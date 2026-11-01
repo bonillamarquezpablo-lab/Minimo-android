@@ -1,4 +1,4 @@
-name: Build and publish EL SIN NOMBRE web game
+name: Build and deploy EL SIN NOMBRE
 
 on:
   push:
@@ -6,17 +6,17 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: el-sin-nombre-web-publish
+  group: github-pages
   cancel-in-progress: true
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout game repository
         uses: actions/checkout@v4
@@ -29,11 +29,21 @@ jobs:
       - name: Download and validate all runtime resources
         run: python scripts/build_site.py
 
-      - name: Publish complete static game package
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Configure native GitHub Pages deployment
+        uses: actions/configure-pages@v5
+
+      - name: Upload complete game website
+        uses: actions/upload-pages-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          publish_branch: gh-pages
-          force_orphan: true
-          commit_message: "Publish EL SIN NOMBRE 0.6.69 web game"
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy website to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
