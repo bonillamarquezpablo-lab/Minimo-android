@@ -1,5 +1,5 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.114";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.115";
 const ASSET_CACHE = "el-sin-nombre-assets-build";
 const SHELL_FILES = ["./index.html", "./guest/index.html", "./manifest.webmanifest", "./icon.svg"];
 
