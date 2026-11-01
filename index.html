@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.101">
-<meta name="el-sin-nombre-repair" content="0.6.101 water surface, shoreline halo removal and persistent visible ship crew">
+<meta name="el-sin-nombre-build" content="0.6.102">
+<meta name="el-sin-nombre-repair" content="0.6.102 detailed tree canopies, textured trunks and natural wind sway">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.101</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.102</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1871,65 +1871,150 @@ async function startGame(){
   });
   return mergedCount;
  }
- function createTree(x,z,scale=1){
-  // Se construye en coordenadas locales y se agrupa al final para respetar la caída del árbol.
+  function createTree(x,z,scale=1){
+  // Árboles nórdicos: tronco con taper, ramas visibles y copas construidas con hojas lanceoladas.
+  // El pivote independiente de copa permite que el viento mueva follaje y ramas sin doblar las raíces.
   const root=newGroup('mixedForestTree',null);
-  const baseYaw=rand(0,Math.PI*2);
-  const roll=Math.random(),species=roll<.54?'oak':roll<.78?'birch':'fir';
-  const trunkHeight=species==='fir'?4.45:species==='birch'?4.8:3.75;
+  const baseYaw=rand(0,Math.PI*2),roll=Math.random(),species=roll<.54?'oak':roll<.78?'birch':'fir';
+  const trunkHeight=species==='fir'?4.65:species==='birch'?5.05:4.05;
   const trunkMat=species==='birch'?M.birch:M.bark;
-  cyl('texturedTreeTrunk',root,[0,trunkHeight*.5,0],trunkHeight,species==='birch'?.18:.23,species==='birch'?.27:.39,trunkMat);
-  // Exposed roots and irregular branches break the repeated lollipop silhouette.
-  for(let i=0;i<3;i++){
-   const a=i*Math.PI*2/3+rand(-.22,.22),len=rand(.48,.78),rootBranch=newGroup('TreeRoot_'+i,root);
-   rootBranch.position=v(0,.23,0);rootBranch.rotation.y=a;rootBranch.rotation.z=-.48;
-   cyl('TreeRootFlare_'+i,rootBranch,[0,-.05,len*.42],len,.055,.22,trunkMat,[Math.PI/2,0,0]);
+  const trunkTop=species==='birch'?.13:species==='fir'?.15:.16;
+  const trunkBottom=species==='birch'?.34:species==='fir'?.39:.48;
+  cyl('texturedTreeTrunk',root,[0,trunkHeight*.5,0],trunkHeight,trunkTop,trunkBottom,trunkMat);
+  // Raíces visibles, abiertas y desiguales; no forman un pedestal circular.
+  const rootCount=species==='fir'?3:4;
+  for(let i=0;i<rootCount;i++){
+   const a=i*Math.PI*2/rootCount+rand(-.26,.26),len=rand(.52,.88),flare=newGroup('TreeRootFlare_'+i,root);
+   flare.position=v(0,.24,0);flare.rotation.y=a;flare.rotation.z=-rand(.34,.56);
+   cyl('TreeRootWood_'+i,flare,[0,-.02,len*.42],len,.045,.19,trunkMat,[Math.PI/2,0,0]);
   }
-  const branchCount=species==='fir'?4:species==='birch'?4:3;
-  for(let k=0;k<branchCount;k++){
-   const y=trunkHeight*(.43+k/(branchCount+1)*.40),a=k*2.399+rand(-.28,.28),len=species==='fir'?rand(.85,1.45):rand(.78,1.35);
-   const br=newGroup('IrregularTreeBranch_'+k,root);br.position=v(0,y,0);br.rotation.y=a;br.rotation.z=-rand(.45,.82);
-   cyl('BranchWood_'+k,br,[0,len*.43,0],len,.045,.14,trunkMat,[0,0,Math.PI/2]);
-  }
-  const leafMats=[M.leafOak,M.leaf,M.leafSun,M.leafShadow];
-  if(species==='oak'||species==='birch'){
-   const count=species==='oak'?7:5;
-   for(let i=0;i<count;i++){
-    const a=i*2.399+rand(-.35,.35),ring=species==='oak'?rand(.38,.95):rand(.30,.75),y=trunkHeight*(.68+rand(-.10,.12));
-    const rx=species==='oak'?rand(.48,.80):rand(.36,.62),ry=species==='oak'?rand(.42,.67):rand(.52,.82),rz=species==='oak'?rand(.45,.78):rand(.36,.62);
-    const crown=organicLeaf('IrregularLeafMass_'+i,root,[Math.cos(a)*ring,y+rand(-.25,.26),Math.sin(a)*ring],[rx,ry,rz],leafMats[(i+Math.floor(rand(0,4)))%leafMats.length],2);
-    crown.rotation.set(rand(-.22,.22),rand(0,Math.PI),rand(-.20,.20));
+  if(species==='birch'){
+   // Cicatrices horizontales oscuras de corteza, colocadas a distintas alturas.
+   for(let i=0;i<11;i++){
+    const y=rand(.55,trunkHeight-.35),a=rand(0,Math.PI*2),r=.17+(.34-y/trunkHeight)*.06;
+    const mark=box('BirchBarkScar_'+i,root,[Math.cos(a)*r,y,Math.sin(a)*r],[rand(.065,.13),rand(.018,.035),.018],M.woodDark,[rand(-.08,.08),a,rand(-.12,.12)]);
    }
-   // Small outer leaf groups add an uneven edge instead of a perfect cluster silhouette.
-   for(let i=0;i<4;i++){
-    const a=i*Math.PI/2+rand(-.18,.18),r=rand(.72,1.08);
-    const leaf=organicLeaf('OuterLeafCluster_'+i,root,[Math.cos(a)*r,trunkHeight*.72+rand(-.28,.3),Math.sin(a)*r],[rand(.22,.38),rand(.22,.34),rand(.22,.38)],leafMats[i%leafMats.length],1);
-    leaf.rotation.set(rand(-.3,.3),a,rand(-.25,.25));
+  }
+  // Fusionar solo el fuste y las raíces: se conserva intacto el pivote animado de la copa.
+  mergeStaticDecorByMaterial(root,'NorseTreeBase');
+  const canopy=newGroup('TreeCanopyWindPivot',root);
+  const pivotY=trunkHeight*(species==='fir'?.57:.56);canopy.position.y=pivotY;
+  const leafMats=[M.leafOak,M.leaf,M.leafSun,M.leafShadow];
+  const leafBatches=leafMats.map(()=>({positions:[],indices:[],uvs:[]}));
+  // Una hoja tiene limbo puntiagudo, ligera curvatura y dos caras; todas se ensamblan por material.
+  const appendLeaf=(matIndex,pos,length,width,yaw,pitch,rollAngle,thickness)=>{
+   const batch=leafBatches[matIndex],offset=batch.positions.length/3;
+   const outline=[
+    [0,0,0],[width*.58,length*.22,thickness*.12],
+    [width*.48,length*.61,thickness*.30],[0,length,0],
+    [-width*.48,length*.61,-thickness*.22],[-width*.58,length*.22,-thickness*.08]
+   ];
+   const centre=[0,length*.48,thickness*.72];
+   const cx=Math.cos(pitch),sx=Math.sin(pitch),cy=Math.cos(yaw),sy=Math.sin(yaw),cz=Math.cos(rollAngle),sz=Math.sin(rollAngle);
+   const put=(point)=>{
+    let px=point[0],py=point[1],pz=point[2];
+    const y1=py*cx-pz*sx,z1=py*sx+pz*cx;
+    const x2=px*cy+z1*sy,z2=-px*sy+z1*cy;
+    const x3=x2*cz-y1*sz,y3=x2*sz+y1*cz;
+    batch.positions.push(pos[0]+x3,pos[1]-pivotY+y3,pos[2]+z2);
+   };
+   outline.forEach(put);put(centre);
+   outline.forEach(p=>put([p[0],p[1],-p[2]-.012]));
+   put([0,length*.48,-thickness*.55]);
+   const frontCentre=offset+6,backStart=offset+7,backCentre=offset+13;
+   for(let i=0;i<6;i++){
+    const next=(i+1)%6;
+    batch.indices.push(frontCentre,offset+i,offset+next);
+    batch.indices.push(backCentre,backStart+next,backStart+i);
+   }
+   batch.uvs.push(.5,0,1,.22,.90,.61,.5,1,.10,.61,0,.22,.5,.48,
+                  .5,0,1,.22,.90,.61,.5,1,.10,.61,0,.22,.5,.48);
+  };
+  const addBranch=(name,y,angle,length,lean,top=.045,bottom=.14)=>{
+   const branch=newGroup(name,canopy);branch.position=v(0,y-pivotY,0);branch.rotation.y=angle;branch.rotation.z=-lean;
+   cyl(name+'_Wood',branch,[0,length*.43,0],length,top,bottom,trunkMat,[0,0,Math.PI/2]);
+   // Una ramificación secundaria más fina en el extremo aporta una silueta quebrada.
+   if(species!=='fir'&&length>.8){
+    const twig=newGroup(name+'_Twig',branch);twig.position=v(0,length*.55,0);twig.rotation.y=rand(-.45,.45);twig.rotation.z=-rand(.26,.52);
+    cyl(name+'_TwigWood',twig,[0,length*.20,0],length*.46,.018,.060,trunkMat,[0,0,Math.PI/2]);
+   }
+  };
+  if(species==='oak'||species==='birch'){
+   const oak=species==='oak',branchCount=oak?7:6;
+   for(let k=0;k<branchCount;k++){
+    const f=k/Math.max(1,branchCount-1),y=trunkHeight*(oak?.43+f*.43:.42+f*.45);
+    const angle=k*2.399+rand(-.24,.24),len=oak?rand(1.05,1.52):rand(.78,1.18);
+    addBranch('TreeCanopyBranch_'+k,y,angle,len,rand(.52,.88),.035,.13);
+   }
+   // Copas asimétricas por pisos: roble ancho y redondeado de forma irregular;
+   // abedul más alto, estrecho y abierto, nunca una única esfera lisa.
+   const lobes=oak?9:7,leafCount=oak?12:10;
+   for(let c=0;c<lobes;c++){
+    const angle=c*2.399+rand(-.42,.42),ring=oak?rand(.38,1.00):rand(.26,.72);
+    const level=oak?rand(.63,.91):rand(.63,.94);
+    const centreX=Math.cos(angle)*ring,centreZ=Math.sin(angle)*ring,centreY=trunkHeight*level;
+    // Pequeños grupos interiores rompen los huecos, con tamaño y densidad variables.
+    const tuft=organicLeaf('TreeFoliageTuft_'+c,canopy,[centreX,centreY-pivotY,centreZ],
+      oak?[rand(.27,.43),rand(.24,.36),rand(.29,.45)]:[rand(.22,.34),rand(.30,.43),rand(.22,.34)],
+      leafMats[(c+Math.floor(rand(0,4)))%leafMats.length],1);
+    tuft.rotation.set(rand(-.28,.28),angle+rand(-.4,.4),rand(-.24,.24));
+    for(let j=0;j<leafCount;j++){
+     const a=angle+rand(-1.15,1.15),spread=oak?rand(.12,.43):rand(.08,.31);
+     const p=[centreX+Math.cos(a)*spread+rand(-.16,.16),
+              centreY+rand(-.31,.31),
+              centreZ+Math.sin(a)*spread+rand(-.16,.16)];
+     const direction=a+rand(-.95,.95);
+     appendLeaf((c+j+Math.floor(rand(0,4)))%leafMats.length,p,
+       oak?rand(.31,.53):rand(.30,.48),oak?rand(.105,.18):rand(.085,.15),
+       direction,rand(-.72,.60),rand(-.55,.55),rand(.018,.034));
+    }
+   }
+   // Hojas terminales sueltas en el contorno, para una copa viva y no geométricamente perfecta.
+   for(let i=0;i<(oak?18:13);i++){
+    const a=rand(0,Math.PI*2),r=oak?rand(.82,1.25):rand(.52,.94);
+    const p=[Math.cos(a)*r,trunkHeight*rand(.68,.94)-pivotY,Math.sin(a)*r];
+    appendLeaf(i%leafMats.length,p,rand(.34,.52),rand(.09,.16),a+rand(-.8,.8),rand(-.8,.4),rand(-.7,.7),.025);
    }
   }else{
-   // Layered fir branches: visible branch fans with small needle clumps, not stacked spheres.
-   for(let tier=0;tier<3;tier++){
-    const y=1.95+tier*.82,rad=1.18-tier*.25;
-    for(let k=0;k<4;k++){
-     const a=k*Math.PI/2+tier*.31,branch=newGroup('FirFan_'+tier+'_'+k,root);branch.position=v(0,y,0);branch.rotation.y=a;branch.rotation.z=-.48;
-     const length=rad*1.03;cyl('FirBranch_'+tier+'_'+k,branch,[0,length*.38,0],length,.035,.095,M.bark,[0,0,Math.PI/2]);
-     for(let j=0;j<1;j++){
-      const q=.55,needle=organicLeaf('FirNeedleMass_'+tier+'_'+k+'_'+j,branch,[Math.sin(q*1.15)*length*.28,length*(.30+q*.33),0],[.27,.16,.23],leafMats[(tier+k+j)%leafMats.length],1);
-      needle.rotation.z=-.16;
+   // Abeto: pisos de ramas descendentes en estrella, con agujas largas y estrechas.
+   const tiers=5,branchesPerTier=5;
+   for(let tier=0;tier<tiers;tier++){
+    const f=tier/(tiers-1),y=trunkHeight*(.37+f*.56),rad=1.46-f*.93;
+    for(let k=0;k<branchesPerTier;k++){
+     const angle=k*Math.PI*2/branchesPerTier+tier*.29+rand(-.10,.10),length=rad*rand(.88,1.12);
+     const branch=newGroup('FirBough_'+tier+'_'+k,canopy);branch.position=v(0,y-pivotY,0);branch.rotation.y=angle;branch.rotation.z=-rand(.63,.84);
+     cyl('FirBoughWood_'+tier+'_'+k,branch,[0,length*.40,0],length,.025,.105,M.bark,[0,0,Math.PI/2]);
+     for(let needle=0;needle<5;needle++){
+      const along=.24+needle*.15,outer=length*along;
+      for(let side=-1;side<=1;side+=2){
+       const p=[Math.cos(angle)*(outer*.72)+side*Math.sin(angle)*.10,
+                y-pivotY-outer*.16+rand(-.045,.045),
+                Math.sin(angle)*(outer*.72)-side*Math.cos(angle)*.10];
+       appendLeaf((tier+needle+k+(side>0?1:0))%leafMats.length,p,
+         rand(.30,.48),rand(.035,.065),angle+side*rand(.36,.72),rand(-.85,-.35),rand(-.28,.28),.012);
+      }
      }
     }
    }
-   sphere('FirTopCrown',root,[0,4.62,0],[.48,.70,.48],M.leaf,10);
-  }
-  if(species==='birch'){
-   for(let i=0;i<7;i++){
-    const y=rand(.7,4.1),a=rand(0,Math.PI*2),patch=box('BirchBarkMark_'+i,root,[Math.cos(a)*.19,y,Math.sin(a)*.19],[.09,.045,.018],M.woodDark,[0,rand(0,Math.PI),0]);
+   // Punta principal y pequeños brotes en la parte superior del abeto.
+   const leader=newGroup('FirLeaderShoot',canopy);leader.position=v(0,trunkHeight*.77-pivotY,0);leader.rotation.z=-.10;
+   cyl('FirLeaderWood',leader,[0,.50,0],1.0,.025,.105,M.bark);
+   for(let i=0;i<16;i++){
+    const a=i*2.399,p=[Math.cos(a)*.12,trunkHeight*.86-pivotY+rand(-.10,.12),Math.sin(a)*.12];
+    appendLeaf(i%leafMats.length,p,rand(.35,.50),rand(.035,.06),a,rand(-.9,-.45),rand(-.24,.24),.012);
    }
   }
-  // Conservamos la silueta, las ramas y todas las hojas; solo reducimos sus llamadas de dibujo.
-  mergeStaticDecorByMaterial(root,'NorseTree');
+  // Una malla por material mantiene el coste de dibujo bajo pese al mayor detalle de hojas.
+  leafBatches.forEach((batch,i)=>{
+   if(!batch.indices.length)return;
+   const normals=[];B.VertexData.ComputeNormals(batch.positions,batch.indices,normals);
+   const mesh=new B.Mesh('NorseTreeLeafBatch_'+i,scene),data=new B.VertexData();
+   data.positions=batch.positions;data.indices=batch.indices;data.uvs=batch.uvs;data.normals=normals;data.applyToMesh(mesh);
+   mesh.parent=canopy;mesh.material=leafMats[i];mesh.isPickable=false;mesh.receiveShadows=true;
+  });
+  mergeStaticDecorByMaterial(canopy,'NorseTreeCanopy');
   root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.y=baseYaw;root.scaling.setAll(scale);
-  return {root,x,z,radius:.62*scale,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species,baseYaw,windPhase:rand(0,Math.PI*2)};
+  return {root,canopy,x,z,radius:.62*scale,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species,baseYaw,windPhase:rand(0,Math.PI*2)};
  }
  function createShrub(x,z,size=1){
   const g=newGroup('coastalShrub',null),yaw=rand(0,Math.PI*2);
@@ -4564,7 +4649,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'3',build:'0.6.101',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'3',build:'0.6.102',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -4627,7 +4712,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.101');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.102');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -6016,11 +6101,21 @@ function updateHUD(){
     if(t.falling!==undefined&&t.falling!==null){
      t.falling=Math.min(1.22,t.falling+treeDt);const p=Math.max(0,Math.min(1,t.falling/1.22)),fallEase=easeOut(p);
      t.root.rotation.x=(t.fallX||0)*1.38*fallEase;t.root.rotation.z=(t.fallZ||0)*1.38*fallEase;
+     if(t.canopy)t.canopy.rotation.set(0,0,0);
      if(t.falling>=1.22){t.root.setEnabled(false);t.falling=null;}
     }else if(t.hitFlash>0){
      t.hitFlash=Math.max(0,t.hitFlash-treeDt);const shake=t.hitFlash/.34;
      t.root.rotation.x=Math.sin(elapsed*82)*.065*shake;t.root.rotation.z=Math.sin(elapsed*69)*.025*shake;
-    }else{t.root.rotation.x=0;t.root.rotation.z=Math.sin(elapsed*.78+t.windPhase)*.010;t.root.rotation.y=t.baseYaw+Math.sin(elapsed*.62+t.windPhase)*.014;}
+     if(t.canopy){t.canopy.rotation.x=Math.sin(elapsed*82+t.windPhase)*.045*shake;t.canopy.rotation.z=Math.sin(elapsed*69+t.windPhase)*.035*shake;}
+    }else{
+     const gust=Math.sin(elapsed*.57+t.windPhase)+Math.sin(elapsed*1.13+t.windPhase*1.71)*.28;
+     t.root.rotation.x=0;t.root.rotation.z=Math.sin(elapsed*.78+t.windPhase)*.010;t.root.rotation.y=t.baseYaw+Math.sin(elapsed*.62+t.windPhase)*.014;
+     if(t.canopy){
+      t.canopy.rotation.x=gust*.026;
+      t.canopy.rotation.z=Math.sin(elapsed*.49+t.windPhase*1.31)*.022+gust*.009;
+      t.canopy.rotation.y=Math.sin(elapsed*.43+t.windPhase*.83)*.010;
+     }
+    }
    }
   }
   for(let i=effects.length-1;i>=0;i--){let e=effects[i];e.life-=dt;e.mesh.position.addInPlace(e.vel.scale(dt));e.vel.y-=8*dt;if(e.spin){e.mesh.rotation.x+=e.spin.x*dt;e.mesh.rotation.y+=e.spin.y*dt;e.mesh.rotation.z+=e.spin.z*dt;}if(e.life<=0){e.mesh.setEnabled(false);effectPool.push(e.mesh);effects.splice(i,1);}}
