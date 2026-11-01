@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.106">
-<meta name="el-sin-nombre-repair" content="0.6.106 wide tidal beaches, expanded outer archipelago and new Norse landmarks">
+<meta name="el-sin-nombre-build" content="0.6.107">
+<meta name="el-sin-nombre-repair" content="0.6.107 professional naval chart, responsive map sizing and deferred mobile secondary assets">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.106</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.107</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -710,6 +710,12 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 @media(max-height:460px) and (orientation:landscape){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
+
+/* 0.6.107 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+#map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
+#mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
+#mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
+@media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 </style>
 </head>
 <body class="booting">
@@ -4871,7 +4877,7 @@ function villageHostileDefenders(vl){
   function toggle(){muted=!muted;if(master&&ctx)master.gain.setTargetAtTime(muted?0:.72,ctx.currentTime,.04);Object.values(foleyPools).flat(2).forEach(a=>{try{a.muted=muted;}catch(_){}});return muted;}
   return {unlock,play,update,toggle,marchStep,civilianStep,preloadAll,get unlocked(){return unlocked;}};
  })();
- const startupAudioPreload=NorseAudio.preloadAll(6500);
+ const startupAudioPreload=Promise.resolve({deferredUntilInteraction:true,total:0,ready:0,failed:0});
  document.addEventListener('pointerdown',()=>NorseAudio.unlock(),{once:true,passive:true});
  document.addEventListener('keydown',()=>NorseAudio.unlock(),{once:true});
  document.addEventListener('keydown',e=>{if(String(e.key||'').toLowerCase()==='m'&&!e.repeat){const state=NorseAudio.toggle();msg(state?'Sonido desactivado':'Sonido activado');}});
@@ -4894,7 +4900,7 @@ function villageHostileDefenders(vl){
   if(introOverlay){introOverlay.setAttribute('aria-hidden','false');introOverlay.classList.add('open');}
   console.info('Pantalla previa lista',{guardianes:guardianReady,aldeanosGLB:civilianReady,aldeanos: civilianTotal,guerrerosGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length});
  }
- function beginSaga(){gameStarted=true;document.body.classList.remove('booting','boot-failed','intro-open');document.body.classList.add('game-running');NorseAudio.unlock();if(introOverlay){introOverlay.classList.remove('open');introOverlay.setAttribute('aria-hidden','true');}try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();}catch(startViewError){console.warn('La vista se ajustará en el siguiente fotograma:',startViewError);}msg('La costa te espera.');if(isIOSDevice)setTimeout(()=>{try{startNpcHumanModels();}catch(err){console.warn('Carga NPC diferida en Safari:',err);}},6500);}
+ function beginSaga(){gameStarted=true;document.body.classList.remove('booting','boot-failed','intro-open');document.body.classList.add('game-running');NorseAudio.unlock();if(introOverlay){introOverlay.classList.remove('open');introOverlay.setAttribute('aria-hidden','true');}try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();}catch(startViewError){console.warn('La vista se ajustará en el siguiente fotograma:',startViewError);}msg('La costa te espera.');if(isTouchDevice)setTimeout(()=>{const launch=()=>{try{startNpcHumanModels();}catch(err){console.warn('Carga diferida de modelos secundarios:',err);}};if(typeof window.requestIdleCallback==='function')window.requestIdleCallback(launch,{timeout:12000});else launch();},6500);}
  if(introStartButton)introStartButton.addEventListener('click',beginSaga);
  window.NorseAudio=NorseAudio;
  window.getPlayerTerritoryDebug=()=>{const p=playerPos();return {position:{x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2))},protected:isPlayerTerritoryAt(p.x,p.z),homeDistance:Number(Math.hypot(p.x-STARTER_CAMP_POSITION.x,p.z-STARTER_CAMP_POSITION.z).toFixed(2)),friendlyGuards:enemies.filter(isFriendlyGuard).length,hostileGuards:enemies.filter(e=>canAttackPlayer(e,p.x,p.z)).length};};
@@ -4904,7 +4910,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'3',build:'0.6.106',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'3',build:'0.6.107',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -4967,7 +4973,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.106');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.107');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -5611,7 +5617,7 @@ function updateHUD(){
  document.addEventListener('contextmenu',e=>{if(cameraPointers.size)e.preventDefault();},{capture:true});
  canvas.addEventListener('wheel',e=>{cameraDistance=Math.max(6.8,Math.min(17.0,cameraDistance+e.deltaY*.010));e.preventDefault();},{passive:false});
  window.addEventListener('blur',()=>{cameraPointers.clear();cameraPointerTypes.clear();});
- function setMapExpanded(open){map.classList.toggle('expanded',!!open);document.body.classList.toggle('map-open',!!open);}
+ function setMapExpanded(open){map.classList.toggle('expanded',!!open);document.body.classList.toggle('map-open',!!open);if(open){mapClock=0;drawMap();}}
  map.addEventListener('click',e=>{e.stopPropagation();setMapExpanded(!map.classList.contains('expanded'));});
  document.getElementById('mapClose').addEventListener('click',()=>setMapExpanded(false));
  document.getElementById('mapBackdrop').addEventListener('click',()=>setMapExpanded(false));
@@ -5770,70 +5776,109 @@ function updateHUD(){
  }));
  // Map widget.
  function drawMap(){
-  // Canvas backing store is 2x; draw in a 480x344 logical chart to keep text crisp when enlarged.
+  // Carta nórdica 2x: el índice lateral evita amontonar trece nombres en la costa.
   mg.setTransform(1,0,0,1,0,0);mg.clearRect(0,0,map.width,map.height);mg.setTransform(2,0,0,2,0,0);
-  const w=480,h=344,ox=w/2,oz=h/2,scale=.32;
-  const sea=mg.createLinearGradient(0,0,w,h);sea.addColorStop(0,'#153746');sea.addColorStop(.48,'#2c6170');sea.addColorStop(1,'#102b39');mg.fillStyle=sea;mg.fillRect(0,0,w,h);
-  // Map-cartouche header, fine coordinate grid and subtle sea-chart grain.
-  mg.fillStyle='rgba(7,20,25,.76)';mg.fillRect(12,11,w-24,27);
-  mg.strokeStyle='rgba(229,190,123,.82)';mg.lineWidth=1;mg.strokeRect(12,11,w-24,27);
-  mg.fillStyle='#f0d59b';mg.font='bold 11px Georgia,serif';mg.textAlign='center';mg.fillText('CARTA DE LAS TIERRAS DEL NORTE',w/2,29);
-  mg.save();mg.strokeStyle='rgba(190,215,211,.13)';mg.lineWidth=1;
-  for(let y=12;y<h;y+=23){mg.beginPath();for(let x=0;x<=w;x+=8){let yy=y+Math.sin(x*.025+y*.06)*2.5;if(x===0)mg.moveTo(x,yy);else mg.lineTo(x,yy);}mg.stroke();}mg.restore();
-  const pt=(x,z)=>[ox+x*scale,oz+z*scale];
-  function islandPath(a,extra=0){
-   const cx=ox+a.x*scale,cy=oz+a.z*scale,rx=(a.r+extra)*scale,rz=(a.r*.78+extra*.7)*scale;mg.beginPath();
-   for(let i=0;i<=68;i++){const t=i/68*Math.PI*2,wobble=1+.05*Math.sin(t*3+a.x*.04)+.025*Math.cos(t*7+a.z*.03),x=cx+Math.cos(t)*rx*wobble,y=cy+Math.sin(t)*rz*wobble;if(i===0)mg.moveTo(x,y);else mg.lineTo(x,y);}mg.closePath();
+  const w=480,h=344,plot={x:12,y:40,w:342,h:264},side={x:362,y:40,w:106,h:264};
+  const cx=184,cy=174,scale=.235,pt=(x,z)=>[cx+x*scale,cy+z*scale];
+  const sea=mg.createLinearGradient(0,0,w,h);sea.addColorStop(0,'#183e49');sea.addColorStop(.46,'#245565');sea.addColorStop(1,'#102c37');
+  mg.fillStyle=sea;mg.fillRect(0,0,w,h);
+  mg.save();mg.beginPath();mg.rect(plot.x,plot.y,plot.w,plot.h);mg.clip();
+  for(let i=0;i<17;i++){
+   const y=plot.y+8+i*15.2;mg.beginPath();
+   for(let x=plot.x;x<=plot.x+plot.w;x+=5){const yy=y+Math.sin(x*.026+i*.68)*2+Math.sin(x*.009-i*.41)*2.6;if(x===plot.x)mg.moveTo(x,yy);else mg.lineTo(x,yy);}
+   mg.strokeStyle=i%4===0?'rgba(183,207,198,.16)':'rgba(180,210,205,.075)';mg.lineWidth=i%4===0?1:.65;mg.stroke();
   }
-  land.forEach((a,index)=>{
-   islandPath(a,4);mg.fillStyle='#a28f6c';mg.fill();islandPath(a);
-   const cx=ox+a.x*scale,cy=oz+a.z*scale,g=mg.createRadialGradient(cx-7,cy-8,2,cx,cy,a.r*scale);
-   g.addColorStop(0,'#93a477');g.addColorStop(.7,index%2?'#71885d':'#7d9567');g.addColorStop(1,'#415b46');mg.fillStyle=g;mg.fill();mg.strokeStyle='#e1c99c';mg.lineWidth=2;mg.stroke();
-   mg.save();islandPath(a);mg.clip();
-   for(let k=0;k<68;k++){let x=cx+Math.sin(k*12.989+index)*a.r*scale*.68,y=cy+Math.cos(k*7.233+index)*a.r*scale*.52;mg.fillStyle=k%2?'rgba(27,65,43,.32)':'rgba(199,184,127,.26)';mg.beginPath();mg.arc(x,y,1.2+(k%4),0,Math.PI*2);mg.fill();}
-   mg.restore();mg.font='bold 10px system-ui';mg.textAlign='center';mg.fillStyle='#fff0ce';mg.shadowColor='#10242b';mg.shadowBlur=4;mg.fillText(a.name,cx,cy-a.r*.78*scale-8);mg.shadowBlur=0;
+  mg.strokeStyle='rgba(218,205,164,.105)';mg.lineWidth=.7;mg.setLineDash([2,5]);
+  for(let x=plot.x+12;x<plot.x+plot.w;x+=28){mg.beginPath();mg.moveTo(x,plot.y+5);mg.lineTo(x,plot.y+plot.h-4);mg.stroke();}
+  for(let y=plot.y+8;y<plot.y+plot.h;y+=28){mg.beginPath();mg.moveTo(plot.x+5,y);mg.lineTo(plot.x+plot.w-5,y);mg.stroke();}
+  mg.setLineDash([]);mg.fillStyle='rgba(223,207,164,.48)';mg.font='6px Georgia,serif';mg.textAlign='center';
+  ['−400','−200','0','200','400'].forEach((label,i)=>mg.fillText(label,plot.x+27+i*70,plot.y+9));
+  mg.textAlign='left';mg.fillText('N',plot.x+5,plot.y+17);mg.fillText('S',plot.x+5,plot.y+plot.h-6);
+  function islandPath(island,index,extra=0,rxScale=1){
+   const x0=cx+island.x*scale,z0=cy+island.z*scale,base=island.r+extra;mg.beginPath();
+   for(let i=0;i<=88;i++){
+    const a=i/88*Math.PI*2,irregular=1+.038*Math.sin(a*3+index*1.31)+.022*Math.sin(a*5-index*.73)+.014*Math.cos(a*9+index*.39)+.008*Math.sin(a*13+index);
+    const px=x0+Math.cos(a)*base*scale*irregular*rxScale,py=z0+Math.sin(a)*base*scale*.88*irregular;
+    if(i===0)mg.moveTo(px,py);else mg.lineTo(px,py);
+   }
+   mg.closePath();
+  }
+  land.forEach((island,index)=>{
+   const x0=cx+island.x*scale,z0=cy+island.z*scale;
+   islandPath(island,index,7);mg.fillStyle='rgba(190,171,126,.22)';mg.fill();
+   islandPath(island,index,3.2);mg.fillStyle='#bca77a';mg.fill();
+   islandPath(island,index,1);mg.fillStyle='#66765d';mg.fill();
+   islandPath(island,index);
+   const grad=mg.createRadialGradient(x0-island.r*scale*.22,z0-island.r*scale*.30,1,x0,z0,island.r*scale*1.12);
+   grad.addColorStop(0,index===0?'#9ba17a':'#899575');grad.addColorStop(.57,index%3===0?'#718064':'#677b62');grad.addColorStop(1,'#455c4c');
+   mg.fillStyle=grad;mg.fill();mg.strokeStyle='#e1ca96';mg.lineWidth=1.05;mg.stroke();
+   mg.save();islandPath(island,index);mg.clip();
+   for(let k=0;k<22;k++){
+    const a=k*2.399+index*.81,r=island.r*scale*(.18+((k*37+index*13)%71)/100),px=x0+Math.cos(a)*r,py=z0+Math.sin(a)*r*.78;
+    mg.fillStyle=k%4===0?'rgba(195,181,133,.26)':k%3===0?'rgba(34,57,44,.30)':'rgba(213,208,164,.13)';
+    mg.beginPath();mg.ellipse(px,py,1+(k%3)*.45,.7+(k%2)*.55,a*.35,0,Math.PI*2);mg.fill();
+   }
+   if(island.r>29)for(let ring=0;ring<2;ring++){
+    mg.beginPath();mg.ellipse(x0-island.r*scale*.06,z0-island.r*scale*.08,island.r*scale*(.57-ring*.17),island.r*scale*(.42-ring*.13),-.22+index*.03,0,Math.PI*2);
+    mg.strokeStyle=ring===0?'rgba(223,211,161,.35)':'rgba(40,57,42,.29)';mg.lineWidth=.65;mg.stroke();
+   }
+   for(let tree=0;tree<5;tree++){
+    const a=tree*2.17+index*.93,r=island.r*scale*(.22+tree*.095),tx=x0+Math.cos(a)*r,tz=z0+Math.sin(a)*r*.72;
+    mg.fillStyle='#314d3b';mg.beginPath();mg.moveTo(tx,tz-2.4);mg.lineTo(tx-1.8,tz+1.6);mg.lineTo(tx+1.8,tz+1.6);mg.closePath();mg.fill();
+    mg.fillStyle='rgba(205,193,145,.35)';mg.fillRect(tx-.35,tz+1.4,.7,1.4);
+   }
+   mg.restore();
+   mg.beginPath();mg.arc(x0,z0,index===0?5.7:4.6,0,Math.PI*2);mg.fillStyle='#182e32';mg.fill();mg.strokeStyle='#f0d18a';mg.lineWidth=1.05;mg.stroke();
+   mg.fillStyle='#fff0c9';mg.font='bold 5.7px Georgia,serif';mg.textAlign='center';mg.textBaseline='middle';mg.fillText(String(index+1).padStart(2,'0'),x0,z0+.15);mg.textBaseline='alphabetic';
   });
-  mg.save();mg.setLineDash([6,5]);mg.strokeStyle='rgba(242,218,166,.48)';mg.lineWidth=1.6;mg.beginPath();
-  villages.forEach((q,i)=>{const [x,y]=pt(q.x,q.z);if(i===0)mg.moveTo(x,y);else mg.lineTo(x,y);});mg.stroke();mg.restore();
-  villages.forEach(q=>{
-   const [x,y]=pt(q.x,q.z);
-   if(q.claimed){const r=24*scale;mg.beginPath();mg.arc(x,y,r,0,Math.PI*2);mg.fillStyle='rgba(226,183,91,.27)';mg.fill();mg.setLineDash([6,4]);mg.lineWidth=2.6;mg.strokeStyle='#f0ca79';mg.stroke();mg.setLineDash([]);}
-   mg.beginPath();mg.arc(x,y,8,0,Math.PI*2);mg.fillStyle=q.claimed?'#bd9652':'#a64c42';mg.fill();mg.strokeStyle='#fff0ce';mg.lineWidth=1.2;mg.stroke();
-   mg.fillStyle='#fff0ce';mg.fillRect(x-3,y-2,6,4);mg.strokeStyle='#392b23';mg.beginPath();mg.moveTo(x-4,y-2);mg.lineTo(x,y-6);mg.lineTo(x+4,y-2);mg.stroke();
-   mg.font='bold 9px system-ui';mg.textAlign='left';mg.fillStyle=q.claimed?'#ffdf95':'#f1d8c1';mg.fillText((q.claimed?'◆ ':'')+q.name,x+11,y+3);
+  mg.save();mg.beginPath();regattaBuoys.forEach((buoy,i)=>{const p=pt(buoy.x,buoy.z);if(i===0)mg.moveTo(p[0],p[1]);else mg.lineTo(p[0],p[1]);});
+  mg.closePath();mg.setLineDash([4,3]);mg.strokeStyle='rgba(240,203,126,.72)';mg.lineWidth=1.05;mg.stroke();mg.setLineDash([]);
+  regattaBuoys.forEach((buoy,i)=>{const p=pt(buoy.x,buoy.z);mg.beginPath();mg.arc(p[0],p[1],2.1,0,Math.PI*2);mg.fillStyle=i%2?'#c96f58':'#e8c47d';mg.fill();mg.strokeStyle='#f9e8c4';mg.lineWidth=.55;mg.stroke();});mg.restore();
+  villages.forEach(village=>{
+   const p=pt(village.x,village.z);mg.save();mg.translate(p[0],p[1]);
+   if(village.claimed){mg.beginPath();mg.arc(0,0,7.5,0,Math.PI*2);mg.fillStyle='rgba(236,192,105,.23)';mg.fill();mg.strokeStyle='#f0c67e';mg.lineWidth=1;mg.stroke();}
+   mg.fillStyle=village.claimed?'#e1bd79':'#cf7669';mg.strokeStyle='#292a22';mg.lineWidth=1;
+   mg.beginPath();mg.moveTo(0,-4.8);mg.lineTo(4.6,-.8);mg.lineTo(3.6,4.1);mg.lineTo(-3.6,4.1);mg.lineTo(-4.6,-.8);mg.closePath();mg.fill();mg.stroke();
+   mg.strokeStyle='#fff0d0';mg.lineWidth=.6;mg.beginPath();mg.moveTo(-2.4,-.9);mg.lineTo(0,-3);mg.lineTo(2.4,-.9);mg.stroke();mg.restore();
   });
-  function shipIcon(x,z,angle,color,size){const [px,py]=pt(x,z);mg.save();mg.translate(px,py);mg.rotate(-angle);mg.fillStyle=color;mg.beginPath();mg.moveTo(0,-size*1.8);mg.lineTo(size*.72,-size*.8);mg.lineTo(size*.7,size);mg.lineTo(0,size*1.5);mg.lineTo(-size*.7,size);mg.lineTo(-size*.72,-size*.8);mg.closePath();mg.fill();mg.strokeStyle='#f4e8cd';mg.stroke();mg.restore();}
-  enemyShips.forEach(e=>{if(!e.sunk)shipIcon(e.root.position.x,e.root.position.z,e.root.rotation.y,'#d75b4e',4.5);});
-  // Ruta de regata: línea discontinua y boyas numeradas alrededor del perímetro navegable.
-  mg.save();mg.beginPath();regattaBuoys.forEach((b,i)=>{const q=pt(b.x,b.z);if(i===0)mg.moveTo(q[0],q[1]);else mg.lineTo(q[0],q[1]);});mg.closePath();mg.setLineDash([5,4]);mg.strokeStyle='rgba(244,207,126,.52)';mg.lineWidth=1.5;mg.stroke();mg.setLineDash([]);
-  regattaBuoys.forEach((b,i)=>{const q=pt(b.x,b.z);mg.beginPath();mg.arc(q[0],q[1],3.1,0,Math.PI*2);mg.fillStyle=i%2?'#c75a49':'#e4bd71';mg.fill();mg.strokeStyle='#fff0cf';mg.lineWidth=.8;mg.stroke();});mg.restore();
-  if(onShip)shipIcon(ship.position.x,ship.position.z,ship.rotation.y,'#f3d28b',5.5);
-  // Pequeño símbolo del refugio inicial: una lona junto a la costa, antes de tener una granja.
-  const [campMapX,campMapY]=pt(STARTER_CAMP_POSITION.x,STARTER_CAMP_POSITION.z);mg.save();mg.translate(campMapX,campMapY);mg.fillStyle='#d0a05c';mg.strokeStyle='#201b15';mg.lineWidth=1.4;mg.beginPath();mg.moveTo(0,-6);mg.lineTo(6,5);mg.lineTo(-6,5);mg.closePath();mg.fill();mg.stroke();mg.font='bold 8px Georgia';mg.textAlign='left';mg.fillStyle='#f0d9a4';mg.fillText('REFUGIO',8,3);mg.restore();
-  if(playerShelterBuilt){const [hx,hy]=pt(playerShelterX,playerShelterZ);mg.save();mg.translate(hx,hy);mg.fillStyle='#d7b06c';mg.strokeStyle='#241b14';mg.lineWidth=1.3;mg.beginPath();mg.moveTo(0,-5);mg.lineTo(6,1);mg.lineTo(5,6);mg.lineTo(-5,6);mg.lineTo(-6,1);mg.closePath();mg.fill();mg.stroke();mg.restore();}
-  const p=playerPos(),[px,py]=pt(p.x,p.z);mg.save();mg.translate(px,py);mg.rotate(-yaw);mg.fillStyle='#fff1d4';mg.beginPath();mg.moveTo(0,-8);mg.lineTo(6,6);mg.lineTo(0,3);mg.lineTo(-6,6);mg.closePath();mg.fill();mg.strokeStyle='#43372b';mg.stroke();mg.restore();
-  mg.fillStyle='rgba(7,19,25,.88)';mg.fillRect(12,h-31,w-24,22);mg.strokeStyle='rgba(229,190,123,.65)';mg.lineWidth=1;mg.strokeRect(12,h-31,w-24,22);mg.font='bold 10px Georgia,serif';mg.textAlign='left';
-  mg.fillStyle='#f1cc7c';mg.fillText('⌂ ASENTAMIENTOS',23,h-16);mg.fillStyle='#e47c6b';mg.fillText('● HOSTILES',174,h-16);mg.fillStyle='#fff1d4';mg.fillText('▲ TÚ',368,h-16);
-  // Norse chart finishing: compass rose, inset bronze frame and carved corner marks.
-  mg.save();
-  const cx=w-31,cy=31;
-  mg.translate(cx,cy);
-  mg.fillStyle='rgba(8,22,27,.68)';mg.strokeStyle='rgba(230,196,133,.82)';mg.lineWidth=1.5;
-  mg.beginPath();mg.arc(0,0,17,0,Math.PI*2);mg.fill();mg.stroke();
-  mg.strokeStyle='rgba(230,196,133,.65)';mg.lineWidth=1;
-  for(let a=0;a<8;a++){const t=a*Math.PI/4;mg.beginPath();mg.moveTo(Math.cos(t)*5,Math.sin(t)*5);mg.lineTo(Math.cos(t)*14,Math.sin(t)*14);mg.stroke();}
-  mg.fillStyle='#f1d18e';mg.beginPath();mg.moveTo(0,-13);mg.lineTo(4,1);mg.lineTo(0,-2);mg.lineTo(-4,1);mg.closePath();mg.fill();
-  mg.fillStyle='#f4e7c9';mg.font='bold 8px Georgia';mg.textAlign='center';mg.fillText('N',0,-21);
+  function shipIcon(x,z,angle,color,size){
+   const p=pt(x,z);mg.save();mg.translate(p[0],p[1]);mg.rotate(-angle);mg.fillStyle=color;mg.strokeStyle='#f5e8c8';mg.lineWidth=.75;mg.beginPath();
+   mg.moveTo(0,-size*1.55);mg.lineTo(size*.8,-size*.55);mg.lineTo(size*.64,size*.95);mg.lineTo(0,size*1.35);mg.lineTo(-size*.64,size*.95);mg.lineTo(-size*.8,-size*.55);mg.closePath();mg.fill();mg.stroke();mg.restore();
+  }
+  enemyShips.forEach(enemy=>{if(!enemy.sunk)shipIcon(enemy.root.position.x,enemy.root.position.z,enemy.root.rotation.y,'#cc6c60',3);});
+  if(onShip)shipIcon(ship.position.x,ship.position.z,ship.rotation.y,'#ffe0a0',4.1);
+  const camp=pt(STARTER_CAMP_POSITION.x,STARTER_CAMP_POSITION.z);mg.fillStyle='#d6a96a';mg.strokeStyle='#38291d';mg.lineWidth=.9;mg.beginPath();mg.moveTo(camp[0],camp[1]-4);mg.lineTo(camp[0]+4,camp[1]+3);mg.lineTo(camp[0]-4,camp[1]+3);mg.closePath();mg.fill();mg.stroke();
+  if(playerShelterBuilt){const p=pt(playerShelterX,playerShelterZ);mg.fillStyle='#e6c47c';mg.fillRect(p[0]-3,p[1]-3,6,6);mg.strokeStyle='#34281b';mg.strokeRect(p[0]-3,p[1]-3,6,6);}
+  const player=playerPos(),playerPoint=pt(player.x,player.z);mg.save();mg.translate(playerPoint[0],playerPoint[1]);mg.rotate(-yaw);mg.fillStyle='#fff3d3';mg.strokeStyle='#243236';mg.lineWidth=1.05;
+  mg.beginPath();mg.moveTo(0,-6.1);mg.lineTo(4.5,4.1);mg.lineTo(0,2);mg.lineTo(-4.5,4.1);mg.closePath();mg.fill();mg.stroke();mg.restore();
+  mg.save();mg.translate(plot.x+19,plot.y+25);mg.fillStyle='rgba(11,28,31,.8)';mg.strokeStyle='rgba(229,194,129,.75)';mg.lineWidth=.8;
+  mg.beginPath();mg.arc(0,0,10,0,Math.PI*2);mg.fill();mg.stroke();mg.fillStyle='#f2d397';
+  mg.beginPath();mg.moveTo(0,-8);mg.lineTo(2.2,1);mg.lineTo(0,-1);mg.lineTo(-2.2,1);mg.closePath();mg.fill();
+  mg.font='bold 6px Georgia,serif';mg.textAlign='center';mg.fillText('N',0,-12);mg.restore();
   mg.restore();
-  mg.save();mg.strokeStyle='rgba(228,203,157,.30)';mg.lineWidth=.8;
-  for(let x=52;x<w-24;x+=42){mg.beginPath();mg.moveTo(x,43);mg.lineTo(x,48);mg.stroke();mg.beginPath();mg.moveTo(x,h-43);mg.lineTo(x,h-38);mg.stroke();}
-  for(let y=55;y<h-42;y+=40){mg.beginPath();mg.moveTo(17,y);mg.lineTo(22,y);mg.stroke();mg.beginPath();mg.moveTo(w-22,y);mg.lineTo(w-17,y);mg.stroke();}
-  mg.restore();
-  mg.strokeStyle='rgba(255,225,166,.88)';mg.lineWidth=2.2;mg.strokeRect(4,4,w-8,h-8);
-  mg.strokeStyle='rgba(76,42,25,.95)';mg.lineWidth=1;mg.strokeRect(8,8,w-16,h-16);
-  const corners=[[13,13,1,1],[w-13,13,-1,1],[13,h-13,1,-1],[w-13,h-13,-1,-1]];
-  for(const [x,y,sx,sy] of corners){mg.strokeStyle='#e2bd7a';mg.lineWidth=2;mg.beginPath();mg.moveTo(x,y+sy*12);mg.lineTo(x,y);mg.lineTo(x+sx*12,y);mg.stroke();}
-  mg.strokeStyle='rgba(255,242,218,.7)';mg.lineWidth=1.4;mg.strokeRect(1,1,w-2,h-2);
+  mg.fillStyle='rgba(9,24,27,.70)';mg.fillRect(side.x,side.y,side.w,side.h);mg.strokeStyle='rgba(218,181,112,.55)';mg.lineWidth=.8;mg.strokeRect(side.x+.5,side.y+.5,side.w-1,side.h-1);
+  mg.fillStyle='#e8c987';mg.font='bold 7.5px Georgia,serif';mg.textAlign='left';mg.fillText('ARCHIPIÉLAGO',side.x+6,side.y+12);
+  mg.fillStyle='rgba(221,205,165,.65)';mg.font='6px system-ui';mg.fillText('13 TIERRAS',side.x+6,side.y+22);
+  const current=playerPos();let nearestIndex=0,nearestDistance=Infinity;
+  land.forEach((island,index)=>{const d=Math.hypot(current.x-island.x,current.z-island.z);if(d<nearestDistance){nearestDistance=d;nearestIndex=index;}});
+  for(let i=0;i<land.length;i++){
+   const y=side.y+34+i*13.05,isCurrent=i===nearestIndex;
+   if(isCurrent){mg.fillStyle='rgba(212,166,88,.18)';mg.fillRect(side.x+3,y-8,side.w-6,12);}
+   mg.beginPath();mg.arc(side.x+11,y-3,3.4,0,Math.PI*2);mg.fillStyle=isCurrent?'#f1cf88':'#7f9675';mg.fill();mg.strokeStyle='#e9d2a2';mg.lineWidth=.55;mg.stroke();
+   mg.fillStyle='#172d31';mg.font='bold 5.8px Georgia,serif';mg.textAlign='center';mg.fillText(String(i+1).padStart(2,'0'),side.x+11,y-1.3);
+   mg.fillStyle=isCurrent?'#f3d79b':'#d6d0b9';mg.font='6.7px system-ui';mg.textAlign='left';
+   const name=land[i].name,shortName=name.length>19?name.slice(0,18)+'…':name;mg.fillText(shortName,side.x+18,y-1.1,side.w-23);
+  }
+  const villageHeader=side.y+211;mg.strokeStyle='rgba(218,181,112,.33)';mg.beginPath();mg.moveTo(side.x+5,villageHeader-5);mg.lineTo(side.x+side.w-5,villageHeader-5);mg.stroke();
+  mg.fillStyle='#e7c987';mg.font='bold 7px Georgia,serif';mg.textAlign='left';mg.fillText('ASENTAMIENTOS',side.x+6,villageHeader+5);
+  villages.forEach((village,i)=>{const y=villageHeader+17+i*9.1;mg.fillStyle=village.claimed?'#e7c47e':'#cf8575';mg.beginPath();mg.arc(side.x+9,y-2,2.25,0,Math.PI*2);mg.fill();mg.fillStyle='#e0d7c2';mg.font='6.4px system-ui';mg.fillText(village.name,side.x+15,y,side.w-19);});
+  mg.fillStyle='rgba(7,20,23,.92)';mg.fillRect(12,8,456,26);mg.strokeStyle='rgba(225,187,118,.82)';mg.lineWidth=.85;mg.strokeRect(12,8,456,26);
+  mg.fillStyle='#f0d49a';mg.font='bold 10px Georgia,serif';mg.textAlign='left';mg.fillText('CARTA DE NAVEGACIÓN · MAR DEL NORTE',22,24);
+  mg.fillStyle='rgba(219,205,169,.70)';mg.font='6px system-ui';mg.textAlign='right';mg.fillText('EL SIN NOMBRE / SAGA DEL NORTE',458,24);
+  mg.fillStyle='rgba(7,19,23,.94)';mg.fillRect(12,309,456,25);mg.strokeStyle='rgba(225,187,118,.72)';mg.lineWidth=.85;mg.strokeRect(12,309,456,25);
+  mg.font='bold 7px Georgia,serif';mg.textAlign='left';mg.fillStyle='#e8ca8b';mg.fillText('▲ TÚ',22,325);mg.fillStyle='#e5c27d';mg.fillText('◆ ASENTAMIENTO',91,325);mg.fillStyle='#d78977';mg.fillText('● HOSTIL',213,325);mg.fillStyle='#d4d0bb';mg.fillText('— RUTA MARÍTIMA',292,325);
+  mg.strokeStyle='rgba(247,220,164,.90)';mg.lineWidth=1.6;mg.strokeRect(2,2,w-4,h-4);mg.strokeStyle='rgba(83,54,34,.98)';mg.lineWidth=.8;mg.strokeRect(6,6,w-12,h-12);
+  [[10,10,1,1],[w-10,10,-1,1],[10,h-10,1,-1],[w-10,h-10,-1,-1]].forEach(([x,y,sx,sy])=>{mg.strokeStyle='#e3c17d';mg.lineWidth=1.3;mg.beginPath();mg.moveTo(x,y+sy*7);mg.lineTo(x,y);mg.lineTo(x+sx*7,y);mg.stroke();});
  }
  // Enemy AI and render loop.
  let elapsed=0,walkPhase=0,areaLast='',contextRefresh=0,hudRefresh=0,treeAnimAccumulator=0,ambientUpdateAccumulator=0,ambientVfxAccumulator=0;
@@ -6510,13 +6555,13 @@ function updateHUD(){
  }
  // Cargar exclusivamente el caballero acorazado independiente en los puestos guerreros; el modelo provisional
  // solo permanece visible si el GLB falla y nunca se sustituye por un caballero medieval.
- const deferNpcHumanModelsOnIOS=!!isIOSDevice;
- let enemyHumanModelsStarted=!deferNpcHumanModelsOnIOS;
- let enemyHumanLoadTask=deferNpcHumanModelsOnIOS?Promise.resolve(0):loadEnemyHumanCharacters();
+ const deferNpcHumanModelsOnTouch=!!isTouchDevice;
+ let enemyHumanModelsStarted=!deferNpcHumanModelsOnTouch;
+ let enemyHumanLoadTask=deferNpcHumanModelsOnTouch?Promise.resolve(0):loadEnemyHumanCharacters();
  function startNpcHumanModels(){
   if(enemyHumanModelsStarted)return enemyHumanLoadTask;
   enemyHumanModelsStarted=true;
-  console.info('Safari iOS: mundo en juego; carga escalonada de modelos secundarios iniciada.');
+  console.info('Móvil: mundo en juego; empieza la carga diferida de modelos secundarios existentes.');
   enemyHumanLoadTask=loadEnemyHumanCharacters();
   enemyHumanLoadTask.finally(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(20000);});
   return enemyHumanLoadTask;
@@ -6555,7 +6600,7 @@ function updateHUD(){
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator.onLine)setTimeout(retryMissingEnemyVikings,2200);});
  // Reintentos serializados: un fallo de red no deja los modelos provisionales sin otra oportunidad,
  // pero tampoco crea descargas duplicadas que consuman memoria de GPU y RAM en el móvil.
- if(!deferNpcHumanModelsOnIOS)enemyHumanLoadTask.finally(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
+ if(!deferNpcHumanModelsOnTouch)enemyHumanLoadTask.finally(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
  console.info('Norse NPC roster: separate armored-knight guards and Viking civilians',{warriorCount:humanEnemyParts.length,civilianCount:humanCivilianParts.length,homeAllies:campGuards.length,protectedHomeRadius:24});
  let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;
  let firstFrameRendered=false,startupAssetsReady=false,startScreenShown=false,frameErrorShown=false,lastFrameErrorAt=0,renderedFrames=0;
@@ -6614,7 +6659,7 @@ function updateHUD(){
   try{
    if(gameStarted){
     if(combatFreeze>0){combatFreeze=Math.max(0,combatFreeze-dt);update(0);}else update(dt);
-    mapClock+=dt;if(mapClock>.80){drawMap();mapClock=0;}
+    if(document.body.classList.contains('map-open')){mapClock+=dt;if(mapClock>.80){drawMap();mapClock=0;}}else mapClock=0;
     progressClock+=dt;if(progressClock>.55){progressClock=0;const panel=document.getElementById('progressPanel');if(panel&&panel.classList.contains('open'))updateProgressPanel();}
    }
   }catch(err){
