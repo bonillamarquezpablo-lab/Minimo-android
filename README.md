@@ -2,36 +2,45 @@
 
 Videojuego web 3D construido con Babylon.js.
 
-## Abrir y compartir el juego
+## Enlace del juego
 
-**Enlace web:**  
-https://raw.githack.com/bonillamarquezpablo-lab/Minimo-android/gh-pages/index.html
+**Dirección definitiva cuando GitHub Pages esté activado:**
 
-El enlace sirve el HTML con el tipo de contenido web correcto. En la primera visita, raw.githack puede mostrar una pantalla breve de confirmación de seguridad antes de abrir el juego; después de confirmarlo, el navegador ejecuta la página.
+https://bonillamarquezpablo-lab.github.io/Minimo-android/
 
-## Paquete web
+No usar enlaces `rawcdn.githack.com` ni `cdn.jsdelivr.net` para abrir el HTML como página: esos servicios sirven archivos del repositorio como proxy y no sustituyen un alojamiento web propio fiable.
 
-El flujo de GitHub Actions ejecuta `scripts/build_site.py` y reúne en un paquete:
+## Activación inicial de GitHub Pages (una sola vez)
+
+El paquete del videojuego ya se construye y publica automáticamente en la rama `gh-pages`. Para que GitHub lo sirva como una web real:
+
+1. Abre https://github.com/bonillamarquezpablo-lab/Minimo-android/settings/pages
+2. En **Build and deployment**, selecciona **Deploy from a branch**.
+3. En **Branch**, selecciona `gh-pages`.
+4. En la carpeta selecciona `/(root)`.
+5. Pulsa **Save**.
+
+GitHub habilitará entonces el dominio `github.io`. No hay que volver a hacer estos pasos en futuras versiones.
+
+## Paquete web autónomo
+
+Cada cambio en `main` ejecuta `.github/workflows/deploy-pages.yml` y `scripts/build_site.py`. El proceso reúne y verifica en un paquete:
 
 - Babylon.js 7.54.3 y el importador glTF.
-- Modelo del protagonista, caballeros, aldeanos y gaviota.
+- Modelos GLB del protagonista, guerreros, aldeanos y gaviota.
 - Entorno gráfico y sonidos CC0.
-- Manifiesto con URL de origen, tamaño y SHA-256 de cada recurso.
+- Manifiesto con origen, tamaño y SHA-256 de cada recurso.
 
-Los archivos se publican en la rama `gh-pages`. Los recursos del juego se cargan desde la misma ruta HTTPS, no desde Grab3D ni repositorios de audio durante la partida.
+Los recursos se sirven desde el propio sitio HTTPS. El usuario no tiene que descargar ni seleccionar los modelos por separado.
 
-## Caché
+## Primera carga y caché
 
-`sw.js` guarda el HTML, el manifiesto y los recursos en Cache Storage. La primera apertura necesita conexión y descarga el paquete completo; las siguientes pueden reutilizar la caché si el navegador no la ha eliminado.
+La primera visita necesita conexión para descargar el paquete de recursos. `sw.js` guarda la aplicación y los recursos en Cache Storage para acelerar las visitas siguientes y permitir recuperación sin conexión mientras el navegador conserve la caché.
 
 ## Navegadores
 
-Safari y Chrome son las opciones recomendadas. Instagram puede abrir el enlace dentro de su navegador integrado, pero el soporte WebGL depende de las restricciones de la aplicación anfitriona. Si no permite WebGL, usa "Abrir en Safari" o "Abrir en Chrome".
-
-## Publicación
-
-Cada cambio en `main` inicia el flujo `.github/workflows/deploy-pages.yml`: valida y descarga todos los recursos, construye `dist/` y actualiza la rama `gh-pages`. El enlace web permanece estable.
+Safari y Chrome son las opciones recomendadas. Instagram puede abrir la dirección en su navegador integrado, pero el soporte WebGL depende de las restricciones que aplique su navegador interno. Si no habilita WebGL, utiliza **Abrir en Safari** o **Abrir en Chrome**.
 
 ## Licencias
 
-Consulta [ASSET-LICENSES.md](ASSET-LICENSES.md). El manifiesto generado está en `assets/asset-manifest.json`.
+Consulta [ASSET-LICENSES.md](ASSET-LICENSES.md). El manifiesto de recursos se genera en `dist/assets/asset-manifest.json` durante cada publicación.
