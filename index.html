@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.110">
-<meta name="el-sin-nombre-repair" content="0.6.110 professional naval chart, responsive map sizing and deferred mobile secondary assets">
+<meta name="el-sin-nombre-build" content="0.6.111">
+<meta name="el-sin-nombre-repair" content="0.6.111 professional naval chart, responsive map sizing and deferred mobile secondary assets">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.110</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.111</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -711,7 +711,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.110 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.111 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
@@ -3269,8 +3269,8 @@ async function startGame(){
  }
  function worldEntityVisualDue(entity,x,z){
   if(!entity)return true;
-  const now=performance.now(),activeCamera=scene.activeCamera,focus=activeCamera&&activeCamera.position?activeCamera.position:(onShip?ship.position:player.root.position);
-  const dx=(Number(x)||0)-focus.x,dz=(Number(z)||0)-focus.z,d2=dx*dx+dz*dz;
+  const now=elapsed*1000;
+  const dx=(Number(x)||0)-worldVisualFocusX,dz=(Number(z)||0)-worldVisualFocusZ,d2=dx*dx+dz*dz;
   const tier=d2<70*70?0:(d2<150*150?1:2),previousTier=Number.isFinite(entity._worldVisualTier)?entity._worldVisualTier:-1;
   if(tier<previousTier)entity._worldVisualNextAt=0;
   entity._worldVisualTier=tier;
@@ -3280,7 +3280,7 @@ async function startGame(){
  }
  function updateManagedWorldShadowCasters(){
   if(!shadowGen||!managedWorldShadowGroups.length)return;
-  const now=performance.now(),interval=isConstrainedMobile?260:600;
+  const now=performance.now(),interval=isConstrainedMobile?750:1000;
   if(now-managedShadowCullAt<interval)return;managedShadowCullAt=now;
   const activeCamera=scene.activeCamera,focus=activeCamera&&activeCamera.position?activeCamera.position:(onShip?ship.position:player.root.position);
   const enterRadius=isConstrainedMobile?145:175,leaveRadius=isConstrainedMobile?165:195,enterSq=enterRadius*enterRadius,leaveSq=leaveRadius*leaveRadius;
@@ -3288,7 +3288,7 @@ async function startGame(){
   for(const group of managedWorldShadowGroups){
    const root=group.root;if(!root||root.isDisposed&&root.isDisposed())continue;
    let position=root.position;
-   try{if(root.computeWorldMatrix)root.computeWorldMatrix(true);if(root.getAbsolutePosition)position=root.getAbsolutePosition();}catch(_){ }
+   try{if(root.parent&&root.getAbsolutePosition)position=root.getAbsolutePosition();}catch(_){ }
    const dx=position.x-focus.x,dz=position.z-focus.z,d2=dx*dx+dz*dz;
    const wanted=group.active?d2<=leaveSq:d2<=enterSq;
    if(wanted!==group.active){
@@ -5003,7 +5003,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'3',build:'0.6.110',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'3',build:'0.6.111',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5066,7 +5066,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.110');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.111');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -5749,7 +5749,7 @@ function updateHUD(){
  let boatHp=65,boatMax=100,boatLevel=0;
  document.getElementById('upgradeBtn').addEventListener('click',openBoatModal);
  document.getElementById('closeModal').addEventListener('click',()=>modal.style.display='none');
- const SAVE_KEY='el-sin-nombre-campaign-v1';let lastSaveAt=0,saveAccumulator=0;
+ const SHARE_NEW_GAME=new URLSearchParams(location.search).get('newgame')==='1';const SAVE_KEY=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v1':'el-sin-nombre-campaign-v1';let lastSaveAt=0,saveAccumulator=0;
  let playerShelterBuilt=false,playerShelterGroup=null,playerShelterX=0,playerShelterZ=0;
  const PLAYER_SHELTER_COST={wood:6,stone:1};
  function buildPlayerShelter(restoring=false,savedPosition=null){
@@ -5974,7 +5974,7 @@ function updateHUD(){
   [[10,10,1,1],[w-10,10,-1,1],[10,h-10,1,-1],[w-10,h-10,-1,-1]].forEach(([x,y,sx,sy])=>{mg.strokeStyle='#e3c17d';mg.lineWidth=1.3;mg.beginPath();mg.moveTo(x,y+sy*7);mg.lineTo(x,y);mg.lineTo(x+sx*7,y);mg.stroke();});
  }
  // Enemy AI and render loop.
- let elapsed=0,walkPhase=0,areaLast='',contextRefresh=0,hudRefresh=0,treeAnimAccumulator=0,ambientUpdateAccumulator=0,ambientVfxAccumulator=0;
+ let elapsed=0,walkPhase=0,areaLast='',contextRefresh=0,hudRefresh=0,treeAnimAccumulator=0,ambientUpdateAccumulator=0,ambientVfxAccumulator=0,worldVisualFocusX=0,worldVisualFocusZ=0;
  let worldUpdatePhase='not started',worldUpdateCount=0,lastWorldUpdateFailure=null;
  const animationFailureLog=[];
  const gameDiagnosticEvents=[],gameDiagnosticDedup=new Map();
@@ -6144,7 +6144,7 @@ function updateHUD(){
  function update(dt){
   worldUpdateCount++;worldUpdatePhase='environment / water';
   updateManagedWorldShadowCasters();
-  elapsed+=dt;const cloudWindRate=.00042+.00014*Math.sin(elapsed*.0031);skyTexture.uOffset=(elapsed*cloudWindRate)%1;
+  elapsed+=dt;const visualFocus=scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position:(onShip?ship.position:player.root.position);worldVisualFocusX=visualFocus.x;worldVisualFocusZ=visualFocus.z;const cloudWindRate=.00042+.00014*Math.sin(elapsed*.0031);skyTexture.uOffset=(elapsed*cloudWindRate)%1;
   // El cielo se desplaza con viento variable; la capa vertical acompaña el flujo atmosférico.
   skyTexture.vOffset=Math.sin(elapsed*.00009)*.012;
   const sunArc=elapsed*.00022;sunHalo.position.x=290+Math.sin(sunArc)*48;sunDisc.position.x=sunHalo.position.x;sunHalo.position.y=235+Math.sin(sunArc*.7)*22;sunDisc.position.y=sunHalo.position.y;
