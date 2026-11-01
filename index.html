@@ -1752,12 +1752,12 @@ async function startGame(){
   material.diffuseColor=new B.Color3(.82,.88,.85);material.emissiveColor=new B.Color3(.055,.075,.068);
   material.specularColor=new B.Color3(.015,.018,.016);material.useVertexColors=true;material.useVertexAlpha=true;
   material.backFaceCulling=false;material.alpha=.72;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;mesh.material=material;
-  mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;
+  mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.hasVertexAlpha=true;
   tidalFoamMeshes.push({mesh,base:new Float32Array(positions),positions:new Float32Array(positions)});
  }
  land.forEach(buildTidalFoam);
- const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.985;return dx*dx+dz*dz<r*r;});
- function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.985;if(dx*dx+dz*dz<r*r)return i;}return -1;}
+ const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
+ function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.975;if(dx*dx+dz*dz<r*r)return i;}return -1;}
  // Trails on the main island.
  function createTrail(points,width=1.7){
   const positions=[],indices=[],uvs=[];
@@ -4349,8 +4349,8 @@ async function startGame(){
    sphere('PierLanternGlow_'+index+'_'+side,pier,[5.9,2.61,side*.88],[.17,.20,.17],M.ember,8);
   }
   mergeStaticDecorByMaterial(pier,'NorsePierStatic');
-  pier.position=v(startX,Math.max(.10,terrainSurfaceAt(startX,startZ)+.10),startZ);pier.rotation.y=angle;
-  registerWorldCollider({type:'rect',x:startX+dx*1.5,z:startZ+dz*1.5,hx:8.0,hz:1.45,cameraBlocker:true});
+  pier.position=v(startX,Math.max(.10,terrainSurfaceAt(startX,startZ)+.10),startZ);pier.rotation.y=-angle;
+  registerWorldCollider({type:'rect',x:startX+dx*1.5,z:startZ+dz*1.5,hx:Math.abs(dx)*8.0+Math.abs(dz)*1.45,hz:Math.abs(dz)*8.0+Math.abs(dx)*1.45,cameraBlocker:true});
   addModelShadow(pier,4);
   try{pier.freezeWorldMatrix();pier.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){}
   return pier;
