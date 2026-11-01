@@ -15,7 +15,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.116 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.117 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -322,6 +322,8 @@ def main() -> None:
         "assets/models/man-base-character-rigged.glb",
         "const OGA_FOLEY_BASE='./assets/audio/cc0-game-sfx/';",
         "navigator.serviceWorker.register",
+        'name="el-sin-nombre-guest-entry" content="true"',
+        'href="./guest-manifest.webmanifest"',
     ]
     for item in required:
         if item not in html:
@@ -335,8 +337,13 @@ def main() -> None:
     guest_dir = DIST / "guest"
     guest_dir.mkdir(parents=True, exist_ok=True)
     guest_html = html.replace("<head>", '<head>\n<base href="../">\n<meta name="el-sin-nombre-guest-entry" content="true">', 1)
+    guest_html = guest_html.replace(
+        '<link rel="manifest" href="./manifest.webmanifest">',
+        '<link rel="manifest" href="./guest-manifest.webmanifest">',
+        1,
+    )
     (guest_dir / "index.html").write_text(guest_html, encoding="utf-8")
-    for name in ("sw.js", "manifest.webmanifest", "icon.svg", "ASSET-LICENSES.md"):
+    for name in ("sw.js", "manifest.webmanifest", "guest-manifest.webmanifest", "icon.svg", "ASSET-LICENSES.md"):
         source = ROOT / name
         if not source.exists():
             raise SystemExit(f"Falta el archivo de despliegue: {name}")
