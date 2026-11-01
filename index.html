@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.73">
-<meta name="el-sin-nombre-repair" content="0.6.73 planted idle legs, natural weapon grip, corrected pitched thatch roof, detailed weathered cabin materials">
+<meta name="el-sin-nombre-build" content="0.6.74">
+<meta name="el-sin-nombre-repair" content="0.6.74 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.73</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.74</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -472,9 +472,9 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 }
 
 
-/* 0.6.72 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
+/* 0.6.74 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
 #modelStatus{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;max-width:100%;max-height:25vh;overflow:auto;pointer-events:auto}
-/* 0.6.72 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
+/* 0.6.74 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
 #loading{overflow:hidden;align-items:stretch;justify-content:stretch;padding:0;background:linear-gradient(180deg,rgba(3,12,16,.24) 0%,rgba(3,12,16,.10) 38%,rgba(3,10,12,.88) 100%);backdrop-filter:none;text-align:left}
 #loading:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 38%,transparent 0 22%,rgba(3,9,12,.18) 58%,rgba(2,7,9,.78) 100%),linear-gradient(90deg,rgba(3,11,14,.42),transparent 35%,transparent 65%,rgba(3,11,14,.42));}
 #loading:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:linear-gradient(0deg,rgba(3,9,11,.94),rgba(3,9,11,0));}
@@ -519,7 +519,7 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 @media(prefers-reduced-motion:reduce){#loading .loadPulse{animation:none}}
 
 
-/* 0.6.72 — presentación cinematográfica limpia y estados de arranque inequívocos. */
+/* 0.6.74 — presentación cinematográfica limpia y estados de arranque inequívocos. */
 body.booting #hud, body.boot-failed #hud {
  visibility:hidden!important; opacity:0!important; pointer-events:none!important;
 }
@@ -559,6 +559,10 @@ body.intro-open #intro { display:flex!important; }
 #loading .loadTrack {height:4px; margin:12px 0 0; border-radius:8px; background:rgba(3,12,14,.88); overflow:hidden; box-shadow:0 1px 7px #0008;}
 #loading .loadTrack i {background:linear-gradient(90deg,#986b3d,#f0cd8c); box-shadow:0 0 12px #e0bd7880;}
 #loading #retryEngine {display:block; width:min(320px,100%); min-height:50px; margin:18px 0 0; border:1px solid #e5c184; border-radius:9px; background:linear-gradient(180deg,#b27b43,#85572f); color:#fff7e9; font:900 12px system-ui,sans-serif; letter-spacing:1px;}
+#loading {pointer-events:auto!important; z-index:60!important;}
+#loading .loadBottom,#loading #retryEngine,#loading #loadHelp {pointer-events:auto!important;}
+#loading #retryEngine {touch-action:manipulation; cursor:pointer; position:relative; z-index:70; user-select:none; -webkit-tap-highlight-color:rgba(229,193,132,.25);}
+#loading #retryEngine:disabled {opacity:.72;}
 #loading #loadHelp {display:block; max-width:620px; margin:12px 0 0; padding:0; color:#e4dfd3; font:600 12px/1.45 system-ui,sans-serif; overflow-wrap:anywhere;}
 body.boot-failed #loading {align-items:center; justify-content:center; background:rgba(2,8,10,.92);}
 body.boot-failed #loading .loadHero {display:none;}
@@ -575,7 +579,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 }
 
 </style>
-<!-- EL SIN NOMBRE 0.6.72: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.74: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -591,7 +595,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 </script>
 <meta name="el-sin-nombre-repair-0669" content="forward-facing resting arms and weapon grip, remove rigid civilian robe/cape shell, vivid terrain palette and stronger natural lighting">
 <style>
-/* 0.6.72: civilian GLBs install automatically; no manual installer is shown. */
+/* 0.6.74: civilian GLBs install automatically; no manual installer is shown. */
 #introCivilianInstallCard,#villagerModelBtn{display:none!important}
 </style>
 </head>
@@ -947,14 +951,32 @@ function showBootError(message){
  loadText.textContent='No se ha podido preparar el mundo.';
  const embedded=/Instagram|FBAN|FBAV|FBIOS|FB_IAB/i.test(navigator.userAgent);
  const userMessage=embedded
-  ? 'Instagram no puede abrir este archivo de juego correctamente. Usa “Abrir en Chrome” o comparte el archivo con Chrome/Safari.'
+  ? 'El navegador integrado ha bloqueado una función del juego. Abre el enlace en Chrome.'
   : (!navigator.onLine
-    ? 'La primera apertura necesita conexión para descargar el motor 3D y los recursos que aún no están guardados.'
-    : 'No se ha podido descargar o preparar el motor 3D. Comprueba la conexión y pulsa REINTENTAR.');
- loadHelp.textContent=userMessage;
- loadHelp.style.display='block';retryButton.textContent='REINTENTAR';retryButton.style.display='block';
+    ? 'La primera apertura necesita conexión para descargar el motor 3D y los recursos pendientes.'
+    : 'El arranque se ha detenido. Pulsa REINTENTAR para volver a cargar la partida guardada.');
+ const detail=raw.replace(/\\s+/g,' ').slice(0,360);
+ loadHelp.textContent=userMessage+' Detalle técnico: '+detail;
+ loadHelp.style.display='block';
+ retryButton.disabled=false;retryButton.style.pointerEvents='auto';retryButton.style.touchAction='manipulation';
+ retryButton.style.position='relative';retryButton.style.zIndex='70';
+ retryButton.textContent='REINTENTAR';retryButton.style.display='block';
 }
-retryButton.addEventListener('click',()=>{if(contextLostRequiresReload){location.reload();return;}bootEngine();});
+let retryReloadInProgress=false;
+function retryGameStartup(event){
+ if(event){event.preventDefault();event.stopPropagation();}
+ if(retryReloadInProgress)return;
+ retryReloadInProgress=true;retryButton.disabled=true;retryButton.textContent='REINICIANDO…';
+ try{
+  const registration=navigator.serviceWorker&&navigator.serviceWorker.getRegistration
+   ?navigator.serviceWorker.getRegistration().then(reg=>reg&&navigator.onLine?reg.update().catch(()=>{}):null)
+   :Promise.resolve();
+  Promise.race([registration,new Promise(resolve=>setTimeout(resolve,1800))]).finally(()=>window.location.reload());
+ }catch(_){window.location.reload();}
+}
+retryButton.addEventListener('click',retryGameStartup);
+retryButton.addEventListener('pointerup',retryGameStartup);
+retryButton.addEventListener('touchend',retryGameStartup,{passive:false});
 window.addEventListener('online',()=>{
  if(engineLoaded&&typeof window.__retryVikingModel==='function')window.__retryVikingModel();
  else if(document.body.classList.contains('boot-failed')){
@@ -994,7 +1016,7 @@ async function startGame(){
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
- console.info('EL SIN NOMBRE 0.6.72 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
+ console.info('EL SIN NOMBRE 0.6.74 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
  let fpsSample=0,fpsBadTime=0,shadowUpgradeTime=0;
  function changeShadowQuality(nextSize){
   // Conservado como interfaz interna; no baja la resolución de sombras automáticamente.
@@ -3431,55 +3453,100 @@ async function startGame(){
   return c;
  }
  function buildHouse(cx,cz,scale=1){
+  // Cabaña nórdica humilde: huella menor, troncos desiguales, tejado vencido y reparaciones visibles.
   const g=newGroup('WeatheredNorseHut',null);g.position=v(cx,terrainSurfaceAt(cx,cz)+.035,cz);g.scaling=v(scale,scale,scale);
-  const wallTones=[M.hutWoodAmber,M.wood,M.hutWoodWeathered,M.woodLight,M.hutWoodDeep],roofTones=[M.hutThatchGold,M.thatch,M.hutThatchShade,M.thatch];
-  box('HutTimberCore',g,[0,.83,0],[3.48,1.48,4.72],M.woodDark);box('HutStoneFoundation',g,[0,.13,0],[4.02,.24,5.28],M.hutStone);box('HutUnevenStoneThreshold',g,[0,.15,2.86],[1.18,.18,.48],M.stoneLight);
+  box('HutTimberCore',g,[0,.83,0],[3.48,1.48,4.72],M.woodDark);
+  box('HutDarkStoneFooting',g,[0,.13,0],[4.02,.22,5.28],M.woodDark);
+  box('HutUnevenStoneThreshold',g,[0,.13,2.86],[1.18,.18,.48],M.stone,[0,0,.015]);
+  // Troncos de pared con alturas y tonos alternos; las juntas no quedan perfectamente regulares.
   for(let side of [-1,1]){
-   for(let row=0;row<5;row++){const y=.27+row*.285+(row%2?-.025:.015),tone=wallTones[(row+(side>0?2:0))%wallTones.length];cyl('HutSideLog_'+side+'_'+row,g,[side*1.88,y,0],5.08,.105,.12,tone,[Math.PI/2,0,side*.012]);}
-   cyl('HutSideTopBeam_'+side,g,[side*1.89,1.62,0],5.18,.12,.14,M.hutWoodDeep,[Math.PI/2,0,side*.01]);
-   for(let z of [-2.43,2.43])cyl('HutCornerPost_'+side+'_'+z,g,[side*1.86,1.02,z],2.04,.145,.15,M.hutWoodDeep,[0,0,side*.025]);
-   for(let row of [1,3])sphere('HutLogKnot_'+side+'_'+row,g,[side*1.995,.27+row*.285,-1.10+row*.72],[.035,.055,.105],M.hutWoodDeep,8);
+   for(let row=0;row<5;row++){
+    const y=.27+row*.285+(row%2?-.025:.015);
+    cyl('HutSideLog_'+side+'_'+row,g,[side*1.88,y,0],5.08,.105,.12,row%3===0?M.woodLight:M.wood,[Math.PI/2,0,side*.012]);
+   }
+   for(let z of [-2.43,2.43])cyl('HutCornerPost_'+side+'_'+z,g,[side*1.86,1.02,z],2.04,.145,.15,M.woodDark,[0,0,side*.025]);
   }
   for(let end of [-1,1]){
-   for(let row=0;row<4;row++){const y=.29+row*.29;cyl('HutEndLog_'+end+'_'+row,g,[0,y,end*2.46],3.78,.105,.115,wallTones[(row+(end>0?1:3))%wallTones.length],[0,0,Math.PI/2]);}
-   const faceZ=end*2.505,backZ=end*2.345,gable=new B.Mesh('HutTimberGable_'+end,scene),vd=new B.VertexData();
-   vd.positions=[-1.86,1.48,faceZ,1.86,1.48,faceZ,0,2.88,faceZ,-1.86,1.48,backZ,1.86,1.48,backZ,0,2.88,backZ];
-   vd.indices=[0,1,2,5,4,3,0,3,4,0,4,1,1,4,5,1,5,2,2,5,3,2,3,0];vd.uvs=[0,0,1,0,.5,1,0,0,1,0,.5,1];
-   B.VertexData.ComputeNormals(vd.positions,vd.indices,vd.normals);vd.applyToMesh(gable);gable.parent=g;gable.material=M.hutWoodAmber;gable.isPickable=false;gable.receiveShadows=true;
-   for(let plank=-1;plank<=1;plank++){const x=plank*.78,top=2.88-Math.abs(x)*.75,height=top-1.53;box('HutGablePlank_'+end+'_'+plank,g,[x,1.53+height*.5,faceZ+end*.012],[.105,height,.055],plank===0?M.hutWoodWeathered:M.woodLight,[0,0,plank*.018]);}
+   for(let row=0;row<4;row++){
+    const y=.29+row*.29;
+    cyl('HutEndLog_'+end+'_'+row,g,[0,y,end*2.46],3.78,.105,.115,row%2?M.woodLight:M.wood,[0,0,Math.PI/2]);
+   }
   }
-  const roofAngle=.59;
-  box('HutThatchRoofLeft',g,[-.94,2.18,0],[2.82,.31,5.55],M.thatch,[0,0,roofAngle]);
-  box('HutThatchRoofRight',g,[.94,2.18,0],[2.82,.31,5.55],M.hutThatchGold,[0,0,-roofAngle]);
-  box('HutRidgeBeam',g,[0,2.96,0],[.22,.20,5.72],M.hutWoodDeep,[.015,0,.018]);cyl('HutRidgeThatchRoll',g,[0,2.96,0],5.72,.16,.16,M.hutThatchShade,[Math.PI/2,0,0]);
+  // Tejado de paja irregular con faldones desiguales y vigas envejecidas a la vista.
+  box('HutThatchRoofLeft',g,[-.94,2.18,0],[2.82,.31,5.55],M.thatch,[0,0,.59]);
+  box('HutThatchRoofRight',g,[.94,2.12,0],[2.82,.31,5.55],M.thatch,[0,0,-.59]);
+  box('HutRidgeBeam',g,[0,2.96,0],[.20,.22,5.70],M.woodDark,[.015,0,.018]);
+  for(const end of [-1,1])for(const side of [-1,1])cyl('HutGableBrace_'+end+'_'+side,g,[side*.92,2.25,end*2.47],2.34,.105,.12,M.woodDark,[0,0,-side*.89]);
+  // Hastiales de troncos escalonados: detalle sin geometría personalizada ni fusiones arriesgadas.
+  for(const end of [-1,1]){
+   for(let row=0;row<4;row++){
+    const width=2.75-row*.56,y=1.43+row*.25;
+    cyl('HutGableLog_'+end+'_'+row,g,[0,y,end*2.49],width,.105,.11,row%2?M.woodLight:M.woodDark,[0,0,Math.PI/2]);
+   }
+   for(let side of [-1,1])cyl('HutGableEdge_'+end+'_'+side,g,[side*.91,2.12,end*2.51],1.55,.075,.085,M.woodDark,[0,0,-side*.59]);
+  }
   for(let side of [-1,1]){
-   const slopeAngle=side<0?roofAngle:-roofAngle;
-   for(let k=0;k<5;k++){const absX=.38+k*.43,x=side*absX,y=2.18+.67*(1-absX)+.18;box('HutThatchCourse_'+side+'_'+k,g,[x,y,0],[.16,.055,5.18],roofTones[(k+(side>0?1:0))%roofTones.length],[0,0,slopeAngle]);}
-   cyl('HutEaveBeam_'+side,g,[side*2.22,1.48,0],5.58,.095,.11,M.hutWoodDeep,[Math.PI/2,0,0]);
-   for(let z of [-2.70,2.70])box('HutUnevenEave_'+side+'_'+z,g,[side*2.22,1.48,z],[.16,.20,.18],M.hutWoodWeathered,[0,0,side*.08]);
-   for(let k=0;k<3;k++){const x=side*(.62+k*.66),y=2.18+.67*(1-Math.abs(x))+.20;sphere('HutStrawTuft_'+side+'_'+k,g,[x,y,[-2.18,0,2.18][k]],[.15,.07,.28],roofTones[(k+1)%roofTones.length],8);}
+   for(let k=0;k<3;k++){
+    const x=side*(.43+k*.55),y=2.78-k*.17;
+    cyl('HutExposedRafter_'+side+'_'+k,g,[x,y,0],5.58,.052,.062,M.woodLight,[Math.PI/2,0,side*.045]);
+   }
+   for(let z of [-2.70,2.70])box('HutUnevenEave_'+side+'_'+z,g,[side*1.63,2.18,z],[.12,.18,.16],M.woodDark,[0,0,side*.08]);
   }
-  box('HutRoofThatchRepair',g,[-.82,2.49,-1.05],[.56,.075,.84],M.hutThatchShade,[0,0,roofAngle]);
-  for(let i=0;i<4;i++){const x=(i%2?1:-1)*(1.05+(i%3)*.32),z=i<2?-2.12:2.08;sphere('HutRoofMoss_'+i,g,[x,2.18+.67*(1-Math.abs(x))+.21,z],[.17,.045,.26],M.hutMoss,8);}
-  box('HutDoorLeaf',g,[0,.72,2.54],[.88,1.40,.12],M.hutWoodDeep,[0,0,-.025]);
-  for(let i=-1;i<=1;i++)box('HutDoorPlank_'+i,g,[i*.155,.72,2.605],[.13,1.26,.035],i%2?M.hutWoodWeathered:M.hutWoodAmber,[0,0,i*.012]);
-  for(let side of [-1,1])box('HutDoorJamb_'+side,g,[side*.53,.76,2.61],[.12,1.62,.17],M.hutWoodDeep,[0,0,side*.025]);
-  box('HutDoorLintel',g,[0,1.48,2.61],[1.23,.14,.18],M.hutWoodAmber,[0,0,-.025]);
-  for(let y of [.36,1.08])for(let side of [-1,1])box('HutDoorIronHinge_'+side+'_'+y,g,[side*.32,y,2.69],[.23,.055,.025],M.hutIron,[0,0,side*.05]);
-  for(let y of [.30,1.30])for(let x of [-.32,.32])sphere('HutDoorRivet_'+x+'_'+y,g,[x,y,2.72],[.025,.025,.018],M.brass,8);
+  // Capas de paja visibles y mechones desiguales; geometría sencilla para GPU móvil.
+  for(let side of [-1,1]){
+   const roofAngle=side<0 ? .59 : -.59;
+   for(let course=0;course<4;course++){
+    const x=side*(.48+course*.38),y=2.18+.59*(1-Math.abs(x))+.12;
+    box('HutThatchLayer_'+side+'_'+course,g,[x,y,0],[.18,.075,5.22],course%2?M.thatch:M.woodLight,[0,0,roofAngle]);
+   }
+   for(let z of [-2.20,0,2.20])sphere('HutThatchTuft_'+side+'_'+z,g,[side*1.26,1.95,z],[.14,.075,.34],M.thatch,8);
+  }
+  // Un pequeño remiendo oscuro deja ver que parte de la cubierta se ha perdido.
+  box('HutRoofThatchRepair',g,[-.82,2.31,-1.05],[.56,.075,.84],M.darkGrass,[0,0,-.59]);
+  // Puerta vieja, algo caída, con tablones desparejados y herrajes sencillos.
+  box('HutDoorLeaf',g,[0,.72,2.54],[.88,1.40,.12],M.woodDark,[0,0,-.025]);
+  for(let i=-1;i<=1;i++)box('HutDoorPlank_'+i,g,[i*.155,.72,2.605],[.13,1.26,.035],i%2?M.wood:M.woodLight,[0,0,i*.012]);
+  for(let side of [-1,1])box('HutDoorJamb_'+side,g,[side*.53,.76,2.61],[.12,1.62,.17],M.woodDark,[0,0,side*.025]);
+  box('HutDoorLintel',g,[0,1.48,2.61],[1.23,.14,.18],M.woodLight,[0,0,-.025]);
   sphere('HutDoorHandle',g,[.28,.73,2.68],[.055,.065,.035],M.darkMetal,8);
-  for(let side of [-1,1]){box('HutWindowFrame_'+side,g,[side*1.94,1.28,-1.22],[.055,.48,.56],M.hutWoodDeep);box('HutWindowGlow_'+side,g,[side*1.975,1.28,-1.22],[.028,.29,.35],M.windowGlow);box('HutWindowCross_'+side,g,[side*2.0,1.28,-1.22],[.045,.045,.48],M.hutWoodAmber);}
-  box('HutBrokenShutter',g,[2.01,1.28,-1.22],[.055,.42,.49],M.hutWoodWeathered,[0,0,.14]);
-  for(let i=0;i<7;i++){const a=i*Math.PI*2/7;sphere('HutChimneyStone_'+i,g,[-1.24+Math.cos(a)*.19,2.68+Math.sin(a)*.08,-1.98],[.24,.20,.23],i%2?M.hutStone:M.stone,8);}
-  box('HutChimneyMouth',g,[-1.24,2.83,-1.98],[.29,.09,.29],M.hutWoodDeep);
+  // Herrajes de hierro y clavos envejecidos en los tablones.
+  for(let y of [.34,1.04])for(let side of [-1,1]){
+   box('HutDoorHinge_'+side+'_'+y,g,[side*.32,y,2.685],[.22,.045,.025],M.darkMetal,[0,0,side*.035]);
+   sphere('HutDoorNail_'+side+'_'+y,g,[side*.32,y,2.705],[.025,.025,.018],M.gold,8);
+  }
+  // Solo una ventana pequeña por costado; una se tapa con una contraventana vieja.
+  for(let side of [-1,1]){
+   box('HutWindowFrame_'+side,g,[side*1.94,1.28,-1.22],[.055,.48,.56],M.woodDark);
+   box('HutWindowGlow_'+side,g,[side*1.975,1.28,-1.22],[.028,.29,.35],M.windowGlow);
+   box('HutWindowCross_'+side,g,[side*2.0,1.28,-1.22],[.045,.045,.48],M.woodLight);
+  }
+  box('HutBrokenShutter',g,[2.01,1.28,-1.22],[.055,.42,.49],M.wood,[0,0,.14]);
+  // Chimenea baja de piedra, no una torre limpia de ladrillos.
+  for(let i=0;i<5;i++){
+   const a=i*Math.PI*2/5;
+   sphere('HutChimneyStone_'+i,g,[-1.24+Math.cos(a)*.19,2.68+Math.sin(a)*.08,-1.98],[.24,.20,.23],M.stone,8);
+  }
+  box('HutChimneyMouth',g,[-1.24,2.83,-1.98],[.29,.09,.29],M.woodDark);
   if(scale>.78)smokeEmitters.push({x:cx-1.24*scale,y:g.position.y+2.92*scale,z:cz-1.98*scale,phase:rand(0,8)});
-  for(let i=0;i<2;i++){const side=i===0?-1:1,zp=rand(-2.05,2.05),yp=rand(.50,1.45);box('HutWeatheredRepairBoard_'+i,g,[side*1.93,yp,zp],[.055,rand(.38,.64),rand(.28,.54)],i?M.woodLight:M.hutWoodDeep,[0,0,rand(-.10,.10)]);}
-  for(let i=0;i<4;i++){const side=i%2?1:-1,z=i<2?-2.15:2.12;sphere('HutFoundationMoss_'+i,g,[side*1.94,.22,z],[.17,.07,.28],M.hutMoss,8);}
-  box('HutCollapsedYardTimber',g,[rand(-2.8,2.8),.10,rand(-3.0,3.0)],[.92,.10,.14],M.hutWoodDeep,[0,rand(0,Math.PI),rand(-.12,.12)]);
-  for(let i=0;i<3;i++){const a=i*Math.PI*2/3;sphere('HutYardRubble_'+i,g,[Math.cos(a)*2.0,.13,Math.sin(a)*2.72],[.22,.13,.25],i%2?M.stone:M.hutStone,8);}
-  try{mergeStaticDecorByMaterial(g,'NorseHutDetail');}catch(err){console.warn('No se pudo agrupar el detalle de la cabaña:',err);}
-  registerWorldCollider({type:'rect',x:cx,z:cz,hx:2.16*scale,hz:2.78*scale,cameraBlocker:true});addModelShadow(g);
-  try{g.freezeWorldMatrix();g.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){}
+  // Dos tablones de reparación, un travesaño vencido y restos: detalle medido para no sumar cientos de draw calls.
+  for(let i=0;i<2;i++){
+   const side=i===0?-1:1,zp=rand(-2.05,2.05),yp=rand(.50,1.45);
+   box('HutWeatheredRepairBoard_'+i,g,[side*1.93,yp,zp],[.055,rand(.38,.64),rand(.28,.54)],i?M.woodLight:M.woodDark,[0,0,rand(-.10,.10)]);
+  }
+  for(let i=0;i<2;i++){
+   const side=i===0?-1:1,zp=rand(-2.45,2.45);
+   sphere('HutUnevenThatchTuft_'+i,g,[side*rand(.55,1.32),2.34+rand(-.07,.07),zp],[.25,.09,.48],i?M.thatch:M.darkGrass,8);
+  }
+  box('HutCollapsedYardTimber',g,[rand(-2.8,2.8),.10,rand(-3.0,3.0)],[.92,.10,.14],M.woodDark,[0,rand(0,Math.PI),rand(-.12,.12)]);
+  for(let i=0;i<3;i++){
+   const a=i*Math.PI*2/3;
+   sphere('HutYardRubble_'+i,g,[Math.cos(a)*2.0,.13,Math.sin(a)*2.72],[.22,.13,.25],M.stone,8);
+  }
+  // Huella sólida de la cabaña: el antiguo sistema solo bloqueaba cuatro paredes parciales
+  // y dejaba un hueco de puerta por el que los NPC podían atravesar toda la estructura.
+  registerWorldCollider({type:'rect',x:cx,z:cz,hx:2.16*scale,hz:2.78*scale,cameraBlocker:true});
+  addModelShadow(g);
+  try{g.freezeWorldMatrix();g.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){ }
   return g;
  }
  function makeVillage(index,x,z,name){
@@ -3988,7 +4055,7 @@ async function startGame(){
  if(introStartButton)introStartButton.addEventListener('click',beginSaga);
  window.NorseAudio=NorseAudio;
  window.getPlayerTerritoryDebug=()=>{const p=playerPos();return {position:{x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2))},protected:isPlayerTerritoryAt(p.x,p.z),homeDistance:Number(Math.hypot(p.x-STARTER_CAMP_POSITION.x,p.z-STARTER_CAMP_POSITION.z).toFixed(2)),friendlyGuards:enemies.filter(isFriendlyGuard).length,hostileGuards:enemies.filter(e=>canAttackPlayer(e,p.x,p.z)).length};};
- window.getGameHealthDebug=()=>({build:'0.6.72',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
+ window.getGameHealthDebug=()=>({build:'0.6.74',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
  let chapterStage=0;
  const chapterMilestones=[
   'Reúne 12 de madera y 3 de piedra para preparar el refugio.',
@@ -5315,7 +5382,7 @@ async function startGame(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.72: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.74: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -5337,10 +5404,21 @@ async function startGame(){
 window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passive:true});
  if(window.visualViewport)window.visualViewport.addEventListener('resize',resizeGameViewport,{passive:true});
  updateHUD();drawMap();
- console.info('EL SIN NOMBRE 0.6.72 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.74 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'Descargando e instalando personajes 3D…');
- const resourceResults=await Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
+ const allCharacterLoads=Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
+ let resourceResults=[],characterLoadsComplete=false,characterWaitTimer=null;
+ const characterWait=await Promise.race([
+  allCharacterLoads.then(results=>({complete:true,results})),
+  new Promise(resolve=>{characterWaitTimer=setTimeout(()=>resolve({complete:false,results:[]}),10000);})
+ ]);
+ if(characterWaitTimer)clearTimeout(characterWaitTimer);
+ resourceResults=characterWait.results;characterLoadsComplete=characterWait.complete;
+ if(!characterLoadsComplete){
+  console.info('EL SIN NOMBRE: entrada prioritaria; los GLB secundarios continúan cargando detrás de la pantalla de inicio.');
+  allCharacterLoads.then(results=>console.info('Recursos de personajes terminados en segundo plano:',results.map(x=>x.status)));
+ }
  startupAudioPreload.then(audioResult=>console.info('Audio preparado en segundo plano:',audioResult)).catch(audioError=>console.info('El audio continuará cargando al entrar:',audioError));
  // Esperar a que Babylon termine la preparación de texturas/materiales y compile lo pendiente.
  // El límite evita que una textura remota lenta bloquee indefinidamente la entrada al juego.
@@ -5353,8 +5431,8 @@ window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passiv
   }
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
- const engineStored=!!(await readRuntimeScript('https://cdnjs.cloudflare.com/ajax/libs/babylonjs/7.54.3/babylon.js').catch(()=>null))||!!(await readRuntimeScript('https://cdn.babylonjs.com/v7.54.3/babylon.js').catch(()=>null))||!!(await readRuntimeScript('https://cdn.jsdelivr.net/npm/babylonjs@7.54.3/babylon.js').catch(()=>null))||!!(await readRuntimeScript('https://unpkg.com/babylonjs@7.54.3/babylon.js').catch(()=>null));
- console.info('EL SIN NOMBRE 0.6.72 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
+ console.info('EL SIN NOMBRE 0.6.74 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
