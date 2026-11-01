@@ -150,7 +150,7 @@ def main() -> None:
         "assets/models/viking-rigged.glb",
         "assets/models/armored-knight-rigged.glb",
         "assets/models/man-base-character-rigged.glb",
-        "assets/audio/cc0-game-sfx/oga-footsteps/",
+        "const OGA_FOLEY_BASE='./assets/audio/cc0-game-sfx/';",
         "navigator.serviceWorker.register",
     ]
     for item in required:
