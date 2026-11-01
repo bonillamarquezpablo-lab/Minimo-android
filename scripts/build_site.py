@@ -322,8 +322,6 @@ def main() -> None:
         "assets/models/man-base-character-rigged.glb",
         "const OGA_FOLEY_BASE='./assets/audio/cc0-game-sfx/';",
         "navigator.serviceWorker.register",
-        'name="el-sin-nombre-guest-entry" content="true"',
-        'href="./guest-manifest.webmanifest"',
     ]
     for item in required:
         if item not in html:
@@ -342,6 +340,10 @@ def main() -> None:
         '<link rel="manifest" href="./guest-manifest.webmanifest">',
         1,
     )
+    if 'name="el-sin-nombre-guest-entry" content="true"' not in guest_html:
+        raise SystemExit("La ruta de invitado no lleva la marca de partida independiente.")
+    if 'href="./guest-manifest.webmanifest"' not in guest_html:
+        raise SystemExit("La ruta de invitado no apunta a su manifiesto PWA independiente.")
     (guest_dir / "index.html").write_text(guest_html, encoding="utf-8")
     for name in ("sw.js", "manifest.webmanifest", "guest-manifest.webmanifest", "icon.svg", "ASSET-LICENSES.md"):
         source = ROOT / name
