@@ -1993,6 +1993,7 @@ async function startGame(){
  const sailPositions=new Float32Array(sailBasePositions),sailNormals=[];B.VertexData.ComputeNormals(sailPositions,sailIndices,sailNormals);
  const sailData=new B.VertexData();sailData.positions=sailPositions;sailData.indices=sailIndices;sailData.uvs=sailUvs;sailData.normals=sailNormals;
  let sail=new B.Mesh('stripedSail',scene);sailData.applyToMesh(sail);sail.parent=ship;sail.position=v(0,3.50,-.42);sail.material=M.canvas;sail.isPickable=false;
+ for(let i=-1;i<=1;i++)box('sailstripe'+i,ship,[i*1.0,3.50,-.38],[.16,4.15,.025],M.sailRed);
  let sailUpdateAccumulator=0;
  function updateDrakkarSail(dt){
   sailUpdateAccumulator+=dt;if(sailUpdateAccumulator<1/24)return;sailUpdateAccumulator=0;
@@ -4003,7 +4004,7 @@ async function startGame(){
    box('OutpostBedroll_'+vl.index+'_'+tent,camp,[ox,.13,oz+.85],[.72,.16,.95],M.fur,[0,0,rot]);
   }
   box('OutpostSupplyCrate_'+vl.index,camp,[-4.1,.28,1.25],[.78,.56,.72],M.woodDark);
-  campfire(cx+4.1,cz+2.0);
+  sphere('OutpostHearthGlow_'+vl.index,null,[cx+4.1,gy+.22,cz+2.0],[.24,.16,.24],M.fire,8);
  }
  villages.forEach(buildIslandOutpost);
  // Primer refugio del protagonista: lona remendada, dos postes, leña húmeda y un fuego pequeño.
