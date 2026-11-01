@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "EL SIN NOMBRE — Capítulo I: Un hombre sin tierra",
+  "short_name": "EL SIN NOMBRE",
+  "description": "Una aventura vikinga de supervivencia, exploración y conquista.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#071316",
+  "theme_color": "#0b1719",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
