@@ -1254,7 +1254,7 @@ window.addEventListener('online',()=>{
 
 const SHARE_NEW_GAME=!!document.querySelector('meta[name="el-sin-nombre-guest-entry"][content="true"]')||new URLSearchParams(location.search).get('newgame')==='1'||/(?:^|\/)(?:guest|invitado)\/?$/.test(location.pathname);
 const PREFLIGHT_SETTINGS_KEY='el-sin-nombre-client-preferences-v1';
-const PLAYER_IDENTITY_KEY='el-sin-nombre-identity-'+(SHARE_NEW_GAME?'guest-v3':'main-v1');
+const PLAYER_IDENTITY_KEY='el-sin-nombre-identity-'+(SHARE_NEW_GAME?'guest-v4':'main-v1');
 let activeGraphicsProfile='quality',selectedPlayerName='',playerIdentityChosen=false;
 function safePreferenceRead(key,fallback=''){try{const value=localStorage.getItem(key);return value===null?fallback:value;}catch(_){return fallback;}}
 function safePreferenceWrite(key,value){try{localStorage.setItem(key,String(value));return true;}catch(err){console.info('No se pudo guardar una preferencia local:',err);return false;}}
