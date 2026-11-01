@@ -640,7 +640,15 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #quickActions{top:calc(env(safe-area-inset-top,0px) + 92px)!important}
  #map{top:calc(env(safe-area-inset-top,0px) + 91px)!important}
  #notice{top:calc(env(safe-area-inset-top,0px) + 176px)!important;max-height:12dvh;width:min(70vw,520px)}
-}</style>
+}/* 0.6.97 — accesos compactos: no tapan el centro de la escena. */
+#quickActions{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;align-content:flex-start;align-items:center;width:auto!important;max-width:min(48vw,560px)!important;gap:5px!important}
+#quickActions button{flex:0 1 auto!important;width:auto!important;min-width:38px;min-height:31px;padding:5px 8px!important;font-size:9px!important;white-space:nowrap!important}
+#chapterTracker{width:min(30vw,190px)!important;max-height:38px!important;min-height:0!important;padding:5px 8px!important;gap:0!important}
+#chapterTracker .chapterKicker,#chapterDescription,#sprintQuestLine{display:none!important}
+#chapterTitle{font-size:9px!important;line-height:1.15!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#notice{max-width:min(60vw,420px);max-height:42px;overflow:hidden;font-size:10px;line-height:1.2}
+@media(max-width:520px){#quickActions{max-width:calc(100vw - 150px)!important}#quickActions button{font-size:8px!important;padding:5px 6px!important}}
+</style>
 </head>
 <body class="booting">
 <svg id="norseIconLibrary" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
@@ -1979,8 +1987,26 @@ async function startGame(){
  }
  // Stem posts and curled dragon head.
  cyl('mast',ship,[0,3.0,-.45],5.2,.16,.21,M.woodLight);
- let sail=B.MeshBuilder.CreatePlane('stripedSail',{width:4.25,height:4.15,sideOrientation:B.Mesh.DOUBLESIDE},scene);sail.parent=ship;sail.position=v(0,3.50,-.42);sail.material=M.canvas;
- for(let i=-1;i<=1;i++)box('sailstripe'+i,ship,[i*1.0,3.50,-.38],[.16,4.15,.025],M.sailRed);
+ const sailColumns=10,sailRows=7,sailIndices=[],sailUvs=[],sailBasePositions=[];
+ for(let row=0;row<=sailRows;row++)for(let col=0;col<=sailColumns;col++){const u=col/sailColumns,w=row/sailRows;sailBasePositions.push((u-.5)*4.25,(.5-w)*4.15,0);sailUvs.push(u,1-w);}
+ for(let row=0;row<sailRows;row++)for(let col=0;col<sailColumns;col++){const a=row*(sailColumns+1)+col,b=a+sailColumns+1;sailIndices.push(a,b,a+1,a+1,b,b+1);}
+ const sailPositions=new Float32Array(sailBasePositions),sailNormals=[];B.VertexData.ComputeNormals(sailPositions,sailIndices,sailNormals);
+ const sailData=new B.VertexData();sailData.positions=sailPositions;sailData.indices=sailIndices;sailData.uvs=sailUvs;sailData.normals=sailNormals;
+ let sail=new B.Mesh('stripedSail',scene);sailData.applyToMesh(sail);sail.parent=ship;sail.position=v(0,3.50,-.42);sail.material=M.canvas;sail.isPickable=false;
+ let sailUpdateAccumulator=0;
+ function updateDrakkarSail(dt){
+  sailUpdateAccumulator+=dt;if(sailUpdateAccumulator<1/24)return;sailUpdateAccumulator=0;
+  const positions=new Float32Array(sailBasePositions.length),wind=.72+.28*Math.sin(elapsed*.31);
+  for(let row=0;row<=sailRows;row++)for(let col=0;col<=sailColumns;col++){
+   const index=(row*(sailColumns+1)+col)*3,u=col/sailColumns,w=row/sailRows,bend=u*(1-u)*4;
+   positions[index]=sailBasePositions[index]+bend*.035*Math.sin(elapsed*1.8-w*2.1);
+   positions[index+1]=sailBasePositions[index+1]+bend*.045*Math.sin(elapsed*1.25-u*3.2);
+   positions[index+2]=bend*(.08+.20*wind)*Math.sin(elapsed*2.25-u*4.4+w*1.7);
+  }
+  const normals=[];B.VertexData.ComputeNormals(positions,sailIndices,normals);
+  sail.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);
+  sail.updateVerticesData(B.VertexBuffer.NormalKind,normals,false,false);
+ }
  cyl('ClanPennantPole',ship,[0,5.92,-.43],1.05,.045,.045,M.woodLight);
  const wornPennantTexture=new B.DynamicTexture('WeatheredDrakkarPennantTexture',{width:256,height:256},scene,false),wornPennantCtx=wornPennantTexture.getContext();
  wornPennantCtx.drawImage(clanBannerTexture.getContext().canvas,0,0,256,256);
@@ -4734,8 +4760,29 @@ function updateHUD(){
    if(e.healthMesh){e.healthMesh.scaling.x=Math.max(.001,e.hp/100);e.healthMesh.position.x=-(1-e.hp/100)*.55;}
    hits++;combatFreeze=Math.max(combatFreeze,.038);if(e.hp<=0){if(Number.isInteger(e.villageIndex))surrenderGuard(e);else defeatGuard(e,'jugador');}
   }
-  if(hits){NorseAudio.play('metalHit');msg(hits+' impacto(s).');}
-  else msg('Acércate un poco y orienta el golpe hacia los enemigos.');
+  // El ataque del jugador da la orden de apoyo a los guerreros cercanos.
+  if(hits){
+   const allies=[...companions.filter(a=>a.recruited),...campGuards.filter(g=>g.alive)];
+   for(const ally of allies){
+    const parts=ally.parts;if(!parts||!parts.root||!parts.root.isEnabled())continue;
+    let target=null,targetDistance=8.5;
+    for(const foe of enemies){
+     if(!foe.alive||isFriendlyGuard(foe))continue;
+     const d=Math.hypot(foe.parts.root.position.x-parts.root.position.x,foe.parts.root.position.z-parts.root.position.z);
+     if(d<targetDistance){targetDistance=d;target=foe;}
+    }
+    if(!target||(ally.assistCooldown||0)>elapsed)continue;
+    ally.assistCooldown=elapsed+.85;ally.attackAnim=.42;
+    const from=parts.root.position,to=target.parts.root.position,dir=v(to.x-from.x,0,to.z-from.z).normalize();
+    parts.root.rotation.y=Math.atan2(dir.x,dir.z);
+    target.hp-=14;target.stun=Math.max(target.stun||0,.24);target.hitReact=.24;
+    target.hitDir=dir.scale(-1);target.knockback=Math.max(target.knockback||0,1.1);
+    burst(to.add(v(0,1.2,0)),M.gold,4);
+    if(target.healthMesh){target.healthMesh.scaling.x=Math.max(.001,target.hp/100);target.healthMesh.position.x=-(1-target.hp/100)*.55;}
+    if(target.hp<=0){if(Number.isInteger(target.villageIndex))surrenderGuard(target);else defeatGuard(target,'clan');}
+   }
+   NorseAudio.play('metalHit');msg(hits+' impacto(s). ¡Tu clan ataca!');
+  }else msg('Acércate un poco y orienta el golpe hacia los enemigos.');
  }
  function easeOut(t){return 1-Math.pow(1-t,3);}
  function animateVikingCore(parts,phase,walking,action,blockingNow){
@@ -5583,7 +5630,7 @@ function updateHUD(){
 
   const oarStroke=onShip?Math.sin(elapsed*7.2):0;
   for(const row of playerOars){const stroke=onShip?Math.sin(elapsed*5.8+row.phase):0;row.pivot.rotation.y=onShip?stroke*.25:0;row.pivot.rotation.x=onShip?Math.sin(elapsed*5.8+row.phase+1.1)*.06:0;}
-  updateDrakkarPennant(dt);
+  updateDrakkarPennant(dt);updateDrakkarSail(dt);
 
   // Three hostile longships patrol the open sea, pursue the player and damage the hull with volleys.
   worldUpdatePhase='raider ships and naval AI';
