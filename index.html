@@ -4,10 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.114">
-<meta name="el-sin-nombre-repair" content="0.6.114 professional naval chart, responsive map sizing and deferred mobile secondary assets">
+<meta name="el-sin-nombre-build" content="0.6.115">
+<meta name="el-sin-nombre-repair" content="0.6.115 progressive real-byte loading, non-blocking secondary characters and startup warmup">
+<link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
+<link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.114</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.115</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -937,18 +939,36 @@ window.addEventListener('unhandledrejection',e=>{console.error('EL SIN NOMBRE as
 const loadText=document.getElementById('loadText');
 const retryButton=document.getElementById('retryEngine'),loadHelp=document.getElementById('loadHelp');
 const loadProgressBar=document.getElementById('loadProgress'),loadProgressLabel=document.getElementById('loadPercent'),loadProgressTrack=document.querySelector('#loading .loadTrack');
-let currentLoadProgress=0;const assetLoadProgress={player:0,enemy:0};
-function setLoadingProgress(value,label){
- currentLoadProgress=Math.max(currentLoadProgress,Math.min(100,Math.max(0,Number(value)||0)));
- if(loadProgressBar)loadProgressBar.style.width=currentLoadProgress.toFixed(1)+'%';
- if(loadProgressLabel)loadProgressLabel.textContent=Math.round(currentLoadProgress)+'%';
+let currentLoadProgress=0,targetLoadProgress=0,loadProgressAnimation=0,lastLoadProgressFrame=0;
+const assetLoadProgress={player:0,enemy:0};
+function paintLoadingProgress(timestamp){
+ const elapsed=lastLoadProgressFrame?Math.min(.10,Math.max(0,(timestamp-lastLoadProgressFrame)/1000)):1/60;
+ lastLoadProgressFrame=timestamp;
+ const distance=targetLoadProgress-currentLoadProgress;
+ const step=Math.min(Math.abs(distance),Math.max(.025,elapsed*11));
+ currentLoadProgress+=Math.sign(distance)*step;
+ if(loadProgressBar)loadProgressBar.style.width=currentLoadProgress.toFixed(2)+'%';
+ if(loadProgressLabel)loadProgressLabel.textContent=Math.floor(currentLoadProgress)+'%';
  if(loadProgressTrack)loadProgressTrack.setAttribute('aria-valuenow',String(Math.round(currentLoadProgress)));
+ if(Math.abs(targetLoadProgress-currentLoadProgress)>.015){
+  loadProgressAnimation=requestAnimationFrame(paintLoadingProgress);
+ }else{
+  currentLoadProgress=targetLoadProgress;
+  if(loadProgressBar)loadProgressBar.style.width=currentLoadProgress.toFixed(2)+'%';
+  if(loadProgressLabel)loadProgressLabel.textContent=Math.floor(currentLoadProgress)+'%';
+  if(loadProgressTrack)loadProgressTrack.setAttribute('aria-valuenow',String(Math.round(currentLoadProgress)));
+  loadProgressAnimation=0;lastLoadProgressFrame=0;
+ }
+}
+function setLoadingProgress(value,label){
+ targetLoadProgress=Math.max(targetLoadProgress,Math.min(100,Math.max(0,Number(value)||0)));
  if(label&&loadText)loadText.textContent=label;
+ if(!loadProgressAnimation)loadProgressAnimation=requestAnimationFrame(paintLoadingProgress);
 }
 function setAssetLoadingProgress(which,percent,label){
  assetLoadProgress[which]=Math.max(assetLoadProgress[which]||0,Math.min(100,Math.max(0,Number(percent)||0)));
- const combined=48+(assetLoadProgress.player*.22)+(assetLoadProgress.enemy*.22);
- setLoadingProgress(combined,label);
+ // Solo el protagonista bloquea la entrada. Los NPC se preparan en segundo plano.
+ if(which==='player')setLoadingProgress(48+(assetLoadProgress.player*.34),label);
 }
 async function responseBlobWithProgress(response,label,start,end,progressKey=null){
  const total=Number(response.headers&&response.headers.get('content-length'))||0;
@@ -1010,10 +1030,58 @@ function loadEngine(url,timeoutMs=7000,check=null){
   try{document.head.appendChild(script);}catch(err){finish(false,err&&err.message?err.message:'no se pudo insertar el script');}
  });
 }
-async function loadEngineWithCache(url,timeoutMs=7000,check=null){
- // Los recursos propios del juego están cacheados por HTTP y Service Worker.
- // Evita duplicar Babylon y sus complementos en IndexedDB y volver a leerlos como texto.
+async function loadSameOriginScriptWithProgress(url,timeoutMs,check,progressStart,progressEnd,label){
+ let objectUrl=null,script=null;
+ try{
+  const response=await fetch(url,{cache:'force-cache',credentials:'same-origin'});
+  if(!response.ok)throw new Error('HTTP '+response.status);
+  const total=Number(response.headers&&response.headers.get('content-length'))||0;
+  const reader=response.body&&typeof response.body.getReader==='function'?response.body.getReader():null;
+  const decoder=new TextDecoder(),parts=[];let loaded=0;
+  if(reader){
+   while(true){
+    const chunk=await reader.read();if(chunk.done)break;
+    loaded+=chunk.value.byteLength;parts.push(decoder.decode(chunk.value,{stream:true}));
+    const ratio=total>0?Math.min(.94,loaded/total):Math.min(.88,loaded/(5*1024*1024));
+    setLoadingProgress(progressStart+(progressEnd-progressStart)*ratio,label+' · '+Math.round(loaded/1024)+' KB');
+   }
+   parts.push(decoder.decode());
+  }else{
+   parts.push(await response.text());
+   setLoadingProgress(progressStart+(progressEnd-progressStart)*.94,label+' · descarga terminada');
+  }
+  setLoadingProgress(progressStart+(progressEnd-progressStart)*.96,label+' · preparando motor…');
+  objectUrl=URL.createObjectURL(new Blob(parts,{type:'text/javascript'}));
+  const result=await new Promise(resolve=>{
+   let settled=false;
+   const finish=(ok,reason)=>{
+    if(settled)return;settled=true;clearTimeout(timer);
+    if(!ok&&script)script.remove();
+    resolve({ok:!!ok,reason:reason||'unknown',url});
+   };
+   const timer=setTimeout(()=>finish(false,'tiempo agotado al compilar el recurso local'),timeoutMs);
+   script=document.createElement('script');script.async=false;script.src=objectUrl;
+   script.onload=()=>{let ok=false;try{ok=check?!!check():!!(window.BABYLON&&window.BABYLON.Engine);}catch(_){ok=false;}finish(ok,ok?'cargado':'script cargado pero API no disponible');};
+   script.onerror=()=>finish(false,'no se pudo ejecutar el recurso local');
+   try{document.head.appendChild(script);}catch(err){finish(false,err&&err.message?err.message:'no se pudo insertar el script');}
+  });
+  if(result.ok)setLoadingProgress(progressEnd,label+' listo.');
+  return {...result,cached:response.headers.get('x-cache')==='HIT',source:'same-origin-stream'};
+ }catch(err){
+  return {ok:false,reason:err&&err.message?err.message:String(err),url};
+ }finally{
+  if(objectUrl)URL.revokeObjectURL(objectUrl);
+ }
+}
+async function loadEngineWithCache(url,timeoutMs=7000,check=null,progressStart=0,progressEnd=0,label='Cargando recurso'){
+ const resolved=new URL(url,document.baseURI);
+ if(resolved.origin===location.origin){
+  const streamed=await loadSameOriginScriptWithProgress(resolved.href,timeoutMs,check,progressStart,progressEnd,label);
+  if(streamed.ok)return streamed;
+  console.info('Se usará la carga directa del navegador como respaldo:',streamed.reason);
+ }
  const result=await loadEngine(url,timeoutMs,check);
+ if(result.ok)setLoadingProgress(progressEnd,label+' listo.');
  return {...result,cached:false,source:'browser-cache-and-service-worker'};
 }
 async function installCachedRuntime(urls,check){
@@ -1024,9 +1092,10 @@ async function loadFromMirrors(label,urls,check){
  const failures=[];
  for(let i=0;i<urls.length;i++){
   const url=urls[i],isEngine=/motor 3D/i.test(label),base=isEngine?6:28,span=isEngine?20:10;
-  setLoadingProgress(base+(i/urls.length)*span,label+' ('+(i+1)+'/'+urls.length+')…');
-  const result=await loadEngineWithCache(url,7000,check);
-  if(result.ok){setLoadingProgress(base+span,result.cached?label+' recuperado del dispositivo.':label+' listo.');return {ok:true,url,failures,cached:!!result.cached};}
+  const segmentStart=base+(i/urls.length)*span,segmentEnd=base+((i+1)/urls.length)*span;
+  setLoadingProgress(segmentStart,label+' ('+(i+1)+'/'+urls.length+')…');
+  const result=await loadEngineWithCache(url,7000,check,segmentStart,segmentEnd,label);
+  if(result.ok){setLoadingProgress(segmentEnd,result.cached?label+' recuperado del dispositivo.':label+' listo.');return {ok:true,url,failures,cached:!!result.cached};}
   failures.push(url+' — '+result.reason);console.warn('EL SIN NOMBRE: recurso externo no disponible',result);
  }
  return {ok:false,url:null,failures,cached:false};
@@ -1059,7 +1128,10 @@ function openInSafariAdvice(){
 }
 async function bootEngine(){
  if(engineBooting||engineLoaded)return;
- engineBooting=true;console.info('EL SIN NOMBRE boot session:',{ios:isIOSDevice,embedded:isEmbeddedBrowser,wasDiscarded:!!document.wasDiscarded,deviceMemory:Number(navigator.deviceMemory)||null,dpr:window.devicePixelRatio||1,visibility:document.visibilityState});document.body.classList.add('booting');document.body.classList.remove('boot-failed');retryButton.style.display='none';loadHelp.style.display='none';currentLoadProgress=0;assetLoadProgress.player=0;assetLoadProgress.enemy=0;setLoadingProgress(2,'1/3 · Comprobando los gráficos…');
+ engineBooting=true;console.info('EL SIN NOMBRE boot session:',{ios:isIOSDevice,embedded:isEmbeddedBrowser,wasDiscarded:!!document.wasDiscarded,deviceMemory:Number(navigator.deviceMemory)||null,dpr:window.devicePixelRatio||1,visibility:document.visibilityState});document.body.classList.add('booting');document.body.classList.remove('boot-failed');retryButton.style.display='none';loadHelp.style.display='none';currentLoadProgress=0;targetLoadProgress=0;
+ if(loadProgressAnimation)cancelAnimationFrame(loadProgressAnimation);
+ loadProgressAnimation=0;lastLoadProgressFrame=0;
+ assetLoadProgress.player=0;assetLoadProgress.enemy=0;setLoadingProgress(2,'1/3 · Comprobando los gráficos…');
  try{
   if(!webGLSupport())throw new Error('Este navegador no permite gráficos 3D. Abre el archivo con Safari en iPhone o Chrome en Android.');
   setLoadingProgress(5,'Preparando motor 3D…');
@@ -6778,9 +6850,12 @@ function updateHUD(){
  }
  // Cargar exclusivamente el caballero acorazado independiente en los puestos guerreros; el modelo provisional
  // solo permanece visible si el GLB falla y nunca se sustituye por un caballero medieval.
- const deferNpcHumanModelsOnTouch=false;
- let enemyHumanModelsStarted=true;
- let enemyHumanLoadTask=loadEnemyHumanCharacters();
+ // Los modelos de guerreros y aldeanos no son necesarios para abrir el mundo:
+ // sus cuerpos provisionales conservan colisión, IA y comportamiento hasta el relevo GLB.
+ // Esperamos al primer fotograma y al menú de entrada antes de iniciar descargas/importaciones NPC.
+ const deferNpcHumanModelsOnTouch=true;
+ let enemyHumanModelsStarted=false;
+ let enemyHumanLoadTask=Promise.resolve(0);
  function startNpcHumanModels(){
   if(enemyHumanModelsStarted)return enemyHumanLoadTask;
   enemyHumanModelsStarted=true;
@@ -6905,6 +6980,9 @@ function updateHUD(){
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
     showStartScreen();startScreenShown=true;
+    if(deferNpcHumanModelsOnTouch&&!enemyHumanModelsStarted){
+     setTimeout(()=>{if(!enemyHumanModelsStarted)startNpcHumanModels();},1100);
+    }
    }
   }catch(err){reportFrameError('renderizado 3D',err);}
   fpsHudTime+=dt;
@@ -6963,22 +7041,24 @@ function updateHUD(){
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
  console.info('EL SIN NOMBRE 0.6.101 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();updatePlayerIdentityHud();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
- setLoadingProgress(48,'Descargando e instalando personajes 3D…');
- const allCharacterLoads=Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
- let resourceResults=[];
- setLoadingProgress(88,'Esperando a que terminen todos los personajes 3D…');
- resourceResults=await allCharacterLoads;
- console.info('Personajes 3D listos antes de jugar:',resourceResults.map(x=>x.status));
+ setLoadingProgress(48,'3/3 · Preparando el protagonista…');
+ // Solo esperamos el modelo principal. Los NPC mantienen sus modelos provisionales
+ // mientras sus GLB se descargan y montan tras el primer fotograma del mundo.
+ const resourceResults=await Promise.allSettled([playerHumanLoadPromise]);
+ console.info('Protagonista preparado para entrar:',resourceResults.map(x=>x.status));
  let audioPreloadResult={total:0,ready:0,failed:0};
- try{audioPreloadResult=await startupAudioPreload;}catch(audioError){console.info('Precarga de sonido incompleta:',audioError);}
- console.info('Audio preparado antes de empezar:',audioPreloadResult);
+ Promise.resolve(startupAudioPreload)
+  .then(result=>{audioPreloadResult=result;console.info('Audio preparado en segundo plano:',result);})
+  .catch(audioError=>console.info('La precarga de sonido continúa pendiente; no bloquea la entrada:',audioError));
  // Esperar a que Babylon termine la preparación de texturas/materiales y compile lo pendiente.
  // El límite evita que una textura remota lenta bloquee indefinidamente la entrada al juego.
- setLoadingProgress(96,'Afinando la iluminación…');
+ setLoadingProgress(86,'Preparando iluminación y materiales…');
  try{
   if(scene&&typeof scene.whenReadyAsync==='function'){
-   setLoadingProgress(96,'Terminando de preparar materiales, texturas y modelos…');
-   await scene.whenReadyAsync();
+   setLoadingProgress(90,'Terminando de preparar el mundo…');
+   // El inicio no debe quedar retenido por una textura opcional o un recurso secundario lento.
+   const sceneReady=scene.whenReadyAsync().catch(warmupError=>{console.warn('La escena conserva recursos pendientes:',warmupError);return false;});
+   await Promise.race([sceneReady,new Promise(resolve=>setTimeout(()=>resolve(false),2200))]);
   }
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
