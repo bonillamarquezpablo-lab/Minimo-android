@@ -1531,6 +1531,8 @@ async function startGame(){
    shorelineWaves.push({mesh:ring,base:radius,phase:index*.8+layer*1.35,mat:foamMat,x:island.x,z:island.z,layer});
   }
  }
+ // Genera la espuma de rompiente para todas las islas; cada banda sigue la altura del oleaje.
+ land.forEach((island,index)=>buildShoreFoam(island,index));
  function animateWater(dt){
   oceanTime+=dt;waterAccumulator+=dt;waterNormalAccumulator+=dt;
   // 25 Hz vertex motion avoids the visible stepping of the old ~9 Hz water update.
