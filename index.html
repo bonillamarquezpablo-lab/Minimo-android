@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.104">
-<meta name="el-sin-nombre-repair" content="0.6.104 natural ground variation and reduced terrain GPU work">
+<meta name="el-sin-nombre-build" content="0.6.105">
+<meta name="el-sin-nombre-repair" content="0.6.105 realistic woodland ground, visible instanced ground cover and static mobile vegetation">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.104</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.105</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1369,7 +1369,7 @@ async function startGame(){
   let seed=90631;
   const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   function grid(w,h){const a=new Float32Array(w*h);for(let i=0;i<a.length;i++)a[i]=random();return {w,h,a};}
-  const grids=[grid(4,4),grid(10,10),grid(24,24),grid(58,58),grid(132,132)];
+  const grids=[grid(3,3),grid(8,8),grid(18,18),grid(46,46),grid(112,112)];
   function noise(g,x,y){
    const px=x/size*g.w,py=y/size*g.h,x0=Math.floor(px),y0=Math.floor(py),fx=px-x0,fy=py-y0;
    const sm=t=>t*t*(3-2*t),u=sm(fx),v=sm(fy),wrap=(n,m)=>(n%m+m)%m;
@@ -1380,75 +1380,79 @@ async function startGame(){
   const smooth=(a,b,v)=>{const t=Math.max(0,Math.min(1,(v-a)/(b-a)));return t*t*(3-2*t);};
   const mix=(a,b,t)=>a+(b-a)*t;
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
-   const broad=noise(grids[0],x,y)*.70+noise(grids[1],x,y)*.30;
-   const medium=noise(grids[1],x,y)*.60+noise(grids[2],x,y)*.40;
-   const fine=noise(grids[2],x,y)*.58+noise(grids[3],x,y)*.42;
+   const broad=noise(grids[0],x,y)*.68+noise(grids[1],x,y)*.32;
+   const medium=noise(grids[1],x,y)*.48+noise(grids[2],x,y)*.52;
+   const fine=noise(grids[3],x,y)*.58+noise(grids[4],x,y)*.42;
    const grain=noise(grids[4],x,y);
-   const moss=smooth(.40,.72,broad*.72+medium*.28);
-   const soil=smooth(.48,.76,medium*.68+fine*.32);
-   const damp=smooth(.56,.82,medium*.52+fine*.48)*(1-moss*.42);
-   const dry=smooth(.64,.88,broad*.56+fine*.44)*(1-soil*.48);
-   const pebbles=smooth(.75,.95,grain*.58+fine*.42);
-   const leafLitter=smooth(.70,.94,grain*.34+medium*.66)*(1-damp*.5);
-   const grass=[88,113,62],mossCol=[119,135,78],earth=[91,72,49],dampCol=[48,62,49],dryCol=[158,140,91],stoneCol=[145,141,126],leafCol=[124,91,58];
-   let c=[0,1,2].map(i=>mix(grass[i],mossCol[i],moss));
-   c=c.map((v,i)=>mix(v,earth[i],soil*.58));
-   c=c.map((v,i)=>mix(v,dampCol[i],damp*.30));
+   // Wider, overlapping biome masks; the old thresholds left nearly every pixel grass-green.
+   const moss=smooth(.35,.68,broad*.72+medium*.28);
+   const soil=smooth(.39,.69,medium*.62+fine*.38);
+   const damp=smooth(.43,.70,medium*.54+fine*.46)*(1-moss*.48);
+   const dry=smooth(.49,.76,broad*.46+fine*.54)*(1-soil*.54);
+   const pebbles=smooth(.68,.91,grain*.62+fine*.38);
+   const leafLitter=smooth(.47,.75,noise(grids[2],x,y)*.38+fine*.62)*(1-damp*.48);
+   // Real forest-floor palette: subdued olive moss, umber soil, wet earth, leaf litter and stone.
+   const base=[105,101,71],mossCol=[82,96,61],earth=[108,80,54],dampCol=[55,63,52],dryCol=[145,125,88],stoneCol=[128,125,112],leafCol=[103,76,49];
+   let c=base.map((v,i)=>mix(v,mossCol[i],moss*.62));
+   c=c.map((v,i)=>mix(v,earth[i],soil*.60));
+   c=c.map((v,i)=>mix(v,dampCol[i],damp*.38));
    c=c.map((v,i)=>mix(v,dryCol[i],dry*.27));
-   c=c.map((v,i)=>mix(v,stoneCol[i],pebbles*.42));
-   c=c.map((v,i)=>mix(v,leafCol[i],leafLitter*.23));
-   const micro=(random()-.5)*19+(grain-.5)*7;
+   c=c.map((v,i)=>mix(v,stoneCol[i],pebbles*.30));
+   c=c.map((v,i)=>mix(v,leafCol[i],leafLitter*.42));
+   const variation=(random()-.5)*11+(grain-.5)*5;
    const idx=(y*size+x)*4;
-   for(let k=0;k<3;k++)data[idx+k]=Math.max(0,Math.min(255,c[k]+micro));
+   for(let k=0;k<3;k++)data[idx+k]=Math.max(0,Math.min(255,c[k]+variation));
    data[idx+3]=255;
   }
   ctx.putImageData(img,0,0);
   function repeatMark(draw,x,y){
-   const r=40;
+   const r=46;
    for(const ox of [-size,0,size])for(const oy of [-size,0,size])if(x+ox>-r&&x+ox<size+r&&y+oy>-r&&y+oy<size+r)draw(x+ox,y+oy);
   }
-  // Raíces, hojas caídas y gravilla fina, con tamaños mezclados para evitar un patrón repetitivo.
-  for(let i=0;i<2100;i++){
-   const x=random()*size,y=random()*size,len=2+random()*12,alpha=.10+random()*.20;
-   repeatMark((px,py)=>{ctx.strokeStyle=i%4===0?'rgba(174,151,91,'+(alpha*.8)+')':'rgba(24,35,22,'+alpha+')';ctx.lineWidth=.45+random()*.8;ctx.beginPath();ctx.moveTo(px,py);ctx.quadraticCurveTo(px+(random()-.5)*4,py-len*.5,px+(random()-.5)*6,py-len);ctx.stroke();},x,y);
+  // Fine roots, short twigs, dry needles and curled leaves on top of the broad albedo patches.
+  for(let i=0;i<1900;i++){
+   const x=random()*size,y=random()*size,len=3+random()*16,alpha=.10+random()*.18;
+   repeatMark((px,py)=>{
+    ctx.strokeStyle=i%4===0?'rgba(151,125,79,'+(alpha*.85)+')':'rgba(39,35,26,'+alpha+')';
+    ctx.lineWidth=.55+random()*.65;ctx.beginPath();
+    ctx.moveTo(px,py);ctx.quadraticCurveTo(px+(random()-.5)*5,py-len*.5,px+(random()-.5)*7,py-len);ctx.stroke();
+   },x,y);
   }
-  for(let i=0;i<980;i++){
-   const x=random()*size,y=random()*size,rx=.6+random()*2.8,ry=.45+random()*2.0;
-   repeatMark((px,py)=>{ctx.fillStyle=i%3===0?'rgba(147,143,119,.38)':'rgba(28,32,28,.30)';ctx.beginPath();ctx.ellipse(px,py,rx,ry,random()*Math.PI,0,Math.PI*2);ctx.fill();},x,y);
+  for(let i=0;i<1850;i++){
+   const x=random()*size,y=random()*size,len=2+random()*9,w=.8+random()*2.1,a=random()*Math.PI,kind=i%5;
+   repeatMark((px,py)=>{
+    ctx.save();ctx.translate(px,py);ctx.rotate(a);
+    ctx.fillStyle=kind===0?'rgba(139,105,65,.48)':kind===1?'rgba(76,72,49,.43)':kind===2?'rgba(159,139,96,.38)':'rgba(91,68,47,.39)';
+    ctx.beginPath();ctx.ellipse(0,0,len*.5,w*.5,0,0,Math.PI*2);ctx.fill();
+    if(kind===0||kind===3){ctx.strokeStyle='rgba(48,43,31,.35)';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(-len*.35,0);ctx.lineTo(len*.35,0);ctx.stroke();}
+    ctx.restore();
+   },x,y);
   }
-  for(let i=0;i<520;i++){
-   const x=random()*size,y=random()*size,angle=random()*Math.PI,len=2+random()*7;
-   repeatMark((px,py)=>{ctx.strokeStyle=i%2?'rgba(127,103,59,.38)':'rgba(179,166,112,.25)';ctx.lineWidth=.6+random()*.7;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+Math.cos(angle)*len,py+Math.sin(angle)*len*.48);ctx.stroke();},x,y);
+  for(let i=0;i<900;i++){
+   const x=random()*size,y=random()*size,rx=.7+random()*2.4,ry=.45+random()*1.7,a=random()*Math.PI;
+   repeatMark((px,py)=>{
+    ctx.fillStyle=i%4===0?'rgba(151,147,130,.43)':'rgba(42,43,37,.35)';
+    ctx.beginPath();ctx.ellipse(px,py,rx,ry,a,0,Math.PI*2);ctx.fill();
+   },x,y);
   }
-  // Hierba legible a escala de juego: pequeños grupos de briznas, no manchas borrosas.
-  // Los grupos se repiten al cruzar los bordes para mantener una textura tileable.
-  for(let i=0;i<3100;i++){
-   const x=random()*size,y=random()*size,scale=.65+random()*1.05,count=3+(random()*3|0);
-   const blades=Array.from({length:count},(_,k)=>({x:(random()-.5)*5*scale,y:(random()-.5)*2*scale,len:(3+random()*7)*scale,lean:(random()-.5)*5*scale,alpha:.42+random()*.35,width:.55+random()*.65,kind:(k+i)%4===0?0:(k+i)%3===0?1:2}));
+  // Subtle fine grass strokes in the albedo; the visible 3D ground cover is instanced separately.
+  for(let i=0;i<2300;i++){
+   const x=random()*size,y=random()*size,scale=.7+random()*1.3,count=2+(random()*3|0);
+   const blades=Array.from({length:count},()=>({x:(random()-.5)*5*scale,y:(random()-.5)*2*scale,len:(3+random()*8)*scale,lean:(random()-.5)*5*scale,width:.5+random()*.65,kind:random()}));
    repeatMark((px,py)=>{
     blades.forEach(b=>{
-     ctx.strokeStyle=b.kind===0?'rgba(174,190,105,.42)':b.kind===1?'rgba(35,66,33,.48)':'rgba(119,145,72,.38)';
-     ctx.globalAlpha=b.alpha;ctx.lineWidth=b.width;
-     ctx.beginPath();ctx.moveTo(px+b.x,py+b.y);ctx.quadraticCurveTo(px+b.x+b.lean*.5,py+b.y-b.len*.55,px+b.x+b.lean,py+b.y-b.len);ctx.stroke();
+     ctx.strokeStyle=b.kind<.25?'rgba(153,155,100,.42)':b.kind<.55?'rgba(50,73,44,.48)':'rgba(112,119,75,.38)';
+     ctx.lineWidth=b.width;ctx.beginPath();ctx.moveTo(px+b.x,py+b.y);
+     ctx.quadraticCurveTo(px+b.x+b.lean*.5,py+b.y-b.len*.56,px+b.x+b.lean,py+b.y-b.len);ctx.stroke();
     });
    },x,y);
   }
-  // Tierra desnuda, agujas de pino y hojas pequeñas, repartidas a distintas escalas.
-  for(let i=0;i<1450;i++){
-   const x=random()*size,y=random()*size,rx=.5+random()*2.2,ry=.35+random()*1.3,angle=random()*Math.PI,kind=i%4===0;
-   repeatMark((px,py)=>{
-    ctx.fillStyle=kind?'rgba(166,133,79,.36)':'rgba(42,48,33,.34)';
-    ctx.beginPath();ctx.ellipse(px,py,rx,ry,angle,0,Math.PI*2);ctx.fill();
-   },x,y);
-  }
-  ctx.globalAlpha=1;
-  tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);
-  tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;
-  return tex;
+  ctx.globalAlpha=1;tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);
+  tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
  }
  const texTerrain=makeNordicTerrainAlbedo();
 
- const albedoNormalTerrain=makeAlbedoNormal('Albedo-derived terrain normal',texTerrain,.70,512),albedoNormalGrass=makeAlbedoNormal('Albedo-derived grass normal',texGrass,.72,512),albedoNormalSand=makeAlbedoNormal('Albedo-derived sand normal',texSand,.30,384),albedoNormalStone=makeAlbedoNormal('Albedo-derived stone normal',texStone,.86,384),albedoNormalWood=makeAlbedoNormal('Albedo-derived timber normal',texWood,.90,384),albedoNormalBark=makeAlbedoNormal('Albedo-derived bark normal',texBark,.82,384),albedoNormalCloth=makeAlbedoNormal('Albedo-derived wool normal',texCloth,.34,256),albedoNormalLeather=makeAlbedoNormal('Albedo-derived leather normal',texLeather,.52,256),albedoNormalWater=makeAlbedoNormal('Albedo-derived water normal',texWater,.23,256);
+ const albedoNormalTerrain=makeAlbedoNormal('Albedo-derived terrain normal',texTerrain,.48,512),albedoNormalGrass=makeAlbedoNormal('Albedo-derived grass normal',texGrass,.72,512),albedoNormalSand=makeAlbedoNormal('Albedo-derived sand normal',texSand,.30,384),albedoNormalStone=makeAlbedoNormal('Albedo-derived stone normal',texStone,.86,384),albedoNormalWood=makeAlbedoNormal('Albedo-derived timber normal',texWood,.90,384),albedoNormalBark=makeAlbedoNormal('Albedo-derived bark normal',texBark,.82,384),albedoNormalCloth=makeAlbedoNormal('Albedo-derived wool normal',texCloth,.34,256),albedoNormalLeather=makeAlbedoNormal('Albedo-derived leather normal',texLeather,.52,256),albedoNormalWater=makeAlbedoNormal('Albedo-derived water normal',texWater,.23,256);
  [M.grass,M.grass2,M.darkGrass].forEach(m=>{m.bumpTexture=albedoNormalGrass;m.bumpTexture.level=.44;});
  M.sand.bumpTexture=albedoNormalSand;M.sand.bumpTexture.level=.24;
  [M.stone,M.stoneLight].forEach(m=>{m.bumpTexture=albedoNormalStone;m.bumpTexture.level=.48;});
@@ -1659,12 +1663,12 @@ async function startGame(){
    const wet=smooth01((patch*.36+micro*.39+fine*.25-.49)*3.8)*(1-rock)*(1-beach);
    const moss=smooth01((patch*.62+micro*.25+grain*.13-.42)*3.4)*(1-rock)*(1-beach);
    const bareSoil=smooth01((micro*.42+fine*.34+grain*.24-.53)*4.2)*(1-rock)*(1-beach);
-   const leafLitter=smooth01((litter*.57+grain*.27+fine*.16-.62)*5.0)*(1-rock)*(1-beach);
+   const leafLitter=smooth01((litter*.42+grain*.30+fine*.28-.53)*4.4)*(1-rock)*(1-beach);
    // Neutral olive base lets the albedo read through instead of tinting the whole island green.
-   const grass=[.94+.035*moss,.92+.045*moss,.82+.055*moss],stone=[.94,.93,.88],sand=[1,.88,.70],soil=[.93,.77,.57],mud=[.76,.82,.68],leaf=[.98,.79,.56];
+   const grass=[.98,.95,.86],stone=[.94,.93,.87],sand=[1,.92,.79],soil=[.96,.83,.68],mud=[.83,.87,.76],leaf=[.98,.84,.68];
    let r=grass[0]*(1-rock)+stone[0]*rock,g=grass[1]*(1-rock)+stone[1]*rock,b=grass[2]*(1-rock)+stone[2]*rock;
    r=r*(1-wet)+mud[0]*wet;g=g*(1-wet)+mud[1]*wet;b=b*(1-wet)+mud[2]*wet;
-   const soilMix=Math.min(.94,bareSoil*1.12),leafMix=Math.min(.46,leafLitter*.58);
+   const soilMix=Math.min(.96,bareSoil*1.12),leafMix=Math.min(.58,leafLitter*.76);
    r=r*(1-soilMix)+soil[0]*soilMix;g=g*(1-soilMix)+soil[1]*soilMix;b=b*(1-soilMix)+soil[2]*soilMix;
    r=r*(1-leafMix)+leaf[0]*leafMix;g=g*(1-leafMix)+leaf[1]*leafMix;b=b*(1-leafMix)+leaf[2]*leafMix;
    const mottling=(grain-.5)*.045;
@@ -1686,11 +1690,11 @@ async function startGame(){
    const terrainPBR=new B.PBRMaterial('NordicGroundPBR_'+index,scene);
    terrainPBR.albedoTexture=texTerrain;terrainPBR.albedoColor=new B.Color3(1,1,1);
    // Más repeticiones por isla: el grano se lee a escala de suelo, no como una mancha gigante.
-   texTerrain.uScale=30;texTerrain.vScale=30;
-   terrainPBR.bumpTexture=albedoNormalTerrain;terrainPBR.bumpTexture.level=.72;
-   albedoNormalTerrain.uScale=30;albedoNormalTerrain.vScale=30;
+   texTerrain.uScale=12;texTerrain.vScale=12;
+   terrainPBR.bumpTexture=albedoNormalTerrain;terrainPBR.bumpTexture.level=.55;
+   albedoNormalTerrain.uScale=12;albedoNormalTerrain.vScale=12;
    terrainPBR.metallic=0;terrainPBR.roughness=.99;terrainPBR.useVertexColors=true;
-   terrainPBR.environmentIntensity=.34;terrainPBR.backFaceCulling=true;
+   terrainPBR.environmentIntensity=.30;terrainPBR.backFaceCulling=true;
    terrainPBR.maxSimultaneousLights=2;mesh.material=terrainPBR;
   }
   mesh.isPickable=true;mesh.checkCollisions=true;mesh.receiveShadows=true;mesh.refreshBoundingInfo(true);
@@ -4378,64 +4382,83 @@ async function startGame(){
  let grassInstanceCount=0,grassBatchCount=0,grassWindAccumulator=0,grassWindClock=0;const grassWindMeshes=[];let grassWindBasePositions=null,grassWindPositions=null;
  function createRealGrass(){
   const positions=[],indices=[],colors=[];
-  const bladeAngles=[0,Math.PI/4,Math.PI/2,Math.PI*3/4];
-  for(let a=0;a<bladeAngles.length;a++){
-   const ang=bladeAngles[a],rx=Math.cos(ang),rz=Math.sin(ang),px=-rz,pz=rx;
-   const w=.052,h=.50+(a%2)*.18,bend=.068+a*.014,base=positions.length/3;
-   positions.push(-px*w,.018,-pz*w, px*w,.018,-pz*w, -px*w*.18+bend,h,-pz*w*.18, px*w*.18+bend,h,-pz*w*.18);
-   indices.push(base,base+2,base+1,base+1,base+2,base+3);
-   const greens=[[.32,.48,.20,1],[.43,.58,.26,1],[.25,.40,.17,1],[.50,.62,.29,1]];
-   colors.push(...greens[a%greens.length],...greens[(a+1)%greens.length],...greens[(a+2)%greens.length],...greens[(a+3)%greens.length]);
-  }
+  const shades=[[.27,.32,.17],[.36,.40,.22],[.43,.45,.27],[.23,.29,.16],[.38,.36,.20]];
+  const addLeaf=(angle,length,width,lean,startRadius,shadeIndex)=>{
+   const dx=Math.sin(angle),dz=Math.cos(angle),px=Math.cos(angle),pz=-Math.sin(angle);
+   const sx=dx*startRadius,sz=dz*startRadius;
+   const base=positions.length/3,tipW=width*.035;
+   const rows=[
+    {cx:sx,cy:.022,cz:sz,w:width*.43,tint:.66},
+    {cx:sx+dx*lean*.38,cy:.022+length*.57,cz:sz+dz*lean*.38,w:width*.54,tint:.91},
+    {cx:sx+dx*lean,cy:.022+length,cz:sz+dz*lean,w:tipW,tint:1.14}
+   ];
+   for(const row of rows){
+    positions.push(row.cx-px*row.w,row.cy,row.cz-pz*row.w,row.cx+px*row.w,row.cy,row.cz+pz*row.w);
+    const shade=shades[shadeIndex%shades.length];
+    for(let side=0;side<2;side++){
+     const f=row.tint*(side===0?.96:1.04);
+     colors.push(Math.min(1,shade[0]*f),Math.min(1,shade[1]*f),Math.min(1,shade[2]*f),1);
+    }
+   }
+   indices.push(base,base+2,base+1,base+1,base+2,base+3,base+2,base+4,base+3,base+3,base+4,base+5);
+  };
+  // Four taller blades crossed at irregular angles, plus three low broad leaves at ground level.
+  addLeaf(.12,.78,.135,.19,.035,0);
+  addLeaf(1.63,.91,.115,.22,.045,1);
+  addLeaf(3.04,.68,.145,.17,.035,2);
+  addLeaf(4.48,.84,.125,.21,.050,3);
+  addLeaf(.82,.34,.235,.31,.035,4);
+  addLeaf(2.90,.29,.255,.34,.045,1);
+  addLeaf(5.05,.37,.215,.29,.035,2);
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
-  grassWindBasePositions=new Float32Array(positions);grassWindPositions=new Float32Array(positions.length);
   const vertexData=new B.VertexData();vertexData.positions=positions;vertexData.indices=indices;vertexData.normals=normals;vertexData.colors=colors;
-  const gm=new B.StandardMaterial('IndividualGrassBladeMaterial',scene);gm.diffuseColor=new B.Color3(1,1,1);gm.specularColor=new B.Color3(.015,.02,.012);gm.specularPower=8;gm.backFaceCulling=false;gm.useVertexColors=true;
-  // Lotes espaciales: la malla mundial anterior anulaba el frustum culling y enviaba
-  // hierba de islas completas al GPU aunque quedaran fuera de cámara.
-  // Se conservan densidad, tamaño, color y número de matas: solo cambia la partición.
-  const chunkSize=30,grassBatches=new Map();let count=0;
+  const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);
+  gm.diffuseColor=new B.Color3(1,1,1);gm.specularColor=new B.Color3(.018,.022,.012);gm.specularPower=7;gm.backFaceCulling=false;gm.useVertexColors=true;
+  const chunkSize=28,grassBatches=new Map();let count=0;
   for(let islandIndex=0;islandIndex<land.length;islandIndex++){
-   const island=land[islandIndex],want=islandIndex===0?2000:(islandIndex<4?450:260);let placed=0,tries=0;
-   while(placed<want&&tries<want*8){tries++;
-    const angle=Math.random()*Math.PI*2,rad=Math.sqrt(Math.random())*island.r*.86;
+   const island=land[islandIndex],want=islandIndex===0?6500:(islandIndex<4?1050:520);let placed=0,tries=0;
+   while(placed<want&&tries<want*8){
+    tries++;
+    const angle=Math.random()*Math.PI*2,rad=Math.sqrt(Math.random())*island.r*.865;
     const x=island.x+Math.cos(angle)*rad,z=island.z+Math.sin(angle)*rad;
     if(!isLand(x,z))continue;
     const gx=(terrainSurfaceAt(x+.55,z)-terrainSurfaceAt(x-.55,z))/1.1,gz=(terrainSurfaceAt(x,z+.55)-terrainSurfaceAt(x,z-.55))/1.1;
-    if(Math.hypot(gx,gz)>.72)continue;
-    if(settlements.some(q=>Math.hypot(x-q[0],z-q[1])<10.5))continue;
-    if(trees.some(t=>t.alive&&Math.hypot(x-t.x,z-t.z)<(t.radius||.6)+.55))continue;
-    if(rocks.some(r=>r.alive&&Math.hypot(x-r.x,z-r.z)<(r.radius||.75)+.35))continue;
+    if(Math.hypot(gx,gz)>.82)continue;
+    if(settlements.some(q=>Math.hypot(x-q[0],z-q[1])<9.3))continue;
+    if(trees.some(t=>t.alive&&Math.hypot(x-t.x,z-t.z)<(t.radius||.6)+.48))continue;
+    if(rocks.some(r=>r.alive&&Math.hypot(x-r.x,z-r.z)<(r.radius||.75)+.30))continue;
     let blocked=false;
-    for(const c of worldColliders){if(c.type==='circle'?Math.hypot(x-c.x,z-c.z)<c.r+.3:Math.abs(x-c.x)<c.hx+.3&&Math.abs(z-c.z)<c.hz+.3){blocked=true;break;}}
+    for(const c of worldColliders){
+     if(c.type==='circle'?Math.hypot(x-c.x,z-c.z)<c.r+.25:Math.abs(x-c.x)<c.hx+.25&&Math.abs(z-c.z)<c.hz+.25){blocked=true;break;}
+    }
     if(blocked)continue;
-    const height=rand(.72,1.32),width=rand(.78,1.22),rotation=B.Quaternion.RotationYawPitchRoll(rand(0,Math.PI*2),0,0);
-    const matrix=B.Matrix.Compose(v(width,height,width),rotation,v(x,terrainSurfaceAt(x,z)+1000,z));
-    const cellX=Math.floor((x-island.x+island.r*.86)/chunkSize),cellZ=Math.floor((z-island.z+island.r*.86)/chunkSize);
+    const scaleX=rand(.92,1.42),scaleY=rand(.90,1.28),scaleZ=rand(.92,1.42);
+    const rotation=B.Quaternion.RotationYawPitchRoll(rand(0,Math.PI*2),0,0);
+    const groundY=terrainSurfaceAt(x,z)+.018;
+    const matrix=B.Matrix.Compose(v(scaleX,scaleY,scaleZ),rotation,v(x,groundY,z));
+    const cellX=Math.floor((x-island.x+island.r*.865)/chunkSize),cellZ=Math.floor((z-island.z+island.r*.865)/chunkSize);
     const key=islandIndex+':'+cellX+':'+cellZ;
     let batch=grassBatches.get(key);
     if(!batch){batch={islandIndex,cellX,cellZ,matrices:[],colors:[]};grassBatches.set(key,batch);}
     batch.matrices.push(...matrix.m);
-    const tint=rand(.72,1.18);batch.colors.push(tint,rand(.88,1.12),rand(.72,1.08),1);
+    const tint=rand(.84,1.12);batch.colors.push(tint,rand(.92,1.06),rand(.82,1.02),1);
     placed++;count++;
    }
   }
   for(const batch of grassBatches.values()){
-   const grassMesh=new B.Mesh('NordicGrass_'+batch.islandIndex+'_'+batch.cellX+'_'+batch.cellZ,scene);
+   const grassMesh=new B.Mesh('NordicGroundCover_'+batch.islandIndex+'_'+batch.cellX+'_'+batch.cellZ,scene);
    vertexData.applyToMesh(grassMesh);grassMesh.material=gm;grassMesh.isPickable=false;grassMesh.receiveShadows=false;
-   grassMesh.position.y=-1000;
+   // Keep the source clump on the ground plane; instance transforms contain the actual terrain height.
+   grassMesh.position.set(0,0,0);grassMesh.computeWorldMatrix(true);
    grassMesh.thinInstanceSetBuffer('matrix',new Float32Array(batch.matrices),16,true);
    grassMesh.thinInstanceSetBuffer('color',new Float32Array(batch.colors),4,true);
-   grassMesh.thinInstanceCount=batch.matrices.length/16;grassMesh.thinInstanceRefreshBoundingInfo(true);grassMesh.doNotSyncBoundingInfo=true;
-   const island=land[batch.islandIndex];
-   grassWindMeshes.push({mesh:grassMesh,x:island.x-island.r*.86+(batch.cellX+.5)*chunkSize,z:island.z-island.r*.86+(batch.cellZ+.5)*chunkSize,phase:batch.islandIndex*1.91+batch.cellX*.73+batch.cellZ*1.17});
+   grassMesh.thinInstanceCount=batch.matrices.length/16;grassMesh.thinInstanceRefreshBoundingInfo(true);
+   grassMesh.doNotSyncBoundingInfo=false;
   }
   grassInstanceCount=count;grassBatchCount=grassBatches.size;
-  console.info('Real grass tufts created',{instances:count,blades:count*4,spatialBatches:grassBatchCount,chunkSize});
+  console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:7,instancesPerIsland:land.map((is,i)=>({island:is.name,requested:i===0?6500:(i<4?1050:520)})),spatialBatches:grassBatchCount,chunkSize});
  }
  createRealGrass();
- // Viento de hierba por deformación de la malla base compartida por las thin instances.
- // Solo se actualizan lotes cercanos a cámara, a 10 Hz; no se crean objetos ni draw calls.
  function updateRealGrassWind(dt){
   // Menos transferencias de vértices por segundo: la hierba cercana sigue respirando,
   // pero no se suben decenas de buffers al GPU durante cada ráfaga.
@@ -4709,7 +4732,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'3',build:'0.6.104',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'3',build:'0.6.105',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -4772,7 +4795,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.104');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.105');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -6154,7 +6177,6 @@ function updateHUD(){
      rock.meshes.forEach((mesh,i)=>{mesh.position.copyFrom(rock.basePositions[i]);mesh.scaling.copyFrom(rock.baseScales[i]);});
     }
    }
-  updateRealGrassWind(dt);
   treeAnimAccumulator+=dt;
   if(treeAnimAccumulator>=1/30){
    const treeDt=Math.min(.10,treeAnimAccumulator);treeAnimAccumulator=0;
