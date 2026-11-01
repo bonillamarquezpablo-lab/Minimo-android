@@ -169,6 +169,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                     size += len(chunk)
             if size < minimum:
                 raise RuntimeError(f"File too small ({size} bytes): {url}")
+            relative = destination.relative_to(DIST).as_posix()
             if kind == "glb":
                 if destination.name in {
                     "viking-rigged.glb",
