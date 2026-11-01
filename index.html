@@ -1660,7 +1660,7 @@ async function startGame(){
    const grass=[.80+.13*moss,.84+.11*moss,.70+.14*moss],stone=[.88,.86,.80],sand=[.98,.86,.68],soil=[.82,.65,.46],mud=[.66,.70,.56];
    let r=grass[0]*(1-rock)+stone[0]*rock,g=grass[1]*(1-rock)+stone[1]*rock,b=grass[2]*(1-rock)+stone[2]*rock;
    r=r*(1-wet)+mud[0]*wet;g=g*(1-wet)+mud[1]*wet;b=b*(1-wet)+mud[2]*wet;
-   r=r*(1-bareSoil*.58)+soil[0]*(bareSoil*.58);g=g*(1-bareSoil*.58)+soil[1]*(bareSoil*.58);b=b*(1-bareSoil*.58)+soil[2]*(bareSoil*.58);
+   r=r*(1-Math.min(1,bareSoil*1.18))+soil[0]*Math.min(1,bareSoil*1.18);g=g*(1-Math.min(1,bareSoil*1.18))+soil[1]*Math.min(1,bareSoil*1.18);b=b*(1-Math.min(1,bareSoil*1.18))+soil[2]*Math.min(1,bareSoil*1.18);
    r=r*(1-beach)+sand[0]*beach;g=g*(1-beach)+sand[1]*beach;b=b*(1-beach)+sand[2]*beach;
    colors.push(r,g,b,1);
   }
