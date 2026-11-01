@@ -1,0 +1,21 @@
+{
+  "id": "./guest/",
+  "name": "EL SIN NOMBRE — Partida de invitado",
+  "short_name": "EL SIN NOMBRE · Invitado",
+  "description": "Partida independiente para jugar en este dispositivo.",
+  "lang": "es",
+  "start_url": "./guest/?newgame=1",
+  "scope": "./guest/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#071316",
+  "theme_color": "#0b1719",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
