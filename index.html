@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.94">
-<meta name="el-sin-nombre-repair" content="0.6.94 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
+<meta name="el-sin-nombre-build" content="0.6.95">
+<meta name="el-sin-nombre-repair" content="0.6.95 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.94</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.95</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -480,9 +480,9 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 }
 
 
-/* 0.6.94 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
+/* 0.6.95 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
 #modelStatus{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;max-width:100%;max-height:25vh;overflow:auto;pointer-events:auto}
-/* 0.6.94 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
+/* 0.6.95 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
 #loading{overflow:hidden;align-items:stretch;justify-content:stretch;padding:0;background:linear-gradient(180deg,rgba(3,12,16,.24) 0%,rgba(3,12,16,.10) 38%,rgba(3,10,12,.88) 100%);backdrop-filter:none;text-align:left}
 #loading:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 38%,transparent 0 22%,rgba(3,9,12,.18) 58%,rgba(2,7,9,.78) 100%),linear-gradient(90deg,rgba(3,11,14,.42),transparent 35%,transparent 65%,rgba(3,11,14,.42));}
 #loading:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:linear-gradient(0deg,rgba(3,9,11,.94),rgba(3,9,11,0));}
@@ -527,7 +527,7 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 @media(prefers-reduced-motion:reduce){#loading .loadPulse{animation:none}}
 
 
-/* 0.6.94 — presentación cinematográfica limpia y estados de arranque inequívocos. */
+/* 0.6.95 — presentación cinematográfica limpia y estados de arranque inequívocos. */
 body.booting #hud, body.boot-failed #hud {
  visibility:hidden!important; opacity:0!important; pointer-events:none!important;
 }
@@ -591,7 +591,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 </style>
-<!-- EL SIN NOMBRE 0.6.94: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.95: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -607,9 +607,40 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 </script>
 <meta name="el-sin-nombre-repair-0669" content="forward-facing resting arms and weapon grip, remove rigid civilian robe/cape shell, vivid terrain palette and stronger natural lighting">
 <style>
-/* 0.6.94: civilian GLBs install automatically; no manual installer is shown. */
+/* 0.6.95: civilian GLBs install automatically; no manual installer is shown. */
 #introCivilianInstallCard,#villagerModelBtn{display:none!important}
-</style>
+
+/* 0.6.95 — HUD typography lanes: text never stacks over controls or map. */
+#area{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 92px)!important;left:10px!important;right:auto!important;max-width:min(46vw,440px);max-height:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;z-index:9;pointer-events:none}
+#quickActions{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 122px)!important;left:10px!important;right:auto!important;width:min(54vw,460px);max-width:calc(100vw - 170px);display:flex!important;flex-wrap:wrap!important;align-items:flex-start;align-content:flex-start;gap:5px;z-index:10}
+#quickActions button{flex:0 1 auto;min-width:0;max-width:100%;min-height:35px;padding:7px 9px;line-height:1.18;white-space:normal;overflow-wrap:anywhere;text-align:center}
+#map{z-index:9}
+#notice{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 248px)!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translateX(-50%)!important;width:min(78vw,560px);max-width:78vw;max-height:min(13dvh,94px);overflow-y:auto;padding:9px 13px;border-radius:10px;line-height:1.35;font-size:clamp(10px,1vw,12px);text-wrap:pretty;overflow-wrap:anywhere;z-index:17;pointer-events:none;box-shadow:0 6px 20px #0008}
+#modelStatus{position:relative!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;width:100%;max-width:100%;max-height:none;overflow:visible;margin:9px 0;z-index:auto}
+#modelStatusText{display:block;overflow-wrap:anywhere;line-height:1.4}
+#chapterTracker{overflow:hidden}
+#chapterDescription,#sprintQuestLine{overflow-wrap:anywhere;line-height:1.25}
+@media(max-width:520px) and (orientation:portrait){
+ #area{left:8px!important;max-width:44vw;font-size:8px}
+ #quickActions{top:calc(env(safe-area-inset-top,0px) + 116px)!important;left:8px!important;width:min(54vw,224px);max-width:calc(100vw - 145px);gap:5px}
+ #quickActions button{flex:1 1 calc(50% - 5px);min-height:34px;padding:6px;font-size:8px}
+ #map{top:calc(env(safe-area-inset-top,0px) + 113px)!important;right:8px!important}
+ #notice{top:calc(env(safe-area-inset-top,0px) + 244px)!important;width:min(78vw,440px);max-height:min(13dvh,90px);padding:8px 10px;font-size:10px}
+ #chapterTracker{width:min(48vw,214px);padding:7px 8px;gap:3px}
+ #chapterDescription,#sprintQuestLine{font-size:8px}
+}
+@media(orientation:landscape){
+ #area{top:calc(env(safe-area-inset-top,0px) + 82px)!important;max-width:44vw}
+ #quickActions{top:calc(env(safe-area-inset-top,0px) + 112px)!important;max-width:calc(100vw - 184px)}
+ #map{top:calc(env(safe-area-inset-top,0px) + 108px)!important}
+ #notice{top:calc(env(safe-area-inset-top,0px) + 220px)!important;width:min(68vw,560px)}
+}
+@media(max-height:460px) and (orientation:landscape){
+ #area{top:calc(env(safe-area-inset-top,0px) + 80px)!important}
+ #quickActions{top:calc(env(safe-area-inset-top,0px) + 92px)!important}
+ #map{top:calc(env(safe-area-inset-top,0px) + 91px)!important}
+ #notice{top:calc(env(safe-area-inset-top,0px) + 176px)!important;max-height:12dvh;width:min(70vw,520px)}
+}</style>
 </head>
 <body class="booting">
 <svg id="norseIconLibrary" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
@@ -651,7 +682,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
   <span id="sprintQuestLine">🏃 PRUEBA DE CARRERA · 0/40 m</span>
   <span class="chapterTrack"><i id="chapterProgress"></i></span>
  </button>
- <div id="notice"></div>
+ <div id="notice" role="status" aria-live="polite" aria-atomic="true"></div>
  <button id="frameDiagnostic" type="button" aria-label="Informe de errores" title="Toca para copiar el informe de errores" style="display:none;position:fixed;right:calc(env(safe-area-inset-right,0px) + 8px);top:50%;left:auto;bottom:auto;transform:translateY(-50%);z-index:28;width:40px;min-width:40px;height:78px;padding:7px 4px;border:1px solid #d58b68;border-radius:17px;background:#351c1bea;color:#fff0df;font:800 12px/1.1 system-ui;text-align:center;align-items:center;justify-content:center;writing-mode:vertical-rl;touch-action:manipulation;box-shadow:0 4px 14px #0008">⚠ 0</button>
  <div id="quickActions"><button id="progressBtn" type="button">📜 SAGA</button><button id="saveBtn" type="button">💾 GUARDAR</button><button id="audioToggle" type="button" aria-label="Activar o desactivar sonido">🔊</button><button id="rotateScreenBtn" type="button" aria-label="Cambiar orientación de pantalla" title="Alternar automática, horizontal y vertical">↻ AUTO</button><button id="buildCabinBtn" type="button" aria-label="Construir refugio permanente">🏚 REFUGIO · 6M/1P</button><button id="villagerModelBtn" type="button" style="display:none">📦 ALDEANOS 3D</button></div>
  <div id="mapBackdrop"></div>
@@ -1031,7 +1062,7 @@ async function startGame(){
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
- console.info('EL SIN NOMBRE 0.6.94 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
+ console.info('EL SIN NOMBRE 0.6.95 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
  let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
  const minimumQualityDpr=Math.min(qualityDpr,2.05),targetFrameRate=120;
  function changeShadowQuality(nextSize){
@@ -2345,7 +2376,7 @@ async function startGame(){
   }catch(_){return false;}
  }
 
- // Selección de locomoción 0.6.94: los GLB oficiales incluyen clips explícitos "walk" y "run".
+ // Selección de locomoción 0.6.95: los GLB oficiales incluyen clips explícitos "walk" y "run".
  // No se debe exigir que el nombre de cada pista incluya Left/Right + Leg:
  // algunos exportadores renombran los nodos y el validador antiguo rechazaba un ciclo válido.
  function hasPlayableAnimationTracks(group){
@@ -4183,7 +4214,9 @@ function villageHostileDefenders(vl){
  }
  function playerIsInProtectedTerritory(){const p=playerPos();return isPlayerTerritoryAt(p.x,p.z);}
  const companions=[];const MAX_RECRUITS=12;let actionVillage=null;
- function msg(t){let e=document.getElementById('notice');if(!e)return;const text=String(t||'');e.textContent=text.length>74?text.slice(0,71)+'…':text;e.style.opacity=1;clearTimeout(msg.timer);msg.timer=setTimeout(()=>{e.style.opacity=0;},1900);}
+ const noticeQueue=[];let noticeActive=false,noticeCurrent='';
+ function showNextNotice(){const element=document.getElementById('notice');if(!element||!noticeQueue.length){noticeActive=false;noticeCurrent='';return;}noticeCurrent=noticeQueue.shift();noticeActive=true;element.textContent=noticeCurrent;element.style.opacity='1';clearTimeout(msg.timer);msg.timer=setTimeout(()=>{element.style.opacity='0';msg.timer=setTimeout(()=>{noticeActive=false;noticeCurrent='';showNextNotice();},220);},1900);}
+ function msg(t){const full=String(t||'').trim();if(!full)return;const text=full.length>74?full.slice(0,71)+'…':full;if(text===noticeCurrent||noticeQueue[noticeQueue.length-1]===text)return;if(noticeQueue.length>=4)noticeQueue.shift();noticeQueue.push(text);if(!noticeActive)showNextNotice();}
  // Audio nórdico procedural: se desbloquea tras el primer toque (política de autoplay móvil).
  const NorseAudio=(()=>{
   let ctx=null,master=null,windGain=null,seaGain=null,noiseBuffer=null,unlocked=false,muted=false,mediaUnlocked=false,crackleClock=0,gullClock=17,stepDistance=0,marchCooldown=0,civilianStepCooldown=0;
@@ -4285,7 +4318,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'3',build:'0.6.94',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'3',build:'0.6.95',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -4310,21 +4343,20 @@ function villageHostileDefenders(vl){
   'Desembarca y acércate a la gente del asentamiento.',
   'Has encontrado un primer hogar. La saga acaba de empezar.'
  ];
- function updateChapterTracker(){
-  const panel=document.getElementById('chapterTracker');if(!panel)return;
-  const title=document.getElementById('chapterTitle'),desc=document.getElementById('chapterDescription'),bar=document.getElementById('chapterProgress');
-  const stage=Math.max(0,Math.min(4,chapterStage));let progress=0,detail='';
-  const sprintLine=document.getElementById('sprintQuestLine');
-  if(sprintLine)sprintLine.textContent=sprintMissionDone?'🏃 PRUEBA DE CARRERA · COMPLETADA':'🏃 PRUEBA DE CARRERA · '+Math.floor(Math.min(40,sprintMissionMeters))+'/40 m';
-  if(stage===0){progress=Math.min(1,Math.min(woodCount/12,stoneCount/3));detail='Madera '+woodCount+'/12 · Piedra '+stoneCount+'/3';}
-  else if(stage===1){progress=Math.max(0,Math.min(1,boatHp/boatMax));detail='Casco '+Math.round(boatHp)+'% · Reparación: 8 madera';}
-  else if(stage===2){const v0=villages[0],d=v0?Math.hypot(ship.position.x-v0.x,ship.position.z-v0.z):100;progress=Math.max(0,Math.min(1,1-d/110));detail=onShip?'A la costa · '+Math.round(d)+' m':'Sube al drakkar para zarpar';}
-  else if(stage===3){const v0=villages[0],p=playerPos(),d=v0?Math.hypot(p.x-v0.x,p.z-v0.z):100;progress=Math.max(0,Math.min(1,1-d/110));detail=onShip?'Desembarca en la costa':'Aldea del Cuervo · '+Math.round(d)+' m';}
-  else{progress=1;detail='CAPÍTULO I · COMPLETADO';}
-  if(title)title.textContent=stage===4?'Primer hogar encontrado':stage===0?'Reúne provisiones':stage===1?'Repara el drakkar':stage===2?'La primera travesía':'Busca refugio en Cuervo';
-  if(desc)desc.textContent=detail;
-  if(bar)bar.style.width=(progress*100).toFixed(1)+'%';
-  panel.dataset.stage=String(stage);
+ const chapterTrackerUI={panel:document.getElementById('chapterTracker'),title:document.getElementById('chapterTitle'),description:document.getElementById('chapterDescription'),progress:document.getElementById('chapterProgress'),sprint:document.getElementById('sprintQuestLine')};
+const actButtonUI=document.getElementById('act');
+function updateChapterTracker(){
+ const {panel,title,description:desc,progress:bar,sprint:sprintLine}=chapterTrackerUI;if(!panel)return;
+ const stage=Math.max(0,Math.min(4,chapterStage));let progress=0,detail='';
+ const sprintText=sprintMissionDone?'🏃 PRUEBA DE CARRERA · COMPLETADA':'🏃 PRUEBA DE CARRERA · '+Math.floor(Math.min(40,sprintMissionMeters))+'/40 m';
+ if(sprintLine&&sprintLine.textContent!==sprintText)sprintLine.textContent=sprintText;
+ if(stage===0){progress=Math.min(1,Math.min(woodCount/12,stoneCount/3));detail='Madera '+woodCount+'/12 · Piedra '+stoneCount+'/3';}
+ else if(stage===1){progress=Math.max(0,Math.min(1,boatHp/boatMax));detail='Casco '+Math.round(boatHp)+'% · Reparación: 8 madera';}
+ else if(stage===2){const v0=villages[0],d=v0?Math.hypot(ship.position.x-v0.x,ship.position.z-v0.z):100;progress=Math.max(0,Math.min(1,1-d/110));detail=onShip?'A la costa · '+Math.round(d)+' m':'Sube al drakkar para zarpar';}
+ else if(stage===3){const v0=villages[0],p=playerPos(),d=v0?Math.hypot(p.x-v0.x,p.z-v0.z):100;progress=Math.max(0,Math.min(1,1-d/110));detail=onShip?'Desembarca en la costa':'Aldea del Cuervo · '+Math.round(d)+' m';}
+ else{progress=1;detail='CAPÍTULO I · COMPLETADO';}
+ const titleText=stage===4?'Primer hogar encontrado':stage===0?'Reúne provisiones':stage===1?'Repara el drakkar':stage===2?'La primera travesía':'Busca refugio en Cuervo';if(title&&title.textContent!==titleText)title.textContent=titleText;if(desc&&desc.textContent!==detail)desc.textContent=detail;
+ const progressWidth=(progress*100).toFixed(1)+'%';if(bar&&bar.style.width!==progressWidth)bar.style.width=progressWidth;const stageValue=String(stage);if(panel.dataset.stage!==stageValue)panel.dataset.stage=stageValue;
  }
  function updateChapterQuest(){
   const old=chapterStage;
@@ -4345,9 +4377,11 @@ function villageHostileDefenders(vl){
   }else updateChapterTracker();
  }
  function recordSagaEvent(text){const event={at:Date.now(),text:String(text).slice(0,120)};sagaHistory.push(event);if(sagaHistory.length>30)sagaHistory.splice(0,sagaHistory.length-30);const panel=document.getElementById('progressPanel');if(panel&&panel.classList.contains('open'))updateProgressPanel();}
- function updateHUD(){
-  const versionNode=document.getElementById('subtitle');if(versionNode)versionNode.textContent='SAGA DEL NORTE · CAPÍTULO I · 0.6.94';
-  document.getElementById('wood').textContent=woodCount;document.getElementById('stone').textContent=stoneCount;document.getElementById('recruits').textContent=companions.length;document.getElementById('arsenalBtn').textContent='⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]);document.getElementById('kills').textContent=kills;document.getElementById('captured').textContent=captured+'/4';document.getElementById('health').style.width=Math.max(0,health)+'%';document.getElementById('boatHealthStat').textContent=Math.round(boatHp)+'%';document.getElementById('raiders').textContent=enemyShips.filter(e=>!e.sunk).length;document.getElementById('stamina').style.width=Math.max(0,stamina)+'%';document.getElementById('healBtn').textContent=healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR';updateWeaponPanel();updateChapterTracker();
+ const hudElements={subtitle:document.getElementById('subtitle'),wood:document.getElementById('wood'),stone:document.getElementById('stone'),recruits:document.getElementById('recruits'),arsenal:document.getElementById('arsenalBtn'),kills:document.getElementById('kills'),captured:document.getElementById('captured'),health:document.getElementById('health'),boatHealth:document.getElementById('boatHealthStat'),raiders:document.getElementById('raiders'),stamina:document.getElementById('stamina'),heal:document.getElementById('healBtn')};
+function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
+function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
+function updateHUD(){
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.95');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -5783,7 +5817,10 @@ function villageHostileDefenders(vl){
   // Coast gulls circle above the water, with a slow wing beat.
   ambientBirds.forEach(b=>{const a=elapsed*b.speed+b.phase,bank=Math.sin(a*1.2)*.12;b.root.position.x=Math.cos(a)*b.radius-36;b.root.position.z=Math.sin(a)*b.radius-18;b.root.position.y=b.alt+Math.sin(a*2+b.phase)*.72+Math.sin(elapsed*.41+b.phase)*.12;b.root.rotation.y=-a+Math.PI/2;b.root.rotation.z=bank;if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);});
   }
-  contextRefresh+=dt;if(contextRefresh>=.12){updateContext();contextRefresh=0;}updateChapterQuest();document.getElementById('act').classList.toggle('chopping',playerAction==='chop'||playerAction==='mine');updateCamera(dt);
+  contextRefresh+=dt;if(contextRefresh>=.12){updateContext();contextRefresh=0;}updateChapterQuest();
+  const shouldShowChopping=playerAction==='chop'||playerAction==='mine';
+  if(actButtonUI&&actButtonUI.classList.contains('chopping')!==shouldShowChopping)actButtonUI.classList.toggle('chopping',shouldShowChopping);
+  updateCamera(dt);
   const nearPlayer=player.root.position;let near=land[0],nearDistSq=Infinity;
   for(const island of land){const dx=nearPlayer.x-island.x,dz=nearPlayer.z-island.z,d2=dx*dx+dz*dz;if(d2<nearDistSq){nearDistSq=d2;near=island;}}
   const inHomeTerritory=Math.hypot(nearPlayer.x-STARTER_CAMP_POSITION.x,nearPlayer.z-STARTER_CAMP_POSITION.z)<=24;
@@ -5864,7 +5901,7 @@ function villageHostileDefenders(vl){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.94 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.95 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -5917,7 +5954,7 @@ function villageHostileDefenders(vl){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.94: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.95: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -5977,7 +6014,7 @@ function villageHostileDefenders(vl){
  });
  updateRotateScreenButton();
  updateHUD();drawMap();
- console.info('EL SIN NOMBRE 0.6.94 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.95 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'Descargando e instalando personajes 3D…');
  const allCharacterLoads=Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
@@ -6005,7 +6042,7 @@ function villageHostileDefenders(vl){
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
- console.info('EL SIN NOMBRE 0.6.94 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ console.info('EL SIN NOMBRE 0.6.95 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
