@@ -1,5 +1,5 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.115";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.116";
 const ASSET_CACHE = "el-sin-nombre-assets-build";
 const SHELL_FILES = ["./index.html", "./guest/index.html", "./manifest.webmanifest", "./icon.svg"];
 
@@ -55,7 +55,9 @@ self.addEventListener("fetch", event => {
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, SHELL_CACHE).catch(async () => {
       const cache = await caches.open(SHELL_CACHE);
-      return (await cache.match("./index.html")) || Response.error();
+      const guestPath = /\/guest\/?$/.test(url.pathname);
+      const fallback = guestPath ? "./guest/index.html" : "./index.html";
+      return (await cache.match(fallback)) || Response.error();
     }));
     return;
   }
