@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.103">
-<meta name="el-sin-nombre-repair" content="0.6.103 detailed island ground, wind animated grass and compact notifications">
+<meta name="el-sin-nombre-build" content="0.6.104">
+<meta name="el-sin-nombre-repair" content="0.6.104 natural ground variation and reduced terrain GPU work">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.103</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.104</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1448,7 +1448,7 @@ async function startGame(){
  }
  const texTerrain=makeNordicTerrainAlbedo();
 
- const albedoNormalTerrain=makeAlbedoNormal('Albedo-derived terrain normal',texTerrain,.94,768),albedoNormalGrass=makeAlbedoNormal('Albedo-derived grass normal',texGrass,.72,512),albedoNormalSand=makeAlbedoNormal('Albedo-derived sand normal',texSand,.30,384),albedoNormalStone=makeAlbedoNormal('Albedo-derived stone normal',texStone,.86,384),albedoNormalWood=makeAlbedoNormal('Albedo-derived timber normal',texWood,.90,384),albedoNormalBark=makeAlbedoNormal('Albedo-derived bark normal',texBark,.82,384),albedoNormalCloth=makeAlbedoNormal('Albedo-derived wool normal',texCloth,.34,256),albedoNormalLeather=makeAlbedoNormal('Albedo-derived leather normal',texLeather,.52,256),albedoNormalWater=makeAlbedoNormal('Albedo-derived water normal',texWater,.23,256);
+ const albedoNormalTerrain=makeAlbedoNormal('Albedo-derived terrain normal',texTerrain,.70,512),albedoNormalGrass=makeAlbedoNormal('Albedo-derived grass normal',texGrass,.72,512),albedoNormalSand=makeAlbedoNormal('Albedo-derived sand normal',texSand,.30,384),albedoNormalStone=makeAlbedoNormal('Albedo-derived stone normal',texStone,.86,384),albedoNormalWood=makeAlbedoNormal('Albedo-derived timber normal',texWood,.90,384),albedoNormalBark=makeAlbedoNormal('Albedo-derived bark normal',texBark,.82,384),albedoNormalCloth=makeAlbedoNormal('Albedo-derived wool normal',texCloth,.34,256),albedoNormalLeather=makeAlbedoNormal('Albedo-derived leather normal',texLeather,.52,256),albedoNormalWater=makeAlbedoNormal('Albedo-derived water normal',texWater,.23,256);
  [M.grass,M.grass2,M.darkGrass].forEach(m=>{m.bumpTexture=albedoNormalGrass;m.bumpTexture.level=.44;});
  M.sand.bumpTexture=albedoNormalSand;M.sand.bumpTexture.level=.24;
  [M.stone,M.stoneLight].forEach(m=>{m.bumpTexture=albedoNormalStone;m.bumpTexture.level=.48;});
@@ -1637,7 +1637,7 @@ async function startGame(){
  function createIslandTerrain(is,index){
   // Babylon's native Ground mesh guarantees a stable, upward-facing heightfield.
   // Vertices outside the island are sunk beneath the sea, so no square island edge is visible.
-  const subdivisions=index===0?(isTouchDevice?176:208):96;
+  const subdivisions=index===0?(isTouchDevice?176:208):72;
   const mesh=B.MeshBuilder.CreateGround('IslandHeightfield_'+index,{width:is.r*2,height:is.r*2,subdivisions,updatable:true},scene);
   const positions=mesh.getVerticesData(B.VertexBuffer.PositionKind);
   const colors=[];
@@ -1654,15 +1654,23 @@ async function startGame(){
    const patch=terrainValueNoise(wx*.022+17.2,wz*.022-8.4);
    const micro=terrainValueNoise(wx*.075-4.1,wz*.075+9.7);
    const fine=terrainValueNoise(wx*.19+3.7,wz*.19-5.2);
-   const wet=smooth01((patch*.42+micro*.42+fine*.16-.50)*3.5)*(1-rock)*(1-beach);
-   const moss=smooth01((patch*.70+micro*.30-.39)*3.0)*(1-rock)*(1-beach);
-   const bareSoil=smooth01((micro*.58+fine*.32+patch*.10-.55)*3.4)*(1-rock)*(1-beach);
-   const grass=[.80+.13*moss,.84+.11*moss,.70+.14*moss],stone=[.88,.86,.80],sand=[.98,.86,.68],soil=[.82,.65,.46],mud=[.66,.70,.56];
+   const grain=terrainValueNoise(wx*.34-11.7,wz*.34+23.4);
+   const litter=terrainValueNoise(wx*.22+31.3,wz*.22-16.8);
+   const wet=smooth01((patch*.36+micro*.39+fine*.25-.49)*3.8)*(1-rock)*(1-beach);
+   const moss=smooth01((patch*.62+micro*.25+grain*.13-.42)*3.4)*(1-rock)*(1-beach);
+   const bareSoil=smooth01((micro*.42+fine*.34+grain*.24-.53)*4.2)*(1-rock)*(1-beach);
+   const leafLitter=smooth01((litter*.57+grain*.27+fine*.16-.62)*5.0)*(1-rock)*(1-beach);
+   // Neutral olive base lets the albedo read through instead of tinting the whole island green.
+   const grass=[.94+.035*moss,.92+.045*moss,.82+.055*moss],stone=[.94,.93,.88],sand=[1,.88,.70],soil=[.93,.77,.57],mud=[.76,.82,.68],leaf=[.98,.79,.56];
    let r=grass[0]*(1-rock)+stone[0]*rock,g=grass[1]*(1-rock)+stone[1]*rock,b=grass[2]*(1-rock)+stone[2]*rock;
    r=r*(1-wet)+mud[0]*wet;g=g*(1-wet)+mud[1]*wet;b=b*(1-wet)+mud[2]*wet;
-   r=r*(1-Math.min(1,bareSoil*1.18))+soil[0]*Math.min(1,bareSoil*1.18);g=g*(1-Math.min(1,bareSoil*1.18))+soil[1]*Math.min(1,bareSoil*1.18);b=b*(1-Math.min(1,bareSoil*1.18))+soil[2]*Math.min(1,bareSoil*1.18);
+   const soilMix=Math.min(.94,bareSoil*1.12),leafMix=Math.min(.46,leafLitter*.58);
+   r=r*(1-soilMix)+soil[0]*soilMix;g=g*(1-soilMix)+soil[1]*soilMix;b=b*(1-soilMix)+soil[2]*soilMix;
+   r=r*(1-leafMix)+leaf[0]*leafMix;g=g*(1-leafMix)+leaf[1]*leafMix;b=b*(1-leafMix)+leaf[2]*leafMix;
+   const mottling=(grain-.5)*.045;
+   r+=mottling;g+=mottling*.90;b+=mottling*.68;
    r=r*(1-beach)+sand[0]*beach;g=g*(1-beach)+sand[1]*beach;b=b*(1-beach)+sand[2]*beach;
-   colors.push(r,g,b,1);
+   colors.push(Math.max(.35,Math.min(1,r)),Math.max(.35,Math.min(1,g)),Math.max(.30,Math.min(1,b)),1);
   }
   mesh.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);
   mesh.setVerticesData(B.VertexBuffer.ColorKind,colors,true,4);
@@ -1678,11 +1686,11 @@ async function startGame(){
    const terrainPBR=new B.PBRMaterial('NordicGroundPBR_'+index,scene);
    terrainPBR.albedoTexture=texTerrain;terrainPBR.albedoColor=new B.Color3(1,1,1);
    // Más repeticiones por isla: el grano se lee a escala de suelo, no como una mancha gigante.
-   texTerrain.uScale=54;texTerrain.vScale=54;
-   terrainPBR.bumpTexture=albedoNormalTerrain;terrainPBR.bumpTexture.level=1.20;
-   albedoNormalTerrain.uScale=54;albedoNormalTerrain.vScale=54;
-   terrainPBR.metallic=0;terrainPBR.roughness=.95;terrainPBR.useVertexColors=true;
-   terrainPBR.environmentIntensity=.60;terrainPBR.backFaceCulling=false;
+   texTerrain.uScale=30;texTerrain.vScale=30;
+   terrainPBR.bumpTexture=albedoNormalTerrain;terrainPBR.bumpTexture.level=.72;
+   albedoNormalTerrain.uScale=30;albedoNormalTerrain.vScale=30;
+   terrainPBR.metallic=0;terrainPBR.roughness=.99;terrainPBR.useVertexColors=true;
+   terrainPBR.environmentIntensity=.34;terrainPBR.backFaceCulling=true;
    terrainPBR.maxSimultaneousLights=2;mesh.material=terrainPBR;
   }
   mesh.isPickable=true;mesh.checkCollisions=true;mesh.receiveShadows=true;mesh.refreshBoundingInfo(true);
@@ -4429,18 +4437,30 @@ async function startGame(){
  // Viento de hierba por deformación de la malla base compartida por las thin instances.
  // Solo se actualizan lotes cercanos a cámara, a 10 Hz; no se crean objetos ni draw calls.
  function updateRealGrassWind(dt){
+  // Menos transferencias de vértices por segundo: la hierba cercana sigue respirando,
+  // pero no se suben decenas de buffers al GPU durante cada ráfaga.
   grassWindAccumulator+=Math.min(.05,Math.max(0,dt||0));
-  if(grassWindAccumulator<.10||!grassWindBasePositions)return;
+  if(grassWindAccumulator<.20||!grassWindBasePositions)return;
   grassWindClock+=grassWindAccumulator;grassWindAccumulator=0;
-  const cameraPosition=scene.activeCamera&&scene.activeCamera.position,limit=isTouchDevice?104:138;
+  const cameraPosition=scene.activeCamera&&scene.activeCamera.position,limit=isTouchDevice?58:92;
+  const nearest=[];const maxAnimated=isTouchDevice?2:4,limitSq=limit*limit;
   for(const batch of grassWindMeshes){
-   if(cameraPosition&&Math.hypot(batch.x-cameraPosition.x,batch.z-cameraPosition.z)>limit)continue;
-   const gust=Math.sin(grassWindClock*.76+batch.phase)*.052+Math.sin(grassWindClock*.31+batch.phase*1.83)*.018;
-   const cross=Math.cos(grassWindClock*.58+batch.phase*1.37)*.035;
+   const dx=cameraPosition?batch.x-cameraPosition.x:0,dz=cameraPosition?batch.z-cameraPosition.z:0,d2=dx*dx+dz*dz;
+   if(cameraPosition&&d2>limitSq)continue;
+   let slot=nearest.length;
+   if(slot<maxAnimated)nearest.push({batch,d2});
+   else{
+    let farthest=0;for(let i=1;i<nearest.length;i++)if(nearest[i].d2>nearest[farthest].d2)farthest=i;
+    if(d2<nearest[farthest].d2)nearest[farthest]={batch,d2};
+   }
+  }
+  for(const entry of nearest){
+   const batch=entry.batch,gust=Math.sin(grassWindClock*.76+batch.phase)*.034+Math.sin(grassWindClock*.31+batch.phase*1.83)*.012;
+   const cross=Math.cos(grassWindClock*.58+batch.phase*1.37)*.022;
    for(let i=0;i<grassWindBasePositions.length;i+=3){
     const height=Math.max(0,Math.min(1,(grassWindBasePositions[i+1]-.018)/.68)),bend=height*height;
     grassWindPositions[i]=grassWindBasePositions[i]+gust*bend;
-    grassWindPositions[i+1]=grassWindBasePositions[i+1]+Math.sin(grassWindClock*.9+batch.phase+i*.013)*.004*bend;
+    grassWindPositions[i+1]=grassWindBasePositions[i+1]+Math.sin(grassWindClock*.9+batch.phase+i*.013)*.003*bend;
     grassWindPositions[i+2]=grassWindBasePositions[i+2]+cross*bend;
    }
    batch.mesh.updateVerticesData(B.VertexBuffer.PositionKind,grassWindPositions,false,false);
@@ -4689,7 +4709,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'3',build:'0.6.103',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'3',build:'0.6.104',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -4752,7 +4772,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.103');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.104');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
