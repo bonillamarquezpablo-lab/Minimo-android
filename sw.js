@@ -1,7 +1,7 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.117";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.118";
 const ASSET_CACHE = "el-sin-nombre-assets-build";
-const SHELL_FILES = ["./index.html", "./guest/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./icon.svg"];
+const SHELL_FILES = ["./index.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", event => {
   event.waitUntil(
@@ -55,8 +55,8 @@ self.addEventListener("fetch", event => {
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, SHELL_CACHE).catch(async () => {
       const cache = await caches.open(SHELL_CACHE);
-      const guestPath = /\/guest\/?$/.test(url.pathname);
-      const fallback = guestPath ? "./guest/index.html" : "./index.html";
+      const guestPath = /\/(?:guest|invitado)\/?$/.test(url.pathname);
+      const fallback = guestPath ? (url.pathname.replace(/\/$/, "").endsWith("/invitado") ? "./invitado/index.html" : "./guest/index.html") : "./index.html";
       return (await cache.match(fallback)) || Response.error();
     }));
     return;
@@ -67,7 +67,7 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  if (url.pathname.endsWith("/manifest.webmanifest") || url.pathname.endsWith("/guest-manifest.webmanifest") || url.pathname.endsWith("/icon.svg")) {
+  if (url.pathname.endsWith("/manifest.webmanifest") || url.pathname.endsWith("/guest-manifest.webmanifest") || url.pathname.endsWith("/invitado-manifest.webmanifest") || url.pathname.endsWith("/icon.svg")) {
     event.respondWith(cacheFirst(request, SHELL_CACHE).catch(() => Response.error()));
   }
 });

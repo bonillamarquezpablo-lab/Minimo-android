@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.117">
-<meta name="el-sin-nombre-repair" content="0.6.117 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.118">
+<meta name="el-sin-nombre-repair" content="0.6.118 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.117</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.118</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1252,9 +1252,9 @@ window.addEventListener('online',()=>{
  }
 });
 
-const SHARE_NEW_GAME=!!document.querySelector('meta[name="el-sin-nombre-guest-entry"][content="true"]')||new URLSearchParams(location.search).get('newgame')==='1'||/(?:^|\/)guest\/?$/.test(location.pathname);
+const SHARE_NEW_GAME=!!document.querySelector('meta[name="el-sin-nombre-guest-entry"][content="true"]')||new URLSearchParams(location.search).get('newgame')==='1'||/(?:^|\/)(?:guest|invitado)\/?$/.test(location.pathname);
 const PREFLIGHT_SETTINGS_KEY='el-sin-nombre-client-preferences-v1';
-const PLAYER_IDENTITY_KEY='el-sin-nombre-identity-'+(SHARE_NEW_GAME?'guest-v2':'main-v1');
+const PLAYER_IDENTITY_KEY='el-sin-nombre-identity-'+(SHARE_NEW_GAME?'guest-v3':'main-v1');
 let activeGraphicsProfile='quality',selectedPlayerName='',playerIdentityChosen=false;
 function safePreferenceRead(key,fallback=''){try{const value=localStorage.getItem(key);return value===null?fallback:value;}catch(_){return fallback;}}
 function safePreferenceWrite(key,value){try{localStorage.setItem(key,String(value));return true;}catch(err){console.info('No se pudo guardar una preferencia local:',err);return false;}}
@@ -1332,35 +1332,35 @@ async function startGame(){
  const constrainedGpuMatch=/SM-A127F|Mali-G52\s*MP1|PowerVR\s*GE8320/i.test((navigator.userAgent||'')+' '+graphicsRenderer);
  const constrainedHardware=!!(isTouchDevice&&(constrainedGpuMatch||(reportedMemory>0&&reportedMemory<=4&&(Number(navigator.hardwareConcurrency)||0)<=8)));
  const isConstrainedMobile=!!(isPerformanceMode&&isTouchDevice&&(constrainedHardware||reportedMemory<=4));
- const shadowMapSize=isPerformanceMode?(isIOSDevice?512:(isTouchDevice?512:1024)):(isIOSDevice?1024:(isTouchDevice?2048:(reportedMemory>=8?3072:2048)));
+ const shadowMapSize=isPerformanceMode?(isConstrainedMobile?256:(isTouchDevice?512:1024)):(isIOSDevice?1024:(isTouchDevice?2048:(reportedMemory>=8?3072:2048)));
  let shadowGen=null,currentShadowSize=shadowMapSize;
  // CALIDAD conserva la configuración completa. RENDIMIENTO reduce el coste gráfico,
  // no desactiva ni sustituye ningún sistema de juego.
- const qualityDpr=isPerformanceMode?Math.min(deviceDpr,constrainedHardware?.78:(isTouchDevice?1.0:1.35)):Math.min(deviceDpr,isIOSDevice?1.75:(isTouchDevice?2.60:2.0));
+ const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isConstrainedMobile ? .68 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35))):Math.min(deviceDpr,isIOSDevice?1.75:(isTouchDevice?2.60:2.0));
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
- const maxAnisotropy=Math.max(1,Math.min(isPerformanceMode?4:16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
+ const maxAnisotropy=Math.max(1,Math.min(isPerformanceMode?(isConstrainedMobile?2:4):16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
  console.info('EL SIN NOMBRE render profile:',{profile:activeGraphicsProfile,devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize,constrainedHardware});
  let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
- const minimumQualityDpr=Math.min(qualityDpr,2.05),minimumPerformanceDpr=isPerformanceMode?(isTouchDevice?.52:.68):qualityDpr,targetFrameRate=60;
+ const minimumQualityDpr=Math.min(qualityDpr,2.05),minimumPerformanceDpr=isPerformanceMode?(isConstrainedMobile ? .40 : (isTouchDevice ? .52 : .68)):qualityDpr,targetFrameRate=60;
  function changeShadowQuality(nextSize){
   if(!shadowGen||nextSize===currentShadowSize)return;
   try{const map=shadowGen.getShadowMap&&shadowGen.getShadowMap();if(map&&typeof map.resize==='function'){map.resize(nextSize);currentShadowSize=nextSize;}}
   catch(err){console.warn('No se pudo cambiar el mapa de sombras:',err);}
  }
  function adaptRenderQuality(dt){
-  fpsSample+=dt;if(fpsSample<2.5)return;fpsSample=0;
+  fpsSample+=dt;if(fpsSample<(isConstrainedMobile?1.5:2.5))return;fpsSample=0;
   const fps=engine.getFps();
   // Si RAF parece limitado a 60Hz, bajar píxeles no desbloquea la frecuencia de pantalla.
   if(fps>=58&&fps<=62){lowFpsWindows=0;highFpsWindows=0;return;}
-  if(isPerformanceMode&&fps<24){
+  if(isPerformanceMode&&fps<28){
    lowFpsWindows++;highFpsWindows=0;
-   if(lowFpsWindows>=2){
+   if(lowFpsWindows>=1){
     lowFpsWindows=0;
-    const nextDpr=Math.max(minimumPerformanceDpr,qualityDprCurrent*.84);
+    const nextDpr=Math.max(minimumPerformanceDpr,qualityDprCurrent*.78);
     if(nextDpr<qualityDprCurrent-.015){qualityDprCurrent=nextDpr;engine.setHardwareScalingLevel(1/qualityDprCurrent);}
-    if(currentShadowSize>256)changeShadowQuality(256);
+    if(currentShadowSize>128)changeShadowQuality(128);
     console.info('Perfil de rendimiento adaptativo activado',{fps:Math.round(fps),renderDpr:qualityDprCurrent,shadowMap:currentShadowSize});
    }
   }else if(fps>44){highFpsWindows++;lowFpsWindows=0;}
@@ -1410,7 +1410,7 @@ async function startGame(){
   }
  }catch(shadowInitError){console.warn('Sombras dinámicas no disponibles; el juego continuará con iluminación directa:',shadowInitError);shadowGen=null;}
  const managedWorldShadowGroups=[];let managedActiveWorldShadowCount=0,managedShadowCullAt=0;
- function addModelShadow(root,maxCasters=isPerformanceMode?2:7){
+ function addModelShadow(root,maxCasters=isConstrainedMobile?1:(isPerformanceMode?2:7)){
   if(!root||!root.getChildMeshes)return;
   const meshes=root.getChildMeshes(false).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0);
   meshes.forEach(mesh=>{mesh.receiveShadows=true;});
@@ -1527,12 +1527,12 @@ async function startGame(){
   material.diffuseTexture=texture;material.diffuseColor=new B.Color3(1,1,1);
   texture.uScale=repeat;texture.vScale=repeat;material.specularColor=new B.Color3(.045,.045,.045);
  }
- const texGrass=makePatternTexture('Detailed grass albedo','#617a48',['#a4b96e','#49683c','#c1c18a','#3a5a40'],'grass',isPerformanceMode?1024:2048);
- const texSand=makePatternTexture('Pebbled sand albedo','#ad9870',['#dfc99b','#786c55','#e8d9b8'],'sand',isPerformanceMode?512:1024);
+ const texGrass=makePatternTexture('Detailed grass albedo','#617a48',['#a4b96e','#49683c','#c1c18a','#3a5a40'],'grass',isPerformanceMode?(isConstrainedMobile?512:1024):2048);
+ const texSand=makePatternTexture('Pebbled sand albedo','#ad9870',['#dfc99b','#786c55','#e8d9b8'],'sand',isPerformanceMode?(isConstrainedMobile?256:512):1024);
  const texBark=makePatternTexture('Rough tree bark','#59402d',['#8b6540','#382a22','#a27b50'],'bark');
  const texWood=makePatternTexture('Weathered timber','#79563a',['#b18a5c','#4e3729','#d0a06b'],'grain');
  const texLeaf=makePatternTexture('Leaf canopy detail','#3c6540',['#769257','#294b35','#a0a66a'],'leaf');
- const texWater=makePatternTexture('Nordic sea surface','#1f5363',['#79a6aa','#183e51','#a8c1b8','#396e7a'],'water',768);
+ const texWater=makePatternTexture('Nordic sea surface','#1f5363',['#79a6aa','#183e51','#a8c1b8','#396e7a'],'water',isConstrainedMobile?512:768);
  const texStone=makePatternTexture('Rock grain','#73766f',['#b0b0a2','#484e4b','#93988c'],'stone');
  const texCloth=makePatternTexture('Woven wool','#76513a',['#a17b55','#4b382d'],'cloth');
  const texLeather=makePatternTexture('Leather grain','#493328',['#79563b','#2c211d'],'grain');
@@ -1723,10 +1723,10 @@ async function startGame(){
  const shadowMaterial=new B.StandardMaterial('SoftShadowMaterial',scene);shadowMaterial.diffuseTexture=shadowTexture;shadowMaterial.opacityTexture=shadowTexture;shadowMaterial.useAlphaFromDiffuseTexture=true;shadowMaterial.disableLighting=true;shadowMaterial.backFaceCulling=false;shadowMaterial.specularColor=new B.Color3(0,0,0);shadowMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;shadowMaterial.disableDepthWrite=true;
  function attachContactShadow(root,name,radius=.9){const disc=B.MeshBuilder.CreateDisc(name,{radius,tessellation:28},scene);disc.parent=root;disc.rotation.x=-Math.PI/2;disc.position=v(0,.025,0);disc.material=shadowMaterial;disc.isPickable=false;return disc;}
  const land=[{x:0,z:0,r:60,name:'Isla del Cuervo'},{x:135,z:14,r:31,name:'Costa de Skall'},{x:-132,z:45,r:33,name:'Isla de los Pinos'},{x:28,z:143,r:33,name:'Bahía de Hrafn'},{x:146,z:-132,r:25,name:'Islote del Hielo'},{x:-145,z:-126,r:27,name:'Isla de las Cenizas'},{x:286,z:154,r:33,name:'Cabo de Bruma'},{x:-286,z:232,r:31,name:'Isla del Cuerno'},{x:292,z:-264,r:36,name:'Costa de las Tormentas'},{x:470,z:100,r:31,name:'Skjoldheim'},{x:-470,z:-310,r:34,name:'Isla de los Juramentos'},{x:60,z:465,r:34,name:'Isla del Altar'},{x:-45,z:-465,r:32,name:'Cabo del Vigía'}];
- const waterSubdivisions=isPerformanceMode?(isTouchDevice?64:112):(isTouchDevice?176:224);
+ const waterSubdivisions=isPerformanceMode?(isConstrainedMobile?40:(isTouchDevice?64:112)):(isTouchDevice?176:224);
  const ground=B.MeshBuilder.CreateGround('ocean',{width:1050,height:1050,subdivisions:waterSubdivisions,updatable:true},scene);ground.position.y=0;ground.material=M.water;ground.isPickable=false;ground.receiveShadows=false;
  const waterBase=ground.getVerticesData(B.VertexBuffer.PositionKind).slice(),waterPositions=waterBase.slice(),waterIndices=ground.getIndices(),waterNormals=new Float32Array(waterBase.length);
- const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isTouchDevice?125:180):(isTouchDevice?250:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS;
+ const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:(isTouchDevice?125:180)):(isTouchDevice?250:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS;
  const waterPositionBuffer=ground.getVertexBuffer(B.VertexBuffer.PositionKind),waterNormalBuffer=ground.getVertexBuffer(B.VertexBuffer.NormalKind);
  for(let i=0;i<waterNormals.length;i+=3)waterNormals[i+1]=1;
  let waterActiveVertexOffsets=new Uint32Array(0),waterActiveMinOffset=0,waterActiveMaxOffset=-1,waterFocusX=NaN,waterFocusZ=NaN,waterLastUpdatedVertices=0,waterLastUploadedVertices=0,waterLastUploadBytes=0,waterLastUpdateMs=0,waterLastNormalMs=0;
@@ -1751,8 +1751,8 @@ async function startGame(){
   }
  }
  let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0;
- const waterVertexStep=isPerformanceMode?(isTouchDevice?1/12:1/20):(isTouchDevice?1/30:1/40);
- const waterNormalStep=isPerformanceMode?(isTouchDevice?1/3:1/6):(isTouchDevice?1/8:1/12);
+ const waterVertexStep=isPerformanceMode?(isConstrainedMobile?1/8:(isTouchDevice?1/12:1/20)):(isTouchDevice?1/30:1/40);
+ const waterNormalStep=isPerformanceMode?(isConstrainedMobile?1/2:(isTouchDevice?1/3:1/6)):(isTouchDevice?1/8:1/12);
  function waterHeight(x,z,t=oceanTime){
   // Layered directional swells: broad North Sea swell plus shorter cross-waves and capillary ripples.
   const longSwell=Math.sin(x*.009+z*.012+t*.48)*.105;
@@ -4893,7 +4893,7 @@ async function startGame(){
   gm.diffuseColor=new B.Color3(1,1,1);gm.specularColor=new B.Color3(.018,.022,.012);gm.specularPower=7;gm.backFaceCulling=false;gm.useVertexColors=true;
   const chunkSize=28,grassBatches=new Map();let count=0;
   for(let islandIndex=0;islandIndex<land.length;islandIndex++){
-   const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520),want=isPerformanceMode?Math.round(baseWant*(isTouchDevice?.34:.52)):baseWant;let placed=0,tries=0;
+   const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520),want=isPerformanceMode?Math.round(baseWant*(isConstrainedMobile?.18:(isTouchDevice?.34:.52))):baseWant;let placed=0,tries=0;
    while(placed<want&&tries<want*8){
     tries++;
     if(tries%480===0){setLoadingProgress(42+((islandIndex+placed/want)/land.length)*5,'Distribuyendo vegetación 3D…');await yieldStartupFrame();}
@@ -4933,7 +4933,7 @@ async function startGame(){
    grassMesh.thinInstanceSetBuffer('color',new Float32Array(batch.colors),4,true);
    grassMesh.thinInstanceCount=batch.matrices.length/16;grassMesh.thinInstanceRefreshBoundingInfo(true);
    grassMesh.doNotSyncBoundingInfo=false;
-   if(++grassUploadBatch%8===0)await yieldStartupFrame();
+   if(++grassUploadBatch%(isConstrainedMobile?4:8)===0)await yieldStartupFrame();
   }
   grassInstanceCount=count;grassBatchCount=grassBatches.size;
   console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:7,instancesPerIsland:land.map((is,i)=>({island:is.name,requested:i===0?6500:(i<4?1050:520)})),spatialBatches:grassBatchCount,chunkSize});
@@ -4943,7 +4943,7 @@ async function startGame(){
   // Menos transferencias de vértices por segundo: la hierba cercana sigue respirando,
   // pero no se suben decenas de buffers al GPU durante cada ráfaga.
   grassWindAccumulator+=Math.min(.05,Math.max(0,dt||0));
-  if(grassWindAccumulator<(isPerformanceMode?.28:.20)||!grassWindBasePositions)return;
+  if(grassWindAccumulator<(isConstrainedMobile?.45:(isPerformanceMode?.28:.20))||!grassWindBasePositions)return;
   grassWindClock+=grassWindAccumulator;grassWindAccumulator=0;
   const cameraPosition=scene.activeCamera&&scene.activeCamera.position,limit=isTouchDevice?58:92;
   const nearest=[];const maxAnimated=isPerformanceMode?(isTouchDevice?1:2):(isTouchDevice?2:4),limitSq=limit*limit;
@@ -5958,7 +5958,7 @@ function updateHUD(){
  let boatHp=65,boatMax=100,boatLevel=0;
  document.getElementById('upgradeBtn').addEventListener('click',openBoatModal);
  document.getElementById('closeModal').addEventListener('click',()=>modal.style.display='none');
- const SAVE_KEY=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v2':'el-sin-nombre-campaign-v1';let playerName=selectedPlayerName;let lastSaveAt=0,saveAccumulator=0;
+ const SAVE_KEY=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v3':'el-sin-nombre-campaign-v1';let playerName=selectedPlayerName;let lastSaveAt=0,saveAccumulator=0;
  let playerShelterBuilt=false,playerShelterGroup=null,playerShelterX=0,playerShelterZ=0;
  const PLAYER_SHELTER_COST={wood:6,stone:1};
  function updatePlayerIdentityHud(){const tag=document.getElementById('playerIdentityTag');if(tag)tag.textContent='VIKINGO · '+(playerName?playerName.toLocaleUpperCase('es-ES'):'SIN NOMBRE');}
@@ -6998,8 +6998,12 @@ function updateHUD(){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
     showStartScreen();startScreenShown=true;
     if(deferNpcHumanModelsOnTouch&&!enemyHumanModelsStarted){
-     const npcWarmupDelay=activeGraphicsProfile==='performance'?18000:1100;
-     setTimeout(()=>{if(!enemyHumanModelsStarted&&!document.hidden)startNpcHumanModels();},npcWarmupDelay);
+     if(isConstrainedMobile){
+      console.info('Perfil Rendimiento móvil limitado: se mantienen los NPC ligeros y se omite la importación automática de modelos secundarios para proteger la memoria.');
+     }else{
+      const npcWarmupDelay=activeGraphicsProfile==='performance'?18000:1100;
+      setTimeout(()=>{if(!enemyHumanModelsStarted&&!document.hidden)startNpcHumanModels();},npcWarmupDelay);
+     }
     }
    }
   }catch(err){reportFrameError('renderizado 3D',err);}
