@@ -15,7 +15,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.118 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.119 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -334,7 +334,7 @@ def main() -> None:
     # discard query parameters from a shared URL.
     guest_dir = DIST / "guest"
     guest_dir.mkdir(parents=True, exist_ok=True)
-    guest_html = html.replace("<head>", '<head>\n<base href="../">\n<meta name="el-sin-nombre-guest-entry" content="true">', 1)
+    guest_html = html.replace("<head>", '<head>\n<base href="../">\n<meta name="el-sin-nombre-guest-entry" content="true">\n<script>(function(){const u=new URL(location.href);if(u.searchParams.get("newgame")!=="1"){u.searchParams.set("newgame","1");u.searchParams.set("v","0.6.119");location.replace(u.href);}})();</script>', 1)
     guest_html = guest_html.replace(
         '<link rel="manifest" href="./manifest.webmanifest">',
         '<link rel="manifest" href="./guest-manifest.webmanifest">',
@@ -349,7 +349,7 @@ def main() -> None:
     # Canonical invite URL with its own PWA scope and a new, empty guest save slot.
     invite_dir = DIST / "invitado"
     invite_dir.mkdir(parents=True, exist_ok=True)
-    invite_html = html.replace("<head>", '<head>\n<base href="../">\n<meta name="el-sin-nombre-guest-entry" content="true">', 1)
+    invite_html = html.replace("<head>", '<head>\n<base href="../">\n<meta name="el-sin-nombre-guest-entry" content="true">\n<script>(function(){const u=new URL(location.href);if(u.searchParams.get("newgame")!=="1"){u.searchParams.set("newgame","1");u.searchParams.set("v","0.6.119");location.replace(u.href);}})();</script>', 1)
     invite_html = invite_html.replace(
         '<link rel="manifest" href="./manifest.webmanifest">',
         '<link rel="manifest" href="./invitado-manifest.webmanifest">',
@@ -359,7 +359,7 @@ def main() -> None:
         raise SystemExit("La ruta /invitado/ no lleva la marca de partida independiente.")
     if 'href="./invitado-manifest.webmanifest"' not in invite_html:
         raise SystemExit("La ruta /invitado/ no apunta a su manifiesto PWA independiente.")
-    if "el-sin-nombre-campaign-guest-v3" not in invite_html:
+    if "el-sin-nombre-campaign-guest-v4" not in invite_html:
         raise SystemExit("La ruta /invitado/ no usa el nuevo guardado de invitados.")
     (invite_dir / "index.html").write_text(invite_html, encoding="utf-8")
 
@@ -419,7 +419,7 @@ def main() -> None:
 
     manifest = {
         "game": "EL SIN NOMBRE",
-        "version": "0.6.118",
+        "version": "0.6.119",
         "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
         "assets": results,
     }
