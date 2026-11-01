@@ -15,7 +15,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.115 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.116 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -334,7 +334,7 @@ def main() -> None:
     # discard query parameters from a shared URL.
     guest_dir = DIST / "guest"
     guest_dir.mkdir(parents=True, exist_ok=True)
-    guest_html = html.replace("<head>", '<head>\n<base href="../">', 1)
+    guest_html = html.replace("<head>", '<head>\n<base href="../">\n<meta name="el-sin-nombre-guest-entry" content="true">', 1)
     (guest_dir / "index.html").write_text(guest_html, encoding="utf-8")
     for name in ("sw.js", "manifest.webmanifest", "icon.svg", "ASSET-LICENSES.md"):
         source = ROOT / name
