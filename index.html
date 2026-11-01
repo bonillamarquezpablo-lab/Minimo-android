@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.95">
-<meta name="el-sin-nombre-repair" content="0.6.95 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
+<meta name="el-sin-nombre-build" content="0.6.96">
+<meta name="el-sin-nombre-repair" content="0.6.96 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.95</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.96</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -480,9 +480,9 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 }
 
 
-/* 0.6.95 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
+/* 0.6.96 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
 #modelStatus{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;max-width:100%;max-height:25vh;overflow:auto;pointer-events:auto}
-/* 0.6.95 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
+/* 0.6.96 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
 #loading{overflow:hidden;align-items:stretch;justify-content:stretch;padding:0;background:linear-gradient(180deg,rgba(3,12,16,.24) 0%,rgba(3,12,16,.10) 38%,rgba(3,10,12,.88) 100%);backdrop-filter:none;text-align:left}
 #loading:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 38%,transparent 0 22%,rgba(3,9,12,.18) 58%,rgba(2,7,9,.78) 100%),linear-gradient(90deg,rgba(3,11,14,.42),transparent 35%,transparent 65%,rgba(3,11,14,.42));}
 #loading:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:linear-gradient(0deg,rgba(3,9,11,.94),rgba(3,9,11,0));}
@@ -527,7 +527,7 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 @media(prefers-reduced-motion:reduce){#loading .loadPulse{animation:none}}
 
 
-/* 0.6.95 — presentación cinematográfica limpia y estados de arranque inequívocos. */
+/* 0.6.96 — presentación cinematográfica limpia y estados de arranque inequívocos. */
 body.booting #hud, body.boot-failed #hud {
  visibility:hidden!important; opacity:0!important; pointer-events:none!important;
 }
@@ -591,7 +591,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 </style>
-<!-- EL SIN NOMBRE 0.6.95: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.96: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -607,10 +607,10 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 </script>
 <meta name="el-sin-nombre-repair-0669" content="forward-facing resting arms and weapon grip, remove rigid civilian robe/cape shell, vivid terrain palette and stronger natural lighting">
 <style>
-/* 0.6.95: civilian GLBs install automatically; no manual installer is shown. */
+/* 0.6.96: civilian GLBs install automatically; no manual installer is shown. */
 #introCivilianInstallCard,#villagerModelBtn{display:none!important}
 
-/* 0.6.95 — HUD typography lanes: text never stacks over controls or map. */
+/* 0.6.96 — HUD typography lanes: text never stacks over controls or map. */
 #area{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 92px)!important;left:10px!important;right:auto!important;max-width:min(46vw,440px);max-height:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;z-index:9;pointer-events:none}
 #quickActions{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 122px)!important;left:10px!important;right:auto!important;width:min(54vw,460px);max-width:calc(100vw - 170px);display:flex!important;flex-wrap:wrap!important;align-items:flex-start;align-content:flex-start;gap:5px;z-index:10}
 #quickActions button{flex:0 1 auto;min-width:0;max-width:100%;min-height:35px;padding:7px 9px;line-height:1.18;white-space:normal;overflow-wrap:anywhere;text-align:center}
@@ -1062,7 +1062,7 @@ async function startGame(){
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
- console.info('EL SIN NOMBRE 0.6.95 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
+ console.info('EL SIN NOMBRE 0.6.96 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
  let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
  const minimumQualityDpr=Math.min(qualityDpr,2.05),targetFrameRate=120;
  function changeShadowQuality(nextSize){
@@ -1157,6 +1157,30 @@ async function startGame(){
  clanCtx.strokeStyle='#d9b36b';clanCtx.lineWidth=9;clanCtx.beginPath();clanCtx.moveTo(256,335);clanCtx.lineTo(256,419);clanCtx.moveTo(218,395);clanCtx.lineTo(256,435);clanCtx.lineTo(294,395);clanCtx.stroke();
  clanBannerTexture.update(false);clanBannerTexture.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);clanBannerTexture.anisotropicFilteringLevel=4;
  M.playerBanner.diffuseTexture=clanBannerTexture;M.playerBanner.diffuseColor=new B.Color3(1,1,1);M.playerBanner.specularColor=new B.Color3(.12,.10,.07);
+ const factionBadgeMaterials={};
+ function createFactionBadgeMaterial(kind){
+  const friendly=kind==='friendly',texture=new B.DynamicTexture('FactionBadgeTexture_'+kind,{width:96,height:96},scene,false),ctx=texture.getContext();
+  texture.hasAlpha=true;ctx.clearRect(0,0,96,96);
+  ctx.fillStyle=friendly?'#153b2c':'#4b201d';ctx.strokeStyle=friendly?'#a3d88f':'#e18a70';ctx.lineWidth=6;
+  ctx.beginPath();ctx.moveTo(48,5);ctx.lineTo(83,20);ctx.lineTo(78,62);ctx.lineTo(48,91);ctx.lineTo(18,62);ctx.lineTo(13,20);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.strokeStyle=friendly?'#e3f1c7':'#ffe0bd';ctx.lineWidth=9;ctx.lineCap='round';ctx.lineJoin='round';
+  if(friendly){ctx.beginPath();ctx.moveTo(27,49);ctx.lineTo(41,64);ctx.lineTo(69,31);ctx.stroke();}
+  else{ctx.beginPath();ctx.moveTo(29,28);ctx.lineTo(67,67);ctx.moveTo(67,28);ctx.lineTo(29,67);ctx.stroke();}
+  texture.update(false);texture.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);
+  const material=new B.StandardMaterial('FactionBadgeMaterial_'+kind,scene);material.diffuseTexture=texture;material.emissiveTexture=texture;material.disableLighting=true;material.useAlphaFromDiffuseTexture=true;material.backFaceCulling=false;material.specularColor=new B.Color3(0,0,0);material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;return material;
+ }
+ factionBadgeMaterials.friendly=createFactionBadgeMaterial('friendly');factionBadgeMaterials.enemy=createFactionBadgeMaterial('enemy');
+ function setFactionBadge(parts,faction){
+  if(!parts||!parts.root)return;
+  const kind=faction==='friendly'?'friendly':'enemy';
+  if(!parts.factionBadge){
+   const badge=B.MeshBuilder.CreatePlane('FactionBadge_'+kind+'_'+String(parts.name||'warrior'),{width:.39,height:.43,sideOrientation:B.Mesh.DOUBLESIDE},scene);
+   badge.parent=parts.root;badge.position=v(0,2.66,0);badge.billboardMode=B.Mesh.BILLBOARDMODE_ALL;badge.isPickable=false;badge.renderingGroupId=1;parts.factionBadge=badge;
+  }
+  if(parts.factionBadgeType!==kind){parts.factionBadge.material=factionBadgeMaterials[kind];parts.factionBadgeType=kind;}
+  parts.factionBadge.setEnabled(true);
+ }
+ const distantGullMaterial=mat('Distant sea gull silhouette','#778588',.98);
 
  function makePatternTexture(name,base,accents,style='grain',size=512){
   const tex=new B.DynamicTexture(name,{width:size,height:size},scene,false),ctx=tex.getContext();
@@ -1924,6 +1948,7 @@ async function startGame(){
   // Tres saqueadores visibles por barco: cada flota lleva su propia combinación de facción.
   for(let i=0;i<2;i++){
    const raider=makeViking('RaiderCrew_'+index+'_'+i,true,(index+i)%4),side=i%2===0?-1:1;
+   setFactionBadge(raider,'enemy');
    raider.root.parent=root;raider.root.position=v(side*.66,1.005,1.65-i*2.25);raider.root.rotation.y=side*Math.PI/2;raider.weapon.setEnabled(false);attachContactShadow(raider.root,'RaiderCrewShadow_'+index+'_'+i,.82);addModelShadow(raider.root);
    crew.push({parts:raider,side,index:i});
   }
@@ -1957,7 +1982,41 @@ async function startGame(){
  let sail=B.MeshBuilder.CreatePlane('stripedSail',{width:4.25,height:4.15,sideOrientation:B.Mesh.DOUBLESIDE},scene);sail.parent=ship;sail.position=v(0,3.50,-.42);sail.material=M.canvas;
  for(let i=-1;i<=1;i++)box('sailstripe'+i,ship,[i*1.0,3.50,-.38],[.16,4.15,.025],M.sailRed);
  cyl('ClanPennantPole',ship,[0,5.92,-.43],1.05,.045,.045,M.woodLight);
- const clanPennant=B.MeshBuilder.CreatePlane('RavenClanPennant',{width:.95,height:.72,sideOrientation:B.Mesh.DOUBLESIDE},scene);clanPennant.parent=ship;clanPennant.position=v(.48,5.70,-.43);clanPennant.material=M.playerBanner;
+ const wornPennantTexture=new B.DynamicTexture('WeatheredDrakkarPennantTexture',{width:256,height:256},scene,false),wornPennantCtx=wornPennantTexture.getContext();
+ wornPennantCtx.drawImage(clanBannerTexture.getContext().canvas,0,0,256,256);
+ wornPennantCtx.save();wornPennantCtx.globalAlpha=.18;wornPennantCtx.fillStyle='#514638';wornPennantCtx.fillRect(0,0,256,256);
+ wornPennantCtx.globalAlpha=.26;wornPennantCtx.strokeStyle='#d2bea0';wornPennantCtx.lineWidth=1;
+ for(let i=0;i<54;i++){const x=(i*47+19)%256,y=(i*83+31)%256;wornPennantCtx.beginPath();wornPennantCtx.moveTo(x,y);wornPennantCtx.lineTo(x+(i%2?5:2),y+(i%3?1:7));wornPennantCtx.stroke();}
+ wornPennantCtx.globalAlpha=.42;wornPennantCtx.clearRect(245,58,6,17);wornPennantCtx.clearRect(244,132,8,12);wornPennantCtx.clearRect(246,207,6,18);wornPennantCtx.restore();
+ wornPennantTexture.update(false);wornPennantTexture.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);wornPennantTexture.anisotropicFilteringLevel=4;
+ const wornPennantMaterial=M.playerBanner.clone('WeatheredDrakkarPennantMaterial');wornPennantMaterial.diffuseTexture=wornPennantTexture;wornPennantMaterial.diffuseColor=new B.Color3(.84,.82,.73);wornPennantMaterial.specularColor=new B.Color3(.025,.022,.018);wornPennantMaterial.roughness=.98;wornPennantMaterial.backFaceCulling=false;
+ const pennantColumns=12,pennantRows=6,pennantIndices=[],pennantUvs=[],pennantBasePositions=[];
+ const pennantTornEdge=[0,.025,.008,.050,.014,.036,0,.060,.012,.040,.006,.052,0];
+ for(let row=0;row<=pennantRows;row++)for(let col=0;col<=pennantColumns;col++){
+  const u=col/pennantColumns,w=row/pennantRows,fray=row===pennantRows?pennantTornEdge[col]:0;
+  pennantBasePositions.push(u*.95,.36-w*.72+fray,0);pennantUvs.push(u,1-w);
+ }
+ for(let row=0;row<pennantRows;row++)for(let col=0;col<pennantColumns;col++){
+  const a=row*(pennantColumns+1)+col,b=a+pennantColumns+1;pennantIndices.push(a,b,a+1,a+1,b,b+1);
+ }
+ const pennantPositions=new Float32Array(pennantBasePositions),pennantNormals=[];
+ B.VertexData.ComputeNormals(pennantPositions,pennantIndices,pennantNormals);
+ const pennantData=new B.VertexData();pennantData.positions=pennantPositions;pennantData.indices=pennantIndices;pennantData.uvs=pennantUvs;pennantData.normals=pennantNormals;
+ const clanPennant=new B.Mesh('RavenClanPennant',scene);pennantData.applyToMesh(clanPennant);clanPennant.parent=ship;clanPennant.position=v(.02,5.70,-.43);clanPennant.material=wornPennantMaterial;clanPennant.isPickable=false;
+ let pennantUpdateAccumulator=0;
+ function updateDrakkarPennant(dt){
+  pennantUpdateAccumulator+=dt;if(pennantUpdateAccumulator<1/30)return;pennantUpdateAccumulator=0;
+  const positions=new Float32Array(pennantBasePositions.length),wind=.72+.28*Math.sin(elapsed*.43);
+  for(let row=0;row<=pennantRows;row++)for(let col=0;col<=pennantColumns;col++){
+   const index=(row*(pennantColumns+1)+col)*3,u=col/pennantColumns,w=row/pennantRows,bend=u*u;
+   positions[index]=pennantBasePositions[index]+bend*.018*Math.sin(elapsed*2.0-u*4.5+w*.5);
+   positions[index+1]=pennantBasePositions[index+1]+bend*.012*Math.sin(elapsed*1.55-u*2.7)*w;
+   positions[index+2]=bend*(.025+.105*wind)*Math.sin(elapsed*2.7-u*5.4+w*1.1);
+  }
+  const normals=[];B.VertexData.ComputeNormals(positions,pennantIndices,normals);
+  clanPennant.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);
+  clanPennant.updateVerticesData(B.VertexBuffer.NormalKind,normals,false,false);
+ }
  const wakeMaterial=M.foam.clone('DrakkarWakeMaterial');wakeMaterial.alpha=0;wakeMaterial.emissiveColor=new B.Color3(.12,.20,.22);
  const shipWake=[];for(let side of [-1,1]){const strip=B.MeshBuilder.CreatePlane('DrakkarWake_'+side,{width:1.08,height:7.1,sideOrientation:B.Mesh.DOUBLESIDE},scene);strip.parent=ship;strip.rotation.x=Math.PI/2;strip.position=v(side*.48,.42,-7.45);strip.material=wakeMaterial;shipWake.push(strip);}addModelShadow(ship);
  const VESSEL_SPRAY_COUNT=64;
@@ -2376,7 +2435,7 @@ async function startGame(){
   }catch(_){return false;}
  }
 
- // Selección de locomoción 0.6.95: los GLB oficiales incluyen clips explícitos "walk" y "run".
+ // Selección de locomoción 0.6.96: los GLB oficiales incluyen clips explícitos "walk" y "run".
  // No se debe exigir que el nombre de cada pista incluya Left/Right + Leg:
  // algunos exportadores renombran los nodos y el validador antiguo rechazaba un ciclo válido.
  function hasPlayableAnimationTracks(group){
@@ -3800,7 +3859,7 @@ async function startGame(){
   const guards=[];
   for(let i=0;i<3;i++){
    let angle=i*2.1+.4,ex=x+Math.cos(angle)*8,ez=z+Math.sin(angle)*8;
-   let ch=makeViking('VillageGuard'+index+'_'+i,true,(index+i)%4);ch.root.position=v(ex,terrainSurfaceAt(ex,ez)+.08,ez);ch.root.rotation.y=rand(0,6.28);attachContactShadow(ch.root,'GuardShadow_'+index+'_'+i,.92);addModelShadow(ch.root);
+   let ch=makeViking('VillageGuard'+index+'_'+i,true,(index+i)%4);setFactionBadge(ch,'enemy');ch.root.position=v(ex,terrainSurfaceAt(ex,ez)+.08,ez);ch.root.rotation.y=rand(0,6.28);attachContactShadow(ch.root,'GuardShadow_'+index+'_'+i,.92);addModelShadow(ch.root);
    let back=B.MeshBuilder.CreatePlane('guardHealthBack',{width:1.15,height:.12},scene);back.parent=ch.root;back.position=v(0,2.02,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=M.red;
    let front=B.MeshBuilder.CreatePlane('guardHealth',{width:1.1,height:.09},scene);front.parent=ch.root;front.position=v(0,2.03,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('EnemyHealth'+index+i,'#76a75a');
    guards.push({parts:ch,villageIndex:index,hp:100,alive:true,surrendered:false,recruited:false,state:'idle',attackT:0,attackDone:false,cool:rand(0,.5),stun:0,hitReact:0,knockback:0,hitDir:v(0,0,0),deadFallT:0,deadSide:rand(-1,1),healthMesh:front,healthBack:back,home:v(ex,0,ez)});
@@ -4104,9 +4163,9 @@ async function startGame(){
 
  // Distant gulls circle the coast; simple articulated wings keep them cheap on mobile.
  for(let i=0;i<9;i++){
-  const root=newGroup('CoastalGull_'+i,null),body=sphere('GullBody_'+i,root,[0,0,0],[.24,.115,.43],M.eyeWhite,10);
-  const left=box('GullLeftWing_'+i,root,[-.39,.015,0],[.78,.045,.15],M.eyeWhite,[0,0,-.08]);
-  const right=box('GullRightWing_'+i,root,[.39,.015,0],[.78,.045,.15],M.eyeWhite,[0,0,.08]);
+  const root=newGroup('CoastalGull_'+i,null),body=sphere('GullBody_'+i,root,[0,0,0],[.24,.115,.43],distantGullMaterial,10);
+  const left=box('GullLeftWing_'+i,root,[-.39,.015,0],[.78,.045,.15],distantGullMaterial,[0,0,-.08]);
+  const right=box('GullRightWing_'+i,root,[.39,.015,0],[.78,.045,.15],distantGullMaterial,[0,0,.08]);
   root.position=v(-36+Math.cos(i)*18,10+i%3*1.4,-18+Math.sin(i)*18);ambientBirds.push({root,left,right,phase:i*1.2,radius:18+i*1.65,alt:9+i%3*1.9,speed:.070+i*.004,procedural:true});
  }
  async function loadRiggedCoastalGulls(){
@@ -4121,6 +4180,23 @@ async function startGame(){
     const inst=container.instantiateModelsToScene(name=>name+'_Gull_'+i,false),roots=inst.rootNodes||[];if(!roots.length)continue;
     const actor=new B.TransformNode('RealSeagullActor_'+i,scene);roots.forEach(r=>{r.parent=actor;r.setEnabled(true);});
     const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}
+    const subduedMaterials=new Set();
+    meshes.forEach(mesh=>{
+     if(Array.isArray(mesh.material))mesh.material=mesh.material.map(material=>material?material.clone(material.name+'_subdued_gull'):material);
+     else if(mesh.material)mesh.material=mesh.material.clone(mesh.material.name+'_subdued_gull');
+     const list=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+     list.filter(Boolean).forEach(material=>{
+      if(subduedMaterials.has(material))return;subduedMaterials.add(material);
+      const color=material.diffuseColor||material.albedoColor;
+      if(color&&((color.r+color.g+color.b)/3)>.64){
+       const target=new B.Color3(.42,.49,.51),muted=B.Color3.Lerp(color,target,.58);
+       if(material.diffuseColor)material.diffuseColor.copyFrom(muted);
+       if(material.albedoColor)material.albedoColor.copyFrom(muted);
+      }
+      if(material.specularColor)material.specularColor.scaleInPlace(.24);
+      if(material.emissiveColor)material.emissiveColor.scaleInPlace(.18);
+     });
+    });
     const bounds=boundsForMeshes(meshes),height=Math.max(.001,bounds.height),scale=1.65/height;actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);
     meshes.forEach(m=>{m.isPickable=false;m.receiveShadows=false;});
     const groups=inst.animationGroups||[],fly=groups.find(g=>/walk|fly|flap/i.test(g.name))||groups.find(g=>/idle/i.test(g.name))||groups[0]||null;
@@ -4174,7 +4250,7 @@ async function startGame(){
  campGuardAngles.forEach((angle,i)=>{
   const ex=campGuardAnchor.x+Math.cos(angle)*3.8,ez=campGuardAnchor.z+Math.sin(angle)*3.8;
   const parts=makeViking('VillageGuardPatrol0_'+i,true,(i+1)%4);
-  parts.faction='player';parts.root.position=v(ex,terrainSurfaceAt(ex,ez)+.08,ez);parts.root.rotation.y=angle+Math.PI;
+  setFactionBadge(parts,'friendly');parts.faction='player';parts.root.position=v(ex,terrainSurfaceAt(ex,ez)+.08,ez);parts.root.rotation.y=angle+Math.PI;
   attachContactShadow(parts.root,'HomeGuardShadow_'+i,.92);addModelShadow(parts.root);
   const back=B.MeshBuilder.CreatePlane('HomeGuardHealthBack_'+i,{width:1.02,height:.105},scene);back.parent=parts.root;back.position=v(0,2.02,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=mat('HomeGuardHealthDark_'+i,'#1d3b2d');
   const front=B.MeshBuilder.CreatePlane('HomeGuardHealth_'+i,{width:1.0,height:.078},scene);front.parent=parts.root;front.position=v(0,2.03,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('HomeGuardHealthGreen_'+i,'#86c77a');
@@ -4214,6 +4290,15 @@ function villageHostileDefenders(vl){
  }
  function playerIsInProtectedTerritory(){const p=playerPos();return isPlayerTerritoryAt(p.x,p.z);}
  const companions=[];const MAX_RECRUITS=12;let actionVillage=null;
+ function refreshFactionBadges(){
+  for(const village of villages)for(const guard of village.guards){
+   if(!guard.alive){if(guard.parts.factionBadge)guard.parts.factionBadge.setEnabled(false);continue;}
+   setFactionBadge(guard.parts,isFriendlyGuard(guard)?'friendly':'enemy');
+  }
+  for(const guard of campGuards)if(guard.alive)setFactionBadge(guard.parts,'friendly');
+  for(const ally of companions)if(ally.recruited)setFactionBadge(ally.parts,'friendly');
+  for(const vessel of enemyShips)if(!vessel.sunk)for(const crewman of vessel.crew)setFactionBadge(crewman.parts,'enemy');
+ }
  const noticeQueue=[];let noticeActive=false,noticeCurrent='';
  function showNextNotice(){const element=document.getElementById('notice');if(!element||!noticeQueue.length){noticeActive=false;noticeCurrent='';return;}noticeCurrent=noticeQueue.shift();noticeActive=true;element.textContent=noticeCurrent;element.style.opacity='1';clearTimeout(msg.timer);msg.timer=setTimeout(()=>{element.style.opacity='0';msg.timer=setTimeout(()=>{noticeActive=false;noticeCurrent='';showNextNotice();},220);},1900);}
  function msg(t){const full=String(t||'').trim();if(!full)return;const text=full.length>74?full.slice(0,71)+'…':full;if(text===noticeCurrent||noticeQueue[noticeQueue.length-1]===text)return;if(noticeQueue.length>=4)noticeQueue.shift();noticeQueue.push(text);if(!noticeActive)showNextNotice();}
@@ -4318,7 +4403,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'3',build:'0.6.95',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'3',build:'0.6.96',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -4381,7 +4466,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.95');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.96');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -4855,6 +4940,42 @@ function updateHUD(){
  }
 
  const failedAnimationRoots=new WeakSet();
+ function animateShipRower(parts,phase){
+  if(!parts||!parts.root)return;
+  if(parts.weapon)parts.weapon.setEnabled(false);
+  const real=parts.realHuman;
+  if(real){
+   if(!Object.prototype.hasOwnProperty.call(real,'shipRowOriginalIsRaiderCrew'))real.shipRowOriginalIsRaiderCrew=!!real.isRaiderCrew;
+   real.isRaiderCrew=true;
+   animateViking(parts,phase,false,'row',false);
+  }else{
+   animateViking(parts,phase,false,'idle',false);
+   const stroke=Math.sin(phase),lift=Math.cos(phase);
+   if(parts.body)parts.body.rotation.x=.035*Math.sin(phase*2);
+   if(parts.arms&&parts.arms.length>=2){parts.arms[0].rotation.x=-.62+stroke*.20;parts.arms[0].rotation.z=.38;parts.arms[1].rotation.x=-.62-stroke*.20;parts.arms[1].rotation.z=-.38;}
+   if(parts.elbows&&parts.elbows.length>=2){parts.elbows[0].rotation.x=.56+lift*.14;parts.elbows[1].rotation.x=.56-lift*.14;}
+  }
+  if(parts.legs&&parts.legs.length>=2){parts.legs[0].rotation.x=-1.02;parts.legs[1].rotation.x=-1.02;}
+ }
+ function stopShipRower(parts){
+  if(!parts)return;
+  const real=parts.realHuman;
+  if(real&&Object.prototype.hasOwnProperty.call(real,'shipRowOriginalIsRaiderCrew')){real.isRaiderCrew=real.shipRowOriginalIsRaiderCrew;delete real.shipRowOriginalIsRaiderCrew;}
+  if(parts.weapon)parts.weapon.setEnabled(true);
+  if(parts.legs)parts.legs.forEach(leg=>{if(leg&&leg.rotation)leg.rotation.set(0,0,0);});
+ }
+ function placeShipAllyOnShore(parts,index,leader){
+  if(!parts||!parts.root)return;
+  const root=parts.root,worldPosition=root.getAbsolutePosition().clone();
+  if(root.parent===ship)root.parent=null;
+  const forward=v(Math.sin(yaw),0,Math.cos(yaw)),right=v(Math.cos(yaw),0,-Math.sin(yaw));
+  const side=index%2===0?-1:1,row=Math.floor(index/2);
+  const desired=leader.subtract(forward.scale(3.0+row*1.15)).add(right.scale(side*1.55));
+  const landing=nearestSafeLandPoint(desired.x,desired.z,.66)||nearestSafeLandPoint(leader.x,leader.z,.66);
+  if(landing)root.position=v(landing.x,terrainSurfaceAt(landing.x,landing.z)+actorGroundOffset(parts),landing.z);
+  else root.position.copyFrom(worldPosition);
+  stopShipRower(parts);
+ }
  function animateViking(parts,phase,walking,action,blockingNow){
   try{return animateVikingCore(parts,phase,walking,action,blockingNow);}
   catch(err){
@@ -5462,6 +5583,7 @@ function updateHUD(){
 
   const oarStroke=onShip?Math.sin(elapsed*7.2):0;
   for(const row of playerOars){const stroke=onShip?Math.sin(elapsed*5.8+row.phase):0;row.pivot.rotation.y=onShip?stroke*.25:0;row.pivot.rotation.x=onShip?Math.sin(elapsed*5.8+row.phase+1.1)*.06:0;}
+  updateDrakkarPennant(dt);
 
   // Three hostile longships patrol the open sea, pursue the player and damage the hull with volleys.
   worldUpdatePhase='raider ships and naval AI';
@@ -5649,14 +5771,13 @@ function updateHUD(){
     if(ally.parts.root.parent!==ship)ally.parts.root.parent=ship;
     const row=Math.floor(index/2),side=index%2===0?-1:1;
     ally.parts.root.position=v(side*.72,1.005,2.90-row*1.08);ally.parts.root.rotation.set(0,side*Math.PI/2,0);
-    ally.parts.weapon.setEnabled(false);
-    ally.parts.legs[0].rotation.x=-1.02;ally.parts.legs[1].rotation.x=-1.02;
-    animateViking(ally.parts,elapsed*2.9+index*.65,false,'row',false);
+    const oarIndex=Math.max(0,Math.min(8,Math.round((2.90-row*1.08+4.15)/1.04)));
+    animateShipRower(ally.parts,elapsed*5.8+oarIndex*.58+(side>0?Math.PI:0));
     ally.attackAnim=Math.max(0,(ally.attackAnim||0)-dt);
     if(ally.attackAnim>0){const throwT=1-ally.attackAnim/.30;ally.parts.body.rotation.x=-.10*Math.sin(throwT*Math.PI);ally.parts.arms[1].rotation.x=-1.35+Math.min(1,throwT*1.8)*1.75;ally.parts.elbows[1].rotation.x=.15+Math.min(1,throwT*1.8)*.55;}
     return;
    }
-   if(ally.parts.root.parent!==null){const worldPos=ally.parts.root.getAbsolutePosition().clone();ally.parts.root.parent=null;ally.parts.root.position.copyFrom(worldPos);ally.parts.weapon.setEnabled(true);ally.parts.legs[0].rotation.set(0,0,0);ally.parts.legs[1].rotation.set(0,0,0);}
+   if(ally.parts.root.parent===ship)placeShipAllyOnShore(ally.parts,index,leader);
    if(landIslandIndex(ally.parts.root.position.x,ally.parts.root.position.z)!==landIslandIndex(leader.x,leader.z)){
     ally.parts.actualMoveSpeed=0;ally.parts.root.position.y=terrainSurfaceAt(ally.parts.root.position.x,ally.parts.root.position.z)+actorGroundOffset(ally.parts);
     animateViking(ally.parts,ally.walkPhase||0,false,'idle',false);return;
@@ -5765,7 +5886,13 @@ function updateHUD(){
   campGuards.forEach((guard,i)=>{
    if(!guard.alive)return;
    const p=guard.parts.root;
-   if(onShip){guard.parts.actualMoveSpeed=0;p.position.y=terrainSurfaceAt(p.position.x,p.position.z)+actorGroundOffset(guard.parts);animateViking(guard.parts,elapsed*.7+i*1.3,false,'idle',false);return;}
+   if(onShip){
+    if(p.parent!==ship)p.parent=ship;
+    const seats=[{x:-.72,z:-3.72,oar:0,side:-1},{x:.72,z:-3.72,oar:0,side:1},{x:0,z:4.02,oar:8,side:0}],seat=seats[i%seats.length];
+    p.position=v(seat.x,1.005,seat.z);p.rotation.set(0,seat.side*Math.PI/2,0);guard.parts.actualMoveSpeed=0;
+    animateShipRower(guard.parts,elapsed*5.8+seat.oar*.58+(seat.side>0?Math.PI:0));return;
+   }
+   if(p.parent===ship)placeShipAllyOnShore(guard.parts,i,playerLookAt);
    if(landIslandIndex(p.position.x,p.position.z)!==landIslandIndex(playerLookAt.x,playerLookAt.z)){
     guard.parts.actualMoveSpeed=0;p.position.y=terrainSurfaceAt(p.position.x,p.position.z)+actorGroundOffset(guard.parts);
     animateViking(guard.parts,elapsed*.7+i*1.3,false,'idle',false);return;
@@ -5818,6 +5945,8 @@ function updateHUD(){
   ambientBirds.forEach(b=>{const a=elapsed*b.speed+b.phase,bank=Math.sin(a*1.2)*.12;b.root.position.x=Math.cos(a)*b.radius-36;b.root.position.z=Math.sin(a)*b.radius-18;b.root.position.y=b.alt+Math.sin(a*2+b.phase)*.72+Math.sin(elapsed*.41+b.phase)*.12;b.root.rotation.y=-a+Math.PI/2;b.root.rotation.z=bank;if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);});
   }
   contextRefresh+=dt;if(contextRefresh>=.12){updateContext();contextRefresh=0;}updateChapterQuest();
+  update.factionBadgeAccumulator=(update.factionBadgeAccumulator||0)+dt;
+  if(update.factionBadgeAccumulator>=.45){update.factionBadgeAccumulator=0;refreshFactionBadges();}
   const shouldShowChopping=playerAction==='chop'||playerAction==='mine';
   if(actButtonUI&&actButtonUI.classList.contains('chopping')!==shouldShowChopping)actButtonUI.classList.toggle('chopping',shouldShowChopping);
   updateCamera(dt);
@@ -5901,7 +6030,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.95 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.96 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -5954,7 +6083,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.95: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.96: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -6014,7 +6143,7 @@ function updateHUD(){
  });
  updateRotateScreenButton();
  updateHUD();drawMap();
- console.info('EL SIN NOMBRE 0.6.95 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.96 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'Descargando e instalando personajes 3D…');
  const allCharacterLoads=Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
@@ -6042,7 +6171,7 @@ function updateHUD(){
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
- console.info('EL SIN NOMBRE 0.6.95 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ console.info('EL SIN NOMBRE 0.6.96 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
