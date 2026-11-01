@@ -2338,6 +2338,32 @@ async function startGame(){
   }catch(_){return false;}
  }
 
+ // Selección de locomoción 0.6.88: los GLB oficiales incluyen clips explícitos "walk" y "run".
+ // No se debe exigir que el nombre de cada pista incluya Left/Right + Leg:
+ // algunos exportadores renombran los nodos y el validador antiguo rechazaba un ciclo válido.
+ function hasPlayableAnimationTracks(group){
+  try{
+   const tracks=Array.isArray(group&&group.targetedAnimations)?group.targetedAnimations:[];
+   return tracks.some(track=>{
+    const animation=track&&track.animation;
+    const keys=animation&&typeof animation.getKeys==='function'?animation.getKeys():[];
+    return Array.isArray(keys)&&keys.length>=2&&Number.isFinite(Number(keys[0].frame))&&Number(keys[keys.length-1].frame)>Number(keys[0].frame);
+   });
+  }catch(_){return false;}
+ }
+ function selectGaitAnimationGroups(groups){
+  const playable=(groups||[]).filter(hasPlayableAnimationTracks);
+  const pick=pattern=>playable.find(group=>pattern.test(String(group.name||'')))||null;
+  let walk=pick(/walk|walking|march/i);
+  let run=pick(/run|running|sprint/i);
+  // Último recurso para modelos que no etiqueten sus clips: acepta ciclos bilaterales
+  // ya medidos, pero nunca sustituye un walk/run explícito y reproducible.
+  const inferred=playable.find(group=>!/(jump|attack|idle|death|row|turn|hit|block|chop|mine|rest)/i.test(String(group.name||''))&&clipHasBilateralLegMotion(group))||null;
+  if(!walk)walk=inferred||run;
+  if(!run)run=pick(/run|running|sprint/i)||walk;
+  return {walk,run,playable};
+ }
+
  function syncEnemySword(parts){
   const real=parts&&parts.realHuman;if(!real||real.isRaiderCrew||!real.sword)return;
   // The sword is parented to the hand bone; it inherits position and rotation from the rig.
@@ -2416,12 +2442,8 @@ async function startGame(){
   for(const node of (inst.transformNodes||[])){if(node&&!transformNodes.includes(node))transformNodes.push(node);}
   const rig=separateRigLimbAliases(findRigNodes({skeletons:inst.skeletons||[],transformNodes}));
   const groups=inst.animationGroups||[];
-  const validGaitClips=groups.filter(clipHasBilateralLegMotion);
-  const walk=groups.find(g=>/\bwalk(?:ing)?\b|\bmarch(?:ing)?\b/i.test(String(g.name||''))&&clipHasBilateralLegMotion(g))
-   ||validGaitClips.find(g=>!/run|sprint|jump|attack|idle|death|row/i.test(String(g.name||'')))
-   ||validGaitClips[0]||null;
-  const run=groups.find(g=>/\b(run|running|sprint)\b/i.test(String(g.name||''))&&clipHasBilateralLegMotion(g))
-   ||validGaitClips.find(g=>/run|sprint/i.test(String(g.name||'')))||null;
+  const gait=selectGaitAnimationGroups(groups);
+  const walk=gait.walk,run=gait.run;
   const idle=groups.find(g=>/idle|stand|breath|rest/i.test(g.name))||null;
   const attack=groups.find(g=>/attack|swing|slash|hit/i.test(g.name))||null;
   groups.forEach(g=>{try{g.stop();}catch(_){}});
@@ -3015,12 +3037,9 @@ async function startGame(){
   visibleMeshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;});
   if(shadowGen)visibleMeshes.slice().sort((a,b)=>(b.getTotalVertices?.()||0)-(a.getTotalVertices?.()||0)).slice(0,12).forEach(mesh=>shadowGen.addShadowCaster(mesh));
   const groups=asset.animationGroups||[];
-  const validGaitClips=groups.filter(clipHasBilateralLegMotion);
-  const walk=groups.find(g=>/(walk|walking|march)/i.test(String(g.name||''))&&clipHasBilateralLegMotion(g))
-   ||validGaitClips.find(g=>!/run|sprint|jump|attack|idle|death|row/i.test(String(g.name||'')))
-   ||validGaitClips[0]||null;
-  const run=groups.find(g=>/(run|running|sprint)/i.test(String(g.name||''))&&clipHasBilateralLegMotion(g))
-   ||validGaitClips.find(g=>/run|sprint/i.test(String(g.name||'')))||null;
+  const gait=selectGaitAnimationGroups(groups);
+  const walk=gait.walk,run=gait.run;
+  const validGaitClips=gait.playable.filter(clipHasBilateralLegMotion);
   const idle=groups.find(g=>/idle|stand|rest/i.test(g.name));
   const attackClip=groups.find(g=>/attack|swing|slash|melee|axe/i.test(g.name));
   const rig=separateRigLimbAliases(findRigNodes(asset));
@@ -3033,9 +3052,11 @@ async function startGame(){
   realWeaponSocketMode=rig.hand?'hand':(rig.forearm?'forearm':(rig.upperArm?'upperArm':'pivot'));
   if(!rig.hand&&rig.forearm){console.warn('El rig no expone hueso de mano derecha; se usará el final de antebrazo para el arma.');}
   const hasCompleteManualGait=!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg);
-  realPlayerManualLocomotion=hasCompleteManualGait;
+  // Priorizar Walk/Run originales del GLB; usar el gait manual solo si no hay clips utilizables.
+  realPlayerManualLocomotion=!(walk||run)&&hasCompleteManualGait;
   const locomotionGroup=walk||run;
-  const locomotionTargets=new Set((hasCompleteManualGait?[]:[locomotionGroup]).filter(Boolean).flatMap(group=>(group.targetedAnimations||[]).map(a=>a.target).filter(Boolean)));
+  const locomotionGroups=realPlayerManualLocomotion?[]:[walk,run].filter(Boolean);
+  const locomotionTargets=new Set(locomotionGroups.flatMap(group=>(group.targetedAnimations||[]).map(a=>a.target).filter(Boolean)));
   realRigManualGaitNodes={};
   Object.entries({hips:rig.hips,head:rig.head,rightShoulder:rig.rightShoulder,leftShoulder:rig.leftShoulder,leftUpperLeg:rig.leftUpperLeg,rightUpperLeg:rig.rightUpperLeg,leftLowerLeg:rig.leftLowerLeg,rightLowerLeg:rig.rightLowerLeg,leftFoot:rig.leftFoot,rightFoot:rig.rightFoot,leftUpperArm:rig.leftUpperArm,upperArm:rig.upperArm,leftForearm:rig.leftForearm,forearm:rig.forearm,spine:rig.spine}).forEach(([key,node])=>{if(node)realRigManualGaitNodes[key]=hasCompleteManualGait||!locomotionTargets.has(node);});
   [realHandNode,rig.leftHand,realUpperArmNode,realForearmNode,realSpineNode,rig.head,rig.rightShoulder,rig.leftShoulder,rig.hips,rig.leftUpperLeg,rig.rightUpperLeg,rig.leftLowerLeg,rig.rightLowerLeg,rig.leftFoot,rig.rightFoot,rig.leftUpperArm,rig.leftForearm,rig.rightUpperLeg,rig.rightLowerLeg,rig.rightFoot].forEach(rememberRigRest);
