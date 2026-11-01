@@ -15,7 +15,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.99 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.100 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -384,7 +384,7 @@ def main() -> None:
 
     manifest = {
         "game": "EL SIN NOMBRE",
-        "version": "0.6.99",
+        "version": "0.6.100",
         "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
         "assets": results,
     }
