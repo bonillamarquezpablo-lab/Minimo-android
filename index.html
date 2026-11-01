@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.82">
-<meta name="el-sin-nombre-repair" content="0.6.82 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
+<meta name="el-sin-nombre-build" content="0.6.83">
+<meta name="el-sin-nombre-repair" content="0.6.83 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.82</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.83</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101b1d;color:var(--paper);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;touch-action:none}
-#renderCanvas{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none;touch-action:none;background:linear-gradient(#91b5c0 0%,#d2d4c5 48%,#496d48 100%)}
+html,body{margin:0;width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#101b1d;color:var(--paper);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;touch-action:none}
+#renderCanvas{position:fixed;inset:0;width:100vw;height:100dvh;display:block;outline:none;touch-action:none;background:linear-gradient(#91b5c0 0%,#d2d4c5 48%,#496d48 100%)}
 #hud{position:fixed;inset:0;pointer-events:none}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:8px 11px;box-shadow:0 5px 20px #0005;backdrop-filter:blur(8px)}
 #top{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);left:9px;right:9px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
@@ -39,6 +39,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101b1d;col
 #actions{position:fixed!important;left:auto!important;right:max(12px,env(safe-area-inset-right,0px) + 12px)!important;top:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 18px)!important;display:grid;width:min(46vw,258px);max-width:calc(100vw - 142px);min-width:154px;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;pointer-events:auto;z-index:12;transform:none!important;margin:0!important}
 #quickActions{position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 116px);display:flex;gap:6px;z-index:11;pointer-events:auto}
 #quickActions button{border:1px solid #d8ad6899;border-radius:9px;background:#122528ed;color:#f4e7d0;font-size:10px;font-weight:900;padding:7px 10px;box-shadow:0 4px 12px #0006;touch-action:manipulation}
+#quickActions #rotateScreenBtn{min-width:49px;padding:7px 6px;font-size:9px;white-space:nowrap;border-color:#d8ad68;background:linear-gradient(145deg,#243b3b,#142326)}
 #actions #runBtn{grid-column:1/-1;min-height:36px;height:38px}
 #modelStatus{top:calc(env(safe-area-inset-top,0px) + 154px)}
 #arsenalPanel{display:none;position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 154px);transform:translateX(-50%);width:min(94vw,420px);max-height:min(52dvh,390px);overflow:auto;padding:12px;background:rgba(13,27,30,.96);border:1px solid #d8ad68bb;border-radius:15px;box-shadow:0 12px 36px #000b;pointer-events:auto;z-index:6;backdrop-filter:blur(12px)}
@@ -472,9 +473,9 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 }
 
 
-/* 0.6.82 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
+/* 0.6.83 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
 #modelStatus{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;max-width:100%;max-height:25vh;overflow:auto;pointer-events:auto}
-/* 0.6.82 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
+/* 0.6.83 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
 #loading{overflow:hidden;align-items:stretch;justify-content:stretch;padding:0;background:linear-gradient(180deg,rgba(3,12,16,.24) 0%,rgba(3,12,16,.10) 38%,rgba(3,10,12,.88) 100%);backdrop-filter:none;text-align:left}
 #loading:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 38%,transparent 0 22%,rgba(3,9,12,.18) 58%,rgba(2,7,9,.78) 100%),linear-gradient(90deg,rgba(3,11,14,.42),transparent 35%,transparent 65%,rgba(3,11,14,.42));}
 #loading:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:linear-gradient(0deg,rgba(3,9,11,.94),rgba(3,9,11,0));}
@@ -519,7 +520,7 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 @media(prefers-reduced-motion:reduce){#loading .loadPulse{animation:none}}
 
 
-/* 0.6.82 — presentación cinematográfica limpia y estados de arranque inequívocos. */
+/* 0.6.83 — presentación cinematográfica limpia y estados de arranque inequívocos. */
 body.booting #hud, body.boot-failed #hud {
  visibility:hidden!important; opacity:0!important; pointer-events:none!important;
 }
@@ -583,7 +584,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 </style>
-<!-- EL SIN NOMBRE 0.6.82: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.83: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -599,7 +600,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 </script>
 <meta name="el-sin-nombre-repair-0669" content="forward-facing resting arms and weapon grip, remove rigid civilian robe/cape shell, vivid terrain palette and stronger natural lighting">
 <style>
-/* 0.6.82: civilian GLBs install automatically; no manual installer is shown. */
+/* 0.6.83: civilian GLBs install automatically; no manual installer is shown. */
 #introCivilianInstallCard,#villagerModelBtn{display:none!important}
 </style>
 </head>
@@ -645,7 +646,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  </button>
  <div id="notice"></div>
  <div id="frameDiagnostic" role="status" aria-live="polite" style="display:none;position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);z-index:30;max-width:92vw;padding:9px 12px;border:1px solid #d8ad68;border-radius:10px;background:#102326ed;color:#fff0d8;font:700 11px/1.35 system-ui;text-align:center;pointer-events:none"></div>
- <div id="quickActions"><button id="progressBtn" type="button">📜 SAGA</button><button id="saveBtn" type="button">💾 GUARDAR</button><button id="audioToggle" type="button" aria-label="Activar o desactivar sonido">🔊</button><button id="buildCabinBtn" type="button" aria-label="Construir refugio permanente">🏚 REFUGIO · 6M/1P</button><button id="villagerModelBtn" type="button" style="display:none">📦 ALDEANOS 3D</button></div>
+ <div id="quickActions"><button id="progressBtn" type="button">📜 SAGA</button><button id="saveBtn" type="button">💾 GUARDAR</button><button id="audioToggle" type="button" aria-label="Activar o desactivar sonido">🔊</button><button id="rotateScreenBtn" type="button" aria-label="Cambiar orientación de pantalla" title="Alternar automática, horizontal y vertical">↻ AUTO</button><button id="buildCabinBtn" type="button" aria-label="Construir refugio permanente">🏚 REFUGIO · 6M/1P</button><button id="villagerModelBtn" type="button" style="display:none">📦 ALDEANOS 3D</button></div>
  <div id="mapBackdrop"></div>
  <canvas id="map" width="960" height="688" aria-label="Mapa táctico; toca para ampliar"></canvas>
  <button id="mapClose" type="button" aria-label="Cerrar mapa">CERRAR MAPA ✕</button>
@@ -1023,7 +1024,7 @@ async function startGame(){
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
- console.info('EL SIN NOMBRE 0.6.82 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
+ console.info('EL SIN NOMBRE 0.6.83 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
  let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
  const minimumQualityDpr=Math.min(qualityDpr,2.05),targetFrameRate=120;
  function changeShadowQuality(nextSize){
@@ -1539,7 +1540,8 @@ async function startGame(){
   shore.position=v(is.x,-4.30,is.z);shore.material=M.sand;shore.isPickable=false;
   createIslandTerrain(is,i);
  });
- const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.99;return dx*dx+dz*dz<r*r;});
+ const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
+ function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.975;if(dx*dx+dz*dz<r*r)return i;}return -1;}
  // Trails on the main island.
  function createTrail(points,width=1.7){
   const positions=[],indices=[],uvs=[];
@@ -4046,7 +4048,7 @@ async function startGame(){
  // El primer campamento es territorio del jugador: tres defensores del clan lo custodian.
  // Los guardias se cargan con el GLB distinto del caballero acorazado y nunca entran en la lista hostil.
  const campGuards=[];
- const campGuardAngles=[.40,2.55,4.80];
+ const campGuardAngles=[.40,1.20,4.80];
  campGuardAngles.forEach((angle,i)=>{
   const ex=STARTER_CAMP_POSITION.x+Math.cos(angle)*9.2,ez=STARTER_CAMP_POSITION.z+Math.sin(angle)*9.2;
   const parts=makeViking('VillageGuardPatrol0_'+i,true,(i+1)%4);
@@ -4186,7 +4188,7 @@ function villageHostileDefenders(vl){
  if(introStartButton)introStartButton.addEventListener('click',beginSaga);
  window.NorseAudio=NorseAudio;
  window.getPlayerTerritoryDebug=()=>{const p=playerPos();return {position:{x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2))},protected:isPlayerTerritoryAt(p.x,p.z),homeDistance:Number(Math.hypot(p.x-STARTER_CAMP_POSITION.x,p.z-STARTER_CAMP_POSITION.z).toFixed(2)),friendlyGuards:enemies.filter(isFriendlyGuard).length,hostileGuards:enemies.filter(e=>canAttackPlayer(e,p.x,p.z)).length};};
- window.getGameHealthDebug=()=>({build:'0.6.82',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
+ window.getGameHealthDebug=()=>({build:'0.6.83',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
  let chapterStage=0;
  const chapterMilestones=[
   'Reúne 12 de madera y 3 de piedra para preparar el refugio.',
@@ -4231,7 +4233,7 @@ function villageHostileDefenders(vl){
  }
  function recordSagaEvent(text){const event={at:Date.now(),text:String(text).slice(0,120)};sagaHistory.push(event);if(sagaHistory.length>30)sagaHistory.splice(0,sagaHistory.length-30);const panel=document.getElementById('progressPanel');if(panel&&panel.classList.contains('open'))updateProgressPanel();}
  function updateHUD(){
-  const versionNode=document.getElementById('subtitle');if(versionNode)versionNode.textContent='SAGA DEL NORTE · CAPÍTULO I · 0.6.82';
+  const versionNode=document.getElementById('subtitle');if(versionNode)versionNode.textContent='SAGA DEL NORTE · CAPÍTULO I · 0.6.83';
   document.getElementById('wood').textContent=woodCount;document.getElementById('stone').textContent=stoneCount;document.getElementById('recruits').textContent=companions.length;document.getElementById('arsenalBtn').textContent='⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]);document.getElementById('kills').textContent=kills;document.getElementById('captured').textContent=captured+'/4';document.getElementById('health').style.width=Math.max(0,health)+'%';document.getElementById('boatHealthStat').textContent=Math.round(boatHp)+'%';document.getElementById('raiders').textContent=enemyShips.filter(e=>!e.sunk).length;document.getElementById('stamina').style.width=Math.max(0,stamina)+'%';document.getElementById('healBtn').textContent=healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR';updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
@@ -5076,6 +5078,47 @@ function villageHostileDefenders(vl){
   }
   return true;
  }
+ function nearestSafeLandPoint(x,z,radius=.66){
+  let best=null,bestDistance=Infinity;
+  const angleOffsets=[0,.28,-.28,.62,-.62,1.0,-1.0,Math.PI];
+  for(const island of land){
+   const dx=x-island.x,dz=z-island.z,distance=Math.hypot(dx,dz);
+   const angle=distance>.001?Math.atan2(dz,dx):0;
+   const radial=[Math.min(distance,island.r*.78),island.r*.70,island.r*.58,island.r*.44,island.r*.28,0];
+   for(const r of radial)for(const offset of angleOffsets){
+    const px=island.x+Math.cos(angle+offset)*r,pz=island.z+Math.sin(angle+offset)*r;
+    const score=(px-x)*(px-x)+(pz-z)*(pz-z);
+    if(score>=bestDistance)continue;
+    if(tryLandMove(px,pz,radius)){best={x:px,z:pz,island:land.indexOf(island)};bestDistance=score;}
+   }
+  }
+  return best;
+ }
+ function recoverGroundActor(root,groundOffset=.08,radius=.66){
+  if(!root||root.parent!==null||landIslandIndex(root.position.x,root.position.z)>=0)return false;
+  const landing=nearestSafeLandPoint(root.position.x,root.position.z,radius);
+  if(!landing)return false;
+  root.position.x=landing.x;root.position.z=landing.z;
+  root.position.y=terrainSurfaceAt(landing.x,landing.z)+groundOffset;
+  root.rotation.x=0;root.rotation.z=0;
+  return true;
+ }
+ function rescueGroundActors(){
+  let playerRecovered=false,recoveredNpcs=0;
+  if(!onShip&&recoverGroundActor(player.root,realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08,.70)){
+   playerRecovered=true;playerAirborne=false;playerVerticalVelocity=0;playerGroundYFiltered=player.root.position.y;
+   playerVelocity.x=0;playerVelocity.z=0;lastSafePosition.copyFrom(player.root.position);cameraTargetSmoothed=null;
+  }
+  const rescueParts=(parts,radius=.66)=>{
+   if(parts&&recoverGroundActor(parts.root,actorGroundOffset(parts),radius))recoveredNpcs++;
+  };
+  for(const enemy of enemies)if(enemy.alive)rescueParts(enemy.parts,.62);
+  for(const guard of campGuards)if(guard.alive)rescueParts(guard.parts,.62);
+  for(const ally of companions)if(ally.recruited&&ally.parts.root.parent===null)rescueParts(ally.parts,.66);
+  for(const npc of ambientPeople)if(!npc.recruited)rescueParts(npc.parts,.46);
+  for(const fallen of fallenEnemies)rescueParts(fallen.parts,.62);
+  return {playerRecovered,recoveredNpcs};
+ }
  function tryLandSegment(fromX,fromZ,toX,toZ,radius=.72){
   const length=Math.hypot(toX-fromX,toZ-fromZ),samples=Math.max(1,Math.ceil(length/.18));
   let px=fromX,pz=fromZ;
@@ -5123,6 +5166,12 @@ function villageHostileDefenders(vl){
   const sunArc=elapsed*.00022;sunHalo.position.x=290+Math.sin(sunArc)*48;sunDisc.position.x=sunHalo.position.x;sunHalo.position.y=235+Math.sin(sunArc*.7)*22;sunDisc.position.y=sunHalo.position.y;
   sun.direction.x=-.42+Math.sin(sunArc)*.055;sun.direction.z=.22+Math.cos(sunArc)*.045;hemi.intensity=.84+.035*Math.sin(elapsed*.002);sun.intensity=1.38+.08*Math.sin(elapsed*.0017);
   animateWater(dt);
+  update.landRecoveryAccumulator=(update.landRecoveryAccumulator||0)+dt;
+  if(update.landRecoveryAccumulator>=.65){
+   update.landRecoveryAccumulator=0;
+   const recovered=rescueGroundActors();
+   if(recovered.playerRecovered){msg('Has vuelto a tierra firme.');saveGame(true);}
+  }
   for(const buoy of regattaBuoys){buoy.root.position.y=waterHeight(buoy.x,buoy.z,elapsed)-.12+Math.sin(elapsed*1.35+buoy.phase)*.035;buoy.root.rotation.z=Math.sin(elapsed*.72+buoy.phase)*.025;buoy.root.rotation.x=Math.cos(elapsed*.61+buoy.phase)*.018;}
   invuln=Math.max(0,invuln-dt);comboWindow=Math.max(0,comboWindow-dt);blockAge+=dt;cameraShake=Math.max(0,cameraShake-dt*2.8);saveAccumulator+=dt;if(saveAccumulator>=18){saveAccumulator=0;saveGame(true);}
   for(let i=installAnimations.length-1;i>=0;i--){const a=installAnimations[i];if(!a.mesh||a.mesh.isDisposed&&a.mesh.isDisposed()){installAnimations.splice(i,1);continue;}a.t=Math.min(1,a.t+dt/a.duration);const k=1-Math.pow(1-a.t,3);a.mesh.scaling.copyFrom(B.Vector3.Lerp(v(.025,.025,.025),a.target,k));if(a.t>=1)installAnimations.splice(i,1);}dodgeTimer=Math.max(0,dodgeTimer-dt);healCooldown=Math.max(0,healCooldown-dt);
@@ -5273,7 +5322,11 @@ function villageHostileDefenders(vl){
    if(!e.alive||e.recruited)continue;
    if(e.surrendered){e.state='surrendered';continue;}
    if(onShip){e.state='idle';animateViking(e.parts,elapsed*.7,false,'idle',false);continue;}
-   const root=e.parts.root,pp=playerPos(),dx=pp.x-root.position.x,dz=pp.z-root.position.z,dist=Math.hypot(dx,dz);root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+actorGroundOffset(e.parts);
+   const root=e.parts.root,pp=playerPos(),dx=pp.x-root.position.x,dz=pp.z-root.position.z,dist=Math.hypot(dx,dz);
+   root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+actorGroundOffset(e.parts);
+   if(landIslandIndex(root.position.x,root.position.z)!==landIslandIndex(pp.x,pp.z)){
+    e.state='idle';e.attackT=0;animateViking(e.parts,elapsed*.7,false,'idle',false);continue;
+   }
    // Defensores de aldeas conquistadas y enemigos que entran en territorio propio no pueden atacar al jugador.
    if(!canAttackPlayer(e,pp.x,pp.z)){
     e.state='friendly';e.attackT=0;e.attackDone=false;e.attackCooldown=0;
@@ -5368,6 +5421,10 @@ function villageHostileDefenders(vl){
     return;
    }
    if(ally.parts.root.parent!==null){const worldPos=ally.parts.root.getAbsolutePosition().clone();ally.parts.root.parent=null;ally.parts.root.position.copyFrom(worldPos);ally.parts.weapon.setEnabled(true);ally.parts.legs[0].rotation.set(0,0,0);ally.parts.legs[1].rotation.set(0,0,0);}
+   if(landIslandIndex(ally.parts.root.position.x,ally.parts.root.position.z)!==landIslandIndex(leader.x,leader.z)){
+    ally.parts.actualMoveSpeed=0;ally.parts.root.position.y=terrainSurfaceAt(ally.parts.root.position.x,ally.parts.root.position.z)+actorGroundOffset(ally.parts);
+    animateViking(ally.parts,ally.walkPhase||0,false,'idle',false);return;
+   }
    const slots=[{side:-1,back:4.25},{side:1,back:4.25},{side:0,back:6.55}];
    const slot=slots[index%3],row=Math.floor(index/3);
    const target=leader.subtract(leaderForward.scale(slot.back+row*2.45)).add(leaderRight.scale(slot.side*2.25));
@@ -5471,6 +5528,10 @@ function villageHostileDefenders(vl){
    if(!guard.alive)return;
    const p=guard.parts.root;
    if(onShip){guard.parts.actualMoveSpeed=0;p.position.y=terrainSurfaceAt(p.position.x,p.position.z)+actorGroundOffset(guard.parts);animateViking(guard.parts,elapsed*.7+i*1.3,false,'idle',false);return;}
+   if(landIslandIndex(p.position.x,p.position.z)!==landIslandIndex(playerLookAt.x,playerLookAt.z)){
+    guard.parts.actualMoveSpeed=0;p.position.y=terrainSurfaceAt(p.position.x,p.position.z)+actorGroundOffset(guard.parts);
+    animateViking(guard.parts,elapsed*.7+i*1.3,false,'idle',false);return;
+   }
    const f=v(Math.sin(yaw),0,Math.cos(yaw)),r=v(Math.cos(yaw),0,-Math.sin(yaw));
    // Escuadra de tres: dos soldados en primera línea y uno cerrando el centro por detrás.
    const slots=[{side:-1,back:5.35},{side:1,back:5.35},{side:0,back:8.65}];
@@ -5629,7 +5690,7 @@ function villageHostileDefenders(vl){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.82: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.83: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -5644,14 +5705,52 @@ function villageHostileDefenders(vl){
   }catch(err){reportFrameError('contador FPS',err);}fpsHudTime=0;}
  });
  function resizeGameViewport(){
-  try{engine.resize();readStickCenter();resetStick();updateCamera(1/30);}catch(err){console.warn('Ajuste de cámara/viewport aplazado:',err);}
+  try{
+   engine.resize();readStickCenter();resetStick();
+   if(scene.activeCamera!==camera)scene.activeCamera=camera;
+   cameraTargetSmoothed=null;updateCamera(1/30);
+  }catch(err){console.warn('Ajuste de cámara/viewport aplazado:',err);}
  }
- window.addEventListener('resize',resizeGameViewport,{passive:true});
- window.addEventListener('orientationchange',()=>setTimeout(resizeGameViewport,220),{passive:true});
-window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passive:true});
- if(window.visualViewport)window.visualViewport.addEventListener('resize',resizeGameViewport,{passive:true});
+ function scheduleViewportResize(){
+  [0,120,280,560].forEach(delay=>setTimeout(resizeGameViewport,delay));
+ }
+ window.addEventListener('resize',scheduleViewportResize,{passive:true});
+ window.addEventListener('orientationchange',scheduleViewportResize,{passive:true});
+ if(screen.orientation&&typeof screen.orientation.addEventListener==='function'){
+  screen.orientation.addEventListener('change',scheduleViewportResize);
+ }
+ window.addEventListener('pageshow',scheduleViewportResize,{passive:true});
+ if(window.visualViewport)window.visualViewport.addEventListener('resize',scheduleViewportResize,{passive:true});
+ const rotateScreenButton=document.getElementById('rotateScreenBtn');
+ let screenOrientationMode='any';
+ function updateRotateScreenButton(){
+  if(!rotateScreenButton)return;
+  rotateScreenButton.textContent=screenOrientationMode==='any'?'↻ AUTO':screenOrientationMode==='landscape'?'↻ HORIZ.':'↻ VERT.';
+  rotateScreenButton.setAttribute('aria-label','Orientación de pantalla: '+(screenOrientationMode==='any'?'automática':screenOrientationMode==='landscape'?'horizontal':'vertical')+'. Toca para cambiar.');
+ }
+ if(rotateScreenButton)rotateScreenButton.addEventListener('click',async()=>{
+  const order=['any','landscape','portrait'],next=order[(order.indexOf(screenOrientationMode)+1)%order.length];
+  try{
+   if(!screen.orientation)throw new Error('orientation-api-unavailable');
+   if(next==='any'){
+    if(typeof screen.orientation.unlock==='function')screen.orientation.unlock();
+   }else{
+    if(typeof screen.orientation.lock!=='function')throw new Error('orientation-lock-unavailable');
+    await screen.orientation.lock(next);
+   }
+   screenOrientationMode=next;updateRotateScreenButton();scheduleViewportResize();
+   msg(next==='any'?'Rotación automática activada.':next==='landscape'?'Pantalla horizontal seleccionada.':'Pantalla vertical seleccionada.');
+  }catch(orientationError){
+   console.info('El navegador no permite cambiar la orientación desde la web:',orientationError);
+   screenOrientationMode='any';updateRotateScreenButton();
+   msg(/iPhone|iPad|iPod/i.test(navigator.userAgent)
+    ?'En iPhone, activa el giro desde el Centro de control y desactiva el bloqueo de orientación.'
+    :'Este navegador no permite forzar el giro aquí. Activa la rotación automática del dispositivo o abre el juego instalado.');
+  }
+ });
+ updateRotateScreenButton();
  updateHUD();drawMap();
- console.info('EL SIN NOMBRE 0.6.82 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.83 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'Descargando e instalando personajes 3D…');
  const allCharacterLoads=Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
@@ -5679,7 +5778,7 @@ window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passiv
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
- console.info('EL SIN NOMBRE 0.6.82 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ console.info('EL SIN NOMBRE 0.6.83 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
