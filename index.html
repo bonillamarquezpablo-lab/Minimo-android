@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.105">
-<meta name="el-sin-nombre-repair" content="0.6.105 realistic woodland ground, visible instanced ground cover and static mobile vegetation">
+<meta name="el-sin-nombre-build" content="0.6.106">
+<meta name="el-sin-nombre-repair" content="0.6.106 wide tidal beaches, expanded outer archipelago and new Norse landmarks">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.105</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.106</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1500,7 +1500,7 @@ async function startGame(){
  const shadowGrad=shadowCtx.createRadialGradient(64,64,5,64,64,62);shadowGrad.addColorStop(0,'rgba(3,7,8,.34)');shadowGrad.addColorStop(.45,'rgba(3,7,8,.21)');shadowGrad.addColorStop(1,'rgba(3,7,8,0)');shadowCtx.clearRect(0,0,128,128);shadowCtx.fillStyle=shadowGrad;shadowCtx.fillRect(0,0,128,128);shadowTexture.update(false);shadowTexture.hasAlpha=true;
  const shadowMaterial=new B.StandardMaterial('SoftShadowMaterial',scene);shadowMaterial.diffuseTexture=shadowTexture;shadowMaterial.opacityTexture=shadowTexture;shadowMaterial.useAlphaFromDiffuseTexture=true;shadowMaterial.disableLighting=true;shadowMaterial.backFaceCulling=false;shadowMaterial.specularColor=new B.Color3(0,0,0);shadowMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;shadowMaterial.disableDepthWrite=true;
  function attachContactShadow(root,name,radius=.9){const disc=B.MeshBuilder.CreateDisc(name,{radius,tessellation:28},scene);disc.parent=root;disc.rotation.x=-Math.PI/2;disc.position=v(0,.025,0);disc.material=shadowMaterial;disc.isPickable=false;return disc;}
- const land=[{x:0,z:0,r:60,name:'Isla del Cuervo'},{x:135,z:14,r:31,name:'Costa de Skall'},{x:-132,z:45,r:33,name:'Isla de los Pinos'},{x:28,z:143,r:33,name:'Bahía de Hrafn'},{x:146,z:-132,r:25,name:'Islote del Hielo'},{x:-145,z:-126,r:27,name:'Isla de las Cenizas'},{x:286,z:154,r:33,name:'Cabo de Bruma'},{x:-286,z:232,r:31,name:'Isla del Cuerno'},{x:292,z:-264,r:36,name:'Costa de las Tormentas'}];
+ const land=[{x:0,z:0,r:60,name:'Isla del Cuervo'},{x:135,z:14,r:31,name:'Costa de Skall'},{x:-132,z:45,r:33,name:'Isla de los Pinos'},{x:28,z:143,r:33,name:'Bahía de Hrafn'},{x:146,z:-132,r:25,name:'Islote del Hielo'},{x:-145,z:-126,r:27,name:'Isla de las Cenizas'},{x:286,z:154,r:33,name:'Cabo de Bruma'},{x:-286,z:232,r:31,name:'Isla del Cuerno'},{x:292,z:-264,r:36,name:'Costa de las Tormentas'},{x:470,z:100,r:31,name:'Skjoldheim'},{x:-470,z:-310,r:34,name:'Isla de los Juramentos'},{x:60,z:465,r:34,name:'Isla del Altar'},{x:-45,z:-465,r:32,name:'Cabo del Vigía'}];
  const waterSubdivisions=isTouchDevice?176:224;
  const ground=B.MeshBuilder.CreateGround('ocean',{width:1050,height:1050,subdivisions:waterSubdivisions,updatable:true},scene);ground.position.y=0;ground.material=M.water;ground.isPickable=false;ground.receiveShadows=false;
  const waterBase=ground.getVerticesData(B.VertexBuffer.PositionKind).slice(),waterPositions=waterBase.slice(),waterIndices=ground.getIndices(),waterNormals=[];
@@ -1578,6 +1578,10 @@ async function startGame(){
   ground.updateVerticesData(B.VertexBuffer.PositionKind,waterPositions,false,false);
   // Normals are refreshed independently to balance smooth highlights against mobile GPU/CPU cost.
   if(waterNormalAccumulator>=waterNormalStep){B.VertexData.ComputeNormals(waterPositions,waterIndices,waterNormals);ground.updateVerticesData(B.VertexBuffer.NormalKind,waterNormals,false,false);waterNormalAccumulator%=waterNormalStep;}
+  for(const foam of tidalFoamMeshes){
+   for(let i=0;i<foam.positions.length;i+=3){const x=foam.base[i],z=foam.base[i+2];foam.positions[i+1]=waterHeight(x,z,oceanTime)+.028;}
+   foam.mesh.updateVerticesData(B.VertexBuffer.PositionKind,foam.positions,false,false);
+  }
   for(const wave of shorelineWaves){
    const pulse=Math.sin(oceanTime*1.05+wave.phase),secondary=Math.sin(oceanTime*.63+wave.phase*1.7);
    wave.mesh.scaling.x=1+pulse*.022+secondary*.009;
@@ -1596,6 +1600,9 @@ async function startGame(){
  const mountainProfiles=land.map((is,i)=>({x:is.x+(i===0?-25:i===1?15:i===2?-12:i===3?10:0),z:is.z+(i===0?-22:i===1?-10:i===2?8:i===3?15:-4),height:i===0?11.5:(i<4?5.0:3.8),sx:i===0?17:Math.max(9,is.r*.34),sz:i===0?23:Math.max(10,is.r*.38)}));
  function terrainHeightOnIsland(is,x,z){
   const d=Math.hypot(x-is.x,z-is.z),edge=Math.max(0,1-(d/is.r)*(d/is.r));
+  // Línea de costa irregular: pequeñas calas y entrantes de arena en vez de un círculo perfecto.
+  const coastNoise=(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.045+Math.sin(x*.17+z*.11)*.006;
+  const coastDistance=d+coastNoise*is.r;
   const peak=mountainProfiles[land.indexOf(is)],px=(x-peak.x)/peak.sx,pz=(z-peak.z)/peak.sz;
   let relief=peak.height*Math.exp(-.5*(px*px+pz*pz));
   const ridge=peak.height*.20*Math.exp(-.5*(((x-(peak.x+peak.sx*1.05))/(peak.sx*1.55))**2+((z-(peak.z+peak.sz*.55))/(peak.sz*1.35))**2));
@@ -1607,15 +1614,15 @@ async function startGame(){
   const micro=.075*Math.sin(x*1.55+z*.82)*Math.cos(z*1.28-x*.61);
   const detail=(broad+fine+rolling+erosion+micro)*Math.pow(edge,1.55)*flat;
   const core=.92+(relief+ridge)*edge*flat+detail;
-  // Same edge profile as createIslandTerrain: smooth grass-to-sand beach, then a submerged seabed skirt.
-  if(d<=is.r*.90)return core;
-  if(d<=is.r*.985){const t=smooth01((d/is.r-.90)/.085);return core*(1-t)+.48*t;}
-  if(d<=is.r*1.035){const t=smooth01((d/is.r-.985)/.05);return .48*(1-t)-2.9*t;}
+  // Playa amplia: terreno vegetal -> arena seca -> arena mojada -> fondo submarino gradual.
+  if(coastDistance<=is.r*.76)return core;
+  if(coastDistance<=is.r*.97){const t=smooth01((coastDistance/is.r-.76)/.21);return core*(1-t)+.26*t;}
+  if(coastDistance<=is.r*1.09){const t=smooth01((coastDistance/is.r-.97)/.12);return .26*(1-t)-2.9*t;}
   return -2.9;
  }
  function terrainSurfaceAt(x,z){
   for(let index=0;index<land.length;index++){
-   const island=land[index],dx=x-island.x,dz=z-island.z,limit=island.r*1.035;
+   const island=land[index],dx=x-island.x,dz=z-island.z,limit=island.r*1.09;
    if(dx*dx+dz*dz>=limit*limit)continue;
    // La altura analítica es la misma función con la que se construyó el heightfield.
    // Evitamos forzar matrices mundiales y consultar la malla en cada colisión o paso de NPC.
@@ -1653,7 +1660,10 @@ async function startGame(){
    const slopeZ=(terrainHeightOnIsland(is,wx,wz+1)-terrainHeightOnIsland(is,wx,wz-1))*.5;
    const slope=Math.hypot(slopeX,slopeZ);
    const rock=Math.max(0,Math.min(.92,(h-2.7)/6.6+slope*.72));
-   const beach=d>is.r*.90?Math.max(0,Math.min(1,(d/is.r-.90)/.085)):0;
+   const coastNoise=(terrainValueNoise(wx*.12+17.2,wz*.12-8.4)-.5)*.045+Math.sin(wx*.17+wz*.11)*.006;
+   const coastDistance=d+coastNoise*is.r;
+   const beach=smooth01((coastDistance/is.r-.75)/.24);
+   const wetSand=smooth01((coastDistance/is.r-.87)/.105);
    // Variación espacial real: humedad y musgo cambian por zonas, no un tinte uniforme por isla.
    const patch=terrainValueNoise(wx*.022+17.2,wz*.022-8.4);
    const micro=terrainValueNoise(wx*.075-4.1,wz*.075+9.7);
@@ -1665,7 +1675,7 @@ async function startGame(){
    const bareSoil=smooth01((micro*.42+fine*.34+grain*.24-.53)*4.2)*(1-rock)*(1-beach);
    const leafLitter=smooth01((litter*.42+grain*.30+fine*.28-.53)*4.4)*(1-rock)*(1-beach);
    // Neutral olive base lets the albedo read through instead of tinting the whole island green.
-   const grass=[.98,.95,.86],stone=[.94,.93,.87],sand=[1,.92,.79],soil=[.96,.83,.68],mud=[.83,.87,.76],leaf=[.98,.84,.68];
+   const grass=[.98,.95,.86],stone=[.94,.93,.87],sand=[.88,.77,.61],wetSandCol=[.56,.55,.47],soil=[.96,.83,.68],mud=[.83,.87,.76],leaf=[.98,.84,.68];
    let r=grass[0]*(1-rock)+stone[0]*rock,g=grass[1]*(1-rock)+stone[1]*rock,b=grass[2]*(1-rock)+stone[2]*rock;
    r=r*(1-wet)+mud[0]*wet;g=g*(1-wet)+mud[1]*wet;b=b*(1-wet)+mud[2]*wet;
    const soilMix=Math.min(.96,bareSoil*1.12),leafMix=Math.min(.58,leafLitter*.76);
@@ -1674,7 +1684,11 @@ async function startGame(){
    const mottling=(grain-.5)*.045;
    r+=mottling;g+=mottling*.90;b+=mottling*.68;
    r=r*(1-beach)+sand[0]*beach;g=g*(1-beach)+sand[1]*beach;b=b*(1-beach)+sand[2]*beach;
-   colors.push(Math.max(.35,Math.min(1,r)),Math.max(.35,Math.min(1,g)),Math.max(.30,Math.min(1,b)),1);
+   const wetBlend=wetSand*beach*.78;
+   r=r*(1-wetBlend)+wetSandCol[0]*wetBlend;g=g*(1-wetBlend)+wetSandCol[1]*wetBlend;b=b*(1-wetBlend)+wetSandCol[2]*wetBlend;
+   const shoreGrain=(terrainValueNoise(wx*.48+7.1,wz*.48-12.6)-.5)*.026*beach;
+   r+=shoreGrain;g+=shoreGrain*.92;b+=shoreGrain*.78;
+   colors.push(Math.max(.30,Math.min(1,r)),Math.max(.30,Math.min(1,g)),Math.max(.27,Math.min(1,b)),1);
   }
   mesh.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);
   mesh.setVerticesData(B.VertexBuffer.ColorKind,colors,true,4);
@@ -1707,8 +1721,43 @@ async function startGame(){
   shore.position=v(is.x,-4.30,is.z);shore.material=M.sand;shore.isPickable=false;
   createIslandTerrain(is,i);
  });
- const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.915;return dx*dx+dz*dz<r*r;});
- function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.915;if(dx*dx+dz*dz<r*r)return i;}return -1;}
+ const tidalFoamMeshes=[];
+ function buildTidalFoam(island,index){
+  const positions=[],indices=[],colors=[],patches=25;
+  const shorelineRadius=(angle)=>{
+   const heightAt=radius=>terrainHeightOnIsland(island,island.x+Math.cos(angle)*radius,island.z+Math.sin(angle)*radius);
+   let lo=island.r*.94,hi=island.r*1.09;
+   for(let step=0;step<11;step++){const mid=(lo+hi)*.5;if(heightAt(mid)>.035)lo=mid;else hi=mid;}
+   return (lo+hi)*.5;
+  };
+  for(let i=0;i<patches;i++){
+   if(i%5===0)continue;
+   const angle=i/patches*Math.PI*2+Math.sin(i*2.17+index)*.018,halfArc=.026+(i%4)*.008,radius=shorelineRadius(angle),start=positions.length/3;
+   for(let row=0;row<3;row++){
+    const radial=row===0?-.42:row===1?0:.34;
+    for(let side=0;side<2;side++){
+     const a=angle+(side===0?-halfArc:halfArc),r=radius+radial,x=island.x+Math.cos(a)*r,z=island.z+Math.sin(a)*r;
+     positions.push(x,waterHeight(x,z,0)+.028,z);
+     const edgeFade=(row===1?1:.18)*(side===0?.62:.78),alpha=edgeFade*(.16+((i*7)%5)*.018);
+     colors.push(.78,.86,.82,alpha);
+    }
+   }
+   for(let row=0;row<2;row++){const a=start+row*2,b=a+2;indices.push(a,b,a+1,a+1,b,b+1);}
+  }
+  if(!indices.length)return;
+  const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
+  const mesh=new B.Mesh('BrokenNordicShoreWash_'+index,scene),data=new B.VertexData();
+  data.positions=positions;data.indices=indices;data.normals=normals;data.colors=colors;data.applyToMesh(mesh);
+  const material=new B.StandardMaterial('ShoreWashMaterial_'+index,scene);
+  material.diffuseColor=new B.Color3(.82,.88,.85);material.emissiveColor=new B.Color3(.055,.075,.068);
+  material.specularColor=new B.Color3(.015,.018,.016);material.useVertexColors=true;material.useVertexAlpha=true;
+  material.backFaceCulling=false;material.alpha=.72;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;mesh.material=material;
+  mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;
+  tidalFoamMeshes.push({mesh,base:new Float32Array(positions),positions:new Float32Array(positions)});
+ }
+ land.forEach(buildTidalFoam);
+ const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.985;return dx*dx+dz*dz<r*r;});
+ function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.985;if(dx*dx+dz*dz<r*r)return i;}return -1;}
  // Trails on the main island.
  function createTrail(points,width=1.7){
   const positions=[],indices=[],uvs=[];
@@ -4238,6 +4287,129 @@ async function startGame(){
   sphere('ScoutCampEmbers_'+vl.index,scout,[1.15,.13,.15],[.36,.12,.30],M.ember,8);
  }
  villages.forEach(buildIslandOutpost);
+ // Nuevos lugares de la expansión: salón comunal, embarcadero, círculo del thing y baliza costera.
+ function buildNorseGreatHall(x,z,index){
+  const floorY=terrainSurfaceAt(x,z),hall=newGroup('NorseGreatMeadHall_'+index,null);
+  box('GreatHallStoneFooting_'+index,hall,[0,.16,0],[8.4,.32,14.2],M.stoneDark);
+  box('GreatHallOakFloor_'+index,hall,[0,.38,0],[8.0,.18,13.7],M.woodDark);
+  for(const side of [-1,1]){
+   for(let row=0;row<7;row++){
+    const y=.62+row*.34;
+    cyl('GreatHallSideLog_'+index+'_'+side+'_'+row,hall,[side*3.55,y,0],13.35,.14,.16,row%3===0?M.woodLight:M.woodDark,[Math.PI/2,0,0]);
+   }
+   for(const end of [-1,1]){
+    cyl('GreatHallCornerPost_'+index+'_'+side+'_'+end,hall,[side*3.62,1.64,end*6.3],3.15,.20,.22,M.woodDark);
+    for(let row=0;row<5;row++)cyl('GreatHallGableLog_'+index+'_'+side+'_'+end+'_'+row,hall,[side*(3.25-row*.60),2.65+row*.31,end*6.35],.13,.12,.12,M.woodLight,[0,0,Math.PI/2]);
+   }
+  }
+  for(let end of [-1,1])for(let row=0;row<6;row++)
+   cyl('GreatHallEndLog_'+index+'_'+end+'_'+row,hall,[0,.67+row*.34,end*6.45],7.15,.14,.15,row%2?M.woodLight:M.woodDark,[0,0,Math.PI/2]);
+  box('GreatHallRoofLeft_'+index,hall,[-2.0,4.15,0],[5.1,.32,14.8],M.thatch,[0,0,.54]);
+  box('GreatHallRoofRight_'+index,hall,[2.0,4.15,0],[5.1,.32,14.8],M.thatch,[0,0,-.54]);
+  box('GreatHallRidge_'+index,hall,[0,5.43,0],[.30,.30,15.0],M.woodDark);
+  for(const side of [-1,1])for(let k=0;k<5;k++){
+   const px=side*(.65+k*.55);
+   cyl('GreatHallRafter_'+index+'_'+side+'_'+k,hall,[px,4.05,0],14.3,.065,.075,M.woodLight,[Math.PI/2,0,side*.08]);
+  }
+  for(let side of [-1,1])cyl('GreatHallPorchPost_'+index+'_'+side,hall,[side*1.55,1.55,7.05],3.05,.13,.16,M.woodLight);
+  box('GreatHallDoorLintel_'+index,hall,[0,3.0,7.05],[3.5,.20,.22],M.woodDark);
+  box('GreatHallDoor_'+index,hall,[0,1.25,6.53],[1.65,2.35,.15],M.woodDark);
+  for(let k=0;k<3;k++){
+   const sx=(k-1)*1.15;
+   cyl('GreatHallClanShield_'+index+'_'+k,hall,[sx,2.25,6.68],.13,.82,.82,[M.red,M.blueCloth,M.ochreCloth][(k+index)%3],[Math.PI/2,0,0]);
+   sphere('GreatHallShieldBoss_'+index+'_'+k,hall,[sx,2.25,6.78],[.16,.16,.07],M.brass,10);
+  }
+  sphere('GreatHallRavenCrest_'+index,hall,[0,5.76,7.06],[.58,.34,.43],M.woodDark,10);
+  box('GreatHallRavenBeak_'+index,hall,[0,5.72,7.48],[.30,.12,.45],M.gold,[.08,0,0]);
+  mergeStaticDecorByMaterial(hall,'NorseGreatHallStatic');
+  hall.position=v(x,floorY,z);hall.rotation.y=index*.37;
+  registerWorldCollider({type:'rect',x,z,hx:4.35,hz:7.45,cameraBlocker:true});
+  addModelShadow(hall,5);
+  try{hall.freezeWorldMatrix();hall.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){}
+  return hall;
+ }
+ function buildNorsePier(island,index,direction=1){
+  const angle=direction,dx=Math.cos(angle),dz=Math.sin(angle);
+  const startX=island.x+dx*island.r*.79,startZ=island.z+dz*island.r*.79,pier=newGroup('NorseCoastalPier_'+index,null);
+  for(let side of [-1,1]){
+   const beam=newGroup('PierStringer_'+index+'_'+side,pier);
+   cyl('PierOakBeam_'+index+'_'+side,beam,[0,.03,side*1.12],15.5,.20,.24,M.woodDark,[0,0,Math.PI/2]);
+  }
+  for(let plank=0;plank<10;plank++){
+   const t=-6.5+plank*1.48;
+   box('PierDeckPlank_'+index+'_'+plank,pier,[t,.28,0],[1.34,.18,2.5],plank%3===0?M.woodLight:M.wood);
+  }
+  for(const along of [-7.35,7.35])for(const side of [-1,1]){
+   cyl('PierMooringPost_'+index+'_'+along+'_'+side,pier,[along,.22,side*1.22],2.15,.18,.23,M.woodDark);
+   sphere('PierPostCap_'+index+'_'+along+'_'+side,pier,[along,1.34,side*1.22],[.22,.13,.22],M.woodLight,8);
+  }
+  for(let side of [-1,1]){
+   cyl('PierLanternPost_'+index+'_'+side,pier,[5.9,1.3,side*.88],2.6,.075,.09,M.woodDark);
+   box('PierLanternFrame_'+index+'_'+side,pier,[5.9,2.60,side*.88],[.46,.38,.46],M.woodDark);
+   sphere('PierLanternGlow_'+index+'_'+side,pier,[5.9,2.61,side*.88],[.17,.20,.17],M.ember,8);
+  }
+  mergeStaticDecorByMaterial(pier,'NorsePierStatic');
+  pier.position=v(startX,Math.max(.10,terrainSurfaceAt(startX,startZ)+.10),startZ);pier.rotation.y=angle;
+  registerWorldCollider({type:'rect',x:startX+dx*1.5,z:startZ+dz*1.5,hx:8.0,hz:1.45,cameraBlocker:true});
+  addModelShadow(pier,4);
+  try{pier.freezeWorldMatrix();pier.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){}
+  return pier;
+ }
+ function buildNorseThingstead(island,index){
+  const x=island.x,z=island.z,y=terrainSurfaceAt(x,z),circle=newGroup('NorseThingstead_'+index,null),ringRadius=5.2;
+  for(let i=0;i<9;i++){
+   const a=i*Math.PI*2/9,rx=Math.cos(a)*ringRadius,rz=Math.sin(a)*ringRadius,height=rand(2.0,3.1);
+   const stone=cyl('ThingsteadStandingStone_'+index+'_'+i,circle,[rx,height*.5,rz],height,rand(.48,.68),rand(.65,.86),i%3===0?M.stoneLight:M.stone,[0,0,rand(-.07,.07)]);
+   stone.rotation.x=rand(-.045,.045);stone.rotation.z=rand(-.08,.08);
+   box('ThingsteadRuneMark_'+index+'_'+i,circle,[rx,height*.58,rz+.32],[.11,.52,.035],M.woodDark,[0,0,rand(-.22,.22)]);
+  }
+  cyl('ThingsteadAltarBase_'+index,circle,[0,.28,0],.56,2.25,2.6,M.stoneDark);
+  box('ThingsteadOfferingSlab_'+index,circle,[0,.68,0],[2.25,.28,1.55],M.stoneLight,[.02,0,.03]);
+  for(let i=0;i<4;i++){
+   const a=i*Math.PI/2,rootX=Math.cos(a)*2.35,rootZ=Math.sin(a)*2.35;
+   sphere('ThingsteadOfferingBowl_'+index+'_'+i,circle,[rootX,.27,rootZ],[.48,.20,.48],M.darkMetal,10);
+  }
+  mergeStaticDecorByMaterial(circle,'NorseThingsteadStatic');
+  circle.position=v(x,y,z);circle.rotation.y=.19*index;
+  registerWorldCollider({type:'circle',x,z,r:6.4,cameraBlocker:true});
+  addModelShadow(circle,5);
+  try{circle.freezeWorldMatrix();circle.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){}
+  return circle;
+ }
+ function buildNorseBeacon(island,index){
+  const x=island.x,z=island.z,y=terrainSurfaceAt(x,z),tower=newGroup('NorseCoastalBeacon_'+index,null);
+  for(const side of [-1,1])for(const depth of [-1,1]){
+   const px=side*.88,pz=depth*.88;
+   cyl('BeaconSupport_'+index+'_'+side+'_'+depth,tower,[px,2.05,pz],4.1,.17,.20,M.woodDark,[0,0,side*depth*.05]);
+  }
+  box('BeaconPlatform_'+index,tower,[0,4.05,0],[2.45,.28,2.45],M.woodLight);
+  for(let side of [-1,1])box('BeaconRail_'+index+'_'+side,tower,[side*1.05,4.65,0],[.15,.95,2.40],M.woodDark);
+  box('BeaconBackRail_'+index,tower,[0,4.65,-1.05],[2.40,.95,.15],M.woodDark);
+  for(let step=0;step<7;step++)box('BeaconLadderStep_'+index+'_'+step,tower,[-1.18,.38+step*.48,.68-step*.18],[.12,.10,.76],M.woodLight);
+  box('BeaconFireBasket_'+index,tower,[0,4.78,0],[.92,.22,.92],M.darkMetal);
+  for(let i=0;i<6;i++){
+   const a=i*Math.PI/3;
+   cyl('BeaconBrazierBar_'+index+'_'+i,tower,[Math.cos(a)*.42,5.12,Math.sin(a)*.42],.75,.045,.06,M.woodLight,[0,0,a]);
+  }
+  sphere('BeaconEmber_'+index,tower,[0,5.35,0],[.42,.30,.42],M.ember,10);
+  cyl('BeaconBannerPole_'+index,tower,[0,6.15,-.82],2.0,.045,.045,M.woodLight);
+  const pennant=B.MeshBuilder.CreatePlane('BeaconRavenPennant_'+index,{width:.85,height:.66,sideOrientation:B.Mesh.DOUBLESIDE},scene);
+  pennant.parent=tower;pennant.position=v(.42,6.20,-.82);pennant.material=M.playerBanner;
+  mergeStaticDecorByMaterial(tower,'NorseBeaconStatic');
+  tower.position=v(x,y,z);tower.rotation.y=index*.61;
+  registerWorldCollider({type:'rect',x,z,hx:1.35,hz:1.35,cameraBlocker:true});
+  addModelShadow(tower,4);
+  try{tower.freezeWorldMatrix();tower.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){}
+  return tower;
+ }
+ function buildOuterIslandLandmarks(){
+  const east=land[9],west=land[10],south=land[11],north=land[12];
+  buildNorseGreatHall(east.x-1.8,east.z-1.4,9);
+  buildNorseThingstead(west,10);
+  buildNorsePier(south,11,Math.PI/2);
+  buildNorseBeacon(north,12);
+ }
+ buildOuterIslandLandmarks();
  // Primer refugio del protagonista: lona remendada, dos postes, leña húmeda y un fuego pequeño.
  // No es una casa construida: es un campamento de náufrago junto al lugar donde despierta.
  const starterCampX=-53.5,starterCampZ=15.5,starterCampY=terrainSurfaceAt(starterCampX,starterCampZ);
@@ -4732,7 +4904,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'3',build:'0.6.105',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'3',build:'0.6.106',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -4795,7 +4967,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.105');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.106');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -5600,12 +5772,12 @@ function updateHUD(){
  function drawMap(){
   // Canvas backing store is 2x; draw in a 480x344 logical chart to keep text crisp when enlarged.
   mg.setTransform(1,0,0,1,0,0);mg.clearRect(0,0,map.width,map.height);mg.setTransform(2,0,0,2,0,0);
-  const w=480,h=344,ox=w/2,oz=h/2,scale=.53;
+  const w=480,h=344,ox=w/2,oz=h/2,scale=.32;
   const sea=mg.createLinearGradient(0,0,w,h);sea.addColorStop(0,'#153746');sea.addColorStop(.48,'#2c6170');sea.addColorStop(1,'#102b39');mg.fillStyle=sea;mg.fillRect(0,0,w,h);
   // Map-cartouche header, fine coordinate grid and subtle sea-chart grain.
   mg.fillStyle='rgba(7,20,25,.76)';mg.fillRect(12,11,w-24,27);
   mg.strokeStyle='rgba(229,190,123,.82)';mg.lineWidth=1;mg.strokeRect(12,11,w-24,27);
-  mg.fillStyle='#f0d59b';mg.font='bold 11px Georgia,serif';mg.textAlign='center';mg.fillText('CARTA COSTERA  ·  CIRCUITO DE REGATAS',w/2,29);
+  mg.fillStyle='#f0d59b';mg.font='bold 11px Georgia,serif';mg.textAlign='center';mg.fillText('CARTA DE LAS TIERRAS DEL NORTE',w/2,29);
   mg.save();mg.strokeStyle='rgba(190,215,211,.13)';mg.lineWidth=1;
   for(let y=12;y<h;y+=23){mg.beginPath();for(let x=0;x<=w;x+=8){let yy=y+Math.sin(x*.025+y*.06)*2.5;if(x===0)mg.moveTo(x,yy);else mg.lineTo(x,yy);}mg.stroke();}mg.restore();
   const pt=(x,z)=>[ox+x*scale,oz+z*scale];
