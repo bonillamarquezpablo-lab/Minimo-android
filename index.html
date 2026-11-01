@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.109">
-<meta name="el-sin-nombre-repair" content="0.6.109 professional naval chart, responsive map sizing and deferred mobile secondary assets">
+<meta name="el-sin-nombre-build" content="0.6.110">
+<meta name="el-sin-nombre-repair" content="0.6.110 professional naval chart, responsive map sizing and deferred mobile secondary assets">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.109</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.110</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -711,7 +711,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.109 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.110 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
@@ -1141,6 +1141,11 @@ async function startGame(){
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
+ const graphicsContext=engine._gl||engine._gl2||null;
+ let graphicsRenderer='no disponible',graphicsVendor='no disponible',graphicsVersion='no disponible';
+ try{if(graphicsContext){const debugInfo=graphicsContext.getExtension('WEBGL_debug_renderer_info');graphicsRenderer=String(graphicsContext.getParameter(debugInfo?debugInfo.UNMASKED_RENDERER_WEBGL:graphicsContext.RENDERER)||'no disponible');graphicsVendor=String(graphicsContext.getParameter(debugInfo?debugInfo.UNMASKED_VENDOR_WEBGL:graphicsContext.VENDOR)||'no disponible');graphicsVersion=String(graphicsContext.getParameter(graphicsContext.VERSION)||'no disponible');}}catch(_){ }
+ const constrainedGpuMatch=/SM-A127F|Mali-G52\s*MP1|PowerVR\s*GE8320/i.test((navigator.userAgent||'')+' '+graphicsRenderer);
+ const isConstrainedMobile=!!(isTouchDevice&&(constrainedGpuMatch||(reportedMemory>0&&reportedMemory<=4&&(Number(navigator.hardwareConcurrency)||0)<=8)));
  console.info('EL SIN NOMBRE 0.6.101 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
  let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
@@ -1199,13 +1204,17 @@ async function startGame(){
    if(shadowMap)shadowMap.refreshRate=3;
   }
  }catch(shadowInitError){console.warn('Sombras dinámicas no disponibles; el juego continuará con iluminación directa:',shadowInitError);shadowGen=null;}
+ const managedWorldShadowGroups=[];let managedActiveWorldShadowCount=0,managedShadowCullAt=0;
  function addModelShadow(root,maxCasters=7){
   if(!root||!root.getChildMeshes)return;
   const meshes=root.getChildMeshes(false).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0);
   meshes.forEach(mesh=>{mesh.receiveShadows=true;});
   if(!shadowGen)return;
-  // Solo las piezas grandes generan sombras; los detalles siguen recibiéndolas.
-  meshes.sort((a,b)=>(b.getTotalVertices()||0)-(a.getTotalVertices()||0)).slice(0,maxCasters).forEach(mesh=>shadowGen.addShadowCaster(mesh));
+  // Las sombras permanecen completas en la zona jugable; las estructuras lejanas
+  // salen del pase local y vuelven a entrar cuando el jugador se aproxima.
+  const casterMeshes=meshes.sort((a,b)=>(b.getTotalVertices()||0)-(a.getTotalVertices()||0)).slice(0,maxCasters);
+  casterMeshes.forEach(mesh=>shadowGen.addShadowCaster(mesh));
+  if(casterMeshes.length){managedWorldShadowGroups.push({root,meshes:casterMeshes,active:true});managedActiveWorldShadowCount+=casterMeshes.length;}
  }
  const mat=(name,color,rough=.9)=>{let m=new B.StandardMaterial(name,scene);m.diffuseColor=B.Color3.FromHexString(color);m.specularColor=new B.Color3(.08,.08,.08);m.roughness=rough;m.specularPower=Math.round(8+Math.pow(1-rough,2)*92);return m};
  const M={
@@ -3258,6 +3267,41 @@ async function startGame(){
    }
   }
  }
+ function worldEntityVisualDue(entity,x,z){
+  if(!entity)return true;
+  const now=performance.now(),activeCamera=scene.activeCamera,focus=activeCamera&&activeCamera.position?activeCamera.position:(onShip?ship.position:player.root.position);
+  const dx=(Number(x)||0)-focus.x,dz=(Number(z)||0)-focus.z,d2=dx*dx+dz*dz;
+  const tier=d2<70*70?0:(d2<150*150?1:2),previousTier=Number.isFinite(entity._worldVisualTier)?entity._worldVisualTier:-1;
+  if(tier<previousTier)entity._worldVisualNextAt=0;
+  entity._worldVisualTier=tier;
+  const interval=isConstrainedMobile?(tier===0?55:(tier===1?185:420)):(tier===0?33:(tier===1?90:180));
+  if(now<(entity._worldVisualNextAt||0))return false;
+  entity._worldVisualNextAt=now+interval;return true;
+ }
+ function updateManagedWorldShadowCasters(){
+  if(!shadowGen||!managedWorldShadowGroups.length)return;
+  const now=performance.now(),interval=isConstrainedMobile?260:600;
+  if(now-managedShadowCullAt<interval)return;managedShadowCullAt=now;
+  const activeCamera=scene.activeCamera,focus=activeCamera&&activeCamera.position?activeCamera.position:(onShip?ship.position:player.root.position);
+  const enterRadius=isConstrainedMobile?145:175,leaveRadius=isConstrainedMobile?165:195,enterSq=enterRadius*enterRadius,leaveSq=leaveRadius*leaveRadius;
+  let activeCount=0;
+  for(const group of managedWorldShadowGroups){
+   const root=group.root;if(!root||root.isDisposed&&root.isDisposed())continue;
+   let position=root.position;
+   try{if(root.computeWorldMatrix)root.computeWorldMatrix(true);if(root.getAbsolutePosition)position=root.getAbsolutePosition();}catch(_){ }
+   const dx=position.x-focus.x,dz=position.z-focus.z,d2=dx*dx+dz*dz;
+   const wanted=group.active?d2<=leaveSq:d2<=enterSq;
+   if(wanted!==group.active){
+    for(const mesh of group.meshes){
+     if(!mesh||mesh.isDisposed&&mesh.isDisposed())continue;
+     try{if(wanted){if(!root.isEnabled||root.isEnabled())shadowGen.addShadowCaster(mesh);}else shadowGen.removeShadowCaster(mesh);}catch(_){ }
+    }
+    group.active=wanted;
+   }
+   if(group.active)activeCount+=group.meshes.length;
+  }
+  managedActiveWorldShadowCount=activeCount;
+ }
  function rememberRigRest(node){if(!node||realBoneRest.has(node))return;realBoneRest.set(node,{rotation:node.rotation?node.rotation.clone():B.Vector3.Zero(),quaternion:node.rotationQuaternion?node.rotationQuaternion.clone():null});}
  function setRigDelta(node,dx=0,dy=0,dz=0){
   if(!node)return;rememberRigRest(node);const base=realBoneRest.get(node);
@@ -4959,12 +5003,12 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'3',build:'0.6.109',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'3',build:'0.6.110',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
    boat:{onShip,velocity:Number(boatVelocity.toFixed(3)),position:{x:Number(ship.position.x.toFixed(2)),y:Number(ship.position.y.toFixed(2)),z:Number(ship.position.z.toFixed(2))},rotation:{x:Number(ship.rotation.x.toFixed(3)),y:Number(ship.rotation.y.toFixed(3)),z:Number(ship.rotation.z.toFixed(3))},flatWakeStrips:shipWake.map(w=>({name:w.name,enabled:w.isEnabled()})),activeSprayParticles:activeSpray,sprayCapacity:VESSEL_SPRAY_COUNT},
-   runtime:{fps:Math.round(engine.getFps()),elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),waterTotalVertices:waterPositions.length/3,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
+   runtime:{fps:Math.round(engine.getFps()),elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
    npcs:{enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,ambientPeople:ambientPeople.length,ambientMoving:ambientPeople.filter(n=>Number(n.parts.actualMoveSpeed)>.1).length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,npcClips:humanEnemyParts.filter(p=>p.realHuman).slice(0,8).map(p=>({name:p.name,walk:p.realHuman.walk&&p.realHuman.walk.name,walkPlaying:!!(p.realHuman.walk&&p.realHuman.walk.isPlaying),current:p.realHuman.current&&p.realHuman.current.name,enabled:p.root.isEnabled()}))}
   };
  };
@@ -5022,7 +5066,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.109');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.110');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -6099,6 +6143,7 @@ function updateHUD(){
  function boatCanMove(x,z){return vesselCanMove(ship,x,z,5.25,1.22);}
  function update(dt){
   worldUpdateCount++;worldUpdatePhase='environment / water';
+  updateManagedWorldShadowCasters();
   elapsed+=dt;const cloudWindRate=.00042+.00014*Math.sin(elapsed*.0031);skyTexture.uOffset=(elapsed*cloudWindRate)%1;
   // El cielo se desplaza con viento variable; la capa vertical acompaña el flujo atmosférico.
   skyTexture.vOffset=Math.sin(elapsed*.00009)*.012;
@@ -6122,7 +6167,7 @@ function updateHUD(){
    const recovered=rescueGroundActors();
    if(recovered.playerRecovered){msg('Has vuelto a tierra firme.');saveGame(true);}
   }
-  for(const buoy of regattaBuoys){buoy.root.position.y=waterHeight(buoy.x,buoy.z,elapsed)-.12+Math.sin(elapsed*1.35+buoy.phase)*.035;buoy.root.rotation.z=Math.sin(elapsed*.72+buoy.phase)*.025;buoy.root.rotation.x=Math.cos(elapsed*.61+buoy.phase)*.018;}
+  for(const buoy of regattaBuoys){if(!worldEntityVisualDue(buoy,buoy.x,buoy.z))continue;buoy.root.position.y=waterHeight(buoy.x,buoy.z,elapsed)-.12+Math.sin(elapsed*1.35+buoy.phase)*.035;buoy.root.rotation.z=Math.sin(elapsed*.72+buoy.phase)*.025;buoy.root.rotation.x=Math.cos(elapsed*.61+buoy.phase)*.018;}
   invuln=Math.max(0,invuln-dt);comboWindow=Math.max(0,comboWindow-dt);blockAge+=dt;cameraShake=Math.max(0,cameraShake-dt*2.8);saveAccumulator+=dt;if(saveAccumulator>=18){saveAccumulator=0;saveGame(true);}
   for(let i=installAnimations.length-1;i>=0;i--){const a=installAnimations[i];if(!a.mesh||a.mesh.isDisposed&&a.mesh.isDisposed()){installAnimations.splice(i,1);continue;}a.t=Math.min(1,a.t+dt/a.duration);const k=1-Math.pow(1-a.t,3);a.mesh.scaling.copyFrom(B.Vector3.Lerp(v(.025,.025,.025),a.target,k));if(a.t>=1)installAnimations.splice(i,1);}dodgeTimer=Math.max(0,dodgeTimer-dt);healCooldown=Math.max(0,healCooldown-dt);
   input.x+=(input.tx-input.x)*Math.min(1,dt*15);input.y+=(input.ty-input.y)*Math.min(1,dt*15);
@@ -6133,7 +6178,7 @@ function updateHUD(){
   shipAttackCooldown=Math.max(0,shipAttackCooldown-dt);
   if(!onShip){
    worldUpdatePhase='boat / idle vessel float';
-   updateVesselFloat(ship,dt,playerBoatFloatState,{length:10.0,beam:2.25,draft:.39});
+   if(worldEntityVisualDue(ship,ship.position.x,ship.position.z))updateVesselFloat(ship,dt,playerBoatFloatState,{length:10.0,beam:2.25,draft:.39});
   }
   if(onShip){
    worldUpdatePhase='boat / steering, collision and propulsion';
@@ -6205,22 +6250,24 @@ function updateHUD(){
   worldUpdatePhase='raider ships and naval AI';
   for(const raider of enemyShips){
    if(raider.sunk)continue;raider.cool=Math.max(0,raider.cool-dt);
-   updateVesselFloat(raider.root,dt,raider.floatState,{length:9.6,beam:2.15,draft:.37});
-   // Mantener disponible la normal de oleaje usada por el balanceo de patrulla.
-   // La ausencia de esta variable provocaba un ReferenceError en cada frame y
-   // abortaba el resto de la simulación antes de actualizar aldeanos y compañeros.
-   worldUpdatePhase='boat / enemy vessel simulation';
-   const raiderSlope=waterNormalAt(raider.root.position.x,raider.root.position.z,elapsed);
-   raider.oars.forEach(o=>{const stroke=Math.sin(elapsed*5.2+o.phase+raider.index*.8);o.pivot.rotation.y=stroke*.22;});
-   raider.crew.forEach((c,i)=>animateViking(c.parts,elapsed*2.65+i*.55,false,'row',false));
-   const dx=ship.position.x-raider.root.position.x,dz=ship.position.z-raider.root.position.z,dist=Math.hypot(dx,dz);
+   const raiderFocus=onShip?ship.position:player.root.position;
+   const dx=raiderFocus.x-raider.root.position.x,dz=raiderFocus.z-raider.root.position.z,dist=Math.hypot(dx,dz);
+   const updateRaiderVisuals=worldEntityVisualDue(raider,raider.root.position.x,raider.root.position.z);
+   if(updateRaiderVisuals){
+    updateVesselFloat(raider.root,dt,raider.floatState,{length:9.6,beam:2.15,draft:.37});
+    worldUpdatePhase='boat / enemy vessel simulation';
+    const raiderSlope=waterNormalAt(raider.root.position.x,raider.root.position.z,elapsed);
+    raider._lastWaveRoll=raiderSlope.roll;
+    raider.oars.forEach(o=>{const stroke=Math.sin(elapsed*5.2+o.phase+raider.index*.8);o.pivot.rotation.y=stroke*.22;});
+    raider.crew.forEach((c,i)=>animateViking(c.parts,elapsed*2.65+i*.55,false,'row',false));
+   }
    if(onShip&&dist<175){
     const desired=Math.atan2(dx,dz);let delta=((desired-raider.root.rotation.y+Math.PI*3)%(Math.PI*2))-Math.PI;raider.root.rotation.y+=Math.max(-1.0*dt,Math.min(1.0*dt,delta));
     if(dist>30){let ex=Math.sin(raider.root.rotation.y),ez=Math.cos(raider.root.rotation.y),nx=raider.root.position.x+ex*4.8*dt,nz=raider.root.position.z+ez*4.8*dt;if(vesselCanMove(raider.root,nx,nz,4.7,1.1)){raider.root.position.x=nx;raider.root.position.z=nz;}}
     if(dist<52&&raider.cool<=0){raider.cool=3.0+Math.random()*1.0;boatHp=Math.max(0,boatHp-(11-boatLevel*2.2));burst(ship.position.add(v(rand(-1,1),1.1,rand(-3,3))),M.red,10);msg('¡Una andanada enemiga golpea el casco! '+Math.round(boatHp)+'% de resistencia');if(boatHp<=0){boatVelocity=Math.min(boatVelocity,2.0);invuln=1.0;msg('¡El casco está destrozado! Aún puedes regresar lentamente a la costa.');}updateHUD();}
    }else{
     // Slow patrol drift keeps enemy sails visible even before the player approaches.
-    raider.root.rotation.z=raiderSlope.roll*.78+Math.sin(elapsed*.7+raider.index)*.009;
+    raider.root.rotation.z=(raider._lastWaveRoll||0)*.78+Math.sin(elapsed*.7+raider.index)*.009;
    }
   }
 
@@ -6295,11 +6342,11 @@ function updateHUD(){
   for(const e of enemies){
    if(!e.alive||e.recruited)continue;
    if(e.surrendered){e.state='surrendered';continue;}
-   if(onShip){e.state='idle';animateViking(e.parts,elapsed*.7,false,'idle',false);continue;}
+   if(onShip){e.state='idle';if(worldEntityVisualDue(e,e.parts.root.position.x,e.parts.root.position.z))animateViking(e.parts,elapsed*.7,false,'idle',false);continue;}
    const root=e.parts.root,pp=playerPos(),dx=pp.x-root.position.x,dz=pp.z-root.position.z,dist=Math.hypot(dx,dz);
    root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+actorGroundOffset(e.parts);
    if(landIslandIndex(root.position.x,root.position.z)!==landIslandIndex(pp.x,pp.z)){
-    e.state='idle';e.attackT=0;animateViking(e.parts,elapsed*.7,false,'idle',false);continue;
+    e.state='idle';e.attackT=0;if(worldEntityVisualDue(e,root.position.x,root.position.z))animateViking(e.parts,elapsed*.7,false,'idle',false);continue;
    }
    // Defensores de aldeas conquistadas y enemigos que entran en territorio propio no pueden atacar al jugador.
    if(!canAttackPlayer(e,pp.x,pp.z)){
@@ -6447,6 +6494,8 @@ function updateHUD(){
   if(treeAnimAccumulator>=1/30){
    const treeDt=Math.min(.10,treeAnimAccumulator);treeAnimAccumulator=0;
    for(const t of trees){
+    const treeNeedsFullUpdate=(t.falling!==undefined&&t.falling!==null)||t.hitFlash>0;
+    if(!treeNeedsFullUpdate&&!worldEntityVisualDue(t,t.x,t.z))continue;
     if(t.falling!==undefined&&t.falling!==null){
      t.falling=Math.min(1.22,t.falling+treeDt);const p=Math.max(0,Math.min(1,t.falling/1.22)),fallEase=easeOut(p);
      t.root.rotation.x=(t.fallX||0)*1.38*fallEase;t.root.rotation.z=(t.fallZ||0)*1.38*fallEase;
@@ -6468,26 +6517,28 @@ function updateHUD(){
    }
   }
   for(let i=effects.length-1;i>=0;i--){let e=effects[i];e.life-=dt;e.mesh.position.addInPlace(e.vel.scale(dt));e.vel.y-=8*dt;if(e.spin){e.mesh.rotation.x+=e.spin.x*dt;e.mesh.rotation.y+=e.spin.y*dt;e.mesh.rotation.z+=e.spin.z*dt;}if(e.life<=0){e.mesh.setEnabled(false);effectPool.push(e.mesh);effects.splice(i,1);}}
-  driftingLeaves.forEach(l=>{l.mesh.position.x+=Math.sin(elapsed*.38+l.phase)*l.speed*dt;l.mesh.position.z+=Math.cos(elapsed*.31+l.phase)*l.speed*dt;l.mesh.position.y+=Math.sin(elapsed*.75+l.phase)*.08*dt;l.mesh.rotation.y+=dt*l.speed; if(l.mesh.position.x>46)l.mesh.position.x=-46;if(l.mesh.position.x< -46)l.mesh.position.x=46;if(l.mesh.position.z>46)l.mesh.position.z=-46;if(l.mesh.position.z< -46)l.mesh.position.z=46;});
+  driftingLeaves.forEach(l=>{if(!worldEntityVisualDue(l,l.mesh.position.x,l.mesh.position.z))return;l.mesh.position.x+=Math.sin(elapsed*.38+l.phase)*l.speed*dt;l.mesh.position.z+=Math.cos(elapsed*.31+l.phase)*l.speed*dt;l.mesh.position.y+=Math.sin(elapsed*.75+l.phase)*.08*dt;l.mesh.rotation.y+=dt*l.speed; if(l.mesh.position.x>46)l.mesh.position.x=-46;if(l.mesh.position.x< -46)l.mesh.position.x=46;if(l.mesh.position.z>46)l.mesh.position.z=-46;if(l.mesh.position.z< -46)l.mesh.position.z=46;});
   // Vida ambiental a 30 Hz; el render y el combate se mantienen a la frecuencia de pantalla.
   worldUpdatePhase='ambient NPCs, guards and companions';
   ambientUpdateAccumulator+=dt;
-  if(ambientUpdateAccumulator>=1/60){
+  if(ambientUpdateAccumulator>=(isConstrainedMobile?1/30:1/60)){
    const ambientDt=Math.min(.05,ambientUpdateAccumulator);ambientUpdateAccumulator=Math.max(0,ambientUpdateAccumulator-ambientDt);
   // Los efectos de fuego/humo se actualizan a 20 Hz; locomoción y combate conservan su cadencia.
   ambientVfxAccumulator+=ambientDt;
   if(ambientVfxAccumulator>=.05){
    ambientVfxAccumulator%=.05;
   // Hearths flicker and throw warm light across the settlement.
-  flameMeshes.forEach(f=>{const wave=.91+Math.sin(elapsed*9.5+f.phase)*.13+Math.sin(elapsed*17+f.phase)*.055;f.mesh.scaling.y=wave;f.mesh.scaling.x=1+Math.sin(elapsed*12+f.phase)*.07;f.mesh.rotation.z=Math.sin(elapsed*8+f.phase)*.105;f.mesh.rotation.x=Math.cos(elapsed*7.2+f.phase)*.045;f.mesh.position.x=f.baseX+Math.sin(elapsed*6.8+f.phase)*.035;f.mesh.position.z=f.baseZ+Math.cos(elapsed*7.6+f.phase)*.025;});
-  fireLights.forEach(f=>{f.light.intensity=.66+Math.sin(elapsed*8+f.phase)*.16+Math.sin(elapsed*13+f.phase)*.065;});
-  fireSparks.forEach(s=>{const t=(elapsed*s.speed+s.phase)%1,visible=t<.66;s.mesh.setEnabled(visible);if(visible){const rise=t/.66;s.mesh.position.x=s.offsetX+Math.sin(elapsed*11+s.phase)*(.045+rise*.12);s.mesh.position.y=.34+rise*.72;s.mesh.position.z=s.offsetZ+Math.cos(elapsed*9+s.phase)*(.04+rise*.10);const size=.032*(1-rise*.58);s.mesh.scaling.set(size,size*1.35,size);}});
+  flameMeshes.forEach(f=>{if(!worldEntityVisualDue(f,f.baseX,f.baseZ))return;const wave=.91+Math.sin(elapsed*9.5+f.phase)*.13+Math.sin(elapsed*17+f.phase)*.055;f.mesh.scaling.y=wave;f.mesh.scaling.x=1+Math.sin(elapsed*12+f.phase)*.07;f.mesh.rotation.z=Math.sin(elapsed*8+f.phase)*.105;f.mesh.rotation.x=Math.cos(elapsed*7.2+f.phase)*.045;f.mesh.position.x=f.baseX+Math.sin(elapsed*6.8+f.phase)*.035;f.mesh.position.z=f.baseZ+Math.cos(elapsed*7.6+f.phase)*.025;});
+  fireLights.forEach(f=>{if(!worldEntityVisualDue(f,f.light.position.x,f.light.position.z))return;f.light.intensity=.66+Math.sin(elapsed*8+f.phase)*.16+Math.sin(elapsed*13+f.phase)*.065;});
+  fireSparks.forEach(s=>{if(!worldEntityVisualDue(s,s.offsetX,s.offsetZ))return;const t=(elapsed*s.speed+s.phase)%1,visible=t<.66;s.mesh.setEnabled(visible);if(visible){const rise=t/.66;s.mesh.position.x=s.offsetX+Math.sin(elapsed*11+s.phase)*(.045+rise*.12);s.mesh.position.y=.34+rise*.72;s.mesh.position.z=s.offsetZ+Math.cos(elapsed*9+s.phase)*(.04+rise*.10);const size=.032*(1-rise*.58);s.mesh.scaling.set(size,size*1.35,size);}});
   // Soft chimney and hearth smoke rises, stretches and fades in a repeating cycle.
-  smokeEmitters.forEach((source,si)=>{if(!source.puffs){source.puffs=[];const puffCount=source.fire?3:2;for(let p=0;p<puffCount;p++){const puff=sphere('VillageSmokePuff_'+si+'_'+p,null,[source.x,source.y,source.z],[.20,.20,.20],M.smoke,8);const pm=M.smoke.clone('SmokeMat_'+si+'_'+p);pm.alpha=source.fire ? 0.13 : 0.10;pm.disableLighting=true;puff.material=pm;source.puffs.push({mesh:puff,phase:p/puffCount,mat:pm});}}source.puffs.forEach(p=>{const t=(elapsed*(source.fire ? 0.082 : 0.105)+p.phase+source.phase*.03)%1;p.mesh.position.x=source.x+Math.sin(t*5+source.phase)*(.10+t*(source.fire ? 0.34 : 0.55));p.mesh.position.y=source.y+t*(source.fire?2.35:3.1);p.mesh.position.z=source.z+Math.cos(t*4+source.phase)*(.08+t*(source.fire ? 0.30 : 0.38));const sc=(source.fire ? 0.13 : 0.18)+t*(source.fire ? 0.40 : 0.52);p.mesh.scaling.set(sc,sc*1.5,sc);p.mat.alpha=(1-t)*(source.fire ? 0.14 : 0.105);});});
+  smokeEmitters.forEach((source,si)=>{if(!source.puffs){source.puffs=[];const puffCount=source.fire?3:2;for(let p=0;p<puffCount;p++){const puff=sphere('VillageSmokePuff_'+si+'_'+p,null,[source.x,source.y,source.z],[.20,.20,.20],M.smoke,8);const pm=M.smoke.clone('SmokeMat_'+si+'_'+p);pm.alpha=source.fire ? 0.13 : 0.10;pm.disableLighting=true;puff.material=pm;source.puffs.push({mesh:puff,phase:p/puffCount,mat:pm});}}if(!worldEntityVisualDue(source,source.x,source.z))return;source.puffs.forEach(p=>{const t=(elapsed*(source.fire ? 0.082 : 0.105)+p.phase+source.phase*.03)%1;p.mesh.position.x=source.x+Math.sin(t*5+source.phase)*(.10+t*(source.fire ? 0.34 : 0.55));p.mesh.position.y=source.y+t*(source.fire?2.35:3.1);p.mesh.position.z=source.z+Math.cos(t*4+source.phase)*(.08+t*(source.fire ? 0.30 : 0.38));const sc=(source.fire ? 0.13 : 0.18)+t*(source.fire ? 0.40 : 0.52);p.mesh.scaling.set(sc,sc*1.5,sc);p.mat.alpha=(1-t)*(source.fire ? 0.14 : 0.105);});});
   }
   // Villagers walk between short work points, pause and look around; they are neutral, not hostile guards.
   ambientPeople.forEach((npc,i)=>{
    if(npc.recruited)return;
+   const npcPosition=npc.parts.root.position;
+   if(!worldEntityVisualDue(npc,npcPosition.x,npcPosition.z))return;
    npc.pause=Math.max(0,npc.pause-ambientDt);
    const p=npc.parts.root,oldX=p.position.x,oldZ=p.position.z;
    let moved=0;
@@ -6583,7 +6634,7 @@ function updateHUD(){
    animateViking(guard.parts,guard.walkPhase+(i===1?Math.PI:(i===2?Math.PI*.5:0)),walking,'idle',false);
   });
   // Coast gulls circle above the water, with a slow wing beat.
-  ambientBirds.forEach(b=>{const a=elapsed*b.speed+b.phase,bank=Math.sin(a*1.2)*.12;b.root.position.x=Math.cos(a)*b.radius-36;b.root.position.z=Math.sin(a)*b.radius-18;b.root.position.y=b.alt+Math.sin(a*2+b.phase)*.72+Math.sin(elapsed*.41+b.phase)*.12;b.root.rotation.y=-a+Math.PI/2;b.root.rotation.z=bank;if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);});
+  ambientBirds.forEach(b=>{if(!worldEntityVisualDue(b,b.root.position.x,b.root.position.z))return;const a=elapsed*b.speed+b.phase,bank=Math.sin(a*1.2)*.12;b.root.position.x=Math.cos(a)*b.radius-36;b.root.position.z=Math.sin(a)*b.radius-18;b.root.position.y=b.alt+Math.sin(a*2+b.phase)*.72+Math.sin(elapsed*.41+b.phase)*.12;b.root.rotation.y=-a+Math.PI/2;b.root.rotation.z=bank;if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);});
   }
   contextRefresh+=dt;if(contextRefresh>=.12){updateContext();contextRefresh=0;}updateChapterQuest();
   update.factionBadgeAccumulator=(update.factionBadgeAccumulator||0)+dt;
