@@ -1972,7 +1972,7 @@ async function startGame(){
    // Hojas terminales sueltas en el contorno, para una copa viva y no geométricamente perfecta.
    for(let i=0;i<(oak?18:13);i++){
     const a=rand(0,Math.PI*2),r=oak?rand(.82,1.25):rand(.52,.94);
-    const p=[Math.cos(a)*r,trunkHeight*rand(.68,.94)-pivotY,Math.sin(a)*r];
+    const p=[Math.cos(a)*r,trunkHeight*rand(.68,.94),Math.sin(a)*r];
     appendLeaf(i%leafMats.length,p,rand(.34,.52),rand(.09,.16),a+rand(-.8,.8),rand(-.8,.4),rand(-.7,.7),.025);
    }
   }else{
