@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.76">
-<meta name="el-sin-nombre-repair" content="0.6.76 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
+<meta name="el-sin-nombre-build" content="0.6.77">
+<meta name="el-sin-nombre-repair" content="0.6.77 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.76</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.77</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -472,9 +472,9 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 }
 
 
-/* 0.6.76 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
+/* 0.6.77 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
 #modelStatus{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;max-width:100%;max-height:25vh;overflow:auto;pointer-events:auto}
-/* 0.6.76 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
+/* 0.6.77 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
 #loading{overflow:hidden;align-items:stretch;justify-content:stretch;padding:0;background:linear-gradient(180deg,rgba(3,12,16,.24) 0%,rgba(3,12,16,.10) 38%,rgba(3,10,12,.88) 100%);backdrop-filter:none;text-align:left}
 #loading:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 38%,transparent 0 22%,rgba(3,9,12,.18) 58%,rgba(2,7,9,.78) 100%),linear-gradient(90deg,rgba(3,11,14,.42),transparent 35%,transparent 65%,rgba(3,11,14,.42));}
 #loading:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:linear-gradient(0deg,rgba(3,9,11,.94),rgba(3,9,11,0));}
@@ -519,7 +519,7 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 @media(prefers-reduced-motion:reduce){#loading .loadPulse{animation:none}}
 
 
-/* 0.6.76 — presentación cinematográfica limpia y estados de arranque inequívocos. */
+/* 0.6.77 — presentación cinematográfica limpia y estados de arranque inequívocos. */
 body.booting #hud, body.boot-failed #hud {
  visibility:hidden!important; opacity:0!important; pointer-events:none!important;
 }
@@ -579,7 +579,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 }
 
 </style>
-<!-- EL SIN NOMBRE 0.6.76: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.77: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -595,7 +595,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 </script>
 <meta name="el-sin-nombre-repair-0669" content="forward-facing resting arms and weapon grip, remove rigid civilian robe/cape shell, vivid terrain palette and stronger natural lighting">
 <style>
-/* 0.6.76: civilian GLBs install automatically; no manual installer is shown. */
+/* 0.6.77: civilian GLBs install automatically; no manual installer is shown. */
 #introCivilianInstallCard,#villagerModelBtn{display:none!important}
 </style>
 </head>
@@ -1018,7 +1018,7 @@ async function startGame(){
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
- console.info('EL SIN NOMBRE 0.6.76 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
+ console.info('EL SIN NOMBRE 0.6.77 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
  let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
  const minimumQualityDpr=Math.min(qualityDpr,2.05),targetFrameRate=120;
  function changeShadowQuality(nextSize){
@@ -1040,7 +1040,10 @@ async function startGame(){
  scene.skipPointerMovePicking=true;scene.constantlyUpdateMeshUnderPointer=false;
 
  if(scene.onAfterAnimationsObservable&&typeof scene.onAfterAnimationsObservable.add==='function'){
-  scene.onAfterAnimationsObservable.add(()=>{try{applyRealPlayerFootIK();}catch(err){console.debug('Foot IK no disponible:',err);}});
+  scene.onAfterAnimationsObservable.add(()=>{
+  try{applyRealPlayerFootIK();}catch(err){console.debug('Foot IK jugador no disponible:',err);}
+  try{applyNpcFootIK();}catch(err){console.debug('Foot IK NPC no disponible:',err);}
+ });
  }
  scene.clearColor=new B.Color4(.42,.57,.65,1);scene.fogMode=B.Scene.FOGMODE_EXP;scene.fogDensity=.00058;scene.fogColor=new B.Color3(.39,.53,.59);
  scene.imageProcessingConfiguration.toneMappingEnabled=true;scene.imageProcessingConfiguration.toneMappingType=B.ImageProcessingConfiguration.TONEMAPPING_ACES;scene.imageProcessingConfiguration.exposure=1.08;scene.imageProcessingConfiguration.contrast=1.10;
@@ -2352,7 +2355,7 @@ async function startGame(){
   parts.legs=[rig.leftUpperLeg||poseSocket('EnemyLeftLegPose',[-.12/scale,.48/scale,0]),rig.rightUpperLeg||poseSocket('EnemyRightLegPose',[.12/scale,.48/scale,0])];
   parts.knees=[rig.leftLowerLeg||poseSocket('EnemyLeftKneePose',[-.12/scale,.25/scale,0]),rig.rightLowerLeg||poseSocket('EnemyRightKneePose',[.12/scale,.25/scale,0])];
   parts.cloak=null;parts.weapon=sword;
-  parts.realHuman={roots,meshes,groups,walk,run,idle,attack,current:null,rig,rest,sword,modelRoot,visualBody,isRaiderCrew,weaponSocketNode,role,manualGaitReady:!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg),modelForwardOffset:NPC_HUMAN_FORWARD_OFFSET,shadowCasterMeshes,shadowCasterActive:true,phaseOffset:index*1.37};
+  parts.realHuman={roots,meshes,groups,walk,run,idle,attack,current:null,rig,rest,sword,modelRoot,visualBody,isRaiderCrew,weaponSocketNode,role,footIKLegs:createFootIKLegs(rig),manualGaitReady:!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg),modelForwardOffset:NPC_HUMAN_FORWARD_OFFSET,shadowCasterMeshes,shadowCasterActive:true,phaseOffset:index*1.37};
   parts.root.position.y=terrainSurfaceAt(parts.root.position.x,parts.root.position.z)+.012;
   inst.__norseAttachNodes=null;
   if(shadowGen){
@@ -2715,8 +2718,8 @@ async function startGame(){
   else node.rotation=base.rotation.add(v(dx,dy,dz));
  }
  let realFootIKLegs=[],realFootIKEnabled=false;
- function configureRealFootIK(rig){
-  realFootIKLegs=[];realFootIKEnabled=false;
+ function createFootIKLegs(rig){
+  const legs=[];
   for(const side of ['left','right']){
    const upper=rig&&rig[side+'UpperLeg'],lower=rig&&rig[side+'LowerLeg'],foot=rig&&rig[side+'Foot'];
    if(!upper||!lower||!foot||typeof upper.rotate!=='function'||typeof lower.rotate!=='function'||typeof foot.getAbsolutePosition!=='function')continue;
@@ -2724,10 +2727,15 @@ async function startGame(){
     upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);foot.computeWorldMatrix(true);
     const hip=upper.getAbsolutePosition(),knee=lower.getAbsolutePosition(),ankle=foot.getAbsolutePosition();
     const upperLength=B.Vector3.Distance(hip,knee),lowerLength=B.Vector3.Distance(knee,ankle);
-    if(upperLength>.12&&upperLength<1.3&&lowerLength>.12&&lowerLength<1.3)realFootIKLegs.push({side,upper,lower,foot,upperLength,lowerLength,filteredError:0});
+    if(upperLength>.12&&upperLength<1.3&&lowerLength>.12&&lowerLength<1.3){
+     legs.push({side,upper,lower,foot,upperLength,lowerLength,filteredError:0});
+    }
    }catch(err){console.info('Foot IK omitido para '+side+':',err);}
   }
-  realFootIKEnabled=realFootIKLegs.length===2;
+  return legs;
+ }
+ function configureRealFootIK(rig){
+  realFootIKLegs=createFootIKLegs(rig);realFootIKEnabled=realFootIKLegs.length===2;
   console.info('Foot IK jugador:',{enabled:realFootIKEnabled,legs:realFootIKLegs.map(l=>l.side)});
  }
  function rotateBoneWorldToward(node,from,to){
@@ -2768,9 +2776,8 @@ async function startGame(){
    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);
    const shoulder=upper.getAbsolutePosition(),elbow=lower.getAbsolutePosition(),upperVector=elbow.subtract(shoulder),upperLength=upperVector.length();
    if(upperLength<.045)return false;
-   // Elbows hang slightly outward, then bend inward and forward instead of leaving
-   // the familiar T-pose/arms-open silhouette from the raw GLB rest pose.
-   const upperTarget=bodyLocalDirection(root,-side*.14,-.978,-.16,upperLength);
+   // Shoulder-to-elbow hangs at the body's side, not folded across the chest.
+   const upperTarget=bodyLocalDirection(root,side*.13,-.985,.055,upperLength);
    rotateBoneWorldTowardExact(upper,upperVector,upperTarget);
    lower.computeWorldMatrix(true);
    let wristVector=null;
@@ -2781,30 +2788,14 @@ async function startGame(){
     if(child){child.computeWorldMatrix(true);wristVector=child.getAbsolutePosition().subtract(lower.getAbsolutePosition());}
    }
    if(wristVector&&wristVector.length()>.035){
-    const target=bodyLocalDirection(root,-side*.09,-.944,-.30,wristVector.length());
+    // A small forward elbow bend prevents the straight, mannequin-like arm.
+    const target=holdingWeapon
+     ?bodyLocalDirection(root,side*.025,-.958,.13,wristVector.length())
+     :bodyLocalDirection(root,side*.07,-.915,.27,wristVector.length());
     rotateBoneWorldTowardExact(lower,wristVector,target);
    }
-   if(hand&&!holdingWeapon){
-    // Las manos libres miran al muslo; la mano armada conserva la orientación de agarre. Girar cada muñeca sobre
-    // el eje real del antebrazo orienta la palma hacia el muslo correspondiente.
-    hand.computeWorldMatrix(true);lower.computeWorldMatrix(true);
-    const wristAxis=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
-    if(wristAxis.lengthSquared()>.001){
-     wristAxis.normalize();
-     const forward=root.getDirection(B.Axis.Z).normalize();
-     const inward=root.getDirection(new B.Vector3(-side,0,0)).normalize();
-     const candidates=[B.Axis.X,B.Axis.Y,B.Axis.Z].map(axis=>hand.getDirection(axis).normalize());
-     let palmNormal=candidates.reduce((best,current)=>Math.abs(B.Vector3.Dot(current,forward))>Math.abs(B.Vector3.Dot(best,forward))?current:best,candidates[0]).clone();
-     if(B.Vector3.Dot(palmNormal,forward)<0)palmNormal.scaleInPlace(-1);
-     const normalFlat=palmNormal.subtract(wristAxis.scale(B.Vector3.Dot(palmNormal,wristAxis)));
-     const targetFlat=inward.subtract(wristAxis.scale(B.Vector3.Dot(inward,wristAxis)));
-     if(normalFlat.lengthSquared()>.001&&targetFlat.lengthSquared()>.001){
-      normalFlat.normalize();targetFlat.normalize();
-      const angle=Math.atan2(B.Vector3.Dot(wristAxis,B.Vector3.Cross(normalFlat,targetFlat)),B.Vector3.Dot(normalFlat,targetFlat));
-      if(Number.isFinite(angle)&&Math.abs(angle)>.025)hand.rotate(wristAxis,Math.max(-1.45,Math.min(1.45,angle)),B.Space.WORLD);
-     }
-    }
-   }
+   // The hand quaternion has already been restored from the GLB rest pose.
+   // Do not twist it around a guessed palm-normal axis: rigs use different local axes.
    return true;
   }catch(err){console.debug('Pose de reposo del brazo omitida:',err);return false;}
  }
@@ -2830,15 +2821,14 @@ async function startGame(){
   relaxHumanoidLeg(root,rig.leftUpperLeg,rig.leftLowerLeg,rig.leftFoot,-1);
   relaxHumanoidLeg(root,rig.rightUpperLeg,rig.rightLowerLeg,rig.rightFoot,1);
  }
- function applyTwoBoneFootIK(leg){
+ function applyTwoBoneFootIK(leg,targetClearance=.035,maxCorrection=.30){
   try{
    const {upper,lower,foot}=leg;upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);foot.computeWorldMatrix(true);
    const hip=upper.getAbsolutePosition(),knee=lower.getAbsolutePosition(),ankle=foot.getAbsolutePosition();
-   const floor=terrainSurfaceAt(ankle.x,ankle.z)+.035,error=floor-ankle.y;
-   // Solo corregir el contacto; no arrastrar hacia el suelo un pie en plena fase de vuelo.
-   if(!Number.isFinite(error)||ankle.y-floor>.25||Math.abs(error)<.018||Math.abs(error)>.30)return;
-   leg.filteredError+=(error-leg.filteredError)*.38;
-   const correction=Math.max(-.18,Math.min(.18,leg.filteredError));
+   const floor=terrainSurfaceAt(ankle.x,ankle.z)+targetClearance,error=floor-ankle.y;
+   if(!Number.isFinite(error)||Math.abs(error)<.018||Math.abs(error)>maxCorrection)return;
+   leg.filteredError+=(error-leg.filteredError)*.42;
+   const correction=Math.max(-.22,Math.min(.22,leg.filteredError));
    const targetAnkle=ankle.add(v(0,correction,0)),delta=targetAnkle.subtract(hip),dist=delta.length();
    const l1=leg.upperLength,l2=leg.lowerLength,minReach=Math.abs(l1-l2)+.008,maxReach=l1+l2-.008;
    if(dist<minReach-.03||dist>maxReach+.03||dist<.001)return;
@@ -2856,6 +2846,27 @@ async function startGame(){
  function applyRealPlayerFootIK(){
   if(!realPlayerReady||!realFootIKEnabled||onShip||playerAction==='dodge')return;
   for(const leg of realFootIKLegs)applyTwoBoneFootIK(leg);
+ }
+ let npcFootIKLastTime=0;
+ function applyNpcFootIK(){
+  const now=performance.now();if(now-npcFootIKLastTime<33)return;npcFootIKLastTime=now;
+  const focus=playerPos();
+  const applyRoster=roster=>{
+   for(const parts of roster){
+    const real=parts&&parts.realHuman;
+    if(!real||!real.wasWalking||!real.footIKLegs||!real.footIKLegs.length)continue;
+    if(parts.root&&typeof parts.root.isEnabled==='function'&&!parts.root.isEnabled())continue;
+    const dx=parts.root.position.x-focus.x,dz=parts.root.position.z-focus.z;
+    if(dx*dx+dz*dz>46*46)continue;
+    const phase=Number(real.lastGaitPhase)||0;
+    for(const leg of real.footIKLegs){
+     const swing=Math.max(0,Math.cos(phase+(leg.side==='left'?0:Math.PI)));
+     // Toe clearance is 4.5–10.5 cm: enough for a step, never a high ballerina kick.
+     applyTwoBoneFootIK(leg,.045+swing*.06,.42);
+    }
+   }
+  };
+  applyRoster(humanEnemyParts);applyRoster(humanCivilianParts);
  }
  async function attachHumanViking(asset,originLabel){
   const importedRoot=getImportedRoot(asset);
@@ -3141,7 +3152,7 @@ async function startGame(){
   realWeaponHolder=new B.TransformNode('RealVikingRightHandWeaponAnchor',scene);
   // No usar el pivote del personaje cuando exista un hueso de brazo: el arma debe heredar la animación del esqueleto.
   const socket=realHandNode||realWeaponSocketNode||realForearmNode||realUpperArmNode||null;
-  realWeaponHolder.parent=socket||realPlayerModelPivot;
+  realWeaponHolder.parent=realPlayerModelPivot||socket;
   realWeaponHolder.scaling.setAll(.86);
   const makeGroup=name=>newGroup('RealWeapon_'+name,realWeaponHolder);
   const axe=makeGroup('Axe');
@@ -3173,22 +3184,62 @@ async function startGame(){
   if(typeof weaponLevel!=='undefined'&&weaponLevel>0)decorateWeaponGroups(realWeaponGroups,'real',weaponLevel);
   syncRealWeaponAnchor(0);
  }
+ function quaternionAlignYTo(direction){
+  const from=B.Axis.Y.clone().normalize(),to=direction.clone().normalize();
+  const dot=Math.max(-1,Math.min(1,B.Vector3.Dot(from,to)));
+  if(dot>.99995)return B.Quaternion.Identity();
+  if(dot<-.99995)return B.Quaternion.RotationAxis(B.Axis.X,Math.PI);
+  const cross=B.Vector3.Cross(from,to);
+  return new B.Quaternion(cross.x,cross.y,cross.z,1+dot).normalize();
+ }
  function syncRealWeaponAnchor(dt=0,pose=null){
   if(!realPlayerReady||!realWeaponHolder)return;
   const socket=realHandNode||realWeaponSocketNode||realForearmNode||realUpperArmNode||null;
-  const desiredParent=socket||realPlayerModelPivot;
-  if(desiredParent&&realWeaponHolder.parent!==desiredParent)realWeaponHolder.parent=desiredParent;
-  // Los offsets cambian según el hueso disponible: muñeca, antebrazo o pivote como último recurso.
-  // El mango se modela alrededor del punto de agarre (y=-0.19 en el arma).
-  // Desplazamos el origen para que la palma coincida con el cuero del mango.
-  const handOffset={axe:.19,sword:.22,spear:.08,pickaxe:.19}[equippedWeapon]||.19;
-  if(realWeaponSocketMode==='hand')realWeaponHolder.position=v(.010,handOffset+.006,-.075);
-  else if(realWeaponSocketMode==='forearm')realWeaponHolder.position=v(.008,-.285,-.105);
-  else if(realWeaponSocketMode==='upperArm')realWeaponHolder.position=v(.010,-.61,-.12);
-  else realWeaponHolder.position=v(.27,1.00,-.22);
+  const parent=realPlayerModelPivot||socket;
+  if(parent&&realWeaponHolder.parent!==parent)realWeaponHolder.parent=parent;
   const defaultWeaponPose=equippedWeapon==='axe'?{x:.06,y:0,z:-.10}:equippedWeapon==='sword'?{x:.03,y:0,z:-.045}:{x:0,y:0,z:0};
   const r=pose||defaultWeaponPose;
-  realWeaponHolder.rotation.copyFrom(v(r.x||0,r.y||0,r.z||0));
+  if(realPlayerModelPivot&&socket){
+   try{
+    realPlayerModelPivot.computeWorldMatrix(true);socket.computeWorldMatrix(true);
+    let gripWorld=socket.getAbsolutePosition().clone(),axisWorld=null;
+    if(realHandNode&&realForearmNode){
+     realHandNode.computeWorldMatrix(true);realForearmNode.computeWorldMatrix(true);
+     gripWorld=realHandNode.getAbsolutePosition().clone();
+     axisWorld=gripWorld.subtract(realForearmNode.getAbsolutePosition());
+    }else if(realForearmNode){
+     realForearmNode.computeWorldMatrix(true);
+     axisWorld=realForearmNode.getDirection(B.Axis.Y).normalize();
+     gripWorld.addInPlace(axisWorld.scale(.30));
+    }else if(realUpperArmNode){
+     realUpperArmNode.computeWorldMatrix(true);
+     axisWorld=realUpperArmNode.getDirection(B.Axis.Y).normalize();
+     gripWorld.addInPlace(axisWorld.scale(.56));
+    }else{
+     axisWorld=socket.getDirection(B.Axis.Y).normalize();
+    }
+    if(!axisWorld||axisWorld.lengthSquared()<1e-6)axisWorld=socket.getDirection(B.Axis.Y).normalize();
+    axisWorld.normalize();
+    // Grip point matches the actual palm position. The shaft runs along the forearm,
+    // rather than assuming the imported hand's local Y axis points upwards.
+    const gripOffset={axe:.19,sword:.31,spear:-.03,pickaxe:.31}[equippedWeapon]??.19;
+    const handForward=realHandNode?realHandNode.getDirection(B.Axis.Z).normalize():realPlayerModelPivot.getDirection(B.Axis.Z).normalize();
+    const holderWorld=gripWorld.add(axisWorld.scale(gripOffset)).add(handForward.scale(.028));
+    const inverseParent=realPlayerModelPivot.getWorldMatrix().clone();inverseParent.invert();
+    const localAxis=B.Vector3.TransformNormal(axisWorld,inverseParent).normalize();
+    const localPosition=B.Vector3.TransformCoordinates(holderWorld,inverseParent);
+    realWeaponHolder.position.copyFrom(localPosition);
+    const align=quaternionAlignYTo(localAxis);
+    const poseRotation=B.Quaternion.RotationYawPitchRoll(r.y||0,r.x||0,r.z||0);
+    realWeaponHolder.rotationQuaternion=align.multiply(poseRotation).normalize();
+   }catch(err){
+    console.warn('No se pudo calibrar la empuñadura con la mano real; se conserva el anclaje seguro.',err);
+    realWeaponHolder.position=v(.27,1.00,-.22);realWeaponHolder.rotationQuaternion=null;realWeaponHolder.rotation.copyFrom(v(r.x||0,r.y||0,r.z||0));
+   }
+  }else{
+   // Último recurso para rigs sin mano/antebrazo reconocible.
+   realWeaponHolder.position=v(.27,1.00,-.22);realWeaponHolder.rotationQuaternion=null;realWeaponHolder.rotation.copyFrom(v(r.x||0,r.y||0,r.z||0));
+  }
   realWeaponHolder.setEnabled(true);
   Object.entries(realWeaponGroups||{}).forEach(([key,node])=>{if(node)node.setEnabled(key===equippedWeapon);});
   realWeaponHolder.computeWorldMatrix(true);
@@ -3389,7 +3440,7 @@ async function startGame(){
  const skyMat=new B.StandardMaterial('NordicSkyMaterial',scene);skyMat.backFaceCulling=false;skyMat.disableLighting=true;skyMat.emissiveTexture=skyTexture;skyMat.diffuseColor=new B.Color3(0,0,0);skyMat.specularColor=new B.Color3(0,0,0);skyMat.fogEnabled=false;skyDome.material=skyMat;
  const sunHalo=B.MeshBuilder.CreateSphere('SunHalo',{diameter:48,segments:24},scene);sunHalo.parent=skyDome;sunHalo.position=v(290,235,-690);const haloMat=new B.StandardMaterial('SunHaloMat',scene);haloMat.emissiveColor=new B.Color3(.88,.69,.42);haloMat.alpha=.19;haloMat.disableLighting=true;sunHalo.material=haloMat;
   const sunDisc=B.MeshBuilder.CreateSphere('SunDisc',{diameter:21,segments:20},scene);sunDisc.parent=skyDome;sunDisc.position=v(290,235,-680);const sunMat=new B.StandardMaterial('SunDiscMat',scene);sunMat.emissiveColor=new B.Color3(1,.82,.58);sunMat.disableLighting=true;sunDisc.material=sunMat;
- let yaw=0,cameraYaw=0,cameraPitch=.48,cameraDistance=10.35;
+ let yaw=0,attackFacingYaw=0,cameraYaw=0,cameraPitch=.48,cameraDistance=10.35;
  let cameraTargetSmoothed=null,cameraCollisionTimer=0,cameraObstructionRatio=1,cameraObstructionBlend=1,playerGroundYFiltered=NaN;
  let cameraPointers=new Map(),cameraPinchDistance=0,cameraPinchStart=0;
  function playerPos(){return player.root.getAbsolutePosition();}
@@ -3951,6 +4002,10 @@ async function startGame(){
   }
   return false;
  }
+function villageHostileDefenders(vl){
+  if(!vl||vl.claimed)return [];
+  return vl.guards.filter(g=>g&&g.alive&&!g.surrendered&&!g.recruited&&!isFriendlyGuard(g));
+ }
  function isPlayerTerritoryAt(x,z){
   if(!Number.isFinite(x)||!Number.isFinite(z))return false;
   const homeDistance=Math.hypot(x-STARTER_CAMP_POSITION.x,z-STARTER_CAMP_POSITION.z);
@@ -4064,7 +4119,7 @@ async function startGame(){
  if(introStartButton)introStartButton.addEventListener('click',beginSaga);
  window.NorseAudio=NorseAudio;
  window.getPlayerTerritoryDebug=()=>{const p=playerPos();return {position:{x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2))},protected:isPlayerTerritoryAt(p.x,p.z),homeDistance:Number(Math.hypot(p.x-STARTER_CAMP_POSITION.x,p.z-STARTER_CAMP_POSITION.z).toFixed(2)),friendlyGuards:enemies.filter(isFriendlyGuard).length,hostileGuards:enemies.filter(e=>canAttackPlayer(e,p.x,p.z)).length};};
- window.getGameHealthDebug=()=>({build:'0.6.76',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
+ window.getGameHealthDebug=()=>({build:'0.6.77',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
  let chapterStage=0;
  const chapterMilestones=[
   'Reúne 12 de madera y 3 de piedra para preparar el refugio.',
@@ -4109,19 +4164,27 @@ async function startGame(){
  }
  function recordSagaEvent(text){const event={at:Date.now(),text:String(text).slice(0,120)};sagaHistory.push(event);if(sagaHistory.length>30)sagaHistory.splice(0,sagaHistory.length-30);const panel=document.getElementById('progressPanel');if(panel&&panel.classList.contains('open'))updateProgressPanel();}
  function updateHUD(){
-  const versionNode=document.getElementById('subtitle');if(versionNode)versionNode.textContent='SAGA DEL NORTE · CAPÍTULO I · 0.6.63';
+  const versionNode=document.getElementById('subtitle');if(versionNode)versionNode.textContent='SAGA DEL NORTE · CAPÍTULO I · 0.6.77';
   document.getElementById('wood').textContent=woodCount;document.getElementById('stone').textContent=stoneCount;document.getElementById('recruits').textContent=companions.length;document.getElementById('arsenalBtn').textContent='⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]);document.getElementById('kills').textContent=kills;document.getElementById('captured').textContent=captured+'/4';document.getElementById('health').style.width=Math.max(0,health)+'%';document.getElementById('boatHealthStat').textContent=Math.round(boatHp)+'%';document.getElementById('raiders').textContent=enemyShips.filter(e=>!e.sunk).length;document.getElementById('stamina').style.width=Math.max(0,stamina)+'%';document.getElementById('healBtn').textContent=healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR';updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
-  let pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;nearBoat=Math.hypot(ship.position.x-pos.x,ship.position.z-pos.z)<13.5;
-  let r=nearestResource();if(r){activeResourceDistance=r.dist;if(r.type==='tree')activeTree=r.obj;else activeRock=r.obj;}  for(const vl of villages)if(Math.hypot(vl.x-pos.x,vl.z-pos.z)<22){nearVillage=vl;break;}
+  const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
+  nearBoat=Math.hypot(ship.position.x-pos.x,ship.position.z-pos.z)<13.5;
+  const r=nearestResource();if(r){activeResourceDistance=r.dist;if(r.type==='tree')activeTree=r.obj;else activeRock=r.obj;}
+  const protectedHere=isPlayerTerritoryAt(pos.x,pos.z);
+  let bestDistance=protectedHere?24:22;
+  for(const vl of villages){
+   if(protectedHere&&!vl.claimed)continue;
+   const distance=Math.hypot(vl.x-pos.x,vl.z-pos.z);
+   if(distance<bestDistance){bestDistance=distance;nearVillage=vl;}
+  }
   const act=document.getElementById('act'),boatBtn=document.getElementById('boatBtn');
   const resourceInReach=activeResourceDistance<4.75;
   if(onShip){act.textContent='⚒ MEJORAR / REPARAR';boatBtn.textContent='🏝 DESEMBARCAR';}
   else if(resourceInReach&&activeTree){act.textContent='🪓 TALAR';act.title='Talar árbol cercano (el hacha se equipa automáticamente)';}
   else if(resourceInReach&&activeRock){act.textContent='⛏ EXTRAER PIEDRA';act.title='Extraer piedra con el pico; se equipa automáticamente';}
   else if(nearVillage&&!nearVillage.claimed){
-   const standing=nearVillage.guards.filter(g=>g.alive&&!g.surrendered&&!g.recruited).length;
+   const standing=villageHostileDefenders(nearVillage).length;
    act.textContent=standing>0?'⚔ RESISTENCIA: '+standing:'🏴 RECLAMAR ALDEA';
   }else if(nearVillage&&nearVillage.claimed&&findVillageSurvivor(nearVillage)){
    act.textContent='🤝 RECLUTAR GUERRERO';
@@ -4131,7 +4194,7 @@ async function startGame(){
   document.getElementById('attack').textContent=onShip?'🏹 ATACAR BARCO':'⚔ ATACAR';
   document.getElementById('upgradeBtn').hidden=!(onShip||nearBoat);
  }
-  function stoneChips(rock){
+ function stoneChips(rock){
    const origin=v(rock.x,terrainSurfaceAt(rock.x,rock.z)+.75,rock.z);
    burst(origin,M.stoneLight,5);
    for(let i=0;i<6;i++){
@@ -4164,7 +4227,7 @@ async function startGame(){
   }
  function claimVillage(vl,restoring=false){
   if(!vl||vl.claimed)return;
-  const resistance=vl.guards.filter(g=>g.alive&&!g.surrendered&&!g.recruited);
+  const resistance=villageHostileDefenders(vl);
   if(resistance.length){msg('La aldea aún resiste. Haz que depongan las armas ('+resistance.length+' defensores).');return;}
   vl.claimed=true;captured++;if(!restoring)woodCount+=12;
   vl.guards.forEach(guard=>{guard.faction='player';guard.parts.faction='player';if(guard.alive&&!guard.surrendered&&!guard.recruited)guard.state='friendly';});
@@ -4225,7 +4288,7 @@ async function startGame(){
   if(activeTree&&activeResourceDistance<4.75){startAction('chop');return;}
   if(activeRock&&activeResourceDistance<4.75){startAction('mine');return;}
   if(nearVillage&&!nearVillage.claimed){
-   const remaining=nearVillage.guards.filter(g=>g.alive&&!g.surrendered&&!g.recruited).length;
+   const remaining=villageHostileDefenders(nearVillage).length;
    if(remaining===0)startAction('claim');else msg('La aldea resiste, pero puedes talar el árbol cercano.');
    return;
   }
@@ -4239,7 +4302,7 @@ async function startGame(){
   if(health<=0)return;
   if(equippedWeapon==='pickaxe')equipWeapon('axe');
   if(playerAction!=='idle'&&playerAction!=='walk')return;
-  NorseAudio.play(equippedWeapon==='axe'?'axeSwing':'swordSwing');combo=comboWindow>0?(combo+1)%3:0;comboWindow=1.18;cameraShake=Math.max(cameraShake,.012);playerAction='attack';actionTimer=.86;actionHit=false;if(realPlayerReady)realPlayerMode='';
+  NorseAudio.play(equippedWeapon==='axe'?'axeSwing':'swordSwing');attackFacingYaw=Number(player.root.rotation.y)||yaw;combo=comboWindow>0?(combo+1)%3:0;comboWindow=1.18;cameraShake=Math.max(cameraShake,.012);playerAction='attack';actionTimer=.86;actionHit=false;if(realPlayerReady)realPlayerMode='';
  }
  document.getElementById('attack').addEventListener('click',attack);
 
@@ -4335,31 +4398,36 @@ async function startGame(){
   return true;
  }
  function hitEnemies(){
-  const f=v(Math.sin(yaw),0,Math.cos(yaw)),pp=playerPos();
+  const facing=Number.isFinite(attackFacingYaw)?attackFacingYaw:yaw;
+  const f=v(Math.sin(facing),0,Math.cos(facing)),pp=playerPos();
   const profile={
-   axe:{reach:4.25,width:1.65,damage:38,stun:.52,push:5.0},
-   sword:{reach:3.95,width:1.36,damage:40,stun:.40,push:3.4},
-   spear:{reach:5.10,width:.82,damage:34,stun:.34,push:4.1},
-   pickaxe:{reach:2.90,width:.92,damage:9,stun:.24,push:1.8}
-  }[equippedWeapon]||{reach:4.25,width:1.65,damage:38,stun:.52,push:5.0};
+   axe:{reach:4.75,width:2.10,damage:38,stun:.52,push:5.0},
+   sword:{reach:4.45,width:1.86,damage:40,stun:.40,push:3.4},
+   spear:{reach:5.35,width:1.30,damage:34,stun:.34,push:4.1},
+   pickaxe:{reach:3.25,width:1.24,damage:9,stun:.24,push:1.8}
+  }[equippedWeapon]||{reach:4.75,width:2.10,damage:38,stun:.52,push:5.0};
   const reach=profile.reach+weaponLevel*.16;let hits=0;
   for(const e of enemies){
    if(!e.alive||isFriendlyGuard(e))continue;
-   const target=e.parts.root.position,d=target.subtract(pp);d.y=0;
-   const dist=d.length();if(dist<.55||dist>reach)continue;
-   const forward=d.x*f.x+d.z*f.z,side=Math.abs(d.x*f.z-d.z*f.x);
-   if(forward<.30||side>profile.width*(.66+.34*(forward/reach)))continue;
-   if(!strikePathClear(pp,target))continue;
-   const dir=d.scale(1/(dist||1)),damage=Math.round(profile.damage*(1+weaponLevel*.16)*(combo===2?1.28:1));
+   const target=e.parts.root.position,dx=target.x-pp.x,dz=target.z-pp.z,dist=Math.hypot(dx,dz);
+   const targetRadius=.62;
+   if(dist<.30||dist>reach+targetRadius)continue;
+   const forward=dx*f.x+dz*f.z,side=Math.abs(dx*f.z-dz*f.x);
+   const closeContact=dist<=1.35;
+   // Broad swept melee cone: props, trees and low palisade colliders no longer cancel a visible hit.
+   if(!closeContact&&forward<-.35)continue;
+   const lateralLimit=profile.width+(closeContact?.75:.35);
+   if(side>lateralLimit)continue;
+   const dir=v(dx,0,dz).normalize(),damage=Math.round(profile.damage*(1+weaponLevel*.16)*(combo===2?1.28:1));
    e.hp-=damage;e.stun=Math.max(e.stun||0,profile.stun);e.hitReact=profile.stun;e.knockback=Math.max(e.knockback||0,profile.push);e.hitDir=dir.clone();e.state='hit';
    e.parts.root.rotation.y=Math.atan2(-dir.x,-dir.z);cameraShake=Math.max(cameraShake,.028);
    burst(target.add(v(0,1.25,0)),M.gold,9);
-   e.healthMesh.scaling.x=Math.max(.001,e.hp/100);e.healthMesh.position.x=-(1-e.hp/100)*.55;
+   if(e.healthMesh){e.healthMesh.scaling.x=Math.max(.001,e.hp/100);e.healthMesh.position.x=-(1-e.hp/100)*.55;}
    hits++;combatFreeze=Math.max(combatFreeze,.038);if(e.hp<=0){if(Number.isInteger(e.villageIndex))surrenderGuard(e);else defeatGuard(e,'jugador');}
   }
-  if(hits){NorseAudio.play('metalHit');}if(!hits)msg('El golpe no ha alcanzado a ningún enemigo.');else msg(hits+' impacto(s). El golpe depende del arma, el alcance y la dirección.');
+  if(hits){NorseAudio.play('metalHit');msg(hits+' impacto(s).');}
+  else msg('Acércate un poco y orienta el golpe hacia los enemigos.');
  }
-
  function easeOut(t){return 1-Math.pow(1-t,3);}
  function animateVikingCore(parts,phase,walking,action,blockingNow){
   // Los NPC ocultos por el LOD de distancia siguen simulando IA y colisiones,
@@ -4375,7 +4443,7 @@ async function startGame(){
   if(parts.realHuman&&!parts.realHuman.animationFailed){
    const real=parts.realHuman;
    const sprinting=parts===player?!!running:(Number.isFinite(measuredSpeed)&&measuredSpeed>2.45);
-   real.wasWalking=stableWalking;
+   real.wasWalking=stableWalking;real.lastGaitPhase=phase;
    // Si falta Walk, usar marcha procedural; Run no es un sustituto de caminar.
    const desired=stableWalking?(sprinting?(real.run||real.walk):(real.walk||null)):null; // Reposo propio controlado: no reproducir clips Idle que dejan brazos abiertos.
    const clipIsRun=!!(desired&&desired===real.run);
@@ -5404,7 +5472,7 @@ async function startGame(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.76: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.77: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -5426,7 +5494,7 @@ async function startGame(){
 window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passive:true});
  if(window.visualViewport)window.visualViewport.addEventListener('resize',resizeGameViewport,{passive:true});
  updateHUD();drawMap();
- console.info('EL SIN NOMBRE 0.6.76 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.77 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'Descargando e instalando personajes 3D…');
  const allCharacterLoads=Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
@@ -5454,7 +5522,7 @@ window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passiv
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
- console.info('EL SIN NOMBRE 0.6.76 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ console.info('EL SIN NOMBRE 0.6.77 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
