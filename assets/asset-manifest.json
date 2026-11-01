@@ -1,0 +1,139 @@
+{
+  "game": "EL SIN NOMBRE",
+  "version": "0.6.69",
+  "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
+  "assets": [
+    {
+      "path": "assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+      "bytes": 7279,
+      "sha256": "83554049f81f4db9209379e103c30bfa63f65c42189a03f300b045c2c82e23ae",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/impact-sounds/impactMetal_heavy_001.ogg"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+      "bytes": 7117,
+      "sha256": "a96f879fec0864a8938e0c745b6996a6c5679c16a234ce31a01cc995e8401003",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/impact-sounds/impactMetal_medium_000.ogg"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+      "bytes": 6964,
+      "sha256": "2a185e2e57211d02c1bdd33b872d6b6a2fe83e6c14f4e56f426a95e717acf08e",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/impact-sounds/impactMetal_medium_003.ogg"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+      "bytes": 66114,
+      "sha256": "690725fd44a99a4abd32d59c0efe8e28486afb564d3f5710cca75a2c786cf0f1",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-battle/battle_sound_effects/swish_2.wav"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+      "bytes": 102130,
+      "sha256": "7767c7b6ba063d8d5de6e05ba29c037af5c4a19d02b00b6b5ff398f72732e1c9",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-battle/battle_sound_effects/swish_3.wav"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+      "bytes": 66850,
+      "sha256": "a53382f21d9c7e4d7a1d6e8cddc9ce9779740f9ad2ba4d9012ee20318c04f24c",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-battle/battle_sound_effects/swish_4.wav"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+      "bytes": 21087,
+      "sha256": "34e6057ec1581b5cb8802e4942952b00b1dac235bfcb0ed8cff0ceb15a3ebbbf",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-footsteps/gravel.ogg"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+      "bytes": 11761,
+      "sha256": "93b3bbcd06380eec54335d1869924db6ff2cc6c1cb103502133d78484c5ca836",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-footsteps/leaves01.ogg"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+      "bytes": 11823,
+      "sha256": "477c35bfd3f740915b24f93cb66364523217692d2749057f9b8be162eb8209f4",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-footsteps/leaves02.ogg"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+      "bytes": 9925,
+      "sha256": "354682c2cb340cd787d892d31beb87c45dda94ca6e8363b16828ab2f1d129b82",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-footsteps/mud02.ogg"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+      "bytes": 9329,
+      "sha256": "99b04d784eb6b531777a64fb0e319f104eb7cdd6b625c1fac68f511605930a2c",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-footsteps/stone01.ogg"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+      "bytes": 8569,
+      "sha256": "482d97c5e1e6eb7b239be46f25d093ebebb94cefb56eedb04807b6a5dc68e972",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-footsteps/wood01.ogg"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+      "bytes": 8672,
+      "sha256": "588bb121bd3db005b4c2a5b55c1cf39b8ec620f820c2123ac1f62748d132dac2",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-footsteps/wood02.ogg"
+    },
+    {
+      "path": "assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+      "bytes": 9832,
+      "sha256": "9b677c284389163f132b94e1323ea713a4c7ac9d5fba849cf7cbf8b53a1627e2",
+      "source": "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-footsteps/wood03.ogg"
+    },
+    {
+      "path": "assets/audio/kenney-rpg-audio/chop.ogg",
+      "bytes": 9370,
+      "sha256": "d00c2b3c9fff07e376145c8c8c45c90e5084ec192f6ce0387db233f7b86f1486",
+      "source": "https://raw.githubusercontent.com/rowink/CC0-Sounds-Web/main/public/sounds/kenney_rpgaudio/Audio/chop.ogg"
+    },
+    {
+      "path": "assets/environmentSpecular.env",
+      "bytes": 273974,
+      "sha256": "ca3e30921265d084d46c62c5220217d99296c0c3eacaeb40ca15f7534dfdd8bc",
+      "source": "https://assets.babylonjs.com/environments/environmentSpecular.env"
+    },
+    {
+      "path": "assets/models/Seagull.glb",
+      "bytes": 90708,
+      "sha256": "2909080ed283b9c4eb4cde5d46743bd623cd26e37a868ba62a0db5ca1d591eab",
+      "source": "https://gobkit.com/freebies/animal007/Seagull.glb"
+    },
+    {
+      "path": "assets/models/armored-knight-rigged.glb",
+      "bytes": 14617576,
+      "sha256": "5a6073df01941b2e5a98d98b34e2924e5dae75c352eeb45d3fc148692a169b4c",
+      "source": "https://grab3d.com/dl/armored-knight-rigged/armored-knight-rigged.glb"
+    },
+    {
+      "path": "assets/models/man-base-character-rigged.glb",
+      "bytes": 11354468,
+      "sha256": "3038f56e1225d0ef9692189ed19ff688f1424e669281148a4cc6995fed568496",
+      "source": "https://grab3d.com/dl/man-base-character-rigged/man-base-character-rigged.glb"
+    },
+    {
+      "path": "assets/models/viking-rigged.glb",
+      "bytes": 14068192,
+      "sha256": "a5e92d6b7e2529e77ee4350e0f03116f21efc4aaee04f7b3077b705f1eb0eca1",
+      "source": "https://grab3d.com/dl/viking-rigged/viking-rigged.glb"
+    },
+    {
+      "path": "assets/vendor/babylon.js",
+      "bytes": 6794120,
+      "sha256": "420088fc4c31c22591703ce207c7736f15419faa556b0678d28f71dbf7ea523a",
+      "source": "https://cdn.babylonjs.com/v7.54.3/babylon.js"
+    },
+    {
+      "path": "assets/vendor/babylonjs.loaders.min.js",
+      "bytes": 288275,
+      "sha256": "02a6782cf71693218165ae87b114697a74b9cb081c8123e3fcc310e159598d6c",
+      "source": "https://cdn.babylonjs.com/v7.54.3/loaders/babylonjs.loaders.min.js"
+    }
+  ]
+}
