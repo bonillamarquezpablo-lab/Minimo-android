@@ -15,7 +15,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.70 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.71 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -25,6 +25,9 @@ DOWNLOADS = {
     ),
     "assets/vendor/babylonjs.loaders.min.js": (
         "https://cdn.babylonjs.com/v7.54.3/loaders/babylonjs.loaders.min.js", 20_000, "script"
+    ),
+    "assets/vendor/meshopt_decoder.js": (
+        "https://cdn.babylonjs.com/meshopt_decoder.js", 2_000, "script"
     ),
     "assets/environmentSpecular.env": (
         "https://assets.babylonjs.com/environments/environmentSpecular.env", 100_000, "binary"
@@ -129,6 +132,86 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                 time.sleep(attempt * 2)
     raise RuntimeError(f"Could not download {url}: {last_error}") from last_error
 
+MESHOPT_MODELS = (
+    "assets/models/viking-rigged.glb",
+    "assets/models/armored-knight-rigged.glb",
+    "assets/models/man-base-character-rigged.glb",
+)
+
+
+def meshopt_compress_models(results: list[dict]) -> None:
+    """Compress geometry/animation streams; preserve original textures and material data."""
+    npm = shutil.which("npm")
+    if not npm:
+        print("WARN Meshopt omitted: npm is not available; original GLBs remain untouched.")
+        return
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="norse-meshopt-") as tool_dir:
+            install = subprocess.run(
+                [
+                    npm, "install", "--prefix", tool_dir, "--no-save", "--no-package-lock",
+                    "--no-audit", "--no-fund", "@gltf-transform/cli@4.5.1",
+                ],
+                capture_output=True, text=True, timeout=300,
+            )
+            if install.returncode != 0:
+                raise RuntimeError((install.stderr or install.stdout)[-4000:])
+            cli = Path(tool_dir) / "node_modules" / ".bin" / "gltf-transform"
+            if not cli.exists():
+                raise RuntimeError("gltf-transform executable was not installed.")
+
+            # Process every model to temporary output before replacing any source file.
+            outputs = []
+            for relative in MESHOPT_MODELS:
+                source = DIST / relative
+                if not source.exists():
+                    raise RuntimeError(f"Missing model: {relative}")
+                temp_output = Path(tool_dir) / (Path(relative).stem + ".meshopt.glb")
+                command = [
+                    str(cli), "meshopt", str(source), str(temp_output),
+                    "--level", "high",
+                    "--quantize-position", "16", "--quantize-normal", "16",
+                    "--quantize-texcoord", "16", "--quantize-color", "16",
+                    "--quantize-weight", "16",
+                ]
+                result = subprocess.run(command, capture_output=True, text=True, timeout=240)
+                if result.returncode != 0 or not temp_output.exists():
+                    raise RuntimeError(
+                        f"Meshopt failed for {relative}: {(result.stderr or result.stdout)[-3000:]}"
+                    )
+                raw = temp_output.read_bytes()
+                if len(raw) < 20 or raw[:4] != b"glTF":
+                    raise RuntimeError(f"Invalid optimized GLB: {relative}")
+                json_length = int.from_bytes(raw[12:16], "little")
+                if raw[16:20] != b"JSON" or 20 + json_length > len(raw):
+                    raise RuntimeError(f"Invalid optimized JSON chunk: {relative}")
+                doc = json.loads(raw[20:20 + json_length].decode("utf-8").rstrip("\x00 "))
+                if "EXT_meshopt_compression" not in set(doc.get("extensionsUsed", [])):
+                    raise RuntimeError(f"EXT_meshopt_compression missing: {relative}")
+                outputs.append((relative, source, temp_output, len(raw)))
+
+            by_path = {item["path"]: item for item in results}
+            for relative, source, output, optimized_size in outputs:
+                original_size = source.stat().st_size
+                if optimized_size >= original_size:
+                    print(f"WARN Meshopt did not reduce {relative}; original retained.")
+                    continue
+                raw = output.read_bytes()
+                shutil.copy2(output, source)
+                item = by_path[relative]
+                item["bytes"] = optimized_size
+                item["sha256"] = hashlib.sha256(raw).hexdigest()
+                item["compression"] = "EXT_meshopt_compression"
+                item["originalBytes"] = original_size
+                print(
+                    f"OK Meshopt {relative}: {original_size:,} → {optimized_size:,} bytes "
+                    f"({(original_size-optimized_size)/1048576:.2f} MiB saved; textures untouched)"
+                )
+    except Exception as exc:
+        print(f"WARN Meshopt skipped; original models retained: {exc}", file=sys.stderr)
+
+
 def main() -> None:
     if DIST.exists():
         shutil.rmtree(DIST)
@@ -168,6 +251,8 @@ def main() -> None:
     )
     required = [
         "assets/vendor/babylon.js",
+        "assets/vendor/meshopt_decoder.js",
+        "BABYLON.MeshoptCompression.Configuration",
         "assets/models/viking-rigged.glb",
         "assets/models/armored-knight-rigged.glb",
         "assets/models/man-base-character-rigged.glb",
@@ -208,10 +293,11 @@ def main() -> None:
             print(f"- {relative}: {reason}", file=sys.stderr)
         raise SystemExit(1)
 
+    meshopt_compress_models(results)
     results.sort(key=lambda item: item["path"])
     manifest = {
         "game": "EL SIN NOMBRE",
-        "version": "0.6.70",
+        "version": "0.6.71",
         "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
         "assets": results,
     }

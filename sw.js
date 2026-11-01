@@ -1,6 +1,6 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.70";
-const ASSET_CACHE = "el-sin-nombre-assets-0.6.70";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.71";
+const ASSET_CACHE = "el-sin-nombre-assets-0.6.71";
 const SHELL_FILES = ["./index.html", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", event => {
@@ -41,14 +41,8 @@ async function networkFirst(request, cacheName) {
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
-  if (cached) {
-    fetch(request).then(response => {
-      if (response && (response.ok || response.type === "opaque")) {
-        cache.put(request, response.clone()).catch(() => {});
-      }
-    }).catch(() => {});
-    return cached;
-  }
+  // No volver a descargar modelos grandes cuando ya están guardados en esta versión.
+  if (cached) return cached;
   return networkFirst(request, cacheName);
 }
 
