@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.107">
-<meta name="el-sin-nombre-repair" content="0.6.107 professional naval chart, responsive map sizing and deferred mobile secondary assets">
+<meta name="el-sin-nombre-build" content="0.6.108">
+<meta name="el-sin-nombre-repair" content="0.6.108 professional naval chart, responsive map sizing and deferred mobile secondary assets">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.107</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.108</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -711,7 +711,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.107 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.108 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
@@ -1112,6 +1112,7 @@ async function startGame(){
  setLoadingProgress(40,'Preparando el mundo…');
  try{
  const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
+ const yieldStartupFrame=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
  if(!B||!B.Engine)throw new Error('La librería Babylon.js está incompleta o no es compatible.');
  const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:!isIOSDevice,powerPreference:'high-performance',failIfMajorPerformanceCaveat:false},false);
  bootEngineForCleanup=engine;
@@ -1509,7 +1510,30 @@ async function startGame(){
  const land=[{x:0,z:0,r:60,name:'Isla del Cuervo'},{x:135,z:14,r:31,name:'Costa de Skall'},{x:-132,z:45,r:33,name:'Isla de los Pinos'},{x:28,z:143,r:33,name:'Bahía de Hrafn'},{x:146,z:-132,r:25,name:'Islote del Hielo'},{x:-145,z:-126,r:27,name:'Isla de las Cenizas'},{x:286,z:154,r:33,name:'Cabo de Bruma'},{x:-286,z:232,r:31,name:'Isla del Cuerno'},{x:292,z:-264,r:36,name:'Costa de las Tormentas'},{x:470,z:100,r:31,name:'Skjoldheim'},{x:-470,z:-310,r:34,name:'Isla de los Juramentos'},{x:60,z:465,r:34,name:'Isla del Altar'},{x:-45,z:-465,r:32,name:'Cabo del Vigía'}];
  const waterSubdivisions=isTouchDevice?176:224;
  const ground=B.MeshBuilder.CreateGround('ocean',{width:1050,height:1050,subdivisions:waterSubdivisions,updatable:true},scene);ground.position.y=0;ground.material=M.water;ground.isPickable=false;ground.receiveShadows=false;
- const waterBase=ground.getVerticesData(B.VertexBuffer.PositionKind).slice(),waterPositions=waterBase.slice(),waterIndices=ground.getIndices(),waterNormals=[];
+ const waterBase=ground.getVerticesData(B.VertexBuffer.PositionKind).slice(),waterPositions=waterBase.slice(),waterIndices=ground.getIndices(),waterNormals=new Float32Array(waterBase.length);
+ const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isTouchDevice?250:300,WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS;
+ for(let i=0;i<waterNormals.length;i+=3)waterNormals[i+1]=1;
+ let waterActiveVertexOffsets=new Uint32Array(0),waterFocusX=NaN,waterFocusZ=NaN,waterLastUpdatedVertices=0,waterLastUpdateMs=0,waterLastNormalMs=0;
+ function refreshWaterDetailRegion(){
+  const activeCamera=scene.activeCamera,focus=activeCamera&&activeCamera.position?activeCamera.position:(onShip?ship.position:player.root.position);
+  const fx=Number(focus.x)||0,fz=Number(focus.z)||0,dx=fx-waterFocusX,dz=fz-waterFocusZ;
+  if(waterActiveVertexOffsets.length&&dx*dx+dz*dz<576)return;
+  waterFocusX=fx;waterFocusZ=fz;
+  const offsets=[];
+  for(let i=0;i<waterBase.length;i+=3){const x=waterBase[i]-fx,z=waterBase[i+2]-fz;if(x*x+z*z<=WATER_DETAIL_RADIUS_SQ)offsets.push(i);}
+  waterActiveVertexOffsets=new Uint32Array(offsets);
+ }
+ function updateWaterNormalsFast(){
+  for(let n=0;n<waterActiveVertexOffsets.length;n++){
+   const offset=waterActiveVertexOffsets[n],vertex=offset/3,row=Math.floor(vertex/waterGridSize),col=vertex-row*waterGridSize;
+   const left=(row*waterGridSize+Math.max(0,col-1))*3,right=(row*waterGridSize+Math.min(waterGridSize-1,col+1))*3;
+   const up=(Math.max(0,row-1)*waterGridSize+col)*3,down=(Math.min(waterGridSize-1,row+1)*waterGridSize+col)*3;
+   const dx=waterBase[right]-waterBase[left]||1,dz=waterBase[down+2]-waterBase[up+2]||1;
+   const nx=-(waterPositions[right+1]-waterPositions[left+1])/dx,nz=-(waterPositions[down+1]-waterPositions[up+1])/dz;
+   const inv=1/Math.sqrt(nx*nx+1+nz*nz);
+   waterNormals[offset]=nx*inv;waterNormals[offset+1]=inv;waterNormals[offset+2]=nz*inv;
+  }
+ }
  let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0;
  const waterVertexStep=isTouchDevice?1/30:1/40;
  const waterNormalStep=isTouchDevice?1/8:1/12;
@@ -1576,29 +1600,35 @@ async function startGame(){
  // La espuma queda reservada para el contacto dinámico del casco con el agua.
  function animateWater(dt){
   oceanTime+=dt;waterAccumulator+=dt;waterNormalAccumulator+=dt;
-  // 25 Hz vertex motion avoids the visible stepping of the old ~9 Hz water update.
   if(waterAccumulator<waterVertexStep)return;waterAccumulator%=waterVertexStep;
-  for(let i=0;i<waterPositions.length;i+=3){
-   const x=waterBase[i],z=waterBase[i+2];waterPositions[i+1]=waterHeight(x,z,oceanTime);
+  const workStart=performance.now();refreshWaterDetailRegion();
+  for(let n=0;n<waterActiveVertexOffsets.length;n++){
+   const i=waterActiveVertexOffsets[n];waterPositions[i+1]=waterHeight(waterBase[i],waterBase[i+2],oceanTime);
   }
+  waterLastUpdatedVertices=waterActiveVertexOffsets.length;
   ground.updateVerticesData(B.VertexBuffer.PositionKind,waterPositions,false,false);
-  // Normals are refreshed independently to balance smooth highlights against mobile GPU/CPU cost.
-  if(waterNormalAccumulator>=waterNormalStep){B.VertexData.ComputeNormals(waterPositions,waterIndices,waterNormals);ground.updateVerticesData(B.VertexBuffer.NormalKind,waterNormals,false,false);waterNormalAccumulator%=waterNormalStep;}
+  if(waterNormalAccumulator>=waterNormalStep){
+   const normalStart=performance.now();updateWaterNormalsFast();
+   ground.updateVerticesData(B.VertexBuffer.NormalKind,waterNormals,false,false);
+   waterLastNormalMs=performance.now()-normalStart;waterNormalAccumulator%=waterNormalStep;
+  }
+  const nearbyRadiusSq=(WATER_DETAIL_RADIUS+75)*(WATER_DETAIL_RADIUS+75);
   for(const foam of tidalFoamMeshes){
+   const dx=foam.centerX-waterFocusX,dz=foam.centerZ-waterFocusZ;if(dx*dx+dz*dz>nearbyRadiusSq)continue;
    for(let i=0;i<foam.positions.length;i+=3){const x=foam.base[i],z=foam.base[i+2];foam.positions[i+1]=waterHeight(x,z,oceanTime)+.028;}
    foam.mesh.updateVerticesData(B.VertexBuffer.PositionKind,foam.positions,false,false);
   }
   for(const wave of shorelineWaves){
+   const dx=wave.x-waterFocusX,dz=wave.z-waterFocusZ;if(dx*dx+dz*dz>nearbyRadiusSq)continue;
    const pulse=Math.sin(oceanTime*1.05+wave.phase),secondary=Math.sin(oceanTime*.63+wave.phase*1.7);
    wave.mesh.scaling.x=1+pulse*.022+secondary*.009;
    wave.mesh.scaling.z=1+pulse*.019-secondary*.008;
    wave.mesh.position.y=waterHeight(wave.x,wave.z,oceanTime)+.045+Math.max(0,pulse)*.028;
-   const bandAlpha=.13+(.5+.5*pulse)*.22;
-   wave.mat.alpha=bandAlpha*(wave.layer===0?1:(wave.layer===1?.78:.56));
+   const bandAlpha=.13+(.5+.5*pulse)*.22;wave.mat.alpha=bandAlpha*(wave.layer===0?1:(wave.layer===1?.78:.56));
   }
-  M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;
-  M.water.diffuseTexture.vOffset=(oceanTime*.007)%1;
+  M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset=(oceanTime*.007)%1;
   if(M.water.bumpTexture){M.water.bumpTexture.uOffset=(oceanTime*.0078)%1;M.water.bumpTexture.vOffset=(-oceanTime*.0058)%1;}
+  waterLastUpdateMs=performance.now()-workStart;
  }
  function rand(a,b){return a+Math.random()*(b-a)}
  const islandMaterials=[M.grass,M.grass2,M.darkGrass];
@@ -1759,7 +1789,7 @@ async function startGame(){
   material.specularColor=new B.Color3(.015,.018,.016);material.useVertexColors=true;material.useVertexAlpha=true;
   material.backFaceCulling=false;material.alpha=.72;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;mesh.material=material;
   mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.hasVertexAlpha=true;
-  tidalFoamMeshes.push({mesh,base:new Float32Array(positions),positions:new Float32Array(positions)});
+  tidalFoamMeshes.push({mesh,base:new Float32Array(positions),positions:new Float32Array(positions),centerX:island.x,centerZ:island.z});
  }
  land.forEach(buildTidalFoam);
  const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
@@ -2296,7 +2326,7 @@ async function startGame(){
   const hidden=B.Matrix.Compose(v(.0001,.0001,.0001),sprayIdentity,v(0,-1000,0));hidden.copyToArray(vesselSprayMatrices,i*16);
  }
  vesselSprayMesh.thinInstanceSetBuffer('matrix',vesselSprayMatrices,16,true);vesselSprayMesh.thinInstanceCount=VESSEL_SPRAY_COUNT;
- let vesselSprayCursor=0;
+ let vesselSprayCursor=0,vesselSprayActive=false;
  function spawnVesselSplash(root,speed){
   const particle=vesselSprayParticles[vesselSprayCursor++%VESSEL_SPRAY_COUNT];
   const heading=root.rotation.y,fx=Math.sin(heading),fz=Math.cos(heading),rx=Math.cos(heading),rz=-Math.sin(heading);
@@ -2310,7 +2340,7 @@ async function startGame(){
   particle.vx=rx*side*rand(.38,.92)+fx*(bow?push*.56:push*.16);
   particle.vz=rz*side*rand(.38,.92)+fz*(bow?push*1.05:push*.18);
   particle.vy=rand(1.35,2.30)+push*.52;
-  particle.life=particle.maxLife=rand(.40,.64);particle.size=rand(.105,.205);
+  particle.life=particle.maxLife=rand(.40,.64);particle.size=rand(.105,.205);vesselSprayActive=true;
  }
  function emitVesselSplashes(root,dt,speed,state){
   if(!state)return;
@@ -2325,18 +2355,19 @@ async function startGame(){
   }
  }
  function updateVesselSpray(dt){
-  const step=Math.min(.04,Math.max(0,dt||0));
+  if(!vesselSprayActive)return;
+  const step=Math.min(.04,Math.max(0,dt||0));let remaining=0;
   for(let i=0;i<VESSEL_SPRAY_COUNT;i++){
    const p=vesselSprayParticles[i];let scale=0;
    if(p.life>0){
     p.life=Math.max(0,p.life-step);p.x+=p.vx*step;p.y+=p.vy*step;p.z+=p.vz*step;
     p.vx*=Math.pow(.72,step*10);p.vz*=Math.pow(.72,step*10);p.vy-=4.7*step;
-    const fade=p.life/(p.maxLife||.35);scale=p.size*Math.min(1,fade*1.8);
+    const fade=p.life/(p.maxLife||.35);scale=p.size*Math.min(1,fade*1.8);if(p.life>0)remaining++;
    }
    const matrix=B.Matrix.Compose(v(scale,scale,scale),sprayIdentity,v(p.x,p.y,p.z));
    matrix.copyToArray(vesselSprayMatrices,i*16);
   }
-  vesselSprayMesh.thinInstanceBufferUpdated('matrix');
+  vesselSprayMesh.thinInstanceBufferUpdated('matrix');vesselSprayActive=remaining>0;
  }
  cyl('yard',ship,[0,5.50,-.42],5.1,.1,.1,M.woodLight,[0,0,Math.PI/2]);
  cyl('prowNeck',ship,[0,1.15,5.12],2.0,.42,.23,M.wood,[Math.PI/2,0,0]);
@@ -4558,7 +4589,7 @@ async function startGame(){
  // but the eye now reads individual tufts and depth rather than a flat green carpet.
  // Keep the count outside createRealGrass(): grassMesh itself is local to that builder.
  let grassInstanceCount=0,grassBatchCount=0,grassWindAccumulator=0,grassWindClock=0;const grassWindMeshes=[];let grassWindBasePositions=null,grassWindPositions=null;
- function createRealGrass(){
+ async function createRealGrass(){
   const positions=[],indices=[],colors=[];
   const shades=[[.27,.32,.17],[.36,.40,.22],[.43,.45,.27],[.23,.29,.16],[.38,.36,.20]];
   const addLeaf=(angle,length,width,lean,startRadius,shadeIndex)=>{
@@ -4597,6 +4628,7 @@ async function startGame(){
    const island=land[islandIndex],want=islandIndex===0?6500:(islandIndex<4?1050:520);let placed=0,tries=0;
    while(placed<want&&tries<want*8){
     tries++;
+    if(tries%480===0){setLoadingProgress(42+((islandIndex+placed/want)/land.length)*5,'Distribuyendo vegetación 3D…');await yieldStartupFrame();}
     const angle=Math.random()*Math.PI*2,rad=Math.sqrt(Math.random())*island.r*.865;
     const x=island.x+Math.cos(angle)*rad,z=island.z+Math.sin(angle)*rad;
     if(!isLand(x,z))continue;
@@ -4623,6 +4655,7 @@ async function startGame(){
     placed++;count++;
    }
   }
+  let grassUploadBatch=0;
   for(const batch of grassBatches.values()){
    const grassMesh=new B.Mesh('NordicGroundCover_'+batch.islandIndex+'_'+batch.cellX+'_'+batch.cellZ,scene);
    vertexData.applyToMesh(grassMesh);grassMesh.material=gm;grassMesh.isPickable=false;grassMesh.receiveShadows=false;
@@ -4632,11 +4665,12 @@ async function startGame(){
    grassMesh.thinInstanceSetBuffer('color',new Float32Array(batch.colors),4,true);
    grassMesh.thinInstanceCount=batch.matrices.length/16;grassMesh.thinInstanceRefreshBoundingInfo(true);
    grassMesh.doNotSyncBoundingInfo=false;
+   if(++grassUploadBatch%8===0)await yieldStartupFrame();
   }
   grassInstanceCount=count;grassBatchCount=grassBatches.size;
   console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:7,instancesPerIsland:land.map((is,i)=>({island:is.name,requested:i===0?6500:(i<4?1050:520)})),spatialBatches:grassBatchCount,chunkSize});
  }
- createRealGrass();
+ await createRealGrass();
  function updateRealGrassWind(dt){
   // Menos transferencias de vértices por segundo: la hierba cercana sigue respirando,
   // pero no se suben decenas de buffers al GPU durante cada ráfaga.
@@ -4877,7 +4911,7 @@ function villageHostileDefenders(vl){
   function toggle(){muted=!muted;if(master&&ctx)master.gain.setTargetAtTime(muted?0:.72,ctx.currentTime,.04);Object.values(foleyPools).flat(2).forEach(a=>{try{a.muted=muted;}catch(_){}});return muted;}
   return {unlock,play,update,toggle,marchStep,civilianStep,preloadAll,get unlocked(){return unlocked;}};
  })();
- const startupAudioPreload=Promise.resolve({deferredUntilInteraction:true,total:0,ready:0,failed:0});
+ const startupAudioPreload=NorseAudio.preloadAll(6500);
  document.addEventListener('pointerdown',()=>NorseAudio.unlock(),{once:true,passive:true});
  document.addEventListener('keydown',()=>NorseAudio.unlock(),{once:true});
  document.addEventListener('keydown',e=>{if(String(e.key||'').toLowerCase()==='m'&&!e.repeat){const state=NorseAudio.toggle();msg(state?'Sonido desactivado':'Sonido activado');}});
@@ -4900,7 +4934,7 @@ function villageHostileDefenders(vl){
   if(introOverlay){introOverlay.setAttribute('aria-hidden','false');introOverlay.classList.add('open');}
   console.info('Pantalla previa lista',{guardianes:guardianReady,aldeanosGLB:civilianReady,aldeanos: civilianTotal,guerrerosGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length});
  }
- function beginSaga(){gameStarted=true;document.body.classList.remove('booting','boot-failed','intro-open');document.body.classList.add('game-running');NorseAudio.unlock();if(introOverlay){introOverlay.classList.remove('open');introOverlay.setAttribute('aria-hidden','true');}try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();}catch(startViewError){console.warn('La vista se ajustará en el siguiente fotograma:',startViewError);}msg('La costa te espera.');if(isTouchDevice)setTimeout(()=>{const launch=()=>{try{startNpcHumanModels();}catch(err){console.warn('Carga diferida de modelos secundarios:',err);}};if(typeof window.requestIdleCallback==='function')window.requestIdleCallback(launch,{timeout:12000});else launch();},6500);}
+ function beginSaga(){gameStarted=true;document.body.classList.remove('booting','boot-failed','intro-open');document.body.classList.add('game-running');NorseAudio.unlock();if(introOverlay){introOverlay.classList.remove('open');introOverlay.setAttribute('aria-hidden','true');}try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();}catch(startViewError){console.warn('La vista se ajustará en el siguiente fotograma:',startViewError);}msg('La costa te espera.');}
  if(introStartButton)introStartButton.addEventListener('click',beginSaga);
  window.NorseAudio=NorseAudio;
  window.getPlayerTerritoryDebug=()=>{const p=playerPos();return {position:{x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2))},protected:isPlayerTerritoryAt(p.x,p.z),homeDistance:Number(Math.hypot(p.x-STARTER_CAMP_POSITION.x,p.z-STARTER_CAMP_POSITION.z).toFixed(2)),friendlyGuards:enemies.filter(isFriendlyGuard).length,hostileGuards:enemies.filter(e=>canAttackPlayer(e,p.x,p.z)).length};};
@@ -4910,12 +4944,12 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'3',build:'0.6.107',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'3',build:'0.6.108',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
    boat:{onShip,velocity:Number(boatVelocity.toFixed(3)),position:{x:Number(ship.position.x.toFixed(2)),y:Number(ship.position.y.toFixed(2)),z:Number(ship.position.z.toFixed(2))},rotation:{x:Number(ship.rotation.x.toFixed(3)),y:Number(ship.rotation.y.toFixed(3)),z:Number(ship.rotation.z.toFixed(3))},flatWakeStrips:shipWake.map(w=>({name:w.name,enabled:w.isEnabled()})),activeSprayParticles:activeSpray,sprayCapacity:VESSEL_SPRAY_COUNT},
-   runtime:{fps:Math.round(engine.getFps()),elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,animationGroupCount:scene.animationGroups.length,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
+   runtime:{fps:Math.round(engine.getFps()),elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,animationGroupCount:scene.animationGroups.length,waterTotalVertices:waterPositions.length/3,waterAnimatedVertices:waterLastUpdatedVertices,waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
    npcs:{enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,ambientPeople:ambientPeople.length,ambientMoving:ambientPeople.filter(n=>Number(n.parts.actualMoveSpeed)>.1).length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,npcClips:humanEnemyParts.filter(p=>p.realHuman).slice(0,8).map(p=>({name:p.name,walk:p.realHuman.walk&&p.realHuman.walk.name,walkPlaying:!!(p.realHuman.walk&&p.realHuman.walk.isPlaying),current:p.realHuman.current&&p.realHuman.current.name,enabled:p.root.isEnabled()}))}
   };
  };
@@ -4973,7 +5007,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.107');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.108');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -6555,9 +6589,9 @@ function updateHUD(){
  }
  // Cargar exclusivamente el caballero acorazado independiente en los puestos guerreros; el modelo provisional
  // solo permanece visible si el GLB falla y nunca se sustituye por un caballero medieval.
- const deferNpcHumanModelsOnTouch=!!isTouchDevice;
- let enemyHumanModelsStarted=!deferNpcHumanModelsOnTouch;
- let enemyHumanLoadTask=deferNpcHumanModelsOnTouch?Promise.resolve(0):loadEnemyHumanCharacters();
+ const deferNpcHumanModelsOnTouch=false;
+ let enemyHumanModelsStarted=true;
+ let enemyHumanLoadTask=loadEnemyHumanCharacters();
  function startNpcHumanModels(){
   if(enemyHumanModelsStarted)return enemyHumanLoadTask;
   enemyHumanModelsStarted=true;
@@ -6739,26 +6773,20 @@ function updateHUD(){
  const restored=restoreGame();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'Descargando e instalando personajes 3D…');
  const allCharacterLoads=Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
- let resourceResults=[],characterLoadsComplete=false,characterWaitTimer=null;
- const characterWait=await Promise.race([
-  allCharacterLoads.then(results=>({complete:true,results})),
-  new Promise(resolve=>{characterWaitTimer=setTimeout(()=>resolve({complete:false,results:[]}),10000);})
- ]);
- if(characterWaitTimer)clearTimeout(characterWaitTimer);
- resourceResults=characterWait.results;characterLoadsComplete=characterWait.complete;
- if(!characterLoadsComplete){
-  console.info('EL SIN NOMBRE: entrada prioritaria; los GLB secundarios continúan cargando detrás de la pantalla de inicio.');
-  allCharacterLoads.then(results=>console.info('Recursos de personajes terminados en segundo plano:',results.map(x=>x.status)));
- }
- startupAudioPreload.then(audioResult=>console.info('Audio preparado en segundo plano:',audioResult)).catch(audioError=>console.info('El audio continuará cargando al entrar:',audioError));
+ let resourceResults=[];
+ setLoadingProgress(88,'Esperando a que terminen todos los personajes 3D…');
+ resourceResults=await allCharacterLoads;
+ console.info('Personajes 3D listos antes de jugar:',resourceResults.map(x=>x.status));
+ let audioPreloadResult={total:0,ready:0,failed:0};
+ try{audioPreloadResult=await startupAudioPreload;}catch(audioError){console.info('Precarga de sonido incompleta:',audioError);}
+ console.info('Audio preparado antes de empezar:',audioPreloadResult);
  // Esperar a que Babylon termine la preparación de texturas/materiales y compile lo pendiente.
  // El límite evita que una textura remota lenta bloquee indefinidamente la entrada al juego.
  setLoadingProgress(96,'Afinando la iluminación…');
  try{
   if(scene&&typeof scene.whenReadyAsync==='function'){
-   let warmupTimer;
-   await Promise.race([scene.whenReadyAsync(),new Promise(resolve=>{warmupTimer=setTimeout(resolve,5000);})]);
-   if(warmupTimer)clearTimeout(warmupTimer);
+   setLoadingProgress(96,'Terminando de preparar materiales, texturas y modelos…');
+   await scene.whenReadyAsync();
   }
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
