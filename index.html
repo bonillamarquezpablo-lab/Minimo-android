@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.63">
-<meta name="el-sin-nombre-repair" content="bilateral gait validation, safe NPC mesh filtering, relaxed held-axe pose, non-blocking diagnostics">
+<meta name="el-sin-nombre-build" content="0.6.73">
+<meta name="el-sin-nombre-repair" content="0.6.73 planted idle legs, natural weapon grip, corrected pitched thatch roof, detailed weathered cabin materials">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.72</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.73</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1068,7 +1068,8 @@ async function startGame(){
   bark:mat('Tree bark','#59402d'),foam:mat('Sea foam','#dce8df'),blueCloth:mat('Storm-blue wool','#354e5d'),
   greenCloth:mat('Moss-green wool','#465a3c'),ochreCloth:mat('Ochre wool','#84623b'),darkMetal:mat('Blackened iron','#48545a',.52),
   paleSkin:mat('Pale skin','#d9b18d'),tanSkin:mat('Weathered skin','#a96f4d'),blondHair:mat('Flax hair','#a27c4d'),
-  redHair:mat('Red hair','#783e2d'),fur:mat('Animal fur','#70604a'),warpaint:mat('War paint','#843c32')
+  redHair:mat('Red hair','#783e2d'),fur:mat('Animal fur','#70604a'),warpaint:mat('War paint','#843c32'),
+   hutWoodAmber:mat('Hut amber oak','#8d603b'),hutWoodWeathered:mat('Hut weathered oak','#725039'),hutWoodDeep:mat('Hut dark oak','#463027'),hutThatchGold:mat('Hut golden straw','#a48755'),hutThatchShade:mat('Hut shaded straw','#655039'),hutMoss:mat('Hut moss','#596747'),hutIron:mat('Hut aged iron','#62584d',.68),hutStone:mat('Hut warm stone','#817b6d')
  };
  // Estandarte propio del jugador: paño azul noche, bordes de bronce y cuervo dorado.
  const clanBannerTexture=new B.DynamicTexture('RavenClanStandard',{width:512,height:512},scene,false),clanCtx=clanBannerTexture.getContext();
@@ -1099,7 +1100,11 @@ async function startGame(){
    for(let i=0;i<480;i++){let x=Math.random()*size,y=Math.random()*size;ctx.strokeStyle=accents[i%accents.length];ctx.globalAlpha=.12+Math.random()*.24;ctx.lineWidth=.5+Math.random()*1.3;ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+8,y-3,x+15+Math.random()*20,y);ctx.stroke();}
   }else if(style==='leaf'){
    for(let i=0;i<900;i++){ctx.fillStyle=accents[i%accents.length];ctx.globalAlpha=.12+Math.random()*.24;ctx.beginPath();ctx.ellipse(Math.random()*size,Math.random()*size,1+Math.random()*4,1+Math.random()*2,Math.random()*3,0,Math.PI*2);ctx.fill();}
-  }else if(style==='cloth'){
+  }else if(style==='thatch'){
+    for(let i=0;i<Math.round(7800*densityScale);i++){const x=Math.random()*size,y=Math.random()*size;ctx.strokeStyle=accents[i%accents.length];ctx.globalAlpha=.18+Math.random()*.28;ctx.lineWidth=.45+Math.random()*1.55;ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+(Math.random()-.5)*5,y+3+Math.random()*5,x+(Math.random()-.5)*9,y+7+Math.random()*13);ctx.stroke();}
+    for(let i=0;i<Math.round(340*densityScale);i++){ctx.fillStyle=accents[i%accents.length];ctx.globalAlpha=.12+Math.random()*.20;ctx.beginPath();ctx.ellipse(Math.random()*size,Math.random()*size,3+Math.random()*13,1+Math.random()*3,Math.random()*.55-.25,0,Math.PI*2);ctx.fill();}
+    for(let i=0;i<Math.round(95*densityScale);i++){const y=Math.random()*size;ctx.strokeStyle=i%2?accents[1]:accents[3];ctx.globalAlpha=.10+Math.random()*.12;ctx.lineWidth=.8+Math.random()*1.1;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(size,y+(Math.random()-.5)*5);ctx.stroke();}
+   }else if(style==='cloth'){
    for(let i=0;i<size;i+=3){ctx.strokeStyle=i%6===0?accents[0]:accents[1];ctx.globalAlpha=.16;ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,size);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(size,i);ctx.stroke();}
    for(let i=0;i<260;i++){ctx.fillStyle=accents[i%accents.length];ctx.globalAlpha=.18;ctx.fillRect(Math.random()*size,Math.random()*size,1,1);}
   }else{
@@ -1120,7 +1125,7 @@ async function startGame(){
  const texStone=makePatternTexture('Rock grain','#73766f',['#b0b0a2','#484e4b','#93988c'],'stone');
  const texCloth=makePatternTexture('Woven wool','#76513a',['#a17b55','#4b382d'],'cloth');
  const texLeather=makePatternTexture('Leather grain','#493328',['#79563b','#2c211d'],'grain');
-  const texThatched=makePatternTexture('Layered thatch roofing','#766044',['#ad8a55','#4c3c2b','#c3a16b','#5d4a32'],'grain',768);
+  const texThatched=makePatternTexture('Layered thatch roofing','#766044',['#ad8a55','#4c3c2b','#c3a16b','#5d4a32'],'thatch',1024);
  applyTexture(M.grass,texGrass,3.2);applyTexture(M.grass2,texGrass,2.7);applyTexture(M.darkGrass,texGrass,2.7);
  applyTexture(M.sand,texSand,4);applyTexture(M.wood,texBark,2);applyTexture(M.woodDark,texWood,2);
  applyTexture(M.woodLight,texWood,2);applyTexture(M.bark,texBark,2);
@@ -1131,6 +1136,7 @@ async function startGame(){
  applyTexture(M.greenCloth,texCloth,2);applyTexture(M.ochreCloth,texCloth,2);applyTexture(M.leather,texLeather,2);
  applyTexture(M.fur,texCloth,2);applyTexture(M.thatch,texThatched,2.4);applyTexture(M.water,texWater,3);
   M.birch.diffuseTexture=texBark;M.birch.diffuseColor=new B.Color3(.86,.84,.76);M.birch.specularColor=new B.Color3(.035,.035,.03);
+  [M.hutWoodAmber,M.hutWoodWeathered,M.hutWoodDeep].forEach(m=>applyTexture(m,texWood,2.25));[M.hutThatchGold,M.hutThatchShade].forEach(m=>applyTexture(m,texThatched,2.65));applyTexture(M.hutStone,texStone,2.1);applyTexture(M.hutMoss,texGrass,2.2);
  // Mapas normales ligeros: dan relieve fino a hierba, piedra, cuero, tela y madera.
  function makeDetailNormal(name,seed,strength=.72){
   const size=256,tex=new B.DynamicTexture(name,{width:size,height:size},scene,false),ctx=tex.getContext(),img=ctx.createImageData(size,size);
@@ -1147,7 +1153,7 @@ async function startGame(){
  [M.grass,M.grass2,M.darkGrass].forEach(m=>m.bumpTexture=normalGrass);M.sand.bumpTexture=normalSand;
  [M.stone,M.stoneLight].forEach(m=>m.bumpTexture=normalStone);
  [M.tunic,M.red,M.blueCloth,M.greenCloth,M.ochreCloth,M.fur].forEach(m=>m.bumpTexture=normalCloth);
- M.leather.bumpTexture=normalLeather;[M.wood,M.woodLight,M.woodDark,M.bark,M.thatch,M.birch].forEach(m=>m.bumpTexture=normalWood);
+ M.leather.bumpTexture=normalLeather;[M.wood,M.woodLight,M.woodDark,M.bark,M.thatch,M.birch,M.hutWoodAmber,M.hutWoodWeathered,M.hutWoodDeep,M.hutThatchGold,M.hutThatchShade].forEach(m=>m.bumpTexture=normalWood);M.hutStone.bumpTexture=normalStone;M.hutMoss.bumpTexture=normalGrass;
  // Normal maps are derived from the actual albedo texture, so pores, grain and grass flecks
  // produce matching relief instead of an unrelated generic bump pattern.
  function makeAlbedoNormal(name,source,strength=.7,size=384){
@@ -2252,10 +2258,10 @@ async function startGame(){
   groups.forEach(g=>{try{g.stop();}catch(_){}});
   const hasAnyRig=Object.values(rig).some(Boolean);
   console.info('Enemy GLB rig inspection',{index,rootCount:roots.length,meshCount:meshes.length,skeletonCount:(inst.skeletons||[]).length,animationClips:groups.map(g=>g.name),recognisedNodes:Object.keys(rig).filter(k=>rig[k]),hasAnyRig});
-  const civilianPalettes=[new B.Color3(.80,.67,.48),new B.Color3(.56,.68,.73),new B.Color3(.62,.69,.49),new B.Color3(.75,.61,.42)];
-  const warriorPalettes=[new B.Color3(.72,.43,.34),new B.Color3(.35,.53,.66),new B.Color3(.48,.59,.38),new B.Color3(.68,.55,.37)];
-  const hairPalettes=[new B.Color3(.66,.43,.26),new B.Color3(.78,.68,.43),new B.Color3(.43,.29,.22),new B.Color3(.60,.34,.25)];
-  const styleIndex=index%4,tint=(isCivilian?civilianPalettes:warriorPalettes)[styleIndex];
+  const civilianPalettes=[new B.Color3(.80,.67,.48),new B.Color3(.56,.68,.73),new B.Color3(.62,.69,.49),new B.Color3(.75,.61,.42),new B.Color3(.66,.48,.38),new B.Color3(.49,.57,.61),new B.Color3(.72,.67,.54),new B.Color3(.52,.62,.46)];
+  const warriorPalettes=[new B.Color3(.72,.43,.34),new B.Color3(.35,.53,.66),new B.Color3(.48,.59,.38),new B.Color3(.68,.55,.37),new B.Color3(.54,.46,.39),new B.Color3(.45,.52,.56),new B.Color3(.66,.37,.30),new B.Color3(.32,.49,.46)];
+  const hairPalettes=[new B.Color3(.66,.43,.26),new B.Color3(.78,.68,.43),new B.Color3(.43,.29,.22),new B.Color3(.60,.34,.25),new B.Color3(.28,.24,.22),new B.Color3(.76,.73,.65),new B.Color3(.54,.32,.24),new B.Color3(.45,.45,.43)];
+  const styleIndex=index%8,tint=(isCivilian?civilianPalettes:warriorPalettes)[styleIndex];
   let weatheredMaterialCount=0,retintedMaterialCount=0;
   // El modelo Armored Knight se importaba con su acabado metálico claro intacto:
   // por eso los guardianes aparecían como estatuas plateadas. Ahora todos los roles
@@ -2725,7 +2731,7 @@ async function startGame(){
   const yaw=Number(root&&root.rotation&&root.rotation.y)||0,c=Math.cos(yaw),s=Math.sin(yaw);
   return new B.Vector3((x*c+z*s)*length,y*length,(-x*s+z*c)*length);
  }
- function relaxHumanoidArm(root,upper,lower,hand,side){
+ function relaxHumanoidArm(root,upper,lower,hand,side,holdingWeapon=false){
   if(!root||!upper||!lower)return false;
   try{
    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);
@@ -2733,7 +2739,7 @@ async function startGame(){
    if(upperLength<.045)return false;
    // Elbows hang slightly outward, then bend inward and forward instead of leaving
    // the familiar T-pose/arms-open silhouette from the raw GLB rest pose.
-   const upperTarget=bodyLocalDirection(root,-side*.17,-.973,-.16,upperLength);
+   const upperTarget=bodyLocalDirection(root,-side*.14,-.978,-.16,upperLength);
    rotateBoneWorldTowardExact(upper,upperVector,upperTarget);
    lower.computeWorldMatrix(true);
    let wristVector=null;
@@ -2744,11 +2750,11 @@ async function startGame(){
     if(child){child.computeWorldMatrix(true);wristVector=child.getAbsolutePosition().subtract(lower.getAbsolutePosition());}
    }
    if(wristVector&&wristVector.length()>.035){
-    const target=bodyLocalDirection(root,-side*.12,-.935,-.33,wristVector.length());
+    const target=bodyLocalDirection(root,-side*.09,-.944,-.30,wristVector.length());
     rotateBoneWorldTowardExact(lower,wristVector,target);
    }
-   if(hand){
-    // El GLB base deja las palmas mirando al frente. Girar cada muñeca sobre
+   if(hand&&!holdingWeapon){
+    // Las manos libres miran al muslo; la mano armada conserva la orientación de agarre. Girar cada muñeca sobre
     // el eje real del antebrazo orienta la palma hacia el muslo correspondiente.
     hand.computeWorldMatrix(true);lower.computeWorldMatrix(true);
     const wristAxis=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
@@ -2770,6 +2776,28 @@ async function startGame(){
    }
    return true;
   }catch(err){console.debug('Pose de reposo del brazo omitida:',err);return false;}
+ }
+ function relaxHumanoidLeg(root,upper,lower,foot,side){
+  if(!root||!upper||!lower)return false;
+  try{
+   upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);
+   const hip=upper.getAbsolutePosition(),knee=lower.getAbsolutePosition(),thigh=knee.subtract(hip),thighLength=thigh.length();
+   if(thighLength<.06)return false;
+   const thighTarget=bodyLocalDirection(root,side*.045,-.994,.075,thighLength);
+   rotateBoneWorldTowardExact(upper,thigh,thighTarget);
+   lower.computeWorldMatrix(true);
+   let ankle=null;
+   if(foot){foot.computeWorldMatrix(true);ankle=foot.getAbsolutePosition();}
+   if(!ankle){const children=lower.getChildren?lower.getChildren():[];const child=children.find(node=>node&&node.getAbsolutePosition);if(child){child.computeWorldMatrix(true);ankle=child.getAbsolutePosition();}}
+   if(ankle){const kneeNow=lower.getAbsolutePosition(),shin=ankle.subtract(kneeNow),shinLength=shin.length();if(shinLength>.06){const shinTarget=bodyLocalDirection(root,-side*.018,-.996,-.085,shinLength);rotateBoneWorldTowardExact(lower,shin,shinTarget);}}
+   if(foot)foot.computeWorldMatrix(true);
+   return true;
+  }catch(err){console.debug('Pose de apoyo de pierna omitida:',err);return false;}
+ }
+ function relaxHumanoidLegs(root,rig){
+  if(!rig)return;
+  relaxHumanoidLeg(root,rig.leftUpperLeg,rig.leftLowerLeg,rig.leftFoot,-1);
+  relaxHumanoidLeg(root,rig.rightUpperLeg,rig.rightLowerLeg,rig.rightFoot,1);
  }
  function applyTwoBoneFootIK(leg){
   try{
@@ -3066,8 +3094,9 @@ async function startGame(){
    // Asentar hombros antes de resolver el brazo: el importador puede traer una T-pose.
    apply('leftShoulder',.002*Math.sin(elapsed*.83),0,.010,true);
    apply('rightShoulder',-.002*Math.sin(elapsed*.83),0,-.010,true);
-   relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1);
-   relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1);
+   relaxHumanoidLegs(realPlayerModelPivot||player.root,n);
+   relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false);
+   relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true);
    apply('hips',breath*.006,0,.003*Math.sin(elapsed*.7),true);
    apply('spine',-.014+breath*.014,0,.006*Math.sin(elapsed*.7),true);
    apply('head',.008*Math.sin(elapsed*.45),.014*Math.sin(elapsed*.32),0,true);
@@ -3402,78 +3431,55 @@ async function startGame(){
   return c;
  }
  function buildHouse(cx,cz,scale=1){
-  // Cabaña nórdica humilde: huella menor, troncos desiguales, tejado vencido y reparaciones visibles.
   const g=newGroup('WeatheredNorseHut',null);g.position=v(cx,terrainSurfaceAt(cx,cz)+.035,cz);g.scaling=v(scale,scale,scale);
-  box('HutTimberCore',g,[0,.83,0],[3.48,1.48,4.72],M.woodDark);
-  box('HutDarkStoneFooting',g,[0,.13,0],[4.02,.22,5.28],M.woodDark);
-  box('HutUnevenStoneThreshold',g,[0,.13,2.86],[1.18,.18,.48],M.stone,[0,0,.015]);
-  // Troncos de pared con alturas y tonos alternos; las juntas no quedan perfectamente regulares.
+  const wallTones=[M.hutWoodAmber,M.wood,M.hutWoodWeathered,M.woodLight,M.hutWoodDeep],roofTones=[M.hutThatchGold,M.thatch,M.hutThatchShade,M.thatch];
+  box('HutTimberCore',g,[0,.83,0],[3.48,1.48,4.72],M.woodDark);box('HutStoneFoundation',g,[0,.13,0],[4.02,.24,5.28],M.hutStone);box('HutUnevenStoneThreshold',g,[0,.15,2.86],[1.18,.18,.48],M.stoneLight);
   for(let side of [-1,1]){
-   for(let row=0;row<5;row++){
-    const y=.27+row*.285+(row%2?-.025:.015);
-    cyl('HutSideLog_'+side+'_'+row,g,[side*1.88,y,0],5.08,.105,.12,row%3===0?M.woodLight:M.wood,[Math.PI/2,0,side*.012]);
-   }
-   for(let z of [-2.43,2.43])cyl('HutCornerPost_'+side+'_'+z,g,[side*1.86,1.02,z],2.04,.145,.15,M.woodDark,[0,0,side*.025]);
+   for(let row=0;row<5;row++){const y=.27+row*.285+(row%2?-.025:.015),tone=wallTones[(row+(side>0?2:0))%wallTones.length];cyl('HutSideLog_'+side+'_'+row,g,[side*1.88,y,0],5.08,.105,.12,tone,[Math.PI/2,0,side*.012]);}
+   cyl('HutSideTopBeam_'+side,g,[side*1.89,1.62,0],5.18,.12,.14,M.hutWoodDeep,[Math.PI/2,0,side*.01]);
+   for(let z of [-2.43,2.43])cyl('HutCornerPost_'+side+'_'+z,g,[side*1.86,1.02,z],2.04,.145,.15,M.hutWoodDeep,[0,0,side*.025]);
+   for(let row of [1,3])sphere('HutLogKnot_'+side+'_'+row,g,[side*1.995,.27+row*.285,-1.10+row*.72],[.035,.055,.105],M.hutWoodDeep,8);
   }
   for(let end of [-1,1]){
-   for(let row=0;row<4;row++){
-    const y=.29+row*.29;
-    cyl('HutEndLog_'+end+'_'+row,g,[0,y,end*2.46],3.78,.105,.115,row%2?M.woodLight:M.wood,[0,0,Math.PI/2]);
-   }
+   for(let row=0;row<4;row++){const y=.29+row*.29;cyl('HutEndLog_'+end+'_'+row,g,[0,y,end*2.46],3.78,.105,.115,wallTones[(row+(end>0?1:3))%wallTones.length],[0,0,Math.PI/2]);}
+   const faceZ=end*2.505,backZ=end*2.345,gable=new B.Mesh('HutTimberGable_'+end,scene),vd=new B.VertexData();
+   vd.positions=[-1.86,1.48,faceZ,1.86,1.48,faceZ,0,2.88,faceZ,-1.86,1.48,backZ,1.86,1.48,backZ,0,2.88,backZ];
+   vd.indices=[0,1,2,5,4,3,0,3,4,0,4,1,1,4,5,1,5,2,2,5,3,2,3,0];vd.uvs=[0,0,1,0,.5,1,0,0,1,0,.5,1];
+   B.VertexData.ComputeNormals(vd.positions,vd.indices,vd.normals);vd.applyToMesh(gable);gable.parent=g;gable.material=M.hutWoodAmber;gable.isPickable=false;gable.receiveShadows=true;
+   for(let plank=-1;plank<=1;plank++){const x=plank*.78,top=2.88-Math.abs(x)*.75,height=top-1.53;box('HutGablePlank_'+end+'_'+plank,g,[x,1.53+height*.5,faceZ+end*.012],[.105,height,.055],plank===0?M.hutWoodWeathered:M.woodLight,[0,0,plank*.018]);}
   }
-  // Tejado de paja irregular con faldones desiguales y vigas envejecidas a la vista.
-  box('HutThatchRoofLeft',g,[-.94,2.18,0],[2.82,.31,5.55],M.thatch,[0,0,-.59]);
-  box('HutThatchRoofRight',g,[.94,2.12,0],[2.82,.31,5.55],M.thatch,[0,0,.59]);
-  box('HutRidgeBeam',g,[0,2.96,0],[.20,.22,5.70],M.woodDark,[.015,0,.018]);
-  for(const end of [-1,1])for(const side of [-1,1])cyl('HutGableBrace_'+end+'_'+side,g,[side*.92,2.25,end*2.47],2.34,.105,.12,M.woodDark,[0,0,-side*.89]);
+  const roofAngle=.59;
+  box('HutThatchRoofLeft',g,[-.94,2.18,0],[2.82,.31,5.55],M.thatch,[0,0,roofAngle]);
+  box('HutThatchRoofRight',g,[.94,2.18,0],[2.82,.31,5.55],M.hutThatchGold,[0,0,-roofAngle]);
+  box('HutRidgeBeam',g,[0,2.96,0],[.22,.20,5.72],M.hutWoodDeep,[.015,0,.018]);cyl('HutRidgeThatchRoll',g,[0,2.96,0],5.72,.16,.16,M.hutThatchShade,[Math.PI/2,0,0]);
   for(let side of [-1,1]){
-   for(let k=0;k<3;k++){
-    const x=side*(.43+k*.55),y=2.78-k*.17;
-    cyl('HutExposedRafter_'+side+'_'+k,g,[x,y,0],5.58,.052,.062,M.woodLight,[Math.PI/2,0,side*.045]);
-   }
-   for(let z of [-2.70,2.70])box('HutUnevenEave_'+side+'_'+z,g,[side*1.63,2.18,z],[.12,.18,.16],M.woodDark,[0,0,side*.08]);
+   const slopeAngle=side<0?roofAngle:-roofAngle;
+   for(let k=0;k<5;k++){const absX=.38+k*.43,x=side*absX,y=2.18+.67*(1-absX)+.18;box('HutThatchCourse_'+side+'_'+k,g,[x,y,0],[.16,.055,5.18],roofTones[(k+(side>0?1:0))%roofTones.length],[0,0,slopeAngle]);}
+   cyl('HutEaveBeam_'+side,g,[side*2.22,1.48,0],5.58,.095,.11,M.hutWoodDeep,[Math.PI/2,0,0]);
+   for(let z of [-2.70,2.70])box('HutUnevenEave_'+side+'_'+z,g,[side*2.22,1.48,z],[.16,.20,.18],M.hutWoodWeathered,[0,0,side*.08]);
+   for(let k=0;k<3;k++){const x=side*(.62+k*.66),y=2.18+.67*(1-Math.abs(x))+.20;sphere('HutStrawTuft_'+side+'_'+k,g,[x,y,[-2.18,0,2.18][k]],[.15,.07,.28],roofTones[(k+1)%roofTones.length],8);}
   }
-  // Un pequeño remiendo oscuro deja ver que parte de la cubierta se ha perdido.
-  box('HutRoofThatchRepair',g,[-.82,2.31,-1.05],[.56,.075,.84],M.darkGrass,[0,0,-.59]);
-  // Puerta vieja, algo caída, con tablones desparejados y herrajes sencillos.
-  box('HutDoorLeaf',g,[0,.72,2.54],[.88,1.40,.12],M.woodDark,[0,0,-.025]);
-  for(let i=-1;i<=1;i++)box('HutDoorPlank_'+i,g,[i*.155,.72,2.605],[.13,1.26,.035],i%2?M.wood:M.woodLight,[0,0,i*.012]);
-  for(let side of [-1,1])box('HutDoorJamb_'+side,g,[side*.53,.76,2.61],[.12,1.62,.17],M.woodDark,[0,0,side*.025]);
-  box('HutDoorLintel',g,[0,1.48,2.61],[1.23,.14,.18],M.woodLight,[0,0,-.025]);
+  box('HutRoofThatchRepair',g,[-.82,2.49,-1.05],[.56,.075,.84],M.hutThatchShade,[0,0,roofAngle]);
+  for(let i=0;i<4;i++){const x=(i%2?1:-1)*(1.05+(i%3)*.32),z=i<2?-2.12:2.08;sphere('HutRoofMoss_'+i,g,[x,2.18+.67*(1-Math.abs(x))+.21,z],[.17,.045,.26],M.hutMoss,8);}
+  box('HutDoorLeaf',g,[0,.72,2.54],[.88,1.40,.12],M.hutWoodDeep,[0,0,-.025]);
+  for(let i=-1;i<=1;i++)box('HutDoorPlank_'+i,g,[i*.155,.72,2.605],[.13,1.26,.035],i%2?M.hutWoodWeathered:M.hutWoodAmber,[0,0,i*.012]);
+  for(let side of [-1,1])box('HutDoorJamb_'+side,g,[side*.53,.76,2.61],[.12,1.62,.17],M.hutWoodDeep,[0,0,side*.025]);
+  box('HutDoorLintel',g,[0,1.48,2.61],[1.23,.14,.18],M.hutWoodAmber,[0,0,-.025]);
+  for(let y of [.36,1.08])for(let side of [-1,1])box('HutDoorIronHinge_'+side+'_'+y,g,[side*.32,y,2.69],[.23,.055,.025],M.hutIron,[0,0,side*.05]);
+  for(let y of [.30,1.30])for(let x of [-.32,.32])sphere('HutDoorRivet_'+x+'_'+y,g,[x,y,2.72],[.025,.025,.018],M.brass,8);
   sphere('HutDoorHandle',g,[.28,.73,2.68],[.055,.065,.035],M.darkMetal,8);
-  // Solo una ventana pequeña por costado; una se tapa con una contraventana vieja.
-  for(let side of [-1,1]){
-   box('HutWindowFrame_'+side,g,[side*1.94,1.28,-1.22],[.055,.48,.56],M.woodDark);
-   box('HutWindowGlow_'+side,g,[side*1.975,1.28,-1.22],[.028,.29,.35],M.windowGlow);
-   box('HutWindowCross_'+side,g,[side*2.0,1.28,-1.22],[.045,.045,.48],M.woodLight);
-  }
-  box('HutBrokenShutter',g,[2.01,1.28,-1.22],[.055,.42,.49],M.wood,[0,0,.14]);
-  // Chimenea baja de piedra, no una torre limpia de ladrillos.
-  for(let i=0;i<5;i++){
-   const a=i*Math.PI*2/5;
-   sphere('HutChimneyStone_'+i,g,[-1.24+Math.cos(a)*.19,2.68+Math.sin(a)*.08,-1.98],[.24,.20,.23],M.stone,8);
-  }
-  box('HutChimneyMouth',g,[-1.24,2.83,-1.98],[.29,.09,.29],M.woodDark);
+  for(let side of [-1,1]){box('HutWindowFrame_'+side,g,[side*1.94,1.28,-1.22],[.055,.48,.56],M.hutWoodDeep);box('HutWindowGlow_'+side,g,[side*1.975,1.28,-1.22],[.028,.29,.35],M.windowGlow);box('HutWindowCross_'+side,g,[side*2.0,1.28,-1.22],[.045,.045,.48],M.hutWoodAmber);}
+  box('HutBrokenShutter',g,[2.01,1.28,-1.22],[.055,.42,.49],M.hutWoodWeathered,[0,0,.14]);
+  for(let i=0;i<7;i++){const a=i*Math.PI*2/7;sphere('HutChimneyStone_'+i,g,[-1.24+Math.cos(a)*.19,2.68+Math.sin(a)*.08,-1.98],[.24,.20,.23],i%2?M.hutStone:M.stone,8);}
+  box('HutChimneyMouth',g,[-1.24,2.83,-1.98],[.29,.09,.29],M.hutWoodDeep);
   if(scale>.78)smokeEmitters.push({x:cx-1.24*scale,y:g.position.y+2.92*scale,z:cz-1.98*scale,phase:rand(0,8)});
-  // Dos tablones de reparación, un travesaño vencido y restos: detalle medido para no sumar cientos de draw calls.
-  for(let i=0;i<2;i++){
-   const side=i===0?-1:1,zp=rand(-2.05,2.05),yp=rand(.50,1.45);
-   box('HutWeatheredRepairBoard_'+i,g,[side*1.93,yp,zp],[.055,rand(.38,.64),rand(.28,.54)],i?M.woodLight:M.woodDark,[0,0,rand(-.10,.10)]);
-  }
-  for(let i=0;i<2;i++){
-   const side=i===0?-1:1,zp=rand(-2.45,2.45);
-   sphere('HutUnevenThatchTuft_'+i,g,[side*rand(.55,1.32),2.34+rand(-.07,.07),zp],[.25,.09,.48],i?M.thatch:M.darkGrass,8);
-  }
-  box('HutCollapsedYardTimber',g,[rand(-2.8,2.8),.10,rand(-3.0,3.0)],[.92,.10,.14],M.woodDark,[0,rand(0,Math.PI),rand(-.12,.12)]);
-  for(let i=0;i<3;i++){
-   const a=i*Math.PI*2/3;
-   sphere('HutYardRubble_'+i,g,[Math.cos(a)*2.0,.13,Math.sin(a)*2.72],[.22,.13,.25],M.stone,8);
-  }
-  // Huella sólida de la cabaña: el antiguo sistema solo bloqueaba cuatro paredes parciales
-  // y dejaba un hueco de puerta por el que los NPC podían atravesar toda la estructura.
-  registerWorldCollider({type:'rect',x:cx,z:cz,hx:2.16*scale,hz:2.78*scale,cameraBlocker:true});
-  addModelShadow(g);
-  try{g.freezeWorldMatrix();g.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){ }
+  for(let i=0;i<2;i++){const side=i===0?-1:1,zp=rand(-2.05,2.05),yp=rand(.50,1.45);box('HutWeatheredRepairBoard_'+i,g,[side*1.93,yp,zp],[.055,rand(.38,.64),rand(.28,.54)],i?M.woodLight:M.hutWoodDeep,[0,0,rand(-.10,.10)]);}
+  for(let i=0;i<4;i++){const side=i%2?1:-1,z=i<2?-2.15:2.12;sphere('HutFoundationMoss_'+i,g,[side*1.94,.22,z],[.17,.07,.28],M.hutMoss,8);}
+  box('HutCollapsedYardTimber',g,[rand(-2.8,2.8),.10,rand(-3.0,3.0)],[.92,.10,.14],M.hutWoodDeep,[0,rand(0,Math.PI),rand(-.12,.12)]);
+  for(let i=0;i<3;i++){const a=i*Math.PI*2/3;sphere('HutYardRubble_'+i,g,[Math.cos(a)*2.0,.13,Math.sin(a)*2.72],[.22,.13,.25],i%2?M.stone:M.hutStone,8);}
+  try{mergeStaticDecorByMaterial(g,'NorseHutDetail');}catch(err){console.warn('No se pudo agrupar el detalle de la cabaña:',err);}
+  registerWorldCollider({type:'rect',x:cx,z:cz,hx:2.16*scale,hz:2.78*scale,cameraBlocker:true});addModelShadow(g);
+  try{g.freezeWorldMatrix();g.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){}
   return g;
  }
  function makeVillage(index,x,z,name){
@@ -4364,8 +4370,9 @@ async function startGame(){
     // asumir ejes locales fijos que cambian entre GLB y producen posturas extrañas.
     setEnemyRigDelta(parts,real.rig.rightShoulder,0,0,-.025);
     setEnemyRigDelta(parts,real.rig.leftShoulder,0,0,.025);
-    relaxHumanoidArm(real.modelRoot||parts.root,real.rig.leftUpperArm,real.rig.leftForearm,real.rig.leftHand,-1);
-    relaxHumanoidArm(real.modelRoot||parts.root,real.rig.upperArm,real.rig.forearm,real.rig.hand,1);
+    relaxHumanoidLegs(real.modelRoot||parts.root,real.rig);
+    relaxHumanoidArm(real.modelRoot||parts.root,real.rig.leftUpperArm,real.rig.leftForearm,real.rig.leftHand,-1,false);
+    relaxHumanoidArm(real.modelRoot||parts.root,real.rig.upperArm,real.rig.forearm,real.rig.hand,1,!!real.sword);
    }
    if(action==='row'&&real.isRaiderCrew){
     const stroke=Math.sin(phase),lift=Math.cos(phase);
