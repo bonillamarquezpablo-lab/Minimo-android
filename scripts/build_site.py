@@ -6,8 +6,11 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 import hashlib
 import json
+import re
 import shutil
+import subprocess
 import sys
+import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -135,6 +138,22 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
+
+    # Fail the deployment if an inline JavaScript edit is syntactically invalid.
+    # The GitHub-hosted runner provides Node.js; this catches startup regressions
+    # before the new web build replaces the previous playable release.
+    script_blocks = re.findall(r"<script\\b[^>]*>(.*?)</script\\s*>", html, flags=re.IGNORECASE | re.DOTALL)
+    inline_scripts = [block for block in script_blocks if block.strip()]
+    node = shutil.which("node")
+    if not node:
+        raise SystemExit("Node.js is required to validate the inline game JavaScript.")
+    with tempfile.TemporaryDirectory(prefix="norse-js-check-") as temp_dir:
+        check_file = Path(temp_dir) / "game-inline.js"
+        check_file.write_text("\\n".join(inline_scripts), encoding="utf-8")
+        check = subprocess.run([node, "--check", str(check_file)], capture_output=True, text=True)
+        if check.returncode != 0:
+            raise SystemExit("JavaScript syntax validation failed:\\n" + check.stderr)
+    print(f"JavaScript syntax validation passed ({len(inline_scripts)} inline script block(s)).")
 
     # The packaged build always prefers the same-origin, bundled files.
     html = html.replace(
