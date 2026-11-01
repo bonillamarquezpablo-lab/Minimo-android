@@ -15,7 +15,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.85 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.86 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -91,6 +91,60 @@ DOWNLOADS = {
     ),
 }
 
+def read_glb_document(path: Path) -> dict:
+    raw = path.read_bytes()
+    if len(raw) < 20 or raw[:4] != b"glTF":
+        raise RuntimeError(f"Invalid GLB header: {path.name}")
+    version = int.from_bytes(raw[4:8], "little")
+    declared_length = int.from_bytes(raw[8:12], "little")
+    if version != 2 or declared_length != len(raw):
+        raise RuntimeError(
+            f"Invalid GLB v2 length for {path.name}: version={version}, "
+            f"declared={declared_length}, actual={len(raw)}"
+        )
+    offset = 12
+    document = None
+    while offset + 8 <= len(raw):
+        chunk_length = int.from_bytes(raw[offset:offset + 4], "little")
+        chunk_type = raw[offset + 4:offset + 8]
+        offset += 8
+        end = offset + chunk_length
+        if end > len(raw):
+            raise RuntimeError(f"Truncated GLB chunk in {path.name}")
+        if chunk_type == b"JSON":
+            document = json.loads(raw[offset:end].decode("utf-8").rstrip("\x00 "))
+            break
+        offset = end
+    if not isinstance(document, dict) or not isinstance(document.get("asset"), dict):
+        raise RuntimeError(f"Missing glTF JSON document in {path.name}")
+    return document
+
+
+def validate_rigged_character_glb(path: Path, label: str) -> dict:
+    document = read_glb_document(path)
+    meshes = document.get("meshes") or []
+    skins = document.get("skins") or []
+    animations = document.get("animations") or []
+    materials = document.get("materials") or []
+    textures = document.get("textures") or []
+    images = document.get("images") or []
+    max_joints = max((len(skin.get("joints") or []) for skin in skins), default=0)
+    if not meshes or not skins or len(animations) < 2:
+        raise RuntimeError(
+            f"{label}: rigged character must contain meshes, skins, and walk/run animation clips "
+            f"(meshes={len(meshes)}, skins={len(skins)}, animations={len(animations)})"
+        )
+    if max_joints < 16:
+        raise RuntimeError(f"{label}: humanoid rig is incomplete ({max_joints} joints; expected >=16)")
+    if not materials or not textures or not images:
+        raise RuntimeError(
+            f"{label}: original PBR appearance data is incomplete "
+            f"(materials={len(materials)}, textures={len(textures)}, images={len(images)})"
+        )
+    if any(not (mesh.get("primitives") or []) for mesh in meshes):
+        raise RuntimeError(f"{label}: one or more GLB meshes have no primitives")
+    return document
+
 def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
     destination.parent.mkdir(parents=True, exist_ok=True)
     last_error = None
@@ -116,9 +170,21 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
             if size < minimum:
                 raise RuntimeError(f"File too small ({size} bytes): {url}")
             if kind == "glb":
-                with destination.open("rb") as f:
-                    if f.read(4) != b"glTF":
-                        raise RuntimeError(f"Invalid GLB header: {url}")
+                if destination.name in {
+                    "viking-rigged.glb",
+                    "armored-knight-rigged.glb",
+                    "man-base-character-rigged.glb",
+                }:
+                    document = validate_rigged_character_glb(destination, relative)
+                    print(
+                        f"OK rigged GLB {relative}: "
+                        f"{len(document.get('meshes') or [])} meshes, "
+                        f"{max((len(s.get('joints') or []) for s in (document.get('skins') or [])), default=0)} joints, "
+                        f"{len(document.get('animations') or [])} clips, "
+                        f"{len(document.get('images') or [])} texture images."
+                    )
+                else:
+                    read_glb_document(destination)
             return {
                 "path": destination.relative_to(DIST).as_posix(),
                 "bytes": size,
@@ -183,10 +249,7 @@ def meshopt_compress_models(results: list[dict]) -> None:
                 raw = temp_output.read_bytes()
                 if len(raw) < 20 or raw[:4] != b"glTF":
                     raise RuntimeError(f"Invalid optimized GLB: {relative}")
-                json_length = int.from_bytes(raw[12:16], "little")
-                if raw[16:20] != b"JSON" or 20 + json_length > len(raw):
-                    raise RuntimeError(f"Invalid optimized JSON chunk: {relative}")
-                doc = json.loads(raw[20:20 + json_length].decode("utf-8").rstrip("\x00 "))
+                doc = validate_rigged_character_glb(temp_output, relative)
                 if "EXT_meshopt_compression" not in set(doc.get("extensionsUsed", [])):
                     raise RuntimeError(f"EXT_meshopt_compression missing: {relative}")
                 outputs.append((relative, source, temp_output, len(raw)))
@@ -320,7 +383,7 @@ def main() -> None:
 
     manifest = {
         "game": "EL SIN NOMBRE",
-        "version": "0.6.85",
+        "version": "0.6.86",
         "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
         "assets": results,
     }
