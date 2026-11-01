@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.118">
-<meta name="el-sin-nombre-repair" content="0.6.118 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.119">
+<meta name="el-sin-nombre-repair" content="0.6.119 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.118</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.119</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -5958,7 +5958,7 @@ function updateHUD(){
  let boatHp=65,boatMax=100,boatLevel=0;
  document.getElementById('upgradeBtn').addEventListener('click',openBoatModal);
  document.getElementById('closeModal').addEventListener('click',()=>modal.style.display='none');
- const SAVE_KEY=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v3':'el-sin-nombre-campaign-v1';let playerName=selectedPlayerName;let lastSaveAt=0,saveAccumulator=0;
+ const SAVE_KEY=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v4':'el-sin-nombre-campaign-v1';let playerName=selectedPlayerName;let lastSaveAt=0,saveAccumulator=0;
  let playerShelterBuilt=false,playerShelterGroup=null,playerShelterX=0,playerShelterZ=0;
  const PLAYER_SHELTER_COST={wood:6,stone:1};
  function updatePlayerIdentityHud(){const tag=document.getElementById('playerIdentityTag');if(tag)tag.textContent='VIKINGO · '+(playerName?playerName.toLocaleUpperCase('es-ES'):'SIN NOMBRE');}
