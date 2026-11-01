@@ -6881,8 +6881,10 @@ function updateHUD(){
  }
  let enemyHumanRetryPromise=null,enemyHumanRetryAttempts=0,enemyHumanRetryScheduled=false;
  function hasMissingEnemyVikings(){
-  const warriors=isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuardPatrol0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts;
-  const civilians=isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts;
+  const warriors=isPerformanceMode
+   ?humanEnemyParts.filter(p=>/^VillageGuardPatrol0_/.test(String(p.name||''))).slice(0,3)
+   :(isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuardPatrol0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts);
+  const civilians=isPerformanceMode?humanCivilianParts.slice(0,4):(isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts);
   return warriors.some(p=>!p.realHuman||p.realHuman.role!=='knight')||civilians.some(p=>!p.realHuman||p.realHuman.role!=='civilian');
  }
  async function retryMissingEnemyVikings(){
