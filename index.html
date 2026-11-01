@@ -1988,7 +1988,7 @@ async function startGame(){
       const along=.24+needle*.15,outer=length*along;
       for(let side=-1;side<=1;side+=2){
        const p=[Math.cos(angle)*(outer*.72)+side*Math.sin(angle)*.10,
-                y-pivotY-outer*.16+rand(-.045,.045),
+                y-outer*.16+rand(-.045,.045),
                 Math.sin(angle)*(outer*.72)-side*Math.cos(angle)*.10];
        appendLeaf((tier+needle+k+(side>0?1:0))%leafMats.length,p,
          rand(.30,.48),rand(.035,.065),angle+side*rand(.36,.72),rand(-.85,-.35),rand(-.28,.28),.012);
@@ -2000,7 +2000,7 @@ async function startGame(){
    const leader=newGroup('FirLeaderShoot',canopy);leader.position=v(0,trunkHeight*.77-pivotY,0);leader.rotation.z=-.10;
    cyl('FirLeaderWood',leader,[0,.50,0],1.0,.025,.105,M.bark);
    for(let i=0;i<16;i++){
-    const a=i*2.399,p=[Math.cos(a)*.12,trunkHeight*.86-pivotY+rand(-.10,.12),Math.sin(a)*.12];
+    const a=i*2.399,p=[Math.cos(a)*.12,trunkHeight*.86+rand(-.10,.12),Math.sin(a)*.12];
     appendLeaf(i%leafMats.length,p,rand(.35,.50),rand(.035,.06),a,rand(-.9,-.45),rand(-.24,.24),.012);
    }
   }
