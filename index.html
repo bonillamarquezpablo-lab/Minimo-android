@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.79">
-<meta name="el-sin-nombre-repair" content="0.6.79 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
+<meta name="el-sin-nombre-build" content="0.6.80">
+<meta name="el-sin-nombre-repair" content="0.6.80 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.79</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.80</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -472,9 +472,9 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 }
 
 
-/* 0.6.79 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
+/* 0.6.80 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
 #modelStatus{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;max-width:100%;max-height:25vh;overflow:auto;pointer-events:auto}
-/* 0.6.79 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
+/* 0.6.80 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
 #loading{overflow:hidden;align-items:stretch;justify-content:stretch;padding:0;background:linear-gradient(180deg,rgba(3,12,16,.24) 0%,rgba(3,12,16,.10) 38%,rgba(3,10,12,.88) 100%);backdrop-filter:none;text-align:left}
 #loading:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 38%,transparent 0 22%,rgba(3,9,12,.18) 58%,rgba(2,7,9,.78) 100%),linear-gradient(90deg,rgba(3,11,14,.42),transparent 35%,transparent 65%,rgba(3,11,14,.42));}
 #loading:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:linear-gradient(0deg,rgba(3,9,11,.94),rgba(3,9,11,0));}
@@ -519,7 +519,7 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 @media(prefers-reduced-motion:reduce){#loading .loadPulse{animation:none}}
 
 
-/* 0.6.79 — presentación cinematográfica limpia y estados de arranque inequívocos. */
+/* 0.6.80 — presentación cinematográfica limpia y estados de arranque inequívocos. */
 body.booting #hud, body.boot-failed #hud {
  visibility:hidden!important; opacity:0!important; pointer-events:none!important;
 }
@@ -578,8 +578,12 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
  body.boot-failed #loading .loadBottom {padding:21px 18px;}
 }
 
+#actions #runBtn,#actions #jumpBtn{grid-column:auto!important;min-height:40px;height:40px}
+#actions #jumpBtn{background:linear-gradient(145deg,#334c42,#1a2b28 68%,#101d1d);border-color:#b6a06e;color:#f3e7d1}
+@media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
+@media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 </style>
-<!-- EL SIN NOMBRE 0.6.79: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.80: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -595,7 +599,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 </script>
 <meta name="el-sin-nombre-repair-0669" content="forward-facing resting arms and weapon grip, remove rigid civilian robe/cape shell, vivid terrain palette and stronger natural lighting">
 <style>
-/* 0.6.79: civilian GLBs install automatically; no manual installer is shown. */
+/* 0.6.80: civilian GLBs install automatically; no manual installer is shown. */
 #introCivilianInstallCard,#villagerModelBtn{display:none!important}
 </style>
 </head>
@@ -653,6 +657,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
    <button class="action" id="act">🪓 ACCIÓN</button>
    <button class="action" id="arsenalBtn">⚔ ARSENAL</button>
    <button class="action" id="boatBtn">🛶 EMBARCAR</button>
+   <button class="action" id="jumpBtn">↟ SALTAR</button>
    <button class="action" id="runBtn">🏃 CORRER: NO</button>
    <button class="action" id="upgradeBtn" hidden>⚒ BARCO</button>
   </div>
@@ -1018,7 +1023,7 @@ async function startGame(){
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
- console.info('EL SIN NOMBRE 0.6.79 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
+ console.info('EL SIN NOMBRE 0.6.80 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
  let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
  const minimumQualityDpr=Math.min(qualityDpr,2.05),targetFrameRate=120;
  function changeShadowQuality(nextSize){
@@ -1381,9 +1386,12 @@ async function startGame(){
   let relief=peak.height*Math.exp(-.5*(px*px+pz*pz));
   const ridge=peak.height*.20*Math.exp(-.5*(((x-(peak.x+peak.sx*1.05))/(peak.sx*1.55))**2+((z-(peak.z+peak.sz*.55))/(peak.sz*1.35))**2));
   let flat=1;for(let si=0;si<settlements.length;si++){const spot=settlements[si],sd=Math.hypot(x-spot[0],z-spot[1]),radius=10.5;const t=Math.max(0,Math.min(1,(sd-radius)/8));flat=Math.min(flat,t*t*(3-2*t));}
-  const broad=.34*(Math.sin(x*.12+z*.055)+.42*Math.sin(z*.19-x*.085)+.22*Math.sin((x+z)*.31));
-  const fine=.23*(Math.sin(x*.37+z*.23)*Math.sin(z*.29-x*.17)+.35*Math.cos((x-z)*.46));
-  const detail=(broad+fine)*Math.pow(edge,1.55)*flat;
+  const broad=.48*(Math.sin(x*.12+z*.055)+.42*Math.sin(z*.19-x*.085)+.22*Math.sin((x+z)*.31));
+  const fine=.30*(Math.sin(x*.37+z*.23)*Math.sin(z*.29-x*.17)+.35*Math.cos((x-z)*.46));
+  const rolling=(terrainValueNoise(x*.075+17.2,z*.075-8.4)-.5)*.82;
+  const erosion=(terrainValueNoise(x*.19-4.1,z*.19+9.7)-.5)*.34;
+  const micro=.075*Math.sin(x*1.55+z*.82)*Math.cos(z*1.28-x*.61);
+  const detail=(broad+fine+rolling+erosion+micro)*Math.pow(edge,1.55)*flat;
   const core=.92+(relief+ridge)*edge*flat+detail;
   // Same edge profile as createIslandTerrain: smooth grass-to-sand beach, then a submerged seabed skirt.
   if(d<=is.r*.90)return core;
@@ -1392,11 +1400,21 @@ async function startGame(){
   return -2.9;
  }
  function terrainSurfaceAt(x,z){
-  for(const is of land){
-   const dx=x-is.x,dz=z-is.z,limit=is.r*1.035;
-   if(dx*dx+dz*dz<limit*limit)return terrainHeightOnIsland(is,x,z);
+  for(let index=0;index<land.length;index++){
+   const is=land[index],dx=x-is.x,dz=z-is.z,limit=is.r*1.035;
+   if(dx*dx+dz*dz>=limit*limit)continue;
+   const mesh=islandTerrainMeshes[index];
+   if(mesh&&typeof mesh.getHeightAtCoordinates==='function'){
+    try{const sample=mesh.getHeightAtCoordinates(dx,dz);if(Number.isFinite(sample))return sample+(mesh.position.y||0);}catch(_){}
+   }
+   return terrainHeightOnIsland(is,x,z);
   }
   return .42;
+ }
+ function terrainNormalAt(x,z,step=.32){
+  const gx=(terrainSurfaceAt(x+step,z)-terrainSurfaceAt(x-step,z))/(2*step);
+  const gz=(terrainSurfaceAt(x,z+step)-terrainSurfaceAt(x,z-step))/(2*step);
+  return v(-gx,1,-gz).normalize();
  }
  const islandTerrainMeshes=[];
  function terrainHash(ix,iz){const n=Math.sin(ix*127.1+iz*311.7+19.19)*43758.5453123;return n-Math.floor(n);}
@@ -1411,7 +1429,7 @@ async function startGame(){
  function createIslandTerrain(is,index){
   // Babylon's native Ground mesh guarantees a stable, upward-facing heightfield.
   // Vertices outside the island are sunk beneath the sea, so no square island edge is visible.
-  const subdivisions=index===0?112:96;
+  const subdivisions=index===0?(isTouchDevice?176:208):96;
   const mesh=B.MeshBuilder.CreateGround('IslandHeightfield_'+index,{width:is.r*2,height:is.r*2,subdivisions,updatable:true},scene);
   const positions=mesh.getVerticesData(B.VertexBuffer.PositionKind);
   const colors=[];
@@ -1422,7 +1440,7 @@ async function startGame(){
    const slopeX=(terrainHeightOnIsland(is,wx+1,wz)-terrainHeightOnIsland(is,wx-1,wz))*.5;
    const slopeZ=(terrainHeightOnIsland(is,wx,wz+1)-terrainHeightOnIsland(is,wx,wz-1))*.5;
    const slope=Math.hypot(slopeX,slopeZ);
-   const rock=Math.max(0,Math.min(.86,(h-3.2)/7.2+slope*.58));
+   const rock=Math.max(0,Math.min(.92,(h-2.7)/6.6+slope*.72));
    const beach=d>is.r*.90?Math.max(0,Math.min(1,(d/is.r-.90)/.085)):0;
    // Variación espacial real: humedad y musgo cambian por zonas, no un tinte uniforme por isla.
    const patch=terrainValueNoise(wx*.022+17.2,wz*.022-8.4);
@@ -1430,8 +1448,8 @@ async function startGame(){
    const fine=terrainValueNoise(wx*.19+3.7,wz*.19-5.2);
    const wet=smooth01((patch*.42+micro*.42+fine*.16-.50)*3.5)*(1-rock)*(1-beach);
    const moss=smooth01((patch*.70+micro*.30-.39)*3.0)*(1-rock)*(1-beach);
-   const bareSoil=smooth01((micro*.64+fine*.36-.61)*3.7)*(1-rock)*(1-beach);
-   const grass=[.52+.22*moss,.64+.20*moss,.31+.15*moss],stone=[.62,.64,.59],sand=[.90,.76,.56],soil=[.46,.32,.21],mud=[.34,.34,.27];
+   const bareSoil=smooth01((micro*.58+fine*.32+patch*.10-.55)*3.4)*(1-rock)*(1-beach);
+   const grass=[.43+.18*moss,.54+.17*moss,.29+.12*moss],stone=[.56,.56,.51],sand=[.78,.66,.48],soil=[.43,.29,.18],mud=[.27,.29,.22];
    let r=grass[0]*(1-rock)+stone[0]*rock,g=grass[1]*(1-rock)+stone[1]*rock,b=grass[2]*(1-rock)+stone[2]*rock;
    r=r*(1-wet)+mud[0]*wet;g=g*(1-wet)+mud[1]*wet;b=b*(1-wet)+mud[2]*wet;
    r=r*(1-bareSoil)+soil[0]*bareSoil;g=g*(1-bareSoil)+soil[1]*bareSoil;b=b*(1-bareSoil)+soil[2]*bareSoil;
@@ -1442,7 +1460,9 @@ async function startGame(){
   mesh.setVerticesData(B.VertexBuffer.ColorKind,colors,true,4);
   const normals=[];B.VertexData.ComputeNormals(positions,mesh.getIndices(),normals);
   mesh.updateVerticesData(B.VertexBuffer.NormalKind,normals,false,false);
-  mesh.position=v(is.x,0,is.z);
+  mesh.position=v(is.x,0,is.z);mesh.computeWorldMatrix(true);
+  try{if(typeof mesh.updateCoordinateHeights==='function')mesh.updateCoordinateHeights();}catch(heightCacheError){console.info('Heightfield cache fallback:',heightCacheError);}
+  mesh.checkCollisions=true;mesh.metadata=Object.assign({},mesh.metadata||{},{norsePhysicalHeightfield:true,islandIndex:index,subdivisions});
   mesh.material=islandMaterials[index%3].clone('TerrainMaterial_'+index);
   mesh.useVertexColors=true;mesh.useVertexAlpha=false;mesh.material.backFaceCulling=false;mesh.material.diffuseTexture=texGrass;mesh.material.diffuseTexture.uScale=7.2;mesh.material.diffuseTexture.vScale=7.2;mesh.material.diffuseTexture.anisotropicFilteringLevel=maxAnisotropy;mesh.material.bumpTexture=albedoNormalGrass;mesh.material.bumpTexture.level=.52;mesh.material.diffuseColor=new B.Color3(1,1,1);
   mesh.material.roughness=.96;mesh.material.needDepthPrePass=false;
@@ -1457,17 +1477,17 @@ async function startGame(){
    terrainPBR.environmentIntensity=.60;terrainPBR.backFaceCulling=false;
    terrainPBR.maxSimultaneousLights=2;mesh.material=terrainPBR;
   }
-  mesh.isPickable=true;mesh.receiveShadows=true;mesh.refreshBoundingInfo(true);
+  mesh.isPickable=true;mesh.checkCollisions=true;mesh.receiveShadows=true;mesh.refreshBoundingInfo(true);
   islandTerrainMeshes.push(mesh);
   return mesh;
  }
  land.forEach((is,i)=>{
   // Lower the sandy shore foundation below the heightfield; it must never cover the grass.
-  let shore=B.MeshBuilder.CreateCylinder('shore'+i,{height:2.3,diameterTop:is.r*2,diameterBottom:(is.r+5)*2,tessellation:64},scene);
-  shore.position=v(is.x,-1.12,is.z);shore.material=M.sand;shore.isPickable=false;
+  let shore=B.MeshBuilder.CreateCylinder('shore'+i,{height:2.5,diameterTop:is.r*2,diameterBottom:(is.r+5)*2,tessellation:64},scene);
+  shore.position=v(is.x,-4.30,is.z);shore.material=M.sand;shore.isPickable=false;
   createIslandTerrain(is,i);
  });
- const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r-1.2;return dx*dx+dz*dz<r*r;});
+ const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.99;return dx*dx+dz*dz<r*r;});
  // Trails on the main island.
  function createTrail(points,width=1.7){
   const positions=[],indices=[],uvs=[];
@@ -3434,7 +3454,7 @@ async function startGame(){
  const sunHalo=B.MeshBuilder.CreateSphere('SunHalo',{diameter:48,segments:24},scene);sunHalo.parent=skyDome;sunHalo.position=v(290,235,-690);const haloMat=new B.StandardMaterial('SunHaloMat',scene);haloMat.emissiveColor=new B.Color3(.88,.69,.42);haloMat.alpha=.19;haloMat.disableLighting=true;sunHalo.material=haloMat;
   const sunDisc=B.MeshBuilder.CreateSphere('SunDisc',{diameter:21,segments:20},scene);sunDisc.parent=skyDome;sunDisc.position=v(290,235,-680);const sunMat=new B.StandardMaterial('SunDiscMat',scene);sunMat.emissiveColor=new B.Color3(1,.82,.58);sunMat.disableLighting=true;sunDisc.material=sunMat;
  let yaw=0,attackFacingYaw=0,cameraYaw=0,cameraPitch=.48,cameraDistance=10.35;
- let cameraTargetSmoothed=null,cameraCollisionTimer=0,cameraObstructionRatio=1,cameraObstructionBlend=1,playerGroundYFiltered=NaN;
+ let cameraTargetSmoothed=null,cameraCollisionTimer=0,cameraObstructionRatio=1,cameraObstructionBlend=1,playerGroundYFiltered=NaN,playerVerticalVelocity=0,playerAirborne=false;
  let cameraPointers=new Map(),cameraPinchDistance=0,cameraPinchStart=0;
  function playerPos(){return player.root.getAbsolutePosition();}
  function cameraPointBlocked(x,z){
@@ -4112,7 +4132,7 @@ function villageHostileDefenders(vl){
  if(introStartButton)introStartButton.addEventListener('click',beginSaga);
  window.NorseAudio=NorseAudio;
  window.getPlayerTerritoryDebug=()=>{const p=playerPos();return {position:{x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2))},protected:isPlayerTerritoryAt(p.x,p.z),homeDistance:Number(Math.hypot(p.x-STARTER_CAMP_POSITION.x,p.z-STARTER_CAMP_POSITION.z).toFixed(2)),friendlyGuards:enemies.filter(isFriendlyGuard).length,hostileGuards:enemies.filter(e=>canAttackPlayer(e,p.x,p.z)).length};};
- window.getGameHealthDebug=()=>({build:'0.6.79',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
+ window.getGameHealthDebug=()=>({build:'0.6.80',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
  let chapterStage=0;
  const chapterMilestones=[
   'Reúne 12 de madera y 3 de piedra para preparar el refugio.',
@@ -4157,7 +4177,7 @@ function villageHostileDefenders(vl){
  }
  function recordSagaEvent(text){const event={at:Date.now(),text:String(text).slice(0,120)};sagaHistory.push(event);if(sagaHistory.length>30)sagaHistory.splice(0,sagaHistory.length-30);const panel=document.getElementById('progressPanel');if(panel&&panel.classList.contains('open'))updateProgressPanel();}
  function updateHUD(){
-  const versionNode=document.getElementById('subtitle');if(versionNode)versionNode.textContent='SAGA DEL NORTE · CAPÍTULO I · 0.6.79';
+  const versionNode=document.getElementById('subtitle');if(versionNode)versionNode.textContent='SAGA DEL NORTE · CAPÍTULO I · 0.6.80';
   document.getElementById('wood').textContent=woodCount;document.getElementById('stone').textContent=stoneCount;document.getElementById('recruits').textContent=companions.length;document.getElementById('arsenalBtn').textContent='⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]);document.getElementById('kills').textContent=kills;document.getElementById('captured').textContent=captured+'/4';document.getElementById('health').style.width=Math.max(0,health)+'%';document.getElementById('boatHealthStat').textContent=Math.round(boatHp)+'%';document.getElementById('raiders').textContent=enemyShips.filter(e=>!e.sunk).length;document.getElementById('stamina').style.width=Math.max(0,stamina)+'%';document.getElementById('healBtn').textContent=healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR';updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
@@ -4316,7 +4336,15 @@ function villageHostileDefenders(vl){
   if(onShip||dodgeTimer>0)return;dodgeTimer=.85;invuln=.42;playerAction='dodge';actionTimer=.34;
   msg('Esquiva');
  }
+ function jump(){
+  if(onShip||playerAirborne||health<=0||(playerAction!=='idle'&&playerAction!=='walk'))return false;
+  const floor=terrainSurfaceAt(player.root.position.x,player.root.position.z)+(realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08);
+  if(Math.abs(player.root.position.y-floor)>.16)return false;
+  playerAirborne=true;playerVerticalVelocity=6.15;playerGroundYFiltered=floor;
+  msg('Salto · gravedad activa');return true;
+ }
  document.getElementById('dodge').addEventListener('click',dodge);
+ document.getElementById('jumpBtn').addEventListener('click',jump);
  document.getElementById('runBtn').addEventListener('click',()=>{running=!running;document.getElementById('runBtn').textContent=running?'🏃 CORRER: SÍ':'🏃 CORRER: NO';msg(running?'Carrera activada. Consume resistencia.':'Carrera desactivada.');});
  document.getElementById('healBtn').addEventListener('click',()=>{if(health>=100){msg('Ya tienes la salud al máximo.');return;}if(healCooldown>0){msg('Espera '+Math.ceil(healCooldown)+' s para volver a curarte.');return;}health=Math.min(100,health+32);healCooldown=18;invuln=Math.max(invuln,.35);updateHUD();msg('Has recuperado 32 puntos de salud.');});
  function playerHit(damage,from,attacker=null){
@@ -4694,7 +4722,7 @@ function villageHostileDefenders(vl){
  document.getElementById('mapClose').addEventListener('click',()=>setMapExpanded(false));
  document.getElementById('mapBackdrop').addEventListener('click',()=>setMapExpanded(false));
  window.addEventListener('keydown',e=>{if(e.key==='Escape'){setMapExpanded(false);modelImportPanel.classList.remove('open');}});
- window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' '){attack();e.preventDefault();}if(e.key==='Shift')dodge();});
+ window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' '){attack();e.preventDefault();}if(e.key==='Shift')dodge();if(e.key.toLowerCase()==='j'){jump();e.preventDefault();}});
  window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
  function embark(){
   if(onShip){
@@ -4774,7 +4802,7 @@ function villageHostileDefenders(vl){
    health=num(d.health,100,1,100);stamina=num(d.stamina,100,0,100);woodCount=num(d.woodCount,0,0,99999);stoneCount=num(d.stoneCount,0,0,99999);kills=num(d.kills,0,0,99999);weaponLevel=num(d.weaponLevel,0,0,3);
    const validWeapon=['axe','sword','spear','pickaxe'];equippedWeapon=validWeapon.includes(d.equippedWeapon)?d.equippedWeapon:'axe';
    if(d.ship){ship.position.x=num(d.ship.x,-70.5,-450,450);ship.position.z=num(d.ship.z,9.5,-450,450);ship.rotation.y=num(d.ship.yaw,0,-Math.PI*20,Math.PI*20);boatHp=num(d.ship.hp,100,0,250);boatMax=num(d.ship.max,100,100,250);boatLevel=num(d.ship.level,0,0,3);}
-   if(d.player){const x=num(d.player.x,-47,-450,450),z=num(d.player.z,8,-450,450);yaw=num(d.player.yaw,0,-Math.PI*20,Math.PI*20);cameraYaw=yaw;player.root.parent=null;onShip=false;if(d.onShip===true){player.root.parent=ship;player.root.position=v(0,1.02,-4.05);player.root.rotation.set(0,0,0);onShip=true;}else if(tryLandMove(x,z,.70)){player.root.position=v(x,terrainSurfaceAt(x,z)+(realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08),z);playerGroundYFiltered=player.root.position.y;cameraTargetSmoothed=null;}}
+   if(d.player){const x=num(d.player.x,-47,-450,450),z=num(d.player.z,8,-450,450);yaw=num(d.player.yaw,0,-Math.PI*20,Math.PI*20);cameraYaw=yaw;playerAirborne=false;playerVerticalVelocity=0;player.root.parent=null;onShip=false;if(d.onShip===true){player.root.parent=ship;player.root.position=v(0,1.02,-4.05);player.root.rotation.set(0,0,0);onShip=true;}else if(tryLandMove(x,z,.70)){player.root.position=v(x,terrainSurfaceAt(x,z)+(realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08),z);playerGroundYFiltered=player.root.position.y;cameraTargetSmoothed=null;}}
    if(d.checkpoint){const cx=num(d.checkpoint.x,player.root.position.x,-450,450),cz=num(d.checkpoint.z,player.root.position.z,-450,450);if(tryLandMove(cx,cz,.70))lastSafePosition=v(cx,terrainSurfaceAt(cx,cz)+(realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08),cz);else lastSafePosition=player.root.position.clone();}else lastSafePosition=player.root.position.clone();
    if(Array.isArray(d.history)){sagaHistory.splice(0,sagaHistory.length,...d.history.filter(e=>e&&typeof e.text==='string').slice(-30).map(e=>({at:num(e.at,Date.now(),0,Date.now()+86400000),text:e.text.slice(0,120)})));}
    applyBoatAppearance(boatLevel);applyWeaponAppearance(weaponLevel);equipWeapon(equippedWeapon);
@@ -4927,10 +4955,13 @@ function villageHostileDefenders(vl){
  }
  function tryLandMove(x,z,radius=.75,fromX=null,fromZ=null){
   if(!isLand(x,z))return false;
-  const here=terrainSurfaceAt(x,z),gx=(terrainSurfaceAt(x+.75,z)-terrainSurfaceAt(x-.75,z))/1.5,gz=(terrainSurfaceAt(x,z+.75)-terrainSurfaceAt(x,z-.75))/1.5;
-  // Reject cliff faces and sudden height discontinuities instead of allowing the capsule to tunnel through them.
-  if(Math.hypot(gx,gz)>.78)return false;
-  if(fromX!==null&&fromZ!==null){const from=terrainSurfaceAt(fromX,fromZ),step=Math.hypot(x-fromX,z-fromZ);if(Math.abs(here-from)>.22+step*.72)return false;}
+  const here=terrainSurfaceAt(x,z),normal=terrainNormalAt(x,z,.34);
+  if(normal.y<.70)return false;
+  if(fromX!==null&&fromZ!==null){
+   const from=terrainSurfaceAt(fromX,fromZ),step=Math.hypot(x-fromX,z-fromZ),heightDelta=here-from;
+   const maxStepUp=.24+step*.86,maxStepDown=.40+step*1.18;
+   if(heightDelta>maxStepUp||heightDelta< -maxStepDown)return false;
+  }
   const stamp=++collisionQueryStamp;
   const x0=Math.floor((x-radius)/COLLISION_CELL_SIZE),x1=Math.floor((x+radius)/COLLISION_CELL_SIZE);
   const z0=Math.floor((z-radius)/COLLISION_CELL_SIZE),z1=Math.floor((z+radius)/COLLISION_CELL_SIZE);
@@ -5030,7 +5061,7 @@ function villageHostileDefenders(vl){
     const slopeX=(terrainSurfaceAt(player.root.position.x+.55,player.root.position.z)-terrainSurfaceAt(player.root.position.x-.55,player.root.position.z))/1.10;
     const slopeZ=(terrainSurfaceAt(player.root.position.x,player.root.position.z+.55)-terrainSurfaceAt(player.root.position.x,player.root.position.z-.55))/1.10;
     const climb=Math.max(-.18,Math.min(.24,slopeX*dir.x+slopeZ*dir.z));
-    const baseSpeed=sprinting?8.2:3.7,speed=baseSpeed*(1-climb);
+    const baseSpeed=sprinting?7.7:3.55,speed=baseSpeed*(1-climb)*(playerAirborne?.34:1);
     targetX=dir.x*speed;targetZ=dir.z*speed;
    }
    const targetMagnitude=Math.hypot(targetX,targetZ),currentMagnitude=Math.hypot(playerVelocity.x,playerVelocity.z);
@@ -5093,20 +5124,27 @@ function villageHostileDefenders(vl){
 
   if(playerAction==='dodge'&&!onShip){const dir=v(Math.sin(yaw),0,Math.cos(yaw)),ox=player.root.position.x,oz=player.root.position.z,nx=ox+dir.x*8.5*dt,nz=oz+dir.z*8.5*dt;if(tryLandMove(nx,nz,.68,ox,oz)){player.root.position.x=nx;player.root.position.z=nz;playerStepDistance=Math.hypot(nx-ox,nz-oz);playerActualSpeed=dt>0?playerStepDistance/dt:0;}}
   if(!onShip){
-   playerShadow.setEnabled(true);
    const targetGroundY=terrainSurfaceAt(player.root.position.x,player.root.position.z)+(realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08);
-   if(!Number.isFinite(playerGroundYFiltered))playerGroundYFiltered=targetGroundY;
-   const groundDelta=targetGroundY-playerGroundYFiltered;
-   if(Math.abs(groundDelta)>.58)playerGroundYFiltered=targetGroundY;
-   else playerGroundYFiltered+=groundDelta*(1-Math.exp(-Math.max(.001,dt)*19));
-   player.root.position.y=playerGroundYFiltered;
+   if(playerAirborne){
+    playerVerticalVelocity=Math.max(-18,playerVerticalVelocity-18.5*dt);
+    player.root.position.y+=playerVerticalVelocity*dt;
+    if(player.root.position.y<=targetGroundY){player.root.position.y=targetGroundY;playerVerticalVelocity=0;playerAirborne=false;playerGroundYFiltered=targetGroundY;}
+   }else{
+    playerVerticalVelocity=0;playerGroundYFiltered=targetGroundY;player.root.position.y=targetGroundY;
+   }
+   const airHeight=Math.max(0,player.root.position.y-targetGroundY);
+   playerShadow.setEnabled(true);playerShadow.position.y=.025-airHeight;
+   playerShadow.scaling.x=1+airHeight*.18;playerShadow.scaling.y=1+airHeight*.18;
    player.root.rotation.y=B.Scalar.Lerp(player.root.rotation.y,yaw,Math.min(1,dt*15));
-   const gx=(terrainSurfaceAt(player.root.position.x+.42,player.root.position.z)-terrainSurfaceAt(player.root.position.x-.42,player.root.position.z))/.84;
-   const gz=(terrainSurfaceAt(player.root.position.x,player.root.position.z+.42)-terrainSurfaceAt(player.root.position.x,player.root.position.z-.42))/.84;
-   const forwardSlope=gx*Math.sin(yaw)+gz*Math.cos(yaw),sideSlope=gx*Math.cos(yaw)-gz*Math.sin(yaw);
-   player.root.rotation.x=B.Scalar.Lerp(player.root.rotation.x,Math.max(-.26,Math.min(.26,-Math.atan(forwardSlope))),Math.min(1,dt*7));
-   player.root.rotation.z=B.Scalar.Lerp(player.root.rotation.z,Math.max(-.22,Math.min(.22,Math.atan(sideSlope))),Math.min(1,dt*7));
-  }else{playerShadow.setEnabled(false);player.root.rotation.x=B.Scalar.Lerp(player.root.rotation.x,0,Math.min(1,dt*4));player.root.rotation.z=B.Scalar.Lerp(player.root.rotation.z,0,Math.min(1,dt*4));}
+   const normal=terrainNormalAt(player.root.position.x,player.root.position.z,.34);
+   const forwardSlope=-normal.x*Math.sin(yaw)-normal.z*Math.cos(yaw),sideSlope=-normal.x*Math.cos(yaw)+normal.z*Math.sin(yaw);
+   player.root.rotation.x=B.Scalar.Lerp(player.root.rotation.x,Math.max(-.34,Math.min(.34,-Math.atan(forwardSlope))),Math.min(1,dt*10));
+   player.root.rotation.z=B.Scalar.Lerp(player.root.rotation.z,Math.max(-.30,Math.min(.30,Math.atan(sideSlope))),Math.min(1,dt*10));
+  }else{
+   playerAirborne=false;playerVerticalVelocity=0;playerShadow.setEnabled(false);
+   player.root.rotation.x=B.Scalar.Lerp(player.root.rotation.x,0,Math.min(1,dt*4));
+   player.root.rotation.z=B.Scalar.Lerp(player.root.rotation.z,0,Math.min(1,dt*4));
+  }
   if(!onShip&&playerAction!=='hurt'&&tryLandMove(player.root.position.x,player.root.position.z,.72)){
    lastSafePosition.copyFrom(player.root.position);
   }
@@ -5128,7 +5166,7 @@ function villageHostileDefenders(vl){
    setRealVikingAnimation(realMode);
    updateRealRigGait(walkPhase,!onShip&&((moving&&playerAction!=='attack'&&playerAction!=='chop'&&playerAction!=='mine')||playerAction==='dodge'),running&&stamina>0);
    updateRealWeaponPose(dt);
-   if(realPlayerModelPivot){const contactLift=moving?Math.max(0,Math.sin(walkPhase*2))*(running?.020:.010):Math.sin(elapsed*2.1)*.003;realPlayerModelPivot.position.y=contactLift;realPlayerModelPivot.rotation.z=moving?Math.sin(walkPhase)*.012:Math.sin(elapsed*1.2)*.003;}
+   if(realPlayerModelPivot){realPlayerModelPivot.position.y=0;realPlayerModelPivot.rotation.z=moving?Math.sin(walkPhase)*.012:Math.sin(elapsed*1.2)*.003;}
   }
   // Enemy awareness, pursuit on land, telegraphed attacks and damage.
   for(const e of enemies){
@@ -5491,7 +5529,7 @@ function villageHostileDefenders(vl){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.79: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.80: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -5513,7 +5551,7 @@ function villageHostileDefenders(vl){
 window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passive:true});
  if(window.visualViewport)window.visualViewport.addEventListener('resize',resizeGameViewport,{passive:true});
  updateHUD();drawMap();
- console.info('EL SIN NOMBRE 0.6.79 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.80 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'Descargando e instalando personajes 3D…');
  const allCharacterLoads=Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
@@ -5541,7 +5579,7 @@ window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passiv
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
- console.info('EL SIN NOMBRE 0.6.79 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ console.info('EL SIN NOMBRE 0.6.80 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
