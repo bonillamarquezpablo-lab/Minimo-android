@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.85">
-<meta name="el-sin-nombre-repair" content="0.6.85 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
+<meta name="el-sin-nombre-build" content="0.6.86">
+<meta name="el-sin-nombre-repair" content="0.6.86 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.85</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.86</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -473,9 +473,9 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 }
 
 
-/* 0.6.85 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
+/* 0.6.86 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
 #modelStatus{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;max-width:100%;max-height:25vh;overflow:auto;pointer-events:auto}
-/* 0.6.85 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
+/* 0.6.86 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
 #loading{overflow:hidden;align-items:stretch;justify-content:stretch;padding:0;background:linear-gradient(180deg,rgba(3,12,16,.24) 0%,rgba(3,12,16,.10) 38%,rgba(3,10,12,.88) 100%);backdrop-filter:none;text-align:left}
 #loading:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 38%,transparent 0 22%,rgba(3,9,12,.18) 58%,rgba(2,7,9,.78) 100%),linear-gradient(90deg,rgba(3,11,14,.42),transparent 35%,transparent 65%,rgba(3,11,14,.42));}
 #loading:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:linear-gradient(0deg,rgba(3,9,11,.94),rgba(3,9,11,0));}
@@ -520,7 +520,7 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 @media(prefers-reduced-motion:reduce){#loading .loadPulse{animation:none}}
 
 
-/* 0.6.85 — presentación cinematográfica limpia y estados de arranque inequívocos. */
+/* 0.6.86 — presentación cinematográfica limpia y estados de arranque inequívocos. */
 body.booting #hud, body.boot-failed #hud {
  visibility:hidden!important; opacity:0!important; pointer-events:none!important;
 }
@@ -584,7 +584,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 </style>
-<!-- EL SIN NOMBRE 0.6.85: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.86: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -600,7 +600,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 </script>
 <meta name="el-sin-nombre-repair-0669" content="forward-facing resting arms and weapon grip, remove rigid civilian robe/cape shell, vivid terrain palette and stronger natural lighting">
 <style>
-/* 0.6.85: civilian GLBs install automatically; no manual installer is shown. */
+/* 0.6.86: civilian GLBs install automatically; no manual installer is shown. */
 #introCivilianInstallCard,#villagerModelBtn{display:none!important}
 </style>
 </head>
@@ -1024,7 +1024,7 @@ async function startGame(){
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
- console.info('EL SIN NOMBRE 0.6.85 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
+ console.info('EL SIN NOMBRE 0.6.86 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
  let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
  const minimumQualityDpr=Math.min(qualityDpr,2.05),targetFrameRate=120;
  function changeShadowQuality(nextSize){
@@ -2097,7 +2097,7 @@ async function startGame(){
  // sin esta corrección el cuerpo parece correr de espaldas aunque la raíz avance bien.
  const NPC_HUMAN_FORWARD_OFFSET=0;
  const ENEMY_HUMAN_GLB_URL=new URL('./assets/models/armored-knight-rigged.glb',document.baseURI).href;
- const ENEMY_HUMAN_CACHE_KEY='armored-knight-rigged-glb-v5';
+ const ENEMY_HUMAN_CACHE_KEY='armored-knight-rigged-glb-v6';
  const CIVILIAN_HUMAN_GLB_URL=new URL('./assets/models/man-base-character-rigged.glb',document.baseURI).href;
  const CIVILIAN_HUMAN_CACHE_KEY='norse-peasant-man-rigged-glb-v3';
  let enemyHumanContainer=null,civilianHumanContainer=null,enemyHumanLoadPromise=null;
@@ -2390,6 +2390,13 @@ async function startGame(){
    meshes=(inst.meshes||[]).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0);
   }
   if(!meshes.length)throw new Error('El GLB no contiene mallas visibles instanciadas.');
+  const sourceSkeletons=inst.skeletons||[];
+  const rigBoneCount=sourceSkeletons.reduce((max,skeleton)=>Math.max(max,(skeleton.bones||[]).length),0);
+  const skinnedMeshCount=meshes.filter(mesh=>!!mesh.skeleton).length;
+  const sourceVertexCount=meshes.reduce((sum,mesh)=>sum+Math.max(0,Number(mesh.getTotalVertices?.())||0),0);
+  if(role==='knight'&&(!sourceSkeletons.length||rigBoneCount<16||skinnedMeshCount<1||sourceVertexCount<10000)){
+   throw new Error('El GLB del guerrero no supera la validación 3D: esqueleto '+rigBoneCount+'/24, mallas con skin '+skinnedMeshCount+', vértices '+sourceVertexCount+'. Se conserva el personaje anterior.');
+  }
   const isCivilian=role==='civilian',isKnight=role==='knight';
   const filterResult=filterNpcEquipmentMeshes(meshes,isCivilian);
   meshes=filterResult.meshes;
@@ -2419,57 +2426,23 @@ async function startGame(){
   groups.forEach(g=>{try{g.stop();}catch(_){}});
   const hasAnyRig=Object.values(rig).some(Boolean);
   console.info('Enemy GLB rig inspection',{index,rootCount:roots.length,meshCount:meshes.length,skeletonCount:(inst.skeletons||[]).length,animationClips:groups.map(g=>g.name),recognisedNodes:Object.keys(rig).filter(k=>rig[k]),hasAnyRig});
-  const civilianPalettes=[
-   new B.Color3(.82,.68,.48),new B.Color3(.48,.62,.72),new B.Color3(.57,.68,.45),new B.Color3(.78,.58,.35),
-   new B.Color3(.66,.42,.35),new B.Color3(.48,.56,.62),new B.Color3(.76,.70,.57),new B.Color3(.43,.59,.46),
-   new B.Color3(.62,.46,.59),new B.Color3(.36,.48,.56),new B.Color3(.73,.54,.40),new B.Color3(.55,.57,.48)
-  ];
-  const warriorPalettes=[
-   new B.Color3(.78,.36,.29),new B.Color3(.31,.49,.68),new B.Color3(.34,.55,.37),new B.Color3(.76,.55,.29),
-   new B.Color3(.48,.27,.34),new B.Color3(.43,.55,.60),new B.Color3(.67,.60,.45),new B.Color3(.29,.47,.40),
-   new B.Color3(.58,.39,.28),new B.Color3(.31,.38,.52),new B.Color3(.72,.43,.32),new B.Color3(.50,.53,.40)
-  ];
-  const hairPalettes=[
-   new B.Color3(.35,.22,.15),new B.Color3(.77,.62,.36),new B.Color3(.49,.25,.16),new B.Color3(.65,.60,.49),
-   new B.Color3(.20,.18,.16),new B.Color3(.67,.48,.29),new B.Color3(.58,.35,.23),new B.Color3(.76,.72,.60),
-   new B.Color3(.40,.31,.23),new B.Color3(.84,.68,.43),new B.Color3(.31,.25,.20),new B.Color3(.57,.56,.50)
-  ];
-  const metalPalettes=[new B.Color3(.76,.78,.78),new B.Color3(.62,.66,.68),new B.Color3(.79,.70,.55),new B.Color3(.54,.57,.58)];
-  const leatherPalettes=[new B.Color3(.62,.42,.29),new B.Color3(.48,.32,.23),new B.Color3(.73,.54,.36),new B.Color3(.55,.45,.34)];
-  const styleIndex=index%12,tint=(isCivilian?civilianPalettes:warriorPalettes)[styleIndex];
-  let weatheredMaterialCount=0,retintedMaterialCount=0;
-  // El modelo Armored Knight se importaba con su acabado metálico claro intacto:
-  // por eso los guardianes aparecían como estatuas plateadas. Ahora todos los roles
-  // reciben materiales de campaña envejecidos, sin quitar sus mapas de textura.
+  // Preservar al 100 % los materiales PBR del GLB importado.
+  // El tintado genérico anterior modificaba materiales sin nombre semántico y
+  // aplanaba metal/roughness: la armadura parecía una carcasa beige pintada.
+  // No se superpone armadura procedural sobre el Armored Knight.
+  const sourceMaterials=new Set();
   meshes.forEach(mesh=>{
-   const material=mesh.material;if(!material||typeof material.clone!=='function')return;
-   const label=(String(mesh.name||'')+' '+String(material.name||'')).toLowerCase();
-   const hairPart=/hair|beard|braid|moustache/.test(label);
-   const skinPart=/skin|face|eye|mouth|teeth|eyebrow|lash/.test(label);
-   if(skinPart)return;
-   const metalPart=/metal|steel|iron|armor|armour|shield|helmet|blade|sword|axe|chain|mail/.test(label);
-   const clothPart=/cloth|fabric|tunic|shirt|trouser|skirt|cloak|robe|sleeve|banner/.test(label);
-   const leatherPart=/leather|fur|belt|vest|boot|strap|glove|pouch/.test(label);
-   const key=String(material.uniqueId||material.name)+'_'+role+'_'+styleIndex+(hairPart?'_hair':metalPart?'_metal':clothPart?'_cloth':leatherPart?'_leather':'_weathered');
-   let clone=enemyFactionMaterialCache.get(key);
-   if(!clone){
-    try{clone=material.clone(String(material.name||'ImportedMaterial')+'_'+role+'_'+styleIndex+'_Weathered');}catch(_){clone=null;}
-    if(!clone)return;
-    let materialTint;
-    if(hairPart)materialTint=hairPalettes[styleIndex];
-    else if(metalPart)materialTint=metalPalettes[styleIndex%metalPalettes.length];
-    else if(clothPart)materialTint=tint;
-    else if(leatherPart)materialTint=leatherPalettes[styleIndex%leatherPalettes.length];
-    else materialTint=isKnight?new B.Color3(.78,.72,.62):new B.Color3(.82,.75,.63);
-    if(clone.albedoColor){clone.albedoColor=clone.albedoColor.multiply(materialTint);retintedMaterialCount++;}
-    if(clone.diffuseColor)clone.diffuseColor=clone.diffuseColor.multiply(materialTint);
-    if('roughness' in clone)clone.roughness=Math.max(Number(clone.roughness)||0,metalPart?.82:.90);
-    if('metallic' in clone)clone.metallic=metalPart?Math.min(Number(clone.metallic)||.12,.22):Math.min(Number(clone.metallic)||0,.055);
-    if(clone.specularColor)clone.specularColor=metalPart?new B.Color3(.13,.105,.075):new B.Color3(.055,.05,.04);
-    enemyFactionMaterialCache.set(key,clone);
-   }
-   mesh.material=clone;weatheredMaterialCount++;
+   const material=mesh.material;
+   if(material)sourceMaterials.add(material);
+   mesh.isPickable=false;
+   mesh.receiveShadows=true;
   });
+  const sourceMaterialCount=sourceMaterials.size;
+  const sourceTextureCount=[...sourceMaterials].reduce((sum,material)=>{
+   const textures=typeof material.getActiveTextures==='function'?material.getActiveTextures():[];
+   return sum+(Array.isArray(textures)?textures.length:0);
+  },0);
+  const weatheredMaterialCount=0,retintedMaterialCount=0;
   const restNodes=[rig.head,rig.hand,rig.leftHand,rig.upperArm,rig.leftUpperArm,rig.forearm,rig.leftForearm,rig.rightShoulder,rig.leftShoulder,rig.spine,rig.hips,rig.leftUpperLeg,rig.rightUpperLeg,rig.leftLowerLeg,rig.rightLowerLeg,rig.leftFoot,rig.rightFoot].filter(Boolean);
   const rest=new Map();restNodes.forEach(node=>rest.set(node,{rotation:node.rotation?node.rotation.clone():B.Vector3.Zero(),quaternion:node.rotationQuaternion?node.rotationQuaternion.clone():null}));
   const isRaiderCrew=/^RaiderCrew/.test(parts.name||'');
@@ -2508,7 +2481,7 @@ async function startGame(){
    if(fallbackRoot&&fallbackRoot.getChildMeshes)fallbackRoot.getChildMeshes(false).forEach(mesh=>{try{shadowGen.removeShadowCaster(mesh);}catch(_){}});
    shadowCasterMeshes.forEach(mesh=>{try{shadowGen.addShadowCaster(mesh);}catch(_){}});
   }
-  console.info('Human NPC instantiated',{index,name:parts.name,role,height:bounds.height,walk:walk&&walk.name,run:run&&run.name,proceduralWalkFallback:!walk&&!run,idle:idle&&idle.name,hand:!!rig.hand,weaponSocket:weaponAttachMode,bones:restNodes.length,meshes:meshes.length,weatheredMaterials:weatheredMaterialCount,retintedMaterials:retintedMaterialCount,look:isCivilian?'civilian profession '+(index%4):'warrior faction '+(parts.variant||0)});
+  console.info('Human NPC instantiated',{index,name:parts.name,role,height:bounds.height,walk:walk&&walk.name,run:run&&run.name,proceduralWalkFallback:!walk&&!run,hand:!!rig.hand,weaponSocket:weaponAttachMode,bones:restNodes.length,rigBoneCount,skinnedMeshCount,vertices:sourceVertexCount,meshes:meshes.length,sourceMaterialCount,sourceTextureCount,weatheredMaterials:weatheredMaterialCount,retintedMaterials:retintedMaterialCount,look:isCivilian?'civilian profession '+(index%4):'original Armored Knight GLB'});
  }
  function actorGroundOffset(parts){return parts&&parts.realHuman?.role ? .028 : .08;}
  function setEnemyRigDelta(parts,node,dx=0,dy=0,dz=0){
@@ -2539,21 +2512,19 @@ async function startGame(){
   let db;
   try{
    db=await openVikingCache();
-   // Solo se consultan claves que históricamente pertenecen al Armored Knight azul/dorado.
-   // La clave viking-rigged-enemy-glb-v2 queda excluida deliberadamente.
-   for(const key of [ENEMY_HUMAN_CACHE_KEY,'armored-knight-rigged-glb-v3','armored-knight-rigged-glb']){
-    const record=await new Promise((resolve,reject)=>{
-     const tx=db.transaction(VIKING_CACHE_STORE,'readonly');
-     const req=tx.objectStore(VIKING_CACHE_STORE).get(key);
-     req.onsuccess=()=>resolve(req.result||null);
-     req.onerror=()=>reject(req.error||new Error('No se pudo leer la caché del enemigo.'));
-    });
-    const blob=record&&record.blob instanceof Blob?record.blob:null;
-    const label=String(record&&record.name||'').toLowerCase();
-    if(blob&&await isValidGLB(blob)&&(key==='armored-knight-rigged-glb'||label.includes('armored-knight')||key===ENEMY_HUMAN_CACHE_KEY))return blob;
-   }
-   return null;
-  }catch(err){console.info('La caché del caballero acorazado no está disponible:',err);return null;}
+   // Solo se acepta la clave v6 creada para el Armored Knight validado.
+   // No se reutilizan claves heredadas que pudieron guardar otro personaje.
+   const record=await new Promise((resolve,reject)=>{
+    const tx=db.transaction(VIKING_CACHE_STORE,'readonly');
+    const req=tx.objectStore(VIKING_CACHE_STORE).get(ENEMY_HUMAN_CACHE_KEY);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error||new Error('No se pudo leer la caché del enemigo.'));
+   });
+   const blob=record&&record.blob instanceof Blob?record.blob:null;
+   const label=String(record&&record.name||'').toLowerCase();
+   if(!blob||!await isValidGLB(blob)||!label.includes('armored-knight'))return null;
+   return blob;
+  }catch(err){console.info('La caché v6 del caballero no está disponible; se descargará el modelo oficial:',err);return null;}
   finally{if(db)db.close();}
  }
  async function sameBlobBytes(a,b){
@@ -4256,7 +4227,7 @@ function villageHostileDefenders(vl){
  if(introStartButton)introStartButton.addEventListener('click',beginSaga);
  window.NorseAudio=NorseAudio;
  window.getPlayerTerritoryDebug=()=>{const p=playerPos();return {position:{x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2))},protected:isPlayerTerritoryAt(p.x,p.z),homeDistance:Number(Math.hypot(p.x-STARTER_CAMP_POSITION.x,p.z-STARTER_CAMP_POSITION.z).toFixed(2)),friendlyGuards:enemies.filter(isFriendlyGuard).length,hostileGuards:enemies.filter(e=>canAttackPlayer(e,p.x,p.z)).length};};
- window.getGameHealthDebug=()=>({build:'0.6.85',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
+ window.getGameHealthDebug=()=>({build:'0.6.86',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,visibleFallbackWarriors:humanEnemyParts.filter(p=>!p.realHuman&&p.body&&p.body.isEnabled()&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
  let chapterStage=0;
  const chapterMilestones=[
   'Reúne 12 de madera y 3 de piedra para preparar el refugio.',
@@ -4301,7 +4272,7 @@ function villageHostileDefenders(vl){
  }
  function recordSagaEvent(text){const event={at:Date.now(),text:String(text).slice(0,120)};sagaHistory.push(event);if(sagaHistory.length>30)sagaHistory.splice(0,sagaHistory.length-30);const panel=document.getElementById('progressPanel');if(panel&&panel.classList.contains('open'))updateProgressPanel();}
  function updateHUD(){
-  const versionNode=document.getElementById('subtitle');if(versionNode)versionNode.textContent='SAGA DEL NORTE · CAPÍTULO I · 0.6.85';
+  const versionNode=document.getElementById('subtitle');if(versionNode)versionNode.textContent='SAGA DEL NORTE · CAPÍTULO I · 0.6.86';
   document.getElementById('wood').textContent=woodCount;document.getElementById('stone').textContent=stoneCount;document.getElementById('recruits').textContent=companions.length;document.getElementById('arsenalBtn').textContent='⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]);document.getElementById('kills').textContent=kills;document.getElementById('captured').textContent=captured+'/4';document.getElementById('health').style.width=Math.max(0,health)+'%';document.getElementById('boatHealthStat').textContent=Math.round(boatHp)+'%';document.getElementById('raiders').textContent=enemyShips.filter(e=>!e.sunk).length;document.getElementById('stamina').style.width=Math.max(0,stamina)+'%';document.getElementById('healBtn').textContent=healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR';updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
@@ -5777,7 +5748,7 @@ function villageHostileDefenders(vl){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.85: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.86: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -5837,7 +5808,7 @@ function villageHostileDefenders(vl){
  });
  updateRotateScreenButton();
  updateHUD();drawMap();
- console.info('EL SIN NOMBRE 0.6.85 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.86 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'Descargando e instalando personajes 3D…');
  const allCharacterLoads=Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
@@ -5865,7 +5836,7 @@ function villageHostileDefenders(vl){
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
- console.info('EL SIN NOMBRE 0.6.85 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ console.info('EL SIN NOMBRE 0.6.86 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
