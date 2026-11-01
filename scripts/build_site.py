@@ -15,7 +15,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.71 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.72 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -295,9 +295,32 @@ def main() -> None:
 
     meshopt_compress_models(results)
     results.sort(key=lambda item: item["path"])
+
+    # Keep large model/audio caches across code-only releases. The asset cache
+    # changes only when the actual packaged resource bytes change, so a new
+    # game version does not force every phone to download ~20 MB again.
+    asset_fingerprint = hashlib.sha256(
+        json.dumps(
+            [(item["path"], item["sha256"]) for item in results],
+            separators=(",", ":"), ensure_ascii=False,
+        ).encode("utf-8")
+    ).hexdigest()[:16]
+    sw_path = DIST / "sw.js"
+    sw_source = sw_path.read_text(encoding="utf-8")
+    sw_source, replacements = re.subn(
+        r'const ASSET_CACHE = "[^"]+";',
+        f'const ASSET_CACHE = "el-sin-nombre-assets-{asset_fingerprint}";',
+        sw_source,
+        count=1,
+    )
+    if replacements != 1:
+        raise SystemExit("No se pudo fijar la versión estable de caché de recursos.")
+    sw_path.write_text(sw_source, encoding="utf-8")
+    print(f"Asset cache fingerprint: {asset_fingerprint} (los recursos idénticos se conservan entre versiones).")
+
     manifest = {
         "game": "EL SIN NOMBRE",
-        "version": "0.6.71",
+        "version": "0.6.72",
         "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
         "assets": results,
     }

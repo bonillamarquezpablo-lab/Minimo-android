@@ -7,7 +7,7 @@
 <meta name="el-sin-nombre-build" content="0.6.63">
 <meta name="el-sin-nombre-repair" content="bilateral gait validation, safe NPC mesh filtering, relaxed held-axe pose, non-blocking diagnostics">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.71</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.72</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -472,9 +472,9 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 }
 
 
-/* 0.6.71 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
+/* 0.6.72 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
 #modelStatus{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;max-width:100%;max-height:25vh;overflow:auto;pointer-events:auto}
-/* 0.6.71 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
+/* 0.6.72 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
 #loading{overflow:hidden;align-items:stretch;justify-content:stretch;padding:0;background:linear-gradient(180deg,rgba(3,12,16,.24) 0%,rgba(3,12,16,.10) 38%,rgba(3,10,12,.88) 100%);backdrop-filter:none;text-align:left}
 #loading:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 38%,transparent 0 22%,rgba(3,9,12,.18) 58%,rgba(2,7,9,.78) 100%),linear-gradient(90deg,rgba(3,11,14,.42),transparent 35%,transparent 65%,rgba(3,11,14,.42));}
 #loading:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:linear-gradient(0deg,rgba(3,9,11,.94),rgba(3,9,11,0));}
@@ -519,7 +519,7 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 @media(prefers-reduced-motion:reduce){#loading .loadPulse{animation:none}}
 
 
-/* 0.6.71 — presentación cinematográfica limpia y estados de arranque inequívocos. */
+/* 0.6.72 — presentación cinematográfica limpia y estados de arranque inequívocos. */
 body.booting #hud, body.boot-failed #hud {
  visibility:hidden!important; opacity:0!important; pointer-events:none!important;
 }
@@ -575,7 +575,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 }
 
 </style>
-<!-- EL SIN NOMBRE 0.6.71: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.72: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -591,7 +591,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 </script>
 <meta name="el-sin-nombre-repair-0669" content="forward-facing resting arms and weapon grip, remove rigid civilian robe/cape shell, vivid terrain palette and stronger natural lighting">
 <style>
-/* 0.6.71: civilian GLBs install automatically; no manual installer is shown. */
+/* 0.6.72: civilian GLBs install automatically; no manual installer is shown. */
 #introCivilianInstallCard,#villagerModelBtn{display:none!important}
 </style>
 </head>
@@ -994,7 +994,7 @@ async function startGame(){
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
- console.info('EL SIN NOMBRE 0.6.71 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
+ console.info('EL SIN NOMBRE 0.6.72 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
  let fpsSample=0,fpsBadTime=0,shadowUpgradeTime=0;
  function changeShadowQuality(nextSize){
   // Conservado como interfaz interna; no baja la resolución de sombras automáticamente.
@@ -3982,7 +3982,7 @@ async function startGame(){
  if(introStartButton)introStartButton.addEventListener('click',beginSaga);
  window.NorseAudio=NorseAudio;
  window.getPlayerTerritoryDebug=()=>{const p=playerPos();return {position:{x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2))},protected:isPlayerTerritoryAt(p.x,p.z),homeDistance:Number(Math.hypot(p.x-STARTER_CAMP_POSITION.x,p.z-STARTER_CAMP_POSITION.z).toFixed(2)),friendlyGuards:enemies.filter(isFriendlyGuard).length,hostileGuards:enemies.filter(e=>canAttackPlayer(e,p.x,p.z)).length};};
- window.getGameHealthDebug=()=>({build:'0.6.71',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
+ window.getGameHealthDebug=()=>({build:'0.6.72',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
  let chapterStage=0;
  const chapterMilestones=[
   'Reúne 12 de madera y 3 de piedra para preparar el refugio.',
@@ -5308,7 +5308,7 @@ async function startGame(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.71: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.72: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -5330,9 +5330,9 @@ async function startGame(){
 window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passive:true});
  if(window.visualViewport)window.visualViewport.addEventListener('resize',resizeGameViewport,{passive:true});
  updateHUD();drawMap();
- console.info('EL SIN NOMBRE 0.6.71 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.72 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
- setLoadingProgress(94,'Cargando guerreros, aldeanos y sonido…');
+ setLoadingProgress(48,'Descargando e instalando personajes 3D…');
  const resourceResults=await Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
  startupAudioPreload.then(audioResult=>console.info('Audio preparado en segundo plano:',audioResult)).catch(audioError=>console.info('El audio continuará cargando al entrar:',audioError));
  // Esperar a que Babylon termine la preparación de texturas/materiales y compile lo pendiente.
@@ -5347,7 +5347,7 @@ window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passiv
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
  const engineStored=!!(await readRuntimeScript('https://cdnjs.cloudflare.com/ajax/libs/babylonjs/7.54.3/babylon.js').catch(()=>null))||!!(await readRuntimeScript('https://cdn.babylonjs.com/v7.54.3/babylon.js').catch(()=>null))||!!(await readRuntimeScript('https://cdn.jsdelivr.net/npm/babylonjs@7.54.3/babylon.js').catch(()=>null))||!!(await readRuntimeScript('https://unpkg.com/babylonjs@7.54.3/babylon.js').catch(()=>null));
- console.info('EL SIN NOMBRE 0.6.71 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ console.info('EL SIN NOMBRE 0.6.72 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
