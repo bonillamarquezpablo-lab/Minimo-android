@@ -4,43 +4,43 @@ Videojuego web 3D construido con Babylon.js.
 
 ## Enlace del juego
 
-**Dirección definitiva cuando GitHub Pages esté activado:**
+Cuando se complete la activación inicial de GitHub Pages:
 
 https://bonillamarquezpablo-lab.github.io/Minimo-android/
 
-No usar enlaces `rawcdn.githack.com` ni `cdn.jsdelivr.net` para abrir el HTML como página: esos servicios sirven archivos del repositorio como proxy y no sustituyen un alojamiento web propio fiable.
+No utilizar enlaces raw de GitHub, jsDelivr o raw.githack para ejecutar la página como destino final.
 
-## Activación inicial de GitHub Pages (una sola vez)
+## Activación inicial (una sola vez)
 
-El paquete del videojuego ya se construye y publica automáticamente en la rama `gh-pages`. Para que GitHub lo sirva como una web real:
+La compilación del paquete ya está automatizada. GitHub Pages aún debe habilitarse una vez desde la configuración del repositorio:
 
-1. Abre https://github.com/bonillamarquezpablo-lab/Minimo-android/settings/pages
-2. En **Build and deployment**, selecciona **Deploy from a branch**.
-3. En **Branch**, selecciona `gh-pages`.
-4. En la carpeta selecciona `/(root)`.
-5. Pulsa **Save**.
+1. Abrir https://github.com/bonillamarquezpablo-lab/Minimo-android/settings/pages
+2. En **Build and deployment → Source**, elegir **GitHub Actions**.
+3. Guardar si GitHub muestra el botón.
 
-GitHub habilitará entonces el dominio `github.io`. No hay que volver a hacer estos pasos en futuras versiones.
+Después, el flujo `.github/workflows/deploy-pages.yml` construye y publica el juego automáticamente en cada cambio de `main`.
 
-## Paquete web autónomo
+La primera activación requiere que alguien con permisos administrativos del repositorio cambie esta opción. La integración conectada no tiene permiso de API para crear el sitio Pages por sí misma.
 
-Cada cambio en `main` ejecuta `.github/workflows/deploy-pages.yml` y `scripts/build_site.py`. El proceso reúne y verifica en un paquete:
+## Recursos incluidos
+
+El proceso `scripts/build_site.py` descarga y verifica en cada compilación:
 
 - Babylon.js 7.54.3 y el importador glTF.
 - Modelos GLB del protagonista, guerreros, aldeanos y gaviota.
 - Entorno gráfico y sonidos CC0.
-- Manifiesto con origen, tamaño y SHA-256 de cada recurso.
+- Manifiesto de recursos con origen, tamaño y SHA-256.
 
-Los recursos se sirven desde el propio sitio HTTPS. El usuario no tiene que descargar ni seleccionar los modelos por separado.
+Los recursos se sirven desde el propio sitio HTTPS. Los jugadores no necesitan descargar modelos ni sonidos por separado.
 
-## Primera carga y caché
+## Caché
 
-La primera visita necesita conexión para descargar el paquete de recursos. `sw.js` guarda la aplicación y los recursos en Cache Storage para acelerar las visitas siguientes y permitir recuperación sin conexión mientras el navegador conserve la caché.
+`sw.js` guarda la aplicación y los recursos en Cache Storage. La primera apertura necesita conexión; las siguientes pueden reutilizar la caché si el navegador la conserva.
 
 ## Navegadores
 
-Safari y Chrome son las opciones recomendadas. Instagram puede abrir la dirección en su navegador integrado, pero el soporte WebGL depende de las restricciones que aplique su navegador interno. Si no habilita WebGL, utiliza **Abrir en Safari** o **Abrir en Chrome**.
+Safari y Chrome son los recomendados. Instagram puede abrir el enlace dentro de su navegador integrado, pero la compatibilidad WebGL depende de sus restricciones; si bloquea WebGL, usar "Abrir en Safari" o "Abrir en Chrome".
 
 ## Licencias
 
-Consulta [ASSET-LICENSES.md](ASSET-LICENSES.md). El manifiesto de recursos se genera en `dist/assets/asset-manifest.json` durante cada publicación.
+Consulta [ASSET-LICENSES.md](ASSET-LICENSES.md). El manifiesto de cada compilación se genera en `dist/assets/asset-manifest.json`.
