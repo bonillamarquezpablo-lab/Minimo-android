@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.80">
-<meta name="el-sin-nombre-repair" content="0.6.80 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
+<meta name="el-sin-nombre-build" content="0.6.81">
+<meta name="el-sin-nombre-repair" content="0.6.81 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.80</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.81</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -472,9 +472,9 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 }
 
 
-/* 0.6.80 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
+/* 0.6.81 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
 #modelStatus{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;max-width:100%;max-height:25vh;overflow:auto;pointer-events:auto}
-/* 0.6.80 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
+/* 0.6.81 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
 #loading{overflow:hidden;align-items:stretch;justify-content:stretch;padding:0;background:linear-gradient(180deg,rgba(3,12,16,.24) 0%,rgba(3,12,16,.10) 38%,rgba(3,10,12,.88) 100%);backdrop-filter:none;text-align:left}
 #loading:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 38%,transparent 0 22%,rgba(3,9,12,.18) 58%,rgba(2,7,9,.78) 100%),linear-gradient(90deg,rgba(3,11,14,.42),transparent 35%,transparent 65%,rgba(3,11,14,.42));}
 #loading:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:linear-gradient(0deg,rgba(3,9,11,.94),rgba(3,9,11,0));}
@@ -519,7 +519,7 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 @media(prefers-reduced-motion:reduce){#loading .loadPulse{animation:none}}
 
 
-/* 0.6.80 — presentación cinematográfica limpia y estados de arranque inequívocos. */
+/* 0.6.81 — presentación cinematográfica limpia y estados de arranque inequívocos. */
 body.booting #hud, body.boot-failed #hud {
  visibility:hidden!important; opacity:0!important; pointer-events:none!important;
 }
@@ -583,7 +583,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 </style>
-<!-- EL SIN NOMBRE 0.6.80: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.81: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -599,7 +599,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 </script>
 <meta name="el-sin-nombre-repair-0669" content="forward-facing resting arms and weapon grip, remove rigid civilian robe/cape shell, vivid terrain palette and stronger natural lighting">
 <style>
-/* 0.6.80: civilian GLBs install automatically; no manual installer is shown. */
+/* 0.6.81: civilian GLBs install automatically; no manual installer is shown. */
 #introCivilianInstallCard,#villagerModelBtn{display:none!important}
 </style>
 </head>
@@ -713,7 +713,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
   <p class="introStory">Sobrevive. Reúne a tu clan. Conquista el norte.</p>
   <div class="introControls" aria-label="Controles básicos">
    <div class="introControl"><b>01 · MOVER</b><span>Joystick izquierdo</span></div>
-   <div class="introControl"><b>02 · MIRAR</b><span>Desliza la derecha</span></div>
+   <div class="introControl"><b>02 · CÁMARA 360°</b><span>Arrastra cualquier zona libre de la mitad derecha. Dos dedos: zoom.</span></div>
    <div class="introControl"><b>03 · LUCHAR Y RECOGER</b><span>Botones de acción</span></div>
   </div>
   <section class="introAssetStatus" aria-live="polite">
@@ -1023,7 +1023,7 @@ async function startGame(){
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
- console.info('EL SIN NOMBRE 0.6.80 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
+ console.info('EL SIN NOMBRE 0.6.81 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
  let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
  const minimumQualityDpr=Math.min(qualityDpr,2.05),targetFrameRate=120;
  function changeShadowQuality(nextSize){
@@ -3458,16 +3458,20 @@ async function startGame(){
  let cameraPointers=new Map(),cameraPinchDistance=0,cameraPinchStart=0;
  function playerPos(){return player.root.getAbsolutePosition();}
  function cameraPointBlocked(x,z){
-  // Solo los paramentos de las casas bloquean la cámara; props bajos no producen zoom brusco.
-  for(const c of worldColliders){
-   if(!c.cameraBlocker)continue;
+  // O(nearby bucket) lookup instead of scanning every village/house collider.
+  if(!collisionGrid||typeof collisionCellKey!=='function')return false;
+  const cx=Math.floor(x/COLLISION_CELL_SIZE),cz=Math.floor(z/COLLISION_CELL_SIZE);
+  const bucket=collisionGrid.get(collisionCellKey(cx,cz));if(!bucket)return false;
+  for(const entry of bucket){
+   if(entry.kind!=='world')continue;
+   const c=entry.ref;if(!c||!c.cameraBlocker)continue;
    const dx=x-c.x,dz=z-c.z;
    if(c.type==='circle'){if(dx*dx+dz*dz<(c.r+.28)*(c.r+.28))return true;}
    else if(Math.abs(dx)<c.hx+.28&&Math.abs(dz)<c.hz+.28)return true;
   }
   return false;
  }
- function updateCamera(dt){
+  function updateCamera(dt){
   const focus=playerPos();
   const portrait=innerHeight>innerWidth;
   const safeDt=Math.max(0,Math.min(.05,dt||0));
@@ -3483,17 +3487,17 @@ async function startGame(){
   const right=v(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
   const horizontal=Math.cos(cameraPitch)*distance;
   const vertical=Math.sin(cameraPitch)*distance+.28;
-  const baseOffset=forward.scale(-horizontal).add(v(0,vertical,0)).add(right.scale(.28));
+  const baseOffset=forward.scale(-horizontal).add(v(0,vertical,0)).add(right.scale(.40));
   // La comprobación de colisión de cámara es cara si recorre todos los colliders cada frame.
   // Se actualiza a intervalos; el encuadre 3D y la resolución siguen renderizándose cada frame.
   cameraCollisionTimer-=safeDt;
   if(cameraCollisionTimer<=0){
-   cameraCollisionTimer=.12;
+   cameraCollisionTimer=.14;
    const candidate=target.add(baseOffset),ray=target.subtract(candidate),rayLength=ray.length();
    let ratio=1;
    if(rayLength>.01){
     const dir=ray.scale(1/rayLength),usable=Math.max(0,rayLength-1.25);
-    for(let d=.65;d<usable;d+=.55){
+    for(let d=.70;d<usable;d+=.78){
      const point=candidate.add(dir.scale(d));
      if(point.y<4.25&&cameraPointBlocked(point.x,point.z)){
       ratio=Math.max(.28,Math.min(1,(d-.48)/rayLength));
@@ -3506,7 +3510,7 @@ async function startGame(){
   cameraObstructionBlend+=(cameraObstructionRatio-cameraObstructionBlend)*(1-Math.exp(-safeDt*9));
   const adjustedOffset=baseOffset.scale(Math.max(.28,Math.min(1,cameraObstructionBlend)));
   const want=target.add(adjustedOffset);
-  const positionAlpha=1-Math.exp(-safeDt*(onShip?11.5:14.5));
+  const positionAlpha=1-Math.exp(-safeDt*(onShip?11.5:13.2));
   camera.position.copyFrom(B.Vector3.Lerp(camera.position,want,Math.min(1,positionAlpha)));
   // La sacudida solo aparece tras impactos; nunca depende de correr ni de la velocidad.
   if(cameraShake>.001){
@@ -3514,7 +3518,7 @@ async function startGame(){
    camera.position.addInPlace(v(Math.sin(elapsed*47)*shake,Math.cos(elapsed*61)*shake*.35,0));
   }
   camera.setTarget(target);
-  camera.fov=portrait?.90:.78;
+  camera.fov=portrait?.84:.78;
   skyDome.position.copyFrom(camera.position);
  } // Villages and enemy camps.
  const villages=[],worldColliders=[];
@@ -4132,7 +4136,7 @@ function villageHostileDefenders(vl){
  if(introStartButton)introStartButton.addEventListener('click',beginSaga);
  window.NorseAudio=NorseAudio;
  window.getPlayerTerritoryDebug=()=>{const p=playerPos();return {position:{x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2))},protected:isPlayerTerritoryAt(p.x,p.z),homeDistance:Number(Math.hypot(p.x-STARTER_CAMP_POSITION.x,p.z-STARTER_CAMP_POSITION.z).toFixed(2)),friendlyGuards:enemies.filter(isFriendlyGuard).length,hostileGuards:enemies.filter(e=>canAttackPlayer(e,p.x,p.z)).length};};
- window.getGameHealthDebug=()=>({build:'0.6.80',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
+ window.getGameHealthDebug=()=>({build:'0.6.81',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
  let chapterStage=0;
  const chapterMilestones=[
   'Reúne 12 de madera y 3 de piedra para preparar el refugio.',
@@ -4177,7 +4181,7 @@ function villageHostileDefenders(vl){
  }
  function recordSagaEvent(text){const event={at:Date.now(),text:String(text).slice(0,120)};sagaHistory.push(event);if(sagaHistory.length>30)sagaHistory.splice(0,sagaHistory.length-30);const panel=document.getElementById('progressPanel');if(panel&&panel.classList.contains('open'))updateProgressPanel();}
  function updateHUD(){
-  const versionNode=document.getElementById('subtitle');if(versionNode)versionNode.textContent='SAGA DEL NORTE · CAPÍTULO I · 0.6.80';
+  const versionNode=document.getElementById('subtitle');if(versionNode)versionNode.textContent='SAGA DEL NORTE · CAPÍTULO I · 0.6.81';
   document.getElementById('wood').textContent=woodCount;document.getElementById('stone').textContent=stoneCount;document.getElementById('recruits').textContent=companions.length;document.getElementById('arsenalBtn').textContent='⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]);document.getElementById('kills').textContent=kills;document.getElementById('captured').textContent=captured+'/4';document.getElementById('health').style.width=Math.max(0,health)+'%';document.getElementById('boatHealthStat').textContent=Math.round(boatHp)+'%';document.getElementById('raiders').textContent=enemyShips.filter(e=>!e.sunk).length;document.getElementById('stamina').style.width=Math.max(0,stamina)+'%';document.getElementById('healBtn').textContent=healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR';updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
@@ -4698,31 +4702,69 @@ function villageHostileDefenders(vl){
  stick.addEventListener('pointermove',e=>{if(e.pointerId===pointerId)stickMove(e);});
  function resetStick(){pointerId=null;input.tx=0;input.ty=0;knob.style.transform='translate(0,0)';}
  stick.addEventListener('pointerup',resetStick);stick.addEventListener('pointercancel',resetStick);stick.addEventListener('lostpointercapture',resetStick);window.addEventListener('blur',resetStick);window.addEventListener('resize',()=>{readStickCenter();resetStick();});window.addEventListener('orientationchange',()=>{setTimeout(()=>{readStickCenter();resetStick();},180);});
- // Right-side drag rotates and tilts the camera; two fingers pinch to zoom.
- canvas.addEventListener('pointerdown',e=>{
-  if(e.clientX<innerWidth*.38||e.clientY>innerHeight-210||document.getElementById('modal').style.display==='flex'||map.classList.contains('expanded'))return;
+ // Third-person orbit camera: the right side of the viewport is the look zone.
+ // Pointer events are captured at document level so drags continue across the canvas edge.
+ // The joystick, action buttons, map, HUD panels and intro controls remain independent.
+ const cameraInteractiveSelector='#stick,#actions,#quickActions,#map,#mapClose,#arsenalPanel,#progressPanel,#modal,#modelImportPanel,#chapterTracker,#mapBackdrop,#intro,button,a,input,textarea,select';
+ const cameraPointerTypes=new Map();
+ let cameraGestureMoved=false;
+ function isCameraGestureAllowed(e){
+  if(document.getElementById('modal')?.style.display==='flex')return false;
+  if(document.getElementById('map')?.classList.contains('expanded'))return false;
+  if(document.getElementById('arsenalPanel')?.classList.contains('open'))return false;
+  if(document.getElementById('progressPanel')?.classList.contains('open'))return false;
+  const el=e.target instanceof Element?e.target:null;
+  if(el&&el.closest(cameraInteractiveSelector))return false;
+  // Mobile: left third is reserved for locomotion. Mouse can orbit from any empty area.
+  if(e.pointerType!=='mouse'&&e.clientX<innerWidth*.32)return false;
+  if(e.pointerType==='mouse'&&e.button!==0&&e.button!==2)return false;
+  return true;
+ }
+ function cameraPointerDown(e){
+  if(!isCameraGestureAllowed(e))return;
+  if(e.pointerType==='mouse'&&e.button===2)e.preventDefault();
   cameraPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(cameraPointers.size===2){const p=[...cameraPointers.values()];cameraPinchDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);cameraPinchStart=cameraDistance;}
-  try{canvas.setPointerCapture(e.pointerId);}catch(_){}
- });
- canvas.addEventListener('pointermove',e=>{
+  cameraPointerTypes.set(e.pointerId,e.pointerType||'touch');
+  cameraGestureMoved=false;
+  if(cameraPointers.size===2){
+   const p=[...cameraPointers.values()];
+   cameraPinchDistance=Math.max(1,Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y));
+   cameraPinchStart=cameraDistance;
+  }
+ }
+ function cameraPointerMove(e){
   if(!cameraPointers.has(e.pointerId))return;
   const old=cameraPointers.get(e.pointerId),dx=e.clientX-old.x,dy=e.clientY-old.y;
   cameraPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(Math.abs(dx)+Math.abs(dy)<.15)return;
+  cameraGestureMoved=true;
   if(cameraPointers.size>=2){
-   const p=[...cameraPointers.values()],d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
-   cameraDistance=Math.max(6.8,Math.min(17.0,cameraPinchStart-(d-cameraPinchDistance)*.022));
-  }else{cameraYaw-=dx*.0058;cameraPitch=Math.max(.22,Math.min(.82,cameraPitch+dy*.0040));}
- });
- function releaseCameraPointer(e){cameraPointers.delete(e.pointerId);}
- canvas.addEventListener('pointerup',releaseCameraPointer);canvas.addEventListener('pointercancel',releaseCameraPointer);
+   const p=[...cameraPointers.values()],distance=Math.max(1,Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y));
+   // Pinch remains optional; the normal camera distance is unchanged unless the player pinches.
+   cameraDistance=Math.max(6.8,Math.min(17.0,cameraPinchStart-(distance-cameraPinchDistance)*.022));
+  }else{
+   const sensitivity=cameraPointerTypes.get(e.pointerId)==='mouse'?.0068:.0082;
+   cameraYaw-=dx*sensitivity;
+   cameraPitch=Math.max(.20,Math.min(.94,cameraPitch+dy*sensitivity*.66));
+  }
+ }
+ function cameraPointerUp(e){
+  cameraPointers.delete(e.pointerId);cameraPointerTypes.delete(e.pointerId);
+  if(cameraPointers.size<2){cameraPinchDistance=0;cameraPinchStart=cameraDistance;}
+ }
+ document.addEventListener('pointerdown',cameraPointerDown,{capture:true,passive:false});
+ document.addEventListener('pointermove',cameraPointerMove,{capture:true,passive:true});
+ document.addEventListener('pointerup',cameraPointerUp,{capture:true,passive:true});
+ document.addEventListener('pointercancel',cameraPointerUp,{capture:true,passive:true});
+ document.addEventListener('contextmenu',e=>{if(cameraPointers.size)e.preventDefault();},{capture:true});
  canvas.addEventListener('wheel',e=>{cameraDistance=Math.max(6.8,Math.min(17.0,cameraDistance+e.deltaY*.010));e.preventDefault();},{passive:false});
+ window.addEventListener('blur',()=>{cameraPointers.clear();cameraPointerTypes.clear();});
  function setMapExpanded(open){map.classList.toggle('expanded',!!open);document.body.classList.toggle('map-open',!!open);}
  map.addEventListener('click',e=>{e.stopPropagation();setMapExpanded(!map.classList.contains('expanded'));});
  document.getElementById('mapClose').addEventListener('click',()=>setMapExpanded(false));
  document.getElementById('mapBackdrop').addEventListener('click',()=>setMapExpanded(false));
  window.addEventListener('keydown',e=>{if(e.key==='Escape'){setMapExpanded(false);modelImportPanel.classList.remove('open');}});
- window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' '){attack();e.preventDefault();}if(e.key==='Shift')dodge();if(e.key.toLowerCase()==='j'){jump();e.preventDefault();}});
+ window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' '){attack();e.preventDefault();}if(e.key==='Shift')dodge();if(e.key.toLowerCase()==='j'){jump();e.preventDefault();}if(e.key.toLowerCase()==='c'){cameraYaw=yaw;cameraPitch=.48;cameraTargetSmoothed=null;}});
  window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
  function embark(){
   if(onShip){
@@ -5529,7 +5571,7 @@ function villageHostileDefenders(vl){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.80: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.81: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -5551,7 +5593,7 @@ function villageHostileDefenders(vl){
 window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passive:true});
  if(window.visualViewport)window.visualViewport.addEventListener('resize',resizeGameViewport,{passive:true});
  updateHUD();drawMap();
- console.info('EL SIN NOMBRE 0.6.80 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.81 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'Descargando e instalando personajes 3D…');
  const allCharacterLoads=Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
@@ -5579,7 +5621,7 @@ window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passiv
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
- console.info('EL SIN NOMBRE 0.6.80 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ console.info('EL SIN NOMBRE 0.6.81 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
