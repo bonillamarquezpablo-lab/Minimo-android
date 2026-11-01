@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.115">
-<meta name="el-sin-nombre-repair" content="0.6.115 progressive real-byte loading, non-blocking secondary characters and startup warmup">
+<meta name="el-sin-nombre-build" content="0.6.116">
+<meta name="el-sin-nombre-repair" content="0.6.116 guest entry isolation and mobile performance profile">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.115</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.116</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1252,7 +1252,7 @@ window.addEventListener('online',()=>{
  }
 });
 
-const SHARE_NEW_GAME=new URLSearchParams(location.search).get('newgame')==='1'||/(?:^|\/)guest\/?$/.test(location.pathname);
+const SHARE_NEW_GAME=!!document.querySelector('meta[name="el-sin-nombre-guest-entry"][content="true"]')||new URLSearchParams(location.search).get('newgame')==='1'||/(?:^|\/)guest\/?$/.test(location.pathname);
 const PREFLIGHT_SETTINGS_KEY='el-sin-nombre-client-preferences-v1';
 const PLAYER_IDENTITY_KEY='el-sin-nombre-identity-'+(SHARE_NEW_GAME?'guest-v2':'main-v1');
 let activeGraphicsProfile='quality',selectedPlayerName='',playerIdentityChosen=false;
@@ -1331,19 +1331,19 @@ async function startGame(){
  try{if(graphicsContext){const debugInfo=graphicsContext.getExtension('WEBGL_debug_renderer_info');graphicsRenderer=String(graphicsContext.getParameter(debugInfo?debugInfo.UNMASKED_RENDERER_WEBGL:graphicsContext.RENDERER)||'no disponible');graphicsVendor=String(graphicsContext.getParameter(debugInfo?debugInfo.UNMASKED_VENDOR_WEBGL:graphicsContext.VENDOR)||'no disponible');graphicsVersion=String(graphicsContext.getParameter(graphicsContext.VERSION)||'no disponible');}}catch(_){ }
  const constrainedGpuMatch=/SM-A127F|Mali-G52\s*MP1|PowerVR\s*GE8320/i.test((navigator.userAgent||'')+' '+graphicsRenderer);
  const constrainedHardware=!!(isTouchDevice&&(constrainedGpuMatch||(reportedMemory>0&&reportedMemory<=4&&(Number(navigator.hardwareConcurrency)||0)<=8)));
- const isConstrainedMobile=!!(isPerformanceMode&&constrainedHardware);
- const shadowMapSize=isPerformanceMode?(isIOSDevice?1024:(isTouchDevice?1024:2048)):(isIOSDevice?1024:(isTouchDevice?2048:(reportedMemory>=8?3072:2048)));
+ const isConstrainedMobile=!!(isPerformanceMode&&isTouchDevice&&(constrainedHardware||reportedMemory<=4));
+ const shadowMapSize=isPerformanceMode?(isIOSDevice?512:(isTouchDevice?512:1024)):(isIOSDevice?1024:(isTouchDevice?2048:(reportedMemory>=8?3072:2048)));
  let shadowGen=null,currentShadowSize=shadowMapSize;
  // CALIDAD conserva la configuración completa. RENDIMIENTO reduce el coste gráfico,
  // no desactiva ni sustituye ningún sistema de juego.
- const qualityDpr=isPerformanceMode?Math.min(deviceDpr,constrainedHardware?1.05:(isTouchDevice?1.35:1.60)):Math.min(deviceDpr,isIOSDevice?1.75:(isTouchDevice?2.60:2.0));
+ const qualityDpr=isPerformanceMode?Math.min(deviceDpr,constrainedHardware?.78:(isTouchDevice?1.0:1.35)):Math.min(deviceDpr,isIOSDevice?1.75:(isTouchDevice?2.60:2.0));
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(isPerformanceMode?4:16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
  console.info('EL SIN NOMBRE render profile:',{profile:activeGraphicsProfile,devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize,constrainedHardware});
  let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
- const minimumQualityDpr=Math.min(qualityDpr,2.05),targetFrameRate=120;
+ const minimumQualityDpr=Math.min(qualityDpr,2.05),minimumPerformanceDpr=isPerformanceMode?(isTouchDevice?.52:.68):qualityDpr,targetFrameRate=60;
  function changeShadowQuality(nextSize){
   if(!shadowGen||nextSize===currentShadowSize)return;
   try{const map=shadowGen.getShadowMap&&shadowGen.getShadowMap();if(map&&typeof map.resize==='function'){map.resize(nextSize);currentShadowSize=nextSize;}}
@@ -1354,11 +1354,22 @@ async function startGame(){
   const fps=engine.getFps();
   // Si RAF parece limitado a 60Hz, bajar píxeles no desbloquea la frecuencia de pantalla.
   if(fps>=58&&fps<=62){lowFpsWindows=0;highFpsWindows=0;return;}
-  if(fps<108){lowFpsWindows++;highFpsWindows=0;}else if(fps>117){highFpsWindows++;lowFpsWindows=0;}else{lowFpsWindows=0;highFpsWindows=0;}
-  // No reducimos la resolución para disimular caídas de FPS: la calidad visual se conserva.
-  if(lowFpsWindows>=2){lowFpsWindows=0;console.info('Rendimiento bajo: se conserva la resolución nativa y se prioriza optimizar CPU/GPU.');}
-  else if(highFpsWindows>=2&&qualityDprCurrent<qualityDpr){qualityDprCurrent=Math.min(qualityDpr,qualityDprCurrent+.05);engine.setHardwareScalingLevel(1/qualityDprCurrent);highFpsWindows=0;}
-  if(fps<108)console.info('Diagnóstico de rendimiento',{fps:Math.round(fps),targetFrameRate,totalMeshes:scene.meshes.length,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,vegetationMerge:staticMergeStats});
+  if(isPerformanceMode&&fps<24){
+   lowFpsWindows++;highFpsWindows=0;
+   if(lowFpsWindows>=2){
+    lowFpsWindows=0;
+    const nextDpr=Math.max(minimumPerformanceDpr,qualityDprCurrent*.84);
+    if(nextDpr<qualityDprCurrent-.015){qualityDprCurrent=nextDpr;engine.setHardwareScalingLevel(1/qualityDprCurrent);}
+    if(currentShadowSize>256)changeShadowQuality(256);
+    console.info('Perfil de rendimiento adaptativo activado',{fps:Math.round(fps),renderDpr:qualityDprCurrent,shadowMap:currentShadowSize});
+   }
+  }else if(fps>44){highFpsWindows++;lowFpsWindows=0;}
+  else{lowFpsWindows=0;highFpsWindows=0;}
+  if(highFpsWindows>=4&&qualityDprCurrent<qualityDpr){
+   qualityDprCurrent=Math.min(qualityDpr,qualityDprCurrent+.04);
+   engine.setHardwareScalingLevel(1/qualityDprCurrent);highFpsWindows=0;
+  }
+  if(fps<24)console.info('Diagnóstico de rendimiento',{fps:Math.round(fps),targetFrameRate,totalMeshes:scene.meshes.length,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,vegetationMerge:staticMergeStats});
  }
  const scene=new B.Scene(engine);
  scene.skipPointerMovePicking=true;scene.constantlyUpdateMeshUnderPointer=false;
@@ -1388,18 +1399,18 @@ async function startGame(){
  try{
   shadowGen=B.ShadowGenerator?new B.ShadowGenerator(shadowMapSize,sun):null;
   if(shadowGen){
-   shadowGen.usePercentageCloserFiltering=true;
-   shadowGen.filteringQuality=isPerformanceMode?B.ShadowGenerator.QUALITY_MEDIUM:B.ShadowGenerator.QUALITY_HIGH;
+   shadowGen.usePercentageCloserFiltering=!isPerformanceMode;
+   shadowGen.filteringQuality=isPerformanceMode?B.ShadowGenerator.QUALITY_LOW:B.ShadowGenerator.QUALITY_HIGH;
    shadowGen.bias=.00035;shadowGen.normalBias=.014;shadowGen.darkness=.27;
    if('transparencyShadow' in shadowGen)shadowGen.transparencyShadow=true;
    // Conserva el mapa 2048 y el filtrado alto; solo evita recalcular la misma sombra
    // en cada fotograma. El movimiento y la animación siguen renderizándose cada frame.
    const shadowMap=shadowGen.getShadowMap&&shadowGen.getShadowMap();
-   if(shadowMap)shadowMap.refreshRate=isPerformanceMode?5:3;
+   if(shadowMap)shadowMap.refreshRate=isPerformanceMode?10:3;
   }
  }catch(shadowInitError){console.warn('Sombras dinámicas no disponibles; el juego continuará con iluminación directa:',shadowInitError);shadowGen=null;}
  const managedWorldShadowGroups=[];let managedActiveWorldShadowCount=0,managedShadowCullAt=0;
- function addModelShadow(root,maxCasters=7){
+ function addModelShadow(root,maxCasters=isPerformanceMode?2:7){
   if(!root||!root.getChildMeshes)return;
   const meshes=root.getChildMeshes(false).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0);
   meshes.forEach(mesh=>{mesh.receiveShadows=true;});
@@ -1516,8 +1527,8 @@ async function startGame(){
   material.diffuseTexture=texture;material.diffuseColor=new B.Color3(1,1,1);
   texture.uScale=repeat;texture.vScale=repeat;material.specularColor=new B.Color3(.045,.045,.045);
  }
- const texGrass=makePatternTexture('Detailed grass albedo','#617a48',['#a4b96e','#49683c','#c1c18a','#3a5a40'],'grass',2048);
- const texSand=makePatternTexture('Pebbled sand albedo','#ad9870',['#dfc99b','#786c55','#e8d9b8'],'sand',1024);
+ const texGrass=makePatternTexture('Detailed grass albedo','#617a48',['#a4b96e','#49683c','#c1c18a','#3a5a40'],'grass',isPerformanceMode?1024:2048);
+ const texSand=makePatternTexture('Pebbled sand albedo','#ad9870',['#dfc99b','#786c55','#e8d9b8'],'sand',isPerformanceMode?512:1024);
  const texBark=makePatternTexture('Rough tree bark','#59402d',['#8b6540','#382a22','#a27b50'],'bark');
  const texWood=makePatternTexture('Weathered timber','#79563a',['#b18a5c','#4e3729','#d0a06b'],'grain');
  const texLeaf=makePatternTexture('Leaf canopy detail','#3c6540',['#769257','#294b35','#a0a66a'],'leaf');
@@ -1712,10 +1723,10 @@ async function startGame(){
  const shadowMaterial=new B.StandardMaterial('SoftShadowMaterial',scene);shadowMaterial.diffuseTexture=shadowTexture;shadowMaterial.opacityTexture=shadowTexture;shadowMaterial.useAlphaFromDiffuseTexture=true;shadowMaterial.disableLighting=true;shadowMaterial.backFaceCulling=false;shadowMaterial.specularColor=new B.Color3(0,0,0);shadowMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;shadowMaterial.disableDepthWrite=true;
  function attachContactShadow(root,name,radius=.9){const disc=B.MeshBuilder.CreateDisc(name,{radius,tessellation:28},scene);disc.parent=root;disc.rotation.x=-Math.PI/2;disc.position=v(0,.025,0);disc.material=shadowMaterial;disc.isPickable=false;return disc;}
  const land=[{x:0,z:0,r:60,name:'Isla del Cuervo'},{x:135,z:14,r:31,name:'Costa de Skall'},{x:-132,z:45,r:33,name:'Isla de los Pinos'},{x:28,z:143,r:33,name:'Bahía de Hrafn'},{x:146,z:-132,r:25,name:'Islote del Hielo'},{x:-145,z:-126,r:27,name:'Isla de las Cenizas'},{x:286,z:154,r:33,name:'Cabo de Bruma'},{x:-286,z:232,r:31,name:'Isla del Cuerno'},{x:292,z:-264,r:36,name:'Costa de las Tormentas'},{x:470,z:100,r:31,name:'Skjoldheim'},{x:-470,z:-310,r:34,name:'Isla de los Juramentos'},{x:60,z:465,r:34,name:'Isla del Altar'},{x:-45,z:-465,r:32,name:'Cabo del Vigía'}];
- const waterSubdivisions=isPerformanceMode?(isTouchDevice?136:184):(isTouchDevice?176:224);
+ const waterSubdivisions=isPerformanceMode?(isTouchDevice?64:112):(isTouchDevice?176:224);
  const ground=B.MeshBuilder.CreateGround('ocean',{width:1050,height:1050,subdivisions:waterSubdivisions,updatable:true},scene);ground.position.y=0;ground.material=M.water;ground.isPickable=false;ground.receiveShadows=false;
  const waterBase=ground.getVerticesData(B.VertexBuffer.PositionKind).slice(),waterPositions=waterBase.slice(),waterIndices=ground.getIndices(),waterNormals=new Float32Array(waterBase.length);
- const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isTouchDevice?190:240):(isTouchDevice?250:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS;
+ const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isTouchDevice?125:180):(isTouchDevice?250:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS;
  const waterPositionBuffer=ground.getVertexBuffer(B.VertexBuffer.PositionKind),waterNormalBuffer=ground.getVertexBuffer(B.VertexBuffer.NormalKind);
  for(let i=0;i<waterNormals.length;i+=3)waterNormals[i+1]=1;
  let waterActiveVertexOffsets=new Uint32Array(0),waterActiveMinOffset=0,waterActiveMaxOffset=-1,waterFocusX=NaN,waterFocusZ=NaN,waterLastUpdatedVertices=0,waterLastUploadedVertices=0,waterLastUploadBytes=0,waterLastUpdateMs=0,waterLastNormalMs=0;
@@ -1740,8 +1751,8 @@ async function startGame(){
   }
  }
  let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0;
- const waterVertexStep=isPerformanceMode?(isTouchDevice?1/20:1/30):(isTouchDevice?1/30:1/40);
- const waterNormalStep=isPerformanceMode?(isTouchDevice?1/5:1/8):(isTouchDevice?1/8:1/12);
+ const waterVertexStep=isPerformanceMode?(isTouchDevice?1/12:1/20):(isTouchDevice?1/30:1/40);
+ const waterNormalStep=isPerformanceMode?(isTouchDevice?1/3:1/6):(isTouchDevice?1/8:1/12);
  function waterHeight(x,z,t=oceanTime){
   // Layered directional swells: broad North Sea swell plus shorter cross-waves and capillary ripples.
   const longSwell=Math.sin(x*.009+z*.012+t*.48)*.105;
@@ -3217,8 +3228,12 @@ async function startGame(){
  async function loadEnemyHumanCharacters(){
   if(enemyHumanLoadPromise)return enemyHumanLoadPromise;
   enemyHumanLoadPromise=(async()=>{
-   const warriorPartsToLoad=isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuardPatrol0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts;
-   const civilianPartsToLoad=isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts;
+   // En Rendimiento se conservan todos los NPC y su IA con el modelo procedural ligero;
+   // solo los tres guardianes del campamento y cuatro aldeanos cercanos reciben GLB de alta carga.
+   const warriorPartsToLoad=isPerformanceMode
+    ?humanEnemyParts.filter(p=>/^VillageGuardPatrol0_/.test(String(p.name||''))).slice(0,3)
+    :(isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuardPatrol0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts);
+   const civilianPartsToLoad=isPerformanceMode?humanCivilianParts.slice(0,4):(isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts);
    const warriorTotal=warriorPartsToLoad.length,civilianTotal=civilianPartsToLoad.length,homeGuardTotal=warriorPartsToLoad.filter(p=>/^VillageGuardPatrol0_/.test(String(p.name||''))).length,total=warriorTotal+civilianTotal;
    if(!total){setAssetLoadingProgress('enemy',100,'No hay personajes secundarios pendientes.');return 0;}
    setAssetLoadingProgress('enemy',2,'Preparando guardianes, aldeanos y guerreros…');
@@ -4878,7 +4893,7 @@ async function startGame(){
   gm.diffuseColor=new B.Color3(1,1,1);gm.specularColor=new B.Color3(.018,.022,.012);gm.specularPower=7;gm.backFaceCulling=false;gm.useVertexColors=true;
   const chunkSize=28,grassBatches=new Map();let count=0;
   for(let islandIndex=0;islandIndex<land.length;islandIndex++){
-   const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520),want=isPerformanceMode?Math.round(baseWant*.74):baseWant;let placed=0,tries=0;
+   const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520),want=isPerformanceMode?Math.round(baseWant*(isTouchDevice?.34:.52)):baseWant;let placed=0,tries=0;
    while(placed<want&&tries<want*8){
     tries++;
     if(tries%480===0){setLoadingProgress(42+((islandIndex+placed/want)/land.length)*5,'Distribuyendo vegetación 3D…');await yieldStartupFrame();}
@@ -6981,7 +6996,8 @@ function updateHUD(){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
     showStartScreen();startScreenShown=true;
     if(deferNpcHumanModelsOnTouch&&!enemyHumanModelsStarted){
-     setTimeout(()=>{if(!enemyHumanModelsStarted)startNpcHumanModels();},1100);
+     const npcWarmupDelay=activeGraphicsProfile==='performance'?18000:1100;
+     setTimeout(()=>{if(!enemyHumanModelsStarted&&!document.hidden)startNpcHumanModels();},npcWarmupDelay);
     }
    }
   }catch(err){reportFrameError('renderizado 3D',err);}
