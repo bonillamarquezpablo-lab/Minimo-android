@@ -15,7 +15,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.113 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.114 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -327,7 +327,15 @@ def main() -> None:
         if item not in html:
             raise SystemExit(f"El HTML no apunta al recurso local requerido: {item}")
 
+
     (DIST / "index.html").write_text(html, encoding="utf-8")
+
+    # Dedicated invite route: the pathname survives PWA launch flows that may
+    # discard query parameters from a shared URL.
+    guest_dir = DIST / "guest"
+    guest_dir.mkdir(parents=True, exist_ok=True)
+    guest_html = html.replace("<head>", '<head>\n<base href="../">', 1)
+    (guest_dir / "index.html").write_text(guest_html, encoding="utf-8")
     for name in ("sw.js", "manifest.webmanifest", "icon.svg", "ASSET-LICENSES.md"):
         source = ROOT / name
         if not source.exists():
@@ -384,7 +392,7 @@ def main() -> None:
 
     manifest = {
         "game": "EL SIN NOMBRE",
-        "version": "0.6.113",
+        "version": "0.6.114",
         "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
         "assets": results,
     }
