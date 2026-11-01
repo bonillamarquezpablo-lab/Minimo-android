@@ -1,7 +1,7 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.116";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.117";
 const ASSET_CACHE = "el-sin-nombre-assets-build";
-const SHELL_FILES = ["./index.html", "./guest/index.html", "./manifest.webmanifest", "./icon.svg"];
+const SHELL_FILES = ["./index.html", "./guest/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", event => {
   event.waitUntil(
@@ -67,7 +67,7 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  if (url.pathname.endsWith("/manifest.webmanifest") || url.pathname.endsWith("/icon.svg")) {
+  if (url.pathname.endsWith("/manifest.webmanifest") || url.pathname.endsWith("/guest-manifest.webmanifest") || url.pathname.endsWith("/icon.svg")) {
     event.respondWith(cacheFirst(request, SHELL_CACHE).catch(() => Response.error()));
   }
 });
