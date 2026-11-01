@@ -2,34 +2,36 @@
 
 Videojuego web 3D construido con Babylon.js.
 
-## Jugar
+## Abrir y compartir el juego
 
-**Enlace HTTPS para compartir:**  
-https://cdn.jsdelivr.net/gh/bonillamarquezpablo-lab/Minimo-android@gh-pages/index.html
+**Enlace web:**  
+https://raw.githack.com/bonillamarquezpablo-lab/Minimo-android/gh-pages/index.html
 
-Comparte ese enlace con tus amigos. No tienen que descargar el HTML, instalar una app ni elegir modelos: abren la dirección en Safari, Chrome o un navegador integrado compatible con WebGL.
+El enlace sirve el HTML con el tipo de contenido web correcto. En la primera visita, raw.githack puede mostrar una pantalla breve de confirmación de seguridad antes de abrir el juego; después de confirmarlo, el navegador ejecuta la página.
 
-## Paquete web autónomo
+## Paquete web
 
-El repositorio conserva el HTML del juego y un proceso de construcción. En cada publicación, GitHub Actions ejecuta `scripts/build_site.py` y descarga, comprueba y reúne:
+El flujo de GitHub Actions ejecuta `scripts/build_site.py` y reúne en un paquete:
 
 - Babylon.js 7.54.3 y el importador glTF.
-- Vikingos, caballeros, aldeanos y gaviotas en GLB.
-- Entorno gráfico.
-- Sonidos Foley CC0.
+- Modelo del protagonista, caballeros, aldeanos y gaviota.
+- Entorno gráfico y sonidos CC0.
+- Manifiesto con URL de origen, tamaño y SHA-256 de cada recurso.
 
-El paquete se publica en la rama `gh-pages`; el enlace HTTPS se sirve desde jsDelivr. Los recursos se sirven desde el mismo origen CDN, por lo que el juego no necesita leer modelos de Grab3D ni audio de repositorios externos durante la partida.
+Los archivos se publican en la rama `gh-pages`. Los recursos del juego se cargan desde la misma ruta HTTPS, no desde Grab3D ni repositorios de audio durante la partida.
 
-## Primera carga y caché
+## Caché
 
-La primera apertura necesita conexión porque el navegador descarga el paquete de recursos. `sw.js` guarda la aplicación y los recursos en Cache Storage para acelerar las siguientes aperturas y permitir recuperación sin conexión cuando el navegador conserve la caché.
+`sw.js` guarda el HTML, el manifiesto y los recursos en Cache Storage. La primera apertura necesita conexión y descarga el paquete completo; las siguientes pueden reutilizar la caché si el navegador no la ha eliminado.
 
-En iPhone, comparte el enlace HTTPS. Safari es la opción más compatible; el navegador interno de Instagram también puede abrirlo, aunque el soporte de WebGL depende de las restricciones que aplique la propia aplicación anfitriona.
+## Navegadores
 
-## Publicación y actualización
+Safari y Chrome son las opciones recomendadas. Instagram puede abrir el enlace dentro de su navegador integrado, pero el soporte WebGL depende de las restricciones de la aplicación anfitriona. Si no permite WebGL, usa "Abrir en Safari" o "Abrir en Chrome".
 
-Cada cambio en `main` ejecuta el flujo `.github/workflows/deploy-pages.yml`. El proceso descarga y valida los modelos y sonidos, construye `dist/` y reemplaza la rama `gh-pages` con el paquete completo. El enlace para compartir no cambia.
+## Publicación
+
+Cada cambio en `main` inicia el flujo `.github/workflows/deploy-pages.yml`: valida y descarga todos los recursos, construye `dist/` y actualiza la rama `gh-pages`. El enlace web permanece estable.
 
 ## Licencias
 
-Consulta [ASSET-LICENSES.md](ASSET-LICENSES.md). El archivo `assets/asset-manifest.json` se genera en cada build con origen, tamaño y SHA-256 de cada recurso.
+Consulta [ASSET-LICENSES.md](ASSET-LICENSES.md). El manifiesto generado está en `assets/asset-manifest.json`.
