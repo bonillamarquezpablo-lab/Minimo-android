@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.74">
-<meta name="el-sin-nombre-repair" content="0.6.74 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
+<meta name="el-sin-nombre-build" content="0.6.75">
+<meta name="el-sin-nombre-repair" content="0.6.75 safe boot recovery, bounded character loading, robust retry, planted idle stance, detailed pitched cabin roof">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.74</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.75</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -472,9 +472,9 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 }
 
 
-/* 0.6.74 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
+/* 0.6.75 — diagnóstico NPC dentro del panel, nunca encima del personaje. */
 #modelStatus{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;max-width:100%;max-height:25vh;overflow:auto;pointer-events:auto}
-/* 0.6.74 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
+/* 0.6.75 — CINEMATIC STARTUP: el mundo 3D permanece visible durante toda la preparación. */
 #loading{overflow:hidden;align-items:stretch;justify-content:stretch;padding:0;background:linear-gradient(180deg,rgba(3,12,16,.24) 0%,rgba(3,12,16,.10) 38%,rgba(3,10,12,.88) 100%);backdrop-filter:none;text-align:left}
 #loading:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 38%,transparent 0 22%,rgba(3,9,12,.18) 58%,rgba(2,7,9,.78) 100%),linear-gradient(90deg,rgba(3,11,14,.42),transparent 35%,transparent 65%,rgba(3,11,14,.42));}
 #loading:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:linear-gradient(0deg,rgba(3,9,11,.94),rgba(3,9,11,0));}
@@ -519,7 +519,7 @@ button,a{ -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
 @media(prefers-reduced-motion:reduce){#loading .loadPulse{animation:none}}
 
 
-/* 0.6.74 — presentación cinematográfica limpia y estados de arranque inequívocos. */
+/* 0.6.75 — presentación cinematográfica limpia y estados de arranque inequívocos. */
 body.booting #hud, body.boot-failed #hud {
  visibility:hidden!important; opacity:0!important; pointer-events:none!important;
 }
@@ -579,7 +579,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 }
 
 </style>
-<!-- EL SIN NOMBRE 0.6.74: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.75: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -595,7 +595,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 </script>
 <meta name="el-sin-nombre-repair-0669" content="forward-facing resting arms and weapon grip, remove rigid civilian robe/cape shell, vivid terrain palette and stronger natural lighting">
 <style>
-/* 0.6.74: civilian GLBs install automatically; no manual installer is shown. */
+/* 0.6.75: civilian GLBs install automatically; no manual installer is shown. */
 #introCivilianInstallCard,#villagerModelBtn{display:none!important}
 </style>
 </head>
@@ -1012,24 +1012,27 @@ async function startGame(){
  // Perfil ALTO: se usa más resolución real en móviles potentes y no se degrada
  // automáticamente la imagen cuando baja el FPS. La fluidez se gana optimizando trabajo.
  const deviceDpr=Math.max(1,Number(window.devicePixelRatio)||1);
- const qualityDpr=Math.min(deviceDpr,isTouchDevice?2.25:2.0);
+ const qualityDpr=Math.min(deviceDpr,isTouchDevice?2.60:2.0);
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
- console.info('EL SIN NOMBRE 0.6.74 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
- let fpsSample=0,fpsBadTime=0,shadowUpgradeTime=0;
+ console.info('EL SIN NOMBRE 0.6.75 render:',{devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize});
+ let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
+ const minimumQualityDpr=Math.min(qualityDpr,2.05),targetFrameRate=120;
  function changeShadowQuality(nextSize){
-  // Conservado como interfaz interna; no baja la resolución de sombras automáticamente.
   if(!shadowGen||nextSize===currentShadowSize)return;
   try{const map=shadowGen.getShadowMap&&shadowGen.getShadowMap();if(map&&typeof map.resize==='function'){map.resize(nextSize);currentShadowSize=nextSize;}}
-  catch(err){console.warn('No se pudo cambiar el mapa de sombras:',err);} }
+  catch(err){console.warn('No se pudo cambiar el mapa de sombras:',err);}
+ }
  function adaptRenderQuality(dt){
-  // Telemetría y diagnóstico: no reduce resolución, sombras, texturas ni distancia de visión.
-  fpsSample+=dt;if(fpsSample<5)return;fpsSample=0;
+  fpsSample+=dt;if(fpsSample<2.5)return;fpsSample=0;
   const fps=engine.getFps();
-  if(fps<85){
-   console.info('Diagnóstico de rendimiento (calidad intacta):',{fps:Math.round(fps),totalMeshes:scene.meshes.length,renderDpr:qualityDpr,shadowMap:currentShadowSize,vegetationMerge:staticMergeStats});
-  }
+  // Si RAF parece limitado a 60Hz, bajar píxeles no desbloquea la frecuencia de pantalla.
+  if(fps>=58&&fps<=62){lowFpsWindows=0;highFpsWindows=0;return;}
+  if(fps<108){lowFpsWindows++;highFpsWindows=0;}else if(fps>117){highFpsWindows++;lowFpsWindows=0;}else{lowFpsWindows=0;highFpsWindows=0;}
+  if(lowFpsWindows>=2&&qualityDprCurrent>minimumQualityDpr){qualityDprCurrent=Math.max(minimumQualityDpr,qualityDprCurrent-.10);engine.setHardwareScalingLevel(1/qualityDprCurrent);lowFpsWindows=0;}
+  else if(highFpsWindows>=2&&qualityDprCurrent<qualityDpr){qualityDprCurrent=Math.min(qualityDpr,qualityDprCurrent+.05);engine.setHardwareScalingLevel(1/qualityDprCurrent);highFpsWindows=0;}
+  if(fps<108)console.info('Diagnóstico de rendimiento',{fps:Math.round(fps),targetFrameRate,totalMeshes:scene.meshes.length,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,vegetationMerge:staticMergeStats});
  }
  const scene=new B.Scene(engine);
  scene.skipPointerMovePicking=true;scene.constantlyUpdateMeshUnderPointer=false;
@@ -2347,7 +2350,8 @@ async function startGame(){
   parts.legs=[rig.leftUpperLeg||poseSocket('EnemyLeftLegPose',[-.12/scale,.48/scale,0]),rig.rightUpperLeg||poseSocket('EnemyRightLegPose',[.12/scale,.48/scale,0])];
   parts.knees=[rig.leftLowerLeg||poseSocket('EnemyLeftKneePose',[-.12/scale,.25/scale,0]),rig.rightLowerLeg||poseSocket('EnemyRightKneePose',[.12/scale,.25/scale,0])];
   parts.cloak=null;parts.weapon=sword;
-  parts.realHuman={roots,meshes,groups,walk,run,idle,attack,current:null,rig,rest,sword,modelRoot,visualBody,isRaiderCrew,weaponSocketNode,role,manualGaitReady:!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg),modelForwardOffset:NPC_HUMAN_FORWARD_OFFSET,shadowCasterMeshes,shadowCasterActive:true,phaseOffset:index*1.37};
+  parts.realHuman={roots,meshes,groups,walk,run,idle,attack,current:null,rig,rest,sword,modelRoot,visualBody,isRaiderCrew,weaponSocketNode,role,footIKLegs:createFootIKLegs(rig),manualGaitReady:!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg),modelForwardOffset:NPC_HUMAN_FORWARD_OFFSET,shadowCasterMeshes,shadowCasterActive:true,phaseOffset:index*1.37};
+  parts.root.position.y=terrainSurfaceAt(parts.root.position.x,parts.root.position.z)+.012;
   inst.__norseAttachNodes=null;
   if(shadowGen){
    const fallbackRoot=parts.root;
@@ -2356,6 +2360,74 @@ async function startGame(){
   }
   console.info('Human NPC instantiated',{index,name:parts.name,role,height:bounds.height,walk:walk&&walk.name,run:run&&run.name,proceduralWalkFallback:!walk&&!run,idle:idle&&idle.name,hand:!!rig.hand,weaponSocket:weaponAttachMode,bones:restNodes.length,meshes:meshes.length,weatheredMaterials:weatheredMaterialCount,retintedMaterials:retintedMaterialCount,look:isCivilian?'civilian profession '+(index%4):'warrior faction '+(parts.variant||0)});
  }
+ const MM_POSES_PER_BANK=321,MM_TAU=Math.PI*2,MM_POSE_WIDTH=23;
+ const MM_BANK_DEFS=[
+  {mode:'walk',speed:1.55,turn:-1.35,hip:.205,knee:.52,lift:.068,stance:.62},
+  {mode:'walk',speed:1.55,turn:0,hip:.205,knee:.52,lift:.068,stance:.62},
+  {mode:'walk',speed:1.55,turn:1.35,hip:.205,knee:.52,lift:.068,stance:.62},
+  {mode:'run',speed:4.10,turn:-1.55,hip:.31,knee:.78,lift:.135,stance:.48},
+  {mode:'run',speed:4.10,turn:0,hip:.31,knee:.78,lift:.135,stance:.48},
+  {mode:'run',speed:4.10,turn:1.55,hip:.31,knee:.78,lift:.135,stance:.48}
+ ];
+ const mmClamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+ const mmWrapAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
+ function mmLegPose(phase,bank){
+  const p=((phase%MM_TAU)+MM_TAU)%MM_TAU/MM_TAU,stance=bank.stance;
+  if(p<stance){const q=p/stance,hip=bank.hip*(.22-.44*q),knee=.025+.018*Math.sin(q*Math.PI);return [hip,knee,-hip*.72-knee*.18,0];}
+  const q=(p-stance)/(1-stance),smooth=q*q*(3-2*q),swing=Math.pow(Math.max(0,Math.sin(q*Math.PI)),1.25);
+  const hip=bank.hip*(-.22+.44*smooth),knee=.035+bank.knee*swing;
+  return [hip,knee,-hip*.70-knee*.24,bank.lift*swing];
+ }
+ function mmMakePose(phase,bank){
+  const left=mmLegPose(phase,bank),right=mmLegPose(phase+Math.PI,bank),turn=bank.turn,pose=new Float32Array(MM_POSE_WIDTH),lift=Math.max(left[3],right[3]);
+  pose[0]=.002+lift*.16+Math.abs(Math.sin(phase*2))*.0025;pose[1]=bank.mode==='run'?.045:.018;pose[2]=-turn*.018;pose[3]=turn*.035;
+  pose[4]=left[0];pose[5]=right[0];pose[6]=left[1];pose[7]=right[1];pose[8]=left[2];pose[9]=right[2];
+  pose[10]=-right[0]*.58-turn*.010;pose[11]=-left[0]*.58+turn*.010;pose[12]=.09+right[1]*.17;pose[13]=.09+left[1]*.17;
+  pose[14]=-pose[10]*.10;pose[15]=-pose[11]*.10;pose[16]=pose[1]+lift*.09;pose[17]=turn*.025+(left[0]-right[0])*.018;pose[18]=turn*.045;
+  pose[19]=Math.sin(phase*2)*.008;pose[20]=-turn*.024;pose[21]=left[3];pose[22]=right[3];return pose;
+ }
+ function mmPredictTrajectory(speed,turn){
+  const points=new Float32Array(6),horizons=[.18,.36,.54];
+  for(let i=0;i<horizons.length;i++){const t=horizons[i];if(Math.abs(turn)<.025){points[i*2]=0;points[i*2+1]=speed*t;}else{points[i*2]=speed/turn*(1-Math.cos(turn*t));points[i*2+1]=speed/turn*Math.sin(turn*t);}}
+  return points;
+ }
+ function buildNorseMotionDatabase(){
+  return MM_BANK_DEFS.map((bank,index)=>{const samples=[];for(let i=0;i<MM_POSES_PER_BANK;i++){const phase=i/(MM_POSES_PER_BANK-1)*MM_TAU;samples.push({phase,pose:mmMakePose(phase,bank)});}return {index,mode:bank.mode,speed:bank.speed,turn:bank.turn,trajectory:mmPredictTrajectory(bank.speed,bank.turn),samples};});
+ }
+ const NORSE_MOTION_DATABASE=buildNorseMotionDatabase();
+ const NORSE_MOTION_DATABASE_SIZE=NORSE_MOTION_DATABASE.reduce((sum,bank)=>sum+bank.samples.length,0);
+ function getMotionMatchedPose(owner,root,phase,speed,sprinting,walking){
+  if(!walking)return null;
+  const now=performance.now()*.001,actor=owner||root;let state=actor.__norseMotionMatch;
+  if(!state)state=actor.__norseMotionMatch={bankIndex:sprinting?4:1,phaseOffset:0,lastYaw:Number(root&&root.rotation&&root.rotation.y)||0,lastYawTime:now,lastMatchTime:-1,pose:new Float32Array(MM_POSE_WIDTH),initialised:false};
+  const yaw=Number(root&&root.rotation&&root.rotation.y)||0,dt=mmClamp(now-state.lastYawTime,.008,.18),turnRate=mmClamp(mmWrapAngle(yaw-state.lastYaw)/dt,-1.8,1.8);
+  state.lastYaw=yaw;state.lastYawTime=now;
+  const mode=sprinting?'run':'walk',actualSpeed=mmClamp(Number(speed)||(sprinting?4.1:1.55),sprinting?2.2:.55,sprinting?6.0:2.8);
+  if(state.lastMatchTime<0||now-state.lastMatchTime>=.085){
+   const target=mmPredictTrajectory(actualSpeed,turnRate);let bestCost=Infinity,bestBank=state.bankIndex,bestPhase=phase;
+   const continuityKeys=[4,5,6,7,10,11,16,17];
+   // Motion matching: score 963 candidates for the active gait against path prediction and pose continuity.
+   for(const bank of NORSE_MOTION_DATABASE){
+    if(bank.mode!==mode)continue;
+    const scale=actualSpeed/bank.speed,turnCost=(bank.turn-turnRate)*(bank.turn-turnRate);
+    for(let i=0;i<bank.samples.length;i++){
+     const sample=bank.samples[i],phaseDelta=mmWrapAngle(sample.phase-(phase+state.phaseOffset));let pathCost=0,poseCost=0;
+     for(let k=0;k<6;k++){const d=bank.trajectory[k]*scale-target[k];pathCost+=d*d;}
+     if(state.initialised)for(let k=0;k<continuityKeys.length;k++){const key=continuityKeys[k],d=sample.pose[key]-state.pose[key];poseCost+=d*d;}
+     const cost=pathCost*1.35+turnCost*.20+phaseDelta*phaseDelta*.075+poseCost*.055+(bank.index===state.bankIndex?0:.025);
+     if(cost<bestCost){bestCost=cost;bestBank=bank.index;bestPhase=sample.phase;}
+    }
+   }
+   state.bankIndex=bestBank;const wantedOffset=mmWrapAngle(bestPhase-phase);
+   state.phaseOffset=mmWrapAngle(state.phaseOffset+mmWrapAngle(wantedOffset-state.phaseOffset)*.55);state.lastMatchTime=now;
+  }
+  const bank=NORSE_MOTION_DATABASE[state.bankIndex]||NORSE_MOTION_DATABASE[sprinting?4:1];
+  const position=(((phase+state.phaseOffset)%MM_TAU)+MM_TAU)%MM_TAU/MM_TAU*(MM_POSES_PER_BANK-1);
+  const lo=Math.floor(position),hi=Math.min(MM_POSES_PER_BANK-1,lo+1),blend=position-lo,a=bank.samples[lo].pose,b=bank.samples[hi].pose,smooth=1-Math.exp(-Math.min(.06,dt)*20);
+  for(let i=0;i<MM_POSE_WIDTH;i++){const target=a[i]+(b[i]-a[i])*blend;if(!state.initialised)state.pose[i]=target;else state.pose[i]+=(target-state.pose[i])*smooth;}
+  state.initialised=true;return state.pose;
+ }
+ function actorGroundOffset(parts){return parts&&parts.realHuman?.role ? .012 : .08;}
  function setEnemyRigDelta(parts,node,dx=0,dy=0,dz=0){
   if(!parts||!parts.realHuman||!node)return;
   const base=parts.realHuman.rest.get(node);if(!base)return;
@@ -2706,21 +2778,17 @@ async function startGame(){
   else node.rotation=base.rotation.add(v(dx,dy,dz));
  }
  let realFootIKLegs=[],realFootIKEnabled=false;
- function configureRealFootIK(rig){
-  realFootIKLegs=[];realFootIKEnabled=false;
+ function createFootIKLegs(rig){
+  const legs=[];
   for(const side of ['left','right']){
    const upper=rig&&rig[side+'UpperLeg'],lower=rig&&rig[side+'LowerLeg'],foot=rig&&rig[side+'Foot'];
    if(!upper||!lower||!foot||typeof upper.rotate!=='function'||typeof lower.rotate!=='function'||typeof foot.getAbsolutePosition!=='function')continue;
-   try{
-    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);foot.computeWorldMatrix(true);
-    const hip=upper.getAbsolutePosition(),knee=lower.getAbsolutePosition(),ankle=foot.getAbsolutePosition();
-    const upperLength=B.Vector3.Distance(hip,knee),lowerLength=B.Vector3.Distance(knee,ankle);
-    if(upperLength>.12&&upperLength<1.3&&lowerLength>.12&&lowerLength<1.3)realFootIKLegs.push({side,upper,lower,foot,upperLength,lowerLength,filteredError:0});
-   }catch(err){console.info('Foot IK omitido para '+side+':',err);}
+   try{upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);foot.computeWorldMatrix(true);const hip=upper.getAbsolutePosition(),knee=lower.getAbsolutePosition(),ankle=foot.getAbsolutePosition(),upperLength=B.Vector3.Distance(hip,knee),lowerLength=B.Vector3.Distance(knee,ankle);if(upperLength>.12&&upperLength<1.3&&lowerLength>.12&&lowerLength<1.3)legs.push({side,upper,lower,foot,upperLength,lowerLength,filteredError:0});}
+   catch(err){console.info('Foot IK omitido para '+side+':',err);}
   }
-  realFootIKEnabled=realFootIKLegs.length===2;
-  console.info('Foot IK jugador:',{enabled:realFootIKEnabled,legs:realFootIKLegs.map(l=>l.side)});
+  return legs;
  }
+ function configureRealFootIK(rig){realFootIKLegs=createFootIKLegs(rig);realFootIKEnabled=realFootIKLegs.length===2;console.info('Foot IK jugador:',{enabled:realFootIKEnabled,legs:realFootIKLegs.map(l=>l.side)});}
  function rotateBoneWorldToward(node,from,to){
   const a=from.clone(),b=to.clone();if(a.lengthSquared()<1e-8||b.lengthSquared()<1e-8)return;
   a.normalize();b.normalize();const dot=Math.max(-1,Math.min(1,B.Vector3.Dot(a,b)));if(dot>.99995)return;
@@ -3078,8 +3146,8 @@ async function startGame(){
   if(!realPlayerReady)return;
   let group=null,loop=true,speed=1.0;
   if(mode==='attack'||mode==='chop'||mode==='mine'){group=null;}
-  else if(mode==='run'){group=realPlayerAnimations.run||realPlayerAnimations.walk;speed=1.35;}
-  else if(mode==='walk'){group=realPlayerAnimations.walk;speed=.98;}
+  else if(mode==='run'){group=null;}
+  else if(mode==='walk'){group=null;}
   else if(mode==='idle'){group=null;} // La pose de reposo propia se calcula por rig; el clip importado abría demasiado los brazos.
   if(mode===realPlayerMode&&group===realPlayerCurrentGroup){if(group)group.speedRatio=speed;return;}
   Object.values(realPlayerAnimations).filter(Boolean).forEach(g=>{if(g.isPlaying)g.stop();});
@@ -3087,43 +3155,27 @@ async function startGame(){
  }
  function updateRealRigGait(phase,walking,sprinting){
   if(!realPlayerReady)return;
-  const n=realRigNodes,m=realRigManualGaitNodes;
-  const l=Math.sin(phase),r=Math.sin(phase+Math.PI),lk=Math.pow(Math.max(0,Math.cos(phase)),1.2),rk=Math.pow(Math.max(0,Math.cos(phase+Math.PI)),1.2);
-   const hipAmp=sprinting?.34:.27,kneeAmp=sprinting?.48:.38;
-  const apply=(key,x,y=0,z=0,force=false)=>{const node=n[key];if(node&&(force||m[key]!==false))setRigDelta(node,x,y,z);};
+  const n=realRigNodes,apply=(key,x,y=0,z=0)=>{const node=n[key];if(node)setRigDelta(node,x,y,z);};
   if(walking){
-   const leftStance=Math.max(0,-Math.sin(phase)),rightStance=Math.max(0,-Math.sin(phase+Math.PI));
-   apply('hips',-.012+Math.abs(Math.sin(phase*2))*(sprinting?.014:.008),0,(l-r)*.016);
-   apply('leftUpperLeg',l*hipAmp,0,-.012-l*.015);apply('rightUpperLeg',r*hipAmp,0,.012-r*.015);
-   apply('leftLowerLeg',lk*kneeAmp);apply('rightLowerLeg',rk*kneeAmp);
-   apply('leftFoot',-l*.14-lk*.25+leftStance*.035);apply('rightFoot',-r*.14-rk*.25+rightStance*.035);
-   apply('leftUpperArm',-l*(sprinting?.36:.28),0,.028);apply('upperArm',-r*(sprinting?.36:.28),0,-.028);
-   apply('leftForearm',.13+lk*.16);apply('forearm',.13+rk*.16);
-   apply('spine',sprinting?.105:.06,0,(l-r)*.022);
-   apply('rightShoulder',-r*.10,0,-.025);apply('leftShoulder',-l*.10,0,.025);
-   if(n.head&&m.head!==false)setRigDelta(n.head,-Math.sin(phase*2)*.012,(l-r)*.018,0);
+   const speed=Number(playerActualSpeed)||(sprinting?4.1:1.55),pose=getMotionMatchedPose(player,player.root,phase,speed,sprinting,true);
+   if(!pose)return;
+   apply('hips',pose[0],pose[3],pose[2]);apply('spine',pose[16],pose[18],pose[17]);
+   apply('leftUpperLeg',pose[4]);apply('rightUpperLeg',pose[5]);apply('leftLowerLeg',pose[6]);apply('rightLowerLeg',pose[7]);apply('leftFoot',pose[8]);apply('rightFoot',pose[9]);
+   apply('leftUpperArm',pose[10],0,pose[14]);apply('upperArm',pose[11],0,pose[15]);apply('leftForearm',pose[12]);apply('forearm',pose[13]);
+   apply('leftShoulder',0,0,pose[14]);apply('rightShoulder',0,0,pose[15]);apply('head',pose[19],pose[20],0);
   }else{
-   // Reposo: parar los clips devuelve el rig a su pose base, pero el filtro de
-   // locomoción puede marcar esos mismos huesos como "ya animados". En reposo
-   // forzamos una pose relajada propia para todos los huesos que reconocimos.
    const resetNodes=new Set(Object.values(n).filter(Boolean));
    resetNodes.forEach(node=>{const base=realBoneRest.get(node);if(!base)return;if(base.quaternion)node.rotationQuaternion=base.quaternion.clone();else if(node.rotation)node.rotation.copyFrom(base.rotation);});
    const breath=Math.sin(elapsed*1.25);
-   // Brazos caídos junto al torso, codos ligeramente flexionados y manos orientadas
-   // hacia el cuerpo. La pose parte siempre de la transformación de reposo del GLB.
-   // En vez de adivinar el eje local del rig (que cambia entre exportadores),
-   // orienta cada brazo hacia abajo usando las posiciones reales de hombro y codo.
-   // Asentar hombros antes de resolver el brazo: el importador puede traer una T-pose.
-   apply('leftShoulder',.002*Math.sin(elapsed*.83),0,.010,true);
-   apply('rightShoulder',-.002*Math.sin(elapsed*.83),0,-.010,true);
+   apply('leftShoulder',.002*Math.sin(elapsed*.83),0,.010);apply('rightShoulder',-.002*Math.sin(elapsed*.83),0,-.010);
    relaxHumanoidLegs(realPlayerModelPivot||player.root,n);
    relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false);
    relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true);
-   apply('hips',breath*.006,0,.003*Math.sin(elapsed*.7),true);
-   apply('spine',-.014+breath*.014,0,.006*Math.sin(elapsed*.7),true);
-   apply('head',.008*Math.sin(elapsed*.45),.014*Math.sin(elapsed*.32),0,true);
+   apply('hips',breath*.006,0,.003*Math.sin(elapsed*.7));apply('spine',-.014+breath*.014,0,.006*Math.sin(elapsed*.7));
+   apply('head',.008*Math.sin(elapsed*.45),.014*Math.sin(elapsed*.32),0);
   }
  }
+
 
  function createRealWeapon(type='axe'){
   if(!realPlayerReady)return;
@@ -3312,7 +3364,7 @@ async function startGame(){
   renderPipeline=new B.DefaultRenderingPipeline('NordicSharpAA',true,scene,[camera]);
   renderPipeline.fxaaEnabled=true;renderPipeline.bloomEnabled=false;renderPipeline.grainEnabled=false;renderPipeline.chromaticAberrationEnabled=false;
   const maxSamples=Number(engine.getCaps&&engine.getCaps().maxMSAASamples)||1;
-  renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?2:4,maxSamples));
+  renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?1:4,maxSamples));
  }catch(err){console.warn('Antialiasing avanzado no disponible; se mantiene el renderizado base.',err);}}
  // Cielo envolvente con gradiente atmosférico y nubes suaves; sigue a la cámara para evitar el horizonte vacío.
  const skyTexture=new B.DynamicTexture('NordicCloudSky',{width:1536,height:768},scene,false),skyCtx=skyTexture.getContext();
@@ -4055,7 +4107,7 @@ async function startGame(){
  if(introStartButton)introStartButton.addEventListener('click',beginSaga);
  window.NorseAudio=NorseAudio;
  window.getPlayerTerritoryDebug=()=>{const p=playerPos();return {position:{x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2))},protected:isPlayerTerritoryAt(p.x,p.z),homeDistance:Number(Math.hypot(p.x-STARTER_CAMP_POSITION.x,p.z-STARTER_CAMP_POSITION.z).toFixed(2)),friendlyGuards:enemies.filter(isFriendlyGuard).length,hostileGuards:enemies.filter(e=>canAttackPlayer(e,p.x,p.z)).length};};
- window.getGameHealthDebug=()=>({build:'0.6.74',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
+ window.getGameHealthDebug=()=>({build:'0.6.75',player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),speed:Number((playerActualSpeed||0).toFixed(2))},fps:Math.round(engine.getFps()),enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,visibleFallbackCivilians:humanCivilianParts.filter(p=>p.proceduralCivilianFallback&&p.root.isEnabled()).length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,failedNpcAnimations:failedAnimationRoots? 'isolated on demand':'none'});
  let chapterStage=0;
  const chapterMilestones=[
   'Reúne 12 de madera y 3 de piedra para preparar el refugio.',
@@ -4368,7 +4420,7 @@ async function startGame(){
    const sprinting=parts===player?!!running:(Number.isFinite(measuredSpeed)&&measuredSpeed>2.45);
    real.wasWalking=stableWalking;
    // Si falta Walk, usar marcha procedural; Run no es un sustituto de caminar.
-   const desired=stableWalking?(sprinting?(real.run||real.walk):(real.walk||null)):null; // Reposo propio controlado: no reproducir clips Idle que dejan brazos abiertos.
+   const desired=stableWalking&&!real.manualGaitReady?(sprinting?(real.run||real.walk):(real.walk||null)):null; // Rig completo: marcha bilateral por Motion Matching.
    const clipIsRun=!!(desired&&desired===real.run);
    const nominalStride=sprinting?(clipIsRun?3.05:2.55):2.40;
    const locomotionSpeed=parts===player?(playerActualSpeed||(sprinting?8.2:3.7)):(Number.isFinite(parts.actualMoveSpeed)&&parts.actualMoveSpeed>.15?parts.actualMoveSpeed:(sprinting?7.8:3.15));
@@ -4403,28 +4455,21 @@ async function startGame(){
    // Fallback de locomoción para GLB riggeados que no incluyen clips Walk/Run.
    // Antes el NPC avanzaba cambiando la raíz, pero el esqueleto no movía piernas ni brazos:
    // visualmente parecía deslizarse o quedarse como una estatua.
+   let matchedPose=null;
    if(stableWalking&&!desired&&real.manualGaitReady){
-    for(const [node,base] of real.rest){
-     if(base.quaternion)node.rotationQuaternion=base.quaternion.clone();
-     else if(node.rotation&&base.rotation)node.rotation.copyFrom(base.rotation);
-    }
-    const swing=Math.sin(phase),opposite=Math.sin(phase+Math.PI);
-    const liftL=Math.pow(Math.max(0,Math.cos(phase)),1.08),liftR=Math.pow(Math.max(0,Math.cos(phase+Math.PI)),1.08);
+    matchedPose=getMotionMatchedPose(real,parts.root,phase,locomotionSpeed,sprinting,true);
     const rig=real.rig||{};
-    // Zancada más baja y alterna: apoyo largo, vuelo corto y menos elevación del torso.
-    setEnemyRigDelta(parts,rig.hips,.010+Math.abs(Math.sin(phase*2))*.010,0,(swing-opposite)*.018);
-    setEnemyRigDelta(parts,rig.leftUpperLeg,swing*.30,0,-swing*.010);
-    setEnemyRigDelta(parts,rig.rightUpperLeg,opposite*.30,0,-opposite*.010);
-    setEnemyRigDelta(parts,rig.leftLowerLeg,liftL*.40,0,0);
-    setEnemyRigDelta(parts,rig.rightLowerLeg,liftR*.40,0,0);
-    setEnemyRigDelta(parts,rig.leftFoot,-swing*.085-liftL*.13,0,0);
-    setEnemyRigDelta(parts,rig.rightFoot,-opposite*.085-liftR*.13,0,0);
-    setEnemyRigDelta(parts,rig.leftUpperArm,-opposite*.19,0,.12);
-    setEnemyRigDelta(parts,rig.upperArm,-swing*.19,0,-.12);
-    setEnemyRigDelta(parts,rig.leftForearm,.12+liftL*.12,0,0);
-    setEnemyRigDelta(parts,rig.forearm,.12+liftR*.12,0,0);
-    setEnemyRigDelta(parts,rig.spine,.035+Math.abs(Math.sin(phase*2))*.018,0,(swing-opposite)*.012);
-    setEnemyRigDelta(parts,rig.head,-Math.sin(phase*2)*.012,(swing-opposite)*.012,0);
+    if(matchedPose){
+     setEnemyRigDelta(parts,rig.hips,matchedPose[0],matchedPose[3],matchedPose[2]);
+     setEnemyRigDelta(parts,rig.leftUpperLeg,matchedPose[4],0,0);setEnemyRigDelta(parts,rig.rightUpperLeg,matchedPose[5],0,0);
+     setEnemyRigDelta(parts,rig.leftLowerLeg,matchedPose[6],0,0);setEnemyRigDelta(parts,rig.rightLowerLeg,matchedPose[7],0,0);
+     setEnemyRigDelta(parts,rig.leftFoot,matchedPose[8],0,0);setEnemyRigDelta(parts,rig.rightFoot,matchedPose[9],0,0);
+     setEnemyRigDelta(parts,rig.leftUpperArm,matchedPose[10],0,matchedPose[14]);setEnemyRigDelta(parts,rig.upperArm,matchedPose[11],0,matchedPose[15]);
+     setEnemyRigDelta(parts,rig.leftForearm,matchedPose[12],0,0);setEnemyRigDelta(parts,rig.forearm,matchedPose[13],0,0);
+     setEnemyRigDelta(parts,rig.leftShoulder,0,0,matchedPose[14]);setEnemyRigDelta(parts,rig.rightShoulder,0,0,matchedPose[15]);
+     setEnemyRigDelta(parts,rig.spine,matchedPose[16],matchedPose[18],matchedPose[17]);setEnemyRigDelta(parts,rig.head,matchedPose[19],matchedPose[20],0);
+    }
+    if(real.footIKLegs&&real.footIKLegs.length&&elapsed-(real.lastFootIKAt||0)>.045){real.footIKLegs.forEach(applyTwoBoneFootIK);real.lastFootIKAt=elapsed;}
    }
    if(!stableWalking){
     // No clip de reposo: mantener postura base y añadir respiración corporal real, sin congelar el NPC.
@@ -4453,28 +4498,27 @@ async function startGame(){
    if(action==='attack'&&real.attack){
     real.attack.start(false,1);real.current=real.attack;
    }
-   if(parts.body){parts.body.position.y=real.dead?parts.body.position.y:(.90+(stableWalking?Math.abs(Math.sin(phase*2))*.025:Math.sin(phase*.7+(real.phaseOffset||0))*.009));}
+   if(parts.body){parts.body.position.y=real.dead?parts.body.position.y:(.90+(stableWalking&&matchedPose?matchedPose[0]:Math.sin(phase*.7+(real.phaseOffset||0))*.009));}
    syncEnemySword(parts);
    return;
   }
-  // Phase measured by travelled distance: footsteps no longer slide against the ground.
-  const leftSwing=stableWalking?Math.sin(phase):0,rightSwing=stableWalking?Math.sin(phase+Math.PI):0;
-  const leftLift=stableWalking?Math.pow(Math.max(0,Math.cos(phase)),1.35):0;
-  const rightLift=stableWalking?Math.pow(Math.max(0,Math.cos(phase+Math.PI)),1.35):0;
-  const sprinting=parts===player?!!running:(Number.isFinite(measuredSpeed)&&measuredSpeed>2.45),pace=sprinting?1.08:1;
-  const breath=Math.sin(phase*.22+(parts.variant||0)*.7);
-  if(parts.head){parts.head.rotation.x=stableWalking?-.035+Math.sin(phase*2)*.018:Math.sin(phase*.7)*.012;parts.head.rotation.y=Math.sin(phase*.35+(parts.variant||0))*.018;parts.head.rotation.z=stableWalking?(leftSwing-rightSwing)*.012:0;}
-  parts.body.rotation.set(stableWalking?(sprinting?.075:.042):0,stableWalking?(rightSwing-leftSwing)*.018:0,stableWalking?(leftSwing-rightSwing)*.016:breath*.004);
-  parts.body.position.y=stableWalking?.006+Math.abs(Math.sin(phase*2))*(sprinting?.014:.008):.003+breath*.003;
-  parts.body.position.z=stableWalking?-.006:0;
-  parts.legs[0].rotation.x=leftSwing*(sprinting?.49:.37);parts.legs[1].rotation.x=rightSwing*(sprinting?.49:.37);
-  parts.legs[0].rotation.z=stableWalking?-.018-leftSwing*.018:0;parts.legs[1].rotation.z=stableWalking?.018-rightSwing*.018:0;
-  const leftKnee=stableWalking?leftLift*(sprinting?.70:.54):0,rightKnee=stableWalking?rightLift*(sprinting?.70:.54):0;
-  parts.knees[0].rotation.x=leftKnee;parts.knees[1].rotation.x=rightKnee;
-  if(parts.feet){parts.feet[0].position.y=-.405+leftLift*(sprinting?.075:.048);parts.feet[1].position.y=-.405+rightLift*(sprinting?.075:.048);parts.feet[0].rotation.x=-leftSwing*.22-leftKnee*.32;parts.feet[1].rotation.x=-rightSwing*.22-rightKnee*.32;}
-  parts.arms[0].rotation.set(-leftSwing*(sprinting?.37:.28),0,.035+leftSwing*.025);parts.arms[1].rotation.set(-rightSwing*(sprinting?.37:.28),0,-.035+rightSwing*.025);
-  parts.elbows[0].rotation.set(stableWalking?.16+leftLift*.12:.08,0,.012);parts.elbows[1].rotation.set(stableWalking?.16+rightLift*.12:.08,0,-.012);
-  if(parts.cloak){parts.cloak.rotation.x=Math.sin(phase*.72)*(.012+(stableWalking?.055:0));parts.cloak.rotation.y=Math.sin(phase*.54+(parts.variant||0))*(.010+(stableWalking?.030:0));parts.cloak.rotation.z=stableWalking?-.045*(leftSwing-rightSwing):Math.sin(phase*.32)*.006;}
+  // Procedural reserve actors share the same matched gait and planted idle stance.
+  const sprinting=parts===player?!!running:(Number.isFinite(measuredSpeed)&&measuredSpeed>2.45),breath=Math.sin(phase*.22+(parts.variant||0)*.7);
+  const pose=stableWalking?getMotionMatchedPose(parts,parts.root,phase,measuredSpeed,sprinting,true):null;
+  if(pose){
+   parts.body.rotation.set(pose[16],pose[18],pose[17]);parts.body.position.y=pose[0];parts.body.position.z=-.004;
+   parts.legs[0].rotation.set(pose[4],0,pose[14]);parts.legs[1].rotation.set(pose[5],0,pose[15]);parts.knees[0].rotation.x=pose[6];parts.knees[1].rotation.x=pose[7];
+   if(parts.feet){parts.feet[0].position.y=-.405+pose[21];parts.feet[1].position.y=-.405+pose[22];parts.feet[0].rotation.x=pose[8];parts.feet[1].rotation.x=pose[9];}
+   parts.arms[0].rotation.set(pose[10],0,pose[14]);parts.arms[1].rotation.set(pose[11],0,pose[15]);parts.elbows[0].rotation.set(pose[12],0,.012);parts.elbows[1].rotation.set(pose[13],0,-.012);
+   if(parts.head)parts.head.rotation.set(pose[19],pose[20],0);
+  }else{
+   if(parts.head){parts.head.rotation.x=Math.sin(phase*.7)*.012;parts.head.rotation.y=Math.sin(phase*.35+(parts.variant||0))*.018;parts.head.rotation.z=0;}
+   parts.body.rotation.set(0,0,breath*.004);parts.body.position.y=.003+breath*.003;parts.body.position.z=0;
+   parts.legs[0].rotation.set(0,0,0);parts.legs[1].rotation.set(0,0,0);parts.knees[0].rotation.x=0;parts.knees[1].rotation.x=0;
+   if(parts.feet){parts.feet[0].position.y=-.405;parts.feet[1].position.y=-.405;parts.feet[0].rotation.x=0;parts.feet[1].rotation.x=0;}
+   parts.arms[0].rotation.set(-.08,0,.035);parts.arms[1].rotation.set(-.08,0,-.035);parts.elbows[0].rotation.set(.12,0,.012);parts.elbows[1].rotation.set(.12,0,-.012);
+  }
+  if(parts.cloak){parts.cloak.rotation.x=Math.sin(phase*.72)*(.012+(stableWalking?.055:0));parts.cloak.rotation.y=Math.sin(phase*.54+(parts.variant||0))*(.010+(stableWalking?.030:0));parts.cloak.rotation.z=pose?pose[17]:0;}
   if(action==='attack'){
    const t=Math.max(0,Math.min(1,1-actionTimer/.78));
    const strike=easeOut(Math.max(0,Math.min(1,(t-.20)/.48)));
@@ -5064,7 +5108,7 @@ async function startGame(){
    if(!e.alive||e.recruited)continue;
    if(e.surrendered){e.state='surrendered';continue;}
    if(onShip){e.state='idle';animateViking(e.parts,elapsed*.7,false,'idle',false);continue;}
-   const root=e.parts.root,pp=playerPos(),dx=pp.x-root.position.x,dz=pp.z-root.position.z,dist=Math.hypot(dx,dz);root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+.08;
+   const root=e.parts.root,pp=playerPos(),dx=pp.x-root.position.x,dz=pp.z-root.position.z,dist=Math.hypot(dx,dz);root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+actorGroundOffset(e.parts);
    // Defensores de aldeas conquistadas y enemigos que entran en territorio propio no pueden atacar al jugador.
    if(!canAttackPlayer(e,pp.x,pp.z)){
     e.state='friendly';e.attackT=0;e.attackDone=false;e.attackCooldown=0;
@@ -5090,7 +5134,7 @@ async function startGame(){
      e.parts.arms[0].rotation.x=-.82*react;e.parts.arms[1].rotation.x=-.95*react;
      e.parts.elbows[0].rotation.x=.55*react;e.parts.elbows[1].rotation.x=.62*react;
     }
-    root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+.08;continue;
+    root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+actorGroundOffset(e.parts);continue;
    }
    if(e.state==='attack'){
     // Recalcula la orientación mientras prepara y ejecuta el golpe: no se queda mirando en la dirección anterior.
@@ -5122,13 +5166,13 @@ async function startGame(){
     e.state='idle';animateViking(e.parts,elapsed*.7,false,'idle',false);let hx=e.home.x-root.position.x,hz=e.home.z-root.position.z,hd=Math.hypot(hx,hz);if(hd>1){let nx=root.position.x+hx/hd*.6*dt,nz=root.position.z+hz/hd*.6*dt;if(tryLandMove(nx,nz,.65,root.position.x,root.position.z)){root.position.x=nx;root.position.z=nz;}}
    }
    // La altura se calcula después de mover X/Z, no desde la posición del fotograma anterior.
-   root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+.08;
+   root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+actorGroundOffset(e.parts);
   }
   for(let i=fallenEnemies.length-1;i>=0;i--){
    const fallen=fallenEnemies[i];fallen.deadTimer-=dt;fallen.deadFallT=Math.min(1,(fallen.deadFallT||0)+dt/.52);
    const t=fallen.deadFallT,ease=t*t*(3-2*t),body=fallen.parts.body;
    if(body){body.rotation.z=fallen.deadSide*.96*ease;body.rotation.x=(fallen.parts.realHuman?.32:.58)*ease;body.position.y=fallen.parts.realHuman?.90-.45*ease:-.34*ease;}
-   fallen.parts.root.position.y=terrainSurfaceAt(fallen.parts.root.position.x,fallen.parts.root.position.z)+.08-.035*ease;
+   fallen.parts.root.position.y=terrainSurfaceAt(fallen.parts.root.position.x,fallen.parts.root.position.z)+actorGroundOffset(fallen.parts)-.035*ease;
    if(fallen.deadTimer<=0){fallen.parts.root.setEnabled(false);fallenEnemies.splice(i,1);}
   }
   const leader=playerPos(),leaderForward=v(Math.sin(yaw),0,Math.cos(yaw)),leaderRight=v(Math.cos(yaw),0,-Math.sin(yaw));
@@ -5149,10 +5193,10 @@ async function startGame(){
    const slots=[{side:-1,back:4.25},{side:1,back:4.25},{side:0,back:6.55}];
    const slot=slots[index%3],row=Math.floor(index/3);
    const target=leader.subtract(leaderForward.scale(slot.back+row*2.45)).add(leaderRight.scale(slot.side*2.25));
-   const dx=target.x-ally.parts.root.position.x,dz=target.z-ally.parts.root.position.z,dist=Math.hypot(dx,dz);let walkingAlly=false;ally.parts.root.position.y=terrainSurfaceAt(ally.parts.root.position.x,ally.parts.root.position.z)+.08;
+   const dx=target.x-ally.parts.root.position.x,dz=target.z-ally.parts.root.position.z,dist=Math.hypot(dx,dz);let walkingAlly=false;ally.parts.root.position.y=terrainSurfaceAt(ally.parts.root.position.x,ally.parts.root.position.z)+actorGroundOffset(ally.parts);
    let allyStep=0;if(dist>.72){const pace=running?Math.min(4.15,3.25+Math.max(0,dist-5)*.10):Math.min(2.15,1.55+Math.max(0,dist-3)*.075),step=Math.min(dist-.72,pace*dt),oldX=ally.parts.root.position.x,oldZ=ally.parts.root.position.z;let resolved=resolveLandStep(oldX,oldZ,dx/(dist||1)*step,dz/(dist||1)*step,.70);if(!resolved.moved){const side=index%2===0?1:-1,px=-(dz/(dist||1))*side,pz=(dx/(dist||1))*side;resolved=resolveLandStep(oldX,oldZ,(dx/(dist||1)*.82+px*.42)*step,(dz/(dist||1)*.82+pz*.42)*step,.66);}if(resolved.moved){ally.parts.root.position.x=resolved.x;ally.parts.root.position.z=resolved.z;walkingAlly=true;allyStep=Math.hypot(resolved.x-oldX,resolved.z-oldZ);}if(allyStep>.006)ally.parts.root.rotation.y=Math.atan2(ally.parts.root.position.x-oldX,ally.parts.root.position.z-oldZ);}
    ally.parts.actualMoveSpeed=dt>0?allyStep/dt:0;
-   ally.parts.root.position.y=terrainSurfaceAt(ally.parts.root.position.x,ally.parts.root.position.z)+.08;
+   ally.parts.root.position.y=terrainSurfaceAt(ally.parts.root.position.x,ally.parts.root.position.z)+actorGroundOffset(ally.parts);
    ally.followCooldown=Math.max(0,(ally.followCooldown||0)-dt);
    let foe=null,foeDist=4;
    for(const enemy of enemies){if(!enemy.alive||isFriendlyGuard(enemy))continue;const d=Math.hypot(enemy.parts.root.position.x-ally.parts.root.position.x,enemy.parts.root.position.z-ally.parts.root.position.z);if(d<foeDist){foeDist=d;foe=enemy;}}
@@ -5198,7 +5242,7 @@ async function startGame(){
   driftingLeaves.forEach(l=>{l.mesh.position.x+=Math.sin(elapsed*.38+l.phase)*l.speed*dt;l.mesh.position.z+=Math.cos(elapsed*.31+l.phase)*l.speed*dt;l.mesh.position.y+=Math.sin(elapsed*.75+l.phase)*.08*dt;l.mesh.rotation.y+=dt*l.speed; if(l.mesh.position.x>46)l.mesh.position.x=-46;if(l.mesh.position.x< -46)l.mesh.position.x=46;if(l.mesh.position.z>46)l.mesh.position.z=-46;if(l.mesh.position.z< -46)l.mesh.position.z=46;});
   // Vida ambiental a 30 Hz; el render y el combate se mantienen a la frecuencia de pantalla.
   ambientUpdateAccumulator+=dt;
-  if(ambientUpdateAccumulator>=1/30){
+  if(ambientUpdateAccumulator>=1/60){
    const ambientDt=Math.min(.10,ambientUpdateAccumulator);ambientUpdateAccumulator=0;
   // Hearths flicker and throw warm light across the settlement.
   flameMeshes.forEach(f=>{const wave=.91+Math.sin(elapsed*9.5+f.phase)*.13+Math.sin(elapsed*17+f.phase)*.055;f.mesh.scaling.y=wave;f.mesh.scaling.x=1+Math.sin(elapsed*12+f.phase)*.07;f.mesh.rotation.z=Math.sin(elapsed*8+f.phase)*.105;f.mesh.rotation.x=Math.cos(elapsed*7.2+f.phase)*.045;f.mesh.position.x=f.baseX+Math.sin(elapsed*6.8+f.phase)*.035;f.mesh.position.z=f.baseZ+Math.cos(elapsed*7.6+f.phase)*.025;});
@@ -5223,7 +5267,7 @@ async function startGame(){
      if(tryLandMove(nx,nz,.43,oldX,oldZ)){
       p.position.x=nx;p.position.z=nz;moved=Math.hypot(nx-oldX,nz-oldZ);
       if(moved>.004){p.rotation.y=Math.atan2(nx-oldX,nz-oldZ);npc.walkPhase=(npc.walkPhase||0)+moved*(Math.PI*2/2.40);npc.stepDistance=(npc.stepDistance||0)+moved;}
-      p.position.y=terrainSurfaceAt(nx,nz)+.08;
+      p.position.y=terrainSurfaceAt(nx,nz)+actorGroundOffset(npc.parts);
       if(npc.stepDistance>=1.20){npc.stepDistance-=1.20;NorseAudio.civilianStep();}
      }else{npc.pause=.8;npc.targetX=npc.homeX;npc.targetZ=npc.homeZ;}
     }
@@ -5236,7 +5280,7 @@ async function startGame(){
   campGuards.forEach((guard,i)=>{
    if(!guard.alive)return;
    const p=guard.parts.root;
-   if(onShip){guard.parts.actualMoveSpeed=0;p.position.y=terrainSurfaceAt(p.position.x,p.position.z)+.08;animateViking(guard.parts,elapsed*.7+i*1.3,false,'idle',false);return;}
+   if(onShip){guard.parts.actualMoveSpeed=0;p.position.y=terrainSurfaceAt(p.position.x,p.position.z)+actorGroundOffset(guard.parts);animateViking(guard.parts,elapsed*.7+i*1.3,false,'idle',false);return;}
    const f=v(Math.sin(yaw),0,Math.cos(yaw)),r=v(Math.cos(yaw),0,-Math.sin(yaw));
    // Escuadra de tres: dos soldados en primera línea y uno cerrando el centro por detrás.
    const slots=[{side:-1,back:5.35},{side:1,back:5.35},{side:0,back:8.65}];
@@ -5266,7 +5310,7 @@ async function startGame(){
     if(move.moved){p.position.x=move.x;p.position.z=move.z;travelled=Math.hypot(move.x-oldX,move.z-oldZ);walking=travelled>.004;}
    }
    if(!walking)guard.moveSpeed=(Number(guard.moveSpeed)||0)*(1-Math.exp(-ambientDt*5.5));
-   p.position.y=terrainSurfaceAt(p.position.x,p.position.z)+.08;
+   p.position.y=terrainSurfaceAt(p.position.x,p.position.z)+actorGroundOffset(guard.parts);
    // En movimiento, el cuerpo debe mirar hacia donde realmente se desplaza.
    // Mirar al jugador mientras camina hacia su formación causa el efecto de caminar hacia atrás.
    const faceX=playerLookAt.x-p.position.x,faceZ=playerLookAt.z-p.position.z;
@@ -5382,7 +5426,7 @@ async function startGame(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.74: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.75: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -5393,7 +5437,7 @@ async function startGame(){
   if(fpsHudTime>=.55){try{
    const measured=engine.getFps(),meter=document.getElementById('fpsMeter');
    const ordered=fpsFrameSamples.slice().sort((a,b)=>a-b),p95=ordered.length?ordered[Math.min(ordered.length-1,Math.floor((ordered.length-1)*.95))]:0;
-   if(meter){meter.textContent=Math.round(measured)+' FPS';meter.style.color=measured>=88?'#94d8a0':measured>=72?'#e6c27f':'#ff9a83';meter.title='Objetivo: 90 FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms (90 FPS requiere ≤11,1 ms). No se reduce la resolución ni la calidad de texturas.';}
+   if(meter){meter.textContent=Math.round(measured)+' FPS';meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';meter.title='Objetivo: 120 FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms (120 FPS requiere ≤8,3 ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';}
   }catch(err){reportFrameError('contador FPS',err);}fpsHudTime=0;}
  });
  function resizeGameViewport(){
@@ -5404,7 +5448,7 @@ async function startGame(){
 window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passive:true});
  if(window.visualViewport)window.visualViewport.addEventListener('resize',resizeGameViewport,{passive:true});
  updateHUD();drawMap();
- console.info('EL SIN NOMBRE 0.6.74 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.75 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'Descargando e instalando personajes 3D…');
  const allCharacterLoads=Promise.allSettled([playerHumanLoadPromise,enemyHumanLoadTask]);
@@ -5432,7 +5476,7 @@ window.addEventListener('pageshow',()=>setTimeout(resizeGameViewport,80),{passiv
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
- console.info('EL SIN NOMBRE 0.6.74 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ console.info('EL SIN NOMBRE 0.6.75 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
