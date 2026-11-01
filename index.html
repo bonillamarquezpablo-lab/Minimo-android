@@ -1994,19 +1994,19 @@ async function startGame(){
  const sailData=new B.VertexData();sailData.positions=sailPositions;sailData.indices=sailIndices;sailData.uvs=sailUvs;sailData.normals=sailNormals;
  let sail=new B.Mesh('stripedSail',scene);sailData.applyToMesh(sail);sail.parent=ship;sail.position=v(0,3.50,-.42);sail.material=M.canvas;sail.isPickable=false;
  for(let i=-1;i<=1;i++)box('sailstripe'+i,ship,[i*1.0,3.50,-.38],[.16,4.15,.025],M.sailRed);
+ const sailAnimatedPositions=new Float32Array(sailBasePositions),sailUpdateInterval=1/18;
  let sailUpdateAccumulator=0;
  function updateDrakkarSail(dt){
-  sailUpdateAccumulator+=dt;if(sailUpdateAccumulator<1/24)return;sailUpdateAccumulator=0;
-  const positions=new Float32Array(sailBasePositions.length),wind=.72+.28*Math.sin(elapsed*.31);
+  if(!onShip)return;
+  sailUpdateAccumulator+=dt;if(sailUpdateAccumulator<sailUpdateInterval)return;sailUpdateAccumulator=0;
+  const wind=.72+.28*Math.sin(elapsed*.31);
   for(let row=0;row<=sailRows;row++)for(let col=0;col<=sailColumns;col++){
    const index=(row*(sailColumns+1)+col)*3,u=col/sailColumns,w=row/sailRows,bend=u*(1-u)*4;
-   positions[index]=sailBasePositions[index]+bend*.035*Math.sin(elapsed*1.8-w*2.1);
-   positions[index+1]=sailBasePositions[index+1]+bend*.045*Math.sin(elapsed*1.25-u*3.2);
-   positions[index+2]=bend*(.08+.20*wind)*Math.sin(elapsed*2.25-u*4.4+w*1.7);
+   sailAnimatedPositions[index]=sailBasePositions[index]+bend*.035*Math.sin(elapsed*1.8-w*2.1);
+   sailAnimatedPositions[index+1]=sailBasePositions[index+1]+bend*.045*Math.sin(elapsed*1.25-u*3.2);
+   sailAnimatedPositions[index+2]=bend*(.08+.20*wind)*Math.sin(elapsed*2.25-u*4.4+w*1.7);
   }
-  const normals=[];B.VertexData.ComputeNormals(positions,sailIndices,normals);
-  sail.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);
-  sail.updateVerticesData(B.VertexBuffer.NormalKind,normals,false,false);
+  sail.updateVerticesData(B.VertexBuffer.PositionKind,sailAnimatedPositions,false,false);
  }
  cyl('ClanPennantPole',ship,[0,5.92,-.43],1.05,.045,.045,M.woodLight);
  const wornPennantTexture=new B.DynamicTexture('WeatheredDrakkarPennantTexture',{width:256,height:256},scene,false),wornPennantCtx=wornPennantTexture.getContext();
@@ -4004,7 +4004,7 @@ async function startGame(){
    box('OutpostBedroll_'+vl.index+'_'+tent,camp,[ox,.13,oz+.85],[.72,.16,.95],M.fur,[0,0,rot]);
   }
   box('OutpostSupplyCrate_'+vl.index,camp,[-4.1,.28,1.25],[.78,.56,.72],M.woodDark);
-  sphere('OutpostHearthGlow_'+vl.index,null,[cx+4.1,gy+.22,cz+2.0],[.24,.16,.24],M.fire,8);
+  sphere('OutpostHearthGlow_'+vl.index,null,[cx+4.1,gy+.22,cz+2.0],[.24,.16,.24],M.ember,8);
  }
  villages.forEach(buildIslandOutpost);
  // Primer refugio del protagonista: lona remendada, dos postes, leña húmeda y un fuego pequeño.
