@@ -1,4 +1,4 @@
-name: Build and publish EL SIN NOMBRE web build
+name: Build and deploy EL SIN NOMBRE
 
 on:
   push:
@@ -6,17 +6,19 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: el-sin-nombre-web-publish
+  group: github-pages
   cancel-in-progress: true
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Checkout game repository
         uses: actions/checkout@v4
@@ -29,21 +31,26 @@ jobs:
       - name: Download and package every runtime resource
         run: python scripts/build_site.py
 
-      - name: Publish the complete static game to the distribution branch
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Enable and configure GitHub Pages
+        uses: actions/configure-pages@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          publish_branch: gh-pages
-          force_orphan: true
-          commit_message: "Deploy EL SIN NOMBRE 0.6.68 web package"
+          enablement: true
 
-      - name: Write the public HTTPS game link
-        run: |
-          {
-            echo "## EL SIN NOMBRE is published"
-            echo ""
-            echo "https://cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@gh-pages/index.html"
-            echo ""
-            echo "All runtime assets are served from this HTTPS package."
-          } >> "${GITHUB_STEP_SUMMARY}"
+      - name: Upload complete website
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Publish website with native HTML MIME type
+        id: deployment
+        uses: actions/deploy-pages@v4
