@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.135">
-<meta name="el-sin-nombre-repair" content="0.6.135 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.136">
+<meta name="el-sin-nombre-repair" content="0.6.136 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.135</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.136</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -610,7 +610,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.135 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.136 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -648,7 +648,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.135: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.136: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -768,13 +768,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.135 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.136 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.135 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.136 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -5403,11 +5403,24 @@ function villageHostileDefenders(vl){
   console.info('Selector de campaña listo.',{partidasDisponibles:getAvailableCampaignSaves().length});
  }
  function resetCampaignForNewGame(){
+  // Estado de campaña nuevo: sin materiales, conquistas, escolta ni arsenal desbloqueado.
   health=100;stamina=100;healCooldown=0;woodCount=0;stoneCount=0;kills=0;captured=0;weaponLevel=0;
   unlockedWeapons.clear();unlockedWeapons.add('club');equippedWeapon='club';
   chapterStage=0;sprintMissionMeters=0;sprintMissionDone=false;sagaHistory.splice(0,sagaHistory.length);
+  // Desvincular y ocultar físicamente a todos los reclutas de la saga anterior antes de vaciar la lista.
+  companions.forEach(ally=>{
+   const parts=ally&&ally.parts;
+   if(parts&&parts.root){parts.root.parent=null;parts.root.setEnabled(false);}
+   if(ally&&ally.enemyRef){
+    ally.enemyRef.recruited=false;ally.enemyRef.surrendered=false;
+    ally.enemyRef.faction='enemy';
+    if(ally.enemyRef.parts)ally.enemyRef.parts.faction='enemy';
+   }
+  });
   companions.splice(0,companions.length);fallenEnemies.splice(0,fallenEnemies.length);
-  campGuards.forEach(guard=>{guard.alive=false;guard.parts.root.setEnabled(false);});campGuards.splice(0,campGuards.length);
+  // Los guardianes decorativos del campamento tampoco son una escolta inicial.
+  campGuards.forEach(guard=>{guard.alive=false;guard.recruited=false;guard.faction='enemy';guard.parts.faction='enemy';guard.parts.root.parent=null;guard.parts.root.setEnabled(false);});
+  campGuards.splice(0,campGuards.length);
   player.root.parent=null;player.root.setEnabled(true);
   player.root.position=v(NEW_CAMPAIGN_SPAWN.x,terrainSurfaceAt(NEW_CAMPAIGN_SPAWN.x,NEW_CAMPAIGN_SPAWN.z)+(realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08),NEW_CAMPAIGN_SPAWN.z);
   player.root.rotation.set(0,0,0);if(realPlayerModelPivot)realPlayerModelPivot.position.y=0;
@@ -5431,6 +5444,7 @@ function villageHostileDefenders(vl){
     guard.hp=100;guard.alive=true;guard.surrendered=false;guard.recruited=false;guard.state='idle';
     guard.attackT=0;guard.attackDone=false;guard.stun=0;guard.hitReact=0;guard.knockback=0;guard.deadFallT=0;guard.deadTimer=0;guard.cool=.4;
     guard.faction='enemy';guard.parts.faction='enemy';guard.parts.root.parent=null;guard.parts.root.setEnabled(true);
+    guard.parts.recruited=false;guard.parts.surrendered=false;
     guard.parts.root.position=v(guard.home.x,terrainSurfaceAt(guard.home.x,guard.home.z)+.08,guard.home.z);
     guard.parts.root.rotation.set(0,guard.initialYaw||0,0);guard.parts.weapon.setEnabled(true);
     if(guard.parts.realHuman){
@@ -5445,6 +5459,16 @@ function villageHostileDefenders(vl){
     guard.healthBack.setEnabled(true);guard.healthMesh.setEnabled(true);guard.healthMesh.scaling.x=1;guard.healthMesh.position.x=0;
     setFactionBadge(guard.parts,'enemy');
    });
+  });
+  // Barrido final del roster de defensores: ninguna unidad conserva una facción aliada anterior.
+  enemies.forEach(guard=>{
+   if(!guard||!guard.parts)return;
+   guard.faction='enemy';guard.parts.faction='enemy';
+   guard.recruited=false;guard.surrendered=false;
+   guard.parts.recruited=false;guard.parts.surrendered=false;
+   guard.state='idle';
+   if(guard.alive!==false)guard.parts.root.setEnabled(true);
+   setFactionBadge(guard.parts,'enemy');
   });
   trees.forEach(tree=>{
    tree.alive=true;tree.hp=3;tree.hitFlash=0;tree.falling=null;tree.fallX=0;tree.fallZ=0;
@@ -5489,9 +5513,14 @@ function villageHostileDefenders(vl){
   playerShelterBuilt=false;playerShelterX=0;playerShelterZ=0;
   const shelterButton=document.getElementById('buildCabinBtn');if(shelterButton){shelterButton.textContent='🏚 CONSTRUIR REFUGIO';shelterButton.disabled=false;shelterButton.removeAttribute('aria-label');}
   lastSaveAt=0;saveAccumulator=0;
-  if(document.getElementById('saveTimeLabel'))document.getElementById('saveTimeLabel').textContent='Nueva saga. Sin recursos, sin escolta y sin armas forjadas.';
+  if(document.getElementById('saveTimeLabel'))document.getElementById('saveTimeLabel').textContent='Nueva saga. Sin recursos, sin escolta y solo con un palo.';
   const saveBtn=document.getElementById('saveBtn');if(saveBtn)saveBtn.textContent='📕 GUARDAR';
-  refreshFactionBadges();equipWeapon('club');updateHUD();updateWeaponPanel();updateProgressPanel();updateChapterTracker();drawMap();
+  refreshFactionBadges();updateWeaponAvailabilityUI();equipWeapon('club');
+  // No guardar una nueva campaña si queda algún recurso, recluta o arma avanzada.
+  if(woodCount!==0||stoneCount!==0||captured!==0||companions.length!==0||unlockedWeapons.size!==1||!unlockedWeapons.has('club')){
+   throw new Error('El estado inicial de la nueva saga no está limpio.');
+  }
+  updateHUD();updateWeaponPanel();updateProgressPanel();updateChapterTracker();drawMap();
  } function beginSaga(){gameStarted=true;document.body.classList.remove('booting','boot-failed','intro-open');document.body.classList.add('game-running');NorseAudio.unlock();if(introOverlay){introOverlay.classList.remove('open');introOverlay.setAttribute('aria-hidden','true');}try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();}catch(startViewError){console.warn('La vista se ajustará en el siguiente fotograma:',startViewError);}msg('La costa te espera.');}
  function beginNewSaga(){
   activeSaveKey=chooseNewCampaignSaveKey();
@@ -5519,7 +5548,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.135',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.136',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5582,7 +5611,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.135');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.136');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -7327,7 +7356,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.135 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.136 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7382,7 +7411,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.135: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.136: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -7445,7 +7474,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.135 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.136 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -7483,7 +7512,7 @@ function updateHUD(){
   throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.135 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.136 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
