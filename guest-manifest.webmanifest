@@ -4,7 +4,7 @@
   "short_name": "EL SIN NOMBRE · Invitado",
   "description": "Partida independiente para jugar en este dispositivo.",
   "lang": "es",
-  "start_url": "./guest/index.html?newgame=1&v=0.6.125",
+  "start_url": "./guest/index.html?newgame=1&v=0.6.126",
   "scope": "./guest/",
   "display": "fullscreen",
   "orientation": "any",
