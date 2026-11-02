@@ -6248,10 +6248,7 @@ function updateHUD(){
    // Antes el NPC avanzaba cambiando la raíz, pero el esqueleto no movía piernas ni brazos:
    // visualmente parecía deslizarse o quedarse como una estatua.
    if(stableWalking&&!desired&&(real.manualGaitAvailable||real.manualGaitReady)){
-    for(const [node,base] of real.rest){
-     restoreRigNodePose(node,base);
-     else if(node.rotation&&base.rotation)node.rotation.copyFrom(base.rotation);
-    }
+    for(const [node,base] of real.rest)restoreRigNodePose(node,base);
     const swing=Math.sin(phase),opposite=Math.sin(phase+Math.PI);
     const liftL=Math.pow(Math.max(0,Math.cos(phase)),1.08),liftR=Math.pow(Math.max(0,Math.cos(phase+Math.PI)),1.08);
     const rig=real.rig||{};
@@ -6448,7 +6445,7 @@ function updateHUD(){
    if(parts&&parts.realHuman){
     parts.realHuman.animationFailed=true;parts.realHuman.animationRetryAt=performance.now()+500;
     try{(parts.realHuman.groups||[]).forEach(group=>{if(group&&group.isPlaying)group.stop();});}catch(_){}
-    try{for(const [node,base] of (parts.realHuman.rest||[])){restoreRigNodePose(node,base);else if(node.rotation&&base.rotation)node.rotation.copyFrom(base.rotation);}}catch(_){}
+    try{for(const [node,base] of (parts.realHuman.rest||[]))restoreRigNodePose(node,base);}catch(_){}
    }
    if(root&& !failedAnimationRoots.has(root)){
     failedAnimationRoots.add(root);
