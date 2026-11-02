@@ -3477,11 +3477,28 @@ async function startGame(){
   console.info('Human NPC instantiated',{index,name:parts.name,role,height:bounds.height,walk:walk&&walk.name,run:run&&run.name,proceduralWalkFallback:!walk&&!run,hand:!!rig.hand,weaponSocket:weaponAttachMode,bones:restNodes.length,rigBoneCount,skinnedMeshCount,vertices:sourceVertexCount,meshes:meshes.length,sourceMaterialCount,sourceTextureCount,weatheredMaterials:weatheredMaterialCount,retintedMaterials:retintedMaterialCount,look:isCivilian?'civilian profession '+(index%4):'original Armored Knight GLB'});
  }
  function actorGroundOffset(parts){return parts&&parts.realHuman?.role ? .028 : .08;}
+ const enemyRigDeltaScratchQuaternion=new B.Quaternion();
+ function restoreRigNodePose(node,base){
+  if(!node||!base)return;
+  if(base.quaternion){
+   if(node.rotationQuaternion)node.rotationQuaternion.copyFrom(base.quaternion);
+   else node.rotationQuaternion=base.quaternion.clone();
+  }else if(node.rotation&&base.rotation){
+   node.rotation.copyFrom(base.rotation);
+  }
+ }
  function setEnemyRigDelta(parts,node,dx=0,dy=0,dz=0){
   if(!parts||!parts.realHuman||!node)return;
   const base=parts.realHuman.rest.get(node);if(!base)return;
-  if(base.quaternion){const delta=B.Quaternion.RotationYawPitchRoll(dy,dx,dz);node.rotationQuaternion=base.quaternion.multiply(delta);}
-  else node.rotation=base.rotation.add(v(dx,dy,dz));
+  if(base.quaternion){
+   B.Quaternion.RotationYawPitchRollToRef(dy,dx,dz,enemyRigDeltaScratchQuaternion);
+   const target=node.rotationQuaternion||(node.rotationQuaternion=new B.Quaternion());
+   base.quaternion.multiplyToRef(enemyRigDeltaScratchQuaternion,target);
+  }else{
+   node.rotation.x=base.rotation.x+dx;
+   node.rotation.y=base.rotation.y+dy;
+   node.rotation.z=base.rotation.z+dz;
+  }
  }
  async function purgeLegacyVikingWarriorCache(){
   // 0.6.37 y 0.6.39 guardaron el GLB del protagonista como guerrero en esta clave.
@@ -3860,10 +3877,18 @@ async function startGame(){
   managedActiveWorldShadowCount=activeCount;
  }
  function rememberRigRest(node){if(!node||realBoneRest.has(node))return;realBoneRest.set(node,{rotation:node.rotation?node.rotation.clone():B.Vector3.Zero(),quaternion:node.rotationQuaternion?node.rotationQuaternion.clone():null});}
+ const playerRigDeltaScratchQuaternion=new B.Quaternion();
  function setRigDelta(node,dx=0,dy=0,dz=0){
   if(!node)return;rememberRigRest(node);const base=realBoneRest.get(node);
-  if(base.quaternion){const delta=B.Quaternion.RotationYawPitchRoll(dy,dx,dz);node.rotationQuaternion=base.quaternion.multiply(delta);}
-  else node.rotation=base.rotation.add(v(dx,dy,dz));
+  if(base.quaternion){
+   B.Quaternion.RotationYawPitchRollToRef(dy,dx,dz,playerRigDeltaScratchQuaternion);
+   const target=node.rotationQuaternion||(node.rotationQuaternion=new B.Quaternion());
+   base.quaternion.multiplyToRef(playerRigDeltaScratchQuaternion,target);
+  }else{
+   node.rotation.x=base.rotation.x+dx;
+   node.rotation.y=base.rotation.y+dy;
+   node.rotation.z=base.rotation.z+dz;
+  }
  }
  let realFootIKLegs=[],realFootIKEnabled=false;
  function createFootIKLegs(rig){
@@ -4274,7 +4299,7 @@ async function startGame(){
    // locomoción puede marcar esos mismos huesos como "ya animados". En reposo
    // forzamos una pose relajada propia para todos los huesos que reconocimos.
    const resetNodes=new Set(Object.values(n).filter(Boolean));
-   resetNodes.forEach(node=>{const base=realBoneRest.get(node);if(!base)return;if(base.quaternion)node.rotationQuaternion=base.quaternion.clone();else if(node.rotation)node.rotation.copyFrom(base.rotation);});
+   resetNodes.forEach(node=>restoreRigNodePose(node,realBoneRest.get(node)));
    const breath=Math.sin(elapsed*1.25);
    // Brazos caídos junto al torso, codos ligeramente flexionados y manos orientadas
    // hacia el cuerpo. La pose parte siempre de la transformación de reposo del GLB.
@@ -5695,7 +5720,7 @@ function villageHostileDefenders(vl){
     guard.parts.root.rotation.set(0,guard.initialYaw||0,0);guard.parts.weapon.setEnabled(true);
     if(guard.parts.realHuman){
      const real=guard.parts.realHuman;real.groups.forEach(group=>{try{group.stop();}catch(_){ }});
-     for(const [node,base] of real.rest){if(base.quaternion)node.rotationQuaternion=base.quaternion.clone();else if(node.rotation&&base.rotation)node.rotation.copyFrom(base.rotation);}
+     for(const [node,base] of real.rest)restoreRigNodePose(node,base);
      if(real.modelRoot)real.modelRoot.rotation.y=real.modelForwardOffset||0;
      if(real.sword)real.sword.setEnabled(true);real.current=null;
     }else{
@@ -5961,7 +5986,7 @@ function updateHUD(){
   guard.recruited=true;guard.surrendered=false;guard.faction='player';guard.parts.faction='player';guard.state='recruited';guard.parts.root.setEnabled(true);
   if(guard.parts.realHuman){
    const real=guard.parts.realHuman;real.groups.forEach(g=>g.stop());real.current=null;
-   for(const [node,base] of real.rest){if(base.quaternion)node.rotationQuaternion=base.quaternion.clone();else if(node.rotation&&base.rotation)node.rotation.copyFrom(base.rotation);}
+   for(const [node,base] of real.rest)restoreRigNodePose(node,base);
    if(real.modelRoot)real.modelRoot.rotation.y=real.modelForwardOffset||0;
    if(real.sword)real.sword.setEnabled(true);
   }else{
@@ -6077,7 +6102,7 @@ function updateHUD(){
   const pp=playerPos();e.parts.root.rotation.y=Math.atan2(pp.x-e.parts.root.position.x,pp.z-e.parts.root.position.z);
   if(e.parts.realHuman){
    const real=e.parts.realHuman;real.groups.forEach(g=>g.stop());real.current=null;
-   for(const [node,base] of real.rest){if(base.quaternion)node.rotationQuaternion=base.quaternion.clone();else if(node.rotation&&base.rotation)node.rotation.copyFrom(base.rotation);}
+   for(const [node,base] of real.rest)restoreRigNodePose(node,base);
    setEnemyRigDelta(e.parts,real.rig.spine,.16,0,0);
    setEnemyRigDelta(e.parts,real.rig.upperArm,-.92,0,-.30);setEnemyRigDelta(e.parts,real.rig.forearm,.42,0,-.08);
    setEnemyRigDelta(e.parts,real.rig.leftUpperArm,-.92,0,.30);setEnemyRigDelta(e.parts,real.rig.leftForearm,.42,0,.08);
@@ -6224,7 +6249,7 @@ function updateHUD(){
    // visualmente parecía deslizarse o quedarse como una estatua.
    if(stableWalking&&!desired&&(real.manualGaitAvailable||real.manualGaitReady)){
     for(const [node,base] of real.rest){
-     if(base.quaternion)node.rotationQuaternion=base.quaternion.clone();
+     restoreRigNodePose(node,base);
      else if(node.rotation&&base.rotation)node.rotation.copyFrom(base.rotation);
     }
     const swing=Math.sin(phase),opposite=Math.sin(phase+Math.PI);
@@ -6247,7 +6272,7 @@ function updateHUD(){
    }
    if(!stableWalking){
     // No clip de reposo: mantener postura base y añadir respiración corporal real, sin congelar el NPC.
-    for(const [node,base] of real.rest){if(base.quaternion)node.rotationQuaternion=base.quaternion.clone();else if(node.rotation&&base.rotation)node.rotation.copyFrom(base.rotation);}
+    for(const [node,base] of real.rest)restoreRigNodePose(node,base);
     const breath=Math.sin(phase*.9+(real.phaseOffset||0));
     setEnemyRigDelta(parts,real.rig.spine,-.018+breath*.024,0,.012*Math.sin(phase*.43));
     setEnemyRigDelta(parts,real.rig.hips,.008*Math.sin(phase*.7),.006*Math.sin(phase*.35),.012*Math.sin(phase*.52));
@@ -6423,7 +6448,7 @@ function updateHUD(){
    if(parts&&parts.realHuman){
     parts.realHuman.animationFailed=true;parts.realHuman.animationRetryAt=performance.now()+500;
     try{(parts.realHuman.groups||[]).forEach(group=>{if(group&&group.isPlaying)group.stop();});}catch(_){}
-    try{for(const [node,base] of (parts.realHuman.rest||[])){if(base.quaternion)node.rotationQuaternion=base.quaternion.clone();else if(node.rotation&&base.rotation)node.rotation.copyFrom(base.rotation);}}catch(_){}
+    try{for(const [node,base] of (parts.realHuman.rest||[])){restoreRigNodePose(node,base);else if(node.rotation&&base.rotation)node.rotation.copyFrom(base.rotation);}}catch(_){}
    }
    if(root&& !failedAnimationRoots.has(root)){
     failedAnimationRoots.add(root);
