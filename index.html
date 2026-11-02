@@ -5394,7 +5394,7 @@ function villageHostileDefenders(vl){
   const VOLUME=.12;
   function ensure(){
    if(audio||typeof Audio==='undefined')return audio;
-   audio=new Audio();audio.preload='none';audio.src=SOURCE;audio.loop=true;audio.volume=VOLUME;audio.playsInline=true;
+   audio=new Audio();audio.preload='auto';audio.src=SOURCE;audio.loop=true;audio.volume=VOLUME;audio.playsInline=true;
    audio.addEventListener('error',()=>console.warn('No se pudo cargar la banda sonora del menú:',SOURCE));
    return audio;
   }
@@ -5417,6 +5417,9 @@ function villageHostileDefenders(vl){
   function setMuted(value){muted=!!value;if(audio)audio.muted=muted;if(!muted&&!stoppedForGame&&started&&audio&&audio.paused)start();}
   return {start,stop,setMuted};
  })();
+ // Solicita la música desde el arranque, mientras carga el mundo; si el navegador bloquea autoplay,
+ // el primer toque/tecla la reintenta inmediatamente (no espera a que termine la carga 3D).
+ MenuMusic.start();
  // Música de partida: se crea y solicita al navegador solo después de elegir/cargar una saga.
  const GameplayMusic=(()=>{
   let audio=null,muted=false,sessionActive=false,started=false;
