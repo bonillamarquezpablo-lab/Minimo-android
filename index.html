@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.144">
-<meta name="el-sin-nombre-repair" content="0.6.144 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.145">
+<meta name="el-sin-nombre-repair" content="0.6.145 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.144</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.145</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -611,7 +611,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.144 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.145 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -649,7 +649,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.144: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.145: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -769,13 +769,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.144 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.145 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.144 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.145 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -885,7 +885,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #intro .campaignCard strong{font-size:19px!important}
  #intro .campaignCardArt{font-size:39px!important}
 }
-/* 0.6.144 — menús compactos y música antes del selector gráfico. */
+/* 0.6.145 — menús compactos y música antes del selector gráfico. */
 #audioGate{position:fixed;inset:0;z-index:2001;display:none;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at 50% 28%,rgba(151,105,54,.30),transparent 48%),linear-gradient(145deg,#071316,#101f20 58%,#050d10);color:#f3e5c9}
 body.preflight.audio-gate #audioGate{display:flex}
 body.preflight.audio-gate #modeSelect{display:none!important}
@@ -1700,7 +1700,7 @@ async function startGame(){
    // Conserva el mapa 2048 y el filtrado alto; solo evita recalcular la misma sombra
    // en cada fotograma. El movimiento y la animación siguen renderizándose cada frame.
    const shadowMap=shadowGen.getShadowMap&&shadowGen.getShadowMap();
-   if(shadowMap)shadowMap.refreshRate=isPerformanceMode?10:3;
+   if(shadowMap)shadowMap.refreshRate=isPerformanceMode?10:2;
   }
  }catch(shadowInitError){console.warn('Sombras dinámicas no disponibles; el juego continuará con iluminación directa:',shadowInitError);shadowGen=null;}
  const managedWorldShadowGroups=[];let managedActiveWorldShadowCount=0,managedShadowCullAt=0;
@@ -2046,9 +2046,10 @@ async function startGame(){
    waterNormals[offset]=nx*inv;waterNormals[offset+1]=inv;waterNormals[offset+2]=nz*inv;
   }
  }
- let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0;
+ let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0,waterFarAccumulator=0;
  const waterVertexStep=isPerformanceMode?(isUltraLowEndMobile?1/6:(isGalaxyA12LowEndMobile?1/7:(isConstrainedMobile?1/8:(isTouchDevice?1/12:1/20)))):(isTouchDevice?1/30:1/40);
  const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/3:1/6)))):(isTouchDevice?1/8:1/12);
+ const waterFarStep=isPerformanceMode?(isConstrainedMobile?.36:.25):.14;
  function waterHeight(x,z,t=oceanTime){
   // Layered directional swells: broad North Sea swell plus shorter cross-waves and capillary ripples.
   const longSwell=Math.sin(x*.009+z*.012+t*.48)*.105;
@@ -2064,6 +2065,13 @@ async function startGame(){
   const crestFoamLift=Math.pow(Math.max(0,crossWave),5)*.032;
   const shortCrest=Math.pow(Math.max(0,chopWave),6)*.019;
   return longSwell+swellA+swellB+cross+chop+secondary+ripple+crestFoamLift+shortCrest;
+ }
+ // El oleaje amplio sigue animándose en todo el océano; la zona cercana recibe después
+ // las crestas cortas y normales completas. Así no quedan parches congelados tras mover la cámara.
+ function waterFarHeight(x,z,t=oceanTime){
+  return Math.sin(x*.009+z*.012+t*.48)*.105
+   +Math.sin(x*.018+z*.012+t*.82)*.315
+   +Math.sin(-x*.013+z*.027-t*.73)*.225;
  }
  function createVesselFloatState(){return {heaveVelocity:0,pitchVelocity:0,rollVelocity:0};}
  function updateVesselFloat(root,dt,state,options={}){
@@ -2114,20 +2122,33 @@ async function startGame(){
  // No se dibujan anillos completos alrededor de las islas: desde el mar parecían arcos translúcidos.
  // La espuma queda reservada para el contacto dinámico del casco con el agua.
  function animateWater(dt){
-  oceanTime+=dt;waterAccumulator+=dt;waterNormalAccumulator+=dt;
-  if(waterAccumulator<waterVertexStep)return;waterAccumulator%=waterVertexStep;
+  oceanTime+=dt;waterAccumulator+=dt;waterNormalAccumulator+=dt;waterFarAccumulator+=dt;
+  const farDue=waterFarAccumulator>=waterFarStep,detailDue=waterAccumulator>=waterVertexStep;
+  if(!farDue&&!detailDue)return;
   const workStart=performance.now();refreshWaterDetailRegion();
+  // Actualización global económica para el mar lejano: tres ondas largas, cadencia baja.
+  if(farDue){
+   waterFarAccumulator%=waterFarStep;
+   for(let i=0;i<waterBase.length;i+=3)waterPositions[i+1]=waterFarHeight(waterBase[i],waterBase[i+2],oceanTime);
+  }
+  if(detailDue)waterAccumulator%=waterVertexStep;
+  // La zona alrededor de la cámara conserva el oleaje completo y de mayor frecuencia.
   for(let n=0;n<waterActiveVertexOffsets.length;n++){
    const i=waterActiveVertexOffsets[n];waterPositions[i+1]=waterHeight(waterBase[i],waterBase[i+2],oceanTime);
   }
   waterLastUpdatedVertices=waterActiveVertexOffsets.length;waterLastUploadedVertices=0;waterLastUploadBytes=0;
   const uploadEnd=waterActiveMaxOffset+3;
-  if(uploadEnd>waterActiveMinOffset&&waterPositionBuffer&&waterPositionBuffer.isUpdatable()){
+  if(farDue){
+   // Un único envío contiguo de la malla completa evita que queden zonas antiguas inmóviles.
+   if(waterPositionBuffer&&waterPositionBuffer.isUpdatable())waterPositionBuffer.updateDirectly(waterPositions,0);
+   else ground.updateVerticesData(B.VertexBuffer.PositionKind,waterPositions,false);
+   waterLastUploadedVertices=waterPositions.length/3;waterLastUploadBytes=waterPositions.byteLength;
+  }else if(uploadEnd>waterActiveMinOffset&&waterPositionBuffer&&waterPositionBuffer.isUpdatable()){
    const positionSlice=waterPositions.subarray(waterActiveMinOffset,uploadEnd);
    waterPositionBuffer.updateDirectly(positionSlice,waterActiveMinOffset);
    waterLastUploadedVertices=positionSlice.length/3;waterLastUploadBytes=positionSlice.byteLength;
   }else if(uploadEnd>waterActiveMinOffset){
-   ground.updateVerticesData(B.VertexBuffer.PositionKind,waterPositions,false,false);
+   ground.updateVerticesData(B.VertexBuffer.PositionKind,waterPositions,false);
    waterLastUploadedVertices=waterPositions.length/3;waterLastUploadBytes=waterPositions.byteLength;
   }
   if(waterNormalAccumulator>=waterNormalStep){
@@ -2136,7 +2157,7 @@ async function startGame(){
     const normalSlice=waterNormals.subarray(waterActiveMinOffset,uploadEnd);
     waterNormalBuffer.updateDirectly(normalSlice,waterActiveMinOffset);waterLastUploadBytes+=normalSlice.byteLength;
    }else if(uploadEnd>waterActiveMinOffset){
-    ground.updateVerticesData(B.VertexBuffer.NormalKind,waterNormals,false,false);waterLastUploadBytes+=waterNormals.byteLength;
+    ground.updateVerticesData(B.VertexBuffer.NormalKind,waterNormals,false);waterLastUploadBytes+=waterNormals.byteLength;
    }
    waterLastNormalMs=performance.now()-normalStart;waterNormalAccumulator%=waterNormalStep;
   }
@@ -2144,7 +2165,7 @@ async function startGame(){
   for(const foam of tidalFoamMeshes){
    const dx=foam.centerX-waterFocusX,dz=foam.centerZ-waterFocusZ;if(dx*dx+dz*dz>nearbyRadiusSq)continue;
    for(let i=0;i<foam.positions.length;i+=3){const x=foam.base[i],z=foam.base[i+2];foam.positions[i+1]=waterHeight(x,z,oceanTime)+.028;}
-   foam.mesh.updateVerticesData(B.VertexBuffer.PositionKind,foam.positions,false,false);
+   foam.mesh.updateVerticesData(B.VertexBuffer.PositionKind,foam.positions,false);
   }
   for(const wave of shorelineWaves){
    const dx=wave.x-waterFocusX,dz=wave.z-waterFocusZ;if(dx*dx+dz*dz>nearbyRadiusSq)continue;
@@ -5770,7 +5791,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.144',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.145',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5833,7 +5854,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.144');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.145');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -7584,7 +7605,7 @@ function updateHUD(){
  console.info('Norse NPC roster: separate armored-knight guards and Viking civilians',{warriorCount:humanEnemyParts.length,civilianCount:humanCivilianParts.length,homeAllies:campGuards.length,protectedHomeRadius:24});
  let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;
  let firstFrameRendered=false,startupAssetsReady=false,startScreenShown=false,frameErrorShown=false,lastFrameErrorAt=0,renderedFrames=0;
- const fpsFrameSamples=[];
+ const fpsFrameSamples=new Float32Array(120);let fpsFrameSampleCount=0,fpsFrameSampleCursor=0;
  const frameDiagnostic=document.getElementById('frameDiagnostic');
  function reportFrameError(stage,error){
   const now=performance.now(),detail=String(error&&error.message||error||'error desconocido');
@@ -7602,7 +7623,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.144 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.145 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7635,7 +7656,7 @@ function updateHUD(){
  engine.runRenderLoop(()=>{
   const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;
   const worldUpdateStarted=performance.now();
-  fpsFrameSamples.push(rawFrameMs);if(fpsFrameSamples.length>120)fpsFrameSamples.shift();
+  fpsFrameSamples[fpsFrameSampleCursor]=rawFrameMs;fpsFrameSampleCursor=(fpsFrameSampleCursor+1)%fpsFrameSamples.length;fpsFrameSampleCount=Math.min(fpsFrameSampleCount+1,fpsFrameSamples.length);
   // Nunca dejamos que un error de actualización impida dibujar la escena completa.
   try{
    if(gameStarted){
@@ -7657,7 +7678,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.144: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.145: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -7669,7 +7690,7 @@ function updateHUD(){
   fpsHudTime+=dt;
   if(fpsHudTime>=.55){try{
    const measured=engine.getFps(),meter=document.getElementById('fpsMeter');
-   const ordered=fpsFrameSamples.slice().sort((a,b)=>a-b),p95=ordered.length?ordered[Math.min(ordered.length-1,Math.floor((ordered.length-1)*.95))]:0;
+   const ordered=Array.from(fpsFrameSamples.subarray(0,fpsFrameSampleCount)).sort((a,b)=>a-b),p95=ordered.length?ordered[Math.min(ordered.length-1,Math.floor((ordered.length-1)*.95))]:0;
    if(meter){meter.textContent=Math.round(measured)+' FPS';meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';meter.title='Objetivo: 120 FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms (120 FPS requiere ≤8,3 ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';}
   }catch(err){reportFrameError('contador FPS',err);}fpsHudTime=0;}
  });
@@ -7720,7 +7741,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.144 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.145 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -7758,7 +7779,7 @@ function updateHUD(){
   throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.144 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.145 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
