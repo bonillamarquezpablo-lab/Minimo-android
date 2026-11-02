@@ -7237,12 +7237,15 @@ function updateHUD(){
     if(elapsed<(e.mobileAiNextAt||0))continue;
     e.mobileAiNextAt=elapsed+mobileAiInterval;
    }else if(isConstrainedMobile){e.mobileAiNextAt=0;}
-   root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+actorGroundOffset(e.parts);
    if(landIslandIndex(root.position.x,root.position.z)!==landIslandIndex(pp.x,pp.z)){
+    // En esta salida temprana no habrá una actualización de altura al final del ciclo.
+    root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+actorGroundOffset(e.parts);
     e.state='idle';e.attackT=0;if(worldEntityVisualDue(e,root.position.x,root.position.z))animateViking(e.parts,elapsed*.7,false,'idle',false);continue;
    }
    // Defensores de aldeas conquistadas y enemigos que entran en territorio propio no pueden atacar al jugador.
    if(!canAttackPlayer(e,pp.x,pp.z,enemyPlayerProtected)){
+    // Mantener la altura correcta también cuando la IA termina aquí.
+    root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+actorGroundOffset(e.parts);
     e.state='friendly';e.attackT=0;e.attackDone=false;e.attackCooldown=0;
     if(dist<32){
      const wantedYaw=Math.atan2(dx,dz),yawDelta=Math.atan2(Math.sin(wantedYaw-root.rotation.y),Math.cos(wantedYaw-root.rotation.y));
