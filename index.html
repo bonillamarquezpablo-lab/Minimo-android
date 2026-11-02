@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.122">
-<meta name="el-sin-nombre-repair" content="0.6.122 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.123">
+<meta name="el-sin-nombre-repair" content="0.6.123 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.122</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.123</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1332,25 +1332,29 @@ async function startGame(){
  try{if(graphicsContext){const debugInfo=graphicsContext.getExtension('WEBGL_debug_renderer_info');graphicsRenderer=String(graphicsContext.getParameter(debugInfo?debugInfo.UNMASKED_RENDERER_WEBGL:graphicsContext.RENDERER)||'no disponible');graphicsVendor=String(graphicsContext.getParameter(debugInfo?debugInfo.UNMASKED_VENDOR_WEBGL:graphicsContext.VENDOR)||'no disponible');graphicsVersion=String(graphicsContext.getParameter(graphicsContext.VERSION)||'no disponible');}}catch(_){ }
  const hardwareSignature=(navigator.userAgent||'')+' '+graphicsRenderer;
  // Galaxy A10 (SM-A105) / Exynos 7884 / Mali-G71 MP2: hardware legacy de 2 GB.
+ // Galaxy A12 (SM-A125) Helio P35/PowerVR GE8320 y A12 Nacho (SM-A127) Exynos 850/Mali-G52.
  // Algunos navegadores Samsung ocultan navigator.deviceMemory y el nombre del modelo.
  const legacyLowEndGpuMatch=/SM-A10[0-9A-Z]*|Exynos\s*7884|Mali[- ]?G71(?:\s*MP2)?/i.test(hardwareSignature);
- const constrainedGpuMatch=/SM-A127F|Mali-G52\s*MP1|PowerVR\s*GE8320|SM-A10[0-9A-Z]*|Exynos\s*7884|Mali[- ]?G71(?:\s*MP2)?/i.test(hardwareSignature);
+ const galaxyA12HardwareMatch=/SM-A12[57][A-Z0-9]*|Exynos\s*850|MT6765|Helio\s*P35/i.test(hardwareSignature);
+ const galaxyA12GpuMatch=/Mali[- ]?G52(?:\s*MP1)?|PowerVR.*GE8320/i.test(hardwareSignature);
+ const constrainedGpuMatch=/SM-A12[57][A-Z0-9]*|SM-A127F|Mali[- ]?G52(?:\s*MP1)?|PowerVR.*GE8320|SM-A10[0-9A-Z]*|Exynos\s*7884|Mali[- ]?G71(?:\s*MP2)?/i.test(hardwareSignature);
  const constrainedHardware=!!(isTouchDevice&&(constrainedGpuMatch||(reportedMemory>0&&reportedMemory<=4&&(Number(navigator.hardwareConcurrency)||0)<=8)));
  const iosMemoryBlindMobile=!!(isIOSDevice&&(!reportedMemory||reportedMemory<=4));
  const isConstrainedMobile=!!(isPerformanceMode&&(iosMemoryBlindMobile||(isTouchDevice&&(constrainedHardware||reportedMemory<=3))));
  const isUltraLowEndMobile=!!(isPerformanceMode&&isTouchDevice&&(legacyLowEndGpuMatch||(reportedMemory>0&&reportedMemory<=2)));
+ const isGalaxyA12LowEndMobile=!!(isPerformanceMode&&isTouchDevice&&(galaxyA12HardwareMatch||galaxyA12GpuMatch));
  const shadowMapSize=isPerformanceMode?(isConstrainedMobile?256:(isTouchDevice?512:1024)):(isIOSDevice?1024:(isTouchDevice?2048:(reportedMemory>=8?3072:2048)));
  let shadowGen=null,currentShadowSize=shadowMapSize;
  // CALIDAD conserva la configuración completa. RENDIMIENTO reduce el coste gráfico,
  // no desactiva ni sustituye ningún sistema de juego.
- const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.48:(isConstrainedMobile ? .54 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))):Math.min(deviceDpr,isIOSDevice?1.75:(isTouchDevice?2.60:2.0));
+ const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.48:(isGalaxyA12LowEndMobile?.50:(isConstrainedMobile ? .54 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35))))):Math.min(deviceDpr,isIOSDevice?1.75:(isTouchDevice?2.60:2.0));
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(isPerformanceMode?(isUltraLowEndMobile?1:(isConstrainedMobile?2:4)):16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
- console.info('EL SIN NOMBRE render profile:',{profile:activeGraphicsProfile,devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize,constrainedHardware,ultraLowEndMobile:isUltraLowEndMobile});
+ console.info('EL SIN NOMBRE render profile:',{profile:activeGraphicsProfile,devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize,constrainedHardware,ultraLowEndMobile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile});
  let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
- const minimumQualityDpr=Math.min(qualityDpr,2.05),minimumPerformanceDpr=isPerformanceMode?(isUltraLowEndMobile?.28:(isConstrainedMobile ? .32 : (isTouchDevice ? .52 : .68))):qualityDpr,targetFrameRate=60;
+ const minimumQualityDpr=Math.min(qualityDpr,2.05),minimumPerformanceDpr=isPerformanceMode?(isUltraLowEndMobile?.28:(isGalaxyA12LowEndMobile?.30:(isConstrainedMobile ? .32 : (isTouchDevice ? .52 : .68)))):qualityDpr,targetFrameRate=60;
  function changeShadowQuality(nextSize){
   if(!shadowGen||nextSize===currentShadowSize)return;
   try{const map=shadowGen.getShadowMap&&shadowGen.getShadowMap();if(map&&typeof map.resize==='function'){map.resize(nextSize);currentShadowSize=nextSize;}}
@@ -1394,7 +1398,7 @@ async function startGame(){
  // Entorno IBL opcional: mejora reflejos y materiales PBR del vikingo GLB ya usado.
  // Si el recurso no responde, la escena conserva las luces direccionales y no se bloquea.
  try{
-  if(!isUltraLowEndMobile&&B.CubeTexture&&typeof B.CubeTexture.CreateFromPrefilteredData==='function'){
+  if(!isUltraLowEndMobile&&!isGalaxyA12LowEndMobile&&B.CubeTexture&&typeof B.CubeTexture.CreateFromPrefilteredData==='function'){
    const nordicEnvironment=B.CubeTexture.CreateFromPrefilteredData(new URL('./assets/environmentSpecular.env',document.baseURI).href,scene);
    if(nordicEnvironment){scene.environmentTexture=nordicEnvironment;if('environmentIntensity' in scene)scene.environmentIntensity=.52;}
   }
@@ -1758,8 +1762,8 @@ async function startGame(){
   }
  }
  let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0;
- const waterVertexStep=isPerformanceMode?(isUltraLowEndMobile?1/6:(isConstrainedMobile?1/8:(isTouchDevice?1/12:1/20))):(isTouchDevice?1/30:1/40);
- const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isConstrainedMobile?1/2:(isTouchDevice?1/3:1/6))):(isTouchDevice?1/8:1/12);
+ const waterVertexStep=isPerformanceMode?(isUltraLowEndMobile?1/6:(isGalaxyA12LowEndMobile?1/7:(isConstrainedMobile?1/8:(isTouchDevice?1/12:1/20)))):(isTouchDevice?1/30:1/40);
+ const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/3:1/6)))):(isTouchDevice?1/8:1/12);
  function waterHeight(x,z,t=oceanTime){
   // Layered directional swells: broad North Sea swell plus shorter cross-waves and capillary ripples.
   const longSwell=Math.sin(x*.009+z*.012+t*.48)*.105;
@@ -2549,7 +2553,7 @@ async function startGame(){
  }
  const wakeMaterial=M.foam.clone('DrakkarWakeMaterial');wakeMaterial.alpha=0;wakeMaterial.emissiveColor=new B.Color3(.12,.20,.22);
  const shipWake=[];for(let side of [-1,1]){const strip=B.MeshBuilder.CreatePlane('DrakkarWake_'+side,{width:1.08,height:7.1,sideOrientation:B.Mesh.DOUBLESIDE},scene);strip.parent=ship;strip.rotation.x=Math.PI/2;strip.position=v(side*.48,.42,-7.45);strip.material=wakeMaterial;shipWake.push(strip);}addModelShadow(ship);
- const VESSEL_SPRAY_COUNT=isUltraLowEndMobile?24:(isConstrainedMobile?48:96);
+ const VESSEL_SPRAY_COUNT=isUltraLowEndMobile?24:(isGalaxyA12LowEndMobile?36:(isConstrainedMobile?48:96));
  const vesselSprayMesh=B.MeshBuilder.CreateSphere('VesselWaterSprayBatch',{diameter:1,segments:6},scene);
  const vesselSprayMaterial=M.foam.clone('VesselWaterSprayMaterial');
  vesselSprayMaterial.diffuseColor=new B.Color3(.80,.91,.93);vesselSprayMaterial.emissiveColor=new B.Color3(.10,.17,.19);
@@ -4978,7 +4982,7 @@ async function startGame(){
  }
  
  // Distant gulls circle the coast; simple articulated wings keep them cheap on mobile.
- for(let i=0;i<(isUltraLowEndMobile?3:9);i++){
+ for(let i=0;i<(isUltraLowEndMobile?3:(isGalaxyA12LowEndMobile?4:9));i++){
   const root=newGroup('CoastalGull_'+i,null),body=sphere('GullBody_'+i,root,[0,0,0],[.24,.115,.43],distantGullMaterial,10);
   const left=box('GullLeftWing_'+i,root,[-.39,.015,0],[.78,.045,.15],distantGullMaterial,[0,0,-.08]);
   const right=box('GullRightWing_'+i,root,[.39,.015,0],[.78,.045,.15],distantGullMaterial,[0,0,.08]);
@@ -5023,12 +5027,12 @@ async function startGame(){
    else throw new Error('El GLB se importó sin mallas instanciables');
   }catch(err){console.warn('Se conserva la gaviota animada de reserva; no se cargó el modelo riggeado:',err);}
  }
- if(!isUltraLowEndMobile)loadRiggedCoastalGulls();
+ if(!isUltraLowEndMobile&&!isGalaxyA12LowEndMobile)loadRiggedCoastalGulls();
  // Partículas reutilizables: evita crear y destruir geometría en cada impacto.
  const effects=[],effectPool=[];
- const MAX_ACTIVE_EFFECTS=isUltraLowEndMobile?48:(isConstrainedMobile?96:180);
+ const MAX_ACTIVE_EFFECTS=isUltraLowEndMobile?48:(isGalaxyA12LowEndMobile?72:(isConstrainedMobile?96:180));
  const driftingLeaves=[];
- for(let i=0;i<(isUltraLowEndMobile?0:(isConstrainedMobile?3:10));i++){
+ for(let i=0;i<(isUltraLowEndMobile?0:(isGalaxyA12LowEndMobile?2:(isConstrainedMobile?3:10)));i++){
   const leaf=sphere('WindborneLeaf_'+i,null,[rand(-34,34),rand(1.5,5.0),rand(-34,34)],[.045,.012,.10],i%2?M.leafSun:M.ochreCloth,6);
   leaf.rotation.z=rand(-.5,.5);driftingLeaves.push({mesh:leaf,phase:rand(0,Math.PI*2),speed:rand(.35,.85)});
  }
@@ -5219,12 +5223,12 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'4',build:'0.6.122',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'4',build:'0.6.123',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
    boat:{onShip,velocity:Number(boatVelocity.toFixed(3)),position:{x:Number(ship.position.x.toFixed(2)),y:Number(ship.position.y.toFixed(2)),z:Number(ship.position.z.toFixed(2))},rotation:{x:Number(ship.rotation.x.toFixed(3)),y:Number(ship.rotation.y.toFixed(3)),z:Number(ship.rotation.z.toFixed(3))},flatWakeStrips:shipWake.map(w=>({name:w.name,enabled:w.isEnabled()})),activeSprayParticles:activeSpray,sprayCapacity:VESSEL_SPRAY_COUNT},
-   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,guestMode:SHARE_NEW_GAME,saveSlot:SAVE_KEY,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
+   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,guestMode:SHARE_NEW_GAME,saveSlot:SAVE_KEY,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
    npcs:{enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,ambientPeople:ambientPeople.length,ambientMoving:ambientPeople.filter(n=>Number(n.parts.actualMoveSpeed)>.1).length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,npcClips:humanEnemyParts.filter(p=>p.realHuman).slice(0,8).map(p=>({name:p.name,walk:p.realHuman.walk&&p.realHuman.walk.name,walkPlaying:!!(p.realHuman.walk&&p.realHuman.walk.isPlaying),current:p.realHuman.current&&p.realHuman.current.name,enabled:p.root.isEnabled()}))}
   };
  };
@@ -7086,7 +7090,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.122 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.123 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();updatePlayerIdentityHud();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'3/3 · Preparando el protagonista…');
  // Solo esperamos el modelo principal. Los NPC mantienen sus modelos provisionales
