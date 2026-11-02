@@ -1877,12 +1877,14 @@ async function startGame(){
  const islandMaterials=[M.grass,M.grass2,M.darkGrass];
  const settlements=[[31,-17],[135,14],[-132,45],[28,143]];
  const mountainProfiles=land.map((is,i)=>({x:is.x+(i===0?-25:i===1?15:i===2?-12:i===3?10:0),z:is.z+(i===0?-22:i===1?-10:i===2?8:i===3?15:-4),height:i===0?11.5:(i<4?5.0:3.8),sx:i===0?17:Math.max(9,is.r*.34),sz:i===0?23:Math.max(10,is.r*.38)}));
+ // O(1) lookup: terrain samples used to scan the full island array with indexOf for every vertex.
+ const mountainProfileByIsland=new Map(land.map((is,index)=>[is,mountainProfiles[index]]));
  function terrainHeightOnIsland(is,x,z){
   const d=Math.hypot(x-is.x,z-is.z),edge=Math.max(0,1-(d/is.r)*(d/is.r));
   // Línea de costa irregular: pequeñas calas y entrantes de arena en vez de un círculo perfecto.
   const coastNoise=(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.045+Math.sin(x*.17+z*.11)*.006;
   const coastDistance=d+coastNoise*is.r;
-  const peak=mountainProfiles[land.indexOf(is)],px=(x-peak.x)/peak.sx,pz=(z-peak.z)/peak.sz;
+  const peak=mountainProfileByIsland.get(is),px=(x-peak.x)/peak.sx,pz=(z-peak.z)/peak.sz;
   let relief=peak.height*Math.exp(-.5*(px*px+pz*pz));
   const ridge=peak.height*.20*Math.exp(-.5*(((x-(peak.x+peak.sx*1.05))/(peak.sx*1.55))**2+((z-(peak.z+peak.sz*.55))/(peak.sz*1.35))**2));
   let flat=1;for(let si=0;si<settlements.length;si++){const spot=settlements[si],sd=Math.hypot(x-spot[0],z-spot[1]),radius=10.5;const t=Math.max(0,Math.min(1,(sd-radius)/8));flat=Math.min(flat,t*t*(3-2*t));}
@@ -4909,6 +4911,26 @@ async function startGame(){
   const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);
   gm.diffuseColor=new B.Color3(1,1,1);gm.specularColor=new B.Color3(.018,.022,.012);gm.specularPower=7;gm.backFaceCulling=false;gm.useVertexColors=true;
   const chunkSize=28,grassBatches=new Map();let count=0;
+  // Preserve the exact original clearance tests, but query only obstacles in the candidate's spatial cell.
+  const grassPlacementCellSize=12,grassPlacementGrid=new Map();
+  const grassPlacementKey=(cx,cz)=>cx*100000+cz;
+  function addGrassPlacement(kind,ref,minX,minZ,maxX,maxZ){
+   const x0=Math.floor(minX/grassPlacementCellSize),x1=Math.floor(maxX/grassPlacementCellSize),z0=Math.floor(minZ/grassPlacementCellSize),z1=Math.floor(maxZ/grassPlacementCellSize);
+   for(let cx=x0;cx<=x1;cx++)for(let cz=z0;cz<=z1;cz++){const key=grassPlacementKey(cx,cz);let bucket=grassPlacementGrid.get(key);if(!bucket){bucket=[];grassPlacementGrid.set(key,bucket);}bucket.push({kind,ref});}
+  }
+  for(const tree of trees){const r=(tree.radius||.6)+.48;addGrassPlacement('tree',tree,tree.x-r,tree.z-r,tree.x+r,tree.z+r);}
+  for(const rock of rocks){const r=(rock.radius||.75)+.30;addGrassPlacement('rock',rock,rock.x-r,rock.z-r,rock.x+r,rock.z+r);}
+  for(const collider of worldColliders){const ex=(collider.type==='circle'?collider.r:collider.hx)+.25,ez=(collider.type==='circle'?collider.r:collider.hz)+.25;addGrassPlacement('world',collider,collider.x-ex,collider.z-ez,collider.x+ex,collider.z+ez);}
+  function grassPlacementBlocked(x,z){
+   const bucket=grassPlacementGrid.get(grassPlacementKey(Math.floor(x/grassPlacementCellSize),Math.floor(z/grassPlacementCellSize)));if(!bucket)return false;
+   for(const entry of bucket){const ref=entry.ref,dx=x-ref.x,dz=z-ref.z;
+    if(entry.kind==='tree'){if(ref.alive&&Math.hypot(dx,dz)<(ref.radius||.6)+.48)return true;}
+    else if(entry.kind==='rock'){if(ref.alive&&Math.hypot(dx,dz)<(ref.radius||.75)+.30)return true;}
+    else if(ref.type==='circle'){if(Math.hypot(dx,dz)<ref.r+.25)return true;}
+    else if(Math.abs(dx)<ref.hx+.25&&Math.abs(dz)<ref.hz+.25)return true;
+   }
+   return false;
+  }
   for(let islandIndex=0;islandIndex<land.length;islandIndex++){
    const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520),want=isPerformanceMode?Math.round(baseWant*(isConstrainedMobile?.18:(isTouchDevice?.34:.52))):baseWant;let placed=0,tries=0;
    while(placed<want&&tries<want*8){
@@ -4920,13 +4942,7 @@ async function startGame(){
     const gx=(terrainSurfaceAt(x+.55,z)-terrainSurfaceAt(x-.55,z))/1.1,gz=(terrainSurfaceAt(x,z+.55)-terrainSurfaceAt(x,z-.55))/1.1;
     if(Math.hypot(gx,gz)>.82)continue;
     if(settlements.some(q=>Math.hypot(x-q[0],z-q[1])<9.3))continue;
-    if(trees.some(t=>t.alive&&Math.hypot(x-t.x,z-t.z)<(t.radius||.6)+.48))continue;
-    if(rocks.some(r=>r.alive&&Math.hypot(x-r.x,z-r.z)<(r.radius||.75)+.30))continue;
-    let blocked=false;
-    for(const c of worldColliders){
-     if(c.type==='circle'?Math.hypot(x-c.x,z-c.z)<c.r+.25:Math.abs(x-c.x)<c.hx+.25&&Math.abs(z-c.z)<c.hz+.25){blocked=true;break;}
-    }
-    if(blocked)continue;
+    if(grassPlacementBlocked(x,z))continue;
     const scaleX=rand(.92,1.42),scaleY=rand(.90,1.28),scaleZ=rand(.92,1.42);
     const rotation=B.Quaternion.RotationYawPitchRoll(rand(0,Math.PI*2),0,0);
     const groundY=terrainSurfaceAt(x,z)+.018;
