@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.130">
-<meta name="el-sin-nombre-repair" content="0.6.130 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.131">
+<meta name="el-sin-nombre-repair" content="0.6.131 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.130</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.131</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -609,7 +609,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.130 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.131 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -647,7 +647,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.130: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.131: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -767,11 +767,122 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.130 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.131 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
+
+/* 0.6.131 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+#intro{
+ align-items:center!important;justify-content:center!important;
+ padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
+ overflow:auto!important;
+ background:
+  radial-gradient(ellipse at 50% 42%,rgba(5,12,13,.25),rgba(2,8,10,.76) 78%),
+  linear-gradient(90deg,rgba(2,9,11,.72),rgba(2,9,11,.20) 50%,rgba(2,9,11,.72))!important;
+ backdrop-filter:blur(2px)!important;
+}
+#intro .introCard{
+ position:relative!important;isolation:isolate!important;
+ width:min(1100px,100%)!important;height:auto!important;min-height:0!important;
+ max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 36px)!important;
+ overflow-y:auto!important;overscroll-behavior:contain!important;
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:center!important;
+ padding:clamp(22px,4vw,48px) clamp(20px,5vw,58px)!important;
+ border:1px solid rgba(211,171,104,.92)!important;border-radius:11px!important;
+ background:
+  radial-gradient(ellipse at 82% 16%,rgba(142,99,48,.17),transparent 36%),
+  repeating-linear-gradient(128deg,transparent 0 19px,rgba(226,190,125,.018) 20px,transparent 21px),
+  linear-gradient(145deg,rgba(22,38,36,.985),rgba(5,15,18,.99) 72%)!important;
+ box-shadow:0 30px 100px #000e,inset 0 0 0 5px rgba(202,160,96,.055),inset 0 1px #fff2,0 0 0 1px #493a29!important;
+}
+#intro .introCard:before{inset:7px!important;left:7px!important;right:7px!important;top:7px!important;bottom:7px!important;height:auto!important;border:1px solid rgba(205,165,101,.23)!important;border-radius:6px!important;pointer-events:none!important}
+#intro .introCard:after{content:"ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ"!important;position:absolute!important;left:50%!important;right:auto!important;bottom:8px!important;top:auto!important;width:auto!important;height:auto!important;transform:translateX(-50%)!important;background:none!important;color:rgba(217,180,115,.18)!important;font:700 9px/1 Georgia,serif!important;letter-spacing:7px!important;white-space:nowrap!important;pointer-events:none!important}
+#intro .introSigil{width:48px!important;height:48px!important;margin:0 0 12px!important;display:grid!important;place-items:center!important;border:1px solid #d2ac70!important;border-radius:7px!important;background:linear-gradient(145deg,#344640,#101e20)!important;color:#f0cd8b!important;font:29px Georgia,serif!important;box-shadow:inset 0 1px #fff3,0 8px 20px #0008,0 0 26px #d7ac6a20!important}
+#intro .introEyebrow{margin:0 0 7px!important;text-align:left!important;color:#d2b17a!important;font:900 9px/1.4 system-ui,sans-serif!important;letter-spacing:3.2px!important}
+#intro .introTitle{margin:0!important;text-align:left!important;color:#f0d49a!important;font:900 clamp(43px,6.2vw,76px)/.91 Georgia,"Times New Roman",serif!important;letter-spacing:2.4px!important;text-shadow:0 3px 0 #4c3520,0 9px 32px #000d!important}
+#intro .introSubtitle{margin:10px 0 0!important;text-align:left!important;color:#bfb49b!important;font:850 9px/1.4 system-ui,sans-serif!important;letter-spacing:2.2px!important}
+#intro .introRule{width:100%!important;height:1px!important;margin:18px 0 15px!important;background:linear-gradient(90deg,#7a5834,#d5b277 32%,rgba(213,178,119,.16) 100%)!important}
+#intro .introStory{max-width:810px!important;margin:0 0 18px!important;text-align:left!important;color:#f0e6d2!important;font:700 clamp(15px,1.8vw,20px)/1.48 Georgia,"Times New Roman",serif!important;letter-spacing:.2px!important;text-shadow:0 2px 9px #0009!important}
+#intro .campaignPrompt{display:flex!important;align-items:center!important;gap:12px!important;margin:0 0 11px!important;color:#c7a36b!important;font:900 9px/1.3 system-ui,sans-serif!important;letter-spacing:2.6px!important}
+#intro .campaignPrompt i{height:1px!important;flex:1!important;background:linear-gradient(90deg,rgba(202,162,99,.7),transparent)!important}
+#intro .campaignPrompt b{font:18px Georgia,serif!important;color:#e3c17d!important}
+#intro .campaignOptions{
+ width:100%!important;max-width:none!important;
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:16px!important;margin:0!important;
+}
+#intro .campaignCard{
+ position:relative!important;isolation:isolate!important;overflow:hidden!important;
+ width:100%!important;min-width:0!important;min-height:224px!important;
+ display:grid!important;grid-template-columns:76px minmax(0,1fr)!important;
+ grid-template-rows:auto auto 1fr auto!important;column-gap:16px!important;row-gap:7px!important;
+ align-items:center!important;align-content:stretch!important;
+ padding:22px 22px 18px!important;
+ border:1px solid rgba(193,151,88,.82)!important;border-radius:9px!important;
+ color:#f4e8d2!important;text-align:left!important;cursor:pointer!important;
+ background:
+  linear-gradient(135deg,rgba(64,57,39,.45),transparent 44%),
+  repeating-linear-gradient(135deg,transparent 0 13px,rgba(238,207,153,.025) 14px,transparent 15px),
+  linear-gradient(145deg,rgba(42,58,48,.98),rgba(9,21,22,.99) 78%)!important;
+ box-shadow:inset 0 1px #fff3,inset 0 0 0 4px rgba(207,165,101,.055),0 14px 32px #0009!important;
+ transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease!important;
+ touch-action:manipulation!important;
+}
+#intro .campaignCard:before{content:""!important;position:absolute!important;inset:6px!important;z-index:-1!important;border:1px solid rgba(219,181,117,.27)!important;border-radius:5px!important;pointer-events:none!important}
+#intro .campaignCard:after{content:"ᛟ"!important;position:absolute!important;right:10px!important;bottom:-46px!important;left:auto!important;top:auto!important;width:auto!important;height:auto!important;transform:rotate(-13deg)!important;color:rgba(227,193,125,.085)!important;font:170px/1 Georgia,serif!important;pointer-events:none!important}
+#intro .campaignCard:hover:not(:disabled){transform:translateY(-3px)!important;border-color:#f0d08e!important;box-shadow:inset 0 1px #fff4,inset 0 0 0 4px rgba(207,165,101,.09),0 19px 40px #000b,0 0 22px #c99a5522!important}
+#intro .campaignCard:active:not(:disabled){transform:translateY(1px) scale(.99)!important}
+#intro .campaignCardArt{
+ grid-column:1!important;grid-row:1/5!important;align-self:stretch!important;
+ display:grid!important;place-items:center!important;
+ min-width:0!important;border-right:1px solid rgba(215,176,112,.37)!important;
+ color:#e9c47f!important;font:clamp(48px,6vw,76px)/1 Georgia,serif!important;
+ text-shadow:0 3px 0 #49331f,0 0 30px rgba(226,186,114,.25)!important;
+}
+#intro .campaignCardKicker{grid-column:2!important;grid-row:1!important;color:#d4b27c!important;font:900 8px/1.4 system-ui,sans-serif!important;letter-spacing:2px!important}
+#intro .campaignCard strong{grid-column:2!important;grid-row:2!important;display:block!important;margin:0!important;color:#f1d49b!important;font:900 clamp(21px,2.5vw,30px)/1 Georgia,serif!important;letter-spacing:1.25px!important;text-shadow:0 2px 10px #0009!important}
+#intro .campaignCardDescription,#intro .campaignCard small{grid-column:2!important;grid-row:3!important;align-self:start!important;max-width:440px!important;min-height:0!important;margin:0!important;color:#e5ddce!important;font:600 12px/1.5 system-ui,sans-serif!important}
+#intro .campaignCardAction{grid-column:2!important;grid-row:4!important;display:block!important;margin-top:8px!important;padding-top:10px!important;border-top:1px solid rgba(216,173,104,.42)!important;color:#f0cd8c!important;font:900 9px/1.3 system-ui,sans-serif!important;letter-spacing:1.5px!important}
+#intro .campaignCardAction b{float:right!important;font:16px Georgia,serif!important}
+#intro .campaignLoad{background:
+ linear-gradient(135deg,rgba(30,54,57,.42),transparent 48%),
+ repeating-linear-gradient(45deg,transparent 0 15px,rgba(238,207,153,.025) 16px,transparent 17px),
+ linear-gradient(145deg,rgba(27,48,49,.99),rgba(7,18,22,.99) 78%)!important}
+#intro .campaignLoad .campaignCardArt{color:#c7d0bd!important;text-shadow:0 3px 0 #303d37,0 0 28px rgba(185,205,180,.2)!important}
+#intro .campaignCard:disabled{opacity:.67!important;cursor:not-allowed!important;filter:saturate(.55)!important}
+#intro .campaignCard:disabled:active{transform:none!important}
+#intro .campaignFooter{display:flex!important;justify-content:center!important;align-items:center!important;gap:12px!important;margin:18px 0 0!important;color:#a9936b!important;font:900 8px/1.4 system-ui,sans-serif!important;letter-spacing:2px!important;text-align:center!important}
+#intro .campaignFooter span{color:#d5b276!important;font:16px Georgia,serif!important}
+#intro .introControls,#intro .introAssetStatus,#intro #start{display:none!important}
+#introCivilianInstallCard,#villagerModelBtn{display:none!important}
+@media(max-width:760px){
+ #intro .introCard{width:min(620px,100%)!important;padding:21px 18px!important}
+ #intro .introTitle{font-size:clamp(38px,9vw,58px)!important}
+ #intro .campaignOptions{grid-template-columns:1fr!important;gap:10px!important}
+ #intro .campaignCard{min-height:154px!important;padding:15px 15px!important;grid-template-columns:58px minmax(0,1fr)!important;column-gap:12px!important;row-gap:5px!important}
+ #intro .campaignCardArt{font-size:48px!important}
+ #intro .campaignCardDescription,#intro .campaignCard small{font-size:10px!important;line-height:1.4!important}
+ #intro .campaignFooter{margin-top:12px!important;font-size:7px!important;letter-spacing:1.4px!important}
+}
+@media(max-height:620px){
+ #intro .introCard{max-height:calc(100dvh - 16px)!important;padding-top:15px!important;padding-bottom:15px!important}
+ #intro .introSigil{width:34px!important;height:34px!important;margin-bottom:7px!important;font-size:20px!important}
+ #intro .introTitle{font-size:clamp(32px,5vw,52px)!important}
+ #intro .introSubtitle{margin-top:5px!important}
+ #intro .introRule{margin:10px 0!important}
+ #intro .introStory{margin-bottom:10px!important;font-size:14px!important}
+ #intro .campaignCard{min-height:164px!important;padding:14px 15px!important}
+ #intro .campaignFooter{margin-top:9px!important}
+}
+@media(max-width:430px) and (max-height:700px){
+ #intro .introCard{padding:14px 12px!important}
+ #intro .introStory{font-size:12px!important;line-height:1.35!important}
+ #intro .campaignCard{min-height:137px!important;padding:11px!important}
+ #intro .campaignCard strong{font-size:19px!important}
+ #intro .campaignCardArt{font-size:39px!important}
+}
 </style>
 </head>
 <body class="preflight">
@@ -910,44 +1021,32 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
   <button id="progressSave" class="main" type="button">💾 GUARDAR PARTIDA</button>
  </div>
 </div>
-<div id="intro" role="dialog" aria-modal="true" aria-label="Entrar en la saga">
+<div id="intro" role="dialog" aria-modal="true" aria-label="Elige tu destino">
  <div class="introCard">
   <div class="introSigil" aria-hidden="true">ᛟ</div>
   <div class="introEyebrow">SAGA DEL NORTE · CAPÍTULO I</div>
   <div class="introTitle">EL SIN NOMBRE</div>
-  <div class="introSubtitle">CAPÍTULO I · UN HOMBRE SIN TIERRA</div>
+  <div class="introSubtitle">UN HOMBRE SIN TIERRA · UNA SAGA POR FORJAR</div>
   <div class="introRule"></div>
-  <p class="introStory">Sobrevive. Reúne a tu clan. Conquista el norte.</p>
+  <p class="introStory">Te han arrebatado tu hogar. Te quedan un hacha, un drakkar humilde y la voluntad de conquistar tu lugar en el norte.</p>
+  <div class="campaignPrompt"><span>ELIGE TU DESTINO</span><i aria-hidden="true"></i><b aria-hidden="true">ᛟ</b></div>
   <div class="campaignOptions" id="campaignOptions" aria-label="Selecciona cómo continuar tu saga">
    <button id="newGameChoice" class="campaignCard campaignNew" type="button">
-    <span class="campaignCardSigil" aria-hidden="true">ᛟ</span>
+    <span class="campaignCardArt" aria-hidden="true">ᛟ</span>
     <span class="campaignCardKicker">FORJA TU PROPIO DESTINO</span>
     <strong>NUEVA PARTIDA</strong>
-    <span class="campaignCardDescription">Empieza desde la costa, reúne recursos y levanta tu clan desde cero.</span>
-    <em>INICIAR UNA NUEVA SAGA <b aria-hidden="true">ᛟ</b></em>
+    <span class="campaignCardDescription">Una costa hostil. Un barco sin gloria. Empieza desde cero y gana tu nombre a filo de hacha.</span>
+    <span class="campaignCardAction">COMENZAR LA SAGA <b aria-hidden="true">ᛟ</b></span>
    </button>
    <button id="loadGameChoice" class="campaignCard campaignLoad" type="button" disabled>
-    <span class="campaignCardSigil" aria-hidden="true">ᚱ</span>
+    <span class="campaignCardArt" aria-hidden="true">ᚱ</span>
     <span class="campaignCardKicker">RETOMA TU CONQUISTA</span>
     <strong>CARGAR PARTIDA</strong>
-    <small id="loadGameSummary">Todavía no hay ninguna partida guardada en este dispositivo.</small>
-    <em id="loadGameAction">SIN PARTIDA GUARDADA</em>
+    <small id="loadGameSummary">Todavía no hay ninguna saga guardada en este dispositivo.</small>
+    <span class="campaignCardAction" id="loadGameAction">SIN PARTIDA GUARDADA</span>
    </button>
   </div>
-  <div class="introControls" aria-label="Controles básicos">
-   <div class="introControl"><b>01 · MOVER</b><span>Joystick izquierdo</span></div>
-   <div class="introControl"><b>02 · CÁMARA 360°</b><span>Arrastra cualquier zona libre de la mitad derecha. Dos dedos: zoom.</span></div>
-   <div class="introControl"><b>03 · LUCHAR Y RECOGER</b><span>Botones de acción</span></div>
-  </div>
-  <section class="introAssetStatus" aria-live="polite">
-   <strong id="introResourceStatus">MUNDO PREPARADO · COMPROBANDO RECURSOS</strong>
-   <p id="introCivilianStatus">El juego prepara automáticamente los personajes y el audio antes de entrar.</p>
-   <div id="introCivilianInstallCard" class="introCivilianInstall">
-    <a id="introDownloadCivilian" href="./assets/models/man-base-character-rigged.glb" target="_blank" rel="noopener" download>DESCARGAR MODELO DE ALDEANO · 11 MB</a>
-    <button id="introInstallCivilian" type="button">INSTALAR ALDEANOS DESDE DESCARGAS</button>
-   </div>
-  </section>
-  <button id="start" type="button">ENTRAR EN EL MUNDO</button>
+  <div class="campaignFooter"><span aria-hidden="true">ᚠ</span> UN BARCO · UN HACHA · UN NOMBRE POR CONQUISTAR <span aria-hidden="true">ᚠ</span></div>
  </div>
 </div>
 <div id="modal">
@@ -5255,21 +5354,14 @@ function villageHostileDefenders(vl){
  const audioToggleButton=document.getElementById('audioToggle');if(audioToggleButton)audioToggleButton.addEventListener('click',()=>{NorseAudio.unlock();const state=NorseAudio.toggle();audioToggleButton.textContent=state?'🔇':'🔊';msg(state?'Sonido desactivado':'Sonido activado');});
  const introOverlay=document.getElementById('intro'),newGameChoiceButton=document.getElementById('newGameChoice'),loadGameChoiceButton=document.getElementById('loadGameChoice');let gameStarted=false;
  function showStartScreen(){
-  // El mundo queda preparado detrás del selector de campaña; la simulación no comienza aún.
+  // Se presenta directamente la elección de campaña sobre el mundo preparado.
+  // La simulación y el HUD permanecen ocultos hasta que el jugador elija una tarjeta.
   document.body.classList.remove('booting','boot-failed');
   document.body.classList.add('intro-open');
   refreshCampaignSelection();
-  const civilianTotal=humanCivilianParts.length;
-  const civilianReady=humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length;
-  const guardianReady=humanEnemyParts.filter(p=>/^VillageGuardPatrol0_/.test(String(p.name||''))&&p.realHuman&&p.realHuman.role==='knight').length;
-  const resourceStatus=document.getElementById('introResourceStatus');
-  if(resourceStatus)resourceStatus.textContent='MUNDO PREPARADO';
-  const civilianStatus=document.getElementById('introCivilianStatus');
-  if(civilianStatus)civilianStatus.textContent=civilianReady===civilianTotal&&civilianTotal>0?'Aldeanos humanos instalados: '+civilianReady+'/'+civilianTotal+'.': 'Aldeanos provisionales visibles: '+civilianTotal+'/'+civilianTotal+'. Modelos humanos: '+civilianReady+'/'+civilianTotal+'.';
-  showCivilianModelInstaller(civilianTotal>0&&civilianReady<civilianTotal);
-  try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();drawMap();}catch(introViewError){console.warn('La cámara inicial se ajustará antes de jugar:',introViewError);}
+  try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);drawMap();}catch(introViewError){console.warn('La cámara inicial se ajustará antes de elegir campaña:',introViewError);}
   if(introOverlay){introOverlay.setAttribute('aria-hidden','false');introOverlay.classList.add('open');}
-  console.info('Pantalla previa lista',{guardianes:guardianReady,aldeanosGLB:civilianReady,aldeanos: civilianTotal,guerrerosGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length});
+  console.info('Selector de campaña listo.',{partidasDisponibles:getAvailableCampaignSaves().length});
  }
  function beginSaga(){gameStarted=true;document.body.classList.remove('booting','boot-failed','intro-open');document.body.classList.add('game-running');NorseAudio.unlock();if(introOverlay){introOverlay.classList.remove('open');introOverlay.setAttribute('aria-hidden','true');}try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();}catch(startViewError){console.warn('La vista se ajustará en el siguiente fotograma:',startViewError);}msg('La costa te espera.');}
  function beginNewSaga(){
@@ -5297,7 +5389,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.130',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.131',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5360,7 +5452,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.130');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.131');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -7084,7 +7176,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.130 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.131 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7139,7 +7231,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.130: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.131: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -7208,7 +7300,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.130 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.131 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -7234,7 +7326,7 @@ function updateHUD(){
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
- console.info('EL SIN NOMBRE 0.6.130 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ console.info('EL SIN NOMBRE 0.6.131 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
