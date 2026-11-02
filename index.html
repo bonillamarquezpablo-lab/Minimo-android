@@ -5391,7 +5391,7 @@ function villageHostileDefenders(vl){
  const MenuMusic=(()=>{
   let audio=null,muted=false,stoppedForGame=false,started=false;
   const SOURCE='./assets/audio/menu/winter_s_final_toll.mp3';
-  const VOLUME=.17;
+  const VOLUME=.12;
   function ensure(){
    if(audio||typeof Audio==='undefined')return audio;
    audio=new Audio();audio.preload='none';audio.src=SOURCE;audio.loop=true;audio.volume=VOLUME;audio.playsInline=true;
@@ -5421,7 +5421,7 @@ function villageHostileDefenders(vl){
  const GameplayMusic=(()=>{
   let audio=null,muted=false,sessionActive=false,started=false;
   const SOURCE='./assets/audio/gameplay/the_weight_of_empire.mp3';
-  const VOLUME=.15;
+  const VOLUME=.10;
   function ensure(){
    if(audio||typeof Audio==='undefined')return audio;
    audio=new Audio();audio.preload='none';audio.src=SOURCE;audio.loop=true;audio.volume=VOLUME;audio.playsInline=true;
@@ -5452,7 +5452,7 @@ function villageHostileDefenders(vl){
   return {start,stop,setMuted};
  })();
  const startupAudioPreload=NorseAudio.preloadAll(6500);
- document.addEventListener('pointerdown',()=>NorseAudio.unlock(),{once:true,passive:true});
+ document.addEventListener('pointerdown',()=>{NorseAudio.unlock();if(!document.body.classList.contains('game-running'))MenuMusic.start();},{once:true,passive:true});
  document.addEventListener('keydown',()=>NorseAudio.unlock(),{once:true});
  window.addEventListener('pagehide',()=>{MenuMusic.stop();GameplayMusic.stop();},{once:true});
  document.addEventListener('keydown',e=>{const target=e.target;if(target&&(target.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)))return;if(String(e.key||'').toLowerCase()==='m'&&!e.repeat){const state=NorseAudio.toggle();MenuMusic.setMuted(state);GameplayMusic.setMuted(state);msg(state?'Sonido desactivado':'Sonido activado');}});
