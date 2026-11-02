@@ -15,7 +15,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.139 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.140 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -402,24 +402,28 @@ def main() -> None:
         raise SystemExit("La ruta /invitado/ no usa el nuevo guardado de invitados.")
     (invite_dir / "index.html").write_text(invite_html, encoding="utf-8")
 
-    # User-provided title-screen soundtrack. The source file is stored in the repository;
-    # keep it optional until the MP3 is uploaded, so missing audio never blocks game builds.
-    menu_music_source = ROOT / "assets" / "audio" / "menu" / "winter_s_final_toll.mp3"
-    if menu_music_source.is_file():
-        menu_music_target = DIST / "assets" / "audio" / "menu" / "winter_s_final_toll.mp3"
-        menu_music_target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(menu_music_source, menu_music_target)
-        menu_music_bytes = menu_music_target.read_bytes()
-        results_music = {
-            "path": "assets/audio/menu/winter_s_final_toll.mp3",
-            "bytes": len(menu_music_bytes),
-            "sha256": hashlib.sha256(menu_music_bytes).hexdigest(),
+    # User-provided soundtracks are optional during code-only development; when uploaded,
+    # copy them into the packaged assets and include them in the immutable asset fingerprint.
+    optional_music_assets = [
+        "assets/audio/menu/winter_s_final_toll.mp3",
+        "assets/audio/gameplay/the_weight_of_empire.mp3",
+    ]
+    optional_music_results = []
+    for relative in optional_music_assets:
+        source = ROOT / relative
+        if not source.is_file():
+            print(f"WARN Optional soundtrack not present yet: {relative}")
+            continue
+        target = DIST / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        raw_audio = target.read_bytes()
+        optional_music_results.append({
+            "path": relative,
+            "bytes": len(raw_audio),
+            "sha256": hashlib.sha256(raw_audio).hexdigest(),
             "kind": "audio",
-        }
-        # Add after the downloads are collected below, before the asset-cache fingerprint.
-    else:
-        results_music = None
-        print("WARN Menu soundtrack is not in the repository yet; build continues without it.")
+        })
 
     for name in ("sw.js", "manifest.webmanifest", "guest-manifest.webmanifest", "invitado-manifest.webmanifest", "guest-file-manifest.webmanifest", "icon.svg", "ASSET-LICENSES.md"):
         source = ROOT / name
@@ -450,9 +454,10 @@ def main() -> None:
             print(f"- {relative}: {reason}", file=sys.stderr)
         raise SystemExit(1)
 
-    if results_music:
-        results.append(results_music)
-        print(f"OK assets/audio/menu/winter_s_final_toll.mp3: {results_music['bytes']:,} bytes (banda sonora de menú)")
+    for music_asset in optional_music_results:
+        results.append(music_asset)
+        print(f"OK {music_asset['path']}: {music_asset['bytes']:,} bytes (banda sonora)")
+
 
     meshopt_compress_models(results)
     results.sort(key=lambda item: item["path"])
@@ -481,7 +486,7 @@ def main() -> None:
 
     manifest = {
         "game": "EL SIN NOMBRE",
-        "version": "0.6.139",
+        "version": "0.6.140",
         "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
         "assets": results,
     }
