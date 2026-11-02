@@ -286,6 +286,22 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
+    version_match = re.search(
+        r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
+        html,
+        flags=re.IGNORECASE,
+    )
+    if not version_match:
+        raise SystemExit("index.html no declara el número de versión el-sin-nombre-build.")
+    game_version = version_match.group(1).strip()
+    if not re.fullmatch(r"\d+\.\d+\.\d+", game_version):
+        raise SystemExit(f"Versión del juego no válida en index.html: {game_version!r}")
+    global USER_AGENT
+    USER_AGENT = (
+        f"EL-SIN-NOMBRE-WebBuild/{game_version} "
+        "(+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+    )
+    print(f"Preparando EL SIN NOMBRE {game_version}.")
 
     # Fail the deployment if an inline JavaScript edit is syntactically invalid.
     # The GitHub-hosted runner provides Node.js; this catches startup regressions
@@ -446,12 +462,23 @@ def main() -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
         raw_audio = target.read_bytes()
+        if len(raw_audio) < 100_000 or not (
+            raw_audio.startswith(b"ID3") or (raw_audio[0] == 0xFF and (raw_audio[1] & 0xE0) == 0xE0)
+        ):
+            raise SystemExit(f"Archivo MP3 no válido o demasiado pequeño: {relative}")
         optional_music_results.append({
             "path": relative,
             "bytes": len(raw_audio),
             "sha256": hashlib.sha256(raw_audio).hexdigest(),
             "kind": "audio",
         })
+
+    missing_music = [relative for relative in optional_music_assets if not (DIST / relative).is_file()]
+    if missing_music:
+        raise SystemExit(
+            "No se publica una versión sin las dos bandas sonoras requeridas: "
+            + ", ".join(missing_music)
+        )
 
     for name in ("sw.js", "manifest.webmanifest", "guest-manifest.webmanifest", "invitado-manifest.webmanifest", "guest-file-manifest.webmanifest", "icon.svg", "ASSET-LICENSES.md"):
         source = ROOT / name
@@ -501,6 +528,13 @@ def main() -> None:
     ).hexdigest()[:16]
     sw_path = DIST / "sw.js"
     sw_source = sw_path.read_text(encoding="utf-8")
+    shell_match = re.search(r'const SHELL_CACHE = "el-sin-nombre-shell-([^"]+)";', sw_source)
+    if not shell_match or shell_match.group(1) != game_version:
+        actual = shell_match.group(1) if shell_match else "no declarada"
+        raise SystemExit(
+            f"Versión de caché del service worker desincronizada: "
+            f"index.html={game_version}, sw.js={actual}"
+        )
     sw_source, replacements = re.subn(
         r'const ASSET_CACHE = "[^"]+";',
         f'const ASSET_CACHE = "el-sin-nombre-assets-{asset_fingerprint}";',
@@ -514,7 +548,7 @@ def main() -> None:
 
     manifest = {
         "game": "EL SIN NOMBRE",
-        "version": "0.6.142",
+        "version": game_version,
         "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
         "assets": results,
     }
