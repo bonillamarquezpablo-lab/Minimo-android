@@ -1,4 +1,4 @@
-# Recursos de EL SIN NOMBRE 0.6.127
+# Recursos de EL SIN NOMBRE 0.6.128
 
 Esta distribución se construye desde GitHub Actions y copia los recursos al paquete estático publicado. El navegador los recibe desde el mismo origen HTTPS; no necesita descargar modelos ni sonidos por separado.
 
