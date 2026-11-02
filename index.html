@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.124">
-<meta name="el-sin-nombre-repair" content="0.6.124 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.125">
+<meta name="el-sin-nombre-repair" content="0.6.125 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.124</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.125</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -593,7 +593,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.114 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.125 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -631,7 +631,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.101: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.125: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -751,7 +751,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.114 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.125 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
@@ -1783,7 +1783,7 @@ async function startGame(){
  function createVesselFloatState(){return {heaveVelocity:0,pitchVelocity:0,rollVelocity:0};}
  function updateVesselFloat(root,dt,state,options={}){
   if(!root||!state)return;
-  const step=Math.max(0,Math.min(.04,dt||0)),length=options.length||9.8,beam=options.beam||2.12,draft=options.draft??.16;
+  const totalStep=Math.max(0,Math.min(.10,dt||0)),substeps=Math.max(1,Math.ceil(totalStep/.02)),step=totalStep/substeps,length=options.length||9.8,beam=options.beam||2.12,draft=options.draft??.16;
   const heading=root.rotation.y,fx=Math.sin(heading),fz=Math.cos(heading),sx=Math.cos(heading),sz=-Math.sin(heading);
   const x=root.position.x,z=root.position.z,front=length*.46,side=beam*.43;
   const centre=waterHeight(x,z,oceanTime);
@@ -1794,15 +1794,18 @@ async function startGame(){
   const targetY=centre*.30+(bow+stern+port+starboard)*.175-draft;
   const targetPitch=Math.max(-.19,Math.min(.19,Math.atan2(stern-bow,length)));
   const targetRoll=Math.max(-.16,Math.min(.16,Math.atan2(starboard-port,beam)));
-  state.heaveVelocity+=((targetY-root.position.y)*17.5-state.heaveVelocity*7.4)*step;
-  state.pitchVelocity+=((targetPitch-root.rotation.x)*19.0-state.pitchVelocity*8.2)*step;
-  state.rollVelocity+=((targetRoll-root.rotation.z)*18.0-state.rollVelocity*7.8)*step;
-  state.heaveVelocity=Math.max(-3.6,Math.min(3.6,state.heaveVelocity));
-  state.pitchVelocity=Math.max(-1.15,Math.min(1.15,state.pitchVelocity));
-  state.rollVelocity=Math.max(-.95,Math.min(.95,state.rollVelocity));
-  root.position.y+=state.heaveVelocity*step;
-  root.rotation.x+=state.pitchVelocity*step;
-  root.rotation.z+=state.rollVelocity*step;
+  // Fixed substeps consume the full frame delta without dropping simulation time at low FPS.
+  for(let substep=0;substep<substeps;substep++){
+   state.heaveVelocity+=((targetY-root.position.y)*17.5-state.heaveVelocity*7.4)*step;
+   state.pitchVelocity+=((targetPitch-root.rotation.x)*19.0-state.pitchVelocity*8.2)*step;
+   state.rollVelocity+=((targetRoll-root.rotation.z)*18.0-state.rollVelocity*7.8)*step;
+   state.heaveVelocity=Math.max(-3.6,Math.min(3.6,state.heaveVelocity));
+   state.pitchVelocity=Math.max(-1.15,Math.min(1.15,state.pitchVelocity));
+   state.rollVelocity=Math.max(-.95,Math.min(.95,state.rollVelocity));
+   root.position.y+=state.heaveVelocity*step;
+   root.rotation.x+=state.pitchVelocity*step;
+   root.rotation.z+=state.rollVelocity*step;
+  }
   return {centre,bow,stern,port,starboard,targetY,targetPitch,targetRoll};
  }
  function waterNormalAt(x,z,t=oceanTime){
@@ -2596,12 +2599,15 @@ async function startGame(){
  }
  function updateVesselSpray(dt){
   if(!vesselSprayActive)return;
-  const step=Math.min(.04,Math.max(0,dt||0));let remaining=0;
+  const totalStep=Math.max(0,Math.min(.10,dt||0)),substeps=Math.max(1,Math.ceil(totalStep/.02)),step=totalStep/substeps;let remaining=0;
   for(let i=0;i<VESSEL_SPRAY_COUNT;i++){
    const p=vesselSprayParticles[i];let scale=0;
    if(p.life>0){
-    p.life=Math.max(0,p.life-step);p.x+=p.vx*step;p.y+=p.vy*step;p.z+=p.vz*step;
-    p.vx*=Math.pow(.72,step*10);p.vz*=Math.pow(.72,step*10);p.vy-=4.7*step;
+    // Keep splash lifetime, drag and gravity in sync with the full render-frame delta.
+    for(let substep=0;substep<substeps&&p.life>0;substep++){
+     p.life=Math.max(0,p.life-step);p.x+=p.vx*step;p.y+=p.vy*step;p.z+=p.vz*step;
+     p.vx*=Math.pow(.72,step*10);p.vz*=Math.pow(.72,step*10);p.vy-=4.7*step;
+    }
     const fade=p.life/(p.maxLife||.35);scale=p.size*Math.min(1,fade*1.8);if(p.life>0)remaining++;
    }
    const matrix=B.Matrix.Compose(v(scale,scale,scale),sprayIdentity,v(p.x,p.y,p.z));
@@ -4312,7 +4318,7 @@ async function startGame(){
   function updateCamera(dt){
   const focus=playerPos();
   const portrait=innerHeight>innerWidth;
-  const safeDt=Math.max(0,Math.min(.05,dt||0));
+  const safeDt=Math.max(0,Math.min(.10,dt||0));
   // Quita el microtemblor de la raíz y reduce el seguimiento excesivo del movimiento.
   const lead=onShip?v(0,0,0):v(playerVelocity.x*.045,0,playerVelocity.z*.045);
   const targetRaw=focus.add(lead).add(v(0,onShip?1.78:1.56,0));
@@ -5056,9 +5062,9 @@ async function startGame(){
  let activeTree=null,activeRock=null,activeResourceDistance=Infinity,nearVillage=null,nearBoat=false,actionResource=null,chopStyle=0;
   const CHOP_DURATION=1.12,CHOP_IMPACT_REMAINING=.36,MINING_DURATION=1.28,MINING_IMPACT_REMAINING=.34;
  function nearestResource(){
-  let best=null,dist=5;
-  trees.forEach(t=>{if(!t.alive)return;let pp=playerPos();let d=Math.hypot(t.x-pp.x,t.z-pp.z);if(d<dist){dist=d;best={type:'tree',obj:t,dist:d}}});
-  rocks.forEach(r=>{if(!r.alive)return;let pp=playerPos();let d=Math.hypot(r.x-pp.x,r.z-pp.z);if(d<dist){dist=d;best={type:'rock',obj:r,dist:d}}});
+  let best=null,dist=5;const pp=playerPos(),px=pp.x,pz=pp.z;
+  trees.forEach(t=>{if(!t.alive)return;const d=Math.hypot(t.x-px,t.z-pz);if(d<dist){dist=d;best={type:'tree',obj:t,dist:d}}});
+  rocks.forEach(r=>{if(!r.alive)return;const d=Math.hypot(r.x-px,r.z-pz);if(d<dist){dist=d;best={type:'rock',obj:r,dist:d}}});
   return best;
  }
  function nearEnemies(){const p=playerPos();return enemies.some(e=>e.alive&&canAttackPlayer(e,p.x,p.z)&&Math.hypot(e.parts.root.position.x-p.x,e.parts.root.position.z-p.z)<13)}
@@ -5141,7 +5147,7 @@ function villageHostileDefenders(vl){
    metalHit:[OGA_FOLEY_BASE+'impact-sounds/impactMetal_medium_000.ogg',OGA_FOLEY_BASE+'impact-sounds/impactMetal_medium_003.ogg',OGA_FOLEY_BASE+'impact-sounds/impactMetal_heavy_001.ogg']
   };
   const foleyPools={};let foleyIndex=0;
-  function prepareFoley(){if(typeof Audio==='undefined')return;for(const [kind,files] of Object.entries(FOLEY_FILES)){foleyPools[kind]=files.map(file=>{const pool=[];const source=/^https?:\/\//i.test(file)?file:FOLEY_BASE+file;for(let i=0;i<2;i++){try{const a=new Audio(source);a.preload='none';a.volume=.5;a.playsInline=true;pool.push(a);}catch(_){}}return pool;});}}
+  function prepareFoley(){if(typeof Audio==='undefined')return;for(const [kind,files] of Object.entries(FOLEY_FILES)){foleyPools[kind]=files.map(file=>{const pool=[];const source=/^(?:https?:)?\/\//i.test(file)||file.startsWith('/')||file.startsWith('./')?file:FOLEY_BASE+file;for(let i=0;i<2;i++){try{const a=new Audio(source);a.preload='none';a.volume=.5;a.playsInline=true;pool.push(a);}catch(_){}}return pool;});}}
   prepareFoley();
   function preloadFoley(){Object.values(foleyPools).flat(2).forEach(a=>{try{a.preload='auto';a.load();}catch(_){}});}
   function preloadAll(maxWaitMs=6000){
@@ -5193,7 +5199,7 @@ function villageHostileDefenders(vl){
  const startupAudioPreload=NorseAudio.preloadAll(6500);
  document.addEventListener('pointerdown',()=>NorseAudio.unlock(),{once:true,passive:true});
  document.addEventListener('keydown',()=>NorseAudio.unlock(),{once:true});
- document.addEventListener('keydown',e=>{if(String(e.key||'').toLowerCase()==='m'&&!e.repeat){const state=NorseAudio.toggle();msg(state?'Sonido desactivado':'Sonido activado');}});
+ document.addEventListener('keydown',e=>{const target=e.target;if(target&&(target.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)))return;if(String(e.key||'').toLowerCase()==='m'&&!e.repeat){const state=NorseAudio.toggle();msg(state?'Sonido desactivado':'Sonido activado');}});
  const audioToggleButton=document.getElementById('audioToggle');if(audioToggleButton)audioToggleButton.addEventListener('click',()=>{NorseAudio.unlock();const state=NorseAudio.toggle();audioToggleButton.textContent=state?'🔇':'🔊';msg(state?'Sonido desactivado':'Sonido activado');});
  const introOverlay=document.getElementById('intro'),introStartButton=document.getElementById('start');let gameStarted=false;
  function showStartScreen(){
@@ -5223,7 +5229,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'4',build:'0.6.124',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'5',build:'0.6.125',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5286,7 +5292,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.114');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.125');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -5315,6 +5321,11 @@ function updateHUD(){
   document.getElementById('attack').textContent=onShip?'🏹 ATACAR BARCO':'⚔ ATACAR';
   document.getElementById('upgradeBtn').hidden=!(onShip||nearBoat);
  }
+ function createTreeStump(tree,index=trees.indexOf(tree)){
+  if(!tree||tree.stump)return tree&&tree.stump;
+  const stump=cyl('FelledTreeStump_'+index,null,[tree.x,terrainSurfaceAt(tree.x,tree.z)+.20,tree.z],.35,.55,.55,M.wood);
+  stump.rotation.z=.12;tree.stump=stump;return stump;
+ }
  function stoneChips(rock){
    const origin=v(rock.x,terrainSurfaceAt(rock.x,rock.z)+.75,rock.z);
    burst(origin,M.stoneLight,5);
@@ -5332,10 +5343,10 @@ function updateHUD(){
     tree.alive=false;tree.falling=0;
     const pp=playerPos(),awayX=tree.x-pp.x,awayZ=tree.z-pp.z,awayLen=Math.hypot(awayX,awayZ)||1;
     tree.fallX=(awayZ/awayLen);tree.fallZ=(-awayX/awayLen);
-    NorseAudio.play('woodBreak');woodCount+=5;const stump=cyl('FelledTreeStump',null,[tree.x,terrainSurfaceAt(tree.x,tree.z)+.20,tree.z],.35,.55,.55,M.wood);stump.rotation.z=.12;
+    NorseAudio.play('woodBreak');woodCount+=5;createTreeStump(tree,trees.indexOf(tree));
     recordSagaEvent('Árbol talado: +5 madera.');msg('¡ÁRBOL DERRIBADO! +5 madera');
    }else msg('¡Hachazo limpio! '+tree.hp+' golpes para derribarlo');
-   updateHUD();actionResource=null;
+   updateHUD();saveGame(true);actionResource=null;
   }
   function mineRock(){
    const target=actionResource;
@@ -5344,7 +5355,7 @@ function updateHUD(){
    const rock=target.obj;rock.hp--;rock.hitFlash=.30;stoneChips(rock);NorseAudio.play('stoneHit');
    if(rock.hp<=0){rock.alive=false;rock.meshes.forEach(m=>m.setEnabled(false));stoneCount+=3;recordSagaEvent('Veta de piedra agotada: +3 piedra.');msg('¡Veta extraída! +3 piedra');}
    else msg('¡Golpe de pico! Quedan '+rock.hp+' impactos para extraer la veta.');
-   updateHUD();actionResource=null;
+   updateHUD();saveGame(true);actionResource=null;
   }
  function claimVillage(vl,restoring=false){
   if(!vl||vl.claimed)return;
@@ -5360,7 +5371,7 @@ function updateHUD(){
   for(const group of vl.houseGroups){for(const mesh of group.getChildMeshes()){if(mesh.material===M.wood||mesh.material===M.woodDark)mesh.material=M.friendlyWood;else if(mesh.material===M.roof||mesh.material===M.thatch)mesh.material=M.friendlyRoof;}}
   const surrendered=vl.guards.filter(g=>g.alive&&g.surrendered&&!g.recruited).length;
   if(!restoring){msg('¡'+vl.name+' conquistada! '+surrendered+' guerrero(s) se han rendido. Ya puedes reclutarlos. +12 madera.');recordSagaEvent('Aldea conquistada: '+vl.name+'. Defensores rendidos: '+surrendered+'.');}
-  updateHUD();
+  updateHUD();if(!restoring)saveGame(true);
  }
  function findVillageSurvivor(vl){return vl&&vl.guards.find(g=>g.alive&&g.surrendered&&!g.recruited)||null;}
  function recruitGuard(vl,restoring=false){
@@ -5381,7 +5392,7 @@ function updateHUD(){
   guard.parts.weapon.setEnabled(true);guard.healthBack.setEnabled(false);guard.healthMesh.setEnabled(false);
   const ally={parts:guard.parts,recruited:true,enemyRef:guard,followCooldown:.4,companionIndex:companions.length,attackAnim:0,walkPhase:0,villageIndex:vl.index,kind:'surrendered-guard'};
   companions.push(ally);
-  if(!restoring){msg('¡Un guerrero enemigo se une a tu clan! Tripulación: '+companions.length+'/'+MAX_RECRUITS);recordSagaEvent('Guerrero reclutado en '+vl.name+'. Tripulación '+companions.length+'/'+MAX_RECRUITS+'.');updateHUD();}
+  if(!restoring){msg('¡Un guerrero enemigo se une a tu clan! Tripulación: '+companions.length+'/'+MAX_RECRUITS);recordSagaEvent('Guerrero reclutado en '+vl.name+'. Tripulación '+companions.length+'/'+MAX_RECRUITS+'.');updateHUD();saveGame(true);}
   return true;
  }
   function startAction(type){
@@ -5454,7 +5465,7 @@ function updateHUD(){
  document.getElementById('dodge').addEventListener('click',dodge);
  document.getElementById('jumpBtn').addEventListener('click',jump);
  document.getElementById('runBtn').addEventListener('click',()=>{running=!running;document.getElementById('runBtn').textContent=running?'🏃 CORRER: SÍ':'🏃 CORRER: NO';msg(running?'Carrera activada. Consume resistencia.':'Carrera desactivada.');});
- document.getElementById('healBtn').addEventListener('click',()=>{if(health>=100){msg('Ya tienes la salud al máximo.');return;}if(healCooldown>0){msg('Espera '+Math.ceil(healCooldown)+' s para volver a curarte.');return;}health=Math.min(100,health+32);healCooldown=18;invuln=Math.max(invuln,.35);updateHUD();msg('Has recuperado 32 puntos de salud.');});
+ document.getElementById('healBtn').addEventListener('click',()=>{if(health>=100){msg('Ya tienes la salud al máximo.');return;}if(healCooldown>0){msg('Espera '+Math.ceil(healCooldown)+' s para volver a curarte.');return;}health=Math.min(100,health+32);healCooldown=18;invuln=Math.max(invuln,.35);updateHUD();msg('Has recuperado 32 puntos de salud.');saveGame(true);});
  function playerHit(damage,from,attacker=null){
   if(invuln>0||dodgeTimer>0)return;
   const impactPosition=playerPos();
@@ -5500,7 +5511,7 @@ function updateHUD(){
   }
   const vl=villages.find(v=>v.guards.includes(e));
   if(!silent){msg('¡El defensor ha depuesto las armas! Reclámala para poder reclutarlo.');recordSagaEvent('Un defensor se rindió'+(vl?' en '+vl.name:'')+'.');}
-  updateHUD();
+  updateHUD();if(!silent)saveGame(true);
  }
  function defeatGuard(e,source='combate'){
   if(!e||!e.alive)return;
@@ -5513,7 +5524,7 @@ function updateHUD(){
   const defeatedVillage=villages.find(vl=>vl.guards.includes(e));recordSagaEvent('Defensor eliminado'+(defeatedVillage?' en '+defeatedVillage.name:'')+'. Total: '+kills+'.');
   burst(e.parts.root.position.add(v(0,1.0,0)),M.gold,10);
   if(source==='clan')msg('Tu clan ha abatido a un defensor.');
-  updateHUD();
+  updateHUD();saveGame(true);
  }
  function strikePathClear(from,to){
   const dx=to.x-from.x,dz=to.z-from.z,steps=Math.max(2,Math.ceil(Math.hypot(dx,dz)/.34));
@@ -5935,7 +5946,7 @@ function updateHUD(){
  document.getElementById('mapClose').addEventListener('click',()=>setMapExpanded(false));
  document.getElementById('mapBackdrop').addEventListener('click',()=>setMapExpanded(false));
  window.addEventListener('keydown',e=>{if(e.key==='Escape'){setMapExpanded(false);modelImportPanel.classList.remove('open');}});
- window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' '){attack();e.preventDefault();}if(e.key==='Shift')dodge();if(e.key.toLowerCase()==='j'){jump();e.preventDefault();}if(e.key.toLowerCase()==='c'){cameraYaw=yaw;cameraPitch=.48;cameraTargetSmoothed=null;}});
+ window.addEventListener('keydown',e=>{const target=e.target;if(target&&(target.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)))return;const key=String(e.key||'').toLowerCase();if(key)keys[key]=true;if(e.key===' '){attack();e.preventDefault();}if(e.key==='Shift')dodge();if(key==='j'){jump();e.preventDefault();}if(key==='c'){cameraYaw=yaw;cameraPitch=.48;cameraTargetSmoothed=null;}});
  window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
  function embark(){
   if(onShip){
@@ -5993,12 +6004,12 @@ function updateHUD(){
  function saveGame(silent=false){
   try{
    const pos=playerPos();
-   const data={version:1,saveSlot:SAVE_KEY,guestMode:SHARE_NEW_GAME,savedAt:Date.now(),playerName,chapterStage,sprintMissionMeters,sprintMissionDone,health,stamina,woodCount,stoneCount,kills,captured,weaponLevel,equippedWeapon,
+   const data={version:1,saveSlot:SAVE_KEY,guestMode:SHARE_NEW_GAME,savedAt:Date.now(),playerName,chapterStage,sprintMissionMeters,sprintMissionDone,health,stamina,healCooldown,woodCount,stoneCount,kills,captured,weaponLevel,equippedWeapon,
     player:{x:pos.x,z:pos.z,yaw},checkpoint:{x:lastSafePosition.x,z:lastSafePosition.z},onShip,ship:{x:ship.position.x,z:ship.position.z,yaw:ship.rotation.y,hp:boatHp,max:boatMax,level:boatLevel},
     history:sagaHistory.slice(-30),villages:villages.map(vl=>({claimed:vl.claimed,guards:vl.guards.map(g=>({alive:g.alive,hp:g.hp,surrendered:!!g.surrendered,recruited:!!g.recruited}))})),
     survivorRecruits:companions.map(a=>a.villageIndex),
     ships:enemyShips.map(e=>({hp:e.hp,sunk:e.sunk,x:e.root.position.x,z:e.root.position.z,yaw:e.root.rotation.y})),
-    trees:trees.map(t=>!!t.alive),rocks:rocks.map(r=>!!r.alive),structures:{starterShelter:{built:playerShelterBuilt,x:playerShelterX,z:playerShelterZ}}};
+    trees:trees.map(t=>!!t.alive),rocks:rocks.map(r=>!!r.alive),treeHp:trees.map(t=>Math.max(0,Math.min(3,Number(t.hp)||0))),rockHp:rocks.map(r=>Math.max(0,Math.min(3,Number(r.hp)||0))),structures:{starterShelter:{built:playerShelterBuilt,x:playerShelterX,z:playerShelterZ}}};
    localStorage.setItem(SAVE_KEY,JSON.stringify(data));lastSaveAt=data.savedAt;
    const d=new Date(lastSaveAt);const time=d.toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
    const label=document.getElementById('saveTimeLabel');if(label)label.textContent='Guardado local: '+time+' · Se conserva en este dispositivo.';
@@ -6016,7 +6027,7 @@ function updateHUD(){
    chapterStage=Number.isFinite(Number(d.chapterStage))?Math.max(0,Math.min(4,Number(d.chapterStage))):4;
    const num=(x,fallback,min,max)=>Number.isFinite(Number(x))?Math.max(min,Math.min(max,Number(x))):fallback;
    sprintMissionMeters=num(d.sprintMissionMeters,0,0,40);sprintMissionDone=!!d.sprintMissionDone||sprintMissionMeters>=40;
-   health=num(d.health,100,1,100);stamina=num(d.stamina,100,0,100);woodCount=num(d.woodCount,0,0,99999);stoneCount=num(d.stoneCount,0,0,99999);kills=num(d.kills,0,0,99999);weaponLevel=num(d.weaponLevel,0,0,3);
+   health=num(d.health,100,1,100);stamina=num(d.stamina,100,0,100);healCooldown=Math.max(0,num(d.healCooldown,0,0,18)-Math.max(0,(Date.now()-num(d.savedAt,Date.now(),0,Date.now()+86400000))/1000));woodCount=num(d.woodCount,0,0,99999);stoneCount=num(d.stoneCount,0,0,99999);kills=num(d.kills,0,0,99999);weaponLevel=num(d.weaponLevel,0,0,3);
    const validWeapon=['axe','sword','spear','pickaxe'];equippedWeapon=validWeapon.includes(d.equippedWeapon)?d.equippedWeapon:'axe';
    if(d.ship){ship.position.x=num(d.ship.x,-70.5,-450,450);ship.position.z=num(d.ship.z,9.5,-450,450);ship.rotation.y=num(d.ship.yaw,0,-Math.PI*20,Math.PI*20);boatHp=num(d.ship.hp,100,0,250);boatMax=num(d.ship.max,100,100,250);boatLevel=num(d.ship.level,0,0,3);}
    if(d.player){const x=num(d.player.x,-47,-450,450),z=num(d.player.z,8,-450,450);yaw=num(d.player.yaw,0,-Math.PI*20,Math.PI*20);cameraYaw=yaw;playerAirborne=false;playerVerticalVelocity=0;player.root.parent=null;onShip=false;if(d.onShip===true){player.root.parent=ship;player.root.position=v(0,1.005,-2.75);player.root.rotation.set(0,0,0);if(realPlayerModelPivot)realPlayerModelPivot.position.y=0;onShip=true;}else{
@@ -6035,8 +6046,8 @@ function updateHUD(){
    if(Array.isArray(d.survivorRecruits))d.survivorRecruits.forEach(i=>{const vl=villages.find(v=>v.index===Number(i));if(vl&&vl.claimed)recruitGuard(vl,true);});
    if(d.structures&&d.structures.starterShelter&&d.structures.starterShelter.built)buildPlayerShelter(true,d.structures.starterShelter);
    if(Array.isArray(d.ships))d.ships.forEach((saved,i)=>{const e=enemyShips[i];if(!e||!saved)return;e.hp=num(saved.hp,e.maxHp,0,e.maxHp);e.sunk=!!saved.sunk;e.root.position.x=num(saved.x,e.root.position.x,-450,450);e.root.position.z=num(saved.z,e.root.position.z,-450,450);e.root.rotation.y=num(saved.yaw,e.root.rotation.y,-Math.PI*20,Math.PI*20);e.root.setEnabled(!e.sunk);e.bar.setEnabled(!e.sunk);e.back.setEnabled(!e.sunk);e.bar.scaling.x=Math.max(.01,e.hp/e.maxHp);});
-   if(Array.isArray(d.trees))d.trees.forEach((alive,i)=>{if(trees[i]&&alive===false){trees[i].alive=false;trees[i].root.setEnabled(false);}});
-   if(Array.isArray(d.rocks))d.rocks.forEach((alive,i)=>{if(rocks[i]&&alive===false){rocks[i].alive=false;rocks[i].meshes.forEach(m=>m.setEnabled(false));}});
+   if(Array.isArray(d.trees))d.trees.forEach((alive,i)=>{const tree=trees[i];if(!tree)return;tree.hp=Array.isArray(d.treeHp)?num(d.treeHp[i],alive===false?0:tree.hp,0,3):(alive===false?0:tree.hp);if(alive===false||tree.hp<=0){tree.alive=false;tree.root.setEnabled(false);createTreeStump(tree,i);}});
+   if(Array.isArray(d.rocks))d.rocks.forEach((alive,i)=>{const rock=rocks[i];if(!rock)return;rock.hp=Array.isArray(d.rockHp)?num(d.rockHp[i],alive===false?0:rock.hp,0,3):(alive===false?0:rock.hp);if(alive===false||rock.hp<=0){rock.alive=false;rock.meshes.forEach(m=>m.setEnabled(false));}});
    updateHUD();updateWeaponPanel();updateProgressPanel();
    const when=new Date(Number(d.savedAt)||Date.now()).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
    document.getElementById('saveTimeLabel').textContent='Partida recuperada: '+when+'.';
@@ -6045,7 +6056,7 @@ function updateHUD(){
  }
  function updateProgressPanel(){
   const summary=document.getElementById('progressSummary'),check=document.getElementById('progressChecklist'),history=document.getElementById('progressHistory'),loadout=document.getElementById('progressLoadout');if(!summary||!check||!history||!loadout)return;
-  const sunk=enemyShips.filter(e=>e.sunk).length,dead=enemies.filter(e=>!e.alive).length,claimed=villages.filter(v=>v.claimed).length;
+  const sunk=enemyShips.filter(e=>e.sunk).length,dead=enemies.filter(e=>!e.alive).length,neutralized=enemies.filter(e=>!e.alive||e.surrendered||e.recruited).length,claimed=villages.filter(v=>v.claimed).length;
   const stats=[[''+claimed+'/4','Aldeas'],[String(dead),'Defensores'],[sunk+'/3','Barcos hundidos'],[companions.length,'Tripulación'],[String(woodCount),'Madera'],[String(stoneCount),'Piedra']];
   summary.innerHTML=stats.map(([n,l])=>'<div class="progressStat"><b>'+n+'</b><span>'+l+'</span></div>').join('');
   const chapterTasks=[
@@ -6058,7 +6069,7 @@ function updateHUD(){
    ['Construye y guarda tu refugio',playerShelterBuilt,playerShelterBuilt?'Construido y persistente':'6 madera · 1 piedra'],
    ['Prueba de carrera · recorre 40 metros corriendo',sprintMissionDone,Math.floor(sprintMissionMeters)+'/40 m'],
    ['Asegura las cuatro aldeas vikingas',claimed>=4,claimed+'/4'],
-   ['Elimina a todos los defensores de los asentamientos',dead>=12,dead+'/12'],
+   ['Neutraliza a todos los defensores de los asentamientos',neutralized>=12,neutralized+'/12'],
    ['Recluta supervivientes y forma tu tripulación',companions.length>=4,companions.length+'/4'],
    ['Hunde los tres drakkars saqueadores',sunk>=3,sunk+'/3'],
    ['Forja un arma de nivel maestro',weaponLevel>=3,'Nivel '+weaponLevel+'/3'],
@@ -6083,7 +6094,7 @@ function updateHUD(){
   recordSagaEvent('Arma mejorada: nivel '+weaponLevel+'/3. Daño '+weaponDamageValue()+'.');msg('¡Arma forjada a nivel '+weaponLevel+'/3! Se han añadido runas, refuerzos y detalles visibles.');saveGame(true);
  });
 
- document.getElementById('repairBoat').addEventListener('click',()=>{if(boatHp>=boatMax){msg('El drakkar está en buen estado.');return;}if(woodCount<8){msg('Necesitas 8 de madera.');return;}woodCount-=8;boatHp=Math.min(boatMax,boatHp+35);document.getElementById('modalText').textContent='Casco reparado: '+boatHp+'/'+boatMax+'. Madera: '+woodCount;updateHUD();});
+ document.getElementById('repairBoat').addEventListener('click',()=>{if(boatHp>=boatMax){msg('El drakkar está en buen estado.');return;}if(woodCount<8){msg('Necesitas 8 de madera.');return;}woodCount-=8;boatHp=Math.min(boatMax,boatHp+35);document.getElementById('modalText').textContent='Casco reparado: '+boatHp+'/'+boatMax+'. Madera: '+woodCount;updateHUD();recordSagaEvent('Drakkar reparado: '+boatHp+'/'+boatMax+' de casco.');updateChapterQuest();saveGame(true);});
  modal.querySelectorAll('[data-upgrade]').forEach(b=>b.addEventListener('click',()=>{
   let lv=Number(b.dataset.upgrade),cost=[0,12,25,45][lv],stoneCost=[0,0,5,10][lv];if(boatLevel!==lv-1){msg('Compra primero la mejora anterior.');return;}if(woodCount<cost||stoneCount<stoneCost){msg('Necesitas '+cost+' madera y '+stoneCost+' piedra para esta mejora.');return;}
   woodCount-=cost;stoneCount-=stoneCost;boatLevel=lv;boatMax+=lv===1?25:lv===2?20:30;boatHp=boatMax;applyBoatAppearance(boatLevel);document.getElementById('modalText').textContent='Mejora '+lv+'/3 instalada. Casco '+boatHp+'/'+boatMax+' · velocidad '+(12.5+boatLevel*1.15).toFixed(1)+' m/s · daño '+(42+boatLevel*12+companions.length*4)+'. Se han instalado piezas visibles en el drakkar.';updateHUD();recordSagaEvent('Drakkar mejorado: nivel '+lv+'/3. Casco '+boatHp+'/'+boatMax+'.');msg('¡Mejora naval '+lv+'/3 instalada!');saveGame(true);
@@ -6966,7 +6977,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.101 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.125 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7021,7 +7032,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.101: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.125: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -7090,7 +7101,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.124 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.125 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();updatePlayerIdentityHud();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'3/3 · Preparando el protagonista…');
  // Solo esperamos el modelo principal. Los NPC mantienen sus modelos provisionales
@@ -7114,7 +7125,7 @@ function updateHUD(){
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
- console.info('EL SIN NOMBRE 0.6.101 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ console.info('EL SIN NOMBRE 0.6.125 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
