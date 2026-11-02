@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.138">
-<meta name="el-sin-nombre-repair" content="0.6.138 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.139">
+<meta name="el-sin-nombre-repair" content="0.6.139 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.138</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.139</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -610,7 +610,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.138 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.139 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -648,7 +648,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.138: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.139: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -768,13 +768,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.138 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.139 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.138 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.139 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -5386,11 +5386,41 @@ function villageHostileDefenders(vl){
   function toggle(){muted=!muted;if(master&&ctx)master.gain.setTargetAtTime(muted?0:.72,ctx.currentTime,.04);Object.values(foleyPools).flat(2).forEach(a=>{try{a.muted=muted;}catch(_){}});return muted;}
   return {unlock,play,update,toggle,marchStep,civilianStep,preloadAll,get unlocked(){return unlocked;}};
  })();
+ // Banda sonora de menú: se inicia en el primer gesto del usuario para respetar el autoplay móvil.
+ const MenuMusic=(()=>{
+  let audio=null,muted=false,stoppedForGame=false,started=false;
+  const SOURCE='./assets/audio/menu/winter_s_final_toll.mp3';
+  function ensure(){
+   if(audio||typeof Audio==='undefined')return audio;
+   audio=new Audio(SOURCE);audio.preload='auto';audio.loop=true;audio.volume=.42;audio.playsInline=true;
+   audio.addEventListener('error',()=>console.warn('No se pudo cargar la banda sonora del menú:',SOURCE));
+   return audio;
+  }
+  function start(){
+   if(stoppedForGame||muted)return false;
+   const track=ensure();if(!track)return false;
+   track.volume=.42;track.muted=false;
+   if(!started||track.paused){
+    started=true;
+    const attempt=track.play();
+    if(attempt&&typeof attempt.catch==='function')attempt.catch(err=>{started=false;console.info('La banda sonora espera un gesto válido del usuario:',err);});
+   }
+   return true;
+  }
+  function stop(){
+   stoppedForGame=true;started=false;
+   if(!audio)return;
+   try{audio.pause();audio.currentTime=0;}catch(_){}
+  }
+  function setMuted(value){muted=!!value;if(audio)audio.muted=muted;if(!muted&&!stoppedForGame&&started&&audio&&audio.paused)start();}
+  return {start,stop,setMuted};
+ })();
  const startupAudioPreload=NorseAudio.preloadAll(6500);
- document.addEventListener('pointerdown',()=>NorseAudio.unlock(),{once:true,passive:true});
- document.addEventListener('keydown',()=>NorseAudio.unlock(),{once:true});
- document.addEventListener('keydown',e=>{const target=e.target;if(target&&(target.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)))return;if(String(e.key||'').toLowerCase()==='m'&&!e.repeat){const state=NorseAudio.toggle();msg(state?'Sonido desactivado':'Sonido activado');}});
- const audioToggleButton=document.getElementById('audioToggle');if(audioToggleButton)audioToggleButton.addEventListener('click',()=>{NorseAudio.unlock();const state=NorseAudio.toggle();audioToggleButton.textContent=state?'🔇':'🔊';msg(state?'Sonido desactivado':'Sonido activado');});
+ document.addEventListener('pointerdown',()=>{NorseAudio.unlock();MenuMusic.start();},{once:true,passive:true});
+ document.addEventListener('keydown',()=>{NorseAudio.unlock();MenuMusic.start();},{once:true});
+ window.addEventListener('pagehide',()=>MenuMusic.stop(),{once:true});
+ document.addEventListener('keydown',e=>{const target=e.target;if(target&&(target.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)))return;if(String(e.key||'').toLowerCase()==='m'&&!e.repeat){const state=NorseAudio.toggle();MenuMusic.setMuted(state);msg(state?'Sonido desactivado':'Sonido activado');}});
+ const audioToggleButton=document.getElementById('audioToggle');if(audioToggleButton)audioToggleButton.addEventListener('click',()=>{NorseAudio.unlock();const state=NorseAudio.toggle();MenuMusic.setMuted(state);audioToggleButton.textContent=state?'🔇':'🔊';msg(state?'Sonido desactivado':'Sonido activado');});
  const introOverlay=document.getElementById('intro'),newGameChoiceButton=document.getElementById('newGameChoice'),loadGameChoiceButton=document.getElementById('loadGameChoice');let gameStarted=false;
  function showStartScreen(){
   // Se presenta directamente la elección de campaña sobre el mundo preparado.
@@ -5400,6 +5430,7 @@ function villageHostileDefenders(vl){
   refreshCampaignSelection();
   try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);drawMap();}catch(introViewError){console.warn('La cámara inicial se ajustará antes de elegir campaña:',introViewError);}
   if(introOverlay){introOverlay.setAttribute('aria-hidden','false');introOverlay.classList.add('open');}
+  MenuMusic.start();
   console.info('Selector de campaña listo.',{partidasDisponibles:getAvailableCampaignSaves().length});
  }
  function resetCampaignForNewGame(){
@@ -5521,7 +5552,7 @@ function villageHostileDefenders(vl){
    throw new Error('El estado inicial de la nueva saga no está limpio.');
   }
   updateHUD();updateWeaponPanel();updateProgressPanel();updateChapterTracker();drawMap();
- } function beginSaga(){gameStarted=true;document.body.classList.remove('booting','boot-failed','intro-open');document.body.classList.add('game-running');NorseAudio.unlock();if(introOverlay){introOverlay.classList.remove('open');introOverlay.setAttribute('aria-hidden','true');}try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();}catch(startViewError){console.warn('La vista se ajustará en el siguiente fotograma:',startViewError);}msg('La costa te espera.');}
+ } function beginSaga(){MenuMusic.stop();gameStarted=true;document.body.classList.remove('booting','boot-failed','intro-open');document.body.classList.add('game-running');NorseAudio.unlock();if(introOverlay){introOverlay.classList.remove('open');introOverlay.setAttribute('aria-hidden','true');}try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();}catch(startViewError){console.warn('La vista se ajustará en el siguiente fotograma:',startViewError);}msg('La costa te espera.');}
  function beginNewSaga(){
   activeSaveKey=chooseNewCampaignSaveKey();
   resetCampaignForNewGame();
@@ -5548,7 +5579,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.138',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.139',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5611,7 +5642,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.138');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.139');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -7381,7 +7412,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.138 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.139 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7436,7 +7467,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.138: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.139: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -7499,7 +7530,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.138 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.139 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -7537,7 +7568,7 @@ function updateHUD(){
   throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.138 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.139 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
