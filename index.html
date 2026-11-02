@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.148">
-<meta name="el-sin-nombre-repair" content="0.6.148 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.149">
+<meta name="el-sin-nombre-repair" content="0.6.149 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.148</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.149</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -611,7 +611,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.148 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.149 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -649,7 +649,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.148: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.149: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -769,13 +769,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.148 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.149 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.148 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.149 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -885,7 +885,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #intro .campaignCard strong{font-size:19px!important}
  #intro .campaignCardArt{font-size:39px!important}
 }
-/* 0.6.148 — menús compactos y música antes del selector gráfico. */
+/* 0.6.149 — menús compactos y música antes del selector gráfico. */
 #audioGate{position:fixed;inset:0;z-index:2001;display:none;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at 50% 28%,rgba(151,105,54,.30),transparent 48%),linear-gradient(145deg,#071316,#101f20 58%,#050d10);color:#f3e5c9}
 body.preflight.audio-gate #audioGate{display:flex}
 body.preflight.audio-gate #modeSelect{display:none!important}
@@ -2984,7 +2984,7 @@ async function startGame(){
  // descargado desde Android mediante el selector de archivos. No se oculta el fallo.
  // Recurso exacto del protagonista que ya aparece en el dispositivo: no sustituirlo por otro modelo.
  const VIKING_GLB_URL=new URL('./assets/models/viking-rigged.glb',document.baseURI).href;
- let realPlayerModel=null,realPlayerModelPivot=null,realPlayerAnimations={walk:null,run:null,idle:null,attack:null},realPlayerMode='',realPlayerCurrentGroup=null,realRigNodes={},realRigManualGaitNodes={},realPlayerReady=false,realPlayerBusy=false,realPlayerManualLocomotion=false,playerHumanBlob=null,equippedWeapon='club';
+ let realPlayerModel=null,realPlayerModelPivot=null,realPlayerAnimations={walk:null,run:null,idle:null,attack:null},realPlayerMode='',realPlayerCurrentGroup=null,realPlayerIdleTransition=null,realRigNodes={},realRigManualGaitNodes={},realPlayerReady=false,realPlayerBusy=false,realPlayerManualLocomotion=false,playerHumanBlob=null,equippedWeapon='club';
  const unlockedWeapons=new Set(['club']);
   const REAL_VIKING_FORWARD_OFFSET=Math.PI;
  let realHandNode=null,realUpperArmNode=null,realForearmNode=null,realSpineNode=null,realWeaponHolder=null,realWeaponGroups={},realBoneRest=new Map(),realWeaponAnchorCalibrated=false,realWeaponAnchorType='',realWeaponPoseOverride=null,realWeaponSocketNode=null,realWeaponSocketMode='pivot';
@@ -3972,7 +3972,7 @@ async function startGame(){
    return true;
   }catch(err){console.debug('Pose de reposo del brazo omitida:',err);return false;}
  }
- function relaxHumanoidLeg(root,upper,lower,foot,side){
+ function relaxHumanoidLeg(root,upper,lower,foot,side,kneeFlex=0){
   if(!root||!upper||!lower)return false;
   try{
    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);
@@ -3984,23 +3984,27 @@ async function startGame(){
    let ankle=null;
    if(foot){foot.computeWorldMatrix(true);ankle=foot.getAbsolutePosition();}
    if(!ankle){const children=lower.getChildren?lower.getChildren():[];const child=children.find(node=>node&&node.getAbsolutePosition);if(child){child.computeWorldMatrix(true);ankle=child.getAbsolutePosition();}}
-   if(ankle){const kneeNow=lower.getAbsolutePosition(),shin=ankle.subtract(kneeNow),shinLength=shin.length();if(shinLength>.06){const shinTarget=bodyLocalDirection(root,-side*.018,-.996,-.085,shinLength);rotateBoneWorldTowardExact(lower,shin,shinTarget);}}
+   if(ankle){const kneeNow=lower.getAbsolutePosition(),shin=ankle.subtract(kneeNow),shinLength=shin.length();if(shinLength>.06){const flex=Math.max(0,Math.min(1,kneeFlex)),shinLean=.085+flex*.055;const shinTarget=bodyLocalDirection(root,-side*.018,-.996,-shinLean,shinLength);rotateBoneWorldTowardExact(lower,shin,shinTarget);}}
    if(foot)foot.computeWorldMatrix(true);
    return true;
   }catch(err){console.debug('Pose de apoyo de pierna omitida:',err);return false;}
  }
- function relaxHumanoidLegs(root,rig){
+ function relaxHumanoidLegs(root,rig,kneeFlex=0){
   if(!rig)return;
-  relaxHumanoidLeg(root,rig.leftUpperLeg,rig.leftLowerLeg,rig.leftFoot,-1);
-  relaxHumanoidLeg(root,rig.rightUpperLeg,rig.rightLowerLeg,rig.rightFoot,1);
+  relaxHumanoidLeg(root,rig.leftUpperLeg,rig.leftLowerLeg,rig.leftFoot,-1,kneeFlex);
+  relaxHumanoidLeg(root,rig.rightUpperLeg,rig.rightLowerLeg,rig.rightFoot,1,kneeFlex);
  }
- function applyTwoBoneFootIK(leg,targetClearance=.035,maxCorrection=.30){
+ function applyTwoBoneFootIK(leg,targetClearance=.035,maxCorrection=.30,supportWeight=1){
   try{
+   const support=Math.max(0,Math.min(1,supportWeight));
+   if(support<.08){leg.filteredError*=.55;return;}
    const {upper,lower,foot}=leg;upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);foot.computeWorldMatrix(true);
    const hip=upper.getAbsolutePosition(),knee=lower.getAbsolutePosition(),ankle=foot.getAbsolutePosition();
-   const floor=terrainSurfaceAt(ankle.x,ankle.z)+targetClearance,error=floor-ankle.y;
-   if(!Number.isFinite(error)||Math.abs(error)<.018||Math.abs(error)>maxCorrection)return;
-   leg.filteredError+=(error-leg.filteredError)*.42;
+   const floor=terrainSurfaceAt(ankle.x,ankle.z)+targetClearance,rawError=floor-ankle.y;
+   if(!Number.isFinite(rawError)||Math.abs(rawError)>maxCorrection){leg.filteredError*=.72;return;}
+   const error=rawError*support;
+   if(Math.abs(error)<.012){leg.filteredError*=.68;return;}
+   leg.filteredError+=(error-leg.filteredError)*(.30+.12*support);
    const correction=Math.max(-.22,Math.min(.22,leg.filteredError));
    const targetAnkle=ankle.add(v(0,correction,0)),delta=targetAnkle.subtract(hip),dist=delta.length();
    const l1=leg.upperLength,l2=leg.lowerLength,minReach=Math.abs(l1-l2)+.008,maxReach=l1+l2-.008;
@@ -4017,9 +4021,19 @@ async function startGame(){
   }catch(err){console.debug('Foot IK omitido en este fotograma:',err);}
  }
  function applyRealPlayerFootIK(){
-  // IK solo corrige poses manuales/reposo; no debe pisar Walk/Run tras evaluar el clip.
-  if(!realPlayerReady||realPlayerManualLocomotion||!realFootIKEnabled||onShip||playerAction==='dodge'||(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying))return;
-  for(const leg of realFootIKLegs)applyTwoBoneFootIK(leg);
+  if(!realPlayerReady||!realFootIKEnabled||onShip||playerAirborne||playerAction==='dodge')return;
+  const idle=realPlayerMode==='idle';
+  const walking=(realPlayerMode==='walk'||realPlayerMode==='run')&&playerActualSpeed>.16;
+  if(!idle&&!walking)return;
+  const phase=Number.isFinite(walkPhase)?walkPhase:0;
+  for(const leg of realFootIKLegs){
+   let support=1;
+   if(walking){
+    const contact=Math.max(0,-Math.sin(phase+(leg.side==='right'?Math.PI:0)));
+    support=contact*contact*(3-2*contact);
+   }
+   applyTwoBoneFootIK(leg,.035,.30,support);
+  }
  }
  async function attachHumanViking(asset,originLabel){
   const importedRoot=getImportedRoot(asset);
@@ -4258,24 +4272,53 @@ async function startGame(){
   humanFileInput.addEventListener('change',async()=>{const file=humanFileInput.files&&humanFileInput.files[0];if(file)await loadHumanViking(file);humanFileInput.value='';});
  }
  setLoadingProgress(48,'3/3 · Instalando tu vikingo…');const playerHumanLoadPromise=loadHumanViking();
- function setRealVikingAnimation(mode){
-  if(!realPlayerReady)return;
-  let group=null,loop=true,speed=1.0;
-  if(mode==='attack'||mode==='chop'||mode==='mine'){group=null;}
-  else if(mode==='run'){
-   if(realPlayerManualLocomotion)group=null;
-   else{group=realPlayerAnimations.run||realPlayerAnimations.walk;speed=1.35;}
+ function captureRealPlayerIdleTransition(){
+   const seen=new Set(),poses=[];
+   Object.values(realRigNodes).forEach(node=>{
+    if(!node||seen.has(node))return;seen.add(node);
+    if(node.rotationQuaternion)poses.push({node,quaternion:node.rotationQuaternion.clone(),rotation:null});
+    else if(node.rotation)poses.push({node,quaternion:null,rotation:node.rotation.clone()});
+   });
+   return {startedAt:elapsed,duration:.38,poses};
   }
-  else if(mode==='walk'){
-   if(realPlayerManualLocomotion)group=null;
-   else{group=realPlayerAnimations.walk||realPlayerAnimations.run;speed=realPlayerAnimations.walk?.98:.76;}
+  const realPlayerTransitionQuaternionScratch=new B.Quaternion();
+  function blendRealPlayerIdleTransition(){
+   const transition=realPlayerIdleTransition;if(!transition)return;
+   const raw=Math.max(0,Math.min(1,(elapsed-transition.startedAt)/transition.duration));
+   const alpha=raw*raw*(3-2*raw);
+   for(const pose of transition.poses){
+    const node=pose.node;if(!node)continue;
+    if(pose.quaternion){
+     const target=node.rotationQuaternion||B.Quaternion.RotationYawPitchRoll(node.rotation.y,node.rotation.x,node.rotation.z);
+     B.Quaternion.SlerpToRef(pose.quaternion,target,alpha,realPlayerTransitionQuaternionScratch);
+     if(node.rotationQuaternion)node.rotationQuaternion.copyFrom(realPlayerTransitionQuaternionScratch);
+     else node.rotationQuaternion=realPlayerTransitionQuaternionScratch.clone();
+    }else if(pose.rotation&&node.rotation){
+     node.rotation.set(B.Scalar.LerpAngle(pose.rotation.x,node.rotation.x,alpha),B.Scalar.LerpAngle(pose.rotation.y,node.rotation.y,alpha),B.Scalar.LerpAngle(pose.rotation.z,node.rotation.z,alpha));
+    }
+   }
+   if(raw>=1)realPlayerIdleTransition=null;
   }
-  else if(mode==='idle'){group=null;} // La pose de reposo propia se calcula por rig; el clip importado abría demasiado los brazos.
-  if(mode===realPlayerMode&&group===realPlayerCurrentGroup){if(group)group.speedRatio=speed;return;}
-  Object.values(realPlayerAnimations).filter(Boolean).forEach(g=>{if(g.isPlaying)g.stop();});
-  realPlayerMode=mode;realPlayerCurrentGroup=group;  if(group){group.start(loop,speed);group.speedRatio=speed;}
- }
- function updateRealRigGait(phase,walking,sprinting){
+  function setRealVikingAnimation(mode){
+   if(!realPlayerReady)return;
+   let group=null,loop=true,speed=1.0;
+   if(mode==='attack'||mode==='chop'||mode==='mine'){group=null;}
+   else if(mode==='run'){
+    if(realPlayerManualLocomotion)group=null;
+    else{group=realPlayerAnimations.run||realPlayerAnimations.walk;speed=1.35;}
+   }
+   else if(mode==='walk'){
+    if(realPlayerManualLocomotion)group=null;
+    else{group=realPlayerAnimations.walk||realPlayerAnimations.run;speed=realPlayerAnimations.walk?.98:.76;}
+   }
+   else if(mode==='idle'){group=null;} // Reposo procedural para conservar una postura relajada del GLB.
+   if(mode===realPlayerMode&&group===realPlayerCurrentGroup){if(group)group.speedRatio=speed;return;}
+   if(mode==='idle'&&(realPlayerMode==='walk'||realPlayerMode==='run'))realPlayerIdleTransition=captureRealPlayerIdleTransition();
+   else if(mode!=='idle')realPlayerIdleTransition=null;
+   Object.values(realPlayerAnimations).filter(Boolean).forEach(g=>{if(g.isPlaying)g.stop();});
+   realPlayerMode=mode;realPlayerCurrentGroup=group;if(group){group.start(loop,speed);group.speedRatio=speed;}
+  }
+  function updateRealRigGait(phase,walking,sprinting){
   if(!realPlayerReady)return;
   // El clip nativo es el único propietario de los huesos mientras Walk/Run está activo.
   if(walking&&realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying)return;
@@ -4295,25 +4338,21 @@ async function startGame(){
    apply('rightShoulder',-r*.10,0,-.025);apply('leftShoulder',-l*.10,0,.025);
    if(n.head&&m.head!==false)setRigDelta(n.head,-Math.sin(phase*2)*.012,(l-r)*.018,0);
   }else{
-   // Reposo: parar los clips devuelve el rig a su pose base, pero el filtro de
-   // locomoción puede marcar esos mismos huesos como "ya animados". En reposo
-   // forzamos una pose relajada propia para todos los huesos que reconocimos.
+   // Reposo vivo: soltar el último paso, conservar una flexión mínima de rodillas
+   // y desplazar el peso suavemente entre ambas piernas, sin congelar el esqueleto.
    const resetNodes=new Set(Object.values(n).filter(Boolean));
    resetNodes.forEach(node=>restoreRigNodePose(node,realBoneRest.get(node)));
-   const breath=Math.sin(elapsed*1.25);
-   // Brazos caídos junto al torso, codos ligeramente flexionados y manos orientadas
-   // hacia el cuerpo. La pose parte siempre de la transformación de reposo del GLB.
-   // En vez de adivinar el eje local del rig (que cambia entre exportadores),
-   // orienta cada brazo hacia abajo usando las posiciones reales de hombro y codo.
-   // Asentar hombros antes de resolver el brazo: el importador puede traer una T-pose.
-   apply('leftShoulder',.002*Math.sin(elapsed*.83),0,.010,true);
-   apply('rightShoulder',-.002*Math.sin(elapsed*.83),0,-.010,true);
-   relaxHumanoidLegs(realPlayerModelPivot||player.root,n);
+   const breath=Math.sin(elapsed*1.12),weightShift=Math.sin(elapsed*.72),counterSway=Math.sin(elapsed*.51);
+   apply('leftShoulder',.004*Math.sin(elapsed*.83),0,.012,true);
+   apply('rightShoulder',-.004*Math.sin(elapsed*.83),0,-.012,true);
+   relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.58+Math.abs(weightShift)*.22);
    relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false);
    relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true);
-   apply('hips',breath*.006,0,.003*Math.sin(elapsed*.7),true);
-   apply('spine',-.014+breath*.014,0,.006*Math.sin(elapsed*.7),true);
-   apply('head',.008*Math.sin(elapsed*.45),.014*Math.sin(elapsed*.32),0,true);
+   apply('hips',breath*.010,weightShift*.008,weightShift*.014,true);
+   apply('spine',-.020+breath*.019,-weightShift*.006,-weightShift*.010,true);
+   apply('head',.010*Math.sin(elapsed*.45),.018*Math.sin(elapsed*.32),.006*counterSway,true);
+   blendRealPlayerIdleTransition();
+  }
   }
  }
 
@@ -5819,7 +5858,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.148',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.149',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5882,7 +5921,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.148');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.149');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -7651,7 +7690,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.148 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.149 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7706,7 +7745,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.148: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.149: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -7769,7 +7808,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.148 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.149 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -7807,7 +7846,7 @@ function updateHUD(){
   throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.148 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.149 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
