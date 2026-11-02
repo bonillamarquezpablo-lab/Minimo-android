@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.120">
-<meta name="el-sin-nombre-repair" content="0.6.120 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.121">
+<meta name="el-sin-nombre-repair" content="0.6.121 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.120</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.121</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1252,9 +1252,10 @@ window.addEventListener('online',()=>{
  }
 });
 
-const SHARE_NEW_GAME=!!document.querySelector('meta[name="el-sin-nombre-guest-entry"][content="true"]')||new URLSearchParams(location.search).get('newgame')==='1'||/(?:^|\/)(?:guest|invitado)\/?$/.test(location.pathname);
+const SHARE_NEW_GAME=!!document.querySelector('meta[name="el-sin-nombre-guest-entry"][content="true"]')||new URLSearchParams(location.search).get('newgame')==='1'||new URLSearchParams(location.search).get('guest')==='1'||/(?:^|\/)(?:guest|invitado)\/?$/.test(location.pathname);
 const PREFLIGHT_SETTINGS_KEY='el-sin-nombre-client-preferences-v1';
-const PLAYER_IDENTITY_KEY='el-sin-nombre-identity-'+(SHARE_NEW_GAME?'guest-v4':'main-v1');
+if(SHARE_NEW_GAME){document.documentElement.dataset.guestMode='true';document.title='EL SIN NOMBRE · PARTIDA DE INVITADO';const guestLabel=document.getElementById('subtitle');if(guestLabel)guestLabel.textContent='PARTIDA DE INVITADO · GUARDADO INDEPENDIENTE';}
+const PLAYER_IDENTITY_KEY='el-sin-nombre-identity-'+(SHARE_NEW_GAME?'guest-v6':'main-v1');
 let activeGraphicsProfile='quality',selectedPlayerName='',playerIdentityChosen=false;
 function safePreferenceRead(key,fallback=''){try{const value=localStorage.getItem(key);return value===null?fallback:value;}catch(_){return fallback;}}
 function safePreferenceWrite(key,value){try{localStorage.setItem(key,String(value));return true;}catch(err){console.info('No se pudo guardar una preferencia local:',err);return false;}}
@@ -5218,7 +5219,7 @@ function villageHostileDefenders(vl){
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
    boat:{onShip,velocity:Number(boatVelocity.toFixed(3)),position:{x:Number(ship.position.x.toFixed(2)),y:Number(ship.position.y.toFixed(2)),z:Number(ship.position.z.toFixed(2))},rotation:{x:Number(ship.rotation.x.toFixed(3)),y:Number(ship.rotation.y.toFixed(3)),z:Number(ship.rotation.z.toFixed(3))},flatWakeStrips:shipWake.map(w=>({name:w.name,enabled:w.isEnabled()})),activeSprayParticles:activeSpray,sprayCapacity:VESSEL_SPRAY_COUNT},
-   runtime:{graphicsProfile:activeGraphicsProfile,fps:Math.round(engine.getFps()),elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
+   runtime:{graphicsProfile:activeGraphicsProfile,guestMode:SHARE_NEW_GAME,saveSlot:SAVE_KEY,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
    npcs:{enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,ambientPeople:ambientPeople.length,ambientMoving:ambientPeople.filter(n=>Number(n.parts.actualMoveSpeed)>.1).length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,npcClips:humanEnemyParts.filter(p=>p.realHuman).slice(0,8).map(p=>({name:p.name,walk:p.realHuman.walk&&p.realHuman.walk.name,walkPlaying:!!(p.realHuman.walk&&p.realHuman.walk.isPlaying),current:p.realHuman.current&&p.realHuman.current.name,enabled:p.root.isEnabled()}))}
   };
  };
@@ -5959,7 +5960,7 @@ function updateHUD(){
  let boatHp=65,boatMax=100,boatLevel=0;
  document.getElementById('upgradeBtn').addEventListener('click',openBoatModal);
  document.getElementById('closeModal').addEventListener('click',()=>modal.style.display='none');
- const SAVE_KEY=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v5':'el-sin-nombre-campaign-v1';let playerName=selectedPlayerName;let lastSaveAt=0,saveAccumulator=0;
+ const SAVE_KEY=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v6':'el-sin-nombre-campaign-v1';let playerName=selectedPlayerName;let lastSaveAt=0,saveAccumulator=0;
  let playerShelterBuilt=false,playerShelterGroup=null,playerShelterX=0,playerShelterZ=0;
  const PLAYER_SHELTER_COST={wood:6,stone:1};
  function updatePlayerIdentityHud(){const tag=document.getElementById('playerIdentityTag');if(tag)tag.textContent='VIKINGO · '+(playerName?playerName.toLocaleUpperCase('es-ES'):'SIN NOMBRE');}
@@ -5983,7 +5984,7 @@ function updateHUD(){
  function saveGame(silent=false){
   try{
    const pos=playerPos();
-   const data={version:1,saveSlot:SAVE_KEY,savedAt:Date.now(),playerName,chapterStage,sprintMissionMeters,sprintMissionDone,health,stamina,woodCount,stoneCount,kills,captured,weaponLevel,equippedWeapon,
+   const data={version:1,saveSlot:SAVE_KEY,guestMode:SHARE_NEW_GAME,savedAt:Date.now(),playerName,chapterStage,sprintMissionMeters,sprintMissionDone,health,stamina,woodCount,stoneCount,kills,captured,weaponLevel,equippedWeapon,
     player:{x:pos.x,z:pos.z,yaw},checkpoint:{x:lastSafePosition.x,z:lastSafePosition.z},onShip,ship:{x:ship.position.x,z:ship.position.z,yaw:ship.rotation.y,hp:boatHp,max:boatMax,level:boatLevel},
     history:sagaHistory.slice(-30),villages:villages.map(vl=>({claimed:vl.claimed,guards:vl.guards.map(g=>({alive:g.alive,hp:g.hp,surrendered:!!g.surrendered,recruited:!!g.recruited}))})),
     survivorRecruits:companions.map(a=>a.villageIndex),
@@ -6001,7 +6002,7 @@ function updateHUD(){
   let raw;try{raw=localStorage.getItem(SAVE_KEY);}catch(err){console.warn('No se puede leer el guardado',err);return false;}
   if(!raw)return false;
   try{
-   const d=JSON.parse(raw);if(!d||d.version!==1)throw new Error('Versión de partida no compatible.');if(d.saveSlot&&d.saveSlot!==SAVE_KEY){console.warn('Guardado de otro perfil descartado:',{expected:SAVE_KEY,received:d.saveSlot});return false;}if(!playerIdentityChosen&&typeof d.playerName==='string')playerName=d.playerName;updatePlayerIdentityHud();
+   const d=JSON.parse(raw);if(!d||d.version!==1)throw new Error('Versión de partida no compatible.');if(d.saveSlot&&d.saveSlot!==SAVE_KEY){console.warn('Guardado de otro perfil descartado:',{expected:SAVE_KEY,received:d.saveSlot});return false;}if(SHARE_NEW_GAME&&d.guestMode===false){console.warn('Guardado de campaña principal rechazado en modo invitado.');return false;}if(!playerIdentityChosen&&typeof d.playerName==='string')playerName=d.playerName;updatePlayerIdentityHud();
    // Los guardados anteriores no se reinician ni se obligan a repetir el capítulo inicial.
    chapterStage=Number.isFinite(Number(d.chapterStage))?Math.max(0,Math.min(4,Number(d.chapterStage))):4;
    const num=(x,fallback,min,max)=>Number.isFinite(Number(x))?Math.max(min,Math.min(max,Number(x))):fallback;
@@ -6550,7 +6551,12 @@ function updateHUD(){
   }
   // Enemy awareness, pursuit on land, telegraphed attacks and damage.
   worldUpdatePhase='enemy AI and combat';
-  for(const e of enemies){
+  update.enemyAiAccumulator=(update.enemyAiAccumulator||0)+dt;
+  if(!isConstrainedMobile||update.enemyAiAccumulator>=.05){
+   const enemyAiDt=isConstrainedMobile?Math.min(.15,update.enemyAiAccumulator):dt;
+   update.enemyAiAccumulator=0;update.enemyAiTicks=(update.enemyAiTicks||0)+1;
+   for(const e of enemies){
+   const dt=enemyAiDt;
    if(!e.alive||e.recruited)continue;
    if(e.surrendered){e.state='surrendered';continue;}
    if(onShip){e.state='idle';if(worldEntityVisualDue(e,e.parts.root.position.x,e.parts.root.position.z))animateViking(e.parts,elapsed*.7,false,'idle',false);continue;}
@@ -6636,6 +6642,7 @@ function updateHUD(){
    }
    // La altura se calcula después de mover X/Z, no desde la posición del fotograma anterior.
    root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+actorGroundOffset(e.parts);
+   }
   }
   for(let i=fallenEnemies.length-1;i>=0;i--){
    const fallen=fallenEnemies[i];fallen.deadTimer-=dt;fallen.deadFallT=Math.min(1,(fallen.deadFallT||0)+dt/.52);
@@ -6644,8 +6651,13 @@ function updateHUD(){
    fallen.parts.root.position.y=terrainSurfaceAt(fallen.parts.root.position.x,fallen.parts.root.position.z)+actorGroundOffset(fallen.parts)-.035*ease;
    if(fallen.deadTimer<=0){fallen.parts.root.setEnabled(false);fallenEnemies.splice(i,1);}
   }
-  const leader=playerPos(),leaderForward=v(Math.sin(yaw),0,Math.cos(yaw)),leaderRight=v(Math.cos(yaw),0,-Math.sin(yaw));
-  companions.forEach((ally,index)=>{
+  update.companionAiAccumulator=(update.companionAiAccumulator||0)+dt;
+  if(!isConstrainedMobile||update.companionAiAccumulator>=.0667){
+   const companionAiDt=isConstrainedMobile?Math.min(.15,update.companionAiAccumulator):dt;
+   update.companionAiAccumulator=0;update.companionAiTicks=(update.companionAiTicks||0)+1;
+   const leader=playerPos(),leaderForward=v(Math.sin(yaw),0,Math.cos(yaw)),leaderRight=v(Math.cos(yaw),0,-Math.sin(yaw));
+   companions.forEach((ally,index)=>{
+   const dt=companionAiDt;
    if(!ally.recruited)return;
    if(onShip){
     const crew=ally.parts,crewRoot=crew.root;
@@ -6686,7 +6698,8 @@ function updateHUD(){
    ally.attackAnim=Math.max(0,(ally.attackAnim||0)-dt);
    ally.walkPhase=(ally.walkPhase||0)+allyStep*(Math.PI*2/(ally.parts.actualMoveSpeed>2.45?3.05:2.40));ally.stepDistance=(ally.stepDistance||0)+allyStep;const allyStepStride=ally.parts.actualMoveSpeed>2.45?1.52:1.20;if(ally.stepDistance>=allyStepStride){ally.stepDistance-=allyStepStride;NorseAudio.marchStep();}animateViking(ally.parts,ally.walkPhase+(index%2?Math.PI:0),walkingAlly,'idle',false);
    if(ally.attackAnim>0){const t=1-ally.attackAnim/.42;ally.parts.body.rotation.y=-.22*Math.sin(t*Math.PI);ally.parts.arms[1].rotation.x=-1.2+Math.min(1,t*2.3)*1.8;ally.parts.elbows[1].rotation.x=.20+Math.min(1,t*2.3)*.62;ally.parts.arms[1].rotation.z=-.28;}
-  });
+   });
+  }
   for(const village of villages){
    village.flag.rotation.z=Math.sin(elapsed*1.35+village.index*1.7)*.028;
    if(!village.captureAnimation)continue;
@@ -6975,7 +6988,7 @@ function updateHUD(){
   }catch(err){reportFrameError('restauración WebGL',err);}
  });
  engine.runRenderLoop(()=>{
-  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.033,rawFrameMs/1000));last=now;
+  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;
   const worldUpdateStarted=performance.now();
   fpsFrameSamples.push(rawFrameMs);if(fpsFrameSamples.length>120)fpsFrameSamples.shift();
   // Nunca dejamos que un error de actualización impida dibujar la escena completa.
