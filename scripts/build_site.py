@@ -12,10 +12,11 @@ import subprocess
 import sys
 import tempfile
 import time
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.141 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.142 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -402,14 +403,41 @@ def main() -> None:
         raise SystemExit("La ruta /invitado/ no usa el nuevo guardado de invitados.")
     (invite_dir / "index.html").write_text(invite_html, encoding="utf-8")
 
-    # User-provided soundtracks are optional during code-only development; when uploaded,
-    # copy them into the packaged assets and include them in the immutable asset fingerprint.
+    # Both soundtrack tracks can be supplied either in their final paths or as one ZIP
+    # uploaded to the repository root. Read ZIP members directly; do not extract arbitrary paths.
     optional_music_assets = [
         "assets/audio/menu/winter_s_final_toll.mp3",
         "assets/audio/gameplay/the_weight_of_empire.mp3",
     ]
     optional_music_results = []
+    music_zip = ROOT / "el-sin-nombre-bandas-sonoras.zip"
+    music_archive = None
+    if music_zip.is_file():
+        try:
+            with zipfile.ZipFile(music_zip, "r") as archive:
+                names = set(archive.namelist())
+                missing = [relative for relative in optional_music_assets if relative not in names]
+                if missing:
+                    raise SystemExit("El ZIP de bandas sonoras no contiene: " + ", ".join(missing))
+                for relative in optional_music_assets:
+                    raw_audio = archive.read(relative)
+                    if len(raw_audio) < 100_000 or not (raw_audio.startswith(b"ID3") or (raw_audio[0] == 0xFF and (raw_audio[1] & 0xE0) == 0xE0)):
+                        raise SystemExit(f"Archivo MP3 no válido o demasiado pequeño en el ZIP: {relative}")
+                    target = DIST / relative
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(raw_audio)
+                    optional_music_results.append({
+                        "path": relative,
+                        "bytes": len(raw_audio),
+                        "sha256": hashlib.sha256(raw_audio).hexdigest(),
+                        "kind": "audio",
+                    })
+                music_archive = "zip"
+        except zipfile.BadZipFile as exc:
+            raise SystemExit(f"El paquete de bandas sonoras no es un ZIP válido: {exc}")
     for relative in optional_music_assets:
+        if music_archive == "zip":
+            break
         source = ROOT / relative
         if not source.is_file():
             print(f"WARN Optional soundtrack not present yet: {relative}")
@@ -486,7 +514,7 @@ def main() -> None:
 
     manifest = {
         "game": "EL SIN NOMBRE",
-        "version": "0.6.141",
+        "version": "0.6.142",
         "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
         "assets": results,
     }
