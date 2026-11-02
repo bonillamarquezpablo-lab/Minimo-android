@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.142">
-<meta name="el-sin-nombre-repair" content="0.6.142 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.143">
+<meta name="el-sin-nombre-repair" content="0.6.143 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.142</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.143</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -610,7 +610,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.142 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.143 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -648,7 +648,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.142: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.143: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -768,13 +768,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.142 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.143 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.142 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.143 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -1389,6 +1389,45 @@ window.addEventListener('online',()=>{
 
 const SHARE_NEW_GAME=!!document.querySelector('meta[name="el-sin-nombre-guest-entry"][content="true"]')||new URLSearchParams(location.search).get('newgame')==='1'||new URLSearchParams(location.search).get('guest')==='1'||/(?:^|\/)(?:guest|invitado)\/?$/.test(location.pathname);
 const PREFLIGHT_SETTINGS_KEY='el-sin-nombre-client-preferences-v1';
+// La banda sonora se prepara aquí, antes de inicializar el motor 3D.
+// El primer toque en CALIDAD/RENDIMIENTO solicita play() dentro del gesto del usuario.
+const PREFLIGHT_MENU_MUSIC_SOURCE='./assets/audio/menu/winter_s_final_toll.mp3';
+const PREFLIGHT_MENU_MUSIC_VOLUME=.12;
+let preflightMenuMusic=null;
+function ensurePreflightMenuMusic(){
+ if(preflightMenuMusic||typeof Audio==='undefined')return preflightMenuMusic;
+ preflightMenuMusic=new Audio();
+ preflightMenuMusic.preload='auto';
+ preflightMenuMusic.src=PREFLIGHT_MENU_MUSIC_SOURCE;
+ preflightMenuMusic.loop=true;
+ preflightMenuMusic.volume=PREFLIGHT_MENU_MUSIC_VOLUME;
+ preflightMenuMusic.playsInline=true;
+ preflightMenuMusic.addEventListener('error',()=>console.warn('No se pudo cargar la música inicial del menú:',PREFLIGHT_MENU_MUSIC_SOURCE));
+ window.__elSinNombrePreflightMenuMusic=preflightMenuMusic;
+ return preflightMenuMusic;
+}
+function startPreflightMenuMusic(){
+ const track=ensurePreflightMenuMusic();
+ if(!track||!track.paused)return !!track;
+ try{
+  track.volume=PREFLIGHT_MENU_MUSIC_VOLUME;
+  track.muted=false;
+  const attempt=track.play();
+  if(attempt&&typeof attempt.catch==='function')attempt.catch(error=>console.info('La música inicial espera un gesto válido del navegador:',error));
+  return true;
+ }catch(error){
+  console.info('No se pudo iniciar la música desde el selector inicial:',error);
+  return false;
+ }
+}
+ensurePreflightMenuMusic();
+startPreflightMenuMusic(); // Intento inmediato; móviles que bloqueen autoplay se reintentan al tocar el perfil.
+['chooseQuality','choosePerformance'].forEach(id=>{
+ const button=document.getElementById(id);
+ if(!button)return;
+ button.addEventListener('pointerdown',startPreflightMenuMusic,{capture:true,passive:true});
+ button.addEventListener('click',startPreflightMenuMusic,true);
+});
 if(SHARE_NEW_GAME){document.documentElement.dataset.guestMode='true';document.title='EL SIN NOMBRE · PARTIDA DE INVITADO';const guestLabel=document.getElementById('subtitle');if(guestLabel)guestLabel.textContent='PARTIDA DE INVITADO · GUARDADO INDEPENDIENTE';}
 const PLAYER_IDENTITY_KEY='el-sin-nombre-identity-'+(SHARE_NEW_GAME?'guest-v7':'main-v1');
 let activeGraphicsProfile='quality',selectedPlayerName='',playerIdentityChosen=false;
@@ -5389,12 +5428,13 @@ function villageHostileDefenders(vl){
  // Banda sonora de menú: se inicia en el primer gesto del usuario para respetar el autoplay móvil.
  // Pista de menú/carga: HTMLAudio usa el pipeline nativo de medios, sin trabajo en el bucle 3D.
  const MenuMusic=(()=>{
-  let audio=null,muted=false,stoppedForGame=false,started=false;
+  let audio=window.__elSinNombrePreflightMenuMusic||null,muted=false,stoppedForGame=false,started=!!(audio&&!audio.paused);
   const SOURCE='./assets/audio/menu/winter_s_final_toll.mp3';
   const VOLUME=.12;
   function ensure(){
    if(audio||typeof Audio==='undefined')return audio;
    audio=new Audio();audio.preload='auto';audio.src=SOURCE;audio.loop=true;audio.volume=VOLUME;audio.playsInline=true;
+   window.__elSinNombrePreflightMenuMusic=audio;
    audio.addEventListener('error',()=>console.warn('No se pudo cargar la banda sonora del menú:',SOURCE));
    return audio;
   }
@@ -5402,11 +5442,10 @@ function villageHostileDefenders(vl){
    if(stoppedForGame||muted)return false;
    const track=ensure();if(!track)return false;
    track.volume=VOLUME;track.muted=false;
-   if(!started||track.paused){
-    started=true;
-    const attempt=track.play();
-    if(attempt&&typeof attempt.catch==='function')attempt.catch(err=>{started=false;console.info('La banda sonora espera un gesto válido del usuario:',err);});
-   }
+   if(!track.paused){started=true;return true;}
+   started=true;
+   const attempt=track.play();
+   if(attempt&&typeof attempt.catch==='function')attempt.catch(err=>{started=false;console.info('La banda sonora espera un gesto válido del usuario:',err);});
    return true;
   }
   function stop(){
@@ -5618,7 +5657,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.142',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.143',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5681,7 +5720,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.142');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.143');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -7451,7 +7490,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.142 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.143 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7506,7 +7545,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.142: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.143: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -7569,7 +7608,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.142 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.143 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -7607,7 +7646,7 @@ function updateHUD(){
   throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.142 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.143 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
