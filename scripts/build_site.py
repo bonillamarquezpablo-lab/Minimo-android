@@ -333,7 +333,7 @@ def main() -> None:
     # Root-level invite entry. The guest mode is compiled as a constant, so
     # redirects, query stripping, PWA launch parameters and path parsing cannot
     # accidentally select the main campaign.
-    guest_file_html = html.replace("<head>", '<head>\\n<meta name="el-sin-nombre-guest-entry" content="true">', 1)
+    guest_file_html = html.replace("<head>", '<head>\n<meta name="el-sin-nombre-guest-entry" content="true">', 1)
     guest_file_html = guest_file_html.replace(
         '<link rel="manifest" href="./manifest.webmanifest">',
         '<link rel="manifest" href="./guest-file-manifest.webmanifest">',
@@ -373,7 +373,7 @@ def main() -> None:
         raise SystemExit("La ruta de invitado no lleva la marca de partida independiente.")
     if 'href="./guest-manifest.webmanifest"' not in guest_html:
         raise SystemExit("La ruta de invitado no apunta a su manifiesto PWA independiente.")
-    if "el-sin-nombre-campaign-guest-v5" not in guest_html:
+    if "el-sin-nombre-campaign-guest-v6" not in guest_html:
         raise SystemExit("La ruta /guest/ no usa el guardado nuevo de invitados.")
     (guest_dir / "index.html").write_text(guest_html, encoding="utf-8")
 
@@ -398,7 +398,7 @@ def main() -> None:
         raise SystemExit("La ruta /invitado/ no lleva la marca de partida independiente.")
     if 'href="./invitado-manifest.webmanifest"' not in invite_html:
         raise SystemExit("La ruta /invitado/ no apunta a su manifiesto PWA independiente.")
-    if "el-sin-nombre-campaign-guest-v5" not in invite_html:
+    if "el-sin-nombre-campaign-guest-v6" not in invite_html:
         raise SystemExit("La ruta /invitado/ no usa el nuevo guardado de invitados.")
     (invite_dir / "index.html").write_text(invite_html, encoding="utf-8")
 
