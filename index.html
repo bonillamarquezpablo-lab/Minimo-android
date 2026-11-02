@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.149">
-<meta name="el-sin-nombre-repair" content="0.6.149 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.150">
+<meta name="el-sin-nombre-repair" content="0.6.150 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.149</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.150</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -611,7 +611,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.149 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.150 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -649,7 +649,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.149: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.150: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -769,13 +769,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.149 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.150 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.149 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.150 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -885,7 +885,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #intro .campaignCard strong{font-size:19px!important}
  #intro .campaignCardArt{font-size:39px!important}
 }
-/* 0.6.149 — menús compactos y música antes del selector gráfico. */
+/* 0.6.150 — menús compactos y música antes del selector gráfico. */
 #audioGate{position:fixed;inset:0;z-index:2001;display:none;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at 50% 28%,rgba(151,105,54,.30),transparent 48%),linear-gradient(145deg,#071316,#101f20 58%,#050d10);color:#f3e5c9}
 body.preflight.audio-gate #audioGate{display:flex}
 body.preflight.audio-gate #modeSelect{display:none!important}
@@ -976,6 +976,102 @@ body.preflight.audio-gate #modeSelect{display:none!important}
  #intro .campaignCard strong{font-size:18px!important}
  #intro .campaignFooter{display:none!important}
 }
+
+/* 0.6.150 — pantalla de carga nórdica a sangre completa; arte 2D ligero. */
+#loading{
+ position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;min-height:100dvh!important;
+ margin:0!important;padding:0!important;overflow:hidden!important;display:flex!important;align-items:stretch!important;justify-content:stretch!important;
+ background:#061114!important;isolation:isolate;backdrop-filter:none!important;
+}
+#loading:before{
+ content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+ background:
+  linear-gradient(90deg,rgba(2,8,11,.88) 0%,rgba(3,12,15,.55) 40%,rgba(3,12,15,.20) 70%,rgba(2,8,11,.42) 100%),
+  linear-gradient(0deg,rgba(2,7,9,.82) 0%,transparent 35%,rgba(3,10,13,.10) 68%,rgba(2,8,10,.34) 100%),
+  radial-gradient(ellipse at 49% 47%,transparent 12%,rgba(0,0,0,.16) 66%,rgba(0,0,0,.52) 100%);
+}
+#loading:after{
+ content:"ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ ᚷ ᚹ ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ ᛉ ᛊ";
+ position:absolute;z-index:2;right:clamp(9px,2.2vw,32px);top:50%;transform:translateY(-50%);
+ writing-mode:vertical-rl;color:rgba(228,194,132,.26);font:700 13px/1 Georgia,serif;letter-spacing:8px;pointer-events:none;
+}
+#loading .loadBattlefield{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:#09191e}
+#loading .loadBattlefield svg{display:block;width:100%;height:100%;opacity:.94}
+#loading .loadBattlefield .battleRidge{fill:none;stroke:rgba(222,225,211,.22);stroke-width:3}
+#loading .loadBattlefield .battleMist{fill:none;stroke:rgba(191,210,204,.15);stroke-width:20;stroke-linecap:round}
+#loading .loadCard{
+ position:relative!important;z-index:3!important;display:flex!important;flex-direction:column!important;justify-content:space-between!important;align-items:stretch!important;
+ width:100%!important;max-width:none!important;height:100%!important;min-height:100%!important;max-height:none!important;margin:0!important;
+ padding:0!important;overflow:hidden!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;
+}
+#loading .loadHero{
+ position:relative!important;display:flex!important;flex:1 1 auto!important;flex-direction:column!important;justify-content:center!important;align-items:flex-start!important;
+ width:100%!important;max-width:none!important;min-height:0!important;margin:0!important;
+ padding:calc(env(safe-area-inset-top,0px) + clamp(24px,5vh,58px)) clamp(24px,6.2vw,104px) 20px!important;
+ text-align:left!important;text-shadow:0 4px 24px #000!important;
+}
+#loading .loadEdition{margin:0 0 clamp(10px,2vh,20px)!important;color:#e8c990!important;font:900 clamp(9px,1vw,13px)/1.4 system-ui,sans-serif!important;letter-spacing:clamp(2px,.38vw,5px)!important;text-transform:uppercase}
+#loading .loadHero > strong{
+ display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:0!important;
+ max-width:min(76vw,1120px)!important;margin:0!important;
+ color:#f0dfbd!important;font:900 clamp(52px,9.4vw,132px)/.80 Georgia,"Times New Roman",serif!important;
+ letter-spacing:.025em!important;text-transform:uppercase;
+ text-shadow:0 2px 0 #55442e,0 4px 0 #172022,0 10px 36px rgba(0,0,0,.9)!important;
+}
+#loading .loadHero > strong span{display:block;white-space:nowrap}
+#loading .loadHero > strong span:last-child{color:#e3c48e;text-shadow:0 2px 0 #5a4328,0 5px 0 #182021,0 12px 38px #000}
+#loading .loadTagline{max-width:680px;margin:clamp(13px,2.2vh,24px) 0 0!important;color:#f0e5d2!important;font:850 clamp(10px,1.1vw,14px)/1.5 system-ui,sans-serif!important;letter-spacing:clamp(1.5px,.22vw,3px)!important;text-transform:uppercase}
+#loading .loadWarcry{margin:clamp(9px,1.6vh,17px) 0 0!important;color:#d0a76d!important;font:950 clamp(8px,.85vw,11px)/1.4 system-ui,sans-serif!important;letter-spacing:clamp(1.5px,.26vw,3.2px)!important;text-transform:uppercase}
+#loading .loadWarcry span{padding:0 clamp(3px,.5vw,8px)!important;color:#f1d6a2!important}
+#loading .loadNorseEmblem{
+ position:absolute!important;top:50%!important;right:clamp(35px,10vw,170px)!important;transform:translateY(-50%)!important;
+ width:clamp(118px,18vw,270px)!important;max-width:25vw!important;opacity:.82!important;
+ filter:drop-shadow(0 14px 28px rgba(0,0,0,.9))!important;
+}
+#loading .loadNorseEmblem svg{display:block;width:100%;height:auto}
+#loading .loadBottom{
+ position:relative!important;z-index:4!important;flex:0 0 auto!important;
+ width:100%!important;max-width:none!important;margin:0!important;
+ padding:clamp(13px,2.2vh,25px) clamp(24px,6.2vw,104px) calc(env(safe-area-inset-bottom,0px) + clamp(16px,2.6vh,28px))!important;
+ border:0!important;border-top:1px solid rgba(222,185,119,.54)!important;border-radius:0!important;
+ background:linear-gradient(180deg,rgba(3,12,15,.64),rgba(2,8,10,.96))!important;
+ box-shadow:0 -12px 38px rgba(0,0,0,.24)!important;backdrop-filter:none!important;
+}
+#loading .loadPhase{min-height:24px;gap:11px!important;color:#f4ead8!important;font:800 clamp(11px,1.1vw,14px)/1.35 system-ui,sans-serif!important;letter-spacing:.1px}
+#loading .loadPulse{width:8px;height:8px;flex:0 0 8px;border-radius:1px!important;background:#e8c17e!important;box-shadow:0 0 0 4px rgba(232,193,126,.12),0 0 16px #e8c17e!important;transform:rotate(45deg);animation:norsePulse 1.7s ease-in-out infinite}
+#loading #loadText{display:block;flex:1;min-width:0;color:#f4ead8!important;font:800 clamp(11px,1.1vw,14px)/1.35 system-ui,sans-serif!important;overflow-wrap:anywhere}
+#loading .loadPercent{margin:0 0 0 10px!important;color:#f0d092!important;font:950 clamp(12px,1.2vw,15px)/1 system-ui,sans-serif!important;font-variant-numeric:tabular-nums}
+#loading .loadTrack{height:7px!important;margin:clamp(10px,1.6vh,17px) 0 0!important;border:1px solid rgba(221,182,115,.48)!important;border-radius:2px!important;background:rgba(0,0,0,.78)!important;box-shadow:inset 0 2px 5px #000!important}
+#loading .loadTrack i{background:linear-gradient(90deg,#674326 0%,#b47b3e 42%,#f1d397 72%,#a96e34 100%)!important;box-shadow:0 0 15px rgba(220,177,106,.52)!important}
+#loading #retryEngine{width:min(320px,100%);margin:16px 0 0;border-radius:4px;text-align:center}
+body.boot-failed #loading{padding:18px!important;align-items:center!important;justify-content:center!important;background:rgba(2,8,10,.96)!important}
+body.boot-failed #loading:before,body.boot-failed #loading:after,body.boot-failed #loading .loadBattlefield{display:none!important}
+body.boot-failed #loading .loadHero{display:none!important}
+body.boot-failed #loading .loadBottom{width:min(520px,calc(100% - 20px))!important;margin:auto!important;padding:24px!important;border:1px solid rgba(210,170,105,.65)!important;border-radius:12px!important;background:linear-gradient(145deg,rgba(21,39,40,.98),rgba(7,17,19,.99))!important;box-shadow:0 20px 65px #000b!important}
+@media(max-width:600px) and (orientation:portrait){
+ #loading .loadHero{justify-content:center!important;padding:calc(env(safe-area-inset-top,0px) + 28px) 22px 14px!important}
+ #loading .loadHero > strong{font-size:clamp(43px,12vw,72px)!important;max-width:82vw!important}
+ #loading .loadNorseEmblem{top:18%!important;right:20px!important;width:clamp(74px,21vw,112px)!important;max-width:24vw!important;transform:none!important;opacity:.72!important}
+ #loading .loadEdition{max-width:78vw;font-size:9px!important;letter-spacing:2px!important}
+ #loading .loadTagline{max-width:76vw;font-size:9px!important;letter-spacing:1.2px!important}
+ #loading .loadWarcry{font-size:8px!important;letter-spacing:1.2px!important}
+ #loading .loadBottom{padding:12px 18px calc(env(safe-area-inset-bottom,0px) + 18px)!important}
+ #loading .loadPhase{gap:8px!important;font-size:10px!important}
+ #loading #loadText{font-size:10px!important}
+ #loading .loadPercent{font-size:11px!important}
+}
+@media(max-height:500px) and (orientation:landscape){
+ #loading .loadHero{padding:calc(env(safe-area-inset-top,0px) + 12px) clamp(22px,5vw,72px) 10px!important}
+ #loading .loadEdition{margin-bottom:8px!important;font-size:8px!important}
+ #loading .loadHero > strong{font-size:clamp(42px,8.1vw,76px)!important}
+ #loading .loadTagline{margin-top:8px!important;font-size:9px!important}
+ #loading .loadWarcry{margin-top:6px!important;font-size:8px!important}
+ #loading .loadNorseEmblem{right:9vw!important;width:clamp(75px,14vh,120px)!important}
+ #loading .loadBottom{padding:9px clamp(22px,5vw,72px) calc(env(safe-area-inset-bottom,0px) + 10px)!important}
+ #loading .loadTrack{height:5px!important;margin-top:8px!important}
+}
+@media(prefers-reduced-motion:reduce){#loading .loadPulse{animation:none!important}}
+
 </style>
 </head>
 <body class="preflight audio-gate">
@@ -1034,13 +1130,57 @@ body.preflight.audio-gate #modeSelect{display:none!important}
 </div>
 
 <div id="loading" aria-live="polite">
+ <div class="loadBattlefield" aria-hidden="true">
+ <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+  <defs>
+   <linearGradient id="battleSky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#172e35"/><stop offset=".48" stop-color="#344c4d"/><stop offset="1" stop-color="#102226"/></linearGradient>
+   <linearGradient id="battleSea" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#40595b"/><stop offset=".42" stop-color="#162e35"/><stop offset="1" stop-color="#071519"/></linearGradient>
+   <linearGradient id="battlePeak" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#778582"/><stop offset=".36" stop-color="#405759"/><stop offset="1" stop-color="#152d32"/></linearGradient>
+   <linearGradient id="battleSail" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d8c39d"/><stop offset="1" stop-color="#806b50"/></linearGradient>
+   <radialGradient id="battleMoon"><stop stop-color="#f1d9a7" stop-opacity=".62"/><stop offset="1" stop-color="#d8c49d" stop-opacity="0"/></radialGradient>
+   <filter id="battleSoft"><feGaussianBlur stdDeviation="15"/></filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#battleSky)"/>
+  <circle cx="1245" cy="208" r="230" fill="url(#battleMoon)"/>
+  <circle cx="1245" cy="208" r="66" fill="#d8c8a7" opacity=".52"/>
+  <path d="M0 600 120 506 225 545 390 345 500 480 650 275 790 480 930 328 1060 491 1190 298 1325 470 1460 350 1600 448V680H0Z" fill="url(#battlePeak)" opacity=".86"/>
+  <path d="m346 398 44-53 42 66-42-20-15 28zm262-54 42-69 61 91-60-38-18 25zm326 20 56-36 49 58-49-22-25 17zm250-16 49-50 44 65-48-27-17 22z" fill="#c1c6b8" opacity=".28"/>
+  <path d="M0 592 170 526 270 569 450 436 575 557 742 414 870 558 1045 438 1185 570 1390 442 1600 545V718H0Z" fill="#1c373a" opacity=".82"/>
+  <path d="M0 630Q290 597 520 634T1000 628T1600 615V900H0Z" fill="url(#battleSea)"/>
+  <path class="battleMist" d="M-20 626Q280 592 520 630T1020 620T1640 625" />
+  <path d="M0 690Q260 656 520 682T1040 675T1600 666" fill="none" stroke="#9aa9a0" stroke-opacity=".15" stroke-width="4"/>
+  <path d="M0 756Q360 714 700 746T1600 730" fill="none" stroke="#aeb5a7" stroke-opacity=".10" stroke-width="3"/>
+  <g transform="translate(795 450)" opacity=".90">
+   <path d="M-75 190Q190 240 620 188L570 245Q265 296-25 242Z" fill="#071215" stroke="#b68b56" stroke-opacity=".52" stroke-width="5"/>
+   <path d="M-55 194Q230 228 594 191" fill="none" stroke="#cfaa71" stroke-opacity=".5" stroke-width="7"/>
+   <path d="M-22 239 35 268 520 269 574 242" fill="none" stroke="#050d10" stroke-width="13"/>
+   <path d="M536 192Q595 160 626 117Q649 104 666 129Q636 129 622 151L593 199" fill="#091619" stroke="#b9905c" stroke-width="4"/>
+   <path d="M-70 191Q-119 163-119 133Q-86 158-43 166" fill="none" stroke="#9a754a" stroke-width="10"/>
+   <path d="M-38 170H585" stroke="#b88a55" stroke-width="8"/>
+   <path d="M250 168V-48" stroke="#090f11" stroke-width="13"/>
+   <path d="M258-35Q406-4 493 123L258 123Z" fill="url(#battleSail)" opacity=".78" stroke="#574a37" stroke-width="5"/>
+   <path d="M270-15 464 110M272 40 425 122M258 123 491 123" fill="none" stroke="#66543d" stroke-opacity=".62" stroke-width="4"/>
+   <path d="M258-47 250-70 269-52" fill="none" stroke="#d6b778" stroke-width="5"/>
+   <g fill="#9b6942" stroke="#d3b17a" stroke-width="5">
+    <circle cx="45" cy="192" r="29"/><circle cx="117" cy="201" r="29"/><circle cx="189" cy="207" r="29"/>
+    <circle cx="261" cy="210" r="29"/><circle cx="333" cy="209" r="29"/><circle cx="405" cy="205" r="29"/><circle cx="477" cy="198" r="29"/>
+   </g>
+   <g fill="none" stroke="#ead3a1" stroke-opacity=".74" stroke-width="3">
+    <path d="M45 170v44m-18-22h36m54-22v44m-18-22h36m54-22v44m-18-22h36m54-22v44m-18-22h36m54-22v44m-18-22h36m54-22v44m-18-22h36m54-22v44m-18-22h36"/>
+   </g>
+   <path d="M250-70 250-112 277-91 250-81 223-91Z" fill="#9a4035" stroke="#d7af75" stroke-width="3"/>
+   <path d="M250-112V-70" stroke="#d7af75" stroke-width="3"/>
+  </g>
+  <path d="M0 840Q300 795 530 836T1040 821T1600 816V900H0Z" fill="#030b0e" opacity=".65"/>
+ </svg>
+</div>
  <div class="loadCard">
   <div class="loadHero">
    <div class="loadNorseEmblem" aria-hidden="true"><svg viewBox="0 0 112 132" role="presentation"><path d="M56 5 101 23v35c0 30-17 53-45 68C28 111 11 88 11 58V23Z" fill="#152b2c" stroke="#d0a765" stroke-width="4"/><path d="M56 13 93 28v29c0 24-13 43-37 57C32 100 19 81 19 57V28Z" fill="none" stroke="#8c6941" stroke-width="2"/><path d="M56 26v75M38 44l18 18 18-18M38 83l18-18 18 18" fill="none" stroke="#dfbd7c" stroke-width="4" stroke-linecap="square"/><path d="M26 34 12 20m74 14 14-14" stroke="#ead09c" stroke-width="3"/><circle cx="56" cy="64" r="5" fill="#ead09c"/></svg></div>
    <div class="loadEdition">SAGA DEL NORTE <span>·</span> CAPÍTULO I</div>
-   <strong>EL SIN NOMBRE</strong>
-   <div class="loadTagline">LA COSTA TE ESPERA.</div>
-   <div class="loadWarcry">ACERO <span>·</span> LEALTAD <span>·</span> CONQUISTA</div>
+   <strong><span>EL SIN</span><span>NOMBRE</span></strong>
+   <div class="loadTagline">LA COSTA TE ESPERA. EL ACERO DECIDIRÁ TU DESTINO.</div>
+   <div class="loadWarcry">ACERO <span>·</span> HONOR <span>·</span> CONQUISTA</div>
   </div>
   <div class="loadBottom">
    <div class="loadPhase"><span class="loadPulse" aria-hidden="true"></span><span id="loadText">Preparando el mundo…</span><span id="loadPercent" class="loadPercent">0%</span></div>
@@ -5857,7 +5997,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.149',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.150',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5920,7 +6060,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.149');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.150');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -7689,7 +7829,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.149 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.150 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7744,7 +7884,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.149: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.150: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -7807,7 +7947,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.149 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.150 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -7845,7 +7985,7 @@ function updateHUD(){
   throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.149 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.150 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
