@@ -6646,8 +6646,6 @@ function updateHUD(){
   }
   const leader=playerPos(),leaderForward=v(Math.sin(yaw),0,Math.cos(yaw)),leaderRight=v(Math.cos(yaw),0,-Math.sin(yaw));
   companions.forEach((ally,index)=>{
-   if(isConstrainedMobile&&elapsed<(ally.mobileFollowNextAt||0))return;
-   if(isConstrainedMobile)ally.mobileFollowNextAt=elapsed+.10;
    if(!ally.recruited)return;
    if(onShip){
     const crew=ally.parts,crewRoot=crew.root;
@@ -6741,7 +6739,7 @@ function updateHUD(){
   worldUpdatePhase='ambient NPCs, guards and companions';
   ambientUpdateAccumulator+=dt;
   if(ambientUpdateAccumulator>=(isConstrainedMobile?1/10:(isPerformanceMode?1/30:1/60))){
-   const ambientDt=Math.min(.05,ambientUpdateAccumulator);ambientUpdateAccumulator=Math.max(0,ambientUpdateAccumulator-ambientDt);
+   const ambientDt=Math.min(isConstrainedMobile?.10:.05,ambientUpdateAccumulator);ambientUpdateAccumulator=Math.max(0,ambientUpdateAccumulator-ambientDt);
   // Los efectos de fuego/humo se actualizan a 20 Hz; locomoción y combate conservan su cadencia.
   ambientVfxAccumulator+=ambientDt;
   if(ambientVfxAccumulator>=(isConstrainedMobile?.10:.05)){
