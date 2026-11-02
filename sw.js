@@ -1,7 +1,7 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.120";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.121";
 const ASSET_CACHE = "el-sin-nombre-assets-build";
-const SHELL_FILES = ["./index.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./icon.svg"];
+const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", event => {
   event.waitUntil(
@@ -55,9 +55,10 @@ self.addEventListener("fetch", event => {
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, SHELL_CACHE).catch(async () => {
       const cache = await caches.open(SHELL_CACHE);
+      const guestFilePath = url.pathname.endsWith("/guest.html");
       const guestPath = /\/(?:guest|invitado)(?:\/|\/index\.html)?$/.test(url.pathname);
       const invitePath = /\/invitado(?:\/|\/index\.html)?$/.test(url.pathname);
-      const fallback = guestPath ? (invitePath ? "./invitado/index.html" : "./guest/index.html") : "./index.html";
+      const fallback = guestFilePath ? "./guest.html" : (guestPath ? (invitePath ? "./invitado/index.html" : "./guest/index.html") : "./index.html");
       return (await cache.match(fallback)) || Response.error();
     }));
     return;
@@ -68,7 +69,7 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  if (url.pathname.endsWith("/manifest.webmanifest") || url.pathname.endsWith("/guest-manifest.webmanifest") || url.pathname.endsWith("/invitado-manifest.webmanifest") || url.pathname.endsWith("/icon.svg")) {
+  if (url.pathname.endsWith("/manifest.webmanifest") || url.pathname.endsWith("/guest-manifest.webmanifest") || url.pathname.endsWith("/invitado-manifest.webmanifest") || url.pathname.endsWith("/guest-file-manifest.webmanifest") || url.pathname.endsWith("/icon.svg")) {
     event.respondWith(cacheFirst(request, SHELL_CACHE).catch(() => Response.error()));
   }
 });
