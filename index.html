@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.131">
-<meta name="el-sin-nombre-repair" content="0.6.131 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.132">
+<meta name="el-sin-nombre-repair" content="0.6.132 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.131</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.132</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -609,7 +609,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.131 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.132 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -647,7 +647,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.131: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.132: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -767,13 +767,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.131 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.132 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.131 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.132 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -1098,8 +1098,10 @@ function setLoadingProgress(value,label){
 }
 function setAssetLoadingProgress(which,percent,label){
  assetLoadProgress[which]=Math.max(assetLoadProgress[which]||0,Math.min(100,Math.max(0,Number(percent)||0)));
- // Solo el protagonista bloquea la entrada. Los NPC se preparan en segundo plano.
- if(which==='player')setLoadingProgress(48+(assetLoadProgress.player*.34),label);
+ // La carga avanza por fases: protagonista primero, NPC después.
+ // La pantalla no termina hasta que los modelos y la escena estén listos.
+ if(which==='player')setLoadingProgress(48+(assetLoadProgress.player*.12),label);
+ else if(which==='enemy')setLoadingProgress(60+(assetLoadProgress.enemy*.22),label||'Preparando guardianes, guerreros y aldeanos…');
 }
 async function responseBlobWithProgress(response,label,start,end,progressKey=null){
  const total=Number(response.headers&&response.headers.get('content-length'))||0;
@@ -5389,7 +5391,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.131',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.132',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5452,7 +5454,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.131');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.132');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -7102,20 +7104,17 @@ function updateHUD(){
   hudRefresh+=dt;if(hudRefresh>=.12){updateHUD();hudRefresh=0;}
   worldUpdatePhase='complete';
  }
- // Cargar exclusivamente el caballero acorazado independiente en los puestos guerreros; el modelo provisional
- // solo permanece visible si el GLB falla y nunca se sustituye por un caballero medieval.
- // Los modelos de guerreros y aldeanos no son necesarios para abrir el mundo:
- // sus cuerpos provisionales conservan colisión, IA y comportamiento hasta el relevo GLB.
- // Esperamos al primer fotograma y al menú de entrada antes de iniciar descargas/importaciones NPC.
- const deferNpcHumanModelsOnTouch=true;
+ // Los cuerpos provisionales de todos los NPC se crean con el mundo.
+ // Los modelos humanos GLB previstos por el perfil seleccionado se descargan y montan
+ // durante la pantalla de carga, nunca después de entrar en la partida.
+ const deferNpcHumanModelsOnTouch=false;
  let enemyHumanModelsStarted=false;
  let enemyHumanLoadTask=Promise.resolve(0);
  function startNpcHumanModels(){
   if(enemyHumanModelsStarted)return enemyHumanLoadTask;
   enemyHumanModelsStarted=true;
-  console.info('Móvil: mundo en juego; empieza la carga diferida de modelos secundarios existentes.');
+  console.info('Pantalla de carga: preparando los modelos humanos del perfil gráfico seleccionado.');
   enemyHumanLoadTask=loadEnemyHumanCharacters();
-  enemyHumanLoadTask.finally(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(20000);});
   return enemyHumanLoadTask;
  }
  let enemyHumanRetryPromise=null,enemyHumanRetryAttempts=0,enemyHumanRetryScheduled=false;
@@ -7127,7 +7126,8 @@ function updateHUD(){
   return warriors.some(p=>!p.realHuman||p.realHuman.role!=='knight')||civilians.some(p=>!p.realHuman||p.realHuman.role!=='civilian');
  }
  async function retryMissingEnemyVikings(){
-  if(!enemyHumanModelsStarted)return false;
+  // Evitar descargas/importaciones de NPC una vez abierta la campaña.
+  if(startupAssetsReady||gameStarted||!enemyHumanModelsStarted)return false;
   if(enemyHumanRetryPromise)return enemyHumanRetryPromise;
   if(!navigator.onLine||!hasMissingEnemyVikings())return false;
   enemyHumanRetryPromise=(async()=>{
@@ -7142,7 +7142,7 @@ function updateHUD(){
   finally{enemyHumanRetryPromise=null;}
  }
  function scheduleMissingEnemyVikingsRetry(delay=12000){
-  if(!enemyHumanModelsStarted||enemyHumanRetryAttempts>=3||enemyHumanRetryScheduled||!hasMissingEnemyVikings())return;
+  if(startupAssetsReady||gameStarted||!enemyHumanModelsStarted||enemyHumanRetryAttempts>=3||enemyHumanRetryScheduled||!hasMissingEnemyVikings())return;
   enemyHumanRetryScheduled=true;enemyHumanRetryAttempts++;
   setTimeout(async()=>{
    enemyHumanRetryScheduled=false;
@@ -7176,7 +7176,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.131 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.132 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7231,19 +7231,13 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.131: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.132: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
     showStartScreen();startScreenShown=true;
-    if(deferNpcHumanModelsOnTouch&&!enemyHumanModelsStarted){
-     if(isConstrainedMobile){
-      console.info('Perfil Rendimiento móvil limitado: se mantienen los NPC ligeros y se omite la importación automática de modelos secundarios para proteger la memoria.');
-     }else{
-      const npcWarmupDelay=activeGraphicsProfile==='performance'?18000:1100;
-      setTimeout(()=>{if(!enemyHumanModelsStarted&&!document.hidden)startNpcHumanModels();},npcWarmupDelay);
-     }
-    }
+    // Todos los modelos humanos previstos por el perfil se han preparado antes de mostrar este selector.
+    // No se inician descargas ni montajes pesados después de entrar en la campaña.
    }
   }catch(err){reportFrameError('renderizado 3D',err);}
   fpsHudTime+=dt;
@@ -7300,33 +7294,53 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.131 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.132 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
- setLoadingProgress(48,'3/3 · Preparando el protagonista…');
- // Solo esperamos el modelo principal. Los NPC mantienen sus modelos provisionales
- // mientras sus GLB se descargan y montan tras el primer fotograma del mundo.
- const resourceResults=await Promise.allSettled([playerHumanLoadPromise]);
- console.info('Protagonista preparado para entrar:',resourceResults.map(x=>x.status));
- let audioPreloadResult={total:0,ready:0,failed:0};
- Promise.resolve(startupAudioPreload)
-  .then(result=>{audioPreloadResult=result;console.info('Audio preparado en segundo plano:',result);})
-  .catch(audioError=>console.info('La precarga de sonido continúa pendiente; no bloquea la entrada:',audioError));
- // Esperar a que Babylon termine la preparación de texturas/materiales y compile lo pendiente.
- // El límite evita que una textura remota lenta bloquee indefinidamente la entrada al juego.
- setLoadingProgress(86,'Preparando iluminación y materiales…');
+ setLoadingProgress(48,'3/3 · Preparando protagonista y personajes del norte…');
+ // La carga del protagonista y la tanda de NPC se inicia y termina antes del selector.
+ // En Rendimiento se mantiene el conjunto humano ligero definido para ese perfil;
+ // los demás NPC ya tienen cuerpo, colisión y animación procedural en la escena.
+ const npcPreparationTask=startNpcHumanModels();
+ const resourceResults=await Promise.allSettled([playerHumanLoadPromise,npcPreparationTask]);
+ console.info('Personajes preparados antes de entrar:',{
+  protagonist:resourceResults[0].status,
+  npcs:resourceResults[1].status,
+  humanWarriors:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
+  totalWarriors:humanEnemyParts.length,
+  humanCivilians:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,
+  totalCivilians:humanCivilianParts.length,
+  selectedProfile:activeGraphicsProfile
+ });
+ setLoadingProgress(84,'Guardianes, guerreros y aldeanos preparados. Sincronizando animaciones…');
+ let audioPreloadResult={total:0,ready:0,failed:0,pending:0};
  try{
-  if(scene&&typeof scene.whenReadyAsync==='function'){
-   setLoadingProgress(90,'Terminando de preparar el mundo…');
-   // El inicio no debe quedar retenido por una textura opcional o un recurso secundario lento.
-   const sceneReady=scene.whenReadyAsync().catch(warmupError=>{console.warn('La escena conserva recursos pendientes:',warmupError);return false;});
-   await Promise.race([sceneReady,new Promise(resolve=>setTimeout(()=>resolve(false),2200))]);
-  }
+  audioPreloadResult=await startupAudioPreload;
+  console.info('Audio Foley preparado antes de entrar:',audioPreloadResult);
+ }catch(audioError){
+  console.info('La precarga de Foley terminó con recursos opcionales pendientes:',audioError);
+ }
+ // Los NPC ya se han añadido a la escena. Babylon debe terminar de preparar sus
+ // esqueletos, animaciones, materiales, sombras y texturas antes de abrir la campaña.
+ setLoadingProgress(87,'Sincronizando modelos, texturas e iluminación…');
+ try{
+  if(scene&&typeof scene.whenReadyAsync==='function')await scene.whenReadyAsync();
   if(engine&&typeof engine.resize==='function')engine.resize();
- }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
- const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
- console.info('EL SIN NOMBRE 0.6.131 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ }catch(warmupError){
+  console.error('No se pudo completar la preparación gráfica de la escena:',warmupError);
+  throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
+ }
+ const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
+ console.info('EL SIN NOMBRE 0.6.132 preparación completa:',{
+  motorGuardado:engineStored,vikingoCargado:realPlayerReady,
+  guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
+  guerrerosEnMundo:humanEnemyParts.length,
+  aldeanosHumanos:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,
+  aldeanosEnMundo:humanCivilianParts.length,
+  npcLoadFinished:enemyHumanModelsStarted,audio:audioPreloadResult,
+  vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)
+ });
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
