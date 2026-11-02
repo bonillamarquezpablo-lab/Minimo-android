@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.119">
-<meta name="el-sin-nombre-repair" content="0.6.119 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.120">
+<meta name="el-sin-nombre-repair" content="0.6.120 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.119</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.120</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1331,19 +1331,20 @@ async function startGame(){
  try{if(graphicsContext){const debugInfo=graphicsContext.getExtension('WEBGL_debug_renderer_info');graphicsRenderer=String(graphicsContext.getParameter(debugInfo?debugInfo.UNMASKED_RENDERER_WEBGL:graphicsContext.RENDERER)||'no disponible');graphicsVendor=String(graphicsContext.getParameter(debugInfo?debugInfo.UNMASKED_VENDOR_WEBGL:graphicsContext.VENDOR)||'no disponible');graphicsVersion=String(graphicsContext.getParameter(graphicsContext.VERSION)||'no disponible');}}catch(_){ }
  const constrainedGpuMatch=/SM-A127F|Mali-G52\s*MP1|PowerVR\s*GE8320/i.test((navigator.userAgent||'')+' '+graphicsRenderer);
  const constrainedHardware=!!(isTouchDevice&&(constrainedGpuMatch||(reportedMemory>0&&reportedMemory<=4&&(Number(navigator.hardwareConcurrency)||0)<=8)));
- const isConstrainedMobile=!!(isPerformanceMode&&isTouchDevice&&(constrainedHardware||reportedMemory<=4));
+ const iosMemoryBlindMobile=!!(isIOSDevice&&(!reportedMemory||reportedMemory<=4));
+ const isConstrainedMobile=!!(isPerformanceMode&&(iosMemoryBlindMobile||(isTouchDevice&&(constrainedHardware||reportedMemory<=3))));
  const shadowMapSize=isPerformanceMode?(isConstrainedMobile?256:(isTouchDevice?512:1024)):(isIOSDevice?1024:(isTouchDevice?2048:(reportedMemory>=8?3072:2048)));
  let shadowGen=null,currentShadowSize=shadowMapSize;
  // CALIDAD conserva la configuración completa. RENDIMIENTO reduce el coste gráfico,
  // no desactiva ni sustituye ningún sistema de juego.
- const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isConstrainedMobile ? .68 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35))):Math.min(deviceDpr,isIOSDevice?1.75:(isTouchDevice?2.60:2.0));
+ const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isConstrainedMobile ? .54 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35))):Math.min(deviceDpr,isIOSDevice?1.75:(isTouchDevice?2.60:2.0));
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(isPerformanceMode?(isConstrainedMobile?2:4):16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
  console.info('EL SIN NOMBRE render profile:',{profile:activeGraphicsProfile,devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize,constrainedHardware});
  let fpsSample=0,qualityDprCurrent=qualityDpr,lowFpsWindows=0,highFpsWindows=0;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
- const minimumQualityDpr=Math.min(qualityDpr,2.05),minimumPerformanceDpr=isPerformanceMode?(isConstrainedMobile ? .40 : (isTouchDevice ? .52 : .68)):qualityDpr,targetFrameRate=60;
+ const minimumQualityDpr=Math.min(qualityDpr,2.05),minimumPerformanceDpr=isPerformanceMode?(isConstrainedMobile ? .32 : (isTouchDevice ? .52 : .68)):qualityDpr,targetFrameRate=60;
  function changeShadowQuality(nextSize){
   if(!shadowGen||nextSize===currentShadowSize)return;
   try{const map=shadowGen.getShadowMap&&shadowGen.getShadowMap();if(map&&typeof map.resize==='function'){map.resize(nextSize);currentShadowSize=nextSize;}}
@@ -1354,7 +1355,7 @@ async function startGame(){
   const fps=engine.getFps();
   // Si RAF parece limitado a 60Hz, bajar píxeles no desbloquea la frecuencia de pantalla.
   if(fps>=58&&fps<=62){lowFpsWindows=0;highFpsWindows=0;return;}
-  if(isPerformanceMode&&fps<28){
+  if(isPerformanceMode&&fps<(isConstrainedMobile?40:28)){
    lowFpsWindows++;highFpsWindows=0;
    if(lowFpsWindows>=1){
     lowFpsWindows=0;
@@ -1381,7 +1382,7 @@ async function startGame(){
   });
  }
  scene.clearColor=new B.Color4(.42,.57,.65,1);scene.fogMode=B.Scene.FOGMODE_EXP;scene.fogDensity=.00058;scene.fogColor=new B.Color3(.39,.53,.59);
- scene.imageProcessingConfiguration.toneMappingEnabled=true;scene.imageProcessingConfiguration.toneMappingType=B.ImageProcessingConfiguration.TONEMAPPING_ACES;scene.imageProcessingConfiguration.exposure=1.08;scene.imageProcessingConfiguration.contrast=1.10;
+ scene.imageProcessingConfiguration.toneMappingEnabled=!isConstrainedMobile;scene.imageProcessingConfiguration.toneMappingType=B.ImageProcessingConfiguration.TONEMAPPING_ACES;scene.imageProcessingConfiguration.exposure=isConstrainedMobile?1.0:1.08;scene.imageProcessingConfiguration.contrast=isConstrainedMobile?1.0:1.10;
  const hemi=new B.HemisphericLight('skyLight',new B.Vector3(0,1,0),scene);hemi.intensity=.88;hemi.diffuse=new B.Color3(.72,.82,.92);hemi.groundColor=new B.Color3(.15,.19,.13);
  const sun=new B.DirectionalLight('sun',new B.Vector3(-.42,-1,.22),scene);sun.position=new B.Vector3(-110,160,-75);sun.intensity=1.36;sun.diffuse=new B.Color3(1,.89,.74);sun.specular=new B.Color3(.72,.78,.86);
  // Entorno IBL opcional: mejora reflejos y materiales PBR del vikingo GLB ya usado.
@@ -1397,7 +1398,7 @@ async function startGame(){
  if('shadowMinZ' in sun)sun.shadowMinZ=1;
  if('shadowMaxZ' in sun)sun.shadowMaxZ=245;
  try{
-  shadowGen=B.ShadowGenerator?new B.ShadowGenerator(shadowMapSize,sun):null;
+  shadowGen=(!isConstrainedMobile&&B.ShadowGenerator)?new B.ShadowGenerator(shadowMapSize,sun):null;
   if(shadowGen){
    shadowGen.usePercentageCloserFiltering=!isPerformanceMode;
    shadowGen.filteringQuality=isPerformanceMode?B.ShadowGenerator.QUALITY_LOW:B.ShadowGenerator.QUALITY_HIGH;
@@ -3483,7 +3484,7 @@ async function startGame(){
   const tier=d2<70*70?0:(d2<150*150?1:2),previousTier=Number.isFinite(entity._worldVisualTier)?entity._worldVisualTier:-1;
   if(tier<previousTier)entity._worldVisualNextAt=0;
   entity._worldVisualTier=tier;
-  const interval=isPerformanceMode?(isConstrainedMobile?(tier===0?55:(tier===1?185:420)):(tier===0?42:(tier===1?145:300))):(tier===0?33:(tier===1?90:180));
+  const interval=isPerformanceMode?(isConstrainedMobile?(tier===0?120:(tier===1?360:800)):(tier===0?42:(tier===1?145:300))):(tier===0?33:(tier===1?90:180));
   if(now<(entity._worldVisualNextAt||0))return false;
   entity._worldVisualNextAt=now+interval;return true;
  }
@@ -5958,7 +5959,7 @@ function updateHUD(){
  let boatHp=65,boatMax=100,boatLevel=0;
  document.getElementById('upgradeBtn').addEventListener('click',openBoatModal);
  document.getElementById('closeModal').addEventListener('click',()=>modal.style.display='none');
- const SAVE_KEY=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v4':'el-sin-nombre-campaign-v1';let playerName=selectedPlayerName;let lastSaveAt=0,saveAccumulator=0;
+ const SAVE_KEY=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v5':'el-sin-nombre-campaign-v1';let playerName=selectedPlayerName;let lastSaveAt=0,saveAccumulator=0;
  let playerShelterBuilt=false,playerShelterGroup=null,playerShelterX=0,playerShelterZ=0;
  const PLAYER_SHELTER_COST={wood:6,stone:1};
  function updatePlayerIdentityHud(){const tag=document.getElementById('playerIdentityTag');if(tag)tag.textContent='VIKINGO · '+(playerName?playerName.toLocaleUpperCase('es-ES'):'SIN NOMBRE');}
@@ -5982,7 +5983,7 @@ function updateHUD(){
  function saveGame(silent=false){
   try{
    const pos=playerPos();
-   const data={version:1,savedAt:Date.now(),playerName,chapterStage,sprintMissionMeters,sprintMissionDone,health,stamina,woodCount,stoneCount,kills,captured,weaponLevel,equippedWeapon,
+   const data={version:1,saveSlot:SAVE_KEY,savedAt:Date.now(),playerName,chapterStage,sprintMissionMeters,sprintMissionDone,health,stamina,woodCount,stoneCount,kills,captured,weaponLevel,equippedWeapon,
     player:{x:pos.x,z:pos.z,yaw},checkpoint:{x:lastSafePosition.x,z:lastSafePosition.z},onShip,ship:{x:ship.position.x,z:ship.position.z,yaw:ship.rotation.y,hp:boatHp,max:boatMax,level:boatLevel},
     history:sagaHistory.slice(-30),villages:villages.map(vl=>({claimed:vl.claimed,guards:vl.guards.map(g=>({alive:g.alive,hp:g.hp,surrendered:!!g.surrendered,recruited:!!g.recruited}))})),
     survivorRecruits:companions.map(a=>a.villageIndex),
@@ -6000,7 +6001,7 @@ function updateHUD(){
   let raw;try{raw=localStorage.getItem(SAVE_KEY);}catch(err){console.warn('No se puede leer el guardado',err);return false;}
   if(!raw)return false;
   try{
-   const d=JSON.parse(raw);if(!d||d.version!==1)throw new Error('Versión de partida no compatible.');if(!playerIdentityChosen&&typeof d.playerName==='string')playerName=d.playerName;updatePlayerIdentityHud();
+   const d=JSON.parse(raw);if(!d||d.version!==1)throw new Error('Versión de partida no compatible.');if(d.saveSlot&&d.saveSlot!==SAVE_KEY){console.warn('Guardado de otro perfil descartado:',{expected:SAVE_KEY,received:d.saveSlot});return false;}if(!playerIdentityChosen&&typeof d.playerName==='string')playerName=d.playerName;updatePlayerIdentityHud();
    // Los guardados anteriores no se reinician ni se obligan a repetir el capítulo inicial.
    chapterStage=Number.isFinite(Number(d.chapterStage))?Math.max(0,Math.min(4,Number(d.chapterStage))):4;
    const num=(x,fallback,min,max)=>Number.isFinite(Number(x))?Math.max(min,Math.min(max,Number(x))):fallback;
@@ -6554,6 +6555,12 @@ function updateHUD(){
    if(e.surrendered){e.state='surrendered';continue;}
    if(onShip){e.state='idle';if(worldEntityVisualDue(e,e.parts.root.position.x,e.parts.root.position.z))animateViking(e.parts,elapsed*.7,false,'idle',false);continue;}
    const root=e.parts.root,pp=playerPos(),dx=pp.x-root.position.x,dz=pp.z-root.position.z,dist=Math.hypot(dx,dz);
+   // On constrained Performance devices, distant idle/chasing enemies do not need a full AI + collision tick every rendered frame.
+   if(isConstrainedMobile&&dist>18&&e.state!=='attack'&&e.stun<=0){
+    const mobileAiInterval=dist>70?.90:(dist>36?.42:.18);
+    if(elapsed<(e.mobileAiNextAt||0))continue;
+    e.mobileAiNextAt=elapsed+mobileAiInterval;
+   }else if(isConstrainedMobile){e.mobileAiNextAt=0;}
    root.position.y=terrainSurfaceAt(root.position.x,root.position.z)+actorGroundOffset(e.parts);
    if(landIslandIndex(root.position.x,root.position.z)!==landIslandIndex(pp.x,pp.z)){
     e.state='idle';e.attackT=0;if(worldEntityVisualDue(e,root.position.x,root.position.z))animateViking(e.parts,elapsed*.7,false,'idle',false);continue;
@@ -6639,6 +6646,8 @@ function updateHUD(){
   }
   const leader=playerPos(),leaderForward=v(Math.sin(yaw),0,Math.cos(yaw)),leaderRight=v(Math.cos(yaw),0,-Math.sin(yaw));
   companions.forEach((ally,index)=>{
+   if(isConstrainedMobile&&elapsed<(ally.mobileFollowNextAt||0))return;
+   if(isConstrainedMobile)ally.mobileFollowNextAt=elapsed+.10;
    if(!ally.recruited)return;
    if(onShip){
     const crew=ally.parts,crewRoot=crew.root;
@@ -6701,7 +6710,7 @@ function updateHUD(){
     }
    }
   treeAnimAccumulator+=dt;
-  if(treeAnimAccumulator>=1/30){
+  if(treeAnimAccumulator>=(isConstrainedMobile?1/10:1/30)){
    const treeDt=Math.min(.10,treeAnimAccumulator);treeAnimAccumulator=0;
    for(const t of trees){
     const treeNeedsFullUpdate=(t.falling!==undefined&&t.falling!==null)||t.hitFlash>0;
@@ -6731,12 +6740,12 @@ function updateHUD(){
   // Vida ambiental a 30 Hz; el render y el combate se mantienen a la frecuencia de pantalla.
   worldUpdatePhase='ambient NPCs, guards and companions';
   ambientUpdateAccumulator+=dt;
-  if(ambientUpdateAccumulator>=(isPerformanceMode?1/30:1/60)){
+  if(ambientUpdateAccumulator>=(isConstrainedMobile?1/10:(isPerformanceMode?1/30:1/60))){
    const ambientDt=Math.min(.05,ambientUpdateAccumulator);ambientUpdateAccumulator=Math.max(0,ambientUpdateAccumulator-ambientDt);
   // Los efectos de fuego/humo se actualizan a 20 Hz; locomoción y combate conservan su cadencia.
   ambientVfxAccumulator+=ambientDt;
-  if(ambientVfxAccumulator>=.05){
-   ambientVfxAccumulator%=.05;
+  if(ambientVfxAccumulator>=(isConstrainedMobile?.10:.05)){
+   ambientVfxAccumulator%=isConstrainedMobile?.10:.05;
   // Hearths flicker and throw warm light across the settlement.
   flameMeshes.forEach(f=>{if(!worldEntityVisualDue(f,f.baseX,f.baseZ))return;const wave=.91+Math.sin(elapsed*9.5+f.phase)*.13+Math.sin(elapsed*17+f.phase)*.055;f.mesh.scaling.y=wave;f.mesh.scaling.x=1+Math.sin(elapsed*12+f.phase)*.07;f.mesh.rotation.z=Math.sin(elapsed*8+f.phase)*.105;f.mesh.rotation.x=Math.cos(elapsed*7.2+f.phase)*.045;f.mesh.position.x=f.baseX+Math.sin(elapsed*6.8+f.phase)*.035;f.mesh.position.z=f.baseZ+Math.cos(elapsed*7.6+f.phase)*.025;});
   fireLights.forEach(f=>{if(!worldEntityVisualDue(f,f.light.position.x,f.light.position.z))return;f.light.intensity=.66+Math.sin(elapsed*8+f.phase)*.16+Math.sin(elapsed*13+f.phase)*.065;});
