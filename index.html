@@ -4,12 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.143">
-<meta name="el-sin-nombre-repair" content="0.6.143 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.144">
+<meta name="el-sin-nombre-repair" content="0.6.144 dedicated guest PWA manifest and guest start URL">
+<link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.143</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.144</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -610,7 +611,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.143 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.144 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -648,7 +649,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.143: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.144: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -768,13 +769,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.143 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.144 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.143 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.144 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -884,9 +885,100 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #intro .campaignCard strong{font-size:19px!important}
  #intro .campaignCardArt{font-size:39px!important}
 }
+/* 0.6.144 — menús compactos y música antes del selector gráfico. */
+#audioGate{position:fixed;inset:0;z-index:2001;display:none;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at 50% 28%,rgba(151,105,54,.30),transparent 48%),linear-gradient(145deg,#071316,#101f20 58%,#050d10);color:#f3e5c9}
+body.preflight.audio-gate #audioGate{display:flex}
+body.preflight.audio-gate #modeSelect{display:none!important}
+#audioGate .audioGateCard{width:min(520px,100%);padding:clamp(20px,4vh,34px);text-align:center;border:1px solid #c49a5f;border-radius:8px;background:linear-gradient(145deg,rgba(28,45,42,.97),rgba(7,17,19,.99));box-shadow:0 24px 80px #000c,inset 0 0 0 4px rgba(198,158,94,.06)}
+#audioGate .audioGateSigil{width:44px;height:44px;margin:0 auto 10px;display:grid;place-items:center;border:1px solid #c49a5f;border-radius:50%;color:#e7c17c;font:26px Georgia,serif}
+#audioGate .audioGateEyebrow{color:#c9ad7d;font:900 8px/1.4 system-ui;letter-spacing:2.4px}
+#audioGate h1{margin:8px 0 4px;color:#edce91;font:900 clamp(34px,6vw,52px)/.98 Georgia,serif;letter-spacing:1.6px}
+#audioGate p{margin:6px 0 16px;color:#c9bea5;font:800 9px system-ui;letter-spacing:2px}
+#audioGate button{width:min(320px,100%);min-height:50px;border:1px solid #e1bd7b;border-radius:5px;background:linear-gradient(180deg,#a97842,#684326);color:#fff3db;font:900 12px system-ui;letter-spacing:2px;box-shadow:0 7px 22px #0008;touch-action:manipulation}
+#audioGate button:active{transform:translateY(1px) scale(.99)}
+#modeSelect,#identitySetup{overflow:hidden;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px calc(env(safe-area-inset-bottom,0px) + 8px)}
+.preflightCard{width:min(760px,100%);max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 16px);overflow:hidden;padding:clamp(13px,2.4vh,22px) clamp(15px,3vw,28px)}
+.preflightSigil{width:34px;height:34px;margin:0 auto 6px;font-size:22px}
+.preflightCard h1,.preflightCard h2{margin:5px 0 3px;font-size:clamp(28px,4.5vw,44px);letter-spacing:1.4px}
+.preflightLead{margin:6px auto 9px;font-size:12px;line-height:1.3}
+.profileOptions{gap:10px;margin-top:10px}
+.profileOption{min-height:132px;padding:13px;gap:7px}
+.profileOption strong{font-size:clamp(19px,2.5vw,23px)}
+.profileOption>span:not(.profileTag){font-size:11px;line-height:1.35}
+.profileOption em{font-size:8px;letter-spacing:.35px}
+.profileTag{padding:4px 6px;font-size:7px}
+.preflightFoot{margin:8px auto 0;font-size:9px;line-height:1.3}
+.identityCard{overflow:auto}
+@media(max-width:560px){
+ #modeSelect,#identitySetup{padding:calc(env(safe-area-inset-top,0px) + 8px) 12px calc(env(safe-area-inset-bottom,0px) + 8px)}
+ .preflightCard{padding:15px 13px}
+ .profileOptions{grid-template-columns:1fr;gap:8px;margin-top:8px}
+ .profileOption{min-height:98px;padding:11px 13px;gap:5px}
+ .profileOption strong{font-size:20px}
+ .profileOption>span:not(.profileTag){font-size:10px;line-height:1.3}
+ .profileOption em{font-size:7px}
+ .preflightLead{font-size:11px;margin:5px auto 7px}
+ .preflightFoot{font-size:8px;margin-top:6px}
+}
+@media(max-height:520px) and (orientation:landscape){
+ #modeSelect{padding-top:6px;padding-bottom:6px}
+ .preflightCard{padding:9px 18px}
+ .preflightSigil{display:none}
+ .preflightCard h1{font-size:28px}
+ .preflightLead{margin:3px auto 5px}
+ .profileOptions{margin-top:6px}
+ .profileOption{min-height:92px;padding:9px;gap:4px}
+ .preflightFoot{margin-top:5px}
+}
+/* Selector de campaña: tarjetas completas, jerarquía breve y sin desplazamiento. */
+#intro{overflow:hidden!important;padding:calc(env(safe-area-inset-top,0px) + 8px) clamp(10px,2.5vw,28px) calc(env(safe-area-inset-bottom,0px) + 8px)!important}
+#intro .introCard{width:min(1080px,100%)!important;max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 16px)!important;overflow:hidden!important;padding:clamp(12px,2.4vh,22px) clamp(16px,3vw,34px)!important;gap:0!important}
+#intro .introSigil{display:none!important}
+#intro .introEyebrow{font-size:8px!important;letter-spacing:2.4px!important;margin-bottom:3px!important}
+#intro .introTitle{font-size:clamp(32px,4.8vw,50px)!important;line-height:.96!important;letter-spacing:1.6px!important}
+#intro .introSubtitle{margin:4px 0 0!important;font-size:8px!important;letter-spacing:1.6px!important}
+#intro .introRule{margin:8px 0!important}
+#intro .introStory{margin:0 0 8px!important;font-size:12px!important;line-height:1.25!important;max-width:100%!important}
+#intro .campaignPrompt{margin:0 0 7px!important;font-size:8px!important;letter-spacing:2px!important}
+#intro .campaignOptions{gap:10px!important;margin:0!important}
+#intro .campaignCard{min-height:132px!important;padding:12px 14px!important;grid-template-columns:54px minmax(0,1fr)!important;column-gap:12px!important;row-gap:4px!important}
+#intro .campaignCardArt{font-size:42px!important}
+#intro .campaignCardKicker{font-size:7px!important;letter-spacing:1.5px!important}
+#intro .campaignCard strong{font-size:clamp(18px,2.2vw,23px)!important;line-height:1!important}
+#intro .campaignCardDescription,#intro .campaignCard small{font-size:10px!important;line-height:1.3!important}
+#intro .campaignCardAction{margin-top:4px!important;padding-top:6px!important;font-size:8px!important;letter-spacing:1.2px!important}
+#intro .campaignFooter{margin-top:7px!important;font-size:7px!important;letter-spacing:1.2px!important}
+@media(max-width:760px){
+ #intro .introCard{padding:14px 13px!important}
+ #intro .introTitle{font-size:clamp(30px,8vw,42px)!important}
+ #intro .introStory{font-size:11px!important}
+ #intro .campaignOptions{grid-template-columns:1fr!important;gap:7px!important}
+ #intro .campaignCard{min-height:104px!important;padding:10px 12px!important;grid-template-columns:46px minmax(0,1fr)!important;column-gap:10px!important;row-gap:3px!important}
+ #intro .campaignCardArt{font-size:35px!important}
+ #intro .campaignCardDescription,#intro .campaignCard small{font-size:9px!important;line-height:1.25!important}
+ #intro .campaignFooter{margin-top:5px!important;font-size:6px!important}
+}
+@media(max-height:560px){
+ #intro .introCard{padding-top:9px!important;padding-bottom:9px!important}
+ #intro .introTitle{font-size:clamp(28px,4vw,40px)!important}
+ #intro .introSubtitle{margin-top:2px!important}
+ #intro .introRule{margin:5px 0!important}
+ #intro .introStory{margin-bottom:5px!important;font-size:10px!important}
+ #intro .campaignPrompt{margin-bottom:4px!important}
+ #intro .campaignCard{min-height:96px!important;padding:8px 10px!important}
+ #intro .campaignCardArt{font-size:32px!important}
+ #intro .campaignFooter{margin-top:4px!important}
+}
+@media(max-width:430px) and (orientation:portrait){
+ #intro .introTitle{font-size:clamp(28px,8vw,36px)!important}
+ #intro .campaignCard{min-height:98px!important}
+ #intro .campaignCardKicker{font-size:6px!important}
+ #intro .campaignCard strong{font-size:18px!important}
+ #intro .campaignFooter{display:none!important}
+}
 </style>
 </head>
-<body class="preflight">
+<body class="preflight audio-gate">
 <svg id="norseIconLibrary" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
  <symbol id="norse-wood" viewBox="0 0 24 24"><path fill="#6f4128" d="M3 5h18v14H3z"/><path fill="#b97842" d="M5 7h14v10H5z"/><path fill="#e0b36d" d="M7 7h2v10H7zm7 0h2v10h-2zM5 10h14v2H5z"/><path fill="#55301f" d="M3 4h18v2H3zM3 18h18v2H3z"/></symbol>
  <symbol id="norse-stone" viewBox="0 0 24 24"><path fill="#65716d" d="M5 4h11l5 6-2 9-9 2-6-6z"/><path fill="#aeb8aa" d="M7 6h8l3 4-7 1-4 5-2-5z"/><path fill="#414e4d" d="M7 16l4-5 7-1-2 7-6 2z"/><path fill="#d8d9c4" d="M8 7h5l2 2-5 1z"/></symbol>
@@ -898,24 +990,33 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 </svg>
 
 <canvas id="renderCanvas"></canvas>
+<div id="audioGate" role="dialog" aria-modal="true" aria-label="Iniciar EL SIN NOMBRE">
+ <div class="audioGateCard">
+  <div class="audioGateSigil" aria-hidden="true">ᛟ</div>
+  <div class="audioGateEyebrow">SAGA DEL NORTE · CAPÍTULO I</div>
+  <h1>EL SIN NOMBRE</h1>
+  <p>LA AVENTURA COMIENZA.</p>
+  <button id="audioGateStart" type="button">ENTRAR</button>
+ </div>
+</div>
 
 <div id="modeSelect" role="dialog" aria-modal="true" aria-label="Elegir perfil gráfico">
  <div class="preflightCard">
   <div class="preflightSigil" aria-hidden="true">ᛟ</div><div class="preflightEyebrow">SAGA DEL NORTE · CAPÍTULO I</div>
-  <h1>EL SIN NOMBRE</h1><p class="preflightLead">¿Cómo quieres vivir la aventura?</p>
+  <h1>EL SIN NOMBRE</h1><p class="preflightLead">Elige tu experiencia.</p>
   <div class="profileOptions">
    <button id="chooseQuality" class="profileOption qualityOption" type="button">
     <span class="profileTag">EXPERIENCIA COMPLETA</span><strong>CALIDAD</strong>
-    <span>Gráficos al máximo disponible: hierba más densa, sombras detalladas, agua completa e iluminación y efectos de alta calidad.</span>
+    <span>Gráficos, sombras, agua y efectos completos.</span>
     <em>Para móviles y equipos potentes</em>
    </button>
    <button id="choosePerformance" class="profileOption performanceOption" type="button">
     <span class="profileTag">MÁS FLUIDEZ</span><strong>RENDIMIENTO</strong>
-    <span>Reduce moderadamente el coste gráfico para conseguir una experiencia más fluida en móviles modestos.</span>
-    <em>Las funciones y la simulación siguen completas</em>
+    <span>Más fluidez en móviles modestos.</span>
+    <em>Se mantienen todas las funciones</em>
    </button>
   </div>
-  <p class="preflightFoot">Ningún perfil elimina barcos, combate, aldeanos, conquistas, físicas ni animaciones.</p>
+  <p class="preflightFoot">Mismas mecánicas y contenido en ambos perfiles.</p>
  </div>
 </div>
 <div id="identitySetup" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Nombre del vikingo">
@@ -1030,25 +1131,25 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
   <div class="introTitle">EL SIN NOMBRE</div>
   <div class="introSubtitle">UN HOMBRE SIN TIERRA · UNA SAGA POR FORJAR</div>
   <div class="introRule"></div>
-  <p class="introStory">Te han arrebatado tu hogar. Te quedan un hacha, un drakkar humilde y la voluntad de conquistar tu lugar en el norte.</p>
+  <p class="introStory">Tu costa. Tu drakkar. Tu conquista.</p>
   <div class="campaignPrompt"><span>ELIGE TU DESTINO</span><i aria-hidden="true"></i><b aria-hidden="true">ᛟ</b></div>
   <div class="campaignOptions" id="campaignOptions" aria-label="Selecciona cómo continuar tu saga">
    <button id="newGameChoice" class="campaignCard campaignNew" type="button">
     <span class="campaignCardArt" aria-hidden="true">ᛟ</span>
-    <span class="campaignCardKicker">FORJA TU PROPIO DESTINO</span>
+    <span class="campaignCardKicker">EMPIEZA DE CERO</span>
     <strong>NUEVA PARTIDA</strong>
-    <span class="campaignCardDescription">Una costa hostil. Un barco sin gloria. Empieza desde cero y gana tu nombre a filo de hacha.</span>
+    <span class="campaignCardDescription">Explora, reúne recursos y conquista.</span>
     <span class="campaignCardAction">COMENZAR LA SAGA <b aria-hidden="true">ᛟ</b></span>
    </button>
    <button id="loadGameChoice" class="campaignCard campaignLoad" type="button" disabled>
     <span class="campaignCardArt" aria-hidden="true">ᚱ</span>
-    <span class="campaignCardKicker">RETOMA TU CONQUISTA</span>
+    <span class="campaignCardKicker">TU PROGRESO</span>
     <strong>CARGAR PARTIDA</strong>
     <small id="loadGameSummary">Todavía no hay ninguna saga guardada en este dispositivo.</small>
     <span class="campaignCardAction" id="loadGameAction">SIN PARTIDA GUARDADA</span>
    </button>
   </div>
-  <div class="campaignFooter"><span aria-hidden="true">ᚠ</span> UN BARCO · UN HACHA · UN NOMBRE POR CONQUISTAR <span aria-hidden="true">ᚠ</span></div>
+  <div class="campaignFooter"><span aria-hidden="true">ᚠ</span> EXPLORA · CONSTRUYE · CONQUISTA <span aria-hidden="true">ᚠ</span></div>
  </div>
 </div>
 <div id="modal">
@@ -1408,20 +1509,32 @@ function ensurePreflightMenuMusic(){
 }
 function startPreflightMenuMusic(){
  const track=ensurePreflightMenuMusic();
- if(!track||!track.paused)return !!track;
+ if(!track)return Promise.resolve(false);
+ if(!track.paused)return Promise.resolve(true);
  try{
   track.volume=PREFLIGHT_MENU_MUSIC_VOLUME;
   track.muted=false;
   const attempt=track.play();
-  if(attempt&&typeof attempt.catch==='function')attempt.catch(error=>console.info('La música inicial espera un gesto válido del navegador:',error));
-  return true;
+  if(attempt&&typeof attempt.then==='function')return attempt.then(()=>true).catch(error=>{console.info('La música inicial espera un gesto válido del navegador:',error);return false;});
+  return Promise.resolve(true);
  }catch(error){
   console.info('No se pudo iniciar la música desde el selector inicial:',error);
-  return false;
+  return Promise.resolve(false);
  }
 }
 ensurePreflightMenuMusic();
-startPreflightMenuMusic(); // Intento inmediato; móviles que bloqueen autoplay se reintentan al tocar el perfil.
+startPreflightMenuMusic(); // En dispositivos con autoplay permitido, suena antes del primer toque.
+const audioGateStart=document.getElementById('audioGateStart');
+if(audioGateStart)audioGateStart.addEventListener('click',()=>{
+ audioGateStart.disabled=true;
+ audioGateStart.textContent='INICIANDO…';
+ // play() se invoca dentro del gesto real del usuario para cumplir las reglas de iOS/Android.
+ startPreflightMenuMusic().finally(()=>{
+  document.body.classList.remove('audio-gate');
+  const profileDialog=document.getElementById('modeSelect');
+  if(profileDialog)profileDialog.setAttribute('aria-hidden','false');
+ });
+},{once:true});
 ['chooseQuality','choosePerformance'].forEach(id=>{
  const button=document.getElementById(id);
  if(!button)return;
@@ -5657,7 +5770,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.143',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.144',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5720,7 +5833,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.143');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.144');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -6441,13 +6554,12 @@ function updateHUD(){
   if(!button||!summary||!action)return;
   const entries=getAvailableCampaignSaves();
   if(!entries.length){
-   button.disabled=true;summary.textContent='Todavía no hay ninguna partida guardada en este dispositivo.';action.textContent='SIN PARTIDA GUARDADA';return;
+   button.disabled=true;summary.textContent='Sin partidas guardadas.';action.textContent='NUEVA SAGA';return;
   }
   const latest=entries[0],data=latest.data;
-  const when=new Date(latest.savedAt||Date.now()).toLocaleString('es-ES',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const name=String(data.playerName||'Vikingo sin nombre').trim()||'Vikingo sin nombre';
   const stage=Math.max(0,Math.min(4,Number(data.chapterStage)||0));
-  summary.textContent=name+' · '+when+' · Capítulo I · Etapa '+(stage+1)+'/5';
+  summary.textContent=name+' · Etapa '+(stage+1)+'/5';
   action.textContent='CONTINUAR ESTA SAGA';
   button.disabled=false;
  }
@@ -7490,7 +7602,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.143 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.144 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7545,7 +7657,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.143: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.144: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -7608,7 +7720,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.143 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.144 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -7646,7 +7758,7 @@ function updateHUD(){
   throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.143 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.144 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
