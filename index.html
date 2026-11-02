@@ -6072,7 +6072,7 @@ function updateHUD(){
   const when=new Date(latest.savedAt||Date.now()).toLocaleString('es-ES',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const name=String(data.playerName||'Vikingo sin nombre').trim()||'Vikingo sin nombre';
   const stage=Math.max(0,Math.min(4,Number(data.chapterStage)||0));
-  summary.textContent=name+' · '+when+' · Capítulo '+(stage+1);
+  summary.textContent=name+' · '+when+' · Capítulo I · Etapa '+(stage+1)+'/5';
   action.textContent='CONTINUAR ESTA SAGA';
   button.disabled=false;
  }
@@ -6124,7 +6124,7 @@ function updateHUD(){
   let raw;try{raw=localStorage.getItem(activeSaveKey);}catch(err){console.warn('No se puede leer el guardado',err);return false;}
   if(!raw)return false;
   try{
-   const d=JSON.parse(raw);if(!d||d.version!==1)throw new Error('Versión de partida no compatible.');if(d.saveSlot&&d.saveSlot!==activeSaveKey){console.warn('Guardado de otro perfil descartado:',{expected:SAVE_KEY,received:d.saveSlot});return false;}if(SHARE_NEW_GAME&&d.guestMode===false){console.warn('Guardado de campaña principal rechazado en modo invitado.');return false;}if(!playerIdentityChosen&&typeof d.playerName==='string')playerName=d.playerName;updatePlayerIdentityHud();
+   const d=JSON.parse(raw);if(!d||d.version!==1)throw new Error('Versión de partida no compatible.');if(d.saveSlot&&d.saveSlot!==activeSaveKey){console.warn('Guardado de otro perfil descartado:',{expected:activeSaveKey,received:d.saveSlot});return false;}if(SHARE_NEW_GAME&&d.guestMode===false){console.warn('Guardado de campaña principal rechazado en modo invitado.');return false;}if(!playerIdentityChosen&&typeof d.playerName==='string')playerName=d.playerName;updatePlayerIdentityHud();
    // Los guardados anteriores no se reinician ni se obligan a repetir el capítulo inicial.
    chapterStage=Number.isFinite(Number(d.chapterStage))?Math.max(0,Math.min(4,Number(d.chapterStage))):4;
    const num=(x,fallback,min,max)=>Number.isFinite(Number(x))?Math.max(min,Math.min(max,Number(x))):fallback;
