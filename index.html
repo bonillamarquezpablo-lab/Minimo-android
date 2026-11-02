@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.125">
-<meta name="el-sin-nombre-repair" content="0.6.125 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.126">
+<meta name="el-sin-nombre-repair" content="0.6.126 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.125</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.126</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -593,7 +593,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.125 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.126 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -631,7 +631,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.125: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.126: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -751,7 +751,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.125 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.126 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
@@ -1740,15 +1740,17 @@ async function startGame(){
  const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:(isTouchDevice?125:180)):(isTouchDevice?250:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS;
  const waterPositionBuffer=ground.getVertexBuffer(B.VertexBuffer.PositionKind),waterNormalBuffer=ground.getVertexBuffer(B.VertexBuffer.NormalKind);
  for(let i=0;i<waterNormals.length;i+=3)waterNormals[i+1]=1;
- let waterActiveVertexOffsets=new Uint32Array(0),waterActiveMinOffset=0,waterActiveMaxOffset=-1,waterFocusX=NaN,waterFocusZ=NaN,waterLastUpdatedVertices=0,waterLastUploadedVertices=0,waterLastUploadBytes=0,waterLastUpdateMs=0,waterLastNormalMs=0;
+ const waterActiveVertexStorage=new Uint32Array(waterBase.length/3);
+ let waterActiveVertexOffsets=waterActiveVertexStorage.subarray(0,0),waterActiveMinOffset=0,waterActiveMaxOffset=-1,waterFocusX=NaN,waterFocusZ=NaN,waterLastUpdatedVertices=0,waterLastUploadedVertices=0,waterLastUploadBytes=0,waterLastUpdateMs=0,waterLastNormalMs=0;
  function refreshWaterDetailRegion(){
   const activeCamera=scene.activeCamera,focus=activeCamera&&activeCamera.position?activeCamera.position:(onShip?ship.position:player.root.position);
   const fx=Number(focus.x)||0,fz=Number(focus.z)||0,dx=fx-waterFocusX,dz=fz-waterFocusZ;
   if(waterActiveVertexOffsets.length&&dx*dx+dz*dz<576)return;
   waterFocusX=fx;waterFocusZ=fz;
-  const offsets=[];let minOffset=Infinity,maxOffset=-1;
-  for(let i=0;i<waterBase.length;i+=3){const x=waterBase[i]-fx,z=waterBase[i+2]-fz;if(x*x+z*z<=WATER_DETAIL_RADIUS_SQ){offsets.push(i);if(i<minOffset)minOffset=i;if(i>maxOffset)maxOffset=i;}}
-  waterActiveVertexOffsets=new Uint32Array(offsets);waterActiveMinOffset=Number.isFinite(minOffset)?minOffset:0;waterActiveMaxOffset=maxOffset;
+  let count=0,minOffset=Infinity,maxOffset=-1;
+  for(let i=0;i<waterBase.length;i+=3){const x=waterBase[i]-fx,z=waterBase[i+2]-fz;if(x*x+z*z<=WATER_DETAIL_RADIUS_SQ){waterActiveVertexStorage[count++]=i;if(i<minOffset)minOffset=i;if(i>maxOffset)maxOffset=i;}}
+  // Reuse one typed buffer rather than allocating a JS array and copying it on every camera-region shift.
+  waterActiveVertexOffsets=waterActiveVertexStorage.subarray(0,count);waterActiveMinOffset=Number.isFinite(minOffset)?minOffset:0;waterActiveMaxOffset=maxOffset;
  }
  function updateWaterNormalsFast(){
   for(let n=0;n<waterActiveVertexOffsets.length;n++){
@@ -2612,8 +2614,13 @@ async function startGame(){
     }
     const fade=p.life/(p.maxLife||.35);scale=p.size*Math.min(1,fade*1.8);if(p.life>0)remaining++;
    }
-   const matrix=B.Matrix.Compose(v(scale,scale,scale),sprayIdentity,v(p.x,p.y,p.z));
-   matrix.copyToArray(vesselSprayMatrices,i*16);
+   // Identity rotation + uniform scale: write the same Babylon matrix directly into the reusable instance buffer.
+   // This removes per-particle Vector3/Matrix allocations without changing any transform or rendered pixel.
+   const offset=i*16,matrices=vesselSprayMatrices;
+   matrices[offset]=scale;matrices[offset+1]=0;matrices[offset+2]=0;matrices[offset+3]=0;
+   matrices[offset+4]=0;matrices[offset+5]=scale;matrices[offset+6]=0;matrices[offset+7]=0;
+   matrices[offset+8]=0;matrices[offset+9]=0;matrices[offset+10]=scale;matrices[offset+11]=0;
+   matrices[offset+12]=p.x;matrices[offset+13]=p.y;matrices[offset+14]=p.z;matrices[offset+15]=1;
   }
   vesselSprayMesh.thinInstanceBufferUpdated('matrix');vesselSprayActive=remaining>0;
  }
@@ -5122,12 +5129,12 @@ function villageHostileDefenders(vl){
   return villages.some(vl=>vl.claimed&&Math.hypot(x-vl.x,z-vl.z)<=24);
  }
  // Regla única de combate: aliados/capturados nunca son hostiles y ninguna unidad puede dañar al jugador dentro de su territorio.
- function canAttackPlayer(attacker,x,z){
+ function canAttackPlayer(attacker,x,z,playerProtectedOverride=null){
   if(!attacker||!attacker.alive||attacker.recruited||attacker.surrendered)return false;
   if(isFriendlyGuard(attacker))return false;
   // Si no podemos determinar la posición del jugador, se protege por seguridad.
   if(!Number.isFinite(x)||!Number.isFinite(z))return false;
-  if(isPlayerTerritoryAt(x,z))return false;
+  if(playerProtectedOverride===null?isPlayerTerritoryAt(x,z):playerProtectedOverride)return false;
   return true;
  }
  function playerIsInProtectedTerritory(){const p=playerPos();return isPlayerTerritoryAt(p.x,p.z);}
@@ -5245,7 +5252,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'5',build:'0.6.125',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'5',build:'0.6.126',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5308,7 +5315,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.125');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.126');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -6572,7 +6579,8 @@ function updateHUD(){
    if(actionTimer<=0){playerAction='idle';actionTimer=0;actionVillage=null;actionResource=null;}
   }else if(blocking)playerAction='block';else if(playerAction==='block')playerAction='idle';else playerAction=moving?'walk':'idle';
   const strideLength=running&&stamina>0?3.05:2.55;walkPhase+=playerStepDistance*(Math.PI*2/strideLength);
-  const audioPos=playerPos(),nearFireAudio=Math.hypot(audioPos.x-STARTER_CAMP_POSITION.x,audioPos.z-STARTER_CAMP_POSITION.z)<15||villages.some(vl=>Math.hypot(audioPos.x-(vl.x-3),audioPos.z-(vl.z+5))<8);
+  const audioPos=playerPos();let nearFireAudio=Math.hypot(audioPos.x-STARTER_CAMP_POSITION.x,audioPos.z-STARTER_CAMP_POSITION.z)<15;
+  if(!nearFireAudio){for(let i=0;i<villages.length;i++){const village=villages[i],dx=audioPos.x-(village.x-3),dz=audioPos.z-(village.z+5);if(dx*dx+dz*dz<64){nearFireAudio=true;break;}}}
   NorseAudio.update(dt,nearFireAudio,playerStepDistance>.02,onShip,playerStepDistance,running&&stamina>0);
   worldUpdatePhase='animation / player '+(playerAction==='idle'&&moving?(running?'run':'walk'):playerAction);
   animateViking(player,walkPhase,!onShip&&moving,onShip?'sail':playerAction,blocking);
@@ -6591,12 +6599,16 @@ function updateHUD(){
   if(!isConstrainedMobile||update.enemyAiAccumulator>=.05){
    const enemyAiDt=isConstrainedMobile?Math.min(.15,update.enemyAiAccumulator):dt;
    update.enemyAiAccumulator=0;update.enemyAiTicks=(update.enemyAiTicks||0)+1;
+   // Player world position/matrix and protected-territory state are invariant throughout this AI pass.
+   // Calculate them once instead of once per enemy.
+   const enemyPlayerPosition=onShip?null:playerPos();
+   const enemyPlayerProtected=enemyPlayerPosition?isPlayerTerritoryAt(enemyPlayerPosition.x,enemyPlayerPosition.z):false;
    for(const e of enemies){
    const dt=enemyAiDt;
    if(!e.alive||e.recruited)continue;
    if(e.surrendered){e.state='surrendered';continue;}
    if(onShip){e.state='idle';if(worldEntityVisualDue(e,e.parts.root.position.x,e.parts.root.position.z))animateViking(e.parts,elapsed*.7,false,'idle',false);continue;}
-   const root=e.parts.root,pp=playerPos(),dx=pp.x-root.position.x,dz=pp.z-root.position.z,dist=Math.hypot(dx,dz);
+   const root=e.parts.root,pp=enemyPlayerPosition,dx=pp.x-root.position.x,dz=pp.z-root.position.z,dist=Math.hypot(dx,dz);
    // On constrained Performance devices, distant idle/chasing enemies do not need a full AI + collision tick every rendered frame.
    if(isConstrainedMobile&&dist>18&&e.state!=='attack'&&e.stun<=0){
     const mobileAiInterval=dist>70?.90:(dist>36?.42:.18);
@@ -6608,7 +6620,7 @@ function updateHUD(){
     e.state='idle';e.attackT=0;if(worldEntityVisualDue(e,root.position.x,root.position.z))animateViking(e.parts,elapsed*.7,false,'idle',false);continue;
    }
    // Defensores de aldeas conquistadas y enemigos que entran en territorio propio no pueden atacar al jugador.
-   if(!canAttackPlayer(e,pp.x,pp.z)){
+   if(!canAttackPlayer(e,pp.x,pp.z,enemyPlayerProtected)){
     e.state='friendly';e.attackT=0;e.attackDone=false;e.attackCooldown=0;
     if(dist<32){
      const wantedYaw=Math.atan2(dx,dz),yawDelta=Math.atan2(Math.sin(wantedYaw-root.rotation.y),Math.cos(wantedYaw-root.rotation.y));
@@ -6691,7 +6703,7 @@ function updateHUD(){
   if(!isConstrainedMobile||update.companionAiAccumulator>=.0667){
    const companionAiDt=isConstrainedMobile?Math.min(.15,update.companionAiAccumulator):dt;
    update.companionAiAccumulator=0;update.companionAiTicks=(update.companionAiTicks||0)+1;
-   const leader=playerPos(),leaderForward=v(Math.sin(yaw),0,Math.cos(yaw)),leaderRight=v(Math.cos(yaw),0,-Math.sin(yaw));
+   const leader=playerPos(),leaderForwardX=Math.sin(yaw),leaderForwardZ=Math.cos(yaw),leaderRightX=Math.cos(yaw),leaderRightZ=-Math.sin(yaw);
    companions.forEach((ally,index)=>{
    const dt=companionAiDt;
    if(!ally.recruited)return;
@@ -6720,10 +6732,10 @@ function updateHUD(){
     ally.parts.actualMoveSpeed=0;ally.parts.root.position.y=terrainSurfaceAt(ally.parts.root.position.x,ally.parts.root.position.z)+actorGroundOffset(ally.parts);
     animateViking(ally.parts,ally.walkPhase||0,false,'idle',false);return;
    }
-   const slots=[{side:-1,back:4.25},{side:1,back:4.25},{side:0,back:6.55}];
-   const slot=slots[index%3],row=Math.floor(index/3);
-   const target=leader.subtract(leaderForward.scale(slot.back+row*2.45)).add(leaderRight.scale(slot.side*2.25));
-   const dx=target.x-ally.parts.root.position.x,dz=target.z-ally.parts.root.position.z,dist=Math.hypot(dx,dz);let walkingAlly=false;ally.parts.root.position.y=terrainSurfaceAt(ally.parts.root.position.x,ally.parts.root.position.z)+actorGroundOffset(ally.parts);
+   const slotIndex=index%3,slotSide=slotIndex===0?-1:(slotIndex===1?1:0),slotBack=slotIndex===2?6.55:4.25,row=Math.floor(index/3);
+   const targetX=leader.x-leaderForwardX*(slotBack+row*2.45)+leaderRightX*(slotSide*2.25);
+   const targetZ=leader.z-leaderForwardZ*(slotBack+row*2.45)+leaderRightZ*(slotSide*2.25);
+   const dx=targetX-ally.parts.root.position.x,dz=targetZ-ally.parts.root.position.z,dist=Math.hypot(dx,dz);let walkingAlly=false;ally.parts.root.position.y=terrainSurfaceAt(ally.parts.root.position.x,ally.parts.root.position.z)+actorGroundOffset(ally.parts);
    let allyStep=0;if(dist>.72){const pace=running?Math.min(4.15,3.25+Math.max(0,dist-5)*.10):Math.min(2.15,1.55+Math.max(0,dist-3)*.075),step=Math.min(dist-.72,pace*dt),oldX=ally.parts.root.position.x,oldZ=ally.parts.root.position.z;let resolved=resolveLandStep(oldX,oldZ,dx/(dist||1)*step,dz/(dist||1)*step,.70);if(!resolved.moved){const side=index%2===0?1:-1,px=-(dz/(dist||1))*side,pz=(dx/(dist||1))*side;resolved=resolveLandStep(oldX,oldZ,(dx/(dist||1)*.82+px*.42)*step,(dz/(dist||1)*.82+pz*.42)*step,.66);}if(resolved.moved){ally.parts.root.position.x=resolved.x;ally.parts.root.position.z=resolved.z;walkingAlly=true;allyStep=Math.hypot(resolved.x-oldX,resolved.z-oldZ);}if(allyStep>.006)ally.parts.root.rotation.y=Math.atan2(ally.parts.root.position.x-oldX,ally.parts.root.position.z-oldZ);}
    ally.parts.actualMoveSpeed=dt>0?allyStep/dt:0;
    ally.parts.root.position.y=terrainSurfaceAt(ally.parts.root.position.x,ally.parts.root.position.z)+actorGroundOffset(ally.parts);
@@ -6782,7 +6794,7 @@ function updateHUD(){
     }
    }
   }
-  for(let i=effects.length-1;i>=0;i--){let e=effects[i];e.life-=dt;e.mesh.position.addInPlace(e.vel.scale(dt));e.vel.y-=8*dt;if(e.spin){e.mesh.rotation.x+=e.spin.x*dt;e.mesh.rotation.y+=e.spin.y*dt;e.mesh.rotation.z+=e.spin.z*dt;}if(e.life<=0){e.mesh.setEnabled(false);effectPool.push(e.mesh);effects.splice(i,1);}}
+  for(let i=effects.length-1;i>=0;i--){const e=effects[i];e.life-=dt;const position=e.mesh.position,velocity=e.vel;position.x+=velocity.x*dt;position.y+=velocity.y*dt;position.z+=velocity.z*dt;velocity.y-=8*dt;if(e.spin){e.mesh.rotation.x+=e.spin.x*dt;e.mesh.rotation.y+=e.spin.y*dt;e.mesh.rotation.z+=e.spin.z*dt;}if(e.life<=0){e.mesh.setEnabled(false);effectPool.push(e.mesh);effects.splice(i,1);}}
   driftingLeaves.forEach(l=>{if(!worldEntityVisualDue(l,l.mesh.position.x,l.mesh.position.z))return;l.mesh.position.x+=Math.sin(elapsed*.38+l.phase)*l.speed*dt;l.mesh.position.z+=Math.cos(elapsed*.31+l.phase)*l.speed*dt;l.mesh.position.y+=Math.sin(elapsed*.75+l.phase)*.08*dt;l.mesh.rotation.y+=dt*l.speed; if(l.mesh.position.x>46)l.mesh.position.x=-46;if(l.mesh.position.x< -46)l.mesh.position.x=46;if(l.mesh.position.z>46)l.mesh.position.z=-46;if(l.mesh.position.z< -46)l.mesh.position.z=46;});
   // Vida ambiental a 30 Hz; el render y el combate se mantienen a la frecuencia de pantalla.
   worldUpdatePhase='ambient NPCs, guards and companions';
@@ -6993,7 +7005,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.125 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.126 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7048,7 +7060,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.125: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.126: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -7117,7 +7129,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.125 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.126 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  const restored=restoreGame();updatePlayerIdentityHud();if(!restored){updateWeaponPanel();updateProgressPanel();document.getElementById('saveTimeLabel').textContent='Sin partida guardada todavía. Pulsa GUARDAR para conservar tu progreso.';}
  setLoadingProgress(48,'3/3 · Preparando el protagonista…');
  // Solo esperamos el modelo principal. Los NPC mantienen sus modelos provisionales
@@ -7141,7 +7153,7 @@ function updateHUD(){
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){console.warn('La preparación gráfica terminó con recursos pendientes; se continuará sin bloquear el inicio:',warmupError);}
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker; no abrir cuatro lecturas IndexedDB en el arranque.
- console.info('EL SIN NOMBRE 0.6.125 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
+ console.info('EL SIN NOMBRE 0.6.126 preparación automática:',{motorGuardado:engineStored,vikingoCargado:realPlayerReady,guerrerosPreparados:humanEnemyParts.filter(p=>!!p.realHuman).length,guerrerosTotales:humanEnemyParts.length,aldeanosEnMundo:humanCivilianParts.length,aldeanosGLBPreparados:humanCivilianParts.filter(p=>!!p.realHuman&&p.realHuman.role==='civilian').length,aldeanosTotales:humanCivilianParts.length,audio:'precarga en segundo plano',vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)});
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
  await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
