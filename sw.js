@@ -1,5 +1,5 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.119";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.120";
 const ASSET_CACHE = "el-sin-nombre-assets-build";
 const SHELL_FILES = ["./index.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./icon.svg"];
 
@@ -55,8 +55,9 @@ self.addEventListener("fetch", event => {
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, SHELL_CACHE).catch(async () => {
       const cache = await caches.open(SHELL_CACHE);
-      const guestPath = /\/(?:guest|invitado)\/?$/.test(url.pathname);
-      const fallback = guestPath ? (url.pathname.replace(/\/$/, "").endsWith("/invitado") ? "./invitado/index.html" : "./guest/index.html") : "./index.html";
+      const guestPath = /\/(?:guest|invitado)(?:\/|\/index\.html)?$/.test(url.pathname);
+      const invitePath = /\/invitado(?:\/|\/index\.html)?$/.test(url.pathname);
+      const fallback = guestPath ? (invitePath ? "./invitado/index.html" : "./guest/index.html") : "./index.html";
       return (await cache.match(fallback)) || Response.error();
     }));
     return;
