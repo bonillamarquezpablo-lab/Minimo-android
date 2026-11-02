@@ -15,7 +15,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.120 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.121 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -330,6 +330,27 @@ def main() -> None:
 
     (DIST / "index.html").write_text(html, encoding="utf-8")
 
+    # Root-level invite entry. The guest mode is compiled as a constant, so
+    # redirects, query stripping, PWA launch parameters and path parsing cannot
+    # accidentally select the main campaign.
+    guest_file_html = html.replace("<head>", '<head>\\n<meta name="el-sin-nombre-guest-entry" content="true">', 1)
+    guest_file_html = guest_file_html.replace(
+        '<link rel="manifest" href="./manifest.webmanifest">',
+        '<link rel="manifest" href="./guest-file-manifest.webmanifest">',
+        1,
+    )
+    guest_file_html, guest_file_mode_replacements = re.subn(
+        r"const SHARE_NEW_GAME=.*?;",
+        "const SHARE_NEW_GAME=true;",
+        guest_file_html,
+        count=1,
+    )
+    if guest_file_mode_replacements != 1 or "const SHARE_NEW_GAME=true;" not in guest_file_html:
+        raise SystemExit("La página guest.html no fija el modo invitado.")
+    if "el-sin-nombre-campaign-guest-v6" not in guest_file_html:
+        raise SystemExit("La página guest.html no usa el guardado guest-v6.")
+    (DIST / "guest.html").write_text(guest_file_html, encoding="utf-8")
+
     # Dedicated invite route: the pathname survives PWA launch flows that may
     # discard query parameters from a shared URL.
     guest_dir = DIST / "guest"
@@ -381,7 +402,7 @@ def main() -> None:
         raise SystemExit("La ruta /invitado/ no usa el nuevo guardado de invitados.")
     (invite_dir / "index.html").write_text(invite_html, encoding="utf-8")
 
-    for name in ("sw.js", "manifest.webmanifest", "guest-manifest.webmanifest", "invitado-manifest.webmanifest", "icon.svg", "ASSET-LICENSES.md"):
+    for name in ("sw.js", "manifest.webmanifest", "guest-manifest.webmanifest", "invitado-manifest.webmanifest", "guest-file-manifest.webmanifest", "icon.svg", "ASSET-LICENSES.md"):
         source = ROOT / name
         if not source.exists():
             raise SystemExit(f"Falta el archivo de despliegue: {name}")
@@ -437,7 +458,7 @@ def main() -> None:
 
     manifest = {
         "game": "EL SIN NOMBRE",
-        "version": "0.6.120",
+        "version": "0.6.121",
         "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
         "assets": results,
     }
