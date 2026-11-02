@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.132">
-<meta name="el-sin-nombre-repair" content="0.6.132 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.133">
+<meta name="el-sin-nombre-repair" content="0.6.133 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.132</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.133</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -48,7 +48,8 @@ html,body{margin:0;width:100%;height:100%;min-height:100dvh;overflow:hidden;back
 #arsenalPanel.open{display:block}
 #arsenalHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;color:var(--gold);font-weight:950;letter-spacing:1px;font-size:12px}
 #arsenalClose{border:1px solid #d8ad6888;border-radius:8px;padding:5px 10px;background:#213437;color:#f5ead7;font-weight:800}
-#weaponChoices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px}
+#weaponChoices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px}
+.weaponChoice:disabled,.weaponChoice.locked{opacity:.43;filter:saturate(.35);cursor:not-allowed}
 .weaponChoice{min-height:38px;border:1px solid #d8ad6877;border-radius:9px;background:#213437;color:#eee2ce;font-size:10px;font-weight:850;padding:6px 4px}
 .weaponChoice.active{background:#8a602f;border-color:#f1d08b;color:#fff}
 #arsenalActions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
@@ -609,7 +610,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.132 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.133 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -647,7 +648,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.132: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.133: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -767,13 +768,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.132 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.133 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.132 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.133 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -983,10 +984,11 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  <div id="arsenalPanel" aria-label="Arsenal y acciones de combate">
   <div id="arsenalHead"><span>ARSENAL DEL CLAN</span><button id="arsenalClose" type="button">CERRAR ✕</button></div>
 <div id="weaponChoices">
-    <button class="weaponChoice active" data-weapon="axe" type="button">🪓 Hacha</button>
-    <button class="weaponChoice" data-weapon="sword" type="button">⚔ Espada</button>
-    <button class="weaponChoice" data-weapon="spear" type="button">🔱 Lanza</button>
-    <button class="weaponChoice" data-weapon="pickaxe" type="button">⛏ Pico</button>
+    <button class="weaponChoice active" data-weapon="club" type="button">🪵 Palo</button>
+    <button class="weaponChoice" data-weapon="axe" type="button" disabled>🔒 Hacha</button>
+    <button class="weaponChoice" data-weapon="pickaxe" type="button" disabled>🔒 Pico</button>
+    <button class="weaponChoice" data-weapon="spear" type="button" disabled>🔒 Lanza</button>
+    <button class="weaponChoice" data-weapon="sword" type="button" disabled>🔒 Espada</button>
    </div>
   <div id="arsenalActions">
    <button class="action" id="block">🛡 BLOQUEAR</button>
@@ -2210,7 +2212,7 @@ async function startGame(){
    {tunic:M.greenCloth,trim:M.ochreCloth,skin:M.tanSkin,hair:M.redHair,cloak:M.red,armor:M.leather,helmet:'bare',weapon:'axe',shield:M.ochreCloth},
    {tunic:M.ochreCloth,trim:M.metal,skin:M.paleSkin,hair:M.hair,cloak:M.fur,armor:M.metal,helmet:'cap',weapon:'sword',shield:M.shield}
   ];
-  const st=enemy?styles[variant%styles.length]:{tunic:M.greenCloth,trim:M.woodLight,skin:M.skin,hair:M.hair,cloak:M.woodDark,armor:M.leather,helmet:'bare',weapon:'axe',shield:M.woodDark};
+  const st=enemy?styles[variant%styles.length]:{tunic:M.greenCloth,trim:M.woodLight,skin:M.skin,hair:M.hair,cloak:M.woodDark,armor:M.leather,helmet:'bare',weapon:'club',shield:M.woodDark};
   const root=newGroup(name,null),body=newGroup(name+'Body',root);
   body.scaling=enemy?v(...[[1.03,.88,1.02],[.94,.92,.96],[1.08,.86,1.04],[.98,.90,.98]][variant%4]):v(.94,.88,.94);
   // Torso con cintura, caja torácica y hombros diferenciados; no es una cápsula ovalada.
@@ -2326,7 +2328,15 @@ async function startGame(){
    for(let k=0;k<6;k++){let a=k*Math.PI/3;sphere(name+'ShieldRivet'+k,elbows[0],[Math.cos(a)*.22,-.06+Math.sin(a)*.22,.225],[.024,.024,.015],M.gold,6);}
   }
   const cloak=enemy?null:makeDrapedCape(name+'WornTravelCloak',body,st.cloak);
+  let clubWeapon=null;
   if(!enemy){
+   // A weathered branch with no iron head or forged fittings.
+   weapon.setEnabled(false);
+   clubWeapon=newGroup(name+'CastawayStick',elbows[1]);clubWeapon.position=v(0,-.44,.10);
+   capsule(name+'CastawayStickShaft',clubWeapon,[0,-.08,.02],1.24,.052,M.woodDark,[.025,0,.015]);
+   capsule(name+'CastawayStickGrip',clubWeapon,[0,-.30,.045],.30,.062,M.woodLight,[.03,0,0]);
+   sphere(name+'CastawayStickKnot',clubWeapon,[-.025,.49,.025],[.105,.11,.10],M.wood,[.15,0,.12]);
+   clubWeapon.setEnabled(true);
    // Remiendo visible y costuras sencillas: equipo de superviviente, no armadura de élite.
    box(name+'CloakPatch',body,[.19,.93,-.405],[.20,.27,.035],M.ochreCloth,[0,0,.12]);
    box(name+'CloakPatchStitchA',body,[.19,.82,-.429],[.23,.025,.018],M.woodLight);
@@ -2334,7 +2344,7 @@ async function startGame(){
    box(name+'TunicRepairPatch',body,[-.28,.77,.27],[.17,.22,.035],M.woodDark,[0,0,-.10]);
   }
   for(let side of [-1,1]){sphere(name+'elbowJoint'+side,arms[side===-1?0:1],[0,-.48,.035],[.14,.14,.14],st.skin,18);capsule(name+'bootCuff'+side,legs[side===-1?0:1],[0,-.78,.02],.18,.16,M.leather);}
-  const parts={name,root,body,head:headGroup,arms,elbows,legs,knees,weapon,cloak,enemy,variant,weaponKind:st.weapon};
+  const parts={name,root,body,head:headGroup,arms,elbows,legs,knees,weapon,clubWeapon,cloak,enemy,variant,weaponKind:st.weapon};
   // The village defenders are replaced after scene construction with a skinned, textured GLB.
   // Keep their gameplay roots/controllers intact so AI, health, village logic and saves are preserved.
   if(enemy && /^(VillageGuard|RaiderCrew)/.test(name)) humanEnemyParts.push(parts);
@@ -2610,7 +2620,7 @@ async function startGame(){
   sphere('RaiderProwBeast',root,[0,1.38,5.15],[.54,.45,.62],factionTrim,10);
   let back=B.MeshBuilder.CreatePlane('RaiderHealthBack',{width:3.0,height:.18},scene);back.parent=root;back.position=v(0,6.2,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=M.red;
   let bar=B.MeshBuilder.CreatePlane('RaiderHealthBar',{width:2.9,height:.12},scene);bar.parent=root;bar.position=v(0,6.21,-.015);bar.billboardMode=B.Mesh.BILLBOARDMODE_ALL;bar.material=M.gold;
-  addModelShadow(root);let obj={root,hp:130,maxHp:130,cool:2+Math.random()*2,sunk:false,bar,back,index,crew,oars:enemyOars,floatState:createVesselFloatState()};enemyShips.push(obj);return obj;
+  addModelShadow(root);let obj={root,hp:130,maxHp:130,cool:2+Math.random()*2,sunk:false,bar,back,index,crew,oars:enemyOars,floatState:createVesselFloatState(),initialX:x,initialY:-.35,initialZ:z,initialYaw:rotation};enemyShips.push(obj);return obj;
  }
  buildRaiderShip(0,82,-96,.35);
  buildRaiderShip(1,-222,132,2.3);
@@ -2786,14 +2796,16 @@ async function startGame(){
   }
  }
 
- // Player and camera.
- const player=makeViking('PabloTheNameless',false);player.root.position=v(-47,terrainSurfaceAt(-47,8)+.08,8);let lastSafePosition=v(player.root.position.x,player.root.position.y,player.root.position.z);const playerShadow=attachContactShadow(player.root,'PlayerGroundShadow',1.05);addModelShadow(player.root);
+ // Player and camera. New campaigns begin alone on the central island, Isla del Cuervo.
+ const NEW_CAMPAIGN_SPAWN={x:-47,z:8};
+ const player=makeViking('PabloTheNameless',false);player.root.position=v(NEW_CAMPAIGN_SPAWN.x,terrainSurfaceAt(NEW_CAMPAIGN_SPAWN.x,NEW_CAMPAIGN_SPAWN.z)+.08,NEW_CAMPAIGN_SPAWN.z);let lastSafePosition=v(player.root.position.x,player.root.position.y,player.root.position.z);const playerShadow=attachContactShadow(player.root,'PlayerGroundShadow',1.05);addModelShadow(player.root);
  // Viking GLB: el URL oficial se valida en la ficha del modelo. Si el navegador bloquea
  // la descarga cruzada (CORS/permisos del archivo local), el usuario puede importar el GLB
  // descargado desde Android mediante el selector de archivos. No se oculta el fallo.
  // Recurso exacto del protagonista que ya aparece en el dispositivo: no sustituirlo por otro modelo.
  const VIKING_GLB_URL=new URL('./assets/models/viking-rigged.glb',document.baseURI).href;
- let realPlayerModel=null,realPlayerModelPivot=null,realPlayerAnimations={walk:null,run:null,idle:null,attack:null},realPlayerMode='',realPlayerCurrentGroup=null,realRigNodes={},realRigManualGaitNodes={},realPlayerReady=false,realPlayerBusy=false,realPlayerManualLocomotion=false,playerHumanBlob=null,equippedWeapon='axe';
+ let realPlayerModel=null,realPlayerModelPivot=null,realPlayerAnimations={walk:null,run:null,idle:null,attack:null},realPlayerMode='',realPlayerCurrentGroup=null,realRigNodes={},realRigManualGaitNodes={},realPlayerReady=false,realPlayerBusy=false,realPlayerManualLocomotion=false,playerHumanBlob=null,equippedWeapon='club';
+ const unlockedWeapons=new Set(['club']);
   const REAL_VIKING_FORWARD_OFFSET=Math.PI;
  let realHandNode=null,realUpperArmNode=null,realForearmNode=null,realSpineNode=null,realWeaponHolder=null,realWeaponGroups={},realBoneRest=new Map(),realWeaponAnchorCalibrated=false,realWeaponAnchorType='',realWeaponPoseOverride=null,realWeaponSocketNode=null,realWeaponSocketMode='pivot';
  const REAL_PLAYER_ROOT_GROUND_OFFSET=.025;
@@ -4110,6 +4122,10 @@ async function startGame(){
   realWeaponHolder.parent=realPlayerModelPivot||socket;
   realWeaponHolder.scaling.setAll(.86);
   const makeGroup=name=>newGroup('RealWeapon_'+name,realWeaponHolder);
+  const club=makeGroup('Club');
+  capsule('RealCastawayStickShaft',club,[0,-.04,0],1.22,.052,M.woodDark,[.025,0,.015]);
+  capsule('RealCastawayStickGrip',club,[0,-.27,.025],.30,.063,M.woodLight);
+  sphere('RealCastawayStickKnot',club,[-.025,.52,.015],[.11,.12,.105],M.wood,[.15,0,.12]);
   const axe=makeGroup('Axe');
   capsule('RealAxeWoodenHandle',axe,[0,-.02,0],1.02,.052,M.woodLight);
   capsule('RealAxeLeatherGrip',axe,[0,-.19,.028],.30,.064,M.leather);
@@ -4134,7 +4150,7 @@ async function startGame(){
   box('RealPickaxeIronHead',pickaxe,[0,.43,0],[.86,.16,.14],M.darkMetal);
   const pickLeft=B.MeshBuilder.CreateCylinder('RealPickaxeLeftPoint',{height:.38,diameterTop:0,diameterBottom:.15,tessellation:10},scene);pickLeft.parent=pickaxe;pickLeft.position=v(-.40,.43,0);pickLeft.rotation.z=Math.PI/2;pickLeft.material=M.metal;
   const pickRight=B.MeshBuilder.CreateCylinder('RealPickaxeRightPoint',{height:.38,diameterTop:0,diameterBottom:.15,tessellation:10},scene);pickRight.parent=pickaxe;pickRight.position=v(.40,.43,0);pickRight.rotation.z=-Math.PI/2;pickRight.material=M.metal;
-  realWeaponGroups={axe,sword,spear,pickaxe};
+  realWeaponGroups={club,axe,sword,spear,pickaxe};
   Object.entries(realWeaponGroups).forEach(([key,node])=>{node.setEnabled(key===type);node.getChildMeshes(false).forEach(mesh=>{mesh.isVisible=true;mesh.visibility=1;mesh.isPickable=false;mesh.receiveShadows=true;if(shadowGen)shadowGen.addShadowCaster(mesh);});});
   if(typeof weaponLevel!=='undefined'&&weaponLevel>0)decorateWeaponGroups(realWeaponGroups,'real',weaponLevel);
   syncRealWeaponAnchor(0);
@@ -4152,7 +4168,7 @@ async function startGame(){
   if(pose!==undefined)realWeaponPoseOverride=pose;
   const socket=realHandNode||realWeaponSocketNode||realForearmNode||realUpperArmNode||null;
   if(realWeaponHolder.parent!==realPlayerModelPivot)realWeaponHolder.parent=realPlayerModelPivot;
-  const defaultPose=equippedWeapon==='axe'?{x:.04,y:0,z:-.055}:equippedWeapon==='sword'?{x:.025,y:0,z:-.035}:{x:0,y:0,z:0};
+  const defaultPose=equippedWeapon==='club'?{x:.045,y:0,z:-.075}:equippedWeapon==='axe'?{x:.04,y:0,z:-.055}:equippedWeapon==='sword'?{x:.025,y:0,z:-.035}:{x:0,y:0,z:0};
   const r=realWeaponPoseOverride||defaultPose;
   const enableEquipped=()=>Object.entries(realWeaponGroups||{}).forEach(([key,node])=>{if(node)node.setEnabled(key===equippedWeapon);});
   try{
@@ -4176,7 +4192,7 @@ async function startGame(){
     if(!axisWorld||axisWorld.lengthSquared()<1e-6)axisWorld=socket.getDirection(B.Axis.Y);
     if(!forwardWorld||forwardWorld.lengthSquared()<1e-6)forwardWorld=socket.getDirection(B.Axis.Z);
     axisWorld.normalize();forwardWorld.normalize();
-    const gripOffset={axe:.17,sword:.25,spear:-.04,pickaxe:.25}[equippedWeapon]??.17;
+    const gripOffset={club:.12,axe:.17,sword:.25,spear:-.04,pickaxe:.25}[equippedWeapon]??.12;
     const gripOrigin=gripWorld.add(axisWorld.scale(gripOffset)).add(forwardWorld.scale(.022));
     const localPosition=B.Vector3.TransformCoordinates(gripOrigin,inverseParent);
     const localAxis=B.Vector3.TransformNormal(axisWorld,inverseParent).normalize();
@@ -4202,7 +4218,8 @@ async function startGame(){
   const tAttack=Math.max(0,Math.min(1,1-actionTimer/.86));
   const n=realRigNodes;
   if(playerAction==='chop'){
-   Object.entries(realWeaponGroups).forEach(([key,node])=>node.setEnabled(key==='axe'));
+   const chopWeapon=unlockedWeapons.has('axe')?'axe':'club';
+   Object.entries(realWeaponGroups).forEach(([key,node])=>node.setEnabled(key===chopWeapon));
    syncRealWeaponAnchor(dt);
    const raise=easeOut(Math.max(0,Math.min(1,tChop/.40)));
    const strike=easeOut(Math.max(0,Math.min(1,(tChop-.40)/.27)));
@@ -4224,7 +4241,8 @@ async function startGame(){
    return;
   }
   if(playerAction==='mine'){
-   Object.entries(realWeaponGroups).forEach(([key,node])=>node.setEnabled(key==='pickaxe'));
+   const miningWeapon=unlockedWeapons.has('pickaxe')?'pickaxe':'club';
+   Object.entries(realWeaponGroups).forEach(([key,node])=>node.setEnabled(key===miningWeapon));
    const lift=easeOut(Math.max(0,Math.min(1,tMine/.45)));
    const hit=easeOut(Math.max(0,Math.min(1,(tMine-.45)/.23)));
    const settle=Math.max(0,Math.min(1,(tMine-.68)/.32));
@@ -4265,7 +4283,7 @@ async function startGame(){
   if(realPlayerModelPivot)realPlayerModelPivot.position.z=0;
   syncRealWeaponAnchor(dt);
  }
- const weaponOptions={axe:player.weapon};
+ const weaponOptions={club:player.clubWeapon,axe:player.weapon};
  const swordGroup=newGroup('PlayerSwordWeapon',player.elbows[1]);swordGroup.position=v(0,-.44,.10);capsule('PlayerSwordGrip',swordGroup,[0,-.42,.02],.43,.055,M.leather);box('PlayerSwordGuard',swordGroup,[0,-.16,.04],[.50,.09,.10],M.gold);const swordBlade=box('PlayerSwordBlade',swordGroup,[0,.28,.02],[.16,.92,.055],M.metal,[0,0,.015]);sphere('PlayerSwordPommel',swordGroup,[0,-.67,.02],[.12,.12,.12],M.gold,12);weaponOptions.sword=swordGroup;swordGroup.setEnabled(false);
  const spearGroup=newGroup('PlayerSpearWeapon',player.elbows[1]);spearGroup.position=v(0,-.44,.10);capsule('PlayerSpearShaft',spearGroup,[0,-.02,.02],2.0,.045,M.woodLight);cyl('PlayerSpearSocket',spearGroup,[0,.92,.02],.22,.11,.13,M.metal);cyl('PlayerSpearHead',spearGroup,[0,1.18,.02],.48,0,.18,M.metal);weaponOptions.spear=spearGroup;spearGroup.setEnabled(false);
  const pickaxeGroup=newGroup('PlayerPickaxeWeapon',player.elbows[1]);pickaxeGroup.position=v(0,-.44,.10);capsule('PlayerPickaxeShaft',pickaxeGroup,[0,-.02,.02],1.72,.045,M.woodLight);box('PlayerPickaxeHead',pickaxeGroup,[0,.79,.02],[.78,.14,.12],M.darkMetal,[0,0,-.04]);cyl('PlayerPickaxePointL',pickaxeGroup,[-.37,.79,.02],.36,0,.13,M.metal,[0,0,Math.PI/2]);cyl('PlayerPickaxePointR',pickaxeGroup,[.37,.79,.02],.36,0,.13,M.metal,[0,0,-Math.PI/2]);weaponOptions.pickaxe=pickaxeGroup;pickaxeGroup.setEnabled(false);
@@ -4296,23 +4314,38 @@ async function startGame(){
   decorateWeaponGroups(weaponOptions,'proc',level);
   if(realPlayerReady)decorateWeaponGroups(realWeaponGroups,'real',level);
  }
- function weaponDamageValue(){const base={axe:36,sword:40,spear:33,pickaxe:8}[equippedWeapon]||36;return Math.round(base*(1+weaponLevel*.16));}
+ function weaponDamageValue(){const base={club:12,axe:36,sword:40,spear:33,pickaxe:8}[equippedWeapon]||12;return Math.round(base*(1+weaponLevel*.16));}
  function weaponUpgradeCost(level){return [{wood:0,stone:0},{wood:8,stone:6},{wood:16,stone:12},{wood:28,stone:20}][level]||{wood:0,stone:0};}
+ const weaponLabels={club:'Palo de supervivencia',axe:'Hacha de guerra',pickaxe:'Pico de minero',spear:'Lanza',sword:'Espada'};
+ const weaponButtonLabels={club:'🪵 Palo',axe:'🪓 Hacha',pickaxe:'⛏ Pico',spear:'🔱 Lanza',sword:'⚔ Espada'};
+ function updateWeaponAvailabilityUI(){
+  document.querySelectorAll('.weaponChoice').forEach(button=>{
+   const type=button.dataset.weapon,unlocked=unlockedWeapons.has(type);
+   button.disabled=!unlocked;
+   button.textContent=(unlocked?'':'🔒 ')+(weaponButtonLabels[type]||type);
+   button.title=unlocked?(weaponLabels[type]||type):'Bloqueada. Conquista un asentamiento para desbloquear esta arma.';
+   button.setAttribute('aria-label',button.title);
+   button.classList.toggle('locked',!unlocked);
+  });
+ }
  function updateWeaponPanel(){
-  const names={axe:'Hacha de guerra',sword:'Espada',spear:'Lanza',pickaxe:'Pico de minero'};
+  const names=weaponLabels;
   const stats=document.getElementById('weaponStatsText');if(!stats)return;
+  updateWeaponAvailabilityUI();
   const cost=weaponUpgradeCost(Math.min(3,weaponLevel+1));
-  const baseReach={axe:4.15,sword:3.85,spear:5.0,pickaxe:2.9}[equippedWeapon]||4.15;const reach=(baseReach+weaponLevel*.12).toFixed(2).replace('.',',')+' m';stats.textContent=names[equippedWeapon]+' · Nivel '+weaponLevel+'/3 · Daño '+weaponDamageValue()+' · Alcance '+reach+(weaponLevel<3?' · Siguiente: '+cost.wood+' madera + '+cost.stone+' piedra':' · Forja maestra');
+  const baseReach={club:3.05,axe:4.15,sword:3.85,spear:5.0,pickaxe:2.9}[equippedWeapon]||3.05;const reach=(baseReach+weaponLevel*.12).toFixed(2).replace('.',',')+' m';stats.textContent=names[equippedWeapon]+' · Nivel '+weaponLevel+'/3 · Daño '+weaponDamageValue()+' · Alcance '+reach+(weaponLevel<3?' · Siguiente: '+cost.wood+' madera + '+cost.stone+' piedra':' · Forja maestra');
   const btn=document.getElementById('upgradeWeaponBtn');if(btn)btn.textContent=weaponLevel>=3?'✦ ARMA DE LEYENDA':'⚒ FORJAR MEJORA '+(weaponLevel+1);
  }
  function equipWeapon(type){
-  if(!weaponOptions[type])return;
+  if(!weaponOptions[type])return false;
+  if(!unlockedWeapons.has(type)){msg('Arma bloqueada. Conquista un asentamiento para desbloquearla.');return false;}
   Object.entries(weaponOptions).forEach(([key,mesh])=>mesh.setEnabled(key===type));
   player.weapon=weaponOptions[type];equippedWeapon=type;
   if(realPlayerReady){Object.entries(realWeaponGroups).forEach(([key,node])=>node.setEnabled(key===type));if(!realWeaponGroups[type])createRealWeapon(type);}
   document.querySelectorAll('.weaponChoice').forEach(b=>b.classList.toggle('active',b.dataset.weapon===type));
   updateWeaponPanel();
-  msg('Equipo: '+({axe:'hacha',sword:'espada',spear:'lanza',pickaxe:'pico de minería'}[type])+'.');
+  msg('Equipo: '+({club:'palo',axe:'hacha',sword:'espada',spear:'lanza',pickaxe:'pico de minería'}[type])+'.');
+  return true;
  }
  let health=100,stamina=100,woodCount=0,stoneCount=0,kills=0,captured=0,weaponLevel=0,blocking=false,onShip=false,invuln=0,playerAction='idle',actionTimer=0,actionHit=false,combo=0,comboWindow=0,blockAge=9,cameraShake=0,combatFreeze=0,dodgeTimer=0,respawnWait=0,running=false,healCooldown=0,boatVelocity=0,boatBaseY=-.10,shipAttackCooldown=0,crewVolleyCooldown=1.2;
  const playerBoatFloatState=createVesselFloatState();
@@ -4625,9 +4658,9 @@ async function startGame(){
    let ch=makeViking('VillageGuard'+index+'_'+i,true,(index+i)%4);setFactionBadge(ch,'enemy');ch.root.position=v(ex,terrainSurfaceAt(ex,ez)+.08,ez);ch.root.rotation.y=rand(0,6.28);attachContactShadow(ch.root,'GuardShadow_'+index+'_'+i,.92);addModelShadow(ch.root);
    let back=B.MeshBuilder.CreatePlane('guardHealthBack',{width:1.15,height:.12},scene);back.parent=ch.root;back.position=v(0,2.02,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=M.red;
    let front=B.MeshBuilder.CreatePlane('guardHealth',{width:1.1,height:.09},scene);front.parent=ch.root;front.position=v(0,2.03,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('EnemyHealth'+index+i,'#76a75a');
-   guards.push({parts:ch,villageIndex:index,hp:100,alive:true,surrendered:false,recruited:false,state:'idle',attackT:0,attackDone:false,cool:rand(0,.5),stun:0,hitReact:0,knockback:0,hitDir:v(0,0,0),deadFallT:0,deadSide:rand(-1,1),healthMesh:front,healthBack:back,home:v(ex,0,ez)});
+   guards.push({parts:ch,villageIndex:index,hp:100,alive:true,surrendered:false,recruited:false,state:'idle',attackT:0,attackDone:false,cool:rand(0,.5),stun:0,hitReact:0,knockback:0,hitDir:v(0,0,0),deadFallT:0,deadSide:rand(-1,1),healthMesh:front,healthBack:back,home:v(ex,0,ez),initialYaw:ch.root.rotation.y});
   }
-  villages.push({index,x,z,name,guards,claimed:false,flag,flagGroup,flagEmblem,flagpole,houseGroups,territoryFill:null,territoryRing:null,captureAnimation:null});
+  villages.push({index,x,z,name,guards,claimed:false,flag,flagGroup,flagEmblem,flagpole,houseGroups,houseOriginalMaterials:houseGroups.map(group=>group.getChildMeshes(false).map(mesh=>({mesh,material:mesh.material}))),territoryFill:null,territoryRing:null,captureAnimation:null});
  }
  makeVillage(0,31,-17,'Aldea de Cuervo');
  makeVillage(1,135,14,'Skall');
@@ -5221,10 +5254,10 @@ async function startGame(){
   return best;
  }
  function nearEnemies(){const p=playerPos();return enemies.some(e=>e.alive&&canAttackPlayer(e,p.x,p.z)&&Math.hypot(e.parts.root.position.x-p.x,e.parts.root.position.z-p.z)<13)}
- // El primer campamento es territorio del jugador: tres defensores del clan lo custodian.
- // Los guardias se cargan con el GLB distinto del caballero acorazado y nunca entran en la lista hostil.
+ // El náufrago empieza solo: no hay escolta gratuita ni guerreros amistosos en el campamento.
+ // Los aliados aparecerán cuando se conquisten aldeas y se reclute a sus defensores.
  const campGuards=[];
- const campGuardAngles=[.40,2.55,4.80];
+ const campGuardAngles=[];
  const campGuardAnchor={x:STARTER_CAMP_POSITION.x*.78,z:STARTER_CAMP_POSITION.z*.78};
  campGuardAngles.forEach((angle,i)=>{
   const ex=campGuardAnchor.x+Math.cos(angle)*3.8,ez=campGuardAnchor.z+Math.sin(angle)*3.8;
@@ -5365,13 +5398,84 @@ function villageHostileDefenders(vl){
   if(introOverlay){introOverlay.setAttribute('aria-hidden','false');introOverlay.classList.add('open');}
   console.info('Selector de campaña listo.',{partidasDisponibles:getAvailableCampaignSaves().length});
  }
- function beginSaga(){gameStarted=true;document.body.classList.remove('booting','boot-failed','intro-open');document.body.classList.add('game-running');NorseAudio.unlock();if(introOverlay){introOverlay.classList.remove('open');introOverlay.setAttribute('aria-hidden','true');}try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();}catch(startViewError){console.warn('La vista se ajustará en el siguiente fotograma:',startViewError);}msg('La costa te espera.');}
+ function resetCampaignForNewGame(){
+  health=100;stamina=100;healCooldown=0;woodCount=0;stoneCount=0;kills=0;captured=0;weaponLevel=0;
+  unlockedWeapons.clear();unlockedWeapons.add('club');equippedWeapon='club';
+  chapterStage=0;sprintMissionMeters=0;sprintMissionDone=false;sagaHistory.splice(0,sagaHistory.length);
+  companions.splice(0,companions.length);fallenEnemies.splice(0,fallenEnemies.length);
+  campGuards.forEach(guard=>{guard.alive=false;guard.parts.root.setEnabled(false);});campGuards.splice(0,campGuards.length);
+  player.root.parent=null;player.root.setEnabled(true);
+  player.root.position=v(NEW_CAMPAIGN_SPAWN.x,terrainSurfaceAt(NEW_CAMPAIGN_SPAWN.x,NEW_CAMPAIGN_SPAWN.z)+(realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08),NEW_CAMPAIGN_SPAWN.z);
+  player.root.rotation.set(0,0,0);if(realPlayerModelPivot)realPlayerModelPivot.position.y=0;
+  lastSafePosition.copyFrom(player.root.position);playerVelocity.x=0;playerVelocity.z=0;
+  yaw=0;attackFacingYaw=0;cameraYaw=0;cameraPitch=.48;cameraDistance=10.35;cameraTargetSmoothed=null;
+  playerAirborne=false;playerVerticalVelocity=0;playerGroundYFiltered=player.root.position.y;
+  onShip=false;blocking=false;invuln=0;playerAction='idle';actionTimer=0;actionHit=false;combo=0;comboWindow=0;
+  running=false;dodgeTimer=0;respawnWait=0;boatVelocity=0;shipAttackCooldown=0;crewVolleyCooldown=1.2;
+  actionResource=null;actionVillage=null;activeTree=null;activeRock=null;nearVillage=null;nearBoat=false;
+  if(document.getElementById('runBtn'))document.getElementById('runBtn').textContent='🏃 CORRER: NO';
+  if(document.getElementById('act'))document.getElementById('act').textContent='🪓 ACCIÓN';
+  villages.forEach(vl=>{
+   vl.claimed=false;
+   if(vl.flag)vl.flag.material=M.red;
+   if(vl.flagGroup){vl.flagGroup.position.y=terrainSurfaceAt(vl.x,vl.z)+4.65;vl.flagGroup.scaling.set(1,1,1);}
+   (vl.flagEmblem||[]).forEach(mesh=>mesh.setEnabled(true));
+   if(vl.territoryFill){vl.territoryFill.dispose(false,true);vl.territoryFill=null;}
+   if(vl.territoryRing){vl.territoryRing.dispose(false,true);vl.territoryRing=null;}
+   (vl.houseOriginalMaterials||[]).forEach(group=>group.forEach(entry=>{if(entry.mesh&&!entry.mesh.isDisposed())entry.mesh.material=entry.material;}));
+   vl.guards.forEach(guard=>{
+    guard.hp=100;guard.alive=true;guard.surrendered=false;guard.recruited=false;guard.state='idle';
+    guard.attackT=0;guard.attackDone=false;guard.stun=0;guard.hitReact=0;guard.knockback=0;guard.deadFallT=0;guard.deadTimer=0;guard.cool=.4;
+    guard.faction='enemy';guard.parts.faction='enemy';guard.parts.root.parent=null;guard.parts.root.setEnabled(true);
+    guard.parts.root.position=v(guard.home.x,terrainSurfaceAt(guard.home.x,guard.home.z)+.08,guard.home.z);
+    guard.parts.root.rotation.set(0,guard.initialYaw||0,0);guard.parts.weapon.setEnabled(true);
+    if(guard.parts.realHuman){
+     const real=guard.parts.realHuman;real.groups.forEach(group=>{try{group.stop();}catch(_){ }});
+     for(const [node,base] of real.rest){if(base.quaternion)node.rotationQuaternion=base.quaternion.clone();else if(node.rotation&&base.rotation)node.rotation.copyFrom(base.rotation);}
+     if(real.modelRoot)real.modelRoot.rotation.y=real.modelForwardOffset||0;
+     if(real.sword)real.sword.setEnabled(true);real.current=null;
+    }else{
+     guard.parts.body.rotation.set(0,0,0);guard.parts.arms.forEach(node=>node.rotation.set(0,0,0));
+     guard.parts.elbows.forEach(node=>node.rotation.set(0,0,0));guard.parts.legs.forEach(node=>node.rotation.set(0,0,0));guard.parts.knees.forEach(node=>node.rotation.set(0,0,0));
+    }
+    guard.healthBack.setEnabled(true);guard.healthMesh.setEnabled(true);guard.healthMesh.scaling.x=1;guard.healthMesh.position.x=0;
+    setFactionBadge(guard.parts,'enemy');
+   });
+  });
+  trees.forEach(tree=>{
+   tree.alive=true;tree.hp=3;tree.hitFlash=0;tree.falling=null;tree.fallX=0;tree.fallZ=0;
+   tree.root.setEnabled(true);tree.root.position=v(tree.x,terrainSurfaceAt(tree.x,tree.z),tree.z);tree.root.rotation.set(0,tree.baseYaw||0,0);
+   if(tree.stump)tree.stump.setEnabled(false);
+  });
+  rocks.forEach(rock=>{
+   rock.alive=true;rock.hp=3;rock.hitFlash=0;
+   rock.meshes.forEach((mesh,i)=>{mesh.setEnabled(true);mesh.position.copyFrom(rock.basePositions[i]);mesh.scaling.copyFrom(rock.baseScales[i]);});
+  });
+  enemyShips.forEach(enemy=>{
+   enemy.hp=enemy.maxHp;enemy.sunk=false;enemy.cool=2;
+   enemy.root.position.set(enemy.initialX,enemy.initialY,enemy.initialZ);enemy.root.rotation.set(0,enemy.initialYaw,0);enemy.root.setEnabled(true);
+   enemy.bar.setEnabled(true);enemy.back.setEnabled(true);enemy.bar.scaling.x=1;enemy.bar.position.x=0;
+  });
+  ship.position.set(-70.5,-.36,9.5);ship.rotation.set(0,0,0);
+  boatHp=65;boatMax=100;boatLevel=0;
+  boatVisuals.armor.concat(boatVisuals.cargo,boatVisuals.sails).forEach(mesh=>{if(mesh&&!mesh.isDisposed())mesh.setEnabled(false);});
+  sail.scaling.set(1,1,1);
+  playerBoatFloatState.heaveVelocity=0;playerBoatFloatState.pitchVelocity=0;playerBoatFloatState.rollVelocity=0;
+  if(playerShelterGroup){try{playerShelterGroup.dispose(false,true);}catch(_){ }playerShelterGroup=null;}
+  playerShelterBuilt=false;playerShelterX=0;playerShelterZ=0;
+  const shelterButton=document.getElementById('buildCabinBtn');if(shelterButton){shelterButton.textContent='🏚 CONSTRUIR REFUGIO';shelterButton.disabled=false;shelterButton.removeAttribute('aria-label');}
+  lastSaveAt=0;saveAccumulator=0;
+  if(document.getElementById('saveTimeLabel'))document.getElementById('saveTimeLabel').textContent='Nueva saga. Sin recursos, sin escolta y sin armas forjadas.';
+  const saveBtn=document.getElementById('saveBtn');if(saveBtn)saveBtn.textContent='📕 GUARDAR';
+  refreshFactionBadges();equipWeapon('club');updateHUD();updateWeaponPanel();updateProgressPanel();updateChapterTracker();drawMap();
+ } function beginSaga(){gameStarted=true;document.body.classList.remove('booting','boot-failed','intro-open');document.body.classList.add('game-running');NorseAudio.unlock();if(introOverlay){introOverlay.classList.remove('open');introOverlay.setAttribute('aria-hidden','true');}try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();}catch(startViewError){console.warn('La vista se ajustará en el siguiente fotograma:',startViewError);}msg('La costa te espera.');}
  function beginNewSaga(){
   activeSaveKey=chooseNewCampaignSaveKey();
-  updatePlayerIdentityHud();updateHUD();updateWeaponPanel();updateProgressPanel();
-  const saveLabel=document.getElementById('saveTimeLabel');
-  if(saveLabel)saveLabel.textContent='Nueva campaña. Guarda tu progreso para conservar esta saga.';
-  if(getAvailableCampaignSaves().length)msg('Nueva saga iniciada. Tu última partida guardada se conserva en el otro espacio.');
+  resetCampaignForNewGame();
+  updatePlayerIdentityHud();
+  saveGame(true);
+  if(getAvailableCampaignSaves().length>1)msg('Nueva saga iniciada en la isla central. El guardado anterior se conserva en el otro espacio.');
+  else msg('Nueva saga iniciada. Solo tienes un palo y un destino por conquistar.');
   beginSaga();
  }
  function loadSavedSaga(){
@@ -5391,7 +5495,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.132',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.133',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -5454,7 +5558,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.132');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.133');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -5499,31 +5603,43 @@ function updateHUD(){
   function chop(){
    const target=actionResource;
    if(!target||target.type!=='tree'||!target.obj||!target.obj.alive){msg('No hay un árbol válido al que golpear.');actionResource=null;return;}
-   if(realPlayerReady&&equippedWeapon!=='axe')equipWeapon('axe');
-   const tree=target.obj;tree.hp--;tree.hitFlash=.34;woodChips(tree);NorseAudio.play('woodHit');
+   const hasAxe=unlockedWeapons.has('axe');
+   if(realPlayerReady) equipWeapon(hasAxe?'axe':'club');
+   const tree=target.obj;tree.hp-=hasAxe?1:.5;tree.hitFlash=.34;woodChips(tree);NorseAudio.play('woodHit');
    if(tree.hp<=0){
     tree.alive=false;tree.falling=0;
     const pp=playerPos(),awayX=tree.x-pp.x,awayZ=tree.z-pp.z,awayLen=Math.hypot(awayX,awayZ)||1;
     tree.fallX=(awayZ/awayLen);tree.fallZ=(-awayX/awayLen);
     NorseAudio.play('woodBreak');woodCount+=5;createTreeStump(tree,trees.indexOf(tree));
     recordSagaEvent('Árbol talado: +5 madera.');msg('¡ÁRBOL DERRIBADO! +5 madera');
-   }else msg('¡Hachazo limpio! '+tree.hp+' golpes para derribarlo');
+   }else msg(hasAxe?'¡Hachazo limpio! '+Math.ceil(tree.hp)+' golpes para derribarlo':'El palo apenas astilla la madera. Necesitarás más golpes o desbloquear un hacha ('+Math.ceil(tree.hp)+' restantes).');
    updateHUD();saveGame(true);actionResource=null;
   }
   function mineRock(){
    const target=actionResource;
    if(!target||target.type!=='rock'||!target.obj||!target.obj.alive){msg('No hay una veta de piedra válida al alcance.');actionResource=null;return;}
-   if(equippedWeapon!=='pickaxe')equipWeapon('pickaxe');
-   const rock=target.obj;rock.hp--;rock.hitFlash=.30;stoneChips(rock);NorseAudio.play('stoneHit');
+   const hasPickaxe=unlockedWeapons.has('pickaxe');
+   if(realPlayerReady) equipWeapon(hasPickaxe?'pickaxe':'club');
+   const rock=target.obj;rock.hp-=hasPickaxe?1:.5;rock.hitFlash=.30;stoneChips(rock);NorseAudio.play('stoneHit');
    if(rock.hp<=0){rock.alive=false;rock.meshes.forEach(m=>m.setEnabled(false));stoneCount+=3;recordSagaEvent('Veta de piedra agotada: +3 piedra.');msg('¡Veta extraída! +3 piedra');}
-   else msg('¡Golpe de pico! Quedan '+rock.hp+' impactos para extraer la veta.');
+   else msg(hasPickaxe?'¡Golpe de pico! Quedan '+Math.ceil(rock.hp)+' impactos para extraer la veta.':'El palo apenas agrieta la piedra. Un pico hará el trabajo mucho más rápido ('+Math.ceil(rock.hp)+' golpes restantes).');
    updateHUD();saveGame(true);actionResource=null;
   }
+ const VILLAGE_WEAPON_REWARDS=['axe','pickaxe','spear','sword'];
+ function unlockWeaponForVillage(vl){
+  const weapon=VILLAGE_WEAPON_REWARDS[Number(vl&&vl.index)];
+  if(!weapon||unlockedWeapons.has(weapon))return null;
+  unlockedWeapons.add(weapon);
+  updateWeaponAvailabilityUI();
+  const name=weaponLabels[weapon]||weapon;
+  recordSagaEvent('Arma desbloqueada al conquistar '+vl.name+': '+name+'.');
+  return name;
+ }
  function claimVillage(vl,restoring=false){
   if(!vl||vl.claimed)return;
   const resistance=villageHostileDefenders(vl);
   if(resistance.length){msg('La aldea aún resiste. Haz que depongan las armas ('+resistance.length+' defensores).');return;}
-  vl.claimed=true;captured++;if(!restoring)woodCount+=12;
+  vl.claimed=true;captured++;const unlockedReward=restoring?null:unlockWeaponForVillage(vl);if(!restoring)woodCount+=12;
   vl.guards.forEach(guard=>{guard.faction='player';guard.parts.faction='player';if(guard.alive&&!guard.surrendered&&!guard.recruited)guard.state='friendly';});
   vl.flag.material=M.playerBanner;vl.flagEmblem.forEach(mesh=>mesh.setEnabled(false));vl.flagGroup.position.y=2.15;vl.flagGroup.scaling.y=.18;
   const fillMat=M.territoryFill.clone('TerritoryFill_'+vl.index);fillMat.alpha=.22;fillMat.diffuseColor=new B.Color3(.72,.54,.25);
@@ -5532,7 +5648,7 @@ function updateHUD(){
   vl.captureAnimation={t:0};
   for(const group of vl.houseGroups){for(const mesh of group.getChildMeshes()){if(mesh.material===M.wood||mesh.material===M.woodDark)mesh.material=M.friendlyWood;else if(mesh.material===M.roof||mesh.material===M.thatch)mesh.material=M.friendlyRoof;}}
   const surrendered=vl.guards.filter(g=>g.alive&&g.surrendered&&!g.recruited).length;
-  if(!restoring){msg('¡'+vl.name+' conquistada! '+surrendered+' guerrero(s) se han rendido. Ya puedes reclutarlos. +12 madera.');recordSagaEvent('Aldea conquistada: '+vl.name+'. Defensores rendidos: '+surrendered+'.');}
+  if(!restoring){msg('¡'+vl.name+' conquistada! '+surrendered+' guerrero(s) se han rendido. Ya puedes reclutarlos. +12 madera.'+(unlockedReward?' Arma desbloqueada: '+unlockedReward+'.':''));recordSagaEvent('Aldea conquistada: '+vl.name+'. Defensores rendidos: '+surrendered+'.');}
   updateHUD();if(!restoring)saveGame(true);
  }
  function findVillageSurvivor(vl){return vl&&vl.guards.find(g=>g.alive&&g.surrendered&&!g.recruited)||null;}
@@ -5563,11 +5679,11 @@ function updateHUD(){
    if(type==='chop'){
     if(activeTree&&activeResourceDistance<4.75)actionResource={type:'tree',obj:activeTree};
     if(!actionResource){playerAction='idle';msg('Acércate a un árbol para talarlo.');return;}
-    equipWeapon('axe');NorseAudio.play('axeSwing');
+    equipWeapon(unlockedWeapons.has('axe')?'axe':'club');NorseAudio.play('axeSwing');
    }else if(type==='mine'){
     if(activeRock&&activeResourceDistance<4.75)actionResource={type:'rock',obj:activeRock};
     if(!actionResource){playerAction='idle';msg('Acércate a una veta de piedra para extraerla.');return;}
-    equipWeapon('pickaxe');NorseAudio.play('axeSwing');
+    equipWeapon(unlockedWeapons.has('pickaxe')?'pickaxe':'club');NorseAudio.play('axeSwing');
    }
    if((type==='chop'||type==='mine')&&actionResource){
     chopStyle=rand(-1,1);
@@ -5594,9 +5710,9 @@ function updateHUD(){
  function attack(){
   if(onShip){fireShipWeapon();return;}
   if(health<=0)return;
-  if(equippedWeapon==='pickaxe')equipWeapon('axe');
+  if(equippedWeapon==='pickaxe')equipWeapon(unlockedWeapons.has('axe')?'axe':'club');
   if(playerAction!=='idle'&&playerAction!=='walk')return;
-  NorseAudio.play(equippedWeapon==='axe'?'axeSwing':'swordSwing');attackFacingYaw=Number(player.root.rotation.y)||yaw;combo=comboWindow>0?(combo+1)%3:0;comboWindow=1.18;cameraShake=Math.max(cameraShake,.012);playerAction='attack';actionTimer=.86;actionHit=false;if(realPlayerReady)realPlayerMode='';
+  NorseAudio.play(equippedWeapon==='axe'||equippedWeapon==='club'?'axeSwing':'swordSwing');attackFacingYaw=Number(player.root.rotation.y)||yaw;combo=comboWindow>0?(combo+1)%3:0;comboWindow=1.18;cameraShake=Math.max(cameraShake,.012);playerAction='attack';actionTimer=.86;actionHit=false;if(realPlayerReady)realPlayerMode='';
  }
  document.getElementById('attack').addEventListener('click',attack);
 
@@ -5703,11 +5819,12 @@ function updateHUD(){
   const facing=Number.isFinite(attackFacingYaw)?attackFacingYaw:yaw;
   const f=v(Math.sin(facing),0,Math.cos(facing)),pp=playerPos();
   const profile={
+   club:{reach:3.10,width:1.36,damage:12,stun:.20,push:1.55},
    axe:{reach:4.75,width:2.10,damage:38,stun:.52,push:5.0},
    sword:{reach:4.45,width:1.86,damage:40,stun:.40,push:3.4},
    spear:{reach:5.35,width:1.30,damage:34,stun:.34,push:4.1},
    pickaxe:{reach:3.25,width:1.24,damage:9,stun:.24,push:1.8}
-  }[equippedWeapon]||{reach:4.75,width:2.10,damage:38,stun:.52,push:5.0};
+  }[equippedWeapon]||{reach:3.10,width:1.36,damage:12,stun:.20,push:1.55};
   const reach=profile.reach+weaponLevel*.16;let hits=0;
   for(const e of enemies){
    if(!e.alive||isFriendlyGuard(e))continue;
@@ -6200,7 +6317,7 @@ function updateHUD(){
  function saveGame(silent=false){
   try{
    const pos=playerPos();
-   const data={version:1,saveSlot:activeSaveKey,guestMode:SHARE_NEW_GAME,savedAt:Date.now(),playerName,chapterStage,sprintMissionMeters,sprintMissionDone,health,stamina,healCooldown,woodCount,stoneCount,kills,captured,weaponLevel,equippedWeapon,
+   const data={version:1,saveSlot:activeSaveKey,guestMode:SHARE_NEW_GAME,savedAt:Date.now(),playerName,chapterStage,sprintMissionMeters,sprintMissionDone,health,stamina,healCooldown,woodCount,stoneCount,kills,captured,weaponLevel,equippedWeapon,unlockedWeapons:[...unlockedWeapons],
     player:{x:pos.x,z:pos.z,yaw},checkpoint:{x:lastSafePosition.x,z:lastSafePosition.z},onShip,ship:{x:ship.position.x,z:ship.position.z,yaw:ship.rotation.y,hp:boatHp,max:boatMax,level:boatLevel},
     history:sagaHistory.slice(-30),villages:villages.map(vl=>({claimed:vl.claimed,guards:vl.guards.map(g=>({alive:g.alive,hp:g.hp,surrendered:!!g.surrendered,recruited:!!g.recruited}))})),
     survivorRecruits:companions.map(a=>a.villageIndex),
@@ -6224,7 +6341,16 @@ function updateHUD(){
    const num=(x,fallback,min,max)=>Number.isFinite(Number(x))?Math.max(min,Math.min(max,Number(x))):fallback;
    sprintMissionMeters=num(d.sprintMissionMeters,0,0,40);sprintMissionDone=!!d.sprintMissionDone||sprintMissionMeters>=40;
    health=num(d.health,100,1,100);stamina=num(d.stamina,100,0,100);healCooldown=Math.max(0,num(d.healCooldown,0,0,18)-Math.max(0,(Date.now()-num(d.savedAt,Date.now(),0,Date.now()+86400000))/1000));woodCount=num(d.woodCount,0,0,99999);stoneCount=num(d.stoneCount,0,0,99999);kills=num(d.kills,0,0,99999);weaponLevel=num(d.weaponLevel,0,0,3);
-   const validWeapon=['axe','sword','spear','pickaxe'];equippedWeapon=validWeapon.includes(d.equippedWeapon)?d.equippedWeapon:'axe';
+   const validWeapon=['club','axe','sword','spear','pickaxe'];
+   unlockedWeapons.clear();
+   if(Array.isArray(d.unlockedWeapons)){
+    d.unlockedWeapons.filter(type=>validWeapon.includes(type)).forEach(type=>unlockedWeapons.add(type));
+    if(!unlockedWeapons.has('club'))unlockedWeapons.add('club');
+   }else{
+    // Legacy saves used the original four-weapon arsenal; do not downgrade existing campaigns.
+    ['club','axe','sword','spear','pickaxe'].forEach(type=>unlockedWeapons.add(type));
+   }
+   equippedWeapon=validWeapon.includes(d.equippedWeapon)&&unlockedWeapons.has(d.equippedWeapon)?d.equippedWeapon:'club';
    if(d.ship){ship.position.x=num(d.ship.x,-70.5,-450,450);ship.position.z=num(d.ship.z,9.5,-450,450);ship.rotation.y=num(d.ship.yaw,0,-Math.PI*20,Math.PI*20);boatHp=num(d.ship.hp,100,0,250);boatMax=num(d.ship.max,100,100,250);boatLevel=num(d.ship.level,0,0,3);}
    if(d.player){const x=num(d.player.x,-47,-450,450),z=num(d.player.z,8,-450,450);yaw=num(d.player.yaw,0,-Math.PI*20,Math.PI*20);cameraYaw=yaw;playerAirborne=false;playerVerticalVelocity=0;player.root.parent=null;onShip=false;if(d.onShip===true){player.root.parent=ship;player.root.position=v(0,1.005,-2.75);player.root.rotation.set(0,0,0);if(realPlayerModelPivot)realPlayerModelPivot.position.y=0;onShip=true;}else{
     let safe=null;
@@ -7176,7 +7302,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.132 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.133 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7231,7 +7357,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.132: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.133: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -7294,7 +7420,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.132 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.133 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -7332,7 +7458,7 @@ function updateHUD(){
   throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.132 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.133 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
