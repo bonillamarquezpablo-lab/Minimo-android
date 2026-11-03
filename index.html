@@ -32,6 +32,7 @@ html,body{margin:0;width:100%;height:100%;min-height:100dvh;overflow:hidden;back
 #modelStatus button,#modelStatus a{display:inline-block;margin-top:6px;margin-right:5px;padding:6px 8px;border:1px solid #d8ad68aa;border-radius:7px;background:#8b5c30;color:#fff5e5;font-weight:850;font-size:9px;text-decoration:none}
 #humanModelFile{display:none}
 #notice{position:absolute;top:calc(env(safe-area-inset-top,0px) + 108px);left:50%;transform:translateX(-50%);max-width:min(76vw,420px);background:#102326d9;border:1px solid #d8ad6877;border-radius:10px;padding:7px 11px;font-size:11px;line-height:1.25;text-align:center;opacity:0;transition:opacity .18s;box-shadow:0 4px 15px #0005}
+#vikingLoadDiagnostic{display:none;position:fixed;top:calc(env(safe-area-inset-top,0px) + 164px);left:10px;right:10px;z-index:14;max-width:560px;margin:0 auto;padding:9px 11px;border:1px solid #d8ad68;border-radius:9px;background:#101f22f2;color:#f4e7d0;font:700 11px/1.4 system-ui,sans-serif;overflow-wrap:anywhere;box-shadow:0 5px 18px #0009;pointer-events:none}
 #map{position:absolute;right:9px;top:calc(env(safe-area-inset-top,0px) + 75px);width:clamp(112px,29vw,138px);height:auto;aspect-ratio:480/344;border-radius:10px;border:1px solid #d8ad6888;background:#12353b;box-shadow:0 5px 15px #0007;pointer-events:auto;touch-action:manipulation;z-index:3;cursor:pointer}
 #map.expanded{position:fixed;left:5vw;right:auto;top:13vh;width:90vw;height:72vh;z-index:16;border:2px solid #d8ad68;border-radius:16px;box-shadow:0 18px 65px #000d}
 #controls{position:fixed;inset:0;display:block;pointer-events:none;z-index:10;isolation:isolate}
@@ -1410,6 +1411,7 @@ body.game-running #loading{display:none!important;visibility:hidden!important;op
   <span class="chapterTrack"><i id="chapterProgress"></i></span>
  </button>
  <div id="notice" role="status" aria-live="polite" aria-atomic="true"></div>
+ <div id="vikingLoadDiagnostic" role="status" aria-live="assertive" aria-atomic="true"></div>
  <button id="frameDiagnostic" type="button" aria-label="Informe de errores" title="Toca para copiar el informe de errores" style="display:none;position:fixed;right:calc(env(safe-area-inset-right,0px) + 8px);top:50%;left:auto;bottom:auto;transform:translateY(-50%);z-index:28;width:40px;min-width:40px;height:78px;padding:7px 4px;border:1px solid #d58b68;border-radius:17px;background:#351c1bea;color:#fff0df;font:800 12px/1.1 system-ui;text-align:center;align-items:center;justify-content:center;writing-mode:vertical-rl;touch-action:manipulation;box-shadow:0 4px 14px #0008">⚠ 0</button>
  <div id="quickActions"><button id="progressBtn" type="button">📜 SAGA</button><button id="saveBtn" type="button">💾 GUARDAR</button><button id="audioToggle" type="button" aria-label="Activar o desactivar sonido">🔊</button><button id="rotateScreenBtn" type="button" aria-label="Cambiar orientación de pantalla" title="Alternar automática, horizontal y vertical">↻ AUTO</button><button id="buildCabinBtn" type="button" aria-label="Construir refugio permanente">🏚 REFUGIO · 6M/1P</button><button id="villagerModelBtn" type="button" style="display:none">📦 ALDEANOS 3D</button></div>
  <div id="mapBackdrop"></div>
@@ -1763,12 +1765,12 @@ async function bootEngine(){
     gltfReady=loaded.ok;loaderFailures=loaded.failures;
    }
   }
+  // Los GLB publicados en esta compilación son originales y no usan EXT_meshopt_compression.
+  // Si el plugin existe puede configurarse, pero su ausencia no debe bloquear la carga glTF.
   if(window.BABYLON&&window.BABYLON.MeshoptCompression){
    window.BABYLON.MeshoptCompression.Configuration={
     decoder:{url:new URL('./assets/vendor/meshopt_decoder.js',document.baseURI).href}
    };
-  }else{
-   throw new Error('No está disponible el decodificador Meshopt necesario para los modelos optimizados.');
   }
   setLoadingProgress(38,gltfReady?'2/3 · Construyendo la isla…':'2/3 · Construyendo la isla y preparando personajes de reserva…');
   try{
@@ -3349,14 +3351,17 @@ async function startGame(){
  let realHandNode=null,realUpperArmNode=null,realForearmNode=null,realSpineNode=null,realWeaponHolder=null,realWeaponGroups={},realBoneRest=new Map(),realRightGripBones=[],realWeaponAnchorCalibrated=false,realWeaponAnchorType='',realWeaponPoseOverride=null,realWeaponSocketNode=null,realWeaponSocketMode='pivot',realWeaponHandDefaultPosition=null,realWeaponHandDefaultRotation=null;
  const REAL_PLAYER_ROOT_GROUND_OFFSET=.025;
  const modelStatusEl=document.getElementById('modelStatus'),modelStatusText=document.getElementById('modelStatusText');
+ const vikingLoadDiagnostic=document.getElementById('vikingLoadDiagnostic');
  let modelStatusAutoHideTimer=null;
  const modelImportPanel=document.getElementById('modelImportPanel');
  const humanFileInput=document.getElementById('humanModelFile');
  function setModelStatus(text,show=true){
-  if(!modelStatusText){console.info('Estado de modelo 3D:',text);return;}
-  modelStatusText.textContent=String(text||'');
+  const message=String(text||'');
+  if(modelStatusText)modelStatusText.textContent=message;
   if(modelStatusEl){modelStatusEl.style.display=show?'block':'none';clearTimeout(modelStatusAutoHideTimer);if(show)modelStatusAutoHideTimer=setTimeout(()=>{if(modelStatusEl)modelStatusEl.style.display='none';},5600);}
-  if(show&&/no se ha cargado|no se pudo|fallo|error|no se ha podido/i.test(String(text||'')))console.info('Se puede elegir un modelo manualmente desde PERSONAJES 3D.');
+  const isFailure=show&&/no se ha cargado|no se pudo|fallo|error|no se ha podido|reserva/i.test(message);
+  if(vikingLoadDiagnostic){vikingLoadDiagnostic.textContent=message;vikingLoadDiagnostic.style.display=isFailure?'block':'none';}
+  if(isFailure)console.error('Diagnóstico visible del GLB:',message);
  }
  function getImportedRoot(asset){
   return asset.meshes.find(m=>m.name==='__root__')||asset.transformNodes.find(n=>!n.parent)||asset.meshes.find(m=>!m.parent);
@@ -4507,7 +4512,7 @@ async function startGame(){
  // El modelo humano se conserva en IndexedDB tras la primera descarga/selección.
  // En aperturas posteriores se recupera automáticamente; si el almacenamiento local está bloqueado,
  // el juego vuelve a descargar el modelo sin pedir ninguna selección manual.
- const VIKING_CACHE_DB='el-sin-nombre-assets-v1',VIKING_CACHE_STORE='models',VIKING_CACHE_KEY='viking-rigged-glb';
+ const VIKING_CACHE_DB='el-sin-nombre-assets-original-v2',VIKING_CACHE_STORE='models',VIKING_CACHE_KEY='viking-rigged-glb-original-0.6.168';
  function openVikingCache(){
   return new Promise((resolve,reject)=>{
    if(!window.indexedDB){reject(new Error('IndexedDB no está disponible en este origen local.'));return;}
@@ -4533,7 +4538,7 @@ async function startGame(){
   try{return await new Promise((resolve,reject)=>{const tx=db.transaction(VIKING_CACHE_STORE,'readonly'),req=tx.objectStore(VIKING_CACHE_STORE).get(VIKING_CACHE_KEY);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error||new Error('No se pudo leer el modelo guardado.'));});}
   finally{db.close();}
  }
- const VIKING_WEB_CACHE='el-sin-nombre-models-v1';
+ const VIKING_WEB_CACHE='el-sin-nombre-models-original-v2';
  async function readVikingFromWebCache(){
   try{if(!window.caches)return null;const cache=await window.caches.open(VIKING_WEB_CACHE);const hit=await cache.match(VIKING_GLB_URL);return hit?await hit.blob():null;}
   catch(err){console.info('La caché web no está disponible para este HTML local:',err);return null;}
@@ -4565,25 +4570,10 @@ async function startGame(){
   }finally{URL.revokeObjectURL(objectUrl);}
  }
  async function resolveVikingAssetUrls(){
-  const urls=[VIKING_GLB_URL];
-  // La ficha oficial actual es la fuente principal. La URL de descarga histórica queda como respaldo.
-  const metaUrls=['https://grab3d.com/api/v1/models/viking.json','https://www.grab3d.com/api/v1/models/viking.json'];
-  lastVikingStage='consulta de la ficha del Vikingo en Grab3D';
-  for(const metaUrl of metaUrls){
-   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
-   try{
-    const res=await fetch(metaUrl,{mode:'cors',cache:'no-store',credentials:'omit',signal:controller.signal,headers:{'Accept':'application/json'}});
-    if(!res.ok)throw new Error('La ficha del modelo respondió HTTP '+res.status+'.');
-    const data=await res.json();
-    const files=(data.rigged&&Array.isArray(data.rigged.files))?data.rigged.files:[];
-    const riggedGlb=files.find(f=>String(f.format||'').toLowerCase()==='glb'&&f.url)||files.find(f=>String(f.file||'').toLowerCase().endsWith('.glb')&&f.url);
-    if(riggedGlb&&riggedGlb.url)urls.push(new URL(riggedGlb.url,metaUrl).href);
-    if(urls.length)break;
-   }catch(err){console.info('No se pudo leer la ficha oficial; se probará la URL guardada:',err);}
-   finally{clearTimeout(timer);}
-  }
-  if(!urls.includes(VIKING_GLB_URL))urls.push(VIKING_GLB_URL);
-  return [...new Set(urls)];
+  // Fuente única: GLB original publicado junto al juego. No consultar Grab3D ni aceptar
+  // URLs remotas alternativas durante la carga automática del protagonista.
+  lastVikingStage='localización del GLB original publicado';
+  return [VIKING_GLB_URL];
  }
  async function importHumanVikingFromUrl(){
   setAssetLoadingProgress('player',2,'3/3 · Localizando y descargando tu vikingo…');
