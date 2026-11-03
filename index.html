@@ -3400,7 +3400,7 @@ async function startGame(){
    const ja=Number((a.name.match(/[1-9]$/)||[])[0]||1),jb=Number((b.name.match(/[1-9]$/)||[])[0]||1);
    return ja-jb;
   });
-  return found.map(item=>item.node);
+  return found;
  }
  function findRigNodes(asset){
   const entries=[];
@@ -4479,7 +4479,7 @@ async function startGame(){
   const rig=separateRigLimbAliases(findRigNodes(asset));
   const hasRigLegs=!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg&&rig.leftUpperLeg!==rig.rightUpperLeg&&rig.leftLowerLeg!==rig.rightLowerLeg);
   if(!walk&&!run&&!hasRigLegs)throw new Error('El GLB no incluye animación de marcha ni huesos de piernas reconocibles. Animaciones: '+(groups.map(g=>g.name).join(', ')||'ninguna'));
-  realRigNodes=rig;realRightGripBones=findRightGripBones(asset);realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});realRightGripBones.forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
+  realRigNodes=rig;realRightGripBones=findRightGripBones(asset);realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});realRightGripBones.forEach(entry=>{const node=entry&&entry.node;if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
   // Prioridad: palma real -> muñeca/antebrazo -> brazo superior. Así el arma acompaña el giro del brazo incluso en esqueletos con nombres distintos.
   realWeaponSocketNode=rig.hand||rig.forearm||rig.upperArm||null;
   realWeaponSocketMode=rig.hand?'hand':(rig.forearm?'forearm':(rig.upperArm?'upperArm':'pivot'));
@@ -4769,7 +4769,7 @@ async function startGame(){
   const makeGroup=name=>newGroup('RealWeapon_'+name,realWeaponHolder);
   const club=makeGroup('Club');club.position.y=-.20;
   capsule('RealCastawayStickShaft',club,[0,-.04,0],1.22,.052,M.woodDark,[.025,0,.015]);
-  capsule('RealCastawayStickGrip',club,[0,.20,.025],.34,.076,M.leather);
+  capsule('RealCastawayStickGrip',club,[0,.095,.025],.34,.076,M.leather);
   sphere('RealCastawayStickKnot',club,[-.025,.52,.015],[.11,.12,.105],M.wood,[.15,0,.12]);
   const axe=makeGroup('Axe');
   capsule('RealAxeWoodenHandle',axe,[0,-.02,0],1.02,.052,M.woodLight);
@@ -4811,9 +4811,9 @@ async function startGame(){
   }
   const bones=realRightGripBones||[];
   for(let i=0;i<bones.length;i++){
-   const node=bones[i];if(!node)continue;
+   const entry=bones[i],node=entry&&entry.node||entry;if(!node)continue;
    if(!holding){const rest=realBoneRest.get(node);if(rest)restoreRigNodePose(node,rest);continue;}
-   const name=String(node.name||'').toLowerCase();
+   const name=String(entry&&entry.name||node.name||'').toLowerCase();
    const thumb=/thumb/.test(name);
    const joint=Number((name.match(/[1-9]$/)||[])[0]||1);
    const curl=thumb?(joint===1?.28:.20):(joint===1?.34:joint===2?.48:.36);
