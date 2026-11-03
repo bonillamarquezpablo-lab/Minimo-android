@@ -127,7 +127,7 @@ def main() -> None:
         fail("El palo no tiene el desplazamiento frontal de visibilidad en la palma.")
     if "RealCastawayStickGrip',club,[0,.20,.025]" not in index_html:
         fail("La empuñadura del palo no está centrada en la palma.")
-    if "distal.scale(.045)" not in index_html:
+    if "distal.scale(.025)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
     if "side*(.025+breathSway*.010),-.958,.13" not in index_html:
         fail("La pose natural del antebrazo con el palo no está restaurada.")
