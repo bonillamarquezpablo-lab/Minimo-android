@@ -4,7 +4,7 @@
   "short_name": "EL SIN NOMBRE · Invitado",
   "description": "Partida independiente para invitados. No accede a la campaña principal.",
   "lang": "es",
-  "start_url": "./guest.html?v=0.6.164",
+  "start_url": "./guest.html?v=0.6.165",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "any",
