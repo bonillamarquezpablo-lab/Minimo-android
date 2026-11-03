@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.155">
-<meta name="el-sin-nombre-repair" content="0.6.155 dedicated guest PWA manifest and guest start URL">
+<meta name="el-sin-nombre-build" content="0.6.156">
+<meta name="el-sin-nombre-repair" content="0.6.156 dedicated guest PWA manifest and guest start URL">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.155</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.156</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -611,7 +611,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.155 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.156 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -648,8 +648,140 @@ body.identity-setup #identitySetup{display:flex}
 #playerIdentityTag{margin-top:4px;color:#d7bd8e;font:900 8px/1.2 system-ui;letter-spacing:1px;max-width:58vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
+
+/* 0.6.156 — portada principal de aventura nórdica, a pantalla completa. */
+#audioGate{
+ position:fixed!important;inset:0!important;z-index:2001!important;
+ display:none;align-items:stretch!important;justify-content:stretch!important;
+ width:100vw!important;height:100vh!important;height:100dvh!important;min-height:100dvh!important;
+ margin:0!important;padding:0!important;overflow:hidden!important;isolation:isolate;
+ background:#07161c!important;color:#f5e5c7!important;
+}
+body.preflight.audio-gate #audioGate{display:flex!important}
+body.preflight.audio-gate #modeSelect{display:none!important}
+#audioGate .audioGateScene{position:absolute;inset:0;z-index:0;overflow:hidden;background:#10252d}
+#audioGate .audioGateScene svg{display:block;width:100%;height:100%;object-fit:cover}
+#audioGate .audioGateShade{
+ position:absolute;inset:0;z-index:1;pointer-events:none;
+ background:
+  linear-gradient(90deg,rgba(2,9,13,.91) 0%,rgba(3,12,15,.77) 27%,rgba(4,13,16,.30) 57%,rgba(3,11,14,.10) 82%,rgba(2,8,12,.25) 100%),
+  linear-gradient(0deg,rgba(2,8,11,.82) 0%,rgba(3,10,13,.06) 32%,rgba(3,10,13,.04) 67%,rgba(2,8,11,.34) 100%),
+  radial-gradient(ellipse at 57% 46%,transparent 26%,rgba(0,0,0,.25) 100%);
+}
+#audioGate .audioGateCard{
+ position:relative!important;z-index:2!important;
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:space-between!important;
+ width:100%!important;height:100%!important;min-height:100dvh!important;max-width:none!important;
+ margin:0!important;padding:calc(env(safe-area-inset-top,0px) + clamp(22px,4vh,46px)) clamp(24px,7vw,112px) calc(env(safe-area-inset-bottom,0px) + clamp(22px,4vh,46px))!important;
+ border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;
+ text-align:left!important;overflow:hidden!important;
+}
+#audioGate .audioGateTopline{
+ display:flex!important;align-items:center!important;gap:13px!important;width:min(660px,100%)!important;
+ color:#e2c18b!important;font:900 9px/1.35 system-ui,sans-serif!important;letter-spacing:3px!important;text-shadow:0 2px 12px #000!important;
+}
+#audioGate .audioGateTopline i{height:1px;flex:1;background:linear-gradient(90deg,rgba(210,172,111,.65),transparent)}
+#audioGate .audioGateTopline b{font-size:8px;letter-spacing:2px;color:#c4aa7c}
+#audioGate .audioGateCrest{
+ width:39px;height:39px;flex:0 0 39px;display:grid;place-items:center;
+ border:1px solid #c9a66f;border-radius:50%;background:rgba(7,19,22,.5);
+ color:#f0ce8a;font:24px Georgia,serif;box-shadow:0 0 0 4px rgba(221,185,120,.07),0 6px 18px #0008;
+}
+#audioGate .audioGateCopy{
+ width:min(760px,100%);margin:auto auto clamp(30px,10vh,112px) 0;
+ padding:0;display:flex;flex-direction:column;align-items:flex-start;
+ text-shadow:0 3px 20px #000d;
+}
+#audioGate .audioGateEyebrow{
+ margin:0 0 clamp(12px,2vh,20px)!important;color:#d9b879!important;
+ font:900 clamp(8px,.9vw,11px)/1.5 system-ui,sans-serif!important;letter-spacing:clamp(2px,.35vw,4.5px)!important;
+}
+#audioGate h1{
+ max-width:900px!important;margin:0!important;
+ display:flex!important;flex-direction:column!important;align-items:flex-start!important;
+ color:#f0d5a0!important;font:900 clamp(64px,10.5vw,154px)/.78 Georgia,"Times New Roman",serif!important;
+ letter-spacing:clamp(1px,.22vw,4px)!important;text-align:left!important;
+ text-shadow:0 3px 0 #55402b,0 7px 0 #172022,0 15px 42px #000!important;
+}
+#audioGate h1 span{display:block;color:#ead0a0}
+#audioGate .audioGateTagline{
+ margin:clamp(17px,2.8vh,28px) 0 0!important;color:#f0e6d5!important;
+ font:900 clamp(11px,1.25vw,16px)/1.4 system-ui,sans-serif!important;letter-spacing:clamp(2px,.35vw,4px)!important;
+}
+#audioGate .audioGateStory{
+ max-width:540px;margin:9px 0 0!important;color:#d6d3c6!important;
+ font:600 clamp(12px,1.15vw,15px)/1.55 system-ui,sans-serif!important;letter-spacing:.25px!important;
+}
+#audioGate button{
+ width:min(350px,100%)!important;min-height:64px!important;margin:clamp(20px,3.5vh,34px) 0 0!important;padding:0 23px!important;
+ display:flex!important;align-items:center!important;justify-content:space-between!important;gap:18px!important;
+ border:1px solid #e7c88d!important;border-radius:5px!important;
+ background:linear-gradient(180deg,rgba(178,126,67,.98),rgba(94,57,31,.98))!important;
+ color:#fff2d9!important;font:950 13px/1 system-ui,sans-serif!important;letter-spacing:2.2px!important;
+ box-shadow:0 10px 30px #0009,inset 0 1px #fff5,0 0 0 1px rgba(239,205,147,.25)!important;
+ text-shadow:0 2px 5px #3b2416!important;touch-action:manipulation!important;cursor:pointer!important;
+}
+#audioGate button b{width:30px;height:30px;display:grid;place-items:center;border-left:1px solid rgba(255,239,208,.36);padding-left:12px;color:#f1d69f;font:22px Georgia,serif}
+#audioGate button:active{transform:translateY(2px)!important;filter:brightness(1.08)}
+#audioGate button:disabled{opacity:.82;cursor:wait}
+#audioGate .audioGateFooter{
+ display:flex!important;align-items:center!important;gap:10px!important;margin:22px 0 0!important;
+ color:#c8ab79!important;font:900 8px/1.3 system-ui,sans-serif!important;letter-spacing:2.2px!important;
+}
+#audioGate .audioGateFooter i{width:4px;height:4px;border-radius:50%;background:#d6b57b;box-shadow:0 0 7px #d6b57b}
+#audioGate .audioGateSeal{
+ position:absolute;right:clamp(26px,7vw,112px);top:50%;transform:translateY(-35%);
+ width:clamp(112px,13vw,190px);height:clamp(132px,16vw,218px);
+ display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;
+ border:1px solid rgba(220,184,121,.62);clip-path:polygon(50% 0,94% 15%,91% 75%,50% 100%,9% 75%,6% 15%);
+ background:linear-gradient(145deg,rgba(8,21,24,.60),rgba(6,17,20,.22));
+ color:rgba(232,199,139,.82);text-shadow:0 3px 14px #000;pointer-events:none;
+}
+#audioGate .audioGateSeal span{font:clamp(46px,5vw,72px)/1 Georgia,serif}
+#audioGate .audioGateSeal small{font:900 7px/1.2 system-ui,sans-serif;letter-spacing:1.7px}
+@media(max-width:760px){
+ #audioGate .audioGateShade{
+  background:linear-gradient(180deg,rgba(2,9,13,.30),rgba(3,11,14,.16) 33%,rgba(3,10,13,.56) 57%,rgba(2,8,11,.96) 100%),
+   linear-gradient(90deg,rgba(2,9,13,.32),rgba(2,9,13,.03) 68%,rgba(2,8,12,.18));
+ }
+ #audioGate .audioGateCard{padding:calc(env(safe-area-inset-top,0px) + 18px) 22px calc(env(safe-area-inset-bottom,0px) + 24px)!important}
+ #audioGate .audioGateTopline{gap:9px;font-size:8px!important;letter-spacing:2px!important}
+ #audioGate .audioGateCrest{width:33px;height:33px;flex-basis:33px;font-size:20px}
+ #audioGate .audioGateCopy{margin: auto 0 clamp(30px,8vh,72px)!important;width:100%}
+ #audioGate h1{font-size:clamp(58px,14vw,104px)!important;line-height:.82!important}
+ #audioGate .audioGateEyebrow{max-width:82%;font-size:8px!important;letter-spacing:1.8px!important}
+ #audioGate .audioGateTagline{font-size:11px!important;letter-spacing:2.1px!important;margin-top:15px!important}
+ #audioGate .audioGateStory{max-width:340px;font-size:12px!important}
+ #audioGate button{width:min(100%,340px)!important;min-height:58px!important;margin-top:23px!important;font-size:11px!important}
+ #audioGate .audioGateFooter{font-size:7px!important;letter-spacing:1.4px!important;margin-top:17px!important}
+ #audioGate .audioGateSeal{width:74px;height:88px;right:23px;top:22%;transform:none;opacity:.74}
+ #audioGate .audioGateSeal span{font-size:34px}
+ #audioGate .audioGateSeal small{font-size:5px;letter-spacing:1px}
+}
+@media(max-width:390px){
+ #audioGate .audioGateCard{padding-left:17px!important;padding-right:17px!important}
+ #audioGate h1{font-size:clamp(52px,14vw,72px)!important}
+ #audioGate .audioGateStory{font-size:11px!important}
+ #audioGate button{min-height:54px!important}
+ #audioGate .audioGateFooter{gap:7px!important;font-size:6px!important;letter-spacing:1.1px!important}
+}
+@media(max-height:500px) and (orientation:landscape){
+ #audioGate .audioGateCard{padding-top:10px!important;padding-bottom:12px!important}
+ #audioGate .audioGateCopy{margin:auto 0 12px!important;width:58%}
+ #audioGate .audioGateTopline{font-size:7px!important}
+ #audioGate .audioGateCrest{width:27px;height:27px;flex-basis:27px;font-size:17px}
+ #audioGate .audioGateEyebrow{font-size:7px!important;margin-bottom:6px!important}
+ #audioGate h1{font-size:clamp(42px,8vw,72px)!important}
+ #audioGate .audioGateTagline{font-size:9px!important;margin-top:8px!important}
+ #audioGate .audioGateStory{font-size:9px!important}
+ #audioGate button{width:min(270px,100%)!important;min-height:42px!important;margin-top:10px!important;font-size:9px!important}
+ #audioGate .audioGateFooter{margin-top:8px!important}
+ #audioGate .audioGateSeal{width:74px;height:90px;right:9vw}
+}
+@media(prefers-reduced-motion:reduce){#audioGate button{transition:none!important}}
+
 </style>
-<!-- EL SIN NOMBRE 0.6.155: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.156: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -769,13 +901,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.155 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.156 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.155 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.156 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -885,7 +1017,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #intro .campaignCard strong{font-size:19px!important}
  #intro .campaignCardArt{font-size:39px!important}
 }
-/* 0.6.155 — menús compactos y música antes del selector gráfico. */
+/* 0.6.156 — menús compactos y música antes del selector gráfico. */
 #audioGate{position:fixed;inset:0;z-index:2001;display:none;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at 50% 28%,rgba(151,105,54,.30),transparent 48%),linear-gradient(145deg,#071316,#101f20 58%,#050d10);color:#f3e5c9}
 body.preflight.audio-gate #audioGate{display:flex}
 body.preflight.audio-gate #modeSelect{display:none!important}
@@ -977,7 +1109,7 @@ body.preflight.audio-gate #modeSelect{display:none!important}
  #intro .campaignFooter{display:none!important}
 }
 
-/* 0.6.155 — pantalla de carga nórdica a sangre completa; arte 2D ligero. */
+/* 0.6.156 — pantalla de carga nórdica a sangre completa; arte 2D ligero. */
 #loading{
  position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;min-height:100dvh!important;
  margin:0!important;padding:0!important;overflow:hidden!important;display:flex!important;align-items:stretch!important;justify-content:stretch!important;
@@ -1089,13 +1221,84 @@ body.game-running #loading{display:none!important;visibility:hidden!important;op
 </svg>
 
 <canvas id="renderCanvas"></canvas>
-<div id="audioGate" role="dialog" aria-modal="true" aria-label="Iniciar EL SIN NOMBRE">
+<div id="audioGate" role="dialog" aria-modal="true" aria-label="Entrar en el mundo de EL SIN NOMBRE">
+ <div class="audioGateScene" aria-hidden="true">
+  <svg viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" focusable="false">
+   <defs>
+    <linearGradient id="titleSky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#101d27"/><stop offset=".48" stop-color="#34484b"/><stop offset="1" stop-color="#172d31"/></linearGradient>
+    <linearGradient id="titleSea" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#476064"/><stop offset=".28" stop-color="#173943"/><stop offset="1" stop-color="#07171d"/></linearGradient>
+    <linearGradient id="titlePeak" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#99a39b"/><stop offset=".22" stop-color="#526568"/><stop offset="1" stop-color="#1d3539"/></linearGradient>
+    <linearGradient id="titleSail" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e0d3b4"/><stop offset=".55" stop-color="#aa9671"/><stop offset="1" stop-color="#635744"/></linearGradient>
+    <linearGradient id="titleHull" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#98633d"/><stop offset=".35" stop-color="#513724"/><stop offset="1" stop-color="#101b1d"/></linearGradient>
+    <radialGradient id="titleMoon"><stop stop-color="#f2d9a7" stop-opacity=".78"/><stop offset=".42" stop-color="#d6c39b" stop-opacity=".25"/><stop offset="1" stop-color="#d6c39b" stop-opacity="0"/></radialGradient>
+    <linearGradient id="titleFire" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffe6a0"/><stop offset=".48" stop-color="#d77b36"/><stop offset="1" stop-color="#7b3024"/></linearGradient>
+    <pattern id="titleWaterLines" width="190" height="52" patternUnits="userSpaceOnUse"><path d="M0 16q35-9 72 0t92 0M40 42q30-7 62 0t82 0" fill="none" stroke="#a9bbb1" stroke-opacity=".16" stroke-width="2"/></pattern>
+   </defs>
+   <rect width="1920" height="1080" fill="url(#titleSky)"/>
+   <circle cx="1480" cy="244" r="280" fill="url(#titleMoon)"/>
+   <circle cx="1480" cy="244" r="72" fill="#e6d5af" opacity=".50"/>
+   <path d="M-80 170Q230 5 480 168T980 116T1450 80T2000 165" fill="none" stroke="#9eb2a5" stroke-opacity=".12" stroke-width="44"/>
+   <path d="M-80 194Q220 55 480 192T990 143T1480 117T2000 200" fill="none" stroke="#c0c5a8" stroke-opacity=".085" stroke-width="17"/>
+   <g fill="#e6d9bd" opacity=".65">
+    <circle cx="136" cy="170" r="2"/><circle cx="268" cy="105" r="2"/><circle cx="412" cy="220" r="2"/><circle cx="566" cy="112" r="2"/><circle cx="713" cy="172" r="2"/><circle cx="866" cy="79" r="2"/><circle cx="1008" cy="210" r="2"/><circle cx="1167" cy="126" r="2"/><circle cx="1295" cy="92" r="2"/><circle cx="1613" cy="98" r="2"/><circle cx="1778" cy="178" r="2"/><circle cx="1860" cy="288" r="2"/>
+   </g>
+   <path d="M-80 655 110 514 238 556 405 356 514 493 678 280 813 477 952 346 1086 516 1247 320 1372 470 1510 353 1642 478 1780 379 2000 529V790H-80Z" fill="url(#titlePeak)"/>
+   <path d="m345 430 60-74 50 88-55-25-22 36zm276-90 58-60 60 102-65-39-18 24zm282 56 49-51 50 78-52-28-22 24zm311-34 52-63 63 86-62-36-22 24zm260 18 38-47 46 66-44-25-19 19z" fill="#d0d2c4" opacity=".58"/>
+   <path d="M-80 680 160 569 308 622 496 475 630 600 807 446 957 612 1124 468 1262 601 1457 438 1618 594 1805 468 2000 600V790H-80Z" fill="#263f42"/>
+   <path d="M-70 704Q280 654 520 697T1040 685T1510 677T1990 690V1080H-70Z" fill="url(#titleSea)"/>
+   <rect x="0" y="705" width="1920" height="375" fill="url(#titleWaterLines)" opacity=".7"/>
+   <path d="M0 766Q270 726 530 762T1050 746T1550 751T1920 739" fill="none" stroke="#b9c8bd" stroke-opacity=".24" stroke-width="4"/>
+   <path d="M0 853Q290 821 580 850T1120 835T1640 845T1920 831" fill="none" stroke="#d3d2bc" stroke-opacity=".12" stroke-width="3"/>
+   <path d="M0 936Q300 899 620 928T1210 918T1920 901" fill="none" stroke="#b8c5b7" stroke-opacity=".10" stroke-width="3"/>
+   <g transform="translate(790 385)">
+    <path d="M-58 530Q300 584 815 523L746 620Q390 704 25 626Z" fill="#060f13" stroke="#c39b65" stroke-width="8"/>
+    <path d="M-42 536Q342 584 797 525L752 579Q392 647 4 579Z" fill="url(#titleHull)" stroke="#4d3525" stroke-width="5"/>
+    <path d="M-14 585Q383 641 770 579M-2 611Q380 665 747 608" fill="none" stroke="#b88950" stroke-opacity=".68" stroke-width="7"/>
+    <path d="M-47 532Q-106 490-116 435Q-78 464-24 480" fill="none" stroke="#9e7445" stroke-width="19"/>
+    <path d="M777 526Q844 474 874 412Q900 383 924 409Q889 426 867 464L817 541" fill="#151f20" stroke="#b68d5a" stroke-width="9"/>
+    <path d="M-50 532H806" fill="none" stroke="#d0a66a" stroke-width="16"/>
+    <path d="M360 533V-5" stroke="#131c1d" stroke-width="21"/>
+    <path d="M371 16Q585 33 714 294L371 294Z" fill="url(#titleSail)" stroke="#4c4333" stroke-width="10"/>
+    <path d="M380 39 679 278M374 102 615 294M371 170 552 294M371 294H714" fill="none" stroke="#75654b" stroke-opacity=".78" stroke-width="7"/>
+    <path d="M360-5 360-65 394-38 360-27 330-43Z" fill="#813c32" stroke="#d1aa6e" stroke-width="5"/>
+    <path d="M360-64V-4" stroke="#d1aa6e" stroke-width="5"/>
+    <g fill="#7a5234" stroke="#e0bf83" stroke-width="6">
+     <circle cx="72" cy="547" r="43"/><circle cx="164" cy="553" r="43"/><circle cx="256" cy="559" r="43"/><circle cx="348" cy="562" r="43"/><circle cx="440" cy="561" r="43"/><circle cx="532" cy="557" r="43"/><circle cx="624" cy="548" r="43"/><circle cx="716" cy="538" r="43"/>
+    </g>
+    <g fill="none" stroke="#e4d1aa" stroke-opacity=".82" stroke-width="5">
+     <path d="M72 516v62m-31-31h62M164 522v62m-31-31h62M256 528v62m-31-31h62M348 531v62m-31-31h62M440 530v62m-31-31h62M532 526v62m-31-31h62M624 517v62m-31-31h62M716 507v62m-31-31h62"/>
+    </g>
+    <g stroke="#101a1b" stroke-width="8">
+     <path d="M34 578 5 663M126 585 100 677M218 590 199 689M310 594 295 697M402 595 395 699M494 591 501 692M586 583 609 680M678 572 718 661"/>
+    </g>
+    <path d="M-75 526q-36-20-54-57 34 12 61 36" fill="#a37a4d" stroke="#30251c" stroke-width="7"/>
+   </g>
+   <g transform="translate(1690 612)">
+    <path d="M0 95V-100" stroke="#161d1b" stroke-width="11"/>
+    <path d="M5-92 104-50 5-10Z" fill="#873d32" stroke="#d4ad71" stroke-width="4"/>
+    <path d="M-44 96 0 32 43 96Z" fill="url(#titleFire)" opacity=".9"/>
+    <path d="M-23 100 0 51 23 100Z" fill="#f2d59a"/>
+    <path d="M-74 109H74" stroke="#22221c" stroke-width="13"/>
+   </g>
+   <path d="M0 1010Q350 944 650 992T1260 986T1920 957V1080H0Z" fill="#081316" opacity=".76"/>
+   <g fill="#080f11" opacity=".90">
+    <path d="M0 880h70l-26-65-24 25-13-57-15 69-19-8zm1840 0h80l-28-75-22 30-17-53-21 63-15-5z"/>
+    <path d="M80 930h30l-20-59-17 24-11-42-12 45-9-4zm1690-18h40l-18-64-16 27-12-40-15 49-10-4z"/>
+   </g>
+  </svg>
+ </div>
+ <div class="audioGateShade" aria-hidden="true"></div>
  <div class="audioGateCard">
-  <div class="audioGateSigil" aria-hidden="true">ᛟ</div>
-  <div class="audioGateEyebrow">SAGA DEL NORTE · CAPÍTULO I</div>
-  <h1>EL SIN NOMBRE</h1>
-  <p>LA AVENTURA COMIENZA.</p>
-  <button id="audioGateStart" type="button">ENTRAR</button>
+  <div class="audioGateTopline"><span class="audioGateCrest">ᛟ</span><span>SAGA DEL NORTE</span><i></i><b>CAPÍTULO I</b></div>
+  <div class="audioGateCopy">
+   <div class="audioGateEyebrow">UN HOMBRE SIN TIERRA · UNA SAGA POR FORJAR</div>
+   <h1>EL SIN <span>NOMBRE</span></h1>
+   <p class="audioGateTagline">LA COSTA TE ESPERA.</p>
+   <p class="audioGateStory">Forja tu destino. Reúne a tu clan. Conquista el norte.</p>
+   <button id="audioGateStart" type="button"><span>ENTRAR EN EL MUNDO</span><b aria-hidden="true">ᛟ</b></button>
+   <div class="audioGateFooter"><span>EXPLORA</span><i></i><span>SOBREVIVE</span><i></i><span>CONQUISTA</span></div>
+  </div>
+  <div class="audioGateSeal" aria-hidden="true"><span>ᛟ</span><small>EL NORTE RECUERDA</small></div>
  </div>
 </div>
 
@@ -6055,7 +6258,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.155',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.156',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -6118,7 +6321,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.155');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.156');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -7892,7 +8095,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.155 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.156 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -7947,7 +8150,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.155: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.156: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -8010,7 +8213,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.155 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.156 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -8048,7 +8251,7 @@ function updateHUD(){
   throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.155 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.156 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
