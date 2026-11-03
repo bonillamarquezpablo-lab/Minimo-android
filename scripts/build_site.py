@@ -30,9 +30,6 @@ DOWNLOADS = {
     "assets/vendor/meshopt_decoder.js": (
         "https://cdn.babylonjs.com/meshopt_decoder.js", 2_000, "script"
     ),
-    "assets/environmentSpecular.env": (
-        "https://assets.babylonjs.com/environments/environmentSpecular.env", 100_000, "binary"
-    ),
     "assets/models/viking-rigged.glb": (
         "https://grab3d.com/dl/viking-rigged/viking-rigged.glb", 1_000_000, "glb"
     ),
@@ -488,6 +485,29 @@ def main() -> None:
 
     results = []
     failures = []
+
+    # Project-owned Nordic IBL: copy the supplied binary instead of downloading Babylon's generic environment.
+    local_environment = ROOT / "scripts" / "nordic" / "environmentSpecular.env"
+    if not local_environment.is_file():
+        raise SystemExit(f"Falta el entorno nórdico local: {local_environment.relative_to(ROOT)}")
+    local_size = local_environment.stat().st_size
+    if local_size != 131395:
+        raise SystemExit(
+            f"Tamaño inesperado para environmentSpecular.env: {local_size:,} bytes; "
+            "se esperaban exactamente 131,395 bytes."
+        )
+    environment_target = DIST / "assets" / "environmentSpecular.env"
+    environment_target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(local_environment, environment_target)
+    environment_bytes = environment_target.read_bytes()
+    results.append({
+        "path": "assets/environmentSpecular.env",
+        "bytes": len(environment_bytes),
+        "sha256": hashlib.sha256(environment_bytes).hexdigest(),
+        "source": "project-generated: scripts/nordic/environmentSpecular.env",
+    })
+    print(f"OK assets/environmentSpecular.env: {len(environment_bytes):,} bytes (entorno nórdico local)")
+
     with ThreadPoolExecutor(max_workers=6) as pool:
         jobs = {
             pool.submit(fetch, url, DIST / relative, minimum, kind): relative
