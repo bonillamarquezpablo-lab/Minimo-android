@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.161"
+EXPECTED_VERSION = "0.6.162"
 
 HTML_PAGES = (
     "index.html",
@@ -115,6 +115,10 @@ def main() -> None:
         fail("Falta el controlador de postura de navegación del protagonista.")
     if "club-world-anchor" not in index_html:
         fail("Falta el socket visible del palo anclado a la palma en espacio del jugador.")
+    if "function findRightGripBones" not in index_html or "applyRealPlayerClubGripPose" not in index_html:
+        fail("Falta la detección y pose procedural de agarre de la mano derecha.")
+    if "rightGripBones:realRightGripBones.length" not in index_html:
+        fail("Falta telemetría del número de huesos de agarre detectados.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
