@@ -1,1 +1,0 @@
-Carpeta reservada para el entorno de iluminación nórdico procedural del proyecto. Subir aquí el archivo binario exacto environmentSpecular.env (131395 bytes).
