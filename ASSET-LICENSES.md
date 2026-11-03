@@ -19,4 +19,10 @@ Esta distribución se construye desde GitHub Actions y copia los recursos al paq
 - Impactos y sonidos de batalla: Kenney / OpenGameArt, CC0 1.0. https://kenney.nl/assets/impact-sounds
 - Corte de madera: Kenney RPG Audio, CC0. https://kenney.nl/assets/rpg-audio
 
+## Entorno de iluminación nórdico
+- Archivo distribuido: `assets/environmentSpecular.env`.
+- Origen: generado proceduralmente para EL SIN NOMBRE; creación propia del proyecto, sin licencia ni dependencia de terceros.
+- Formato: entorno prefiltrado compatible con Babylon.js, 128 px, 8 niveles prefiltrados y polinomios de iluminación difusa.
+- El build copia el archivo local desde `scripts/nordic/environmentSpecular.env`; no descarga ni sustituye este recurso desde el CDN de Babylon.js.
+
 El archivo assets/asset-manifest.json generado en cada build contiene URL de origen, tamaño y SHA-256 de cada recurso distribuido.
