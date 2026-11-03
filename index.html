@@ -4769,7 +4769,9 @@ async function startGame(){
  }
  function syncRealWeaponAnchor(dt=0,pose=null){
   if(!realPlayerReady||!realWeaponHolder||!realPlayerModelPivot)return;
+  const hadHandActionPose=!!realWeaponPoseOverride;
   if(pose!==undefined)realWeaponPoseOverride=pose;
+  const handActionPoseJustCleared=hadHandActionPose&&!realWeaponPoseOverride;
   const socket=realHandNode||realWeaponSocketNode||realForearmNode||realUpperArmNode||null;
   const directClubHand=equippedWeapon==='club'&&!!realHandNode;
   const holderParent=directClubHand?realHandNode:realPlayerModelPivot;
@@ -4786,9 +4788,17 @@ async function startGame(){
    // En marcha/reposo basta con heredar la transformación de la mano; no hay que
    // recalcular posiciones cada fotograma. Solo se recalibra durante acciones.
    if(!realWeaponPoseOverride&&realWeaponHandDefaultPosition&&realWeaponHandDefaultRotation){
-    realWeaponHolder.position.copyFrom(realWeaponHandDefaultPosition);
-    if(realWeaponHolder.rotationQuaternion)realWeaponHolder.rotationQuaternion.copyFrom(realWeaponHandDefaultRotation);
-    else realWeaponHolder.rotationQuaternion=realWeaponHandDefaultRotation.clone();
+    // En locomoción/reposo el arma hereda directamente el hueso de la mano.
+    // Solo restablece el bind local al terminar un golpe; después no hace trabajo por frame.
+    if(handActionPoseJustCleared||!realWeaponAnchorCalibrated||realWeaponAnchorType!==equippedWeapon){
+     realWeaponHolder.position.copyFrom(realWeaponHandDefaultPosition);
+     if(realWeaponHolder.rotationQuaternion)realWeaponHolder.rotationQuaternion.copyFrom(realWeaponHandDefaultRotation);
+     else realWeaponHolder.rotationQuaternion=realWeaponHandDefaultRotation.clone();
+     realWeaponHolder.computeWorldMatrix(true);
+     realWeaponAnchorCalibrated=true;realWeaponAnchorType=equippedWeapon;
+     realWeaponHolder.setEnabled(true);enableEquipped();
+    }
+    return;
    }else{
     try{
      realHandNode.computeWorldMatrix(true);
