@@ -534,7 +534,7 @@ def main() -> None:
         print(f"OK {music_asset['path']}: {music_asset['bytes']:,} bytes (banda sonora)")
 
 
-    meshopt_compress_models(results)
+    print("Meshopt desactivado: se conservan los archivos GLB originales sin comprimir.")
     results.sort(key=lambda item: item["path"])
 
     # Keep large model/audio caches across code-only releases. The asset cache
