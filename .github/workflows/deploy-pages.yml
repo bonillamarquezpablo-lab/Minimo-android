@@ -27,7 +27,9 @@ jobs:
           python-version: "3.12"
 
       - name: Download and validate all runtime resources
-        run: python scripts/build_site.py
+        run: |
+          python scripts/build_site.py
+          python scripts/validate_release.py
 
       - name: Configure native GitHub Pages deployment
         uses: actions/configure-pages@v5

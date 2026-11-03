@@ -1,6 +1,6 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.158";
-const ASSET_CACHE = "el-sin-nombre-assets-nordic-ibl-v1";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.159";
+const ASSET_CACHE = "el-sin-nombre-assets-pending-build-0.6.159";
 const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", event => {
@@ -27,10 +27,13 @@ async function networkFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   try {
     const response = await fetch(request);
+    // Keep a known-good cached copy when the server returns an HTTP error.
     if (response && (response.ok || response.type === "opaque")) {
       cache.put(request, response.clone()).catch(() => {});
+      return response;
     }
-    return response;
+    const cached = await cache.match(request);
+    return cached || response;
   } catch (error) {
     const cached = await cache.match(request);
     if (cached) return cached;

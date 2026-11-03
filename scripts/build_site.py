@@ -581,6 +581,12 @@ def main() -> None:
     print(f"\nBuild completo: {len(results)} recursos, {total:,} bytes.")
     print("Todas las mallas GLB se verificaron por su cabecera glTF.")
     print("El sitio se publica solo si se descargaron y validaron todos los recursos.")
+    
+    # Final gate: validate every generated entry point, manifest, asset hash and runtime script.
+    validator = ROOT / "scripts" / "validate_release.py"
+    validation = subprocess.run([sys.executable, str(validator)], cwd=ROOT)
+    if validation.returncode != 0:
+        raise SystemExit(validation.returncode)
 
 if __name__ == "__main__":
     main()
