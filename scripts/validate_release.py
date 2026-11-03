@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.159"
+EXPECTED_VERSION = "0.6.160"
 
 HTML_PAGES = (
     "index.html",
@@ -111,6 +111,10 @@ def main() -> None:
         fail("El entorno de iluminación nórdico no tiene los 131.395 bytes esperados.")
     if "./assets/environmentSpecular.env" not in index_html:
         fail("index.html no referencia el entorno de iluminación local.")
+    if "onShip?'sail'" not in index_html or "function updateRealRigGait" not in index_html:
+        fail("Falta el controlador de postura de navegación del protagonista.")
+    if "club-world-palm" not in index_html:
+        fail("Falta el socket visible del palo anclado a la palma en espacio del jugador.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
