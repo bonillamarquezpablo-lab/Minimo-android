@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.164"
+EXPECTED_VERSION = "0.6.165"
 
 HTML_PAGES = (
     "index.html",
@@ -121,6 +121,10 @@ def main() -> None:
         fail("Falta telemetría del número de huesos de agarre detectados.")
     if "if(holding&&(mode==='idle'||mode==='sail'))" not in index_html:
         fail("El agarre sigue anulando la animación nativa del brazo durante Walk/Run.")
+    if "if(walking&&realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying)return;" in index_html:
+        fail("El gait procedural sigue saltándose los huesos no animados por el clip Walk/Run.")
+    if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html:
+        fail("El palo no tiene el desplazamiento frontal de visibilidad en la palma.")
     if "RealCastawayStickGrip',club,[0,.20,.025]" not in index_html:
         fail("La empuñadura del palo no está centrada en la palma.")
     if "distal.scale(.045)" not in index_html:
