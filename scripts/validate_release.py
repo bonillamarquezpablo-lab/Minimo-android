@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.162"
+EXPECTED_VERSION = "0.6.163"
 
 HTML_PAGES = (
     "index.html",
@@ -119,6 +119,12 @@ def main() -> None:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
     if "rightGripBones:realRightGripBones.length" not in index_html:
         fail("Falta telemetría del número de huesos de agarre detectados.")
+    if "RealCastawayStickGrip',club,[0,.20,.025]" not in index_html:
+        fail("La empuñadura del palo no está centrada en la palma.")
+    if "distal.scale(.045)" not in index_html:
+        fail("El anclaje del palo no sigue el eje muñeca-palma.")
+    if "side*(.025+breathSway*.010),-.958,.13" not in index_html:
+        fail("La pose natural del antebrazo con el palo no está restaurada.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
