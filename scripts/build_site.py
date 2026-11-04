@@ -182,6 +182,56 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                         f"{len(document.get('animations') or [])} clips, "
                         f"{len(document.get('images') or [])} texture images."
                     )
+                    if destination.name == "viking-rigged.glb":
+                        nodes = document.get("nodes") or []
+                        parent_of = {}
+                        for parent_index, parent_node in enumerate(nodes):
+                            for child_index in parent_node.get("children") or []:
+                                parent_of[child_index] = parent_index
+                        joint_indices = sorted({
+                            index
+                            for skin in (document.get("skins") or [])
+                            for index in (skin.get("joints") or [])
+                        })
+                        def node_name(index):
+                            if index < 0 or index >= len(nodes):
+                                return f"<invalid:{index}>"
+                            return nodes[index].get("name") or f"node_{index}"
+                        rig_map = []
+                        for index in joint_indices:
+                            node = nodes[index]
+                            parent_index = parent_of.get(index)
+                            rig_map.append({
+                                "i": index,
+                                "name": node_name(index),
+                                "parent": node_name(parent_index) if parent_index is not None else None,
+                                "children": [
+                                    node_name(child)
+                                    for child in (node.get("children") or [])
+                                    if child in joint_indices
+                                ],
+                                "translation": node.get("translation"),
+                                "rotation": node.get("rotation"),
+                            })
+                        print("VIKING_RIG_NODE_MAP=" + json.dumps(rig_map, ensure_ascii=False, separators=(",", ":")))
+                        animated = []
+                        for animation in (document.get("animations") or []):
+                            for channel in (animation.get("channels") or []):
+                                target = channel.get("target") or {}
+                                node_index = target.get("node")
+                                if node_index in joint_indices:
+                                    name = node_name(node_index).lower()
+                                    if any(token in name for token in (
+                                        "arm", "forearm", "elbow", "hand", "wrist",
+                                        "thumb", "index", "middle", "ring", "pinky",
+                                        "little", "finger"
+                                    )):
+                                        animated.append({
+                                            "clip": animation.get("name") or "unnamed",
+                                            "node": node_name(node_index),
+                                            "path": target.get("path"),
+                                        })
+                        print("VIKING_ARM_HAND_ANIMATION_CHANNELS=" + json.dumps(animated, ensure_ascii=False, separators=(",", ":")))
                 else:
                     read_glb_document(destination)
             return {
