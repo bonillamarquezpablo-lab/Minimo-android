@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.171"
+EXPECTED_VERSION = "0.6.172"
 
 HTML_PAGES = (
     "index.html",
@@ -129,15 +129,19 @@ def main() -> None:
         fail("La flexión visible de los dedos no está aplicada en ambas manos.")
     if "alignPalmTowardTorso" in index_html:
         fail("Se ha reintroducido el giro experimental de palma en espacio mundial.")
+    if "La rotación de la palma se conserva íntegra." not in index_html:
+        fail("La corrección de brazos no debe añadir rotaciones a la palma.")
     gait_start = index_html.find("function updateRealRigGait(")
     gait_end = index_html.find("\n\n function createRealWeapon(", gait_start)
     player_gait = index_html[gait_start:gait_end] if gait_start >= 0 and gait_end > gait_start else ""
-    if not player_gait or "relaxHumanoidArm(" in player_gait or "rotateBoneWorldTowardExact(" in player_gait:
-        fail("El reposo del jugador no debe recalcular codos, antebrazos ni palmas.")
+    if not player_gait or player_gait.count("relaxHumanoidArm(") != 4:
+        fail("La postura estable debe colocar ambos brazos en reposo y navegación.")
+    if "rotateBoneWorldTowardExact(" not in player_gait:
+        fail("Falta la colocación geométrica de los brazos desde hombro y codo.")
     if "restoreRigNodePose(node,realBoneRest.get(node))" not in player_gait:
         fail("El reposo del jugador no restaura el bind pose original del GLB.")
-    if "Brazos, codos, antebrazos, muñecas y palmas permanecen en el bind pose del GLB." not in player_gait:
-        fail("Falta la separación estricta entre pose del brazo y flexión de dedos.")
+    if "Postura bilateral recuperada de la versión estable" not in player_gait:
+        fail("Falta la pose bilateral estable sin giro de palma.")
     grip_start = index_html.find("function applyRealPlayerClubGripPose(){")
     grip_end = index_html.find("\n }", grip_start)
     grip_pose = index_html[grip_start:grip_end] if grip_start >= 0 and grip_end > grip_start else ""
