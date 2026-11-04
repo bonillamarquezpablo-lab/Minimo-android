@@ -4370,8 +4370,9 @@ async function startGame(){
    palmNormal.subtractInPlace(axis.scale(B.Vector3.Dot(palmNormal,axis)));
    if(palmNormal.lengthSquared()<1e-7)return false;
    palmNormal.normalize();
-   // The shoulder-to-wrist direction points medially toward the torso on either side.
-   let desired=upper.getAbsolutePosition().subtract(wrist);
+   // Use the character's local medial axis: each palm faces its own thigh,
+   // not the camera/front and not up the shoulder-to-wrist line.
+   let desired=bodyLocalDirection(realPlayerModelPivot||root,-side,0,0,1);
    desired.subtractInPlace(axis.scale(B.Vector3.Dot(desired,axis)));
    if(desired.lengthSquared()<1e-7)return false;
    desired.normalize();
@@ -4876,15 +4877,8 @@ async function startGame(){
  function applyRealPlayerClubGripPose(){
   if(!realPlayerReady||!realWeaponHolder||!realRigNodes)return;
   const holding=!!realWeaponGroups.club&&equippedWeapon==='club';
-  const mode=realPlayerMode;
-  // En reposo/navegación fijamos una pose estable; durante Walk/Run dejamos
-   // que el clip nativo anime hombro y codo. Forzar relaxHumanoidArm aquí,
-   // después del clip, congelaba el brazo y anulaba el balanceo al caminar.
-     if(holding&&(mode==='idle'||mode==='sail')){
-   const breath=Math.sin(elapsed*1.08)*.35;
-   const boat=mode==='sail';
-   relaxHumanoidArm(realPlayerModelPivot||player.root,realRigNodes.upperArm,realRigNodes.forearm,realRigNodes.hand,1,true,breath,boat);
-  }
+  // The arm pose is owned by updateRealRigGait; do not apply it again here.
+  // This function only curls the right fingers around the club grip.
   const bones=realRightGripBones||[];
   for(let i=0;i<bones.length;i++){
    const entry=bones[i],node=entry&&entry.node||entry;if(!node)continue;
