@@ -4394,7 +4394,10 @@ async function startGame(){
    if(upperLength<.045)return false;
    // Recupera la postura suave anterior: el hombro no se abre hacia atrás.
    // El GLB mira hacia -Z en su espacio visual tras el pivote de 180°; los brazos deben avanzar hacia -Z, no hacia la espalda (+Z).
-   const upperTarget=boatStance?bodyLocalDirection(root,side*(holdingWeapon?0.17:0.15+breathSway*.018),-.962,-(.19+breathSway*.024),upperLength):bodyLocalDirection(root,side*(.13+breathSway*.022),-.985,-(.055+breathSway*.024),upperLength);
+   // Elbow slightly flexed and naturally offset from the rib cage; subtle sway follows breathing and weight shift.
+   const upperTarget=boatStance
+    ?bodyLocalDirection(root,side*(holdingWeapon?.16:.145+breathSway*.018),-.968,-(.17+breathSway*.026),upperLength)
+    :bodyLocalDirection(root,side*(.125+breathSway*.018),-.982,-(.075+breathSway*.034),upperLength);
    rotateBoneWorldTowardExact(upper,upperVector,upperTarget);
    lower.computeWorldMatrix(true);
    let wristVector=null;
@@ -4406,10 +4409,10 @@ async function startGame(){
    }
    if(wristVector&&wristVector.length()>.035){
     const target=boatStance
-     ?bodyLocalDirection(root,side*(holdingWeapon?.06:.11+breathSway*.015),holdingWeapon?-.91:-.88,-(.34+breathSway*.04),wristVector.length())
+     ?bodyLocalDirection(root,side*(holdingWeapon?.075:.115+breathSway*.022),holdingWeapon?-.925:-.90,-(.30+breathSway*.045),wristVector.length())
      :(holdingWeapon
-      ?bodyLocalDirection(root,side*(.025+breathSway*.010),-.958,-(.13+breathSway*.032),wristVector.length())
-      :bodyLocalDirection(root,side*(.07+breathSway*.018),-.915,-(.27+breathSway*.045),wristVector.length()));
+      ?bodyLocalDirection(root,side*(.045+breathSway*.022),-.938,-(.205+breathSway*.065),wristVector.length())
+      :bodyLocalDirection(root,side*(.085+breathSway*.035),-.895,-(.315+breathSway*.085),wristVector.length()));
     rotateBoneWorldTowardExact(lower,wristVector,target);
     lower.computeWorldMatrix(true);
     if(hand)hand.computeWorldMatrix(true);
@@ -4545,7 +4548,7 @@ async function startGame(){
   const rig=separateRigLimbAliases(findRigNodes(asset));
   const hasRigLegs=!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg&&rig.leftUpperLeg!==rig.rightUpperLeg&&rig.leftLowerLeg!==rig.rightLowerLeg);
   if(!walk&&!run&&!hasRigLegs)throw new Error('El GLB no incluye animación de marcha ni huesos de piernas reconocibles. Animaciones: '+(groups.map(g=>g.name).join(', ')||'ninguna'));
-  realRigNodes=rig;realRightGripBones=findRightGripBones(asset,'right');realLeftGripBones=findRightGripBones(asset,'left');realRightPalmNodes=null;realLeftPalmNodes=null;realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});realRightGripBones.forEach(entry=>{const node=entry&&entry.node;if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
+  realRigNodes=rig;realRightGripBones=findRightGripBones(asset,'right');realLeftGripBones=findRightGripBones(asset,'left');realRightPalmNodes=null;realLeftPalmNodes=null;realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});realRightGripBones.concat(realLeftGripBones).forEach(entry=>{const node=entry&&entry.node;if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
   // Prioridad: palma real -> muñeca/antebrazo -> brazo superior. Así el arma acompaña el giro del brazo incluso en esqueletos con nombres distintos.
   realWeaponSocketNode=rig.hand||rig.forearm||rig.upperArm||null;
   realWeaponSocketMode=rig.hand?'hand':(rig.forearm?'forearm':(rig.upperArm?'upperArm':'pivot'));
@@ -4559,6 +4562,7 @@ async function startGame(){
   realRigManualGaitNodes={};
   Object.entries({hips:rig.hips,head:rig.head,rightShoulder:rig.rightShoulder,leftShoulder:rig.leftShoulder,leftUpperLeg:rig.leftUpperLeg,rightUpperLeg:rig.rightUpperLeg,leftLowerLeg:rig.leftLowerLeg,rightLowerLeg:rig.rightLowerLeg,leftFoot:rig.leftFoot,rightFoot:rig.rightFoot,leftUpperArm:rig.leftUpperArm,upperArm:rig.upperArm,leftForearm:rig.leftForearm,forearm:rig.forearm,spine:rig.spine}).forEach(([key,node])=>{if(node)realRigManualGaitNodes[key]=!locomotionTargets.has(node);});
   [realHandNode,rig.leftHand,realUpperArmNode,realForearmNode,realSpineNode,rig.head,rig.rightShoulder,rig.leftShoulder,rig.hips,rig.leftUpperLeg,rig.rightUpperLeg,rig.leftLowerLeg,rig.rightLowerLeg,rig.leftFoot,rig.rightFoot,rig.leftUpperArm,rig.leftForearm,rig.rightUpperLeg,rig.rightLowerLeg,rig.rightFoot].forEach(rememberRigRest);
+  realRightGripBones.concat(realLeftGripBones).forEach(entry=>rememberRigRest(entry&&entry.node));
   configureRealFootIK(rig);
   // Ocultar la figura procedural solo cuando el humano GLB ya está validado y visible.
   player.body.setEnabled(false);
@@ -4821,9 +4825,11 @@ async function startGame(){
    apply('leftShoulder',.002*Math.sin(elapsed*.83),0,.010,true);
    apply('rightShoulder',-.002*Math.sin(elapsed*.83),0,-.010,true);
    relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.58+Math.abs(weightShift)*.22);
-   const armBreath=Math.sin(elapsed*1.16);
-   relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false,armBreath*.22);
-   relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true,armBreath*.22);
+   const armBreath=Math.sin(elapsed*1.16),armWeight=Math.sin(elapsed*.64),armCounter=Math.sin(elapsed*.47+.65);
+   const leftArmSway=armBreath*.62+armWeight*.22+armCounter*.10;
+   const rightArmSway=Math.sin(elapsed*1.16+.42)*.48-armWeight*.16-armCounter*.08;
+   relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false,leftArmSway);
+   relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true,rightArmSway);
    apply('hips',breath*.014*idleMotionScale,weightShift*.010*idleMotionScale,weightShift*.018*idleMotionScale,true);
    apply('spine',-.024+breath*.032*idleMotionScale,-weightShift*.008*idleMotionScale,-weightShift*.014*idleMotionScale,true);
    apply('head',.012*Math.sin(elapsed*.43)*idleMotionScale,.021*Math.sin(elapsed*.31)*idleMotionScale,.008*counterSway*idleMotionScale,true);
@@ -4874,21 +4880,44 @@ async function startGame(){
   if(typeof weaponLevel!=='undefined'&&weaponLevel>0)decorateWeaponGroups(realWeaponGroups,'real',weaponLevel);
   syncRealWeaponAnchor(0);
  }
+ function applyFingerCurlProfile(entries,side,gripping=false){
+  if(!entries||!entries.length)return;
+  const profiles=gripping
+   ?{thumb:[.18,.34,.22],index:[.27,.52,.34],middle:[.29,.57,.37],ring:[.30,.60,.39],pinky:[.32,.63,.41],little:[.32,.63,.41]}
+   :{thumb:[.075,.12,.08],index:[.075,.14,.10],middle:[.085,.16,.11],ring:[.095,.18,.12],pinky:[.11,.20,.14],little:[.11,.20,.14]};
+  const grouped={thumb:[],index:[],middle:[],ring:[],pinky:[],little:[]};
+  for(const entry of entries){
+   const name=String(entry&&entry.name||entry&&entry.node&&entry.node.name||'').toLowerCase();
+   const digit=Object.keys(grouped).find(key=>name.includes(key));
+   const node=entry&&entry.node||entry;
+   if(digit&&node)grouped[digit].push({node,name});
+  }
+  for(const [digit,joints] of Object.entries(grouped)){
+   joints.sort((a,b)=>{
+    const ja=Number((a.name.match(/([0-9]+)[rl]?$/)||[])[1]||99);
+    const jb=Number((b.name.match(/([0-9]+)[rl]?$/)||[])[1]||99);
+    return ja-jb;
+   });
+   for(let i=0;i<joints.length;i++){
+    const {node,name}=joints[i];
+    // GLB finger nodes commonly end in 1/2/3; accept a trailing side marker too.
+    const suffix=Number((name.match(/([0-9]+)[rl]?$/)||[])[1]||i+1);
+    const segment=Math.max(1,Math.min(3,suffix))-1;
+    const profile=profiles[digit]||profiles.index;
+    const curl=profile[segment]??profile[Math.min(2,i)];
+    const fingerSpread=digit==='thumb'?(side*.035):(digit==='pinky'||digit==='little'?side*.018:(digit==='index'?-side*.012:0));
+    const wristRelax=gripping?0:.012*Math.sin(elapsed*.82+(i*.21));
+    setRigDelta(node,curl+wristRelax,fingerSpread,0,true);
+   }
+  }
+ }
  function applyRealPlayerClubGripPose(){
   if(!realPlayerReady||!realWeaponHolder||!realRigNodes)return;
-  const holding=!!realWeaponGroups.club&&equippedWeapon==='club';
-  // The arm pose is owned by updateRealRigGait; do not apply it again here.
-  // This function only curls the right fingers around the club grip.
-  const bones=realRightGripBones||[];
-  for(let i=0;i<bones.length;i++){
-   const entry=bones[i],node=entry&&entry.node||entry;if(!node)continue;
-   if(!holding){const rest=realBoneRest.get(node);if(rest)restoreRigNodePose(node,rest);continue;}
-   const name=String(entry&&entry.name||node.name||'').toLowerCase();
-   const thumb=/thumb/.test(name);
-   const joint=Number((name.match(/[1-9]$/)||[])[0]||1);
-   const curl=thumb?(joint===1?.28:.20):(joint===1?.34:joint===2?.48:.36);
-   setRigDelta(node,curl,0,0,true);
-  }
+  const gripping=!!realWeaponGroups[equippedWeapon];
+  // Finger joints are posed separately from the arm: a loose hand at rest,
+  // a progressive three-joint curl around the equipped weapon when held.
+  applyFingerCurlProfile(realLeftGripBones,-1,false);
+  applyFingerCurlProfile(realRightGripBones,1,gripping);
  }
  function quaternionAlignYTo(direction){
   const from=B.Axis.Y.clone().normalize(),to=direction.clone().normalize();
