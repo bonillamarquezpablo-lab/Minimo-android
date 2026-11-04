@@ -142,6 +142,13 @@ def main() -> None:
         fail("Faltan los puntos de referencia de los dedos de ambas manos.")
     if "palmWidth=index.getAbsolutePosition().subtract(pinky.getAbsolutePosition())" not in index_html:
         fail("Falta la referencia geométrica de la palma mediante los dedos.")
+    palm_pose = index_html.split("function alignPalmTowardTorso", 1)[1].split("function relaxHumanoidArm", 1)[0]
+    if "hand.rotate(axis,twist,B.Space.WORLD)" not in palm_pose or "lower.rotate(axis,twist,B.Space.WORLD)" in palm_pose:
+        fail("La corrección de giro de palma debe actuar sobre la muñeca, no retorcer el antebrazo.")
+    if "index:[.17,.30,.20]" not in index_html or "middle:[.19,.34,.23]" not in index_html:
+        fail("La mano libre no mantiene la flexión relajada de los dedos.")
+    if "index:[.38,.72,.48]" not in index_html or "middle:[.42,.78,.52]" not in index_html:
+        fail("La mano que agarra el arma no mantiene la flexión progresiva de los dedos.")
     if "function applyFingerCurlProfile" not in index_html or "([0-9]+)[rl]?$" not in index_html:
         fail("Falta la flexión progresiva de los segmentos de los dedos.")
     if "applyFingerCurlProfile(realLeftGripBones,-1,false)" not in index_html or "applyFingerCurlProfile(realRightGripBones,1,gripping)" not in index_html:
