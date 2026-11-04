@@ -127,7 +127,11 @@ def main() -> None:
         fail("La mano izquierda no aplica una curva relajada de dedos.")
     if "alignPalmTowardTorso" in index_html:
         fail("Se ha reintroducido el giro experimental de palma en espacio mundial.")
-    grip_pose = re.search(r"function applyRealPlayerClubGripPose\\(\\)\\{([\\s\\S]*?)\\n \\}", index_html)
+    grip_start = index_html.find("function applyRealPlayerClubGripPose(){")
+    grip_end = index_html.find("\n }", grip_start)
+    grip_pose = index_html[grip_start:grip_end] if grip_start >= 0 and grip_end > grip_start else ""
+    if not grip_pose or "relaxHumanoidArm" in grip_pose:
+        fail("La pose de dedos no debe volver a girar el brazo o la muñeca.")
     if not grip_pose or "relaxHumanoidArm" in grip_pose.group(1):
         fail("La pose de dedos no debe volver a girar el brazo o la muñeca.")
     if "if(walking&&realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying)return;" in index_html:
