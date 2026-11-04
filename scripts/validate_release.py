@@ -136,8 +136,13 @@ def main() -> None:
     player_gait = index_html[gait_start:gait_end] if gait_start >= 0 and gait_end > gait_start else ""
     if not player_gait or player_gait.count("relaxHumanoidArm(") != 4:
         fail("La postura estable debe colocar ambos brazos en reposo y navegación.")
-    if "rotateBoneWorldTowardExact(" not in player_gait:
-        fail("Falta la colocación geométrica de los brazos desde hombro y codo.")
+    arm_start = index_html.find("function relaxHumanoidArm(")
+    arm_end = index_html.find("\\n function relaxHumanoidLeg(", arm_start)
+    arm_pose = index_html[arm_start:arm_end] if arm_start >= 0 and arm_end > arm_start else ""
+    if not arm_pose or arm_pose.count("rotateBoneWorldTowardExact(") < 2:
+        fail("Falta la colocación anatómica de hombro y antebrazo.")
+    if "La rotación de la palma se conserva íntegra." not in arm_pose:
+        fail("La pose de brazo no debe girar la palma.")
     if "restoreRigNodePose(node,realBoneRest.get(node))" not in player_gait:
         fail("El reposo del jugador no restaura el bind pose original del GLB.")
     if "Postura bilateral recuperada de la versión estable" not in player_gait:
