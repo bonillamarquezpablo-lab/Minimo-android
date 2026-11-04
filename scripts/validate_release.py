@@ -130,7 +130,7 @@ def main() -> None:
     if "alignPalmTowardTorso" in index_html:
         fail("Se ha reintroducido el giro experimental de palma en espacio mundial.")
     gait_start = index_html.find("function updateRealRigGait(")
-    gait_end = index_html.find("\\n\\n function createRealWeapon(", gait_start)
+    gait_end = index_html.find("\n\n function createRealWeapon(", gait_start)
     player_gait = index_html[gait_start:gait_end] if gait_start >= 0 and gait_end > gait_start else ""
     if not player_gait or "relaxHumanoidArm(" in player_gait or "rotateBoneWorldTowardExact(" in player_gait:
         fail("El reposo del jugador no debe recalcular codos, antebrazos ni palmas.")
