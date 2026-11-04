@@ -222,7 +222,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                             chunk_length = int.from_bytes(raw_glb[chunk_offset:chunk_offset + 4], "little")
                             chunk_type = raw_glb[chunk_offset + 4:chunk_offset + 8]
                             chunk_offset += 8
-                            if chunk_type == b"BIN\\x00":
+                            if chunk_type == b"BIN\x00":
                                 bin_chunk = raw_glb[chunk_offset:chunk_offset + chunk_length]
                                 break
                             chunk_offset += chunk_length
