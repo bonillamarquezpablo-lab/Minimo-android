@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -214,6 +215,74 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                                 "rotation": node.get("rotation"),
                             })
                         print("VIKING_RIG_NODE_MAP=" + json.dumps(rig_map, ensure_ascii=False, separators=(",", ":")))
+                        raw_glb = destination.read_bytes()
+                        bin_chunk = b""
+                        chunk_offset = 12
+                        while chunk_offset + 8 <= len(raw_glb):
+                            chunk_length = int.from_bytes(raw_glb[chunk_offset:chunk_offset + 4], "little")
+                            chunk_type = raw_glb[chunk_offset + 4:chunk_offset + 8]
+                            chunk_offset += 8
+                            if chunk_type == b"BIN\\x00":
+                                bin_chunk = raw_glb[chunk_offset:chunk_offset + chunk_length]
+                                break
+                            chunk_offset += chunk_length
+                        def read_float_accessor(accessor_index):
+                            accessor = (document.get("accessors") or [])[accessor_index]
+                            view = (document.get("bufferViews") or [])[accessor["bufferView"]]
+                            components = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}[accessor["type"]]
+                            if accessor.get("componentType") != 5126:
+                                return []
+                            stride = view.get("byteStride", components * 4)
+                            start = view.get("byteOffset", 0) + accessor.get("byteOffset", 0)
+                            return [
+                                struct.unpack_from("<" + "f" * components, bin_chunk, start + index * stride)
+                                for index in range(accessor["count"])
+                            ]
+                        def quat_multiply(a, b):
+                            ax, ay, az, aw = a
+                            bx, by, bz, bw = b
+                            return (
+                                aw*bx + ax*bw + ay*bz - az*by,
+                                aw*by - ax*bz + ay*bw + az*bx,
+                                aw*bz + ax*by - ay*bx + az*bw,
+                                aw*bw - ax*bx - ay*by - az*bz,
+                            )
+                        finger_tracks = []
+                        for animation in (document.get("animations") or []):
+                            for channel in (animation.get("channels") or []):
+                                target = channel.get("target") or {}
+                                node_index = target.get("node")
+                                if target.get("path") != "rotation" or node_index not in joint_indices:
+                                    continue
+                                name = node_name(node_index)
+                                if not re.search(r"(Thumb|Index|Middle|Ring|Pinky)([123])$", name, re.I):
+                                    continue
+                                sampler = animation["samplers"][channel["sampler"]]
+                                times = read_float_accessor(sampler["input"])
+                                values = read_float_accessor(sampler["output"])
+                                if not times or not values:
+                                    continue
+                                rest = nodes[node_index].get("rotation") or (0, 0, 0, 1)
+                                rest_inverse = (-rest[0], -rest[1], -rest[2], rest[3])
+                                samples = []
+                                for key_index in range(min(len(times), len(values))):
+                                    delta = quat_multiply(rest_inverse, values[key_index])
+                                    samples.append({
+                                        "t": round(float(times[key_index]), 4),
+                                        "dq": [round(float(v), 4) for v in delta],
+                                        "absXYZ": [round(abs(float(delta[i])), 4) for i in range(3)],
+                                    })
+                                strongest = max(samples, key=lambda sample: sum(sample["absXYZ"]))
+                                finger_tracks.append({
+                                    "clip": animation.get("name") or "unnamed",
+                                    "node": name,
+                                    "keys": len(samples),
+                                    "maxDelta": strongest,
+                                    "first": samples[0]["dq"],
+                                    "mid": samples[len(samples)//2]["dq"],
+                                    "last": samples[-1]["dq"],
+                                })
+                        print("VIKING_FINGER_ROTATION_TRACKS=" + json.dumps(finger_tracks, ensure_ascii=False, separators=(",", ":")))
                         animated = []
                         for animation in (document.get("animations") or []):
                             for channel in (animation.get("channels") or []):
