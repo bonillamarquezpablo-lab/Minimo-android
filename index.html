@@ -4342,7 +4342,8 @@ async function startGame(){
    const shoulder=upper.getAbsolutePosition(),elbow=lower.getAbsolutePosition(),upperVector=elbow.subtract(shoulder),upperLength=upperVector.length();
    if(upperLength<.045)return false;
    // Recupera la postura suave anterior: el hombro no se abre hacia atrás.
-   const upperTarget=boatStance?bodyLocalDirection(root,side*(holdingWeapon?0.17:0.15+breathSway*.018),-.962,.19+breathSway*.024,upperLength):bodyLocalDirection(root,side*(.13+breathSway*.022),-.985,.055+breathSway*.024,upperLength);
+   // El GLB mira hacia -Z en su espacio visual tras el pivote de 180°; los brazos deben avanzar hacia -Z, no hacia la espalda (+Z).
+   const upperTarget=boatStance?bodyLocalDirection(root,side*(holdingWeapon?0.17:0.15+breathSway*.018),-.962,-(.19+breathSway*.024),upperLength):bodyLocalDirection(root,side*(.13+breathSway*.022),-.985,-(.055+breathSway*.024),upperLength);
    rotateBoneWorldTowardExact(upper,upperVector,upperTarget);
    lower.computeWorldMatrix(true);
    let wristVector=null;
@@ -4354,10 +4355,10 @@ async function startGame(){
    }
    if(wristVector&&wristVector.length()>.035){
     const target=boatStance
-     ?bodyLocalDirection(root,side*(holdingWeapon?.06:.11+breathSway*.015),holdingWeapon?-.91:-.88,.34+breathSway*.04,wristVector.length())
+     ?bodyLocalDirection(root,side*(holdingWeapon?.06:.11+breathSway*.015),holdingWeapon?-.91:-.88,-(.34+breathSway*.04),wristVector.length())
      :(holdingWeapon
-      ?bodyLocalDirection(root,side*(.025+breathSway*.010),-.958,.13+breathSway*.032,wristVector.length())
-      :bodyLocalDirection(root,side*(.07+breathSway*.018),-.915,.27+breathSway*.045,wristVector.length()));
+      ?bodyLocalDirection(root,side*(.025+breathSway*.010),-.958,-(.13+breathSway*.032),wristVector.length())
+      :bodyLocalDirection(root,side*(.07+breathSway*.018),-.915,-(.27+breathSway*.045),wristVector.length()));
     rotateBoneWorldTowardExact(lower,wristVector,target);
    }
    // La rotación de la palma se conserva íntegra.
