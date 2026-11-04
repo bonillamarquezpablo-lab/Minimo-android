@@ -234,10 +234,11 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                                 return []
                             stride = view.get("byteStride", components * 4)
                             start = view.get("byteOffset", 0) + accessor.get("byteOffset", 0)
-                            return [
+                            values = [
                                 struct.unpack_from("<" + "f" * components, bin_chunk, start + index * stride)
                                 for index in range(accessor["count"])
                             ]
+                            return [row[0] for row in values] if components == 1 else values
                         def quat_multiply(a, b):
                             ax, ay, az, aw = a
                             bx, by, bz, bw = b
