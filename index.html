@@ -4335,52 +4335,73 @@ async function startGame(){
   const yaw=Number(root&&root.rotation&&root.rotation.y)||0,c=Math.cos(yaw),s=Math.sin(yaw);
   return new B.Vector3((x*c+z*s)*length,y*length,(-x*s+z*c)*length);
  }
- function alignPalmTowardTorso(upper,lower,hand,forearmAxis,side=1){
-  // Derive the palm normal from finger-base landmarks and roll the forearm
-  // around its anatomical axis. Do this for both hands, not only the weapon hand.
+ function getRealPalmFrame(side){
   const fingerBones=side<0?realLeftGripBones:realRightGripBones;
-  if(!upper||!lower||!hand||!forearmAxis||!fingerBones||fingerBones.length<3)return false;
+  if(!fingerBones||!fingerBones.length)return null;
+  let cached=side<0?realLeftPalmNodes:realRightPalmNodes;
+  if(!cached){
+   const firstSegment=digit=>{
+    const candidates=fingerBones.filter(entry=>entry&&entry.node&&entry.name&&entry.name.includes(digit));
+    candidates.sort((a,b)=>{
+     const ja=Number((String(a.name).match(/([0-9]+)$/)||[])[1]||99);
+     const jb=Number((String(b.name).match(/([0-9]+)$/)||[])[1]||99);
+     return ja-jb;
+    });
+    return candidates.length?candidates[0].node:null;
+   };
+   cached={
+    index:firstSegment('index'),
+    middle:firstSegment('middle'),
+    ring:firstSegment('ring'),
+    pinky:firstSegment('pinky')||firstSegment('little'),
+    thumb:firstSegment('thumb')
+   };
+   if(side<0)realLeftPalmNodes=cached;else realRightPalmNodes=cached;
+  }
+  const hand=side<0?realRigNodes.leftHand:realRigNodes.hand;
+  const {index,middle,ring,pinky,thumb}=cached;
+  if(!hand||!index||!middle||!ring||!pinky)return null;
+  [hand,index,middle,ring,pinky,thumb].filter(Boolean).forEach(node=>node.computeWorldMatrix(true));
+  const wrist=hand.getAbsolutePosition().clone();
+  const indexBase=index.getAbsolutePosition().clone();
+  const middleBase=middle.getAbsolutePosition().clone();
+  const ringBase=ring.getAbsolutePosition().clone();
+  const pinkyBase=pinky.getAbsolutePosition().clone();
+  const mcpCenter=indexBase.add(middleBase).addInPlace(ringBase).addInPlace(pinkyBase).scale(.25);
+  const fingerAxis=middleBase.subtract(wrist);
+  const width=index.getAbsolutePosition().subtract(pinky.getAbsolutePosition());
+  if(fingerAxis.lengthSquared()<1e-7||width.lengthSquared()<1e-7)return null;
+  let normal=B.Vector3.Cross(fingerAxis,width);
+  if(normal.lengthSquared()<1e-7)return null;
+  normal.normalize();
+  const root=realPlayerModelPivot||player.root;
+  let medial=bodyLocalDirection(root,-side,0,0,1);
+  medial.subtractInPlace(fingerAxis.clone().normalize().scale(B.Vector3.Dot(medial,fingerAxis.clone().normalize())));
+  if(medial.lengthSquared()>.000001&&B.Vector3.Dot(normal,medial)<0)normal.scaleInPlace(-1);
+  width.normalize();
+  const palmCenter=wrist.add(mcpCenter.subtract(wrist).scale(.56));
+  return {hand,wrist,indexBase,middleBase,ringBase,pinkyBase,thumbBase:thumb?thumb.getAbsolutePosition().clone():null,mcpCenter,palmCenter,width,normal,fingerAxis:fingerAxis.normalize()};
+ }
+ function alignPalmTowardTorso(upper,lower,hand,forearmAxis,side=1){
+  if(!upper||!lower||!hand||!forearmAxis)return false;
   try{
-   const cached=side<0?realLeftPalmNodes:realRightPalmNodes;
-   let palmNodes=cached;
-   if(!palmNodes){
-    const firstSegment=digit=>{
-     const candidates=fingerBones.filter(entry=>entry&&entry.node&&entry.name&&entry.name.includes(digit));
-     candidates.sort((a,b)=>{
-      const ja=Number((String(a.name).match(/([0-9]+)$/)||[])[1]||99);
-      const jb=Number((String(b.name).match(/([0-9]+)$/)||[])[1]||99);
-      return ja-jb;
-     });
-     return candidates.length?candidates[0].node:null;
-    };
-    palmNodes={index:firstSegment('index'),middle:firstSegment('middle'),pinky:firstSegment('pinky')||firstSegment('little')};
-    if(side<0)realLeftPalmNodes=palmNodes;else realRightPalmNodes=palmNodes;
-   }
-   const {index,middle,pinky}=palmNodes;
-   if(!index||!middle||!pinky)return false;
-   [hand,index,middle,pinky,upper,lower].forEach(node=>node.computeWorldMatrix(true));
-   const wrist=hand.getAbsolutePosition();
-   const fingerAxis=middle.getAbsolutePosition().subtract(wrist);
-   const palmWidth=index.getAbsolutePosition().subtract(pinky.getAbsolutePosition());
-   if(fingerAxis.lengthSquared()<1e-7||palmWidth.lengthSquared()<1e-7)return false;
+   const frame=getRealPalmFrame(side);
+   if(!frame)return false;
    const axis=forearmAxis.clone();
    if(axis.lengthSquared()<1e-7)return false;
    axis.normalize();
-   let palmNormal=B.Vector3.Cross(fingerAxis,palmWidth);
+   let palmNormal=frame.normal.clone();
    palmNormal.subtractInPlace(axis.scale(B.Vector3.Dot(palmNormal,axis)));
    if(palmNormal.lengthSquared()<1e-7)return false;
    palmNormal.normalize();
-   // Use the character's local medial axis: each palm faces its own thigh,
-   // not the camera/front and not up the shoulder-to-wrist line.
-   let desired=bodyLocalDirection(realPlayerModelPivot||root,-side,0,0,1);
+   let desired=bodyLocalDirection(realPlayerModelPivot||player.root,-side,0,0,1);
    desired.subtractInPlace(axis.scale(B.Vector3.Dot(desired,axis)));
    if(desired.lengthSquared()<1e-7)return false;
    desired.normalize();
    const cross=B.Vector3.Cross(palmNormal,desired);
    const twist=Math.atan2(B.Vector3.Dot(axis,cross),Math.max(-1,Math.min(1,B.Vector3.Dot(palmNormal,desired))));
    if(Number.isFinite(twist)&&Math.abs(twist)>.012){
-    // Palm roll belongs to the wrist/hand joint. Twisting the forearm here
-    // rotates the elbow/ulna visually and creates the "strangled" arm.
+    // Roll the wrist only; never twist the forearm/elbow to turn the palm.
     hand.rotate(axis,twist,B.Space.WORLD);
     hand.computeWorldMatrix(true);
    }
@@ -4883,11 +4904,13 @@ async function startGame(){
  }
  function applyFingerCurlProfile(entries,side,gripping=false){
   if(!entries||!entries.length)return;
-  // More visible but still relaxed finger flex: MCP, PIP and DIP are
-  // progressively curled; the free hand must not hang as a flat open hand.
+  const frame=getRealPalmFrame(side);
+  if(!frame)return;
+  // Flexion magnitudes are per phalanx. The actual hinge axis and its sign
+  // are derived from this GLB's palm width and current finger direction.
   const profiles=gripping
-   ?{thumb:[.26,.48,.32],index:[.38,.72,.48],middle:[.42,.78,.52],ring:[.45,.82,.56],pinky:[.48,.86,.58],little:[.48,.86,.58]}
-   :{thumb:[.16,.24,.16],index:[.17,.30,.20],middle:[.19,.34,.23],ring:[.21,.37,.25],pinky:[.23,.40,.27],little:[.23,.40,.27]};
+   ?{thumb:[.38,.55,.40],index:[.48,.78,.58],middle:[.52,.86,.64],ring:[.54,.90,.66],pinky:[.56,.92,.68],little:[.56,.92,.68]}
+   :{thumb:[.18,.28,.20],index:[.24,.38,.28],middle:[.27,.42,.31],ring:[.29,.46,.33],pinky:[.31,.49,.35],little:[.31,.49,.35]};
   const grouped={thumb:[],index:[],middle:[],ring:[],pinky:[],little:[]};
   for(const entry of entries){
    const name=String(entry&&entry.name||entry&&entry.node&&entry.node.name||'').toLowerCase();
@@ -4897,20 +4920,43 @@ async function startGame(){
   }
   for(const [digit,joints] of Object.entries(grouped)){
    joints.sort((a,b)=>{
-    const ja=Number((a.name.match(/([0-9]+)[rl]?$/)||[])[1]||99);
-    const jb=Number((b.name.match(/([0-9]+)[rl]?$/)||[])[1]||99);
+    const ja=Number((a.name.match(/([0-9]+)$/)||[])[1]||99);
+    const jb=Number((b.name.match(/([0-9]+)$/)||[])[1]||99);
     return ja-jb;
    });
    for(let i=0;i<joints.length;i++){
-    const {node,name}=joints[i];
-    // GLB finger nodes commonly end in 1/2/3; accept a trailing side marker too.
-    const suffix=Number((name.match(/([0-9]+)[rl]?$/)||[])[1]||i+1);
-    const segment=Math.max(1,Math.min(3,suffix))-1;
+    const {node}=joints[i];
+    node.computeWorldMatrix(true);
+    const child=joints[i+1]&&joints[i+1].node;
+    let fingerDirection;
+    if(child){
+     child.computeWorldMatrix(true);
+     fingerDirection=child.getAbsolutePosition().subtract(node.getAbsolutePosition());
+    }else{
+     fingerDirection=node.getDirection(B.Axis.Y).clone();
+    }
+    if(fingerDirection.lengthSquared()<1e-7)continue;
+    fingerDirection.normalize();
+    // Anatomical flexion axis runs across the palm, perpendicular to each phalanx.
+    const hingeAxis=frame.width.clone();
+    hingeAxis.subtractInPlace(fingerDirection.clone().scale(B.Vector3.Dot(hingeAxis,fingerDirection)));
+    if(hingeAxis.lengthSquared()<1e-7)continue;
+    hingeAxis.normalize();
+    // Finger tips curl into the palmar side; the thumb opposes toward the index knuckle.
+    let bendTarget=digit==='thumb'
+     ?frame.indexBase.subtract(node.getAbsolutePosition())
+     :frame.normal.clone();
+    bendTarget.subtractInPlace(fingerDirection.clone().scale(B.Vector3.Dot(bendTarget,fingerDirection)));
+    if(bendTarget.lengthSquared()<1e-7)continue;
+    bendTarget.normalize();
+    const bendDirection=B.Vector3.Cross(hingeAxis,fingerDirection);
+    const sign=B.Vector3.Dot(bendDirection,bendTarget)>=0?1:-1;
     const profile=profiles[digit]||profiles.index;
-    const curl=profile[segment]??profile[Math.min(2,i)];
-    const fingerSpread=digit==='thumb'?(side*.035):(digit==='pinky'||digit==='little'?side*.018:(digit==='index'?-side*.012:0));
-    const wristRelax=gripping?0:.012*Math.sin(elapsed*.82+(i*.21));
-    setRigDelta(node,curl+wristRelax,fingerSpread,0,true);
+    const angle=profile[Math.min(2,i)]??profile[2];
+    // World-space hinge rotation is sign-corrected independently for left/right
+    // and for each finger, avoiding mirrored outward bends from local +X guesses.
+    node.rotate(hingeAxis,angle*sign,B.Space.WORLD);
+    node.computeWorldMatrix(true);
    }
   }
  }
@@ -4960,20 +5006,28 @@ async function startGame(){
     let gripWorld=null,stickAxis=forwardCarryAxis.clone();
     if(realHandNode){
      realHandNode.computeWorldMatrix(true);
-     gripWorld=realHandNode.getAbsolutePosition().clone();
+     const palmFrame=getRealPalmFrame(1);
+     if(palmFrame){
+      // Place the shaft through the actual palm centre, not at the wrist pivot.
+      // A small offset keeps it visible on the palmar side without floating.
+      gripWorld=palmFrame.palmCenter.clone()
+       .add(palmFrame.normal.scale(.018))
+       .add(modelRight.scale(.006));
+     }else{
+      gripWorld=realHandNode.getAbsolutePosition().clone();
+      if(realForearmNode){
+       realForearmNode.computeWorldMatrix(true);
+       const distal=gripWorld.subtract(realForearmNode.getAbsolutePosition());
+       if(distal.lengthSquared()>.0001)gripWorld.addInPlace(distal.normalize().scale(.055));
+      }
+      gripWorld.addInPlace(modelForward.scale(.025));
+     }
      if(realForearmNode){
       realForearmNode.computeWorldMatrix(true);
-      const distal=gripWorld.subtract(realForearmNode.getAbsolutePosition());
-      if(distal.lengthSquared()>.0001){
-       distal.normalize();
-       // Move a short distance toward the fingers, then expose the shaft just
-       // in front of the palm so it cannot disappear inside the torso mesh.
-       gripWorld.addInPlace(distal.scale(.025));
-      }
-     }
-     gripWorld.addInPlace(modelForward.scale(.075));
-     gripWorld.addInPlace(modelRight.scale(.012));
-     stickAxis=forwardCarryAxis.clone();
+      const armDown=realHandNode.getAbsolutePosition().subtract(realForearmNode.getAbsolutePosition());
+      if(armDown.lengthSquared()>.0001)stickAxis=armDown.normalize().scale(-1);
+      else stickAxis=forwardCarryAxis.clone();
+     }else stickAxis=forwardCarryAxis.clone();
     }else if(realForearmNode){
      realForearmNode.computeWorldMatrix(true);
      const forearmDirection=realForearmNode.getDirection(B.Axis.Y).normalize();
