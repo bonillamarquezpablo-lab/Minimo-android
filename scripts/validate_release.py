@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.169"
+EXPECTED_VERSION = "0.6.170"
 
 HTML_PAGES = (
     "index.html",
@@ -125,8 +125,12 @@ def main() -> None:
         fail("La mano derecha no aplica la pose de agarre del arma.")
     if "applyRealPlayerFingerPose(realLeftGripBones,'relaxed')" not in index_html:
         fail("La mano izquierda no aplica una curva relajada de dedos.")
+    if "joint===1?.56:joint===2?.76:.58" not in index_html or "joint===1?.27:joint===2?.39:.30" not in index_html:
+        fail("La flexión visible de los dedos no está aplicada en ambas manos.")
     if "alignPalmTowardTorso" in index_html:
         fail("Se ha reintroducido el giro experimental de palma en espacio mundial.")
+    if "bodyLocalDirection(root,side*(.13+breathSway*.022),-.985,.055+breathSway*.024,upperLength)" not in index_html:
+        fail("La postura estable de brazos se ha alterado.")
     grip_start = index_html.find("function applyRealPlayerClubGripPose(){")
     grip_end = index_html.find("\n }", grip_start)
     grip_pose = index_html[grip_start:grip_end] if grip_start >= 0 and grip_end > grip_start else ""
@@ -142,8 +146,8 @@ def main() -> None:
         fail("El palo no está orientado hacia delante con inclinación descendente.")
     if "distal.scale(.025)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
-    if "side*(.045+breathSway*.022),-.938,-(.205+breathSway*.065)" not in index_html:
-        fail("La pose natural del antebrazo con el palo no está restaurada.")
+    if "side*(.025+breathSway*.010),-.958,.13+breathSway*.032" not in index_html:
+        fail("La orientación original del brazo de la versión estable no está restaurada.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
