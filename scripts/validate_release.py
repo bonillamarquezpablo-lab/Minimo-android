@@ -122,17 +122,17 @@ def main() -> None:
     club_pose = index_html.split("function applyRealPlayerClubGripPose()", 1)[1].split("function quaternionAlignYTo", 1)[0]
     if "relaxHumanoidArm(" in club_pose:
         fail("La pose del brazo se aplica dos veces en el fotograma del palo.")
-    if "bodyLocalDirection(realPlayerModelPivot||root,-side,0,0,1)" not in index_html:
+    if "bodyLocalDirection(root,-side,0,0,1)" not in index_html:
         fail("La palma no utiliza el eje medial del personaje para orientarse hacia el muslo.")
     if "if(walking&&realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying)return;" in index_html:
         fail("El gait procedural sigue saltándose los huesos no animados por el clip Walk/Run.")
-    if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html:
+    if "palmFrame.palmCenter.clone()" not in index_html:
         fail("El palo no tiene el desplazamiento frontal de visibilidad en la palma.")
     if "RealCastawayStickGrip',club,[0,.20,.025]" not in index_html:
         fail("La empuñadura del palo no está centrada en la palma.")
     if "modelForward.clone().add(new B.Vector3(0,.24,0)).normalize()" not in index_html:
         fail("El palo no está orientado hacia delante con inclinación descendente.")
-    if "distal.scale(.025)" not in index_html:
+    if "frame.normal.scale(.018)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
     if "side*(.045+breathSway*.022),-.938,-(.205+breathSway*.065)" not in index_html:
         fail("El antebrazo del palo no conserva la flexión suave prevista.")
@@ -152,7 +152,7 @@ def main() -> None:
         fail("La flexión no distingue el cierre de los dedos de la oposición del pulgar.")
     if "palmFrame.palmCenter.clone()" not in index_html or "gripWorld.addInPlace(modelForward.scale(.075))" in index_html:
         fail("El palo no está centrado en la palma real del vikingo.")
-    if "function applyFingerCurlProfile" not in index_html or "([0-9]+)[rl]?$" not in index_html:
+    if "function applyFingerCurlProfile" not in index_html or "([0-9]+)$" not in index_html:
         fail("Falta la flexión progresiva de los segmentos de los dedos.")
     if "applyFingerCurlProfile(realLeftGripBones,-1,false)" not in index_html or "applyFingerCurlProfile(realRightGripBones,1,gripping)" not in index_html:
         fail("La pose de dedos no se aplica a ambas manos.")
