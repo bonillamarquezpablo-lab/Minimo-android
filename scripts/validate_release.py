@@ -133,10 +133,14 @@ def main() -> None:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
     if "side*(.025+breathSway*.010),-.958,-(" not in index_html:
         fail("El antebrazo con el palo no sigue el eje frontal del modelo tras el pivote visual.")
-    if "function alignRightPalmTowardTorso" not in index_html or "alignRightPalmTowardTorso(upper,lower,hand,alignedAxis)" not in index_html:
-        fail("Falta la calibración anatómica de la palma respecto al antebrazo.")
+    if "function alignPalmTowardTorso" not in index_html or "alignPalmTowardTorso(upper,lower,hand,alignedAxis,side)" not in index_html:
+        fail("Falta la calibración anatómica de ambas palmas respecto a sus antebrazos.")
+    if "const fingerBones=side<0?realLeftGripBones:realRightGripBones" not in index_html or "realLeftGripBones=findRightGripBones(asset,'left')" not in index_html:
+        fail("Faltan los puntos de referencia de los dedos de ambas manos.")
     if "palmWidth=index.getAbsolutePosition().subtract(pinky.getAbsolutePosition())" not in index_html:
         fail("Falta la referencia geométrica de la palma mediante los dedos.")
+    if "const armBreath=Math.sin(elapsed*1.16)" not in index_html:
+        fail("Falta el movimiento respiratorio sutil de los brazos en reposo.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
