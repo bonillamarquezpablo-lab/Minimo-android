@@ -3351,7 +3351,7 @@ async function startGame(){
  let realPlayerModel=null,realPlayerModelPivot=null,realPlayerAnimations={walk:null,run:null,idle:null,attack:null},realPlayerMode='',realPlayerCurrentGroup=null,realPlayerIdleTransition=null,realRigNodes={},realRigIdleNodes=[],realRigManualGaitNodes={},realPlayerReady=false,realPlayerBusy=false,realPlayerManualLocomotion=false,playerHumanBlob=null,equippedWeapon='club';
  const unlockedWeapons=new Set(['club']);
   const REAL_VIKING_FORWARD_OFFSET=Math.PI;
- let realHandNode=null,realUpperArmNode=null,realForearmNode=null,realSpineNode=null,realWeaponHolder=null,realWeaponGroups={},realBoneRest=new Map(),realRightGripBones=[],realWeaponAnchorCalibrated=false,realWeaponAnchorType='',realWeaponPoseOverride=null,realWeaponSocketNode=null,realWeaponSocketMode='pivot',realWeaponHandDefaultPosition=null,realWeaponHandDefaultRotation=null;
+ let realHandNode=null,realUpperArmNode=null,realForearmNode=null,realSpineNode=null,realWeaponHolder=null,realWeaponGroups={},realBoneRest=new Map(),realRightGripBones=[],realRightPalmNodes=null,realWeaponAnchorCalibrated=false,realWeaponAnchorType='',realWeaponPoseOverride=null,realWeaponSocketNode=null,realWeaponSocketMode='pivot',realWeaponHandDefaultPosition=null,realWeaponHandDefaultRotation=null;
  const REAL_PLAYER_ROOT_GROUND_OFFSET=.025;
  const modelStatusEl=document.getElementById('modelStatus'),modelStatusText=document.getElementById('modelStatusText');
  let modelStatusAutoHideTimer=null;
@@ -4336,28 +4336,28 @@ async function startGame(){
   return new B.Vector3((x*c+z*s)*length,y*length,(-x*s+z*c)*length);
  }
  function alignRightPalmTowardTorso(upper,lower,hand,forearmAxis){
-  // Twist the forearm around its own long axis so the palm faces the torso,
-  // rather than leaving the bind-pose palm normal pointing forward.
+  // Build the palm frame from the index, middle and little-finger metacarpal
+  // directions, then roll the forearm around its own axis so the palm faces inward.
   if(!upper||!lower||!hand||!forearmAxis||!realRightGripBones||!realRightGripBones.length)return false;
   try{
-   const firstSegment=(digit)=>{
-    const candidates=realRightGripBones.filter(entry=>entry&&entry.node&&entry.name&&entry.name.includes(digit));
-    candidates.sort((a,b)=>{
-     const ja=Number((String(a.name).match(/(\\d+)$/)||[])[1]||99);
-     const jb=Number((String(b.name).match(/(\\d+)$/)||[])[1]||99);
-     return ja-jb;
-    });
-    return candidates.length?candidates[0].node:null;
-   };
-   const index=firstSegment('index'),middle=firstSegment('middle'),pinky=firstSegment('pinky')||firstSegment('little');
+   if(!realRightPalmNodes){
+    const firstSegment=digit=>{
+     const candidates=realRightGripBones.filter(entry=>entry&&entry.node&&entry.name&&entry.name.includes(digit));
+     candidates.sort((a,b)=>{
+      const ja=Number((String(a.name).match(/([0-9]+)$/)||[])[1]||99);
+      const jb=Number((String(b.name).match(/([0-9]+)$/)||[])[1]||99);
+      return ja-jb;
+     });
+     return candidates.length?candidates[0].node:null;
+    };
+    realRightPalmNodes={index:firstSegment('index'),middle:firstSegment('middle'),pinky:firstSegment('pinky')||firstSegment('little')};
+   }
+   const {index,middle,pinky}=realRightPalmNodes;
    if(!index||!middle||!pinky)return false;
    [hand,index,middle,pinky,upper,lower].forEach(node=>node.computeWorldMatrix(true));
    const wrist=hand.getAbsolutePosition();
-   const fingerBase=middle.getAbsolutePosition();
-   const indexBase=index.getAbsolutePosition();
-   const pinkyBase=pinky.getAbsolutePosition();
-   const fingerAxis=fingerBase.subtract(wrist);
-   const palmWidth=indexBase.subtract(pinkyBase);
+   const fingerAxis=middle.getAbsolutePosition().subtract(wrist);
+   const palmWidth=index.getAbsolutePosition().subtract(pinky.getAbsolutePosition());
    if(fingerAxis.lengthSquared()<1e-7||palmWidth.lengthSquared()<1e-7)return false;
    const axis=forearmAxis.clone();
    if(axis.lengthSquared()<1e-7)return false;
@@ -4366,17 +4366,14 @@ async function startGame(){
    palmNormal.subtractInPlace(axis.scale(B.Vector3.Dot(palmNormal,axis)));
    if(palmNormal.lengthSquared()<1e-7)return false;
    palmNormal.normalize();
-   // The shoulder-to-wrist direction, projected off the forearm, defines
-   // the medial/palm-in direction for a relaxed arm at the character's side.
-   const shoulder=upper.getAbsolutePosition();
-   let desired=shoulder.subtract(wrist);
+   // The shoulder vector projected off the forearm gives the medial direction:
+   // the relaxed right palm faces the torso, not the character's forward axis.
+   let desired=upper.getAbsolutePosition().subtract(wrist);
    desired.subtractInPlace(axis.scale(B.Vector3.Dot(desired,axis)));
    if(desired.lengthSquared()<1e-7)return false;
    desired.normalize();
    const cross=B.Vector3.Cross(palmNormal,desired);
-   const sin=B.Vector3.Dot(axis,cross);
-   const cos=Math.max(-1,Math.min(1,B.Vector3.Dot(palmNormal,desired)));
-   const twist=Math.atan2(sin,cos);
+   const twist=Math.atan2(B.Vector3.Dot(axis,cross),Math.max(-1,Math.min(1,B.Vector3.Dot(palmNormal,desired))));
    if(Number.isFinite(twist)&&Math.abs(twist)>.012){
     lower.rotate(axis,twist,B.Space.WORLD);
     lower.computeWorldMatrix(true);
@@ -4544,7 +4541,7 @@ async function startGame(){
   const rig=separateRigLimbAliases(findRigNodes(asset));
   const hasRigLegs=!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg&&rig.leftUpperLeg!==rig.rightUpperLeg&&rig.leftLowerLeg!==rig.rightLowerLeg);
   if(!walk&&!run&&!hasRigLegs)throw new Error('El GLB no incluye animación de marcha ni huesos de piernas reconocibles. Animaciones: '+(groups.map(g=>g.name).join(', ')||'ninguna'));
-  realRigNodes=rig;realRightGripBones=findRightGripBones(asset);realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});realRightGripBones.forEach(entry=>{const node=entry&&entry.node;if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
+  realRigNodes=rig;realRightGripBones=findRightGripBones(asset);realRightPalmNodes=null;realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});realRightGripBones.forEach(entry=>{const node=entry&&entry.node;if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
   // Prioridad: palma real -> muñeca/antebrazo -> brazo superior. Así el arma acompaña el giro del brazo incluso en esqueletos con nombres distintos.
   realWeaponSocketNode=rig.hand||rig.forearm||rig.upperArm||null;
   realWeaponSocketMode=rig.hand?'hand':(rig.forearm?'forearm':(rig.upperArm?'upperArm':'pivot'));
