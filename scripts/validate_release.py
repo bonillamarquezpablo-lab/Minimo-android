@@ -137,7 +137,7 @@ def main() -> None:
     if not player_gait or player_gait.count("relaxHumanoidArm(") != 4:
         fail("La postura estable debe colocar ambos brazos en reposo y navegación.")
     arm_start = index_html.find("function relaxHumanoidArm(")
-    arm_end = index_html.find("\\n function relaxHumanoidLeg(", arm_start)
+    arm_end = index_html.find("\n function relaxHumanoidLeg(", arm_start)
     arm_pose = index_html[arm_start:arm_end] if arm_start >= 0 and arm_end > arm_start else ""
     if not arm_pose or arm_pose.count("rotateBoneWorldTowardExact(") < 2:
         fail("Falta la colocación anatómica de hombro y antebrazo.")
