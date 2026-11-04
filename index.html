@@ -4754,8 +4754,8 @@ async function startGame(){
     apply('spine',-.035-.035*stance+.045*seaPitch,.012*Math.sin(elapsed*.83),.055*seaRoll-.024*stance,true);
     apply('head',.012*Math.sin(elapsed*.62),.028*Math.sin(elapsed*.48+.4),-.018*seaRoll+.012*Math.sin(elapsed*.91),true);
     relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.78+Math.abs(stance)*.16);
-    relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false,breathBoat,true);
-    relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true,breathBoat,true);
+    relaxHumanoidArm(player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false,breathBoat,true);
+    relaxHumanoidArm(player.root,n.upperArm,n.forearm,n.hand,1,true,breathBoat,true);
     blendRealPlayerIdleTransition();
     return;
    }
@@ -4764,8 +4764,8 @@ async function startGame(){
    apply('leftShoulder',.002*Math.sin(elapsed*.83),0,.010,true);
    apply('rightShoulder',-.002*Math.sin(elapsed*.83),0,-.010,true);
    relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.58+Math.abs(weightShift)*.22);
-   relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false);
-   relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true);
+   relaxHumanoidArm(player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false);
+   relaxHumanoidArm(player.root,n.upperArm,n.forearm,n.hand,1,true);
    apply('hips',breath*.014*idleMotionScale,weightShift*.010*idleMotionScale,weightShift*.018*idleMotionScale,true);
    apply('spine',-.024+breath*.032*idleMotionScale,-weightShift*.008*idleMotionScale,-weightShift*.014*idleMotionScale,true);
    apply('head',.012*Math.sin(elapsed*.43)*idleMotionScale,.021*Math.sin(elapsed*.31)*idleMotionScale,.008*counterSway*idleMotionScale,true);
@@ -4826,7 +4826,7 @@ async function startGame(){
      if(holding&&(mode==='idle'||mode==='sail')){
    const breath=Math.sin(elapsed*1.08)*.35;
    const boat=mode==='sail';
-   relaxHumanoidArm(realPlayerModelPivot||player.root,realRigNodes.upperArm,realRigNodes.forearm,realRigNodes.hand,1,true,breath,boat);
+   relaxHumanoidArm(player.root,realRigNodes.upperArm,realRigNodes.forearm,realRigNodes.hand,1,true,breath,boat);
   }
   const bones=realRightGripBones||[];
   for(let i=0;i<bones.length;i++){
