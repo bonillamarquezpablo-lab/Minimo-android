@@ -168,3 +168,41 @@ def main() -> None:
     with tempfile.TemporaryDirectory(prefix="eln-release-check-") as temp_dir:
         temp = Path(temp_dir)
         sw_check = subprocess.run(
+            [node, "--check", str(DIST / "sw.js")],
+            capture_output=True,
+            text=True,
+        )
+        if sw_check.returncode:
+            fail("Sintaxis inválida en sw.js:\n" + sw_check.stderr)
+
+        for number, page in enumerate(HTML_PAGES):
+            html = read_text(page)
+            blocks = re.findall(
+                r"<script\b[^>]*>(.*?)</script\s*>",
+                html,
+                re.IGNORECASE | re.DOTALL,
+            )
+            inline = [block for block in blocks if block.strip()]
+            if not inline:
+                fail(f"No se encontraron scripts inline en {page}.")
+            check_file = temp / f"inline-{number}.js"
+            check_file.write_text("\n".join(inline), encoding="utf-8")
+            check = subprocess.run(
+                [node, "--check", str(check_file)],
+                capture_output=True,
+                text=True,
+            )
+            if check.returncode:
+                fail(f"Sintaxis JavaScript inválida en {page}:\n{check.stderr}")
+
+    print(
+        f"OK EL SIN NOMBRE {version}: páginas, rutas de invitado, manifiestos, "
+        "caché, hashes y JavaScript verificados."
+    )
+    print(
+        f"OK {len(entries)} recursos registrados; entorno nórdico local "
+        "y service worker validados."
+    )
+
+if __name__ == "__main__":
+    main()
