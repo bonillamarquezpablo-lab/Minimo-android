@@ -4881,46 +4881,28 @@ async function startGame(){
   if(typeof weaponLevel!=='undefined'&&weaponLevel>0)decorateWeaponGroups(realWeaponGroups,'real',weaponLevel);
   syncRealWeaponAnchor(0);
  }
- function applyFingerCurlProfile(entries,side,gripping=false){
-  if(!entries||!entries.length)return;
-  // More visible but still relaxed finger flex: MCP, PIP and DIP are
-  // progressively curled; the free hand must not hang as a flat open hand.
-  const profiles=gripping
-   ?{thumb:[.26,.48,.32],index:[.38,.72,.48],middle:[.42,.78,.52],ring:[.45,.82,.56],pinky:[.48,.86,.58],little:[.48,.86,.58]}
-   :{thumb:[.16,.24,.16],index:[.17,.30,.20],middle:[.19,.34,.23],ring:[.21,.37,.25],pinky:[.23,.40,.27],little:[.23,.40,.27]};
-  const grouped={thumb:[],index:[],middle:[],ring:[],pinky:[],little:[]};
-  for(const entry of entries){
-   const name=String(entry&&entry.name||entry&&entry.node&&entry.node.name||'').toLowerCase();
-   const digit=Object.keys(grouped).find(key=>name.includes(key));
-   const node=entry&&entry.node||entry;
-   if(digit&&node)grouped[digit].push({node,name});
-  }
-  for(const [digit,joints] of Object.entries(grouped)){
-   joints.sort((a,b)=>{
-    const ja=Number((a.name.match(/([0-9]+)[rl]?$/)||[])[1]||99);
-    const jb=Number((b.name.match(/([0-9]+)[rl]?$/)||[])[1]||99);
-    return ja-jb;
-   });
-   for(let i=0;i<joints.length;i++){
-    const {node,name}=joints[i];
-    // GLB finger nodes commonly end in 1/2/3; accept a trailing side marker too.
-    const suffix=Number((name.match(/([0-9]+)[rl]?$/)||[])[1]||i+1);
-    const segment=Math.max(1,Math.min(3,suffix))-1;
-    const profile=profiles[digit]||profiles.index;
-    const curl=profile[segment]??profile[Math.min(2,i)];
-    const fingerSpread=digit==='thumb'?(side*.035):(digit==='pinky'||digit==='little'?side*.018:(digit==='index'?-side*.012:0));
-    const wristRelax=gripping?0:.012*Math.sin(elapsed*.82+(i*.21));
-    setRigDelta(node,curl+wristRelax,fingerSpread,0,true);
-   }
-  }
- }
  function applyRealPlayerClubGripPose(){
   if(!realPlayerReady||!realWeaponHolder||!realRigNodes)return;
-  const gripping=!!realWeaponGroups[equippedWeapon];
-  // Finger joints are posed separately from the arm: a loose hand at rest,
-  // a progressive three-joint curl around the equipped weapon when held.
-  applyFingerCurlProfile(realLeftGripBones,-1,false);
-  applyFingerCurlProfile(realRightGripBones,1,gripping);
+  const holding=!!realWeaponGroups.club&&equippedWeapon==='club';
+  const mode=realPlayerMode;
+  // En reposo/navegación fijamos una pose estable; durante Walk/Run dejamos
+   // que el clip nativo anime hombro y codo. Forzar relaxHumanoidArm aquí,
+   // después del clip, congelaba el brazo y anulaba el balanceo al caminar.
+     if(holding&&(mode==='idle'||mode==='sail')){
+   const breath=Math.sin(elapsed*1.08)*.35;
+   const boat=mode==='sail';
+   relaxHumanoidArm(realPlayerModelPivot||player.root,realRigNodes.upperArm,realRigNodes.forearm,realRigNodes.hand,1,true,breath,boat);
+  }
+  const bones=realRightGripBones||[];
+  for(let i=0;i<bones.length;i++){
+   const entry=bones[i],node=entry&&entry.node||entry;if(!node)continue;
+   if(!holding){const rest=realBoneRest.get(node);if(rest)restoreRigNodePose(node,rest);continue;}
+   const name=String(entry&&entry.name||node.name||'').toLowerCase();
+   const thumb=/thumb/.test(name);
+   const joint=Number((name.match(/[1-9]$/)||[])[0]||1);
+   const curl=thumb?(joint===1?.28:.20):(joint===1?.34:joint===2?.48:.36);
+   setRigDelta(node,curl,0,0,true);
+  }
  }
  function quaternionAlignYTo(direction){
   const from=B.Axis.Y.clone().normalize(),to=direction.clone().normalize();
