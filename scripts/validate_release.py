@@ -133,6 +133,10 @@ def main() -> None:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
     if "side*(.025+breathSway*.010),-.958,-(" not in index_html:
         fail("El antebrazo con el palo no sigue el eje frontal del modelo tras el pivote visual.")
+    if "function alignRightPalmTowardTorso" not in index_html or "alignRightPalmTowardTorso(upper,lower,hand,alignedAxis)" not in index_html:
+        fail("Falta la calibración anatómica de la palma respecto al antebrazo.")
+    if "palmWidth=index.getAbsolutePosition().subtract(pinky.getAbsolutePosition())" not in index_html:
+        fail("Falta la referencia geométrica de la palma mediante los dedos.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
