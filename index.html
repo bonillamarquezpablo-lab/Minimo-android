@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.172">
-<meta name="el-sin-nombre-repair" content="0.6.172 release hardening: guest PWA URLs, offline fallback and release validation">
+<meta name="el-sin-nombre-build" content="0.6.173">
+<meta name="el-sin-nombre-repair" content="0.6.173 arm-side calibration from the Viking GLB bind pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.172</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.173</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -4341,8 +4341,11 @@ async function startGame(){
    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);
    const shoulder=upper.getAbsolutePosition(),elbow=lower.getAbsolutePosition(),upperVector=elbow.subtract(shoulder),upperLength=upperVector.length();
    if(upperLength<.045)return false;
-   // Recupera la postura suave anterior: el hombro no se abre hacia atrás.
-   const upperTarget=boatStance?bodyLocalDirection(root,side*(holdingWeapon?0.17:0.15+breathSway*.018),-.962,.19+breathSway*.024,upperLength):bodyLocalDirection(root,side*(.13+breathSway*.022),-.985,.055+breathSway*.024,upperLength);
+   // El GLB coloca RightArm en X<0 y LeftArm en X>0. El parámetro side
+   // llega como +1 para derecha y -1 para izquierda: se invierte para que
+   // el codo siga el lado anatómico real del esqueleto y no cruce el torso.
+   const modelSide=-side;
+   const upperTarget=boatStance?bodyLocalDirection(root,modelSide*(holdingWeapon?0.17:0.15+breathSway*.018),-.962,.19+breathSway*.024,upperLength):bodyLocalDirection(root,modelSide*(.13+breathSway*.022),-.985,.055+breathSway*.024,upperLength);
    rotateBoneWorldTowardExact(upper,upperVector,upperTarget);
    lower.computeWorldMatrix(true);
    let wristVector=null;
@@ -4354,10 +4357,10 @@ async function startGame(){
    }
    if(wristVector&&wristVector.length()>.035){
     const target=boatStance
-     ?bodyLocalDirection(root,side*(holdingWeapon?.06:.11+breathSway*.015),holdingWeapon?-.91:-.88,.34+breathSway*.04,wristVector.length())
+     ?bodyLocalDirection(root,modelSide*(holdingWeapon?.06:.11+breathSway*.015),holdingWeapon?-.91:-.88,.34+breathSway*.04,wristVector.length())
      :(holdingWeapon
-      ?bodyLocalDirection(root,side*(.025+breathSway*.010),-.958,.13+breathSway*.032,wristVector.length())
-      :bodyLocalDirection(root,side*(.07+breathSway*.018),-.915,.27+breathSway*.045,wristVector.length()));
+      ?bodyLocalDirection(root,modelSide*(.025+breathSway*.010),-.958,.13+breathSway*.032,wristVector.length())
+      :bodyLocalDirection(root,modelSide*(.07+breathSway*.018),-.915,.27+breathSway*.045,wristVector.length()));
     rotateBoneWorldTowardExact(lower,wristVector,target);
    }
    // La rotación de la palma se conserva íntegra.
