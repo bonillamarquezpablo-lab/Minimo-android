@@ -132,7 +132,7 @@ def main() -> None:
         fail("La empuñadura del palo no está centrada en la palma.")
     if "modelForward.clone().add(new B.Vector3(0,.24,0)).normalize()" not in index_html:
         fail("El palo no está orientado hacia delante con inclinación descendente.")
-    if "frame.normal.scale(.018)" not in index_html:
+    if "palmFrame.normal.scale(.018)" not in index_html or "armDown.normalize().scale(-1)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
     if "side*(.045+breathSway*.022),-.938,-(.205+breathSway*.065)" not in index_html:
         fail("El antebrazo del palo no conserva la flexión suave prevista.")
