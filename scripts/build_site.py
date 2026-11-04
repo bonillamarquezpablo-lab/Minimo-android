@@ -8,7 +8,6 @@ import hashlib
 import json
 import re
 import shutil
-import struct
 import subprocess
 import sys
 import tempfile
@@ -183,125 +182,6 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                         f"{len(document.get('animations') or [])} clips, "
                         f"{len(document.get('images') or [])} texture images."
                     )
-                    if destination.name == "viking-rigged.glb":
-                        nodes = document.get("nodes") or []
-                        parent_of = {}
-                        for parent_index, parent_node in enumerate(nodes):
-                            for child_index in parent_node.get("children") or []:
-                                parent_of[child_index] = parent_index
-                        joint_indices = sorted({
-                            index
-                            for skin in (document.get("skins") or [])
-                            for index in (skin.get("joints") or [])
-                        })
-                        def node_name(index):
-                            if index < 0 or index >= len(nodes):
-                                return f"<invalid:{index}>"
-                            return nodes[index].get("name") or f"node_{index}"
-                        rig_map = []
-                        for index in joint_indices:
-                            node = nodes[index]
-                            parent_index = parent_of.get(index)
-                            rig_map.append({
-                                "i": index,
-                                "name": node_name(index),
-                                "parent": node_name(parent_index) if parent_index is not None else None,
-                                "children": [
-                                    node_name(child)
-                                    for child in (node.get("children") or [])
-                                    if child in joint_indices
-                                ],
-                                "translation": node.get("translation"),
-                                "rotation": node.get("rotation"),
-                            })
-                        print("VIKING_RIG_NODE_MAP=" + json.dumps(rig_map, ensure_ascii=False, separators=(",", ":")))
-                        raw_glb = destination.read_bytes()
-                        bin_chunk = b""
-                        chunk_offset = 12
-                        while chunk_offset + 8 <= len(raw_glb):
-                            chunk_length = int.from_bytes(raw_glb[chunk_offset:chunk_offset + 4], "little")
-                            chunk_type = raw_glb[chunk_offset + 4:chunk_offset + 8]
-                            chunk_offset += 8
-                            if chunk_type == b"BIN\x00":
-                                bin_chunk = raw_glb[chunk_offset:chunk_offset + chunk_length]
-                                break
-                            chunk_offset += chunk_length
-                        def read_float_accessor(accessor_index):
-                            accessor = (document.get("accessors") or [])[accessor_index]
-                            view = (document.get("bufferViews") or [])[accessor["bufferView"]]
-                            components = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}[accessor["type"]]
-                            if accessor.get("componentType") != 5126:
-                                return []
-                            stride = view.get("byteStride", components * 4)
-                            start = view.get("byteOffset", 0) + accessor.get("byteOffset", 0)
-                            values = [
-                                struct.unpack_from("<" + "f" * components, bin_chunk, start + index * stride)
-                                for index in range(accessor["count"])
-                            ]
-                            return [row[0] for row in values] if components == 1 else values
-                        def quat_multiply(a, b):
-                            ax, ay, az, aw = a
-                            bx, by, bz, bw = b
-                            return (
-                                aw*bx + ax*bw + ay*bz - az*by,
-                                aw*by - ax*bz + ay*bw + az*bx,
-                                aw*bz + ax*by - ay*bx + az*bw,
-                                aw*bw - ax*bx - ay*by - az*bz,
-                            )
-                        finger_tracks = []
-                        for animation in (document.get("animations") or []):
-                            for channel in (animation.get("channels") or []):
-                                target = channel.get("target") or {}
-                                node_index = target.get("node")
-                                if target.get("path") != "rotation" or node_index not in joint_indices:
-                                    continue
-                                name = node_name(node_index)
-                                if not re.search(r"(Thumb|Index|Middle|Ring|Pinky)([123])$", name, re.I):
-                                    continue
-                                sampler = animation["samplers"][channel["sampler"]]
-                                times = read_float_accessor(sampler["input"])
-                                values = read_float_accessor(sampler["output"])
-                                if not times or not values:
-                                    continue
-                                rest = nodes[node_index].get("rotation") or (0, 0, 0, 1)
-                                rest_inverse = (-rest[0], -rest[1], -rest[2], rest[3])
-                                samples = []
-                                for key_index in range(min(len(times), len(values))):
-                                    delta = quat_multiply(rest_inverse, values[key_index])
-                                    samples.append({
-                                        "t": round(float(times[key_index]), 4),
-                                        "dq": [round(float(v), 4) for v in delta],
-                                        "absXYZ": [round(abs(float(delta[i])), 4) for i in range(3)],
-                                    })
-                                strongest = max(samples, key=lambda sample: sum(sample["absXYZ"]))
-                                finger_tracks.append({
-                                    "clip": animation.get("name") or "unnamed",
-                                    "node": name,
-                                    "keys": len(samples),
-                                    "maxDelta": strongest,
-                                    "first": samples[0]["dq"],
-                                    "mid": samples[len(samples)//2]["dq"],
-                                    "last": samples[-1]["dq"],
-                                })
-                        print("VIKING_FINGER_ROTATION_TRACKS=" + json.dumps(finger_tracks, ensure_ascii=False, separators=(",", ":")))
-                        animated = []
-                        for animation in (document.get("animations") or []):
-                            for channel in (animation.get("channels") or []):
-                                target = channel.get("target") or {}
-                                node_index = target.get("node")
-                                if node_index in joint_indices:
-                                    name = node_name(node_index).lower()
-                                    if any(token in name for token in (
-                                        "arm", "forearm", "elbow", "hand", "wrist",
-                                        "thumb", "index", "middle", "ring", "pinky",
-                                        "little", "finger"
-                                    )):
-                                        animated.append({
-                                            "clip": animation.get("name") or "unnamed",
-                                            "node": node_name(node_index),
-                                            "path": target.get("path"),
-                                        })
-                        print("VIKING_ARM_HAND_ANIMATION_CHANNELS=" + json.dumps(animated, ensure_ascii=False, separators=(",", ":")))
                 else:
                     read_glb_document(destination)
             return {
