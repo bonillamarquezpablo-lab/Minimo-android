@@ -132,8 +132,6 @@ def main() -> None:
     grip_pose = index_html[grip_start:grip_end] if grip_start >= 0 and grip_end > grip_start else ""
     if not grip_pose or "relaxHumanoidArm" in grip_pose:
         fail("La pose de dedos no debe volver a girar el brazo o la muñeca.")
-    if not grip_pose or "relaxHumanoidArm" in grip_pose.group(1):
-        fail("La pose de dedos no debe volver a girar el brazo o la muñeca.")
     if "if(walking&&realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying)return;" in index_html:
         fail("El gait procedural sigue saltándose los huesos no animados por el clip Walk/Run.")
     if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html:
