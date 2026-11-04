@@ -4379,8 +4379,9 @@ async function startGame(){
    const cross=B.Vector3.Cross(palmNormal,desired);
    const twist=Math.atan2(B.Vector3.Dot(axis,cross),Math.max(-1,Math.min(1,B.Vector3.Dot(palmNormal,desired))));
    if(Number.isFinite(twist)&&Math.abs(twist)>.012){
-    lower.rotate(axis,twist,B.Space.WORLD);
-    lower.computeWorldMatrix(true);
+    // Palm roll belongs to the wrist/hand joint. Twisting the forearm here
+    // rotates the elbow/ulna visually and creates the "strangled" arm.
+    hand.rotate(axis,twist,B.Space.WORLD);
     hand.computeWorldMatrix(true);
    }
    return true;
@@ -4882,9 +4883,11 @@ async function startGame(){
  }
  function applyFingerCurlProfile(entries,side,gripping=false){
   if(!entries||!entries.length)return;
+  // More visible but still relaxed finger flex: MCP, PIP and DIP are
+  // progressively curled; the free hand must not hang as a flat open hand.
   const profiles=gripping
-   ?{thumb:[.18,.34,.22],index:[.27,.52,.34],middle:[.29,.57,.37],ring:[.30,.60,.39],pinky:[.32,.63,.41],little:[.32,.63,.41]}
-   :{thumb:[.075,.12,.08],index:[.075,.14,.10],middle:[.085,.16,.11],ring:[.095,.18,.12],pinky:[.11,.20,.14],little:[.11,.20,.14]};
+   ?{thumb:[.26,.48,.32],index:[.38,.72,.48],middle:[.42,.78,.52],ring:[.45,.82,.56],pinky:[.48,.86,.58],little:[.48,.86,.58]}
+   :{thumb:[.16,.24,.16],index:[.17,.30,.20],middle:[.19,.34,.23],ring:[.21,.37,.25],pinky:[.23,.40,.27],little:[.23,.40,.27]};
   const grouped={thumb:[],index:[],middle:[],ring:[],pinky:[],little:[]};
   for(const entry of entries){
    const name=String(entry&&entry.name||entry&&entry.node&&entry.node.name||'').toLowerCase();
