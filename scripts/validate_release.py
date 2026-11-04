@@ -134,14 +134,22 @@ def main() -> None:
         fail("El palo no está orientado hacia delante con inclinación descendente.")
     if "distal.scale(.025)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
-    if "side*(.025+breathSway*.010),-.958,-(" not in index_html:
-        fail("El antebrazo con el palo no sigue el eje frontal del modelo tras el pivote visual.")
+    if "side*(.045+breathSway*.022),-.938,-(.205+breathSway*.065)" not in index_html:
+        fail("El antebrazo del palo no conserva la flexión suave prevista.")
     if "function alignPalmTowardTorso" not in index_html or "alignPalmTowardTorso(upper,lower,hand,alignedAxis,side)" not in index_html:
         fail("Falta la calibración anatómica de ambas palmas respecto a sus antebrazos.")
     if "const fingerBones=side<0?realLeftGripBones:realRightGripBones" not in index_html or "realLeftGripBones=findRightGripBones(asset,'left')" not in index_html:
         fail("Faltan los puntos de referencia de los dedos de ambas manos.")
     if "palmWidth=index.getAbsolutePosition().subtract(pinky.getAbsolutePosition())" not in index_html:
         fail("Falta la referencia geométrica de la palma mediante los dedos.")
+    if "function applyFingerCurlProfile" not in index_html or "([0-9]+)[rl]?$" not in index_html:
+        fail("Falta la flexión progresiva de los segmentos de los dedos.")
+    if "applyFingerCurlProfile(realLeftGripBones,-1,false)" not in index_html or "applyFingerCurlProfile(realRightGripBones,1,gripping)" not in index_html:
+        fail("La pose de dedos no se aplica a ambas manos.")
+    if "realRightGripBones.concat(realLeftGripBones)" not in index_html:
+        fail("Los huesos de la mano izquierda no se restauran desde el bind pose.")
+    if "const leftArmSway=armBreath*.62+armWeight*.22+armCounter*.10" not in index_html or "const rightArmSway=Math.sin(elapsed*1.16+.42)*.48-armWeight*.16-armCounter*.08" not in index_html:
+        fail("Falta el balanceo asimétrico y sutil de los brazos.")
     if "const armBreath=Math.sin(elapsed*1.16)" not in index_html:
         fail("Falta el movimiento respiratorio sutil de los brazos en reposo.")
 
