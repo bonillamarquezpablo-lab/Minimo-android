@@ -4335,6 +4335,56 @@ async function startGame(){
   const yaw=Number(root&&root.rotation&&root.rotation.y)||0,c=Math.cos(yaw),s=Math.sin(yaw);
   return new B.Vector3((x*c+z*s)*length,y*length,(-x*s+z*c)*length);
  }
+ function alignRightPalmTowardTorso(upper,lower,hand,forearmAxis){
+  // Twist the forearm around its own long axis so the palm faces the torso,
+  // rather than leaving the bind-pose palm normal pointing forward.
+  if(!upper||!lower||!hand||!forearmAxis||!realRightGripBones||!realRightGripBones.length)return false;
+  try{
+   const firstSegment=(digit)=>{
+    const candidates=realRightGripBones.filter(entry=>entry&&entry.node&&entry.name&&entry.name.includes(digit));
+    candidates.sort((a,b)=>{
+     const ja=Number((String(a.name).match(/(\\d+)$/)||[])[1]||99);
+     const jb=Number((String(b.name).match(/(\\d+)$/)||[])[1]||99);
+     return ja-jb;
+    });
+    return candidates.length?candidates[0].node:null;
+   };
+   const index=firstSegment('index'),middle=firstSegment('middle'),pinky=firstSegment('pinky')||firstSegment('little');
+   if(!index||!middle||!pinky)return false;
+   [hand,index,middle,pinky,upper,lower].forEach(node=>node.computeWorldMatrix(true));
+   const wrist=hand.getAbsolutePosition();
+   const fingerBase=middle.getAbsolutePosition();
+   const indexBase=index.getAbsolutePosition();
+   const pinkyBase=pinky.getAbsolutePosition();
+   const fingerAxis=fingerBase.subtract(wrist);
+   const palmWidth=indexBase.subtract(pinkyBase);
+   if(fingerAxis.lengthSquared()<1e-7||palmWidth.lengthSquared()<1e-7)return false;
+   const axis=forearmAxis.clone();
+   if(axis.lengthSquared()<1e-7)return false;
+   axis.normalize();
+   let palmNormal=B.Vector3.Cross(fingerAxis,palmWidth);
+   palmNormal.subtractInPlace(axis.scale(B.Vector3.Dot(palmNormal,axis)));
+   if(palmNormal.lengthSquared()<1e-7)return false;
+   palmNormal.normalize();
+   // The shoulder-to-wrist direction, projected off the forearm, defines
+   // the medial/palm-in direction for a relaxed arm at the character's side.
+   const shoulder=upper.getAbsolutePosition();
+   let desired=shoulder.subtract(wrist);
+   desired.subtractInPlace(axis.scale(B.Vector3.Dot(desired,axis)));
+   if(desired.lengthSquared()<1e-7)return false;
+   desired.normalize();
+   const cross=B.Vector3.Cross(palmNormal,desired);
+   const sin=B.Vector3.Dot(axis,cross);
+   const cos=Math.max(-1,Math.min(1,B.Vector3.Dot(palmNormal,desired)));
+   const twist=Math.atan2(sin,cos);
+   if(Number.isFinite(twist)&&Math.abs(twist)>.012){
+    lower.rotate(axis,twist,B.Space.WORLD);
+    lower.computeWorldMatrix(true);
+    hand.computeWorldMatrix(true);
+   }
+   return true;
+  }catch(err){console.debug('Ajuste de orientación de la palma omitido:',err);return false;}
+ }
  function relaxHumanoidArm(root,upper,lower,hand,side,holdingWeapon=false,breathSway=0,boatStance=false){
   if(!root||!upper||!lower)return false;
   try{
@@ -4360,8 +4410,13 @@ async function startGame(){
       ?bodyLocalDirection(root,side*(.025+breathSway*.010),-.958,-(.13+breathSway*.032),wristVector.length())
       :bodyLocalDirection(root,side*(.07+breathSway*.018),-.915,-(.27+breathSway*.045),wristVector.length()));
     rotateBoneWorldTowardExact(lower,wristVector,target);
+    lower.computeWorldMatrix(true);
+    if(hand)hand.computeWorldMatrix(true);
+    if(holdingWeapon&&hand){
+     const alignedAxis=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+     if(alignedAxis.lengthSquared()>.001)alignRightPalmTowardTorso(upper,lower,hand,alignedAxis);
+    }
    }
-   // La rotación de la palma se conserva íntegra.
    return true;
   }catch(err){console.debug('Pose de reposo del brazo omitida:',err);return false;}
  }
