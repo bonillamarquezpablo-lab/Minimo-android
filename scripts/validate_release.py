@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.168"
+EXPECTED_VERSION = "0.6.169"
 
 HTML_PAGES = (
     "index.html",
@@ -119,8 +119,17 @@ def main() -> None:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
     if "rightGripBones:realRightGripBones.length" not in index_html:
         fail("Falta telemetría del número de huesos de agarre detectados.")
-    if "if(holding&&(mode==='idle'||mode==='sail'))" not in index_html:
-        fail("El agarre sigue anulando la animación nativa del brazo durante Walk/Run.")
+    if "function applyRealPlayerFingerPose" not in index_html:
+        fail("Falta el controlador de flexión individual de los dedos.")
+    if "applyRealPlayerFingerPose(realRightGripBones,holding?'grip':'restore')" not in index_html:
+        fail("La mano derecha no aplica la pose de agarre del arma.")
+    if "applyRealPlayerFingerPose(realLeftGripBones,'relaxed')" not in index_html:
+        fail("La mano izquierda no aplica una curva relajada de dedos.")
+    if "alignPalmTowardTorso" in index_html:
+        fail("Se ha reintroducido el giro experimental de palma en espacio mundial.")
+    grip_pose = re.search(r"function applyRealPlayerClubGripPose\\(\\)\\{([\\s\\S]*?)\\n \\}", index_html)
+    if not grip_pose or "relaxHumanoidArm" in grip_pose.group(1):
+        fail("La pose de dedos no debe volver a girar el brazo o la muñeca.")
     if "if(walking&&realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying)return;" in index_html:
         fail("El gait procedural sigue saltándose los huesos no animados por el clip Walk/Run.")
     if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html:
