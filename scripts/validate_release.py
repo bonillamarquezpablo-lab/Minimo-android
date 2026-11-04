@@ -131,7 +131,7 @@ def main() -> None:
         fail("El palo no está orientado hacia delante con inclinación descendente.")
     if "distal.scale(.025)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
-    if "side*(.025+breathSway*.010),-.958,.13" not in index_html:
+    if "side*(.045+breathSway*.022),-.938,-(.205+breathSway*.065)" not in index_html:
         fail("La pose natural del antebrazo con el palo no está restaurada.")
 
     expected_guest = {
