@@ -136,19 +136,22 @@ def main() -> None:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
     if "side*(.045+breathSway*.022),-.938,-(.205+breathSway*.065)" not in index_html:
         fail("El antebrazo del palo no conserva la flexión suave prevista.")
-    if "function alignPalmTowardTorso" not in index_html or "alignPalmTowardTorso(upper,lower,hand,alignedAxis,side)" not in index_html:
-        fail("Falta la calibración anatómica de ambas palmas respecto a sus antebrazos.")
-    if "const fingerBones=side<0?realLeftGripBones:realRightGripBones" not in index_html or "realLeftGripBones=findRightGripBones(asset,'left')" not in index_html:
-        fail("Faltan los puntos de referencia de los dedos de ambas manos.")
-    if "palmWidth=index.getAbsolutePosition().subtract(pinky.getAbsolutePosition())" not in index_html:
-        fail("Falta la referencia geométrica de la palma mediante los dedos.")
+    if "function getRealPalmFrame(side)" not in index_html or "function alignPalmTowardTorso" not in index_html:
+        fail("Falta el marco anatómico compartido de ambas palmas.")
+    if "realLeftGripBones=findRightGripBones(asset,'left')" not in index_html or "realRightGripBones=findRightGripBones(asset,'right')" not in index_html:
+        fail("Faltan los puntos de referencia independientes de ambas manos.")
     palm_pose = index_html.split("function alignPalmTowardTorso", 1)[1].split("function relaxHumanoidArm", 1)[0]
     if "hand.rotate(axis,twist,B.Space.WORLD)" not in palm_pose or "lower.rotate(axis,twist,B.Space.WORLD)" in palm_pose:
         fail("La corrección de giro de palma debe actuar sobre la muñeca, no retorcer el antebrazo.")
-    if "index:[.17,.30,.20]" not in index_html or "middle:[.19,.34,.23]" not in index_html:
-        fail("La mano libre no mantiene la flexión relajada de los dedos.")
-    if "index:[.38,.72,.48]" not in index_html or "middle:[.42,.78,.52]" not in index_html:
-        fail("La mano que agarra el arma no mantiene la flexión progresiva de los dedos.")
+    finger_pose = index_html.split("function applyFingerCurlProfile", 1)[1].split("function applyRealPlayerClubGripPose", 1)[0]
+    if "const hingeAxis=frame.width.clone()" not in finger_pose or "B.Vector3.Cross(hingeAxis,fingerDirection)" not in finger_pose:
+        fail("La flexión de falanges no está calculada con el eje real de la palma.")
+    if "node.rotate(hingeAxis,angle*sign,B.Space.WORLD)" not in finger_pose:
+        fail("Las falanges no aplican la flexión geométrica con signo anatómico.")
+    if "frame.normal.clone()" not in finger_pose or "frame.indexBase.subtract(node.getAbsolutePosition())" not in finger_pose:
+        fail("La flexión no distingue el cierre de los dedos de la oposición del pulgar.")
+    if "palmFrame.palmCenter.clone()" not in index_html or "gripWorld.addInPlace(modelForward.scale(.075))" in index_html:
+        fail("El palo no está centrado en la palma real del vikingo.")
     if "function applyFingerCurlProfile" not in index_html or "([0-9]+)[rl]?$" not in index_html:
         fail("Falta la flexión progresiva de los segmentos de los dedos.")
     if "applyFingerCurlProfile(realLeftGripBones,-1,false)" not in index_html or "applyFingerCurlProfile(realRightGripBones,1,gripping)" not in index_html:
