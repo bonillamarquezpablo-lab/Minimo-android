@@ -119,8 +119,11 @@ def main() -> None:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
     if "rightGripBones:realRightGripBones.length" not in index_html:
         fail("Falta telemetría del número de huesos de agarre detectados.")
-    if "if(holding&&(mode==='idle'||mode==='sail'))" not in index_html:
-        fail("El agarre sigue anulando la animación nativa del brazo durante Walk/Run.")
+    club_pose = index_html.split("function applyRealPlayerClubGripPose()", 1)[1].split("function quaternionAlignYTo", 1)[0]
+    if "relaxHumanoidArm(" in club_pose:
+        fail("La pose del brazo se aplica dos veces en el fotograma del palo.")
+    if "bodyLocalDirection(realPlayerModelPivot||root,-side,0,0,1)" not in index_html:
+        fail("La palma no utiliza el eje medial del personaje para orientarse hacia el muslo.")
     if "if(walking&&realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying)return;" in index_html:
         fail("El gait procedural sigue saltándose los huesos no animados por el clip Walk/Run.")
     if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html:
