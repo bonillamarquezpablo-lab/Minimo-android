@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.175">
-<meta name="el-sin-nombre-repair" content="0.6.175 forward-facing elbow axis correction from GLB pivot orientation">
+<meta name="el-sin-nombre-build" content="0.6.176">
+<meta name="el-sin-nombre-repair" content="0.6.176 restore elbow spacing and orient palms toward torso from GLB finger landmarks">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.175</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.176</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -4346,7 +4346,15 @@ async function startGame(){
    // Z local negativo; Z positivo desplaza el codo hacia la espalda.
    // La lateralidad se mantiene según el lado anatómico real del rig.
    const modelSide=-side;
-   const upperTarget=boatStance?bodyLocalDirection(root,modelSide*(holdingWeapon?0.17:0.15+breathSway*.018),-.962,-.19-breathSway*.024,upperLength):bodyLocalDirection(root,modelSide*(.13+breathSway*.022),-.985,-.055-breathSway*.024,upperLength);
+   // Recuperar la apertura real del GLB: el objetivo anterior (.13) reducía
+   // el desplazamiento lateral del codo de unos 14 cm a solo 4 cm.
+   // El brazo que lleva el palo conserva algo más de apertura y avance.
+   const upperSide=holdingWeapon?.40:.36;
+   const upperDrop=holdingWeapon?-.88:-.91;
+   const upperForward=holdingWeapon?-.22:-.18;
+   const upperTarget=boatStance
+    ?bodyLocalDirection(root,modelSide*(holdingWeapon?.40:.34+breathSway*.012),holdingWeapon?-.88:-.92,holdingWeapon?-.26:-.19,upperLength)
+    :bodyLocalDirection(root,modelSide*(upperSide+breathSway*.012),upperDrop,upperForward,upperLength);
    rotateBoneWorldTowardExact(upper,upperVector,upperTarget);
    lower.computeWorldMatrix(true);
    let wristVector=null;
@@ -4358,13 +4366,15 @@ async function startGame(){
    }
    if(wristVector&&wristVector.length()>.035){
     const target=boatStance
-     ?bodyLocalDirection(root,modelSide*(holdingWeapon?.06:.11+breathSway*.015),holdingWeapon?-.91:-.88,-.34-breathSway*.04,wristVector.length())
+     ?(holdingWeapon
+       ?bodyLocalDirection(root,modelSide*(.16+breathSway*.010),-.86,-.46,wristVector.length())
+       :bodyLocalDirection(root,modelSide*(.20+breathSway*.012),-.93,-.28,wristVector.length()))
      :(holdingWeapon
-      ?bodyLocalDirection(root,modelSide*(.025+breathSway*.010),-.958,-.13-breathSway*.032,wristVector.length())
-      :bodyLocalDirection(root,modelSide*(.07+breathSway*.018),-.915,-.27-breathSway*.045,wristVector.length()));
+       ?bodyLocalDirection(root,modelSide*(.16+breathSway*.010),-.86,-.47-breathSway*.018,wristVector.length())
+       :bodyLocalDirection(root,modelSide*(.18+breathSway*.014),-.93,-.25-breathSway*.025,wristVector.length()));
     rotateBoneWorldTowardExact(lower,wristVector,target);
    }
-   // La rotación de la palma se conserva íntegra.
+   // La orientación de la palma se calcula por separado tras colocar los huesos.
    return true;
   }catch(err){console.debug('Pose de reposo del brazo omitida:',err);return false;}
  }
@@ -4492,7 +4502,7 @@ async function startGame(){
   const rig=separateRigLimbAliases(findRigNodes(asset));
   const hasRigLegs=!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg&&rig.leftUpperLeg!==rig.rightUpperLeg&&rig.leftLowerLeg!==rig.rightLowerLeg);
   if(!walk&&!run&&!hasRigLegs)throw new Error('El GLB no incluye animación de marcha ni huesos de piernas reconocibles. Animaciones: '+(groups.map(g=>g.name).join(', ')||'ninguna'));
-  realRigNodes=rig;realRightGripBones=findRightGripBones(asset,'right');realLeftGripBones=findRightGripBones(asset,'left');realRightPalmNodes=null;realLeftPalmNodes=null;realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});realRightGripBones.concat(realLeftGripBones).forEach(entry=>{const node=entry&&entry.node;if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
+  realRigNodes=rig;realRightGripBones=findRightGripBones(asset,'right');realLeftGripBones=findRightGripBones(asset,'left');realRightPalmNodes=findRealPalmLandmarks(realRightGripBones);realLeftPalmNodes=findRealPalmLandmarks(realLeftGripBones);realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});realRightGripBones.concat(realLeftGripBones).forEach(entry=>{const node=entry&&entry.node;if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
   // Prioridad: palma real -> muñeca/antebrazo -> brazo superior. Así el arma acompaña el giro del brazo incluso en esqueletos con nombres distintos.
   realWeaponSocketNode=rig.hand||rig.forearm||rig.upperArm||null;
   realWeaponSocketMode=rig.hand?'hand':(rig.forearm?'forearm':(rig.upperArm?'upperArm':'pivot'));
@@ -4826,6 +4836,37 @@ async function startGame(){
   if(typeof weaponLevel!=='undefined'&&weaponLevel>0)decorateWeaponGroups(realWeaponGroups,'real',weaponLevel);
   syncRealWeaponAnchor(0);
  }
+ function findRealPalmLandmarks(bones){
+  if(!Array.isArray(bones))return null;
+  const find=digit=>bones.find(entry=>entry&&entry.node&&String(entry.name||'').includes(digit)&&/1$/.test(String(entry.name||'')))||null;
+  const index=find('index'),middle=find('middle'),pinky=find('pinky')||find('little');
+  return index&&middle&&pinky?{index:index.node,middle:middle.node,pinky:pinky.node}:null;
+ }
+ function orientRealPlayerPalmTowardTorso(hand,landmarks,side){
+  if(!hand||!landmarks||!realRigNodes)return false;
+  try{
+   const torso=realRigNodes.spine||realRigNodes.hips;
+   if(!torso)return false;
+   hand.computeWorldMatrix(true);landmarks.index.computeWorldMatrix(true);landmarks.middle.computeWorldMatrix(true);landmarks.pinky.computeWorldMatrix(true);torso.computeWorldMatrix(true);
+   const handPosition=hand.getAbsolutePosition();
+   const fingerDirection=landmarks.middle.getAbsolutePosition().subtract(handPosition);
+   const across=landmarks.index.getAbsolutePosition().subtract(landmarks.pinky.getAbsolutePosition());
+   if(fingerDirection.lengthSquared()<1e-7||across.lengthSquared()<1e-7)return false;
+   const palmNormal=B.Vector3.Cross(fingerDirection,across);
+   // El orden índice-meñique se invierte al reflejar el rig de la mano izquierda.
+   if(side<0)palmNormal.scaleInPlace(-1);
+   if(palmNormal.lengthSquared()<1e-7)return false;
+   palmNormal.normalize();
+   // La palma mira hacia el tronco, no hacia arriba ni hacia delante.
+   const target=torso.getAbsolutePosition().subtract(handPosition);
+   target.y=0;
+   if(target.lengthSquared()<1e-7)return false;
+   target.normalize();
+   rotateBoneWorldTowardExact(hand,palmNormal,target);
+   hand.computeWorldMatrix(true);
+   return true;
+  }catch(err){console.debug('Orientación de palma omitida:',err);return false;}
+ }
  function applyRealPlayerFingerPose(bones,pose){
   if(!Array.isArray(bones))return;
   for(let i=0;i<bones.length;i++){
@@ -4850,8 +4891,10 @@ async function startGame(){
  function applyRealPlayerClubGripPose(){
   if(!realPlayerReady||!realWeaponHolder||!realRigNodes)return;
   const holding=!!realWeaponGroups[equippedWeapon];
-  // Los brazos se colocan una sola vez en updateRealRigGait. Aquí solo se flexionan
-  // las falanges después de los clips GLB, sin volver a girar muñeca/antebrazo.
+  // Primero orientamos la superficie real de ambas palmas hacia el tronco;
+  // después flexionamos las falanges para cerrar alrededor del mango.
+  orientRealPlayerPalmTowardTorso(realRigNodes.hand,realRightPalmNodes,1);
+  orientRealPlayerPalmTowardTorso(realRigNodes.leftHand,realLeftPalmNodes,-1);
   applyRealPlayerFingerPose(realRightGripBones,holding?'grip':'restore');
   applyRealPlayerFingerPose(realLeftGripBones,'relaxed');
  }
