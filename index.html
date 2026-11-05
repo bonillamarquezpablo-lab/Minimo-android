@@ -1958,12 +1958,32 @@ async function startGame(){
  const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
  const realPlayerArmDebugState={free:{status:'ESPERANDO',reason:'',twistDeg:null},weapon:{status:'POSE ORIGINAL',reason:'',twistDeg:null}};
  const REAL_PLAYER_ARM_TUNING_DEFAULTS={
-  free:{upper:{outward:.30,forward:-.15},forearm:{outward:.15,forward:.19}},
-  weapon:{upper:{outward:.30,forward:-.15},forearm:{outward:.15,forward:.19}}
+  free:{
+   upper:{outward:.26,forward:-.21},forearm:{outward:.15,forward:-.08},
+   fingers:{thumb:.08,index:.10,middle:.10,ring:.10,little:.10},
+   twistPercent:100,handSharePercent:0
+  },
+  weapon:{
+   upper:{outward:.16,forward:-.02},forearm:{outward:0,forward:0},
+   fingers:{thumb:.28,index:.34,middle:.34,ring:.34,little:.34},
+   twistPercent:100,handSharePercent:0
+  }
  };
  const realPlayerArmTuning={
-  free:{upper:{outward:.30,forward:-.15},forearm:{outward:.15,forward:.19}},
-  weapon:{upper:{outward:.30,forward:-.15},forearm:{outward:.15,forward:.19}}
+  free:{
+   upper:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.free.upper},
+   forearm:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.free.forearm},
+   fingers:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.free.fingers},
+   twistPercent:REAL_PLAYER_ARM_TUNING_DEFAULTS.free.twistPercent,
+   handSharePercent:REAL_PLAYER_ARM_TUNING_DEFAULTS.free.handSharePercent
+  },
+  weapon:{
+   upper:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.weapon.upper},
+   forearm:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.weapon.forearm},
+   fingers:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.weapon.fingers},
+   twistPercent:REAL_PLAYER_ARM_TUNING_DEFAULTS.weapon.twistPercent,
+   handSharePercent:REAL_PLAYER_ARM_TUNING_DEFAULTS.weapon.handSharePercent
+  }
  };
  const getRealPlayerArmTuningTarget=(arm,segment)=>{
   const resting=realPlayerArmDebugEnabled&&realPlayerMode==='idle'&&playerAction==='idle'&&!onShip;
@@ -1979,7 +1999,57 @@ async function startGame(){
   const vertical=-Math.sqrt(Math.max(0,1-outward*outward-forward*forward));
   return new B.Vector3(outward,vertical,forward);
  };
- const yieldStartupFrame=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+ function isRealPlayerArmTuningResting(){
+  return realPlayerArmDebugEnabled&&realPlayerMode==='idle'&&playerAction==='idle'&&!onShip;
+ }
+ function getRealPlayerArmTwistTuning(arm){
+  if(!isRealPlayerArmTuningResting())return {twistPercent:100,handSharePercent:0};
+  const tuning=realPlayerArmTuning[arm];
+  return {
+   twistPercent:Math.max(0,Math.min(100,Number(tuning.twistPercent)||0)),
+   handSharePercent:Math.max(0,Math.min(100,Number(tuning.handSharePercent)||0))
+  };
+ }
+ function applyRealPlayerArmTwist(lower,hand,forearmAxis,calculatedAngle,arm){
+  const settings=getRealPlayerArmTwistTuning(arm);
+  const appliedAngle=calculatedAngle*(settings.twistPercent/100);
+  const handAngle=appliedAngle*(settings.handSharePercent/100);
+  const forearmAngle=appliedAngle-handAngle;
+  if(Number.isFinite(forearmAngle)&&Math.abs(forearmAngle)>.0001){
+   lower.rotate(forearmAxis,forearmAngle,B.Space.WORLD);
+   lower.computeWorldMatrix(true);
+  }
+  if(Number.isFinite(handAngle)&&Math.abs(handAngle)>.0001){
+   lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   hand.rotate(forearmAxis,handAngle,B.Space.WORLD);
+   hand.computeWorldMatrix(true);
+  }
+ }
+ function getRealPlayerFingerDigit(name){
+  const normal=String(name||'').toLowerCase();
+  if(normal.includes('thumb'))return 'thumb';
+  if(normal.includes('index'))return 'index';
+  if(normal.includes('middle'))return 'middle';
+  if(normal.includes('ring'))return 'ring';
+  if(normal.includes('pinky')||normal.includes('little'))return 'little';
+  return null;
+ }
+ function getRealPlayerFingerJointMultiplier(name,digit){
+  const normal=String(name||'').toLowerCase();
+  const joint=Number((normal.match(/[1-9]$/)||[])[0]||1);
+  if(digit==='thumb')return joint===1?1:(.20/.28);
+  return joint===1?1:(joint===2?(.48/.34):(.36/.34));
+ }
+ function getRealPlayerFingerCurl(entry,arm){
+  const node=entry&&entry.node||entry;
+  const name=String(entry&&entry.name||node&&node.name||'').toLowerCase();
+  const digit=getRealPlayerFingerDigit(name);
+  if(isRealPlayerArmTuningResting()&&digit)return realPlayerArmTuning[arm].fingers[digit]*getRealPlayerFingerJointMultiplier(name,digit);
+  const thumb=digit==='thumb';
+  const joint=Number((name.match(/[1-9]$/)||[])[0]||1);
+  return thumb?(joint===1?.28:.20):(joint===1?.34:joint===2?.48:.36);
+ }
+  const yieldStartupFrame=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
  if(!B||!B.Engine)throw new Error('La librería Babylon.js está incompleta o no es compatible.');
  const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:!isIOSDevice&&activeGraphicsProfile!=='performance',powerPreference:'high-performance',failIfMajorPerformanceCaveat:false},false);
  bootEngineForCleanup=engine;
@@ -3370,7 +3440,7 @@ async function startGame(){
  let realPlayerModel=null,realPlayerModelPivot=null,realPlayerAnimations={walk:null,run:null,idle:null,attack:null},realPlayerMode='',realPlayerCurrentGroup=null,realPlayerIdleTransition=null,realRigNodes={},realRigIdleNodes=[],realRigManualGaitNodes={},realPlayerReady=false,realPlayerBusy=false,realPlayerManualLocomotion=false,playerHumanBlob=null,equippedWeapon='club';
  const unlockedWeapons=new Set(['club']);
   const REAL_VIKING_FORWARD_OFFSET=Math.PI;
- let realHandNode=null,realUpperArmNode=null,realForearmNode=null,realSpineNode=null,realWeaponHolder=null,realWeaponGroups={},realBoneRest=new Map(),realRightGripBones=[],realWeaponAnchorCalibrated=false,realWeaponAnchorType='',realWeaponPoseOverride=null,realWeaponSocketNode=null,realWeaponSocketMode='pivot',realWeaponHandDefaultPosition=null,realWeaponHandDefaultRotation=null,realRigFrameNodeDiagnostics=[];
+ let realHandNode=null,realUpperArmNode=null,realForearmNode=null,realSpineNode=null,realWeaponHolder=null,realWeaponGroups={},realBoneRest=new Map(),realRightGripBones=[],realLeftGripBones=[],realWeaponAnchorCalibrated=false,realWeaponAnchorType='',realWeaponPoseOverride=null,realWeaponSocketNode=null,realWeaponSocketMode='pivot',realWeaponHandDefaultPosition=null,realWeaponHandDefaultRotation=null,realRigFrameNodeDiagnostics=[];
  const REAL_PLAYER_ROOT_GROUND_OFFSET=.025;
  const modelStatusEl=document.getElementById('modelStatus'),modelStatusText=document.getElementById('modelStatusText');
  let modelStatusAutoHideTimer=null;
@@ -3426,7 +3496,30 @@ async function startGame(){
   });
   return found;
  }
- function findRigNodes(asset){
+ function findLeftGripBones(asset){
+  const entries=[];
+  (asset.skeletons||[]).forEach(sk=>(sk.bones||[]).forEach(b=>entries.push({name:String(b.name||''),node:rigNodeForBone(b)})));
+  (asset.transformNodes||[]).forEach(n=>entries.push({name:String(n.name||''),node:n}));
+  const seen=new Set(),found=[];
+  for(const entry of entries){
+   const node=entry.node;if(!node||seen.has(node))continue;
+   const name=String(entry.name||''),normal=name.toLowerCase().replace(/[^a-z0-9]/g,'');
+   const finger=/(thumb|index|middle|ring|pinky|little)/.test(normal);
+   const left=/left/.test(normal)||/(?:thumb|index|middle|ring|pinky|little)[a-z0-9]*l$/.test(normal);
+   if(!finger||!left||/right/.test(normal))continue;
+   seen.add(node);found.push({node,name:normal});
+  }
+  const order={thumb:0,index:1,middle:2,ring:3,pinky:4,little:4};
+  found.sort((a,b)=>{
+   const digit=name=>Object.keys(order).find(key=>name.includes(key))||'middle';
+   const da=order[digit(a.name)]??2,db=order[digit(b.name)]??2;
+   if(da!==db)return da-db;
+   const ja=Number((a.name.match(/[1-9]$/)||[])[0]||1),jb=Number((b.name.match(/[1-9]$/)||[])[0]||1);
+   return ja-jb;
+  });
+  return found;
+ }
+  function findRigNodes(asset){
   const entries=[];
   (asset.skeletons||[]).forEach(sk=>(sk.bones||[]).forEach(b=>entries.push({name:String(b.name||''),node:rigNodeForBone(b)})));
   (asset.transformNodes||[]).forEach(n=>entries.push({name:String(n.name||''),node:n}));
@@ -4529,10 +4622,7 @@ async function startGame(){
      const twistCos=Math.max(-1,Math.min(1,B.Vector3.Dot(palmTangent,bodyTangent)));
      const twistAngle=Math.atan2(twistSin,twistCos);
      if(debugState&&Number.isFinite(twistAngle))debugState.twistDeg=twistAngle*180/Math.PI;
-     if(Number.isFinite(twistAngle)&&Math.abs(twistAngle)>.0001){
-      lower.rotate(forearmAxis,twistAngle,B.Space.WORLD);
-      lower.computeWorldMatrix(true);
-     }
+     if(Number.isFinite(twistAngle)&&Math.abs(twistAngle)>.0001)applyRealPlayerArmTwist(lower,hand,forearmAxis,twistAngle,'free');
     }
    }
    restoreFallbackPose=null;
@@ -4607,10 +4697,7 @@ async function startGame(){
      const twistCos=Math.max(-1,Math.min(1,B.Vector3.Dot(palmTangent,bodyTangent)));
      const twistAngle=Math.atan2(twistSin,twistCos);
      if(debugState&&Number.isFinite(twistAngle))debugState.twistDeg=twistAngle*180/Math.PI;
-     if(Number.isFinite(twistAngle)&&Math.abs(twistAngle)>.0001){
-      lower.rotate(forearmAxis,twistAngle,B.Space.WORLD);
-      lower.computeWorldMatrix(true);
-     }
+     if(Number.isFinite(twistAngle)&&Math.abs(twistAngle)>.0001)applyRealPlayerArmTwist(lower,hand,forearmAxis,twistAngle,'weapon');
     }
    }
    restoreFallbackPose=null;
@@ -4719,18 +4806,19 @@ async function startGame(){
   armTuneStyle.textContent=`
    #realPlayerArmTuneDock{position:fixed;top:calc(env(safe-area-inset-top,0px) + 170px);right:6px;width:min(94vw,410px);z-index:99998;pointer-events:auto;color:#f5e8cf;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
    #realPlayerArmTuneToggle{display:block;margin:0 0 4px auto;padding:6px 9px;border:1px solid #d8ad68;border-radius:6px;background:rgba(14,29,31,.94);color:#f5e8cf;font-size:10px;font-weight:800;box-shadow:0 3px 10px #0008;touch-action:manipulation}
-   #realPlayerArmTunePanel{display:none;max-height:34vh;overflow:auto;padding:8px;border:1px solid #d8ad68;border-radius:7px;background:rgba(5,12,14,.94);box-shadow:0 5px 16px #000b}
+   #realPlayerArmTunePanel{display:none;max-height:48vh;overflow:auto;padding:8px;border:1px solid #d8ad68;border-radius:7px;background:rgba(5,12,14,.94);box-shadow:0 5px 16px #000b}
    #realPlayerArmTunePanel.open{display:block}
    #realPlayerArmTuneHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;color:#e6c27f;font-size:10px;font-weight:900}
    #realPlayerArmTuneReset{padding:4px 7px;border:1px solid #d8ad6888;border-radius:5px;background:#263735;color:#fff2d8;font-size:9px;font-weight:800}
    #realPlayerArmTuneColumns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
    .realArmTuneSide{min-width:0;padding:5px;border:1px solid #d8ad6844;border-radius:5px;background:#142426}
    .realArmTuneSide h4{margin:0 0 5px;color:#e6c27f;font-size:9px;letter-spacing:.6px}
+   .realArmTuneDivider{margin:8px 0 4px;padding-top:5px;border-top:1px solid #d8ad6855;color:#e6c27f;font-size:8px;font-weight:900;letter-spacing:.5px}
    .realArmTuneControl{display:block;margin:4px 0 6px;font-size:8px;line-height:1.1}
    .realArmTuneControl span{display:flex;justify-content:space-between;gap:4px;margin-bottom:2px}
    .realArmTuneControl output{color:#f1cb82;font-weight:900;font-variant-numeric:tabular-nums}
-   .realArmTuneControl input{display:block;width:100%;height:14px;margin:0;accent-color:#d8ad68;touch-action:pan-x}
-   @media(max-height:520px){#realPlayerArmTuneDock{top:calc(env(safe-area-inset-top,0px) + 160px);right:6px;width:min(94vw,380px)}#realPlayerArmTunePanel{max-height:26vh}}
+   .realArmTuneControl input{display:block;width:100%;height:16px;margin:0;accent-color:#d8ad68;touch-action:pan-x}
+   @media(max-height:520px){#realPlayerArmTuneDock{top:calc(env(safe-area-inset-top,0px) + 160px);right:6px;width:min(94vw,380px)}#realPlayerArmTunePanel{max-height:40vh}}
   `;
   document.head.appendChild(armTuneStyle);
   const armTuneDock=document.createElement('div');
@@ -4747,47 +4835,81 @@ async function startGame(){
    <div id="realPlayerArmTuneHead"><span>AJUSTE EN VIVO · SOLO REPOSO</span><button id="realPlayerArmTuneReset" type="button">RESTABLECER</button></div>
    <div id="realPlayerArmTuneColumns">
     <div class="realArmTuneSide"><h4>BRAZO LIBRE</h4>
-     <label class="realArmTuneControl"><span>Brazo · hacia fuera <output>0.30</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.30" data-arm="free" data-segment="upper" data-axis="outward"></label>
-     <label class="realArmTuneControl"><span>Brazo · delante <output>-0.15</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="-0.15" data-arm="free" data-segment="upper" data-axis="forward"></label>
-     <label class="realArmTuneControl"><span>Antebrazo · hacia fuera <output>0.15</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.15" data-arm="free" data-segment="forearm" data-axis="outward"></label>
-     <label class="realArmTuneControl"><span>Antebrazo · delante <output>0.19</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="0.19" data-arm="free" data-segment="forearm" data-axis="forward"></label>
+     <label class="realArmTuneControl"><span>Brazo · hacia fuera <output>0.26</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.26" data-arm="free" data-kind="arm" data-segment="upper" data-axis="outward"></label>
+     <label class="realArmTuneControl"><span>Brazo · delante <output>-0.21</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="-0.21" data-arm="free" data-kind="arm" data-segment="upper" data-axis="forward"></label>
+     <label class="realArmTuneControl"><span>Antebrazo · hacia fuera <output>0.15</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.15" data-arm="free" data-kind="arm" data-segment="forearm" data-axis="outward"></label>
+     <label class="realArmTuneControl"><span>Antebrazo · delante <output>-0.08</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="-0.08" data-arm="free" data-kind="arm" data-segment="forearm" data-axis="forward"></label>
+     <div class="realArmTuneDivider">TORSIÓN</div>
+     <label class="realArmTuneControl"><span>Giro antebrazo (%) <output>100.00</output></span><input type="range" min="0" max="100" step="0.01" value="100" data-arm="free" data-kind="twist" data-field="twistPercent"></label>
+     <label class="realArmTuneControl"><span>Parte del giro a la mano (%) <output>0.00</output></span><input type="range" min="0" max="100" step="0.01" value="0" data-arm="free" data-kind="twist" data-field="handSharePercent"></label>
+     <div class="realArmTuneDivider">DEDOS · RADIANES</div>
+     <label class="realArmTuneControl"><span>Pulgar <output>0.08</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.08" data-arm="free" data-kind="finger" data-digit="thumb"></label>
+     <label class="realArmTuneControl"><span>Índice <output>0.10</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.10" data-arm="free" data-kind="finger" data-digit="index"></label>
+     <label class="realArmTuneControl"><span>Corazón <output>0.10</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.10" data-arm="free" data-kind="finger" data-digit="middle"></label>
+     <label class="realArmTuneControl"><span>Anular <output>0.10</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.10" data-arm="free" data-kind="finger" data-digit="ring"></label>
+     <label class="realArmTuneControl"><span>Meñique <output>0.10</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.10" data-arm="free" data-kind="finger" data-digit="little"></label>
     </div>
     <div class="realArmTuneSide"><h4>BRAZO DEL PALO</h4>
-     <label class="realArmTuneControl"><span>Brazo · hacia fuera <output>0.30</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.30" data-arm="weapon" data-segment="upper" data-axis="outward"></label>
-     <label class="realArmTuneControl"><span>Brazo · delante <output>-0.15</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="-0.15" data-arm="weapon" data-segment="upper" data-axis="forward"></label>
-     <label class="realArmTuneControl"><span>Antebrazo · hacia fuera <output>0.15</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.15" data-arm="weapon" data-segment="forearm" data-axis="outward"></label>
-     <label class="realArmTuneControl"><span>Antebrazo · delante <output>0.19</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="0.19" data-arm="weapon" data-segment="forearm" data-axis="forward"></label>
+     <label class="realArmTuneControl"><span>Brazo · hacia fuera <output>0.16</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.16" data-arm="weapon" data-kind="arm" data-segment="upper" data-axis="outward"></label>
+     <label class="realArmTuneControl"><span>Brazo · delante <output>-0.02</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="-0.02" data-arm="weapon" data-kind="arm" data-segment="upper" data-axis="forward"></label>
+     <label class="realArmTuneControl"><span>Antebrazo · hacia fuera <output>0.00</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.00" data-arm="weapon" data-kind="arm" data-segment="forearm" data-axis="outward"></label>
+     <label class="realArmTuneControl"><span>Antebrazo · delante <output>0.00</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="0.00" data-arm="weapon" data-kind="arm" data-segment="forearm" data-axis="forward"></label>
+     <div class="realArmTuneDivider">TORSIÓN</div>
+     <label class="realArmTuneControl"><span>Giro antebrazo (%) <output>100.00</output></span><input type="range" min="0" max="100" step="0.01" value="100" data-arm="weapon" data-kind="twist" data-field="twistPercent"></label>
+     <label class="realArmTuneControl"><span>Parte del giro a la mano (%) <output>0.00</output></span><input type="range" min="0" max="100" step="0.01" value="0" data-arm="weapon" data-kind="twist" data-field="handSharePercent"></label>
+     <div class="realArmTuneDivider">DEDOS · RADIANES</div>
+     <label class="realArmTuneControl"><span>Pulgar <output>0.28</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.28" data-arm="weapon" data-kind="finger" data-digit="thumb"></label>
+     <label class="realArmTuneControl"><span>Índice <output>0.34</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.34" data-arm="weapon" data-kind="finger" data-digit="index"></label>
+     <label class="realArmTuneControl"><span>Corazón <output>0.34</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.34" data-arm="weapon" data-kind="finger" data-digit="middle"></label>
+     <label class="realArmTuneControl"><span>Anular <output>0.34</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.34" data-arm="weapon" data-kind="finger" data-digit="ring"></label>
+     <label class="realArmTuneControl"><span>Meñique <output>0.34</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.34" data-arm="weapon" data-kind="finger" data-digit="little"></label>
     </div>
    </div>`;
   armTuneDock.appendChild(armTuneToggle);
   armTuneDock.appendChild(armTunePanel);
   document.body.appendChild(armTuneDock);
+  const readArmTuneValue=input=>{
+   const arm=input.dataset.arm,kind=input.dataset.kind;
+   if(kind==='arm')return realPlayerArmTuning[arm][input.dataset.segment][input.dataset.axis];
+   if(kind==='finger')return realPlayerArmTuning[arm].fingers[input.dataset.digit];
+   if(kind==='twist')return realPlayerArmTuning[arm][input.dataset.field];
+   return 0;
+  };
+  const writeArmTuneValue=(input,value)=>{
+   const arm=input.dataset.arm,kind=input.dataset.kind;
+   if(kind==='arm')realPlayerArmTuning[arm][input.dataset.segment][input.dataset.axis]=value;
+   else if(kind==='finger')realPlayerArmTuning[arm].fingers[input.dataset.digit]=value;
+   else if(kind==='twist')realPlayerArmTuning[arm][input.dataset.field]=value;
+  };
   const updateArmTuneControls=()=>{
    armTunePanel.querySelectorAll('input[data-arm]').forEach(input=>{
-    const arm=input.dataset.arm,segment=input.dataset.segment,axis=input.dataset.axis;
-    const value=realPlayerArmTuning[arm][segment][axis];
+    const value=readArmTuneValue(input);
     input.value=String(value);
     const output=input.parentElement.querySelector('output');
-    if(output)output.textContent=value.toFixed(2);
+    if(output)output.textContent=Number(value).toFixed(2);
    });
   };
   armTunePanel.querySelectorAll('input[data-arm]').forEach(input=>{
    input.addEventListener('input',()=>{
-    const arm=input.dataset.arm,segment=input.dataset.segment,axis=input.dataset.axis;
     const value=Number(input.value);
     if(!Number.isFinite(value))return;
-    realPlayerArmTuning[arm][segment][axis]=value;
+    writeArmTuneValue(input,value);
     const output=input.parentElement.querySelector('output');
     if(output)output.textContent=value.toFixed(2);
    },{passive:true});
   });
   document.getElementById('realPlayerArmTuneReset').addEventListener('click',()=>{
-   Object.keys(REAL_PLAYER_ARM_TUNING_DEFAULTS).forEach(arm=>{
+   ['free','weapon'].forEach(arm=>{
     ['upper','forearm'].forEach(segment=>{
      ['outward','forward'].forEach(axis=>{
       realPlayerArmTuning[arm][segment][axis]=REAL_PLAYER_ARM_TUNING_DEFAULTS[arm][segment][axis];
      });
     });
+    Object.keys(REAL_PLAYER_ARM_TUNING_DEFAULTS[arm].fingers).forEach(digit=>{
+     realPlayerArmTuning[arm].fingers[digit]=REAL_PLAYER_ARM_TUNING_DEFAULTS[arm].fingers[digit];
+    });
+    realPlayerArmTuning[arm].twistPercent=REAL_PLAYER_ARM_TUNING_DEFAULTS[arm].twistPercent;
+    realPlayerArmTuning[arm].handSharePercent=REAL_PLAYER_ARM_TUNING_DEFAULTS[arm].handSharePercent;
    });
    updateArmTuneControls();
   });
@@ -4959,7 +5081,7 @@ async function startGame(){
   ];
   const hasRigLegs=!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg&&rig.leftUpperLeg!==rig.rightUpperLeg&&rig.leftLowerLeg!==rig.rightLowerLeg);
   if(!walk&&!run&&!hasRigLegs)throw new Error('El GLB no incluye animación de marcha ni huesos de piernas reconocibles. Animaciones: '+(groups.map(g=>g.name).join(', ')||'ninguna'));
-  realRigNodes=rig;realRightGripBones=findRightGripBones(asset);realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});realRightGripBones.forEach(entry=>{const node=entry&&entry.node;if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
+  realRigNodes=rig;realRightGripBones=findRightGripBones(asset);realLeftGripBones=findLeftGripBones({skeletons:asset.skeletons||[],transformNodes:protagonistRigTransformNodes});realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});[...realRightGripBones,...realLeftGripBones].forEach(entry=>{const node=entry&&entry.node;if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
   // Prioridad: palma real -> muñeca/antebrazo -> brazo superior. Así el arma acompaña el giro del brazo incluso en esqueletos con nombres distintos.
   realWeaponSocketNode=rig.hand||rig.forearm||rig.upperArm||null;
   realWeaponSocketMode=rig.hand?'hand':(rig.forearm?'forearm':(rig.upperArm?'upperArm':'pivot'));
@@ -4973,6 +5095,7 @@ async function startGame(){
   realRigManualGaitNodes={};
   Object.entries({hips:rig.hips,head:rig.head,rightShoulder:rig.rightShoulder,leftShoulder:rig.leftShoulder,leftUpperLeg:rig.leftUpperLeg,rightUpperLeg:rig.rightUpperLeg,leftLowerLeg:rig.leftLowerLeg,rightLowerLeg:rig.rightLowerLeg,leftFoot:rig.leftFoot,rightFoot:rig.rightFoot,leftUpperArm:rig.leftUpperArm,upperArm:rig.upperArm,leftForearm:rig.leftForearm,forearm:rig.forearm,spine:rig.spine}).forEach(([key,node])=>{if(node)realRigManualGaitNodes[key]=!locomotionTargets.has(node);});
   [realHandNode,rig.leftHand,realUpperArmNode,realForearmNode,realSpineNode,rig.head,rig.rightShoulder,rig.leftShoulder,rig.hips,rig.leftUpperLeg,rig.rightUpperLeg,rig.leftLowerLeg,rig.rightLowerLeg,rig.leftFoot,rig.rightFoot,rig.leftUpperArm,rig.leftForearm,rig.rightUpperLeg,rig.rightLowerLeg,rig.rightFoot].forEach(rememberRigRest);
+  [...realRightGripBones,...realLeftGripBones].forEach(entry=>rememberRigRest(entry&&entry.node));
   configureRealFootIK(rig);
   // Ocultar la figura procedural solo cuando el humano GLB ya está validado y visible.
   player.body.setEnabled(false);
@@ -5288,26 +5411,28 @@ async function startGame(){
   if(!realPlayerReady||!realWeaponHolder||!realRigNodes)return;
   const holding=!!realWeaponGroups.club&&equippedWeapon==='club';
   const mode=realPlayerMode;
-  // En reposo/navegación fijamos una pose estable; durante Walk/Run dejamos
-   // que el clip nativo anime hombro y codo. Forzar relaxHumanoidArm aquí,
-   // después del clip, congelaba el brazo y anulaba el balanceo al caminar.
-     if(holding&&(mode==='idle'||mode==='sail')){
+  const tuneRest=isRealPlayerArmTuningResting();
+  // En reposo/navegación fijamos una pose estable; las falanges se ajustan aparte.
+  if(holding&&(mode==='idle'||mode==='sail')){
    const breath=Math.sin(elapsed*1.08)*.35;
    const boat=mode==='sail';
    relaxRealPlayerWeaponArm(realPlayerModelPivot||player.root,realRigNodes,breath,boat,realPlayerArmDebugEnabled?realPlayerArmDebugState.weapon:null);
   }
-  const bones=realRightGripBones||[];
-  for(let i=0;i<bones.length;i++){
-   const entry=bones[i],node=entry&&entry.node||entry;if(!node)continue;
+  const rightBones=realRightGripBones||[];
+  for(let i=0;i<rightBones.length;i++){
+   const entry=rightBones[i],node=entry&&entry.node||entry;if(!node)continue;
    if(!holding){const rest=realBoneRest.get(node);if(rest)restoreRigNodePose(node,rest);continue;}
-   const name=String(entry&&entry.name||node.name||'').toLowerCase();
-   const thumb=/thumb/.test(name);
-   const joint=Number((name.match(/[1-9]$/)||[])[0]||1);
-   const curl=thumb?(joint===1?.28:.20):(joint===1?.34:joint===2?.48:.36);
-   setRigDelta(node,curl,0,0,true);
+   setRigDelta(node,getRealPlayerFingerCurl(entry,'weapon'),0,0,true);
+  }
+  // La mano libre recibe una curvatura pequeña solo durante el ajuste debug en reposo.
+  const leftBones=realLeftGripBones||[];
+  for(let i=0;i<leftBones.length;i++){
+   const entry=leftBones[i],node=entry&&entry.node||entry;if(!node)continue;
+   if(!tuneRest){const rest=realBoneRest.get(node);if(rest)restoreRigNodePose(node,rest);continue;}
+   setRigDelta(node,getRealPlayerFingerCurl(entry,'free'),0,0,true);
   }
  }
- function quaternionAlignYTo(direction){
+  function quaternionAlignYTo(direction){
   const from=B.Axis.Y.clone().normalize(),to=direction.clone().normalize();
   const dot=Math.max(-1,Math.min(1,B.Vector3.Dot(from,to)));
   if(dot>.99995)return B.Quaternion.Identity();
