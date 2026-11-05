@@ -4383,14 +4383,14 @@ async function startGame(){
    return true;
   }catch(err){console.debug('Pose de reposo del brazo omitida:',err);return false;}
  }
- const REAL_PLAYER_FREE_ARM_UPPER_TARGET=new B.Vector3(.40,-.90,-.20);
- const REAL_PLAYER_FREE_ARM_FOREARM_TARGET=new B.Vector3(.11,-.98,.19);
+ const REAL_PLAYER_FREE_ARM_UPPER_TARGET=new B.Vector3(.30,-.94,-.15);
+ const REAL_PLAYER_FREE_ARM_FOREARM_TARGET=new B.Vector3(.15,-.97,.19);
  const REAL_PLAYER_FREE_ARM_PALM_NORMAL=new B.Vector3(-.59,-.22,-.78);
  // Objetivos del brazo del arma expresados con "hacia fuera" positivo.
  // El marco anatómico mantiene izquierda positiva, así que el método derecho
  // invierte solo la componente lateral al convertirlos a coordenadas mundiales.
- const REAL_PLAYER_WEAPON_ARM_UPPER_TARGET=new B.Vector3(.40,-.89,-.24);
- const REAL_PLAYER_WEAPON_ARM_FOREARM_TARGET=new B.Vector3(.32,-.935,.16);
+ const REAL_PLAYER_WEAPON_ARM_UPPER_TARGET=new B.Vector3(.30,-.94,-.15);
+ const REAL_PLAYER_WEAPON_ARM_FOREARM_TARGET=new B.Vector3(.15,-.97,.19);
  const REAL_PLAYER_WEAPON_ARM_PALM_NORMAL=new B.Vector3(.61,-.23,-.76);
  function getRealPlayerBodyFrame(nodes,orientationRoot){
   const worldUp=new B.Vector3(0,1,0);
@@ -4630,66 +4630,63 @@ async function startGame(){
   const parentName=parent?String(parent.name||parent.id||'padre sin nombre'):'sin padre';
   return entry.label+': SÍ · '+name+' · padre '+parentName+' · '+(entry.source||'árbol importado')+(boneNames?' · bone: '+boneNames:'');
  }
+ function armDebugFormatCompactVector(values){
+  if(!values)return '—';
+  return values.map(value=>(value>=0?'+':'')+value.toFixed(2)).join('/');
+ }
  function updateRealPlayerArmDebugPanel(){
   if(!realPlayerArmDebugEnabled||!realPlayerArmDebugPanel)return;
   if(!realPlayerReady||!realRigNodes){
-   realPlayerArmDebugPanel.textContent='ARM DEBUG · ?debug=1\nEsperando al GLB y al esqueleto del protagonista…';
+   realPlayerArmDebugPanel.textContent='ARM DEBUG · esperando GLB…';
    return;
   }
   const n=realRigNodes,frame=getRealPlayerBodyFrame(n,player.root);
-  const diagnostics=(realRigFrameNodeDiagnostics||[]).map(armDebugDescribeFrameNode).join('\n');
-  const header='ARM DEBUG · ?debug=1 · '+(realPlayerMode||'sin modo')+'\n'+
-   'Búsqueda local: esqueleto + nodos descendientes de la raíz importada; no recorre la escena global.\n'+
-   'Huesos para marco de piernas:\n'+diagnostics+'\n'+
-   'Marco activo: '+(frame?frame.source:'NO DISPONIBLE')+' · coordenadas: fuera positivo · vertical · delante\n';
+  const shortRig=(realRigFrameNodeDiagnostics||[]).map(entry=>{
+   const key=({LeftFoot:'LF',LeftToeBase:'TOE',LeftUpLeg:'LUP',RightUpLeg:'RUP'})[entry.label]||entry.label;
+   return key+(entry.resolved?'✓':(entry.boneNames&&entry.boneNames.length?'b!':'×'));
+  }).join(' ');
+  const header='ARM DEBUG · '+(realPlayerMode||'idle')+' · '+(frame?frame.source:'SIN MARCO')+'\n'+
+   'RIG '+shortRig+' · fuera / vertical / delante\n';
   if(!frame){
-   realPlayerArmDebugPanel.textContent=header+'No se puede proyectar: faltan los dos brazos superiores o el rumbo horizontal de player.root.';
+   realPlayerArmDebugPanel.textContent=header+'Sin marco: faltan brazos superiores o rumbo horizontal.';
    return;
   }
   const readArm=(label,upper,lower,hand,isLeft,palmLocal,state)=>{
-   if(!upper||!lower||!hand)return label+'\n  NODOS: INCOMPLETOS';
+   if(!upper||!lower||!hand)return label+' INCOMPLETO';
    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
    const shoulder=upper.getAbsolutePosition(),elbow=lower.getAbsolutePosition(),wrist=hand.getAbsolutePosition();
    const upperDirection=armDebugProjectDirection(elbow.subtract(shoulder),frame,isLeft);
    const forearmDirection=armDebugProjectDirection(wrist.subtract(elbow),frame,isLeft);
    const palmWorld=hand.getDirection(palmLocal).normalize();
    const palmDirection=armDebugProjectDirection(palmWorld,frame,isLeft);
-   const twist=state&&Number.isFinite(state.twistDeg)?state.twistDeg.toFixed(1)+'°':'—';
+   const twist=state&&Number.isFinite(state.twistDeg)?(state.twistDeg>=0?'+':'')+state.twistDeg.toFixed(1)+'°':'—';
    const status=state&&state.status?state.status:'SIN DATO';
-   const reason=state&&state.reason?' · '+state.reason:'';
-   return label+'\n'+
-    '  brazo→codo:    '+armDebugFormatVector(upperDirection)+'\n'+
-    '  codo→muñeca:   '+armDebugFormatVector(forearmDirection)+'\n'+
-    '  normal palma*: '+armDebugFormatVector(palmDirection)+'\n'+
-    '  pose: '+status+reason+' · giro antebrazo: '+twist;
+   const reason=state&&state.reason?' · '+String(state.reason).slice(0,24):'';
+   return label+' '+status+' '+twist+' B'+armDebugFormatCompactVector(upperDirection)+' A'+armDebugFormatCompactVector(forearmDirection)+reason+'\n'+
+    label+' palma P'+armDebugFormatCompactVector(palmDirection);
   };
-  const leftPalmLocal=new B.Vector3(-.59,-.22,-.78);
-  const rightPalmLocal=REAL_PLAYER_WEAPON_ARM_PALM_NORMAL;
-  let stickDirectionLine='PALO · no equipado';
+  let stickDirectionLine='PALO eje: no equipado';
   const clubGroup=realWeaponGroups&&realWeaponGroups.club;
   if(clubGroup&&equippedWeapon==='club'){
    clubGroup.computeWorldMatrix(true);
-   // El eje largo de la parte expuesta del palo es el -Y local del modelo.
-   // Se mide desde la empuñadura hacia el extremo y se expresa en el marco corporal.
    const stickWorld=clubGroup.getDirection(B.Axis.Y).scale(-1).normalize();
    const stickBody=[
     B.Vector3.Dot(stickWorld,frame.left),
     B.Vector3.Dot(stickWorld,frame.up),
     B.Vector3.Dot(stickWorld,frame.forward)
    ];
-   stickDirectionLine='PALO · agarre→extremo largo (izquierda, vertical, delante): '+armDebugFormatVector(stickBody);
+   stickDirectionLine='PALO eje agarre→punta '+armDebugFormatCompactVector(stickBody);
   }
   realPlayerArmDebugPanel.textContent=header+
-   '*Normal calculada con la aproximación local solicitada.\n'+
-   readArm('LIBRE · IZQUIERDO',n.leftUpperArm,n.leftForearm,n.leftHand,true,leftPalmLocal,realPlayerArmDebugState.free)+'\n\n'+
-   readArm('PALO · DERECHO',n.upperArm,n.forearm,n.hand,false,rightPalmLocal,realPlayerArmDebugState.weapon)+'\n'+
+   readArm('LIBRE',n.leftUpperArm,n.leftForearm,n.leftHand,true,REAL_PLAYER_FREE_ARM_PALM_NORMAL,realPlayerArmDebugState.free)+'\n'+
+   readArm('PALO',n.upperArm,n.forearm,n.hand,false,REAL_PLAYER_WEAPON_ARM_PALM_NORMAL,realPlayerArmDebugState.weapon)+'\n'+
    stickDirectionLine;
  }
  if(realPlayerArmDebugEnabled){
   realPlayerArmDebugPanel=document.createElement('pre');
   realPlayerArmDebugPanel.id='realPlayerArmDebugPanel';
   realPlayerArmDebugPanel.setAttribute('aria-label','Diagnóstico temporal de los brazos del vikingo');
-  realPlayerArmDebugPanel.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:8px;z-index:99999;max-width:min(94vw,560px);max-height:48vh;overflow:auto;margin:0;padding:9px 11px;border:1px solid #d8ad68;border-radius:7px;background:rgba(5,12,14,.94);color:#f5e8cf;font:10px/1.38 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;pointer-events:none;box-shadow:0 4px 16px #000b';
+  realPlayerArmDebugPanel.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:6px;z-index:99999;width:min(76vw,440px);max-width:min(76vw,440px);max-height:16vh;overflow-x:auto;overflow-y:hidden;margin:0;padding:5px 7px;border:1px solid #d8ad68;border-radius:6px;background:rgba(5,12,14,.84);color:#f5e8cf;font:7.5px/1.22 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre;pointer-events:none;box-shadow:0 3px 10px #0009';
   document.body.appendChild(realPlayerArmDebugPanel);
   updateRealPlayerArmDebugPanel();
   window.setInterval(updateRealPlayerArmDebugPanel,500);
