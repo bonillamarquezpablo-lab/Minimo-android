@@ -4338,7 +4338,7 @@ async function startGame(){
    foot.computeWorldMatrix(true);toe.computeWorldMatrix(true);
    rightHip.computeWorldMatrix(true);leftHip.computeWorldMatrix(true);
    const forward=toe.getAbsolutePosition().subtract(foot.getAbsolutePosition());
-   const left=leftHip.getAbsolutePosition().subtract(rightHip.getAbsolutePosition());
+   let left=leftHip.getAbsolutePosition().subtract(rightHip.getAbsolutePosition());
    if(forward.lengthSquared()<1e-6||left.lengthSquared()<1e-6)return null;
    forward.normalize();
    left.subtractInPlace(forward.scale(B.Vector3.Dot(left,forward)));
