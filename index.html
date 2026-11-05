@@ -4350,8 +4350,31 @@ async function startGame(){
       ?bodyLocalDirection(root,side*(.025+breathSway*.010),-.958,.13+breathSway*.032,wristVector.length())
       :bodyLocalDirection(root,side*(.07+breathSway*.018),-.915,.27+breathSway*.045,wristVector.length()));
     rotateBoneWorldTowardExact(lower,wristVector,target);
+    lower.computeWorldMatrix(true);
+    // GLB Viking: el +Y local recorre el antebrazo y la cara palmar corresponde a -Z local.
+    // Corregir solo la torsión axial del antebrazo; no se rotan huesos de dedos ni la mano por separado.
+    if(hand){
+     hand.computeWorldMatrix(true);
+     const forearmAxis=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+     if(forearmAxis.lengthSquared()>.001){
+      forearmAxis.normalize();
+      const palmNormal=hand.getDirection(B.Axis.Z).scale(-1).normalize();
+      const thighDirection=bodyLocalDirection(root,side,0,0,1).normalize();
+      const palmTangent=palmNormal.subtract(forearmAxis.scale(B.Vector3.Dot(palmNormal,forearmAxis)));
+      const thighTangent=thighDirection.subtract(forearmAxis.scale(B.Vector3.Dot(thighDirection,forearmAxis)));
+      if(palmTangent.lengthSquared()>.001&&thighTangent.lengthSquared()>.001){
+       palmTangent.normalize();thighTangent.normalize();
+       const twistSin=B.Vector3.Dot(forearmAxis,B.Vector3.Cross(palmTangent,thighTangent));
+       const twistCos=Math.max(-1,Math.min(1,B.Vector3.Dot(palmTangent,thighTangent)));
+       const twistAngle=Math.atan2(twistSin,twistCos);
+       if(Number.isFinite(twistAngle)&&Math.abs(twistAngle)>.0001){
+        lower.rotate(forearmAxis,twistAngle,B.Space.WORLD);
+        lower.computeWorldMatrix(true);
+       }
+      }
+     }
+    }
    }
-   // La rotación de la palma se conserva íntegra.
    return true;
   }catch(err){console.debug('Pose de reposo del brazo omitida:',err);return false;}
  }
