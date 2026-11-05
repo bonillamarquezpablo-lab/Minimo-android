@@ -4792,7 +4792,8 @@ async function startGame(){
   realPlayerArmDebugPanel.textContent=header+
    readArm('LIBRE',n.leftUpperArm,n.leftForearm,n.leftHand,true,REAL_PLAYER_FREE_ARM_PALM_NORMAL,realPlayerArmDebugState.free)+'\n'+
    readArm('PALO',n.upperArm,n.forearm,n.hand,false,REAL_PLAYER_WEAPON_ARM_PALM_NORMAL,realPlayerArmDebugState.weapon)+'\n'+
-   stickDirectionLine;
+   stickDirectionLine+'\n'+
+   'DEDOS RESUELTOS · libre '+(realLeftGripBones||[]).length+' · palo '+(realRightGripBones||[]).length;
  }
  if(realPlayerArmDebugEnabled){
   realPlayerArmDebugPanel=document.createElement('pre');
