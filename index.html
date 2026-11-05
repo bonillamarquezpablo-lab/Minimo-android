@@ -1969,6 +1969,7 @@ async function startGame(){
    twistPercent:100,handSharePercent:0
   }
  };
+ let realPlayerLeftFingerTuningApplied=false;
  const realPlayerArmTuning={
   free:{
    upper:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.free.upper},
@@ -5425,11 +5426,20 @@ async function startGame(){
    setRigDelta(node,getRealPlayerFingerCurl(entry,'weapon'),0,0,true);
   }
   // La mano libre recibe una curvatura pequeña solo durante el ajuste debug en reposo.
+  // Al salir del reposo se restaura una sola vez el bind pose para no bloquear Walk/Run.
   const leftBones=realLeftGripBones||[];
-  for(let i=0;i<leftBones.length;i++){
-   const entry=leftBones[i],node=entry&&entry.node||entry;if(!node)continue;
-   if(!tuneRest){const rest=realBoneRest.get(node);if(rest)restoreRigNodePose(node,rest);continue;}
-   setRigDelta(node,getRealPlayerFingerCurl(entry,'free'),0,0,true);
+  if(tuneRest){
+   for(let i=0;i<leftBones.length;i++){
+    const entry=leftBones[i],node=entry&&entry.node||entry;if(!node)continue;
+    setRigDelta(node,getRealPlayerFingerCurl(entry,'free'),0,0,true);
+   }
+   realPlayerLeftFingerTuningApplied=true;
+  }else if(realPlayerLeftFingerTuningApplied){
+   for(let i=0;i<leftBones.length;i++){
+    const entry=leftBones[i],node=entry&&entry.node||entry;if(!node)continue;
+    const rest=realBoneRest.get(node);if(rest)restoreRigNodePose(node,rest);
+   }
+   realPlayerLeftFingerTuningApplied=false;
   }
  }
   function quaternionAlignYTo(direction){
