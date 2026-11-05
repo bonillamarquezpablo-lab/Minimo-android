@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.173"
+EXPECTED_VERSION = "0.6.174"
 
 HTML_PAGES = (
     "index.html",
@@ -162,10 +162,10 @@ def main() -> None:
         fail("El palo no está orientado hacia delante con inclinación descendente.")
     if "distal.scale(.025)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
-    if "const modelSide=-side;" not in arm_pose or arm_pose.count("modelSide*(") != 5 or "side*(" in arm_pose:
-        fail("Las direcciones laterales del brazo no coinciden con los lados reales del rig GLB.")
-    if "modelSide*(.025+breathSway*.010),-.958,.13+breathSway*.032" not in arm_pose:
-        fail("El antebrazo derecho no conserva la dirección corregida hacia su lado anatómico.")
+    if "const modelSide=side;" not in arm_pose or arm_pose.count("side*(") != 5 or "modelSide*(" in arm_pose:
+        fail("La corrección lateral no debe abrir ambos codos hacia fuera.")
+    if "side*(.025+breathSway*.010),-.958,.13+breathSway*.032" not in arm_pose:
+        fail("Falta la dirección hacia el centro del torso para el antebrazo que sujeta el palo.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
