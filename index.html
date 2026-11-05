@@ -3348,7 +3348,7 @@ async function startGame(){
  let realPlayerModel=null,realPlayerModelPivot=null,realPlayerAnimations={walk:null,run:null,idle:null,attack:null},realPlayerMode='',realPlayerCurrentGroup=null,realPlayerIdleTransition=null,realRigNodes={},realRigIdleNodes=[],realRigManualGaitNodes={},realPlayerReady=false,realPlayerBusy=false,realPlayerManualLocomotion=false,playerHumanBlob=null,equippedWeapon='club';
  const unlockedWeapons=new Set(['club']);
   const REAL_VIKING_FORWARD_OFFSET=Math.PI;
- let realHandNode=null,realUpperArmNode=null,realForearmNode=null,realSpineNode=null,realWeaponHolder=null,realWeaponGroups={},realBoneRest=new Map(),realRightGripBones=[],realWeaponAnchorCalibrated=false,realWeaponAnchorType='',realWeaponPoseOverride=null,realWeaponSocketNode=null,realWeaponSocketMode='pivot',realWeaponHandDefaultPosition=null,realWeaponHandDefaultRotation=null;
+ let realHandNode=null,realUpperArmNode=null,realForearmNode=null,realSpineNode=null,realWeaponHolder=null,realWeaponGroups={},realBoneRest=new Map(),realRightGripBones=[],realWeaponAnchorCalibrated=false,realWeaponAnchorType='',realWeaponPoseOverride=null,realWeaponSocketNode=null,realWeaponSocketMode='pivot',realWeaponHandDefaultPosition=null,realWeaponHandDefaultRotation=null,realRigFrameNodeDiagnostics=[];
  const REAL_PLAYER_ROOT_GROUND_OFFSET=.025;
  const modelStatusEl=document.getElementById('modelStatus'),modelStatusText=document.getElementById('modelStatusText');
  let modelStatusAutoHideTimer=null;
@@ -4386,28 +4386,57 @@ async function startGame(){
  const REAL_PLAYER_FREE_ARM_UPPER_TARGET=new B.Vector3(.40,-.90,-.20);
  const REAL_PLAYER_FREE_ARM_FOREARM_TARGET=new B.Vector3(.11,-.98,.19);
  const REAL_PLAYER_FREE_ARM_PALM_NORMAL=new B.Vector3(-.59,-.22,-.78);
- function getRealPlayerBodyFrame(nodes){
+ function getRealPlayerBodyFrame(nodes,orientationRoot){
+  const worldUp=new B.Vector3(0,1,0);
+  // Primero se intenta el marco anatómico de piernas. Solo se usa si están
+  // presentes los cuatro nodos y sus vectores permiten formar una base válida.
   const foot=nodes&&nodes.leftFoot,toe=nodes&&nodes.leftToeBase;
   const rightHip=nodes&&nodes.rightUpperLeg,leftHip=nodes&&nodes.leftUpperLeg;
-  if(!foot||!toe||!rightHip||!leftHip)return null;
+  if(foot&&toe&&rightHip&&leftHip){
+   try{
+    foot.computeWorldMatrix(true);toe.computeWorldMatrix(true);
+    rightHip.computeWorldMatrix(true);leftHip.computeWorldMatrix(true);
+    let left=leftHip.getAbsolutePosition().subtract(rightHip.getAbsolutePosition());
+    if(left.lengthSquared()>=1e-6){
+     left.subtractInPlace(worldUp.scale(B.Vector3.Dot(left,worldUp)));
+     if(left.lengthSquared()>=1e-6){
+      left.normalize();
+      let forward=toe.getAbsolutePosition().subtract(foot.getAbsolutePosition());
+      if(forward.lengthSquared()>=1e-6){
+       forward.subtractInPlace(worldUp.scale(B.Vector3.Dot(forward,worldUp)));
+       forward.subtractInPlace(left.scale(B.Vector3.Dot(forward,left)));
+       if(forward.lengthSquared()>=1e-6){
+        forward.normalize();
+        const handedness=B.Vector3.Dot(B.Vector3.Cross(left,forward),worldUp);
+        if(Number.isFinite(handedness)&&handedness>=.5)return {left,up:worldUp,forward,source:'PIERNAS'};
+       }
+      }
+     }
+    }
+   }catch(_){}
+  }
+  // Respaldo independiente de las piernas: derecha -> izquierda entre brazos
+  // superiores; el rumbo de player.root fija inequívocamente el sentido de delante.
+  const rightArm=nodes&&nodes.upperArm,leftArm=nodes&&nodes.leftUpperArm;
+  if(!rightArm||!leftArm||!orientationRoot)return null;
   try{
-   foot.computeWorldMatrix(true);toe.computeWorldMatrix(true);
-   rightHip.computeWorldMatrix(true);leftHip.computeWorldMatrix(true);
-   const worldUp=new B.Vector3(0,1,0);
-   let left=leftHip.getAbsolutePosition().subtract(rightHip.getAbsolutePosition());
-   if(left.lengthSquared()<1e-6)return null;
+   rightArm.computeWorldMatrix(true);leftArm.computeWorldMatrix(true);
+   orientationRoot.computeWorldMatrix(true);
+   let left=leftArm.getAbsolutePosition().subtract(rightArm.getAbsolutePosition());
    left.subtractInPlace(worldUp.scale(B.Vector3.Dot(left,worldUp)));
    if(left.lengthSquared()<1e-6)return null;
    left.normalize();
-   let forward=toe.getAbsolutePosition().subtract(foot.getAbsolutePosition());
-   if(forward.lengthSquared()<1e-6)return null;
-   forward.subtractInPlace(worldUp.scale(B.Vector3.Dot(forward,worldUp)));
-   forward.subtractInPlace(left.scale(B.Vector3.Dot(forward,left)));
+   let forward=B.Vector3.Cross(worldUp,left);
    if(forward.lengthSquared()<1e-6)return null;
    forward.normalize();
-   const handedness=B.Vector3.Dot(B.Vector3.Cross(left,forward),worldUp);
-   if(!Number.isFinite(handedness)||handedness<.5)return null;
-   return {left,up:worldUp,forward};
+   const rootForward=orientationRoot.getDirection(B.Axis.Z);
+   rootForward.subtractInPlace(worldUp.scale(B.Vector3.Dot(rootForward,worldUp)));
+   if(rootForward.lengthSquared()<1e-6)return null;
+   rootForward.normalize();
+   const headingDot=B.Vector3.Dot(forward,rootForward);
+   if(!Number.isFinite(headingDot)||Math.abs(headingDot)<1e-5)return null;
+   if(headingDot<0)forward.scaleInPlace(-1);
+   return {left,up:worldUp,forward,source:'BRAZOS'};
   }catch(_){return null;}
  }
  function directionFromRealPlayerBodyFrame(frame,target,length){
@@ -4428,7 +4457,7 @@ async function startGame(){
   };
   if(!root||!upper||!lower){if(debugState){debugState.status='NO DISPONIBLE';debugState.reason='faltan nodos del brazo';debugState.twistDeg=null;}return false;}
   if(debugState){debugState.status='NUEVA';debugState.reason='';debugState.twistDeg=null;}
-  const frame=getRealPlayerBodyFrame(nodes),bodyNode=nodes.spine||nodes.hips;
+  const frame=getRealPlayerBodyFrame(nodes,player.root),bodyNode=nodes.spine||nodes.hips;
   if(!frame||!hand||!bodyNode)return fallback(!frame?'marco anatómico no disponible':!hand?'mano no disponible':'referencia del torso no disponible');
   try{
    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
@@ -4501,15 +4530,31 @@ async function startGame(){
    B.Vector3.Dot(direction,frame.forward)
   ];
  }
+ function armDebugDescribeFrameNode(entry){
+  if(!entry||!entry.candidate)return entry.label+': NO ENCONTRADO';
+  if(!entry.resolved){
+   const duplicate=entry.counterpart&&entry.counterpart===entry.candidate;
+   return entry.label+': ENCONTRADO, PERO DESCARTADO'+(duplicate?' (mismo nodo que '+entry.counterpartLabel+')':'');
+  }
+  const node=entry.resolved,parent=node.parent;
+  const name=String(node.name||node.id||'nodo sin nombre');
+  const parentName=parent?String(parent.name||parent.id||'padre sin nombre'):'sin padre';
+  return entry.label+': SÍ · '+name+' · padre '+parentName+' · '+(entry.source||'árbol importado');
+ }
  function updateRealPlayerArmDebugPanel(){
   if(!realPlayerArmDebugEnabled||!realPlayerArmDebugPanel)return;
   if(!realPlayerReady||!realRigNodes){
    realPlayerArmDebugPanel.textContent='ARM DEBUG · ?debug=1\nEsperando al GLB y al esqueleto del protagonista…';
    return;
   }
-  const n=realRigNodes,frame=getRealPlayerBodyFrame(n);
+  const n=realRigNodes,frame=getRealPlayerBodyFrame(n,player.root);
+  const diagnostics=(realRigFrameNodeDiagnostics||[]).map(armDebugDescribeFrameNode).join('\n');
+  const header='ARM DEBUG · ?debug=1 · '+(realPlayerMode||'sin modo')+'\n'+
+   'Búsqueda local: esqueleto + nodos descendientes de la raíz importada; no recorre la escena global.\n'+
+   'Huesos para marco de piernas:\n'+diagnostics+'\n'+
+   'Marco activo: '+(frame?frame.source:'NO DISPONIBLE')+' · coordenadas: fuera positivo · vertical · delante\n';
   if(!frame){
-   realPlayerArmDebugPanel.textContent='ARM DEBUG · ?debug=1\nNo se puede construir el marco desde LeftFoot, LeftToeBase y las caderas.';
+   realPlayerArmDebugPanel.textContent=header+'No se puede proyectar: faltan los dos brazos superiores o el rumbo horizontal de player.root.';
    return;
   }
   const readArm=(label,upper,lower,hand,isLeft,palmLocal,state)=>{
@@ -4531,10 +4576,8 @@ async function startGame(){
   };
   const leftPalmLocal=new B.Vector3(-.59,-.22,-.78);
   const rightPalmLocal=new B.Vector3(.61,-.23,-.76);
-  realPlayerArmDebugPanel.textContent=
-   'ARM DEBUG · ?debug=1 · '+(realPlayerMode||'sin modo')+'\n'+
-   'Coordenadas: fuera positivo en ambos lados · vertical · delante\n'+
-   '*Normal calculada desde el vector local aproximado indicado.\n'+
+  realPlayerArmDebugPanel.textContent=header+
+   '*Normal calculada con la aproximación local solicitada.\n'+
    readArm('LIBRE · IZQUIERDO',n.leftUpperArm,n.leftForearm,n.leftHand,true,leftPalmLocal,realPlayerArmDebugState.free)+'\n\n'+
    readArm('PALO · DERECHO',n.upperArm,n.forearm,n.hand,false,rightPalmLocal,realPlayerArmDebugState.weapon);
  }
@@ -4668,7 +4711,25 @@ async function startGame(){
   const validGaitClips=gait.playable.filter(clipHasBilateralLegMotion);
   const idle=groups.find(g=>/idle|stand|rest/i.test(g.name));
   const attackClip=groups.find(g=>/attack|swing|slash|melee|axe/i.test(g.name));
-  const rig=separateRigLimbAliases(findRigNodes(asset));
+  // El GLB del protagonista puede exponer articulaciones dentro del árbol de
+  // importedRoot aunque no estén en asset.transformNodes. Reunir ambas fuentes
+  // como ya se hace con cada GLB NPC, sin consultar nodos de otros personajes.
+  const protagonistRootTransformNodes=collectTransformNodes([importedRoot]);
+  const protagonistRootNodeSet=new Set(protagonistRootTransformNodes);
+  const protagonistRigTransformNodes=protagonistRootTransformNodes.slice();
+  (asset.transformNodes||[]).forEach(node=>{if(node&&!protagonistRigTransformNodes.includes(node))protagonistRigTransformNodes.push(node);});
+  const detectedRig=findRigNodes({skeletons:asset.skeletons||[],transformNodes:protagonistRigTransformNodes});
+  const rig=separateRigLimbAliases(detectedRig);
+  const frameNodeDiagnostic=(label,candidate,resolved,counterpart,counterpartLabel)=>({
+   label,candidate,resolved,counterpart,counterpartLabel,
+   source:candidate?(protagonistRootNodeSet.has(candidate)?'descendiente de RealHumanVikingRoot':'asset.transformNodes/esqueleto'):''
+  });
+  realRigFrameNodeDiagnostics=[
+   frameNodeDiagnostic('LeftFoot',detectedRig.leftFoot,rig.leftFoot,detectedRig.rightFoot,'RightFoot'),
+   frameNodeDiagnostic('LeftToeBase',detectedRig.leftToeBase,rig.leftToeBase,null,''),
+   frameNodeDiagnostic('LeftUpLeg',detectedRig.leftUpperLeg,rig.leftUpperLeg,detectedRig.rightUpperLeg,'RightUpLeg'),
+   frameNodeDiagnostic('RightUpLeg',detectedRig.rightUpperLeg,rig.rightUpperLeg,detectedRig.leftUpperLeg,'LeftUpLeg')
+  ];
   const hasRigLegs=!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg&&rig.leftUpperLeg!==rig.rightUpperLeg&&rig.leftLowerLeg!==rig.rightLowerLeg);
   if(!walk&&!run&&!hasRigLegs)throw new Error('El GLB no incluye animación de marcha ni huesos de piernas reconocibles. Animaciones: '+(groups.map(g=>g.name).join(', ')||'ninguna'));
   realRigNodes=rig;realRightGripBones=findRightGripBones(asset);realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});realRightGripBones.forEach(entry=>{const node=entry&&entry.node;if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
@@ -4828,7 +4889,7 @@ async function startGame(){
    }
   }catch(err){
    setAssetLoadingProgress('player',100,'No se pudo descargar el vikingo; se usará el personaje de reserva.');
-   realPlayerReady=false;realPlayerManualLocomotion=false;realPlayerMode='';realPlayerCurrentGroup=null;realRigNodes={};realRigIdleNodes=[];realRigManualGaitNodes={};player.body.setEnabled(true);Object.values(realPlayerAnimations).filter(Boolean).forEach(group=>group.stop());
+   realPlayerReady=false;realPlayerManualLocomotion=false;realPlayerMode='';realPlayerCurrentGroup=null;realRigNodes={};realRigIdleNodes=[];realRigFrameNodeDiagnostics=[];realRigManualGaitNodes={};player.body.setEnabled(true);Object.values(realPlayerAnimations).filter(Boolean).forEach(group=>group.stop());
    if(realWeaponHolder){realWeaponHolder.dispose(false,true);realWeaponHolder=null;}if(realPlayerModel){realPlayerModel.dispose(false,true);realPlayerModel=null;}if(realPlayerModelPivot){realPlayerModelPivot.dispose(false,false);realPlayerModelPivot=null;}
    realWeaponAnchorCalibrated=false;realWeaponAnchorType='';realWeaponPoseOverride=null;realWeaponSocketNode=null;realWeaponSocketMode='pivot';realWeaponGroups={};realPlayerAnimations={walk:null,run:null,idle:null,attack:null};realHandNode=null;realUpperArmNode=null;realForearmNode=null;realSpineNode=null;
    const detail=(err&&err.message)?err.message:String(err||'error desconocido');
