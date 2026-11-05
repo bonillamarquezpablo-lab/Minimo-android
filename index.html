@@ -4531,15 +4531,22 @@ async function startGame(){
   ];
  }
  function armDebugDescribeFrameNode(entry){
-  if(!entry||!entry.candidate)return entry.label+': NO ENCONTRADO';
+  if(!entry)return 'NODO SIN DIAGNÓSTICO';
+  const boneNames=(entry.boneNames||[]).join(', ');
+  const transformNames=(entry.transformNames||[]).join(', ');
+  if(!entry.candidate){
+   if(boneNames)return entry.label+': HUESO EN SKELETON ('+boneNames+') · SIN NODO TRANSFORM ENLAZADO';
+   if(transformNames)return entry.label+': NODO EN ÁRBOL ('+transformNames+') · NO RESUELTO POR EL PATRÓN';
+   return entry.label+': NO ENCONTRADO';
+  }
   if(!entry.resolved){
    const duplicate=entry.counterpart&&entry.counterpart===entry.candidate;
-   return entry.label+': ENCONTRADO, PERO DESCARTADO'+(duplicate?' (mismo nodo que '+entry.counterpartLabel+')':'');
+   return entry.label+': NODO ENCONTRADO, PERO DESCARTADO'+(duplicate?' (mismo nodo que '+entry.counterpartLabel+')':'');
   }
   const node=entry.resolved,parent=node.parent;
   const name=String(node.name||node.id||'nodo sin nombre');
   const parentName=parent?String(parent.name||parent.id||'padre sin nombre'):'sin padre';
-  return entry.label+': SÍ · '+name+' · padre '+parentName+' · '+(entry.source||'árbol importado');
+  return entry.label+': SÍ · '+name+' · padre '+parentName+' · '+(entry.source||'árbol importado')+(boneNames?' · bone: '+boneNames:'');
  }
  function updateRealPlayerArmDebugPanel(){
   if(!realPlayerArmDebugEnabled||!realPlayerArmDebugPanel)return;
@@ -4720,10 +4727,28 @@ async function startGame(){
   (asset.transformNodes||[]).forEach(node=>{if(node&&!protagonistRigTransformNodes.includes(node))protagonistRigTransformNodes.push(node);});
   const detectedRig=findRigNodes({skeletons:asset.skeletons||[],transformNodes:protagonistRigTransformNodes});
   const rig=separateRigLimbAliases(detectedRig);
-  const frameNodeDiagnostic=(label,candidate,resolved,counterpart,counterpartLabel)=>({
-   label,candidate,resolved,counterpart,counterpartLabel,
-   source:candidate?(protagonistRootNodeSet.has(candidate)?'descendiente de RealHumanVikingRoot':'asset.transformNodes/esqueleto'):''
-  });
+  const frameNodePatterns={
+   LeftFoot:[/left.?foot/i,/foot.?l/i],
+   LeftToeBase:[/^left.?toe.?base$/i,/left.?toe.?base/i,/mixamorig.*toe.?base/i],
+   LeftUpLeg:[/left.?up.?leg/i,/left.?thigh/i,/thigh.?l/i,/upleg.?l/i,/mixamorig.*upleg.?l/i],
+   RightUpLeg:[/right.?up.?leg/i,/right.?thigh/i,/thigh.?r/i,/upleg.?r/i,/mixamorig.*upleg.?r/i]
+  };
+  const frameNodeDiagnostic=(label,candidate,resolved,counterpart,counterpartLabel)=>{
+   const patterns=frameNodePatterns[label]||[];
+   const boneNames=[];
+   (asset.skeletons||[]).forEach(skeleton=>(skeleton.bones||[]).forEach(bone=>{
+    const name=String(bone.name||'');
+    if(patterns.some(pattern=>pattern.test(name))&&!boneNames.includes(name))boneNames.push(name);
+   }));
+   const transformNames=protagonistRigTransformNodes
+    .filter(node=>node&&patterns.some(pattern=>pattern.test(String(node.name||''))))
+    .map(node=>String(node.name||node.id||''))
+    .filter((name,index,list)=>name&&list.indexOf(name)===index);
+   return {
+    label,candidate,resolved,counterpart,counterpartLabel,boneNames,transformNames,
+    source:candidate?(protagonistRootNodeSet.has(candidate)?'descendiente de RealHumanVikingRoot':'asset.transformNodes/esqueleto'):''
+   };
+  };
   realRigFrameNodeDiagnostics=[
    frameNodeDiagnostic('LeftFoot',detectedRig.leftFoot,rig.leftFoot,detectedRig.rightFoot,'RightFoot'),
    frameNodeDiagnostic('LeftToeBase',detectedRig.leftToeBase,rig.leftToeBase,null,''),
