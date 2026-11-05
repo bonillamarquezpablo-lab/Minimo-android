@@ -4371,6 +4371,12 @@ async function startGame(){
         lower.rotate(forearmAxis,twistAngle,B.Space.WORLD);
         lower.computeWorldMatrix(true);
        }
+       // TEST TEMPORAL: +90° axial solo en el antebrazo derecho del protagonista.
+       // Se elimina tras verificar visualmente la precedencia de la pose procedural.
+       if(realPlayerReady&&lower===realRigNodes.forearm){
+        lower.rotate(forearmAxis,Math.PI/2,B.Space.WORLD);
+        lower.computeWorldMatrix(true);
+       }
       }
      }
     }
