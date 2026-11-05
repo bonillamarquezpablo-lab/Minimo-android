@@ -4769,7 +4769,7 @@ async function startGame(){
     apply('spine',-.035-.035*stance+.045*seaPitch,.012*Math.sin(elapsed*.83),.055*seaRoll-.024*stance,true);
     apply('head',.012*Math.sin(elapsed*.62),.028*Math.sin(elapsed*.48+.4),-.018*seaRoll+.012*Math.sin(elapsed*.91),true);
     relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.78+Math.abs(stance)*.16);
-    // Recuperación bilateral de la pose estable 0.6.167; no se gira la palma ni la muñeca.
+    // La palma se calibra después a partir de los huesos reales de cada mano.
     relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false,breathBoat,true);
     relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true,breathBoat,true);
     blendRealPlayerIdleTransition();
@@ -4778,7 +4778,7 @@ async function startGame(){
    // Arms have slightly different phase and amplitude: the free arm hangs more,
    // while the weapon arm keeps its elbow softly bent around the handle.
    relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.58+Math.abs(weightShift)*.22);
-   // Postura bilateral recuperada de la versión estable: brazos junto al tronco y codos flexionados.
+   // Postura bilateral: conservar apertura anatómica y flexión natural de los codos.
    apply('leftShoulder',.002*Math.sin(elapsed*.83),0,.010,true);
    apply('rightShoulder',-.002*Math.sin(elapsed*.83),0,-.010,true);
    const armBreath=Math.sin(elapsed*1.16),armWeight=Math.sin(elapsed*.64),armCounter=Math.sin(elapsed*.47+.65);
