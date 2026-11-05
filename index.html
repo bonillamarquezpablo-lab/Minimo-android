@@ -1966,9 +1966,15 @@ async function startGame(){
   weapon:{upper:{outward:.30,forward:-.15},forearm:{outward:.15,forward:.19}}
  };
  const getRealPlayerArmTuningTarget=(arm,segment)=>{
-  const defaults=REAL_PLAYER_ARM_TUNING_DEFAULTS[arm][segment];
   const resting=realPlayerArmDebugEnabled&&realPlayerMode==='idle'&&playerAction==='idle'&&!onShip;
-  const selected=resting?realPlayerArmTuning[arm][segment]:defaults;
+  if(!resting){
+   // Fuera del ajuste en reposo, conservar exactamente los vectores históricos.
+   const original=arm==='free'
+    ?(segment==='upper'?REAL_PLAYER_FREE_ARM_UPPER_TARGET:REAL_PLAYER_FREE_ARM_FOREARM_TARGET)
+    :(segment==='upper'?REAL_PLAYER_WEAPON_ARM_UPPER_TARGET:REAL_PLAYER_WEAPON_ARM_FOREARM_TARGET);
+   return original.clone();
+  }
+  const selected=realPlayerArmTuning[arm][segment];
   const outward=Number(selected.outward),forward=Number(selected.forward);
   const vertical=-Math.sqrt(Math.max(0,1-outward*outward-forward*forward));
   return new B.Vector3(outward,vertical,forward);
