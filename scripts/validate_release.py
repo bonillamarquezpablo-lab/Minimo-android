@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.175"
+EXPECTED_VERSION = "0.6.176"
 
 HTML_PAGES = (
     "index.html",
@@ -127,10 +127,12 @@ def main() -> None:
         fail("La mano izquierda no aplica una curva relajada de dedos.")
     if "joint===1?.56:joint===2?.76:.58" not in index_html or "joint===1?.27:joint===2?.39:.30" not in index_html:
         fail("La flexión visible de los dedos no está aplicada en ambas manos.")
-    if "alignPalmTowardTorso" in index_html:
-        fail("Se ha reintroducido el giro experimental de palma en espacio mundial.")
-    if "La rotación de la palma se conserva íntegra." not in index_html:
-        fail("La corrección de brazos no debe añadir rotaciones a la palma.")
+    if "function findRealPalmLandmarks" not in index_html or "function orientRealPlayerPalmTowardTorso" not in index_html:
+        fail("Falta la orientación de palma basada en los puntos anatómicos del GLB.")
+    if "palmNormal=B.Vector3.Cross(fingerDirection,across)" not in index_html or "torso.getAbsolutePosition().subtract(handPosition)" not in index_html:
+        fail("La palma no se orienta mediante su normal real hacia el tronco.")
+    if "orientRealPlayerPalmTowardTorso(realRigNodes.hand,realRightPalmNodes,1)" not in index_html or "orientRealPlayerPalmTowardTorso(realRigNodes.leftHand,realLeftPalmNodes,-1)" not in index_html:
+        fail("La orientación de palma no se aplica a ambas manos.")
     gait_start = index_html.find("function updateRealRigGait(")
     gait_end = index_html.find("\n\n function createRealWeapon(", gait_start)
     player_gait = index_html[gait_start:gait_end] if gait_start >= 0 and gait_end > gait_start else ""
@@ -141,17 +143,21 @@ def main() -> None:
     arm_pose = index_html[arm_start:arm_end] if arm_start >= 0 and arm_end > arm_start else ""
     if not arm_pose or arm_pose.count("rotateBoneWorldTowardExact(") < 2:
         fail("Falta la colocación anatómica de hombro y antebrazo.")
-    if "La rotación de la palma se conserva íntegra." not in arm_pose:
-        fail("La pose de brazo no debe girar la palma.")
+    if "const upperSide=holdingWeapon?.40:.36;" not in arm_pose or "const upperForward=holdingWeapon?-.22:-.18;" not in arm_pose:
+        fail("La apertura de hombros y codos no conserva la separación anatómica del GLB.")
+    if arm_pose.count("modelSide*(") != 6 or "const modelSide=-side;" not in arm_pose:
+        fail("Las direcciones laterales de ambos brazos no coinciden con el rig real.")
+    if "modelSide*(.16+breathSway*.010),-.86,-.47-breathSway*.018" not in arm_pose:
+        fail("El antebrazo que sujeta el palo no alcanza la posición frontal prevista.")
     if "restoreRigNodePose(node,realBoneRest.get(node))" not in player_gait:
         fail("El reposo del jugador no restaura el bind pose original del GLB.")
-    if "Postura bilateral recuperada de la versión estable" not in player_gait:
-        fail("Falta la pose bilateral estable sin giro de palma.")
+    if "Postura bilateral: conservar apertura anatómica y flexión natural de los codos." not in player_gait:
+        fail("Falta la postura bilateral con apertura anatómica.")
     grip_start = index_html.find("function applyRealPlayerClubGripPose(){")
     grip_end = index_html.find("\n }", grip_start)
     grip_pose = index_html[grip_start:grip_end] if grip_start >= 0 and grip_end > grip_start else ""
-    if not grip_pose or "relaxHumanoidArm" in grip_pose:
-        fail("La pose de dedos no debe volver a girar el brazo o la muñeca.")
+    if not grip_pose or "relaxHumanoidArm" in grip_pose or "orientRealPlayerPalmTowardTorso" not in grip_pose:
+        fail("La pose de agarre debe orientar las palmas sin volver a mover el hombro o el codo.")
     if "if(walking&&realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying)return;" in index_html:
         fail("El gait procedural sigue saltándose los huesos no animados por el clip Walk/Run.")
     if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html:
@@ -162,17 +168,6 @@ def main() -> None:
         fail("El palo no está orientado hacia delante con inclinación descendente.")
     if "distal.scale(.025)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
-    if "const modelSide=-side;" not in arm_pose or arm_pose.count("modelSide*(") != 5 or "side*(" in arm_pose:
-        fail("Las direcciones laterales del brazo no coinciden con los lados reales del rig GLB.")
-    if "modelSide*(.025+breathSway*.010),-.958,-.13-breathSway*.032" not in arm_pose:
-        fail("El antebrazo derecho no apunta hacia delante con el signo local correcto.")
-    if "modelSide*(.13+breathSway*.022),-.985,-.055-breathSway*.024" not in arm_pose:
-        fail("El codo no apunta hacia delante desde el hombro.")
-    if "modelSide*(holdingWeapon?0.17:0.15+breathSway*.018),-.962,-.19-breathSway*.024" not in arm_pose:
-        fail("La postura de navegación no conserva los codos orientados hacia proa.")
-    if "Z positivo desplaza el codo hacia la espalda." not in arm_pose:
-        fail("Falta la documentación del eje delantero local del pivote GLB.")
-
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
         "guest/index.html": "guest-manifest.webmanifest",
