@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.173"
+EXPECTED_VERSION = "0.6.175"
 
 HTML_PAGES = (
     "index.html",
@@ -164,8 +164,14 @@ def main() -> None:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
     if "const modelSide=-side;" not in arm_pose or arm_pose.count("modelSide*(") != 5 or "side*(" in arm_pose:
         fail("Las direcciones laterales del brazo no coinciden con los lados reales del rig GLB.")
-    if "modelSide*(.025+breathSway*.010),-.958,.13+breathSway*.032" not in arm_pose:
-        fail("El antebrazo derecho no conserva la dirección corregida hacia su lado anatómico.")
+    if "modelSide*(.025+breathSway*.010),-.958,-.13-breathSway*.032" not in arm_pose:
+        fail("El antebrazo derecho no apunta hacia delante con el signo local correcto.")
+    if "modelSide*(.13+breathSway*.022),-.985,-.055-breathSway*.024" not in arm_pose:
+        fail("El codo no apunta hacia delante desde el hombro.")
+    if "modelSide*(holdingWeapon?0.17:0.15+breathSway*.018),-.962,-.19-breathSway*.024" not in arm_pose:
+        fail("La postura de navegación no conserva los codos orientados hacia proa.")
+    if "Z positivo desplaza el codo hacia la espalda." not in arm_pose:
+        fail("Falta la documentación del eje delantero local del pivote GLB.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
