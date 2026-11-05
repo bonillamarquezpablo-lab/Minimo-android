@@ -4416,7 +4416,11 @@ async function startGame(){
  }
  function relaxRealPlayerFreeArm(root,nodes,side=-1,breathSway=0,boatStance=false){
   const upper=nodes&&nodes.leftUpperArm,lower=nodes&&nodes.leftForearm,hand=nodes&&nodes.leftHand;
-  const fallback=()=>relaxHumanoidArm(root,upper,lower,hand,side,false,breathSway,boatStance);
+  let restoreFallbackPose=null;
+  const fallback=()=>{
+   if(restoreFallbackPose)restoreFallbackPose();
+   return relaxHumanoidArm(root,upper,lower,hand,side,false,breathSway,boatStance);
+  };
   if(!root||!upper||!lower)return false;
   const frame=getRealPlayerBodyFrame(nodes),bodyNode=nodes.spine||nodes.hips;
   if(!frame||!hand||!bodyNode)return fallback();
@@ -4432,6 +4436,16 @@ async function startGame(){
    // Seguro: si cualquiera de los segmentos quedaría apuntando hacia arriba,
    // no se aplica la calibración y se conserva íntegra la pose anterior.
    if(!upperTarget||!forearmTarget||upperTarget.y>1e-6||forearmTarget.y>1e-6)return fallback();
+   const upperRotation=upper.rotation.clone(),lowerRotation=lower.rotation.clone();
+   const upperQuaternion=upper.rotationQuaternion&&upper.rotationQuaternion.clone();
+   const lowerQuaternion=lower.rotationQuaternion&&lower.rotationQuaternion.clone();
+   restoreFallbackPose=()=>{
+    if(upperQuaternion){if(upper.rotationQuaternion)upper.rotationQuaternion.copyFrom(upperQuaternion);else upper.rotationQuaternion=upperQuaternion.clone();}
+    else{upper.rotationQuaternion=null;upper.rotation.copyFrom(upperRotation);}
+    if(lowerQuaternion){if(lower.rotationQuaternion)lower.rotationQuaternion.copyFrom(lowerQuaternion);else lower.rotationQuaternion=lowerQuaternion.clone();}
+    else{lower.rotationQuaternion=null;lower.rotation.copyFrom(lowerRotation);}
+    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);
+   };
    rotateBoneWorldTowardExact(upper,upperVector,upperTarget);
    lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
    const currentWrist=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
@@ -4457,6 +4471,7 @@ async function startGame(){
      }
     }
    }
+   restoreFallbackPose=null;
    return true;
   }catch(err){
    console.debug('Calibración del brazo libre omitida:',err);
