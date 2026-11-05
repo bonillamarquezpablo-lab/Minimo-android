@@ -4331,7 +4331,7 @@ async function startGame(){
  }
  function relaxHumanoidArm(root,upper,lower,hand,side,holdingWeapon=false,breathSway=0,boatStance=false,debugState=null){
   if(!root||!upper||!lower)return false;
-  if(debugState)debugState.twistDeg=null;
+  if(debugState){debugState.twistDeg=null;if(debugState.status!=='RESPALDO'){debugState.status='POSE ORIGINAL';debugState.reason='rutina original relaxHumanoidArm';}}
   try{
    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);
    const shoulder=upper.getAbsolutePosition(),elbow=lower.getAbsolutePosition(),upperVector=elbow.subtract(shoulder),upperLength=upperVector.length();
