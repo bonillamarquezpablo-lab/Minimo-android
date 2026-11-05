@@ -1957,6 +1957,22 @@ async function startGame(){
  const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
  const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
  const realPlayerArmDebugState={free:{status:'ESPERANDO',reason:'',twistDeg:null},weapon:{status:'POSE ORIGINAL',reason:'',twistDeg:null}};
+ const REAL_PLAYER_ARM_TUNING_DEFAULTS={
+  free:{upper:{outward:.30,forward:-.15},forearm:{outward:.15,forward:.19}},
+  weapon:{upper:{outward:.30,forward:-.15},forearm:{outward:.15,forward:.19}}
+ };
+ const realPlayerArmTuning={
+  free:{upper:{outward:.30,forward:-.15},forearm:{outward:.15,forward:.19}},
+  weapon:{upper:{outward:.30,forward:-.15},forearm:{outward:.15,forward:.19}}
+ };
+ const getRealPlayerArmTuningTarget=(arm,segment)=>{
+  const defaults=REAL_PLAYER_ARM_TUNING_DEFAULTS[arm][segment];
+  const resting=realPlayerArmDebugEnabled&&realPlayerMode==='idle'&&playerAction==='idle'&&!onShip;
+  const selected=resting?realPlayerArmTuning[arm][segment]:defaults;
+  const outward=Number(selected.outward),forward=Number(selected.forward);
+  const vertical=-Math.sqrt(Math.max(0,1-outward*outward-forward*forward));
+  return new B.Vector3(outward,vertical,forward);
+ };
  const yieldStartupFrame=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
  if(!B||!B.Engine)throw new Error('La librería Babylon.js está incompleta o no es compatible.');
  const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:!isIOSDevice&&activeGraphicsProfile!=='performance',powerPreference:'high-performance',failIfMajorPerformanceCaveat:false},false);
@@ -4472,8 +4488,8 @@ async function startGame(){
    const wristVector=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
    const wristLength=wristVector.length();
    if(upperLength<.045||wristLength<.035)return fallback('longitud de segmento insuficiente');
-   const upperTarget=directionFromRealPlayerBodyFrame(frame,REAL_PLAYER_FREE_ARM_UPPER_TARGET,upperLength);
-   const forearmTarget=directionFromRealPlayerBodyFrame(frame,REAL_PLAYER_FREE_ARM_FOREARM_TARGET,wristLength);
+   const upperTarget=directionFromRealPlayerBodyFrame(frame,getRealPlayerArmTuningTarget('free','upper'),upperLength);
+   const forearmTarget=directionFromRealPlayerBodyFrame(frame,getRealPlayerArmTuningTarget('free','forearm'),wristLength);
    // Seguro: si cualquiera de los segmentos quedaría apuntando hacia arriba,
    // no se aplica la calibración y se conserva íntegra la pose anterior.
    if(!upperTarget||!forearmTarget||upperTarget.y>1e-6||forearmTarget.y>1e-6)return fallback('seguro vertical: objetivo no válido o apunta hacia arriba');
@@ -4545,8 +4561,10 @@ async function startGame(){
    if(upperLength<.045||wristLength<.035)return fallback('longitud de segmento insuficiente');
    // Hacia fuera positivo también en el lado derecho; dentro del marco global
    // (izquierda positiva) esto equivale a invertir la componente X.
-   const upperTarget=directionFromRealPlayerBodyFrame(frame,new B.Vector3(-REAL_PLAYER_WEAPON_ARM_UPPER_TARGET.x,REAL_PLAYER_WEAPON_ARM_UPPER_TARGET.y,REAL_PLAYER_WEAPON_ARM_UPPER_TARGET.z),upperLength);
-   const forearmTarget=directionFromRealPlayerBodyFrame(frame,new B.Vector3(-REAL_PLAYER_WEAPON_ARM_FOREARM_TARGET.x,REAL_PLAYER_WEAPON_ARM_FOREARM_TARGET.y,REAL_PLAYER_WEAPON_ARM_FOREARM_TARGET.z),wristLength);
+   const upperBodyTarget=getRealPlayerArmTuningTarget('weapon','upper');upperBodyTarget.x*=-1;
+   const forearmBodyTarget=getRealPlayerArmTuningTarget('weapon','forearm');forearmBodyTarget.x*=-1;
+   const upperTarget=directionFromRealPlayerBodyFrame(frame,upperBodyTarget,upperLength);
+   const forearmTarget=directionFromRealPlayerBodyFrame(frame,forearmBodyTarget,wristLength);
    // Seguro transaccional: no aplicar una pose que levante los segmentos.
    // Si falla cualquier validación posterior, restaurar rotaciones originales
    // antes de ejecutar el respaldo histórico.
@@ -4690,6 +4708,90 @@ async function startGame(){
   document.body.appendChild(realPlayerArmDebugPanel);
   updateRealPlayerArmDebugPanel();
   window.setInterval(updateRealPlayerArmDebugPanel,500);
+  // Controles manuales temporales: existen únicamente al abrir ?debug=1.
+  const armTuneStyle=document.createElement('style');
+  armTuneStyle.textContent=`
+   #realPlayerArmTuneDock{position:fixed;top:calc(env(safe-area-inset-top,0px) + 170px);right:6px;width:min(94vw,410px);z-index:99998;pointer-events:auto;color:#f5e8cf;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+   #realPlayerArmTuneToggle{display:block;margin:0 0 4px auto;padding:6px 9px;border:1px solid #d8ad68;border-radius:6px;background:rgba(14,29,31,.94);color:#f5e8cf;font-size:10px;font-weight:800;box-shadow:0 3px 10px #0008;touch-action:manipulation}
+   #realPlayerArmTunePanel{display:none;max-height:34vh;overflow:auto;padding:8px;border:1px solid #d8ad68;border-radius:7px;background:rgba(5,12,14,.94);box-shadow:0 5px 16px #000b}
+   #realPlayerArmTunePanel.open{display:block}
+   #realPlayerArmTuneHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;color:#e6c27f;font-size:10px;font-weight:900}
+   #realPlayerArmTuneReset{padding:4px 7px;border:1px solid #d8ad6888;border-radius:5px;background:#263735;color:#fff2d8;font-size:9px;font-weight:800}
+   #realPlayerArmTuneColumns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+   .realArmTuneSide{min-width:0;padding:5px;border:1px solid #d8ad6844;border-radius:5px;background:#142426}
+   .realArmTuneSide h4{margin:0 0 5px;color:#e6c27f;font-size:9px;letter-spacing:.6px}
+   .realArmTuneControl{display:block;margin:4px 0 6px;font-size:8px;line-height:1.1}
+   .realArmTuneControl span{display:flex;justify-content:space-between;gap:4px;margin-bottom:2px}
+   .realArmTuneControl output{color:#f1cb82;font-weight:900;font-variant-numeric:tabular-nums}
+   .realArmTuneControl input{display:block;width:100%;height:14px;margin:0;accent-color:#d8ad68;touch-action:pan-x}
+   @media(max-height:520px){#realPlayerArmTuneDock{top:calc(env(safe-area-inset-top,0px) + 160px);right:6px;width:min(94vw,380px)}#realPlayerArmTunePanel{max-height:26vh}}
+  `;
+  document.head.appendChild(armTuneStyle);
+  const armTuneDock=document.createElement('div');
+  armTuneDock.id='realPlayerArmTuneDock';
+  const armTuneToggle=document.createElement('button');
+  armTuneToggle.id='realPlayerArmTuneToggle';
+  armTuneToggle.type='button';
+  armTuneToggle.textContent='AJUSTAR BRAZOS +';
+  armTuneToggle.setAttribute('aria-expanded','false');
+  const armTunePanel=document.createElement('section');
+  armTunePanel.id='realPlayerArmTunePanel';
+  armTunePanel.setAttribute('aria-label','Ajuste en vivo de los brazos');
+  armTunePanel.innerHTML=`
+   <div id="realPlayerArmTuneHead"><span>AJUSTE EN VIVO · SOLO REPOSO</span><button id="realPlayerArmTuneReset" type="button">RESTABLECER</button></div>
+   <div id="realPlayerArmTuneColumns">
+    <div class="realArmTuneSide"><h4>BRAZO LIBRE</h4>
+     <label class="realArmTuneControl"><span>Brazo · hacia fuera <output>0.30</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.30" data-arm="free" data-segment="upper" data-axis="outward"></label>
+     <label class="realArmTuneControl"><span>Brazo · delante <output>-0.15</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="-0.15" data-arm="free" data-segment="upper" data-axis="forward"></label>
+     <label class="realArmTuneControl"><span>Antebrazo · hacia fuera <output>0.15</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.15" data-arm="free" data-segment="forearm" data-axis="outward"></label>
+     <label class="realArmTuneControl"><span>Antebrazo · delante <output>0.19</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="0.19" data-arm="free" data-segment="forearm" data-axis="forward"></label>
+    </div>
+    <div class="realArmTuneSide"><h4>BRAZO DEL PALO</h4>
+     <label class="realArmTuneControl"><span>Brazo · hacia fuera <output>0.30</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.30" data-arm="weapon" data-segment="upper" data-axis="outward"></label>
+     <label class="realArmTuneControl"><span>Brazo · delante <output>-0.15</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="-0.15" data-arm="weapon" data-segment="upper" data-axis="forward"></label>
+     <label class="realArmTuneControl"><span>Antebrazo · hacia fuera <output>0.15</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.15" data-arm="weapon" data-segment="forearm" data-axis="outward"></label>
+     <label class="realArmTuneControl"><span>Antebrazo · delante <output>0.19</output></span><input type="range" min="-0.5" max="0.5" step="0.01" value="0.19" data-arm="weapon" data-segment="forearm" data-axis="forward"></label>
+    </div>
+   </div>`;
+  armTuneDock.appendChild(armTuneToggle);
+  armTuneDock.appendChild(armTunePanel);
+  document.body.appendChild(armTuneDock);
+  const updateArmTuneControls=()=>{
+   armTunePanel.querySelectorAll('input[data-arm]').forEach(input=>{
+    const arm=input.dataset.arm,segment=input.dataset.segment,axis=input.dataset.axis;
+    const value=realPlayerArmTuning[arm][segment][axis];
+    input.value=String(value);
+    const output=input.parentElement.querySelector('output');
+    if(output)output.textContent=value.toFixed(2);
+   });
+  };
+  armTunePanel.querySelectorAll('input[data-arm]').forEach(input=>{
+   input.addEventListener('input',()=>{
+    const arm=input.dataset.arm,segment=input.dataset.segment,axis=input.dataset.axis;
+    const value=Number(input.value);
+    if(!Number.isFinite(value))return;
+    realPlayerArmTuning[arm][segment][axis]=value;
+    const output=input.parentElement.querySelector('output');
+    if(output)output.textContent=value.toFixed(2);
+   },{passive:true});
+  });
+  document.getElementById('realPlayerArmTuneReset').addEventListener('click',()=>{
+   Object.keys(REAL_PLAYER_ARM_TUNING_DEFAULTS).forEach(arm=>{
+    ['upper','forearm'].forEach(segment=>{
+     ['outward','forward'].forEach(axis=>{
+      realPlayerArmTuning[arm][segment][axis]=REAL_PLAYER_ARM_TUNING_DEFAULTS[arm][segment][axis];
+     });
+    });
+   });
+   updateArmTuneControls();
+  });
+  armTuneToggle.addEventListener('click',()=>{
+   const open=!armTunePanel.classList.contains('open');
+   armTunePanel.classList.toggle('open',open);
+   armTuneToggle.textContent=open?'AJUSTAR BRAZOS −':'AJUSTAR BRAZOS +';
+   armTuneToggle.setAttribute('aria-expanded',String(open));
+  });
+  updateArmTuneControls();
  }
  function relaxHumanoidLeg(root,upper,lower,foot,side,kneeFlex=0){
   if(!root||!upper||!lower)return false;
