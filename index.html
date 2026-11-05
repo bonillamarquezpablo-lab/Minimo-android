@@ -4327,49 +4327,14 @@ async function startGame(){
   const yaw=Number(root&&root.rotation&&root.rotation.y)||0,c=Math.cos(yaw),s=Math.sin(yaw);
   return new B.Vector3((x*c+z*s)*length,y*length,(-x*s+z*c)*length);
  }
- const REAL_PLAYER_FREE_ARM_UPPER_TARGET=new B.Vector3(.40,-.90,-.20);
- const REAL_PLAYER_FREE_ARM_FOREARM_TARGET=new B.Vector3(.11,-.98,.19);
- const REAL_PLAYER_FREE_ARM_PALM_NORMAL=new B.Vector3(-.59,-.22,-.78);
- function getRealPlayerBodyFrame(nodes){
-  const foot=nodes&&nodes.leftFoot,toe=nodes&&nodes.leftToeBase;
-  const rightHip=nodes&&nodes.rightUpperLeg,leftHip=nodes&&nodes.leftUpperLeg;
-  if(!foot||!toe||!rightHip||!leftHip)return null;
-  try{
-   foot.computeWorldMatrix(true);toe.computeWorldMatrix(true);
-   rightHip.computeWorldMatrix(true);leftHip.computeWorldMatrix(true);
-   const forward=toe.getAbsolutePosition().subtract(foot.getAbsolutePosition());
-   let left=leftHip.getAbsolutePosition().subtract(rightHip.getAbsolutePosition());
-   if(forward.lengthSquared()<1e-6||left.lengthSquared()<1e-6)return null;
-   forward.normalize();
-   left.subtractInPlace(forward.scale(B.Vector3.Dot(left,forward)));
-   if(left.lengthSquared()<1e-6)return null;
-   left.normalize();
-   const up=B.Vector3.Cross(left,forward);
-   if(up.lengthSquared()<1e-6)return null;
-   up.normalize();
-   left=B.Vector3.Cross(forward,up);
-   if(left.lengthSquared()<1e-6)return null;
-   left.normalize();
-   return {left,up,forward};
-  }catch(_){return null;}
- }
- function directionFromRealPlayerBodyFrame(frame,target,length){
-  if(!frame||!target)return null;
-  const direction=frame.left.scale(target.x)
-   .add(frame.up.scale(target.y))
-   .add(frame.forward.scale(target.z));
-  if(direction.lengthSquared()<1e-8)return null;
-  return direction.normalize().scale(length);
- }
- function relaxHumanoidArm(root,upper,lower,hand,side,holdingWeapon=false,breathSway=0,boatStance=false,bodyFrameCalibration=null){
+ function relaxHumanoidArm(root,upper,lower,hand,side,holdingWeapon=false,breathSway=0,boatStance=false){
   if(!root||!upper||!lower)return false;
   try{
    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);
    const shoulder=upper.getAbsolutePosition(),elbow=lower.getAbsolutePosition(),upperVector=elbow.subtract(shoulder),upperLength=upperVector.length();
    if(upperLength<.045)return false;
-   // El jugador usa el marco anatómico del esqueleto solo para el brazo libre.
-   const calibratedUpperTarget=bodyFrameCalibration&&directionFromRealPlayerBodyFrame(bodyFrameCalibration.frame,REAL_PLAYER_FREE_ARM_UPPER_TARGET,upperLength);
-   const upperTarget=calibratedUpperTarget|| (boatStance?bodyLocalDirection(root,side*(holdingWeapon?0.17:0.15+breathSway*.018),-.962,.19+breathSway*.024,upperLength):bodyLocalDirection(root,side*(.13+breathSway*.022),-.985,.055+breathSway*.024,upperLength));
+   // Recupera la postura suave anterior: el hombro no se abre hacia atrás.
+   const upperTarget=boatStance?bodyLocalDirection(root,side*(holdingWeapon?0.17:0.15+breathSway*.018),-.962,.19+breathSway*.024,upperLength):bodyLocalDirection(root,side*(.13+breathSway*.022),-.985,.055+breathSway*.024,upperLength);
    rotateBoneWorldTowardExact(upper,upperVector,upperTarget);
    lower.computeWorldMatrix(true);
    let wristVector=null;
@@ -4380,12 +4345,11 @@ async function startGame(){
     if(child){child.computeWorldMatrix(true);wristVector=child.getAbsolutePosition().subtract(lower.getAbsolutePosition());}
    }
    if(wristVector&&wristVector.length()>.035){
-    const calibratedForearmTarget=bodyFrameCalibration&&directionFromRealPlayerBodyFrame(bodyFrameCalibration.frame,REAL_PLAYER_FREE_ARM_FOREARM_TARGET,wristVector.length());
-    const target=calibratedForearmTarget|| (boatStance
+    const target=boatStance
      ?bodyLocalDirection(root,side*(holdingWeapon?.06:.11+breathSway*.015),holdingWeapon?-.91:-.88,.34+breathSway*.04,wristVector.length())
      :(holdingWeapon
       ?bodyLocalDirection(root,side*(.025+breathSway*.010),-.958,.13+breathSway*.032,wristVector.length())
-      :bodyLocalDirection(root,side*(.07+breathSway*.018),-.915,.27+breathSway*.045,wristVector.length())));
+      :bodyLocalDirection(root,side*(.07+breathSway*.018),-.915,.27+breathSway*.045,wristVector.length()));
     rotateBoneWorldTowardExact(lower,wristVector,target);
     lower.computeWorldMatrix(true);
     // GLB Viking: el +Y local recorre el antebrazo y la cara palmar corresponde a -Z local.
@@ -4395,20 +4359,14 @@ async function startGame(){
      const forearmAxis=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
      if(forearmAxis.lengthSquared()>.001){
       forearmAxis.normalize();
-      const palmNormal=bodyFrameCalibration
-       ?hand.getDirection(REAL_PLAYER_FREE_ARM_PALM_NORMAL).normalize()
-       :hand.getDirection(B.Axis.Z).scale(-1).normalize();
-      let bodyFacingDirection=null;
-      if(bodyFrameCalibration&&bodyFrameCalibration.bodyNode){
-       bodyFrameCalibration.bodyNode.computeWorldMatrix(true);
-       bodyFacingDirection=bodyFrameCalibration.bodyNode.getAbsolutePosition().subtract(hand.getAbsolutePosition());
-      }else bodyFacingDirection=bodyLocalDirection(root,side,0,0,1);
+      const palmNormal=hand.getDirection(B.Axis.Z).scale(-1).normalize();
+      const thighDirection=bodyLocalDirection(root,side,0,0,1).normalize();
       const palmTangent=palmNormal.subtract(forearmAxis.scale(B.Vector3.Dot(palmNormal,forearmAxis)));
-      const bodyTangent=bodyFacingDirection.subtract(forearmAxis.scale(B.Vector3.Dot(bodyFacingDirection,forearmAxis)));
-      if(palmTangent.lengthSquared()>.001&&bodyTangent.lengthSquared()>.001){
-       palmTangent.normalize();bodyTangent.normalize();
-       const twistSin=B.Vector3.Dot(forearmAxis,B.Vector3.Cross(palmTangent,bodyTangent));
-       const twistCos=Math.max(-1,Math.min(1,B.Vector3.Dot(palmTangent,bodyTangent)));
+      const thighTangent=thighDirection.subtract(forearmAxis.scale(B.Vector3.Dot(thighDirection,forearmAxis)));
+      if(palmTangent.lengthSquared()>.001&&thighTangent.lengthSquared()>.001){
+       palmTangent.normalize();thighTangent.normalize();
+       const twistSin=B.Vector3.Dot(forearmAxis,B.Vector3.Cross(palmTangent,thighTangent));
+       const twistCos=Math.max(-1,Math.min(1,B.Vector3.Dot(palmTangent,thighTangent)));
        const twistAngle=Math.atan2(twistSin,twistCos);
        if(Number.isFinite(twistAngle)&&Math.abs(twistAngle)>.0001){
         lower.rotate(forearmAxis,twistAngle,B.Space.WORLD);
@@ -4420,6 +4378,90 @@ async function startGame(){
    }
    return true;
   }catch(err){console.debug('Pose de reposo del brazo omitida:',err);return false;}
+ }
+ const REAL_PLAYER_FREE_ARM_UPPER_TARGET=new B.Vector3(.40,-.90,-.20);
+ const REAL_PLAYER_FREE_ARM_FOREARM_TARGET=new B.Vector3(.11,-.98,.19);
+ const REAL_PLAYER_FREE_ARM_PALM_NORMAL=new B.Vector3(-.59,-.22,-.78);
+ function getRealPlayerBodyFrame(nodes){
+  const foot=nodes&&nodes.leftFoot,toe=nodes&&nodes.leftToeBase;
+  const rightHip=nodes&&nodes.rightUpperLeg,leftHip=nodes&&nodes.leftUpperLeg;
+  if(!foot||!toe||!rightHip||!leftHip)return null;
+  try{
+   foot.computeWorldMatrix(true);toe.computeWorldMatrix(true);
+   rightHip.computeWorldMatrix(true);leftHip.computeWorldMatrix(true);
+   const worldUp=new B.Vector3(0,1,0);
+   let left=leftHip.getAbsolutePosition().subtract(rightHip.getAbsolutePosition());
+   if(left.lengthSquared()<1e-6)return null;
+   left.subtractInPlace(worldUp.scale(B.Vector3.Dot(left,worldUp)));
+   if(left.lengthSquared()<1e-6)return null;
+   left.normalize();
+   let forward=toe.getAbsolutePosition().subtract(foot.getAbsolutePosition());
+   if(forward.lengthSquared()<1e-6)return null;
+   forward.subtractInPlace(worldUp.scale(B.Vector3.Dot(forward,worldUp)));
+   forward.subtractInPlace(left.scale(B.Vector3.Dot(forward,left)));
+   if(forward.lengthSquared()<1e-6)return null;
+   forward.normalize();
+   const handedness=B.Vector3.Dot(B.Vector3.Cross(left,forward),worldUp);
+   if(!Number.isFinite(handedness)||handedness<.5)return null;
+   return {left,up:worldUp,forward};
+  }catch(_){return null;}
+ }
+ function directionFromRealPlayerBodyFrame(frame,target,length){
+  if(!frame||!target)return null;
+  const direction=frame.left.scale(target.x)
+   .add(frame.up.scale(target.y))
+   .add(frame.forward.scale(target.z));
+  if(direction.lengthSquared()<1e-8)return null;
+  return direction.normalize().scale(length);
+ }
+ function relaxRealPlayerFreeArm(root,nodes,side=-1,breathSway=0,boatStance=false){
+  const upper=nodes&&nodes.leftUpperArm,lower=nodes&&nodes.leftForearm,hand=nodes&&nodes.leftHand;
+  const fallback=()=>relaxHumanoidArm(root,upper,lower,hand,side,false,breathSway,boatStance);
+  if(!root||!upper||!lower)return false;
+  const frame=getRealPlayerBodyFrame(nodes),bodyNode=nodes.spine||nodes.hips;
+  if(!frame||!hand||!bodyNode)return fallback();
+  try{
+   upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   const shoulder=upper.getAbsolutePosition(),elbow=lower.getAbsolutePosition();
+   const upperVector=elbow.subtract(shoulder),upperLength=upperVector.length();
+   const wristVector=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+   const wristLength=wristVector.length();
+   if(upperLength<.045||wristLength<.035)return fallback();
+   const upperTarget=directionFromRealPlayerBodyFrame(frame,REAL_PLAYER_FREE_ARM_UPPER_TARGET,upperLength);
+   const forearmTarget=directionFromRealPlayerBodyFrame(frame,REAL_PLAYER_FREE_ARM_FOREARM_TARGET,wristLength);
+   // Seguro: si cualquiera de los segmentos quedaría apuntando hacia arriba,
+   // no se aplica la calibración y se conserva íntegra la pose anterior.
+   if(!upperTarget||!forearmTarget||upperTarget.y>1e-6||forearmTarget.y>1e-6)return fallback();
+   rotateBoneWorldTowardExact(upper,upperVector,upperTarget);
+   lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   const currentWrist=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+   if(currentWrist.length()<.035)return fallback();
+   rotateBoneWorldTowardExact(lower,currentWrist,forearmTarget);
+   lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   const forearmAxis=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+   if(forearmAxis.lengthSquared()>.001){
+    forearmAxis.normalize();
+    const palmNormal=hand.getDirection(REAL_PLAYER_FREE_ARM_PALM_NORMAL).normalize();
+    bodyNode.computeWorldMatrix(true);
+    const bodyFacing=bodyNode.getAbsolutePosition().subtract(hand.getAbsolutePosition());
+    const palmTangent=palmNormal.subtract(forearmAxis.scale(B.Vector3.Dot(palmNormal,forearmAxis)));
+    const bodyTangent=bodyFacing.subtract(forearmAxis.scale(B.Vector3.Dot(bodyFacing,forearmAxis)));
+    if(palmTangent.lengthSquared()>.001&&bodyTangent.lengthSquared()>.001){
+     palmTangent.normalize();bodyTangent.normalize();
+     const twistSin=B.Vector3.Dot(forearmAxis,B.Vector3.Cross(palmTangent,bodyTangent));
+     const twistCos=Math.max(-1,Math.min(1,B.Vector3.Dot(palmTangent,bodyTangent)));
+     const twistAngle=Math.atan2(twistSin,twistCos);
+     if(Number.isFinite(twistAngle)&&Math.abs(twistAngle)>.0001){
+      lower.rotate(forearmAxis,twistAngle,B.Space.WORLD);
+      lower.computeWorldMatrix(true);
+     }
+    }
+   }
+   return true;
+  }catch(err){
+   console.debug('Calibración del brazo libre omitida:',err);
+   return fallback();
+  }
  }
  function relaxHumanoidLeg(root,upper,lower,foot,side,kneeFlex=0){
   if(!root||!upper||!lower)return false;
@@ -4805,9 +4847,7 @@ async function startGame(){
     apply('spine',-.035-.035*stance+.045*seaPitch,.012*Math.sin(elapsed*.83),.055*seaRoll-.024*stance,true);
     apply('head',.012*Math.sin(elapsed*.62),.028*Math.sin(elapsed*.48+.4),-.018*seaRoll+.012*Math.sin(elapsed*.91),true);
     relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.78+Math.abs(stance)*.16);
-    const freeArmFrame=getRealPlayerBodyFrame(n);
-    const freeArmCalibration=freeArmFrame?{frame:freeArmFrame,bodyNode:n.spine||n.hips}:null;
-    relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false,breathBoat,true,freeArmCalibration);
+    relaxRealPlayerFreeArm(realPlayerModelPivot||player.root,n,-1,breathBoat,true);
     relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true,breathBoat,true);
     blendRealPlayerIdleTransition();
     return;
@@ -4817,9 +4857,7 @@ async function startGame(){
    apply('leftShoulder',.002*Math.sin(elapsed*.83),0,.010,true);
    apply('rightShoulder',-.002*Math.sin(elapsed*.83),0,-.010,true);
    relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.58+Math.abs(weightShift)*.22);
-   const freeArmFrame=getRealPlayerBodyFrame(n);
-   const freeArmCalibration=freeArmFrame?{frame:freeArmFrame,bodyNode:n.spine||n.hips}:null;
-   relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false,0,false,freeArmCalibration);
+   relaxRealPlayerFreeArm(realPlayerModelPivot||player.root,n,-1,0,false);
    relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true);
    apply('hips',breath*.014*idleMotionScale,weightShift*.010*idleMotionScale,weightShift*.018*idleMotionScale,true);
    apply('spine',-.024+breath*.032*idleMotionScale,-weightShift*.008*idleMotionScale,-weightShift*.014*idleMotionScale,true);
