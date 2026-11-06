@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.167"
+EXPECTED_VERSION = "0.6.187"
 
 HTML_PAGES = (
     "index.html",
@@ -119,20 +119,160 @@ def main() -> None:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
     if "rightGripBones:realRightGripBones.length" not in index_html:
         fail("Falta telemetría del número de huesos de agarre detectados.")
-    if "if(holding&&(mode==='idle'||mode==='sail'))" not in index_html:
-        fail("El agarre sigue anulando la animación nativa del brazo durante Walk/Run.")
-    if "if(walking&&realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying)return;" in index_html:
-        fail("El gait procedural sigue saltándose los huesos no animados por el clip Walk/Run.")
+    # Master idle pose is represented only by per-bone local rotations.
+    if "const REAL_PLAYER_MASTER_POSE_DEFAULTS=Object.freeze(" not in index_html:
+        fail("Falta el bloque de rotaciones maestras locales por articulación.")
+    if index_html.count("quaternion:[") < 38:
+        fail("La pose maestra de fábrica no contiene las 38 rotaciones capturadas.")
+    for master_joint in ("leftShoulder","leftUpperArm","leftForearm","leftHand","rightShoulder","rightUpperArm","rightForearm","rightHand","leftFinger_lefthandthumb1","rightFinger_righthandpinky3"):
+        if '"' + master_joint + '":{quaternion:' not in index_html:
+            fail(f"Falta una rotación maestra capturada: {master_joint}")
+    if "initializeRealPlayerMasterPose();" not in index_html:
+        fail("La pose maestra no se inicializa después de capturar el bind pose del GLB.")
+    if "add('leftShoulder'" not in index_html or "add('rightShoulder'" not in index_html:
+        fail("La pose maestra no incluye ambos hombros.")
+    for joint in ("leftUpperArm", "rightUpperArm", "leftForearm", "rightForearm", "leftHand", "rightHand"):
+        if f"add('{joint}'" not in index_html:
+            fail(f"La pose maestra no incluye {joint}.")
+    if "addFingers(realLeftGripBones,'left','free');" not in index_html:
+        fail("La pose maestra no incluye los dedos de la mano izquierda.")
+    if "addFingers(realRightGripBones,'right','weapon');" not in index_html:
+        fail("La pose maestra no incluye los dedos de la mano derecha.")
+    if "const base=realBoneRest.get(entry.node);" not in index_html:
+        fail("No se conserva una rotación base local por hueso.")
+    if "restoreRigNodePose(node,base);" not in index_html or "applyRealPlayerMasterPoseValue(node,target);" not in index_html:
+        fail("El reposo no restaura la base local y aplica directamente la rotación maestra.")
+    if "function captureRealPlayerMasterTransition()" not in index_html or "return {startedAt:elapsed,duration:.22,poses};" not in index_html:
+        fail("La entrada en reposo no usa una mezcla fija de 0,22 segundos.")
+    pose_start = index_html.find("function applyRealPlayerArmPoseAfterAnimations(){")
+    pose_end = index_html.find("function buildRealPlayerMasterPoseControls()", pose_start)
+    pose_body = index_html[pose_start:pose_end]
+    if pose_start < 0 or pose_end <= pose_start:
+        fail("Falta el aplicador de la pose maestra después de las animaciones.")
+    if "realPlayerMode!=='idle'" not in pose_body or "playerAction!=='idle'" not in pose_body:
+        fail("La pose maestra no está limitada al reposo normal.")
+    for forbidden in ("getRealPlayerSkeletonBodyFrame(", "getRealPlayerBodyFrame(", "getRealPlayerHeadingBodyFrame(", "joystick"):
+        if forbidden in pose_body:
+            fail(f"La pose maestra depende indebidamente de {forbidden}.")
+    if "relaxRealPlayerFreeArm(" in pose_body or "relaxRealPlayerWeaponArm(" in pose_body:
+        fail("La pose maestra todavía calcula direcciones anatómicas.")
+    if "function sampleRealPlayerArmDeviation()" not in index_html:
+        fail("Falta el detector de desviación local.")
+    detector_start = index_html.find("function sampleRealPlayerArmDeviation(){")
+    detector_end = index_html.find("function armDebugFormatYaw", detector_start)
+    detector_body = index_html[detector_start:detector_end]
+    if detector_start < 0 or detector_end <= detector_start:
+        fail("El detector local de desviación no está completo.")
+    if "realPlayerLocalRotationQuaternion(node)" not in detector_body or "if(degrees<=1)continue;" not in detector_body:
+        fail("El detector no compara rotaciones locales reales con tolerancia de 1 grado.")
+    if "toleranceDeg:1" not in detector_body:
+        fail("El informe del detector no registra la tolerancia de 1 grado.")
+    if "getRealPlayerSkeletonBodyFrame(" in detector_body or "getRealPlayerBodyFrame(" in detector_body:
+        fail("El detector local sigue dependiendo de rumbo, pies o caderas.")
+    if "slider.type='range';" not in index_html or "slider.addEventListener('input'" not in index_html:
+        fail("Faltan los deslizadores locales por articulación.")
+    if "slider.dataset.masterPoseAxis=axis;" not in index_html or "output.textContent=Number(euler[axis]).toFixed(3);" not in index_html:
+        fail("Los deslizadores no muestran los valores locales de cada eje.")
+    if "CAPTURAR POSE ACTUAL" not in index_html or "captureRealPlayerMasterPoseText()" not in index_html:
+        fail("Falta la captura copiable de las rotaciones locales actuales.")
+    if "node.rotationQuaternion?{quaternion:[" not in index_html or ":{rotation:[node.rotation.x,node.rotation.y,node.rotation.z]}" not in index_html:
+        fail("La captura no exporta las rotaciones locales reales como quaternion o Euler.")
+    if "navigator.clipboard.writeText(output.value)" not in index_html:
+        fail("Falta la copia directa del código de pose maestra.")
+    if "REAL_PLAYER_MASTER_POSE_STORAGE_KEY='el-sin-nombre-master-local-pose-v1'" not in index_html:
+        fail("Falta la clave de guardado local de la postura maestra.")
+    if "function readRealPlayerMasterPoseStorage()" not in index_html or "function restoreRealPlayerMasterPoseStoredValue(raw)" not in index_html:
+        fail("Falta la restauración validada de la pose guardada.")
+    if "function saveRealPlayerMasterPoseLocally()" not in index_html or "localStorage.setItem(REAL_PLAYER_MASTER_POSE_STORAGE_KEY" not in index_html:
+        fail("Falta el guardado persistente de las rotaciones.")
+    if "realPlayerMasterPoseSave" not in index_html or "GUARDAR Y FIJAR POSE EN ESTE DISPOSITIVO" not in index_html:
+        fail("Falta el botón visible para guardar y fijar la pose.")
+    if "localStorage.removeItem(REAL_PLAYER_MASTER_POSE_STORAGE_KEY)" not in index_html:
+        fail("RESTABLECER no elimina la configuración persistida.")
+    if "realPlayerArmTuneMove" not in index_html or "pointerdown" not in index_html or "pointermove" not in index_html:
+        fail("El panel de ajuste no ofrece reubicación táctil.")
+    if "el-sin-nombre-arm-tune-dock-position-v1" not in index_html:
+        fail("La posición del panel no se conserva en el navegador.")
+    if "z-index:100001" not in index_html:
+        fail("El editor no queda por encima de los paneles de diagnóstico.")
+    if "realPlayerArmTuneSavePosition" not in index_html or "GUARDAR POSICIÓN DEL PANEL" not in index_html:
+        fail("Falta el botón explícito para guardar la posición del editor.")
+    if "persistArmTuneDockPosition" not in index_html or "armTuneSavePosition.addEventListener('click',persistArmTuneDockPosition)" not in index_html:
+        fail("El botón de posición no guarda las coordenadas del panel.")
+    if "width:min(48vw,260px)" not in index_html or "left:7px;right:auto" not in index_html:
+        fail("El panel móvil no está desplazado al lateral para dejar libre el centro.")
+    if "new URLSearchParams(window.location.search).get('debug')==='1'" not in index_html:
+        fail("El panel de pose no está condicionado por ?debug=1.")
+    if "if(!realPlayerArmDebugEnabled)return;" not in index_html or "if(realPlayerArmDebugEnabled){\n  const armTuneStyle=document.createElement('style');" not in index_html:
+        fail("Los controles de la pose maestra no están reservados a ?debug=1.")
+    if "armTuneDock.appendChild(armTuneToggle);" not in index_html or "realPlayerArmTuneReset" not in index_html:
+        fail("Faltan el menú de pose maestra o RESTABLECER.")
+    if "realPlayerMasterIdleTransition=mode==='idle'?captureRealPlayerMasterTransition():null;" not in index_html:
+        fail("La transición a reposo no captura el último estado local para mezclarlo.")
+    if "if(walking&&!realPlayerManualLocomotion)return;" not in index_html:
+        fail("El gait procedural todavía puede competir con la locomoción GLB.")
+    if "group=realPlayerAnimations.run||realPlayerAnimations.walk;" not in index_html or "group=realPlayerAnimations.walk||realPlayerAnimations.run;" not in index_html:
+        fail("No se seleccionan los clips originales Walk/Run del GLB.")
+    club_start = index_html.find("function applyRealPlayerClubGripPose(){")
+    club_end = index_html.find("function restoreRealPlayerArmBindPose(nodes)", club_start)
+    club_body = index_html[club_start:club_end]
+    if club_start < 0 or club_end <= club_start:
+        fail("Falta la rutina original de agarre.")
+    if "const holding=!!realWeaponGroups[equippedWeapon];" not in club_body:
+        fail("La rutina original de agarre no conserva la selección de arma.")
+    callback_start = index_html.find("scene.onAfterAnimationsObservable.add(()=>{")
+    callback_end = index_html.find("\n });", callback_start)
+    callback_body = index_html[callback_start:callback_end]
+    if callback_start < 0 or callback_end <= callback_start:
+        fail("Falta el callback posterior a las animaciones.")
+    if "const masterOrNativeOwnsFingers=" not in callback_body or "if(!masterOrNativeOwnsFingers)applyRealPlayerClubGripPose();" not in callback_body:
+        fail("La propiedad de dedos no está separada entre GLB, pose maestra y acciones.")
+    if "syncRealWeaponAnchor(0,realWeaponPoseOverride);" not in callback_body:
+        fail("El callback no conserva el seguimiento normal del anclaje del palo.")
+    gait_start = index_html.find("function updateRealRigGait(")
+    gait_end = index_html.find("function createRealWeapon(", gait_start)
+    gait_body = index_html[gait_start:gait_end]
+    if gait_start < 0 or gait_end <= gait_start or "relaxRealPlayerFreeArm(" in gait_body or "relaxRealPlayerWeaponArm(" in gait_body:
+        fail("El gait del cuerpo no debe recalcular la dirección de los brazos.")
+    idle_start = gait_body.find("Reposo estable: sin respiración, balanceo ni variaciones sinusoidales.")
+    idle_end = gait_body.find("\n  }\n }", idle_start)
+    if idle_start < 0 or idle_end <= idle_start:
+        fail("No se encontró la rama de reposo estático.")
+    idle_body = gait_body[idle_start:idle_end]
+    if "Math.sin(" in idle_body or "Math.cos(" in idle_body or "elapsed" in idle_body:
+        fail("El reposo contiene balanceo o respiración variable.")
+    if "Object.values(rig).forEach(rememberRigRest);" not in index_html:
+        fail("No se captura el bind pose de los huesos del rig.")
+    if "function findRightGripBones" not in index_html or "applyRealPlayerClubGripPose" not in index_html:
+        fail("Falta la detección y la gestión del agarre del palo.")
+    if "rightGripBones:realRightGripBones.length" not in index_html:
+        fail("Falta la telemetría de los huesos de agarre.")
+    if "club-world-anchor" not in index_html or "function syncRealWeaponAnchor(" not in index_html:
+        fail("Falta el anclaje del palo al jugador.")
     if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html:
         fail("El palo no tiene el desplazamiento frontal de visibilidad en la palma.")
     if "RealCastawayStickGrip',club,[0,.20,.025]" not in index_html:
         fail("La empuñadura del palo no está centrada en la palma.")
     if "modelForward.clone().add(new B.Vector3(0,.24,0)).normalize()" not in index_html:
-        fail("El palo no está orientado hacia delante con inclinación descendente.")
+        fail("El palo no conserva la orientación frontal e inclinación fijadas.")
     if "distal.scale(.025)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
-    if "side*(.025+breathSway*.010),-.958,.13" not in index_html:
-        fail("La pose natural del antebrazo con el palo no está restaurada.")
+    if "window.setInterval(updateRealPlayerArmDebugPanel,500);\n  window.setInterval(sampleRealPlayerArmDeviation,100);\n }\n // Panel de ajuste permanente" not in index_html:
+        fail("La estructura del diagnóstico de brazos debug=1 ha cambiado inesperadamente.")
+    if "FPS EN VIVO '+liveFps+' · MATAS '+grassDebugClumpCount.toLocaleString('es-ES')+' · LOTES '+grassDebugBatchCount" not in index_html:
+        fail("Faltan FPS en vivo y el recuento de matas en el panel debug=1.")
+    if "grassDebugClumpCount=count;grassDebugBatchCount=grassBatches.size;" not in index_html:
+        fail("El contador de hierba no recibe el número real de matas creadas.")
+    if "const liveFps=Number.isFinite(engine.getFps())?Math.round(engine.getFps()):0;" not in index_html:
+        fail("El panel debug=1 no mide los FPS actuales.")
+    if "const grassDebugEnabled=new URLSearchParams(window.location.search).get('grassdebug')==='1';" not in index_html:
+        fail("Falta el acceso independiente al diagnóstico de hierba ?grassdebug=1.")
+    if "function updateGrassDebugPanel()" not in index_html or "grassDebugIslandStats.push({" not in index_html:
+        fail("Faltan las métricas por isla del diagnóstico de hierba.")
+    if "const qualityGrassDensity=1.18;" not in index_html or "addLeaf(5.72,.52,.13,.26,.045,0);" not in index_html:
+        fail("La hierba de calidad no incluye la densidad y el penacho mejorados.")
+    if "const jitter=isPerformanceMode ? .30 : .24;" not in index_html or "const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));" not in index_html:
+        fail("La distribución uniforme de hierba no incluye reducción de jitter y relleno de huecos.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",

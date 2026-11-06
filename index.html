@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.167">
-<meta name="el-sin-nombre-repair" content="0.6.167 release hardening: guest PWA URLs, offline fallback and release validation">
+<meta name="el-sin-nombre-build" content="0.6.187">
+<meta name="el-sin-nombre-repair" content="0.6.187 denser uniform 3D grass; independent grass diagnostic; preserve the 0.6.185 saved master idle pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.167</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.187</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -611,7 +611,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.167 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.185 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -649,7 +649,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 
-/* 0.6.167 — portada principal de aventura nórdica, a pantalla completa. */
+/* 0.6.185 — portada principal de aventura nórdica, a pantalla completa. */
 #audioGate{
  position:fixed!important;inset:0!important;z-index:2001!important;
  display:none;align-items:stretch!important;justify-content:stretch!important;
@@ -781,7 +781,7 @@ body.preflight.audio-gate #modeSelect{display:none!important}
 @media(prefers-reduced-motion:reduce){#audioGate button{transition:none!important}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.167: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.185: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -901,13 +901,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.167 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.185 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.167 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.185 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -1017,7 +1017,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #intro .campaignCard strong{font-size:19px!important}
  #intro .campaignCardArt{font-size:39px!important}
 }
-/* 0.6.167 — menús compactos y música antes del selector gráfico. */
+/* 0.6.185 — menús compactos y música antes del selector gráfico. */
 #audioGate{position:fixed;inset:0;z-index:2001;display:none;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at 50% 28%,rgba(151,105,54,.30),transparent 48%),linear-gradient(145deg,#071316,#101f20 58%,#050d10);color:#f3e5c9}
 body.preflight.audio-gate #audioGate{display:flex}
 body.preflight.audio-gate #modeSelect{display:none!important}
@@ -1109,7 +1109,7 @@ body.preflight.audio-gate #modeSelect{display:none!important}
  #intro .campaignFooter{display:none!important}
 }
 
-/* 0.6.167 — pantalla de carga nórdica a sangre completa; arte 2D ligero. */
+/* 0.6.185 — pantalla de carga nórdica a sangre completa; arte 2D ligero. */
 #loading{
  position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;min-height:100dvh!important;
  margin:0!important;padding:0!important;overflow:hidden!important;display:flex!important;align-items:stretch!important;justify-content:stretch!important;
@@ -1955,7 +1955,174 @@ async function startGame(){
  setLoadingProgress(40,'Preparando el mundo…');
  try{
  const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
- const yieldStartupFrame=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+ const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
+ const realPlayerArmTuningEnabled=true;
+ const realPlayerArmDebugState={free:{status:'ESPERANDO',reason:'',twistDeg:null},weapon:{status:'POSE ORIGINAL',reason:'',twistDeg:null}};
+ let realPlayerSkeletonFrameDiagnostic='esqueleto pendiente';
+ const realPlayerArmFrameMode='ESQUELETO';
+ const realPlayerArmDebugTargets={free:null,weapon:null};
+ // Observabilidad únicamente: no participa en el muestreo, la geometría ni la animación de la hierba.
+ let grassDebugClumpCount=0,grassDebugBatchCount=0,grassDebugLeavesPerClump=7,grassDebugIslandStats=[],grassDebugPanel=null;
+ const grassDebugEnabled=new URLSearchParams(window.location.search).get('grassdebug')==='1';
+ const REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY='el-sin-nombre-arm-last-deviation-v1';
+ let realPlayerArmLastDeviation=null,realPlayerArmDeviationLastWasLocomoting=false,realPlayerArmDeviationStoppedAtMs=null,realPlayerArmDeviationActiveSignature='';
+ if(realPlayerArmDebugEnabled){try{const storedDeviation=localStorage.getItem(REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY);if(storedDeviation){const parsed=JSON.parse(storedDeviation);if(parsed&&parsed.timestamp&&Array.isArray(parsed.violations))realPlayerArmLastDeviation=parsed;}}catch(_){realPlayerArmLastDeviation=null;}}
+ const REAL_PLAYER_MASTER_POSE_DEFAULTS=Object.freeze({
+ "leftShoulder":{quaternion:[0.6885098,0.5020899,-0.3943813,0.3439817]},
+ "leftUpperArm":{quaternion:[0.3468108,0.2414689,0.333833,0.8425975]},
+ "leftForearm":{quaternion:[0.0576338,-0.011775,0.0910955,0.9941033]},
+ "leftHand":{quaternion:[0.0157877,0.5768049,0.2508177,0.7772627]},
+ "rightShoulder":{quaternion:[0.5335978,-0.3117381,0.3612409,0.698282]},
+ "rightUpperArm":{quaternion:[0.5939425,-0.5737427,-0.1774567,0.5353137]},
+ "rightForearm":{quaternion:[-0.3746706,0.0073678,-0.2140638,0.9020778]},
+ "rightHand":{quaternion:[0.0264659,-0.3026369,-0.377169,0.8749023]},
+ "leftFinger_lefthandthumb1":{quaternion:[-0.1441846,0.6573011,-0.0663896,0.7367214]},
+ "leftFinger_lefthandthumb2":{quaternion:[-0.1151035,-0.111678,-0.0099925,0.9870052]},
+ "leftFinger_lefthandthumb3":{quaternion:[-0.1807264,-0.2756597,0.0193549,0.9439147]},
+ "leftFinger_lefthandindex1":{quaternion:[-0.1310093,0.3813746,0.1351063,0.9050615]},
+ "leftFinger_lefthandindex2":{quaternion:[-0.2381337,-0.1721961,0.0226177,0.955578]},
+ "leftFinger_lefthandindex3":{quaternion:[-0.1135945,-0.1238676,0.0267915,0.9854112]},
+ "leftFinger_lefthandmiddle1":{quaternion:[-0.1178338,0.3420149,0.1589183,0.9186326]},
+ "leftFinger_lefthandmiddle2":{quaternion:[-0.2691069,-0.197438,0.0354039,0.9419906]},
+ "leftFinger_lefthandmiddle3":{quaternion:[-0.1228785,-0.1784629,0.0410331,0.975381]},
+ "leftFinger_lefthandring1":{quaternion:[-0.1079452,0.2936198,0.1868732,0.9312431]},
+ "leftFinger_lefthandring2":{quaternion:[-0.291561,-0.2083115,0.0474465,0.932388]},
+ "leftFinger_lefthandring3":{quaternion:[-0.1246068,-0.2196068,0.0502038,0.9662948]},
+ "leftFinger_lefthandpinky1":{quaternion:[-0.0905694,0.2098908,0.2325258,0.9453437]},
+ "leftFinger_lefthandpinky2":{quaternion:[-0.3159189,-0.1835042,0.0556572,0.929206]},
+ "leftFinger_lefthandpinky3":{quaternion:[-0.1302446,-0.2529182,0.0546642,0.957121]},
+ "rightFinger_righthandthumb1":{quaternion:[-0.1145655,-0.8434687,-0.4300455,0.3008259]},
+ "rightFinger_righthandthumb2":{quaternion:[-0.3372554,0,0,0.9414132]},
+ "rightFinger_righthandthumb3":{quaternion:[-0.1561707,0.1670843,0.0362294,0.9728211]},
+ "rightFinger_righthandindex1":{quaternion:[0.7774446,0,0,-0.6289514]},
+ "rightFinger_righthandindex2":{quaternion:[-0.1717876,0.1523483,-0.0253217,0.9729531]},
+ "rightFinger_righthandindex3":{quaternion:[-0.0639221,0.109855,-0.0279331,0.9914966]},
+ "rightFinger_righthandmiddle1":{quaternion:[-0.7904235,0,0,0.6125608]},
+ "rightFinger_righthandmiddle2":{quaternion:[-0.2041348,0.1790423,-0.0394442,0.9616221]},
+ "rightFinger_righthandmiddle3":{quaternion:[-0.0748002,0.1627355,-0.0447345,0.9828128]},
+ "rightFinger_righthandring1":{quaternion:[0.9891116,0,0,-0.1471672]},
+ "rightFinger_righthandring2":{quaternion:[-0.2261364,0.2024703,-0.0579248,0.9510588]},
+ "rightFinger_righthandring3":{quaternion:[-0.0742799,0.2207137,-0.0605746,0.9706177]},
+ "rightFinger_righthandpinky1":{quaternion:[0.9537858,0,0,-0.3004874]},
+ "rightFinger_righthandpinky2":{quaternion:[-0.2493625,0.195587,-0.0693784,0.9459127]},
+ "rightFinger_righthandpinky3":{quaternion:[-0.076162,0.2740689,-0.0715967,0.9560123]}
+}); // Rotaciones locales maestras capturadas y verificadas por el usuario; el ajuste guardado tiene prioridad.
+ const REAL_PLAYER_MASTER_POSE_STORAGE_KEY='el-sin-nombre-master-local-pose-v1';
+ let realPlayerMasterPoseLoadedFromStorage=false,realPlayerMasterPoseSavedAt=null;
+ const REAL_PLAYER_ARM_TUNING_DEFAULTS={
+  free:{
+   upper:{outward:.26,forward:-.21},forearm:{outward:.15,forward:-.08},
+   fingers:{thumb:-.08,index:-.10,middle:-.10,ring:-.10,little:-.10},
+   twistPercent:100,handSharePercent:100
+  },
+  weapon:{
+   upper:{outward:.16,forward:-.02},forearm:{outward:0,forward:0},
+   fingers:{thumb:-.28,index:-.34,middle:-.34,ring:-.34,little:-.34},
+   twistPercent:100,handSharePercent:100
+  }
+ };
+ let realPlayerLeftFingerTuningApplied=false;
+ const realPlayerArmTuning={
+  free:{
+   upper:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.free.upper},
+   forearm:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.free.forearm},
+   fingers:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.free.fingers},
+   twistPercent:REAL_PLAYER_ARM_TUNING_DEFAULTS.free.twistPercent,
+   handSharePercent:REAL_PLAYER_ARM_TUNING_DEFAULTS.free.handSharePercent
+  },
+  weapon:{
+   upper:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.weapon.upper},
+   forearm:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.weapon.forearm},
+   fingers:{...REAL_PLAYER_ARM_TUNING_DEFAULTS.weapon.fingers},
+   twistPercent:REAL_PLAYER_ARM_TUNING_DEFAULTS.weapon.twistPercent,
+   handSharePercent:REAL_PLAYER_ARM_TUNING_DEFAULTS.weapon.handSharePercent
+  }
+ };
+ const getRealPlayerArmTuningTarget=(arm,segment)=>{
+  // La calibración define el corredor anatómico del brazo en todos los estados.
+  // Durante la marcha cambia la fase del movimiento, no el objetivo lateral que
+  // mantiene el codo y la muñeca fuera del volumen del torso.
+  const useCalibrated=realPlayerArmTuningEnabled;
+  if(!useCalibrated){
+   const original=arm==='free'
+    ?(segment==='upper'?REAL_PLAYER_FREE_ARM_UPPER_TARGET:REAL_PLAYER_FREE_ARM_FOREARM_TARGET)
+    :(segment==='upper'?REAL_PLAYER_WEAPON_ARM_UPPER_TARGET:REAL_PLAYER_WEAPON_ARM_FOREARM_TARGET);
+   return original.clone();
+  }
+  const selected=realPlayerArmTuning[arm][segment];
+  const outward=Number(selected.outward),forward=Number(selected.forward);
+  const vertical=-Math.sqrt(Math.max(0,1-outward*outward-forward*forward));
+  return new B.Vector3(outward,vertical,forward);
+ };
+ function isRealPlayerArmTuningResting(){
+  return realPlayerArmTuningEnabled&&realPlayerMode==='idle'&&playerAction==='idle'&&!onShip;
+ }
+ function getRealPlayerArmTwistTuning(arm){
+  // La distribución de torsión no cambia al pasar de reposo a locomoción.
+  // Evita que la muñeca y el antebrazo intercambien el giro al empezar a andar.
+  const tuning=realPlayerArmTuning[arm];
+  return {
+   twistPercent:Math.max(0,Math.min(100,Number(tuning.twistPercent)||0)),
+   handSharePercent:Math.max(0,Math.min(100,Number(tuning.handSharePercent)||0))
+  };
+ }
+ function applyRealPlayerArmTwist(lower,hand,forearmAxis,calculatedAngle,arm){
+  const settings=getRealPlayerArmTwistTuning(arm);
+  const appliedAngle=calculatedAngle*(settings.twistPercent/100);
+  const handAngle=appliedAngle*(settings.handSharePercent/100);
+  const forearmAngle=appliedAngle-handAngle;
+  if(Number.isFinite(forearmAngle)&&Math.abs(forearmAngle)>.0001){
+   lower.rotate(forearmAxis,forearmAngle,B.Space.WORLD);
+   lower.computeWorldMatrix(true);
+  }
+  if(Number.isFinite(handAngle)&&Math.abs(handAngle)>.0001){
+   lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   hand.rotate(forearmAxis,handAngle,B.Space.WORLD);
+   hand.computeWorldMatrix(true);
+  }
+ }
+ function armDebugDirectionInFrame(vector,frame){
+  if(!vector||!frame||vector.lengthSquared()<1e-8)return null;
+  const d=vector.clone().normalize();return {x:B.Vector3.Dot(d,frame.left),y:B.Vector3.Dot(d,frame.up),z:B.Vector3.Dot(d,frame.forward)};
+ }
+ function armDebugDirectionFromFrame(target,frame){
+  if(!target||!frame)return null;
+  const d=frame.left.scale(target.x).add(frame.up.scale(target.y)).add(frame.forward.scale(target.z));
+  return d.lengthSquared()<1e-8?null:d.normalize();
+ }
+ function captureRealPlayerArmDebugTargets(arm,upperTarget,forearmTarget,palmNormal,forearmAxis,calculatedAngle,solverFrame){
+  if(!realPlayerArmDebugEnabled||!solverFrame||!upperTarget||!forearmTarget||!palmNormal||!forearmAxis||forearmAxis.lengthSquared()<1e-8)return;
+  const settings=getRealPlayerArmTwistTuning(arm);
+  const appliedAngle=(Number.isFinite(calculatedAngle)?calculatedAngle:0)*(settings.twistPercent/100);
+  const rotation=B.Matrix.RotationAxis(forearmAxis,appliedAngle);
+  const expectedPalm=B.Vector3.TransformNormal(palmNormal,rotation).normalize();
+  realPlayerArmDebugTargets[arm]={upper:armDebugDirectionInFrame(upperTarget,solverFrame),forearm:armDebugDirectionInFrame(forearmTarget,solverFrame),palm:armDebugDirectionInFrame(expectedPalm,solverFrame)};
+ }
+ function getRealPlayerFingerDigit(name){
+  const normal=String(name||'').toLowerCase();
+  if(normal.includes('thumb'))return 'thumb';
+  if(normal.includes('index'))return 'index';
+  if(normal.includes('middle'))return 'middle';
+  if(normal.includes('ring'))return 'ring';
+  if(normal.includes('pinky')||normal.includes('little'))return 'little';
+  return null;
+ }
+ function getRealPlayerFingerJointMultiplier(name,digit){
+  const normal=String(name||'').toLowerCase();
+  const joint=Number((normal.match(/[1-9]$/)||[])[0]||1);
+  if(digit==='thumb')return joint===1?1:(.20/.28);
+  return joint===1?1:(joint===2?(.48/.34):(.36/.34));
+ }
+ function getRealPlayerFingerCurl(entry,arm){
+  const node=entry&&entry.node||entry;
+  const name=String(entry&&entry.name||node&&node.name||'').toLowerCase();
+  const digit=getRealPlayerFingerDigit(name);
+  if(digit)return realPlayerArmTuning[arm].fingers[digit]*getRealPlayerFingerJointMultiplier(name,digit);
+  const thumb=digit==='thumb';
+  const joint=Number((name.match(/[1-9]$/)||[])[0]||1);
+  return thumb?(joint===1?.28:.20):(joint===1?.34:joint===2?.48:.36);
+ }
+  const yieldStartupFrame=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
  if(!B||!B.Engine)throw new Error('La librería Babylon.js está incompleta o no es compatible.');
  const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:!isIOSDevice&&activeGraphicsProfile!=='performance',powerPreference:'high-performance',failIfMajorPerformanceCaveat:false},false);
  bootEngineForCleanup=engine;
@@ -2017,7 +2184,8 @@ async function startGame(){
  if(scene.onAfterAnimationsObservable&&typeof scene.onAfterAnimationsObservable.add==='function'){
   scene.onAfterAnimationsObservable.add(()=>{
    try{applyRealPlayerFootIK();}catch(err){console.debug('Foot IK jugador no disponible:',err);}
-   try{if(realPlayerReady&&realWeaponHolder){applyRealPlayerClubGripPose();syncRealWeaponAnchor(0,realWeaponPoseOverride);}}catch(err){console.debug('Seguimiento del arma/agarre omitido:',err);}
+   try{applyRealPlayerArmPoseAfterAnimations();}catch(err){console.debug('Corrección anatómica post-animación omitida:',err);}
+   try{if(realPlayerReady&&realWeaponHolder){const masterOrNativeOwnsFingers=(realPlayerMode==='walk'||realPlayerMode==='run'||(realPlayerMode==='idle'&&!onShip&&playerAction==='idle'));if(!masterOrNativeOwnsFingers)applyRealPlayerClubGripPose();syncRealWeaponAnchor(0,realWeaponPoseOverride);}}catch(err){console.debug('Seguimiento del arma/agarre omitido:',err);}
   });
  }
  scene.clearColor=new B.Color4(.42,.57,.65,1);scene.fogMode=B.Scene.FOGMODE_EXP;scene.fogDensity=.00058;scene.fogColor=new B.Color3(.39,.53,.59);
@@ -3344,9 +3512,10 @@ async function startGame(){
  // Recurso exacto del protagonista que ya aparece en el dispositivo: no sustituirlo por otro modelo.
  const VIKING_GLB_URL=new URL('./assets/models/viking-rigged.glb',document.baseURI).href;
  let realPlayerModel=null,realPlayerModelPivot=null,realPlayerAnimations={walk:null,run:null,idle:null,attack:null},realPlayerMode='',realPlayerCurrentGroup=null,realPlayerIdleTransition=null,realRigNodes={},realRigIdleNodes=[],realRigManualGaitNodes={},realPlayerReady=false,realPlayerBusy=false,realPlayerManualLocomotion=false,playerHumanBlob=null,equippedWeapon='club';
+ let realPlayerMasterPoseEntries=[],realPlayerMasterPose=new Map(),realPlayerMasterPoseDefaults=new Map(),realPlayerMasterIdleTransition=null;
  const unlockedWeapons=new Set(['club']);
   const REAL_VIKING_FORWARD_OFFSET=Math.PI;
- let realHandNode=null,realUpperArmNode=null,realForearmNode=null,realSpineNode=null,realWeaponHolder=null,realWeaponGroups={},realBoneRest=new Map(),realRightGripBones=[],realWeaponAnchorCalibrated=false,realWeaponAnchorType='',realWeaponPoseOverride=null,realWeaponSocketNode=null,realWeaponSocketMode='pivot',realWeaponHandDefaultPosition=null,realWeaponHandDefaultRotation=null;
+ let realHandNode=null,realUpperArmNode=null,realForearmNode=null,realSpineNode=null,realWeaponHolder=null,realWeaponGroups={},realBoneRest=new Map(),realRightGripBones=[],realLeftGripBones=[],realWeaponAnchorCalibrated=false,realWeaponAnchorType='',realWeaponPoseOverride=null,realWeaponSocketNode=null,realWeaponSocketMode='pivot',realWeaponHandDefaultPosition=null,realWeaponHandDefaultRotation=null,realRigFrameNodeDiagnostics=[];
  const REAL_PLAYER_ROOT_GROUND_OFFSET=.025;
  const modelStatusEl=document.getElementById('modelStatus'),modelStatusText=document.getElementById('modelStatusText');
  let modelStatusAutoHideTimer=null;
@@ -3402,7 +3571,30 @@ async function startGame(){
   });
   return found;
  }
- function findRigNodes(asset){
+ function findLeftGripBones(asset){
+  const entries=[];
+  (asset.skeletons||[]).forEach(sk=>(sk.bones||[]).forEach(b=>entries.push({name:String(b.name||''),node:rigNodeForBone(b)})));
+  (asset.transformNodes||[]).forEach(n=>entries.push({name:String(n.name||''),node:n}));
+  const seen=new Set(),found=[];
+  for(const entry of entries){
+   const node=entry.node;if(!node||seen.has(node))continue;
+   const name=String(entry.name||''),normal=name.toLowerCase().replace(/[^a-z0-9]/g,'');
+   const finger=/(thumb|index|middle|ring|pinky|little)/.test(normal);
+   const left=/left/.test(normal)||/(?:thumb|index|middle|ring|pinky|little)[a-z0-9]*l$/.test(normal);
+   if(!finger||!left||/right/.test(normal))continue;
+   seen.add(node);found.push({node,name:normal});
+  }
+  const order={thumb:0,index:1,middle:2,ring:3,pinky:4,little:4};
+  found.sort((a,b)=>{
+   const digit=name=>Object.keys(order).find(key=>name.includes(key))||'middle';
+   const da=order[digit(a.name)]??2,db=order[digit(b.name)]??2;
+   if(da!==db)return da-db;
+   const ja=Number((a.name.match(/[1-9]$/)||[])[0]||1),jb=Number((b.name.match(/[1-9]$/)||[])[0]||1);
+   return ja-jb;
+  });
+  return found;
+ }
+  function findRigNodes(asset){
   const entries=[];
   (asset.skeletons||[]).forEach(sk=>(sk.bones||[]).forEach(b=>entries.push({name:String(b.name||''),node:rigNodeForBone(b)})));
   (asset.transformNodes||[]).forEach(n=>entries.push({name:String(n.name||''),node:n}));
@@ -3442,6 +3634,7 @@ async function startGame(){
    leftLowerLeg:find([/left.?leg$/i,/left.?calf/i,/calf.?l/i,/shin.?l/i,/mixamorig.*leg.?l/i,/lowerleg.?l/i]),
    rightFoot:find([/right.?foot/i,/foot.?r/i,/mixamorig.*foot.?r/i]),
    leftFoot:find([/left.?foot/i,/foot.?l/i,/mixamorig.*foot.?l/i]),
+   leftToeBase:find([/^left.?toe.?base$/i,/left.?toe.?base/i,/mixamorig.*toe.?base/i]),
    spine:find([/spine2/i,/upper.?chest/i,/chest/i,/spine1/i])
   };
  }
@@ -4326,8 +4519,9 @@ async function startGame(){
   const yaw=Number(root&&root.rotation&&root.rotation.y)||0,c=Math.cos(yaw),s=Math.sin(yaw);
   return new B.Vector3((x*c+z*s)*length,y*length,(-x*s+z*c)*length);
  }
- function relaxHumanoidArm(root,upper,lower,hand,side,holdingWeapon=false,breathSway=0,boatStance=false){
+ function relaxHumanoidArm(root,upper,lower,hand,side,holdingWeapon=false,breathSway=0,boatStance=false,debugState=null){
   if(!root||!upper||!lower)return false;
+  if(debugState){debugState.twistDeg=null;if(debugState.status!=='RESPALDO'){debugState.status='POSE ORIGINAL';debugState.reason='rutina original relaxHumanoidArm';}}
   try{
    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);
    const shoulder=upper.getAbsolutePosition(),elbow=lower.getAbsolutePosition(),upperVector=elbow.subtract(shoulder),upperLength=upperVector.length();
@@ -4350,11 +4544,598 @@ async function startGame(){
       ?bodyLocalDirection(root,side*(.025+breathSway*.010),-.958,.13+breathSway*.032,wristVector.length())
       :bodyLocalDirection(root,side*(.07+breathSway*.018),-.915,.27+breathSway*.045,wristVector.length()));
     rotateBoneWorldTowardExact(lower,wristVector,target);
+    lower.computeWorldMatrix(true);
+    // GLB Viking: el +Y local recorre el antebrazo y la cara palmar corresponde a -Z local.
+    // Corregir solo la torsión axial del antebrazo; no se rotan huesos de dedos ni la mano por separado.
+    if(hand){
+     hand.computeWorldMatrix(true);
+     const forearmAxis=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+     if(forearmAxis.lengthSquared()>.001){
+      forearmAxis.normalize();
+      const palmNormal=hand.getDirection(B.Axis.Z).scale(-1).normalize();
+      const thighDirection=bodyLocalDirection(root,side,0,0,1).normalize();
+      const palmTangent=palmNormal.subtract(forearmAxis.scale(B.Vector3.Dot(palmNormal,forearmAxis)));
+      const thighTangent=thighDirection.subtract(forearmAxis.scale(B.Vector3.Dot(thighDirection,forearmAxis)));
+      if(palmTangent.lengthSquared()>.001&&thighTangent.lengthSquared()>.001){
+       palmTangent.normalize();thighTangent.normalize();
+       const twistSin=B.Vector3.Dot(forearmAxis,B.Vector3.Cross(palmTangent,thighTangent));
+       const twistCos=Math.max(-1,Math.min(1,B.Vector3.Dot(palmTangent,thighTangent)));
+       const twistAngle=Math.atan2(twistSin,twistCos);
+       if(debugState&&Number.isFinite(twistAngle))debugState.twistDeg=twistAngle*180/Math.PI;
+       if(Number.isFinite(twistAngle)&&Math.abs(twistAngle)>.0001){
+        lower.rotate(forearmAxis,twistAngle,B.Space.WORLD);
+        lower.computeWorldMatrix(true);
+       }
+      }
+     }
+    }
    }
-   // La rotación de la palma se conserva íntegra.
    return true;
   }catch(err){console.debug('Pose de reposo del brazo omitida:',err);return false;}
  }
+ const REAL_PLAYER_FREE_ARM_UPPER_TARGET=new B.Vector3(.26,-Math.sqrt(1-.26*.26-.21*.21),-.21);
+ const REAL_PLAYER_FREE_ARM_FOREARM_TARGET=new B.Vector3(.15,-Math.sqrt(1-.15*.15-.08*.08),-.08);
+ const REAL_PLAYER_FREE_ARM_PALM_NORMAL=new B.Vector3(-.59,-.22,-.78);
+ // Objetivos del brazo del arma expresados con "hacia fuera" positivo.
+ // El marco anatómico mantiene izquierda positiva, así que el método derecho
+ // invierte solo la componente lateral al convertirlos a coordenadas mundiales.
+ const REAL_PLAYER_WEAPON_ARM_UPPER_TARGET=new B.Vector3(.16,-Math.sqrt(1-.16*.16-.02*.02),-.02);
+ const REAL_PLAYER_WEAPON_ARM_FOREARM_TARGET=new B.Vector3(0,-1,0);
+ const REAL_PLAYER_WEAPON_ARM_PALM_NORMAL=new B.Vector3(.61,-.23,-.76);
+ function getRealPlayerSkeletonBodyFrame(nodes){
+  // Referencia anatómica: eje lateral de las caderas y eje longitudinal del pie,
+  // proyectados al plano horizontal y ortogonalizados entre sí.
+  const up=new B.Vector3(0,1,0),foot=nodes&&nodes.leftFoot,toe=nodes&&nodes.leftToeBase;
+  const rightHip=nodes&&nodes.rightUpperLeg,leftHip=nodes&&nodes.leftUpperLeg;
+  const fail=reason=>{realPlayerSkeletonFrameDiagnostic=reason;return null;};
+  if(!foot||!toe||!rightHip||!leftHip)return fail('faltan LeftFoot, LeftToeBase o caderas');
+  try{
+   foot.computeWorldMatrix(true);toe.computeWorldMatrix(true);
+   rightHip.computeWorldMatrix(true);leftHip.computeWorldMatrix(true);
+   const left=leftHip.getAbsolutePosition().subtract(rightHip.getAbsolutePosition());
+   left.subtractInPlace(up.scale(B.Vector3.Dot(left,up)));
+   if(left.lengthSquared()<1e-6)return fail('eje lateral de caderas sin separación horizontal');
+   left.normalize();
+   const forward=toe.getAbsolutePosition().subtract(foot.getAbsolutePosition());
+   forward.subtractInPlace(up.scale(B.Vector3.Dot(forward,up)));
+   forward.subtractInPlace(left.scale(B.Vector3.Dot(forward,left)));
+   if(forward.lengthSquared()<1e-6)return fail('eje pie→punta degenerado o paralelo a las caderas');
+   forward.normalize();
+   const handedness=B.Vector3.Dot(B.Vector3.Cross(left,forward),up);
+   // El signo puede ser positivo o negativo según el convenio espacial del rig.
+   // Ambos son bases ortogonales válidas; solo rechazamos la casi degenerada.
+   if(!Number.isFinite(handedness)||Math.abs(handedness)<.5)return fail('ejes anatómicos casi colineales');
+   realPlayerSkeletonFrameDiagnostic='OK · caderas + pie→punta · orientación '+(handedness<0?'invertida':'directa');
+   return {left,up,forward,source:'ESQUELETO',handedness};
+  }catch(err){
+   return fail('error geométrico: '+String(err&&err.message||err));
+  }
+ }
+ function getRealPlayerHeadingBodyFrame(root){
+  const up=new B.Vector3(0,1,0);if(!root)return null;
+  try{
+   let worldYaw=0;
+   for(let node=root;node;node=node.parent){
+    if(node.rotationQuaternion)worldYaw+=Number(node.rotationQuaternion.toEulerAngles().y)||0;
+    else if(node.rotation)worldYaw+=Number(node.rotation.y)||0;
+   }
+   if(!Number.isFinite(worldYaw))return null;
+   const forward=new B.Vector3(Math.sin(worldYaw),0,Math.cos(worldYaw));
+   if(forward.lengthSquared()<1e-6)return null;
+   forward.normalize();
+   const left=B.Vector3.Cross(forward,up);
+   if(left.lengthSquared()<1e-6)return null;
+   left.normalize();
+   const handedness=B.Vector3.Dot(B.Vector3.Cross(left,forward),up);
+   if(!Number.isFinite(handedness)||handedness<.999)return null;
+   return {left,up,forward,source:'RUMBO'};
+  }catch(_){return null;}
+ }
+ function getRealPlayerBodyFrame(nodes,root){
+  return getRealPlayerSkeletonBodyFrame(nodes);
+ }
+ function directionFromRealPlayerBodyFrame(frame,target,length){
+  if(!frame||!target)return null;
+  const direction=frame.left.scale(target.x)
+   .add(frame.up.scale(target.y))
+   .add(frame.forward.scale(target.z));
+  if(direction.lengthSquared()<1e-8)return null;
+  return direction.normalize().scale(length);
+ }
+ function relaxRealPlayerFreeArm(root,nodes,side=-1,breathSway=0,boatStance=false,debugState=null){
+  const upper=nodes&&nodes.leftUpperArm,lower=nodes&&nodes.leftForearm,hand=nodes&&nodes.leftHand;
+  let restoreFallbackPose=null;
+  const fallback=reason=>{
+   if(restoreFallbackPose)restoreFallbackPose();
+   if(debugState){debugState.status='RESPALDO';debugState.reason=reason||'pose original';debugState.twistDeg=null;}
+   return relaxHumanoidArm(root,upper,lower,hand,side,false,breathSway,boatStance,debugState);
+  };
+  if(!root||!upper||!lower){if(debugState){debugState.status='NO DISPONIBLE';debugState.reason='faltan nodos del brazo';debugState.twistDeg=null;}return false;}
+  if(debugState){debugState.status='NUEVA';debugState.reason='';debugState.twistDeg=null;}
+  const frame=getRealPlayerBodyFrame(nodes,root),bodyNode=nodes.spine||nodes.hips;
+  if(!frame||!hand||!bodyNode)return fallback(!frame?'marco anatómico no disponible':!hand?'mano no disponible':'referencia del torso no disponible');
+  try{
+   upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   const shoulder=upper.getAbsolutePosition(),elbow=lower.getAbsolutePosition();
+   const upperVector=elbow.subtract(shoulder),upperLength=upperVector.length();
+   const wristVector=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+   const wristLength=wristVector.length();
+   if(upperLength<.045||wristLength<.035)return fallback('longitud de segmento insuficiente');
+   const upperBodyTarget=getRealPlayerArmTuningTarget('free','upper');
+   const forearmBodyTarget=getRealPlayerArmTuningTarget('free','forearm');
+   const swayOffset=breathSway*(boatStance?.025:1);
+   upperBodyTarget.z+=swayOffset;forearmBodyTarget.z+=swayOffset*.65;
+   const upperTarget=directionFromRealPlayerBodyFrame(frame,upperBodyTarget,upperLength);
+   const forearmTarget=directionFromRealPlayerBodyFrame(frame,forearmBodyTarget,wristLength);
+   // Seguro: si cualquiera de los segmentos quedaría apuntando hacia arriba,
+   // no se aplica la calibración y se conserva íntegra la pose anterior.
+   if(!upperTarget||!forearmTarget||upperTarget.y>1e-6||forearmTarget.y>1e-6)return fallback('seguro vertical: objetivo no válido o apunta hacia arriba');
+   const upperRotation=upper.rotation.clone(),lowerRotation=lower.rotation.clone();
+   const upperQuaternion=upper.rotationQuaternion&&upper.rotationQuaternion.clone();
+   const lowerQuaternion=lower.rotationQuaternion&&lower.rotationQuaternion.clone();
+   restoreFallbackPose=()=>{
+    if(upperQuaternion){if(upper.rotationQuaternion)upper.rotationQuaternion.copyFrom(upperQuaternion);else upper.rotationQuaternion=upperQuaternion.clone();}
+    else{upper.rotationQuaternion=null;upper.rotation.copyFrom(upperRotation);}
+    if(lowerQuaternion){if(lower.rotationQuaternion)lower.rotationQuaternion.copyFrom(lowerQuaternion);else lower.rotationQuaternion=lowerQuaternion.clone();}
+    else{lower.rotationQuaternion=null;lower.rotation.copyFrom(lowerRotation);}
+    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);
+   };
+   rotateBoneWorldTowardExact(upper,upperVector,upperTarget);
+   lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   const currentWrist=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+   if(currentWrist.length()<.035)return fallback('muñeca no válida tras orientar el brazo');
+   rotateBoneWorldTowardExact(lower,currentWrist,forearmTarget);
+   lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   const forearmAxis=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+   if(forearmAxis.lengthSquared()>.001){
+    forearmAxis.normalize();
+    const palmNormal=hand.getDirection(REAL_PLAYER_FREE_ARM_PALM_NORMAL).normalize();
+    bodyNode.computeWorldMatrix(true);
+    const bodyFacing=bodyNode.getAbsolutePosition().subtract(hand.getAbsolutePosition());
+    const palmTangent=palmNormal.subtract(forearmAxis.scale(B.Vector3.Dot(palmNormal,forearmAxis)));
+    const bodyTangent=bodyFacing.subtract(forearmAxis.scale(B.Vector3.Dot(bodyFacing,forearmAxis)));
+    let twistAngle=0;
+    if(palmTangent.lengthSquared()>.001&&bodyTangent.lengthSquared()>.001){
+     palmTangent.normalize();bodyTangent.normalize();
+     const twistSin=B.Vector3.Dot(forearmAxis,B.Vector3.Cross(palmTangent,bodyTangent));
+     const twistCos=Math.max(-1,Math.min(1,B.Vector3.Dot(palmTangent,bodyTangent)));
+     twistAngle=Math.atan2(twistSin,twistCos);
+     if(debugState&&Number.isFinite(twistAngle))debugState.twistDeg=twistAngle*180/Math.PI;
+     if(Number.isFinite(twistAngle)&&Math.abs(twistAngle)>.0001)applyRealPlayerArmTwist(lower,hand,forearmAxis,twistAngle,'free');
+    }
+    captureRealPlayerArmDebugTargets('free',upperTarget,forearmTarget,palmNormal,forearmAxis,twistAngle,frame);
+   }
+   restoreFallbackPose=null;
+   if(debugState){debugState.status='NUEVA';debugState.reason='';}
+   return true;
+  }catch(err){
+   console.debug('Calibración del brazo libre omitida:',err);
+   return fallback('excepción: '+String(err&&err.message||err));
+  }
+ }
+ function relaxRealPlayerWeaponArm(root,nodes,breathSway=0,boatStance=false,debugState=null){
+  const upper=nodes&&nodes.upperArm,lower=nodes&&nodes.forearm,hand=nodes&&nodes.hand;
+  let restoreFallbackPose=null;
+  const fallback=reason=>{
+   if(restoreFallbackPose)restoreFallbackPose();
+   if(debugState){debugState.status='RESPALDO';debugState.reason=reason||'pose original';debugState.twistDeg=null;}
+   return relaxHumanoidArm(root,upper,lower,hand,1,true,breathSway,boatStance,debugState);
+  };
+  if(!root||!upper||!lower){
+   if(debugState){debugState.status='NO DISPONIBLE';debugState.reason='faltan nodos del brazo del arma';debugState.twistDeg=null;}
+   return false;
+  }
+  if(debugState){debugState.status='NUEVA';debugState.reason='';debugState.twistDeg=null;}
+  const frame=getRealPlayerBodyFrame(nodes,root),bodyNode=nodes.spine||nodes.hips;
+  if(!frame||!hand||!bodyNode)return fallback(!frame?'marco anatómico no disponible':!hand?'mano no disponible':'referencia del torso no disponible');
+  try{
+   upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   const shoulder=upper.getAbsolutePosition(),elbow=lower.getAbsolutePosition();
+   const upperVector=elbow.subtract(shoulder),upperLength=upperVector.length();
+   const wristVector=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+   const wristLength=wristVector.length();
+   if(upperLength<.045||wristLength<.035)return fallback('longitud de segmento insuficiente');
+   // Hacia fuera positivo también en el lado derecho; dentro del marco global
+   // (izquierda positiva) esto equivale a invertir la componente X.
+   const upperBodyTarget=getRealPlayerArmTuningTarget('weapon','upper');upperBodyTarget.x*=-1;
+   const forearmBodyTarget=getRealPlayerArmTuningTarget('weapon','forearm');forearmBodyTarget.x*=-1;
+   const swayOffset=breathSway*(boatStance?.025:1);
+   upperBodyTarget.z+=swayOffset;forearmBodyTarget.z+=swayOffset*.65;
+   const upperTarget=directionFromRealPlayerBodyFrame(frame,upperBodyTarget,upperLength);
+   const forearmTarget=directionFromRealPlayerBodyFrame(frame,forearmBodyTarget,wristLength);
+   // Seguro transaccional: no aplicar una pose que levante los segmentos.
+   // Si falla cualquier validación posterior, restaurar rotaciones originales
+   // antes de ejecutar el respaldo histórico.
+   if(!upperTarget||!forearmTarget||upperTarget.y>1e-6||forearmTarget.y>1e-6)return fallback('seguro vertical: objetivo no válido o apunta hacia arriba');
+   const upperRotation=upper.rotation.clone(),lowerRotation=lower.rotation.clone();
+   const upperQuaternion=upper.rotationQuaternion&&upper.rotationQuaternion.clone();
+   const lowerQuaternion=lower.rotationQuaternion&&lower.rotationQuaternion.clone();
+   restoreFallbackPose=()=>{
+    if(upperQuaternion){if(upper.rotationQuaternion)upper.rotationQuaternion.copyFrom(upperQuaternion);else upper.rotationQuaternion=upperQuaternion.clone();}
+    else{upper.rotationQuaternion=null;upper.rotation.copyFrom(upperRotation);}
+    if(lowerQuaternion){if(lower.rotationQuaternion)lower.rotationQuaternion.copyFrom(lowerQuaternion);else lower.rotationQuaternion=lowerQuaternion.clone();}
+    else{lower.rotationQuaternion=null;lower.rotation.copyFrom(lowerRotation);}
+    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);
+   };
+   rotateBoneWorldTowardExact(upper,upperVector,upperTarget);
+   lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   const currentWrist=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+   if(currentWrist.length()<.035)return fallback('muñeca no válida tras orientar el brazo');
+   rotateBoneWorldTowardExact(lower,currentWrist,forearmTarget);
+   lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   const forearmAxis=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+   if(forearmAxis.lengthSquared()>.001){
+    forearmAxis.normalize();
+    const palmNormal=hand.getDirection(REAL_PLAYER_WEAPON_ARM_PALM_NORMAL).normalize();
+    bodyNode.computeWorldMatrix(true);
+    const bodyFacing=bodyNode.getAbsolutePosition().subtract(hand.getAbsolutePosition());
+    const palmTangent=palmNormal.subtract(forearmAxis.scale(B.Vector3.Dot(palmNormal,forearmAxis)));
+    const bodyTangent=bodyFacing.subtract(forearmAxis.scale(B.Vector3.Dot(bodyFacing,forearmAxis)));
+    let twistAngle=0;
+    if(palmTangent.lengthSquared()>.001&&bodyTangent.lengthSquared()>.001){
+     palmTangent.normalize();bodyTangent.normalize();
+     // El signo emerge del eje real del antebrazo: para el brazo derecho
+     // debe ser opuesto al giro que orienta la palma izquierda hacia el torso.
+     const twistSin=B.Vector3.Dot(forearmAxis,B.Vector3.Cross(palmTangent,bodyTangent));
+     const twistCos=Math.max(-1,Math.min(1,B.Vector3.Dot(palmTangent,bodyTangent)));
+     twistAngle=Math.atan2(twistSin,twistCos);
+     if(debugState&&Number.isFinite(twistAngle))debugState.twistDeg=twistAngle*180/Math.PI;
+     if(Number.isFinite(twistAngle)&&Math.abs(twistAngle)>.0001)applyRealPlayerArmTwist(lower,hand,forearmAxis,twistAngle,'weapon');
+    }
+    captureRealPlayerArmDebugTargets('weapon',upperTarget,forearmTarget,palmNormal,forearmAxis,twistAngle,frame);
+   }
+   restoreFallbackPose=null;
+   if(debugState){debugState.status='NUEVA';debugState.reason='';}
+   return true;
+  }catch(err){
+   console.debug('Calibración del brazo del arma omitida:',err);
+   return fallback('excepción: '+String(err&&err.message||err));
+  }
+ }
+ let realPlayerArmDebugPanel=null;
+ function armDebugFormatVector(values){
+  if(!values)return '—';
+  return '('+values.map(value=>(value>=0?'+':'')+value.toFixed(3)).join(', ')+')';
+ }
+ function armDebugProjectDirection(vector,frame,isLeft){
+  if(!vector||vector.lengthSquared()<1e-8||!frame)return null;
+  const direction=vector.clone().normalize();
+  const outward=frame.left.scale(isLeft?1:-1);
+  return [
+   B.Vector3.Dot(direction,outward),
+   B.Vector3.Dot(direction,frame.up),
+   B.Vector3.Dot(direction,frame.forward)
+  ];
+ }
+ function armDebugDescribeFrameNode(entry){
+  if(!entry)return 'NODO SIN DIAGNÓSTICO';
+  const boneNames=(entry.boneNames||[]).join(', ');
+  const transformNames=(entry.transformNames||[]).join(', ');
+  if(!entry.candidate){
+   if(boneNames)return entry.label+': HUESO EN SKELETON ('+boneNames+') · SIN NODO TRANSFORM ENLAZADO';
+   if(transformNames)return entry.label+': NODO EN ÁRBOL ('+transformNames+') · NO RESUELTO POR EL PATRÓN';
+   return entry.label+': NO ENCONTRADO';
+  }
+  if(!entry.resolved){
+   const duplicate=entry.counterpart&&entry.counterpart===entry.candidate;
+   return entry.label+': NODO ENCONTRADO, PERO DESCARTADO'+(duplicate?' (mismo nodo que '+entry.counterpartLabel+')':'');
+  }
+  const node=entry.resolved,parent=node.parent;
+  const name=String(node.name||node.id||'nodo sin nombre');
+  const parentName=parent?String(parent.name||parent.id||'padre sin nombre'):'sin padre';
+  return entry.label+': SÍ · '+name+' · padre '+parentName+' · '+(entry.source||'árbol importado')+(boneNames?' · bone: '+boneNames:'');
+ }
+ function armDebugFormatCompactVector(values){
+  if(!values)return '—';
+  return values.map(value=>(value>=0?'+':'')+value.toFixed(2)).join('/');
+ }
+ let realPlayerArmDeviationPanel=null,realPlayerArmDeviationPhaseLine=null,realPlayerArmDeviationRecordLine=null;
+ function getRealPlayerArmDeviationPhase(){
+  if(onShip||realPlayerMode==='sail')return 'navegación (sin muestreo)';
+  if(playerAction!=='idle')return 'acción especial';
+  if(realPlayerMode==='run')return 'correr';
+  if(realPlayerMode==='walk')return 'andar';
+  if(realPlayerIdleTransition||realPlayerMasterIdleTransition)return 'mezcla de parada';
+  return 'reposo';
+ }
+ function formatRealPlayerArmDeviationVector(values){
+  return values?values.map(value=>(value>=0?'+':'')+value.toFixed(2)).join('/'):'—';
+ }
+ function updateRealPlayerArmDeviationPanel(phase){
+  if(!realPlayerArmDeviationPanel)return;
+  const bounds=realPlayerArmDebugPanel&&realPlayerArmDebugPanel.getBoundingClientRect();
+  if(bounds)realPlayerArmDeviationPanel.style.top=Math.ceil(bounds.bottom+5)+'px';
+  const currentPhase=phase||getRealPlayerArmDeviationPhase();
+  const secondsSinceStop=realPlayerArmDeviationStoppedAtMs===null?null:Math.max(0,(performance.now()-realPlayerArmDeviationStoppedAtMs)/1000);
+  realPlayerArmDeviationPhaseLine.textContent='FASE ACTUAL: '+currentPhase+' · desde parada: '+(secondsSinceStop===null?'—':secondsSinceStop.toFixed(2)+' s');
+  if(!realPlayerArmLastDeviation){
+   realPlayerArmDeviationRecordLine.textContent='DETECTOR LOCAL: ninguna desviación superior a 1° (todavía).';
+   return;
+  }
+  const record=realPlayerArmLastDeviation;
+  const clock=new Date(record.timestamp).toLocaleString('es-ES',{hour12:false});
+  const stopText=record.secondsSinceStop===null?'en marcha / sin parada previa':Number(record.secondsSinceStop).toFixed(2)+' s desde parada';
+  const details=record.violations.map(item=>item.side+' '+item.metric+' '+formatRealPlayerArmDeviationVector(item.measured)+' (objetivo '+formatRealPlayerArmDeviationVector(item.expected)+', Δ '+Number(item.degrees).toFixed(1)+'°)').join(' · ');
+  realPlayerArmDeviationRecordLine.textContent='ÚLTIMA DESVIACIÓN LOCAL (>1°): '+clock+' · '+record.phase+' · '+stopText+' · '+details;
+ }
+ function sampleRealPlayerArmDeviation(){
+  if(!realPlayerArmDebugEnabled)return;
+  const now=performance.now(),phase=getRealPlayerArmDeviationPhase(),moving=phase==='andar'||phase==='correr';
+  if(moving){realPlayerArmDeviationLastWasLocomoting=true;realPlayerArmDeviationStoppedAtMs=null;}
+  else if(realPlayerArmDeviationLastWasLocomoting){realPlayerArmDeviationLastWasLocomoting=false;realPlayerArmDeviationStoppedAtMs=now;}
+  else if(realPlayerArmDeviationStoppedAtMs===null&&realPlayerReady&&phase==='reposo')realPlayerArmDeviationStoppedAtMs=now;
+  updateRealPlayerArmDeviationPanel(phase);
+  if(phase!=='reposo'||!realPlayerReady||!realPlayerMasterPoseEntries.length||!realRigNodes||playerAction!=='idle'||onShip||realPlayerMasterIdleTransition||realPlayerIdleTransition){
+   realPlayerArmDeviationActiveSignature='';return;
+  }
+  const violations=[];
+  for(const entry of realPlayerMasterPoseEntries){
+   const node=entry.node,expected=realPlayerMasterPose.get(node);if(!node||!expected)continue;
+   const actualQ=realPlayerLocalRotationQuaternion(node);
+   const expectedQ=expected.quaternion?expected.quaternion.clone().normalize():B.Quaternion.FromEulerAngles(expected.rotation.x,expected.rotation.y,expected.rotation.z).normalize();
+   const dot=Math.max(-1,Math.min(1,Math.abs(actualQ.x*expectedQ.x+actualQ.y*expectedQ.y+actualQ.z*expectedQ.z+actualQ.w*expectedQ.w)));
+   const degrees=2*Math.acos(dot)*180/Math.PI;
+   if(degrees<=1)continue;
+   const actualEuler=node.rotationQuaternion?node.rotationQuaternion.toEulerAngles():node.rotation;
+   const expectedEuler=realPlayerMasterPoseEuler(expected);
+   violations.push({
+    id:entry.id,side:entry.side,metric:entry.label,degrees:Number(degrees.toFixed(3)),
+    measured:[actualEuler.x*180/Math.PI,actualEuler.y*180/Math.PI,actualEuler.z*180/Math.PI],
+    expected:[expectedEuler.x*180/Math.PI,expectedEuler.y*180/Math.PI,expectedEuler.z*180/Math.PI]
+   });
+  }
+  const signature=violations.map(v=>v.id).sort().join('|')+'@'+phase;
+  if(violations.length&&signature!==realPlayerArmDeviationActiveSignature){
+   const secondsSinceStop=realPlayerArmDeviationStoppedAtMs===null?null:Number(Math.max(0,(now-realPlayerArmDeviationStoppedAtMs)/1000).toFixed(2));
+   realPlayerArmLastDeviation={timestamp:new Date().toISOString(),phase,secondsSinceStop,reference:'ROTACIONES LOCALES MAESTRAS',toleranceDeg:1,violations};
+   try{localStorage.setItem(REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY,JSON.stringify(realPlayerArmLastDeviation));}catch(_){}
+  }
+  realPlayerArmDeviationActiveSignature=signature;updateRealPlayerArmDeviationPanel(phase);
+ }
+ 
+ function armDebugFormatYaw(r){return Number.isFinite(r)?(r*180/Math.PI).toFixed(1)+'°':'—';}
+ function armDebugLocalYaw(node){if(!node)return null;try{if(node.rotationQuaternion)return Number(node.rotationQuaternion.toEulerAngles().y)||0;return node.rotation?Number(node.rotation.y)||0:null;}catch(_){return null;}}
+ function armDebugFrameAngle(a,b){if(!a||!b||a.lengthSquared()<1e-8||b.lengthSquared()<1e-8)return null;return Math.acos(Math.max(-1,Math.min(1,B.Vector3.Dot(a.clone().normalize(),b.clone().normalize()))))*180/Math.PI;}
+ function updateRealPlayerArmDebugPanel(){
+  if(!realPlayerArmDebugEnabled||!realPlayerArmDebugPanel)return;
+  if(!realPlayerReady||!realRigNodes){realPlayerArmDebugPanel.textContent='POSE MAESTRA LOCAL · esperando GLB…';return;}
+  const mode=realPlayerMode||'idle';
+  const movement=(mode==='walk'||mode==='run')?'ANIMACIÓN GLB ORIGINAL':(mode==='idle'?'POSE MAESTRA LOCAL':'ACCIÓN / NAVEGACIÓN');
+  const masterCount=realPlayerMasterPoseEntries.length;
+  const missing=realPlayerMasterPoseEntries.filter(entry=>!realBoneRest.has(entry.node)||!realPlayerMasterPose.has(entry.node)).length;
+  const transition=realPlayerMasterIdleTransition?'MEZCLA FIJA 0,22 s':'SIN MEZCLA';
+  const liveFps=Number.isFinite(engine.getFps())?Math.round(engine.getFps()):0;
+  realPlayerArmDebugPanel.textContent=
+   'POSE MAESTRA · ROTACIONES LOCALES\n'+
+   'ESTADO '+mode.toUpperCase()+' · '+movement+'\n'+
+   'MARCO ACTIVO: NINGUNO · sin rumbo, pies, caderas ni joystick\n'+
+   'HUESOS '+masterCount+' · SIN BASE/MAESTRA '+missing+'\n'+
+   'TRANSICIÓN '+transition+' · SIN RESPIRACIÓN\n'+
+   'BRAZO LIBRE '+(realPlayerArmDebugState.free.status||'—')+' / PALO '+(realPlayerArmDebugState.weapon.status||'—')+'\n'+
+   'DETECTOR: rotación local real vs maestra · tolerancia 1°\n'+
+   'FPS EN VIVO '+liveFps+' · MATAS '+grassDebugClumpCount.toLocaleString('es-ES')+' · LOTES '+grassDebugBatchCount;
+ }
+ 
+
+function updateGrassDebugPanel(){
+ if(!grassDebugEnabled||!grassDebugPanel)return;
+ const liveFps=Number.isFinite(engine.getFps())?Math.round(engine.getFps()):0;
+ const target=grassDebugIslandStats.reduce((sum,item)=>sum+item.target,0);
+ const islands=grassDebugIslandStats.map((item,index)=>
+  (index+1)+'. '+item.name+': '+item.placed.toLocaleString('es-ES')+'/'+item.target.toLocaleString('es-ES')+' ('+item.fillPct+'%) · celdas '+item.gridPct+'%'
+ );
+ grassDebugPanel.textContent=[
+  'DIAGNÓSTICO DE HIERBA 3D',
+  'PERFIL '+(isPerformanceMode?'RENDIMIENTO':'CALIDAD')+' · FPS '+liveFps,
+  'MATAS '+grassDebugClumpCount.toLocaleString('es-ES')+'/'+target.toLocaleString('es-ES')+' · LOTES '+grassDebugBatchCount,
+  'HOJAS/MATA '+grassDebugLeavesPerClump+' · ISLAS '+grassDebugIslandStats.length,
+  'DISTRIBUCIÓN: objetivo alcanzado / ocupación de cuadrícula',
+  ...islands
+ ].join('\n');
+}
+if(grassDebugEnabled){
+ grassDebugPanel=document.createElement('pre');
+ grassDebugPanel.id='grassDebugPanel';
+ grassDebugPanel.setAttribute('aria-label','Diagnóstico de densidad y distribución de la hierba 3D');
+ grassDebugPanel.style.cssText='position:fixed;left:8px;top:calc(env(safe-area-inset-top,0px) + 112px);z-index:99998;width:min(88vw,340px);max-height:34vh;overflow:auto;margin:0;padding:8px 10px;border:1px solid #d8ad68;border-radius:8px;background:rgba(5,12,14,.91);color:#f5e8cf;font:9px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;pointer-events:none;box-shadow:0 3px 12px #0009';
+ document.body.appendChild(grassDebugPanel);
+ window.setInterval(updateGrassDebugPanel,500);
+ updateGrassDebugPanel();
+}
+
+if(realPlayerArmDebugEnabled){
+  realPlayerArmDebugPanel=document.createElement('pre');
+  realPlayerArmDebugPanel.id='realPlayerArmDebugPanel';
+  realPlayerArmDebugPanel.setAttribute('aria-label','Diagnóstico temporal de los brazos del vikingo');
+  realPlayerArmDebugPanel.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:6px;z-index:99999;width:min(92vw,440px);max-width:min(92vw,440px);max-height:18vh;overflow:auto;margin:0;padding:5px 7px;border:1px solid #d8ad68;border-radius:6px;background:rgba(5,12,14,.84);color:#f5e8cf;font:7.5px/1.22 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;pointer-events:none;box-shadow:0 3px 10px #0009';
+  document.body.appendChild(realPlayerArmDebugPanel);
+
+  realPlayerArmDeviationPanel=document.createElement('div');
+  realPlayerArmDeviationPanel.id='realPlayerArmDeviationPanel';
+  realPlayerArmDeviationPanel.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 50px);right:6px;z-index:100000;width:min(92vw,440px);max-width:min(92vw,440px);max-height:22vh;overflow:auto;padding:5px 7px;border:1px solid #d65a5a;border-radius:6px;background:rgba(18,5,7,.94);color:#ff7777;font:7px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 3px 10px #0009;pointer-events:auto';
+  const deviationHeader=document.createElement('div');
+  deviationHeader.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:3px';
+  realPlayerArmDeviationPhaseLine=document.createElement('div');
+  realPlayerArmDeviationPhaseLine.style.cssText='font-weight:900;color:#ffd0d0';
+  const clearDeviationButton=document.createElement('button');
+  clearDeviationButton.type='button';clearDeviationButton.textContent='BORRAR';
+  clearDeviationButton.setAttribute('aria-label','Borrar última desviación de los brazos');
+  clearDeviationButton.style.cssText='flex:0 0 auto;padding:3px 6px;border:1px solid #d65a5a;border-radius:4px;background:#321316;color:#ffb7b7;font:700 7px ui-monospace,monospace;touch-action:manipulation';
+  clearDeviationButton.addEventListener('click',()=>{
+   realPlayerArmLastDeviation=null;realPlayerArmDeviationActiveSignature='';
+   try{localStorage.removeItem(REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY);}catch(_){}
+   updateRealPlayerArmDeviationPanel();
+  });
+  deviationHeader.appendChild(realPlayerArmDeviationPhaseLine);deviationHeader.appendChild(clearDeviationButton);
+  realPlayerArmDeviationRecordLine=document.createElement('div');
+  realPlayerArmDeviationRecordLine.style.cssText='color:#ff7777';
+  realPlayerArmDeviationPanel.appendChild(deviationHeader);realPlayerArmDeviationPanel.appendChild(realPlayerArmDeviationRecordLine);
+  document.body.appendChild(realPlayerArmDeviationPanel);
+  // No consultar onShip aquí: su let se inicializa más abajo durante el arranque.
+  updateRealPlayerArmDeviationPanel('inicializando');
+  realPlayerArmDebugPanel.addEventListener('click',()=>{
+   const expanded=realPlayerArmDebugPanel.classList.toggle('expanded');
+   realPlayerArmDebugPanel.setAttribute('aria-expanded',String(expanded));
+  });
+  realPlayerArmDebugPanel.setAttribute('role','button');
+  realPlayerArmDebugPanel.setAttribute('tabindex','0');
+  realPlayerArmDebugPanel.setAttribute('aria-expanded','false');
+  updateRealPlayerArmDebugPanel();
+  window.setInterval(updateRealPlayerArmDebugPanel,500);
+  window.setInterval(sampleRealPlayerArmDeviation,100);
+ }
+ // Panel de ajuste permanente: el diagnóstico detallado sigue reservado a ?debug=1.
+  if(realPlayerArmDebugEnabled){
+  const armTuneStyle=document.createElement('style');
+  armTuneStyle.textContent=`
+   #realPlayerArmTuneDock{position:fixed;top:calc(env(safe-area-inset-top,0px) + 125px);left:8px;right:auto;width:min(94vw,410px);max-width:calc(100vw - 16px);z-index:100001;pointer-events:auto;color:#f5e8cf;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+   #realPlayerArmTuneToggle{display:block;margin:0 0 4px auto;padding:7px 10px;border:1px solid #d8ad68;border-radius:7px;background:rgba(14,29,31,.96);color:#f5e8cf;font-size:10px;font-weight:800;box-shadow:0 3px 10px #0008;touch-action:manipulation}
+   #realPlayerArmTunePanel{display:none;max-height:min(48dvh,560px);overflow:auto;overscroll-behavior:contain;padding:8px;border:1px solid #d8ad68;border-radius:7px;background:rgba(5,12,14,.96);box-shadow:0 5px 16px #000b}
+   #realPlayerArmTunePanel.open{display:block}
+   #realPlayerArmTuneHead{position:sticky;top:-8px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:5px;margin:-8px -8px 7px;padding:8px;background:rgba(5,12,14,.98);color:#e6c27f;font-size:10px;font-weight:900}
+   #realPlayerArmTuneHead>span{min-width:0;flex:1 1 auto}
+   #realPlayerArmTuneHead>div{display:flex;gap:4px;flex:0 0 auto}
+   #realPlayerArmTuneReset,#realPlayerArmTuneMove{padding:5px 7px;border:1px solid #d8ad6888;border-radius:5px;background:#263735;color:#fff2d8;font-size:9px;font-weight:800;touch-action:manipulation}
+   #realPlayerArmTuneMove{background:#4c3925;border-color:#e0bd78;touch-action:none;cursor:move;user-select:none}
+   #realPlayerArmTuneTabs{display:none}
+   #realPlayerArmTuneColumns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+   .realArmTuneSide{min-width:0;padding:5px;border:1px solid #d8ad6844;border-radius:5px;background:#142426}
+   .realArmTuneSide h4{margin:0 0 5px;color:#e6c27f;font-size:9px;letter-spacing:.6px}
+   .realArmTuneDivider{margin:8px 0 4px;padding-top:5px;border-top:1px solid #d8ad6855;color:#e6c27f;font-size:8px;font-weight:900;letter-spacing:.5px}
+   .realArmTuneControl{display:block;margin:4px 0 6px;font-size:8px;line-height:1.1}
+   .realArmTuneControl span{display:flex;justify-content:space-between;gap:4px;margin-bottom:2px}
+   .realArmTuneControl output{color:#f1cb82;font-weight:900;font-variant-numeric:tabular-nums}
+   .realArmTuneControl input{display:block;width:100%;height:18px;margin:0;accent-color:#d8ad68;touch-action:pan-x}
+   @media(max-width:600px) and (orientation:portrait){
+    #realPlayerArmDebugPanel{width:min(92vw,440px)!important;max-width:min(92vw,440px)!important;max-height:18vh!important;overflow:auto!important;pointer-events:auto!important;cursor:pointer!important}
+    #realPlayerArmDebugPanel.expanded{max-height:34dvh!important;overflow:auto!important}
+    /* Panel lateral estrecho: deja libre el centro y permite reubicarlo con el asa MOVER. */
+    #realPlayerArmTuneDock{top:calc(env(safe-area-inset-top,0px) + 125px);left:7px;right:auto;width:min(48vw,260px);max-width:calc(100vw - 14px)}
+    #realPlayerArmTuneToggle{font-size:9px;padding:6px 8px}
+    #realPlayerArmTunePanel{max-height:32dvh;padding:6px;overflow:auto;overscroll-behavior:contain}
+    #realPlayerArmTuneHead{top:-6px;margin:-6px -6px 5px;padding:6px;font-size:8px;gap:3px}
+    #realPlayerArmTuneHead>div{gap:3px}
+    #realPlayerArmTuneReset,#realPlayerArmTuneMove{font-size:7px;padding:4px 5px}
+    #realPlayerArmTuneTabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:0 0 6px}
+    .realArmTuneTab{min-height:29px;padding:5px 6px;border:1px solid #d8ad6877;border-radius:6px;background:#1b3031;color:#e7dcc7;font:800 9px ui-monospace,SFMono-Regular,Consolas,monospace;touch-action:manipulation}
+    .realArmTuneTab[aria-selected="true"]{background:#8a602f;border-color:#f1d08b;color:#fff}
+    #realPlayerArmTuneColumns{grid-template-columns:minmax(0,1fr)}
+    .realArmTuneSide{display:none;padding:5px;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:7px;row-gap:1px}
+    .realArmTuneSide.active{display:grid}
+    .realArmTuneSide h4,.realArmTuneDivider{grid-column:1/-1}
+    .realArmTuneSide h4{font-size:9px;margin-bottom:3px}
+    .realArmTuneDivider{font-size:8px;margin:4px 0 2px;padding-top:4px}
+    .realArmTuneControl{min-width:0;font-size:8px;margin:3px 0 4px;line-height:1.05}
+    .realArmTuneControl span{gap:3px;margin-bottom:1px;font-size:8px;white-space:normal;min-height:17px}
+    .realArmTuneControl output{white-space:nowrap;font-size:8px}
+    .realArmTuneControl input{height:15px}
+   }
+   @media(max-height:520px){#realPlayerArmTuneDock{top:calc(env(safe-area-inset-top,0px) + 110px);right:6px;width:min(94vw,380px)}#realPlayerArmTunePanel{max-height:40dvh}}
+  `;
+  document.head.appendChild(armTuneStyle);
+  const armTuneDock=document.createElement('div');
+  armTuneDock.id='realPlayerArmTuneDock';
+  const armTuneToggle=document.createElement('button');
+  armTuneToggle.id='realPlayerArmTuneToggle';
+  armTuneToggle.type='button';
+  armTuneToggle.textContent='AJUSTAR POSE +';
+  armTuneToggle.setAttribute('aria-expanded','false');
+  const armTunePanel=document.createElement('section');
+  armTunePanel.id='realPlayerArmTunePanel';
+  armTunePanel.setAttribute('aria-label','Edición de la postura maestra local');
+  armTunePanel.innerHTML=
+   '<div id="realPlayerArmTuneHead"><span>POSTURA MAESTRA · RAD</span><div><button id="realPlayerArmTuneMove" type="button" aria-label="Mover panel">MOVER</button><button id="realPlayerArmTuneReset" type="button">RESTABLECER</button></div></div>'+
+   '<button id="realPlayerArmTuneSavePosition" type="button" style="width:100%;margin:0 0 6px;padding:7px 6px;border:1px solid #d8ad68;border-radius:5px;background:#263735;color:#fff2d8;font:800 8px ui-monospace,monospace">GUARDAR POSICIÓN DEL PANEL</button>'+
+   '<div id="realPlayerMasterPoseStatus" style="margin:4px 0;color:#f1cb82;font:8px ui-monospace,monospace">Esperando GLB…</div>'+
+   '<div id="realPlayerMasterPoseControls" style="max-height:36dvh;overflow:auto;overscroll-behavior:contain"></div>'+
+   '<button id="realPlayerMasterPoseSave" type="button" style="width:100%;margin:7px 0 4px;padding:8px 6px;border:1px solid #e0bd78;border-radius:5px;background:linear-gradient(145deg,#9a6a35,#694727);color:#fff5df;font:900 8px ui-monospace,monospace">✓ GUARDAR Y FIJAR POSE EN ESTE DISPOSITIVO</button>'+
+   '<div style="display:flex;gap:6px;margin:4px 0">'+
+    '<button id="realPlayerMasterPoseCapture" type="button" style="flex:1;padding:6px;border:1px solid #d8ad68;border-radius:5px;background:#8a602f;color:#fff;font:800 8px ui-monospace,monospace">CAPTURAR POSE ACTUAL</button>'+
+    '<button id="realPlayerMasterPoseCopy" type="button" style="padding:6px;border:1px solid #d8ad6888;border-radius:5px;background:#263735;color:#fff2d8;font:800 8px ui-monospace,monospace">COPIAR</button>'+
+   '</div>'+
+   '<textarea id="realPlayerMasterPoseOutput" readonly rows="5" spellcheck="false" placeholder="La captura de las rotaciones locales aparecerá aquí." style="box-sizing:border-box;width:100%;resize:vertical;padding:6px;border:1px solid #d8ad6866;border-radius:5px;background:#071113;color:#e8e0d0;font:7px/1.35 ui-monospace,monospace"></textarea>';
+  armTuneDock.appendChild(armTuneToggle);
+  armTuneDock.appendChild(armTunePanel);
+  document.body.appendChild(armTuneDock);
+  armTuneToggle.textContent='AJUSTAR POSE +';
+  armTunePanel.querySelector('#realPlayerArmTuneReset').addEventListener('click',resetRealPlayerMasterPose);
+  armTunePanel.querySelector('#realPlayerMasterPoseSave').addEventListener('click',saveRealPlayerMasterPoseLocally);
+  armTunePanel.querySelector('#realPlayerMasterPoseCapture').addEventListener('click',()=>{
+   const output=armTunePanel.querySelector('#realPlayerMasterPoseOutput');
+   const status=document.getElementById('realPlayerMasterPoseStatus');
+   if(!realPlayerReady||!realPlayerMasterPoseEntries.length){if(status)status.textContent='GLB todavía no disponible';return;}
+   output.value=captureRealPlayerMasterPoseText();
+   output.focus();output.select();
+   if(status)status.textContent='CAPTURADAS '+realPlayerMasterPoseEntries.length+' ARTICULACIONES · rotaciones locales copiables';
+  });
+  armTunePanel.querySelector('#realPlayerMasterPoseCopy').addEventListener('click',async()=>{
+   const output=armTunePanel.querySelector('#realPlayerMasterPoseOutput');
+   const status=document.getElementById('realPlayerMasterPoseStatus');
+   if(!output.value){if(status)status.textContent='Pulsa primero «Capturar pose actual»';return;}
+   output.focus();output.select();
+   try{await navigator.clipboard.writeText(output.value);if(status)status.textContent='CÓDIGO COPIADO';}
+   catch(_){if(status)status.textContent='Texto seleccionado: usa COPIAR desde el menú del dispositivo';}
+  });
+  armTuneToggle.addEventListener('click',()=>{
+   const open=!armTunePanel.classList.contains('open');
+   armTunePanel.classList.toggle('open',open);
+   armTuneToggle.textContent=open?'AJUSTAR POSE −':'AJUSTAR POSE +';
+   armTuneToggle.setAttribute('aria-expanded',String(open));
+  });
+  // El panel se puede arrastrar desde MOVER y recuerda su posición en este navegador.
+  const REAL_PLAYER_ARM_TUNE_DOCK_POSITION_KEY='el-sin-nombre-arm-tune-dock-position-v1';
+  const armTuneMove=armTunePanel.querySelector('#realPlayerArmTuneMove');
+  const armTuneSavePosition=armTunePanel.querySelector('#realPlayerArmTuneSavePosition');
+  const persistArmTuneDockPosition=()=>{
+   const rect=armTuneDock.getBoundingClientRect();
+   const position={
+    left:Math.max(4,Math.min(window.innerWidth-rect.width-4,rect.left)),
+    top:Math.max(4,Math.min(window.innerHeight-rect.height-4,rect.top))
+   };
+   try{
+    localStorage.setItem(REAL_PLAYER_ARM_TUNE_DOCK_POSITION_KEY,JSON.stringify(position));
+    armTuneSavePosition.textContent='✓ POSICIÓN GUARDADA';
+    return true;
+   }catch(error){
+    console.warn('No se pudo guardar la posición del panel:',error);
+    armTuneSavePosition.textContent='ERROR AL GUARDAR POSICIÓN';
+    return false;
+   }
+  };
+  armTuneSavePosition.addEventListener('click',persistArmTuneDockPosition);
+  let armTuneDrag=null;
+  try{
+   const savedPosition=JSON.parse(localStorage.getItem(REAL_PLAYER_ARM_TUNE_DOCK_POSITION_KEY)||'null');
+   if(savedPosition&&Number.isFinite(savedPosition.left)&&Number.isFinite(savedPosition.top)){
+    armTuneDock.style.left=Math.max(4,Math.min(window.innerWidth-80,savedPosition.left))+'px';
+    armTuneDock.style.top=Math.max(4,Math.min(window.innerHeight-80,savedPosition.top))+'px';
+    armTuneDock.style.right='auto';
+   }
+  }catch(_){}
+  armTuneMove.addEventListener('pointerdown',event=>{
+   if(event.button!==undefined&&event.button!==0)return;
+   const rect=armTuneDock.getBoundingClientRect();
+   armTuneDock.style.left=rect.left+'px';armTuneDock.style.top=rect.top+'px';armTuneDock.style.right='auto';
+   armTuneDrag={id:event.pointerId,offsetX:event.clientX-rect.left,offsetY:event.clientY-rect.top};
+   try{armTuneMove.setPointerCapture(event.pointerId);}catch(_){}
+   event.preventDefault();
+  });
+  armTuneMove.addEventListener('pointermove',event=>{
+   if(!armTuneDrag||event.pointerId!==armTuneDrag.id)return;
+   const rect=armTuneDock.getBoundingClientRect();
+   const left=Math.max(4,Math.min(window.innerWidth-rect.width-4,event.clientX-armTuneDrag.offsetX));
+   const top=Math.max(4,Math.min(window.innerHeight-rect.height-4,event.clientY-armTuneDrag.offsetY));
+   armTuneDock.style.left=left+'px';armTuneDock.style.top=top+'px';
+   event.preventDefault();
+  });
+  const finishArmTuneDrag=event=>{
+   if(!armTuneDrag||event.pointerId!==armTuneDrag.id)return;
+   armTuneDrag=null;
+   persistArmTuneDockPosition();
+  };
+  armTuneMove.addEventListener('pointerup',finishArmTuneDrag);
+  armTuneMove.addEventListener('pointercancel',finishArmTuneDrag);
+  }
  function relaxHumanoidLeg(root,upper,lower,foot,side,kneeFlex=0){
   if(!root||!upper||!lower)return false;
   try{
@@ -4476,10 +5257,46 @@ async function startGame(){
   const validGaitClips=gait.playable.filter(clipHasBilateralLegMotion);
   const idle=groups.find(g=>/idle|stand|rest/i.test(g.name));
   const attackClip=groups.find(g=>/attack|swing|slash|melee|axe/i.test(g.name));
-  const rig=separateRigLimbAliases(findRigNodes(asset));
+  // El GLB del protagonista puede exponer articulaciones dentro del árbol de
+  // importedRoot aunque no estén en asset.transformNodes. Reunir ambas fuentes
+  // como ya se hace con cada GLB NPC, sin consultar nodos de otros personajes.
+  const protagonistRootTransformNodes=collectTransformNodes([importedRoot]);
+  const protagonistRootNodeSet=new Set(protagonistRootTransformNodes);
+  const protagonistRigTransformNodes=protagonistRootTransformNodes.slice();
+  (asset.transformNodes||[]).forEach(node=>{if(node&&!protagonistRigTransformNodes.includes(node))protagonistRigTransformNodes.push(node);});
+  const detectedRig=findRigNodes({skeletons:asset.skeletons||[],transformNodes:protagonistRigTransformNodes});
+  const rig=separateRigLimbAliases(detectedRig);
+  const frameNodePatterns={
+   LeftFoot:[/left.?foot/i,/foot.?l/i],
+   LeftToeBase:[/^left.?toe.?base$/i,/left.?toe.?base/i,/mixamorig.*toe.?base/i],
+   LeftUpLeg:[/left.?up.?leg/i,/left.?thigh/i,/thigh.?l/i,/upleg.?l/i,/mixamorig.*upleg.?l/i],
+   RightUpLeg:[/right.?up.?leg/i,/right.?thigh/i,/thigh.?r/i,/upleg.?r/i,/mixamorig.*upleg.?r/i]
+  };
+  const frameNodeDiagnostic=(label,candidate,resolved,counterpart,counterpartLabel)=>{
+   const patterns=frameNodePatterns[label]||[];
+   const boneNames=[];
+   (asset.skeletons||[]).forEach(skeleton=>(skeleton.bones||[]).forEach(bone=>{
+    const name=String(bone.name||'');
+    if(patterns.some(pattern=>pattern.test(name))&&!boneNames.includes(name))boneNames.push(name);
+   }));
+   const transformNames=protagonistRigTransformNodes
+    .filter(node=>node&&patterns.some(pattern=>pattern.test(String(node.name||''))))
+    .map(node=>String(node.name||node.id||''))
+    .filter((name,index,list)=>name&&list.indexOf(name)===index);
+   return {
+    label,candidate,resolved,counterpart,counterpartLabel,boneNames,transformNames,
+    source:candidate?(protagonistRootNodeSet.has(candidate)?'descendiente de RealHumanVikingRoot':'asset.transformNodes/esqueleto'):''
+   };
+  };
+  realRigFrameNodeDiagnostics=[
+   frameNodeDiagnostic('LeftFoot',detectedRig.leftFoot,rig.leftFoot,detectedRig.rightFoot,'RightFoot'),
+   frameNodeDiagnostic('LeftToeBase',detectedRig.leftToeBase,rig.leftToeBase,null,''),
+   frameNodeDiagnostic('LeftUpLeg',detectedRig.leftUpperLeg,rig.leftUpperLeg,detectedRig.rightUpperLeg,'RightUpLeg'),
+   frameNodeDiagnostic('RightUpLeg',detectedRig.rightUpperLeg,rig.rightUpperLeg,detectedRig.leftUpperLeg,'LeftUpLeg')
+  ];
   const hasRigLegs=!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg&&rig.leftUpperLeg!==rig.rightUpperLeg&&rig.leftLowerLeg!==rig.rightLowerLeg);
   if(!walk&&!run&&!hasRigLegs)throw new Error('El GLB no incluye animación de marcha ni huesos de piernas reconocibles. Animaciones: '+(groups.map(g=>g.name).join(', ')||'ninguna'));
-  realRigNodes=rig;realRightGripBones=findRightGripBones(asset);realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});realRightGripBones.forEach(entry=>{const node=entry&&entry.node;if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
+  realRigNodes=rig;realRightGripBones=findRightGripBones(asset);realLeftGripBones=findLeftGripBones({skeletons:asset.skeletons||[],transformNodes:protagonistRigTransformNodes});realRigIdleNodes=[];{const uniqueIdleNodes=new Set();Object.values(rig).forEach(node=>{if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});[...realRightGripBones,...realLeftGripBones].forEach(entry=>{const node=entry&&entry.node;if(node&&!uniqueIdleNodes.has(node)){uniqueIdleNodes.add(node);realRigIdleNodes.push(node);}});}realHandNode=rig.hand;realUpperArmNode=rig.upperArm;realForearmNode=rig.forearm;realSpineNode=rig.spine;
   // Prioridad: palma real -> muñeca/antebrazo -> brazo superior. Así el arma acompaña el giro del brazo incluso en esqueletos con nombres distintos.
   realWeaponSocketNode=rig.hand||rig.forearm||rig.upperArm||null;
   realWeaponSocketMode=rig.hand?'hand':(rig.forearm?'forearm':(rig.upperArm?'upperArm':'pivot'));
@@ -4492,7 +5309,10 @@ async function startGame(){
   const locomotionTargets=new Set(locomotionGroups.flatMap(group=>(group.targetedAnimations||[]).map(a=>a.target).filter(Boolean)));
   realRigManualGaitNodes={};
   Object.entries({hips:rig.hips,head:rig.head,rightShoulder:rig.rightShoulder,leftShoulder:rig.leftShoulder,leftUpperLeg:rig.leftUpperLeg,rightUpperLeg:rig.rightUpperLeg,leftLowerLeg:rig.leftLowerLeg,rightLowerLeg:rig.rightLowerLeg,leftFoot:rig.leftFoot,rightFoot:rig.rightFoot,leftUpperArm:rig.leftUpperArm,upperArm:rig.upperArm,leftForearm:rig.leftForearm,forearm:rig.forearm,spine:rig.spine}).forEach(([key,node])=>{if(node)realRigManualGaitNodes[key]=!locomotionTargets.has(node);});
-  [realHandNode,rig.leftHand,realUpperArmNode,realForearmNode,realSpineNode,rig.head,rig.rightShoulder,rig.leftShoulder,rig.hips,rig.leftUpperLeg,rig.rightUpperLeg,rig.leftLowerLeg,rig.rightLowerLeg,rig.leftFoot,rig.rightFoot,rig.leftUpperArm,rig.leftForearm,rig.rightUpperLeg,rig.rightLowerLeg,rig.rightFoot].forEach(rememberRigRest);
+  // Capturar explícitamente todos los nodos del rig antes de cualquier pose procedural o clip.
+  Object.values(rig).forEach(rememberRigRest);
+  [...realRightGripBones,...realLeftGripBones].forEach(entry=>rememberRigRest(entry&&entry.node));
+  initializeRealPlayerMasterPose();
   configureRealFootIK(rig);
   // Ocultar la figura procedural solo cuando el humano GLB ya está validado y visible.
   player.body.setEnabled(false);
@@ -4593,7 +5413,7 @@ async function startGame(){
    const assetUrl=urls[index],controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),30000);
    try{
     lastVikingStage='descarga del modelo desde Grab3D';
-    const response=await fetch(assetUrl,{mode:'cors',cache:'no-store',credentials:'omit',signal:controller.signal,headers:{'Accept':'model/gltf-binary,application/octet-stream,*/*'}});
+    const response=await fetch(assetUrl,{mode:'cors',cache:'no-store',credentials:'same-origin',signal:controller.signal,headers:{'Accept':'model/gltf-binary,application/octet-stream,*/*'}});
     if(response.type==='opaque')throw new Error('El servidor no permite leer el archivo desde este HTML (CORS).');
     if(!response.ok)throw new Error('Grab3D respondió HTTP '+response.status+' al descargar el modelo.');
     const blob=await responseBlobWithProgress(response,'3/3 · Descargando tu vikingo…',0,100,'player');
@@ -4636,7 +5456,7 @@ async function startGame(){
    }
   }catch(err){
    setAssetLoadingProgress('player',100,'No se pudo descargar el vikingo; se usará el personaje de reserva.');
-   realPlayerReady=false;realPlayerManualLocomotion=false;realPlayerMode='';realPlayerCurrentGroup=null;realRigNodes={};realRigIdleNodes=[];realRigManualGaitNodes={};player.body.setEnabled(true);Object.values(realPlayerAnimations).filter(Boolean).forEach(group=>group.stop());
+   realPlayerReady=false;realPlayerManualLocomotion=false;realPlayerMode='';realPlayerCurrentGroup=null;realRigNodes={};realRigIdleNodes=[];realRigFrameNodeDiagnostics=[];realRigManualGaitNodes={};player.body.setEnabled(true);Object.values(realPlayerAnimations).filter(Boolean).forEach(group=>group.stop());
    if(realWeaponHolder){realWeaponHolder.dispose(false,true);realWeaponHolder=null;}if(realPlayerModel){realPlayerModel.dispose(false,true);realPlayerModel=null;}if(realPlayerModelPivot){realPlayerModelPivot.dispose(false,false);realPlayerModelPivot=null;}
    realWeaponAnchorCalibrated=false;realWeaponAnchorType='';realWeaponPoseOverride=null;realWeaponSocketNode=null;realWeaponSocketMode='pivot';realWeaponGroups={};realPlayerAnimations={walk:null,run:null,idle:null,attack:null};realHandNode=null;realUpperArmNode=null;realForearmNode=null;realSpineNode=null;
    const detail=(err&&err.message)?err.message:String(err||'error desconocido');
@@ -4657,12 +5477,21 @@ async function startGame(){
  setLoadingProgress(48,'3/3 · Instalando tu vikingo…');const playerHumanLoadPromise=loadHumanViking();
  function captureRealPlayerIdleTransition(){
    const seen=new Set(),poses=[];
-   Object.values(realRigNodes).forEach(node=>{
-    if(!node||seen.has(node))return;seen.add(node);
+   // Los brazos/manos tienen un objetivo anatómico determinista en reposo.
+   // Excluirlos de la interpolación evita que el clip de marcha los vuelva a
+   // mover después de aplicar los controles manuales durante los primeros ms.
+   const armHandKeys=/^(leftUpperArm|leftForearm|leftHand|upperArm|forearm|hand|leftShoulder|rightShoulder)$/i;
+   Object.entries(realRigNodes).forEach(([key,node])=>{
+    if(!node||seen.has(node)||armHandKeys.test(key))return;
+    seen.add(node);
     if(node.rotationQuaternion)poses.push({node,quaternion:node.rotationQuaternion.clone(),rotation:null});
     else if(node.rotation)poses.push({node,quaternion:null,rotation:node.rotation.clone()});
    });
-   return {startedAt:elapsed,duration:.38,poses};
+   // Los huesos de dedos se resuelven fuera del mapa principal del rig.
+   [...(realLeftGripBones||[]),...(realRightGripBones||[])].forEach(entry=>{
+    const node=entry&&entry.node;if(node)seen.add(node);
+   });
+   return {startedAt:elapsed,duration:.22,poses};
   }
   const realPlayerTransitionQuaternionScratch=new B.Quaternion();
   function blendRealPlayerIdleTransition(){
@@ -4696,8 +5525,12 @@ async function startGame(){
    }
    else if(mode==='idle'||mode==='sail'){group=null;} // Reposo o navegación: pose procedural sobre el rig original.
    if(mode===realPlayerMode&&group===realPlayerCurrentGroup){if(group)group.speedRatio=speed;return;}
-   if((mode==='idle'||mode==='sail')&&(realPlayerMode==='walk'||realPlayerMode==='run'))realPlayerIdleTransition=captureRealPlayerIdleTransition();
-   else if(mode!=='idle'&&mode!=='sail')realPlayerIdleTransition=null;
+   if((mode==='idle'||mode==='sail')&&(realPlayerMode==='walk'||realPlayerMode==='run')){
+    realPlayerIdleTransition=captureRealPlayerIdleTransition();
+    realPlayerMasterIdleTransition=mode==='idle'?captureRealPlayerMasterTransition():null;
+   }else if(mode!=='idle'&&mode!=='sail'){
+    realPlayerIdleTransition=null;realPlayerMasterIdleTransition=null;
+   }
    Object.values(realPlayerAnimations).filter(Boolean).forEach(g=>{if(g.isPlaying)g.stop();});
    realPlayerMode=mode;realPlayerCurrentGroup=group;if(group){group.start(loop,speed);group.speedRatio=speed;}
   }
@@ -4707,6 +5540,10 @@ async function startGame(){
   // o el gait procedural cuando el GLB no incluye ese canal. No salir aquí,
   // porque algunos clips Walk/Run no contienen los canales del hombro/codo.
   const n=realRigNodes,m=realRigManualGaitNodes;
+  // Si el GLB dispone de Walk/Run, sus AnimationGroups son los únicos propietarios de la locomoción.
+  // No se superpone gait procedural sobre piernas, torso ni brazos del clip original.
+  if(walking&&!realPlayerManualLocomotion)return;
+  if(realPlayerArmDebugEnabled&&walking){realPlayerArmDebugState.free.status='CORREDOR DE MARCHA';realPlayerArmDebugState.free.reason='objetivo anatómico calibrado + balanceo suave';realPlayerArmDebugState.free.twistDeg=null;realPlayerArmDebugState.weapon.status='CORREDOR DE MARCHA';realPlayerArmDebugState.weapon.reason='objetivo anatómico calibrado + balanceo suave';realPlayerArmDebugState.weapon.twistDeg=null;}
   const l=Math.sin(phase),r=Math.sin(phase+Math.PI),lk=Math.pow(Math.max(0,Math.cos(phase)),1.2),rk=Math.pow(Math.max(0,Math.cos(phase+Math.PI)),1.2);
    const hipAmp=sprinting?.40:.33,kneeAmp=sprinting?.56:.46;
   const apply=(key,x,y=0,z=0,force=false)=>{const node=n[key];if(node&&(force||m[key]!==false))setRigDelta(node,x,y,z);};
@@ -4716,49 +5553,23 @@ async function startGame(){
    apply('leftUpperLeg',l*hipAmp,0,-.012-l*.015);apply('rightUpperLeg',r*hipAmp,0,.012-r*.015);
    apply('leftLowerLeg',lk*kneeAmp);apply('rightLowerLeg',rk*kneeAmp);
    apply('leftFoot',-l*.17-lk*.27+leftStance*.045);apply('rightFoot',-r*.17-rk*.27+rightStance*.045);
-   apply('leftUpperArm',-l*(sprinting?.40:.32),0,.028);apply('upperArm',-r*(sprinting?.40:.32),0,-.028);
-   apply('leftForearm',.13+lk*.16);apply('forearm',.13+rk*.16);
+   // El torso y las piernas siguen el gait. Los brazos se corrigen una sola vez
+   // después de que Babylon aplique el clip nativo (véase applyRealPlayerArmPoseAfterAnimations).
    apply('spine',sprinting?.105:.06,0,(l-r)*.022);
-   apply('rightShoulder',-r*.10,0,-.025);apply('leftShoulder',-l*.10,0,.025);
+   apply('rightShoulder',-r*.035,0,-.012);apply('leftShoulder',-l*.035,0,.012);
    if(n.head&&m.head!==false)setRigDelta(n.head,-Math.sin(phase*2)*.012,(l-r)*.018,0);
   }else{
-   // Reposo vivo: soltar el último paso, conservar una flexión mínima de rodillas
-   // y desplazar el peso suavemente entre ambas piernas, sin congelar el esqueleto.
-   // Reuse the rig-node list built once when the GLB is attached; no Set/Array
-   // allocation is needed on every idle frame.
-   for(let i=0;i<realRigIdleNodes.length;i++){const node=realRigIdleNodes[i];restoreRigNodePose(node,realBoneRest.get(node));}
-   const idleMotionScale=isPerformanceMode?.72:1;
-   const breath=Math.sin(elapsed*1.16),weightShift=Math.sin(elapsed*.64),counterSway=Math.sin(elapsed*.47+.65);
-   if(onShip){
-    // Postura de navegación: el cuerpo contrapesa el balanceo del drakkar,
-    // las rodillas absorben el oleaje y las dos manos acompañan el control del barco.
-    const seaRoll=Math.max(-.18,Math.min(.18,Number(ship.rotation.z)||0));
-    const seaPitch=Math.max(-.16,Math.min(.16,Number(ship.rotation.x)||0));
-    const stance=Math.sin(elapsed*1.42),breathBoat=Math.sin(elapsed*1.08);
-    apply('hips',.028*stance+.010*breathBoat,-.012*seaPitch,-.045*seaRoll+.025*Math.sin(elapsed*.72),true);
-    apply('spine',-.035-.035*stance+.045*seaPitch,.012*Math.sin(elapsed*.83),.055*seaRoll-.024*stance,true);
-    apply('head',.012*Math.sin(elapsed*.62),.028*Math.sin(elapsed*.48+.4),-.018*seaRoll+.012*Math.sin(elapsed*.91),true);
-    relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.78+Math.abs(stance)*.16);
-    relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false,breathBoat,true);
-    relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true,breathBoat,true);
-    blendRealPlayerIdleTransition();
-    return;
+   // Reposo estable: sin respiración, balanceo ni variaciones sinusoidales.
+   for(let i=0;i<realRigIdleNodes.length;i++){
+    const node=realRigIdleNodes[i];restoreRigNodePose(node,realBoneRest.get(node));
    }
-   // Arms have slightly different phase and amplitude: the free arm hangs more,
-   // while the weapon arm keeps its elbow softly bent around the handle.
-   apply('leftShoulder',.002*Math.sin(elapsed*.83),0,.010,true);
-   apply('rightShoulder',-.002*Math.sin(elapsed*.83),0,-.010,true);
-   relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.58+Math.abs(weightShift)*.22);
-   relaxHumanoidArm(realPlayerModelPivot||player.root,n.leftUpperArm,n.leftForearm,n.leftHand,-1,false);
-   relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true);
-   apply('hips',breath*.014*idleMotionScale,weightShift*.010*idleMotionScale,weightShift*.018*idleMotionScale,true);
-   apply('spine',-.024+breath*.032*idleMotionScale,-weightShift*.008*idleMotionScale,-weightShift*.014*idleMotionScale,true);
-   apply('head',.012*Math.sin(elapsed*.43)*idleMotionScale,.021*Math.sin(elapsed*.31)*idleMotionScale,.008*counterSway*idleMotionScale,true);
    blendRealPlayerIdleTransition();
+   relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.58);
   }
  }
 
- function createRealWeapon(type='axe'){
+
+function createRealWeapon(type='axe'){
   if(!realPlayerReady)return;
   if(realWeaponHolder)realWeaponHolder.dispose(false,true);
   realWeaponGroups={};
@@ -4803,27 +5614,330 @@ async function startGame(){
  }
  function applyRealPlayerClubGripPose(){
   if(!realPlayerReady||!realWeaponHolder||!realRigNodes)return;
-  const holding=!!realWeaponGroups.club&&equippedWeapon==='club';
-  const mode=realPlayerMode;
-  // En reposo/navegación fijamos una pose estable; durante Walk/Run dejamos
-   // que el clip nativo anime hombro y codo. Forzar relaxHumanoidArm aquí,
-   // después del clip, congelaba el brazo y anulaba el balanceo al caminar.
-     if(holding&&(mode==='idle'||mode==='sail')){
-   const breath=Math.sin(elapsed*1.08)*.35;
-   const boat=mode==='sail';
-   relaxHumanoidArm(realPlayerModelPivot||player.root,realRigNodes.upperArm,realRigNodes.forearm,realRigNodes.hand,1,true,breath,boat);
-  }
-  const bones=realRightGripBones||[];
-  for(let i=0;i<bones.length;i++){
-   const entry=bones[i],node=entry&&entry.node||entry;if(!node)continue;
+  const holding=!!realWeaponGroups[equippedWeapon];
+  const tuneRest=playerAction==='idle';
+  // La pose anatómica del brazo ya se corrigió después de las animaciones.
+  // Este callback aplica falanges y seguimiento del arma sin competir por el codo.
+  const rightBones=realRightGripBones||[];
+  for(let i=0;i<rightBones.length;i++){
+   const entry=rightBones[i],node=entry&&entry.node||entry;if(!node)continue;
    if(!holding){const rest=realBoneRest.get(node);if(rest)restoreRigNodePose(node,rest);continue;}
-   const name=String(entry&&entry.name||node.name||'').toLowerCase();
-   const thumb=/thumb/.test(name);
-   const joint=Number((name.match(/[1-9]$/)||[])[0]||1);
-   const curl=thumb?(joint===1?.28:.20):(joint===1?.34:joint===2?.48:.36);
-   setRigDelta(node,curl,0,0,true);
+   setRigDelta(node,getRealPlayerFingerCurl(entry,'weapon'),0,0,true);
+  }
+  // La mano libre conserva la misma apertura tanto en reposo como en Walk/Run.
+  // Las acciones especiales mantienen sus poses propias.
+  const leftBones=realLeftGripBones||[];
+  if(tuneRest){
+   for(let i=0;i<leftBones.length;i++){
+    const entry=leftBones[i],node=entry&&entry.node||entry;if(!node)continue;
+    setRigDelta(node,getRealPlayerFingerCurl(entry,'free'),0,0,true);
+   }
+   realPlayerLeftFingerTuningApplied=true;
+  }else if(realPlayerLeftFingerTuningApplied){
+   for(let i=0;i<leftBones.length;i++){
+    const entry=leftBones[i],node=entry&&entry.node||entry;if(!node)continue;
+    const rest=realBoneRest.get(node);if(rest)restoreRigNodePose(node,rest);
+   }
+   realPlayerLeftFingerTuningApplied=false;
   }
  }
+  function restoreRealPlayerArmBindPose(nodes){
+  if(!nodes)return;
+  // El solver de dirección conserva la torsión axial que ya tenía cada hueso.
+  // Restaurar el bind pose aquí elimina la influencia del último clip antes de
+  // reconstruir el corredor anatómico y evita dos reposos según la animación previa.
+  const chain=[
+   nodes.leftShoulder,nodes.leftUpperArm,nodes.leftForearm,nodes.leftHand,
+   nodes.rightShoulder,nodes.upperArm,nodes.forearm,nodes.hand
+  ];
+  for(let i=0;i<chain.length;i++){
+   const node=chain[i];if(!node)continue;
+   restoreRigNodePose(node,realBoneRest.get(node));
+  }
+  // Actualizar matrices padre-hijo en orden anatómico antes de medir segmentos.
+  for(let i=0;i<chain.length;i++){
+   const node=chain[i];if(node&&typeof node.computeWorldMatrix==='function')node.computeWorldMatrix(true);
+  }
+ }
+ function cloneRealPlayerMasterPoseValue(pose){
+  if(!pose)return null;
+  return {
+   rotation:pose.rotation?pose.rotation.clone():null,
+   quaternion:pose.quaternion?pose.quaternion.clone():null
+  };
+ }
+ function realPlayerLocalRotationQuaternion(node){
+  if(!node)return B.Quaternion.Identity();
+  if(node.rotationQuaternion)return node.rotationQuaternion.clone().normalize();
+  const r=node.rotation||B.Vector3.Zero();
+  return B.Quaternion.FromEulerAngles(Number(r.x)||0,Number(r.y)||0,Number(r.z)||0).normalize();
+ }
+ function realPlayerMasterPoseEuler(pose){
+  if(!pose)return B.Vector3.Zero();
+  if(pose.rotation)return pose.rotation.clone();
+  return pose.quaternion?pose.quaternion.toEulerAngles():B.Vector3.Zero();
+ }
+ function realPlayerMasterPoseForEntry(entry){
+  if(!entry)return null;
+  return realPlayerMasterPose.get(entry.node)||null;
+ }
+ function readRealPlayerMasterPoseStorage(){
+  try{
+   const raw=localStorage.getItem(REAL_PLAYER_MASTER_POSE_STORAGE_KEY);
+   if(!raw)return null;
+   const parsed=JSON.parse(raw);
+   return parsed&&parsed.schema===1&&parsed.entries&&typeof parsed.entries==='object'?parsed:null;
+  }catch(_){return null;}
+ }
+ function restoreRealPlayerMasterPoseStoredValue(raw){
+  if(!raw||typeof raw!=='object')return null;
+  if(Array.isArray(raw.quaternion)&&raw.quaternion.length===4&&raw.quaternion.every(Number.isFinite)){
+   const q=new B.Quaternion(raw.quaternion[0],raw.quaternion[1],raw.quaternion[2],raw.quaternion[3]);
+   const norm=q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w;
+   if(norm>1e-8){q.normalize();return {quaternion:q,rotation:q.toEulerAngles()};}
+  }
+  if(Array.isArray(raw.rotation)&&raw.rotation.length===3&&raw.rotation.every(Number.isFinite)){
+   return {rotation:new B.Vector3(raw.rotation[0],raw.rotation[1],raw.rotation[2]),quaternion:null};
+  }
+  return null;
+ }
+ function initializeRealPlayerMasterPose(){
+  const n=realRigNodes||{},entries=[],seen=new Set(),ids=new Set();
+  const add=(id,label,node,side,kind='chain',fingerArm=null,fingerEntry=null)=>{
+   if(!node||seen.has(node))return;
+   seen.add(node);
+   const rawId=String(id||node.name||node.id||('joint_'+entries.length));
+   let uniqueId=rawId,suffix=2;
+   while(ids.has(uniqueId))uniqueId=rawId+'_'+suffix++;
+   ids.add(uniqueId);
+   entries.push({id:uniqueId,label:label||String(node.name||node.id||uniqueId),node,side,kind,fingerArm,fingerEntry});
+  };
+  add('leftShoulder','Hombro izquierdo',n.leftShoulder,'left');
+  add('leftUpperArm','Brazo superior izquierdo',n.leftUpperArm,'left');
+  add('leftForearm','Antebrazo izquierdo',n.leftForearm,'left');
+  add('leftHand','Mano izquierda',n.leftHand,'left');
+  add('rightShoulder','Hombro derecho',n.rightShoulder,'right');
+  add('rightUpperArm','Brazo superior derecho',n.upperArm,'right');
+  add('rightForearm','Antebrazo derecho',n.forearm,'right');
+  add('rightHand','Mano derecha',n.hand,'right');
+  const addFingers=(list,side,arm)=>{
+   (list||[]).forEach((entry,index)=>{
+    const node=entry&&entry.node||entry;
+    if(!node)return;
+    const name=String(entry&&entry.name||node.name||('dedo_'+(index+1)));
+    const safe=name.trim().replace(/[^\w.-]+/g,'_')||('dedo_'+(index+1));
+    add(side+'Finger_'+safe, (side==='left'?'Dedo izquierdo · ':'Dedo derecho · ')+name,node,side,'finger',arm,entry);
+   });
+  };
+  addFingers(realLeftGripBones,'left','free');
+  addFingers(realRightGripBones,'right','weapon');
+  realPlayerMasterPoseEntries=entries;
+  realPlayerMasterPose=new Map();
+  realPlayerMasterPoseDefaults=new Map();
+  const storedPosePayload=readRealPlayerMasterPoseStorage();
+  let restoredSavedPoseEntries=0;
+  for(const entry of entries){
+   const base=realBoneRest.get(entry.node);
+   if(!base)continue;
+   let pose={
+    rotation:base.rotation?base.rotation.clone():new B.Vector3(),
+    quaternion:base.quaternion?base.quaternion.clone():null
+   };
+   const explicit=REAL_PLAYER_MASTER_POSE_DEFAULTS&&REAL_PLAYER_MASTER_POSE_DEFAULTS[entry.id];
+   if(explicit){
+    if(Array.isArray(explicit.quaternion)&&explicit.quaternion.length===4){
+     pose.quaternion=new B.Quaternion(explicit.quaternion[0],explicit.quaternion[1],explicit.quaternion[2],explicit.quaternion[3]).normalize();
+     pose.rotation=pose.quaternion.toEulerAngles();
+    }else if(Array.isArray(explicit.rotation)&&explicit.rotation.length===3){
+     pose.rotation=new B.Vector3(explicit.rotation[0],explicit.rotation[1],explicit.rotation[2]);
+     pose.quaternion=null;
+    }
+   }else if(entry.kind==='finger'&&entry.fingerArm&&(entry.fingerArm==='free'||!!(realWeaponGroups&&realWeaponGroups[equippedWeapon]))){
+    // Conserva exactamente el cierre local previamente aplicado por el sistema de agarre.
+    const curl=getRealPlayerFingerCurl(entry.fingerEntry,entry.fingerArm);
+    if(pose.quaternion){
+     const delta=B.Quaternion.RotationYawPitchRoll(0,curl,0);
+     pose.quaternion=pose.quaternion.multiply(delta).normalize();
+     pose.rotation=pose.quaternion.toEulerAngles();
+    }else{
+     pose.rotation.x+=curl;
+    }
+   }
+   // Valores de fábrica separados del ajuste guardado para que RESTABLECER
+   // vuelva siempre al punto de partida original del modelo.
+   realPlayerMasterPoseDefaults.set(entry.node,cloneRealPlayerMasterPoseValue(pose));
+   const saved=restoreRealPlayerMasterPoseStoredValue(storedPosePayload&&storedPosePayload.entries&&storedPosePayload.entries[entry.id]);
+   if(saved){pose.rotation=saved.rotation;pose.quaternion=saved.quaternion;restoredSavedPoseEntries++;}
+   realPlayerMasterPose.set(entry.node,pose);
+  }
+  realPlayerMasterPoseLoadedFromStorage=restoredSavedPoseEntries>0;
+  realPlayerMasterPoseSavedAt=realPlayerMasterPoseLoadedFromStorage?(storedPosePayload.updatedAt||null):null;
+  realPlayerMasterIdleTransition=null;
+  buildRealPlayerMasterPoseControls();
+ }
+ function captureRealPlayerMasterTransition(){
+  const poses=new Map();
+  for(const entry of realPlayerMasterPoseEntries){
+   const node=entry.node;if(!node)continue;
+   poses.set(node,{
+    quaternion:realPlayerLocalRotationQuaternion(node),
+    rotation:node.rotation?node.rotation.clone():B.Vector3.Zero(),
+    useQuaternion:!!node.rotationQuaternion
+   });
+  }
+  return {startedAt:elapsed,duration:.22,poses};
+ }
+ function applyRealPlayerMasterPoseValue(node,pose){
+  if(!node||!pose)return;
+  if(pose.quaternion){
+   const q=pose.quaternion.clone();
+   if(node.rotationQuaternion)node.rotationQuaternion.copyFrom(q);
+   else node.rotationQuaternion=q;
+  }else if(pose.rotation){
+   if(node.rotationQuaternion)node.rotationQuaternion=null;
+   if(node.rotation)node.rotation.copyFrom(pose.rotation);
+  }
+ }
+ function applyRealPlayerArmPoseAfterAnimations(){
+  if(!realPlayerReady||!realRigNodes||playerAction!=='idle'||realPlayerMode!=='idle'||onShip)return;
+  const transition=realPlayerMasterIdleTransition;
+  const raw=transition?Math.max(0,Math.min(1,(elapsed-transition.startedAt)/transition.duration)):1;
+  const alpha=raw*raw*(3-2*raw);
+  for(const entry of realPlayerMasterPoseEntries){
+   const node=entry.node;if(!node)continue;
+   const base=realBoneRest.get(node);
+   if(base)restoreRigNodePose(node,base);
+   const target=realPlayerMasterPoseForEntry(entry);
+   if(!target)continue;
+   const start=transition&&transition.poses.get(node);
+   if(start&&raw<1){
+    const targetQ=target.quaternion?target.quaternion.clone():B.Quaternion.FromEulerAngles(target.rotation.x,target.rotation.y,target.rotation.z);
+    const startQ=start.quaternion.clone();
+    const blend=B.Quaternion.Slerp(startQ,targetQ,alpha).normalize();
+    if(start.useQuaternion||target.quaternion){
+     if(node.rotationQuaternion)node.rotationQuaternion.copyFrom(blend);
+     else node.rotationQuaternion=blend;
+    }else if(node.rotation){
+     node.rotation.copyFrom(blend.toEulerAngles());
+    }
+   }else{
+    applyRealPlayerMasterPoseValue(node,target);
+   }
+  }
+  if(transition&&raw>=1)realPlayerMasterIdleTransition=null;
+ }
+ function buildRealPlayerMasterPoseControls(){
+  if(!realPlayerArmDebugEnabled)return;
+  const controls=document.getElementById('realPlayerMasterPoseControls');
+  const status=document.getElementById('realPlayerMasterPoseStatus');
+  if(!controls)return;
+  controls.innerHTML='';
+  if(!realPlayerMasterPoseEntries.length){
+   controls.textContent='Esperando huesos del GLB…';return;
+  }
+  const groups=[
+   {side:'left',title:'LADO IZQUIERDO'},
+   {side:'right',title:'LADO DERECHO'}
+  ];
+  for(const group of groups){
+   const details=document.createElement('details');
+   details.open=group.side==='left';
+   details.style.cssText='margin:5px 0;border:1px solid #d8ad6855;border-radius:5px;background:#142426;padding:4px';
+   const summary=document.createElement('summary');
+   summary.textContent=group.title;
+   summary.style.cssText='color:#e6c27f;font-size:9px;font-weight:900;letter-spacing:.5px;padding:4px;cursor:pointer';
+   details.appendChild(summary);
+   for(const entry of realPlayerMasterPoseEntries.filter(item=>item.side===group.side)){
+    const pose=realPlayerMasterPose.get(entry.node);if(!pose)continue;
+    const euler=realPlayerMasterPoseEuler(pose);
+    const row=document.createElement('div');
+    row.style.cssText='margin:5px 2px 8px;padding:4px 0;border-bottom:1px solid #d8ad6822';
+    const heading=document.createElement('div');
+    heading.textContent=entry.label+' · '+(entry.node.name||entry.id);
+    heading.style.cssText='color:#f5e8cf;font-size:8px;font-weight:800;margin-bottom:2px;overflow-wrap:anywhere';
+    row.appendChild(heading);
+    for(const axis of ['x','y','z']){
+     const label=document.createElement('label');
+     label.style.cssText='display:grid;grid-template-columns:13px minmax(0,1fr) 43px;align-items:center;gap:4px;margin:2px 0;color:#d6d0c4;font-size:8px';
+     const axisName=document.createElement('span');axisName.textContent=axis.toUpperCase();
+     const slider=document.createElement('input');
+     slider.type='range';slider.min='-6.283';slider.max='6.283';slider.step='0.005';
+     slider.value=String(euler[axis]);
+     slider.style.cssText='width:100%;height:17px;margin:0;accent-color:#d8ad68;touch-action:pan-x';
+     slider.dataset.masterPoseId=entry.id;slider.dataset.masterPoseAxis=axis;
+     const output=document.createElement('output');output.textContent=Number(euler[axis]).toFixed(3);
+     output.style.cssText='color:#f1cb82;text-align:right;font:8px ui-monospace,monospace';
+     slider.addEventListener('input',()=>{
+      const value=Number(slider.value);if(!Number.isFinite(value))return;
+      const current=realPlayerMasterPose.get(entry.node);
+      if(!current)return;
+      const nextEuler=realPlayerMasterPoseEuler(current);
+      nextEuler[axis]=value;
+      const next={rotation:nextEuler,quaternion:current.quaternion?B.Quaternion.FromEulerAngles(nextEuler.x,nextEuler.y,nextEuler.z):null};
+      realPlayerMasterPose.set(entry.node,next);
+      output.textContent=value.toFixed(3);
+      realPlayerMasterIdleTransition=null;
+      if(realPlayerReady&&realPlayerMode==='idle'&&!onShip&&playerAction==='idle')applyRealPlayerArmPoseAfterAnimations();
+      if(status)status.textContent='EDITANDO '+entry.label+' · '+axis.toUpperCase()+' '+value.toFixed(3)+' rad';
+     },{passive:true});
+     label.appendChild(axisName);label.appendChild(slider);label.appendChild(output);row.appendChild(label);
+    }
+    details.appendChild(row);
+   }
+   controls.appendChild(details);
+  }
+  if(status)status.textContent=realPlayerMasterPoseLoadedFromStorage
+   ?'✓ POSE GUARDADA CARGADA · '+realPlayerMasterPoseEntries.length+' articulaciones'
+   :'POSE MAESTRA LOCAL · '+realPlayerMasterPoseEntries.length+' articulaciones';
+ }
+ function resetRealPlayerMasterPose(){
+  realPlayerMasterPose=new Map();
+  realPlayerMasterPoseDefaults.forEach((pose,node)=>realPlayerMasterPose.set(node,cloneRealPlayerMasterPoseValue(pose)));
+  realPlayerMasterPoseLoadedFromStorage=false;realPlayerMasterPoseSavedAt=null;
+  try{localStorage.removeItem(REAL_PLAYER_MASTER_POSE_STORAGE_KEY);}catch(_){}
+  realPlayerMasterIdleTransition=null;
+  buildRealPlayerMasterPoseControls();
+  const status=document.getElementById('realPlayerMasterPoseStatus');
+  if(status)status.textContent='POSE RESTABLECIDA · valores originales del modelo';
+  if(realPlayerReady&&realPlayerMode==='idle'&&!onShip&&playerAction==='idle')applyRealPlayerArmPoseAfterAnimations();
+ }
+ function saveRealPlayerMasterPoseLocally(){
+  const snapshot={};let count=0;
+  for(const entry of realPlayerMasterPoseEntries){
+   const pose=realPlayerMasterPose.get(entry.node);if(!pose)continue;
+   if(pose.quaternion){
+    const q=pose.quaternion.clone().normalize();
+    snapshot[entry.id]={quaternion:[q.x,q.y,q.z,q.w].map(value=>Number(value.toFixed(7)))};
+   }else{
+    const rotation=realPlayerMasterPoseEuler(pose);
+    snapshot[entry.id]={rotation:[rotation.x,rotation.y,rotation.z].map(value=>Number(value.toFixed(7)))};
+   }
+   count++;
+  }
+  const status=document.getElementById('realPlayerMasterPoseStatus');
+  if(!count){if(status)status.textContent='NO HAY ARTICULACIONES PARA GUARDAR';return false;}
+  try{
+   const payload={schema:1,updatedAt:new Date().toISOString(),entries:snapshot};
+   localStorage.setItem(REAL_PLAYER_MASTER_POSE_STORAGE_KEY,JSON.stringify(payload));
+   realPlayerMasterPoseLoadedFromStorage=true;realPlayerMasterPoseSavedAt=payload.updatedAt;
+   if(status)status.textContent='✓ POSE GUARDADA EN ESTE DISPOSITIVO · '+count+' ARTICULACIONES';
+   return true;
+  }catch(error){
+   console.warn('No se pudo guardar la pose maestra local:',error);
+   if(status)status.textContent='NO SE PUDO GUARDAR · almacenamiento del navegador no disponible';
+   return false;
+  }
+ }
+ function captureRealPlayerMasterPoseText(){
+  const snapshot={};
+  for(const entry of realPlayerMasterPoseEntries){
+   const node=entry.node;if(!node)continue;
+   const local=node.rotationQuaternion?{quaternion:[node.rotationQuaternion.x,node.rotationQuaternion.y,node.rotationQuaternion.z,node.rotationQuaternion.w]}:{rotation:[node.rotation.x,node.rotation.y,node.rotation.z]};
+   snapshot[entry.id]=Object.fromEntries(Object.entries(local).map(([key,values])=>[key,values.map(value=>Number(value.toFixed(7)))]));
+  }
+  return 'const REAL_PLAYER_MASTER_POSE_DEFAULTS = Object.freeze('+JSON.stringify(snapshot,null,2)+');';
+ }
+ 
  function quaternionAlignYTo(direction){
   const from=B.Axis.Y.clone().normalize(),to=direction.clone().normalize();
   const dot=Math.max(-1,Math.min(1,B.Vector3.Dot(from,to)));
@@ -5788,6 +6902,7 @@ async function startGame(){
  // Keep the count outside createRealGrass(): grassMesh itself is local to that builder.
  let grassInstanceCount=0,grassBatchCount=0,grassWindAccumulator=0,grassWindClock=0;const grassWindMeshes=[];let grassWindBasePositions=null,grassWindPositions=null;
  async function createRealGrass(){
+  grassDebugIslandStats.length=0;
   const positions=[],indices=[],colors=[];
   const shades=[[.27,.32,.17],[.36,.40,.22],[.43,.45,.27],[.23,.29,.16],[.38,.36,.20]];
   const grassHeightScale=isPerformanceMode?.52:.63,grassWidthScale=isPerformanceMode?1.02:1.12;
@@ -5819,6 +6934,8 @@ async function startGame(){
   addLeaf(.82,.34,.235,.31,.035,4);
   addLeaf(2.90,.29,.255,.34,.045,1);
   addLeaf(5.05,.37,.215,.29,.035,2);
+  if(!isPerformanceMode)addLeaf(5.72,.52,.13,.26,.045,0);
+  grassDebugLeavesPerClump=isPerformanceMode?7:8;
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
   const vertexData=new B.VertexData();vertexData.positions=positions;vertexData.indices=indices;vertexData.normals=normals;vertexData.colors=colors;
   const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);
@@ -5847,9 +6964,12 @@ async function startGame(){
   for(let islandIndex=0;islandIndex<land.length;islandIndex++){
    const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520);
    const performanceDensity=isConstrainedMobile?.15:(isTouchDevice?.29:.45);
-   const want=isPerformanceMode?Math.round(baseWant*performanceDensity):baseWant;
+   const qualityGrassDensity=1.18;
+   const want=isPerformanceMode?Math.round(baseWant*performanceDensity):Math.round(baseWant*qualityGrassDensity);
    let placed=0,tries=0;
    const radius=island.r*.865;
+   const gridSide=Math.ceil(Math.sqrt(want*1.30)),cellSize=(radius*2)/gridSide;
+   const occupiedGridCells=new Set();
    const tryPlaceGrass=(x,z)=>{
     if(!isLand(x,z))return false;
     const gx=(terrainSurfaceAt(x+.55,z)-terrainSurfaceAt(x-.55,z))/1.1,gz=(terrainSurfaceAt(x,z+.55)-terrainSurfaceAt(x,z-.55))/1.1;
@@ -5866,10 +6986,13 @@ async function startGame(){
     if(!batch){batch={islandIndex,cellX,cellZ,matrices:[],colors:[]};grassBatches.set(key,batch);}
     batch.matrices.push(...matrix.m);
     const tint=rand(.84,1.12);batch.colors.push(tint,rand(.92,1.06),rand(.82,1.02),1);
+    const gridCol=Math.max(0,Math.min(gridSide-1,Math.floor((x-(island.x-radius))/cellSize)));
+    const gridRow=Math.max(0,Math.min(gridSide-1,Math.floor((z-(island.z-radius))/cellSize)));
+    occupiedGridCells.add(gridRow*gridSide+gridCol);
     placed++;count++;return true;
    };
-   // Muestreo por celdas con jitter: separaciones más uniformes sin reducir la densidad en Calidad.
-   const gridSide=Math.ceil(Math.sqrt(want*1.30)),cellSize=(radius*2)/gridSide;
+   // Muestreo por celdas con menos jitter para evitar huecos y grupos irregulares.
+   const jitter=isPerformanceMode ? .30 : .24;
    const candidateCells=Array.from({length:gridSide*gridSide},(_,i)=>i);
    for(let i=candidateCells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)),tmp=candidateCells[i];candidateCells[i]=candidateCells[j];candidateCells[j]=tmp;}
    for(const sample of candidateCells){
@@ -5877,10 +7000,26 @@ async function startGame(){
     tries++;
     if(tries%480===0){setLoadingProgress(42+((islandIndex+placed/want)/land.length)*5,'Distribuyendo vegetación 3D…');await yieldStartupFrame();}
     const col=sample%gridSide,row=Math.floor(sample/gridSide);
-    const x=island.x-radius+(col+.5+rand(-.34,.34))*cellSize;
-    const z=island.z-radius+(row+.5+rand(-.34,.34))*cellSize;
+    const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
+    const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
     const dx=x-island.x,dz=z-island.z;if(dx*dx+dz*dz>radius*radius)continue;
     tryPlaceGrass(x,z);
+   }
+   // Reintenta las celdas que quedaron vacías antes de recurrir al relleno aleatorio.
+   const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));
+   for(const sample of refillCells){
+    if(placed>=want)break;
+    const col=sample%gridSide,row=Math.floor(sample/gridSide);
+    const dx=(col+.5)/gridSide*radius*2-radius,dz=(row+.5)/gridSide*radius*2-radius;
+    if(dx*dx+dz*dz>radius*radius)continue;
+    for(let attempt=0;attempt<2&&placed<want;attempt++){
+     tries++;
+     if(tries%480===0){setLoadingProgress(42+((islandIndex+placed/want)/land.length)*5,'Distribuyendo vegetación 3D…');await yieldStartupFrame();}
+     const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
+     const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
+     tryPlaceGrass(x,z);
+     if(occupiedGridCells.has(sample))break;
+    }
    }
    // Completa solamente las celdas que hayan caído sobre árboles, roca, pendiente o asentamientos.
    while(placed<want&&tries<want*8){
@@ -5889,6 +7028,8 @@ async function startGame(){
     const angle=Math.random()*Math.PI*2,rad=Math.sqrt(Math.random())*radius;
     tryPlaceGrass(island.x+Math.cos(angle)*rad,island.z+Math.sin(angle)*rad);
    }
+   const totalGridCells=Math.max(1,Math.round(Math.PI*.25*gridSide*gridSide));
+   grassDebugIslandStats.push({name:island.name||('ISLA '+(islandIndex+1)),target:want,placed,fillPct:Math.round(placed/Math.max(1,want)*100),occupiedCells:occupiedGridCells.size,totalGridCells,gridPct:Math.min(100,Math.round(occupiedGridCells.size/totalGridCells*100))});
   }
   let grassUploadBatch=0;
   for(const batch of grassBatches.values()){
@@ -5903,7 +7044,9 @@ async function startGame(){
    if(++grassUploadBatch%(isConstrainedMobile?4:8)===0)await yieldStartupFrame();
   }
   grassInstanceCount=count;grassBatchCount=grassBatches.size;
-  console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:7,instancesPerIsland:land.map((is,i)=>({island:is.name,requested:i===0?6500:(i<4?1050:520)})),spatialBatches:grassBatchCount,chunkSize});
+  // Publica únicamente el recuento real ya generado para el panel ?debug=1.
+  grassDebugClumpCount=count;grassDebugBatchCount=grassBatches.size;
+  console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:grassDebugLeavesPerClump,instancesPerIsland:grassDebugIslandStats,spatialBatches:grassBatchCount,chunkSize});
  }
  await createRealGrass();
  function updateRealGrassWind(dt){
@@ -6378,12 +7521,12 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.167',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.187',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
    boat:{onShip,velocity:Number(boatVelocity.toFixed(3)),position:{x:Number(ship.position.x.toFixed(2)),y:Number(ship.position.y.toFixed(2)),z:Number(ship.position.z.toFixed(2))},rotation:{x:Number(ship.rotation.x.toFixed(3)),y:Number(ship.rotation.y.toFixed(3)),z:Number(ship.rotation.z.toFixed(3))},flatWakeStrips:shipWake.map(w=>({name:w.name,enabled:w.isEnabled()})),activeSprayParticles:activeSpray,sprayCapacity:VESSEL_SPRAY_COUNT},
-   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
+   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
    npcs:{enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,ambientPeople:ambientPeople.length,ambientMoving:ambientPeople.filter(n=>Number(n.parts.actualMoveSpeed)>.1).length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,npcClips:humanEnemyParts.filter(p=>p.realHuman).slice(0,8).map(p=>({name:p.name,walk:p.realHuman.walk&&p.realHuman.walk.name,walkPlaying:!!(p.realHuman.walk&&p.realHuman.walk.isPlaying),current:p.realHuman.current&&p.realHuman.current.name,enabled:p.root.isEnabled()}))}
   };
  };
@@ -6441,7 +7584,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.167');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.185');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -7737,7 +8880,7 @@ function updateHUD(){
    const airHeight=Math.max(0,player.root.position.y-targetGroundY);
    playerShadow.setEnabled(true);playerShadow.position.y=.025-airHeight;
    playerShadow.scaling.x=1+airHeight*.18;playerShadow.scaling.y=1+airHeight*.18;
-   player.root.rotation.y=B.Scalar.Lerp(player.root.rotation.y,yaw,Math.min(1,dt*15));
+   player.root.rotation.y=B.Scalar.LerpAngle(player.root.rotation.y,yaw,Math.min(1,dt*15));
    const normal=terrainNormalAt(player.root.position.x,player.root.position.z,.34);
    const forwardSlope=-normal.x*Math.sin(yaw)-normal.z*Math.cos(yaw),sideSlope=-normal.x*Math.cos(yaw)+normal.z*Math.sin(yaw);
    player.root.rotation.x=B.Scalar.Lerp(player.root.rotation.x,Math.max(-.34,Math.min(.34,-Math.atan(forwardSlope))),Math.min(1,dt*10));
@@ -7769,15 +8912,16 @@ function updateHUD(){
    const realMode=playerAction==='attack'?'attack':playerAction==='chop'?'chop':playerAction==='mine'?'mine':(onShip?'sail':moving?(running&&stamina>0?'run':'walk'):'idle');
    worldUpdatePhase='animation / player native clip '+realMode;
    setRealVikingAnimation(realMode);
-   updateRealRigGait(walkPhase,!onShip&&((moving&&playerAction!=='attack'&&playerAction!=='chop'&&playerAction!=='mine')||playerAction==='dodge'),running&&stamina>0);
-   worldUpdatePhase='animation / player weapon '+realMode;
-   updateRealWeaponPose(dt);
    if(realPlayerModelPivot){
-    const idleBreathing=!onShip&&!moving&&playerAction==='idle'&&realPlayerMode==='idle';
+    const idleBreathing=!onShip&&!moving&&playerAction==='idle'&&realMode==='idle';
     realPlayerModelPivot.position.y=0;
     realPlayerModelPivot.rotation.x=onShip?Math.sin(elapsed*1.85)*.006:(idleBreathing?Math.sin(elapsed*1.16)*.0035:0);
     realPlayerModelPivot.rotation.z=onShip?Math.sin(elapsed*1.42)*.010-(Number(ship.rotation.z)||0)*.12:(moving?Math.sin(walkPhase)*.012:(idleBreathing?Math.sin(elapsed*.72)*.0065:Math.sin(elapsed*1.2)*.003));
+    realPlayerModelPivot.computeWorldMatrix(true);
    }
+   updateRealRigGait(walkPhase,!onShip&&((moving&&playerAction!=='attack'&&playerAction!=='chop'&&playerAction!=='mine')||playerAction==='dodge'),running&&stamina>0);
+   worldUpdatePhase='animation / player weapon '+realMode;
+   updateRealWeaponPose(dt);
   }
   // Enemy awareness, pursuit on land, telegraphed attacks and damage.
   worldUpdatePhase='enemy AI and combat';
@@ -8215,7 +9359,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.167 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.185 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -8270,7 +9414,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.167: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.185: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -8333,7 +9477,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.167 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.187 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -8371,7 +9515,7 @@ function updateHUD(){
   throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.167 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.185 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
