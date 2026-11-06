@@ -261,7 +261,7 @@ def main() -> None:
         fail("La pose maestra debe aplicarse en tierra y a bordo.")
     if "realPlayerMasterIdleTransition=(mode==='idle'||mode==='sail')?captureRealPlayerMasterTransition():null" not in index_html:
         fail("Falta la transición a pose maestra al embarcar.")
-    if "realPlayerMode==='sail'&&playerAction==='idle'" not in index_html:
+    if "((realPlayerMode==='idle'||realPlayerMode==='sail')&&playerAction==='idle')" not in index_html:
         fail("La pose maestra no tiene prioridad sobre el solver de dedos durante la navegación.")
     if "realPlayerArmDebugPanel=document.createElement('pre')" in index_html or "realPlayerArmDeviationPanel=document.createElement('div')" in index_html:
         fail("Los paneles grandes de diagnóstico superior deben estar retirados.")
