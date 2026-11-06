@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.185">
+<meta name="el-sin-nombre-build" content="0.6.186">
 <meta name="el-sin-nombre-repair" content="0.6.185 local-rotation master idle pose; original GLB locomotion; debug sliders, capture and 1-degree local detector">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
@@ -1961,6 +1961,8 @@ async function startGame(){
  let realPlayerSkeletonFrameDiagnostic='esqueleto pendiente';
  const realPlayerArmFrameMode='ESQUELETO';
  const realPlayerArmDebugTargets={free:null,weapon:null};
+ // Observabilidad únicamente: no participa en el muestreo, la geometría ni la animación de la hierba.
+ let grassDebugClumpCount=0,grassDebugBatchCount=0;
  const REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY='el-sin-nombre-arm-last-deviation-v1';
  let realPlayerArmLastDeviation=null,realPlayerArmDeviationLastWasLocomoting=false,realPlayerArmDeviationStoppedAtMs=null,realPlayerArmDeviationActiveSignature='';
  if(realPlayerArmDebugEnabled){try{const storedDeviation=localStorage.getItem(REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY);if(storedDeviation){const parsed=JSON.parse(storedDeviation);if(parsed&&parsed.timestamp&&Array.isArray(parsed.violations))realPlayerArmLastDeviation=parsed;}}catch(_){realPlayerArmLastDeviation=null;}}
@@ -4901,6 +4903,7 @@ async function startGame(){
   const masterCount=realPlayerMasterPoseEntries.length;
   const missing=realPlayerMasterPoseEntries.filter(entry=>!realBoneRest.has(entry.node)||!realPlayerMasterPose.has(entry.node)).length;
   const transition=realPlayerMasterIdleTransition?'MEZCLA FIJA 0,22 s':'SIN MEZCLA';
+  const liveFps=Number.isFinite(engine.getFps())?Math.round(engine.getFps()):0;
   realPlayerArmDebugPanel.textContent=
    'POSE MAESTRA · ROTACIONES LOCALES\n'+
    'ESTADO '+mode.toUpperCase()+' · '+movement+'\n'+
@@ -4908,7 +4911,8 @@ async function startGame(){
    'HUESOS '+masterCount+' · SIN BASE/MAESTRA '+missing+'\n'+
    'TRANSICIÓN '+transition+' · SIN RESPIRACIÓN\n'+
    'BRAZO LIBRE '+(realPlayerArmDebugState.free.status||'—')+' / PALO '+(realPlayerArmDebugState.weapon.status||'—')+'\n'+
-   'DETECTOR: rotación local real vs maestra · tolerancia 1°';
+   'DETECTOR: rotación local real vs maestra · tolerancia 1°\n'+
+   'FPS EN VIVO '+liveFps+' · MATAS '+grassDebugClumpCount.toLocaleString('es-ES')+' · LOTES '+grassDebugBatchCount;
  }
  
 if(realPlayerArmDebugEnabled){
@@ -6985,6 +6989,8 @@ function createRealWeapon(type='axe'){
    if(++grassUploadBatch%(isConstrainedMobile?4:8)===0)await yieldStartupFrame();
   }
   grassInstanceCount=count;grassBatchCount=grassBatches.size;
+  // Publica únicamente el recuento real ya generado para el panel ?debug=1.
+  grassDebugClumpCount=count;grassDebugBatchCount=grassBatches.size;
   console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:7,instancesPerIsland:land.map((is,i)=>({island:is.name,requested:i===0?6500:(i<4?1050:520)})),spatialBatches:grassBatchCount,chunkSize});
  }
  await createRealGrass();
