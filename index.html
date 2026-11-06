@@ -4849,7 +4849,7 @@ async function startGame(){
   realPlayerArmDeviationActiveSignature=signature;updateRealPlayerArmDeviationPanel(phase);
  }
  
- function armDebugFormatYaw(r)function armDebugFormatYaw(r){return Number.isFinite(r)?(r*180/Math.PI).toFixed(1)+'°':'—';}
+ function armDebugFormatYaw(r){return Number.isFinite(r)?(r*180/Math.PI).toFixed(1)+'°':'—';}
  function armDebugLocalYaw(node){if(!node)return null;try{if(node.rotationQuaternion)return Number(node.rotationQuaternion.toEulerAngles().y)||0;return node.rotation?Number(node.rotation.y)||0:null;}catch(_){return null;}}
  function armDebugFrameAngle(a,b){if(!a||!b||a.lengthSquared()<1e-8||b.lengthSquared()<1e-8)return null;return Math.acos(Math.max(-1,Math.min(1,B.Vector3.Dot(a.clone().normalize(),b.clone().normalize()))))*180/Math.PI;}
  function updateRealPlayerArmDebugPanel(){
@@ -4871,7 +4871,7 @@ async function startGame(){
  }
  
 if(realPlayerArmDebugEnabled){
-  realPlayerArmDebugPanel=document.createElement('pre');if(realPlayerArmDebugEnabled){
+  if(realPlayerArmDebugEnabled){
   realPlayerArmDebugPanel=document.createElement('pre');
   realPlayerArmDebugPanel.id='realPlayerArmDebugPanel';
   realPlayerArmDebugPanel.setAttribute('aria-label','Diagnóstico temporal de los brazos del vikingo');
@@ -4966,16 +4966,15 @@ if(realPlayerArmDebugEnabled){
   const armTunePanel=document.createElement('section');
   armTunePanel.id='realPlayerArmTunePanel';
   armTunePanel.setAttribute('aria-label','Edición de la postura maestra local');
-  armTunePanel.innerHTML=\`
-   <div id="realPlayerArmTuneHead"><span>POSTURA MAESTRA · ROTACIONES LOCALES (RAD)</span><button id="realPlayerArmTuneReset" type="button">RESTABLECER</button></div>
-   <div id="realPlayerMasterPoseStatus" style="margin:4px 0;color:#f1cb82;font:8px ui-monospace,monospace">Esperando GLB…</div>
-   <div id="realPlayerMasterPoseControls" style="max-height:36dvh;overflow:auto;overscroll-behavior:contain"></div>
-   <div style="display:flex;gap:6px;margin:7px 0 4px">
-    <button id="realPlayerMasterPoseCapture" type="button" style="flex:1;padding:6px;border:1px solid #d8ad68;border-radius:5px;background:#8a602f;color:#fff;font:800 8px ui-monospace,monospace">CAPTURAR POSE ACTUAL</button>
-    <button id="realPlayerMasterPoseCopy" type="button" style="padding:6px;border:1px solid #d8ad6888;border-radius:5px;background:#263735;color:#fff2d8;font:800 8px ui-monospace,monospace">COPIAR</button>
-   </div>
-   <textarea id="realPlayerMasterPoseOutput" readonly rows="5" spellcheck="false" placeholder="La captura de las rotaciones locales aparecerá aquí." style="box-sizing:border-box;width:100%;resize:vertical;padding:6px;border:1px solid #d8ad6866;border-radius:5px;background:#071113;color:#e8e0d0;font:7px/1.35 ui-monospace,monospace"></textarea>
-  \`;
+  armTunePanel.innerHTML=
+   '<div id="realPlayerArmTuneHead"><span>POSTURA MAESTRA · ROTACIONES LOCALES (RAD)</span><button id="realPlayerArmTuneReset" type="button">RESTABLECER</button></div>'+
+   '<div id="realPlayerMasterPoseStatus" style="margin:4px 0;color:#f1cb82;font:8px ui-monospace,monospace">Esperando GLB…</div>'+
+   '<div id="realPlayerMasterPoseControls" style="max-height:36dvh;overflow:auto;overscroll-behavior:contain"></div>'+
+   '<div style="display:flex;gap:6px;margin:7px 0 4px">'+
+    '<button id="realPlayerMasterPoseCapture" type="button" style="flex:1;padding:6px;border:1px solid #d8ad68;border-radius:5px;background:#8a602f;color:#fff;font:800 8px ui-monospace,monospace">CAPTURAR POSE ACTUAL</button>'+
+    '<button id="realPlayerMasterPoseCopy" type="button" style="padding:6px;border:1px solid #d8ad6888;border-radius:5px;background:#263735;color:#fff2d8;font:800 8px ui-monospace,monospace">COPIAR</button>'+
+   '</div>'+
+   '<textarea id="realPlayerMasterPoseOutput" readonly rows="5" spellcheck="false" placeholder="La captura de las rotaciones locales aparecerá aquí." style="box-sizing:border-box;width:100%;resize:vertical;padding:6px;border:1px solid #d8ad6866;border-radius:5px;background:#071113;color:#e8e0d0;font:7px/1.35 ui-monospace,monospace"></textarea>';
   armTuneDock.appendChild(armTuneToggle);
   armTuneDock.appendChild(armTunePanel);
   document.body.appendChild(armTuneDock);
