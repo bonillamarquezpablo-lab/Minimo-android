@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.191">
-<meta name="el-sin-nombre-repair" content="0.6.191 denser uniform groundcover; remove low-poly decorative shrubs; preserve saved master idle pose">
+<meta name="el-sin-nombre-build" content="0.6.192">
+<meta name="el-sin-nombre-repair" content="0.6.192 clear trails and camp areas of grass; add natural shrubs and roaming deer/boar; preserve master pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.191</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.192</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2864,8 +2864,12 @@ async function startGame(){
  land.forEach(buildTidalFoam);
  const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
  function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.975;if(dx*dx+dz*dz<r*r)return i;}return -1;}
- // Trails on the main island.
+ // Trails on the main island; their centerlines define vegetation-free corridors.
+ const vegetationTrailPaths=[];
+ function pointSegmentDistanceSquared(x,z,a,b){const dx=b[0]-a[0],dz=b[1]-a[1],len=dx*dx+dz*dz,t=len>1e-8?Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/len)):0,px=a[0]+dx*t,pz=a[1]+dz*t;return (x-px)*(x-px)+(z-pz)*(z-pz);}
+ function isVegetationTrailClearance(x,z,extra=1.15){for(const path of vegetationTrailPaths){const limit=path.width*.5+extra,limitSq=limit*limit;for(let i=0;i<path.points.length-1;i++)if(pointSegmentDistanceSquared(x,z,path.points[i],path.points[i+1])<limitSq)return true;}return false;}
  function createTrail(points,width=1.7){
+  vegetationTrailPaths.push({points:points.map(p=>[p[0],p[1]]),width});
   const positions=[],indices=[],uvs=[];
   for(let i=0;i<points.length;i++){
    const prev=points[Math.max(0,i-1)],next=points[Math.min(points.length-1,i+1)],dx=next[0]-prev[0],dz=next[1]-prev[1],len=Math.hypot(dx,dz)||1,nx=dz/len,nz=-dx/len;
@@ -3208,7 +3212,63 @@ async function startGame(){
   root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.y=baseYaw;root.scaling.setAll(scale);
   return {root,canopy,x,z,radius:.62*scale,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species,baseYaw,windPhase:rand(0,Math.PI*2)};
  }
- // 0.6.191: se eliminan los arbustos low-poly aislados; el sotobosque se representa con la cubierta vegetal integrada.
+ // Layered broadleaf shrubs with smooth, irregular foliage masses and visible woody stems.
+ const naturalShrubs=[];
+ function createNaturalShrub(x,z,size=1){
+  const root=newGroup('NaturalBroadleafShrub',null),yaw=rand(0,Math.PI*2),leafMats=[M.leafOak,M.leaf,M.leafSun,M.leafShadow];
+  const stemCount=4+Math.floor(rand(0,3));
+  for(let i=0;i<stemCount;i++){const a=i*Math.PI*2/stemCount+rand(-.35,.35),len=rand(.48,.82),branch=newGroup('ShrubWoodyStem_'+i,root);branch.position=v(0,.08,0);branch.rotation.y=a;branch.rotation.z=-rand(.28,.62);cyl('ShrubTwig_'+i,branch,[0,len*.43,0],len,.018,.045,M.bark,[Math.PI/2,0,0]);}
+  const lobes=15+Math.floor(rand(0,6));
+  for(let i=0;i<lobes;i++){const a=i*2.399963+rand(-.5,.5),ring=rand(.10,.58),y=rand(.25,.78),r=rand(.20,.34)*size;const lobe=organicLeaf('NaturalShrubFoliage_'+i,root,[Math.cos(a)*ring*size,y*size,Math.sin(a)*ring*size],[r*1.10,r*.70,r*.92],leafMats[Math.floor(rand(0,leafMats.length))],3);lobe.rotation.set(rand(-.20,.20),a,rand(-.22,.22));}
+  root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.y=yaw;root.scaling.setAll(size);mergeStaticDecorByMaterial(root,'NaturalBroadleafShrub');return {root,x,z,radius:.9*size};
+ }
+ const ambientFauna=[];
+ function createWildlifeAnimal(kind,x,z,size=1){
+  const deer=kind==='deer',root=newGroup(deer?'WildRedDeer':'WildBoar',null),fur=deer?M.fur:M.woodDark,legs=[];
+  sphere('FaunaTorso',root,[0,deer?1.02:.76,0],deer?[.48,.53,.98]:[.60,.52,.92],fur,24);
+  sphere('FaunaRump',root,[0,deer?1.08:.70,deer?-.55:-.42],deer?[.46,.48,.53]:[.58,.48,.52],deer?M.ochreCloth:M.woodLight,20);
+  if(deer){
+   const neck=capsule('DeerNeck',root,[0,1.48,.54],.94,.20,fur,[-.48,0,0]);neck.scaling.x=.84;neck.scaling.z=.86;
+   sphere('DeerHead',root,[0,1.94,.91],[.24,.27,.34],fur,20);sphere('DeerMuzzle',root,[0,1.84,1.17],[.17,.13,.22],M.ochreCloth,16);
+   for(const side of [-1,1]){
+    const ear=capsule('DeerEar_'+side,root,[side*.23,2.08,.82],.38,.065,fur,[0,0,side*.72]);ear.scaling.z=.48;
+    sphere('DeerEye_'+side,root,[side*.205,1.99,1.04],[.045,.052,.045],M.darkMetal,12);
+    capsule('DeerAntlerMain_'+side,root,[side*.17,2.34,.79],.58,.035,M.woodLight,[side*.25,0,side*.18]);
+    for(let tine=0;tine<2;tine++)capsule('DeerAntlerTine_'+side+'_'+tine,root,[side*(.29+tine*.10),2.49+tine*.10,.79],.30,.022,M.woodLight,[0,0,side*(.55+tine*.25)]);
+   }
+   sphere('DeerTail',root,[0,1.28,-1.0],[.14,.16,.18],M.ochreCloth,12);
+  }else{
+   sphere('BoarSnout',root,[0,.88,.79],[.32,.25,.38],M.woodLight,18);sphere('BoarNose',root,[0,.91,1.09],[.18,.15,.12],M.darkMetal,14);
+   for(const side of [-1,1]){capsule('BoarEar_'+side,root,[side*.36,1.18,.35],.30,.10,fur,[0,0,side*.75]);capsule('BoarTusk_'+side,root,[side*.23,.78,.87],.24,.045,M.stoneLight,[side*.15,0,side*.30]);sphere('BoarEye_'+side,root,[side*.36,1.02,.53],[.045,.05,.045],M.darkMetal,12);}
+   for(let i=0;i<5;i++)capsule('BoarBristle_'+i,root,[0,1.23-i*.045,-.25-i*.16],.24,.025,M.woodLight);
+   capsule('BoarTail',root,[0,.96,-.96],.32,.035,fur,[.6,0,0]);
+  }
+  for(const side of [-1,1])for(const fore of [true,false]){
+   const leg=newGroup('FaunaLeg_'+(side>0?'R':'L')+(fore?'F':'H'),root);leg.position=v(side*(deer?.27:.34),deer?.91:.65,fore?.48:-.58);
+   capsule('FaunaUpperLeg',leg,[0,-.22,0],.52,deer?.085:.12,fur);capsule('FaunaLowerLeg',leg,[0,-.57,.015],.43,deer?.058:.085,fur);box('FaunaHoof',leg,[0,-.80,.07],[deer?.13:.17,.12,.20],M.woodDark);
+   legs.push({pivot:leg,phase:rand(0,Math.PI*2),fore});
+  }
+  root.scaling.setAll(size);root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.y=rand(0,Math.PI*2);
+  return {kind,root,x,z,size,legs,heading:root.rotation.y,speed:rand(.20,.42),phase:rand(0,8),turnTimer:rand(2,6),flee:0};
+ }
+ function spawnNaturalVegetationAndFauna(){
+  for(let idx=0;idx<land.length;idx++){
+   const island=land[idx],bushCount=idx===0?12:(idx<4?5:3);
+   for(let i=0;i<bushCount;i++){let p=null;for(let attempt=0;attempt<36;attempt++){const q=sampleGroundPoint(island,3.9,.68,.25,.79);if(isVegetationTrailClearance(q.x,q.z,2.4)||settlements.some(s=>Math.hypot(q.x-s[0],q.z-s[1])<14)||worldColliders.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<(c.type==='circle'?c.r:Math.max(c.hx,c.hz))+2.4)||trees.some(t=>Math.hypot(q.x-t.x,q.z-t.z)<3))continue;p=q;break;}if(p)naturalShrubs.push(createNaturalShrub(p.x,p.z,rand(.82,1.18)));}
+   const animalCount=idx===0?5:(idx<4?2:1);
+   for(let i=0;i<animalCount;i++){let p=null;for(let attempt=0;attempt<45;attempt++){const q=sampleGroundPoint(island,3.8,.62,.28,.76);if(isVegetationTrailClearance(q.x,q.z,3.2)||settlements.some(s=>Math.hypot(q.x-s[0],q.z-s[1])<19)||worldColliders.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<(c.type==='circle'?c.r:Math.max(c.hx,c.hz))+3.5)||trees.some(t=>Math.hypot(q.x-t.x,q.z-t.z)<2.6))continue;p=q;break;}if(p){const kind=(idx+i)%3===0?'boar':'deer';ambientFauna.push(createWildlifeAnimal(kind,p.x,p.z,kind==='deer'?rand(.86,1.08):rand(.82,.98)));}}
+  }
+ }
+ function updateWildlife(dt){
+  if(!ambientFauna.length)return;const focus=onShip?ship.position:player.root.position;
+  for(const animal of ambientFauna){const dx=focus.x-animal.root.position.x,dz=focus.z-animal.root.position.z,dist=Math.hypot(dx,dz);animal.flee=dist<13?Math.max(animal.flee,3.5):Math.max(0,animal.flee-dt);animal.turnTimer-=dt;if(animal.turnTimer<=0){animal.turnTimer=rand(2.5,7);animal.heading+=rand(-.85,.85);}if(animal.flee>0&&dist>.01)animal.heading=Math.atan2(-dx,-dz);
+   const moving=animal.flee>0||Math.sin(elapsed*.45+animal.phase)>.25,speed=animal.flee>0?(animal.kind==='deer'?4.1:2.9):animal.speed;
+   if(moving){const nx=animal.root.position.x+Math.sin(animal.heading)*speed*dt,nz=animal.root.position.z+Math.cos(animal.heading)*speed*dt;if(isLand(nx,nz)&&!isVegetationTrailClearance(nx,nz,.1)){animal.root.position.x=nx;animal.root.position.z=nz;}else{animal.heading+=Math.PI*rand(.55,1.45);animal.turnTimer=.25;}}
+   animal.root.rotation.y=animal.heading;animal.root.position.y=terrainSurfaceAt(animal.root.position.x,animal.root.position.z);const gait=moving?Math.sin(elapsed*(animal.flee>0?10:4.2)+animal.phase):0;for(const leg of animal.legs)leg.pivot.rotation.x=moving?gait*(leg.fore?1:-1)*.30:0;
+  }
+ }
+
+ // 0.6.192: la cubierta vegetal queda despejada de caminos y campamentos.
  function createRock(x,z){
   const gy=terrainSurfaceAt(x,z),sx=rand(1.0,1.8),sy=rand(1.0,1.6),sz=rand(1,1.7);
   let r=sphere('graniteBoulder',null,[x,gy+sy*.49,z],[sx,sy,sz],M.stone,12);
@@ -6943,6 +7003,8 @@ function createRealWeapon(type='axe'){
   for(const rock of rocks){const r=(rock.radius||.75)+.30;addGrassPlacement('rock',rock,rock.x-r,rock.z-r,rock.x+r,rock.z+r);}
   for(const collider of worldColliders){const ex=(collider.type==='circle'?collider.r:collider.hx)+.25,ez=(collider.type==='circle'?collider.r:collider.hz)+.25;addGrassPlacement('world',collider,collider.x-ex,collider.z-ez,collider.x+ex,collider.z+ez);}
   function grassPlacementBlocked(x,z){
+   if(isVegetationTrailClearance(x,z,1.35))return true;
+   if(settlements.some(q=>Math.hypot(x-q[0],z-q[1])<12.6))return true;
    const bucket=grassPlacementGrid.get(grassPlacementKey(Math.floor(x/grassPlacementCellSize),Math.floor(z/grassPlacementCellSize)));if(!bucket)return false;
    for(const entry of bucket){const ref=entry.ref,dx=x-ref.x,dz=z-ref.z;
     if(entry.kind==='tree'){if(ref.alive&&Math.hypot(dx,dz)<(ref.radius||.6)+.48)return true;}
@@ -7048,6 +7110,7 @@ function createRealWeapon(type='axe'){
   grassDebugClumpCount=count;grassDebugBatchCount=grassBatches.size;
   console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:grassDebugLeavesPerClump,instancesPerIsland:grassDebugIslandStats,spatialBatches:grassBatchCount,chunkSize});
  }
+ spawnNaturalVegetationAndFauna();
  await createRealGrass();
  function updateRealGrassWind(dt){
   // Menos transferencias de vértices por segundo: la hierba cercana sigue respirando,
@@ -7521,7 +7584,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.191',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.192',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -8729,6 +8792,7 @@ function updateHUD(){
   const sunArc=elapsed*.00022;sunHalo.position.x=290+Math.sin(sunArc)*48;sunDisc.position.x=sunHalo.position.x;sunHalo.position.y=235+Math.sin(sunArc*.7)*22;sunDisc.position.y=sunHalo.position.y;
   sun.direction.x=-.42+Math.sin(sunArc)*.055;sun.direction.z=.22+Math.cos(sunArc)*.045;hemi.intensity=.84+.035*Math.sin(elapsed*.002);sun.intensity=1.38+.08*Math.sin(elapsed*.0017);
   animateWater(dt);
+  updateWildlife(dt);
   worldUpdatePhase='vessel spray / shoreline recovery';
   updateVesselSpray(dt);
   if(!onShip&&!playerAirborne&&!tryLandMove(player.root.position.x,player.root.position.z,.70)){
@@ -9477,7 +9541,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.191 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.192 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
