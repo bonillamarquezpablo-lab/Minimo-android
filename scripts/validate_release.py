@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.186"
+EXPECTED_VERSION = "0.6.187"
 
 HTML_PAGES = (
     "index.html",
@@ -265,6 +265,14 @@ def main() -> None:
         fail("El contador de hierba no recibe el número real de matas creadas.")
     if "const liveFps=Number.isFinite(engine.getFps())?Math.round(engine.getFps()):0;" not in index_html:
         fail("El panel debug=1 no mide los FPS actuales.")
+    if "const grassDebugEnabled=new URLSearchParams(window.location.search).get('grassdebug')==='1';" not in index_html:
+        fail("Falta el acceso independiente al diagnóstico de hierba ?grassdebug=1.")
+    if "function updateGrassDebugPanel()" not in index_html or "grassDebugIslandStats.push({" not in index_html:
+        fail("Faltan las métricas por isla del diagnóstico de hierba.")
+    if "const qualityGrassDensity=1.18;" not in index_html or "addLeaf(5.72,.52,.13,.26,.045,0);" not in index_html:
+        fail("La hierba de calidad no incluye la densidad y el penacho mejorados.")
+    if "const jitter=isPerformanceMode ? .30 : .24;" not in index_html or "const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));" not in index_html:
+        fail("La distribución uniforme de hierba no incluye reducción de jitter y relleno de huecos.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
