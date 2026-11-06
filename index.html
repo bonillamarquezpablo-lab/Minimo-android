@@ -4509,56 +4509,23 @@ async function startGame(){
  const REAL_PLAYER_WEAPON_ARM_FOREARM_TARGET=new B.Vector3(.15,-.97,.19);
  const REAL_PLAYER_WEAPON_ARM_PALM_NORMAL=new B.Vector3(.61,-.23,-.76);
  function getRealPlayerBodyFrame(nodes,orientationRoot){
+  // Marco canónico ligado al rumbo del personaje, no a huesos que cambian
+  // durante la marcha, la transición de reposo o la postura de las piernas.
   const worldUp=new B.Vector3(0,1,0);
-  // Primero se intenta el marco anatómico de piernas. Solo se usa si están
-  // presentes los cuatro nodos y sus vectores permiten formar una base válida.
-  const foot=nodes&&nodes.leftFoot,toe=nodes&&nodes.leftToeBase;
-  const rightHip=nodes&&nodes.rightUpperLeg,leftHip=nodes&&nodes.leftUpperLeg;
-  if(foot&&toe&&rightHip&&leftHip){
-   try{
-    foot.computeWorldMatrix(true);toe.computeWorldMatrix(true);
-    rightHip.computeWorldMatrix(true);leftHip.computeWorldMatrix(true);
-    let left=leftHip.getAbsolutePosition().subtract(rightHip.getAbsolutePosition());
-    if(left.lengthSquared()>=1e-6){
-     left.subtractInPlace(worldUp.scale(B.Vector3.Dot(left,worldUp)));
-     if(left.lengthSquared()>=1e-6){
-      left.normalize();
-      let forward=toe.getAbsolutePosition().subtract(foot.getAbsolutePosition());
-      if(forward.lengthSquared()>=1e-6){
-       forward.subtractInPlace(worldUp.scale(B.Vector3.Dot(forward,worldUp)));
-       forward.subtractInPlace(left.scale(B.Vector3.Dot(forward,left)));
-       if(forward.lengthSquared()>=1e-6){
-        forward.normalize();
-        const handedness=B.Vector3.Dot(B.Vector3.Cross(left,forward),worldUp);
-        if(Number.isFinite(handedness)&&handedness>=.5)return {left,up:worldUp,forward,source:'PIERNAS'};
-       }
-      }
-     }
-    }
-   }catch(_){}
-  }
-  // Respaldo independiente de las piernas: derecha -> izquierda entre brazos
-  // superiores; el rumbo de player.root fija inequívocamente el sentido de delante.
-  const rightArm=nodes&&nodes.upperArm,leftArm=nodes&&nodes.leftUpperArm;
-  if(!rightArm||!leftArm||!orientationRoot)return null;
+  if(!orientationRoot)return null;
   try{
-   rightArm.computeWorldMatrix(true);leftArm.computeWorldMatrix(true);
    orientationRoot.computeWorldMatrix(true);
-   let left=leftArm.getAbsolutePosition().subtract(rightArm.getAbsolutePosition());
-   left.subtractInPlace(worldUp.scale(B.Vector3.Dot(left,worldUp)));
-   if(left.lengthSquared()<1e-6)return null;
-   left.normalize();
-   let forward=B.Vector3.Cross(worldUp,left);
+   const forward=orientationRoot.getDirection(B.Axis.Z);
+   forward.subtractInPlace(worldUp.scale(B.Vector3.Dot(forward,worldUp)));
    if(forward.lengthSquared()<1e-6)return null;
    forward.normalize();
-   const rootForward=orientationRoot.getDirection(B.Axis.Z);
-   rootForward.subtractInPlace(worldUp.scale(B.Vector3.Dot(rootForward,worldUp)));
-   if(rootForward.lengthSquared()<1e-6)return null;
-   rootForward.normalize();
-   const headingDot=B.Vector3.Dot(forward,rootForward);
-   if(!Number.isFinite(headingDot)||Math.abs(headingDot)<1e-5)return null;
-   if(headingDot<0)forward.scaleInPlace(-1);
-   return {left,up:worldUp,forward,source:'BRAZOS'};
+   // +Z es delante; delante × arriba produce el eje anatómico izquierdo.
+   const left=B.Vector3.Cross(forward,worldUp);
+   if(left.lengthSquared()<1e-6)return null;
+   left.normalize();
+   const handedness=B.Vector3.Dot(B.Vector3.Cross(left,forward),worldUp);
+   if(!Number.isFinite(handedness)||handedness<.999)return null;
+   return {left,up:worldUp,forward,source:'RUMBO RAÍZ'};
   }catch(_){return null;}
  }
  function directionFromRealPlayerBodyFrame(frame,target,length){
@@ -5306,10 +5273,19 @@ async function startGame(){
  setLoadingProgress(48,'3/3 · Instalando tu vikingo…');const playerHumanLoadPromise=loadHumanViking();
  function captureRealPlayerIdleTransition(){
    const seen=new Set(),poses=[];
-   Object.values(realRigNodes).forEach(node=>{
-    if(!node||seen.has(node))return;seen.add(node);
+   // Los brazos/manos tienen un objetivo anatómico determinista en reposo.
+   // Excluirlos de la interpolación evita que el clip de marcha los vuelva a
+   // mover después de aplicar los controles manuales durante los primeros ms.
+   const armHandKeys=/^(leftUpperArm|leftForearm|leftHand|upperArm|forearm|hand|leftShoulder|rightShoulder)$/i;
+   Object.entries(realRigNodes).forEach(([key,node])=>{
+    if(!node||seen.has(node)||armHandKeys.test(key))return;
+    seen.add(node);
     if(node.rotationQuaternion)poses.push({node,quaternion:node.rotationQuaternion.clone(),rotation:null});
     else if(node.rotation)poses.push({node,quaternion:null,rotation:node.rotation.clone()});
+   });
+   // Los huesos de dedos se resuelven fuera del mapa principal del rig.
+   [...(realLeftGripBones||[]),...(realRightGripBones||[])].forEach(entry=>{
+    const node=entry&&entry.node;if(node)seen.add(node);
    });
    return {startedAt:elapsed,duration:.38,poses};
   }
