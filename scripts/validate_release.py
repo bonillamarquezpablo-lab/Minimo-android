@@ -127,8 +127,14 @@ def main() -> None:
         fail("La calibración fija del brazo del palo no coincide con los valores aprobados.")
     if "new B.Vector3(.26,-Math.sqrt(1-.26*.26-.21*.21),-.21)" not in index_html:
         fail("El objetivo de reposo del brazo libre no usa la calibración fijada.")
+    if "new B.Vector3(.15,-Math.sqrt(1-.15*.15-.08*.08),-.08)" not in index_html:
+        fail("El objetivo de reposo del antebrazo libre no usa la calibración fijada.")
     if "new B.Vector3(.16,-Math.sqrt(1-.16*.16-.02*.02),-.02)" not in index_html:
         fail("El objetivo de reposo del brazo del arma no usa la calibración fijada.")
+    if "new B.Vector3(0,-1,0)" not in index_html:
+        fail("El objetivo de reposo del antebrazo del arma no usa la calibración fijada.")
+    if "updateArmTuneControls();" not in index_html:
+        fail("El panel no sincroniza sus controles con los valores de reposo fijados.")
     if "getRealPlayerBodyFrame(n,realPlayerModelPivot||player.root)" not in index_html:
         fail("El diagnóstico anatómico no utiliza el mismo marco visual que el solucionador.")
     if "player.root.rotation.y=B.Scalar.LerpAngle(player.root.rotation.y,yaw" not in index_html:
