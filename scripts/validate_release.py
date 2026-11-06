@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.184"
+EXPECTED_VERSION = "0.6.185"
 
 HTML_PAGES = (
     "index.html",
@@ -122,6 +122,11 @@ def main() -> None:
     # Master idle pose is represented only by per-bone local rotations.
     if "const REAL_PLAYER_MASTER_POSE_DEFAULTS=Object.freeze(" not in index_html:
         fail("Falta el bloque de rotaciones maestras locales por articulación.")
+    if index_html.count("quaternion:[") < 38:
+        fail("La pose maestra de fábrica no contiene las 38 rotaciones capturadas.")
+    for master_joint in ("leftShoulder","leftUpperArm","leftForearm","leftHand","rightShoulder","rightUpperArm","rightForearm","rightHand","leftFinger_lefthandthumb1","rightFinger_righthandpinky3"):
+        if '"' + master_joint + '":{quaternion:' not in index_html:
+            fail(f"Falta una rotación maestra capturada: {master_joint}")
     if "initializeRealPlayerMasterPose();" not in index_html:
         fail("La pose maestra no se inicializa después de capturar el bind pose del GLB.")
     if "add('leftShoulder'" not in index_html or "add('rightShoulder'" not in index_html:
