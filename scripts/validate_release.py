@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.192"
+EXPECTED_VERSION = "0.6.193"
 
 HTML_PAGES = (
     "index.html",
@@ -289,6 +289,16 @@ def main() -> None:
         fail("Falta la vegetación natural de sotobosque.")
     if "function createWildlifeAnimal(" not in index_html or "function updateWildlife(dt)" not in index_html or "updateWildlife(dt);" not in index_html:
         fail("Falta la fauna salvaje animada.")
+    if "function createWildlifeAnimal(" in index_html or "FaunaTorso" in index_html or "BoarSnout" in index_html:
+        fail("Siguen presentes los animales provisionales construidos con primitivas.")
+    if "function loadWildlifeModels()" not in index_html or "function playWildlifeAnimation(" not in index_html or "Deer.glb" not in index_html or "Stag.glb" not in index_html or "Wolf.glb" not in index_html:
+        fail("Faltan los modelos GLB rigged de ciervo, venado y lobo.")
+    if "WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837'" not in index_html or "await loadWildlifeModels();" not in index_html:
+        fail("La fuente de fauna no está fijada a una revisión inmutable o no se carga.")
+    if "mesh.receiveShadows=false;mesh.castShadows=false;" not in index_html or "mesh.material=packedTrailMaterial;" not in index_html:
+        fail("El camino no utiliza tierra compactada sin recepción de sombras.")
+    if "indices.push(a,b,a+1,a+1,b,b+1);" not in index_html or "packedTrailTexture" not in index_html:
+        fail("La malla o la textura independiente del camino están incompletas.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
