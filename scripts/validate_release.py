@@ -135,8 +135,11 @@ def main() -> None:
         fail("El objetivo de reposo del antebrazo del arma no usa la calibración fijada.")
     if "updateArmTuneControls();" not in index_html:
         fail("El panel no sincroniza sus controles con los valores de reposo fijados.")
-    if "getRealPlayerBodyFrame(n,realPlayerModelPivot||player.root)" not in index_html:
-        fail("El diagnóstico anatómico no utiliza el mismo marco visual que el solucionador.")
+    if ("function getRealPlayerSkeletonBodyFrame(nodes)" not in index_html
+            or "function getRealPlayerHeadingBodyFrame(root)" not in index_html
+            or "realPlayerArmFrameMode==='ESQUELETO'" not in index_html
+            or "const n=realRigNodes,reference=getRealPlayerSkeletonBodyFrame(n);" not in index_html):
+        fail("El marco seleccionable del solucionador o la referencia anatómica independiente no están implementados.")
     if "player.root.rotation.y=B.Scalar.LerpAngle(player.root.rotation.y,yaw" not in index_html:
         fail("El giro del jugador no interpola el ángulo por el arco más corto.")
     grip_start = index_html.find("function applyRealPlayerClubGripPose(){")
