@@ -4537,6 +4537,8 @@ async function startGame(){
  const REAL_PLAYER_WEAPON_ARM_FOREARM_TARGET=new B.Vector3(0,-1,0);
  const REAL_PLAYER_WEAPON_ARM_PALM_NORMAL=new B.Vector3(.61,-.23,-.76);
  function getRealPlayerSkeletonBodyFrame(nodes){
+  // Referencia anatómica: eje lateral de las caderas y eje longitudinal del pie,
+  // proyectados al plano horizontal y ortogonalizados entre sí.
   const up=new B.Vector3(0,1,0),foot=nodes&&nodes.leftFoot,toe=nodes&&nodes.leftToeBase;
   const rightHip=nodes&&nodes.rightUpperLeg,leftHip=nodes&&nodes.leftUpperLeg;
   const fail=reason=>{realPlayerSkeletonFrameDiagnostic=reason;return null;};
@@ -4544,30 +4546,21 @@ async function startGame(){
   try{
    foot.computeWorldMatrix(true);toe.computeWorldMatrix(true);
    rightHip.computeWorldMatrix(true);leftHip.computeWorldMatrix(true);
-   const footPosition=foot.getAbsolutePosition(),toePosition=toe.getAbsolutePosition();
-   const rightHipPosition=rightHip.getAbsolutePosition(),leftHipPosition=leftHip.getAbsolutePosition();
-   const pelvisAxis=leftHipPosition.subtract(rightHipPosition);
-   pelvisAxis.subtractInPlace(up.scale(B.Vector3.Dot(pelvisAxis,up)));
-   let forward=toePosition.subtract(footPosition);
-   forward.subtractInPlace(up.scale(B.Vector3.Dot(forward,up)));
-   let source='LeftFoot→LeftToeBase';
-   if(forward.lengthSquared()<1e-6){
-    if(pelvisAxis.lengthSquared()<1e-6)return fail('pierna y caderas sin separación horizontal medible');
-    forward=B.Vector3.Cross(up,pelvisAxis);
-    source='eje de caderas (respaldo)';
-   }
-   if(forward.lengthSquared()<1e-6)return fail('no se puede obtener el frente horizontal del esqueleto');
-   forward.normalize();
-   // Usa el frente real de los pies para formar una base ortonormal consistente.
-   // La orientación invertida del eje nombrado de las caderas ya no invalida el marco.
-   const left=B.Vector3.Cross(forward,up);
-   if(left.lengthSquared()<1e-6)return fail('eje lateral degenerado');
+   const left=leftHip.getAbsolutePosition().subtract(rightHip.getAbsolutePosition());
+   left.subtractInPlace(up.scale(B.Vector3.Dot(left,up)));
+   if(left.lengthSquared()<1e-6)return fail('eje lateral de caderas sin separación horizontal');
    left.normalize();
-   const hipAlignment=pelvisAxis.lengthSquared()>1e-6
-    ?Math.max(-1,Math.min(1,B.Vector3.Dot(left,pelvisAxis.normalize())))
-    :null;
-   realPlayerSkeletonFrameDiagnostic='OK · '+source+' · alineación caderas '+(hipAlignment===null?'—':(hipAlignment*100).toFixed(0)+'%');
-   return {left,up,forward,source:'ESQUELETO',hipAlignment};
+   const forward=toe.getAbsolutePosition().subtract(foot.getAbsolutePosition());
+   forward.subtractInPlace(up.scale(B.Vector3.Dot(forward,up)));
+   forward.subtractInPlace(left.scale(B.Vector3.Dot(forward,left)));
+   if(forward.lengthSquared()<1e-6)return fail('eje pie→punta degenerado o paralelo a las caderas');
+   forward.normalize();
+   const handedness=B.Vector3.Dot(B.Vector3.Cross(left,forward),up);
+   // El signo puede ser positivo o negativo según el convenio espacial del rig.
+   // Ambos son bases ortogonales válidas; solo rechazamos la casi degenerada.
+   if(!Number.isFinite(handedness)||Math.abs(handedness)<.5)return fail('ejes anatómicos casi colineales');
+   realPlayerSkeletonFrameDiagnostic='OK · caderas + pie→punta · orientación '+(handedness<0?'invertida':'directa');
+   return {left,up,forward,source:'ESQUELETO',handedness};
   }catch(err){
    return fail('error geométrico: '+String(err&&err.message||err));
   }
