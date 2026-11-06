@@ -4891,7 +4891,8 @@ async function startGame(){
   realPlayerArmDeviationRecordLine.style.cssText='color:#ff7777';
   realPlayerArmDeviationPanel.appendChild(deviationHeader);realPlayerArmDeviationPanel.appendChild(realPlayerArmDeviationRecordLine);
   document.body.appendChild(realPlayerArmDeviationPanel);
-  updateRealPlayerArmDeviationPanel();
+  // No consultar onShip aquí: su let se inicializa más abajo durante el arranque.
+  updateRealPlayerArmDeviationPanel('inicializando');
   realPlayerArmDebugPanel.addEventListener('click',()=>{
    const expanded=realPlayerArmDebugPanel.classList.toggle('expanded');
    realPlayerArmDebugPanel.setAttribute('aria-expanded',String(expanded));
