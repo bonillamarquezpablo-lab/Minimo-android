@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.178"
+EXPECTED_VERSION = "0.6.179"
 
 HTML_PAGES = (
     "index.html",
@@ -140,14 +140,31 @@ def main() -> None:
     if "player.root.rotation.y=B.Scalar.LerpAngle(player.root.rotation.y,yaw" not in index_html:
         fail("El giro del jugador no interpola el ángulo por el arco más corto.")
     grip_start = index_html.find("function applyRealPlayerClubGripPose(){")
-    grip_end = index_html.find("function quaternionAlignYTo", grip_start)
+    grip_end = index_html.find("function applyRealPlayerArmPoseAfterAnimations", grip_start)
     if grip_start < 0 or grip_end <= grip_start or "relaxRealPlayerWeaponArm(" in index_html[grip_start:grip_end]:
         fail("El callback de agarre vuelve a competir por la pose del brazo.")
     gait_start = index_html.find("function updateRealRigGait(")
     gait_end = index_html.find("function createRealWeapon(", gait_start)
     gait_body = index_html[gait_start:gait_end]
-    if gait_start < 0 or gait_end <= gait_start or gait_body.count("relaxRealPlayerWeaponArm(") != 3:
-        fail("La marcha, navegación y reposo no tienen un único solucionador de brazo del arma.")
+    if gait_start < 0 or gait_end <= gait_start or "relaxRealPlayerFreeArm(" in gait_body or "relaxRealPlayerWeaponArm(" in gait_body:
+        fail("El solucionador anatómico sigue ejecutándose antes de las animaciones.")
+    post_arm_start = index_html.find("function applyRealPlayerArmPoseAfterAnimations(){")
+    post_arm_end = index_html.find("function quaternionAlignYTo", post_arm_start)
+    post_arm_body = index_html[post_arm_start:post_arm_end]
+    if post_arm_start < 0 or post_arm_end <= post_arm_start:
+        fail("Falta el solucionador anatómico posterior a las animaciones.")
+    if "applyRealPlayerArmPoseAfterAnimations();" not in index_html:
+        fail("El solucionador anatómico no se invoca después de las animaciones.")
+    if "m.leftUpperArm!==false||m.leftForearm!==false" not in post_arm_body or "m.upperArm!==false||m.forearm!==false" not in post_arm_body:
+        fail("La locomoción no respeta los canales de brazos que ya pertenecen al clip Walk/Run.")
+    if "const realPlayerArmTuningEnabled=true;" not in index_html:
+        fail("El ajuste de brazos no está habilitado en el juego normal.")
+    if "window.setInterval(updateRealPlayerArmDebugPanel,500);\n }\n // Panel de ajuste permanente" not in index_html:
+        fail("El panel de ajuste sigue dentro del bloque de diagnóstico debug=1.")
+    if "armTuneDock.appendChild(armTuneToggle);" not in index_html or "realPlayerArmTuneReset" not in index_html:
+        fail("El menú de ajuste y su botón de restablecer no están montados.")
+    if "const holding=!!realWeaponGroups[equippedWeapon];" not in index_html:
+        fail("El cierre de dedos no contempla todas las armas equipadas.")
     pivot_update = index_html.find("realPlayerModelPivot.rotation.z=onShip?")
     gait_update = index_html.find("updateRealRigGait(walkPhase", index_html.find("const realMode="))
     if pivot_update < 0 or gait_update < 0 or pivot_update > gait_update:
