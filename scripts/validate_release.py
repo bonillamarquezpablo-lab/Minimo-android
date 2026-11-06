@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.182"
+EXPECTED_VERSION = "0.6.183"
 
 HTML_PAGES = (
     "index.html",
@@ -174,6 +174,22 @@ def main() -> None:
         fail("La captura no exporta las rotaciones locales reales como quaternion o Euler.")
     if "navigator.clipboard.writeText(output.value)" not in index_html:
         fail("Falta la copia directa del código de pose maestra.")
+    if "REAL_PLAYER_MASTER_POSE_STORAGE_KEY='el-sin-nombre-master-local-pose-v1'" not in index_html:
+        fail("Falta la clave de guardado local de la postura maestra.")
+    if "function readRealPlayerMasterPoseStorage()" not in index_html or "function restoreRealPlayerMasterPoseStoredValue(raw)" not in index_html:
+        fail("Falta la restauración validada de la pose guardada.")
+    if "function saveRealPlayerMasterPoseLocally()" not in index_html or "localStorage.setItem(REAL_PLAYER_MASTER_POSE_STORAGE_KEY" not in index_html:
+        fail("Falta el guardado persistente de las rotaciones.")
+    if "realPlayerMasterPoseSave" not in index_html or "GUARDAR Y FIJAR POSE EN ESTE DISPOSITIVO" not in index_html:
+        fail("Falta el botón visible para guardar y fijar la pose.")
+    if "localStorage.removeItem(REAL_PLAYER_MASTER_POSE_STORAGE_KEY)" not in index_html:
+        fail("RESTABLECER no elimina la configuración persistida.")
+    if "realPlayerArmTuneMove" not in index_html or "pointerdown" not in index_html or "pointermove" not in index_html:
+        fail("El panel de ajuste no ofrece reubicación táctil.")
+    if "el-sin-nombre-arm-tune-dock-position-v1" not in index_html:
+        fail("La posición del panel no se conserva en el navegador.")
+    if "width:min(48vw,260px)" not in index_html or "left:7px;right:auto" not in index_html:
+        fail("El panel móvil no está desplazado al lateral para dejar libre el centro.")
     if "new URLSearchParams(window.location.search).get('debug')==='1'" not in index_html:
         fail("El panel de pose no está condicionado por ?debug=1.")
     if "if(!realPlayerArmDebugEnabled)return;" not in index_html or "if(realPlayerArmDebugEnabled){\n  const armTuneStyle=document.createElement('style');" not in index_html:
