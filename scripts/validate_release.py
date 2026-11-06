@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.191"
+EXPECTED_VERSION = "0.6.192"
 
 HTML_PAGES = (
     "index.html",
@@ -283,6 +283,12 @@ def main() -> None:
         fail("La distribución no rellena las celdas vacías.")
     if "function createShrub(" in index_html or "IslandShrubBatch_" in index_html or "NorseShrubsIsland_" in index_html:
         fail("Siguen presentes los arbustos decorativos low-poly aislados.")
+    if "function isVegetationTrailClearance(" not in index_html or "vegetationTrailPaths.push(" not in index_html or "isVegetationTrailClearance(x,z,1.35)" not in index_html:
+        fail("La hierba no respeta los caminos.")
+    if "function createNaturalShrub(" not in index_html or "function spawnNaturalVegetationAndFauna()" not in index_html:
+        fail("Falta la vegetación natural de sotobosque.")
+    if "function createWildlifeAnimal(" not in index_html or "function updateWildlife(dt)" not in index_html or "updateWildlife(dt);" not in index_html:
+        fail("Falta la fauna salvaje animada.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
