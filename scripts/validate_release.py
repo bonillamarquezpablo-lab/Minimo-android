@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.188"
+EXPECTED_VERSION = "0.6.189"
 
 HTML_PAGES = (
     "index.html",
@@ -269,12 +269,14 @@ def main() -> None:
         fail("Falta el acceso independiente al diagnóstico de hierba ?grassdebug=1.")
     if "function updateGrassDebugPanel()" not in index_html or "grassDebugIslandStats.push({" not in index_html:
         fail("Faltan las métricas por isla del diagnóstico de hierba.")
-    if "const qualityGrassDensity=isTouchDevice?3.0:3.25;" not in index_html or "const leavesPerClump=isPerformanceMode?7:12;" not in index_html:
-        fail("Falta la densidad nueva o los penachos de hojas estrechas.")
-    if "gm.twoSidedLighting=true;" not in index_html or "gm.emissiveColor=new B.Color3(.045,.068,.025);" not in index_html:
-        fail("La hierba no tiene iluminación de doble cara para evitar siluetas negras.")
-    if "for(let i=0;i<5600;i++)" not in index_html or "const jitter=isPerformanceMode ? .43 : .47;" not in index_html:
-        fail("Falta la cobertura fina del suelo o la variación espacial natural.")
+    if "const qualityGrassDensity=isTouchDevice?(islandIndex===0?7.5:5.0):(islandIndex===0?7.0:5.0);" not in index_html:
+        fail("La cobertura de hierba no incrementa la densidad de la isla inicial.")
+    if "const leavesPerClump=isPerformanceMode?8:12;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
+        fail("Los penachos o la iluminación de doble cara están incompletos.")
+    if "for(let i=0;i<15000;i++)" not in index_html or "const gridSide=Math.ceil(Math.sqrt(want*.72))" not in index_html:
+        fail("La textura de cobertura o la distribución multi-mata no están aplicadas.")
+    if "const cellAttempts=1+(Math.random()<.82?1:0)+(Math.random()<.16?1:0);" not in index_html:
+        fail("El muestreo no genera varias matas por celda.")
     if "const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));" not in index_html:
         fail("La distribución de hierba no rellena celdas vacías.")
 
