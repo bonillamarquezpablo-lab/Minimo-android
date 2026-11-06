@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.185"
+EXPECTED_VERSION = "0.6.186"
 
 HTML_PAGES = (
     "index.html",
@@ -257,8 +257,12 @@ def main() -> None:
         fail("El palo no conserva la orientación frontal e inclinación fijadas.")
     if "distal.scale(.025)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
-    if "window.setInterval(updateRealPlayerArmDebugPanel,500);\n  window.setInterval(sampleRealPlayerArmDeviation,100);\n }\n // Panel de ajuste permanente" not in index_html:
-        fail("La estructura del diagnóstico de brazos debug=1 ha cambiado inesperadamente.")
+    if "realPlayerArmDebugPanel=document.createElement('pre')" in index_html or "realPlayerArmDeviationPanel=document.createElement('div')" in index_html:
+        fail("Los paneles grandes de diagnóstico superior deben estar retirados.")
+    if "window.setInterval(updateRealPlayerArmDebugPanel" in index_html or "window.setInterval(sampleRealPlayerArmDeviation" in index_html:
+        fail("Los paneles superiores retirados no deben ejecutar actualizaciones periódicas.")
+    if "realPlayerArmTuneDock" not in index_html or "realPlayerMasterPoseSave" not in index_html:
+        fail("La retirada de diagnósticos no debe eliminar el editor ni el guardado de postura.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
