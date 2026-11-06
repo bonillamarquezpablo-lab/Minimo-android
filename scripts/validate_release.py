@@ -207,7 +207,7 @@ def main() -> None:
         fail("Los controles de la pose maestra no están reservados a ?debug=1.")
     if "armTuneDock.appendChild(armTuneToggle);" not in index_html or "realPlayerArmTuneReset" not in index_html:
         fail("Faltan el menú de pose maestra o RESTABLECER.")
-    if "realPlayerMasterIdleTransition=mode==='idle'?captureRealPlayerMasterTransition():null;" not in index_html:
+    if "realPlayerMasterIdleTransition=(mode==='idle'||mode==='sail')?captureRealPlayerMasterTransition():null;" not in index_html:
         fail("La transición a reposo no captura el último estado local para mezclarlo.")
     if "if(walking&&!realPlayerManualLocomotion)return;" not in index_html:
         fail("El gait procedural todavía puede competir con la locomoción GLB.")
