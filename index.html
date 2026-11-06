@@ -5364,25 +5364,28 @@ async function startGame(){
     apply('hips',.028*stance+.010*breathBoat,-.012*seaPitch,-.045*seaRoll+.025*Math.sin(elapsed*.72),true);
     apply('spine',-.035-.035*stance+.045*seaPitch,.012*Math.sin(elapsed*.83),.055*seaRoll-.024*stance,true);
     apply('head',.012*Math.sin(elapsed*.62),.028*Math.sin(elapsed*.48+.4),-.018*seaRoll+.012*Math.sin(elapsed*.91),true);
+    // Primero se estabiliza el torso; las extremidades se resuelven después.
+    blendRealPlayerIdleTransition();
     relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.78+Math.abs(stance)*.16);
     relaxRealPlayerFreeArm(realPlayerModelPivot||player.root,n,-1,breathBoat,true,realPlayerArmDebugEnabled?realPlayerArmDebugState.free:null);
     if(equippedWeapon==='club')relaxRealPlayerWeaponArm(realPlayerModelPivot||player.root,n,breathBoat,true,realPlayerArmDebugEnabled?realPlayerArmDebugState.weapon:null);
     else relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true,breathBoat,true,realPlayerArmDebugEnabled?realPlayerArmDebugState.weapon:null);
-    blendRealPlayerIdleTransition();
     return;
    }
    // Arms have slightly different phase and amplitude: the free arm hangs more,
    // while the weapon arm keeps its elbow softly bent around the handle.
    apply('leftShoulder',.002*Math.sin(elapsed*.83),0,.010,true);
    apply('rightShoulder',-.002*Math.sin(elapsed*.83),0,-.010,true);
-   relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.58+Math.abs(weightShift)*.22);
-   relaxRealPlayerFreeArm(realPlayerModelPivot||player.root,n,-1,0,false,realPlayerArmDebugEnabled?realPlayerArmDebugState.free:null);
-   if(equippedWeapon==='club')relaxRealPlayerWeaponArm(realPlayerModelPivot||player.root,n,0,false,realPlayerArmDebugEnabled?realPlayerArmDebugState.weapon:null);
-   else relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true,0,false,realPlayerArmDebugEnabled?realPlayerArmDebugState.weapon:null);
+   // El cuerpo y su transición se aplican antes de reconstruir la pose de brazos.
+   // Así el balanceo del torso no invalida los valores que se están calibrando.
    apply('hips',breath*.014*idleMotionScale,weightShift*.010*idleMotionScale,weightShift*.018*idleMotionScale,true);
    apply('spine',-.024+breath*.032*idleMotionScale,-weightShift*.008*idleMotionScale,-weightShift*.014*idleMotionScale,true);
    apply('head',.012*Math.sin(elapsed*.43)*idleMotionScale,.021*Math.sin(elapsed*.31)*idleMotionScale,.008*counterSway*idleMotionScale,true);
    blendRealPlayerIdleTransition();
+   relaxHumanoidLegs(realPlayerModelPivot||player.root,n,.58+Math.abs(weightShift)*.22);
+   relaxRealPlayerFreeArm(realPlayerModelPivot||player.root,n,-1,0,false,realPlayerArmDebugEnabled?realPlayerArmDebugState.free:null);
+   if(equippedWeapon==='club')relaxRealPlayerWeaponArm(realPlayerModelPivot||player.root,n,0,false,realPlayerArmDebugEnabled?realPlayerArmDebugState.weapon:null);
+   else relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true,0,false,realPlayerArmDebugEnabled?realPlayerArmDebugState.weapon:null);
   }
  }
 
