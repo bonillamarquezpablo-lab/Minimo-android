@@ -140,7 +140,7 @@ def main() -> None:
     if "player.root.rotation.y=B.Scalar.LerpAngle(player.root.rotation.y,yaw" not in index_html:
         fail("El giro del jugador no interpola el ángulo por el arco más corto.")
     grip_start = index_html.find("function applyRealPlayerClubGripPose(){")
-    grip_end = index_html.find("function quaternionAlignYTo", grip_start)
+    grip_end = index_html.find("function applyRealPlayerArmPoseAfterAnimations", grip_start)
     if grip_start < 0 or grip_end <= grip_start or "relaxRealPlayerWeaponArm(" in index_html[grip_start:grip_end]:
         fail("El callback de agarre vuelve a competir por la pose del brazo.")
     gait_start = index_html.find("function updateRealRigGait(")
