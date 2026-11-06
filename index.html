@@ -1987,9 +1987,11 @@ async function startGame(){
   }
  };
  const getRealPlayerArmTuningTarget=(arm,segment)=>{
-  const resting=realPlayerArmDebugEnabled&&realPlayerMode==='idle'&&playerAction==='idle'&&!onShip;
-  if(!resting){
-   // Fuera del ajuste en reposo, conservar exactamente los vectores históricos.
+  // La calibración define el corredor anatómico del brazo en todos los estados.
+  // Durante la marcha cambia la fase del movimiento, no el objetivo lateral que
+  // mantiene el codo y la muñeca fuera del volumen del torso.
+  const useCalibrated=realPlayerArmDebugEnabled;
+  if(!useCalibrated){
    const original=arm==='free'
     ?(segment==='upper'?REAL_PLAYER_FREE_ARM_UPPER_TARGET:REAL_PLAYER_FREE_ARM_FOREARM_TARGET)
     :(segment==='upper'?REAL_PLAYER_WEAPON_ARM_UPPER_TARGET:REAL_PLAYER_WEAPON_ARM_FOREARM_TARGET);
@@ -5332,7 +5334,7 @@ async function startGame(){
   // o el gait procedural cuando el GLB no incluye ese canal. No salir aquí,
   // porque algunos clips Walk/Run no contienen los canales del hombro/codo.
   const n=realRigNodes,m=realRigManualGaitNodes;
-  if(realPlayerArmDebugEnabled&&walking){realPlayerArmDebugState.free.status='CLIP WALK/RUN';realPlayerArmDebugState.free.reason='la pose de reposo no se ejecuta durante la locomoción';realPlayerArmDebugState.free.twistDeg=null;realPlayerArmDebugState.weapon.status='CLIP WALK/RUN';realPlayerArmDebugState.weapon.reason='hombro y codo controlados por el clip';realPlayerArmDebugState.weapon.twistDeg=null;}
+  if(realPlayerArmDebugEnabled&&walking){realPlayerArmDebugState.free.status='CORREDOR DE MARCHA';realPlayerArmDebugState.free.reason='objetivo anatómico calibrado + balanceo suave';realPlayerArmDebugState.free.twistDeg=null;realPlayerArmDebugState.weapon.status='CORREDOR DE MARCHA';realPlayerArmDebugState.weapon.reason='objetivo anatómico calibrado + balanceo suave';realPlayerArmDebugState.weapon.twistDeg=null;}
   const l=Math.sin(phase),r=Math.sin(phase+Math.PI),lk=Math.pow(Math.max(0,Math.cos(phase)),1.2),rk=Math.pow(Math.max(0,Math.cos(phase+Math.PI)),1.2);
    const hipAmp=sprinting?.40:.33,kneeAmp=sprinting?.56:.46;
   const apply=(key,x,y=0,z=0,force=false)=>{const node=n[key];if(node&&(force||m[key]!==false))setRigDelta(node,x,y,z);};
@@ -5342,10 +5344,14 @@ async function startGame(){
    apply('leftUpperLeg',l*hipAmp,0,-.012-l*.015);apply('rightUpperLeg',r*hipAmp,0,.012-r*.015);
    apply('leftLowerLeg',lk*kneeAmp);apply('rightLowerLeg',rk*kneeAmp);
    apply('leftFoot',-l*.17-lk*.27+leftStance*.045);apply('rightFoot',-r*.17-rk*.27+rightStance*.045);
-   apply('leftUpperArm',-l*(sprinting?.40:.32),0,.028);apply('upperArm',-r*(sprinting?.40:.32),0,-.028);
-   apply('leftForearm',.13+lk*.16);apply('forearm',.13+rk*.16);
+   // El torso y las piernas conservan el gait procedural. Los brazos no reciben
+   // deltas angulares independientes que puedan cruzar el pecho: se reconstruyen
+   // desde sus vectores anatómicos calibrados después de mover el torso.
    apply('spine',sprinting?.105:.06,0,(l-r)*.022);
-   apply('rightShoulder',-r*.10,0,-.025);apply('leftShoulder',-l*.10,0,.025);
+   apply('rightShoulder',-r*.035,0,-.012);apply('leftShoulder',-l*.035,0,.012);
+   relaxRealPlayerFreeArm(realPlayerModelPivot||player.root,n,-1,l*(sprinting?.035:.025),false,realPlayerArmDebugEnabled?realPlayerArmDebugState.free:null);
+   if(equippedWeapon==='club')relaxRealPlayerWeaponArm(realPlayerModelPivot||player.root,n,r*(sprinting?.025:.018),false,realPlayerArmDebugEnabled?realPlayerArmDebugState.weapon:null);
+   else relaxHumanoidArm(realPlayerModelPivot||player.root,n.upperArm,n.forearm,n.hand,1,true,r*(sprinting?.025:.018),false,realPlayerArmDebugEnabled?realPlayerArmDebugState.weapon:null);
    if(n.head&&m.head!==false)setRigDelta(n.head,-Math.sin(phase*2)*.012,(l-r)*.018,0);
   }else{
    // Reposo vivo: soltar el último paso, conservar una flexión mínima de rodillas
