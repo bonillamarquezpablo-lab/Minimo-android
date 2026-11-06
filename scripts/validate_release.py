@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.190"
+EXPECTED_VERSION = "0.6.191"
 
 HTML_PAGES = (
     "index.html",
@@ -269,11 +269,11 @@ def main() -> None:
         fail("Falta el acceso independiente al diagnóstico de hierba ?grassdebug=1.")
     if "function updateGrassDebugPanel()" not in index_html or "grassDebugIslandStats.push({" not in index_html:
         fail("Faltan las métricas por isla del diagnóstico de hierba.")
-    if "const qualityGrassDensity=isTouchDevice?(islandIndex===0?7.5:5.0):(islandIndex===0?7.0:5.0);" not in index_html:
+    if "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);" not in index_html:
         fail("La densidad principal de vegetación no conserva su cobertura.")
-    if "const leavesPerClump=isPerformanceMode?8:12;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
+    if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
         fail("Los penachos o su iluminación de doble cara están incompletos.")
-    if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.30" not in index_html:
+    if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
         fail("Falta la distribución uniforme con separación mínima.")
     if "const grids=[grid(4,4),grid(10,10),grid(24,24),grid(60,60),grid(144,144),grid(288,288)];" not in index_html:
         fail("El suelo no utiliza escalas orgánicas de textura.")
@@ -281,6 +281,8 @@ def main() -> None:
         fail("Falta el detalle fino de suelo o su relieve PBR.")
     if "const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));" not in index_html:
         fail("La distribución no rellena las celdas vacías.")
+    if "function createShrub(" in index_html or "IslandShrubBatch_" in index_html or "NorseShrubsIsland_" in index_html:
+        fail("Siguen presentes los arbustos decorativos low-poly aislados.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",

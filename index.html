@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.190">
-<meta name="el-sin-nombre-repair" content="0.6.190 uniform natural groundcover, blue-noise grass spacing and richer Nordic soil material; preserve saved master idle pose">
+<meta name="el-sin-nombre-build" content="0.6.191">
+<meta name="el-sin-nombre-repair" content="0.6.191 denser uniform groundcover; remove low-poly decorative shrubs; preserve saved master idle pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.190</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.191</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -3208,22 +3208,7 @@ async function startGame(){
   root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.y=baseYaw;root.scaling.setAll(scale);
   return {root,canopy,x,z,radius:.62*scale,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species,baseYaw,windPhase:rand(0,Math.PI*2)};
  }
- function createShrub(x,z,size=1){
-  const g=newGroup('coastalShrub',null),yaw=rand(0,Math.PI*2);
-  for(let i=0;i<7;i++){
-   const a=i*Math.PI*2/7,leaf=organicLeaf('shrubLeaf_'+i,g,[Math.cos(a)*.26,.20+Math.sin(a*2)*.07,Math.sin(a)*.26],[.34*size,.22*size,.52*size],i%3===0?M.leafSun:(i%2?M.leafOak:M.leafShadow),1);
-   leaf.rotation.y=-a;leaf.rotation.z=rand(-.18,.18);
-  }
-  g.position=v(x,terrainSurfaceAt(x,z),z);g.rotation.y=yaw;
-  return g;
- }
- // Arbustos decorativos agrupados por isla y material: misma geometría visible, muchas menos llamadas de dibujo.
- land.forEach((is,i)=>{
-  const batchRoot=newGroup('IslandShrubBatch_'+i,null),sourceGroups=[];
-  for(let k=0;k<(i===0?22:8);k++){let a=rand(0,Math.PI*2),r=is.r*rand(.48,.88),g=createShrub(is.x+Math.cos(a)*r,is.z+Math.sin(a)*r,rand(.65,1.05));g.parent=batchRoot;sourceGroups.push(g);}
-  mergeStaticDecorByMaterial(batchRoot,'NorseShrubsIsland_'+i);
-  sourceGroups.forEach(g=>g.dispose(false,false));
- });
+ // 0.6.191: se eliminan los arbustos low-poly aislados; el sotobosque se representa con la cubierta vegetal integrada.
  function createRock(x,z){
   const gy=terrainSurfaceAt(x,z),sx=rand(1.0,1.8),sy=rand(1.0,1.6),sz=rand(1,1.7);
   let r=sphere('graniteBoulder',null,[x,gy+sy*.49,z],[sx,sy,sz],M.stone,12);
@@ -6931,7 +6916,7 @@ function createRealWeapon(type='axe'){
   };
   // Each tuft is a loose crown of narrow blades with irregular angles and heights.
   // Short inner blades fill the base; longer outer blades avoid the old palm-shaped silhouette.
-  const leavesPerClump=isPerformanceMode?8:12;
+  const leavesPerClump=isPerformanceMode?8:10;
   for(let i=0;i<leavesPerClump;i++){
    const inner=i<Math.max(2,Math.floor(leavesPerClump*.30));
    const angle=i*2.399963229728653+rand(-.52,.52);
@@ -6970,7 +6955,7 @@ function createRealWeapon(type='axe'){
   for(let islandIndex=0;islandIndex<land.length;islandIndex++){
    const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520);
    const performanceDensity=isConstrainedMobile?.18:(isTouchDevice?.36:.50);
-   const qualityGrassDensity=isTouchDevice?(islandIndex===0?7.5:5.0):(islandIndex===0?7.0:5.0);
+   const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);
    const want=isPerformanceMode?Math.round(baseWant*performanceDensity):Math.round(baseWant*qualityGrassDensity);
    let placed=0,tries=0;
    const radius=island.r*.865;
@@ -6982,7 +6967,7 @@ function createRealWeapon(type='axe'){
     const gridRow=Math.max(0,Math.min(gridSide-1,Math.floor((z-(island.z-radius))/cellSize)));
     const gridCell=gridRow*gridSide+gridCol;
     if(occupiedGridCells.has(gridCell))return false;
-    const minSpacing=cellSize*.30,minSpacingSq=minSpacing*minSpacing;
+    const minSpacing=cellSize*.24,minSpacingSq=minSpacing*minSpacing;
     for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){
      const nx=gridCol+dx,nz=gridRow+dz;if(nx<0||nz<0||nx>=gridSide||nz>=gridSide)continue;
      const neighbour=placedGridPositions.get(nz*gridSide+nx);if(!neighbour)continue;
@@ -7536,7 +7521,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.190',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.191',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -9492,7 +9477,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.190 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.191 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
