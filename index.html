@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.192">
-<meta name="el-sin-nombre-repair" content="0.6.192 clear trails and camp areas of grass; add natural shrubs and roaming deer/boar; preserve master pose">
+<meta name="el-sin-nombre-build" content="0.6.193">
+<meta name="el-sin-nombre-repair" content="0.6.193 clear trails and camp areas of grass; add natural shrubs and roaming deer/boar; preserve master pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.192</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.193</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2864,23 +2864,41 @@ async function startGame(){
  land.forEach(buildTidalFoam);
  const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
  function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.975;if(dx*dx+dz*dz<r*r)return i;}return -1;}
- // Trails on the main island; their centerlines define vegetation-free corridors.
+ // Trails on the main island. Their centre lines also define vegetation-free corridors.
  const vegetationTrailPaths=[];
  function pointSegmentDistanceSquared(x,z,a,b){const dx=b[0]-a[0],dz=b[1]-a[1],len=dx*dx+dz*dz,t=len>1e-8?Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/len)):0,px=a[0]+dx*t,pz=a[1]+dz*t;return (x-px)*(x-px)+(z-pz)*(z-pz);}
  function isVegetationTrailClearance(x,z,extra=1.15){for(const path of vegetationTrailPaths){const limit=path.width*.5+extra,limitSq=limit*limit;for(let i=0;i<path.points.length-1;i++)if(pointSegmentDistanceSquared(x,z,path.points[i],path.points[i+1])<limitSq)return true;}return false;}
- function createTrail(points,width=1.7){
+ // The path has its own packed-earth material and never receives world shadows (the source of the pitch-black slab).
+ const packedTrailTexture=makePatternTexture('Packed Norse trail earth','#66533b',['#8e7957','#4b3a2a','#a18a62','#574633'],'sand',512);
+ packedTrailTexture.uScale=1.0;packedTrailTexture.vScale=3.2;
+ const packedTrailMaterial=new B.StandardMaterial('PackedNorseEarthTrailMaterial',scene);
+ packedTrailMaterial.diffuseTexture=packedTrailTexture;packedTrailMaterial.diffuseColor=new B.Color3(.83,.75,.61);
+ packedTrailMaterial.bumpTexture=albedoNormalSand;packedTrailMaterial.bumpTexture.level=.16;
+ packedTrailMaterial.specularColor=new B.Color3(.018,.015,.010);packedTrailMaterial.specularPower=5;
+ packedTrailMaterial.backFaceCulling=false;packedTrailMaterial.roughness=.99;
+ function createTrail(points,width=1.45){
   vegetationTrailPaths.push({points:points.map(p=>[p[0],p[1]]),width});
-  const positions=[],indices=[],uvs=[];
+  const positions=[],indices=[],uvs=[];let distance=0;
   for(let i=0;i<points.length;i++){
    const prev=points[Math.max(0,i-1)],next=points[Math.min(points.length-1,i+1)],dx=next[0]-prev[0],dz=next[1]-prev[1],len=Math.hypot(dx,dz)||1,nx=dz/len,nz=-dx/len;
-   for(const side of [-1,1]){const x=points[i][0]+nx*width*.5*side,z=points[i][1]+nz*width*.5*side;positions.push(x,terrainSurfaceAt(x,z)+.055,z);uvs.push(side<0?0:1,i*.75);}
+   if(i>0)distance+=Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1])*.72;
+   const edgeW=width*(1+Math.sin(i*2.17)*.035);
+   for(const side of [-1,1]){
+    const x=points[i][0]+nx*edgeW*.5*side,z=points[i][1]+nz*edgeW*.5*side;
+    positions.push(x,terrainSurfaceAt(x,z)+.026,z);uvs.push(side<0?0:1,distance);
+   }
   }
+  // The strip's triangle order keeps its geometric normals facing upwards.
   for(let i=0;i<points.length-1;i++){const a=i*2,b=a+2;indices.push(a,b,a+1,a+1,b,b+1);}
-  const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);const mesh=new B.Mesh('WindingPackedEarthTrail',scene),data=new B.VertexData();data.positions=positions;data.indices=indices;data.normals=normals;data.uvs=uvs;data.applyToMesh(mesh);mesh.material=M.sand;mesh.material.backFaceCulling=false;mesh.material.specularColor=new B.Color3(.025,.025,.02);mesh.isPickable=false;mesh.receiveShadows=true;return mesh;
+  const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
+  const mesh=new B.Mesh('WindingPackedEarthTrail',scene),data=new B.VertexData();
+  data.positions=positions;data.indices=indices;data.normals=normals;data.uvs=uvs;data.applyToMesh(mesh);
+  mesh.material=packedTrailMaterial;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;
+  mesh.computeWorldMatrix(true);mesh.refreshBoundingInfo(true);return mesh;
  }
- createTrail([[-19,-25],[-13,-18],[-7,-11],[-1,-3],[6,5],[13,13],[20,22],[27,30]],1.85);
- createTrail([[8,-19],[12,-13],[16,-7],[21,-1],[27,5]],1.45);
- createTrail([[-34,3],[-29,6],[-24,9],[-19,13]],1.35);
+ createTrail([[-19,-25],[-13,-18],[-7,-11],[-1,-3],[6,5],[13,13],[20,22],[27,30]],1.52);
+ createTrail([[8,-19],[12,-13],[16,-7],[21,-1],[27,5]],1.16);
+ createTrail([[-34,3],[-29,6],[-24,9],[-19,13]],1.02);
  // Viking model with separate animated limbs and weapon.
  function capsule(name,parent,pos,height,radius,material,rotation){
   let m=B.MeshBuilder.CreateCapsule(name,{height,radius,tessellation:24,subdivisions:5},scene);m.parent=parent;m.position=v(...pos);m.material=material;if(rotation)m.rotation=v(...rotation);return m;
@@ -3222,53 +3240,163 @@ async function startGame(){
   for(let i=0;i<lobes;i++){const a=i*2.399963+rand(-.5,.5),ring=rand(.10,.58),y=rand(.25,.78),r=rand(.20,.34)*size;const lobe=organicLeaf('NaturalShrubFoliage_'+i,root,[Math.cos(a)*ring*size,y*size,Math.sin(a)*ring*size],[r*1.10,r*.70,r*.92],leafMats[Math.floor(rand(0,leafMats.length))],3);lobe.rotation.set(rand(-.20,.20),a,rand(-.22,.22));}
   root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.y=yaw;root.scaling.setAll(size);mergeStaticDecorByMaterial(root,'NaturalBroadleafShrub');return {root,x,z,radius:.9*size};
  }
- const ambientFauna=[];
- function createWildlifeAnimal(kind,x,z,size=1){
-  const deer=kind==='deer',root=newGroup(deer?'WildRedDeer':'WildBoar',null),fur=deer?M.fur:M.woodDark,legs=[];
-  sphere('FaunaTorso',root,[0,deer?1.02:.76,0],deer?[.48,.53,.98]:[.60,.52,.92],fur,24);
-  sphere('FaunaRump',root,[0,deer?1.08:.70,deer?-.55:-.42],deer?[.46,.48,.53]:[.58,.48,.52],deer?M.ochreCloth:M.woodLight,20);
-  if(deer){
-   const neck=capsule('DeerNeck',root,[0,1.48,.54],.94,.20,fur,[-.48,0,0]);neck.scaling.x=.84;neck.scaling.z=.86;
-   sphere('DeerHead',root,[0,1.94,.91],[.24,.27,.34],fur,20);sphere('DeerMuzzle',root,[0,1.84,1.17],[.17,.13,.22],M.ochreCloth,16);
-   for(const side of [-1,1]){
-    const ear=capsule('DeerEar_'+side,root,[side*.23,2.08,.82],.38,.065,fur,[0,0,side*.72]);ear.scaling.z=.48;
-    sphere('DeerEye_'+side,root,[side*.205,1.99,1.04],[.045,.052,.045],M.darkMetal,12);
-    capsule('DeerAntlerMain_'+side,root,[side*.17,2.34,.79],.58,.035,M.woodLight,[side*.25,0,side*.18]);
-    for(let tine=0;tine<2;tine++)capsule('DeerAntlerTine_'+side+'_'+tine,root,[side*(.29+tine*.10),2.49+tine*.10,.79],.30,.022,M.woodLight,[0,0,side*(.55+tine*.25)]);
-   }
-   sphere('DeerTail',root,[0,1.28,-1.0],[.14,.16,.18],M.ochreCloth,12);
-  }else{
-   sphere('BoarSnout',root,[0,.88,.79],[.32,.25,.38],M.woodLight,18);sphere('BoarNose',root,[0,.91,1.09],[.18,.15,.12],M.darkMetal,14);
-   for(const side of [-1,1]){capsule('BoarEar_'+side,root,[side*.36,1.18,.35],.30,.10,fur,[0,0,side*.75]);capsule('BoarTusk_'+side,root,[side*.23,.78,.87],.24,.045,M.stoneLight,[side*.15,0,side*.30]);sphere('BoarEye_'+side,root,[side*.36,1.02,.53],[.045,.05,.045],M.darkMetal,12);}
-   for(let i=0;i<5;i++)capsule('BoarBristle_'+i,root,[0,1.23-i*.045,-.25-i*.16],.24,.025,M.woodLight);
-   capsule('BoarTail',root,[0,.96,-.96],.32,.035,fur,[.6,0,0]);
+ // Quaternius Ultimate Animated Animals (CC0): rigged GLB models with their own animal animation clips.
+ // Source files are pinned to an immutable revision; no sphere/capsule animal placeholders are used.
+ const WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837';
+ const WILDLIFE_ASSET_ROOT='https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/'+WILDLIFE_SOURCE_COMMIT+'/assets/Animated%20Animal%20Pack-glb/';
+ const WILDLIFE_MODEL_DEFS={
+  deer:{file:'Deer.glb',height:1.42,walkSpeed:.68,runSpeed:3.25},
+  stag:{file:'Stag.glb',height:1.78,walkSpeed:.82,runSpeed:3.85},
+  wolf:{file:'Wolf.glb',height:.82,walkSpeed:1.05,runSpeed:4.05}
+ };
+ const ambientFauna=[],wildlifeSpawnSpecs=[],wildlifeContainers=new Map();
+ function chooseWildlifeClips(groups){
+  const playable=(groups||[]).filter(group=>group&&Array.isArray(group.targetedAnimations)&&group.targetedAnimations.length>0);
+  const pick=pattern=>playable.find(group=>pattern.test(String(group.name||'')))||null;
+  const idle=pick(/idle|stand|rest|survey|graze/i);
+  const walk=pick(/walk|walking|trot|pace/i);
+  const run=pick(/run|running|gallop|sprint/i);
+  return {idle,walk:walk||run||idle,run:run||walk||idle};
+ }
+ async function downloadWildlifeContainer(kind){
+  const definition=WILDLIFE_MODEL_DEFS[kind];
+  if(!definition)throw new Error('Especie de fauna desconocida: '+kind);
+  const url=WILDLIFE_ASSET_ROOT+encodeURIComponent(definition.file);
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
+  try{
+   const response=await fetch(url,{mode:'cors',cache:'force-cache',credentials:'omit',signal:controller.signal,headers:{'Accept':'model/gltf-binary,application/octet-stream,*/*'}});
+   if(response.type==='opaque'||!response.ok)throw new Error(kind+': descarga GLB no disponible ('+(response.status||'CORS')+').');
+   const blob=await responseBlobWithProgress(response,'Cargando fauna 3D · '+kind.toUpperCase(),48,52);
+   if(!await isValidGLB(blob))throw new Error(kind+': el archivo descargado no es un GLB válido.');
+   const objectUrl=URL.createObjectURL(blob);let container=null;
+   try{container=await B.SceneLoader.LoadAssetContainerAsync('',objectUrl,scene,null,'.glb');}
+   catch(err){throw new Error(kind+': Babylon no pudo importar el GLB: '+(err&&err.message?err.message:String(err)));}
+   finally{URL.revokeObjectURL(objectUrl);}
+   if(!container||typeof container.instantiateModelsToScene!=='function')throw new Error(kind+': contenedor GLB incompatible.');
+   return container;
+  }catch(err){
+   if(err&&err.name==='AbortError')throw new Error(kind+': tiempo de descarga agotado.');
+   throw err;
+  }finally{clearTimeout(timer);}
+ }
+ function playWildlifeAnimation(animal,mode){
+  const target=mode==='run'?animal.clips.run:(mode==='walk'?animal.clips.walk:animal.clips.idle);
+  if(!target||animal.activeAnimation===target)return;
+  (animal.groups||[]).forEach(group=>{try{group.stop();}catch(_){}});
+  target.start(true,mode==='run'?1.05:(mode==='walk'?.82:.78));
+  animal.activeAnimation=target;animal.activeMode=mode;
+ }
+ function instantiateWildlifeAnimal(kind,x,z,size=1,index=0){
+  const container=wildlifeContainers.get(kind);if(!container)return null;
+  let inst=null;
+  try{
+   inst=container.instantiateModelsToScene(name=>name+'_Wildlife_'+kind+'_'+index,false);
+   const pool=[...(inst.rootNodes||[]),...(inst.transformNodes||[]),...(inst.meshes||[])],unique=[],seen=new Set();
+   for(const node of pool){if(node&&!seen.has(node)){seen.add(node);unique.push(node);}}
+   const roots=unique.filter(node=>!node.parent||!seen.has(node.parent));
+   if(!roots.length)throw new Error('El modelo no contiene una raíz visual.');
+   const meshes=getRootMeshes(roots);if(!meshes.length)throw new Error('El modelo no contiene mallas visibles.');
+   const bounds=boundsForMeshes(meshes);
+   if(!Number.isFinite(bounds.height)||bounds.height<.25)throw new Error('La escala del animal no es válida.');
+   const definition=WILDLIFE_MODEL_DEFS[kind],scale=definition.height/Math.max(.001,bounds.height)*size;
+   const actor=new B.TransformNode('WildlifeActor_'+kind+'_'+index,scene);
+   const modelRoot=new B.TransformNode('WildlifeModelRoot_'+kind+'_'+index,scene);modelRoot.parent=actor;
+   roots.forEach(root=>{root.parent=modelRoot;try{root.setEnabled(true);}catch(_){}});
+   modelRoot.scaling.setAll(scale);modelRoot.position.y=-bounds.min.y*scale;
+   meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=false;});
+   actor.position=v(x,terrainSurfaceAt(x,z),z);actor.rotation.y=rand(0,Math.PI*2);
+   addModelShadow(actor,isPerformanceMode?1:2);
+   const groups=inst.animationGroups||[],clips=chooseWildlifeClips(groups);
+   groups.forEach(group=>{try{group.stop();}catch(_){}});
+   const animal={kind,root:actor,modelRoot,x,z,size,heading:actor.rotation.y,phase:rand(0,8),turnTimer:rand(2.5,6),wanderTimer:rand(2,5),wandering:Math.random()<.45,flee:0,clips,groups,activeAnimation:null,activeMode:''};
+   playWildlifeAnimation(animal,'idle');
+   return animal;
+  }catch(err){
+   if(inst){try{(inst.animationGroups||[]).forEach(group=>group.stop());(inst.rootNodes||[]).forEach(root=>root.dispose(false,true));}catch(_){}}
+   console.warn('No se pudo montar la fauna '+kind+':',err);return null;
   }
-  for(const side of [-1,1])for(const fore of [true,false]){
-   const leg=newGroup('FaunaLeg_'+(side>0?'R':'L')+(fore?'F':'H'),root);leg.position=v(side*(deer?.27:.34),deer?.91:.65,fore?.48:-.58);
-   capsule('FaunaUpperLeg',leg,[0,-.22,0],.52,deer?.085:.12,fur);capsule('FaunaLowerLeg',leg,[0,-.57,.015],.43,deer?.058:.085,fur);box('FaunaHoof',leg,[0,-.80,.07],[deer?.13:.17,.12,.20],M.woodDark);
-   legs.push({pivot:leg,phase:rand(0,Math.PI*2),fore});
+ }
+ async function loadWildlifeModels(){
+  if(!wildlifeSpawnSpecs.length)return 0;
+  setLoadingProgress(48,'Cargando fauna salvaje 3D…');
+  const kinds=[...new Set(wildlifeSpawnSpecs.map(spec=>spec.kind))];
+  await Promise.all(kinds.map(async kind=>{
+   try{wildlifeContainers.set(kind,await downloadWildlifeContainer(kind));}
+   catch(err){console.warn('Fauna 3D no disponible para '+kind+':',err);}
+  }));
+  let loaded=0;
+  wildlifeSpawnSpecs.forEach((spec,index)=>{
+   const animal=instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,index);
+   if(animal){ambientFauna.push(animal);loaded++;}
+  });
+  console.info('Fauna nórdica GLB preparada',{loaded,requested:wildlifeSpawnSpecs.length,species:kinds,clips:ambientFauna.map(animal=>({kind:animal.kind,groups:animal.groups.map(group=>group.name)}))});
+  setLoadingProgress(52,loaded?'Fauna nórdica animada preparada.':'La partida continúa sin fauna: no se pudieron descargar los GLB.');
+  return loaded;
+ }
+ function canWildlifeMove(x,z){
+  if(!isLand(x,z)||isVegetationTrailClearance(x,z,.65))return false;
+  if(settlements.some(point=>Math.hypot(x-point[0],z-point[1])<13.8))return false;
+  if(trees.some(tree=>tree.alive&&Math.hypot(x-tree.x,z-tree.z)<(tree.radius||.6)+.65))return false;
+  if(rocks.some(rock=>rock.alive&&Math.hypot(x-rock.x,z-rock.z)<(rock.radius||.75)+.45))return false;
+  for(const collider of worldColliders){
+   const dx=x-collider.x,dz=z-collider.z;
+   if(collider.type==='circle'){if(Math.hypot(dx,dz)<collider.r+.65)return false;}
+   else if(Math.abs(dx)<collider.hx+.65&&Math.abs(dz)<collider.hz+.65)return false;
   }
-  root.scaling.setAll(size);root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.y=rand(0,Math.PI*2);
-  return {kind,root,x,z,size,legs,heading:root.rotation.y,speed:rand(.20,.42),phase:rand(0,8),turnTimer:rand(2,6),flee:0};
+  return true;
  }
  function spawnNaturalVegetationAndFauna(){
   for(let idx=0;idx<land.length;idx++){
    const island=land[idx],bushCount=idx===0?12:(idx<4?5:3);
-   for(let i=0;i<bushCount;i++){let p=null;for(let attempt=0;attempt<36;attempt++){const q=sampleGroundPoint(island,3.9,.68,.25,.79);if(isVegetationTrailClearance(q.x,q.z,2.4)||settlements.some(s=>Math.hypot(q.x-s[0],q.z-s[1])<14)||worldColliders.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<(c.type==='circle'?c.r:Math.max(c.hx,c.hz))+2.4)||trees.some(t=>Math.hypot(q.x-t.x,q.z-t.z)<3))continue;p=q;break;}if(p)naturalShrubs.push(createNaturalShrub(p.x,p.z,rand(.82,1.18)));}
-   const animalCount=idx===0?5:(idx<4?2:1);
-   for(let i=0;i<animalCount;i++){let p=null;for(let attempt=0;attempt<45;attempt++){const q=sampleGroundPoint(island,3.8,.62,.28,.76);if(isVegetationTrailClearance(q.x,q.z,3.2)||settlements.some(s=>Math.hypot(q.x-s[0],q.z-s[1])<19)||worldColliders.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<(c.type==='circle'?c.r:Math.max(c.hx,c.hz))+3.5)||trees.some(t=>Math.hypot(q.x-t.x,q.z-t.z)<2.6))continue;p=q;break;}if(p){const kind=(idx+i)%3===0?'boar':'deer';ambientFauna.push(createWildlifeAnimal(kind,p.x,p.z,kind==='deer'?rand(.86,1.08):rand(.82,.98)));}}
+   for(let i=0;i<bushCount;i++){
+    let p=null;
+    for(let attempt=0;attempt<36;attempt++){
+     const q=sampleGroundPoint(island,3.9,.68,.25,.79);
+     if(isVegetationTrailClearance(q.x,q.z,2.4)||settlements.some(s=>Math.hypot(q.x-s[0],q.z-s[1])<14)||worldColliders.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<(c.type==='circle'?c.r:Math.max(c.hx,c.hz))+2.4)||trees.some(t=>Math.hypot(q.x-t.x,q.z-t.z)<3))continue;
+     p=q;break;
+    }
+    if(p)naturalShrubs.push(createNaturalShrub(p.x,p.z,rand(.82,1.18)));
+   }
+   // Six real animals in the world, not a crowd of primitive stand-ins.
+   const animalCount=isPerformanceMode?(idx===0?2:(idx===1?1:0)):(idx===0?3:(idx<4?1:0));
+   for(let i=0;i<animalCount;i++){
+    let p=null;
+    for(let attempt=0;attempt<45;attempt++){
+     const q=sampleGroundPoint(island,3.8,.62,.28,.76);
+     if(isVegetationTrailClearance(q.x,q.z,3.2)||settlements.some(s=>Math.hypot(q.x-s[0],q.z-s[1])<19)||worldColliders.some(c=>Math.hypot(q.x-c.x,q.z-c.z)<(c.type==='circle'?c.r:Math.max(c.hx,c.hz))+3.5)||trees.some(t=>Math.hypot(q.x-t.x,q.z-t.z)<2.6))continue;
+     p=q;break;
+    }
+    if(p){
+     const kind=idx===0?['deer','wolf','stag'][i]:(idx===2?'wolf':(idx===3?'stag':'deer'));
+     wildlifeSpawnSpecs.push({kind,x:p.x,z:p.z,size:rand(.92,1.06)});
+    }
+   }
   }
  }
  function updateWildlife(dt){
-  if(!ambientFauna.length)return;const focus=onShip?ship.position:player.root.position;
-  for(const animal of ambientFauna){const dx=focus.x-animal.root.position.x,dz=focus.z-animal.root.position.z,dist=Math.hypot(dx,dz);animal.flee=dist<13?Math.max(animal.flee,3.5):Math.max(0,animal.flee-dt);animal.turnTimer-=dt;if(animal.turnTimer<=0){animal.turnTimer=rand(2.5,7);animal.heading+=rand(-.85,.85);}if(animal.flee>0&&dist>.01)animal.heading=Math.atan2(-dx,-dz);
-   const moving=animal.flee>0||Math.sin(elapsed*.45+animal.phase)>.25,speed=animal.flee>0?(animal.kind==='deer'?4.1:2.9):animal.speed;
-   if(moving){const nx=animal.root.position.x+Math.sin(animal.heading)*speed*dt,nz=animal.root.position.z+Math.cos(animal.heading)*speed*dt;if(isLand(nx,nz)&&!isVegetationTrailClearance(nx,nz,.1)){animal.root.position.x=nx;animal.root.position.z=nz;}else{animal.heading+=Math.PI*rand(.55,1.45);animal.turnTimer=.25;}}
-   animal.root.rotation.y=animal.heading;animal.root.position.y=terrainSurfaceAt(animal.root.position.x,animal.root.position.z);const gait=moving?Math.sin(elapsed*(animal.flee>0?10:4.2)+animal.phase):0;for(const leg of animal.legs)leg.pivot.rotation.x=moving?gait*(leg.fore?1:-1)*.30:0;
+  if(!ambientFauna.length)return;
+  const focus=onShip?ship.position:player.root.position;
+  for(const animal of ambientFauna){
+   const dx=focus.x-animal.root.position.x,dz=focus.z-animal.root.position.z,dist=Math.hypot(dx,dz);
+   animal.flee=dist<14?Math.max(animal.flee,3.2):Math.max(0,animal.flee-dt);
+   if(animal.flee>0&&dist>.01)animal.heading=Math.atan2(-dx,-dz);
+   else{
+    animal.turnTimer-=dt;animal.wanderTimer-=dt;
+    if(animal.turnTimer<=0){animal.turnTimer=rand(2.5,6.5);animal.heading+=rand(-.72,.72);}
+    if(animal.wanderTimer<=0){animal.wanderTimer=rand(2,5.5);animal.wandering=Math.random()<.58;}
+   }
+   const moving=animal.flee>0||animal.wandering;
+   const speed=animal.flee>0?WILDLIFE_MODEL_DEFS[animal.kind].runSpeed:WILDLIFE_MODEL_DEFS[animal.kind].walkSpeed;
+   playWildlifeAnimation(animal,animal.flee>0?'run':(moving?'walk':'idle'));
+   if(moving){
+    const nx=animal.root.position.x+Math.sin(animal.heading)*speed*dt,nz=animal.root.position.z+Math.cos(animal.heading)*speed*dt;
+    if(canWildlifeMove(nx,nz)){animal.root.position.x=nx;animal.root.position.z=nz;}
+    else{animal.heading+=Math.PI*rand(.55,1.45);animal.turnTimer=.35;animal.wanderTimer=.45;}
+   }
+   animal.root.rotation.y=animal.heading;animal.root.position.y=terrainSurfaceAt(animal.root.position.x,animal.root.position.z);
   }
  }
-
- // 0.6.192: la cubierta vegetal queda despejada de caminos y campamentos.
+ // 0.6.193: la cubierta vegetal queda despejada de caminos y campamentos.
  function createRock(x,z){
   const gy=terrainSurfaceAt(x,z),sx=rand(1.0,1.8),sy=rand(1.0,1.6),sz=rand(1,1.7);
   let r=sphere('graniteBoulder',null,[x,gy+sy*.49,z],[sx,sy,sz],M.stone,12);
@@ -7112,6 +7240,7 @@ function createRealWeapon(type='axe'){
  }
  spawnNaturalVegetationAndFauna();
  await createRealGrass();
+ await loadWildlifeModels();
  function updateRealGrassWind(dt){
   // Menos transferencias de vértices por segundo: la hierba cercana sigue respirando,
   // pero no se suben decenas de buffers al GPU durante cada ráfaga.
@@ -7584,7 +7713,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.192',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.193',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -9541,7 +9670,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.192 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.193 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
