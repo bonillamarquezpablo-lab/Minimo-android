@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.182"
+EXPECTED_VERSION = "0.6.183"
 
 HTML_PAGES = (
     "index.html",
@@ -232,6 +232,12 @@ def main() -> None:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
     if "window.setInterval(updateRealPlayerArmDebugPanel,500);\n  window.setInterval(sampleRealPlayerArmDeviation,100);\n }\n // Panel de ajuste permanente" not in index_html:
         fail("La estructura del diagnóstico de brazos debug=1 ha cambiado inesperadamente.")
+    if "FPS EN VIVO '+liveFps+' · MATAS '+grassDebugClumpCount.toLocaleString('es-ES')+' · LOTES '+grassDebugBatchCount" not in index_html:
+        fail("Faltan FPS en vivo y el recuento de matas en el panel debug=1.")
+    if "grassDebugClumpCount=count;grassDebugBatchCount=grassBatches.size;" not in index_html:
+        fail("El contador de hierba no recibe el número real de matas creadas.")
+    if "const liveFps=Number.isFinite(engine.getFps())?Math.round(engine.getFps()):0;" not in index_html:
+        fail("El panel debug=1 no mide los FPS actuales.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
