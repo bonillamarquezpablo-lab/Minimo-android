@@ -155,8 +155,12 @@ def main() -> None:
         fail("Falta el solucionador anatómico posterior a las animaciones.")
     if "applyRealPlayerArmPoseAfterAnimations();" not in index_html:
         fail("El solucionador anatómico no se invoca después de las animaciones.")
-    if "m.leftUpperArm!==false||m.leftForearm!==false" not in post_arm_body or "m.upperArm!==false||m.forearm!==false" not in post_arm_body:
-        fail("La locomoción no respeta los canales de brazos que ya pertenecen al clip Walk/Run.")
+    if "restoreRealPlayerArmBindPose(n);" not in post_arm_body:
+        fail("La locomoción no restaura las cadenas completas antes de resolverlas.")
+    if post_arm_body.count("relaxRealPlayerFreeArm(") != 1 or post_arm_body.count("relaxRealPlayerWeaponArm(") != 1:
+        fail("No hay un único solucionador postanimación para ambos brazos.")
+    if "CLIP NATIVO" in post_arm_body or "m.leftUpperArm" in post_arm_body or "m.upperArm" in post_arm_body:
+        fail("Los clips nativos todavía compiten con el solucionador anatómico.")
     if "const realPlayerArmTuningEnabled=true;" not in index_html:
         fail("El ajuste de brazos no está habilitado en el juego normal.")
     if "Object.values(rig).forEach(rememberRigRest);" not in index_html:
