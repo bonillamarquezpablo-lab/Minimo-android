@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.181">
-<meta name="el-sin-nombre-repair" content="0.6.181 release hardening: guest PWA URLs, offline fallback and release validation">
+<meta name="el-sin-nombre-build" content="0.6.182">
+<meta name="el-sin-nombre-repair" content="0.6.182 release hardening: guest PWA URLs, offline fallback and release validation">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.181</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.182</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -611,7 +611,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.181 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.182 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -649,7 +649,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 
-/* 0.6.181 — portada principal de aventura nórdica, a pantalla completa. */
+/* 0.6.182 — portada principal de aventura nórdica, a pantalla completa. */
 #audioGate{
  position:fixed!important;inset:0!important;z-index:2001!important;
  display:none;align-items:stretch!important;justify-content:stretch!important;
@@ -781,7 +781,7 @@ body.preflight.audio-gate #modeSelect{display:none!important}
 @media(prefers-reduced-motion:reduce){#audioGate button{transition:none!important}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.181: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.182: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -901,13 +901,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.181 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.182 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.181 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.182 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -1017,7 +1017,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #intro .campaignCard strong{font-size:19px!important}
  #intro .campaignCardArt{font-size:39px!important}
 }
-/* 0.6.181 — menús compactos y música antes del selector gráfico. */
+/* 0.6.182 — menús compactos y música antes del selector gráfico. */
 #audioGate{position:fixed;inset:0;z-index:2001;display:none;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at 50% 28%,rgba(151,105,54,.30),transparent 48%),linear-gradient(145deg,#071316,#101f20 58%,#050d10);color:#f3e5c9}
 body.preflight.audio-gate #audioGate{display:flex}
 body.preflight.audio-gate #modeSelect{display:none!important}
@@ -1109,7 +1109,7 @@ body.preflight.audio-gate #modeSelect{display:none!important}
  #intro .campaignFooter{display:none!important}
 }
 
-/* 0.6.181 — pantalla de carga nórdica a sangre completa; arte 2D ligero. */
+/* 0.6.182 — pantalla de carga nórdica a sangre completa; arte 2D ligero. */
 #loading{
  position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;min-height:100dvh!important;
  margin:0!important;padding:0!important;overflow:hidden!important;display:flex!important;align-items:stretch!important;justify-content:stretch!important;
@@ -1962,12 +1962,12 @@ async function startGame(){
   free:{
    upper:{outward:.26,forward:-.21},forearm:{outward:.15,forward:-.08},
    fingers:{thumb:-.08,index:-.10,middle:-.10,ring:-.10,little:-.10},
-   twistPercent:100,handSharePercent:100
+   twistPercent:0,handSharePercent:0
   },
   weapon:{
    upper:{outward:.16,forward:-.02},forearm:{outward:0,forward:0},
    fingers:{thumb:-.28,index:-.34,middle:-.34,ring:-.34,little:-.34},
-   twistPercent:100,handSharePercent:100
+   twistPercent:0,handSharePercent:0
   }
  };
  let realPlayerLeftFingerTuningApplied=false;
@@ -2117,7 +2117,7 @@ async function startGame(){
   scene.onAfterAnimationsObservable.add(()=>{
    try{applyRealPlayerFootIK();}catch(err){console.debug('Foot IK jugador no disponible:',err);}
    try{applyRealPlayerArmPoseAfterAnimations();}catch(err){console.debug('Corrección anatómica post-animación omitida:',err);}
-   try{if(realPlayerReady&&realWeaponHolder){applyRealPlayerClubGripPose();syncRealWeaponAnchor(0,realWeaponPoseOverride);}}catch(err){console.debug('Seguimiento del arma/agarre omitido:',err);}
+   try{if(realPlayerReady&&realWeaponHolder){applyRealPlayerClubGripPose();if(realPlayerMode==='idle'||realPlayerMode==='walk'||realPlayerMode==='run'||realPlayerMode==='sail')syncRealWeaponAnchor(0,realWeaponPoseOverride);}}catch(err){console.debug('Seguimiento del arma/agarre omitido:',err);}
   });
  }
  scene.clearColor=new B.Color4(.42,.57,.65,1);scene.fogMode=B.Scene.FOGMODE_EXP;scene.fogDensity=.00058;scene.fogColor=new B.Color3(.39,.53,.59);
@@ -4844,7 +4844,7 @@ async function startGame(){
   armTunePanel.id='realPlayerArmTunePanel';
   armTunePanel.setAttribute('aria-label','Ajuste en vivo de los brazos');
   armTunePanel.innerHTML=`
-   <div id="realPlayerArmTuneHead"><span>AJUSTE EN VIVO · SOLO REPOSO</span><button id="realPlayerArmTuneReset" type="button">RESTABLECER</button></div>
+   <div id="realPlayerArmTuneHead"><span>AJUSTE EN VIVO · TODOS LOS ESTADOS</span><button id="realPlayerArmTuneReset" type="button">RESTABLECER</button></div>
    <div id="realPlayerArmTuneTabs" role="tablist" aria-label="Seleccionar brazo">
     <button class="realArmTuneTab" type="button" data-arm-tab="free" role="tab" aria-selected="true">BRAZO LIBRE</button>
     <button class="realArmTuneTab" type="button" data-arm-tab="weapon" role="tab" aria-selected="false">BRAZO DEL PALO</button>
@@ -5357,7 +5357,7 @@ async function startGame(){
    // El torso y las piernas siguen el gait. Los brazos se corrigen una sola vez
    // después de que Babylon aplique el clip nativo (véase applyRealPlayerArmPoseAfterAnimations).
    apply('spine',sprinting?.105:.06,0,(l-r)*.022);
-   apply('rightShoulder',-r*.035,0,-.012);apply('leftShoulder',-l*.035,0,.012);
+   // Los brazos se resuelven después del clip con IK anatómico de dos huesos.
    if(n.head&&m.head!==false)setRigDelta(n.head,-Math.sin(phase*2)*.012,(l-r)*.018,0);
   }else{
    // Reposo vivo: soltar el último paso, conservar una flexión mínima de rodillas
@@ -5469,24 +5469,113 @@ async function startGame(){
  }
   function restoreRealPlayerArmBindPose(nodes){
   if(!nodes)return;
-  // El solver de dirección conserva la torsión axial que ya tenía cada hueso.
-  // Restaurar el bind pose aquí elimina la influencia del último clip antes de
-  // reconstruir el corredor anatómico y evita dos reposos según la animación previa.
+  // Restablecer solo rotaciones locales; el solucionador IK recalcula las
+  // matrices padre-hijo una sola vez, siguiendo hombro -> codo -> muñeca.
   const chain=[
    nodes.leftShoulder,nodes.leftUpperArm,nodes.leftForearm,nodes.leftHand,
    nodes.rightShoulder,nodes.upperArm,nodes.forearm,nodes.hand
   ];
   for(let i=0;i<chain.length;i++){
-   const node=chain[i];if(!node)continue;
-   restoreRigNodePose(node,realBoneRest.get(node));
+   const node=chain[i];if(node)restoreRigNodePose(node,realBoneRest.get(node));
   }
-  // Actualizar matrices padre-hijo en orden anatómico antes de medir segmentos.
-  for(let i=0;i<chain.length;i++){
-   const node=chain[i];if(node&&typeof node.computeWorldMatrix==='function')node.computeWorldMatrix(true);
+ }
+ function solveRealPlayerArmTwoBoneIK(root,nodes,arm,frame,sway=0,boatStance=false,debugState=null){
+  const isFree=arm==='free';
+  const upper=nodes&&(isFree?nodes.leftUpperArm:nodes.upperArm);
+  const lower=nodes&&(isFree?nodes.leftForearm:nodes.forearm);
+  const hand=nodes&&(isFree?nodes.leftHand:nodes.hand);
+  if(!root||!upper||!lower||!hand||!frame){
+   if(debugState){debugState.status='NO DISPONIBLE';debugState.reason='faltan brazo, antebrazo, mano o marco';debugState.twistDeg=null;}
+   return false;
+  }
+  try{
+   upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   const shoulder=upper.getAbsolutePosition(),elbow=lower.getAbsolutePosition(),wrist=hand.getAbsolutePosition();
+   const upperLength=B.Vector3.Distance(shoulder,elbow),forearmLength=B.Vector3.Distance(elbow,wrist);
+   if(!Number.isFinite(upperLength)||!Number.isFinite(forearmLength)||upperLength<.045||forearmLength<.035){
+    if(debugState){debugState.status='NO DISPONIBLE';debugState.reason='longitud de hueso inválida';debugState.twistDeg=null;}
+    return false;
+   }
+   // Los cuatro pares aprobados forman la dirección de muñeca. La flexión
+   // del codo se calcula aparte con las longitudes reales del rig.
+   const upperLocal=getRealPlayerArmTuningTarget(arm,'upper');
+   const forearmLocal=getRealPlayerArmTuningTarget(arm,'forearm');
+   if(!isFree){upperLocal.x*=-1;forearmLocal.x*=-1;}
+   const wristLocal=upperLocal.scale(.62).add(forearmLocal.scale(.38));
+   wristLocal.z+=sway;
+   if(wristLocal.lengthSquared()<1e-8)return false;
+   wristLocal.normalize();
+   const wristDirection=directionFromRealPlayerBodyFrame(frame,wristLocal,1);
+   if(!wristDirection||wristDirection.y>1e-6){
+    if(debugState){debugState.status='RESPALDO';debugState.reason='objetivo de muñeca inválido';debugState.twistDeg=null;}
+    return false;
+   }
+   const maximumReach=upperLength+forearmLength-.002;
+   const minimumReach=Math.abs(upperLength-forearmLength)+.002;
+   const reachRatio=isFree?.972:(boatStance?.952:.942);
+   const reach=Math.max(minimumReach,Math.min(maximumReach,maximumReach*reachRatio));
+   const wristTarget=shoulder.add(wristDirection.scale(reach));
+   const shoulderToWrist=wristTarget.subtract(shoulder),distance=shoulderToWrist.length();
+   if(distance<.001)return false;
+   const axis=shoulderToWrist.scale(1/distance);
+   const along=(upperLength*upperLength-forearmLength*forearmLength+distance*distance)/(2*distance);
+   const elbowHeight=Math.sqrt(Math.max(0,upperLength*upperLength-along*along));
+   // Plano de flexión estable: el codo sale hacia delante, no cruza el pecho.
+   const inward=isFree?frame.left.scale(-1):frame.left.clone();
+   const poleHint=frame.forward.scale(.84).add(inward.scale(.28));
+   let bendDirection=poleHint.subtract(axis.scale(B.Vector3.Dot(poleHint,axis)));
+   if(bendDirection.lengthSquared()<1e-7){
+    bendDirection=frame.up.subtract(axis.scale(B.Vector3.Dot(frame.up,axis)));
+   }
+   if(bendDirection.lengthSquared()<1e-7)return false;
+   bendDirection.normalize();
+   const elbowTarget=shoulder.add(axis.scale(along)).add(bendDirection.scale(elbowHeight));
+   rotateBoneWorldTowardExact(upper,elbow.subtract(shoulder),elbowTarget.subtract(shoulder));
+   lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   const currentForearm=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+   const desiredForearm=wristTarget.subtract(lower.getAbsolutePosition());
+   if(currentForearm.length()<.035||desiredForearm.length()<.035)return false;
+   rotateBoneWorldTowardExact(lower,currentForearm,desiredForearm);
+   lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
+   // No torsionar la palma automáticamente: el bind pose del GLB es el
+   // único valor por defecto. El control manual puede activar torsión a demanda.
+   const twistSettings=getRealPlayerArmTwistTuning(arm);
+   if(twistSettings.twistPercent>0){
+    const forearmAxis=hand.getAbsolutePosition().subtract(lower.getAbsolutePosition());
+    if(forearmAxis.lengthSquared()>.001){
+     forearmAxis.normalize();
+     const palmNormal=hand.getDirection(isFree?REAL_PLAYER_FREE_ARM_PALM_NORMAL:REAL_PLAYER_WEAPON_ARM_PALM_NORMAL).normalize();
+     const bodyNode=nodes.spine||nodes.hips;
+     if(bodyNode){
+      bodyNode.computeWorldMatrix(true);
+      const bodyFacing=bodyNode.getAbsolutePosition().subtract(hand.getAbsolutePosition());
+      const palmTangent=palmNormal.subtract(forearmAxis.scale(B.Vector3.Dot(palmNormal,forearmAxis)));
+      const bodyTangent=bodyFacing.subtract(forearmAxis.scale(B.Vector3.Dot(bodyFacing,forearmAxis)));
+      if(palmTangent.lengthSquared()>.001&&bodyTangent.lengthSquared()>.001){
+       palmTangent.normalize();bodyTangent.normalize();
+       const sin=B.Vector3.Dot(forearmAxis,B.Vector3.Cross(palmTangent,bodyTangent));
+       const cos=Math.max(-1,Math.min(1,B.Vector3.Dot(palmTangent,bodyTangent)));
+       const angle=Math.atan2(sin,cos);
+       if(debugState&&Number.isFinite(angle))debugState.twistDeg=angle*180/Math.PI;
+       if(Number.isFinite(angle)&&Math.abs(angle)>.0001)applyRealPlayerArmTwist(lower,hand,forearmAxis,angle,arm);
+      }
+     }
+    }
+   }else if(debugState){debugState.twistDeg=0;}
+   if(debugState){debugState.status='IK DOS HUESOS';debugState.reason='muñeca definida + codo calculado';}
+   return true;
+  }catch(err){
+   console.debug('IK anatómica de brazo omitida:',err);
+   if(debugState){debugState.status='RESPALDO';debugState.reason=String(err&&err.message||err);debugState.twistDeg=null;}
+   return false;
   }
  }
  function applyRealPlayerArmPoseAfterAnimations(){
-  if(!realPlayerReady||!realRigNodes||playerAction!=='idle')return;
+  if(!realPlayerReady||!realRigNodes)return;
+  // No resolver sobre ataques, tala, minería, esquiva ni bloqueo: conservan
+  // sus animaciones especiales. Walk/Run sí deben pasar por este IK posterior.
+  const normalAction=playerAction==='idle'||playerAction==='walk'||playerAction==='run';
+  if(!normalAction)return;
   const mode=realPlayerMode;
   const walking=mode==='walk'||mode==='run';
   const sailing=onShip||mode==='sail';
@@ -5494,15 +5583,13 @@ async function startGame(){
   if(!walking&&!sailing&&!resting)return;
   const n=realRigNodes,root=realPlayerModelPivot||player.root;
   const phase=Number.isFinite(walkPhase)?walkPhase:0;
-  // Los clips Walk/Run dejan de ser propietarios de los brazos. Cada fotograma
-  // se parte del mismo bind pose y este solver reconstruye ambas cadenas completas.
-  // Así no se hereda torsión de un fotograma anterior ni se mezcla un brazo nativo
-  // con un antebrazo procedural.
   restoreRealPlayerArmBindPose(n);
-  const freeSway=walking?Math.sin(phase)*(mode==='run'?.035:.025):(sailing?Math.sin(elapsed*1.08)*.025:0);
-  const weaponSway=walking?Math.sin(phase+Math.PI)*(mode==='run'?.025:.018):(sailing?Math.sin(elapsed*1.08)*.025:0);
-  relaxRealPlayerFreeArm(root,n,-1,freeSway,sailing,realPlayerArmDebugEnabled?realPlayerArmDebugState.free:null);
-  relaxRealPlayerWeaponArm(root,n,weaponSway,sailing,realPlayerArmDebugEnabled?realPlayerArmDebugState.weapon:null);
+  const freeSway=walking?Math.sin(phase)*(mode==='run'?.052:.034):(sailing?Math.sin(elapsed*1.08)*.018:0);
+  const weaponSway=walking?Math.sin(phase+Math.PI)*(mode==='run'?.026:.018):(sailing?Math.sin(elapsed*1.08)*.012:0);
+  const frame=getRealPlayerBodyFrame(n,root);
+  if(!frame)return;
+  solveRealPlayerArmTwoBoneIK(root,n,'free',frame,freeSway,sailing,realPlayerArmDebugEnabled?realPlayerArmDebugState.free:null);
+  solveRealPlayerArmTwoBoneIK(root,n,'weapon',frame,weaponSway,sailing,realPlayerArmDebugEnabled?realPlayerArmDebugState.weapon:null);
  }
  function quaternionAlignYTo(direction){
   const from=B.Axis.Y.clone().normalize(),to=direction.clone().normalize();
@@ -5699,10 +5786,10 @@ async function startGame(){
    if(realPlayerModelPivot)realPlayerModelPivot.position.z=-.035*wind+.11*strike-.025*recover;
    return;
   }
-  // La marcha/idle se gobierna en updateRealRigGait y en los clips GLB.
-  // No resetear aquí los huesos: hacerlo después del gait anulaba el balanceo al caminar.
+  // En marcha/reposo, el anclaje se actualiza una sola vez tras el IK postanimación.
+  // Las acciones especiales ya sincronizaron su arma en sus propias ramas.
   if(realPlayerModelPivot)realPlayerModelPivot.position.z=0;
-  syncRealWeaponAnchor(dt);
+  if(playerAction!=='idle'&&playerAction!=='walk'&&playerAction!=='run')syncRealWeaponAnchor(dt);
  }
  const weaponOptions={club:player.clubWeapon,axe:player.weapon};
  const swordGroup=newGroup('PlayerSwordWeapon',player.elbows[1]);swordGroup.position=v(0,-.44,.10);capsule('PlayerSwordGrip',swordGroup,[0,-.42,.02],.43,.055,M.leather);box('PlayerSwordGuard',swordGroup,[0,-.16,.04],[.50,.09,.10],M.gold);const swordBlade=box('PlayerSwordBlade',swordGroup,[0,.28,.02],[.16,.92,.055],M.metal,[0,0,.015]);sphere('PlayerSwordPommel',swordGroup,[0,-.67,.02],[.12,.12,.12],M.gold,12);weaponOptions.sword=swordGroup;swordGroup.setEnabled(false);
@@ -7058,7 +7145,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.181',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.182',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -7121,7 +7208,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.181');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.182');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -8896,7 +8983,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.181 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.182 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -8951,7 +9038,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.181: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.182: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -9014,7 +9101,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.181 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.182 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -9052,7 +9139,7 @@ function updateHUD(){
   throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.181 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.182 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
