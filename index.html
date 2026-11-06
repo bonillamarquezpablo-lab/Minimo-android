@@ -2141,7 +2141,7 @@ async function startGame(){
   scene.onAfterAnimationsObservable.add(()=>{
    try{applyRealPlayerFootIK();}catch(err){console.debug('Foot IK jugador no disponible:',err);}
    try{applyRealPlayerArmPoseAfterAnimations();}catch(err){console.debug('Corrección anatómica post-animación omitida:',err);}
-   try{if(realPlayerReady&&realWeaponHolder){applyRealPlayerClubGripPose();syncRealWeaponAnchor(0,realWeaponPoseOverride);}}catch(err){console.debug('Seguimiento del arma/agarre omitido:',err);}
+   try{if(realPlayerReady&&realWeaponHolder){const masterOrNativeOwnsFingers=(realPlayerMode==='walk'||realPlayerMode==='run'||(realPlayerMode==='idle'&&!onShip&&playerAction==='idle'));if(!masterOrNativeOwnsFingers)applyRealPlayerClubGripPose();syncRealWeaponAnchor(0,realWeaponPoseOverride);}}catch(err){console.debug('Seguimiento del arma/agarre omitido:',err);}
   });
  }
  scene.clearColor=new B.Color4(.42,.57,.65,1);scene.fogMode=B.Scene.FOGMODE_EXP;scene.fogDensity=.00058;scene.fogColor=new B.Color3(.39,.53,.59);
@@ -5481,9 +5481,6 @@ function createRealWeapon(type='axe'){
  }
  function applyRealPlayerClubGripPose(){
   if(!realPlayerReady||!realWeaponHolder||!realRigNodes)return;
-  // En Walk/Run mandan los clips GLB. En reposo, los dedos ya forman parte de la pose maestra local.
-  if(realPlayerMode==='walk'||realPlayerMode==='run')return;
-  if(realPlayerMode==='idle'&&!onShip&&playerAction==='idle')return;
   const holding=!!realWeaponGroups[equippedWeapon];
   const tuneRest=playerAction==='idle';
   // La pose anatómica del brazo ya se corrigió después de las animaciones.
@@ -5599,8 +5596,8 @@ function createRealWeapon(type='axe'){
      pose.rotation=new B.Vector3(explicit.rotation[0],explicit.rotation[1],explicit.rotation[2]);
      pose.quaternion=null;
     }
-   }else if(entry.kind==='finger'&&entry.fingerArm){
-    // Conserva el cierre local de dedos que ya usaba el agarre, pero lo congela una sola vez en la pose maestra.
+   }else if(entry.kind==='finger'&&entry.fingerArm&&(entry.fingerArm==='free'||!!(realWeaponGroups&&realWeaponGroups[equippedWeapon]))){
+    // Conserva exactamente el cierre local previamente aplicado por el sistema de agarre.
     const curl=getRealPlayerFingerCurl(entry.fingerEntry,entry.fingerArm);
     if(pose.quaternion){
      const delta=B.Quaternion.RotationYawPitchRoll(0,curl,0);
