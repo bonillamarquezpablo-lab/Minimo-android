@@ -1959,14 +1959,14 @@ async function startGame(){
  const realPlayerArmDebugState={free:{status:'ESPERANDO',reason:'',twistDeg:null},weapon:{status:'POSE ORIGINAL',reason:'',twistDeg:null}};
  const REAL_PLAYER_ARM_TUNING_DEFAULTS={
   free:{
-   upper:{outward:.26,forward:-.21},forearm:{outward:.15,forward:-.08},
-   fingers:{thumb:.08,index:.10,middle:.10,ring:.10,little:.10},
-   twistPercent:100,handSharePercent:0
+   upper:{outward:.20,forward:-.22},forearm:{outward:.16,forward:.01},
+   fingers:{thumb:-.08,index:-.10,middle:-.10,ring:-.10,little:-.10},
+   twistPercent:100,handSharePercent:100
   },
   weapon:{
-   upper:{outward:.16,forward:-.02},forearm:{outward:0,forward:0},
-   fingers:{thumb:.28,index:.34,middle:.34,ring:.34,little:.34},
-   twistPercent:100,handSharePercent:0
+   upper:{outward:.22,forward:.02},forearm:{outward:.03,forward:.15},
+   fingers:{thumb:-.28,index:-.34,middle:-.34,ring:-.34,little:-.34},
+   twistPercent:100,handSharePercent:100
   }
  };
  let realPlayerLeftFingerTuningApplied=false;
@@ -4880,11 +4880,11 @@ async function startGame(){
      <label class="realArmTuneControl"><span>Giro antebrazo (%) <output>100.00</output></span><input type="range" min="0" max="100" step="0.01" value="100" data-arm="free" data-kind="twist" data-field="twistPercent"></label>
      <label class="realArmTuneControl"><span>Parte del giro a la mano (%) <output>0.00</output></span><input type="range" min="0" max="100" step="0.01" value="0" data-arm="free" data-kind="twist" data-field="handSharePercent"></label>
      <div class="realArmTuneDivider">DEDOS · RADIANES</div>
-     <label class="realArmTuneControl"><span>Pulgar <output>0.08</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.08" data-arm="free" data-kind="finger" data-digit="thumb"></label>
-     <label class="realArmTuneControl"><span>Índice <output>0.10</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.10" data-arm="free" data-kind="finger" data-digit="index"></label>
-     <label class="realArmTuneControl"><span>Corazón <output>0.10</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.10" data-arm="free" data-kind="finger" data-digit="middle"></label>
-     <label class="realArmTuneControl"><span>Anular <output>0.10</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.10" data-arm="free" data-kind="finger" data-digit="ring"></label>
-     <label class="realArmTuneControl"><span>Meñique <output>0.10</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.10" data-arm="free" data-kind="finger" data-digit="little"></label>
+     <label class="realArmTuneControl"><span>Pulgar <output>-0.08</output></span><input type="range" min="-1.2" max="1.2" step="0.01" value="-0.08" data-arm="free" data-kind="finger" data-digit="thumb"></label>
+     <label class="realArmTuneControl"><span>Índice <output>-0.10</output></span><input type="range" min="-1.2" max="1.2" step="0.01" value="-0.10" data-arm="free" data-kind="finger" data-digit="index"></label>
+     <label class="realArmTuneControl"><span>Corazón <output>-0.10</output></span><input type="range" min="-1.2" max="1.2" step="0.01" value="-0.10" data-arm="free" data-kind="finger" data-digit="middle"></label>
+     <label class="realArmTuneControl"><span>Anular <output>-0.10</output></span><input type="range" min="-1.2" max="1.2" step="0.01" value="-0.10" data-arm="free" data-kind="finger" data-digit="ring"></label>
+     <label class="realArmTuneControl"><span>Meñique <output>-0.10</output></span><input type="range" min="-1.2" max="1.2" step="0.01" value="-0.10" data-arm="free" data-kind="finger" data-digit="little"></label>
     </div>
     <div class="realArmTuneSide" data-arm-side="weapon"><h4>BRAZO DEL PALO</h4>
      <label class="realArmTuneControl"><span>Brazo · hacia fuera <output>0.16</output></span><input type="range" min="-0.2" max="0.8" step="0.01" value="0.16" data-arm="weapon" data-kind="arm" data-segment="upper" data-axis="outward"></label>
@@ -4895,11 +4895,11 @@ async function startGame(){
      <label class="realArmTuneControl"><span>Giro antebrazo (%) <output>100.00</output></span><input type="range" min="0" max="100" step="0.01" value="100" data-arm="weapon" data-kind="twist" data-field="twistPercent"></label>
      <label class="realArmTuneControl"><span>Parte del giro a la mano (%) <output>0.00</output></span><input type="range" min="0" max="100" step="0.01" value="0" data-arm="weapon" data-kind="twist" data-field="handSharePercent"></label>
      <div class="realArmTuneDivider">DEDOS · RADIANES</div>
-     <label class="realArmTuneControl"><span>Pulgar <output>0.28</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.28" data-arm="weapon" data-kind="finger" data-digit="thumb"></label>
-     <label class="realArmTuneControl"><span>Índice <output>0.34</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.34" data-arm="weapon" data-kind="finger" data-digit="index"></label>
-     <label class="realArmTuneControl"><span>Corazón <output>0.34</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.34" data-arm="weapon" data-kind="finger" data-digit="middle"></label>
-     <label class="realArmTuneControl"><span>Anular <output>0.34</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.34" data-arm="weapon" data-kind="finger" data-digit="ring"></label>
-     <label class="realArmTuneControl"><span>Meñique <output>0.34</output></span><input type="range" min="0" max="1.2" step="0.01" value="0.34" data-arm="weapon" data-kind="finger" data-digit="little"></label>
+     <label class="realArmTuneControl"><span>Pulgar <output>-0.28</output></span><input type="range" min="-1.2" max="1.2" step="0.01" value="-0.28" data-arm="weapon" data-kind="finger" data-digit="thumb"></label>
+     <label class="realArmTuneControl"><span>Índice <output>-0.34</output></span><input type="range" min="-1.2" max="1.2" step="0.01" value="-0.34" data-arm="weapon" data-kind="finger" data-digit="index"></label>
+     <label class="realArmTuneControl"><span>Corazón <output>-0.34</output></span><input type="range" min="-1.2" max="1.2" step="0.01" value="-0.34" data-arm="weapon" data-kind="finger" data-digit="middle"></label>
+     <label class="realArmTuneControl"><span>Anular <output>-0.34</output></span><input type="range" min="-1.2" max="1.2" step="0.01" value="-0.34" data-arm="weapon" data-kind="finger" data-digit="ring"></label>
+     <label class="realArmTuneControl"><span>Meñique <output>-0.34</output></span><input type="range" min="-1.2" max="1.2" step="0.01" value="-0.34" data-arm="weapon" data-kind="finger" data-digit="little"></label>
     </div>
    </div>`;
   armTuneDock.appendChild(armTuneToggle);
