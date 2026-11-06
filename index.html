@@ -4861,12 +4861,12 @@ async function startGame(){
   const missing=realPlayerMasterPoseEntries.filter(entry=>!realBoneRest.has(entry.node)||!realPlayerMasterPose.has(entry.node)).length;
   const transition=realPlayerMasterIdleTransition?'MEZCLA FIJA 0,22 s':'SIN MEZCLA';
   realPlayerArmDebugPanel.textContent=
-   'POSE MAESTRA · ROTACIONES LOCALES\\n'+
-   'ESTADO '+mode.toUpperCase()+' · '+movement+'\\n'+
-   'MARCO ACTIVO: NINGUNO · sin rumbo, pies, caderas ni joystick\\n'+
-   'HUESOS '+masterCount+' · SIN BASE/MAESTRA '+missing+'\\n'+
-   'TRANSICIÓN '+transition+' · SIN RESPIRACIÓN\\n'+
-   'BRAZO LIBRE '+(realPlayerArmDebugState.free.status||'—')+' / PALO '+(realPlayerArmDebugState.weapon.status||'—')+'\\n'+
+   'POSE MAESTRA · ROTACIONES LOCALES\n'+
+   'ESTADO '+mode.toUpperCase()+' · '+movement+'\n'+
+   'MARCO ACTIVO: NINGUNO · sin rumbo, pies, caderas ni joystick\n'+
+   'HUESOS '+masterCount+' · SIN BASE/MAESTRA '+missing+'\n'+
+   'TRANSICIÓN '+transition+' · SIN RESPIRACIÓN\n'+
+   'BRAZO LIBRE '+(realPlayerArmDebugState.free.status||'—')+' / PALO '+(realPlayerArmDebugState.weapon.status||'—')+'\n'+
    'DETECTOR: rotación local real vs maestra · tolerancia 1°';
  }
  
