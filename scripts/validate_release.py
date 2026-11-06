@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.167"
+EXPECTED_VERSION = "0.6.178"
 
 HTML_PAGES = (
     "index.html",
@@ -119,8 +119,39 @@ def main() -> None:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
     if "rightGripBones:realRightGripBones.length" not in index_html:
         fail("Falta telemetría del número de huesos de agarre detectados.")
-    if "if(holding&&(mode==='idle'||mode==='sail'))" not in index_html:
-        fail("El agarre sigue anulando la animación nativa del brazo durante Walk/Run.")
+    if "if(holding&&(mode==='idle'||mode==='sail'))" in index_html:
+        fail("La pose del brazo se está recalculando en el callback posterior a las animaciones.")
+    if "upper:{outward:.26,forward:-.21},forearm:{outward:.15,forward:-.08}" not in index_html:
+        fail("La calibración fija del brazo libre no coincide con los valores aprobados.")
+    if "upper:{outward:.16,forward:-.02},forearm:{outward:0,forward:0}" not in index_html:
+        fail("La calibración fija del brazo del palo no coincide con los valores aprobados.")
+    if "new B.Vector3(.26,-Math.sqrt(1-.26*.26-.21*.21),-.21)" not in index_html:
+        fail("El objetivo de reposo del brazo libre no usa la calibración fijada.")
+    if "new B.Vector3(.15,-Math.sqrt(1-.15*.15-.08*.08),-.08)" not in index_html:
+        fail("El objetivo de reposo del antebrazo libre no usa la calibración fijada.")
+    if "new B.Vector3(.16,-Math.sqrt(1-.16*.16-.02*.02),-.02)" not in index_html:
+        fail("El objetivo de reposo del brazo del arma no usa la calibración fijada.")
+    if "new B.Vector3(0,-1,0)" not in index_html:
+        fail("El objetivo de reposo del antebrazo del arma no usa la calibración fijada.")
+    if "updateArmTuneControls();" not in index_html:
+        fail("El panel no sincroniza sus controles con los valores de reposo fijados.")
+    if "getRealPlayerBodyFrame(n,realPlayerModelPivot||player.root)" not in index_html:
+        fail("El diagnóstico anatómico no utiliza el mismo marco visual que el solucionador.")
+    if "player.root.rotation.y=B.Scalar.LerpAngle(player.root.rotation.y,yaw" not in index_html:
+        fail("El giro del jugador no interpola el ángulo por el arco más corto.")
+    grip_start = index_html.find("function applyRealPlayerClubGripPose(){")
+    grip_end = index_html.find("function quaternionAlignYTo", grip_start)
+    if grip_start < 0 or grip_end <= grip_start or "relaxRealPlayerWeaponArm(" in index_html[grip_start:grip_end]:
+        fail("El callback de agarre vuelve a competir por la pose del brazo.")
+    gait_start = index_html.find("function updateRealRigGait(")
+    gait_end = index_html.find("function createRealWeapon(", gait_start)
+    gait_body = index_html[gait_start:gait_end]
+    if gait_start < 0 or gait_end <= gait_start or gait_body.count("relaxRealPlayerWeaponArm(") != 3:
+        fail("La marcha, navegación y reposo no tienen un único solucionador de brazo del arma.")
+    pivot_update = index_html.find("realPlayerModelPivot.rotation.z=onShip?")
+    gait_update = index_html.find("updateRealRigGait(walkPhase", index_html.find("const realMode="))
+    if pivot_update < 0 or gait_update < 0 or pivot_update > gait_update:
+        fail("La orientación visual del torso se actualiza después de resolver los brazos.")
     if "if(walking&&realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying)return;" in index_html:
         fail("El gait procedural sigue saltándose los huesos no animados por el clip Walk/Run.")
     if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html:
