@@ -136,12 +136,13 @@ def main() -> None:
     if "updateArmTuneControls();" not in index_html:
         fail("El panel no sincroniza sus controles con los valores de reposo fijados.")
     if ("function getRealPlayerSkeletonBodyFrame(nodes)" not in index_html
-            or "function getRealPlayerHeadingBodyFrame(root)" not in index_html
-            or "realPlayerArmFrameMode==='ESQUELETO'" not in index_html
-            or "let realPlayerArmFrameMode='ESQUELETO';" not in index_html
-            or "realPlayerArmFrameToggle.textContent=realPlayerArmFrameMode;" not in index_html
-            or "const n=realRigNodes,reference=getRealPlayerSkeletonBodyFrame(n);" not in index_html):
-        fail("El modo ESQUELETO no es el predeterminado o falta la referencia anatómica independiente.")
+            or "const realPlayerArmFrameMode='ESQUELETO';" not in index_html
+            or "function getRealPlayerBodyFrame(nodes,root)" not in index_html
+            or "return getRealPlayerSkeletonBodyFrame(nodes);" not in index_html
+            or "applyRealPlayerArmPoseAfterAnimations();" not in index_html
+            or "function sampleRealPlayerArmDeviation()" not in index_html
+            or "const realPlayerArmFrameBar=document.createElement('div');" in index_html):
+        fail("El marco ESQUELETO debe ser fijo, los controles deben actualizar la pose y no debe aparecer el selector de marco.")
     if "player.root.rotation.y=B.Scalar.LerpAngle(player.root.rotation.y,yaw" not in index_html:
         fail("El giro del jugador no interpola el ángulo por el arco más corto.")
     grip_start = index_html.find("function applyRealPlayerClubGripPose(){")
