@@ -1958,7 +1958,7 @@ async function startGame(){
  const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
  const realPlayerArmTuningEnabled=true;
  const realPlayerArmDebugState={free:{status:'ESPERANDO',reason:'',twistDeg:null},weapon:{status:'POSE ORIGINAL',reason:'',twistDeg:null}};
- let realPlayerArmFrameMode='RUMBO';
+ let realPlayerArmFrameMode='ESQUELETO';
  const realPlayerArmDebugTargets={free:null,weapon:null};
  const REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY='el-sin-nombre-arm-last-deviation-v1';
  let realPlayerArmLastDeviation=null,realPlayerArmDeviationLastWasLocomoting=false,realPlayerArmDeviationStoppedAtMs=null,realPlayerArmDeviationActiveSignature='';
@@ -4882,7 +4882,7 @@ if(realPlayerArmDebugEnabled){
   const realPlayerArmFrameBar=document.createElement('div');
   realPlayerArmFrameBar.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 5px);right:6px;z-index:100001;width:min(76vw,440px);max-width:min(76vw,440px);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 7px;border:1px solid #d8ad68;border-radius:5px;background:rgba(5,12,14,.94);color:#f5e8cf;font:8px ui-monospace,monospace;pointer-events:auto';
   const frameLabel=document.createElement('span');frameLabel.textContent='MARCO DEL SOLUCIONADOR';
-  const realPlayerArmFrameToggle=document.createElement('button');realPlayerArmFrameToggle.type='button';realPlayerArmFrameToggle.textContent='RUMBO';
+  const realPlayerArmFrameToggle=document.createElement('button');realPlayerArmFrameToggle.type='button';realPlayerArmFrameToggle.textContent=realPlayerArmFrameMode;
   realPlayerArmFrameToggle.style.cssText='padding:3px 8px;border:1px solid #d8ad68;border-radius:4px;background:#263c38;color:#ffe0a0;font:800 8px ui-monospace,monospace;touch-action:manipulation';
   realPlayerArmFrameToggle.setAttribute('aria-label','Alternar marco entre RUMBO y ESQUELETO');
   realPlayerArmFrameToggle.addEventListener('click',()=>{

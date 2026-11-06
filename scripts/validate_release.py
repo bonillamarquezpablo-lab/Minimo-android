@@ -138,8 +138,10 @@ def main() -> None:
     if ("function getRealPlayerSkeletonBodyFrame(nodes)" not in index_html
             or "function getRealPlayerHeadingBodyFrame(root)" not in index_html
             or "realPlayerArmFrameMode==='ESQUELETO'" not in index_html
+            or "let realPlayerArmFrameMode='ESQUELETO';" not in index_html
+            or "realPlayerArmFrameToggle.textContent=realPlayerArmFrameMode;" not in index_html
             or "const n=realRigNodes,reference=getRealPlayerSkeletonBodyFrame(n);" not in index_html):
-        fail("El marco seleccionable del solucionador o la referencia anatómica independiente no están implementados.")
+        fail("El modo ESQUELETO no es el predeterminado o falta la referencia anatómica independiente.")
     if "player.root.rotation.y=B.Scalar.LerpAngle(player.root.rotation.y,yaw" not in index_html:
         fail("El giro del jugador no interpola el ángulo por el arco más corto.")
     grip_start = index_html.find("function applyRealPlayerClubGripPose(){")
