@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.188">
-<meta name="el-sin-nombre-repair" content="0.6.188 natural dense grass: narrow irregular blades, connected forest-floor cover, brighter two-sided lighting; preserve saved master idle pose">
+<meta name="el-sin-nombre-build" content="0.6.189">
+<meta name="el-sin-nombre-repair" content="0.6.189 denser continuous grass cover: multi-tuft stratified placement and denser ground-level vegetation; preserve saved master idle pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.188</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.189</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2467,8 +2467,8 @@ async function startGame(){
   }
   // Subtle fine grass strokes in the albedo; the visible 3D ground cover is instanced separately.
   // Fine green ground cover connects the tufts visually instead of leaving bare gaps.
-  for(let i=0;i<5600;i++){
-   const x=random()*size,y=random()*size,scale=.8+random()*1.35,count=3+(random()*4|0);
+  for(let i=0;i<15000;i++){
+   const x=random()*size,y=random()*size,scale=.8+random()*1.35,count=4+(random()*4|0);
    const blades=Array.from({length:count},()=>({x:(random()-.5)*5*scale,y:(random()-.5)*2*scale,len:(2.5+random()*7.5)*scale,lean:(random()-.5)*5*scale,width:.55+random()*.7,kind:random()}));
    repeatMark((px,py)=>{
     blades.forEach(b=>{
@@ -6907,7 +6907,7 @@ function createRealWeapon(type='axe'){
   const positions=[],indices=[],colors=[];
   // Natural olive greens: the previous palette rendered as almost-black cut-outs.
   const shades=[[.39,.51,.24],[.47,.57,.28],[.54,.59,.31],[.34,.46,.21],[.44,.53,.25],[.51,.56,.29]];
-  const grassHeightScale=isPerformanceMode?.66:.72,grassWidthScale=isPerformanceMode?.94:.90;
+  const grassHeightScale=isPerformanceMode?.64:.64,grassWidthScale=isPerformanceMode?.94:.92;
   const addLeaf=(angle,length,width,lean,startRadius,shadeIndex)=>{
    length*=grassHeightScale;width*=grassWidthScale;lean*=grassHeightScale;startRadius*=grassWidthScale;
    const dx=Math.sin(angle),dz=Math.cos(angle),px=Math.cos(angle),pz=-Math.sin(angle);
@@ -6930,7 +6930,7 @@ function createRealWeapon(type='axe'){
   };
   // Each tuft is a loose crown of narrow blades with irregular angles and heights.
   // Short inner blades fill the base; longer outer blades avoid the old palm-shaped silhouette.
-  const leavesPerClump=isPerformanceMode?7:12;
+  const leavesPerClump=isPerformanceMode?8:12;
   for(let i=0;i<leavesPerClump;i++){
    const inner=i<Math.max(2,Math.floor(leavesPerClump*.30));
    const angle=i*2.399963229728653+rand(-.52,.52);
@@ -6968,12 +6968,12 @@ function createRealWeapon(type='axe'){
   }
   for(let islandIndex=0;islandIndex<land.length;islandIndex++){
    const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520);
-   const performanceDensity=isConstrainedMobile?.15:(isTouchDevice?.29:.45);
-   const qualityGrassDensity=isTouchDevice?3.0:3.25;
+   const performanceDensity=isConstrainedMobile?.18:(isTouchDevice?.36:.50);
+   const qualityGrassDensity=isTouchDevice?(islandIndex===0?7.5:5.0):(islandIndex===0?7.0:5.0);
    const want=isPerformanceMode?Math.round(baseWant*performanceDensity):Math.round(baseWant*qualityGrassDensity);
    let placed=0,tries=0;
    const radius=island.r*.865;
-   const gridSide=Math.ceil(Math.sqrt(want*1.30)),cellSize=(radius*2)/gridSide;
+   const gridSide=Math.ceil(Math.sqrt(want*.72)),cellSize=(radius*2)/gridSide;
    const occupiedGridCells=new Set();
    const tryPlaceGrass=(x,z)=>{
     if(!isLand(x,z))return false;
@@ -6996,8 +6996,8 @@ function createRealWeapon(type='axe'){
     occupiedGridCells.add(gridRow*gridSide+gridCol);
     placed++;count++;return true;
    };
-   // Muestreo por celdas con menos jitter para evitar huecos y grupos irregulares.
-   const jitter=isPerformanceMode ? .43 : .47;
+   // Muestreo estratificado de varias matas por celda: evita filas perfectas y cierra los huecos.
+   const jitter=isPerformanceMode ? .46 : .49;
    const candidateCells=Array.from({length:gridSide*gridSide},(_,i)=>i);
    for(let i=candidateCells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)),tmp=candidateCells[i];candidateCells[i]=candidateCells[j];candidateCells[j]=tmp;}
    for(const sample of candidateCells){
@@ -7005,10 +7005,15 @@ function createRealWeapon(type='axe'){
     tries++;
     if(tries%480===0){setLoadingProgress(42+((islandIndex+placed/want)/land.length)*5,'Distribuyendo vegetación 3D…');await yieldStartupFrame();}
     const col=sample%gridSide,row=Math.floor(sample/gridSide);
-    const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
-    const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
-    const dx=x-island.x,dz=z-island.z;if(dx*dx+dz*dz>radius*radius)continue;
-    tryPlaceGrass(x,z);
+    const dx0=(col+.5)/gridSide*radius*2-radius,dz0=(row+.5)/gridSide*radius*2-radius;
+    if(dx0*dx0+dz0*dz0>radius*radius)continue;
+    // Dos o tres candidatos por celda en la mayoría de los casos; los puntos no comparten centro.
+    const cellAttempts=1+(Math.random()<.82?1:0)+(Math.random()<.16?1:0);
+    for(let attempt=0;attempt<cellAttempts&&placed<want;attempt++){
+     const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
+     const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
+     tryPlaceGrass(x,z);
+    }
    }
    // Reintenta las celdas que quedaron vacías antes de recurrir al relleno aleatorio.
    const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));
@@ -7526,7 +7531,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.188',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.189',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -9482,7 +9487,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.188 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.189 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
