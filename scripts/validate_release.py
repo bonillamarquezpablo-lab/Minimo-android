@@ -192,7 +192,7 @@ def main() -> None:
     finger_body = index_html[finger_start:finger_end]
     if "isRealPlayerArmTuningResting()&&digit" in finger_body:
         fail("El cierre de dedos cambia entre reposo y locomoción.")
-    if "window.setInterval(updateRealPlayerArmDebugPanel,500);\n }\n // Panel de ajuste permanente" not in index_html:
+    if "window.setInterval(updateRealPlayerArmDebugPanel,500);\n  window.setInterval(sampleRealPlayerArmDeviation,100);\n }\n // Panel de ajuste permanente" not in index_html:
         fail("El panel de ajuste sigue dentro del bloque de diagnóstico debug=1.")
     if "armTuneDock.appendChild(armTuneToggle);" not in index_html or "realPlayerArmTuneReset" not in index_html:
         fail("El menú de ajuste y su botón de restablecer no están montados.")
