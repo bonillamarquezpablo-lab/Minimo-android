@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.183"
+EXPECTED_VERSION = "0.6.184"
 
 HTML_PAGES = (
     "index.html",
@@ -188,6 +188,12 @@ def main() -> None:
         fail("El panel de ajuste no ofrece reubicación táctil.")
     if "el-sin-nombre-arm-tune-dock-position-v1" not in index_html:
         fail("La posición del panel no se conserva en el navegador.")
+    if "z-index:100001" not in index_html:
+        fail("El editor no queda por encima de los paneles de diagnóstico.")
+    if "realPlayerArmTuneSavePosition" not in index_html or "GUARDAR POSICIÓN DEL PANEL" not in index_html:
+        fail("Falta el botón explícito para guardar la posición del editor.")
+    if "persistArmTuneDockPosition" not in index_html or "armTuneSavePosition.addEventListener('click',persistArmTuneDockPosition)" not in index_html:
+        fail("El botón de posición no guarda las coordenadas del panel.")
     if "width:min(48vw,260px)" not in index_html or "left:7px;right:auto" not in index_html:
         fail("El panel móvil no está desplazado al lateral para dejar libre el centro.")
     if "new URLSearchParams(window.location.search).get('debug')==='1'" not in index_html:
