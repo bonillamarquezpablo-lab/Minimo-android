@@ -287,8 +287,8 @@ def main() -> None:
         fail("La hierba no respeta los caminos.")
     if "function createNaturalShrub(" not in index_html or "function spawnNaturalVegetationAndFauna()" not in index_html:
         fail("Falta la vegetación natural de sotobosque.")
-    if "function createWildlifeAnimal(" not in index_html or "function updateWildlife(dt)" not in index_html or "updateWildlife(dt);" not in index_html:
-        fail("Falta la fauna salvaje animada.")
+    if "function loadWildlifeModels()" not in index_html or "function updateWildlife(dt)" not in index_html or "updateWildlife(dt);" not in index_html:
+        fail("Falta el cargador y el controlador de la fauna salvaje rigged.")
     if "function createWildlifeAnimal(" in index_html or "FaunaTorso" in index_html or "BoarSnout" in index_html:
         fail("Siguen presentes los animales provisionales construidos con primitivas.")
     if "function loadWildlifeModels()" not in index_html or "function playWildlifeAnimation(" not in index_html or "Deer.glb" not in index_html or "Stag.glb" not in index_html or "Wolf.glb" not in index_html:
