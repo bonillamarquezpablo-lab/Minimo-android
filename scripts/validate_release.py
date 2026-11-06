@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.181"
+EXPECTED_VERSION = "0.6.182"
 
 HTML_PAGES = (
     "index.html",
@@ -157,10 +157,26 @@ def main() -> None:
         fail("El solucionador anatómico no se invoca después de las animaciones.")
     if "restoreRealPlayerArmBindPose(n);" not in post_arm_body:
         fail("La locomoción no restaura las cadenas completas antes de resolverlas.")
-    if post_arm_body.count("relaxRealPlayerFreeArm(") != 1 or post_arm_body.count("relaxRealPlayerWeaponArm(") != 1:
-        fail("No hay un único solucionador postanimación para ambos brazos.")
+    if post_arm_body.count("solveRealPlayerArmTwoBoneIK(") != 2:
+        fail("El solucionador postanimación no usa IK de dos huesos en ambos brazos.")
+    ik_start = index_html.find("function solveRealPlayerArmTwoBoneIK(")
+    ik_end = index_html.find("function applyRealPlayerArmPoseAfterAnimations", ik_start)
+    ik_body = index_html[ik_start:ik_end]
+    if ik_start < 0 or ik_end <= ik_start:
+        fail("Falta el cálculo geométrico hombro-codo-muñeca.")
+    for token in ("wristTarget", "elbowTarget", "elbowHeight", "reachRatio", "bendDirection"):
+        if token not in ik_body:
+            fail(f"El IK de dos huesos no calcula {token}.")
+    if "twistPercent:0,handSharePercent:0" not in index_html:
+        fail("La torsión de muñeca no está desactivada de forma segura por defecto.")
     if "CLIP NATIVO" in post_arm_body or "m.leftUpperArm" in post_arm_body or "m.upperArm" in post_arm_body:
         fail("Los clips nativos todavía compiten con el solucionador anatómico.")
+    if "playerAction==='idle'||playerAction==='walk'||playerAction==='run'" not in post_arm_body:
+        fail("La corrección postanimación no cubre reposo, caminar y correr.")
+    if "if(playerAction!=='idle'&&playerAction!=='walk'&&playerAction!=='run')syncRealWeaponAnchor(dt);" not in index_html:
+        fail("El arma sigue actualizándose antes del IK en estados normales.")
+    if "realPlayerMode==='idle'||realPlayerMode==='walk'||realPlayerMode==='run'||realPlayerMode==='sail'" not in index_html:
+        fail("Falta la sincronización única del arma tras el IK.")
     if "const realPlayerArmTuningEnabled=true;" not in index_html:
         fail("El ajuste de brazos no está habilitado en el juego normal.")
     if "Object.values(rig).forEach(rememberRigRest);" not in index_html:
