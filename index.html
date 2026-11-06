@@ -5471,8 +5471,8 @@ async function startGame(){
   // Si Walk/Run contiene canales nativos para ambos segmentos, ese clip es
   // el único propietario del brazo. Si no los contiene, corrige el rig aquí,
   // después de la evaluación de animaciones de Babylon.
-  const freeManual=!walking||(m.leftUpperArm!==false&&m.leftForearm!==false);
-  const weaponManual=!walking||(m.upperArm!==false&&m.forearm!==false);
+  const freeManual=!walking||(m.leftUpperArm!==false||m.leftForearm!==false);
+  const weaponManual=!walking||(m.upperArm!==false||m.forearm!==false);
   if(freeManual){
    const sway=walking?Math.sin(phase)*(mode==='run'?.035:.025):(sailing?Math.sin(elapsed*1.08):0);
    relaxRealPlayerFreeArm(root,n,-1,sway,sailing,realPlayerArmDebugEnabled?realPlayerArmDebugState.free:null);
