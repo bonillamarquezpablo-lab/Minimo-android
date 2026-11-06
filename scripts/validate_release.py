@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.180"
+EXPECTED_VERSION = "0.6.181"
 
 HTML_PAGES = (
     "index.html",
@@ -169,8 +169,25 @@ def main() -> None:
     for node_key in ("nodes.leftUpperArm", "nodes.leftForearm", "nodes.leftHand", "nodes.upperArm", "nodes.forearm", "nodes.hand"):
         if node_key not in bind_body:
             fail(f"La restauración determinista no incluye {node_key}.")
-    if "if(!walking)restoreRealPlayerArmBindPose(n);" not in index_html:
-        fail("El reposo no reconstruye ambos brazos desde el bind pose después de los clips.")
+    if "restoreRealPlayerArmBindPose(n);" not in index_html:
+        fail("Las cadenas de ambos brazos no se restauran desde bind pose después de cada clip.")
+    pose_start = index_html.find("function applyRealPlayerArmPoseAfterAnimations(){")
+    pose_end = index_html.find("function quaternionAlignYTo", pose_start)
+    pose_body = index_html[pose_start:pose_end]
+    if pose_body.count("relaxRealPlayerFreeArm(") != 1 or pose_body.count("relaxRealPlayerWeaponArm(") != 1:
+        fail("El solver postanimación no es propietario único de ambas cadenas de brazos.")
+    if "m.leftUpperArm" in pose_body or "m.upperArm" in pose_body or "CLIP NATIVO" in pose_body:
+        fail("La locomoción todavía alterna entre propietario nativo y procedural de los brazos.")
+    twist_start = index_html.find("function getRealPlayerArmTwistTuning(arm){")
+    twist_end = index_html.find("function applyRealPlayerArmTwist", twist_start)
+    twist_body = index_html[twist_start:twist_end]
+    if "isRealPlayerArmTuningResting()" in twist_body or "handSharePercent:0" in twist_body:
+        fail("La distribución de torsión cambia entre reposo y locomoción.")
+    finger_start = index_html.find("function getRealPlayerFingerCurl(entry,arm){")
+    finger_end = index_html.find("const yieldStartupFrame", finger_start)
+    finger_body = index_html[finger_start:finger_end]
+    if "isRealPlayerArmTuningResting()&&digit" in finger_body:
+        fail("El cierre de dedos cambia entre reposo y locomoción.")
     if "window.setInterval(updateRealPlayerArmDebugPanel,500);\n }\n // Panel de ajuste permanente" not in index_html:
         fail("El panel de ajuste sigue dentro del bloque de diagnóstico debug=1.")
     if "armTuneDock.appendChild(armTuneToggle);" not in index_html or "realPlayerArmTuneReset" not in index_html:
