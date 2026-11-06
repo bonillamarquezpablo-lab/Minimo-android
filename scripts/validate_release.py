@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.186"
+EXPECTED_VERSION = "0.6.187"
 
 HTML_PAGES = (
     "index.html",
@@ -257,6 +257,12 @@ def main() -> None:
         fail("El palo no conserva la orientación frontal e inclinación fijadas.")
     if "distal.scale(.025)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
+    if "realPlayerMode!=='idle'&&realPlayerMode!=='sail'" not in index_html:
+        fail("La pose maestra debe aplicarse en tierra y a bordo.")
+    if "realPlayerMasterIdleTransition=(mode==='idle'||mode==='sail')?captureRealPlayerMasterTransition():null" not in index_html:
+        fail("Falta la transición a pose maestra al embarcar.")
+    if "realPlayerMode==='sail'&&playerAction==='idle'" not in index_html:
+        fail("La pose maestra no tiene prioridad sobre el solver de dedos durante la navegación.")
     if "realPlayerArmDebugPanel=document.createElement('pre')" in index_html or "realPlayerArmDeviationPanel=document.createElement('div')" in index_html:
         fail("Los paneles grandes de diagnóstico superior deben estar retirados.")
     if "window.setInterval(updateRealPlayerArmDebugPanel" in index_html or "window.setInterval(sampleRealPlayerArmDeviation" in index_html:
