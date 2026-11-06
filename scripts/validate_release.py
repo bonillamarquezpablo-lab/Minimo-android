@@ -194,8 +194,8 @@ def main() -> None:
     pose_start = index_html.find("function applyRealPlayerArmPoseAfterAnimations(){")
     pose_end = index_html.find("function quaternionAlignYTo", pose_start)
     pose_body = index_html[pose_start:pose_end]
-    if pose_body.count("relaxRealPlayerFreeArm(") != 1 or pose_body.count("relaxRealPlayerWeaponArm(") != 1:
-        fail("El solver postanimación no es propietario único de ambas cadenas de brazos.")
+    if pose_body.count("solveRealPlayerArmTwoBoneIK(") != 2:
+        fail("El solver postanimación no resuelve ambas cadenas con IK de dos huesos.")
     if "m.leftUpperArm" in pose_body or "m.upperArm" in pose_body or "CLIP NATIVO" in pose_body:
         fail("La locomoción todavía alterna entre propietario nativo y procedural de los brazos.")
     twist_start = index_html.find("function getRealPlayerArmTwistTuning(arm){")
