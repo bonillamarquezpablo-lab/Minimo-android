@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.187"
+EXPECTED_VERSION = "0.6.188"
 
 HTML_PAGES = (
     "index.html",
@@ -269,10 +269,14 @@ def main() -> None:
         fail("Falta el acceso independiente al diagnóstico de hierba ?grassdebug=1.")
     if "function updateGrassDebugPanel()" not in index_html or "grassDebugIslandStats.push({" not in index_html:
         fail("Faltan las métricas por isla del diagnóstico de hierba.")
-    if "const qualityGrassDensity=1.18;" not in index_html or "addLeaf(5.72,.52,.13,.26,.045,0);" not in index_html:
-        fail("La hierba de calidad no incluye la densidad y el penacho mejorados.")
-    if "const jitter=isPerformanceMode ? .30 : .24;" not in index_html or "const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));" not in index_html:
-        fail("La distribución uniforme de hierba no incluye reducción de jitter y relleno de huecos.")
+    if "const qualityGrassDensity=isTouchDevice?3.0:3.25;" not in index_html or "const leavesPerClump=isPerformanceMode?7:12;" not in index_html:
+        fail("Falta la densidad nueva o los penachos de hojas estrechas.")
+    if "gm.twoSidedLighting=true;" not in index_html or "gm.emissiveColor=new B.Color3(.045,.068,.025);" not in index_html:
+        fail("La hierba no tiene iluminación de doble cara para evitar siluetas negras.")
+    if "for(let i=0;i<5600;i++)" not in index_html or "const jitter=isPerformanceMode ? .43 : .47;" not in index_html:
+        fail("Falta la cobertura fina del suelo o la variación espacial natural.")
+    if "const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));" not in index_html:
+        fail("La distribución de hierba no rellena celdas vacías.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",

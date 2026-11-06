@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.187">
-<meta name="el-sin-nombre-repair" content="0.6.187 denser uniform 3D grass; independent grass diagnostic; preserve the 0.6.185 saved master idle pose">
+<meta name="el-sin-nombre-build" content="0.6.188">
+<meta name="el-sin-nombre-repair" content="0.6.188 natural dense grass: narrow irregular blades, connected forest-floor cover, brighter two-sided lighting; preserve saved master idle pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.187</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.188</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2466,12 +2466,13 @@ async function startGame(){
    },x,y);
   }
   // Subtle fine grass strokes in the albedo; the visible 3D ground cover is instanced separately.
-  for(let i=0;i<2300;i++){
-   const x=random()*size,y=random()*size,scale=.7+random()*1.3,count=2+(random()*3|0);
-   const blades=Array.from({length:count},()=>({x:(random()-.5)*5*scale,y:(random()-.5)*2*scale,len:(3+random()*8)*scale,lean:(random()-.5)*5*scale,width:.5+random()*.65,kind:random()}));
+  // Fine green ground cover connects the tufts visually instead of leaving bare gaps.
+  for(let i=0;i<5600;i++){
+   const x=random()*size,y=random()*size,scale=.8+random()*1.35,count=3+(random()*4|0);
+   const blades=Array.from({length:count},()=>({x:(random()-.5)*5*scale,y:(random()-.5)*2*scale,len:(2.5+random()*7.5)*scale,lean:(random()-.5)*5*scale,width:.55+random()*.7,kind:random()}));
    repeatMark((px,py)=>{
     blades.forEach(b=>{
-     ctx.strokeStyle=b.kind<.25?'rgba(153,155,100,.42)':b.kind<.55?'rgba(50,73,44,.48)':'rgba(112,119,75,.38)';
+     ctx.strokeStyle=b.kind<.25?'rgba(165,170,102,.58)':b.kind<.55?'rgba(66,92,52,.56)':'rgba(126,139,78,.48)';
      ctx.lineWidth=b.width;ctx.beginPath();ctx.moveTo(px+b.x,py+b.y);
      ctx.quadraticCurveTo(px+b.x+b.lean*.5,py+b.y-b.len*.56,px+b.x+b.lean,py+b.y-b.len);ctx.stroke();
     });
@@ -6904,42 +6905,46 @@ function createRealWeapon(type='axe'){
  async function createRealGrass(){
   grassDebugIslandStats.length=0;
   const positions=[],indices=[],colors=[];
-  const shades=[[.27,.32,.17],[.36,.40,.22],[.43,.45,.27],[.23,.29,.16],[.38,.36,.20]];
-  const grassHeightScale=isPerformanceMode?.52:.63,grassWidthScale=isPerformanceMode?1.02:1.12;
+  // Natural olive greens: the previous palette rendered as almost-black cut-outs.
+  const shades=[[.39,.51,.24],[.47,.57,.28],[.54,.59,.31],[.34,.46,.21],[.44,.53,.25],[.51,.56,.29]];
+  const grassHeightScale=isPerformanceMode?.66:.72,grassWidthScale=isPerformanceMode?.94:.90;
   const addLeaf=(angle,length,width,lean,startRadius,shadeIndex)=>{
    length*=grassHeightScale;width*=grassWidthScale;lean*=grassHeightScale;startRadius*=grassWidthScale;
    const dx=Math.sin(angle),dz=Math.cos(angle),px=Math.cos(angle),pz=-Math.sin(angle);
    const sx=dx*startRadius,sz=dz*startRadius;
-   const base=positions.length/3,tipW=width*.035;
+   const base=positions.length/3,tipW=width*.012;
    const rows=[
-    {cx:sx,cy:.022,cz:sz,w:width*.43,tint:.66},
-    {cx:sx+dx*lean*.38,cy:.022+length*.57,cz:sz+dz*lean*.38,w:width*.54,tint:.91},
-    {cx:sx+dx*lean,cy:.022+length,cz:sz+dz*lean,w:tipW,tint:1.14}
+    {cx:sx,cy:.022,cz:sz,w:width*.30,tint:.62},
+    {cx:sx+dx*lean*.34,cy:.022+length*.54,cz:sz+dz*lean*.34,w:width*.46,tint:.94},
+    {cx:sx+dx*lean,cy:.022+length,cz:sz+dz*lean,w:tipW,tint:1.19}
    ];
    for(const row of rows){
     positions.push(row.cx-px*row.w,row.cy,row.cz-pz*row.w,row.cx+px*row.w,row.cy,row.cz+pz*row.w);
     const shade=shades[shadeIndex%shades.length];
     for(let side=0;side<2;side++){
-     const f=row.tint*(side===0?.96:1.04);
+     const f=row.tint*(side===0?.95:1.05);
      colors.push(Math.min(1,shade[0]*f),Math.min(1,shade[1]*f),Math.min(1,shade[2]*f),1);
     }
    }
    indices.push(base,base+2,base+1,base+1,base+2,base+3,base+2,base+4,base+3,base+3,base+4,base+5);
   };
-  // Four taller blades crossed at irregular angles, plus three low broad leaves at ground level.
-  addLeaf(.12,.78,.135,.19,.035,0);
-  addLeaf(1.63,.91,.115,.22,.045,1);
-  addLeaf(3.04,.68,.145,.17,.035,2);
-  addLeaf(4.48,.84,.125,.21,.050,3);
-  addLeaf(.82,.34,.235,.31,.035,4);
-  addLeaf(2.90,.29,.255,.34,.045,1);
-  addLeaf(5.05,.37,.215,.29,.035,2);
-  if(!isPerformanceMode)addLeaf(5.72,.52,.13,.26,.045,0);
-  grassDebugLeavesPerClump=isPerformanceMode?7:8;
+  // Each tuft is a loose crown of narrow blades with irregular angles and heights.
+  // Short inner blades fill the base; longer outer blades avoid the old palm-shaped silhouette.
+  const leavesPerClump=isPerformanceMode?7:12;
+  for(let i=0;i<leavesPerClump;i++){
+   const inner=i<Math.max(2,Math.floor(leavesPerClump*.30));
+   const angle=i*2.399963229728653+rand(-.52,.52);
+   const length=inner?rand(.19,.34):rand(.34,.59);
+   const width=rand(.020,.046);
+   const lean=rand(.055,.22);
+   const startRadius=rand(.018,.15);
+   addLeaf(angle,length,width,lean,startRadius,Math.floor(rand(0,shades.length)));
+  }
+  grassDebugLeavesPerClump=leavesPerClump;
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
   const vertexData=new B.VertexData();vertexData.positions=positions;vertexData.indices=indices;vertexData.normals=normals;vertexData.colors=colors;
   const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);
-  gm.diffuseColor=new B.Color3(1,1,1);gm.specularColor=new B.Color3(.018,.022,.012);gm.specularPower=7;gm.backFaceCulling=false;gm.useVertexColors=true;
+  gm.diffuseColor=new B.Color3(1,1,1);gm.specularColor=new B.Color3(.018,.022,.012);gm.specularPower=7;gm.backFaceCulling=false;gm.twoSidedLighting=true;gm.emissiveColor=new B.Color3(.045,.068,.025);gm.useVertexColors=true;
   const chunkSize=28,grassBatches=new Map();let count=0;
   // Preserve the exact original clearance tests, but query only obstacles in the candidate's spatial cell.
   const grassPlacementCellSize=12,grassPlacementGrid=new Map();
@@ -6964,7 +6969,7 @@ function createRealWeapon(type='axe'){
   for(let islandIndex=0;islandIndex<land.length;islandIndex++){
    const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520);
    const performanceDensity=isConstrainedMobile?.15:(isTouchDevice?.29:.45);
-   const qualityGrassDensity=1.18;
+   const qualityGrassDensity=isTouchDevice?3.0:3.25;
    const want=isPerformanceMode?Math.round(baseWant*performanceDensity):Math.round(baseWant*qualityGrassDensity);
    let placed=0,tries=0;
    const radius=island.r*.865;
@@ -6992,7 +6997,7 @@ function createRealWeapon(type='axe'){
     placed++;count++;return true;
    };
    // Muestreo por celdas con menos jitter para evitar huecos y grupos irregulares.
-   const jitter=isPerformanceMode ? .30 : .24;
+   const jitter=isPerformanceMode ? .43 : .47;
    const candidateCells=Array.from({length:gridSide*gridSide},(_,i)=>i);
    for(let i=candidateCells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)),tmp=candidateCells[i];candidateCells[i]=candidateCells[j];candidateCells[j]=tmp;}
    for(const sample of candidateCells){
@@ -7521,7 +7526,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.187',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.188',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -9477,7 +9482,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.187 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.188 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
