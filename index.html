@@ -3358,7 +3358,7 @@ async function startGame(){
     if(p)naturalShrubs.push(createNaturalShrub(p.x,p.z,rand(.82,1.18)));
    }
    // Six real animals in the world, not a crowd of primitive stand-ins.
-   const animalCount=idx===0?3:(idx<4?1:0);
+   const animalCount=isPerformanceMode?(idx===0?2:(idx===1?1:0)):(idx===0?3:(idx<4?1:0));
    for(let i=0;i<animalCount;i++){
     let p=null;
     for(let attempt=0;attempt<45;attempt++){
@@ -3367,7 +3367,7 @@ async function startGame(){
      p=q;break;
     }
     if(p){
-     const kind=idx===0?['deer','stag','wolf'][i]:(idx===2?'wolf':(idx===3?'stag':'deer'));
+     const kind=idx===0?['deer','wolf','stag'][i]:(idx===2?'wolf':(idx===3?'stag':'deer'));
      wildlifeSpawnSpecs.push({kind,x:p.x,z:p.z,size:rand(.92,1.06)});
     }
    }
