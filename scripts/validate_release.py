@@ -190,11 +190,18 @@ def main() -> None:
     club_end = index_html.find("function restoreRealPlayerArmBindPose(nodes)", club_start)
     club_body = index_html[club_start:club_end]
     if club_start < 0 or club_end <= club_start:
-        fail("Falta la rutina de agarre.")
-    if "if(realPlayerMode==='walk'||realPlayerMode==='run')return;" not in club_body:
-        fail("La rutina de agarre podría sobrescribir los clips originales Walk/Run.")
-    if "if(realPlayerMode==='idle'&&!onShip&&playerAction==='idle')return;" not in club_body:
-        fail("La rutina de agarre podría sobrescribir las rotaciones maestras de los dedos en reposo.")
+        fail("Falta la rutina original de agarre.")
+    if "const holding=!!realWeaponGroups[equippedWeapon];" not in club_body:
+        fail("La rutina original de agarre no conserva la selección de arma.")
+    callback_start = index_html.find("scene.onAfterAnimationsObservable.add(()=>{")
+    callback_end = index_html.find("\n });", callback_start)
+    callback_body = index_html[callback_start:callback_end]
+    if callback_start < 0 or callback_end <= callback_start:
+        fail("Falta el callback posterior a las animaciones.")
+    if "const masterOrNativeOwnsFingers=" not in callback_body or "if(!masterOrNativeOwnsFingers)applyRealPlayerClubGripPose();" not in callback_body:
+        fail("La propiedad de dedos no está separada entre GLB, pose maestra y acciones.")
+    if "syncRealWeaponAnchor(0,realWeaponPoseOverride);" not in callback_body:
+        fail("El callback no conserva el seguimiento normal del anclaje del palo.")
     gait_start = index_html.find("function updateRealRigGait(")
     gait_end = index_html.find("function createRealWeapon(", gait_start)
     gait_body = index_html[gait_start:gait_end]
