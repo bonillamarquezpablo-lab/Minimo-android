@@ -293,6 +293,8 @@ def main() -> None:
         fail("Siguen presentes los animales provisionales construidos con primitivas.")
     if "function loadWildlifeModels()" not in index_html or "function playWildlifeAnimation(" not in index_html or "Deer.glb" not in index_html or "Stag.glb" not in index_html or "Wolf.glb" not in index_html:
         fail("Faltan los modelos GLB rigged de ciervo, venado y lobo.")
+    if "const animalCount=isPerformanceMode?(idx===0?2:(idx===1?1:0)):(idx===0?3:(idx<4?1:0));" not in index_html:
+        fail("El número de animales no está reducido en modo Rendimiento.")
     if "WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837'" not in index_html or "await loadWildlifeModels();" not in index_html:
         fail("La fuente de fauna no está fijada a una revisión inmutable o no se carga.")
     if "mesh.receiveShadows=false;mesh.castShadows=false;" not in index_html or "mesh.material=packedTrailMaterial;" not in index_html:
