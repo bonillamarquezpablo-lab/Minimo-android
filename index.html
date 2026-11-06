@@ -4527,7 +4527,7 @@ async function startGame(){
    left.normalize();
    const handedness=B.Vector3.Dot(B.Vector3.Cross(left,forward),worldUp);
    if(!Number.isFinite(handedness)||handedness<.999)return null;
-   return {left,up:worldUp,forward,source:'RUMBO RAÍZ'};
+   return {left,up:worldUp,forward,source:'RUMBO VISUAL'};
   }catch(_){return null;}
  }
  function directionFromRealPlayerBodyFrame(frame,target,length){
@@ -4548,7 +4548,7 @@ async function startGame(){
   };
   if(!root||!upper||!lower){if(debugState){debugState.status='NO DISPONIBLE';debugState.reason='faltan nodos del brazo';debugState.twistDeg=null;}return false;}
   if(debugState){debugState.status='NUEVA';debugState.reason='';debugState.twistDeg=null;}
-  const frame=getRealPlayerBodyFrame(nodes,player.root),bodyNode=nodes.spine||nodes.hips;
+  const frame=getRealPlayerBodyFrame(nodes,root),bodyNode=nodes.spine||nodes.hips;
   if(!frame||!hand||!bodyNode)return fallback(!frame?'marco anatómico no disponible':!hand?'mano no disponible':'referencia del torso no disponible');
   try{
    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
@@ -4616,7 +4616,7 @@ async function startGame(){
    return false;
   }
   if(debugState){debugState.status='NUEVA';debugState.reason='';debugState.twistDeg=null;}
-  const frame=getRealPlayerBodyFrame(nodes,player.root),bodyNode=nodes.spine||nodes.hips;
+  const frame=getRealPlayerBodyFrame(nodes,root),bodyNode=nodes.spine||nodes.hips;
   if(!frame||!hand||!bodyNode)return fallback(!frame?'marco anatómico no disponible':!hand?'mano no disponible':'referencia del torso no disponible');
   try{
    upper.computeWorldMatrix(true);lower.computeWorldMatrix(true);hand.computeWorldMatrix(true);
