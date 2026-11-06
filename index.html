@@ -4913,6 +4913,7 @@ if(realPlayerArmDebugEnabled){
   window.setInterval(sampleRealPlayerArmDeviation,100);
  }
  // Panel de ajuste permanente: el diagnóstico detallado sigue reservado a ?debug=1.
+  if(realPlayerArmDebugEnabled){
   const armTuneStyle=document.createElement('style');
   armTuneStyle.textContent=`
    #realPlayerArmTuneDock{position:fixed;top:calc(env(safe-area-inset-top,0px) + 170px);right:6px;width:min(94vw,410px);max-width:calc(100vw - 12px);z-index:14;pointer-events:auto;color:#f5e8cf;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
@@ -5002,6 +5003,7 @@ if(realPlayerArmDebugEnabled){
    armTuneToggle.textContent=open?'AJUSTAR POSE −':'AJUSTAR POSE +';
    armTuneToggle.setAttribute('aria-expanded',String(open));
   });
+  }
  function relaxHumanoidLeg(root,upper,lower,foot,side,kneeFlex=0){
   if(!root||!upper||!lower)return false;
   try{
@@ -5393,7 +5395,7 @@ if(realPlayerArmDebugEnabled){
    if(mode===realPlayerMode&&group===realPlayerCurrentGroup){if(group)group.speedRatio=speed;return;}
    if((mode==='idle'||mode==='sail')&&(realPlayerMode==='walk'||realPlayerMode==='run')){
     realPlayerIdleTransition=captureRealPlayerIdleTransition();
-    realPlayerMasterIdleTransition=mode==='idle'?captureRealPlayerMasterIdleTransition():null;
+    realPlayerMasterIdleTransition=mode==='idle'?captureRealPlayerMasterTransition():null;
    }else if(mode!=='idle'&&mode!=='sail'){
     realPlayerIdleTransition=null;realPlayerMasterIdleTransition=null;
    }
