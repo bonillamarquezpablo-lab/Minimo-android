@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.186">
-<meta name="el-sin-nombre-repair" content="0.6.185 local-rotation master idle pose; original GLB locomotion; debug sliders, capture and 1-degree local detector">
+<meta name="el-sin-nombre-build" content="0.6.187">
+<meta name="el-sin-nombre-repair" content="0.6.187 denser uniform 3D grass; independent grass diagnostic; preserve the 0.6.185 saved master idle pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.185</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.187</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1962,7 +1962,8 @@ async function startGame(){
  const realPlayerArmFrameMode='ESQUELETO';
  const realPlayerArmDebugTargets={free:null,weapon:null};
  // Observabilidad únicamente: no participa en el muestreo, la geometría ni la animación de la hierba.
- let grassDebugClumpCount=0,grassDebugBatchCount=0;
+ let grassDebugClumpCount=0,grassDebugBatchCount=0,grassDebugLeavesPerClump=7,grassDebugIslandStats=[],grassDebugPanel=null;
+ const grassDebugEnabled=new URLSearchParams(window.location.search).get('grassdebug')==='1';
  const REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY='el-sin-nombre-arm-last-deviation-v1';
  let realPlayerArmLastDeviation=null,realPlayerArmDeviationLastWasLocomoting=false,realPlayerArmDeviationStoppedAtMs=null,realPlayerArmDeviationActiveSignature='';
  if(realPlayerArmDebugEnabled){try{const storedDeviation=localStorage.getItem(REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY);if(storedDeviation){const parsed=JSON.parse(storedDeviation);if(parsed&&parsed.timestamp&&Array.isArray(parsed.violations))realPlayerArmLastDeviation=parsed;}}catch(_){realPlayerArmLastDeviation=null;}}
@@ -4915,6 +4916,33 @@ async function startGame(){
    'FPS EN VIVO '+liveFps+' · MATAS '+grassDebugClumpCount.toLocaleString('es-ES')+' · LOTES '+grassDebugBatchCount;
  }
  
+
+function updateGrassDebugPanel(){
+ if(!grassDebugEnabled||!grassDebugPanel)return;
+ const liveFps=Number.isFinite(engine.getFps())?Math.round(engine.getFps()):0;
+ const target=grassDebugIslandStats.reduce((sum,item)=>sum+item.target,0);
+ const islands=grassDebugIslandStats.map((item,index)=>
+  (index+1)+'. '+item.name+': '+item.placed.toLocaleString('es-ES')+'/'+item.target.toLocaleString('es-ES')+' ('+item.fillPct+'%) · celdas '+item.gridPct+'%'
+ );
+ grassDebugPanel.textContent=[
+  'DIAGNÓSTICO DE HIERBA 3D',
+  'PERFIL '+(isPerformanceMode?'RENDIMIENTO':'CALIDAD')+' · FPS '+liveFps,
+  'MATAS '+grassDebugClumpCount.toLocaleString('es-ES')+'/'+target.toLocaleString('es-ES')+' · LOTES '+grassDebugBatchCount,
+  'HOJAS/MATA '+grassDebugLeavesPerClump+' · ISLAS '+grassDebugIslandStats.length,
+  'DISTRIBUCIÓN: objetivo alcanzado / ocupación de cuadrícula',
+  ...islands
+ ].join('\n');
+}
+if(grassDebugEnabled){
+ grassDebugPanel=document.createElement('pre');
+ grassDebugPanel.id='grassDebugPanel';
+ grassDebugPanel.setAttribute('aria-label','Diagnóstico de densidad y distribución de la hierba 3D');
+ grassDebugPanel.style.cssText='position:fixed;left:8px;top:calc(env(safe-area-inset-top,0px) + 112px);z-index:99998;width:min(88vw,340px);max-height:34vh;overflow:auto;margin:0;padding:8px 10px;border:1px solid #d8ad68;border-radius:8px;background:rgba(5,12,14,.91);color:#f5e8cf;font:9px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;pointer-events:none;box-shadow:0 3px 12px #0009';
+ document.body.appendChild(grassDebugPanel);
+ window.setInterval(updateGrassDebugPanel,500);
+ updateGrassDebugPanel();
+}
+
 if(realPlayerArmDebugEnabled){
   realPlayerArmDebugPanel=document.createElement('pre');
   realPlayerArmDebugPanel.id='realPlayerArmDebugPanel';
@@ -6874,6 +6902,7 @@ function createRealWeapon(type='axe'){
  // Keep the count outside createRealGrass(): grassMesh itself is local to that builder.
  let grassInstanceCount=0,grassBatchCount=0,grassWindAccumulator=0,grassWindClock=0;const grassWindMeshes=[];let grassWindBasePositions=null,grassWindPositions=null;
  async function createRealGrass(){
+  grassDebugIslandStats.length=0;
   const positions=[],indices=[],colors=[];
   const shades=[[.27,.32,.17],[.36,.40,.22],[.43,.45,.27],[.23,.29,.16],[.38,.36,.20]];
   const grassHeightScale=isPerformanceMode?.52:.63,grassWidthScale=isPerformanceMode?1.02:1.12;
@@ -6905,6 +6934,8 @@ function createRealWeapon(type='axe'){
   addLeaf(.82,.34,.235,.31,.035,4);
   addLeaf(2.90,.29,.255,.34,.045,1);
   addLeaf(5.05,.37,.215,.29,.035,2);
+  if(!isPerformanceMode)addLeaf(5.72,.52,.13,.26,.045,0);
+  grassDebugLeavesPerClump=isPerformanceMode?7:8;
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
   const vertexData=new B.VertexData();vertexData.positions=positions;vertexData.indices=indices;vertexData.normals=normals;vertexData.colors=colors;
   const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);
@@ -6933,9 +6964,12 @@ function createRealWeapon(type='axe'){
   for(let islandIndex=0;islandIndex<land.length;islandIndex++){
    const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520);
    const performanceDensity=isConstrainedMobile?.15:(isTouchDevice?.29:.45);
-   const want=isPerformanceMode?Math.round(baseWant*performanceDensity):baseWant;
+   const qualityGrassDensity=1.18;
+   const want=isPerformanceMode?Math.round(baseWant*performanceDensity):Math.round(baseWant*qualityGrassDensity);
    let placed=0,tries=0;
    const radius=island.r*.865;
+   const gridSide=Math.ceil(Math.sqrt(want*1.30)),cellSize=(radius*2)/gridSide;
+   const occupiedGridCells=new Set();
    const tryPlaceGrass=(x,z)=>{
     if(!isLand(x,z))return false;
     const gx=(terrainSurfaceAt(x+.55,z)-terrainSurfaceAt(x-.55,z))/1.1,gz=(terrainSurfaceAt(x,z+.55)-terrainSurfaceAt(x,z-.55))/1.1;
@@ -6952,10 +6986,13 @@ function createRealWeapon(type='axe'){
     if(!batch){batch={islandIndex,cellX,cellZ,matrices:[],colors:[]};grassBatches.set(key,batch);}
     batch.matrices.push(...matrix.m);
     const tint=rand(.84,1.12);batch.colors.push(tint,rand(.92,1.06),rand(.82,1.02),1);
+    const gridCol=Math.max(0,Math.min(gridSide-1,Math.floor((x-(island.x-radius))/cellSize)));
+    const gridRow=Math.max(0,Math.min(gridSide-1,Math.floor((z-(island.z-radius))/cellSize)));
+    occupiedGridCells.add(gridRow*gridSide+gridCol);
     placed++;count++;return true;
    };
-   // Muestreo por celdas con jitter: separaciones más uniformes sin reducir la densidad en Calidad.
-   const gridSide=Math.ceil(Math.sqrt(want*1.30)),cellSize=(radius*2)/gridSide;
+   // Muestreo por celdas con menos jitter para evitar huecos y grupos irregulares.
+   const jitter=isPerformanceMode ? .30 : .24;
    const candidateCells=Array.from({length:gridSide*gridSide},(_,i)=>i);
    for(let i=candidateCells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)),tmp=candidateCells[i];candidateCells[i]=candidateCells[j];candidateCells[j]=tmp;}
    for(const sample of candidateCells){
@@ -6963,10 +7000,26 @@ function createRealWeapon(type='axe'){
     tries++;
     if(tries%480===0){setLoadingProgress(42+((islandIndex+placed/want)/land.length)*5,'Distribuyendo vegetación 3D…');await yieldStartupFrame();}
     const col=sample%gridSide,row=Math.floor(sample/gridSide);
-    const x=island.x-radius+(col+.5+rand(-.34,.34))*cellSize;
-    const z=island.z-radius+(row+.5+rand(-.34,.34))*cellSize;
+    const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
+    const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
     const dx=x-island.x,dz=z-island.z;if(dx*dx+dz*dz>radius*radius)continue;
     tryPlaceGrass(x,z);
+   }
+   // Reintenta las celdas que quedaron vacías antes de recurrir al relleno aleatorio.
+   const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));
+   for(const sample of refillCells){
+    if(placed>=want)break;
+    const col=sample%gridSide,row=Math.floor(sample/gridSide);
+    const dx=(col+.5)/gridSide*radius*2-radius,dz=(row+.5)/gridSide*radius*2-radius;
+    if(dx*dx+dz*dz>radius*radius)continue;
+    for(let attempt=0;attempt<2&&placed<want;attempt++){
+     tries++;
+     if(tries%480===0){setLoadingProgress(42+((islandIndex+placed/want)/land.length)*5,'Distribuyendo vegetación 3D…');await yieldStartupFrame();}
+     const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
+     const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
+     tryPlaceGrass(x,z);
+     if(occupiedGridCells.has(sample))break;
+    }
    }
    // Completa solamente las celdas que hayan caído sobre árboles, roca, pendiente o asentamientos.
    while(placed<want&&tries<want*8){
@@ -6975,6 +7028,8 @@ function createRealWeapon(type='axe'){
     const angle=Math.random()*Math.PI*2,rad=Math.sqrt(Math.random())*radius;
     tryPlaceGrass(island.x+Math.cos(angle)*rad,island.z+Math.sin(angle)*rad);
    }
+   const totalGridCells=Math.max(1,Math.round(Math.PI*.25*gridSide*gridSide));
+   grassDebugIslandStats.push({name:island.name||('ISLA '+(islandIndex+1)),target:want,placed,fillPct:Math.round(placed/Math.max(1,want)*100),occupiedCells:occupiedGridCells.size,totalGridCells,gridPct:Math.min(100,Math.round(occupiedGridCells.size/totalGridCells*100))});
   }
   let grassUploadBatch=0;
   for(const batch of grassBatches.values()){
@@ -6991,7 +7046,7 @@ function createRealWeapon(type='axe'){
   grassInstanceCount=count;grassBatchCount=grassBatches.size;
   // Publica únicamente el recuento real ya generado para el panel ?debug=1.
   grassDebugClumpCount=count;grassDebugBatchCount=grassBatches.size;
-  console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:7,instancesPerIsland:land.map((is,i)=>({island:is.name,requested:i===0?6500:(i<4?1050:520)})),spatialBatches:grassBatchCount,chunkSize});
+  console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:grassDebugLeavesPerClump,instancesPerIsland:grassDebugIslandStats,spatialBatches:grassBatchCount,chunkSize});
  }
  await createRealGrass();
  function updateRealGrassWind(dt){
@@ -7466,12 +7521,12 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.185',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.187',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
    boat:{onShip,velocity:Number(boatVelocity.toFixed(3)),position:{x:Number(ship.position.x.toFixed(2)),y:Number(ship.position.y.toFixed(2)),z:Number(ship.position.z.toFixed(2))},rotation:{x:Number(ship.rotation.x.toFixed(3)),y:Number(ship.rotation.y.toFixed(3)),z:Number(ship.rotation.z.toFixed(3))},flatWakeStrips:shipWake.map(w=>({name:w.name,enabled:w.isEnabled()})),activeSprayParticles:activeSpray,sprayCapacity:VESSEL_SPRAY_COUNT},
-   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
+   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
    npcs:{enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,ambientPeople:ambientPeople.length,ambientMoving:ambientPeople.filter(n=>Number(n.parts.actualMoveSpeed)>.1).length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,npcClips:humanEnemyParts.filter(p=>p.realHuman).slice(0,8).map(p=>({name:p.name,walk:p.realHuman.walk&&p.realHuman.walk.name,walkPlaying:!!(p.realHuman.walk&&p.realHuman.walk.isPlaying),current:p.realHuman.current&&p.realHuman.current.name,enabled:p.root.isEnabled()}))}
   };
  };
@@ -9422,7 +9477,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.185 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.187 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
