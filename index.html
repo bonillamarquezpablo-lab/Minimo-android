@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.189">
-<meta name="el-sin-nombre-repair" content="0.6.189 denser continuous grass cover: multi-tuft stratified placement and denser ground-level vegetation; preserve saved master idle pose">
+<meta name="el-sin-nombre-build" content="0.6.190">
+<meta name="el-sin-nombre-repair" content="0.6.190 uniform natural groundcover, blue-noise grass spacing and richer Nordic soil material; preserve saved master idle pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.189</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.190</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2399,7 +2399,7 @@ async function startGame(){
   let seed=90631;
   const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   function grid(w,h){const a=new Float32Array(w*h);for(let i=0;i<a.length;i++)a[i]=random();return {w,h,a};}
-  const grids=[grid(3,3),grid(8,8),grid(18,18),grid(46,46),grid(112,112)];
+  const grids=[grid(4,4),grid(10,10),grid(24,24),grid(60,60),grid(144,144),grid(288,288)];
   function noise(g,x,y){
    const px=x/size*g.w,py=y/size*g.h,x0=Math.floor(px),y0=Math.floor(py),fx=px-x0,fy=py-y0;
    const sm=t=>t*t*(3-2*t),u=sm(fx),v=sm(fy),wrap=(n,m)=>(n%m+m)%m;
@@ -2410,26 +2410,27 @@ async function startGame(){
   const smooth=(a,b,v)=>{const t=Math.max(0,Math.min(1,(v-a)/(b-a)));return t*t*(3-2*t);};
   const mix=(a,b,t)=>a+(b-a)*t;
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
-   const broad=noise(grids[0],x,y)*.68+noise(grids[1],x,y)*.32;
-   const medium=noise(grids[1],x,y)*.48+noise(grids[2],x,y)*.52;
-   const fine=noise(grids[3],x,y)*.58+noise(grids[4],x,y)*.42;
-   const grain=noise(grids[4],x,y);
+   // More frequent organic noise scales, fewer oversized blended patches.
+   const broad=noise(grids[2],x,y)*.34+noise(grids[3],x,y)*.42+noise(grids[4],x,y)*.24;
+   const medium=noise(grids[3],x,y)*.36+noise(grids[4],x,y)*.64;
+   const fine=noise(grids[4],x,y)*.42+noise(grids[5],x,y)*.58;
+   const grain=noise(grids[5],x,y);
    // Wider, overlapping biome masks; the old thresholds left nearly every pixel grass-green.
-   const moss=smooth(.35,.68,broad*.72+medium*.28);
-   const soil=smooth(.39,.69,medium*.62+fine*.38);
-   const damp=smooth(.43,.70,medium*.54+fine*.46)*(1-moss*.48);
-   const dry=smooth(.49,.76,broad*.46+fine*.54)*(1-soil*.54);
-   const pebbles=smooth(.68,.91,grain*.62+fine*.38);
-   const leafLitter=smooth(.47,.75,noise(grids[2],x,y)*.38+fine*.62)*(1-damp*.48);
-   // Real forest-floor palette: subdued olive moss, umber soil, wet earth, leaf litter and stone.
-   const base=[105,101,71],mossCol=[82,96,61],earth=[108,80,54],dampCol=[55,63,52],dryCol=[145,125,88],stoneCol=[128,125,112],leafCol=[103,76,49];
+   const moss=smooth(.36,.65,broad*.57+medium*.43);
+   const soil=smooth(.42,.73,medium*.43+fine*.57);
+   const damp=smooth(.43,.72,medium*.60+fine*.40)*(1-moss*.42);
+   const dry=smooth(.48,.77,broad*.38+fine*.62)*(1-soil*.45);
+   const pebbles=smooth(.72,.94,grain*.66+fine*.34);
+   const leafLitter=smooth(.48,.74,noise(grids[2],x,y)*.25+noise(grids[3],x,y)*.35+fine*.40)*(1-damp*.52);
+   // Muted Nordic forest floor: restrained moss, umber soil, damp earth and litter.
+   const base=[99,91,67],mossCol=[76,89,55],earth=[104,77,53],dampCol=[56,62,50],dryCol=[132,112,77],stoneCol=[117,113,101],leafCol=[91,68,47];
    let c=base.map((v,i)=>mix(v,mossCol[i],moss*.62));
    c=c.map((v,i)=>mix(v,earth[i],soil*.60));
    c=c.map((v,i)=>mix(v,dampCol[i],damp*.38));
    c=c.map((v,i)=>mix(v,dryCol[i],dry*.27));
    c=c.map((v,i)=>mix(v,stoneCol[i],pebbles*.30));
    c=c.map((v,i)=>mix(v,leafCol[i],leafLitter*.42));
-   const variation=(random()-.5)*11+(grain-.5)*5;
+   const variation=(random()-.5)*9+(grain-.5)*7;
    const idx=(y*size+x)*4;
    for(let k=0;k<3;k++)data[idx+k]=Math.max(0,Math.min(255,c[k]+variation));
    data[idx+3]=255;
@@ -2467,12 +2468,12 @@ async function startGame(){
   }
   // Subtle fine grass strokes in the albedo; the visible 3D ground cover is instanced separately.
   // Fine green ground cover connects the tufts visually instead of leaving bare gaps.
-  for(let i=0;i<15000;i++){
-   const x=random()*size,y=random()*size,scale=.8+random()*1.35,count=4+(random()*4|0);
-   const blades=Array.from({length:count},()=>({x:(random()-.5)*5*scale,y:(random()-.5)*2*scale,len:(2.5+random()*7.5)*scale,lean:(random()-.5)*5*scale,width:.55+random()*.7,kind:random()}));
+  for(let i=0;i<8200;i++){
+   const x=random()*size,y=random()*size,scale=.62+random()*.92,count=2+(random()*3|0);
+   const blades=Array.from({length:count},()=>({x:(random()-.5)*4*scale,y:(random()-.5)*2*scale,len:(1.7+random()*4.6)*scale,lean:(random()-.5)*4*scale,width:.35+random()*.55,kind:random()}));
    repeatMark((px,py)=>{
     blades.forEach(b=>{
-     ctx.strokeStyle=b.kind<.25?'rgba(165,170,102,.58)':b.kind<.55?'rgba(66,92,52,.56)':'rgba(126,139,78,.48)';
+     ctx.strokeStyle=b.kind<.25?'rgba(143,150,91,.32)':b.kind<.55?'rgba(67,86,53,.27)':'rgba(112,121,74,.24)';
      ctx.lineWidth=b.width;ctx.beginPath();ctx.moveTo(px+b.x,py+b.y);
      ctx.quadraticCurveTo(px+b.x+b.lean*.5,py+b.y-b.len*.56,px+b.x+b.lean,py+b.y-b.len);ctx.stroke();
     });
@@ -2770,17 +2771,17 @@ async function startGame(){
    const beach=smooth01((coastDistance/is.r-.75)/.24);
    const wetSand=smooth01((coastDistance/is.r-.87)/.105);
    // Variación espacial real: humedad y musgo cambian por zonas, no un tinte uniforme por isla.
-   const patch=terrainValueNoise(wx*.022+17.2,wz*.022-8.4);
-   const micro=terrainValueNoise(wx*.075-4.1,wz*.075+9.7);
-   const fine=terrainValueNoise(wx*.19+3.7,wz*.19-5.2);
-   const grain=terrainValueNoise(wx*.34-11.7,wz*.34+23.4);
-   const litter=terrainValueNoise(wx*.22+31.3,wz*.22-16.8);
-   const wet=smooth01((patch*.36+micro*.39+fine*.25-.49)*3.8)*(1-rock)*(1-beach);
-   const moss=smooth01((patch*.62+micro*.25+grain*.13-.42)*3.4)*(1-rock)*(1-beach);
-   const bareSoil=smooth01((micro*.42+fine*.34+grain*.24-.53)*4.2)*(1-rock)*(1-beach);
-   const leafLitter=smooth01((litter*.42+grain*.30+fine*.28-.53)*4.4)*(1-rock)*(1-beach);
+   const patch=terrainValueNoise(wx*.028+17.2,wz*.028-8.4);
+   const micro=terrainValueNoise(wx*.095-4.1,wz*.095+9.7);
+   const fine=terrainValueNoise(wx*.24+3.7,wz*.24-5.2);
+   const grain=terrainValueNoise(wx*.43-11.7,wz*.43+23.4);
+   const litter=terrainValueNoise(wx*.31+31.3,wz*.31-16.8);
+   const wet=smooth01((patch*.18+micro*.37+fine*.45-.51)*4.8)*(1-rock)*(1-beach);
+   const moss=smooth01((patch*.25+micro*.44+grain*.31-.43)*3.0)*(1-rock)*(1-beach);
+   const bareSoil=smooth01((micro*.30+fine*.42+grain*.28-.57)*3.5)*(1-rock)*(1-beach);
+   const leafLitter=smooth01((litter*.28+grain*.36+fine*.36-.57)*3.4)*(1-rock)*(1-beach);
    // Neutral olive base lets the albedo read through instead of tinting the whole island green.
-   const grass=[.98,.95,.86],stone=[.94,.93,.87],sand=[.88,.77,.61],wetSandCol=[.56,.55,.47],soil=[.96,.83,.68],mud=[.83,.87,.76],leaf=[.98,.84,.68];
+   const grass=[.91,.91,.82],stone=[.87,.86,.80],sand=[.84,.72,.55],wetSandCol=[.56,.55,.47],soil=[.88,.76,.61],mud=[.78,.81,.68],leaf=[.87,.74,.56];
    let r=grass[0]*(1-rock)+stone[0]*rock,g=grass[1]*(1-rock)+stone[1]*rock,b=grass[2]*(1-rock)+stone[2]*rock;
    r=r*(1-wet)+mud[0]*wet;g=g*(1-wet)+mud[1]*wet;b=b*(1-wet)+mud[2]*wet;
    const soilMix=Math.min(.96,bareSoil*1.12),leafMix=Math.min(.58,leafLitter*.76);
@@ -2809,11 +2810,11 @@ async function startGame(){
    const terrainPBR=new B.PBRMaterial('NordicGroundPBR_'+index,scene);
    terrainPBR.albedoTexture=texTerrain;terrainPBR.albedoColor=new B.Color3(1,1,1);
    // Más repeticiones por isla: el grano se lee a escala de suelo, no como una mancha gigante.
-   texTerrain.uScale=12;texTerrain.vScale=12;
-   terrainPBR.bumpTexture=albedoNormalTerrain;terrainPBR.bumpTexture.level=.55;
-   albedoNormalTerrain.uScale=12;albedoNormalTerrain.vScale=12;
-   terrainPBR.metallic=0;terrainPBR.roughness=.99;terrainPBR.useVertexColors=true;
-   terrainPBR.environmentIntensity=.30;terrainPBR.backFaceCulling=true;
+   texTerrain.uScale=9.5;texTerrain.vScale=9.5;
+   terrainPBR.bumpTexture=albedoNormalTerrain;terrainPBR.bumpTexture.level=.70;
+   albedoNormalTerrain.uScale=9.5;albedoNormalTerrain.vScale=9.5;
+   terrainPBR.metallic=0;terrainPBR.roughness=.97;terrainPBR.useVertexColors=true;
+   terrainPBR.environmentIntensity=.22;terrainPBR.backFaceCulling=true;
    terrainPBR.maxSimultaneousLights=2;mesh.material=terrainPBR;
   }
   mesh.isPickable=true;mesh.checkCollisions=true;mesh.receiveShadows=true;mesh.refreshBoundingInfo(true);
@@ -6906,7 +6907,7 @@ function createRealWeapon(type='axe'){
   grassDebugIslandStats.length=0;
   const positions=[],indices=[],colors=[];
   // Natural olive greens: the previous palette rendered as almost-black cut-outs.
-  const shades=[[.39,.51,.24],[.47,.57,.28],[.54,.59,.31],[.34,.46,.21],[.44,.53,.25],[.51,.56,.29]];
+  const shades=[[.32,.41,.20],[.38,.47,.23],[.44,.51,.27],[.29,.37,.18],[.36,.45,.22],[.41,.48,.25]];
   const grassHeightScale=isPerformanceMode?.64:.64,grassWidthScale=isPerformanceMode?.94:.92;
   const addLeaf=(angle,length,width,lean,startRadius,shadeIndex)=>{
    length*=grassHeightScale;width*=grassWidthScale;lean*=grassHeightScale;startRadius*=grassWidthScale;
@@ -6914,9 +6915,9 @@ function createRealWeapon(type='axe'){
    const sx=dx*startRadius,sz=dz*startRadius;
    const base=positions.length/3,tipW=width*.012;
    const rows=[
-    {cx:sx,cy:.022,cz:sz,w:width*.30,tint:.62},
-    {cx:sx+dx*lean*.34,cy:.022+length*.54,cz:sz+dz*lean*.34,w:width*.46,tint:.94},
-    {cx:sx+dx*lean,cy:.022+length,cz:sz+dz*lean,w:tipW,tint:1.19}
+    {cx:sx,cy:.006,cz:sz,w:width*.30,tint:.68},
+    {cx:sx+dx*lean*.34,cy:.006+length*.54,cz:sz+dz*lean*.34,w:width*.46,tint:.88},
+    {cx:sx+dx*lean,cy:.006+length,cz:sz+dz*lean,w:tipW,tint:1.08}
    ];
    for(const row of rows){
     positions.push(row.cx-px*row.w,row.cy,row.cz-pz*row.w,row.cx+px*row.w,row.cy,row.cz+pz*row.w);
@@ -6944,7 +6945,7 @@ function createRealWeapon(type='axe'){
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
   const vertexData=new B.VertexData();vertexData.positions=positions;vertexData.indices=indices;vertexData.normals=normals;vertexData.colors=colors;
   const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);
-  gm.diffuseColor=new B.Color3(1,1,1);gm.specularColor=new B.Color3(.018,.022,.012);gm.specularPower=7;gm.backFaceCulling=false;gm.twoSidedLighting=true;gm.emissiveColor=new B.Color3(.045,.068,.025);gm.useVertexColors=true;
+  gm.diffuseColor=new B.Color3(1,1,1);gm.specularColor=new B.Color3(.018,.022,.012);gm.specularPower=7;gm.backFaceCulling=false;gm.twoSidedLighting=true;gm.emissiveColor=new B.Color3(.012,.018,.006);gm.useVertexColors=true;
   const chunkSize=28,grassBatches=new Map();let count=0;
   // Preserve the exact original clearance tests, but query only obstacles in the candidate's spatial cell.
   const grassPlacementCellSize=12,grassPlacementGrid=new Map();
@@ -6973,31 +6974,39 @@ function createRealWeapon(type='axe'){
    const want=isPerformanceMode?Math.round(baseWant*performanceDensity):Math.round(baseWant*qualityGrassDensity);
    let placed=0,tries=0;
    const radius=island.r*.865;
-   const gridSide=Math.ceil(Math.sqrt(want*.72)),cellSize=(radius*2)/gridSide;
-   const occupiedGridCells=new Set();
+   const gridSide=Math.ceil(Math.sqrt(want*1.60)),cellSize=(radius*2)/gridSide;
+   const occupiedGridCells=new Set(),placedGridPositions=new Map();
    const tryPlaceGrass=(x,z)=>{
     if(!isLand(x,z))return false;
+    const gridCol=Math.max(0,Math.min(gridSide-1,Math.floor((x-(island.x-radius))/cellSize)));
+    const gridRow=Math.max(0,Math.min(gridSide-1,Math.floor((z-(island.z-radius))/cellSize)));
+    const gridCell=gridRow*gridSide+gridCol;
+    if(occupiedGridCells.has(gridCell))return false;
+    const minSpacing=cellSize*.30,minSpacingSq=minSpacing*minSpacing;
+    for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){
+     const nx=gridCol+dx,nz=gridRow+dz;if(nx<0||nz<0||nx>=gridSide||nz>=gridSide)continue;
+     const neighbour=placedGridPositions.get(nz*gridSide+nx);if(!neighbour)continue;
+     const sx=x-neighbour.x,sz=z-neighbour.z;if(sx*sx+sz*sz<minSpacingSq)return false;
+    }
     const gx=(terrainSurfaceAt(x+.55,z)-terrainSurfaceAt(x-.55,z))/1.1,gz=(terrainSurfaceAt(x,z+.55)-terrainSurfaceAt(x,z-.55))/1.1;
     if(Math.hypot(gx,gz)>.82)return false;
     if(settlements.some(q=>Math.hypot(x-q[0],z-q[1])<9.3))return false;
     if(grassPlacementBlocked(x,z))return false;
     const scaleX=rand(.94,1.18),scaleY=isPerformanceMode?rand(.78,.92):rand(.90,1.02),scaleZ=rand(.94,1.18);
     const rotation=B.Quaternion.RotationYawPitchRoll(rand(0,Math.PI*2),0,0);
-    const groundY=terrainSurfaceAt(x,z)+.018;
+    const groundY=terrainSurfaceAt(x,z)+.006;
     const matrix=B.Matrix.Compose(v(scaleX,scaleY,scaleZ),rotation,v(x,groundY,z));
     const cellX=Math.floor((x-island.x+radius)/chunkSize),cellZ=Math.floor((z-island.z+radius)/chunkSize);
     const key=islandIndex+':'+cellX+':'+cellZ;
     let batch=grassBatches.get(key);
     if(!batch){batch={islandIndex,cellX,cellZ,matrices:[],colors:[]};grassBatches.set(key,batch);}
     batch.matrices.push(...matrix.m);
-    const tint=rand(.84,1.12);batch.colors.push(tint,rand(.92,1.06),rand(.82,1.02),1);
-    const gridCol=Math.max(0,Math.min(gridSide-1,Math.floor((x-(island.x-radius))/cellSize)));
-    const gridRow=Math.max(0,Math.min(gridSide-1,Math.floor((z-(island.z-radius))/cellSize)));
-    occupiedGridCells.add(gridRow*gridSide+gridCol);
+    const tint=rand(.93,1.06);batch.colors.push(tint,rand(.96,1.03),rand(.90,.99),1);
+    occupiedGridCells.add(gridCell);placedGridPositions.set(gridCell,{x,z});
     placed++;count++;return true;
    };
-   // Muestreo estratificado de varias matas por celda: evita filas perfectas y cierra los huecos.
-   const jitter=isPerformanceMode ? .46 : .49;
+   // One jittered sample per small cell creates an even, natural ground-cover distribution.
+   const jitter=isPerformanceMode ? .46 : .47;
    const candidateCells=Array.from({length:gridSide*gridSide},(_,i)=>i);
    for(let i=candidateCells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)),tmp=candidateCells[i];candidateCells[i]=candidateCells[j];candidateCells[j]=tmp;}
    for(const sample of candidateCells){
@@ -7007,13 +7016,9 @@ function createRealWeapon(type='axe'){
     const col=sample%gridSide,row=Math.floor(sample/gridSide);
     const dx0=(col+.5)/gridSide*radius*2-radius,dz0=(row+.5)/gridSide*radius*2-radius;
     if(dx0*dx0+dz0*dz0>radius*radius)continue;
-    // Dos o tres candidatos por celda en la mayoría de los casos; los puntos no comparten centro.
-    const cellAttempts=1+(Math.random()<.82?1:0)+(Math.random()<.16?1:0);
-    for(let attempt=0;attempt<cellAttempts&&placed<want;attempt++){
-     const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
-     const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
-     tryPlaceGrass(x,z);
-    }
+    const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
+    const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
+    tryPlaceGrass(x,z);
    }
    // Reintenta las celdas que quedaron vacías antes de recurrir al relleno aleatorio.
    const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));
@@ -7022,7 +7027,7 @@ function createRealWeapon(type='axe'){
     const col=sample%gridSide,row=Math.floor(sample/gridSide);
     const dx=(col+.5)/gridSide*radius*2-radius,dz=(row+.5)/gridSide*radius*2-radius;
     if(dx*dx+dz*dz>radius*radius)continue;
-    for(let attempt=0;attempt<2&&placed<want;attempt++){
+    for(let attempt=0;attempt<4&&placed<want;attempt++){
      tries++;
      if(tries%480===0){setLoadingProgress(42+((islandIndex+placed/want)/land.length)*5,'Distribuyendo vegetación 3D…');await yieldStartupFrame();}
      const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
@@ -7531,7 +7536,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.189',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.190',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -9487,7 +9492,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.189 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.190 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';

@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.189"
+EXPECTED_VERSION = "0.6.190"
 
 HTML_PAGES = (
     "index.html",
@@ -270,15 +270,17 @@ def main() -> None:
     if "function updateGrassDebugPanel()" not in index_html or "grassDebugIslandStats.push({" not in index_html:
         fail("Faltan las métricas por isla del diagnóstico de hierba.")
     if "const qualityGrassDensity=isTouchDevice?(islandIndex===0?7.5:5.0):(islandIndex===0?7.0:5.0);" not in index_html:
-        fail("La cobertura de hierba no incrementa la densidad de la isla inicial.")
+        fail("La densidad principal de vegetación no conserva su cobertura.")
     if "const leavesPerClump=isPerformanceMode?8:12;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
-        fail("Los penachos o la iluminación de doble cara están incompletos.")
-    if "for(let i=0;i<15000;i++)" not in index_html or "const gridSide=Math.ceil(Math.sqrt(want*.72))" not in index_html:
-        fail("La textura de cobertura o la distribución multi-mata no están aplicadas.")
-    if "const cellAttempts=1+(Math.random()<.82?1:0)+(Math.random()<.16?1:0);" not in index_html:
-        fail("El muestreo no genera varias matas por celda.")
+        fail("Los penachos o su iluminación de doble cara están incompletos.")
+    if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.30" not in index_html:
+        fail("Falta la distribución uniforme con separación mínima.")
+    if "const grids=[grid(4,4),grid(10,10),grid(24,24),grid(60,60),grid(144,144),grid(288,288)];" not in index_html:
+        fail("El suelo no utiliza escalas orgánicas de textura.")
+    if "for(let i=0;i<8200;i++)" not in index_html or "terrainPBR.bumpTexture.level=.70;" not in index_html:
+        fail("Falta el detalle fino de suelo o su relieve PBR.")
     if "const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));" not in index_html:
-        fail("La distribución de hierba no rellena celdas vacías.")
+        fail("La distribución no rellena las celdas vacías.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
