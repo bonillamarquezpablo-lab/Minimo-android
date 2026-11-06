@@ -4526,14 +4526,24 @@ async function startGame(){
  const REAL_PLAYER_WEAPON_ARM_FOREARM_TARGET=new B.Vector3(0,-1,0);
  const REAL_PLAYER_WEAPON_ARM_PALM_NORMAL=new B.Vector3(.61,-.23,-.76);
  function getRealPlayerBodyFrame(nodes,orientationRoot){
-  // Marco canónico ligado al rumbo del personaje, no a huesos que cambian
-  // durante la marcha, la transición de reposo o la postura de las piernas.
+  // Marco anatómico ligado exclusivamente al rumbo horizontal acumulado de la
+  // jerarquía del jugador. No usar +Z mundial del pivot: ese vector contiene
+  // cabeceo y balanceo del terreno/barco y falsea el plano de los brazos.
   const worldUp=new B.Vector3(0,1,0);
   if(!orientationRoot)return null;
   try{
-   orientationRoot.computeWorldMatrix(true);
-   const forward=orientationRoot.getDirection(B.Axis.Z);
-   forward.subtractInPlace(worldUp.scale(B.Vector3.Dot(forward,worldUp)));
+   let worldYaw=0;
+   for(let node=orientationRoot;node;node=node.parent){
+    if(node.rotationQuaternion){
+     const euler=node.rotationQuaternion.toEulerAngles();
+     worldYaw+=Number(euler.y)||0;
+    }else if(node.rotation){
+     worldYaw+=Number(node.rotation.y)||0;
+    }
+   }
+   if(!Number.isFinite(worldYaw))return null;
+   // +Z visual del modelo transformado solo por el yaw de toda su jerarquía.
+   const forward=new B.Vector3(Math.sin(worldYaw),0,Math.cos(worldYaw));
    if(forward.lengthSquared()<1e-6)return null;
    forward.normalize();
    // +Z es delante; delante × arriba produce el eje anatómico izquierdo.
@@ -4542,7 +4552,7 @@ async function startGame(){
    left.normalize();
    const handedness=B.Vector3.Dot(B.Vector3.Cross(left,forward),worldUp);
    if(!Number.isFinite(handedness)||handedness<.999)return null;
-   return {left,up:worldUp,forward,source:'RUMBO VISUAL'};
+   return {left,up:worldUp,forward,source:'RUMBO HORIZONTAL'};
   }catch(_){return null;}
  }
  function directionFromRealPlayerBodyFrame(frame,target,length){
