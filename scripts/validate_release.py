@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.179"
+EXPECTED_VERSION = "0.6.180"
 
 HTML_PAGES = (
     "index.html",
@@ -159,6 +159,18 @@ def main() -> None:
         fail("La locomoción no respeta los canales de brazos que ya pertenecen al clip Walk/Run.")
     if "const realPlayerArmTuningEnabled=true;" not in index_html:
         fail("El ajuste de brazos no está habilitado en el juego normal.")
+    if "Object.values(rig).forEach(rememberRigRest);" not in index_html:
+        fail("El bind pose no se captura para todos los huesos mapeados del rig.")
+    bind_start = index_html.find("function restoreRealPlayerArmBindPose(nodes){")
+    bind_end = index_html.find("function applyRealPlayerArmPoseAfterAnimations", bind_start)
+    bind_body = index_html[bind_start:bind_end]
+    if bind_start < 0 or bind_end <= bind_start:
+        fail("Falta la restauración determinista del bind pose de ambos brazos.")
+    for node_key in ("nodes.leftUpperArm", "nodes.leftForearm", "nodes.leftHand", "nodes.upperArm", "nodes.forearm", "nodes.hand"):
+        if node_key not in bind_body:
+            fail(f"La restauración determinista no incluye {node_key}.")
+    if "if(!walking)restoreRealPlayerArmBindPose(n);" not in index_html:
+        fail("El reposo no reconstruye ambos brazos desde el bind pose después de los clips.")
     if "window.setInterval(updateRealPlayerArmDebugPanel,500);\n }\n // Panel de ajuste permanente" not in index_html:
         fail("El panel de ajuste sigue dentro del bloque de diagnóstico debug=1.")
     if "armTuneDock.appendChild(armTuneToggle);" not in index_html or "realPlayerArmTuneReset" not in index_html:
