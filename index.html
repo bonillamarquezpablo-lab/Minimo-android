@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.182">
-<meta name="el-sin-nombre-repair" content="0.6.182 local-rotation master idle pose; original GLB locomotion; debug sliders, capture and 1-degree local detector">
+<meta name="el-sin-nombre-build" content="0.6.183">
+<meta name="el-sin-nombre-repair" content="0.6.183 local-rotation master idle pose; original GLB locomotion; debug sliders, capture and 1-degree local detector">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.182</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.183</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -611,7 +611,7 @@ body.boot-failed #loading .loadTrack {margin-top:14px;}
 @media(max-width:520px) and (orientation:portrait){#actions #runBtn,#actions #jumpBtn{height:42px;min-height:42px}}
 @media(max-height:440px) and (orientation:landscape){#actions #runBtn,#actions #jumpBtn{height:31px;min-height:31px}}
 
-/* 0.6.182 — selector de perfil gráfico e identidad antes de la carga principal. */
+/* 0.6.183 — selector de perfil gráfico e identidad antes de la carga principal. */
 body.preflight #hud,body.identity-setup #hud,body.preflight #controls,body.identity-setup #controls{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.preflight #loading,body.identity-setup #loading{display:none!important}
 body.preflight #intro,body.identity-setup #intro{display:none!important}
@@ -649,7 +649,7 @@ body.identity-setup #identitySetup{display:flex}
 @media(max-width:560px){.preflightCard{padding:19px 15px}.profileOptions{grid-template-columns:1fr;gap:9px}.profileOption{min-height:0;padding:14px;gap:7px}.profileOption strong{font-size:23px}.profileOption>span:not(.profileTag){font-size:11px}.profileOption em{margin-top:2px}.preflightLead{font-size:12px;margin:9px auto 13px}}
 
 
-/* 0.6.182 — portada principal de aventura nórdica, a pantalla completa. */
+/* 0.6.183 — portada principal de aventura nórdica, a pantalla completa. */
 #audioGate{
  position:fixed!important;inset:0!important;z-index:2001!important;
  display:none;align-items:stretch!important;justify-content:stretch!important;
@@ -781,7 +781,7 @@ body.preflight.audio-gate #modeSelect{display:none!important}
 @media(prefers-reduced-motion:reduce){#audioGate button{transition:none!important}}
 
 </style>
-<!-- EL SIN NOMBRE 0.6.182: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
+<!-- EL SIN NOMBRE 0.6.183: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
 <meta name="el-sin-nombre-repair-0666" content="cinematic clean boot screen, HUD hidden until gameplay, concise failure panel; existing game systems and save schema retained">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -901,13 +901,13 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #notice{top:calc(env(safe-area-inset-top,0px) + 166px)!important;width:min(42vw,300px)!important;}
 }
 
-/* 0.6.182 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
+/* 0.6.183 — mapa nórdico: anchura y altura conservan la proporción del canvas. */
 #map.expanded{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;width:min(94vw,calc(88dvh * 1.3953488),1100px)!important;height:auto!important;max-height:88dvh!important;aspect-ratio:480/344!important;transform:translate(-50%,-50%)!important;object-fit:contain!important;border:2px solid #d8b777!important;border-radius:12px!important;outline:1px solid #62452d!important;background:#153640!important;box-shadow:0 22px 75px #000e,0 0 0 1px #e2c17d66!important;}
 #mapBackdrop{background:rgba(2,9,12,.90)!important;backdrop-filter:blur(4px)!important;}
 #mapClose{top:calc(env(safe-area-inset-top,0px) + 10px)!important;right:calc(env(safe-area-inset-right,0px) + 10px)!important;padding:9px 13px!important;border-radius:8px!important;background:linear-gradient(145deg,#263b37,#101f23)!important;border:1px solid #d7b777!important;box-shadow:0 4px 16px #0009!important;}
 @media(max-width:520px) and (orientation:portrait){#map.expanded{width:min(94vw,calc(84dvh * 1.3953488),900px)!important;max-height:84dvh!important;}}
 
-/* 0.6.182 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
+/* 0.6.183 — pantalla de campaña: presentación épica, sin paneles técnicos ni botón intermedio. */
 #intro{
  align-items:center!important;justify-content:center!important;
  padding:calc(env(safe-area-inset-top,0px) + 18px) clamp(12px,3vw,42px) calc(env(safe-area-inset-bottom,0px) + 18px)!important;
@@ -1017,7 +1017,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
  #intro .campaignCard strong{font-size:19px!important}
  #intro .campaignCardArt{font-size:39px!important}
 }
-/* 0.6.182 — menús compactos y música antes del selector gráfico. */
+/* 0.6.183 — menús compactos y música antes del selector gráfico. */
 #audioGate{position:fixed;inset:0;z-index:2001;display:none;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at 50% 28%,rgba(151,105,54,.30),transparent 48%),linear-gradient(145deg,#071316,#101f20 58%,#050d10);color:#f3e5c9}
 body.preflight.audio-gate #audioGate{display:flex}
 body.preflight.audio-gate #modeSelect{display:none!important}
@@ -1109,7 +1109,7 @@ body.preflight.audio-gate #modeSelect{display:none!important}
  #intro .campaignFooter{display:none!important}
 }
 
-/* 0.6.182 — pantalla de carga nórdica a sangre completa; arte 2D ligero. */
+/* 0.6.183 — pantalla de carga nórdica a sangre completa; arte 2D ligero. */
 #loading{
  position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;min-height:100dvh!important;
  margin:0!important;padding:0!important;overflow:hidden!important;display:flex!important;align-items:stretch!important;justify-content:stretch!important;
@@ -1964,7 +1964,9 @@ async function startGame(){
  const REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY='el-sin-nombre-arm-last-deviation-v1';
  let realPlayerArmLastDeviation=null,realPlayerArmDeviationLastWasLocomoting=false,realPlayerArmDeviationStoppedAtMs=null,realPlayerArmDeviationActiveSignature='';
  if(realPlayerArmDebugEnabled){try{const storedDeviation=localStorage.getItem(REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY);if(storedDeviation){const parsed=JSON.parse(storedDeviation);if(parsed&&parsed.timestamp&&Array.isArray(parsed.violations))realPlayerArmLastDeviation=parsed;}}catch(_){realPlayerArmLastDeviation=null;}}
- const REAL_PLAYER_MASTER_POSE_DEFAULTS=Object.freeze({}); // Se rellena con el texto generado por «Capturar pose actual» cuando se fije la postura definitiva.
+ const REAL_PLAYER_MASTER_POSE_DEFAULTS=Object.freeze({}); // Valores de fábrica; el ajuste guardado por el jugador tiene prioridad.
+ const REAL_PLAYER_MASTER_POSE_STORAGE_KEY='el-sin-nombre-master-local-pose-v1';
+ let realPlayerMasterPoseLoadedFromStorage=false,realPlayerMasterPoseSavedAt=null;
  const REAL_PLAYER_ARM_TUNING_DEFAULTS={
   free:{
    upper:{outward:.26,forward:-.21},forearm:{outward:.15,forward:-.08},
@@ -4915,12 +4917,15 @@ if(realPlayerArmDebugEnabled){
   if(realPlayerArmDebugEnabled){
   const armTuneStyle=document.createElement('style');
   armTuneStyle.textContent=`
-   #realPlayerArmTuneDock{position:fixed;top:calc(env(safe-area-inset-top,0px) + 170px);right:6px;width:min(94vw,410px);max-width:calc(100vw - 12px);z-index:14;pointer-events:auto;color:#f5e8cf;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+   #realPlayerArmTuneDock{position:fixed;top:calc(env(safe-area-inset-top,0px) + 125px);left:8px;right:auto;width:min(94vw,410px);max-width:calc(100vw - 16px);z-index:14;pointer-events:auto;color:#f5e8cf;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
    #realPlayerArmTuneToggle{display:block;margin:0 0 4px auto;padding:7px 10px;border:1px solid #d8ad68;border-radius:7px;background:rgba(14,29,31,.96);color:#f5e8cf;font-size:10px;font-weight:800;box-shadow:0 3px 10px #0008;touch-action:manipulation}
    #realPlayerArmTunePanel{display:none;max-height:min(48dvh,560px);overflow:auto;overscroll-behavior:contain;padding:8px;border:1px solid #d8ad68;border-radius:7px;background:rgba(5,12,14,.96);box-shadow:0 5px 16px #000b}
    #realPlayerArmTunePanel.open{display:block}
-   #realPlayerArmTuneHead{position:sticky;top:-8px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-8px -8px 7px;padding:8px;background:rgba(5,12,14,.98);color:#e6c27f;font-size:10px;font-weight:900}
-   #realPlayerArmTuneReset{padding:5px 8px;border:1px solid #d8ad6888;border-radius:5px;background:#263735;color:#fff2d8;font-size:9px;font-weight:800;touch-action:manipulation}
+   #realPlayerArmTuneHead{position:sticky;top:-8px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:5px;margin:-8px -8px 7px;padding:8px;background:rgba(5,12,14,.98);color:#e6c27f;font-size:10px;font-weight:900}
+   #realPlayerArmTuneHead>span{min-width:0;flex:1 1 auto}
+   #realPlayerArmTuneHead>div{display:flex;gap:4px;flex:0 0 auto}
+   #realPlayerArmTuneReset,#realPlayerArmTuneMove{padding:5px 7px;border:1px solid #d8ad6888;border-radius:5px;background:#263735;color:#fff2d8;font-size:9px;font-weight:800;touch-action:manipulation}
+   #realPlayerArmTuneMove{background:#4c3925;border-color:#e0bd78;touch-action:none;cursor:move;user-select:none}
    #realPlayerArmTuneTabs{display:none}
    #realPlayerArmTuneColumns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
    .realArmTuneSide{min-width:0;padding:5px;border:1px solid #d8ad6844;border-radius:5px;background:#142426}
@@ -4933,12 +4938,13 @@ if(realPlayerArmDebugEnabled){
    @media(max-width:600px) and (orientation:portrait){
     #realPlayerArmDebugPanel{width:min(92vw,440px)!important;max-width:min(92vw,440px)!important;max-height:18vh!important;overflow:auto!important;pointer-events:auto!important;cursor:pointer!important}
     #realPlayerArmDebugPanel.expanded{max-height:34dvh!important;overflow:auto!important}
-    /* Tarjeta lateral: no cruza el centro de la escena ni ocupa todo el ancho. */
-    #realPlayerArmTuneDock{top:calc(env(safe-area-inset-top,0px) + 145px);right:7px;left:auto;width:min(72vw,320px);max-width:calc(100vw - 14px)}
+    /* Panel lateral estrecho: deja libre el centro y permite reubicarlo con el asa MOVER. */
+    #realPlayerArmTuneDock{top:calc(env(safe-area-inset-top,0px) + 125px);left:7px;right:auto;width:min(48vw,260px);max-width:calc(100vw - 14px)}
     #realPlayerArmTuneToggle{font-size:9px;padding:6px 8px}
-    #realPlayerArmTunePanel{max-height:29dvh;padding:6px;overflow:auto;overscroll-behavior:contain}
-    #realPlayerArmTuneHead{top:-6px;margin:-6px -6px 5px;padding:6px;font-size:9px}
-    #realPlayerArmTuneReset{font-size:8px;padding:4px 6px}
+    #realPlayerArmTunePanel{max-height:32dvh;padding:6px;overflow:auto;overscroll-behavior:contain}
+    #realPlayerArmTuneHead{top:-6px;margin:-6px -6px 5px;padding:6px;font-size:8px;gap:3px}
+    #realPlayerArmTuneHead>div{gap:3px}
+    #realPlayerArmTuneReset,#realPlayerArmTuneMove{font-size:7px;padding:4px 5px}
     #realPlayerArmTuneTabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:0 0 6px}
     .realArmTuneTab{min-height:29px;padding:5px 6px;border:1px solid #d8ad6877;border-radius:6px;background:#1b3031;color:#e7dcc7;font:800 9px ui-monospace,SFMono-Regular,Consolas,monospace;touch-action:manipulation}
     .realArmTuneTab[aria-selected="true"]{background:#8a602f;border-color:#f1d08b;color:#fff}
@@ -4967,10 +4973,11 @@ if(realPlayerArmDebugEnabled){
   armTunePanel.id='realPlayerArmTunePanel';
   armTunePanel.setAttribute('aria-label','Edición de la postura maestra local');
   armTunePanel.innerHTML=
-   '<div id="realPlayerArmTuneHead"><span>POSTURA MAESTRA · ROTACIONES LOCALES (RAD)</span><button id="realPlayerArmTuneReset" type="button">RESTABLECER</button></div>'+
+   '<div id="realPlayerArmTuneHead"><span>POSTURA MAESTRA · RAD</span><div><button id="realPlayerArmTuneMove" type="button" aria-label="Mover panel">MOVER</button><button id="realPlayerArmTuneReset" type="button">RESTABLECER</button></div></div>'+
    '<div id="realPlayerMasterPoseStatus" style="margin:4px 0;color:#f1cb82;font:8px ui-monospace,monospace">Esperando GLB…</div>'+
    '<div id="realPlayerMasterPoseControls" style="max-height:36dvh;overflow:auto;overscroll-behavior:contain"></div>'+
-   '<div style="display:flex;gap:6px;margin:7px 0 4px">'+
+   '<button id="realPlayerMasterPoseSave" type="button" style="width:100%;margin:7px 0 4px;padding:8px 6px;border:1px solid #e0bd78;border-radius:5px;background:linear-gradient(145deg,#9a6a35,#694727);color:#fff5df;font:900 8px ui-monospace,monospace">✓ GUARDAR Y FIJAR POSE EN ESTE DISPOSITIVO</button>'+
+   '<div style="display:flex;gap:6px;margin:4px 0">'+
     '<button id="realPlayerMasterPoseCapture" type="button" style="flex:1;padding:6px;border:1px solid #d8ad68;border-radius:5px;background:#8a602f;color:#fff;font:800 8px ui-monospace,monospace">CAPTURAR POSE ACTUAL</button>'+
     '<button id="realPlayerMasterPoseCopy" type="button" style="padding:6px;border:1px solid #d8ad6888;border-radius:5px;background:#263735;color:#fff2d8;font:800 8px ui-monospace,monospace">COPIAR</button>'+
    '</div>'+
@@ -4980,6 +4987,7 @@ if(realPlayerArmDebugEnabled){
   document.body.appendChild(armTuneDock);
   armTuneToggle.textContent='AJUSTAR POSE +';
   armTunePanel.querySelector('#realPlayerArmTuneReset').addEventListener('click',resetRealPlayerMasterPose);
+  armTunePanel.querySelector('#realPlayerMasterPoseSave').addEventListener('click',saveRealPlayerMasterPoseLocally);
   armTunePanel.querySelector('#realPlayerMasterPoseCapture').addEventListener('click',()=>{
    const output=armTunePanel.querySelector('#realPlayerMasterPoseOutput');
    const status=document.getElementById('realPlayerMasterPoseStatus');
@@ -5002,6 +5010,43 @@ if(realPlayerArmDebugEnabled){
    armTuneToggle.textContent=open?'AJUSTAR POSE −':'AJUSTAR POSE +';
    armTuneToggle.setAttribute('aria-expanded',String(open));
   });
+  // El panel se puede arrastrar desde MOVER y recuerda su posición en este navegador.
+  const REAL_PLAYER_ARM_TUNE_DOCK_POSITION_KEY='el-sin-nombre-arm-tune-dock-position-v1';
+  const armTuneMove=armTunePanel.querySelector('#realPlayerArmTuneMove');
+  let armTuneDrag=null;
+  try{
+   const savedPosition=JSON.parse(localStorage.getItem(REAL_PLAYER_ARM_TUNE_DOCK_POSITION_KEY)||'null');
+   if(savedPosition&&Number.isFinite(savedPosition.left)&&Number.isFinite(savedPosition.top)){
+    armTuneDock.style.left=Math.max(4,Math.min(window.innerWidth-80,savedPosition.left))+'px';
+    armTuneDock.style.top=Math.max(4,Math.min(window.innerHeight-80,savedPosition.top))+'px';
+    armTuneDock.style.right='auto';
+   }
+  }catch(_){}
+  armTuneMove.addEventListener('pointerdown',event=>{
+   if(event.button!==undefined&&event.button!==0)return;
+   const rect=armTuneDock.getBoundingClientRect();
+   armTuneDock.style.left=rect.left+'px';armTuneDock.style.top=rect.top+'px';armTuneDock.style.right='auto';
+   armTuneDrag={id:event.pointerId,offsetX:event.clientX-rect.left,offsetY:event.clientY-rect.top};
+   try{armTuneMove.setPointerCapture(event.pointerId);}catch(_){}
+   event.preventDefault();
+  });
+  armTuneMove.addEventListener('pointermove',event=>{
+   if(!armTuneDrag||event.pointerId!==armTuneDrag.id)return;
+   const rect=armTuneDock.getBoundingClientRect();
+   const left=Math.max(4,Math.min(window.innerWidth-rect.width-4,event.clientX-armTuneDrag.offsetX));
+   const top=Math.max(4,Math.min(window.innerHeight-rect.height-4,event.clientY-armTuneDrag.offsetY));
+   armTuneDock.style.left=left+'px';armTuneDock.style.top=top+'px';
+   event.preventDefault();
+  });
+  const finishArmTuneDrag=event=>{
+   if(!armTuneDrag||event.pointerId!==armTuneDrag.id)return;
+   armTuneDrag=null;
+   try{localStorage.setItem(REAL_PLAYER_ARM_TUNE_DOCK_POSITION_KEY,JSON.stringify({
+    left:parseFloat(armTuneDock.style.left)||4,top:parseFloat(armTuneDock.style.top)||4
+   }));}catch(_){}
+  };
+  armTuneMove.addEventListener('pointerup',finishArmTuneDrag);
+  armTuneMove.addEventListener('pointercancel',finishArmTuneDrag);
   }
  function relaxHumanoidLeg(root,upper,lower,foot,side,kneeFlex=0){
   if(!root||!upper||!lower)return false;
@@ -5548,6 +5593,26 @@ function createRealWeapon(type='axe'){
   if(!entry)return null;
   return realPlayerMasterPose.get(entry.node)||null;
  }
+ function readRealPlayerMasterPoseStorage(){
+  try{
+   const raw=localStorage.getItem(REAL_PLAYER_MASTER_POSE_STORAGE_KEY);
+   if(!raw)return null;
+   const parsed=JSON.parse(raw);
+   return parsed&&parsed.schema===1&&parsed.entries&&typeof parsed.entries==='object'?parsed:null;
+  }catch(_){return null;}
+ }
+ function restoreRealPlayerMasterPoseStoredValue(raw){
+  if(!raw||typeof raw!=='object')return null;
+  if(Array.isArray(raw.quaternion)&&raw.quaternion.length===4&&raw.quaternion.every(Number.isFinite)){
+   const q=new B.Quaternion(raw.quaternion[0],raw.quaternion[1],raw.quaternion[2],raw.quaternion[3]);
+   const norm=q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w;
+   if(norm>1e-8){q.normalize();return {quaternion:q,rotation:q.toEulerAngles()};}
+  }
+  if(Array.isArray(raw.rotation)&&raw.rotation.length===3&&raw.rotation.every(Number.isFinite)){
+   return {rotation:new B.Vector3(raw.rotation[0],raw.rotation[1],raw.rotation[2]),quaternion:null};
+  }
+  return null;
+ }
  function initializeRealPlayerMasterPose(){
   const n=realRigNodes||{},entries=[],seen=new Set(),ids=new Set();
   const add=(id,label,node,side,kind='chain',fingerArm=null,fingerEntry=null)=>{
@@ -5580,6 +5645,9 @@ function createRealWeapon(type='axe'){
   addFingers(realRightGripBones,'right','weapon');
   realPlayerMasterPoseEntries=entries;
   realPlayerMasterPose=new Map();
+  realPlayerMasterPoseDefaults=new Map();
+  const storedPosePayload=readRealPlayerMasterPoseStorage();
+  let restoredSavedPoseEntries=0;
   for(const entry of entries){
    const base=realBoneRest.get(entry.node);
    if(!base)continue;
@@ -5607,13 +5675,15 @@ function createRealWeapon(type='axe'){
      pose.rotation.x+=curl;
     }
    }
+   // Valores de fábrica separados del ajuste guardado para que RESTABLECER
+   // vuelva siempre al punto de partida original del modelo.
+   realPlayerMasterPoseDefaults.set(entry.node,cloneRealPlayerMasterPoseValue(pose));
+   const saved=restoreRealPlayerMasterPoseStoredValue(storedPosePayload&&storedPosePayload.entries&&storedPosePayload.entries[entry.id]);
+   if(saved){pose.rotation=saved.rotation;pose.quaternion=saved.quaternion;restoredSavedPoseEntries++;}
    realPlayerMasterPose.set(entry.node,pose);
   }
-  realPlayerMasterPoseDefaults=new Map();
-  entries.forEach(entry=>{
-   const pose=realPlayerMasterPose.get(entry.node);
-   if(pose)realPlayerMasterPoseDefaults.set(entry.node,cloneRealPlayerMasterPoseValue(pose));
-  });
+  realPlayerMasterPoseLoadedFromStorage=restoredSavedPoseEntries>0;
+  realPlayerMasterPoseSavedAt=realPlayerMasterPoseLoadedFromStorage?(storedPosePayload.updatedAt||null):null;
   realPlayerMasterIdleTransition=null;
   buildRealPlayerMasterPoseControls();
  }
@@ -5728,14 +5798,47 @@ function createRealWeapon(type='axe'){
    }
    controls.appendChild(details);
   }
-  if(status)status.textContent='POSE MAESTRA LOCAL · '+realPlayerMasterPoseEntries.length+' articulaciones';
+  if(status)status.textContent=realPlayerMasterPoseLoadedFromStorage
+   ?'✓ POSE GUARDADA CARGADA · '+realPlayerMasterPoseEntries.length+' articulaciones'
+   :'POSE MAESTRA LOCAL · '+realPlayerMasterPoseEntries.length+' articulaciones';
  }
  function resetRealPlayerMasterPose(){
   realPlayerMasterPose=new Map();
   realPlayerMasterPoseDefaults.forEach((pose,node)=>realPlayerMasterPose.set(node,cloneRealPlayerMasterPoseValue(pose)));
+  realPlayerMasterPoseLoadedFromStorage=false;realPlayerMasterPoseSavedAt=null;
+  try{localStorage.removeItem(REAL_PLAYER_MASTER_POSE_STORAGE_KEY);}catch(_){}
   realPlayerMasterIdleTransition=null;
   buildRealPlayerMasterPoseControls();
+  const status=document.getElementById('realPlayerMasterPoseStatus');
+  if(status)status.textContent='POSE RESTABLECIDA · valores originales del modelo';
   if(realPlayerReady&&realPlayerMode==='idle'&&!onShip&&playerAction==='idle')applyRealPlayerArmPoseAfterAnimations();
+ }
+ function saveRealPlayerMasterPoseLocally(){
+  const snapshot={};let count=0;
+  for(const entry of realPlayerMasterPoseEntries){
+   const pose=realPlayerMasterPose.get(entry.node);if(!pose)continue;
+   if(pose.quaternion){
+    const q=pose.quaternion.clone().normalize();
+    snapshot[entry.id]={quaternion:[q.x,q.y,q.z,q.w].map(value=>Number(value.toFixed(7)))};
+   }else{
+    const rotation=realPlayerMasterPoseEuler(pose);
+    snapshot[entry.id]={rotation:[rotation.x,rotation.y,rotation.z].map(value=>Number(value.toFixed(7)))};
+   }
+   count++;
+  }
+  const status=document.getElementById('realPlayerMasterPoseStatus');
+  if(!count){if(status)status.textContent='NO HAY ARTICULACIONES PARA GUARDAR';return false;}
+  try{
+   const payload={schema:1,updatedAt:new Date().toISOString(),entries:snapshot};
+   localStorage.setItem(REAL_PLAYER_MASTER_POSE_STORAGE_KEY,JSON.stringify(payload));
+   realPlayerMasterPoseLoadedFromStorage=true;realPlayerMasterPoseSavedAt=payload.updatedAt;
+   if(status)status.textContent='✓ POSE GUARDADA EN ESTE DISPOSITIVO · '+count+' ARTICULACIONES';
+   return true;
+  }catch(error){
+   console.warn('No se pudo guardar la pose maestra local:',error);
+   if(status)status.textContent='NO SE PUDO GUARDAR · almacenamiento del navegador no disponible';
+   return false;
+  }
  }
  function captureRealPlayerMasterPoseText(){
   const snapshot={};
@@ -7301,7 +7404,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.182',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.183',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -7364,7 +7467,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.182');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.183');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -9139,7 +9242,7 @@ function updateHUD(){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.182 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.183 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -9194,7 +9297,7 @@ function updateHUD(){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.182: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    console.info('EL SIN NOMBRE 0.6.183: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -9257,7 +9360,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.182 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.183 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -9295,7 +9398,7 @@ function updateHUD(){
   throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.182 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.183 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
