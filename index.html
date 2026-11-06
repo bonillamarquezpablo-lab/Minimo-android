@@ -4829,21 +4829,27 @@ async function startGame(){
    .realArmTuneControl output{color:#f1cb82;font-weight:900;font-variant-numeric:tabular-nums}
    .realArmTuneControl input{display:block;width:100%;height:18px;margin:0;accent-color:#d8ad68;touch-action:pan-x}
    @media(max-width:600px) and (orientation:portrait){
-    #realPlayerArmDebugPanel{max-height:1.55em!important;overflow:hidden!important;pointer-events:auto!important;cursor:pointer!important}
+    #realPlayerArmDebugPanel{width:min(58vw,250px)!important;max-width:min(58vw,250px)!important;max-height:1.55em!important;overflow:hidden!important;pointer-events:auto!important;cursor:pointer!important}
     #realPlayerArmDebugPanel.expanded{max-height:15vh!important;overflow:auto!important}
-    #realPlayerArmTuneDock{top:calc(env(safe-area-inset-top,0px) + 145px);right:6px;width:calc(100vw - 12px);max-width:460px}
-    #realPlayerArmTunePanel{max-height:36dvh;padding:8px;overflow:auto}
-    #realPlayerArmTuneTabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 8px}
-    .realArmTuneTab{min-height:34px;padding:7px 8px;border:1px solid #d8ad6877;border-radius:6px;background:#1b3031;color:#e7dcc7;font:800 10px ui-monospace,SFMono-Regular,Consolas,monospace;touch-action:manipulation}
+    /* Tarjeta lateral: no cruza el centro de la escena ni ocupa todo el ancho. */
+    #realPlayerArmTuneDock{top:calc(env(safe-area-inset-top,0px) + 145px);right:7px;left:auto;width:min(72vw,320px);max-width:calc(100vw - 14px)}
+    #realPlayerArmTuneToggle{font-size:9px;padding:6px 8px}
+    #realPlayerArmTunePanel{max-height:29dvh;padding:6px;overflow:auto;overscroll-behavior:contain}
+    #realPlayerArmTuneHead{top:-6px;margin:-6px -6px 5px;padding:6px;font-size:9px}
+    #realPlayerArmTuneReset{font-size:8px;padding:4px 6px}
+    #realPlayerArmTuneTabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:0 0 6px}
+    .realArmTuneTab{min-height:29px;padding:5px 6px;border:1px solid #d8ad6877;border-radius:6px;background:#1b3031;color:#e7dcc7;font:800 9px ui-monospace,SFMono-Regular,Consolas,monospace;touch-action:manipulation}
     .realArmTuneTab[aria-selected="true"]{background:#8a602f;border-color:#f1d08b;color:#fff}
     #realPlayerArmTuneColumns{grid-template-columns:minmax(0,1fr)}
-    .realArmTuneSide{display:none;padding:6px}
-    .realArmTuneSide.active{display:block}
-    .realArmTuneSide h4{font-size:10px;margin-bottom:6px}
-    .realArmTuneDivider{font-size:9px;margin:7px 0 5px}
-    .realArmTuneControl{font-size:10px;margin:5px 0 7px;line-height:1.2}
-    .realArmTuneControl span{gap:8px;margin-bottom:3px}
-    .realArmTuneControl input{height:22px}
+    .realArmTuneSide{display:none;padding:5px;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:7px;row-gap:1px}
+    .realArmTuneSide.active{display:grid}
+    .realArmTuneSide h4,.realArmTuneDivider{grid-column:1/-1}
+    .realArmTuneSide h4{font-size:9px;margin-bottom:3px}
+    .realArmTuneDivider{font-size:8px;margin:4px 0 2px;padding-top:4px}
+    .realArmTuneControl{min-width:0;font-size:8px;margin:3px 0 4px;line-height:1.05}
+    .realArmTuneControl span{gap:3px;margin-bottom:1px;font-size:8px;white-space:normal;min-height:17px}
+    .realArmTuneControl output{white-space:nowrap;font-size:8px}
+    .realArmTuneControl input{height:15px}
    }
    @media(max-height:520px){#realPlayerArmTuneDock{top:calc(env(safe-area-inset-top,0px) + 110px);right:6px;width:min(94vw,380px)}#realPlayerArmTunePanel{max-height:40dvh}}
   `;
@@ -4904,6 +4910,7 @@ async function startGame(){
   const selectArmTuneTab=arm=>{
    armTuneTabButtons.forEach(button=>button.setAttribute("aria-selected",String(button.dataset.armTab===arm)));
    armTuneSidePanels.forEach(panel=>panel.classList.toggle("active",panel.dataset.armSide===arm));
+   armTunePanel.scrollTop=0;
   };
   armTuneTabButtons.forEach(button=>button.addEventListener("click",()=>selectArmTuneTab(button.dataset.armTab)));
   selectArmTuneTab("free");
