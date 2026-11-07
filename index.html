@@ -2934,17 +2934,18 @@ async function removeStrayDebugGeometry(targetScene){
   for(let i=0;i<=segments;i++){
    const angle=i/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
    const coastNoise=(terrainValueNoise((island.x+cs*island.r)*.12+17.2,(island.z+sn*island.r)*.12-8.4)-.5)*.045+Math.sin((island.x+cs*island.r)*.17+(island.z+sn*island.r)*.11)*.006;
-   const inner=island.r*(.748-coastNoise),outer=island.r*(.974-coastNoise);
-   radials.push(inner,outer);
-   for(let row=0;row<rows;row++){
-    const t=row/(rows-1),radius=inner+(outer-inner)*t;
-    for(const side of [0,1]){
-     const x=island.x+cs*radius,z=island.z+sn*radius,y=terrainSurfaceAt(x,z)+.012;
-     positions.push(x,y,z);uvs.push(i/segments*12,t*2.8);
-     const edgeFade=Math.min(smooth01(t/.11),smooth01((1-t)/.075));
-     const alpha=.88*edgeFade;colors.push(1,.94,.82,alpha);
-    }
-    baseAlpha.push(.88*Math.min(smooth01(t/.11),smooth01((1-t)/.075)));
+   radials.push(island.r*(.748-coastNoise),island.r*(.974-coastNoise));
+  }
+  // Row-major topology: exactly one vertex per (radial row, shoreline segment).
+  // This keeps the mesh indices, color state and local position updates on the same grid.
+  for(let row=0;row<rows;row++){
+   const t=row/(rows-1);
+   for(let i=0;i<=segments;i++){
+    const angle=i/segments*Math.PI*2,inner=radials[i*2],outer=radials[i*2+1];
+    const radius=inner+(outer-inner)*t,x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
+    positions.push(x,terrainSurfaceAt(x,z)+.012,z);uvs.push(i/segments*12,t*2.8);
+    const edgeFade=Math.min(smooth01(t/.11),smooth01((1-t)/.075));
+    const alpha=.88*edgeFade;colors.push(1,.94,.82,alpha);baseAlpha.push(alpha);
    }
   }
   for(let row=0;row<rows-1;row++)for(let i=0;i<segments;i++){
@@ -2979,17 +2980,17 @@ async function removeStrayDebugGeometry(targetScene){
    const layer=livingBeachLayers[islandIndex];if(!layer)return;
    const dx=x-layer.island.x,dz=z-layer.island.z,radius=Math.hypot(dx,dz),angle=(Math.atan2(dz,dx)+Math.PI*2)%(Math.PI*2);
    const segment=Math.round(angle/(Math.PI*2)*layer.segments)%layer.segments;
-   const inner=layer.radials[segment*2],outer=layer.radials[segment*2+1],rowCenter=Math.max(0,Math.min(layer.rows-1,Math.round((radius-inner)/Math.max(.001,outer-inner)*(layer.rows-1))));
+   const inner=layer.radials[segment*2],outer=layer.radials[segment*2+1];
+   if(radius<inner-.35||radius>outer+.35)return;
+   const rowCenter=Math.max(0,Math.min(layer.rows-1,Math.round((radius-inner)/Math.max(.001,outer-inner)*(layer.rows-1))));
    for(let da=-2;da<=2;da++){
-    const angular=(segment+da+layer.segments)%layer.segments;
+    const angular=(segment+da+layer.segments)%(layer.segments+1);
     for(let dr=-1;dr<=1;dr++){
-     const row=Math.max(0,Math.min(layer.rows-1,rowCenter+dr));
-     for(let side=0;side<2;side++){
-      const offset=(row*layer.cols+angular+side)*3,wx=layer.positions[offset],wz=layer.positions[offset+2];
-      layer.positions[offset+1]=terrainSurfaceAt(wx,wz)+.012;
-      layer.positionScratch[0]=layer.positions[offset];layer.positionScratch[1]=layer.positions[offset+1];layer.positionScratch[2]=layer.positions[offset+2];
-      layer.positionBuffer.updateDirectly(layer.positionScratch,offset);
-     }
+     const row=Math.max(0,Math.min(layer.rows-1,rowCenter+dr)),offset=(row*layer.cols+angular)*3;
+     const wx=layer.positions[offset],wz=layer.positions[offset+2];
+     layer.positions[offset+1]=terrainSurfaceAt(wx,wz)+.012;
+     layer.positionScratch[0]=wx;layer.positionScratch[1]=layer.positions[offset+1];layer.positionScratch[2]=wz;
+     layer.positionBuffer.updateDirectly(layer.positionScratch,offset);
     }
    }
   }
@@ -3133,11 +3134,8 @@ async function removeStrayDebugGeometry(targetScene){
        let rgb=dryColor.map((c,k)=>c+(wetColor[k]-c)*w);
        rgb=rgb.map((c,k)=>c+(foamColor[k]-c)*f);
        const alpha=base*(.82+w*.10+f*.22);
-       const sideCount=i===layer.segments?1:2;
-       for(let side=0;side<sideCount;side++){
-        const vertex=(row*layer.cols+i+side)*4;
-        layer.colors[vertex]=rgb[0];layer.colors[vertex+1]=rgb[1];layer.colors[vertex+2]=rgb[2];layer.colors[vertex+3]=alpha;
-       }
+       const vertex=(row*layer.cols+i)*4;
+       layer.colors[vertex]=rgb[0];layer.colors[vertex+1]=rgb[1];layer.colors[vertex+2]=rgb[2];layer.colors[vertex+3]=alpha;
       }
       layer.lastShore[i]=shore;
      }else{
@@ -3147,9 +3145,8 @@ async function removeStrayDebugGeometry(targetScene){
        const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[stateIndex];
        const dryColor=[1,.94,.82],wetColor=[.48,.54,.48],foamColor=[.91,.94,.87];
        let rgb=dryColor.map((c,k)=>c+(wetColor[k]-c)*w);rgb=rgb.map((c,k)=>c+(foamColor[k]-c)*f);
-       const alpha=base*(.82+w*.10+f*.22);
-       const sideCount=i===layer.segments?1:2;
-       for(let side=0;side<sideCount;side++){const vertex=(row*layer.cols+i+side)*4;layer.colors[vertex]=rgb[0];layer.colors[vertex+1]=rgb[1];layer.colors[vertex+2]=rgb[2];layer.colors[vertex+3]=alpha;}
+       const alpha=base*(.82+w*.10+f*.22),vertex=(row*layer.cols+i)*4;
+       layer.colors[vertex]=rgb[0];layer.colors[vertex+1]=rgb[1];layer.colors[vertex+2]=rgb[2];layer.colors[vertex+3]=alpha;
       }
      }
     }
