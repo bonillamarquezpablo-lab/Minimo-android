@@ -281,6 +281,12 @@ def main() -> None:
         fail("Los guerreros montados no se alinean usando coordenadas mundiales.")
     if "mount.position=v(side*.66,.967,1.65-i*2.25);" not in index_html:
         fail("La tripulación enemiga no está montada a la altura superior de la cubierta.")
+    if "const starterCampX=-40.0,starterCampZ=15.5" not in index_html:
+        fail("El campamento inicial sigue en la franja de rompiente.")
+    if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
+        fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.197</title>" not in index_html:
+        fail("El título de la página no coincide con la versión publicada.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
         fail("Los penachos o su iluminación de doble cara están incompletos.")
     if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
