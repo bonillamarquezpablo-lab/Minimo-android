@@ -119,6 +119,20 @@ def main() -> None:
         fail("Falta el socket visible del palo anclado a la palma en espacio del jugador.")
     if "function findRightGripBones" not in index_html or "applyRealPlayerClubGripPose" not in index_html:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
+    if "if(isPerformanceMode)return;\\n  const positions=[]" not in index_html:
+        fail("Rendimiento debe omitir la geometría dinámica de espuma costera.")
+    if "const VESSEL_SPRAY_COUNT=isPerformanceMode?0:" not in index_html:
+        fail("Rendimiento debe desactivar la espuma/rociado del barco.")
+    if "if(B.MirrorTexture&&B.Plane&&!isPerformanceMode)" not in index_html:
+        fail("Rendimiento debe omitir el pase de reflejos del agua; Calidad lo conserva.")
+    if "const oceanWaveNormal=isPerformanceMode?null:makeOceanWaveNormal()" not in index_html:
+        fail("Rendimiento debe evitar generar la normal de oleaje de alta calidad.")
+    if "resourceResults=await Promise.allSettled([playerHumanLoadPromise,startNpcHumanModels()])" not in index_html:
+        fail("Rendimiento debe completar la importación GLB del roster antes de abrir la intro.")
+    if "?await fullSceneWarmup" not in index_html:
+        fail("Rendimiento debe esperar a que la escena esté lista, sin el timeout de entrada anticipada.")
+    if "GLB protagonist pipeline timing" not in index_html:
+        fail("Falta telemetría de importación y montaje del GLB protagonista.")
     if "rightGripBones:realRightGripBones.length" not in index_html:
         fail("Falta telemetría del número de huesos de agarre detectados.")
     # Master idle pose is represented only by per-bone local rotations.
