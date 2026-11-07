@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.203"
+EXPECTED_VERSION = "0.6.204"
 
 HTML_PAGES = (
     "index.html",
@@ -330,8 +330,10 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.203</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.204</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
+    if "const warmupResult=await Promise.race([" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
+        fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
     if "const grassYieldInterval=isConstrainedMobile?512:1024;" not in index_html:
         fail("La generación de vegetación debe ceder el control en bloques optimizados para móviles.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
