@@ -82,14 +82,27 @@ self.addEventListener("fetch", event => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
-    event.respondWith(networkFirst(request, SHELL_CACHE).catch(async () => {
-      const cache = await caches.open(SHELL_CACHE);
-      const guestFilePath = url.pathname.endsWith("/guest.html");
-      const guestPath = /\/(?:guest|invitado)(?:\/|\/index\.html)?$/.test(url.pathname);
-      const invitePath = /\/invitado(?:\/|\/index\.html)?$/.test(url.pathname);
-      const fallback = guestFilePath ? "./guest.html" : (guestPath ? (invitePath ? "./invitado/index.html" : "./guest/index.html") : "./index.html");
+    const guestFilePath = url.pathname.endsWith("/guest.html");
+    const guestPath = /\/(?:guest|invitado)(?:\/|\/index\.html)?$/.test(url.pathname);
+    const invitePath = /\/invitado(?:\/|\/index\.html)?$/.test(url.pathname);
+    const fallback = guestFilePath ? "./guest.html" : (guestPath ? (invitePath ? "./invitado/index.html" : "./guest/index.html") : "./index.html");
+    const cachePromise = caches.open(SHELL_CACHE);
+    // Launch the installed game from its cached shell; revalidate and refresh without blocking startup.
+    const refreshPromise = fetch(request).then(response => {
+      if (!response || !response.ok) return response;
+      return cachePromise.then(cache => cache.put(request, response.clone())).then(() => response).catch(() => response);
+    });
+    event.waitUntil(refreshPromise.catch(() => {}));
+    event.respondWith((async () => {
+      const cache = await cachePromise;
+      const cached = await cache.match(request) || await cache.match(fallback);
+      if (cached) return cached;
+      try {
+        const response = await refreshPromise;
+        if (response && response.ok) return response;
+      } catch (_) {}
       return (await cache.match(fallback)) || Response.error();
-    }));
+    })());
     return;
   }
 
