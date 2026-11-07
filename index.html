@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.202">
-<meta name="el-sin-nombre-repair" content="0.6.202 terrain mipmaps, isolated ground diagnostics, correct frame-time P95 and live Phase A controls">
+<meta name="el-sin-nombre-build" content="0.6.203">
+<meta name="el-sin-nombre-repair" content="0.6.203 terrain-sampled grass placement, time-sliced generation and typed thin-instance buffers">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.202</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.203</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -7722,6 +7722,7 @@ function createRealWeapon(type='axe'){
   const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);
   gm.diffuseColor=new B.Color3(1,1,1);gm.specularColor=new B.Color3(.018,.022,.012);gm.specularPower=7;gm.backFaceCulling=false;gm.twoSidedLighting=true;gm.emissiveColor=new B.Color3(.012,.018,.006);gm.useVertexColors=true;
   const chunkSize=28,grassBatches=new Map();let count=0;
+  const grassBuildStartedAt=performance.now();
   // Preserve the exact original clearance tests, but query only obstacles in the candidate's spatial cell.
   const grassPlacementCellSize=12,grassPlacementGrid=new Map();
   const grassPlacementKey=(cx,cz)=>cx*100000+cz;
@@ -7750,11 +7751,50 @@ function createRealWeapon(type='axe'){
    const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);
    const want=isPerformanceMode?Math.round(baseWant*performanceDensity):Math.round(baseWant*qualityGrassDensity);
    let placed=0,tries=0;
+   const islandPlacementStartedAt=performance.now();
    const radius=island.r*.865;
    const gridSide=Math.ceil(Math.sqrt(want*1.60)),cellSize=(radius*2)/gridSide;
    const occupiedGridCells=new Set(),placedGridPositions=new Map();
    // Muestreo especializado para la isla actual: evita recorrer las 13 islas cinco veces
    // por candidato. Conserva los mismos límites de costa, altura y pendiente del validador.
+   // Lee la altura de la malla que ya está renderizando Babylon. La interpolación
+   // triangular sigue exactamente el mismo plano de cada triángulo y también suma
+   // los desplazamientos físicos del terreno, sin recalcular ruido trigonométrico.
+   function createGrassHeightSampler(sampleIslandIndex){
+    const field=terrainDeformationFields[sampleIslandIndex];
+    if(!field)return (x,z)=>terrainHeightOnIsland(island,x,z)+terrainDeformationAt(sampleIslandIndex,x,z);
+    const gridSize=field.gridSize,subdivisions=gridSize-1,positions=field.positions;
+    const baseHeights=field.baseHeights,offsets=field.offsets,stepX=positions[3]-positions[0];
+    const stepZ=positions[gridSize*3+2]-positions[2];
+    const originX=field.island.x+positions[0],originZ=field.island.z+positions[2];
+    const indices=field.mesh&&field.mesh.getIndices?field.mesh.getIndices():null;
+    let diagonalTLBR=true;
+    if(indices&&indices.length>=6){
+     const first=[indices[0],indices[1],indices[2]],second=[indices[3],indices[4],indices[5]];
+     const shared=first.filter(vertex=>second.includes(vertex));
+     const hasTLBR=shared.includes(0)&&shared.includes(gridSize+1);
+     const hasTRBL=shared.includes(1)&&shared.includes(gridSize);
+     if(hasTLBR||hasTRBL)diagonalTLBR=hasTLBR;
+    }
+    return (x,z)=>{
+     const gx=(x-originX)/stepX,gz=(z-originZ)/stepZ;
+     if(gx<0||gz<0||gx>subdivisions||gz>subdivisions)return NaN;
+     const col=Math.min(subdivisions-1,Math.floor(gx)),row=Math.min(subdivisions-1,Math.floor(gz));
+     const u=gx-col,vz=gz-row,topLeft=row*gridSize+col,topRight=topLeft+1;
+     const bottomLeft=topLeft+gridSize,bottomRight=bottomLeft+1;
+     const h00=baseHeights[topLeft]+offsets[topLeft],h10=baseHeights[topRight]+offsets[topRight];
+     const h01=baseHeights[bottomLeft]+offsets[bottomLeft],h11=baseHeights[bottomRight]+offsets[bottomRight];
+     if(diagonalTLBR){
+      return vz<=u
+       ?h00*(1-u)+h10*(u-vz)+h11*vz
+       :h00*(1-vz)+h11*u+h01*(vz-u);
+     }
+     return u+vz<=1
+      ?h00*(1-u-vz)+h10*u+h01*vz
+      :h10*(1-vz)+h11*(u+vz-1)+h01*(1-u);
+    };
+   }
+   const sampleGrassSurface=createGrassHeightSampler(islandIndex);
    const safeLandRadius=island.r*.70,safeLandRadiusSq=safeLandRadius*safeLandRadius,groundStep=.62;
    const grassGroundSample=(x,z)=>{
     const dx=x-island.x,dz=z-island.z;if(dx*dx+dz*dz>safeLandRadiusSq)return null;
@@ -7763,22 +7803,28 @@ function createRealWeapon(type='axe'){
     const p3=dx*dx+(zP-island.z)**2,p4=dx*dx+(zM-island.z)**2;
     const landLimitSq=(island.r*.975)**2;
     if(p1>landLimitSq||p2>landLimitSq||p3>landLimitSq||p4>landLimitSq)return null;
-    const groundY=terrainHeightOnIsland(island,x,z);
+    const groundY=sampleGrassSurface(x,z);
     if(!Number.isFinite(groundY)||groundY<.82||groundY>12.5)return null;
-    const hXP=terrainHeightOnIsland(island,xP,z),hXM=terrainHeightOnIsland(island,xM,z);
-    const hZP=terrainHeightOnIsland(island,x,zP),hZM=terrainHeightOnIsland(island,x,zM);
-    if(hXP<.70||hXM<.70||hZP<.70||hZM<.70)return null;
-    const slopeX=(hXP-hXM)/(2*groundStep),slopeZ=(hZP-hZM)/(2*groundStep);
-    if(!Number.isFinite(slopeX)||!Number.isFinite(slopeZ)||Math.hypot(slopeX,slopeZ)>.82)return null;
-    // Mantiene también la comprobación de pendiente sobre el terreno deformable,
-    // pero consulta el campo de la isla directamente y evita el barrido global.
-    const surfaceXP=hXP+terrainDeformationAt(islandIndex,xP,z),surfaceXM=hXM+terrainDeformationAt(islandIndex,xM,z);
-    const surfaceZP=hZP+terrainDeformationAt(islandIndex,x,zP),surfaceZM=hZM+terrainDeformationAt(islandIndex,x,zM);
-    const surfaceSlopeX=(surfaceXP-surfaceXM)/(2*groundStep),surfaceSlopeZ=(surfaceZP-surfaceZM)/(2*groundStep);
+    const hXP=sampleGrassSurface(xP,z),hXM=sampleGrassSurface(xM,z);
+    const hZP=sampleGrassSurface(x,zP),hZM=sampleGrassSurface(x,zM);
+    if(!Number.isFinite(hXP)||!Number.isFinite(hXM)||!Number.isFinite(hZP)||!Number.isFinite(hZM)||hXP<.70||hXM<.70||hZP<.70||hZM<.70)return null;
+    const surfaceSlopeX=(hXP-hXM)/(2*groundStep),surfaceSlopeZ=(hZP-hZM)/(2*groundStep);
     if(!Number.isFinite(surfaceSlopeX)||!Number.isFinite(surfaceSlopeZ)||Math.hypot(surfaceSlopeX,surfaceSlopeZ)>.82)return null;
-    return groundY+terrainDeformationAt(islandIndex,x,z);
+    return groundY;
    };
-   const grassYieldInterval=isConstrainedMobile?48:96;
+   const grassYieldBudgetMs=isConstrainedMobile?12:16,grassYieldCheckInterval=16;
+   let grassSliceStartedAt=performance.now(),lastGrassProgressAt=0;
+   const maybeYieldGrassStartup=async(force=false)=>{
+    const now=performance.now();
+    if(!force&&now-grassSliceStartedAt<grassYieldBudgetMs)return;
+    if(force||now-lastGrassProgressAt>=120){
+     const phase=(islandIndex+placed/Math.max(1,want))/land.length;
+     setLoadingProgress(60+phase*8,'Distribuyendo vegetación 3D · Isla '+(islandIndex+1)+'/'+land.length+' · '+placed.toLocaleString('es-ES')+'/'+want.toLocaleString('es-ES')+' grupos');
+     lastGrassProgressAt=now;
+    }
+    await yieldStartupFrame();
+    grassSliceStartedAt=performance.now();
+   };
    const tryPlaceGrass=(x,z)=>{
     const sampledGroundY=grassGroundSample(x,z);if(sampledGroundY===null)return false;
     const gridCol=Math.max(0,Math.min(gridSide-1,Math.floor((x-(island.x-radius))/cellSize)));
@@ -7795,15 +7841,24 @@ function createRealWeapon(type='axe'){
     // posterior conserva caminos, asentamientos y colisiones sin repetir muestreos.
     if(grassPlacementBlocked(x,z))return false;
     const scaleX=rand(.94,1.18),scaleY=isPerformanceMode?rand(.78,.92):rand(.90,1.02),scaleZ=rand(.94,1.18);
-    const rotation=B.Quaternion.RotationYawPitchRoll(rand(0,Math.PI*2),0,0);
-    const groundY=sampledGroundY+.006;
-    const matrix=B.Matrix.Compose(v(scaleX,scaleY,scaleZ),rotation,v(x,groundY,z));
+    const yaw=rand(0,Math.PI*2),cosYaw=Math.cos(yaw),sinYaw=Math.sin(yaw),groundY=sampledGroundY+.006;
     const cellX=Math.floor((x-island.x+radius)/chunkSize),cellZ=Math.floor((z-island.z+radius)/chunkSize);
     const key=islandIndex+':'+cellX+':'+cellZ;
     let batch=grassBatches.get(key);
-    if(!batch){batch={islandIndex,cellX,cellZ,matrices:[],colors:[]};grassBatches.set(key,batch);}
-    batch.matrices.push(...matrix.m);
-    const tint=rand(.93,1.06);batch.colors.push(tint,rand(.96,1.03),rand(.90,.99),1);
+    if(!batch){batch={islandIndex,cellX,cellZ,capacity:128,count:0,matrices:new Float32Array(128*16),colors:new Float32Array(128*4)};grassBatches.set(key,batch);}
+    if(batch.count>=batch.capacity){
+     const nextCapacity=batch.capacity*2,nextMatrices=new Float32Array(nextCapacity*16),nextColors=new Float32Array(nextCapacity*4);
+     nextMatrices.set(batch.matrices.subarray(0,batch.count*16));nextColors.set(batch.colors.subarray(0,batch.count*4));
+     batch.capacity=nextCapacity;batch.matrices=nextMatrices;batch.colors=nextColors;
+    }
+    const matrixOffset=batch.count*16,colorOffset=batch.count*4,m=batch.matrices;
+    m[matrixOffset]=scaleX*cosYaw;m[matrixOffset+1]=0;m[matrixOffset+2]=-scaleX*sinYaw;m[matrixOffset+3]=0;
+    m[matrixOffset+4]=0;m[matrixOffset+5]=scaleY;m[matrixOffset+6]=0;m[matrixOffset+7]=0;
+    m[matrixOffset+8]=scaleZ*sinYaw;m[matrixOffset+9]=0;m[matrixOffset+10]=scaleZ*cosYaw;m[matrixOffset+11]=0;
+    m[matrixOffset+12]=x;m[matrixOffset+13]=groundY;m[matrixOffset+14]=z;m[matrixOffset+15]=1;
+    const tint=rand(.93,1.06),c=batch.colors;
+    c[colorOffset]=tint;c[colorOffset+1]=rand(.96,1.03);c[colorOffset+2]=rand(.90,.99);c[colorOffset+3]=1;
+    batch.count++;
     occupiedGridCells.add(gridCell);placedGridPositions.set(gridCell,{x,z});
     placed++;count++;return true;
    };
@@ -7814,7 +7869,7 @@ function createRealWeapon(type='axe'){
    for(const sample of candidateCells){
     if(placed>=want)break;
     tries++;
-    if(tries%grassYieldInterval===0){const phase=(islandIndex+placed/Math.max(1,want))/land.length;setLoadingProgress(60+phase*8,'Distribuyendo vegetación 3D · Isla '+(islandIndex+1)+'/'+land.length+' · '+placed.toLocaleString('es-ES')+'/'+want.toLocaleString('es-ES')+' grupos');await yieldStartupFrame();}
+    if((tries&(grassYieldCheckInterval-1))===0)await maybeYieldGrassStartup();
     const col=sample%gridSide,row=Math.floor(sample/gridSide);
     const dx0=(col+.5)/gridSide*radius*2-radius,dz0=(row+.5)/gridSide*radius*2-radius;
     if(dx0*dx0+dz0*dz0>radius*radius)continue;
@@ -7831,7 +7886,7 @@ function createRealWeapon(type='axe'){
     if(dx*dx+dz*dz>radius*radius)continue;
     for(let attempt=0;attempt<4&&placed<want;attempt++){
      tries++;
-     if(tries%grassYieldInterval===0){const phase=(islandIndex+placed/Math.max(1,want))/land.length;setLoadingProgress(60+phase*8,'Distribuyendo vegetación 3D · Isla '+(islandIndex+1)+'/'+land.length+' · '+placed.toLocaleString('es-ES')+'/'+want.toLocaleString('es-ES')+' grupos');await yieldStartupFrame();}
+     if((tries&(grassYieldCheckInterval-1))===0)await maybeYieldGrassStartup();
      const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
      const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
      tryPlaceGrass(x,z);
@@ -7841,29 +7896,31 @@ function createRealWeapon(type='axe'){
    // Completa solamente las celdas que hayan caído sobre árboles, roca, pendiente o asentamientos.
    while(placed<want&&tries<want*8){
     tries++;
-    if(tries%grassYieldInterval===0){const phase=(islandIndex+placed/Math.max(1,want))/land.length;setLoadingProgress(60+phase*8,'Distribuyendo vegetación 3D · Isla '+(islandIndex+1)+'/'+land.length+' · '+placed.toLocaleString('es-ES')+'/'+want.toLocaleString('es-ES')+' grupos');await yieldStartupFrame();}
+    if((tries&(grassYieldCheckInterval-1))===0)await maybeYieldGrassStartup();
     const angle=Math.random()*Math.PI*2,rad=Math.sqrt(Math.random())*radius;
     tryPlaceGrass(island.x+Math.cos(angle)*rad,island.z+Math.sin(angle)*rad);
    }
+   await maybeYieldGrassStartup(true);
    const totalGridCells=Math.max(1,Math.round(Math.PI*.25*gridSide*gridSide));
-   grassDebugIslandStats.push({name:island.name||('ISLA '+(islandIndex+1)),target:want,placed,fillPct:Math.round(placed/Math.max(1,want)*100),occupiedCells:occupiedGridCells.size,totalGridCells,gridPct:Math.min(100,Math.round(occupiedGridCells.size/totalGridCells*100))});
+   grassDebugIslandStats.push({name:island.name||('ISLA '+(islandIndex+1)),target:want,placed,attempts:tries,placementMs:Math.round(performance.now()-islandPlacementStartedAt),fillPct:Math.round(placed/Math.max(1,want)*100),occupiedCells:occupiedGridCells.size,totalGridCells,gridPct:Math.min(100,Math.round(occupiedGridCells.size/totalGridCells*100))});
   }
   let grassUploadBatch=0;
+  const grassUploadStartedAt=performance.now();
   for(const batch of grassBatches.values()){
    const grassMesh=new B.Mesh('NordicGroundCover_'+batch.islandIndex+'_'+batch.cellX+'_'+batch.cellZ,scene);
    vertexData.applyToMesh(grassMesh);grassMesh.material=gm;grassMesh.isPickable=false;grassMesh.receiveShadows=false;
    // Keep the source clump on the ground plane; instance transforms contain the actual terrain height.
    grassMesh.position.set(0,0,0);grassMesh.computeWorldMatrix(true);
-   grassMesh.thinInstanceSetBuffer('matrix',new Float32Array(batch.matrices),16,true);
-   grassMesh.thinInstanceSetBuffer('color',new Float32Array(batch.colors),4,true);
-   grassMesh.thinInstanceCount=batch.matrices.length/16;grassMesh.thinInstanceRefreshBoundingInfo(true);
+   grassMesh.thinInstanceSetBuffer('matrix',batch.matrices.subarray(0,batch.count*16),16,true);
+   grassMesh.thinInstanceSetBuffer('color',batch.colors.subarray(0,batch.count*4),4,true);
+   grassMesh.thinInstanceCount=batch.count;grassMesh.thinInstanceRefreshBoundingInfo(true);
    grassMesh.doNotSyncBoundingInfo=false;
    if(++grassUploadBatch%(isConstrainedMobile?4:8)===0)await yieldStartupFrame();
   }
   grassInstanceCount=count;grassBatchCount=grassBatches.size;
   // Publica únicamente el recuento real ya generado para el panel ?debug=1.
   grassDebugClumpCount=count;grassDebugBatchCount=grassBatches.size;
-  console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:grassDebugLeavesPerClump,instancesPerIsland:grassDebugIslandStats,spatialBatches:grassBatchCount,chunkSize});
+  console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:grassDebugLeavesPerClump,instancesPerIsland:grassDebugIslandStats,spatialBatches:grassBatchCount,chunkSize,placementMs:Math.round(grassUploadStartedAt-grassBuildStartedAt),uploadMs:Math.round(performance.now()-grassUploadStartedAt),totalMs:Math.round(performance.now()-grassBuildStartedAt)});
  }
  spawnNaturalVegetationAndFauna();
  await createRealGrass();
