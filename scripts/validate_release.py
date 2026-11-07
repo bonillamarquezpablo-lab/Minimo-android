@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.224"
+EXPECTED_VERSION = "0.6.225"
 
 HTML_PAGES = (
     "index.html",
@@ -131,7 +131,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'8',build:'0.6.224'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html:
+    if "reportVersion:'8',build:'0.6.225'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -155,12 +155,12 @@ def main() -> None:
         fail("La fauna debe priorizar los clips canónicos Idle/Walk/Gallop y usar AnimalArmature como respaldo.")
     if "const segments=Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)))" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
         fail("Calidad debe construir una banda continua y de alta resolución alrededor de toda la costa.")
-    if "foam.mesh.updateVerticesData(B.VertexBuffer.ColorKind,colors,false,false)" not in index_html or "foam.retreatResidue[col]*retreatFade+Math.min(.42,retreat*2.6)" not in index_html:
-        fail("La espuma costera debe depositarse por retirada real del agua y disiparse gradualmente.")
+    if "foam.mesh.updateVerticesData(B.VertexBuffer.ColorKind,colors,false,false)" not in index_html or "foam.retreatResidue[col]*retreatFade+Math.min(.48,retreat*3.4)" not in index_html:
+        fail("La espuma costera debe depositarse al retroceder el agua, acumular visibilidad y disiparse gradualmente.")
     if "const initialShoreline=shorelineFoamRadius(island,angle,oceanTime)" not in index_html or "colors[color+3]=0;" not in index_html:
         fail("La espuma debe comenzar invisible y aparecer tras el primer retroceso real de la línea de agua.")
-    if "const retreat=Number.isFinite(previousShore)?Math.max(0,shoreline-previousShore):0;" not in index_html or "const whiteFoamProfile=Math.exp(-(((shoreOffset-.16)/.27)**2));" not in index_html:
-        fail("La espuma visible debe seguir el borde que acaba de quedar seco y formar una línea blanca estrecha.")
+    if "Math.max(0,previousShore-shoreline)" not in index_html or "const foamVisibility=Math.min(1,foamStrength/.18);" not in index_html or "const whiteFoamProfile=Math.exp(-(((shoreOffset-.16)/.27)**2));" not in index_html:
+        fail("La espuma visible debe activarse con el movimiento de retirada y superar un umbral de opacidad perceptible.")
     if "const VESSEL_SPRAY_COUNT=isPerformanceMode?0:" not in index_html:
         fail("Rendimiento debe desactivar la espuma/rociado del barco.")
     if "if(B.MirrorTexture&&B.Plane&&!isPerformanceMode)" not in index_html:
@@ -384,18 +384,18 @@ def main() -> None:
         fail("La isla activa debe usar la malla costera continua de alta resolución.")
     if "const initialShoreline=shorelineFoamRadius(island,angle,oceanTime)" not in index_html or "lastShoreline.fill(NaN);foamCenter.fill(NaN);" not in index_html:
         fail("La espuma debe inicializar su historial de costa y no mostrarse como una banda permanente.")
-    if "inlandDistance<4.8" not in index_html or "swashReach=1.55+3.05*wavePulse" not in index_html:
-        fail("La resaca debe mojar una superficie amplia de arena y avanzar/retroceder con el oleaje.")
+    if "inlandDistance<4.8" not in index_html or "foamBreath=.92+.08*wavePulse" not in index_html:
+        fail("La humedad debe seguir cubriendo la playa y la espuma debe modularse suavemente tras la retirada.")
     if "foamPattern=new Float32Array((segments+1)*rows)" not in index_html or "foamPattern,wetness,residue,lastShore" not in index_html:
         fail("La espuma de resaca debe usar una máscara espacial precomputada y reutilizada.")
     if "foamMass=smooth01((broadFoam*.54+mediumFoam*.31+fineFoam*.15-.49)*8.5)" not in index_html or "foamFilament=1-smooth01((Math.abs(mediumFoam-.5)-.19)*7.5)" not in index_html:
         fail("La espuma debe formar masas rotas con filamentos, no una banda lisa.")
     if "Math.min(288,Math.ceil(Math.PI*2*island.r/1.35))" not in index_html or "rows=isPerformanceMode?9:(isTouchDevice?15:17)" not in index_html:
         fail("La resolución de la playa debe conservar el presupuesto del perfil Rendimiento.")
-    if "swashReach=1.55+3.05*wavePulse" not in index_html or "swashZone=swashIn*swashOut" not in index_html:
-        fail("La resaca debe extenderse como una lámina irregular sobre la arena, no como una línea.")
-    if "foamIslands=swashZone*foamMask*drift" not in index_html or "layer.residue[stateIndex]*Math.exp(-step/5.8)" not in index_html:
-        fail("La espuma debe ser fragmentada, dinámica y disiparse progresivamente.")
+    if "Math.max(0,previous-shore)" not in index_html or "deposit=Math.min(.78,retreat*2.35)*Math.exp(-distance*.92)" not in index_html:
+        fail("El depósito de espuma sobre la playa debe ocurrir en la franja que acaba de quedar descubierta.")
+    if "foamBreath=.92+.08*wavePulse" not in index_html or "layer.residue[stateIndex]*Math.exp(-step/3.0)" not in index_html or "const f=Math.min(.82,foam*foamBreath)" not in index_html:
+        fail("La espuma de playa debe ser fragmentada, depender del residuo de retirada y disiparse en pocos segundos.")
     if "Math.exp(-Math.max(0,inlandDistance)*.43)" not in index_html:
         fail("La humedad debe oscurecer una franja amplia de arena mojada detrás de la espuma.")
     shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"))]
@@ -403,8 +403,8 @@ def main() -> None:
         fail("El cruce agua/arena debe usar el perfil real completo; no puede sustituir el mar exterior por una altura plana.")
     if "radialOffsets=[-.72,-.54,-.36,-.18,-.02,.13,.28,.43,.58]" not in index_html or "water>ground?water+.014:ground+.022" not in index_html:
         fail("La malla de espuma debe ser una cinta estrecha, blanca y apoyada en la superficie real de agua o arena.")
-    if "foam.foamCenter[col]=shoreline-.16" not in index_html or "const alpha=Math.min(.90,foamStrength*whiteFoamProfile*innerFade*outerFade*Math.pow(lace,1.18)*(.92+.08*secondary));" not in index_html:
-        fail("La línea de espuma debe persistir brevemente en el punto de retirada y romperse en fragmentos.")
+    if "foam.foamCenter[col]=previousShore-.10" not in index_html or "const lace=.18+.82*foamPattern[vertex]" not in index_html or "const alpha=Math.min(.94,foamVisibility*whiteFoamProfile*innerFade*outerFade*Math.pow(lace,.92)*(.94+.06*secondary));" not in index_html:
+        fail("La espuma debe quedar sobre la arena recién descubierta, ser claramente visible y mantener fragmentos irregulares.")
     if "const radius=Number.isFinite(shoreline)?shoreline:island.r*1.09" in index_html:
         fail("La espuma no puede usar el borde exterior de la isla como posición de reserva.")
     if "function terrainDeformationAt(islandIndex,x,z)" not in index_html or "terrainDeformationFields[index]=deformationField;" not in index_html:
@@ -458,7 +458,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.224</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.225</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
