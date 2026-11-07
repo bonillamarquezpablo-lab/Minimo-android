@@ -88,6 +88,8 @@ def main() -> None:
         fail("La caché de recursos no contiene la huella SHA-256 generada en build.")
     if "return cached || response;" not in sw:
         fail("El service worker no contiene fallback de caché para errores HTTP.")
+    if "Launch the installed game from its cached shell" not in sw or "event.waitUntil(refreshPromise.catch(() => {}));" not in sw:
+        fail("La aplicación instalada debe arrancar desde caché y actualizar en segundo plano.")
 
     asset_manifest = json.loads(read_text("assets/asset-manifest.json"))
     if asset_manifest.get("game") != "EL SIN NOMBRE" or asset_manifest.get("version") != version:
@@ -348,8 +350,11 @@ def main() -> None:
         fail("El suelo no utiliza escalas orgánicas de textura.")
     if "for(let i=0;i<8200;i++)" not in index_html or "terrainPBR.bumpTexture.level=GROUND_PHASE_A_DEFAULTS.relief;" not in index_html:
         fail("Falta el detalle fino de suelo o su relieve PBR.")
-    if "const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));" not in index_html:
-        fail("La distribución no rellena las celdas vacías.")
+    if "for(const sample of candidateCells){" not in index_html or "if(occupiedGridCells[sample])continue;" not in index_html:
+        fail("La distribución no recorre las celdas vacías con su buffer compacto.")
+    for compact in ("new Uint8Array(gridSide*gridSide)", "new Float32Array(gridSide*gridSide*2)", "new Uint32Array(gridSide*gridSide)", "placedGridPositions[placedOffset+1]=z"):
+        if compact not in index_html:
+            fail("Falta un buffer compacto de colocación de hierba: " + compact)
     if "function createShrub(" in index_html or "IslandShrubBatch_" in index_html or "NorseShrubsIsland_" in index_html:
         fail("Siguen presentes los arbustos decorativos low-poly aislados.")
     if "function isVegetationTrailClearance(" not in index_html or "vegetationTrailPaths.push(" not in index_html or "isVegetationTrailClearance(x,z,1.35)" not in index_html:
