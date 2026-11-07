@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.217">
-<meta name="el-sin-nombre-repair" content="0.6.217 ultra-low-end island streaming in Performance mode; 0.6.216 fragmented shoreline foam and thirteen-island conquest">
+<meta name="el-sin-nombre-build" content="0.6.219">
+<meta name="el-sin-nombre-repair" content="0.6.219 full pre-entry asset readiness and low-end Performance rendering reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.217</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.219</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2597,12 +2597,13 @@ async function removeStrayDebugGeometry(targetScene){
   }
   ctx.putImageData(img,0,0);tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
  }
- const oceanWaveNormal=makeOceanWaveNormal();oceanWaveNormal.level=.96;oceanWaveNormal.uScale=9.2;oceanWaveNormal.vScale=9.2;
- M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.96;
+ const oceanWaveNormal=isPerformanceMode?null:makeOceanWaveNormal();
+ if(oceanWaveNormal){oceanWaveNormal.level=.96;oceanWaveNormal.uScale=9.2;oceanWaveNormal.vScale=9.2;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.96;}
+ else{M.water.bumpTexture=albedoNormalWater;M.water.bumpTexture.level=.24;}
  // El agua recibe un reflejo propio de las islas y del cielo nórdico.
  // El HDRI global se conserva para los materiales PBR, pero nunca se asigna al mar.
  M.water.specularColor=new B.Color3(.62,.76,.82);M.water.specularPower=128;
- if(B.FresnelParameters){M.water.reflectionFresnelParameters=new B.FresnelParameters();M.water.reflectionFresnelParameters.isEnabled=true;M.water.reflectionFresnelParameters.leftColor=new B.Color3(.08,.18,.23);M.water.reflectionFresnelParameters.rightColor=new B.Color3(.68,.82,.86);M.water.reflectionFresnelParameters.bias=.035;M.water.reflectionFresnelParameters.power=2.1;}
+ if(B.FresnelParameters&&!isPerformanceMode){M.water.reflectionFresnelParameters=new B.FresnelParameters();M.water.reflectionFresnelParameters.isEnabled=true;M.water.reflectionFresnelParameters.leftColor=new B.Color3(.08,.18,.23);M.water.reflectionFresnelParameters.rightColor=new B.Color3(.68,.82,.86);M.water.reflectionFresnelParameters.bias=.035;M.water.reflectionFresnelParameters.power=2.1;}else if(M.water.reflectionFresnelParameters)M.water.reflectionFresnelParameters.isEnabled=false;
   M.windowGlow.emissiveColor=new B.Color3(.8,.38,.10);M.windowGlow.disableLighting=false;M.windowGlow.specularColor=new B.Color3(.2,.12,.04);
   M.ember.emissiveColor=new B.Color3(1,.22,.035);M.ember.disableLighting=true;M.ember.alpha=.96;
  [M.tunic,M.red,M.blueCloth,M.greenCloth,M.ochreCloth,M.fur].forEach(m=>{m.specularColor=new B.Color3(.035,.032,.028);m.specularPower=18;});
@@ -3387,6 +3388,7 @@ async function removeStrayDebugGeometry(targetScene){
  })();
  const tidalFoamMeshes=[];
  function buildTidalFoam(island,index){
+  if(isPerformanceMode)return;
   const positions=[],indices=[],colors=[],patches=72,patchMeta=[],radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47];
   for(let i=0;i<patches;i++){
    if(((i*37+index*19)%11)<3)continue;
@@ -4062,7 +4064,7 @@ async function removeStrayDebugGeometry(targetScene){
    if(idx===0&&Math.hypot(x+58,z-9)<13)continue;
    trees.push(createTree(x,z,rand(.78,1.12)));
   }
-  let rc=idx===0?21:idx<6?8:9;
+  let rc=isPerformanceMode?(idx===0?8:(idx<6?3:3)):(idx===0?21:idx<6?8:9);
   for(let i=0;i<rc;i++){
    const p=sampleGroundPoint(is,3.6,.82,.16,.84);if(!p)continue;const x=p.x,z=p.z;
    if(Math.hypot(x-(idx===0?32:is.x),z-(idx===0?-14:is.z))<10)continue;
@@ -4209,7 +4211,7 @@ async function removeStrayDebugGeometry(targetScene){
  const wakeMaterial=M.foam.clone('DrakkarWakeMaterial');wakeMaterial.alpha=0;wakeMaterial.emissiveColor=new B.Color3(.12,.20,.22);
  const shipWake=[];for(let side of [-1,1]){const strip=B.MeshBuilder.CreatePlane('DrakkarWake_'+side,{width:1.08,height:7.1,sideOrientation:B.Mesh.DOUBLESIDE},scene);strip.parent=ship;strip.rotation.x=Math.PI/2;strip.position=v(side*.48,.42,-7.45);strip.material=wakeMaterial;shipWake.push(strip);}// El casco conserva su sombra; la vela y el mástil no proyectan una franja desproporcionada sobre la isla.
  addModelShadow(ship,1);
- const VESSEL_SPRAY_COUNT=isUltraLowEndMobile?24:(isGalaxyA12NachoPerformance?28:(isGalaxyA12LowEndMobile?36:(isConstrainedMobile?48:96)));
+ const VESSEL_SPRAY_COUNT=isPerformanceMode?0:(isUltraLowEndMobile?24:(isGalaxyA12NachoPerformance?28:(isGalaxyA12LowEndMobile?36:(isConstrainedMobile?48:96))));
  const vesselSprayMesh=B.MeshBuilder.CreateSphere('VesselWaterSprayBatch',{diameter:1,segments:8},scene);
  const vesselSprayMaterial=new B.StandardMaterial('VesselWaterSprayMaterial',scene);
  vesselSprayMaterial.diffuseColor=new B.Color3(.90,.97,1.0);vesselSprayMaterial.emissiveColor=new B.Color3(.20,.31,.36);
@@ -4226,6 +4228,7 @@ async function removeStrayDebugGeometry(targetScene){
  vesselSprayMesh.thinInstanceSetBuffer('matrix',vesselSprayMatrices,16,true);vesselSprayMesh.thinInstanceCount=VESSEL_SPRAY_COUNT;
  let vesselSprayCursor=0,vesselSprayActive=false;
  function spawnVesselSplash(root,speed){
+  if(!VESSEL_SPRAY_COUNT)return;
   const particle=vesselSprayParticles[vesselSprayCursor++%VESSEL_SPRAY_COUNT];
   const heading=root.rotation.y,fx=Math.sin(heading),fz=Math.cos(heading),rx=Math.cos(heading),rz=-Math.sin(heading);
   const side=Math.random()<.5?-1:1,bow=Math.random()<.48,foam=Math.random()<.36;
@@ -4243,7 +4246,7 @@ async function removeStrayDebugGeometry(targetScene){
   vesselSprayActive=true;
  }
  function emitVesselSplashes(root,dt,speed,state){
-  if(!state)return;
+  if(isPerformanceMode||!state)return;
   const magnitude=Math.abs(speed);
   if(magnitude<.55){state.accumulator=0;return;}
   state.accumulator=(state.accumulator||0)+dt;
@@ -4256,7 +4259,7 @@ async function removeStrayDebugGeometry(targetScene){
   }
  }
  function updateVesselSpray(dt){
-  if(!vesselSprayActive)return;
+  if(isPerformanceMode||!vesselSprayActive)return;
   const totalStep=Math.max(0,Math.min(.10,dt||0)),substeps=Math.max(1,Math.ceil(totalStep/.02)),step=totalStep/substeps;let remaining=0;
   for(let i=0;i<VESSEL_SPRAY_COUNT;i++){
    const p=vesselSprayParticles[i];let scale=0;
@@ -6308,6 +6311,7 @@ if(realPlayerArmDebugEnabled){
   }finally{URL.revokeObjectURL(objectUrl);}
  }
  async function resolveVikingAssetUrls(){
+  if(isPerformanceMode)return [VIKING_GLB_URL];
   const urls=[VIKING_GLB_URL];
   // La ficha oficial actual es la fuente principal. La URL de descarga histórica queda como respaldo.
   const metaUrls=['https://grab3d.com/api/v1/models/viking.json','https://www.grab3d.com/api/v1/models/viking.json'];
@@ -6336,7 +6340,7 @@ if(realPlayerArmDebugEnabled){
    const assetUrl=urls[index],controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),30000);
    try{
     lastVikingStage='descarga del modelo desde Grab3D';
-    const response=await fetch(assetUrl,{mode:'cors',cache:'no-store',credentials:'same-origin',signal:controller.signal,headers:{'Accept':'model/gltf-binary,application/octet-stream,*/*'}});
+    const response=await fetch(assetUrl,{mode:'cors',cache:isPerformanceMode?'force-cache':'no-store',credentials:'same-origin',signal:controller.signal,headers:{'Accept':'model/gltf-binary,application/octet-stream,*/*'}});
     if(response.type==='opaque')throw new Error('El servidor no permite leer el archivo desde este HTML (CORS).');
     if(!response.ok)throw new Error('Grab3D respondió HTTP '+response.status+' al descargar el modelo.');
     const blob=await responseBlobWithProgress(response,'3/3 · Descargando tu vikingo…',0,100,'player');
@@ -7207,7 +7211,7 @@ function createRealWeapon(type='axe'){
  // No utiliza environmentSpecular.env, que contiene un entorno urbano genérico.
  let nordicWaterMirror=null;
  try{
-  if(B.MirrorTexture&&B.Plane){
+  if(B.MirrorTexture&&B.Plane&&!isPerformanceMode){
    const mirrorSize=isTouchDevice?256:512;
    nordicWaterMirror=new B.MirrorTexture('NordicIslandWaterReflection',mirrorSize,scene,true);
    nordicWaterMirror.mirrorPlane=new B.Plane(0,-1,0,.035);
@@ -10717,7 +10721,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.195 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.219 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -10727,17 +10731,9 @@ function updateHUD(){
  // los demás NPC ya tienen cuerpo, colisión y animación procedural en la escena.
  let resourceResults;
  if(isPerformanceMode){
-  // En móviles limitados, el jugador y el primer frame tienen prioridad: los siete
-  // NPC 3D previstos por el perfil se importan tras mostrar la intro, sobre los proxies existentes.
-  const playerPreparation=await Promise.allSettled([playerHumanLoadPromise]);
-  resourceResults=[...playerPreparation,{status:'background'}];
-  setTimeout(()=>{
-   const npcPreparationTask=startNpcHumanModels();
-   npcPreparationTask.then(
-    result=>console.info('Modelos NPC del perfil Rendimiento preparados en segundo plano:',result),
-    error=>console.warn('Los modelos NPC siguen usando sus proxies; se reintentará la carga:',error)
-   );
-  },900);
+  // El roster reducido de Rendimiento se importa completo antes de abrir la intro.
+  // No se difieren modelos GLB ni se muestran proxies como sustitutos temporales.
+  resourceResults=await Promise.allSettled([playerHumanLoadPromise,startNpcHumanModels()]);
  }else{
   const npcPreparationTask=startNpcHumanModels();
   resourceResults=await Promise.allSettled([playerHumanLoadPromise,npcPreparationTask]);
@@ -10772,10 +10768,9 @@ function updateHUD(){
     error=>({ready:false,error})
    );
    // Presupuesto máximo para el arranque: evita quedarse indefinidamente en el 87 %.
-   const warmupResult=await Promise.race([
-    fullSceneWarmup,
-    new Promise(resolve=>{warmupTimer=setTimeout(()=>resolve({ready:false,timeout:true}),1400);})
-   ]);
+   const warmupResult=isPerformanceMode
+    ?await fullSceneWarmup
+    :await Promise.race([fullSceneWarmup,new Promise(resolve=>{warmupTimer=setTimeout(()=>resolve({ready:false,timeout:true}),1400);})]);
    if(warmupTimer!==null)clearTimeout(warmupTimer);
    if(warmupResult.ready){
     sceneWarmupStatus='ready';
@@ -10795,7 +10790,7 @@ function updateHUD(){
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.185 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.219 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
