@@ -10,7 +10,7 @@
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.195</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.197</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -7077,7 +7077,7 @@ function createRealWeapon(type='axe'){
  buildOuterIslandLandmarks();
  // Primer refugio del protagonista: lona remendada, dos postes, leña húmeda y un fuego pequeño.
  // No es una casa construida: es un campamento de náufrago junto al lugar donde despierta.
- const starterCampX=-53.5,starterCampZ=15.5,starterCampY=terrainSurfaceAt(starterCampX,starterCampZ);
+ const starterCampX=-40.0,starterCampZ=15.5,starterCampY=terrainSurfaceAt(starterCampX,starterCampZ);
  const starterCamp=newGroup('PoorNorseCastawayCamp',null);starterCamp.position=v(starterCampX,starterCampY,starterCampZ);
  for(const side of [-1,1]){
   cyl('CastawayLeanToPole_'+side,starterCamp,[side*.92,.88,-.32],1.78,.065,.07,M.woodDark,[0,0,side*.20]);
@@ -9569,7 +9569,7 @@ function updateHUD(){
     // Los GLB pueden conservar rotationQuaternion; se elimina para que la pose
     // local de cubierta no quede anulada por la orientación de importación.
     p.rotationQuaternion=null;
-    p.position.set(seat.x,.995,seat.z);p.rotation.set(0,seat.side*Math.PI/2,0);
+    p.position.set(seat.x,guard.parts.realHuman?.role?.972:.995,seat.z);p.rotation.set(0,seat.side*Math.PI/2,0);
     p.computeWorldMatrix(true);guard.parts.actualMoveSpeed=0;
     animateShipRower(guard.parts,elapsed*5.8+seat.oar*.58+(seat.side>0?Math.PI:0));return;
    }
