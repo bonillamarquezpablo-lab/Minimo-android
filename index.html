@@ -10496,7 +10496,9 @@ function updateHUD(){
      mesh.computeWorldMatrix(true);
      const info=mesh.getBoundingInfo&&mesh.getBoundingInfo(),sphere=info&&info.boundingSphere;
      if(sphere&&Number.isFinite(sphere.radiusWorld)&&sphere.radiusWorld>165){oversized=true;break;}
-     const p=mesh.getAbsolutePosition?mesh.getAbsolutePosition():mesh.position;
+     // Use the actual world-space bounds centre: some beach/foam meshes store
+     // their vertices in world coordinates while their node origin stays at (0,0,0).
+     const p=sphere&&sphere.centerWorld?sphere.centerWorld:(mesh.getAbsolutePosition?mesh.getAbsolutePosition():mesh.position);
      if(p&&Number.isFinite(p.x)&&Number.isFinite(p.z)){sumX+=p.x;sumZ+=p.z;samples++;}
     }catch(_){ }
    }
@@ -10511,10 +10513,24 @@ function updateHUD(){
    scene.onNewMeshAddedObservable.add(mesh=>{
     let root=mesh;while(root&&root.parent&&!islandStreamRootLookup.has(root))root=root.parent;
     let group=root&&islandStreamRootLookup.get(root);
-    if(!group&&!mesh.parent&&!islandStreamExcludedRoot(mesh)){
+    if(!group&&root&&!islandStreamExcludedRoot(root)){
      try{
-      mesh.computeWorldMatrix(true);const p=mesh.getAbsolutePosition?mesh.getAbsolutePosition():mesh.position,index=islandStreamIslandAt(p.x,p.z),island=land[index];
-      if(Math.hypot(p.x-island.x,p.z-island.z)<=island.r+28)group=islandStreamCreateGroup(mesh,[mesh],index,p.x,p.z);
+      const rootMeshes=[];
+      if(typeof root.getTotalVertices==='function'&&root.getTotalVertices()>0)rootMeshes.push(root);
+      if(typeof root.getChildMeshes==='function')rootMeshes.push(...root.getChildMeshes(false));
+      const candidates=[...new Set(rootMeshes)].filter(item=>item&&typeof item.getTotalVertices==='function'&&item.getTotalVertices()>0);
+      let x=0,z=0,count=0;
+      for(const item of candidates){
+       item.computeWorldMatrix(true);
+       const bounds=item.getBoundingInfo&&item.getBoundingInfo(),sphere=bounds&&bounds.boundingSphere;
+       const p=sphere&&sphere.centerWorld?sphere.centerWorld:(item.getAbsolutePosition?item.getAbsolutePosition():item.position);
+       if(p&&Number.isFinite(p.x)&&Number.isFinite(p.z)){x+=p.x;z+=p.z;count++;}
+      }
+      if(count){
+       x/=count;z/=count;
+       const index=islandStreamIslandAt(x,z),island=land[index];
+       if(Math.hypot(x-island.x,z-island.z)<=island.r+28)group=islandStreamCreateGroup(root,candidates,index,x,z);
+      }
      }catch(_){ }
     }
     if(group)islandStreamAddMesh(group,mesh);
@@ -10528,8 +10544,8 @@ function updateHUD(){
   islandStreamClock=0;
   const focus=onShip?ship.position:player.root.position;
   const onIsland=landIslandIndex(focus.x,focus.z),wantedIndex=onIsland>=0?onIsland:islandStreamIslandAt(focus.x,focus.z);
-  if(!force&&wantedIndex===islandStreamActiveIndex)return;
-  islandStreamActiveIndex=wantedIndex;
+  const islandChanged=wantedIndex!==islandStreamActiveIndex;
+  if(islandChanged)islandStreamActiveIndex=wantedIndex;
   let visibleMeshes=0;
   for(const group of islandStreamGroups){
    let keep=group.index===wantedIndex;
@@ -10540,7 +10556,14 @@ function updateHUD(){
      keep=Math.hypot(p.x-focus.x,p.z-focus.z)<48;
     }
    }
-   if(keep===group.active){if(keep)visibleMeshes+=group.meshes.length;continue;}
+   if(keep===group.active){
+    if(keep)visibleMeshes+=group.meshes.length;
+    else if(!islandChanged&&group.meshes.some(state=>state.mesh&&state.mesh.isVisible!==false)){
+     // Dynamic NPC/faction code may mark a badge visible again while its home island is remote.
+     for(const state of group.meshes){const mesh=state.mesh;if(mesh&&mesh.isVisible!==false){mesh.isVisible=false;mesh.visibility=0;}}
+    }
+    continue;
+   }
    group.active=keep;
    for(const state of group.meshes){
     const mesh=state.mesh;if(!mesh||mesh.isDisposed&&mesh.isDisposed())continue;
