@@ -1527,6 +1527,7 @@ let startupPerfActiveStage=STARTUP_PERF_DEBUG_ENABLED?{name:'Preparación inicia
 function startupPerfStageName(progress){
  const value=Number(progress)||0;
  if(value>=87)return 'Sincronización final';
+ if(value>=82)return 'Sincronización y preparación de entrada';
  if(value>=70)return 'Guardianes y aldeanos';
  if(value>=68)return 'Fauna';
  if(value>=60)return 'Vegetación 3D';
@@ -3253,7 +3254,7 @@ async function removeStrayDebugGeometry(targetScene){
  function pointSegmentDistanceSquared(x,z,a,b){const dx=b[0]-a[0],dz=b[1]-a[1],len=dx*dx+dz*dz,t=len>1e-8?Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/len)):0,px=a[0]+dx*t,pz=a[1]+dz*t;return (x-px)*(x-px)+(z-pz)*(z-pz);}
  function isVegetationTrailClearance(x,z,extra=1.15){for(const path of vegetationTrailPaths){const limit=path.width*.5+extra,limitSq=limit*limit;for(let i=0;i<path.points.length-1;i++)if(pointSegmentDistanceSquared(x,z,path.points[i],path.points[i+1])<limitSq)return true;}return false;}
  // The path has its own packed-earth material and never receives world shadows (the source of the pitch-black slab).
- const packedTrailTexture=makePatternTexture('Packed Norse trail earth','#66533b',['#8e7957','#4b3a2a','#a18a62','#574633'],'sand',512);
+ const packedTrailTexture=makePatternTexture('Packed Norse trail earth','#66533b',['#8e7957','#4b3a2a','#a18a62','#574633'],'sand',512,true);
  packedTrailTexture.uScale=1.0;packedTrailTexture.vScale=3.2;
  const packedTrailMaterial=new B.StandardMaterial('PackedNorseEarthTrailMaterial',scene);
  packedTrailMaterial.diffuseTexture=packedTrailTexture;packedTrailMaterial.diffuseColor=new B.Color3(.83,.75,.61);
@@ -5613,7 +5614,7 @@ if(grassDebugEnabled){
  grassDebugPanel=document.createElement('pre');
  grassDebugPanel.id='grassDebugPanel';
  grassDebugPanel.setAttribute('aria-label','Diagnóstico de densidad y distribución de la hierba 3D');
- grassDebugPanel.style.cssText='position:fixed;left:8px;top:calc(env(safe-area-inset-top,0px) + 112px);z-index:99998;width:min(88vw,340px);max-height:34vh;overflow:auto;margin:0;padding:8px 10px;border:1px solid #d8ad68;border-radius:8px;background:rgba(5,12,14,.91);color:#f5e8cf;font:9px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;pointer-events:none;box-shadow:0 3px 12px #0009';
+ grassDebugPanel.style.cssText='position:fixed;left:8px;top:calc(env(safe-area-inset-top,0px) + 112px);z-index:99998;width:min(88vw,340px);max-height:34vh;overflow:auto;margin:0;padding:8px 10px;border:1px solid #d8ad68;border-radius:8px;background:rgba(5,12,14,.91);color:#f5e8cf;font:9px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;pointer-events:auto;touch-action:pan-y;box-shadow:0 3px 12px #0009';
  document.body.appendChild(grassDebugPanel);
  window.setInterval(updateGrassDebugPanel,500);
  updateGrassDebugPanel();
