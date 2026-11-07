@@ -3089,7 +3089,7 @@ async function removeStrayDebugGeometry(targetScene){
    const island=land[islandIndex],dx=x-island.x,dz=z-island.z,d=Math.hypot(dx,dz);
    if(d>island.r*.973)return;
    const positions=[],indices=[],uvs=[],colors=[],baseAlpha=[];
-   const halfLength=running?.245:.225,baseWidth=running?.155:.137;
+   const halfLength=running?.270:.248,baseWidth=running?.172:.151;
    for(let row=0;row<imprintRows;row++){
     const nz=row/(imprintRows-1)*2-1;
     for(let col=0;col<imprintCols;col++){
@@ -3099,10 +3099,11 @@ async function removeStrayDebugGeometry(targetScene){
      const wx=x+rightX*localX+forwardX*localZ,wz=z+rightZ*localX+forwardZ*localZ;
      const onSameIsland=landIslandIndex(wx,wz)===islandIndex,groundY=terrainSurfaceAt(wx,wz);
      const mask=onSameIsland?1-smooth01((radial-.69)/.31):0,edge=smooth01((radial-.78)/.22);
-     const rim=beach?edge*.009:edge*.004,press=(1-edge)* (wet?.013:(beach?.009:.006));
-     positions.push(wx,groundY+.012+rim-press,wz);uvs.push(col/(imprintCols-1),row/(imprintRows-1));
-     const strength=wet?.68:(beach?.50:.34),tint=wet?[.40,.48,.42]:(beach?[.48,.38,.25]:[.43,.39,.30]);
-     const edgeTint=beach?[.78,.69,.51]:[.62,.57,.43],blend=edge*.46;
+     const rim=beach?edge*.010:edge*.005,press=(1-edge)*(wet?.012:(beach?.009:.006));
+     // Keep the impression above the heightfield to prevent z-fighting and buried wet marks.
+     positions.push(wx,groundY+.022+rim-press,wz);uvs.push(col/(imprintCols-1),row/(imprintRows-1));
+     const strength=wet?.82:(beach?.72:.58),tint=wet?[.30,.39,.38]:(beach?[.37,.29,.19]:[.36,.33,.25]);
+     const edgeTint=beach?[.64,.53,.37]:[.53,.48,.37],blend=edge*.38;
      colors.push(tint[0]*(1-blend)+edgeTint[0]*blend,tint[1]*(1-blend)+edgeTint[1]*blend,tint[2]*(1-blend)+edgeTint[2]*blend,strength*mask);
      baseAlpha.push(strength*mask);
     }
@@ -3118,14 +3119,22 @@ async function removeStrayDebugGeometry(targetScene){
    const life=wet?92:(beach?62:34);imprints.push({mesh,age:0,life,baseAlpha,colors:new Float32Array(colors),fadeAccumulator:0});
    if(imprints.length>maxImprints){const old=imprints.shift();old.mesh.dispose(false,true);}
   }
+  let particleCursor=0;
+  for(let i=0;i<maxParticles;i++){
+   const mesh=B.MeshBuilder.CreateSphere('FootstepSandGrainPool_'+i,{diameter:1,segments:4},scene);
+   mesh.material=dryGrainMaterial;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;mesh.setEnabled(false);
+   particles.push({mesh,vx:0,vz:0,vy:0,life:0,age:0,wet:false});
+  }
   function kickSandGrains(x,z,heading,wet,running){
-   const count=wet?2:(running?4:3);
-   for(let i=0;i<count&&particles.length<maxParticles;i++){
-    const angle=heading+rand(-1.2,1.2),speed=rand(.16,running?.82:.48),distance=rand(.08,.21),y=terrainSurfaceAt(x,z)+.07;
-    const mesh=B.MeshBuilder.CreateSphere('FootstepSandGrain',{diameter:rand(.018,.038),segments:4},scene);
-    mesh.material=wet?wetGrainMaterial:dryGrainMaterial;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;
-    mesh.position=v(x+Math.sin(angle)*distance,y,z+Math.cos(angle)*distance);
-    particles.push({mesh,vx:Math.sin(angle)*speed,vz:Math.cos(angle)*speed,vy:rand(.28,running?1.05:.68),life:rand(.28,.55),age:0});
+   const count=wet?3:(running?4:3);let emitted=0,checked=0;
+   while(emitted<count&&checked<maxParticles){
+    const p=particles[particleCursor++%maxParticles];checked++;if(p.life>0)continue;
+    const angle=heading+rand(-1.2,1.2),speed=wet?rand(.42,running?1.02:.72):rand(.16,running?.82:.48),distance=rand(.08,.21),y=terrainSurfaceAt(x,z)+(wet?.035:.07);
+    const diameter=wet?rand(.030,.052):rand(.018,.038);
+    p.mesh.material=wet?wetGrainMaterial:dryGrainMaterial;p.mesh.position.set(x+Math.sin(angle)*distance,y,z+Math.cos(angle)*distance);
+    p.mesh.scaling.set(diameter*(wet?.62:1),diameter*(wet?1.65:1),diameter*(wet?.62:1));p.mesh.setEnabled(true);
+    p.vx=Math.sin(angle)*speed;p.vz=Math.cos(angle)*speed;p.vy=wet?rand(.48,running?1.30:.92):rand(.28,running?1.05:.68);
+    p.life=wet?rand(.42,.70):rand(.28,.55);p.age=0;p.wet=wet;emitted++;
    }
   }
   function addStep(x,z,heading,running){
@@ -3200,13 +3209,11 @@ async function removeStrayDebugGeometry(targetScene){
     }
    }
    relaxGround(dt);
-   for(let i=particles.length-1;i>=0;i--){
-    const p=particles[i];p.age+=dt;p.life-=dt;
-    p.vy-=2.6*dt;p.mesh.position.x+=p.vx*dt;p.mesh.position.z+=p.vz*dt;p.mesh.position.y+=p.vy*dt;
-    p.mesh.scaling.scaleInPlace(1-dt*.85);
-    if(p.life<=0||p.mesh.position.y<=terrainSurfaceAt(p.mesh.position.x,p.mesh.position.z)+.025){
-     p.mesh.dispose(false,true);particles.splice(i,1);
-    }
+   for(let i=0;i<particles.length;i++){
+    const p=particles[i];if(p.life<=0)continue;p.age+=dt;p.life-=dt;
+    p.vy-=(p.wet?3.4:2.6)*dt;p.mesh.position.x+=p.vx*dt;p.mesh.position.z+=p.vz*dt;p.mesh.position.y+=p.vy*dt;
+    p.mesh.scaling.scaleInPlace(Math.max(.90,1-dt*(p.wet?.48:.85)));
+    if(p.life<=0||p.mesh.position.y<=terrainSurfaceAt(p.mesh.position.x,p.mesh.position.z)+.018){p.life=0;p.mesh.setEnabled(false);}
    }
    updateBeach(dt,x,z);
    if(onShip||airborne||!Number.isFinite(distance)||distance<=0){if(!onShip&&(!Number.isFinite(distance)||distance<=0))stepDistance=0;return;}
