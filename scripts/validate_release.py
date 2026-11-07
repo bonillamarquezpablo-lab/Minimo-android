@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.216"
+EXPECTED_VERSION = "0.6.217"
 
 HTML_PAGES = (
     "index.html",
@@ -302,6 +302,16 @@ def main() -> None:
         fail("La arena no utiliza el albedo costero de grano fino y su relieve PBR.")
     if "function buildLivingBeachLayer(island,index)" not in index_html or "function updateBeach(dt,focusX,focusZ)" not in index_html:
         fail("Falta la capa de playa con humedad y espuma residual dinámica.")
+    if "redmi8aHardwareMatch" not in index_html or "M2006C3L" not in index_html:
+        fail("El Redmi 8A debe entrar en el perfil de hardware extremo del modo Rendimiento.")
+    if "ultraLowEndIslandStreaming=!!(isPerformanceMode&&isUltraLowEndMobile)" not in index_html or "function islandStreamBuildGroups()" not in index_html or "updatePerformanceIslandStreaming(dt)" not in index_html:
+        fail("El streaming de islas debe activarse solo en Rendimiento extremo y seguir al jugador/barco.")
+    if "mesh.isVisible=keep?state.visible:false" not in index_html or "mesh.visibility=keep?state.opacity:0" not in index_html:
+        fail("Las islas lejanas deben quedar fuera del render sin destruir sus entidades o estado de juego.")
+    if "sphere.centerWorld?sphere.centerWorld" not in index_html or "const islandChanged=wantedIndex!==islandStreamActiveIndex" not in index_html:
+        fail("El streaming debe clasificar geometría por centro real y mantener ocultos los NPC remotos.")
+    if "landIslandIndex(focus.x,focus.z)" not in index_html or "islandStreamIslandAt(focus.x,focus.z)" not in index_html:
+        fail("El cambio de isla renderizada debe seguir al jugador en tierra y al drakkar en navegación.")
     if "island.r*(1.085-coastNoise)" not in index_html or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018" not in index_html:
         fail("La superficie de playa debe prolongarse hasta la zona intermareal usando la altura real del perfil costero.")
     if "land.forEach(buildTidalFoam);" not in index_html or "radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47]" not in index_html:
@@ -384,7 +394,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.216</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.217</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
