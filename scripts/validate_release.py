@@ -344,8 +344,8 @@ def main() -> None:
         fail("La rompiente debe actualizarse dinámicamente en todas las islas, no solo junto al jugador.")
     if "const crestCentre=.38+reach*.76" not in index_html or "const lace=crest*" not in index_html or "const offshore=" not in index_html:
         fail("La espuma debe incluir crestas rotas, filamentos y fragmentos marinos, no una línea blanca.")
-    if "tidalFoamAccumulator+=dt" not in index_html or "if(tidalFoamAccumulator>=.12)" not in index_html:
-        fail("La animación de la espuma debe mantener una cadencia temporal independiente y estable.")
+    if "if(!isPerformanceMode)tidalFoamAccumulator+=dt;" not in index_html or "if(!isPerformanceMode&&tidalFoamAccumulator>=.12)" not in index_html:
+        fail("El planificador de espuma debe ejecutarse exclusivamente en Calidad y mantener una cadencia estable.")
     if "inlandDistance<4.8" not in index_html or "swashReach=1.55+3.05*wavePulse" not in index_html:
         fail("La resaca debe mojar una superficie amplia de arena y avanzar/retroceder con el oleaje.")
     if "foamPattern=new Float32Array((segments+1)*rows)" not in index_html or "foamPattern,wetness,residue,lastShore" not in index_html:
