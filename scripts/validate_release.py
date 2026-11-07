@@ -406,10 +406,10 @@ def main() -> None:
         fail("Los saltos de posición, teletransportes y estados a bordo/en el aire deben reiniciar el trazado de huellas.")
     if "pendingStepDistance:Number(stepDistance.toFixed(3))" not in index_html or "footstepsEmitted" not in index_html:
         fail("El diagnóstico debe exponer la distancia pendiente y el contador de huellas emitidas.")
-    if "radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47]" not in index_html or "DynamicSubmergedShoreWash_" not in index_html or "Number.isFinite(radius)?radius:island.r*1.09" in index_html:
-        fail("La espuma de orilla debe cruzar la línea de agua sin usar el fallback mar adentro.")
-    if "Math.max(ground,water)+.028" not in index_html or "foam.positions[offset+1]=-3.2" not in index_html:
-        fail("La espuma debe apoyarse sobre arena emergida o sobre la superficie del agua y ocultarse si no hay intersección.")
+    if "const radialOffsets=[-5.6,-4.9,-4.2,-3.5,-2.8,-2.1,-1.45,-.85,-.25,.35,.95,1.65,2.35]" not in index_html or "DynamicBreakerFoam_" not in index_html or "shorelineFoamRadiusForBreakers" not in index_html:
+        fail("La espuma de orilla debe usar la malla de rompiente continua y resolver el contacto real agua-arena.")
+    if "Math.max(ground,water)+lift" not in index_html or "const alpha=Math.min(.84,body+lace+retreat+offshore)" not in index_html:
+        fail("La espuma debe levantarse sobre agua o arena y combinar lámina de lavado, cresta, retorno y espuma mar adentro.")
     if "source.fire&&source.extinguished" not in index_html or "flame.hearth=hearth" not in index_html:
         fail("Las hogueras inundadas no apagan sus llamas y humo.")
     if "parts.root.getAbsolutePosition().y" not in index_html or "rootWorldY-bounds.min.y+.008" not in index_html:
