@@ -4021,6 +4021,7 @@ async function removeStrayDebugGeometry(targetScene){
  });
 
  const enemyShips=[];
+ const islandInvasionState={started:false,wave:0,nextWaveAt:0,waveInProgress:false,targetIndex:-1,ships:[],activeInvaders:[]};
  function buildRaiderShip(index,x,z,rotation){
   let root=newGroup('RaiderLongship_'+index,null);root.position=v(x,-.35,z);root.rotation.y=rotation;root.scaling=v(.94,1,.88);
   let eh=createLongshipHull(root);eh.material=M.navy;
@@ -8170,6 +8171,110 @@ function createRealWeapon(type='axe'){
  });
  const enemies=[...villages.flatMap(q=>q.guards)];
  const fallenEnemies=[];
+ function islandGarrisonUnits(vl){
+  if(!vl||!vl.claimed)return [];
+  const stationedGuards=vl.guards.filter(g=>g&&g.alive&&!g.recruited&&isFriendlyGuard(g));
+  const stationedCompanions=companions.filter(a=>a&&a.recruited&&a.garrisonVillageIndex===vl.index);
+  return [...stationedGuards,...stationedCompanions];
+ }
+ function downIslandGarrisonGuard(guard){
+  if(!guard||!guard.alive)return;
+  guard.hp=0;guard.alive=false;guard.state='dead';guard.surrendered=false;guard.stun=0;
+  if(guard.parts&&guard.parts.weapon)guard.parts.weapon.setEnabled(false);
+  if(guard.healthBack)guard.healthBack.setEnabled(false);
+  if(guard.healthMesh)guard.healthMesh.setEnabled(false);
+  guard.deadFallT=0;guard.deadSide=guard.deadSide||1;guard.deadTimer=2.8;
+  if(guard.parts&&guard.parts.realHuman){guard.parts.realHuman.groups.forEach(g=>g.stop());guard.parts.realHuman.current=null;}
+  fallenEnemies.push(guard);
+ }
+ function loseIslandHolding(vl){
+  if(!vl||!vl.claimed)return;
+  vl.claimed=false;captured=Math.max(0,captured-1);
+  if(vl.flag)vl.flag.material=M.red;
+  (vl.flagEmblem||[]).forEach(mesh=>mesh.setEnabled(true));
+  if(vl.territoryFill){vl.territoryFill.dispose(false,true);vl.territoryFill=null;}
+  if(vl.territoryRing){vl.territoryRing.dispose(false,true);vl.territoryRing=null;}
+  (vl.houseOriginalMaterials||[]).forEach(group=>group.forEach(entry=>{if(entry.mesh&&!entry.mesh.isDisposed())entry.mesh.material=entry.material;}));
+  vl.guards.forEach(g=>{if(g.alive&&!g.recruited){g.faction='enemy';g.parts.faction='enemy';g.state='idle';g.cool=.6;setFactionBadge(g.parts,'enemy');}});
+  companions.filter(a=>a.garrisonVillageIndex===vl.index).forEach(a=>{a.garrisonVillageIndex=null;a.garrisonHealth=100;});
+  msg('¡'+vl.name+' ha caído! La flota enemiga ha ocupado la costa. Debes reconquistarla.');
+  recordSagaEvent('Asentamiento perdido: '+vl.name+'. La invasión ha roto sus defensas.');
+  updateHUD();saveGame(true);
+ }
+ function invasionDisembark(ship,vl){
+  if(!ship||ship.invasionPartySpawned||!vl)return;
+  const island=land[vl.index],dx=ship.invasionApproachX-island.x,dz=ship.invasionApproachZ-island.z,len=Math.hypot(dx,dz)||1,ux=dx/len,uz=dz/len,rx=uz,rz=-ux;
+  ship.crew.forEach((crewman,i)=>{
+   const side=i===0?-1:1,candidateX=island.x+ux*island.r*.62+rx*side*1.8,candidateZ=island.z+uz*island.r*.62+rz*side*1.8;
+   const landing=nearestSafeLandPoint(candidateX,candidateZ,.70),fallback=nearestSafeLandPoint(vl.x+rx*side*2.6,vl.z+rz*side*2.6,.70),spot=landing&&landing.island===vl.index?landing:(fallback&&fallback.island===vl.index?fallback:null);
+   if(!spot)return;
+   const parts=crewman.parts;parts.root.parent=null;parts.root.setEnabled(true);parts.root.position=v(spot.x,terrainSurfaceAt(spot.x,spot.z)+actorGroundOffset(parts),spot.z);
+   parts.root.rotation.set(0,Math.atan2(vl.x-spot.x,vl.z-spot.z),0);parts.weapon.setEnabled(true);
+   if(parts.realHuman&&parts.realHuman.sword)parts.realHuman.sword.setEnabled(true);
+   if(!crewman.healthBack){
+    crewman.healthBack=B.MeshBuilder.CreatePlane('InvasionCrewHealthBack_'+ship.index+'_'+i,{width:1.10,height:.12},scene);crewman.healthBack.parent=parts.root;crewman.healthBack.position=v(0,2.02,0);crewman.healthBack.billboardMode=B.Mesh.BILLBOARDMODE_ALL;crewman.healthBack.material=M.red;
+    crewman.healthMesh=B.MeshBuilder.CreatePlane('InvasionCrewHealth_'+ship.index+'_'+i,{width:1.05,height:.085},scene);crewman.healthMesh.parent=parts.root;crewman.healthMesh.position=v(0,2.03,-.02);crewman.healthMesh.billboardMode=B.Mesh.BILLBOARDMODE_ALL;crewman.healthMesh.material=M.gold;
+   }
+   crewman.healthBack.setEnabled(true);crewman.healthMesh.setEnabled(true);crewman.healthMesh.scaling.x=1;crewman.healthMesh.position.x=0;
+   const invader={parts,hp:100+islandInvasionState.wave*12,alive:true,surrendered:false,recruited:false,state:'idle',attackT:0,attackDone:false,cool:rand(.4,1.2),stun:0,hitReact:0,knockback:0,hitDir:v(0,0,0),deadFallT:0,deadSide:1,deadTimer:0,healthMesh:crewman.healthMesh,healthBack:crewman.healthBack,islandInvader:true,targetVillageIndex:vl.index,attackCooldown:rand(.4,1.0),siegeProgress:0};
+   enemies.push(invader);islandInvasionState.activeInvaders.push(invader);crewman.landed=true;crewman.invaderRef=invader;setFactionBadge(parts,'enemy');
+  });
+  ship.invasionPartySpawned=true;ship.invasionPhase='landed';
+  msg('¡Desembarco enemigo en '+vl.name+'! Sus guerreros atacan la guarnición.');
+  recordSagaEvent('Desembarco enemigo en '+vl.name+'. Defiende el puesto y hunde sus drakkars.');
+  saveGame(true);
+ }
+ function prepareInvasionShip(ship,slot,vl){
+  const island=land[vl.index],angle=(islandInvasionState.wave*1.83+slot*Math.PI+.37),spawnRadius=island.r+118;
+  const sx=island.x+Math.cos(angle)*spawnRadius,sz=island.z+Math.sin(angle)*spawnRadius;
+  if(!ship)ship=buildRaiderShip(enemyShips.length,sx,sz,Math.atan2(island.x-sx,island.z-sz));
+  ship.islandInvasionShip=true;ship.invasionTargetIndex=vl.index;ship.invasionPhase='sailing';ship.invasionPartySpawned=false;ship.invasionAttackClock=0;ship.invasionSiegeClock=0;
+  ship.invasionApproachX=island.x+Math.cos(angle)*(island.r+13);ship.invasionApproachZ=island.z+Math.sin(angle)*(island.r+13);
+  ship.root.setEnabled(true);ship.root.position.set(sx,-.35,sz);ship.root.rotation.set(0,Math.atan2(ship.invasionApproachX-sx,ship.invasionApproachZ-sz),0);
+  ship.hp=130+islandInvasionState.wave*12;ship.maxHp=ship.hp;ship.sunk=false;ship.cool=1.8;ship.bar.setEnabled(true);ship.back.setEnabled(true);ship.bar.scaling.x=1;ship.bar.position.x=0;
+  ship.floatState=createVesselFloatState();
+  ship.crew.forEach((crewman,i)=>{
+   if(crewman.landed){
+    const old=enemies.findIndex(e=>e.islandInvader&&e.parts===crewman.parts);if(old>=0)enemies.splice(old,1);
+    const active=islandInvasionState.activeInvaders.indexOf(crewman.invaderRef);if(active>=0)islandInvasionState.activeInvaders.splice(active,1);
+    const fallen=fallenEnemies.findIndex(e=>e.parts===crewman.parts);if(fallen>=0)fallenEnemies.splice(fallen,1);
+    const real=crewman.parts.realHuman;if(real){real.groups.forEach(g=>g.stop());real.current=null;for(const [node,base] of real.rest)restoreRigNodePose(node,base);if(real.modelRoot)real.modelRoot.rotation.y=real.modelForwardOffset||0;if(real.sword)real.sword.setEnabled(false);}
+    crewman.parts.weapon.setEnabled(false);crewman.parts.root.setEnabled(true);crewman.parts.root.parent=crewman.mount;crewman.parts.root.position.set(0,0,0);crewman.parts.root.rotation.set(0,crewman.side*Math.PI/2,0);
+    if(crewman.healthBack)crewman.healthBack.setEnabled(false);if(crewman.healthMesh)crewman.healthMesh.setEnabled(false);
+    crewman.landed=false;crewman.invaderRef=null;setFactionBadge(crewman.parts,'enemy');
+   }
+  });
+  return ship;
+ }
+ function chooseInvasionTarget(){
+  const holdings=villages.filter(vl=>vl.claimed);if(!holdings.length)return null;
+  holdings.sort((a,b)=>islandGarrisonUnits(a).length-islandGarrisonUnits(b).length||((a.index-islandInvasionState.wave)%land.length)-((b.index-islandInvasionState.wave)%land.length));
+  return holdings[0];
+ }
+ function spawnIslandInvasionWave(){
+  const target=chooseInvasionTarget();if(!target)return;
+  islandInvasionState.wave++;islandInvasionState.targetIndex=target.index;islandInvasionState.activeInvaders=[];islandInvasionState.waveInProgress=true;
+  for(let i=0;i<2;i++)islandInvasionState.ships[i]=prepareInvasionShip(islandInvasionState.ships[i],i,target);
+  msg('¡OLEADA '+islandInvasionState.wave+'! Una flota enemiga navega hacia '+target.name+'.');
+  recordSagaEvent('Oleada naval '+islandInvasionState.wave+': flota enemiga rumbo a '+target.name+'.');
+  updateHUD();saveGame(true);
+ }
+ function updateIslandInvasion(){
+  if(!islandInvasionState.started&&villages.length===land.length&&villages.every(vl=>vl.claimed)){
+   islandInvasionState.started=true;islandInvasionState.wave=0;islandInvasionState.waveInProgress=false;islandInvasionState.nextWaveAt=elapsed+22;
+   msg('¡EL ARCHIPIÉLAGO ESTÁ UNIDO! Se avistan velas enemigas en el horizonte.');
+   recordSagaEvent('Las trece islas han sido unificadas. Comienza la defensa naval del reino.');
+   saveGame(true);
+  }
+  if(!islandInvasionState.started||islandInvasionState.waveInProgress)return;
+  if(elapsed>=islandInvasionState.nextWaveAt)spawnIslandInvasionWave();
+  if(islandInvasionState.waveInProgress&&!islandInvasionState.activeInvaders.some(e=>e&&e.alive)&&islandInvasionState.ships.every(ship=>!ship||ship.sunk||ship.invasionPhase==='landed')){
+   islandInvasionState.waveInProgress=false;islandInvasionState.nextWaveAt=elapsed+Math.max(55,88-islandInvasionState.wave*3);
+   recordSagaEvent('Oleada '+islandInvasionState.wave+' rechazada. La siguiente flota se aproxima.');
+   saveGame(true);
+  }
+ }
+
  function isFriendlyGuard(e){
   if(!e)return false;
   // Ambas marcas se consultan: algunos NPC conservan la facción en parts tras cambiar de estado.
