@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.213">
-<meta name="el-sin-nombre-repair" content="0.6.213 corrected shoreline intersection, five-row advancing beach swash, broken foam tongues, typed terrain-deformation buffers and batched footprints">
+<meta name="el-sin-nombre-build" content="0.6.214">
+<meta name="el-sin-nombre-repair" content="0.6.214 thirteen-island conquest, persistent island discovery and endgame naval-defence unlock, corrected shoreline and typed terrain buffers">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.213</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.214</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -7453,6 +7453,35 @@ function createRealWeapon(type='axe'){
  makeVillage(1,135,14,'Skall');
  makeVillage(2,-132,45,'Pinos');
  makeVillage(3,28,143,'Hrafn');
+ // Nine additional island garrisons complete the archipelago's 13-island conquest layer.
+ // They reuse the existing capture/recruit/save controller but avoid full village props,
+ // civilians and extra campfires to keep the mobile world budget bounded.
+ function makeIslandGarrison(islandIndex){
+  const island=land[islandIndex],phase=islandIndex*2.399,guardAngle=phase+.8;
+  const gx=island.x+Math.cos(guardAngle)*island.r*.18,gz=island.z+Math.sin(guardAngle)*island.r*.18;
+  const gy=terrainSurfaceAt(gx,gz),flagX=island.x-Math.cos(guardAngle)*2.8,flagZ=island.z-Math.sin(guardAngle)*2.8,flagY=terrainSurfaceAt(flagX,flagZ);
+  const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,null,[flagX,flagY+2.15,flagZ],4.3,.075,.075,M.woodLight);
+  const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,null);flagGroup.position=v(flagX,flagY+3.55,flagZ);
+  const flag=box('IslandGarrisonFlag_'+islandIndex,flagGroup,[0,0,0],[1.28,.86,.055],M.red);
+  const flagEmblem=[box('IslandGarrisonRuneA_'+islandIndex,flagGroup,[0,0,.038],[.72,.07,.025],M.gold,[0,0,.62]),box('IslandGarrisonRuneB_'+islandIndex,flagGroup,[0,0,.040],[.72,.07,.025],M.gold,[0,0,-.62])];
+  cyl('IslandGarrisonCrossbar_'+islandIndex,flagGroup,[.08,.43,0],1.48,.045,.045,M.woodLight,[0,0,Math.PI/2]);
+  for(let stake=0;stake<3;stake++){
+   const a=phase+stake*Math.PI*2/3,px=island.x+Math.cos(a)*island.r*.12,pz=island.z+Math.sin(a)*island.r*.12,py=terrainSurfaceAt(px,pz);
+   cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,null,[px,py+.42,pz],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);
+  }
+  const parts=makeViking('VillageGuardIsland_'+islandIndex,true,(islandIndex+1)%4);
+  setFactionBadge(parts,'enemy');parts.root.position=v(gx,gy+.08,gz);parts.root.rotation.y=guardAngle+Math.PI;
+  attachContactShadow(parts.root,'IslandGuardShadow_'+islandIndex,.82);addModelShadow(parts.root);
+  const back=B.MeshBuilder.CreatePlane('IslandGuardHealthBack_'+islandIndex,{width:1.08,height:.11},scene);
+  back.parent=parts.root;back.position=v(0,2.02,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=M.red;
+  const front=B.MeshBuilder.CreatePlane('IslandGuardHealth_'+islandIndex,{width:1.04,height:.085},scene);
+  front.parent=parts.root;front.position=v(0,2.03,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('IslandGuardHealthFront_'+islandIndex,'#76a75a');
+  const guard={parts,villageIndex:islandIndex,hp:100,alive:true,surrendered:false,recruited:false,state:'idle',attackT:0,attackDone:false,cool:rand(.1,.8),stun:0,hitReact:0,knockback:0,hitDir:v(0,0,0),deadFallT:0,deadSide:rand(-1,1),healthMesh:front,healthBack:back,home:v(gx,0,gz),initialYaw:parts.root.rotation.y};
+  villages.push({index:islandIndex,landIndex:islandIndex,x:island.x,z:island.z,name:island.name,guards:[guard],claimed:false,flag,flagGroup,flagEmblem,flagpole:flagPole,flagBaseY:flagY+3.55,houseGroups:[],houseOriginalMaterials:[],territoryFill:null,territoryRing:null,captureAnimation:null,islandGarrison:true,territoryRadius:Math.min(19,island.r*.70)});
+ }
+ for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);
+ const discoveredIslands=land.map((_,index)=>index===0);
+ let navalDefensePhaseUnlocked=false;
  // Norse settlement dressing: rune stones, shield racks, casks, firewood and a fish-drying frame.
  const runeFaceTexture=new B.DynamicTexture('RunestoneCarvingTexture',{width:256,height:512},scene,false),runeFaceCtx=runeFaceTexture.getContext();
  runeFaceCtx.fillStyle='#777b70';runeFaceCtx.fillRect(0,0,256,512);runeFaceCtx.strokeStyle='#c9b990';runeFaceCtx.lineWidth=8;runeFaceCtx.strokeRect(16,16,224,480);
@@ -7500,7 +7529,7 @@ function createRealWeapon(type='axe'){
   cyl('WatchtowerBannerPole_'+idx,tower,[0,5.05,-.70],2.4,.045,.045,M.woodLight);
   const towerBanner=B.MeshBuilder.CreatePlane('WatchtowerRavenBanner_'+idx,{width:.76,height:.55,sideOrientation:B.Mesh.DOUBLESIDE},scene);towerBanner.parent=tower;towerBanner.position=v(.38,5.54,-.70);towerBanner.material=M.playerBanner;
  }
- villages.forEach((vl,i)=>addNorseVillageProps(vl,i));
+ villages.forEach((vl,i)=>{if(!vl.islandGarrison)addNorseVillageProps(vl,i);});
  // Decoration and atmosphere: anatomically built Norse hearths, layered flame, embers and smoke.
  const flameMeshes=[],fireSparks=[],hearthStates=[];
  const hearthAshMat=mat('Hearth ash and soot','#28231f',1),hearthCoalMat=mat('Charred oak coal','#201914',.98);
@@ -7570,7 +7599,7 @@ function createRealWeapon(type='axe'){
    }
   }
  }
- villages.forEach(vl=>campfire(vl.x-3,vl.z+5));
+ villages.forEach(vl=>{if(!vl.islandGarrison)campfire(vl.x-3,vl.z+5);});
  // 0.6.100 — pequeños campamentos secundarios, uno en cada isla con asentamiento.
  // Son decoración ligera: no sustituyen aldeas, guardias, colisiones ni sistemas existentes.
  function buildIslandOutpost(vl){
@@ -7592,7 +7621,7 @@ function createRealWeapon(type='axe'){
   box('ScoutCampSupplies_'+vl.index,scout,[0,.30,0],[.92,.60,.78],M.woodDark);
   sphere('ScoutCampEmbers_'+vl.index,scout,[1.15,.13,.15],[.36,.12,.30],M.ember,8);
  }
- villages.forEach(buildIslandOutpost);
+ villages.forEach(vl=>{if(!vl.islandGarrison)buildIslandOutpost(vl);});
  // Nuevos lugares de la expansión: salón comunal, embarcadero, círculo del thing y baliza costera.
  function buildNorseGreatHall(x,z,index){
   const floorY=terrainSurfaceAt(x,z),hall=newGroup('NorseGreatMeadHall_'+index,null);
@@ -7836,6 +7865,7 @@ function createRealWeapon(type='axe'){
  }
  // Two civilians per settlement follow short daily routes and make the villages feel inhabited.
  villages.forEach((vl,vi)=>{
+  if(vl.islandGarrison)return;
   // Un vecino por aldea para no disparar los draw calls; ropa civil, sin casco, armadura, escudo ni arma visible.
   for(let n=0;n<2;n++){
    const variant=(vi+n+1)%4,parts=makePeasantFallback('Villager_'+vi+'_'+n,variant);
@@ -8228,7 +8258,7 @@ function villageHostileDefenders(vl){
   if(!Number.isFinite(x)||!Number.isFinite(z))return false;
   const homeDistance=Math.hypot(x-STARTER_CAMP_POSITION.x,z-STARTER_CAMP_POSITION.z);
   if(homeDistance<=24)return true;
-  return villages.some(vl=>vl.claimed&&Math.hypot(x-vl.x,z-vl.z)<=24);
+  return villages.some(vl=>vl.claimed&&Math.hypot(x-vl.x,z-vl.z)<=(vl.territoryRadius||24));
  }
  // Regla única de combate: aliados/capturados nunca son hostiles y ninguna unidad puede dañar al jugador dentro de su territorio.
  function canAttackPlayer(attacker,x,z,playerProtectedOverride=null){
@@ -8437,10 +8467,11 @@ function villageHostileDefenders(vl){
   actionResource=null;actionVillage=null;activeTree=null;activeRock=null;nearVillage=null;nearBoat=false;
   if(document.getElementById('runBtn'))document.getElementById('runBtn').textContent='🏃 CORRER: NO';
   if(document.getElementById('act'))document.getElementById('act').textContent='🪓 ACCIÓN';
+  discoveredIslands.fill(false);discoveredIslands[0]=true;navalDefensePhaseUnlocked=false;
   villages.forEach(vl=>{
    vl.claimed=false;
    if(vl.flag)vl.flag.material=M.red;
-   if(vl.flagGroup){vl.flagGroup.position.y=terrainSurfaceAt(vl.x,vl.z)+4.65;vl.flagGroup.scaling.set(1,1,1);}
+   if(vl.flagGroup){vl.flagGroup.position.y=vl.flagBaseY||terrainSurfaceAt(vl.x,vl.z)+4.65;vl.flagGroup.scaling.set(1,1,1);}
    (vl.flagEmblem||[]).forEach(mesh=>mesh.setEnabled(true));
    if(vl.territoryFill){vl.territoryFill.dispose(false,true);vl.territoryFill=null;}
    if(vl.territoryRing){vl.territoryRing.dispose(false,true);vl.territoryRing=null;}
@@ -8553,7 +8584,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'7',build:'0.6.213',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'7',build:'0.6.214',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -8616,10 +8647,15 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.185');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.185');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
+  const visitedIsland=landIslandIndex(pos.x,pos.z);
+  if(visitedIsland>=0&&!discoveredIslands[visitedIsland]){
+   discoveredIslands[visitedIsland]=true;recordSagaEvent('Isla descubierta: '+land[visitedIsland].name+'.');
+   msg('Nueva tierra descubierta: '+land[visitedIsland].name+'.');saveGame(true);drawMap();
+  }
   nearBoat=Math.hypot(ship.position.x-pos.x,ship.position.z-pos.z)<13.5;
   const r=nearestResource();if(r){activeResourceDistance=r.dist;if(r.type==='tree')activeTree=r.obj;else activeRock=r.obj;}
   const protectedHere=isPlayerTerritoryAt(pos.x,pos.z);
@@ -8636,10 +8672,10 @@ function updateHUD(){
   else if(resourceInReach&&activeRock){act.textContent='⛏ EXTRAER PIEDRA';act.title='Extraer piedra con el pico; se equipa automáticamente';}
   else if(nearVillage&&!nearVillage.claimed){
    const standing=villageHostileDefenders(nearVillage).length;
-   act.textContent=standing>0?'⚔ RESISTENCIA: '+standing:'🏴 RECLAMAR ALDEA';
+   act.textContent=standing>0?'⚔ RESISTENCIA: '+standing:(nearVillage.islandGarrison?'🏴 RECLAMAR ISLA':'🏴 RECLAMAR ALDEA');
   }else if(nearVillage&&nearVillage.claimed&&findVillageSurvivor(nearVillage)){
    act.textContent='🤝 RECLUTAR GUERRERO';
-  }else if(nearVillage&&nearVillage.claimed){act.textContent='🏴 TERRITORIO ALIADO';}
+  }else if(nearVillage&&nearVillage.claimed){act.textContent=nearVillage.islandGarrison?'🏴 ISLA ALIADA':'🏴 TERRITORIO ALIADO';}
   else{act.textContent='🪓 ACCIÓN';}
   boatBtn.style.opacity=(onShip||nearBoat||isLand(pos.x,pos.z))?'1':'.55';
   document.getElementById('attack').textContent=onShip?'🏹 ATACAR BARCO':'⚔ ATACAR';
@@ -8698,18 +8734,21 @@ function updateHUD(){
  function claimVillage(vl,restoring=false){
   if(!vl||vl.claimed)return;
   const resistance=villageHostileDefenders(vl);
-  if(resistance.length){msg('La aldea aún resiste. Haz que depongan las armas ('+resistance.length+' defensores).');return;}
-  vl.claimed=true;captured++;const unlockedReward=restoring?null:unlockWeaponForVillage(vl);if(!restoring)woodCount+=12;
+  if(resistance.length){msg((vl.islandGarrison?'La isla aún resiste.':'La aldea aún resiste.')+' Haz que depongan las armas ('+resistance.length+' defensores).');return;}
+  vl.claimed=true;captured++;const territoryIndex=Number.isInteger(vl.landIndex)?vl.landIndex:vl.index;if(territoryIndex>=0&&territoryIndex<discoveredIslands.length)discoveredIslands[territoryIndex]=true;const unlockedReward=restoring?null:unlockWeaponForVillage(vl);if(!restoring)woodCount+=12;
   vl.guards.forEach(guard=>{guard.faction='player';guard.parts.faction='player';if(guard.alive&&!guard.surrendered&&!guard.recruited)guard.state='friendly';});
   vl.flag.material=M.playerBanner;vl.flagEmblem.forEach(mesh=>mesh.setEnabled(false));vl.flagGroup.position.y=2.15;vl.flagGroup.scaling.y=.18;
   const fillMat=M.territoryFill.clone('TerritoryFill_'+vl.index);fillMat.alpha=.22;fillMat.diffuseColor=new B.Color3(.72,.54,.25);
-  vl.territoryFill=B.MeshBuilder.CreateDisc('ClaimedLand_'+vl.index,{radius:24,tessellation:48},scene);
+  vl.territoryFill=B.MeshBuilder.CreateDisc('ClaimedLand_'+vl.index,{radius:vl.territoryRadius||24,tessellation:48},scene);
   vl.territoryFill.rotation.x=-Math.PI/2;vl.territoryFill.position=v(vl.x,1.015,vl.z);vl.territoryFill.material=fillMat;vl.territoryFill.scaling.set(.12,1,.12);
   vl.captureAnimation={t:0};
   for(const group of vl.houseGroups){for(const mesh of group.getChildMeshes()){if(mesh.material===M.wood||mesh.material===M.woodDark)mesh.material=M.friendlyWood;else if(mesh.material===M.roof||mesh.material===M.thatch)mesh.material=M.friendlyRoof;}}
   const surrendered=vl.guards.filter(g=>g.alive&&g.surrendered&&!g.recruited).length;
-  if(!restoring){msg('¡'+vl.name+' conquistada! '+surrendered+' guerrero(s) se han rendido. Ya puedes reclutarlos. +12 madera.'+(unlockedReward?' Arma desbloqueada: '+unlockedReward+'.':''));recordSagaEvent('Aldea conquistada: '+vl.name+'. Defensores rendidos: '+surrendered+'.');}
-  updateHUD();if(!restoring)saveGame(true);
+  if(!restoring){const territoryLabel=vl.islandGarrison?'Isla':'Aldea';msg('¡'+vl.name+' conquistada! '+surrendered+' guerrero(s) se han rendido. Ya puedes reclutarlos. +12 madera.'+(unlockedReward?' Arma desbloqueada: '+unlockedReward+'.':''));recordSagaEvent(territoryLabel+' conquistada: '+vl.name+'. Defensores rendidos: '+surrendered+'.');}
+  updateHUD();
+  const allTerritoriesClaimed=villages.length===land.length&&villages.every(entry=>entry.claimed)&&discoveredIslands.every(Boolean);
+  if(allTerritoriesClaimed&&!navalDefensePhaseUnlocked){navalDefensePhaseUnlocked=true;if(!restoring){recordSagaEvent('Las trece islas están bajo tu estandarte. Se ha desbloqueado el hito de la defensa naval del archipiélago.');msg('¡ARCHIPIÉLAGO UNIFICADO! Has completado la conquista de las trece islas.');}}
+  if(!restoring)saveGame(true);
  }
  function findVillageSurvivor(vl){return vl&&vl.guards.find(g=>g.alive&&g.surrendered&&!g.recruited)||null;}
  function recruitGuard(vl,restoring=false){
@@ -9388,7 +9427,7 @@ function updateHUD(){
    const pos=playerPos();
    const data={version:1,saveSlot:activeSaveKey,guestMode:SHARE_NEW_GAME,savedAt:Date.now(),playerName,chapterStage,sprintMissionMeters,sprintMissionDone,health,stamina,healCooldown,woodCount,stoneCount,kills,captured,weaponLevel,equippedWeapon,unlockedWeapons:[...unlockedWeapons],
     player:{x:pos.x,z:pos.z,yaw},checkpoint:{x:lastSafePosition.x,z:lastSafePosition.z},onShip,ship:{x:ship.position.x,z:ship.position.z,yaw:ship.rotation.y,hp:boatHp,max:boatMax,level:boatLevel},
-    history:sagaHistory.slice(-30),villages:villages.map(vl=>({claimed:vl.claimed,guards:vl.guards.map(g=>({alive:g.alive,hp:g.hp,surrendered:!!g.surrendered,recruited:!!g.recruited}))})),
+    history:sagaHistory.slice(-30),discoveredIslands:discoveredIslands.slice(),navalDefensePhaseUnlocked,villages:villages.map(vl=>({claimed:vl.claimed,guards:vl.guards.map(g=>({alive:g.alive,hp:g.hp,surrendered:!!g.surrendered,recruited:!!g.recruited}))})),
     survivorRecruits:companions.map(a=>a.villageIndex),
     ships:enemyShips.map(e=>({hp:e.hp,sunk:e.sunk,x:e.root.position.x,z:e.root.position.z,yaw:e.root.rotation.y})),
     trees:trees.map(t=>!!t.alive),rocks:rocks.map(r=>!!r.alive),treeHp:trees.map(t=>Math.max(0,Math.min(3,Number(t.hp)||0))),rockHp:rocks.map(r=>Math.max(0,Math.min(3,Number(r.hp)||0))),structures:{starterShelter:{built:playerShelterBuilt,x:playerShelterX,z:playerShelterZ}}};
@@ -9431,9 +9470,12 @@ function updateHUD(){
     }
    }}
    if(d.checkpoint){const cx=num(d.checkpoint.x,player.root.position.x,-450,450),cz=num(d.checkpoint.z,player.root.position.z,-450,450);if(tryLandMove(cx,cz,.70))lastSafePosition=v(cx,terrainSurfaceAt(cx,cz)+(realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08),cz);else{const safeCheckpoint=nearestSafeLandPoint(cx,cz,.70);lastSafePosition=safeCheckpoint?v(safeCheckpoint.x,terrainSurfaceAt(safeCheckpoint.x,safeCheckpoint.z)+(realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08),safeCheckpoint.z):player.root.position.clone();}}else lastSafePosition=player.root.position.clone();
+   discoveredIslands.fill(false);discoveredIslands[0]=true;
+   if(Array.isArray(d.discoveredIslands))d.discoveredIslands.forEach((seen,i)=>{if(i<discoveredIslands.length)discoveredIslands[i]=!!seen;});
+   navalDefensePhaseUnlocked=!!d.navalDefensePhaseUnlocked;
    if(Array.isArray(d.history)){sagaHistory.splice(0,sagaHistory.length,...d.history.filter(e=>e&&typeof e.text==='string').slice(-30).map(e=>({at:num(e.at,Date.now(),0,Date.now()+86400000),text:e.text.slice(0,120)})));}
    applyBoatAppearance(boatLevel);applyWeaponAppearance(weaponLevel);equipWeapon(equippedWeapon);
-   if(Array.isArray(d.villages))d.villages.forEach((saved,i)=>{const vl=villages[i];if(!vl||!saved)return;if(Array.isArray(saved.guards))saved.guards.forEach((g,j)=>{const guard=vl.guards[j];if(!guard||!g)return;guard.hp=num(g.hp,100,0,100);if(g.alive===false||guard.hp<=0){guard.alive=false;guard.state='dead';guard.parts.root.setEnabled(false);guard.healthBack.setEnabled(false);guard.healthMesh.setEnabled(false);}else if(g.surrendered||g.recruited)surrenderGuard(guard,true);});if(saved.claimed)claimVillage(vl,true);});
+   if(Array.isArray(d.villages))d.villages.forEach((saved,i)=>{const vl=villages[i];if(!vl||!saved)return;if(Array.isArray(saved.guards))saved.guards.forEach((g,j)=>{const guard=vl.guards[j];if(!guard||!g)return;guard.hp=num(g.hp,100,0,100);if(g.alive===false||guard.hp<=0){guard.alive=false;guard.state='dead';guard.parts.root.setEnabled(false);guard.healthBack.setEnabled(false);guard.healthMesh.setEnabled(false);}else if(g.surrendered||g.recruited)surrenderGuard(guard,true);});if(saved.claimed){claimVillage(vl,true);discoveredIslands[Number.isInteger(vl.landIndex)?vl.landIndex:i]=true;}});
    if(Array.isArray(d.survivorRecruits))d.survivorRecruits.forEach(i=>{const vl=villages.find(v=>v.index===Number(i));if(vl&&vl.claimed)recruitGuard(vl,true);});
    if(d.structures&&d.structures.starterShelter&&d.structures.starterShelter.built)buildPlayerShelter(true,d.structures.starterShelter);
    if(Array.isArray(d.ships))d.ships.forEach((saved,i)=>{const e=enemyShips[i];if(!e||!saved)return;e.hp=num(saved.hp,e.maxHp,0,e.maxHp);e.sunk=!!saved.sunk;e.root.position.x=num(saved.x,e.root.position.x,-450,450);e.root.position.z=num(saved.z,e.root.position.z,-450,450);e.root.rotation.y=num(saved.yaw,e.root.rotation.y,-Math.PI*20,Math.PI*20);e.root.setEnabled(!e.sunk);e.bar.setEnabled(!e.sunk);e.back.setEnabled(!e.sunk);e.bar.scaling.x=Math.max(.01,e.hp/e.maxHp);});
@@ -9448,7 +9490,8 @@ function updateHUD(){
  function updateProgressPanel(){
   const summary=document.getElementById('progressSummary'),check=document.getElementById('progressChecklist'),history=document.getElementById('progressHistory'),loadout=document.getElementById('progressLoadout');if(!summary||!check||!history||!loadout)return;
   const sunk=enemyShips.filter(e=>e.sunk).length,dead=enemies.filter(e=>!e.alive).length,neutralized=enemies.filter(e=>!e.alive||e.surrendered||e.recruited).length,claimed=villages.filter(v=>v.claimed).length;
-  const stats=[[''+claimed+'/4','Aldeas'],[String(dead),'Defensores'],[sunk+'/3','Barcos hundidos'],[companions.length,'Tripulación'],[String(woodCount),'Madera'],[String(stoneCount),'Piedra']];
+  const discoveredCount=discoveredIslands.filter(Boolean).length;
+  const stats=[[''+claimed+'/13','Islas'],[discoveredCount+'/13','Exploradas'],[String(dead),'Defensores'],[sunk+'/3','Barcos hundidos'],[companions.length,'Tripulación'],[String(woodCount),'Madera']];
   summary.innerHTML=stats.map(([n,l])=>'<div class="progressStat"><b>'+n+'</b><span>'+l+'</span></div>').join('');
   const chapterTasks=[
    ['Capítulo I · Reúne 12 madera y 3 piedra',chapterStage>0,woodCount+'/12 madera · '+stoneCount+'/3 piedra'],
@@ -9459,8 +9502,9 @@ function updateHUD(){
   const tasks=[...chapterTasks,
    ['Construye y guarda tu refugio',playerShelterBuilt,playerShelterBuilt?'Construido y persistente':'6 madera · 1 piedra'],
    ['Prueba de carrera · recorre 40 metros corriendo',sprintMissionDone,Math.floor(sprintMissionMeters)+'/40 m'],
-   ['Asegura las cuatro aldeas vikingas',claimed>=4,claimed+'/4'],
-   ['Neutraliza a todos los defensores de los asentamientos',neutralized>=12,neutralized+'/12'],
+   ['Explora las trece islas',discoveredCount>=land.length,discoveredCount+'/13'],
+   ['Conquista las trece islas',claimed>=land.length,claimed+'/13'],
+   ['Neutraliza a todos los defensores de las islas',neutralized>=enemies.length,neutralized+'/'+enemies.length],
    ['Recluta supervivientes y forma tu tripulación',companions.length>=4,companions.length+'/4'],
    ['Hunde los tres drakkars saqueadores',sunk>=3,sunk+'/3'],
    ['Forja un arma de nivel maestro',weaponLevel>=3,'Nivel '+weaponLevel+'/3'],
@@ -9579,21 +9623,21 @@ function updateHUD(){
   const current=playerPos();let nearestIndex=0,nearestDistance=Infinity;
   land.forEach((island,index)=>{const d=Math.hypot(current.x-island.x,current.z-island.z);if(d<nearestDistance){nearestDistance=d;nearestIndex=index;}});
   for(let i=0;i<land.length;i++){
-   const y=side.y+34+i*13.05,isCurrent=i===nearestIndex;
+   const y=side.y+34+i*13.05,isCurrent=i===nearestIndex,isClaimed=!!(villages[i]&&villages[i].claimed),isDiscovered=!!discoveredIslands[i];
    if(isCurrent){mg.fillStyle='rgba(212,166,88,.18)';mg.fillRect(side.x+3,y-8,side.w-6,12);}
-   mg.beginPath();mg.arc(side.x+11,y-3,3.4,0,Math.PI*2);mg.fillStyle=isCurrent?'#f1cf88':'#7f9675';mg.fill();mg.strokeStyle='#e9d2a2';mg.lineWidth=.55;mg.stroke();
+   mg.beginPath();mg.arc(side.x+11,y-3,3.4,0,Math.PI*2);mg.fillStyle=isClaimed?'#e1bd79':isDiscovered?'#cf8575':'#586d69';mg.fill();mg.strokeStyle='#e9d2a2';mg.lineWidth=.55;mg.stroke();
    mg.fillStyle='#172d31';mg.font='bold 5.8px Georgia,serif';mg.textAlign='center';mg.fillText(String(i+1).padStart(2,'0'),side.x+11,y-1.3);
-   mg.fillStyle=isCurrent?'#f3d79b':'#d6d0b9';mg.font='6.7px system-ui';mg.textAlign='left';
+   mg.fillStyle=isCurrent?'#f3d79b':isClaimed?'#e7c47e':'#d6d0b9';mg.font='6.7px system-ui';mg.textAlign='left';
    const name=land[i].name,shortName=name.length>19?name.slice(0,18)+'…':name;mg.fillText(shortName,side.x+18,y-1.1,side.w-23);
   }
   const villageHeader=side.y+211;mg.strokeStyle='rgba(218,181,112,.33)';mg.beginPath();mg.moveTo(side.x+5,villageHeader-5);mg.lineTo(side.x+side.w-5,villageHeader-5);mg.stroke();
-  mg.fillStyle='#e7c987';mg.font='bold 7px Georgia,serif';mg.textAlign='left';mg.fillText('ASENTAMIENTOS',side.x+6,villageHeader+5);
-  villages.forEach((village,i)=>{const y=villageHeader+17+i*9.1;mg.fillStyle=village.claimed?'#e7c47e':'#cf8575';mg.beginPath();mg.arc(side.x+9,y-2,2.25,0,Math.PI*2);mg.fill();mg.fillStyle='#e0d7c2';mg.font='6.4px system-ui';mg.fillText(village.name,side.x+15,y,side.w-19);});
+  mg.fillStyle='#e7c987';mg.font='bold 7px Georgia,serif';mg.textAlign='left';mg.fillText('CONTROL DE ISLAS',side.x+6,villageHeader+5);
+  mg.fillStyle='#e7c47e';mg.font='6.1px system-ui';mg.fillText(villages.filter(village=>village.claimed).length+'/13 BAJO TU ESTANDARTE',side.x+6,villageHeader+17);
   mg.fillStyle='rgba(7,20,23,.92)';mg.fillRect(12,8,456,26);mg.strokeStyle='rgba(225,187,118,.82)';mg.lineWidth=.85;mg.strokeRect(12,8,456,26);
   mg.fillStyle='#f0d49a';mg.font='bold 10px Georgia,serif';mg.textAlign='left';mg.fillText('CARTA DE NAVEGACIÓN · MAR DEL NORTE',22,24);
   mg.fillStyle='rgba(219,205,169,.70)';mg.font='6px system-ui';mg.textAlign='right';mg.fillText('EL SIN NOMBRE / SAGA DEL NORTE',458,24);
   mg.fillStyle='rgba(7,19,23,.94)';mg.fillRect(12,309,456,25);mg.strokeStyle='rgba(225,187,118,.72)';mg.lineWidth=.85;mg.strokeRect(12,309,456,25);
-  mg.font='bold 7px Georgia,serif';mg.textAlign='left';mg.fillStyle='#e8ca8b';mg.fillText('▲ TÚ',22,325);mg.fillStyle='#e5c27d';mg.fillText('◆ ASENTAMIENTO',91,325);mg.fillStyle='#d78977';mg.fillText('● HOSTIL',213,325);mg.fillStyle='#d4d0bb';mg.fillText('— RUTA MARÍTIMA',292,325);
+  mg.font='bold 7px Georgia,serif';mg.textAlign='left';mg.fillStyle='#e8ca8b';mg.fillText('▲ TÚ',22,325);mg.fillStyle='#e1bd79';mg.fillText('◆ CONTROLADO',74,325);mg.fillStyle='#cf8575';mg.fillText('● DESCUBIERTO',174,325);mg.fillStyle='#d4d0bb';mg.fillText('— RUTA MARÍTIMA',292,325);
   mg.strokeStyle='rgba(247,220,164,.90)';mg.lineWidth=1.6;mg.strokeRect(2,2,w-4,h-4);mg.strokeStyle='rgba(83,54,34,.98)';mg.lineWidth=.8;mg.strokeRect(6,6,w-12,h-12);
   [[10,10,1,1],[w-10,10,-1,1],[10,h-10,1,-1],[w-10,h-10,-1,-1]].forEach(([x,y,sx,sy])=>{mg.strokeStyle='#e3c17d';mg.lineWidth=1.3;mg.beginPath();mg.moveTo(x,y+sy*7);mg.lineTo(x,y);mg.lineTo(x+sx*7,y);mg.stroke();});
  }
