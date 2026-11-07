@@ -314,11 +314,11 @@ def main() -> None:
         fail("La espuma debe formar masas rotas con filamentos, no una banda lisa.")
     if "Math.min(288,Math.ceil(Math.PI*2*island.r/1.35))" not in index_html or "rows=isPerformanceMode?9:(isTouchDevice?15:17)" not in index_html:
         fail("La resolución de la playa debe conservar el presupuesto del perfil Rendimiento.")
-    if "swashReach=1.05+2.35*wavePulse" not in index_html or "swashZone=swashIn*swashOut" not in index_html:
+    if "swashReach=1.55+3.05*wavePulse" not in index_html or "swashZone=swashIn*swashOut" not in index_html:
         fail("La resaca debe extenderse como una lámina irregular sobre la arena, no como una línea.")
     if "foamIslands=swashZone*foamMask*drift" not in index_html or "layer.residue[stateIndex]*Math.exp(-step/5.8)" not in index_html:
         fail("La espuma debe ser fragmentada, dinámica y disiparse progresivamente.")
-    if "Math.exp(-Math.max(0,inlandDistance)*.78)" not in index_html:
+    if "Math.exp(-Math.max(0,inlandDistance)*.43)" not in index_html:
         fail("La humedad debe oscurecer una franja amplia de arena mojada detrás de la espuma.")
     shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"))]
     if "const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z);" not in shoreline_body or ".42;" in shoreline_body:
