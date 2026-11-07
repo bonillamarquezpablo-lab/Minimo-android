@@ -9929,16 +9929,18 @@ function updateHUD(){
  const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(['attack','chop','mine','hurt','dodge','claim','recruit']);
 const PLAYER_BOAT_FLOAT_OPTIONS=Object.freeze({length:10.0,beam:2.25,draft:.39});
 const RAIDER_BOAT_FLOAT_OPTIONS=Object.freeze({length:9.6,beam:2.15,draft:.37});
-const playerGroundNormalCache=new B.Vector3(0,1,0);
+const playerGroundNormalCache=new B.Vector3(0,1,0);let playerGroundNormalCacheValid=false;
 function refreshPlayerGroundNormal(x,z){
  const step=.34,invStep=1/(step*2);
  const slopeX=(terrainSurfaceAt(x+step,z)-terrainSurfaceAt(x-step,z))*invStep;
  const slopeZ=(terrainSurfaceAt(x,z+step)-terrainSurfaceAt(x,z-step))*invStep;
  const nx=-slopeX,nz=-slopeZ,invLength=1/Math.sqrt(nx*nx+1+nz*nz);
- playerGroundNormalCache.set(nx*invLength,invLength,nz*invLength);
+ playerGroundNormalCache.set(nx*invLength,invLength,nz*invLength);playerGroundNormalCacheValid=true;
  return playerGroundNormalCache;
 }
 function update(dt){
+  if(onShip)playerGroundNormalCacheValid=false;
+  else if(!playerGroundNormalCacheValid)refreshPlayerGroundNormal(player.root.position.x,player.root.position.z);
   const playerGroundNormalForMovement=playerGroundNormalCache;
   worldUpdateCount++;worldUpdatePhase='environment / water';
   updatePerformanceIslandStreaming(dt);
