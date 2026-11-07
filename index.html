@@ -3401,10 +3401,14 @@ async function removeStrayDebugGeometry(targetScene){
   const indices=new Uint16Array(segments*(rows-1)*6);let cursor=0;
   for(let col=0;col<=segments;col++){
    const angle=col/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
+   // Inicializar también las costas lejanas: no deben quedar sin espuma hasta que el jugador se acerque.
+   const initialShoreline=shorelineFoamRadius(island,angle,oceanTime);
    for(let row=0;row<rows;row++){
-    const vertex=row*cols+col,offset=vertex*3,color=vertex*4,radius=island.r+radialOffsets[row];
+    const vertex=row*cols+col,offset=vertex*3,color=vertex*4;
+    const radius=(Number.isFinite(initialShoreline)?initialShoreline:island.r)+radialOffsets[row];
     const x=island.x+cs*radius,z=island.z+sn*radius;
-    positions[offset]=x;positions[offset+1]=-3.2;positions[offset+2]=z;
+    const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=waterHeight(x,z,oceanTime);
+    positions[offset]=x;positions[offset+1]=Number.isFinite(initialShoreline)?Math.max(ground,water)+.042:-3.2;positions[offset+2]=z;
     // Tres escalas de ruido forman células rotas, filamentos y pequeñas motas.
     const broad=terrainValueNoise(x*.17+37.4,z*.17-21.8);
     const medium=terrainValueNoise(x*.57-14.7,z*.57+42.1);
@@ -3413,7 +3417,9 @@ async function removeStrayDebugGeometry(targetScene){
     const lace=1-smooth01((Math.abs(medium-.5)-.145)*10.5);
     const flecks=smooth01((fine-.47)*12);
     foamPattern[vertex]=Math.min(1,cells*(.24+.48*lace+.34*flecks));
-    colors[color]=.91;colors[color+1]=.97;colors[color+2]=.96;colors[color+3]=0;
+    const inner=smooth01((radialOffsets[row]+2.45)/.72),outer=1-smooth01((radialOffsets[row]-.34)/.82);
+    colors[color]=.91;colors[color+1]=.97;colors[color+2]=.96;
+    colors[color+3]=Number.isFinite(initialShoreline)?inner*outer*foamPattern[vertex]*.34:0;
    }
   }
   for(let row=0;row<rows-1;row++)for(let col=0;col<segments;col++){
