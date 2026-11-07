@@ -10175,7 +10175,7 @@ function updateHUD(){
   enemyHumanModelsStarted=true;
   console.info('Preparando modelos humanos secundarios sin bloquear el arranque del mundo.');
   enemyHumanLoadTask=loadEnemyHumanCharacters();
-  enemyHumanLoadTask.finally(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
+  enemyHumanLoadTask.then(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);},()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
   return enemyHumanLoadTask;
  }
  let enemyHumanRetryPromise=null,enemyHumanRetryAttempts=0,enemyHumanRetryScheduled=false;
@@ -10215,7 +10215,7 @@ function updateHUD(){
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator.onLine)setTimeout(retryMissingEnemyVikings,2200);});
  // Reintentos serializados: un fallo de red no deja los modelos provisionales sin otra oportunidad,
  // pero tampoco crea descargas duplicadas que consuman memoria de GPU y RAM en el móvil.
- if(!deferNpcHumanModelsOnTouch)enemyHumanLoadTask.finally(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
+ if(!deferNpcHumanModelsOnTouch)enemyHumanLoadTask.then(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);},()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
  console.info('Norse NPC roster: separate armored-knight guards and Viking civilians',{warriorCount:humanEnemyParts.length,civilianCount:humanCivilianParts.length,homeAllies:campGuards.length,protectedHomeRadius:24});
  let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;
  let firstFrameRendered=false,startupAssetsReady=false,startScreenShown=false,frameErrorShown=false,lastFrameErrorAt=0,renderedFrames=0;
