@@ -10741,6 +10741,7 @@ function updateHUD(){
   const npcPreparationTask=startNpcHumanModels();
   resourceResults=await Promise.allSettled([playerHumanLoadPromise,npcPreparationTask]);
  }
+ if(isPerformanceMode&&!realPlayerReady)throw new Error('El GLB del protagonista no terminó de importarse; no se abrirá una partida incompleta.');
  console.info('Personajes preparados antes de entrar:',{
   protagonist:resourceResults[0].status,
   npcs:resourceResults[1].status,
@@ -10787,13 +10788,15 @@ function updateHUD(){
     sceneWarmupStatus='background';
     console.info('La escena sigue terminando de preparar recursos gráficos en segundo plano; se permite entrar.');
    }else{
+    if(isPerformanceMode)throw (warmupResult.error||new Error('La escena no terminó de prepararse en Rendimiento.'));
     sceneWarmupStatus='deferred-after-error';
     console.warn('La comprobación global de recursos gráficos falló; se permite continuar y Babylon seguirá preparando la escena:',warmupResult.error);
    }
   }
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){
-  // Una comprobación gráfica secundaria nunca debe impedir iniciar la partida.
+  if(isPerformanceMode)throw warmupError;
+  // Calidad conserva el comportamiento de tolerancia a errores de preparación secundaria.
   sceneWarmupStatus='deferred-after-error';
   console.warn('Se aplaza la preparación gráfica no esencial; la partida puede continuar:',warmupError);
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
