@@ -7778,7 +7778,7 @@ function createRealWeapon(type='axe'){
     if(!Number.isFinite(surfaceSlopeX)||!Number.isFinite(surfaceSlopeZ)||Math.hypot(surfaceSlopeX,surfaceSlopeZ)>.82)return null;
     return groundY+terrainDeformationAt(islandIndex,x,z);
    };
-   const grassYieldInterval=isConstrainedMobile?48:96;
+   const grassYieldInterval=isConstrainedMobile?512:1024;
    const tryPlaceGrass=(x,z)=>{
     const sampledGroundY=grassGroundSample(x,z);if(sampledGroundY===null)return false;
     const gridCol=Math.max(0,Math.min(gridSide-1,Math.floor((x-(island.x-radius))/cellSize)));
