@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.207"
+EXPECTED_VERSION = "0.6.208"
 
 HTML_PAGES = (
     "index.html",
@@ -314,10 +314,20 @@ def main() -> None:
         fail("La dinámica del suelo no recibe los pasos reales del jugador.")
     if "norseDeformableGround:true" not in index_html or "updateDeformedNormals(field,changed)" not in index_html:
         fail("El heightfield no actualiza los normales al deformarse.")
-    if "terrainSurfaceAt(x,z)-waterHeight(x,z,t)" not in index_html:
+    if "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z)-waterHeight(x,z,t)" not in index_html:
         fail("La línea de agua no reacciona al terreno físicamente deformado.")
-    if "function shorelineFoamRadius(island,angle,t=oceanTime)" not in index_html or "terrainSurfaceAt(x,z)-waterHeight(x,z,t)" not in index_html:
+    if "function shorelineFoamRadius(island,angle,t=oceanTime)" not in index_html or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z)-waterHeight(x,z,t)" not in index_html:
         fail("La espuma de orilla no sigue la intersección actual del oleaje con el terreno.")
+    if "const waterWaveBasis=new Float32Array((waterBase.length/3)*WATER_WAVE_STRIDE)" not in index_html or "waterDetailHeightAtVertex(i/3,fade)" not in index_html or "waterFarHeightAtVertex(vertex)" not in index_html:
+        fail("El oleaje debe conservar sus mismas ondas usando la caché de fases espaciales.")
+    if "NorseBootImprintBatch" not in index_html or "new Uint16Array(maxImprints*imprintIndicesPerFoot)" not in index_html or "imprintPositionBuffer.updateDirectly" not in index_html:
+        fail("Las huellas deben conservar geometría detallada en una malla reutilizable.")
+    if "groundY+.028+rim-press*.16" not in index_html or "slot.life=wet?70:(beach?105:52)" not in index_html:
+        fail("Las huellas deben quedar visibles sobre el suelo y persistir en la arena.")
+    if "GroundSplashParticleBatch" not in index_html or "thinInstanceSetBuffer('color',grainColors,4,true)" not in index_html or "grainMesh.thinInstanceBufferUpdated('matrix')" not in index_html:
+        fail("Las salpicaduras deben utilizar el pool de partículas instanciadas.")
+    if "const count=wet?(running?8:6):(running?6:4)" not in index_html or "particles[particleCursor++%maxParticles]" not in index_html:
+        fail("La emisión de arena/agua debe mantener partículas reutilizables y visibles.")
     if "row===0?.025:(row===1?.14:.30)" not in index_html or "DynamicSubmergedShoreWash_" not in index_html:
         fail("La espuma de orilla invade la arena seca o usa la malla antigua.")
     if "foam.positions[offset+1]=waterHeight(x,z,oceanTime)+.024" not in index_html or "foam.positions[offset+1]=-3.2" not in index_html:
@@ -332,7 +342,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.207</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.208</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "const warmupResult=await Promise.race([" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
         fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
