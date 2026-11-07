@@ -3270,10 +3270,13 @@ async function removeStrayDebugGeometry(targetScene){
   for(let i=0;i<stemCount;i++){const a=i*Math.PI*2/stemCount+rand(-.35,.35),len=rand(.48,.82),branch=newGroup('ShrubWoodyStem_'+i,root);branch.position=v(0,.08,0);branch.rotation.y=a;branch.rotation.z=-rand(.28,.62);cyl('ShrubTwig_'+i,branch,[0,len*.43,0],len,.018,.045,M.bark,[Math.PI/2,0,0]);}
   const lobes=15+Math.floor(rand(0,6));
   for(let i=0;i<lobes;i++){const a=i*2.399963+rand(-.5,.5),ring=rand(.10,.58),y=rand(.25,.78),r=rand(.20,.34)*size;const lobe=organicLeaf('NaturalShrubFoliage_'+i,root,[Math.cos(a)*ring*size,y*size,Math.sin(a)*ring*size],[r*1.10,r*.70,r*.92],leafMats[Math.floor(rand(0,leafMats.length))],3);lobe.rotation.set(rand(-.20,.20),a,rand(-.22,.22));}
-  root.position=v(x,groundY+.012,z);
+  // Fusionar en espacio local antes de transformar el pivote: MergeMeshes hornea
+  // las matrices de los hijos; transformar antes duplicaba posición/escala y dejaba
+  // arbustos desplazados o aparentemente suspendidos sobre el terreno.
+  mergeStaticDecorByMaterial(root,'NaturalBroadleafShrub');
+  root.position.set(x,groundY+.012,z);
   root.rotation.set(Math.atan2(normal.z,normal.y),yaw,-Math.atan2(normal.x,normal.y));
   root.scaling.setAll(size);
-  mergeStaticDecorByMaterial(root,'NaturalBroadleafShrub');
   root.computeWorldMatrix(true);
   return {root,x,z,radius:.9*size,homeIslandIndex,groundY};
  }
@@ -9515,6 +9518,9 @@ function updateHUD(){
     // La tripulación usa coordenadas locales del drakkar: los pies apoyan sobre la cubierta
     // y cada personaje conserva su anclaje aunque el casco cabecee, role o avance.
     if(p.parent!==ship){p.parent=ship;}
+    // Los GLB pueden conservar rotationQuaternion; se elimina para que la pose
+    // local de cubierta no quede anulada por la orientación de importación.
+    p.rotationQuaternion=null;
     p.position.set(seat.x,.995,seat.z);p.rotation.set(0,seat.side*Math.PI/2,0);
     p.computeWorldMatrix(true);guard.parts.actualMoveSpeed=0;
     animateShipRower(guard.parts,elapsed*5.8+seat.oar*.58+(seat.side>0?Math.PI:0));return;
