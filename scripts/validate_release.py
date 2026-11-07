@@ -303,6 +303,24 @@ def main() -> None:
         fail("La fauna GLB no conserva su isla de origen o puede caminar hacia el mar.")
     if "RaiderCrewMount_" not in index_html or "if(parts.vesselMount)" not in index_html:
         fail("La tripulación del drakkar no está anclada a la cubierta.")
+    if "p.rotationQuaternion=null;" not in index_html or "p.position.set(seat.x,.995,seat.z)" not in index_html:
+        fail("La tripulación no limpia la rotación heredada ni fija coordenadas locales de cubierta.")
+    shore_start = index_html.find("function placeShipAllyOnShore(")
+    shore_end = index_html.find("function animateViking(", shore_start)
+    shore_body = index_html[shore_start:shore_end]
+    if shore_start < 0 or shore_end <= shore_start or "root.getAbsolutePosition().clone()" not in shore_body or "root.position.copyFrom(worldPosition)" not in shore_body:
+        fail("El desembarque no conserva la transformación mundial del tripulante.")
+    if "function isSafeShrubGroundPoint(" not in index_html or "groundY<.82" not in index_html or "Math.hypot(sx,sz)<=.48" not in index_html:
+        fail("Los arbustos no validan altura mínima, costa y pendiente del terreno.")
+    shrub_start = index_html.find("function createNaturalShrub(")
+    shrub_end = index_html.find("// Quaternius Ultimate Animated Animals", shrub_start)
+    shrub_body = index_html[shrub_start:shrub_end]
+    if shrub_start < 0 or shrub_end <= shrub_start or shrub_body.find("mergeStaticDecorByMaterial(root,'NaturalBroadleafShrub')") > shrub_body.find("root.position.set(x,groundY+.012,z)"):
+        fail("La geometría de arbustos se fusiona después de transformar el pivote y puede desplazarse.")
+    if "if(!isSafeShrubGroundPoint(island,x,z)||" not in index_html or "naturalShrubs.some(b=>" not in index_html:
+        fail("La generación de arbustos no valida el terreno ni evita solapamientos.")
+    if "function removeStrayDebugGeometry(targetScene)" not in index_html or "removeStrayDebugGeometry(scene);" not in index_html:
+        fail("Falta la limpieza segura de mallas de depuración residuales.")
     if "HutTimberCore" in index_html or "HutEndWallPlank_" not in index_html or "HutSideWallPlank_" not in index_html:
         fail("La cabaña todavía contiene el bloque macizo en vez de paredes de tablones.")
     if "PierSupportPile_" not in index_html:
