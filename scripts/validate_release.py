@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.193"
+EXPECTED_VERSION = "0.6.194"
 
 HTML_PAGES = (
     "index.html",
@@ -291,8 +291,8 @@ def main() -> None:
         fail("Falta el cargador y el controlador de la fauna salvaje rigged.")
     if "function createWildlifeAnimal(" in index_html or "FaunaTorso" in index_html or "BoarSnout" in index_html:
         fail("Siguen presentes los animales provisionales construidos con primitivas.")
-    if "function loadWildlifeModels()" not in index_html or "function playWildlifeAnimation(" not in index_html or "Deer.glb" not in index_html or "Stag.glb" not in index_html or "Wolf.glb" not in index_html:
-        fail("Faltan los modelos GLB rigged de ciervo, venado y lobo.")
+    if "function loadWildlifeModels()" not in index_html or "function playWildlifeAnimation(" not in index_html or "ImportMeshAsync(" not in index_html or "numBoneInfluencers>0" not in index_html or "Deer.glb" not in index_html or "Stag.glb" not in index_html or "Wolf.glb" not in index_html:
+        fail("Falta la importación GLB con esqueleto de ciervo, venado y lobo.")
     if "const animalCount=isPerformanceMode?(idx===0?2:(idx===1?1:0)):(idx===0?3:(idx<4?1:0));" not in index_html:
         fail("El número de animales no está reducido en modo Rendimiento.")
     if "WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837'" not in index_html or "await loadWildlifeModels();" not in index_html:
