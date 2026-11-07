@@ -20,6 +20,8 @@ USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.142 (+https://github.com/bonillamarquez
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
+# Keep the exact CC0 rigged characters from the last validated build mirrored on Vercel.
+# Grab3D has intermittent timeouts; this avoids making every new build depend on that origin.
 DOWNLOADS = {
     "assets/vendor/babylon.js": (
         "https://cdn.babylonjs.com/v7.54.3/babylon.js", 500_000, "script"
@@ -31,13 +33,13 @@ DOWNLOADS = {
         "https://cdn.babylonjs.com/meshopt_decoder.js", 2_000, "script"
     ),
     "assets/models/viking-rigged.glb": (
-        "https://grab3d.com/dl/viking-rigged/viking-rigged.glb", 1_000_000, "glb"
+        "https://el-sin-nombre-candidate-0-6-168-c9pmz9w7g.vercel.app/assets/models/viking-rigged.glb", 1_000_000, "glb"
     ),
     "assets/models/armored-knight-rigged.glb": (
-        "https://grab3d.com/dl/armored-knight-rigged/armored-knight-rigged.glb", 1_000_000, "glb"
+        "https://el-sin-nombre-candidate-0-6-168-c9pmz9w7g.vercel.app/assets/models/armored-knight-rigged.glb", 1_000_000, "glb"
     ),
     "assets/models/man-base-character-rigged.glb": (
-        "https://grab3d.com/dl/man-base-character-rigged/man-base-character-rigged.glb", 1_000_000, "glb"
+        "https://el-sin-nombre-candidate-0-6-168-c9pmz9w7g.vercel.app/assets/models/man-base-character-rigged.glb", 1_000_000, "glb"
     ),
     "assets/models/Seagull.glb": (
         "https://gobkit.com/freebies/animal007/Seagull.glb", 50_000, "glb"
