@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.225"
+EXPECTED_VERSION = "0.6.226"
 
 HTML_PAGES = (
     "index.html",
@@ -131,7 +131,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'8',build:'0.6.225'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html:
+    if "reportVersion:'8',build:'0.6.226'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -396,8 +396,10 @@ def main() -> None:
         fail("El depósito de espuma sobre la playa debe ocurrir en la franja que acaba de quedar descubierta.")
     if "foamBreath=.92+.08*wavePulse" not in index_html or "layer.residue[stateIndex]*Math.exp(-step/3.0)" not in index_html or "const f=Math.min(.82,foam*foamBreath)" not in index_html:
         fail("La espuma de playa debe ser fragmentada, depender del residuo de retirada y disiparse en pocos segundos.")
-    if "Math.exp(-Math.max(0,inlandDistance)*.43)" not in index_html:
-        fail("La humedad debe oscurecer una franja amplia de arena mojada detrás de la espuma.")
+    if "Math.exp(-Math.max(0,inlandDistance)*.36)" not in index_html or "wetSandCol=[.68,.63,.54]" not in index_html or "wetBlend=wetSand*beach*.55" not in index_html:
+        fail("La arena mojada debe conservar humedad visible con una transición cálida y sin un borde excesivamente oscuro.")
+    if "wetR=1-.32*w,wetG=.94-.27*w,wetB=.82-.20*w" not in index_html:
+        fail("La capa dinámica de arena mojada no debe dibujar un contorno negro en el límite del agua.")
     shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"))]
     if "const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z);" not in shoreline_body or ".42;" in shoreline_body:
         fail("El cruce agua/arena debe usar el perfil real completo; no puede sustituir el mar exterior por una altura plana.")
@@ -458,7 +460,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.225</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.226</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
