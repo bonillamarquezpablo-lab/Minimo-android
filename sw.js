@@ -1,5 +1,5 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.206";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.207";
 const ASSET_CACHE = "el-sin-nombre-assets-pending-build-0.6.204";
 const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./icon.svg"];
 
@@ -75,6 +75,39 @@ async function cacheFirst(request, cacheName) {
   return networkFirst(request, cacheName);
 }
 
+async function isValidGameNavigation(response) {
+  if (!response || !response.ok) return false;
+  const contentType = (response.headers.get("content-type") || "").toLowerCase();
+  if (!contentType.includes("text/html")) return false;
+  try {
+    const html = await response.clone().text();
+    return /<meta\\s+name=["']el-sin-nombre-build["']\\s+content=["']\\d+\\.\\d+\\.\\d+["']/i.test(html) &&
+      /id=["']renderCanvas["']/i.test(html) &&
+      /id=["']loading["']/i.test(html);
+  } catch (_) {
+    return false;
+  }
+}
+
+async function getVerifiedCachedNavigation(cache, request, fallback) {
+  const exact = await cache.match(request);
+  if (exact && await isValidGameNavigation(exact)) return exact;
+  if (exact) await cache.delete(request);
+  const entry = await cache.match(fallback);
+  if (entry && await isValidGameNavigation(entry)) return entry;
+  if (entry) await cache.delete(fallback);
+  return null;
+}
+
+const NAVIGATION_RECOVERY_HTML = `<!doctype html>
+<html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EL SIN NOMBRE · Recuperación</title>
+<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#101b1d;color:#f2e7d1;font:16px system-ui;text-align:center">
+<main style="max-width:34rem;padding:2rem"><h1 style="color:#e0bd78">No se pudo validar la copia local</h1>
+<p>La versión guardada no parece una página de juego válida y tampoco se ha podido descargar una versión nueva.</p>
+<p>Conéctate a Internet y vuelve a intentarlo. La partida guardada no se ha borrado.</p>
+<button onclick="location.reload()" style="padding:.8rem 1.2rem;background:#94602e;color:white;border:1px solid #d8ad68;border-radius:8px;font-weight:800">VOLVER A INTENTAR</button></main></body></html>`;
+
 self.addEventListener("fetch", event => {
   const request = event.request;
   if (request.method !== "GET") return;
@@ -83,25 +116,33 @@ self.addEventListener("fetch", event => {
 
   if (request.mode === "navigate") {
     const guestFilePath = url.pathname.endsWith("/guest.html");
-    const guestPath = /\/(?:guest|invitado)(?:\/|\/index\.html)?$/.test(url.pathname);
-    const invitePath = /\/invitado(?:\/|\/index\.html)?$/.test(url.pathname);
+    const guestPath = /\\/(?:guest|invitado)(?:\\/|\\/index\\.html)?$/.test(url.pathname);
+    const invitePath = /\\/invitado(?:\\/|\\/index\\.html)?$/.test(url.pathname);
     const fallback = guestFilePath ? "./guest.html" : (guestPath ? (invitePath ? "./invitado/index.html" : "./guest/index.html") : "./index.html");
-    const cachePromise = caches.open(SHELL_CACHE);
-    // The installed app opens from its cached shell immediately; refresh it in the background.
-    const refreshPromise = fetch(request).then(response => {
-      if (!response || !response.ok) return response;
-      return cachePromise.then(cache => cache.put(request, response.clone())).then(() => response).catch(() => response);
-    });
-    event.waitUntil(refreshPromise.catch(() => {}));
+    // Network first: never launch a saved shell before checking for a fresh valid build.
+    // A bounded timeout prevents a broken or unreachable network from blocking forever.
     event.respondWith((async () => {
-      const cache = await cachePromise;
-      const cached = await cache.match(request) || await cache.match(fallback);
-      if (cached) return cached;
+      const cache = await caches.open(SHELL_CACHE);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
       try {
-        const response = await refreshPromise;
-        if (response && response.ok) return response;
-      } catch (_) {}
-      return (await cache.match(fallback)) || Response.error();
+        const fresh = await fetch(request, { cache: "no-store", signal: controller.signal });
+        if (!await isValidGameNavigation(fresh)) throw new Error("Fresh game shell failed structural validation");
+        await cache.put(request, fresh.clone()).catch(error => console.info("Shell cache update deferred:", error));
+        return fresh;
+      } catch (error) {
+        const cached = await getVerifiedCachedNavigation(cache, request, fallback);
+        if (cached) {
+          console.info("Network unavailable; using a structurally validated offline shell:", error);
+          return cached;
+        }
+        return new Response(NAVIGATION_RECOVERY_HTML, {
+          status: 503,
+          headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" }
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
     })());
     return;
   }
