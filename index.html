@@ -3008,7 +3008,7 @@ async function removeStrayDebugGeometry(targetScene){
  // so it never changes the walkable collision profile.
  const livingBeachLayers=[];
  function buildLivingBeachLayer(island,index){
-  const segments=isPerformanceMode?(isConstrainedMobile?72:104):Math.max(144,Math.min(288,Math.ceil(Math.PI*2*island.r/1.35))),rows=isPerformanceMode?9:(isTouchDevice?13:15),cols=segments+1;
+  const segments=isPerformanceMode?(isConstrainedMobile?72:104):Math.max(144,Math.min(288,Math.ceil(Math.PI*2*island.r/1.35))),rows=isPerformanceMode?9:(isTouchDevice?15:17),cols=segments+1;
   const positions=[],indices=[],uvs=[],colors=[],radials=[],baseAlpha=[],foamPattern=new Float32Array((segments+1)*rows),wetness=new Float32Array((segments+1)*rows),residue=new Float32Array((segments+1)*rows),lastShore=new Float32Array(segments+1);
   lastShore.fill(NaN);
   for(let i=0;i<=segments;i++){
@@ -3254,13 +3254,13 @@ async function removeStrayDebugGeometry(targetScene){
        // A travelling swash front advances and drains over the beach; the pre-baked mask
        // breaks its edge into irregular lace instead of a continuous straight white stripe.
        const wavePhase=oceanTime*1.15+localX*.095+localZ*.073+foamMask*5.3;
-       const wavePulse=.5+.5*Math.sin(wavePhase),frontWidth=.28+wavePulse*.14;
-       const frontDistance=(inlandDistance-(.20+wavePulse*.54))/frontWidth;
+       const wavePulse=.5+.5*Math.sin(wavePhase),frontWidth=.48+wavePulse*.20;
+       const frontDistance=(inlandDistance-(.24+wavePulse*.60))/frontWidth;
        const activeFoam=Math.exp(-frontDistance*frontDistance)*foamMask*(.15+.24*wavePulse);
-       const f=Math.min(.72,Math.max(layer.residue[stateIndex]*foamMask,activeFoam)),wetR=1-.52*w,wetG=.94-.40*w,wetB=.82-.34*w;
-       layer.colors[vertex*4]=wetR+(.925-wetR)*f;
-       layer.colors[vertex*4+1]=wetG+(.965-wetG)*f;
-       layer.colors[vertex*4+2]=wetB+(.945-wetB)*f;
+       const f=Math.min(.76,Math.max(layer.residue[stateIndex]*foamMask,activeFoam)),wetR=1-.52*w,wetG=.94-.40*w,wetB=.82-.34*w;
+       layer.colors[vertex*4]=wetR+(.935-wetR)*f;
+       layer.colors[vertex*4+1]=wetG+(.972-wetG)*f;
+       layer.colors[vertex*4+2]=wetB+(.95-wetB)*f;
        layer.colors[vertex*4+3]=base*(.78+w*.10+f*.34);
       }
       layer.lastShore[i]=shore;
@@ -3270,7 +3270,7 @@ async function removeStrayDebugGeometry(targetScene){
        const stateIndex=i*layer.rows+row,vertex=row*layer.cols+i;
        layer.wetness[stateIndex]*=drying;layer.residue[stateIndex]*=Math.exp(-step/4.2);
        const w=layer.wetness[stateIndex],foam=layer.residue[stateIndex]*layer.foamPattern[vertex],base=layer.baseAlpha[vertex];
-       const wetR=1-.52*w,wetG=.94-.40*w,wetB=.82-.34*w,f=Math.min(.72,foam);
+       const wetR=1-.52*w,wetG=.94-.40*w,wetB=.82-.34*w,f=Math.min(.76,foam);
        layer.colors[vertex*4]=wetR+(.925-wetR)*f;
        layer.colors[vertex*4+1]=wetG+(.965-wetG)*f;
        layer.colors[vertex*4+2]=wetB+(.945-wetB)*f;
