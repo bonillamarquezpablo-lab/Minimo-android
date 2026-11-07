@@ -119,7 +119,7 @@ def main() -> None:
         fail("Falta el socket visible del palo anclado a la palma en espacio del jugador.")
     if "function findRightGripBones" not in index_html or "applyRealPlayerClubGripPose" not in index_html:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
-    if "if(isPerformanceMode)return;\\n  const positions=[]" not in index_html:
+    if "if(isPerformanceMode)return;" not in index_html or "tidalFoamMeshes.push" not in index_html:
         fail("Rendimiento debe omitir la geometría dinámica de espuma costera.")
     if "const VESSEL_SPRAY_COUNT=isPerformanceMode?0:" not in index_html:
         fail("Rendimiento debe desactivar la espuma/rociado del barco.")
