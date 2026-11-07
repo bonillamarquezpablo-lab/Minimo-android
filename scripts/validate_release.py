@@ -319,7 +319,7 @@ def main() -> None:
     shoreline_body = index_html[shoreline_start:shoreline_end]
     if shoreline_start < 0 or shoreline_end <= shoreline_start or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z)" not in shoreline_body or "return ground-waterHeight(x,z,t);" not in shoreline_body or "surfaceLimitSq=(island.r*1.09)**2" not in shoreline_body:
         fail("La espuma de orilla debe cruzar el heightfield deformable y mantener el límite de tierra firme.")
-    if "const waterWaveBasis=new Float32Array((waterBase.length/3)*WATER_WAVE_STRIDE)" not in index_html or "waterDetailHeightAtVertex(i/3,fade)" not in index_html or "waterFarHeightAtVertex(vertex)" not in index_html:
+    if "waterWaveBasis=new Float32Array((waterBase.length/3)*WATER_WAVE_STRIDE)" not in index_html or "waterDetailHeightAtVertex(i/3,fade)" not in index_html or "waterFarHeightAtVertex(vertex)" not in index_html:
         fail("El oleaje debe conservar sus mismas ondas usando la caché de fases espaciales.")
     if "NorseBootImprintBatch" not in index_html or "new Uint16Array(maxImprints*imprintIndicesPerFoot)" not in index_html or "imprintPositionBuffer.updateDirectly" not in index_html:
         fail("Las huellas deben conservar geometría detallada en una malla reutilizable.")
