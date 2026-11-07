@@ -8066,28 +8066,21 @@ function createRealWeapon(type='axe'){
    length*=grassHeightScale;width*=grassWidthScale;lean*=grassHeightScale;startRadius*=grassWidthScale;
    const dx=Math.sin(angle),dz=Math.cos(angle),px=Math.cos(angle),pz=-Math.sin(angle);
    const sx=dx*startRadius,sz=dz*startRadius;
-   const base=positions.length/3;
+   const base=positions.length/3,tipW=width*.012;
    const rows=[
     {cx:sx,cy:.006,cz:sz,w:width*.30,tint:.68},
     {cx:sx+dx*lean*.34,cy:.006+length*.54,cz:sz+dz*lean*.34,w:width*.46,tint:.88},
-    {cx:sx+dx*lean,cy:.006+length,cz:sz+dz*lean,w:0,tint:1.08}
+    {cx:sx+dx*lean,cy:.006+length,cz:sz+dz*lean,w:tipW,tint:1.08}
    ];
-   const shade=shades[shadeIndex%shades.length];
-   // La hoja mantiene la misma base ancha, el mismo quiebro central y la misma punta.
-   // Se sustituye el pequeño borde de dos vértices de la punta por un único vértice:
-   // la silueta visible no cambia de forma apreciable y cada hoja pasa de 4 a 3 triángulos.
-   for(let rowIndex=0;rowIndex<2;rowIndex++){
-    const row=rows[rowIndex];
+   for(const row of rows){
     positions.push(row.cx-px*row.w,row.cy,row.cz-pz*row.w,row.cx+px*row.w,row.cy,row.cz+pz*row.w);
+    const shade=shades[shadeIndex%shades.length];
     for(let side=0;side<2;side++){
      const f=row.tint*(side===0?.95:1.05);
      colors.push(Math.min(1,shade[0]*f),Math.min(1,shade[1]*f),Math.min(1,shade[2]*f),1);
     }
    }
-   const tip=rows[2];
-   positions.push(tip.cx,tip.cy,tip.cz);
-   colors.push(Math.min(1,shade[0]*tip.tint),Math.min(1,shade[1]*tip.tint),Math.min(1,shade[2]*tip.tint),1);
-   indices.push(base,base+2,base+1,base+1,base+2,base+3,base+2,base+4,base+3);
+   indices.push(base,base+2,base+1,base+1,base+2,base+3,base+2,base+4,base+3,base+3,base+4,base+5);
   };
   // Each tuft is a loose crown of narrow blades with irregular angles and heights.
   // Short inner blades fill the base; longer outer blades avoid the old palm-shaped silhouette.
