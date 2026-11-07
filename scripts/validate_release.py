@@ -281,6 +281,8 @@ def main() -> None:
         fail("Falta la capa de playa con humedad y espuma residual dinámica.")
     if "function terrainDeformationAt(islandIndex,x,z)" not in index_html or "terrainDeformationFields[index]=deformationField;" not in index_html:
         fail("El heightfield no conserva el estado físico de deformación del terreno.")
+    if "const deformationField={island:is,index,subdivisions,gridSize," not in index_html:
+        fail("El campo de deformación del terreno debe enlazar la isla local sin referencias globales indefinidas.")
     if "function pressGround(x,z,islandIndex,wet,beach)" not in index_html or "pressGround(x,z,islandIndex,wet,beach)" not in index_html:
         fail("Las pisadas no presionan la geometría real del terreno.")
     if "function relaxGround(dt)" not in index_html or "relaxGround(dt);" not in index_html:
