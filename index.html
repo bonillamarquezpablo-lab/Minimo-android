@@ -9930,18 +9930,16 @@ function updateHUD(){
 const PLAYER_BOAT_FLOAT_OPTIONS=Object.freeze({length:10.0,beam:2.25,draft:.39});
 const RAIDER_BOAT_FLOAT_OPTIONS=Object.freeze({length:9.6,beam:2.15,draft:.37});
 const playerGroundNormalCache=new B.Vector3(0,1,0);
-let playerGroundNormalCacheX=NaN,playerGroundNormalCacheZ=NaN,playerGroundNormalCacheAt=-Infinity;
-function refreshPlayerGroundNormal(x,z,force=false){
- const dx=x-playerGroundNormalCacheX,dz=z-playerGroundNormalCacheZ;
- if(force||!Number.isFinite(playerGroundNormalCacheX)||elapsed-playerGroundNormalCacheAt>=.075||dx*dx+dz*dz>=.04){
-  const sampled=terrainNormalAt(x,z,.34);
-  playerGroundNormalCache.copyFrom(sampled);
-  playerGroundNormalCacheX=x;playerGroundNormalCacheZ=z;playerGroundNormalCacheAt=elapsed;
- }
+function refreshPlayerGroundNormal(x,z){
+ const step=.34,invStep=1/(step*2);
+ const slopeX=(terrainSurfaceAt(x+step,z)-terrainSurfaceAt(x-step,z))*invStep;
+ const slopeZ=(terrainSurfaceAt(x,z+step)-terrainSurfaceAt(x,z-step))*invStep;
+ const nx=-slopeX,nz=-slopeZ,invLength=1/Math.sqrt(nx*nx+1+nz*nz);
+ playerGroundNormalCache.set(nx*invLength,invLength,nz*invLength);
  return playerGroundNormalCache;
 }
 function update(dt){
-  const playerGroundNormal=!onShip?refreshPlayerGroundNormal(player.root.position.x,player.root.position.z):null;
+  const playerGroundNormalForMovement=playerGroundNormalCache;
   worldUpdateCount++;worldUpdatePhase='environment / water';
   updatePerformanceIslandStreaming(dt);
   updateQualityGrassLod(dt);
@@ -9961,7 +9959,7 @@ function update(dt){
     player.root.position.x=safePlayerPoint.x;player.root.position.z=safePlayerPoint.z;
     player.root.position.y=terrainSurfaceAt(safePlayerPoint.x,safePlayerPoint.z)+(realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08);
     playerGroundYFiltered=player.root.position.y;playerVelocity.x=0;playerVelocity.z=0;
-    refreshPlayerGroundNormal(safePlayerPoint.x,safePlayerPoint.z,true);
+    refreshPlayerGroundNormal(safePlayerPoint.x,safePlayerPoint.z);
     lastSafePosition.copyFrom(player.root.position);cameraTargetSmoothed=null;
    }
   }
@@ -10020,8 +10018,8 @@ function update(dt){
     const dirLengthSq=dirX*dirX+dirZ*dirZ;if(dirLengthSq>1){const invDirLength=1/Math.sqrt(dirLengthSq);dirX*=invDirLength;dirZ*=invDirLength;}
     const sprinting=running&&stamina>1;
     // A little less speed uphill and slightly more downhill; lateral movement remains controlled.
-    const slopeX=-playerGroundNormal.x/Math.max(.001,playerGroundNormal.y);
-    const slopeZ=-playerGroundNormal.z/Math.max(.001,playerGroundNormal.y);
+    const slopeX=-playerGroundNormalForMovement.x/Math.max(.001,playerGroundNormalForMovement.y);
+    const slopeZ=-playerGroundNormalForMovement.z/Math.max(.001,playerGroundNormalForMovement.y);
     const climb=Math.max(-.18,Math.min(.24,slopeX*dirX+slopeZ*dirZ));
     const baseSpeed=sprinting?7.7:3.55,speed=baseSpeed*(1-climb)*(playerAirborne?.34:1);
     targetX=dirX*speed;targetZ=dirZ*speed;
@@ -10106,7 +10104,7 @@ function update(dt){
    playerShadow.setEnabled(true);playerShadow.position.y=.025-airHeight;
    playerShadow.scaling.x=1+airHeight*.18;playerShadow.scaling.y=1+airHeight*.18;
    player.root.rotation.y=B.Scalar.LerpAngle(player.root.rotation.y,yaw,Math.min(1,dt*15));
-   const normal=playerGroundNormal;
+   const normal=refreshPlayerGroundNormal(player.root.position.x,player.root.position.z);
    const forwardSlope=-normal.x*Math.sin(yaw)-normal.z*Math.cos(yaw),sideSlope=-normal.x*Math.cos(yaw)+normal.z*Math.sin(yaw);
    player.root.rotation.x=B.Scalar.Lerp(player.root.rotation.x,Math.max(-.34,Math.min(.34,-Math.atan(forwardSlope))),Math.min(1,dt*10));
    player.root.rotation.z=B.Scalar.Lerp(player.root.rotation.z,Math.max(-.30,Math.min(.30,Math.atan(sideSlope))),Math.min(1,dt*10));
