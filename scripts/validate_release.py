@@ -334,12 +334,18 @@ def main() -> None:
         fail("El cambio de isla renderizada debe seguir al jugador en tierra y al drakkar en navegación.")
     if "island.r*(1.085-coastNoise)" not in index_html or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018" not in index_html:
         fail("La superficie de playa debe prolongarse hasta la zona intermareal usando la altura real del perfil costero.")
-    if "land.forEach(buildTidalFoam);" not in index_html or "radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47]" not in index_html:
-        fail("La espuma debe construirse como lenguas discontinuas sobre la línea de agua real, no como una franja flotante.")
-    if "patches=72" not in index_html or "((i*37+index*19)%11)<3" not in index_html or "halfArc=.010+((i*7+index*3)%8)*.0017" not in index_html:
-        fail("La espuma debe conservar fragmentos cortos e irregulares con huecos visibles entre lenguas.")
-    if "radialJitter=Math.sin(oceanTime*.86+patch.phase+row*1.17)*[.055,.09,.125,.15,.135,.105,.075,.045][row]" not in index_html:
-        fail("Las ocho filas de espuma deben tener desplazamientos de oleaje definidos y finitos.")
+    if "if(isPerformanceMode)return;" not in index_html or "land.forEach(buildTidalFoam);" not in index_html:
+        fail("La malla de espuma avanzada debe existir en Calidad y quedar totalmente omitida en Rendimiento.")
+    if "const segments=Math.max(192,Math.min(384,Math.ceil(Math.PI*2*island.r/1.15)))" not in index_html or "const radialOffsets=[-5.6,-4.9,-4.2,-3.5,-2.8,-2.1,-1.45,-.85,-.25,.35,.95,1.65,2.35]" not in index_html:
+        fail("La rompiente debe cubrir toda la costa con una malla continua y una zona de lavado de anchura real.")
+    if "function shorelineFoamRadiusForBreakers" not in index_html or "const scanSteps=18" not in index_html:
+        fail("La espuma debe resolver la intersección real agua-arena y recuperar sectores cuando falla el primer intervalo.")
+    if "function updateTidalShoreFoam" not in index_html or "for(const foam of tidalFoamMeshes)updateTidalShoreFoam(foam,oceanTime)" not in index_html:
+        fail("La rompiente debe actualizarse dinámicamente en todas las islas, no solo junto al jugador.")
+    if "const crestCentre=.38+reach*.76" not in index_html or "const lace=crest*" not in index_html or "const offshore=" not in index_html:
+        fail("La espuma debe incluir crestas rotas, filamentos y fragmentos marinos, no una línea blanca.")
+    if "tidalFoamAccumulator+=dt" not in index_html or "if(tidalFoamAccumulator>=.12)" not in index_html:
+        fail("La animación de la espuma debe mantener una cadencia temporal independiente y estable.")
     if "inlandDistance<4.8" not in index_html or "swashReach=1.55+3.05*wavePulse" not in index_html:
         fail("La resaca debe mojar una superficie amplia de arena y avanzar/retroceder con el oleaje.")
     if "foamPattern=new Float32Array((segments+1)*rows)" not in index_html or "foamPattern,wetness,residue,lastShore" not in index_html:
