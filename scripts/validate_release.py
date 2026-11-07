@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.195"
+EXPECTED_VERSION = "0.6.196"
 
 HTML_PAGES = (
     "index.html",
