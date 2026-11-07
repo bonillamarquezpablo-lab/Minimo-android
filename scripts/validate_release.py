@@ -308,6 +308,8 @@ def main() -> None:
         fail("El streaming de islas debe activarse solo en Rendimiento extremo y seguir al jugador/barco.")
     if "mesh.isVisible=keep?state.visible:false" not in index_html or "mesh.visibility=keep?state.opacity:0" not in index_html:
         fail("Las islas lejanas deben quedar fuera del render sin destruir sus entidades o estado de juego.")
+    if "sphere.centerWorld?sphere.centerWorld" not in index_html or "const islandChanged=wantedIndex!==islandStreamActiveIndex" not in index_html:
+        fail("El streaming debe clasificar geometría por centro real y mantener ocultos los NPC remotos.")
     if "landIslandIndex(focus.x,focus.z)" not in index_html or "islandStreamIslandAt(focus.x,focus.z)" not in index_html:
         fail("El cambio de isla renderizada debe seguir al jugador en tierra y al drakkar en navegación.")
     if "island.r*(1.085-coastNoise)" not in index_html or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018" not in index_html:
