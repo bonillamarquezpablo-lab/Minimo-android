@@ -422,9 +422,9 @@ def main() -> None:
         fail("Los saltos de posición, teletransportes y estados a bordo/en el aire deben reiniciar el trazado de huellas.")
     if "pendingStepDistance:Number(stepDistance.toFixed(3))" not in index_html or "footstepsEmitted" not in index_html:
         fail("El diagnóstico debe exponer la distancia pendiente y el contador de huellas emitidas.")
-    if "radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47]" not in index_html or "DynamicSubmergedShoreWash_" not in index_html or "Number.isFinite(radius)?radius:island.r*1.09" in index_html:
-        fail("La espuma de orilla debe cruzar la línea de agua sin usar el fallback mar adentro.")
-    if "Math.max(ground,water)+.028" not in index_html or "foam.positions[offset+1]=-3.2" not in index_html:
+    if "ContinuousOrganicShoreFoam_" not in index_html or "Number.isFinite(initialShoreline)?initialShoreline:island.r" not in index_html:
+        fail("La espuma de orilla debe usar el sistema de malla continua y no un fallback de franja mar adentro.")
+    if "Math.max(ground,water)+.042" not in index_html or "positions[offset+1]=-3.2" not in index_html:
         fail("La espuma debe apoyarse sobre arena emergida o sobre la superficie del agua y ocultarse si no hay intersección.")
     if "source.fire&&source.extinguished" not in index_html or "flame.hearth=hearth" not in index_html:
         fail("Las hogueras inundadas no apagan sus llamas y humo.")
