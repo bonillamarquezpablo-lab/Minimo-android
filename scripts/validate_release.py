@@ -420,8 +420,14 @@ def main() -> None:
         fail("El perfil de calidad en iPhone debe conservar antialiasing y sombras de alta resolución.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
         fail("Los penachos o su iluminación de doble cara están incompletos.")
-    if "isUltraLowEndMobile?.52:(isGalaxyA12LowEndMobile?.58:" not in index_html or "performanceDensity=isConstrainedMobile?(isUltraLowEndMobile?.22:.26)" not in index_html:
-        fail("El perfil A10/A12 no conserva el nuevo presupuesto de resolución y cobertura vegetal.")
+    if "isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:" not in index_html or "performanceDensity=isConstrainedMobile?(isUltraLowEndMobile?.22:(isGalaxyA12NachoPerformance?.18:.26))" not in index_html:
+        fail("El perfil A10/A12 Nacho no conserva el presupuesto específico de resolución y vegetación.")
+    if "const isGalaxyA12NachoPerformance=!!(isPerformanceMode&&isTouchDevice&&(galaxyA12NachoHardwareMatch||galaxyA12NachoGpuMatch));" not in index_html:
+        fail("El Galaxy A12 Nacho SM-A127 / Exynos 850 no tiene un perfil de Rendimiento específico.")
+    if "ultraLowEndIslandStreaming=!!(isPerformanceMode&&(isUltraLowEndMobile||isGalaxyA12NachoPerformance))" not in index_html:
+        fail("El Galaxy A12 Nacho no activa el streaming visual de la isla ocupada.")
+    if "isGalaxyA12NachoPerformance?32:" not in index_html or "isGalaxyA12NachoPerformance?1/5:" not in index_html:
+        fail("El perfil A12 Nacho no aplica los límites de malla de agua y actualización previstos.")
     if "shadowGen=(!isConstrainedMobile||isUltraLowEndMobile||isGalaxyA12LowEndMobile)" not in index_html or "const enterRadius=isConstrainedMobile?58:175" not in index_html:
         fail("El perfil A10/A12 no activa sombras dinámicas acotadas por distancia.")
     if "resourceResults=[...playerPreparation,{status:'background'}]" not in index_html or "npcPreparationTask=startNpcHumanModels();" not in index_html:
