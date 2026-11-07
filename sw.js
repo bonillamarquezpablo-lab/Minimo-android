@@ -1,6 +1,6 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.202";
-const ASSET_CACHE = "el-sin-nombre-assets-pending-build-0.6.202";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.203";
+const ASSET_CACHE = "el-sin-nombre-assets-pending-build-0.6.203";
 const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", event => {
