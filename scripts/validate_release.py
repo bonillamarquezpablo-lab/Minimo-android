@@ -135,8 +135,8 @@ def main() -> None:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
-    if "function refreshPlayerGroundNormal(x,z,force=false)" not in index_html or "elapsed-playerGroundNormalCacheAt>=.075" not in index_html:
-        fail("La normal del terreno debe reutilizarse entre movimiento e inclinación sin muestrear cuatro veces cada fotograma.")
+    if "function refreshPlayerGroundNormal(x,z)" not in index_html or "const normal=refreshPlayerGroundNormal(player.root.position.x,player.root.position.z);" not in index_html or "playerGroundNormalForMovement=playerGroundNormalCache" not in index_html:
+        fail("La normal del terreno debe muestrearse una vez por fotograma y reutilizarse entre movimiento e inclinación.")
     if "const focus=onShip?player.root.getAbsolutePosition():player.root.position;" not in index_html or "cameraTargetSmoothed.x+=(targetX-cameraTargetSmoothed.x)*targetAlpha;" not in index_html:
         fail("La cámara debe evitar vectores temporales sin perder el foco absoluto al navegar.")
     if "scale.x=.025+(target.x-.025)*k" not in index_html or "PLAYER_BOAT_FLOAT_OPTIONS" not in index_html:
