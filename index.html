@@ -2631,8 +2631,14 @@ async function removeStrayDebugGeometry(targetScene){
  const waterWaveFrequencies=[.48,.82,-.73,1.28,-1.82,2.15,2.8];
  for(let vertex=0;vertex<waterBase.length/3;vertex++){
   const offset=vertex*3,x=waterBase[offset],z=waterBase[offset+2],basis=vertex*WATER_WAVE_STRIDE;
-  const phases=[x*.009+z*.012,x*.018+z*.012,-x*.013+z*.027,(x+z*.62)*.052,(x-z)*.092,(x*.76-z*1.13)*.145,x*.19+z*.14];
-  for(let wave=0;wave<7;wave++){waterWaveBasis[basis+wave*2]=Math.sin(phases[wave]);waterWaveBasis[basis+wave*2+1]=Math.cos(phases[wave]);}
+  const p0=x*.009+z*.012,p1=x*.018+z*.012,p2=-x*.013+z*.027,p3=(x+z*.62)*.052,p4=(x-z)*.092,p5=(x*.76-z*1.13)*.145,p6=x*.19+z*.14;
+  waterWaveBasis[basis]=Math.sin(p0);waterWaveBasis[basis+1]=Math.cos(p0);
+  waterWaveBasis[basis+2]=Math.sin(p1);waterWaveBasis[basis+3]=Math.cos(p1);
+  waterWaveBasis[basis+4]=Math.sin(p2);waterWaveBasis[basis+5]=Math.cos(p2);
+  waterWaveBasis[basis+6]=Math.sin(p3);waterWaveBasis[basis+7]=Math.cos(p3);
+  waterWaveBasis[basis+8]=Math.sin(p4);waterWaveBasis[basis+9]=Math.cos(p4);
+  waterWaveBasis[basis+10]=Math.sin(p5);waterWaveBasis[basis+11]=Math.cos(p5);
+  waterWaveBasis[basis+12]=Math.sin(p6);waterWaveBasis[basis+13]=Math.cos(p6);
  }
  function updateWaterWaveTime(t){
   for(let wave=0;wave<7;wave++){const phase=t*waterWaveFrequencies[wave];waterWaveTimeSin[wave]=Math.sin(phase);waterWaveTimeCos[wave]=Math.cos(phase);}
@@ -2883,10 +2889,11 @@ async function removeStrayDebugGeometry(targetScene){
  // Solving against the current wave height (instead of a frozen sea level) prevents foam decals
  // from remaining visibly stranded on the dry sand when the tide/wave phase changes.
  function shorelineFoamRadius(island,angle,t=oceanTime){
-  const islandIndex=land.indexOf(island);
+  const islandIndex=land.indexOf(island),surfaceLimitSq=(island.r*1.09)**2;
   const sample=radius=>{
-   const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-   return terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z)-waterHeight(x,z,t);
+   const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius,dx=x-island.x,dz=z-island.z;
+   const ground=dx*dx+dz*dz<surfaceLimitSq?terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z):.42;
+   return ground-waterHeight(x,z,t);
   };
   let lo=island.r*.70,hi=island.r*1.09,loDelta=sample(lo),hiDelta=sample(hi);
   if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)||loDelta<=0||hiDelta>=0)return null;
