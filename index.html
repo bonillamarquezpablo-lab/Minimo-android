@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.212">
-<meta name="el-sin-nombre-repair" content="0.6.212 wide patchy swash wash, cellular foam lace and wet-sand retreat, typed terrain-deformation buffers, cached waves and batched footprints">
+<meta name="el-sin-nombre-build" content="0.6.213">
+<meta name="el-sin-nombre-repair" content="0.6.213 shorewash on land, 13-island conquest and naval invasion endgame, persistent island garrisons">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.212</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.213</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1399,7 +1399,7 @@ body.game-running #loading{display:none!important;visibility:hidden!important;op
 <div id="hud">
  <div id="top">
   <div class="panel"><div id="brand">EL SIN NOMBRE</div><div id="subtitle">SAGA DEL NORTE · CAPÍTULO I</div><div id="playerIdentityTag">VIKINGO · SIN NOMBRE</div></div>
-  <div class="panel" id="stats"><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-wood"/></svg><b id="wood">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-stone"/></svg><b id="stone">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-clan"/></svg><b id="recruits">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-sword"/></svg><b id="kills">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-banner"/></svg><b id="captured">0/4</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-ship"/></svg><b id="boatHealthStat">100%</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-skull"/></svg><b id="raiders">3</b></span><span class="fpsStat"><b id="fpsMeter">FPS --</b></span></div>
+  <div class="panel" id="stats"><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-wood"/></svg><b id="wood">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-stone"/></svg><b id="stone">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-clan"/></svg><b id="recruits">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-sword"/></svg><b id="kills">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-banner"/></svg><b id="captured">0/13</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-ship"/></svg><b id="boatHealthStat">100%</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-skull"/></svg><b id="raiders">3</b></span><span class="fpsStat"><b id="fpsMeter">FPS --</b></span></div>
  </div>
  <div id="healthWrap"><div id="health"></div></div><div id="staminaWrap"><div id="stamina"></div></div><div id="area">Costa del Cuervo</div>
  <button id="chapterTracker" type="button" aria-label="Objetivo actual de la saga">
@@ -3014,7 +3014,7 @@ async function removeStrayDebugGeometry(targetScene){
   for(let i=0;i<=segments;i++){
    const angle=i/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
    const coastNoise=(terrainValueNoise((island.x+cs*island.r)*.12+17.2,(island.z+sn*island.r)*.12-8.4)-.5)*.045+Math.sin((island.x+cs*island.r)*.17+(island.z+sn*island.r)*.11)*.006;
-   radials.push(island.r*(.748-coastNoise),island.r*(.974-coastNoise));
+   radials.push(island.r*(.748-coastNoise),island.r*(.958-coastNoise));
   }
   // Row-major topology: exactly one vertex per (radial row, shoreline segment).
   // This keeps the mesh indices, color state and local position updates on the same grid.
@@ -3256,13 +3256,13 @@ async function removeStrayDebugGeometry(targetScene){
        const w=layer.wetness[stateIndex],foamMask=layer.foamPattern[vertex],base=layer.baseAlpha[vertex];
        // A real swash is an area of broken wash, not a single sinusoidal line:
        // each pulse spreads a shallow water sheet inland, while foam survives in patchy lace.
-       const wavePhase=oceanTime*.72+localX*.031+localZ*.024+foamMask*2.7;
-       const wavePulse=.5+.5*Math.sin(wavePhase),swashReach=1.05+2.35*wavePulse;
-       const swashIn=smooth01(inlandDistance/.28),swashOut=1-smooth01((inlandDistance-swashReach)/.95);
+       const wavePhase=oceanTime*.54+localX*.027+localZ*.022+foamMask*3.4;
+       const wavePulse=.5+.5*Math.sin(wavePhase),swashReach=1.35+3.45*wavePulse+(foamMask-.45)*1.15;
+       const swashIn=smooth01((inlandDistance+.10)/.42),swashOut=1-smooth01((inlandDistance-swashReach)/1.30);
        const swashZone=swashIn*swashOut;
-       const drift=.72+.28*(.5+.5*Math.sin(oceanTime*1.35+localX*.11-localZ*.085));
-       const foamIslands=swashZone*foamMask*drift*(.34+.30*wavePulse);
-       const foamRims=swashZone*Math.pow(foamMask,1.65)*(.18+.18*wavePulse);
+       const drift=.68+.32*(.5+.5*Math.sin(oceanTime*1.08+localX*.083-localZ*.071));
+       const foamIslands=swashZone*Math.pow(foamMask,1.18)*drift*(.38+.32*wavePulse);
+       const foamRims=swashZone*Math.pow(foamMask,1.75)*(.14+.22*wavePulse);
        const f=Math.min(.78,Math.max(layer.residue[stateIndex],foamIslands+foamRims)),wetR=1-.58*w,wetG=.94-.48*w,wetB=.82-.40*w;
        // Wet sand stays darker; only the disconnected foam cells lift toward a cool ivory.
        layer.colors[vertex*4]=wetR+(.94-wetR)*f;
@@ -3401,7 +3401,8 @@ async function removeStrayDebugGeometry(targetScene){
   mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.hasVertexAlpha=true;
   tidalFoamMeshes.push({mesh,positions:new Float32Array(positions),patches:patchMeta,island,centerX:island.x,centerZ:island.z});
  }
- land.forEach(buildTidalFoam);
+ // No seaward foam-ring meshes: the old detached wash strips were visibly stranded over open water.
+ // Shore foam is rendered only on the land-side beach heightfield.
  const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
  function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.975;if(dx*dx+dz*dz<r*r)return i;}return -1;}
  // Trails on the main island. Their centre lines also define vegetation-free corridors.
@@ -7431,12 +7432,38 @@ function createRealWeapon(type='axe'){
    let front=B.MeshBuilder.CreatePlane('guardHealth',{width:1.1,height:.09},scene);front.parent=ch.root;front.position=v(0,2.03,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('EnemyHealth'+index+i,'#76a75a');
    guards.push({parts:ch,villageIndex:index,hp:100,alive:true,surrendered:false,recruited:false,state:'idle',attackT:0,attackDone:false,cool:rand(0,.5),stun:0,hitReact:0,knockback:0,hitDir:v(0,0,0),deadFallT:0,deadSide:rand(-1,1),healthMesh:front,healthBack:back,home:v(ex,0,ez),initialYaw:ch.root.rotation.y});
   }
-  villages.push({index,x,z,name,guards,claimed:false,flag,flagGroup,flagEmblem,flagpole,houseGroups,houseOriginalMaterials:houseGroups.map(group=>group.getChildMeshes(false).map(mesh=>({mesh,material:mesh.material}))),territoryFill:null,territoryRing:null,captureAnimation:null});
+  villages.push({index,x,z,name,guards,claimed:false,flag,flagGroup,flagEmblem,flagpole,houseGroups,houseOriginalMaterials:houseGroups.map(group=>group.getChildMeshes(false).map(mesh=>({mesh,material:mesh.material}))),territoryFill:null,territoryRing:null,captureAnimation:null,kind:'village',fullSettlement:true});
  }
  makeVillage(0,31,-17,'Aldea de Cuervo');
  makeVillage(1,135,14,'Skall');
  makeVillage(2,-132,45,'Pinos');
  makeVillage(3,28,143,'Hrafn');
+ // Remaining islands receive compact, conquerable outposts with one stationed defender.
+ function makeIslandOutpost(islandIndex){
+  const island=land[islandIndex],baseAngle=islandIndex*2.399963229728653;let plot=null;
+  for(let attempt=0;attempt<28&&!plot;attempt++){
+   const angle=baseAngle+attempt*2.399963229728653,radius=island.r*(.22+(attempt%5)*.055);
+   const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
+   if(isSafeIslandGroundPoint(island,x,z,3.8,.82,.52))plot={x,z};
+  }
+  if(!plot)return;
+  const x=plot.x,z=plot.z,y=terrainSurfaceAt(x,z),name=island.name;
+  const clearing=B.MeshBuilder.CreateDisc('IslandOutpostClearing_'+islandIndex,{radius:5.4,tessellation:20},scene);
+  clearing.rotation.x=-Math.PI/2;clearing.position=v(x,y+.025,z);clearing.material=M.grass2;clearing.isPickable=false;
+  const flagpole=cyl('IslandOutpostFlagpole_'+islandIndex,null,[x+3.8,y+2.35,z-2.8],4.7,.075,.075,M.woodLight);
+  cyl('IslandOutpostCrossbar_'+islandIndex,null,[x+4.55,y+4.2,z-2.8],1.45,.045,.045,M.woodLight,[0,0,Math.PI/2]);
+  const flagGroup=newGroup('IslandOutpostBanner_'+islandIndex,null);flagGroup.position=v(x+4.58,y+3.75,z-2.8);
+  const flag=box('IslandOutpostFlag_'+islandIndex,flagGroup,[0,0,0],[1.25,.82,.055],M.red);
+  const flagEmblem=[box('IslandOutpostEmblemA_'+islandIndex,flagGroup,[0,0,.04],[.78,.075,.025],M.gold,[0,0,.62]),box('IslandOutpostEmblemB_'+islandIndex,flagGroup,[0,0,.045],[.78,.075,.025],M.gold,[0,0,-.62])];
+  const guards=[],gx=x-2.7,gz=z+2.4,parts=makeViking('IslandOutpostGuard_'+islandIndex,true,(islandIndex+1)%4);
+  setFactionBadge(parts,'enemy');parts.root.position=v(gx,terrainSurfaceAt(gx,gz)+.08,gz);parts.root.rotation.y=baseAngle+Math.PI;
+  attachContactShadow(parts.root,'IslandOutpostGuardShadow_'+islandIndex,.86);addModelShadow(parts.root);
+  const back=B.MeshBuilder.CreatePlane('IslandOutpostGuardHealthBack_'+islandIndex,{width:1.05,height:.11},scene);back.parent=parts.root;back.position=v(0,2.02,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=M.red;
+  const front=B.MeshBuilder.CreatePlane('IslandOutpostGuardHealth_'+islandIndex,{width:1.0,height:.075},scene);front.parent=parts.root;front.position=v(0,2.03,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('IslandOutpostGuardHealthMat_'+islandIndex,'#76a75a');
+  guards.push({parts,villageIndex:islandIndex,hp:100,alive:true,surrendered:false,recruited:false,state:'idle',attackT:0,attackDone:false,cool:.4,stun:0,hitReact:0,knockback:0,hitDir:v(0,0,0),deadFallT:0,deadSide:1,healthMesh:front,healthBack:back,home:v(gx,0,gz),initialYaw:parts.root.rotation.y});
+  villages.push({index:islandIndex,x,z,name,guards,claimed:false,flag,flagGroup,flagEmblem,flagpole,houseGroups:[],houseOriginalMaterials:[],territoryFill:null,territoryRing:null,captureAnimation:null,kind:'islandOutpost',fullSettlement:false});
+ }
+ for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandOutpost(islandIndex);
  // Norse settlement dressing: rune stones, shield racks, casks, firewood and a fish-drying frame.
  const runeFaceTexture=new B.DynamicTexture('RunestoneCarvingTexture',{width:256,height:512},scene,false),runeFaceCtx=runeFaceTexture.getContext();
  runeFaceCtx.fillStyle='#777b70';runeFaceCtx.fillRect(0,0,256,512);runeFaceCtx.strokeStyle='#c9b990';runeFaceCtx.lineWidth=8;runeFaceCtx.strokeRect(16,16,224,480);
@@ -7484,7 +7511,7 @@ function createRealWeapon(type='axe'){
   cyl('WatchtowerBannerPole_'+idx,tower,[0,5.05,-.70],2.4,.045,.045,M.woodLight);
   const towerBanner=B.MeshBuilder.CreatePlane('WatchtowerRavenBanner_'+idx,{width:.76,height:.55,sideOrientation:B.Mesh.DOUBLESIDE},scene);towerBanner.parent=tower;towerBanner.position=v(.38,5.54,-.70);towerBanner.material=M.playerBanner;
  }
- villages.forEach((vl,i)=>addNorseVillageProps(vl,i));
+ villages.forEach((vl,i)=>{if(vl.fullSettlement)addNorseVillageProps(vl,i);});
  // Decoration and atmosphere: anatomically built Norse hearths, layered flame, embers and smoke.
  const flameMeshes=[],fireSparks=[],hearthStates=[];
  const hearthAshMat=mat('Hearth ash and soot','#28231f',1),hearthCoalMat=mat('Charred oak coal','#201914',.98);
@@ -8537,7 +8564,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'7',build:'0.6.212',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'7',build:'0.6.213',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -8600,7 +8627,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.185');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.185');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/13');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -8620,7 +8647,7 @@ function updateHUD(){
   else if(resourceInReach&&activeRock){act.textContent='⛏ EXTRAER PIEDRA';act.title='Extraer piedra con el pico; se equipa automáticamente';}
   else if(nearVillage&&!nearVillage.claimed){
    const standing=villageHostileDefenders(nearVillage).length;
-   act.textContent=standing>0?'⚔ RESISTENCIA: '+standing:'🏴 RECLAMAR ALDEA';
+   act.textContent=standing>0?'⚔ RESISTENCIA: '+standing:(nearVillage.kind==='islandOutpost'?'🏴 RECLAMAR ISLA':'🏴 RECLAMAR ALDEA');
   }else if(nearVillage&&nearVillage.claimed&&findVillageSurvivor(nearVillage)){
    act.textContent='🤝 RECLUTAR GUERRERO';
   }else if(nearVillage&&nearVillage.claimed){act.textContent='🏴 TERRITORIO ALIADO';}
@@ -8692,7 +8719,7 @@ function updateHUD(){
   vl.captureAnimation={t:0};
   for(const group of vl.houseGroups){for(const mesh of group.getChildMeshes()){if(mesh.material===M.wood||mesh.material===M.woodDark)mesh.material=M.friendlyWood;else if(mesh.material===M.roof||mesh.material===M.thatch)mesh.material=M.friendlyRoof;}}
   const surrendered=vl.guards.filter(g=>g.alive&&g.surrendered&&!g.recruited).length;
-  if(!restoring){msg('¡'+vl.name+' conquistada! '+surrendered+' guerrero(s) se han rendido. Ya puedes reclutarlos. +12 madera.'+(unlockedReward?' Arma desbloqueada: '+unlockedReward+'.':''));recordSagaEvent('Aldea conquistada: '+vl.name+'. Defensores rendidos: '+surrendered+'.');}
+  if(!restoring){const subject=vl.kind==='islandOutpost'?'Isla asegurada':'Aldea conquistada';msg('¡'+vl.name+'! '+surrendered+' guerrero(s) se han rendido. Ya puedes reclutarlos. +12 madera.'+(unlockedReward?' Arma desbloqueada: '+unlockedReward+'.':''));recordSagaEvent(subject+': '+vl.name+'. Defensores rendidos: '+surrendered+'.');}
   updateHUD();if(!restoring)saveGame(true);
  }
  function findVillageSurvivor(vl){return vl&&vl.guards.find(g=>g.alive&&g.surrendered&&!g.recruited)||null;}
@@ -9431,8 +9458,8 @@ function updateHUD(){
  }
  function updateProgressPanel(){
   const summary=document.getElementById('progressSummary'),check=document.getElementById('progressChecklist'),history=document.getElementById('progressHistory'),loadout=document.getElementById('progressLoadout');if(!summary||!check||!history||!loadout)return;
-  const sunk=enemyShips.filter(e=>e.sunk).length,dead=enemies.filter(e=>!e.alive).length,neutralized=enemies.filter(e=>!e.alive||e.surrendered||e.recruited).length,claimed=villages.filter(v=>v.claimed).length;
-  const stats=[[''+claimed+'/4','Aldeas'],[String(dead),'Defensores'],[sunk+'/3','Barcos hundidos'],[companions.length,'Tripulación'],[String(woodCount),'Madera'],[String(stoneCount),'Piedra']];
+  const sunk=enemyShips.filter(e=>e.sunk&&!e.islandInvasion).length,dead=enemies.filter(e=>!e.alive).length,neutralized=enemies.filter(e=>!e.alive||e.surrendered||e.recruited).length,claimed=villages.filter(v=>v.claimed).length;
+  const stats=[[''+claimed+'/13','Islas'],[String(dead),'Defensores'],[sunk+'/3','Barcos hundidos'],[companions.length,'Tripulación'],[String(woodCount),'Madera'],[String(stoneCount),'Piedra']];
   summary.innerHTML=stats.map(([n,l])=>'<div class="progressStat"><b>'+n+'</b><span>'+l+'</span></div>').join('');
   const chapterTasks=[
    ['Capítulo I · Reúne 12 madera y 3 piedra',chapterStage>0,woodCount+'/12 madera · '+stoneCount+'/3 piedra'],
@@ -9443,8 +9470,8 @@ function updateHUD(){
   const tasks=[...chapterTasks,
    ['Construye y guarda tu refugio',playerShelterBuilt,playerShelterBuilt?'Construido y persistente':'6 madera · 1 piedra'],
    ['Prueba de carrera · recorre 40 metros corriendo',sprintMissionDone,Math.floor(sprintMissionMeters)+'/40 m'],
-   ['Asegura las cuatro aldeas vikingas',claimed>=4,claimed+'/4'],
-   ['Neutraliza a todos los defensores de los asentamientos',neutralized>=12,neutralized+'/12'],
+   ['Conquista y asegura las trece islas',claimed>=13,claimed+'/13'],
+   ['Neutraliza a todos los defensores de las trece islas',neutralized>=villages.reduce((n,vl)=>n+vl.guards.length,0),neutralized+'/'+villages.reduce((n,vl)=>n+vl.guards.length,0)],
    ['Recluta supervivientes y forma tu tripulación',companions.length>=4,companions.length+'/4'],
    ['Hunde los tres drakkars saqueadores',sunk>=3,sunk+'/3'],
    ['Forja un arma de nivel maestro',weaponLevel>=3,'Nivel '+weaponLevel+'/3'],
@@ -9565,14 +9592,14 @@ function updateHUD(){
   for(let i=0;i<land.length;i++){
    const y=side.y+34+i*13.05,isCurrent=i===nearestIndex;
    if(isCurrent){mg.fillStyle='rgba(212,166,88,.18)';mg.fillRect(side.x+3,y-8,side.w-6,12);}
-   mg.beginPath();mg.arc(side.x+11,y-3,3.4,0,Math.PI*2);mg.fillStyle=isCurrent?'#f1cf88':'#7f9675';mg.fill();mg.strokeStyle='#e9d2a2';mg.lineWidth=.55;mg.stroke();
+   const holding=villages.find(village=>village.index===i);mg.beginPath();mg.arc(side.x+11,y-3,3.4,0,Math.PI*2);mg.fillStyle=holding&&holding.claimed?'#e7c47e':(isCurrent?'#f1cf88':'#7f9675');mg.fill();mg.strokeStyle='#e9d2a2';mg.lineWidth=.55;mg.stroke();
    mg.fillStyle='#172d31';mg.font='bold 5.8px Georgia,serif';mg.textAlign='center';mg.fillText(String(i+1).padStart(2,'0'),side.x+11,y-1.3);
    mg.fillStyle=isCurrent?'#f3d79b':'#d6d0b9';mg.font='6.7px system-ui';mg.textAlign='left';
    const name=land[i].name,shortName=name.length>19?name.slice(0,18)+'…':name;mg.fillText(shortName,side.x+18,y-1.1,side.w-23);
   }
   const villageHeader=side.y+211;mg.strokeStyle='rgba(218,181,112,.33)';mg.beginPath();mg.moveTo(side.x+5,villageHeader-5);mg.lineTo(side.x+side.w-5,villageHeader-5);mg.stroke();
-  mg.fillStyle='#e7c987';mg.font='bold 7px Georgia,serif';mg.textAlign='left';mg.fillText('ASENTAMIENTOS',side.x+6,villageHeader+5);
-  villages.forEach((village,i)=>{const y=villageHeader+17+i*9.1;mg.fillStyle=village.claimed?'#e7c47e':'#cf8575';mg.beginPath();mg.arc(side.x+9,y-2,2.25,0,Math.PI*2);mg.fill();mg.fillStyle='#e0d7c2';mg.font='6.4px system-ui';mg.fillText(village.name,side.x+15,y,side.w-19);});
+  mg.fillStyle='#e7c987';mg.font='bold 7px Georgia,serif';mg.textAlign='left';mg.fillText('CONTROL DEL ARCHIPIÉLAGO',side.x+6,villageHeader+5);
+  mg.fillStyle='#e0d7c2';mg.font='bold 8px system-ui';mg.fillText(villages.filter(village=>village.claimed).length+' / '+land.length+' ISLAS ASEGURADAS',side.x+6,villageHeader+19);
   mg.fillStyle='rgba(7,20,23,.92)';mg.fillRect(12,8,456,26);mg.strokeStyle='rgba(225,187,118,.82)';mg.lineWidth=.85;mg.strokeRect(12,8,456,26);
   mg.fillStyle='#f0d49a';mg.font='bold 10px Georgia,serif';mg.textAlign='left';mg.fillText('CARTA DE NAVEGACIÓN · MAR DEL NORTE',22,24);
   mg.fillStyle='rgba(219,205,169,.70)';mg.font='6px system-ui';mg.textAlign='right';mg.fillText('EL SIN NOMBRE / SAGA DEL NORTE',458,24);
