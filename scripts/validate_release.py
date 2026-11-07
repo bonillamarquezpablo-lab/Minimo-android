@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.217"
+EXPECTED_VERSION = "0.6.219"
 
 HTML_PAGES = (
     "index.html",
@@ -42,6 +42,9 @@ REQUIRED_FILES = (
     "assets/models/viking-rigged.glb",
     "assets/models/armored-knight-rigged.glb",
     "assets/models/man-base-character-rigged.glb",
+    "assets/models/performance/viking-rigged.glb",
+    "assets/models/performance/armored-knight-rigged.glb",
+    "assets/models/performance/man-base-character-rigged.glb",
     "assets/audio/menu/winter_s_final_toll.mp3",
     "assets/audio/gameplay/the_weight_of_empire.mp3",
 )
@@ -394,7 +397,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.217</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.219</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
@@ -406,8 +409,8 @@ def main() -> None:
         fail("El hito de defensa naval solo se desbloquea al explorar y conquistar todo el archipiélago.")
     if "if(vl.islandGarrison)return;" not in index_html:
         fail("Los puestos insulares no deben añadir civiles de relleno y exceder el presupuesto móvil.")
-    if "const warmupResult=await Promise.race([" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
-        fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
+    if "if(isPerformanceMode){\n    warmupResult=await fullSceneWarmup;" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
+        fail("Rendimiento debe esperar a que la escena completa esté lista; Calidad conserva su límite original.")
     if "const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;" not in index_html or "await yieldGrassStartupIfNeeded(islandIndex,placed,want);" not in index_html:
         fail("La generación de vegetación debe ceder el control según tiempo real de CPU.")
     if "const occupiedGridCells=new Uint8Array(gridSide*gridSide)" not in index_html or "const terrainHashCache=new Map();" not in index_html:
@@ -430,8 +433,8 @@ def main() -> None:
         fail("El perfil A12 Nacho no aplica los límites de malla de agua y actualización previstos.")
     if "shadowGen=(!isConstrainedMobile||isUltraLowEndMobile||isGalaxyA12LowEndMobile)" not in index_html or "const enterRadius=isConstrainedMobile?58:175" not in index_html:
         fail("El perfil A10/A12 no activa sombras dinámicas acotadas por distancia.")
-    if "resourceResults=[...playerPreparation,{status:'background'}]" not in index_html or "npcPreparationTask=startNpcHumanModels();" not in index_html:
-        fail("Los NPC de Rendimiento deben terminar de importarse en segundo plano sin bloquear el primer acceso.")
+    if "resourceResults=await Promise.allSettled([playerHumanLoadPromise,npcPreparationTask]);" not in index_html or "if(isPerformanceMode)return false;" not in index_html:
+        fail("Rendimiento debe esperar al jugador y a todos sus modelos NPC antes de abrir y no iniciar reintentos GLB en segundo plano.")
     if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
         fail("Falta la distribución uniforme con separación mínima.")
     if "const grids=[grid(4,4),grid(10,10),grid(24,24),grid(60,60),grid(144,144),grid(288,288)];" not in index_html:
@@ -456,6 +459,31 @@ def main() -> None:
         fail("El modo Rendimiento debe omitir la creación de animales sin alterar el roster de Calidad.")
     if "if(isPerformanceMode){" not in index_html or "grassInstanceCount=0;grassBatchCount=0;grassDebugClumpCount=0;grassDebugBatchCount=0;" not in index_html or "const wildlifePreparationTask=loadWildlifeModels();" not in index_html:
         fail("Hierba/fauna deben omitirse solo en Rendimiento y conservarse completas en Calidad.")
+
+    # Las variantes GLB reducidas son exclusivas de Rendimiento y conservan la estructura de animación.
+    for performance_model in (
+        "assets/models/performance/viking-rigged.glb",
+        "assets/models/performance/armored-knight-rigged.glb",
+        "assets/models/performance/man-base-character-rigged.glb",
+    ):
+        raw_model = (DIST / performance_model).read_bytes()
+        if b"EXT_meshopt_compression" not in raw_model:
+            fail(f"El GLB de Rendimiento no contiene Meshopt: {performance_model}")
+    if "isPerformanceMode?'./assets/models/performance/viking-rigged.glb':'./assets/models/viking-rigged.glb'" not in index_html:
+        fail("El protagonista no selecciona el GLB optimizado solo en Rendimiento.")
+    if "isPerformanceMode?'./assets/models/performance/armored-knight-rigged.glb':'./assets/models/armored-knight-rigged.glb'" not in index_html:
+        fail("Los guardianes no seleccionan el GLB optimizado solo en Rendimiento.")
+    if "isPerformanceMode?'./assets/models/performance/man-base-character-rigged.glb':'./assets/models/man-base-character-rigged.glb'" not in index_html:
+        fail("Los aldeanos no seleccionan el GLB optimizado solo en Rendimiento.")
+    if "if(isPerformanceMode){\\n   const r=sphere('graniteBoulder'" not in index_html:
+        fail("Las vetas de piedra deben conservar su funcionalidad con una sola malla simplificada en Rendimiento.")
+    if "if(!isPerformanceMode)land.forEach(buildTidalFoam);" not in index_html or "VESSEL_SPRAY_COUNT=isPerformanceMode?0:" not in index_html:
+        fail("La espuma de orilla y las salpicaduras del barco deben quedar desactivadas solo en Rendimiento.")
+    if "if(!isPerformanceMode)for(let side of [-1,1])" not in index_html or "if(belongsToVessel)continue;" not in index_html:
+        fail("Las estelas/reflejos de barcos deben reducirse solo en Rendimiento.")
+    if "if(isPerformanceMode)size=Math.min(size,256);" not in index_html or "const size=isPerformanceMode?192:384" not in index_html:
+        fail("Las texturas procedurales de Rendimiento no reducen resolución/VRAM.")
+
     if "civilianWarmupPromise=!isPerformanceMode&&civilianTotal" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html:
         fail("Calidad debe precargar el modelo de aldeanos en paralelo y reutilizar ese resultado al instanciarlo.")
     if "WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837'" not in index_html or "function loadWildlifeModels()" not in index_html:
