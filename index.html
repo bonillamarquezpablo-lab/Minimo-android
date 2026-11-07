@@ -3262,24 +3262,45 @@ async function removeStrayDebugGeometry(targetScene){
   }
   function update(dt,x,z,distance,heading,running,onShip,airborne){
    if(!Number.isFinite(dt)||dt<=0)return;
-   for(let i=imprints.length-1;i>=0;i--){
-    const item=imprints[i];item.age+=dt;item.fadeAccumulator+=dt;
-    if(item.age>=item.life){item.mesh.dispose(false,true);imprints.splice(i,1);continue;}
+   let imprintColorsDirty=false;
+   for(const item of imprints){
+    if(!item.active)continue;
+    item.age+=dt;item.fadeAccumulator+=dt;
+    const base=item.slot*imprintVertexCount,colorStart=base*4;
+    if(item.age>=item.life){
+     item.active=false;
+     for(let vertex=0;vertex<imprintVertexCount;vertex++)imprintColors[colorStart+vertex*4+3]=0;
+     imprintColorsDirty=true;continue;
+    }
     if(item.fadeAccumulator>=.48){
      item.fadeAccumulator=0;const fade=Math.pow(Math.max(0,1-item.age/item.life),1.42);
-     for(let k=0;k<item.colors.length;k+=4)item.colors[k+3]=item.baseAlpha[k/4]*fade;
-     item.mesh.updateVerticesData(B.VertexBuffer.ColorKind,item.colors,false,false);
+     for(let vertex=0;vertex<imprintVertexCount;vertex++)imprintColors[colorStart+vertex*4+3]=item.baseAlpha[vertex]*fade;
+     imprintColorsDirty=true;
     }
    }
+   if(imprintColorsDirty)imprintColorBuffer.updateDirectly(imprintColors,0);
    relaxGround(dt);
-   for(let i=particles.length-1;i>=0;i--){
-    const p=particles[i];p.age+=dt;p.life-=dt;
-    p.vy-=2.6*dt;p.mesh.position.x+=p.vx*dt;p.mesh.position.z+=p.vz*dt;p.mesh.position.y+=p.vy*dt;
-    p.mesh.scaling.scaleInPlace(1-dt*.85);
-    if(p.life<=0||p.mesh.position.y<=terrainSurfaceAt(p.mesh.position.x,p.mesh.position.z)+.025){
-     p.mesh.dispose(false,true);particles.splice(i,1);
+   let grainBuffersDirty=false;
+   for(const particle of particles){
+    if(particle.life<=0)continue;
+    particle.age+=dt;particle.life-=dt;
+    particle.vy-=(particle.wet?5.0:4.4)*dt;
+    particle.x+=particle.vx*dt;particle.z+=particle.vz*dt;particle.y+=particle.vy*dt;
+    const matrixOffset=particle.slot*16,colorOffset=particle.slot*4;
+    if(particle.life<=0||particle.y<=particle.groundY+.025){
+     particle.life=0;grainMatrices[matrixOffset]=.0001;grainMatrices[matrixOffset+5]=.0001;grainMatrices[matrixOffset+10]=.0001;
+     grainMatrices[matrixOffset+12]=particle.x;grainMatrices[matrixOffset+13]=-1000;grainMatrices[matrixOffset+14]=particle.z;
+     grainColors[colorOffset+3]=0;grainBuffersDirty=true;continue;
     }
+    const fade=Math.min(1,particle.life/Math.max(.001,particle.maxLife*.18)),size=particle.size*fade;
+    grainMatrices[matrixOffset]=size*(particle.wet?.78:1.0);grainMatrices[matrixOffset+1]=0;grainMatrices[matrixOffset+2]=0;grainMatrices[matrixOffset+3]=0;
+    grainMatrices[matrixOffset+4]=0;grainMatrices[matrixOffset+5]=size*(particle.wet?1.55:.72);grainMatrices[matrixOffset+6]=0;grainMatrices[matrixOffset+7]=0;
+    grainMatrices[matrixOffset+8]=0;grainMatrices[matrixOffset+9]=0;grainMatrices[matrixOffset+10]=size*(particle.wet?.82:1.0);grainMatrices[matrixOffset+11]=0;
+    grainMatrices[matrixOffset+12]=particle.x;grainMatrices[matrixOffset+13]=particle.y;grainMatrices[matrixOffset+14]=particle.z;grainMatrices[matrixOffset+15]=1;
+    grainColors[colorOffset]=particle.r;grainColors[colorOffset+1]=particle.g;grainColors[colorOffset+2]=particle.b;grainColors[colorOffset+3]=particle.a*fade;
+    grainBuffersDirty=true;
    }
+   if(grainBuffersDirty){grainMesh.thinInstanceBufferUpdated('matrix');grainMesh.thinInstanceBufferUpdated('color');}
    updateBeach(dt,x,z);
    if(onShip||airborne||!Number.isFinite(distance)||distance<=0){if(!onShip&&(!Number.isFinite(distance)||distance<=0))stepDistance=0;return;}
    stepDistance+=distance;
@@ -3292,7 +3313,7 @@ async function removeStrayDebugGeometry(targetScene){
    }
   }
   function reset(){stepDistance=0;alternateFoot=0;}
-  return {update,reset,counts:()=>({imprints:imprints.length,particles:particles.length})};
+  return {update,reset,counts:()=>({imprints:imprints.reduce((count,item)=>count+(item.active?1:0),0),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1})};
  })();
  const tidalFoamMeshes=[];
  function buildTidalFoam(island,index){
