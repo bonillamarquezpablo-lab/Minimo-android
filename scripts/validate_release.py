@@ -125,6 +125,8 @@ def main() -> None:
         fail("Calidad debe construir una banda continua y de alta resolución alrededor de toda la costa.")
     if "foam.mesh.updateVerticesData(B.VertexBuffer.ColorKind,colors,false,false)" not in index_html or "const breaking=.52+.30*pulse+.18*secondary" not in index_html:
         fail("La espuma costera debe animar su patrón de alfa y la energía de rompiente.")
+    if "const initialShoreline=shorelineFoamRadius(island,angle,oceanTime)" not in index_html:
+        fail("La espuma debe estar visible en todas las costas desde el primer fotograma, incluidas las islas lejanas.")
     if "const VESSEL_SPRAY_COUNT=isPerformanceMode?0:" not in index_html:
         fail("Rendimiento debe desactivar la espuma/rociado del barco.")
     if "if(B.MirrorTexture&&B.Plane&&!isPerformanceMode)" not in index_html:
