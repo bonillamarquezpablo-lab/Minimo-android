@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.212">
-<meta name="el-sin-nombre-repair" content="0.6.212 wide patchy swash wash, cellular foam lace and wet-sand retreat, typed terrain-deformation buffers, cached waves and batched footprints">
+<meta name="el-sin-nombre-build" content="0.6.213">
+<meta name="el-sin-nombre-repair" content="0.6.213 shore-side foam tongues conformed to wet sand, broken dynamic swash patches, endgame-safe mobile budgets and typed terrain deformation">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.212</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.213</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2805,20 +2805,27 @@ async function removeStrayDebugGeometry(targetScene){
    const island=foam.island;
    for(const patch of foam.patches){
     const shoreline=shorelineFoamRadius(island,patch.angle,oceanTime);
-    for(let row=0;row<3;row++)for(let side=0;side<2;side++){
-     const offset=patch.start+(row*2+side)*3;
+    for(let row=0;row<foam.rows;row++)for(let side=0;side<2;side++){
+     const vertex=patch.start/3+row*2+side,offset=vertex*3,colorOffset=vertex*4;
      if(!Number.isFinite(shoreline)){
       foam.positions[offset]=island.x;foam.positions[offset+1]=-3.2;foam.positions[offset+2]=island.z;
+      foam.colors[colorOffset+3]=0;
       continue;
      }
-     const angle=patch.angle+(side===0?-patch.halfArc:patch.halfArc);
-     const radius=shoreline+(row===0?.025:(row===1?.14:.30));
-     const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-     // Shore wash is always on the submerged side of the live terrain/water intersection.
-     foam.positions[offset]=x;foam.positions[offset+1]=waterHeight(x,z,oceanTime)+.024;foam.positions[offset+2]=z;
+     const rowT=row/(foam.rows-1),width=patch.halfArc*foam.rowWidths[row];
+     const sideSign=side===0?-1:1,lateral=sideSign*width+Math.sin(patch.phase+row*1.71+oceanTime*.72)*.012*rowT;
+     const angle=patch.angle+lateral+Math.sin(oceanTime*.64+patch.phase+row*.9)*.008*rowT;
+     const radial=shoreline-foam.radialOffsets[row]+Math.sin(oceanTime*1.15+patch.phase+row*1.4)*.025*rowT;
+     const x=island.x+Math.cos(angle)*radial,z=island.z+Math.sin(angle)*radial;
+     // The mesh now follows the actual sandy surface; it cannot float as a white stripe offshore.
+     const groundY=terrainSurfaceAt(x,z),seaY=waterHeight(x,z,oceanTime);
+     foam.positions[offset]=x;foam.positions[offset+1]=Math.max(groundY,seaY)+.018+Math.sin(oceanTime*1.6+patch.phase+row)*.006;foam.positions[offset+2]=z;
+     const pulse=.78+.22*(.5+.5*Math.sin(oceanTime*1.45+patch.phase+row*.83));
+     foam.colors[colorOffset+3]=foam.baseAlpha[vertex]*pulse;
     }
    }
    foam.mesh.updateVerticesData(B.VertexBuffer.PositionKind,foam.positions,false);
+   foam.mesh.updateVerticesData(B.VertexBuffer.ColorKind,foam.colors,false);
   }
   for(const wave of shorelineWaves){
    const dx=wave.x-waterFocusX,dz=wave.z-waterFocusZ;if(dx*dx+dz*dz>nearbyRadiusSq)continue;
@@ -3372,34 +3379,51 @@ async function removeStrayDebugGeometry(targetScene){
  })();
  const tidalFoamMeshes=[];
  function buildTidalFoam(island,index){
-  const positions=[],indices=[],colors=[],patches=25,patchMeta=[];
+  // Broken swash tongues are laid onto the beach side of the live water/terrain
+  // intersection. Earlier versions added the radial offsets, placing the white
+  // strips out in the sea and making them read as a long detached line.
+  const positions=[],indices=[],colors=[],patches=isPerformanceMode?20:32,rows=isPerformanceMode?3:5,patchMeta=[],baseAlpha=[];
+  const radialOffsets=isPerformanceMode?[.035,.38,.92]:[.035,.24,.62,1.24,2.05];
+  const rowWidths=isPerformanceMode?[1,.66,.24]:[1,.94,.72,.43,.18];
   for(let i=0;i<patches;i++){
-   if(i%5===0)continue;
-   const angle=i/patches*Math.PI*2+Math.sin(i*2.17+index)*.018,halfArc=.026+(i%4)*.008,start=positions.length/3;
+   if(i%(isPerformanceMode?5:6)===0)continue;
+   const angle=i/patches*Math.PI*2+Math.sin(i*2.17+index)*.018;
+   const halfArc=.045+((i*7+index*3)%11)/10*.075;
+   const phase=i*.71+index*1.37,start=positions.length/3;
    const radius=shorelineFoamRadius(island,angle,oceanTime);
-   for(let row=0;row<3;row++){
-    // All three rows sit at or beyond the live shoreline intersection, never across dry sand.
-    const radial=row===0?.025:(row===1?.14:.30);
+   for(let row=0;row<rows;row++){
+    const radialOffset=radialOffsets[row],rowT=row/(rows-1),width=halfArc*rowWidths[row];
     for(let side=0;side<2;side++){
-     const a=angle+(side===0?-halfArc:halfArc),r=(Number.isFinite(radius)?radius:island.r*1.09)+radial,x=island.x+Math.cos(a)*r,z=island.z+Math.sin(a)*r;
-     positions.push(x,waterHeight(x,z,oceanTime)+.024,z);
-     const edgeFade=(row===1?1:.18)*(side===0?.62:.78),alpha=edgeFade*(.16+((i*7)%5)*.018);
-     colors.push(.78,.86,.82,alpha);
+     const sideSign=side===0?-1:1;
+     const lateral=sideSign*width+Math.sin(phase+row*1.71)*.012*rowT;
+     const a=angle+lateral,r=(Number.isFinite(radius)?radius:island.r*1.09)-radialOffset;
+     const x=island.x+Math.cos(a)*r,z=island.z+Math.sin(a)*r;
+     const groundY=terrainSurfaceAt(x,z),seaY=waterHeight(x,z,oceanTime);
+     positions.push(x,Math.max(groundY,seaY)+.018,z);
+     const broad=terrainValueNoise(x*.22+phase,z*.22-phase),fine=terrainValueNoise(x*.78-phase*1.7,z*.78+phase);
+     const broken=smooth01((broad*.62+fine*.38-.43)*7.0);
+     const rowAlpha=(rows===3?[.42,.58,.16]:[.52,.78,.48,.22,.07])[row];
+     const edgeFade=side===0?.78:.92;
+     const alpha=rowAlpha*edgeFade*broken;
+     baseAlpha.push(alpha);
+     // Cool wet-sand tint at the inner edge, pale mineral foam where the wash breaks.
+     const foamTone=.35+.65*broken;
+     colors.push(.39+.50*foamTone,.54+.42*foamTone,.55+.39*foamTone,alpha);
     }
    }
-   patchMeta.push({angle,halfArc,start:(start*3)});
-   for(let row=0;row<2;row++){const a=start+row*2,b=a+2;indices.push(a,b,a+1,a+1,b,b+1);}
+   patchMeta.push({angle,halfArc,start:start*3,phase});
+   for(let row=0;row<rows-1;row++){const a=start+row*2,b=a+2;indices.push(a,b,a+1,a+1,b,b+1);}
   }
   if(!indices.length)return;
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
   const mesh=new B.Mesh('DynamicSubmergedShoreWash_'+index,scene),data=new B.VertexData();
   data.positions=positions;data.indices=indices;data.normals=normals;data.colors=colors;data.applyToMesh(mesh);
   const material=new B.StandardMaterial('ShoreWashMaterial_'+index,scene);
-  material.diffuseColor=new B.Color3(.82,.88,.85);material.emissiveColor=new B.Color3(.035,.048,.044);
-  material.specularColor=new B.Color3(.015,.018,.016);material.useVertexColors=true;material.useVertexAlpha=true;
-  material.backFaceCulling=false;material.alpha=.54;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;mesh.material=material;
+  material.diffuseColor=new B.Color3(.72,.80,.77);material.emissiveColor=new B.Color3(.018,.027,.025);
+  material.specularColor=new B.Color3(.12,.16,.15);material.specularPower=48;material.useVertexColors=true;material.useVertexAlpha=true;
+  material.backFaceCulling=false;material.alpha=.72;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;mesh.material=material;
   mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.hasVertexAlpha=true;
-  tidalFoamMeshes.push({mesh,positions:new Float32Array(positions),patches:patchMeta,island,centerX:island.x,centerZ:island.z});
+  tidalFoamMeshes.push({mesh,positions:new Float32Array(positions),colors:new Float32Array(colors),baseAlpha:new Float32Array(baseAlpha),patches:patchMeta,rows,radialOffsets,rowWidths,island,centerX:island.x,centerZ:island.z});
  }
  land.forEach(buildTidalFoam);
  const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
@@ -8537,7 +8561,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'7',build:'0.6.212',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'7',build:'0.6.213',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
