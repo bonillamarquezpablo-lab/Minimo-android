@@ -2764,7 +2764,7 @@ async function removeStrayDebugGeometry(targetScene){
  // No se dibujan anillos completos alrededor de las islas: desde el mar parecían arcos translúcidos.
  // La espuma queda reservada para el contacto dinámico del casco con el agua.
  function animateWater(dt){
-  oceanTime+=dt;updateWaterWaveTime(oceanTime);waterAccumulator+=dt;waterNormalAccumulator+=dt;waterFarAccumulator+=dt;
+  oceanTime+=dt;updateWaterWaveTime(oceanTime);waterAccumulator+=dt;waterNormalAccumulator+=dt;waterFarAccumulator+=dt;tidalFoamAccumulator+=dt;
   const farDue=waterFarAccumulator>=waterFarStep,detailDue=waterAccumulator>=waterVertexStep;
   if(!farDue&&!detailDue)return;
   const workStart=performance.now();refreshWaterDetailRegion();
@@ -2806,7 +2806,6 @@ async function removeStrayDebugGeometry(targetScene){
    }
    waterLastNormalMs=performance.now()-normalStart;waterNormalAccumulator%=waterNormalStep;
   }
-  tidalFoamAccumulator+=dt;
   if(tidalFoamAccumulator>=.12){
    tidalFoamAccumulator%=.12;
    for(const foam of tidalFoamMeshes)updateTidalShoreFoam(foam,oceanTime);
