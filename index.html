@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.210">
-<meta name="el-sin-nombre-repair" content="0.6.210 typed terrain-deformation buffers, exact-wave water math cache, batched ground imprints and reusable sand-splash particles">
+<meta name="el-sin-nombre-build" content="0.6.211">
+<meta name="el-sin-nombre-repair" content="0.6.211 broken-lace dynamic shore foam, typed terrain-deformation buffers, exact-wave water math cache, batched ground imprints and reusable sand-splash particles">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.210</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.211</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -3008,8 +3008,8 @@ async function removeStrayDebugGeometry(targetScene){
  // so it never changes the walkable collision profile.
  const livingBeachLayers=[];
  function buildLivingBeachLayer(island,index){
-  const segments=isPerformanceMode?(isConstrainedMobile?72:104):160,rows=9,cols=segments+1;
-  const positions=[],indices=[],uvs=[],colors=[],radials=[],baseAlpha=[],wetness=new Float32Array((segments+1)*rows),residue=new Float32Array((segments+1)*rows),lastShore=new Float32Array(segments+1);
+  const segments=isPerformanceMode?(isConstrainedMobile?72:104):Math.max(144,Math.min(288,Math.ceil(Math.PI*2*island.r/1.35))),rows=isPerformanceMode?9:(isTouchDevice?13:15),cols=segments+1;
+  const positions=[],indices=[],uvs=[],colors=[],radials=[],baseAlpha=[],foamPattern=new Float32Array((segments+1)*rows),wetness=new Float32Array((segments+1)*rows),residue=new Float32Array((segments+1)*rows),lastShore=new Float32Array(segments+1);
   lastShore.fill(NaN);
   for(let i=0;i<=segments;i++){
    const angle=i/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
@@ -3026,6 +3026,10 @@ async function removeStrayDebugGeometry(targetScene){
     positions.push(x,terrainSurfaceAt(x,z)+.012,z);uvs.push(i/segments*12,t*2.8);
     const edgeFade=Math.min(smooth01(t/.11),smooth01((1-t)/.075));
     const alpha=.88*edgeFade;colors.push(1,.94,.82,alpha);baseAlpha.push(alpha);
+     // Pre-bake multi-scale, world-space foam breakup; runtime only reads this mask.
+     const broadFoam=terrainValueNoise(x*.105+37.4,z*.105-21.8),mediumFoam=terrainValueNoise(x*.33-14.7,z*.33+42.1),fineFoam=terrainValueNoise(x*.91+8.3,z*.91-31.6);
+     const foamNoise=broadFoam*.46+mediumFoam*.34+fineFoam*.20;
+     foamPattern[row*cols+i]=.035+.965*smooth01((foamNoise-.43)*5.6);
    }
   }
   for(let row=0;row<rows-1;row++)for(let i=0;i<segments;i++){
@@ -3041,7 +3045,7 @@ async function removeStrayDebugGeometry(targetScene){
   mesh.material=material;mesh.isPickable=false;mesh.receiveShadows=true;mesh.castShadows=false;mesh.hasVertexAlpha=true;
   mesh.metadata=Object.assign({},mesh.metadata||{},{livingBeachSurface:true,islandIndex:index,wetnessSimulation:true});
   const baseY=new Float32Array(positions.length/3);for(let vertex=0;vertex<baseY.length;vertex++)baseY[vertex]=positions[vertex*3+1];
-   livingBeachLayers.push({mesh,island,index,segments,rows,cols,radials,baseAlpha,wetness,residue,lastShore,colors:new Float32Array(colors),positions:new Float32Array(positions),baseY,positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),positionScratch:new Float32Array(3),centerX:island.x,centerZ:island.z});
+   livingBeachLayers.push({mesh,island,index,segments,rows,cols,radials,baseAlpha,foamPattern,wetness,residue,lastShore,colors:new Float32Array(colors),positions:new Float32Array(positions),baseY,positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),positionScratch:new Float32Array(3),centerX:island.x,centerZ:island.z});
  }
  land.forEach(buildLivingBeachLayer);
  // Interactive ground layer: impressed boot soles, compacted lips, sand grains and drying tide marks.
@@ -3240,31 +3244,37 @@ async function removeStrayDebugGeometry(targetScene){
         wet=Math.max(wet,contact);
        }
        layer.wetness[stateIndex]=Math.min(1,wet);
-       let foam=layer.residue[stateIndex]*Math.exp(-step/7.5);
-       if(retreat>.035){
-        const distance=Math.abs(radial-previous),deposit=Math.min(.52,retreat*2.1)*Math.exp(-distance*1.25);
+       let foam=layer.residue[stateIndex]*Math.exp(-step/4.2);
+       if(retreat>.025){
+        const distance=Math.abs(radial-previous),deposit=Math.min(.58,retreat*2.0)*Math.exp(-distance*.98);
         foam=Math.max(foam,deposit);
        }
-       layer.residue[stateIndex]=Math.min(.6,foam);
-       const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[vertex];
-       const wetR=1-.52*w,wetG=.94-.40*w,wetB=.82-.34*w;
-       layer.colors[vertex*4]=wetR+(.91-wetR)*f;
-       layer.colors[vertex*4+1]=wetG+(.94-wetG)*f;
-       layer.colors[vertex*4+2]=wetB+(.87-wetB)*f;
-       layer.colors[vertex*4+3]=base*(.82+w*.10+f*.22);
+       layer.residue[stateIndex]=Math.min(.65,foam);
+       const w=layer.wetness[stateIndex],foamMask=layer.foamPattern[vertex],base=layer.baseAlpha[vertex];
+       // A travelling swash front advances and drains over the beach; the pre-baked mask
+       // breaks its edge into irregular lace instead of a continuous straight white stripe.
+       const wavePhase=oceanTime*1.15+localX*.095+localZ*.073+foamMask*5.3;
+       const wavePulse=.5+.5*Math.sin(wavePhase),frontWidth=.28+wavePulse*.14;
+       const frontDistance=(inlandDistance-(.20+wavePulse*.54))/frontWidth;
+       const activeFoam=Math.exp(-frontDistance*frontDistance)*foamMask*(.15+.24*wavePulse);
+       const f=Math.min(.72,Math.max(layer.residue[stateIndex]*foamMask,activeFoam)),wetR=1-.52*w,wetG=.94-.40*w,wetB=.82-.34*w;
+       layer.colors[vertex*4]=wetR+(.925-wetR)*f;
+       layer.colors[vertex*4+1]=wetG+(.965-wetG)*f;
+       layer.colors[vertex*4+2]=wetB+(.945-wetB)*f;
+       layer.colors[vertex*4+3]=base*(.78+w*.10+f*.34);
       }
       layer.lastShore[i]=shore;
      }else{
       layer.lastShore[i]=NaN;
       for(let row=0;row<layer.rows;row++){
        const stateIndex=i*layer.rows+row,vertex=row*layer.cols+i;
-       layer.wetness[stateIndex]*=drying;layer.residue[stateIndex]*=Math.exp(-step/7.5);
-       const w=layer.wetness[stateIndex],foam=layer.residue[stateIndex],base=layer.baseAlpha[vertex];
-       const wetR=1-.52*w,wetG=.94-.40*w,wetB=.82-.34*w;
-       layer.colors[vertex*4]=wetR+(.91-wetR)*foam;
-       layer.colors[vertex*4+1]=wetG+(.94-wetG)*foam;
-       layer.colors[vertex*4+2]=wetB+(.87-wetB)*foam;
-       layer.colors[vertex*4+3]=base*(.82+w*.10+foam*.22);
+       layer.wetness[stateIndex]*=drying;layer.residue[stateIndex]*=Math.exp(-step/4.2);
+       const w=layer.wetness[stateIndex],foam=layer.residue[stateIndex]*layer.foamPattern[vertex],base=layer.baseAlpha[vertex];
+       const wetR=1-.52*w,wetG=.94-.40*w,wetB=.82-.34*w,f=Math.min(.72,foam);
+       layer.colors[vertex*4]=wetR+(.925-wetR)*f;
+       layer.colors[vertex*4+1]=wetG+(.965-wetG)*f;
+       layer.colors[vertex*4+2]=wetB+(.945-wetB)*f;
+       layer.colors[vertex*4+3]=base*(.78+w*.10+f*.34);
       }
      }
     }
@@ -8520,7 +8530,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'7',build:'0.6.210',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'7',build:'0.6.211',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
