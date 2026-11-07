@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.217">
-<meta name="el-sin-nombre-repair" content="0.6.217 ultra-low-end island streaming in Performance mode; 0.6.216 fragmented shoreline foam and thirteen-island conquest">
+<meta name="el-sin-nombre-build" content="0.6.219">
+<meta name="el-sin-nombre-repair" content="0.6.219 low-end startup: performance-only GLB, terrain and water budgets; quality assets unchanged">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.217</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.219</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2338,6 +2338,7 @@ async function removeStrayDebugGeometry(targetScene){
  const distantGullMaterial=mat('Distant sea gull silhouette','#778588',.98);
 
  function makePatternTexture(name,base,accents,style='grain',size=512,generateMipMaps=false){
+  if(isPerformanceMode)size=Math.min(size,256);
   const tex=new B.DynamicTexture(name,{width:size,height:size},scene,generateMipMaps),ctx=tex.getContext();
   const densityScale=Math.max(.65,(size/1024)**2);
   ctx.fillStyle=base;ctx.fillRect(0,0,size,size);
@@ -2587,7 +2588,7 @@ async function removeStrayDebugGeometry(targetScene){
  M.water.bumpTexture=albedoNormalWater;M.water.bumpTexture.level=.72;albedoNormalWater.uScale=10.5;albedoNormalWater.vScale=10.5;
  // Normal map de oleaje tileable: tres escalas de crestas direccionales, sin ruido pintado en la textura.
  function makeOceanWaveNormal(){
-  const size=384,tau=Math.PI*2,tex=new B.DynamicTexture('LayeredOceanWaveNormal',{width:size,height:size},scene,false),ctx=tex.getContext(),img=ctx.createImageData(size,size);
+  const size=isPerformanceMode?192:384,tau=Math.PI*2,tex=new B.DynamicTexture('LayeredOceanWaveNormal',{width:size,height:size},scene,false),ctx=tex.getContext(),img=ctx.createImageData(size,size);
   const height=(x,y)=>{const u=tau*x/size,w=tau*y/size;return .43*Math.sin(2*u+w)+.25*Math.sin(3*u-4*w)+.17*Math.sin(7*u+5*w)+.095*Math.sin(11*u-2*w)+.055*Math.sin(15*u+9*w);};
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
    const dx=(height((x+1)%size,y)-height((x+size-1)%size,y))*4.8;
@@ -2597,8 +2598,8 @@ async function removeStrayDebugGeometry(targetScene){
   }
   ctx.putImageData(img,0,0);tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
  }
- const oceanWaveNormal=makeOceanWaveNormal();oceanWaveNormal.level=.96;oceanWaveNormal.uScale=9.2;oceanWaveNormal.vScale=9.2;
- M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.96;
+ const oceanWaveNormal=makeOceanWaveNormal();oceanWaveNormal.level=isPerformanceMode?.56:.96;oceanWaveNormal.uScale=9.2;oceanWaveNormal.vScale=9.2;
+ M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=isPerformanceMode?.56:.96;
  // El agua recibe un reflejo propio de las islas y del cielo nórdico.
  // El HDRI global se conserva para los materiales PBR, pero nunca se asigna al mar.
  M.water.specularColor=new B.Color3(.62,.76,.82);M.water.specularPower=128;
@@ -2608,7 +2609,7 @@ async function removeStrayDebugGeometry(targetScene){
  [M.tunic,M.red,M.blueCloth,M.greenCloth,M.ochreCloth,M.fur].forEach(m=>{m.specularColor=new B.Color3(.035,.032,.028);m.specularPower=18;});
  M.leather.specularColor=new B.Color3(.12,.095,.07);M.leather.specularPower=28;
  [M.metal,M.darkMetal,M.gold,M.brass].forEach(m=>{m.specularColor=new B.Color3(.48,.46,.39);m.specularPower=72;});
- M.water.specularColor=new B.Color3(.58,.73,.81);M.water.specularPower=104;
+ M.water.specularColor=isPerformanceMode?new B.Color3(.32,.41,.46):new B.Color3(.58,.73,.81);M.water.specularPower=isPerformanceMode?54:104;
  M.water.emissiveColor=new B.Color3(.020,.052,.068);M.water.backFaceCulling=false;M.water.alpha=1;
  if(B.FresnelParameters){M.water.diffuseFresnelParameters=new B.FresnelParameters();M.water.diffuseFresnelParameters.bias=.11;M.water.diffuseFresnelParameters.power=2.0;M.water.diffuseFresnelParameters.leftColor=new B.Color3(.075,.19,.24);M.water.diffuseFresnelParameters.rightColor=new B.Color3(.43,.68,.72);} 
 
@@ -3043,11 +3044,13 @@ async function removeStrayDebugGeometry(targetScene){
     const alpha=.88*edgeFade;colors.push(1,.94,.82,alpha);baseAlpha.push(alpha);
      // Pre-bake a broken, cellular foam lace field in world space. Broad patches,
      // medium filaments and fine flecks are sampled once; no per-frame noise allocation.
-     const broadFoam=terrainValueNoise(x*.12+37.4,z*.12-21.8),mediumFoam=terrainValueNoise(x*.38-14.7,z*.38+42.1),fineFoam=terrainValueNoise(x*1.05+8.3,z*1.05-31.6);
-     const foamMass=smooth01((broadFoam*.54+mediumFoam*.31+fineFoam*.15-.49)*8.5);
-     const foamFilament=1-smooth01((Math.abs(mediumFoam-.5)-.19)*7.5);
-     const foamFleck=smooth01((fineFoam-.48)*10.5);
-     foamPattern[row*cols+i]=Math.min(1,foamMass*(.22+.52*foamFilament+.42*foamFleck));
+     if(!isPerformanceMode){
+      const broadFoam=terrainValueNoise(x*.12+37.4,z*.12-21.8),mediumFoam=terrainValueNoise(x*.38-14.7,z*.38+42.1),fineFoam=terrainValueNoise(x*1.05+8.3,z*1.05-31.6);
+      const foamMass=smooth01((broadFoam*.54+mediumFoam*.31+fineFoam*.15-.49)*8.5);
+      const foamFilament=1-smooth01((Math.abs(mediumFoam-.5)-.19)*7.5);
+      const foamFleck=smooth01((fineFoam-.48)*10.5);
+      foamPattern[row*cols+i]=Math.min(1,foamMass*(.22+.52*foamFilament+.42*foamFleck));
+     }
    }
   }
   for(let row=0;row<rows-1;row++)for(let i=0;i<segments;i++){
@@ -3276,9 +3279,9 @@ async function removeStrayDebugGeometry(targetScene){
        const swashIn=smooth01((inlandDistance+.62)/.58),swashOut=1-smooth01((inlandDistance-swashReach)/1.35);
        const swashZone=swashIn*swashOut;
        const drift=.72+.28*(.5+.5*Math.sin(oceanTime*1.35+localX*.11-localZ*.085));
-       const foamIslands=swashZone*foamMask*drift*(.34+.30*wavePulse);
-       const foamRims=swashZone*Math.pow(foamMask,1.65)*(.18+.18*wavePulse);
-       const f=Math.min(.78,Math.max(layer.residue[stateIndex],foamIslands+foamRims)),wetR=1-.58*w,wetG=.94-.48*w,wetB=.82-.40*w;
+       const foamIslands=isPerformanceMode?0:swashZone*foamMask*drift*(.34+.30*wavePulse);
+       const foamRims=isPerformanceMode?0:swashZone*Math.pow(foamMask,1.65)*(.18+.18*wavePulse);
+       const f=isPerformanceMode?0:Math.min(.78,Math.max(layer.residue[stateIndex],foamIslands+foamRims)),wetR=1-.58*w,wetG=.94-.48*w,wetB=.82-.40*w;
        // Wet sand stays darker; only the disconnected foam cells lift toward a cool ivory.
        layer.colors[vertex*4]=wetR+(.94-wetR)*f;
        layer.colors[vertex*4+1]=wetG+(.965-wetG)*f;
@@ -3292,7 +3295,7 @@ async function removeStrayDebugGeometry(targetScene){
        const stateIndex=i*layer.rows+row,vertex=row*layer.cols+i;
        layer.wetness[stateIndex]*=drying;layer.residue[stateIndex]*=Math.exp(-step/4.2);
        const w=layer.wetness[stateIndex],foam=layer.residue[stateIndex]*layer.foamPattern[vertex],base=layer.baseAlpha[vertex];
-       const wetR=1-.58*w,wetG=.94-.48*w,wetB=.82-.40*w,f=Math.min(.78,foam);
+       const wetR=1-.58*w,wetG=.94-.48*w,wetB=.82-.40*w,f=isPerformanceMode?0:Math.min(.78,foam);
        layer.colors[vertex*4]=wetR+(.94-wetR)*f;
        layer.colors[vertex*4+1]=wetG+(.965-wetG)*f;
        layer.colors[vertex*4+2]=wetB+(.94-wetB)*f;
@@ -3424,7 +3427,7 @@ async function removeStrayDebugGeometry(targetScene){
   mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.hasVertexAlpha=true;
   tidalFoamMeshes.push({mesh,positions:new Float32Array(positions),patches:patchMeta,island,centerX:island.x,centerZ:island.z,index});
  }
- land.forEach(buildTidalFoam);
+ if(!isPerformanceMode)land.forEach(buildTidalFoam);
  
  const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
  function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.975;if(dx*dx+dz*dz<r*r)return i;}return -1;}
@@ -4024,6 +4027,10 @@ async function removeStrayDebugGeometry(targetScene){
  // 0.6.195: la cubierta vegetal queda despejada de caminos y campamentos.
  function createRock(x,z){
   const gy=terrainSurfaceAt(x,z),sx=rand(1.0,1.8),sy=rand(1.0,1.6),sz=rand(1,1.7);
+  if(isPerformanceMode){
+   const r=sphere('graniteBoulder',null,[x,gy+sy*.49,z],[sx,sy,sz],M.stone,7);
+   return {meshes:[r],x,z,radius:Math.max(sx,sz)*.48,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone()],baseScales:[r.scaling.clone()]};
+  }
   let r=sphere('graniteBoulder',null,[x,gy+sy*.49,z],[sx,sy,sz],M.stone,12);
   let cap=sphere('rockFacet',null,[x-.18,gy+sy*.72,z-.10],[sx*.62,sy*.36,sz*.62],M.stoneLight,10);
   return {meshes:[r,cap],x,z,radius:Math.max(sx,sz)*.48,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
@@ -4207,9 +4214,9 @@ async function removeStrayDebugGeometry(targetScene){
   clanPennant.updateVerticesData(B.VertexBuffer.NormalKind,normals,false,false);
  }
  const wakeMaterial=M.foam.clone('DrakkarWakeMaterial');wakeMaterial.alpha=0;wakeMaterial.emissiveColor=new B.Color3(.12,.20,.22);
- const shipWake=[];for(let side of [-1,1]){const strip=B.MeshBuilder.CreatePlane('DrakkarWake_'+side,{width:1.08,height:7.1,sideOrientation:B.Mesh.DOUBLESIDE},scene);strip.parent=ship;strip.rotation.x=Math.PI/2;strip.position=v(side*.48,.42,-7.45);strip.material=wakeMaterial;shipWake.push(strip);}// El casco conserva su sombra; la vela y el mástil no proyectan una franja desproporcionada sobre la isla.
+ const shipWake=[];if(!isPerformanceMode)for(let side of [-1,1]){const strip=B.MeshBuilder.CreatePlane('DrakkarWake_'+side,{width:1.08,height:7.1,sideOrientation:B.Mesh.DOUBLESIDE},scene);strip.parent=ship;strip.rotation.x=Math.PI/2;strip.position=v(side*.48,.42,-7.45);strip.material=wakeMaterial;shipWake.push(strip);}// El casco conserva su sombra; la vela y el mástil no proyectan una franja desproporcionada sobre la isla.
  addModelShadow(ship,1);
- const VESSEL_SPRAY_COUNT=isUltraLowEndMobile?24:(isGalaxyA12NachoPerformance?28:(isGalaxyA12LowEndMobile?36:(isConstrainedMobile?48:96)));
+ const VESSEL_SPRAY_COUNT=isPerformanceMode?0:(isUltraLowEndMobile?24:(isGalaxyA12NachoPerformance?28:(isGalaxyA12LowEndMobile?36:(isConstrainedMobile?48:96))));
  const vesselSprayMesh=B.MeshBuilder.CreateSphere('VesselWaterSprayBatch',{diameter:1,segments:8},scene);
  const vesselSprayMaterial=new B.StandardMaterial('VesselWaterSprayMaterial',scene);
  vesselSprayMaterial.diffuseColor=new B.Color3(.90,.97,1.0);vesselSprayMaterial.emissiveColor=new B.Color3(.20,.31,.36);
@@ -4217,15 +4224,17 @@ async function removeStrayDebugGeometry(targetScene){
  vesselSprayMaterial.disableLighting=true;vesselSprayMaterial.alpha=.96;vesselSprayMaterial.backFaceCulling=false;
  vesselSprayMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
  vesselSprayMesh.material=vesselSprayMaterial;vesselSprayMesh.isPickable=false;vesselSprayMesh.alwaysSelectAsActiveMesh=true;
- vesselSprayMesh.renderingGroupId=1;vesselSprayMesh.setEnabled(true);
+ vesselSprayMesh.renderingGroupId=1;vesselSprayMesh.setEnabled(VESSEL_SPRAY_COUNT>0);
  const vesselSprayParticles=Array.from({length:VESSEL_SPRAY_COUNT},()=>({life:0,maxLife:.35,x:0,y:-1000,z:0,vx:0,vy:0,vz:0,size:.08,foam:false}));
- const vesselSprayMatrices=new Float32Array(VESSEL_SPRAY_COUNT*16),sprayIdentity=new B.Quaternion(0,0,0,1);
- for(let i=0;i<VESSEL_SPRAY_COUNT;i++){
+ const sprayBufferCount=Math.max(1,VESSEL_SPRAY_COUNT);
+ const vesselSprayMatrices=new Float32Array(sprayBufferCount*16),sprayIdentity=new B.Quaternion(0,0,0,1);
+ for(let i=0;i<sprayBufferCount;i++){
   const hidden=B.Matrix.Compose(v(.0001,.0001,.0001),sprayIdentity,v(0,-1000,0));hidden.copyToArray(vesselSprayMatrices,i*16);
  }
  vesselSprayMesh.thinInstanceSetBuffer('matrix',vesselSprayMatrices,16,true);vesselSprayMesh.thinInstanceCount=VESSEL_SPRAY_COUNT;
  let vesselSprayCursor=0,vesselSprayActive=false;
  function spawnVesselSplash(root,speed){
+  if(VESSEL_SPRAY_COUNT<=0)return;
   const particle=vesselSprayParticles[vesselSprayCursor++%VESSEL_SPRAY_COUNT];
   const heading=root.rotation.y,fx=Math.sin(heading),fz=Math.cos(heading),rx=Math.cos(heading),rz=-Math.sin(heading);
   const side=Math.random()<.5?-1:1,bow=Math.random()<.48,foam=Math.random()<.36;
@@ -4243,7 +4252,7 @@ async function removeStrayDebugGeometry(targetScene){
   vesselSprayActive=true;
  }
  function emitVesselSplashes(root,dt,speed,state){
-  if(!state)return;
+  if(VESSEL_SPRAY_COUNT<=0||!state)return;
   const magnitude=Math.abs(speed);
   if(magnitude<.55){state.accumulator=0;return;}
   state.accumulator=(state.accumulator||0)+dt;
@@ -4256,7 +4265,7 @@ async function removeStrayDebugGeometry(targetScene){
   }
  }
  function updateVesselSpray(dt){
-  if(!vesselSprayActive)return;
+  if(VESSEL_SPRAY_COUNT<=0||!vesselSprayActive)return;
   const totalStep=Math.max(0,Math.min(.10,dt||0)),substeps=Math.max(1,Math.ceil(totalStep/.02)),step=totalStep/substeps;let remaining=0;
   for(let i=0;i<VESSEL_SPRAY_COUNT;i++){
    const p=vesselSprayParticles[i];let scale=0;
@@ -4329,7 +4338,7 @@ async function removeStrayDebugGeometry(targetScene){
  // la descarga cruzada (CORS/permisos del archivo local), el usuario puede importar el GLB
  // descargado desde Android mediante el selector de archivos. No se oculta el fallo.
  // Recurso exacto del protagonista que ya aparece en el dispositivo: no sustituirlo por otro modelo.
- const VIKING_GLB_URL=new URL('./assets/models/viking-rigged.glb',document.baseURI).href;
+ const VIKING_GLB_URL=new URL(isPerformanceMode?'./assets/models/performance/viking-rigged.glb':'./assets/models/viking-rigged.glb',document.baseURI).href;
  let realPlayerModel=null,realPlayerModelPivot=null,realPlayerAnimations={walk:null,run:null,idle:null,attack:null},realPlayerMode='',realPlayerCurrentGroup=null,realPlayerIdleTransition=null,realRigNodes={},realRigIdleNodes=[],realRigManualGaitNodes={},realPlayerReady=false,realPlayerBusy=false,realPlayerManualLocomotion=false,playerHumanBlob=null,equippedWeapon='club';
  let realPlayerMasterPoseEntries=[],realPlayerMasterPose=new Map(),realPlayerMasterPoseDefaults=new Map(),realPlayerMasterIdleTransition=null;
  const unlockedWeapons=new Set(['club']);
@@ -4460,10 +4469,10 @@ async function removeStrayDebugGeometry(targetScene){
  // El pivote de los GLB humanos debe girar 180° respecto al controlador del mundo;
  // sin esta corrección el cuerpo parece correr de espaldas aunque la raíz avance bien.
  const NPC_HUMAN_FORWARD_OFFSET=0;
- const ENEMY_HUMAN_GLB_URL=new URL('./assets/models/armored-knight-rigged.glb',document.baseURI).href;
- const ENEMY_HUMAN_CACHE_KEY='armored-knight-rigged-glb-v6';
- const CIVILIAN_HUMAN_GLB_URL=new URL('./assets/models/man-base-character-rigged.glb',document.baseURI).href;
- const CIVILIAN_HUMAN_CACHE_KEY='norse-peasant-man-rigged-glb-v3';
+ const ENEMY_HUMAN_GLB_URL=new URL(isPerformanceMode?'./assets/models/performance/armored-knight-rigged.glb':'./assets/models/armored-knight-rigged.glb',document.baseURI).href;
+ const ENEMY_HUMAN_CACHE_KEY=isPerformanceMode?'armored-knight-rigged-performance-512-meshopt-v1':'armored-knight-rigged-glb-v6';
+ const CIVILIAN_HUMAN_GLB_URL=new URL(isPerformanceMode?'./assets/models/performance/man-base-character-rigged.glb':'./assets/models/man-base-character-rigged.glb',document.baseURI).href;
+ const CIVILIAN_HUMAN_CACHE_KEY=isPerformanceMode?'norse-peasant-man-performance-512-meshopt-v1':'norse-peasant-man-rigged-glb-v3';
  let enemyHumanContainer=null,civilianHumanContainer=null,enemyHumanLoadPromise=null;
  const enemyModelFileInput=document.getElementById('enemyModelFile');
  const civilianModelFileInput=document.getElementById('civilianModelFile');
@@ -6250,7 +6259,7 @@ if(realPlayerArmDebugEnabled){
  // El modelo humano se conserva en IndexedDB tras la primera descarga/selección.
  // En aperturas posteriores se recupera automáticamente; si el almacenamiento local está bloqueado,
  // el juego vuelve a descargar el modelo sin pedir ninguna selección manual.
- const VIKING_CACHE_DB='el-sin-nombre-assets-v1',VIKING_CACHE_STORE='models',VIKING_CACHE_KEY='viking-rigged-glb';
+ const VIKING_CACHE_DB='el-sin-nombre-assets-v1',VIKING_CACHE_STORE='models',VIKING_CACHE_KEY=isPerformanceMode?'viking-rigged-glb-performance-512-meshopt-v1':'viking-rigged-glb';
  function openVikingCache(){
   return new Promise((resolve,reject)=>{
    if(!window.indexedDB){reject(new Error('IndexedDB no está disponible en este origen local.'));return;}
@@ -6262,7 +6271,7 @@ if(realPlayerArmDebugEnabled){
  }
  async function saveVikingToBrowser(blob,originLabel){
   let db;try{
-   if(!(blob instanceof Blob)||blob.size<2000000)throw new Error('El GLB no es válido para guardarlo.');
+   if(!(blob instanceof Blob)||blob.size<(isPerformanceMode?500000:2000000))throw new Error('El GLB no es válido para guardarlo.');
    db=await openVikingCache();
    await new Promise((resolve,reject)=>{const tx=db.transaction(VIKING_CACHE_STORE,'readwrite');tx.objectStore(VIKING_CACHE_STORE).put({blob,name:'viking-rigged.glb',origin:originLabel,savedAt:Date.now()},VIKING_CACHE_KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('No se pudo guardar el vikingo.'));tx.onabort=()=>reject(tx.error||new Error('Se canceló el guardado.'));});
    console.info('Viking GLB saved in browser storage',{bytes:blob.size,origin:originLabel});
@@ -7208,15 +7217,16 @@ function createRealWeapon(type='axe'){
  let nordicWaterMirror=null;
  try{
   if(B.MirrorTexture&&B.Plane){
-   const mirrorSize=isTouchDevice?256:512;
+   const mirrorSize=isPerformanceMode?128:(isTouchDevice?256:512);
    nordicWaterMirror=new B.MirrorTexture('NordicIslandWaterReflection',mirrorSize,scene,true);
    nordicWaterMirror.mirrorPlane=new B.Plane(0,-1,0,.035);
    nordicWaterMirror.renderList=[];
-   nordicWaterMirror.refreshRate=isTouchDevice?8:5;
-   nordicWaterMirror.level=.62;
+   nordicWaterMirror.refreshRate=isPerformanceMode?16:(isTouchDevice?8:5);
+   nordicWaterMirror.level=isPerformanceMode?.42:.62;
    const reflectedMeshes=new Set();
    for(const mesh of scene.meshes){
     if(!mesh||mesh===ground||mesh===vesselSprayMesh||mesh.material===M.water)continue;
+    if(isPerformanceMode){let ancestor=mesh,belongsToVessel=false;while(ancestor){if(ancestor===ship||/^RaiderLongship_/.test(String(ancestor.name||''))){belongsToVessel=true;break;}ancestor=ancestor.parent;}if(belongsToVessel)continue;}
     if(mesh.name&&(/^(shoreFoam_|VesselWaterSprayBatch|DrakkarWake_)/.test(mesh.name)))continue;
     if(mesh.isVisible===false||mesh.visibility===0)continue;
     const isSky=mesh===skyDome||mesh===sunHalo||mesh===sunDisc;
@@ -7237,7 +7247,7 @@ function createRealWeapon(type='axe'){
     if(nearIsland){nordicWaterMirror.renderList.push(mesh);reflectedMeshes.add(mesh);}
    }
    M.water.reflectionTexture=nordicWaterMirror;
-   M.water.reflectionTexture.level=.72;
+   M.water.reflectionTexture.level=isPerformanceMode?.42:.72;
    console.info('Nordic water reflection ready',{resolution:mirrorSize,refreshRate:nordicWaterMirror.refreshRate,islandMeshes:reflectedMeshes.size});
   }else{
    M.water.reflectionTexture=null;
@@ -10411,6 +10421,7 @@ function updateHUD(){
  }
  let enemyHumanRetryPromise=null,enemyHumanRetryAttempts=0,enemyHumanRetryScheduled=false;
  function hasMissingEnemyVikings(){
+  if(isPerformanceMode)return false;
   const warriors=isPerformanceMode
    ?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3)
    :(isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts);
@@ -10726,22 +10737,10 @@ function updateHUD(){
  // En Rendimiento se mantiene el conjunto humano ligero definido para ese perfil;
  // los demás NPC ya tienen cuerpo, colisión y animación procedural en la escena.
  let resourceResults;
- if(isPerformanceMode){
-  // En móviles limitados, el jugador y el primer frame tienen prioridad: los siete
-  // NPC 3D previstos por el perfil se importan tras mostrar la intro, sobre los proxies existentes.
-  const playerPreparation=await Promise.allSettled([playerHumanLoadPromise]);
-  resourceResults=[...playerPreparation,{status:'background'}];
-  setTimeout(()=>{
-   const npcPreparationTask=startNpcHumanModels();
-   npcPreparationTask.then(
-    result=>console.info('Modelos NPC del perfil Rendimiento preparados en segundo plano:',result),
-    error=>console.warn('Los modelos NPC siguen usando sus proxies; se reintentará la carga:',error)
-   );
-  },900);
- }else{
-  const npcPreparationTask=startNpcHumanModels();
-  resourceResults=await Promise.allSettled([playerHumanLoadPromise,npcPreparationTask]);
- }
+ // El protagonista y los siete modelos GLB previstos por Rendimiento se descargan,
+ // importan, montan y esperan aquí. No se difiere ningún personaje tras abrir la partida.
+ const npcPreparationTask=startNpcHumanModels();
+ resourceResults=await Promise.allSettled([playerHumanLoadPromise,npcPreparationTask]);
  console.info('Personajes preparados antes de entrar:',{
   protagonist:resourceResults[0].status,
   npcs:resourceResults[1].status,
@@ -10772,10 +10771,15 @@ function updateHUD(){
     error=>({ready:false,error})
    );
    // Presupuesto máximo para el arranque: evita quedarse indefinidamente en el 87 %.
-   const warmupResult=await Promise.race([
-    fullSceneWarmup,
-    new Promise(resolve=>{warmupTimer=setTimeout(()=>resolve({ready:false,timeout:true}),1400);})
-   ]);
+   let warmupResult;
+   if(isPerformanceMode){
+    warmupResult=await fullSceneWarmup;
+   }else{
+    warmupResult=await Promise.race([
+     fullSceneWarmup,
+     new Promise(resolve=>{warmupTimer=setTimeout(()=>resolve({ready:false,timeout:true}),1400);})
+    ]);
+   }
    if(warmupTimer!==null)clearTimeout(warmupTimer);
    if(warmupResult.ready){
     sceneWarmupStatus='ready';
