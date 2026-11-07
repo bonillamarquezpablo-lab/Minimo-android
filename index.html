@@ -7653,7 +7653,13 @@ function createRealWeapon(type='axe'){
     if(hXP<.70||hXM<.70||hZP<.70||hZM<.70)return null;
     const slopeX=(hXP-hXM)/(2*groundStep),slopeZ=(hZP-hZM)/(2*groundStep);
     if(!Number.isFinite(slopeX)||!Number.isFinite(slopeZ)||Math.hypot(slopeX,slopeZ)>.82)return null;
-    return groundY;
+    // Mantiene también la comprobación de pendiente sobre el terreno deformable,
+    // pero consulta el campo de la isla directamente y evita el barrido global.
+    const surfaceXP=hXP+terrainDeformationAt(islandIndex,xP,z),surfaceXM=hXM+terrainDeformationAt(islandIndex,xM,z);
+    const surfaceZP=hZP+terrainDeformationAt(islandIndex,x,zP),surfaceZM=hZM+terrainDeformationAt(islandIndex,x,zM);
+    const surfaceSlopeX=(surfaceXP-surfaceXM)/(2*groundStep),surfaceSlopeZ=(surfaceZP-surfaceZM)/(2*groundStep);
+    if(!Number.isFinite(surfaceSlopeX)||!Number.isFinite(surfaceSlopeZ)||Math.hypot(surfaceSlopeX,surfaceSlopeZ)>.82)return null;
+    return groundY+terrainDeformationAt(islandIndex,x,z);
    };
    const grassYieldInterval=isConstrainedMobile?48:96;
    const tryPlaceGrass=(x,z)=>{
@@ -7673,7 +7679,7 @@ function createRealWeapon(type='axe'){
     if(grassPlacementBlocked(x,z))return false;
     const scaleX=rand(.94,1.18),scaleY=isPerformanceMode?rand(.78,.92):rand(.90,1.02),scaleZ=rand(.94,1.18);
     const rotation=B.Quaternion.RotationYawPitchRoll(rand(0,Math.PI*2),0,0);
-    const groundY=sampledGroundY+terrainDeformationAt(islandIndex,x,z)+.006;
+    const groundY=sampledGroundY+.006;
     const matrix=B.Matrix.Compose(v(scaleX,scaleY,scaleZ),rotation,v(x,groundY,z));
     const cellX=Math.floor((x-island.x+radius)/chunkSize),cellZ=Math.floor((z-island.z+radius)/chunkSize);
     const key=islandIndex+':'+cellX+':'+cellZ;
