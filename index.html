@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.200">
-<meta name="el-sin-nombre-repair" content="0.6.195 preserve rigged deer/stag/wolf; validate island ground and animal roaming; deck-mounted raider crew; plank-built huts; distance-culled faction badges; preserve master pose">
+<meta name="el-sin-nombre-build" content="0.6.201">
+<meta name="el-sin-nombre-repair" content="0.6.201 preserve all gameplay and visual systems; optimize time-sliced grass placement, cached ground sampling and monotonic startup progress">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.200</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.201</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1550,7 +1550,7 @@ function setAssetLoadingProgress(which,percent,label){
  // La carga avanza por fases: protagonista primero, NPC después.
  // La pantalla no termina hasta que los modelos y la escena estén listos.
  if(which==='player')setLoadingProgress(48+(assetLoadProgress.player*.12),label);
- else if(which==='enemy')setLoadingProgress(60+(assetLoadProgress.enemy*.22),label||'Preparando guardianes, guerreros y aldeanos…');
+ else if(which==='enemy')setLoadingProgress(70+(assetLoadProgress.enemy*.12),label||'Preparando guardianes, guerreros y aldeanos…');
 }
 async function responseBlobWithProgress(response,label,start,end,progressKey=null){
  const total=Number(response.headers&&response.headers.get('content-length'))||0;
@@ -3655,7 +3655,7 @@ async function removeStrayDebugGeometry(targetScene){
   try{
    const response=await fetch(url,{mode:'cors',cache:'force-cache',credentials:'omit',signal:controller.signal,headers:{'Accept':'model/gltf-binary,application/octet-stream,*/*'}});
    if(response.type==='opaque'||!response.ok)throw new Error(kind+': GLB HTTP '+(response.status||'CORS'));
-   const blob=await responseBlobWithProgress(response,'Cargando modelo animal · '+kind.toUpperCase(),48,52);
+   const blob=await responseBlobWithProgress(response,'Cargando modelo animal · '+kind.toUpperCase(),68,70);
    if(!await isValidGLB(blob))throw new Error(kind+': archivo GLB no válido.');
    return blob;
   }catch(err){if(err&&err.name==='AbortError')throw new Error(kind+': descarga agotada.');throw err;}
@@ -3712,7 +3712,7 @@ async function removeStrayDebugGeometry(targetScene){
  }
  async function loadWildlifeModels(){
   if(!wildlifeSpawnSpecs.length)return 0;
-  setLoadingProgress(48,'Cargando fauna salvaje 3D…');
+  setLoadingProgress(68,'Cargando fauna salvaje 3D…');
   const kinds=[...new Set(wildlifeSpawnSpecs.map(spec=>spec.kind))];
   await Promise.all(kinds.map(async kind=>{try{wildlifeBlobs.set(kind,await downloadWildlifeBlob(kind));}catch(err){console.warn('Modelo animal no disponible ('+kind+'):',err);}}));
   let loaded=0;
@@ -3721,7 +3721,7 @@ async function removeStrayDebugGeometry(targetScene){
    if(animal){ambientFauna.push(animal);loaded++;}
   }
   console.info('Fauna nórdica validada',{loaded,requested:wildlifeSpawnSpecs.length,species:kinds});
-  setLoadingProgress(52,loaded?'Fauna nórdica preparada.':'La partida continúa sin fauna: no se importó ningún cuerpo animal completo.');
+  setLoadingProgress(70,loaded?'Fauna nórdica preparada.':'La partida continúa sin fauna: no se importó ningún cuerpo animal completo.');
   return loaded;
  }
  function canWildlifeMove(x,z,clearance=.65){
@@ -7636,8 +7636,34 @@ function createRealWeapon(type='axe'){
    const radius=island.r*.865;
    const gridSide=Math.ceil(Math.sqrt(want*1.60)),cellSize=(radius*2)/gridSide;
    const occupiedGridCells=new Set(),placedGridPositions=new Map();
+   // Muestreo especializado para la isla actual: evita recorrer las 13 islas cinco veces
+   // por candidato. Conserva los mismos límites de costa, altura y pendiente del validador.
+   const safeLandRadius=island.r*.70,safeLandRadiusSq=safeLandRadius*safeLandRadius,groundStep=.62;
+   const grassGroundSample=(x,z)=>{
+    const dx=x-island.x,dz=z-island.z;if(dx*dx+dz*dz>safeLandRadiusSq)return null;
+    const xP=x+groundStep,xM=x-groundStep,zP=z+groundStep,zM=z-groundStep;
+    const p1=(xP-island.x)**2+dz*dz,p2=(xM-island.x)**2+dz*dz;
+    const p3=dx*dx+(zP-island.z)**2,p4=dx*dx+(zM-island.z)**2;
+    const landLimitSq=(island.r*.975)**2;
+    if(p1>landLimitSq||p2>landLimitSq||p3>landLimitSq||p4>landLimitSq)return null;
+    const groundY=terrainHeightOnIsland(island,x,z);
+    if(!Number.isFinite(groundY)||groundY<.82||groundY>12.5)return null;
+    const hXP=terrainHeightOnIsland(island,xP,z),hXM=terrainHeightOnIsland(island,xM,z);
+    const hZP=terrainHeightOnIsland(island,x,zP),hZM=terrainHeightOnIsland(island,x,zM);
+    if(hXP<.70||hXM<.70||hZP<.70||hZM<.70)return null;
+    const slopeX=(hXP-hXM)/(2*groundStep),slopeZ=(hZP-hZM)/(2*groundStep);
+    if(!Number.isFinite(slopeX)||!Number.isFinite(slopeZ)||Math.hypot(slopeX,slopeZ)>.82)return null;
+    // Mantiene también la comprobación de pendiente sobre el terreno deformable,
+    // pero consulta el campo de la isla directamente y evita el barrido global.
+    const surfaceXP=hXP+terrainDeformationAt(islandIndex,xP,z),surfaceXM=hXM+terrainDeformationAt(islandIndex,xM,z);
+    const surfaceZP=hZP+terrainDeformationAt(islandIndex,x,zP),surfaceZM=hZM+terrainDeformationAt(islandIndex,x,zM);
+    const surfaceSlopeX=(surfaceXP-surfaceXM)/(2*groundStep),surfaceSlopeZ=(surfaceZP-surfaceZM)/(2*groundStep);
+    if(!Number.isFinite(surfaceSlopeX)||!Number.isFinite(surfaceSlopeZ)||Math.hypot(surfaceSlopeX,surfaceSlopeZ)>.82)return null;
+    return groundY+terrainDeformationAt(islandIndex,x,z);
+   };
+   const grassYieldInterval=isConstrainedMobile?48:96;
    const tryPlaceGrass=(x,z)=>{
-    if(!isSafeGroundCoverPoint(island,x,z))return false;
+    const sampledGroundY=grassGroundSample(x,z);if(sampledGroundY===null)return false;
     const gridCol=Math.max(0,Math.min(gridSide-1,Math.floor((x-(island.x-radius))/cellSize)));
     const gridRow=Math.max(0,Math.min(gridSide-1,Math.floor((z-(island.z-radius))/cellSize)));
     const gridCell=gridRow*gridSide+gridCol;
@@ -7648,13 +7674,12 @@ function createRealWeapon(type='axe'){
      const neighbour=placedGridPositions.get(nz*gridSide+nx);if(!neighbour)continue;
      const sx=x-neighbour.x,sz=z-neighbour.z;if(sx*sx+sz*sz<minSpacingSq)return false;
     }
-    const gx=(terrainSurfaceAt(x+.55,z)-terrainSurfaceAt(x-.55,z))/1.1,gz=(terrainSurfaceAt(x,z+.55)-terrainSurfaceAt(x,z-.55))/1.1;
-    if(Math.hypot(gx,gz)>.82)return false;
-    if(settlements.some(q=>Math.hypot(x-q[0],z-q[1])<9.3))return false;
+    // La pendiente ya se validó con el mismo heightfield; el filtro espacial
+    // posterior conserva caminos, asentamientos y colisiones sin repetir muestreos.
     if(grassPlacementBlocked(x,z))return false;
     const scaleX=rand(.94,1.18),scaleY=isPerformanceMode?rand(.78,.92):rand(.90,1.02),scaleZ=rand(.94,1.18);
     const rotation=B.Quaternion.RotationYawPitchRoll(rand(0,Math.PI*2),0,0);
-    const groundY=terrainSurfaceAt(x,z)+.006;
+    const groundY=sampledGroundY+.006;
     const matrix=B.Matrix.Compose(v(scaleX,scaleY,scaleZ),rotation,v(x,groundY,z));
     const cellX=Math.floor((x-island.x+radius)/chunkSize),cellZ=Math.floor((z-island.z+radius)/chunkSize);
     const key=islandIndex+':'+cellX+':'+cellZ;
@@ -7672,7 +7697,7 @@ function createRealWeapon(type='axe'){
    for(const sample of candidateCells){
     if(placed>=want)break;
     tries++;
-    if(tries%480===0){setLoadingProgress(42+((islandIndex+placed/want)/land.length)*5,'Distribuyendo vegetación 3D…');await yieldStartupFrame();}
+    if(tries%grassYieldInterval===0){const phase=(islandIndex+placed/Math.max(1,want))/land.length;setLoadingProgress(60+phase*8,'Distribuyendo vegetación 3D · Isla '+(islandIndex+1)+'/'+land.length+' · '+placed.toLocaleString('es-ES')+'/'+want.toLocaleString('es-ES')+' grupos');await yieldStartupFrame();}
     const col=sample%gridSide,row=Math.floor(sample/gridSide);
     const dx0=(col+.5)/gridSide*radius*2-radius,dz0=(row+.5)/gridSide*radius*2-radius;
     if(dx0*dx0+dz0*dz0>radius*radius)continue;
@@ -7689,7 +7714,7 @@ function createRealWeapon(type='axe'){
     if(dx*dx+dz*dz>radius*radius)continue;
     for(let attempt=0;attempt<4&&placed<want;attempt++){
      tries++;
-     if(tries%480===0){setLoadingProgress(42+((islandIndex+placed/want)/land.length)*5,'Distribuyendo vegetación 3D…');await yieldStartupFrame();}
+     if(tries%grassYieldInterval===0){const phase=(islandIndex+placed/Math.max(1,want))/land.length;setLoadingProgress(60+phase*8,'Distribuyendo vegetación 3D · Isla '+(islandIndex+1)+'/'+land.length+' · '+placed.toLocaleString('es-ES')+'/'+want.toLocaleString('es-ES')+' grupos');await yieldStartupFrame();}
      const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
      const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
      tryPlaceGrass(x,z);
@@ -7699,7 +7724,7 @@ function createRealWeapon(type='axe'){
    // Completa solamente las celdas que hayan caído sobre árboles, roca, pendiente o asentamientos.
    while(placed<want&&tries<want*8){
     tries++;
-    if(tries%480===0){setLoadingProgress(42+((islandIndex+placed/want)/land.length)*5,'Distribuyendo vegetación 3D…');await yieldStartupFrame();}
+    if(tries%grassYieldInterval===0){const phase=(islandIndex+placed/Math.max(1,want))/land.length;setLoadingProgress(60+phase*8,'Distribuyendo vegetación 3D · Isla '+(islandIndex+1)+'/'+land.length+' · '+placed.toLocaleString('es-ES')+'/'+want.toLocaleString('es-ES')+' grupos');await yieldStartupFrame();}
     const angle=Math.random()*Math.PI*2,rad=Math.sqrt(Math.random())*radius;
     tryPlaceGrass(island.x+Math.cos(angle)*rad,island.z+Math.sin(angle)*rad);
    }
