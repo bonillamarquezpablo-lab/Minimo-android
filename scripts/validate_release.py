@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.194"
+EXPECTED_VERSION = "0.6.195"
 
 HTML_PAGES = (
     "index.html",
@@ -297,6 +297,18 @@ def main() -> None:
         fail("El número de animales no está reducido en modo Rendimiento.")
     if "WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837'" not in index_html or "await loadWildlifeModels();" not in index_html:
         fail("La fuente de fauna no está fijada a una revisión inmutable o no se carga.")
+    if "function isSafeIslandGroundPoint(" not in index_html or "return null;" not in index_html[index_html.find("function sampleGroundPoint("):index_html.find("land.forEach((is,idx)=>{", index_html.find("function sampleGroundPoint("))]:
+        fail("La vegetación no valida tierra firme o todavía utiliza ubicaciones de reserva.")
+    if "homeIslandIndex" not in index_html or "isSafeIslandGroundPoint(homeIsland,nx,nz,Infinity,1.05,.52)" not in index_html:
+        fail("La fauna GLB no conserva su isla de origen o puede caminar hacia el mar.")
+    if "RaiderCrewMount_" not in index_html or "if(parts.vesselMount)" not in index_html:
+        fail("La tripulación del drakkar no está anclada a la cubierta.")
+    if "HutTimberCore" in index_html or "HutEndWallPlank_" not in index_html or "HutSideWallPlank_" not in index_html:
+        fail("La cabaña todavía contiene el bloque macizo en vez de paredes de tablones.")
+    if "PierSupportPile_" not in index_html:
+        fail("El muelle no tiene pilotes de soporte hasta el lecho marino.")
+    if "FACTION_BADGE_MAX_DISTANCE=28" not in index_html or "parts.factionBadge.isVisible=distanceSq<maxSq" not in index_html:
+        fail("Las insignias lejanas siguen apareciendo como puntos rojos.")
     if "mesh.receiveShadows=false;mesh.castShadows=false;" not in index_html or "mesh.material=packedTrailMaterial;" not in index_html:
         fail("El camino no utiliza tierra compactada sin recepción de sombras.")
     if "indices.push(a,b,a+1,a+1,b,b+1);" not in index_html or "packedTrailTexture" not in index_html:
