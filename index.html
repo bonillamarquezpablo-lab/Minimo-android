@@ -2626,7 +2626,7 @@ async function removeStrayDebugGeometry(targetScene){
  const shadowMaterial=new B.StandardMaterial('SoftShadowMaterial',scene);shadowMaterial.diffuseTexture=shadowTexture;shadowMaterial.opacityTexture=shadowTexture;shadowMaterial.useAlphaFromDiffuseTexture=true;shadowMaterial.disableLighting=true;shadowMaterial.backFaceCulling=false;shadowMaterial.specularColor=new B.Color3(0,0,0);shadowMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;shadowMaterial.disableDepthWrite=true;
  function attachContactShadow(root,name,radius=.9){const disc=B.MeshBuilder.CreateDisc(name,{radius,tessellation:28},scene);disc.parent=root;disc.rotation.x=-Math.PI/2;disc.position=v(0,.025,0);disc.material=shadowMaterial;disc.isPickable=false;return disc;}
  const land=[{x:0,z:0,r:60,name:'Isla del Cuervo'},{x:135,z:14,r:31,name:'Costa de Skall'},{x:-132,z:45,r:33,name:'Isla de los Pinos'},{x:28,z:143,r:33,name:'Bahía de Hrafn'},{x:146,z:-132,r:25,name:'Islote del Hielo'},{x:-145,z:-126,r:27,name:'Isla de las Cenizas'},{x:286,z:154,r:33,name:'Cabo de Bruma'},{x:-286,z:232,r:31,name:'Isla del Cuerno'},{x:292,z:-264,r:36,name:'Costa de las Tormentas'},{x:470,z:100,r:31,name:'Skjoldheim'},{x:-470,z:-310,r:34,name:'Isla de los Juramentos'},{x:60,z:465,r:34,name:'Isla del Altar'},{x:-45,z:-465,r:32,name:'Cabo del Vigía'}];
- const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?64:112))):(isTouchDevice?192:256);
+ const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?64:112))):(isTouchDevice?(isConstrainedMobile?176:192):256);
  const ground=B.MeshBuilder.CreateGround('ocean',{width:1050,height:1050,subdivisions:waterSubdivisions,updatable:true},scene);ground.position.y=0;ground.material=M.water;ground.isPickable=false;ground.receiveShadows=false;
  const waterBase=ground.getVerticesData(B.VertexBuffer.PositionKind).slice(),waterPositions=waterBase.slice(),waterIndices=ground.getIndices(),waterNormals=new Float32Array(waterBase.length);
  const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:(isTouchDevice?125:180)):(isTouchDevice?250:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS,WATER_DETAIL_FADE_START_SQ=WATER_DETAIL_RADIUS_SQ*.55;
@@ -2691,7 +2691,7 @@ async function removeStrayDebugGeometry(targetScene){
  }
  let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0,waterFarAccumulator=0;
  const waterVertexStep=isPerformanceMode?(isUltraLowEndMobile?1/6:(isGalaxyA12NachoPerformance?1/5:(isGalaxyA12LowEndMobile?1/7:(isConstrainedMobile?1/8:(isTouchDevice?1/12:1/20))))):(isTouchDevice?1/30:1/40);
- const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12NachoPerformance?1.35:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/3:1/6))))):(isTouchDevice?1/10:1/15);
+ const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12NachoPerformance?1.35:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/3:1/6))))):(isTouchDevice?(isConstrainedMobile?1/8:1/10):1/15);
  const waterFarStep=isPerformanceMode?(isConstrainedMobile?.36:.25):.14;
  function waterHeight(x,z,t=oceanTime,detailFade=1){
   // Layered directional swells: broad North Sea swell plus shorter cross-waves and capillary ripples.
@@ -7382,7 +7382,7 @@ function createRealWeapon(type='axe'){
  }
  try{
   if(B.MirrorTexture&&B.Plane&&!isPerformanceMode){
-   const mirrorSize=isTouchDevice?640:1024;
+   const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024;
    nordicWaterMirror=new B.MirrorTexture('NordicIslandWaterReflection',mirrorSize,scene,true);
    nordicWaterMirror.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);
    nordicWaterMirror.anisotropicFilteringLevel=Math.min(8,maxAnisotropy);
