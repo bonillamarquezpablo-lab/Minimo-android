@@ -3,7 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "feat/0.6.202-ground-debug-mipmap-phase-a": false,
-      "repair/0.6.202-audit-diagnostics": false
+      "repair/0.6.202-audit-diagnostics": false,
+      "repair/0.6.203-island-grass-startup": false
     }
   }
 }
