@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.220"
+EXPECTED_VERSION = "0.6.221"
 
 HTML_PAGES = (
     "index.html",
@@ -121,6 +121,16 @@ def main() -> None:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
     if "if(isPerformanceMode)return;" not in index_html or "tidalFoamMeshes.push" not in index_html:
         fail("Rendimiento debe omitir la geometría dinámica de espuma costera.")
+    if "activeTidalFoamIslandIndex" not in index_html or "if(nextIndex>=0)buildTidalFoam(land[nextIndex],nextIndex);" not in index_html:
+        fail("La espuma de Calidad debe existir solo para la isla activa del jugador.")
+    if "Math.min(deviceDpr,isTouchDevice?1.80:1.85)" not in index_html:
+        fail("Calidad debe limitar la resolución interna para reducir el coste de GPU sin recortar efectos.")
+    if "function updateQualityGrassLod(dt)" not in index_html or "qualityGrassLodBatches.push" not in index_html or "updateQualityGrassLod(dt);" not in index_html:
+        fail("Calidad debe aplicar LOD por distancia a los lotes de hierba.")
+    if "const boneCount=skeletons.reduce" not in index_html or "skinnedVertexCount<600" not in index_html or "const attachedBounds=boundsForMeshes(meshes)" not in index_html:
+        fail("La fauna debe validar el cuerpo riggeado y alinear el modelo tras reparentar sus raíces.")
+    if "const normalized=group=>" not in index_html:
+        fail("La fauna debe resolver los clips de animación por nombre normalizado.")
     if "const segments=Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)))" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
         fail("Calidad debe construir una banda continua y de alta resolución alrededor de toda la costa.")
     if "foam.mesh.updateVerticesData(B.VertexBuffer.ColorKind,colors,false,false)" not in index_html or "const breaking=.52+.30*pulse+.18*secondary" not in index_html:
@@ -422,7 +432,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.220</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.221</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
