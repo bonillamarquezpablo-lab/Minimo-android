@@ -2931,19 +2931,16 @@ async function removeStrayDebugGeometry(targetScene){
  const groundPhaseAMaterials=[];
  const islandTerrainMeshes=[];
  const TERRAIN_HASH_CACHE_LIMIT=65536;
- const terrainHashCache=new Map(),terrainHashCacheSlots=new Float64Array(TERRAIN_HASH_CACHE_LIMIT),terrainHashCacheValid=new Uint8Array(TERRAIN_HASH_CACHE_LIMIT);
+ const terrainHashCache=new Map(),terrainHashCacheSlots=new Float64Array(TERRAIN_HASH_CACHE_LIMIT),terrainHashCacheValues=new Float64Array(TERRAIN_HASH_CACHE_LIMIT),terrainHashCacheValid=new Uint8Array(TERRAIN_HASH_CACHE_LIMIT);
  let terrainHashCacheCursor=0;
  function terrainHash(ix,iz){
-  const key=ix*1048576+iz,cached=terrainHashCache.get(key);
-  if(cached!==undefined)return cached.value;
+  const key=ix*1048576+iz,cachedSlot=terrainHashCache.get(key);
+  if(cachedSlot!==undefined)return terrainHashCacheValues[cachedSlot];
   const n=Math.sin(ix*127.1+iz*311.7+19.19)*43758.5453123,value=n-Math.floor(n);
   const slot=terrainHashCacheCursor,oldKey=terrainHashCacheSlots[slot];
-  if(terrainHashCacheValid[slot]){
-   const previous=terrainHashCache.get(oldKey);
-   if(previous&&previous.slot===slot)terrainHashCache.delete(oldKey);
-  }
-  terrainHashCache.set(key,{value,slot});
-  terrainHashCacheSlots[slot]=key;terrainHashCacheValid[slot]=1;
+  if(terrainHashCacheValid[slot]&&terrainHashCache.get(oldKey)===slot)terrainHashCache.delete(oldKey);
+  terrainHashCache.set(key,slot);
+  terrainHashCacheSlots[slot]=key;terrainHashCacheValues[slot]=value;terrainHashCacheValid[slot]=1;
   terrainHashCacheCursor=(slot+1)%TERRAIN_HASH_CACHE_LIMIT;
   return value;
  }
