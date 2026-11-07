@@ -10411,17 +10411,17 @@ function updateHUD(){
  function startNpcHumanModels(){
   if(enemyHumanModelsStarted)return enemyHumanLoadTask;
   enemyHumanModelsStarted=true;
-  console.info('Preparando modelos humanos secundarios sin bloquear el arranque del mundo.');
+  console.info(isPerformanceMode?'Rendimiento: NPC procedurales definitivos; se omiten GLB secundarios.':'Preparando modelos humanos secundarios antes de entrar.');
   enemyHumanLoadTask=loadEnemyHumanCharacters();
   enemyHumanLoadTask.then(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);},()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
   return enemyHumanLoadTask;
  }
  let enemyHumanRetryPromise=null,enemyHumanRetryAttempts=0,enemyHumanRetryScheduled=false;
  function hasMissingEnemyVikings(){
-  const warriors=isPerformanceMode
-   ?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3)
-   :(isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts);
-  const civilians=isPerformanceMode?humanCivilianParts.slice(0,4):(isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts);
+  // Los NPC procedurales son la representación final del perfil Rendimiento; no son modelos pendientes.
+  if(isPerformanceMode)return false;
+  const warriors=isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts;
+  const civilians=isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts;
   return warriors.some(p=>!p.realHuman||p.realHuman.role!=='knight')||civilians.some(p=>!p.realHuman||p.realHuman.role!=='civilian');
  }
  async function retryMissingEnemyVikings(){
