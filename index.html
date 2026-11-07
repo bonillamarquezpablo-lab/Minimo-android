@@ -8201,7 +8201,7 @@ function createRealWeapon(type='axe'){
  const effects=[],effectPool=[];
  const MAX_ACTIVE_EFFECTS=isUltraLowEndMobile?48:(isGalaxyA12NachoPerformance?56:(isGalaxyA12LowEndMobile?72:(isConstrainedMobile?96:180)));
  const driftingLeaves=[];
- for(let i=0;i<(isUltraLowEndMobile?0:(isGalaxyA12NachoPerformance?1:(isGalaxyA12LowEndMobile?2:(isConstrainedMobile?3:10)));i++){
+ for(let i=0;i<(isUltraLowEndMobile?0:(isGalaxyA12NachoPerformance?1:(isGalaxyA12LowEndMobile?2:(isConstrainedMobile?3:10))));i++){
   const leaf=sphere('WindborneLeaf_'+i,null,[rand(-34,34),rand(1.5,5.0),rand(-34,34)],[.045,.012,.10],i%2?M.leafSun:M.ochreCloth,6);
   leaf.rotation.z=rand(-.5,.5);driftingLeaves.push({mesh:leaf,phase:rand(0,Math.PI*2),speed:rand(.35,.85)});
  }
