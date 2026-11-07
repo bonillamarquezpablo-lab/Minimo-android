@@ -352,12 +352,16 @@ def main() -> None:
         fail("El cambio de isla renderizada debe seguir al jugador en tierra y al drakkar en navegación.")
     if "island.r*(1.085-coastNoise)" not in index_html or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018" not in index_html:
         fail("La superficie de playa debe prolongarse hasta la zona intermareal usando la altura real del perfil costero.")
-    if "land.forEach(buildTidalFoam);" not in index_html or "radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47]" not in index_html:
-        fail("La espuma debe construirse como lenguas discontinuas sobre la línea de agua real, no como una franja flotante.")
-    if "patches=72" not in index_html or "((i*37+index*19)%11)<3" not in index_html or "halfArc=.010+((i*7+index*3)%8)*.0017" not in index_html:
-        fail("La espuma debe conservar fragmentos cortos e irregulares con huecos visibles entre lenguas.")
-    if "radialJitter=Math.sin(oceanTime*.86+patch.phase+row*1.17)*[.055,.09,.125,.15,.135,.105,.075,.045][row]" not in index_html:
-        fail("Las ocho filas de espuma deben tener desplazamientos de oleaje definidos y finitos.")
+    if "let activeTidalFoamIslandIndex=-2;" not in index_html or "function syncActiveTidalFoamIsland()" not in index_html:
+        fail("La espuma costera debe tener un único propietario de isla activa.")
+    if "if(bestRatio>(onShip?1.16:1.09))nextIndex=-1;" not in index_html or "while(tidalFoamMeshes.length)" not in index_html:
+        fail("La espuma debe apagarse en mar abierto y liberar la malla de la isla anterior.")
+    if "if(nextIndex>=0)buildTidalFoam(land[nextIndex],nextIndex);" not in index_html:
+        fail("La malla de espuma solo debe construirse para la isla activa.")
+    if "const segments=Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)))" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
+        fail("La isla activa debe usar la malla costera continua de alta resolución.")
+    if "const initialShoreline=shorelineFoamRadius(island,angle,oceanTime)" not in index_html or "const landwardFront=1-smooth01((inlandDistance-inlandReach)/.62)" not in index_html:
+        fail("La espuma debe inicializarse visible y avanzar como lengua de agua sobre la arena.")
     if "inlandDistance<4.8" not in index_html or "swashReach=1.55+3.05*wavePulse" not in index_html:
         fail("La resaca debe mojar una superficie amplia de arena y avanzar/retroceder con el oleaje.")
     if "foamPattern=new Float32Array((segments+1)*rows)" not in index_html or "foamPattern,wetness,residue,lastShore" not in index_html:
