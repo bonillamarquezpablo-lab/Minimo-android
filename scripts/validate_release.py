@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.205"
+EXPECTED_VERSION = "0.6.206"
 
 HTML_PAGES = (
     "index.html",
@@ -330,7 +330,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.205</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.206</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "const warmupResult=await Promise.race([" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
         fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
@@ -346,6 +346,12 @@ def main() -> None:
         fail("El perfil de calidad en iPhone debe conservar antialiasing y sombras de alta resolución.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
         fail("Los penachos o su iluminación de doble cara están incompletos.")
+    if "isUltraLowEndMobile?.52:(isGalaxyA12LowEndMobile?.58:" not in index_html or "performanceDensity=isConstrainedMobile?(isUltraLowEndMobile?.22:.26)" not in index_html:
+        fail("El perfil A10/A12 no conserva el nuevo presupuesto de resolución y cobertura vegetal.")
+    if "shadowGen=(!isConstrainedMobile||isUltraLowEndMobile||isGalaxyA12LowEndMobile)" not in index_html or "const enterRadius=isConstrainedMobile?58:175" not in index_html:
+        fail("El perfil A10/A12 no activa sombras dinámicas acotadas por distancia.")
+    if "resourceResults=[...playerPreparation,{status:'background'}]" not in index_html or "npcPreparationTask=startNpcHumanModels();" not in index_html:
+        fail("Los NPC de Rendimiento deben terminar de importarse en segundo plano sin bloquear el primer acceso.")
     if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
         fail("Falta la distribución uniforme con separación mínima.")
     if "const grids=[grid(4,4),grid(10,10),grid(24,24),grid(60,60),grid(144,144),grid(288,288)];" not in index_html:
