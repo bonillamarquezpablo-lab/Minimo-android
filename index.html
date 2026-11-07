@@ -2609,7 +2609,7 @@ async function removeStrayDebugGeometry(targetScene){
  [M.tunic,M.red,M.blueCloth,M.greenCloth,M.ochreCloth,M.fur].forEach(m=>{m.specularColor=new B.Color3(.035,.032,.028);m.specularPower=18;});
  M.leather.specularColor=new B.Color3(.12,.095,.07);M.leather.specularPower=28;
  [M.metal,M.darkMetal,M.gold,M.brass].forEach(m=>{m.specularColor=new B.Color3(.48,.46,.39);m.specularPower=72;});
- M.water.specularColor=new B.Color3(.58,.73,.81);M.water.specularPower=104;
+ M.water.specularColor=isPerformanceMode?new B.Color3(.18,.25,.28):new B.Color3(.58,.73,.81);M.water.specularPower=isPerformanceMode?28:104;
  M.water.emissiveColor=new B.Color3(.020,.052,.068);M.water.backFaceCulling=false;M.water.alpha=1;
  if(B.FresnelParameters){M.water.diffuseFresnelParameters=new B.FresnelParameters();M.water.diffuseFresnelParameters.bias=.11;M.water.diffuseFresnelParameters.power=2.0;M.water.diffuseFresnelParameters.leftColor=new B.Color3(.075,.19,.24);M.water.diffuseFresnelParameters.rightColor=new B.Color3(.43,.68,.72);} 
 
@@ -4225,7 +4225,7 @@ async function removeStrayDebugGeometry(targetScene){
  for(let i=0;i<VESSEL_SPRAY_COUNT;i++){
   const hidden=B.Matrix.Compose(v(.0001,.0001,.0001),sprayIdentity,v(0,-1000,0));hidden.copyToArray(vesselSprayMatrices,i*16);
  }
- vesselSprayMesh.thinInstanceSetBuffer('matrix',vesselSprayMatrices,16,true);vesselSprayMesh.thinInstanceCount=VESSEL_SPRAY_COUNT;
+ if(VESSEL_SPRAY_COUNT){vesselSprayMesh.thinInstanceSetBuffer('matrix',vesselSprayMatrices,16,true);vesselSprayMesh.thinInstanceCount=VESSEL_SPRAY_COUNT;}else vesselSprayMesh.setEnabled(false);
  let vesselSprayCursor=0,vesselSprayActive=false;
  function spawnVesselSplash(root,speed){
   if(!VESSEL_SPRAY_COUNT)return;
