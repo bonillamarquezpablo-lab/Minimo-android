@@ -274,6 +274,121 @@ def meshopt_compress_models(results: list[dict]) -> None:
         print(f"WARN Meshopt skipped; original models retained: {exc}", file=sys.stderr)
 
 
+
+PERFORMANCE_MODEL_SOURCES = (
+    "assets/models/viking-rigged.glb",
+    "assets/models/armored-knight-rigged.glb",
+    "assets/models/man-base-character-rigged.glb",
+)
+
+
+def rigged_character_signature(document: dict) -> tuple:
+    skins = document.get("skins") or []
+    return (
+        len(document.get("meshes") or []),
+        len(skins),
+        len(document.get("animations") or []),
+        max((len(skin.get("joints") or []) for skin in skins), default=0),
+        len(document.get("materials") or []),
+        len(document.get("textures") or []),
+        len(document.get("images") or []),
+    )
+
+
+def build_performance_model_variants(results: list[dict]) -> None:
+    """Create separate lower-memory GLBs for Rendimiento; never modify Quality sources."""
+    npm = shutil.which("npm")
+    if not npm:
+        raise RuntimeError("npm is required to build the Performance-only GLB variants.")
+
+    with tempfile.TemporaryDirectory(prefix="norse-performance-glb-") as tool_dir:
+        install = subprocess.run(
+            [
+                npm, "install", "--prefix", tool_dir, "--no-save", "--no-package-lock",
+                "--no-audit", "--no-fund", "@gltf-transform/cli@4.5.1",
+            ],
+            capture_output=True, text=True, timeout=360,
+        )
+        if install.returncode != 0:
+            raise RuntimeError(
+                "No se pudo instalar glTF Transform para los modelos de Rendimiento: "
+                + (install.stderr or install.stdout)[-4000:]
+            )
+        cli = Path(tool_dir) / "node_modules" / ".bin" / "gltf-transform"
+        if not cli.exists():
+            raise RuntimeError("No se instaló el ejecutable gltf-transform.")
+
+        for relative in PERFORMANCE_MODEL_SOURCES:
+            source = DIST / relative
+            if not source.is_file():
+                raise RuntimeError(f"Falta el GLB original para Rendimiento: {relative}")
+            original_doc = validate_rigged_character_glb(source, relative)
+            source_signature = rigged_character_signature(original_doc)
+            resized = Path(tool_dir) / (Path(relative).stem + ".512px.glb")
+            optimized = Path(tool_dir) / (Path(relative).stem + ".performance.glb")
+
+            resize = subprocess.run(
+                [
+                    str(cli), "resize", str(source), str(resized),
+                    "--width", "512", "--height", "512",
+                ],
+                capture_output=True, text=True, timeout=240,
+            )
+            if resize.returncode != 0 or not resized.is_file():
+                raise RuntimeError(
+                    f"No se pudieron limitar las texturas a 512 px en {relative}: "
+                    + (resize.stderr or resize.stdout)[-3000:]
+                )
+
+            compress = subprocess.run(
+                [
+                    str(cli), "meshopt", str(resized), str(optimized),
+                    "--level", "medium",
+                ],
+                capture_output=True, text=True, timeout=240,
+            )
+            if compress.returncode != 0 or not optimized.is_file():
+                raise RuntimeError(
+                    f"Meshopt no pudo optimizar {relative}: "
+                    + (compress.stderr or compress.stdout)[-3000:]
+                )
+
+            optimized_doc = validate_rigged_character_glb(optimized, relative + " (Performance)")
+            if rigged_character_signature(optimized_doc) != source_signature:
+                raise RuntimeError(
+                    f"La variante de Rendimiento altera mallas/rig/animaciones/materiales: {relative}"
+                )
+            extensions = set(optimized_doc.get("extensionsUsed") or [])
+            if "EXT_meshopt_compression" not in extensions:
+                raise RuntimeError(f"Falta EXT_meshopt_compression en {relative}.")
+            optimized_bytes = optimized.read_bytes()
+            original_bytes = source.stat().st_size
+            if len(optimized_bytes) >= original_bytes:
+                raise RuntimeError(
+                    f"La variante Performance no reduce el GLB {relative}: "
+                    f"{original_bytes:,} → {len(optimized_bytes):,} bytes."
+                )
+
+            destination = DIST / "assets" / "models" / "performance" / Path(relative).name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(optimized, destination)
+            digest = hashlib.sha256(optimized_bytes).hexdigest()
+            results.append({
+                "path": destination.relative_to(DIST).as_posix(),
+                "bytes": len(optimized_bytes),
+                "sha256": digest,
+                "source": f"Performance-only derivative of {relative}",
+                "compression": "512px maximum textures + EXT_meshopt_compression medium",
+                "originalBytes": original_bytes,
+            })
+            print(
+                f"OK Performance GLB {relative}: {original_bytes:,} → "
+                f"{len(optimized_bytes):,} bytes "
+                f"({(original_bytes-len(optimized_bytes))/1048576:.2f} MiB saved); "
+                "rig, animations, materials and image count preserved."
+            )
+
+
 def main() -> None:
     if DIST.exists():
         shutil.rmtree(DIST)
@@ -528,6 +643,8 @@ def main() -> None:
         for relative, reason in failures:
             print(f"- {relative}: {reason}", file=sys.stderr)
         raise SystemExit(1)
+
+    build_performance_model_variants(results)
 
     for music_asset in optional_music_results:
         results.append(music_asset)
