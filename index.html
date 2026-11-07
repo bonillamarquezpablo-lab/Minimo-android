@@ -2929,7 +2929,7 @@ async function removeStrayDebugGeometry(targetScene){
  const livingBeachLayers=[];
  function buildLivingBeachLayer(island,index){
   const segments=isPerformanceMode?(isConstrainedMobile?72:104):160,rows=7,cols=segments+1;
-  const positions=[],indices=[],uvs=[],colors=[],radials=[],baseAlpha=[],wetness=new Float32Array(segments*rows),residue=new Float32Array(segments*rows),lastShore=new Float32Array(segments+1);
+  const positions=[],indices=[],uvs=[],colors=[],radials=[],baseAlpha=[],wetness=new Float32Array((segments+1)*rows),residue=new Float32Array((segments+1)*rows),lastShore=new Float32Array(segments+1);
   lastShore.fill(NaN);
   for(let i=0;i<=segments;i++){
    const angle=i/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
@@ -3120,7 +3120,7 @@ async function removeStrayDebugGeometry(targetScene){
         foam=Math.max(foam,deposit);
        }
        layer.residue[stateIndex]=Math.min(.6,foam);
-       const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[stateIndex];
+       const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[row*layer.cols+i];
        const dryColor=[1,.94,.82],wetColor=[.48,.54,.48],foamColor=[.91,.94,.87];
        let rgb=dryColor.map((c,k)=>c+(wetColor[k]-c)*w);
        rgb=rgb.map((c,k)=>c+(foamColor[k]-c)*f);
@@ -3133,7 +3133,7 @@ async function removeStrayDebugGeometry(targetScene){
       layer.lastShore[i]=NaN;
       for(let row=0;row<layer.rows;row++){
        const stateIndex=i*layer.rows+row;layer.wetness[stateIndex]*=drying;layer.residue[stateIndex]*=Math.exp(-step/7.5);
-       const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[stateIndex];
+       const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[row*layer.cols+i];
        const dryColor=[1,.94,.82],wetColor=[.48,.54,.48],foamColor=[.91,.94,.87];
        let rgb=dryColor.map((c,k)=>c+(wetColor[k]-c)*w);rgb=rgb.map((c,k)=>c+(foamColor[k]-c)*f);
        const alpha=base*(.82+w*.10+f*.22),vertex=(row*layer.cols+i)*4;
