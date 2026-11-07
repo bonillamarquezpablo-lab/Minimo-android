@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.201">
-<meta name="el-sin-nombre-repair" content="0.6.201 preserve all gameplay and visual systems; optimize time-sliced grass placement, cached ground sampling and monotonic startup progress">
+<meta name="el-sin-nombre-build" content="0.6.204">
+<meta name="el-sin-nombre-repair" content="0.6.204 non-blocking scene warmup; preserves all models, textures and scene content">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.201</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.204</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1998,7 +1998,8 @@ async function removeStrayDebugGeometry(targetScene){
  setLoadingProgress(40,'Preparando el mundo…');
  try{
  const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
- const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
+ const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('armdebug')==='1';
+ const groundDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
  const realPlayerArmTuningEnabled=true;
  const realPlayerArmDebugState={free:{status:'ESPERANDO',reason:'',twistDeg:null},weapon:{status:'POSE ORIGINAL',reason:'',twistDeg:null}};
  let realPlayerSkeletonFrameDiagnostic='esqueleto pendiente';
@@ -2006,7 +2007,7 @@ async function removeStrayDebugGeometry(targetScene){
  const realPlayerArmDebugTargets={free:null,weapon:null};
  // Observabilidad únicamente: no participa en el muestreo, la geometría ni la animación de la hierba.
  let grassDebugClumpCount=0,grassDebugBatchCount=0,grassDebugLeavesPerClump=7,grassDebugIslandStats=[],grassDebugPanel=null;
- const grassDebugEnabled=realPlayerArmDebugEnabled||new URLSearchParams(window.location.search).get('grassdebug')==='1';
+ const grassDebugEnabled=groundDebugEnabled||new URLSearchParams(window.location.search).get('grassdebug')==='1';
  const fpsFrameSamples=new Float32Array(120);let fpsFrameSampleCount=0,fpsFrameSampleCursor=0;
  const REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY='el-sin-nombre-arm-last-deviation-v1';
  let realPlayerArmLastDeviation=null,realPlayerArmDeviationLastWasLocomoting=false,realPlayerArmDeviationStoppedAtMs=null,realPlayerArmDeviationActiveSignature='';
@@ -5588,9 +5589,10 @@ function updateGrassDebugPanel(){
  );
  const frameMs=Array.from(fpsFrameSamples.subarray(0,fpsFrameSampleCount)).filter(value=>Number.isFinite(value)&&value>0);
  const frameMsTotal=frameMs.reduce((sum,value)=>sum+value,0);
- const fpsValues=frameMs.map(value=>1000/value).sort((a,b)=>a-b);
+ const sortedFrameMs=frameMs.slice().sort((a,b)=>a-b);
  const averageFps=frameMs.length?frameMs.length*1000/frameMsTotal:liveFps;
- const p95Fps=fpsValues.length?fpsValues[Math.min(fpsValues.length-1,Math.floor((fpsValues.length-1)*.95))]:liveFps;
+ const p95FrameMs=sortedFrameMs.length?sortedFrameMs[Math.min(sortedFrameMs.length-1,Math.floor((sortedFrameMs.length-1)*.95))]:(liveFps>0?1000/liveFps:0);
+ const p5Fps=p95FrameMs>0?1000/p95FrameMs:liveFps;
  const activeTriangles=Math.round(((scene.getActiveIndices&&scene.getActiveIndices())||0)/3);
  const drawCalls=Number(engine._drawCalls&&engine._drawCalls.current)||0;
  const textureMemoryMB=estimateDebugTextureMemoryMB();
@@ -5603,8 +5605,8 @@ function updateGrassDebugPanel(){
   'HOJAS/MATA '+grassDebugLeavesPerClump+' · ISLAS '+grassDebugIslandStats.length,
   'TEXTURAS VRAM EST.: '+textureMemoryMB.toFixed(1)+' MB RGBA8',
   'TRIÁNGULOS ACTIVOS: '+activeTriangles.toLocaleString('es-ES')+' · DRAW CALLS: '+drawCalls,
-  'FPS MEDIO: '+averageFps.toFixed(1)+' · FPS P95: '+p95Fps.toFixed(1)+' · MUESTRA '+frameMs.length+'/120',
-  'TIEMPOS DE CARGA POR ETAPA:',
+  'FPS MEDIO: '+averageFps.toFixed(1)+' · FRAME P95: '+p95FrameMs.toFixed(1)+' ms · FPS P5: '+p5Fps.toFixed(1)+' · MUESTRA '+frameMs.length+'/120',
+  'TIEMPOS POR TRAMO DE PROGRESO DE CARGA:',
   ...(loadStages.length?loadStages:['Esperando mediciones de carga']),
   'DISTRIBUCIÓN: objetivo alcanzado / ocupación de cuadrícula',
   ...islands
@@ -5620,7 +5622,7 @@ if(grassDebugEnabled){
  updateGrassDebugPanel();
 }
 function createGroundPhaseAPanel(){
- if(!realPlayerArmDebugEnabled)return;
+ if(!groundDebugEnabled)return;
  const settings={textureRepeat:GROUND_PHASE_A_DEFAULTS.textureRepeat,relief:GROUND_PHASE_A_DEFAULTS.relief,roughness:GROUND_PHASE_A_DEFAULTS.roughness};
  const apply=()=>{
   texTerrain.uScale=settings.textureRepeat;texTerrain.vScale=settings.textureRepeat;
@@ -7776,7 +7778,7 @@ function createRealWeapon(type='axe'){
     if(!Number.isFinite(surfaceSlopeX)||!Number.isFinite(surfaceSlopeZ)||Math.hypot(surfaceSlopeX,surfaceSlopeZ)>.82)return null;
     return groundY+terrainDeformationAt(islandIndex,x,z);
    };
-   const grassYieldInterval=isConstrainedMobile?48:96;
+   const grassYieldInterval=isConstrainedMobile?512:1024;
    const tryPlaceGrass=(x,z)=>{
     const sampledGroundY=grassGroundSample(x,z);if(sampledGroundY===null)return false;
     const gridCol=Math.max(0,Math.min(gridSide-1,Math.floor((x-(island.x-radius))/cellSize)));
@@ -10343,16 +10345,41 @@ function updateHUD(){
  }catch(audioError){
   console.info('La precarga de Foley terminó con recursos opcionales pendientes:',audioError);
  }
- // Los NPC ya se han añadido a la escena. Babylon debe terminar de preparar sus
- // esqueletos, animaciones, materiales, sombras y texturas antes de abrir la campaña.
- setLoadingProgress(87,'Sincronizando modelos, texturas e iluminación…');
+ // No bloqueamos la entrada hasta que Babylon declare lista cada malla y textura
+ // de las 13 islas. La escena ya se está renderizando: los recursos restantes pueden
+ // terminar de compilarse/cargarse mientras el jugador entra, sin eliminar contenido.
+ setLoadingProgress(87,'Preparando los últimos recursos gráficos…');
+ let sceneWarmupStatus='unavailable';
  try{
   removeStrayDebugGeometry(scene);
-  if(scene&&typeof scene.whenReadyAsync==='function')await scene.whenReadyAsync();
+  if(scene&&typeof scene.whenReadyAsync==='function'){
+   let warmupTimer=null;
+   const fullSceneWarmup=scene.whenReadyAsync().then(
+    ()=>({ready:true}),
+    error=>({ready:false,error})
+   );
+   // Presupuesto máximo para el arranque: evita quedarse indefinidamente en el 87 %.
+   const warmupResult=await Promise.race([
+    fullSceneWarmup,
+    new Promise(resolve=>{warmupTimer=setTimeout(()=>resolve({ready:false,timeout:true}),1400);})
+   ]);
+   if(warmupTimer!==null)clearTimeout(warmupTimer);
+   if(warmupResult.ready){
+    sceneWarmupStatus='ready';
+   }else if(warmupResult.timeout){
+    sceneWarmupStatus='background';
+    console.info('La escena sigue terminando de preparar recursos gráficos en segundo plano; se permite entrar.');
+   }else{
+    sceneWarmupStatus='deferred-after-error';
+    console.warn('La comprobación global de recursos gráficos falló; se permite continuar y Babylon seguirá preparando la escena:',warmupResult.error);
+   }
+  }
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){
-  console.error('No se pudo completar la preparación gráfica de la escena:',warmupError);
-  throw new Error('La escena no terminó de preparar todos sus recursos gráficos: '+(warmupError&&warmupError.message?warmupError.message:String(warmupError)));
+  // Una comprobación gráfica secundaria nunca debe impedir iniciar la partida.
+  sceneWarmupStatus='deferred-after-error';
+  console.warn('Se aplaza la preparación gráfica no esencial; la partida puede continuar:',warmupError);
+  try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
  console.info('EL SIN NOMBRE 0.6.185 preparación completa:',{
@@ -10362,7 +10389,7 @@ function updateHUD(){
   aldeanosHumanos:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,
   aldeanosEnMundo:humanCivilianParts.length,
   npcLoadFinished:enemyHumanModelsStarted,audio:audioPreloadResult,
-  vegetationMerge:staticMergeStats,resultados:resourceResults.map(x=>x.status)
+  vegetationMerge:staticMergeStats,sceneWarmupStatus,resultados:resourceResults.map(x=>x.status)
  });
  
  setLoadingProgress(98,'Comprobando que todo está listo…');

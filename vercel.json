@@ -2,7 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "feat/0.6.202-ground-debug-mipmap-phase-a": false
+      "feat/0.6.202-ground-debug-mipmap-phase-a": false,
+      "repair/0.6.202-audit-diagnostics": false,
+      "repair/0.6.204-nonblocking-scene-ready": false
     }
   }
 }

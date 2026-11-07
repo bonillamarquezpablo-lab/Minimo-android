@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.201"
+EXPECTED_VERSION = "0.6.204"
 
 HTML_PAGES = (
     "index.html",
@@ -265,18 +265,20 @@ def main() -> None:
         fail("El contador de hierba no recibe el número real de matas creadas.")
     if "const liveFps=Number.isFinite(engine.getFps())?Math.round(engine.getFps()):0;" not in index_html:
         fail("El panel debug=1 no mide los FPS actuales.")
-    if "const grassDebugEnabled=realPlayerArmDebugEnabled||new URLSearchParams(window.location.search).get('grassdebug')==='1';" not in index_html:
+    if "const grassDebugEnabled=groundDebugEnabled||new URLSearchParams(window.location.search).get('grassdebug')==='1';" not in index_html:
         fail("Falta el acceso independiente al diagnóstico de hierba ?grassdebug=1.")
     if "function updateGrassDebugPanel()" not in index_html or "grassDebugIslandStats.push({" not in index_html:
         fail("Faltan las métricas por isla del diagnóstico de hierba.")
     if "const STARTUP_PERF_DEBUG_ENABLED=new URLSearchParams(window.location.search).get('debug')==='1';" not in index_html:
         fail("La medición de etapas de carga debe estar limitada a ?debug=1.")
-    for metric in ("estimateDebugTextureMemoryMB()", "activeTriangles", "drawCalls", "averageFps", "p95Fps", "TIEMPOS DE CARGA POR ETAPA:"):
+    if "const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('armdebug')==='1';" not in index_html or "const groundDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';" not in index_html:
+        fail("El diagnóstico del suelo debe estar separado del diagnóstico anatómico de brazos.")
+    for metric in ("estimateDebugTextureMemoryMB()", "activeTriangles", "drawCalls", "averageFps", "p95FrameMs", "p5Fps", "TIEMPOS POR TRAMO DE PROGRESO DE CARGA:"):
         if metric not in index_html:
             fail("Falta una métrica del panel debug=1: " + metric)
     if "const GROUND_PHASE_A_DEFAULTS=Object.freeze({textureRepeat:9.5,relief:.70,roughness:.97});" not in index_html:
         fail("La Fase A no conserva los valores por defecto actuales del suelo.")
-    if "function createGroundPhaseAPanel()" not in index_html or "RESTABLECER VALORES INICIALES" not in index_html:
+    if "function createGroundPhaseAPanel()" not in index_html or "if(!groundDebugEnabled)return;" not in index_html or "RESTABLECER VALORES INICIALES" not in index_html:
         fail("Faltan los deslizadores en vivo y el restablecimiento de la Fase A.")
     if "new B.DynamicTexture('NordicTerrainAlbedo',{width:size,height:size},scene,true)" not in index_html or "new B.DynamicTexture('LivingCoastalSandAlbedo',{width:size,height:size},scene,true)" not in index_html:
         fail("Las texturas procedurales principales del suelo deben generar mipmaps.")
@@ -328,8 +330,12 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.201</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.204</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
+    if "const warmupResult=await Promise.race([" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
+        fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
+    if "const grassYieldInterval=isConstrainedMobile?512:1024;" not in index_html:
+        fail("La generación de vegetación debe ceder el control en bloques optimizados para móviles.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
         fail("Los penachos o su iluminación de doble cara están incompletos.")
     if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
