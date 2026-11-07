@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.202"
+EXPECTED_VERSION = "0.6.203"
 
 HTML_PAGES = (
     "index.html",
@@ -292,8 +292,16 @@ def main() -> None:
         fail("La densidad principal de vegetación no conserva su cobertura.")
     if "function isSafeGroundCoverPoint(is,x,z)" not in index_html or "const grassGroundSample=(x,z)=>{" not in index_html or "const safeLandRadius=island.r*.70" not in index_html:
         fail("La hierba no restringe la generación optimizada a terreno seco y alejado de la costa.")
-    if "terrainDeformationAt(islandIndex,xP,z)" not in index_html or "surfaceSlopeX" not in index_html:
-        fail("El muestreo optimizado de hierba no conserva la pendiente del terreno deformable.")
+    if "function createGrassHeightSampler(sampleIslandIndex)" not in index_html or "field.mesh.getIndices()" not in index_html or "baseHeights[topLeft]+offsets[topLeft]" not in index_html or "surfaceSlopeX" not in index_html:
+        fail("La hierba no muestrea los triángulos de la malla ni conserva la pendiente y deformación del terreno.")
+    if "const grassYieldBudgetMs=isConstrainedMobile?12:16,grassYieldCheckInterval=16;" not in index_html or "await maybeYieldGrassStartup(true);" not in index_html:
+        fail("La distribución de hierba no utiliza pausas adaptativas ni actualiza el progreso al terminar cada isla.")
+    if "capacity:128,count:0,matrices:new Float32Array(128*16),colors:new Float32Array(128*4)" not in index_html or "thinInstanceSetBuffer('matrix',batch.matrices.subarray(0,batch.count*16),16,true)" not in index_html:
+        fail("La hierba no usa buffers Float32 reutilizables para las instancias.")
+    if "const yaw=rand(0,Math.PI*2),cosYaw=Math.cos(yaw),sinYaw=Math.sin(yaw)" not in index_html or "B.Matrix.Compose(v(scaleX" in index_html:
+        fail("La matriz de instancia de hierba no utiliza la transformación directa sin objetos temporales.")
+    if "placementMs:Math.round(performance.now()-islandPlacementStartedAt)" not in index_html or "uploadMs:Math.round(performance.now()-grassUploadStartedAt)" not in index_html:
+        fail("Falta la telemetría de coste de colocación y subida de vegetación.")
     if "function updateHearthFlooding(dt)" not in index_html or "updateHearthFlooding(ambientDt)" not in index_html:
         fail("Las hogueras no reaccionan a la altura del oleaje.")
     if "const texCoastalSand=makeLivingCoastalSandTexture();" not in index_html or "M.sand.bumpTexture.level=.72;" not in index_html:
@@ -330,7 +338,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.202</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.203</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
         fail("Los penachos o su iluminación de doble cara están incompletos.")
