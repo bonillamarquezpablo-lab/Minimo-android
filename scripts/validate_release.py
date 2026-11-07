@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.198"
+EXPECTED_VERSION = "0.6.199"
 
 HTML_PAGES = (
     "index.html",
@@ -275,6 +275,12 @@ def main() -> None:
         fail("La hierba no restringe la generación a terreno seco y alejado de la costa.")
     if "function updateHearthFlooding(dt)" not in index_html or "updateHearthFlooding(ambientDt)" not in index_html:
         fail("Las hogueras no reaccionan a la altura del oleaje.")
+    if "function shorelineFoamRadius(island,angle,t=oceanTime)" not in index_html or "terrainHeightOnIsland(island,x,z)-waterHeight(x,z,t)" not in index_html:
+        fail("La espuma de orilla no sigue la intersección actual del oleaje con el terreno.")
+    if "row===0?.025:(row===1?.14:.30)" not in index_html or "DynamicSubmergedShoreWash_" not in index_html:
+        fail("La espuma de orilla invade la arena seca o usa la malla antigua.")
+    if "foam.positions[offset+1]=waterHeight(x,z,oceanTime)+.024" not in index_html or "foam.positions[offset+1]=-3.2" not in index_html:
+        fail("La espuma no se actualiza con el oleaje o no se oculta cuando no hay intersección.")
     if "source.fire&&source.extinguished" not in index_html or "flame.hearth=hearth" not in index_html:
         fail("Las hogueras inundadas no apagan sus llamas y humo.")
     if "parts.root.getAbsolutePosition().y" not in index_html or "rootWorldY-bounds.min.y+.008" not in index_html:
@@ -285,7 +291,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.198</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.199</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
         fail("Los penachos o su iluminación de doble cara están incompletos.")
