@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.225">
-<meta name="el-sin-nombre-repair" content="0.6.225 frame pacing and CPU allocation reduction without visual reductions">
+<meta name="el-sin-nombre-build" content="0.6.226">
+<meta name="el-sin-nombre-repair" content="0.6.226 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.225</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.226</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2978,7 +2978,7 @@ async function removeStrayDebugGeometry(targetScene){
    const coastNoise=(terrainValueNoise(wx*.12+17.2,wz*.12-8.4)-.5)*.045+Math.sin(wx*.17+wz*.11)*.006;
    const coastDistance=d+coastNoise*is.r;
    const beach=smooth01((coastDistance/is.r-.75)/.24);
-   const wetSand=smooth01((coastDistance/is.r-.87)/.105);
+   const wetSand=smooth01((coastDistance/is.r-.82)/.22);
    // Variación espacial real: humedad y musgo cambian por zonas, no un tinte uniforme por isla.
    const patch=terrainValueNoise(wx*.028+17.2,wz*.028-8.4);
    const micro=terrainValueNoise(wx*.095-4.1,wz*.095+9.7);
@@ -2990,7 +2990,7 @@ async function removeStrayDebugGeometry(targetScene){
    const bareSoil=smooth01((micro*.30+fine*.42+grain*.28-.57)*3.5)*(1-rock)*(1-beach);
    const leafLitter=smooth01((litter*.28+grain*.36+fine*.36-.57)*3.4)*(1-rock)*(1-beach);
    // Neutral olive base lets the albedo read through instead of tinting the whole island green.
-   const grass=[.91,.91,.82],stone=[.87,.86,.80],sand=[.84,.72,.55],wetSandCol=[.56,.55,.47],soil=[.88,.76,.61],mud=[.78,.81,.68],leaf=[.87,.74,.56];
+   const grass=[.91,.91,.82],stone=[.87,.86,.80],sand=[.84,.72,.55],wetSandCol=[.68,.63,.54],soil=[.88,.76,.61],mud=[.78,.81,.68],leaf=[.87,.74,.56];
    let r=grass[0]*(1-rock)+stone[0]*rock,g=grass[1]*(1-rock)+stone[1]*rock,b=grass[2]*(1-rock)+stone[2]*rock;
    r=r*(1-wet)+mud[0]*wet;g=g*(1-wet)+mud[1]*wet;b=b*(1-wet)+mud[2]*wet;
    const soilMix=Math.min(.96,bareSoil*1.12),leafMix=Math.min(.58,leafLitter*.76);
@@ -2999,7 +2999,7 @@ async function removeStrayDebugGeometry(targetScene){
    const mottling=(grain-.5)*.045;
    r+=mottling;g+=mottling*.90;b+=mottling*.68;
    r=r*(1-beach)+sand[0]*beach;g=g*(1-beach)+sand[1]*beach;b=b*(1-beach)+sand[2]*beach;
-   const wetBlend=wetSand*beach*.78;
+   const wetBlend=wetSand*beach*.55;
    r=r*(1-wetBlend)+wetSandCol[0]*wetBlend;g=g*(1-wetBlend)+wetSandCol[1]*wetBlend;b=b*(1-wetBlend)+wetSandCol[2]*wetBlend;
    const shoreGrain=(terrainValueNoise(wx*.48+7.1,wz*.48-12.6)-.5)*.026*beach;
    r+=shoreGrain;g+=shoreGrain*.92;b+=shoreGrain*.78;
@@ -3284,7 +3284,7 @@ async function removeStrayDebugGeometry(targetScene){
        let wet=layer.wetness[stateIndex]*drying;
        const inlandDistance=shore-radial;
        if(inlandDistance>=-.65&&inlandDistance<4.8){
-        const contact=.92*Math.exp(-Math.max(0,inlandDistance)*.43);
+        const contact=.76*Math.exp(-Math.max(0,inlandDistance)*.36);
         wet=Math.max(wet,contact);
        }
        layer.wetness[stateIndex]=Math.min(1,wet);
@@ -3299,7 +3299,7 @@ async function removeStrayDebugGeometry(targetScene){
        // La humedad sigue cubriendo la zona de batida, independientemente de la espuma.
        const wavePhase=oceanTime*.72+localX*.031+localZ*.024+foamMask*2.7;
        const wavePulse=.5+.5*Math.sin(wavePhase),foamBreath=.92+.08*wavePulse;
-       const f=Math.min(.82,foam*foamBreath),wetR=1-.58*w,wetG=.94-.48*w,wetB=.82-.40*w;
+       const f=Math.min(.82,foam*foamBreath),wetR=1-.32*w,wetG=.94-.27*w,wetB=.82-.20*w;
        // Wet sand stays darker; only the disconnected foam cells lift toward a cool ivory.
        layer.colors[vertex*4]=wetR+(.94-wetR)*f;
        layer.colors[vertex*4+1]=wetG+(.965-wetG)*f;
@@ -3313,7 +3313,7 @@ async function removeStrayDebugGeometry(targetScene){
        const stateIndex=i*layer.rows+row,vertex=row*layer.cols+i;
        layer.wetness[stateIndex]*=drying;layer.residue[stateIndex]*=Math.exp(-step/4.2);
        const w=layer.wetness[stateIndex],foam=layer.residue[stateIndex],base=layer.baseAlpha[vertex];
-       const wetR=1-.58*w,wetG=.94-.48*w,wetB=.82-.40*w,f=Math.min(.78,foam);
+       const wetR=1-.32*w,wetG=.94-.27*w,wetB=.82-.20*w,f=Math.min(.78,foam);
        layer.colors[vertex*4]=wetR+(.94-wetR)*f;
        layer.colors[vertex*4+1]=wetG+(.965-wetG)*f;
        layer.colors[vertex*4+2]=wetB+(.94-wetB)*f;
@@ -8706,7 +8706,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'8',build:'0.6.225',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'8',build:'0.6.226',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -10855,7 +10855,7 @@ function update(dt){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.225 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.226 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -10933,7 +10933,7 @@ function update(dt){
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.225 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.226 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
