@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "feat/0.6.202-ground-debug-mipmap-phase-a": false
+    }
+  }
+}

@@ -265,10 +265,27 @@ def main() -> None:
         fail("El contador de hierba no recibe el número real de matas creadas.")
     if "const liveFps=Number.isFinite(engine.getFps())?Math.round(engine.getFps()):0;" not in index_html:
         fail("El panel debug=1 no mide los FPS actuales.")
-    if "const grassDebugEnabled=new URLSearchParams(window.location.search).get('grassdebug')==='1';" not in index_html:
+    if "const grassDebugEnabled=realPlayerArmDebugEnabled||new URLSearchParams(window.location.search).get('grassdebug')==='1';" not in index_html:
         fail("Falta el acceso independiente al diagnóstico de hierba ?grassdebug=1.")
     if "function updateGrassDebugPanel()" not in index_html or "grassDebugIslandStats.push({" not in index_html:
         fail("Faltan las métricas por isla del diagnóstico de hierba.")
+    if "const STARTUP_PERF_DEBUG_ENABLED=new URLSearchParams(window.location.search).get('debug')==='1';" not in index_html:
+        fail("La medición de etapas de carga debe estar limitada a ?debug=1.")
+    for metric in ("estimateDebugTextureMemoryMB()", "activeTriangles", "drawCalls", "averageFps", "p95Fps", "TIEMPOS DE CARGA POR ETAPA:"):
+        if metric not in index_html:
+            fail("Falta una métrica del panel debug=1: " + metric)
+    if "const GROUND_PHASE_A_DEFAULTS=Object.freeze({textureRepeat:9.5,relief:.70,roughness:.97});" not in index_html:
+        fail("La Fase A no conserva los valores por defecto actuales del suelo.")
+    if "function createGroundPhaseAPanel()" not in index_html or "RESTABLECER VALORES INICIALES" not in index_html:
+        fail("Faltan los deslizadores en vivo y el restablecimiento de la Fase A.")
+    if "new B.DynamicTexture('NordicTerrainAlbedo',{width:size,height:size},scene,true)" not in index_html or "new B.DynamicTexture('LivingCoastalSandAlbedo',{width:size,height:size},scene,true)" not in index_html:
+        fail("Las texturas procedurales principales del suelo deben generar mipmaps.")
+    if "const packedTrailTexture=makePatternTexture('Packed Norse trail earth','#66533b',['#8e7957','#4b3a2a','#a18a62','#574633'],'sand',512,true);" not in index_html:
+        fail("La textura procedural de los caminos también debe generar mipmaps.")
+    if "makePatternTexture(name,base,accents,style='grain',size=512,generateMipMaps=false)" not in index_html:
+        fail("La generación selectiva de mipmaps de las texturas procedurales ha cambiado.")
+    if "mesh.material.diffuseTexture.anisotropicFilteringLevel=maxAnisotropy" not in index_html or "tex.anisotropicFilteringLevel=maxAnisotropy" not in index_html:
+        fail("No se conserva el filtrado anisotrópico de las texturas procedurales.")
     if "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);" not in index_html:
         fail("La densidad principal de vegetación no conserva su cobertura.")
     if "function isSafeGroundCoverPoint(is,x,z)" not in index_html or "const grassGroundSample=(x,z)=>{" not in index_html or "const safeLandRadius=island.r*.70" not in index_html:
