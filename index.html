@@ -9569,7 +9569,7 @@ function updateHUD(){
     // Los GLB pueden conservar rotationQuaternion; se elimina para que la pose
     // local de cubierta no quede anulada por la orientación de importación.
     p.rotationQuaternion=null;
-    p.position.set(seat.x,guard.parts.realHuman?.role?.972:.995,seat.z);p.rotation.set(0,seat.side*Math.PI/2,0);
+    p.position.set(seat.x,guard.parts.realHuman?.role ? .972 : .995,seat.z);p.rotation.set(0,seat.side*Math.PI/2,0);
     p.computeWorldMatrix(true);guard.parts.actualMoveSpeed=0;
     animateShipRower(guard.parts,elapsed*5.8+seat.oar*.58+(seat.side>0?Math.PI:0));return;
    }
