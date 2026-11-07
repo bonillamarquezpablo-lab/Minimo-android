@@ -308,6 +308,12 @@ def main() -> None:
         fail("El campo de deformación del terreno debe enlazar la isla local sin referencias globales indefinidas.")
     if "function pressGround(x,z,islandIndex,wet,beach)" not in index_html or "pressGround(x,z,islandIndex,wet,beach)" not in index_html:
         fail("Las pisadas no presionan la geometría real del terreno.")
+    if "groundY+.022+rim-press" not in index_html or "const strength=wet?.82:(beach?.72:.58)" not in index_html:
+        fail("Las huellas deben quedar visibles sobre el terreno con contraste suficiente.")
+    if "FootstepSandGrainPool_" not in index_html or "p.mesh.setEnabled(false)" not in index_html or "p.mesh.setEnabled(true)" not in index_html:
+        fail("Las salpicaduras de los pasos deben reutilizar partículas en vez de crear y destruir mallas continuamente.")
+    if "refreshHeight=!!(deformationField&&deformationField.active&&deformationField.active.size)" not in index_html or "if(refreshHeight)layer.mesh.updateVerticesData(B.VertexBuffer.PositionKind" not in index_html:
+        fail("La playa no debe recalcular y subir alturas cuando el terreno no está deformándose.")
     if "function relaxGround(dt)" not in index_html or "relaxGround(dt);" not in index_html:
         fail("El terreno deformado no recupera su forma gradualmente.")
     if "GroundDynamics.update(dt,audioPos.x,audioPos.z,playerStepDistance,yaw,running&&stamina>0,onShip,playerAirborne);" not in index_html:
