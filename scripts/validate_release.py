@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.211"
+EXPECTED_VERSION = "0.6.212"
 
 HTML_PAGES = (
     "index.html",
@@ -304,12 +304,16 @@ def main() -> None:
         fail("Falta la capa de playa con humedad y espuma residual dinámica.")
     if "foamPattern=new Float32Array((segments+1)*rows)" not in index_html or "foamPattern,wetness,residue,lastShore" not in index_html:
         fail("La espuma de resaca debe usar una máscara espacial precomputada y reutilizada.")
+    if "foamMass=smooth01((broadFoam*.54+mediumFoam*.31+fineFoam*.15-.49)*8.5)" not in index_html or "foamFilament=1-smooth01((Math.abs(mediumFoam-.5)-.19)*7.5)" not in index_html:
+        fail("La espuma debe formar masas rotas con filamentos, no una banda lisa.")
     if "Math.min(288,Math.ceil(Math.PI*2*island.r/1.35))" not in index_html or "rows=isPerformanceMode?9:(isTouchDevice?15:17)" not in index_html:
-        fail("La resolución de la playa debe aumentar el detalle de resaca en calidad sin alterar el perfil de rendimiento.")
-    if "oceanTime*1.15+localX*.095+localZ*.073+foamMask*5.3" not in index_html or "frontWidth=.48+wavePulse*.20" not in index_html:
-        fail("La espuma de playa debe avanzar y retirarse con una línea de resaca dinámica.")
-    if "layer.residue[stateIndex]*Math.exp(-step/4.2)" not in index_html or "activeFoam=Math.exp(-frontDistance*frontDistance)*foamMask" not in index_html:
-        fail("El residuo debe fragmentarse mediante espuma orgánica y disiparse en un tiempo natural.")
+        fail("La resolución de la playa debe conservar el presupuesto del perfil Rendimiento.")
+    if "swashReach=1.05+2.35*wavePulse" not in index_html or "swashZone=swashIn*swashOut" not in index_html:
+        fail("La resaca debe extenderse como una lámina irregular sobre la arena, no como una línea.")
+    if "foamIslands=swashZone*foamMask*drift" not in index_html or "layer.residue[stateIndex]*Math.exp(-step/5.8)" not in index_html:
+        fail("La espuma debe ser fragmentada, dinámica y disiparse progresivamente.")
+    if "Math.exp(-Math.max(0,inlandDistance)*.78)" not in index_html:
+        fail("La humedad debe oscurecer una franja amplia de arena mojada detrás de la espuma.")
     if "function terrainDeformationAt(islandIndex,x,z)" not in index_html or "terrainDeformationFields[index]=deformationField;" not in index_html:
         fail("El heightfield no conserva el estado físico de deformación del terreno.")
     if "const deformationField={island:is,index,subdivisions,gridSize," not in index_html:
@@ -361,7 +365,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.211</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.212</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "const warmupResult=await Promise.race([" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
         fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
