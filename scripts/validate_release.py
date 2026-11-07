@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.192"
+EXPECTED_VERSION = "0.6.195"
 
 HTML_PAGES = (
     "index.html",
@@ -289,6 +289,18 @@ def main() -> None:
         fail("Falta la vegetación natural de sotobosque.")
     if "function createWildlifeAnimal(" not in index_html or "function updateWildlife(dt)" not in index_html or "updateWildlife(dt);" not in index_html:
         fail("Falta la fauna salvaje animada.")
+    if "function isSafeIslandGroundPoint(" not in index_html or "return null;" not in index_html[index_html.find("function sampleGroundPoint("):index_html.find("land.forEach((is,idx)=>{", index_html.find("function sampleGroundPoint("))]:
+        fail("La generación de vegetación no valida tierra firme ni rechaza ubicaciones sin suelo.")
+    if "homeIslandIndex" not in index_html or "isSafeIslandGroundPoint(island,nx,nz,Infinity,1.05,.52)" not in index_html:
+        fail("La fauna puede abandonar su isla o avanzar sobre el mar.")
+    if "RaiderCrewMount_" not in index_html or "if(parts.vesselMount)" not in index_html:
+        fail("La tripulación del drakkar no está anclada a la cubierta.")
+    if "HutTimberCore" in index_html or "HutEndWallPlank_" not in index_html or "HutSideWallPlank_" not in index_html:
+        fail("La cabaña todavía usa un bloque macizo en lugar de paredes de tablones.")
+    if "PierSupportPile_" not in index_html:
+        fail("El muelle no tiene pilotes que lo unan al lecho marino.")
+    if "FACTION_BADGE_MAX_DISTANCE=28" not in index_html or "parts.factionBadge.isVisible=distanceSq<maxSq" not in index_html:
+        fail("Las insignias de facción lejanas siguen renderizándose como puntos rojos.")
 
     expected_guest = {
         "guest.html": "guest-file-manifest.webmanifest",
