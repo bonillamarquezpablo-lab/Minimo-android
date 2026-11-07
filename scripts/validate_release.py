@@ -430,8 +430,8 @@ def main() -> None:
         fail("La generación del terreno y la hierba debe reutilizar buffers compactos y hashes deterministas.")
     if "const grassGenerationTask=createRealGrass();" not in index_html or "await Promise.all([grassGenerationTask,wildlifePreparationTask]);" not in index_html:
         fail("Los perfiles de calidad deben poder preparar vegetación y fauna en paralelo.")
-    if "startupAudioPreload.then(" not in index_html or "audioPreloadResult=await startupAudioPreload" in index_html:
-        fail("La precarga de audio opcional no debe bloquear la apertura del mundo.")
+    if "if(isPerformanceMode)" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html:
+        fail("Rendimiento espera el audio; Calidad conserva su precarga paralela.")
     if "antialias:activeGraphicsProfile!=='performance'" not in index_html or "(isTouchDevice?2048:" not in index_html:
         fail("El perfil de calidad en iPhone debe conservar antialiasing y sombras de alta resolución.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
