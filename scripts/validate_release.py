@@ -153,8 +153,8 @@ def main() -> None:
         fail("La fauna debe validar el cuerpo riggeado y alinear el modelo tras reparentar sus raíces.")
     if "const normalized=group=>" not in index_html or "const pickExact=name=>playable.find(group=>normalized(group)===name)||null;" not in index_html or "pickExact('animalarmature'+name)" not in index_html:
         fail("La fauna debe priorizar los clips canónicos Idle/Walk/Gallop y usar AnimalArmature como respaldo.")
-    if "const segments=Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)))" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
-        fail("Calidad debe construir una banda continua y de alta resolución alrededor de toda la costa.")
+    if "const segments=isPerformanceMode?(isConstrainedMobile?112:160):Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)))" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
+        fail("Calidad debe construir una banda costera de alta resolución y Rendimiento una versión reducida.")
     if "foam.mesh.updateVerticesData(B.VertexBuffer.ColorKind,colors,false,false)" not in index_html or "foam.retreatResidue[col]*retreatFade+Math.min(.48,retreat*3.4)" not in index_html:
         fail("La espuma costera debe depositarse al retroceder el agua, acumular visibilidad y disiparse gradualmente.")
     if "const initialShoreline=shorelineFoamRadius(island,angle,oceanTime)" not in index_html or "colors[color+3]=0;" not in index_html:
@@ -386,8 +386,8 @@ def main() -> None:
         fail("La espuma debe apagarse en mar abierto y liberar la malla de la isla anterior.")
     if "if(nextIndex>=0)buildTidalFoam(land[nextIndex],nextIndex);" not in index_html:
         fail("La malla de espuma solo debe construirse para la isla activa.")
-    if "const segments=Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)))" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
-        fail("La isla activa debe usar la malla costera continua de alta resolución.")
+    if "const segments=isPerformanceMode?(isConstrainedMobile?112:160):Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)))" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
+        fail("La isla activa debe usar la malla costera continua, adaptada al presupuesto gráfico.")
     if "const initialShoreline=shorelineFoamRadius(island,angle,oceanTime)" not in index_html or "lastShoreline.fill(NaN);foamCenter.fill(NaN);" not in index_html:
         fail("La espuma debe inicializar su historial de costa y no mostrarse como una banda permanente.")
     if "inlandDistance<4.8" not in index_html or "foamBreath=.92+.08*wavePulse" not in index_html:
@@ -409,7 +409,7 @@ def main() -> None:
     shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"))]
     if "const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z);" not in shoreline_body or ".42;" in shoreline_body:
         fail("El cruce agua/arena debe usar el perfil real completo; no puede sustituir el mar exterior por una altura plana.")
-    if "radialOffsets=[-.72,-.54,-.36,-.18,-.02,.13,.28,.43,.58]" not in index_html or "water>ground?water+.014:ground+.022" not in index_html:
+    if "radialOffsets=isPerformanceMode?[-.52,-.26,0,.26,.52]:[-.72,-.54,-.36,-.18,-.02,.13,.28,.43,.58]" not in index_html or "water>ground?water+.014:ground+.022" not in index_html:
         fail("La malla de espuma debe ser una cinta estrecha, blanca y apoyada en la superficie real de agua o arena.")
     if "foam.foamCenter[col]=(previousShore+shoreline)*.5-.06" not in index_html or "const lace=.18+.82*foamPattern[vertex]" not in index_html or "const alpha=Math.min(.94,foamVisibility*whiteFoamProfile*innerFade*outerFade*Math.pow(lace,.92)*(.94+.06*secondary));" not in index_html:
         fail("La espuma debe quedar sobre la franja recién descubierta, ser claramente visible y mantener fragmentos irregulares.")
