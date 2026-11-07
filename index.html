@@ -2602,7 +2602,7 @@ async function removeStrayDebugGeometry(targetScene){
  M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=isPerformanceMode?.56:.96;
  // El agua recibe un reflejo propio de las islas y del cielo nórdico.
  // El HDRI global se conserva para los materiales PBR, pero nunca se asigna al mar.
- M.water.specularColor=new B.Color3(.62,.76,.82);M.water.specularPower=128;
+ M.water.specularColor=isPerformanceMode?new B.Color3(.32,.41,.46):new B.Color3(.62,.76,.82);M.water.specularPower=isPerformanceMode?54:128;
  if(B.FresnelParameters){M.water.reflectionFresnelParameters=new B.FresnelParameters();M.water.reflectionFresnelParameters.isEnabled=true;M.water.reflectionFresnelParameters.leftColor=new B.Color3(.08,.18,.23);M.water.reflectionFresnelParameters.rightColor=new B.Color3(.68,.82,.86);M.water.reflectionFresnelParameters.bias=.035;M.water.reflectionFresnelParameters.power=2.1;}
   M.windowGlow.emissiveColor=new B.Color3(.8,.38,.10);M.windowGlow.disableLighting=false;M.windowGlow.specularColor=new B.Color3(.2,.12,.04);
   M.ember.emissiveColor=new B.Color3(1,.22,.035);M.ember.disableLighting=true;M.ember.alpha=.96;
