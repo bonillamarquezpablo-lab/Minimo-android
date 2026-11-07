@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.228"
+EXPECTED_VERSION = "0.6.229"
 
 HTML_PAGES = (
     "index.html",
@@ -131,7 +131,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'8',build:'0.6.228'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html:
+    if "reportVersion:'8',build:'0.6.229'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -171,6 +171,16 @@ def main() -> None:
         fail("Rendimiento también debe conservar una rompiente costera simplificada con lámina somera y cresta visible.")
     if "const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?64:112))):(isTouchDevice?(isConstrainedMobile?176:192):256)" not in index_html:
         fail("El aumento de teselación del agua debe limitarse al perfil Calidad; Rendimiento conserva su presupuesto.")
+    water_loop_start = index_html.find("for(let col=0;col<=segments;col++){", index_html.find("function animateWater(dt)"))
+    water_mesh_update = index_html.find("foam.mesh.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);", water_loop_start)
+    breaker_update = index_html.find("const breakerPhase=", water_loop_start)
+    if water_loop_start < 0 or breaker_update < water_loop_start or water_mesh_update < breaker_update:
+        fail("El cálculo de rompiente debe estar dentro del bucle angular que define cs, sn, col y shoreline; no puede usar variables fuera de ámbito.")
+    breaker_scope = index_html[water_loop_start:water_mesh_update]
+    if "const shoreX=island.x+cs*shoreline,shoreZ=island.z+sn*shoreline;" not in breaker_scope or "const residual=foam.retreatResidue[col];" not in breaker_scope or "for(let washRow=0;washRow<washRows;washRow++)" not in breaker_scope:
+        fail("Cada segmento de costa debe calcular su propia lámina de agua y espuma usando sus coordenadas locales.")
+    if "const wavePhase=(shoreX+shoreZ*.62)*.052+oceanTime*1.28;" in index_html:
+        fail("No debe quedar la versión antigua de la rompiente fuera del bucle angular.")
     if "const breakStrength=smooth01((waveCrest-.30)/.65);" not in index_html or "const waterFilm=exposedSand*coverage*(.055+.105*waveCrest);" not in index_html or "const whitewater=breakStrength*leadingEdge*cellular*.66;" not in index_html or "const angularWaveStep=.052*shoreline*(-sn+.62*cs)*(Math.PI*2/segments);" not in index_html or "const lipProfile=Math.exp(-Math.pow((fraction-.78)/.26,2));" not in index_html:
         fail("La rompiente debe suavizar cresta y labio, avanzar como lámina y formar espuma fragmentada sin puntas geométricas.")
     if "if(isPerformanceMode)return;" in index_html[index_html.find("function buildTidalFoam(island,index)"):index_html.find("let activeTidalFoamIslandIndex")]:
@@ -472,7 +482,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.228</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.229</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
