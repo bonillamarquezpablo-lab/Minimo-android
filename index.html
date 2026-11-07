@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.205">
-<meta name="el-sin-nombre-repair" content="0.6.205 time-sliced grass, cached terrain hashes, parallel quality startup, cached PWA shell and full iOS quality">
+<meta name="el-sin-nombre-build" content="0.6.206">
+<meta name="el-sin-nombre-repair" content="0.6.206 low-end DPR recovery, bounded dynamic shadows, restored ground cover and deferred NPC imports">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.205</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.206</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2209,7 +2209,7 @@ async function removeStrayDebugGeometry(targetScene){
  let shadowGen=null,currentShadowSize=shadowMapSize;
  // CALIDAD conserva la configuración completa. RENDIMIENTO reduce el coste gráfico,
  // no desactiva ni sustituye ningún sistema de juego.
- const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.48:(isGalaxyA12LowEndMobile?.50:(isConstrainedMobile ? .54 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35))))):Math.min(deviceDpr,isTouchDevice?2.60:2.0);
+ const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35))))):Math.min(deviceDpr,isTouchDevice?2.60:2.0);
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
  const maxAnisotropy=Math.max(1,Math.min(isPerformanceMode?(isUltraLowEndMobile?1:(isConstrainedMobile?2:4)):16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
@@ -2250,7 +2250,7 @@ async function removeStrayDebugGeometry(targetScene){
  if('shadowMinZ' in sun)sun.shadowMinZ=1;
  if('shadowMaxZ' in sun)sun.shadowMaxZ=245;
  try{
-  shadowGen=(!isConstrainedMobile&&B.ShadowGenerator)?new B.ShadowGenerator(shadowMapSize,sun):null;
+  shadowGen=(!isConstrainedMobile||isUltraLowEndMobile||isGalaxyA12LowEndMobile)&&B.ShadowGenerator?new B.ShadowGenerator(shadowMapSize,sun):null;
   if(shadowGen){
    shadowGen.usePercentageCloserFiltering=!isPerformanceMode;
    shadowGen.filteringQuality=isPerformanceMode?B.ShadowGenerator.QUALITY_LOW:B.ShadowGenerator.QUALITY_HIGH;
@@ -2259,11 +2259,11 @@ async function removeStrayDebugGeometry(targetScene){
    // Conserva el mapa 2048 y el filtrado alto; solo evita recalcular la misma sombra
    // en cada fotograma. El movimiento y la animación siguen renderizándose cada frame.
    const shadowMap=shadowGen.getShadowMap&&shadowGen.getShadowMap();
-   if(shadowMap)shadowMap.refreshRate=isPerformanceMode?10:2;
+   if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:2);
   }
  }catch(shadowInitError){console.warn('Sombras dinámicas no disponibles; el juego continuará con iluminación directa:',shadowInitError);shadowGen=null;}
  const managedWorldShadowGroups=[];let managedActiveWorldShadowCount=0,managedShadowCullAt=0;
- function addModelShadow(root,maxCasters=isConstrainedMobile?1:(isPerformanceMode?2:7)){
+ function addModelShadow(root,maxCasters=isUltraLowEndMobile?1:(isConstrainedMobile?2:(isPerformanceMode?2:7))) {
   if(!root||!root.getChildMeshes)return;
   const meshes=root.getChildMeshes(false).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0);
   meshes.forEach(mesh=>{mesh.receiveShadows=true;});
@@ -5063,7 +5063,7 @@ async function removeStrayDebugGeometry(targetScene){
     const wasVisible=real.distanceVisible!==false,wantVisible=wasVisible?d2<(hideRadius*hideRadius):d2<(showRadius*showRadius);
     if(wantVisible!==wasVisible){real.distanceVisible=wantVisible;parts.root.setEnabled(wantVisible);}
     // Histeresis de sombras: mantiene resolución y materiales completos cerca del jugador.
-    const wantCasters=real.shadowCasterActive?d2<(46*46):d2<(36*36);
+    const shadowEnterRadius=isConstrainedMobile?28:36,shadowLeaveRadius=isConstrainedMobile?38:46;const wantCasters=real.shadowCasterActive?d2<(shadowLeaveRadius*shadowLeaveRadius):d2<(shadowEnterRadius*shadowEnterRadius);
     if(wantCasters===real.shadowCasterActive)continue;
     real.shadowCasterMeshes.forEach(mesh=>{
      try{if(wantCasters)shadowGen.addShadowCaster(mesh);else shadowGen.removeShadowCaster(mesh);}catch(_){ }
@@ -5088,7 +5088,7 @@ async function removeStrayDebugGeometry(targetScene){
   const now=performance.now(),interval=isConstrainedMobile?750:1000;
   if(now-managedShadowCullAt<interval)return;managedShadowCullAt=now;
   const activeCamera=scene.activeCamera,focus=activeCamera&&activeCamera.position?activeCamera.position:(onShip?ship.position:player.root.position);
-  const enterRadius=isConstrainedMobile?145:175,leaveRadius=isConstrainedMobile?165:195,enterSq=enterRadius*enterRadius,leaveSq=leaveRadius*leaveRadius;
+  const enterRadius=isConstrainedMobile?58:175,leaveRadius=isConstrainedMobile?72:195,enterSq=enterRadius*enterRadius,leaveSq=leaveRadius*leaveRadius;
   let activeCount=0;
   for(const group of managedWorldShadowGroups){
    const root=group.root;if(!root||root.isDisposed&&root.isDisposed())continue;
@@ -7765,7 +7765,7 @@ function createRealWeapon(type='axe'){
   }
   for(let islandIndex=0;islandIndex<land.length;islandIndex++){
    const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520);
-   const performanceDensity=isConstrainedMobile?.18:(isTouchDevice?.36:.50);
+   const performanceDensity=isConstrainedMobile?(isUltraLowEndMobile?.22:.26):(isTouchDevice?.36:.50);
    const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);
    const want=isPerformanceMode?Math.round(baseWant*performanceDensity):Math.round(baseWant*qualityGrassDensity);
    let placed=0,tries=0;
@@ -10173,8 +10173,9 @@ function updateHUD(){
  function startNpcHumanModels(){
   if(enemyHumanModelsStarted)return enemyHumanLoadTask;
   enemyHumanModelsStarted=true;
-  console.info('Pantalla de carga: preparando los modelos humanos del perfil gráfico seleccionado.');
+  console.info('Preparando modelos humanos secundarios sin bloquear el arranque del mundo.');
   enemyHumanLoadTask=loadEnemyHumanCharacters();
+  enemyHumanLoadTask.finally(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
   return enemyHumanLoadTask;
  }
  let enemyHumanRetryPromise=null,enemyHumanRetryAttempts=0,enemyHumanRetryScheduled=false;
@@ -10187,7 +10188,7 @@ function updateHUD(){
  }
  async function retryMissingEnemyVikings(){
   // Evitar descargas/importaciones de NPC una vez abierta la campaña.
-  if(startupAssetsReady||gameStarted||!enemyHumanModelsStarted)return false;
+  if(!enemyHumanModelsStarted)return false;
   if(enemyHumanRetryPromise)return enemyHumanRetryPromise;
   if(!navigator.onLine||!hasMissingEnemyVikings())return false;
   enemyHumanRetryPromise=(async()=>{
@@ -10202,7 +10203,7 @@ function updateHUD(){
   finally{enemyHumanRetryPromise=null;}
  }
  function scheduleMissingEnemyVikingsRetry(delay=12000){
-  if(startupAssetsReady||gameStarted||!enemyHumanModelsStarted||enemyHumanRetryAttempts>=3||enemyHumanRetryScheduled||!hasMissingEnemyVikings())return;
+  if(!enemyHumanModelsStarted||enemyHumanRetryAttempts>=3||enemyHumanRetryScheduled||!hasMissingEnemyVikings())return;
   enemyHumanRetryScheduled=true;enemyHumanRetryAttempts++;
   setTimeout(async()=>{
    enemyHumanRetryScheduled=false;
@@ -10361,8 +10362,23 @@ function updateHUD(){
  // La carga del protagonista y la tanda de NPC se inicia y termina antes del selector.
  // En Rendimiento se mantiene el conjunto humano ligero definido para ese perfil;
  // los demás NPC ya tienen cuerpo, colisión y animación procedural en la escena.
- const npcPreparationTask=startNpcHumanModels();
- const resourceResults=await Promise.allSettled([playerHumanLoadPromise,npcPreparationTask]);
+ let resourceResults;
+ if(isPerformanceMode){
+  // En móviles limitados, el jugador y el primer frame tienen prioridad: los siete
+  // NPC 3D previstos por el perfil se importan tras mostrar la intro, sobre los proxies existentes.
+  const playerPreparation=await Promise.allSettled([playerHumanLoadPromise]);
+  resourceResults=[...playerPreparation,{status:'background'}];
+  setTimeout(()=>{
+   const npcPreparationTask=startNpcHumanModels();
+   npcPreparationTask.then(
+    result=>console.info('Modelos NPC del perfil Rendimiento preparados en segundo plano:',result),
+    error=>console.warn('Los modelos NPC siguen usando sus proxies; se reintentará la carga:',error)
+   );
+  },900);
+ }else{
+  const npcPreparationTask=startNpcHumanModels();
+  resourceResults=await Promise.allSettled([playerHumanLoadPromise,npcPreparationTask]);
+ }
  console.info('Personajes preparados antes de entrar:',{
   protagonist:resourceResults[0].status,
   npcs:resourceResults[1].status,
