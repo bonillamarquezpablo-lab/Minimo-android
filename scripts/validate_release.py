@@ -360,8 +360,8 @@ def main() -> None:
         fail("El suelo no utiliza escalas orgánicas de textura.")
     if "for(let i=0;i<8200;i++)" not in index_html or "terrainPBR.bumpTexture.level=GROUND_PHASE_A_DEFAULTS.relief;" not in index_html:
         fail("Falta el detalle fino de suelo o su relieve PBR.")
-    if "const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));" not in index_html:
-        fail("La distribución no rellena las celdas vacías.")
+    if "for(const sample of candidateCells)" not in index_html or "if(occupiedGridCells[sample])continue;" not in index_html or "for(let attempt=0;attempt<4&&placed<want;attempt++)" not in index_html:
+        fail("La distribución no rellena las celdas vacías con el buffer tipado y el segundo barrido.")
     if "function createShrub(" in index_html or "IslandShrubBatch_" in index_html or "NorseShrubsIsland_" in index_html:
         fail("Siguen presentes los arbustos decorativos low-poly aislados.")
     if "function isVegetationTrailClearance(" not in index_html or "vegetationTrailPaths.push(" not in index_html or "isVegetationTrailClearance(x,z,1.35)" not in index_html:
