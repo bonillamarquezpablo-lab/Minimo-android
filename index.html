@@ -2200,21 +2200,26 @@ async function removeStrayDebugGeometry(targetScene){
  const redmi8aHardwareMatch=/Redmi\s*8A|M2006C3L[A-Z0-9]*|Snapdragon\s*439|Adreno[- ]?505/i.test(hardwareSignature);
  const galaxyA12HardwareMatch=/SM-A12[57][A-Z0-9]*|Exynos\s*850|MT6765|Helio\s*P35/i.test(hardwareSignature);
  const galaxyA12GpuMatch=/Mali[- ]?G52(?:\s*MP1)?|PowerVR.*GE8320/i.test(hardwareSignature);
+ // Galaxy A12 Nacho (familia SM-A127): Exynos 850 / S5E3830 y Mali-G52 MP1.
+ // Se separa del A12 Helio P35 para reservarle un presupuesto propio en Rendimiento.
+ const galaxyA12NachoHardwareMatch=/SM-A127[A-Z0-9]*|Exynos\s*850|S5E3830/i.test(hardwareSignature);
+ const galaxyA12NachoGpuMatch=/Mali[- ]?G52(?:\s*MP1)?/i.test(graphicsRenderer);
  const constrainedGpuMatch=/SM-A12[57][A-Z0-9]*|SM-A127F|Mali[- ]?G52(?:\s*MP1)?|PowerVR.*GE8320|SM-A10[0-9A-Z]*|Exynos\s*7884|Mali[- ]?G71(?:\s*MP2)?|Redmi\s*8A|M2006C3L[A-Z0-9]*|Snapdragon\s*439|Adreno[- ]?505/i.test(hardwareSignature);
  const constrainedHardware=!!(isTouchDevice&&(constrainedGpuMatch||(reportedMemory>0&&reportedMemory<=4&&(Number(navigator.hardwareConcurrency)||0)<=8)));
  const iosMemoryBlindMobile=!!(isIOSDevice&&(!reportedMemory||reportedMemory<=4));
  const isConstrainedMobile=!!(isPerformanceMode&&(iosMemoryBlindMobile||(isTouchDevice&&(constrainedHardware||reportedMemory<=3))));
  const isUltraLowEndMobile=!!(isPerformanceMode&&isTouchDevice&&(legacyLowEndGpuMatch||redmi8aHardwareMatch||(reportedMemory>0&&reportedMemory<=2)));
  const isGalaxyA12LowEndMobile=!!(isPerformanceMode&&isTouchDevice&&(galaxyA12HardwareMatch||galaxyA12GpuMatch));
+ const isGalaxyA12NachoPerformance=!!(isPerformanceMode&&isTouchDevice&&(galaxyA12NachoHardwareMatch||galaxyA12NachoGpuMatch));
  const shadowMapSize=isPerformanceMode?(isConstrainedMobile?256:(isTouchDevice?512:1024)):(isTouchDevice?2048:(reportedMemory>=8?3072:2048));
  let shadowGen=null,currentShadowSize=shadowMapSize;
  // CALIDAD conserva la configuración completa. RENDIMIENTO reduce el coste gráfico,
  // no desactiva ni sustituye ningún sistema de juego.
- const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35))))):Math.min(deviceDpr,isTouchDevice?2.60:2.0);
+ const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?2.60:2.0);
  const renderScale=1/qualityDpr;
  engine.setHardwareScalingLevel(renderScale);
- const maxAnisotropy=Math.max(1,Math.min(isPerformanceMode?(isUltraLowEndMobile?1:(isConstrainedMobile?2:4)):16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
- console.info('EL SIN NOMBRE render profile:',{profile:activeGraphicsProfile,devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize,constrainedHardware,ultraLowEndMobile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile});
+ const maxAnisotropy=Math.max(1,Math.min(isPerformanceMode?((isUltraLowEndMobile||isGalaxyA12NachoPerformance)?1:(isConstrainedMobile?2:4)):16,Number(engine.getCaps&&engine.getCaps().maxAnisotropy)||16));
+ console.info('EL SIN NOMBRE render profile:',{profile:activeGraphicsProfile,devicePixelRatio:deviceDpr,renderDpr:qualityDpr,hardwareScalingLevel:renderScale,anisotropy:maxAnisotropy,shadowMapSize,constrainedHardware,ultraLowEndMobile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,galaxyA12NachoPerformanceProfile:isGalaxyA12NachoPerformance});
  let fpsSample=0,qualityDprCurrent=qualityDpr;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
  const targetFrameRate=60;
@@ -2264,7 +2269,7 @@ async function removeStrayDebugGeometry(targetScene){
   }
  }catch(shadowInitError){console.warn('Sombras dinámicas no disponibles; el juego continuará con iluminación directa:',shadowInitError);shadowGen=null;}
  const managedWorldShadowGroups=[];let managedActiveWorldShadowCount=0,managedShadowCullAt=0;
- function addModelShadow(root,maxCasters=isUltraLowEndMobile?1:(isConstrainedMobile?2:(isPerformanceMode?2:7))) {
+ function addModelShadow(root,maxCasters=(isUltraLowEndMobile||isGalaxyA12NachoPerformance)?1:(isConstrainedMobile?2:(isPerformanceMode?2:7))) {
   if(!root||!root.getChildMeshes)return;
   const meshes=root.getChildMeshes(false).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0);
   meshes.forEach(mesh=>{mesh.receiveShadows=true;});
@@ -2619,7 +2624,7 @@ async function removeStrayDebugGeometry(targetScene){
  const shadowMaterial=new B.StandardMaterial('SoftShadowMaterial',scene);shadowMaterial.diffuseTexture=shadowTexture;shadowMaterial.opacityTexture=shadowTexture;shadowMaterial.useAlphaFromDiffuseTexture=true;shadowMaterial.disableLighting=true;shadowMaterial.backFaceCulling=false;shadowMaterial.specularColor=new B.Color3(0,0,0);shadowMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;shadowMaterial.disableDepthWrite=true;
  function attachContactShadow(root,name,radius=.9){const disc=B.MeshBuilder.CreateDisc(name,{radius,tessellation:28},scene);disc.parent=root;disc.rotation.x=-Math.PI/2;disc.position=v(0,.025,0);disc.material=shadowMaterial;disc.isPickable=false;return disc;}
  const land=[{x:0,z:0,r:60,name:'Isla del Cuervo'},{x:135,z:14,r:31,name:'Costa de Skall'},{x:-132,z:45,r:33,name:'Isla de los Pinos'},{x:28,z:143,r:33,name:'Bahía de Hrafn'},{x:146,z:-132,r:25,name:'Islote del Hielo'},{x:-145,z:-126,r:27,name:'Isla de las Cenizas'},{x:286,z:154,r:33,name:'Cabo de Bruma'},{x:-286,z:232,r:31,name:'Isla del Cuerno'},{x:292,z:-264,r:36,name:'Costa de las Tormentas'},{x:470,z:100,r:31,name:'Skjoldheim'},{x:-470,z:-310,r:34,name:'Isla de los Juramentos'},{x:60,z:465,r:34,name:'Isla del Altar'},{x:-45,z:-465,r:32,name:'Cabo del Vigía'}];
- const waterSubdivisions=isPerformanceMode?(isConstrainedMobile?40:(isTouchDevice?64:112)):(isTouchDevice?176:224);
+ const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?64:112))):(isTouchDevice?176:224);
  const ground=B.MeshBuilder.CreateGround('ocean',{width:1050,height:1050,subdivisions:waterSubdivisions,updatable:true},scene);ground.position.y=0;ground.material=M.water;ground.isPickable=false;ground.receiveShadows=false;
  const waterBase=ground.getVerticesData(B.VertexBuffer.PositionKind).slice(),waterPositions=waterBase.slice(),waterIndices=ground.getIndices(),waterNormals=new Float32Array(waterBase.length);
  const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:(isTouchDevice?125:180)):(isTouchDevice?250:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS,WATER_DETAIL_FADE_START_SQ=WATER_DETAIL_RADIUS_SQ*.55;
@@ -2683,8 +2688,8 @@ async function removeStrayDebugGeometry(targetScene){
   }
  }
  let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0,waterFarAccumulator=0;
- const waterVertexStep=isPerformanceMode?(isUltraLowEndMobile?1/6:(isGalaxyA12LowEndMobile?1/7:(isConstrainedMobile?1/8:(isTouchDevice?1/12:1/20)))):(isTouchDevice?1/30:1/40);
- const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/3:1/6)))):(isTouchDevice?1/8:1/12);
+ const waterVertexStep=isPerformanceMode?(isUltraLowEndMobile?1/6:(isGalaxyA12NachoPerformance?1/5:(isGalaxyA12LowEndMobile?1/7:(isConstrainedMobile?1/8:(isTouchDevice?1/12:1/20))))):(isTouchDevice?1/30:1/40);
+ const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12NachoPerformance?1.35:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/3:1/6))))):(isTouchDevice?1/8:1/12);
  const waterFarStep=isPerformanceMode?(isConstrainedMobile?.36:.25):.14;
  function waterHeight(x,z,t=oceanTime,detailFade=1){
   // Layered directional swells: broad North Sea swell plus shorter cross-waves and capillary ripples.
@@ -4204,7 +4209,7 @@ async function removeStrayDebugGeometry(targetScene){
  const wakeMaterial=M.foam.clone('DrakkarWakeMaterial');wakeMaterial.alpha=0;wakeMaterial.emissiveColor=new B.Color3(.12,.20,.22);
  const shipWake=[];for(let side of [-1,1]){const strip=B.MeshBuilder.CreatePlane('DrakkarWake_'+side,{width:1.08,height:7.1,sideOrientation:B.Mesh.DOUBLESIDE},scene);strip.parent=ship;strip.rotation.x=Math.PI/2;strip.position=v(side*.48,.42,-7.45);strip.material=wakeMaterial;shipWake.push(strip);}// El casco conserva su sombra; la vela y el mástil no proyectan una franja desproporcionada sobre la isla.
  addModelShadow(ship,1);
- const VESSEL_SPRAY_COUNT=isUltraLowEndMobile?24:(isGalaxyA12LowEndMobile?36:(isConstrainedMobile?48:96));
+ const VESSEL_SPRAY_COUNT=isUltraLowEndMobile?24:(isGalaxyA12NachoPerformance?28:(isGalaxyA12LowEndMobile?36:(isConstrainedMobile?48:96)));
  const vesselSprayMesh=B.MeshBuilder.CreateSphere('VesselWaterSprayBatch',{diameter:1,segments:8},scene);
  const vesselSprayMaterial=new B.StandardMaterial('VesselWaterSprayMaterial',scene);
  vesselSprayMaterial.diffuseColor=new B.Color3(.90,.97,1.0);vesselSprayMaterial.emissiveColor=new B.Color3(.20,.31,.36);
@@ -7975,7 +7980,7 @@ function createRealWeapon(type='axe'){
   }
   for(let islandIndex=0;islandIndex<land.length;islandIndex++){
    const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520);
-   const performanceDensity=isConstrainedMobile?(isUltraLowEndMobile?.22:.26):(isTouchDevice?.36:.50);
+   const performanceDensity=isConstrainedMobile?(isUltraLowEndMobile?.22:(isGalaxyA12NachoPerformance?.18:.26)):(isTouchDevice?.36:.50);
    const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);
    const want=isPerformanceMode?Math.round(baseWant*performanceDensity):Math.round(baseWant*qualityGrassDensity);
    let placed=0,tries=0;
@@ -8146,7 +8151,7 @@ function createRealWeapon(type='axe'){
  }
  
  // Distant gulls circle the coast; simple articulated wings keep them cheap on mobile.
- for(let i=0;i<(isUltraLowEndMobile?3:(isGalaxyA12LowEndMobile?4:9));i++){
+ for(let i=0;i<(isUltraLowEndMobile?3:(isGalaxyA12NachoPerformance?3:(isGalaxyA12LowEndMobile?4:9)));i++){
   const root=newGroup('CoastalGull_'+i,null),body=sphere('GullBody_'+i,root,[0,0,0],[.24,.115,.43],distantGullMaterial,10);
   const left=box('GullLeftWing_'+i,root,[-.39,.015,0],[.78,.045,.15],distantGullMaterial,[0,0,-.08]);
   const right=box('GullRightWing_'+i,root,[.39,.015,0],[.78,.045,.15],distantGullMaterial,[0,0,.08]);
@@ -8194,9 +8199,9 @@ function createRealWeapon(type='axe'){
  if(!isUltraLowEndMobile&&!isGalaxyA12LowEndMobile)loadRiggedCoastalGulls();
  // Partículas reutilizables: evita crear y destruir geometría en cada impacto.
  const effects=[],effectPool=[];
- const MAX_ACTIVE_EFFECTS=isUltraLowEndMobile?48:(isGalaxyA12LowEndMobile?72:(isConstrainedMobile?96:180));
+ const MAX_ACTIVE_EFFECTS=isUltraLowEndMobile?48:(isGalaxyA12NachoPerformance?56:(isGalaxyA12LowEndMobile?72:(isConstrainedMobile?96:180)));
  const driftingLeaves=[];
- for(let i=0;i<(isUltraLowEndMobile?0:(isGalaxyA12LowEndMobile?2:(isConstrainedMobile?3:10)));i++){
+ for(let i=0;i<(isUltraLowEndMobile?0:(isGalaxyA12NachoPerformance?1:(isGalaxyA12LowEndMobile?2:(isConstrainedMobile?3:10)));i++){
   const leaf=sphere('WindborneLeaf_'+i,null,[rand(-34,34),rand(1.5,5.0),rand(-34,34)],[.045,.012,.10],i%2?M.leafSun:M.ochreCloth,6);
   leaf.rotation.z=rand(-.5,.5);driftingLeaves.push({mesh:leaf,phase:rand(0,Math.PI*2),speed:rand(.35,.85)});
  }
@@ -8592,7 +8597,7 @@ function villageHostileDefenders(vl){
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
    boat:{onShip,velocity:Number(boatVelocity.toFixed(3)),position:{x:Number(ship.position.x.toFixed(2)),y:Number(ship.position.y.toFixed(2)),z:Number(ship.position.z.toFixed(2))},rotation:{x:Number(ship.rotation.x.toFixed(3)),y:Number(ship.rotation.y.toFixed(3)),z:Number(ship.rotation.z.toFixed(3))},flatWakeStrips:shipWake.map(w=>({name:w.name,enabled:w.isEnabled()})),activeSprayParticles:activeSpray,sprayCapacity:VESSEL_SPRAY_COUNT},
-   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
+   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,galaxyA12NachoPerformanceProfile:isGalaxyA12NachoPerformance,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
    npcs:{enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,ambientPeople:ambientPeople.length,ambientMoving:ambientPeople.filter(n=>Number(n.parts.actualMoveSpeed)>.1).length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,npcClips:humanEnemyParts.filter(p=>p.realHuman).slice(0,8).map(p=>({name:p.name,walk:p.realHuman.walk&&p.realHuman.walk.name,walkPlaying:!!(p.realHuman.walk&&p.realHuman.walk.isPlaying),current:p.realHuman.current&&p.realHuman.current.name,enabled:p.root.isEnabled()}))}
   };
  };
@@ -10446,7 +10451,7 @@ function updateHUD(){
  // Island streaming for the weakest Android GPUs: keep only the island occupied by
  // the player/longship renderable. All world data, collisions, AI, saves and conquest
  // state remain resident; distant visual roots are hidden, never disposed or deleted.
- const ultraLowEndIslandStreaming=!!(isPerformanceMode&&isUltraLowEndMobile);
+ const ultraLowEndIslandStreaming=!!(isPerformanceMode&&(isUltraLowEndMobile||isGalaxyA12NachoPerformance));
  const islandStreamGroups=[],islandStreamRootLookup=new Map();
  let islandStreamActiveIndex=-1,islandStreamClock=0,islandStreamCulledMeshCount=0;
  function islandStreamIslandAt(x,z){
