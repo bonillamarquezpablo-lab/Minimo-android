@@ -2800,26 +2800,7 @@ async function removeStrayDebugGeometry(targetScene){
    waterLastNormalMs=performance.now()-normalStart;waterNormalAccumulator%=waterNormalStep;
   }
   const nearbyRadiusSq=(WATER_DETAIL_RADIUS+75)*(WATER_DETAIL_RADIUS+75);
-  for(const foam of tidalFoamMeshes){
-   const dx=foam.centerX-waterFocusX,dz=foam.centerZ-waterFocusZ;if(dx*dx+dz*dz>nearbyRadiusSq)continue;
-   const island=foam.island;
-   for(const patch of foam.patches){
-    const shoreline=shorelineFoamRadius(island,patch.angle,oceanTime);
-    for(let row=0;row<3;row++)for(let side=0;side<2;side++){
-     const offset=patch.start+(row*2+side)*3;
-     if(!Number.isFinite(shoreline)){
-      foam.positions[offset]=island.x;foam.positions[offset+1]=-3.2;foam.positions[offset+2]=island.z;
-      continue;
-     }
-     const angle=patch.angle+(side===0?-patch.halfArc:patch.halfArc);
-     const radius=shoreline+(row===0?.025:(row===1?.14:.30));
-     const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-     // Shore wash is always on the submerged side of the live terrain/water intersection.
-     foam.positions[offset]=x;foam.positions[offset+1]=waterHeight(x,z,oceanTime)+.024;foam.positions[offset+2]=z;
-    }
-   }
-   foam.mesh.updateVerticesData(B.VertexBuffer.PositionKind,foam.positions,false);
-  }
+  // Detached seaward foam ribbons are intentionally removed; shore wash lives on the sand heightfield.
   for(const wave of shorelineWaves){
    const dx=wave.x-waterFocusX,dz=wave.z-waterFocusZ;if(dx*dx+dz*dz>nearbyRadiusSq)continue;
    const pulse=Math.sin(oceanTime*1.05+wave.phase),secondary=Math.sin(oceanTime*.63+wave.phase*1.7);
@@ -3370,39 +3351,7 @@ async function removeStrayDebugGeometry(targetScene){
   function reset(){stepDistance=0;alternateFoot=0;hasLastStepPosition=false;footstepsEmitted=0;lastFootstepSegmentLength=0;}
   return {update,reset,counts:()=>({imprints:imprints.reduce((count,item)=>count+(item.active?1:0),0),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3))})};
  })();
- const tidalFoamMeshes=[];
- function buildTidalFoam(island,index){
-  const positions=[],indices=[],colors=[],patches=25,patchMeta=[];
-  for(let i=0;i<patches;i++){
-   if(i%5===0)continue;
-   const angle=i/patches*Math.PI*2+Math.sin(i*2.17+index)*.018,halfArc=.026+(i%4)*.008,start=positions.length/3;
-   const radius=shorelineFoamRadius(island,angle,oceanTime);
-   for(let row=0;row<3;row++){
-    // All three rows sit at or beyond the live shoreline intersection, never across dry sand.
-    const radial=row===0?.025:(row===1?.14:.30);
-    for(let side=0;side<2;side++){
-     const a=angle+(side===0?-halfArc:halfArc),r=(Number.isFinite(radius)?radius:island.r*1.09)+radial,x=island.x+Math.cos(a)*r,z=island.z+Math.sin(a)*r;
-     positions.push(x,waterHeight(x,z,oceanTime)+.024,z);
-     const edgeFade=(row===1?1:.18)*(side===0?.62:.78),alpha=edgeFade*(.16+((i*7)%5)*.018);
-     colors.push(.78,.86,.82,alpha);
-    }
-   }
-   patchMeta.push({angle,halfArc,start:(start*3)});
-   for(let row=0;row<2;row++){const a=start+row*2,b=a+2;indices.push(a,b,a+1,a+1,b,b+1);}
-  }
-  if(!indices.length)return;
-  const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
-  const mesh=new B.Mesh('DynamicSubmergedShoreWash_'+index,scene),data=new B.VertexData();
-  data.positions=positions;data.indices=indices;data.normals=normals;data.colors=colors;data.applyToMesh(mesh);
-  const material=new B.StandardMaterial('ShoreWashMaterial_'+index,scene);
-  material.diffuseColor=new B.Color3(.82,.88,.85);material.emissiveColor=new B.Color3(.035,.048,.044);
-  material.specularColor=new B.Color3(.015,.018,.016);material.useVertexColors=true;material.useVertexAlpha=true;
-  material.backFaceCulling=false;material.alpha=.54;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;mesh.material=material;
-  mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.hasVertexAlpha=true;
-  tidalFoamMeshes.push({mesh,positions:new Float32Array(positions),patches:patchMeta,island,centerX:island.x,centerZ:island.z});
- }
- // No seaward foam-ring meshes: the old detached wash strips were visibly stranded over open water.
- // Shore foam is rendered only on the land-side beach heightfield.
+ // No extra submerged shore-wash mesh: avoids the detached pale stripe over open water.
  const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
  function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.975;if(dx*dx+dz*dz<r*r)return i;}return -1;}
  // Trails on the main island. Their centre lines also define vegetation-free corridors.
