@@ -10,8 +10,9 @@ on:
 permissions:
   contents: read
 
+# New group releases the recovery run from the orphaned run using the old group.
 concurrency:
-  group: github-pages
+  group: github-pages-recovery
   cancel-in-progress: false
 
 jobs:
@@ -63,12 +64,26 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: build
     permissions:
       contents: read
       pages: write
       id-token: write
     steps:
+      # The previous 0.6.221 attempt was orphaned by GitHub Pages while syncing_files.
+      # Cancel only that exact commit's stale deployment before creating a fresh one.
+      - name: Release stale Pages deployment lock for 0.6.221
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          stale_sha="6b242b60daac742a4d4a6aa7f51bcdfd4db49772"
+          if gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${stale_sha}/cancel"; then
+            echo "Cancelled stale Pages deployment for ${stale_sha}."
+          else
+            echo "::warning::The previous deployment was already terminal or not cancellable; continuing with a fresh deployment attempt."
+          fi
+
       - name: Deploy website to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
