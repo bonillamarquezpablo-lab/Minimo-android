@@ -446,8 +446,8 @@ def main() -> None:
         fail("El perfil A12 Nacho no aplica los límites de malla de agua y actualización previstos.")
     if "shadowGen=(!isConstrainedMobile||isUltraLowEndMobile||isGalaxyA12LowEndMobile)" not in index_html or "const enterRadius=isConstrainedMobile?58:175" not in index_html:
         fail("El perfil A10/A12 no activa sombras dinámicas acotadas por distancia.")
-    if "resourceResults=[...playerPreparation,{status:'background'}]" not in index_html or "npcPreparationTask=startNpcHumanModels();" not in index_html:
-        fail("Los NPC de Rendimiento deben terminar de importarse en segundo plano sin bloquear el primer acceso.")
+    if "resourceResults=await Promise.allSettled([playerHumanLoadPromise,startNpcHumanModels()])" not in index_html or "resourceResults=[...playerPreparation,{status:'background'}]" in index_html:
+        fail("Los NPC GLB previstos en Rendimiento deben terminar de importarse antes de mostrar la intro.")
     if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
         fail("Falta la distribución uniforme con separación mínima.")
     if "const grids=[grid(4,4),grid(10,10),grid(24,24),grid(60,60),grid(144,144),grid(288,288)];" not in index_html:
