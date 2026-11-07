@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.221">
-<meta name="el-sin-nombre-repair" content="0.6.221 full pre-entry asset readiness and low-end Performance rendering reductions">
+<meta name="el-sin-nombre-build" content="0.6.222">
+<meta name="el-sin-nombre-repair" content="0.6.222 full pre-entry asset readiness and low-end Performance rendering reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.221</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.222</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2910,12 +2910,12 @@ async function removeStrayDebugGeometry(targetScene){
  // Solving against the current wave height (instead of a frozen sea level) prevents foam decals
  // from remaining visibly stranded on the dry sand when the tide/wave phase changes.
  function shorelineFoamRadius(island,angle,t=oceanTime){
-  const islandIndex=land.indexOf(island);
+  const islandIndex=land.indexOf(island),dirX=Math.cos(angle),dirZ=Math.sin(angle);
   // Sample the actual beach profile across the whole shoreline bracket.
   // Do not substitute a flat ocean sentinel outside the terrain mesh: that created
   // false/no intersections and sent fallback foam strips out into open water.
   const sample=radius=>{
-   const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
+   const x=island.x+dirX*radius,z=island.z+dirZ*radius;
    const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z);
    return ground-waterHeight(x,z,t);
   };
@@ -2930,13 +2930,20 @@ async function removeStrayDebugGeometry(targetScene){
  const GROUND_PHASE_A_DEFAULTS=Object.freeze({textureRepeat:9.5,relief:.70,roughness:.97});
  const groundPhaseAMaterials=[];
  const islandTerrainMeshes=[];
- const terrainHashCache=new Map();
-  function terrainHash(ix,iz){
-   const key=ix*1048576+iz,cached=terrainHashCache.get(key);
-   if(cached!==undefined)return cached;
-   const n=Math.sin(ix*127.1+iz*311.7+19.19)*43758.5453123,value=n-Math.floor(n);
-   terrainHashCache.set(key,value);return value;
-  }
+ const TERRAIN_HASH_CACHE_LIMIT=65536;
+ const terrainHashCache=new Map(),terrainHashCacheSlots=new Float64Array(TERRAIN_HASH_CACHE_LIMIT),terrainHashCacheValues=new Float64Array(TERRAIN_HASH_CACHE_LIMIT),terrainHashCacheValid=new Uint8Array(TERRAIN_HASH_CACHE_LIMIT);
+ let terrainHashCacheCursor=0;
+ function terrainHash(ix,iz){
+  const key=ix*1048576+iz,cachedSlot=terrainHashCache.get(key);
+  if(cachedSlot!==undefined)return terrainHashCacheValues[cachedSlot];
+  const n=Math.sin(ix*127.1+iz*311.7+19.19)*43758.5453123,value=n-Math.floor(n);
+  const slot=terrainHashCacheCursor,oldKey=terrainHashCacheSlots[slot];
+  if(terrainHashCacheValid[slot]&&terrainHashCache.get(oldKey)===slot)terrainHashCache.delete(oldKey);
+  terrainHashCache.set(key,slot);
+  terrainHashCacheSlots[slot]=key;terrainHashCacheValues[slot]=value;terrainHashCacheValid[slot]=1;
+  terrainHashCacheCursor=(slot+1)%TERRAIN_HASH_CACHE_LIMIT;
+  return value;
+ }
  function terrainValueNoise(x,z){
   const ix=Math.floor(x),iz=Math.floor(z),fx=x-ix,fz=z-iz;
   const u=fx*fx*(3-2*fx),v=fz*fz*(3-2*fz);
@@ -3080,7 +3087,8 @@ async function removeStrayDebugGeometry(targetScene){
  const GroundDynamics=(()=>{
   const maxImprints=isPerformanceMode?(isConstrainedMobile?18:28):64,maxParticles=isPerformanceMode?22:48;
   const imprintCols=13,imprintRows=23,imprintVertexCount=imprintCols*imprintRows,imprintIndicesPerFoot=(imprintCols-1)*(imprintRows-1)*6;
-  let stepDistance=0,alternateFoot=0,beachClock=0,imprintCursor=0,particleCursor=0,lastStepX=0,lastStepZ=0,hasLastStepPosition=false,footstepsEmitted=0,lastFootstepSegmentLength=0;
+  let stepDistance=0,alternateFoot=0,beachClock=0,imprintCursor=0,particleCursor=0,lastStepX=0,lastStepZ=0,hasLastStepPosition=false,footstepsEmitted=0,lastFootstepSegmentLength=0,groundRelaxAccumulator=0;
+  const GROUND_RELAX_INTERVAL=1/30;
   const imprints=Array.from({length:maxImprints},(_,slot)=>({slot,active:false,age:0,life:1,fadeAccumulator:0,baseAlpha:new Float32Array(imprintVertexCount)}));
   const particles=Array.from({length:maxParticles},(_,slot)=>({slot,life:0,maxLife:1,age:0,x:0,y:-1000,z:0,vx:0,vy:0,vz:0,size:.02,groundY:0,wet:false,r:.7,g:.6,b:.45,a:.8}));
   const imprintMaterial=new B.StandardMaterial('NorseGroundImprintMaterial',scene);
@@ -3334,7 +3342,10 @@ async function removeStrayDebugGeometry(targetScene){
     }
    }
    if(imprintColorsDirty)imprintColorBuffer.updateDirectly(imprintColors,0);
-   relaxGround(dt);
+   groundRelaxAccumulator+=dt;
+   if(groundRelaxAccumulator>=GROUND_RELAX_INTERVAL){
+    const relaxStep=groundRelaxAccumulator;groundRelaxAccumulator=0;relaxGround(relaxStep);
+   }
    let grainBuffersDirty=false;
    for(const particle of particles){
     if(particle.life<=0)continue;
@@ -3391,7 +3402,7 @@ async function removeStrayDebugGeometry(targetScene){
    lastStepX=x;lastStepZ=z;
    groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;
   }
-  function reset(){stepDistance=0;alternateFoot=0;hasLastStepPosition=false;footstepsEmitted=0;lastFootstepSegmentLength=0;}
+  function reset(){stepDistance=0;alternateFoot=0;hasLastStepPosition=false;footstepsEmitted=0;lastFootstepSegmentLength=0;groundRelaxAccumulator=0;}
   return {update,reset,counts:()=>({imprints:imprints.reduce((count,item)=>count+(item.active?1:0),0),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3))})};
  })();
  const tidalFoamMeshes=[];
@@ -8684,12 +8695,12 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'7',build:'0.6.215',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'8',build:'0.6.222',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
    boat:{onShip,velocity:Number(boatVelocity.toFixed(3)),position:{x:Number(ship.position.x.toFixed(2)),y:Number(ship.position.y.toFixed(2)),z:Number(ship.position.z.toFixed(2))},rotation:{x:Number(ship.rotation.x.toFixed(3)),y:Number(ship.rotation.y.toFixed(3)),z:Number(ship.rotation.z.toFixed(3))},flatWakeStrips:shipWake.map(w=>({name:w.name,enabled:w.isEnabled()})),activeSprayParticles:activeSpray,sprayCapacity:VESSEL_SPRAY_COUNT},
-   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,galaxyA12NachoPerformanceProfile:isGalaxyA12NachoPerformance,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,activeFoamIsland:activeTidalFoamIslandIndex,waterReflectionIsland:activeWaterReflectionIslandIndex,waterReflectionMeshes:nordicWaterMirror&&nordicWaterMirror.renderList?nordicWaterMirror.renderList.length:0,waterReflectionRefreshRate:nordicWaterMirror&&nordicWaterMirror.refreshRate||0,waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassVisibleBatches:qualityGrassVisibleBatchCount,grassTotalBatches:qualityGrassLodBatches.length,grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
+   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,galaxyA12NachoPerformanceProfile:isGalaxyA12NachoPerformance,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,activeFoamIsland:activeTidalFoamIslandIndex,waterReflectionIsland:activeWaterReflectionIslandIndex,waterReflectionMeshes:nordicWaterMirror&&nordicWaterMirror.renderList?nordicWaterMirror.renderList.length:0,waterReflectionRefreshRate:nordicWaterMirror&&nordicWaterMirror.refreshRate||0,waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),terrainHashCacheEntries:terrainHashCache.size,terrainHashCacheLimit:TERRAIN_HASH_CACHE_LIMIT,groundRelaxHz:30,enemyAiRateCapHz:isConstrainedMobile?20:60,companionAiRateCapHz:isConstrainedMobile?15:60,grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassVisibleBatches:qualityGrassVisibleBatchCount,grassTotalBatches:qualityGrassLodBatches.length,grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
    wildlife:ambientFauna.map(animal=>({kind:animal.kind,island:animal.homeIslandIndex,meshes:animal.meshCount,bones:animal.skeletonBoneCount,skinnedVertices:animal.skinnedVertexCount,dimensions:animal.dimensions,animation:animal.activeAnimation&&animal.activeAnimation.name||null,meshNames:animal.meshNames})),
    npcs:{enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,ambientPeople:ambientPeople.length,ambientMoving:ambientPeople.filter(n=>Number(n.parts.actualMoveSpeed)>.1).length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,npcClips:humanEnemyParts.filter(p=>p.realHuman).slice(0,8).map(p=>({name:p.name,walk:p.realHuman.walk&&p.realHuman.walk.name,walkPlaying:!!(p.realHuman.walk&&p.realHuman.walk.isPlaying),current:p.realHuman.current&&p.realHuman.current.name,enabled:p.root.isEnabled()}))}
   };
@@ -10120,9 +10131,12 @@ function updateHUD(){
   // Enemy awareness, pursuit on land, telegraphed attacks and damage.
   worldUpdatePhase='enemy AI and combat';
   update.enemyAiAccumulator=(update.enemyAiAccumulator||0)+dt;
-  if(!isConstrainedMobile||update.enemyAiAccumulator>=.05){
-   const enemyAiDt=isConstrainedMobile?Math.min(.15,update.enemyAiAccumulator):dt;
-   update.enemyAiAccumulator=0;update.enemyAiTicks=(update.enemyAiTicks||0)+1;
+  const enemyAiInterval=isConstrainedMobile?.05:(1/60);
+  if(update.enemyAiAccumulator>=enemyAiInterval){
+   const enemyAiDt=Math.min(.15,update.enemyAiAccumulator);
+   if(isConstrainedMobile)update.enemyAiAccumulator=0;
+   else update.enemyAiAccumulator=Math.max(0,update.enemyAiAccumulator-enemyAiDt);
+   update.enemyAiTicks=(update.enemyAiTicks||0)+1;
    // Player world position/matrix and protected-territory state are invariant throughout this AI pass.
    // Calculate them once instead of once per enemy.
    const enemyPlayerPosition=onShip?null:playerPos();
@@ -10227,9 +10241,12 @@ function updateHUD(){
    if(fallen.deadTimer<=0){fallen.parts.root.setEnabled(false);fallenEnemies.splice(i,1);}
   }
   update.companionAiAccumulator=(update.companionAiAccumulator||0)+dt;
-  if(!isConstrainedMobile||update.companionAiAccumulator>=.0667){
-   const companionAiDt=isConstrainedMobile?Math.min(.15,update.companionAiAccumulator):dt;
-   update.companionAiAccumulator=0;update.companionAiTicks=(update.companionAiTicks||0)+1;
+  const companionAiInterval=isConstrainedMobile?.0667:(1/60);
+  if(update.companionAiAccumulator>=companionAiInterval){
+   const companionAiDt=Math.min(.15,update.companionAiAccumulator);
+   if(isConstrainedMobile)update.companionAiAccumulator=0;
+   else update.companionAiAccumulator=Math.max(0,update.companionAiAccumulator-companionAiDt);
+   update.companionAiTicks=(update.companionAiTicks||0)+1;
    const leader=playerPos(),leaderForwardX=Math.sin(yaw),leaderForwardZ=Math.cos(yaw),leaderRightX=Math.cos(yaw),leaderRightZ=-Math.sin(yaw);
    companions.forEach((ally,index)=>{
    const dt=companionAiDt;
@@ -10811,7 +10828,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.221 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.222 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -10889,7 +10906,7 @@ function updateHUD(){
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.221 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.222 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,

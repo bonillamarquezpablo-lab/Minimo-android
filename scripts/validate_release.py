@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.221"
+EXPECTED_VERSION = "0.6.222"
 
 HTML_PAGES = (
     "index.html",
@@ -125,6 +125,14 @@ def main() -> None:
         fail("La espuma de Calidad debe existir solo para la isla activa del jugador.")
     if "Math.min(deviceDpr,isTouchDevice?1.80:1.85)" not in index_html:
         fail("Calidad debe limitar la resolución interna para reducir el coste de GPU sin recortar efectos.")
+    if "const TERRAIN_HASH_CACHE_LIMIT=65536;" not in index_html or "terrainHashCacheSlots" not in index_html or "terrainHashCacheEntries:terrainHashCache.size" not in index_html:
+        fail("La caché determinista de ruido del terreno debe estar acotada y diagnosticada.")
+    if "const GROUND_RELAX_INTERVAL=1/30;" not in index_html or "groundRelaxAccumulator>=GROUND_RELAX_INTERVAL" not in index_html:
+        fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
+    if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
+        fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
+    if "reportVersion:'8',build:'0.6.222'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html:
+        fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "function updateQualityGrassLod(dt)" not in index_html or "qualityGrassLodBatches.push" not in index_html or "updateQualityGrassLod(dt);" not in index_html:
         fail("Calidad debe aplicar LOD por distancia a los lotes de hierba.")
     if "function syncNordicWaterReflectionIsland()" not in index_html or "syncNordicWaterReflectionIsland();" not in index_html or "activeWaterReflectionIslandIndex" not in index_html:
@@ -399,7 +407,7 @@ def main() -> None:
         fail("La subida parcial de vértices debe tolerar arrays normales y usar subarrays tipados.")
     if "function pressGround(x,z,islandIndex,wet,beach)" not in index_html or "pressGround(x,z,islandIndex,wet,beach)" not in index_html:
         fail("Las pisadas no presionan la geometría real del terreno.")
-    if "function relaxGround(dt)" not in index_html or "relaxGround(dt);" not in index_html:
+    if "function relaxGround(dt)" not in index_html or "relaxGround(relaxStep);" not in index_html:
         fail("El terreno deformado no recupera su forma gradualmente.")
     if "GroundDynamics.update(dt,audioPos.x,audioPos.z,playerStepDistance,yaw,running&&stamina>0,onShip,playerAirborne);" not in index_html:
         fail("La dinámica del suelo no recibe los pasos reales del jugador.")
@@ -440,7 +448,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.221</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.222</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
@@ -456,7 +464,7 @@ def main() -> None:
         fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
     if "const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;" not in index_html or "await yieldGrassStartupIfNeeded(islandIndex,placed,want);" not in index_html:
         fail("La generación de vegetación debe ceder el control según tiempo real de CPU.")
-    if "const occupiedGridCells=new Uint8Array(gridSide*gridSide)" not in index_html or "const terrainHashCache=new Map();" not in index_html:
+    if "const occupiedGridCells=new Uint8Array(gridSide*gridSide)" not in index_html or "const terrainHashCache=new Map()," not in index_html:
         fail("La generación del terreno y la hierba debe reutilizar buffers compactos y hashes deterministas.")
     if "const grassGenerationTask=createRealGrass();" not in index_html or "await Promise.all([grassGenerationTask,wildlifePreparationTask]);" not in index_html:
         fail("Los perfiles de calidad deben poder preparar vegetación y fauna en paralelo.")
