@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.219">
-<meta name="el-sin-nombre-repair" content="0.6.219 full pre-entry asset readiness and low-end Performance rendering reductions">
+<meta name="el-sin-nombre-build" content="0.6.220">
+<meta name="el-sin-nombre-repair" content="0.6.220 full pre-entry asset readiness and low-end Performance rendering reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.219</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.220</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2806,33 +2806,12 @@ async function removeStrayDebugGeometry(targetScene){
    }
    waterLastNormalMs=performance.now()-normalStart;waterNormalAccumulator%=waterNormalStep;
   }
-  const nearbyRadiusSq=(WATER_DETAIL_RADIUS+75)*(WATER_DETAIL_RADIUS+75);
-  for(const foam of tidalFoamMeshes){
-   const dx=foam.centerX-waterFocusX,dz=foam.centerZ-waterFocusZ;if(dx*dx+dz*dz>nearbyRadiusSq)continue;
-   const island=foam.island;
-   for(const patch of foam.patches){
-    const shoreline=shorelineFoamRadius(island,patch.angle,oceanTime);
-    const radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47];
-    if(!Number.isFinite(shoreline)){
-     for(let vertex=0;vertex<radialOffsets.length*2;vertex++){const offset=patch.start+vertex*3;foam.positions[offset]=island.x;foam.positions[offset+1]=-3.2;foam.positions[offset+2]=island.z;}
-     continue;
-    }
-    const pulse=.5+.5*Math.sin(oceanTime*.92+patch.phase),arcScale=.76+.34*pulse;
-    for(let row=0;row<radialOffsets.length;row++)for(let side=0;side<2;side++){
-     const offset=patch.start+(row*2+side)*3,sign=side===0?-1:1;
-     // The wash crosses the intersection: most of its tongue lies on the wet sand,
-     // with only a narrow outer lip touching the moving water surface.
-     const angularWobble=Math.sin(oceanTime*.78+patch.phase+row*.71)*.0048;
-     const angle=patch.angle+sign*(patch.halfArc*arcScale)+angularWobble*sign;
-     const radialJitter=Math.sin(oceanTime*.86+patch.phase+row*1.17)*[.055,.09,.125,.15,.135,.105,.075,.045][row];
-     const radius=shoreline+radialOffsets[row]+radialJitter;
-     const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-     const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(foam.index,x,z),water=waterHeight(x,z,oceanTime);
-     foam.positions[offset]=x;foam.positions[offset+1]=Math.max(ground,water)+.028;foam.positions[offset+2]=z;
-    }
-   }
-   foam.mesh.updateVerticesData(B.VertexBuffer.PositionKind,foam.positions,false);
+  tidalFoamAccumulator+=dt;
+  if(tidalFoamAccumulator>=.12){
+   tidalFoamAccumulator%=.12;
+   for(const foam of tidalFoamMeshes)updateTidalShoreFoam(foam,oceanTime);
   }
+  const nearbyRadiusSq=(WATER_DETAIL_RADIUS+75)*(WATER_DETAIL_RADIUS+75);
   for(const wave of shorelineWaves){
    const dx=wave.x-waterFocusX,dz=wave.z-waterFocusZ;if(dx*dx+dz*dz>nearbyRadiusSq)continue;
    const pulse=Math.sin(oceanTime*1.05+wave.phase),secondary=Math.sin(oceanTime*.63+wave.phase*1.7);
@@ -3387,44 +3366,112 @@ async function removeStrayDebugGeometry(targetScene){
   return {update,reset,counts:()=>({imprints:imprints.reduce((count,item)=>count+(item.active?1:0),0),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3))})};
  })();
  const tidalFoamMeshes=[];
- function buildTidalFoam(island,index){
-  if(isPerformanceMode)return;
-  const positions=[],indices=[],colors=[],patches=72,patchMeta=[],radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47];
-  for(let i=0;i<patches;i++){
-   if(((i*37+index*19)%11)<3)continue;
-   const angle=i/patches*Math.PI*2+Math.sin(i*2.17+index)*.022,halfArc=.010+((i*7+index*3)%8)*.0017;
-   const start=positions.length/3,radius=shorelineFoamRadius(island,angle,oceanTime);
-   // Never use island.r*1.09 as a fallback: that is the seaward edge of the heightfield,
-   // not the shoreline. A missing intersection means this patch starts hidden.
-   if(!Number.isFinite(radius))continue;
-   for(let row=0;row<radialOffsets.length;row++){
-    const radial=radialOffsets[row]+Math.sin(i*1.91+row*2.3+index*.7)*.10;
-    for(let side=0;side<2;side++){
-     const sign=side===0?-1:1,a=angle+sign*halfArc+Math.sin(i*1.7+row*1.3+side)*.008;
-     const r=radius+radial,x=island.x+Math.cos(a)*r,z=island.z+Math.sin(a)*r;
-     const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=waterHeight(x,z,oceanTime);
-     positions.push(x,Math.max(ground,water)+.028,z);
-     const rowAlpha=[.008,.055,.24,.48,.54,.36,.12,.012][row],sideAlpha=side===0?.62:.90;
-     const foamLace=.72+.28*(.5+.5*Math.sin(i*4.73+row*2.31+index));
-     colors.push(.91,.96,.92,rowAlpha*sideAlpha*foamLace);
+ let tidalFoamAccumulator=0;
+ // Foam breaker ribbon: a continuous, high-resolution coastal surface. Its vertex mask
+ // is deliberately broken into cells and filaments so it reads as aerated wash, not a white contour line.
+ function shorelineFoamRadiusForBreakers(island,angle,t=oceanTime){
+  const islandIndex=land.indexOf(island);
+  const sample=radius=>{
+   const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
+   const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z);
+   return ground-waterHeight(x,z,t);
+  };
+  let lo=island.r*.70,hi=island.r*1.09,loDelta=sample(lo),hiDelta=sample(hi);
+  if(!(Number.isFinite(loDelta)&&Number.isFinite(hiDelta)&&loDelta>0&&hiDelta<0)){
+   // Some high crests briefly cover the inner end of the old bracket. Search the complete
+   // beach slope and keep the first land-to-sea crossing instead of dropping that coastline sector.
+   const scanSteps=18;let previousRadius=island.r*.28,previousDelta=sample(previousRadius),found=false;
+   for(let i=1;i<=scanSteps;i++){
+    const radius=island.r*(.28+.84*i/scanSteps),delta=sample(radius);
+    if(Number.isFinite(previousDelta)&&Number.isFinite(delta)&&previousDelta>0&&delta<=0){
+     lo=previousRadius;hi=radius;found=true;break;
     }
+    previousRadius=radius;previousDelta=delta;
    }
-   patchMeta.push({angle,halfArc,start:start*3,phase:index*.81+i*.73});
-   for(let row=0;row<radialOffsets.length-1;row++){
-    const a=start+row*2,b=a+2;indices.push(a,b,a+1,a+1,b,b+1);
+   if(!found){
+    const coastX=island.x+Math.cos(angle)*island.r,coastZ=island.z+Math.sin(angle)*island.r;
+    const coastNoise=(terrainValueNoise(coastX*.12+17.2,coastZ*.12-8.4)-.5)*.045+Math.sin(coastX*.17+coastZ*.11)*.006;
+    return Math.max(island.r*.90,Math.min(island.r*1.06,island.r*(.98-coastNoise)));
    }
   }
-  if(!indices.length)return;
+  for(let step=0;step<12;step++){
+   const mid=(lo+hi)*.5;
+   if(sample(mid)>0)lo=mid;else hi=mid;
+  }
+  return (lo+hi)*.5;
+ }
+ function updateTidalShoreFoam(foam,t){
+  const {mesh,island,index,segments,rows,cols,angles,radialOffsets,baseShore,positions,colors,foamPattern,foamFilaments,foamFlecks}=foam;
+  const phase=foam.phase;
+  for(let i=0;i<=segments;i++){
+   const angle=angles[i],shore=shorelineFoamRadiusForBreakers(island,angle,t)||baseShore[i];
+   const tongue=.5+.5*Math.sin(angle*7.2+index*1.9+t*.53);
+   for(let row=0;row<rows;row++){
+    const vertex=row*cols+i,offset=radialOffsets[row];
+    const radialJitter=.13*Math.sin(angle*9.0+phase+t*.62)+.055*Math.sin(angle*18.0-phase+row*.43-t*.91);
+    const radius=shore+offset+radialJitter,x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
+    const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=waterHeight(x,z,t);
+    const lift=.026+Math.max(0,Math.sin(t*1.8+angle*5.1+row*.64+phase))*.014;
+    const positionOffset=vertex*3;
+    positions[positionOffset]=x;positions[positionOffset+1]=Math.max(ground,water)+lift;positions[positionOffset+2]=z;
+    const inland=shore-radius,localPulse=.5+.5*Math.sin(t*.92+x*.041+z*.036+phase);
+    const reach=1.05+2.75*localPulse+1.0*Math.pow(tongue,3);
+    const washIn=smooth01((inland+.62)/.68),washOut=1-smooth01((inland-reach)/.95),wash=washIn*washOut;
+    const crestCentre=.38+reach*.76,crestDistance=(inland-crestCentre)/.58,crest=Math.exp(-crestDistance*crestDistance);
+    const backwashCentre=.22+reach*.20,backwashDistance=(inland-backwashCentre)/.52,backwash=Math.exp(-backwashDistance*backwashDistance);
+    const pattern=foamPattern[vertex],filament=foamFilaments[vertex],fleck=foamFlecks[vertex];
+    const drift=.70+.30*(.5+.5*Math.sin(t*1.22-x*.075+z*.061+pattern*7.1+phase));
+    const body=wash*(.055+.22*pattern)*drift;
+    const lace=crest*(.10+.43*filament+.25*fleck)*(.72+.28*localPulse);
+    const retreat=backwash*(.035+.19*pattern)*(1-localPulse*.26);
+    const offshore=Math.exp(-Math.pow((inland+.30)/.72,2))*(.018+.13*fleck);
+    const alpha=Math.min(.84,body+lace+retreat+offshore);
+    const colorOffset=vertex*4;
+    colors[colorOffset]=.86+alpha*.10;colors[colorOffset+1]=.94+alpha*.055;colors[colorOffset+2]=.94+alpha*.06;colors[colorOffset+3]=alpha;
+   }
+  }
+  mesh.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);
+  mesh.updateVerticesData(B.VertexBuffer.ColorKind,colors,false,false);
+ }
+ function buildTidalFoam(island,index){
+  if(isPerformanceMode)return;
+  const segments=Math.max(192,Math.min(384,Math.ceil(Math.PI*2*island.r/1.15)));
+  const radialOffsets=[-5.6,-4.9,-4.2,-3.5,-2.8,-2.1,-1.45,-.85,-.25,.35,.95,1.65,2.35];
+  const rows=radialOffsets.length,cols=segments+1,vertexCount=rows*cols,positions=new Float32Array(vertexCount*3),colors=new Float32Array(vertexCount*4);
+  const foamPattern=new Float32Array(vertexCount),foamFilaments=new Float32Array(vertexCount),foamFlecks=new Float32Array(vertexCount);
+  const angles=new Float32Array(cols),baseShore=new Float32Array(cols),indices=[];
+  for(let i=0;i<=segments;i++){
+   const angle=i/segments*Math.PI*2;angles[i]=angle;
+   let shore=shorelineFoamRadiusForBreakers(island,angle,oceanTime);
+   if(!Number.isFinite(shore))shore=island.r*.98;
+   baseShore[i]=shore;
+   for(let row=0;row<rows;row++){
+    const vertex=row*cols+i,offset=radialOffsets[row],shape=Math.sin(angle*8.2+index*1.7+row*.38)*.11+Math.sin(angle*17.0-index*.8-row*.51)*.045;
+    const radius=shore+offset+shape,x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
+    const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=waterHeight(x,z,oceanTime);
+    const positionOffset=vertex*3;positions[positionOffset]=x;positions[positionOffset+1]=Math.max(ground,water)+.04;positions[positionOffset+2]=z;
+    const broad=terrainValueNoise(x*.24+37.4,z*.24-21.8),medium=terrainValueNoise(x*.76-14.7,z*.76+42.1),fine=terrainValueNoise(x*1.65+8.3,z*1.65-31.6);
+    const mass=smooth01((broad*.56+medium*.30+fine*.14-.47)*8.5);
+    const filament=1-smooth01((Math.abs(medium-.5)-.13)*10.0),fleck=smooth01((fine-.56)*13.0);
+    foamPattern[vertex]=Math.min(1,mass*.60+filament*.27+fleck*.35);foamFilaments[vertex]=filament;foamFlecks[vertex]=fleck;
+    const colorOffset=vertex*4;colors[colorOffset]=.94;colors[colorOffset+1]=.98;colors[colorOffset+2]=.98;colors[colorOffset+3]=0;
+   }
+  }
+  for(let row=0;row<rows-1;row++)for(let i=0;i<segments;i++){
+   const a=row*cols+i,b=a+1,c=(row+1)*cols+i,d=c+1;indices.push(a,b,c,b,d,c);
+  }
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
-  const mesh=new B.Mesh('DynamicSubmergedShoreWash_'+index,scene),data=new B.VertexData();
-  data.positions=positions;data.indices=indices;data.normals=normals;data.colors=colors;data.applyToMesh(mesh);
-  const material=new B.StandardMaterial('ShoreWashMaterial_'+index,scene);
-  material.diffuseColor=new B.Color3(.93,.97,.94);material.emissiveColor=new B.Color3(.022,.028,.024);
-  material.specularColor=new B.Color3(.025,.032,.029);material.specularPower=42;
+  const mesh=new B.Mesh('DynamicBreakerFoam_'+index,scene),data=new B.VertexData();
+  data.positions=positions;data.indices=indices;data.normals=normals;data.colors=colors;data.applyToMesh(mesh,true);
+  const material=new B.StandardMaterial('BreakerFoamMaterial_'+index,scene);
+  material.diffuseColor=new B.Color3(.94,.985,.99);material.emissiveColor=new B.Color3(.045,.060,.064);
+  material.specularColor=new B.Color3(.12,.16,.17);material.specularPower=58;
   material.useVertexColors=true;material.useVertexAlpha=true;material.backFaceCulling=false;
-  material.alpha=.52;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;mesh.material=material;
+  material.alpha=.92;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;mesh.material=material;
   mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.hasVertexAlpha=true;
-  tidalFoamMeshes.push({mesh,positions:new Float32Array(positions),patches:patchMeta,island,centerX:island.x,centerZ:island.z,index});
+  const foam={mesh,positions,colors,foamPattern,foamFilaments,foamFlecks,angles,baseShore,radialOffsets,island,index,segments,rows,cols,phase:index*1.27};
+  tidalFoamMeshes.push(foam);
+  updateTidalShoreFoam(foam,oceanTime);
  }
  land.forEach(buildTidalFoam);
  
@@ -10724,7 +10771,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.219 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.220 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -10802,7 +10849,7 @@ function updateHUD(){
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.219 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.220 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
