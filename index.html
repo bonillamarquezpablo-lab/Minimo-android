@@ -2823,22 +2823,25 @@ async function removeStrayDebugGeometry(targetScene){
     }
     const wavePhase=oceanTime*.83+island.x*.013+island.z*.017+angle*2.6;
     const pulse=.5+.5*Math.sin(wavePhase),secondary=.5+.5*Math.sin(oceanTime*1.31+angle*5.1+index*.73);
-    const swashReach=1.05+1.45*pulse;
+    const inlandReach=1.05+1.55*pulse;
     for(let row=0;row<rows;row++){
      const vertex=row*cols+col,offset=vertex*3,color=vertex*4,shoreOffset=radialOffsets[row];
-     // La lengua avanza y retrocede con variación angular: no se desplaza como un aro rígido.
-     const edgeMotion=Math.sin(wavePhase+row*.39)*.16+Math.sin(oceanTime*.57+angle*4.3+row)*.11;
+     // La lengua entra hacia la arena y se retira por sectores; el borde de espuma no es una circunferencia rígida.
+     const edgeMotion=Math.sin(wavePhase+row*.39)*.27+Math.sin(oceanTime*.57+angle*4.3+row)*.16;
      const radius=shoreline+shoreOffset+edgeMotion;
      const x=island.x+cs*radius,z=island.z+sn*radius;
      const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=waterHeight(x,z,oceanTime);
      positions[offset]=x;positions[offset+1]=Math.max(ground,water)+.042;positions[offset+2]=z;
      const inner=smooth01((shoreOffset+2.45)/.72);
-     const outer=1-smooth01((shoreOffset-.34)/.82);
-     const swash=smooth01((shoreOffset+2.35)/.72)*(1-smooth01((shoreOffset-swashReach)/.78));
+     const outer=1-smooth01((shoreOffset-.30)/.78);
+     const inlandDistance=Math.max(0,-shoreOffset);
+     const landwardFront=1-smooth01((inlandDistance-inlandReach)/.62);
+     const swash=inner*outer*landwardFront;
      const lace=foamPattern[vertex];
      const breaking=.52+.30*pulse+.18*secondary;
-     const crest=Math.pow(Math.max(0,1-Math.abs(shoreOffset-(.10+.48*pulse))/.78),1.35);
-     const alpha=Math.min(.94,Math.max(0,(inner*outer*swash*lace*breaking+crest*lace*.30)*(.72+.28*secondary)));
+     const crestPosition=-(.25+.95*pulse+Math.sin(wavePhase+angle*3)*.12);
+     const crest=Math.pow(Math.max(0,1-Math.abs(shoreOffset-crestPosition)/.48),1.45);
+     const alpha=Math.min(.94,Math.max(0,(swash*lace*breaking+crest*lace*.36)*(.72+.28*secondary)));
      colors[color]=.88+.08*secondary;colors[color+1]=.95+.045*pulse;colors[color+2]=.94+.05*pulse;colors[color+3]=alpha;
     }
    }
