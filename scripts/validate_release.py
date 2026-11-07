@@ -304,7 +304,7 @@ def main() -> None:
         fail("Falta la capa de playa con humedad y espuma residual dinámica.")
     if "redmi8aHardwareMatch" not in index_html or "M2006C3L" not in index_html:
         fail("El Redmi 8A debe entrar en el perfil de hardware extremo del modo Rendimiento.")
-    if "ultraLowEndIslandStreaming=!!(isPerformanceMode&&isUltraLowEndMobile)" not in index_html or "function islandStreamBuildGroups()" not in index_html or "updatePerformanceIslandStreaming(dt)" not in index_html:
+    if "ultraLowEndIslandStreaming=!!(isPerformanceMode&&(isUltraLowEndMobile||isGalaxyA12NachoPerformance))" not in index_html or "function islandStreamBuildGroups()" not in index_html or "updatePerformanceIslandStreaming(dt)" not in index_html:
         fail("El streaming de islas debe activarse solo en Rendimiento extremo y seguir al jugador/barco.")
     if "mesh.isVisible=keep?state.visible:false" not in index_html or "mesh.visibility=keep?state.opacity:0" not in index_html:
         fail("Las islas lejanas deben quedar fuera del render sin destruir sus entidades o estado de juego.")
