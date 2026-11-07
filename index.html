@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.206">
-<meta name="el-sin-nombre-repair" content="0.6.206 low-end DPR recovery, bounded dynamic shadows, restored ground cover and deferred NPC imports">
+<meta name="el-sin-nombre-build" content="0.6.207">
+<meta name="el-sin-nombre-repair" content="0.6.207 performance mode without grass or wildlife; quality-mode parallel NPC asset prefetch">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.206</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.207</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -3798,7 +3798,7 @@ async function removeStrayDebugGeometry(targetScene){
     }
     if(p){const shrub=createNaturalShrub(p.x,p.z,rand(.82,1.18),idx);if(shrub)naturalShrubs.push(shrub);}
    }
-   const animalCount=isPerformanceMode?(idx===0?2:(idx===1?1:0)):(idx===0?3:(idx<4?1:0));
+   const animalCount=isPerformanceMode?0:(idx===0?3:(idx<4?1:0));
    for(let i=0;i<animalCount;i++){
     let p=null;
     for(let attempt=0;attempt<56;attempt++){
@@ -4906,6 +4906,15 @@ async function removeStrayDebugGeometry(targetScene){
     }
     await yieldMobileFrame();
    };
+   // Calidad precarga el GLB civil en paralelo con la descarga y el montaje del caballero.
+   // La importación/instanciación sigue respetando el orden de prioridad del roster.
+   const civilianWarmupPromise=!isPerformanceMode&&civilianTotal?(async()=>{
+    let blob=await readCivilianHumanCache(),source=blob?'caché propia de aldeanos':'';
+    if(blob&&!await isValidGLB(blob)){console.warn('Caché de aldeanos inválida; se volverá a descargar.');blob=null;}
+    if(!blob){report('Preparando en paralelo el modelo humano de los aldeanos…');const downloaded=await downloadCivilianGLB();blob=downloaded.blob;source='Grab3D · Man Base Mesh rigged · '+downloaded.url;await saveCivilianHumanCache(blob);}
+    if(playerHumanBlob&&await sameBlobBytes(blob,playerHumanBlob))throw new Error('Bloqueado: el modelo de aldeanos coincide con el protagonista.');
+    return {blob,source};
+   })().then(value=>({value}),error=>({error})):null;
    try{
     // 1) Descarga independiente del caballero; no se permite reutilizar el GLB del protagonista.
     if(warriorTotal){
@@ -4941,9 +4950,13 @@ async function removeStrayDebugGeometry(targetScene){
     //    por una larga tanda de modelos de caballero en móviles con memoria gráfica limitada.
     if(civilianTotal){
      try{
-      let civilianBlob=await readCivilianHumanCache(),civilianSource=civilianBlob?'caché propia de aldeanos':'';
-      if(civilianBlob&&!await isValidGLB(civilianBlob)){console.warn('Caché de aldeanos inválida; se volverá a descargar.');civilianBlob=null;}
-      if(!civilianBlob){report('Localizando el modelo humano rigged de los aldeanos…');const downloaded=await downloadCivilianGLB();civilianBlob=downloaded.blob;civilianSource='Grab3D · Man Base Mesh rigged · '+downloaded.url;await saveCivilianHumanCache(civilianBlob);}
+      let civilianBlob=null,civilianSource='';
+      if(civilianWarmupPromise){const warmed=await civilianWarmupPromise;if(warmed.error)throw warmed.error;if(warmed.value){civilianBlob=warmed.value.blob;civilianSource=warmed.value.source;}}
+      if(!civilianBlob){
+       civilianBlob=await readCivilianHumanCache();civilianSource=civilianBlob?'caché propia de aldeanos':'';
+       if(civilianBlob&&!await isValidGLB(civilianBlob)){console.warn('Caché de aldeanos inválida; se volverá a descargar.');civilianBlob=null;}
+       if(!civilianBlob){report('Localizando el modelo humano rigged de los aldeanos…');const downloaded=await downloadCivilianGLB();civilianBlob=downloaded.blob;civilianSource='Grab3D · Man Base Mesh rigged · '+downloaded.url;await saveCivilianHumanCache(civilianBlob);}
+      }
       if(playerHumanBlob&&await sameBlobBytes(civilianBlob,playerHumanBlob))throw new Error('Bloqueado: el modelo de aldeanos coincide con el protagonista.');
       const civilianContainer=await containerFromBlob(civilianBlob,'El modelo independiente de los aldeanos');civilianHumanContainer=civilianContainer;
       for(let i=0;i<civilianPartsToLoad.length;i++){
@@ -7893,12 +7906,13 @@ function createRealWeapon(type='axe'){
   console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:grassDebugLeavesPerClump,instancesPerIsland:grassDebugIslandStats,spatialBatches:grassBatchCount,chunkSize});
  }
  spawnNaturalVegetationAndFauna();
- // Quality devices build grass and import wildlife concurrently; constrained phones
- // serialize the same full work to avoid CPU/GPU memory contention during startup.
- if(isConstrainedMobile){
-  await createRealGrass();
-  await loadWildlifeModels();
+ if(isPerformanceMode){
+  // A10/A12 prioritise world entry and memory headroom: grass and wildlife are not
+  // generated or downloaded in Rendimiento. Trees, rocks, shrubs, NPCs and gameplay stay.
+  grassInstanceCount=0;grassBatchCount=0;grassDebugClumpCount=0;grassDebugBatchCount=0;
+  console.info('Perfil Rendimiento: hierba y fauna omitidas; resto del mundo y mecánicas conservados.');
  }else{
+  // Calidad keeps the complete original visual and gameplay path unchanged.
   const grassGenerationTask=createRealGrass();
   const wildlifePreparationTask=loadWildlifeModels();
   await Promise.all([grassGenerationTask,wildlifePreparationTask]);
