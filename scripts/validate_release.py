@@ -359,8 +359,12 @@ def main() -> None:
         fail("Los saltos de posición, teletransportes y estados a bordo/en el aire deben reiniciar el trazado de huellas.")
     if "pendingStepDistance:Number(stepDistance.toFixed(3))" not in index_html or "footstepsEmitted" not in index_html:
         fail("El diagnóstico debe exponer la distancia pendiente y el contador de huellas emitidas.")
-    if "row===0?.025:(row===1?.14:.30)" not in index_html or "DynamicSubmergedShoreWash_" not in index_html:
-        fail("La espuma de orilla invade la arena seca o usa la malla antigua.")
+    if "const radialOffsets=isPerformanceMode?[.035,.38,.92]:[.035,.24,.62,1.24,2.05]" not in index_html or "DynamicSubmergedShoreWash_" not in index_html:
+        fail("Las lenguas de espuma deben tener varias filas sobre la playa y conservar su malla reutilizable.")
+    if "shoreline-radialOffsets[row]" not in index_html or "Math.max(groundY,seaY)+.018" not in index_html:
+        fail("La espuma debe situarse tierra adentro y apoyar sobre la superficie real, no flotar mar afuera.")
+    if "foam.mesh.updateVerticesData(B.VertexBuffer.ColorKind,foam.colors,false)" not in index_html or "foam.baseAlpha[vertex]*pulse" not in index_html:
+        fail("La espuma debe animar su transparencia mediante el buffer existente, sin crear partículas ni draw calls.")
     if "foam.positions[offset+1]=waterHeight(x,z,oceanTime)+.024" not in index_html or "foam.positions[offset+1]=-3.2" not in index_html:
         fail("La espuma no se actualiza con el oleaje o no se oculta cuando no hay intersección.")
     if "source.fire&&source.extinguished" not in index_html or "flame.hearth=hearth" not in index_html:
