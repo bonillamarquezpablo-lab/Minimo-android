@@ -3423,7 +3423,7 @@ async function removeStrayDebugGeometry(targetScene){
   const indices=new Uint16Array(segments*(rows-1)*6);let cursor=0;
   for(let col=0;col<=segments;col++){
    const angle=col/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
-   // Inicializar también las costas lejanas: no deben quedar sin espuma hasta que el jugador se acerque.
+   // Registrar también las costas lejanas, pero sin mostrar espuma hasta detectar una retirada real.
    const initialShoreline=shorelineFoamRadius(island,angle,oceanTime);
    if(Number.isFinite(initialShoreline)){lastShoreline[col]=initialShoreline;foamCenter[col]=initialShoreline-.16;}
    for(let row=0;row<rows;row++){
