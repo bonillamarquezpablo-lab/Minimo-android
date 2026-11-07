@@ -5002,9 +5002,9 @@ async function removeStrayDebugGeometry(targetScene){
    // En Rendimiento se conservan todos los NPC y su IA con el modelo procedural ligero;
    // solo los tres guardianes del campamento y cuatro aldeanos cercanos reciben GLB de alta carga.
    const warriorPartsToLoad=isPerformanceMode
-    ?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3)
+    ?[]
     :(isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts);
-   const civilianPartsToLoad=isPerformanceMode?humanCivilianParts.slice(0,4):(isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts);
+   const civilianPartsToLoad=isPerformanceMode?[]:(isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts);
    const warriorTotal=warriorPartsToLoad.length,civilianTotal=civilianPartsToLoad.length,homeGuardTotal=warriorPartsToLoad.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).length,total=warriorTotal+civilianTotal;
    if(!total){setAssetLoadingProgress('enemy',100,'No hay personajes secundarios pendientes.');return 0;}
    setAssetLoadingProgress('enemy',2,'Preparando guardianes, aldeanos y guerreros…');
