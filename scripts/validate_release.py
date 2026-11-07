@@ -379,10 +379,10 @@ def main() -> None:
     shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"))]
     if "const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z);" not in shoreline_body or ".42;" in shoreline_body:
         fail("El cruce agua/arena debe usar el perfil real completo; no puede sustituir el mar exterior por una altura plana.")
-    if "radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47]" not in index_html or "Math.max(ground,water)+.028" not in index_html:
-        fail("La espuma debe cruzar la intersección y extenderse sobre la arena mojada, no quedar solo mar adentro.")
-    if "for(let row=0;row<radialOffsets.length;row++)for(let side=0;side<2;side++)" not in index_html or "arcScale=.76+.34*pulse" not in index_html:
-        fail("Las lenguas de resaca deben tener anchura y curvatura dinámica.")
+    if "radialOffsets=[-2.45,-2.05,-1.68,-1.30,-.94,-.60,-.28,.02,.30,.60,.92]" not in index_html or "Math.max(ground,water)+.042" not in index_html:
+        fail("La malla de espuma activa debe cruzar la intersección de la costa y la superficie real del agua.")
+    if "const inlandDistance=Math.max(0,-shoreOffset)" not in index_html or "const landwardFront=1-smooth01((inlandDistance-inlandReach)/.62)" not in index_html:
+        fail("La lengua de espuma debe extenderse por el lado de arena mojada de la costa.")
     if "const radius=Number.isFinite(shoreline)?shoreline:island.r*1.09" in index_html:
         fail("La espuma no puede usar el borde exterior de la isla como posición de reserva.")
     if "function terrainDeformationAt(islandIndex,x,z)" not in index_html or "terrainDeformationFields[index]=deformationField;" not in index_html:
