@@ -127,6 +127,8 @@ def main() -> None:
         fail("La espuma costera debe animar su patrón de alfa y la energía de rompiente.")
     if "const initialShoreline=shorelineFoamRadius(island,angle,oceanTime)" not in index_html:
         fail("La espuma debe estar visible en todas las costas desde el primer fotograma, incluidas las islas lejanas.")
+    if "const inlandReach=1.05+1.55*pulse" not in index_html or "const landwardFront=1-smooth01((inlandDistance-inlandReach)/.62)" not in index_html:
+        fail("La rompiente debe avanzar tierra adentro y retirarse de forma dinámica, no limitarse a una línea de espuma.")
     if "const VESSEL_SPRAY_COUNT=isPerformanceMode?0:" not in index_html:
         fail("Rendimiento debe desactivar la espuma/rociado del barco.")
     if "if(B.MirrorTexture&&B.Plane&&!isPerformanceMode)" not in index_html:
