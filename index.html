@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.207">
-<meta name="el-sin-nombre-repair" content="0.6.207 performance mode without grass or wildlife; quality-mode parallel NPC asset prefetch">
+<meta name="el-sin-nombre-build" content="0.6.208">
+<meta name="el-sin-nombre-repair" content="0.6.208 exact-wave water math cache, batched ground imprints and reusable sand-splash particles">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.207</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.208</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2624,6 +2624,40 @@ async function removeStrayDebugGeometry(targetScene){
  const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:(isTouchDevice?125:180)):(isTouchDevice?250:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS,WATER_DETAIL_FADE_START_SQ=WATER_DETAIL_RADIUS_SQ*.55;
  const waterPositionBuffer=ground.getVertexBuffer(B.VertexBuffer.PositionKind),waterNormalBuffer=ground.getVertexBuffer(B.VertexBuffer.NormalKind);
  for(let i=0;i<waterNormals.length;i+=3)waterNormals[i+1]=1;
+ // Precompute spatial wave phases once. Every frame evaluates the same exact
+ // sinusoidal waves using seven shared time sin/cos pairs instead of per-vertex trig.
+ const WATER_WAVE_STRIDE=14,waterWaveBasis=new Float32Array((waterBase.length/3)*WATER_WAVE_STRIDE);
+ const waterWaveTimeSin=new Float32Array(7),waterWaveTimeCos=new Float32Array(7);
+ const waterWaveFrequencies=[.48,.82,-.73,1.28,-1.82,2.15,2.8];
+ for(let vertex=0;vertex<waterBase.length/3;vertex++){
+  const offset=vertex*3,x=waterBase[offset],z=waterBase[offset+2],basis=vertex*WATER_WAVE_STRIDE;
+  const p0=x*.009+z*.012,p1=x*.018+z*.012,p2=-x*.013+z*.027,p3=(x+z*.62)*.052,p4=(x-z)*.092,p5=(x*.76-z*1.13)*.145,p6=x*.19+z*.14;
+  waterWaveBasis[basis]=Math.sin(p0);waterWaveBasis[basis+1]=Math.cos(p0);
+  waterWaveBasis[basis+2]=Math.sin(p1);waterWaveBasis[basis+3]=Math.cos(p1);
+  waterWaveBasis[basis+4]=Math.sin(p2);waterWaveBasis[basis+5]=Math.cos(p2);
+  waterWaveBasis[basis+6]=Math.sin(p3);waterWaveBasis[basis+7]=Math.cos(p3);
+  waterWaveBasis[basis+8]=Math.sin(p4);waterWaveBasis[basis+9]=Math.cos(p4);
+  waterWaveBasis[basis+10]=Math.sin(p5);waterWaveBasis[basis+11]=Math.cos(p5);
+  waterWaveBasis[basis+12]=Math.sin(p6);waterWaveBasis[basis+13]=Math.cos(p6);
+ }
+ function updateWaterWaveTime(t){
+  for(let wave=0;wave<7;wave++){const phase=t*waterWaveFrequencies[wave];waterWaveTimeSin[wave]=Math.sin(phase);waterWaveTimeCos[wave]=Math.cos(phase);}
+ }
+ function waterWaveValueAtVertex(vertex,wave){
+  const offset=vertex*WATER_WAVE_STRIDE+wave*2;
+  return waterWaveBasis[offset]*waterWaveTimeCos[wave]+waterWaveBasis[offset+1]*waterWaveTimeSin[wave];
+ }
+ function waterFarHeightAtVertex(vertex){
+  return waterWaveValueAtVertex(vertex,0)*.105+waterWaveValueAtVertex(vertex,1)*.315+waterWaveValueAtVertex(vertex,2)*.225;
+ }
+ function waterDetailHeightAtVertex(vertex,fade){
+  const longSwell=waterWaveValueAtVertex(vertex,0)*.105,swellA=waterWaveValueAtVertex(vertex,1)*.315,swellB=waterWaveValueAtVertex(vertex,2)*.225;
+  const crossWave=waterWaveValueAtVertex(vertex,3),chopWave=waterWaveValueAtVertex(vertex,4);
+  const cross=crossWave*.15,chop=chopWave*.082,secondary=waterWaveValueAtVertex(vertex,5)*.046,ripple=waterWaveValueAtVertex(vertex,6)*.026;
+  const crestFoamLift=Math.pow(Math.max(0,crossWave),5)*.032,shortCrest=Math.pow(Math.max(0,chopWave),6)*.019;
+  return longSwell+swellA+swellB+(cross+chop+secondary+ripple+crestFoamLift+shortCrest)*fade;
+ }
+ updateWaterWaveTime(0);
  const waterActiveVertexStorage=new Uint32Array(waterBase.length/3);
  let waterActiveVertexOffsets=waterActiveVertexStorage.subarray(0,0),waterActiveMinOffset=0,waterActiveMaxOffset=-1,waterFocusX=NaN,waterFocusZ=NaN,waterLastUpdatedVertices=0,waterLastUploadedVertices=0,waterLastUploadBytes=0,waterLastUpdateMs=0,waterLastNormalMs=0;
  function refreshWaterDetailRegion(){
@@ -2723,14 +2757,14 @@ async function removeStrayDebugGeometry(targetScene){
  // No se dibujan anillos completos alrededor de las islas: desde el mar parecían arcos translúcidos.
  // La espuma queda reservada para el contacto dinámico del casco con el agua.
  function animateWater(dt){
-  oceanTime+=dt;waterAccumulator+=dt;waterNormalAccumulator+=dt;waterFarAccumulator+=dt;
+  oceanTime+=dt;updateWaterWaveTime(oceanTime);waterAccumulator+=dt;waterNormalAccumulator+=dt;waterFarAccumulator+=dt;
   const farDue=waterFarAccumulator>=waterFarStep,detailDue=waterAccumulator>=waterVertexStep;
   if(!farDue&&!detailDue)return;
   const workStart=performance.now();refreshWaterDetailRegion();
   // Actualización global económica para el mar lejano: tres ondas largas, cadencia baja.
   if(farDue){
    waterFarAccumulator%=waterFarStep;
-   for(let i=0;i<waterBase.length;i+=3)waterPositions[i+1]=waterFarHeight(waterBase[i],waterBase[i+2],oceanTime);
+   for(let vertex=0;vertex<waterBase.length/3;vertex++)waterPositions[vertex*3+1]=waterFarHeightAtVertex(vertex);
   }
   if(detailDue)waterAccumulator%=waterVertexStep;
   // La zona alrededor de la cámara conserva el oleaje completo y de mayor frecuencia.
@@ -2738,7 +2772,7 @@ async function removeStrayDebugGeometry(targetScene){
    const i=waterActiveVertexOffsets[n],x=waterBase[i],z=waterBase[i+2],dx=x-waterFocusX,dz=z-waterFocusZ;
    const fadeT=Math.max(0,Math.min(1,(WATER_DETAIL_RADIUS_SQ-(dx*dx+dz*dz))/(WATER_DETAIL_RADIUS_SQ-WATER_DETAIL_FADE_START_SQ)));
    const fade=fadeT*fadeT*(3-2*fadeT);
-   waterPositions[i+1]=waterHeight(x,z,oceanTime,fade);
+   waterPositions[i+1]=waterDetailHeightAtVertex(i/3,fade);
   }
   waterLastUpdatedVertices=waterActiveVertexOffsets.length;waterLastUploadedVertices=0;waterLastUploadBytes=0;
   const uploadEnd=waterActiveMaxOffset+3;
@@ -2855,9 +2889,11 @@ async function removeStrayDebugGeometry(targetScene){
  // Solving against the current wave height (instead of a frozen sea level) prevents foam decals
  // from remaining visibly stranded on the dry sand when the tide/wave phase changes.
  function shorelineFoamRadius(island,angle,t=oceanTime){
+  const islandIndex=land.indexOf(island),surfaceLimitSq=(island.r*1.09)**2;
   const sample=radius=>{
-   const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-   return terrainSurfaceAt(x,z)-waterHeight(x,z,t);
+   const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius,dx=x-island.x,dz=z-island.z;
+   const ground=dx*dx+dz*dz<surfaceLimitSq?terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z):.42;
+   return ground-waterHeight(x,z,t);
   };
   let lo=island.r*.70,hi=island.r*1.09,loDelta=sample(lo),hiDelta=sample(hi);
   if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)||loDelta<=0||hiDelta>=0)return null;
@@ -3003,22 +3039,61 @@ async function removeStrayDebugGeometry(targetScene){
   material.backFaceCulling=false;material.alpha=1;material.specularColor=new B.Color3(.018,.016,.012);
   mesh.material=material;mesh.isPickable=false;mesh.receiveShadows=true;mesh.castShadows=false;mesh.hasVertexAlpha=true;
   mesh.metadata=Object.assign({},mesh.metadata||{},{livingBeachSurface:true,islandIndex:index,wetnessSimulation:true});
-  livingBeachLayers.push({mesh,island,index,segments,rows,cols,radials,baseAlpha,wetness,residue,lastShore,colors:new Float32Array(colors),positions:new Float32Array(positions),positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),positionScratch:new Float32Array(3),centerX:island.x,centerZ:island.z});
+  const baseY=new Float32Array(positions.length/3);for(let vertex=0;vertex<baseY.length;vertex++)baseY[vertex]=positions[vertex*3+1];
+   livingBeachLayers.push({mesh,island,index,segments,rows,cols,radials,baseAlpha,wetness,residue,lastShore,colors:new Float32Array(colors),positions:new Float32Array(positions),baseY,positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),positionScratch:new Float32Array(3),centerX:island.x,centerZ:island.z});
  }
  land.forEach(buildLivingBeachLayer);
  // Interactive ground layer: impressed boot soles, compacted lips, sand grains and drying tide marks.
+ let groundDynamicsLastUpdateMs=0,beachUpdateLastMs=0;
  const GroundDynamics=(()=>{
-  const imprints=[],particles=[],maxImprints=isPerformanceMode?(isConstrainedMobile?18:28):48,maxParticles=isPerformanceMode?22:38;
-  const imprintCols=13,imprintRows=23;let stepDistance=0,alternateFoot=0,beachClock=0;
+  const maxImprints=isPerformanceMode?(isConstrainedMobile?18:28):64,maxParticles=isPerformanceMode?22:48;
+  const imprintCols=13,imprintRows=23,imprintVertexCount=imprintCols*imprintRows,imprintIndicesPerFoot=(imprintCols-1)*(imprintRows-1)*6;
+  let stepDistance=0,alternateFoot=0,beachClock=0,imprintCursor=0,particleCursor=0;
+  const imprints=Array.from({length:maxImprints},(_,slot)=>({slot,active:false,age:0,life:1,fadeAccumulator:0,baseAlpha:new Float32Array(imprintVertexCount)}));
+  const particles=Array.from({length:maxParticles},(_,slot)=>({slot,life:0,maxLife:1,age:0,x:0,y:-1000,z:0,vx:0,vy:0,vz:0,size:.02,groundY:0,wet:false,r:.7,g:.6,b:.45,a:.8}));
   const imprintMaterial=new B.StandardMaterial('NorseGroundImprintMaterial',scene);
   imprintMaterial.diffuseTexture=texCoastalSand;imprintMaterial.diffuseColor=new B.Color3(1,1,1);
   imprintMaterial.specularColor=new B.Color3(.012,.011,.009);imprintMaterial.specularPower=4;
   imprintMaterial.useVertexColors=true;imprintMaterial.useVertexAlpha=true;imprintMaterial.backFaceCulling=false;
-  imprintMaterial.alpha=1;imprintMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
-  const dryGrainMaterial=new B.StandardMaterial('DrySandGrainMaterial',scene);dryGrainMaterial.diffuseTexture=texCoastalSand;
-  dryGrainMaterial.diffuseColor=new B.Color3(.72,.58,.37);dryGrainMaterial.specularColor=new B.Color3(.015,.012,.008);
-  const wetGrainMaterial=new B.StandardMaterial('WetSandGrainMaterial',scene);wetGrainMaterial.diffuseTexture=texCoastalSand;
-  wetGrainMaterial.diffuseColor=new B.Color3(.37,.43,.39);wetGrainMaterial.specularColor=new B.Color3(.035,.045,.04);
+  imprintMaterial.alpha=1;imprintMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;imprintMaterial.disableDepthWrite=true;
+  // One persistent decal mesh replaces individual transparent meshes and their draw calls.
+  const imprintPositions=new Float32Array(maxImprints*imprintVertexCount*3),imprintNormals=new Float32Array(maxImprints*imprintVertexCount*3);
+  const imprintUvs=new Float32Array(maxImprints*imprintVertexCount*2),imprintColors=new Float32Array(maxImprints*imprintVertexCount*4);
+  const imprintIndices=new Uint16Array(maxImprints*imprintIndicesPerFoot);
+  for(let slot=0;slot<maxImprints;slot++){
+   const vertexBase=slot*imprintVertexCount,indexBase=slot*imprintIndicesPerFoot;
+   for(let row=0;row<imprintRows;row++)for(let col=0;col<imprintCols;col++){
+    const vertex=vertexBase+row*imprintCols+col,position=vertex*3,uv=vertex*2,color=vertex*4;
+    imprintPositions[position+1]=-1000;imprintNormals[position+1]=1;
+    imprintUvs[uv]=col/(imprintCols-1);imprintUvs[uv+1]=row/(imprintRows-1);imprintColors[color+3]=0;
+   }
+   let cursor=indexBase;
+   for(let row=0;row<imprintRows-1;row++)for(let col=0;col<imprintCols-1;col++){
+    const a=vertexBase+row*imprintCols+col,b=a+1,c=a+imprintCols,d=c+1;
+    imprintIndices[cursor++]=a;imprintIndices[cursor++]=c;imprintIndices[cursor++]=b;
+    imprintIndices[cursor++]=b;imprintIndices[cursor++]=c;imprintIndices[cursor++]=d;
+   }
+  }
+  const imprintMesh=new B.Mesh('NorseBootImprintBatch',scene),imprintData=new B.VertexData();
+  imprintData.positions=imprintPositions;imprintData.indices=imprintIndices;imprintData.normals=imprintNormals;imprintData.uvs=imprintUvs;imprintData.colors=imprintColors;imprintData.applyToMesh(imprintMesh,true);
+  imprintMesh.material=imprintMaterial;imprintMesh.isPickable=false;imprintMesh.receiveShadows=false;imprintMesh.castShadows=false;
+  imprintMesh.hasVertexAlpha=true;imprintMesh.alwaysSelectAsActiveMesh=true;imprintMesh.doNotSyncBoundingInfo=true;
+  const imprintPositionBuffer=imprintMesh.getVertexBuffer(B.VertexBuffer.PositionKind),imprintColorBuffer=imprintMesh.getVertexBuffer(B.VertexBuffer.ColorKind);
+  // One thin-instance batch replaces the per-footstep Sphere mesh create/dispose loop.
+  const grainMaterial=new B.StandardMaterial('GroundSplashParticleMaterial',scene);
+  grainMaterial.diffuseTexture=texCoastalSand;grainMaterial.diffuseColor=new B.Color3(1,1,1);
+  grainMaterial.specularColor=new B.Color3(.22,.24,.22);grainMaterial.specularPower=26;
+  grainMaterial.useVertexColors=true;grainMaterial.useVertexAlpha=true;grainMaterial.alpha=1;grainMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
+  const grainMesh=B.MeshBuilder.CreateSphere('GroundSplashParticleBatch',{diameter:1,segments:6},scene);
+  const grainMatrices=new Float32Array(maxParticles*16),grainColors=new Float32Array(maxParticles*4);
+  for(let slot=0;slot<maxParticles;slot++){
+   const m=slot*16,c=slot*4;
+   grainMatrices[m]=.0001;grainMatrices[m+5]=.0001;grainMatrices[m+10]=.0001;grainMatrices[m+15]=1;grainMatrices[m+13]=-1000;
+   grainColors[c]=.8;grainColors[c+1]=.9;grainColors[c+2]=.94;grainColors[c+3]=0;
+  }
+  grainMesh.material=grainMaterial;grainMesh.isPickable=false;grainMesh.receiveShadows=false;grainMesh.castShadows=false;
+  grainMesh.alwaysSelectAsActiveMesh=true;grainMesh.renderingGroupId=1;grainMesh.hasVertexAlpha=true;
+  grainMesh.thinInstanceSetBuffer('matrix',grainMatrices,16,true);grainMesh.thinInstanceSetBuffer('color',grainColors,4,true);grainMesh.thinInstanceCount=maxParticles;
   function uploadDeformedRows(field,vertices,buffer,data){
    if(!vertices.length)return;
    const n=field.gridSize,ranges=new Map();
@@ -3084,48 +3159,50 @@ async function removeStrayDebugGeometry(targetScene){
     }
    }
   }
-  function makeFootprint(x,z,heading,wet,beach,running){
-   const islandIndex=landIslandIndex(x,z);if(islandIndex<0)return;
-   const island=land[islandIndex],dx=x-island.x,dz=z-island.z,d=Math.hypot(dx,dz);
-   if(d>island.r*.973)return;
-   const positions=[],indices=[],uvs=[],colors=[],baseAlpha=[];
+  function makeFootprint(islandIndex,x,z,heading,wet,beach,running){
+   const island=land[islandIndex];if(!island)return;
+   const dx=x-island.x,dz=z-island.z;
+   if(dx*dx+dz*dz>(island.r*.973)**2)return;
+   const slot=imprints[imprintCursor++%maxImprints],vertexBase=slot.slot*imprintVertexCount,floatBase=vertexBase*3,colorBase=vertexBase*4;
    const halfLength=running?.245:.225,baseWidth=running?.155:.137;
+   const rightX=Math.cos(heading),rightZ=-Math.sin(heading),forwardX=Math.sin(heading),forwardZ=Math.cos(heading);
+   const strength=wet?.82:(beach?.78:.48),tint=wet?[.28,.36,.34]:(beach?[.32,.235,.145]:[.37,.32,.245]);
+   const edgeTint=beach?[.70,.55,.36]:[.58,.52,.40];
+   slot.active=true;slot.age=0;slot.life=wet?70:(beach?105:52);slot.fadeAccumulator=0;
    for(let row=0;row<imprintRows;row++){
     const nz=row/(imprintRows-1)*2-1;
     for(let col=0;col<imprintCols;col++){
      const u=col/(imprintCols-1)*2-1,halfWidth=baseWidth*(.76+.24*smooth01((nz+1)*.5));
-     const localX=u*halfWidth,localZ=nz*halfLength,radial=Math.hypot(u,nz);
-     const rightX=Math.cos(heading),rightZ=-Math.sin(heading),forwardX=Math.sin(heading),forwardZ=Math.cos(heading);
+     const localX=u*halfWidth,localZ=nz*halfLength,radial=Math.hypot(u,nz*.92);
      const wx=x+rightX*localX+forwardX*localZ,wz=z+rightZ*localX+forwardZ*localZ;
-     const onSameIsland=landIslandIndex(wx,wz)===islandIndex,groundY=terrainSurfaceAt(wx,wz);
-     const mask=onSameIsland?1-smooth01((radial-.69)/.31):0,edge=smooth01((radial-.78)/.22);
-     const rim=beach?edge*.009:edge*.004,press=(1-edge)* (wet?.013:(beach?.009:.006));
-     positions.push(wx,groundY+.012+rim-press,wz);uvs.push(col/(imprintCols-1),row/(imprintRows-1));
-     const strength=wet?.68:(beach?.50:.34),tint=wet?[.40,.48,.42]:(beach?[.48,.38,.25]:[.43,.39,.30]);
-     const edgeTint=beach?[.78,.69,.51]:[.62,.57,.43],blend=edge*.46;
-     colors.push(tint[0]*(1-blend)+edgeTint[0]*blend,tint[1]*(1-blend)+edgeTint[1]*blend,tint[2]*(1-blend)+edgeTint[2]*blend,strength*mask);
-     baseAlpha.push(strength*mask);
+     const vertex=row*imprintCols+col,position=floatBase+vertex*3,color=colorBase+vertex*4;
+     const islandDx=wx-island.x,islandDz=wz-island.z;
+     const onSameIsland=islandDx*islandDx+islandDz*islandDz<(island.r*.975)**2,mask=onSameIsland?1-smooth01((radial-.63)/.37):0;
+     const edge=smooth01((radial-.70)/.30),rim=beach?edge*.014:edge*.005;
+     const press=wet?.013:(beach?.030:.018),groundY=terrainHeightOnIsland(island,wx,wz)+terrainDeformationAt(islandIndex,wx,wz);
+     // Lift above the opaque heightfield: the old wet imprint could be hidden below terrain.
+     imprintPositions[position]=wx;imprintPositions[position+1]=groundY+.028+rim-press*.16;imprintPositions[position+2]=wz;
+     const edgeBlend=edge*.32,rowGroove=(row>3&&row<imprintRows-3&&row%5===1&&Math.abs(u)<.82)?.12:0;
+     const toeRelief=nz>.55&&Math.abs(u)>.42?.05:0,shade=1-rowGroove-toeRelief;
+     imprintColors[color]=(tint[0]*(1-edgeBlend)+edgeTint[0]*edgeBlend)*shade;
+     imprintColors[color+1]=(tint[1]*(1-edgeBlend)+edgeTint[1]*edgeBlend)*shade;
+     imprintColors[color+2]=(tint[2]*(1-edgeBlend)+edgeTint[2]*edgeBlend)*shade;
+     const alpha=strength*mask;imprintColors[color+3]=alpha;slot.baseAlpha[vertex]=alpha;
     }
    }
-   for(let row=0;row<imprintRows-1;row++)for(let col=0;col<imprintCols-1;col++){
-    const a=row*imprintCols+col,b=a+1,c=(row+1)*imprintCols+col,d=c+1;
-    indices.push(a,c,b,b,c,d);
-   }
-   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
-   const mesh=new B.Mesh('PhysicalBootImprint_'+(wet?'Wet':'Dry')+'_'+Math.floor(elapsed*1000),scene),data=new B.VertexData();
-   data.positions=positions;data.indices=indices;data.normals=normals;data.uvs=uvs;data.colors=colors;data.applyToMesh(mesh,true);
-   mesh.material=imprintMaterial;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;mesh.hasVertexAlpha=true;mesh.refreshBoundingInfo(true);
-   const life=wet?92:(beach?62:34);imprints.push({mesh,age:0,life,baseAlpha,colors:new Float32Array(colors),fadeAccumulator:0});
-   if(imprints.length>maxImprints){const old=imprints.shift();old.mesh.dispose(false,true);}
+   const positionStart=floatBase,positionEnd=floatBase+imprintVertexCount*3,colorStart=colorBase,colorEnd=colorBase+imprintVertexCount*4;
+   imprintPositionBuffer.updateDirectly(imprintPositions.subarray(positionStart,positionEnd),positionStart);
+   imprintColorBuffer.updateDirectly(imprintColors.subarray(colorStart,colorEnd),colorStart);
   }
-  function kickSandGrains(x,z,heading,wet,running){
-   const count=wet?2:(running?4:3);
-   for(let i=0;i<count&&particles.length<maxParticles;i++){
-    const angle=heading+rand(-1.2,1.2),speed=rand(.16,running?.82:.48),distance=rand(.08,.21),y=terrainSurfaceAt(x,z)+.07;
-    const mesh=B.MeshBuilder.CreateSphere('FootstepSandGrain',{diameter:rand(.018,.038),segments:4},scene);
-    mesh.material=wet?wetGrainMaterial:dryGrainMaterial;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;
-    mesh.position=v(x+Math.sin(angle)*distance,y,z+Math.cos(angle)*distance);
-    particles.push({mesh,vx:Math.sin(angle)*speed,vz:Math.cos(angle)*speed,vy:rand(.28,running?1.05:.68),life:rand(.28,.55),age:0});
+  function kickSandGrains(x,z,heading,wet,running,groundY){
+   const count=wet?(running?8:6):(running?6:4),surfaceY=wet?Math.max(groundY,waterHeight(x,z,oceanTime)):groundY;
+   for(let i=0;i<count;i++){
+    const particle=particles[particleCursor++%maxParticles],angle=heading+Math.PI+rand(-1.15,1.15),speed=rand(wet?.22:.14,wet?.82:(running?.72:.46)),distance=rand(.055,.16);
+    particle.x=x+Math.sin(angle)*distance;particle.z=z+Math.cos(angle)*distance;particle.y=surfaceY+(wet?.035:.045);
+    particle.groundY=surfaceY;particle.vx=Math.sin(angle)*speed;particle.vz=Math.cos(angle)*speed;
+    particle.vy=wet?rand(.82,1.58):rand(.42,running?.98:.72);
+    particle.life=particle.maxLife=wet?rand(.40,.68):rand(.32,.56);particle.age=0;particle.size=wet?rand(.030,.054):rand(.018,.036);particle.wet=wet;
+    particle.r=wet?.83:.78;particle.g=wet?.91:.61;particle.b=wet?.95:.40;particle.a=wet?.92:.82;
    }
   }
   function addStep(x,z,heading,running){
@@ -3134,22 +3211,26 @@ async function removeStrayDebugGeometry(targetScene){
    const ratio=d/island.r,beach=ratio>.748&&ratio<.976;
    const angle=Math.atan2(dz,dx),shore=shorelineFoamRadius(island,angle,oceanTime),groundY=terrainSurfaceAt(x,z);
    const wet=beach&&((Number.isFinite(shore)&&shore-d<1.45)||waterHeight(x,z,oceanTime)>groundY-.20);
-   pressGround(x,z,islandIndex,wet,beach);makeFootprint(x,z,heading,wet,beach,running);kickSandGrains(x,z,heading,wet,running);
+   pressGround(x,z,islandIndex,wet,beach);makeFootprint(islandIndex,x,z,heading,wet,beach,running);kickSandGrains(x,z,heading,wet,running,groundY);
   }
   function updateBeach(dt,focusX,focusZ){
-   beachClock+=dt;if(beachClock<.30)return;const step=beachClock;beachClock=0;
-   const drying= Math.exp(-step/(48+Math.max(0,Math.sin(oceanTime*.018))*34));
+   beachClock+=dt;if(beachClock<.30)return;const beachUpdateStartedAt=performance.now(),step=beachClock;beachClock=0;
+   const drying=Math.exp(-step/(48+Math.max(0,Math.sin(oceanTime*.018))*34));
    for(const layer of livingBeachLayers){
     if(Math.hypot(focusX-layer.centerX,focusZ-layer.centerZ)>layer.island.r+115)continue;
+    const islandIndex=layer.index,field=terrainDeformationFields[islandIndex];
     for(let i=0;i<=layer.segments;i++){
      const angle=i/layer.segments*Math.PI*2,shore=shorelineFoamRadius(layer.island,angle,oceanTime),previous=layer.lastShore[i];
      const inner=layer.radials[i*2],outer=layer.radials[i*2+1];
      if(Number.isFinite(shore)){
       const retreat=Number.isFinite(previous)?Math.max(0,shore-previous):0;
       for(let row=0;row<layer.rows;row++){
-       const radial=inner+(outer-inner)*row/(layer.rows-1),stateIndex=i*layer.rows+row;
-       const positionOffset=(row*layer.cols+i)*3;
-       layer.positions[positionOffset+1]=terrainSurfaceAt(layer.positions[positionOffset],layer.positions[positionOffset+2])+.012;
+       const radial=inner+(outer-inner)*row/(layer.rows-1),stateIndex=i*layer.rows+row,vertex=row*layer.cols+i;
+       const positionOffset=vertex*3,localX=layer.positions[positionOffset],localZ=layer.positions[positionOffset+2];
+       // Keep the baked beach surface and sample only the tiny live deformation field.
+       // Re-running the complete procedural height function per vertex on every tide tick
+       // was redundant and created a large amount of CPU work.
+       layer.positions[positionOffset+1]=layer.baseY[vertex]+(field?terrainDeformationAt(islandIndex,localX,localZ):0);
        let wet=layer.wetness[stateIndex]*drying;
        const inlandDistance=shore-radial;
        if(inlandDistance>=-.18&&inlandDistance<2.35){
@@ -3163,53 +3244,77 @@ async function removeStrayDebugGeometry(targetScene){
         foam=Math.max(foam,deposit);
        }
        layer.residue[stateIndex]=Math.min(.6,foam);
-       const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[row*layer.cols+i];
-       const dryColor=[1,.94,.82],wetColor=[.48,.54,.48],foamColor=[.91,.94,.87];
-       let rgb=dryColor.map((c,k)=>c+(wetColor[k]-c)*w);
-       rgb=rgb.map((c,k)=>c+(foamColor[k]-c)*f);
-       const alpha=base*(.82+w*.10+f*.22);
-       const vertex=(row*layer.cols+i)*4;
-       layer.colors[vertex]=rgb[0];layer.colors[vertex+1]=rgb[1];layer.colors[vertex+2]=rgb[2];layer.colors[vertex+3]=alpha;
+       const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[vertex];
+       const wetR=1-.52*w,wetG=.94-.40*w,wetB=.82-.34*w;
+       layer.colors[vertex*4]=wetR+(.91-wetR)*f;
+       layer.colors[vertex*4+1]=wetG+(.94-wetG)*f;
+       layer.colors[vertex*4+2]=wetB+(.87-wetB)*f;
+       layer.colors[vertex*4+3]=base*(.82+w*.10+f*.22);
       }
       layer.lastShore[i]=shore;
      }else{
       layer.lastShore[i]=NaN;
       for(let row=0;row<layer.rows;row++){
-       const stateIndex=i*layer.rows+row;layer.wetness[stateIndex]*=drying;layer.residue[stateIndex]*=Math.exp(-step/7.5);
-       const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[row*layer.cols+i];
-       const dryColor=[1,.94,.82],wetColor=[.48,.54,.48],foamColor=[.91,.94,.87];
-       let rgb=dryColor.map((c,k)=>c+(wetColor[k]-c)*w);rgb=rgb.map((c,k)=>c+(foamColor[k]-c)*f);
-       const alpha=base*(.82+w*.10+f*.22),vertex=(row*layer.cols+i)*4;
-       layer.colors[vertex]=rgb[0];layer.colors[vertex+1]=rgb[1];layer.colors[vertex+2]=rgb[2];layer.colors[vertex+3]=alpha;
+       const stateIndex=i*layer.rows+row,vertex=row*layer.cols+i;
+       layer.wetness[stateIndex]*=drying;layer.residue[stateIndex]*=Math.exp(-step/7.5);
+       const w=layer.wetness[stateIndex],foam=layer.residue[stateIndex],base=layer.baseAlpha[vertex];
+       const wetR=1-.52*w,wetG=.94-.40*w,wetB=.82-.34*w;
+       layer.colors[vertex*4]=wetR+(.91-wetR)*foam;
+       layer.colors[vertex*4+1]=wetG+(.94-wetG)*foam;
+       layer.colors[vertex*4+2]=wetB+(.87-wetB)*foam;
+       layer.colors[vertex*4+3]=base*(.82+w*.10+foam*.22);
       }
      }
     }
     layer.mesh.updateVerticesData(B.VertexBuffer.PositionKind,layer.positions,false,false);
     layer.mesh.updateVerticesData(B.VertexBuffer.ColorKind,layer.colors,false,false);
    }
+   beachUpdateLastMs=performance.now()-beachUpdateStartedAt;
   }
   function update(dt,x,z,distance,heading,running,onShip,airborne){
+   const groundDynamicsStartedAt=performance.now();
    if(!Number.isFinite(dt)||dt<=0)return;
-   for(let i=imprints.length-1;i>=0;i--){
-    const item=imprints[i];item.age+=dt;item.fadeAccumulator+=dt;
-    if(item.age>=item.life){item.mesh.dispose(false,true);imprints.splice(i,1);continue;}
+   let imprintColorsDirty=false;
+   for(const item of imprints){
+    if(!item.active)continue;
+    item.age+=dt;item.fadeAccumulator+=dt;
+    const base=item.slot*imprintVertexCount,colorStart=base*4;
+    if(item.age>=item.life){
+     item.active=false;
+     for(let vertex=0;vertex<imprintVertexCount;vertex++)imprintColors[colorStart+vertex*4+3]=0;
+     imprintColorsDirty=true;continue;
+    }
     if(item.fadeAccumulator>=.48){
      item.fadeAccumulator=0;const fade=Math.pow(Math.max(0,1-item.age/item.life),1.42);
-     for(let k=0;k<item.colors.length;k+=4)item.colors[k+3]=item.baseAlpha[k/4]*fade;
-     item.mesh.updateVerticesData(B.VertexBuffer.ColorKind,item.colors,false,false);
+     for(let vertex=0;vertex<imprintVertexCount;vertex++)imprintColors[colorStart+vertex*4+3]=item.baseAlpha[vertex]*fade;
+     imprintColorsDirty=true;
     }
    }
+   if(imprintColorsDirty)imprintColorBuffer.updateDirectly(imprintColors,0);
    relaxGround(dt);
-   for(let i=particles.length-1;i>=0;i--){
-    const p=particles[i];p.age+=dt;p.life-=dt;
-    p.vy-=2.6*dt;p.mesh.position.x+=p.vx*dt;p.mesh.position.z+=p.vz*dt;p.mesh.position.y+=p.vy*dt;
-    p.mesh.scaling.scaleInPlace(1-dt*.85);
-    if(p.life<=0||p.mesh.position.y<=terrainSurfaceAt(p.mesh.position.x,p.mesh.position.z)+.025){
-     p.mesh.dispose(false,true);particles.splice(i,1);
+   let grainBuffersDirty=false;
+   for(const particle of particles){
+    if(particle.life<=0)continue;
+    particle.age+=dt;particle.life-=dt;
+    particle.vy-=(particle.wet?5.0:4.4)*dt;
+    particle.x+=particle.vx*dt;particle.z+=particle.vz*dt;particle.y+=particle.vy*dt;
+    const matrixOffset=particle.slot*16,colorOffset=particle.slot*4;
+    if(particle.life<=0||particle.y<=particle.groundY+.025){
+     particle.life=0;grainMatrices[matrixOffset]=.0001;grainMatrices[matrixOffset+5]=.0001;grainMatrices[matrixOffset+10]=.0001;
+     grainMatrices[matrixOffset+12]=particle.x;grainMatrices[matrixOffset+13]=-1000;grainMatrices[matrixOffset+14]=particle.z;
+     grainColors[colorOffset+3]=0;grainBuffersDirty=true;continue;
     }
+    const fade=Math.min(1,particle.life/Math.max(.001,particle.maxLife*.18)),size=particle.size*fade;
+    grainMatrices[matrixOffset]=size*(particle.wet?.78:1.0);grainMatrices[matrixOffset+1]=0;grainMatrices[matrixOffset+2]=0;grainMatrices[matrixOffset+3]=0;
+    grainMatrices[matrixOffset+4]=0;grainMatrices[matrixOffset+5]=size*(particle.wet?1.55:.72);grainMatrices[matrixOffset+6]=0;grainMatrices[matrixOffset+7]=0;
+    grainMatrices[matrixOffset+8]=0;grainMatrices[matrixOffset+9]=0;grainMatrices[matrixOffset+10]=size*(particle.wet?.82:1.0);grainMatrices[matrixOffset+11]=0;
+    grainMatrices[matrixOffset+12]=particle.x;grainMatrices[matrixOffset+13]=particle.y;grainMatrices[matrixOffset+14]=particle.z;grainMatrices[matrixOffset+15]=1;
+    grainColors[colorOffset]=particle.r;grainColors[colorOffset+1]=particle.g;grainColors[colorOffset+2]=particle.b;grainColors[colorOffset+3]=particle.a*fade;
+    grainBuffersDirty=true;
    }
+   if(grainBuffersDirty){grainMesh.thinInstanceBufferUpdated('matrix');grainMesh.thinInstanceBufferUpdated('color');}
    updateBeach(dt,x,z);
-   if(onShip||airborne||!Number.isFinite(distance)||distance<=0){if(!onShip&&(!Number.isFinite(distance)||distance<=0))stepDistance=0;return;}
+   if(onShip||airborne||!Number.isFinite(distance)||distance<=0){if(!onShip&&(!Number.isFinite(distance)||distance<=0))stepDistance=0;groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;return;}
    stepDistance+=distance;
    const stride=running?1.62:1.14;
    while(stepDistance>=stride){
@@ -3218,9 +3323,10 @@ async function removeStrayDebugGeometry(targetScene){
     const back=running?.18:.13,px=x-forwardX*back+rightX*side,pz=z-forwardZ*back+rightZ*side;
     addStep(px,pz,heading,running);
    }
+   groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;
   }
   function reset(){stepDistance=0;alternateFoot=0;}
-  return {update,reset,counts:()=>({imprints:imprints.length,particles:particles.length})};
+  return {update,reset,counts:()=>({imprints:imprints.reduce((count,item)=>count+(item.active?1:0),0),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1})};
  })();
  const tidalFoamMeshes=[];
  function buildTidalFoam(island,index){
@@ -8389,12 +8495,12 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.195',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'7',build:'0.6.208',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
    boat:{onShip,velocity:Number(boatVelocity.toFixed(3)),position:{x:Number(ship.position.x.toFixed(2)),y:Number(ship.position.y.toFixed(2)),z:Number(ship.position.z.toFixed(2))},rotation:{x:Number(ship.rotation.x.toFixed(3)),y:Number(ship.rotation.y.toFixed(3)),z:Number(ship.rotation.z.toFixed(3))},flatWakeStrips:shipWake.map(w=>({name:w.name,enabled:w.isEnabled()})),activeSprayParticles:activeSpray,sprayCapacity:VESSEL_SPRAY_COUNT},
-   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
+   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
    npcs:{enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,ambientPeople:ambientPeople.length,ambientMoving:ambientPeople.filter(n=>Number(n.parts.actualMoveSpeed)>.1).length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,npcClips:humanEnemyParts.filter(p=>p.realHuman).slice(0,8).map(p=>({name:p.name,walk:p.realHuman.walk&&p.realHuman.walk.name,walkPlaying:!!(p.realHuman.walk&&p.realHuman.walk.isPlaying),current:p.realHuman.current&&p.realHuman.current.name,enabled:p.root.isEnabled()}))}
   };
  };
