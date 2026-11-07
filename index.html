@@ -2363,24 +2363,27 @@ async function removeStrayDebugGeometry(targetScene){
   // Fine mineral grain, shell fragments and tiny darker basalt flecks at several scales.
   for(let i=0;i<Math.round(size*size/105);i++){
    const x=random()*size,y=random()*size,r=.25+random()*1.25,light=random()>.53;
+   const fill=light?(random()>.5?'#ead7b0':'#d8c39a'):(random()>.5?'#786b53':'#927c5a');
+   const alpha=.10+random()*.20,rx=r*(.7+random()*1.8),ry=r*(.45+random()),rotation=random()*Math.PI;
    repeatMark((px,py)=>{
-    ctx.fillStyle=light?(random()>.5?'#ead7b0':'#d8c39a'):(random()>.5?'#786b53':'#927c5a');
-    ctx.globalAlpha=.10+random()*.20;ctx.beginPath();ctx.ellipse(px,py,r*(.7+random()*1.8),r*(.45+random()),random()*Math.PI,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=fill;ctx.globalAlpha=alpha;ctx.beginPath();ctx.ellipse(px,py,rx,ry,rotation,0,Math.PI*2);ctx.fill();
    },x,y,4);
   }
   // Low wind-built ripples: shallow, broken curves rather than a repeated striped pattern.
   for(let i=0;i<Math.round(size*.78);i++){
    const x=random()*size,y=random()*size,len=8+random()*70,amp=.6+random()*2.7;
+   const stroke=i%3===0?'#e4d0a5':'#806e4d',alpha=.055+random()*.10,width=.35+random()*.75;
    repeatMark((px,py)=>{
-    ctx.strokeStyle=i%3===0?'#e4d0a5':'#806e4d';ctx.globalAlpha=.055+random()*.10;ctx.lineWidth=.35+random()*.75;
+    ctx.strokeStyle=stroke;ctx.globalAlpha=alpha;ctx.lineWidth=width;
     ctx.beginPath();ctx.moveTo(px,py);ctx.bezierCurveTo(px+len*.28,py-amp,px+len*.68,py+amp,px+len,py+amp*.15);ctx.stroke();
    },x,y,76);
   }
   for(let i=0;i<Math.round(size*.20);i++){
    const x=random()*size,y=random()*size,len=2+random()*8;
+   const stroke=i%2?'#efe0bd':'#675a45',alpha=.12+random()*.16,width=.45+random()*.8,slope=(random()-.5)*1.8;
    repeatMark((px,py)=>{
-    ctx.strokeStyle=i%2?'#efe0bd':'#675a45';ctx.globalAlpha=.12+random()*.16;ctx.lineWidth=.45+random()*.8;
-    ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+len,py+(random()-.5)*1.8);ctx.stroke();
+    ctx.strokeStyle=stroke;ctx.globalAlpha=alpha;ctx.lineWidth=width;
+    ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+len,py+slope);ctx.stroke();
    },x,y,12);
   }
   ctx.globalAlpha=1;tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);
@@ -2928,7 +2931,7 @@ async function removeStrayDebugGeometry(targetScene){
  // so it never changes the walkable collision profile.
  const livingBeachLayers=[];
  function buildLivingBeachLayer(island,index){
-  const segments=isPerformanceMode?(isConstrainedMobile?72:104):160,rows=7,cols=segments+1;
+  const segments=isPerformanceMode?(isConstrainedMobile?72:104):160,rows=9,cols=segments+1;
   const positions=[],indices=[],uvs=[],colors=[],radials=[],baseAlpha=[],wetness=new Float32Array((segments+1)*rows),residue=new Float32Array((segments+1)*rows),lastShore=new Float32Array(segments+1);
   lastShore.fill(NaN);
   for(let i=0;i<=segments;i++){
@@ -3116,7 +3119,7 @@ async function removeStrayDebugGeometry(targetScene){
        layer.wetness[stateIndex]=Math.min(1,wet);
        let foam=layer.residue[stateIndex]*Math.exp(-step/7.5);
        if(retreat>.035){
-        const distance=Math.abs(radial-previous),deposit=Math.min(.44,retreat*2.1)*Math.exp(-distance*5.5);
+        const distance=Math.abs(radial-previous),deposit=Math.min(.52,retreat*2.1)*Math.exp(-distance*1.25);
         foam=Math.max(foam,deposit);
        }
        layer.residue[stateIndex]=Math.min(.6,foam);
