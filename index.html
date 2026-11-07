@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.196">
+<meta name="el-sin-nombre-build" content="0.6.197">
 <meta name="el-sin-nombre-repair" content="0.6.195 preserve rigged deer/stag/wolf; validate island ground and animal roaming; deck-mounted raider crew; plank-built huts; distance-culled faction badges; preserve master pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.195</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.197</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -3259,6 +3259,24 @@ async function removeStrayDebugGeometry(targetScene){
   const sz=(terrainHeightOnIsland(is,x,z+step)-terrainHeightOnIsland(is,x,z-step))/(2*step);
   return Number.isFinite(sx)&&Number.isFinite(sz)&&Math.hypot(sx,sz)<=.48;
  }
+ // Vegetation must stay inside the true dry-land band, not merely inside the island's
+ // broad collision radius (which also includes wet sand and submerged shoreline).
+ function isSafeGroundCoverPoint(is,x,z){
+  const index=land.indexOf(is);
+  if(index<0||landIslandIndex(x,z)!==index)return false;
+  const dx=x-is.x,dz=z-is.z;
+  if(dx*dx+dz*dz>(is.r*.70)**2)return false;
+  const groundY=terrainHeightOnIsland(is,x,z);
+  if(!Number.isFinite(groundY)||groundY<.82||groundY>12.5)return false;
+  const step=.62;
+  for(const [sx,sz] of [[step,0],[-step,0],[0,step],[0,-step]]){
+   if(landIslandIndex(x+sx,z+sz)!==index)return false;
+   if(terrainHeightOnIsland(is,x+sx,z+sz)<.70)return false;
+  }
+  const slopeX=(terrainHeightOnIsland(is,x+step,z)-terrainHeightOnIsland(is,x-step,z))/(2*step);
+  const slopeZ=(terrainHeightOnIsland(is,x,z+step)-terrainHeightOnIsland(is,x,z-step))/(2*step);
+  return Number.isFinite(slopeX)&&Number.isFinite(slopeZ)&&Math.hypot(slopeX,slopeZ)<=.82;
+ }
  // Layered broadleaf shrubs with smooth, irregular foliage masses and visible woody stems.
  const naturalShrubs=[];
  function createNaturalShrub(x,z,size=1,homeIslandIndex=landIslandIndex(x,z)){
@@ -3542,7 +3560,7 @@ async function removeStrayDebugGeometry(targetScene){
    const raider=makeViking('RaiderCrew_'+index+'_'+i,true,(index+i)%4),side=i%2===0?-1:1;
    setFactionBadge(raider,'enemy');
    const mount=newGroup('RaiderCrewMount_'+index+'_'+i,root);
-   mount.position=v(side*.66,1.005,1.65-i*2.25);
+   mount.position=v(side*.66,.967,1.65-i*2.25);
    raider.root.parent=mount;raider.root.position.set(0,0,0);raider.root.rotation.y=side*Math.PI/2;
    raider.vesselMount=mount;
    raider.weapon.setEnabled(false);attachContactShadow(raider.root,'RaiderCrewShadow_'+index+'_'+i,.82);addModelShadow(raider.root);
@@ -4228,7 +4246,11 @@ async function removeStrayDebugGeometry(targetScene){
   const bodyWidth=isCivilian?[.94,1.02,1.08,.91][index%4]:[1.02,1.10,.94,1.06][index%4];
   const bodyDepth=isCivilian?[.98,1.02,1.05,.94][index%4]:[1.04,.96,1.08,.99][index%4];
   modelRoot.scaling.set(scale*bodyWidth,scale,scale*bodyDepth);bounds=boundsForMeshes(meshes);
-  modelRoot.position.y += parts.root.position.y-bounds.min.y+.008;
+  // bounds.min.y is a WORLD-space coordinate. Use the root's WORLD height as
+  // the reference too; parts.root.position.y is only local when mounted to a ship.
+  parts.root.computeWorldMatrix(true);
+  const rootWorldY=parts.root.getAbsolutePosition().y;
+  modelRoot.position.y += rootWorldY-bounds.min.y+.008;
   meshes.forEach(mesh=>{mesh.computeWorldMatrix(true);});
   const shadowCasterMeshes=meshes.slice().sort((a,b)=>(b.getTotalVertices?.()||0)-(a.getTotalVertices?.()||0)).slice(0,isCivilian?2:4);
   const transformNodes=collectTransformNodes(roots);
@@ -6836,7 +6858,7 @@ function createRealWeapon(type='axe'){
  }
  villages.forEach((vl,i)=>addNorseVillageProps(vl,i));
  // Decoration and atmosphere: anatomically built Norse hearths, layered flame, embers and smoke.
- const flameMeshes=[],fireSparks=[];
+ const flameMeshes=[],fireSparks=[],hearthStates=[];
  const hearthAshMat=mat('Hearth ash and soot','#28231f',1),hearthCoalMat=mat('Charred oak coal','#201914',.98);
  const hearthOuterFlame=new B.StandardMaterial('HearthFlameOuter',scene);hearthOuterFlame.emissiveColor=new B.Color3(1,.105,.012);hearthOuterFlame.diffuseColor=new B.Color3(.76,.12,.025);hearthOuterFlame.disableLighting=true;hearthOuterFlame.alpha=.94;hearthOuterFlame.backFaceCulling=false;hearthOuterFlame.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
  const hearthMiddleFlame=new B.StandardMaterial('HearthFlameMiddle',scene);hearthMiddleFlame.emissiveColor=new B.Color3(1,.34,.035);hearthMiddleFlame.diffuseColor=new B.Color3(1,.36,.045);hearthMiddleFlame.disableLighting=true;hearthMiddleFlame.alpha=.97;hearthMiddleFlame.backFaceCulling=false;hearthMiddleFlame.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
@@ -6851,7 +6873,7 @@ function createRealWeapon(type='axe'){
   flameMeshes.push({mesh,phase,baseX:pos[0],baseZ:pos[2],height,width});return mesh;
  }
  function campfire(x,z){
-  const floorY=terrainSurfaceAt(x,z),base=newGroup('DetailedNorseHearth',null),baseYaw=rand(-.28,.28);
+  const floorY=terrainSurfaceAt(x,z),flameStart=flameMeshes.length,sparkStart=fireSparks.length,base=newGroup('DetailedNorseHearth',null),baseYaw=rand(-.28,.28);
   // Mancha de tierra quemada, cama de ceniza y carbón irregular bajo la leña.
   const scorch=sphere('HearthScorchedEarth',base,[0,.025,0],[1.52,.045,1.18],hearthAshMat,16);scorch.isPickable=false;
   const ash=sphere('HearthAshBed',base,[0,.075,0],[.91,.085,.68],hearthAshMat,14);ash.isPickable=false;
@@ -6875,9 +6897,34 @@ function createRealWeapon(type='axe'){
   makeFlameTongue('HearthFlameCore_B',base,[.035,.22,.025],.35,.062,hearthCoreFlame,3.7,-.025);
   // Chispas pequeñas, reutilizadas en el bucle ambiental para no crear partículas cada fotograma.
   for(let i=0;i<4;i++){const spark=sphere('HearthSpark_'+i,base,[0,.35,0],[.035,.055,.035],hearthSparkMat,6);spark.isPickable=false;fireSparks.push({mesh:spark,phase:i*.23+rand(0,.2),speed:.45+rand(0,.25),offsetX:rand(-.16,.16),offsetZ:rand(-.13,.13)});spark.setEnabled(false);}
-  const light=new B.PointLight('HearthGlow',v(x,floorY+1.0,z),scene);light.diffuse=new B.Color3(1,.43,.13);light.specular=new B.Color3(1,.32,.075);light.intensity=.82;light.range=12;fireLights.push({light,phase:rand(0,6)});
-  smokeEmitters.push({x,y:floorY+.78,z,phase:rand(0,8),fire:true});
+  const light=new B.PointLight('HearthGlow',v(x,floorY+1.0,z),scene);light.diffuse=new B.Color3(1,.43,.13);light.specular=new B.Color3(1,.32,.075);light.intensity=.82;light.range=12;const fireLight={light,phase:rand(0,6)};fireLights.push(fireLight);
+  const smoke={x,y:floorY+.78,z,phase:rand(0,8),fire:true,extinguished:false};smokeEmitters.push(smoke);
+  const hearth={x,z,floorY,extinguished:false,drySeconds:0,flames:flameMeshes.slice(flameStart),sparks:fireSparks.slice(sparkStart),fireLight,smoke};
+  hearth.flames.forEach(flame=>flame.hearth=hearth);
+  hearth.sparks.forEach(spark=>spark.hearth=hearth);
+  fireLight.hearth=hearth;hearthStates.push(hearth);
   return base;
+ }
+ function setHearthExtinguished(hearth,extinguished){
+  if(!hearth||hearth.extinguished===extinguished)return;
+  hearth.extinguished=extinguished;
+  if(hearth.smoke)hearth.smoke.extinguished=extinguished;
+  hearth.flames.forEach(flame=>flame.mesh.setEnabled(!extinguished));
+  hearth.sparks.forEach(spark=>spark.mesh.setEnabled(!extinguished));
+  if(hearth.fireLight)hearth.fireLight.light.intensity=extinguished?0:.82;
+ }
+ function updateHearthFlooding(dt){
+  for(const hearth of hearthStates){
+   const surface=waterHeight(hearth.x,hearth.z,oceanTime);
+   const flooded=Number.isFinite(surface)&&surface>=hearth.floorY+.16;
+   if(flooded){
+    hearth.drySeconds=0;
+    setHearthExtinguished(hearth,true);
+   }else if(hearth.extinguished){
+    hearth.drySeconds=surface<hearth.floorY-.10?hearth.drySeconds+dt:0;
+    if(hearth.drySeconds>=7.5)setHearthExtinguished(hearth,false);
+   }
+  }
  }
  villages.forEach(vl=>campfire(vl.x-3,vl.z+5));
  // 0.6.100 — pequeños campamentos secundarios, uno en cada isla con asentamiento.
@@ -7030,7 +7077,7 @@ function createRealWeapon(type='axe'){
  buildOuterIslandLandmarks();
  // Primer refugio del protagonista: lona remendada, dos postes, leña húmeda y un fuego pequeño.
  // No es una casa construida: es un campamento de náufrago junto al lugar donde despierta.
- const starterCampX=-53.5,starterCampZ=15.5,starterCampY=terrainSurfaceAt(starterCampX,starterCampZ);
+ const starterCampX=-40.0,starterCampZ=15.5,starterCampY=terrainSurfaceAt(starterCampX,starterCampZ);
  const starterCamp=newGroup('PoorNorseCastawayCamp',null);starterCamp.position=v(starterCampX,starterCampY,starterCampZ);
  for(const side of [-1,1]){
   cyl('CastawayLeanToPole_'+side,starterCamp,[side*.92,.88,-.32],1.78,.065,.07,M.woodDark,[0,0,side*.20]);
@@ -7246,7 +7293,7 @@ function createRealWeapon(type='axe'){
    const gridSide=Math.ceil(Math.sqrt(want*1.60)),cellSize=(radius*2)/gridSide;
    const occupiedGridCells=new Set(),placedGridPositions=new Map();
    const tryPlaceGrass=(x,z)=>{
-    if(!isLand(x,z))return false;
+    if(!isSafeGroundCoverPoint(island,x,z))return false;
     const gridCol=Math.max(0,Math.min(gridSide-1,Math.floor((x-(island.x-radius))/cellSize)));
     const gridRow=Math.max(0,Math.min(gridSide-1,Math.floor((z-(island.z-radius))/cellSize)));
     const gridCell=gridRow*gridSide+gridCol;
@@ -9461,12 +9508,13 @@ function updateHUD(){
   ambientVfxAccumulator+=ambientDt;
   if(ambientVfxAccumulator>=(isConstrainedMobile?.10:.05)){
    ambientVfxAccumulator%=isConstrainedMobile?.10:.05;
+  updateHearthFlooding(ambientDt);
   // Hearths flicker and throw warm light across the settlement.
-  flameMeshes.forEach(f=>{if(!worldEntityVisualDue(f,f.baseX,f.baseZ))return;const wave=.91+Math.sin(elapsed*9.5+f.phase)*.13+Math.sin(elapsed*17+f.phase)*.055;f.mesh.scaling.y=wave;f.mesh.scaling.x=1+Math.sin(elapsed*12+f.phase)*.07;f.mesh.rotation.z=Math.sin(elapsed*8+f.phase)*.105;f.mesh.rotation.x=Math.cos(elapsed*7.2+f.phase)*.045;f.mesh.position.x=f.baseX+Math.sin(elapsed*6.8+f.phase)*.035;f.mesh.position.z=f.baseZ+Math.cos(elapsed*7.6+f.phase)*.025;});
-  fireLights.forEach(f=>{if(!worldEntityVisualDue(f,f.light.position.x,f.light.position.z))return;f.light.intensity=.66+Math.sin(elapsed*8+f.phase)*.16+Math.sin(elapsed*13+f.phase)*.065;});
-  fireSparks.forEach(s=>{if(!worldEntityVisualDue(s,s.offsetX,s.offsetZ))return;const t=(elapsed*s.speed+s.phase)%1,visible=t<.66;s.mesh.setEnabled(visible);if(visible){const rise=t/.66;s.mesh.position.x=s.offsetX+Math.sin(elapsed*11+s.phase)*(.045+rise*.12);s.mesh.position.y=.34+rise*.72;s.mesh.position.z=s.offsetZ+Math.cos(elapsed*9+s.phase)*(.04+rise*.10);const size=.032*(1-rise*.58);s.mesh.scaling.set(size,size*1.35,size);}});
+  flameMeshes.forEach(f=>{if(f.hearth&&f.hearth.extinguished){f.mesh.setEnabled(false);return;}f.mesh.setEnabled(true);if(!worldEntityVisualDue(f,f.baseX,f.baseZ))return;const wave=.91+Math.sin(elapsed*9.5+f.phase)*.13+Math.sin(elapsed*17+f.phase)*.055;f.mesh.scaling.y=wave;f.mesh.scaling.x=1+Math.sin(elapsed*12+f.phase)*.07;f.mesh.rotation.z=Math.sin(elapsed*8+f.phase)*.105;f.mesh.rotation.x=Math.cos(elapsed*7.2+f.phase)*.045;f.mesh.position.x=f.baseX+Math.sin(elapsed*6.8+f.phase)*.035;f.mesh.position.z=f.baseZ+Math.cos(elapsed*7.6+f.phase)*.025;});
+  fireLights.forEach(f=>{if(f.hearth&&f.hearth.extinguished){f.light.intensity=0;return;}if(!worldEntityVisualDue(f,f.light.position.x,f.light.position.z))return;f.light.intensity=.66+Math.sin(elapsed*8+f.phase)*.16+Math.sin(elapsed*13+f.phase)*.065;});
+  fireSparks.forEach(s=>{if(s.hearth&&s.hearth.extinguished){s.mesh.setEnabled(false);return;}if(!worldEntityVisualDue(s,s.offsetX,s.offsetZ))return;const t=(elapsed*s.speed+s.phase)%1,visible=t<.66;s.mesh.setEnabled(visible);if(visible){const rise=t/.66;s.mesh.position.x=s.offsetX+Math.sin(elapsed*11+s.phase)*(.045+rise*.12);s.mesh.position.y=.34+rise*.72;s.mesh.position.z=s.offsetZ+Math.cos(elapsed*9+s.phase)*(.04+rise*.10);const size=.032*(1-rise*.58);s.mesh.scaling.set(size,size*1.35,size);}});
   // Soft chimney and hearth smoke rises, stretches and fades in a repeating cycle.
-  smokeEmitters.forEach((source,si)=>{if(!source.puffs){source.puffs=[];const puffCount=source.fire?3:2;for(let p=0;p<puffCount;p++){const puff=sphere('VillageSmokePuff_'+si+'_'+p,null,[source.x,source.y,source.z],[.20,.20,.20],M.smoke,8);const pm=M.smoke.clone('SmokeMat_'+si+'_'+p);pm.alpha=source.fire ? 0.13 : 0.10;pm.disableLighting=true;puff.material=pm;source.puffs.push({mesh:puff,phase:p/puffCount,mat:pm});}}if(!worldEntityVisualDue(source,source.x,source.z))return;source.puffs.forEach(p=>{const t=(elapsed*(source.fire ? 0.082 : 0.105)+p.phase+source.phase*.03)%1;p.mesh.position.x=source.x+Math.sin(t*5+source.phase)*(.10+t*(source.fire ? 0.34 : 0.55));p.mesh.position.y=source.y+t*(source.fire?2.35:3.1);p.mesh.position.z=source.z+Math.cos(t*4+source.phase)*(.08+t*(source.fire ? 0.30 : 0.38));const sc=(source.fire ? 0.13 : 0.18)+t*(source.fire ? 0.40 : 0.52);p.mesh.scaling.set(sc,sc*1.5,sc);p.mat.alpha=(1-t)*(source.fire ? 0.14 : 0.105);});});
+  smokeEmitters.forEach((source,si)=>{if(source.fire&&source.extinguished){if(source.puffs)source.puffs.forEach(p=>{p.mesh.setEnabled(false);p.mat.alpha=0;});return;}if(!source.puffs){source.puffs=[];const puffCount=source.fire?3:2;for(let p=0;p<puffCount;p++){const puff=sphere('VillageSmokePuff_'+si+'_'+p,null,[source.x,source.y,source.z],[.20,.20,.20],M.smoke,8);const pm=M.smoke.clone('SmokeMat_'+si+'_'+p);pm.alpha=source.fire ? 0.13 : 0.10;pm.disableLighting=true;puff.material=pm;source.puffs.push({mesh:puff,phase:p/puffCount,mat:pm});}}if(!worldEntityVisualDue(source,source.x,source.z))return;source.puffs.forEach(p=>{p.mesh.setEnabled(true);const t=(elapsed*(source.fire ? 0.082 : 0.105)+p.phase+source.phase*.03)%1;p.mesh.position.x=source.x+Math.sin(t*5+source.phase)*(.10+t*(source.fire ? 0.34 : 0.55));p.mesh.position.y=source.y+t*(source.fire?2.35:3.1);p.mesh.position.z=source.z+Math.cos(t*4+source.phase)*(.08+t*(source.fire ? 0.30 : 0.38));const sc=(source.fire ? 0.13 : 0.18)+t*(source.fire ? 0.40 : 0.52);p.mesh.scaling.set(sc,sc*1.5,sc);p.mat.alpha=(1-t)*(source.fire ? 0.14 : 0.105);});});
   }
   // Villagers walk between short work points, pause and look around; they are neutral, not hostile guards.
   ambientPeople.forEach((npc,i)=>{
@@ -9521,7 +9569,7 @@ function updateHUD(){
     // Los GLB pueden conservar rotationQuaternion; se elimina para que la pose
     // local de cubierta no quede anulada por la orientación de importación.
     p.rotationQuaternion=null;
-    p.position.set(seat.x,.995,seat.z);p.rotation.set(0,seat.side*Math.PI/2,0);
+    p.position.set(seat.x,guard.parts.realHuman?.role ? .972 : .995,seat.z);p.rotation.set(0,seat.side*Math.PI/2,0);
     p.computeWorldMatrix(true);guard.parts.actualMoveSpeed=0;
     animateShipRower(guard.parts,elapsed*5.8+seat.oar*.58+(seat.side>0?Math.PI:0));return;
    }

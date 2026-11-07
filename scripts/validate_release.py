@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.196"
+EXPECTED_VERSION = "0.6.197"
 
 HTML_PAGES = (
     "index.html",
@@ -271,6 +271,22 @@ def main() -> None:
         fail("Faltan las métricas por isla del diagnóstico de hierba.")
     if "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);" not in index_html:
         fail("La densidad principal de vegetación no conserva su cobertura.")
+    if "function isSafeGroundCoverPoint(is,x,z)" not in index_html or "isSafeGroundCoverPoint(island,x,z)" not in index_html:
+        fail("La hierba no restringe la generación a terreno seco y alejado de la costa.")
+    if "function updateHearthFlooding(dt)" not in index_html or "updateHearthFlooding(ambientDt)" not in index_html:
+        fail("Las hogueras no reaccionan a la altura del oleaje.")
+    if "source.fire&&source.extinguished" not in index_html or "flame.hearth=hearth" not in index_html:
+        fail("Las hogueras inundadas no apagan sus llamas y humo.")
+    if "parts.root.getAbsolutePosition().y" not in index_html or "rootWorldY-bounds.min.y+.008" not in index_html:
+        fail("Los guerreros montados no se alinean usando coordenadas mundiales.")
+    if "mount.position=v(side*.66,.967,1.65-i*2.25);" not in index_html:
+        fail("La tripulación enemiga no está montada a la altura superior de la cubierta.")
+    if "const starterCampX=-40.0,starterCampZ=15.5" not in index_html:
+        fail("El campamento inicial sigue en la franja de rompiente.")
+    if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
+        fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.197</title>" not in index_html:
+        fail("El título de la página no coincide con la versión publicada.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
         fail("Los penachos o su iluminación de doble cara están incompletos.")
     if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
@@ -303,7 +319,7 @@ def main() -> None:
         fail("La fauna GLB no conserva su isla de origen o puede caminar hacia el mar.")
     if "RaiderCrewMount_" not in index_html or "if(parts.vesselMount)" not in index_html:
         fail("La tripulación del drakkar no está anclada a la cubierta.")
-    if "p.rotationQuaternion=null;" not in index_html or "p.position.set(seat.x,.995,seat.z)" not in index_html:
+    if "p.rotationQuaternion=null;" not in index_html or "p.position.set(seat.x,guard.parts.realHuman?.role ? .972 : .995,seat.z)" not in index_html:
         fail("La tripulación no limpia la rotación heredada ni fija coordenadas locales de cubierta.")
     shore_start = index_html.find("function placeShipAllyOnShore(")
     shore_end = index_html.find("function animateViking(", shore_start)
