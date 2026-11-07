@@ -2845,7 +2845,7 @@ async function removeStrayDebugGeometry(targetScene){
      positions[offset]=x;positions[offset+1]=water>ground?water+.014:ground+.022;positions[offset+2]=z;
      const innerFade=smooth01((shoreOffset+.72)/.18);
      const outerFade=1-smooth01((shoreOffset-.48)/.18);
-     const whiteFoamProfile=Math.exp(-((shoreOffset-.16)/.27)**2);
+     const whiteFoamProfile=Math.exp(-(((shoreOffset-.16)/.27)**2));
      const lace=foamPattern[vertex];
      const alpha=Math.min(.90,foamStrength*whiteFoamProfile*innerFade*outerFade*Math.pow(lace,1.18)*(.92+.08*secondary));
      colors[color]=.98;colors[color+1]=.99;colors[color+2]=1;colors[color+3]=alpha;
