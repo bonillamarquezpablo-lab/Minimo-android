@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.198"
+EXPECTED_VERSION = "0.6.199"
 
 HTML_PAGES = (
     "index.html",
@@ -289,6 +289,15 @@ def main() -> None:
         fail("El título de la página no coincide con la versión publicada.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
         fail("Los penachos o su iluminación de doble cara están incompletos.")
+    foam_start = index_html.find("function buildTidalFoam(")
+    foam_end = index_html.find("land.forEach(buildTidalFoam)", foam_start)
+    foam_body = index_html[foam_start:foam_end]
+    if foam_start < 0 or foam_end <= foam_start or "const radial=row===0?.08:(row===1?.27:.50);" not in foam_body:
+        fail("La espuma costera sigue extendiéndose hacia la arena transitable.")
+    if "const groundY=terrainHeightOnIsland(foam.island,x,z);" not in index_html or "smooth01((surface-groundY+.08)/.24)" not in index_html:
+        fail("La espuma no está limitada al contacto real entre oleaje y terreno.")
+    if "foam.mesh.updateVerticesData(B.VertexBuffer.ColorKind,foam.colors,false);" not in index_html or "baseColors:new Float32Array(colors)" not in foam_body:
+        fail("La transparencia de la espuma no se actualiza con la altura local del agua.")
     if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
         fail("Falta la distribución uniforme con separación mínima.")
     if "const grids=[grid(4,4),grid(10,10),grid(24,24),grid(60,60),grid(144,144),grid(288,288)];" not in index_html:
