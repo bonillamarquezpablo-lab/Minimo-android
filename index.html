@@ -2823,7 +2823,7 @@ async function removeStrayDebugGeometry(targetScene){
  function shorelineFoamRadius(island,angle,t=oceanTime){
   const sample=radius=>{
    const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-   return terrainHeightOnIsland(island,x,z)-waterHeight(x,z,t);
+   return terrainSurfaceAt(x,z)-waterHeight(x,z,t);
   };
   let lo=island.r*.70,hi=island.r*1.09,loDelta=sample(lo),hiDelta=sample(hi);
   if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)||loDelta<=0||hiDelta>=0)return null;
