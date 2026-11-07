@@ -149,7 +149,7 @@ def main() -> None:
         fail("El espejo del agua debe actualizarse solo con la isla activa.")
     if "nordicWaterMirror.refreshRate=isTouchDevice?12:8" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
         fail("El espejo de Calidad debe reducir su frecuencia y excluir la espuma del pase de reflejo.")
-    if "const mirrorSize=isTouchDevice?640:1024" not in index_html or "nordicWaterMirror.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE)" not in index_html or "anisotropicFilteringLevel=Math.min(8,maxAnisotropy)" not in index_html:
+    if "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024" not in index_html or "nordicWaterMirror.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE)" not in index_html or "anisotropicFilteringLevel=Math.min(8,maxAnisotropy)" not in index_html:
         fail("El reflejo de Calidad debe mantener resolución alta y filtrado trilineal/aniso sin cambiar la cadencia de actualización.")
     if "ShoreBreakerWash_" not in index_html[index_html.find("function syncNordicWaterReflectionIsland"):index_html.find("try{\n  if(B.MirrorTexture")]:
         fail("La lámina de rompiente no debe autorreflejarse en el espejo del agua.")
@@ -169,7 +169,7 @@ def main() -> None:
         fail("Rendimiento debe desactivar la espuma/rociado del barco.")
     if "const segments=isPerformanceMode?(isConstrainedMobile?112:160)" not in index_html or "const washFractions=isPerformanceMode?[1,.72,.44,.16,0,-.22]" not in index_html or "ShoreBreakerWash_" not in index_html:
         fail("Rendimiento también debe conservar una rompiente costera simplificada con lámina somera y cresta visible.")
-    if "const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?64:112))):(isTouchDevice?192:256)" not in index_html:
+    if "const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?64:112))):(isTouchDevice?(isConstrainedMobile?176:192):256)" not in index_html:
         fail("El aumento de teselación del agua debe limitarse al perfil Calidad; Rendimiento conserva su presupuesto.")
     if "const breakStrength=smooth01((waveCrest-.30)/.65);" not in index_html or "const waterFilm=exposedSand*coverage*(.055+.105*waveCrest);" not in index_html or "const whitewater=breakStrength*leadingEdge*cellular*.66;" not in index_html or "const angularWaveStep=.052*shoreline*(-sn+.62*cs)*(Math.PI*2/segments);" not in index_html or "const lipProfile=Math.exp(-Math.pow((fraction-.78)/.26,2));" not in index_html:
         fail("La rompiente debe suavizar cresta y labio, avanzar como lámina y formar espuma fragmentada sin puntas geométricas.")
