@@ -133,6 +133,10 @@ def main() -> None:
         fail("Rendimiento debe esperar a que la escena esté lista, sin el timeout de entrada anticipada.")
     if "audioPreloadResult=await startupAudioPreload" not in index_html:
         fail("Rendimiento debe completar la precarga de audio antes de abrir la intro.")
+    if "if(isPerformanceMode&&!realPlayerReady)throw new Error(" not in index_html:
+        fail("Rendimiento no debe abrir la intro si el GLB protagonista no está listo.")
+    if "if(isPerformanceMode)throw warmupError;" not in index_html:
+        fail("Rendimiento no debe permitir entrar con una escena que falló al prepararse.")
     if "GLB protagonist pipeline timing" not in index_html:
         fail("Falta telemetría de importación y montaje del GLB protagonista.")
     if "rightGripBones:realRightGripBones.length" not in index_html:
