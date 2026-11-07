@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.216">
-<meta name="el-sin-nombre-repair" content="0.6.216 fragmented dynamic shoreline foam, corrected eight-row wave displacement, thirteen-island conquest and naval defence">
+<meta name="el-sin-nombre-build" content="0.6.217">
+<meta name="el-sin-nombre-repair" content="0.6.217 ultra-low-end island streaming in Performance mode; 0.6.216 fragmented shoreline foam and thirteen-island conquest">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.216</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.217</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2197,13 +2197,14 @@ async function removeStrayDebugGeometry(targetScene){
  // Galaxy A12 (SM-A125) Helio P35/PowerVR GE8320 y A12 Nacho (SM-A127) Exynos 850/Mali-G52.
  // Algunos navegadores Samsung ocultan navigator.deviceMemory y el nombre del modelo.
  const legacyLowEndGpuMatch=/SM-A10[0-9A-Z]*|Exynos\s*7884|Mali[- ]?G71(?:\s*MP2)?/i.test(hardwareSignature);
+ const redmi8aHardwareMatch=/Redmi\s*8A|M2006C3L[A-Z0-9]*|Snapdragon\s*439|Adreno[- ]?505/i.test(hardwareSignature);
  const galaxyA12HardwareMatch=/SM-A12[57][A-Z0-9]*|Exynos\s*850|MT6765|Helio\s*P35/i.test(hardwareSignature);
  const galaxyA12GpuMatch=/Mali[- ]?G52(?:\s*MP1)?|PowerVR.*GE8320/i.test(hardwareSignature);
- const constrainedGpuMatch=/SM-A12[57][A-Z0-9]*|SM-A127F|Mali[- ]?G52(?:\s*MP1)?|PowerVR.*GE8320|SM-A10[0-9A-Z]*|Exynos\s*7884|Mali[- ]?G71(?:\s*MP2)?/i.test(hardwareSignature);
+ const constrainedGpuMatch=/SM-A12[57][A-Z0-9]*|SM-A127F|Mali[- ]?G52(?:\s*MP1)?|PowerVR.*GE8320|SM-A10[0-9A-Z]*|Exynos\s*7884|Mali[- ]?G71(?:\s*MP2)?|Redmi\s*8A|M2006C3L[A-Z0-9]*|Snapdragon\s*439|Adreno[- ]?505/i.test(hardwareSignature);
  const constrainedHardware=!!(isTouchDevice&&(constrainedGpuMatch||(reportedMemory>0&&reportedMemory<=4&&(Number(navigator.hardwareConcurrency)||0)<=8)));
  const iosMemoryBlindMobile=!!(isIOSDevice&&(!reportedMemory||reportedMemory<=4));
  const isConstrainedMobile=!!(isPerformanceMode&&(iosMemoryBlindMobile||(isTouchDevice&&(constrainedHardware||reportedMemory<=3))));
- const isUltraLowEndMobile=!!(isPerformanceMode&&isTouchDevice&&(legacyLowEndGpuMatch||(reportedMemory>0&&reportedMemory<=2)));
+ const isUltraLowEndMobile=!!(isPerformanceMode&&isTouchDevice&&(legacyLowEndGpuMatch||redmi8aHardwareMatch||(reportedMemory>0&&reportedMemory<=2)));
  const isGalaxyA12LowEndMobile=!!(isPerformanceMode&&isTouchDevice&&(galaxyA12HardwareMatch||galaxyA12GpuMatch));
  const shadowMapSize=isPerformanceMode?(isConstrainedMobile?256:(isTouchDevice?512:1024)):(isTouchDevice?2048:(reportedMemory>=8?3072:2048));
  let shadowGen=null,currentShadowSize=shadowMapSize;
@@ -9813,6 +9814,7 @@ function updateHUD(){
  function boatCanMove(x,z){return vesselCanMove(ship,x,z,5.25,1.22);}
  function update(dt){
   worldUpdateCount++;worldUpdatePhase='environment / water';
+  updatePerformanceIslandStreaming(dt);
   updateManagedWorldShadowCasters();
   elapsed+=dt;const visualFocus=scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position:(onShip?ship.position:player.root.position);worldVisualFocusX=visualFocus.x;worldVisualFocusZ=visualFocus.z;const cloudWindRate=.00042+.00014*Math.sin(elapsed*.0031);skyTexture.uOffset=(elapsed*cloudWindRate)%1;
   // El cielo se desplaza con viento variable; la capa vertical acompaña el flujo atmosférico.
@@ -10441,6 +10443,115 @@ function updateHUD(){
  // pero tampoco crea descargas duplicadas que consuman memoria de GPU y RAM en el móvil.
  if(!deferNpcHumanModelsOnTouch)enemyHumanLoadTask.then(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);},()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
  console.info('Norse NPC roster: separate armored-knight guards and Viking civilians',{warriorCount:humanEnemyParts.length,civilianCount:humanCivilianParts.length,homeAllies:campGuards.length,protectedHomeRadius:24});
+ // Island streaming for the weakest Android GPUs: keep only the island occupied by
+ // the player/longship renderable. All world data, collisions, AI, saves and conquest
+ // state remain resident; distant visual roots are hidden, never disposed or deleted.
+ const ultraLowEndIslandStreaming=!!(isPerformanceMode&&isUltraLowEndMobile);
+ const islandStreamGroups=[],islandStreamRootLookup=new Map();
+ let islandStreamActiveIndex=-1,islandStreamClock=0,islandStreamCulledMeshCount=0;
+ function islandStreamIslandAt(x,z){
+  let nearest=0,best=Infinity;
+  for(let i=0;i<land.length;i++){
+   const d=Math.hypot(x-land[i].x,z-land[i].z)-land[i].r;
+   if(d<best){best=d;nearest=i;}
+  }
+  return nearest;
+ }
+ function islandStreamExcludedRoot(root){
+  const name=String(root&&root.name||'');
+  if(/NordicSkyDome|^(?:ocean|Drakkar|RaiderLongship_)|VesselSpray|WaterReflection|EnvironmentReflection|Camera/i.test(name))return true;
+  for(let node=root;node;node=node.parent){
+   if(node===player.root||node===ship)return true;
+   for(const vessel of enemyShips)if(vessel&&node===vessel.root)return true;
+  }
+  return false;
+ }
+ function islandStreamAddMesh(group,mesh){
+  if(!mesh||typeof mesh.getTotalVertices!=='function'||mesh.getTotalVertices()<=0||group.meshLookup.has(mesh))return;
+  const state={mesh,visible:mesh.isVisible!==false,opacity:Number.isFinite(mesh.visibility)?mesh.visibility:1};
+  group.meshLookup.set(mesh,state);group.meshes.push(state);
+  if(!group.active){mesh.isVisible=false;mesh.visibility=0;}
+ }
+ function islandStreamCreateGroup(root,meshes,index,cx,cz){
+  let group=islandStreamRootLookup.get(root);
+  if(group){for(const mesh of meshes)islandStreamAddMesh(group,mesh);return group;}
+  group={root,index,centerX:cx,centerZ:cz,meshes:[],meshLookup:new Map(),active:true};
+  islandStreamGroups.push(group);islandStreamRootLookup.set(root,group);
+  for(const mesh of meshes)islandStreamAddMesh(group,mesh);
+  return group;
+ }
+ function islandStreamBuildGroups(){
+  if(!ultraLowEndIslandStreaming)return;
+  const roots=[...scene.transformNodes.filter(node=>!node.parent),...scene.meshes.filter(mesh=>!mesh.parent)];
+  const seen=new Set();
+  for(const root of roots){
+   if(!root||seen.has(root)||islandStreamExcludedRoot(root))continue;seen.add(root);
+   let meshes=[];
+   try{if(typeof root.getTotalVertices==='function'&&root.getTotalVertices()>0)meshes.push(root);if(typeof root.getChildMeshes==='function')meshes.push(...root.getChildMeshes(false));}catch(_){continue;}
+   meshes=[...new Set(meshes)].filter(mesh=>mesh&&typeof mesh.getTotalVertices==='function'&&mesh.getTotalVertices()>0);
+   if(!meshes.length)continue;
+   let sumX=0,sumZ=0,samples=0,oversized=false;
+   for(const mesh of meshes){
+    try{
+     mesh.computeWorldMatrix(true);
+     const info=mesh.getBoundingInfo&&mesh.getBoundingInfo(),sphere=info&&info.boundingSphere;
+     if(sphere&&Number.isFinite(sphere.radiusWorld)&&sphere.radiusWorld>165){oversized=true;break;}
+     const p=mesh.getAbsolutePosition?mesh.getAbsolutePosition():mesh.position;
+     if(p&&Number.isFinite(p.x)&&Number.isFinite(p.z)){sumX+=p.x;sumZ+=p.z;samples++;}
+    }catch(_){ }
+   }
+   if(oversized||!samples)continue;
+   const cx=sumX/samples,cz=sumZ/samples,index=islandStreamIslandAt(cx,cz),island=land[index];
+   if(Math.hypot(cx-island.x,cz-island.z)>island.r+28)continue;
+   islandStreamCreateGroup(root,meshes,index,cx,cz);
+  }
+  islandStreamCulledMeshCount=islandStreamGroups.reduce((n,g)=>n+g.meshes.length,0);
+  console.info('Streaming visual de islas activado para hardware extremo',{roots:islandStreamGroups.length,meshes:islandStreamCulledMeshCount,mode:activeGraphicsProfile});
+  if(scene.onNewMeshAddedObservable&&typeof scene.onNewMeshAddedObservable.add==='function'){
+   scene.onNewMeshAddedObservable.add(mesh=>{
+    let root=mesh;while(root&&root.parent&&!islandStreamRootLookup.has(root))root=root.parent;
+    let group=root&&islandStreamRootLookup.get(root);
+    if(!group&&!mesh.parent&&!islandStreamExcludedRoot(mesh)){
+     try{
+      mesh.computeWorldMatrix(true);const p=mesh.getAbsolutePosition?mesh.getAbsolutePosition():mesh.position,index=islandStreamIslandAt(p.x,p.z),island=land[index];
+      if(Math.hypot(p.x-island.x,p.z-island.z)<=island.r+28)group=islandStreamCreateGroup(mesh,[mesh],index,p.x,p.z);
+     }catch(_){ }
+    }
+    if(group)islandStreamAddMesh(group,mesh);
+   });
+  }
+ }
+ function updatePerformanceIslandStreaming(dt=0,force=false){
+  if(!ultraLowEndIslandStreaming)return;
+  islandStreamClock+=Math.max(0,dt||0);
+  if(!force&&islandStreamClock<.40)return;
+  islandStreamClock=0;
+  const focus=onShip?ship.position:player.root.position;
+  const onIsland=landIslandIndex(focus.x,focus.z),wantedIndex=onIsland>=0?onIsland:islandStreamIslandAt(focus.x,focus.z);
+  if(!force&&wantedIndex===islandStreamActiveIndex)return;
+  islandStreamActiveIndex=wantedIndex;
+  let visibleMeshes=0;
+  for(const group of islandStreamGroups){
+   let keep=group.index===wantedIndex;
+   if(!keep){
+    // A recruited/following actor can leave its home island; never cull it beside the player.
+    const actorName=/Viking|Guard|Villager|Peasant|Companion|PabloTheNameless/i.test(String(group.root.name||''));
+    if(actorName){let p=group.root.position;try{if(group.root.getAbsolutePosition)p=group.root.getAbsolutePosition();}catch(_){ }
+     keep=Math.hypot(p.x-focus.x,p.z-focus.z)<48;
+    }
+   }
+   if(keep===group.active){if(keep)visibleMeshes+=group.meshes.length;continue;}
+   group.active=keep;
+   for(const state of group.meshes){
+    const mesh=state.mesh;if(!mesh||mesh.isDisposed&&mesh.isDisposed())continue;
+    mesh.isVisible=keep?state.visible:false;mesh.visibility=keep?state.opacity:0;
+   }
+   if(keep)visibleMeshes+=group.meshes.length;
+  }
+  window.__elSinNombreIslandStreaming={enabled:true,activeIsland:wantedIndex,activeIslandName:land[wantedIndex]&&land[wantedIndex].name,groups:islandStreamGroups.length,managedMeshes:islandStreamCulledMeshCount,visibleMeshes,culledMeshes:islandStreamCulledMeshCount-visibleMeshes};
+ }
+ islandStreamBuildGroups();
+ updatePerformanceIslandStreaming(0,true);
  let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;
  let firstFrameRendered=false,startupAssetsReady=false,startScreenShown=false,frameErrorShown=false,lastFrameErrorAt=0,renderedFrames=0;
  const frameDiagnostic=document.getElementById('frameDiagnostic');
