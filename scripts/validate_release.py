@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.206"
+EXPECTED_VERSION = "0.6.207"
 
 HTML_PAGES = (
     "index.html",
@@ -88,6 +88,8 @@ def main() -> None:
         fail("La caché de recursos no contiene la huella SHA-256 generada en build.")
     if "return cached || response;" not in sw:
         fail("El service worker no contiene fallback de caché para errores HTTP.")
+    if "Network first: never launch a saved shell" not in sw or "await isValidGameNavigation(fresh)" not in sw or "controller.abort(), 5000" not in sw or "getVerifiedCachedNavigation(cache, request, fallback)" not in sw:
+        fail("La navegación PWA debe comprobar red primero y aceptar la copia local solo tras validar su estructura.")
 
     asset_manifest = json.loads(read_text("assets/asset-manifest.json"))
     if asset_manifest.get("game") != "EL SIN NOMBRE" or asset_manifest.get("version") != version:
@@ -330,7 +332,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.206</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.207</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "const warmupResult=await Promise.race([" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
         fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
@@ -372,10 +374,14 @@ def main() -> None:
         fail("Siguen presentes los animales provisionales construidos con primitivas.")
     if "function loadWildlifeModels()" not in index_html or "function playWildlifeAnimation(" not in index_html or "ImportMeshAsync(" not in index_html or "numBoneInfluencers>0" not in index_html or "Deer.glb" not in index_html or "Stag.glb" not in index_html or "Wolf.glb" not in index_html:
         fail("Falta la importación GLB con esqueleto de ciervo, venado y lobo.")
-    if "const animalCount=isPerformanceMode?(idx===0?2:(idx===1?1:0)):(idx===0?3:(idx<4?1:0));" not in index_html:
-        fail("El número de animales no está reducido en modo Rendimiento.")
-    if "WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837'" not in index_html or "await loadWildlifeModels();" not in index_html:
-        fail("La fuente de fauna no está fijada a una revisión inmutable o no se carga.")
+    if "const animalCount=isPerformanceMode?0:(idx===0?3:(idx<4?1:0));" not in index_html:
+        fail("El modo Rendimiento debe omitir la creación de animales sin alterar el roster de Calidad.")
+    if "if(isPerformanceMode){" not in index_html or "grassInstanceCount=0;grassBatchCount=0;grassDebugClumpCount=0;grassDebugBatchCount=0;" not in index_html or "const wildlifePreparationTask=loadWildlifeModels();" not in index_html:
+        fail("Hierba/fauna deben omitirse solo en Rendimiento y conservarse completas en Calidad.")
+    if "civilianWarmupPromise=!isPerformanceMode&&civilianTotal" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html:
+        fail("Calidad debe precargar el modelo de aldeanos en paralelo y reutilizar ese resultado al instanciarlo.")
+    if "WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837'" not in index_html or "function loadWildlifeModels()" not in index_html:
+        fail("Los modelos de fauna de Calidad deben conservar su fuente inmutable y su cargador.")
     if "function isSafeIslandGroundPoint(" not in index_html or "return null;" not in index_html[index_html.find("function sampleGroundPoint("):index_html.find("land.forEach((is,idx)=>{", index_html.find("function sampleGroundPoint("))]:
         fail("La vegetación no valida tierra firme o todavía utiliza ubicaciones de reserva.")
     if "homeIslandIndex" not in index_html or "isSafeIslandGroundPoint(homeIsland,nx,nz,Infinity,1.05,.52)" not in index_html:
