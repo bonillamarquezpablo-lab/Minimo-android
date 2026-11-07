@@ -1,5 +1,5 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.204";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.205";
 const ASSET_CACHE = "el-sin-nombre-assets-pending-build-0.6.204";
 const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./icon.svg"];
 
@@ -82,14 +82,27 @@ self.addEventListener("fetch", event => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
-    event.respondWith(networkFirst(request, SHELL_CACHE).catch(async () => {
-      const cache = await caches.open(SHELL_CACHE);
-      const guestFilePath = url.pathname.endsWith("/guest.html");
-      const guestPath = /\/(?:guest|invitado)(?:\/|\/index\.html)?$/.test(url.pathname);
-      const invitePath = /\/invitado(?:\/|\/index\.html)?$/.test(url.pathname);
-      const fallback = guestFilePath ? "./guest.html" : (guestPath ? (invitePath ? "./invitado/index.html" : "./guest/index.html") : "./index.html");
+    const guestFilePath = url.pathname.endsWith("/guest.html");
+    const guestPath = /\/(?:guest|invitado)(?:\/|\/index\.html)?$/.test(url.pathname);
+    const invitePath = /\/invitado(?:\/|\/index\.html)?$/.test(url.pathname);
+    const fallback = guestFilePath ? "./guest.html" : (guestPath ? (invitePath ? "./invitado/index.html" : "./guest/index.html") : "./index.html");
+    const cachePromise = caches.open(SHELL_CACHE);
+    // The installed app opens from its cached shell immediately; refresh it in the background.
+    const refreshPromise = fetch(request).then(response => {
+      if (!response || !response.ok) return response;
+      return cachePromise.then(cache => cache.put(request, response.clone())).then(() => response).catch(() => response);
+    });
+    event.waitUntil(refreshPromise.catch(() => {}));
+    event.respondWith((async () => {
+      const cache = await cachePromise;
+      const cached = await cache.match(request) || await cache.match(fallback);
+      if (cached) return cached;
+      try {
+        const response = await refreshPromise;
+        if (response && response.ok) return response;
+      } catch (_) {}
       return (await cache.match(fallback)) || Response.error();
-    }));
+    })());
     return;
   }
 
