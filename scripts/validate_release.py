@@ -291,7 +291,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.198</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.199</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
         fail("Los penachos o su iluminación de doble cara están incompletos.")
