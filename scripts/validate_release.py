@@ -336,7 +336,7 @@ def main() -> None:
         fail("Falta la distribución uniforme con separación mínima.")
     if "const grids=[grid(4,4),grid(10,10),grid(24,24),grid(60,60),grid(144,144),grid(288,288)];" not in index_html:
         fail("El suelo no utiliza escalas orgánicas de textura.")
-    if "for(let i=0;i<8200;i++)" not in index_html or "terrainPBR.bumpTexture.level=.70;" not in index_html:
+    if "for(let i=0;i<8200;i++)" not in index_html or "terrainPBR.bumpTexture.level=GROUND_PHASE_A_DEFAULTS.relief;" not in index_html:
         fail("Falta el detalle fino de suelo o su relieve PBR.")
     if "const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));" not in index_html:
         fail("La distribución no rellena las celdas vacías.")
