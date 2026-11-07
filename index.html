@@ -2899,7 +2899,7 @@ async function removeStrayDebugGeometry(targetScene){
   try{if(typeof mesh.updateCoordinateHeights==='function')mesh.updateCoordinateHeights();}catch(heightCacheError){console.info('Heightfield cache fallback:',heightCacheError);}
   const gridSize=subdivisions+1,baseHeights=new Float32Array(gridSize*gridSize);
   for(let vertex=0;vertex<baseHeights.length;vertex++)baseHeights[vertex]=positions[vertex*3+1];
-  const deformationField={island,index,subdivisions,gridSize,step:(is.r*2)/subdivisions,baseHeights,offsets:new Float32Array(baseHeights.length),decaySeconds:new Float32Array(baseHeights.length),active:new Set(),positions,normals:mesh.getVerticesData(B.VertexBuffer.NormalKind),positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),normalBuffer:mesh.getVertexBuffer(B.VertexBuffer.NormalKind),mesh};
+  const deformationField={island:is,index,subdivisions,gridSize,step:(is.r*2)/subdivisions,baseHeights,offsets:new Float32Array(baseHeights.length),decaySeconds:new Float32Array(baseHeights.length),active:new Set(),positions,normals:mesh.getVerticesData(B.VertexBuffer.NormalKind),positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),normalBuffer:mesh.getVertexBuffer(B.VertexBuffer.NormalKind),mesh};
   terrainDeformationFields[index]=deformationField;
   mesh.checkCollisions=true;mesh.metadata=Object.assign({},mesh.metadata||{},{norsePhysicalHeightfield:true,norseDeformableGround:true,islandIndex:index,subdivisions});
   mesh.material=islandMaterials[index%3].clone('TerrainMaterial_'+index);
