@@ -10,9 +10,9 @@ on:
 permissions:
   contents: read
 
-# New group releases the recovery run from the orphaned run using the old group.
+# Isolate the recovery run from the previous workflow's stuck concurrency group.
 concurrency:
-  group: github-pages-recovery
+  group: github-pages-recovery-final
   cancel-in-progress: false
 
 jobs:
@@ -57,6 +57,26 @@ jobs:
         with:
           path: ./dist
 
+  recover-pages:
+    name: Release orphaned GitHub Pages deployment
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      actions: write
+      pages: write
+    steps:
+      - name: Cancel stuck workflow attempts and stale Pages deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # These are the two stuck attempts identified in the Pages deployment incident.
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/42413262099/cancel" || true
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/42414967473/cancel" || true
+          # The Pages deployment version is the commit SHA, not the Actions run ID.
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/6b242b60daac742a4d4a6aa7f51bcdfd4db49772/cancel" || true
+          echo "Recovery requests sent. The next job will create a fresh Pages deployment."
+
   deploy:
     name: Publish the exact validated build
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -65,25 +85,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build
+    needs: [build, recover-pages]
     permissions:
       contents: read
       pages: write
       id-token: write
     steps:
-      # The previous 0.6.221 attempt was orphaned by GitHub Pages while syncing_files.
-      # Cancel only that exact commit's stale deployment before creating a fresh one.
-      - name: Release stale Pages deployment lock for 0.6.221
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          stale_sha="6b242b60daac742a4d4a6aa7f51bcdfd4db49772"
-          if gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${stale_sha}/cancel"; then
-            echo "Cancelled stale Pages deployment for ${stale_sha}."
-          else
-            echo "::warning::The previous deployment was already terminal or not cancellable; continuing with a fresh deployment attempt."
-          fi
-
       - name: Deploy website to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
