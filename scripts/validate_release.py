@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.194"
+EXPECTED_VERSION = "0.6.196"
 
 HTML_PAGES = (
     "index.html",
@@ -297,6 +297,36 @@ def main() -> None:
         fail("El número de animales no está reducido en modo Rendimiento.")
     if "WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837'" not in index_html or "await loadWildlifeModels();" not in index_html:
         fail("La fuente de fauna no está fijada a una revisión inmutable o no se carga.")
+    if "function isSafeIslandGroundPoint(" not in index_html or "return null;" not in index_html[index_html.find("function sampleGroundPoint("):index_html.find("land.forEach((is,idx)=>{", index_html.find("function sampleGroundPoint("))]:
+        fail("La vegetación no valida tierra firme o todavía utiliza ubicaciones de reserva.")
+    if "homeIslandIndex" not in index_html or "isSafeIslandGroundPoint(homeIsland,nx,nz,Infinity,1.05,.52)" not in index_html:
+        fail("La fauna GLB no conserva su isla de origen o puede caminar hacia el mar.")
+    if "RaiderCrewMount_" not in index_html or "if(parts.vesselMount)" not in index_html:
+        fail("La tripulación del drakkar no está anclada a la cubierta.")
+    if "p.rotationQuaternion=null;" not in index_html or "p.position.set(seat.x,.995,seat.z)" not in index_html:
+        fail("La tripulación no limpia la rotación heredada ni fija coordenadas locales de cubierta.")
+    shore_start = index_html.find("function placeShipAllyOnShore(")
+    shore_end = index_html.find("function animateViking(", shore_start)
+    shore_body = index_html[shore_start:shore_end]
+    if shore_start < 0 or shore_end <= shore_start or "root.getAbsolutePosition().clone()" not in shore_body or "root.position.copyFrom(worldPosition)" not in shore_body:
+        fail("El desembarque no conserva la transformación mundial del tripulante.")
+    if "function isSafeShrubGroundPoint(" not in index_html or "groundY<.82" not in index_html or "Math.hypot(sx,sz)<=.48" not in index_html:
+        fail("Los arbustos no validan altura mínima, costa y pendiente del terreno.")
+    shrub_start = index_html.find("function createNaturalShrub(")
+    shrub_end = index_html.find("// Quaternius Ultimate Animated Animals", shrub_start)
+    shrub_body = index_html[shrub_start:shrub_end]
+    if shrub_start < 0 or shrub_end <= shrub_start or shrub_body.find("mergeStaticDecorByMaterial(root,'NaturalBroadleafShrub')") > shrub_body.find("root.position.set(x,groundY+.012,z)"):
+        fail("La geometría de arbustos se fusiona después de transformar el pivote y puede desplazarse.")
+    if "if(!isSafeShrubGroundPoint(island,x,z)||" not in index_html or "naturalShrubs.some(b=>" not in index_html:
+        fail("La generación de arbustos no valida el terreno ni evita solapamientos.")
+    if "function removeStrayDebugGeometry(targetScene)" not in index_html or "removeStrayDebugGeometry(scene);" not in index_html:
+        fail("Falta la limpieza segura de mallas de depuración residuales.")
+    if "HutTimberCore" in index_html or "HutEndWallPlank_" not in index_html or "HutSideWallPlank_" not in index_html:
+        fail("La cabaña todavía contiene el bloque macizo en vez de paredes de tablones.")
+    if "PierSupportPile_" not in index_html:
+        fail("El muelle no tiene pilotes de soporte hasta el lecho marino.")
+    if "FACTION_BADGE_MAX_DISTANCE=28" not in index_html or "parts.factionBadge.isVisible=distanceSq<maxSq" not in index_html:
+        fail("Las insignias lejanas siguen apareciendo como puntos rojos.")
     if "mesh.receiveShadows=false;mesh.castShadows=false;" not in index_html or "mesh.material=packedTrailMaterial;" not in index_html:
         fail("El camino no utiliza tierra compactada sin recepción de sombras.")
     if "indices.push(a,b,a+1,a+1,b,b+1);" not in index_html or "packedTrailTexture" not in index_html:
