@@ -10,9 +10,9 @@ on:
 permissions:
   contents: read
 
-# Isolate the recovery run from the previous workflow's stuck concurrency group.
+# A new release group lets the validated build supersede an orphaned older Pages publish.
 concurrency:
-  group: github-pages-recovery-final
+  group: github-pages-release-0-6-227
   cancel-in-progress: false
 
 jobs:
@@ -70,11 +70,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # These are the two stuck attempts identified in the Pages deployment incident.
+          # Retire known orphaned attempts from previous Pages incidents.
           gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/42413262099/cancel" || true
           gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/42414967473/cancel" || true
-          # The Pages deployment version is the commit SHA, not the Actions run ID.
+          # The 0.6.226 deploy-pages step remained in progress after build and upload succeeded.
+          # This newer, fully validated 0.6.227 release supersedes that orphaned attempt.
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/42421155099/cancel" || true
+          # Pages deployment IDs are commit SHAs, not Actions run IDs.
           gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/6b242b60daac742a4d4a6aa7f51bcdfd4db49772/cancel" || true
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/f8c0f011c0fb168db466bf6c7477fc4e141ceb71/cancel" || true
           echo "Recovery requests sent. The next job will create a fresh Pages deployment."
 
   deploy:
