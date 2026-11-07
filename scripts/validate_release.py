@@ -304,9 +304,9 @@ def main() -> None:
         fail("Falta la capa de playa con humedad y espuma residual dinámica.")
     if "foamPattern=new Float32Array((segments+1)*rows)" not in index_html or "foamPattern,wetness,residue,lastShore" not in index_html:
         fail("La espuma de resaca debe usar una máscara espacial precomputada y reutilizada.")
-    if "Math.min(288,Math.ceil(Math.PI*2*island.r/1.35))" not in index_html or "rows=isPerformanceMode?9:(isTouchDevice?13:15)" not in index_html:
+    if "Math.min(288,Math.ceil(Math.PI*2*island.r/1.35))" not in index_html or "rows=isPerformanceMode?9:(isTouchDevice?15:17)" not in index_html:
         fail("La resolución de la playa debe aumentar el detalle de resaca en calidad sin alterar el perfil de rendimiento.")
-    if "oceanTime*1.15+localX*.095+localZ*.073+foamMask*5.3" not in index_html or "frontWidth=.28+wavePulse*.14" not in index_html:
+    if "oceanTime*1.15+localX*.095+localZ*.073+foamMask*5.3" not in index_html or "frontWidth=.48+wavePulse*.20" not in index_html:
         fail("La espuma de playa debe avanzar y retirarse con una línea de resaca dinámica.")
     if "layer.residue[stateIndex]*Math.exp(-step/4.2)" not in index_html or "activeFoam=Math.exp(-frontDistance*frontDistance)*foamMask" not in index_html:
         fail("El residuo debe fragmentarse mediante espuma orgánica y disiparse en un tiempo natural.")
