@@ -320,7 +320,7 @@ def main() -> None:
 
     # The packaged build always prefers the same-origin, bundled files.
     html = html.replace(
-        "async function resolveVikingAssetUrls(){\n  const urls=[VIKING_GLB_URL];",
+        "async function resolveVikingAssetUrls(){\n  if(isPerformanceMode)return [VIKING_GLB_URL];\n  const urls=[VIKING_GLB_URL];",
         "async function resolveVikingAssetUrls(){\n  return [VIKING_GLB_URL];\n  const urls=[VIKING_GLB_URL];"
     )
     html = html.replace(
