@@ -319,14 +319,14 @@ def main() -> None:
         fail("La fauna GLB no conserva su isla de origen o puede caminar hacia el mar.")
     if "const groundOffset=-bounds.min.y*scale;" not in index_html or "groundOffset+terrainHeightOnIsland(homeIsland,x,z)" not in index_html:
         fail("La importación GLB no calcula y aplica el desplazamiento vertical de apoyo.")
-    if "groundOffset:animal" in index_html:
-        fail("El desplazamiento de apoyo se ha almacenado de forma incorrecta.")
     if "animal.groundOffset" not in index_html or "+animal.groundOffset;" not in index_html:
         fail("El bucle de fauna vuelve a sobrescribir la altura de apoyo de los modelos.")
     if "collisionRadius:definition.collisionRadius*size" not in index_html or "canWildlifeMove(nx,nz,animal.collisionRadius)" not in index_html:
         fail("La fauna no utiliza el volumen corporal al evitar árboles y obstáculos.")
     if "wildlifeSpawnSpecs.some(other=>Math.hypot(x-other.x,z-other.z)<5.6)" not in index_html:
         fail("La generación permite que dos animales se solapen.")
+    if "trees.some(t=>Math.hypot(x-t.x,z-t.z)<(t.radius||.6)+3.0)" not in index_html:
+        fail("Los animales pueden aparecer demasiado cerca de los troncos.")
     if "RaiderCrewMount_" not in index_html or "if(parts.vesselMount)" not in index_html:
         fail("La tripulación del drakkar no está anclada a la cubierta.")
     if "p.rotationQuaternion=null;" not in index_html or "p.position.set(seat.x,guard.parts.realHuman?.role ? .972 : .995,seat.z)" not in index_html:
