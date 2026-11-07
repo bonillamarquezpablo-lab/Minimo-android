@@ -475,7 +475,7 @@ def main() -> None:
         fail("Los guardianes no seleccionan el GLB optimizado solo en Rendimiento.")
     if "isPerformanceMode?'./assets/models/performance/man-base-character-rigged.glb':'./assets/models/man-base-character-rigged.glb'" not in index_html:
         fail("Los aldeanos no seleccionan el GLB optimizado solo en Rendimiento.")
-    if "if(isPerformanceMode){\\n   const r=sphere('graniteBoulder'" not in index_html:
+    if "if(isPerformanceMode)" not in index_html or "const r=sphere('graniteBoulder',null,[x,gy+sy*.49,z],[sx,sy,sz],M.stone,7);" not in index_html or "return {meshes:[r],x,z,radius:" not in index_html:
         fail("Las vetas de piedra deben conservar su funcionalidad con una sola malla simplificada en Rendimiento.")
     if "if(!isPerformanceMode)land.forEach(buildTidalFoam);" not in index_html or "VESSEL_SPRAY_COUNT=isPerformanceMode?0:" not in index_html:
         fail("La espuma de orilla y las salpicaduras del barco deben quedar desactivadas solo en Rendimiento.")
