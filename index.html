@@ -1521,6 +1521,33 @@ const retryButton=document.getElementById('retryEngine'),loadHelp=document.getEl
 const loadProgressBar=document.getElementById('loadProgress'),loadProgressLabel=document.getElementById('loadPercent'),loadProgressTrack=document.querySelector('#loading .loadTrack');
 let currentLoadProgress=0,targetLoadProgress=0,loadProgressAnimation=0,lastLoadProgressFrame=0;
 const assetLoadProgress={player:0,enemy:0};
+const STARTUP_PERF_DEBUG_ENABLED=new URLSearchParams(window.location.search).get('debug')==='1';
+const startupPerfStages=[];
+let startupPerfActiveStage=STARTUP_PERF_DEBUG_ENABLED?{name:'Preparación inicial',startedAt:performance.now(),label:'Arranque'}:null;
+function startupPerfStageName(progress){
+ const value=Number(progress)||0;
+ if(value>=87)return 'Sincronización final';
+ if(value>=70)return 'Guardianes y aldeanos';
+ if(value>=68)return 'Fauna';
+ if(value>=60)return 'Vegetación 3D';
+ if(value>=48)return 'Vikingo y rig';
+ if(value>=40)return 'Construcción del mundo';
+ return 'Preparación inicial';
+}
+function trackStartupPerfStage(progress,label){
+ if(!STARTUP_PERF_DEBUG_ENABLED)return;
+ const now=performance.now(),name=startupPerfStageName(progress);
+ if(startupPerfActiveStage&&startupPerfActiveStage.name!==name){
+  startupPerfStages.push({name:startupPerfActiveStage.name,durationMs:now-startupPerfActiveStage.startedAt,label:startupPerfActiveStage.label});
+  startupPerfActiveStage={name,startedAt:now,label:String(label||'')};
+ }else if(startupPerfActiveStage&&label)startupPerfActiveStage.label=String(label);
+}
+function finishStartupPerfStage(){
+ if(!STARTUP_PERF_DEBUG_ENABLED||!startupPerfActiveStage)return;
+ const now=performance.now();
+ startupPerfStages.push({name:startupPerfActiveStage.name,durationMs:now-startupPerfActiveStage.startedAt,label:startupPerfActiveStage.label});
+ startupPerfActiveStage=null;
+}
 function paintLoadingProgress(timestamp){
  const elapsed=lastLoadProgressFrame?Math.min(.10,Math.max(0,(timestamp-lastLoadProgressFrame)/1000)):1/60;
  lastLoadProgressFrame=timestamp;
@@ -1541,6 +1568,7 @@ function paintLoadingProgress(timestamp){
  }
 }
 function setLoadingProgress(value,label){
+ trackStartupPerfStage(value,label);
  targetLoadProgress=Math.max(targetLoadProgress,Math.min(100,Math.max(0,Number(value)||0)));
  if(label&&loadText)loadText.textContent=label;
  if(!loadProgressAnimation)loadProgressAnimation=requestAnimationFrame(paintLoadingProgress);
@@ -1977,7 +2005,8 @@ async function removeStrayDebugGeometry(targetScene){
  const realPlayerArmDebugTargets={free:null,weapon:null};
  // Observabilidad únicamente: no participa en el muestreo, la geometría ni la animación de la hierba.
  let grassDebugClumpCount=0,grassDebugBatchCount=0,grassDebugLeavesPerClump=7,grassDebugIslandStats=[],grassDebugPanel=null;
- const grassDebugEnabled=new URLSearchParams(window.location.search).get('grassdebug')==='1';
+ const grassDebugEnabled=realPlayerArmDebugEnabled||new URLSearchParams(window.location.search).get('grassdebug')==='1';
+ const fpsFrameSamples=new Float32Array(120);let fpsFrameSampleCount=0,fpsFrameSampleCursor=0;
  const REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY='el-sin-nombre-arm-last-deviation-v1';
  let realPlayerArmLastDeviation=null,realPlayerArmDeviationLastWasLocomoting=false,realPlayerArmDeviationStoppedAtMs=null,realPlayerArmDeviationActiveSignature='';
  if(realPlayerArmDebugEnabled){try{const storedDeviation=localStorage.getItem(REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY);if(storedDeviation){const parsed=JSON.parse(storedDeviation);if(parsed&&parsed.timestamp&&Array.isArray(parsed.violations))realPlayerArmLastDeviation=parsed;}}catch(_){realPlayerArmLastDeviation=null;}}
@@ -2300,8 +2329,8 @@ async function removeStrayDebugGeometry(targetScene){
  }
  const distantGullMaterial=mat('Distant sea gull silhouette','#778588',.98);
 
- function makePatternTexture(name,base,accents,style='grain',size=512){
-  const tex=new B.DynamicTexture(name,{width:size,height:size},scene,false),ctx=tex.getContext();
+ function makePatternTexture(name,base,accents,style='grain',size=512,generateMipMaps=false){
+  const tex=new B.DynamicTexture(name,{width:size,height:size},scene,generateMipMaps),ctx=tex.getContext();
   const densityScale=Math.max(.65,(size/1024)**2);
   ctx.fillStyle=base;ctx.fillRect(0,0,size,size);
   if(style==='grass'){
@@ -2350,11 +2379,11 @@ async function removeStrayDebugGeometry(targetScene){
   material.diffuseTexture=texture;material.diffuseColor=new B.Color3(1,1,1);
   texture.uScale=repeat;texture.vScale=repeat;material.specularColor=new B.Color3(.045,.045,.045);
  }
- const texGrass=makePatternTexture('Detailed grass albedo','#617a48',['#a4b96e','#49683c','#c1c18a','#3a5a40'],'grass',isPerformanceMode?(isConstrainedMobile?512:1024):2048);
- const texSand=makePatternTexture('Pebbled sand albedo','#ad9870',['#dfc99b','#786c55','#e8d9b8'],'sand',isPerformanceMode?(isConstrainedMobile?256:512):1024);
+ const texGrass=makePatternTexture('Detailed grass albedo','#617a48',['#a4b96e','#49683c','#c1c18a','#3a5a40'],'grass',isPerformanceMode?(isConstrainedMobile?512:1024):2048,true);
+ const texSand=makePatternTexture('Pebbled sand albedo','#ad9870',['#dfc99b','#786c55','#e8d9b8'],'sand',isPerformanceMode?(isConstrainedMobile?256:512):1024,true);
  function makeLivingCoastalSandTexture(){
   const size=isPerformanceMode?(isConstrainedMobile?512:768):1024;
-  const tex=new B.DynamicTexture('LivingCoastalSandAlbedo',{width:size,height:size},scene,false),ctx=tex.getContext();
+  const tex=new B.DynamicTexture('LivingCoastalSandAlbedo',{width:size,height:size},scene,true),ctx=tex.getContext();
   let seed=42671;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   const gradient=ctx.createLinearGradient(0,0,size,size);
   gradient.addColorStop(0,'#c4aa7d');gradient.addColorStop(.48,'#b69a6b');gradient.addColorStop(1,'#a98e64');
@@ -2429,10 +2458,10 @@ async function removeStrayDebugGeometry(targetScene){
  M.leather.bumpTexture=normalLeather;[M.wood,M.woodLight,M.woodDark,M.bark,M.thatch,M.birch,M.hutWoodAmber,M.hutWoodWeathered,M.hutWoodDeep,M.hutThatchGold,M.hutThatchShade].forEach(m=>m.bumpTexture=normalWood);M.hutStone.bumpTexture=normalStone;M.hutMoss.bumpTexture=normalGrass;
  // Normal maps are derived from the actual albedo texture, so pores, grain and grass flecks
  // produce matching relief instead of an unrelated generic bump pattern.
- function makeAlbedoNormal(name,source,strength=.7,size=384){
+ function makeAlbedoNormal(name,source,strength=.7,size=384,generateMipMaps=false){
   const srcCtx=source.getContext(),srcSize=source.getSize(),sw=srcSize.width,sh=srcSize.height;
   const src=srcCtx.getImageData(0,0,sw,sh).data;
-  const tex=new B.DynamicTexture(name,{width:size,height:size},scene,false),ctx=tex.getContext(),img=ctx.createImageData(size,size);
+  const tex=new B.DynamicTexture(name,{width:size,height:size},scene,generateMipMaps),ctx=tex.getContext(),img=ctx.createImageData(size,size);
   const sx=Math.max(1,Math.floor(sw/size)),sy=Math.max(1,Math.floor(sh/size));
   const lum=(x,y)=>{x=Math.max(0,Math.min(sw-1,x));y=Math.max(0,Math.min(sh-1,y));const i=(y*sw+x)*4;return (src[i]*.2126+src[i+1]*.7152+src[i+2]*.0722)/255;};
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
@@ -2448,7 +2477,7 @@ async function removeStrayDebugGeometry(targetScene){
  // Textura específica del terreno: musgo, césped, tierra húmeda y grano mineral.
  // Se genera como tile repetible para evitar costuras y usar una sola pasada PBR.
  function makeNordicTerrainAlbedo(){
-  const size=1024,tex=new B.DynamicTexture('NordicTerrainAlbedo',{width:size,height:size},scene,false);
+  const size=1024,tex=new B.DynamicTexture('NordicTerrainAlbedo',{width:size,height:size},scene,true);
   const ctx=tex.getContext(),img=ctx.createImageData(size,size),data=img.data;
   let seed=90631;
   const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
@@ -2538,7 +2567,7 @@ async function removeStrayDebugGeometry(targetScene){
  }
  const texTerrain=makeNordicTerrainAlbedo();
 
- const albedoNormalTerrain=makeAlbedoNormal('Albedo-derived terrain normal',texTerrain,.48,512),albedoNormalGrass=makeAlbedoNormal('Albedo-derived grass normal',texGrass,.72,512),albedoNormalSand=makeAlbedoNormal('Albedo-derived sand normal',texCoastalSand,.72,512),albedoNormalStone=makeAlbedoNormal('Albedo-derived stone normal',texStone,.86,384),albedoNormalWood=makeAlbedoNormal('Albedo-derived timber normal',texWood,.90,384),albedoNormalBark=makeAlbedoNormal('Albedo-derived bark normal',texBark,.82,384),albedoNormalCloth=makeAlbedoNormal('Albedo-derived wool normal',texCloth,.34,256),albedoNormalLeather=makeAlbedoNormal('Albedo-derived leather normal',texLeather,.52,256),albedoNormalWater=makeAlbedoNormal('Albedo-derived water normal',texWater,.23,256);
+ const albedoNormalTerrain=makeAlbedoNormal('Albedo-derived terrain normal',texTerrain,.48,512,true),albedoNormalGrass=makeAlbedoNormal('Albedo-derived grass normal',texGrass,.72,512,true),albedoNormalSand=makeAlbedoNormal('Albedo-derived sand normal',texCoastalSand,.72,512,true),albedoNormalStone=makeAlbedoNormal('Albedo-derived stone normal',texStone,.86,384),albedoNormalWood=makeAlbedoNormal('Albedo-derived timber normal',texWood,.90,384),albedoNormalBark=makeAlbedoNormal('Albedo-derived bark normal',texBark,.82,384),albedoNormalCloth=makeAlbedoNormal('Albedo-derived wool normal',texCloth,.34,256),albedoNormalLeather=makeAlbedoNormal('Albedo-derived leather normal',texLeather,.52,256),albedoNormalWater=makeAlbedoNormal('Albedo-derived water normal',texWater,.23,256);
  [M.grass,M.grass2,M.darkGrass].forEach(m=>{m.bumpTexture=albedoNormalGrass;m.bumpTexture.level=.44;});
  M.sand.bumpTexture=albedoNormalSand;M.sand.bumpTexture.level=.72;
  [M.stone,M.stoneLight].forEach(m=>{m.bumpTexture=albedoNormalStone;m.bumpTexture.level=.48;});
@@ -2836,6 +2865,8 @@ async function removeStrayDebugGeometry(targetScene){
   }
   return (lo+hi)*.5;
  }
+ const GROUND_PHASE_A_DEFAULTS=Object.freeze({textureRepeat:9.5,relief:.70,roughness:.97});
+ const groundPhaseAMaterials=[];
  const islandTerrainMeshes=[];
  function terrainHash(ix,iz){const n=Math.sin(ix*127.1+iz*311.7+19.19)*43758.5453123;return n-Math.floor(n);}
  function terrainValueNoise(x,z){
@@ -2909,10 +2940,11 @@ async function removeStrayDebugGeometry(targetScene){
    const terrainPBR=new B.PBRMaterial('NordicGroundPBR_'+index,scene);
    terrainPBR.albedoTexture=texTerrain;terrainPBR.albedoColor=new B.Color3(1,1,1);
    // Más repeticiones por isla: el grano se lee a escala de suelo, no como una mancha gigante.
-   texTerrain.uScale=9.5;texTerrain.vScale=9.5;
-   terrainPBR.bumpTexture=albedoNormalTerrain;terrainPBR.bumpTexture.level=.70;
-   albedoNormalTerrain.uScale=9.5;albedoNormalTerrain.vScale=9.5;
-   terrainPBR.metallic=0;terrainPBR.roughness=.97;terrainPBR.useVertexColors=true;
+   texTerrain.uScale=GROUND_PHASE_A_DEFAULTS.textureRepeat;texTerrain.vScale=GROUND_PHASE_A_DEFAULTS.textureRepeat;
+   terrainPBR.bumpTexture=albedoNormalTerrain;terrainPBR.bumpTexture.level=GROUND_PHASE_A_DEFAULTS.relief;
+   albedoNormalTerrain.uScale=GROUND_PHASE_A_DEFAULTS.textureRepeat;albedoNormalTerrain.vScale=GROUND_PHASE_A_DEFAULTS.textureRepeat;
+   terrainPBR.metallic=0;terrainPBR.roughness=GROUND_PHASE_A_DEFAULTS.roughness;terrainPBR.useVertexColors=true;
+   groundPhaseAMaterials.push(terrainPBR);
    terrainPBR.environmentIntensity=.22;terrainPBR.backFaceCulling=true;
    terrainPBR.maxSimultaneousLights=2;mesh.material=terrainPBR;
   }
@@ -5532,6 +5564,20 @@ async function removeStrayDebugGeometry(targetScene){
  }
  
 
+function estimateDebugTextureMemoryMB(){
+ const textures=scene.textures||[],seen=new Set();let bytes=0;
+ textures.forEach(texture=>{
+  try{
+   const size=texture&&typeof texture.getSize==='function'?texture.getSize():null;
+   if(!size||!size.width||!size.height)return;
+   const internal=typeof texture.getInternalTexture==='function'?texture.getInternalTexture():texture._texture;
+   const identity=internal||texture;if(seen.has(identity))return;seen.add(identity);
+   const mipmapped=!!(internal&&(internal.generateMipMaps||internal._generateMipMaps));
+   bytes+=size.width*size.height*4*(mipmapped?4/3:1);
+  }catch(_){}
+ });
+ return bytes/(1024*1024);
+}
 function updateGrassDebugPanel(){
  if(!grassDebugEnabled||!grassDebugPanel)return;
  const liveFps=Number.isFinite(engine.getFps())?Math.round(engine.getFps()):0;
@@ -5539,11 +5585,26 @@ function updateGrassDebugPanel(){
  const islands=grassDebugIslandStats.map((item,index)=>
   (index+1)+'. '+item.name+': '+item.placed.toLocaleString('es-ES')+'/'+item.target.toLocaleString('es-ES')+' ('+item.fillPct+'%) · celdas '+item.gridPct+'%'
  );
+ const frameMs=Array.from(fpsFrameSamples.subarray(0,fpsFrameSampleCount)).filter(value=>Number.isFinite(value)&&value>0);
+ const frameMsTotal=frameMs.reduce((sum,value)=>sum+value,0);
+ const fpsValues=frameMs.map(value=>1000/value).sort((a,b)=>a-b);
+ const averageFps=frameMs.length?frameMs.length*1000/frameMsTotal:liveFps;
+ const p95Fps=fpsValues.length?fpsValues[Math.min(fpsValues.length-1,Math.floor((fpsValues.length-1)*.95))]:liveFps;
+ const activeTriangles=Math.round(((scene.getActiveIndices&&scene.getActiveIndices())||0)/3);
+ const drawCalls=Number(engine._drawCalls&&engine._drawCalls.current)||0;
+ const textureMemoryMB=estimateDebugTextureMemoryMB();
+ const loadStages=startupPerfStages.map(item=>item.name+': '+(item.durationMs/1000).toFixed(2)+' s');
+ if(startupPerfActiveStage)loadStages.push(startupPerfActiveStage.name+': '+((performance.now()-startupPerfActiveStage.startedAt)/1000).toFixed(2)+' s (en curso)');
  grassDebugPanel.textContent=[
   'DIAGNÓSTICO DE HIERBA 3D',
   'PERFIL '+(isPerformanceMode?'RENDIMIENTO':'CALIDAD')+' · FPS '+liveFps,
   'MATAS '+grassDebugClumpCount.toLocaleString('es-ES')+'/'+target.toLocaleString('es-ES')+' · LOTES '+grassDebugBatchCount,
   'HOJAS/MATA '+grassDebugLeavesPerClump+' · ISLAS '+grassDebugIslandStats.length,
+  'TEXTURAS VRAM EST.: '+textureMemoryMB.toFixed(1)+' MB RGBA8',
+  'TRIÁNGULOS ACTIVOS: '+activeTriangles.toLocaleString('es-ES')+' · DRAW CALLS: '+drawCalls,
+  'FPS MEDIO: '+averageFps.toFixed(1)+' · FPS P95: '+p95Fps.toFixed(1)+' · MUESTRA '+frameMs.length+'/120',
+  'TIEMPOS DE CARGA POR ETAPA:',
+  ...(loadStages.length?loadStages:['Esperando mediciones de carga']),
   'DISTRIBUCIÓN: objetivo alcanzado / ocupación de cuadrícula',
   ...islands
  ].join('\n');
@@ -5557,6 +5618,59 @@ if(grassDebugEnabled){
  window.setInterval(updateGrassDebugPanel,500);
  updateGrassDebugPanel();
 }
+function createGroundPhaseAPanel(){
+ if(!realPlayerArmDebugEnabled)return;
+ const settings={textureRepeat:GROUND_PHASE_A_DEFAULTS.textureRepeat,relief:GROUND_PHASE_A_DEFAULTS.relief,roughness:GROUND_PHASE_A_DEFAULTS.roughness};
+ const apply=()=>{
+  texTerrain.uScale=settings.textureRepeat;texTerrain.vScale=settings.textureRepeat;
+  albedoNormalTerrain.uScale=settings.textureRepeat;albedoNormalTerrain.vScale=settings.textureRepeat;
+  groundPhaseAMaterials.forEach(material=>{
+   if(material.bumpTexture)material.bumpTexture.level=settings.relief;
+   material.roughness=settings.roughness;
+   if(typeof material.markAsDirty==='function')material.markAsDirty(B.Material.AllDirtyFlag);
+  });
+ };
+ const panel=document.createElement('div');
+ panel.id='groundPhaseAPanel';
+ panel.style.cssText='position:fixed;left:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 142px);z-index:99997;width:min(88vw,340px);max-height:30vh;overflow:auto;padding:7px 9px;border:1px solid #d8ad68;border-radius:8px;background:rgba(5,12,14,.94);color:#f5e8cf;font:9px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;box-shadow:0 3px 12px #0009;pointer-events:auto;overscroll-behavior:contain';
+ const details=document.createElement('details');
+ const summary=document.createElement('summary');
+ summary.textContent='FASE A · AJUSTE EN VIVO DEL SUELO';
+ summary.style.cssText='cursor:pointer;color:#e6c27f;font-weight:900;touch-action:manipulation';
+ details.appendChild(summary);
+ const controls=document.createElement('div');
+ controls.style.cssText='display:grid;gap:6px;margin-top:7px';
+ const addSlider=(label,key,min,max,step,digits)=>{
+  const row=document.createElement('label');
+  row.style.cssText='display:grid;grid-template-columns:1fr auto;gap:3px 8px;align-items:center;color:#eee2cc';
+  const caption=document.createElement('span');caption.textContent=label;
+  const output=document.createElement('output');output.textContent=settings[key].toFixed(digits);
+  const input=document.createElement('input');input.type='range';input.min=String(min);input.max=String(max);input.step=String(step);input.value=String(settings[key]);
+  input.setAttribute('aria-label',label);
+  input.style.cssText='grid-column:1/-1;width:100%;height:18px;margin:0;accent-color:#d8ad68;touch-action:pan-x';
+  input.addEventListener('input',()=>{
+   settings[key]=Number(input.value);output.textContent=settings[key].toFixed(digits);apply();
+  });
+  row.appendChild(caption);row.appendChild(output);row.appendChild(input);controls.appendChild(row);
+ };
+ addSlider('Repetición de textura', 'textureRepeat',4,16,.1,1);
+ addSlider('Relieve normal', 'relief',.10,1.20,.01,2);
+ addSlider('Rugosidad', 'roughness',.70,1,.01,2);
+ const reset=document.createElement('button');
+ reset.type='button';reset.textContent='RESTABLECER VALORES INICIALES';
+ reset.style.cssText='width:100%;padding:6px;border:1px solid #d8ad6888;border-radius:5px;background:#263735;color:#fff2d8;font:800 8px ui-monospace,monospace;touch-action:manipulation';
+ reset.addEventListener('click',()=>{
+  settings.textureRepeat=GROUND_PHASE_A_DEFAULTS.textureRepeat;settings.relief=GROUND_PHASE_A_DEFAULTS.relief;settings.roughness=GROUND_PHASE_A_DEFAULTS.roughness;
+  controls.querySelectorAll('input[type="range"]').forEach((input,index)=>{
+   const key=['textureRepeat','relief','roughness'][index];input.value=String(settings[key]);
+   const output=input.parentElement.querySelector('output');if(output)output.textContent=settings[key].toFixed(index===0?1:2);
+  });
+  apply();
+ });
+ controls.appendChild(reset);details.appendChild(controls);panel.appendChild(details);document.body.appendChild(panel);
+ window.__elSinNombreGroundPhaseA={defaults:Object.assign({},GROUND_PHASE_A_DEFAULTS),apply:()=>apply()};
+}
+createGroundPhaseAPanel();
 
 if(realPlayerArmDebugEnabled){
   realPlayerArmDebugPanel=document.createElement('pre');
@@ -10066,7 +10180,6 @@ function updateHUD(){
  console.info('Norse NPC roster: separate armored-knight guards and Viking civilians',{warriorCount:humanEnemyParts.length,civilianCount:humanCivilianParts.length,homeAllies:campGuards.length,protectedHomeRadius:24});
  let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;
  let firstFrameRendered=false,startupAssetsReady=false,startScreenShown=false,frameErrorShown=false,lastFrameErrorAt=0,renderedFrames=0;
- const fpsFrameSamples=new Float32Array(120);let fpsFrameSampleCount=0,fpsFrameSampleCursor=0;
  const frameDiagnostic=document.getElementById('frameDiagnostic');
  function reportFrameError(stage,error){
   const now=performance.now(),detail=String(error&&error.message||error||'error desconocido');
@@ -10143,7 +10256,7 @@ function updateHUD(){
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
-    showStartScreen();startScreenShown=true;
+    showStartScreen();trackStartupPerfStage(100,'Selector principal listo');finishStartupPerfStage();startScreenShown=true;
     // Todos los modelos humanos previstos por el perfil se han preparado antes de mostrar este selector.
     // No se inician descargas ni montajes pesados después de entrar en la campaña.
    }
