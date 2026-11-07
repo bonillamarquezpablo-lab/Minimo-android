@@ -2805,7 +2805,7 @@ async function removeStrayDebugGeometry(targetScene){
    const island=foam.island;
    for(const patch of foam.patches){
     const shoreline=shorelineFoamRadius(island,patch.angle,oceanTime);
-    const radialOffsets=[-2.8,-2.0,-1.15,-.42,.18,.78,1.55,2.45];
+    const radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47];
     if(!Number.isFinite(shoreline)){
      for(let vertex=0;vertex<radialOffsets.length*2;vertex++){const offset=patch.start+vertex*3;foam.positions[offset]=island.x;foam.positions[offset+1]=-3.2;foam.positions[offset+2]=island.z;}
      continue;
@@ -2815,9 +2815,9 @@ async function removeStrayDebugGeometry(targetScene){
      const offset=patch.start+(row*2+side)*3,sign=side===0?-1:1;
      // The wash crosses the intersection: most of its tongue lies on the wet sand,
      // with only a narrow outer lip touching the moving water surface.
-     const angularWobble=Math.sin(oceanTime*.78+patch.phase+row*.71)*.012;
+     const angularWobble=Math.sin(oceanTime*.78+patch.phase+row*.71)*.0048;
      const angle=patch.angle+sign*(patch.halfArc*arcScale)+angularWobble*sign;
-     const radialJitter=Math.sin(oceanTime*.86+patch.phase+row*1.17)*[.10,.18,.23,.16,.08][row];
+     const radialJitter=Math.sin(oceanTime*.86+patch.phase+row*1.17)*[.055,.09,.125,.15,.135,.105,.075,.045][row];
      const radius=shoreline+radialOffsets[row]+radialJitter;
      const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
      const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(foam.index,x,z),water=waterHeight(x,z,oceanTime);
@@ -3381,10 +3381,10 @@ async function removeStrayDebugGeometry(targetScene){
  })();
  const tidalFoamMeshes=[];
  function buildTidalFoam(island,index){
-  const positions=[],indices=[],colors=[],patches=36,patchMeta=[],radialOffsets=[-2.8,-2.0,-1.15,-.42,.18,.78,1.55,2.45];
+  const positions=[],indices=[],colors=[],patches=72,patchMeta=[],radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47];
   for(let i=0;i<patches;i++){
-   if(i%6===0)continue;
-   const angle=i/patches*Math.PI*2+Math.sin(i*2.17+index)*.018,halfArc=.065+(i%5)*.014;
+   if(((i*37+index*19)%11)<3)continue;
+   const angle=i/patches*Math.PI*2+Math.sin(i*2.17+index)*.022,halfArc=.010+((i*7+index*3)%8)*.0017;
    const start=positions.length/3,radius=shorelineFoamRadius(island,angle,oceanTime);
    // Never use island.r*1.09 as a fallback: that is the seaward edge of the heightfield,
    // not the shoreline. A missing intersection means this patch starts hidden.
@@ -3396,8 +3396,9 @@ async function removeStrayDebugGeometry(targetScene){
      const r=radius+radial,x=island.x+Math.cos(a)*r,z=island.z+Math.sin(a)*r;
      const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=waterHeight(x,z,oceanTime);
      positions.push(x,Math.max(ground,water)+.028,z);
-     const rowAlpha=[.018,.10,.34,.58,.46,.24,.075,.012][row],sideAlpha=side===0?.68:.96;
-     colors.push(.80,.89,.86,rowAlpha*sideAlpha*(.78+((i*7)%5)*.055));
+     const rowAlpha=[.008,.055,.24,.48,.54,.36,.12,.012][row],sideAlpha=side===0?.62:.90;
+     const foamLace=.72+.28*(.5+.5*Math.sin(i*4.73+row*2.31+index));
+     colors.push(.91,.96,.92,rowAlpha*sideAlpha*foamLace);
     }
    }
    patchMeta.push({angle,halfArc,start:start*3,phase:index*.81+i*.73});
@@ -3410,10 +3411,10 @@ async function removeStrayDebugGeometry(targetScene){
   const mesh=new B.Mesh('DynamicSubmergedShoreWash_'+index,scene),data=new B.VertexData();
   data.positions=positions;data.indices=indices;data.normals=normals;data.colors=colors;data.applyToMesh(mesh);
   const material=new B.StandardMaterial('ShoreWashMaterial_'+index,scene);
-  material.diffuseColor=new B.Color3(.87,.93,.90);material.emissiveColor=new B.Color3(.018,.026,.023);
+  material.diffuseColor=new B.Color3(.93,.97,.94);material.emissiveColor=new B.Color3(.022,.028,.024);
   material.specularColor=new B.Color3(.025,.032,.029);material.specularPower=42;
   material.useVertexColors=true;material.useVertexAlpha=true;material.backFaceCulling=false;
-  material.alpha=.46;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;mesh.material=material;
+  material.alpha=.52;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;mesh.material=material;
   mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.hasVertexAlpha=true;
   tidalFoamMeshes.push({mesh,positions:new Float32Array(positions),patches:patchMeta,island,centerX:island.x,centerZ:island.z,index});
  }
