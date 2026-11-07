@@ -2767,6 +2767,7 @@ async function removeStrayDebugGeometry(targetScene){
  function animateWater(dt){
   oceanTime+=dt;updateWaterWaveTime(oceanTime);waterAccumulator+=dt;waterNormalAccumulator+=dt;waterFarAccumulator+=dt;
   syncActiveTidalFoamIsland();
+  syncNordicWaterReflectionIsland();
   const farDue=waterFarAccumulator>=waterFarStep,detailDue=waterAccumulator>=waterVertexStep;
   if(!farDue&&!detailDue)return;
   const workStart=performance.now();refreshWaterDetailRegion();
@@ -7261,40 +7262,44 @@ function createRealWeapon(type='axe'){
   const sunDisc=B.MeshBuilder.CreateSphere('SunDisc',{diameter:21,segments:20},scene);sunDisc.parent=skyDome;sunDisc.position=v(290,235,-680);const sunMat=new B.StandardMaterial('SunDiscMat',scene);sunMat.emissiveColor=new B.Color3(1,.82,.58);sunMat.disableLighting=true;sunDisc.material=sunMat;
  // Reflejo exclusivo del mar: espejo de baja resolución con las islas y el cielo del propio juego.
  // No utiliza environmentSpecular.env, que contiene un entorno urbano genérico.
- let nordicWaterMirror=null;
+ let nordicWaterMirror=null,activeWaterReflectionIslandIndex=-2;
+ function syncNordicWaterReflectionIsland(){
+  if(!nordicWaterMirror||isPerformanceMode)return;
+  const islandIndex=activeTidalFoamIslandIndex;
+  if(islandIndex===activeWaterReflectionIslandIndex)return;
+  activeWaterReflectionIslandIndex=islandIndex;
+  const list=nordicWaterMirror.renderList||(nordicWaterMirror.renderList=[]);
+  list.length=0;
+  // El espejo solo dibuja el entorno de la isla activa; antes incluía las trece islas
+  // en cada pase fuera de pantalla, aunque el jugador estuviera lejos de ellas.
+  for(const mesh of scene.meshes){
+   if(!mesh||mesh===ground||mesh===vesselSprayMesh||mesh.material===M.water)continue;
+   if(mesh.name&&(/^(shoreFoam_|ContinuousOrganicShoreFoam_|VesselWaterSprayBatch|DrakkarWake_)/.test(mesh.name)))continue;
+   if(mesh.isVisible===false||mesh.visibility===0)continue;
+   if(mesh===skyDome||mesh===sunHalo||mesh===sunDisc){list.push(mesh);continue;}
+   if(islandIndex<0)continue;
+   try{
+    if(typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix(true);
+    const bounds=mesh.getBoundingInfo&&mesh.getBoundingInfo();
+    const center=bounds&&bounds.boundingBox?bounds.boundingBox.centerWorld:(mesh.getAbsolutePosition&&mesh.getAbsolutePosition());
+    if(!center)continue;
+    const island=land[islandIndex],dx=center.x-island.x,dz=center.z-island.z,reach=island.r+26;
+    if(dx*dx+dz*dz<reach*reach)list.push(mesh);
+   }catch(_){}
+  }
+  console.info('Nordic water reflection island updated',{islandIndex,reflectedMeshes:list.length});
+ }
  try{
   if(B.MirrorTexture&&B.Plane&&!isPerformanceMode){
    const mirrorSize=isTouchDevice?256:512;
    nordicWaterMirror=new B.MirrorTexture('NordicIslandWaterReflection',mirrorSize,scene,true);
    nordicWaterMirror.mirrorPlane=new B.Plane(0,-1,0,.035);
    nordicWaterMirror.renderList=[];
-   nordicWaterMirror.refreshRate=isTouchDevice?8:5;
+   nordicWaterMirror.refreshRate=isTouchDevice?12:8;
    nordicWaterMirror.level=.62;
-   const reflectedMeshes=new Set();
-   for(const mesh of scene.meshes){
-    if(!mesh||mesh===ground||mesh===vesselSprayMesh||mesh.material===M.water)continue;
-    if(mesh.name&&(/^(shoreFoam_|VesselWaterSprayBatch|DrakkarWake_)/.test(mesh.name)))continue;
-    if(mesh.isVisible===false||mesh.visibility===0)continue;
-    const isSky=mesh===skyDome||mesh===sunHalo||mesh===sunDisc;
-    let nearIsland=isSky;
-    if(!nearIsland){
-     try{
-      if(typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix(true);
-      const bounds=mesh.getBoundingInfo&&mesh.getBoundingInfo();
-      const center=bounds&&bounds.boundingBox?bounds.boundingBox.centerWorld:(mesh.getAbsolutePosition&&mesh.getAbsolutePosition());
-      if(center){
-       for(const island of land){
-        const dx=center.x-island.x,dz=center.z-island.z,reach=island.r+22;
-        if(dx*dx+dz*dz<reach*reach){nearIsland=true;break;}
-       }
-      }
-     }catch(_){}
-    }
-    if(nearIsland){nordicWaterMirror.renderList.push(mesh);reflectedMeshes.add(mesh);}
-   }
    M.water.reflectionTexture=nordicWaterMirror;
    M.water.reflectionTexture.level=.72;
-   console.info('Nordic water reflection ready',{resolution:mirrorSize,refreshRate:nordicWaterMirror.refreshRate,islandMeshes:reflectedMeshes.size});
+   console.info('Nordic water reflection ready',{resolution:mirrorSize,refreshRate:nordicWaterMirror.refreshRate,scope:'active-island only'});
   }else{
    M.water.reflectionTexture=null;
    console.warn('MirrorTexture unavailable; water uses its own Fresnel reflection without the generic HDRI.');
@@ -8183,7 +8188,7 @@ function createRealWeapon(type='axe'){
   for(const batch of qualityGrassLodBatches){
    const dx=batch.x-focus.x,dz=batch.z-focus.z,d2=dx*dx+dz*dz;
    const sameIsland=batch.islandIndex===currentIsland;
-   const radius=isTouchDevice?(sameIsland?225:165):(sameIsland?310:230);
+   const radius=isTouchDevice?(sameIsland?132:90):(sameIsland?180:140);
    const currentlyVisible=batch.mesh.isVisible!==false,threshold=radius+(currentlyVisible?12:-12);
    const show=d2<=threshold*threshold;
    if(batch.mesh.isVisible!==show)batch.mesh.isVisible=show;
