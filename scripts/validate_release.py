@@ -125,6 +125,14 @@ def main() -> None:
         fail("La espuma de Calidad debe existir solo para la isla activa del jugador.")
     if "Math.min(deviceDpr,isTouchDevice?1.80:1.85)" not in index_html:
         fail("Calidad debe limitar la resolución interna para reducir el coste de GPU sin recortar efectos.")
+    if "const TERRAIN_HASH_CACHE_LIMIT=65536;" not in index_html or "terrainHashCacheSlots" not in index_html or "terrainHashCacheEntries:terrainHashCache.size" not in index_html:
+        fail("La caché determinista de ruido del terreno debe estar acotada y diagnosticada.")
+    if "const GROUND_RELAX_INTERVAL=1/30;" not in index_html or "groundRelaxAccumulator>=GROUND_RELAX_INTERVAL" not in index_html:
+        fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
+    if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
+        fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
+    if "reportVersion:'8',build:'0.6.222'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html:
+        fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "function updateQualityGrassLod(dt)" not in index_html or "qualityGrassLodBatches.push" not in index_html or "updateQualityGrassLod(dt);" not in index_html:
         fail("Calidad debe aplicar LOD por distancia a los lotes de hierba.")
     if "function syncNordicWaterReflectionIsland()" not in index_html or "syncNordicWaterReflectionIsland();" not in index_html or "activeWaterReflectionIslandIndex" not in index_html:
