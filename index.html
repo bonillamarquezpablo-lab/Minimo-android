@@ -6301,11 +6301,14 @@ if(realPlayerArmDebugEnabled){
   const objectUrl=URL.createObjectURL(blob);
   try{
    lastVikingStage='importación GLB';
-   let asset;
+   let asset;const glbImportStartedAt=performance.now();
    try{asset=await B.SceneLoader.ImportMeshAsync('',objectUrl,'',scene,null,'.glb');}
    catch(err){throw new Error('El archivo llegó, pero Babylon.js no pudo leer el GLB: '+(err&&err.message?err.message:String(err)));}
+   const glbImportDurationMs=performance.now()-glbImportStartedAt;
    lastVikingStage='montaje del esqueleto y personaje';
-   try{await attachHumanViking(asset,originLabel);}
+   const glbAttachStartedAt=performance.now();
+   try{await attachHumanViking(asset,originLabel);
+    console.info('GLB protagonist pipeline timing',{profile:activeGraphicsProfile,origin:originLabel,bytes:blob.size,importMs:Math.round(glbImportDurationMs),attachMs:Math.round(performance.now()-glbAttachStartedAt),meshes:(asset.meshes||[]).length,skeletons:(asset.skeletons||[]).length,animationGroups:(asset.animationGroups||[]).length});}
    catch(err){try{(asset.meshes||[]).forEach(m=>{if(m&&!m.isDisposed())m.dispose(false,true);});(asset.transformNodes||[]).forEach(n=>{if(n&&!n.isDisposed())n.dispose(false,false);});}catch(_){}throw new Error('El GLB se descargó y se abrió, pero falló el montaje del esqueleto: '+(err&&err.message?err.message:String(err)));}
    return true;
   }finally{URL.revokeObjectURL(objectUrl);}
