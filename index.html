@@ -3893,10 +3893,13 @@ async function removeStrayDebugGeometry(targetScene){
  function chooseWildlifeClips(groups){
   const playable=(groups||[]).filter(group=>group&&Array.isArray(group.targetedAnimations)&&group.targetedAnimations.length>0);
   const normalized=group=>String(group&&group.name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-  const exact=names=>playable.find(group=>names.includes(normalized(group)))||null;
-  const idle=exact(['idle','idle2','animalarmatureidle','animalarmatureidle2'])||playable.find(group=>/idle/i.test(String(group.name||'')))||null;
-  const walk=exact(['walk','animalarmaturewalk'])||playable.find(group=>/walk/i.test(String(group.name||'')))||null;
-  const run=exact(['gallop','animalarmaturegallop','run','animalarmaturerun'])||playable.find(group=>/gallop|run/i.test(String(group.name||'')))||null;
+  const pickExact=name=>playable.find(group=>normalized(group)===name)||null;
+  // Quaternius exports duplicate tracks as both "Idle" and "AnimalArmature|Idle".
+  // Prefer the short canonical clip; use the prefixed variant only when absent.
+  const pick=names=>{for(const name of names){const shortName=pickExact(name);if(shortName)return shortName;const prefixed=pickExact('animalarmature'+name);if(prefixed)return prefixed;}return null;};
+  const idle=pick(['idle','idle2'])||playable.find(group=>/idle/i.test(String(group.name||'')))||null;
+  const walk=pick(['walk'])||playable.find(group=>/walk/i.test(String(group.name||'')))||null;
+  const run=pick(['gallop','run'])||playable.find(group=>/gallop|run/i.test(String(group.name||'')))||null;
   return {idle,walk:walk||idle,run:run||walk||idle};
  }
  async function downloadWildlifeBlob(kind){
