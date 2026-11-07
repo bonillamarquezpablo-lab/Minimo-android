@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.202"
+EXPECTED_VERSION = "0.6.203"
 
 HTML_PAGES = (
     "index.html",
@@ -88,6 +88,8 @@ def main() -> None:
         fail("La caché de recursos no contiene la huella SHA-256 generada en build.")
     if "return cached || response;" not in sw:
         fail("El service worker no contiene fallback de caché para errores HTTP.")
+    if "opens from its last known shell immediately" not in sw or "event.waitUntil(refreshPromise.catch(() => {}));" not in sw:
+        fail("La aplicación instalada debe abrir desde la shell cacheada sin esperar a la red.")
 
     asset_manifest = json.loads(read_text("assets/asset-manifest.json"))
     if asset_manifest.get("game") != "EL SIN NOMBRE" or asset_manifest.get("version") != version:
@@ -290,6 +292,11 @@ def main() -> None:
         fail("No se conserva el filtrado anisotrópico de las texturas procedurales.")
     if "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);" not in index_html:
         fail("La densidad principal de vegetación no conserva su cobertura.")
+    for optimization in ("const terrainHashCache=new Map();", "grassStartupSliceBudgetMs=isConstrainedMobile?8:12", "new Uint8Array(gridSide*gridSide)", "new Float32Array(gridSide*gridSide*2)", "new Uint32Array(gridSide*gridSide)", "await Promise.all([grassGenerationTask,wildlifePreparationTask])"):
+        if optimization not in index_html:
+            fail("Falta una optimización de arranque móvil: " + optimization)
+    if "grassYieldInterval" in index_html or "occupiedGridCells=new Set()" in index_html:
+        fail("La distribución de hierba todavía usa esperas fijas o estructuras de colocación poco compactas.")
     if "function isSafeGroundCoverPoint(is,x,z)" not in index_html or "const grassGroundSample=(x,z)=>{" not in index_html or "const safeLandRadius=island.r*.70" not in index_html:
         fail("La hierba no restringe la generación optimizada a terreno seco y alejado de la costa.")
     if "terrainDeformationAt(islandIndex,xP,z)" not in index_html or "surfaceSlopeX" not in index_html:
@@ -330,7 +337,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.202</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.203</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
         fail("Los penachos o su iluminación de doble cara están incompletos.")
