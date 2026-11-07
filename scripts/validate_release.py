@@ -464,7 +464,7 @@ def main() -> None:
         fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
     if "const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;" not in index_html or "await yieldGrassStartupIfNeeded(islandIndex,placed,want);" not in index_html:
         fail("La generación de vegetación debe ceder el control según tiempo real de CPU.")
-    if "const occupiedGridCells=new Uint8Array(gridSide*gridSide)" not in index_html or "const terrainHashCache=new Map();" not in index_html:
+    if "const occupiedGridCells=new Uint8Array(gridSide*gridSide)" not in index_html or "const terrainHashCache=new Map()," not in index_html:
         fail("La generación del terreno y la hierba debe reutilizar buffers compactos y hashes deterministas.")
     if "const grassGenerationTask=createRealGrass();" not in index_html or "await Promise.all([grassGenerationTask,wildlifePreparationTask]);" not in index_html:
         fail("Los perfiles de calidad deben poder preparar vegetación y fauna en paralelo.")
