@@ -119,8 +119,8 @@ def main() -> None:
         fail("Falta el socket visible del palo anclado a la palma en espacio del jugador.")
     if "function findRightGripBones" not in index_html or "applyRealPlayerClubGripPose" not in index_html:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
-    if "if(isPerformanceMode)return;" not in index_html or "tidalFoamMeshes.push" not in index_html:
-        fail("Rendimiento debe omitir la geometría dinámica de espuma costera.")
+    if "const segments=isPerformanceMode?(isConstrainedMobile?112:160)" not in index_html or "ShoreBreakerWash_" not in index_html or "tidalFoamMeshes.push" not in index_html:
+        fail("Rendimiento debe conservar una geometría dinámica de rompiente costera simplificada.")
     if "activeTidalFoamIslandIndex" not in index_html or "if(nextIndex>=0)buildTidalFoam(land[nextIndex],nextIndex);" not in index_html:
         fail("La espuma de Calidad debe existir solo para la isla activa del jugador.")
     if "Math.min(deviceDpr,isTouchDevice?1.80:1.85)" not in index_html:
