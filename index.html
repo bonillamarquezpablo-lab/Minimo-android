@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.199">
+<meta name="el-sin-nombre-build" content="0.6.200">
 <meta name="el-sin-nombre-repair" content="0.6.195 preserve rigged deer/stag/wolf; validate island ground and animal roaming; deck-mounted raider crew; plank-built huts; distance-culled faction badges; preserve master pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.199</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.200</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2352,6 +2352,41 @@ async function removeStrayDebugGeometry(targetScene){
  }
  const texGrass=makePatternTexture('Detailed grass albedo','#617a48',['#a4b96e','#49683c','#c1c18a','#3a5a40'],'grass',isPerformanceMode?(isConstrainedMobile?512:1024):2048);
  const texSand=makePatternTexture('Pebbled sand albedo','#ad9870',['#dfc99b','#786c55','#e8d9b8'],'sand',isPerformanceMode?(isConstrainedMobile?256:512):1024);
+ function makeLivingCoastalSandTexture(){
+  const size=isPerformanceMode?(isConstrainedMobile?512:768):1024;
+  const tex=new B.DynamicTexture('LivingCoastalSandAlbedo',{width:size,height:size},scene,false),ctx=tex.getContext();
+  let seed=42671;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+  const gradient=ctx.createLinearGradient(0,0,size,size);
+  gradient.addColorStop(0,'#c4aa7d');gradient.addColorStop(.48,'#b69a6b');gradient.addColorStop(1,'#a98e64');
+  ctx.fillStyle=gradient;ctx.fillRect(0,0,size,size);
+  const repeatMark=(draw,x,y,pad=48)=>{for(const ox of [-size,0,size])for(const oy of [-size,0,size])if(x+ox>-pad&&x+ox<size+pad&&y+oy>-pad&&y+oy<size+pad)draw(x+ox,y+oy);};
+  // Fine mineral grain, shell fragments and tiny darker basalt flecks at several scales.
+  for(let i=0;i<Math.round(size*size/105);i++){
+   const x=random()*size,y=random()*size,r=.25+random()*1.25,light=random()>.53;
+   repeatMark((px,py)=>{
+    ctx.fillStyle=light?(random()>.5?'#ead7b0':'#d8c39a'):(random()>.5?'#786b53':'#927c5a');
+    ctx.globalAlpha=.10+random()*.20;ctx.beginPath();ctx.ellipse(px,py,r*(.7+random()*1.8),r*(.45+random()),random()*Math.PI,0,Math.PI*2);ctx.fill();
+   },x,y,4);
+  }
+  // Low wind-built ripples: shallow, broken curves rather than a repeated striped pattern.
+  for(let i=0;i<Math.round(size*.78);i++){
+   const x=random()*size,y=random()*size,len=8+random()*70,amp=.6+random()*2.7;
+   repeatMark((px,py)=>{
+    ctx.strokeStyle=i%3===0?'#e4d0a5':'#806e4d';ctx.globalAlpha=.055+random()*.10;ctx.lineWidth=.35+random()*.75;
+    ctx.beginPath();ctx.moveTo(px,py);ctx.bezierCurveTo(px+len*.28,py-amp,px+len*.68,py+amp,px+len,py+amp*.15);ctx.stroke();
+   },x,y,76);
+  }
+  for(let i=0;i<Math.round(size*.20);i++){
+   const x=random()*size,y=random()*size,len=2+random()*8;
+   repeatMark((px,py)=>{
+    ctx.strokeStyle=i%2?'#efe0bd':'#675a45';ctx.globalAlpha=.12+random()*.16;ctx.lineWidth=.45+random()*.8;
+    ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+len,py+(random()-.5)*1.8);ctx.stroke();
+   },x,y,12);
+  }
+  ctx.globalAlpha=1;tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);
+  tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
+ }
+ const texCoastalSand=makeLivingCoastalSandTexture();
  const texBark=makePatternTexture('Rough tree bark','#59402d',['#8b6540','#382a22','#a27b50'],'bark');
  const texWood=makePatternTexture('Weathered timber','#79563a',['#b18a5c','#4e3729','#d0a06b'],'grain');
  const texLeaf=makePatternTexture('Leaf canopy detail','#3c6540',['#769257','#294b35','#a0a66a'],'leaf');
@@ -2361,7 +2396,8 @@ async function removeStrayDebugGeometry(targetScene){
  const texLeather=makePatternTexture('Leather grain','#493328',['#79563b','#2c211d'],'grain');
   const texThatched=makePatternTexture('Layered thatch roofing','#766044',['#ad8a55','#4c3c2b','#c3a16b','#5d4a32'],'thatch',1024);
  applyTexture(M.grass,texGrass,3.2);applyTexture(M.grass2,texGrass,2.7);applyTexture(M.darkGrass,texGrass,2.7);
- applyTexture(M.sand,texSand,4);applyTexture(M.wood,texBark,2);applyTexture(M.woodDark,texWood,2);
+ applyTexture(M.sand,texCoastalSand,7.5);
+ M.sand.specularColor=new B.Color3(.018,.016,.012);M.sand.roughness=.985;applyTexture(M.wood,texBark,2);applyTexture(M.woodDark,texWood,2);
  applyTexture(M.woodLight,texWood,2);applyTexture(M.bark,texBark,2);
  applyTexture(M.leaf,texLeaf,2);applyTexture(M.leaf2,texLeaf,2);applyTexture(M.leafOak,texLeaf,2);
  applyTexture(M.leafSun,texLeaf,2);applyTexture(M.leafShadow,texLeaf,2);
@@ -2499,9 +2535,9 @@ async function removeStrayDebugGeometry(targetScene){
  }
  const texTerrain=makeNordicTerrainAlbedo();
 
- const albedoNormalTerrain=makeAlbedoNormal('Albedo-derived terrain normal',texTerrain,.48,512),albedoNormalGrass=makeAlbedoNormal('Albedo-derived grass normal',texGrass,.72,512),albedoNormalSand=makeAlbedoNormal('Albedo-derived sand normal',texSand,.30,384),albedoNormalStone=makeAlbedoNormal('Albedo-derived stone normal',texStone,.86,384),albedoNormalWood=makeAlbedoNormal('Albedo-derived timber normal',texWood,.90,384),albedoNormalBark=makeAlbedoNormal('Albedo-derived bark normal',texBark,.82,384),albedoNormalCloth=makeAlbedoNormal('Albedo-derived wool normal',texCloth,.34,256),albedoNormalLeather=makeAlbedoNormal('Albedo-derived leather normal',texLeather,.52,256),albedoNormalWater=makeAlbedoNormal('Albedo-derived water normal',texWater,.23,256);
+ const albedoNormalTerrain=makeAlbedoNormal('Albedo-derived terrain normal',texTerrain,.48,512),albedoNormalGrass=makeAlbedoNormal('Albedo-derived grass normal',texGrass,.72,512),albedoNormalSand=makeAlbedoNormal('Albedo-derived sand normal',texCoastalSand,.72,512),albedoNormalStone=makeAlbedoNormal('Albedo-derived stone normal',texStone,.86,384),albedoNormalWood=makeAlbedoNormal('Albedo-derived timber normal',texWood,.90,384),albedoNormalBark=makeAlbedoNormal('Albedo-derived bark normal',texBark,.82,384),albedoNormalCloth=makeAlbedoNormal('Albedo-derived wool normal',texCloth,.34,256),albedoNormalLeather=makeAlbedoNormal('Albedo-derived leather normal',texLeather,.52,256),albedoNormalWater=makeAlbedoNormal('Albedo-derived water normal',texWater,.23,256);
  [M.grass,M.grass2,M.darkGrass].forEach(m=>{m.bumpTexture=albedoNormalGrass;m.bumpTexture.level=.44;});
- M.sand.bumpTexture=albedoNormalSand;M.sand.bumpTexture.level=.24;
+ M.sand.bumpTexture=albedoNormalSand;M.sand.bumpTexture.level=.72;
  [M.stone,M.stoneLight].forEach(m=>{m.bumpTexture=albedoNormalStone;m.bumpTexture.level=.48;});
  [M.wood,M.woodLight,M.woodDark].forEach(m=>{m.bumpTexture=albedoNormalWood;m.bumpTexture.level=.34;});
  [M.bark,M.birch].forEach(m=>{m.bumpTexture=albedoNormalBark;m.bumpTexture.level=.36;});
@@ -2873,6 +2909,191 @@ async function removeStrayDebugGeometry(targetScene){
   shore.position=v(is.x,-4.30,is.z);shore.material=M.sand;shore.isPickable=false;
   createIslandTerrain(is,i);
  });
+ // The playable beach is a dedicated textured layer over the heightfield, with soft edges
+ // and a moisture/foam state per shoreline sample. It uses the same analytical terrain height,
+ // so it never changes the walkable collision profile.
+ const livingBeachLayers=[];
+ function buildLivingBeachLayer(island,index){
+  const segments=isPerformanceMode?(isConstrainedMobile?72:104):160,rows=7,cols=segments+1;
+  const positions=[],indices=[],uvs=[],colors=[],radials=[],baseAlpha=[],wetness=new Float32Array(segments*rows),residue=new Float32Array(segments*rows),lastShore=new Float32Array(segments+1);
+  lastShore.fill(NaN);
+  for(let i=0;i<=segments;i++){
+   const angle=i/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
+   const coastNoise=(terrainValueNoise((island.x+cs*island.r)*.12+17.2,(island.z+sn*island.r)*.12-8.4)-.5)*.045+Math.sin((island.x+cs*island.r)*.17+(island.z+sn*island.r)*.11)*.006;
+   const inner=island.r*(.748-coastNoise),outer=island.r*(.974-coastNoise);
+   radials.push(inner,outer);
+   for(let row=0;row<rows;row++){
+    const t=row/(rows-1),radius=inner+(outer-inner)*t;
+    for(const side of [0,1]){
+     const x=island.x+cs*radius,z=island.z+sn*radius,y=terrainHeightOnIsland(island,x,z)+.018;
+     positions.push(x,y,z);uvs.push(i/segments*12,t*2.8);
+     const edgeFade=Math.min(smooth01(t/.11),smooth01((1-t)/.075));
+     const alpha=.88*edgeFade;colors.push(1,.94,.82,alpha);
+    }
+    baseAlpha.push(.88*Math.min(smooth01(t/.11),smooth01((1-t)/.075)));
+   }
+  }
+  for(let row=0;row<rows-1;row++)for(let i=0;i<segments;i++){
+   const a=row*cols+i,b=a+1,c=(row+1)*cols+i,d=c+1;
+   indices.push(a,b,c,b,d,c);
+  }
+  const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
+  const mesh=new B.Mesh('LivingCoastalSand_'+index,scene),data=new B.VertexData();
+  data.positions=positions;data.indices=indices;data.normals=normals;data.uvs=uvs;data.colors=colors;data.applyToMesh(mesh,true);
+  const material=M.sand.clone('LivingBeachSandMaterial_'+index),texture=texCoastalSand.clone('LivingBeachSandTexture_'+index);
+  texture.uScale=1;texture.vScale=1;material.diffuseTexture=texture;material.useVertexColors=true;material.useVertexAlpha=true;
+  material.backFaceCulling=false;material.alpha=1;material.specularColor=new B.Color3(.018,.016,.012);
+  mesh.material=material;mesh.isPickable=false;mesh.receiveShadows=true;mesh.castShadows=false;mesh.hasVertexAlpha=true;
+  mesh.metadata=Object.assign({},mesh.metadata||{},{livingBeachSurface:true,islandIndex:index,wetnessSimulation:true});
+  livingBeachLayers.push({mesh,island,index,segments,rows,cols,radials,baseAlpha,wetness,residue,lastShore,colors:new Float32Array(colors),centerX:island.x,centerZ:island.z});
+ }
+ land.forEach(buildLivingBeachLayer);
+ const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
+ function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.975;if(dx*dx+dz*dz<r*r)return i;}return -1;}
+ // Interactive ground layer: impressed boot soles, compacted lips, sand grains and drying tide marks.
+ const GroundDynamics=(()=>{
+  const imprints=[],particles=[],maxImprints=isPerformanceMode?(isConstrainedMobile?18:28):48,maxParticles=isPerformanceMode?22:38;
+  const imprintCols=13,imprintRows=23;let stepDistance=0,alternateFoot=0,beachClock=0;
+  const imprintMaterial=new B.StandardMaterial('NorseGroundImprintMaterial',scene);
+  imprintMaterial.diffuseTexture=texCoastalSand;imprintMaterial.diffuseColor=new B.Color3(1,1,1);
+  imprintMaterial.specularColor=new B.Color3(.012,.011,.009);imprintMaterial.specularPower=4;
+  imprintMaterial.useVertexColors=true;imprintMaterial.useVertexAlpha=true;imprintMaterial.backFaceCulling=false;
+  imprintMaterial.alpha=1;imprintMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
+  const dryGrainMaterial=new B.StandardMaterial('DrySandGrainMaterial',scene);dryGrainMaterial.diffuseTexture=texCoastalSand;
+  dryGrainMaterial.diffuseColor=new B.Color3(.72,.58,.37);dryGrainMaterial.specularColor=new B.Color3(.015,.012,.008);
+  const wetGrainMaterial=new B.StandardMaterial('WetSandGrainMaterial',scene);wetGrainMaterial.diffuseTexture=texCoastalSand;
+  wetGrainMaterial.diffuseColor=new B.Color3(.37,.43,.39);wetGrainMaterial.specularColor=new B.Color3(.035,.045,.04);
+  function makeFootprint(x,z,heading,wet,beach,running){
+   const islandIndex=landIslandIndex(x,z);if(islandIndex<0)return;
+   const island=land[islandIndex],dx=x-island.x,dz=z-island.z,d=Math.hypot(dx,dz);
+   if(d>island.r*.973)return;
+   const positions=[],indices=[],uvs=[],colors=[],baseAlpha=[];
+   const halfLength=running?.245:.225,baseWidth=running?.155:.137;
+   for(let row=0;row<imprintRows;row++){
+    const nz=row/(imprintRows-1)*2-1;
+    for(let col=0;col<imprintCols;col++){
+     const u=col/(imprintCols-1)*2-1,halfWidth=baseWidth*(.76+.24*smooth01((nz+1)*.5));
+     const localX=u*halfWidth,localZ=nz*halfLength,radial=Math.hypot(u,nz);
+     const rightX=Math.cos(heading),rightZ=-Math.sin(heading),forwardX=Math.sin(heading),forwardZ=Math.cos(heading);
+     const wx=x+rightX*localX+forwardX*localZ,wz=z+rightZ*localX+forwardZ*localZ;
+     const onSameIsland=landIslandIndex(wx,wz)===islandIndex,groundY=terrainSurfaceAt(wx,wz);
+     const mask=onSameIsland?1-smooth01((radial-.69)/.31):0,edge=smooth01((radial-.78)/.22);
+     const rim=beach?edge*.009:edge*.004,press=(1-edge)* (wet?.013:(beach?.009:.006));
+     positions.push(wx,groundY+.012+rim-press,wz);uvs.push(col/(imprintCols-1),row/(imprintRows-1));
+     const strength=wet?.68:(beach?.50:.34),tint=wet?[.40,.48,.42]:(beach?[.48,.38,.25]:[.43,.39,.30]);
+     const edgeTint=beach?[.78,.69,.51]:[.62,.57,.43],blend=edge*.46;
+     colors.push(tint[0]*(1-blend)+edgeTint[0]*blend,tint[1]*(1-blend)+edgeTint[1]*blend,tint[2]*(1-blend)+edgeTint[2]*blend,strength*mask);
+     baseAlpha.push(strength*mask);
+    }
+   }
+   for(let row=0;row<imprintRows-1;row++)for(let col=0;col<imprintCols-1;col++){
+    const a=row*imprintCols+col,b=a+1,c=(row+1)*imprintCols+col,d=c+1;
+    indices.push(a,c,b,b,c,d);
+   }
+   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
+   const mesh=new B.Mesh('PhysicalBootImprint_'+(wet?'Wet':'Dry')+'_'+Math.floor(elapsed*1000),scene),data=new B.VertexData();
+   data.positions=positions;data.indices=indices;data.normals=normals;data.uvs=uvs;data.colors=colors;data.applyToMesh(mesh,true);
+   mesh.material=imprintMaterial;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;mesh.hasVertexAlpha=true;mesh.refreshBoundingInfo(true);
+   const life=wet?92:(beach?62:34);imprints.push({mesh,age:0,life,baseAlpha,colors:new Float32Array(colors),fadeAccumulator:0});
+   if(imprints.length>maxImprints){const old=imprints.shift();old.mesh.dispose(false,true);}
+  }
+  function kickSandGrains(x,z,heading,wet,running){
+   const count=wet?2:(running?4:3);
+   for(let i=0;i<count&&particles.length<maxParticles;i++){
+    const angle=heading+rand(-1.2,1.2),speed=rand(.16,running?.82:.48),distance=rand(.08,.21),y=terrainSurfaceAt(x,z)+.07;
+    const mesh=B.MeshBuilder.CreateSphere('FootstepSandGrain',{diameter:rand(.018,.038),segments:4},scene);
+    mesh.material=wet?wetGrainMaterial:dryGrainMaterial;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;
+    mesh.position=v(x+Math.sin(angle)*distance,y,z+Math.cos(angle)*distance);
+    particles.push({mesh,vx:Math.sin(angle)*speed,vz:Math.cos(angle)*speed,vy:rand(.28,running?1.05:.68),life:rand(.28,.55),age:0});
+   }
+  }
+  function addStep(x,z,heading,running){
+   const islandIndex=landIslandIndex(x,z);if(islandIndex<0)return;
+   const island=land[islandIndex],dx=x-island.x,dz=z-island.z,d=Math.hypot(dx,dz);
+   const ratio=d/island.r,beach=ratio>.748&&ratio<.976;
+   const angle=Math.atan2(dz,dx),shore=shorelineFoamRadius(island,angle,oceanTime),groundY=terrainSurfaceAt(x,z);
+   const wet=beach&&((Number.isFinite(shore)&&shore-d<1.45)||waterHeight(x,z,oceanTime)>groundY-.20);
+   makeFootprint(x,z,heading,wet,beach,running);kickSandGrains(x,z,heading,wet,running);
+  }
+  function updateBeach(dt,focusX,focusZ){
+   beachClock+=dt;if(beachClock<.30)return;const step=beachClock;beachClock=0;
+   const drying= Math.exp(-step/(48+Math.max(0,Math.sin(oceanTime*.018))*34));
+   for(const layer of livingBeachLayers){
+    if(Math.hypot(focusX-layer.centerX,focusZ-layer.centerZ)>layer.island.r+115)continue;
+    for(let i=0;i<=layer.segments;i++){
+     const angle=i/layer.segments*Math.PI*2,shore=shorelineFoamRadius(layer.island,angle,oceanTime),previous=layer.lastShore[i];
+     const innerOuter=layer.radials.slice(i*2,i*2+2),inner=innerOuter[0],outer=innerOuter[1];
+     if(Number.isFinite(shore)){
+      const retreat=Number.isFinite(previous)?Math.max(0,shore-previous):0;
+      for(let row=0;row<layer.rows;row++){
+       const radial=inner+(outer-inner)*row/(layer.rows-1),stateIndex=i*layer.rows+row;
+       let wet=layer.wetness[stateIndex]*drying;
+       const inlandDistance=shore-radial;
+       if(inlandDistance>=-.18&&inlandDistance<2.35){
+        const contact=.84*Math.exp(-Math.max(0,inlandDistance)*1.42);
+        wet=Math.max(wet,contact);
+       }
+       layer.wetness[stateIndex]=Math.min(1,wet);
+       let foam=layer.residue[stateIndex]*Math.exp(-step/7.5);
+       if(retreat>.035){
+        const distance=Math.abs(radial-previous),deposit=Math.min(.44,retreat*2.1)*Math.exp(-distance*5.5);
+        foam=Math.max(foam,deposit);
+       }
+       layer.residue[stateIndex]=Math.min(.6,foam);
+       const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[stateIndex];
+       const dryColor=[1,.94,.82],wetColor=[.48,.54,.48],foamColor=[.91,.94,.87];
+       let rgb=dryColor.map((c,k)=>c+(wetColor[k]-c)*w);
+       rgb=rgb.map((c,k)=>c+(foamColor[k]-c)*f);
+       const alpha=base*(.82+w*.10+f*.22);
+       for(let side=0;side<2;side++){
+        const vertex=(row*layer.cols+i+side)*4;
+        layer.colors[vertex]=rgb[0];layer.colors[vertex+1]=rgb[1];layer.colors[vertex+2]=rgb[2];layer.colors[vertex+3]=alpha;
+       }
+      }
+      layer.lastShore[i]=shore;
+     }else{
+      layer.lastShore[i]=NaN;
+      for(let row=0;row<layer.rows;row++){
+       const stateIndex=i*layer.rows+row;layer.wetness[stateIndex]*=drying;layer.residue[stateIndex]*=Math.exp(-step/7.5);
+      }
+     }
+    }
+    layer.mesh.updateVerticesData(B.VertexBuffer.ColorKind,layer.colors,false,false);
+   }
+  }
+  function update(dt,x,z,distance,heading,running,onShip,airborne){
+   if(!Number.isFinite(dt)||dt<=0)return;
+   for(let i=imprints.length-1;i>=0;i--){
+    const item=imprints[i];item.age+=dt;item.fadeAccumulator+=dt;
+    if(item.age>=item.life){item.mesh.dispose(false,true);imprints.splice(i,1);continue;}
+    if(item.fadeAccumulator>=.48){
+     item.fadeAccumulator=0;const fade=Math.pow(Math.max(0,1-item.age/item.life),1.42);
+     for(let k=0;k<item.colors.length;k+=4)item.colors[k+3]=item.baseAlpha[k/4]*fade;
+     item.mesh.updateVerticesData(B.VertexBuffer.ColorKind,item.colors,false,false);
+    }
+   }
+   for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];p.age+=dt;p.life-=dt;
+    p.vy-=2.6*dt;p.mesh.position.x+=p.vx*dt;p.mesh.position.z+=p.vz*dt;p.mesh.position.y+=p.vy*dt;
+    p.mesh.scaling.scaleInPlace(1-dt*.85);
+    if(p.life<=0||p.mesh.position.y<=terrainSurfaceAt(p.mesh.position.x,p.mesh.position.z)+.025){
+     p.mesh.dispose(false,true);particles.splice(i,1);
+    }
+   }
+   updateBeach(dt,x,z);
+   if(onShip||airborne||!Number.isFinite(distance)||distance<=0){if(!onShip&&(!Number.isFinite(distance)||distance<=0))stepDistance=0;return;}
+   stepDistance+=distance;
+   const stride=running?1.62:1.14;
+   while(stepDistance>=stride){
+    stepDistance-=stride;alternateFoot^=1;
+    const side=alternateFoot?-.145:.145,forwardX=Math.sin(heading),forwardZ=Math.cos(heading),rightX=Math.cos(heading),rightZ=-Math.sin(heading);
+    const back=running?.18:.13,px=x-forwardX*back+rightX*side,pz=z-forwardZ*back+rightZ*side;
+    addStep(px,pz,heading,running);
+   }
+  }
+  function reset(){stepDistance=0;alternateFoot=0;}
+  return {update,reset,counts:()=>({imprints:imprints.length,particles:particles.length})};
+ })();
  const tidalFoamMeshes=[];
  function buildTidalFoam(island,index){
   const positions=[],indices=[],colors=[],patches=25,patchMeta=[];
@@ -9287,6 +9508,7 @@ function updateHUD(){
   const strideLength=running&&stamina>0?3.05:2.55;walkPhase+=playerStepDistance*(Math.PI*2/strideLength);
   const audioPos=playerPos();let nearFireAudio=Math.hypot(audioPos.x-STARTER_CAMP_POSITION.x,audioPos.z-STARTER_CAMP_POSITION.z)<15;
   if(!nearFireAudio){for(let i=0;i<villages.length;i++){const village=villages[i],dx=audioPos.x-(village.x-3),dz=audioPos.z-(village.z+5);if(dx*dx+dz*dz<64){nearFireAudio=true;break;}}}
+  GroundDynamics.update(dt,audioPos.x,audioPos.z,playerStepDistance,yaw,running&&stamina>0,onShip,playerAirborne);
   NorseAudio.update(dt,nearFireAudio,playerStepDistance>.02,onShip,playerStepDistance,running&&stamina>0);
   worldUpdatePhase='animation / player '+(playerAction==='idle'&&moving?(running?'run':'walk'):playerAction);
   animateViking(player,walkPhase,!onShip&&moving,onShip?'sail':playerAction,blocking);
