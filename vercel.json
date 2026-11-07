@@ -5,7 +5,8 @@
       "feat/0.6.202-ground-debug-mipmap-phase-a": false,
       "repair/0.6.202-audit-diagnostics": false,
       "repair/0.6.204-nonblocking-scene-ready": false,
-      "perf/0.6.205-dual-device-startup": false
+      "perf/0.6.205-dual-device-startup": false,
+      "perf/0.6.206-low-end-visual-budget": false
     }
   }
 }
