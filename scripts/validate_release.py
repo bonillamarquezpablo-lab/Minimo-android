@@ -323,7 +323,7 @@ def main() -> None:
     shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"))]
     if "const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z);" not in shoreline_body or ".42;" in shoreline_body:
         fail("El cruce agua/arena debe usar el perfil real completo; no puede sustituir el mar exterior por una altura plana.")
-    if "radialOffsets=[-1.80,-.92,-.24,.28,.82]" not in index_html or "Math.max(ground,water)+.028" not in index_html:
+    if "radialOffsets=[-2.8,-2.0,-1.15,-.42,.18,.78,1.55,2.45]" not in index_html or "Math.max(ground,water)+.028" not in index_html:
         fail("La espuma debe cruzar la intersección y extenderse sobre la arena mojada, no quedar solo mar adentro.")
     if "for(let row=0;row<radialOffsets.length;row++)for(let side=0;side<2;side++)" not in index_html or "arcScale=.76+.34*pulse" not in index_html:
         fail("Las lenguas de resaca deben tener anchura y curvatura dinámica.")
