@@ -3418,7 +3418,7 @@ async function removeStrayDebugGeometry(targetScene){
   tidalFoamMeshes.push({mesh,positions:new Float32Array(positions),patches:patchMeta,island,centerX:island.x,centerZ:island.z,index});
  }
  land.forEach(buildTidalFoam);
- land.forEach(buildTidalFoam);
+ 
  const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
  function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.975;if(dx*dx+dz*dz<r*r)return i;}return -1;}
  // Trails on the main island. Their centre lines also define vegetation-free corridors.
