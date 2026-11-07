@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.227">
-<meta name="el-sin-nombre-repair" content="0.6.227 frame pacing and CPU allocation reduction without visual reductions">
+<meta name="el-sin-nombre-build" content="0.6.228">
+<meta name="el-sin-nombre-repair" content="0.6.228 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.227</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.228</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2626,7 +2626,7 @@ async function removeStrayDebugGeometry(targetScene){
  const shadowMaterial=new B.StandardMaterial('SoftShadowMaterial',scene);shadowMaterial.diffuseTexture=shadowTexture;shadowMaterial.opacityTexture=shadowTexture;shadowMaterial.useAlphaFromDiffuseTexture=true;shadowMaterial.disableLighting=true;shadowMaterial.backFaceCulling=false;shadowMaterial.specularColor=new B.Color3(0,0,0);shadowMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;shadowMaterial.disableDepthWrite=true;
  function attachContactShadow(root,name,radius=.9){const disc=B.MeshBuilder.CreateDisc(name,{radius,tessellation:28},scene);disc.parent=root;disc.rotation.x=-Math.PI/2;disc.position=v(0,.025,0);disc.material=shadowMaterial;disc.isPickable=false;return disc;}
  const land=[{x:0,z:0,r:60,name:'Isla del Cuervo'},{x:135,z:14,r:31,name:'Costa de Skall'},{x:-132,z:45,r:33,name:'Isla de los Pinos'},{x:28,z:143,r:33,name:'Bahía de Hrafn'},{x:146,z:-132,r:25,name:'Islote del Hielo'},{x:-145,z:-126,r:27,name:'Isla de las Cenizas'},{x:286,z:154,r:33,name:'Cabo de Bruma'},{x:-286,z:232,r:31,name:'Isla del Cuerno'},{x:292,z:-264,r:36,name:'Costa de las Tormentas'},{x:470,z:100,r:31,name:'Skjoldheim'},{x:-470,z:-310,r:34,name:'Isla de los Juramentos'},{x:60,z:465,r:34,name:'Isla del Altar'},{x:-45,z:-465,r:32,name:'Cabo del Vigía'}];
- const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?64:112))):(isTouchDevice?176:224);
+ const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?64:112))):(isTouchDevice?192:256);
  const ground=B.MeshBuilder.CreateGround('ocean',{width:1050,height:1050,subdivisions:waterSubdivisions,updatable:true},scene);ground.position.y=0;ground.material=M.water;ground.isPickable=false;ground.receiveShadows=false;
  const waterBase=ground.getVerticesData(B.VertexBuffer.PositionKind).slice(),waterPositions=waterBase.slice(),waterIndices=ground.getIndices(),waterNormals=new Float32Array(waterBase.length);
  const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:(isTouchDevice?125:180)):(isTouchDevice?250:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS,WATER_DETAIL_FADE_START_SQ=WATER_DETAIL_RADIUS_SQ*.55;
@@ -2662,7 +2662,7 @@ async function removeStrayDebugGeometry(targetScene){
   const longSwell=waterWaveValueAtVertex(vertex,0)*.105,swellA=waterWaveValueAtVertex(vertex,1)*.315,swellB=waterWaveValueAtVertex(vertex,2)*.225;
   const crossWave=waterWaveValueAtVertex(vertex,3),chopWave=waterWaveValueAtVertex(vertex,4);
   const cross=crossWave*.15,chop=chopWave*.082,secondary=waterWaveValueAtVertex(vertex,5)*.046,ripple=waterWaveValueAtVertex(vertex,6)*.026;
-  const crestFoamLift=Math.pow(Math.max(0,crossWave),5)*.032,shortCrest=Math.pow(Math.max(0,chopWave),6)*.019;
+  const crestFoamLift=Math.pow(Math.max(0,crossWave),3)*.018,shortCrest=Math.pow(Math.max(0,chopWave),3)*.010;
   return longSwell+swellA+swellB+(cross+chop+secondary+ripple+crestFoamLift+shortCrest)*fade;
  }
  updateWaterWaveTime(0);
@@ -2691,7 +2691,7 @@ async function removeStrayDebugGeometry(targetScene){
  }
  let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0,waterFarAccumulator=0;
  const waterVertexStep=isPerformanceMode?(isUltraLowEndMobile?1/6:(isGalaxyA12NachoPerformance?1/5:(isGalaxyA12LowEndMobile?1/7:(isConstrainedMobile?1/8:(isTouchDevice?1/12:1/20))))):(isTouchDevice?1/30:1/40);
- const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12NachoPerformance?1.35:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/3:1/6))))):(isTouchDevice?1/8:1/12);
+ const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12NachoPerformance?1.35:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/3:1/6))))):(isTouchDevice?1/10:1/15);
  const waterFarStep=isPerformanceMode?(isConstrainedMobile?.36:.25):.14;
  function waterHeight(x,z,t=oceanTime,detailFade=1){
   // Layered directional swells: broad North Sea swell plus shorter cross-waves and capillary ripples.
@@ -2705,8 +2705,8 @@ async function removeStrayDebugGeometry(targetScene){
   const secondary=Math.sin((x*.76-z*1.13)*.145+t*2.15)*.046;
   const ripple=Math.sin(x*.19+z*.14+t*2.8)*.026;
   // Crestas algo más tensas y asimétricas: el agua levanta la ola y rompe suavemente.
-  const crestFoamLift=Math.pow(Math.max(0,crossWave),5)*.032;
-  const shortCrest=Math.pow(Math.max(0,chopWave),6)*.019;
+  const crestFoamLift=Math.pow(Math.max(0,crossWave),3)*.018;
+  const shortCrest=Math.pow(Math.max(0,chopWave),3)*.010;
   return longSwell+swellA+swellB+(cross+chop+secondary+ripple+crestFoamLift+shortCrest)*detailFade;
  }
  // El oleaje amplio sigue animándose en todo el océano; la zona cercana recibe después
@@ -2861,25 +2861,27 @@ async function removeStrayDebugGeometry(targetScene){
    // levanta un labio translúcido y deja espuma irregular en su frente.
    const shoreX=island.x+cs*shoreline,shoreZ=island.z+sn*shoreline;
    const wavePhase=(shoreX+shoreZ*.62)*.052+oceanTime*1.28;
-   const waveCrest=Math.max(0,Math.sin(wavePhase));
-   const breakStrength=smooth01((waveCrest-.24)/.68);
-   const runup=.42+1.98*Math.pow(waveCrest,1.35);
+   const angularWaveStep=.052*shoreline*(-sn+.62*cs)*(Math.PI*2/segments);
+   const waveCrest=smooth01(.5*Math.max(0,Math.sin(wavePhase))+.25*Math.max(0,Math.sin(wavePhase-angularWaveStep))+.25*Math.max(0,Math.sin(wavePhase+angularWaveStep)));
+   const breakStrength=smooth01((waveCrest-.30)/.65);
+   const runup=.55+1.45*Math.pow(waveCrest,1.15);
    const residual=foam.retreatResidue[col];
    for(let row=0;row<washRows;row++){
     const vertex=row*cols+col,offset=vertex*3,color=vertex*4,fraction=washFractions[row];
     const radius=shoreline-runup*fraction,x=island.x+cs*radius,z=island.z+sn*radius;
     const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=waterHeight(x,z,oceanTime);
-    const leadingEdge=Math.exp(-Math.pow((fraction-.86)/.17,2));
+    const leadingEdge=Math.exp(-Math.pow((fraction-.82)/.23,2));
     const coverage=smooth01((runup*(1-fraction)+.10)/.48);
     const exposedSand=smooth01((ground-water+.035)/.24);
     const waterFilm=exposedSand*coverage*(.055+.105*waveCrest);
     const cellular=.14+.86*washPattern[vertex];
-    const whitewater=breakStrength*leadingEdge*cellular*.78;
+    const whitewater=breakStrength*leadingEdge*cellular*.66;
     const trailingFoam=residual*Math.exp(-Math.abs(fraction-.66)*3.2)*.24;
     const alpha=Math.min(.86,waterFilm+whitewater+trailingFoam);
     const whiteMix=Math.min(1,whitewater*1.3+trailingFoam);
     washPositions[offset]=x;
-    washPositions[offset+1]=Math.max(ground,water)+.026+breakStrength*(fraction<0?.10:.035);
+    const lipProfile=Math.exp(-Math.pow((fraction-.78)/.26,2));
+    washPositions[offset+1]=Math.max(ground,water)+.026+breakStrength*lipProfile*.035;
     washPositions[offset+2]=z;
     washColors[color]=.66*(1-whiteMix)+.98*whiteMix;
     washColors[color+1]=.84*(1-whiteMix)+.99*whiteMix;
@@ -7363,7 +7365,7 @@ function createRealWeapon(type='axe'){
   // en cada pase fuera de pantalla, aunque el jugador estuviera lejos de ellas.
   for(const mesh of scene.meshes){
    if(!mesh||mesh===ground||mesh===vesselSprayMesh||mesh.material===M.water)continue;
-   if(mesh.name&&(/^(shoreFoam_|ContinuousOrganicShoreFoam_|VesselWaterSprayBatch|DrakkarWake_)/.test(mesh.name)))continue;
+   if(mesh.name&&(/^(shoreFoam_|ContinuousOrganicShoreFoam_|ShoreBreakerWash_|VesselWaterSprayBatch|DrakkarWake_)/.test(mesh.name)))continue;
    if(mesh.isVisible===false||mesh.visibility===0)continue;
    if(mesh===skyDome||mesh===sunHalo||mesh===sunDisc){list.push(mesh);continue;}
    if(islandIndex<0)continue;
@@ -7380,8 +7382,10 @@ function createRealWeapon(type='axe'){
  }
  try{
   if(B.MirrorTexture&&B.Plane&&!isPerformanceMode){
-   const mirrorSize=isTouchDevice?256:512;
+   const mirrorSize=isTouchDevice?640:1024;
    nordicWaterMirror=new B.MirrorTexture('NordicIslandWaterReflection',mirrorSize,scene,true);
+   nordicWaterMirror.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);
+   nordicWaterMirror.anisotropicFilteringLevel=Math.min(8,maxAnisotropy);
    nordicWaterMirror.mirrorPlane=new B.Plane(0,-1,0,.035);
    nordicWaterMirror.renderList=[];
    nordicWaterMirror.refreshRate=isTouchDevice?12:8;
@@ -8775,7 +8779,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'8',build:'0.6.227',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'8',build:'0.6.228',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -10924,7 +10928,7 @@ function update(dt){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.227 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.228 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -11002,7 +11006,7 @@ function update(dt){
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.227 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.228 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
