@@ -319,7 +319,7 @@ def main() -> None:
         fail("La fauna GLB no conserva su isla de origen o puede caminar hacia el mar.")
     if "RaiderCrewMount_" not in index_html or "if(parts.vesselMount)" not in index_html:
         fail("La tripulación del drakkar no está anclada a la cubierta.")
-    if "p.rotationQuaternion=null;" not in index_html or "p.position.set(seat.x,.995,seat.z)" not in index_html:
+    if "p.rotationQuaternion=null;" not in index_html or "p.position.set(seat.x,guard.parts.realHuman?.role ? .972 : .995,seat.z)" not in index_html:
         fail("La tripulación no limpia la rotación heredada ni fija coordenadas locales de cubierta.")
     shore_start = index_html.find("function placeShipAllyOnShore(")
     shore_end = index_html.find("function animateViking(", shore_start)
