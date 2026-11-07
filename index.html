@@ -3018,7 +3018,7 @@ async function removeStrayDebugGeometry(targetScene){
   const dryGrainMaterial=new B.StandardMaterial('DrySandGrainMaterial',scene);dryGrainMaterial.diffuseTexture=texCoastalSand;
   dryGrainMaterial.diffuseColor=new B.Color3(.72,.58,.37);dryGrainMaterial.specularColor=new B.Color3(.015,.012,.008);
   const wetGrainMaterial=new B.StandardMaterial('WetSandGrainMaterial',scene);wetGrainMaterial.diffuseTexture=texCoastalSand;
-  wetGrainMaterial.diffuseColor=new B.Color3(.37,.43,.39);wetGrainMaterial.specularColor=new B.Color3(.035,.045,.04);
+  wetGrainMaterial.diffuseColor=new B.Color3(.55,.68,.72);wetGrainMaterial.specularColor=new B.Color3(.48,.58,.64);wetGrainMaterial.specularPower=48;wetGrainMaterial.alpha=.88;wetGrainMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
   function uploadDeformedRows(field,vertices,buffer,data){
    if(!vertices.length)return;
    const n=field.gridSize,ranges=new Map();
@@ -3097,7 +3097,7 @@ async function removeStrayDebugGeometry(targetScene){
      const localX=u*halfWidth,localZ=nz*halfLength,radial=Math.hypot(u,nz);
      const rightX=Math.cos(heading),rightZ=-Math.sin(heading),forwardX=Math.sin(heading),forwardZ=Math.cos(heading);
      const wx=x+rightX*localX+forwardX*localZ,wz=z+rightZ*localX+forwardZ*localZ;
-     const onSameIsland=landIslandIndex(wx,wz)===islandIndex,groundY=terrainSurfaceAt(wx,wz);
+     const islandDx=wx-island.x,islandDz=wz-island.z,onSameIsland=islandDx*islandDx+islandDz*islandDz<(island.r*.975)**2,groundY=terrainHeightOnIsland(island,wx,wz)+terrainDeformationAt(islandIndex,wx,wz);
      const mask=onSameIsland?1-smooth01((radial-.69)/.31):0,edge=smooth01((radial-.78)/.22);
      const rim=beach?edge*.010:edge*.005,press=(1-edge)*(wet?.012:(beach?.009:.006));
      // Keep the impression above the heightfield to prevent z-fighting and buried wet marks.
