@@ -81,7 +81,7 @@ async function isValidGameNavigation(response) {
   if (!contentType.includes("text/html")) return false;
   try {
     const html = await response.clone().text();
-    return /<meta\\s+name=["']el-sin-nombre-build["']\\s+content=["']\\d+\\.\\d+\\.\\d+["']/i.test(html) &&
+    return /<meta\s+name=["']el-sin-nombre-build["']\s+content=["']\d+\.\d+\.\d+["']/i.test(html) &&
       /id=["']renderCanvas["']/i.test(html) &&
       /id=["']loading["']/i.test(html);
   } catch (_) {
@@ -116,8 +116,8 @@ self.addEventListener("fetch", event => {
 
   if (request.mode === "navigate") {
     const guestFilePath = url.pathname.endsWith("/guest.html");
-    const guestPath = /\\/(?:guest|invitado)(?:\\/|\\/index\\.html)?$/.test(url.pathname);
-    const invitePath = /\\/invitado(?:\\/|\\/index\\.html)?$/.test(url.pathname);
+    const guestPath = /\/(?:guest|invitado)(?:\/|\/index\.html)?$/.test(url.pathname);
+    const invitePath = /\/invitado(?:\/|\/index\.html)?$/.test(url.pathname);
     const fallback = guestFilePath ? "./guest.html" : (guestPath ? (invitePath ? "./invitado/index.html" : "./guest/index.html") : "./index.html");
     // Network first: never launch a saved shell before checking for a fresh valid build.
     // A bounded timeout prevents a broken or unreachable network from blocking forever.
