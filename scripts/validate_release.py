@@ -159,7 +159,7 @@ def main() -> None:
         fail("La espuma costera debe depositarse por retirada real del agua y disiparse gradualmente.")
     if "const initialShoreline=shorelineFoamRadius(island,angle,oceanTime)" not in index_html or "colors[color+3]=0;" not in index_html:
         fail("La espuma debe comenzar invisible y aparecer tras el primer retroceso real de la línea de agua.")
-    if "const retreat=Number.isFinite(previousShore)?Math.max(0,shoreline-previousShore):0;" not in index_html or "const whiteFoamProfile=Math.exp(-((shoreOffset-.16)/.27)**2);" not in index_html:
+    if "const retreat=Number.isFinite(previousShore)?Math.max(0,shoreline-previousShore):0;" not in index_html or "const whiteFoamProfile=Math.exp(-(((shoreOffset-.16)/.27)**2));" not in index_html:
         fail("La espuma visible debe seguir el borde que acaba de quedar seco y formar una línea blanca estrecha.")
     if "const VESSEL_SPRAY_COUNT=isPerformanceMode?0:" not in index_html:
         fail("Rendimiento debe desactivar la espuma/rociado del barco.")
