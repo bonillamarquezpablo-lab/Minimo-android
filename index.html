@@ -10751,12 +10751,18 @@ function updateHUD(){
   selectedProfile:activeGraphicsProfile
  });
  setLoadingProgress(84,'Guardianes, guerreros y aldeanos preparados. Sincronizando animaciones…');
- const audioPreloadResult={total:0,ready:0,failed:0,pending:0};
- // Foley is optional for opening the world: load it in parallel, never hold the boot screen.
- startupAudioPreload.then(
-  result=>console.info('Audio Foley preparado en segundo plano:',result),
-  audioError=>console.info('La precarga de Foley queda pendiente; no bloquea la partida:',audioError)
- );
+ let audioPreloadResult={total:0,ready:0,failed:0,pending:0};
+ if(isPerformanceMode){
+  // En Rendimiento la intro no aparece hasta terminar la precarga de audio disponible.
+  try{audioPreloadResult=await startupAudioPreload;console.info('Audio preparado antes de entrar:',audioPreloadResult);}
+  catch(audioError){console.warn('La precarga de audio terminó con recursos no disponibles:',audioError);}
+ }else{
+  // Calidad conserva su precarga paralela actual.
+  startupAudioPreload.then(
+   result=>console.info('Audio Foley preparado en segundo plano:',result),
+   audioError=>console.info('La precarga de Foley queda pendiente; no bloquea la partida:',audioError)
+  );
+ }
  // No bloqueamos la entrada hasta que Babylon declare lista cada malla y textura
  // de las 13 islas. La escena ya se está renderizando: los recursos restantes pueden
  // terminar de compilarse/cargarse mientras el jugador entra, sin eliminar contenido.
