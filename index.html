@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.214">
-<meta name="el-sin-nombre-repair" content="0.6.214 thirteen-island conquest, persistent island discovery and endgame naval-defence unlock, corrected shoreline and typed terrain buffers">
+<meta name="el-sin-nombre-build" content="0.6.215">
+<meta name="el-sin-nombre-repair" content="0.6.215 thirteen-island conquest, persistent island discovery and endgame naval-defence unlock, corrected shoreline and typed terrain buffers">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.214</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.215</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2805,9 +2805,9 @@ async function removeStrayDebugGeometry(targetScene){
    const island=foam.island;
    for(const patch of foam.patches){
     const shoreline=shorelineFoamRadius(island,patch.angle,oceanTime);
-    const radialOffsets=[-1.80,-.92,-.24,.28,.82];
+    const radialOffsets=[-2.8,-2.0,-1.15,-.42,.18,.78,1.55,2.45];
     if(!Number.isFinite(shoreline)){
-     for(let vertex=0;vertex<10;vertex++){const offset=patch.start+vertex*3;foam.positions[offset]=island.x;foam.positions[offset+1]=-3.2;foam.positions[offset+2]=island.z;}
+     for(let vertex=0;vertex<radialOffsets.length*2;vertex++){const offset=patch.start+vertex*3;foam.positions[offset]=island.x;foam.positions[offset+1]=-3.2;foam.positions[offset+2]=island.z;}
      continue;
     }
     const pulse=.5+.5*Math.sin(oceanTime*.92+patch.phase),arcScale=.76+.34*pulse;
@@ -3023,7 +3023,7 @@ async function removeStrayDebugGeometry(targetScene){
   for(let i=0;i<=segments;i++){
    const angle=i/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
    const coastNoise=(terrainValueNoise((island.x+cs*island.r)*.12+17.2,(island.z+sn*island.r)*.12-8.4)-.5)*.045+Math.sin((island.x+cs*island.r)*.17+(island.z+sn*island.r)*.11)*.006;
-   radials.push(island.r*(.748-coastNoise),island.r*(.974-coastNoise));
+   radials.push(island.r*(.755-coastNoise),island.r*(1.085-coastNoise));
   }
   // Row-major topology: exactly one vertex per (radial row, shoreline segment).
   // This keeps the mesh indices, color state and local position updates on the same grid.
@@ -3032,7 +3032,7 @@ async function removeStrayDebugGeometry(targetScene){
    for(let i=0;i<=segments;i++){
     const angle=i/segments*Math.PI*2,inner=radials[i*2],outer=radials[i*2+1];
     const radius=inner+(outer-inner)*t,x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-    positions.push(x,terrainSurfaceAt(x,z)+.012,z);uvs.push(i/segments*12,t*2.8);
+    positions.push(x,terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018,z);uvs.push(i/segments*12,t*2.8);
     const edgeFade=Math.min(smooth01(t/.11),smooth01((1-t)/.075));
     const alpha=.88*edgeFade;colors.push(1,.94,.82,alpha);baseAlpha.push(alpha);
      // Pre-bake a broken, cellular foam lace field in world space. Broad patches,
@@ -3041,7 +3041,7 @@ async function removeStrayDebugGeometry(targetScene){
      const foamMass=smooth01((broadFoam*.54+mediumFoam*.31+fineFoam*.15-.49)*8.5);
      const foamFilament=1-smooth01((Math.abs(mediumFoam-.5)-.19)*7.5);
      const foamFleck=smooth01((fineFoam-.48)*10.5);
-     foamPattern[row*cols+i]=foamMass*(.16+.48*foamFilament+.36*foamFleck);
+     foamPattern[row*cols+i]=Math.min(1,foamMass*(.22+.52*foamFilament+.42*foamFleck));
    }
   }
   for(let row=0;row<rows-1;row++)for(let i=0;i<segments;i++){
@@ -3251,8 +3251,8 @@ async function removeStrayDebugGeometry(targetScene){
        layer.positions[positionOffset+1]=layer.baseY[vertex]+(field?terrainDeformationAt(islandIndex,localX,localZ):0);
        let wet=layer.wetness[stateIndex]*drying;
        const inlandDistance=shore-radial;
-       if(inlandDistance>=-.18&&inlandDistance<2.35){
-        const contact=.86*Math.exp(-Math.max(0,inlandDistance)*.78);
+       if(inlandDistance>=-.65&&inlandDistance<4.8){
+        const contact=.92*Math.exp(-Math.max(0,inlandDistance)*.43);
         wet=Math.max(wet,contact);
        }
        layer.wetness[stateIndex]=Math.min(1,wet);
@@ -3266,8 +3266,8 @@ async function removeStrayDebugGeometry(targetScene){
        // A real swash is an area of broken wash, not a single sinusoidal line:
        // each pulse spreads a shallow water sheet inland, while foam survives in patchy lace.
        const wavePhase=oceanTime*.72+localX*.031+localZ*.024+foamMask*2.7;
-       const wavePulse=.5+.5*Math.sin(wavePhase),swashReach=1.05+2.35*wavePulse;
-       const swashIn=smooth01(inlandDistance/.28),swashOut=1-smooth01((inlandDistance-swashReach)/.95);
+       const wavePulse=.5+.5*Math.sin(wavePhase),swashReach=1.55+3.05*wavePulse;
+       const swashIn=smooth01((inlandDistance+.62)/.58),swashOut=1-smooth01((inlandDistance-swashReach)/1.35);
        const swashZone=swashIn*swashOut;
        const drift=.72+.28*(.5+.5*Math.sin(oceanTime*1.35+localX*.11-localZ*.085));
        const foamIslands=swashZone*foamMask*drift*(.34+.30*wavePulse);
@@ -3381,10 +3381,10 @@ async function removeStrayDebugGeometry(targetScene){
  })();
  const tidalFoamMeshes=[];
  function buildTidalFoam(island,index){
-  const positions=[],indices=[],colors=[],patches=25,patchMeta=[],radialOffsets=[-1.80,-.92,-.24,.28,.82];
+  const positions=[],indices=[],colors=[],patches=36,patchMeta=[],radialOffsets=[-2.8,-2.0,-1.15,-.42,.18,.78,1.55,2.45];
   for(let i=0;i<patches;i++){
-   if(i%5===0)continue;
-   const angle=i/patches*Math.PI*2+Math.sin(i*2.17+index)*.018,halfArc=.055+(i%5)*.012;
+   if(i%6===0)continue;
+   const angle=i/patches*Math.PI*2+Math.sin(i*2.17+index)*.018,halfArc=.065+(i%5)*.014;
    const start=positions.length/3,radius=shorelineFoamRadius(island,angle,oceanTime);
    // Never use island.r*1.09 as a fallback: that is the seaward edge of the heightfield,
    // not the shoreline. A missing intersection means this patch starts hidden.
@@ -3396,7 +3396,7 @@ async function removeStrayDebugGeometry(targetScene){
      const r=radius+radial,x=island.x+Math.cos(a)*r,z=island.z+Math.sin(a)*r;
      const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=waterHeight(x,z,oceanTime);
      positions.push(x,Math.max(ground,water)+.028,z);
-     const rowAlpha=[.035,.22,.48,.28,.025][row],sideAlpha=side===0?.78:.94;
+     const rowAlpha=[.018,.10,.34,.58,.46,.24,.075,.012][row],sideAlpha=side===0?.68:.96;
      colors.push(.80,.89,.86,rowAlpha*sideAlpha*(.78+((i*7)%5)*.055));
     }
    }
@@ -3418,6 +3418,7 @@ async function removeStrayDebugGeometry(targetScene){
   tidalFoamMeshes.push({mesh,positions:new Float32Array(positions),patches:patchMeta,island,centerX:island.x,centerZ:island.z,index});
  }
  land.forEach(buildTidalFoam);
+ 
  const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
  function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.975;if(dx*dx+dz*dz<r*r)return i;}return -1;}
  // Trails on the main island. Their centre lines also define vegetation-free corridors.
@@ -8584,7 +8585,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'7',build:'0.6.214',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'7',build:'0.6.215',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},

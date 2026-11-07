@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.214"
+EXPECTED_VERSION = "0.6.215"
 
 HTML_PAGES = (
     "index.html",
@@ -302,22 +302,28 @@ def main() -> None:
         fail("La arena no utiliza el albedo costero de grano fino y su relieve PBR.")
     if "function buildLivingBeachLayer(island,index)" not in index_html or "function updateBeach(dt,focusX,focusZ)" not in index_html:
         fail("Falta la capa de playa con humedad y espuma residual dinámica.")
+    if "island.r*(1.085-coastNoise)" not in index_html or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018" not in index_html:
+        fail("La superficie de playa debe prolongarse hasta la zona intermareal usando la altura real del perfil costero.")
+    if "land.forEach(buildTidalFoam);" not in index_html or "radialOffsets=[-2.8,-2.0,-1.15,-.42,.18,.78,1.55,2.45]" not in index_html:
+        fail("La espuma debe construirse como lenguas discontinuas sobre la línea de agua real, no como una franja flotante.")
+    if "inlandDistance<4.8" not in index_html or "swashReach=1.55+3.05*wavePulse" not in index_html:
+        fail("La resaca debe mojar una superficie amplia de arena y avanzar/retroceder con el oleaje.")
     if "foamPattern=new Float32Array((segments+1)*rows)" not in index_html or "foamPattern,wetness,residue,lastShore" not in index_html:
         fail("La espuma de resaca debe usar una máscara espacial precomputada y reutilizada.")
     if "foamMass=smooth01((broadFoam*.54+mediumFoam*.31+fineFoam*.15-.49)*8.5)" not in index_html or "foamFilament=1-smooth01((Math.abs(mediumFoam-.5)-.19)*7.5)" not in index_html:
         fail("La espuma debe formar masas rotas con filamentos, no una banda lisa.")
     if "Math.min(288,Math.ceil(Math.PI*2*island.r/1.35))" not in index_html or "rows=isPerformanceMode?9:(isTouchDevice?15:17)" not in index_html:
         fail("La resolución de la playa debe conservar el presupuesto del perfil Rendimiento.")
-    if "swashReach=1.05+2.35*wavePulse" not in index_html or "swashZone=swashIn*swashOut" not in index_html:
+    if "swashReach=1.55+3.05*wavePulse" not in index_html or "swashZone=swashIn*swashOut" not in index_html:
         fail("La resaca debe extenderse como una lámina irregular sobre la arena, no como una línea.")
     if "foamIslands=swashZone*foamMask*drift" not in index_html or "layer.residue[stateIndex]*Math.exp(-step/5.8)" not in index_html:
         fail("La espuma debe ser fragmentada, dinámica y disiparse progresivamente.")
-    if "Math.exp(-Math.max(0,inlandDistance)*.78)" not in index_html:
+    if "Math.exp(-Math.max(0,inlandDistance)*.43)" not in index_html:
         fail("La humedad debe oscurecer una franja amplia de arena mojada detrás de la espuma.")
     shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"))]
     if "const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z);" not in shoreline_body or ".42;" in shoreline_body:
         fail("El cruce agua/arena debe usar el perfil real completo; no puede sustituir el mar exterior por una altura plana.")
-    if "radialOffsets=[-1.80,-.92,-.24,.28,.82]" not in index_html or "Math.max(ground,water)+.028" not in index_html:
+    if "radialOffsets=[-2.8,-2.0,-1.15,-.42,.18,.78,1.55,2.45]" not in index_html or "Math.max(ground,water)+.028" not in index_html:
         fail("La espuma debe cruzar la intersección y extenderse sobre la arena mojada, no quedar solo mar adentro.")
     if "for(let row=0;row<radialOffsets.length;row++)for(let side=0;side<2;side++)" not in index_html or "arcScale=.76+.34*pulse" not in index_html:
         fail("Las lenguas de resaca deben tener anchura y curvatura dinámica.")
@@ -360,7 +366,7 @@ def main() -> None:
         fail("Los saltos de posición, teletransportes y estados a bordo/en el aire deben reiniciar el trazado de huellas.")
     if "pendingStepDistance:Number(stepDistance.toFixed(3))" not in index_html or "footstepsEmitted" not in index_html:
         fail("El diagnóstico debe exponer la distancia pendiente y el contador de huellas emitidas.")
-    if "radialOffsets=[-1.80,-.92,-.24,.28,.82]" not in index_html or "DynamicSubmergedShoreWash_" not in index_html or "Number.isFinite(radius)?radius:island.r*1.09" in index_html:
+    if "radialOffsets=[-2.8,-2.0,-1.15,-.42,.18,.78,1.55,2.45]" not in index_html or "DynamicSubmergedShoreWash_" not in index_html or "Number.isFinite(radius)?radius:island.r*1.09" in index_html:
         fail("La espuma de orilla debe cruzar la línea de agua sin usar el fallback mar adentro.")
     if "Math.max(ground,water)+.028" not in index_html or "foam.positions[offset+1]=-3.2" not in index_html:
         fail("La espuma debe apoyarse sobre arena emergida o sobre la superficie del agua y ocultarse si no hay intersección.")
@@ -374,7 +380,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.214</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.215</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
