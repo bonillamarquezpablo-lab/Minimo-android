@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.207">
-<meta name="el-sin-nombre-repair" content="0.6.207 performance mode without grass or wildlife; quality-mode parallel NPC asset prefetch">
+<meta name="el-sin-nombre-build" content="0.6.208">
+<meta name="el-sin-nombre-repair" content="0.6.208 exact-wave water math cache, batched ground imprints and reusable sand-splash particles">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.207</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.208</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2624,6 +2624,34 @@ async function removeStrayDebugGeometry(targetScene){
  const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:(isTouchDevice?125:180)):(isTouchDevice?250:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS,WATER_DETAIL_FADE_START_SQ=WATER_DETAIL_RADIUS_SQ*.55;
  const waterPositionBuffer=ground.getVertexBuffer(B.VertexBuffer.PositionKind),waterNormalBuffer=ground.getVertexBuffer(B.VertexBuffer.NormalKind);
  for(let i=0;i<waterNormals.length;i+=3)waterNormals[i+1]=1;
+ // Precompute spatial wave phases once. Every frame evaluates the same exact
+ // sinusoidal waves using seven shared time sin/cos pairs instead of per-vertex trig.
+ const WATER_WAVE_STRIDE=14,waterWaveBasis=new Float32Array((waterBase.length/3)*WATER_WAVE_STRIDE);
+ const waterWaveTimeSin=new Float32Array(7),waterWaveTimeCos=new Float32Array(7);
+ const waterWaveFrequencies=[.48,.82,-.73,1.28,-1.82,2.15,2.8];
+ for(let vertex=0;vertex<waterBase.length/3;vertex++){
+  const offset=vertex*3,x=waterBase[offset],z=waterBase[offset+2],basis=vertex*WATER_WAVE_STRIDE;
+  const phases=[x*.009+z*.012,x*.018+z*.012,-x*.013+z*.027,(x+z*.62)*.052,(x-z)*.092,(x*.76-z*1.13)*.145,x*.19+z*.14];
+  for(let wave=0;wave<7;wave++){waterWaveBasis[basis+wave*2]=Math.sin(phases[wave]);waterWaveBasis[basis+wave*2+1]=Math.cos(phases[wave]);}
+ }
+ function updateWaterWaveTime(t){
+  for(let wave=0;wave<7;wave++){const phase=t*waterWaveFrequencies[wave];waterWaveTimeSin[wave]=Math.sin(phase);waterWaveTimeCos[wave]=Math.cos(phase);}
+ }
+ function waterWaveValueAtVertex(vertex,wave){
+  const offset=vertex*WATER_WAVE_STRIDE+wave*2;
+  return waterWaveBasis[offset]*waterWaveTimeCos[wave]+waterWaveBasis[offset+1]*waterWaveTimeSin[wave];
+ }
+ function waterFarHeightAtVertex(vertex){
+  return waterWaveValueAtVertex(vertex,0)*.105+waterWaveValueAtVertex(vertex,1)*.315+waterWaveValueAtVertex(vertex,2)*.225;
+ }
+ function waterDetailHeightAtVertex(vertex,fade){
+  const longSwell=waterWaveValueAtVertex(vertex,0)*.105,swellA=waterWaveValueAtVertex(vertex,1)*.315,swellB=waterWaveValueAtVertex(vertex,2)*.225;
+  const crossWave=waterWaveValueAtVertex(vertex,3),chopWave=waterWaveValueAtVertex(vertex,4);
+  const cross=crossWave*.15,chop=chopWave*.082,secondary=waterWaveValueAtVertex(vertex,5)*.046,ripple=waterWaveValueAtVertex(vertex,6)*.026;
+  const crestFoamLift=Math.pow(Math.max(0,crossWave),5)*.032,shortCrest=Math.pow(Math.max(0,chopWave),6)*.019;
+  return longSwell+swellA+swellB+(cross+chop+secondary+ripple+crestFoamLift+shortCrest)*fade;
+ }
+ updateWaterWaveTime(0);
  const waterActiveVertexStorage=new Uint32Array(waterBase.length/3);
  let waterActiveVertexOffsets=waterActiveVertexStorage.subarray(0,0),waterActiveMinOffset=0,waterActiveMaxOffset=-1,waterFocusX=NaN,waterFocusZ=NaN,waterLastUpdatedVertices=0,waterLastUploadedVertices=0,waterLastUploadBytes=0,waterLastUpdateMs=0,waterLastNormalMs=0;
  function refreshWaterDetailRegion(){
@@ -2723,14 +2751,14 @@ async function removeStrayDebugGeometry(targetScene){
  // No se dibujan anillos completos alrededor de las islas: desde el mar parecían arcos translúcidos.
  // La espuma queda reservada para el contacto dinámico del casco con el agua.
  function animateWater(dt){
-  oceanTime+=dt;waterAccumulator+=dt;waterNormalAccumulator+=dt;waterFarAccumulator+=dt;
+  oceanTime+=dt;updateWaterWaveTime(oceanTime);waterAccumulator+=dt;waterNormalAccumulator+=dt;waterFarAccumulator+=dt;
   const farDue=waterFarAccumulator>=waterFarStep,detailDue=waterAccumulator>=waterVertexStep;
   if(!farDue&&!detailDue)return;
   const workStart=performance.now();refreshWaterDetailRegion();
   // Actualización global económica para el mar lejano: tres ondas largas, cadencia baja.
   if(farDue){
    waterFarAccumulator%=waterFarStep;
-   for(let i=0;i<waterBase.length;i+=3)waterPositions[i+1]=waterFarHeight(waterBase[i],waterBase[i+2],oceanTime);
+   for(let vertex=0;vertex<waterBase.length/3;vertex++)waterPositions[vertex*3+1]=waterFarHeightAtVertex(vertex);
   }
   if(detailDue)waterAccumulator%=waterVertexStep;
   // La zona alrededor de la cámara conserva el oleaje completo y de mayor frecuencia.
@@ -2738,7 +2766,7 @@ async function removeStrayDebugGeometry(targetScene){
    const i=waterActiveVertexOffsets[n],x=waterBase[i],z=waterBase[i+2],dx=x-waterFocusX,dz=z-waterFocusZ;
    const fadeT=Math.max(0,Math.min(1,(WATER_DETAIL_RADIUS_SQ-(dx*dx+dz*dz))/(WATER_DETAIL_RADIUS_SQ-WATER_DETAIL_FADE_START_SQ)));
    const fade=fadeT*fadeT*(3-2*fadeT);
-   waterPositions[i+1]=waterHeight(x,z,oceanTime,fade);
+   waterPositions[i+1]=waterDetailHeightAtVertex(i/3,fade);
   }
   waterLastUpdatedVertices=waterActiveVertexOffsets.length;waterLastUploadedVertices=0;waterLastUploadBytes=0;
   const uploadEnd=waterActiveMaxOffset+3;
