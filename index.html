@@ -2948,8 +2948,6 @@ async function removeStrayDebugGeometry(targetScene){
   livingBeachLayers.push({mesh,island,index,segments,rows,cols,radials,baseAlpha,wetness,residue,lastShore,colors:new Float32Array(colors),centerX:island.x,centerZ:island.z});
  }
  land.forEach(buildLivingBeachLayer);
- const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
- function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.975;if(dx*dx+dz*dz<r*r)return i;}return -1;}
  // Interactive ground layer: impressed boot soles, compacted lips, sand grains and drying tide marks.
  const GroundDynamics=(()=>{
   const imprints=[],particles=[],maxImprints=isPerformanceMode?(isConstrainedMobile?18:28):48,maxParticles=isPerformanceMode?22:38;
@@ -3022,7 +3020,7 @@ async function removeStrayDebugGeometry(targetScene){
     if(Math.hypot(focusX-layer.centerX,focusZ-layer.centerZ)>layer.island.r+115)continue;
     for(let i=0;i<=layer.segments;i++){
      const angle=i/layer.segments*Math.PI*2,shore=shorelineFoamRadius(layer.island,angle,oceanTime),previous=layer.lastShore[i];
-     const innerOuter=layer.radials.slice(i*2,i*2+2),inner=innerOuter[0],outer=innerOuter[1];
+     const inner=layer.radials[i*2],outer=layer.radials[i*2+1];
      if(Number.isFinite(shore)){
       const retreat=Number.isFinite(previous)?Math.max(0,shore-previous):0;
       for(let row=0;row<layer.rows;row++){
@@ -3045,7 +3043,8 @@ async function removeStrayDebugGeometry(targetScene){
        let rgb=dryColor.map((c,k)=>c+(wetColor[k]-c)*w);
        rgb=rgb.map((c,k)=>c+(foamColor[k]-c)*f);
        const alpha=base*(.82+w*.10+f*.22);
-       for(let side=0;side<2;side++){
+       const sideCount=i===layer.segments?1:2;
+       for(let side=0;side<sideCount;side++){
         const vertex=(row*layer.cols+i+side)*4;
         layer.colors[vertex]=rgb[0];layer.colors[vertex+1]=rgb[1];layer.colors[vertex+2]=rgb[2];layer.colors[vertex+3]=alpha;
        }
@@ -3055,6 +3054,12 @@ async function removeStrayDebugGeometry(targetScene){
       layer.lastShore[i]=NaN;
       for(let row=0;row<layer.rows;row++){
        const stateIndex=i*layer.rows+row;layer.wetness[stateIndex]*=drying;layer.residue[stateIndex]*=Math.exp(-step/7.5);
+       const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[stateIndex];
+       const dryColor=[1,.94,.82],wetColor=[.48,.54,.48],foamColor=[.91,.94,.87];
+       let rgb=dryColor.map((c,k)=>c+(wetColor[k]-c)*w);rgb=rgb.map((c,k)=>c+(foamColor[k]-c)*f);
+       const alpha=base*(.82+w*.10+f*.22);
+       const sideCount=i===layer.segments?1:2;
+       for(let side=0;side<sideCount;side++){const vertex=(row*layer.cols+i+side)*4;layer.colors[vertex]=rgb[0];layer.colors[vertex+1]=rgb[1];layer.colors[vertex+2]=rgb[2];layer.colors[vertex+3]=alpha;}
       }
      }
     }
