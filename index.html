@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.213">
-<meta name="el-sin-nombre-repair" content="0.6.213 corrected shoreline intersection, five-row advancing beach swash, broken foam tongues, typed terrain-deformation buffers and batched footprints">
+<meta name="el-sin-nombre-build" content="0.6.214">
+<meta name="el-sin-nombre-repair" content="0.6.214 thirteen-island conquest, permanent island wardens and endgame naval invasion phase, corrected shoreline intersection, advancing beach swash and batched footprints">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.213</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.214</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1399,7 +1399,7 @@ body.game-running #loading{display:none!important;visibility:hidden!important;op
 <div id="hud">
  <div id="top">
   <div class="panel"><div id="brand">EL SIN NOMBRE</div><div id="subtitle">SAGA DEL NORTE · CAPÍTULO I</div><div id="playerIdentityTag">VIKINGO · SIN NOMBRE</div></div>
-  <div class="panel" id="stats"><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-wood"/></svg><b id="wood">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-stone"/></svg><b id="stone">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-clan"/></svg><b id="recruits">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-sword"/></svg><b id="kills">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-banner"/></svg><b id="captured">0/4</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-ship"/></svg><b id="boatHealthStat">100%</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-skull"/></svg><b id="raiders">3</b></span><span class="fpsStat"><b id="fpsMeter">FPS --</b></span></div>
+  <div class="panel" id="stats"><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-wood"/></svg><b id="wood">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-stone"/></svg><b id="stone">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-clan"/></svg><b id="recruits">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-sword"/></svg><b id="kills">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-banner"/></svg><b id="captured">0/13</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-ship"/></svg><b id="boatHealthStat">100%</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-skull"/></svg><b id="raiders">3</b></span><span class="fpsStat"><b id="fpsMeter">FPS --</b></span></div>
  </div>
  <div id="healthWrap"><div id="health"></div></div><div id="staminaWrap"><div id="stamina"></div></div><div id="area">Costa del Cuervo</div>
  <button id="chapterTracker" type="button" aria-label="Objetivo actual de la saga">
@@ -7445,7 +7445,7 @@ function createRealWeapon(type='axe'){
    let ch=makeViking('VillageGuard'+index+'_'+i,true,(index+i)%4);setFactionBadge(ch,'enemy');ch.root.position=v(ex,terrainSurfaceAt(ex,ez)+.08,ez);ch.root.rotation.y=rand(0,6.28);attachContactShadow(ch.root,'GuardShadow_'+index+'_'+i,.92);addModelShadow(ch.root);
    let back=B.MeshBuilder.CreatePlane('guardHealthBack',{width:1.15,height:.12},scene);back.parent=ch.root;back.position=v(0,2.02,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=M.red;
    let front=B.MeshBuilder.CreatePlane('guardHealth',{width:1.1,height:.09},scene);front.parent=ch.root;front.position=v(0,2.03,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('EnemyHealth'+index+i,'#76a75a');
-   guards.push({parts:ch,villageIndex:index,hp:100,alive:true,surrendered:false,recruited:false,state:'idle',attackT:0,attackDone:false,cool:rand(0,.5),stun:0,hitReact:0,knockback:0,hitDir:v(0,0,0),deadFallT:0,deadSide:rand(-1,1),healthMesh:front,healthBack:back,home:v(ex,0,ez),initialYaw:ch.root.rotation.y});
+   guards.push({parts:ch,villageIndex:index,garrisonRequired:i===0,garrisoned:false,hp:100,alive:true,surrendered:false,recruited:false,state:'idle',attackT:0,attackDone:false,cool:rand(0,.5),stun:0,hitReact:0,knockback:0,hitDir:v(0,0,0),deadFallT:0,deadSide:rand(-1,1),healthMesh:front,healthBack:back,home:v(ex,0,ez),initialYaw:ch.root.rotation.y});
   }
   villages.push({index,x,z,name,guards,claimed:false,flag,flagGroup,flagEmblem,flagpole,houseGroups,houseOriginalMaterials:houseGroups.map(group=>group.getChildMeshes(false).map(mesh=>({mesh,material:mesh.material}))),territoryFill:null,territoryRing:null,captureAnimation:null});
  }
@@ -7453,6 +7453,31 @@ function createRealWeapon(type='axe'){
  makeVillage(1,135,14,'Skall');
  makeVillage(2,-132,45,'Pinos');
  makeVillage(3,28,143,'Hrafn');
+ // Las nueve islas periféricas también tienen un punto de control conquistable.
+ // Son puestos ligeros: una bandera, un pequeño depósito y un guardián; no se duplican aldeas,
+ // casas, civiles ni empalizadas completas en cada isla para proteger el presupuesto móvil.
+ function makeIslandCaptureOutpost(index,island){
+  const p=sampleGroundPoint(island,3.8,.82,.18,.62)||sampleGroundPoint(island,5.0,.95,.12,.70)||{x:island.x,z:island.z};
+  const x=p.x,z=p.z,gy=terrainSurfaceAt(x,z),name=island.name;
+  const root=newGroup('IslandCaptureOutpost_'+index,null);root.position=v(x,gy,z);
+  box('IslandOutpostStoneFoot_'+index,root,[0,.10,0],[1.9,.20,1.35],M.stoneDark);
+  box('IslandOutpostSupplyCrate_'+index,root,[-.92,.48,.18],[.62,.64,.58],M.woodDark);
+  box('IslandOutpostSupplyLid_'+index,root,[-.92,.82,.18],[.68,.08,.62],M.woodLight);
+  const poleX=1.35,poleZ=-.55;
+  cyl('IslandOutpostFlagPole_'+index,root,[poleX,2.15,poleZ],4.25,.065,.075,M.woodLight);
+  const flagGroup=newGroup('IslandOutpostBanner_'+index,scene);
+  flagGroup.position=v(x+poleX+.62,gy+3.45,z+poleZ);
+  const flag=box('IslandOutpostFlag_'+index,flagGroup,[0,0,0],[1.28,.86,.055],M.red);
+  const emblem=[box('IslandOutpostRuneA_'+index,flagGroup,[-.12,0,.04],[.68,.075,.035],M.gold,[0,0,.66]),box('IslandOutpostRuneB_'+index,flagGroup,[.12,0,.045],[.68,.075,.035],M.gold,[0,0,-.66])];
+  const guard=makeViking('IslandWarden_'+index,true,index%4);setFactionBadge(guard,'enemy');
+  const gx=x-2.0,gz=z+.65;guard.root.position=v(gx,terrainSurfaceAt(gx,gz)+.08,gz);guard.root.rotation.y=rand(0,Math.PI*2);
+  attachContactShadow(guard.root,'IslandWardenShadow_'+index,.88);addModelShadow(guard.root);
+  const back=B.MeshBuilder.CreatePlane('IslandWardenHealthBack_'+index,{width:1.12,height:.12},scene);back.parent=guard.root;back.position=v(0,2.02,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=M.red;
+  const front=B.MeshBuilder.CreatePlane('IslandWardenHealth_'+index,{width:1.08,height:.09},scene);front.parent=guard.root;front.position=v(0,2.03,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('IslandWardenHealthGreen_'+index,'#76a75a');
+  const guards=[{parts:guard,villageIndex:index,garrisonRequired:true,garrisoned:false,hp:100,alive:true,surrendered:false,recruited:false,state:'idle',attackT:0,attackDone:false,cool:rand(0,.5),stun:0,hitReact:0,knockback:0,hitDir:v(0,0,0),deadFallT:0,deadSide:rand(-1,1),healthMesh:front,healthBack:back,home:v(gx,0,gz),initialYaw:guard.root.rotation.y}];
+  villages.push({index,x,z,name,guards,claimed:false,flag,flagGroup,flagEmblem:emblem,flagpole:root,houseGroups:[],houseOriginalMaterials:[],territoryFill:null,territoryRing:null,captureAnimation:null,lightweightOutpost:true,outpostRoot:root});
+ }
+ for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandCaptureOutpost(islandIndex,land[islandIndex]);
  // Norse settlement dressing: rune stones, shield racks, casks, firewood and a fish-drying frame.
  const runeFaceTexture=new B.DynamicTexture('RunestoneCarvingTexture',{width:256,height:512},scene,false),runeFaceCtx=runeFaceTexture.getContext();
  runeFaceCtx.fillStyle='#777b70';runeFaceCtx.fillRect(0,0,256,512);runeFaceCtx.strokeStyle='#c9b990';runeFaceCtx.lineWidth=8;runeFaceCtx.strokeRect(16,16,224,480);
@@ -7500,7 +7525,7 @@ function createRealWeapon(type='axe'){
   cyl('WatchtowerBannerPole_'+idx,tower,[0,5.05,-.70],2.4,.045,.045,M.woodLight);
   const towerBanner=B.MeshBuilder.CreatePlane('WatchtowerRavenBanner_'+idx,{width:.76,height:.55,sideOrientation:B.Mesh.DOUBLESIDE},scene);towerBanner.parent=tower;towerBanner.position=v(.38,5.54,-.70);towerBanner.material=M.playerBanner;
  }
- villages.forEach((vl,i)=>addNorseVillageProps(vl,i));
+ villages.forEach((vl,i)=>{if(!vl.lightweightOutpost)addNorseVillageProps(vl,i);});
  // Decoration and atmosphere: anatomically built Norse hearths, layered flame, embers and smoke.
  const flameMeshes=[],fireSparks=[],hearthStates=[];
  const hearthAshMat=mat('Hearth ash and soot','#28231f',1),hearthCoalMat=mat('Charred oak coal','#201914',.98);
@@ -7570,7 +7595,7 @@ function createRealWeapon(type='axe'){
    }
   }
  }
- villages.forEach(vl=>campfire(vl.x-3,vl.z+5));
+ villages.forEach(vl=>{if(!vl.lightweightOutpost)campfire(vl.x-3,vl.z+5);});
  // 0.6.100 — pequeños campamentos secundarios, uno en cada isla con asentamiento.
  // Son decoración ligera: no sustituyen aldeas, guardias, colisiones ni sistemas existentes.
  function buildIslandOutpost(vl){
@@ -7592,7 +7617,7 @@ function createRealWeapon(type='axe'){
   box('ScoutCampSupplies_'+vl.index,scout,[0,.30,0],[.92,.60,.78],M.woodDark);
   sphere('ScoutCampEmbers_'+vl.index,scout,[1.15,.13,.15],[.36,.12,.30],M.ember,8);
  }
- villages.forEach(buildIslandOutpost);
+ villages.forEach(vl=>{if(!vl.lightweightOutpost)buildIslandOutpost(vl);});
  // Nuevos lugares de la expansión: salón comunal, embarcadero, círculo del thing y baliza costera.
  function buildNorseGreatHall(x,z,index){
   const floorY=terrainSurfaceAt(x,z),hall=newGroup('NorseGreatMeadHall_'+index,null);
@@ -7836,6 +7861,7 @@ function createRealWeapon(type='axe'){
  }
  // Two civilians per settlement follow short daily routes and make the villages feel inhabited.
  villages.forEach((vl,vi)=>{
+  if(vl.lightweightOutpost)return;
   // Un vecino por aldea para no disparar los draw calls; ropa civil, sin casco, armadura, escudo ni arma visible.
   for(let n=0;n<2;n++){
    const variant=(vi+n+1)%4,parts=makePeasantFallback('Villager_'+vi+'_'+n,variant);
@@ -8553,7 +8579,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'7',build:'0.6.213',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'7',build:'0.6.214',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -8616,7 +8642,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.185');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/4');setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.185');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+villages.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -9448,7 +9474,7 @@ function updateHUD(){
  function updateProgressPanel(){
   const summary=document.getElementById('progressSummary'),check=document.getElementById('progressChecklist'),history=document.getElementById('progressHistory'),loadout=document.getElementById('progressLoadout');if(!summary||!check||!history||!loadout)return;
   const sunk=enemyShips.filter(e=>e.sunk).length,dead=enemies.filter(e=>!e.alive).length,neutralized=enemies.filter(e=>!e.alive||e.surrendered||e.recruited).length,claimed=villages.filter(v=>v.claimed).length;
-  const stats=[[''+claimed+'/4','Aldeas'],[String(dead),'Defensores'],[sunk+'/3','Barcos hundidos'],[companions.length,'Tripulación'],[String(woodCount),'Madera'],[String(stoneCount),'Piedra']];
+  const stats=[[''+claimed+'/'+villages.length,'Islas controladas'],[String(dead),'Defensores'],[sunk+'/3','Barcos hundidos'],[companions.length,'Tripulación'],[String(woodCount),'Madera'],[String(stoneCount),'Piedra']];
   summary.innerHTML=stats.map(([n,l])=>'<div class="progressStat"><b>'+n+'</b><span>'+l+'</span></div>').join('');
   const chapterTasks=[
    ['Capítulo I · Reúne 12 madera y 3 piedra',chapterStage>0,woodCount+'/12 madera · '+stoneCount+'/3 piedra'],
@@ -9459,7 +9485,7 @@ function updateHUD(){
   const tasks=[...chapterTasks,
    ['Construye y guarda tu refugio',playerShelterBuilt,playerShelterBuilt?'Construido y persistente':'6 madera · 1 piedra'],
    ['Prueba de carrera · recorre 40 metros corriendo',sprintMissionDone,Math.floor(sprintMissionMeters)+'/40 m'],
-   ['Asegura las cuatro aldeas vikingas',claimed>=4,claimed+'/4'],
+   ['Conquista las 13 islas del archipiélago',claimed>=land.length,claimed+'/'+land.length],
    ['Neutraliza a todos los defensores de los asentamientos',neutralized>=12,neutralized+'/12'],
    ['Recluta supervivientes y forma tu tripulación',companions.length>=4,companions.length+'/4'],
    ['Hunde los tres drakkars saqueadores',sunk>=3,sunk+'/3'],
