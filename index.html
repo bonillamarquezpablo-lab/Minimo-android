@@ -3150,6 +3150,7 @@ async function removeStrayDebugGeometry(targetScene){
    const drying= Math.exp(-step/(48+Math.max(0,Math.sin(oceanTime*.018))*34));
    for(const layer of livingBeachLayers){
     if(Math.hypot(focusX-layer.centerX,focusZ-layer.centerZ)>layer.island.r+115)continue;
+    const deformationField=terrainDeformationFields[layer.index],refreshHeight=!!(deformationField&&deformationField.active&&deformationField.active.size);
     for(let i=0;i<=layer.segments;i++){
      const angle=i/layer.segments*Math.PI*2,shore=shorelineFoamRadius(layer.island,angle,oceanTime),previous=layer.lastShore[i];
      const inner=layer.radials[i*2],outer=layer.radials[i*2+1];
@@ -3158,7 +3159,7 @@ async function removeStrayDebugGeometry(targetScene){
       for(let row=0;row<layer.rows;row++){
        const radial=inner+(outer-inner)*row/(layer.rows-1),stateIndex=i*layer.rows+row;
        const positionOffset=(row*layer.cols+i)*3;
-       layer.positions[positionOffset+1]=terrainSurfaceAt(layer.positions[positionOffset],layer.positions[positionOffset+2])+.012;
+       if(refreshHeight)layer.positions[positionOffset+1]=terrainSurfaceAt(layer.positions[positionOffset],layer.positions[positionOffset+2])+.012;
        let wet=layer.wetness[stateIndex]*drying;
        const inlandDistance=shore-radial;
        if(inlandDistance>=-.18&&inlandDistance<2.35){
@@ -3173,12 +3174,11 @@ async function removeStrayDebugGeometry(targetScene){
        }
        layer.residue[stateIndex]=Math.min(.6,foam);
        const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[row*layer.cols+i];
-       const dryColor=[1,.94,.82],wetColor=[.48,.54,.48],foamColor=[.91,.94,.87];
-       let rgb=dryColor.map((c,k)=>c+(wetColor[k]-c)*w);
-       rgb=rgb.map((c,k)=>c+(foamColor[k]-c)*f);
-       const alpha=base*(.82+w*.10+f*.22);
-       const vertex=(row*layer.cols+i)*4;
-       layer.colors[vertex]=rgb[0];layer.colors[vertex+1]=rgb[1];layer.colors[vertex+2]=rgb[2];layer.colors[vertex+3]=alpha;
+       const red=1+(.48-1)*w+(.91-(1+(.48-1)*w))*f;
+       const green=.94+(.54-.94)*w+(.94-(.94+(.54-.94)*w))*f;
+       const blue=.82+(.48-.82)*w+(.87-(.82+(.48-.82)*w))*f;
+       const alpha=base*(.82+w*.10+f*.22),vertex=(row*layer.cols+i)*4;
+       layer.colors[vertex]=red;layer.colors[vertex+1]=green;layer.colors[vertex+2]=blue;layer.colors[vertex+3]=alpha;
       }
       layer.lastShore[i]=shore;
      }else{
@@ -3186,14 +3186,15 @@ async function removeStrayDebugGeometry(targetScene){
       for(let row=0;row<layer.rows;row++){
        const stateIndex=i*layer.rows+row;layer.wetness[stateIndex]*=drying;layer.residue[stateIndex]*=Math.exp(-step/7.5);
        const w=layer.wetness[stateIndex],f=layer.residue[stateIndex],base=layer.baseAlpha[row*layer.cols+i];
-       const dryColor=[1,.94,.82],wetColor=[.48,.54,.48],foamColor=[.91,.94,.87];
-       let rgb=dryColor.map((c,k)=>c+(wetColor[k]-c)*w);rgb=rgb.map((c,k)=>c+(foamColor[k]-c)*f);
+       const red=1+(.48-1)*w+(.91-(1+(.48-1)*w))*f;
+       const green=.94+(.54-.94)*w+(.94-(.94+(.54-.94)*w))*f;
+       const blue=.82+(.48-.82)*w+(.87-(.82+(.48-.82)*w))*f;
        const alpha=base*(.82+w*.10+f*.22),vertex=(row*layer.cols+i)*4;
-       layer.colors[vertex]=rgb[0];layer.colors[vertex+1]=rgb[1];layer.colors[vertex+2]=rgb[2];layer.colors[vertex+3]=alpha;
+       layer.colors[vertex]=red;layer.colors[vertex+1]=green;layer.colors[vertex+2]=blue;layer.colors[vertex+3]=alpha;
       }
      }
     }
-    layer.mesh.updateVerticesData(B.VertexBuffer.PositionKind,layer.positions,false,false);
+    if(refreshHeight)layer.mesh.updateVerticesData(B.VertexBuffer.PositionKind,layer.positions,false,false);
     layer.mesh.updateVerticesData(B.VertexBuffer.ColorKind,layer.colors,false,false);
    }
   }
