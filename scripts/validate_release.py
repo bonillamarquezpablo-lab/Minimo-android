@@ -506,8 +506,8 @@ def main() -> None:
         fail("La vegetación no valida tierra firme o todavía utiliza ubicaciones de reserva.")
     if "homeIslandIndex" not in index_html or "isSafeIslandGroundPoint(homeIsland,nx,nz,Infinity,1.05,.52)" not in index_html:
         fail("La fauna GLB no conserva su isla de origen o puede caminar hacia el mar.")
-    if "const groundOffset=-bounds.min.y*scale;" not in index_html or "groundOffset+terrainHeightOnIsland(homeIsland,x,z)" not in index_html:
-        fail("La importación GLB no calcula y aplica el desplazamiento vertical de apoyo.")
+    if "const groundOffset=-attachedBounds.min.y+.015;" not in index_html or "actor.position.y=groundY+groundOffset;" not in index_html or "const finalBounds=boundsForMeshes(meshes);" not in index_html:
+        fail("La fauna GLB debe calcular y verificar el apoyo del cuerpo después de montar las raíces en el actor.")
     if "animal.groundOffset" not in index_html or "+animal.groundOffset;" not in index_html:
         fail("El bucle de fauna vuelve a sobrescribir la altura de apoyo de los modelos.")
     if "collisionRadius:definition.collisionRadius*size" not in index_html or "canWildlifeMove(nx,nz,animal.collisionRadius)" not in index_html:
