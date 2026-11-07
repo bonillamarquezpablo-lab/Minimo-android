@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.193">
-<meta name="el-sin-nombre-repair" content="0.6.193 clear trails and camp areas of grass; add natural shrubs and roaming deer/boar; preserve master pose">
+<meta name="el-sin-nombre-build" content="0.6.194">
+<meta name="el-sin-nombre-repair" content="0.6.194 clear trails and camp areas of grass; add natural shrubs and roaming deer/boar; preserve master pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.193</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.194</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -3244,40 +3244,27 @@ async function startGame(){
  // Source files are pinned to an immutable revision; no sphere/capsule animal placeholders are used.
  const WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837';
  const WILDLIFE_ASSET_ROOT='https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/'+WILDLIFE_SOURCE_COMMIT+'/assets/Animated%20Animal%20Pack-glb/';
- const WILDLIFE_MODEL_DEFS={
-  deer:{file:'Deer.glb',height:1.42,walkSpeed:.68,runSpeed:3.25},
-  stag:{file:'Stag.glb',height:1.78,walkSpeed:.82,runSpeed:3.85},
-  wolf:{file:'Wolf.glb',height:.82,walkSpeed:1.05,runSpeed:4.05}
- };
- const ambientFauna=[],wildlifeSpawnSpecs=[],wildlifeContainers=new Map();
+ const WILDLIFE_MODEL_DEFS={deer:{file:'Deer.glb',height:1.42,walkSpeed:.68,runSpeed:3.25},stag:{file:'Stag.glb',height:1.78,walkSpeed:.82,runSpeed:3.85},wolf:{file:'Wolf.glb',height:.82,walkSpeed:1.05,runSpeed:4.05}};
+ const ambientFauna=[],wildlifeSpawnSpecs=[],wildlifeBlobs=new Map();
  function chooseWildlifeClips(groups){
   const playable=(groups||[]).filter(group=>group&&Array.isArray(group.targetedAnimations)&&group.targetedAnimations.length>0);
   const pick=pattern=>playable.find(group=>pattern.test(String(group.name||'')))||null;
-  const idle=pick(/idle|stand|rest|survey|graze/i);
-  const walk=pick(/walk|walking|trot|pace/i);
-  const run=pick(/run|running|gallop|sprint/i);
-  return {idle,walk:walk||run||idle,run:run||walk||idle};
+  const idle=pick(/^(?:AnimalArmature\\|)?Idle$/i)||pick(/^(?:AnimalArmature\\|)?Idle_2$/i)||pick(/idle/i);
+  const walk=pick(/^(?:AnimalArmature\\|)?Walk$/i)||pick(/walk/i);
+  const run=pick(/^(?:AnimalArmature\\|)?Gallop$/i)||pick(/gallop|run/i);
+  return {idle,walk:walk||idle,run:run||walk||idle};
  }
- async function downloadWildlifeContainer(kind){
-  const definition=WILDLIFE_MODEL_DEFS[kind];
-  if(!definition)throw new Error('Especie de fauna desconocida: '+kind);
-  const url=WILDLIFE_ASSET_ROOT+encodeURIComponent(definition.file);
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
+ async function downloadWildlifeBlob(kind){
+  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)throw new Error('Especie desconocida: '+kind);
+  const url=WILDLIFE_ASSET_ROOT+encodeURIComponent(definition.file),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
   try{
    const response=await fetch(url,{mode:'cors',cache:'force-cache',credentials:'omit',signal:controller.signal,headers:{'Accept':'model/gltf-binary,application/octet-stream,*/*'}});
-   if(response.type==='opaque'||!response.ok)throw new Error(kind+': descarga GLB no disponible ('+(response.status||'CORS')+').');
-   const blob=await responseBlobWithProgress(response,'Cargando fauna 3D · '+kind.toUpperCase(),48,52);
-   if(!await isValidGLB(blob))throw new Error(kind+': el archivo descargado no es un GLB válido.');
-   const objectUrl=URL.createObjectURL(blob);let container=null;
-   try{container=await B.SceneLoader.LoadAssetContainerAsync('',objectUrl,scene,null,'.glb');}
-   catch(err){throw new Error(kind+': Babylon no pudo importar el GLB: '+(err&&err.message?err.message:String(err)));}
-   finally{URL.revokeObjectURL(objectUrl);}
-   if(!container||typeof container.instantiateModelsToScene!=='function')throw new Error(kind+': contenedor GLB incompatible.');
-   return container;
-  }catch(err){
-   if(err&&err.name==='AbortError')throw new Error(kind+': tiempo de descarga agotado.');
-   throw err;
-  }finally{clearTimeout(timer);}
+   if(response.type==='opaque'||!response.ok)throw new Error(kind+': GLB HTTP '+(response.status||'CORS'));
+   const blob=await responseBlobWithProgress(response,'Cargando modelo animal · '+kind.toUpperCase(),48,52);
+   if(!await isValidGLB(blob))throw new Error(kind+': archivo GLB no válido.');
+   return blob;
+  }catch(err){if(err&&err.name==='AbortError')throw new Error(kind+': descarga agotada.');throw err;}
+  finally{clearTimeout(timer);}
  }
  function playWildlifeAnimation(animal,mode){
   const target=mode==='run'?animal.clips.run:(mode==='walk'?animal.clips.walk:animal.clips.idle);
@@ -3286,51 +3273,54 @@ async function startGame(){
   target.start(true,mode==='run'?1.05:(mode==='walk'?.82:.78));
   animal.activeAnimation=target;animal.activeMode=mode;
  }
- function instantiateWildlifeAnimal(kind,x,z,size=1,index=0){
-  const container=wildlifeContainers.get(kind);if(!container)return null;
-  let inst=null;
+ async function instantiateWildlifeAnimal(kind,x,z,size=1,index=0){
+  const blob=wildlifeBlobs.get(kind);if(!blob)return null;
+  let imported=null,objectUrl=null,actor=null;
   try{
-   inst=container.instantiateModelsToScene(name=>name+'_Wildlife_'+kind+'_'+index,false);
-   const pool=[...(inst.rootNodes||[]),...(inst.transformNodes||[]),...(inst.meshes||[])],unique=[],seen=new Set();
-   for(const node of pool){if(node&&!seen.has(node)){seen.add(node);unique.push(node);}}
-   const roots=unique.filter(node=>!node.parent||!seen.has(node.parent));
-   if(!roots.length)throw new Error('El modelo no contiene una raíz visual.');
-   const meshes=getRootMeshes(roots);if(!meshes.length)throw new Error('El modelo no contiene mallas visibles.');
+   // Import each GLB independently into the live scene; never clone a skinned mesh/skeleton.
+   objectUrl=URL.createObjectURL(blob);
+   imported=await B.SceneLoader.ImportMeshAsync('',objectUrl,'',scene,undefined,'.glb');
+   const allNodes=[...(imported.transformNodes||[]),...(imported.meshes||[])],nodeSet=new Set(allNodes),unique=[...new Set(allNodes)];
+   const roots=unique.filter(node=>!node.parent||!nodeSet.has(node.parent));
+   if(!roots.length)throw new Error('GLB sin raíz de escena.');
+   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);
+   if(!meshes.length)throw new Error('GLB sin malla visible.');
+   const skinned=meshes.filter(mesh=>mesh.skeleton||mesh.numBoneInfluencers>0);
+   if(!skinned.length)throw new Error('El cuerpo del animal se ha importado sin esqueleto.');
+   scene.incrementRenderId();
    const bounds=boundsForMeshes(meshes);
-   if(!Number.isFinite(bounds.height)||bounds.height<.25)throw new Error('La escala del animal no es válida.');
+   if(!Number.isFinite(bounds.height)||bounds.height<.25)throw new Error('Altura de malla no válida.');
    const definition=WILDLIFE_MODEL_DEFS[kind],scale=definition.height/Math.max(.001,bounds.height)*size;
-   const actor=new B.TransformNode('WildlifeActor_'+kind+'_'+index,scene);
-   const modelRoot=new B.TransformNode('WildlifeModelRoot_'+kind+'_'+index,scene);modelRoot.parent=actor;
-   roots.forEach(root=>{root.parent=modelRoot;try{root.setEnabled(true);}catch(_){}});
-   modelRoot.scaling.setAll(scale);modelRoot.position.y=-bounds.min.y*scale;
+   actor=new B.TransformNode('WildlifeActor_'+kind+'_'+index,scene);
+   roots.forEach(root=>{root.parent=actor;try{root.setEnabled(true);}catch(_){}});
+   actor.scaling.setAll(scale);
+   actor.position=v(x,-bounds.min.y*scale+terrainSurfaceAt(x,z),z);
+   actor.rotation.y=rand(0,Math.PI*2);
    meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=false;});
-   actor.position=v(x,terrainSurfaceAt(x,z),z);actor.rotation.y=rand(0,Math.PI*2);
-   addModelShadow(actor,isPerformanceMode?1:2);
-   const groups=inst.animationGroups||[],clips=chooseWildlifeClips(groups);
+   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);
    groups.forEach(group=>{try{group.stop();}catch(_){}});
-   const animal={kind,root:actor,modelRoot,x,z,size,heading:actor.rotation.y,phase:rand(0,8),turnTimer:rand(2.5,6),wanderTimer:rand(2,5),wandering:Math.random()<.45,flee:0,clips,groups,activeAnimation:null,activeMode:''};
-   playWildlifeAnimation(animal,'idle');
+   const animal={kind,root:actor,x,z,size,heading:actor.rotation.y,turnTimer:rand(2.5,6),wanderTimer:rand(2,5),wandering:Math.random()<.45,flee:0,clips,groups,activeAnimation:null,activeMode:''};
+   playWildlifeAnimation(animal,'idle');addModelShadow(actor,isPerformanceMode?1:2);
+   console.info('Animal GLB importado',{kind,meshes:meshes.length,skinned:skinned.length,skeletons:(imported.skeletons||[]).length,animations:groups.map(group=>group.name),height:bounds.height});
    return animal;
   }catch(err){
-   if(inst){try{(inst.animationGroups||[]).forEach(group=>group.stop());(inst.rootNodes||[]).forEach(root=>root.dispose(false,true));}catch(_){}}
-   console.warn('No se pudo montar la fauna '+kind+':',err);return null;
-  }
+   if(imported){try{(imported.animationGroups||[]).forEach(group=>group.stop());(imported.skeletons||[]).forEach(skeleton=>skeleton.dispose());(imported.meshes||[]).forEach(mesh=>mesh.dispose(false,true));(imported.transformNodes||[]).forEach(node=>node.dispose(false,true));}catch(_){}}
+   if(actor)actor.dispose(false,true);
+   console.warn('Fauna descartada: importación GLB incompleta ('+kind+')',err);return null;
+  }finally{if(objectUrl)URL.revokeObjectURL(objectUrl);}
  }
  async function loadWildlifeModels(){
   if(!wildlifeSpawnSpecs.length)return 0;
   setLoadingProgress(48,'Cargando fauna salvaje 3D…');
   const kinds=[...new Set(wildlifeSpawnSpecs.map(spec=>spec.kind))];
-  await Promise.all(kinds.map(async kind=>{
-   try{wildlifeContainers.set(kind,await downloadWildlifeContainer(kind));}
-   catch(err){console.warn('Fauna 3D no disponible para '+kind+':',err);}
-  }));
+  await Promise.all(kinds.map(async kind=>{try{wildlifeBlobs.set(kind,await downloadWildlifeBlob(kind));}catch(err){console.warn('Modelo animal no disponible ('+kind+'):',err);}}));
   let loaded=0;
-  wildlifeSpawnSpecs.forEach((spec,index)=>{
-   const animal=instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,index);
+  for(let index=0;index<wildlifeSpawnSpecs.length;index++){
+   const spec=wildlifeSpawnSpecs[index],animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,index);
    if(animal){ambientFauna.push(animal);loaded++;}
-  });
-  console.info('Fauna nórdica GLB preparada',{loaded,requested:wildlifeSpawnSpecs.length,species:kinds,clips:ambientFauna.map(animal=>({kind:animal.kind,groups:animal.groups.map(group=>group.name)}))});
-  setLoadingProgress(52,loaded?'Fauna nórdica animada preparada.':'La partida continúa sin fauna: no se pudieron descargar los GLB.');
+  }
+  console.info('Fauna nórdica validada',{loaded,requested:wildlifeSpawnSpecs.length,species:kinds});
+  setLoadingProgress(52,loaded?'Fauna nórdica preparada.':'La partida continúa sin fauna: no se importó ningún cuerpo animal completo.');
   return loaded;
  }
  function canWildlifeMove(x,z){
@@ -3396,7 +3386,7 @@ async function startGame(){
    animal.root.rotation.y=animal.heading;animal.root.position.y=terrainSurfaceAt(animal.root.position.x,animal.root.position.z);
   }
  }
- // 0.6.193: la cubierta vegetal queda despejada de caminos y campamentos.
+ // 0.6.194: la cubierta vegetal queda despejada de caminos y campamentos.
  function createRock(x,z){
   const gy=terrainSurfaceAt(x,z),sx=rand(1.0,1.8),sy=rand(1.0,1.6),sz=rand(1,1.7);
   let r=sphere('graniteBoulder',null,[x,gy+sy*.49,z],[sx,sy,sz],M.stone,12);
@@ -7713,7 +7703,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'6',build:'0.6.193',gameStarted,worldUpdatePhase,worldUpdateCount,
+   reportVersion:'6',build:'0.6.194',gameStarted,worldUpdatePhase,worldUpdateCount,
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -9670,7 +9660,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.193 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.194 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
