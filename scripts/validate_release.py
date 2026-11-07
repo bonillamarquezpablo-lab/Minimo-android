@@ -329,6 +329,12 @@ def main() -> None:
         fail("Las salpicaduras deben utilizar el pool de partículas instanciadas.")
     if "const count=wet?(running?8:6):(running?6:4)" not in index_html or "particles[particleCursor++%maxParticles]" not in index_html:
         fail("La emisión de arena/agua debe mantener partículas reutilizables y visibles.")
+    if "lastStepX=x;lastStepZ=z;hasLastStepPosition=true" not in index_html or "stepX=lastStepX+segmentX*t,stepZ=lastStepZ+segmentZ*t" not in index_html:
+        fail("Cada pisada debe interpolarse en su posición real a lo largo del desplazamiento, sin apilar varias huellas al final del fotograma.")
+    if "segmentLength>Math.max(4,distance*2+1)" not in index_html or "hasLastStepPosition=false" not in index_html:
+        fail("Los saltos de posición, teletransportes y estados a bordo/en el aire deben reiniciar el trazado de huellas.")
+    if "pendingStepDistance:Number(stepDistance.toFixed(3))" not in index_html or "footstepsEmitted" not in index_html:
+        fail("El diagnóstico debe exponer la distancia pendiente y el contador de huellas emitidas.")
     if "row===0?.025:(row===1?.14:.30)" not in index_html or "DynamicSubmergedShoreWash_" not in index_html:
         fail("La espuma de orilla invade la arena seca o usa la malla antigua.")
     if "foam.positions[offset+1]=waterHeight(x,z,oceanTime)+.024" not in index_html or "foam.positions[offset+1]=-3.2" not in index_html:
