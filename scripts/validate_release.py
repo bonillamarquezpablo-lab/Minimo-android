@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.217"
+EXPECTED_VERSION = "0.6.219"
 
 HTML_PAGES = (
     "index.html",
@@ -119,6 +119,26 @@ def main() -> None:
         fail("Falta el socket visible del palo anclado a la palma en espacio del jugador.")
     if "function findRightGripBones" not in index_html or "applyRealPlayerClubGripPose" not in index_html:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
+    if "if(isPerformanceMode)return;" not in index_html or "tidalFoamMeshes.push" not in index_html:
+        fail("Rendimiento debe omitir la geometría dinámica de espuma costera.")
+    if "const VESSEL_SPRAY_COUNT=isPerformanceMode?0:" not in index_html:
+        fail("Rendimiento debe desactivar la espuma/rociado del barco.")
+    if "if(B.MirrorTexture&&B.Plane&&!isPerformanceMode)" not in index_html:
+        fail("Rendimiento debe omitir el pase de reflejos del agua; Calidad lo conserva.")
+    if "const oceanWaveNormal=isPerformanceMode?null:makeOceanWaveNormal()" not in index_html:
+        fail("Rendimiento debe evitar generar la normal de oleaje de alta calidad.")
+    if "resourceResults=await Promise.allSettled([playerHumanLoadPromise,startNpcHumanModels()])" not in index_html:
+        fail("Rendimiento debe completar la importación GLB del roster antes de abrir la intro.")
+    if "?await fullSceneWarmup" not in index_html:
+        fail("Rendimiento debe esperar a que la escena esté lista, sin el timeout de entrada anticipada.")
+    if "audioPreloadResult=await startupAudioPreload" not in index_html:
+        fail("Rendimiento debe completar la precarga de audio antes de abrir la intro.")
+    if "if(isPerformanceMode&&!realPlayerReady)throw new Error(" not in index_html:
+        fail("Rendimiento no debe abrir la intro si el GLB protagonista no está listo.")
+    if "if(isPerformanceMode)throw warmupError;" not in index_html:
+        fail("Rendimiento no debe permitir entrar con una escena que falló al prepararse.")
+    if "GLB protagonist pipeline timing" not in index_html:
+        fail("Falta telemetría de importación y montaje del GLB protagonista.")
     if "rightGripBones:realRightGripBones.length" not in index_html:
         fail("Falta telemetría del número de huesos de agarre detectados.")
     # Master idle pose is represented only by per-bone local rotations.
@@ -394,7 +414,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.217</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.219</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
@@ -406,7 +426,7 @@ def main() -> None:
         fail("El hito de defensa naval solo se desbloquea al explorar y conquistar todo el archipiélago.")
     if "if(vl.islandGarrison)return;" not in index_html:
         fail("Los puestos insulares no deben añadir civiles de relleno y exceder el presupuesto móvil.")
-    if "const warmupResult=await Promise.race([" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
+    if "const warmupResult=isPerformanceMode" not in index_html or "?await fullSceneWarmup" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html:
         fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
     if "const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;" not in index_html or "await yieldGrassStartupIfNeeded(islandIndex,placed,want);" not in index_html:
         fail("La generación de vegetación debe ceder el control según tiempo real de CPU.")
@@ -414,8 +434,8 @@ def main() -> None:
         fail("La generación del terreno y la hierba debe reutilizar buffers compactos y hashes deterministas.")
     if "const grassGenerationTask=createRealGrass();" not in index_html or "await Promise.all([grassGenerationTask,wildlifePreparationTask]);" not in index_html:
         fail("Los perfiles de calidad deben poder preparar vegetación y fauna en paralelo.")
-    if "startupAudioPreload.then(" not in index_html or "audioPreloadResult=await startupAudioPreload" in index_html:
-        fail("La precarga de audio opcional no debe bloquear la apertura del mundo.")
+    if "if(isPerformanceMode)" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html:
+        fail("Rendimiento espera el audio; Calidad conserva su precarga paralela.")
     if "antialias:activeGraphicsProfile!=='performance'" not in index_html or "(isTouchDevice?2048:" not in index_html:
         fail("El perfil de calidad en iPhone debe conservar antialiasing y sombras de alta resolución.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
@@ -430,8 +450,8 @@ def main() -> None:
         fail("El perfil A12 Nacho no aplica los límites de malla de agua y actualización previstos.")
     if "shadowGen=(!isConstrainedMobile||isUltraLowEndMobile||isGalaxyA12LowEndMobile)" not in index_html or "const enterRadius=isConstrainedMobile?58:175" not in index_html:
         fail("El perfil A10/A12 no activa sombras dinámicas acotadas por distancia.")
-    if "resourceResults=[...playerPreparation,{status:'background'}]" not in index_html or "npcPreparationTask=startNpcHumanModels();" not in index_html:
-        fail("Los NPC de Rendimiento deben terminar de importarse en segundo plano sin bloquear el primer acceso.")
+    if "warriorPartsToLoad=isPerformanceMode\n    ?[]" not in index_html or "civilianPartsToLoad=isPerformanceMode?[]" not in index_html or "if(isPerformanceMode)return false;" not in index_html:
+        fail("Rendimiento debe usar NPC procedurales completos y no iniciar importaciones GLB secundarias diferidas.")
     if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
         fail("Falta la distribución uniforme con separación mínima.")
     if "const grids=[grid(4,4),grid(10,10),grid(24,24),grid(60,60),grid(144,144),grid(288,288)];" not in index_html:
