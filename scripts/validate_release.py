@@ -407,7 +407,7 @@ def main() -> None:
         fail("La subida parcial de vértices debe tolerar arrays normales y usar subarrays tipados.")
     if "function pressGround(x,z,islandIndex,wet,beach)" not in index_html or "pressGround(x,z,islandIndex,wet,beach)" not in index_html:
         fail("Las pisadas no presionan la geometría real del terreno.")
-    if "function relaxGround(dt)" not in index_html or "relaxGround(dt);" not in index_html:
+    if "function relaxGround(dt)" not in index_html or "relaxGround(relaxStep);" not in index_html:
         fail("El terreno deformado no recupera su forma gradualmente.")
     if "GroundDynamics.update(dt,audioPos.x,audioPos.z,playerStepDistance,yaw,running&&stamina>0,onShip,playerAirborne);" not in index_html:
         fail("La dinámica del suelo no recibe los pasos reales del jugador.")
