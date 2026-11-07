@@ -1951,12 +1951,14 @@ document.getElementById('continueWithName').addEventListener('click',()=>beginLo
 document.getElementById('continueUnnamed').addEventListener('click',()=>beginLoadingWithIdentity(''));
 document.getElementById('playerNameInput').addEventListener('keydown',event=>{if(event.key==='Enter')beginLoadingWithIdentity(event.currentTarget.value);});
 
-async function removeStrayDebugGeometry(){
-  // Retira solo restos de depuración explícitamente nombrados; no toca colisionadores
-  // lógicos, sombras de contacto ni elementos artísticos del mundo.
-  const debugOnlyName=/(?:^|[_\\-])(debug|debugonly|collisiondebug|spawnmarker|testmarker|groundprobe)(?:[_\\-]|$)/i;
+async function removeStrayDebugGeometry(targetScene){
+  // Retira únicamente mallas residuales de depuración; nunca colisionadores lógicos,
+  // sombras de contacto ni piezas artísticas. La escena se recibe explícitamente
+  // porque su referencia vive dentro de startGame().
+  if(!targetScene||!Array.isArray(targetScene.meshes))return 0;
+  const debugOnlyName=/(debug|collisiondebug|collisionbox|collisioncircle|spawnmarker|spawnbox|spawncircle|testmarker|testbox|testcircle|groundprobe)/i;
   let removed=0;
-  for(const mesh of [...scene.meshes]){
+  for(const mesh of [...targetScene.meshes]){
    if(!mesh||mesh.isDisposed()||!debugOnlyName.test(String(mesh.name||'')))continue;
    mesh.dispose(false,true);removed++;
   }
@@ -9807,7 +9809,7 @@ function updateHUD(){
  // esqueletos, animaciones, materiales, sombras y texturas antes de abrir la campaña.
  setLoadingProgress(87,'Sincronizando modelos, texturas e iluminación…');
  try{
-  removeStrayDebugGeometry();
+  removeStrayDebugGeometry(scene);
   if(scene&&typeof scene.whenReadyAsync==='function')await scene.whenReadyAsync();
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){
