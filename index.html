@@ -1951,7 +1951,19 @@ document.getElementById('continueWithName').addEventListener('click',()=>beginLo
 document.getElementById('continueUnnamed').addEventListener('click',()=>beginLoadingWithIdentity(''));
 document.getElementById('playerNameInput').addEventListener('keydown',event=>{if(event.key==='Enter')beginLoadingWithIdentity(event.currentTarget.value);});
 
-async function startGame(){
+async function removeStrayDebugGeometry(){
+  // Retira solo restos de depuración explícitamente nombrados; no toca colisionadores
+  // lógicos, sombras de contacto ni elementos artísticos del mundo.
+  const debugOnlyName=/(?:^|[_\\-])(debug|debugonly|collisiondebug|spawnmarker|testmarker|groundprobe)(?:[_\\-]|$)/i;
+  let removed=0;
+  for(const mesh of [...scene.meshes]){
+   if(!mesh||mesh.isDisposed()||!debugOnlyName.test(String(mesh.name||'')))continue;
+   mesh.dispose(false,true);removed++;
+  }
+  if(removed)console.info('Geometría de depuración residual retirada:',removed);
+  return removed;
+ }
+ function startGame(){
  setLoadingProgress(40,'Preparando el mundo…');
  try{
  const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
@@ -3231,15 +3243,37 @@ async function startGame(){
   root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.y=baseYaw;root.scaling.setAll(scale);
   return {root,canopy,x,z,radius:.62*scale,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species,baseYaw,windPhase:rand(0,Math.PI*2)};
  }
+ function isSafeShrubGroundPoint(is,x,z){
+  const index=land.indexOf(is);
+  if(index<0||landIslandIndex(x,z)!==index)return false;
+  const dx=x-is.x,dz=z-is.z;
+  if(dx*dx+dz*dz>(is.r*.62)**2)return false;
+  const groundY=terrainHeightOnIsland(is,x,z);
+  if(!Number.isFinite(groundY)||groundY<.82||groundY>3.9)return false;
+  const step=.55;
+  if(landIslandIndex(x+step,z)!==index||landIslandIndex(x-step,z)!==index||
+     landIslandIndex(x,z+step)!==index||landIslandIndex(x,z-step)!==index)return false;
+  const sx=(terrainHeightOnIsland(is,x+step,z)-terrainHeightOnIsland(is,x-step,z))/(2*step);
+  const sz=(terrainHeightOnIsland(is,x,z+step)-terrainHeightOnIsland(is,x,z-step))/(2*step);
+  return Number.isFinite(sx)&&Number.isFinite(sz)&&Math.hypot(sx,sz)<=.48;
+ }
  // Layered broadleaf shrubs with smooth, irregular foliage masses and visible woody stems.
  const naturalShrubs=[];
- function createNaturalShrub(x,z,size=1){
+ function createNaturalShrub(x,z,size=1,homeIslandIndex=landIslandIndex(x,z)){
+  const island=land[homeIslandIndex];
+  if(!island||!isSafeShrubGroundPoint(island,x,z))return null;
+  const groundY=terrainHeightOnIsland(island,x,z),normal=terrainNormalAt(x,z,.42);
   const root=newGroup('NaturalBroadleafShrub',null),yaw=rand(0,Math.PI*2),leafMats=[M.leafOak,M.leaf,M.leafSun,M.leafShadow];
   const stemCount=4+Math.floor(rand(0,3));
   for(let i=0;i<stemCount;i++){const a=i*Math.PI*2/stemCount+rand(-.35,.35),len=rand(.48,.82),branch=newGroup('ShrubWoodyStem_'+i,root);branch.position=v(0,.08,0);branch.rotation.y=a;branch.rotation.z=-rand(.28,.62);cyl('ShrubTwig_'+i,branch,[0,len*.43,0],len,.018,.045,M.bark,[Math.PI/2,0,0]);}
   const lobes=15+Math.floor(rand(0,6));
   for(let i=0;i<lobes;i++){const a=i*2.399963+rand(-.5,.5),ring=rand(.10,.58),y=rand(.25,.78),r=rand(.20,.34)*size;const lobe=organicLeaf('NaturalShrubFoliage_'+i,root,[Math.cos(a)*ring*size,y*size,Math.sin(a)*ring*size],[r*1.10,r*.70,r*.92],leafMats[Math.floor(rand(0,leafMats.length))],3);lobe.rotation.set(rand(-.20,.20),a,rand(-.22,.22));}
-  root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.y=yaw;root.scaling.setAll(size);mergeStaticDecorByMaterial(root,'NaturalBroadleafShrub');return {root,x,z,radius:.9*size};
+  root.position=v(x,groundY+.012,z);
+  root.rotation.set(Math.atan2(normal.z,normal.y),yaw,-Math.atan2(normal.x,normal.y));
+  root.scaling.setAll(size);
+  mergeStaticDecorByMaterial(root,'NaturalBroadleafShrub');
+  root.computeWorldMatrix(true);
+  return {root,x,z,radius:.9*size,homeIslandIndex,groundY};
  }
  // Quaternius Ultimate Animated Animals (CC0): rigged GLB models with their own animal animation clips.
  // Source files are pinned to an immutable revision; no sphere/capsule animal placeholders are used.
@@ -3344,16 +3378,19 @@ async function startGame(){
    for(let i=0;i<bushCount;i++){
     let p=null;
     for(let attempt=0;attempt<48;attempt++){
-     const candidate=sampleGroundPoint(island,3.9,.68,.25,.70);
+     const candidate=sampleGroundPoint(island,3.9,.48,.25,.62);
      if(!candidate)continue;
      const x=candidate.x,z=candidate.z;
-     if(isVegetationTrailClearance(x,z,2.4)||
+     if(!isSafeShrubGroundPoint(island,x,z)||
+        isVegetationTrailClearance(x,z,2.4)||
         settlements.some(s=>Math.hypot(x-s[0],z-s[1])<14)||
         worldColliders.some(c=>Math.hypot(x-c.x,z-c.z)<(c.type==='circle'?c.r:Math.max(c.hx,c.hz))+2.4)||
-        trees.some(t=>Math.hypot(x-t.x,z-t.z)<3))continue;
+        trees.some(t=>Math.hypot(x-t.x,z-t.z)<3)||
+        rocks.some(r=>Math.hypot(x-r.x,z-r.z)<(r.radius||.8)+1.5)||
+        naturalShrubs.some(b=>Math.hypot(x-b.x,z-b.z)<(b.radius||.9)+1.25))continue;
      p=candidate;break;
     }
-    if(p)naturalShrubs.push(createNaturalShrub(p.x,p.z,rand(.82,1.18)));
+    if(p){const shrub=createNaturalShrub(p.x,p.z,rand(.82,1.18),idx);if(shrub)naturalShrubs.push(shrub);}
    }
    const animalCount=isPerformanceMode?(idx===0?2:(idx===1?1:0)):(idx===0?3:(idx<4?1:0));
    for(let i=0;i<animalCount;i++){
@@ -8376,14 +8413,17 @@ function updateHUD(){
  }
  function placeShipAllyOnShore(parts,index,leader){
   if(!parts||!parts.root)return;
-  const root=parts.root,worldPosition=root.getAbsolutePosition().clone();
-  if(root.parent===ship)root.parent=null;
+  const root=parts.root;
+  root.computeWorldMatrix(true);
+  const worldPosition=root.getAbsolutePosition().clone();
+  if(root.parent===ship){root.parent=null;root.position.copyFrom(worldPosition);root.rotationQuaternion=null;}
   const forward=v(Math.sin(yaw),0,Math.cos(yaw)),right=v(Math.cos(yaw),0,-Math.sin(yaw));
   const side=index%2===0?-1:1,row=Math.floor(index/2);
   const desired=leader.subtract(forward.scale(3.0+row*1.15)).add(right.scale(side*1.55));
   const landing=nearestSafeLandPoint(desired.x,desired.z,.66)||nearestSafeLandPoint(leader.x,leader.z,.66);
   if(landing)root.position=v(landing.x,terrainSurfaceAt(landing.x,landing.z)+actorGroundOffset(parts),landing.z);
   else root.position.copyFrom(worldPosition);
+  root.computeWorldMatrix(true);
   stopShipRower(parts);
  }
  function animateViking(parts,phase,walking,action,blockingNow){
@@ -9469,8 +9509,12 @@ function updateHUD(){
    const p=guard.parts.root;
    if(onShip){
     if(p.parent!==ship)p.parent=ship;
-    const seats=[{x:-.72,z:-3.72,oar:0,side:-1},{x:.72,z:-3.72,oar:0,side:1},{x:0,z:4.02,oar:8,side:0}],seat=seats[i%seats.length];
-    p.position=v(seat.x,1.005,seat.z);p.rotation.set(0,seat.side*Math.PI/2,0);guard.parts.actualMoveSpeed=0;
+    const seats=[{x:-.76,z:-3.25,oar:0,side:-1},{x:.76,z:-3.25,oar:0,side:1},{x:0,z:3.72,oar:8,side:0}],seat=seats[i%seats.length];
+    // La tripulación usa coordenadas locales del drakkar: los pies apoyan sobre la cubierta
+    // y cada personaje conserva su anclaje aunque el casco cabecee, role o avance.
+    if(p.parent!==ship){p.parent=ship;}
+    p.position.set(seat.x,.995,seat.z);p.rotation.set(0,seat.side*Math.PI/2,0);
+    p.computeWorldMatrix(true);guard.parts.actualMoveSpeed=0;
     animateShipRower(guard.parts,elapsed*5.8+seat.oar*.58+(seat.side>0?Math.PI:0));return;
    }
    if(p.parent===ship)placeShipAllyOnShore(guard.parts,i,playerLookAt);
@@ -9763,6 +9807,7 @@ function updateHUD(){
  // esqueletos, animaciones, materiales, sombras y texturas antes de abrir la campaña.
  setLoadingProgress(87,'Sincronizando modelos, texturas e iluminación…');
  try{
+  removeStrayDebugGeometry();
   if(scene&&typeof scene.whenReadyAsync==='function')await scene.whenReadyAsync();
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){
