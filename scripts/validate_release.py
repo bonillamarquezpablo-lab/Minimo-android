@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.213"
+EXPECTED_VERSION = "0.6.214"
 
 HTML_PAGES = (
     "index.html",
@@ -374,8 +374,18 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.213</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.214</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
+    if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
+        fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
+    if "const discoveredIslands=land.map((_,index)=>index===0);" not in index_html or "discoveredIslands:discoveredIslands.slice()" not in index_html:
+        fail("El descubrimiento de cada isla debe persistir en el guardado.")
+    if "captured+'/'+land.length" not in index_html or "claimed>=land.length" not in index_html:
+        fail("La conquista debe medir las trece islas y no las cuatro aldeas antiguas.")
+    if "navalDefensePhaseUnlocked" not in index_html or "villages.every(entry=>entry.claimed)&&discoveredIslands.every(Boolean)" not in index_html:
+        fail("El hito de defensa naval solo se desbloquea al explorar y conquistar todo el archipiélago.")
+    if "if(vl.islandGarrison)return;" not in index_html:
+        fail("Los puestos insulares no deben añadir civiles de relleno y exceder el presupuesto móvil.")
     if "const warmupResult=await Promise.race([" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
         fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
     if "const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;" not in index_html or "await yieldGrassStartupIfNeeded(islandIndex,placed,want);" not in index_html:
