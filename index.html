@@ -3044,6 +3044,7 @@ async function removeStrayDebugGeometry(targetScene){
  }
  land.forEach(buildLivingBeachLayer);
  // Interactive ground layer: impressed boot soles, compacted lips, sand grains and drying tide marks.
+ let groundDynamicsLastUpdateMs=0,beachUpdateLastMs=0;
  const GroundDynamics=(()=>{
   const maxImprints=isPerformanceMode?(isConstrainedMobile?18:28):64,maxParticles=isPerformanceMode?22:48;
   const imprintCols=13,imprintRows=23,imprintVertexCount=imprintCols*imprintRows,imprintIndicesPerFoot=(imprintCols-1)*(imprintRows-1)*6;
@@ -3213,7 +3214,7 @@ async function removeStrayDebugGeometry(targetScene){
    pressGround(x,z,islandIndex,wet,beach);makeFootprint(islandIndex,x,z,heading,wet,beach,running);kickSandGrains(x,z,heading,wet,running,groundY);
   }
   function updateBeach(dt,focusX,focusZ){
-   beachClock+=dt;if(beachClock<.30)return;const step=beachClock;beachClock=0;
+   beachClock+=dt;if(beachClock<.30)return;const beachUpdateStartedAt=performance.now(),step=beachClock;beachClock=0;
    const drying=Math.exp(-step/(48+Math.max(0,Math.sin(oceanTime*.018))*34));
    for(const layer of livingBeachLayers){
     if(Math.hypot(focusX-layer.centerX,focusZ-layer.centerZ)>layer.island.r+115)continue;
@@ -3268,8 +3269,10 @@ async function removeStrayDebugGeometry(targetScene){
     layer.mesh.updateVerticesData(B.VertexBuffer.PositionKind,layer.positions,false,false);
     layer.mesh.updateVerticesData(B.VertexBuffer.ColorKind,layer.colors,false,false);
    }
+   beachUpdateLastMs=performance.now()-beachUpdateStartedAt;
   }
   function update(dt,x,z,distance,heading,running,onShip,airborne){
+   const groundDynamicsStartedAt=performance.now();
    if(!Number.isFinite(dt)||dt<=0)return;
    let imprintColorsDirty=false;
    for(const item of imprints){
@@ -3311,7 +3314,7 @@ async function removeStrayDebugGeometry(targetScene){
    }
    if(grainBuffersDirty){grainMesh.thinInstanceBufferUpdated('matrix');grainMesh.thinInstanceBufferUpdated('color');}
    updateBeach(dt,x,z);
-   if(onShip||airborne||!Number.isFinite(distance)||distance<=0){if(!onShip&&(!Number.isFinite(distance)||distance<=0))stepDistance=0;return;}
+   if(onShip||airborne||!Number.isFinite(distance)||distance<=0){if(!onShip&&(!Number.isFinite(distance)||distance<=0))stepDistance=0;groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;return;}
    stepDistance+=distance;
    const stride=running?1.62:1.14;
    while(stepDistance>=stride){
@@ -3320,6 +3323,7 @@ async function removeStrayDebugGeometry(targetScene){
     const back=running?.18:.13,px=x-forwardX*back+rightX*side,pz=z-forwardZ*back+rightZ*side;
     addStep(px,pz,heading,running);
    }
+   groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;
   }
   function reset(){stepDistance=0;alternateFoot=0;}
   return {update,reset,counts:()=>({imprints:imprints.reduce((count,item)=>count+(item.active?1:0),0),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1})};
@@ -8491,7 +8495,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'7',build:'0.6.208',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),
+   reportVersion:'7',build:'0.6.208',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
