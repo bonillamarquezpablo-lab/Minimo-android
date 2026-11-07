@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.209">
-<meta name="el-sin-nombre-repair" content="0.6.209 exact-wave water math cache, batched ground imprints and reusable sand-splash particles">
+<meta name="el-sin-nombre-build" content="0.6.210">
+<meta name="el-sin-nombre-repair" content="0.6.210 typed terrain-deformation buffers, exact-wave water math cache, batched ground imprints and reusable sand-splash particles">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.209</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.210</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2974,7 +2974,8 @@ async function removeStrayDebugGeometry(targetScene){
   try{if(typeof mesh.updateCoordinateHeights==='function')mesh.updateCoordinateHeights();}catch(heightCacheError){console.info('Heightfield cache fallback:',heightCacheError);}
   const gridSize=subdivisions+1,baseHeights=new Float32Array(gridSize*gridSize);
   for(let vertex=0;vertex<baseHeights.length;vertex++)baseHeights[vertex]=positions[vertex*3+1];
-  const deformationField={island:is,index,subdivisions,gridSize,step:(is.r*2)/subdivisions,baseHeights,offsets:new Float32Array(baseHeights.length),decaySeconds:new Float32Array(baseHeights.length),active:new Set(),positions,normals:mesh.getVerticesData(B.VertexBuffer.NormalKind),positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),normalBuffer:mesh.getVertexBuffer(B.VertexBuffer.NormalKind),mesh};
+  const deformationPositions=Float32Array.from(positions),deformationNormals=Float32Array.from(normals);
+  const deformationField={island:is,index,subdivisions,gridSize,step:(is.r*2)/subdivisions,baseHeights,offsets:new Float32Array(baseHeights.length),decaySeconds:new Float32Array(baseHeights.length),active:new Set(),positions:deformationPositions,normals:deformationNormals,positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),normalBuffer:mesh.getVertexBuffer(B.VertexBuffer.NormalKind),mesh};
   terrainDeformationFields[index]=deformationField;
   mesh.checkCollisions=true;mesh.metadata=Object.assign({},mesh.metadata||{},{norsePhysicalHeightfield:true,norseDeformableGround:true,islandIndex:index,subdivisions});
   mesh.material=islandMaterials[index%3].clone('TerrainMaterial_'+index);
@@ -3095,7 +3096,8 @@ async function removeStrayDebugGeometry(targetScene){
   grainMesh.alwaysSelectAsActiveMesh=true;grainMesh.renderingGroupId=1;grainMesh.hasVertexAlpha=true;
   grainMesh.thinInstanceSetBuffer('matrix',grainMatrices,16,true);grainMesh.thinInstanceSetBuffer('color',grainColors,4,true);grainMesh.thinInstanceCount=maxParticles;
   function uploadDeformedRows(field,vertices,buffer,data){
-   if(!vertices.length)return;
+   if(!vertices.length||!buffer||!data)return;
+   const source=data instanceof Float32Array?data:Float32Array.from(data);
    const n=field.gridSize,ranges=new Map();
    for(const vertex of vertices){
     const row=Math.floor(vertex/n),col=vertex-row*n,current=ranges.get(row);
@@ -3104,7 +3106,7 @@ async function removeStrayDebugGeometry(targetScene){
    }
    for(const [row,range] of ranges){
     const start=(row*n+range[0])*3,end=(row*n+range[1]+1)*3;
-    buffer.updateDirectly(data.subarray(start,end),start);
+    buffer.updateDirectly(source.subarray(start,end),start);
    }
   }
   function writeDeformedVertex(field,vertex){
@@ -8518,7 +8520,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'7',build:'0.6.209',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'7',build:'0.6.210',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},

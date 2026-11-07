@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.209"
+EXPECTED_VERSION = "0.6.210"
 
 HTML_PAGES = (
     "index.html",
@@ -306,6 +306,10 @@ def main() -> None:
         fail("El heightfield no conserva el estado físico de deformación del terreno.")
     if "const deformationField={island:is,index,subdivisions,gridSize," not in index_html:
         fail("El campo de deformación del terreno debe enlazar la isla local sin referencias globales indefinidas.")
+    if "const deformationPositions=Float32Array.from(positions),deformationNormals=Float32Array.from(normals);" not in index_html or "positions:deformationPositions,normals:deformationNormals" not in index_html:
+        fail("Los buffers editables del heightfield deben ser Float32Array, no arrays JavaScript normales.")
+    if "const source=data instanceof Float32Array?data:Float32Array.from(data);" not in index_html or "source.subarray(start,end)" not in index_html:
+        fail("La subida parcial de vértices debe tolerar arrays normales y usar subarrays tipados.")
     if "function pressGround(x,z,islandIndex,wet,beach)" not in index_html or "pressGround(x,z,islandIndex,wet,beach)" not in index_html:
         fail("Las pisadas no presionan la geometría real del terreno.")
     if "function relaxGround(dt)" not in index_html or "relaxGround(dt);" not in index_html:
@@ -349,7 +353,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.209</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.210</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "const warmupResult=await Promise.race([" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
         fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
