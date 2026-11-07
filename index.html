@@ -7693,7 +7693,7 @@ function createRealWeapon(type='axe'){
     grassPositionScratch.set(x,groundY+.006,z);
     B.Matrix.ComposeToRef(grassScaleScratch,grassRotationScratch,grassPositionScratch,grassMatrixScratch);
     const cellX=Math.floor((x-island.x+radius)/chunkSize),cellZ=Math.floor((z-island.z+radius)/chunkSize);
-    const key=islandIndex+':'+cellX+':'+chunkZ;
+    const key=islandIndex+':'+cellX+':'+cellZ;
     let batch=grassBatches.get(key);
     if(!batch){batch={islandIndex,cellX,cellZ,matrices:new Float32Array(grassBatchInitialCapacity*16),colors:new Float32Array(grassBatchInitialCapacity*4),count:0};grassBatches.set(key,batch);}
     if(batch.count*16+16>batch.matrices.length){
