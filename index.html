@@ -3151,10 +3151,10 @@ async function removeStrayDebugGeometry(targetScene){
     }
    }
   }
-  function makeFootprint(x,z,heading,wet,beach,running){
-   const islandIndex=landIslandIndex(x,z);if(islandIndex<0)return;
-   const island=land[islandIndex],dx=x-island.x,dz=z-island.z;
-   if(Math.hypot(dx,dz)>island.r*.973)return;
+  function makeFootprint(islandIndex,x,z,heading,wet,beach,running){
+   const island=land[islandIndex];if(!island)return;
+   const dx=x-island.x,dz=z-island.z;
+   if(dx*dx+dz*dz>(island.r*.973)**2)return;
    const slot=imprints[imprintCursor++%maxImprints],vertexBase=slot.slot*imprintVertexCount,floatBase=vertexBase*3,colorBase=vertexBase*4;
    const halfLength=running?.245:.225,baseWidth=running?.155:.137;
    const rightX=Math.cos(heading),rightZ=-Math.sin(heading),forwardX=Math.sin(heading),forwardZ=Math.cos(heading);
@@ -3168,9 +3168,10 @@ async function removeStrayDebugGeometry(targetScene){
      const localX=u*halfWidth,localZ=nz*halfLength,radial=Math.hypot(u,nz*.92);
      const wx=x+rightX*localX+forwardX*localZ,wz=z+rightZ*localX+forwardZ*localZ;
      const vertex=row*imprintCols+col,position=floatBase+vertex*3,color=colorBase+vertex*4;
-     const onSameIsland=landIslandIndex(wx,wz)===islandIndex,mask=onSameIsland?1-smooth01((radial-.63)/.37):0;
+     const islandDx=wx-island.x,islandDz=wz-island.z;
+     const onSameIsland=islandDx*islandDx+islandDz*islandDz<(island.r*.975)**2,mask=onSameIsland?1-smooth01((radial-.63)/.37):0;
      const edge=smooth01((radial-.70)/.30),rim=beach?edge*.014:edge*.005;
-     const press=wet?.013:(beach?.030:.018),groundY=terrainSurfaceAt(wx,wz);
+     const press=wet?.013:(beach?.030:.018),groundY=terrainHeightOnIsland(island,wx,wz)+terrainDeformationAt(islandIndex,wx,wz);
      // Lift above the opaque heightfield: the old wet imprint could be hidden below terrain.
      imprintPositions[position]=wx;imprintPositions[position+1]=groundY+.028+rim-press*.16;imprintPositions[position+2]=wz;
      const edgeBlend=edge*.32,rowGroove=(row>3&&row<imprintRows-3&&row%5===1&&Math.abs(u)<.82)?.12:0;
@@ -3185,8 +3186,8 @@ async function removeStrayDebugGeometry(targetScene){
    imprintPositionBuffer.updateDirectly(imprintPositions.subarray(positionStart,positionEnd),positionStart);
    imprintColorBuffer.updateDirectly(imprintColors.subarray(colorStart,colorEnd),colorStart);
   }
-  function kickSandGrains(x,z,heading,wet,running){
-   const count=wet?(running?8:6):(running?6:4),groundY=terrainSurfaceAt(x,z),surfaceY=wet?Math.max(groundY,waterHeight(x,z,oceanTime)):groundY;
+  function kickSandGrains(x,z,heading,wet,running,groundY){
+   const count=wet?(running?8:6):(running?6:4),surfaceY=wet?Math.max(groundY,waterHeight(x,z,oceanTime)):groundY;
    for(let i=0;i<count;i++){
     const particle=particles[particleCursor++%maxParticles],angle=heading+Math.PI+rand(-1.15,1.15),speed=rand(wet?.22:.14,wet?.82:(running?.72:.46)),distance=rand(.055,.16);
     particle.x=x+Math.sin(angle)*distance;particle.z=z+Math.cos(angle)*distance;particle.y=surfaceY+(wet?.035:.045);
@@ -3202,7 +3203,7 @@ async function removeStrayDebugGeometry(targetScene){
    const ratio=d/island.r,beach=ratio>.748&&ratio<.976;
    const angle=Math.atan2(dz,dx),shore=shorelineFoamRadius(island,angle,oceanTime),groundY=terrainSurfaceAt(x,z);
    const wet=beach&&((Number.isFinite(shore)&&shore-d<1.45)||waterHeight(x,z,oceanTime)>groundY-.20);
-   pressGround(x,z,islandIndex,wet,beach);makeFootprint(x,z,heading,wet,beach,running);kickSandGrains(x,z,heading,wet,running);
+   pressGround(x,z,islandIndex,wet,beach);makeFootprint(islandIndex,x,z,heading,wet,beach,running);kickSandGrains(x,z,heading,wet,running,groundY);
   }
   function updateBeach(dt,focusX,focusZ){
    beachClock+=dt;if(beachClock<.30)return;const step=beachClock;beachClock=0;
