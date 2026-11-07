@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.222"
+EXPECTED_VERSION = "0.6.223"
 
 HTML_PAGES = (
     "index.html",
@@ -131,8 +131,18 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'8',build:'0.6.222'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html:
+    if "reportVersion:'8',build:'0.6.223'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
+    if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
+        fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
+    if "function refreshPlayerGroundNormal(x,z)" not in index_html or "const normal=refreshPlayerGroundNormal(player.root.position.x,player.root.position.z);" not in index_html or "playerGroundNormalForMovement=playerGroundNormalCache" not in index_html:
+        fail("La normal del terreno debe muestrearse una vez por fotograma y reutilizarse entre movimiento e inclinación.")
+    if "const focus=onShip?player.root.getAbsolutePosition():player.root.position;" not in index_html or "cameraTargetSmoothed.x+=(targetX-cameraTargetSmoothed.x)*targetAlpha;" not in index_html:
+        fail("La cámara debe evitar vectores temporales sin perder el foco absoluto al navegar.")
+    if "scale.x=.025+(target.x-.025)*k" not in index_html or "PLAYER_BOAT_FLOAT_OPTIONS" not in index_html:
+        fail("Las animaciones y la flotación deben reutilizar valores sin asignaciones por fotograma.")
+    if "frameTimingMs:{samples:frameTimes.length,average:frameAverage,p50:frameAt(.50),p95:frameAt(.95),p99:frameAt(.99)" not in index_html:
+        fail("El diagnóstico debe exponer percentiles de tiempo de fotograma.")
     if "function updateQualityGrassLod(dt)" not in index_html or "qualityGrassLodBatches.push" not in index_html or "updateQualityGrassLod(dt);" not in index_html:
         fail("Calidad debe aplicar LOD por distancia a los lotes de hierba.")
     if "function syncNordicWaterReflectionIsland()" not in index_html or "syncNordicWaterReflectionIsland();" not in index_html or "activeWaterReflectionIslandIndex" not in index_html:
@@ -448,7 +458,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.222</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.223</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")

@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.222">
-<meta name="el-sin-nombre-repair" content="0.6.222 full pre-entry asset readiness and low-end Performance rendering reductions">
+<meta name="el-sin-nombre-build" content="0.6.223">
+<meta name="el-sin-nombre-repair" content="0.6.223 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.222</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.223</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -7341,34 +7341,34 @@ function createRealWeapon(type='axe'){
   return false;
  }
   function updateCamera(dt){
-  const focus=playerPos();
-  const portrait=innerHeight>innerWidth;
-  const safeDt=Math.max(0,Math.min(.10,dt||0));
-  // Quita el microtemblor de la raíz y reduce el seguimiento excesivo del movimiento.
-  const lead=onShip?v(0,0,0):v(playerVelocity.x*.045,0,playerVelocity.z*.045);
-  const targetRaw=focus.add(lead).add(v(0,onShip?1.78:1.56,0));
-  if(!cameraTargetSmoothed)cameraTargetSmoothed=targetRaw.clone();
-  const targetAlpha=1-Math.exp(-safeDt*(onShip?11.5:18.0));
-  cameraTargetSmoothed.copyFrom(B.Vector3.Lerp(cameraTargetSmoothed,targetRaw,Math.min(1,targetAlpha)));
+  // La raíz solo se parenta al drakkar al embarcar; en ese caso se conserva la posición absoluta.
+  const focus=onShip?player.root.getAbsolutePosition():player.root.position;
+  const portrait=innerHeight>innerWidth,safeDt=Math.max(0,Math.min(.10,dt||0));
+  const targetX=focus.x+(onShip?0:playerVelocity.x*.045);
+  const targetY=focus.y+(onShip?1.78:1.56);
+  const targetZ=focus.z+(onShip?0:playerVelocity.z*.045);
+  if(!cameraTargetSmoothed)cameraTargetSmoothed=new B.Vector3(targetX,targetY,targetZ);
+  const targetAlpha=Math.min(1,1-Math.exp(-safeDt*(onShip?11.5:18.0)));
+  cameraTargetSmoothed.x+=(targetX-cameraTargetSmoothed.x)*targetAlpha;
+  cameraTargetSmoothed.y+=(targetY-cameraTargetSmoothed.y)*targetAlpha;
+  cameraTargetSmoothed.z+=(targetZ-cameraTargetSmoothed.z)*targetAlpha;
   const target=cameraTargetSmoothed;
   const distance=(onShip?cameraDistance*1.16:cameraDistance)*(portrait?1.0:.96);
-  const forward=v(Math.sin(cameraYaw),0,Math.cos(cameraYaw));
-  const right=v(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
-  const horizontal=Math.cos(cameraPitch)*distance;
-  const vertical=Math.sin(cameraPitch)*distance+.28;
-  const baseOffset=forward.scale(-horizontal).add(v(0,vertical,0)).add(right.scale(.40));
-  // La comprobación de colisión de cámara es cara si recorre todos los colliders cada frame.
-  // Se actualiza a intervalos; el encuadre 3D y la resolución siguen renderizándose cada frame.
+  const sinYaw=Math.sin(cameraYaw),cosYaw=Math.cos(cameraYaw);
+  const horizontal=Math.cos(cameraPitch)*distance,vertical=Math.sin(cameraPitch)*distance+.28;
+  const baseX=-sinYaw*horizontal+cosYaw*.40,baseY=vertical,baseZ=-cosYaw*horizontal-sinYaw*.40;
+  // La colisión se sigue comprobando al mismo intervalo, sin construir vectores temporales.
   cameraCollisionTimer-=safeDt;
   if(cameraCollisionTimer<=0){
    cameraCollisionTimer=.14;
-   const candidate=target.add(baseOffset),ray=target.subtract(candidate),rayLength=ray.length();
+   const candidateX=target.x+baseX,candidateY=target.y+baseY,candidateZ=target.z+baseZ;
+   const rayLength=Math.hypot(baseX,baseY,baseZ);
    let ratio=1;
    if(rayLength>.01){
-    const dir=ray.scale(1/rayLength),usable=Math.max(0,rayLength-1.25);
+    const usable=Math.max(0,rayLength-1.25),invLength=1/rayLength;
     for(let d=.70;d<usable;d+=.78){
-     const point=candidate.add(dir.scale(d));
-     if(point.y<4.25&&cameraPointBlocked(point.x,point.z)){
+     const pointX=candidateX-baseX*invLength*d,pointY=candidateY-baseY*invLength*d,pointZ=candidateZ-baseZ*invLength*d;
+     if(pointY<4.25&&cameraPointBlocked(pointX,pointZ)){
       ratio=Math.max(.28,Math.min(1,(d-.48)/rayLength));
       break;
      }
@@ -7377,14 +7377,16 @@ function createRealWeapon(type='axe'){
    cameraObstructionRatio=ratio;
   }
   cameraObstructionBlend+=(cameraObstructionRatio-cameraObstructionBlend)*(1-Math.exp(-safeDt*9));
-  const adjustedOffset=baseOffset.scale(Math.max(.28,Math.min(1,cameraObstructionBlend)));
-  const want=target.add(adjustedOffset);
-  const positionAlpha=1-Math.exp(-safeDt*(onShip?11.5:13.2));
-  camera.position.copyFrom(B.Vector3.Lerp(camera.position,want,Math.min(1,positionAlpha)));
-  // La sacudida solo aparece tras impactos; nunca depende de correr ni de la velocidad.
+  const blend=Math.max(.28,Math.min(1,cameraObstructionBlend));
+  const wantX=target.x+baseX*blend,wantY=target.y+baseY*blend,wantZ=target.z+baseZ*blend;
+  const positionAlpha=Math.min(1,1-Math.exp(-safeDt*(onShip?11.5:13.2)));
+  camera.position.x+=(wantX-camera.position.x)*positionAlpha;
+  camera.position.y+=(wantY-camera.position.y)*positionAlpha;
+  camera.position.z+=(wantZ-camera.position.z)*positionAlpha;
   if(cameraShake>.001){
    const shake=Math.min(.012,cameraShake*.10);
-   camera.position.addInPlace(v(Math.sin(elapsed*47)*shake,Math.cos(elapsed*61)*shake*.35,0));
+   camera.position.x+=Math.sin(elapsed*47)*shake;
+   camera.position.y+=Math.cos(elapsed*61)*shake*.35;
   }
   camera.setTarget(target);
   camera.fov=portrait?.84:.78;
@@ -8690,17 +8692,20 @@ function villageHostileDefenders(vl){
  window.NorseAudio=NorseAudio;
  window.getPlayerTerritoryDebug=()=>{const p=playerPos();return {position:{x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2))},protected:isPlayerTerritoryAt(p.x,p.z),homeDistance:Number(Math.hypot(p.x-STARTER_CAMP_POSITION.x,p.z-STARTER_CAMP_POSITION.z).toFixed(2)),friendlyGuards:enemies.filter(isFriendlyGuard).length,hostileGuards:enemies.filter(e=>canAttackPlayer(e,p.x,p.z)).length};};
  window.getGameHealthDebug=()=>{
+  const frameTimes=Array.from(fpsFrameSamples.subarray(0,fpsFrameSampleCount)).sort((a,b)=>a-b);
+  const frameAt=p=>frameTimes.length?Number(frameTimes[Math.min(frameTimes.length-1,Math.floor((frameTimes.length-1)*p))].toFixed(2)):null;
+  const frameAverage=frameTimes.length?Number((frameTimes.reduce((sum,value)=>sum+value,0)/frameTimes.length).toFixed(2)):null;
   const footNodes=[realRigNodes.leftFoot,realRigNodes.rightFoot].filter(Boolean);
   const footY=footNodes.map(node=>{try{node.computeWorldMatrix(true);return Number(node.getAbsolutePosition().y.toFixed(3));}catch(_){return null;}});
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'8',build:'0.6.222',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'8',build:'0.6.223',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
    boat:{onShip,velocity:Number(boatVelocity.toFixed(3)),position:{x:Number(ship.position.x.toFixed(2)),y:Number(ship.position.y.toFixed(2)),z:Number(ship.position.z.toFixed(2))},rotation:{x:Number(ship.rotation.x.toFixed(3)),y:Number(ship.rotation.y.toFixed(3)),z:Number(ship.rotation.z.toFixed(3))},flatWakeStrips:shipWake.map(w=>({name:w.name,enabled:w.isEnabled()})),activeSprayParticles:activeSpray,sprayCapacity:VESSEL_SPRAY_COUNT},
-   runtime:{graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,galaxyA12NachoPerformanceProfile:isGalaxyA12NachoPerformance,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,activeFoamIsland:activeTidalFoamIslandIndex,waterReflectionIsland:activeWaterReflectionIslandIndex,waterReflectionMeshes:nordicWaterMirror&&nordicWaterMirror.renderList?nordicWaterMirror.renderList.length:0,waterReflectionRefreshRate:nordicWaterMirror&&nordicWaterMirror.refreshRate||0,waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),terrainHashCacheEntries:terrainHashCache.size,terrainHashCacheLimit:TERRAIN_HASH_CACHE_LIMIT,groundRelaxHz:30,enemyAiRateCapHz:isConstrainedMobile?20:60,companionAiRateCapHz:isConstrainedMobile?15:60,grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassVisibleBatches:qualityGrassVisibleBatchCount,grassTotalBatches:qualityGrassLodBatches.length,grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
+   runtime:{frameTimingMs:{samples:frameTimes.length,average:frameAverage,p50:frameAt(.50),p95:frameAt(.95),p99:frameAt(.99),max:frameTimes.length?Number(frameTimes[frameTimes.length-1].toFixed(2)):null},graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,galaxyA12NachoPerformanceProfile:isGalaxyA12NachoPerformance,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,activeFoamIsland:activeTidalFoamIslandIndex,waterReflectionIsland:activeWaterReflectionIslandIndex,waterReflectionMeshes:nordicWaterMirror&&nordicWaterMirror.renderList?nordicWaterMirror.renderList.length:0,waterReflectionRefreshRate:nordicWaterMirror&&nordicWaterMirror.refreshRate||0,waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),terrainHashCacheEntries:terrainHashCache.size,terrainHashCacheLimit:TERRAIN_HASH_CACHE_LIMIT,groundRelaxHz:30,enemyAiRateCapHz:isConstrainedMobile?20:60,companionAiRateCapHz:isConstrainedMobile?15:60,grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassVisibleBatches:qualityGrassVisibleBatchCount,grassTotalBatches:qualityGrassLodBatches.length,grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,userAgent:navigator.userAgent},
    wildlife:ambientFauna.map(animal=>({kind:animal.kind,island:animal.homeIslandIndex,meshes:animal.meshCount,bones:animal.skeletonBoneCount,skinnedVertices:animal.skinnedVertexCount,dimensions:animal.dimensions,animation:animal.activeAnimation&&animal.activeAnimation.name||null,meshNames:animal.meshNames})),
    npcs:{enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,ambientPeople:ambientPeople.length,ambientMoving:ambientPeople.filter(n=>Number(n.parts.actualMoveSpeed)>.1).length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,npcClips:humanEnemyParts.filter(p=>p.realHuman).slice(0,8).map(p=>({name:p.name,walk:p.realHuman.walk&&p.realHuman.walk.name,walkPlaying:!!(p.realHuman.walk&&p.realHuman.walk.isPlaying),current:p.realHuman.current&&p.realHuman.current.name,enabled:p.root.isEnabled()}))}
   };
@@ -9921,7 +9926,22 @@ function updateHUD(){
   return land.every(a=>{const dx=x-a.x,dz=z-a.z,d=Math.max(.001,Math.hypot(dx,dz)),nx=dx/d,nz=dz/d;const hullReach=halfLength*Math.abs(fx*nx+fz*nz)+halfWidth*Math.abs(sx*nx+sz*nz);return d>a.r+hullReach-.8;});
  }
  function boatCanMove(x,z){return vesselCanMove(ship,x,z,5.25,1.22);}
- function update(dt){
+ const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(['attack','chop','mine','hurt','dodge','claim','recruit']);
+const PLAYER_BOAT_FLOAT_OPTIONS=Object.freeze({length:10.0,beam:2.25,draft:.39});
+const RAIDER_BOAT_FLOAT_OPTIONS=Object.freeze({length:9.6,beam:2.15,draft:.37});
+const playerGroundNormalCache=new B.Vector3(0,1,0);let playerGroundNormalCacheValid=false;
+function refreshPlayerGroundNormal(x,z){
+ const step=.34,invStep=1/(step*2);
+ const slopeX=(terrainSurfaceAt(x+step,z)-terrainSurfaceAt(x-step,z))*invStep;
+ const slopeZ=(terrainSurfaceAt(x,z+step)-terrainSurfaceAt(x,z-step))*invStep;
+ const nx=-slopeX,nz=-slopeZ,invLength=1/Math.sqrt(nx*nx+1+nz*nz);
+ playerGroundNormalCache.set(nx*invLength,invLength,nz*invLength);playerGroundNormalCacheValid=true;
+ return playerGroundNormalCache;
+}
+function update(dt){
+  if(onShip)playerGroundNormalCacheValid=false;
+  else if(!playerGroundNormalCacheValid)refreshPlayerGroundNormal(player.root.position.x,player.root.position.z);
+  const playerGroundNormalForMovement=playerGroundNormalCache;
   worldUpdateCount++;worldUpdatePhase='environment / water';
   updatePerformanceIslandStreaming(dt);
   updateQualityGrassLod(dt);
@@ -9941,6 +9961,7 @@ function updateHUD(){
     player.root.position.x=safePlayerPoint.x;player.root.position.z=safePlayerPoint.z;
     player.root.position.y=terrainSurfaceAt(safePlayerPoint.x,safePlayerPoint.z)+(realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08);
     playerGroundYFiltered=player.root.position.y;playerVelocity.x=0;playerVelocity.z=0;
+    refreshPlayerGroundNormal(safePlayerPoint.x,safePlayerPoint.z);
     lastSafePosition.copyFrom(player.root.position);cameraTargetSmoothed=null;
    }
   }
@@ -9952,7 +9973,7 @@ function updateHUD(){
   }
   for(const buoy of regattaBuoys){if(!worldEntityVisualDue(buoy,buoy.x,buoy.z))continue;buoy.root.position.y=waterHeight(buoy.x,buoy.z,elapsed)-.12+Math.sin(elapsed*1.35+buoy.phase)*.035;buoy.root.rotation.z=Math.sin(elapsed*.72+buoy.phase)*.025;buoy.root.rotation.x=Math.cos(elapsed*.61+buoy.phase)*.018;}
   invuln=Math.max(0,invuln-dt);comboWindow=Math.max(0,comboWindow-dt);blockAge+=dt;cameraShake=Math.max(0,cameraShake-dt*2.8);saveAccumulator+=dt;if(saveAccumulator>=18){saveAccumulator=0;saveGame(true);}
-  for(let i=installAnimations.length-1;i>=0;i--){const a=installAnimations[i];if(!a.mesh||a.mesh.isDisposed&&a.mesh.isDisposed()){installAnimations.splice(i,1);continue;}a.t=Math.min(1,a.t+dt/a.duration);const k=1-Math.pow(1-a.t,3);a.mesh.scaling.copyFrom(B.Vector3.Lerp(v(.025,.025,.025),a.target,k));if(a.t>=1)installAnimations.splice(i,1);}dodgeTimer=Math.max(0,dodgeTimer-dt);healCooldown=Math.max(0,healCooldown-dt);
+  for(let i=installAnimations.length-1;i>=0;i--){const a=installAnimations[i];if(!a.mesh||a.mesh.isDisposed&&a.mesh.isDisposed()){installAnimations.splice(i,1);continue;}a.t=Math.min(1,a.t+dt/a.duration);const k=1-Math.pow(1-a.t,3),target=a.target,scale=a.mesh.scaling;scale.x=.025+(target.x-.025)*k;scale.y=.025+(target.y-.025)*k;scale.z=.025+(target.z-.025)*k;if(a.t>=1)installAnimations.splice(i,1);}dodgeTimer=Math.max(0,dodgeTimer-dt);healCooldown=Math.max(0,healCooldown-dt);
   input.x+=(input.tx-input.x)*Math.min(1,dt*15);input.y+=(input.ty-input.y)*Math.min(1,dt*15);
   let ix=input.x+(keys.d?1:0)-(keys.a?1:0),iy=input.y+(keys.s?1:0)-(keys.w?1:0);
   let len=Math.hypot(ix,iy);if(len>1){ix/=len;iy/=len;}
@@ -9961,7 +9982,7 @@ function updateHUD(){
   shipAttackCooldown=Math.max(0,shipAttackCooldown-dt);
   if(!onShip){
    worldUpdatePhase='boat / idle vessel float';
-   if(worldEntityVisualDue(ship,ship.position.x,ship.position.z))updateVesselFloat(ship,dt,playerBoatFloatState,{length:10.0,beam:2.25,draft:.39});
+   if(worldEntityVisualDue(ship,ship.position.x,ship.position.z))updateVesselFloat(ship,dt,playerBoatFloatState,PLAYER_BOAT_FLOAT_OPTIONS);
   }
   if(onShip){
    worldUpdatePhase='boat / steering, collision and propulsion';
@@ -9974,7 +9995,7 @@ function updateHUD(){
    if(Math.abs(boatVelocity)>.06&&boatCanMove(nx,nz)){ship.position.x=nx;ship.position.z=nz;}else if(!boatCanMove(nx,nz)){boatVelocity*=.22;}
    if(crippled&&Math.abs(boatVelocity)>0.2)document.getElementById('statusLine').textContent='CASCO DESTROZADO · Navega lentamente hasta la costa y repara el drakkar.';
    worldUpdatePhase='boat / flotation and hull response';
-   updateVesselFloat(ship,dt,playerBoatFloatState,{length:10.0,beam:2.25,draft:.39,throttle,steer});
+   updateVesselFloat(ship,dt,playerBoatFloatState,PLAYER_BOAT_FLOAT_OPTIONS);
    const wakeSpeed=Math.abs(boatVelocity),wakeFactor=Math.min(1.55,wakeSpeed/5.5);
    clanPennant.rotation.y=Math.sin(elapsed*2.1)*.12;clanPennant.rotation.z=Math.sin(elapsed*1.7)*.035;
    // Las dos bandas planas de espuma causaban las líneas blancas detrás del casco.
@@ -9983,26 +10004,27 @@ function updateHUD(){
    wakeMaterial.alpha=0;
    worldUpdatePhase='boat / spray particles and wake';
    emitVesselSplashes(ship,dt,boatVelocity,playerBoatSprayState);
-   shipWake.forEach((wake)=>{
-    wake.setEnabled(false);
+   for(let wakeIndex=0;wakeIndex<shipWake.length;wakeIndex++){
+    const wake=shipWake[wakeIndex];wake.setEnabled(false);
     wake.scaling.x=.82+wakeFactor*.78;wake.scaling.z=.72+wakeFactor*.92;
     wake.position.y=.42;
-   });
+   }
    yaw=ship.rotation.y;cameraYaw=B.Scalar.Lerp(cameraYaw,ship.rotation.y,Math.min(1,dt*1.5));
   }else{
    // Aceleración y frenada progresivas: el cuerpo gana velocidad y pierde inercia de forma gradual.
-   const movementLocked=['attack','chop','mine','hurt','dodge','claim','recruit'].includes(playerAction);
+   const movementLocked=PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction);
    let targetX=0,targetZ=0;
    if(len>.075&&!movementLocked){
-    const forward=v(Math.sin(cameraYaw),0,Math.cos(cameraYaw)),right=v(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
-    const dir=right.scale(ix).add(forward.scale(-iy));if(dir.lengthSquared()>1)dir.normalize();
+    const sinYaw=Math.sin(cameraYaw),cosYaw=Math.cos(cameraYaw);
+    let dirX=cosYaw*ix-sinYaw*iy,dirZ=-sinYaw*ix-cosYaw*iy;
+    const dirLengthSq=dirX*dirX+dirZ*dirZ;if(dirLengthSq>1){const invDirLength=1/Math.sqrt(dirLengthSq);dirX*=invDirLength;dirZ*=invDirLength;}
     const sprinting=running&&stamina>1;
     // A little less speed uphill and slightly more downhill; lateral movement remains controlled.
-    const slopeX=(terrainSurfaceAt(player.root.position.x+.55,player.root.position.z)-terrainSurfaceAt(player.root.position.x-.55,player.root.position.z))/1.10;
-    const slopeZ=(terrainSurfaceAt(player.root.position.x,player.root.position.z+.55)-terrainSurfaceAt(player.root.position.x,player.root.position.z-.55))/1.10;
-    const climb=Math.max(-.18,Math.min(.24,slopeX*dir.x+slopeZ*dir.z));
+    const slopeX=-playerGroundNormalForMovement.x/Math.max(.001,playerGroundNormalForMovement.y);
+    const slopeZ=-playerGroundNormalForMovement.z/Math.max(.001,playerGroundNormalForMovement.y);
+    const climb=Math.max(-.18,Math.min(.24,slopeX*dirX+slopeZ*dirZ));
     const baseSpeed=sprinting?7.7:3.55,speed=baseSpeed*(1-climb)*(playerAirborne?.34:1);
-    targetX=dir.x*speed;targetZ=dir.z*speed;
+    targetX=dirX*speed;targetZ=dirZ*speed;
    }
    const targetMagnitude=Math.hypot(targetX,targetZ),currentMagnitude=Math.hypot(playerVelocity.x,playerVelocity.z);
    const accelerating=targetMagnitude>currentMagnitude+.06;
@@ -10025,7 +10047,6 @@ function updateHUD(){
    }
   }
 
-  const oarStroke=onShip?Math.sin(elapsed*7.2):0;
   for(const row of playerOars){const stroke=onShip?Math.sin(elapsed*5.8+row.phase):0;row.pivot.rotation.y=onShip?stroke*.25:0;row.pivot.rotation.x=onShip?Math.sin(elapsed*5.8+row.phase+1.1)*.06:0;}
   updateDrakkarPennant(dt);updateDrakkarSail(dt);
 
@@ -10037,7 +10058,7 @@ function updateHUD(){
    const dx=raiderFocus.x-raider.root.position.x,dz=raiderFocus.z-raider.root.position.z,dist=Math.hypot(dx,dz);
    const updateRaiderVisuals=worldEntityVisualDue(raider,raider.root.position.x,raider.root.position.z);
    if(updateRaiderVisuals){
-    updateVesselFloat(raider.root,dt,raider.floatState,{length:9.6,beam:2.15,draft:.37});
+    updateVesselFloat(raider.root,dt,raider.floatState,RAIDER_BOAT_FLOAT_OPTIONS);
     worldUpdatePhase='boat / enemy vessel simulation';
     const raiderSlope=waterNormalAt(raider.root.position.x,raider.root.position.z,elapsed);
     raider._lastWaveRoll=raiderSlope.roll;
@@ -10085,7 +10106,7 @@ function updateHUD(){
    playerShadow.setEnabled(true);playerShadow.position.y=.025-airHeight;
    playerShadow.scaling.x=1+airHeight*.18;playerShadow.scaling.y=1+airHeight*.18;
    player.root.rotation.y=B.Scalar.LerpAngle(player.root.rotation.y,yaw,Math.min(1,dt*15));
-   const normal=terrainNormalAt(player.root.position.x,player.root.position.z,.34);
+   const normal=refreshPlayerGroundNormal(player.root.position.x,player.root.position.z);
    const forwardSlope=-normal.x*Math.sin(yaw)-normal.z*Math.cos(yaw),sideSlope=-normal.x*Math.cos(yaw)+normal.z*Math.sin(yaw);
    player.root.rotation.x=B.Scalar.Lerp(player.root.rotation.x,Math.max(-.34,Math.min(.34,-Math.atan(forwardSlope))),Math.min(1,dt*10));
    player.root.rotation.z=B.Scalar.Lerp(player.root.rotation.z,Math.max(-.30,Math.min(.30,Math.atan(sideSlope))),Math.min(1,dt*10));
@@ -10828,7 +10849,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.222 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.223 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -10906,7 +10927,7 @@ function updateHUD(){
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.222 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.223 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
