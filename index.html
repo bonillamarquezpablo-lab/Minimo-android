@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.208">
-<meta name="el-sin-nombre-repair" content="0.6.208 exact-wave water math cache, batched ground imprints and reusable sand-splash particles">
+<meta name="el-sin-nombre-build" content="0.6.209">
+<meta name="el-sin-nombre-repair" content="0.6.209 exact-wave water math cache, batched ground imprints and reusable sand-splash particles">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.208</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.209</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -3048,7 +3048,7 @@ async function removeStrayDebugGeometry(targetScene){
  const GroundDynamics=(()=>{
   const maxImprints=isPerformanceMode?(isConstrainedMobile?18:28):64,maxParticles=isPerformanceMode?22:48;
   const imprintCols=13,imprintRows=23,imprintVertexCount=imprintCols*imprintRows,imprintIndicesPerFoot=(imprintCols-1)*(imprintRows-1)*6;
-  let stepDistance=0,alternateFoot=0,beachClock=0,imprintCursor=0,particleCursor=0;
+  let stepDistance=0,alternateFoot=0,beachClock=0,imprintCursor=0,particleCursor=0,lastStepX=0,lastStepZ=0,hasLastStepPosition=false,footstepsEmitted=0,lastFootstepSegmentLength=0;
   const imprints=Array.from({length:maxImprints},(_,slot)=>({slot,active:false,age:0,life:1,fadeAccumulator:0,baseAlpha:new Float32Array(imprintVertexCount)}));
   const particles=Array.from({length:maxParticles},(_,slot)=>({slot,life:0,maxLife:1,age:0,x:0,y:-1000,z:0,vx:0,vy:0,vz:0,size:.02,groundY:0,wet:false,r:.7,g:.6,b:.45,a:.8}));
   const imprintMaterial=new B.StandardMaterial('NorseGroundImprintMaterial',scene);
@@ -3314,19 +3314,42 @@ async function removeStrayDebugGeometry(targetScene){
    }
    if(grainBuffersDirty){grainMesh.thinInstanceBufferUpdated('matrix');grainMesh.thinInstanceBufferUpdated('color');}
    updateBeach(dt,x,z);
-   if(onShip||airborne||!Number.isFinite(distance)||distance<=0){if(!onShip&&(!Number.isFinite(distance)||distance<=0))stepDistance=0;groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;return;}
-   stepDistance+=distance;
-   const stride=running?1.62:1.14;
-   while(stepDistance>=stride){
-    stepDistance-=stride;alternateFoot^=1;
-    const side=alternateFoot?-.145:.145,forwardX=Math.sin(heading),forwardZ=Math.cos(heading),rightX=Math.cos(heading),rightZ=-Math.sin(heading);
-    const back=running?.18:.13,px=x-forwardX*back+rightX*side,pz=z-forwardZ*back+rightZ*side;
-    addStep(px,pz,heading,running);
+   if(onShip||airborne||!Number.isFinite(distance)||distance<=0||!Number.isFinite(x)||!Number.isFinite(z)){
+    stepDistance=0;hasLastStepPosition=false;
+    groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;return;
    }
+   // Keep the actual previous world position. Accumulated distance alone placed every
+   // crossed stride at the current frame position, stacking multiple imprints on one spot.
+   if(!hasLastStepPosition){
+    lastStepX=x;lastStepZ=z;hasLastStepPosition=true;
+    groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;return;
+   }
+   const segmentX=x-lastStepX,segmentZ=z-lastStepZ,segmentLength=Math.hypot(segmentX,segmentZ);
+   lastFootstepSegmentLength=segmentLength;
+   // A respawn/teleport must not draw a long artificial trail across the island.
+   if(!Number.isFinite(segmentLength)||segmentLength>Math.max(4,distance*2+1)){
+    stepDistance=0;lastStepX=x;lastStepZ=z;
+    groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;return;
+   }
+   if(segmentLength>.0001){
+    const stride=running?1.62:1.14;let travelled=0;
+    while(travelled<segmentLength){
+     const needed=stride-stepDistance;
+     if(segmentLength-travelled+1e-8<needed)break;
+     travelled+=needed;
+     const t=Math.min(1,travelled/segmentLength),stepX=lastStepX+segmentX*t,stepZ=lastStepZ+segmentZ*t;
+     stepDistance=0;alternateFoot^=1;
+     const side=alternateFoot?-.145:.145,forwardX=Math.sin(heading),forwardZ=Math.cos(heading),rightX=Math.cos(heading),rightZ=-Math.sin(heading);
+     const back=running?.18:.13,px=stepX-forwardX*back+rightX*side,pz=stepZ-forwardZ*back+rightZ*side;
+     addStep(px,pz,heading,running);footstepsEmitted++;
+    }
+    stepDistance+=segmentLength-travelled;
+   }
+   lastStepX=x;lastStepZ=z;
    groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;
   }
-  function reset(){stepDistance=0;alternateFoot=0;}
-  return {update,reset,counts:()=>({imprints:imprints.reduce((count,item)=>count+(item.active?1:0),0),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1})};
+  function reset(){stepDistance=0;alternateFoot=0;hasLastStepPosition=false;footstepsEmitted=0;lastFootstepSegmentLength=0;}
+  return {update,reset,counts:()=>({imprints:imprints.reduce((count,item)=>count+(item.active?1:0),0),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3))})};
  })();
  const tidalFoamMeshes=[];
  function buildTidalFoam(island,index){
@@ -8495,7 +8518,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'7',build:'0.6.208',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'7',build:'0.6.209',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
