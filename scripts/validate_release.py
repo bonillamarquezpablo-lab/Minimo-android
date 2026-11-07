@@ -127,6 +127,10 @@ def main() -> None:
         fail("Calidad debe limitar la resolución interna para reducir el coste de GPU sin recortar efectos.")
     if "function updateQualityGrassLod(dt)" not in index_html or "qualityGrassLodBatches.push" not in index_html or "updateQualityGrassLod(dt);" not in index_html:
         fail("Calidad debe aplicar LOD por distancia a los lotes de hierba.")
+    if "function syncNordicWaterReflectionIsland()" not in index_html or "syncNordicWaterReflectionIsland();" not in index_html or "activeWaterReflectionIslandIndex" not in index_html:
+        fail("El espejo del agua debe actualizarse solo con la isla activa.")
+    if "nordicWaterMirror.refreshRate=isTouchDevice?12:8" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
+        fail("El espejo de Calidad debe reducir su frecuencia y excluir la espuma del pase de reflejo.")
     if "const boneCount=skeletons.reduce" not in index_html or "skinnedVertexCount<600" not in index_html or "const attachedBounds=boundsForMeshes(meshes)" not in index_html:
         fail("La fauna debe validar el cuerpo riggeado y alinear el modelo tras reparentar sus raíces.")
     if "const normalized=group=>" not in index_html:
