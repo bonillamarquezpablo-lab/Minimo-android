@@ -133,8 +133,8 @@ def main() -> None:
         fail("El espejo de Calidad debe reducir su frecuencia y excluir la espuma del pase de reflejo.")
     if "const boneCount=skeletons.reduce" not in index_html or "skinnedVertexCount<600" not in index_html or "const attachedBounds=boundsForMeshes(meshes)" not in index_html:
         fail("La fauna debe validar el cuerpo riggeado y alinear el modelo tras reparentar sus raíces.")
-    if "const normalized=group=>" not in index_html:
-        fail("La fauna debe resolver los clips de animación por nombre normalizado.")
+    if "const normalized=group=>" not in index_html or "const pickExact=name=>playable.find(group=>normalized(group)===name)||null;" not in index_html or "pickExact('animalarmature'+name)" not in index_html:
+        fail("La fauna debe priorizar los clips canónicos Idle/Walk/Gallop y usar AnimalArmature como respaldo.")
     if "const segments=Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)))" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
         fail("Calidad debe construir una banda continua y de alta resolución alrededor de toda la costa.")
     if "foam.mesh.updateVerticesData(B.VertexBuffer.ColorKind,colors,false,false)" not in index_html or "const breaking=.52+.30*pulse+.18*secondary" not in index_html:
