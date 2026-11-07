@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.212"
+EXPECTED_VERSION = "0.6.213"
 
 HTML_PAGES = (
     "index.html",
@@ -302,6 +302,14 @@ def main() -> None:
         fail("La arena no utiliza el albedo costero de grano fino y su relieve PBR.")
     if "function buildLivingBeachLayer(island,index)" not in index_html or "function updateBeach(dt,focusX,focusZ)" not in index_html:
         fail("Falta la capa de playa con humedad y espuma residual dinámica.")
+    if "const radialOffsets=isPerformanceMode?[.035,.38,.92]:[.035,.24,.62,1.24,2.05]" not in index_html or "radius=shorelineFoamRadius(island,angle,oceanTime)" not in index_html:
+        fail("Las lenguas de espuma deben generarse en varias filas radiales sobre la zona de arena.")
+    if "radius=shoreline+(row===0?.025:(row===1?.14:.30))" in index_html or "const radius=shoreline+(row===0?.025:(row===1?.14:.30))" in index_html:
+        fail("La espuma no debe quedar desplazada hacia el mar: sus filas se sitúan tierra adentro.")
+    if "shoreline-foam.radialOffsets[row]" not in index_html or "Math.max(groundY,seaY)+.018" not in index_html:
+        fail("La espuma debe seguir la superficie real de la playa y del borde de agua.")
+    if "foam.mesh.updateVerticesData(B.VertexBuffer.ColorKind,foam.colors,false)" not in index_html or "foam.baseAlpha[vertex]*pulse" not in index_html:
+        fail("La espuma debe animar sus transparencias sin crear partículas ni draw calls nuevos.")
     if "foamPattern=new Float32Array((segments+1)*rows)" not in index_html or "foamPattern,wetness,residue,lastShore" not in index_html:
         fail("La espuma de resaca debe usar una máscara espacial precomputada y reutilizada.")
     if "foamMass=smooth01((broadFoam*.54+mediumFoam*.31+fineFoam*.15-.49)*8.5)" not in index_html or "foamFilament=1-smooth01((Math.abs(mediumFoam-.5)-.19)*7.5)" not in index_html:
@@ -365,7 +373,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.212</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.213</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "const warmupResult=await Promise.race([" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
         fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
