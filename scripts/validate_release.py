@@ -422,7 +422,7 @@ def main() -> None:
         fail("El hito de defensa naval solo se desbloquea al explorar y conquistar todo el archipiélago.")
     if "if(vl.islandGarrison)return;" not in index_html:
         fail("Los puestos insulares no deben añadir civiles de relleno y exceder el presupuesto móvil.")
-    if "const warmupResult=await Promise.race([" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html or "await scene.whenReadyAsync()" in index_html:
+    if "const warmupResult=isPerformanceMode" not in index_html or "?await fullSceneWarmup" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html:
         fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
     if "const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;" not in index_html or "await yieldGrassStartupIfNeeded(islandIndex,placed,want);" not in index_html:
         fail("La generación de vegetación debe ceder el control según tiempo real de CPU.")
