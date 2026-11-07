@@ -7754,7 +7754,7 @@ function createRealWeapon(type='axe'){
    const islandPlacementStartedAt=performance.now();
    const radius=island.r*.865;
    const gridSide=Math.ceil(Math.sqrt(want*1.60)),cellSize=(radius*2)/gridSide;
-   const occupiedGridCells=new Set(),placedGridPositions=new Map();
+   const occupiedGridCells=new Uint8Array(gridSide*gridSide),placedGridPositions=new Float32Array(gridSide*gridSide*2);let occupiedGridCellCount=0;
    // Muestreo especializado para la isla actual: evita recorrer las 13 islas cinco veces
    // por candidato. Conserva los mismos límites de costa, altura y pendiente del validador.
    // Lee la altura de la malla que ya está renderizando Babylon. La interpolación
@@ -7830,12 +7830,12 @@ function createRealWeapon(type='axe'){
     const gridCol=Math.max(0,Math.min(gridSide-1,Math.floor((x-(island.x-radius))/cellSize)));
     const gridRow=Math.max(0,Math.min(gridSide-1,Math.floor((z-(island.z-radius))/cellSize)));
     const gridCell=gridRow*gridSide+gridCol;
-    if(occupiedGridCells.has(gridCell))return false;
+    if(occupiedGridCells[gridCell])return false;
     const minSpacing=cellSize*.24,minSpacingSq=minSpacing*minSpacing;
     for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){
      const nx=gridCol+dx,nz=gridRow+dz;if(nx<0||nz<0||nx>=gridSide||nz>=gridSide)continue;
-     const neighbour=placedGridPositions.get(nz*gridSide+nx);if(!neighbour)continue;
-     const sx=x-neighbour.x,sz=z-neighbour.z;if(sx*sx+sz*sz<minSpacingSq)return false;
+     const neighbourCell=nz*gridSide+nx;if(!occupiedGridCells[neighbourCell])continue;
+     const neighbourOffset=neighbourCell*2,sx=x-placedGridPositions[neighbourOffset],sz=z-placedGridPositions[neighbourOffset+1];if(sx*sx+sz*sz<minSpacingSq)return false;
     }
     // La pendiente ya se validó con el mismo heightfield; el filtro espacial
     // posterior conserva caminos, asentamientos y colisiones sin repetir muestreos.
@@ -7859,12 +7859,13 @@ function createRealWeapon(type='axe'){
     const tint=rand(.93,1.06),c=batch.colors;
     c[colorOffset]=tint;c[colorOffset+1]=rand(.96,1.03);c[colorOffset+2]=rand(.90,.99);c[colorOffset+3]=1;
     batch.count++;
-    occupiedGridCells.add(gridCell);placedGridPositions.set(gridCell,{x,z});
+    occupiedGridCells[gridCell]=1;const placedOffset=gridCell*2;placedGridPositions[placedOffset]=x;placedGridPositions[placedOffset+1]=z;occupiedGridCellCount++;
     placed++;count++;return true;
    };
    // One jittered sample per small cell creates an even, natural ground-cover distribution.
    const jitter=isPerformanceMode ? .46 : .47;
-   const candidateCells=Array.from({length:gridSide*gridSide},(_,i)=>i);
+   const candidateCells=new Uint32Array(gridSide*gridSide);
+   for(let i=0;i<candidateCells.length;i++)candidateCells[i]=i;
    for(let i=candidateCells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)),tmp=candidateCells[i];candidateCells[i]=candidateCells[j];candidateCells[j]=tmp;}
    for(const sample of candidateCells){
     if(placed>=want)break;
@@ -7878,9 +7879,9 @@ function createRealWeapon(type='axe'){
     tryPlaceGrass(x,z);
    }
    // Reintenta las celdas que quedaron vacías antes de recurrir al relleno aleatorio.
-   const refillCells=candidateCells.filter(sample=>!occupiedGridCells.has(sample));
-   for(const sample of refillCells){
+   for(const sample of candidateCells){
     if(placed>=want)break;
+    if(occupiedGridCells[sample])continue;
     const col=sample%gridSide,row=Math.floor(sample/gridSide);
     const dx=(col+.5)/gridSide*radius*2-radius,dz=(row+.5)/gridSide*radius*2-radius;
     if(dx*dx+dz*dz>radius*radius)continue;
@@ -7890,7 +7891,7 @@ function createRealWeapon(type='axe'){
      const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
      const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
      tryPlaceGrass(x,z);
-     if(occupiedGridCells.has(sample))break;
+     if(occupiedGridCells[sample])break;
     }
    }
    // Completa solamente las celdas que hayan caído sobre árboles, roca, pendiente o asentamientos.
@@ -7902,7 +7903,7 @@ function createRealWeapon(type='axe'){
    }
    await maybeYieldGrassStartup(true);
    const totalGridCells=Math.max(1,Math.round(Math.PI*.25*gridSide*gridSide));
-   grassDebugIslandStats.push({name:island.name||('ISLA '+(islandIndex+1)),target:want,placed,attempts:tries,placementMs:Math.round(performance.now()-islandPlacementStartedAt),fillPct:Math.round(placed/Math.max(1,want)*100),occupiedCells:occupiedGridCells.size,totalGridCells,gridPct:Math.min(100,Math.round(occupiedGridCells.size/totalGridCells*100))});
+   grassDebugIslandStats.push({name:island.name||('ISLA '+(islandIndex+1)),target:want,placed,attempts:tries,placementMs:Math.round(performance.now()-islandPlacementStartedAt),fillPct:Math.round(placed/Math.max(1,want)*100),occupiedCells:occupiedGridCellCount,totalGridCells,gridPct:Math.min(100,Math.round(occupiedGridCellCount/totalGridCells*100))});
   }
   let grassUploadBatch=0;
   const grassUploadStartedAt=performance.now();
