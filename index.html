@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.197">
+<meta name="el-sin-nombre-build" content="0.6.198">
 <meta name="el-sin-nombre-repair" content="0.6.195 preserve rigged deer/stag/wolf; validate island ground and animal roaming; deck-mounted raider crew; plank-built huts; distance-culled faction badges; preserve master pose">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.197</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.198</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -3302,7 +3302,7 @@ async function removeStrayDebugGeometry(targetScene){
  // Source files are pinned to an immutable revision; no sphere/capsule animal placeholders are used.
  const WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837';
  const WILDLIFE_ASSET_ROOT='https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/'+WILDLIFE_SOURCE_COMMIT+'/assets/Animated%20Animal%20Pack-glb/';
- const WILDLIFE_MODEL_DEFS={deer:{file:'Deer.glb',height:1.42,walkSpeed:.68,runSpeed:3.25},stag:{file:'Stag.glb',height:1.78,walkSpeed:.82,runSpeed:3.85},wolf:{file:'Wolf.glb',height:.82,walkSpeed:1.05,runSpeed:4.05}};
+ const WILDLIFE_MODEL_DEFS={deer:{file:'Deer.glb',height:1.42,walkSpeed:.68,runSpeed:3.25,collisionRadius:1.28},stag:{file:'Stag.glb',height:1.78,walkSpeed:.82,runSpeed:3.85,collisionRadius:1.58},wolf:{file:'Wolf.glb',height:.82,walkSpeed:1.05,runSpeed:4.05,collisionRadius:.92}};
  const ambientFauna=[],wildlifeSpawnSpecs=[],wildlifeBlobs=new Map();
  function chooseWildlifeClips(groups){
   const playable=(groups||[]).filter(group=>group&&Array.isArray(group.targetedAnimations)&&group.targetedAnimations.length>0);
@@ -3351,17 +3351,21 @@ async function removeStrayDebugGeometry(targetScene){
    const bounds=boundsForMeshes(meshes);
    if(!Number.isFinite(bounds.height)||bounds.height<.25)throw new Error('Altura de malla no válida.');
    const definition=WILDLIFE_MODEL_DEFS[kind],scale=definition.height/Math.max(.001,bounds.height)*size;
+   // The GLB's local lower bound is not guaranteed to sit at Y=0. Preserve this
+   // correction on the actor: updateWildlife() runs every frame and must not
+   // discard it, otherwise the torso sinks and only the eyes/antlers remain visible.
+   const groundOffset=-bounds.min.y*scale;
    actor=new B.TransformNode('WildlifeActor_'+kind+'_'+index,scene);
    roots.forEach(root=>{root.parent=actor;try{root.setEnabled(true);}catch(_){}});
    actor.scaling.setAll(scale);
-   actor.position=v(x,-bounds.min.y*scale+terrainHeightOnIsland(homeIsland,x,z),z);
+   actor.position=v(x,groundOffset+terrainHeightOnIsland(homeIsland,x,z),z);
    actor.rotation.y=rand(0,Math.PI*2);
    meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=false;});
    const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);
    groups.forEach(group=>{try{group.stop();}catch(_){}});
-   const animal={kind,root:actor,x,z,size,homeIslandIndex,heading:actor.rotation.y,turnTimer:rand(2.5,6),wanderTimer:rand(2,5),wandering:Math.random()<.45,flee:0,clips,groups,activeAnimation:null,activeMode:''};
+   const animal={kind,root:actor,x,z,size,homeIslandIndex,groundOffset,collisionRadius:definition.collisionRadius*size,heading:actor.rotation.y,turnTimer:rand(2.5,6),wanderTimer:rand(2,5),wandering:Math.random()<.45,flee:0,clips,groups,activeAnimation:null,activeMode:''};
    playWildlifeAnimation(animal,'idle');addModelShadow(actor,isPerformanceMode?1:2);
-   console.info('Animal GLB importado',{kind,meshes:meshes.length,skinned:skinned.length,skeletons:(imported.skeletons||[]).length,animations:groups.map(group=>group.name),height:bounds.height});
+   console.info('Animal GLB importado',{kind,meshes:meshes.length,skinned:skinned.length,skeletons:(imported.skeletons||[]).length,animations:groups.map(group=>group.name),height:bounds.height,groundOffset:Number(groundOffset.toFixed(4)),collisionRadius:animal.collisionRadius});
    return animal;
   }catch(err){
    if(imported){try{(imported.animationGroups||[]).forEach(group=>group.stop());(imported.skeletons||[]).forEach(skeleton=>skeleton.dispose());(imported.meshes||[]).forEach(mesh=>mesh.dispose(false,true));(imported.transformNodes||[]).forEach(node=>node.dispose(false,true));}catch(_){}}
@@ -3383,15 +3387,17 @@ async function removeStrayDebugGeometry(targetScene){
   setLoadingProgress(52,loaded?'Fauna nórdica preparada.':'La partida continúa sin fauna: no se importó ningún cuerpo animal completo.');
   return loaded;
  }
- function canWildlifeMove(x,z){
-  if(!isLand(x,z)||isVegetationTrailClearance(x,z,.65))return false;
-  if(settlements.some(point=>Math.hypot(x-point[0],z-point[1])<13.8))return false;
-  if(trees.some(tree=>tree.alive&&Math.hypot(x-tree.x,z-tree.z)<(tree.radius||.6)+.65))return false;
-  if(rocks.some(rock=>rock.alive&&Math.hypot(x-rock.x,z-rock.z)<(rock.radius||.75)+.45))return false;
+ function canWildlifeMove(x,z,clearance=.65){
+  if(!isLand(x,z)||isVegetationTrailClearance(x,z,Math.max(.65,clearance*.8)))return false;
+  if(settlements.some(point=>Math.hypot(x-point[0],z-point[1])<13.8+clearance*.55))return false;
+  // Collision margins use the animal body radius, not just its root pivot. This
+  // prevents a deer/wolf body from crossing a trunk while its root is still outside it.
+  if(trees.some(tree=>tree.alive&&Math.hypot(x-tree.x,z-tree.z)<(tree.radius||.6)+clearance))return false;
+  if(rocks.some(rock=>rock.alive&&Math.hypot(x-rock.x,z-rock.z)<(rock.radius||.75)+clearance*.8))return false;
   for(const collider of worldColliders){
    const dx=x-collider.x,dz=z-collider.z;
-   if(collider.type==='circle'){if(Math.hypot(dx,dz)<collider.r+.65)return false;}
-   else if(Math.abs(dx)<collider.hx+.65&&Math.abs(dz)<collider.hz+.65)return false;
+   if(collider.type==='circle'){if(Math.hypot(dx,dz)<collider.r+clearance)return false;}
+   else if(Math.abs(dx)<collider.hx+clearance&&Math.abs(dz)<collider.hz+clearance)return false;
   }
   return true;
  }
@@ -3425,7 +3431,8 @@ async function removeStrayDebugGeometry(targetScene){
      if(isVegetationTrailClearance(x,z,3.2)||
         settlements.some(s=>Math.hypot(x-s[0],z-s[1])<19)||
         worldColliders.some(c=>Math.hypot(x-c.x,z-c.z)<(c.type==='circle'?c.r:Math.max(c.hx,c.hz))+3.5)||
-        trees.some(t=>Math.hypot(x-t.x,z-t.z)<2.6))continue;
+        trees.some(t=>Math.hypot(x-t.x,z-t.z)<(t.radius||.6)+3.0)||
+        wildlifeSpawnSpecs.some(other=>Math.hypot(x-other.x,z-other.z)<5.6))continue;
      p=candidate;break;
     }
     if(p){
@@ -3455,14 +3462,14 @@ async function removeStrayDebugGeometry(targetScene){
    if(moving){
     const nx=animal.root.position.x+Math.sin(animal.heading)*speed*dt;
     const nz=animal.root.position.z+Math.cos(animal.heading)*speed*dt;
-    if(isSafeIslandGroundPoint(homeIsland,nx,nz,Infinity,1.05,.52)&&canWildlifeMove(nx,nz)){
+    if(isSafeIslandGroundPoint(homeIsland,nx,nz,Infinity,1.05,.52)&&canWildlifeMove(nx,nz,animal.collisionRadius)){
      animal.root.position.x=nx;animal.root.position.z=nz;
     }else{
      animal.heading+=Math.PI*rand(.55,1.45);animal.turnTimer=.35;animal.wanderTimer=.45;
     }
    }
    animal.root.rotation.y=animal.heading;
-   animal.root.position.y=terrainHeightOnIsland(homeIsland,animal.root.position.x,animal.root.position.z);
+   animal.root.position.y=terrainHeightOnIsland(homeIsland,animal.root.position.x,animal.root.position.z)+animal.groundOffset;
   }
  }
  // 0.6.195: la cubierta vegetal queda despejada de caminos y campamentos.

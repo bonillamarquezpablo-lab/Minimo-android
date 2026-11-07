@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.197"
+EXPECTED_VERSION = "0.6.198"
 
 HTML_PAGES = (
     "index.html",
@@ -285,7 +285,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.197</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.198</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
         fail("Los penachos o su iluminación de doble cara están incompletos.")
@@ -317,6 +317,16 @@ def main() -> None:
         fail("La vegetación no valida tierra firme o todavía utiliza ubicaciones de reserva.")
     if "homeIslandIndex" not in index_html or "isSafeIslandGroundPoint(homeIsland,nx,nz,Infinity,1.05,.52)" not in index_html:
         fail("La fauna GLB no conserva su isla de origen o puede caminar hacia el mar.")
+    if "const groundOffset=-bounds.min.y*scale;" not in index_html or "groundOffset+terrainHeightOnIsland(homeIsland,x,z)" not in index_html:
+        fail("La importación GLB no calcula y aplica el desplazamiento vertical de apoyo.")
+    if "animal.groundOffset" not in index_html or "+animal.groundOffset;" not in index_html:
+        fail("El bucle de fauna vuelve a sobrescribir la altura de apoyo de los modelos.")
+    if "collisionRadius:definition.collisionRadius*size" not in index_html or "canWildlifeMove(nx,nz,animal.collisionRadius)" not in index_html:
+        fail("La fauna no utiliza el volumen corporal al evitar árboles y obstáculos.")
+    if "wildlifeSpawnSpecs.some(other=>Math.hypot(x-other.x,z-other.z)<5.6)" not in index_html:
+        fail("La generación permite que dos animales se solapen.")
+    if "trees.some(t=>Math.hypot(x-t.x,z-t.z)<(t.radius||.6)+3.0)" not in index_html:
+        fail("Los animales pueden aparecer demasiado cerca de los troncos.")
     if "RaiderCrewMount_" not in index_html or "if(parts.vesselMount)" not in index_html:
         fail("La tripulación del drakkar no está anclada a la cubierta.")
     if "p.rotationQuaternion=null;" not in index_html or "p.position.set(seat.x,guard.parts.realHuman?.role ? .972 : .995,seat.z)" not in index_html:
