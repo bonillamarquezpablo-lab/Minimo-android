@@ -1965,7 +1965,7 @@ async function removeStrayDebugGeometry(targetScene){
   if(removed)console.info('Geometría de depuración residual retirada:',removed);
   return removed;
  }
- function startGame(){
+ async function startGame(){
  setLoadingProgress(40,'Preparando el mundo…');
  try{
  const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
