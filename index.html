@@ -2792,13 +2792,23 @@ async function removeStrayDebugGeometry(targetScene){
   if(coastDistance<=is.r*1.09){const t=smooth01((coastDistance/is.r-.97)/.12);return .26*(1-t)-2.9*t;}
   return -2.9;
  }
+ const terrainDeformationFields=[];
+ function terrainDeformationAt(islandIndex,x,z){
+  const field=terrainDeformationFields[islandIndex];if(!field)return 0;
+  const {island,subdivisions,gridSize,step,offsets}=field;
+  const gx=Math.max(0,Math.min(subdivisions,(x-(island.x-island.r))/step));
+  const gz=Math.max(0,Math.min(subdivisions,(z-(island.z-island.r))/step));
+  const x0=Math.floor(gx),z0=Math.floor(gz),x1=Math.min(subdivisions,x0+1),z1=Math.min(subdivisions,z0+1),tx=gx-x0,tz=gz-z0;
+  const a=offsets[z0*gridSize+x0]*(1-tx)+offsets[z0*gridSize+x1]*tx;
+  const b=offsets[z1*gridSize+x0]*(1-tx)+offsets[z1*gridSize+x1]*tx;
+  return a*(1-tz)+b*tz;
+ }
  function terrainSurfaceAt(x,z){
   for(let index=0;index<land.length;index++){
    const island=land[index],dx=x-island.x,dz=z-island.z,limit=island.r*1.09;
    if(dx*dx+dz*dz>=limit*limit)continue;
-   // La altura analítica es la misma función con la que se construyó el heightfield.
-   // Evitamos forzar matrices mundiales y consultar la malla en cada colisión o paso de NPC.
-   return terrainHeightOnIsland(island,x,z);
+   // Base analytical height plus the live, decaying vertex deformation made by feet.
+   return terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z);
   }
   return .42;
  }
@@ -2884,7 +2894,11 @@ async function removeStrayDebugGeometry(targetScene){
   mesh.updateVerticesData(B.VertexBuffer.NormalKind,normals,false,false);
   mesh.position=v(is.x,0,is.z);mesh.computeWorldMatrix(true);
   try{if(typeof mesh.updateCoordinateHeights==='function')mesh.updateCoordinateHeights();}catch(heightCacheError){console.info('Heightfield cache fallback:',heightCacheError);}
-  mesh.checkCollisions=true;mesh.metadata=Object.assign({},mesh.metadata||{},{norsePhysicalHeightfield:true,islandIndex:index,subdivisions});
+  const gridSize=subdivisions+1,baseHeights=new Float32Array(gridSize*gridSize);
+  for(let vertex=0;vertex<baseHeights.length;vertex++)baseHeights[vertex]=positions[vertex*3+1];
+  const deformationField={island,index,subdivisions,gridSize,step:(is.r*2)/subdivisions,baseHeights,offsets:new Float32Array(baseHeights.length),decaySeconds:new Float32Array(baseHeights.length),active:new Set(),positions,positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),normalBuffer:mesh.getVertexBuffer(B.VertexBuffer.NormalKind),positionScratch:new Float32Array(3),normalScratch:new Float32Array(3),mesh};
+  terrainDeformationFields[index]=deformationField;
+  mesh.checkCollisions=true;mesh.metadata=Object.assign({},mesh.metadata||{},{norsePhysicalHeightfield:true,norseDeformableGround:true,islandIndex:index,subdivisions});
   mesh.material=islandMaterials[index%3].clone('TerrainMaterial_'+index);
   mesh.useVertexColors=true;mesh.useVertexAlpha=false;mesh.material.backFaceCulling=false;mesh.material.diffuseTexture=texGrass;mesh.material.diffuseTexture.uScale=7.2;mesh.material.diffuseTexture.vScale=7.2;mesh.material.diffuseTexture.anisotropicFilteringLevel=maxAnisotropy;mesh.material.bumpTexture=albedoNormalGrass;mesh.material.bumpTexture.level=.52;mesh.material.diffuseColor=new B.Color3(1,1,1);
   mesh.material.roughness=.96;mesh.material.needDepthPrePass=false;
@@ -2925,7 +2939,7 @@ async function removeStrayDebugGeometry(targetScene){
    for(let row=0;row<rows;row++){
     const t=row/(rows-1),radius=inner+(outer-inner)*t;
     for(const side of [0,1]){
-     const x=island.x+cs*radius,z=island.z+sn*radius,y=terrainHeightOnIsland(island,x,z)+.018;
+     const x=island.x+cs*radius,z=island.z+sn*radius,y=terrainSurfaceAt(x,z)+.012;
      positions.push(x,y,z);uvs.push(i/segments*12,t*2.8);
      const edgeFade=Math.min(smooth01(t/.11),smooth01((1-t)/.075));
      const alpha=.88*edgeFade;colors.push(1,.94,.82,alpha);
@@ -2945,7 +2959,7 @@ async function removeStrayDebugGeometry(targetScene){
   material.backFaceCulling=false;material.alpha=1;material.specularColor=new B.Color3(.018,.016,.012);
   mesh.material=material;mesh.isPickable=false;mesh.receiveShadows=true;mesh.castShadows=false;mesh.hasVertexAlpha=true;
   mesh.metadata=Object.assign({},mesh.metadata||{},{livingBeachSurface:true,islandIndex:index,wetnessSimulation:true});
-  livingBeachLayers.push({mesh,island,index,segments,rows,cols,radials,baseAlpha,wetness,residue,lastShore,colors:new Float32Array(colors),centerX:island.x,centerZ:island.z});
+  livingBeachLayers.push({mesh,island,index,segments,rows,cols,radials,baseAlpha,wetness,residue,lastShore,colors:new Float32Array(colors),positions:new Float32Array(positions),positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),positionScratch:new Float32Array(3),centerX:island.x,centerZ:island.z});
  }
  land.forEach(buildLivingBeachLayer);
  // Interactive ground layer: impressed boot soles, compacted lips, sand grains and drying tide marks.
@@ -2961,6 +2975,82 @@ async function removeStrayDebugGeometry(targetScene){
   dryGrainMaterial.diffuseColor=new B.Color3(.72,.58,.37);dryGrainMaterial.specularColor=new B.Color3(.015,.012,.008);
   const wetGrainMaterial=new B.StandardMaterial('WetSandGrainMaterial',scene);wetGrainMaterial.diffuseTexture=texCoastalSand;
   wetGrainMaterial.diffuseColor=new B.Color3(.37,.43,.39);wetGrainMaterial.specularColor=new B.Color3(.035,.045,.04);
+  function updateBeachGeometryAt(x,z,islandIndex){
+   const layer=livingBeachLayers[islandIndex];if(!layer)return;
+   const dx=x-layer.island.x,dz=z-layer.island.z,radius=Math.hypot(dx,dz),angle=(Math.atan2(dz,dx)+Math.PI*2)%(Math.PI*2);
+   const segment=Math.round(angle/(Math.PI*2)*layer.segments)%layer.segments;
+   const inner=layer.radials[segment*2],outer=layer.radials[segment*2+1],rowCenter=Math.max(0,Math.min(layer.rows-1,Math.round((radius-inner)/Math.max(.001,outer-inner)*(layer.rows-1))));
+   for(let da=-2;da<=2;da++){
+    const angular=(segment+da+layer.segments)%layer.segments;
+    for(let dr=-1;dr<=1;dr++){
+     const row=Math.max(0,Math.min(layer.rows-1,rowCenter+dr));
+     for(let side=0;side<2;side++){
+      const offset=(row*layer.cols+angular+side)*3,wx=layer.positions[offset],wz=layer.positions[offset+2];
+      layer.positions[offset+1]=terrainSurfaceAt(wx,wz)+.012;
+      layer.positionScratch[0]=layer.positions[offset];layer.positionScratch[1]=layer.positions[offset+1];layer.positionScratch[2]=layer.positions[offset+2];
+      layer.positionBuffer.updateDirectly(layer.positionScratch,offset);
+     }
+    }
+   }
+  }
+  function writeDeformedVertex(field,vertex){
+   const offset=vertex*3;field.positions[offset+1]=field.baseHeights[vertex]+field.offsets[vertex];
+   field.positionScratch[0]=field.positions[offset];field.positionScratch[1]=field.positions[offset+1];field.positionScratch[2]=field.positions[offset+2];
+   field.positionBuffer.updateDirectly(field.positionScratch,offset);
+  }
+  function updateDeformedNormals(field,vertices){
+   const dirty=new Set(),n=field.gridSize;
+   vertices.forEach(vertex=>{
+    const row=Math.floor(vertex/n),col=vertex-row*n;
+    for(let rz=Math.max(0,row-1);rz<=Math.min(n-1,row+1);rz++)for(let cx=Math.max(0,col-1);cx<=Math.min(n-1,col+1);cx++)dirty.add(rz*n+cx);
+   });
+   dirty.forEach(vertex=>{
+    const row=Math.floor(vertex/n),col=vertex-row*n,left=row*n+Math.max(0,col-1),right=row*n+Math.min(n-1,col+1),up=Math.max(0,row-1)*n+col,down=Math.min(n-1,row+1)*n+col;
+    const dx=field.positions[right*3]-field.positions[left*3]||field.step,dz=field.positions[down*3+2]-field.positions[up*3+2]||field.step;
+    const sx=(field.baseHeights[right]+field.offsets[right]-field.baseHeights[left]-field.offsets[left])/dx;
+    const sz=(field.baseHeights[down]+field.offsets[down]-field.baseHeights[up]-field.offsets[up])/dz;
+    let nx=-sx,ny=1,nz=-sz,L=Math.hypot(nx,ny,nz)||1;nx/=L;ny/=L;nz/=L;
+    const offset=vertex*3;field.normalScratch[0]=nx;field.normalScratch[1]=ny;field.normalScratch[2]=nz;
+    field.normalBuffer.updateDirectly(field.normalScratch,offset);
+   });
+  }
+  function pressGround(x,z,islandIndex,wet,beach){
+   const field=terrainDeformationFields[islandIndex];if(!field)return;
+   const {island,gridSize,step,positions,offsets,decaySeconds,active}=field;
+   const centerCol=Math.round((x-(island.x-island.r))/step),centerRow=Math.round((z-(island.z-island.r))/step),radius=wet?1.02:(beach?.88:.72),depth=wet?.043:(beach?.030:.018),changed=[];
+   for(let row=Math.max(0,centerRow-2);row<=Math.min(gridSize-1,centerRow+2);row++)for(let col=Math.max(0,centerCol-2);col<=Math.min(gridSize-1,centerCol+2);col++){
+    const vertex=row*gridSize+col,wx=island.x+positions[vertex*3],wz=island.z+positions[vertex*3+2],distance=Math.hypot(wx-x,wz-z);
+    if(distance>radius)continue;
+    const falloff=Math.pow(Math.max(0,1-distance/radius),1.55),target=-depth*falloff;
+    if(target<offsets[vertex]){
+     offsets[vertex]=target;decaySeconds[vertex]=wet?105:(beach?72:48);active.add(vertex);changed.push(vertex);
+    }
+   }
+   if(changed.length){
+    changed.forEach(vertex=>writeDeformedVertex(field,vertex));updateDeformedNormals(field,changed);
+    updateBeachGeometryAt(x,z,islandIndex);
+   }
+  }
+  function relaxGround(dt){
+   const elapsedStep=Math.min(.12,Math.max(0,dt));if(!elapsedStep)return;
+   for(const field of terrainDeformationFields){
+    if(!field||!field.active.size)continue;
+    const changed=[];
+    for(const vertex of field.active){
+     const before=field.offsets[vertex],life=field.decaySeconds[vertex]||48,next=before*Math.exp(-elapsedStep/life);
+     if(Math.abs(next)<.00035){field.offsets[vertex]=0;field.active.delete(vertex);}
+     else field.offsets[vertex]=next;
+     if(Math.abs(field.offsets[vertex]-before)>.000015)changed.push(vertex);
+    }
+    if(changed.length){
+     changed.forEach(vertex=>writeDeformedVertex(field,vertex));updateDeformedNormals(field,changed);
+     // Keep nearby beach overlay vertices conforming to the displaced heightfield as it recovers.
+     const layer=livingBeachLayers[field.index];
+     if(layer)changed.forEach(vertex=>{const row=Math.floor(vertex/field.gridSize),col=vertex-row*field.gridSize,offset=vertex*3;
+      const wx=field.island.x+field.positions[offset],wz=field.island.z+field.positions[offset+2];updateBeachGeometryAt(wx,wz,field.index);});
+    }
+   }
+  }
   function makeFootprint(x,z,heading,wet,beach,running){
    const islandIndex=landIslandIndex(x,z);if(islandIndex<0)return;
    const island=land[islandIndex],dx=x-island.x,dz=z-island.z,d=Math.hypot(dx,dz);
@@ -3011,7 +3101,7 @@ async function removeStrayDebugGeometry(targetScene){
    const ratio=d/island.r,beach=ratio>.748&&ratio<.976;
    const angle=Math.atan2(dz,dx),shore=shorelineFoamRadius(island,angle,oceanTime),groundY=terrainSurfaceAt(x,z);
    const wet=beach&&((Number.isFinite(shore)&&shore-d<1.45)||waterHeight(x,z,oceanTime)>groundY-.20);
-   makeFootprint(x,z,heading,wet,beach,running);kickSandGrains(x,z,heading,wet,running);
+   pressGround(x,z,islandIndex,wet,beach);makeFootprint(x,z,heading,wet,beach,running);kickSandGrains(x,z,heading,wet,running);
   }
   function updateBeach(dt,focusX,focusZ){
    beachClock+=dt;if(beachClock<.30)return;const step=beachClock;beachClock=0;
@@ -3077,6 +3167,7 @@ async function removeStrayDebugGeometry(targetScene){
      item.mesh.updateVerticesData(B.VertexBuffer.ColorKind,item.colors,false,false);
     }
    }
+   relaxGround(dt);
    for(let i=particles.length-1;i>=0;i--){
     const p=particles[i];p.age+=dt;p.life-=dt;
     p.vy-=2.6*dt;p.mesh.position.x+=p.vx*dt;p.mesh.position.z+=p.vz*dt;p.mesh.position.y+=p.vy*dt;
