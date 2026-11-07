@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.219">
-<meta name="el-sin-nombre-repair" content="0.6.219 full pre-entry asset readiness and low-end Performance rendering reductions">
+<meta name="el-sin-nombre-build" content="0.6.220">
+<meta name="el-sin-nombre-repair" content="0.6.220 full pre-entry asset readiness and low-end Performance rendering reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.219</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.220</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2806,40 +2806,44 @@ async function removeStrayDebugGeometry(targetScene){
    }
    waterLastNormalMs=performance.now()-normalStart;waterNormalAccumulator%=waterNormalStep;
   }
-  const nearbyRadiusSq=(WATER_DETAIL_RADIUS+75)*(WATER_DETAIL_RADIUS+75);
+  const nearbyRadiusSq=(WATER_DETAIL_RADIUS+115)*(WATER_DETAIL_RADIUS+115);
   for(const foam of tidalFoamMeshes){
-   const dx=foam.centerX-waterFocusX,dz=foam.centerZ-waterFocusZ;if(dx*dx+dz*dz>nearbyRadiusSq)continue;
-   const island=foam.island;
-   for(const patch of foam.patches){
-    const shoreline=shorelineFoamRadius(island,patch.angle,oceanTime);
-    const radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47];
+   const dx=foam.centerX-waterFocusX,dz=foam.centerZ-waterFocusZ;
+   if(dx*dx+dz*dz>nearbyRadiusSq)continue;
+   const {island,segments,rows,cols,radialOffsets,positions,colors,foamPattern,index}=foam;
+   for(let col=0;col<=segments;col++){
+    const angle=col/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
+    const shoreline=shorelineFoamRadius(island,angle,oceanTime);
     if(!Number.isFinite(shoreline)){
-     for(let vertex=0;vertex<radialOffsets.length*2;vertex++){const offset=patch.start+vertex*3;foam.positions[offset]=island.x;foam.positions[offset+1]=-3.2;foam.positions[offset+2]=island.z;}
+     for(let row=0;row<rows;row++){
+      const vertex=row*cols+col,offset=vertex*3,color=vertex*4;
+      positions[offset+1]=-3.2;colors[color+3]=0;
+     }
      continue;
     }
-    const pulse=.5+.5*Math.sin(oceanTime*.92+patch.phase),arcScale=.76+.34*pulse;
-    for(let row=0;row<radialOffsets.length;row++)for(let side=0;side<2;side++){
-     const offset=patch.start+(row*2+side)*3,sign=side===0?-1:1;
-     // The wash crosses the intersection: most of its tongue lies on the wet sand,
-     // with only a narrow outer lip touching the moving water surface.
-     const angularWobble=Math.sin(oceanTime*.78+patch.phase+row*.71)*.0048;
-     const angle=patch.angle+sign*(patch.halfArc*arcScale)+angularWobble*sign;
-     const radialJitter=Math.sin(oceanTime*.86+patch.phase+row*1.17)*[.055,.09,.125,.15,.135,.105,.075,.045][row];
-     const radius=shoreline+radialOffsets[row]+radialJitter;
-     const x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-     const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(foam.index,x,z),water=waterHeight(x,z,oceanTime);
-     foam.positions[offset]=x;foam.positions[offset+1]=Math.max(ground,water)+.028;foam.positions[offset+2]=z;
+    const wavePhase=oceanTime*.83+island.x*.013+island.z*.017+angle*2.6;
+    const pulse=.5+.5*Math.sin(wavePhase),secondary=.5+.5*Math.sin(oceanTime*1.31+angle*5.1+index*.73);
+    const swashReach=1.05+1.45*pulse;
+    for(let row=0;row<rows;row++){
+     const vertex=row*cols+col,offset=vertex*3,color=vertex*4,shoreOffset=radialOffsets[row];
+     // La lengua avanza y retrocede con variación angular: no se desplaza como un aro rígido.
+     const edgeMotion=Math.sin(wavePhase+row*.39)*.16+Math.sin(oceanTime*.57+angle*4.3+row)*.11;
+     const radius=shoreline+shoreOffset+edgeMotion;
+     const x=island.x+cs*radius,z=island.z+sn*radius;
+     const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=waterHeight(x,z,oceanTime);
+     positions[offset]=x;positions[offset+1]=Math.max(ground,water)+.042;positions[offset+2]=z;
+     const inner=smooth01((shoreOffset+2.45)/.72);
+     const outer=1-smooth01((shoreOffset-.34)/.82);
+     const swash=smooth01((shoreOffset+2.35)/.72)*(1-smooth01((shoreOffset-swashReach)/.78));
+     const lace=foamPattern[vertex];
+     const breaking=.52+.30*pulse+.18*secondary;
+     const crest=Math.pow(Math.max(0,1-Math.abs(shoreOffset-(.10+.48*pulse))/.78),1.35);
+     const alpha=Math.min(.94,Math.max(0,(inner*outer*swash*lace*breaking+crest*lace*.30)*(.72+.28*secondary)));
+     colors[color]=.88+.08*secondary;colors[color+1]=.95+.045*pulse;colors[color+2]=.94+.05*pulse;colors[color+3]=alpha;
     }
    }
-   foam.mesh.updateVerticesData(B.VertexBuffer.PositionKind,foam.positions,false);
-  }
-  for(const wave of shorelineWaves){
-   const dx=wave.x-waterFocusX,dz=wave.z-waterFocusZ;if(dx*dx+dz*dz>nearbyRadiusSq)continue;
-   const pulse=Math.sin(oceanTime*1.05+wave.phase),secondary=Math.sin(oceanTime*.63+wave.phase*1.7);
-   wave.mesh.scaling.x=1+pulse*.022+secondary*.009;
-   wave.mesh.scaling.z=1+pulse*.019-secondary*.008;
-   wave.mesh.position.y=waterHeight(wave.x,wave.z,oceanTime)+.045+Math.max(0,pulse)*.028;
-   const bandAlpha=.13+(.5+.5*pulse)*.22;wave.mat.alpha=bandAlpha*(wave.layer===0?1:(wave.layer===1?.78:.56));
+   foam.mesh.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);
+   foam.mesh.updateVerticesData(B.VertexBuffer.ColorKind,colors,false,false);
   }
   M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset=(oceanTime*.007)%1;
   if(M.water.bumpTexture){M.water.bumpTexture.uOffset=(oceanTime*.0078)%1;M.water.bumpTexture.vOffset=(-oceanTime*.0058)%1;}
@@ -3389,42 +3393,45 @@ async function removeStrayDebugGeometry(targetScene){
  const tidalFoamMeshes=[];
  function buildTidalFoam(island,index){
   if(isPerformanceMode)return;
-  const positions=[],indices=[],colors=[],patches=72,patchMeta=[],radialOffsets=[-.68,-.46,-.29,-.15,-.025,.115,.265,.47];
-  for(let i=0;i<patches;i++){
-   if(((i*37+index*19)%11)<3)continue;
-   const angle=i/patches*Math.PI*2+Math.sin(i*2.17+index)*.022,halfArc=.010+((i*7+index*3)%8)*.0017;
-   const start=positions.length/3,radius=shorelineFoamRadius(island,angle,oceanTime);
-   // Never use island.r*1.09 as a fallback: that is the seaward edge of the heightfield,
-   // not the shoreline. A missing intersection means this patch starts hidden.
-   if(!Number.isFinite(radius))continue;
-   for(let row=0;row<radialOffsets.length;row++){
-    const radial=radialOffsets[row]+Math.sin(i*1.91+row*2.3+index*.7)*.10;
-    for(let side=0;side<2;side++){
-     const sign=side===0?-1:1,a=angle+sign*halfArc+Math.sin(i*1.7+row*1.3+side)*.008;
-     const r=radius+radial,x=island.x+Math.cos(a)*r,z=island.z+Math.sin(a)*r;
-     const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=waterHeight(x,z,oceanTime);
-     positions.push(x,Math.max(ground,water)+.028,z);
-     const rowAlpha=[.008,.055,.24,.48,.54,.36,.12,.012][row],sideAlpha=side===0?.62:.90;
-     const foamLace=.72+.28*(.5+.5*Math.sin(i*4.73+row*2.31+index));
-     colors.push(.91,.96,.92,rowAlpha*sideAlpha*foamLace);
-    }
-   }
-   patchMeta.push({angle,halfArc,start:start*3,phase:index*.81+i*.73});
-   for(let row=0;row<radialOffsets.length-1;row++){
-    const a=start+row*2,b=a+2;indices.push(a,b,a+1,a+1,b,b+1);
+  // Una única malla anular continua cubre toda la costa; la espuma se rompe mediante
+  // un campo celular de alfa, no mediante tiras geométricas aisladas.
+  const segments=Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)));
+  const rows=11,cols=segments+1,radialOffsets=[-2.45,-2.05,-1.68,-1.30,-.94,-.60,-.28,.02,.30,.60,.92];
+  const positions=new Float32Array(cols*rows*3),colors=new Float32Array(cols*rows*4),foamPattern=new Float32Array(cols*rows);
+  const indices=new Uint16Array(segments*(rows-1)*6);let cursor=0;
+  for(let col=0;col<=segments;col++){
+   const angle=col/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
+   for(let row=0;row<rows;row++){
+    const vertex=row*cols+col,offset=vertex*3,color=vertex*4,radius=island.r+radialOffsets[row];
+    const x=island.x+cs*radius,z=island.z+sn*radius;
+    positions[offset]=x;positions[offset+1]=-3.2;positions[offset+2]=z;
+    // Tres escalas de ruido forman células rotas, filamentos y pequeñas motas.
+    const broad=terrainValueNoise(x*.17+37.4,z*.17-21.8);
+    const medium=terrainValueNoise(x*.57-14.7,z*.57+42.1);
+    const fine=terrainValueNoise(x*1.42+8.3,z*1.42-31.6);
+    const cells=smooth01((broad*.56+medium*.29+fine*.15-.475)*8.2);
+    const lace=1-smooth01((Math.abs(medium-.5)-.145)*10.5);
+    const flecks=smooth01((fine-.47)*12);
+    foamPattern[vertex]=Math.min(1,cells*(.24+.48*lace+.34*flecks));
+    colors[color]=.91;colors[color+1]=.97;colors[color+2]=.96;colors[color+3]=0;
    }
   }
-  if(!indices.length)return;
+  for(let row=0;row<rows-1;row++)for(let col=0;col<segments;col++){
+   const a=row*cols+col,b=a+1,c=a+cols,d=c+1;
+   indices[cursor++]=a;indices[cursor++]=b;indices[cursor++]=c;
+   indices[cursor++]=b;indices[cursor++]=d;indices[cursor++]=c;
+  }
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
-  const mesh=new B.Mesh('DynamicSubmergedShoreWash_'+index,scene),data=new B.VertexData();
-  data.positions=positions;data.indices=indices;data.normals=normals;data.colors=colors;data.applyToMesh(mesh);
-  const material=new B.StandardMaterial('ShoreWashMaterial_'+index,scene);
-  material.diffuseColor=new B.Color3(.93,.97,.94);material.emissiveColor=new B.Color3(.022,.028,.024);
-  material.specularColor=new B.Color3(.025,.032,.029);material.specularPower=42;
+  const mesh=new B.Mesh('ContinuousOrganicShoreFoam_'+index,scene),data=new B.VertexData();
+  data.positions=positions;data.indices=indices;data.normals=normals;data.colors=colors;data.applyToMesh(mesh,true);
+  const material=new B.StandardMaterial('OrganicShoreFoamMaterial_'+index,scene);
+  material.diffuseColor=new B.Color3(.96,.99,.97);material.emissiveColor=new B.Color3(.075,.095,.086);
+  material.specularColor=new B.Color3(.08,.10,.095);material.specularPower=24;
   material.useVertexColors=true;material.useVertexAlpha=true;material.backFaceCulling=false;
-  material.alpha=.52;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;mesh.material=material;
-  mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.hasVertexAlpha=true;
-  tidalFoamMeshes.push({mesh,positions:new Float32Array(positions),patches:patchMeta,island,centerX:island.x,centerZ:island.z,index});
+  material.alpha=.88;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;material.disableDepthWrite=true;
+  mesh.material=material;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;
+  mesh.hasVertexAlpha=true;mesh.alwaysSelectAsActiveMesh=false;
+  tidalFoamMeshes.push({mesh,positions,colors,foamPattern,island,centerX:island.x,centerZ:island.z,index,segments,rows,cols,radialOffsets});
  }
  land.forEach(buildTidalFoam);
  
@@ -10724,7 +10731,7 @@ function updateHUD(){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.219 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.220 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -10802,7 +10809,7 @@ function updateHUD(){
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.219 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.220 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
