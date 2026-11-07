@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.223">
-<meta name="el-sin-nombre-repair" content="0.6.223 frame pacing and CPU allocation reduction without visual reductions">
+<meta name="el-sin-nombre-build" content="0.6.224">
+<meta name="el-sin-nombre-repair" content="0.6.224 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.223</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.224</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2809,41 +2809,46 @@ async function removeStrayDebugGeometry(targetScene){
    }
    waterLastNormalMs=performance.now()-normalStart;waterNormalAccumulator%=waterNormalStep;
   }
-  // Solo existe una malla de espuma: la isla donde está el jugador (o la costa más cercana al drakkar).
+  // La espuma aparece solo cuando la línea de agua retrocede y deja una película blanca en la arena.
+  // La humedad de playa conserva su propia huella; esta malla dibuja únicamente el borde espumoso reciente.
   for(const foam of tidalFoamMeshes){
    const {island,segments,rows,cols,radialOffsets,positions,colors,foamPattern,index}=foam;
+   const retreatFade=Math.exp(-dt/2.6);
    for(let col=0;col<=segments;col++){
     const angle=col/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
     const shoreline=shorelineFoamRadius(island,angle,oceanTime);
     if(!Number.isFinite(shoreline)){
+     foam.retreatResidue[col]*=retreatFade;
+     foam.lastShoreline[col]=NaN;foam.foamCenter[col]=NaN;
      for(let row=0;row<rows;row++){
       const vertex=row*cols+col,offset=vertex*3,color=vertex*4;
       positions[offset+1]=-3.2;colors[color+3]=0;
      }
      continue;
     }
+    const previousShore=foam.lastShoreline[col];
+    const retreat=Number.isFinite(previousShore)?Math.max(0,shoreline-previousShore):0;
+    if(retreat>.004)foam.foamCenter[col]=shoreline-.16;
+    foam.retreatResidue[col]=Math.min(.92,foam.retreatResidue[col]*retreatFade+Math.min(.42,retreat*2.6));
+    foam.lastShoreline[col]=shoreline;
+    if(!Number.isFinite(foam.foamCenter[col]))foam.foamCenter[col]=shoreline-.16;
     const wavePhase=oceanTime*.83+island.x*.013+island.z*.017+angle*2.6;
-    const pulse=.5+.5*Math.sin(wavePhase),secondary=.5+.5*Math.sin(oceanTime*1.31+angle*5.1+index*.73);
-    const inlandReach=1.05+1.55*pulse;
+    const secondary=.5+.5*Math.sin(oceanTime*1.31+angle*5.1+index*.73);
+    const foamStrength=foam.retreatResidue[col];
     for(let row=0;row<rows;row++){
      const vertex=row*cols+col,offset=vertex*3,color=vertex*4,shoreOffset=radialOffsets[row];
-     // La lengua entra hacia la arena y se retira por sectores; el borde de espuma no es una circunferencia rígida.
-     const edgeMotion=Math.sin(wavePhase+row*.39)*.27+Math.sin(oceanTime*.57+angle*4.3+row)*.16;
-     const radius=shoreline+shoreOffset+edgeMotion;
+     // El borde conserva irregularidad fina, pero no ondula como una nube ni cubre toda la orilla.
+     const edgeMotion=Math.sin(wavePhase+row*.39)*.025+Math.sin(oceanTime*.57+angle*4.3+row)*.018;
+     const radius=foam.foamCenter[col]+shoreOffset+edgeMotion;
      const x=island.x+cs*radius,z=island.z+sn*radius;
      const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=waterHeight(x,z,oceanTime);
-     positions[offset]=x;positions[offset+1]=Math.max(ground,water)+.042;positions[offset+2]=z;
-     const inner=smooth01((shoreOffset+2.45)/.72);
-     const outer=1-smooth01((shoreOffset-.30)/.78);
-     const inlandDistance=Math.max(0,-shoreOffset);
-     const landwardFront=1-smooth01((inlandDistance-inlandReach)/.62);
-     const swash=inner*outer*landwardFront;
+     positions[offset]=x;positions[offset+1]=water>ground?water+.014:ground+.022;positions[offset+2]=z;
+     const innerFade=smooth01((shoreOffset+.72)/.18);
+     const outerFade=1-smooth01((shoreOffset-.48)/.18);
+     const whiteFoamProfile=Math.exp(-(((shoreOffset-.16)/.27)**2));
      const lace=foamPattern[vertex];
-     const breaking=.52+.30*pulse+.18*secondary;
-     const crestPosition=-(.25+.95*pulse+Math.sin(wavePhase+angle*3)*.12);
-     const crest=Math.pow(Math.max(0,1-Math.abs(shoreOffset-crestPosition)/.48),1.45);
-     const alpha=Math.min(.94,Math.max(0,(swash*lace*breaking+crest*lace*.36)*(.72+.28*secondary)));
-     colors[color]=.88+.08*secondary;colors[color+1]=.95+.045*pulse;colors[color+2]=.94+.05*pulse;colors[color+3]=alpha;
+     const alpha=Math.min(.90,foamStrength*whiteFoamProfile*innerFade*outerFade*Math.pow(lace,1.18)*(.92+.08*secondary));
+     colors[color]=.98;colors[color+1]=.99;colors[color+2]=1;colors[color+3]=alpha;
     }
    }
    foam.mesh.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);
@@ -3411,19 +3416,22 @@ async function removeStrayDebugGeometry(targetScene){
   // Una única malla anular continua cubre toda la costa; la espuma se rompe mediante
   // un campo celular de alfa, no mediante tiras geométricas aisladas.
   const segments=Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)));
-  const rows=11,cols=segments+1,radialOffsets=[-2.45,-2.05,-1.68,-1.30,-.94,-.60,-.28,.02,.30,.60,.92];
+  const rows=9,cols=segments+1,radialOffsets=[-.72,-.54,-.36,-.18,-.02,.13,.28,.43,.58];
   const positions=new Float32Array(cols*rows*3),colors=new Float32Array(cols*rows*4),foamPattern=new Float32Array(cols*rows);
+  const lastShoreline=new Float32Array(segments+1),retreatResidue=new Float32Array(segments+1),foamCenter=new Float32Array(segments+1);
+  lastShoreline.fill(NaN);foamCenter.fill(NaN);
   const indices=new Uint16Array(segments*(rows-1)*6);let cursor=0;
   for(let col=0;col<=segments;col++){
    const angle=col/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
-   // Inicializar también las costas lejanas: no deben quedar sin espuma hasta que el jugador se acerque.
+   // Registrar también las costas lejanas, pero sin mostrar espuma hasta detectar una retirada real.
    const initialShoreline=shorelineFoamRadius(island,angle,oceanTime);
+   if(Number.isFinite(initialShoreline)){lastShoreline[col]=initialShoreline;foamCenter[col]=initialShoreline-.16;}
    for(let row=0;row<rows;row++){
     const vertex=row*cols+col,offset=vertex*3,color=vertex*4;
     const radius=(Number.isFinite(initialShoreline)?initialShoreline:island.r)+radialOffsets[row];
     const x=island.x+cs*radius,z=island.z+sn*radius;
     const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=waterHeight(x,z,oceanTime);
-    positions[offset]=x;positions[offset+1]=Number.isFinite(initialShoreline)?Math.max(ground,water)+.042:-3.2;positions[offset+2]=z;
+    positions[offset]=x;positions[offset+1]=Number.isFinite(initialShoreline)?Math.max(ground,water)+.018:-3.2;positions[offset+2]=z;
     // Tres escalas de ruido forman células rotas, filamentos y pequeñas motas.
     const broad=terrainValueNoise(x*.17+37.4,z*.17-21.8);
     const medium=terrainValueNoise(x*.57-14.7,z*.57+42.1);
@@ -3432,9 +3440,8 @@ async function removeStrayDebugGeometry(targetScene){
     const lace=1-smooth01((Math.abs(medium-.5)-.145)*10.5);
     const flecks=smooth01((fine-.47)*12);
     foamPattern[vertex]=Math.min(1,cells*(.24+.48*lace+.34*flecks));
-    const inner=smooth01((radialOffsets[row]+2.45)/.72),outer=1-smooth01((radialOffsets[row]-.34)/.82);
-    colors[color]=.91;colors[color+1]=.97;colors[color+2]=.96;
-    colors[color+3]=Number.isFinite(initialShoreline)?inner*outer*foamPattern[vertex]*.34:0;
+    colors[color]=.98;colors[color+1]=.99;colors[color+2]=1;
+    colors[color+3]=0;
    }
   }
   for(let row=0;row<rows-1;row++)for(let col=0;col<segments;col++){
@@ -3446,13 +3453,13 @@ async function removeStrayDebugGeometry(targetScene){
   const mesh=new B.Mesh('ContinuousOrganicShoreFoam_'+index,scene),data=new B.VertexData();
   data.positions=positions;data.indices=indices;data.normals=normals;data.colors=colors;data.applyToMesh(mesh,true);
   const material=new B.StandardMaterial('OrganicShoreFoamMaterial_'+index,scene);
-  material.diffuseColor=new B.Color3(.96,.99,.97);material.emissiveColor=new B.Color3(.075,.095,.086);
-  material.specularColor=new B.Color3(.08,.10,.095);material.specularPower=24;
+  material.diffuseColor=new B.Color3(.98,.99,1);material.emissiveColor=new B.Color3(.012,.014,.018);
+  material.specularColor=new B.Color3(.16,.17,.18);material.specularPower=18;
   material.useVertexColors=true;material.useVertexAlpha=true;material.backFaceCulling=false;
   material.alpha=.88;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;material.disableDepthWrite=true;
   mesh.material=material;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;
   mesh.hasVertexAlpha=true;mesh.alwaysSelectAsActiveMesh=false;
-  tidalFoamMeshes.push({mesh,positions,colors,foamPattern,island,centerX:island.x,centerZ:island.z,index,segments,rows,cols,radialOffsets});
+  tidalFoamMeshes.push({mesh,positions,colors,foamPattern,lastShoreline,retreatResidue,foamCenter,island,centerX:island.x,centerZ:island.z,index,segments,rows,cols,radialOffsets});
  }
  let activeTidalFoamIslandIndex=-2;
  function syncActiveTidalFoamIsland(){
@@ -8700,7 +8707,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'8',build:'0.6.223',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'8',build:'0.6.224',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -10849,7 +10856,7 @@ function update(dt){
  updateRotateScreenButton();
  updateHUD();drawMap();
  console.info('EL SIN NOMBRE boot profile',{sharedGuest:SHARE_NEW_GAME,saveSlot:SAVE_KEY,graphicsProfile:activeGraphicsProfile});
- console.info('EL SIN NOMBRE 0.6.223 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
+ console.info('EL SIN NOMBRE 0.6.224 Capítulo I · Un hombre sin tierra',{collisionCells:collisionGrid.size,trees:trees.length,rocks:rocks.length,grassInstances:grassInstanceCount,shadowMap:currentShadowSize});
  updatePlayerIdentityHud();updateWeaponPanel();updateProgressPanel();
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
@@ -10927,7 +10934,7 @@ function update(dt){
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
  }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.223 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.224 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
