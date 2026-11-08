@@ -13,7 +13,8 @@ assert.match(html,/initial:createWaterCoastSolverStats\(\),animated:createWaterC
 assert.match(html,/const inspectBand=\(positions,vertexColors,rows\)=>/, 'Foam placement diagnostics must inspect each vertex alpha buffer.');
 assert.match(html,/if\(!Number\.isFinite\(alpha\)\|\|alpha<=\.025\)continue/, 'Transparent margin vertices must not be counted as visible foam outside the shoreline band.');
 assert.match(html,/foamVisibleVerticesOutsideBand/, 'Visible foam vertices outside the intended shoreline band must be reported separately from geometry margins.');
-assert.match(html,/recordWaterCoastSolverDiagnostic\(bestError,solverStartedAt,true,bestError<\.006\)/);
+assert.match(html,/recordWaterCoastSolverDiagnostic\(bestError,solverStartedAt,true,bestError<\.006,'initial'\)/, 'Initial shoreline solves must be tagged separately.');
+assert.match(html,/recordWaterCoastSolverDiagnostic\(bestError,solverStartedAt,true,bestError<\.006,'animated'\)/, 'Animated shoreline solves must be tagged separately.');
 assert.match(html,/coastSolver:waterDebugSolverStats/);
 assert.match(html,/physicalBackwashVelocity:'no implementado'/);
 assert.match(html,/window\.__elSinNombreWaterDebugSnapshot=\(\)=>/);
