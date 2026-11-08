@@ -32,6 +32,20 @@ assert.ok(coast.wetness[wet] < beforeDry);
 assert.equal(coast.wetness[untouched], 0);
 assert.equal(coast.reachedWater[untouched], 0);
 
+
+const interpolation = createCoastalGrid({ radius: 60, columns: 360, rows: 12 });
+const row = 5, col = 40;
+interpolation.wetness[interpolation.index(row,col)] = 0;
+interpolation.wetness[interpolation.index(row,col+1)] = 255;
+interpolation.wetness[interpolation.index(row+1,col)] = 0;
+interpolation.wetness[interpolation.index(row+1,col+1)] = 255;
+const radial = interpolation.innerRadius + (row + 0.5) * interpolation.radialStep;
+const theta = ((col + 0.5) / interpolation.columns) * Math.PI * 2;
+const sampled = interpolation.sampleWetnessBilinear(
+  Math.cos(theta) * radial, Math.sin(theta) * radial, 0, 0
+);
+assert.ok(sampled > 0.40 && sampled < 0.60, `bilinear sample should blend neighbouring coastal cells, got ${sampled}`);
+
 const atlas = createFootprintAtlas({ size: 512, worldSize: 16 });
 assert.ok(Math.abs(atlas.pixelSize - 0.03125) < 1e-12);
 atlas.recenter(0, 0);

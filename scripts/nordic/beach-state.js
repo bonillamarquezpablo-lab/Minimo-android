@@ -50,6 +50,25 @@
       const cell = worldToCell(x, z, centerX, centerZ);
       return cell < 0 ? 0 : wetness[cell] / 255;
     }
+    // Continuous world-space read: bilinear in radius and wrapped shoreline angle.
+    // This avoids snapping foot interaction and humidity queries to a single coastal texel.
+    function sampleWetnessBilinear(x, z, centerX, centerZ) {
+      const dx = Number(x) - Number(centerX || 0), dz = Number(z) - Number(centerZ || 0);
+      const radial = Math.hypot(dx, dz);
+      const rowCoord = (radial - innerRadius) / radialStep;
+      if (!Number.isFinite(rowCoord) || rowCoord < 0 || rowCoord > rows - 1) return 0;
+      const angle = (Math.atan2(dz, dx) + Math.PI * 2) % (Math.PI * 2);
+      const colCoord = angle / (Math.PI * 2) * columns;
+      const row0 = Math.floor(rowCoord), row1 = Math.min(rows - 1, row0 + 1);
+      const col0 = Math.floor(colCoord) % columns, col1 = (col0 + 1) % columns;
+      const tx = colCoord - Math.floor(colCoord), ty = rowCoord - row0;
+      const a = wetness[row0 * columns + col0] / 255;
+      const b = wetness[row0 * columns + col1] / 255;
+      const c = wetness[row1 * columns + col0] / 255;
+      const d = wetness[row1 * columns + col1] / 255;
+      const top = a + (b - a) * tx, bottom = c + (d - c) * tx;
+      return clamp01(top + (bottom - top) * ty);
+    }
     function writeTextureCell(cell) {
       const p = cell * 4;
       rgba[p] = wetness[cell]; rgba[p + 1] = foam[cell];
@@ -104,7 +123,7 @@
     return {
       radius, columns, rows, size, innerRadius, outerRadius, radialStep, rowRadius,
       water, wetness, foam, reachedWater, rgba, index, metersPerCell, worldToCell,
-      sampleWetness, stepCell, decay, exportTexture: () => rgba
+      sampleWetness, sampleWetnessBilinear, stepCell, decay, exportTexture: () => rgba
     };
   }
 
