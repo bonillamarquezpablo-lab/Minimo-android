@@ -2716,6 +2716,51 @@ async function removeStrayDebugGeometry(targetScene){
  }
  const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:(isTouchDevice?125:180)):(isTouchDevice?90:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS,WATER_DETAIL_FADE_START_SQ=WATER_DETAIL_RADIUS_SQ*.55;
  const waterPositionBuffer=ground.getVertexBuffer(B.VertexBuffer.PositionKind),waterNormalBuffer=ground.getVertexBuffer(B.VertexBuffer.NormalKind),waterColorBuffer=ground.getVertexBuffer(B.VertexBuffer.ColorKind);
+ // Diagnóstico de solo lectura: guarda el instante y el fade usados para cada vértice realmente enviado a GPU.
+ // Estos buffers solo existen con ?debug=1 y no participan en la geometría ni en el comportamiento del agua.
+ const waterDebugVertexTimes=groundDebugEnabled?new Float64Array(waterBase.length/3).fill(NaN):null;
+ const waterDebugVertexFades=groundDebugEnabled?new Float32Array(waterBase.length/3).fill(NaN):null;
+ const waterDebugSolverStats=groundDebugEnabled?{samples:0,bracketFailures:0,finiteResiduals:0,converged:0,lastResidualMeters:null,maxResidualMeters:0,totalMs:0,lastMs:0,maxMs:0}:null;
+ const waterDebugSampleIndices=groundDebugEnabled?(()=>{
+  const count=Math.min(100,waterBase.length/3),picked=[],seen=new Set();
+  let seed=0x51A7;
+  while(picked.length<count){
+   seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+   const vertex=seed%(waterBase.length/3);
+   if(!seen.has(vertex)){seen.add(vertex);picked.push(vertex);}
+  }
+  return Uint32Array.from(picked);
+ })():null;
+ function getWaterVertexAgreementDiagnostics(){
+  if(!waterDebugSampleIndices)return {implemented:false,reason:'diagnóstico disponible únicamente con ?debug=1'};
+  const errors=[],baseY=Number(ground.position.y)||0;
+  for(let n=0;n<waterDebugSampleIndices.length;n++){
+   const vertex=waterDebugSampleIndices[n],time=waterDebugVertexTimes[vertex],fade=waterDebugVertexFades[vertex];
+   if(!Number.isFinite(time)||!Number.isFinite(fade))continue;
+   const offset=vertex*3,x=waterBase[offset],z=waterBase[offset+2];
+   const drawn=baseY+waterPositions[offset+1],analytic=baseY+waterHeight(x,z,time,fade);
+   const error=Math.abs(drawn-analytic);
+   if(Number.isFinite(error))errors.push(error);
+  }
+  errors.sort((a,b)=>a-b);
+  const sum=errors.reduce((total,value)=>total+value,0);
+  const at=p=>errors.length?errors[Math.min(errors.length-1,Math.floor((errors.length-1)*p))]:null;
+  return {implemented:true,requested:waterDebugSampleIndices.length,sampled:errors.length,meanAbsErrorMeters:errors.length?sum/errors.length:null,p95AbsErrorMeters:at(.95),maxAbsErrorMeters:errors.length?errors[errors.length-1]:null,comparison:'waterHeight against CPU vertex values uploaded to the Babylon mesh; same vertex write time and LOD fade'};
+ }
+ function recordWaterCoastSolverDiagnostic(residual,startedAt,bracketed,converged){
+  if(!waterDebugSolverStats)return;
+  const elapsed=Math.max(0,performance.now()-startedAt);
+  const stats=waterDebugSolverStats;
+  stats.samples++;
+  if(!bracketed)stats.bracketFailures++;
+  if(Number.isFinite(residual)){
+   stats.finiteResiduals++;
+   stats.lastResidualMeters=residual;
+   stats.maxResidualMeters=Math.max(stats.maxResidualMeters,residual);
+  }else stats.lastResidualMeters=null;
+  if(converged)stats.converged++;
+  stats.totalMs+=elapsed;stats.lastMs=elapsed;stats.maxMs=Math.max(stats.maxMs,elapsed);
+ }
  for(let i=0;i<waterNormals.length;i+=3)waterNormals[i+1]=1;
  // Precompute spatial wave phases once. Every frame evaluates the same exact
  // sinusoidal waves using seven shared time sin/cos pairs instead of per-vertex trig.
@@ -2866,7 +2911,10 @@ async function removeStrayDebugGeometry(targetScene){
   }
   return {
    baseSeaLevel:Number(baseSeaLevel.toFixed(3)),tideOffset:Number(tideOffset.toFixed(3)),tidePhaseDegrees:Number((((oceanTime%TIDE_PERIOD_SECONDS)/TIDE_PERIOD_SECONDS)*360).toFixed(1)),tideMode:Number.isFinite(debugForcedTideOffset)?(debugForcedTideOffset>0?'forced-high':'forced-low'):'natural',seaSurfaceAtPlayer:Number((baseSeaLevel+localSurface).toFixed(3)),localWaveDisplacement:Number((localSurface-tideOffset).toFixed(3)),waveAmplitudeBoundMeters:.977,shorelineRadius:Number.isFinite(shorelineRadius)?Number(shorelineRadius.toFixed(3)):null,wetBandPeak:Number(wetBandPeak.toFixed(3)),wetBandDistanceMeters:wetBandDistanceMeters===null?null:Number(wetBandDistanceMeters.toFixed(3)),activeIsland:active?active.island.name:null,activeBeachIslandIndex,
-   foamActiveMeshes:tidalFoamMeshes.length,foamActiveSegments,foamSegmentCapacity,foamValidIntersections,foamIntersectionCapacity,foamVerticesChecked,foamVerticesOutsideBand,foamMaxOffshoreDistanceMeters:Number(Math.max(0,foamMaxOffshoreOffset).toFixed(3)),foamUpdateLastMs:Number(tidalFoamLastUpdateMs.toFixed(3)),foamUpdateMaxMs:Number(tidalFoamMaxUpdateMs.toFixed(3))
+   foamActiveMeshes:tidalFoamMeshes.length,foamActiveSegments,foamSegmentCapacity,foamValidIntersections,foamIntersectionCapacity,foamVerticesChecked,foamVerticesOutsideBand,foamMaxOffshoreDistanceMeters:Number(Math.max(0,foamMaxOffshoreOffset).toFixed(3)),foamUpdateLastMs:Number(tidalFoamLastUpdateMs.toFixed(3)),foamUpdateMaxMs:Number(tidalFoamMaxUpdateMs.toFixed(3)),
+   coastSolver:waterDebugSolverStats?{...waterDebugSolverStats,meanMs:waterDebugSolverStats.samples?waterDebugSolverStats.totalMs/waterDebugSolverStats.samples:null,physicalBackwashVelocity:'no implementado'}:{implemented:false},
+   renderedVertexAgreement:getWaterVertexAgreementDiagnostics(),
+   physicalBackwashVelocity:'no implementado'
   };
  }
  function waterNormalAt(x,z,t=oceanTime){
@@ -2899,7 +2947,7 @@ async function removeStrayDebugGeometry(targetScene){
   // Actualización global económica para el mar lejano: tres ondas largas, cadencia baja.
   if(farDue){
    waterFarAccumulator%=waterFarStep;
-   for(let vertex=0;vertex<waterBase.length/3;vertex++)waterPositions[vertex*3+1]=waterFarHeightAtVertex(vertex);
+   for(let vertex=0;vertex<waterBase.length/3;vertex++){waterPositions[vertex*3+1]=waterFarHeightAtVertex(vertex);if(waterDebugVertexTimes){waterDebugVertexTimes[vertex]=oceanTime;waterDebugVertexFades[vertex]=1;}}
   }
   if(detailDue){
    waterAccumulator%=waterVertexStep;
@@ -2909,6 +2957,7 @@ async function removeStrayDebugGeometry(targetScene){
    const fadeT=Math.max(0,Math.min(1,(WATER_DETAIL_RADIUS_SQ-(dx*dx+dz*dz))/(WATER_DETAIL_RADIUS_SQ-WATER_DETAIL_FADE_START_SQ)));
    const fade=fadeT*fadeT*(3-2*fadeT);
    waterPositions[i+1]=waterDetailHeightAtVertex(i/3,fade);
+   if(waterDebugVertexTimes){waterDebugVertexTimes[i/3]=oceanTime;waterDebugVertexFades[i/3]=fade;}
     const waveIndex=i/3,waveCrest=Math.max(0,waterWaveValueAtVertex(waveIndex,3)),shortCrest=Math.max(0,waterWaveValueAtVertex(waveIndex,4));
     const crestLight=Math.min(.34,(Math.pow(waveCrest,3)*.25+Math.pow(shortCrest,3)*.09)*oceanDepthSettings.waveCrestStrength),colorOffset=waveIndex*4;
     oceanDepthVertexColors[colorOffset]=Math.min(1,oceanDepthBaseColors[colorOffset]*(1+crestLight));oceanDepthVertexColors[colorOffset+1]=Math.min(1,oceanDepthBaseColors[colorOffset+1]*(1+crestLight*.92));oceanDepthVertexColors[colorOffset+2]=Math.min(1,oceanDepthBaseColors[colorOffset+2]*(1+crestLight*.78));
@@ -3135,13 +3184,14 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island),dirX=Math.cos(angle),dirZ=Math.sin(angle)){
   // A safeguarded secant converges on the same real terrain/water intersection
   // with far fewer expensive heightfield and wave evaluations than ten bisections.
+  const solverStartedAt=groundDebugEnabled?performance.now():0;
   const sample=radius=>{
    const x=island.x+dirX*radius,z=island.z+dirZ*radius;
    const terrainY=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z);
    return terrainY-coastalWaterHeight(x,z,t);
   };
   let lo=island.r*.70,hi=island.r*1.09,loDelta=sample(lo),hiDelta=sample(hi);
-  if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)||loDelta<=0||hiDelta>=0)return null;
+  if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)||loDelta<=0||hiDelta>=0){recordWaterCoastSolverDiagnostic(null,solverStartedAt,false,false);return null;}
   const denominator=loDelta-hiDelta;
   let radius=denominator>1e-9?lo+(hi-lo)*loDelta/denominator:(lo+hi)*.5;
   let bestRadius=radius,bestError=Infinity;
@@ -3150,11 +3200,12 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    if(!Number.isFinite(delta))break;
    const error=Math.abs(delta);
    if(error<bestError){bestError=error;bestRadius=radius;}
-   if(error<.006)return radius;
+   if(error<.006){recordWaterCoastSolverDiagnostic(error,solverStartedAt,true,true);return radius;}
    if(delta>0){lo=radius;loDelta=delta;}else{hi=radius;hiDelta=delta;}
    const span=hi-lo,secant=lo+span*loDelta/(loDelta-hiDelta),guard=span*.04;
    radius=Number.isFinite(secant)&&secant>lo+guard&&secant<hi-guard?secant:(lo+hi)*.5;
   }
+  recordWaterCoastSolverDiagnostic(bestError,solverStartedAt,true,bestError<.006);
   return bestError<Infinity?bestRadius:(lo+hi)*.5;
  }
  const GROUND_PHASE_A_DEFAULTS=Object.freeze({textureRepeat:9.5,relief:.70,roughness:.97});
@@ -6467,12 +6518,38 @@ function createWaterShoreDebugPanel(){
  function refreshDiagnostics(){
   const coast=getWaterCoastDiagnostics(),timeline=getStartupTimelineSnapshot(),work=GroundDynamics.counts();
   metrics.textContent='MAR: base '+coast.baseSeaLevel.toFixed(2)+' m · superficie '+coast.seaSurfaceAtPlayer.toFixed(2)+' m\\nMarea: '+coast.tideMode+' '+coast.tideOffset.toFixed(2)+' m · fase '+coast.tidePhaseDegrees.toFixed(0)+'°\\nOla: ±'+coast.waveAmplitudeBoundMeters.toFixed(3)+' m máx. teóricos · local '+coast.localWaveDisplacement.toFixed(3)+' m\\nBanda húmeda–agua: '+(coast.wetBandDistanceMeters===null?'sin muestra':coast.wetBandDistanceMeters.toFixed(2)+' m')+' · humedad '+coast.wetBandPeak.toFixed(2)+'\\nResaca: '+coast.foamActiveSegments+'/'+coast.foamSegmentCapacity+' tramos · cruces '+coast.foamValidIntersections+'/'+coast.foamIntersectionCapacity+' · máx. mar adentro '+coast.foamMaxOffshoreDistanceMeters.toFixed(2)+' m · fuera banda '+coast.foamVerticesOutsideBand+'/'+coast.foamVerticesChecked+' · CPU '+coast.foamUpdateLastMs.toFixed(2)+' ms\\nIsla: '+(coast.activeIsland||'ninguna')+' · nivel base del plano: '+coast.baseSeaLevel.toFixed(2)+' m';
+  const agreement=getWaterVertexAgreementDiagnostics(),solver=waterDebugSolverStats;
+  const frames=Array.from(fpsFrameSamples.subarray(0,fpsFrameSampleCount)).sort((a,b)=>a-b);
+  const frameAt=p=>frames.length?frames[Math.min(frames.length-1,Math.floor((frames.length-1)*p))]:null;
+  const frameAverage=frames.length?frames.reduce((sum,value)=>sum+value,0)/frames.length:null;
+  const fmt=(value,digits=3)=>Number.isFinite(value)?value.toFixed(digits):'sin muestra';
+  metrics.textContent+='\\nSOLVER: residuo '+fmt(solver&&solver.lastResidualMeters,4)+' m · máximo '+fmt(solver&&solver.maxResidualMeters,4)+' m · convergidos '+(solver?solver.converged:0)+'/'+(solver?solver.samples:0)+' · fallos de intervalo '+(solver?solver.bracketFailures:0)+' · '+fmt(solver&&solver.lastMs,3)+' ms';
+  metrics.textContent+='\\nVÉRTICES: '+agreement.sampled+'/'+agreement.requested+' · error medio '+fmt(agreement.meanAbsErrorMeters===null?null:agreement.meanAbsErrorMeters*100,2)+' cm · P95 '+fmt(agreement.p95AbsErrorMeters===null?null:agreement.p95AbsErrorMeters*100,2)+' cm · máx. '+fmt(agreement.maxAbsErrorMeters===null?null:agreement.maxAbsErrorMeters*100,2)+' cm';
+  metrics.textContent+='\\nCPU agua: malla '+fmt(waterLastUpdateMs,2)+' ms · normales '+fmt(waterLastNormalMs,2)+' · espuma '+fmt(tidalFoamLastUpdateMs,2)+' · playa '+fmt(beachUpdateLastMs,2)+' · terreno '+fmt(groundDynamicsLastUpdateMs,2)+' · solver '+fmt(solver&&solver.lastMs,3);
+  metrics.textContent+='\\nFPS '+Math.round(engine.getFps())+' · fotograma medio '+fmt(frameAverage,2)+' ms · P50 '+fmt(frameAt(.50),2)+' · P95 '+fmt(frameAt(.95),2)+' · P99 '+fmt(frameAt(.99),2);
+  metrics.textContent+='\\nVelocidad física de resaca: NO IMPLEMENTADO';
   const recent=(timeline.longFrames||[]).slice(-4).map(item=>Math.round(item.frameMs)+'ms @ '+Math.round(item.elapsedMs/1000)+'s').join(', ')||'ninguno';
   const tasks=(timeline.tasks||[]).slice(-4).map(item=>item.name+': '+Math.round(item.durationMs)+'ms').join('\\n')||'sin tareas registradas aún';
   startup.textContent='ARRANQUE · primer fotograma '+(timeline.firstFrameAt?'registrado':'pendiente')+' · máximo '+(timeline.maxFrameMs||0).toFixed(1)+'ms\\nTareas recientes:\\n'+tasks+'\\nFotogramas largos (>24ms): '+recent+'\\nCosta: '+work.beachWorkLastSliceMs.toFixed(2)+' ms (máx '+work.beachWorkMaxSliceMs.toFixed(2)+' ms / presupuesto '+work.beachWorkBudgetMs+' ms)';
-  window.__elSinNombreWaterDebug={...oceanDepthSettings,baseSettings:{...settings},forcedTideOffset:debugForcedTideOffset,coast,timeline};
+  window.__elSinNombreWaterDebug={...oceanDepthSettings,baseSettings:{...settings},forcedTideOffset:debugForcedTideOffset,coast,timeline,renderedVertexAgreement:agreement,coastSolver:solver?{...solver}:null};
  }
  window.__elSinNombreWaterDebugRefresh=refreshDiagnostics;
+ window.__elSinNombreWaterDebugSnapshot=()=>{
+  const health=typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug():null;
+  const activeCamera=scene.activeCamera||camera,target=activeCamera&&typeof activeCamera.getTarget==='function'?activeCamera.getTarget():null;
+  const position=activeCamera&&activeCamera.position?activeCamera.position:null;
+  return {
+   build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||null,
+   graphicsProfile:activeGraphicsProfile,gameStarted,oceanTime:Number(oceanTime.toFixed(4)),
+   tide:{mode:Number.isFinite(debugForcedTideOffset)?(debugForcedTideOffset>0?'forced-high':'forced-low'):'natural',offset:Number(tideOffsetAt(oceanTime).toFixed(4)),phaseDegrees:Number((((oceanTime%TIDE_PERIOD_SECONDS)/TIDE_PERIOD_SECONDS)*360).toFixed(2))},
+   camera:position?{position:{x:position.x,y:position.y,z:position.z},rotation:activeCamera.rotation?{x:activeCamera.rotation.x,y:activeCamera.rotation.y,z:activeCamera.rotation.z}:null,target:target?{x:target.x,y:target.y,z:target.z}:null}:null,
+   player:{x:player.root.position.x,y:player.root.position.y,z:player.root.position.z},
+   settings:{...settings},coast:getWaterCoastDiagnostics(),renderedVertexAgreement:getWaterVertexAgreementDiagnostics(),
+   coastSolver:waterDebugSolverStats?{...waterDebugSolverStats}:null,
+   timings:{waterLastUpdateMs,waterLastNormalMs,tidalFoamLastUpdateMs,beachUpdateLastMs,groundDynamicsLastUpdateMs},
+   frameTimingMs:health&&health.runtime?health.runtime.frameTimingMs:null,fps:health&&health.runtime?health.runtime.fps:engine.getFps()
+  };
+ };
  controls.appendChild(reset);document.body.appendChild(panel);apply();refreshDiagnostics();
 }
 createWaterShoreDebugPanel();

@@ -1,0 +1,61 @@
+name: Water coast visual reference
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'scripts/test_water_diagnostics.cjs'
+      - 'scripts/capture_water_reference.cjs'
+      - '.github/workflows/water-reference.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: water-reference-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test Stage 0 diagnostic contract
+        run: node scripts/test_water_diagnostics.cjs
+      - name: Build game preview
+        run: python scripts/build_site.py
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Serve preview
+        run: |
+          python -m http.server 4173 --directory dist > /tmp/water-preview.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/guest/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/water-preview.log
+          exit 1
+      - name: Capture baseline and candidate with identical settings
+        env:
+          BASELINE_URL: https://bonillamarquezpablo-lab.github.io/Minimo-android/guest/?v=0.6.271&debug=1
+          PREVIEW_URL: http://127.0.0.1:4173/guest/?debug=1
+          OUTPUT_DIR: artifacts/water-reference
+        run: node scripts/capture_water_reference.cjs
+      - name: Upload screenshots and diagnostic values
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: water-stage0-playwright-reference
+          path: artifacts/water-reference/
+          if-no-files-found: warn
+          retention-days: 30
