@@ -11952,7 +11952,7 @@ function update(dt){
    stop:()=>engine.stopRenderLoop(),
    setCamera:({x,y,z,targetX,targetY,targetZ})=>{camera.position.set(x,y,z);camera.setTarget(new B.Vector3(targetX,targetY,targetZ));},
    setIslandShadowReceiving:(enabled)=>{const terrain=islandTerrainMeshes[0];if(!terrain)return false;terrain.receiveShadows=!!enabled;return terrain.receiveShadows===!!enabled;},
-   setPackedTrailVisible:(enabled)=>{const trails=packedTrailMeshes;trails.forEach(mesh=>{mesh.isVisible=!!enabled;if(typeof mesh.setEnabled==='function')mesh.setEnabled(!!enabled);});return {count:trails.length,visible:trails.length>0&&trails.every(mesh=>mesh.isVisible===!!enabled&&(!mesh.isEnabled||mesh.isEnabled()===!!enabled))};},
+   setPackedTrailVisible:(enabled)=>{const trails=packedTrailMeshes;trails.forEach(mesh=>{mesh.isVisible=!!enabled;if(typeof mesh.setEnabled==='function')mesh.setEnabled(!!enabled);});return {count:trails.length,visible:trails.length>0&&trails.every(mesh=>mesh.isVisible===!!enabled),states:trails.map(mesh=>({name:mesh.name,isVisible:mesh.isVisible,isEnabled:typeof mesh.isEnabled==='function'?mesh.isEnabled():null,disposed:!!mesh.isDisposed?.()}))};},
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},
    render:()=>scene.render(),
    captureCanvas:()=>{const targetCanvas=document.getElementById('renderCanvas');if(!targetCanvas)throw new Error('Render canvas is missing');return targetCanvas.toDataURL('image/png');},
