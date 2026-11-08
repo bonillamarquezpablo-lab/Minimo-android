@@ -130,7 +130,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'10',build:'0.6.256'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'10',build:'0.6.257'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -386,11 +386,11 @@ def main() -> None:
         fail("El mapa costero debe actualizar la isla activa en fragmentos medidos de hasta 4 ms.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
-    if "const subdivisions=index===0?(isTouchDevice?208:240):88;" not in index_html:
+    if "const subdivisions=Math.min(360,Math.max(112,Math.ceil(is.r*2/(isTouchDevice?.42:.36))));" not in index_html:
         fail("La costa necesita un heightfield más fino para evitar escalones visibles.")
     if "Math.max(512,Math.min(2048,Math.ceil(Math.PI*2*island.r/.30)))" not in index_html:
         fail("Calidad debe mantener segmentos de rompiente de unos 30 cm y Rendimiento una malla ligera.")
-    if "(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.026+Math.sin(x*.17+z*.11)*.0035" not in index_html:
+    if "(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.008+Math.sin(x*.17+z*.11)*.0018+(terrainValueNoise(x*.44+3.7,z*.44-8.1)-.5)*.002" not in index_html:
         fail("El perfil costero debe evitar dientes exagerados sin perder las calas naturales.")
     if "beachStateSampler" not in index_html or "float laceNoise=fineFoam*.62+broadFoam*.38" not in index_html or "float foamMask=clamp(foam*lace*broken*foamPulse*shoreFoamStrength" not in index_html:
         fail("La espuma costera debe utilizar detalle de encaje de alta frecuencia en el shader.")
