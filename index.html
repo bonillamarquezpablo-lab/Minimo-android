@@ -3182,7 +3182,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  // Solving against the current wave height (instead of a frozen sea level) prevents foam decals
  // from remaining visibly stranded on the dry sand when the tide/wave phase changes.
  function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island),dirX=Math.cos(angle),dirZ=Math.sin(angle)){
-  const solverStartedAt=performance.now();
+  const solverStartedAt=groundDebugEnabled?performance.now():0;
   // A safeguarded secant converges on the same real terrain/water intersection
   // with far fewer expensive heightfield and wave evaluations than ten bisections.
   const sample=radius=>{
