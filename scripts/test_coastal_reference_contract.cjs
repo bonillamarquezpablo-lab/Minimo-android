@@ -26,7 +26,7 @@ assert.doesNotMatch(html, /const groundDebugEnabled=testModeEnabled/,
 assert.match(html, /if\(testModeEnabled\)\{[\s\S]*?window\.__ELSN_TEST__=/,
   'The test hooks must only be created when ?test=1 is present');
 assert.match(html, /preserveDrawingBuffer:testModeEnabled/, 'Only test mode may preserve the WebGL drawing buffer for PNG readback');
-for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setWaterState:', 'diagnostics:', 'snapshot:', 'stop:', 'render:', 'captureCanvas:']) {
+for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setSceneShadowsEnabled:', 'setOceanSurfaceEnabled:', 'setLivingBeachEnabled:', 'setTerrainTextureMapsEnabled:', 'setWaterState:', 'diagnostics:', 'snapshot:', 'stop:', 'render:', 'captureCanvas:']) {
   assert.ok(html.includes(api), `Missing deterministic test hook: ${api}`);
 }
 assert.match(html, /window\.__ELSN_TEST__=\{/);
@@ -45,8 +45,18 @@ assert.match(captureRunner, /36\/36 complete/,
   'The runner must assert and report all 36 captured views.');
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
-assert.match(contactSheet, /ridge-occlusion__t037__natural__no-island-shadows\.png/, 'The contact sheet must include a shadow-isolation A/B panel.');
-assert.match(captureRunner, /setIslandShadowReceiving\(false\)/, 'The ridge A/B frame must isolate the main-island shadow receiver.');
-assert.match(html, /setIslandShadowReceiving:\(enabled\)=>/, 'Shadow isolation must remain available only through the test-mode hook.');
+for (const diagnostic of ['no-scene-shadows', 'no-ocean-surface', 'no-living-beach', 'no-terrain-maps']) {
+  assert.ok(captureRunner.includes('ridge-occlusion__t037__natural__' + diagnostic + '.png'),
+    `Missing layer-isolation capture: ${diagnostic}`);
+  assert.ok(contactSheet.includes('ridge-occlusion__t037__natural__' + diagnostic + '.png'),
+    `Contact sheet must include layer-isolation capture: ${diagnostic}`);
+}
+assert.match(html, /setIslandShadowReceiving:\(enabled\)=>/, 'Terrain receiver isolation must remain test-only.');
+assert.match(html, /setSceneShadowsEnabled:\(enabled\)=>[\s\S]*?scene\.shadowsEnabled=value/, 'Global scene shadows must be isolatable in test mode.');
+assert.match(html, /setOceanSurfaceEnabled:\(enabled\)=>/, 'Ocean visibility isolation must remain test-only.');
+assert.match(html, /setLivingBeachEnabled:\(enabled\)=>/, 'Beach surface isolation must remain test-only.');
+assert.match(html, /setTerrainTextureMapsEnabled:\(enabled\)=>/, 'Terrain material-map isolation must remain test-only.');
+assert.match(html, /oceanWaveNormal\.level=\.58/, 'The detailed ocean normal map must retain its full texture resolution with controlled strength.');
+assert.match(html, /new B\.Color3\(\.38,\.50,\.56\)/, 'Quality water specular intensity must avoid clipped block highlights.');
 assert.ok(workflow.includes('cancel-in-progress: false'),
-  'A later PR commit must not cancel a long-running 27-image reference capture');
+  'A later PR commit must not cancel a long-running 36-image reference capture');

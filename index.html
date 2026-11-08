@@ -2657,20 +2657,20 @@ async function removeStrayDebugGeometry(targetScene){
   ctx.putImageData(img,0,0);tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
  }
  const oceanWaveNormal=isPerformanceMode&&isConstrainedMobile?null:makeOceanWaveNormal();
- if(oceanWaveNormal){oceanWaveNormal.level=.96;oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.96;}
+ if(oceanWaveNormal){oceanWaveNormal.level=.58;oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.58;}
  else{M.water.bumpTexture=albedoNormalWater;M.water.bumpTexture.level=.24;}
  // El agua recibe un reflejo propio de las islas y del cielo nórdico.
  // El HDRI global se conserva para los materiales PBR, pero nunca se asigna al mar.
  M.water.specularColor=new B.Color3(.62,.76,.82);M.water.specularPower=128;
- if(B.FresnelParameters&&!isPerformanceMode){M.water.reflectionFresnelParameters=new B.FresnelParameters();M.water.reflectionFresnelParameters.isEnabled=true;M.water.reflectionFresnelParameters.leftColor=new B.Color3(.08,.18,.23);M.water.reflectionFresnelParameters.rightColor=new B.Color3(.68,.82,.86);M.water.reflectionFresnelParameters.bias=.035;M.water.reflectionFresnelParameters.power=2.1;}else if(M.water.reflectionFresnelParameters)M.water.reflectionFresnelParameters.isEnabled=false;
+ if(B.FresnelParameters&&!isPerformanceMode){M.water.reflectionFresnelParameters=new B.FresnelParameters();M.water.reflectionFresnelParameters.isEnabled=true;M.water.reflectionFresnelParameters.leftColor=new B.Color3(.08,.18,.23);M.water.reflectionFresnelParameters.rightColor=new B.Color3(.46,.62,.67);M.water.reflectionFresnelParameters.bias=.035;M.water.reflectionFresnelParameters.power=2.1;}else if(M.water.reflectionFresnelParameters)M.water.reflectionFresnelParameters.isEnabled=false;
   M.windowGlow.emissiveColor=new B.Color3(.8,.38,.10);M.windowGlow.disableLighting=false;M.windowGlow.specularColor=new B.Color3(.2,.12,.04);
   M.ember.emissiveColor=new B.Color3(1,.22,.035);M.ember.disableLighting=true;M.ember.alpha=.96;
  [M.tunic,M.red,M.blueCloth,M.greenCloth,M.ochreCloth,M.fur].forEach(m=>{m.specularColor=new B.Color3(.035,.032,.028);m.specularPower=18;});
  M.leather.specularColor=new B.Color3(.12,.095,.07);M.leather.specularPower=28;
  [M.metal,M.darkMetal,M.gold,M.brass].forEach(m=>{m.specularColor=new B.Color3(.48,.46,.39);m.specularPower=72;});
- const reducedWaterProfile=isPerformanceMode&&isConstrainedMobile;M.water.specularColor=reducedWaterProfile?new B.Color3(.18,.25,.28):new B.Color3(.66,.80,.88);M.water.specularPower=reducedWaterProfile?28:88;
+ const reducedWaterProfile=isPerformanceMode&&isConstrainedMobile;M.water.specularColor=reducedWaterProfile?new B.Color3(.18,.25,.28):new B.Color3(.38,.50,.56);M.water.specularPower=reducedWaterProfile?28:68;
  M.water.emissiveColor=new B.Color3(.030,.068,.082);M.water.backFaceCulling=false;M.water.alpha=1;
- if(B.FresnelParameters){M.water.diffuseFresnelParameters=new B.FresnelParameters();M.water.diffuseFresnelParameters.bias=.075;M.water.diffuseFresnelParameters.power=2.3;M.water.diffuseFresnelParameters.leftColor=new B.Color3(.085,.205,.255);M.water.diffuseFresnelParameters.rightColor=new B.Color3(.52,.74,.79);} 
+ if(B.FresnelParameters){M.water.diffuseFresnelParameters=new B.FresnelParameters();M.water.diffuseFresnelParameters.bias=.075;M.water.diffuseFresnelParameters.power=2.3;M.water.diffuseFresnelParameters.leftColor=new B.Color3(.085,.205,.255);M.water.diffuseFresnelParameters.rightColor=new B.Color3(.43,.63,.68);} 
 
  M.foam.alpha=.42;M.foam.emissiveColor=new B.Color3(.34,.40,.39);M.foam.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
 
@@ -11889,12 +11889,17 @@ function update(dt){
   unhandledRejections:window.__elSinNombreStartupSmoke.unhandledRejections.length
  };
  if(testModeEnabled){
+  let testTerrainTextureBackup=null;
   window.__ELSN_TEST__={
    build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',
    islands:land.map(({x,z,r,name})=>({x,z,r,name})),
    stop:()=>engine.stopRenderLoop(),
    setCamera:({x,y,z,targetX,targetY,targetZ})=>{camera.position.set(x,y,z);camera.setTarget(new B.Vector3(targetX,targetY,targetZ));},
    setIslandShadowReceiving:(enabled)=>{const terrain=islandTerrainMeshes[0];if(!terrain)return false;terrain.receiveShadows=!!enabled;return terrain.receiveShadows===!!enabled;},
+   setSceneShadowsEnabled:(enabled)=>{const value=!!enabled;scene.shadowsEnabled=value;if(scene.markAllMaterialsAsDirty)scene.markAllMaterialsAsDirty(B.Constants.MATERIAL_AllDirtyFlag);else scene.materials.forEach(material=>{if(material&&material.markAsDirty)material.markAsDirty(B.Constants.MATERIAL_AllDirtyFlag);});return scene.shadowsEnabled===value;},
+   setOceanSurfaceEnabled:(enabled)=>{ground.setEnabled(!!enabled);return ground.isEnabled()===!!enabled;},
+   setLivingBeachEnabled:(enabled)=>{const layer=livingBeachLayers[0];if(!layer)return false;layer.mesh.setEnabled(!!enabled);return layer.mesh.isEnabled()===!!enabled;},
+   setTerrainTextureMapsEnabled:(enabled)=>{const terrain=islandTerrainMeshes[0],material=terrain&&terrain.material;if(!material)return false;if(!testTerrainTextureBackup)testTerrainTextureBackup={albedoTexture:material.albedoTexture||null,bumpTexture:material.bumpTexture||null};material.albedoTexture=enabled?testTerrainTextureBackup.albedoTexture:null;material.bumpTexture=enabled?testTerrainTextureBackup.bumpTexture:null;if(material.markAsDirty)material.markAsDirty(B.Constants.MATERIAL_AllDirtyFlag);return true;},
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},
    render:()=>scene.render(),
    captureCanvas:()=>{const targetCanvas=document.getElementById('renderCanvas');if(!targetCanvas)throw new Error('Render canvas is missing');return targetCanvas.toDataURL('image/png');},

@@ -38,6 +38,7 @@ const manifest = {
   playerValidation: 'separate-character-startup-job',
   campaignStart: null,
   captures: [],
+  layerIsolationCaptures: [],
   shadowIsolationCapture: null,
   timingsMs: {},
   consoleErrors: [],
@@ -248,42 +249,64 @@ async function main() {
       }
     }
     manifest.timingsMs.captureAll36 = Number((performance.now() - stepStartedAt).toFixed(1));
-    // Diagnostic A/B frame: same ridge camera, wave time and tide, but with main-island
-    // terrain shadow receiving disabled temporarily. This isolates shadow-map streaks from water.
+    // Layer isolation A/B frames use the exact same ridge camera, time and tide.
+    // Each layer is disabled only for its own capture and restored immediately afterwards.
     const ridgeCase = CAMERAS.find(cameraCase => cameraCase.id === 'ridge-occlusion');
-    const shadowIsolation = await page.evaluate(({ cameraCase, island }) => {
-      const api = window.__ELSN_TEST__;
-      const disabled = api.setIslandShadowReceiving(false);
-      api.setCamera({
-        x: island.x + 75, y: cameraCase.height, z: island.z - 22,
-        targetX: island.x - 25, targetY: cameraCase.targetY, targetZ: island.z - 22
-      });
-      api.setWaterState({ time: 37, tide: 'natural' });
-      api.render();
-      const canvasPng = api.captureCanvas();
-      const restored = api.setIslandShadowReceiving(true);
-      return { disabled, restored, canvasPng };
-    }, { cameraCase: ridgeCase, island: mainIsland });
     const pngPrefix = 'data:image/png;base64,';
-    assert.ok(typeof shadowIsolation.canvasPng === 'string' &&
-      shadowIsolation.canvasPng.startsWith(pngPrefix),
-      'Shadow-isolation canvas readback did not return a PNG');
-    assert.ok(shadowIsolation.disabled && shadowIsolation.restored,
-      'The main-island shadow receiver must disable and restore for the diagnostic A/B frame');
-    const shadowPng = Buffer.from(shadowIsolation.canvasPng.slice(pngPrefix.length), 'base64');
-    assert.ok(shadowPng.length > 1000, 'Shadow-isolation PNG was empty');
-    assert.equal(shadowPng.subarray(0, 8).toString('hex'), '89504e470d0a1a0a',
-      'Shadow-isolation capture does not have a valid PNG signature');
-    const shadowFile = 'ridge-occlusion__t037__natural__no-island-shadows.png';
-    fs.writeFileSync(path.join(OUT, shadowFile), shadowPng);
-    manifest.shadowIsolationCapture = {
-      file: shadowFile,
-      camera: 'ridge-occlusion',
-      timeSeconds: 37,
-      tide: 'natural',
-      mainIslandTerrainReceivesShadows: false,
-      receiverRestoredAfterCapture: true
-    };
+    const isolationModes = [
+      { mode: 'scene-shadows', file: 'ridge-occlusion__t037__natural__no-scene-shadows.png', label: 'scene shadows disabled' },
+      { mode: 'ocean-surface', file: 'ridge-occlusion__t037__natural__no-ocean-surface.png', label: 'ocean surface disabled' },
+      { mode: 'living-beach', file: 'ridge-occlusion__t037__natural__no-living-beach.png', label: 'living beach disabled' },
+      { mode: 'terrain-maps', file: 'ridge-occlusion__t037__natural__no-terrain-maps.png', label: 'terrain albedo and normal maps disabled' }
+    ];
+    for (const isolation of isolationModes) {
+      const frame = await page.evaluate(({ cameraCase, island, mode }) => {
+        const api = window.__ELSN_TEST__;
+        api.setCamera({
+          x: island.x + 75, y: cameraCase.height, z: island.z - 22,
+          targetX: island.x - 25, targetY: cameraCase.targetY, targetZ: island.z - 22
+        });
+        api.setWaterState({ time: 37, tide: 'natural' });
+        let disabled = false, restored = false, canvasPng = null;
+        try {
+          if (mode === 'scene-shadows') disabled = api.setSceneShadowsEnabled(false);
+          else if (mode === 'ocean-surface') disabled = api.setOceanSurfaceEnabled(false);
+          else if (mode === 'living-beach') disabled = api.setLivingBeachEnabled(false);
+          else if (mode === 'terrain-maps') disabled = api.setTerrainTextureMapsEnabled(false);
+          api.render();
+          canvasPng = api.captureCanvas();
+        } finally {
+          if (mode === 'scene-shadows') restored = api.setSceneShadowsEnabled(true);
+          else if (mode === 'ocean-surface') restored = api.setOceanSurfaceEnabled(true);
+          else if (mode === 'living-beach') restored = api.setLivingBeachEnabled(true);
+          else if (mode === 'terrain-maps') restored = api.setTerrainTextureMapsEnabled(true);
+          api.render();
+        }
+        return { disabled, restored, canvasPng };
+      }, { cameraCase: ridgeCase, island: mainIsland, mode: isolation.mode });
+      assert.ok(frame.disabled && frame.restored,
+        'Layer isolation must disable and restore: ' + isolation.mode);
+      assert.ok(typeof frame.canvasPng === 'string' && frame.canvasPng.startsWith(pngPrefix),
+        'Layer-isolation canvas readback did not return a PNG: ' + isolation.mode);
+      const pngBuffer = Buffer.from(frame.canvasPng.slice(pngPrefix.length), 'base64');
+      assert.ok(pngBuffer.length > 1000, 'Layer-isolation PNG was empty: ' + isolation.mode);
+      assert.equal(pngBuffer.subarray(0, 8).toString('hex'), '89504e470d0a1a0a',
+        'Layer-isolation capture does not have a valid PNG signature: ' + isolation.mode);
+      fs.writeFileSync(path.join(OUT, isolation.file), pngBuffer);
+      manifest.layerIsolationCaptures.push({
+        file: isolation.file,
+        mode: isolation.mode,
+        disabled: true,
+        restored: true,
+        camera: 'ridge-occlusion',
+        timeSeconds: 37,
+        tide: 'natural',
+        label: isolation.label
+      });
+      console.log('[coastal-reference] layer isolation captured: ' + isolation.mode);
+    }
+    manifest.shadowIsolationCapture =
+      manifest.layerIsolationCaptures.find(frame => frame.mode === 'scene-shadows') || null;
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');
     assert.equal(manifest.consoleErrors.length, 0,
