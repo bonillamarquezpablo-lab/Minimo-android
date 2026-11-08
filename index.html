@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.232">
+<meta name="el-sin-nombre-build" content="0.6.233">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.232</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.233</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -3013,7 +3013,6 @@ async function removeStrayDebugGeometry(targetScene){
    const coastNoise=(terrainValueNoise(wx*.12+17.2,wz*.12-8.4)-.5)*.045+Math.sin(wx*.17+wz*.11)*.006;
    const coastDistance=d+coastNoise*is.r;
    const beach=smooth01((coastDistance/is.r-.75)/.24);
-   const wetSand=smooth01((coastDistance/is.r-.82)/.22);
    // Variación espacial real: humedad y musgo cambian por zonas, no un tinte uniforme por isla.
    const patch=terrainValueNoise(wx*.028+17.2,wz*.028-8.4);
    const micro=terrainValueNoise(wx*.095-4.1,wz*.095+9.7);
@@ -3025,7 +3024,7 @@ async function removeStrayDebugGeometry(targetScene){
    const bareSoil=smooth01((micro*.30+fine*.42+grain*.28-.57)*3.5)*(1-rock)*(1-beach);
    const leafLitter=smooth01((litter*.28+grain*.36+fine*.36-.57)*3.4)*(1-rock)*(1-beach);
    // Neutral olive base lets the albedo read through instead of tinting the whole island green.
-   const grass=[.91,.91,.82],stone=[.87,.86,.80],sand=[.84,.72,.55],wetSandCol=[.68,.63,.54],soil=[.88,.76,.61],mud=[.78,.81,.68],leaf=[.87,.74,.56];
+   const grass=[.91,.91,.82],stone=[.87,.86,.80],sand=[.84,.72,.55],soil=[.88,.76,.61],mud=[.78,.81,.68],leaf=[.87,.74,.56];
    let r=grass[0]*(1-rock)+stone[0]*rock,g=grass[1]*(1-rock)+stone[1]*rock,b=grass[2]*(1-rock)+stone[2]*rock;
    r=r*(1-wet)+mud[0]*wet;g=g*(1-wet)+mud[1]*wet;b=b*(1-wet)+mud[2]*wet;
    const soilMix=Math.min(.96,bareSoil*1.12),leafMix=Math.min(.58,leafLitter*.76);
@@ -3034,8 +3033,6 @@ async function removeStrayDebugGeometry(targetScene){
    const mottling=(grain-.5)*.045;
    r+=mottling;g+=mottling*.90;b+=mottling*.68;
    r=r*(1-beach)+sand[0]*beach;g=g*(1-beach)+sand[1]*beach;b=b*(1-beach)+sand[2]*beach;
-   const wetBlend=wetSand*beach*.55;
-   r=r*(1-wetBlend)+wetSandCol[0]*wetBlend;g=g*(1-wetBlend)+wetSandCol[1]*wetBlend;b=b*(1-wetBlend)+wetSandCol[2]*wetBlend;
    const shoreGrain=(terrainValueNoise(wx*.48+7.1,wz*.48-12.6)-.5)*.026*beach;
    r+=shoreGrain;g+=shoreGrain*.92;b+=shoreGrain*.78;
    colors.push(Math.max(.30,Math.min(1,r)),Math.max(.30,Math.min(1,g)),Math.max(.27,Math.min(1,b)),1);
@@ -3083,8 +3080,13 @@ async function removeStrayDebugGeometry(targetScene){
  const livingBeachLayers=[];
  function buildLivingBeachLayer(island,index){
   const segments=isPerformanceMode?(isConstrainedMobile?72:104):Math.max(144,Math.min(288,Math.ceil(Math.PI*2*island.r/1.35))),rows=isPerformanceMode?9:(isTouchDevice?15:17),cols=segments+1;
-  const positions=[],indices=[],uvs=[],colors=[],radials=[],baseAlpha=[],foamPattern=new Float32Array((segments+1)*rows),wetness=new Float32Array((segments+1)*rows),residue=new Float32Array((segments+1)*rows),lastShore=new Float32Array(segments+1);
-  lastShore.fill(NaN);
+  const positions=[],indices=[],uvs=[],colors=[],radials=[],baseAlpha=[];
+  const coastColumns=isPerformanceMode?256:512,coastRows=isPerformanceMode?32:64;
+  const coastalState=window.NorseBeachState.createCoastalGrid({radius:island.r,columns:coastColumns,rows:coastRows,innerRatio:.755,outerRatio:1.085});
+  const coastalGround=new Float32Array(coastalState.size);
+  const coastalStateTexture=B.RawTexture.CreateRGBATexture(coastalState.rgba,coastColumns,coastRows,scene,false,false,B.Texture.BILINEAR_SAMPLINGMODE);
+  coastalStateTexture.wrapU=B.Texture.CLAMP_ADDRESSMODE;coastalStateTexture.wrapV=B.Texture.CLAMP_ADDRESSMODE;
+  coastalStateTexture.name='BeachStateRGBA_'+index;
   for(let i=0;i<=segments;i++){
    const angle=i/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
    const coastNoise=(terrainValueNoise((island.x+cs*island.r)*.12+17.2,(island.z+sn*island.r)*.12-8.4)-.5)*.045+Math.sin((island.x+cs*island.r)*.17+(island.z+sn*island.r)*.11)*.006;
@@ -3097,16 +3099,9 @@ async function removeStrayDebugGeometry(targetScene){
    for(let i=0;i<=segments;i++){
     const angle=i/segments*Math.PI*2,inner=radials[i*2],outer=radials[i*2+1];
     const radius=inner+(outer-inner)*t,x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-    positions.push(x,terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018,z);uvs.push(i/segments*12,t*2.8);
+    positions.push(x,terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018,z);uvs.push(i/segments,t);
     const edgeFade=Math.min(smooth01(t/.11),smooth01((1-t)/.075));
     const alpha=.88*edgeFade;colors.push(1,.94,.82,alpha);baseAlpha.push(alpha);
-     // Pre-bake a broken, cellular foam lace field in world space. Broad patches,
-     // medium filaments and fine flecks are sampled once; no per-frame noise allocation.
-     const broadFoam=terrainValueNoise(x*.12+37.4,z*.12-21.8),mediumFoam=terrainValueNoise(x*.38-14.7,z*.38+42.1),fineFoam=terrainValueNoise(x*1.05+8.3,z*1.05-31.6);
-     const foamMass=smooth01((broadFoam*.54+mediumFoam*.31+fineFoam*.15-.49)*8.5);
-     const foamFilament=1-smooth01((Math.abs(mediumFoam-.5)-.19)*7.5);
-     const foamFleck=smooth01((fineFoam-.48)*10.5);
-     foamPattern[row*cols+i]=Math.min(1,foamMass*(.22+.52*foamFilament+.42*foamFleck));
    }
   }
   for(let row=0;row<rows-1;row++)for(let i=0;i<segments;i++){
@@ -3116,13 +3111,44 @@ async function removeStrayDebugGeometry(targetScene){
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
   const mesh=new B.Mesh('LivingCoastalSand_'+index,scene),data=new B.VertexData();
   data.positions=positions;data.indices=indices;data.normals=normals;data.uvs=uvs;data.colors=colors;data.applyToMesh(mesh,true);
-  const material=M.sand.clone('LivingBeachSandMaterial_'+index),texture=texCoastalSand.clone('LivingBeachSandTexture_'+index);
-  texture.uScale=1;texture.vScale=1;material.diffuseTexture=texture;material.useVertexColors=true;material.useVertexAlpha=true;
-  material.backFaceCulling=false;material.alpha=1;material.specularColor=new B.Color3(.018,.016,.012);
+  if(!B.Effect.ShadersStore.norseLivingBeachVertexShader){
+   B.Effect.ShadersStore.norseLivingBeachVertexShader=\`precision highp float;
+attribute vec3 position;attribute vec3 normal;attribute vec2 uv;attribute vec4 color;
+uniform mat4 world;uniform mat4 worldViewProjection;
+varying vec2 vUV;varying vec3 vNormalW;varying vec4 vColor;
+void main(void){vUV=uv;vNormalW=normalize((world*vec4(normal,0.0)).xyz);vColor=color;gl_Position=worldViewProjection*vec4(position,1.0);}\`;
+   B.Effect.ShadersStore.norseLivingBeachPixelShader=\`precision highp float;
+varying vec2 vUV;varying vec3 vNormalW;varying vec4 vColor;
+uniform sampler2D sandSampler;uniform sampler2D beachStateSampler;
+void main(void){
+ vec4 sand=texture2D(sandSampler,vUV*vec2(12.0,4.8));
+ vec4 state=texture2D(beachStateSampler,vUV);
+ float wet=clamp(state.r,0.0,1.0),foam=clamp(state.g,0.0,1.0),water=clamp(state.b,0.0,1.0);
+ vec4 broad=texture2D(sandSampler,vUV*vec2(41.0,17.0));
+ vec4 fine=texture2D(sandSampler,vUV*vec2(117.0,49.0));
+ float laceNoise=fine.r*0.62+broad.g*0.38;
+ float lace=smoothstep(0.39,0.76,laceNoise);
+ float broken=smoothstep(0.34,0.62,broad.r)*(1.0-smoothstep(0.83,0.99,fine.g));
+ float foamMask=clamp(foam*lace*broken,0.0,0.94);
+ vec3 dryColor=sand.rgb*vec3(1.12,1.035,0.91);
+ vec3 wetColor=dryColor*vec3(0.66,0.70,0.73);
+ vec3 color=mix(dryColor,wetColor,wet*0.92);
+ color=mix(color,vec3(0.49,0.68,0.73),water*0.18);
+ vec3 foamColor=mix(vec3(0.72,0.85,0.87),vec3(0.97,0.99,0.98),smoothstep(0.4,0.82,laceNoise));
+ color=mix(color,foamColor,foamMask*0.88);
+ color+=vec3(wet*0.035+water*0.045);
+ vec3 n=normalize(vNormalW),lightDir=normalize(vec3(-0.30,0.91,0.27));
+ color*=0.76+0.24*max(0.0,dot(n,lightDir));
+ gl_FragColor=vec4(color,clamp(vColor.a,0.0,1.0));
+}\`;
+  }
+  const material=new B.ShaderMaterial('LivingBeachSandMaterial_'+index,scene,'norseLivingBeach',{attributes:['position','normal','uv','color'],uniforms:['world','worldViewProjection'],samplers:['sandSampler','beachStateSampler']});
+  material.setTexture('sandSampler',texCoastalSand);material.setTexture('beachStateSampler',coastalStateTexture);
+  material.backFaceCulling=false;material.alpha=1;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;material.disableDepthWrite=true;
   mesh.material=material;mesh.isPickable=false;mesh.receiveShadows=true;mesh.castShadows=false;mesh.hasVertexAlpha=true;
-  mesh.metadata=Object.assign({},mesh.metadata||{},{livingBeachSurface:true,islandIndex:index,wetnessSimulation:true});
+  mesh.metadata=Object.assign({},mesh.metadata||{},{livingBeachSurface:true,islandIndex:index,wetnessSimulation:true,coastalStateMap:true,shaderFoamLace:true});
   const baseY=new Float32Array(positions.length/3);for(let vertex=0;vertex<baseY.length;vertex++)baseY[vertex]=positions[vertex*3+1];
-   livingBeachLayers.push({mesh,island,index,segments,rows,cols,radials,baseAlpha,foamPattern,wetness,residue,lastShore,colors:new Float32Array(colors),positions:new Float32Array(positions),baseY,positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),positionScratch:new Float32Array(3),centerX:island.x,centerZ:island.z});
+  livingBeachLayers.push({mesh,island,index,segments,rows,cols,radials,baseAlpha,coastalState,coastalGround,coastalGroundReady:false,coastalStateTexture,positions:new Float32Array(positions),baseY,positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),centerX:island.x,centerZ:island.z,lastStateTime:0});
  }
  land.forEach(buildLivingBeachLayer);
  // Interactive ground layer: impressed boot soles, compacted lips, sand grains and drying tide marks.
@@ -3293,71 +3319,50 @@ async function removeStrayDebugGeometry(targetScene){
    const islandIndex=landIslandIndex(x,z);if(islandIndex<0)return;
    const island=land[islandIndex],dx=x-island.x,dz=z-island.z,d=Math.hypot(dx,dz);
    const ratio=d/island.r,beach=ratio>.748&&ratio<.976;
-   const angle=Math.atan2(dz,dx),shore=shorelineFoamRadius(island,angle,oceanTime),groundY=terrainSurfaceAt(x,z);
-   const wet=beach&&((Number.isFinite(shore)&&shore-d<1.45)||waterHeight(x,z,oceanTime)>groundY-.20);
+   const groundY=terrainSurfaceAt(x,z),beachLayer=livingBeachLayers[islandIndex];
+   const wetness=beachLayer?beachLayer.coastalState.sampleWetness(x,z,island.x,island.z):0;
+   const wet=beach&&(wetness>.08||waterHeight(x,z,oceanTime)>groundY+.035);
    pressGround(x,z,islandIndex,wet,beach);makeFootprint(islandIndex,x,z,heading,wet,beach,running);kickSandGrains(x,z,heading,wet,running,groundY);
   }
+  const BEACH_STATE_DEFAULTS=Object.freeze({drySeconds:32,foamSeconds:6,foamDeposit:.68});
+  const BEACH_STATE_INTERVAL=1/12;
   function updateBeach(dt,focusX,focusZ){
-   beachClock+=dt;if(beachClock<.30)return;const beachUpdateStartedAt=performance.now(),step=beachClock;beachClock=0;
-   const drying=Math.exp(-step/(48+Math.max(0,Math.sin(oceanTime*.018))*34));
+   beachClock+=dt;if(beachClock<BEACH_STATE_INTERVAL)return;
+   const beachUpdateStartedAt=performance.now(),now=performance.now()*.001;
+   beachClock%=BEACH_STATE_INTERVAL;
    for(const layer of livingBeachLayers){
-    if(Math.hypot(focusX-layer.centerX,focusZ-layer.centerZ)>layer.island.r+115)continue;
+    if(Math.hypot(focusX-layer.centerX,focusZ-layer.centerZ)>layer.island.r+28)continue;
     const islandIndex=layer.index,field=terrainDeformationFields[islandIndex];
-    for(let i=0;i<=layer.segments;i++){
-     const angle=i/layer.segments*Math.PI*2,shore=shorelineFoamRadius(layer.island,angle,oceanTime),previous=layer.lastShore[i];
-     const inner=layer.radials[i*2],outer=layer.radials[i*2+1];
-     if(Number.isFinite(shore)){
-      // La retirada mueve el borde hacia radios mayores, mar adentro.
-      const retreat=Number.isFinite(previous)?Math.max(0,shore-previous):0;
-      for(let row=0;row<layer.rows;row++){
-       const radial=inner+(outer-inner)*row/(layer.rows-1),stateIndex=i*layer.rows+row,vertex=row*layer.cols+i;
-       const positionOffset=vertex*3,localX=layer.positions[positionOffset],localZ=layer.positions[positionOffset+2];
-       // Keep the baked beach surface and sample only the tiny live deformation field.
-       // Re-running the complete procedural height function per vertex on every tide tick
-       // was redundant and created a large amount of CPU work.
-       layer.positions[positionOffset+1]=layer.baseY[vertex]+(field?terrainDeformationAt(islandIndex,localX,localZ):0);
-       let wet=layer.wetness[stateIndex]*drying;
-       const inlandDistance=shore-radial;
-       if(inlandDistance>=-.65&&inlandDistance<4.8){
-        const contact=.76*Math.exp(-Math.max(0,inlandDistance)*.36);
-        wet=Math.max(wet,contact);
-       }
-       layer.wetness[stateIndex]=Math.min(1,wet);
-       let foam=layer.residue[stateIndex]*Math.exp(-step/3.0);
-       if(retreat>.008){
-        const washCenter=(previous+shore)*.5,distance=Math.abs(radial-washCenter),deposit=Math.min(.78,retreat*2.35)*Math.exp(-distance*.92)*(.18+.82*layer.foamPattern[vertex]);
-        foam=Math.max(foam,deposit);
-       }
-       layer.residue[stateIndex]=Math.min(.68,foam);
-       const w=layer.wetness[stateIndex],foamMask=layer.foamPattern[vertex],base=layer.baseAlpha[vertex];
-       // La espuma clara solo procede del residuo depositado por una retirada real.
-       // La humedad sigue cubriendo la zona de batida, independientemente de la espuma.
-       const wavePhase=oceanTime*.72+localX*.031+localZ*.024+foamMask*2.7;
-       const wavePulse=.5+.5*Math.sin(wavePhase),foamBreath=.92+.08*wavePulse;
-       const f=Math.min(.82,foam*foamBreath),wetR=1-.32*w,wetG=.94-.27*w,wetB=.82-.20*w;
-       // Wet sand stays darker; only the disconnected foam cells lift toward a cool ivory.
-       layer.colors[vertex*4]=wetR+(.94-wetR)*f;
-       layer.colors[vertex*4+1]=wetG+(.965-wetG)*f;
-       layer.colors[vertex*4+2]=wetB+(.94-wetB)*f;
-       layer.colors[vertex*4+3]=base*(.76+w*.10+f*.36);
-      }
-      layer.lastShore[i]=shore;
-     }else{
-      layer.lastShore[i]=NaN;
-      for(let row=0;row<layer.rows;row++){
-       const stateIndex=i*layer.rows+row,vertex=row*layer.cols+i;
-       layer.wetness[stateIndex]*=drying;layer.residue[stateIndex]*=Math.exp(-step/4.2);
-       const w=layer.wetness[stateIndex],foam=layer.residue[stateIndex],base=layer.baseAlpha[vertex];
-       const wetR=1-.32*w,wetG=.94-.27*w,wetB=.82-.20*w,f=Math.min(.78,foam);
-       layer.colors[vertex*4]=wetR+(.94-wetR)*f;
-       layer.colors[vertex*4+1]=wetG+(.965-wetG)*f;
-       layer.colors[vertex*4+2]=wetB+(.94-wetB)*f;
-       layer.colors[vertex*4+3]=base*(.76+w*.10+f*.36);
+    const elapsed=layer.lastStateTime?Math.min(120,Math.max(BEACH_STATE_INTERVAL,now-layer.lastStateTime)):BEACH_STATE_INTERVAL;
+    layer.lastStateTime=now;
+    for(let vertex=0;vertex<layer.baseY.length;vertex++){
+     const offset=vertex*3,x=layer.positions[offset],z=layer.positions[offset+2];
+     layer.positions[offset+1]=layer.baseY[vertex]+(field?terrainDeformationAt(islandIndex,x,z):0)+.018;
+    }
+    const state=layer.coastalState;
+    if(!layer.coastalGroundReady){
+     for(let row=0;row<state.rows;row++){
+      const radius=state.rowRadius[row];
+      for(let col=0;col<state.columns;col++){
+       const angle=col/state.columns*Math.PI*2,x=layer.island.x+Math.cos(angle)*radius,z=layer.island.z+Math.sin(angle)*radius;
+       layer.coastalGround[row*state.columns+col]=terrainHeightOnIsland(layer.island,x,z);
       }
      }
+     layer.coastalGroundReady=true;
     }
+    for(let row=0;row<state.rows;row++){
+     const radius=state.rowRadius[row],rowOffset=row*state.columns;
+     for(let col=0;col<state.columns;col++){
+      const angle=col/state.columns*Math.PI*2,x=layer.island.x+Math.cos(angle)*radius,z=layer.island.z+Math.sin(angle)*radius;
+      const cell=rowOffset+col;
+      const ground=layer.coastalGround[cell]+(field?terrainDeformationAt(islandIndex,x,z):0);
+      const waterLevel=waterHeight(x,z,oceanTime);
+      const actualCoverage=smooth01((waterLevel-ground+.035)/.11);
+      state.stepCell(cell,actualCoverage,elapsed,BEACH_STATE_DEFAULTS);
+     }
+    }
+    layer.coastalStateTexture.update(state.rgba);
     layer.mesh.updateVerticesData(B.VertexBuffer.PositionKind,layer.positions,false,false);
-    layer.mesh.updateVerticesData(B.VertexBuffer.ColorKind,layer.colors,false,false);
    }
    beachUpdateLastMs=performance.now()-beachUpdateStartedAt;
   }
@@ -8785,7 +8790,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'9',build:'0.6.231',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'9',build:'0.6.233',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},

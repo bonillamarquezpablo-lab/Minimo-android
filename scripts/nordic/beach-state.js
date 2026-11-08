@@ -49,7 +49,7 @@
     }
     function stepCell(cell, waterCoverage, dt, config) {
       if (cell < 0 || cell >= size) throw new RangeError("Coastal cell is outside the grid.");
-      const cfg = config || {}, elapsed = Math.max(0, Math.min(2, Number(dt) || 0));
+      const cfg = config || {}, elapsed = Math.max(0, Math.min(120, Number(dt) || 0));
       const cover = clamp01(waterCoverage), previous = water[cell] / 255;
       const drySeconds = Math.max(1, Number(cfg.drySeconds) || 32);
       const foamSeconds = Math.max(0.5, Number(cfg.foamSeconds) || 6);

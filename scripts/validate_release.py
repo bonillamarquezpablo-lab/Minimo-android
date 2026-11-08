@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.232"
+EXPECTED_VERSION = "0.6.233"
 
 HTML_PAGES = (
     "index.html",
@@ -406,8 +406,14 @@ def main() -> None:
         fail("La isla activa debe usar la malla costera continua, adaptada al presupuesto gráfico.")
     if "const initialShoreline=shorelineFoamRadius(island,angle,oceanTime)" not in index_html or "lastShoreline.fill(NaN);foamCenter.fill(NaN);" not in index_html:
         fail("La espuma debe inicializar su historial de costa y no mostrarse como una banda permanente.")
-    if "inlandDistance<4.8" not in index_html or "foamBreath=.92+.08*wavePulse" not in index_html:
-        fail("La humedad debe seguir cubriendo la playa y la espuma debe modularse suavemente tras la retirada.")
+    if "foamBreath=.92+.08*wavePulse" not in index_html:
+        fail("La espuma residual se conserva hasta el hito de unificación.")
+    if "inlandDistance<4.8" in index_html or "wetSandCol=" in index_html or "wetBlend=wetSand" in index_html:
+        fail("La arena seca no puede contener un tinte húmedo ni una franja artificial.")
+    if "NorseBeachState.createCoastalGrid" not in index_html or "state.stepCell(cell,actualCoverage,elapsed,BEACH_STATE_DEFAULTS)" not in index_html:
+        fail("La humedad debe proceder del contacto real entre agua y terreno.")
+    if "const coastColumns=isPerformanceMode?256:512,coastRows=isPerformanceMode?32:64;" not in index_html:
+        fail("El mapa costero debe mantener su resolución específica por perfil.")
     if "foamPattern=new Float32Array((segments+1)*rows)" not in index_html or "foamPattern,wetness,residue,lastShore" not in index_html:
         fail("La espuma de resaca debe usar una máscara espacial precomputada y reutilizada.")
     if "foamMass=smooth01((broadFoam*.54+mediumFoam*.31+fineFoam*.15-.49)*8.5)" not in index_html or "foamFilament=1-smooth01((Math.abs(mediumFoam-.5)-.19)*7.5)" not in index_html:
@@ -418,10 +424,8 @@ def main() -> None:
         fail("La espuma debe depositarse en el centro de la franja recién descubierta cuando la ola se retira.")
     if "foamBreath=.92+.08*wavePulse" not in index_html or "layer.residue[stateIndex]*Math.exp(-step/3.0)" not in index_html or "const f=Math.min(.82,foam*foamBreath)" not in index_html:
         fail("La espuma de playa debe ser fragmentada, depender del residuo de retirada y disiparse en pocos segundos.")
-    if "Math.exp(-Math.max(0,inlandDistance)*.36)" not in index_html or "wetSandCol=[.68,.63,.54]" not in index_html or "wetBlend=wetSand*beach*.55" not in index_html:
-        fail("La arena mojada debe conservar humedad visible con una transición cálida y sin un borde excesivamente oscuro.")
-    if "wetR=1-.32*w,wetG=.94-.27*w,wetB=.82-.20*w" not in index_html:
-        fail("La capa dinámica de arena mojada no debe dibujar un contorno negro en el límite del agua.")
+    if "beachStateSampler" not in index_html or "float laceNoise=fine.r*0.62+broad.g*0.38" not in index_html:
+        fail("La espuma costera debe utilizar detalle de encaje de alta frecuencia en el shader.")
     shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"))]
     if "const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z);" not in shoreline_body or ".42;" in shoreline_body:
         fail("El cruce agua/arena debe usar el perfil real completo; no puede sustituir el mar exterior por una altura plana.")
@@ -482,7 +486,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.229</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.233</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
