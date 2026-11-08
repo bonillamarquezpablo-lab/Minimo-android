@@ -514,8 +514,8 @@ def main() -> None:
         fail("La defensa naval debe estar conectada al bucle, al desembarco y al guardado.")
     if "float humidity=clamp(max(wet*.58,wetEdge*.56)*wetSandStrength,0.0,.78)" not in index_html or "color=mix(color,wrackTint,wrackZone*wrackFragments*.045)" not in index_html:
         fail("La arena húmeda debe quedar cálida y difusa; los restos de arribazón no pueden formar una banda oscura.")
-    if "washMaterial.emissiveColor=new B.Color3(.004,.014,.020)" not in index_html or "const alpha=Math.min(.58,filmAlpha+whitewater*.28+trailingFoam*.34)" not in index_html or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html:
-        fail("La lámina de agua debe conservar transparencia y la espuma blanca debe permanecer fragmentada.")
+    if "washMaterial.emissiveColor=new B.Color3(0,0,0)" not in index_html or "const alpha=Math.min(.38,filmAlpha+whitewater*.38+trailingFoam*.30)" not in index_html or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html:
+        fail("La lámina de agua debe permanecer neutra, sutil y la espuma blanca debe seguir fragmentada.")
     if "const runup=.28+.82*Math.pow(waveCrest,1.15)" not in index_html:
         fail("La lámina de espuma debe conservar una anchura de run-up contenida.")
     if "navalDefensePhaseUnlocked" not in index_html or "villages.every(entry=>entry.claimed)&&discoveredIslands.every(Boolean)" not in index_html:
