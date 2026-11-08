@@ -4064,6 +4064,22 @@ void main(void){
  packedTrailMaterial.bumpTexture=albedoNormalSand;packedTrailMaterial.bumpTexture.level=.12;
  packedTrailMaterial.specularColor=new B.Color3(.018,.015,.010);packedTrailMaterial.specularPower=5;
  packedTrailMaterial.backFaceCulling=false;packedTrailMaterial.roughness=.99;
+ function renderedTerrainSurfaceAt(x,z){
+  for(let index=0;index<land.length;index++){
+   const island=land[index],dx=x-island.x,dz=z-island.z,limit=island.r;
+   if(dx*dx+dz*dz>=limit*limit)continue;
+   const terrain=islandTerrainMeshes[index];
+   // The visible island is a triangulated GroundMesh, not the ideal analytic heightfield.
+   // Sample Babylon's rendered height so the packed-earth ribbon sits on the exact surface
+   // that the player sees, avoiding sub-cell gaps and z-fighting on ridges.
+   if(terrain&&typeof terrain.getHeightAtCoordinates==='function'){
+    const renderedHeight=terrain.getHeightAtCoordinates(dx,dz);
+    if(Number.isFinite(renderedHeight))return terrain.position.y+renderedHeight;
+   }
+   return terrainSurfaceAt(x,z);
+  }
+  return .42;
+ }
  function createTrail(points,width=1.45){
   vegetationTrailPaths.push({points:points.map(p=>[p[0],p[1]]),width});
   // Subdivide the centreline before building the strip. A single quad spanning
@@ -4093,7 +4109,7 @@ void main(void){
    for(let cross=0;cross<=crossSegments;cross++){
     const across=cross/crossSegments,side=across*2-1;
     const x=sampled[i].x+nx*edgeW*.5*side,z=sampled[i].z+nz*edgeW*.5*side;
-    positions.push(x,terrainSurfaceAt(x,z)+.055,z);
+    positions.push(x,renderedTerrainSurfaceAt(x,z)+.055,z);
     uvs.push(across,sampled[i].distance*.72);
    }
   }
