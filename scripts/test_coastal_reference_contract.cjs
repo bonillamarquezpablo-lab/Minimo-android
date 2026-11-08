@@ -54,7 +54,9 @@ assert.ok(!captureRunner.includes('page.screenshot('),
   'Full-page screenshots can include menus/HUD and add unnecessary SwiftShader compositor cost');
 assert.ok(captureRunner.includes("assert.equal(boot.build, '0.6.272'"), 'The capture must inspect the exact current 0.6.272 candidate.');
 assert.match(html,/name="el-sin-nombre-build" content="0\.6\.272"/, 'The scene capture must use the synchronized 0.6.272 HTML build.');
-assert.match(html,/setPackedTrailVisible:\(enabled\)=>\{const trails=scene\.meshes\.filter\(mesh=>mesh&&mesh\.name==='WindingPackedEarthTrail'\)/, 'The test-only API must isolate the packed-earth ribbon without changing production visibility.');
+assert.match(html,/const vegetationTrailPaths=\[\],packedTrailMeshes=\[\]/, 'The game must keep direct references to its packed-trail meshes for deterministic test isolation.');
+assert.match(html,/packedTrailMeshes\.push\(mesh\)/, 'Every generated packed trail must be registered for the test-only A/B capture.');
+assert.match(html,/setPackedTrailVisible:\(enabled\)=>\{const trails=packedTrailMeshes/, 'The test-only API must isolate the packed-earth ribbon without changing normal gameplay.');
 assert.match(captureRunner,/setPackedTrailVisible\(false\)/, 'The coast capture must produce an A/B frame with packed trails hidden.');
 assert.match(captureRunner,/no-packed-trails\.png/, 'The no-trail comparison image must be included in the reference artifact.');
 assert.match(captureRunner, /expectedCaptureCount: 36/,
