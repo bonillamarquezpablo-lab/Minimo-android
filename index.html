@@ -2779,7 +2779,7 @@ async function removeStrayDebugGeometry(targetScene){
   }
  }
  let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0,waterFarAccumulator=0,tidalFoamAccumulator=0;
- const TIDAL_FOAM_UPDATE_STEP=isTouchDevice?1/24:1/30;
+ const TIDAL_FOAM_UPDATE_STEP=isTouchDevice?1/15:1/30;
  let debugForcedTideOffset=null;
  const TIDE_PERIOD_SECONDS=240,TIDE_NATURAL_AMPLITUDE=.10;
  function tideOffsetAt(t=oceanTime){if(Number.isFinite(debugForcedTideOffset))return debugForcedTideOffset;return Math.sin((t/TIDE_PERIOD_SECONDS)*Math.PI*2)*TIDE_NATURAL_AMPLITUDE;}
@@ -2857,8 +2857,8 @@ async function removeStrayDebugGeometry(targetScene){
 
   syncNordicWaterReflectionIsland();
   const farDue=waterFarAccumulator>=waterFarStep,detailDue=waterAccumulator>=waterVertexStep,foamDue=tidalFoamAccumulator>=TIDAL_FOAM_UPDATE_STEP;
+  if(!farDue&&!detailDue)return;
   if(foamDue)tidalFoamAccumulator%=TIDAL_FOAM_UPDATE_STEP;
-  if(!farDue&&!detailDue&&!foamDue)return;
   const workStart=performance.now();refreshWaterDetailRegion();
   // Actualización global económica para el mar lejano: tres ondas largas, cadencia baja.
   if(farDue){
