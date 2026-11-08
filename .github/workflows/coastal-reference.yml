@@ -65,9 +65,11 @@ jobs:
         run: node scripts/coastal-reference.mjs
 
       - name: Install Pillow for the contact sheet
+        if: always()
         run: python -m pip install --disable-pip-version-check Pillow
 
       - name: Build one PNG contact sheet from all 27 captures
+        if: always()
         run: python scripts/create_coastal_contact_sheet.py
 
       - name: Upload 27 screenshots, JSON manifest and contact sheet
