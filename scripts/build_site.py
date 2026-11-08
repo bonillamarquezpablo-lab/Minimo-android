@@ -371,8 +371,8 @@ def main() -> None:
     )
     if guest_file_mode_replacements != 1 or "const SHARE_NEW_GAME=true;" not in guest_file_html:
         raise SystemExit("La página guest.html no fija el modo invitado.")
-    if "el-sin-nombre-campaign-guest-v7" not in guest_file_html:
-        raise SystemExit("La página guest.html no usa el guardado guest-v7.")
+    if "el-sin-nombre-campaign-guest-v8" not in guest_file_html:
+        raise SystemExit("La página guest.html no usa el guardado guest-v8.")
     (DIST / "guest.html").write_text(guest_file_html, encoding="utf-8")
 
     # Dedicated invite route: the pathname survives PWA launch flows that may
@@ -397,7 +397,7 @@ def main() -> None:
         raise SystemExit("La ruta de invitado no lleva la marca de partida independiente.")
     if 'href="./guest-manifest.webmanifest"' not in guest_html:
         raise SystemExit("La ruta de invitado no apunta a su manifiesto PWA independiente.")
-    if "el-sin-nombre-campaign-guest-v7" not in guest_html:
+    if "el-sin-nombre-campaign-guest-v8" not in guest_html:
         raise SystemExit("La ruta /guest/ no usa el guardado nuevo de invitados.")
     (guest_dir / "index.html").write_text(guest_html, encoding="utf-8")
 
@@ -422,7 +422,7 @@ def main() -> None:
         raise SystemExit("La ruta /invitado/ no lleva la marca de partida independiente.")
     if 'href="./invitado-manifest.webmanifest"' not in invite_html:
         raise SystemExit("La ruta /invitado/ no apunta a su manifiesto PWA independiente.")
-    if "el-sin-nombre-campaign-guest-v7" not in invite_html:
+    if "el-sin-nombre-campaign-guest-v8" not in invite_html:
         raise SystemExit("La ruta /invitado/ no usa el nuevo guardado de invitados.")
     (invite_dir / "index.html").write_text(invite_html, encoding="utf-8")
 
