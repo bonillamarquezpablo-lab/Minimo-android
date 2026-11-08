@@ -60,8 +60,14 @@ assert.match(html,/washMaterial\.bumpTexture=M\.water\.bumpTexture\|\|albedoNorm
 assert.match(html,/washMaterial\.diffuseFresnelParameters/,"The water film must have a grazing-angle Fresnel response.");
 assert.match(html,/washMaterial\.opacityFresnelParameters/,"The water film must keep a controlled transparent edge.");
 assert.match(html,/const cellular=Math\.pow\(smooth01\(\(washPattern\[vertex\]-\.34\)\/\.54\),2\.0\)/,"Whitewater must break into irregular foam patches.");
-assert.match(html,/const filmAlpha=filmCoverage\*\(\.10\+\.08\*breakStrength\)\*flowPulse\*filmStrength\*waterContact/,"The advancing film must be faint and limited to actual water contact.");
-assert.match(html,/const lace=smooth01\(\(foamPattern\[vertex\]-.28\)\/\.46\)/,"The white crest must break into visible foam cells.");
+assert.match(html,/const filmAlpha=filmCoverage\*\(\.16\+\.20\*breakStrength\)\*flowPulse\*filmStrength\*waterContact/,"The advancing film must be visible but limited to actual water contact.");
+assert.match(html,/const lace=smooth01\(\(foamPattern\[vertex\]-.20\)\/\.40\)/,"The white crest must break into visible foam cells.");
+assert.match(html,/foamUvs=new Float32Array/);
+assert.match(html,/data\.uvs=foamUvs/);
+assert.match(html,/material\.bumpTexture=M\.water\.bumpTexture\|\|albedoNormalWater/);
+assert.match(html,/foam\.mesh\.updateVerticesData\(B\.VertexBuffer\.UVKind,foamUvs,false,false\)/);
+assert.match(html,/foamBreakStrength\*\.82/);
+assert.match(html,/const radialOffsets=isPerformanceMode\?\[-\.62,-\.30,0,\.30,\.62\]:\[-1\.05,-\.82,-\.59,-\.36,-\.13,\.10,\.33,\.56,\.79,1\.02,1\.25\]/);
 assert.match(html,/washColors\[color\]=\.72\*\(1-whiteMix\)\+\.97\*whiteMix/,"The intertidal film must remain neutral and foam must fade toward white.");
 
 assert.match(html,/window\.NorseCoastalInteraction\.filmSurfaceHeight\(ground,water,filmWave\)/,"The advancing film must sit above the sand/water interface.");
