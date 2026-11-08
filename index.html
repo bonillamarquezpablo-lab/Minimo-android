@@ -2696,7 +2696,7 @@ async function removeStrayDebugGeometry(targetScene){
     if(absoluteDistance<nearestAbsDistance){nearestAbsDistance=absoluteDistance;nearestSignedDistance=signedDistance;nearestIsland=island;}
    }
    const depth=Math.max(0,nearestSignedDistance);
-   const bathymetry=nearestIsland?waterHeight(x,z,oceanTime)-terrainHeightOnIsland(nearestIsland,x,z):18;
+   const bathymetry=nearestIsland?-terrainHeightOnIsland(nearestIsland,x,z):18;
    const physicalDepth=Math.max(0,Math.min(18,Math.max(depth,bathymetry)));
    const t=smooth01(Math.min(1,physicalDepth/transition));
    const index=vertex*4;
@@ -2704,7 +2704,7 @@ async function removeStrayDebugGeometry(targetScene){
    oceanDepthVertexColors[index]=.88+(.66-.88)*t;
    oceanDepthVertexColors[index+1]=1.01+(.88-1.01)*t;
    oceanDepthVertexColors[index+2]=1.07+(.99-1.07)*t;
-   const shallowAlpha=nearestSignedDistance<-.02?0:(.12+.88*smooth01(Math.max(0,bathymetry)/3.4));
+   const shallowAlpha=(bathymetry<=0&&depth<=0)?0:(.10+.90*smooth01(physicalDepth/7));
    oceanDepthVertexColors[index+3]=Math.max(0,Math.min(1,shallowAlpha*shoreOpacity));
   }
   ground.setVerticesData(B.VertexBuffer.ColorKind,oceanDepthVertexColors,true,4);
@@ -3213,7 +3213,7 @@ void main(void){vec4 wp=world*vec4(position,1.0);vUV=uv;vWorldPos=wp.xyz;vNormal
    B.Effect.ShadersStore.norseLivingBeachPixelShader=`precision highp float;
 varying vec2 vUV;varying vec3 vNormalW;varying vec3 vWorldPos;varying vec4 vColor;
 uniform sampler2D sandSampler;uniform sampler2D sandRoughSampler;uniform sampler2D sandNormalSampler;uniform sampler2D beachStateSampler;
-uniform float beachTime;uniform float shoreFoamStrength;uniform float shoreSheetStrength;uniform vec3 cameraPos;
+uniform float beachTime;uniform float shoreFoamStrength;uniform float shoreSheetStrength;uniform float drySandStrength;uniform float wetSandStrength;uniform float shorelineSmoothness;uniform vec3 cameraPos;
 vec2 rotateUv(vec2 p,float a){float c=cos(a),s=sin(a);return vec2(c*p.x-s*p.y,s*p.x+c*p.y);}
 float hash21(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
 float noise21(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);float a=hash21(i),b=hash21(i+vec2(1.0,0.0)),c=hash21(i+vec2(0.0,1.0)),d=hash21(i+vec2(1.0,1.0));return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);}
@@ -3232,11 +3232,11 @@ void main(void){
  vec4 state=texture2D(beachStateSampler,vUV);
  float wet=clamp(state.r,0.0,1.0),foam=clamp(state.g,0.0,1.0),water=clamp(state.b,0.0,1.0);
  float shoreNoise=(noise21(worldXZ*.46+vec2(3.1,7.7))-.5)*.14+(noise21(worldXZ*1.7)-.5)*.035;
- float wetEdge=smoothstep(.14+shoreNoise,.70+shoreNoise,wet);
- float humidity=clamp(max(wet*.58,wetEdge*.56),0.0,.68);
+ float wetEdge=smoothstep(.14+shoreNoise*shorelineSmoothness,.70+shoreNoise*shorelineSmoothness,wet);
+ float humidity=clamp(max(wet*.58,wetEdge*.56)*wetSandStrength,0.0,.78);
  vec3 dryColor=sand.rgb*vec3(1.12,1.06,.96);
  float broadVariation=noise21(worldXZ*.23+vec2(8.2,2.6)),mediumGrain=noise21(worldXZ*2.15+vec2(5.3,11.2)),grainVariation=noise21(worldXZ*6.3+vec2(1.7,5.4)),microGrain=noise21(worldXZ*17.5+vec2(13.1,2.8));
-  dryColor*=.88+broadVariation*.13+(mediumGrain-.5)*.065+(grainVariation-.5)*.052+(microGrain-.5)*.022;
+  dryColor*=1.0+(broadVariation-.5)*.13*drySandStrength+(mediumGrain-.5)*.065*drySandStrength+(grainVariation-.5)*.052*drySandStrength+(microGrain-.5)*.022*drySandStrength;
  vec3 wetColor=dryColor*vec3(.91,.89,.82)+vec3(.016,.012,.006);
  vec3 color=mix(dryColor,wetColor,humidity);
  // Wind ripples follow one world-space wind axis, not the island radius.
@@ -3279,9 +3279,9 @@ void main(void){
  gl_FragColor=vec4(color,clamp(vColor.a,0.0,1.0));
 }`;
   }
-  const material=new B.ShaderMaterial('LivingBeachSandMaterial_'+index,scene,'norseLivingBeach',{attributes:['position','normal','uv','color'],uniforms:['world','worldViewProjection','beachTime','shoreFoamStrength','shoreSheetStrength','cameraPos'],samplers:['sandSampler','sandRoughSampler','sandNormalSampler','beachStateSampler']});
+  const material=new B.ShaderMaterial('LivingBeachSandMaterial_'+index,scene,'norseLivingBeach',{attributes:['position','normal','uv','color'],uniforms:['world','worldViewProjection','beachTime','shoreFoamStrength','shoreSheetStrength','drySandStrength','wetSandStrength','shorelineSmoothness','cameraPos'],samplers:['sandSampler','sandRoughSampler','sandNormalSampler','beachStateSampler']});
   material.setTexture('sandSampler',texCoastalSand);material.setTexture('sandRoughSampler',texCoastalSandRoughnessPbr);material.setTexture('sandNormalSampler',texCoastalSandNormalPbr);material.setTexture('beachStateSampler',coastalStateTexture);
-  material.setFloat('beachTime',0);material.setFloat('shoreFoamStrength',.82);material.setFloat('shoreSheetStrength',.08);
+  material.setFloat('beachTime',0);material.setFloat('shoreFoamStrength',.82);material.setFloat('shoreSheetStrength',.08);material.setFloat('drySandStrength',1);material.setFloat('wetSandStrength',1);material.setFloat('shorelineSmoothness',1);
   material.setVector3('cameraPos',scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position:v(0,6,0));
   material.backFaceCulling=false;material.alpha=1;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;material.disableDepthWrite=false;
   mesh.material=material;mesh.isPickable=false;mesh.receiveShadows=true;mesh.castShadows=false;mesh.hasVertexAlpha=true;
@@ -3312,7 +3312,7 @@ uniform mat4 world;uniform mat4 worldViewProjection;
 varying vec2 vUV;
 void main(void){vUV=uv;gl_Position=worldViewProjection*vec4(position,1.0);}`;
    B.Effect.ShadersStore.norseFootprintPixelShader=`precision highp float;
-varying vec2 vUV;uniform sampler2D footprintAtlasSampler;uniform float footprintTick;uniform vec2 footprintUvOffset;uniform vec2 footprintTexel;
+varying vec2 vUV;uniform sampler2D footprintAtlasSampler;uniform float footprintTick;uniform float footprintStrength;uniform vec2 footprintUvOffset;uniform vec2 footprintTexel;
 void main(void){
  vec2 uv=fract(vUV+footprintUvOffset);
  vec4 stamp=texture2D(footprintAtlasSampler,uv);
@@ -3328,11 +3328,11 @@ void main(void){
  float rim=clamp(length(vec2(right-left,up-down))*5.8,0.0,1.0);
  float alpha=clamp(stamped/255.0,0.0,1.0)*fade*stamp.a;
  vec3 shadowAndLip=mix(vec3(.12,.078,.045),vec3(.62,.46,.29),rim*.72);
- gl_FragColor=vec4(shadowAndLip,alpha*.88);
+ gl_FragColor=vec4(shadowAndLip,alpha*.88*footprintStrength);
 }`;
   }
-  const footprintMaterial=new B.ShaderMaterial('NorseMovingFootprintAtlasMaterial',scene,'norseFootprint',{attributes:['position','uv'],uniforms:['world','worldViewProjection','footprintTick','footprintUvOffset','footprintTexel'],samplers:['footprintAtlasSampler']});
-  footprintMaterial.setTexture('footprintAtlasSampler',footprintTexture);footprintMaterial.setFloat('footprintTick',0);footprintMaterial.setVector2('footprintUvOffset',footprintUvOffset);footprintMaterial.setVector2('footprintTexel',new B.Vector2(1/FOOTPRINT_ATLAS_SIZE,1/FOOTPRINT_ATLAS_SIZE));
+  const footprintMaterial=new B.ShaderMaterial('NorseMovingFootprintAtlasMaterial',scene,'norseFootprint',{attributes:['position','uv'],uniforms:['world','worldViewProjection','footprintTick','footprintStrength','footprintUvOffset','footprintTexel'],samplers:['footprintAtlasSampler']});
+  footprintMaterial.setTexture('footprintAtlasSampler',footprintTexture);footprintMaterial.setFloat('footprintTick',0);footprintMaterial.setFloat('footprintStrength',1);footprintMaterial.setVector2('footprintUvOffset',footprintUvOffset);footprintMaterial.setVector2('footprintTexel',new B.Vector2(1/FOOTPRINT_ATLAS_SIZE,1/FOOTPRINT_ATLAS_SIZE));
   footprintMaterial.backFaceCulling=false;footprintMaterial.alpha=1;footprintMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;footprintMaterial.disableDepthWrite=true;
   const footprintMesh=B.MeshBuilder.CreateGround('NorseMovingFootprints',{width:FOOTPRINT_WORLD_SIZE,height:FOOTPRINT_WORLD_SIZE,subdivisions:32,updatable:true},scene);
   footprintMesh.material=footprintMaterial;footprintMesh.isPickable=false;footprintMesh.receiveShadows=false;footprintMesh.castShadows=false;
@@ -3584,7 +3584,7 @@ void main(void){
    groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;
   }
   function reset(){stepDistance=0;alternateFoot=0;hasLastStepPosition=false;footstepsEmitted=0;lastFootstepSegmentLength=0;groundRelaxAccumulator=0;lastAtlasFollowX=NaN;lastAtlasFollowZ=NaN;}
-  return {update,reset,counts:()=>({imprints:footprintAtlas.activePixels(),footprintAtlas:footprintAtlas.dimensions(),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3)),beachWorkBudgetMs:BEACH_WORK_BUDGET_MS,beachWorkPending:!!beachWorkLayer,beachWorkLastSliceMs,beachWorkMaxSliceMs:Number(beachWorkMaxSliceMs.toFixed(3)),beachWorkCellsProcessed})};
+  return {update,reset,setFootprintStrength:value=>footprintMaterial.setFloat('footprintStrength',Math.max(0,Number(value)||0)),counts:()=>({imprints:footprintAtlas.activePixels(),footprintAtlas:footprintAtlas.dimensions(),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3)),beachWorkBudgetMs:BEACH_WORK_BUDGET_MS,beachWorkPending:!!beachWorkLayer,beachWorkLastSliceMs,beachWorkMaxSliceMs:Number(beachWorkMaxSliceMs.toFixed(3)),beachWorkCellsProcessed})};
  })(); const tidalFoamMeshes=[];
  function buildTidalFoam(island,index){
   // Calidad usa la malla costera densa; Rendimiento conserva una rompiente más ligera,
@@ -6205,8 +6205,9 @@ function createWaterShoreDebugPanel(){
   livingBeachLayers.forEach(layer=>{
    if(!layer.material)return;
    layer.material.setFloat('shoreFoamStrength',oceanDepthSettings.foamStrength);
-   layer.material.setFloat('shoreSheetStrength',oceanDepthSettings.sheetStrength);
+   layer.material.setFloat('shoreSheetStrength',oceanDepthSettings.sheetStrength);layer.material.setFloat('drySandStrength',settings.drySand);layer.material.setFloat('wetSandStrength',settings.wetSand);layer.material.setFloat('shorelineSmoothness',settings.shoreline);
   });
+  GroundDynamics.setFootprintStrength(settings.footprints);
   window.__elSinNombreWaterDebug={...oceanDepthSettings,baseSettings:{...settings},forcedTideOffset:debugForcedTideOffset};
  };
  const slider=(label,key,min,max,step,digits)=>{
