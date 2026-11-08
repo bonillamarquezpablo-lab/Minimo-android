@@ -3249,7 +3249,7 @@ void main(void){
  vec3 wrackTint=mix(vec3(.26,.27,.21),vec3(.48,.39,.27),noise21(worldXZ*4.1));
  color=mix(color,wrackTint,wrackZone*wrackFragments*.30);
  float broadFoam=texture2D(sandSampler,worldXZ*.62+vec2(.31,.73)).g,fineFoam=texture2D(sandSampler,worldXZ*1.71+vec2(.67,.19)).r;
- float laceNoise=fineFoam*.62+broadFoam*.38,lаce=smoothstep(.31,.71,laceNoise);
+ float laceNoise=fineFoam*.62+broadFoam*.38,lace=smoothstep(.31,.71,laceNoise);
  float broken=smoothstep(.24,.59,broadFoam)*(1.0-smoothstep(.79,.97,fineFoam));
  float foamPulse=.78+.22*(.5+.5*sin(dot(worldXZ,vec2(.61,.79))*1.18+beachTime*1.56+fineFoam*7.0));
  float foamMask=clamp(foam*lace*broken*foamPulse*shoreFoamStrength,0.0,.98);
