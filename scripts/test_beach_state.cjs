@@ -1,0 +1,38 @@
+"use strict";
+const assert = require("node:assert/strict");
+const { createCoastalGrid, createFootprintAtlas } = require("./nordic/beach-state.js");
+
+const coast = createCoastalGrid({ radius: 60, columns: 512, rows: 64 });
+assert.equal(coast.size, 32768);
+assert.ok(Math.abs(coast.metersPerCell(32).tangential - 0.6774) < 0.002);
+assert.ok(Math.abs(coast.metersPerCell(32).radial - 0.3143) < 0.002);
+const untouched = coast.index(20, 20);
+assert.equal(coast.stepCell(untouched, 0, 1).wetness, 0);
+assert.equal(coast.reachedWater[untouched], 0);
+const wet = coast.index(20, 21);
+coast.stepCell(wet, 1, 0.5, { drySeconds: 32, foamSeconds: 6 });
+assert.equal(coast.reachedWater[wet], 1);
+assert.ok(coast.wetness[wet] > 240);
+const retreat = coast.stepCell(wet, 0, 0.1, { drySeconds: 32, foamSeconds: 6 });
+assert.equal(retreat.retreated, true);
+assert.ok(retreat.foam > 0);
+const beforeDry = coast.wetness[wet];
+coast.stepCell(wet, 0, 10, { drySeconds: 32, foamSeconds: 6 });
+assert.ok(coast.wetness[wet] < beforeDry);
+assert.equal(coast.wetness[untouched], 0);
+assert.equal(coast.reachedWater[untouched], 0);
+
+const atlas = createFootprintAtlas({ size: 512, worldSize: 16 });
+assert.ok(Math.abs(atlas.pixelSize - 0.03125) < 1e-12);
+atlas.recenter(0, 0);
+assert.equal(atlas.stamp(0, 0, 0, 0.9), true);
+assert.ok(atlas.sample(0, 0) > 0);
+const before = atlas.sample(0, 0);
+atlas.recenter(0.1, 0);
+assert.ok(atlas.sample(0, 0) >= before * 0.8);
+atlas.eraseRect(0, 0, 0.35, 0.35);
+assert.equal(atlas.sample(0, 0), 0);
+atlas.stamp(0.2, 0.2, 0.3, 0.8);
+assert.ok(atlas.decay(1, 100));
+assert.ok(atlas.sample(0.2, 0.2) < 0.8);
+console.log("BeachState tests passed.");

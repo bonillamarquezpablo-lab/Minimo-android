@@ -336,11 +336,21 @@ def main() -> None:
         "assets/models/man-base-character-rigged.glb",
         "const OGA_FOLEY_BASE='./assets/audio/cc0-game-sfx/';",
         "navigator.serviceWorker.register",
+        "./scripts/nordic/beach-state.js",
+        "window.NorseBeachState",
     ]
     for item in required:
         if item not in html:
             raise SystemExit(f"El HTML no apunta al recurso local requerido: {item}")
 
+
+    # The coastal-state runtime is shared by main and generated guest entry pages.
+    beach_state_source = ROOT / "scripts" / "nordic" / "beach-state.js"
+    if not beach_state_source.is_file():
+        raise SystemExit("Falta scripts/nordic/beach-state.js.")
+    beach_state_target = DIST / "scripts" / "nordic" / "beach-state.js"
+    beach_state_target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(beach_state_source, beach_state_target)
 
     (DIST / "index.html").write_text(html, encoding="utf-8")
 

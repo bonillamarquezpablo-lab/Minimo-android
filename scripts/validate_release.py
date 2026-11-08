@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.231"
+EXPECTED_VERSION = "0.6.232"
 
 HTML_PAGES = (
     "index.html",
@@ -624,6 +624,17 @@ def main() -> None:
     node = shutil.which("node")
     if not node:
         fail("Node.js es necesario para validar la sintaxis JavaScript publicada.")
+    beach_state_test = ROOT / "scripts" / "test_beach_state.cjs"
+    if not beach_state_test.is_file():
+        fail("Falta la suite de comportamiento de BeachState.")
+    beach_test = subprocess.run(
+        [node, str(beach_state_test)],
+        capture_output=True,
+        text=True,
+    )
+    if beach_test.returncode:
+        fail("Fallaron las pruebas de BeachState:\\n" + beach_test.stdout + beach_test.stderr)
+    print("OK BeachState: humectación, secado, espuma, escala y atlas de huellas.")
     with tempfile.TemporaryDirectory(prefix="eln-release-check-") as temp_dir:
         temp = Path(temp_dir)
         sw_check = subprocess.run(
