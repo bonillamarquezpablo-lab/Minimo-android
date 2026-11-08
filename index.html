@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.237">
+<meta name="el-sin-nombre-build" content="0.6.238">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.237</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.238</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1945,7 +1945,7 @@ function chooseGraphicsProfile(profile){
  try{
   knownIdentity=localStorage.getItem(PLAYER_IDENTITY_KEY);
   if(knownIdentity===null){
-   const legacyKey=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v7':'el-sin-nombre-campaign-v1';
+   const legacyKey=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v8':'el-sin-nombre-campaign-v1';
    const legacyRaw=localStorage.getItem(legacyKey);
    if(legacyRaw){try{const legacyData=JSON.parse(legacyRaw);if(legacyData&&typeof legacyData.playerName==='string')knownIdentity=legacyData.playerName;}catch(_){ }}
   }
@@ -2750,21 +2750,7 @@ async function removeStrayDebugGeometry(targetScene){
   const dz=(waterHeight(x,z+.65,t)-waterHeight(x,z-.65,t))/1.3;
   return {pitch:Math.atan2(dz,1),roll:-Math.atan2(dx,1)};
  }
- const shorelineWaves=[];
- function buildShoreFoam(island,index){
-  for(let layer=0;layer<3;layer++){
-   const radius=island.r+(layer===0?3.35:(layer===1?4.45:5.65));
-   const thickness=layer===0?.62:(layer===1?.40:.23);
-   const ring=B.MeshBuilder.CreateTorus('shoreFoam_'+index+'_'+layer,{diameter:radius*2,thickness,tessellation:80},scene);
-   ring.rotation.x=Math.PI/2;ring.position=v(island.x,waterHeight(island.x,island.z,oceanTime)+.045+layer*.006,island.z);
-   const foamMat=M.foam.clone('foamMat_'+index+'_'+layer);
-   foamMat.alpha=layer===0?.30:(layer===1?.23:.15);ring.material=foamMat;
-   ring.isPickable=false;ring.receiveShadows=false;
-   shorelineWaves.push({mesh:ring,base:radius,phase:index*.8+layer*1.35,mat:foamMat,x:island.x,z:island.z,layer});
-  }
- }
- // No se dibujan anillos completos alrededor de las islas: desde el mar parecían arcos translúcidos.
- // La espuma queda reservada para el contacto dinámico del casco con el agua.
+ // El estado de espuma y humedad ahora pertenece a BeachState; se elimina el helper de anillos inactivo.
  function animateWater(dt){
   oceanTime+=dt;updateWaterWaveTime(oceanTime);waterAccumulator+=dt;waterNormalAccumulator+=dt;waterFarAccumulator+=dt;
   syncActiveBeachIsland();
@@ -3084,12 +3070,12 @@ void main(void){
   footprintTexture.name='NorseMovingFootprintAtlasRGBA';footprintTexture.wrapU=B.Texture.WRAP_ADDRESSMODE;footprintTexture.wrapV=B.Texture.WRAP_ADDRESSMODE;
   footprintTexture.hasAlpha=true;
   if(!B.Effect.ShadersStore.norseFootprintVertexShader){
-   B.Effect.ShadersStore.norseFootprintVertexShader=\`precision highp float;
+   B.Effect.ShadersStore.norseFootprintVertexShader=`precision highp float;
 attribute vec3 position;attribute vec2 uv;
 uniform mat4 world;uniform mat4 worldViewProjection;
 varying vec2 vUV;
-void main(void){vUV=uv;gl_Position=worldViewProjection*vec4(position,1.0);}\`;
-   B.Effect.ShadersStore.norseFootprintPixelShader=\`precision highp float;
+void main(void){vUV=uv;gl_Position=worldViewProjection*vec4(position,1.0);}`;
+   B.Effect.ShadersStore.norseFootprintPixelShader=`precision highp float;
 varying vec2 vUV;uniform sampler2D footprintAtlasSampler;uniform float footprintTick;
 void main(void){
  vec4 stamp=texture2D(footprintAtlasSampler,vUV);
@@ -3100,7 +3086,7 @@ void main(void){
  float fade=exp(-ageSeconds/105.0);
  float alpha=clamp(stamped/255.0,0.0,1.0)*fade*stamp.a;
  gl_FragColor=vec4(vec3(.14,.092,.052),alpha*.90);
-}\`;
+}`;
   }
   const footprintMaterial=new B.ShaderMaterial('NorseMovingFootprintAtlasMaterial',scene,'norseFootprint',{attributes:['position','uv'],uniforms:['world','worldViewProjection','footprintTick'],samplers:['footprintAtlasSampler']});
   footprintMaterial.setTexture('footprintAtlasSampler',footprintTexture);footprintMaterial.setFloat('footprintTick',0);
@@ -9398,7 +9384,7 @@ function updateHUD(){
  let boatHp=65,boatMax=100,boatLevel=0;
  document.getElementById('upgradeBtn').addEventListener('click',openBoatModal);
  document.getElementById('closeModal').addEventListener('click',()=>modal.style.display='none');
- const SAVE_KEY=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v7':'el-sin-nombre-campaign-v1';
+ const SAVE_KEY=SHARE_NEW_GAME?'el-sin-nombre-campaign-guest-v8':'el-sin-nombre-campaign-v1';
  const ALTERNATE_SAVE_KEY=SAVE_KEY+'-alternate';let activeSaveKey=SAVE_KEY;
  let playerName=selectedPlayerName;let lastSaveAt=0,saveAccumulator=0;
  function getAvailableCampaignSaves(){
