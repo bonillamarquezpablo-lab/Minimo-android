@@ -2717,6 +2717,50 @@ async function removeStrayDebugGeometry(targetScene){
  }
  const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:(isTouchDevice?125:180)):(isTouchDevice?90:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS,WATER_DETAIL_FADE_START_SQ=WATER_DETAIL_RADIUS_SQ*.55;
  const waterPositionBuffer=ground.getVertexBuffer(B.VertexBuffer.PositionKind),waterNormalBuffer=ground.getVertexBuffer(B.VertexBuffer.NormalKind),waterColorBuffer=ground.getVertexBuffer(B.VertexBuffer.ColorKind);
+ // Instrumentación de solo lectura. Solo reserva buffers de muestreo en ?debug=1 o ?test=1.
+ const waterDebugVertexTimes=groundDebugEnabled?new Float64Array(waterBase.length/3).fill(NaN):null;
+ const waterDebugVertexFades=groundDebugEnabled?new Float32Array(waterBase.length/3).fill(NaN):null;
+ const waterDebugSolverStats=groundDebugEnabled?{samples:0,bracketFailures:0,finiteResiduals:0,converged:0,lastResidualMeters:null,maxResidualMeters:0,totalMs:0,lastMs:0,maxMs:0}:null;
+ const waterDebugSampleIndices=groundDebugEnabled?(()=>{
+  const count=Math.min(100,waterBase.length/3),picked=[],seen=new Set();
+  let seed=0x51A7;
+  while(picked.length<count){
+   seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+   const vertex=seed%(waterBase.length/3);
+   if(!seen.has(vertex)){seen.add(vertex);picked.push(vertex);}
+  }
+  return Uint32Array.from(picked);
+ })():null;
+ function getWaterVertexAgreementDiagnostics(){
+  if(!waterDebugSampleIndices)return {implemented:false,reason:'diagnóstico disponible únicamente con ?debug=1'};
+  const errors=[],baseY=Number(ground.position.y)||0;
+  for(let n=0;n<waterDebugSampleIndices.length;n++){
+   const vertex=waterDebugSampleIndices[n],time=waterDebugVertexTimes[vertex],fade=waterDebugVertexFades[vertex];
+   if(!Number.isFinite(time)||!Number.isFinite(fade))continue;
+   const offset=vertex*3,x=waterBase[offset],z=waterBase[offset+2];
+   const drawn=baseY+waterPositions[offset+1],analytic=baseY+waterHeight(x,z,time,fade);
+   const error=Math.abs(drawn-analytic);
+   if(Number.isFinite(error))errors.push(error);
+  }
+  errors.sort((a,b)=>a-b);
+  const sum=errors.reduce((total,value)=>total+value,0);
+  const at=p=>errors.length?errors[Math.min(errors.length-1,Math.floor((errors.length-1)*p))]:null;
+  return {implemented:true,requested:waterDebugSampleIndices.length,sampled:errors.length,meanAbsErrorMeters:errors.length?sum/errors.length:null,p95AbsErrorMeters:at(.95),maxAbsErrorMeters:errors.length?errors[errors.length-1]:null,comparison:'waterHeight against CPU vertex values uploaded to the Babylon mesh; same vertex write time and LOD fade'};
+ }
+ function recordWaterCoastSolverDiagnostic(residual,startedAt,bracketed,converged){
+  if(!waterDebugSolverStats)return;
+  const elapsed=Math.max(0,performance.now()-startedAt);
+  const stats=waterDebugSolverStats;
+  stats.samples++;
+  if(!bracketed)stats.bracketFailures++;
+  if(Number.isFinite(residual)){
+   stats.finiteResiduals++;
+   stats.lastResidualMeters=residual;
+   stats.maxResidualMeters=Math.max(stats.maxResidualMeters,residual);
+  }else stats.lastResidualMeters=null;
+  if(converged)stats.converged++;
+  stats.totalMs+=elapsed;stats.lastMs=elapsed;stats.maxMs=Math.max(stats.maxMs,elapsed);
+ }
  for(let i=0;i<waterNormals.length;i+=3)waterNormals[i+1]=1;
  // Precompute spatial wave phases once. Every frame evaluates the same exact
  // sinusoidal waves using seven shared time sin/cos pairs instead of per-vertex trig.
@@ -2900,7 +2944,7 @@ async function removeStrayDebugGeometry(targetScene){
   // Actualización global económica para el mar lejano: tres ondas largas, cadencia baja.
   if(farDue){
    waterFarAccumulator%=waterFarStep;
-   for(let vertex=0;vertex<waterBase.length/3;vertex++)waterPositions[vertex*3+1]=waterFarHeightAtVertex(vertex);
+   for(let vertex=0;vertex<waterBase.length/3;vertex++){waterPositions[vertex*3+1]=waterFarHeightAtVertex(vertex);if(waterDebugVertexTimes){waterDebugVertexTimes[vertex]=oceanTime;waterDebugVertexFades[vertex]=0;}}
   }
   if(detailDue){
    waterAccumulator%=waterVertexStep;
@@ -2910,6 +2954,7 @@ async function removeStrayDebugGeometry(targetScene){
    const fadeT=Math.max(0,Math.min(1,(WATER_DETAIL_RADIUS_SQ-(dx*dx+dz*dz))/(WATER_DETAIL_RADIUS_SQ-WATER_DETAIL_FADE_START_SQ)));
    const fade=fadeT*fadeT*(3-2*fadeT);
    waterPositions[i+1]=waterDetailHeightAtVertex(i/3,fade);
+   if(waterDebugVertexTimes){waterDebugVertexTimes[i/3]=oceanTime;waterDebugVertexFades[i/3]=fade;}
     const waveIndex=i/3,waveCrest=Math.max(0,waterWaveValueAtVertex(waveIndex,3)),shortCrest=Math.max(0,waterWaveValueAtVertex(waveIndex,4));
     const crestLight=Math.min(.34,(Math.pow(waveCrest,3)*.25+Math.pow(shortCrest,3)*.09)*oceanDepthSettings.waveCrestStrength),colorOffset=waveIndex*4;
     oceanDepthVertexColors[colorOffset]=Math.min(1,oceanDepthBaseColors[colorOffset]*(1+crestLight));oceanDepthVertexColors[colorOffset+1]=Math.min(1,oceanDepthBaseColors[colorOffset+1]*(1+crestLight*.92));oceanDepthVertexColors[colorOffset+2]=Math.min(1,oceanDepthBaseColors[colorOffset+2]*(1+crestLight*.78));
