@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.256"
+EXPECTED_VERSION = "0.6.257"
 
 HTML_PAGES = (
     "index.html",
@@ -416,6 +416,16 @@ def main() -> None:
         fail("La subida parcial de vértices debe tolerar arrays normales y usar subarrays tipados.")
     if "function pressGround(x,z,islandIndex,wet,beach,heading)" not in index_html or "pressGround(x,z,islandIndex,wet,beach,heading)" not in index_html or "toeOffsets=[-.108,-.054,0,.054,.108]" not in index_html:
         fail("Las pisadas no presionan la geometría real del terreno.")
+    if "function clamp01(value){return Math.max(0,Math.min(1,Number(value)||0));}" not in index_html or "target=-depth*clamp01(" not in index_html:
+        fail("La deformación de pisadas debe disponer de clamp01 en el ámbito global del juego.")
+    if "const shallowAlpha=(bathymetry<=0&&depth<=0)?0:(.10+.90*smooth01(physicalDepth/7));" not in index_html or "oceanDepthVertexColors[index+3]=Math.max(0,Math.min(1,shallowAlpha*shoreOpacity));" not in index_html:
+        fail("El agua somera debe usar alfa progresivo según la profundidad y dejar ver el lecho.")
+    if "float breakerPhase=dot(worldXZ,vec2(.13,.19))*1.9+beachTime*1.72+sheetNoise*2.8;" not in index_html or "float brokenCrest=smoothstep(.34,.82,crest*.62+breakNoise*.65);" not in index_html:
+        fail("La ola debe formar cresta animada y rotura fragmentada directamente en el shader de playa.")
+    if "function clamp01(value)" in index_html and index_html.find("updateOceanDepthGradient();",index_html.find("function smooth01")) < index_html.find("const terrainHashCache="):
+        fail("El mapa de profundidad no puede inicializarse antes de las funciones y datos del terreno.")
+    if "const mediumGrain=noise21(worldXZ*2.15" not in index_html or "const microGrain=noise21(worldXZ*17.5" not in index_html:
+        fail("La arena debe conservar variación de grano a tres escalas en coordenadas mundiales.")
     if "function relaxGround(dt)" not in index_html or "relaxGround(relaxStep);" not in index_html:
         fail("El terreno deformado no recupera su forma gradualmente.")
     if "GroundDynamics.update(dt,audioPos.x,audioPos.z,playerStepDistance,yaw,running&&stamina>0,onShip,playerAirborne);" not in index_html:
@@ -463,7 +473,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.256</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.257</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
@@ -477,7 +487,7 @@ def main() -> None:
         fail("El HUD inicial debe mostrar 0/13 desde el primer fotograma.")
     if "function updateIslandInvasion(dt)" not in index_html or "updateIslandInvasion(dt);" not in index_html or "islandInvasion:snapshotIslandInvasion()" not in index_html or "restoreIslandInvasion(d.islandInvasion)" not in index_html or "invasionDisembark(raider,invasionTarget)" not in index_html:
         fail("La defensa naval debe estar conectada al bucle, al desembarco y al guardado.")
-    if "float humidity=clamp(max(wet*.58,wetEdge*.56),0.0,.68)" not in index_html or "color=mix(color,wrackTint,wrackZone*wrackFragments*.045)" not in index_html:
+    if "float humidity=clamp(max(wet*.58,wetEdge*.56)*wetSandStrength,0.0,.78)" not in index_html or "color=mix(color,wrackTint,wrackZone*wrackFragments*.045)" not in index_html:
         fail("La arena húmeda debe quedar cálida y difusa; los restos de arribazón no pueden formar una banda oscura.")
     if "washMaterial.emissiveColor=new B.Color3(.003,.004,.003)" not in index_html or "const alpha=Math.min(.32,whitewater+trailingFoam)" not in index_html or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html:
         fail("La rompiente debe ser blanca, fragmentada y sin una lámina turquesa continua.")
