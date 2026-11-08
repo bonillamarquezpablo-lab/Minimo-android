@@ -66,6 +66,8 @@ assert.match(html,/foamUvs=new Float32Array/);
 assert.match(html,/data\.uvs=foamUvs/);
 assert.match(html,/material\.bumpTexture=M\.water\.bumpTexture\|\|albedoNormalWater/);
 assert.match(html,/foam\.mesh\.updateVerticesData\(B\.VertexBuffer\.UVKind,foamUvs,false,false\)/);
+assert.match(html,/foamUvs,colors,foamPattern,index,washMesh/,"Animated breaker UV storage must be retained in the active coast state.");
+assert.match(html,/tidalFoamMeshes\.push\(\{mesh,positions,foamUvs,colors,foamPattern/,"Breaker UVs must be retained by the active coast mesh.");
 assert.match(html,/foamBreakStrength\*\.82/);
 assert.match(html,/const radialOffsets=isPerformanceMode\?\[-\.62,-\.30,0,\.30,\.62\]:\[-1\.05,-\.82,-\.59,-\.36,-\.13,\.10,\.33,\.56,\.79,1\.02,1\.25\]/);
 assert.match(html,/washColors\[color\]=\.72\*\(1-whiteMix\)\+\.97\*whiteMix/,"The intertidal film must remain neutral and foam must fade toward white.");
