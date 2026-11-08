@@ -421,7 +421,7 @@ def main() -> None:
         fail("La deformación de pisadas debe disponer de clamp01 en el ámbito global del juego.")
     if "window.NorseCoastalInteraction.waterOpacity(physicalDepth)" not in index_html or "oceanDepthVertexColors[index+3]=Math.max(0,Math.min(1,shallowAlpha*shoreOpacity));" not in index_html:
         fail("El agua somera debe tener opacidad controlada sobre un lecho submarino arenoso independiente.")
-    if "function buildCoastalSeabed(island,index)" not in index_html or "norseSubmergedSandyBottom:true" not in index_html or "coastalSeabedMaterial.bumpTexture=texCoastalSandNormalPbr" not in index_html:
+    if "function buildCoastalSeabed(island,index)" not in index_html or "norseSubmergedSandyBottom:true" not in index_html or "coastalSeabedMaterial.bumpTexture=texCoastalSandNormalPbr" not in index_html or "return window.NorseCoastalInteraction.seabedHeight(d,is.r,-2.9);" not in index_html:
         fail("El fondo submarino debe ser una malla de arena independiente con relieve propio.")
     if "window.NorseCoastalInteraction.filmSurfaceHeight(ground,water,filmWave)" not in index_html or "window.NorseCoastalInteraction.filmCoverage(fraction,washPattern[vertex])" not in index_html or "washMaterial.bumpTexture=M.water.bumpTexture||albedoNormalWater" not in index_html:
         fail("La lámina de agua debe ser una superficie independiente, animada y con normales/reflejos.")
@@ -478,7 +478,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.257</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.258</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
