@@ -6,7 +6,7 @@ assert.match(html,/function loadWildlifeModels\(\)\s*\{\s*if\(!wildlifeModelsLoa
 assert.match(html,/const backgroundNpcTask=startNpcHumanModels\(\)\.then\(/);
 assert.match(html,/const backgroundFaunaTask=Promise\.resolve\(backgroundNpcTask\)\.catch\(error=>\{[\s\S]*?return loadWildlifeModels\(\);\}\);/);
 assert.match(html,/await Promise\.allSettled\(\[backgroundNpcTask,backgroundFaunaTask\]\)/);
-assert.match(html,/protagonistStageTimer=setTimeout\(\(\)=>resolve\(\{status:'timeout'\}\),55000\)/);
+assert.match(html,/const assetUrl=urls\[index\],controller=new AbortController\(\),timeout=setTimeout\(\(\)=>controller\.abort\(\),30000\)/);
 assert.doesNotMatch(html,/const warriorPartsToLoad=isPerformanceMode\s*\?\s*\[\]/);
 assert.doesNotMatch(html,/const civilianPartsToLoad=isPerformanceMode\s*\?\s*\[\]/);
 assert.doesNotMatch(html,/const animalCount=isPerformanceMode\?0/);
