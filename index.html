@@ -2026,11 +2026,10 @@ async function removeStrayDebugGeometry(targetScene){
  try{
  const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
  const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('armdebug')==='1';
- const testQuery=new URLSearchParams(window.location.search);
- const testModeEnabled=testQuery.get('test')==='1';
- const coastalReferenceMode=testQuery.get('coastref')==='1';
- const playerStartupTestEnabled=testQuery.get('playertest')==='1';
- const groundDebugEnabled=testQuery.get('debug')==='1';
+ const testModeEnabled=new URLSearchParams(window.location.search).get('test')==='1';
+ const coastalReferenceMode=new URLSearchParams(window.location.search).get('coastref')==='1';
+ const playerStartupTestEnabled=new URLSearchParams(window.location.search).get('playertest')==='1';
+ const groundDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
  const coastalDiagnosticsEnabled=groundDebugEnabled||testModeEnabled;
  const realPlayerArmTuningEnabled=true;
  const realPlayerArmDebugState={free:{status:'ESPERANDO',reason:'',twistDeg:null},weapon:{status:'POSE ORIGINAL',reason:'',twistDeg:null}};
