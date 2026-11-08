@@ -468,7 +468,7 @@ def main() -> None:
         fail("La dinámica del suelo no recibe los pasos reales del jugador.")
     if "norseDeformableGround:true" not in index_html or "updateDeformedNormals(field,changed)" not in index_html:
         fail("El heightfield no actualiza los normales al deformarse.")
-    shoreline_start = index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)")
+    shoreline_start = index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island))")
     shoreline_end = index_html.find("const GROUND_PHASE_A_DEFAULTS", shoreline_start)
     shoreline_body = index_html[shoreline_start:shoreline_end]
     if shoreline_start < 0 or shoreline_end <= shoreline_start or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z)" not in shoreline_body or "return terrainY-coastalWaterHeight(x,z,t);" not in shoreline_body or "surfaceLimitSq=(island.r*1.09)**2" in shoreline_body or ".42;" in shoreline_body:
