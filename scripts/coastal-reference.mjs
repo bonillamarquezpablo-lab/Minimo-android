@@ -290,6 +290,7 @@ async function main() {
     const trailIsolation = await page.evaluate(({ cameraCase, island }) => {
       const api = window.__ELSN_TEST__;
       const hidden = api.setPackedTrailVisible(false);
+      console.log('[coastal-reference] trail isolation state:', JSON.stringify(hidden));
       api.setCamera({
         x: island.x + 75, y: cameraCase.height, z: island.z - 22,
         targetX: island.x - 25, targetY: cameraCase.targetY, targetZ: island.z - 22
@@ -299,8 +300,10 @@ async function main() {
       const canvasPng = api.captureCanvas();
       const restored = api.setPackedTrailVisible(true);
       return { hidden, restored, canvasPng };
+    manifest.trailIsolationDiagnostic = trailIsolation.hidden;
     }, { cameraCase: ridgeCase, island: mainIsland });
-    assert.ok(trailIsolation.hidden.count >= 1 && trailIsolation.hidden.visible === false,
+      'Packed-earth trail meshes must be hideable for a diagnostic A/B frame');
+      'Packed-earth trail meshes must be hideable for a diagnostic A/B frame: ' + JSON.stringify(trailIsolation.hidden));
       'Packed-earth trail meshes must be hideable for a diagnostic A/B frame');
     assert.ok(trailIsolation.restored.count === trailIsolation.hidden.count && trailIsolation.restored.visible === true,
       'Every packed-earth trail must be restored after diagnostic capture');
