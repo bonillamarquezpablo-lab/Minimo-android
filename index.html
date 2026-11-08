@@ -2918,7 +2918,7 @@ async function removeStrayDebugGeometry(targetScene){
      if(radialOffset>.80||radialOffset< -1.50)foamVisibleVerticesOutsideBand++;
     }
    };
-   inspectBand(foam.positions,colors,foam.rows);inspectBand(washPositions,washColors,washRows);
+   inspectBand(foam.positions,foam.colors,foam.rows);inspectBand(foam.washPositions,foam.washColors,foam.washRows);
   }
   return {
    baseSeaLevel:Number(baseSeaLevel.toFixed(3)),tideOffset:Number(tideOffset.toFixed(3)),tidePhaseDegrees:Number((((oceanTime%TIDE_PERIOD_SECONDS)/TIDE_PERIOD_SECONDS)*360).toFixed(1)),tideMode:Number.isFinite(debugForcedTideOffset)?(debugForcedTideOffset>0?'forced-high':'forced-low'):'natural',seaSurfaceAtPlayer:Number((baseSeaLevel+localSurface).toFixed(3)),localWaveDisplacement:Number((localSurface-tideOffset).toFixed(3)),waveAmplitudeBoundMeters:.977,shorelineRadius:Number.isFinite(shorelineRadius)?Number(shorelineRadius.toFixed(3)):null,wetBandPeak:Number(wetBandPeak.toFixed(3)),wetBandDistanceMeters:wetBandDistanceMeters===null?null:Number(wetBandDistanceMeters.toFixed(3)),activeIsland:active?active.island.name:null,activeBeachIslandIndex,
