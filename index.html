@@ -2027,7 +2027,8 @@ async function removeStrayDebugGeometry(targetScene){
  const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
  const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('armdebug')==='1';
  const testModeEnabled=new URLSearchParams(window.location.search).get('test')==='1';
- const groundDebugEnabled=testModeEnabled||new URLSearchParams(window.location.search).get('debug')==='1';
+ const groundDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
+ const coastalDiagnosticsEnabled=groundDebugEnabled||testModeEnabled;
  const realPlayerArmTuningEnabled=true;
  const realPlayerArmDebugState={free:{status:'ESPERANDO',reason:'',twistDeg:null},weapon:{status:'POSE ORIGINAL',reason:'',twistDeg:null}};
  let realPlayerSkeletonFrameDiagnostic='esqueleto pendiente';
@@ -2718,10 +2719,10 @@ async function removeStrayDebugGeometry(targetScene){
  const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:(isTouchDevice?125:180)):(isTouchDevice?90:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS,WATER_DETAIL_FADE_START_SQ=WATER_DETAIL_RADIUS_SQ*.55;
  const waterPositionBuffer=ground.getVertexBuffer(B.VertexBuffer.PositionKind),waterNormalBuffer=ground.getVertexBuffer(B.VertexBuffer.NormalKind),waterColorBuffer=ground.getVertexBuffer(B.VertexBuffer.ColorKind);
  // Instrumentación de solo lectura. Solo reserva buffers de muestreo en ?debug=1 o ?test=1.
- const waterDebugVertexTimes=groundDebugEnabled?new Float64Array(waterBase.length/3).fill(NaN):null;
- const waterDebugVertexFades=groundDebugEnabled?new Float32Array(waterBase.length/3).fill(NaN):null;
- const waterDebugSolverStats=groundDebugEnabled?{samples:0,bracketFailures:0,finiteResiduals:0,converged:0,lastResidualMeters:null,maxResidualMeters:0,totalMs:0,lastMs:0,maxMs:0}:null;
- const waterDebugSampleIndices=groundDebugEnabled?(()=>{
+ const waterDebugVertexTimes=coastalDiagnosticsEnabled?new Float64Array(waterBase.length/3).fill(NaN):null;
+ const waterDebugVertexFades=coastalDiagnosticsEnabled?new Float32Array(waterBase.length/3).fill(NaN):null;
+ const waterDebugSolverStats=coastalDiagnosticsEnabled?{samples:0,bracketFailures:0,finiteResiduals:0,converged:0,lastResidualMeters:null,maxResidualMeters:0,totalMs:0,lastMs:0,maxMs:0}:null;
+ const waterDebugSampleIndices=coastalDiagnosticsEnabled?(()=>{
   const count=Math.min(100,waterBase.length/3),picked=[],seen=new Set();
   let seed=0x51A7;
   while(picked.length<count){
@@ -3182,7 +3183,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  // Solving against the current wave height (instead of a frozen sea level) prevents foam decals
  // from remaining visibly stranded on the dry sand when the tide/wave phase changes.
  function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island),dirX=Math.cos(angle),dirZ=Math.sin(angle)){
-  const solverStartedAt=groundDebugEnabled?performance.now():0;
+  const solverStartedAt=coastalDiagnosticsEnabled?performance.now():0;
   // A safeguarded secant converges on the same real terrain/water intersection
   // with far fewer expensive heightfield and wave evaluations than ten bisections.
   const sample=radius=>{
