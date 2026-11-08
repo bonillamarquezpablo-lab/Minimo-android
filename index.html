@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.250">
+<meta name="el-sin-nombre-build" content="0.6.251">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
@@ -2983,7 +2983,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  function terrainHeightOnIsland(is,x,z){
   const d=Math.hypot(x-is.x,z-is.z),edge=Math.max(0,1-(d/is.r)*(d/is.r));
   // Línea de costa irregular: pequeñas calas y entrantes de arena en vez de un círculo perfecto.
-  const coastNoise=(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.045+Math.sin(x*.17+z*.11)*.006;
+  const coastNoise=(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.026+Math.sin(x*.17+z*.11)*.0035;
   const coastDistance=d+coastNoise*is.r;
   const peak=mountainProfileByIsland.get(is),px=(x-peak.x)/peak.sx,pz=(z-peak.z)/peak.sz;
   let relief=peak.height*Math.exp(-.5*(px*px+pz*pz));
@@ -3076,7 +3076,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  function createIslandTerrain(is,index){
   // Babylon's native Ground mesh guarantees a stable, upward-facing heightfield.
   // Vertices outside the island are sunk beneath the sea, so no square island edge is visible.
-  const subdivisions=index===0?(isTouchDevice?176:208):72;
+  const subdivisions=index===0?(isTouchDevice?208:240):88;
   const mesh=B.MeshBuilder.CreateGround('IslandHeightfield_'+index,{width:is.r*2,height:is.r*2,subdivisions,updatable:true},scene);
   const positions=mesh.getVerticesData(B.VertexBuffer.PositionKind);
   const colors=[];
@@ -3088,7 +3088,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    const slopeZ=(terrainHeightOnIsland(is,wx,wz+1)-terrainHeightOnIsland(is,wx,wz-1))*.5;
    const slope=Math.hypot(slopeX,slopeZ);
    const rock=Math.max(0,Math.min(.92,(h-2.7)/6.6+slope*.72));
-   const coastNoise=(terrainValueNoise(wx*.12+17.2,wz*.12-8.4)-.5)*.045+Math.sin(wx*.17+wz*.11)*.006;
+   const coastNoise=(terrainValueNoise(wx*.12+17.2,wz*.12-8.4)-.5)*.026+Math.sin(wx*.17+wz*.11)*.0035;
    const coastDistance=d+coastNoise*is.r;
    const beach=smooth01((coastDistance/is.r-.75)/.24);
    // Variación espacial real: humedad y musgo cambian por zonas, no un tinte uniforme por isla.
@@ -3167,7 +3167,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
   coastalStateTexture.name='BeachStateRGBA_'+index;
   for(let i=0;i<=segments;i++){
    const angle=i/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
-   const coastNoise=(terrainValueNoise((island.x+cs*island.r)*.12+17.2,(island.z+sn*island.r)*.12-8.4)-.5)*.045+Math.sin((island.x+cs*island.r)*.17+(island.z+sn*island.r)*.11)*.006;
+   const coastNoise=(terrainValueNoise((island.x+cs*island.r)*.12+17.2,(island.z+sn*island.r)*.12-8.4)-.5)*.026+Math.sin((island.x+cs*island.r)*.17+(island.z+sn*island.r)*.11)*.0035;
    radials.push(island.r*(.755-coastNoise),island.r*(1.085-coastNoise));
   }
   // Row-major topology: exactly one vertex per (radial row, shoreline segment).
@@ -3193,24 +3193,25 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    B.Effect.ShadersStore.norseLivingBeachVertexShader=`precision highp float;
 attribute vec3 position;attribute vec3 normal;attribute vec2 uv;attribute vec4 color;
 uniform mat4 world;uniform mat4 worldViewProjection;
-varying vec2 vUV;varying vec3 vNormalW;varying vec4 vColor;
-void main(void){vUV=uv;vNormalW=normalize((world*vec4(normal,0.0)).xyz);vColor=color;gl_Position=worldViewProjection*vec4(position,1.0);}`;
+varying vec2 vUV;varying vec3 vNormalW;varying vec3 vWorldPos;varying vec4 vColor;
+void main(void){vUV=uv;vNormalW=normalize((world*vec4(normal,0.0)).xyz);vWorldPos=(world*vec4(position,1.0)).xyz;vColor=color;gl_Position=worldViewProjection*vec4(position,1.0);}`;
    B.Effect.ShadersStore.norseLivingBeachPixelShader=`precision highp float;
-varying vec2 vUV;varying vec3 vNormalW;varying vec4 vColor;
+varying vec2 vUV;varying vec3 vNormalW;varying vec3 vWorldPos;varying vec4 vColor;
 uniform sampler2D sandSampler;uniform sampler2D sandRoughSampler;uniform sampler2D beachStateSampler;
 uniform float beachTime;uniform float shoreFoamStrength;uniform float shoreSheetStrength;
 void main(void){
- float antiRepeatNoise=texture2D(sandSampler,vUV*vec2(3.7,2.3)+vec2(0.23,0.47)).g;
- vec2 sandUvA=vUV*vec2(12.0,4.8);
- vec2 sandUvB=vUV*vec2(9.4,6.1)+vec2(0.41,0.13);
+ vec2 worldUV=vWorldPos.xz;
+ float antiRepeatNoise=texture2D(sandSampler,worldUV*.13+vec2(.23,.47)).g;
+ vec2 sandUvA=worldUV*.34;
+ vec2 sandUvB=worldUV*.57+vec2(.41,.13);
  vec4 sandA=texture2D(sandSampler,sandUvA);
  vec4 sandB=texture2D(sandSampler,sandUvB);
  vec4 sand=mix(sandA,sandB,smoothstep(0.22,0.78,antiRepeatNoise)*0.42);
  float sandRoughness=texture2D(sandRoughSampler,sandUvA).r;
  vec4 state=texture2D(beachStateSampler,vUV);
  float wet=clamp(state.r,0.0,1.0),foam=clamp(state.g,0.0,1.0),water=clamp(state.b,0.0,1.0);
- vec4 broad=texture2D(sandSampler,vUV*vec2(41.0,17.0));
- vec4 fine=texture2D(sandSampler,vUV*vec2(117.0,49.0));
+ vec4 broad=texture2D(sandSampler,worldUV*.16);
+ vec4 fine=texture2D(sandSampler,worldUV*1.35+vec2(.17,.31));
  float laceNoise=fine.r*0.62+broad.g*0.38;
  float lace=smoothstep(0.34,0.74,laceNoise);
  float broken=smoothstep(0.28,0.61,broad.r)*(1.0-smoothstep(0.78,0.98,fine.g));
@@ -3219,31 +3220,29 @@ void main(void){
  // Noise perturbs the humidity boundary continuously, not as a binary per-cell cutout.
  float shoreNoise=(broad.r-0.5)*0.17+(fine.g-0.5)*0.07+(fine.b-0.5)*0.035;
  float wetEdge=smoothstep(0.035+shoreNoise,0.72+shoreNoise,wet);
- float humidity=clamp(wet*0.56+wetEdge*0.12,0.0,0.62);
- vec3 dryColor=sand.rgb*vec3(1.14,1.06,0.95);
- vec3 wetColor=dryColor*vec3(0.94,0.92,0.87);
+ float humidity=clamp(wet*0.82+wetEdge*0.20,0.0,0.94);
+ vec3 dryColor=sand.rgb*vec3(1.10,1.04,0.94);
+ vec3 wetColor=dryColor*vec3(0.76,0.72,0.64);
  vec3 color=mix(dryColor,wetColor,humidity);
- float windRill=0.5+0.5*sin(vUV.y*438.0+fine.r*8.0+broad.g*3.0);
- float windRillMask=(1.0-smoothstep(0.18,0.74,wet))*(1.0-smoothstep(0.28,0.92,water));
- color*=1.0+(windRill-0.5)*0.055*windRillMask;
+ float grainRelief=(fine.r-.5)*.035+(broad.g-.5)*.018;
+ float dryGrain=(1.0-smoothstep(.12,.72,wet))*(1.0-smoothstep(.20,.88,water));
+ color*=1.0+grainRelief*dryGrain;
  color=mix(color,vec3(0.52,0.70,0.75),smoothstep(0.06,0.88,water)*0.16);
  vec3 foamColor=mix(vec3(0.76,0.88,0.90),vec3(0.99,1.0,0.99),smoothstep(0.38,0.82,laceNoise));
  color=mix(color,foamColor,foamMask*0.88);
  // Broken high-tide wrack: scattered shell/seaweed fragments in a noisy band,
  // not a continuous painted ring.
- float wrackOffset=(broad.r-0.5)*0.035+(fine.g-0.5)*0.018;
- float wrackBand=1.0-smoothstep(0.012,0.072,abs(vUV.y-0.79+wrackOffset));
- float wrackBreak=smoothstep(0.34,0.58,fine.r)*(1.0-smoothstep(0.78,0.96,broad.b));
- vec3 wrackTint=mix(vec3(0.32,0.34,0.27),vec3(0.78,0.69,0.52),fine.g);
- color=mix(color,wrackTint,wrackBand*wrackBreak*0.20);
+ float wrackPatch=smoothstep(.68,.84,broad.r)*(1.0-smoothstep(.58,.82,fine.g))*smoothstep(.12,.38,wet);
+ vec3 wrackTint=mix(vec3(.27,.29,.23),vec3(.62,.54,.39),fine.g);
+ color=mix(color,wrackTint,wrackPatch*.16);
  // Thin advancing film: shallow coverage flows over the sand and breaks into lacy tongues.
  float sheetFront=smoothstep(0.015,0.34,water)*(1.0-smoothstep(0.54,0.96,water));
  float sheetRipple=0.66+0.34*(0.5+0.5*sin(beachTime*1.85+vUV.x*138.0+broad.g*12.0));
  float sheetMask=sheetFront*sheetRipple*shoreSheetStrength;
- color=mix(color,vec3(0.34,0.62,0.69),sheetMask*0.28);
+ color=mix(color,vec3(0.72,0.84,0.86),sheetMask*0.18);
  // Thin wet sheen: slightly brighter and less rough-looking than dry sand, without a dark stripe.
- float wetHighlight=pow(max(0.0,dot(normalize(vNormalW),normalize(vec3(-0.30,0.91,0.27)))),10.0)*humidity*mix(0.022,0.068,1.0-sandRoughness);
- color+=vec3(0.012+humidity*0.018+wetHighlight);
+ float wetHighlight=pow(max(0.0,dot(normalize(vNormalW),normalize(vec3(-0.30,0.91,0.27)))),18.0)*humidity*mix(.035,.12,1.0-sandRoughness);
+ color+=vec3(.006+humidity*.012+wetHighlight);
  vec3 n=normalize(vNormalW),lightDir=normalize(vec3(-0.30,0.91,0.27));
  color*=0.76+0.24*max(0.0,dot(n,lightDir));
  gl_FragColor=vec4(color,clamp(vColor.a,0.0,1.0));
@@ -3553,7 +3552,7 @@ void main(void){
  function buildTidalFoam(island,index){
   // Calidad usa la malla costera densa; Rendimiento conserva una rompiente más ligera,
   // pero nunca elimina por completo el oleaje blanco junto a la playa.
-  const segments=isPerformanceMode?(isConstrainedMobile?112:160):Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)));
+  const segments=isPerformanceMode?(isConstrainedMobile?112:160):Math.max(512,Math.min(2048,Math.ceil(Math.PI*2*island.r/.30)));
   const rows=isPerformanceMode?5:9,cols=segments+1;
   const radialOffsets=isPerformanceMode?[-.52,-.26,0,.26,.52]:[-.72,-.54,-.36,-.18,-.02,.13,.28,.43,.58];
   const positions=new Float32Array(cols*rows*3),colors=new Float32Array(cols*rows*4),foamPattern=new Float32Array(cols*rows);
