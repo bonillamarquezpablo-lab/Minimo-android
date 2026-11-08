@@ -11782,15 +11782,27 @@ function update(dt){
    const sceneWarmupStartedAt=performance.now();let waitingItemsBefore=null,waitingItemsAfter=null;
    try{if(typeof scene.getWaitingItemsCount==='function')waitingItemsBefore=scene.getWaitingItemsCount();}catch(_){waitingItemsBefore=null;}
    startupTaskCurrent='compilación de shaders y preparación de texturas';
-   // La pantalla de carga permanece visible hasta que Babylon declara lista la escena completa.
-   await scene.whenReadyAsync();
-   // Dos fotogramas adicionales terminan las subidas iniciales de buffers y compilaciones de materiales.
-   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-   try{if(typeof scene.getWaitingItemsCount==='function')waitingItemsAfter=scene.getWaitingItemsCount();}catch(_){waitingItemsAfter=null;}
-   sceneWarmupStatus='ready';
-   window.__elSinNombreStartupSceneWarmup={profile:activeGraphicsProfile,status:sceneWarmupStatus,durationMs:Number((performance.now()-sceneWarmupStartedAt).toFixed(2)),waitingItemsBefore,waitingItemsAfter,blocking:true,warmupFrames:2};
-   recordStartupTask('Shaders, texturas y escena',sceneWarmupStartedAt,performance.now(),'ready',{waitingItemsBefore,waitingItemsAfter});
-   console.info('Escena gráfica completa preparada antes de abrir la partida.',window.__elSinNombreStartupSceneWarmup);
+   if(coastalReferenceMode){
+    // La referencia costera no valida el arranque completo del juego ni el GLB del protagonista.
+    // SwiftShader puede tardar indefinidamente compilando todos los materiales de la isla.
+    // En este job solo esperamos tres fotogramas del escenario ya construido; el arranque
+    // completo y el GLB real se verifican en el job character-startup independiente.
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    try{if(typeof scene.getWaitingItemsCount==='function')waitingItemsAfter=scene.getWaitingItemsCount();}catch(_){waitingItemsAfter=null;}
+    sceneWarmupStatus='coastal-test-frames-ready';
+    window.__elSinNombreStartupSceneWarmup={profile:activeGraphicsProfile,status:sceneWarmupStatus,durationMs:Number((performance.now()-sceneWarmupStartedAt).toFixed(2)),waitingItemsBefore,waitingItemsAfter,blocking:false,warmupFrames:3,renderer:'test-only SwiftShader'};
+    recordStartupTask('Primeros fotogramas de referencia costera',sceneWarmupStartedAt,performance.now(),'ready',{waitingItemsBefore,waitingItemsAfter});
+    console.info('Referencia costera: tres fotogramas preparados sin bloquearse en la compilación completa de materiales.',window.__elSinNombreStartupSceneWarmup);
+   }else{
+    // En el juego real la pantalla de carga permanece hasta que Babylon declara lista la escena completa.
+    await scene.whenReadyAsync();
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    try{if(typeof scene.getWaitingItemsCount==='function')waitingItemsAfter=scene.getWaitingItemsCount();}catch(_){waitingItemsAfter=null;}
+    sceneWarmupStatus='ready';
+    window.__elSinNombreStartupSceneWarmup={profile:activeGraphicsProfile,status:sceneWarmupStatus,durationMs:Number((performance.now()-sceneWarmupStartedAt).toFixed(2)),waitingItemsBefore,waitingItemsAfter,blocking:true,warmupFrames:2};
+    recordStartupTask('Shaders, texturas y escena',sceneWarmupStartedAt,performance.now(),'ready',{waitingItemsBefore,waitingItemsAfter});
+    console.info('Escena gráfica completa preparada antes de abrir la partida.',window.__elSinNombreStartupSceneWarmup);
+   }
   }
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){
