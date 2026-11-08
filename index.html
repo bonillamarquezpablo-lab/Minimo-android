@@ -11805,7 +11805,8 @@ function update(dt){
    render:()=>scene.render(),
    captureCanvas:()=>{const targetCanvas=document.getElementById('renderCanvas');if(!targetCanvas)throw new Error('Render canvas is missing');return targetCanvas.toDataURL('image/png');},
    snapshot:()=>window.__elSinNombreWaterDebugSnapshot?.()||null,
-   diagnostics:()=>({coast:getWaterCoastDiagnostics(),waterDebugSnapshot:window.__elSinNombreWaterDebugSnapshot?.()||null,startup:window.__elSinNombreStartupSmoke.result,meshCount:scene.meshes.length,activeBeachIslandIndex,activeTidalFoamIslandIndex,waterTime:oceanTime,forcedTideOffset:debugForcedTideOffset})
+   retryViking:()=>loadHumanViking(),
+   diagnostics:()=>({coast:getWaterCoastDiagnostics(),waterDebugSnapshot:window.__elSinNombreWaterDebugSnapshot?.()||null,startup:window.__elSinNombreStartupSmoke.result,playerModelReady:!!player.modelReady,realPlayerMeshCount:realPlayerModel&&realPlayerModel.getChildMeshes?realPlayerModel.getChildMeshes(false).filter(mesh=>mesh.getTotalVertices&&mesh.getTotalVertices()>0).length:0,fallbackVisible:!!(player.body&&player.body.isEnabled()),meshCount:scene.meshes.length,activeBeachIslandIndex,activeTidalFoamIslandIndex,waterTime:oceanTime,forcedTideOffset:debugForcedTideOffset})
   };
  }
  console.info('EL SIN NOMBRE startup smoke result',window.__elSinNombreStartupSmoke.result);
