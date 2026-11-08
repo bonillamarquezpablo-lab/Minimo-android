@@ -15,7 +15,8 @@ assert.equal(coast.waterOpacity(-1), 0);
 assert.ok(coast.waterOpacity(0.01) < 0.01);
 assert.ok(coast.waterOpacity(0.10) < 0.06);
 assert.ok(coast.waterOpacity(0.30) < 0.25);
-assert.ok(coast.waterOpacity(0.65) > 0.50 && coast.waterOpacity(0.65) < 0.55);
+assert.ok(coast.waterOpacity(0.50) < 0.25);
+assert.ok(coast.waterOpacity(0.65) > 0.30 && coast.waterOpacity(0.65) < 0.38);
 const opacityDepths = [0, 0.001, 0.01, 0.05, 0.10, 0.20, 0.30, 0.50, 0.65, 0.8, 1, 2, 3.5, 5.5, 20];
 let previousOpacity = 0;
 for (const depth of opacityDepths) {
