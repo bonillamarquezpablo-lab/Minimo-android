@@ -64,16 +64,27 @@ async function main() {
     if (message.type() === 'error') consoleErrors.push(message.text());
   });
   try {
-    // Exactly one navigation: all 27 states are driven by hooks on this same live scene.
+    // Exactly one navigation and one full game boot. All later cases reuse this page.
     await retryOnce('Open the game once', async () => {
       await page.goto(BASE_URL + '?test=1', { waitUntil: 'domcontentloaded', timeout: 120000 });
     });
+    await page.locator('#audioGateStart').waitFor({ state: 'visible', timeout: 120000 });
+    await page.locator('#audioGateStart').click({ timeout: 60000 });
+    await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
+    await page.locator('#chooseQuality').click({ timeout: 60000 });
+    await page.locator('#playerNameInput').waitFor({ state: 'visible', timeout: 60000 });
+    await page.locator('#playerNameInput').fill('Coastal Test');
+    await page.locator('#continueWithName').click({ timeout: 60000 });
+
     await page.waitForFunction(
       () => window.__ELSN_TEST__ && window.__elSinNombreStartupSmoke &&
         window.__elSinNombreStartupSmoke.worldReady === true,
       undefined,
-      { timeout: 240000, polling: 500 }
+      { timeout: 300000, polling: 500 }
     );
+    await page.locator('#newGameChoice').waitFor({ state: 'visible', timeout: 60000 });
+    await page.locator('#newGameChoice').click({ timeout: 60000 });
+    await page.locator('#intro').waitFor({ state: 'hidden', timeout: 60000 });
 
     const boot = await page.evaluate(() => {
       const api = window.__ELSN_TEST__;
