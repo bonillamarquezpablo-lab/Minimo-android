@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.245">
+<meta name="el-sin-nombre-build" content="0.6.246">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.245</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.246</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -8600,7 +8600,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'10',build:'0.6.245',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'10',build:'0.6.246',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    beachState:{activeIslandIndex:activeBeachIslandIndex,activeIsland:activeBeachLayer?activeBeachLayer.island.name:null,columns:activeBeachLayer?activeBeachLayer.coastalState.columns:0,rows:activeBeachLayer?activeBeachLayer.coastalState.rows:0,updatedCellsLast:beachUpdateCellsLast,updatedCellsTotal:beachUpdateCellsTotal,cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,textureUploads:beachStateTextureUploads,updateHz:12},
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
