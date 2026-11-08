@@ -4069,12 +4069,12 @@ void main(void){
    const island=land[index],dx=x-island.x,dz=z-island.z,limit=island.r;
    if(dx*dx+dz*dz>=limit*limit)continue;
    const terrain=islandTerrainMeshes[index];
-   // The visible island is a triangulated GroundMesh, not the ideal analytic heightfield.
-   // Sample Babylon's rendered height so the packed-earth ribbon sits on the exact surface
-   // that the player sees, avoiding sub-cell gaps and z-fighting on ridges.
+   // GroundMesh.getHeightAtCoordinates accepts WORLD X/Z and already returns WORLD Y.
+   // Passing island-relative coordinates samples the wrong part of a translated island,
+   // creating a false height offset that can make the packed-earth ribbon cut into slopes.
    if(terrain&&typeof terrain.getHeightAtCoordinates==='function'){
-    const renderedHeight=terrain.getHeightAtCoordinates(dx,dz);
-    if(Number.isFinite(renderedHeight))return terrain.position.y+renderedHeight;
+    const renderedHeight=terrain.getHeightAtCoordinates(x,z);
+    if(Number.isFinite(renderedHeight))return renderedHeight;
    }
    return terrainSurfaceAt(x,z);
   }
