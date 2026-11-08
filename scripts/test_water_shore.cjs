@@ -48,14 +48,19 @@ assert.ok(html.includes("const subdivisions=Math.min(360,Math.max(112,Math.ceil(
 assert.ok(html.includes("(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.008+Math.sin(x*.17+z*.11)*.0018+(terrainValueNoise(x*.44+3.7,z*.44-8.1)-.5)*.002"),"Coast noise must be softened and contain no large radial teeth");
 assert.match(html,/float humidity=clamp\(max\(wet\*\.58,wetEdge\*\.56\)\*wetSandStrength,0\.0,\.78\)/,"Wet sand should blend dynamically without a dark ring.");
 assert.match(html,/color=mix\(color,wrackTint,wrackZone\*wrackFragments\*\.045\)/,"Wrack must remain sparse and fragmented.");
-assert.match(html,/washMaterial\.emissiveColor=new B\.Color3\(\.004,\.014,\.020\)/,"The independent wash must not emit a cyan/green haze.");
+assert.match(html,/washMaterial\.emissiveColor=new B\.Color3\(0,0,0\)/,"The intertidal water film must not glow cyan or cast colored haze.");
+assert.match(html,/M\.water\.needDepthPrePass=false;M\.water\.disableDepthWrite=true;/,"Transparent water must not write an opaque shoreline depth pre-pass.");
+assert.match(html,/washData\.uvs=washUvs/,"The advancing water film must have world-aligned UVs for the shared ocean normal map.");
+assert.match(html,/washMesh\.updateVerticesData\(B\.VertexBuffer\.UVKind,washUvs,false,false\)/,"Film normal-map UVs must follow the moving shoreline positions.");
+assert.match(html,/const waterContact=smooth01\(\(water-ground\+\.03\)\/\.13\)/,"The water film must be suppressed where the wave does not physically cover the sand.");
+assert.match(html,/mesh\.receiveShadows=false;mesh\.castShadows=false;mesh\.hasVertexAlpha=true/,"The auxiliary wet-sand layer must not introduce hard shadow bands.");
 assert.match(html,/washMaterial\.bumpTexture=M\.water\.bumpTexture\|\|albedoNormalWater/,"The moving sheet must use animated ocean normals.");
 assert.match(html,/washMaterial\.diffuseFresnelParameters/,"The water film must have a grazing-angle Fresnel response.");
 assert.match(html,/washMaterial\.opacityFresnelParameters/,"The water film must keep a controlled transparent edge.");
 assert.match(html,/const cellular=Math\.pow\(smooth01\(\(washPattern\[vertex\]-\.34\)\/\.54\),2\.0\)/,"Whitewater must break into irregular foam patches.");
-assert.match(html,/const filmAlpha=filmCoverage\*\(\.20\+\.10\*breakStrength\)\*flowPulse\*filmStrength/,"The advancing film must remain translucent over pale sand.");
+assert.match(html,/const filmAlpha=filmCoverage\*\(\.10\+\.08\*breakStrength\)\*flowPulse\*filmStrength\*waterContact/,"The advancing film must be faint and limited to actual water contact.");
 assert.match(html,/const lace=smooth01\(\(foamPattern\[vertex\]-.28\)\/\.46\)/,"The white crest must break into visible foam cells.");
-assert.match(html,/washColors\[color\]=\.60\*\(1-whiteMix\)\+\.96\*whiteMix/,"The intertidal film must not tint the sand dark cyan.");
+assert.match(html,/washColors\[color\]=\.72\*\(1-whiteMix\)\+\.97\*whiteMix/,"The intertidal film must remain neutral and foam must fade toward white.");
 
 assert.match(html,/window\.NorseCoastalInteraction\.filmSurfaceHeight\(ground,water,filmWave\)/,"The advancing film must sit above the sand/water interface.");
 assert.match(html,/window\.NorseCoastalInteraction\.filmCoverage\(fraction,washPattern\[vertex\]\)/,"The advancing film must fade and fragment at its edges.");
