@@ -254,9 +254,10 @@ async function main() {
     const ridgeCase = CAMERAS.find(cameraCase => cameraCase.id === 'ridge-occlusion');
     const pngPrefix = 'data:image/png;base64,';
     const isolationModes = [
-      { mode: 'scene-shadows', file: 'ridge-occlusion__t037__natural__no-scene-shadows.png', label: 'scene shadows disabled' },
+      { mode: 'sun-shadows', file: 'ridge-occlusion__t037__natural__no-sun-shadows.png', label: 'directional sun shadows disabled' },
       { mode: 'ocean-surface', file: 'ridge-occlusion__t037__natural__no-ocean-surface.png', label: 'ocean surface disabled' },
       { mode: 'living-beach', file: 'ridge-occlusion__t037__natural__no-living-beach.png', label: 'living beach disabled' },
+      { mode: 'packed-trails', file: 'ridge-occlusion__t037__natural__no-packed-trails.png', label: 'packed-earth trail meshes disabled' },
       { mode: 'terrain-maps', file: 'ridge-occlusion__t037__natural__no-terrain-maps.png', label: 'terrain albedo and normal maps disabled' }
     ];
     for (const isolation of isolationModes) {
@@ -269,16 +270,18 @@ async function main() {
         api.setWaterState({ time: 37, tide: 'natural' });
         let disabled = false, restored = false, canvasPng = null;
         try {
-          if (mode === 'scene-shadows') disabled = api.setSceneShadowsEnabled(false);
+          if (mode === 'sun-shadows') disabled = api.setSceneShadowsEnabled(false);
           else if (mode === 'ocean-surface') disabled = api.setOceanSurfaceEnabled(false);
           else if (mode === 'living-beach') disabled = api.setLivingBeachEnabled(false);
+          else if (mode === 'packed-trails') disabled = api.setPackedTrailsEnabled(false);
           else if (mode === 'terrain-maps') disabled = api.setTerrainTextureMapsEnabled(false);
           api.render();
           canvasPng = api.captureCanvas();
         } finally {
-          if (mode === 'scene-shadows') restored = api.setSceneShadowsEnabled(true);
+          if (mode === 'sun-shadows') restored = api.setSceneShadowsEnabled(true);
           else if (mode === 'ocean-surface') restored = api.setOceanSurfaceEnabled(true);
           else if (mode === 'living-beach') restored = api.setLivingBeachEnabled(true);
+          else if (mode === 'packed-trails') restored = api.setPackedTrailsEnabled(true);
           else if (mode === 'terrain-maps') restored = api.setTerrainTextureMapsEnabled(true);
           api.render();
         }
@@ -306,7 +309,7 @@ async function main() {
       console.log('[coastal-reference] layer isolation captured: ' + isolation.mode);
     }
     manifest.shadowIsolationCapture =
-      manifest.layerIsolationCaptures.find(frame => frame.mode === 'scene-shadows') || null;
+      manifest.layerIsolationCaptures.find(frame => frame.mode === 'sun-shadows') || null;
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');
     assert.equal(manifest.consoleErrors.length, 0,

@@ -26,7 +26,7 @@ assert.doesNotMatch(html, /const groundDebugEnabled=testModeEnabled/,
 assert.match(html, /if\(testModeEnabled\)\{[\s\S]*?window\.__ELSN_TEST__=/,
   'The test hooks must only be created when ?test=1 is present');
 assert.match(html, /preserveDrawingBuffer:testModeEnabled/, 'Only test mode may preserve the WebGL drawing buffer for PNG readback');
-for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setSceneShadowsEnabled:', 'setOceanSurfaceEnabled:', 'setLivingBeachEnabled:', 'setTerrainTextureMapsEnabled:', 'setWaterState:', 'diagnostics:', 'snapshot:', 'stop:', 'render:', 'captureCanvas:']) {
+for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setSceneShadowsEnabled:', 'setOceanSurfaceEnabled:', 'setLivingBeachEnabled:', 'setPackedTrailsEnabled:', 'setTerrainTextureMapsEnabled:', 'setWaterState:', 'diagnostics:', 'snapshot:', 'stop:', 'render:', 'captureCanvas:']) {
   assert.ok(html.includes(api), `Missing deterministic test hook: ${api}`);
 }
 assert.match(html, /window\.__ELSN_TEST__=\{/);
@@ -45,14 +45,15 @@ assert.match(captureRunner, /36\/36 complete/,
   'The runner must assert and report all 36 captured views.');
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
-for (const diagnostic of ['no-scene-shadows', 'no-ocean-surface', 'no-living-beach', 'no-terrain-maps']) {
+for (const diagnostic of ['no-sun-shadows', 'no-ocean-surface', 'no-living-beach', 'no-packed-trails', 'no-terrain-maps']) {
   assert.ok(captureRunner.includes('ridge-occlusion__t037__natural__' + diagnostic + '.png'),
     `Missing layer-isolation capture: ${diagnostic}`);
   assert.ok(contactSheet.includes('ridge-occlusion__t037__natural__' + diagnostic + '.png'),
     `Contact sheet must include layer-isolation capture: ${diagnostic}`);
 }
 assert.match(html, /setIslandShadowReceiving:\(enabled\)=>/, 'Terrain receiver isolation must remain test-only.');
-assert.match(html, /setSceneShadowsEnabled:\(enabled\)=>[\s\S]*?scene\.shadowsEnabled=value/, 'Global scene shadows must be isolatable in test mode.');
+assert.match(html, /setSceneShadowsEnabled:\(enabled\)=>[\s\S]*?sun\.shadowEnabled=value/, 'The directional light that owns the shadow generator must be isolatable in test mode.');
+assert.match(html, /setPackedTrailsEnabled:\(enabled\)=>[\s\S]*?WindingPackedEarthTrail/, 'The standalone packed-earth path meshes must be isolatable in test mode.');
 assert.match(html, /setOceanSurfaceEnabled:\(enabled\)=>/, 'Ocean visibility isolation must remain test-only.');
 assert.match(html, /setLivingBeachEnabled:\(enabled\)=>/, 'Beach surface isolation must remain test-only.');
 assert.match(html, /setTerrainTextureMapsEnabled:\(enabled\)=>/, 'Terrain material-map isolation must remain test-only.');

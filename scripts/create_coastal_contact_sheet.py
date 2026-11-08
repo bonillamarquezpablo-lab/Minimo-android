@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a 36-frame coast/ridge sheet plus four isolated layer comparison frames."""
+"""Build the 36-frame coast/ridge sheet plus five isolated layer comparison frames."""
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
@@ -9,9 +9,10 @@ CAMERAS = ("shore-1m", "surf-20m", "lod-90m", "ridge-occlusion")
 TIMES = (0, 37, 91)
 TIDES = ("natural", "high", "low")
 DIAGNOSTICS = (
-    ("ridge-occlusion__t037__natural__no-scene-shadows.png", "scene shadows off"),
+    ("ridge-occlusion__t037__natural__no-sun-shadows.png", "sun shadows off"),
     ("ridge-occlusion__t037__natural__no-ocean-surface.png", "ocean surface off"),
     ("ridge-occlusion__t037__natural__no-living-beach.png", "living beach off"),
+    ("ridge-occlusion__t037__natural__no-packed-trails.png", "packed trails off"),
     ("ridge-occlusion__t037__natural__no-terrain-maps.png", "terrain maps off"),
 )
 THUMB_W, THUMB_H = 320, 180
@@ -44,7 +45,7 @@ def main() -> None:
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
 
-    draw.text((8, 7), "EL SIN NOMBRE · COASTAL REFERENCE · 36 CAPTURES + 4 LAYER TESTS", fill=TEXT, font=font)
+    draw.text((8, 7), "EL SIN NOMBRE · COASTAL REFERENCE · 36 CAPTURES + 5 LAYER TESTS", fill=TEXT, font=font)
     draw.text((8, 25), "One game load · 960×540 · Chromium / SwiftShader · columns: natural / high / low",
               fill=MUTED, font=font)
 
@@ -59,8 +60,8 @@ def main() -> None:
                     (x, tile_y, x + THUMB_W - 1, tile_y + LABEL_H - 1),
                     radius=3, fill=PANEL, outline=LINE
                 )
-                label = f"{camera} | t={time}s | tide={tide}"
-                draw.text((x + 7, tile_y + 7), label, fill=TEXT, font=font)
+                draw.text((x + 7, tile_y + 7), f"{camera} | t={time}s | tide={tide}",
+                          fill=TEXT, font=font)
                 with Image.open(OUT / name) as source:
                     thumb = source.convert("RGB").resize(
                         (THUMB_W, THUMB_H), Image.Resampling.LANCZOS
@@ -83,7 +84,8 @@ def main() -> None:
             (x, tile_y, x + THUMB_W - 1, tile_y + LABEL_H - 1),
             radius=3, fill=PANEL, outline=LINE
         )
-        draw.text((x + 7, tile_y + 7), f"ridge-occlusion | {label}", fill=TEXT, font=font)
+        draw.text((x + 7, tile_y + 7), f"ridge-occlusion | {label}",
+                  fill=TEXT, font=font)
         with Image.open(OUT / name) as source:
             thumb = source.convert("RGB").resize(
                 (THUMB_W, THUMB_H), Image.Resampling.LANCZOS
