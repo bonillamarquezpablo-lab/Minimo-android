@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.262"
+EXPECTED_VERSION = "0.6.263"
 
 HTML_PAGES = (
     "index.html",
@@ -131,7 +131,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'11',build:'0.6.262'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'11',build:'0.6.263'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -391,7 +391,7 @@ def main() -> None:
         fail("La opacidad del agua debe crecer progresivamente desde la línea de costa.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.262" not in index_html or "EL SIN NOMBRE 0.6.262 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.263" not in index_html or "EL SIN NOMBRE 0.6.263 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -435,8 +435,12 @@ def main() -> None:
         fail("El fondo submarino debe ser una malla de arena independiente con relieve propio.")
     if "window.NorseCoastalInteraction.filmSurfaceHeight(ground,water,filmWave)" not in index_html or "window.NorseCoastalInteraction.filmCoverage(fraction,washPattern[vertex])" not in index_html or "washMaterial.bumpTexture=M.water.bumpTexture||albedoNormalWater" not in index_html:
         fail("La lámina de agua debe ser una superficie independiente, animada y con normales/reflejos.")
-    if "const filmAlpha=filmCoverage*(.20+.10*breakStrength)*flowPulse*filmStrength;" not in index_html or "const lace=smooth01((foamPattern[vertex]-.28)/.46);" not in index_html or "coastalSeabedMaterial.environmentIntensity=.18;" not in index_html:
-        fail("La película costera debe ser translúcida y la espuma fragmentada sobre un fondo submarino legible.")
+    if "const filmAlpha=filmCoverage*(.10+.08*breakStrength)*flowPulse*filmStrength*waterContact;" not in index_html or "const lace=smooth01((foamPattern[vertex]-.28)/.46);" not in index_html or "coastalSeabedMaterial.environmentIntensity=.18;" not in index_html:
+        fail("La película costera debe ser translúcida, ceñida al agua real y la espuma fragmentada sobre un fondo submarino legible.")
+    if "M.water.needDepthPrePass=false;M.water.disableDepthWrite=true;" not in index_html or "washMaterial.emissiveColor=new B.Color3(0,0,0);" not in index_html or "washData.uvs=washUvs;" not in index_html or "washMesh.updateVerticesData(B.VertexBuffer.UVKind,washUvs,false,false);" not in index_html:
+        fail("El agua transparente no debe escribir profundidad opaca ni generar bandas; la lámina debe reutilizar normales con UV mundiales.")
+    if "mesh.receiveShadows=false;mesh.castShadows=false;mesh.hasVertexAlpha=true;" not in index_html or "shore.receiveShadows=false;shore.castShadows=false;" not in index_html:
+        fail("Las capas auxiliares de costa no deben proyectar ni recibir sombras duras en forma de franjas.")
     if "applyTexture(M.water,texWater,17.5);" not in index_html or "oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;" not in index_html or ".020*Math.sin(67*warpU+41*warpW)" not in index_html:
         fail("El mar debe tener normales direccionales de varias escalas y microondulación visible desde la cámara del jugador.")
     if "M.water.specularPower=reducedWaterProfile?28:88;" not in index_html or "M.water.diffuseFresnelParameters.power=2.3;" not in index_html:
@@ -494,7 +498,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.262</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.263</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
@@ -510,8 +514,8 @@ def main() -> None:
         fail("La defensa naval debe estar conectada al bucle, al desembarco y al guardado.")
     if "float humidity=clamp(max(wet*.58,wetEdge*.56)*wetSandStrength,0.0,.78)" not in index_html or "color=mix(color,wrackTint,wrackZone*wrackFragments*.045)" not in index_html:
         fail("La arena húmeda debe quedar cálida y difusa; los restos de arribazón no pueden formar una banda oscura.")
-    if "washMaterial.emissiveColor=new B.Color3(.004,.014,.020)" not in index_html or "const alpha=Math.min(.58,filmAlpha+whitewater*.28+trailingFoam*.34)" not in index_html or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html:
-        fail("La lámina de agua debe conservar transparencia y la espuma blanca debe permanecer fragmentada.")
+    if "washMaterial.emissiveColor=new B.Color3(0,0,0)" not in index_html or "const alpha=Math.min(.38,filmAlpha+whitewater*.38+trailingFoam*.30)" not in index_html or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html:
+        fail("La lámina de agua debe permanecer neutra, sutil y la espuma blanca debe seguir fragmentada.")
     if "const runup=.28+.82*Math.pow(waveCrest,1.15)" not in index_html:
         fail("La lámina de espuma debe conservar una anchura de run-up contenida.")
     if "navalDefensePhaseUnlocked" not in index_html or "villages.every(entry=>entry.claimed)&&discoveredIslands.every(Boolean)" not in index_html:
