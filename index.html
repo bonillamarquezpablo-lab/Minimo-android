@@ -2934,7 +2934,7 @@ async function removeStrayDebugGeometry(targetScene){
   // La espuma aparece solo cuando la línea de agua retrocede y deja una película blanca en la arena.
   // La humedad de playa conserva su propia huella; esta malla dibuja únicamente el borde espumoso reciente.
   for(const foam of tidalFoamMeshes){
-   const {island,segments,rows,cols,radialOffsets,positions,colors,foamPattern,index,washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows}=foam;
+   const {island,segments,rows,cols,radialOffsets,positions,foamUvs,colors,foamPattern,index,washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows}=foam;
    const retreatFade=Math.exp(-foamElapsed/3.4);
    for(let col=0;col<=segments;col++){
     const angle=col/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
@@ -3797,7 +3797,7 @@ void main(void){
   }
   washMesh.material=washMaterial;washMesh.isPickable=false;washMesh.receiveShadows=false;washMesh.castShadows=false;
   washMesh.hasVertexAlpha=true;washMesh.renderingGroupId=1;
-  tidalFoamMeshes.push({mesh,positions,colors,foamPattern,lastShoreline,retreatResidue,foamCenter,island,centerX:island.x,centerZ:island.z,index,segments,rows,cols,radialOffsets,washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows});
+  tidalFoamMeshes.push({mesh,positions,foamUvs,colors,foamPattern,lastShoreline,retreatResidue,foamCenter,island,centerX:island.x,centerZ:island.z,index,segments,rows,cols,radialOffsets,washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows});
  }
  let activeTidalFoamIslandIndex=-2;
  function syncActiveTidalFoamIsland(){
