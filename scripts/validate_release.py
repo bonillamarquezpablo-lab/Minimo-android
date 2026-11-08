@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.255"
+EXPECTED_VERSION = "0.6.256"
 
 HTML_PAGES = (
     "index.html",
@@ -130,7 +130,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'10',build:'0.6.255'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'10',build:'0.6.256'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -463,7 +463,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.255</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.256</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
@@ -476,6 +476,12 @@ def main() -> None:
     if '<b id="captured">0/13</b>' not in index_html or '<b id="captured">0/4</b>' in index_html:
         fail("El HUD inicial debe mostrar 0/13 desde el primer fotograma.")
     if "function updateIslandInvasion(dt)" not in index_html or "updateIslandInvasion(dt);" not in index_html or "islandInvasion:snapshotIslandInvasion()" not in index_html or "restoreIslandInvasion(d.islandInvasion)" not in index_html or "invasionDisembark(raider,invasionTarget)" not in index_html:
+    if "float humidity=clamp(max(wet*.58,wetEdge*.56),0.0,.68)" not in index_html or "color=mix(color,wrackTint,wrackZone*wrackFragments*.045)" not in index_html:
+        fail("La arena húmeda debe quedar cálida y difusa; los restos de arribazón no pueden formar una banda oscura.")
+    if "washMaterial.emissiveColor=new B.Color3(.003,.004,.003)" not in index_html or "const alpha=Math.min(.32,whitewater+trailingFoam)" not in index_html or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html:
+        fail("La rompiente debe ser blanca, fragmentada y sin una lámina turquesa continua.")
+    if "const runup=.28+.82*Math.pow(waveCrest,1.15)" not in index_html:
+        fail("La lámina de espuma debe conservar una anchura de run-up contenida.")
         fail("La defensa naval debe estar conectada al bucle, al desembarco y al guardado.")
     if "navalDefensePhaseUnlocked" not in index_html or "villages.every(entry=>entry.claimed)&&discoveredIslands.every(Boolean)" not in index_html:
         fail("El hito de defensa naval solo se desbloquea al explorar y conquistar todo el archipiélago.")
