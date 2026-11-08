@@ -11,7 +11,7 @@ assert.doesNotMatch(html,/<b id="captured">0\/4<\/b>/,'No debe quedar el contado
 assert.match(html,/for\(let islandIndex=4;islandIndex<land\.length;islandIndex\+\+\)makeIslandGarrison\(islandIndex\);/);
 assert.match(html,/function makeIslandGarrison\(islandIndex\)/);
 assert.match(html,/function claimVillage\(vl,restoring=false\)/);
-assert.match(html,/captured\+\+'\/'\+land\.length/);
+assert.match(html,/captured\+'\/'\+land\.length/);
 assert.match(html,/function updateIslandInvasion\(dt\)/,'La fase naval debe tener una actualización activa.');
 assert.match(html,/updateIslandInvasion\(dt\);/,'La actualización naval debe estar conectada al bucle principal.');
 assert.match(html,/function spawnIslandInvasionWave\(\)/);
