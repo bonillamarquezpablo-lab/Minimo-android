@@ -390,9 +390,9 @@ def main() -> None:
         fail("La espuma costera debe utilizar detalle de encaje de alta frecuencia en el shader.")
     if "function syncActiveBeachIsland()" not in index_html or "activeBeachIslandIndex=nextIndex;" not in index_html or "syncActiveTidalFoamIsland();" not in index_html:
         fail("La isla activa debe sincronizar el estado de playa y la rompiente de espuma.")
-    for obsolete_foam in ("ContinuousOrganicShoreFoam_",):
-        if obsolete_foam in index_html:
-            fail("Se encontró un renderizador antiguo de espuma redundante: " + obsolete_foam)
+    # buildTidalFoam is the restored moving breaker mesh; its legacy mesh label is retained intentionally.
+    if "function buildTidalFoam(" not in index_html or "for(const foam of tidalFoamMeshes)" not in index_html:
+        fail("La rompiente costera debe mantener su malla activa y su ciclo de actualización.")
     if "state.stepCell(cell,coverage,elapsed,BEACH_STATE_DEFAULTS)" not in index_html or "foamValue = Math.max(foamValue, leadingLace)" not in read_text("scripts/nordic/beach-state.js"):
         fail("La espuma de avance y retirada debe pertenecer al mismo estado RGBA costero.")
     shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"))]
