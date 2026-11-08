@@ -26,7 +26,7 @@ assert.match(html,/startupTimeline:getStartupTimelineSnapshot\(\)/);
 assert.match(html,/backgroundFaunaTask=Promise\.resolve\(backgroundNpcTask\)/);
 assert.doesNotMatch(html,/vec3 n=normalize\(vNormalW\).*\n float wetHighlight[\s\S]*\n color\+=vec3\([^\n]+\);\n vec3 n=normalize\(vNormalW\)/);
 assert.ok(html.includes("const segments=isPerformanceMode?(isConstrainedMobile?112:160):Math.max(512,Math.min(2048,Math.ceil(Math.PI*2*island.r/.30)));"),"Quality shore breaker must use approximately 30 cm coastal segments");
-assert.ok(html.includes("const subdivisions=index===0?(isTouchDevice?208:240):88;"),"Coastal heightfield must retain the finer terrain mesh");
+assert.ok(html.includes("const subdivisions=Math.min(360,Math.max(112,Math.ceil(is.r*2/(isTouchDevice?.42:.36))));"),"All island coasts must keep sub-0.42 m heightfield sampling");
 assert.ok(html.includes("(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.008+Math.sin(x*.17+z*.11)*.0018+(terrainValueNoise(x*.44+3.7,z*.44-8.1)-.5)*.002"),"Coast noise must be softened and contain no large radial teeth");
 assert.match(html,/float humidity=clamp\(max\(wet\*\.58,wetEdge\*\.56\)\*wetSandStrength,0\.0,\.78\)/,"Wet sand should blend dynamically without a dark ring.");
 assert.match(html,/color=mix\(color,wrackTint,wrackZone\*wrackFragments\*\.045\)/,"Wrack must remain sparse and fragmented.");
