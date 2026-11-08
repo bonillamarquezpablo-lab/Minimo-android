@@ -3022,7 +3022,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
   if(coastDistance<=is.r*.76)return core;
   if(coastDistance<=is.r*.97){const t=smooth01((coastDistance/is.r-.76)/.21);return core*(1-t)+.26*t;}
   if(coastDistance<=is.r*1.09){const t=smooth01((coastDistance/is.r-.97)/.12);return .26*(1-t)-2.9*t;}
-  return -2.9;
+  return window.NorseCoastalInteraction.seabedHeight(d,is.r,-2.9);
  }
  const terrainDeformationFields=[];
  function terrainDeformationAt(islandIndex,x,z){
