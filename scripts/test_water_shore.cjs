@@ -24,6 +24,11 @@ for(const metric of ["foamActiveSegments","foamSegmentCapacity","foamValidInters
 assert.ok(html.includes('tidalFoamLastUpdateMs=performance.now()-foamWorkStarted'));
 assert.match(html,/Resaca: .*foamActiveSegments/);
 assert.match(html,/function buildTidalFoam\(island,index\)/);
+assert.match(html,/const waveBodyOffsets=\[-2\.65,-2\.05,-1\.48,-1\.02,-\.66,-\.34,-\.08,\.18,\.48,\.86,1\.34,1\.92,2\.55\]/,"The shoreline wave must have a multi-row 3D cross-section, not a single animated line.");
+assert.match(html,/VolumetricShoreBreaker_/,"The coast must create a separate volumetric wave body.");
+assert.match(html,/const lift=\(\.035\+\.48\*crest\+\.13\*rearShoulder\)/,"The wave body must have a raised crest and rear shoulder.");
+assert.match(html,/const breakerTravel=\.62\*Math\.sin\(oceanTime\*1\.08/,"The wave crest must travel onto and away from the beach.");
+assert.match(html,/waveBodyMesh\.updateVerticesData\(B\.VertexBuffer\.NormalKind,waveBodyNormals,false,false\)/,"The moving wave body must update its surface normals.");
 assert.match(html,/for\(const foam of tidalFoamMeshes\)/);
 const animateStart=html.indexOf("function animateWater(dt)");
 const animateEnd=html.indexOf("function rand(a,b)",animateStart);
