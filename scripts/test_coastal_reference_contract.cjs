@@ -31,6 +31,9 @@ for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setWaterState:', 
 }
 assert.match(html, /window\.__ELSN_TEST__=\{/);
 assert.match(html, /debugForcedTideOffset=tide==='natural'\?null:Number\(tide\)/);
+assert.match(html,/const packedTrailTexture=makePatternTexture\('Packed Norse trail earth','#8c7652'/,"Packed earth trails must use a readable warm-earth albedo rather than a near-black base.");
+assert.match(html,/packedTrailMaterial\.emissiveColor=new B\.Color3\(\.13,\.085,\.045\)/,"Packed earth trails must retain a subtle brown ambient floor on shaded ridges.");
+assert.match(html,/positions\.push\(x,terrainSurfaceAt\(x,z\)\+\.055,z\)/,"Packed earth trails must remain conformed to the live island terrain.");
 console.log('COASTAL REFERENCE CONTRACT OK');
 
 assert.ok(captureRunner.includes('api.captureCanvas()'),
