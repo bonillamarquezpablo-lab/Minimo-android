@@ -44,6 +44,8 @@ jobs:
 
       - name: Test BeachState coast and toroidal footprint atlas
         run: node scripts/test_beach_state.cjs
+      - name: Test 13-island campaign and naval invasion integration
+        run: node scripts/test_island_campaign.cjs
 
       - name: Build and validate game resources
         run: python scripts/build_site.py
