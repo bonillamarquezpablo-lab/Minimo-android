@@ -39,6 +39,9 @@ DOWNLOADS = {
     "assets/models/man-base-character-rigged.glb": (
         "https://grab3d.com/dl/man-base-character-rigged/man-base-character-rigged.glb", 1_000_000, "glb"
     ),
+    "assets/downloads/Ground060_2K-JPG.zip": (
+        "https://ambientcg.com/get?file=Ground060_2K-JPG.zip", 1_000_000, "zip"
+    ),
     "assets/models/Seagull.glb": (
         "https://gobkit.com/freebies/animal007/Seagull.glb", 50_000, "glb"
     ),
@@ -553,6 +556,39 @@ def main() -> None:
         for relative, reason in failures:
             print(f"- {relative}: {reason}", file=sys.stderr)
         raise SystemExit(1)
+
+    # Extract only the three PBR maps actually used by the beach; never ship the ZIP.
+    texture_archive_relative = "assets/downloads/Ground060_2K-JPG.zip"
+    texture_archive = DIST / texture_archive_relative
+    try:
+        with zipfile.ZipFile(texture_archive) as archive:
+            wanted = {
+                "Ground060_2K-JPG_Color.jpg": "assets/textures/sand-color.jpg",
+                "Ground060_2K-JPG_NormalGL.jpg": "assets/textures/sand-normal-gl.jpg",
+                "Ground060_2K-JPG_Roughness.jpg": "assets/textures/sand-roughness.jpg",
+            }
+            members = {Path(info.filename).name: info for info in archive.infolist() if not info.is_dir()}
+            for source_name, output_name in wanted.items():
+                info = members.get(source_name)
+                if info is None:
+                    raise RuntimeError(f"ambientCG ZIP is missing {source_name}")
+                raw = archive.read(info)
+                if len(raw) < 20_000 or not raw.startswith(b"\\xff\\xd8"):
+                    raise RuntimeError(f"Invalid JPEG PBR texture: {source_name}")
+                target = DIST / output_name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(raw)
+                results.append({
+                    "path": output_name,
+                    "bytes": len(raw),
+                    "sha256": hashlib.sha256(raw).hexdigest(),
+                    "source": "https://ambientcg.com/view?id=Ground060 (Ground060_2K-JPG)",
+                })
+                print(f"OK {output_name}: {len(raw):,} bytes (ambientCG Ground 060, CC0 1.0)")
+        texture_archive.unlink(missing_ok=True)
+        results[:] = [item for item in results if item["path"] != texture_archive_relative]
+    except Exception as exc:
+        failures.append((texture_archive_relative, f"Could not extract CC0 sand PBR maps: {exc}"))
 
     for music_asset in optional_music_results:
         results.append(music_asset)

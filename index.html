@@ -2429,6 +2429,29 @@ async function removeStrayDebugGeometry(targetScene){
   tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
  }
  const texCoastalSand=makeLivingCoastalSandTexture();
+ // CC0 photogrammetry overlay. The procedural grain remains underneath as a fallback
+ // and the shader blends several transformed UV scales to avoid obvious tile repetition.
+ function blendCc0CoastalSand(target){
+  const image=new Image();
+  image.onload=()=>{
+   try{
+    const size=target.getSize().width,ctx=target.getContext();
+    ctx.save();ctx.globalCompositeOperation='soft-light';ctx.globalAlpha=.66;
+    ctx.drawImage(image,0,0,size,size);ctx.restore();target.update(false);
+    console.info('CC0 coastal sand albedo blended',{source:'ambientCG Ground 060',license:'CC0 1.0',width:size,height:size});
+   }catch(error){console.warn('No se pudo mezclar la textura fotogramétrica; se mantiene la arena procedural.',error);}
+  };
+  image.onerror=()=>console.warn('No se pudo cargar ambientCG Ground 060; se mantiene la textura procedural.');
+  image.src='./assets/textures/sand-color.jpg';
+ }
+ blendCc0CoastalSand(texCoastalSand);
+ const texCoastalSandNormalPbr=new B.Texture('./assets/textures/sand-normal-gl.jpg',scene,false,true,B.Texture.TRILINEAR_SAMPLINGMODE);
+ const texCoastalSandRoughnessPbr=new B.Texture('./assets/textures/sand-roughness.jpg',scene,false,true,B.Texture.TRILINEAR_SAMPLINGMODE);
+ [texCoastalSandNormalPbr,texCoastalSandRoughnessPbr].forEach(texture=>{
+  texture.wrapU=B.Texture.WRAP_ADDRESSMODE;texture.wrapV=B.Texture.WRAP_ADDRESSMODE;
+  texture.anisotropicFilteringLevel=maxAnisotropy;
+ });
+
  const texBark=makePatternTexture('Rough tree bark','#59402d',['#8b6540','#382a22','#a27b50'],'bark');
  const texWood=makePatternTexture('Weathered timber','#79563a',['#b18a5c','#4e3729','#d0a06b'],'grain');
  const texLeaf=makePatternTexture('Leaf canopy detail','#3c6540',['#769257','#294b35','#a0a66a'],'leaf');
@@ -2462,7 +2485,7 @@ async function removeStrayDebugGeometry(targetScene){
  }
  const normalGrass=makeDetailNormal('Grass normal detail',13,.56),normalSand=makeDetailNormal('Sand normal detail',29,.30),normalStone=makeDetailNormal('Stone normal detail',41,.72),normalCloth=makeDetailNormal('Wool normal detail',57,.30),normalLeather=makeDetailNormal('Leather normal detail',73,.42),normalWood=makeDetailNormal('Timber normal detail',89,.42);
  normalGrass.level=.42;normalSand.level=.24;normalStone.level=.48;normalCloth.level=.22;normalLeather.level=.34;normalWood.level=.30;
- [M.grass,M.grass2,M.darkGrass].forEach(m=>m.bumpTexture=normalGrass);M.sand.bumpTexture=normalSand;
+ [M.grass,M.grass2,M.darkGrass].forEach(m=>m.bumpTexture=normalGrass);M.sand.bumpTexture=texCoastalSandNormalPbr;M.sand.bumpTexture.level=.58;
  [M.stone,M.stoneLight].forEach(m=>m.bumpTexture=normalStone);
  [M.tunic,M.red,M.blueCloth,M.greenCloth,M.ochreCloth,M.fur].forEach(m=>m.bumpTexture=normalCloth);
  M.leather.bumpTexture=normalLeather;[M.wood,M.woodLight,M.woodDark,M.bark,M.thatch,M.birch,M.hutWoodAmber,M.hutWoodWeathered,M.hutWoodDeep,M.hutThatchGold,M.hutThatchShade].forEach(m=>m.bumpTexture=normalWood);M.hutStone.bumpTexture=normalStone;M.hutMoss.bumpTexture=normalGrass;
@@ -3023,9 +3046,15 @@ varying vec2 vUV;varying vec3 vNormalW;varying vec4 vColor;
 void main(void){vUV=uv;vNormalW=normalize((world*vec4(normal,0.0)).xyz);vColor=color;gl_Position=worldViewProjection*vec4(position,1.0);}`;
    B.Effect.ShadersStore.norseLivingBeachPixelShader=`precision highp float;
 varying vec2 vUV;varying vec3 vNormalW;varying vec4 vColor;
-uniform sampler2D sandSampler;uniform sampler2D beachStateSampler;
+uniform sampler2D sandSampler;uniform sampler2D sandRoughSampler;uniform sampler2D beachStateSampler;
 void main(void){
- vec4 sand=texture2D(sandSampler,vUV*vec2(12.0,4.8));
+ float antiRepeatNoise=texture2D(sandSampler,vUV*vec2(3.7,2.3)+vec2(0.23,0.47)).g;
+ vec2 sandUvA=vUV*vec2(12.0,4.8);
+ vec2 sandUvB=vUV*vec2(9.4,6.1)+vec2(0.41,0.13);
+ vec4 sandA=texture2D(sandSampler,sandUvA);
+ vec4 sandB=texture2D(sandSampler,sandUvB);
+ vec4 sand=mix(sandA,sandB,smoothstep(0.22,0.78,antiRepeatNoise)*0.42);
+ float sandRoughness=texture2D(sandRoughSampler,sandUvA).r;
  vec4 state=texture2D(beachStateSampler,vUV);
  float wet=clamp(state.r,0.0,1.0),foam=clamp(state.g,0.0,1.0),water=clamp(state.b,0.0,1.0);
  vec4 broad=texture2D(sandSampler,vUV*vec2(41.0,17.0));
@@ -3046,15 +3075,15 @@ void main(void){
  color=mix(color,foamColor,foamMask*0.88);
  // Thin wet sheen: slightly brighter and less rough-looking than dry sand, without a dark stripe.
  vec3 n=normalize(vNormalW),lightDir=normalize(vec3(-0.30,0.91,0.27));
- float wetHighlight=pow(max(0.0,dot(n,lightDir)),10.0)*humidity*0.045;
+ float wetHighlight=pow(max(0.0,dot(n,lightDir)),10.0)*humidity*mix(0.022,0.068,1.0-sandRoughness);
  color+=vec3(0.012+humidity*0.018+wetHighlight);
  vec3 n=normalize(vNormalW),lightDir=normalize(vec3(-0.30,0.91,0.27));
  color*=0.76+0.24*max(0.0,dot(n,lightDir));
  gl_FragColor=vec4(color,clamp(vColor.a,0.0,1.0));
 }`;
   }
-  const material=new B.ShaderMaterial('LivingBeachSandMaterial_'+index,scene,'norseLivingBeach',{attributes:['position','normal','uv','color'],uniforms:['world','worldViewProjection'],samplers:['sandSampler','beachStateSampler']});
-  material.setTexture('sandSampler',texCoastalSand);material.setTexture('beachStateSampler',coastalStateTexture);
+  const material=new B.ShaderMaterial('LivingBeachSandMaterial_'+index,scene,'norseLivingBeach',{attributes:['position','normal','uv','color'],uniforms:['world','worldViewProjection'],samplers:['sandSampler','sandRoughSampler','beachStateSampler']});
+  material.setTexture('sandSampler',texCoastalSand);material.setTexture('sandRoughSampler',texCoastalSandRoughnessPbr);material.setTexture('beachStateSampler',coastalStateTexture);
   material.backFaceCulling=false;material.alpha=1;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;material.disableDepthWrite=true;
   mesh.material=material;mesh.isPickable=false;mesh.receiveShadows=true;mesh.castShadows=false;mesh.hasVertexAlpha=true;
   mesh.metadata=Object.assign({},mesh.metadata||{},{livingBeachSurface:true,islandIndex:index,wetnessSimulation:true,coastalStateMap:true,shaderFoamLace:true});
@@ -3084,20 +3113,27 @@ uniform mat4 world;uniform mat4 worldViewProjection;
 varying vec2 vUV;
 void main(void){vUV=uv;gl_Position=worldViewProjection*vec4(position,1.0);}`;
    B.Effect.ShadersStore.norseFootprintPixelShader=`precision highp float;
-varying vec2 vUV;uniform sampler2D footprintAtlasSampler;uniform float footprintTick;uniform vec2 footprintUvOffset;
+varying vec2 vUV;uniform sampler2D footprintAtlasSampler;uniform float footprintTick;uniform vec2 footprintUvOffset;uniform vec2 footprintTexel;
 void main(void){
- vec4 stamp=texture2D(footprintAtlasSampler,fract(vUV+footprintUvOffset));
+ vec2 uv=fract(vUV+footprintUvOffset);
+ vec4 stamp=texture2D(footprintAtlasSampler,uv);
  float stamped=stamp.r*255.0;
  float stampTick=stamp.g*255.0+stamp.b*65280.0;
  float ageTicks=mod(footprintTick-stampTick+65536.0,65536.0);
  float ageSeconds=ageTicks*.25;
  float fade=exp(-ageSeconds/105.0);
+ float left=texture2D(footprintAtlasSampler,fract(uv-vec2(footprintTexel.x,0.0))).r;
+ float right=texture2D(footprintAtlasSampler,fract(uv+vec2(footprintTexel.x,0.0))).r;
+ float down=texture2D(footprintAtlasSampler,fract(uv-vec2(0.0,footprintTexel.y))).r;
+ float up=texture2D(footprintAtlasSampler,fract(uv+vec2(0.0,footprintTexel.y))).r;
+ float rim=clamp(length(vec2(right-left,up-down))*4.8,0.0,1.0);
  float alpha=clamp(stamped/255.0,0.0,1.0)*fade*stamp.a;
- gl_FragColor=vec4(vec3(.14,.092,.052),alpha*.90);
+ vec3 shadowAndLip=mix(vec3(.13,.083,.047),vec3(.47,.36,.23),rim*.62);
+ gl_FragColor=vec4(shadowAndLip,alpha*.78);
 }`;
   }
-  const footprintMaterial=new B.ShaderMaterial('NorseMovingFootprintAtlasMaterial',scene,'norseFootprint',{attributes:['position','uv'],uniforms:['world','worldViewProjection','footprintTick','footprintUvOffset'],samplers:['footprintAtlasSampler']});
-  footprintMaterial.setTexture('footprintAtlasSampler',footprintTexture);footprintMaterial.setFloat('footprintTick',0);footprintMaterial.setVector2('footprintUvOffset',footprintUvOffset);
+  const footprintMaterial=new B.ShaderMaterial('NorseMovingFootprintAtlasMaterial',scene,'norseFootprint',{attributes:['position','uv'],uniforms:['world','worldViewProjection','footprintTick','footprintUvOffset','footprintTexel'],samplers:['footprintAtlasSampler']});
+  footprintMaterial.setTexture('footprintAtlasSampler',footprintTexture);footprintMaterial.setFloat('footprintTick',0);footprintMaterial.setVector2('footprintUvOffset',footprintUvOffset);footprintMaterial.setVector2('footprintTexel',new B.Vector2(1/FOOTPRINT_ATLAS_SIZE,1/FOOTPRINT_ATLAS_SIZE));
   footprintMaterial.backFaceCulling=false;footprintMaterial.alpha=1;footprintMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;footprintMaterial.disableDepthWrite=true;
   const footprintMesh=B.MeshBuilder.CreateGround('NorseMovingFootprints',{width:FOOTPRINT_WORLD_SIZE,height:FOOTPRINT_WORLD_SIZE,subdivisions:32,updatable:true},scene);
   footprintMesh.material=footprintMaterial;footprintMesh.isPickable=false;footprintMesh.receiveShadows=false;footprintMesh.castShadows=false;

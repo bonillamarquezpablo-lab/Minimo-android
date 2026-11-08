@@ -19,6 +19,13 @@ Esta distribución se construye desde GitHub Actions y copia los recursos al paq
 - Impactos y sonidos de batalla: Kenney / OpenGameArt, CC0 1.0. https://kenney.nl/assets/impact-sounds
 - Corte de madera: Kenney RPG Audio, CC0. https://kenney.nl/assets/rpg-audio
 
+## Arena costera fotogramétrica
+- Albedo, normal OpenGL y roughness: **Ground 060 — Sand with shells**, ambientCG.
+- Fuente: https://ambientcg.com/view?id=Ground060
+- Descarga empaquetada: Ground060_2K-JPG.zip; el build extrae solo los tres mapas usados.
+- Licencia: Creative Commons CC0 1.0 Universal; redistribución dentro del videojuego permitida.
+- La textura se mezcla con el grano procedural existente y se muestrea en varias escalas/offsets para reducir la repetición visible.
+
 ## Entorno de iluminación nórdico
 - Archivo distribuido: `assets/environmentSpecular.env`.
 - Origen: generado proceduralmente para EL SIN NOMBRE; creación propia del proyecto, sin licencia ni dependencia de terceros.

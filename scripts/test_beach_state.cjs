@@ -52,6 +52,11 @@ atlas.recenter(0, 0);
 assert.equal(atlas.stamp(0, 0, 0, 0.9, 400), true);
 assert.ok(atlas.sample(0, 0) > 0);
 assert.equal(atlas.sampleTick(0, 0), 400);
+// Footprints should taper at the heel, narrow through the arch and widen into toe pads.
+assert.ok(atlas.sample(0.075, -0.20) > 0, "heel should be present");
+assert.equal(atlas.sample(0.115, -0.20), 0, "heel edge should stay narrow");
+assert.equal(atlas.sample(0.105, 0.0), 0, "the arch should be narrower than the forefoot");
+assert.ok(atlas.sample(0.102, 0.19) > 0, "outer toe pad should be present");
 const before = atlas.sample(0, 0);
 const storage = atlas.values;
 atlas.recenter(0.1, 0);

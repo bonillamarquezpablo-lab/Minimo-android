@@ -205,14 +205,28 @@
           const wx = originX + (px + 0.5) * pixelSize - x;
           const wz = originZ + (py + 0.5) * pixelSize - z;
           const localX = wx * c - wz * s, localZ = wx * s + wz * c;
-          const taper = 0.82 + 0.18 * smooth01((localZ / halfLength + 1) * 0.5);
-          const lateral = Math.abs(localX) / (halfWidth * taper);
-          const longitudinal = Math.abs(localZ) / halfLength;
-          const distance = lateral * lateral + longitudinal * longitudinal;
-          if (distance > 1) continue;
-          const edge = 1 - smooth01((distance - 0.66) / 0.34);
-          const groove = (Math.abs(localX) < halfWidth * 0.12 && localZ < halfLength * 0.68 && localZ > -halfLength * 0.55) ? 0.72 : 1;
-          const value = Math.round(power * edge * groove);
+          const longitudinal = localZ / halfLength;
+          // Viking boot silhouette: narrower arch, rounded heel, broad forefoot,
+          // and five individually rounded toe lobes rather than one oval stamp.
+          let halfWidthAtZ;
+          if (longitudinal < -0.48) halfWidthAtZ = 0.083 + 0.022 * smooth01((longitudinal + 1) / 0.52);
+          else if (longitudinal < 0.08) halfWidthAtZ = 0.105 - 0.032 * smooth01((longitudinal + 0.48) / 0.56);
+          else halfWidthAtZ = 0.073 + 0.072 * smooth01((longitudinal - 0.08) / 0.55);
+          const bodyDistance = Math.max(Math.abs(localX) / halfWidthAtZ, Math.abs(localZ) / (halfLength * 0.76));
+          const toeOffsets = [-0.104, -0.052, 0, 0.052, 0.104];
+          const toeCenters = [0.170, 0.198, 0.218, 0.194, 0.160];
+          const toeRadii = [0.026, 0.030, 0.033, 0.029, 0.024];
+          let toeDistance = Infinity;
+          for (let toe = 0; toe < toeOffsets.length; toe++) {
+            const tx = localX - toeOffsets[toe], tz = localZ - toeCenters[toe];
+            toeDistance = Math.min(toeDistance, Math.hypot(tx / toeRadii[toe], tz / 0.048));
+          }
+          const distance = Math.min(bodyDistance, toeDistance);
+          if (distance > 1.12) continue;
+          const edge = 1 - smooth01((distance - 0.72) / 0.40);
+          const archGroove = longitudinal > -0.38 && longitudinal < 0.20 && Math.abs(localX) < 0.050 ? 0.82 : 1;
+          const raisedRim = Math.exp(-Math.pow((distance - 0.92) / 0.075, 2)) * 0.18;
+          const value = Math.round(power * clamp01(edge * archGroove + raisedRim));
           const cell = physicalIndex(px, py);
           if (value > 0 && value >= values[cell]) {
             values[cell] = value;
