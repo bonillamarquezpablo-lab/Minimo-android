@@ -3417,7 +3417,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  const livingBeachLayers=new Array(land.length);
  function buildLivingBeachLayer(island,index){
   const coastColumns=window.NorseBeachState.coastalColumnCount(island.r,isPerformanceMode,isConstrainedMobile),coastRows=isPerformanceMode?32:64;
-  const segments=coastColumns,rows=isPerformanceMode?13:(isTouchDevice?15:17),cols=segments+1;
+  const segments=coastColumns,rows=isPerformanceMode?13:coastRows,cols=segments+1;
   const positions=[],indices=[],uvs=[],colors=[],radials=[],baseAlpha=[];
   const coastalState=window.NorseBeachState.createCoastalGrid({radius:island.r,columns:coastColumns,rows:coastRows,innerRatio:.755,outerRatio:1.085});
   const coastalGround=new Float32Array(coastalState.size);
@@ -3436,7 +3436,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    for(let i=0;i<=segments;i++){
     const angle=i/segments*Math.PI*2,inner=radials[i*2],outer=radials[i*2+1];
     const radius=inner+(outer-inner)*t,x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-    positions.push(x,terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018,z);uvs.push(i/segments,t);
+    positions.push(x,terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.04,z);uvs.push(i/segments,t);
     // Keep the sandy bed opaque through the seaward edge; only feather the inland join.
     // This prevents the terrestrial heightfield from bleeding through beneath transparent water.
     const alpha=.985*smooth01(t/.045);colors.push(1,.94,.82,alpha);baseAlpha.push(alpha);
@@ -3763,7 +3763,7 @@ void main(void){
    }
    const vertexStart=beachWorkVertexCursor;
    while(beachWorkVertexCursor<layer.baseY.length&&performance.now()-sliceStarted<BEACH_WORK_BUDGET_MS){
-    const vertex=beachWorkVertexCursor++,offset=vertex*3,x=layer.positions[offset],z=layer.positions[offset+2];layer.positions[offset+1]=layer.baseY[vertex]+(field?terrainDeformationAt(layer.index,x,z):0)+.018;
+    const vertex=beachWorkVertexCursor++,offset=vertex*3,x=layer.positions[offset],z=layer.positions[offset+2];layer.positions[offset+1]=layer.baseY[vertex]+(field?terrainDeformationAt(layer.index,x,z):0)+.04;
    }
    if(beachWorkVertexCursor>vertexStart&&layer.positionBuffer&&layer.positionBuffer.isUpdatable()){const start=vertexStart*3,end=beachWorkVertexCursor*3;layer.positionBuffer.updateDirectly(layer.positions.subarray(start,end),start);}
    const sliceMs=performance.now()-sliceStarted;beachWorkLastSliceMs=Number(sliceMs.toFixed(3));beachWorkMaxSliceMs=Math.max(beachWorkMaxSliceMs,sliceMs);
@@ -4048,22 +4048,45 @@ void main(void){
  packedTrailMaterial.backFaceCulling=false;packedTrailMaterial.roughness=.99;
  function createTrail(points,width=1.45){
   vegetationTrailPaths.push({points:points.map(p=>[p[0],p[1]]),width});
-  const positions=[],indices=[],uvs=[];let distance=0;
-  for(let i=0;i<points.length;i++){
-   const prev=points[Math.max(0,i-1)],next=points[Math.min(points.length-1,i+1)],dx=next[0]-prev[0],dz=next[1]-prev[1],len=Math.hypot(dx,dz)||1,nx=dz/len,nz=-dx/len;
-   if(i>0)distance+=Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1])*.72;
-   const edgeW=width*(1+Math.sin(i*2.17)*.035);
+  // Keep the authored route, but tessellate it along its length so the strip follows
+  // the heightfield instead of bridging several metres with one flat quad.
+  const maxSampleSpacing=.35,centerline=[];let distance=0;
+  for(let segment=0;segment<points.length-1;segment++){
+   const a=points[segment],b=points[segment+1],dx=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dx,dz);
+   const steps=Math.max(1,Math.ceil(length/maxSampleSpacing));
+   for(let step=0;step<steps;step++){
+    const t=step/steps,x=a[0]+dx*t,z=a[1]+dz*t;
+    const previous=centerline[centerline.length-1];
+    if(previous)distance+=Math.hypot(x-previous.x,z-previous.z);
+    centerline.push({x,z,distance});
+   }
+  }
+  const last=points[points.length-1],previous=centerline[centerline.length-1];
+  if(last&&(!previous||Math.hypot(last[0]-previous.x,last[1]-previous.z)>.0001)){
+   distance+=previous?Math.hypot(last[0]-previous.x,last[1]-previous.z):0;
+   centerline.push({x:last[0],z:last[1],distance});
+  }
+  const positions=[],indices=[],uvs=[];
+  for(let i=0;i<centerline.length;i++){
+   const prev=centerline[Math.max(0,i-1)],next=centerline[Math.min(centerline.length-1,i+1)];
+   let dx=next.x-prev.x,dz=next.z-prev.z,len=Math.hypot(dx,dz);
+   if(len<1e-5){dx=1;dz=0;len=1;}
+   const nx=dz/len,nz=-dx/len,sample=centerline[i];
+   const edgeW=width*(1+Math.sin(sample.distance*2.17)*.018);
    for(const side of [-1,1]){
-    const x=points[i][0]+nx*edgeW*.5*side,z=points[i][1]+nz*edgeW*.5*side;
-    positions.push(x,terrainSurfaceAt(x,z)+.026,z);uvs.push(side<0?0:1,distance);
+    const x=sample.x+nx*edgeW*.5*side,z=sample.z+nz*edgeW*.5*side;
+    // The small positive clearance avoids depth fighting while staying visually attached to the ground.
+    positions.push(x,terrainSurfaceAt(x,z)+.045,z);
+    uvs.push(side<0?0:1,sample.distance*.72);
    }
   }
   // The strip's triangle order keeps its geometric normals facing upwards.
-  for(let i=0;i<points.length-1;i++){const a=i*2,b=a+2;indices.push(a,b,a+1,a+1,b,b+1);}
+  for(let i=0;i<centerline.length-1;i++){const a=i*2,b=a+2;indices.push(a,b,a+1,a+1,b,b+1);}
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
   const mesh=new B.Mesh('WindingPackedEarthTrail',scene),data=new B.VertexData();
   data.positions=positions;data.indices=indices;data.normals=normals;data.uvs=uvs;data.applyToMesh(mesh);
   mesh.material=packedTrailMaterial;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;
+  mesh.metadata=Object.assign({},mesh.metadata||{},{terrainConformingPath:true,pathSampleSpacingMeters:maxSampleSpacing});
   mesh.computeWorldMatrix(true);mesh.refreshBoundingInfo(true);return mesh;
  }
  createTrail([[-19,-25],[-13,-18],[-7,-11],[-1,-3],[6,5],[13,13],[20,22],[27,30]],1.52);
