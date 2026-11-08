@@ -2035,10 +2035,10 @@ async function removeStrayDebugGeometry(targetScene){
  let grassDebugClumpCount=0,grassDebugBatchCount=0,grassDebugLeavesPerClump=7,grassDebugIslandStats=[],grassDebugPanel=null;
  const grassDebugEnabled=groundDebugEnabled||new URLSearchParams(window.location.search).get('grassdebug')==='1';
  const fpsFrameSamples=new Float32Array(120);let fpsFrameSampleCount=0,fpsFrameSampleCursor=0;
- const startupTimeline={firstFrameAt:0,firstFrameElapsedMs:null,maxFrameMs:0,postFirstFrameSamples:0,longFrames:[],tasks:[]};
+ const startupTimeline={firstFrameAt:0,firstFrameElapsedMs:null,gameStartedAt:0,gameStartElapsedMs:null,maxFrameMs:0,postFirstFrameSamples:0,longFrames:[],tasks:[]};
  const startupTimelineBootAt=performance.now();let startupTaskCurrent='preparación de escena';
  function recordStartupTask(name,startedAt,endedAt,status='ready',detail=null){const durationMs=Math.max(0,endedAt-startedAt);startupTimeline.tasks.push({name,durationMs:Number(durationMs.toFixed(2)),status,detail,at:new Date().toISOString()});if(startupTimeline.tasks.length>80)startupTimeline.tasks.shift();startupTaskCurrent='idle';return durationMs;}
- function getStartupTimelineSnapshot(){return {firstFrameAt:startupTimeline.firstFrameAt?new Date(performance.timeOrigin+startupTimeline.firstFrameAt).toISOString():null,firstFrameElapsedMs:startupTimeline.firstFrameElapsedMs,maxFrameMs:Number(startupTimeline.maxFrameMs.toFixed(2)),postFirstFrameSamples:startupTimeline.postFirstFrameSamples,tasks:startupTimeline.tasks.slice(-30),longFrames:startupTimeline.longFrames.slice(-30),activeTask:startupTaskCurrent};}
+ function getStartupTimelineSnapshot(){return {firstFrameAt:startupTimeline.firstFrameAt?new Date(performance.timeOrigin+startupTimeline.firstFrameAt).toISOString():null,firstFrameElapsedMs:startupTimeline.firstFrameElapsedMs,gameStartedAt:startupTimeline.gameStartedAt?new Date(performance.timeOrigin+startupTimeline.gameStartedAt).toISOString():null,gameStartElapsedMs:startupTimeline.gameStartElapsedMs,maxFrameMs:Number(startupTimeline.maxFrameMs.toFixed(2)),postFirstFrameSamples:startupTimeline.postFirstFrameSamples,tasks:startupTimeline.tasks.slice(-30),longFrames:startupTimeline.longFrames.slice(-30),activeTask:startupTaskCurrent};}
  const REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY='el-sin-nombre-arm-last-deviation-v1';
  let realPlayerArmLastDeviation=null,realPlayerArmDeviationLastWasLocomoting=false,realPlayerArmDeviationStoppedAtMs=null,realPlayerArmDeviationActiveSignature='';
  if(realPlayerArmDebugEnabled){try{const storedDeviation=localStorage.getItem(REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY);if(storedDeviation){const parsed=JSON.parse(storedDeviation);if(parsed&&parsed.timestamp&&Array.isArray(parsed.violations))realPlayerArmLastDeviation=parsed;}}catch(_){realPlayerArmLastDeviation=null;}}
@@ -6752,9 +6752,9 @@ if(realPlayerArmDebugEnabled){
    setModelStatus(friendly,true);
   }finally{realPlayerBusy=false;}
  }
- window.__retryVikingModel=()=>{if(!realPlayerReady&&!realPlayerBusy&&navigator.onLine)loadHumanViking();};
- window.addEventListener('online',()=>{if(!realPlayerReady&&!realPlayerBusy)setTimeout(()=>window.__retryVikingModel(),1200);});
- document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!realPlayerReady&&!realPlayerBusy&&navigator.onLine)setTimeout(()=>window.__retryVikingModel(),1800);});
+ window.__retryVikingModel=()=>{if(!startupAssetsReady&&!gameStarted&&!realPlayerReady&&!realPlayerBusy&&navigator.onLine)loadHumanViking();};
+ window.addEventListener('online',()=>{if(!startupAssetsReady&&!gameStarted&&!realPlayerReady&&!realPlayerBusy)setTimeout(()=>window.__retryVikingModel(),1200);});
+ document.addEventListener('visibilitychange',()=>{if(!startupAssetsReady&&!gameStarted&&!document.hidden&&!realPlayerReady&&!realPlayerBusy&&navigator.onLine)setTimeout(()=>window.__retryVikingModel(),1800);});
  const chooseHumanModelButton=document.getElementById('chooseHumanModel');
  // Character loading is automatic; keep manual import available only in builds that expose its controls.
  if(chooseHumanModelButton&&humanFileInput){
@@ -8964,7 +8964,7 @@ function villageHostileDefenders(vl){
    throw new Error('El estado inicial de la nueva saga no está limpio.');
   }
   updateHUD();updateWeaponPanel();updateProgressPanel();updateChapterTracker();drawMap();
- } function beginSaga(){MenuMusic.stop();gameStarted=true;document.body.classList.remove('booting','boot-failed','intro-open');document.body.classList.add('game-running');NorseAudio.unlock();if(introOverlay){introOverlay.classList.remove('open');introOverlay.setAttribute('aria-hidden','true');}try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();}catch(startViewError){console.warn('La vista se ajustará en el siguiente fotograma:',startViewError);}msg('La costa te espera.');GameplayMusic.start();}
+ } function beginSaga(){MenuMusic.stop();if(!gameStarted){startupTimeline.gameStartedAt=performance.now();startupTimeline.gameStartElapsedMs=Number((startupTimeline.gameStartedAt-startupTimelineBootAt).toFixed(1));}gameStarted=true;startupTaskCurrent='inicio de la partida';document.body.classList.remove('booting','boot-failed','intro-open');document.body.classList.add('game-running');NorseAudio.unlock();if(introOverlay){introOverlay.classList.remove('open');introOverlay.setAttribute('aria-hidden','true');}try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);updateHUD();}catch(startViewError){console.warn('La vista se ajustará en el siguiente fotograma:',startViewError);}msg('La costa te espera.');GameplayMusic.start();}
  function beginNewSaga(){
   activeSaveKey=chooseNewCampaignSaveKey();
   resetCampaignForNewGame();
@@ -10839,10 +10839,10 @@ function update(dt){
  function startNpcHumanModels(){
   if(enemyHumanModelsStarted)return enemyHumanLoadTask;
   enemyHumanModelsStarted=true;
-  console.info('Preparando GLB de caballeros y aldeanos en segundo plano, sin bloquear el selector ni la partida.');
+  console.info('Preparando GLB de caballeros y aldeanos durante la pantalla de carga, antes de abrir la partida.');
   const npcLoadStarted=performance.now();startupTaskCurrent='GLB caballeros y aldeanos';
   enemyHumanLoadTask=loadEnemyHumanCharacters().then(value=>{recordStartupTask('GLB caballeros y aldeanos',npcLoadStarted,performance.now(),'complete',{loaded:value});return value;},error=>{recordStartupTask('GLB caballeros y aldeanos',npcLoadStarted,performance.now(),'failed',{message:String(error&&error.message||error)});throw error;});
-  enemyHumanLoadTask.then(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);},()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
+
   return enemyHumanLoadTask;
  }
  let enemyHumanRetryPromise=null,enemyHumanRetryAttempts=0,enemyHumanRetryScheduled=false;
@@ -10854,7 +10854,7 @@ function update(dt){
  }
  async function retryMissingEnemyVikings(){
   // Evitar descargas/importaciones de NPC una vez abierta la campaña.
-  if(!enemyHumanModelsStarted)return false;
+  if(startupAssetsReady||gameStarted||!enemyHumanModelsStarted)return false;
   if(enemyHumanRetryPromise)return enemyHumanRetryPromise;
   if(!navigator.onLine||!hasMissingEnemyVikings())return false;
   enemyHumanRetryPromise=(async()=>{
@@ -10869,7 +10869,7 @@ function update(dt){
   finally{enemyHumanRetryPromise=null;}
  }
  function scheduleMissingEnemyVikingsRetry(delay=12000){
-  if(!enemyHumanModelsStarted||enemyHumanRetryAttempts>=3||enemyHumanRetryScheduled||!hasMissingEnemyVikings())return;
+  if(startupAssetsReady||gameStarted||!enemyHumanModelsStarted||enemyHumanRetryAttempts>=3||enemyHumanRetryScheduled||!hasMissingEnemyVikings())return;
   enemyHumanRetryScheduled=true;enemyHumanRetryAttempts++;
   setTimeout(async()=>{
    enemyHumanRetryScheduled=false;
@@ -10877,11 +10877,11 @@ function update(dt){
    if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry([30000,60000,90000][Math.min(2,enemyHumanRetryAttempts-1)]);
   },delay);
  }
- window.addEventListener('online',()=>setTimeout(retryMissingEnemyVikings,1800));
- document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator.onLine)setTimeout(retryMissingEnemyVikings,2200);});
+ window.addEventListener('online',()=>{if(!startupAssetsReady&&!gameStarted)setTimeout(retryMissingEnemyVikings,1800);});
+ document.addEventListener('visibilitychange',()=>{if(!startupAssetsReady&&!gameStarted&&!document.hidden&&navigator.onLine)setTimeout(retryMissingEnemyVikings,2200);});
  // Reintentos serializados: un fallo de red no deja los modelos provisionales sin otra oportunidad,
  // pero tampoco crea descargas duplicadas que consuman memoria de GPU y RAM en el móvil.
- if(!deferNpcHumanModelsOnTouch)enemyHumanLoadTask.then(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);},()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
+
  console.info('Norse NPC roster: separate armored-knight guards and Viking civilians',{warriorCount:humanEnemyParts.length,civilianCount:humanCivilianParts.length,homeAllies:campGuards.length,protectedHomeRadius:24});
  // Island streaming for the weakest Android GPUs: keep only the island occupied by
  // the player/longship renderable. All world data, collisions, AI, saves and conquest
@@ -11068,7 +11068,8 @@ function update(dt){
   const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;
   const worldUpdateStarted=performance.now();
   fpsFrameSamples[fpsFrameSampleCursor]=rawFrameMs;fpsFrameSampleCursor=(fpsFrameSampleCursor+1)%fpsFrameSamples.length;fpsFrameSampleCount=Math.min(fpsFrameSampleCount+1,fpsFrameSamples.length);
-  if(firstFrameRendered&&startupTimeline.firstFrameAt&&now-startupTimeline.firstFrameAt<=20000){startupTimeline.postFirstFrameSamples++;startupTimeline.maxFrameMs=Math.max(startupTimeline.maxFrameMs,rawFrameMs);if(rawFrameMs>24){startupTimeline.longFrames.push({elapsedMs:Number((now-startupTimeline.firstFrameAt).toFixed(1)),frameMs:Number(rawFrameMs.toFixed(2)),task:startupTaskCurrent,phase:worldUpdatePhase});if(startupTimeline.longFrames.length>60)startupTimeline.longFrames.shift();}}
+  const sinceFirstFrame=startupTimeline.firstFrameAt?now-startupTimeline.firstFrameAt:Infinity,sinceGameStart=startupTimeline.gameStartedAt?now-startupTimeline.gameStartedAt:Infinity;
+  if(firstFrameRendered&&(sinceFirstFrame<=20000||sinceGameStart<=20000)){startupTimeline.postFirstFrameSamples++;startupTimeline.maxFrameMs=Math.max(startupTimeline.maxFrameMs,rawFrameMs);if(rawFrameMs>24){startupTimeline.longFrames.push({elapsedMs:Number((sinceGameStart<=20000?sinceGameStart:sinceFirstFrame).toFixed(1)),anchor:sinceGameStart<=20000?'game-start':'first-frame',frameMs:Number(rawFrameMs.toFixed(2)),task:startupTaskCurrent,phase:worldUpdatePhase});if(startupTimeline.longFrames.length>60)startupTimeline.longFrames.shift();}}
   // Nunca dejamos que un error de actualización impida dibujar la escena completa.
   try{
    if(gameStarted){
