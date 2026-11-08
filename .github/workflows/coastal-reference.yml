@@ -1,8 +1,6 @@
 name: Coastal reference capture
 
 on:
-  push:
-    branches: [test/coastal-reference-0.6.272]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -18,7 +16,7 @@ jobs:
   reference:
     name: Build game and capture 27 deterministic coast states
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,15 +58,22 @@ jobs:
           cat /tmp/elsn-http.log
           exit 1
 
-      - name: Capture 27 deterministic coastal reference images
+      - name: Capture 27 deterministic coastal reference images (one game load)
         env:
           COASTAL_TEST_URL: http://127.0.0.1:4173/
         run: node scripts/coastal-reference.mjs
 
-      - name: Upload reference images and diagnostics
+      - name: Install Pillow for the contact sheet
+        run: python -m pip install --disable-pip-version-check Pillow
+
+      - name: Build one PNG contact sheet from all 27 captures
+        run: python scripts/create_coastal_contact_sheet.py
+
+      - name: Upload 27 screenshots, JSON manifest and contact sheet
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coastal-reference-${{ github.sha }}
           path: artifacts/coastal-reference/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
