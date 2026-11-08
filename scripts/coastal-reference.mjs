@@ -185,7 +185,7 @@ async function main() {
           const renderMs = Number((performance.now() - renderStartedAt).toFixed(1));
 
           const screenshotStartedAt = performance.now();
-          const pngMatch = /^data:image\\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(result.canvasPng || '');
+          const pngMatch = new RegExp('^data:image/png;base64,([A-Za-z0-9+/]+={0,2})$').exec(result.canvasPng || '');
           assert.ok(pngMatch, 'Canvas readback did not return a PNG data URL for ' + file);
           const pngBuffer = Buffer.from(pngMatch[1], 'base64');
           assert.ok(pngBuffer.length > 1000, 'PNG readback was empty or truncated for ' + file);
