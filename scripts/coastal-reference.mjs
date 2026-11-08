@@ -34,6 +34,7 @@ const manifest = {
   expectedCaptureCount: 27,
   startup: null,
   playerValidation: 'separate-character-startup-job',
+  campaignStart: null,
   captures: [],
   timingsMs: {},
   consoleErrors: [],
@@ -119,6 +120,28 @@ async function main() {
     manifest.timingsMs.coastalWorldReadyWait = Number((performance.now() - stepStartedAt).toFixed(1));
     console.log('[coastal-reference] coast-only scene ready after ' +
       manifest.timingsMs.coastalWorldReadyWait + ' ms');
+
+    // worldReady means the 3D scene is prepared, not that the campaign has started.
+    // Enter a real new campaign so the intro/menu overlay cannot contaminate coast captures.
+    stepStartedAt = performance.now();
+    await page.locator('#intro.open').waitFor({ state: 'visible', timeout: 60000 });
+    await page.locator('#newGameChoice').click();
+    await page.waitForFunction(() =>
+      document.body.classList.contains('game-running') &&
+      document.querySelector('#intro')?.getAttribute('aria-hidden') === 'true',
+      undefined,
+      { timeout: 30000, polling: 250 }
+    );
+    manifest.timingsMs.startNewCampaign = Number((performance.now() - stepStartedAt).toFixed(1));
+    manifest.campaignStart = await page.evaluate(() => ({
+      gameRunning: document.body.classList.contains('game-running'),
+      introHidden: document.querySelector('#intro')?.getAttribute('aria-hidden') === 'true',
+      introOpen: document.querySelector('#intro')?.classList.contains('open') === true
+    }));
+    assert.equal(manifest.campaignStart.gameRunning, true, 'La partida nueva no llegó a iniciarse');
+    assert.equal(manifest.campaignStart.introHidden, true, 'El selector de campaña sigue visible');
+    assert.equal(manifest.campaignStart.introOpen, false, 'El selector de campaña conserva la clase open');
+    console.log('[coastal-reference] new campaign started; intro overlay closed');
 
     stepStartedAt = performance.now();
     const boot = await page.evaluate(() => {
