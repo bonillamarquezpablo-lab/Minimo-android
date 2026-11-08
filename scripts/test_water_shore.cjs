@@ -23,7 +23,8 @@ for(const metric of ["foamActiveSegments","foamSegmentCapacity","foamValidInters
 }
 assert.ok(html.includes('tidalFoamLastUpdateMs=performance.now()-foamWorkStarted'));
 assert.match(html,/Resaca: .*foamActiveSegments/);
-assert.match(html,/function buildTidalFoam\(island,index\)/);\nassert.match(html,/FOAM_TERRAIN_PROFILE_ROWS=41/,"The active coast must precompute a sub-metre terrain profile without reducing geometry density.");\nassert.match(html,/function sampleTidalFoamTerrainProfile\(foam,col,radius\)/,"Animated coast layers must interpolate cached terrain heights.");\nassert.match(html,/function cachedShorelineFoamRadius\(foam,col,t=oceanTime\)/,"The moving shoreline solver must reuse cached terrain heights.");
+assert.match(html,/function buildTidalFoam\(island,index\)/);
+assert.match(html,/FOAM_TERRAIN_PROFILE_ROWS=41/,"The active coast must precompute a sub-metre terrain profile without reducing geometry density.");\nassert.match(html,/function sampleTidalFoamTerrainProfile\(foam,col,radius\)/,"Animated coast layers must interpolate cached terrain heights.");\nassert.match(html,/function cachedShorelineFoamRadius\(foam,col,t=oceanTime\)/,"The moving shoreline solver must reuse cached terrain heights.");
 assert.match(html,/const waveBodyOffsets=\[-2\.65,-2\.05,-1\.48,-1\.02,-\.66,-\.34,-\.08,\.18,\.48,\.86,1\.34,1\.92,2\.55\]/,"The shoreline wave must have a multi-row 3D cross-section, not a single animated line.");
 assert.match(html,/VolumetricShoreBreaker_/,"The coast must create a separate volumetric wave body.");
 assert.match(html,/const lift=\(\.025\+\.22\*crest\+\.065\*rearShoulder\)/,"The wave body must retain a natural raised crest and rear shoulder with reduced artificial bulging.");
