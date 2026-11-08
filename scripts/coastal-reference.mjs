@@ -153,11 +153,10 @@ async function main() {
               api.render();
               return api.diagnostics();
             }, { cameraCase, time, tide, island: mainIsland, shoreRadius });
-            await page.screenshot({
-              path: path.join(OUT, file),
-              animations: 'disabled',
-              timeout: 60000
-            });
+            const pngDataUrl = await page.evaluate(() => window.__ELSN_TEST__.captureCanvas());
+            const prefix = 'data:image/png;base64,';
+            assert.ok(pngDataUrl.startsWith(prefix), 'The WebGL canvas did not return a PNG data URL');
+            fs.writeFileSync(path.join(OUT, file), Buffer.from(pngDataUrl.slice(prefix.length), 'base64'));
             return result;
           });
 
