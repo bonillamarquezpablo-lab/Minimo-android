@@ -2,11 +2,11 @@
 const fs=require('node:fs');
 const assert=require('node:assert/strict');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
-assert.match(validator,/EXPECTED_VERSION = "0\.6\.258"/);
+assert.match(validator,/EXPECTED_VERSION = "0\.6\.259"/);
 assert.match(validator,/La defensa naval debe estar conectada al bucle/);
 assert.match(validator,/STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200/);
 assert.match(validator,/const backgroundNpcTask=startNpcHumanModels\(\)\.then\(/);
 assert.match(validator,/const backgroundFaunaTask=Promise\.resolve\(backgroundNpcTask\)/);
 assert.match(validator,/rows=isPerformanceMode\?13/);
 assert.doesNotMatch(validator,/resourceResults=await Promise\.allSettled\(\[playerHumanLoadPromise,startNpcHumanModels\(\)\]\)/);
-console.log('OK: release validator matches the non-blocking 0.6.248 startup architecture.');
+console.log('OK: release validator matches the non-blocking 0.6.259 startup architecture.');
