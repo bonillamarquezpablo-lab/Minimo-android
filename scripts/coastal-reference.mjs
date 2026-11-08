@@ -37,28 +37,6 @@ const manifest = {
   failure: null
 };
 
-async function writeContactSheet(page) {
-  if (!manifest.captures.length) return;
-  const cards = manifest.captures.map(item => {
-    const bytes = fs.readFileSync(path.join(OUT, item.file)).toString('base64');
-    return '<figure><img src="data:image/png;base64,' + bytes + '"><figcaption>' +
-      item.camera + ' · t=' + item.timeSeconds + ' s · ' + item.tide +
-      '</figcaption></figure>';
-  }).join('');
-  await page.setContent('<!doctype html><html><head><meta charset="utf-8"><style>' +
-    '*{box-sizing:border-box}body{margin:0;background:#101719;color:#eee;font:12px Arial,sans-serif}' +
-    'header{padding:8px 12px;font-weight:700}main{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px}' +
-    'figure{margin:0;background:#202b2d;min-width:0}img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}' +
-    'figcaption{padding:4px 6px;font-size:11px}</style></head><body><header>EL SIN NOMBRE · REFERENCIA COSTERA · ' +
-    manifest.captures.length + '/27</header><main>' + cards + '</main></body></html>',
-    { waitUntil: 'load', timeout: 60000 });
-  await page.screenshot({
-    path: path.join(OUT, 'contact-sheet-27.png'),
-    fullPage: true,
-    animations: 'disabled',
-    timeout: 60000
-  });
-}
 
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
@@ -184,7 +162,6 @@ async function main() {
       }
     }
 
-    await writeContactSheet(page);
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 27, 'No se han generado las 27 capturas');
     assert.equal(manifest.consoleErrors.length, 0,
@@ -198,15 +175,10 @@ async function main() {
     manifest.consoleErrors = [...manifest.consoleErrors];
     manifest.pageErrors = [...manifest.pageErrors];
     fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-    if (manifest.captures.length && !fs.existsSync(path.join(OUT, 'contact-sheet-27.png'))) {
-      try { await writeContactSheet(page); } catch (sheetError) {
-        manifest.failure = (manifest.failure || '') + '\nContact sheet: ' + String(sheetError);
-      }
-    }
     fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     await browser.close();
   }
-  console.log('COASTAL REFERENCE OK: one game load, 27 screenshots, JSON and contact sheet.');
+  console.log('COASTAL REFERENCE OK: one game load and 27 screenshots plus JSON manifest.');
 }
 
 main().catch(error => {
