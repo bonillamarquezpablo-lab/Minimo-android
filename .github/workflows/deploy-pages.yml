@@ -12,7 +12,7 @@ permissions:
 
 # A new release group lets the validated build supersede an orphaned older Pages publish.
 concurrency:
-  group: github-pages-release-0-6-261
+  group: github-pages-release-0-6-262
   cancel-in-progress: false
 
 jobs:
