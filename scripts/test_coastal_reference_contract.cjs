@@ -34,7 +34,8 @@ assert.match(html, /debugForcedTideOffset=tide==='natural'\?null:Number\(tide\)/
 assert.match(html,/function terrainDeformationAt\(islandIndex,x,z\)\{\s*const field=terrainDeformationFields\[islandIndex\];if\(!field\|\|!field\.active\.size\)return 0;/, 'Unchanged islands must skip bilinear foot-deformation sampling in the per-vertex coastal update.');
 assert.match(html,/const crossSegments=Math\.max\(4,Math\.ceil\(width\/\.20\)\),crossRowWidth=crossSegments\+1;/, 'Packed earth ribbons must be subdivided across their full width.');
 assert.match(html,/positions\.push\(x,renderedTerrainSurfaceAt\(x,z\)\+\.055,z\)/, 'Every across-width trail vertex must follow the rendered terrain mesh.');
-assert.match(html,/function renderedTerrainSurfaceAt\(x,z\)\{[\s\S]*?terrain\.getHeightAtCoordinates\(dx,dz\)/, 'Packed trails must sample Babylon GroundMesh height instead of only the analytic heightfield.');
+assert.match(html,/function renderedTerrainSurfaceAt\(x,z\)\{[\s\S]*?terrain\.getHeightAtCoordinates\(x,z\)[\s\S]*?return renderedHeight/, 'Packed trails must sample Babylon GroundMesh height in world coordinates.');
+assert.doesNotMatch(html,/terrain\.getHeightAtCoordinates\(dx,dz\)[\s\S]{0,100}terrain\.position\.y\+renderedHeight/, 'Do not offset a world-space GroundMesh height a second time.');
 assert.match(html,/for\(let cross=0;cross<crossSegments;cross\+\+\)/, 'Trail indices must cover each across-width terrain-following segment.');
 assert.match(html,/for\(let cross=0;cross<=crossSegments;cross\+\+\)\{\s*const across=cross\/crossSegments,side=across\*2-1;/, 'Each cross-section must sample the actual terrain height instead of only the edges.');
 assert.match(html,/const foamAlphaMask=new Float32Array\(cols\*rows\)/, 'Foam row/noise opacity factors must be precomputed without dropping samples.');
