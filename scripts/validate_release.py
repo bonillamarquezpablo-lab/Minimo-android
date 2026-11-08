@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.261"
+EXPECTED_VERSION = "0.6.262"
 
 HTML_PAGES = (
     "index.html",
@@ -131,7 +131,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'11',build:'0.6.261'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'11',build:'0.6.262'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -391,7 +391,7 @@ def main() -> None:
         fail("La opacidad del agua debe crecer progresivamente desde la línea de costa.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.261" not in index_html or "EL SIN NOMBRE 0.6.261 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.262" not in index_html or "EL SIN NOMBRE 0.6.262 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -437,6 +437,10 @@ def main() -> None:
         fail("La lámina de agua debe ser una superficie independiente, animada y con normales/reflejos.")
     if "const filmAlpha=filmCoverage*(.20+.10*breakStrength)*flowPulse*filmStrength;" not in index_html or "const lace=smooth01((foamPattern[vertex]-.28)/.46);" not in index_html or "coastalSeabedMaterial.environmentIntensity=.18;" not in index_html:
         fail("La película costera debe ser translúcida y la espuma fragmentada sobre un fondo submarino legible.")
+    if "applyTexture(M.water,texWater,17.5);" not in index_html or "oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;" not in index_html or ".020*Math.sin(67*warpU+41*warpW)" not in index_html:
+        fail("El mar debe tener normales direccionales de varias escalas y microondulación visible desde la cámara del jugador.")
+    if "M.water.specularPower=reducedWaterProfile?28:88;" not in index_html or "M.water.diffuseFresnelParameters.power=2.3;" not in index_html:
+        fail("El material de agua en Calidad debe conservar reflejos rasantes legibles sin añadir pasadas de renderizado.")
     if "float sheetFront=" in index_html or "color=mix(color,whitewater,swashMask*.56)" in index_html or "shoreSheetStrength" in index_html:
         fail("El avance del agua no puede simularse pintando el suelo de la playa.")
     if "function clamp01(value)" in index_html and index_html.find("updateOceanDepthGradient();",index_html.find("function smooth01")) < index_html.find("const terrainHashCache="):
@@ -490,7 +494,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.261</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.262</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
