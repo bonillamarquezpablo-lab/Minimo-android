@@ -26,7 +26,7 @@ assert.match(html,/Resaca: .*foamActiveSegments/);
 assert.match(html,/function buildTidalFoam\(island,index\)/);
 assert.match(html,/const waveBodyOffsets=\[-2\.65,-2\.05,-1\.48,-1\.02,-\.66,-\.34,-\.08,\.18,\.48,\.86,1\.34,1\.92,2\.55\]/,"The shoreline wave must have a multi-row 3D cross-section, not a single animated line.");
 assert.match(html,/VolumetricShoreBreaker_/,"The coast must create a separate volumetric wave body.");
-assert.match(html,/const lift=\(\.035\+\.48\*crest\+\.13\*rearShoulder\)/,"The wave body must have a raised crest and rear shoulder.");
+assert.match(html,/const lift=\(\.025\+\.22\*crest\+\.065\*rearShoulder\)/,"The wave body must retain a natural raised crest and rear shoulder with reduced artificial bulging.");
 assert.match(html,/const breakerTravel=\.62\*Math\.sin\(oceanTime\*1\.08/,"The wave crest must travel onto and away from the beach.");
 assert.match(html,/B\.VertexData\.ComputeNormals\(waveBodyPositions,waveBodyIndices,waveBodyNormals\)/,"The volumetric wave must receive a smooth initial normal field.");
 assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/ComputeNormals\(waveBodyPositions|waveBodyMesh\.updateVerticesData\(B\.VertexBuffer\.NormalKind/,"The animated wave must not rebuild its full normal field on mobile.");
