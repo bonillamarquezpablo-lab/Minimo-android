@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.247"
+EXPECTED_VERSION = "0.6.248"
 
 HTML_PAGES = (
     "index.html",
@@ -127,8 +127,14 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'10',build:'0.6.247'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'10',build:'0.6.248'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
+    if "const segments=isPerformanceMode?(isConstrainedMobile?72:104):Math.max(512,Math.min(2048,Math.ceil(Math.PI*2*island.r/.60)))" not in index_html:
+        fail("La malla costera de Calidad debe aumentar su resolución geométrica sin reducir Rendimiento.")
+    if "const warmupBudgetMs=isPerformanceMode?2200:1400" not in index_html or "?await fullSceneWarmup" in index_html:
+        fail("El warmup debe tener un límite temporal también en Rendimiento para evitar el bloqueo al 87 %.")
+    if "vec3 wetColor=dryColor*vec3(0.84,0.86,0.87);" not in index_html or "color+=(fine.rgb-vec3(0.5))*0.075" not in index_html:
+        fail("La transición húmeda y el microdetalle de arena no están aplicados.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
     if "function refreshPlayerGroundNormal(x,z)" not in index_html or "const normal=refreshPlayerGroundNormal(player.root.position.x,player.root.position.z);" not in index_html or "playerGroundNormalForMovement=playerGroundNormalCache" not in index_html:
