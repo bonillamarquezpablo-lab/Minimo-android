@@ -2657,7 +2657,7 @@ async function removeStrayDebugGeometry(targetScene){
   ctx.putImageData(img,0,0);tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
  }
  const oceanWaveNormal=isPerformanceMode&&isConstrainedMobile?null:makeOceanWaveNormal();
- if(oceanWaveNormal){oceanWaveNormal.level=.78;oceanWaveNormal.uScale=13.0;oceanWaveNormal.vScale=13.0;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.78;}
+ if(oceanWaveNormal){oceanWaveNormal.level=.78;oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.78;}
  else{M.water.bumpTexture=albedoNormalWater;M.water.bumpTexture.level=.24;}
  // El agua recibe un reflejo propio de las islas y del cielo nórdico.
  // El HDRI global se conserva para los materiales PBR, pero nunca se asigna al mar.
