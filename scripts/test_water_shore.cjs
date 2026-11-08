@@ -28,4 +28,10 @@ assert.doesNotMatch(html,/vec3 n=normalize\(vNormalW\).*\n float wetHighlight[\s
 assert.ok(html.includes("const segments=isPerformanceMode?(isConstrainedMobile?112:160):Math.max(512,Math.min(2048,Math.ceil(Math.PI*2*island.r/.30)));"),"Quality shore breaker must use approximately 30 cm coastal segments");
 assert.ok(html.includes("const subdivisions=index===0?(isTouchDevice?208:240):88;"),"Coastal heightfield must retain the finer terrain mesh");
 assert.ok(html.includes("(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.026+Math.sin(x*.17+z*.11)*.0035"),"Coast noise must retain the softened natural shoreline");
+assert.match(html,/float humidity=clamp\(max\(wet\*\.58,wetEdge\*\.56\),0\.0,\.68\)/,"Wet sand should not render as a dark continuous tide band.");
+assert.match(html,/color=mix\(color,wrackTint,wrackZone\*wrackFragments\*\.045\)/,"Wrack must remain sparse and fragmented.");
+assert.match(html,/washMaterial\.emissiveColor=new B\.Color3\(\.003,\.004,\.003\)/,"The wash must not emit a cyan tint.");
+assert.match(html,/const cellular=Math\.pow\(smooth01\(\(washPattern\[vertex\]-\.34\)\/\.54\),2\.0\)/,"Whitewater must break into irregular foam patches.");
+assert.match(html,/const alpha=Math\.min\(\.32,whitewater\+trailingFoam\)/,"The intertidal sheet alpha must remain restrained.");
+assert.match(html,/const runup=\.28\+\.82\*Math\.pow\(waveCrest,1\.15\)/,"The swash width must remain physically contained.");
 console.log('OK: water depth gradient, animated shore film/foam, wrack line and debug controls.');

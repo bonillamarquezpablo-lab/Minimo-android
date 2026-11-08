@@ -2,7 +2,7 @@
 const fs=require('node:fs');
 const assert=require('node:assert/strict');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
-assert.match(validator,/EXPECTED_VERSION = "0\.6\.255"/);
+assert.match(validator,/EXPECTED_VERSION = "0\.6\.256"/);
 assert.match(validator,/La defensa naval debe estar conectada al bucle/);
 assert.match(validator,/STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200/);
 assert.match(validator,/const backgroundNpcTask=startNpcHumanModels\(\)\.then\(/);
