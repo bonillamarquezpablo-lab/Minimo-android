@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.249">
+<meta name="el-sin-nombre-build" content="0.6.250">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.249</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.250</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -4188,7 +4188,7 @@ void main(void){
  async function loadWildlifeModelsOnce(){
   const wildlifeLoadStarted=performance.now();
   if(!wildlifeSpawnSpecs.length)return 0;
-  setLoadingProgress(68,'Cargando fauna salvaje 3D…');
+  setLoadingProgress(94,'Cargando fauna salvaje 3D…');
   const kinds=[...new Set(wildlifeSpawnSpecs.map(spec=>spec.kind))];
   await Promise.all(kinds.map(async kind=>{try{wildlifeBlobs.set(kind,await downloadWildlifeBlob(kind));}catch(err){console.warn('Modelo animal no disponible ('+kind+'):',err);}}));
   let loaded=0;
@@ -4200,7 +4200,7 @@ void main(void){
   }
   recordStartupTask('Fauna GLB · cola completa',wildlifeLoadStarted,performance.now(),'complete',{loaded,requested:wildlifeSpawnSpecs.length});
   console.info('Fauna nórdica validada',{loaded,requested:wildlifeSpawnSpecs.length,species:kinds});
-  setLoadingProgress(70,loaded?'Fauna nórdica preparada.':'La partida continúa sin fauna: no se importó ningún cuerpo animal completo.');
+  setLoadingProgress(96,loaded?'Fauna nórdica preparada.':'Se conserva la reserva de fauna; no se importó ningún cuerpo animal completo.');
   return loaded;
  }
  function canWildlifeMove(x,z,clearance=.65){
@@ -9002,7 +9002,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'10',build:'0.6.249',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'10',build:'0.6.250',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    beachState:{activeIslandIndex:activeBeachIslandIndex,activeIsland:activeBeachLayer?activeBeachLayer.island.name:null,columns:activeBeachLayer?activeBeachLayer.coastalState.columns:0,rows:activeBeachLayer?activeBeachLayer.coastalState.rows:0,updatedCellsLast:beachUpdateCellsLast,updatedCellsTotal:beachUpdateCellsTotal,cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,textureUploads:beachStateTextureUploads,updateHz:12,workBudgetMs:GroundDynamics.counts().beachWorkBudgetMs,lastSliceMs:GroundDynamics.counts().beachWorkLastSliceMs,maxSliceMs:GroundDynamics.counts().beachWorkMaxSliceMs,pending:GroundDynamics.counts().beachWorkPending},waterline:getWaterCoastDiagnostics(),startupTimeline:getStartupTimelineSnapshot(),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
@@ -9067,7 +9067,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.249');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.250');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -11034,7 +11034,7 @@ function update(dt){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.249 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.250 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -11091,7 +11091,7 @@ function update(dt){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;startupTimeline.firstFrameAt=performance.now();startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
-    console.info('EL SIN NOMBRE 0.6.249: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
+    console.info('EL SIN NOMBRE 0.6.250: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -11164,82 +11164,59 @@ function update(dt){
  // En Rendimiento se mantiene el conjunto humano ligero definido para ese perfil;
  // los demás NPC ya tienen cuerpo, colisión y animación procedural en la escena.
  // El vikingo tiene prioridad. Un fallo de descarga/importación activa su reserva y no impide entrar.
- setLoadingProgress(84,'Esperando al vikingo principal (máximo 55 s)…');
- const protagonistStageStarted=performance.now();
- let protagonistStageTimer=null;
- const protagonistResult=await Promise.race([
-  playerHumanLoadPromise.then(()=>({status:'finished'}),error=>({status:'failed',error})),
-  new Promise(resolve=>{protagonistStageTimer=setTimeout(()=>resolve({status:'timeout'}),55000);})
- ]);
- if(protagonistStageTimer!==null)clearTimeout(protagonistStageTimer);
- recordGlbTiming('Vikingo','espera total de protagonista',performance.now()-protagonistStageStarted,playerHumanBlob&&playerHumanBlob.size||0,protagonistResult.status!=='failed');
- console.info('Prioridad de carga del protagonista terminada; los secundarios no bloquean la entrada.',{
-  protagonist:protagonistResult.status,realPlayerReady,profile:activeGraphicsProfile
- });
- setLoadingProgress(84,protagonistResult.status==='timeout'
-  ?'El vikingo sigue cargando; se entra con su reserva y la importación continúa en segundo plano…'
-  :'Vikingo preparado. Caballeros, aldeanos y fauna se completarán después de mostrar el mundo…');
+ setLoadingProgress(82,'Esperando a que termine de importarse el vikingo principal…');
+ const protagonistStageStarted=performance.now();let protagonistResult={status:'finished'};
+ try{await playerHumanLoadPromise;protagonistResult.status=realPlayerReady?'finished':'fallback';}
+ catch(error){protagonistResult={status:'failed',error};}
+ recordGlbTiming('Vikingo','espera total de protagonista',performance.now()-protagonistStageStarted,playerHumanBlob&&playerHumanBlob.size||0,protagonistResult.status==='finished');
+ recordStartupTask('GLB protagonista',protagonistStageStarted,performance.now(),protagonistResult.status,{modelReady:realPlayerReady});
+ console.info('Importación del vikingo terminada antes de abrir la partida.',{protagonist:protagonistResult.status,realPlayerReady,profile:activeGraphicsProfile});
+ setLoadingProgress(84,protagonistResult.status==='finished'?'Vikingo principal preparado.':'El GLB principal no estuvo disponible; se conserva el vikingo de reserva.');
  let audioPreloadResult={total:0,ready:0,failed:0,pending:0};
- if(isPerformanceMode){
-  // En Rendimiento la intro no aparece hasta terminar la precarga de audio disponible.
-  try{audioPreloadResult=await startupAudioPreload;console.info('Audio preparado antes de entrar:',audioPreloadResult);}
-  catch(audioError){console.warn('La precarga de audio terminó con recursos no disponibles:',audioError);}
- }else{
-  // Calidad conserva su precarga paralela actual.
-  startupAudioPreload.then(
-   result=>console.info('Audio Foley preparado en segundo plano:',result),
-   audioError=>console.info('La precarga de Foley queda pendiente; no bloquea la partida:',audioError)
-  );
- }
- // No bloqueamos la entrada hasta que Babylon declare lista cada malla y textura
- // de las 13 islas. La escena ya se está renderizando: los recursos restantes pueden
- // terminar de compilarse/cargarse mientras el jugador entra, sin eliminar contenido.
- setLoadingProgress(87,'Preparando la escena (máximo 2,2 s; el resto continúa en segundo plano)…');
+ const audioLoadStarted=performance.now();startupTaskCurrent='precarga de audio';
+ try{audioPreloadResult=await startupAudioPreload;console.info('Audio preparado antes de abrir la partida:',audioPreloadResult);}
+ catch(audioError){console.warn('La precarga de audio terminó con recursos no disponibles; se conservan las reservas:',audioError);}
+ recordStartupTask('Precarga de audio',audioLoadStarted,performance.now(),audioPreloadResult.failed?'partial':'ready',audioPreloadResult);
+ // La carga de todos los modelos continúa bajo la pantalla de carga, no después de abrir el juego.
+ setLoadingProgress(87,'Cargando caballeros, aldeanos y fauna antes de abrir el mundo…');
+ const secondaryModelsStartedAt=performance.now();
+ const backgroundNpcTask=startNpcHumanModels().then(value=>{setLoadingProgress(91,'Personajes humanos preparados. Cargando fauna…');return value;});
+ window.__elSinNombreBackgroundModelTasks={startedAt:new Date().toISOString(),npc:'pending',fauna:'pending',order:'todos los modelos se preparan antes de abrir la partida'};
+ const backgroundFaunaTask=Promise.resolve(backgroundNpcTask).catch(error=>{console.warn('La carga NPC terminó parcialmente; se conservan sus cuerpos de reserva:',error);}).then(()=>{startupTaskCurrent='GLB fauna';setLoadingProgress(94,'Importando fauna 3D…');return loadWildlifeModels();});
+ const startupModelResults=await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask]);
+ window.__elSinNombreBackgroundModelTasks.completedAt=new Date().toISOString();
+ window.__elSinNombreBackgroundModelTasks.npc=startupModelResults[0].status;
+ window.__elSinNombreBackgroundModelTasks.fauna=startupModelResults[1].status;
+ recordStartupTask('Barreras GLB secundarios y fauna',secondaryModelsStartedAt,performance.now(),'complete',{npc:startupModelResults[0].status,fauna:startupModelResults[1].status});
+ console.info('Todos los importadores de NPC y fauna han terminado antes de abrir la partida.',window.__elSinNombreBackgroundModelTasks);
+ setLoadingProgress(97,'Modelos 3D terminados. Preparando shaders y texturas…');
+
  let sceneWarmupStatus='unavailable';
  try{
   removeStrayDebugGeometry(scene);
   if(scene&&typeof scene.whenReadyAsync==='function'){
-   const STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200;
-   const sceneWarmupStartedAt=performance.now();
-   let warmupTimer=null,waitingItemsBefore=null;
+   const sceneWarmupStartedAt=performance.now();let waitingItemsBefore=null,waitingItemsAfter=null;
    try{if(typeof scene.getWaitingItemsCount==='function')waitingItemsBefore=scene.getWaitingItemsCount();}catch(_){waitingItemsBefore=null;}
-   const fullSceneWarmup=Promise.resolve().then(()=>scene.whenReadyAsync()).then(
-    ()=>({ready:true}),
-    error=>({ready:false,error})
-   );
-   // La escena puede terminar shaders/texturas en segundo plano. Ningún perfil
-   // debe quedar bloqueado indefinidamente por la promesa global de Babylon.
-   const warmupResult=await Promise.race([
-    fullSceneWarmup,
-    new Promise(resolve=>{warmupTimer=setTimeout(()=>resolve({ready:false,timeout:true}),STARTUP_SCENE_WARMUP_TIMEOUT_MS);})
-   ]);
-   if(warmupTimer!==null)clearTimeout(warmupTimer);
-   let waitingItemsAfter=null;
+   startupTaskCurrent='compilación de shaders y preparación de texturas';
+   // La pantalla de carga permanece visible hasta que Babylon declara lista la escena completa.
+   await scene.whenReadyAsync();
+   // Dos fotogramas adicionales terminan las subidas iniciales de buffers y compilaciones de materiales.
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
    try{if(typeof scene.getWaitingItemsCount==='function')waitingItemsAfter=scene.getWaitingItemsCount();}catch(_){waitingItemsAfter=null;}
-   const sceneWarmupDurationMs=Math.round(performance.now()-sceneWarmupStartedAt);
-   sceneWarmupStatus=warmupResult.ready?'ready':(warmupResult.timeout?'background-timeout':'deferred-after-error');
-   window.__elSinNombreStartupSceneWarmup={
-    profile:activeGraphicsProfile,status:sceneWarmupStatus,durationMs:sceneWarmupDurationMs,
-    timeoutMs:STARTUP_SCENE_WARMUP_TIMEOUT_MS,waitingItemsBefore,waitingItemsAfter
-   };
-   if(warmupResult.timeout){
-    console.warn('La escena sigue preparando recursos gráficos en segundo plano; se permite entrar sin bloquear el arranque.',window.__elSinNombreStartupSceneWarmup);
-   }else if(warmupResult.error){
-    console.warn('La sincronización gráfica global falló; es no esencial y la partida puede continuar.',warmupResult.error,window.__elSinNombreStartupSceneWarmup);
-   }else{
-    console.info('Sincronización de escena terminada.',window.__elSinNombreStartupSceneWarmup);
-   }
+   sceneWarmupStatus='ready';
+   window.__elSinNombreStartupSceneWarmup={profile:activeGraphicsProfile,status:sceneWarmupStatus,durationMs:Number((performance.now()-sceneWarmupStartedAt).toFixed(2)),waitingItemsBefore,waitingItemsAfter,blocking:true,warmupFrames:2};
+   recordStartupTask('Shaders, texturas y escena',sceneWarmupStartedAt,performance.now(),'ready',{waitingItemsBefore,waitingItemsAfter});
+   console.info('Escena gráfica completa preparada antes de abrir la partida.',window.__elSinNombreStartupSceneWarmup);
   }
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){
-  // Una fase de warm-up secundaria nunca debe bloquear ni cancelar el inicio.
-  sceneWarmupStatus='deferred-after-error';
-  window.__elSinNombreStartupSceneWarmup={
-   profile:activeGraphicsProfile,status:sceneWarmupStatus,error:String(warmupError&&warmupError.message||warmupError)
-  };
-  console.warn('Se aplaza la preparación gráfica no esencial; la partida puede continuar:',warmupError);
+  sceneWarmupStatus='completed-with-errors';
+  window.__elSinNombreStartupSceneWarmup={profile:activeGraphicsProfile,status:sceneWarmupStatus,error:String(warmupError&&warmupError.message||warmupError),blocking:true};
+  recordStartupTask('Shaders, texturas y escena',performance.now(),performance.now(),'fallback',{message:String(warmupError&&warmupError.message||warmupError)});
+  console.warn('La escena informó un error al preparar los recursos; se conserva la reserva antes de entrar:',warmupError);
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
  }
+
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
  console.info('EL SIN NOMBRE 0.6.229 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
@@ -11247,8 +11224,8 @@ function update(dt){
   guerrerosEnMundo:humanEnemyParts.length,
   aldeanosHumanos:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,
   aldeanosEnMundo:humanCivilianParts.length,
-  npcLoadFinished:enemyHumanModelsStarted,audio:audioPreloadResult,
-  vegetationMerge:staticMergeStats,sceneWarmupStatus,npcBackgroundLoad:'deferred-until-world-visible',faunaBackgroundLoad:'deferred-until-world-visible'
+   npcLoadFinished:window.__elSinNombreBackgroundModelTasks&&window.__elSinNombreBackgroundModelTasks.npc==='fulfilled',faunaLoadFinished:window.__elSinNombreBackgroundModelTasks&&window.__elSinNombreBackgroundModelTasks.fauna==='fulfilled',audio:audioPreloadResult,
+  vegetationMerge:staticMergeStats,sceneWarmupStatus,npcBackgroundLoad:'completed-before-opening',faunaBackgroundLoad:'completed-before-opening'
  });
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
@@ -11265,15 +11242,8 @@ function update(dt){
   unhandledRejections:window.__elSinNombreStartupSmoke.unhandledRejections.length
  };
  console.info('EL SIN NOMBRE startup smoke result',window.__elSinNombreStartupSmoke.result);
- // Ya se puede mostrar el mundo: los GLB secundarios se cargan una sola vez en segundo plano.
- const backgroundNpcTask=startNpcHumanModels();
- window.__elSinNombreBackgroundModelTasks={startedAt:new Date().toISOString(),npc:'pending',fauna:'pending',order:'NPC primero; fauna después, todos los modelos se conservan'};
- const backgroundFaunaTask=Promise.resolve(backgroundNpcTask).catch(error=>{console.warn('La tanda NPC terminó parcialmente; la fauna continuará:',error);}).then(()=>{startupTaskCurrent='GLB fauna';return loadWildlifeModels();});
- Promise.allSettled([backgroundNpcTask,backgroundFaunaTask]).then(results=>{
-  window.__elSinNombreBackgroundModelTasks.completedAt=new Date().toISOString();window.__elSinNombreBackgroundModelTasks.npc=results[0].status;window.__elSinNombreBackgroundModelTasks.fauna=results[1].status;
-  console.info('Carga secundaria secuencial terminada sin bloquear la entrada.',window.__elSinNombreBackgroundModelTasks);
- },error=>console.warn('La carga secundaria continúa en segundo plano:',error));
- // El panel de carga se cierra desde el bucle cuando scene.render() completa
+ // No se programa ninguna importación secundaria tras startupAssetsReady: todo el contenido ya está preparado.
+  // El panel de carga se cierra desde el bucle cuando scene.render() completa
  // al menos un fotograma; así no aparece un canvas blanco durante el arranque.
  }catch(err){console.error('EL SIN NOMBRE startGame failed',err);throw err;}
 }
