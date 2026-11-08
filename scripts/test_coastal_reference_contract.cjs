@@ -32,9 +32,9 @@ assert.match(html, /window\.__ELSN_TEST__=\{/);
 assert.match(html, /debugForcedTideOffset=tide==='natural'\?null:Number\(tide\)/);
 console.log('COASTAL REFERENCE CONTRACT OK');
 
-assert.match(captureRunner, /api\\.captureCanvas\\(\\)/,
+assert.ok(captureRunner.includes('api.captureCanvas()'),
   'Coastal reference images must be read directly from the WebGL canvas, not the HTML page');
-assert.doesNotMatch(captureRunner, /page\\.screenshot\\(/,
+assert.ok(!captureRunner.includes('page.screenshot('),
   'Full-page screenshots can include menus/HUD and add unnecessary SwiftShader compositor cost');
-assert.match(workflow, /cancel-in-progress:\\s*false/,
+assert.ok(workflow.includes('cancel-in-progress: false'),
   'A later PR commit must not cancel a long-running 27-image reference capture');
