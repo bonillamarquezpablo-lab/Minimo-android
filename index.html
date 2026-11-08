@@ -2937,9 +2937,9 @@ async function removeStrayDebugGeometry(targetScene){
      const outerFade=1-smooth01((shoreOffset-.48)/.18);
      const whiteFoamProfile=Math.exp(-(((shoreOffset-.16)/.27)**2));
      // La máscara conserva huecos y filamentos, pero evita que la espuma desaparezca por una máscara demasiado débil.
-     const lace=.18+.82*foamPattern[vertex];
-     const foamVisibility=Math.max(Math.min(1,foamStrength/.15),foamBreakStrength*.62);
-     const alpha=Math.min(.94,foamVisibility*whiteFoamProfile*innerFade*outerFade*Math.pow(lace,.92)*(.94+.06*secondary));
+     const lace=Math.pow(Math.max(0,foamPattern[vertex]),1.42);
+     const foamVisibility=Math.max(Math.min(.78,foamStrength/.22),foamBreakStrength*.48);
+     const alpha=Math.min(.76,foamVisibility*whiteFoamProfile*innerFade*outerFade*lace*(.90+.10*secondary));
      colors[color]=.98;colors[color+1]=.99;colors[color+2]=1;colors[color+3]=alpha;
     }
     // Actualizar la rompiente dentro del mismo segmento angular: shoreline, cs, sn y col
@@ -2958,11 +2958,12 @@ async function removeStrayDebugGeometry(targetScene){
      const leadingEdge=Math.exp(-Math.pow((fraction-.82)/.23,2));
      const coverage=smooth01((runup*(1-fraction)+.10)/.48);
      const exposedSand=smooth01((ground-water+.035)/.24);
-     const waterFilm=exposedSand*coverage*(.055+.105*waveCrest);
-     const cellular=.14+.86*washPattern[vertex];
-     const whitewater=breakStrength*leadingEdge*cellular*.84;
-     const trailingFoam=residual*Math.exp(-Math.abs(fraction-.66)*3.2)*.34;
-     const alpha=Math.min(.94,waterFilm+whitewater+trailingFoam);
+     const cellular=Math.pow(Math.max(0,washPattern[vertex]),1.28);
+     const filmBreakup=smooth01((cellular-.20)/.58);
+     const waterFilm=exposedSand*coverage*(.014+.036*waveCrest)*filmBreakup;
+     const whitewater=breakStrength*leadingEdge*cellular*.58;
+     const trailingFoam=residual*Math.exp(-Math.abs(fraction-.66)*3.2)*.14*filmBreakup;
+     const alpha=Math.min(.76,waterFilm+whitewater+trailingFoam);
      const whiteMix=Math.min(1,whitewater*1.3+trailingFoam);
      washPositions[offset]=x;
      const lipProfile=Math.exp(-Math.pow((fraction-.78)/.26,2));
@@ -3236,8 +3237,9 @@ void main(void){
  // Wind ripples follow one world-space wind axis, not the island radius.
  float windWarp=noise21(rotateUv(worldXZ*.31,-.39)+vec2(2.4,7.1));
  float windRill=.5+.5*sin(dot(worldXZ,vec2(.83,.56))*1.46+(windWarp-.5)*3.2);
- float windRillMask=(1.0-smoothstep(.14,.72,humidity))*(1.0-smoothstep(.22,.91,water));
- color*=1.0+(windRill-.5)*.032*windRillMask;
+ float windRillMask=(1.0-smoothstep(.12,.66,humidity))*(1.0-smoothstep(.18,.88,water));
+ // Evita las bandas sinusoidales repetidas visibles desde cámara baja; el relieve PBR conserva el grano.
+ color*=1.0+(windRill-.5)*.009*windRillMask;
  float sheetFront=smoothstep(.025,.25,water)*(1.0-smoothstep(.44,.84,water));
  float sheetNoise=noise21(worldXZ*.58+vec2(beachTime*.035,-beachTime*.021));
  float sheetRipple=.80+.20*sin(dot(worldXZ,vec2(.72,.69))*1.62+beachTime*1.48+sheetNoise*2.4);
