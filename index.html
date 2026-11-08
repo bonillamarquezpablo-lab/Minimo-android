@@ -2382,7 +2382,7 @@ async function removeStrayDebugGeometry(targetScene){
    if(style==='stone')for(let i=0;i<30;i++){ctx.strokeStyle=accents[i%accents.length];ctx.globalAlpha=.18;ctx.lineWidth=.7;ctx.beginPath();let x=Math.random()*size,y=Math.random()*size;ctx.moveTo(x,y);ctx.lineTo(x+8+Math.random()*28,y-5+Math.random()*12);ctx.stroke();}
   }else if(style==='water'){
    const seaGradient=ctx.createLinearGradient(0,0,size,size);
-   seaGradient.addColorStop(0,'#245f70');seaGradient.addColorStop(.42,'#174b5d');seaGradient.addColorStop(1,'#0e354a');
+   seaGradient.addColorStop(0,'#34798a');seaGradient.addColorStop(.42,'#1d5b6d');seaGradient.addColorStop(1,'#124356');
    ctx.fillStyle=seaGradient;ctx.fillRect(0,0,size,size);
    for(let i=0;i<1450;i++){
     const x=Math.random()*size,y=Math.random()*size,len=8+Math.random()*42,curve=(Math.random()-.5)*8;
@@ -2664,7 +2664,7 @@ async function removeStrayDebugGeometry(targetScene){
  M.leather.specularColor=new B.Color3(.12,.095,.07);M.leather.specularPower=28;
  [M.metal,M.darkMetal,M.gold,M.brass].forEach(m=>{m.specularColor=new B.Color3(.48,.46,.39);m.specularPower=72;});
  const reducedWaterProfile=isPerformanceMode&&isConstrainedMobile;M.water.specularColor=reducedWaterProfile?new B.Color3(.18,.25,.28):new B.Color3(.58,.73,.81);M.water.specularPower=reducedWaterProfile?28:104;
- M.water.emissiveColor=new B.Color3(.020,.052,.068);M.water.backFaceCulling=false;M.water.alpha=1;
+ M.water.emissiveColor=new B.Color3(.030,.068,.082);M.water.backFaceCulling=false;M.water.alpha=1;
  if(B.FresnelParameters){M.water.diffuseFresnelParameters=new B.FresnelParameters();M.water.diffuseFresnelParameters.bias=.11;M.water.diffuseFresnelParameters.power=2.0;M.water.diffuseFresnelParameters.leftColor=new B.Color3(.075,.19,.24);M.water.diffuseFresnelParameters.rightColor=new B.Color3(.43,.68,.72);} 
 
  M.foam.alpha=.42;M.foam.emissiveColor=new B.Color3(.34,.40,.39);M.foam.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
@@ -2679,7 +2679,7 @@ async function removeStrayDebugGeometry(targetScene){
  const shadowMaterial=new B.StandardMaterial('SoftShadowMaterial',scene);shadowMaterial.diffuseTexture=shadowTexture;shadowMaterial.opacityTexture=shadowTexture;shadowMaterial.useAlphaFromDiffuseTexture=true;shadowMaterial.disableLighting=true;shadowMaterial.backFaceCulling=false;shadowMaterial.specularColor=new B.Color3(0,0,0);shadowMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;shadowMaterial.disableDepthWrite=true;
  function attachContactShadow(root,name,radius=.9){const disc=B.MeshBuilder.CreateDisc(name,{radius,tessellation:28},scene);disc.parent=root;disc.rotation.x=-Math.PI/2;disc.position=v(0,.025,0);disc.material=shadowMaterial;disc.isPickable=false;return disc;}
  const land=[{x:0,z:0,r:60,name:'Isla del Cuervo'},{x:135,z:14,r:31,name:'Costa de Skall'},{x:-132,z:45,r:33,name:'Isla de los Pinos'},{x:28,z:143,r:33,name:'Bahía de Hrafn'},{x:146,z:-132,r:25,name:'Islote del Hielo'},{x:-145,z:-126,r:27,name:'Isla de las Cenizas'},{x:286,z:154,r:33,name:'Cabo de Bruma'},{x:-286,z:232,r:31,name:'Isla del Cuerno'},{x:292,z:-264,r:36,name:'Costa de las Tormentas'},{x:470,z:100,r:31,name:'Skjoldheim'},{x:-470,z:-310,r:34,name:'Isla de los Juramentos'},{x:60,z:465,r:34,name:'Isla del Altar'},{x:-45,z:-465,r:32,name:'Cabo del Vigía'}];
- const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?64:112))):(isTouchDevice?(isConstrainedMobile?176:192):256);
+ const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?160:112))):(isTouchDevice?(isConstrainedMobile?176:192):256);
  const ground=B.MeshBuilder.CreateGround('ocean',{width:1050,height:1050,subdivisions:waterSubdivisions,updatable:true},scene);ground.position.y=0;ground.material=M.water;ground.isPickable=false;ground.receiveShadows=false;
  const waterBase=ground.getVerticesData(B.VertexBuffer.PositionKind).slice(),waterPositions=waterBase.slice(),waterIndices=ground.getIndices(),waterNormals=new Float32Array(waterBase.length);
  const oceanDepthSettings={transitionMeters:18,shoreOpacity:.86,foamStrength:1,sheetStrength:.22,exaggerated:false};
@@ -2699,9 +2699,9 @@ async function removeStrayDebugGeometry(targetScene){
    const t=smooth01(Math.min(1,depth/transition));
    const index=vertex*4;
    // Vertex tint keeps the original animated water material and all its normal/reflection detail.
-   oceanDepthVertexColors[index]=.78+(.57-.78)*t;
-   oceanDepthVertexColors[index+1]=.98+(.82-.98)*t;
-   oceanDepthVertexColors[index+2]=1.02+(.94-1.02)*t;
+   oceanDepthVertexColors[index]=.88+(.66-.88)*t;
+   oceanDepthVertexColors[index+1]=1.01+(.88-1.01)*t;
+   oceanDepthVertexColors[index+2]=1.07+(.99-1.07)*t;
    oceanDepthVertexColors[index+3]=1.0; // La profundidad colorea el mar, nunca lo recorta en la orilla.
   }
   ground.setVerticesData(B.VertexBuffer.ColorKind,oceanDepthVertexColors,true,4);
@@ -2737,7 +2737,11 @@ async function removeStrayDebugGeometry(targetScene){
   return waterWaveBasis[offset]*waterWaveTimeCos[wave]+waterWaveBasis[offset+1]*waterWaveTimeSin[wave];
  }
  function waterFarHeightAtVertex(vertex){
-  return tideOffsetAt(oceanTime)+waterWaveValueAtVertex(vertex,0)*.105+waterWaveValueAtVertex(vertex,1)*.315+waterWaveValueAtVertex(vertex,2)*.225;
+  const longSwell=waterWaveValueAtVertex(vertex,0)*.105,swellA=waterWaveValueAtVertex(vertex,1)*.315,swellB=waterWaveValueAtVertex(vertex,2)*.225;
+  const crossWave=waterWaveValueAtVertex(vertex,3),chopWave=waterWaveValueAtVertex(vertex,4);
+  const cross=crossWave*.15,chop=chopWave*.082,secondary=waterWaveValueAtVertex(vertex,5)*.046,ripple=waterWaveValueAtVertex(vertex,6)*.026;
+  const crestFoamLift=Math.pow(Math.max(0,crossWave),3)*.018,shortCrest=Math.pow(Math.max(0,chopWave),3)*.010;
+  return tideOffsetAt(oceanTime)+longSwell+swellA+swellB+cross+chop+secondary+ripple+crestFoamLift+shortCrest;
  }
  function waterDetailHeightAtVertex(vertex,fade){
   const longSwell=waterWaveValueAtVertex(vertex,0)*.105,swellA=waterWaveValueAtVertex(vertex,1)*.315,swellB=waterWaveValueAtVertex(vertex,2)*.225;
@@ -2775,7 +2779,7 @@ async function removeStrayDebugGeometry(targetScene){
  const TIDE_PERIOD_SECONDS=240,TIDE_NATURAL_AMPLITUDE=.10;
  function tideOffsetAt(t=oceanTime){if(Number.isFinite(debugForcedTideOffset))return debugForcedTideOffset;return Math.sin((t/TIDE_PERIOD_SECONDS)*Math.PI*2)*TIDE_NATURAL_AMPLITUDE;}
  const waterVertexStep=isPerformanceMode?(isUltraLowEndMobile?1/6:(isGalaxyA12NachoPerformance?1/5:(isGalaxyA12LowEndMobile?1/7:(isConstrainedMobile?1/8:(isTouchDevice?1/30:1/30))))):(isTouchDevice?1/30:1/40);
- const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12NachoPerformance?1.35:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/12:1/12))))):(isTouchDevice?(isConstrainedMobile?1/8:1/10):1/15);
+ const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12NachoPerformance?1.35:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/30:1/12))))):(isTouchDevice?(isConstrainedMobile?1/8:1/10):1/15);
  const waterFarStep=isPerformanceMode?(isConstrainedMobile?.36:1/12):.14;
  function waterHeight(x,z,t=oceanTime,detailFade=1){
   // Layered directional swells: broad North Sea swell plus shorter cross-waves and capillary ripples.
