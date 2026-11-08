@@ -111,7 +111,7 @@ for(const label of ['Arena seca · grano','Arena húmeda · intensidad','Orilla 
 assert.ok(html.includes('./scripts/nordic/coastal-interaction.js'),"The coastal physics helper must load before the game.");
 assert.ok(html.indexOf('updateOceanDepthGradient();',html.indexOf('function smooth01'))>html.indexOf('const terrainHashCache='),'Bathymetry must initialize after terrain noise dependencies.');
 assert.ok(html.includes("applyTexture(M.water,texWater,17.5);"),"Water albedo must show readable smaller-scale surface detail.");
-assert.ok(html.includes("oceanWaveNormal.uScale=13.0;oceanWaveNormal.vScale=13.0;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.78;"),"Quality water normals must retain fine ripples with controlled highlight density.");
+assert.ok(html.includes("oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.78;"),"Quality water normals must retain fine ripples with controlled highlight density.");
 assert.ok(html.includes(".020*Math.sin(67*warpU+41*warpW)"),"Water normals must retain high-frequency cross-directional micro ripples.");
 assert.ok(html.includes("new B.Color3(.52,.68,.75);M.water.specularPower=reducedWaterProfile?28:64;"),"Quality water must preserve visible but restrained specular highlights.");
 assert.ok(html.includes("M.water.diffuseFresnelParameters.power=2.3;"),"Grazing-angle water highlights must become more legible.");
