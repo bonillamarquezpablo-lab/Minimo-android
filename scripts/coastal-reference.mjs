@@ -264,8 +264,26 @@ async function main() {
       const restored = api.setIslandShadowReceiving(true);
       return { disabled, restored, canvasPng };
     }, { cameraCase: ridgeCase, island: mainIsland });
-    const shadowPngMatch = new RegExp('^data:image/png;base64,([A-Za-z0-9+/]+={0,2})
-
+    const pngPrefix = 'data:image/png;base64,';
+    assert.ok(typeof shadowIsolation.canvasPng === 'string' &&
+      shadowIsolation.canvasPng.startsWith(pngPrefix),
+      'Shadow-isolation canvas readback did not return a PNG');
+    assert.ok(shadowIsolation.disabled && shadowIsolation.restored,
+      'The main-island shadow receiver must disable and restore for the diagnostic A/B frame');
+    const shadowPng = Buffer.from(shadowIsolation.canvasPng.slice(pngPrefix.length), 'base64');
+    assert.ok(shadowPng.length > 1000, 'Shadow-isolation PNG was empty');
+    assert.equal(shadowPng.subarray(0, 8).toString('hex'), '89504e470d0a1a0a',
+      'Shadow-isolation capture does not have a valid PNG signature');
+    const shadowFile = 'ridge-occlusion__t037__natural__no-island-shadows.png';
+    fs.writeFileSync(path.join(OUT, shadowFile), shadowPng);
+    manifest.shadowIsolationCapture = {
+      file: shadowFile,
+      camera: 'ridge-occlusion',
+      timeSeconds: 37,
+      tide: 'natural',
+      mainIslandTerrainReceivesShadows: false,
+      receiverRestoredAfterCapture: true
+    };
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');
     assert.equal(manifest.consoleErrors.length, 0,
