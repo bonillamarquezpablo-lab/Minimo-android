@@ -27,6 +27,9 @@ jobs:
       - name: Test bounded startup scene warm-up
         run: node scripts/test_startup_guard.cjs
 
+      - name: Test GLB background pipeline and fallbacks
+        run: node scripts/test_glb_loading.cjs
+
       - name: Test BeachState coast and toroidal footprint atlas
         run: node scripts/test_beach_state.cjs
 

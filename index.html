@@ -1793,13 +1793,18 @@ async function bootEngine(){
     gltfReady=loaded.ok;loaderFailures=loaded.failures;
    }
   }
+  let meshoptDecoderAvailable=false;
   if(window.BABYLON&&window.BABYLON.MeshoptCompression){
-   window.BABYLON.MeshoptCompression.Configuration={
-    decoder:{url:new URL('./assets/vendor/meshopt_decoder.js',document.baseURI).href}
-   };
+   try{
+    window.BABYLON.MeshoptCompression.Configuration={
+     decoder:{url:new URL('./assets/vendor/meshopt_decoder.js',document.baseURI).href}
+    };
+    meshoptDecoderAvailable=true;
+   }catch(meshoptError){console.warn('Meshopt no se pudo configurar; se usarán los GLB originales.',meshoptError);}
   }else{
-   throw new Error('No está disponible el decodificador Meshopt necesario para los modelos optimizados.');
+   console.info('Meshopt no está disponible en este navegador; se usarán los GLB originales sin pérdida de funciones.');
   }
+  window.__elSinNombreMeshopt={decoderConfigured:meshoptDecoderAvailable,originalFallback:true,compressedAssetsInBuild:false};
   setLoadingProgress(38,gltfReady?'2/3 · Construyendo la isla…':'2/3 · Construyendo la isla y preparando personajes de reserva…');
   try{
    // Espera a la construcción del mundo y a la carga automática de los personajes.
@@ -3873,7 +3878,7 @@ void main(void){
   try{
    // Import each GLB independently into the live scene; never clone a skinned mesh/skeleton.
    objectUrl=URL.createObjectURL(blob);
-   imported=await B.SceneLoader.ImportMeshAsync('',objectUrl,'',scene,undefined,'.glb');
+   imported=await timedGlbStage('Fauna '+kind,'importación Babylon',()=>B.SceneLoader.ImportMeshAsync('',objectUrl,'',scene,undefined,'.glb'),blob.size);
    const allNodes=[...(imported.transformNodes||[]),...(imported.meshes||[])],nodeSet=new Set(allNodes),unique=[...new Set(allNodes)];
    const roots=unique.filter(node=>!node.parent||!nodeSet.has(node.parent));
    if(!roots.length)throw new Error('GLB sin raíz de escena.');
@@ -3917,7 +3922,12 @@ void main(void){
    console.warn('Fauna descartada: importación GLB incompleta ('+kind+')',err);return null;
   }finally{if(objectUrl)URL.revokeObjectURL(objectUrl);}
  }
- async function loadWildlifeModels(){
+ let wildlifeModelsLoadPromise=null;
+ function loadWildlifeModels(){
+  if(!wildlifeModelsLoadPromise)wildlifeModelsLoadPromise=loadWildlifeModelsOnce();
+  return wildlifeModelsLoadPromise;
+ }
+ async function loadWildlifeModelsOnce(){
   if(!wildlifeSpawnSpecs.length)return 0;
   setLoadingProgress(68,'Cargando fauna salvaje 3D…');
   const kinds=[...new Set(wildlifeSpawnSpecs.map(spec=>spec.kind))];
@@ -3965,7 +3975,7 @@ void main(void){
     }
     if(p){const shrub=createNaturalShrub(p.x,p.z,rand(.82,1.18),idx);if(shrub)naturalShrubs.push(shrub);}
    }
-   const animalCount=isPerformanceMode?0:(idx===0?3:(idx<4?1:0));
+   const animalCount=idx===0?3:(idx<4?1:0);
    for(let i=0;i<animalCount;i++){
     let p=null;
     for(let attempt=0;attempt<56;attempt++){
@@ -4998,10 +5008,8 @@ void main(void){
   enemyHumanLoadPromise=(async()=>{
    // En Rendimiento se conservan todos los NPC y su IA con el modelo procedural ligero;
    // solo los tres guardianes del campamento y cuatro aldeanos cercanos reciben GLB de alta carga.
-   const warriorPartsToLoad=isPerformanceMode
-    ?[]
-    :(isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts);
-   const civilianPartsToLoad=isPerformanceMode?[]:(isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts);
+   const warriorPartsToLoad=isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts;
+   const civilianPartsToLoad=isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts;
    const warriorTotal=warriorPartsToLoad.length,civilianTotal=civilianPartsToLoad.length,homeGuardTotal=warriorPartsToLoad.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).length,total=warriorTotal+civilianTotal;
    if(!total){setAssetLoadingProgress('enemy',100,'No hay personajes secundarios pendientes.');return 0;}
    setAssetLoadingProgress('enemy',2,'Preparando guardianes, aldeanos y guerreros…');
@@ -5050,7 +5058,7 @@ void main(void){
    };
    const containerFromBlob=async(blob,label)=>{
     const objectUrl=URL.createObjectURL(blob);let container;
-    try{container=await B.SceneLoader.LoadAssetContainerAsync('',objectUrl,scene,null,'.glb');}
+    try{container=await timedGlbStage(label,'importación Babylon',()=>B.SceneLoader.LoadAssetContainerAsync('',objectUrl,scene,null,'.glb'),blob.size);}
     catch(err){throw new Error(label+' descargado, pero Babylon no pudo importarlo: '+(err&&err.message?err.message:String(err)));}
     finally{URL.revokeObjectURL(objectUrl);}
     if(!container||typeof container.instantiateModelsToScene!=='function')throw new Error(label+': Babylon no creó un contenedor GLB válido.');
@@ -5080,7 +5088,7 @@ void main(void){
    };
    // Calidad precarga el GLB civil en paralelo con la descarga y el montaje del caballero.
    // La importación/instanciación sigue respetando el orden de prioridad del roster.
-   const civilianWarmupPromise=!isPerformanceMode&&civilianTotal?(async()=>{
+   const civilianWarmupPromise=civilianTotal?(async()=>{
     let blob=await readCivilianHumanCache(),source=blob?'caché propia de aldeanos':'';
     if(blob&&!await isValidGLB(blob)){console.warn('Caché de aldeanos inválida; se volverá a descargar.');blob=null;}
     if(!blob){report('Preparando en paralelo el modelo humano de los aldeanos…');const downloaded=await downloadCivilianGLB();blob=downloaded.blob;source='Grab3D · Man Base Mesh rigged · '+downloaded.url;await saveCivilianHumanCache(blob);}
@@ -6293,18 +6301,32 @@ if(realPlayerArmDebugEnabled){
  const gltfNoAutoplayObserver=B.SceneLoader.OnPluginActivatedObservable.add(loader=>{
   if(loader&&loader.name==='gltf')loader.animationStartMode=gltfNoAutoplayMode;
  });
+ const glbTimingRecords=[];
+ function recordGlbTiming(model,stage,durationMs,bytes,ok=true){
+  const record={model:String(model),stage:String(stage),durationMs:Math.round(durationMs),bytes:Number(bytes)||0,ok:!!ok,at:new Date().toISOString()};
+  glbTimingRecords.push(record);
+  if(glbTimingRecords.length>80)glbTimingRecords.shift();
+  window.__elSinNombreGlbTimings=glbTimingRecords;
+  console.info('GLB timing',record);
+ }
+ async function timedGlbStage(model,stage,operation,bytes=0){
+  const started=performance.now();
+  try{const result=await operation();recordGlbTiming(model,stage,performance.now()-started,bytes,true);return result;}
+  catch(error){recordGlbTiming(model,stage,performance.now()-started,bytes,false);throw error;}
+ }
  async function importHumanVikingBlob(blob,originLabel){
   playerHumanBlob=blob;
   const objectUrl=URL.createObjectURL(blob);
   try{
    lastVikingStage='importación GLB';
    let asset;const glbImportStartedAt=performance.now();
-   try{asset=await B.SceneLoader.ImportMeshAsync('',objectUrl,'',scene,null,'.glb');}
+   try{asset=await timedGlbStage('Vikingo','importación Babylon',()=>B.SceneLoader.ImportMeshAsync('',objectUrl,'',scene,null,'.glb'),blob.size);}
    catch(err){throw new Error('El archivo llegó, pero Babylon.js no pudo leer el GLB: '+(err&&err.message?err.message:String(err)));}
    const glbImportDurationMs=performance.now()-glbImportStartedAt;
    lastVikingStage='montaje del esqueleto y personaje';
    const glbAttachStartedAt=performance.now();
    try{await attachHumanViking(asset,originLabel);
+    recordGlbTiming('Vikingo','montaje y rig',performance.now()-glbAttachStartedAt,blob.size,true);
     console.info('GLB protagonist pipeline timing',{profile:activeGraphicsProfile,origin:originLabel,bytes:blob.size,importMs:Math.round(glbImportDurationMs),attachMs:Math.round(performance.now()-glbAttachStartedAt),meshes:(asset.meshes||[]).length,skeletons:(asset.skeletons||[]).length,animationGroups:(asset.animationGroups||[]).length});}
    catch(err){try{(asset.meshes||[]).forEach(m=>{if(m&&!m.isDisposed())m.dispose(false,true);});(asset.transformNodes||[]).forEach(n=>{if(n&&!n.isDisposed())n.dispose(false,false);});}catch(_){}throw new Error('El GLB se descargó y se abrió, pero falló el montaje del esqueleto: '+(err&&err.message?err.message:String(err)));}
    return true;
@@ -8149,15 +8171,14 @@ function createRealWeapon(type='axe'){
  }
  spawnNaturalVegetationAndFauna();
  if(isPerformanceMode){
-  // A10/A12 prioritise world entry and memory headroom: grass and wildlife are not
-  // generated or downloaded in Rendimiento. Trees, rocks, shrubs, NPCs and gameplay stay.
+  // Se mantiene el perfil visual y funcional actual; no se añaden recortes.
+  // Fauna y GLB secundarios se completan después de mostrar el mundo.
   grassInstanceCount=0;grassBatchCount=0;grassDebugClumpCount=0;grassDebugBatchCount=0;
-  console.info('Perfil Rendimiento: hierba y fauna omitidas; resto del mundo y mecánicas conservados.');
+  console.info('Perfil Rendimiento: hierba conserva su ajuste actual; fauna y GLB secundarios pasan a carga posterior.');
  }else{
-  // Calidad keeps the complete original visual and gameplay path unchanged.
+  // La generación original de hierba de Calidad se conserva completa.
   const grassGenerationTask=createRealGrass();
-  const wildlifePreparationTask=loadWildlifeModels();
-  await Promise.all([grassGenerationTask,wildlifePreparationTask]);
+  await grassGenerationTask;
  }
  function updateRealGrassWind(dt){
   // Menos transferencias de vértices por segundo: la hierba cercana sigue respirando,
@@ -8202,7 +8223,7 @@ function createRealWeapon(type='axe'){
   try{
    const response=await fetch(gullUrl,{mode:'cors',cache:'force-cache',credentials:'omit'});if(!response.ok)throw new Error('HTTP '+response.status);
    const blob=await response.blob();if(!(blob.size>100000))throw new Error('GLB de gaviota vacío o incompleto');
-   const objectUrl=URL.createObjectURL(blob);let container;try{container=await B.SceneLoader.LoadAssetContainerAsync('',objectUrl,scene,null,'.glb');}finally{URL.revokeObjectURL(objectUrl);}
+   const objectUrl=URL.createObjectURL(blob);let container;try{container=await timedGlbStage('Gaviotas','importación Babylon',()=>B.SceneLoader.LoadAssetContainerAsync('',objectUrl,scene,null,'.glb'),blob.size);}finally{URL.revokeObjectURL(objectUrl);}
    if(!container||!container.instantiateModelsToScene)throw new Error('Babylon no pudo crear el contenedor de gaviota');
    const realBirds=[];
    for(let i=0;i<5;i++){
@@ -10480,15 +10501,14 @@ function update(dt){
  function startNpcHumanModels(){
   if(enemyHumanModelsStarted)return enemyHumanLoadTask;
   enemyHumanModelsStarted=true;
-  console.info(isPerformanceMode?'Rendimiento: NPC procedurales definitivos; se omiten GLB secundarios.':'Preparando modelos humanos secundarios antes de entrar.');
+  console.info('Preparando GLB de caballeros y aldeanos en segundo plano, sin bloquear el selector ni la partida.');
   enemyHumanLoadTask=loadEnemyHumanCharacters();
   enemyHumanLoadTask.then(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);},()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
   return enemyHumanLoadTask;
  }
  let enemyHumanRetryPromise=null,enemyHumanRetryAttempts=0,enemyHumanRetryScheduled=false;
  function hasMissingEnemyVikings(){
-  // Los NPC procedurales son la representación final del perfil Rendimiento; no son modelos pendientes.
-  if(isPerformanceMode)return false;
+  // Los NPC procedurales son la representación provisional mientras se importan los GLB.
   const warriors=isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts;
   const civilians=isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts;
   return warriors.some(p=>!p.realHuman||p.realHuman.role!=='knight')||civilians.some(p=>!p.realHuman||p.realHuman.role!=='civilian');
@@ -10801,26 +10821,22 @@ function update(dt){
  // La carga del protagonista y la tanda de NPC se inicia y termina antes del selector.
  // En Rendimiento se mantiene el conjunto humano ligero definido para ese perfil;
  // los demás NPC ya tienen cuerpo, colisión y animación procedural en la escena.
- let resourceResults;
- if(isPerformanceMode){
-  // El roster reducido de Rendimiento se importa completo antes de abrir la intro.
-  // No se difieren modelos GLB ni se muestran proxies como sustitutos temporales.
-  resourceResults=await Promise.allSettled([playerHumanLoadPromise,startNpcHumanModels()]);
- }else{
-  const npcPreparationTask=startNpcHumanModels();
-  resourceResults=await Promise.allSettled([playerHumanLoadPromise,npcPreparationTask]);
- }
- if(isPerformanceMode&&!realPlayerReady)throw new Error('El GLB del protagonista no terminó de importarse; no se abrirá una partida incompleta.');
- console.info('Personajes preparados antes de entrar:',{
-  protagonist:resourceResults[0].status,
-  npcs:resourceResults[1].status,
-  humanWarriors:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
-  totalWarriors:humanEnemyParts.length,
-  humanCivilians:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,
-  totalCivilians:humanCivilianParts.length,
-  selectedProfile:activeGraphicsProfile
+ // El vikingo tiene prioridad. Un fallo de descarga/importación activa su reserva y no impide entrar.
+ setLoadingProgress(84,'Esperando al vikingo principal (máximo 55 s)…');
+ const protagonistStageStarted=performance.now();
+ let protagonistStageTimer=null;
+ const protagonistResult=await Promise.race([
+  playerHumanLoadPromise.then(()=>({status:'finished'}),error=>({status:'failed',error})),
+  new Promise(resolve=>{protagonistStageTimer=setTimeout(()=>resolve({status:'timeout'}),55000);})
+ ]);
+ if(protagonistStageTimer!==null)clearTimeout(protagonistStageTimer);
+ recordGlbTiming('Vikingo','espera total de protagonista',performance.now()-protagonistStageStarted,playerHumanBlob&&playerHumanBlob.size||0,protagonistResult.status!=='failed');
+ console.info('Prioridad de carga del protagonista terminada; los secundarios no bloquean la entrada.',{
+  protagonist:protagonistResult.status,realPlayerReady,profile:activeGraphicsProfile
  });
- setLoadingProgress(84,'Guardianes, guerreros y aldeanos preparados. Sincronizando animaciones…');
+ setLoadingProgress(84,protagonistResult.status==='timeout'
+  ?'El vikingo sigue cargando; se entra con su reserva y la importación continúa en segundo plano…'
+  :'Vikingo preparado. Caballeros, aldeanos y fauna se completarán después de mostrar el mundo…');
  let audioPreloadResult={total:0,ready:0,failed:0,pending:0};
  if(isPerformanceMode){
   // En Rendimiento la intro no aparece hasta terminar la precarga de audio disponible.
@@ -10898,6 +10914,16 @@ function update(dt){
  setLoadingProgress(100,'Mundo preparado.');
  const intro=document.getElementById('intro');if(intro)intro.setAttribute('aria-hidden','false');
  startupAssetsReady=true;
+ // Ya se puede mostrar el mundo: los GLB secundarios se cargan una sola vez en segundo plano.
+ const backgroundNpcTask=startNpcHumanModels();
+ const backgroundFaunaTask=loadWildlifeModels();
+ window.__elSinNombreBackgroundModelTasks={startedAt:new Date().toISOString(),npc:'pending',fauna:'pending'};
+ Promise.allSettled([backgroundNpcTask,backgroundFaunaTask]).then(results=>{
+  window.__elSinNombreBackgroundModelTasks.completedAt=new Date().toISOString();
+  window.__elSinNombreBackgroundModelTasks.npc=results[0].status;
+  window.__elSinNombreBackgroundModelTasks.fauna=results[1].status;
+  console.info('Carga secundaria terminada sin bloquear la entrada.',window.__elSinNombreBackgroundModelTasks);
+ },error=>console.warn('La carga secundaria continúa en segundo plano:',error));
  // El panel de carga se cierra desde el bucle cuando scene.render() completa
  // al menos un fotograma; así no aparece un canvas blanco durante el arranque.
  }catch(err){console.error('EL SIN NOMBRE startGame failed',err);throw err;}

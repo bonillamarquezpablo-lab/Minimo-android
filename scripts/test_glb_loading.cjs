@@ -1,0 +1,14 @@
+'use strict';
+const fs=require('node:fs');
+const assert=require('node:assert/strict');
+const html=fs.readFileSync('index.html','utf8');
+assert.match(html,/function loadWildlifeModels\(\)\s*\{\s*if\(!wildlifeModelsLoadPromise\)wildlifeModelsLoadPromise=loadWildlifeModelsOnce\(\)/);
+assert.match(html,/const backgroundNpcTask=startNpcHumanModels\(\);\s*const backgroundFaunaTask=loadWildlifeModels\(\);/);
+assert.match(html,/protagonistStageTimer=setTimeout\(\(\)=>resolve\(\{status:'timeout'\}\),55000\)/);
+assert.doesNotMatch(html,/const warriorPartsToLoad=isPerformanceMode\s*\?\s*\[\]/);
+assert.doesNotMatch(html,/const civilianPartsToLoad=isPerformanceMode\s*\?\s*\[\]/);
+assert.doesNotMatch(html,/const animalCount=isPerformanceMode\?0/);
+assert.match(html,/function timedGlbStage\(/);
+assert.match(html,/window\.__elSinNombreGlbTimings=glbTimingRecords/);
+assert.match(html,/originalFallback:true/);
+console.log('OK: GLB timing, one-shot background loads, and original model fallback.');
