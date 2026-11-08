@@ -2026,7 +2026,8 @@ async function removeStrayDebugGeometry(targetScene){
  try{
  const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
  const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('armdebug')==='1';
- const groundDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
+ const testModeEnabled=new URLSearchParams(window.location.search).get('test')==='1';
+ const groundDebugEnabled=testModeEnabled||new URLSearchParams(window.location.search).get('debug')==='1';
  const realPlayerArmTuningEnabled=true;
  const realPlayerArmDebugState={free:{status:'ESPERANDO',reason:'',twistDeg:null},weapon:{status:'POSE ORIGINAL',reason:'',twistDeg:null}};
  let realPlayerSkeletonFrameDiagnostic='esqueleto pendiente';
@@ -11717,6 +11718,17 @@ function update(dt){
   runtimeErrors:window.__elSinNombreStartupSmoke.runtimeErrors.length,
   unhandledRejections:window.__elSinNombreStartupSmoke.unhandledRejections.length
  };
+ if(testModeEnabled){
+  window.__ELSN_TEST__={
+   build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',
+   islands:land.map(({x,z,r,name})=>({x,z,r,name})),
+   stop:()=>engine.stopRenderLoop(),
+   setCamera:({x,y,z,targetX,targetY,targetZ})=>{camera.position.set(x,y,z);camera.setTarget(new B.Vector3(targetX,targetY,targetZ));},
+   setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Math.max(0,Number(time)||0)-1/60;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(1/60);},
+   render:()=>scene.render(),
+   diagnostics:()=>({coast:getWaterCoastDiagnostics(),startup:window.__elSinNombreStartupSmoke.result,meshCount:scene.meshes.length,activeBeachIslandIndex,activeTidalFoamIslandIndex,waterTime:oceanTime,forcedTideOffset:debugForcedTideOffset})
+  };
+ }
  console.info('EL SIN NOMBRE startup smoke result',window.__elSinNombreStartupSmoke.result);
  // No se programa ninguna importación secundaria tras startupAssetsReady: todo el contenido ya está preparado.
   // El panel de carga se cierra desde el bucle cuando scene.render() completa
