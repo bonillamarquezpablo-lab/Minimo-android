@@ -385,7 +385,7 @@ def main() -> None:
         fail("Calidad debe dimensionar columnas según perímetro; Rendimiento conserva 256/512.")
     if "const layer=livingBeachLayers[activeBeachIslandIndex]||null" not in index_html or "beachUpdateCellsLast=beachWorkCellsProcessed" not in index_html or "cpuUpdateP95Ms:beachCpuP95" not in index_html or "BEACH_WORK_BUDGET_MS=isTouchDevice?1.5:2.0" not in index_html or "BEACH_CELL_BUDGET_MS=BEACH_WORK_BUDGET_MS*.68" not in index_html:
         fail("La actualización costera debe respetar su presupuesto reducido por fotograma.")
-    if "TIDAL_FOAM_UPDATE_STEP=isTouchDevice?1/15:1/30" not in index_html or "for(let step=0;step<10;step++)" not in index_html or "performance.now()-sliceStarted<2.65" in index_html or "performance.now()-sliceStarted<3.55" in index_html:
+    if "TIDAL_FOAM_UPDATE_STEP=isTouchDevice?1/18:1/30" not in index_html or "const foamElapsed=foamDue?tidalFoamAccumulator:0" not in index_html or "Math.exp(-foamElapsed/3.4)" not in index_html or "for(let step=0;step<10;step++)" not in index_html or "performance.now()-sliceStarted<2.65" in index_html or "performance.now()-sliceStarted<3.55" in index_html:
         fail("La espuma debe actualizarse con cadencia independiente y el cruce costero debe evitar iteraciones redundantes.")
     if "const shallowBody = 0.52 * smooth01(depth / 1.1);" not in (ROOT / "scripts" / "nordic" / "coastal-interaction.js").read_text(encoding="utf-8"):
         fail("La opacidad del agua debe crecer progresivamente desde la línea de costa.")
