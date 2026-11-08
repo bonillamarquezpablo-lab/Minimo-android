@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.269">
+<meta name="el-sin-nombre-build" content="0.6.270">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.269</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.270</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -8538,8 +8538,8 @@ function createRealWeapon(type='axe'){
  // Keep the count outside createRealGrass(): grassMesh itself is local to that builder.
  let grassInstanceCount=0,grassBatchCount=0,grassWindAccumulator=0,grassWindClock=0;const grassWindMeshes=[];let grassWindBasePositions=null,grassWindPositions=null;
  const qualityGrassLodBatches=[];let qualityGrassLodAccumulator=0,qualityGrassVisibleBatchCount=0;
- let grassBatchMaterial=null,grassStreamActiveIslandIndex=-2,grassStreamPromise=null;
- async function createRealGrass(onlyIslandIndex=null){
+ let grassBatchMaterial=null,grassStreamActiveIslandIndex=-2,grassStreamPromise=null,grassStreamCenterX=NaN,grassStreamCenterZ=NaN;
+ async function createRealGrass(onlyIslandIndex=null,focusX=null,focusZ=null){
   grassDebugIslandStats.length=0;
   const positions=[],indices=[],colors=[];
   // Natural olive greens: the previous palette rendered as almost-black cut-outs.
@@ -8623,14 +8623,17 @@ function createRealWeapon(type='axe'){
    const island=land[islandIndex],baseWant=islandIndex===0?6500:(islandIndex<4?1050:520);
    const performanceDensity=isConstrainedMobile?(isUltraLowEndMobile?.22:(isGalaxyA12NachoPerformance?.18:.26)):(isTouchDevice?.36:.50);
    const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);
-   const want=isPerformanceMode?Math.round(baseWant*performanceDensity):Math.round(baseWant*qualityGrassDensity);
+   const safeLandRadius=island.r*.70;
+   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;
+   const radius=Math.min(92,safeLandRadius);
+   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));
+   const want=isPerformanceMode?0:Math.max(1,Math.round(baseWant*qualityGrassDensity*areaFraction));
    let placed=0,tries=0;
-   const radius=island.r*.865;
    const gridSide=Math.ceil(Math.sqrt(want*1.60)),cellSize=(radius*2)/gridSide;
    const occupiedGridCells=new Uint8Array(gridSide*gridSide),placedGridPositions=new Float32Array(gridSide*gridSide*2);let occupiedGridCellCount=0;
    // Muestreo especializado para la isla actual: evita recorrer las 13 islas cinco veces
    // por candidato. Conserva los mismos límites de costa, altura y pendiente del validador.
-   const safeLandRadius=island.r*.70,safeLandRadiusSq=safeLandRadius*safeLandRadius,groundStep=.62;
+   const safeLandRadiusSq=safeLandRadius*safeLandRadius,groundStep=.62;
    const grassGroundSample=(x,z)=>{
     const dx=x-island.x,dz=z-island.z;if(dx*dx+dz*dz>safeLandRadiusSq)return null;
     const xP=x+groundStep,xM=x-groundStep,zP=z+groundStep,zM=z-groundStep;
@@ -8655,8 +8658,8 @@ function createRealWeapon(type='axe'){
    };
    const tryPlaceGrass=(x,z)=>{
     const sampledGroundY=grassGroundSample(x,z);if(sampledGroundY===null)return false;
-    const gridCol=Math.max(0,Math.min(gridSide-1,Math.floor((x-(island.x-radius))/cellSize)));
-    const gridRow=Math.max(0,Math.min(gridSide-1,Math.floor((z-(island.z-radius))/cellSize)));
+    const gridCol=Math.max(0,Math.min(gridSide-1,Math.floor((x-(centerX-radius))/cellSize)));
+    const gridRow=Math.max(0,Math.min(gridSide-1,Math.floor((z-(centerZ-radius))/cellSize)));
     const gridCell=gridRow*gridSide+gridCol;
     if(occupiedGridCells[gridCell])return false;
     const minSpacing=cellSize*.24,minSpacingSq=minSpacing*minSpacing;
@@ -8699,8 +8702,8 @@ function createRealWeapon(type='axe'){
     const col=sample%gridSide,row=Math.floor(sample/gridSide);
     const dx0=(col+.5)/gridSide*radius*2-radius,dz0=(row+.5)/gridSide*radius*2-radius;
     if(dx0*dx0+dz0*dz0>radius*radius)continue;
-    const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
-    const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
+    const x=centerX-radius+(col+.5+rand(-jitter,jitter))*cellSize;
+    const z=centerZ-radius+(row+.5+rand(-jitter,jitter))*cellSize;
     tryPlaceGrass(x,z);
    }
    // Reintenta las celdas que quedaron vacías antes de recurrir al relleno aleatorio.
@@ -8713,8 +8716,8 @@ function createRealWeapon(type='axe'){
     for(let attempt=0;attempt<4&&placed<want;attempt++){
      tries++;
      if((tries&7)===0&&performance.now()-grassStartupSliceStartedAt>=grassStartupSliceBudgetMs)await yieldGrassStartupIfNeeded(islandIndex,placed,want);
-     const x=island.x-radius+(col+.5+rand(-jitter,jitter))*cellSize;
-     const z=island.z-radius+(row+.5+rand(-jitter,jitter))*cellSize;
+     const x=centerX-radius+(col+.5+rand(-jitter,jitter))*cellSize;
+     const z=centerZ-radius+(row+.5+rand(-jitter,jitter))*cellSize;
      tryPlaceGrass(x,z);
      if(occupiedGridCells[sample])break;
     }
@@ -8724,7 +8727,7 @@ function createRealWeapon(type='axe'){
     tries++;
     if((tries&7)===0&&performance.now()-grassStartupSliceStartedAt>=grassStartupSliceBudgetMs)await yieldGrassStartupIfNeeded(islandIndex,placed,want);
     const angle=Math.random()*Math.PI*2,rad=Math.sqrt(Math.random())*radius;
-    tryPlaceGrass(island.x+Math.cos(angle)*rad,island.z+Math.sin(angle)*rad);
+    tryPlaceGrass(centerX+Math.cos(angle)*rad,centerZ+Math.sin(angle)*rad);
    }
    await yieldGrassStartupIfNeeded(islandIndex,placed,want);
    const totalGridCells=Math.max(1,Math.round(Math.PI*.25*gridSide*gridSide));
@@ -8751,30 +8754,36 @@ function createRealWeapon(type='axe'){
   grassDebugClumpCount=count;grassDebugBatchCount=grassBatches.size;
   console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:grassDebugLeavesPerClump,instancesPerIsland:grassDebugIslandStats,spatialBatches:grassBatchCount,chunkSize});
  }
- async function streamActiveIslandGrass(index){
-  if(index===grassStreamActiveIslandIndex)return;
+ async function streamActiveIslandGrass(index,focusX,focusZ){
+  if(isPerformanceMode)return;
+  const sameIsland=index===grassStreamActiveIslandIndex;
+  const moved=Number.isFinite(focusX)&&Number.isFinite(focusZ)&&Math.hypot(focusX-grassStreamCenterX,focusZ-grassStreamCenterZ)>=38;
+  if(sameIsland&&!moved)return;
   for(const batch of qualityGrassLodBatches){try{if(batch.mesh&&!(batch.mesh.isDisposed&&batch.mesh.isDisposed()))batch.mesh.dispose(false,false);}catch(_){}}
   qualityGrassLodBatches.length=0;qualityGrassVisibleBatchCount=0;
   if(grassBatchMaterial){try{grassBatchMaterial.dispose(false,false);}catch(_){}grassBatchMaterial=null;}
   grassInstanceCount=0;grassBatchCount=0;grassDebugClumpCount=0;grassDebugBatchCount=0;grassDebugIslandStats.length=0;
   grassStreamActiveIslandIndex=-1;
-  if(Number.isInteger(index)&&index>=0&&index<land.length)await createRealGrass(index);
+  if(Number.isInteger(index)&&index>=0&&index<land.length){grassStreamCenterX=focusX;grassStreamCenterZ=focusZ;await createRealGrass(index,focusX,focusZ);}else{grassStreamCenterX=NaN;grassStreamCenterZ=NaN;}
   grassStreamActiveIslandIndex=index;
   qualityGrassLodAccumulator=.22;
  }
  function updateActiveIslandGrass(dt){
+  if(isPerformanceMode)return;
   qualityGrassLodAccumulator+=Math.max(0,Math.min(.10,dt||0));
   if(qualityGrassLodAccumulator<.22)return;
   qualityGrassLodAccumulator%=.22;
-  const focus=onShip?ship.position:player.root.position;
+  const focus=player.root.position;
   let currentIsland=-1,bestRatio=Infinity;
   for(let i=0;i<land.length;i++){
    const island=land[i],ratio=Math.hypot(focus.x-island.x,focus.z-island.z)/island.r;
    if(ratio<bestRatio){bestRatio=ratio;currentIsland=i;}
   }
-  if(bestRatio>(onShip?1.16:1.09))currentIsland=-1;
-  if(currentIsland!==grassStreamActiveIslandIndex&&!grassStreamPromise){
-   grassStreamPromise=streamActiveIslandGrass(currentIsland).catch(error=>{console.error('No se pudo cargar la hierba de la isla activa:',error);}).finally(()=>{grassStreamPromise=null;});
+  if(onShip||bestRatio>1.09)currentIsland=-1;
+  const sameIsland=currentIsland===grassStreamActiveIslandIndex;
+  const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=38;
+  if((!sameIsland||moved)&&!grassStreamPromise){
+   grassStreamPromise=streamActiveIslandGrass(currentIsland,focus.x,focus.z).catch(error=>{console.error('No se pudo cargar la hierba cercana de la isla activa:',error);}).finally(()=>{grassStreamPromise=null;});
   }
   let visible=0;
   for(const batch of qualityGrassLodBatches){
@@ -8785,14 +8794,20 @@ function createRealWeapon(type='axe'){
   qualityGrassVisibleBatchCount=visible;
  }
  spawnNaturalVegetationAndFauna();
- // Ambos perfiles preparan toda la vegetación de la isla inicial antes de abrir la partida.
- // Rendimiento conserva su densidad y número de hojas específico, pero ya no deja la isla vacía.
- const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);
- grassStreamActiveIslandIndex=initialGrassIslandIndex;
- const grassGenerationTask=createRealGrass(initialGrassIslandIndex);
- await grassGenerationTask;
- console.info('Hierba completa de la isla inicial preparada.',{profile:activeGraphicsProfile,island:land[initialGrassIslandIndex]&&land[initialGrassIslandIndex].name,clumps:grassInstanceCount,batches:grassBatchCount});
+ // La hierba existe únicamente en Calidad y solo en un radio local alrededor del jugador.
+ // Rendimiento no crea geometría, buffers ni materiales de hierba.
+ if(!isPerformanceMode){
+  const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);
+  grassStreamActiveIslandIndex=initialGrassIslandIndex;
+  grassStreamCenterX=player.root.position.x;grassStreamCenterZ=player.root.position.z;
+  await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);
+  console.info('Hierba cercana de la isla inicial preparada.',{profile:activeGraphicsProfile,island:land[initialGrassIslandIndex]&&land[initialGrassIslandIndex].name,clumps:grassInstanceCount,batches:grassBatchCount,radiusMeters:92});
+ }else{
+  grassStreamActiveIslandIndex=-1;grassDebugClumpCount=0;grassDebugBatchCount=0;grassDebugIslandStats.length=0;
+  console.info('Hierba desactivada en modo Rendimiento.');
+ }
  function updateRealGrassWind(dt){
+  if(isPerformanceMode)return;
   // Menos transferencias de vértices por segundo: la hierba cercana sigue respirando,
   // pero no se suben decenas de buffers al GPU durante cada ráfaga.
   grassWindAccumulator+=Math.min(.05,Math.max(0,dt||0));
@@ -9447,7 +9462,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'11',build:'0.6.269',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'11',build:'0.6.270',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    beachState:{activeIslandIndex:activeBeachIslandIndex,activeIsland:activeBeachLayer?activeBeachLayer.island.name:null,columns:activeBeachLayer?activeBeachLayer.coastalState.columns:0,rows:activeBeachLayer?activeBeachLayer.coastalState.rows:0,updatedCellsLast:beachUpdateCellsLast,updatedCellsTotal:beachUpdateCellsTotal,cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,textureUploads:beachStateTextureUploads,updateHz:12,workBudgetMs:GroundDynamics.counts().beachWorkBudgetMs,lastSliceMs:GroundDynamics.counts().beachWorkLastSliceMs,maxSliceMs:GroundDynamics.counts().beachWorkMaxSliceMs,pending:GroundDynamics.counts().beachWorkPending},waterline:getWaterCoastDiagnostics(),startupTimeline:getStartupTimelineSnapshot(),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
@@ -9512,7 +9527,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.269');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.270');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -11492,7 +11507,7 @@ function update(dt){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.269 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.270 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -11549,7 +11564,7 @@ function update(dt){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;startupTimeline.firstFrameAt=performance.now();startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
-    console.info('EL SIN NOMBRE 0.6.269: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
+    console.info('EL SIN NOMBRE 0.6.270: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -11675,7 +11690,7 @@ function update(dt){
  }
 
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.269 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.270 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
