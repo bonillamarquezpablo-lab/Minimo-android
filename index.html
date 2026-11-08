@@ -4052,7 +4052,7 @@ void main(void){
  const isLand=(x,z)=>land.some(a=>{const dx=x-a.x,dz=z-a.z,r=a.r*.975;return dx*dx+dz*dz<r*r;});
  function landIslandIndex(x,z){for(let i=0;i<land.length;i++){const a=land[i],dx=x-a.x,dz=z-a.z,r=a.r*.975;if(dx*dx+dz*dz<r*r)return i;}return -1;}
  // Trails on the main island. Their centre lines also define vegetation-free corridors.
- const vegetationTrailPaths=[];
+ const vegetationTrailPaths=[],packedTrailMeshes=[];
  function pointSegmentDistanceSquared(x,z,a,b){const dx=b[0]-a[0],dz=b[1]-a[1],len=dx*dx+dz*dz,t=len>1e-8?Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/len)):0,px=a[0]+dx*t,pz=a[1]+dz*t;return (x-px)*(x-px)+(z-pz)*(z-pz);}
  function isVegetationTrailClearance(x,z,extra=1.15){for(const path of vegetationTrailPaths){const limit=path.width*.5+extra,limitSq=limit*limit;for(let i=0;i<path.points.length-1;i++)if(pointSegmentDistanceSquared(x,z,path.points[i],path.points[i+1])<limitSq)return true;}return false;}
  // The packed trail uses a readable earth albedo and a restrained ambient floor so it stays brown on steep, shaded slopes.
@@ -4121,7 +4121,7 @@ void main(void){
   const mesh=new B.Mesh('WindingPackedEarthTrail',scene),data=new B.VertexData();
   data.positions=positions;data.indices=indices;data.normals=normals;data.uvs=uvs;data.applyToMesh(mesh);
   mesh.material=packedTrailMaterial;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;
-  mesh.computeWorldMatrix(true);mesh.refreshBoundingInfo(true);return mesh;
+  mesh.computeWorldMatrix(true);mesh.refreshBoundingInfo(true);packedTrailMeshes.push(mesh);return mesh;
  }
  createTrail([[-19,-25],[-13,-18],[-7,-11],[-1,-3],[6,5],[13,13],[20,22],[27,30]],1.52);
  createTrail([[8,-19],[12,-13],[16,-7],[21,-1],[27,5]],1.16);
@@ -11952,7 +11952,7 @@ function update(dt){
    stop:()=>engine.stopRenderLoop(),
    setCamera:({x,y,z,targetX,targetY,targetZ})=>{camera.position.set(x,y,z);camera.setTarget(new B.Vector3(targetX,targetY,targetZ));},
    setIslandShadowReceiving:(enabled)=>{const terrain=islandTerrainMeshes[0];if(!terrain)return false;terrain.receiveShadows=!!enabled;return terrain.receiveShadows===!!enabled;},
-   setPackedTrailVisible:(enabled)=>{const trails=scene.meshes.filter(mesh=>mesh&&mesh.name==='WindingPackedEarthTrail');trails.forEach(mesh=>{mesh.isVisible=!!enabled;});return {count:trails.length,visible:trails.length>0&&trails.every(mesh=>mesh.isVisible===!!enabled)};},
+   setPackedTrailVisible:(enabled)=>{const trails=packedTrailMeshes;trails.forEach(mesh=>{mesh.isVisible=!!enabled;if(typeof mesh.setEnabled==='function')mesh.setEnabled(!!enabled);});return {count:trails.length,visible:trails.length>0&&trails.every(mesh=>mesh.isVisible===!!enabled&&(!mesh.isEnabled||mesh.isEnabled()===!!enabled))};},
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},
    render:()=>scene.render(),
    captureCanvas:()=>{const targetCanvas=document.getElementById('renderCanvas');if(!targetCanvas)throw new Error('Render canvas is missing');return targetCanvas.toDataURL('image/png');},
