@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.248">
+<meta name="el-sin-nombre-build" content="0.6.249">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.248</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.249</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2035,6 +2035,10 @@ async function removeStrayDebugGeometry(targetScene){
  let grassDebugClumpCount=0,grassDebugBatchCount=0,grassDebugLeavesPerClump=7,grassDebugIslandStats=[],grassDebugPanel=null;
  const grassDebugEnabled=groundDebugEnabled||new URLSearchParams(window.location.search).get('grassdebug')==='1';
  const fpsFrameSamples=new Float32Array(120);let fpsFrameSampleCount=0,fpsFrameSampleCursor=0;
+ const startupTimeline={firstFrameAt:0,firstFrameElapsedMs:null,maxFrameMs:0,postFirstFrameSamples:0,longFrames:[],tasks:[]};
+ const startupTimelineBootAt=performance.now();let startupTaskCurrent='preparación de escena';
+ function recordStartupTask(name,startedAt,endedAt,status='ready',detail=null){const durationMs=Math.max(0,endedAt-startedAt);startupTimeline.tasks.push({name,durationMs:Number(durationMs.toFixed(2)),status,detail,at:new Date().toISOString()});if(startupTimeline.tasks.length>80)startupTimeline.tasks.shift();startupTaskCurrent='idle';return durationMs;}
+ function getStartupTimelineSnapshot(){return {firstFrameAt:startupTimeline.firstFrameAt?new Date(performance.timeOrigin+startupTimeline.firstFrameAt).toISOString():null,firstFrameElapsedMs:startupTimeline.firstFrameElapsedMs,maxFrameMs:Number(startupTimeline.maxFrameMs.toFixed(2)),postFirstFrameSamples:startupTimeline.postFirstFrameSamples,tasks:startupTimeline.tasks.slice(-30),longFrames:startupTimeline.longFrames.slice(-30),activeTask:startupTaskCurrent};}
  const REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY='el-sin-nombre-arm-last-deviation-v1';
  let realPlayerArmLastDeviation=null,realPlayerArmDeviationLastWasLocomoting=false,realPlayerArmDeviationStoppedAtMs=null,realPlayerArmDeviationActiveSignature='';
  if(realPlayerArmDebugEnabled){try{const storedDeviation=localStorage.getItem(REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY);if(storedDeviation){const parsed=JSON.parse(storedDeviation);if(parsed&&parsed.timestamp&&Array.isArray(parsed.violations))realPlayerArmLastDeviation=parsed;}}catch(_){realPlayerArmLastDeviation=null;}}
@@ -2823,6 +2827,12 @@ async function removeStrayDebugGeometry(targetScene){
    root.rotation.z+=state.rollVelocity*step;
   }
   return {centre,bow,stern,port,starboard,targetY,targetPitch,targetRoll};
+ }
+ function getWaterCoastDiagnostics(){
+  const focus=onShip?ship.position:player.root.position,baseSeaLevel=Number(ground.position.y)||0,tideOffset=tideOffsetAt(oceanTime),localSurface=waterHeight(focus.x,focus.z,oceanTime),active=livingBeachLayers[activeBeachIslandIndex]||null;
+  let shorelineRadius=null,wetBandRadius=null,wetBandPeak=0,wetBandDistanceMeters=null;
+  if(active){const dx=focus.x-active.island.x,dz=focus.z-active.island.z,angle=Math.atan2(dz,dx);shorelineRadius=shorelineFoamRadius(active.island,angle,oceanTime);if(Number.isFinite(shorelineRadius)){for(let sample=-24;sample<=24;sample++){const radius=shorelineRadius+sample*.25,x=active.island.x+Math.cos(angle)*radius,z=active.island.z+Math.sin(angle)*radius,wet=active.coastalState.sampleWetnessBilinear(x,z,active.island.x,active.island.z);if(wet>wetBandPeak){wetBandPeak=wet;wetBandRadius=radius;}}if(wetBandRadius!==null&&wetBandPeak>.06)wetBandDistanceMeters=Math.abs(wetBandRadius-shorelineRadius);}}
+  return {baseSeaLevel:Number(baseSeaLevel.toFixed(3)),tideOffset:Number(tideOffset.toFixed(3)),tidePhaseDegrees:Number((((oceanTime%TIDE_PERIOD_SECONDS)/TIDE_PERIOD_SECONDS)*360).toFixed(1)),tideMode:Number.isFinite(debugForcedTideOffset)?(debugForcedTideOffset>0?'forced-high':'forced-low'):'natural',seaSurfaceAtPlayer:Number((baseSeaLevel+localSurface).toFixed(3)),localWaveDisplacement:Number((localSurface-tideOffset).toFixed(3)),waveAmplitudeBoundMeters:.977,shorelineRadius:Number.isFinite(shorelineRadius)?Number(shorelineRadius.toFixed(3)):null,wetBandPeak:Number(wetBandPeak.toFixed(3)),wetBandDistanceMeters:wetBandDistanceMeters===null?null:Number(wetBandDistanceMeters.toFixed(3)),activeIsland:active?active.island.name:null,activeBeachIslandIndex};
  }
  function waterNormalAt(x,z,t=oceanTime){
   const dx=(waterHeight(x+.65,z,t)-waterHeight(x-.65,z,t))/1.3;
@@ -4176,15 +4186,19 @@ void main(void){
   return wildlifeModelsLoadPromise;
  }
  async function loadWildlifeModelsOnce(){
+  const wildlifeLoadStarted=performance.now();
   if(!wildlifeSpawnSpecs.length)return 0;
   setLoadingProgress(68,'Cargando fauna salvaje 3D…');
   const kinds=[...new Set(wildlifeSpawnSpecs.map(spec=>spec.kind))];
   await Promise.all(kinds.map(async kind=>{try{wildlifeBlobs.set(kind,await downloadWildlifeBlob(kind));}catch(err){console.warn('Modelo animal no disponible ('+kind+'):',err);}}));
   let loaded=0;
   for(let index=0;index<wildlifeSpawnSpecs.length;index++){
-   const spec=wildlifeSpawnSpecs[index],animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,index,spec.homeIslandIndex);
+   const spec=wildlifeSpawnSpecs[index],modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,index,spec.homeIslandIndex);
    if(animal){ambientFauna.push(animal);loaded++;}
+   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),animal?'ready':'fallback',{island:spec.homeIslandIndex});
+   if(index+1<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
   }
+  recordStartupTask('Fauna GLB · cola completa',wildlifeLoadStarted,performance.now(),'complete',{loaded,requested:wildlifeSpawnSpecs.length});
   console.info('Fauna nórdica validada',{loaded,requested:wildlifeSpawnSpecs.length,species:kinds});
   setLoadingProgress(70,loaded?'Fauna nórdica preparada.':'La partida continúa sin fauna: no se importó ningún cuerpo animal completo.');
   return loaded;
@@ -6134,8 +6148,12 @@ function createWaterShoreDebugPanel(){
  const settings={transitionMeters:18,shoreOpacity:.86,foamStrength:1,sheetStrength:.22,exaggerated:false};
  const panel=document.createElement('div');
  panel.id='waterShoreDebugPanel';
- panel.style.cssText='position:fixed;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 142px);z-index:99996;width:min(88vw,330px);max-height:32vh;overflow:auto;padding:8px 10px;border:1px solid #d8ad68;border-radius:8px;background:rgba(5,12,14,.94);color:#f5e8cf;font:9px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;box-shadow:0 3px 12px #0009;pointer-events:auto;overscroll-behavior:contain';
+ panel.style.cssText='position:fixed;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 142px);z-index:99996;width:min(92vw,360px);max-height:44vh;overflow:auto;padding:8px 10px;border:1px solid #d8ad68;border-radius:8px;background:rgba(5,12,14,.96);color:#f5e8cf;font:9px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;box-shadow:0 3px 12px #0009;pointer-events:auto;overscroll-behavior:contain';
  const title=document.createElement('div');title.textContent='AGUA Y ORILLA · DEBUG';title.style.cssText='font-weight:900;color:#e6c27f;margin-bottom:6px';panel.appendChild(title);
+ const metrics=document.createElement('pre');metrics.style.cssText='white-space:pre-wrap;margin:0 0 6px;padding:6px;border-radius:5px;background:#102326;color:#e6dfcf;font:8px/1.35 ui-monospace,monospace';panel.appendChild(metrics);
+ const tideButtons=document.createElement('div');tideButtons.style.cssText='display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-bottom:7px';
+ const tideButton=(label,value)=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.style.cssText='padding:6px 3px;border:1px solid #d8ad6888;border-radius:5px;background:#263735;color:#fff2d8;font:800 8px ui-monospace,monospace;touch-action:manipulation';button.addEventListener('click',()=>{debugForcedTideOffset=value;waterAccumulator=waterVertexStep;waterFarAccumulator=waterFarStep;waterNormalAccumulator=waterNormalStep;animateWater(1/60);refreshDiagnostics();});tideButtons.appendChild(button);};
+ tideButton('MAREA ALTA',.28);tideButton('MAREA BAJA',-.28);tideButton('MAREA NATURAL',null);panel.appendChild(tideButtons);
  const controls=document.createElement('div');controls.style.cssText='display:grid;gap:6px';
  const apply=()=>{
   const exaggeration=settings.exaggerated?1:0;
@@ -6150,7 +6168,7 @@ function createWaterShoreDebugPanel(){
    layer.material.setFloat('shoreFoamStrength',oceanDepthSettings.foamStrength);
    layer.material.setFloat('shoreSheetStrength',oceanDepthSettings.sheetStrength);
   });
-  window.__elSinNombreWaterDebug={...oceanDepthSettings,baseSettings:{...settings}};
+  window.__elSinNombreWaterDebug={...oceanDepthSettings,baseSettings:{...settings},forcedTideOffset:debugForcedTideOffset};
  };
  const slider=(label,key,min,max,step,digits)=>{
   const row=document.createElement('label');row.style.cssText='display:grid;grid-template-columns:1fr auto;gap:3px 8px;align-items:center';
@@ -6179,7 +6197,18 @@ function createWaterShoreDebugPanel(){
   });
   toggle.checked=false;apply();
  });
- controls.appendChild(reset);panel.appendChild(controls);document.body.appendChild(panel);apply();
+ controls.appendChild(reset);panel.appendChild(controls);
+ const startup=document.createElement('pre');startup.style.cssText='white-space:pre-wrap;margin:7px 0 0;padding:6px;border-radius:5px;background:#101f22;color:#c8d0c5;font:7px/1.3 ui-monospace,monospace';panel.appendChild(startup);
+ function refreshDiagnostics(){
+  const coast=getWaterCoastDiagnostics(),timeline=getStartupTimelineSnapshot(),work=GroundDynamics.counts();
+  metrics.textContent='MAR: base '+coast.baseSeaLevel.toFixed(2)+' m · superficie '+coast.seaSurfaceAtPlayer.toFixed(2)+' m\\nMarea: '+coast.tideMode+' '+coast.tideOffset.toFixed(2)+' m · fase '+coast.tidePhaseDegrees.toFixed(0)+'°\\nOla: ±'+coast.waveAmplitudeBoundMeters.toFixed(3)+' m máx. teóricos · local '+coast.localWaveDisplacement.toFixed(3)+' m\\nBanda húmeda–agua: '+(coast.wetBandDistanceMeters===null?'sin muestra':coast.wetBandDistanceMeters.toFixed(2)+' m')+' · humedad '+coast.wetBandPeak.toFixed(2)+'\\nIsla: '+(coast.activeIsland||'ninguna')+' · nivel base del plano: '+coast.baseSeaLevel.toFixed(2)+' m';
+  const recent=(timeline.longFrames||[]).slice(-4).map(item=>Math.round(item.frameMs)+'ms @ '+Math.round(item.elapsedMs/1000)+'s').join(', ')||'ninguno';
+  const tasks=(timeline.tasks||[]).slice(-4).map(item=>item.name+': '+Math.round(item.durationMs)+'ms').join('\\n')||'sin tareas registradas aún';
+  startup.textContent='ARRANQUE · primer fotograma '+(timeline.firstFrameAt?'registrado':'pendiente')+' · máximo '+(timeline.maxFrameMs||0).toFixed(1)+'ms\\nTareas recientes:\\n'+tasks+'\\nFotogramas largos (>24ms): '+recent+'\\nCosta: '+work.beachWorkLastSliceMs.toFixed(2)+' ms (máx '+work.beachWorkMaxSliceMs.toFixed(2)+' ms / presupuesto '+work.beachWorkBudgetMs+' ms)';
+  window.__elSinNombreWaterDebug={...oceanDepthSettings,baseSettings:{...settings},forcedTideOffset:debugForcedTideOffset,coast,timeline};
+ }
+ window.__elSinNombreWaterDebugRefresh=refreshDiagnostics;
+ controls.appendChild(reset);document.body.appendChild(panel);apply();refreshDiagnostics();
 }
 createWaterShoreDebugPanel();
 
@@ -8973,8 +9002,8 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'10',build:'0.6.248',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
-   beachState:{activeIslandIndex:activeBeachIslandIndex,activeIsland:activeBeachLayer?activeBeachLayer.island.name:null,columns:activeBeachLayer?activeBeachLayer.coastalState.columns:0,rows:activeBeachLayer?activeBeachLayer.coastalState.rows:0,updatedCellsLast:beachUpdateCellsLast,updatedCellsTotal:beachUpdateCellsTotal,cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,textureUploads:beachStateTextureUploads,updateHz:12},
+   reportVersion:'10',build:'0.6.249',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   beachState:{activeIslandIndex:activeBeachIslandIndex,activeIsland:activeBeachLayer?activeBeachLayer.island.name:null,columns:activeBeachLayer?activeBeachLayer.coastalState.columns:0,rows:activeBeachLayer?activeBeachLayer.coastalState.rows:0,updatedCellsLast:beachUpdateCellsLast,updatedCellsTotal:beachUpdateCellsTotal,cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,textureUploads:beachStateTextureUploads,updateHz:12,workBudgetMs:GroundDynamics.counts().beachWorkBudgetMs,lastSliceMs:GroundDynamics.counts().beachWorkLastSliceMs,maxSliceMs:GroundDynamics.counts().beachWorkMaxSliceMs,pending:GroundDynamics.counts().beachWorkPending},waterline:getWaterCoastDiagnostics(),startupTimeline:getStartupTimelineSnapshot(),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
@@ -9038,7 +9067,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.231');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.249');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -10811,7 +10840,8 @@ function update(dt){
   if(enemyHumanModelsStarted)return enemyHumanLoadTask;
   enemyHumanModelsStarted=true;
   console.info('Preparando GLB de caballeros y aldeanos en segundo plano, sin bloquear el selector ni la partida.');
-  enemyHumanLoadTask=loadEnemyHumanCharacters();
+  const npcLoadStarted=performance.now();startupTaskCurrent='GLB caballeros y aldeanos';
+  enemyHumanLoadTask=loadEnemyHumanCharacters().then(value=>{recordStartupTask('GLB caballeros y aldeanos',npcLoadStarted,performance.now(),'complete',{loaded:value});return value;},error=>{recordStartupTask('GLB caballeros y aldeanos',npcLoadStarted,performance.now(),'failed',{message:String(error&&error.message||error)});throw error;});
   enemyHumanLoadTask.then(()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);},()=>{if(hasMissingEnemyVikings())scheduleMissingEnemyVikingsRetry(12000);});
   return enemyHumanLoadTask;
  }
@@ -11004,7 +11034,7 @@ function update(dt){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.231 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.249 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -11038,6 +11068,7 @@ function update(dt){
   const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;
   const worldUpdateStarted=performance.now();
   fpsFrameSamples[fpsFrameSampleCursor]=rawFrameMs;fpsFrameSampleCursor=(fpsFrameSampleCursor+1)%fpsFrameSamples.length;fpsFrameSampleCount=Math.min(fpsFrameSampleCount+1,fpsFrameSamples.length);
+  if(firstFrameRendered&&startupTimeline.firstFrameAt&&now-startupTimeline.firstFrameAt<=20000){startupTimeline.postFirstFrameSamples++;startupTimeline.maxFrameMs=Math.max(startupTimeline.maxFrameMs,rawFrameMs);if(rawFrameMs>24){startupTimeline.longFrames.push({elapsedMs:Number((now-startupTimeline.firstFrameAt).toFixed(1)),frameMs:Number(rawFrameMs.toFixed(2)),task:startupTaskCurrent,phase:worldUpdatePhase});if(startupTimeline.longFrames.length>60)startupTimeline.longFrames.shift();}}
   // Nunca dejamos que un error de actualización impida dibujar la escena completa.
   try{
    if(gameStarted){
@@ -11058,8 +11089,8 @@ function update(dt){
    const renderStarted=performance.now();scene.render();lastRenderCpuMs=performance.now()-renderStarted;
    renderedFrames++;
    if(!firstFrameRendered){
-    firstFrameRendered=true;
-    console.info('EL SIN NOMBRE 0.6.231: primer fotograma 3D renderizado; se mantiene la pantalla de preparación hasta terminar los recursos.');
+    firstFrameRendered=true;startupTimeline.firstFrameAt=performance.now();startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
+    console.info('EL SIN NOMBRE 0.6.249: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -11069,6 +11100,7 @@ function update(dt){
    }
   }catch(err){reportFrameError('renderizado 3D',err);}
   fpsHudTime+=dt;
+  if(groundDebugEnabled&&fpsHudTime>=.55&&window.__elSinNombreWaterDebugRefresh)window.__elSinNombreWaterDebugRefresh();
   if(fpsHudTime>=.55){try{
    const measured=engine.getFps(),meter=document.getElementById('fpsMeter');
    const ordered=Array.from(fpsFrameSamples.subarray(0,fpsFrameSampleCount)).sort((a,b)=>a-b),p95=ordered.length?ordered[Math.min(ordered.length-1,Math.floor((ordered.length-1)*.95))]:0;
@@ -11234,13 +11266,11 @@ function update(dt){
  console.info('EL SIN NOMBRE startup smoke result',window.__elSinNombreStartupSmoke.result);
  // Ya se puede mostrar el mundo: los GLB secundarios se cargan una sola vez en segundo plano.
  const backgroundNpcTask=startNpcHumanModels();
- const backgroundFaunaTask=loadWildlifeModels();
- window.__elSinNombreBackgroundModelTasks={startedAt:new Date().toISOString(),npc:'pending',fauna:'pending'};
+ window.__elSinNombreBackgroundModelTasks={startedAt:new Date().toISOString(),npc:'pending',fauna:'pending',order:'NPC primero; fauna después, todos los modelos se conservan'};
+ const backgroundFaunaTask=Promise.resolve(backgroundNpcTask).catch(error=>{console.warn('La tanda NPC terminó parcialmente; la fauna continuará:',error);}).then(()=>{startupTaskCurrent='GLB fauna';return loadWildlifeModels();});
  Promise.allSettled([backgroundNpcTask,backgroundFaunaTask]).then(results=>{
-  window.__elSinNombreBackgroundModelTasks.completedAt=new Date().toISOString();
-  window.__elSinNombreBackgroundModelTasks.npc=results[0].status;
-  window.__elSinNombreBackgroundModelTasks.fauna=results[1].status;
-  console.info('Carga secundaria terminada sin bloquear la entrada.',window.__elSinNombreBackgroundModelTasks);
+  window.__elSinNombreBackgroundModelTasks.completedAt=new Date().toISOString();window.__elSinNombreBackgroundModelTasks.npc=results[0].status;window.__elSinNombreBackgroundModelTasks.fauna=results[1].status;
+  console.info('Carga secundaria secuencial terminada sin bloquear la entrada.',window.__elSinNombreBackgroundModelTasks);
  },error=>console.warn('La carga secundaria continúa en segundo plano:',error));
  // El panel de carga se cierra desde el bucle cuando scene.render() completa
  // al menos un fotograma; así no aparece un canvas blanco durante el arranque.
