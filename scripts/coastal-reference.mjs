@@ -7,9 +7,9 @@ const BASE_URL = process.env.COASTAL_TEST_URL || 'http://127.0.0.1:4173/';
 const OUT = path.resolve('artifacts/coastal-reference');
 const VIEWPORT = { width: 960, height: 540 };
 const CAMERAS = [
-  { id: 'shore-1m', distance: 1, height: 2.8 },
-  { id: 'surf-20m', distance: 20, height: 8 },
-  { id: 'lod-90m', distance: 90, height: 22 }
+  { id: 'shore-1m', distance: 1, height: 2.8, targetInland: 2, targetAlongshore: 9, targetHeight: 1 },
+  { id: 'surf-20m', distance: 20, height: 8, targetInland: 11, targetAlongshore: 28, targetHeight: 1.4 },
+  { id: 'lod-90m', distance: 90, height: 22, targetInland: 0.5, targetAlongshore: 0, targetHeight: 1 }
 ];
 const TIMES = [0, 37, 91];
 const TIDES = [
@@ -139,14 +139,14 @@ async function main() {
           const capture = await retryOnce(`Capture ${file}`, async () => {
             const result = await page.evaluate(({ cameraCase, time, tide, island, shoreRadius }) => {
               const api = window.__ELSN_TEST__;
-              const targetX = island.x + shoreRadius - 0.5;
-              const targetZ = island.z;
+              const targetX = island.x + shoreRadius - cameraCase.targetInland;
+              const targetZ = island.z + cameraCase.targetAlongshore;
               api.setCamera({
                 x: island.x + shoreRadius + cameraCase.distance,
                 y: cameraCase.height,
                 z: island.z,
                 targetX,
-                targetY: 1.0,
+                targetY: cameraCase.targetHeight,
                 targetZ
               });
               api.setWaterState({ time, tide: tide.value });
