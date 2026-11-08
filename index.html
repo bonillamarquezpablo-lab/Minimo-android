@@ -3232,12 +3232,12 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    return sampleTidalFoamTerrainProfile(foam,col,radius)+terrainDeformationAt(index,x,z)-coastalWaterHeight(x,z,t);
   };
   let halfRange=1.6,lo=center-halfRange,hi=center+halfRange,loDelta=sample(lo),hiDelta=sample(hi);
-  if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)){if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(null,solverStartedAt,false,false,'initial');return null;}
+  if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)){if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(null,solverStartedAt,false,false,'animated');return null;}
   if(loDelta<=0||hiDelta>=0){
    halfRange=4.8;lo=center-halfRange;hi=center+halfRange;loDelta=sample(lo);hiDelta=sample(hi);
   }
   if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)||loDelta<=0||hiDelta>=0){
-   if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(null,solverStartedAt,false,false,'initial');
+   if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(null,solverStartedAt,false,false,'animated');
    return shorelineFoamRadius(island,angle,t,index,cs,sn);
   }
   let bestRadius=center,bestError=Infinity;
@@ -3253,7 +3253,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    const span=hi-lo,secant=lo+span*loDelta/(loDelta-hiDelta),guard=span*.04;
    radius=Number.isFinite(secant)&&secant>lo+guard&&secant<hi-guard?secant:(lo+hi)*.5;
   }
-  if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(bestError,solverStartedAt,true,bestError<.006,'initial');
+  if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(bestError,solverStartedAt,true,bestError<.006,'animated');
   return bestError<Infinity?bestRadius:(lo+hi)*.5;
  }
  const GROUND_PHASE_A_DEFAULTS=Object.freeze({textureRepeat:9.5,relief:.70,roughness:.97});
