@@ -83,7 +83,7 @@ assert.match(html,/foamBreakStrength\*\.82/);
 assert.match(html,/const radialOffsets=isPerformanceMode\?\[-\.62,-\.30,0,\.30,\.62\]:\[-1\.05,-\.82,-\.59,-\.36,-\.13,\.10,\.33,\.56,\.79,1\.02,1\.25\]/);
 assert.match(html,/washColors\[color\]=\.72\*\(1-whiteMix\)\+\.97\*whiteMix/,"The intertidal film must remain neutral and foam must fade toward white.");
 
-assert.match(html,/window\.NorseCoastalInteraction\.filmSurfaceHeight\(ground,water,filmWave\)/,"The advancing film must sit above the sand/water interface.");
+assert.match(html,/window\.NorseCoastalInteraction\.filmSurfaceHeight\(terrainY,water,filmWave\)/,"The advancing film must sit above the sand/water interface using the shared terrain sample.");
 assert.match(html,/window\.NorseCoastalInteraction\.filmCoverage\(fraction,washPattern\[vertex\]\)/,"The advancing film must fade and fragment at its edges.");
 assert.match(html,/function buildCoastalSeabed\(island,index\)/,"Each island must have an independent sandy seabed mesh.");
 assert.match(html,/coastalSeabedMaterial\.bumpTexture=texCoastalSandNormalPbr/,"The seabed must have its own normal-mapped sand material.");
@@ -114,7 +114,7 @@ assert.match(html,/if\(previousIndex>=0&&previousIndex!==nextIndex\)disposeActiv
 assert.match(html,/if\(nextIndex>=0\)ensureActiveCoastalIslandSystems\(nextIndex\)/,"Only the current island should allocate coastal resources.");
 assert.match(html,/const nextIndex=activeBeachIslandIndex;/,"The breaker must use the same single active-island selection as the beach.");
 assert.match(html,/const waterDepth=water-terrainY,waterContact=smooth01\(\(waterDepth-\.015\)\/\.22\)/,"The wave body must reuse its sampled coastal water and terrain height.");
-assert.match(html,/waveBodyPositions\[offset\+1\]=waterDepth>0\?water\+\.018\+lift:ground-\.045/,"Dry terrain must occlude the volumetric wave instead of lifting it above mountains.");
+assert.match(html,/waveBodyPositions\[offset\+1\]=waterDepth>0\?water\+\.018\+lift:terrainY-\.045/,"Dry terrain must occlude the volumetric wave instead of lifting it above mountains.");
 assert.match(html,/const foamTerrainContact=Math\.max\(foamSubmerged,dryFoamResidue\)/,"Foam residue must fade with actual terrain/water separation.");
 assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/ComputeNormals\(waveBodyPositions/,"Do not recompute the full volumetric-wave normal field during every animation update.");
 assert.match(html,/if\(beachWorkLayer&&beachWorkLayer\.index!==activeBeachIslandIndex\)/,"Pending beach-state work must be cancelled when the player changes island.");
