@@ -9,10 +9,22 @@ assert.ok(coast.seabedHeight(60 * 1.20, 60, -2.9) < -2.9);
 assert.ok(coast.seabedHeight(60 * 1.34, 60, -2.9) < coast.seabedHeight(60 * 1.20, 60, -2.9));
 assert.ok(Math.abs(coast.seabedHeight(60 * 1.46, 60, -2.9) - (-6.2)) < 1e-9);
 
-// Shallow water remains translucent but has enough body to read as water.
+// Opacity must ramp continuously from the exact waterline: no 52% alpha step.
 assert.equal(coast.waterOpacity(0), 0);
-assert.ok(coast.waterOpacity(0.01) >= 0.52 && coast.waterOpacity(0.01) < 0.53);
-assert.ok(coast.waterOpacity(2) > coast.waterOpacity(0.01));
+assert.equal(coast.waterOpacity(-1), 0);
+assert.ok(coast.waterOpacity(0.01) < 0.01);
+assert.ok(coast.waterOpacity(0.10) < 0.06);
+assert.ok(coast.waterOpacity(0.30) < 0.25);
+assert.ok(coast.waterOpacity(0.50) < 0.25);
+assert.ok(coast.waterOpacity(0.65) > 0.30 && coast.waterOpacity(0.65) < 0.38);
+const opacityDepths = [0, 0.001, 0.01, 0.05, 0.10, 0.20, 0.30, 0.50, 0.65, 0.8, 1, 2, 3.5, 5.5, 20];
+let previousOpacity = 0;
+for (const depth of opacityDepths) {
+  const opacity = coast.waterOpacity(depth);
+  assert.ok(Number.isFinite(opacity) && opacity >= previousOpacity - 1e-9 && opacity <= 0.90,
+    `Water opacity must be finite, monotonic and bounded at depth ${depth}: ${opacity}`);
+  previousOpacity = opacity;
+}
 assert.ok(Math.abs(coast.waterOpacity(5.5) - 0.90) < 1e-9);
 assert.equal(coast.waterOpacity(20), 0.90);
 
