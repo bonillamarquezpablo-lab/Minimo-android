@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.253">
+<meta name="el-sin-nombre-build" content="0.6.254">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.253</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.254</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -7867,6 +7867,11 @@ function createRealWeapon(type='axe'){
   const island=land[islandIndex],phase=islandIndex*2.399,guardAngle=phase+.8;
   const gx=island.x+Math.cos(guardAngle)*island.r*.18,gz=island.z+Math.sin(guardAngle)*island.r*.18;
   const gy=terrainSurfaceAt(gx,gz),flagX=island.x-Math.cos(guardAngle)*2.8,flagZ=island.z-Math.sin(guardAngle)*2.8,flagY=terrainSurfaceAt(flagX,flagZ);
+  const outpostRoot=newGroup('IslandGarrisonOutpost_'+islandIndex,null);outpostRoot.position=v(island.x,gy,island.z);
+  const stoneFoot=box('IslandGarrisonStoneFoot_'+islandIndex,outpostRoot,[0,.10,0],[1.9,.20,1.35],M.stoneDark);
+  const supplyCrate=box('IslandGarrisonSupplyCrate_'+islandIndex,outpostRoot,[-.92,.48,.18],[.62,.64,.58],M.woodDark);
+  const supplyLid=box('IslandGarrisonSupplyLid_'+islandIndex,outpostRoot,[-.92,.82,.18],[.68,.08,.62],M.woodLight);
+  [stoneFoot,supplyCrate,supplyLid].forEach(mesh=>{if(mesh)mesh.isPickable=false;});
   const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,null,[flagX,flagY+2.15,flagZ],4.3,.075,.075,M.woodLight);
   const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,null);flagGroup.position=v(flagX,flagY+3.55,flagZ);
   const flag=box('IslandGarrisonFlag_'+islandIndex,flagGroup,[0,0,0],[1.28,.86,.055],M.red);
@@ -7884,7 +7889,7 @@ function createRealWeapon(type='axe'){
   const front=B.MeshBuilder.CreatePlane('IslandGuardHealth_'+islandIndex,{width:1.04,height:.085},scene);
   front.parent=parts.root;front.position=v(0,2.03,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('IslandGuardHealthFront_'+islandIndex,'#76a75a');
   const guard={parts,villageIndex:islandIndex,hp:100,alive:true,surrendered:false,recruited:false,state:'idle',attackT:0,attackDone:false,cool:rand(.1,.8),stun:0,hitReact:0,knockback:0,hitDir:v(0,0,0),deadFallT:0,deadSide:rand(-1,1),healthMesh:front,healthBack:back,home:v(gx,0,gz),initialYaw:parts.root.rotation.y};
-  villages.push({index:islandIndex,landIndex:islandIndex,x:island.x,z:island.z,name:island.name,guards:[guard],claimed:false,flag,flagGroup,flagEmblem,flagpole:flagPole,flagBaseY:flagY+3.55,houseGroups:[],houseOriginalMaterials:[],territoryFill:null,territoryRing:null,captureAnimation:null,islandGarrison:true,territoryRadius:Math.min(19,island.r*.70)});
+  villages.push({index:islandIndex,landIndex:islandIndex,x:island.x,z:island.z,name:island.name,guards:[guard],claimed:false,flag,flagGroup,flagEmblem,flagpole:flagPole,flagBaseY:flagY+3.55,houseGroups:[],houseOriginalMaterials:[],territoryFill:null,territoryRing:null,captureAnimation:null,islandGarrison:true,outpostRoot,territoryRadius:Math.min(19,island.r*.70)});
  }
  for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);
  const discoveredIslands=land.map((_,index)=>index===0);
@@ -9029,7 +9034,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'10',build:'0.6.253',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'10',build:'0.6.254',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    beachState:{activeIslandIndex:activeBeachIslandIndex,activeIsland:activeBeachLayer?activeBeachLayer.island.name:null,columns:activeBeachLayer?activeBeachLayer.coastalState.columns:0,rows:activeBeachLayer?activeBeachLayer.coastalState.rows:0,updatedCellsLast:beachUpdateCellsLast,updatedCellsTotal:beachUpdateCellsTotal,cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,textureUploads:beachStateTextureUploads,updateHz:12,workBudgetMs:GroundDynamics.counts().beachWorkBudgetMs,lastSliceMs:GroundDynamics.counts().beachWorkLastSliceMs,maxSliceMs:GroundDynamics.counts().beachWorkMaxSliceMs,pending:GroundDynamics.counts().beachWorkPending},waterline:getWaterCoastDiagnostics(),startupTimeline:getStartupTimelineSnapshot(),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
@@ -9094,7 +9099,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.253');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.254');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -11061,7 +11066,7 @@ function update(dt){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.253 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.254 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -11118,7 +11123,7 @@ function update(dt){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;startupTimeline.firstFrameAt=performance.now();startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
-    console.info('EL SIN NOMBRE 0.6.253: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
+    console.info('EL SIN NOMBRE 0.6.254: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -11244,7 +11249,7 @@ function update(dt){
  }
 
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.253 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.254 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
