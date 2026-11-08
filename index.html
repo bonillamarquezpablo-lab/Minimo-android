@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.261">
+<meta name="el-sin-nombre-build" content="0.6.262">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.261</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.262</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2383,7 +2383,7 @@ async function removeStrayDebugGeometry(targetScene){
    if(style==='stone')for(let i=0;i<30;i++){ctx.strokeStyle=accents[i%accents.length];ctx.globalAlpha=.18;ctx.lineWidth=.7;ctx.beginPath();let x=Math.random()*size,y=Math.random()*size;ctx.moveTo(x,y);ctx.lineTo(x+8+Math.random()*28,y-5+Math.random()*12);ctx.stroke();}
   }else if(style==='water'){
    const seaGradient=ctx.createLinearGradient(0,0,size,size);
-   seaGradient.addColorStop(0,'#34798a');seaGradient.addColorStop(.42,'#1d5b6d');seaGradient.addColorStop(1,'#124356');
+   seaGradient.addColorStop(0,'#438593');seaGradient.addColorStop(.42,'#286777');seaGradient.addColorStop(1,'#1b4d5d');
    ctx.fillStyle=seaGradient;ctx.fillRect(0,0,size,size);
    for(let i=0;i<1450;i++){
     const x=Math.random()*size,y=Math.random()*size,len=8+Math.random()*42,curve=(Math.random()-.5)*8;
@@ -2499,7 +2499,7 @@ async function removeStrayDebugGeometry(targetScene){
  applyTexture(M.stone,texStone,2);applyTexture(M.stoneLight,texStone,2);
   applyTexture(M.tunic,texCloth,2);applyTexture(M.red,texCloth,2);applyTexture(M.blueCloth,texCloth,2);
  applyTexture(M.greenCloth,texCloth,2);applyTexture(M.ochreCloth,texCloth,2);applyTexture(M.leather,texLeather,2);
- applyTexture(M.fur,texCloth,2);applyTexture(M.thatch,texThatched,2.4);applyTexture(M.water,texWater,9.5);
+ applyTexture(M.fur,texCloth,2);applyTexture(M.thatch,texThatched,2.4);applyTexture(M.water,texWater,17.5);
   M.birch.diffuseTexture=texBark;M.birch.diffuseColor=new B.Color3(.86,.84,.76);M.birch.specularColor=new B.Color3(.035,.035,.03);
   [M.hutWoodAmber,M.hutWoodWeathered,M.hutWoodDeep].forEach(m=>applyTexture(m,texWood,2.25));[M.hutThatchGold,M.hutThatchShade].forEach(m=>applyTexture(m,texThatched,2.65));applyTexture(M.hutStone,texStone,2.1);applyTexture(M.hutMoss,texGrass,2.2);
  // Mapas normales ligeros: dan relieve fino a hierba, piedra, cuero, tela y madera.
@@ -2643,7 +2643,7 @@ async function removeStrayDebugGeometry(targetScene){
  // Normal map de oleaje tileable: tres escalas de crestas direccionales, sin ruido pintado en la textura.
  function makeOceanWaveNormal(){
   const size=384,tau=Math.PI*2,tex=new B.DynamicTexture('LayeredOceanWaveNormal',{width:size,height:size},scene,false),ctx=tex.getContext(),img=ctx.createImageData(size,size);
-  const height=(x,y)=>{const u=tau*x/size,w=tau*y/size;return .43*Math.sin(2*u+w)+.25*Math.sin(3*u-4*w)+.17*Math.sin(7*u+5*w)+.095*Math.sin(11*u-2*w)+.055*Math.sin(15*u+9*w);};
+  const height=(x,y)=>{const u=tau*x/size,w=tau*y/size,warpU=u+.055*Math.sin(3*u-2*w)+.026*Math.sin(8*u+5*w),warpW=w+.048*Math.sin(2*u+3*w)-.018*Math.sin(7*u-6*w);return .30*Math.sin(2*warpU+warpW)+.22*Math.sin(3*warpU-4*warpW)+.16*Math.sin(7*warpU+5*warpW)+.105*Math.sin(11*warpU-2*warpW)+.075*Math.sin(15*warpU+9*warpW)+.062*Math.sin(23*warpU-17*warpW)+.045*Math.sin(31*warpU+13*warpW)+.031*Math.sin(47*warpU-29*warpW)+.020*Math.sin(67*warpU+41*warpW);};
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
    const dx=(height((x+1)%size,y)-height((x+size-1)%size,y))*4.8;
    const dy=(height(x,(y+1)%size)-height(x,(y+size-1)%size))*4.8;
@@ -2653,7 +2653,7 @@ async function removeStrayDebugGeometry(targetScene){
   ctx.putImageData(img,0,0);tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
  }
  const oceanWaveNormal=isPerformanceMode&&isConstrainedMobile?null:makeOceanWaveNormal();
- if(oceanWaveNormal){oceanWaveNormal.level=.96;oceanWaveNormal.uScale=9.2;oceanWaveNormal.vScale=9.2;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.96;}
+ if(oceanWaveNormal){oceanWaveNormal.level=.96;oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.96;}
  else{M.water.bumpTexture=albedoNormalWater;M.water.bumpTexture.level=.24;}
  // El agua recibe un reflejo propio de las islas y del cielo nórdico.
  // El HDRI global se conserva para los materiales PBR, pero nunca se asigna al mar.
@@ -2664,9 +2664,9 @@ async function removeStrayDebugGeometry(targetScene){
  [M.tunic,M.red,M.blueCloth,M.greenCloth,M.ochreCloth,M.fur].forEach(m=>{m.specularColor=new B.Color3(.035,.032,.028);m.specularPower=18;});
  M.leather.specularColor=new B.Color3(.12,.095,.07);M.leather.specularPower=28;
  [M.metal,M.darkMetal,M.gold,M.brass].forEach(m=>{m.specularColor=new B.Color3(.48,.46,.39);m.specularPower=72;});
- const reducedWaterProfile=isPerformanceMode&&isConstrainedMobile;M.water.specularColor=reducedWaterProfile?new B.Color3(.18,.25,.28):new B.Color3(.58,.73,.81);M.water.specularPower=reducedWaterProfile?28:104;
+ const reducedWaterProfile=isPerformanceMode&&isConstrainedMobile;M.water.specularColor=reducedWaterProfile?new B.Color3(.18,.25,.28):new B.Color3(.66,.80,.88);M.water.specularPower=reducedWaterProfile?28:88;
  M.water.emissiveColor=new B.Color3(.030,.068,.082);M.water.backFaceCulling=false;M.water.alpha=1;
- if(B.FresnelParameters){M.water.diffuseFresnelParameters=new B.FresnelParameters();M.water.diffuseFresnelParameters.bias=.11;M.water.diffuseFresnelParameters.power=2.0;M.water.diffuseFresnelParameters.leftColor=new B.Color3(.075,.19,.24);M.water.diffuseFresnelParameters.rightColor=new B.Color3(.43,.68,.72);} 
+ if(B.FresnelParameters){M.water.diffuseFresnelParameters=new B.FresnelParameters();M.water.diffuseFresnelParameters.bias=.075;M.water.diffuseFresnelParameters.power=2.3;M.water.diffuseFresnelParameters.leftColor=new B.Color3(.085,.205,.255);M.water.diffuseFresnelParameters.rightColor=new B.Color3(.52,.74,.79);} 
 
  M.foam.alpha=.42;M.foam.emissiveColor=new B.Color3(.34,.40,.39);M.foam.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
 
@@ -9331,7 +9331,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'11',build:'0.6.261',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'11',build:'0.6.262',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    beachState:{activeIslandIndex:activeBeachIslandIndex,activeIsland:activeBeachLayer?activeBeachLayer.island.name:null,columns:activeBeachLayer?activeBeachLayer.coastalState.columns:0,rows:activeBeachLayer?activeBeachLayer.coastalState.rows:0,updatedCellsLast:beachUpdateCellsLast,updatedCellsTotal:beachUpdateCellsTotal,cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,textureUploads:beachStateTextureUploads,updateHz:12,workBudgetMs:GroundDynamics.counts().beachWorkBudgetMs,lastSliceMs:GroundDynamics.counts().beachWorkLastSliceMs,maxSliceMs:GroundDynamics.counts().beachWorkMaxSliceMs,pending:GroundDynamics.counts().beachWorkPending},waterline:getWaterCoastDiagnostics(),startupTimeline:getStartupTimelineSnapshot(),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
@@ -9396,7 +9396,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.261');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.262');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -11376,7 +11376,7 @@ function update(dt){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.261 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.262 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -11433,7 +11433,7 @@ function update(dt){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;startupTimeline.firstFrameAt=performance.now();startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
-    console.info('EL SIN NOMBRE 0.6.261: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
+    console.info('EL SIN NOMBRE 0.6.262: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -11559,7 +11559,7 @@ function update(dt){
  }
 
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.261 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.262 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
