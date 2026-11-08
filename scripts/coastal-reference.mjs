@@ -300,11 +300,10 @@ async function main() {
       const canvasPng = api.captureCanvas();
       const restored = api.setPackedTrailVisible(true);
       return { hidden, restored, canvasPng };
-    manifest.trailIsolationDiagnostic = trailIsolation.hidden;
     }, { cameraCase: ridgeCase, island: mainIsland });
-      'Packed-earth trail meshes must be hideable for a diagnostic A/B frame');
+    manifest.trailIsolationDiagnostic = trailIsolation.hidden;
+    assert.ok(trailIsolation.hidden.count >= 1 && trailIsolation.hidden.visible === false,
       'Packed-earth trail meshes must be hideable for a diagnostic A/B frame: ' + JSON.stringify(trailIsolation.hidden));
-      'Packed-earth trail meshes must be hideable for a diagnostic A/B frame');
     assert.ok(trailIsolation.restored.count === trailIsolation.hidden.count && trailIsolation.restored.visible === true,
       'Every packed-earth trail must be restored after diagnostic capture');
     assert.ok(typeof trailIsolation.canvasPng === 'string' && trailIsolation.canvasPng.startsWith(pngPrefix),
