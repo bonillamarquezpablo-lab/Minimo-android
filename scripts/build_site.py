@@ -16,7 +16,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.257 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.258 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -340,6 +340,7 @@ def main() -> None:
         "const OGA_FOLEY_BASE='./assets/audio/cc0-game-sfx/';",
         "navigator.serviceWorker.register",
         "./scripts/nordic/beach-state.js",
+        "./scripts/nordic/coastal-interaction.js",
         "window.NorseBeachState",
     ]
     for item in required:
@@ -354,6 +355,12 @@ def main() -> None:
     beach_state_target = DIST / "scripts" / "nordic" / "beach-state.js"
     beach_state_target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(beach_state_source, beach_state_target)
+
+    coastal_source = ROOT / "scripts" / "nordic" / "coastal-interaction.js"
+    if not coastal_source.is_file():
+        raise SystemExit("Falta scripts/nordic/coastal-interaction.js.")
+    coastal_target = DIST / "scripts" / "nordic" / "coastal-interaction.js"
+    shutil.copy2(coastal_source, coastal_target)
 
     (DIST / "index.html").write_text(html, encoding="utf-8")
 
