@@ -88,13 +88,32 @@ async function main() {
     console.log('[coastal-reference] preflight menu completed in ' + manifest.timingsMs.menuFlow + ' ms');
 
     stepStartedAt = performance.now();
-    await page.waitForFunction(
-      () => window.__ELSN_TEST__ &&
-        window.__elSinNombreStartupSmoke &&
-        window.__elSinNombreStartupSmoke.worldReady === true,
-      undefined,
-      { timeout: 300000, polling: 500 }
-    );
+    try {
+      await page.waitForFunction(
+        () => window.__ELSN_TEST__ &&
+          window.__elSinNombreStartupSmoke &&
+          window.__elSinNombreStartupSmoke.worldReady === true,
+        undefined,
+        { timeout: 180000, polling: 500 }
+      );
+    } catch (waitError) {
+      manifest.startupWaitDiagnostic = await page.evaluate(() => ({
+        testApiReady: !!window.__ELSN_TEST__,
+        smoke: window.__elSinNombreStartupSmoke ? {
+          worldReady: window.__elSinNombreStartupSmoke.worldReady,
+          playerModelReady: window.__elSinNombreStartupSmoke.playerModelReady,
+          completedAt: window.__elSinNombreStartupSmoke.completedAt,
+          consoleErrors: window.__elSinNombreStartupSmoke.consoleErrors?.slice(-10),
+          runtimeErrors: window.__elSinNombreStartupSmoke.runtimeErrors?.slice(-10),
+          unhandledRejections: window.__elSinNombreStartupSmoke.unhandledRejections?.slice(-10)
+        } : null,
+        sceneWarmup: window.__elSinNombreStartupSceneWarmup || null,
+        backgroundModels: window.__elSinNombreBackgroundModelTasks || null,
+        loadingText: document.querySelector('#loading')?.innerText || null,
+        lastRuntimeError: window.__elSinNombreLastRuntimeError || null
+      })).catch(() => ({ diagnosticReadFailed: true }));
+      throw waitError;
+    }
     manifest.timingsMs.coastalWorldReadyWait = Number((performance.now() - stepStartedAt).toFixed(1));
     console.log('[coastal-reference] coast-only scene ready after ' +
       manifest.timingsMs.coastalWorldReadyWait + ' ms');
