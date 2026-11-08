@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.260">
+<meta name="el-sin-nombre-build" content="0.6.261">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.260</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.261</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2841,7 +2841,31 @@ async function removeStrayDebugGeometry(targetScene){
   const focus=onShip?ship.position:player.root.position,baseSeaLevel=Number(ground.position.y)||0,tideOffset=tideOffsetAt(oceanTime),localSurface=waterHeight(focus.x,focus.z,oceanTime),active=livingBeachLayers[activeBeachIslandIndex]||null;
   let shorelineRadius=null,wetBandRadius=null,wetBandPeak=0,wetBandDistanceMeters=null;
   if(active){const dx=focus.x-active.island.x,dz=focus.z-active.island.z,angle=Math.atan2(dz,dx);shorelineRadius=shorelineFoamRadius(active.island,angle,oceanTime);if(Number.isFinite(shorelineRadius)){for(let sample=-24;sample<=24;sample++){const radius=shorelineRadius+sample*.25,x=active.island.x+Math.cos(angle)*radius,z=active.island.z+Math.sin(angle)*radius,wet=active.coastalState.sampleWetnessBilinear(x,z,active.island.x,active.island.z);if(wet>wetBandPeak){wetBandPeak=wet;wetBandRadius=radius;}}if(wetBandRadius!==null&&wetBandPeak>.06)wetBandDistanceMeters=Math.abs(wetBandRadius-shorelineRadius);}}
-  return {baseSeaLevel:Number(baseSeaLevel.toFixed(3)),tideOffset:Number(tideOffset.toFixed(3)),tidePhaseDegrees:Number((((oceanTime%TIDE_PERIOD_SECONDS)/TIDE_PERIOD_SECONDS)*360).toFixed(1)),tideMode:Number.isFinite(debugForcedTideOffset)?(debugForcedTideOffset>0?'forced-high':'forced-low'):'natural',seaSurfaceAtPlayer:Number((baseSeaLevel+localSurface).toFixed(3)),localWaveDisplacement:Number((localSurface-tideOffset).toFixed(3)),waveAmplitudeBoundMeters:.977,shorelineRadius:Number.isFinite(shorelineRadius)?Number(shorelineRadius.toFixed(3)):null,wetBandPeak:Number(wetBandPeak.toFixed(3)),wetBandDistanceMeters:wetBandDistanceMeters===null?null:Number(wetBandDistanceMeters.toFixed(3)),activeIsland:active?active.island.name:null,activeBeachIslandIndex};
+  let foamActiveSegments=0,foamSegmentCapacity=0,foamValidIntersections=0,foamIntersectionCapacity=0,foamVerticesChecked=0,foamVerticesOutsideBand=0,foamMaxOffshoreOffset=0;
+  for(const foam of tidalFoamMeshes){
+   foamSegmentCapacity+=foam.segments;foamIntersectionCapacity+=foam.segments;
+   for(let col=0;col<foam.segments;col++){
+    const shore=foam.lastShoreline[col],next=foam.lastShoreline[col+1];
+    if(Number.isFinite(shore))foamValidIntersections++;
+    if(Number.isFinite(shore)&&Number.isFinite(next))foamActiveSegments++;
+   }
+   const inspectBand=(positions,rows)=>{
+    for(let row=0;row<rows;row++)for(let col=0;col<=foam.segments;col++){
+     const shore=foam.lastShoreline[col];if(!Number.isFinite(shore))continue;
+     const offset=(row*foam.cols+col)*3,x=positions[offset],z=positions[offset+2];
+     if(!Number.isFinite(x)||!Number.isFinite(z))continue;
+     const radialOffset=Math.hypot(x-foam.island.x,z-foam.island.z)-shore;
+     foamVerticesChecked++;
+     foamMaxOffshoreOffset=Math.max(foamMaxOffshoreOffset,radialOffset);
+     if(radialOffset>.80||radialOffset< -1.50)foamVerticesOutsideBand++;
+    }
+   };
+   inspectBand(foam.positions,foam.rows);inspectBand(foam.washPositions,foam.washRows);
+  }
+  return {
+   baseSeaLevel:Number(baseSeaLevel.toFixed(3)),tideOffset:Number(tideOffset.toFixed(3)),tidePhaseDegrees:Number((((oceanTime%TIDE_PERIOD_SECONDS)/TIDE_PERIOD_SECONDS)*360).toFixed(1)),tideMode:Number.isFinite(debugForcedTideOffset)?(debugForcedTideOffset>0?'forced-high':'forced-low'):'natural',seaSurfaceAtPlayer:Number((baseSeaLevel+localSurface).toFixed(3)),localWaveDisplacement:Number((localSurface-tideOffset).toFixed(3)),waveAmplitudeBoundMeters:.977,shorelineRadius:Number.isFinite(shorelineRadius)?Number(shorelineRadius.toFixed(3)):null,wetBandPeak:Number(wetBandPeak.toFixed(3)),wetBandDistanceMeters:wetBandDistanceMeters===null?null:Number(wetBandDistanceMeters.toFixed(3)),activeIsland:active?active.island.name:null,activeBeachIslandIndex,
+   foamActiveMeshes:tidalFoamMeshes.length,foamActiveSegments,foamSegmentCapacity,foamValidIntersections,foamIntersectionCapacity,foamVerticesChecked,foamVerticesOutsideBand,foamMaxOffshoreDistanceMeters:Number(Math.max(0,foamMaxOffshoreOffset).toFixed(3)),foamUpdateLastMs:Number(tidalFoamLastUpdateMs.toFixed(3)),foamUpdateMaxMs:Number(tidalFoamMaxUpdateMs.toFixed(3))
+  };
  }
  function waterNormalAt(x,z,t=oceanTime){
   const dx=(waterHeight(x+.65,z,t)-waterHeight(x-.65,z,t))/1.3;
@@ -2906,6 +2930,7 @@ async function removeStrayDebugGeometry(targetScene){
    waterLastNormalMs=performance.now()-normalStart;waterNormalAccumulator%=waterNormalStep;
   }
   if(foamDue){
+  const foamWorkStarted=performance.now();
   // La espuma aparece solo cuando la línea de agua retrocede y deja una película blanca en la arena.
   // La humedad de playa conserva su propia huella; esta malla dibuja únicamente el borde espumoso reciente.
   for(const foam of tidalFoamMeshes){
@@ -2998,6 +3023,8 @@ async function removeStrayDebugGeometry(targetScene){
    washMesh.updateVerticesData(B.VertexBuffer.PositionKind,washPositions,false,false);
    washMesh.updateVerticesData(B.VertexBuffer.ColorKind,washColors,false,false);
   }
+  tidalFoamLastUpdateMs=performance.now()-foamWorkStarted;
+  tidalFoamMaxUpdateMs=Math.max(tidalFoamMaxUpdateMs,tidalFoamLastUpdateMs);
   }
 M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset=(oceanTime*.007)%1;
   if(M.water.bumpTexture){M.water.bumpTexture.uOffset=(oceanTime*.0078)%1;M.water.bumpTexture.vOffset=(-oceanTime*.0058)%1;}
@@ -3654,6 +3681,7 @@ void main(void){
   function reset(){stepDistance=0;alternateFoot=0;hasLastStepPosition=false;footstepsEmitted=0;lastFootstepSegmentLength=0;groundRelaxAccumulator=0;lastAtlasFollowX=NaN;lastAtlasFollowZ=NaN;}
   return {update,reset,setFootprintStrength:value=>footprintMaterial.setFloat('footprintStrength',Math.max(0,Number(value)||0)),counts:()=>({imprints:footprintAtlas.activePixels(),footprintAtlas:footprintAtlas.dimensions(),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3)),beachWorkBudgetMs:BEACH_WORK_BUDGET_MS,beachWorkPending:!!beachWorkLayer,beachWorkLastSliceMs,beachWorkMaxSliceMs:Number(beachWorkMaxSliceMs.toFixed(3)),beachWorkCellsProcessed})};
  })(); const tidalFoamMeshes=[];
+ let tidalFoamLastUpdateMs=0,tidalFoamMaxUpdateMs=0;
  function buildTidalFoam(island,index){
   // Calidad usa la malla costera densa; Rendimiento conserva una rompiente más ligera,
   // pero nunca elimina por completo el oleaje blanco junto a la playa.
@@ -6326,7 +6354,7 @@ function createWaterShoreDebugPanel(){
  const startup=document.createElement('pre');startup.style.cssText='white-space:pre-wrap;margin:7px 0 0;padding:6px;border-radius:5px;background:#101f22;color:#c8d0c5;font:7px/1.3 ui-monospace,monospace';panel.appendChild(startup);
  function refreshDiagnostics(){
   const coast=getWaterCoastDiagnostics(),timeline=getStartupTimelineSnapshot(),work=GroundDynamics.counts();
-  metrics.textContent='MAR: base '+coast.baseSeaLevel.toFixed(2)+' m · superficie '+coast.seaSurfaceAtPlayer.toFixed(2)+' m\\nMarea: '+coast.tideMode+' '+coast.tideOffset.toFixed(2)+' m · fase '+coast.tidePhaseDegrees.toFixed(0)+'°\\nOla: ±'+coast.waveAmplitudeBoundMeters.toFixed(3)+' m máx. teóricos · local '+coast.localWaveDisplacement.toFixed(3)+' m\\nBanda húmeda–agua: '+(coast.wetBandDistanceMeters===null?'sin muestra':coast.wetBandDistanceMeters.toFixed(2)+' m')+' · humedad '+coast.wetBandPeak.toFixed(2)+'\\nIsla: '+(coast.activeIsland||'ninguna')+' · nivel base del plano: '+coast.baseSeaLevel.toFixed(2)+' m';
+  metrics.textContent='MAR: base '+coast.baseSeaLevel.toFixed(2)+' m · superficie '+coast.seaSurfaceAtPlayer.toFixed(2)+' m\\nMarea: '+coast.tideMode+' '+coast.tideOffset.toFixed(2)+' m · fase '+coast.tidePhaseDegrees.toFixed(0)+'°\\nOla: ±'+coast.waveAmplitudeBoundMeters.toFixed(3)+' m máx. teóricos · local '+coast.localWaveDisplacement.toFixed(3)+' m\\nBanda húmeda–agua: '+(coast.wetBandDistanceMeters===null?'sin muestra':coast.wetBandDistanceMeters.toFixed(2)+' m')+' · humedad '+coast.wetBandPeak.toFixed(2)+'\\nResaca: '+coast.foamActiveSegments+'/'+coast.foamSegmentCapacity+' tramos · cruces '+coast.foamValidIntersections+'/'+coast.foamIntersectionCapacity+' · máx. mar adentro '+coast.foamMaxOffshoreDistanceMeters.toFixed(2)+' m · fuera banda '+coast.foamVerticesOutsideBand+'/'+coast.foamVerticesChecked+' · CPU '+coast.foamUpdateLastMs.toFixed(2)+' ms\\nIsla: '+(coast.activeIsland||'ninguna')+' · nivel base del plano: '+coast.baseSeaLevel.toFixed(2)+' m';
   const recent=(timeline.longFrames||[]).slice(-4).map(item=>Math.round(item.frameMs)+'ms @ '+Math.round(item.elapsedMs/1000)+'s').join(', ')||'ninguno';
   const tasks=(timeline.tasks||[]).slice(-4).map(item=>item.name+': '+Math.round(item.durationMs)+'ms').join('\\n')||'sin tareas registradas aún';
   startup.textContent='ARRANQUE · primer fotograma '+(timeline.firstFrameAt?'registrado':'pendiente')+' · máximo '+(timeline.maxFrameMs||0).toFixed(1)+'ms\\nTareas recientes:\\n'+tasks+'\\nFotogramas largos (>24ms): '+recent+'\\nCosta: '+work.beachWorkLastSliceMs.toFixed(2)+' ms (máx '+work.beachWorkMaxSliceMs.toFixed(2)+' ms / presupuesto '+work.beachWorkBudgetMs+' ms)';
@@ -9303,7 +9331,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'11',build:'0.6.260',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'11',build:'0.6.261',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    beachState:{activeIslandIndex:activeBeachIslandIndex,activeIsland:activeBeachLayer?activeBeachLayer.island.name:null,columns:activeBeachLayer?activeBeachLayer.coastalState.columns:0,rows:activeBeachLayer?activeBeachLayer.coastalState.rows:0,updatedCellsLast:beachUpdateCellsLast,updatedCellsTotal:beachUpdateCellsTotal,cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,textureUploads:beachStateTextureUploads,updateHz:12,workBudgetMs:GroundDynamics.counts().beachWorkBudgetMs,lastSliceMs:GroundDynamics.counts().beachWorkLastSliceMs,maxSliceMs:GroundDynamics.counts().beachWorkMaxSliceMs,pending:GroundDynamics.counts().beachWorkPending},waterline:getWaterCoastDiagnostics(),startupTimeline:getStartupTimelineSnapshot(),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
@@ -9368,7 +9396,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.256');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.261');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -11348,7 +11376,7 @@ function update(dt){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.256 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.261 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -11405,7 +11433,7 @@ function update(dt){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;startupTimeline.firstFrameAt=performance.now();startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
-    console.info('EL SIN NOMBRE 0.6.256: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
+    console.info('EL SIN NOMBRE 0.6.261: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -11531,7 +11559,7 @@ function update(dt){
  }
 
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.256 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.261 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
