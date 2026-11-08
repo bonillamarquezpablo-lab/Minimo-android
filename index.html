@@ -11160,10 +11160,9 @@ function update(dt){
  const initialSaveLabel=document.getElementById('saveTimeLabel');
  if(initialSaveLabel)initialSaveLabel.textContent='Elige Nueva partida o Cargar partida para comenzar tu saga.';
  setLoadingProgress(48,'3/3 · Preparando protagonista y personajes del norte…');
- // La carga del protagonista y la tanda de NPC se inicia y termina antes del selector.
- // En Rendimiento se mantiene el conjunto humano ligero definido para ese perfil;
- // los demás NPC ya tienen cuerpo, colisión y animación procedural en la escena.
- // El vikingo tiene prioridad. Un fallo de descarga/importación activa su reserva y no impide entrar.
+ // El protagonista y todo el roster previsto para el perfil se importan antes del selector.
+ // En Rendimiento se conserva el conjunto humano ligero ya definido; los demás NPC mantienen sus cuerpos, colisiones e IA procedurales.
+ // Si un GLB falla, se usa su reserva antes de abrir la partida, sin iniciar otra importación durante el juego.
  setLoadingProgress(82,'Esperando a que termine de importarse el vikingo principal…');
  const protagonistStageStarted=performance.now();let protagonistResult={status:'finished'};
  try{await playerHumanLoadPromise;protagonistResult.status=realPlayerReady?'finished':'fallback';}
@@ -11218,7 +11217,7 @@ function update(dt){
  }
 
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.229 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.250 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
