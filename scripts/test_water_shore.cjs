@@ -45,7 +45,7 @@ assert.doesNotMatch(animateBody,/foamPattern\[vertex\]=/,"Foam breakup noise mus
 assert.doesNotMatch(animateBody,/updateVerticesData\(B\.VertexBuffer\.UVKind/,"World-aligned UVs should travel with the moving water sheets without redundant per-update GPU uploads.");
 assert.match(animateBody,/const lift=\(\.025\+\.22\*crest\+\.065\*rearShoulder\)/,"The breaker should form a lower, less balloon-like lip while retaining its full geometry.");
 assert.match(html,/waveBodyMaterial\.diffuseColor=new B\.Color3\(\.30,\.45,\.49\)/,"The breaker body should blend with the darker sea instead of reading as a turquoise gas band.");
-assert.match(animateBody,/const foamWaterDepth=water-terrainY/,"Foam water depth must reuse its already sampled terrain and water heights.");
+assert.match(animateBody,/const foamWaterDepth=water-terrainY/,"Foam water depth must reuse its already sampled radial terrain and water heights.");
 assert.match(animateBody,/if\(detailDue\)refreshWaterDetailRegion\(\)/);
 assert.match(animateBody,/Math\.exp\(-foamElapsed\/3\.4\)/);
 assert.doesNotMatch(animateBody,/Math\.exp\(-dt\/3\.4\)/);
@@ -68,9 +68,9 @@ assert.match(html,/color=mix\(color,wrackTint,wrackZone\*wrackFragments\*\.045\)
 assert.match(html,/washMaterial\.emissiveColor=new B\.Color3\(0,0,0\)/,"The intertidal water film must not glow cyan or cast colored haze.");
 assert.match(html,/M\.water\.needDepthPrePass=false;M\.water\.disableDepthWrite=true;/,"Transparent water must not write an opaque shoreline depth pre-pass.");
 assert.match(html,/washData\.uvs=washUvs/,"The advancing water film must have world-aligned UVs for the shared ocean normal map.");
-assert.match(html,/washMesh\.updateVerticesData\(B\.VertexBuffer\.UVKind,washUvs,false,false\)/,"Film normal-map UVs must follow the moving shoreline positions.");
+assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/washMesh\.updateVerticesData\(B\.VertexBuffer\.UVKind,washUvs,false,false\)/,"Film UVs are static in the water-sheet coordinate frame and need no redundant upload.");
 assert.match(html,/washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows\}\);/,"The moving film UV buffer must be retained in the active coast state.");
-assert.match(html,/washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows\}=foam/ ,"The update loop must read the retained film UV buffer.");
+assert.match(html,/washMesh,washPositions,washColors,washPattern,washFractions,washRows\}=foam/ ,"The update loop must reuse film buffers without uploading static UVs.");
 assert.match(html,/const waterContact=smooth01\(\(water-terrainY\+\.03\)\/\.13\)/,"The water film must be suppressed where the wave does not physically cover the sand.");
 assert.match(html,/mesh\.receiveShadows=false;mesh\.castShadows=false;mesh\.hasVertexAlpha=true/,"The auxiliary wet-sand layer must not introduce hard shadow bands.");
 assert.match(html,/washMaterial\.bumpTexture=M\.water\.bumpTexture\|\|albedoNormalWater/,"The moving sheet must use animated ocean normals.");
@@ -84,8 +84,8 @@ assert.match(html,/angle=angleValues\[col\],cs=angleCos\[col\],sn=angleSin\[col\
 assert.match(html,/foamUvs=new Float32Array/);
 assert.match(html,/data\.uvs=foamUvs/);
 assert.match(html,/material\.bumpTexture=M\.water\.bumpTexture\|\|albedoNormalWater/);
-assert.match(html,/foam\.mesh\.updateVerticesData\(B\.VertexBuffer\.UVKind,foamUvs,false,false\)/);
-assert.match(html,/foamUvs,colors,foamPattern,angleValues,angleCos,angleSin,index,waveBodyMesh/,"Animated breaker UV, cached shoreline directions and volumetric wave storage must be retained in the active coast state.");
+assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/foam\.mesh\.updateVerticesData\(B\.VertexBuffer\.UVKind,foamUvs,false,false\)/,"Foam UVs are baked and move with the animated sheet.");
+assert.match(html,/colors,foamPattern,angleValues,angleCos,angleSin,index,waveBodyMesh/,"Cached shoreline directions and volumetric wave storage must be retained in the active coast state.");
 assert.match(html,/tidalFoamMeshes\.push\(\{mesh,positions,foamUvs,colors,foamPattern/,"Breaker UVs must be retained by the active coast mesh.");
 assert.match(html,/foamBreakStrength\*\.82/);
 assert.match(html,/const radialOffsets=isPerformanceMode\?\[-\.62,-\.30,0,\.30,\.62\]:\[-1\.05,-\.82,-\.59,-\.36,-\.13,\.10,\.33,\.56,\.79,1\.02,1\.25\]/);
