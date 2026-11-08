@@ -52,6 +52,8 @@ assert.match(html,/washMaterial\.emissiveColor=new B\.Color3\(0,0,0\)/,"The inte
 assert.match(html,/M\.water\.needDepthPrePass=false;M\.water\.disableDepthWrite=true;/,"Transparent water must not write an opaque shoreline depth pre-pass.");
 assert.match(html,/washData\.uvs=washUvs/,"The advancing water film must have world-aligned UVs for the shared ocean normal map.");
 assert.match(html,/washMesh\.updateVerticesData\(B\.VertexBuffer\.UVKind,washUvs,false,false\)/,"Film normal-map UVs must follow the moving shoreline positions.");
+assert.match(html,/washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows\}\);/,"The moving film UV buffer must be retained in the active coast state.");
+assert.match(html,/washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows\}=foam/ ,"The update loop must read the retained film UV buffer.");
 assert.match(html,/const waterContact=smooth01\(\(water-ground\+\.03\)\/\.13\)/,"The water film must be suppressed where the wave does not physically cover the sand.");
 assert.match(html,/mesh\.receiveShadows=false;mesh\.castShadows=false;mesh\.hasVertexAlpha=true/,"The auxiliary wet-sand layer must not introduce hard shadow bands.");
 assert.match(html,/washMaterial\.bumpTexture=M\.water\.bumpTexture\|\|albedoNormalWater/,"The moving sheet must use animated ocean normals.");
