@@ -36,6 +36,12 @@ assert.match(html,/const crossSegments=Math\.max\(4,Math\.ceil\(width\/\.20\)\),
 assert.match(html,/positions\.push\(x,terrainSurfaceAt\(x,z\)\+\.055,z\)/, 'Every across-width trail vertex must follow the live terrain surface.');
 assert.match(html,/for\(let cross=0;cross<crossSegments;cross\+\+\)/, 'Trail indices must cover each across-width terrain-following segment.');
 assert.match(html,/for\(let cross=0;cross<=crossSegments;cross\+\+\)\{\s*const across=cross\/crossSegments,side=across\*2-1;/, 'Each cross-section must sample the actual terrain height instead of only the edges.');
+assert.match(html,/const foamAlphaMask=new Float32Array\(cols\*rows\)/, 'Foam row/noise opacity factors must be precomputed without dropping samples.');
+assert.match(html,/foamAlphaMask\[vertex\]=whiteFoamProfile\*innerFade\*outerFade\*lace/, 'The shoreline foam must reuse its static breakup mask on every update.');
+assert.match(html,/waveBodyCrestProfile=new Float32Array\(waveBodyRows\)/, 'Volumetric wave row profiles must be cached once at construction.');
+assert.match(html,/washLeadingCellular=new Float32Array\(cols\*washRows\)/, 'Wash breakup factors must be cached per full-resolution vertex.');
+assert.match(html,/washFilmCoverage\[vertex\]=window\.NorseCoastalInteraction\.filmCoverage\(washFractions\[row\],washPattern\[vertex\]\)/, 'The water-film coverage function must be evaluated once per static sample.');
+assert.match(html,/for\(let step=0;step<5;step\+\+\)\{\s*const delta=sample\(radius\)/, 'The cached shore solver must use a safeguarded secant rather than seven fixed bisections.');
 assert.match(html,/const packedTrailTexture=makePatternTexture\('Packed Norse trail earth','#8c7652'/,"Packed earth trails must use a readable warm-earth albedo rather than a near-black base.");
 assert.match(html,/packedTrailMaterial\.emissiveColor=new B\.Color3\(\.13,\.085,\.045\)/,"Packed earth trails must retain a subtle brown ambient floor on shaded ridges.");
 assert.match(html,/positions\.push\(x,terrainSurfaceAt\(x,z\)\+\.055,z\)/,"Packed earth trails must remain conformed to the live island terrain.");

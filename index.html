@@ -2997,7 +2997,7 @@ async function removeStrayDebugGeometry(targetScene){
   // La espuma aparece solo cuando la línea de agua retrocede y deja una película blanca en la arena.
   // La humedad de playa conserva su propia huella; esta malla dibuja únicamente el borde espumoso reciente.
   for(const foam of tidalFoamMeshes){
-   const {island,segments,rows,cols,radialOffsets,positions,colors,foamPattern,angleValues,angleCos,angleSin,index,waveBodyMesh,waveBodyPositions,waveBodyColors,waveBodyOffsets,waveBodyRows,waveBodyTerrainSamples,waveBodyWaterSamples,washMesh,washPositions,washColors,washPattern,washFractions,washRows}=foam;
+   const {island,segments,rows,cols,radialOffsets,positions,colors,foamAlphaMask,foamPattern,angleValues,angleCos,angleSin,index,waveBodyMesh,waveBodyPositions,waveBodyColors,waveBodyOffsets,waveBodyRows,waveBodyCrestProfile,waveBodyShoulderProfile,waveBodySteepFaceProfile,waveBodyEdgeProfile,waveBodyTerrainSamples,waveBodyWaterSamples,washMesh,washPositions,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows}=foam;
    const retreatFade=Math.exp(-foamElapsed/3.4);
    for(let col=0;col<=segments;col++){
     const angle=angleValues[col],cs=angleCos[col],sn=angleSin[col];
@@ -3039,14 +3039,12 @@ async function removeStrayDebugGeometry(targetScene){
      const radius=breakerRadius+radial,x=island.x+cs*radius,z=island.z+sn*radius;
      const terrainY=sampleTidalFoamTerrainProfile(foam,col,radius)+terrainDeformationAt(index,x,z),water=Math.min(waterCap,shoreWater+waterSlope*radial);
      waveBodyTerrainSamples[waveRow]=terrainY;waveBodyWaterSamples[waveRow]=water;
-     const crest=Math.exp(-Math.pow((radial-.16)/.66,2));
-     const rearShoulder=Math.exp(-Math.pow((radial+.78)/1.10,2))*.34;
-     const steepFace=smooth01((radial+.92)/.58)*(1-smooth01((radial-.08)/.36));
+     const crest=waveBodyCrestProfile[waveRow],rearShoulder=waveBodyShoulderProfile[waveRow],steepFace=waveBodySteepFaceProfile[waveRow];
      const waterDepth=water-terrainY,waterContact=smooth01((waterDepth-.015)/.22);
      const lift=(.025+.22*crest+.065*rearShoulder)*(.70+.30*foamWaveCrest)*waterContact;
      waveBodyPositions[offset]=x;waveBodyPositions[offset+1]=waterDepth>0?water+.018+lift:terrainY-.045;waveBodyPositions[offset+2]=z;
      /* World-space UVs are fixed at construction and travel with this water sheet. */
-     const edge=Math.min(smooth01((radial+2.65)/.78),smooth01((2.55-radial)/.82));
+     const edge=waveBodyEdgeProfile[waveRow];
      const bodyAlpha=edge*(.12+.42*Math.max(crest,rearShoulder))*(.72+.28*foamWaveCrest)*waterContact;
      const faceTint=steepFace*.16;
      waveBodyColors[color]=.32-faceTint*.12;waveBodyColors[color+1]=.50+faceTint*.08;waveBodyColors[color+2]=.55+faceTint*.10;waveBodyColors[color+3]=bodyAlpha;
@@ -3066,13 +3064,8 @@ async function removeStrayDebugGeometry(targetScene){
       const foamTerrainContact=Math.max(foamSubmerged,dryFoamResidue);
       positions[offset]=foamWaterDepth>0?water+.014+foamBreakStrength*crestLip*(.012+chop)+chop:terrainY+.006;
       positions[offset+2]=z;
-      // The multi-scale breakup field is baked once; it moves with the foam instead of rebuilding noise every update.
-      const innerFade=smooth01((shoreOffset+1.12)/.24);
-      const outerFade=1-smooth01((shoreOffset-1.20)/.24);
-      const whiteFoamProfile=Math.exp(-(((shoreOffset-.16)/.58)**2));
-      const lace=smooth01((foamPattern[vertex]-.20)/.40);
       const foamVisibility=Math.max(Math.min(.94,foamStrength/.16),foamBreakStrength*.82);
-      const alpha=Math.min(.92,foamVisibility*whiteFoamProfile*innerFade*outerFade*lace*(.82+.18*secondary)*foamTerrainContact);
+      const alpha=Math.min(.92,foamVisibility*foamAlphaMask[vertex]*(.82+.18*secondary)*foamTerrainContact);
       colors[color]=.98;colors[color+1]=.99;colors[color+2]=1;colors[color+3]=alpha;
     }
     // Actualizar la rompiente dentro del mismo segmento angular: shoreline, cs, sn y col
@@ -3088,18 +3081,15 @@ async function removeStrayDebugGeometry(targetScene){
      const radius=shoreline-runup*fraction,x=island.x+cs*radius,z=island.z+sn*radius;
      const profileOffset=radius-breakerRadius;
      const terrainY=sampleRadialProfile(waveBodyOffsets,waveBodyTerrainSamples,profileOffset),water=sampleRadialProfile(waveBodyOffsets,waveBodyWaterSamples,profileOffset);
-     const leadingEdge=Math.exp(-Math.pow((fraction-.82)/.15,2));
-     const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0);
-     const filmBreakup=smooth01((cellular-.22)/.48);
+     const leadingCellular=washLeadingCellular[vertex];
      const waterContact=smooth01((water-terrainY+.03)/.13);
-     const whitewater=breakStrength*leadingEdge*cellular*.38*waterContact;
-     const trailingFoam=residual*Math.exp(-Math.abs(fraction-.66)*3.2)*.045*filmBreakup;
+     const whitewater=breakStrength*leadingCellular*.38*waterContact;
+     const trailingFoam=residual*washTrailingProfile[vertex]*.045;
      const whiteMix=Math.min(1,whitewater*2.6+trailingFoam*2.0);
-     const filmCoverage=window.NorseCoastalInteraction.filmCoverage(fraction,washPattern[vertex]);
+     const filmCoverage=washFilmCoverage[vertex];
      const rippleA=Math.sin((x*.34+z*.19)*1.7+oceanTime*2.3);
      const rippleB=Math.sin((x*.91-z*.63)*2.2-oceanTime*1.6);
-     const lipProfile=Math.exp(-Math.pow((fraction-.78)/.26,2));
-     const filmWave=.006+rippleA*.012+rippleB*.008+breakStrength*lipProfile*.018;
+     const filmWave=.006+rippleA*.012+rippleB*.008+breakStrength*washLipProfile[washRow]*.018;
      const flowPulse=.90+.10*(.5+.5*Math.sin((x*.61+z*.79)*1.18+oceanTime*1.55));
      const filmStrength=Math.max(0,Math.min(1.1,oceanDepthSettings.sheetStrength));
      const filmAlpha=filmCoverage*(.16+.20*breakStrength)*flowPulse*filmStrength*waterContact;
@@ -3243,13 +3233,17 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    return shorelineFoamRadius(island,angle,t,index,cs,sn);
   }
   let bestRadius=center,bestError=Infinity;
-  for(let step=0;step<7;step++){
-   const radius=(lo+hi)*.5,delta=sample(radius);
+  const denominator=loDelta-hiDelta;
+  let radius=denominator>1e-9?lo+(hi-lo)*loDelta/denominator:(lo+hi)*.5;
+  for(let step=0;step<5;step++){
+   const delta=sample(radius);
    if(!Number.isFinite(delta))break;
    const error=Math.abs(delta);
    if(error<bestError){bestError=error;bestRadius=radius;}
    if(error<.006)break;
    if(delta>0){lo=radius;loDelta=delta;}else{hi=radius;hiDelta=delta;}
+   const span=hi-lo,secant=lo+span*loDelta/(loDelta-hiDelta),guard=span*.04;
+   radius=Number.isFinite(secant)&&secant>lo+guard&&secant<hi-guard?secant:(lo+hi)*.5;
   }
   if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(bestError,solverStartedAt,true,bestError<.006);
   return bestError<Infinity?bestRadius:(lo+hi)*.5;
@@ -3897,6 +3891,13 @@ void main(void){
     colors[color+3]=0;
    }
   }
+  const foamAlphaMask=new Float32Array(cols*rows);
+  for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+   const vertex=row*cols+col,shoreOffset=radialOffsets[row];
+   const innerFade=smooth01((shoreOffset+1.12)/.24),outerFade=1-smooth01((shoreOffset-1.20)/.24);
+   const whiteFoamProfile=Math.exp(-(((shoreOffset-.16)/.58)**2)),lace=smooth01((foamPattern[vertex]-.20)/.40);
+   foamAlphaMask[vertex]=whiteFoamProfile*innerFade*outerFade*lace;
+  }
   for(let row=0;row<rows-1;row++)for(let col=0;col<segments;col++){
    const a=row*cols+col,b=a+1,c=a+cols,d=c+1;
    indices[cursor++]=a;indices[cursor++]=b;indices[cursor++]=c;
@@ -3917,6 +3918,14 @@ void main(void){
   // No es una decal ni una franja; la geometría tiene lomo, cara frontal y hombro posterior.
   const waveBodyOffsets=[-2.65,-2.05,-1.48,-1.02,-.66,-.34,-.08,.18,.48,.86,1.34,1.92,2.55];
   const waveBodyRows=waveBodyOffsets.length,waveBodyPositions=new Float32Array(cols*waveBodyRows*3),waveBodyUvs=new Float32Array(cols*waveBodyRows*2),waveBodyColors=new Float32Array(cols*waveBodyRows*4),waveBodyTerrainSamples=new Float32Array(waveBodyRows),waveBodyWaterSamples=new Float32Array(waveBodyRows);
+  const waveBodyCrestProfile=new Float32Array(waveBodyRows),waveBodyShoulderProfile=new Float32Array(waveBodyRows),waveBodySteepFaceProfile=new Float32Array(waveBodyRows),waveBodyEdgeProfile=new Float32Array(waveBodyRows);
+  for(let row=0;row<waveBodyRows;row++){
+   const radial=waveBodyOffsets[row];
+   waveBodyCrestProfile[row]=Math.exp(-Math.pow((radial-.16)/.66,2));
+   waveBodyShoulderProfile[row]=Math.exp(-Math.pow((radial+.78)/1.10,2))*.34;
+   waveBodySteepFaceProfile[row]=smooth01((radial+.92)/.58)*(1-smooth01((radial-.08)/.36));
+   waveBodyEdgeProfile[row]=Math.min(smooth01((radial+2.65)/.78),smooth01((2.55-radial)/.82));
+  }
   const waveBodyIndices=new Uint16Array(segments*(waveBodyRows-1)*6);let waveBodyCursor=0;
   for(let col=0;col<=segments;col++){
    const angle=angleValues[col],cs=angleCos[col],sn=angleSin[col],shore=lastShoreline[col];
@@ -3952,6 +3961,7 @@ void main(void){
   // Se estira hacia la playa durante la cresta y deja una línea de agua blanca y rota al romper.
   const washFractions=isPerformanceMode&&isConstrainedMobile?[1,.72,.44,.16,0,-.22]:[1,.92,.84,.76,.68,.60,.52,.44,.36,.28,.20,.12,.04,-.04,-.12];
   const washRows=washFractions.length,washPositions=new Float32Array(cols*washRows*3),washUvs=new Float32Array(cols*washRows*2),washColors=new Float32Array(cols*washRows*4),washPattern=new Float32Array(cols*washRows);
+  const washLeadingCellular=new Float32Array(cols*washRows),washTrailingProfile=new Float32Array(cols*washRows),washFilmCoverage=new Float32Array(cols*washRows),washLipProfile=new Float32Array(washRows);
   const washIndices=new Uint16Array(segments*(washRows-1)*6);let washCursor=0;
   for(let col=0;col<=segments;col++){
    const angle=angleValues[col],cs=angleCos[col],sn=angleSin[col],shore=lastShoreline[col];
@@ -3966,6 +3976,11 @@ void main(void){
     const cells=smooth01((broad*.48+fine*.34+grain*.18-.48)*9.2);
     const filaments=1-smooth01((Math.abs(fine-.5)-.16)*10.0);
     washPattern[vertex]=Math.min(1,cells*(.18+.52*filaments+.38*smooth01((grain-.46)*12)));
+    const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0);
+    washLeadingCellular[vertex]=Math.exp(-Math.pow((washFractions[row]-.82)/.15,2))*cellular;
+    washTrailingProfile[vertex]=Math.exp(-Math.abs(washFractions[row]-.66)*3.2)*smooth01((cellular-.22)/.48);
+    washFilmCoverage[vertex]=window.NorseCoastalInteraction.filmCoverage(washFractions[row],washPattern[vertex]);
+    if(col===0)washLipProfile[row]=Math.exp(-Math.pow((washFractions[row]-.78)/.26,2));
     washColors[color]=row>=washRows-2?.99:.91;
     washColors[color+1]=row>=washRows-2?1:.94;
     washColors[color+2]=row>=washRows-2?.99:.92;
@@ -4000,7 +4015,7 @@ void main(void){
   }
   washMesh.material=washMaterial;washMesh.isPickable=false;washMesh.receiveShadows=false;washMesh.castShadows=false;
   washMesh.hasVertexAlpha=true;washMesh.renderingGroupId=0;
-  tidalFoamMeshes.push({mesh,positions,foamUvs,colors,foamPattern,lastShoreline,retreatResidue,foamCenter,angleValues,angleCos,angleSin,island,centerX:island.x,centerZ:island.z,index,segments,rows,cols,radialOffsets,terrainProfileCenters,terrainProfile,waveBodyMesh,waveBodyPositions,waveBodyNormals,waveBodyColors,waveBodyUvs,waveBodyIndices,waveBodyOffsets,waveBodyRows,waveBodyTerrainSamples,waveBodyWaterSamples,washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows});
+  tidalFoamMeshes.push({mesh,positions,foamUvs,colors,foamPattern,foamAlphaMask,lastShoreline,retreatResidue,foamCenter,angleValues,angleCos,angleSin,island,centerX:island.x,centerZ:island.z,index,segments,rows,cols,radialOffsets,terrainProfileCenters,terrainProfile,waveBodyMesh,waveBodyPositions,waveBodyNormals,waveBodyColors,waveBodyUvs,waveBodyIndices,waveBodyOffsets,waveBodyRows,waveBodyCrestProfile,waveBodyShoulderProfile,waveBodySteepFaceProfile,waveBodyEdgeProfile,waveBodyTerrainSamples,waveBodyWaterSamples,washMesh,washPositions,washUvs,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows});
  }
  let activeTidalFoamIslandIndex=-2;
  function syncActiveTidalFoamIsland(){
