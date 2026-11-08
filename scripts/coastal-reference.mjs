@@ -39,6 +39,7 @@ const manifest = {
   campaignStart: null,
   captures: [],
   shadowIsolationCapture: null,
+  trailIsolationCapture: null,
   timingsMs: {},
   consoleErrors: [],
   pageErrors: [],
@@ -284,6 +285,33 @@ async function main() {
       mainIslandTerrainReceivesShadows: false,
       receiverRestoredAfterCapture: true
     };
+    // Diagnostic A/B frame: same camera and water state, with packed-earth trail meshes hidden.
+    // This isolates the ribbon from terrain/shadow artifacts without changing the island mesh.
+    const trailIsolation = await page.evaluate(({ cameraCase, island }) => {
+      const api = window.__ELSN_TEST__;
+      const hidden = api.setPackedTrailVisible(false);
+      api.setCamera({
+        x: island.x + 75, y: cameraCase.height, z: island.z - 22,
+        targetX: island.x - 25, targetY: cameraCase.targetY, targetZ: island.z - 22
+      });
+      api.setWaterState({ time: 37, tide: 'natural' });
+      api.render();
+      const canvasPng = api.captureCanvas();
+      const restored = api.setPackedTrailVisible(true);
+      return { hidden, restored, canvasPng };
+    }, { cameraCase: ridgeCase, island: mainIsland });
+    assert.ok(trailIsolation.hidden.count >= 1 && trailIsolation.hidden.visible === false,
+      'Packed-earth trail meshes must be hideable for a diagnostic A/B frame');
+    assert.ok(trailIsolation.restored.count === trailIsolation.hidden.count && trailIsolation.restored.visible === true,
+      'Every packed-earth trail must be restored after diagnostic capture');
+    assert.ok(typeof trailIsolation.canvasPng === 'string' && trailIsolation.canvasPng.startsWith(pngPrefix),
+      'Trail-isolation canvas readback did not return a PNG');
+    const trailPng = Buffer.from(trailIsolation.canvasPng.slice(pngPrefix.length), 'base64');
+    assert.ok(trailPng.length > 1000, 'Trail-isolation PNG was empty');
+    const trailFile = 'ridge-occlusion__t037__natural__no-packed-trails.png';
+    fs.writeFileSync(path.join(OUT, trailFile), trailPng);
+    manifest.trailIsolationCapture = { file: trailFile, camera: 'ridge-occlusion', timeSeconds: 37, tide: 'natural', trailMeshesHidden: trailIsolation.hidden.count, restoredAfterCapture: true };
+
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');
     assert.equal(manifest.consoleErrors.length, 0,
