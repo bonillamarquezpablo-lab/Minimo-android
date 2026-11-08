@@ -393,7 +393,7 @@ def main() -> None:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
     if "SAGA DEL NORTE · CAPÍTULO I · 0.6.271" not in index_html or "EL SIN NOMBRE 0.6.271 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
-    if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
+    if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:coastRows" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
     if "const subdivisions=Math.min(360,Math.max(112,Math.ceil(is.r*2/(isTouchDevice?.42:.36))));" not in index_html:
         fail("La costa necesita un heightfield más fino para evitar escalones visibles.")
