@@ -161,7 +161,7 @@ def main() -> None:
     animate_body = index_html[animate_start:animate_end]
     if animate_start < 0 or animate_end <= animate_start or "waterDetailHeightAtVertex" not in animate_body or "waterFarHeightAtVertex" not in animate_body:
         fail("La animación base del oleaje debe conservar la caché de fases y el detalle de agua.")
-    if "beachStateSampler" not in index_html or "foam=clamp(state.g,0.0,1.0)" not in index_html or "float laceNoise=fine.r*0.62+broad.g*0.38" not in index_html:
+    if "beachStateSampler" not in index_html or "foam=clamp(state.g,0.0,1.0)" not in index_html or "float laceNoise=fineFoam*.62+broadFoam*.38" not in index_html or "foamMask=clamp(foam*lace*broken*foamPulse*shoreFoamStrength" not in index_html:
         fail("La espuma de la orilla debe proceder del canal Foam de BeachState y de su encaje de shader.")
     if "for(const foam of tidalFoamMeshes)" not in index_html or "function buildTidalFoam(" not in index_html or "syncActiveTidalFoamIsland();" not in index_html:
         fail("La rompiente dinámica debe acompañar al estado BeachState y seguir la isla activa.")
@@ -386,7 +386,7 @@ def main() -> None:
         fail("El mapa costero debe actualizar la isla activa en fragmentos medidos de hasta 4 ms.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
-    if "beachStateSampler" not in index_html or "float laceNoise=fine.r*0.62+broad.g*0.38" not in index_html:
+    if "beachStateSampler" not in index_html or "float laceNoise=fineFoam*.62+broadFoam*.38" not in index_html or "float foamMask=clamp(foam*lace*broken*foamPulse*shoreFoamStrength" not in index_html:
         fail("La espuma costera debe utilizar detalle de encaje de alta frecuencia en el shader.")
     if "function syncActiveBeachIsland()" not in index_html or "activeBeachIslandIndex=nextIndex;" not in index_html or "syncActiveTidalFoamIsland();" not in index_html:
         fail("La isla activa debe sincronizar el estado de playa y la rompiente de espuma.")
