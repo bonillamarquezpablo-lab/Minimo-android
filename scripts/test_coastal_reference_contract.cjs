@@ -66,3 +66,5 @@ assert.match(captureRunner, /setIslandShadowReceiving\(false\)/, 'The ridge A/B 
 assert.match(html, /setIslandShadowReceiving:\(enabled\)=>/, 'Shadow isolation must remain available only through the test-mode hook.');
 assert.ok(workflow.includes('cancel-in-progress: false'),
   'A later PR commit must not cancel a long-running 27-image reference capture');
+
+// The coast solver and static foam profile caches are guarded by the assertions above.
