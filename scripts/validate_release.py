@@ -424,7 +424,7 @@ def main() -> None:
         fail("La ola debe formar cresta animada y rotura fragmentada directamente en el shader de playa.")
     if "function clamp01(value)" in index_html and index_html.find("updateOceanDepthGradient();",index_html.find("function smooth01")) < index_html.find("const terrainHashCache="):
         fail("El mapa de profundidad no puede inicializarse antes de las funciones y datos del terreno.")
-    if "const mediumGrain=noise21(worldXZ*2.15" not in index_html or "const microGrain=noise21(worldXZ*17.5" not in index_html:
+    if "mediumGrain=noise21(worldXZ*2.15" not in index_html or "microGrain=noise21(worldXZ*17.5" not in index_html:
         fail("La arena debe conservar variación de grano a tres escalas en coordenadas mundiales.")
     if "function relaxGround(dt)" not in index_html or "relaxGround(relaxStep);" not in index_html:
         fail("El terreno deformado no recupera su forma gradualmente.")
