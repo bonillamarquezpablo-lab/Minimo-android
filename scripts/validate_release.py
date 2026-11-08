@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.269"
+EXPECTED_VERSION = "0.6.270"
 
 HTML_PAGES = (
     "index.html",
@@ -131,7 +131,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'11',build:'0.6.269'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'11',build:'0.6.270'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -143,8 +143,8 @@ def main() -> None:
         fail("Las animaciones y la flotación deben reutilizar valores sin asignaciones por fotograma.")
     if "frameTimingMs:{samples:frameTimes.length,average:frameAverage,p50:frameAt(.50),p95:frameAt(.95),p99:frameAt(.99)" not in index_html:
         fail("El diagnóstico debe exponer percentiles de tiempo de fotograma.")
-    if "function updateActiveIslandGrass(dt)" not in index_html or "qualityGrassLodBatches.push" not in index_html or "updateActiveIslandGrass(dt);" not in index_html or "const show=batch.islandIndex===currentIsland;" not in index_html:
-        fail("Ambos perfiles deben mostrar todos los lotes de hierba de la isla activa.")
+    if "function updateActiveIslandGrass(dt)" not in index_html or "if(isPerformanceMode)return;" not in index_html[index_html.find("function updateActiveIslandGrass(dt)"):index_html.find("spawnNaturalVegetationAndFauna();")] or "qualityGrassLodBatches.push" not in index_html or "updateActiveIslandGrass(dt);" not in index_html or "const show=batch.islandIndex===currentIsland;" not in index_html:
+        fail("La hierba cercana debe actualizarse solo en Calidad y limitarse a la isla activa.")
     if "function syncNordicWaterReflectionIsland()" not in index_html or "syncNordicWaterReflectionIsland();" not in index_html or "activeWaterReflectionIslandIndex" not in index_html:
         fail("El espejo del agua debe actualizarse solo con la isla activa.")
     if "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024" not in index_html or "nordicWaterMirror.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE)" not in index_html or "anisotropicFilteringLevel=Math.min(8,maxAnisotropy)" not in index_html:
@@ -391,7 +391,7 @@ def main() -> None:
         fail("La opacidad del agua debe crecer progresivamente desde la línea de costa.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.269" not in index_html or "EL SIN NOMBRE 0.6.269 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.270" not in index_html or "EL SIN NOMBRE 0.6.270 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -509,7 +509,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.269</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.270</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
@@ -547,14 +547,14 @@ def main() -> None:
         fail("La generación de vegetación debe ceder el control según tiempo real de CPU.")
     if "const occupiedGridCells=new Uint8Array(gridSide*gridSide)" not in index_html or "const terrainHashCache=new Map()," not in index_html:
         fail("La generación del terreno y la hierba debe reutilizar buffers compactos y hashes deterministas.")
-    if "const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);" not in index_html or "const grassGenerationTask=createRealGrass(initialGrassIslandIndex);" not in index_html or "await grassGenerationTask;" not in index_html or "async function createRealGrass(onlyIslandIndex=null)" not in index_html or "if(onlyIslandIndex!==null&&islandIndex!==onlyIslandIndex)continue;" not in index_html or "grassInstanceCount=0;grassBatchCount=0;grassDebugClumpCount=0;grassDebugBatchCount=0;" in index_html[index_html.find("spawnNaturalVegetationAndFauna();"):index_html.find("function updateRealGrassWind")]:
-        fail("Calidad y Rendimiento deben generar y terminar de cargar toda la hierba de la isla inicial antes de jugar.")
-    if "async function streamActiveIslandGrass(index)" not in index_html or "if(currentIsland!==grassStreamActiveIslandIndex&&!grassStreamPromise)" not in index_html or "createRealGrass(index)" not in index_html or "grassStream:{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise}" not in index_html or "if(isPerformanceMode||index===grassStreamActiveIslandIndex)return;" in index_html:
-        fail("La hierba debe reconstruirse al cambiar de isla en ambos perfiles, con diagnóstico de streaming.")
-    if "leavesPerClump=isPerformanceMode?8:10" not in index_html or "const show=batch.islandIndex===currentIsland;" not in index_html or "const chunkSize=56,grassBatches=new Map();" not in index_html:
-        fail("La hierba debe conservar las diferencias de detalle por perfil, mostrar la isla entera y agrupar lotes para limitar llamadas de dibujo.")
-    if "await grassGenerationTask;" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
-        fail("La generación inicial de vegetación debe seguir esperando antes de completar los recursos secundarios.")
+    if "const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);" not in index_html or "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "async function createRealGrass(onlyIslandIndex=null,focusX=null,focusZ=null)" not in index_html or "if(onlyIslandIndex!==null&&islandIndex!==onlyIslandIndex)continue;" not in index_html or "const radius=Math.min(92,safeLandRadius);" not in index_html or "if(!isPerformanceMode){" not in index_html or "console.info('Hierba desactivada en modo Rendimiento.');" not in index_html:
+        fail("Solo Calidad debe generar hierba local; Rendimiento debe desactivarla completamente.")
+    if "async function streamActiveIslandGrass(index,focusX,focusZ)" not in index_html or "(!sameIsland||moved)&&!grassStreamPromise" not in index_html or "createRealGrass(index,focusX,focusZ)" not in index_html or "grassStream:{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise}" not in index_html or "if(onShip||bestRatio>1.09)currentIsland=-1" not in index_html:
+        fail("La hierba debe seguir el área cercana y no cargar islas hasta desembarcar.")
+    if "leavesPerClump=isPerformanceMode?8:10" not in index_html or "const show=batch.islandIndex===currentIsland;" not in index_html or "const chunkSize=56,grassBatches=new Map();" not in index_html or "const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));" not in index_html:
+        fail("La hierba de Calidad debe conservar el detalle y limitar la generación al área local.")
+    if "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
+        fail("La generación inicial de hierba de Calidad debe terminar antes de abrir el juego y mantener la carga secundaria.")
     if "try{audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" in index_html:
         fail("La precarga completa de audio debe finalizar antes de abrir la partida en ambos perfiles gráficos.")
     if "antialias:activeGraphicsProfile!=='performance'" not in index_html or "(isTouchDevice?2048:" not in index_html:
