@@ -573,7 +573,7 @@ def main() -> None:
                 if info is None:
                     raise RuntimeError(f"ambientCG ZIP is missing {source_name}")
                 raw = archive.read(info)
-                if len(raw) < 20_000 or not raw.startswith(b"\\xff\\xd8"):
+                if len(raw) < 20_000 or not raw.startswith(b"\xff\xd8"):
                     raise RuntimeError(f"Invalid JPEG PBR texture: {source_name}")
                 target = DIST / output_name
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -589,6 +589,12 @@ def main() -> None:
         results[:] = [item for item in results if item["path"] != texture_archive_relative]
     except Exception as exc:
         failures.append((texture_archive_relative, f"Could not extract CC0 sand PBR maps: {exc}"))
+
+    if failures:
+        print("\nNo se publica una versión incompleta:", file=sys.stderr)
+        for relative, reason in failures:
+            print(f"- {relative}: {reason}", file=sys.stderr)
+        raise SystemExit(1)
 
     for music_asset in optional_music_results:
         results.append(music_asset)

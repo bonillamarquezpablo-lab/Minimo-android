@@ -1,0 +1,16 @@
+'use strict';
+const fs=require('node:fs');
+const assert=require('node:assert/strict');
+const html=fs.readFileSync('index.html','utf8');
+assert.match(html,/updateOceanDepthGradient\(\)/);
+assert.match(html,/oceanDepthSettings\.transitionMeters/);
+assert.match(html,/uniform float beachTime/);
+assert.match(html,/shoreFoamStrength/);
+assert.match(html,/shoreSheetStrength/);
+assert.match(html,/float sheetFront=/);
+assert.match(html,/float wrackBand=/);
+assert.match(html,/function createWaterShoreDebugPanel\(\)/);
+assert.match(html,/MODO EXAGERADO/);
+assert.match(html,/window\.__elSinNombreWaterDebug=/);
+assert.doesNotMatch(html,/vec3 n=normalize\(vNormalW\).*\n float wetHighlight[\s\S]*\n color\+=vec3\([^\n]+\);\n vec3 n=normalize\(vNormalW\)/);
+console.log('OK: water depth gradient, animated shore film/foam, wrack line and debug controls.');

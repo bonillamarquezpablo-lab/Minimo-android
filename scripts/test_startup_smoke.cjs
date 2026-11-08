@@ -1,0 +1,13 @@
+'use strict';
+const fs=require('node:fs');
+const assert=require('node:assert/strict');
+const html=fs.readFileSync('index.html','utf8');
+assert.match(html,/installStartupSmokeRecorder/);
+assert.match(html,/console\.error=function\(\.\.\.args\)/);
+assert.match(html,/addEventListener\('error'/);
+assert.match(html,/addEventListener\('unhandledrejection'/);
+assert.match(html,/Object\.defineProperty\(player,'modelReady'/);
+assert.match(html,/window\.__elSinNombreStartupSmoke\.result=/);
+assert.match(html,/playerModelReady:\!\!player\.modelReady/);
+assert.doesNotMatch(html,/resourceResults/, 'The removed blocking NPC load result must not be referenced.');
+console.log('OK: startup error recorder and player.modelReady check are installed.');

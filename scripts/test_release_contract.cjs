@@ -1,0 +1,10 @@
+'use strict';
+const fs=require('node:fs');
+const assert=require('node:assert/strict');
+const validator=fs.readFileSync('scripts/validate_release.py','utf8');
+assert.match(validator,/STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200/);
+assert.match(validator,/const backgroundNpcTask=startNpcHumanModels\(\);/);
+assert.match(validator,/const backgroundFaunaTask=loadWildlifeModels\(\);/);
+assert.match(validator,/rows=isPerformanceMode\?13/);
+assert.doesNotMatch(validator,/resourceResults=await Promise\.allSettled\(\[playerHumanLoadPromise,startNpcHumanModels\(\)\]\)/);
+console.log('OK: release validator matches the non-blocking 0.6.248 startup architecture.');
