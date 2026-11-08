@@ -454,8 +454,8 @@ def main() -> None:
         fail("Las capas auxiliares de costa no deben proyectar ni recibir sombras duras en forma de franjas.")
     if "applyTexture(M.water,texWater,17.5);" not in index_html or "oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;" not in index_html or ".020*Math.sin(67*warpU+41*warpW)" not in index_html:
         fail("El mar debe tener normales direccionales de varias escalas y microondulación visible desde la cámara del jugador.")
-    if "M.water.specularPower=reducedWaterProfile?28:88;" not in index_html or "M.water.diffuseFresnelParameters.power=2.3;" not in index_html:
-        fail("El material de agua en Calidad debe conservar reflejos rasantes legibles sin añadir pasadas de renderizado.")
+    if "M.water.specularPower=reducedWaterProfile?28:68;" not in index_html or "new B.Color3(.38,.50,.56)" not in index_html or "oceanWaveNormal.level=.58;" not in index_html or "M.water.diffuseFresnelParameters.power=2.3;" not in index_html:
+        fail("El material de agua en Calidad debe conservar reflejos rasantes legibles, con intensidad controlada y textura de normales completa, sin añadir pasadas de renderizado.")
     if "float sheetFront=" in index_html or "color=mix(color,whitewater,swashMask*.56)" in index_html or "shoreSheetStrength" in index_html:
         fail("El avance del agua no puede simularse pintando el suelo de la playa.")
     if "function clamp01(value)" in index_html and index_html.find("updateOceanDepthGradient();",index_html.find("function smooth01")) < index_html.find("const terrainHashCache="):
