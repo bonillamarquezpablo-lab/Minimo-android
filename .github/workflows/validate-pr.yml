@@ -24,6 +24,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Test deterministic coastal reference hooks
+        run: node scripts/test_coastal_reference_contract.cjs
+
       - name: Test bounded startup scene warm-up
         run: node scripts/test_startup_guard.cjs
 
@@ -49,6 +52,35 @@ jobs:
 
       - name: Build and validate game resources
         run: python scripts/build_site.py
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+
+      - name: Start local built-site server
+        run: |
+          python3 -m http.server 4173 --directory dist > /tmp/elsn-http.log 2>&1 &
+          echo $! > /tmp/elsn-http.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/elsn-http.log
+          exit 1
+
+      - name: Capture 27 deterministic coastal reference images
+        env:
+          COASTAL_TEST_URL: http://127.0.0.1:4173/
+        run: node scripts/coastal-reference.mjs
+
+      - name: Upload coastal reference images and diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: coastal-reference-${{ github.sha }}
+          path: artifacts/coastal-reference/
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Verify generated website entry point
         run: test -s dist/index.html
