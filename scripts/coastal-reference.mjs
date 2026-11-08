@@ -152,9 +152,11 @@ async function main() {
     assert.equal(boot.backgroundModels?.fauna, 'skipped-coastal-reference',
       'La sesión costera no aisló las importaciones de fauna');
 
-    await page.addStyleTag({
-      content: '#loading,#intro,#hud,#controls,#map,#waterShoreDebugPanel,#groundPhaseADebugPanel{display:none!important}'
-    });
+    // Read pixels directly from the WebGL canvas. A full-page screenshot also includes
+    // HTML overlays (campaign menu/HUD) and triggers a slow full-page compositor readback.
+    // The game was launched with ?test=1, so preserveDrawingBuffer is enabled for this CI-only path.
+    manifest.captureMethod = 'WebGL canvas.toDataURL("image/png")';
+    manifest.canvasDimensions = null;
 
     const mainIsland = boot.islands[0];
     const shoreRadius = mainIsland.r * 0.92;
@@ -178,16 +180,24 @@ async function main() {
             });
             api.setWaterState({ time, tide: tide.value });
             api.render();
-            return api.diagnostics();
+            return { diagnostics: api.diagnostics(), canvasPng: api.captureCanvas() };
           }, { cameraCase, time, tide, island: mainIsland, shoreRadius });
           const renderMs = Number((performance.now() - renderStartedAt).toFixed(1));
 
           const screenshotStartedAt = performance.now();
-          await page.screenshot({
-            path: path.join(OUT, file),
-            animations: 'disabled',
-            timeout: 90000
-          });
+          const pngMatch = /^data:image\\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(result.canvasPng || '');
+          assert.ok(pngMatch, 'Canvas readback did not return a PNG data URL for ' + file);
+          const pngBuffer = Buffer.from(pngMatch[1], 'base64');
+          assert.ok(pngBuffer.length > 1000, 'PNG readback was empty or truncated for ' + file);
+          assert.equal(pngBuffer.subarray(0, 8).toString('hex'), '89504e470d0a1a0a',
+            'Canvas readback did not contain a valid PNG signature for ' + file);
+          const width = pngBuffer.readUInt32BE(16);
+          const height = pngBuffer.readUInt32BE(20);
+          assert.ok(width > 0 && height > 0, 'Canvas PNG has invalid dimensions for ' + file);
+          manifest.canvasDimensions = manifest.canvasDimensions || { width, height };
+          assert.deepEqual({ width, height }, manifest.canvasDimensions,
+            'Canvas dimensions changed between deterministic capture states');
+          fs.writeFileSync(path.join(OUT, file), pngBuffer);
           const screenshotMs = Number((performance.now() - screenshotStartedAt).toFixed(1));
           manifest.captures.push({
             file,
@@ -196,12 +206,13 @@ async function main() {
             tide: tide.id,
             renderMs,
             screenshotMs,
+            canvasBytes: pngBuffer.length,
             durationMs: Number((performance.now() - caseStartedAt).toFixed(1)),
-            diagnostics: result
+            diagnostics: result.diagnostics
           });
           if (manifest.captures.length % 3 === 0) {
             console.log('[coastal-reference] captured ' + manifest.captures.length +
-              '/27; latest render=' + renderMs + ' ms, screenshot=' + screenshotMs + ' ms');
+              '/27; latest render=' + renderMs + ' ms, canvas readback=' + screenshotMs + ' ms');
           }
         }
       }
