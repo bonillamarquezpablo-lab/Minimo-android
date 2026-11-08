@@ -14,12 +14,14 @@ concurrency:
 
 jobs:
   reference:
-    name: Build game and capture 27 deterministic coast states
+    name: Build game and capture 36 coastal and ridge views
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
-      - name: Checkout
+      - name: Checkout exact PR head commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -33,6 +35,7 @@ jobs:
 
       - name: Validate coastal state and geometry contracts
         run: |
+          node --check scripts/coastal-reference.mjs
           node scripts/test_coastal_reference_contract.cjs
           node scripts/test_water_diagnostics.cjs
           node scripts/test_beach_state.cjs
@@ -72,7 +75,7 @@ jobs:
         if: always()
         run: python scripts/create_coastal_contact_sheet.py
 
-      - name: Upload 27 screenshots, JSON manifest and contact sheet
+      - name: Upload 36 screenshots, JSON manifest and contact sheet plus A/B shadow frame
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -86,8 +89,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - name: Checkout
+      - name: Checkout exact PR head commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
