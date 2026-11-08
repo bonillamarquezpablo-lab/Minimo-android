@@ -2,6 +2,8 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const html = fs.readFileSync('index.html', 'utf8');
+const captureRunner = fs.readFileSync('scripts/coastal-reference.mjs', 'utf8');
+const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf8');
 
 assert.match(html, /const testModeEnabled=new URLSearchParams\(window\.location\.search\)\.get\('test'\)==='1'/);
 assert.match(html, /const coastalReferenceMode=new URLSearchParams\(window\.location\.search\)\.get\('coastref'\)==='1'/,
@@ -29,3 +31,10 @@ for (const api of ['setCamera:', 'setWaterState:', 'diagnostics:', 'snapshot:', 
 assert.match(html, /window\.__ELSN_TEST__=\{/);
 assert.match(html, /debugForcedTideOffset=tide==='natural'\?null:Number\(tide\)/);
 console.log('COASTAL REFERENCE CONTRACT OK');
+
+assert.match(captureRunner, /api\\.captureCanvas\\(\\)/,
+  'Coastal reference images must be read directly from the WebGL canvas, not the HTML page');
+assert.doesNotMatch(captureRunner, /page\\.screenshot\\(/,
+  'Full-page screenshots can include menus/HUD and add unnecessary SwiftShader compositor cost');
+assert.match(workflow, /cancel-in-progress:\\s*false/,
+  'A later PR commit must not cancel a long-running 27-image reference capture');
