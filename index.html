@@ -3895,7 +3895,8 @@ void main(void){
   for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
    const vertex=row*cols+col,shoreOffset=radialOffsets[row];
    const innerFade=smooth01((shoreOffset+1.12)/.24),outerFade=1-smooth01((shoreOffset-1.20)/.24);
-   const whiteFoamProfile=Math.exp(-(((shoreOffset-.16)/.58)**2)),lace=smooth01((foamPattern[vertex]-.20)/.40);
+   const whiteFoamProfile=Math.exp(-(((shoreOffset-.16)/.58)**2));
+   const lace=smooth01((foamPattern[vertex]-.20)/.40);
    foamAlphaMask[vertex]=whiteFoamProfile*innerFade*outerFade*lace;
   }
   for(let row=0;row<rows-1;row++)for(let col=0;col<segments;col++){
