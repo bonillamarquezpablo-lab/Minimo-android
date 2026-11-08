@@ -113,4 +113,18 @@ assert.match(html,/waveBodyPositions\[offset\+1\]=waterDepth>0\?water\+\.018\+li
 assert.match(html,/const foamTerrainContact=Math\.max\(foamSubmerged,dryFoamResidue\)/,"Foam residue must fade with actual terrain/water separation.");
 assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/ComputeNormals\(waveBodyPositions/,"Do not recompute the full volumetric-wave normal field during every animation update.");
 assert.match(html,/if\(beachWorkLayer&&beachWorkLayer\.index!==activeBeachIslandIndex\)/,"Pending beach-state work must be cancelled when the player changes island.");
+assert.match(html,/function coastalWaterHeight\(x,z,t=oceanTime\).*meanSeaLevel\+\.38/,"The shoreline water must stop at sea level plus a short physical run-up margin.");
+assert.match(html,/return ground-coastalWaterHeight\(x,z,t\);/,"The shoreline intersection must use capped coastal water, not an offshore crest on a hill.");
+assert.match(html,/waveBodyMesh\.renderingGroupId=0/,"The translucent breaker must share the terrain depth buffer.");
+assert.match(html,/washMesh\.hasVertexAlpha=true;washMesh\.renderingGroupId=0/,"The advancing water film must share the terrain depth buffer too.");
+assert.match(html,/WATER_DETAIL_RADIUS[^;]*isTouchDevice\?90:300/,"High-frequency water displacement must stay local to the active island on touch devices without reducing mesh resolution.");
+assert.match(html,/const waterFarStep=isPerformanceMode\?[^;]*isTouchDevice\?\.22/,"Far-ocean geometry updates should be throttled on touch devices while local waves retain detail.");
+assert.match(html,/async function createRealGrass\(onlyIslandIndex=null\)/,"Quality vegetation must accept one selected island rather than building the whole archipelago.");
+assert.match(html,/if\(onlyIslandIndex!==null&&islandIndex!==onlyIslandIndex\)continue;/,"Grass placement must skip all inactive islands.");
+assert.match(html,/async function streamQualityGrassIsland\(index\)/,"The detailed grass set must stream when entering another island.");
+assert.match(html,/if\(currentIsland!==grassStreamActiveIslandIndex&&!grassStreamPromise\)/,"The vegetation streamer must follow the player's current island.");
+assert.match(html,/createRealGrass\(initialGrassIslandIndex\)/,"Startup should build detailed grass only for the player's starting island.");
+assert.match(html,/const radius=isTouchDevice\?\(sameIsland\?52:0\)/,"Touch-device grass culling should retain detail near the player and omit remote island vegetation.");
+assert.match(html,/grassStream:\{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise\}/,"Runtime diagnostics must expose the active grass island and pending streaming state.");
+assert.match(html,/const leavesPerClump=isPerformanceMode\?8:10/,"Quality grass blade detail must be preserved while island streaming changes.");
 console.log('OK: separate seabed, translucent moving water film, white foam, wet sand and detailed multi-scale ocean surface.');
