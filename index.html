@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.254">
+<meta name="el-sin-nombre-build" content="0.6.255">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.254</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.255</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -1399,7 +1399,7 @@ body.game-running #loading{display:none!important;visibility:hidden!important;op
 <div id="hud">
  <div id="top">
   <div class="panel"><div id="brand">EL SIN NOMBRE</div><div id="subtitle">SAGA DEL NORTE · CAPÍTULO I</div><div id="playerIdentityTag">VIKINGO · SIN NOMBRE</div></div>
-  <div class="panel" id="stats"><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-wood"/></svg><b id="wood">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-stone"/></svg><b id="stone">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-clan"/></svg><b id="recruits">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-sword"/></svg><b id="kills">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-banner"/></svg><b id="captured">0/4</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-ship"/></svg><b id="boatHealthStat">100%</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-skull"/></svg><b id="raiders">3</b></span><span class="fpsStat"><b id="fpsMeter">FPS --</b></span></div>
+  <div class="panel" id="stats"><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-wood"/></svg><b id="wood">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-stone"/></svg><b id="stone">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-clan"/></svg><b id="recruits">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-sword"/></svg><b id="kills">0</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-banner"/></svg><b id="captured">0/13</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-ship"/></svg><b id="boatHealthStat">100%</b></span><span><svg class="uiIcon" aria-hidden="true"><use href="#norse-skull"/></svg><b id="raiders">3</b></span><span class="fpsStat"><b id="fpsMeter">FPS --</b></span></div>
  </div>
  <div id="healthWrap"><div id="health"></div></div><div id="staminaWrap"><div id="stamina"></div></div><div id="area">Costa del Cuervo</div>
  <button id="chapterTracker" type="button" aria-label="Objetivo actual de la saga">
@@ -8679,6 +8679,176 @@ function createRealWeapon(type='axe'){
  });
  const enemies=[...villages.flatMap(q=>q.guards)];
  const fallenEnemies=[];
+
+  // Defensa naval del archipiélago: oleadas, navegación, desembarco, asedio y reconquista.
+  // Reutiliza la flota y los guardianes del juego principal; no mantiene un prototipo paralelo.
+  const islandInvasionState={started:false,wave:0,nextWaveAt:0,waveInProgress:false,targetIndex:-1,ships:[],activeInvaders:[],siegeClock:0};
+  function ensureInvasionHealthBars(ship,crewman){
+   if(!crewman.healthBack){
+    crewman.healthBack=B.MeshBuilder.CreatePlane('InvasionCrewHealthBack_'+ship.index+'_'+crewman.index,{width:1.10,height:.12},scene);
+    crewman.healthBack.parent=crewman.parts.root;crewman.healthBack.position=v(0,2.02,0);crewman.healthBack.billboardMode=B.Mesh.BILLBOARDMODE_ALL;crewman.healthBack.material=M.red;
+    crewman.healthMesh=B.MeshBuilder.CreatePlane('InvasionCrewHealth_'+ship.index+'_'+crewman.index,{width:1.05,height:.085},scene);
+    crewman.healthMesh.parent=crewman.parts.root;crewman.healthMesh.position=v(0,2.03,-.02);crewman.healthMesh.billboardMode=B.Mesh.BILLBOARDMODE_ALL;crewman.healthMesh.material=M.gold;
+   }
+   return {healthBack:crewman.healthBack,healthMesh:crewman.healthMesh};
+  }
+  function createIslandInvasionUnit(ship,crewman,vl,x,z,yawValue,hpValue=100){
+   const parts=crewman.parts;parts.root.parent=null;parts.root.setEnabled(true);
+   parts.root.position=v(x,terrainSurfaceAt(x,z)+actorGroundOffset(parts),z);parts.root.rotation.set(0,yawValue,0);
+   parts.weapon.setEnabled(true);parts.faction='enemy';if(parts.realHuman&&parts.realHuman.sword)parts.realHuman.sword.setEnabled(true);
+   const bars=ensureInvasionHealthBars(ship,crewman),healthRatio=Math.max(.01,Math.min(1.24,hpValue/100));
+   bars.healthBack.setEnabled(true);bars.healthMesh.setEnabled(true);bars.healthMesh.scaling.x=healthRatio;bars.healthMesh.position.x=-(1-healthRatio)*.525;
+   const invader={parts,hp:hpValue,alive:true,surrendered:false,recruited:false,state:'idle',attackT:0,attackDone:false,cool:rand(.4,1.1),stun:0,hitReact:0,knockback:0,hitDir:v(0,0,0),deadFallT:0,deadSide:1,deadTimer:0,healthMesh:bars.healthMesh,healthBack:bars.healthBack,home:v(x,0,z),initialYaw:yawValue,islandInvader:true,targetVillageIndex:vl.index,crewShipIndex:ship.index,crewIndex:crewman.index};
+   crewman.landed=true;crewman.invaderRef=invader;if(!enemies.includes(invader))enemies.push(invader);
+   if(!islandInvasionState.activeInvaders.includes(invader))islandInvasionState.activeInvaders.push(invader);
+   setFactionBadge(parts,'enemy');return invader;
+  }
+  function returnInvasionCrewToShip(ship,crewman){
+   if(!crewman||!crewman.landed)return;
+   const invader=crewman.invaderRef;
+   if(invader){
+    const enemyIndex=enemies.indexOf(invader);if(enemyIndex>=0)enemies.splice(enemyIndex,1);
+    const activeIndex=islandInvasionState.activeInvaders.indexOf(invader);if(activeIndex>=0)islandInvasionState.activeInvaders.splice(activeIndex,1);
+    const fallenIndex=fallenEnemies.findIndex(e=>e===invader||e.parts===crewman.parts);if(fallenIndex>=0)fallenEnemies.splice(fallenIndex,1);
+   }
+   const parts=crewman.parts,real=parts.realHuman;
+   if(real){real.groups.forEach(group=>{try{group.stop();}catch(_){}});real.current=null;for(const [node,base] of real.rest)restoreRigNodePose(node,base);if(real.modelRoot)real.modelRoot.rotation.y=real.modelForwardOffset||0;if(real.sword)real.sword.setEnabled(false);}
+   else{if(parts.body){parts.body.rotation.set(0,0,0);parts.body.position.y=0;}if(parts.arms)parts.arms.forEach(node=>node.rotation.set(0,0,0));if(parts.elbows)parts.elbows.forEach(node=>node.rotation.set(0,0,0));if(parts.legs)parts.legs.forEach(node=>node.rotation.set(0,0,0));if(parts.knees)parts.knees.forEach(node=>node.rotation.set(0,0,0));}
+   parts.weapon.setEnabled(false);parts.root.parent=crewman.mount;parts.root.setEnabled(true);parts.root.position.set(0,0,0);parts.root.rotation.set(0,crewman.side*Math.PI/2,0);
+   if(crewman.healthBack)crewman.healthBack.setEnabled(false);if(crewman.healthMesh)crewman.healthMesh.setEnabled(false);
+   crewman.landed=false;crewman.invaderRef=null;parts.faction='enemy';setFactionBadge(parts,'enemy');
+  }
+  function invasionDisembark(ship,vl){
+   if(!ship||ship.invasionPartySpawned||!vl||!vl.claimed)return false;
+   const island=land[vl.index],dx=ship.root.position.x-island.x,dz=ship.root.position.z-island.z,len=Math.hypot(dx,dz)||1,ux=dx/len,uz=dz/len,rx=uz,rz=-ux;
+   let landed=0;
+   ship.crew.forEach((crewman,i)=>{
+    if(crewman.landed)return;
+    const side=i%2===0?-1:1,candidateX=island.x+ux*island.r*.54+rx*side*2.2,candidateZ=island.z+uz*island.r*.54+rz*side*2.2;
+    let spot=nearestSafeLandPoint(candidateX,candidateZ,.68);
+    if(!spot||spot.island!==vl.index)spot=nearestSafeLandPoint(vl.x+rx*side*2.8,vl.z+rz*side*2.8,.68);
+    if(!spot||spot.island!==vl.index)return;
+    createIslandInvasionUnit(ship,crewman,vl,spot.x,spot.z,Math.atan2(vl.x-spot.x,vl.z-spot.z),100+islandInvasionState.wave*12);landed++;
+   });
+   if(!landed)return false;
+   ship.invasionPartySpawned=true;ship.invasionPhase='landed';ship.invasionSiegeClock=0;islandInvasionState.siegeClock=0;
+   msg('¡Desembarco enemigo en '+vl.name+'! Defiende el puesto y elimina a los invasores.');
+   recordSagaEvent('Desembarco enemigo en '+vl.name+'. Sus drakkars han llegado a la costa.');
+   saveGame(true);return true;
+  }
+  function prepareInvasionShip(ship,slot,vl){
+   const island=land[vl.index],angle=(islandInvasionState.wave*1.83+slot*Math.PI+.37),spawnRadius=island.r+118;
+   const sx=island.x+Math.cos(angle)*spawnRadius,sz=island.z+Math.sin(angle)*spawnRadius;
+   ship.crew.forEach(crewman=>returnInvasionCrewToShip(ship,crewman));
+   ship.islandInvasionShip=true;ship.invasionTargetIndex=vl.index;ship.invasionPhase='sailing';ship.invasionPartySpawned=false;ship.invasionSiegeClock=0;
+   ship.invasionApproachX=island.x+Math.cos(angle)*(island.r+13);ship.invasionApproachZ=island.z+Math.sin(angle)*(island.r+13);
+   ship.root.setEnabled(true);ship.root.position.set(sx,-.35,sz);ship.root.rotation.set(0,Math.atan2(ship.invasionApproachX-sx,ship.invasionApproachZ-sz),0);
+   ship.hp=130+islandInvasionState.wave*12;ship.maxHp=ship.hp;ship.sunk=false;ship.cool=1.8;ship.bar.setEnabled(true);ship.back.setEnabled(true);ship.bar.scaling.x=1;ship.bar.position.x=0;ship.floatState=createVesselFloatState();
+   return ship;
+  }
+  function chooseInvasionTarget(){
+   const holdings=villages.filter(vl=>vl.claimed);if(!holdings.length)return null;
+   const garrisonCount=vl=>vl.guards.filter(g=>g&&g.alive&&!g.recruited&&isFriendlyGuard(g)).length;
+   holdings.sort((a,b)=>garrisonCount(a)-garrisonCount(b)||((a.index-islandInvasionState.wave+land.length)%land.length)-((b.index-islandInvasionState.wave+land.length)%land.length));
+   return holdings[0];
+  }
+  function spawnIslandInvasionWave(){
+   const target=chooseInvasionTarget();if(!target){islandInvasionState.nextWaveAt=elapsed+18;return false;}
+   islandInvasionState.wave++;islandInvasionState.targetIndex=target.index;islandInvasionState.activeInvaders=[];islandInvasionState.waveInProgress=true;islandInvasionState.siegeClock=0;
+   islandInvasionState.ships=[enemyShips[0],enemyShips[1]];
+   islandInvasionState.ships.forEach((ship,slot)=>prepareInvasionShip(ship,slot,target));
+   msg('¡OLEADA NAVAL '+islandInvasionState.wave+'! Dos drakkars enemigos navegan hacia '+target.name+'.');
+   recordSagaEvent('Oleada naval '+islandInvasionState.wave+': flota enemiga rumbo a '+target.name+'.');
+   updateHUD();saveGame(true);return true;
+  }
+  function loseIslandHolding(vl){
+   if(!vl||!vl.claimed)return;
+   vl.claimed=false;captured=Math.max(0,captured-1);if(vl.flag)vl.flag.material=M.red;
+   (vl.flagEmblem||[]).forEach(mesh=>mesh.setEnabled(true));
+   if(vl.flagGroup){vl.flagGroup.position.y=vl.flagBaseY||terrainSurfaceAt(vl.x,vl.z)+4.65;vl.flagGroup.scaling.set(1,1,1);}
+   if(vl.territoryFill){vl.territoryFill.dispose(false,true);vl.territoryFill=null;}
+   if(vl.territoryRing){vl.territoryRing.dispose(false,true);vl.territoryRing=null;}
+   (vl.houseOriginalMaterials||[]).forEach(group=>group.forEach(entry=>{if(entry.mesh&&!entry.mesh.isDisposed())entry.mesh.material=entry.material;}));
+   vl.guards.forEach(g=>{
+    if(!g.alive||g.recruited)return;
+    g.surrendered=false;g.faction='enemy';g.parts.faction='enemy';g.parts.recruited=false;g.parts.surrendered=false;g.state='idle';g.cool=.6;
+    const real=g.parts.realHuman;
+    if(real){real.groups.forEach(group=>{try{group.stop();}catch(_){}});real.current=null;for(const [node,base] of real.rest)restoreRigNodePose(node,base);if(real.modelRoot)real.modelRoot.rotation.y=real.modelForwardOffset||0;}
+    else{if(g.parts.body){g.parts.body.rotation.set(0,0,0);g.parts.body.position.y=0;}g.parts.arms.forEach(node=>node.rotation.set(0,0,0));g.parts.elbows.forEach(node=>node.rotation.set(0,0,0));g.parts.legs.forEach(node=>node.rotation.set(0,0,0));g.parts.knees.forEach(node=>node.rotation.set(0,0,0));}
+    if(g.healthBack)g.healthBack.setEnabled(true);if(g.healthMesh){g.healthMesh.setEnabled(true);g.healthMesh.scaling.x=Math.max(.01,g.hp/100);}
+    setFactionBadge(g.parts,'enemy');
+   });
+   updateHUD();recordSagaEvent('Asentamiento perdido: '+vl.name+'. La invasión ha ocupado la costa; debes eliminar a sus invasores y reconquistarla.');
+   msg('¡'+vl.name+' ha caído! La flota enemiga ha ocupado la costa. Elimina a los invasores para recuperarla.');
+   saveGame(true);
+  }
+  function updateIslandInvasion(dt){
+   const allClaimed=villages.length===land.length&&villages.every(vl=>vl.claimed)&&discoveredIslands.every(Boolean);
+   if(!islandInvasionState.started&&(navalDefensePhaseUnlocked||allClaimed)){
+    navalDefensePhaseUnlocked=true;islandInvasionState.started=true;islandInvasionState.wave=0;islandInvasionState.waveInProgress=false;islandInvasionState.nextWaveAt=elapsed+22;
+    msg('¡ARCHIPIÉLAGO UNIFICADO! Se avistan velas enemigas en el horizonte.');
+    recordSagaEvent('Las trece islas están bajo tu estandarte. Comienza la defensa naval del archipiélago.');
+    saveGame(true);
+   }
+   if(!islandInvasionState.started)return;
+   if(islandInvasionState.waveInProgress){
+    const target=villages.find(vl=>vl.index===islandInvasionState.targetIndex);
+    const landedShips=islandInvasionState.ships.filter(ship=>ship&&ship.invasionPartySpawned&&ship.invasionPhase==='landed');
+    if(target&&target.claimed&&landedShips.length){
+     islandInvasionState.siegeClock+=dt;
+     if(islandInvasionState.siegeClock>=12){
+      islandInvasionState.siegeClock=0;
+      const defenders=target.guards.filter(g=>g&&g.alive&&!g.recruited&&isFriendlyGuard(g));
+      if(defenders.length){
+       const guard=defenders.sort((a,b)=>(Number(a.hp)||0)-(Number(b.hp)||0))[0];guard.hp=Math.max(0,(Number(guard.hp)||0)-28);
+       if(guard.healthBack)guard.healthBack.setEnabled(true);
+       if(guard.healthMesh){guard.healthMesh.setEnabled(true);guard.healthMesh.scaling.x=Math.max(.01,guard.hp/100);guard.healthMesh.position.x=-(1-guard.hp/100)*.55;}
+       if(guard.hp<=0)defeatGuard(guard,'invasión');else msg('¡Asedio en '+target.name+'! La guarnición está sufriendo daños.');
+       saveGame(true);
+      }else loseIslandHolding(target);
+     }
+    }
+    islandInvasionState.activeInvaders=islandInvasionState.activeInvaders.filter(invader=>invader&&invader.alive);
+    if(!islandInvasionState.activeInvaders.length&&islandInvasionState.ships.length&&islandInvasionState.ships.every(ship=>!ship||ship.sunk||ship.invasionPhase==='landed')){
+     islandInvasionState.waveInProgress=false;islandInvasionState.nextWaveAt=elapsed+Math.max(58,92-islandInvasionState.wave*3);islandInvasionState.siegeClock=0;
+     recordSagaEvent('Oleada naval '+islandInvasionState.wave+' rechazada. La siguiente flota se aproxima.');
+     msg('¡Oleada rechazada! La siguiente flota se aproxima.');saveGame(true);
+    }
+    return;
+   }
+   if(elapsed>=islandInvasionState.nextWaveAt)spawnIslandInvasionWave();
+  }
+  function snapshotIslandInvasion(){
+   return {started:islandInvasionState.started,wave:islandInvasionState.wave,nextWaveIn:Math.max(0,(islandInvasionState.nextWaveAt||elapsed)-elapsed),waveInProgress:islandInvasionState.waveInProgress,targetIndex:islandInvasionState.targetIndex,siegeClock:islandInvasionState.siegeClock,
+    ships:enemyShips.map(ship=>({invasionShip:!!ship.islandInvasionShip,phase:ship.invasionPhase||'patrol',targetIndex:Number.isInteger(ship.invasionTargetIndex)?ship.invasionTargetIndex:-1,approachX:ship.invasionApproachX,approachZ:ship.invasionApproachZ,partySpawned:!!ship.invasionPartySpawned,siegeClock:ship.invasionSiegeClock||0,
+     crew:ship.crew.map(crewman=>{const invader=crewman.invaderRef;return {landed:!!crewman.landed,alive:!!(invader&&invader.alive),hp:invader?invader.hp:0,targetIndex:invader&&Number.isInteger(invader.targetVillageIndex)?invader.targetVillageIndex:-1,x:crewman.parts.root.position.x,z:crewman.parts.root.position.z,yaw:crewman.parts.root.rotation.y};})}))};
+  }
+  function restoreIslandInvasion(snapshot){
+   islandInvasionState.activeInvaders=[];islandInvasionState.ships=[];
+   if(!snapshot){if(navalDefensePhaseUnlocked){islandInvasionState.started=true;islandInvasionState.nextWaveAt=elapsed+24;}return;}
+   islandInvasionState.started=!!snapshot.started||!!navalDefensePhaseUnlocked;islandInvasionState.wave=Math.max(0,Math.floor(Number(snapshot.wave)||0));
+   islandInvasionState.nextWaveAt=elapsed+Math.max(0,Math.min(3600,Number(snapshot.nextWaveIn)||0));islandInvasionState.waveInProgress=!!snapshot.waveInProgress;
+   islandInvasionState.targetIndex=Number.isInteger(snapshot.targetIndex)?snapshot.targetIndex:-1;islandInvasionState.siegeClock=Math.max(0,Math.min(12,Number(snapshot.siegeClock)||0));
+   (snapshot.ships||[]).forEach((saved,index)=>{
+    const ship=enemyShips[index];if(!ship||!saved)return;
+    ship.islandInvasionShip=!!saved.invasionShip;ship.invasionPhase=saved.phase||'patrol';ship.invasionTargetIndex=Number.isInteger(saved.targetIndex)?saved.targetIndex:-1;
+    ship.invasionApproachX=Number(saved.approachX)||0;ship.invasionApproachZ=Number(saved.approachZ)||0;ship.invasionPartySpawned=!!saved.partySpawned;ship.invasionSiegeClock=Math.max(0,Number(saved.siegeClock)||0);
+    (saved.crew||[]).forEach((crewData,crewIndex)=>{
+     const crewman=ship.crew[crewIndex],target=villages.find(vl=>vl.index===crewData.targetIndex)||villages.find(vl=>vl.index===islandInvasionState.targetIndex);
+     if(!crewman||!crewData.landed||!crewData.alive||!target)return;
+     const x=Number.isFinite(Number(crewData.x))?Number(crewData.x):target.x,z=Number.isFinite(Number(crewData.z))?Number(crewData.z):target.z;
+     const invader=createIslandInvasionUnit(ship,crewman,target,x,z,Number(crewData.yaw)||0,Math.max(1,Math.min(124,Number(crewData.hp)||100)));
+     invader.hp=Math.max(1,Math.min(124,Number(crewData.hp)||100));invader.healthMesh.scaling.x=Math.max(.01,invader.hp/100);
+    });
+    if(ship.islandInvasionShip)islandInvasionState.ships.push(ship);
+   });
+   if(!islandInvasionState.ships.length)islandInvasionState.ships=enemyShips.filter(ship=>ship.islandInvasionShip);
+  }
+  function resetIslandInvasion(){
+   enemyShips.forEach(ship=>{ship.crew.forEach(crewman=>returnInvasionCrewToShip(ship,crewman));ship.islandInvasionShip=false;ship.invasionPhase='patrol';ship.invasionTargetIndex=-1;ship.invasionPartySpawned=false;ship.invasionApproachX=0;ship.invasionApproachZ=0;});
+   islandInvasionState.started=false;islandInvasionState.wave=0;islandInvasionState.nextWaveAt=0;islandInvasionState.waveInProgress=false;islandInvasionState.targetIndex=-1;islandInvasionState.ships=[];islandInvasionState.activeInvaders=[];islandInvasionState.siegeClock=0;
+  }
+
  function isFriendlyGuard(e){
   if(!e)return false;
   // Ambas marcas se consultan: algunos NPC conservan la facción en parts tras cambiar de estado.
@@ -8691,7 +8861,8 @@ function createRealWeapon(type='axe'){
  }
 function villageHostileDefenders(vl){
   if(!vl||vl.claimed)return [];
-  return vl.guards.filter(g=>g&&g.alive&&!g.surrendered&&!g.recruited&&!isFriendlyGuard(g));
+  const islandInvaders=enemies.filter(g=>g&&g.alive&&g.islandInvader&&g.targetVillageIndex===vl.index);
+  return [...vl.guards.filter(g=>g&&g.alive&&!g.surrendered&&!g.recruited&&!isFriendlyGuard(g)),...islandInvaders];
  }
  function isPlayerTerritoryAt(x,z){
   if(!Number.isFinite(x)||!Number.isFinite(z))return false;
@@ -8703,8 +8874,8 @@ function villageHostileDefenders(vl){
  function canAttackPlayer(attacker,x,z,playerProtectedOverride=null){
   if(!attacker||!attacker.alive||attacker.recruited||attacker.surrendered)return false;
   if(isFriendlyGuard(attacker))return false;
-  // Si no podemos determinar la posición del jugador, se protege por seguridad.
   if(!Number.isFinite(x)||!Number.isFinite(z))return false;
+  if(attacker.islandInvader)return landIslandIndex(x,z)===attacker.targetVillageIndex;
   if(playerProtectedOverride===null?isPlayerTerritoryAt(x,z):playerProtectedOverride)return false;
   return true;
  }
@@ -8906,7 +9077,7 @@ function villageHostileDefenders(vl){
   actionResource=null;actionVillage=null;activeTree=null;activeRock=null;nearVillage=null;nearBoat=false;
   if(document.getElementById('runBtn'))document.getElementById('runBtn').textContent='🏃 CORRER: NO';
   if(document.getElementById('act'))document.getElementById('act').textContent='🪓 ACCIÓN';
-  discoveredIslands.fill(false);discoveredIslands[0]=true;navalDefensePhaseUnlocked=false;
+  resetIslandInvasion();discoveredIslands.fill(false);discoveredIslands[0]=true;navalDefensePhaseUnlocked=false;
   villages.forEach(vl=>{
    vl.claimed=false;
    if(vl.flag)vl.flag.material=M.red;
@@ -9034,7 +9205,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'10',build:'0.6.254',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'10',build:'0.6.255',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    beachState:{activeIslandIndex:activeBeachIslandIndex,activeIsland:activeBeachLayer?activeBeachLayer.island.name:null,columns:activeBeachLayer?activeBeachLayer.coastalState.columns:0,rows:activeBeachLayer?activeBeachLayer.coastalState.rows:0,updatedCellsLast:beachUpdateCellsLast,updatedCellsTotal:beachUpdateCellsTotal,cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,textureUploads:beachStateTextureUploads,updateHz:12,workBudgetMs:GroundDynamics.counts().beachWorkBudgetMs,lastSliceMs:GroundDynamics.counts().beachWorkLastSliceMs,maxSliceMs:GroundDynamics.counts().beachWorkMaxSliceMs,pending:GroundDynamics.counts().beachWorkPending},waterline:getWaterCoastDiagnostics(),startupTimeline:getStartupTimelineSnapshot(),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
@@ -9099,7 +9270,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.254');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.255');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -9199,7 +9370,7 @@ function updateHUD(){
   if(!restoring){const territoryLabel=vl.islandGarrison?'Isla':'Aldea';msg('¡'+vl.name+' conquistada! '+surrendered+' guerrero(s) se han rendido. Ya puedes reclutarlos. +12 madera.'+(unlockedReward?' Arma desbloqueada: '+unlockedReward+'.':''));recordSagaEvent(territoryLabel+' conquistada: '+vl.name+'. Defensores rendidos: '+surrendered+'.');}
   updateHUD();
   const allTerritoriesClaimed=villages.length===land.length&&villages.every(entry=>entry.claimed)&&discoveredIslands.every(Boolean);
-  if(allTerritoriesClaimed&&!navalDefensePhaseUnlocked){navalDefensePhaseUnlocked=true;if(!restoring){recordSagaEvent('Las trece islas están bajo tu estandarte. Se ha desbloqueado el hito de la defensa naval del archipiélago.');msg('¡ARCHIPIÉLAGO UNIFICADO! Has completado la conquista de las trece islas.');}}
+  if(allTerritoriesClaimed&&!navalDefensePhaseUnlocked){navalDefensePhaseUnlocked=true;islandInvasionState.started=true;islandInvasionState.wave=0;islandInvasionState.waveInProgress=false;islandInvasionState.nextWaveAt=elapsed+22;if(!restoring){recordSagaEvent('Las trece islas están bajo tu estandarte. La primera flota enemiga llegará en unos segundos.');msg('¡ARCHIPIÉLAGO UNIFICADO! Prepara el drakkar: se acerca una invasión naval.');}}
   if(!restoring)saveGame(true);
  }
  function findVillageSurvivor(vl){return vl&&vl.guards.find(g=>g.alive&&g.surrendered&&!g.recruited)||null;}
@@ -9877,7 +10048,7 @@ function updateHUD(){
  function saveGame(silent=false){
   try{
    const pos=playerPos();
-   const data={version:1,saveSlot:activeSaveKey,guestMode:SHARE_NEW_GAME,savedAt:Date.now(),playerName,chapterStage,sprintMissionMeters,sprintMissionDone,health,stamina,healCooldown,woodCount,stoneCount,kills,captured,weaponLevel,equippedWeapon,unlockedWeapons:[...unlockedWeapons],
+   const data={version:1,saveSlot:activeSaveKey,guestMode:SHARE_NEW_GAME,savedAt:Date.now(),playerName,chapterStage,sprintMissionMeters,sprintMissionDone,health,stamina,healCooldown,woodCount,stoneCount,kills,captured,weaponLevel,equippedWeapon,unlockedWeapons:[...unlockedWeapons],islandInvasion:snapshotIslandInvasion(),
     player:{x:pos.x,z:pos.z,yaw},checkpoint:{x:lastSafePosition.x,z:lastSafePosition.z},onShip,ship:{x:ship.position.x,z:ship.position.z,yaw:ship.rotation.y,hp:boatHp,max:boatMax,level:boatLevel},
     history:sagaHistory.slice(-30),discoveredIslands:discoveredIslands.slice(),navalDefensePhaseUnlocked,villages:villages.map(vl=>({claimed:vl.claimed,guards:vl.guards.map(g=>({alive:g.alive,hp:g.hp,surrendered:!!g.surrendered,recruited:!!g.recruited}))})),
     survivorRecruits:companions.map(a=>a.villageIndex),
@@ -9931,6 +10102,7 @@ function updateHUD(){
    if(Array.isArray(d.survivorRecruits))d.survivorRecruits.forEach(i=>{const vl=villages.find(v=>v.index===Number(i));if(vl&&vl.claimed)recruitGuard(vl,true);});
    if(d.structures&&d.structures.starterShelter&&d.structures.starterShelter.built)buildPlayerShelter(true,d.structures.starterShelter);
    if(Array.isArray(d.ships))d.ships.forEach((saved,i)=>{const e=enemyShips[i];if(!e||!saved)return;e.hp=num(saved.hp,e.maxHp,0,e.maxHp);e.sunk=!!saved.sunk;e.root.position.x=num(saved.x,e.root.position.x,-450,450);e.root.position.z=num(saved.z,e.root.position.z,-450,450);e.root.rotation.y=num(saved.yaw,e.root.rotation.y,-Math.PI*20,Math.PI*20);e.root.setEnabled(!e.sunk);e.bar.setEnabled(!e.sunk);e.back.setEnabled(!e.sunk);e.bar.scaling.x=Math.max(.01,e.hp/e.maxHp);});
+    restoreIslandInvasion(d.islandInvasion);
    if(Array.isArray(d.trees))d.trees.forEach((alive,i)=>{const tree=trees[i];if(!tree)return;tree.hp=Array.isArray(d.treeHp)?num(d.treeHp[i],alive===false?0:tree.hp,0,3):(alive===false?0:tree.hp);if(alive===false||tree.hp<=0){tree.alive=false;tree.root.setEnabled(false);createTreeStump(tree,i);}});
    if(Array.isArray(d.rocks))d.rocks.forEach((alive,i)=>{const rock=rocks[i];if(!rock)return;rock.hp=Array.isArray(d.rockHp)?num(d.rockHp[i],alive===false?0:rock.hp,0,3):(alive===false?0:rock.hp);if(alive===false||rock.hp<=0){rock.alive=false;rock.meshes.forEach(m=>m.setEnabled(false));}});
    updateHUD();updateWeaponPanel();updateProgressPanel();
@@ -10398,8 +10570,19 @@ function update(dt){
     const raiderSlope=waterNormalAt(raider.root.position.x,raider.root.position.z,elapsed);
     raider._lastWaveRoll=raiderSlope.roll;
     raider.oars.forEach(o=>{const stroke=Math.sin(elapsed*5.2+o.phase+raider.index*.8);o.pivot.rotation.y=stroke*.22;});
-    raider.crew.forEach((c,i)=>animateViking(c.parts,elapsed*2.65+i*.55,false,'row',false));
+    raider.crew.forEach((c,i)=>{if(!c.landed)animateViking(c.parts,elapsed*2.65+i*.55,false,'row',false);});
    }
+   if(raider.islandInvasionShip&&raider.invasionPhase==='sailing'){
+    const invasionTarget=villages.find(vl=>vl.index===raider.invasionTargetIndex);
+    if(!invasionTarget||!invasionTarget.claimed){raider.islandInvasionShip=false;raider.invasionPhase='patrol';continue;}
+    const tx=raider.invasionApproachX-raider.root.position.x,tz=raider.invasionApproachZ-raider.root.position.z,td=Math.hypot(tx,tz);
+    const wanted=Math.atan2(tx,tz),turn=Math.atan2(Math.sin(wanted-raider.root.rotation.y),Math.cos(wanted-raider.root.rotation.y));
+    raider.root.rotation.y+=Math.max(-1.15*dt,Math.min(1.15*dt,turn));
+    if(td>8){const step=Math.min(td,5.6*dt),nx=raider.root.position.x+Math.sin(raider.root.rotation.y)*step,nz=raider.root.position.z+Math.cos(raider.root.rotation.y)*step;if(vesselCanMove(raider.root,nx,nz,4.7,1.1)||td<16){raider.root.position.x=nx;raider.root.position.z=nz;}}
+    else invasionDisembark(raider,invasionTarget);
+    raider.root.rotation.z=(raider._lastWaveRoll||0)*.78+Math.sin(elapsed*.7+raider.index)*.009;continue;
+   }
+   if(raider.islandInvasionShip&&raider.invasionPhase==='landed'){raider.root.rotation.z=(raider._lastWaveRoll||0)*.78+Math.sin(elapsed*.7+raider.index)*.009;continue;}
    if(onShip&&dist<175){
     const desired=Math.atan2(dx,dz);let delta=((desired-raider.root.rotation.y+Math.PI*3)%(Math.PI*2))-Math.PI;raider.root.rotation.y+=Math.max(-1.0*dt,Math.min(1.0*dt,delta));
     if(dist>30){let ex=Math.sin(raider.root.rotation.y),ez=Math.cos(raider.root.rotation.y),nx=raider.root.position.x+ex*4.8*dt,nz=raider.root.position.z+ez*4.8*dt;if(vesselCanMove(raider.root,nx,nz,4.7,1.1)){raider.root.position.x=nx;raider.root.position.z=nz;}}
@@ -10845,6 +11028,7 @@ function update(dt){
   // Coast gulls circle above the water, with a slow wing beat.
   ambientBirds.forEach(b=>{if(!worldEntityVisualDue(b,b.root.position.x,b.root.position.z))return;const a=elapsed*b.speed+b.phase,bank=Math.sin(a*1.2)*.12;b.root.position.x=Math.cos(a)*b.radius-36;b.root.position.z=Math.sin(a)*b.radius-18;b.root.position.y=b.alt+Math.sin(a*2+b.phase)*.72+Math.sin(elapsed*.41+b.phase)*.12;b.root.rotation.y=-a+Math.PI/2;b.root.rotation.z=bank;if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);});
   }
+  updateIslandInvasion(dt);
   contextRefresh+=dt;if(contextRefresh>=.12){updateContext();updateChapterQuest();contextRefresh=0;}
   update.factionBadgeAccumulator=(update.factionBadgeAccumulator||0)+dt;
   if(update.factionBadgeAccumulator>=.45){update.factionBadgeAccumulator=0;refreshFactionBadges();}
@@ -11066,7 +11250,7 @@ function update(dt){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.254 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.255 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -11123,7 +11307,7 @@ function update(dt){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;startupTimeline.firstFrameAt=performance.now();startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
-    console.info('EL SIN NOMBRE 0.6.254: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
+    console.info('EL SIN NOMBRE 0.6.255: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -11249,7 +11433,7 @@ function update(dt){
  }
 
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.254 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.255 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,

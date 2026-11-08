@@ -1,0 +1,28 @@
+'use strict';
+const fs=require('node:fs');
+const assert=require('node:assert/strict');
+
+const html=fs.readFileSync('index.html','utf8');
+const land=html.match(/const land=\[([\s\S]*?)\];/);
+assert.ok(land,'No se encuentra la definición del archipiélago.');
+assert.equal((land[1].match(/\{x:/g)||[]).length,13,'El mapa debe contener exactamente trece islas.');
+assert.match(html,/<b id="captured">0\/13<\/b>/,'El HUD debe mostrar 0/13 desde el primer fotograma.');
+assert.doesNotMatch(html,/<b id="captured">0\/4<\/b>/,'No debe quedar el contador antiguo 0/4.');
+assert.match(html,/for\(let islandIndex=4;islandIndex<land\.length;islandIndex\+\+\)makeIslandGarrison\(islandIndex\);/);
+assert.match(html,/function makeIslandGarrison\(islandIndex\)/);
+assert.match(html,/function claimVillage\(vl,restoring=false\)/);
+assert.match(html,/captured\+'\/'\+land\.length/);
+assert.match(html,/function updateIslandInvasion\(dt\)/,'La fase naval debe tener una actualización activa.');
+assert.match(html,/updateIslandInvasion\(dt\);/,'La actualización naval debe estar conectada al bucle principal.');
+assert.match(html,/function spawnIslandInvasionWave\(\)/);
+assert.match(html,/function invasionDisembark\(ship,vl\)/);
+assert.match(html,/invasionDisembark\(raider,invasionTarget\)/,'Los barcos deben alcanzar la costa y ejecutar el desembarco.');
+assert.match(html,/raider\.islandInvasionShip&&raider\.invasionPhase==='sailing'/,'Los barcos deben tener una fase de navegación de invasión.');
+assert.match(html,/function loseIslandHolding\(vl\)/,'El asedio debe poder hacer caer un territorio.');
+assert.match(html,/if\(attacker\.islandInvader\)return landIslandIndex\(x,z\)===attacker\.targetVillageIndex;/,'Los invasores deben poder combatir en la isla sitiada.');
+assert.match(html,/const islandInvaders=enemies\.filter\(g=>g&&g\.alive&&g\.islandInvader&&g\.targetVillageIndex===vl\.index\)/,'Los invasores deben impedir la reconquista hasta ser derrotados.');
+assert.match(html,/islandInvasion:snapshotIslandInvasion\(\)/,'El estado de la invasión debe guardarse.');
+assert.match(html,/restoreIslandInvasion\(d\.islandInvasion\)/,'El estado de la invasión debe recuperarse.');
+assert.match(html,/function snapshotIslandInvasion\(\)/);
+assert.match(html,/function resetIslandInvasion\(\)/);
+console.log('OK: 13 islas, HUD inicial, puestos, combate, navegación, desembarco, asedio, pérdida/reconquista y guardado de invasión.');
