@@ -2948,7 +2948,7 @@ async function removeStrayDebugGeometry(targetScene){
      const outerFade=1-smooth01((shoreOffset-.48)/.18);
      const whiteFoamProfile=Math.exp(-(((shoreOffset-.16)/.27)**2));
      // La máscara conserva huecos y filamentos, pero evita que la espuma desaparezca por una máscara demasiado débil.
-     const lace=Math.pow(Math.max(0,foamPattern[vertex]),1.42);
+     const lace=smooth01((foamPattern[vertex]-.28)/.46);
      const foamVisibility=Math.max(Math.min(.78,foamStrength/.22),foamBreakStrength*.48);
      const alpha=Math.min(.76,foamVisibility*whiteFoamProfile*innerFade*outerFade*lace*(.90+.10*secondary));
      colors[color]=.98;colors[color+1]=.99;colors[color+2]=1;colors[color+3]=alpha;
@@ -2979,14 +2979,14 @@ async function removeStrayDebugGeometry(targetScene){
      const filmWave=.005+rippleA*.006+rippleB*.003+breakStrength*lipProfile*.003;
      const flowPulse=.90+.10*(.5+.5*Math.sin((x*.61+z*.79)*1.18+oceanTime*1.55));
      const filmStrength=Math.max(0,Math.min(1.1,oceanDepthSettings.sheetStrength));
-     const filmAlpha=filmCoverage*(.42+.13*breakStrength)*flowPulse*filmStrength;
-     const alpha=Math.min(.72,filmAlpha+whitewater*.16+trailingFoam*.26);
+     const filmAlpha=filmCoverage*(.20+.10*breakStrength)*flowPulse*filmStrength;
+     const alpha=Math.min(.58,filmAlpha+whitewater*.28+trailingFoam*.34);
      washPositions[offset]=x;
      washPositions[offset+1]=window.NorseCoastalInteraction.filmSurfaceHeight(ground,water,filmWave);
      washPositions[offset+2]=z;
-     washColors[color]=.40*(1-whiteMix)+.92*whiteMix;
-     washColors[color+1]=.72*(1-whiteMix)+.99*whiteMix;
-     washColors[color+2]=.81*(1-whiteMix)+1*whiteMix;
+     washColors[color]=.60*(1-whiteMix)+.96*whiteMix;
+     washColors[color+1]=.77*(1-whiteMix)+.99*whiteMix;
+     washColors[color+2]=.83*(1-whiteMix)+1*whiteMix;
      washColors[color+3]=alpha;
     }
    }
@@ -3106,7 +3106,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  coastalSeabedMaterial.bumpTexture=texCoastalSandNormalPbr;
  coastalSeabedMaterial.metallic=0;
  coastalSeabedMaterial.roughness=.97;
- coastalSeabedMaterial.environmentIntensity=.10;
+ coastalSeabedMaterial.environmentIntensity=.18;
  coastalSeabedMaterial.useVertexColors=true;
  coastalSeabedMaterial.maxSimultaneousLights=1;
  coastalSeabedMaterial.backFaceCulling=false;
@@ -3739,8 +3739,8 @@ void main(void){
   if(B.FresnelParameters){
    washMaterial.diffuseFresnelParameters=new B.FresnelParameters();
    washMaterial.diffuseFresnelParameters.isEnabled=true;
-   washMaterial.diffuseFresnelParameters.leftColor=new B.Color3(.12,.30,.36);
-   washMaterial.diffuseFresnelParameters.rightColor=new B.Color3(.60,.84,.89);
+   washMaterial.diffuseFresnelParameters.leftColor=new B.Color3(.28,.45,.50);
+   washMaterial.diffuseFresnelParameters.rightColor=new B.Color3(.72,.88,.92);
    washMaterial.diffuseFresnelParameters.bias=.065;washMaterial.diffuseFresnelParameters.power=2.25;
    washMaterial.opacityFresnelParameters=new B.FresnelParameters();
    washMaterial.opacityFresnelParameters.isEnabled=true;
