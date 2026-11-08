@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.250"
+EXPECTED_VERSION = "0.6.251"
 
 HTML_PAGES = (
     "index.html",
@@ -130,7 +130,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'10',build:'0.6.250'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'10',build:'0.6.251'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -154,7 +154,7 @@ def main() -> None:
         fail("La fauna debe priorizar los clips canónicos Idle/Walk/Gallop y usar AnimalArmature como respaldo.")
     if "const VESSEL_SPRAY_COUNT=isPerformanceMode?0:" not in index_html:
         fail("Rendimiento debe desactivar la espuma/rociado del barco.")
-    if "const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?64:112))):(isTouchDevice?(isConstrainedMobile?176:192):256)" not in index_html:
+    if "const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?160:112))):(isTouchDevice?(isConstrainedMobile?176:192):256)" not in index_html:
         fail("El aumento de teselación del agua debe limitarse al perfil Calidad; Rendimiento conserva su presupuesto.")
     animate_start = index_html.find("function animateWater(dt)")
     animate_end = index_html.find("function rand(a,b)", animate_start)
@@ -163,7 +163,9 @@ def main() -> None:
         fail("La animación base del oleaje debe conservar la caché de fases y el detalle de agua.")
     if "beachStateSampler" not in index_html or "foam=clamp(state.g,0.0,1.0)" not in index_html or "float laceNoise=fine.r*0.62+broad.g*0.38" not in index_html:
         fail("La espuma de la orilla debe proceder del canal Foam de BeachState y de su encaje de shader.")
-    if "for(const foam of tidalFoamMeshes)" not in index_html or "function buildTidalFoam(" not in index_html or "syncActiveTidalFoamIsland();" not in index_html:
+    if "vWorldPos" not in index_html or "sandNormalSampler" not in index_html or "float wrackZone=" not in index_html or "vUV.y*438.0" in index_html or "vUV.y-.79" in index_html:
+        fail("La arena debe usar proyección mundial y normal/roughness físicos, sin arcos radiales ni una banda de restos fija.")
+    if "for(const foam of tidalFoamMeshes)" not in index_html or "function buildTidalFoam(" not in index_html or "syncActiveTidalFoamIsland();" not in index_html or "foamBreakStrength*.62" not in index_html:
         fail("La rompiente dinámica debe acompañar al estado BeachState y seguir la isla activa.")
     if "if(B.MirrorTexture&&B.Plane&&!isPerformanceMode)" not in index_html:
         fail("Rendimiento debe omitir el pase de reflejos del agua; Calidad lo conserva.")
@@ -457,7 +459,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.250</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.251</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
@@ -630,6 +632,7 @@ def main() -> None:
     if startup_guard.returncode:
         fail("Falló la barrera de carga completa previa a la partida:\\n" + startup_guard.stdout + startup_guard.stderr)
     print("OK Startup: protagonista, NPC, fauna, audio y shaders preparados antes de abrir el juego.")
+    print("OK Beach realism: world-space PBR sand, moisture, breaker foam, higher water detail and boot imprints.")
     with tempfile.TemporaryDirectory(prefix="eln-release-check-") as temp_dir:
         temp = Path(temp_dir)
         sw_check = subprocess.run(
