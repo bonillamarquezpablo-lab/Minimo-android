@@ -2202,7 +2202,7 @@ async function removeStrayDebugGeometry(targetScene){
  }
   const yieldStartupFrame=()=>new Promise(resolve=>requestAnimationFrame(resolve));
  if(!B||!B.Engine)throw new Error('La librería Babylon.js está incompleta o no es compatible.');
- const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:activeGraphicsProfile!=='performance',powerPreference:'high-performance',failIfMajorPerformanceCaveat:false},false);
+ const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:testModeEnabled,stencil:true,antialias:activeGraphicsProfile!=='performance',powerPreference:'high-performance',failIfMajorPerformanceCaveat:false},false);
  bootEngineForCleanup=engine;
  let contextCurrentlyLost=false,contextRecoveryTimer=null;
  canvas.addEventListener('webglcontextlost',event=>{
@@ -11803,6 +11803,7 @@ function update(dt){
    setCamera:({x,y,z,targetX,targetY,targetZ})=>{camera.position.set(x,y,z);camera.setTarget(new B.Vector3(targetX,targetY,targetZ));},
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},
    render:()=>scene.render(),
+   captureCanvas:()=>{const targetCanvas=document.getElementById('renderCanvas');if(!targetCanvas)throw new Error('Render canvas is missing');return targetCanvas.toDataURL('image/png');},
    snapshot:()=>window.__elSinNombreWaterDebugSnapshot?.()||null,
    diagnostics:()=>({coast:getWaterCoastDiagnostics(),waterDebugSnapshot:window.__elSinNombreWaterDebugSnapshot?.()||null,startup:window.__elSinNombreStartupSmoke.result,meshCount:scene.meshes.length,activeBeachIslandIndex,activeTidalFoamIslandIndex,waterTime:oceanTime,forcedTideOffset:debugForcedTideOffset})
   };
