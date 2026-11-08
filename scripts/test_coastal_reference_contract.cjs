@@ -71,3 +71,5 @@ assert.ok(workflow.includes('cancel-in-progress: false'),
   'A later PR commit must not cancel a long-running 27-image reference capture');
 
 // The coast solver and static foam profile caches are guarded by the assertions above.
+
+// A/B road isolation is exercised by the 37th diagnostic image.
