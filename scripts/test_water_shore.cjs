@@ -28,7 +28,8 @@ assert.match(html,/const waveBodyOffsets=\[-2\.65,-2\.05,-1\.48,-1\.02,-\.66,-\.
 assert.match(html,/VolumetricShoreBreaker_/,"The coast must create a separate volumetric wave body.");
 assert.match(html,/const lift=\(\.035\+\.48\*crest\+\.13\*rearShoulder\)/,"The wave body must have a raised crest and rear shoulder.");
 assert.match(html,/const breakerTravel=\.62\*Math\.sin\(oceanTime\*1\.08/,"The wave crest must travel onto and away from the beach.");
-assert.match(html,/waveBodyMesh\.updateVerticesData\(B\.VertexBuffer\.NormalKind,waveBodyNormals,false,false\)/,"The moving wave body must update its surface normals.");
+assert.match(html,/B\.VertexData\.ComputeNormals\(waveBodyPositions,waveBodyIndices,waveBodyNormals\)/,"The volumetric wave must receive a smooth initial normal field.");
+assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/ComputeNormals\(waveBodyPositions|waveBodyMesh\.updateVerticesData\(B\.VertexBuffer\.NormalKind/,"The animated wave must not rebuild its full normal field on mobile.");
 assert.match(html,/for\(const foam of tidalFoamMeshes\)/);
 const animateStart=html.indexOf("function animateWater(dt)");
 const animateEnd=html.indexOf("function rand(a,b)",animateStart);
