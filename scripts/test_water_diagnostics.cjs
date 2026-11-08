@@ -2,8 +2,9 @@
 const fs=require('node:fs');
 const assert=require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8');
-assert.match(html,/const waterDebugVertexTimes=groundDebugEnabled\?new Float64Array\(/);
-assert.match(html,/const waterDebugVertexFades=groundDebugEnabled\?new Float32Array\(/);
+assert.match(html,/const waterDebugVertexTimes=coastalDiagnosticsEnabled\?new Float64Array\(/);
+assert.match(html,/const waterDebugVertexFades=coastalDiagnosticsEnabled\?new Float32Array\(/);
+assert.match(html,/const coastalDiagnosticsEnabled=groundDebugEnabled\\|\\|testModeEnabled/, 'Debug buffers are enabled only by existing debug mode or the isolated test mode.');
 assert.match(html,/function getWaterVertexAgreementDiagnostics\(\)/);
 assert.match(html,/waterHeight\(x,z,time,fade\)/);
 assert.match(html,/function recordWaterCoastSolverDiagnostic\(/);
