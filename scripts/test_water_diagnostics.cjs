@@ -12,6 +12,7 @@ assert.match(html,/recordWaterCoastSolverDiagnostic\(bestError,solverStartedAt,t
 assert.match(html,/coastSolver:waterDebugSolverStats/);
 assert.match(html,/physicalBackwashVelocity:'no implementado'/);
 assert.match(html,/window\.__elSinNombreWaterDebugSnapshot=\(\)=>/);
+assert.match(html,/preserveDrawingBuffer:testModeEnabled/,'The only graphics readback change is confined to isolated test mode.');
 assert.match(html,/P50 '\+fmt\(frameAt\(\.50\),2\)\+' · P95 '\+fmt\(frameAt\(\.95\),2\)\+' · P99/);
 assert.match(html,/Velocidad física de resaca: NO IMPLEMENTADO/);
 assert.match(html,/waterDebugVertexTimes\[vertex\]=oceanTime/);
