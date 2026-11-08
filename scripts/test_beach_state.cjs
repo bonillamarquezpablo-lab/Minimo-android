@@ -2,9 +2,19 @@
 const assert = require("node:assert/strict");
 const { createCoastalGrid, createFootprintAtlas } = require("./nordic/beach-state.js");
 
-const coast = createCoastalGrid({ radius: 60, columns: 512, rows: 64 });
-assert.equal(coast.size, 32768);
-assert.ok(Math.abs(coast.metersPerCell(32).tangential - 0.6774) < 0.002);
+const radii = [60,31,33,33,25,27,33,31,36,31,34,34,32];
+for (const radius of radii) {
+  const columns = require("./nordic/beach-state.js").coastalColumnCount(radius, false, false);
+  const arcCell = Math.PI * 2 * radius * 0.92 / columns;
+  assert.ok(Math.abs(arcCell - 0.30) <= 0.025, `coastal arc cell out of tolerance for r=${radius}: ${arcCell}`);
+}
+assert.equal(require("./nordic/beach-state.js").coastalColumnCount(60, false, false), 1152);
+assert.equal(require("./nordic/beach-state.js").coastalColumnCount(60, true, true), 256);
+assert.equal(require("./nordic/beach-state.js").coastalColumnCount(60, true, false), 512);
+
+const coast = createCoastalGrid({ radius: 60, columns: 1152, rows: 64 });
+assert.equal(coast.size, 73728);
+assert.ok(Math.abs(coast.metersPerCell(32).tangential - 0.301) < 0.003);
 assert.ok(Math.abs(coast.metersPerCell(32).radial - 0.3143) < 0.002);
 const untouched = coast.index(20, 20);
 assert.equal(coast.stepCell(untouched, 0, 1).wetness, 0);

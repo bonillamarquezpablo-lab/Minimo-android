@@ -8,6 +8,14 @@
   const clamp01 = value => Math.max(0, Math.min(1, Number(value) || 0));
   const smooth01 = value => { const t = clamp01(value); return t * t * (3 - 2 * t); };
 
+  function coastalColumnCount(radius, performanceMode, constrainedMobile) {
+    if (performanceMode) return constrainedMobile ? 256 : 512;
+    const meanCoastRadius = Math.max(1, Number(radius) || 1) * 0.92;
+    const target = (Math.PI * 2 * meanCoastRadius) / 0.30;
+    const rounded = Math.round(target / 64) * 64;
+    return Math.max(512, Math.min(2048, rounded));
+  }
+
   function createCoastalGrid(options) {
     const opts = options || {};
     const radius = Math.max(1, Number(opts.radius) || 1);
@@ -192,5 +200,5 @@
       dimensions: () => ({ size, worldSize, pixelSize, originX, originZ })
     };
   }
-  return { createCoastalGrid, createFootprintAtlas, smooth01 };
+  return { createCoastalGrid, createFootprintAtlas, coastalColumnCount, smooth01 };
 });

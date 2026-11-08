@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.235"
+EXPECTED_VERSION = "0.6.236"
 
 HTML_PAGES = (
     "index.html",
@@ -127,7 +127,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'9',build:'0.6.231'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'10',build:'0.6.236'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -378,8 +378,10 @@ def main() -> None:
         fail("La arena seca no puede contener un tinte húmedo ni una franja artificial.")
     if "NorseBeachState.createCoastalGrid" not in index_html or "state.stepCell(cell,actualCoverage,elapsed,BEACH_STATE_DEFAULTS)" not in index_html:
         fail("La humedad debe proceder del contacto real entre agua y terreno.")
-    if "const coastColumns=isPerformanceMode?256:512,coastRows=isPerformanceMode?32:64;" not in index_html:
-        fail("El mapa costero debe mantener su resolución específica por perfil.")
+    if "coastalColumnCount(island.r,isPerformanceMode,isConstrainedMobile)" not in index_html:
+        fail("Calidad debe dimensionar columnas según perímetro; Rendimiento conserva 256/512.")
+    if "if(layer.index!==activeBeachIslandIndex)continue;" not in index_html or "beachUpdateCellsLast=processedCells" not in index_html or "cpuUpdateP95Ms:beachCpuP95" not in index_html:
+        fail("El mapa costero solo debe actualizar la isla activa y medir su coste CPU.")
     if "Math.min(288,Math.ceil(Math.PI*2*island.r/1.35))" not in index_html or "rows=isPerformanceMode?9:(isTouchDevice?15:17)" not in index_html:
         fail("La resolución de la playa debe conservar el presupuesto del perfil Rendimiento.")
     if "beachStateSampler" not in index_html or "float laceNoise=fine.r*0.62+broad.g*0.38" not in index_html:
@@ -447,7 +449,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.235</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.236</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
