@@ -36,5 +36,11 @@ assert.ok(captureRunner.includes('api.captureCanvas()'),
   'Coastal reference images must be read directly from the WebGL canvas, not the HTML page');
 assert.ok(!captureRunner.includes('page.screenshot('),
   'Full-page screenshots can include menus/HUD and add unnecessary SwiftShader compositor cost');
+assert.match(captureRunner, /expectedCaptureCount: 36/,
+  'The coastal reference must include 27 coast states plus nine mountain-occlusion states.');
+assert.match(captureRunner, /id: 'ridge-occlusion'/,
+  'The camera matrix must include a direct view across the main island ridge.');
+assert.match(captureRunner, /36\/36 complete/,
+  'The runner must assert and report all 36 captured views.');
 assert.ok(workflow.includes('cancel-in-progress: false'),
   'A later PR commit must not cancel a long-running 27-image reference capture');
