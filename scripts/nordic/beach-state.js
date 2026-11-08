@@ -60,6 +60,10 @@
       if (submerged) {
         reachedWater[cell] = 1;
         wet = Math.max(wet, 1 - (1 - wet) * Math.exp(-elapsed / 0.18));
+        if (previous < 0.12 && cover > 0.12) {
+          const leadingLace = deposit * 0.16 * Math.sin(Math.PI * cover);
+          foamValue = Math.max(foamValue, leadingLace);
+        }
       } else if (reachedWater[cell]) {
         wet *= Math.exp(-elapsed / drySeconds);
         if (wet < 0.003) { wet = 0; reachedWater[cell] = 0; }
