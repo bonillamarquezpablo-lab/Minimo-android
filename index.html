@@ -2657,7 +2657,7 @@ async function removeStrayDebugGeometry(targetScene){
   ctx.putImageData(img,0,0);tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
  }
  const oceanWaveNormal=isPerformanceMode&&isConstrainedMobile?null:makeOceanWaveNormal();
- if(oceanWaveNormal){oceanWaveNormal.level=.96;oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.96;}
+ if(oceanWaveNormal){oceanWaveNormal.level=.78;oceanWaveNormal.uScale=13.0;oceanWaveNormal.vScale=13.0;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.78;}
  else{M.water.bumpTexture=albedoNormalWater;M.water.bumpTexture.level=.24;}
  // El agua recibe un reflejo propio de las islas y del cielo nórdico.
  // El HDRI global se conserva para los materiales PBR, pero nunca se asigna al mar.
@@ -2668,7 +2668,7 @@ async function removeStrayDebugGeometry(targetScene){
  [M.tunic,M.red,M.blueCloth,M.greenCloth,M.ochreCloth,M.fur].forEach(m=>{m.specularColor=new B.Color3(.035,.032,.028);m.specularPower=18;});
  M.leather.specularColor=new B.Color3(.12,.095,.07);M.leather.specularPower=28;
  [M.metal,M.darkMetal,M.gold,M.brass].forEach(m=>{m.specularColor=new B.Color3(.48,.46,.39);m.specularPower=72;});
- const reducedWaterProfile=isPerformanceMode&&isConstrainedMobile;M.water.specularColor=reducedWaterProfile?new B.Color3(.18,.25,.28):new B.Color3(.66,.80,.88);M.water.specularPower=reducedWaterProfile?28:88;
+ const reducedWaterProfile=isPerformanceMode&&isConstrainedMobile;M.water.specularColor=reducedWaterProfile?new B.Color3(.18,.25,.28):new B.Color3(.52,.68,.75);M.water.specularPower=reducedWaterProfile?28:64;
  M.water.emissiveColor=new B.Color3(.030,.068,.082);M.water.backFaceCulling=false;M.water.alpha=1;
  if(B.FresnelParameters){M.water.diffuseFresnelParameters=new B.FresnelParameters();M.water.diffuseFresnelParameters.bias=.075;M.water.diffuseFresnelParameters.power=2.3;M.water.diffuseFresnelParameters.leftColor=new B.Color3(.085,.205,.255);M.water.diffuseFresnelParameters.rightColor=new B.Color3(.52,.74,.79);} 
 
@@ -8074,7 +8074,7 @@ function createRealWeapon(type='axe'){
    nordicWaterMirror.refreshRate=isTouchDevice?12:8;
    nordicWaterMirror.level=.62;
    M.water.reflectionTexture=nordicWaterMirror;
-   M.water.reflectionTexture.level=.72;
+   M.water.reflectionTexture.level=.64;
    console.info('Nordic water reflection ready',{resolution:mirrorSize,refreshRate:nordicWaterMirror.refreshRate,scope:'active-island only'});
   }else{
    M.water.reflectionTexture=null;
