@@ -11,7 +11,9 @@ const CAMERAS = [
   // The two wider views remain offshore and look back toward the island.
   { id: 'shore-1m', distance: 1, height: 4.8, side: 'land', targetOffset: 10, targetY: 0.15 },
   { id: 'surf-20m', distance: 20, height: 8, side: 'sea', targetOffset: -0.5, targetY: 1.0 },
-  { id: 'lod-90m', distance: 90, height: 22, side: 'sea', targetOffset: -0.5, targetY: 1.0 }
+  { id: 'lod-90m', distance: 90, height: 22, side: 'sea', targetOffset: -0.5, targetY: 1.0 },
+  // Explicit sightline across the main island ridge: catches water/foam leaking through opaque high ground.
+  { id: 'ridge-occlusion', distance: 100, height: 18, side: 'ridge', targetOffset: 0, targetY: 6.5 }
 ];
 const TIMES = [0, 37, 91];
 const TIDES = [
@@ -31,7 +33,7 @@ const manifest = {
   cameraCases: CAMERAS,
   timesSeconds: TIMES,
   tides: TIDES.map(t => ({ id: t.id, value: t.value })),
-  expectedCaptureCount: 27,
+  expectedCaptureCount: 36,
   startup: null,
   playerValidation: 'separate-character-startup-job',
   campaignStart: null,
@@ -194,17 +196,16 @@ async function main() {
           const renderStartedAt = performance.now();
           const result = await page.evaluate(({ cameraCase, time, tide, island, shoreRadius }) => {
             const api = window.__ELSN_TEST__;
-            const cameraOffset = cameraCase.side === 'land'
-              ? -cameraCase.distance
-              : cameraCase.distance;
-            const targetX = island.x + shoreRadius + cameraCase.targetOffset;
+            const ridge = cameraCase.side === 'ridge';
+            const targetX = ridge ? island.x - 25 : island.x + shoreRadius + cameraCase.targetOffset;
+            const targetZ = ridge ? island.z - 22 : island.z;
             api.setCamera({
-              x: island.x + shoreRadius + cameraOffset,
+              x: ridge ? island.x + 75 : island.x + shoreRadius + (cameraCase.side === 'land' ? -cameraCase.distance : cameraCase.distance),
               y: cameraCase.height,
-              z: island.z,
+              z: ridge ? island.z - 22 : island.z,
               targetX,
               targetY: cameraCase.targetY,
-              targetZ: island.z
+              targetZ
             });
             api.setWaterState({ time, tide: tide.value });
             api.render();
@@ -240,20 +241,20 @@ async function main() {
           });
           if (manifest.captures.length % 3 === 0) {
             console.log('[coastal-reference] captured ' + manifest.captures.length +
-              '/27; latest render=' + renderMs + ' ms, canvas readback=' + screenshotMs + ' ms');
+              '/36; latest render=' + renderMs + ' ms, canvas readback=' + screenshotMs + ' ms');
           }
         }
       }
     }
-    manifest.timingsMs.captureAll27 = Number((performance.now() - stepStartedAt).toFixed(1));
+    manifest.timingsMs.captureAll36 = Number((performance.now() - stepStartedAt).toFixed(1));
 
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
-    assert.equal(manifest.captures.length, 27, 'No se han generado las 27 capturas');
+    assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');
     assert.equal(manifest.consoleErrors.length, 0,
       'Errores de consola: ' + manifest.consoleErrors.join(' | '));
     assert.equal(manifest.pageErrors.length, 0,
       'Errores JavaScript: ' + manifest.pageErrors.join(' | '));
-    console.log('[coastal-reference] 27/27 complete in ' + manifest.timingsMs.captureAll27 + ' ms');
+    console.log('[coastal-reference] 36/36 complete in ' + manifest.timingsMs.captureAll36 + ' ms');
   } catch (error) {
     manifest.failure = String(error && error.stack || error);
     throw error;
@@ -264,7 +265,7 @@ async function main() {
     fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     if (browser) await browser.close();
   }
-  console.log('COASTAL REFERENCE OK: one game load and 27 screenshots plus JSON manifest.');
+  console.log('COASTAL REFERENCE OK: one game load, 36 screenshots (27 coast + 9 ridge-occlusion) and JSON manifest.');
 }
 
 main().catch(error => {
