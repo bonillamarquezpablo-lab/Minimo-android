@@ -11802,7 +11802,8 @@ function update(dt){
    setCamera:({x,y,z,targetX,targetY,targetZ})=>{camera.position.set(x,y,z);camera.setTarget(new B.Vector3(targetX,targetY,targetZ));},
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},
    render:()=>scene.render(),
-   diagnostics:()=>({coast:getWaterCoastDiagnostics(),startup:window.__elSinNombreStartupSmoke.result,meshCount:scene.meshes.length,activeBeachIslandIndex,activeTidalFoamIslandIndex,waterTime:oceanTime,forcedTideOffset:debugForcedTideOffset})
+   snapshot:()=>window.__elSinNombreWaterDebugSnapshot?.()||null,
+   diagnostics:()=>({coast:getWaterCoastDiagnostics(),waterDebugSnapshot:window.__elSinNombreWaterDebugSnapshot?.()||null,startup:window.__elSinNombreStartupSmoke.result,meshCount:scene.meshes.length,activeBeachIslandIndex,activeTidalFoamIslandIndex,waterTime:oceanTime,forcedTideOffset:debugForcedTideOffset})
   };
  }
  console.info('EL SIN NOMBRE startup smoke result',window.__elSinNombreStartupSmoke.result);
