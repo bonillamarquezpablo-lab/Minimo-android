@@ -525,7 +525,7 @@ def main() -> None:
         fail("Falta la importación GLB con esqueleto de ciervo, venado y lobo.")
     if "const animalCount=idx===0?3:(idx<4?1:0);" not in index_html:
         fail("La fauna debe conservar el roster completo en Rendimiento y Calidad.")
-    if "if(isPerformanceMode){" not in index_html or "grassInstanceCount=0;grassBatchCount=0;grassDebugClumpCount=0;grassDebugBatchCount=0;" not in index_html or "const backgroundFaunaTask=loadWildlifeModels();" not in index_html:
+    if "if(isPerformanceMode){" not in index_html or "grassInstanceCount=0;grassBatchCount=0;grassDebugClumpCount=0;grassDebugBatchCount=0;" not in index_html or "const backgroundFaunaTask=Promise.resolve(backgroundNpcTask)" not in index_html:
         fail("El ajuste de hierba preexistente de Rendimiento debe mantenerse y la fauna debe cargar después sin recortar su roster.")
     if "const civilianWarmupPromise=civilianTotal?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html:
         fail("La preparación de aldeanos debe compartir la misma promesa de carga y reutilizar el resultado al instanciarlos.")
