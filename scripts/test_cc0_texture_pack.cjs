@@ -1,0 +1,10 @@
+'use strict';
+const fs=require('node:fs');
+const assert=require('node:assert/strict');
+const build=fs.readFileSync('scripts/build_site.py','utf8');
+assert.match(build,/Ground060_2K-JPG\.zip/);
+assert.match(build,/raw\.startswith\(b"\\xff\\xd8"\)/);
+assert.match(build,/Could not extract CC0 sand PBR maps/);
+assert.match(build,/if failures:/g);
+assert.match(build,/texture_archive\.unlink\(missing_ok=True\)/);
+console.log('OK: CC0 texture ZIP extraction validates JPEG bytes and fails closed.');

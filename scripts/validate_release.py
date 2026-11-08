@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.231"
+EXPECTED_VERSION = "0.6.251"
 
 HTML_PAGES = (
     "index.html",
@@ -36,6 +36,9 @@ REQUIRED_FILES = (
     "icon.svg",
     "assets/asset-manifest.json",
     "assets/environmentSpecular.env",
+    "assets/textures/sand-color.jpg",
+    "assets/textures/sand-normal-gl.jpg",
+    "assets/textures/sand-roughness.jpg",
     "assets/vendor/babylon.js",
     "assets/vendor/babylonjs.loaders.min.js",
     "assets/vendor/meshopt_decoder.js",
@@ -119,10 +122,6 @@ def main() -> None:
         fail("Falta el socket visible del palo anclado a la palma en espacio del jugador.")
     if "function findRightGripBones" not in index_html or "applyRealPlayerClubGripPose" not in index_html:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
-    if "const segments=isPerformanceMode?(isConstrainedMobile?112:160)" not in index_html or "ShoreBreakerWash_" not in index_html or "tidalFoamMeshes.push" not in index_html:
-        fail("Rendimiento debe conservar una geometría dinámica de rompiente costera simplificada.")
-    if "activeTidalFoamIslandIndex" not in index_html or "if(nextIndex>=0)buildTidalFoam(land[nextIndex],nextIndex);" not in index_html:
-        fail("La espuma de Calidad debe existir solo para la isla activa del jugador.")
     if "Math.min(deviceDpr,isTouchDevice?1.80:1.85)" not in index_html:
         fail("Calidad debe limitar la resolución interna para reducir el coste de GPU sin recortar efectos.")
     if "const TERRAIN_HASH_CACHE_LIMIT=65536;" not in index_html or "terrainHashCacheSlots" not in index_html or "terrainHashCacheEntries:terrainHashCache.size" not in index_html:
@@ -131,7 +130,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'9',build:'0.6.231'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'10',build:'0.6.251'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -147,58 +146,39 @@ def main() -> None:
         fail("Calidad debe aplicar LOD por distancia a los lotes de hierba.")
     if "function syncNordicWaterReflectionIsland()" not in index_html or "syncNordicWaterReflectionIsland();" not in index_html or "activeWaterReflectionIslandIndex" not in index_html:
         fail("El espejo del agua debe actualizarse solo con la isla activa.")
-    if "nordicWaterMirror.refreshRate=isTouchDevice?12:8" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
-        fail("El espejo de Calidad debe reducir su frecuencia y excluir la espuma del pase de reflejo.")
     if "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024" not in index_html or "nordicWaterMirror.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE)" not in index_html or "anisotropicFilteringLevel=Math.min(8,maxAnisotropy)" not in index_html:
         fail("El reflejo de Calidad debe mantener resolución alta y filtrado trilineal/aniso sin cambiar la cadencia de actualización.")
-    if "ShoreBreakerWash_" not in index_html[index_html.find("function syncNordicWaterReflectionIsland"):index_html.find("try{\n  if(B.MirrorTexture")]:
-        fail("La lámina de rompiente no debe autorreflejarse en el espejo del agua.")
     if "const boneCount=skeletons.reduce" not in index_html or "skinnedVertexCount<600" not in index_html or "const attachedBounds=boundsForMeshes(meshes)" not in index_html:
         fail("La fauna debe validar el cuerpo riggeado y alinear el modelo tras reparentar sus raíces.")
     if "const normalized=group=>" not in index_html or "const pickExact=name=>playable.find(group=>normalized(group)===name)||null;" not in index_html or "pickExact('animalarmature'+name)" not in index_html:
         fail("La fauna debe priorizar los clips canónicos Idle/Walk/Gallop y usar AnimalArmature como respaldo.")
-    if "const segments=isPerformanceMode?(isConstrainedMobile?112:160):Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)))" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
-        fail("Calidad debe construir una banda costera de alta resolución y Rendimiento una versión reducida.")
-    if "foam.mesh.updateVerticesData(B.VertexBuffer.ColorKind,colors,false,false)" not in index_html or "foam.retreatResidue[col]*retreatFade+Math.min(.48,retreat*3.4)" not in index_html:
-        fail("La espuma costera debe depositarse al retroceder el agua, acumular visibilidad y disiparse gradualmente.")
-    if "const initialShoreline=shorelineFoamRadius(island,angle,oceanTime)" not in index_html or "colors[color+3]=0;" not in index_html:
-        fail("La espuma debe comenzar invisible y aparecer tras el primer retroceso real de la línea de agua.")
-    if "Math.max(0,shoreline-previousShore)" not in index_html or "const foamVisibility=Math.min(1,foamStrength/.18);" not in index_html or "const whiteFoamProfile=Math.exp(-(((shoreOffset-.16)/.27)**2));" not in index_html:
-        fail("La espuma visible debe activarse cuando el radio de costa aumenta durante la retirada.")
     if "const VESSEL_SPRAY_COUNT=isPerformanceMode?0:" not in index_html:
         fail("Rendimiento debe desactivar la espuma/rociado del barco.")
-    if "const segments=isPerformanceMode?(isConstrainedMobile?112:160)" not in index_html or "const washFractions=isPerformanceMode?[1,.72,.44,.16,0,-.22]" not in index_html or "ShoreBreakerWash_" not in index_html:
-        fail("Rendimiento también debe conservar una rompiente costera simplificada con lámina somera y cresta visible.")
-    if "const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?64:112))):(isTouchDevice?(isConstrainedMobile?176:192):256)" not in index_html:
+    if "const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?160:112))):(isTouchDevice?(isConstrainedMobile?176:192):256)" not in index_html:
         fail("El aumento de teselación del agua debe limitarse al perfil Calidad; Rendimiento conserva su presupuesto.")
-    water_loop_start = index_html.find("for(let col=0;col<=segments;col++){", index_html.find("function animateWater(dt)"))
-    water_mesh_update = index_html.find("foam.mesh.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);", water_loop_start)
-    breaker_update = index_html.find("const breakerPhase=", water_loop_start)
-    if water_loop_start < 0 or breaker_update < water_loop_start or water_mesh_update < breaker_update:
-        fail("El cálculo de rompiente debe estar dentro del bucle angular que define cs, sn, col y shoreline; no puede usar variables fuera de ámbito.")
-    breaker_scope = index_html[water_loop_start:water_mesh_update]
-    if "const shoreX=island.x+cs*shoreline,shoreZ=island.z+sn*shoreline;" not in breaker_scope or "const residual=foam.retreatResidue[col];" not in breaker_scope or "for(let washRow=0;washRow<washRows;washRow++)" not in breaker_scope:
-        fail("Cada segmento de costa debe calcular su propia lámina de agua y espuma usando sus coordenadas locales.")
-    if "const wavePhase=(shoreX+shoreZ*.62)*.052+oceanTime*1.28;" in index_html:
-        fail("No debe quedar la versión antigua de la rompiente fuera del bucle angular.")
-    if "const breakStrength=smooth01((waveCrest-.30)/.65);" not in index_html or "const waterFilm=exposedSand*coverage*(.055+.105*waveCrest);" not in index_html or "const whitewater=breakStrength*leadingEdge*cellular*.66;" not in index_html or "const angularWaveStep=.052*shoreline*(-sn+.62*cs)*(Math.PI*2/segments);" not in index_html or "const lipProfile=Math.exp(-Math.pow((fraction-.78)/.26,2));" not in index_html:
-        fail("La rompiente debe suavizar cresta y labio, avanzar como lámina y formar espuma fragmentada sin puntas geométricas.")
-    if "if(isPerformanceMode)return;" in index_html[index_html.find("function buildTidalFoam(island,index)"):index_html.find("let activeTidalFoamIslandIndex")]:
-        fail("La espuma costera no puede desaparecer por completo en el perfil Rendimiento.")
+    animate_start = index_html.find("function animateWater(dt)")
+    animate_end = index_html.find("function rand(a,b)", animate_start)
+    animate_body = index_html[animate_start:animate_end]
+    if animate_start < 0 or animate_end <= animate_start or "waterDetailHeightAtVertex" not in animate_body or "waterFarHeightAtVertex" not in animate_body:
+        fail("La animación base del oleaje debe conservar la caché de fases y el detalle de agua.")
+    if "beachStateSampler" not in index_html or "foam=clamp(state.g,0.0,1.0)" not in index_html or "float laceNoise=fineFoam*.62+broadFoam*.38" not in index_html or "foamMask=clamp(foam*lace*broken*foamPulse*shoreFoamStrength" not in index_html:
+        fail("La espuma de la orilla debe proceder del canal Foam de BeachState y de su encaje de shader.")
+    if "for(const foam of tidalFoamMeshes)" not in index_html or "function buildTidalFoam(" not in index_html or "syncActiveTidalFoamIsland();" not in index_html:
+        fail("La rompiente dinámica debe acompañar al estado BeachState y seguir la isla activa.")
     if "if(B.MirrorTexture&&B.Plane&&!isPerformanceMode)" not in index_html:
         fail("Rendimiento debe omitir el pase de reflejos del agua; Calidad lo conserva.")
-    if "const oceanWaveNormal=isPerformanceMode?null:makeOceanWaveNormal()" not in index_html:
-        fail("Rendimiento debe evitar generar la normal de oleaje de alta calidad.")
-    if "resourceResults=await Promise.allSettled([playerHumanLoadPromise,startNpcHumanModels()])" not in index_html:
-        fail("Rendimiento debe completar la importación GLB del roster antes de abrir la intro.")
-    if "?await fullSceneWarmup" not in index_html:
-        fail("Rendimiento debe esperar a que la escena esté lista, sin el timeout de entrada anticipada.")
+    if "const oceanWaveNormal=isPerformanceMode&&isConstrainedMobile?null:makeOceanWaveNormal()" not in index_html:
+        fail("Los móviles de gama alta conservan el normal de oleaje; solo perfiles limitados mantienen la reserva.")
+    if "try{await playerHumanLoadPromise;" not in index_html or "const backgroundNpcTask=startNpcHumanModels().then(" not in index_html or "const backgroundFaunaTask=Promise.resolve(backgroundNpcTask)" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
+        fail("El vikingo debe tener prioridad y los GLB secundarios/fauna deben cargar en segundo plano, secuencialmente y sin bloquear la entrada.")
+    if "await scene.whenReadyAsync();" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html or "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" in index_html:
+        fail("La sincronización de escena debe tener tiempo límite y permitir continuar si falla.")
     if "audioPreloadResult=await startupAudioPreload" not in index_html:
         fail("Rendimiento debe completar la precarga de audio antes de abrir la intro.")
-    if "if(isPerformanceMode&&!realPlayerReady)throw new Error(" not in index_html:
-        fail("Rendimiento no debe abrir la intro si el GLB protagonista no está listo.")
-    if "if(isPerformanceMode)throw warmupError;" not in index_html:
-        fail("Rendimiento no debe permitir entrar con una escena que falló al prepararse.")
+    if "protagonistStageTimer=setTimeout" in index_html or "await playerHumanLoadPromise" not in index_html:
+        fail("El GLB protagonista debe tener un límite de espera y permitir entrar usando su reserva cuando falle.")
+    if "sceneWarmupStatus='completed-with-errors'" not in index_html or "blocking:true,warmupFrames:2" not in index_html:
+        fail("Los errores de warm-up no esencial deben registrarse y no cancelar el arranque.")
     if "GLB protagonist pipeline timing" not in index_html:
         fail("Falta telemetría de importación y montaje del GLB protagonista.")
     if "rightGripBones:realRightGripBones.length" not in index_html:
@@ -380,8 +360,8 @@ def main() -> None:
         fail("El muestreo optimizado de hierba no conserva la pendiente del terreno deformable.")
     if "function updateHearthFlooding(dt)" not in index_html or "updateHearthFlooding(ambientDt)" not in index_html:
         fail("Las hogueras no reaccionan a la altura del oleaje.")
-    if "const texCoastalSand=makeLivingCoastalSandTexture();" not in index_html or "M.sand.bumpTexture.level=.72;" not in index_html:
-        fail("La arena no utiliza el albedo costero de grano fino y su relieve PBR.")
+    if "const texCoastalSand=makeLivingCoastalSandTexture();" not in index_html or "M.sand.bumpTexture=texCoastalSandNormalPbr;" not in index_html or "M.sand.bumpTexture.level=.72;" not in index_html or "sandRoughSampler" not in index_html:
+        fail("La arena debe utilizar el albedo procedural/CC0, el mapa normal PBR de alto relieve y la rugosidad fotogramétrica.")
     if "function buildLivingBeachLayer(island,index)" not in index_html or "function updateBeach(dt,focusX,focusZ)" not in index_html:
         fail("Falta la capa de playa con humedad y espuma residual dinámica.")
     if "redmi8aHardwareMatch" not in index_html or "M2006C3L" not in index_html:
@@ -396,39 +376,34 @@ def main() -> None:
         fail("El cambio de isla renderizada debe seguir al jugador en tierra y al drakkar en navegación.")
     if "island.r*(1.085-coastNoise)" not in index_html or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018" not in index_html:
         fail("La superficie de playa debe prolongarse hasta la zona intermareal usando la altura real del perfil costero.")
-    if "let activeTidalFoamIslandIndex=-2;" not in index_html or "function syncActiveTidalFoamIsland()" not in index_html:
-        fail("La espuma costera debe tener un único propietario de isla activa.")
-    if "if(bestRatio>(onShip?1.16:1.09))nextIndex=-1;" not in index_html or "while(tidalFoamMeshes.length)" not in index_html:
-        fail("La espuma debe apagarse en mar abierto y liberar la malla de la isla anterior.")
-    if "if(nextIndex>=0)buildTidalFoam(land[nextIndex],nextIndex);" not in index_html:
-        fail("La malla de espuma solo debe construirse para la isla activa.")
-    if "const segments=isPerformanceMode?(isConstrainedMobile?112:160):Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)))" not in index_html or "ContinuousOrganicShoreFoam_" not in index_html:
-        fail("La isla activa debe usar la malla costera continua, adaptada al presupuesto gráfico.")
-    if "const initialShoreline=shorelineFoamRadius(island,angle,oceanTime)" not in index_html or "lastShoreline.fill(NaN);foamCenter.fill(NaN);" not in index_html:
-        fail("La espuma debe inicializar su historial de costa y no mostrarse como una banda permanente.")
-    if "inlandDistance<4.8" not in index_html or "foamBreath=.92+.08*wavePulse" not in index_html:
-        fail("La humedad debe seguir cubriendo la playa y la espuma debe modularse suavemente tras la retirada.")
-    if "foamPattern=new Float32Array((segments+1)*rows)" not in index_html or "foamPattern,wetness,residue,lastShore" not in index_html:
-        fail("La espuma de resaca debe usar una máscara espacial precomputada y reutilizada.")
-    if "foamMass=smooth01((broadFoam*.54+mediumFoam*.31+fineFoam*.15-.49)*8.5)" not in index_html or "foamFilament=1-smooth01((Math.abs(mediumFoam-.5)-.19)*7.5)" not in index_html:
-        fail("La espuma debe formar masas rotas con filamentos, no una banda lisa.")
-    if "Math.min(288,Math.ceil(Math.PI*2*island.r/1.35))" not in index_html or "rows=isPerformanceMode?9:(isTouchDevice?15:17)" not in index_html:
-        fail("La resolución de la playa debe conservar el presupuesto del perfil Rendimiento.")
-    if "Math.max(0,shore-previous)" not in index_html or "washCenter=(previous+shore)*.5" not in index_html or "deposit=Math.min(.78,retreat*2.35)*Math.exp(-distance*.92)" not in index_html:
-        fail("La espuma debe depositarse en el centro de la franja recién descubierta cuando la ola se retira.")
-    if "foamBreath=.92+.08*wavePulse" not in index_html or "layer.residue[stateIndex]*Math.exp(-step/3.0)" not in index_html or "const f=Math.min(.82,foam*foamBreath)" not in index_html:
-        fail("La espuma de playa debe ser fragmentada, depender del residuo de retirada y disiparse en pocos segundos.")
-    if "Math.exp(-Math.max(0,inlandDistance)*.36)" not in index_html or "wetSandCol=[.68,.63,.54]" not in index_html or "wetBlend=wetSand*beach*.55" not in index_html:
-        fail("La arena mojada debe conservar humedad visible con una transición cálida y sin un borde excesivamente oscuro.")
-    if "wetR=1-.32*w,wetG=.94-.27*w,wetB=.82-.20*w" not in index_html:
-        fail("La capa dinámica de arena mojada no debe dibujar un contorno negro en el límite del agua.")
+    if "inlandDistance<4.8" in index_html or "wetSandCol=" in index_html or "wetBlend=wetSand" in index_html:
+        fail("La arena seca no puede contener un tinte húmedo ni una franja artificial.")
+    if "NorseBeachState.createCoastalGrid" not in index_html or "state.stepCell(cell,coverage,elapsed,BEACH_STATE_DEFAULTS)" not in index_html:
+        fail("La humedad debe proceder del contacto real entre agua y terreno.")
+    if "coastalColumnCount(island.r,isPerformanceMode,isConstrainedMobile)" not in index_html:
+        fail("Calidad debe dimensionar columnas según perímetro; Rendimiento conserva 256/512.")
+    if "const layer=livingBeachLayers[activeBeachIslandIndex]||null" not in index_html or "beachUpdateCellsLast=beachWorkCellsProcessed" not in index_html or "cpuUpdateP95Ms:beachCpuP95" not in index_html or "BEACH_WORK_BUDGET_MS=4" not in index_html:
+        fail("El mapa costero debe actualizar la isla activa en fragmentos medidos de hasta 4 ms.")
+    if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
+        fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
+    if "const subdivisions=index===0?(isTouchDevice?208:240):88;" not in index_html:
+        fail("La costa necesita un heightfield más fino para evitar escalones visibles.")
+    if "Math.max(512,Math.min(2048,Math.ceil(Math.PI*2*island.r/.30)))" not in index_html:
+        fail("Calidad debe mantener segmentos de rompiente de unos 30 cm y Rendimiento una malla ligera.")
+    if "(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.026+Math.sin(x*.17+z*.11)*.0035" not in index_html:
+        fail("El perfil costero debe evitar dientes exagerados sin perder las calas naturales.")
+    if "beachStateSampler" not in index_html or "float laceNoise=fineFoam*.62+broadFoam*.38" not in index_html or "float foamMask=clamp(foam*lace*broken*foamPulse*shoreFoamStrength" not in index_html:
+        fail("La espuma costera debe utilizar detalle de encaje de alta frecuencia en el shader.")
+    if "function syncActiveBeachIsland()" not in index_html or "activeBeachIslandIndex=nextIndex;" not in index_html or "syncActiveTidalFoamIsland();" not in index_html:
+        fail("La isla activa debe sincronizar el estado de playa y la rompiente de espuma.")
+    # buildTidalFoam is the restored moving breaker mesh; its legacy mesh label is retained intentionally.
+    if "function buildTidalFoam(" not in index_html or "for(const foam of tidalFoamMeshes)" not in index_html:
+        fail("La rompiente costera debe mantener su malla activa y su ciclo de actualización.")
+    if "state.stepCell(cell,coverage,elapsed,BEACH_STATE_DEFAULTS)" not in index_html or "foamValue = Math.max(foamValue, leadingLace)" not in read_text("scripts/nordic/beach-state.js"):
+        fail("La espuma de avance y retirada debe pertenecer al mismo estado RGBA costero.")
     shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime)"))]
     if "const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z);" not in shoreline_body or ".42;" in shoreline_body:
         fail("El cruce agua/arena debe usar el perfil real completo; no puede sustituir el mar exterior por una altura plana.")
-    if "radialOffsets=isPerformanceMode?[-.52,-.26,0,.26,.52]:[-.72,-.54,-.36,-.18,-.02,.13,.28,.43,.58]" not in index_html or "water>ground?water+.014:ground+.022" not in index_html:
-        fail("La malla de espuma debe ser una cinta estrecha, blanca y apoyada en la superficie real de agua o arena.")
-    if "foam.foamCenter[col]=(previousShore+shoreline)*.5-.06" not in index_html or "const lace=.18+.82*foamPattern[vertex]" not in index_html or "const alpha=Math.min(.94,foamVisibility*whiteFoamProfile*innerFade*outerFade*Math.pow(lace,.92)*(.94+.06*secondary));" not in index_html:
-        fail("La espuma debe quedar sobre la franja recién descubierta, ser claramente visible y mantener fragmentos irregulares.")
     if "const radius=Number.isFinite(shoreline)?shoreline:island.r*1.09" in index_html:
         fail("La espuma no puede usar el borde exterior de la isla como posición de reserva.")
     if "function terrainDeformationAt(islandIndex,x,z)" not in index_html or "terrainDeformationFields[index]=deformationField;" not in index_html:
@@ -439,7 +414,7 @@ def main() -> None:
         fail("Los buffers editables del heightfield deben ser Float32Array, no arrays JavaScript normales.")
     if "const source=data instanceof Float32Array?data:Float32Array.from(data);" not in index_html or "source.subarray(start,end)" not in index_html:
         fail("La subida parcial de vértices debe tolerar arrays normales y usar subarrays tipados.")
-    if "function pressGround(x,z,islandIndex,wet,beach)" not in index_html or "pressGround(x,z,islandIndex,wet,beach)" not in index_html:
+    if "function pressGround(x,z,islandIndex,wet,beach,heading)" not in index_html or "pressGround(x,z,islandIndex,wet,beach,heading)" not in index_html or "toeOffsets=[-.108,-.054,0,.054,.108]" not in index_html:
         fail("Las pisadas no presionan la geometría real del terreno.")
     if "function relaxGround(dt)" not in index_html or "relaxGround(relaxStep);" not in index_html:
         fail("El terreno deformado no recupera su forma gradualmente.")
@@ -454,10 +429,20 @@ def main() -> None:
         fail("La espuma de orilla debe cruzar el heightfield deformable y mantener el límite de tierra firme.")
     if "waterWaveBasis=new Float32Array((waterBase.length/3)*WATER_WAVE_STRIDE)" not in index_html or "waterDetailHeightAtVertex(i/3,fade)" not in index_html or "waterFarHeightAtVertex(vertex)" not in index_html:
         fail("El oleaje debe conservar sus mismas ondas usando la caché de fases espaciales.")
-    if "NorseBootImprintBatch" not in index_html or "new Uint16Array(maxImprints*imprintIndicesPerFoot)" not in index_html or "imprintPositionBuffer.updateDirectly" not in index_html:
-        fail("Las huellas deben conservar geometría detallada en una malla reutilizable.")
-    if "groundY+.028+rim-press*.16" not in index_html or "slot.life=wet?70:(beach?105:52)" not in index_html:
-        fail("Las huellas deben quedar visibles sobre el suelo y persistir en la arena.")
+    if "const FOOTPRINT_ATLAS_SIZE=512,FOOTPRINT_WORLD_SIZE=16;" not in index_html or "createFootprintAtlas({size:FOOTPRINT_ATLAS_SIZE,worldSize:FOOTPRINT_WORLD_SIZE})" not in index_html or "NorseMovingFootprints" not in index_html:
+        fail("Las huellas deben usar un atlas cartesiano móvil de 16x16m a 512x512.")
+    if "footprintAtlas.stamp(x,z,heading,strength,currentTick)" not in index_html or "footprintAtlas.recenter(x,z)" not in index_html:
+        fail("Las pisadas deben marcarse en coordenadas mundiales y seguir al jugador.")
+    if "const wrap = value => ((value % size) + size) % size;" not in read_text("scripts/nordic/beach-state.js") or "ringOffsetX = wrap(ringOffsetX + shiftX)" not in read_text("scripts/nordic/beach-state.js"):
+        fail("El atlas de huellas debe desplazarse mediante direccionamiento toroidal sin copiar su buffer.")
+    if "footprintMaterial.setFloat('footprintTick'" not in index_html or "if(footprintAtlasDirty&&footprintAtlasClock>=1/12)uploadFootprintAtlas();" not in index_html:
+        fail("La textura de huellas debe actualizarse por eventos y no cada fotograma.")
+    if "footprintMaterial.setVector2('footprintUvOffset',footprintUvOffset)" not in index_html or "fract(vUV+footprintUvOffset)" not in index_html:
+        fail("El shader de huellas debe muestrear el atlas toroidal con el offset de anillo.")
+    if "transition.flooded" not in index_html or "footprintAtlas.eraseRect(x,z" not in index_html:
+        fail("El agua costera debe borrar las huellas de las celdas que acaba de inundar.")
+    if "NorseBootImprintBatch" in index_html or "imprintPositionBuffer" in index_html:
+        fail("No debe permanecer el antiguo lote de decals polares de huellas.")
     if "GroundSplashParticleBatch" not in index_html or "thinInstanceSetBuffer('color',grainColors,4,true)" not in index_html or "grainMesh.thinInstanceBufferUpdated('matrix')" not in index_html:
         fail("Las salpicaduras deben utilizar el pool de partículas instanciadas.")
     if "const count=wet?(running?8:6):(running?6:4)" not in index_html or "particles[particleCursor++%maxParticles]" not in index_html:
@@ -468,10 +453,6 @@ def main() -> None:
         fail("Los saltos de posición, teletransportes y estados a bordo/en el aire deben reiniciar el trazado de huellas.")
     if "pendingStepDistance:Number(stepDistance.toFixed(3))" not in index_html or "footstepsEmitted" not in index_html:
         fail("El diagnóstico debe exponer la distancia pendiente y el contador de huellas emitidas.")
-    if "ContinuousOrganicShoreFoam_" not in index_html or "Number.isFinite(initialShoreline)?initialShoreline:island.r" not in index_html:
-        fail("La espuma de orilla debe usar el sistema de malla continua y no un fallback de franja mar adentro.")
-    if "water>ground?water+.014:ground+.022" not in index_html or "positions[offset+1]=-3.2" not in index_html or "foam.retreatResidue[col]*retreatFade" not in index_html:
-        fail("La espuma debe apoyarse sobre la superficie activa, ocultarse sin intersección y disiparse si no hay retirada.")
     if "source.fire&&source.extinguished" not in index_html or "flame.hearth=hearth" not in index_html:
         fail("Las hogueras inundadas no apagan sus llamas y humo.")
     if "parts.root.getAbsolutePosition().y" not in index_html or "rootWorldY-bounds.min.y+.008" not in index_html:
@@ -482,7 +463,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.229</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.251</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
@@ -494,16 +475,24 @@ def main() -> None:
         fail("El hito de defensa naval solo se desbloquea al explorar y conquistar todo el archipiélago.")
     if "if(vl.islandGarrison)return;" not in index_html:
         fail("Los puestos insulares no deben añadir civiles de relleno y exceder el presupuesto móvil.")
-    if "const warmupResult=isPerformanceMode" not in index_html or "?await fullSceneWarmup" not in index_html or "setTimeout(()=>resolve({ready:false,timeout:true}),1400)" not in index_html:
-        fail("La preparación gráfica no debe bloquear indefinidamente la entrada al juego.")
+    if "new URLSearchParams(location.search).get('guest')==='1'" not in index_html:
+        fail("La vista de prueba debe admitir el parámetro ?guest=1.")
+    if "el-sin-nombre-campaign-guest-v8" not in index_html or "el-sin-nombre-campaign-v1" not in index_html:
+        fail("La prueba de invitado debe usar una clave independiente y preservar la clave real de campaña.")
+    if "const PLAYER_IDENTITY_KEY='el-sin-nombre-identity-'+(SHARE_NEW_GAME?'guest-v8':'main-v1');" not in index_html:
+        fail("La identidad de invitado debe permanecer aislada de la identidad de la campaña real.")
+    if "function buildShoreFoam(" in index_html or "const shorelineWaves=[]" in index_html:
+        fail("El helper buildShoreFoam sin uso debe desaparecer únicamente en el último hito.")
+    if "await scene.whenReadyAsync();" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html or "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" in index_html:
+        fail("La preparación gráfica global debe estar acotada por timeout en ambos perfiles.")
     if "const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;" not in index_html or "await yieldGrassStartupIfNeeded(islandIndex,placed,want);" not in index_html:
         fail("La generación de vegetación debe ceder el control según tiempo real de CPU.")
     if "const occupiedGridCells=new Uint8Array(gridSide*gridSide)" not in index_html or "const terrainHashCache=new Map()," not in index_html:
         fail("La generación del terreno y la hierba debe reutilizar buffers compactos y hashes deterministas.")
-    if "const grassGenerationTask=createRealGrass();" not in index_html or "await Promise.all([grassGenerationTask,wildlifePreparationTask]);" not in index_html:
-        fail("Los perfiles de calidad deben poder preparar vegetación y fauna en paralelo.")
-    if "if(isPerformanceMode)" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html:
-        fail("Rendimiento espera el audio; Calidad conserva su precarga paralela.")
+    if "const grassGenerationTask=createRealGrass();" not in index_html or "await grassGenerationTask;" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
+        fail("Calidad debe conservar la generación completa de hierba y la fauna debe completarse después de mostrar el mundo.")
+    if "try{audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" in index_html:
+        fail("La precarga completa de audio debe finalizar antes de abrir la partida en ambos perfiles gráficos.")
     if "antialias:activeGraphicsProfile!=='performance'" not in index_html or "(isTouchDevice?2048:" not in index_html:
         fail("El perfil de calidad en iPhone debe conservar antialiasing y sombras de alta resolución.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
@@ -518,8 +507,8 @@ def main() -> None:
         fail("El perfil A12 Nacho no aplica los límites de malla de agua y actualización previstos.")
     if "shadowGen=(!isConstrainedMobile||isUltraLowEndMobile||isGalaxyA12LowEndMobile)" not in index_html or "const enterRadius=isConstrainedMobile?58:175" not in index_html:
         fail("El perfil A10/A12 no activa sombras dinámicas acotadas por distancia.")
-    if "warriorPartsToLoad=isPerformanceMode\n    ?[]" not in index_html or "civilianPartsToLoad=isPerformanceMode?[]" not in index_html or "if(isPerformanceMode)return false;" not in index_html:
-        fail("Rendimiento debe usar NPC procedurales completos y no iniciar importaciones GLB secundarias diferidas.")
+    if "const warriorPartsToLoad=isIOSDevice?" not in index_html or "const civilianPartsToLoad=isIOSDevice?" not in index_html or "const backgroundNpcTask=startNpcHumanModels().then(" not in index_html:
+        fail("Los NPC deben conservar sus GLB y terminar de importarse en segundo plano en todos los perfiles.")
     if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
         fail("Falta la distribución uniforme con separación mínima.")
     if "const grids=[grid(4,4),grid(10,10),grid(24,24),grid(60,60),grid(144,144),grid(288,288)];" not in index_html:
@@ -540,12 +529,12 @@ def main() -> None:
         fail("Siguen presentes los animales provisionales construidos con primitivas.")
     if "function loadWildlifeModels()" not in index_html or "function playWildlifeAnimation(" not in index_html or "ImportMeshAsync(" not in index_html or "numBoneInfluencers>0" not in index_html or "Deer.glb" not in index_html or "Stag.glb" not in index_html or "Wolf.glb" not in index_html:
         fail("Falta la importación GLB con esqueleto de ciervo, venado y lobo.")
-    if "const animalCount=isPerformanceMode?0:(idx===0?3:(idx<4?1:0));" not in index_html:
-        fail("El modo Rendimiento debe omitir la creación de animales sin alterar el roster de Calidad.")
-    if "if(isPerformanceMode){" not in index_html or "grassInstanceCount=0;grassBatchCount=0;grassDebugClumpCount=0;grassDebugBatchCount=0;" not in index_html or "const wildlifePreparationTask=loadWildlifeModels();" not in index_html:
-        fail("Hierba/fauna deben omitirse solo en Rendimiento y conservarse completas en Calidad.")
-    if "civilianWarmupPromise=!isPerformanceMode&&civilianTotal" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html:
-        fail("Calidad debe precargar el modelo de aldeanos en paralelo y reutilizar ese resultado al instanciarlo.")
+    if "const animalCount=idx===0?3:(idx<4?1:0);" not in index_html:
+        fail("La fauna debe conservar el roster completo en Rendimiento y Calidad.")
+    if "if(isPerformanceMode)" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
+        fail("El ajuste de hierba preexistente de Rendimiento debe mantenerse y la fauna debe cargar después sin recortar su roster.")
+    if "const civilianWarmupPromise=civilianTotal?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html:
+        fail("La preparación de aldeanos debe compartir la misma promesa de carga y reutilizar el resultado al instanciarlos.")
     if "WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837'" not in index_html or "function loadWildlifeModels()" not in index_html:
         fail("Los modelos de fauna de Calidad deben conservar su fuente inmutable y su cargador.")
     if "function isSafeIslandGroundPoint(" not in index_html or "return null;" not in index_html[index_html.find("function sampleGroundPoint("):index_html.find("land.forEach((is,idx)=>{", index_html.find("function sampleGroundPoint("))]:
@@ -604,7 +593,7 @@ def main() -> None:
             fail(f"{page} no está marcado como entrada independiente de invitado.")
         if "const SHARE_NEW_GAME=true;" not in html:
             fail(f"{page} no fuerza una partida independiente de invitado.")
-        if "el-sin-nombre-campaign-guest-v7" not in html:
+        if "el-sin-nombre-campaign-guest-v8" not in html:
             fail(f"{page} no usa el espacio de guardado independiente de invitados.")
         if f'./{manifest_name}' not in html:
             fail(f"{page} no enlaza con su manifiesto PWA específico.")
@@ -624,6 +613,29 @@ def main() -> None:
     node = shutil.which("node")
     if not node:
         fail("Node.js es necesario para validar la sintaxis JavaScript publicada.")
+    beach_state_test = ROOT / "scripts" / "test_beach_state.cjs"
+    if not beach_state_test.is_file():
+        fail("Falta la suite de comportamiento de BeachState.")
+    beach_test = subprocess.run(
+        [node, str(beach_state_test)],
+        capture_output=True,
+        text=True,
+    )
+    if beach_test.returncode:
+        fail("Fallaron las pruebas de BeachState:\\n" + beach_test.stdout + beach_test.stderr)
+    print("OK BeachState: humectación, secado, espuma, escala y atlas de huellas.")
+    startup_guard_test = ROOT / "scripts" / "test_startup_guard.cjs"
+    if not startup_guard_test.is_file():
+        fail("Falta la prueba de barrera de arranque antes de abrir la partida.")
+    startup_guard = subprocess.run(
+        [node, str(startup_guard_test)],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+    )
+    if startup_guard.returncode:
+        fail("Falló la barrera de carga completa previa a la partida:\\n" + startup_guard.stdout + startup_guard.stderr)
+    print("OK Startup: protagonista, NPC, fauna, audio y shaders preparados antes de abrir el juego.")
     with tempfile.TemporaryDirectory(prefix="eln-release-check-") as temp_dir:
         temp = Path(temp_dir)
         sw_check = subprocess.run(

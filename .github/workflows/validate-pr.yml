@@ -24,6 +24,27 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Test bounded startup scene warm-up
+        run: node scripts/test_startup_guard.cjs
+
+      - name: Test GLB background pipeline and fallbacks
+        run: node scripts/test_glb_loading.cjs
+
+      - name: Test animated water, foam and debug controls
+        run: node scripts/test_water_shore.cjs
+
+      - name: Test CC0 sand texture packaging
+        run: node scripts/test_cc0_texture_pack.cjs
+
+      - name: Test release validator startup contract
+        run: node scripts/test_release_contract.cjs
+
+      - name: Test automatic startup smoke recorder and player.modelReady
+        run: node scripts/test_startup_smoke.cjs
+
+      - name: Test BeachState coast and toroidal footprint atlas
+        run: node scripts/test_beach_state.cjs
+
       - name: Build and validate game resources
         run: python scripts/build_site.py
 

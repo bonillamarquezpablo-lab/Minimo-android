@@ -39,6 +39,9 @@ DOWNLOADS = {
     "assets/models/man-base-character-rigged.glb": (
         "https://grab3d.com/dl/man-base-character-rigged/man-base-character-rigged.glb", 1_000_000, "glb"
     ),
+    "assets/downloads/Ground060_2K-JPG.zip": (
+        "https://ambientcg.com/get?file=Ground060_2K-JPG.zip", 1_000_000, "zip"
+    ),
     "assets/models/Seagull.glb": (
         "https://gobkit.com/freebies/animal007/Seagull.glb", 50_000, "glb"
     ),
@@ -336,11 +339,21 @@ def main() -> None:
         "assets/models/man-base-character-rigged.glb",
         "const OGA_FOLEY_BASE='./assets/audio/cc0-game-sfx/';",
         "navigator.serviceWorker.register",
+        "./scripts/nordic/beach-state.js",
+        "window.NorseBeachState",
     ]
     for item in required:
         if item not in html:
             raise SystemExit(f"El HTML no apunta al recurso local requerido: {item}")
 
+
+    # The coastal-state runtime is shared by main and generated guest entry pages.
+    beach_state_source = ROOT / "scripts" / "nordic" / "beach-state.js"
+    if not beach_state_source.is_file():
+        raise SystemExit("Falta scripts/nordic/beach-state.js.")
+    beach_state_target = DIST / "scripts" / "nordic" / "beach-state.js"
+    beach_state_target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(beach_state_source, beach_state_target)
 
     (DIST / "index.html").write_text(html, encoding="utf-8")
 
@@ -361,8 +374,8 @@ def main() -> None:
     )
     if guest_file_mode_replacements != 1 or "const SHARE_NEW_GAME=true;" not in guest_file_html:
         raise SystemExit("La página guest.html no fija el modo invitado.")
-    if "el-sin-nombre-campaign-guest-v7" not in guest_file_html:
-        raise SystemExit("La página guest.html no usa el guardado guest-v7.")
+    if "el-sin-nombre-campaign-guest-v8" not in guest_file_html:
+        raise SystemExit("La página guest.html no usa el guardado guest-v8.")
     (DIST / "guest.html").write_text(guest_file_html, encoding="utf-8")
 
     # Dedicated invite route: the pathname survives PWA launch flows that may
@@ -387,7 +400,7 @@ def main() -> None:
         raise SystemExit("La ruta de invitado no lleva la marca de partida independiente.")
     if 'href="./guest-manifest.webmanifest"' not in guest_html:
         raise SystemExit("La ruta de invitado no apunta a su manifiesto PWA independiente.")
-    if "el-sin-nombre-campaign-guest-v7" not in guest_html:
+    if "el-sin-nombre-campaign-guest-v8" not in guest_html:
         raise SystemExit("La ruta /guest/ no usa el guardado nuevo de invitados.")
     (guest_dir / "index.html").write_text(guest_html, encoding="utf-8")
 
@@ -412,7 +425,7 @@ def main() -> None:
         raise SystemExit("La ruta /invitado/ no lleva la marca de partida independiente.")
     if 'href="./invitado-manifest.webmanifest"' not in invite_html:
         raise SystemExit("La ruta /invitado/ no apunta a su manifiesto PWA independiente.")
-    if "el-sin-nombre-campaign-guest-v7" not in invite_html:
+    if "el-sin-nombre-campaign-guest-v8" not in invite_html:
         raise SystemExit("La ruta /invitado/ no usa el nuevo guardado de invitados.")
     (invite_dir / "index.html").write_text(invite_html, encoding="utf-8")
 
@@ -483,6 +496,21 @@ def main() -> None:
             raise SystemExit(f"Falta el archivo de despliegue: {name}")
         shutil.copy2(source, DIST / name)
 
+    # Every generated PWA entry must point at this exact code version.
+    guest_start_urls = {
+        "guest-manifest.webmanifest": f"./guest/index.html?newgame=1&v={game_version}",
+        "invitado-manifest.webmanifest": f"./invitado/index.html?newgame=1&v={game_version}",
+        "guest-file-manifest.webmanifest": f"./guest.html?v={game_version}",
+    }
+    for manifest_name, start_url in guest_start_urls.items():
+        manifest_path = DIST / manifest_name
+        manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest_data["start_url"] = start_url
+        manifest_path.write_text(
+            json.dumps(manifest_data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
     results = []
     failures = []
 
@@ -522,6 +550,45 @@ def main() -> None:
             except Exception as exc:
                 failures.append((relative, str(exc)))
                 print(f"ERROR {relative}: {exc}", file=sys.stderr)
+
+    if failures:
+        print("\nNo se publica una versión incompleta:", file=sys.stderr)
+        for relative, reason in failures:
+            print(f"- {relative}: {reason}", file=sys.stderr)
+        raise SystemExit(1)
+
+    # Extract only the three PBR maps actually used by the beach; never ship the ZIP.
+    texture_archive_relative = "assets/downloads/Ground060_2K-JPG.zip"
+    texture_archive = DIST / texture_archive_relative
+    try:
+        with zipfile.ZipFile(texture_archive) as archive:
+            wanted = {
+                "Ground060_2K-JPG_Color.jpg": "assets/textures/sand-color.jpg",
+                "Ground060_2K-JPG_NormalGL.jpg": "assets/textures/sand-normal-gl.jpg",
+                "Ground060_2K-JPG_Roughness.jpg": "assets/textures/sand-roughness.jpg",
+            }
+            members = {Path(info.filename).name: info for info in archive.infolist() if not info.is_dir()}
+            for source_name, output_name in wanted.items():
+                info = members.get(source_name)
+                if info is None:
+                    raise RuntimeError(f"ambientCG ZIP is missing {source_name}")
+                raw = archive.read(info)
+                if len(raw) < 20_000 or not raw.startswith(b"\xff\xd8"):
+                    raise RuntimeError(f"Invalid JPEG PBR texture: {source_name}")
+                target = DIST / output_name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(raw)
+                results.append({
+                    "path": output_name,
+                    "bytes": len(raw),
+                    "sha256": hashlib.sha256(raw).hexdigest(),
+                    "source": "https://ambientcg.com/view?id=Ground060 (Ground060_2K-JPG)",
+                })
+                print(f"OK {output_name}: {len(raw):,} bytes (ambientCG Ground 060, CC0 1.0)")
+        texture_archive.unlink(missing_ok=True)
+        results[:] = [item for item in results if item["path"] != texture_archive_relative]
+    except Exception as exc:
+        failures.append((texture_archive_relative, f"Could not extract CC0 sand PBR maps: {exc}"))
 
     if failures:
         print("\nNo se publica una versión incompleta:", file=sys.stderr)
