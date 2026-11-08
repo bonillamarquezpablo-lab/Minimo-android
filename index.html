@@ -4067,20 +4067,24 @@ void main(void){
   const last=points[points.length-1];
   sampled.push({x:last[0],z:last[1],distance});
   const positions=[],indices=[],uvs=[];
+  // Sample across the full width as well as along the centreline. Two edge-only
+  // vertices bridge hills and depressions underneath the ribbon, exposing dark seams.
+  const crossSegments=Math.max(4,Math.ceil(width/.20)),crossRowWidth=crossSegments+1;
   for(let i=0;i<sampled.length;i++){
    const prev=sampled[Math.max(0,i-1)],next=sampled[Math.min(sampled.length-1,i+1)];
    const dx=next.x-prev.x,dz=next.z-prev.z,len=Math.hypot(dx,dz)||1,nx=dz/len,nz=-dx/len;
    const edgeW=width*(1+Math.sin(i*2.17)*.035);
-   for(const side of [-1,1]){
+   for(let cross=0;cross<=crossSegments;cross++){
+    const across=cross/crossSegments,side=across*2-1;
     const x=sampled[i].x+nx*edgeW*.5*side,z=sampled[i].z+nz*edgeW*.5*side;
-    // Sample both edges independently so the packed-earth ribbon conforms to
-    // the same terrain profile instead of bridging over valleys and ridges.
     positions.push(x,terrainSurfaceAt(x,z)+.055,z);
-    uvs.push(side<0?0:1,sampled[i].distance*.72);
+    uvs.push(across,sampled[i].distance*.72);
    }
   }
-  // Keep upward-facing triangles and a continuous, terrain-conforming ribbon.
-  for(let i=0;i<sampled.length-1;i++){const a=i*2,b=a+2;indices.push(a,b,a+1,a+1,b,b+1);}
+  // Preserve upward-facing triangles while every row follows the sampled terrain.
+  for(let i=0;i<sampled.length-1;i++)for(let cross=0;cross<crossSegments;cross++){
+   const a=i*crossRowWidth+cross,b=a+crossRowWidth;indices.push(a,b,a+1,a+1,b,b+1);
+  }
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
   const mesh=new B.Mesh('WindingPackedEarthTrail',scene),data=new B.VertexData();
   data.positions=positions;data.indices=indices;data.normals=normals;data.uvs=uvs;data.applyToMesh(mesh);

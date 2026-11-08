@@ -32,6 +32,9 @@ for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setWaterState:', 
 assert.match(html, /window\.__ELSN_TEST__=\{/);
 assert.match(html, /debugForcedTideOffset=tide==='natural'\?null:Number\(tide\)/);
 assert.match(html,/function terrainDeformationAt\(islandIndex,x,z\)\{\s*const field=terrainDeformationFields\[islandIndex\];if\(!field\|\|!field\.active\.size\)return 0;/, 'Unchanged islands must skip bilinear foot-deformation sampling in the per-vertex coastal update.');
+assert.match(html,/const crossSegments=Math\.max\(4,Math\.ceil\(width\/\.20\)\),crossRowWidth=crossSegments\+1;/, 'Packed earth ribbons must be subdivided across their full width.');
+assert.match(html,/positions\.push\(x,terrainSurfaceAt\(x,z\)\+\.055,z\)/, 'Every across-width trail vertex must follow the live terrain surface.');
+assert.match(html,/for\(let cross=0;cross<crossSegments;cross\+\+\)/, 'Trail indices must cover each across-width terrain-following segment.');
 assert.match(html,/const packedTrailTexture=makePatternTexture\('Packed Norse trail earth','#8c7652'/,"Packed earth trails must use a readable warm-earth albedo rather than a near-black base.");
 assert.match(html,/packedTrailMaterial\.emissiveColor=new B\.Color3\(\.13,\.085,\.045\)/,"Packed earth trails must retain a subtle brown ambient floor on shaded ridges.");
 assert.match(html,/positions\.push\(x,terrainSurfaceAt\(x,z\)\+\.055,z\)/,"Packed earth trails must remain conformed to the live island terrain.");
