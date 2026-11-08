@@ -7,9 +7,11 @@ import { chromium } from 'playwright';
 const BASE_URL = process.env.COASTAL_TEST_URL || 'http://127.0.0.1:4173/';
 const OUT = path.resolve('artifacts/coastal-reference');
 const CAMERAS = [
-  { id: 'shore-1m', distance: 1, height: 2.8 },
-  { id: 'surf-20m', distance: 20, height: 8 },
-  { id: 'lod-90m', distance: 90, height: 22 }
+  // The close view stands one metre inland and looks out across the wet sand into the sea.
+  // The two wider views remain offshore and look back toward the island.
+  { id: 'shore-1m', distance: 1, height: 4.8, side: 'land', targetOffset: 10, targetY: 0.15 },
+  { id: 'surf-20m', distance: 20, height: 8, side: 'sea', targetOffset: -0.5, targetY: 1.0 },
+  { id: 'lod-90m', distance: 90, height: 22, side: 'sea', targetOffset: -0.5, targetY: 1.0 }
 ];
 const TIMES = [0, 37, 91];
 const TIDES = [
@@ -169,13 +171,16 @@ async function main() {
           const renderStartedAt = performance.now();
           const result = await page.evaluate(({ cameraCase, time, tide, island, shoreRadius }) => {
             const api = window.__ELSN_TEST__;
-            const targetX = island.x + shoreRadius - 0.5;
+            const cameraOffset = cameraCase.side === 'land'
+              ? -cameraCase.distance
+              : cameraCase.distance;
+            const targetX = island.x + shoreRadius + cameraCase.targetOffset;
             api.setCamera({
-              x: island.x + shoreRadius + cameraCase.distance,
+              x: island.x + shoreRadius + cameraOffset,
               y: cameraCase.height,
               z: island.z,
               targetX,
-              targetY: 1.0,
+              targetY: cameraCase.targetY,
               targetZ: island.z
             });
             api.setWaterState({ time, tide: tide.value });
