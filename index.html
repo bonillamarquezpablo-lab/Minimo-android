@@ -2744,7 +2744,7 @@ async function removeStrayDebugGeometry(targetScene){
   const crossWave=waterWaveValueAtVertex(vertex,3),chopWave=waterWaveValueAtVertex(vertex,4);
   const cross=crossWave*.15,chop=chopWave*.082,secondary=waterWaveValueAtVertex(vertex,5)*.046,ripple=waterWaveValueAtVertex(vertex,6)*.026;
   const crestFoamLift=Math.pow(Math.max(0,crossWave),3)*.018,shortCrest=Math.pow(Math.max(0,chopWave),3)*.010;
-  return longSwell+swellA+swellB+(cross+chop+secondary+ripple+crestFoamLift+shortCrest)*fade;
+  return tideOffsetAt(oceanTime)+longSwell+swellA+swellB+(cross+chop+secondary+ripple+crestFoamLift+shortCrest)*fade;
  }
  updateWaterWaveTime(0);
  const waterActiveVertexStorage=new Uint32Array(waterBase.length/3);
