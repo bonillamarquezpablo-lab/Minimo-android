@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.249"
+EXPECTED_VERSION = "0.6.250"
 
 HTML_PAGES = (
     "index.html",
@@ -130,7 +130,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'10',build:'0.6.249'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'10',build:'0.6.250'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -169,15 +169,15 @@ def main() -> None:
         fail("Rendimiento debe omitir el pase de reflejos del agua; Calidad lo conserva.")
     if "const oceanWaveNormal=isPerformanceMode&&isConstrainedMobile?null:makeOceanWaveNormal()" not in index_html:
         fail("Los móviles de gama alta conservan el normal de oleaje; solo perfiles limitados mantienen la reserva.")
-    if "const protagonistResult=await Promise.race([" not in index_html or "const backgroundNpcTask=startNpcHumanModels();" not in index_html or "const backgroundFaunaTask=Promise.resolve(backgroundNpcTask)" not in index_html:
+    if "try{await playerHumanLoadPromise;" not in index_html or "const backgroundNpcTask=startNpcHumanModels().then(" not in index_html or "const backgroundFaunaTask=Promise.resolve(backgroundNpcTask)" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
         fail("El vikingo debe tener prioridad y los GLB secundarios/fauna deben cargar en segundo plano, secuencialmente y sin bloquear la entrada.")
-    if "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" not in index_html or "const warmupResult=await Promise.race([" not in index_html or "if(isPerformanceMode)throw warmupError;" in index_html:
+    if "await scene.whenReadyAsync();" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html or "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" in index_html:
         fail("La sincronización de escena debe tener tiempo límite y permitir continuar si falla.")
     if "audioPreloadResult=await startupAudioPreload" not in index_html:
         fail("Rendimiento debe completar la precarga de audio antes de abrir la intro.")
-    if "protagonistStageTimer=setTimeout(()=>resolve({status:'timeout'}),55000)" not in index_html or "playerHumanLoadPromise.then(()=>({status:'finished'})" not in index_html:
+    if "protagonistStageTimer=setTimeout" in index_html or "await playerHumanLoadPromise" not in index_html:
         fail("El GLB protagonista debe tener un límite de espera y permitir entrar usando su reserva cuando falle.")
-    if "sceneWarmupStatus='deferred-after-error'" not in index_html or "if(isPerformanceMode)throw warmupError;" in index_html:
+    if "sceneWarmupStatus='completed-with-errors'" not in index_html or "blocking:true,warmupFrames:2" not in index_html:
         fail("Los errores de warm-up no esencial deben registrarse y no cancelar el arranque.")
     if "GLB protagonist pipeline timing" not in index_html:
         fail("Falta telemetría de importación y montaje del GLB protagonista.")
@@ -457,7 +457,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.249</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.250</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
@@ -477,13 +477,13 @@ def main() -> None:
         fail("La identidad de invitado debe permanecer aislada de la identidad de la campaña real.")
     if "function buildShoreFoam(" in index_html or "const shorelineWaves=[]" in index_html:
         fail("El helper buildShoreFoam sin uso debe desaparecer únicamente en el último hito.")
-    if "const warmupResult=await Promise.race([" not in index_html or "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" not in index_html or "scene.whenReadyAsync()" not in index_html:
+    if "await scene.whenReadyAsync();" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html or "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" in index_html:
         fail("La preparación gráfica global debe estar acotada por timeout en ambos perfiles.")
     if "const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;" not in index_html or "await yieldGrassStartupIfNeeded(islandIndex,placed,want);" not in index_html:
         fail("La generación de vegetación debe ceder el control según tiempo real de CPU.")
     if "const occupiedGridCells=new Uint8Array(gridSide*gridSide)" not in index_html or "const terrainHashCache=new Map()," not in index_html:
         fail("La generación del terreno y la hierba debe reutilizar buffers compactos y hashes deterministas.")
-    if "const grassGenerationTask=createRealGrass();" not in index_html or "await grassGenerationTask;" not in index_html or "const backgroundFaunaTask=Promise.resolve(backgroundNpcTask)" not in index_html:
+    if "const grassGenerationTask=createRealGrass();" not in index_html or "await grassGenerationTask;" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
         fail("Calidad debe conservar la generación completa de hierba y la fauna debe completarse después de mostrar el mundo.")
     if "if(isPerformanceMode)" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html:
         fail("Rendimiento espera el audio; Calidad conserva su precarga paralela.")
@@ -501,7 +501,7 @@ def main() -> None:
         fail("El perfil A12 Nacho no aplica los límites de malla de agua y actualización previstos.")
     if "shadowGen=(!isConstrainedMobile||isUltraLowEndMobile||isGalaxyA12LowEndMobile)" not in index_html or "const enterRadius=isConstrainedMobile?58:175" not in index_html:
         fail("El perfil A10/A12 no activa sombras dinámicas acotadas por distancia.")
-    if "const warriorPartsToLoad=isIOSDevice?" not in index_html or "const civilianPartsToLoad=isIOSDevice?" not in index_html or "const backgroundNpcTask=startNpcHumanModels();" not in index_html:
+    if "const warriorPartsToLoad=isIOSDevice?" not in index_html or "const civilianPartsToLoad=isIOSDevice?" not in index_html or "const backgroundNpcTask=startNpcHumanModels().then(" not in index_html:
         fail("Los NPC deben conservar sus GLB y terminar de importarse en segundo plano en todos los perfiles.")
     if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
         fail("Falta la distribución uniforme con separación mínima.")
@@ -525,7 +525,7 @@ def main() -> None:
         fail("Falta la importación GLB con esqueleto de ciervo, venado y lobo.")
     if "const animalCount=idx===0?3:(idx<4?1:0);" not in index_html:
         fail("La fauna debe conservar el roster completo en Rendimiento y Calidad.")
-    if "if(isPerformanceMode){" not in index_html or "grassInstanceCount=0;grassBatchCount=0;grassDebugClumpCount=0;grassDebugBatchCount=0;" not in index_html or "const backgroundFaunaTask=Promise.resolve(backgroundNpcTask)" not in index_html:
+    if "if(isPerformanceMode)" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
         fail("El ajuste de hierba preexistente de Rendimiento debe mantenerse y la fauna debe cargar después sin recortar su roster.")
     if "const civilianWarmupPromise=civilianTotal?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html:
         fail("La preparación de aldeanos debe compartir la misma promesa de carga y reutilizar el resultado al instanciarlos.")
