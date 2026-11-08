@@ -108,7 +108,7 @@ assert.match(html,/function disposeActiveCoastalIslandSystems\(index\)/,"Leaving
 assert.match(html,/if\(previousIndex>=0&&previousIndex!==nextIndex\)disposeActiveCoastalIslandSystems\(previousIndex\)/,"Switching islands must dispose inactive coastal resources.");
 assert.match(html,/if\(nextIndex>=0\)ensureActiveCoastalIslandSystems\(nextIndex\)/,"Only the current island should allocate coastal resources.");
 assert.match(html,/const nextIndex=activeBeachIslandIndex;/,"The breaker must use the same single active-island selection as the beach.");
-assert.match(html,/const waterDepth=water-ground,waterContact=smooth01\(\(waterDepth-\.015\)\/\.22\)/,"The wave body must be clipped by actual water depth.");
+assert.match(html,/const waterDepth=coastalWaterHeight\(x,z,oceanTime\)-ground,waterContact=smooth01\(\(waterDepth-\.015\)\/\.22\)/,"The wave body must be clipped by physically capped coastal water depth.");
 assert.match(html,/waveBodyPositions\[offset\+1\]=waterDepth>0\?water\+\.018\+lift:ground-\.045/,"Dry terrain must occlude the volumetric wave instead of lifting it above mountains.");
 assert.match(html,/const foamTerrainContact=Math\.max\(foamSubmerged,dryFoamResidue\)/,"Foam residue must fade with actual terrain/water separation.");
 assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/ComputeNormals\(waveBodyPositions/,"Do not recompute the full volumetric-wave normal field during every animation update.");
