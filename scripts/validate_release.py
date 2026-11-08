@@ -421,7 +421,7 @@ def main() -> None:
         fail("El mapa completo de normales de la ola no se puede reconstruir en cada actualización móvil.")
     if "state.stepCell(cell,coverage,elapsed,BEACH_STATE_DEFAULTS)" not in index_html or "foamValue = Math.max(foamValue, leadingLace)" not in read_text("scripts/nordic/beach-state.js"):
         fail("La espuma de avance y retirada debe pertenecer al mismo estado RGBA costero.")
-    shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island))"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island))"))]
+    shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island),dirX=Math.cos(angle),dirZ=Math.sin(angle))"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island),dirX=Math.cos(angle),dirZ=Math.sin(angle))"))]
     if "const terrainY=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z);" not in shoreline_body or "for(let step=0;step<5;step++)" not in shoreline_body or "const span=hi-lo,secant=" not in shoreline_body or ".42;" in shoreline_body:
         fail("El cruce agua/arena debe usar el perfil real y un solver secante acotado.")
     if "const radius=Number.isFinite(shoreline)?shoreline:island.r*1.09" in index_html:
@@ -468,7 +468,7 @@ def main() -> None:
         fail("La dinámica del suelo no recibe los pasos reales del jugador.")
     if "norseDeformableGround:true" not in index_html or "updateDeformedNormals(field,changed)" not in index_html:
         fail("El heightfield no actualiza los normales al deformarse.")
-    shoreline_start = index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island))")
+    shoreline_start = index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island),dirX=Math.cos(angle),dirZ=Math.sin(angle))")
     shoreline_end = index_html.find("const GROUND_PHASE_A_DEFAULTS", shoreline_start)
     shoreline_body = index_html[shoreline_start:shoreline_end]
     if shoreline_start < 0 or shoreline_end <= shoreline_start or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z)" not in shoreline_body or "return terrainY-coastalWaterHeight(x,z,t);" not in shoreline_body or "surfaceLimitSq=(island.r*1.09)**2" in shoreline_body or ".42;" in shoreline_body:
