@@ -3179,6 +3179,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  // Solving against the current wave height (instead of a frozen sea level) prevents foam decals
  // from remaining visibly stranded on the dry sand when the tide/wave phase changes.
  function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island),dirX=Math.cos(angle),dirZ=Math.sin(angle)){
+  const solverStartedAt=performance.now();
   // A safeguarded secant converges on the same real terrain/water intersection
   // with far fewer expensive heightfield and wave evaluations than ten bisections.
   const sample=radius=>{
@@ -3187,7 +3188,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    return terrainY-coastalWaterHeight(x,z,t);
   };
   let lo=island.r*.70,hi=island.r*1.09,loDelta=sample(lo),hiDelta=sample(hi);
-  if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)||loDelta<=0||hiDelta>=0)return null;
+  if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)||loDelta<=0||hiDelta>=0){if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(null,solverStartedAt,false,false);return null;}
   const denominator=loDelta-hiDelta;
   let radius=denominator>1e-9?lo+(hi-lo)*loDelta/denominator:(lo+hi)*.5;
   let bestRadius=radius,bestError=Infinity;
@@ -3196,11 +3197,12 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    if(!Number.isFinite(delta))break;
    const error=Math.abs(delta);
    if(error<bestError){bestError=error;bestRadius=radius;}
-   if(error<.006)return radius;
+   if(error<.006){if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(error,solverStartedAt,true,true);return radius;}
    if(delta>0){lo=radius;loDelta=delta;}else{hi=radius;hiDelta=delta;}
    const span=hi-lo,secant=lo+span*loDelta/(loDelta-hiDelta),guard=span*.04;
    radius=Number.isFinite(secant)&&secant>lo+guard&&secant<hi-guard?secant:(lo+hi)*.5;
   }
+  if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(bestError,solverStartedAt,true,bestError<.006);
   return bestError<Infinity?bestRadius:(lo+hi)*.5;
  }
  const GROUND_PHASE_A_DEFAULTS=Object.freeze({textureRepeat:9.5,relief:.70,roughness:.97});
