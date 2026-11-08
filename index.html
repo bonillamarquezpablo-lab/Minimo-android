@@ -2686,7 +2686,7 @@ async function removeStrayDebugGeometry(targetScene){
  const oceanDepthVertexColors=new Float32Array((waterBase.length/3)*4),oceanDepthBaseColors=new Float32Array((waterBase.length/3)*4);
  function updateOceanDepthGradient(){
   const transition=Math.max(2,Number(oceanDepthSettings.transitionMeters)||18);
-  const shoreOpacity=Math.max(.35,Math.min(1,Number(oceanDepthSettings.shoreOpacity)||.86));
+  const shoreOpacity=Math.max(.08,Math.min(1,Number(oceanDepthSettings.shoreOpacity)||.86));
   for(let vertex=0;vertex<waterBase.length/3;vertex++){
    const offset=vertex*3,x=waterBase[offset],z=waterBase[offset+2];
    let nearestSignedDistance=Infinity,nearestAbsDistance=Infinity,nearestIsland=null;
@@ -2713,7 +2713,6 @@ async function removeStrayDebugGeometry(targetScene){
   M.water.useVertexColor=true;M.water.useVertexAlpha=true;M.water.diffuseColor=new B.Color3(1,1,1);
   M.water.transparencyMode=B.Material.MATERIAL_ALPHABLEND;M.water.alpha=1;M.water.useVertexAlpha=true;M.water.needDepthPrePass=true;
  }
- updateOceanDepthGradient();
  const waterGridSize=waterSubdivisions+1,WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:(isTouchDevice?125:180)):(isTouchDevice?250:300),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS,WATER_DETAIL_FADE_START_SQ=WATER_DETAIL_RADIUS_SQ*.55;
  const waterPositionBuffer=ground.getVertexBuffer(B.VertexBuffer.PositionKind),waterNormalBuffer=ground.getVertexBuffer(B.VertexBuffer.NormalKind),waterColorBuffer=ground.getVertexBuffer(B.VertexBuffer.ColorKind);
  for(let i=0;i<waterNormals.length;i+=3)waterNormals[i+1]=1;
@@ -3088,6 +3087,8 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
   return a*(1-v)+b*v;
  }
  function smooth01(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);}
+ function clamp01(value){return Math.max(0,Math.min(1,Number(value)||0));}
+ updateOceanDepthGradient();
  function createIslandTerrain(is,index){
   // Babylon's native Ground mesh guarantees a stable, upward-facing heightfield.
   // Vertices outside the island are sunk beneath the sea, so no square island edge is visible.
@@ -3246,10 +3247,17 @@ void main(void){
  // Evita las bandas sinusoidales repetidas visibles desde cámara baja; el relieve PBR conserva el grano.
  color*=1.0+(windRill-.5)*.009*windRillMask;
  float sheetFront=smoothstep(.035,.23,water)*(1.0-smoothstep(.48,.85,water));
- float sheetNoise=noise21(worldXZ*.58+vec2(beachTime*.035,-beachTime*.021));
- float sheetRipple=.80+.20*sin(dot(worldXZ,vec2(.72,.69))*1.62+beachTime*1.48+sheetNoise*2.4);
- color=mix(color,vec3(.48,.66,.68),sheetFront*sheetRipple*shoreSheetStrength*.12);
- // Wrack fragments follow the drying wetness band; no fixed painted ring.
+  float sheetNoise=noise21(worldXZ*.58+vec2(beachTime*.035,-beachTime*.021));
+  float sheetRipple=.80+.20*sin(dot(worldXZ,vec2(.72,.69))*1.62+beachTime*1.48+sheetNoise*2.4);
+  float breakerPhase=dot(worldXZ,vec2(.13,.19))*1.9+beachTime*1.72+sheetNoise*2.8;
+  float crest=pow(max(0.0,sin(breakerPhase)),7.0);
+  float breakNoise=noise21(worldXZ*1.65+vec2(beachTime*.12,-beachTime*.08));
+  float brokenCrest=smoothstep(.34,.82,crest*.62+breakNoise*.65);
+  float swashMask=clamp(sheetFront*brokenCrest*sheetRipple*shoreSheetStrength,0.0,.78);
+  vec3 whitewater=mix(vec3(.76,.86,.84),vec3(.98,1.0,.98),smoothstep(.35,.92,crest+breakNoise*.55));
+  color=mix(color,whitewater,swashMask*.56);
+  color+=vec3(.055,.072,.067)*crest*sheetFront*shoreSheetStrength*.16;
+  // Wrack fragments follow the drying wetness band; no fixed painted ring.
  float wrackZone=smoothstep(.62,.73,wet)*(1.0-smoothstep(.82,.93,wet));
  float wrackField=noise21(worldXZ*7.2+vec2(12.7,4.9));
  float wrackFragments=smoothstep(.82,.93,wrackField)*(1.0-smoothstep(.94,.995,noise21(worldXZ*18.2+vec2(3.7,17.1))));
