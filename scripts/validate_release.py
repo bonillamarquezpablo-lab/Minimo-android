@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.234"
+EXPECTED_VERSION = "0.6.235"
 
 HTML_PAGES = (
     "index.html",
@@ -419,10 +419,14 @@ def main() -> None:
         fail("La espuma de orilla debe cruzar el heightfield deformable y mantener el límite de tierra firme.")
     if "waterWaveBasis=new Float32Array((waterBase.length/3)*WATER_WAVE_STRIDE)" not in index_html or "waterDetailHeightAtVertex(i/3,fade)" not in index_html or "waterFarHeightAtVertex(vertex)" not in index_html:
         fail("El oleaje debe conservar sus mismas ondas usando la caché de fases espaciales.")
-    if "NorseBootImprintBatch" not in index_html or "new Uint16Array(maxImprints*imprintIndicesPerFoot)" not in index_html or "imprintPositionBuffer.updateDirectly" not in index_html:
-        fail("Las huellas deben conservar geometría detallada en una malla reutilizable.")
-    if "groundY+.028+rim-press*.16" not in index_html or "slot.life=wet?70:(beach?105:52)" not in index_html:
-        fail("Las huellas deben quedar visibles sobre el suelo y persistir en la arena.")
+    if "createFootprintAtlas({size:512,worldSize:16})" not in index_html or "NorseMovingFootprints" not in index_html:
+        fail("Las huellas deben usar un atlas cartesiano móvil de 16x16m a 512x512.")
+    if "footprintAtlas.stamp(x,z,heading,strength)" not in index_html or "footprintAtlas.recenter(x,z)" not in index_html:
+        fail("Las pisadas deben marcarse en coordenadas mundiales y seguir al jugador.")
+    if "transition.flooded" not in index_html or "footprintAtlas.eraseRect(x,z" not in index_html:
+        fail("El agua costera debe borrar las huellas de las celdas que acaba de inundar.")
+    if "NorseBootImprintBatch" in index_html or "imprintPositionBuffer" in index_html:
+        fail("No debe permanecer el antiguo lote de decals polares de huellas.")
     if "GroundSplashParticleBatch" not in index_html or "thinInstanceSetBuffer('color',grainColors,4,true)" not in index_html or "grainMesh.thinInstanceBufferUpdated('matrix')" not in index_html:
         fail("Las salpicaduras deben utilizar el pool de partículas instanciadas.")
     if "const count=wet?(running?8:6):(running?6:4)" not in index_html or "particles[particleCursor++%maxParticles]" not in index_html:
@@ -443,7 +447,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.234</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.235</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")

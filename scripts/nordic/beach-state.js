@@ -56,7 +56,7 @@
       const deposit = clamp01(cfg.foamDeposit === undefined ? 0.68 : cfg.foamDeposit);
       let wet = wetness[cell] / 255;
       let foamValue = (foam[cell] / 255) * Math.exp(-elapsed / foamSeconds);
-      const submerged = cover > 0.08, retreated = previous > 0.55 && cover < 0.12;
+      const submerged = cover > 0.08, flooded = submerged && previous <= 0.08, retreated = previous > 0.55 && cover < 0.12;
       if (submerged) {
         reachedWater[cell] = 1;
         wet = Math.max(wet, 1 - (1 - wet) * Math.exp(-elapsed / 0.18));
@@ -73,7 +73,7 @@
       wetness[cell] = Math.round(clamp01(wet) * 255);
       foam[cell] = Math.round(clamp01(foamValue) * 255);
       writeTextureCell(cell);
-      return { submerged, retreated, wetness: wetness[cell] / 255, foam: foam[cell] / 255 };
+      return { submerged, flooded, retreated, wetness: wetness[cell] / 255, foam: foam[cell] / 255 };
     }
     function decay(elapsed, config) {
       const cfg = config || {}, dt = Math.max(0, Math.min(2, Number(elapsed) || 0));
@@ -114,12 +114,16 @@
       const shiftX = Math.round((nextX - originX) / pixelSize), shiftZ = Math.round((nextZ - originZ) / pixelSize);
       if (!shiftX && !shiftZ) return false;
       const next = new Uint8Array(size * size);
-      for (let row = 0; row < size; row++) {
-        const oldRow = row + shiftZ;
-        if (oldRow < 0 || oldRow >= size) continue;
-        const sourceX = Math.max(0, shiftX), destinationX = Math.max(0, -shiftX);
-        const count = Math.min(size - sourceX, size - destinationX);
-        if (count > 0) next.set(values.subarray(oldRow * size + sourceX, oldRow * size + sourceX + count), row * size + destinationX);
+      const sourceX = Math.max(0, shiftX), destinationX = Math.max(0, -shiftX);
+      const copyWidth = size - Math.abs(shiftX);
+      const firstDestRow = Math.max(0, -shiftZ), lastDestRow = Math.min(size - 1, size - 1 - shiftZ);
+      if (copyWidth > 0) {
+        for (let destRow = firstDestRow; destRow <= lastDestRow; destRow++) {
+          const sourceRow = destRow + shiftZ;
+          const sourceStart = sourceRow * size + sourceX;
+          const destStart = destRow * size + destinationX;
+          next.set(values.subarray(sourceStart, sourceStart + copyWidth), destStart);
+        }
       }
       values = next; originX = nextX; originZ = nextZ; dirty = true; return true;
     }
@@ -184,6 +188,7 @@
       get originX() { return originX; }, get originZ() { return originZ; },
       get initialized() { return initialized; }, recenter, stamp, eraseRect, decay,
       sample, textureData, markDirty: () => { dirty = true; },
+      activePixels: () => { let count = 0; for (let i = 0; i < values.length; i++) if (values[i]) count++; return count; },
       dimensions: () => ({ size, worldSize, pixelSize, originX, originZ })
     };
   }

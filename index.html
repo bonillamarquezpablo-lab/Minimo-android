@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.234">
+<meta name="el-sin-nombre-build" content="0.6.235">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.234</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.235</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -3072,41 +3072,55 @@ void main(void){
  // Interactive ground layer: impressed boot soles, compacted lips, sand grains and drying tide marks.
  let groundDynamicsLastUpdateMs=0,beachUpdateLastMs=0;
  const GroundDynamics=(()=>{
-  const maxImprints=isPerformanceMode?(isConstrainedMobile?18:28):64,maxParticles=isPerformanceMode?22:48;
-  const imprintCols=13,imprintRows=23,imprintVertexCount=imprintCols*imprintRows,imprintIndicesPerFoot=(imprintCols-1)*(imprintRows-1)*6;
-  let stepDistance=0,alternateFoot=0,beachClock=0,imprintCursor=0,particleCursor=0,lastStepX=0,lastStepZ=0,hasLastStepPosition=false,footstepsEmitted=0,lastFootstepSegmentLength=0,groundRelaxAccumulator=0;
+  const maxParticles=isPerformanceMode?22:48;
+  let stepDistance=0,alternateFoot=0,beachClock=0,particleCursor=0,lastStepX=0,lastStepZ=0,hasLastStepPosition=false,footstepsEmitted=0,lastFootstepSegmentLength=0,groundRelaxAccumulator=0;
+  let footprintAtlasDirty=true,footprintAtlasClock=0,footprintFadeClock=0,lastAtlasFollowX=NaN,lastAtlasFollowZ=NaN;
   const GROUND_RELAX_INTERVAL=1/30;
-  const imprints=Array.from({length:maxImprints},(_,slot)=>({slot,active:false,age:0,life:1,fadeAccumulator:0,baseAlpha:new Float32Array(imprintVertexCount)}));
-  const particles=Array.from({length:maxParticles},(_,slot)=>({slot,life:0,maxLife:1,age:0,x:0,y:-1000,z:0,vx:0,vy:0,vz:0,size:.02,groundY:0,wet:false,r:.7,g:.6,b:.45,a:.8}));
-  const imprintMaterial=new B.StandardMaterial('NorseGroundImprintMaterial',scene);
-  imprintMaterial.diffuseTexture=texCoastalSand;imprintMaterial.diffuseColor=new B.Color3(1,1,1);
-  imprintMaterial.specularColor=new B.Color3(.012,.011,.009);imprintMaterial.specularPower=4;
-  imprintMaterial.useVertexColors=true;imprintMaterial.useVertexAlpha=true;imprintMaterial.backFaceCulling=false;
-  imprintMaterial.alpha=1;imprintMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;imprintMaterial.disableDepthWrite=true;
-  // One persistent decal mesh replaces individual transparent meshes and their draw calls.
-  const imprintPositions=new Float32Array(maxImprints*imprintVertexCount*3),imprintNormals=new Float32Array(maxImprints*imprintVertexCount*3);
-  const imprintUvs=new Float32Array(maxImprints*imprintVertexCount*2),imprintColors=new Float32Array(maxImprints*imprintVertexCount*4);
-  const imprintIndices=new Uint16Array(maxImprints*imprintIndicesPerFoot);
-  for(let slot=0;slot<maxImprints;slot++){
-   const vertexBase=slot*imprintVertexCount,indexBase=slot*imprintIndicesPerFoot;
-   for(let row=0;row<imprintRows;row++)for(let col=0;col<imprintCols;col++){
-    const vertex=vertexBase+row*imprintCols+col,position=vertex*3,uv=vertex*2,color=vertex*4;
-    imprintPositions[position+1]=-1000;imprintNormals[position+1]=1;
-    imprintUvs[uv]=col/(imprintCols-1);imprintUvs[uv+1]=row/(imprintRows-1);imprintColors[color+3]=0;
-   }
-   let cursor=indexBase;
-   for(let row=0;row<imprintRows-1;row++)for(let col=0;col<imprintCols-1;col++){
-    const a=vertexBase+row*imprintCols+col,b=a+1,c=a+imprintCols,d=c+1;
-    imprintIndices[cursor++]=a;imprintIndices[cursor++]=c;imprintIndices[cursor++]=b;
-    imprintIndices[cursor++]=b;imprintIndices[cursor++]=c;imprintIndices[cursor++]=d;
-   }
+  const FOOTPRINT_ATLAS_SIZE=512,FOOTPRINT_WORLD_SIZE=16;
+  const footprintAtlas=window.NorseBeachState.createFootprintAtlas({size:FOOTPRINT_ATLAS_SIZE,worldSize:FOOTPRINT_WORLD_SIZE});
+  const footprintTexture=B.RawTexture.CreateRGBATexture(footprintAtlas.textureData(),FOOTPRINT_ATLAS_SIZE,FOOTPRINT_ATLAS_SIZE,scene,false,false,B.Texture.BILINEAR_SAMPLINGMODE);
+  footprintTexture.name='NorseMovingFootprintAtlasRGBA';footprintTexture.wrapU=B.Texture.CLAMP_ADDRESSMODE;footprintTexture.wrapV=B.Texture.CLAMP_ADDRESSMODE;
+  footprintTexture.hasAlpha=true;
+  const footprintMaterial=new B.StandardMaterial('NorseMovingFootprintAtlasMaterial',scene);
+  footprintMaterial.diffuseTexture=footprintTexture;footprintMaterial.diffuseColor=new B.Color3(1,1,1);
+  footprintMaterial.useAlphaFromDiffuseTexture=true;footprintMaterial.disableLighting=true;footprintMaterial.emissiveColor=new B.Color3(.32,.24,.16);
+  footprintMaterial.specularColor=new B.Color3(0,0,0);footprintMaterial.backFaceCulling=false;
+  footprintMaterial.alpha=.88;footprintMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;footprintMaterial.disableDepthWrite=true;
+  const footprintMesh=B.MeshBuilder.CreateGround('NorseMovingFootprints',{width:FOOTPRINT_WORLD_SIZE,height:FOOTPRINT_WORLD_SIZE,subdivisions:24,updatable:true},scene);
+  footprintMesh.material=footprintMaterial;footprintMesh.isPickable=false;footprintMesh.receiveShadows=false;footprintMesh.castShadows=false;
+  footprintMesh.renderingGroupId=1;footprintMesh.hasVertexAlpha=true;footprintMesh.alwaysSelectAsActiveMesh=true;
+  function uploadFootprintAtlas(){
+   footprintTexture.update(footprintAtlas.textureData());
+   footprintAtlasDirty=false;footprintAtlasClock=0;
   }
-  const imprintMesh=new B.Mesh('NorseBootImprintBatch',scene),imprintData=new B.VertexData();
-  imprintData.positions=imprintPositions;imprintData.indices=imprintIndices;imprintData.normals=imprintNormals;imprintData.uvs=imprintUvs;imprintData.colors=imprintColors;imprintData.applyToMesh(imprintMesh,true);
-  imprintMesh.material=imprintMaterial;imprintMesh.isPickable=false;imprintMesh.receiveShadows=false;imprintMesh.castShadows=false;
-  imprintMesh.hasVertexAlpha=true;imprintMesh.alwaysSelectAsActiveMesh=true;imprintMesh.doNotSyncBoundingInfo=true;
-  const imprintPositionBuffer=imprintMesh.getVertexBuffer(B.VertexBuffer.PositionKind),imprintColorBuffer=imprintMesh.getVertexBuffer(B.VertexBuffer.ColorKind);
-  // One thin-instance batch replaces the per-footstep Sphere mesh create/dispose loop.
+  function syncFootprintAtlasFocus(x,z,force=false){
+   if(!Number.isFinite(x)||!Number.isFinite(z))return false;
+   const moved=!Number.isFinite(lastAtlasFollowX)||Math.hypot(x-lastAtlasFollowX,z-lastAtlasFollowZ)>=2.0;
+   if(!force&&!moved)return false;
+   const shifted=footprintAtlas.recenter(x,z);
+   lastAtlasFollowX=x;lastAtlasFollowZ=z;
+   if(!shifted)return false;
+   const half=FOOTPRINT_WORLD_SIZE*.5;
+   footprintMesh.position.x=footprintAtlas.originX+half;footprintMesh.position.z=footprintAtlas.originZ+half;footprintMesh.position.y=0;
+   const positions=footprintMesh.getVerticesData(B.VertexBuffer.PositionKind);
+   for(let i=0;i<positions.length;i+=3){
+    const worldX=footprintMesh.position.x+positions[i],worldZ=footprintMesh.position.z+positions[i+2];
+    positions[i+1]=terrainSurfaceAt(worldX,worldZ)+.034;
+   }
+   const normals=[];B.VertexData.ComputeNormals(positions,footprintMesh.getIndices(),normals);
+   footprintMesh.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);
+   footprintMesh.updateVerticesData(B.VertexBuffer.NormalKind,normals,false,false);
+   footprintAtlasDirty=true;
+   return true;
+  }
+  function decayFootprintAtlas(dt){
+   footprintFadeClock+=dt;
+   if(footprintFadeClock<.25)return;
+   const elapsed=footprintFadeClock;footprintFadeClock=0;
+   if(footprintAtlas.decay(elapsed,105))footprintAtlasDirty=true;
+  }
+  const particles=Array.from({length:maxParticles},(_,slot)=>({slot,life:0,maxLife:1,age:0,x:0,y:-1000,z:0,vx:0,vy:0,vz:0,size:.02,groundY:0,wet:false,r:.7,g:.6,b:.45,a:.8}));
+// One thin-instance batch replaces the per-footstep Sphere mesh create/dispose loop.
   const grainMaterial=new B.StandardMaterial('GroundSplashParticleMaterial',scene);
   grainMaterial.diffuseTexture=texCoastalSand;grainMaterial.diffuseColor=new B.Color3(1,1,1);
   grainMaterial.specularColor=new B.Color3(.22,.24,.22);grainMaterial.specularPower=26;
@@ -3187,40 +3201,10 @@ void main(void){
     }
    }
   }
-  function makeFootprint(islandIndex,x,z,heading,wet,beach,running){
-   const island=land[islandIndex];if(!island)return;
-   const dx=x-island.x,dz=z-island.z;
-   if(dx*dx+dz*dz>(island.r*.973)**2)return;
-   const slot=imprints[imprintCursor++%maxImprints],vertexBase=slot.slot*imprintVertexCount,floatBase=vertexBase*3,colorBase=vertexBase*4;
-   const halfLength=running?.245:.225,baseWidth=running?.155:.137;
-   const rightX=Math.cos(heading),rightZ=-Math.sin(heading),forwardX=Math.sin(heading),forwardZ=Math.cos(heading);
-   const strength=wet?.82:(beach?.78:.48),tint=wet?[.28,.36,.34]:(beach?[.32,.235,.145]:[.37,.32,.245]);
-   const edgeTint=beach?[.70,.55,.36]:[.58,.52,.40];
-   slot.active=true;slot.age=0;slot.life=wet?70:(beach?105:52);slot.fadeAccumulator=0;
-   for(let row=0;row<imprintRows;row++){
-    const nz=row/(imprintRows-1)*2-1;
-    for(let col=0;col<imprintCols;col++){
-     const u=col/(imprintCols-1)*2-1,halfWidth=baseWidth*(.76+.24*smooth01((nz+1)*.5));
-     const localX=u*halfWidth,localZ=nz*halfLength,radial=Math.hypot(u,nz*.92);
-     const wx=x+rightX*localX+forwardX*localZ,wz=z+rightZ*localX+forwardZ*localZ;
-     const vertex=row*imprintCols+col,position=floatBase+vertex*3,color=colorBase+vertex*4;
-     const islandDx=wx-island.x,islandDz=wz-island.z;
-     const onSameIsland=islandDx*islandDx+islandDz*islandDz<(island.r*.975)**2,mask=onSameIsland?1-smooth01((radial-.63)/.37):0;
-     const edge=smooth01((radial-.70)/.30),rim=beach?edge*.014:edge*.005;
-     const press=wet?.013:(beach?.030:.018),groundY=terrainHeightOnIsland(island,wx,wz)+terrainDeformationAt(islandIndex,wx,wz);
-     // Lift above the opaque heightfield: the old wet imprint could be hidden below terrain.
-     imprintPositions[position]=wx;imprintPositions[position+1]=groundY+.028+rim-press*.16;imprintPositions[position+2]=wz;
-     const edgeBlend=edge*.32,rowGroove=(row>3&&row<imprintRows-3&&row%5===1&&Math.abs(u)<.82)?.12:0;
-     const toeRelief=nz>.55&&Math.abs(u)>.42?.05:0,shade=1-rowGroove-toeRelief;
-     imprintColors[color]=(tint[0]*(1-edgeBlend)+edgeTint[0]*edgeBlend)*shade;
-     imprintColors[color+1]=(tint[1]*(1-edgeBlend)+edgeTint[1]*edgeBlend)*shade;
-     imprintColors[color+2]=(tint[2]*(1-edgeBlend)+edgeTint[2]*edgeBlend)*shade;
-     const alpha=strength*mask;imprintColors[color+3]=alpha;slot.baseAlpha[vertex]=alpha;
-    }
-   }
-   const positionStart=floatBase,positionEnd=floatBase+imprintVertexCount*3,colorStart=colorBase,colorEnd=colorBase+imprintVertexCount*4;
-   imprintPositionBuffer.updateDirectly(imprintPositions.subarray(positionStart,positionEnd),positionStart);
-   imprintColorBuffer.updateDirectly(imprintColors.subarray(colorStart,colorEnd),colorStart);
+  function makeFootprint(islandIndex,x,z,heading,wet,beach,running,waterCovered=false){
+   if(waterCovered)return;
+   const strength=wet?.90:(beach?.78:.58);
+   if(footprintAtlas.stamp(x,z,heading,strength))footprintAtlasDirty=true;
   }
   function kickSandGrains(x,z,heading,wet,running,groundY){
    const count=wet?(running?8:6):(running?6:4),surfaceY=wet?Math.max(groundY,waterHeight(x,z,oceanTime)):groundY;
@@ -3239,8 +3223,9 @@ void main(void){
    const ratio=d/island.r,beach=ratio>.748&&ratio<.976;
    const groundY=terrainSurfaceAt(x,z),beachLayer=livingBeachLayers[islandIndex];
    const wetness=beachLayer?beachLayer.coastalState.sampleWetness(x,z,island.x,island.z):0;
-   const wet=beach&&(wetness>.08||waterHeight(x,z,oceanTime)>groundY+.035);
-   pressGround(x,z,islandIndex,wet,beach);makeFootprint(islandIndex,x,z,heading,wet,beach,running);kickSandGrains(x,z,heading,wet,running,groundY);
+   const waterCovered=waterHeight(x,z,oceanTime)>groundY+.035;
+   const wet=beach&&(wetness>.08||waterCovered);
+   pressGround(x,z,islandIndex,wet,beach);makeFootprint(islandIndex,x,z,heading,wet,beach,running,waterCovered);kickSandGrains(x,z,heading,wet,running,groundY);
   }
   const BEACH_STATE_DEFAULTS=Object.freeze({drySeconds:32,foamSeconds:6,foamDeposit:.68});
   const BEACH_STATE_INTERVAL=1/12;
@@ -3276,7 +3261,11 @@ void main(void){
       const ground=layer.coastalGround[cell]+(field?terrainDeformationAt(islandIndex,x,z):0);
       const waterLevel=waterHeight(x,z,oceanTime);
       const actualCoverage=smooth01((waterLevel-ground+.035)/.11);
-      state.stepCell(cell,actualCoverage,elapsed,BEACH_STATE_DEFAULTS);
+      const transition=state.stepCell(cell,actualCoverage,elapsed,BEACH_STATE_DEFAULTS);
+      if(transition.flooded){
+       const cellSize=state.metersPerCell(row);
+       if(footprintAtlas.eraseRect(x,z,Math.max(.02,cellSize.tangential*.55),Math.max(.02,cellSize.radial*.55)))footprintAtlasDirty=true;
+      }
      }
     }
     layer.coastalStateTexture.update(state.rgba);
@@ -3287,23 +3276,6 @@ void main(void){
   function update(dt,x,z,distance,heading,running,onShip,airborne){
    const groundDynamicsStartedAt=performance.now();
    if(!Number.isFinite(dt)||dt<=0)return;
-   let imprintColorsDirty=false;
-   for(const item of imprints){
-    if(!item.active)continue;
-    item.age+=dt;item.fadeAccumulator+=dt;
-    const base=item.slot*imprintVertexCount,colorStart=base*4;
-    if(item.age>=item.life){
-     item.active=false;
-     for(let vertex=0;vertex<imprintVertexCount;vertex++)imprintColors[colorStart+vertex*4+3]=0;
-     imprintColorsDirty=true;continue;
-    }
-    if(item.fadeAccumulator>=.48){
-     item.fadeAccumulator=0;const fade=Math.pow(Math.max(0,1-item.age/item.life),1.42);
-     for(let vertex=0;vertex<imprintVertexCount;vertex++)imprintColors[colorStart+vertex*4+3]=item.baseAlpha[vertex]*fade;
-     imprintColorsDirty=true;
-    }
-   }
-   if(imprintColorsDirty)imprintColorBuffer.updateDirectly(imprintColors,0);
    groundRelaxAccumulator+=dt;
    if(groundRelaxAccumulator>=GROUND_RELAX_INTERVAL){
     const relaxStep=groundRelaxAccumulator;groundRelaxAccumulator=0;relaxGround(relaxStep);
@@ -3329,7 +3301,11 @@ void main(void){
     grainBuffersDirty=true;
    }
    if(grainBuffersDirty){grainMesh.thinInstanceBufferUpdated('matrix');grainMesh.thinInstanceBufferUpdated('color');}
+   if(!onShip&&!airborne)syncFootprintAtlasFocus(x,z);
    updateBeach(dt,x,z);
+   if(!onShip&&!airborne)decayFootprintAtlas(dt);
+   footprintAtlasClock+=dt;
+   if(footprintAtlasDirty&&footprintAtlasClock>=1/12)uploadFootprintAtlas();
    if(onShip||airborne||!Number.isFinite(distance)||distance<=0||!Number.isFinite(x)||!Number.isFinite(z)){
     stepDistance=0;hasLastStepPosition=false;
     groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;return;
@@ -3364,8 +3340,8 @@ void main(void){
    lastStepX=x;lastStepZ=z;
    groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;
   }
-  function reset(){stepDistance=0;alternateFoot=0;hasLastStepPosition=false;footstepsEmitted=0;lastFootstepSegmentLength=0;groundRelaxAccumulator=0;}
-  return {update,reset,counts:()=>({imprints:imprints.reduce((count,item)=>count+(item.active?1:0),0),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3))})};
+  function reset(){stepDistance=0;alternateFoot=0;hasLastStepPosition=false;footstepsEmitted=0;lastFootstepSegmentLength=0;groundRelaxAccumulator=0;lastAtlasFollowX=NaN;lastAtlasFollowZ=NaN;}
+  return {update,reset,counts:()=>({imprints:footprintAtlas.activePixels(),footprintAtlas:{size:FOOTPRINT_ATLAS_SIZE,worldSize:FOOTPRINT_WORLD_SIZE,pixelSize:footprintAtlas.pixelSize,originX:footprintAtlas.originX,originZ:footprintAtlas.originZ},particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3))})};
  })();
  let activeBeachIslandIndex=-2;
  function syncActiveBeachIsland(){
