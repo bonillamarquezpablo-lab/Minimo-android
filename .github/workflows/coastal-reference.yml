@@ -1,0 +1,115 @@
+name: Coastal water visual reference
+
+on:
+  push:
+    branches: [test/coastal-reference-0.6.271]
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/coastal-reference.yml'
+      - 'scripts/prepare_coastal_reference.mjs'
+      - 'scripts/coastal_reference_playwright.mjs'
+      - 'scripts/coastal_reference_README.md'
+  workflow_dispatch:
+    inputs:
+      app_ref:
+        description: 'Commit/ref del juego que se quiere capturar'
+        required: false
+        default: '5d89a75adee230555dc7e2eeee05192df3fb4c0e'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  capture-reference:
+    name: Capture deterministic coastal baseline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout test harness and workflow
+        uses: actions/checkout@v6
+        with:
+          path: harness
+          persist-credentials: false
+
+      - name: Checkout requested game revision
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.app_ref || github.event.pull_request.head.sha || github.sha }}
+          path: game
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify test-only change and reference build
+        working-directory: game
+        env:
+          BASELINE_SHA: 5d89a75adee230555dc7e2eeee05192df3fb4c0e
+        run: |
+          git diff --quiet "$BASELINE_SHA" HEAD -- index.html scripts/nordic/beach-state.js scripts/nordic/coastal-interaction.js
+          git diff --quiet "$BASELINE_SHA" HEAD -- assets
+          changed="$(git diff --name-only "$BASELINE_SHA" HEAD)"
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              .github/workflows/coastal-reference.yml|scripts/prepare_coastal_reference.mjs|scripts/coastal_reference_playwright.mjs|scripts/coastal_reference_README.md) ;;
+              *) echo "Archivo ajeno a las pruebas modificado: $file"; exit 1 ;;
+            esac
+          done <<EOF
+          $changed
+          EOF
+          grep -q '<meta name="el-sin-nombre-build" content="0.6.271">' index.html
+          cp ../harness/scripts/prepare_coastal_reference.mjs scripts/
+          cp ../harness/scripts/coastal_reference_playwright.mjs scripts/
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build the unchanged 0.6.271 game
+        working-directory: game
+        run: python scripts/build_site.py
+
+      - name: Inject CI-only deterministic controls into dist
+        working-directory: game
+        run: node scripts/prepare_coastal_reference.mjs
+
+      - name: Install Playwright and headless Chromium
+        working-directory: game
+        run: |
+          npm install --no-save --no-package-lock playwright@1.65.0
+          npx playwright install --with-deps chromium
+
+      - name: Capture 27 fixed water reference views
+        working-directory: game
+        env:
+          APP_REF_SHA: 5d89a75adee230555dc7e2eeee05192df3fb4c0e
+          HARNESS_SHA: ${{ github.sha }}
+        run: node scripts/coastal_reference_playwright.mjs
+
+      - name: Publish reference screenshots and JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-sin-nombre-water-reference-0.6.271-${{ github.run_number }}
+          path: game/artifacts/coastal-reference/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Add run summary
+        if: always()
+        run: |
+          {
+            echo "## Referencia visual del agua costera"
+            echo "- Build objetivo: 0.6.271"
+            echo "- Capturas: 27 (3 cámaras x 3 instantes x 3 mareas)"
+            echo "- WebGL: Chromium headless con SwiftShader"
+            echo "- FPS CI: no medidos; Galaxy S26 Ultra con ?debug=1."
+            echo "- Artefacto: el-sin-nombre-water-reference-0.6.271-${{ github.run_number }}"
+          } >> "$GITHUB_STEP_SUMMARY"
