@@ -347,7 +347,7 @@ def main() -> None:
         fail("Faltan los deslizadores en vivo y el restablecimiento de la Fase A.")
     if "new B.DynamicTexture('NordicTerrainAlbedo',{width:size,height:size},scene,true)" not in index_html or "new B.DynamicTexture('LivingCoastalSandAlbedo',{width:size,height:size},scene,true)" not in index_html:
         fail("Las texturas procedurales principales del suelo deben generar mipmaps.")
-    if "const packedTrailTexture=makePatternTexture('Packed Norse trail earth','#8c7652',['#b9a174','#765f42','#c8ad7d','#876d49'],'sand',512,true);" not in index_html:
+    if "const packedTrailTexture=makePatternTexture('Packed Norse trail earth','#a18a63',['#d0b68a','#8c7450','#ddc79e','#a58b60'],'sand',512,true);" not in index_html:
         fail("La textura procedural de los caminos también debe generar mipmaps.")
     if "makePatternTexture(name,base,accents,style='grain',size=512,generateMipMaps=false)" not in index_html:
         fail("La generación selectiva de mipmaps de las texturas procedurales ha cambiado.")
