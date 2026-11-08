@@ -4,6 +4,16 @@ const fs = require('node:fs');
 const html = fs.readFileSync('index.html', 'utf8');
 
 assert.match(html, /const testModeEnabled=new URLSearchParams\(window\.location\.search\)\.get\('test'\)==='1'/);
+assert.match(html, /const coastalReferenceMode=new URLSearchParams\(window\.location\.search\)\.get\('coastref'\)==='1'/,
+  'Coastal screenshots must use an isolated coast-only startup mode');
+assert.match(html, /const playerStartupTestEnabled=new URLSearchParams\(window\.location\.search\)\.get\('playertest'\)==='1'/,
+  'Real player GLB verification must have a separate startup-test flag');
+assert.match(html, /coastalReferenceMode\?Promise\.resolve\(null\):loadHumanViking\(\)/,
+  'Coastal-only runs must not wait for the protagonist GLB');
+assert.match(html, /npc:'skipped-coastal-reference'/);
+assert.match(html, /fauna:'skipped-coastal-reference'/);
+assert.match(html, /window\.__ELSN_PLAYER_STARTUP_SMOKE__/,
+  'The independent player startup job needs its own in-page diagnostics');
 assert.match(html, /const groundDebugEnabled=new URLSearchParams\(window\.location\.search\)\.get\('debug'\)==='1'/,
   'The existing ground diagnostics must remain controlled only by ?debug=1');
 assert.match(html, /const coastalDiagnosticsEnabled=groundDebugEnabled\|\|testModeEnabled/,
