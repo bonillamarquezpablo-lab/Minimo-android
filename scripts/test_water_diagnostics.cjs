@@ -8,6 +8,11 @@ assert.match(html,/const coastalDiagnosticsEnabled=groundDebugEnabled\\|\\|testM
 assert.match(html,/function getWaterVertexAgreementDiagnostics\(\)/);
 assert.match(html,/waterHeight\(x,z,time,fade\)/);
 assert.match(html,/function recordWaterCoastSolverDiagnostic\(/);
+assert.match(html,/phase='animated'/, 'Shoreline root-finding diagnostics must distinguish initial construction from animated updates.');
+assert.match(html,/initial:createWaterCoastSolverStats\(\),animated:createWaterCoastSolverStats\(\)/, 'Initial and animated shoreline solver samples must be reported separately.');
+assert.match(html,/const inspectBand=\(positions,vertexColors,rows\)=>/, 'Foam placement diagnostics must inspect each vertex alpha buffer.');
+assert.match(html,/if\(!Number\.isFinite\(alpha\)\|\|alpha<=\.025\)continue/, 'Transparent margin vertices must not be counted as visible foam outside the shoreline band.');
+assert.match(html,/foamVisibleVerticesOutsideBand/, 'Visible foam vertices outside the intended shoreline band must be reported separately from geometry margins.');
 assert.match(html,/recordWaterCoastSolverDiagnostic\(bestError,solverStartedAt,true,bestError<\.006\)/);
 assert.match(html,/coastSolver:waterDebugSolverStats/);
 assert.match(html,/physicalBackwashVelocity:'no implementado'/);
