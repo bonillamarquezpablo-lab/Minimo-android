@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.258"
+EXPECTED_VERSION = "0.6.259"
 
 HTML_PAGES = (
     "index.html",
@@ -131,7 +131,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'11',build:'0.6.258'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'11',build:'0.6.259'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -421,6 +421,8 @@ def main() -> None:
         fail("La deformación de pisadas debe disponer de clamp01 en el ámbito global del juego.")
     if "window.NorseCoastalInteraction.waterOpacity(physicalDepth)" not in index_html or "oceanDepthVertexColors[index+3]=Math.max(0,Math.min(1,shallowAlpha*shoreOpacity));" not in index_html:
         fail("El agua somera debe tener opacidad controlada sobre un lecho submarino arenoso independiente.")
+    if "const alpha=.985*smooth01(t/.045);colors.push(1,.94,.82,alpha);" not in index_html or "const alpha=.88*edgeFade" in index_html:
+        fail("La arena debe mantener continuidad opaca bajo el agua y no revelar el heightfield terrestre por el borde exterior.")
     if "function buildCoastalSeabed(island,index)" not in index_html or "norseSubmergedSandyBottom:true" not in index_html or "coastalSeabedMaterial.bumpTexture=texCoastalSandNormalPbr" not in index_html or "return window.NorseCoastalInteraction.seabedHeight(d,is.r,-2.9);" not in index_html:
         fail("El fondo submarino debe ser una malla de arena independiente con relieve propio.")
     if "window.NorseCoastalInteraction.filmSurfaceHeight(ground,water,filmWave)" not in index_html or "window.NorseCoastalInteraction.filmCoverage(fraction,washPattern[vertex])" not in index_html or "washMaterial.bumpTexture=M.water.bumpTexture||albedoNormalWater" not in index_html:
@@ -478,7 +480,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.258</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.259</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
