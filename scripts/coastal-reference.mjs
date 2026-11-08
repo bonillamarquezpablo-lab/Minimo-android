@@ -42,6 +42,7 @@ async function main() {
     await page.waitForFunction(
       () => window.__ELSN_TEST__ && window.__elSinNombreStartupSmoke &&
         window.__elSinNombreStartupSmoke.worldReady === true,
+      undefined,
       { timeout: 180000 }
     );
 
