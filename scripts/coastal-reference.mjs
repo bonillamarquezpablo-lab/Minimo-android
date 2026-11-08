@@ -56,6 +56,7 @@ async function main() {
     reducedMotion: 'reduce'
   });
   const page = await context.newPage();
+  page.setDefaultTimeout(60000);
   const pageErrors = [];
   const consoleErrors = [];
   page.on('pageerror', error => pageErrors.push(String(error && error.stack || error)));
@@ -142,7 +143,7 @@ async function main() {
               api.setWaterState({ time, tide: tide.value });
               api.render();
               return api.diagnostics();
-            }, { cameraCase, time, tide, island: mainIsland, shoreRadius }, { timeout: 30000 });
+            }, { cameraCase, time, tide, island: mainIsland, shoreRadius });
             await page.screenshot({
               path: path.join(OUT, file),
               animations: 'disabled',
