@@ -3439,7 +3439,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    for(let i=0;i<=segments;i++){
     const angle=i/segments*Math.PI*2,inner=radials[i*2],outer=radials[i*2+1];
     const radius=inner+(outer-inner)*t,x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-    positions.push(x,terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018,z);uvs.push(i/segments,t);
+    positions.push(x,renderedTerrainSurfaceAt(x,z)+.018,z);uvs.push(i/segments,t);
     // Keep the sandy bed opaque through the seaward edge; only feather the inland join.
     // This prevents the terrestrial heightfield from bleeding through beneath transparent water.
     const alpha=.985*smooth01(t/.045);colors.push(1,.94,.82,alpha);baseAlpha.push(alpha);
@@ -3766,7 +3766,7 @@ void main(void){
    }
    const vertexStart=beachWorkVertexCursor;
    while(beachWorkVertexCursor<layer.baseY.length&&performance.now()-sliceStarted<BEACH_WORK_BUDGET_MS){
-    const vertex=beachWorkVertexCursor++,offset=vertex*3,x=layer.positions[offset],z=layer.positions[offset+2];layer.positions[offset+1]=layer.baseY[vertex]+(field?terrainDeformationAt(layer.index,x,z):0)+.018;
+    const vertex=beachWorkVertexCursor++,offset=vertex*3,x=layer.positions[offset],z=layer.positions[offset+2];layer.positions[offset+1]=renderedTerrainSurfaceAt(x,z)+.018;
    }
    if(beachWorkVertexCursor>vertexStart&&layer.positionBuffer&&layer.positionBuffer.isUpdatable()){const start=vertexStart*3,end=beachWorkVertexCursor*3;layer.positionBuffer.updateDirectly(layer.positions.subarray(start,end),start);}
    const sliceMs=performance.now()-sliceStarted;beachWorkLastSliceMs=Number(sliceMs.toFixed(3));beachWorkMaxSliceMs=Math.max(beachWorkMaxSliceMs,sliceMs);
@@ -4078,15 +4078,16 @@ void main(void){
    if(dx*dx+dz*dz>=limit*limit)continue;
    const terrain=islandTerrainMeshes[index];
    // GroundMesh.getHeightAtCoordinates accepts WORLD X/Z and already returns WORLD Y.
-   // Passing island-relative coordinates samples the wrong part of a translated island,
-   // creating a false height offset that can make the packed-earth ribbon cut into slopes.
+   // Its height quads describe the rendered triangulated base mesh; add the live
+   // footprint deformation field separately because deformation updates the GPU buffer.
    if(terrain&&typeof terrain.getHeightAtCoordinates==='function'){
     const renderedHeight=terrain.getHeightAtCoordinates(x,z);
-    if(Number.isFinite(renderedHeight))return renderedHeight;
+    if(Number.isFinite(renderedHeight))return renderedHeight+terrainDeformationAt(index,x,z);
    }
    return terrainSurfaceAt(x,z);
   }
-  return .42;
+  // Outside the circular heightfield footprint, retain the analytic shore/seabed profile.
+  return terrainSurfaceAt(x,z);
  }
  function createTrail(points,width=1.45){
   vegetationTrailPaths.push({points:points.map(p=>[p[0],p[1]]),width});
