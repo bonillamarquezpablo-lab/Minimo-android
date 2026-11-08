@@ -15,5 +15,5 @@ assert.match(html,/P50 '\+fmt\(frameAt\(\.50\),2\)\+' · P95 '\+fmt\(frameAt\(\.
 assert.match(html,/Velocidad física de resaca: NO IMPLEMENTADO/);
 assert.match(html,/waterDebugVertexTimes\[vertex\]=oceanTime/);
 assert.match(html,/waterDebugVertexTimes\[i\/3\]=oceanTime/);
+assert.match(html,/const crestFoamLift=Math\.pow\(Math\.max\(0,crossWave\),3\)\*\.030\*oceanDepthSettings\.waveCrestStrength,shortCrest=Math\.pow\(Math\.max\(0,chopWave\),3\)\*\.018\*oceanDepthSettings\.waveCrestStrength/,'Keep the main 0.6.271 wave crest amplitudes unchanged; exclude the alternate visual amplitudes from the diagnostics branch.');
 console.log('OK: Stage 0 read-only water diagnostics are debug-only and preserve the rendered water formulas.');
-assert.match(html,/const crestFoamLift=Math\\.pow\\(Math\\.max\\(0,crossWave\\),3\\)\\*\\.030\\*oceanDepthSettings\\.waveCrestStrength,shortCrest=Math\\.pow\\(Math\\.max\\(0,chopWave\\),3\\)\\*\\.018\\*oceanDepthSettings\\.waveCrestStrength/,'Keep the main 0.6.271 wave crest amplitudes unchanged; exclude the alternate visual amplitudes from the diagnostics branch.');
