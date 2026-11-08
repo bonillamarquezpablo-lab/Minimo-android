@@ -21,7 +21,7 @@ assert.match(html,/function getWaterCoastDiagnostics\(\)/);
 for(const metric of ["foamActiveSegments","foamSegmentCapacity","foamValidIntersections","foamMaxOffshoreDistanceMeters","foamVerticesOutsideBand","foamUpdateLastMs"]) {
  assert.ok(html.includes(metric), `Missing coastal resaca diagnostic: ${metric}`);
 }
-assert.match(html,/tidalFoamLastUpdateMs=performance\\.now\\(\\)-foamWorkStarted/);
+assert.ok(html.includes('tidalFoamLastUpdateMs=performance.now()-foamWorkStarted'));
 assert.match(html,/Resaca: .*foamActiveSegments/);
 assert.match(html,/function buildTidalFoam\(island,index\)/);
 assert.match(html,/for\(const foam of tidalFoamMeshes\)/);
