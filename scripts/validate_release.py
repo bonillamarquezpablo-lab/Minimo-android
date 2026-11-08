@@ -431,6 +431,8 @@ def main() -> None:
         fail("El fondo submarino debe ser una malla de arena independiente con relieve propio.")
     if "window.NorseCoastalInteraction.filmSurfaceHeight(ground,water,filmWave)" not in index_html or "window.NorseCoastalInteraction.filmCoverage(fraction,washPattern[vertex])" not in index_html or "washMaterial.bumpTexture=M.water.bumpTexture||albedoNormalWater" not in index_html:
         fail("La lámina de agua debe ser una superficie independiente, animada y con normales/reflejos.")
+    if "const filmAlpha=filmCoverage*(.20+.10*breakStrength)*flowPulse*filmStrength;" not in index_html or "const lace=smooth01((foamPattern[vertex]-.28)/.46);" not in index_html or "coastalSeabedMaterial.environmentIntensity=.18;" not in index_html:
+        fail("La película costera debe ser translúcida y la espuma fragmentada sobre un fondo submarino legible.")
     if "float sheetFront=" in index_html or "color=mix(color,whitewater,swashMask*.56)" in index_html or "shoreSheetStrength" in index_html:
         fail("El avance del agua no puede simularse pintando el suelo de la playa.")
     if "function clamp01(value)" in index_html and index_html.find("updateOceanDepthGradient();",index_html.find("function smooth01")) < index_html.find("const terrainHashCache="):
