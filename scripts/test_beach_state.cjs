@@ -20,7 +20,7 @@ const untouched = coast.index(20, 20);
 assert.equal(coast.stepCell(untouched, 0, 1).wetness, 0);
 assert.equal(coast.reachedWater[untouched], 0);
 const wet = coast.index(20, 21);
-coast.stepCell(wet, 1, 0.5, { drySeconds: 32, foamSeconds: 6 });
+coast.stepCell(wet, 1, 0.8, { drySeconds: 32, foamSeconds: 6 });
 assert.equal(coast.reachedWater[wet], 1);
 assert.ok(coast.wetness[wet] > 235);
 const retreat = coast.stepCell(wet, 0, 0.1, { drySeconds: 32, foamSeconds: 6 });
