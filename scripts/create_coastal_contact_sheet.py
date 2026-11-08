@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Build a labelled 27-frame contact sheet from the coastal reference PNGs."""
+"""Build a labelled 36-frame contact sheet from the coastal and ridge-occlusion PNGs."""
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts" / "coastal-reference"
-CAMERAS = ("shore-1m", "surf-20m", "lod-90m")
+CAMERAS = ("shore-1m", "surf-20m", "lod-90m", "ridge-occlusion")
 TIMES = (0, 37, 91)
 TIDES = ("natural", "high", "low")
 THUMB_W, THUMB_H = 320, 180
@@ -31,12 +31,12 @@ def main() -> None:
 
     width = 3 * THUMB_W + 2 * GAP
     row_height = LABEL_H + THUMB_H
-    height = HEADER_H + GAP + 9 * (row_height + GAP)
+    height = HEADER_H + GAP + (len(CAMERAS) * len(TIMES)) * (row_height + GAP)
     sheet = Image.new("RGB", (width, height), BG)
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
 
-    draw.text((8, 7), "EL SIN NOMBRE · COASTAL REFERENCE · 27 CAPTURES", fill=TEXT, font=font)
+    draw.text((8, 7), "EL SIN NOMBRE · COASTAL REFERENCE · 36 CAPTURES", fill=TEXT, font=font)
     draw.text((8, 25), "One game load · 960×540 · Chromium / SwiftShader · columns: natural / high / low",
               fill=MUTED, font=font)
 

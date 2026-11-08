@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const html = fs.readFileSync('index.html', 'utf8');
 const captureRunner = fs.readFileSync('scripts/coastal-reference.mjs', 'utf8');
+const contactSheet = fs.readFileSync('scripts/create_coastal_contact_sheet.py', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf8');
 
 assert.match(html, /const testModeEnabled=new URLSearchParams\(window\.location\.search\)\.get\('test'\)==='1'/);
@@ -42,5 +43,7 @@ assert.match(captureRunner, /id: 'ridge-occlusion'/,
   'The camera matrix must include a direct view across the main island ridge.');
 assert.match(captureRunner, /36\/36 complete/,
   'The runner must assert and report all 36 captured views.');
+assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
+assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
 assert.ok(workflow.includes('cancel-in-progress: false'),
   'A later PR commit must not cancel a long-running 27-image reference capture');

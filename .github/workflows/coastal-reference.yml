@@ -59,7 +59,7 @@ jobs:
           cat /tmp/elsn-http.log
           exit 1
 
-      - name: Capture 27 deterministic coastal reference images (one game load)
+      - name: Capture 36 deterministic coastal and ridge-occlusion images (one game load)
         env:
           COASTAL_TEST_URL: http://127.0.0.1:4173/
         run: node scripts/coastal-reference.mjs
@@ -68,7 +68,7 @@ jobs:
         if: always()
         run: python -m pip install --disable-pip-version-check Pillow
 
-      - name: Build one PNG contact sheet from all 27 captures
+      - name: Build one PNG contact sheet from all 36 captures
         if: always()
         run: python scripts/create_coastal_contact_sheet.py
 
