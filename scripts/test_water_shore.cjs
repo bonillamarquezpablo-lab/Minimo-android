@@ -36,6 +36,8 @@ const animateEnd=html.indexOf("function rand(a,b)",animateStart);
 const animateBody=html.slice(animateStart,animateEnd);
 assert.match(animateBody,/foamDue=tidalFoamAccumulator>=TIDAL_FOAM_UPDATE_STEP/);
 assert.match(animateBody,/const foamElapsed=foamDue\?tidalFoamAccumulator:0/);
+assert.match(animateBody,/const terrainY=terrainHeightOnIsland\(island,x,z\)\+terrainDeformationAt\(index,x,z\),water=coastalWaterHeight\(x,z,oceanTime\);[\s\S]*?const dryFoamResidue=ground<=\(Number\(ground\.position\.y\)\|\|0\)\+\.42/,"Foam terrain height must not shadow the ocean mesh reference used for sea-level height.");
+assert.match(animateBody,/const foamWaterDepth=coastalWaterHeight\(x,z,oceanTime\)-terrainY/,"Foam water depth must use the numeric terrain height.");
 assert.match(animateBody,/if\(detailDue\)refreshWaterDetailRegion\(\)/);
 assert.match(animateBody,/Math\.exp\(-foamElapsed\/3\.4\)/);
 assert.doesNotMatch(animateBody,/Math\.exp\(-dt\/3\.4\)/);

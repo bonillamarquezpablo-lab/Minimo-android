@@ -2992,13 +2992,13 @@ async function removeStrayDebugGeometry(targetScene){
      const edgeMotion=Math.sin(wavePhase+row*.39)*.025+Math.sin(oceanTime*.57+angle*4.3+row)*.018;
      const radius=foam.foamCenter[col]+shoreOffset+edgeMotion;
       const x=island.x+cs*radius,z=island.z+sn*radius;
-      const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=coastalWaterHeight(x,z,oceanTime);
+      const terrainY=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=coastalWaterHeight(x,z,oceanTime);
       const crestLip=Math.exp(-Math.pow((shoreOffset-.18)/.72,2));
       const chop=Math.sin(x*.74+z*.31+oceanTime*1.65)*.006+Math.sin(x*.29-z*.83-oceanTime*1.12)*.004;
-      const foamWaterDepth=coastalWaterHeight(x,z,oceanTime)-ground,foamSubmerged=smooth01((foamWaterDepth-.012)/.14);
+      const foamWaterDepth=coastalWaterHeight(x,z,oceanTime)-terrainY,foamSubmerged=smooth01((foamWaterDepth-.012)/.14);
       const dryFoamResidue=ground<=(Number(ground.position.y)||0)+.42?Math.min(.22,foamStrength*.18)*Math.exp(-Math.max(0,-foamWaterDepth)*5.5):0;
       const foamTerrainContact=Math.max(foamSubmerged,dryFoamResidue);
-      positions[offset]=foamWaterDepth>0?water+.014+foamBreakStrength*crestLip*(.012+chop)+chop:ground+.006;
+      positions[offset]=foamWaterDepth>0?water+.014+foamBreakStrength*crestLip*(.012+chop)+chop:terrainY+.006;
       positions[offset+2]=z;
       const uv=vertex*2;foamUvs[uv]=x/18+.5;foamUvs[uv+1]=z/18+.5;
       const broad=terrainValueNoise(x*.22+oceanTime*.045+37.4,z*.22-oceanTime*.032-21.8);
