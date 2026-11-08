@@ -76,6 +76,17 @@ async function main() {
     });
     manifest.timingsMs.navigationToDomContentLoaded = Number((performance.now() - stepStartedAt).toFixed(1));
 
+    // Reproduce the real preflight path: enter, choose full Quality, continue without a name.
+    stepStartedAt = performance.now();
+    const audioGate = page.locator('#audioGateStart');
+    if (await audioGate.isVisible().catch(() => false)) await audioGate.click({ timeout: 30000 });
+    await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
+    await page.locator('#chooseQuality').click();
+    await page.locator('#continueUnnamed').waitFor({ state: 'visible', timeout: 30000 });
+    await page.locator('#continueUnnamed').click();
+    manifest.timingsMs.menuFlow = Number((performance.now() - stepStartedAt).toFixed(1));
+    console.log('[coastal-reference] preflight menu completed in ' + manifest.timingsMs.menuFlow + ' ms');
+
     stepStartedAt = performance.now();
     await page.waitForFunction(
       () => window.__ELSN_TEST__ &&
