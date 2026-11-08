@@ -412,7 +412,7 @@ def main() -> None:
         fail("Las capas de playa y el fondo submarino no deben reservar mallas/texturas de las trece islas al arrancar.")
     if "function ensureActiveCoastalIslandSystems(index)" not in index_html or "function disposeActiveCoastalIslandSystems(index)" not in index_html or "if(nextIndex>=0)ensureActiveCoastalIslandSystems(nextIndex)" not in index_html or "disposeActiveCoastalIslandSystems(previousIndex)" not in index_html:
         fail("La costa dinámica debe crearse únicamente para la isla ocupada y liberar la anterior al cambiar de isla.")
-    if "const nextIndex=activeBeachIslandIndex;" not in index_html or "const waterDepth=coastalWaterHeight(x,z,oceanTime)-ground,waterContact=smooth01((waterDepth-.015)/.22)" not in index_html or "waveBodyPositions[offset+1]=waterDepth>0?water+.018+lift:ground-.045;" not in index_html or "foamTerrainContact" not in index_html:
+    if "const nextIndex=activeBeachIslandIndex;" not in index_html or "const waterDepth=water-terrainY,waterContact=smooth01((waterDepth-.015)/.22)" not in index_html or "waveBodyPositions[offset+1]=waterDepth>0?water+.018+lift:terrainY-.045;" not in index_html or "foamTerrainContact" not in index_html:
         fail("La rompiente debe seguir una única isla activa y quedar oculta bajo terreno seco o elevado.")
     if "function coastalWaterHeight(x,z,t=oceanTime)" not in index_html or "meanSeaLevel+.38" not in index_html or "waveBodyMesh.renderingGroupId=0;" not in index_html or "washMesh.hasVertexAlpha=true;washMesh.renderingGroupId=0;" not in index_html:
         fail("La rompiente transparente debe respetar la profundidad del terreno y limitar el run-up a la cota física de la marea.")
