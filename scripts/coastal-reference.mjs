@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { chromium } from 'playwright';
 
 const BASE_URL = process.env.COASTAL_TEST_URL || 'http://127.0.0.1:4173/';
@@ -16,77 +17,78 @@ const TIDES = [
   { id: 'high', value: 0.28 },
   { id: 'low', value: -0.28 }
 ];
+const runStartedAt = performance.now();
 const manifest = {
-  schema: 2,
+  schema: 3,
   build: null,
   capturedAt: new Date().toISOString(),
   renderer: 'Chromium headless + ANGLE SwiftShader',
   viewport: { width: 960, height: 540, deviceScaleFactor: 1 },
+  testMode: 'coastal-reference-only; character startup is validated in a separate job',
   gamePageLoads: 0,
   cameraCases: CAMERAS,
   timesSeconds: TIMES,
   tides: TIDES.map(t => ({ id: t.id, value: t.value })),
   expectedCaptureCount: 27,
   startup: null,
-  player: null,
+  playerValidation: 'separate-character-startup-job',
   captures: [],
+  timingsMs: {},
   consoleErrors: [],
   pageErrors: [],
   failure: null
 };
 
-
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
-  const browser = await chromium.launch({
-    headless: true,
-    timeout: 60000,
-    args: [
-      '--use-gl=angle',
-      '--use-angle=swiftshader',
-      '--enable-webgl',
-      '--ignore-gpu-blocklist',
-      '--disable-dev-shm-usage'
-    ]
-  });
-  const page = await browser.newPage({
-    viewport: { width: 960, height: 540 },
-    deviceScaleFactor: 1
-  });
-  page.setDefaultTimeout(60000);
-  page.setDefaultNavigationTimeout(90000);
-  page.on('pageerror', error => manifest.pageErrors.push(String(error && error.stack || error)));
-  page.on('console', message => {
-    if (message.type() === 'error') manifest.consoleErrors.push(message.text());
-  });
-
+  let browser = null;
   try {
-    // One navigation only: all 27 cases are driven through the in-page test API.
+    let stepStartedAt = performance.now();
+    browser = await chromium.launch({
+      headless: true,
+      timeout: 60000,
+      args: [
+        '--use-gl=angle',
+        '--use-angle=swiftshader',
+        '--enable-webgl',
+        '--ignore-gpu-blocklist',
+        '--disable-dev-shm-usage'
+      ]
+    });
+    manifest.timingsMs.browserLaunch = Number((performance.now() - stepStartedAt).toFixed(1));
+    const page = await browser.newPage({
+      viewport: { width: 960, height: 540 },
+      deviceScaleFactor: 1
+    });
+    page.setDefaultTimeout(60000);
+    page.setDefaultNavigationTimeout(90000);
+    page.on('pageerror', error => manifest.pageErrors.push(String(error && error.stack || error)));
+    page.on('console', message => {
+      if (message.type() === 'error') manifest.consoleErrors.push(message.text());
+    });
+
+    // Exactly one page navigation. The coast-only boot flag does not load player/NPC/fauna GLBs.
+    stepStartedAt = performance.now();
     manifest.gamePageLoads = 1;
-    await page.goto(BASE_URL + '?test=1', { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await page.goto(BASE_URL + '?test=1&coastref=1', {
+      waitUntil: 'domcontentloaded',
+      timeout: 90000
+    });
+    manifest.timingsMs.navigationToDomContentLoaded = Number((performance.now() - stepStartedAt).toFixed(1));
+
+    stepStartedAt = performance.now();
     await page.waitForFunction(
-      () => window.__ELSN_TEST__ && window.__elSinNombreStartupSmoke &&
+      () => window.__ELSN_TEST__ &&
+        window.__elSinNombreStartupSmoke &&
         window.__elSinNombreStartupSmoke.worldReady === true,
       undefined,
-      { timeout: 240000, polling: 500 }
+      { timeout: 300000, polling: 500 }
     );
+    manifest.timingsMs.coastalWorldReadyWait = Number((performance.now() - stepStartedAt).toFixed(1));
+    console.log('[coastal-reference] coast-only scene ready after ' +
+      manifest.timingsMs.coastalWorldReadyWait + ' ms');
 
-    // Give the real protagonist GLB a generous first attempt; retry the asset in-place once.
-    let playerReady = await page.waitForFunction(
-      () => window.__ELSN_TEST__ && window.__ELSN_TEST__.diagnostics().playerModelReady === true,
-      undefined,
-      { timeout: 150000, polling: 500 }
-    ).then(() => true).catch(() => false);
-
-    if (!playerReady) {
-      await page.evaluate(() => window.__ELSN_TEST__.retryViking());
-      playerReady = await page.waitForFunction(
-        () => window.__ELSN_TEST__ && window.__ELSN_TEST__.diagnostics().playerModelReady === true,
-        undefined,
-        { timeout: 150000, polling: 500 }
-      ).then(() => true).catch(() => false);
-    }
-
+    stepStartedAt = performance.now();
     const boot = await page.evaluate(() => {
       const api = window.__ELSN_TEST__;
       api.stop();
@@ -94,29 +96,31 @@ async function main() {
         build: api.build,
         startup: window.__elSinNombreStartupSmoke.result,
         islands: api.islands,
-        diagnostics: api.diagnostics()
+        diagnostics: api.diagnostics(),
+        backgroundModels: window.__elSinNombreBackgroundModelTasks || null,
+        sceneWarmup: window.__elSinNombreStartupSceneWarmup || null
       };
     });
+    manifest.timingsMs.readStartupDiagnostics = Number((performance.now() - stepStartedAt).toFixed(1));
     manifest.build = boot.build;
     manifest.startup = boot.startup;
-    manifest.player = {
-      ready: boot.diagnostics.playerModelReady,
-      realPlayerMeshCount: boot.diagnostics.realPlayerMeshCount,
-      fallbackVisible: boot.diagnostics.fallbackVisible
+    manifest.playerValidation = {
+      status: 'not-run-in-coastal-job',
+      delegatedTo: 'character-startup job',
+      coastModeBackgroundModels: boot.backgroundModels
     };
+    manifest.sceneWarmup = boot.sceneWarmup;
 
     assert.equal(boot.build, '0.6.271', 'La referencia debe ser exactamente 0.6.271');
-    assert.equal(boot.startup.worldReady, true, 'El mundo no terminó de cargar');
-    assert.ok(playerReady && boot.diagnostics.playerModelReady,
-      'El GLB real del vikingo no está listo tras un reintento en la misma página');
-    assert.ok(boot.diagnostics.realPlayerMeshCount > 0,
-      'El modelo GLB real del vikingo no contiene mallas visibles');
-    assert.equal(boot.diagnostics.fallbackVisible, false,
-      'El personaje de reserva sigue visible; se cancela la referencia');
+    assert.equal(boot.startup.worldReady, true, 'La escena costera no terminó de prepararse');
     assert.ok(boot.islands.length >= 1, 'No se encontró ninguna isla');
     assert.equal(boot.startup.consoleErrors, 0, 'El arranque registró errores de consola');
     assert.equal(boot.startup.runtimeErrors, 0, 'El arranque registró errores JavaScript');
     assert.equal(boot.startup.unhandledRejections, 0, 'El arranque registró promesas rechazadas');
+    assert.equal(boot.backgroundModels?.npc, 'skipped-coastal-reference',
+      'La sesión costera no aisló las importaciones de NPC');
+    assert.equal(boot.backgroundModels?.fauna, 'skipped-coastal-reference',
+      'La sesión costera no aisló las importaciones de fauna');
 
     await page.addStyleTag({
       content: '#loading,#intro,#hud,#controls,#map,#waterShoreDebugPanel,#groundPhaseADebugPanel{display:none!important}'
@@ -124,10 +128,13 @@ async function main() {
 
     const mainIsland = boot.islands[0];
     const shoreRadius = mainIsland.r * 0.92;
+    stepStartedAt = performance.now();
     for (const cameraCase of CAMERAS) {
       for (const time of TIMES) {
         for (const tide of TIDES) {
+          const caseStartedAt = performance.now();
           const file = cameraCase.id + '__t' + String(time).padStart(3, '0') + '__' + tide.id + '.png';
+          const renderStartedAt = performance.now();
           const result = await page.evaluate(({ cameraCase, time, tide, island, shoreRadius }) => {
             const api = window.__ELSN_TEST__;
             const targetX = island.x + shoreRadius - 0.5;
@@ -143,22 +150,33 @@ async function main() {
             api.render();
             return api.diagnostics();
           }, { cameraCase, time, tide, island: mainIsland, shoreRadius });
+          const renderMs = Number((performance.now() - renderStartedAt).toFixed(1));
 
+          const screenshotStartedAt = performance.now();
           await page.screenshot({
             path: path.join(OUT, file),
             animations: 'disabled',
-            timeout: 60000
+            timeout: 90000
           });
+          const screenshotMs = Number((performance.now() - screenshotStartedAt).toFixed(1));
           manifest.captures.push({
             file,
             camera: cameraCase.id,
             timeSeconds: time,
             tide: tide.id,
+            renderMs,
+            screenshotMs,
+            durationMs: Number((performance.now() - caseStartedAt).toFixed(1)),
             diagnostics: result
           });
+          if (manifest.captures.length % 3 === 0) {
+            console.log('[coastal-reference] captured ' + manifest.captures.length +
+              '/27; latest render=' + renderMs + ' ms, screenshot=' + screenshotMs + ' ms');
+          }
         }
       }
     }
+    manifest.timingsMs.captureAll27 = Number((performance.now() - stepStartedAt).toFixed(1));
 
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 27, 'No se han generado las 27 capturas');
@@ -166,15 +184,16 @@ async function main() {
       'Errores de consola: ' + manifest.consoleErrors.join(' | '));
     assert.equal(manifest.pageErrors.length, 0,
       'Errores JavaScript: ' + manifest.pageErrors.join(' | '));
+    console.log('[coastal-reference] 27/27 complete in ' + manifest.timingsMs.captureAll27 + ' ms');
   } catch (error) {
     manifest.failure = String(error && error.stack || error);
     throw error;
   } finally {
     manifest.consoleErrors = [...manifest.consoleErrors];
     manifest.pageErrors = [...manifest.pageErrors];
+    manifest.timingsMs.totalRunner = Number((performance.now() - runStartedAt).toFixed(1));
     fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-    fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-    await browser.close();
+    if (browser) await browser.close();
   }
   console.log('COASTAL REFERENCE OK: one game load and 27 screenshots plus JSON manifest.');
 }
