@@ -73,8 +73,8 @@ assert.match(html,/washMaterial\.emissiveColor=new B\.Color3\(0,0,0\)/,"The inte
 assert.match(html,/M\.water\.needDepthPrePass=false;M\.water\.disableDepthWrite=true;/,"Transparent water must not write an opaque shoreline depth pre-pass.");
 assert.match(html,/washData\.uvs=washUvs/,"The advancing water film must have world-aligned UVs for the shared ocean normal map.");
 assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/washMesh\.updateVerticesData\(B\.VertexBuffer\.UVKind,washUvs,false,false\)/,"Film UVs are static in the water-sheet coordinate frame and need no redundant upload.");
-assert.match(html,/washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows\}\);/,"The moving film UV buffer must be retained in the active coast state.");
-assert.match(html,/washMesh,washPositions,washColors,washPattern,washFractions,washRows\}=foam/ ,"The update loop must reuse film buffers without uploading static UVs.");
+assert.match(html,/washMesh,washPositions,washUvs,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows\}\);/,"The moving film UV buffer and its cached static fields must be retained in the active coast state.");
+assert.match(html,/washMesh,washPositions,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows\}=foam/ ,"The update loop must reuse cached film buffers without uploading static UVs.");
 assert.match(html,/const waterContact=smooth01\(\(water-terrainY\+\.03\)\/\.13\)/,"The water film must be suppressed where the wave does not physically cover the sand.");
 assert.match(html,/mesh\.receiveShadows=false;mesh\.castShadows=false;mesh\.hasVertexAlpha=true/,"The auxiliary wet-sand layer must not introduce hard shadow bands.");
 assert.match(html,/washMaterial\.bumpTexture=M\.water\.bumpTexture\|\|albedoNormalWater/,"The moving sheet must use animated ocean normals.");
