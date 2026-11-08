@@ -24,6 +24,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Test BeachState coast and toroidal footprint atlas
+        run: node scripts/test_beach_state.cjs
+
       - name: Build and validate game resources
         run: python scripts/build_site.py
 

@@ -36,6 +36,9 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Test BeachState coast and toroidal footprint atlas
+        run: node scripts/test_beach_state.cjs
+
       - name: Download all resources, build dist and run release validation
         run: python scripts/build_site.py
 

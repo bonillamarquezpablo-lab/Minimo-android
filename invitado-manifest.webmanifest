@@ -4,7 +4,7 @@
   "short_name": "EL SIN NOMBRE · Invitado",
   "description": "Partida independiente para invitados. No utiliza el guardado principal.",
   "lang": "es",
-  "start_url": "./invitado/index.html?newgame=1&v=0.6.231",
+  "start_url": "./invitado/index.html?newgame=1&v=0.6.245",
   "scope": "./invitado/",
   "display": "fullscreen",
   "orientation": "any",

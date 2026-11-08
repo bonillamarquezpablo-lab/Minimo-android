@@ -493,6 +493,21 @@ def main() -> None:
             raise SystemExit(f"Falta el archivo de despliegue: {name}")
         shutil.copy2(source, DIST / name)
 
+    # Every generated PWA entry must point at this exact code version.
+    guest_start_urls = {
+        "guest-manifest.webmanifest": f"./guest/index.html?newgame=1&v={game_version}",
+        "invitado-manifest.webmanifest": f"./invitado/index.html?newgame=1&v={game_version}",
+        "guest-file-manifest.webmanifest": f"./guest.html?v={game_version}",
+    }
+    for manifest_name, start_url in guest_start_urls.items():
+        manifest_path = DIST / manifest_name
+        manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest_data["start_url"] = start_url
+        manifest_path.write_text(
+            json.dumps(manifest_data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
     results = []
     failures = []
 
