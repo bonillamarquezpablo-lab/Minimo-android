@@ -113,7 +113,9 @@ assert.ok(html.indexOf('updateOceanDepthGradient();',html.indexOf('function smoo
 assert.ok(html.includes("applyTexture(M.water,texWater,17.5);"),"Water albedo must show readable smaller-scale surface detail.");
 assert.ok(html.includes("oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;"),"Water normals must resolve sub-metre ripples at player distance.");
 assert.ok(html.includes(".020*Math.sin(67*warpU+41*warpW)"),"Water normals must retain high-frequency cross-directional micro ripples.");
-assert.ok(html.includes("new B.Color3(.66,.80,.88);M.water.specularPower=reducedWaterProfile?28:88;"),"Quality water must preserve broader, brighter specular glints.");
+assert.ok(html.includes("new B.Color3(.38,.50,.56);M.water.specularPower=reducedWaterProfile?28:68;"),"Quality water must retain broad specular reflections without clipped highlights.");
+assert.ok(html.includes("oceanWaveNormal.level=.58;"),"Quality water must retain the full-resolution normal map while moderating its amplitude.");
+assert.ok(html.includes("M.water.diffuseFresnelParameters.rightColor=new B.Color3(.43,.63,.68);"),"Water Fresnel highlights must remain present but controlled.");
 assert.ok(html.includes("M.water.diffuseFresnelParameters.power=2.3;"),"Grazing-angle water highlights must become more legible.");
 assert.match(html,/const livingBeachLayers=new Array\(land.length\)/,"Beach shader/state arrays must be indexed by island and lazy.");
 assert.doesNotMatch(html,/land\.forEach\(buildLivingBeachLayer\)/,"Do not allocate high-resolution beach materials and state textures for all thirteen islands at startup.");
