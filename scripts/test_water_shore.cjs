@@ -18,6 +18,11 @@ assert.match(html,/function tideOffsetAt/);
 assert.match(html,/tideButton\('MAREA ALTA',\.28\)/);
 assert.match(html,/tideButton\('MAREA BAJA',-\.28\)/);
 assert.match(html,/function getWaterCoastDiagnostics\(\)/);
+for(const metric of ["foamActiveSegments","foamSegmentCapacity","foamValidIntersections","foamMaxOffshoreDistanceMeters","foamVerticesOutsideBand","foamUpdateLastMs"]) {
+ assert.ok(html.includes(metric), `Missing coastal resaca diagnostic: ${metric}`);
+}
+assert.match(html,/tidalFoamLastUpdateMs=performance\\.now\\(\\)-foamWorkStarted/);
+assert.match(html,/Resaca: .*foamActiveSegments/);
 assert.match(html,/function buildTidalFoam\(island,index\)/);
 assert.match(html,/for\(const foam of tidalFoamMeshes\)/);
 const animateStart=html.indexOf("function animateWater(dt)");
