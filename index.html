@@ -4048,18 +4048,37 @@ void main(void){
  packedTrailMaterial.backFaceCulling=false;packedTrailMaterial.roughness=.99;
  function createTrail(points,width=1.45){
   vegetationTrailPaths.push({points:points.map(p=>[p[0],p[1]]),width});
-  const positions=[],indices=[],uvs=[];let distance=0;
-  for(let i=0;i<points.length;i++){
-   const prev=points[Math.max(0,i-1)],next=points[Math.min(points.length-1,i+1)],dx=next[0]-prev[0],dz=next[1]-prev[1],len=Math.hypot(dx,dz)||1,nx=dz/len,nz=-dx/len;
-   if(i>0)distance+=Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1])*.72;
+  // Subdivide the centreline before building the strip. A single quad spanning
+  // several metres cannot follow the island heightfield and cuts through ridges,
+  // producing the long black z-fighting streaks seen from the coast.
+  const sampled=[],sampleStep=.42;
+  let distance=0;
+  for(let segment=0;segment<points.length-1;segment++){
+   const a=points[segment],b=points[segment+1],length=Math.hypot(b[0]-a[0],b[1]-a[1]);
+   const divisions=Math.max(1,Math.ceil(length/sampleStep));
+   for(let step=0;step<divisions;step++){
+    const t=step/divisions;
+    sampled.push({x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,distance:distance+length*t});
+   }
+   distance+=length;
+  }
+  const last=points[points.length-1];
+  sampled.push({x:last[0],z:last[1],distance});
+  const positions=[],indices=[],uvs=[];
+  for(let i=0;i<sampled.length;i++){
+   const prev=sampled[Math.max(0,i-1)],next=sampled[Math.min(sampled.length-1,i+1)];
+   const dx=next.x-prev.x,dz=next.z-prev.z,len=Math.hypot(dx,dz)||1,nx=dz/len,nz=-dx/len;
    const edgeW=width*(1+Math.sin(i*2.17)*.035);
    for(const side of [-1,1]){
-    const x=points[i][0]+nx*edgeW*.5*side,z=points[i][1]+nz*edgeW*.5*side;
-    positions.push(x,terrainSurfaceAt(x,z)+.026,z);uvs.push(side<0?0:1,distance);
+    const x=sampled[i].x+nx*edgeW*.5*side,z=sampled[i].z+nz*edgeW*.5*side;
+    // Sample both edges independently so the packed-earth ribbon conforms to
+    // the same terrain profile instead of bridging over valleys and ridges.
+    positions.push(x,terrainSurfaceAt(x,z)+.055,z);
+    uvs.push(side<0?0:1,sampled[i].distance*.72);
    }
   }
-  // The strip's triangle order keeps its geometric normals facing upwards.
-  for(let i=0;i<points.length-1;i++){const a=i*2,b=a+2;indices.push(a,b,a+1,a+1,b,b+1);}
+  // Keep upward-facing triangles and a continuous, terrain-conforming ribbon.
+  for(let i=0;i<sampled.length-1;i++){const a=i*2,b=a+2;indices.push(a,b,a+1,a+1,b,b+1);}
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
   const mesh=new B.Mesh('WindingPackedEarthTrail',scene),data=new B.VertexData();
   data.positions=positions;data.indices=indices;data.normals=normals;data.uvs=uvs;data.applyToMesh(mesh);
