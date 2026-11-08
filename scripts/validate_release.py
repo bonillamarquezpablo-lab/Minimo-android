@@ -408,7 +408,7 @@ def main() -> None:
         fail("Los buffers editables del heightfield deben ser Float32Array, no arrays JavaScript normales.")
     if "const source=data instanceof Float32Array?data:Float32Array.from(data);" not in index_html or "source.subarray(start,end)" not in index_html:
         fail("La subida parcial de vértices debe tolerar arrays normales y usar subarrays tipados.")
-    if "function pressGround(x,z,islandIndex,wet,beach)" not in index_html or "pressGround(x,z,islandIndex,wet,beach)" not in index_html:
+    if "function pressGround(x,z,islandIndex,wet,beach,heading)" not in index_html or "pressGround(x,z,islandIndex,wet,beach,heading)" not in index_html or "toeOffsets=[-.108,-.054,0,.054,.108]" not in index_html:
         fail("Las pisadas no presionan la geometría real del terreno.")
     if "function relaxGround(dt)" not in index_html or "relaxGround(relaxStep);" not in index_html:
         fail("El terreno deformado no recupera su forma gradualmente.")
