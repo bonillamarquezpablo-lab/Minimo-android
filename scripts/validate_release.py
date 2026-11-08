@@ -387,7 +387,7 @@ def main() -> None:
         fail("La actualización costera debe respetar su presupuesto reducido por fotograma.")
     if "TIDAL_FOAM_UPDATE_STEP=isTouchDevice?1/15:1/30" not in index_html or "for(let step=0;step<10;step++)" not in index_html or "performance.now()-sliceStarted<2.65" in index_html or "performance.now()-sliceStarted<3.55" in index_html:
         fail("La espuma debe actualizarse con cadencia independiente y el cruce costero debe evitar iteraciones redundantes.")
-    if "const shallowBody = 0.52 * smooth01(depth / 0.65);" not in (ROOT / "scripts" / "nordic" / "coastal-interaction.js").read_text(encoding="utf-8"):
+    if "const shallowBody = 0.52 * smooth01(depth / 1.1);" not in (ROOT / "scripts" / "nordic" / "coastal-interaction.js").read_text(encoding="utf-8"):
         fail("La opacidad del agua debe crecer progresivamente desde la línea de costa.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
