@@ -11,7 +11,7 @@ const deployWorkflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8'
 const expectedVersion=validator.split('EXPECTED_VERSION = "')[1]?.split('"')[0];
 const htmlVersion=indexHtml.split('name="el-sin-nombre-build" content="')[1]?.split('"')[0];
 const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.split('<')[0];
-const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split('"')[0];
+const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 const concurrencyGroup=deployWorkflow.split('github-pages-release-')[1]?.split(/[\s\n]/)[0];
 const deployVersion=concurrencyGroup?.replaceAll('-', '.');
