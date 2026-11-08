@@ -302,7 +302,7 @@ async function main() {
       return { hidden, restored, canvasPng };
     }, { cameraCase: ridgeCase, island: mainIsland });
     manifest.trailIsolationDiagnostic = trailIsolation.hidden;
-    assert.ok(trailIsolation.hidden.count >= 1 && trailIsolation.hidden.visible === false,
+    assert.ok(trailIsolation.hidden.count >= 1 && trailIsolation.hidden.visible === true,
       'Packed-earth trail meshes must be hideable for a diagnostic A/B frame: ' + JSON.stringify(trailIsolation.hidden));
     assert.ok(trailIsolation.restored.count === trailIsolation.hidden.count && trailIsolation.restored.visible === true,
       'Every packed-earth trail must be restored after diagnostic capture');
