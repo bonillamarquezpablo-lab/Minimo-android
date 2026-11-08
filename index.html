@@ -3158,7 +3158,8 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  }
  const terrainDeformationFields=[];
  function terrainDeformationAt(islandIndex,x,z){
-  const field=terrainDeformationFields[islandIndex];if(!field)return 0;
+  const field=terrainDeformationFields[islandIndex];if(!field||!field.active.size)return 0;
+  // Untouched islands have an exact zero deformation field; skip bilinear sampling for every coastal vertex.
   const {island,subdivisions,gridSize,step,offsets}=field;
   const gx=Math.max(0,Math.min(subdivisions,(x-(island.x-island.r))/step));
   const gz=Math.max(0,Math.min(subdivisions,(z-(island.z-island.r))/step));
