@@ -44,8 +44,8 @@ assert.match(html,/waveBodyCrestProfile=new Float32Array\(waveBodyRows\)/, 'Volu
 assert.match(html,/washLeadingCellular=new Float32Array\(cols\*washRows\)/, 'Wash breakup factors must be cached per full-resolution vertex.');
 assert.match(html,/washFilmCoverage\[vertex\]=window\.NorseCoastalInteraction\.filmCoverage\(washFractions\[row\],washPattern\[vertex\]\)/, 'The water-film coverage function must be evaluated once per static sample.');
 assert.match(html,/for\(let step=0;step<5;step\+\+\)\{\s*const delta=sample\(radius\)/, 'The cached shore solver must use a safeguarded secant rather than seven fixed bisections.');
-assert.match(html,/const packedTrailTexture=makePatternTexture\('Packed Norse trail earth','#8c7652'/,"Packed earth trails must use a readable warm-earth albedo rather than a near-black base.");
-assert.match(html,/packedTrailMaterial\.emissiveColor=new B\.Color3\(\.13,\.085,\.045\)/,"Packed earth trails must retain a subtle brown ambient floor on shaded ridges.");
+assert.match(html,/const packedTrailTexture=makePatternTexture\('Packed Norse trail earth','#a18a63'/,"Packed earth trails must use a readable warm-earth albedo rather than a near-black base.");
+assert.match(html,/packedTrailMaterial\.emissiveColor=new B\.Color3\(\.22,\.15,\.07\)/,"Packed earth trails must retain a subtle brown ambient floor on shaded ridges.");
 assert.match(html,/positions\.push\(x,renderedTerrainSurfaceAt\(x,z\)\+\.055,z\)/,"Packed earth trails must remain conformed to the rendered island surface.");
 console.log('COASTAL REFERENCE CONTRACT OK');
 
