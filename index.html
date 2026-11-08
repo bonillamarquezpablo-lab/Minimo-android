@@ -2026,8 +2026,11 @@ async function removeStrayDebugGeometry(targetScene){
  try{
  const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
  const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('armdebug')==='1';
- const testModeEnabled=new URLSearchParams(window.location.search).get('test')==='1';
- const groundDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
+ const testQuery=new URLSearchParams(window.location.search);
+ const testModeEnabled=testQuery.get('test')==='1';
+ const coastalReferenceMode=testQuery.get('coastref')==='1';
+ const playerStartupTestEnabled=testQuery.get('playertest')==='1';
+ const groundDebugEnabled=testQuery.get('debug')==='1';
  const coastalDiagnosticsEnabled=groundDebugEnabled||testModeEnabled;
  const realPlayerArmTuningEnabled=true;
  const realPlayerArmDebugState={free:{status:'ESPERANDO',reason:'',twistDeg:null},weapon:{status:'POSE ORIGINAL',reason:'',twistDeg:null}};
@@ -7104,7 +7107,21 @@ if(realPlayerArmDebugEnabled){
   chooseHumanModelButton.addEventListener('click',()=>humanFileInput.click());
   humanFileInput.addEventListener('change',async()=>{const file=humanFileInput.files&&humanFileInput.files[0];if(file)await loadHumanViking(file);humanFileInput.value='';});
  }
- setLoadingProgress(48,'3/3 · Instalando tu vikingo…');const playerHumanLoadPromise=loadHumanViking();
+ setLoadingProgress(48,'3/3 · Instalando tu vikingo…');
+ const playerHumanLoadPromise=coastalReferenceMode?Promise.resolve(null):loadHumanViking();
+ if(playerStartupTestEnabled){
+  window.__ELSN_PLAYER_STARTUP_SMOKE__={
+   startedAt:new Date().toISOString(),
+   state:()=>({
+    modelReady:!!realPlayerReady,
+    realPlayerMeshCount:realPlayerModel&&realPlayerModel.getChildMeshes?realPlayerModel.getChildMeshes(false).filter(mesh=>mesh.getTotalVertices&&mesh.getTotalVertices()>0).length:0,
+    fallbackVisible:!!(player.body&&player.body.isEnabled()),
+    loading:!!realPlayerBusy,
+    stage:String(lastVikingStage||'')
+   }),
+   retry:()=>loadHumanViking()
+  };
+ }
  function captureRealPlayerIdleTransition(){
    const seen=new Set(),poses=[];
    // Los brazos/manos tienen un objetivo anatómico determinista en reposo.
@@ -11720,12 +11737,17 @@ function update(dt){
  // Si un GLB falla, se usa su reserva antes de abrir la partida, sin iniciar otra importación durante el juego.
  setLoadingProgress(82,'Esperando a que termine de importarse el vikingo principal…');
  const protagonistStageStarted=performance.now();let protagonistResult={status:'finished'};
- try{await playerHumanLoadPromise;protagonistResult.status=realPlayerReady?'finished':'fallback';}
- catch(error){protagonistResult={status:'failed',error};}
- recordGlbTiming('Vikingo','espera total de protagonista',performance.now()-protagonistStageStarted,playerHumanBlob&&playerHumanBlob.size||0,protagonistResult.status==='finished');
- recordStartupTask('GLB protagonista',protagonistStageStarted,performance.now(),protagonistResult.status,{modelReady:realPlayerReady});
- console.info('Importación del vikingo terminada antes de abrir la partida.',{protagonist:protagonistResult.status,realPlayerReady,profile:activeGraphicsProfile});
- setLoadingProgress(84,protagonistResult.status==='finished'?'Vikingo principal preparado.':'El GLB principal no estuvo disponible; se conserva el vikingo de reserva.');
+ if(coastalReferenceMode){
+  protagonistResult.status='skipped-coastal-reference';
+  console.info('Referencia costera: importación del protagonista aislada en el job de arranque de personaje.');
+ }else{
+  try{await playerHumanLoadPromise;protagonistResult.status=realPlayerReady?'finished':'fallback';}
+  catch(error){protagonistResult={status:'failed',error};}
+  recordGlbTiming('Vikingo','espera total de protagonista',performance.now()-protagonistStageStarted,playerHumanBlob&&playerHumanBlob.size||0,protagonistResult.status==='finished');
+  recordStartupTask('GLB protagonista',protagonistStageStarted,performance.now(),protagonistResult.status,{modelReady:realPlayerReady});
+  console.info('Importación del vikingo terminada antes de abrir la partida.',{protagonist:protagonistResult.status,realPlayerReady,profile:activeGraphicsProfile});
+ }
+ setLoadingProgress(84,coastalReferenceMode?'Escena de costa preparada.':(protagonistResult.status==='finished'?'Vikingo principal preparado.':'El GLB principal no estuvo disponible; se conserva el vikingo de reserva.'));
  let audioPreloadResult={total:0,ready:0,failed:0,pending:0};
  const audioLoadStarted=performance.now();startupTaskCurrent='precarga de audio';
  try{audioPreloadResult=await startupAudioPreload;console.info('Audio preparado antes de abrir la partida:',audioPreloadResult);}
@@ -11734,16 +11756,25 @@ function update(dt){
  // La carga de todos los modelos continúa bajo la pantalla de carga, no después de abrir el juego.
  setLoadingProgress(87,'Cargando caballeros, aldeanos y fauna antes de abrir el mundo…');
  const secondaryModelsStartedAt=performance.now();
- const backgroundNpcTask=startNpcHumanModels().then(value=>{setLoadingProgress(91,'Personajes humanos preparados. Cargando fauna…');return value;});
- window.__elSinNombreBackgroundModelTasks={startedAt:new Date().toISOString(),npc:'pending',fauna:'pending',order:'todos los modelos se preparan antes de abrir la partida'};
- const backgroundFaunaTask=Promise.resolve(backgroundNpcTask).catch(error=>{console.warn('La carga NPC terminó parcialmente; se conservan sus cuerpos de reserva:',error);}).then(()=>{startupTaskCurrent='GLB fauna';setLoadingProgress(94,'Importando fauna 3D…');return loadWildlifeModels();});
- const startupModelResults=await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask]);
- window.__elSinNombreBackgroundModelTasks.completedAt=new Date().toISOString();
- window.__elSinNombreBackgroundModelTasks.npc=startupModelResults[0].status;
- window.__elSinNombreBackgroundModelTasks.fauna=startupModelResults[1].status;
- recordStartupTask('Barreras GLB secundarios y fauna',secondaryModelsStartedAt,performance.now(),'complete',{npc:startupModelResults[0].status,fauna:startupModelResults[1].status});
- console.info('Todos los importadores de NPC y fauna han terminado antes de abrir la partida.',window.__elSinNombreBackgroundModelTasks);
- setLoadingProgress(97,'Modelos 3D terminados. Preparando shaders y texturas…');
+ if(coastalReferenceMode){
+  window.__elSinNombreBackgroundModelTasks={
+   startedAt:new Date().toISOString(),completedAt:new Date().toISOString(),
+   npc:'skipped-coastal-reference',fauna:'skipped-coastal-reference',
+   order:'validación de personajes aislada en el job de arranque de personaje'
+  };
+  console.info('Referencia costera: importaciones de NPC y fauna aisladas en el job de arranque de personaje.');
+ }else{
+  const backgroundNpcTask=startNpcHumanModels().then(value=>{setLoadingProgress(91,'Personajes humanos preparados. Cargando fauna…');return value;});
+  window.__elSinNombreBackgroundModelTasks={startedAt:new Date().toISOString(),npc:'pending',fauna:'pending',order:'todos los modelos se preparan antes de abrir la partida'};
+  const backgroundFaunaTask=Promise.resolve(backgroundNpcTask).catch(error=>{console.warn('La carga NPC terminó parcialmente; se conservan sus cuerpos de reserva:',error);}).then(()=>{startupTaskCurrent='GLB fauna';setLoadingProgress(94,'Importando fauna 3D…');return loadWildlifeModels();});
+  const startupModelResults=await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask]);
+  window.__elSinNombreBackgroundModelTasks.completedAt=new Date().toISOString();
+  window.__elSinNombreBackgroundModelTasks.npc=startupModelResults[0].status;
+  window.__elSinNombreBackgroundModelTasks.fauna=startupModelResults[1].status;
+  recordStartupTask('Barreras GLB secundarios y fauna',secondaryModelsStartedAt,performance.now(),'complete',{npc:startupModelResults[0].status,fauna:startupModelResults[1].status});
+  console.info('Todos los importadores de NPC y fauna han terminado antes de abrir la partida.',window.__elSinNombreBackgroundModelTasks);
+ }
+ setLoadingProgress(97,coastalReferenceMode?'Preparando shaders y texturas de costa…':'Modelos 3D terminados. Preparando shaders y texturas…');
 
  let sceneWarmupStatus='unavailable';
  try{
