@@ -109,96 +109,162 @@
   }
 
   function createFootprintAtlas(options) {
-    const opts = options || {}, size = Math.max(64, Math.floor(Number(opts.size) || 512));
-    const worldSize = Math.max(1, Number(opts.worldSize) || 16), pixelSize = worldSize / size;
-    let originX = 0, originZ = 0, initialized = false, dirty = true;
-    let values = new Uint8Array(size * size);
+    const opts = options || {};
+    const size = Math.max(64, Math.floor(Number(opts.size) || 512));
+    const worldSize = Math.max(1, Number(opts.worldSize) || 16);
+    const pixelSize = worldSize / size;
+    let originX = 0, originZ = 0, ringOffsetX = 0, ringOffsetZ = 0;
+    let initialized = false, dirty = true;
+    const values = new Uint8Array(size * size);
+    const stampTicks = new Uint16Array(size * size);
     const rgba = new Uint8Array(size * size * 4);
-    function worldCell(x, z) { return { x: Math.floor((x - originX) / pixelSize), z: Math.floor((z - originZ) / pixelSize) }; }
+    const wrap = value => ((value % size) + size) % size;
+    const logicalCell = (x, z) => ({
+      x: Math.floor((x - originX) / pixelSize),
+      z: Math.floor((z - originZ) / pixelSize)
+    });
+    const physicalIndex = (x, z) => wrap(z + ringOffsetZ) * size + wrap(x + ringOffsetX);
+    function clearLogicalCell(x, z) {
+      const cell = physicalIndex(x, z);
+      values[cell] = 0;
+      stampTicks[cell] = 0;
+    }
     function recenter(x, z) {
       const nextX = Math.floor((Number(x) - worldSize * 0.5) / pixelSize) * pixelSize;
       const nextZ = Math.floor((Number(z) - worldSize * 0.5) / pixelSize) * pixelSize;
-      if (!initialized) { originX = nextX; originZ = nextZ; initialized = true; dirty = true; return true; }
-      const shiftX = Math.round((nextX - originX) / pixelSize), shiftZ = Math.round((nextZ - originZ) / pixelSize);
+      if (!initialized) {
+        originX = nextX;
+        originZ = nextZ;
+        initialized = true;
+        dirty = true;
+        return true;
+      }
+      const shiftX = Math.round((nextX - originX) / pixelSize);
+      const shiftZ = Math.round((nextZ - originZ) / pixelSize);
       if (!shiftX && !shiftZ) return false;
-      const next = new Uint8Array(size * size);
-      const sourceX = Math.max(0, shiftX), destinationX = Math.max(0, -shiftX);
-      const copyWidth = size - Math.abs(shiftX);
-      const firstDestRow = Math.max(0, -shiftZ), lastDestRow = Math.min(size - 1, size - 1 - shiftZ);
-      if (copyWidth > 0) {
-        for (let destRow = firstDestRow; destRow <= lastDestRow; destRow++) {
-          const sourceRow = destRow + shiftZ;
-          const sourceStart = sourceRow * size + sourceX;
-          const destStart = destRow * size + destinationX;
-          next.set(values.subarray(sourceStart, sourceStart + copyWidth), destStart);
+      originX = nextX;
+      originZ = nextZ;
+      ringOffsetX = wrap(ringOffsetX + shiftX);
+      ringOffsetZ = wrap(ringOffsetZ + shiftZ);
+      if (Math.abs(shiftX) >= size || Math.abs(shiftZ) >= size) {
+        values.fill(0);
+        stampTicks.fill(0);
+      } else {
+        if (shiftX > 0) {
+          const first = size - shiftX;
+          for (let zCell = 0; zCell < size; zCell++)
+            for (let xCell = first; xCell < size; xCell++) clearLogicalCell(xCell, zCell);
+        } else if (shiftX < 0) {
+          const last = -shiftX;
+          for (let zCell = 0; zCell < size; zCell++)
+            for (let xCell = 0; xCell < last; xCell++) clearLogicalCell(xCell, zCell);
+        }
+        if (shiftZ > 0) {
+          const first = size - shiftZ;
+          for (let zCell = first; zCell < size; zCell++)
+            for (let xCell = 0; xCell < size; xCell++) clearLogicalCell(xCell, zCell);
+        } else if (shiftZ < 0) {
+          const last = -shiftZ;
+          for (let zCell = 0; zCell < last; zCell++)
+            for (let xCell = 0; xCell < size; xCell++) clearLogicalCell(xCell, zCell);
         }
       }
-      values = next; originX = nextX; originZ = nextZ; dirty = true; return true;
+      dirty = true;
+      return true;
     }
-    function stamp(x, z, heading, strength) {
+    function stamp(x, z, heading, strength, currentTick) {
       if (!initialized) recenter(x, z);
       const power = Math.round(clamp01(strength === undefined ? 0.85 : strength) * 255);
+      const tick = wrapTick(currentTick);
       const c = Math.cos(heading || 0), s = Math.sin(heading || 0);
-      const halfWidth = 0.155, halfLength = 0.245, radius = Math.ceil(halfLength / pixelSize) + 1;
-      const center = worldCell(x, z); let changed = false;
+      const halfWidth = 0.155, halfLength = 0.245;
+      const radius = Math.ceil(halfLength / pixelSize) + 1;
+      const center = logicalCell(x, z);
+      let changed = false;
       for (let py = Math.max(0, center.z - radius); py <= Math.min(size - 1, center.z + radius); py++) {
         for (let px = Math.max(0, center.x - radius); px <= Math.min(size - 1, center.x + radius); px++) {
-          const wx = originX + (px + 0.5) * pixelSize - x, wz = originZ + (py + 0.5) * pixelSize - z;
+          const wx = originX + (px + 0.5) * pixelSize - x;
+          const wz = originZ + (py + 0.5) * pixelSize - z;
           const localX = wx * c - wz * s, localZ = wx * s + wz * c;
           const taper = 0.82 + 0.18 * smooth01((localZ / halfLength + 1) * 0.5);
-          const lateral = Math.abs(localX) / (halfWidth * taper), longitudinal = Math.abs(localZ) / halfLength;
+          const lateral = Math.abs(localX) / (halfWidth * taper);
+          const longitudinal = Math.abs(localZ) / halfLength;
           const distance = lateral * lateral + longitudinal * longitudinal;
           if (distance > 1) continue;
           const edge = 1 - smooth01((distance - 0.66) / 0.34);
           const groove = (Math.abs(localX) < halfWidth * 0.12 && localZ < halfLength * 0.68 && localZ > -halfLength * 0.55) ? 0.72 : 1;
-          const value = Math.round(power * edge * groove), cell = py * size + px;
-          if (value > values[cell]) { values[cell] = value; changed = true; }
+          const value = Math.round(power * edge * groove);
+          const cell = physicalIndex(px, py);
+          if (value > 0 && value >= values[cell]) {
+            values[cell] = value;
+            stampTicks[cell] = tick;
+            changed = true;
+          }
         }
       }
-      dirty = dirty || changed; return changed;
+      dirty = dirty || changed;
+      return changed;
     }
     function eraseRect(x, z, halfWidth, halfDepth) {
-      const min = worldCell(x - halfWidth, z - halfDepth), max = worldCell(x + halfWidth, z + halfDepth);
+      const min = logicalCell(x - halfWidth, z - halfDepth);
+      const max = logicalCell(x + halfWidth, z + halfDepth);
       let changed = false;
       for (let row = Math.max(0, min.z); row <= Math.min(size - 1, max.z); row++) {
         for (let col = Math.max(0, min.x); col <= Math.min(size - 1, max.x); col++) {
-          const cell = row * size + col;
-          if (values[cell]) { values[cell] = 0; changed = true; }
+          const cell = physicalIndex(col, row);
+          if (values[cell] || stampTicks[cell]) {
+            values[cell] = 0;
+            stampTicks[cell] = 0;
+            changed = true;
+          }
         }
       }
-      dirty = dirty || changed; return changed;
-    }
-    function decay(dt, seconds) {
-      const factor = Math.exp(-Math.max(0, Number(dt) || 0) / Math.max(1, Number(seconds) || 105));
-      let changed = false;
-      for (let i = 0; i < values.length; i++) {
-        const old = values[i]; if (!old) continue;
-        values[i] = Math.round(old * factor); changed = true;
-      }
-      dirty = dirty || changed; return changed;
+      dirty = dirty || changed;
+      return changed;
     }
     function textureData() {
       if (dirty) {
         for (let i = 0; i < values.length; i++) {
-          const p = i * 4; rgba[p] = 42; rgba[p + 1] = 30; rgba[p + 2] = 20; rgba[p + 3] = values[i];
+          const p = i * 4;
+          rgba[p] = values[i];
+          rgba[p + 1] = stampTicks[i] & 255;
+          rgba[p + 2] = (stampTicks[i] >>> 8) & 255;
+          rgba[p + 3] = values[i] ? 255 : 0;
         }
         dirty = false;
       }
       return rgba;
     }
     function sample(x, z) {
-      const cell = worldCell(x, z);
+      const cell = logicalCell(x, z);
       if (cell.x < 0 || cell.z < 0 || cell.x >= size || cell.z >= size) return 0;
-      return values[cell.z * size + cell.x] / 255;
+      return values[physicalIndex(cell.x, cell.z)] / 255;
+    }
+    function sampleTick(x, z) {
+      const cell = logicalCell(x, z);
+      if (cell.x < 0 || cell.z < 0 || cell.x >= size || cell.z >= size) return 0;
+      return stampTicks[physicalIndex(cell.x, cell.z)];
+    }
+    function activePixels() {
+      let count = 0;
+      for (let i = 0; i < values.length; i++) if (values[i]) count++;
+      return count;
     }
     return {
-      size, worldSize, pixelSize, get values() { return values; },
-      get originX() { return originX; }, get originZ() { return originZ; },
-      get initialized() { return initialized; }, recenter, stamp, eraseRect, decay,
-      sample, textureData, markDirty: () => { dirty = true; },
-      activePixels: () => { let count = 0; for (let i = 0; i < values.length; i++) if (values[i]) count++; return count; },
-      dimensions: () => ({ size, worldSize, pixelSize, originX, originZ })
+      size, worldSize, pixelSize, values, stampTicks,
+      get originX() { return originX; },
+      get originZ() { return originZ; },
+      get ringOffsetX() { return ringOffsetX; },
+      get ringOffsetZ() { return ringOffsetZ; },
+      get initialized() { return initialized; },
+      recenter, stamp, eraseRect, sample, sampleTick, textureData, activePixels,
+      dimensions: () => ({ size, worldSize, pixelSize, originX, originZ, ringOffsetX, ringOffsetZ })
     };
   }
+  function wrapTick(value) {
+    const numeric = Math.floor(Number(value) || 0);
+    return ((numeric % 65536) + 65536) % 65536;
+  }
+
   return { createCoastalGrid, createFootprintAtlas, coastalColumnCount, smooth01 };
 });

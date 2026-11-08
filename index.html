@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.236">
+<meta name="el-sin-nombre-build" content="0.6.237">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.236</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.237</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -3076,18 +3076,35 @@ void main(void){
  const GroundDynamics=(()=>{
   const maxParticles=isPerformanceMode?22:48;
   let stepDistance=0,alternateFoot=0,beachClock=0,particleCursor=0,lastStepX=0,lastStepZ=0,hasLastStepPosition=false,footstepsEmitted=0,lastFootstepSegmentLength=0,groundRelaxAccumulator=0;
-  let footprintAtlasDirty=true,footprintAtlasClock=0,footprintFadeClock=0,lastAtlasFollowX=NaN,lastAtlasFollowZ=NaN;
+  let footprintAtlasDirty=false,footprintAtlasClock=0,lastAtlasFollowX=NaN,lastAtlasFollowZ=NaN;
   const GROUND_RELAX_INTERVAL=1/30;
   const FOOTPRINT_ATLAS_SIZE=512,FOOTPRINT_WORLD_SIZE=16;
   const footprintAtlas=window.NorseBeachState.createFootprintAtlas({size:FOOTPRINT_ATLAS_SIZE,worldSize:FOOTPRINT_WORLD_SIZE});
   const footprintTexture=B.RawTexture.CreateRGBATexture(footprintAtlas.textureData(),FOOTPRINT_ATLAS_SIZE,FOOTPRINT_ATLAS_SIZE,scene,false,false,B.Texture.BILINEAR_SAMPLINGMODE);
-  footprintTexture.name='NorseMovingFootprintAtlasRGBA';footprintTexture.wrapU=B.Texture.CLAMP_ADDRESSMODE;footprintTexture.wrapV=B.Texture.CLAMP_ADDRESSMODE;
+  footprintTexture.name='NorseMovingFootprintAtlasRGBA';footprintTexture.wrapU=B.Texture.WRAP_ADDRESSMODE;footprintTexture.wrapV=B.Texture.WRAP_ADDRESSMODE;
   footprintTexture.hasAlpha=true;
-  const footprintMaterial=new B.StandardMaterial('NorseMovingFootprintAtlasMaterial',scene);
-  footprintMaterial.diffuseTexture=footprintTexture;footprintMaterial.diffuseColor=new B.Color3(1,1,1);
-  footprintMaterial.useAlphaFromDiffuseTexture=true;footprintMaterial.disableLighting=true;footprintMaterial.emissiveColor=new B.Color3(.32,.24,.16);
-  footprintMaterial.specularColor=new B.Color3(0,0,0);footprintMaterial.backFaceCulling=false;
-  footprintMaterial.alpha=.88;footprintMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;footprintMaterial.disableDepthWrite=true;
+  if(!B.Effect.ShadersStore.norseFootprintVertexShader){
+   B.Effect.ShadersStore.norseFootprintVertexShader=\`precision highp float;
+attribute vec3 position;attribute vec2 uv;
+uniform mat4 world;uniform mat4 worldViewProjection;
+varying vec2 vUV;
+void main(void){vUV=uv;gl_Position=worldViewProjection*vec4(position,1.0);}\`;
+   B.Effect.ShadersStore.norseFootprintPixelShader=\`precision highp float;
+varying vec2 vUV;uniform sampler2D footprintAtlasSampler;uniform float footprintTick;
+void main(void){
+ vec4 stamp=texture2D(footprintAtlasSampler,vUV);
+ float stamped=stamp.r*255.0;
+ float stampTick=stamp.g*255.0+stamp.b*65280.0;
+ float ageTicks=mod(footprintTick-stampTick+65536.0,65536.0);
+ float ageSeconds=ageTicks*.25;
+ float fade=exp(-ageSeconds/105.0);
+ float alpha=clamp(stamped/255.0,0.0,1.0)*fade*stamp.a;
+ gl_FragColor=vec4(vec3(.14,.092,.052),alpha*.90);
+}\`;
+  }
+  const footprintMaterial=new B.ShaderMaterial('NorseMovingFootprintAtlasMaterial',scene,'norseFootprint',{attributes:['position','uv'],uniforms:['world','worldViewProjection','footprintTick'],samplers:['footprintAtlasSampler']});
+  footprintMaterial.setTexture('footprintAtlasSampler',footprintTexture);footprintMaterial.setFloat('footprintTick',0);
+  footprintMaterial.backFaceCulling=false;footprintMaterial.alpha=1;footprintMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;footprintMaterial.disableDepthWrite=true;
   const footprintMesh=B.MeshBuilder.CreateGround('NorseMovingFootprints',{width:FOOTPRINT_WORLD_SIZE,height:FOOTPRINT_WORLD_SIZE,subdivisions:24,updatable:true},scene);
   footprintMesh.material=footprintMaterial;footprintMesh.isPickable=false;footprintMesh.receiveShadows=false;footprintMesh.castShadows=false;
   footprintMesh.renderingGroupId=1;footprintMesh.hasVertexAlpha=true;footprintMesh.alwaysSelectAsActiveMesh=true;
@@ -3112,14 +3129,11 @@ void main(void){
    const normals=[];B.VertexData.ComputeNormals(positions,footprintMesh.getIndices(),normals);
    footprintMesh.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);
    footprintMesh.updateVerticesData(B.VertexBuffer.NormalKind,normals,false,false);
+   const dimensions=footprintAtlas.dimensions();
+   footprintTexture.uOffset=dimensions.ringOffsetX/FOOTPRINT_ATLAS_SIZE;
+   footprintTexture.vOffset=dimensions.ringOffsetZ/FOOTPRINT_ATLAS_SIZE;
    footprintAtlasDirty=true;
    return true;
-  }
-  function decayFootprintAtlas(dt){
-   footprintFadeClock+=dt;
-   if(footprintFadeClock<.25)return;
-   const elapsed=footprintFadeClock;footprintFadeClock=0;
-   if(footprintAtlas.decay(elapsed,105))footprintAtlasDirty=true;
   }
   const particles=Array.from({length:maxParticles},(_,slot)=>({slot,life:0,maxLife:1,age:0,x:0,y:-1000,z:0,vx:0,vy:0,vz:0,size:.02,groundY:0,wet:false,r:.7,g:.6,b:.45,a:.8}));
 // One thin-instance batch replaces the per-footstep Sphere mesh create/dispose loop.
@@ -3205,8 +3219,9 @@ void main(void){
   }
   function makeFootprint(islandIndex,x,z,heading,wet,beach,running,waterCovered=false){
    if(waterCovered)return;
-   const strength=wet?.90:(beach?.78:.58);
-   if(footprintAtlas.stamp(x,z,heading,strength))footprintAtlasDirty=true;
+   syncFootprintAtlasFocus(x,z);
+   const strength=wet?.90:(beach?.78:.58),currentTick=Math.floor((performance.now()*.001)/.25)%65536;
+   if(footprintAtlas.stamp(x,z,heading,strength,currentTick))footprintAtlasDirty=true;
   }
   function kickSandGrains(x,z,heading,wet,running,groundY){
    const count=wet?(running?8:6):(running?6:4),surfaceY=wet?Math.max(groundY,waterHeight(x,z,oceanTime)):groundY;
@@ -3308,9 +3323,8 @@ void main(void){
     grainBuffersDirty=true;
    }
    if(grainBuffersDirty){grainMesh.thinInstanceBufferUpdated('matrix');grainMesh.thinInstanceBufferUpdated('color');}
-   if(!onShip&&!airborne)syncFootprintAtlasFocus(x,z);
    updateBeach(dt,x,z);
-   if(!onShip&&!airborne)decayFootprintAtlas(dt);
+   footprintMaterial.setFloat('footprintTick',Math.floor((performance.now()*.001)/.25)%65536);
    footprintAtlasClock+=dt;
    if(footprintAtlasDirty&&footprintAtlasClock>=1/12)uploadFootprintAtlas();
    if(onShip||airborne||!Number.isFinite(distance)||distance<=0||!Number.isFinite(x)||!Number.isFinite(z)){
@@ -3348,7 +3362,7 @@ void main(void){
    groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;
   }
   function reset(){stepDistance=0;alternateFoot=0;hasLastStepPosition=false;footstepsEmitted=0;lastFootstepSegmentLength=0;groundRelaxAccumulator=0;lastAtlasFollowX=NaN;lastAtlasFollowZ=NaN;}
-  return {update,reset,counts:()=>({imprints:footprintAtlas.activePixels(),footprintAtlas:{size:FOOTPRINT_ATLAS_SIZE,worldSize:FOOTPRINT_WORLD_SIZE,pixelSize:footprintAtlas.pixelSize,originX:footprintAtlas.originX,originZ:footprintAtlas.originZ},particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3))})};
+  return {update,reset,counts:()=>({imprints:footprintAtlas.activePixels(),footprintAtlas:footprintAtlas.dimensions(),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3))})};
  })();
  let activeBeachIslandIndex=-2;
  function syncActiveBeachIsland(){

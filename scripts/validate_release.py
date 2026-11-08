@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.236"
+EXPECTED_VERSION = "0.6.237"
 
 HTML_PAGES = (
     "index.html",
@@ -127,7 +127,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'10',build:'0.6.236'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'10',build:'0.6.237'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -423,8 +423,14 @@ def main() -> None:
         fail("El oleaje debe conservar sus mismas ondas usando la caché de fases espaciales.")
     if "createFootprintAtlas({size:512,worldSize:16})" not in index_html or "NorseMovingFootprints" not in index_html:
         fail("Las huellas deben usar un atlas cartesiano móvil de 16x16m a 512x512.")
-    if "footprintAtlas.stamp(x,z,heading,strength)" not in index_html or "footprintAtlas.recenter(x,z)" not in index_html:
+    if "footprintAtlas.stamp(x,z,heading,strength,currentTick)" not in index_html or "footprintAtlas.recenter(x,z)" not in index_html:
         fail("Las pisadas deben marcarse en coordenadas mundiales y seguir al jugador.")
+    if "const wrap = value => ((value % size) + size) % size;" not in read_text("scripts/nordic/beach-state.js") or "ringOffsetX = wrap(ringOffsetX + shiftX)" not in read_text("scripts/nordic/beach-state.js"):
+        fail("El atlas de huellas debe desplazarse mediante direccionamiento toroidal sin copiar su buffer.")
+    if "footprintMaterial.setFloat('footprintTick'" not in index_html or "if(footprintAtlasDirty&&footprintAtlasClock>=1/12)uploadFootprintAtlas();" not in index_html:
+        fail("La textura de huellas debe actualizarse por eventos y no cada fotograma.")
+    if "footprintTexture.uOffset=dimensions.ringOffsetX/FOOTPRINT_ATLAS_SIZE" not in index_html or "footprintTexture.vOffset=dimensions.ringOffsetZ/FOOTPRINT_ATLAS_SIZE" not in index_html:
+        fail("El material debe leer el mapa toroidal desplazando las coordenadas UV.")
     if "transition.flooded" not in index_html or "footprintAtlas.eraseRect(x,z" not in index_html:
         fail("El agua costera debe borrar las huellas de las celdas que acaba de inundar.")
     if "NorseBootImprintBatch" in index_html or "imprintPositionBuffer" in index_html:
@@ -449,7 +455,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.236</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.237</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);" not in index_html or "islandGarrison:true" not in index_html:
         fail("Las nueve islas restantes deben tener un puesto conquistable con defensor y estandarte.")
