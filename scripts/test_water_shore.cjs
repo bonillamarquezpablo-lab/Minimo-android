@@ -45,7 +45,8 @@ assert.match(animateBody,/if\(!farDue&&!detailDue&&!foamDue\)return;[\s\S]*?if\(
 assert.match(html,/BEACH_WORK_BUDGET_MS=isTouchDevice\?1\.5:2\.0/);
 assert.match(html,/BEACH_CELL_BUDGET_MS=BEACH_WORK_BUDGET_MS\*\.68/);
 assert.match(html,/TIDAL_FOAM_UPDATE_STEP=isTouchDevice\?\(isPerformanceMode\?1\/18:1\/15\):1\/30/);
-assert.match(html,/for\(let step=0;step<5;step\+\+\)/);\nassert.match(html,/const span=hi-lo,secant=lo\+span\*loDelta\/\(loDelta-hiDelta\),guard=span\*\.04/);
+assert.match(html,/for\(let step=0;step<5;step\+\+\)/);
+assert.match(html,/const span=hi-lo,secant=lo\+span\*loDelta\/\(loDelta-hiDelta\),guard=span\*\.04/);
 assert.doesNotMatch(html,/performance\.now\(\)-sliceStarted<2\.65|performance\.now\(\)-sliceStarted<3\.55/);
 assert.match(html,/requestAnimationFrame\(processBeachWorkChunk\)/);
 assert.match(html,/startupTimeline:getStartupTimelineSnapshot\(\)/);
@@ -70,7 +71,9 @@ assert.match(html,/washMaterial\.opacityFresnelParameters/,"The water film must 
 assert.match(html,/const cellular=Math\.pow\(smooth01\(\(washPattern\[vertex\]-\.34\)\/\.54\),2\.0\)/,"Whitewater must break into irregular foam patches.");
 assert.match(html,/const filmAlpha=filmCoverage\*\(\.16\+\.20\*breakStrength\)\*flowPulse\*filmStrength\*waterContact/,"The advancing film must be visible but limited to actual water contact.");
 assert.match(html,/const lace=smooth01\(\(foamPattern\[vertex\]-.20\)\/\.40\)/,"The white crest must break into visible foam cells.");
-assert.match(html,/angleValues=new Float32Array\(cols\),angleCos=new Float32Array\(cols\),angleSin=new Float32Array\(cols\)/);\nassert.match(html,/angle=angleValues\[col\],cs=angleCos\[col\],sn=angleSin\[col\]/);\nassert.match(html,/foamUvs=new Float32Array/);
+assert.match(html,/angleValues=new Float32Array\(cols\),angleCos=new Float32Array\(cols\),angleSin=new Float32Array\(cols\)/);
+assert.match(html,/angle=angleValues\[col\],cs=angleCos\[col\],sn=angleSin\[col\]/);
+assert.match(html,/foamUvs=new Float32Array/);
 assert.match(html,/data\.uvs=foamUvs/);
 assert.match(html,/material\.bumpTexture=M\.water\.bumpTexture\|\|albedoNormalWater/);
 assert.match(html,/foam\.mesh\.updateVerticesData\(B\.VertexBuffer\.UVKind,foamUvs,false,false\)/);
@@ -125,7 +128,9 @@ assert.match(html,/async function createRealGrass\(onlyIslandIndex=null\)/,"Qual
 assert.match(html,/if\(onlyIslandIndex!==null&&islandIndex!==onlyIslandIndex\)continue;/,"Grass placement must skip all inactive islands.");
 assert.match(html,/async function streamActiveIslandGrass\(index\)/,"The detailed grass set must stream when entering another island in both profiles.");
 assert.match(html,/if\(currentIsland!==grassStreamActiveIslandIndex&&!grassStreamPromise\)/,"The vegetation streamer must follow the player's current island.");
-assert.match(html,/createRealGrass\(initialGrassIslandIndex\)/,"Startup should build all grass for the player's starting island in both profiles.");\nassert.match(html,/const grassGenerationTask=createRealGrass\(initialGrassIslandIndex\);\s*await grassGenerationTask;/,"The initial island grass build must finish before gameplay starts.");\nassert.match(html,/function updateActiveIslandGrass\(dt\)/,"Active-island grass streaming must work for Quality and Performance.");
+assert.match(html,/createRealGrass\(initialGrassIslandIndex\)/,"Startup should build all grass for the player's starting island in both profiles.");
+assert.match(html,/const grassGenerationTask=createRealGrass\(initialGrassIslandIndex\);\s*await grassGenerationTask;/,"The initial island grass build must finish before gameplay starts.");
+assert.match(html,/function updateActiveIslandGrass\(dt\)/,"Active-island grass streaming must work for Quality and Performance.");
 assert.match(html,/const show=batch\.islandIndex===currentIsland/,"All grass batches belonging to the occupied island must remain visible.");
 assert.match(html,/grassStream:\{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise\}/,"Runtime diagnostics must expose the active grass island and pending streaming state.");
 assert.match(html,/const leavesPerClump=isPerformanceMode\?8:10/,"Quality grass blade detail must be preserved while island streaming changes.");
