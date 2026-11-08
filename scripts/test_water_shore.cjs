@@ -24,4 +24,7 @@ assert.match(html,/requestAnimationFrame\(processBeachWorkChunk\)/);
 assert.match(html,/startupTimeline:getStartupTimelineSnapshot\(\)/);
 assert.match(html,/backgroundFaunaTask=Promise\.resolve\(backgroundNpcTask\)/);
 assert.doesNotMatch(html,/vec3 n=normalize\(vNormalW\).*\n float wetHighlight[\s\S]*\n color\+=vec3\([^\n]+\);\n vec3 n=normalize\(vNormalW\)/);
+assert.ok(html.includes("const segments=isPerformanceMode?(isConstrainedMobile?112:160):Math.max(512,Math.min(2048,Math.ceil(Math.PI*2*island.r/.30)));"),"Quality shore breaker must use approximately 30 cm coastal segments");
+assert.ok(html.includes("const subdivisions=index===0?(isTouchDevice?208:240):88;"),"Coastal heightfield must retain the finer terrain mesh");
+assert.ok(html.includes("(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.026+Math.sin(x*.17+z*.11)*.0035"),"Coast noise must retain the softened natural shoreline");
 console.log('OK: water depth gradient, animated shore film/foam, wrack line and debug controls.');

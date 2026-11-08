@@ -2992,7 +2992,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  function terrainHeightOnIsland(is,x,z){
   const d=Math.hypot(x-is.x,z-is.z),edge=Math.max(0,1-(d/is.r)*(d/is.r));
   // Línea de costa irregular: pequeñas calas y entrantes de arena en vez de un círculo perfecto.
-  const coastNoise=(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.045+Math.sin(x*.17+z*.11)*.006;
+  const coastNoise=(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.026+Math.sin(x*.17+z*.11)*.0035;
   const coastDistance=d+coastNoise*is.r;
   const peak=mountainProfileByIsland.get(is),px=(x-peak.x)/peak.sx,pz=(z-peak.z)/peak.sz;
   let relief=peak.height*Math.exp(-.5*(px*px+pz*pz));
@@ -3085,7 +3085,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  function createIslandTerrain(is,index){
   // Babylon's native Ground mesh guarantees a stable, upward-facing heightfield.
   // Vertices outside the island are sunk beneath the sea, so no square island edge is visible.
-  const subdivisions=index===0?(isTouchDevice?176:208):72;
+  const subdivisions=index===0?(isTouchDevice?208:240):88;
   const mesh=B.MeshBuilder.CreateGround('IslandHeightfield_'+index,{width:is.r*2,height:is.r*2,subdivisions,updatable:true},scene);
   const positions=mesh.getVerticesData(B.VertexBuffer.PositionKind);
   const colors=[];
@@ -3097,7 +3097,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    const slopeZ=(terrainHeightOnIsland(is,wx,wz+1)-terrainHeightOnIsland(is,wx,wz-1))*.5;
    const slope=Math.hypot(slopeX,slopeZ);
    const rock=Math.max(0,Math.min(.92,(h-2.7)/6.6+slope*.72));
-   const coastNoise=(terrainValueNoise(wx*.12+17.2,wz*.12-8.4)-.5)*.045+Math.sin(wx*.17+wz*.11)*.006;
+   const coastNoise=(terrainValueNoise(wx*.12+17.2,wz*.12-8.4)-.5)*.026+Math.sin(wx*.17+wz*.11)*.0035;
    const coastDistance=d+coastNoise*is.r;
    const beach=smooth01((coastDistance/is.r-.75)/.24);
    // Variación espacial real: humedad y musgo cambian por zonas, no un tinte uniforme por isla.
@@ -3176,7 +3176,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
   coastalStateTexture.name='BeachStateRGBA_'+index;
   for(let i=0;i<=segments;i++){
    const angle=i/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
-   const coastNoise=(terrainValueNoise((island.x+cs*island.r)*.12+17.2,(island.z+sn*island.r)*.12-8.4)-.5)*.045+Math.sin((island.x+cs*island.r)*.17+(island.z+sn*island.r)*.11)*.006;
+   const coastNoise=(terrainValueNoise((island.x+cs*island.r)*.12+17.2,(island.z+sn*island.r)*.12-8.4)-.5)*.026+Math.sin((island.x+cs*island.r)*.17+(island.z+sn*island.r)*.11)*.0035;
    radials.push(island.r*(.755-coastNoise),island.r*(1.085-coastNoise));
   }
   // Row-major topology: exactly one vertex per (radial row, shoreline segment).
@@ -3581,7 +3581,7 @@ void main(void){
  function buildTidalFoam(island,index){
   // Calidad usa la malla costera densa; Rendimiento conserva una rompiente más ligera,
   // pero nunca elimina por completo el oleaje blanco junto a la playa.
-  const segments=isPerformanceMode&&isConstrainedMobile?112:Math.max(360,Math.min(1200,Math.ceil(Math.PI*2*island.r/.72)));
+  const segments=isPerformanceMode?(isConstrainedMobile?112:160):Math.max(512,Math.min(2048,Math.ceil(Math.PI*2*island.r/.30)));
   const rows=isPerformanceMode&&isConstrainedMobile?5:9,cols=segments+1;
   const radialOffsets=isPerformanceMode?[-.52,-.26,0,.26,.52]:[-.72,-.54,-.36,-.18,-.02,.13,.28,.43,.58];
   const positions=new Float32Array(cols*rows*3),colors=new Float32Array(cols*rows*4),foamPattern=new Float32Array(cols*rows);

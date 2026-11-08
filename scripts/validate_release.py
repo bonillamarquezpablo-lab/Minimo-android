@@ -386,6 +386,12 @@ def main() -> None:
         fail("El mapa costero debe actualizar la isla activa en fragmentos medidos de hasta 4 ms.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
+    if "const subdivisions=index===0?(isTouchDevice?208:240):88;" not in index_html:
+        fail("La costa necesita un heightfield más fino para evitar escalones visibles.")
+    if "Math.max(512,Math.min(2048,Math.ceil(Math.PI*2*island.r/.30)))" not in index_html:
+        fail("Calidad debe mantener segmentos de rompiente de unos 30 cm y Rendimiento una malla ligera.")
+    if "(terrainValueNoise(x*.12+17.2,z*.12-8.4)-.5)*.026+Math.sin(x*.17+z*.11)*.0035" not in index_html:
+        fail("El perfil costero debe evitar dientes exagerados sin perder las calas naturales.")
     if "beachStateSampler" not in index_html or "float laceNoise=fineFoam*.62+broadFoam*.38" not in index_html or "float foamMask=clamp(foam*lace*broken*foamPulse*shoreFoamStrength" not in index_html:
         fail("La espuma costera debe utilizar detalle de encaje de alta frecuencia en el shader.")
     if "function syncActiveBeachIsland()" not in index_html or "activeBeachIslandIndex=nextIndex;" not in index_html or "syncActiveTidalFoamIsland();" not in index_html:
