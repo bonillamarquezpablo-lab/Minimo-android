@@ -485,8 +485,8 @@ def main() -> None:
         fail("La generación del terreno y la hierba debe reutilizar buffers compactos y hashes deterministas.")
     if "const grassGenerationTask=createRealGrass();" not in index_html or "await grassGenerationTask;" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
         fail("Calidad debe conservar la generación completa de hierba y la fauna debe completarse después de mostrar el mundo.")
-    if "if(isPerformanceMode)" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html:
-        fail("Rendimiento espera el audio; Calidad conserva su precarga paralela.")
+    if "try{audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" in index_html:
+        fail("La precarga completa de audio debe finalizar antes de abrir la partida en ambos perfiles gráficos.")
     if "antialias:activeGraphicsProfile!=='performance'" not in index_html or "(isTouchDevice?2048:" not in index_html:
         fail("El perfil de calidad en iPhone debe conservar antialiasing y sombras de alta resolución.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
@@ -618,6 +618,18 @@ def main() -> None:
     if beach_test.returncode:
         fail("Fallaron las pruebas de BeachState:\\n" + beach_test.stdout + beach_test.stderr)
     print("OK BeachState: humectación, secado, espuma, escala y atlas de huellas.")
+    startup_guard_test = ROOT / "scripts" / "test_startup_guard.cjs"
+    if not startup_guard_test.is_file():
+        fail("Falta la prueba de barrera de arranque antes de abrir la partida.")
+    startup_guard = subprocess.run(
+        [node, str(startup_guard_test)],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+    )
+    if startup_guard.returncode:
+        fail("Falló la barrera de carga completa previa a la partida:\\n" + startup_guard.stdout + startup_guard.stderr)
+    print("OK Startup: protagonista, NPC, fauna, audio y shaders preparados antes de abrir el juego.")
     with tempfile.TemporaryDirectory(prefix="eln-release-check-") as temp_dir:
         temp = Path(temp_dir)
         sw_check = subprocess.run(
