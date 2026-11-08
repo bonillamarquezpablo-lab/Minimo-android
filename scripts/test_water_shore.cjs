@@ -96,7 +96,7 @@ assert.match(html,/const radialOffsets=isPerformanceMode\?\[-\.62,-\.30,0,\.30,\
 assert.match(html,/washColors\[color\]=\.72\*\(1-whiteMix\)\+\.97\*whiteMix/,"The intertidal film must remain neutral and foam must fade toward white.");
 
 assert.match(html,/window\.NorseCoastalInteraction\.filmSurfaceHeight\(terrainY,water,filmWave\)/,"The advancing film must sit above the sand/water interface using the shared terrain sample.");
-assert.match(html,/window\.NorseCoastalInteraction\.filmCoverage\(fraction,washPattern\[vertex\]\)/,"The advancing film must fade and fragment at its edges.");
+assert.match(html,/washFilmCoverage\[vertex\]=window\.NorseCoastalInteraction\.filmCoverage\(washFractions\[row\],washPattern\[vertex\]\)/,"The advancing film must preserve its edge breakup while caching its static coverage once.");
 assert.match(html,/function buildCoastalSeabed\(island,index\)/,"Each island must have an independent sandy seabed mesh.");
 assert.match(html,/coastalSeabedMaterial\.bumpTexture=texCoastalSandNormalPbr/,"The seabed must have its own normal-mapped sand material.");
 assert.match(html,/norseSubmergedSandyBottom:true/,"The seabed must be identifiable in scene metadata.");
