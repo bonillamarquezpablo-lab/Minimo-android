@@ -34,6 +34,7 @@ jobs:
       - name: Validate coastal state and geometry contracts
         run: |
           node scripts/test_coastal_reference_contract.cjs
+          node scripts/test_water_diagnostics.cjs
           node scripts/test_beach_state.cjs
           node scripts/test_water_shore.cjs
           node scripts/test_coastal_interaction.cjs
