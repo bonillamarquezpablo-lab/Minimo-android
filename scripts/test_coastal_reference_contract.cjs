@@ -26,7 +26,7 @@ assert.doesNotMatch(html, /const groundDebugEnabled=testModeEnabled/,
 assert.match(html, /if\(testModeEnabled\)\{[\s\S]*?window\.__ELSN_TEST__=/,
   'The test hooks must only be created when ?test=1 is present');
 assert.match(html, /preserveDrawingBuffer:testModeEnabled/, 'Only test mode may preserve the WebGL drawing buffer for PNG readback');
-for (const api of ['setCamera:', 'setWaterState:', 'diagnostics:', 'snapshot:', 'stop:', 'render:', 'captureCanvas:']) {
+for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setWaterState:', 'diagnostics:', 'snapshot:', 'stop:', 'render:', 'captureCanvas:']) {
   assert.ok(html.includes(api), `Missing deterministic test hook: ${api}`);
 }
 assert.match(html, /window\.__ELSN_TEST__=\{/);
@@ -45,5 +45,8 @@ assert.match(captureRunner, /36\/36 complete/,
   'The runner must assert and report all 36 captured views.');
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
+assert.match(contactSheet, /ridge-occlusion__t037__natural__no-island-shadows\.png/, 'The contact sheet must include a shadow-isolation A/B panel.');
+assert.match(runner, /setIslandShadowReceiving\(false\)/, 'The ridge A/B frame must isolate the main-island shadow receiver.');
+assert.match(html, /setIslandShadowReceiving:\(enabled\)=>/, 'Shadow isolation must remain available only through the test-mode hook.');
 assert.ok(workflow.includes('cancel-in-progress: false'),
   'A later PR commit must not cancel a long-running 27-image reference capture');

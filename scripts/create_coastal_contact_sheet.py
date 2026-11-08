@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a labelled 36-frame contact sheet from the coastal and ridge-occlusion PNGs."""
+"""Build a 36-frame coast/ridge sheet plus one shadow-isolation comparison frame."""
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
@@ -31,12 +31,12 @@ def main() -> None:
 
     width = 3 * THUMB_W + 2 * GAP
     row_height = LABEL_H + THUMB_H
-    height = HEADER_H + GAP + (len(CAMERAS) * len(TIMES)) * (row_height + GAP)
+    height = HEADER_H + GAP + (len(CAMERAS) * len(TIMES) + 1) * (row_height + GAP)
     sheet = Image.new("RGB", (width, height), BG)
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
 
-    draw.text((8, 7), "EL SIN NOMBRE · COASTAL REFERENCE · 36 CAPTURES", fill=TEXT, font=font)
+    draw.text((8, 7), "EL SIN NOMBRE · COASTAL REFERENCE · 36 CAPTURES + SHADOW ISOLATION", fill=TEXT, font=font)
     draw.text((8, 25), "One game load · 960×540 · Chromium / SwiftShader · columns: natural / high / low",
               fill=MUTED, font=font)
 
@@ -64,6 +64,21 @@ def main() -> None:
                     outline=LINE, width=1
                 )
             row += 1
+
+    # One A/B diagnostic panel: same ridge view with main-island shadows disabled.
+    diagnostic = OUT / "ridge-occlusion__t037__natural__no-island-shadows.png"
+    if not diagnostic.is_file():
+        raise SystemExit(f"Missing shadow-isolation image: {diagnostic.name}")
+    x = 0
+    tile_y = HEADER_H + GAP + row * (row_height + GAP)
+    draw.rounded_rectangle((x, tile_y, x + THUMB_W - 1, tile_y + LABEL_H - 1),
+                           radius=3, fill=PANEL, outline=LINE)
+    draw.text((x + 7, tile_y + 7), "ridge-occlusion | shadows off", fill=TEXT, font=font)
+    with Image.open(diagnostic) as source:
+        thumb = source.convert("RGB").resize((THUMB_W, THUMB_H), Image.Resampling.LANCZOS)
+    image_y = tile_y + LABEL_H
+    sheet.paste(thumb, (x, image_y))
+    draw.rectangle((x, image_y, x + THUMB_W - 1, image_y + THUMB_H - 1), outline=LINE, width=1)
 
     target = OUT / "contact-sheet.png"
     sheet.save(target, format="PNG", optimize=True)

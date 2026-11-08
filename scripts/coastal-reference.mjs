@@ -38,6 +38,7 @@ const manifest = {
   playerValidation: 'separate-character-startup-job',
   campaignStart: null,
   captures: [],
+  shadowIsolationCapture: null,
   timingsMs: {},
   consoleErrors: [],
   pageErrors: [],
@@ -247,6 +248,65 @@ async function main() {
       }
     }
     manifest.timingsMs.captureAll36 = Number((performance.now() - stepStartedAt).toFixed(1));
+    // Diagnostic A/B frame: same ridge camera, wave time and tide, but with main-island
+    // terrain shadow receiving disabled temporarily. This isolates shadow-map streaks from water.
+    const ridgeCase = CAMERAS.find(cameraCase => cameraCase.id === 'ridge-occlusion');
+    const shadowIsolation = await page.evaluate(({ cameraCase, island }) => {
+      const api = window.__ELSN_TEST__;
+      const disabled = api.setIslandShadowReceiving(false);
+      api.setCamera({
+        x: island.x + 75, y: cameraCase.height, z: island.z - 22,
+        targetX: island.x - 25, targetY: cameraCase.targetY, targetZ: island.z - 22
+      });
+      api.setWaterState({ time: 37, tide: 'natural' });
+      api.render();
+      const canvasPng = api.captureCanvas();
+      const restored = api.setIslandShadowReceiving(true);
+      return { disabled, restored, canvasPng };
+    }, { cameraCase: ridgeCase, island: mainIsland });
+    const shadowPngMatch = new RegExp('^data:image/png;base64,([A-Za-z0-9+/]+={0,2})
+
+    assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
+    assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');
+    assert.equal(manifest.consoleErrors.length, 0,
+      'Errores de consola: ' + manifest.consoleErrors.join(' | '));
+    assert.equal(manifest.pageErrors.length, 0,
+      'Errores JavaScript: ' + manifest.pageErrors.join(' | '));
+    console.log('[coastal-reference] 36/36 complete in ' + manifest.timingsMs.captureAll36 + ' ms');
+  } catch (error) {
+    manifest.failure = String(error && error.stack || error);
+    throw error;
+  } finally {
+    manifest.consoleErrors = [...manifest.consoleErrors];
+    manifest.pageErrors = [...manifest.pageErrors];
+    manifest.timingsMs.totalRunner = Number((performance.now() - runStartedAt).toFixed(1));
+    fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+    if (browser) await browser.close();
+  }
+  console.log('COASTAL REFERENCE OK: one game load, 36 screenshots (27 coast + 9 ridge-occlusion) and JSON manifest.');
+}
+
+main().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});
+).exec(shadowIsolation.canvasPng || '');
+    assert.ok(shadowIsolation.disabled && shadowIsolation.restored,
+      'The main-island shadow receiver must disable and restore for the diagnostic A/B frame');
+    assert.ok(shadowPngMatch, 'Shadow-isolation canvas readback did not return a PNG');
+    const shadowPng = Buffer.from(shadowPngMatch[1], 'base64');
+    assert.ok(shadowPng.length > 1000, 'Shadow-isolation PNG was empty');
+    const shadowFile = 'ridge-occlusion__t037__natural__no-island-shadows.png';
+    fs.writeFileSync(path.join(OUT, shadowFile), shadowPng);
+    manifest.shadowIsolationCapture = {
+      file: shadowFile,
+      camera: 'ridge-occlusion',
+      timeSeconds: 37,
+      tide: 'natural',
+      mainIslandTerrainReceivesShadows: false,
+      receiverRestoredAfterCapture: true
+    };
+
 
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');
