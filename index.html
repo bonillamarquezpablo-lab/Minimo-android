@@ -2940,7 +2940,7 @@ async function removeStrayDebugGeometry(targetScene){
    const retreatFade=Math.exp(-foamElapsed/3.4);
    for(let col=0;col<=segments;col++){
     const angle=angleValues[col],cs=angleCos[col],sn=angleSin[col];
-    const shoreline=shorelineFoamRadius(island,angle,oceanTime,index);
+    const shoreline=shorelineFoamRadius(island,angle,oceanTime,index,cs,sn);
     if(!Number.isFinite(shoreline)){
      foam.retreatResidue[col]*=retreatFade;
      foam.lastShoreline[col]=NaN;foam.foamCenter[col]=NaN;
@@ -3128,8 +3128,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  // Find the live point where the moving ocean surface intersects the analytical beach profile.
  // Solving against the current wave height (instead of a frozen sea level) prevents foam decals
  // from remaining visibly stranded on the dry sand when the tide/wave phase changes.
- function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island)){
-  const dirX=Math.cos(angle),dirZ=Math.sin(angle);
+ function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island),dirX=Math.cos(angle),dirZ=Math.sin(angle)){
   // A safeguarded secant converges on the same real terrain/water intersection
   // with far fewer expensive heightfield and wave evaluations than ten bisections.
   const sample=radius=>{
@@ -3767,7 +3766,7 @@ void main(void){
   for(let col=0;col<=segments;col++){
    const angle=col/segments*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);angleValues[col]=angle;angleCos[col]=cs;angleSin[col]=sn;
    // Registrar también las costas lejanas, pero sin mostrar espuma hasta detectar una retirada real.
-   const initialShoreline=shorelineFoamRadius(island,angle,oceanTime,index);
+   const initialShoreline=shorelineFoamRadius(island,angle,oceanTime,index,cs,sn);
    if(Number.isFinite(initialShoreline)){lastShoreline[col]=initialShoreline;foamCenter[col]=initialShoreline-.10;}
    for(let row=0;row<rows;row++){
     const vertex=row*cols+col,offset=vertex*3,color=vertex*4;
