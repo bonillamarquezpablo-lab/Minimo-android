@@ -82,6 +82,16 @@ async function main() {
     });
     manifest.navigationMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
+    // The game boots only after the user chooses a profile and completes the identity screen.
+    stepStartedAt = performance.now();
+    const audioGate = page.locator('#audioGateStart');
+    if (await audioGate.isVisible().catch(() => false)) await audioGate.click({ timeout: 30000 });
+    await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
+    await page.locator('#chooseQuality').click();
+    await page.locator('#continueUnnamed').waitFor({ state: 'visible', timeout: 30000 });
+    await page.locator('#continueUnnamed').click();
+    manifest.menuFlowMs = Number((performance.now() - stepStartedAt).toFixed(1));
+
     stepStartedAt = performance.now();
     await page.waitForFunction(() => !!window.__ELSN_PLAYER_STARTUP_SMOKE__, undefined, {
       timeout: 90000,
