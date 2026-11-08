@@ -9,4 +9,4 @@ assert.match(validator,/const backgroundNpcTask=startNpcHumanModels\(\)\.then\(/
 assert.match(validator,/const backgroundFaunaTask=Promise\.resolve\(backgroundNpcTask\)/);
 assert.match(validator,/rows=isPerformanceMode\?13/);
 assert.doesNotMatch(validator,/resourceResults=await Promise\.allSettled\(\[playerHumanLoadPromise,startNpcHumanModels\(\)\]\)/);
-console.log('OK: release validator matches the non-blocking 0.6.259 startup architecture.');
+console.log('OK: release validator matches the non-blocking 0.6.260 startup architecture.');
