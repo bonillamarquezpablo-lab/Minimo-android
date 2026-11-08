@@ -3193,66 +3193,80 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    B.Effect.ShadersStore.norseLivingBeachVertexShader=`precision highp float;
 attribute vec3 position;attribute vec3 normal;attribute vec2 uv;attribute vec4 color;
 uniform mat4 world;uniform mat4 worldViewProjection;
-varying vec2 vUV;varying vec3 vNormalW;varying vec4 vColor;
-void main(void){vUV=uv;vNormalW=normalize((world*vec4(normal,0.0)).xyz);vColor=color;gl_Position=worldViewProjection*vec4(position,1.0);}`;
+varying vec2 vUV;varying vec3 vNormalW;varying vec3 vWorldPos;varying vec4 vColor;
+void main(void){vec4 wp=world*vec4(position,1.0);vUV=uv;vWorldPos=wp.xyz;vNormalW=normalize((world*vec4(normal,0.0)).xyz);vColor=color;gl_Position=worldViewProjection*vec4(position,1.0);}`;
    B.Effect.ShadersStore.norseLivingBeachPixelShader=`precision highp float;
-varying vec2 vUV;varying vec3 vNormalW;varying vec4 vColor;
-uniform sampler2D sandSampler;uniform sampler2D sandRoughSampler;uniform sampler2D beachStateSampler;
-uniform float beachTime;uniform float shoreFoamStrength;uniform float shoreSheetStrength;
+varying vec2 vUV;varying vec3 vNormalW;varying vec3 vWorldPos;varying vec4 vColor;
+uniform sampler2D sandSampler;uniform sampler2D sandRoughSampler;uniform sampler2D sandNormalSampler;uniform sampler2D beachStateSampler;
+uniform float beachTime;uniform float shoreFoamStrength;uniform float shoreSheetStrength;uniform vec3 cameraPos;
+vec2 rotateUv(vec2 p,float a){float c=cos(a),s=sin(a);return vec2(c*p.x-s*p.y,s*p.x+c*p.y);}
+float hash21(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+float noise21(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);float a=hash21(i),b=hash21(i+vec2(1.0,0.0)),c=hash21(i+vec2(0.0,1.0)),d=hash21(i+vec2(1.0,1.0));return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);}
 void main(void){
- float antiRepeatNoise=texture2D(sandSampler,vUV*vec2(3.7,2.3)+vec2(0.23,0.47)).g;
- vec2 sandUvA=vUV*vec2(12.0,4.8);
- vec2 sandUvB=vUV*vec2(9.4,6.1)+vec2(0.41,0.13);
- vec4 sandA=texture2D(sandSampler,sandUvA);
- vec4 sandB=texture2D(sandSampler,sandUvB);
- vec4 sand=mix(sandA,sandB,smoothstep(0.22,0.78,antiRepeatNoise)*0.42);
- float sandRoughness=texture2D(sandRoughSampler,sandUvA).r;
+ vec2 worldXZ=vWorldPos.xz;
+ // World-space sampling prevents radial UVs from drawing concentric sand rings.
+ float warpX=texture2D(sandSampler,worldXZ*.115+vec2(.17,.31)).r-.5;
+ float warpZ=texture2D(sandSampler,worldXZ*.115+vec2(.63,.79)).g-.5;
+ vec2 warpedXZ=worldXZ+vec2(warpX,warpZ)*1.35;
+ vec2 sandUvA=rotateUv(warpedXZ*.52,.31),sandUvB=rotateUv(warpedXZ*.37,-.57)+vec2(.43,.29),sandUvC=rotateUv(warpedXZ*.91,.83)+vec2(.19,.67);
+ float antiRepeatA=texture2D(sandSampler,worldXZ*.091+vec2(.23,.41)).g,antiRepeatB=noise21(worldXZ*.24+vec2(4.7,9.1));
+ float blendAB=smoothstep(.22,.78,mix(antiRepeatA,antiRepeatB,.38));
+ vec4 sandA=texture2D(sandSampler,sandUvA),sandB=texture2D(sandSampler,sandUvB),sandC=texture2D(sandSampler,sandUvC);
+ vec4 sand=mix(sandA,sandB,.24+.36*blendAB);
+ sand=mix(sand,sandC,.10+.18*smoothstep(.24,.80,texture2D(sandSampler,worldXZ*.137+vec2(.71,.17)).r));
  vec4 state=texture2D(beachStateSampler,vUV);
  float wet=clamp(state.r,0.0,1.0),foam=clamp(state.g,0.0,1.0),water=clamp(state.b,0.0,1.0);
- vec4 broad=texture2D(sandSampler,vUV*vec2(41.0,17.0));
- vec4 fine=texture2D(sandSampler,vUV*vec2(117.0,49.0));
- float laceNoise=fine.r*0.62+broad.g*0.38;
- float lace=smoothstep(0.34,0.74,laceNoise);
- float broken=smoothstep(0.28,0.61,broad.r)*(1.0-smoothstep(0.78,0.98,fine.g));
- float foamPulse=0.64+0.36*(0.5+0.5*sin(beachTime*1.62+vUV.x*104.0+fine.r*9.0));
- float foamMask=clamp(foam*lace*broken*foamPulse*shoreFoamStrength,0.0,0.96);
- // Noise perturbs the humidity boundary continuously, not as a binary per-cell cutout.
- float shoreNoise=(broad.r-0.5)*0.17+(fine.g-0.5)*0.07+(fine.b-0.5)*0.035;
- float wetEdge=smoothstep(0.035+shoreNoise,0.72+shoreNoise,wet);
- float humidity=clamp(wet*0.56+wetEdge*0.12,0.0,0.62);
- vec3 dryColor=sand.rgb*vec3(1.14,1.06,0.95);
- vec3 wetColor=dryColor*vec3(0.94,0.92,0.87);
+ float shoreNoise=(noise21(worldXZ*.46+vec2(3.1,7.7))-.5)*.14+(noise21(worldXZ*1.7)-.5)*.035;
+ float wetEdge=smoothstep(.045+shoreNoise,.64+shoreNoise,wet);
+ float humidity=clamp(max(wet*.82,wetEdge*.88),0.0,.96);
+ vec3 dryColor=sand.rgb*vec3(1.12,1.06,.96);
+ float broadVariation=noise21(worldXZ*.23+vec2(8.2,2.6)),grainVariation=noise21(worldXZ*6.3+vec2(1.7,5.4));
+ dryColor*=.91+broadVariation*.15+(grainVariation-.5)*.045;
+ vec3 wetColor=dryColor*vec3(.71,.75,.78)+vec3(.014,.022,.027);
  vec3 color=mix(dryColor,wetColor,humidity);
- float windRill=0.5+0.5*sin(vUV.y*438.0+fine.r*8.0+broad.g*3.0);
- float windRillMask=(1.0-smoothstep(0.18,0.74,wet))*(1.0-smoothstep(0.28,0.92,water));
- color*=1.0+(windRill-0.5)*0.055*windRillMask;
- color=mix(color,vec3(0.52,0.70,0.75),smoothstep(0.06,0.88,water)*0.16);
- vec3 foamColor=mix(vec3(0.76,0.88,0.90),vec3(0.99,1.0,0.99),smoothstep(0.38,0.82,laceNoise));
- color=mix(color,foamColor,foamMask*0.88);
- // Broken high-tide wrack: scattered shell/seaweed fragments in a noisy band,
- // not a continuous painted ring.
- float wrackOffset=(broad.r-0.5)*0.035+(fine.g-0.5)*0.018;
- float wrackBand=1.0-smoothstep(0.012,0.072,abs(vUV.y-0.79+wrackOffset));
- float wrackBreak=smoothstep(0.34,0.58,fine.r)*(1.0-smoothstep(0.78,0.96,broad.b));
- vec3 wrackTint=mix(vec3(0.32,0.34,0.27),vec3(0.78,0.69,0.52),fine.g);
- color=mix(color,wrackTint,wrackBand*wrackBreak*0.20);
- // Thin advancing film: shallow coverage flows over the sand and breaks into lacy tongues.
- float sheetFront=smoothstep(0.015,0.34,water)*(1.0-smoothstep(0.54,0.96,water));
- float sheetRipple=0.66+0.34*(0.5+0.5*sin(beachTime*1.85+vUV.x*138.0+broad.g*12.0));
- float sheetMask=sheetFront*sheetRipple*shoreSheetStrength;
- color=mix(color,vec3(0.34,0.62,0.69),sheetMask*0.28);
- // Thin wet sheen: slightly brighter and less rough-looking than dry sand, without a dark stripe.
- float wetHighlight=pow(max(0.0,dot(normalize(vNormalW),normalize(vec3(-0.30,0.91,0.27)))),10.0)*humidity*mix(0.022,0.068,1.0-sandRoughness);
- color+=vec3(0.012+humidity*0.018+wetHighlight);
- vec3 n=normalize(vNormalW),lightDir=normalize(vec3(-0.30,0.91,0.27));
- color*=0.76+0.24*max(0.0,dot(n,lightDir));
+ // Wind ripples follow one world-space wind axis, not the island radius.
+ float windWarp=noise21(rotateUv(worldXZ*.31,-.39)+vec2(2.4,7.1));
+ float windRill=.5+.5*sin(dot(worldXZ,vec2(.83,.56))*1.46+(windWarp-.5)*3.2);
+ float windRillMask=(1.0-smoothstep(.14,.72,humidity))*(1.0-smoothstep(.22,.91,water));
+ color*=1.0+(windRill-.5)*.032*windRillMask;
+ float sheetFront=smoothstep(.025,.25,water)*(1.0-smoothstep(.44,.84,water));
+ float sheetNoise=noise21(worldXZ*.58+vec2(beachTime*.035,-beachTime*.021));
+ float sheetRipple=.80+.20*sin(dot(worldXZ,vec2(.72,.69))*1.62+beachTime*1.48+sheetNoise*2.4);
+ color=mix(color,vec3(.43,.68,.71),sheetFront*sheetRipple*shoreSheetStrength*.22);
+ // Wrack fragments follow the drying wetness band; no fixed painted ring.
+ float wrackZone=smoothstep(.22,.37,wet)*(1.0-smoothstep(.60,.76,wet));
+ float wrackField=noise21(worldXZ*2.55+vec2(12.7,4.9));
+ float wrackFragments=smoothstep(.67,.83,wrackField)*(1.0-smoothstep(.89,.98,noise21(worldXZ*8.8+vec2(3.7,17.1))));
+ vec3 wrackTint=mix(vec3(.26,.27,.21),vec3(.48,.39,.27),noise21(worldXZ*4.1));
+ color=mix(color,wrackTint,wrackZone*wrackFragments*.30);
+ float broadFoam=texture2D(sandSampler,worldXZ*.62+vec2(.31,.73)).g,fineFoam=texture2D(sandSampler,worldXZ*1.71+vec2(.67,.19)).r;
+ float laceNoise=fineFoam*.62+broadFoam*.38,lаce=smoothstep(.31,.71,laceNoise);
+ float broken=smoothstep(.24,.59,broadFoam)*(1.0-smoothstep(.79,.97,fineFoam));
+ float foamPulse=.78+.22*(.5+.5*sin(dot(worldXZ,vec2(.61,.79))*1.18+beachTime*1.56+fineFoam*7.0));
+ float foamMask=clamp(foam*lace*broken*foamPulse*shoreFoamStrength,0.0,.98);
+ color=mix(color,mix(vec3(.78,.89,.90),vec3(.99,1.0,.99),smoothstep(.38,.82,laceNoise)),foamMask*.92);
+ vec4 roughA=texture2D(sandRoughSampler,sandUvA),roughB=texture2D(sandRoughSampler,sandUvB);
+ float sandRoughness=clamp(mix(roughA.r,roughB.r,.38),.18,1.0);
+ vec3 normalA=texture2D(sandNormalSampler,sandUvA).xyz*2.0-1.0,normalB=texture2D(sandNormalSampler,sandUvB).xyz*2.0-1.0;
+ vec3 tangentNormal=normalize(mix(normalA,normalB,.34)),baseNormal=normalize(vNormalW);
+ vec3 referenceTangent=abs(baseNormal.x)<.88?vec3(1.0,0.0,0.0):vec3(0.0,0.0,1.0);
+ vec3 tangent=normalize(referenceTangent-baseNormal*dot(referenceTangent,baseNormal)),bitangent=normalize(cross(baseNormal,tangent));
+ tangentNormal.xy*=1.08;
+ vec3 mappedNormal=normalize(tangent*tangentNormal.x+bitangent*tangentNormal.y+baseNormal*tangentNormal.z);
+ vec3 n=normalize(mix(baseNormal,mappedNormal,mix(.68,.40,humidity)));
+ vec3 lightDir=normalize(vec3(-.36,.90,.25)),viewDir=normalize(cameraPos-vWorldPos),halfDir=normalize(lightDir+viewDir);
+ float ndl=max(0.0,dot(n,lightDir)),roughness=mix(max(.70,sandRoughness),.25,humidity);
+ float specular=pow(max(0.0,dot(n,halfDir)),mix(18.0,104.0,1.0-roughness))*mix(.012,.22,humidity);
+ float fresnel=pow(1.0-max(0.0,dot(n,viewDir)),5.0);
+ color*=.76+.24*ndl;color+=vec3(.48,.62,.64)*specular+vec3(.18,.29,.31)*fresnel*humidity*.075;
  gl_FragColor=vec4(color,clamp(vColor.a,0.0,1.0));
 }`;
   }
-  const material=new B.ShaderMaterial('LivingBeachSandMaterial_'+index,scene,'norseLivingBeach',{attributes:['position','normal','uv','color'],uniforms:['world','worldViewProjection','beachTime','shoreFoamStrength','shoreSheetStrength'],samplers:['sandSampler','sandRoughSampler','beachStateSampler']});
-  material.setTexture('sandSampler',texCoastalSand);material.setTexture('sandRoughSampler',texCoastalSandRoughnessPbr);material.setTexture('beachStateSampler',coastalStateTexture);
+  const material=new B.ShaderMaterial('LivingBeachSandMaterial_'+index,scene,'norseLivingBeach',{attributes:['position','normal','uv','color'],uniforms:['world','worldViewProjection','beachTime','shoreFoamStrength','shoreSheetStrength','cameraPos'],samplers:['sandSampler','sandRoughSampler','sandNormalSampler','beachStateSampler']});
+  material.setTexture('sandSampler',texCoastalSand);material.setTexture('sandRoughSampler',texCoastalSandRoughnessPbr);material.setTexture('sandNormalSampler',texCoastalSandNormalPbr);material.setTexture('beachStateSampler',coastalStateTexture);
   material.setFloat('beachTime',0);material.setFloat('shoreFoamStrength',1);material.setFloat('shoreSheetStrength',.22);
-  material.backFaceCulling=false;material.alpha=1;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;material.disableDepthWrite=true;
+  material.setVector3('cameraPos',scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position:v(0,6,0));
+  material.backFaceCulling=false;material.alpha=1;material.transparencyMode=B.Material.MATERIAL_ALPHABLEND;material.disableDepthWrite=false;
   mesh.material=material;mesh.isPickable=false;mesh.receiveShadows=true;mesh.castShadows=false;mesh.hasVertexAlpha=true;
   mesh.metadata=Object.assign({},mesh.metadata||{},{livingBeachSurface:true,islandIndex:index,wetnessSimulation:true,coastalStateMap:true,shaderFoamLace:true});
   const baseY=new Float32Array(positions.length/3);for(let vertex=0;vertex<baseY.length;vertex++)baseY[vertex]=positions[vertex*3+1];
@@ -3479,7 +3493,7 @@ void main(void){
    beachClock+=dt;if(beachClock<BEACH_STATE_INTERVAL||beachWorkLayer)return;
    beachClock%=BEACH_STATE_INTERVAL;const layer=livingBeachLayers[activeBeachIslandIndex]||null;if(!layer)return;
    beachWorkLayer=layer;beachWorkCellCursor=0;beachWorkVertexCursor=0;beachWorkCellsProcessed=0;beachWorkStartedAt=performance.now();
-   if(layer.material)layer.material.setFloat('beachTime',beachWorkStartedAt*.001);scheduleBeachWorkChunk();
+   if(layer.material){layer.material.setFloat('beachTime',beachWorkStartedAt*.001);const camera=scene.activeCamera;if(camera&&camera.position)layer.material.setVector3('cameraPos',camera.position);}scheduleBeachWorkChunk();
   }
   function update(dt,x,z,distance,heading,running,onShip,airborne){
    const groundDynamicsStartedAt=performance.now();
