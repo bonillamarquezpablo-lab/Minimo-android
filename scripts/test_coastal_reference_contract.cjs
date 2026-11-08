@@ -41,6 +41,7 @@ assert.ok(captureRunner.includes('api.captureCanvas()'),
 assert.ok(!captureRunner.includes('page.screenshot('),
   'Full-page screenshots can include menus/HUD and add unnecessary SwiftShader compositor cost');
 assert.ok(captureRunner.includes("assert.equal(boot.build, '0.6.272'"), 'The capture must inspect the exact current 0.6.272 candidate.');
+assert.match(html,/name="el-sin-nombre-build" content="0\.6\.272"/, 'The scene capture must use the synchronized 0.6.272 HTML build.');
 assert.match(captureRunner, /expectedCaptureCount: 36/,
   'The coastal reference must include 27 coast states plus nine mountain-occlusion states.');
 assert.match(captureRunner, /id: 'ridge-occlusion'/,
