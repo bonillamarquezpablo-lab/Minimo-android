@@ -12,7 +12,7 @@ permissions:
 
 # A new release group lets the validated build supersede an orphaned older Pages publish.
 concurrency:
-  group: github-pages-release-0-6-257
+  group: github-pages-release-0-6-258
   cancel-in-progress: false
 
 jobs:
@@ -38,6 +38,8 @@ jobs:
 
       - name: Test BeachState coast and toroidal footprint atlas
         run: node scripts/test_beach_state.cjs
+      - name: Test separate seabed, transparent water and advancing film geometry
+        run: node scripts/test_coastal_interaction.cjs
       - name: Test 13-island campaign and naval invasion integration
         run: node scripts/test_island_campaign.cjs
 
