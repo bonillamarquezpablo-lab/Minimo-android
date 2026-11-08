@@ -3001,7 +3001,7 @@ async function removeStrayDebugGeometry(targetScene){
    const retreatFade=Math.exp(-foamElapsed/3.4);
    for(let col=0;col<=segments;col++){
     const angle=angleValues[col],cs=angleCos[col],sn=angleSin[col];
-    const shoreline=shorelineFoamRadius(island,angle,oceanTime,index,cs,sn);
+    const shoreline=cachedShorelineFoamRadius(foam,col,oceanTime);
     if(!Number.isFinite(shoreline)){
      foam.retreatResidue[col]*=retreatFade;
      foam.lastShoreline[col]=NaN;foam.foamCenter[col]=NaN;
@@ -3037,7 +3037,7 @@ async function removeStrayDebugGeometry(targetScene){
     for(let waveRow=0;waveRow<waveBodyRows;waveRow++){
      const vertex=waveRow*cols+col,offset=vertex*3,uv=vertex*2,color=vertex*4,radial=waveBodyOffsets[waveRow];
      const radius=breakerRadius+radial,x=island.x+cs*radius,z=island.z+sn*radius;
-     const terrainY=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=Math.min(waterCap,shoreWater+waterSlope*radial);
+     const terrainY=sampleTidalFoamTerrainProfile(foam,col,radius)+terrainDeformationAt(index,x,z),water=Math.min(waterCap,shoreWater+waterSlope*radial);
      waveBodyTerrainSamples[waveRow]=terrainY;waveBodyWaterSamples[waveRow]=water;
      const crest=Math.exp(-Math.pow((radial-.16)/.66,2));
      const rearShoulder=Math.exp(-Math.pow((radial+.78)/1.10,2))*.34;
@@ -3207,6 +3207,48 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    if(delta>0){lo=radius;loDelta=delta;}else{hi=radius;hiDelta=delta;}
    const span=hi-lo,secant=lo+span*loDelta/(loDelta-hiDelta),guard=span*.04;
    radius=Number.isFinite(secant)&&secant>lo+guard&&secant<hi-guard?secant:(lo+hi)*.5;
+  }
+  if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(bestError,solverStartedAt,true,bestError<.006);
+  return bestError<Infinity?bestRadius:(lo+hi)*.5;
+ }
+ // Static coastal terrain is sampled once per shoreline column and reused by every animated layer.
+ // The profile spacing follows the sub-metre terrain mesh; no geometry or render density is reduced.
+ const FOAM_TERRAIN_PROFILE_MIN_OFFSET=-4.8,FOAM_TERRAIN_PROFILE_STEP=.24,FOAM_TERRAIN_PROFILE_ROWS=41;
+ function sampleTidalFoamTerrainProfile(foam,col,radius){
+  const center=foam.terrainProfileCenters[col],coordinate=(radius-center-FOAM_TERRAIN_PROFILE_MIN_OFFSET)/FOAM_TERRAIN_PROFILE_STEP,last=FOAM_TERRAIN_PROFILE_ROWS-1;
+  if(!Number.isFinite(coordinate)||coordinate<0||coordinate>last){
+   const angle=foam.angleValues[col];
+   return terrainHeightOnIsland(foam.island,foam.island.x+Math.cos(angle)*radius,foam.island.z+Math.sin(angle)*radius);
+  }
+  const low=Math.min(last-1,Math.floor(coordinate)),high=low+1,t=coordinate-low,base=col*FOAM_TERRAIN_PROFILE_ROWS;
+  const a=foam.terrainProfile[base+low],b=foam.terrainProfile[base+high];
+  return a+(b-a)*t;
+ }
+ function cachedShorelineFoamRadius(foam,col,t=oceanTime){
+  const island=foam.island,index=foam.index,cs=foam.angleCos[col],sn=foam.angleSin[col],angle=foam.angleValues[col];
+  const solverStartedAt=coastalDiagnosticsEnabled?performance.now():0;
+  const center=Number.isFinite(foam.lastShoreline[col])?foam.lastShoreline[col]:foam.terrainProfileCenters[col];
+  const sample=radius=>{
+   const x=island.x+cs*radius,z=island.z+sn*radius;
+   return sampleTidalFoamTerrainProfile(foam,col,radius)+terrainDeformationAt(index,x,z)-coastalWaterHeight(x,z,t);
+  };
+  let halfRange=1.6,lo=center-halfRange,hi=center+halfRange,loDelta=sample(lo),hiDelta=sample(hi);
+  if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)){if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(null,solverStartedAt,false,false);return null;}
+  if(loDelta<=0||hiDelta>=0){
+   halfRange=4.8;lo=center-halfRange;hi=center+halfRange;loDelta=sample(lo);hiDelta=sample(hi);
+  }
+  if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)||loDelta<=0||hiDelta>=0){
+   if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(null,solverStartedAt,false,false);
+   return shorelineFoamRadius(island,angle,t,index,cs,sn);
+  }
+  let bestRadius=center,bestError=Infinity;
+  for(let step=0;step<7;step++){
+   const radius=(lo+hi)*.5,delta=sample(radius);
+   if(!Number.isFinite(delta))break;
+   const error=Math.abs(delta);
+   if(error<bestError){bestError=error;bestRadius=radius;}
+   if(error<.006)break;
+   if(delta>0){lo=radius;loDelta=delta;}else{hi=radius;hiDelta=delta;}
   }
   if(waterDebugSolverStats)recordWaterCoastSolverDiagnostic(bestError,solverStartedAt,true,bestError<.006);
   return bestError<Infinity?bestRadius:(lo+hi)*.5;
@@ -3819,6 +3861,8 @@ void main(void){
   const positions=new Float32Array(cols*rows*3),foamUvs=new Float32Array(cols*rows*2),colors=new Float32Array(cols*rows*4),foamPattern=new Float32Array(cols*rows);
   const lastShoreline=new Float32Array(segments+1),retreatResidue=new Float32Array(segments+1),foamCenter=new Float32Array(segments+1);
   const angleValues=new Float32Array(cols),angleCos=new Float32Array(cols),angleSin=new Float32Array(cols);
+  const terrainProfileCenters=new Float32Array(cols),terrainProfile=new Float32Array(cols*FOAM_TERRAIN_PROFILE_ROWS);
+  const terrainProfileState={island,index,terrainProfileCenters,terrainProfile,angleValues};
   lastShoreline.fill(NaN);foamCenter.fill(NaN);
   const indices=new Uint16Array(segments*(rows-1)*6);let cursor=0;
   for(let col=0;col<=segments;col++){
@@ -3826,11 +3870,18 @@ void main(void){
    // Registrar también las costas lejanas, pero sin mostrar espuma hasta detectar una retirada real.
    const initialShoreline=shorelineFoamRadius(island,angle,oceanTime,index,cs,sn);
    if(Number.isFinite(initialShoreline)){lastShoreline[col]=initialShoreline;foamCenter[col]=initialShoreline-.10;}
+   const profileCenter=Number.isFinite(initialShoreline)?initialShoreline:island.r;
+   terrainProfileCenters[col]=profileCenter;
+   for(let profileRow=0;profileRow<FOAM_TERRAIN_PROFILE_ROWS;profileRow++){
+    const profileRadius=profileCenter+FOAM_TERRAIN_PROFILE_MIN_OFFSET+profileRow*FOAM_TERRAIN_PROFILE_STEP;
+    const profileX=island.x+cs*profileRadius,profileZ=island.z+sn*profileRadius;
+    terrainProfile[col*FOAM_TERRAIN_PROFILE_ROWS+profileRow]=terrainHeightOnIsland(island,profileX,profileZ);
+   }
    for(let row=0;row<rows;row++){
     const vertex=row*cols+col,offset=vertex*3,color=vertex*4;
     const radius=(Number.isFinite(initialShoreline)?initialShoreline:island.r)+radialOffsets[row];
     const x=island.x+cs*radius,z=island.z+sn*radius;
-    const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=coastalWaterHeight(x,z,oceanTime);
+    const ground=sampleTidalFoamTerrainProfile(terrainProfileState,col,radius)+terrainDeformationAt(index,x,z),water=coastalWaterHeight(x,z,oceanTime);
     positions[offset]=x;positions[offset+1]=Number.isFinite(initialShoreline)?Math.max(ground,water)+.018:-3.2;positions[offset+2]=z;
      foamUvs[vertex*2]=x/18+.5;foamUvs[vertex*2+1]=z/18+.5;
     // Tres escalas de ruido forman células rotas, filamentos y pequeñas motas.
@@ -3871,7 +3922,7 @@ void main(void){
    for(let row=0;row<waveBodyRows;row++){
     const vertex=row*cols+col,offset=vertex*3,uv=vertex*2,color=vertex*4,radial=waveBodyOffsets[row];
     const radius=(Number.isFinite(shore)?shore:island.r)+radial,x=island.x+cs*radius,z=island.z+sn*radius;
-    const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=coastalWaterHeight(x,z,oceanTime);
+    const ground=sampleTidalFoamTerrainProfile(terrainProfileState,col,radius)+terrainDeformationAt(index,x,z),water=coastalWaterHeight(x,z,oceanTime);
     waveBodyPositions[offset]=x;waveBodyPositions[offset+1]=Math.max(ground,water)+.018;waveBodyPositions[offset+2]=z;
     waveBodyUvs[uv]=x/9+.5;waveBodyUvs[uv+1]=z/9+.5;
     const edge=Math.min(smooth01((radial+2.65)/.78),smooth01((2.55-radial)/.82));
@@ -3907,7 +3958,7 @@ void main(void){
     const vertex=row*cols+col,offset=vertex*3,uv=vertex*2,color=vertex*4;
     const radius=Number.isFinite(shore)?shore-1.8*washFractions[row]:island.r;
     const x=island.x+cs*radius,z=island.z+sn*radius;
-    const ground=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z),water=coastalWaterHeight(x,z,oceanTime);
+    const ground=sampleTidalFoamTerrainProfile(terrainProfileState,col,radius)+terrainDeformationAt(index,x,z),water=coastalWaterHeight(x,z,oceanTime);
     washPositions[offset]=x;washPositions[offset+1]=Number.isFinite(shore)?window.NorseCoastalInteraction.filmSurfaceHeight(ground,water,.005):-3.2;washPositions[offset+2]=z;
     washUvs[uv]=x/1050+.5;washUvs[uv+1]=z/1050+.5;
     const broad=terrainValueNoise(x*.19+51.7,z*.19-12.4),fine=terrainValueNoise(x*.91-28.3,z*.91+17.6),grain=terrainValueNoise(x*2.1+5.4,z*2.1-39.2);
@@ -3948,7 +3999,7 @@ void main(void){
   }
   washMesh.material=washMaterial;washMesh.isPickable=false;washMesh.receiveShadows=false;washMesh.castShadows=false;
   washMesh.hasVertexAlpha=true;washMesh.renderingGroupId=0;
-  tidalFoamMeshes.push({mesh,positions,foamUvs,colors,foamPattern,lastShoreline,retreatResidue,foamCenter,angleValues,angleCos,angleSin,island,centerX:island.x,centerZ:island.z,index,segments,rows,cols,radialOffsets,waveBodyMesh,waveBodyPositions,waveBodyNormals,waveBodyColors,waveBodyUvs,waveBodyIndices,waveBodyOffsets,waveBodyRows,waveBodyTerrainSamples,waveBodyWaterSamples,washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows});
+  tidalFoamMeshes.push({mesh,positions,foamUvs,colors,foamPattern,lastShoreline,retreatResidue,foamCenter,angleValues,angleCos,angleSin,island,centerX:island.x,centerZ:island.z,index,segments,rows,cols,radialOffsets,terrainProfileCenters,terrainProfile,waveBodyMesh,waveBodyPositions,waveBodyNormals,waveBodyColors,waveBodyUvs,waveBodyIndices,waveBodyOffsets,waveBodyRows,waveBodyTerrainSamples,waveBodyWaterSamples,washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows});
  }
  let activeTidalFoamIslandIndex=-2;
  function syncActiveTidalFoamIsland(){

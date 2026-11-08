@@ -23,7 +23,7 @@ for(const metric of ["foamActiveSegments","foamSegmentCapacity","foamValidInters
 }
 assert.ok(html.includes('tidalFoamLastUpdateMs=performance.now()-foamWorkStarted'));
 assert.match(html,/Resaca: .*foamActiveSegments/);
-assert.match(html,/function buildTidalFoam\(island,index\)/);
+assert.match(html,/function buildTidalFoam\(island,index\)/);\nassert.match(html,/FOAM_TERRAIN_PROFILE_ROWS=41/,"The active coast must precompute a sub-metre terrain profile without reducing geometry density.");\nassert.match(html,/function sampleTidalFoamTerrainProfile\(foam,col,radius\)/,"Animated coast layers must interpolate cached terrain heights.");\nassert.match(html,/function cachedShorelineFoamRadius\(foam,col,t=oceanTime\)/,"The moving shoreline solver must reuse cached terrain heights.");
 assert.match(html,/const waveBodyOffsets=\[-2\.65,-2\.05,-1\.48,-1\.02,-\.66,-\.34,-\.08,\.18,\.48,\.86,1\.34,1\.92,2\.55\]/,"The shoreline wave must have a multi-row 3D cross-section, not a single animated line.");
 assert.match(html,/VolumetricShoreBreaker_/,"The coast must create a separate volumetric wave body.");
 assert.match(html,/const lift=\(\.025\+\.22\*crest\+\.065\*rearShoulder\)/,"The wave body must retain a natural raised crest and rear shoulder with reduced artificial bulging.");
@@ -36,7 +36,7 @@ const animateEnd=html.indexOf("function rand(a,b)",animateStart);
 const animateBody=html.slice(animateStart,animateEnd);
 assert.match(animateBody,/foamDue=tidalFoamAccumulator>=TIDAL_FOAM_UPDATE_STEP/);
 assert.match(animateBody,/const foamElapsed=foamDue\?tidalFoamAccumulator:0/);
-assert.match(animateBody,/const terrainY=sampleRadialProfile\(waveBodyOffsets,waveBodyTerrainSamples,profileOffset\),water=sampleRadialProfile\(waveBodyOffsets,waveBodyWaterSamples,profileOffset\)/,"Foam and wash must reuse the sampled radial terrain/water profile instead of resampling the heightfield for every vertex.");
+assert.match(animateBody,/const terrainY=sampleTidalFoamTerrainProfile\(foam,col,radius\)\+terrainDeformationAt\(index,x,z\),water=Math\.min\(waterCap,shoreWater\+waterSlope\*radial\)/,"Animated breaker vertices must reuse precomputed terrain, not recalculate the full island heightfield.");\nassert.match(animateBody,/const terrainY=sampleRadialProfile\(waveBodyOffsets,waveBodyTerrainSamples,profileOffset\),water=sampleRadialProfile\(waveBodyOffsets,waveBodyWaterSamples,profileOffset\)/,"Foam and wash must reuse the sampled radial terrain/water profile instead of resampling the heightfield for every vertex.");
 assert.match(animateBody,/const dryFoamResidue=terrainY<=\(Number\(ground\.position\.y\)\|\|0\)\+\.42/,"Dry foam residue must compare the numeric terrain height against sea level.");
 assert.match(animateBody,/waveBodyTerrainSamples\[waveRow\]=terrainY;waveBodyWaterSamples\[waveRow\]=water;/,"The volumetric wave must provide its radial samples to the foam and wash layers.");
 assert.match(html,/function sampleRadialProfile\(offsets,values,target\)/,"The coastline must interpolate a shared radial profile without lowering mesh density.");
