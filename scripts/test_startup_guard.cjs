@@ -1,0 +1,15 @@
+'use strict';
+const fs=require('node:fs');
+const assert=require('node:assert/strict');
+const html=fs.readFileSync('index.html','utf8');
+const start=html.indexOf('setLoadingProgress(87,');
+const end=html.indexOf('const engineStored=false',start);
+assert.ok(start>=0&&end>start,'Debe existir una fase final de sincronización de escena.');
+const stage=html.slice(start,end);
+assert.match(stage,/STARTUP_SCENE_WARMUP_TIMEOUT_MS\s*=\s*2200/);
+assert.match(stage,/Promise\.race\s*\(/);
+assert.doesNotMatch(stage,/isPerformanceMode\s*\?\s*await\s+fullSceneWarmup/);
+assert.doesNotMatch(stage,/if\s*\(isPerformanceMode\)\s*throw/);
+assert.match(stage,/__elSinNombreStartupSceneWarmup/);
+assert.match(stage,/getWaitingItemsCount/);
+console.log('OK: bounded, non-blocking final scene warm-up.');

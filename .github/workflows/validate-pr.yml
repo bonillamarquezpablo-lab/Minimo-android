@@ -24,6 +24,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Test bounded startup scene warm-up
+        run: node scripts/test_startup_guard.cjs
+
       - name: Test BeachState coast and toroidal footprint atlas
         run: node scripts/test_beach_state.cjs
 

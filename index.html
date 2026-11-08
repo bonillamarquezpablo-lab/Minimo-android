@@ -10793,37 +10793,49 @@ function update(dt){
  // No bloqueamos la entrada hasta que Babylon declare lista cada malla y textura
  // de las 13 islas. La escena ya se está renderizando: los recursos restantes pueden
  // terminar de compilarse/cargarse mientras el jugador entra, sin eliminar contenido.
- setLoadingProgress(87,'Preparando los últimos recursos gráficos…');
+ setLoadingProgress(87,'Preparando la escena (máximo 2,2 s; el resto continúa en segundo plano)…');
  let sceneWarmupStatus='unavailable';
  try{
   removeStrayDebugGeometry(scene);
   if(scene&&typeof scene.whenReadyAsync==='function'){
-   let warmupTimer=null;
-   const fullSceneWarmup=scene.whenReadyAsync().then(
+   const STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200;
+   const sceneWarmupStartedAt=performance.now();
+   let warmupTimer=null,waitingItemsBefore=null;
+   try{if(typeof scene.getWaitingItemsCount==='function')waitingItemsBefore=scene.getWaitingItemsCount();}catch(_){waitingItemsBefore=null;}
+   const fullSceneWarmup=Promise.resolve().then(()=>scene.whenReadyAsync()).then(
     ()=>({ready:true}),
     error=>({ready:false,error})
    );
-   // Presupuesto máximo para el arranque: evita quedarse indefinidamente en el 87 %.
-   const warmupResult=isPerformanceMode
-    ?await fullSceneWarmup
-    :await Promise.race([fullSceneWarmup,new Promise(resolve=>{warmupTimer=setTimeout(()=>resolve({ready:false,timeout:true}),1400);})]);
+   // La escena puede terminar shaders/texturas en segundo plano. Ningún perfil
+   // debe quedar bloqueado indefinidamente por la promesa global de Babylon.
+   const warmupResult=await Promise.race([
+    fullSceneWarmup,
+    new Promise(resolve=>{warmupTimer=setTimeout(()=>resolve({ready:false,timeout:true}),STARTUP_SCENE_WARMUP_TIMEOUT_MS);})
+   ]);
    if(warmupTimer!==null)clearTimeout(warmupTimer);
-   if(warmupResult.ready){
-    sceneWarmupStatus='ready';
-   }else if(warmupResult.timeout){
-    sceneWarmupStatus='background';
-    console.info('La escena sigue terminando de preparar recursos gráficos en segundo plano; se permite entrar.');
+   let waitingItemsAfter=null;
+   try{if(typeof scene.getWaitingItemsCount==='function')waitingItemsAfter=scene.getWaitingItemsCount();}catch(_){waitingItemsAfter=null;}
+   const sceneWarmupDurationMs=Math.round(performance.now()-sceneWarmupStartedAt);
+   sceneWarmupStatus=warmupResult.ready?'ready':(warmupResult.timeout?'background-timeout':'deferred-after-error');
+   window.__elSinNombreStartupSceneWarmup={
+    profile:activeGraphicsProfile,status:sceneWarmupStatus,durationMs:sceneWarmupDurationMs,
+    timeoutMs:STARTUP_SCENE_WARMUP_TIMEOUT_MS,waitingItemsBefore,waitingItemsAfter
+   };
+   if(warmupResult.timeout){
+    console.warn('La escena sigue preparando recursos gráficos en segundo plano; se permite entrar sin bloquear el arranque.',window.__elSinNombreStartupSceneWarmup);
+   }else if(warmupResult.error){
+    console.warn('La sincronización gráfica global falló; es no esencial y la partida puede continuar.',warmupResult.error,window.__elSinNombreStartupSceneWarmup);
    }else{
-    if(isPerformanceMode)throw (warmupResult.error||new Error('La escena no terminó de prepararse en Rendimiento.'));
-    sceneWarmupStatus='deferred-after-error';
-    console.warn('La comprobación global de recursos gráficos falló; se permite continuar y Babylon seguirá preparando la escena:',warmupResult.error);
+    console.info('Sincronización de escena terminada.',window.__elSinNombreStartupSceneWarmup);
    }
   }
   if(engine&&typeof engine.resize==='function')engine.resize();
  }catch(warmupError){
-  if(isPerformanceMode)throw warmupError;
-  // Calidad conserva el comportamiento de tolerancia a errores de preparación secundaria.
+  // Una fase de warm-up secundaria nunca debe bloquear ni cancelar el inicio.
   sceneWarmupStatus='deferred-after-error';
+  window.__elSinNombreStartupSceneWarmup={
+   profile:activeGraphicsProfile,status:sceneWarmupStatus,error:String(warmupError&&warmupError.message||warmupError)
+  };
   console.warn('Se aplaza la preparación gráfica no esencial; la partida puede continuar:',warmupError);
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
  }
