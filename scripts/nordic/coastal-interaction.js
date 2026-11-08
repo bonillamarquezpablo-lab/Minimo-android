@@ -27,9 +27,9 @@
     const depth = Math.max(0, Number(depthMeters) || 0);
     if (depth <= 0) return 0;
     // Blend in gradually: the first few centimetres must not jump to 52% opacity.
-    // The near-shore ramp reaches its water-body contribution over 65 cm;
+    // The near-shore ramp reaches its water-body contribution over 1.1 m;
     // the deeper ramp retains the existing 90% opacity at 5.5 m.
-    const shallowBody = 0.52 * smooth01(depth / 0.65);
+    const shallowBody = 0.52 * smooth01(depth / 1.1);
     const depthBody = 0.38 * smooth01(depth / 5.5);
     return Math.min(0.90, shallowBody + depthBody);
   }
