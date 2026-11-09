@@ -78,7 +78,13 @@ assert.match(html,/washMesh,washPositions,washUvs,washColors,washPattern,washLea
 assert.match(html,/washMesh,washPositions,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows,washDiagnosticDepths\}=foam/,"The moving film update loop must unpack its optional diagnostic depth array.");
 assert.match(html,/const shallowWashContact=smooth01\(\(waterDepth-\.008\)\/\.055\)\*\(1-smooth01\(\(waterDepth-\.24\)\/\.28\)\)/,"The advancing sheet must be visible through the shallow-water band.");
 assert.match(html,/const exposedSandContact=1-smooth01\(\(waterDepth\+\.018\)\/\.12\)/,"Retreat foam must remain on exposed wet sand.");
-assert.ok(html.includes("const trailingFoam=residual*washTrailingProfile[vertex]*.17*exposedSandContact"),"Retreat foam must fade with exposure, not disappear while the sand is uncovered.");
+assert.ok(html.includes("const trailingFoam=residual*washTrailingProfile[vertex]*.23*exposedSandContact"),"Retreat foam must remain visible longer on exposed wet sand.");
+assert.ok(html.includes("const crossBreakerPhase=(foamWaveX*.31-foamWaveZ)*.041+oceanTime*.79+angle*1.2;"),"A smaller cross swell must break up the single-direction shoreline crest.");
+assert.ok(html.includes("const foamWaveCrest=smooth01(primaryBreakerCrest*.78+crossBreakerCrest*.22);"),"The breaker must blend two travelling wave directions.");
+assert.ok(html.includes("const whitewater=breakStrength*leadingCellular*.64*shallowWashContact;"),"Whitewater must retain a clear, broken white crest.");
+assert.ok(html.includes("const alpha=Math.min(.80,filmAlpha+whitewater*.76+trailingFoam*.70);"),"Foam must remain readable over the water film.");
+assert.ok(html.includes("vec3 wetColor=dryColor*vec3(.84,.82,.76)+vec3(.010,.009,.006);"),"Wet sand must darken naturally when saturated.");
+assert.ok(html.includes("roughness=mix(max(.70,sandRoughness),.31,humidity);"),"Wet sand must retain broad, soft highlights instead of plastic gloss.");
 assert.match(html,/mesh\.receiveShadows=false;mesh\.castShadows=false;mesh\.hasVertexAlpha=true/,"The auxiliary wet-sand layer must not introduce hard shadow bands.");
 assert.match(html,/washMaterial\.bumpTexture=M\.water\.bumpTexture\|\|albedoNormalWater/,"The moving sheet must use animated ocean normals.");
 assert.match(html,/washMaterial\.diffuseFresnelParameters/,"The water film must have a grazing-angle Fresnel response.");
