@@ -2712,15 +2712,15 @@ async function removeStrayDebugGeometry(targetScene){
    return primary*.66+secondary*.22+tertiary*.12;
   };
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
-   const dx=(height((x+1)%size,y)-height((x+size-1)%size,y))*4.8;
-   const dy=(height(x,(y+1)%size)-height(x,(y+size-1)%size))*4.8;
+   const dx=(height((x+1)%size,y)-height((x+size-1)%size,y))*5.8;
+   const dy=(height(x,(y+1)%size)-height(x,(y+size-1)%size))*5.8;
    let nx=-dx,ny=-dy,nz=1,L=Math.hypot(nx,ny,nz)||1;nx/=L;ny/=L;nz/=L;
    const i=(y*size+x)*4;img.data[i]=(nx*.5+.5)*255;img.data[i+1]=(ny*.5+.5)*255;img.data[i+2]=(nz*.5+.5)*255;img.data[i+3]=255;
   }
   ctx.putImageData(img,0,0);tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
  }
  const oceanWaveNormal=isPerformanceMode&&isConstrainedMobile?null:makeOceanWaveNormal();
- if(oceanWaveNormal){oceanWaveNormal.level=.34;oceanWaveNormal.uScale=7.35;oceanWaveNormal.vScale=10.15;oceanWaveNormal.wAng=.4014257279586958;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.34;}
+ if(oceanWaveNormal){oceanWaveNormal.level=.43;oceanWaveNormal.uScale=8.25;oceanWaveNormal.vScale=11.4;oceanWaveNormal.wAng=.4014257279586958;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.43;}
  else{M.water.bumpTexture=albedoNormalWater;M.water.bumpTexture.level=.24;}
  // El agua recibe un reflejo propio de las islas y del cielo nórdico.
  // El HDRI global se conserva para los materiales PBR, pero nunca se asigna al mar.
@@ -2731,9 +2731,9 @@ async function removeStrayDebugGeometry(targetScene){
  [M.tunic,M.red,M.blueCloth,M.greenCloth,M.ochreCloth,M.fur].forEach(m=>{m.specularColor=new B.Color3(.035,.032,.028);m.specularPower=18;});
  M.leather.specularColor=new B.Color3(.12,.095,.07);M.leather.specularPower=28;
  [M.metal,M.darkMetal,M.gold,M.brass].forEach(m=>{m.specularColor=new B.Color3(.48,.46,.39);m.specularPower=72;});
- const reducedWaterProfile=isPerformanceMode&&isConstrainedMobile;M.water.specularColor=reducedWaterProfile?new B.Color3(.18,.25,.28):new B.Color3(.52,.68,.75);M.water.specularPower=reducedWaterProfile?28:64;
+ const reducedWaterProfile=isPerformanceMode&&isConstrainedMobile;M.water.specularColor=reducedWaterProfile?new B.Color3(.24,.34,.38):new B.Color3(.70,.82,.88);M.water.specularPower=reducedWaterProfile?34:52;
  M.water.emissiveColor=new B.Color3(.030,.068,.082);M.water.backFaceCulling=false;M.water.alpha=1;
- if(B.FresnelParameters){M.water.diffuseFresnelParameters=new B.FresnelParameters();M.water.diffuseFresnelParameters.bias=.075;M.water.diffuseFresnelParameters.power=2.3;M.water.diffuseFresnelParameters.leftColor=new B.Color3(.085,.205,.255);M.water.diffuseFresnelParameters.rightColor=new B.Color3(.52,.74,.79);} 
+ if(B.FresnelParameters){M.water.diffuseFresnelParameters=new B.FresnelParameters();M.water.diffuseFresnelParameters.bias=.075;M.water.diffuseFresnelParameters.power=2.3;M.water.diffuseFresnelParameters.leftColor=new B.Color3(.095,.22,.27);M.water.diffuseFresnelParameters.rightColor=new B.Color3(.66,.82,.87);} 
 
  M.foam.alpha=.42;M.foam.emissiveColor=new B.Color3(.34,.40,.39);M.foam.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
 
@@ -2858,16 +2858,17 @@ async function removeStrayDebugGeometry(targetScene){
  // One canonical wave definition feeds the analytic solver and both rendered LOD paths.
  const WATER_WAVE_PARAMETERS=Object.freeze({
   components:Object.freeze([
-   Object.freeze({x:.009,z:.012,frequency:.48,amplitude:.105}),
-   Object.freeze({x:.018,z:.012,frequency:.82,amplitude:.315}),
-   Object.freeze({x:-.013,z:.027,frequency:-.73,amplitude:.225}),
-   Object.freeze({x:.052,z:.03224,frequency:1.28,amplitude:.15}),
-   Object.freeze({x:.092,z:-.092,frequency:-1.82,amplitude:.082}),
-   Object.freeze({x:.76*.145,z:-1.13*.145,frequency:2.15,amplitude:.046}),
-   Object.freeze({x:.19,z:.14,frequency:2.8,amplitude:.026})
+   // Long swells remain, but their crests are closer and steeper so the sea reads at human scale.
+   Object.freeze({x:.014,z:.018,frequency:.48,amplitude:.145}),
+   Object.freeze({x:.024,z:.018,frequency:.82,amplitude:.365}),
+   Object.freeze({x:-.018,z:.036,frequency:-.73,amplitude:.275}),
+   Object.freeze({x:.066,z:.044,frequency:1.28,amplitude:.185}),
+   Object.freeze({x:.145,z:-.145,frequency:-1.82,amplitude:.105}),
+   Object.freeze({x:.76*.185,z:-1.13*.185,frequency:2.15,amplitude:.064}),
+   Object.freeze({x:.235,z:.18,frequency:2.8,amplitude:.040})
   ]),
-  crossCrestLift:.030,
-  shortCrestLift:.018
+  crossCrestLift:.072,
+  shortCrestLift:.044
  });
  const WATER_WAVE_COMPONENTS=WATER_WAVE_PARAMETERS.components;
  const WATER_WAVE_STRIDE=WATER_WAVE_COMPONENTS.length*2,waterWaveBasis=new Float32Array((waterBase.length/3)*WATER_WAVE_STRIDE);
@@ -8306,7 +8307,7 @@ function createRealWeapon(type='axe'){
    nordicWaterMirror.mirrorPlane=new B.Plane(0,-1,0,.035);
    nordicWaterMirror.renderList=[];
    nordicWaterMirror.refreshRate=isTouchDevice?12:8;
-   nordicWaterMirror.level=.62;
+   nordicWaterMirror.level=.78;
    M.water.reflectionTexture=nordicWaterMirror;
    M.water.reflectionTexture.level=.64;
    console.info('Nordic water reflection ready',{resolution:mirrorSize,refreshRate:nordicWaterMirror.refreshRate,scope:'active-island only'});
@@ -8540,8 +8541,12 @@ function createRealWeapon(type='axe'){
  function makeIslandGarrison(islandIndex){
   const island=land[islandIndex],phase=islandIndex*2.399,guardAngle=phase+.8;
   const gx=island.x+Math.cos(guardAngle)*island.r*.18,gz=island.z+Math.sin(guardAngle)*island.r*.18;
-  const gy=terrainSurfaceAt(gx,gz),flagX=island.x-Math.cos(guardAngle)*2.8,flagZ=island.z-Math.sin(guardAngle)*2.8,flagY=terrainSurfaceAt(flagX,flagZ);
-  const outpostRoot=newGroup('IslandGarrisonOutpost_'+islandIndex,null);outpostRoot.position=v(island.x,gy,island.z);
+  // Anchor every garrison part to the rendered heightfield at its own world position.
+  // The old root reused the guard's off-centre height while sitting at island centre,
+  // which lifted or buried the supply platform on uneven ground.
+  const outpostGroundY=renderedTerrainSurfaceAt(island.x,island.z);
+  const gy=renderedTerrainSurfaceAt(gx,gz),flagX=island.x-Math.cos(guardAngle)*2.8,flagZ=island.z-Math.sin(guardAngle)*2.8,flagY=renderedTerrainSurfaceAt(flagX,flagZ);
+  const outpostRoot=newGroup('IslandGarrisonOutpost_'+islandIndex,null);outpostRoot.position=v(island.x,outpostGroundY,island.z);
   const stoneFoot=box('IslandGarrisonStoneFoot_'+islandIndex,outpostRoot,[0,.10,0],[1.9,.20,1.35],M.stoneDark);
   const supplyCrate=box('IslandGarrisonSupplyCrate_'+islandIndex,outpostRoot,[-.92,.48,.18],[.62,.64,.58],M.woodDark);
   const supplyLid=box('IslandGarrisonSupplyLid_'+islandIndex,outpostRoot,[-.92,.82,.18],[.68,.08,.62],M.woodLight);
@@ -8552,7 +8557,7 @@ function createRealWeapon(type='axe'){
   const flagEmblem=[box('IslandGarrisonRuneA_'+islandIndex,flagGroup,[0,0,.038],[.72,.07,.025],M.gold,[0,0,.62]),box('IslandGarrisonRuneB_'+islandIndex,flagGroup,[0,0,.040],[.72,.07,.025],M.gold,[0,0,-.62])];
   cyl('IslandGarrisonCrossbar_'+islandIndex,flagGroup,[.08,.43,0],1.48,.045,.045,M.woodLight,[0,0,Math.PI/2]);
   for(let stake=0;stake<3;stake++){
-   const a=phase+stake*Math.PI*2/3,px=island.x+Math.cos(a)*island.r*.12,pz=island.z+Math.sin(a)*island.r*.12,py=terrainSurfaceAt(px,pz);
+   const a=phase+stake*Math.PI*2/3,px=island.x+Math.cos(a)*island.r*.12,pz=island.z+Math.sin(a)*island.r*.12,py=renderedTerrainSurfaceAt(px,pz);
    cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,null,[px,py+.42,pz],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);
   }
   const parts=makeViking('VillageGuardIsland_'+islandIndex,true,(islandIndex+1)%4);
