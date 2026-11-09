@@ -372,6 +372,12 @@ async function main() {
           api.setWaterState({ time: 37, tide: 'natural' });
           api.render();
           const sheetOpacity = api.sheetOpacityDepth();
+          if (variant.id === 'baseline') {
+            assert.ok(sheetOpacity?.submergedVertices > 0,
+              'The film opacity diagnostic must include vertices submerged by more than 3 cm: ' + JSON.stringify(sheetOpacity));
+            assert.equal(sheetOpacity?.zeroAlphaVertices, sheetOpacity?.submergedVertices,
+              'ShoreBreakerWash must be fully transparent when water covers the sand by more than 3 cm: ' + JSON.stringify(sheetOpacity));
+          }
           const diagnostics = api.diagnostics();
           const canvasPng = api.captureCanvas();
           const restoredVariantState = variant.kind ? api.setDiagnosticVariant(variant.kind, false) : null;

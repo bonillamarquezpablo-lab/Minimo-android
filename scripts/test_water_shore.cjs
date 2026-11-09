@@ -75,7 +75,8 @@ assert.match(html,/washData\.uvs=washUvs/,"The advancing water film must have wo
 assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/washMesh\.updateVerticesData\(B\.VertexBuffer\.UVKind,washUvs,false,false\)/,"Film UVs are static in the water-sheet coordinate frame and need no redundant upload.");
 assert.match(html,/washMesh,washPositions,washUvs,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows,washDiagnosticDepths\}\);/,"The moving film UV buffer and its cached static fields must be retained in the active coast state.");
 assert.match(html,/washMesh,washPositions,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows,washDiagnosticDepths\}=foam/,"The moving film update loop must unpack its optional diagnostic depth array.");
-assert.match(html,/const waterContact=smooth01\(\(water-terrainY\+\.03\)\/\.13\)/,"The water film must be suppressed where the wave does not physically cover the sand.");
+assert.match(html,/const waterContact=1-smooth01\(\(water-terrainY-\.02\)\/\.01\)/,"The near-ground water film must fade to zero when the sea covers the sand by 3 cm.");
+assert.match(html,/const trailingFoam=residual\*washTrailingProfile\[vertex\]\.045\*waterContact/,"The near-ground film residue must fade with the same submerged-depth contact.");
 assert.match(html,/mesh\.receiveShadows=false;mesh\.castShadows=false;mesh\.hasVertexAlpha=true/,"The auxiliary wet-sand layer must not introduce hard shadow bands.");
 assert.match(html,/washMaterial\.bumpTexture=M\.water\.bumpTexture\|\|albedoNormalWater/,"The moving sheet must use animated ocean normals.");
 assert.match(html,/washMaterial\.diffuseFresnelParameters/,"The water film must have a grazing-angle Fresnel response.");
@@ -113,6 +114,9 @@ assert.ok(html.indexOf('updateOceanDepthGradient();',html.indexOf('function smoo
 assert.ok(html.includes("applyTexture(M.water,texWater,17.5);"),"Water albedo must show readable smaller-scale surface detail.");
 assert.ok(html.includes("oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.78;"),"Quality water normals must retain fine ripples with controlled highlight density.");
 assert.ok(html.includes(".020*Math.sin(67*warpU+41*warpW)"),"Water normals must retain high-frequency cross-directional micro ripples.");
+assert.match(html,/new B\.DynamicTexture\('LayeredOceanWaveNormal',\{width:size,height:size\},scene,true\)/,"Ocean normal mipmaps must be generated to prevent tiled high-frequency aliasing.");
+assert.match(html,/rotatedU=2\*warpU\+warpW,rotatedW=-warpU\+2\*warpW/,"The ocean normal field must include a tileable second direction that breaks the repeating grid.");
+assert.match(html,/return primary\*\.82\+secondary\*\.18/,"The two directional normal layers must be blended without reducing the existing fine-wave field.");
 assert.ok(html.includes("M.water.specularColor=reducedWaterProfile?new B.Color3(.18,.25,.28):new B.Color3(.52,.68,.75);M.water.specularPower=reducedWaterProfile?28:64;"),"Quality water must retain visible but restrained specular highlights.");
 assert.ok(html.includes("M.water.diffuseFresnelParameters.power=2.3;"),"Grazing-angle water highlights must become more legible.");
 assert.match(html,/const livingBeachLayers=new Array\(land.length\)/,"Beach shader/state arrays must be indexed by island and lazy.");

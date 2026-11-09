@@ -2,12 +2,20 @@
 const assert = require("node:assert/strict");
 const coast = require("./nordic/coastal-interaction.js");
 
-// The submerged profile joins the analytical shoreline without a height jump.
+// The submerged profile joins the analytical shoreline continuously, including positive coastal terrain heights.
 assert.equal(coast.seabedHeight(60 * 1.085, 60, -2.9), -2.9);
 assert.equal(coast.seabedHeight(60, 60, 0.24), 0.24);
+const shoreHeight = 0.42;
+const exactShore = coast.seabedHeight(60 * 1.085, 60, shoreHeight);
+const justOffshore = coast.seabedHeight(60 * 1.085001, 60, shoreHeight);
+assert.ok(Math.abs(exactShore - shoreHeight) < 1e-12);
+assert.ok(Math.abs(justOffshore - exactShore) < 1e-6,
+  'Submerged seabed must not jump from the shore height to a fixed -2.9m step.');
 assert.ok(coast.seabedHeight(60 * 1.20, 60, -2.9) < -2.9);
 assert.ok(coast.seabedHeight(60 * 1.34, 60, -2.9) < coast.seabedHeight(60 * 1.20, 60, -2.9));
+assert.ok(coast.seabedHeight(60 * 1.34, 60, shoreHeight) < coast.seabedHeight(60 * 1.20, 60, shoreHeight));
 assert.ok(Math.abs(coast.seabedHeight(60 * 1.46, 60, -2.9) - (-6.2)) < 1e-9);
+assert.ok(Math.abs(coast.seabedHeight(60 * 1.46, 60, shoreHeight) - (-6.2)) < 1e-9);
 
 // Opacity must ramp continuously from the exact waterline: no 52% alpha step.
 assert.equal(coast.waterOpacity(0), 0);

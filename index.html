@@ -2648,8 +2648,14 @@ async function removeStrayDebugGeometry(targetScene){
  M.water.bumpTexture=albedoNormalWater;M.water.bumpTexture.level=.72;albedoNormalWater.uScale=10.5;albedoNormalWater.vScale=10.5;
  // Normal map de oleaje tileable: tres escalas de crestas direccionales, sin ruido pintado en la textura.
  function makeOceanWaveNormal(){
-  const size=384,tau=Math.PI*2,tex=new B.DynamicTexture('LayeredOceanWaveNormal',{width:size,height:size},scene,false),ctx=tex.getContext(),img=ctx.createImageData(size,size);
-  const height=(x,y)=>{const u=tau*x/size,w=tau*y/size,warpU=u+.055*Math.sin(3*u-2*w)+.026*Math.sin(8*u+5*w),warpW=w+.048*Math.sin(2*u+3*w)-.018*Math.sin(7*u-6*w);return .30*Math.sin(2*warpU+warpW)+.22*Math.sin(3*warpU-4*warpW)+.16*Math.sin(7*warpU+5*warpW)+.105*Math.sin(11*warpU-2*warpW)+.075*Math.sin(15*warpU+9*warpW)+.062*Math.sin(23*warpU-17*warpW)+.045*Math.sin(31*warpU+13*warpW)+.031*Math.sin(47*warpU-29*warpW)+.020*Math.sin(67*warpU+41*warpW);};
+  const size=384,tau=Math.PI*2,tex=new B.DynamicTexture('LayeredOceanWaveNormal',{width:size,height:size},scene,true),ctx=tex.getContext(),img=ctx.createImageData(size,size);
+  const height=(x,y)=>{
+   const u=tau*x/size,w=tau*y/size,warpU=u+.055*Math.sin(3*u-2*w)+.026*Math.sin(8*u+5*w),warpW=w+.048*Math.sin(2*u+3*w)-.018*Math.sin(7*u-6*w);
+   const primary=.30*Math.sin(2*warpU+warpW)+.22*Math.sin(3*warpU-4*warpW)+.16*Math.sin(7*warpU+5*warpW)+.105*Math.sin(11*warpU-2*warpW)+.075*Math.sin(15*warpU+9*warpW)+.062*Math.sin(23*warpU-17*warpW)+.045*Math.sin(31*warpU+13*warpW)+.031*Math.sin(47*warpU-29*warpW)+.020*Math.sin(67*warpU+41*warpW);
+   const rotatedU=2*warpU+warpW,rotatedW=-warpU+2*warpW;
+   const secondary=.16*Math.sin(rotatedU+rotatedW)+.11*Math.sin(2*rotatedU-rotatedW)+.075*Math.sin(3*rotatedU+2*rotatedW)+.045*Math.sin(5*rotatedU-3*rotatedW);
+   return primary*.82+secondary*.18;
+  };
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
    const dx=(height((x+1)%size,y)-height((x+size-1)%size,y))*4.8;
    const dy=(height(x,(y+1)%size)-height(x,(y+size-1)%size))*4.8;
@@ -3136,10 +3142,10 @@ async function removeStrayDebugGeometry(targetScene){
      const profileOffset=radius-breakerRadius;
      const terrainY=sampleRadialProfile(waveBodyOffsets,waveBodyTerrainSamples,profileOffset),water=sampleRadialProfile(waveBodyOffsets,waveBodyWaterSamples,profileOffset);
      const leadingCellular=washLeadingCellular[vertex];
-     const waterContact=smooth01((water-terrainY+.03)/.13);
+     const waterContact=1-smooth01((water-terrainY-.02)/.01);
      if(washDiagnosticDepths)washDiagnosticDepths[vertex]=water-terrainY;
      const whitewater=breakStrength*leadingCellular*.38*waterContact;
-     const trailingFoam=residual*washTrailingProfile[vertex]*.045;
+     const trailingFoam=residual*washTrailingProfile[vertex]*.045*waterContact;
      const whiteMix=Math.min(1,whitewater*2.6+trailingFoam*2.0);
      const filmCoverage=washFilmCoverage[vertex];
      const rippleA=Math.sin((x*.34+z*.19)*1.7+oceanTime*2.3);

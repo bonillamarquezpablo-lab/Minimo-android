@@ -16,9 +16,10 @@
   function seabedHeight(distance, islandRadius, shoreHeight) {
     const radius = Math.max(0.001, Number(islandRadius) || 0.001);
     const ratio = Math.max(0, Number(distance) || 0) / radius;
-    if (ratio <= 1.085) return Number.isFinite(Number(shoreHeight)) ? Number(shoreHeight) : 0;
+    const shore = Number.isFinite(Number(shoreHeight)) ? Number(shoreHeight) : 0;
+    if (ratio <= 1.085) return shore;
     const descent = smooth01((ratio - 1.085) / 0.375);
-    return -2.9 - 3.3 * descent;
+    return shore + (-6.2 - shore) * descent;
   }
 
   // Shallow water retains enough opacity to read as water, but still reveals
