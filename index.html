@@ -3322,7 +3322,10 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
   const erosion=(terrainValueNoise(x*.19-4.1,z*.19+9.7)-.5)*.34;
   const micro=.075*Math.sin(x*1.55+z*.82)*Math.cos(z*1.28-x*.61);
   const detail=(broad+fine+rolling+erosion+micro)*Math.pow(edge,1.55)*flat;
-  const core=.92+(relief+ridge)*edge*flat+detail;
+  // Settlement pads rise smoothly above sea level so distant village foundations remain visible above the ocean horizon.
+  // The same analytical profile drives the rendered heightfield, collision and every building anchor.
+  const settlementRise=1.55*(1-flat);
+  const core=.92+settlementRise+(relief+ridge)*edge*flat+detail;
   // Playa amplia: terreno vegetal -> arena seca -> arena mojada -> fondo submarino gradual.
   if(coastDistance<=is.r*.76)return core;
   if(coastDistance<=is.r*.97){const t=smooth01((coastDistance/is.r-.76)/.21);return core*(1-t)+.26*t;}
