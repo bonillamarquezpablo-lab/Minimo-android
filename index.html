@@ -8387,7 +8387,7 @@ function createRealWeapon(type='axe'){
  }
  function buildHouse(cx,cz,scale=1){
   // Cabaña nórdica humilde: huella menor, troncos desiguales, tejado vencido y reparaciones visibles.
-  const g=newGroup('WeatheredNorseHut',null);g.position=v(cx,renderedTerrainSurfaceAt(cx,cz)+.035,cz);g.scaling=v(scale,scale,scale);
+  const g=newGroup('WeatheredNorseHut',null);g.scaling=v(scale,scale,scale);g.position=v(cx,renderedTerrainSurfaceAt(cx,cz)-.02*scale,cz);
   // Paredes de tablones separados: no usar una caja maciza que atraviese puerta y ventanas.
   for(const end of [-1,1]){
    for(let plank=-3;plank<=3;plank++){
