@@ -3,6 +3,10 @@ const fs=require('node:fs');
 const assert=require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8');
 assert.match(html,/updateOceanDepthGradient\(\)/);
+assert.match(html,/const physicalDepth=window\.NorseCoastalInteraction\.waterDepth\(waterlineY,seabedY\)/,
+  "Ocean vertex alpha must be derived from the vertical gap between sea level and the rendered seabed, not a radial island-distance mask.");
+assert.doesNotMatch(html,/Math\.max\(depth,bathymetry\)/,
+  "Do not rebuild the old radial alpha oval from a distance proxy.");
 assert.match(html,/oceanDepthSettings\.transitionMeters/);
 assert.match(html,/uniform float beachTime/);
 assert.match(html,/shoreFoamStrength/);
