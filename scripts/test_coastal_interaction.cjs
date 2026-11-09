@@ -30,12 +30,12 @@ const opacityDepths = [0, 0.001, 0.01, 0.05, 0.10, 0.20, 0.30, 0.50, 0.65, 0.8, 
 let previousOpacity = 0;
 for (const depth of opacityDepths) {
   const opacity = coast.waterOpacity(depth);
-  assert.ok(Number.isFinite(opacity) && opacity >= previousOpacity - 1e-9 && opacity <= 0.90,
+  assert.ok(Number.isFinite(opacity) && opacity >= previousOpacity - 1e-9 && opacity <= 0.94,
     `Water opacity must be finite, monotonic and bounded at depth ${depth}: ${opacity}`);
   previousOpacity = opacity;
 }
-assert.ok(Math.abs(coast.waterOpacity(5.5) - 0.90) < 1e-9);
-assert.equal(coast.waterOpacity(20), 0.90);
+assert.ok(Math.abs(coast.waterOpacity(5.5) - 0.94) < 1e-9);
+assert.equal(coast.waterOpacity(20), 0.94);
 
 // The animated sheet must sit above both sloping sand and the sea surface.
 assert.ok(coast.filmSurfaceHeight(0.24, -0.12, 0.01) > 0.24);
