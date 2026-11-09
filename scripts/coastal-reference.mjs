@@ -347,6 +347,8 @@ async function main() {
       { id: 'no-living-beach-layer', kind: 'living-beach-layer' },
       { id: 'no-submerged-sand', kind: 'submerged-sand' },
       { id: 'no-continuous-shore-foam', kind: 'continuous-shore-foam' },
+      { id: 'previous-ocean-normal', kind: 'previous-ocean-normal' },
+      { id: 'no-ocean-depth-alpha', kind: 'ocean-depth-alpha' },
       { id: 'no-ocean-normal-map', kind: 'ocean-normal-map' },
       { id: 'no-ocean-specular', kind: 'ocean-specular' },
       { id: 'no-short-vertex-waves', kind: 'short-vertex-waves' }
@@ -389,12 +391,18 @@ async function main() {
           'no-volumetric-shore-breaker': ['volumetricShoreBreakerVisible', 'VolumetricShoreBreaker'],
           'no-living-beach-layer': ['livingBeachLayerVisible', 'LivingCoastalSand'],
           'no-submerged-sand': ['submergedSandVisible', 'NordicSubmergedSand'],
-          'no-continuous-shore-foam': ['continuousShoreFoamVisible', 'ContinuousOrganicShoreFoam']
+          'no-continuous-shore-foam': ['continuousShoreFoamVisible', 'ContinuousOrganicShoreFoam'],
+          'no-ocean-depth-alpha': ['oceanVertexAlphaEnabled', false]
         };
         if (isolationChecks[variant.id]) {
           const [field, meshName] = isolationChecks[variant.id];
-          assert.equal(diagnostic.variantState?.[field], 0, `${meshName} must be hidden in its isolation capture`);
-          assert.ok(diagnostic.restoredVariantState?.[field] >= 1, `${meshName} visibility must be restored after its isolation capture`);
+          if (variant.id === 'no-ocean-depth-alpha') {
+            assert.equal(diagnostic.variantState?.[field], false, 'Ocean vertex alpha must be disabled in its isolation capture');
+            assert.equal(diagnostic.restoredVariantState?.[field], true, 'Ocean vertex alpha must be restored after its isolation capture');
+          } else {
+            assert.equal(diagnostic.variantState?.[field], 0, `${meshName} must be hidden in its isolation capture`);
+            assert.ok(diagnostic.restoredVariantState?.[field] >= 1, `${meshName} visibility must be restored after its isolation capture`);
+          }
         }
         const prefix = 'data:image/png;base64,';
         assert.ok(typeof diagnostic.canvasPng === 'string' && diagnostic.canvasPng.startsWith(prefix),
@@ -414,9 +422,9 @@ async function main() {
         if (variant.id === 'baseline') manifest.sheetOpacityDiagnostics[cameraId] = diagnostic.sheetOpacity;
       }
     }
-    assert.equal(manifest.diagnosticCaptures.length, 18,
+    assert.equal(manifest.diagnosticCaptures.length, 22,
       'The two cameras must each contain a baseline and all eight isolated variants');
-    console.log('[coastal-reference] 18 same-state A/B captures complete; sheet opacity/depth metrics recorded');
+    console.log('[coastal-reference] 22 same-state A/B captures complete; sheet opacity/depth metrics recorded');
 
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');
