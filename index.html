@@ -2750,7 +2750,7 @@ async function removeStrayDebugGeometry(targetScene){
  const waterSubdivisions=isPerformanceMode?(isGalaxyA12NachoPerformance?32:(isConstrainedMobile?40:(isTouchDevice?160:112))):(isTouchDevice?(isConstrainedMobile?192:256):320);
  const ground=B.MeshBuilder.CreateGround('ocean',{width:1050,height:1050,subdivisions:waterSubdivisions,updatable:true},scene);ground.position.y=0;ground.material=M.water;ground.isPickable=false;ground.receiveShadows=false;
  const waterBase=ground.getVerticesData(B.VertexBuffer.PositionKind).slice(),waterPositions=waterBase.slice(),waterIndices=ground.getIndices(),waterNormals=new Float32Array(waterBase.length);
- const oceanDepthSettings={transitionMeters:10,shoreOpacity:1,foamStrength:1,sheetStrength:.72,waveCrestStrength:1,exaggerated:false};
+ const oceanDepthSettings={transitionMeters:18,shoreOpacity:.94,foamStrength:1,sheetStrength:.72,waveCrestStrength:1,exaggerated:false};
  const oceanDepthVertexColors=new Float32Array((waterBase.length/3)*4),oceanDepthBaseColors=new Float32Array((waterBase.length/3)*4);
  function updateOceanDepthGradient(){
   const transition=Math.max(2,Number(oceanDepthSettings.transitionMeters)||18);
