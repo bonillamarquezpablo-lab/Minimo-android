@@ -27,6 +27,15 @@
   // patch instead of reading as water. Build opacity in three continuous depth bands:
   // a narrow shoreline entry, a clear intertidal body, and deeper water absorption.
   // The sand remains readable under the film; no hard alpha step is introduced.
+  // Physical water depth is the vertical gap between mean sea level and the seabed.
+  // Radial distance from an island centre is not a depth measurement and produces
+  // broad oval alpha masks when interpolated across the ocean vertex grid.
+  function waterDepth(waterlineY, seabedY) {
+    const waterline = Number.isFinite(Number(waterlineY)) ? Number(waterlineY) : 0;
+    const seabed = Number.isFinite(Number(seabedY)) ? Number(seabedY) : waterline;
+    return Math.max(0, Math.min(18, waterline - seabed));
+  }
+
   function waterOpacity(depthMeters) {
     const depth = Math.max(0, Number(depthMeters) || 0);
     if (depth <= 0) return 0;
@@ -57,5 +66,5 @@
     return clamp01(landward * seaward * breakup);
   }
 
-  return Object.freeze({ seabedHeight, waterOpacity, filmSurfaceHeight, filmCoverage });
+  return Object.freeze({ seabedHeight, waterDepth, waterOpacity, filmSurfaceHeight, filmCoverage });
 });
