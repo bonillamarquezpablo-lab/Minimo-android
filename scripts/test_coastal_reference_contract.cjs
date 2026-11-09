@@ -114,7 +114,7 @@ assert.match(captureRunner, /diagnosticCaptures\.length, 26/,
   'Both cameras must capture the baseline and ten controlled A/B variants.');
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
 assert.ok(contactSheet.includes('36 CAPTURES + 26 DIAGNOSTIC A/B'),
-  'The contact sheet must label all 36 baseline frames and 18 diagnostic A/B captures.');
+  'The contact sheet must label all 36 baseline frames and 26 diagnostic A/B captures.');
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
 assert.match(contactSheet, /no-volumetric-shore-breaker/,
