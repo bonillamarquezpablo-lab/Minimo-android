@@ -513,24 +513,66 @@ async function main() {
     manifest.geometryAudit = geometryAudit;
     fs.writeFileSync(path.join(OUT, 'geometry-audit.json'), JSON.stringify(geometryAudit, null, 2) + '\\n');
     assert.equal(geometryAudit?.islandCount, 13, 'La auditoría debe inspeccionar las trece islas.');
+
+    // First isolate the polar seam and null coast-solver hypothesis on all four meshes.
+    // IslandHeightfield is Cartesian, so it is explicitly reported as non-polar.
+    const seamAndSolverAudit = geometryAudit.islands.map(island => ({
+      island: island.island,
+      meshes: island.meshes.map(mesh => ({
+        mesh: mesh.name,
+        seam: mesh.seam,
+        heightfieldSeamNotApplicable: mesh.name === 'IslandHeightfield' && !mesh.seam.applicable
+      })),
+      shorelineSolver: island.shorelineSolver
+    }));
+    manifest.seamAndSolverAudit = seamAndSolverAudit;
     for (const island of geometryAudit.islands) {
       assert.equal(island.meshes.length, 4, 'Cada isla debe incluir las cuatro mallas: ' + island.island);
       for (const mesh of island.meshes) assert.equal(mesh.available, true, 'Falta ' + mesh.name + ' en ' + island.island);
-      for (const mesh of island.meshes) {
-        assert.ok(mesh.heightJump.maxMeters <= mesh.heightJump.thresholdMeters + 1e-6,
-          'Salto de altura fuera de umbral: ' + island.island + '/' + mesh.name + ' ' + JSON.stringify(mesh.heightJump));
-        if (mesh.seam.applicable) assert.ok(mesh.seam.maxPositionGapMeters <= .002,
+      for (const mesh of island.meshes) if (mesh.seam.applicable) {
+        assert.ok(mesh.seam.maxPositionGapMeters <= .002,
           'Costura polar abierta: ' + island.island + '/' + mesh.name + ' ' + JSON.stringify(mesh.seam));
+      }
+      assert.ok(island.meshes.find(mesh => mesh.name === 'IslandHeightfield')?.seam?.applicable === false,
+        'La malla cartesiana debe declarar explícitamente que no tiene costura polar: ' + island.island);
+    }
+
+    // Then list every measured geometric outlier with island, mesh and world coordinates.
+    const geometryOutliers = [];
+    for (const island of geometryAudit.islands) {
+      for (const mesh of island.meshes) {
+        for (const sample of mesh.heightJump.samples || []) geometryOutliers.push({
+          type: 'neighbor-height-jump', island: island.island, mesh: mesh.name, ...sample
+        });
+        for (const sample of mesh.slope.samples || []) geometryOutliers.push({
+          type: 'slope-over-45-deg', island: island.island, mesh: mesh.name, ...sample
+        });
+        for (const sample of mesh.triangleEdgeLength.samples || []) geometryOutliers.push({
+          type: 'long-triangle-edge', island: island.island, mesh: mesh.name, ...sample
+        });
       }
       for (const profile of island.analyticProfileChecks) assert.equal(profile.violationCount, 0,
         'Arena por encima del perfil analítico: ' + island.island + '/' + profile.name + ' ' + JSON.stringify(profile));
     }
+    manifest.geometryOutliers = geometryOutliers;
+    fs.writeFileSync(path.join(OUT, 'geometry-outliers.json'), JSON.stringify({
+      schema: 1, islandCount: 13, outlierCount: geometryOutliers.length, outliers: geometryOutliers
+    }, null, 2) + '\\n');
+    for (const island of geometryAudit.islands) for (const mesh of island.meshes) {
+      assert.ok(mesh.heightJump.maxMeters <= mesh.heightJump.thresholdMeters + 1e-6,
+        'Salto de altura fuera de umbral: ' + island.island + '/' + mesh.name + ' ' + JSON.stringify(mesh.heightJump));
+    }
     manifest.timingsMs.geometryAudit = Number((performance.now() - stepStartedAt).toFixed(1));
     const settlementGrounding = await page.evaluate(() => window.__ELSN_TEST__.settlementGrounding());
-    manifest.settlementGrounding = {houseCount:settlementGrounding.length,maximumErrorMeters:settlementGrounding.reduce((max,item)=>Math.max(max,item.groundingErrorMeters),0),houses:settlementGrounding};
-    assert.ok(settlementGrounding.length >= 3, 'No se encontraron cabañas para comprobar el apoyo.');
+    manifest.settlementGrounding = {
+      houseCount: settlementGrounding.length,
+      maximumErrorMeters: settlementGrounding.reduce((max,item)=>Math.max(max,item.groundingErrorMeters),0),
+      maximumAnalyticVsRenderedMeters: settlementGrounding.reduce((max,item)=>Math.max(max,Math.abs(item.analyticVsRenderedMeters)),0),
+      houses: settlementGrounding
+    };
+    assert.equal(settlementGrounding.length, 12, 'Deben comprobarse individualmente las doce cabañas de los cuatro poblados.');
     for (const house of settlementGrounding) assert.ok(Number.isFinite(house.groundingErrorMeters) && house.groundingErrorMeters < .02,
-      'Cabaña despegada de la altura de la malla dibujada: ' + JSON.stringify(house));
+      'Cabaña despegada más de 2 cm de la altura interpolada de GroundMesh: ' + JSON.stringify(house));
     assert.ok(foamCorridorResult && foamCorridorResult.visibleFoamVertices > 0,
       'The baseline must measure visible foam vertices');
     assert.equal(foamCorridorResult.outsideFoamVertices, 0,
