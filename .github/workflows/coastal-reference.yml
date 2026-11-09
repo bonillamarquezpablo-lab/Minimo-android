@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: coastal-reference-${{ github.ref }}
+  group: coastal-geometry-reference-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:

@@ -154,7 +154,7 @@ assert.match(captureRunner, /auditIslandGeometry/);
 assert.match(captureRunner, /geometry-audit\.json/);
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
 assert.ok(contactSheet.includes('36 CAPTURES + 54 DIAGNOSTIC A/B'),
-  'The contact sheet must label all 36 baseline frames and 51 diagnostic A/B captures.');
+  'The contact sheet must label all 36 baseline frames and 54 diagnostic A/B captures.');
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
 assert.match(contactSheet, /no-volumetric-shore-breaker/,
