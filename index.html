@@ -1512,6 +1512,58 @@ body.game-running #loading{display:none!important;visibility:hidden!important;op
 <script src="./scripts/nordic/beach-state.js"></script>
 <script src="./scripts/nordic/coastal-interaction.js"></script>
 <script>
+// Recovery guard: an unavailable cached/network module must never abort world construction.
+(function(root){
+  const required=['seabedHeight','waterDepth','waterOpacity','filmSurfaceHeight','filmCoverage'];
+  const loaded=root.NorseCoastalInteraction;
+  if(loaded&&required.every(name=>typeof loaded[name]==='function')){
+    root.__ELSN_COASTAL_RUNTIME_MODE__='module';
+    return;
+  }
+  const clamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
+  const smooth01=value=>{const t=clamp01(value);return t*t*(3-2*t);};
+  const fallback=Object.freeze({
+    seabedHeight(distance,islandRadius,shoreHeight){
+      const radius=Math.max(.001,Number(islandRadius)||.001);
+      const ratio=Math.max(0,Number(distance)||0)/radius;
+      const shore=Number.isFinite(Number(shoreHeight))?Number(shoreHeight):0;
+      if(ratio<=1.085)return shore;
+      const descent=smooth01((ratio-1.085)/.375);
+      return shore+(-6.2-shore)*descent;
+    },
+    waterDepth(waterlineY,seabedY){
+      const waterline=Number.isFinite(Number(waterlineY))?Number(waterlineY):0;
+      const seabed=Number.isFinite(Number(seabedY))?Number(seabedY):waterline;
+      return Math.max(0,Math.min(18,waterline-seabed));
+    },
+    waterOpacity(depthMeters){
+      const depth=Math.max(0,Number(depthMeters)||0);
+      if(depth<=0)return 0;
+      const shorelineEntry=.24*smooth01(depth/.30);
+      const shallowBody=.28*smooth01(depth/1.65);
+      const depthBody=.75*smooth01(depth/5.5);
+      return Math.min(.99,shorelineEntry+shallowBody+depthBody);
+    },
+    filmSurfaceHeight(groundY,waterY,waveOffset){
+      const ground=Number.isFinite(Number(groundY))?Number(groundY):0;
+      const water=Number.isFinite(Number(waterY))?Number(waterY):0;
+      const wave=Math.max(-.005,Math.min(.018,Number(waveOffset)||0));
+      return Math.max(ground,water)+.012+wave;
+    },
+    filmCoverage(fraction,pattern){
+      const f=Number(fraction)||0;
+      const landward=smooth01((.99-f)/.18);
+      const seaward=smooth01((f+.14)/.18);
+      const breakup=.68+.32*clamp01(pattern);
+      return clamp01(landward*seaward*breakup);
+    }
+  });
+  root.NorseCoastalInteraction=fallback;
+  root.__ELSN_COASTAL_RUNTIME_MODE__='inline-fallback';
+  console.warn('Coastal module unavailable; inline recovery API enabled. Check same-origin cache/network delivery.');
+})(window);
+</script>
+<script>
 (function(){
 "use strict";
 window.addEventListener('error',e=>{console.error('EL SIN NOMBRE runtime error',e.error||e.message);});
