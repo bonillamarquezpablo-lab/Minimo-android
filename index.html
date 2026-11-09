@@ -3133,7 +3133,7 @@ async function removeStrayDebugGeometry(targetScene){
      const terrainY=sampleRadialProfile(waveBodyOffsets,waveBodyTerrainSamples,profileOffset),water=sampleRadialProfile(waveBodyOffsets,waveBodyWaterSamples,profileOffset);
      const leadingCellular=washLeadingCellular[vertex];
      const waterContact=smooth01((water-terrainY+.03)/.13);
-     if(foam.washDiagnosticDepths)foam.washDiagnosticDepths[vertex]=water-terrainY;
+     if(washDiagnosticDepths)washDiagnosticDepths[vertex]=water-terrainY;
      const whitewater=breakStrength*leadingCellular*.38*waterContact;
      const trailingFoam=residual*washTrailingProfile[vertex]*.045;
      const whiteMix=Math.min(1,whitewater*2.6+trailingFoam*2.0);
