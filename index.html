@@ -12369,7 +12369,7 @@ function update(dt){
     const footingCorners=[[-2.01,-2.64],[2.01,-2.64],[-2.01,2.64],[2.01,2.64]].map(([dx,dz])=>{const x=p.x+dx*scale,z=p.z+dz*scale,terrainY=renderedTerrainSurfaceAt(x,z);return {x:Number(x.toFixed(2)),z:Number(z.toFixed(2)),terrainY:Number(terrainY.toFixed(3)),gapMeters:Number((footingBottomY-terrainY).toFixed(3))};});
     const maximumFootingGapMeters=Math.max(...footingCorners.map(corner=>Math.abs(corner.gapMeters)));
     return {village:village.name||String(village.index),buildingIndex,x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2)),rootY:Number(p.y.toFixed(3)),scale,sampledTerrainY:Number(sampledTerrainY.toFixed(3)),analyticTerrainY:Number(analyticTerrainY.toFixed(3)),groundingErrorMeters:Number(Math.abs(footingBottomY-sampledTerrainY).toFixed(4)),analyticVsRenderedMeters:Number((analyticTerrainY-sampledTerrainY).toFixed(4)),groundClearanceMeters:Number((footingBottomY-sampledTerrainY).toFixed(3)),maximumFootingGapMeters:Number(maximumFootingGapMeters.toFixed(3)),footingCorners,nearestIsland:nearestIsland?.name||null,nearestIslandIndex,distanceToIslandMeters:Number(nearestDistance.toFixed(2)),islandRadiusRatio:nearestIsland?Number((nearestDistance/nearestIsland.r).toFixed(3)):null};
-   }))
+   })),
    sheetOpacityDepth:()=>getSheetOpacityDepthDiagnostics(),
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},
    render:()=>scene.render(),
