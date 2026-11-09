@@ -134,7 +134,10 @@ for(const label of ['Arena seca · grano','Arena húmeda · intensidad','Orilla 
 assert.ok(html.includes('./scripts/nordic/coastal-interaction.js'),"The coastal physics helper must load before the game.");
 assert.ok(html.indexOf('updateOceanDepthGradient();',html.indexOf('function smooth01'))>html.indexOf('const terrainHashCache='),'Bathymetry must initialize after terrain noise dependencies.');
 assert.ok(html.includes("applyTexture(M.water,texWater,17.5);"),"Water albedo must show readable smaller-scale surface detail.");
-assert.ok(html.includes("oceanWaveNormal.uScale=7.35;oceanWaveNormal.vScale=10.15;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.34;"),"Quality water normals must retain fine ripples with non-commensurate world scales.");
+assert.ok(html.includes("oceanWaveNormal.uScale=7.35;oceanWaveNormal.vScale=10.15;oceanWaveNormal.wAng=.4014257279586958;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.34;"),"Quality water normals must retain fine ripples with non-commensurate world scales and rotation.");
+assert.match(html,/const size=512,tau=Math\.PI\*2,tex=new B\.DynamicTexture\('LayeredOceanWaveNormal'/,"Quality ocean normals must use a power-of-two mipmapped texture.");
+assert.match(html,/const bathymetry=nearestIsland\?Math\.max\(0,-terrainHeightOnIsland\(nearestIsland,x,z\)\):18/,"Nearshore water opacity must follow the irregular terrain/seabed profile.");
+assert.match(html,/const farBlend=nearestIsland\?smooth01\(\(nearestRadialRatio-1\.46\)\/\.50\):1/,"Only the far-offshore continuation may use a broad radial depth blend.");
 assert.ok(html.includes(".020*Math.sin(67*warpU+41*warpW)"),"Water normals must retain high-frequency cross-directional micro ripples.");
 assert.match(html,/new B\.DynamicTexture\('LayeredOceanWaveNormal',\{width:size,height:size\},scene,true\)/,"Ocean normal mipmaps must be generated to prevent tiled high-frequency aliasing.");
 assert.match(html,/rotatedU=2\*warpU\+warpW,rotatedW=-warpU\+2\*warpW/,"The ocean normal field must include a tileable second direction that breaks the repeating grid.");
