@@ -343,6 +343,7 @@ async function main() {
     const diagnosticVariants = [
       { id: 'baseline', kind: null },
       { id: 'no-shorebreaker-wash', kind: 'shore-breaker-wash' },
+      { id: 'no-volumetric-shore-breaker', kind: 'volumetric-shore-breaker' },
       { id: 'no-ocean-normal-map', kind: 'ocean-normal-map' },
       { id: 'no-ocean-specular', kind: 'ocean-specular' },
       { id: 'no-short-vertex-waves', kind: 'short-vertex-waves' }
@@ -363,18 +364,24 @@ async function main() {
           });
           // Ensure lazily-created coast meshes exist before snapshotting their original state.
           api.setWaterState({ time: 37, tide: 'natural' });
-          if (variant.kind) api.setDiagnosticVariant(variant.kind, true);
+          const variantState = variant.kind ? api.setDiagnosticVariant(variant.kind, true) : null;
           // Recompute vertex waves after the source toggle.
           api.setWaterState({ time: 37, tide: 'natural' });
           api.render();
           const sheetOpacity = api.sheetOpacityDepth();
           const diagnostics = api.diagnostics();
           const canvasPng = api.captureCanvas();
-          if (variant.kind) api.setDiagnosticVariant(variant.kind, false);
+          const restoredVariantState = variant.kind ? api.setDiagnosticVariant(variant.kind, false) : null;
           api.setWaterState({ time: 37, tide: 'natural' });
           api.render();
-          return { sheetOpacity, diagnostics, canvasPng };
+          return { sheetOpacity, diagnostics, canvasPng, variantState, restoredVariantState };
         }, { cameraCase, variant, island: mainIsland, shoreRadius });
+        if (variant.id === 'no-volumetric-shore-breaker') {
+          assert.equal(diagnostic.variantState?.volumetricShoreBreakerVisible, 0,
+            'The translucent VolumetricShoreBreaker sheet must be hidden in its isolation capture');
+          assert.ok(diagnostic.restoredVariantState?.volumetricShoreBreakerVisible >= 1,
+            'VolumetricShoreBreaker visibility must be restored after its isolation capture');
+        }
         const prefix = 'data:image/png;base64,';
         assert.ok(typeof diagnostic.canvasPng === 'string' && diagnostic.canvasPng.startsWith(prefix),
           'Diagnostic A/B capture did not return a PNG: ' + cameraId + '/' + variant.id);
@@ -393,9 +400,9 @@ async function main() {
         if (variant.id === 'baseline') manifest.sheetOpacityDiagnostics[cameraId] = diagnostic.sheetOpacity;
       }
     }
-    assert.equal(manifest.diagnosticCaptures.length, 10,
-      'The two cameras must each contain a baseline and all four isolated variants');
-    console.log('[coastal-reference] 10 same-state A/B captures complete; sheet opacity/depth metrics recorded');
+    assert.equal(manifest.diagnosticCaptures.length, 12,
+      'The two cameras must each contain a baseline and all five isolated variants');
+    console.log('[coastal-reference] 12 same-state A/B captures complete; sheet opacity/depth metrics recorded');
 
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');

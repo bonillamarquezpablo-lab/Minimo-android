@@ -12,6 +12,7 @@ DIAGNOSTIC_CAMERAS = ("shore-1m", "lod-90m")
 DIAGNOSTIC_VARIANTS = (
     ("baseline", "baseline"),
     ("no-shorebreaker-wash", "sin ShoreBreakerWash"),
+    ("no-volumetric-shore-breaker", "sin lámina rompiente"),
     ("no-ocean-normal-map", "sin normales"),
     ("no-ocean-specular", "sin especular"),
     ("no-short-vertex-waves", "sin ondas cortas"),
@@ -48,7 +49,7 @@ def main() -> None:
     if missing:
         raise SystemExit("Cannot build contact sheet; missing screenshots: " + ", ".join(missing))
 
-    columns = 5
+    columns = 6
     width = columns * THUMB_W + (columns - 1) * GAP
     base_rows = len(CAMERAS) * len(TIMES)
     diagnostic_rows = len(DIAGNOSTIC_CAMERAS)
@@ -59,7 +60,7 @@ def main() -> None:
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
 
-    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 10 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
+    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 12 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
     draw.text((8, 25), "Baseline matrix · A/B same camera, t=037 s, natural tide · prior shadow/trail checks retained",
               fill=MUTED, font=font)
 
@@ -101,7 +102,7 @@ def main() -> None:
 
     target = OUT / "contact-sheet.png"
     sheet.save(target, format="PNG", optimize=True)
-    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 10 diagnostic A/B + legacy)")
+    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 12 diagnostic A/B + legacy)")
 
 
 if __name__ == "__main__":
