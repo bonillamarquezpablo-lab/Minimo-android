@@ -148,28 +148,29 @@ async function main() {
     assert.equal(manifest.campaignStart.introOpen, false, 'El selector de campaña conserva la clase open');
     console.log('[coastal-reference] new campaign started; intro overlay closed');
 
-    // Let the intertidal state map receive its first real shoreline pass before freezing
-    // the render loop for deterministic A/B captures. Otherwise all wet-sand samples are
-    // still zero simply because the test stopped the game immediately after starting it.
+    // Populate the actual breaker/wash depth probes before freezing the render loop.
+    // wetBandPeak belongs to the player's footprint humidity map and can stay zero when
+    // the player is inland; it is not a valid readiness signal for the shoreline mesh.
     stepStartedAt = performance.now();
-    let beachWarmup = null;
-    try {
-      await page.waitForFunction(() => {
-        const coast = window.__ELSN_TEST__?.diagnostics?.()?.coast;
-        return Number.isFinite(coast?.wetBandPeak) && coast.wetBandPeak > 0.04;
-      }, undefined, { timeout: 45000, polling: 250 });
-      beachWarmup = await page.evaluate(() => window.__ELSN_TEST__?.diagnostics?.()?.coast || null);
-      console.log('[coastal-reference] live wet-sand state warmed to ' + beachWarmup.wetBandPeak.toFixed(3));
-    } catch {
-      beachWarmup = await page.evaluate(() => window.__ELSN_TEST__?.diagnostics?.()?.coast || null);
-      console.log('[coastal-reference] wet-sand warm-up did not reach threshold; continuing with diagnostic value ' +
-        Number(beachWarmup?.wetBandPeak || 0).toFixed(3));
-    }
+    const beachWarmup = await page.evaluate(() => {
+      const api = window.__ELSN_TEST__;
+      let diagnostics = null;
+      for (let pass = 0; pass < 4; pass++) {
+        api.setWaterState({ time: 37 + pass * 0.25, tide: 'natural' });
+        diagnostics = api.sheetOpacityDepth();
+        if (diagnostics.submergedVertices > 0) break;
+      }
+      return diagnostics;
+    });
     manifest.beachWarmup = {
       durationMs: Number((performance.now() - stepStartedAt).toFixed(1)),
-      wetBandPeak: beachWarmup?.wetBandPeak ?? 0,
-      wetBandDistanceMeters: beachWarmup?.wetBandDistanceMeters ?? null
+      thresholdDepthMeters: beachWarmup.thresholdDepthMeters,
+      submergedVertices: beachWarmup.submergedVertices,
+      depthRangeMeters: beachWarmup.depthRangeMeters
     };
+    assert.ok(beachWarmup.submergedVertices > 0,
+      'La sonda de la lámina no encontró vértices sumergidos más de 3 cm; la prueba no puede aislar alpha.');
+    console.log('[coastal-reference] wash depth probes populated: ' + beachWarmup.submergedVertices + ' submerged vertices');
 
     stepStartedAt = performance.now();
     const boot = await page.evaluate(() => {
