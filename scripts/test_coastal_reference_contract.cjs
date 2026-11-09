@@ -49,7 +49,7 @@ assert.match(html, /disableShortVertexWaves\?0:1/,
   'Short vertex waves must be independently suppressible in the diagnostic render.');
 assert.match(html, /washDiagnosticDepths=coastalDiagnosticsEnabled\?new Float32Array/,
   'Sheet depth probes must only allocate in diagnostic/test mode.');
-assert.match(html, /getSheetOpacityDepthDiagnostics/,
+assert.match(html, /const threshold=\\.03,depths=\\[\\],alphas=\\[\\]/,\n  'The isolated film diagnostic must inspect vertices submerged by more than 3 cm.');\nassert.match(html, /getSheetOpacityDepthDiagnostics/,
   'The A/B manifest must report opacity for vertices submerged by more than 3 cm.');
 assert.match(html, /if\(washDiagnosticDepths\)washDiagnosticDepths\[vertex\]=waterDepth/,
   'Per-vertex film depth must be recorded through the active foam update scope.');
