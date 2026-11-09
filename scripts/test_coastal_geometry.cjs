@@ -13,6 +13,8 @@ assert.match(html,/coastalAuditProfile\(island,index,'NordicSubmergedSand'/);
 assert.match(html,/coastalAuditProfile\(island,index,'LivingCoastalSand'/);
 assert.match(html,/island-heightfield/);
 assert.match(html,/g\.position=v\(cx,renderedTerrainSurfaceAt\(cx,cz\)-\.02\*scale,cz\)/);
+assert.match(html,/const settlementRise=1\.55\*\(1-flat\)/);
+assert.match(html,/Settlement pads rise smoothly above sea level/);
 assert.match(html,/terrain\.getHeightAtCoordinates\(x,z\)/);
 assert.match(html,/expects WORLD X\/Z here and transforms them internally/);
 assert.match(html,/footingCorners=\[\[-2\.01,-2\.64\],\[2\.01,-2\.64\],\[-2\.01,2\.64\],\[2\.01,2\.64\]\]/);
