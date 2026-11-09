@@ -339,7 +339,7 @@ async function main() {
     fs.writeFileSync(path.join(OUT, trailFile), trailPng);
     manifest.trailIsolationCapture = { file: trailFile, camera: 'ridge-occlusion', timeSeconds: 37, tide: 'natural', trailMeshesHidden: trailIsolation.hidden.count, restoredAfterCapture: true };
 
-    // Same-state A/B isolation: exact same camera, t=37 s and natural tide for the baseline plus eight independent variants.
+    // Same-state A/B isolation: identical camera, t=37 s and natural tide; each coastal source is disabled independently.
     const diagnosticVariants = [
       { id: 'baseline', kind: null },
       { id: 'no-shorebreaker-wash', kind: 'shore-breaker-wash' },
@@ -349,6 +349,8 @@ async function main() {
       { id: 'no-continuous-shore-foam', kind: 'continuous-shore-foam' },
       { id: 'previous-ocean-normal', kind: 'previous-ocean-normal' },
       { id: 'no-ocean-depth-alpha', kind: 'ocean-depth-alpha' },
+      { id: 'no-ocean-vertex-alpha', kind: 'ocean-vertex-alpha' },
+      { id: 'no-ground-vertex-alpha', kind: 'ground-vertex-alpha' }
       { id: 'no-ocean-normal-map', kind: 'ocean-normal-map' },
       { id: 'no-ocean-specular', kind: 'ocean-specular' },
       { id: 'no-short-vertex-waves', kind: 'short-vertex-waves' }
@@ -392,11 +394,13 @@ async function main() {
           'no-living-beach-layer': ['livingBeachLayerVisible', 'LivingCoastalSand'],
           'no-submerged-sand': ['submergedSandVisible', 'NordicSubmergedSand'],
           'no-continuous-shore-foam': ['continuousShoreFoamVisible', 'ContinuousOrganicShoreFoam'],
-          'no-ocean-depth-alpha': ['oceanVertexAlphaEnabled', false]
+          'no-ocean-depth-alpha': ['oceanVertexAlphaEnabled', false],
+          'no-ocean-vertex-alpha': ['oceanVertexAlphaEnabled', false],
+          'no-ground-vertex-alpha': ['groundVertexAlphaEnabled', false]
         };
         if (isolationChecks[variant.id]) {
           const [field, meshName] = isolationChecks[variant.id];
-          if (variant.id === 'no-ocean-depth-alpha') {
+          if (field.endsWith('AlphaEnabled')) {
             assert.equal(diagnostic.variantState?.[field], false, 'Ocean vertex alpha must be disabled in its isolation capture');
             assert.equal(diagnostic.restoredVariantState?.[field], true, 'Ocean vertex alpha must be restored after its isolation capture');
           } else {
@@ -422,7 +426,7 @@ async function main() {
         if (variant.id === 'baseline') manifest.sheetOpacityDiagnostics[cameraId] = diagnostic.sheetOpacity;
       }
     }
-    assert.equal(manifest.diagnosticCaptures.length, 22,
+    assert.equal(manifest.diagnosticCaptures.length, 26,
       'The two cameras must each contain a baseline and all eight isolated variants');
     console.log('[coastal-reference] 22 same-state A/B captures complete; sheet opacity/depth metrics recorded');
 
