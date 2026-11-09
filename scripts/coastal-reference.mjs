@@ -35,7 +35,6 @@ const manifest = {
   tides: TIDES.map(t => ({ id: t.id, value: t.value })),
   expectedCaptureCount: 36,
   startup: null,
-  playerValidation: 'separate-character-startup-job',
   campaignStart: null,
   captures: [],
   shadowIsolationCapture: null,
@@ -165,11 +164,7 @@ async function main() {
     manifest.timingsMs.readStartupDiagnostics = Number((performance.now() - stepStartedAt).toFixed(1));
     manifest.build = boot.build;
     manifest.startup = boot.startup;
-    manifest.playerValidation = {
-      status: 'not-run-in-coastal-job',
-      delegatedTo: 'character-startup job',
-      coastModeBackgroundModels: boot.backgroundModels
-    };
+    manifest.backgroundModels = boot.backgroundModels;
     manifest.sceneWarmup = boot.sceneWarmup;
 
     assert.equal(boot.build, '0.6.273', 'La referencia debe ser exactamente 0.6.273');
