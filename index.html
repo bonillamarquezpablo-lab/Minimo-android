@@ -8407,16 +8407,16 @@ function createRealWeapon(type='axe'){
    let islandIndex=-1;
    for(let i=0;i<land.length;i++){const island=land[i],ix=px-island.x,iz=pz-island.z;if(ix*ix+iz*iz<island.r*island.r){islandIndex=i;break;}}
    if(islandIndex<0)continue;
-   const ys=[renderedTerrainSurfaceAt(px-halfX,pz-halfZ),renderedTerrainSurfaceAt(px+halfX,pz-halfZ),renderedTerrainSurfaceAt(px-halfX,pz+halfZ),renderedTerrainSurfaceAt(px+halfX,pz+halfZ)];
-   const minY=Math.min(...ys),maxY=Math.max(...ys),range=maxY-minY;
-   if(!best||range<best.range-1e-7||(Math.abs(range-best.range)<1e-7&&dx*dx+dz*dz<best.distanceSq))best={x:px,z:pz,minY,maxY,range,distanceSq:dx*dx+dz*dz,islandIndex};
+   const centerY=renderedTerrainSurfaceAt(px,pz),ys=[renderedTerrainSurfaceAt(px-halfX,pz-halfZ),renderedTerrainSurfaceAt(px+halfX,pz-halfZ),renderedTerrainSurfaceAt(px-halfX,pz+halfZ),renderedTerrainSurfaceAt(px+halfX,pz+halfZ)];
+   const minY=Math.min(...ys),maxY=Math.max(...ys),range=maxY-minY,maxGap=Math.max(...ys.map(y=>Math.abs(centerY-y)));
+   if(!best||maxGap<best.maxGap-1e-7||(Math.abs(maxGap-best.maxGap)<1e-7&&dx*dx+dz*dz<best.distanceSq))best={x:px,z:pz,centerY,minY,maxY,range,maxGap,distanceSq:dx*dx+dz*dz,islandIndex};
   }
   return best||{x:cx,z:cz,minY:renderedTerrainSurfaceAt(cx,cz),maxY:renderedTerrainSurfaceAt(cx,cz),range:0,distanceSq:0,islandIndex:-1};
  }
  function buildHouse(cx,cz,scale=1){
   // Cabaña nórdica humilde: huella menor, troncos desiguales, tejado vencido y reparaciones visibles.
   const footing=findLevelHutFooting(cx,cz,scale),houseX=footing.x,houseZ=footing.z;
-  const g=newGroup('WeatheredNorseHut',null);g.scaling=v(scale,scale,scale);g.position=v(houseX,(footing.minY+footing.maxY)*.5-.02*scale,houseZ);
+  const g=newGroup('WeatheredNorseHut',null);g.scaling=v(scale,scale,scale);g.position=v(houseX,footing.centerY-.02*scale,houseZ);
   g.__footingPlacement={requested:{x:cx,z:cz},actual:{x:houseX,z:houseZ},cornerRangeMeters:footing.range};
   // Paredes de tablones separados: no usar una caja maciza que atraviese puerta y ventanas.
   for(const end of [-1,1]){
