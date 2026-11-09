@@ -23,7 +23,7 @@ assert.match(html,/outpostGroundY=renderedTerrainSurfaceAt\(island\.x,island\.z\
 assert.match(html,/gy=renderedTerrainSurfaceAt\(gx,gz\)/);
 assert.match(html,/flagY=renderedTerrainSurfaceAt\(flagX,flagZ\)/);
 assert.match(html,/py=renderedTerrainSurfaceAt\(px,pz\)/);
-assert.match(html,/garrisonGrounding:=>/);
+assert.match(html,/garrisonGrounding:\(\)=>/);
 assert.match(html,/amplitude:\.365/);
 assert.match(html,/amplitude:\.275/);
 assert.match(html,/crossCrestLift:\.072/);
