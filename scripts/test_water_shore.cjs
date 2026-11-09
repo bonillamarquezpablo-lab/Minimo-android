@@ -144,7 +144,7 @@ for(const label of ['Arena seca · grano','Arena húmeda · intensidad','Orilla 
 assert.ok(html.includes('./scripts/nordic/coastal-interaction.js'),"The coastal physics helper must load before the game.");
 assert.ok(html.indexOf('updateOceanDepthGradient();',html.indexOf('function smooth01'))>html.indexOf('const terrainHashCache='),'Bathymetry must initialize after terrain noise dependencies.');
 assert.ok(html.includes("applyTexture(M.water,texWater,17.5);"),"Water albedo must show readable smaller-scale surface detail.");
-assert.ok(html.includes("oceanWaveNormal.uScale=7.35;oceanWaveNormal.vScale=10.15;oceanWaveNormal.wAng=.4014257279586958;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.34;"),"Quality water normals must retain fine ripples with non-commensurate world scales and rotation.");
+assert.ok(html.includes("oceanWaveNormal.uScale=8.25;oceanWaveNormal.vScale=11.4;oceanWaveNormal.wAng=.4014257279586958;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.43;"),"Quality water normals must retain fine ripples with non-commensurate world scales and rotation.");
 assert.match(html,/const size=512,tau=Math\.PI\*2,tex=new B\.DynamicTexture\('LayeredOceanWaveNormal'/,"Quality ocean normals must use a power-of-two mipmapped texture.");
 assert.match(html,/const bathymetry=nearestIsland\?Math\.max\(0,-terrainHeightOnIsland\(nearestIsland,x,z\)\):18/,"Nearshore water opacity must follow the irregular terrain/seabed profile.");
 assert.match(html,/const farBlend=nearestIsland\?smooth01\(\(nearestRadialRatio-1\.46\)\/\.50\):1/,"Only the far-offshore continuation may use a broad radial depth blend.");
@@ -153,7 +153,7 @@ assert.match(html,/new B\.DynamicTexture\('LayeredOceanWaveNormal',\{width:size,
 assert.match(html,/rotatedU=2\*warpU\+warpW,rotatedW=-warpU\+2\*warpW/,"The ocean normal field must include a tileable second direction that breaks the repeating grid.");
 assert.match(html,/tertiaryU=3\*warpU-2\*warpW,tertiaryW=2\*warpU\+3\*warpW/,"The ocean normal field must contain a third independent tileable wave direction.");
 assert.match(html,/return primary\*\.66\+secondary\*\.22\+tertiary\*\.12/,"The three directional normal spectra must blend while retaining the main fine-wave field.");
-assert.ok(html.includes("M.water.specularColor=reducedWaterProfile?new B.Color3(.18,.25,.28):new B.Color3(.52,.68,.75);M.water.specularPower=reducedWaterProfile?28:64;"),"Quality water must retain visible but restrained specular highlights.");
+assert.ok(html.includes("M.water.specularColor=reducedWaterProfile?new B.Color3(.24,.34,.38):new B.Color3(.70,.82,.88);M.water.specularPower=reducedWaterProfile?34:52;"),"Quality water must retain visible but restrained specular highlights.");
 assert.ok(html.includes("M.water.diffuseFresnelParameters.power=2.3;"),"Grazing-angle water highlights must become more legible.");
 assert.match(html,/const livingBeachLayers=new Array\(land.length\)/,"Beach shader/state arrays must be indexed by island and lazy.");
 assert.doesNotMatch(html,/land\.forEach\(buildLivingBeachLayer\)/,"Do not allocate high-resolution beach materials and state textures for all thirteen islands at startup.");
