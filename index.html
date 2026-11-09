@@ -3145,7 +3145,8 @@ async function removeStrayDebugGeometry(targetScene){
       const foamWaterDepth=water-terrainY,foamSubmerged=smooth01((foamWaterDepth-.012)/.14);
       const dryFoamResidue=terrainY<=(Number(ground.position.y)||0)+.42?Math.min(.22,foamStrength*.18)*Math.exp(-Math.max(0,-foamWaterDepth)*5.5):0;
       const foamTerrainContact=Math.max(foamSubmerged,dryFoamResidue);
-      positions[offset]=foamWaterDepth>0?water+.014+foamBreakStrength*crestLip*(.012+chop)+chop:terrainY+.006;
+      positions[offset]=x;
+      positions[offset+1]=foamWaterDepth>0?water+.014+foamBreakStrength*crestLip*(.012+chop)+chop:terrainY+.006;
       positions[offset+2]=z;
       const foamVisibility=Math.max(Math.min(.94,foamStrength/.16),foamBreakStrength*.82);
       // Fade visible foam at the shore corridor edges. Mesh rows and segments remain untouched.
