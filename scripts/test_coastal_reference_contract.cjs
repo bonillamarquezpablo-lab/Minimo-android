@@ -31,7 +31,7 @@ for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setWaterState:', 
 }
 assert.match(html, /window\.__ELSN_TEST__=\{/);
 assert.match(html, /setDiagnosticVariant:\(kind,enabled\)=>/,
-  'Eight independent material/geometry diagnostic switches must be test-only.');
+  'Twelve independent material/geometry diagnostic switches must be test-only.');
 assert.match(html, /diagnosticWashVisibility=new WeakMap\(\)/);
 assert.match(html, /diagnosticWaveBodyVisibility=new WeakMap\(\)/);
 assert.match(html, /diagnosticMeshVisibility=new WeakMap\(\)/);
