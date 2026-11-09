@@ -339,7 +339,7 @@ async function main() {
     fs.writeFileSync(path.join(OUT, trailFile), trailPng);
     manifest.trailIsolationCapture = { file: trailFile, camera: 'ridge-occlusion', timeSeconds: 37, tide: 'natural', trailMeshesHidden: trailIsolation.hidden.count, restoredAfterCapture: true };
 
-    // Same-state A/B isolation: exact same camera, t=37 s and natural tide for all five cases.
+    // Same-state A/B isolation: exact same camera, t=37 s and natural tide for the baseline plus eight independent variants.
     const diagnosticVariants = [
       { id: 'baseline', kind: null },
       { id: 'no-shorebreaker-wash', kind: 'shore-breaker-wash' },

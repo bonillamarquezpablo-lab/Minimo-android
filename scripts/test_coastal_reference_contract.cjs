@@ -31,7 +31,7 @@ for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setWaterState:', 
 }
 assert.match(html, /window\.__ELSN_TEST__=\{/);
 assert.match(html, /setDiagnosticVariant:\(kind,enabled\)=>/,
-  'Five independent material/geometry diagnostic switches must be test-only.');
+  'Eight independent material/geometry diagnostic switches must be test-only.');
 assert.match(html, /diagnosticWashVisibility=new WeakMap\(\)/);
 assert.match(html, /diagnosticWaveBodyVisibility=new WeakMap\(\)/);
 assert.match(html, /diagnosticMeshVisibility=new WeakMap\(\)/);
@@ -95,7 +95,7 @@ assert.match(captureRunner, /no-volumetric-shore-breaker/);
 assert.match(captureRunner, /no-living-beach-layer/);
 assert.match(captureRunner, /no-submerged-sand/);
 assert.match(captureRunner, /no-continuous-shore-foam/);
-assert.match(captureRunner, /volumetricShoreBreakerVisible, 0/);
+assert.match(captureRunner, /'no-volumetric-shore-breaker': \['volumetricShoreBreakerVisible', 'VolumetricShoreBreaker'\]/,\n  'The translucent breaker visibility must be checked in its isolated frame.');\nassert.match(captureRunner, /assert.equal\(diagnostic.variantState\?\.\[field\], 0/);\nassert.match(captureRunner, /assert.ok\(diagnostic.restoredVariantState\?\.\[field\] >= 1/);
 assert.match(captureRunner, /no-ocean-specular/);
 assert.match(captureRunner, /no-short-vertex-waves/);
 assert.match(captureRunner, /Ensure lazily-created coast meshes exist before snapshotting their original state/);
@@ -106,7 +106,7 @@ assert.match(captureRunner, /diagnosticCaptures\.length, 18/,
   'Both cameras must capture the baseline and eight isolated A/B variants.');
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
 assert.ok(contactSheet.includes('36 CAPTURES + 18 DIAGNOSTIC A/B'),
-  'The contact sheet must label all 36 baseline frames and 12 diagnostic A/B captures.');
+  'The contact sheet must label all 36 baseline frames and 18 diagnostic A/B captures.');
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
 assert.match(contactSheet, /no-volumetric-shore-breaker/,
