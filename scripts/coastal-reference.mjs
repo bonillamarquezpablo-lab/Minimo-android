@@ -10,7 +10,7 @@ const CAMERAS = [
   // The close view stands one metre inland and looks out across the wet sand into the sea.
   // The two wider views remain offshore and look back toward the island.
   { id: 'shore-1m', distance: 1, height: 4.8, side: 'land', targetOffset: 10, targetY: 0.15 },
-  { id: 'surf-20m', distance: 20, height: 8, side: 'sea', targetOffset: -0.5, targetY: 1.0 },
+  { id: 'surf-20m', distance: 20, height: 5.5, side: 'sea', targetOffset: 3.5, targetY: 0.1 },
   { id: 'lod-90m', distance: 90, height: 22, side: 'sea', targetOffset: -0.5, targetY: 1.0 },
   // Explicit sightline across the main island ridge: catches water/foam leaking through opaque high ground.
   { id: 'ridge-occlusion', distance: 100, height: 18, side: 'ridge', targetOffset: 0, targetY: 6.5 }
