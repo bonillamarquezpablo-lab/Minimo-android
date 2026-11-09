@@ -31,7 +31,7 @@ for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setWaterState:', 
 }
 assert.match(html, /window\.__ELSN_TEST__=\{/);
 assert.match(html, /setDiagnosticVariant:\(kind,enabled\)=>/,
-  'Four independent material/geometry diagnostic switches must be test-only.');
+  'Five independent material/geometry diagnostic switches must be test-only.');
 assert.match(html, /diagnosticWashVisibility=new WeakMap\(\)/);
 assert.match(html, /diagnosticWaveBodyVisibility=new WeakMap\(\)/);
 assert.match(html, /kind==='volumetric-shore-breaker'/,
@@ -91,7 +91,9 @@ assert.match(captureRunner, /volumetricShoreBreakerVisible, 0/);
 assert.match(captureRunner, /no-ocean-specular/);
 assert.match(captureRunner, /no-short-vertex-waves/);
 assert.match(captureRunner, /Ensure lazily-created coast meshes exist before snapshotting their original state/);
-assert.match(captureRunner, /api\.setWaterState\(\{ time: 37, tide: 'natural' \}\);\s*if \(variant\.kind\) api\.setDiagnosticVariant\(variant\.kind, true\);\s*\/\/ Recompute vertex waves after the source toggle/);
+assert.match(captureRunner, /api\.setWaterState\(\{ time: 37, tide: 'natural' \}\);\s*const variantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, true\) : null;\s*\/\/ Recompute vertex waves after the source toggle/);
+assert.match(captureRunner, /const restoredVariantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, false\) : null;/,
+  'Diagnostic variants must be restored after the isolated frame.');
 assert.match(captureRunner, /diagnosticCaptures\.length, 12/,
   'Both cameras must capture the baseline and five isolated A/B variants.');
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
