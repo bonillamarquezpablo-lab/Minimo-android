@@ -627,8 +627,12 @@ async function main() {
       houses: settlementGrounding
     };
     assert.equal(settlementGrounding.length, 12, 'Deben comprobarse individualmente las doce cabañas de los cuatro poblados.');
-    for (const house of settlementGrounding) assert.ok(Number.isFinite(house.groundingErrorMeters) && house.groundingErrorMeters < .02,
-      'Cabaña despegada más de 2 cm de la altura interpolada de GroundMesh: ' + JSON.stringify(house));
+    for (const house of settlementGrounding) {
+      assert.ok(Number.isFinite(house.groundingErrorMeters) && house.groundingErrorMeters < .02,
+        'Base de cabaña separada más de 2 cm del terreno renderizado: ' + JSON.stringify(house));
+      assert.ok(Number.isFinite(house.maximumFootingGapMeters) && house.maximumFootingGapMeters <= .15,
+        'La base de la cabaña no apoya en sus cuatro esquinas (tolerancia 15 cm): ' + JSON.stringify(house));
+    }
     assert.ok(foamCorridorResult && foamCorridorResult.visibleFoamVertices > 0,
       'The baseline must measure visible foam vertices');
     assert.equal(foamCorridorResult.outsideFoamVertices, 0,
