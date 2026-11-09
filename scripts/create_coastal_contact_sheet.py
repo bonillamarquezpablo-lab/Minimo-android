@@ -59,7 +59,8 @@ def main() -> None:
     columns = 6
     width = columns * THUMB_W + (columns - 1) * GAP
     base_rows = len(CAMERAS) * len(TIMES)
-    diagnostic_rows = len(DIAGNOSTIC_CAMERAS)
+    diagnostic_rows_per_camera = (len(DIAGNOSTIC_VARIANTS) + columns - 1) // columns
+    diagnostic_rows = len(DIAGNOSTIC_CAMERAS) * diagnostic_rows_per_camera
     legacy_rows = 1
     row_height = LABEL_H + THUMB_H
     height = HEADER_H + GAP + (base_rows + diagnostic_rows + legacy_rows) * (row_height + GAP)
@@ -98,7 +99,6 @@ def main() -> None:
                 paste_tile(name, f"{camera} | t={time}s | {tide}", col, row)
             row += 1
 
-    diagnostic_rows_per_camera = (len(DIAGNOSTIC_VARIANTS) + columns - 1) // columns
     for camera in DIAGNOSTIC_CAMERAS:
         for index, (variant, label) in enumerate(DIAGNOSTIC_VARIANTS):
             name = f"{camera}__t037__natural__{variant}.png"
