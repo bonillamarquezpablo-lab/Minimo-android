@@ -112,7 +112,7 @@ for(const label of ['Arena seca · grano','Arena húmeda · intensidad','Orilla 
 assert.ok(html.includes('./scripts/nordic/coastal-interaction.js'),"The coastal physics helper must load before the game.");
 assert.ok(html.indexOf('updateOceanDepthGradient();',html.indexOf('function smooth01'))>html.indexOf('const terrainHashCache='),'Bathymetry must initialize after terrain noise dependencies.');
 assert.ok(html.includes("applyTexture(M.water,texWater,17.5);"),"Water albedo must show readable smaller-scale surface detail.");
-assert.ok(html.includes("oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.78;"),"Quality water normals must retain fine ripples with controlled highlight density.");
+assert.ok(html.includes("oceanWaveNormal.uScale=8.75;oceanWaveNormal.vScale=8.75;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.34;"),"Quality water normals must retain fine ripples with controlled highlight density.");
 assert.ok(html.includes(".020*Math.sin(67*warpU+41*warpW)"),"Water normals must retain high-frequency cross-directional micro ripples.");
 assert.match(html,/new B\.DynamicTexture\('LayeredOceanWaveNormal',\{width:size,height:size\},scene,true\)/,"Ocean normal mipmaps must be generated to prevent tiled high-frequency aliasing.");
 assert.match(html,/rotatedU=2\*warpU\+warpW,rotatedW=-warpU\+2\*warpW/,"The ocean normal field must include a tileable second direction that breaks the repeating grid.");
