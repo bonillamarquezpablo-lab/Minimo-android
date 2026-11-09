@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#172a2d">
-<meta name="el-sin-nombre-build" content="0.6.272">
+<meta name="el-sin-nombre-build" content="0.6.273">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
 <link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
-<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.272</title>
+<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.273</title>
 <style>
 :root{--gold:#d8ad68;--ink:#172528;--panel:rgba(16,29,31,.86);--line:rgba(224,184,112,.58);--paper:#f2e7d1}
 *{box-sizing:border-box}
@@ -2665,7 +2665,7 @@ async function removeStrayDebugGeometry(targetScene){
   ctx.putImageData(img,0,0);tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
  }
  const oceanWaveNormal=isPerformanceMode&&isConstrainedMobile?null:makeOceanWaveNormal();
- if(oceanWaveNormal){oceanWaveNormal.level=.78;oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.78;}
+ if(oceanWaveNormal){oceanWaveNormal.level=.34;oceanWaveNormal.uScale=8.75;oceanWaveNormal.vScale=8.75;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.34;}
  else{M.water.bumpTexture=albedoNormalWater;M.water.bumpTexture.level=.24;}
  // El agua recibe un reflejo propio de las islas y del cielo nórdico.
  // El HDRI global se conserva para los materiales PBR, pero nunca se asigna al mar.
@@ -9730,7 +9730,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'11',build:'0.6.272',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'11',build:'0.6.273',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    beachState:{activeIslandIndex:activeBeachIslandIndex,activeIsland:activeBeachLayer?activeBeachLayer.island.name:null,columns:activeBeachLayer?activeBeachLayer.coastalState.columns:0,rows:activeBeachLayer?activeBeachLayer.coastalState.rows:0,updatedCellsLast:beachUpdateCellsLast,updatedCellsTotal:beachUpdateCellsTotal,cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,textureUploads:beachStateTextureUploads,updateHz:12,workBudgetMs:GroundDynamics.counts().beachWorkBudgetMs,lastSliceMs:GroundDynamics.counts().beachWorkLastSliceMs,maxSliceMs:GroundDynamics.counts().beachWorkMaxSliceMs,pending:GroundDynamics.counts().beachWorkPending},waterline:getWaterCoastDiagnostics(),startupTimeline:getStartupTimelineSnapshot(),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
@@ -9795,7 +9795,7 @@ function updateChapterTracker(){
 function setHudText(node,value){if(node){const next=String(value);if(node.textContent!==next)node.textContent=next;}}
 function setHudWidth(node,value){if(node){const next=value+'%';if(node.style.width!==next)node.style.width=next;}}
 function updateHUD(){
- setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.272');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
+ setHudText(hudElements.subtitle,'SAGA DEL NORTE · CAPÍTULO I · 0.6.273');setHudText(hudElements.wood,woodCount);setHudText(hudElements.stone,stoneCount);setHudText(hudElements.recruits,companions.length);setHudText(hudElements.arsenal,'⚔ ARSENAL · '+({club:'PALO',axe:'HACHA',sword:'ESPADA',spear:'LANZA',pickaxe:'PICO'}[equippedWeapon]));setHudText(hudElements.kills,kills);setHudText(hudElements.captured,captured+'/'+land.length);setHudWidth(hudElements.health,Math.max(0,health));setHudText(hudElements.boatHealth,Math.round(boatHp)+'%');setHudText(hudElements.raiders,enemyShips.filter(e=>!e.sunk).length);setHudWidth(hudElements.stamina,Math.max(0,stamina));setHudText(hudElements.heal,healCooldown>0?'♥ CURAR '+Math.ceil(healCooldown)+'s':'♥ CURAR');updateWeaponPanel();updateChapterTracker();
  }
  function updateContext(){
   const pos=playerPos();activeTree=null;activeRock=null;activeResourceDistance=Infinity;nearVillage=null;
@@ -11775,7 +11775,7 @@ function update(dt){
   }
   if(now-lastFrameErrorAt>=2500){
    lastFrameErrorAt=now;
-   console.error('EL SIN NOMBRE 0.6.272 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
+   console.error('EL SIN NOMBRE 0.6.273 frame error ['+stage+'] phase=['+worldUpdatePhase+']:',error);
   }
   if(modelStatusText)modelStatusText.textContent='Fallo en '+stage+' ('+worldUpdatePhase+'): '+detail;
  }
@@ -11832,7 +11832,7 @@ function update(dt){
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;startupTimeline.firstFrameAt=performance.now();startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
-    console.info('EL SIN NOMBRE 0.6.272: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
+    console.info('EL SIN NOMBRE 0.6.273: primer fotograma 3D renderizado; comienza el registro de tareas posteriores.');
    }
    if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){
     const loading=document.getElementById('loading');if(loading)loading.style.display='none';
@@ -11984,7 +11984,7 @@ function update(dt){
  }
 
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
- console.info('EL SIN NOMBRE 0.6.272 preparación completa:',{
+ console.info('EL SIN NOMBRE 0.6.273 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
   guerrerosHumanos:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,
   guerrerosEnMundo:humanEnemyParts.length,
@@ -12009,7 +12009,10 @@ function update(dt){
  };
  if(testModeEnabled){
   const diagnosticOceanNormal=M.water.bumpTexture;
+  const diagnosticOceanNormalSettings=diagnosticOceanNormal?{level:diagnosticOceanNormal.level,uScale:diagnosticOceanNormal.uScale,vScale:diagnosticOceanNormal.vScale}:null;
   const diagnosticOceanSpecular=M.water.specularColor.clone();
+  const diagnosticOceanVertexAlpha=M.water.useVertexAlpha;
+  const diagnosticGroundVertexAlpha=ground.hasVertexAlpha;
   // La costa se crea de forma diferida al entrar en campaña. Guardar por identidad de malla permite aislar y restaurar las mallas que aparecen después de registrar la API.
   const diagnosticWashNormalMaps=new WeakMap();
   const diagnosticWashSpeculars=new WeakMap();
@@ -12063,13 +12066,17 @@ function update(dt){
     }else if(kind==='ocean-normal-map'){
      M.water.bumpTexture=disabled?null:diagnosticOceanNormal;
      tidalFoamMeshes.forEach(foam=>{rememberDiagnosticWashMesh(foam);const material=foam.washMesh.material;if(material)material.bumpTexture=disabled?null:diagnosticWashNormalMaps.get(foam.washMesh);});
+    }else if(kind==='previous-ocean-normal'){
+     if(diagnosticOceanNormal&&diagnosticOceanNormalSettings){diagnosticOceanNormal.level=disabled?.78:diagnosticOceanNormalSettings.level;diagnosticOceanNormal.uScale=disabled?17.5:diagnosticOceanNormalSettings.uScale;diagnosticOceanNormal.vScale=disabled?17.5:diagnosticOceanNormalSettings.vScale;M.water.bumpTexture=diagnosticOceanNormal;}
+    }else if(kind==='ocean-depth-alpha'){
+     M.water.useVertexAlpha=disabled?false:diagnosticOceanVertexAlpha;ground.hasVertexAlpha=disabled?false:diagnosticGroundVertexAlpha;
     }else if(kind==='ocean-specular'){
      M.water.specularColor=disabled?new B.Color3(0,0,0):diagnosticOceanSpecular.clone();
      tidalFoamMeshes.forEach(foam=>{rememberDiagnosticWashMesh(foam);const material=foam.washMesh.material;if(material)material.specularColor=disabled?new B.Color3(0,0,0):diagnosticWashSpeculars.get(foam.washMesh).clone();});
     }else if(kind==='short-vertex-waves'){
      coastalDiagnosticOverrides.disableShortVertexWaves=disabled;
     }else throw new Error('Unknown coastal diagnostic variant: '+kind);
-    return {kind,disabled,waterNormalMapEnabled:!!M.water.bumpTexture,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length,volumetricShoreBreakerVisible:tidalFoamMeshes.filter(foam=>foam.waveBodyMesh.isVisible).length,livingBeachLayerVisible:livingBeachLayers[activeBeachIslandIndex]?.mesh?.isVisible?1:0,submergedSandVisible:coastalSeabedMeshes[activeBeachIslandIndex]?.isVisible?1:0,continuousShoreFoamVisible:tidalFoamMeshes.filter(foam=>foam.mesh.isVisible).length};
+    return {kind,disabled,waterNormalMapEnabled:!!M.water.bumpTexture,oceanVertexAlphaEnabled:!!M.water.useVertexAlpha,waterNormalLevel:M.water.bumpTexture?.level??null,waterNormalUScale:M.water.bumpTexture?.uScale??null,waterNormalVScale:M.water.bumpTexture?.vScale??null,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length,volumetricShoreBreakerVisible:tidalFoamMeshes.filter(foam=>foam.waveBodyMesh.isVisible).length,livingBeachLayerVisible:livingBeachLayers[activeBeachIslandIndex]?.mesh?.isVisible?1:0,submergedSandVisible:coastalSeabedMeshes[activeBeachIslandIndex]?.isVisible?1:0,continuousShoreFoamVisible:tidalFoamMeshes.filter(foam=>foam.mesh.isVisible).length};
    },
    sheetOpacityDepth:()=>getSheetOpacityDepthDiagnostics(),
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},
