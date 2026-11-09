@@ -148,6 +148,29 @@ async function main() {
     assert.equal(manifest.campaignStart.introOpen, false, 'El selector de campaña conserva la clase open');
     console.log('[coastal-reference] new campaign started; intro overlay closed');
 
+    // Let the intertidal state map receive its first real shoreline pass before freezing
+    // the render loop for deterministic A/B captures. Otherwise all wet-sand samples are
+    // still zero simply because the test stopped the game immediately after starting it.
+    stepStartedAt = performance.now();
+    let beachWarmup = null;
+    try {
+      await page.waitForFunction(() => {
+        const coast = window.__ELSN_TEST__?.diagnostics?.()?.coast;
+        return Number.isFinite(coast?.wetBandPeak) && coast.wetBandPeak > 0.04;
+      }, undefined, { timeout: 45000, polling: 250 });
+      beachWarmup = await page.evaluate(() => window.__ELSN_TEST__?.diagnostics?.()?.coast || null);
+      console.log('[coastal-reference] live wet-sand state warmed to ' + beachWarmup.wetBandPeak.toFixed(3));
+    } catch {
+      beachWarmup = await page.evaluate(() => window.__ELSN_TEST__?.diagnostics?.()?.coast || null);
+      console.log('[coastal-reference] wet-sand warm-up did not reach threshold; continuing with diagnostic value ' +
+        Number(beachWarmup?.wetBandPeak || 0).toFixed(3));
+    }
+    manifest.beachWarmup = {
+      durationMs: Number((performance.now() - stepStartedAt).toFixed(1)),
+      wetBandPeak: beachWarmup?.wetBandPeak ?? 0,
+      wetBandDistanceMeters: beachWarmup?.wetBandDistanceMeters ?? null
+    };
+
     stepStartedAt = performance.now();
     const boot = await page.evaluate(() => {
       const api = window.__ELSN_TEST__;
