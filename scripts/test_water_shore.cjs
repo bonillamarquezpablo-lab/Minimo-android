@@ -7,6 +7,16 @@ assert.match(html,/const physicalDepth=window\.NorseCoastalInteraction\.waterDep
   "Ocean vertex alpha must be derived from the vertical gap between sea level and the rendered seabed, not a radial island-distance mask.");
 assert.doesNotMatch(html,/Math\.max\(depth,bathymetry\)/,
   "Do not rebuild the old radial alpha oval from a distance proxy.");
+assert.match(html,/secondAbsDistance=Infinity,secondIsland=null,secondRadialDistance=0/,
+  "Ocean depth must retain the second-nearest shoreline for a continuous offshore transition.");
+assert.match(html,/else if\(shoreDistance<secondAbsDistance\)/,
+  "The depth sampler must identify both closest island coastlines.");
+assert.match(html,/nearestRadialDistance>nearestIsland\.r\*1\.085&&secondRadialDistance>secondIsland\.r\*1\.085/,
+  "Shoreline blending must remain offshore and must not tint land as water.");
+assert.match(html,/const secondaryWeight=\.5\*\(1-smooth01\(coastDistanceGap\/24\)\)/,
+  "The two offshore depth profiles must blend smoothly over their 24 m nearest-coast transition.");
+assert.match(html,/profileDepth=profileDepth\*\(1-secondaryWeight\)\+secondaryProfileDepth\*secondaryWeight/,
+  "The water tint and alpha must share the blended depth profile.");
 assert.match(html,/oceanDepthSettings\.transitionMeters/);
 assert.match(html,/uniform float beachTime/);
 assert.match(html,/shoreFoamStrength/);
