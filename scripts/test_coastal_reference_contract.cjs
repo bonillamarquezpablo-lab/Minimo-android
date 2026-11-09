@@ -77,7 +77,7 @@ assert.ok(captureRunner.includes('api.captureCanvas()'),
 assert.ok(!captureRunner.includes('page.screenshot('),
   'Full-page screenshots can include menus/HUD and add unnecessary SwiftShader compositor cost');
 assert.ok(captureRunner.includes("assert.equal(boot.build, '0.6.273'"), 'The capture must inspect the exact current 0.6.273 candidate.');
-assert.match(html,/name="el-sin-nombre-build" content="0\.6\.272"/, 'The scene capture must use the synchronized 0.6.273 HTML build.');
+assert.match(html,/name="el-sin-nombre-build" content="0\.6\.273"/, 'The scene capture must use the synchronized 0.6.273 HTML build.');
 assert.match(html,/const vegetationTrailPaths=\[\],packedTrailMeshes=\[\]/, 'The game must keep direct references to its packed-trail meshes for deterministic test isolation.');
 assert.match(html,/packedTrailMeshes\.push\(mesh\)/, 'Every generated packed trail must be registered for the test-only A/B capture.');
 assert.match(html,/setPackedTrailVisible:\(enabled\)=>\{const trails=packedTrailMeshes/, 'The test-only API must isolate the packed-earth ribbon without changing normal gameplay.');
@@ -91,6 +91,8 @@ assert.match(captureRunner, /36\/36 complete/,
   'The runner must assert and report all 36 captured views.');
 assert.match(captureRunner, /no-shorebreaker-wash/);
 assert.match(captureRunner, /no-ocean-normal-map/);
+assert.match(captureRunner, /previous-ocean-normal/);
+assert.match(captureRunner, /no-ocean-depth-alpha/);
 assert.match(captureRunner, /no-volumetric-shore-breaker/);
 assert.match(captureRunner, /no-living-beach-layer/);
 assert.match(captureRunner, /no-submerged-sand/);
@@ -106,7 +108,7 @@ assert.match(captureRunner, /Ensure lazily-created coast meshes exist before sna
 assert.match(captureRunner, /api\.setWaterState\(\{ time: 37, tide: 'natural' \}\);\s*const variantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, true\) : null;\s*\/\/ Recompute vertex waves after the source toggle/);
 assert.match(captureRunner, /const restoredVariantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, false\) : null;/,
   'Diagnostic variants must be restored after the isolated frame.');
-assert.match(captureRunner, /diagnosticCaptures\.length, 18/,
+assert.match(captureRunner, /diagnosticCaptures\.length, 22/,
   'Both cameras must capture the baseline and ten controlled A/B variants.');
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
 assert.ok(contactSheet.includes('36 CAPTURES + 22 DIAGNOSTIC A/B'),
