@@ -25,6 +25,14 @@ assert.match(html,/P50 '\+fmt\(frameAt\(\.50\),2\)\+' · P95 '\+fmt\(frameAt\(\.
 assert.match(html,/Velocidad física de resaca: NO IMPLEMENTADO/);
 assert.match(html,/waterDebugVertexTimes\[vertex\]=oceanTime/);
 assert.match(html,/waterDebugVertexTimes\[i\/3\]=oceanTime/);
-assert.match(html,/const crestFoamLift=Math\.pow\(Math\.max\(0,crossWave\),3\)\*\.018/);
-assert.match(html,/const shortCrest=Math\.pow\(Math\.max\(0,chopWave\),3\)\*\.010/);
-console.log('OK: Stage 0 read-only water diagnostics are debug-only and preserve the rendered water formulas.');
+assert.match(html,/crossCrestLift:\.030/,'Canonical cross crest is 3cm.');
+assert.match(html,/shortCrestLift:\.018/,'Canonical short crest is 1.8cm.');
+assert.ok(html.includes('const WATER_WAVE_PARAMETERS=Object.freeze('));
+assert.ok(html.includes('function waterHeightFromWaveValues('));
+assert.ok(html.includes('function waterFarHeightAtVertex(vertex)'));
+assert.ok(html.includes('function waterDetailHeightAtVertex(vertex,fade)'));
+assert.ok(html.includes('function waterDetailFadeAt(x,z)'));
+assert.ok(html.includes('function updateWaterFarNormalAtVertex(vertex)'));
+assert.ok(html.includes('function getWaterLodBoundaryDiagnostics()'));
+assert.ok(html.includes('waterLodBoundary:getWaterLodBoundaryDiagnostics()'));
+console.log('OK: canonical water surface and continuous LOD contracts.');
