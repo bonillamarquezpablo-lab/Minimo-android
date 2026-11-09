@@ -148,10 +148,13 @@ async function main() {
     assert.equal(manifest.campaignStart.introOpen, false, 'El selector de campaña conserva la clase open');
     console.log('[coastal-reference] new campaign started; intro overlay closed');
 
-    // Populate the actual breaker/wash depth probes before freezing the render loop.
-    // wetBandPeak belongs to the player's footprint humidity map and can stay zero when
-    // the player is inland; it is not a valid readiness signal for the shoreline mesh.
+    // Wait for the active shoreline meshes, then populate the actual wash-depth probes.
+    // Player wetness is unrelated to readiness: the player may be inland.
     stepStartedAt = performance.now();
+    await page.waitForFunction(() => {
+      const d = window.__ELSN_TEST__?.diagnostics?.();
+      return Number.isInteger(d?.activeTidalFoamIslandIndex) && d.activeTidalFoamIslandIndex >= 0;
+    }, undefined, { timeout: 45000, polling: 200 });
     const beachWarmup = await page.evaluate(() => {
       const api = window.__ELSN_TEST__;
       let diagnostics = null;
@@ -403,33 +406,38 @@ async function main() {
           return { sheetOpacity, diagnostics, canvasPng, variantState, restoredVariantState };
         }, { cameraCase, variant, island: mainIsland, shoreRadius });
         if (variant.id === 'baseline') {
-          const submergedVertices = diagnostic.sheetOpacity?.submergedVertices ?? 0;
-          assert.ok(Number.isFinite(submergedVertices) && submergedVertices >= 0,
-            'The film opacity diagnostic returned an invalid sample count: ' + JSON.stringify(diagnostic.sheetOpacity));
-          // A camera can legitimately see no film vertices deeper than the diagnostic
-          // threshold. Keep its screenshot, but only assert deep-water alpha where samples exist.
-          if (submergedVertices > 0) {
-            assert.equal(diagnostic.sheetOpacity?.zeroAlphaVertices, submergedVertices,
-              'ShoreBreakerWash must be fully transparent when water covers the sand by more than 0.55 m: ' + JSON.stringify(diagnostic.sheetOpacity));
-          } else {
-            console.log('[coastal-reference] no film-depth samples above 0.55 m at ' + cameraId +
-              '; retained baseline frame and continued independent A/B captures');
-          }
+          const depth = diagnostic.sheetOpacity;
+          assert.equal(depth?.thresholdDepthMeters, 0.03,
+            'The film diagnostic must use the requested 3 cm depth threshold: ' + JSON.stringify(depth));
+          assert.ok(Number.isFinite(depth?.submergedVertices) && depth.submergedVertices > 0,
+            'The 3 cm film probe must include submerged vertices: ' + JSON.stringify(depth));
+          assert.ok(Number.isFinite(depth?.meanVertexAlpha) && depth.meanVertexAlpha >= 0 && depth.meanVertexAlpha <= 1,
+            'The 3 cm film probe must return a finite normalized mean alpha: ' + JSON.stringify(depth));
+          assert.ok(depth?.depthRangeMeters?.min > 0.03,
+            'Every sampled film vertex must be deeper than 3 cm: ' + JSON.stringify(depth));
         }
         const isolationChecks = {
           'no-volumetric-shore-breaker': ['volumetricShoreBreakerVisible', 'VolumetricShoreBreaker'],
           'no-living-beach-layer': ['livingBeachLayerVisible', 'LivingCoastalSand'],
           'no-submerged-sand': ['submergedSandVisible', 'NordicSubmergedSand'],
           'no-continuous-shore-foam': ['continuousShoreFoamVisible', 'ContinuousOrganicShoreFoam'],
-          'no-ocean-depth-alpha': ['oceanVertexAlphaEnabled', false],
-          'no-ocean-vertex-alpha': ['oceanVertexAlphaEnabled', false],
-          'no-ground-vertex-alpha': ['groundVertexAlphaEnabled', false]
+          'no-ocean-vertex-alpha': ['oceanVertexAlphaEnabled'],
+          'no-ground-vertex-alpha': ['groundVertexAlphaEnabled']
         };
-        if (isolationChecks[variant.id]) {
+        if (variant.id === 'no-ocean-depth-alpha') {
+          assert.equal(diagnostic.variantState?.oceanVertexAlphaEnabled, false,
+            'Combined depth-alpha isolation must disable ocean material vertex alpha');
+          assert.equal(diagnostic.variantState?.groundVertexAlphaEnabled, false,
+            'Combined depth-alpha isolation must disable ocean mesh vertex alpha');
+          assert.equal(diagnostic.restoredVariantState?.oceanVertexAlphaEnabled, true,
+            'Combined depth-alpha isolation must restore ocean material vertex alpha');
+          assert.equal(diagnostic.restoredVariantState?.groundVertexAlphaEnabled, true,
+            'Combined depth-alpha isolation must restore ocean mesh vertex alpha');
+        } else if (isolationChecks[variant.id]) {
           const [field, meshName] = isolationChecks[variant.id];
           if (field.endsWith('AlphaEnabled')) {
-            assert.equal(diagnostic.variantState?.[field], false, 'Ocean vertex alpha must be disabled in its isolation capture');
-            assert.equal(diagnostic.restoredVariantState?.[field], true, 'Ocean vertex alpha must be restored after its isolation capture');
+            assert.equal(diagnostic.variantState?.[field], false, field + ' must be disabled in its isolation capture');
+            assert.equal(diagnostic.restoredVariantState?.[field], true, field + ' must be restored after its isolation capture');
           } else {
             assert.equal(diagnostic.variantState?.[field], 0, `${meshName} must be hidden in its isolation capture`);
             assert.ok(diagnostic.restoredVariantState?.[field] >= 1, `${meshName} visibility must be restored after its isolation capture`);
@@ -447,14 +455,16 @@ async function main() {
         manifest.diagnosticCaptures.push({
           file, camera: cameraId, timeSeconds: 37, tide: 'natural',
           variant: variant.id, disabledSource: variant.kind,
-          sheetOpacity: variant.id === 'baseline' ? diagnostic.sheetOpacity : null,
+          sheetOpacity: diagnostic.sheetOpacity,
+          variantState: diagnostic.variantState,
+          restoredVariantState: diagnostic.restoredVariantState,
           diagnostics: diagnostic.diagnostics
         });
         if (variant.id === 'baseline') manifest.sheetOpacityDiagnostics[cameraId] = diagnostic.sheetOpacity;
       }
     }
     assert.equal(manifest.diagnosticCaptures.length, 26,
-      'The two cameras must each contain a baseline and all eight isolated variants');
+      'The two cameras must each contain a baseline and all twelve isolated variants');
     console.log('[coastal-reference] 26 same-state A/B captures complete; separate vertex-alpha and sheet-depth metrics recorded');
 
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
