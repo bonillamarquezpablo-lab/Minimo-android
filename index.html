@@ -3348,6 +3348,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  const GROUND_PHASE_A_DEFAULTS=Object.freeze({textureRepeat:9.5,relief:.70,roughness:.97});
  const groundPhaseAMaterials=[];
  const islandTerrainMeshes=[];
+ const shoreFoundationMeshes=[];
  const TERRAIN_HASH_CACHE_LIMIT=65536;
  const terrainHashCache=new Map(),terrainHashCacheSlots=new Float64Array(TERRAIN_HASH_CACHE_LIMIT),terrainHashCacheValues=new Float64Array(TERRAIN_HASH_CACHE_LIMIT),terrainHashCacheValid=new Uint8Array(TERRAIN_HASH_CACHE_LIMIT);
  let terrainHashCacheCursor=0;
@@ -3514,7 +3515,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  land.forEach((is,i)=>{
   // Lower the sandy shore foundation below the heightfield; it must never cover the grass.
   let shore=B.MeshBuilder.CreateCylinder('shore'+i,{height:2.5,diameterTop:is.r*2,diameterBottom:(is.r+5)*2,tessellation:64},scene);
-  shore.position=v(is.x,-4.30,is.z);shore.material=M.sand;shore.isPickable=false;shore.receiveShadows=false;shore.castShadows=false;
+  shore.position=v(is.x,-4.30,is.z);shore.material=M.sand;shore.isPickable=false;shore.receiveShadows=false;shore.castShadows=false;shoreFoundationMeshes[i]=shore;
   createIslandTerrain(is,i);
  });
  // The playable beach is a dedicated textured layer over the heightfield, with soft edges
@@ -12111,7 +12112,11 @@ function update(dt){
    setPackedTrailVisible:(enabled)=>{const trails=packedTrailMeshes;trails.forEach(mesh=>{mesh.isVisible=!!enabled;if(typeof mesh.setEnabled==='function')mesh.setEnabled(!!enabled);});return {count:trails.length,visible:trails.length>0&&trails.every(mesh=>mesh.isVisible===!!enabled),states:trails.map(mesh=>({name:mesh.name,isVisible:mesh.isVisible,isEnabled:typeof mesh.isEnabled==='function'?mesh.isEnabled():null,disposed:!!mesh.isDisposed?.()}))};},
    setDiagnosticVariant:(kind,enabled)=>{
     const disabled=!!enabled;
-    if(kind==='shore-breaker-wash'){
+    if(kind==='shore-foundation'){
+     setDiagnosticMeshVisible(shoreFoundationMeshes[activeBeachIslandIndex],disabled);
+    }else if(kind==='village-buildings'){
+     villages.flatMap(village=>village.houseGroups||[]).forEach(group=>setDiagnosticMeshVisible(group,disabled));
+    }else if(kind==='shore-breaker-wash'){
      tidalFoamMeshes.forEach(foam=>{rememberDiagnosticWashMesh(foam);const mesh=foam.washMesh,state=diagnosticWashVisibility.get(mesh);mesh.isVisible=disabled?false:state.visible;if(typeof mesh.setEnabled==='function')mesh.setEnabled(disabled?false:state.enabled);});
     }else if(kind==='volumetric-shore-breaker'){
      tidalFoamMeshes.forEach(foam=>{rememberDiagnosticWashMesh(foam);const mesh=foam.waveBodyMesh,state=diagnosticWaveBodyVisibility.get(mesh);mesh.isVisible=disabled?false:state.visible;if(typeof mesh.setEnabled==='function')mesh.setEnabled(disabled?false:state.enabled);});
@@ -12148,8 +12153,15 @@ function update(dt){
     }else if(kind==='short-vertex-waves'){
      coastalDiagnosticOverrides.disableShortVertexWaves=disabled;
     }else throw new Error('Unknown coastal diagnostic variant: '+kind);
-    return {kind,disabled,waterNormalMapEnabled:!!M.water.bumpTexture,oceanVertexAlphaEnabled:!!M.water.useVertexAlpha,groundVertexAlphaEnabled:!!ground.hasVertexAlpha,oceanDepthTintEnabled:kind==='ocean-depth-tint'?!disabled:true,nearWaterDetailEnabled:!coastalDiagnosticOverrides.disableNearWaterDetail,waterNormalLevel:M.water.bumpTexture?.level??null,waterNormalUScale:M.water.bumpTexture?.uScale??null,waterNormalVScale:M.water.bumpTexture?.vScale??null,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length,volumetricShoreBreakerVisible:tidalFoamMeshes.filter(foam=>foam.waveBodyMesh.isVisible).length,livingBeachLayerVisible:livingBeachLayers[activeBeachIslandIndex]?.mesh?.isVisible?1:0,submergedSandVisible:coastalSeabedMeshes[activeBeachIslandIndex]?.isVisible?1:0,continuousShoreFoamVisible:tidalFoamMeshes.filter(foam=>foam.mesh.isVisible).length};
+    return {kind,disabled,shoreFoundationVisible:shoreFoundationMeshes.filter(mesh=>mesh&&mesh.isVisible).length,villageBuildingGroupsVisible:villages.flatMap(village=>village.houseGroups||[]).filter(group=>group.isVisible!==false&&(!(typeof group.isEnabled==='function')||group.isEnabled())).length,waterNormalMapEnabled:!!M.water.bumpTexture,oceanVertexAlphaEnabled:!!M.water.useVertexAlpha,groundVertexAlphaEnabled:!!ground.hasVertexAlpha,oceanDepthTintEnabled:kind==='ocean-depth-tint'?!disabled:true,nearWaterDetailEnabled:!coastalDiagnosticOverrides.disableNearWaterDetail,waterNormalLevel:M.water.bumpTexture?.level??null,waterNormalUScale:M.water.bumpTexture?.uScale??null,waterNormalVScale:M.water.bumpTexture?.vScale??null,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length,volumetricShoreBreakerVisible:tidalFoamMeshes.filter(foam=>foam.waveBodyMesh.isVisible).length,livingBeachLayerVisible:livingBeachLayers[activeBeachIslandIndex]?.mesh?.isVisible?1:0,submergedSandVisible:coastalSeabedMeshes[activeBeachIslandIndex]?.isVisible?1:0,continuousShoreFoamVisible:tidalFoamMeshes.filter(foam=>foam.mesh.isVisible).length};
    },
+   settlementGrounding:()=>villages.flatMap(village=>(village.houseGroups||[]).map((group,buildingIndex)=>{
+    const p=group.getAbsolutePosition?group.getAbsolutePosition():group.position;
+    let nearestIsland=null,nearestDistance=Infinity,nearestIslandIndex=-1;
+    land.forEach((island,islandIndex)=>{const distance=Math.hypot(p.x-island.x,p.z-island.z);if(distance<nearestDistance){nearestDistance=distance;nearestIsland=island;nearestIslandIndex=islandIndex;}});
+    const sampledTerrainY=terrainSurfaceAt(p.x,p.z);
+    return {village:village.name||String(village.index),buildingIndex,x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2)),rootY:Number(p.y.toFixed(3)),sampledTerrainY:Number(sampledTerrainY.toFixed(3)),groundClearanceMeters:Number((p.y-sampledTerrainY-.035).toFixed(3)),nearestIsland:nearestIsland?.name||null,nearestIslandIndex,distanceToIslandMeters:Number(nearestDistance.toFixed(2)),islandRadiusRatio:nearestIsland?Number((nearestDistance/nearestIsland.r).toFixed(3)):null};
+   })),
    sheetOpacityDepth:()=>getSheetOpacityDepthDiagnostics(),
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},
    render:()=>scene.render(),

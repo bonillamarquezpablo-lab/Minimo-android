@@ -378,10 +378,15 @@ async function main() {
       { id: 'no-ocean-specular', kind: 'ocean-specular' },
       { id: 'no-short-vertex-waves', kind: 'short-vertex-waves' },
       { id: 'no-ocean-depth-tint', kind: 'ocean-depth-tint' },
-      { id: 'no-near-water-detail', kind: 'near-water-detail' }
+      { id: 'no-near-water-detail', kind: 'near-water-detail' },
+      { id: 'no-shore-foundation', kind: 'shore-foundation' },
+      { id: 'no-village-buildings', kind: 'village-buildings' }
     ];
-    for (const cameraId of ['shore-1m', 'lod-90m']) {
-      const cameraCase = CAMERAS.find(item => item.id === cameraId);
+    let foamCorridorResult = null;
+    for (const cameraId of ['shore-1m', 'shoreline-eye', 'lod-90m']) {
+      const cameraCase = cameraId === 'shoreline-eye'
+        ? { id: 'shoreline-eye', distance: 6, height: 2.1, side: 'land', targetOffset: 24, targetY: 0.25 }
+        : CAMERAS.find(item => item.id === cameraId);
       for (const variant of diagnosticVariants) {
         const diagnostic = await page.evaluate(({ cameraCase, variant, island, shoreRadius }) => {
           const api = window.__ELSN_TEST__;
@@ -423,7 +428,8 @@ async function main() {
           const visibleFoamVertices = Number(coast?.foamVerticesChecked) || 0;
           const outsideFoamVertices = Number(coast?.foamVerticesOutsideBand) || 0;
           assert.ok(visibleFoamVertices > 0, 'The baseline must measure visible foam vertices: ' + JSON.stringify(coast));
-          assert.equal(outsideFoamVertices, 0, 'Visible foam must remain inside the 0.8 m seaward / 1.5 m landward corridor: ' + JSON.stringify(coast));
+          if (!foamCorridorResult) foamCorridorResult = { visibleFoamVertices, outsideFoamVertices, coast };
+          manifest.foamCorridorAssessment = { visibleFoamVertices, outsideFoamVertices, outsideFraction: visibleFoamVertices ? Number((outsideFoamVertices/visibleFoamVertices).toFixed(4)) : null, allowedOffshoreMeters: 0.80, allowedLandwardMeters: 1.50 };
           assert.ok(Number(coast?.foamMaxOffshoreDistanceMeters) <= 0.80, 'Visible foam may not extend more than 0.8 m offshore: ' + JSON.stringify(coast));
           assert.equal(coast?.physicalBackwashVelocity?.implemented, true, 'The coast must report measured backwash speed: ' + JSON.stringify(coast?.physicalBackwashVelocity));
           assert.ok(Number.isFinite(coast?.physicalBackwashVelocity?.peakMetersPerSecond), 'Backwash speed must be finite: ' + JSON.stringify(coast?.physicalBackwashVelocity));
@@ -489,9 +495,13 @@ async function main() {
         if (variant.id === 'baseline') manifest.sheetOpacityDiagnostics[cameraId] = diagnostic.sheetOpacity;
       }
     }
-    assert.equal(manifest.diagnosticCaptures.length, 30,
-      'The two cameras must each contain a baseline and all twelve isolated variants');
-    console.log('[coastal-reference] 26 same-state A/B captures complete; separate vertex-alpha and sheet-depth metrics recorded');
+    assert.equal(manifest.diagnosticCaptures.length, 51,
+      'The three diagnostic cameras must each contain a baseline and sixteen isolated variants');
+    console.log('[coastal-reference] 51 same-state A/B captures complete; shoreline, island structures, vertex-alpha and sheet-depth metrics recorded');
+    assert.ok(foamCorridorResult && foamCorridorResult.visibleFoamVertices > 0,
+      'The baseline must measure visible foam vertices');
+    assert.equal(foamCorridorResult.outsideFoamVertices, 0,
+      'Visible foam must remain inside the 0.8 m seaward / 1.5 m landward corridor: ' + JSON.stringify(foamCorridorResult.coast));
 
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');

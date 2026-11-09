@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the 36-frame coastal reference, legacy isolation frames, and fourteen same-state diagnostic variants (36 baseline + 30 diagnostic A/B captures)."""
+"""Build the 36-frame coastal reference, legacy isolation frames, and sixteen same-state diagnostic variants across three cameras."""
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
@@ -8,7 +8,7 @@ OUT = ROOT / "artifacts" / "coastal-reference"
 CAMERAS = ("shore-1m", "surf-20m", "lod-90m", "ridge-occlusion")
 TIMES = (0, 37, 91)
 TIDES = ("natural", "high", "low")
-DIAGNOSTIC_CAMERAS = ("shore-1m", "lod-90m")
+DIAGNOSTIC_CAMERAS = ("shore-1m", "shoreline-eye", "lod-90m")
 DIAGNOSTIC_VARIANTS = (
     ("baseline", "baseline"),
     ("no-shorebreaker-wash", "sin ShoreBreakerWash"),
@@ -25,6 +25,8 @@ DIAGNOSTIC_VARIANTS = (
     ("no-short-vertex-waves", "sin ondas cortas"),
     ("no-ocean-depth-tint", "sin tinte de profundidad"),
     ("no-near-water-detail", "solo oleaje lejano"),
+    ("no-shore-foundation", "sin base bajo isla"),
+    ("no-village-buildings", "sin cabañas"),
 )
 LEGACY_ISOLATIONS = (
     ("ridge-occlusion__t037__natural__no-island-shadows.png", "ridge | sin sombras isla"),
@@ -70,8 +72,8 @@ def main() -> None:
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
 
-    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 30 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
-    draw.text((8, 25), "Baseline matrix · A/B same camera, t=037 s, natural tide · prior shadow/trail checks retained",
+    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 51 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
+    draw.text((8, 25), "Baseline matrix · same camera, t=037 s, natural tide · coast and settlement source isolation",
               fill=MUTED, font=font)
 
     def paste_tile(name: str, label: str, col: int, row: int) -> None:
@@ -112,7 +114,7 @@ def main() -> None:
 
     target = OUT / "contact-sheet.png"
     sheet.save(target, format="PNG", optimize=True)
-    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 26 diagnostic A/B + legacy)")
+    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 51 diagnostic A/B + legacy)")
 
 
 if __name__ == "__main__":
