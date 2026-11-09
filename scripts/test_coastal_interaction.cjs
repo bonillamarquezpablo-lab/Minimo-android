@@ -21,7 +21,7 @@ assert.ok(Math.abs(coast.seabedHeight(60 * 1.46, 60, shoreHeight) - (-6.2)) < 1e
 assert.equal(coast.waterDepth(0, 0.25), 0, "Dry sand must not receive water opacity.");
 assert.ok(Math.abs(coast.waterDepth(0, -0.12) - 0.12) < 1e-12);
 assert.ok(Math.abs(coast.waterDepth(0.2, -0.3) - 0.5) < 1e-12);
-assert.equal(coast.waterDepth(-0.2, -0.3), 0.1);
+assert.ok(Math.abs(coast.waterDepth(-0.2, -0.3) - 0.1) < 1e-12);
 assert.equal(coast.waterDepth(0, -30), 18, "Ocean depth must be bounded.");
 assert.equal(coast.waterDepth(0, NaN), 0, "Non-finite seabed samples must fail dry.");
 
