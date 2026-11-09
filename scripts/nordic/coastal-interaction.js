@@ -22,17 +22,18 @@
     return shore + (-6.2 - shore) * descent;
   }
 
-  // Shallow water retains enough opacity to read as water, but still reveals
-  // the separate pale sand bottom. Opacity increases smoothly with depth.
+  // Shallow water must remain visibly a continuous water sheet. The previous curve
+  // stayed almost transparent over the first metre, exposing the seabed as a broad oval
+  // patch instead of reading as water. Build opacity in three continuous depth bands:
+  // a narrow shoreline entry, a clear intertidal body, and deeper water absorption.
+  // The sand remains readable under the film; no hard alpha step is introduced.
   function waterOpacity(depthMeters) {
     const depth = Math.max(0, Number(depthMeters) || 0);
     if (depth <= 0) return 0;
-    // Blend in gradually: the first few centimetres must not jump to 52% opacity.
-    // The near-shore ramp reaches its water-body contribution over 1.1 m;
-    // the deeper ramp retains the existing 90% opacity at 5.5 m.
-    const shallowBody = 0.52 * smooth01(depth / 1.1);
+    const shorelineEntry = 0.24 * smooth01(depth / 0.30);
+    const shallowBody = 0.28 * smooth01(depth / 1.65);
     const depthBody = 0.38 * smooth01(depth / 5.5);
-    return Math.min(0.90, shallowBody + depthBody);
+    return Math.min(0.90, shorelineEntry + shallowBody + depthBody);
   }
 
   // The moving sheet always floats just above both the sloping sand and sea.
