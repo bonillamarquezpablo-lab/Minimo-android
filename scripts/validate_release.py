@@ -387,8 +387,12 @@ def main() -> None:
         fail("La actualización costera debe respetar su presupuesto reducido por fotograma.")
     if "TIDAL_FOAM_UPDATE_STEP=isTouchDevice?(isPerformanceMode?1/18:1/15):1/30" not in index_html or "const foamElapsed=foamDue?tidalFoamAccumulator:0" not in index_html or "Math.exp(-foamElapsed/3.4)" not in index_html or "for(let step=0;step<5;step++)" not in index_html or "const span=hi-lo,secant=lo+span*loDelta/(loDelta-hiDelta),guard=span*.04" not in index_html or "const waterDepth=water-terrainY" not in index_html or "const foamWaterDepth=water-terrainY" not in index_html or "performance.now()-sliceStarted<2.65" in index_html or "performance.now()-sliceStarted<3.55" in index_html:
         fail("La rompiente debe reutilizar alturas de agua y terreno y resolver la costa con menos evaluaciones.")
-    if "const shallowBody = 0.52 * smooth01(depth / 1.1);" not in (ROOT / "scripts" / "nordic" / "coastal-interaction.js").read_text(encoding="utf-8"):
-        fail("La opacidad del agua debe crecer progresivamente desde la línea de costa.")
+    coastal_interaction = (ROOT / "scripts" / "nordic" / "coastal-interaction.js").read_text(encoding="utf-8")
+    if ("const shorelineEntry = 0.24 * smooth01(depth / 0.30);" not in coastal_interaction
+            or "const shallowBody = 0.28 * smooth01(depth / 1.65);" not in coastal_interaction
+            or "const depthBody = 0.48 * smooth01(depth / 5.5);" not in coastal_interaction
+            or "return Math.min(0.94, shorelineEntry + shallowBody + depthBody);" not in coastal_interaction):
+        fail("La opacidad del agua debe transicionar suavemente en la orilla y absorber el lecho a profundidad.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
     if "SAGA DEL NORTE · CAPÍTULO I · 0.6.273" not in index_html or "EL SIN NOMBRE 0.6.273 frame error" not in index_html:
