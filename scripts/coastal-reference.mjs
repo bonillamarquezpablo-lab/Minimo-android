@@ -630,7 +630,7 @@ async function main() {
     for (const house of settlementGrounding) {
       assert.ok(Number.isFinite(house.groundingErrorMeters) && house.groundingErrorMeters < .02,
         'Base de cabaña separada más de 2 cm del terreno renderizado: ' + JSON.stringify(house));
-      assert.ok(Number.isFinite(house.maximumFootingGapMeters) && house.maximumFootingGapMeters <= .15,
+      assert.ok(Number.isFinite(house.maximumFootingGapMeters) && house.maximumFootingGapMeters < .02,
         'La base de la cabaña no apoya en sus cuatro esquinas (tolerancia 15 cm): ' + JSON.stringify(house));
     }
     const garrisonGrounding = await page.evaluate(() => window.__ELSN_TEST__.garrisonGrounding());
