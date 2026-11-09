@@ -64,6 +64,9 @@ assert.doesNotMatch(html,/terrain\.getHeightAtCoordinates\(dx,dz\)[\s\S]{0,100}t
 assert.match(html,/for\(let cross=0;cross<crossSegments;cross\+\+\)/, 'Trail indices must cover each across-width terrain-following segment.');
 assert.match(html,/for\(let cross=0;cross<=crossSegments;cross\+\+\)\{\s*const across=cross\/crossSegments,side=across\*2-1;/, 'Each cross-section must sample the actual terrain height instead of only the edges.');
 assert.match(html,/const foamAlphaMask=new Float32Array\(cols\*rows\)/, 'Foam row/noise opacity factors must be precomputed without dropping samples.');
+assert.match(html,/const backwashVelocity=new Float32Array\(segments\+1\)/,'Backwash must be tracked independently for every shoreline column.');
+assert.match(html,/const shorelineBandFade=smooth01\(\(radialOffsetFromShore\+1\.50\)\/\.18\)\*\(1-smooth01\(\(radialOffsetFromShore-\.58\)\/\.22\)\)/,'Visible foam must fade out beyond the measured coastal band.');
+assert.match(html,/physicalBackwashVelocity:\{implemented:true,unit:'m\/s'/,'The diagnostics must expose physical backwash speed in metres per second.');
 assert.match(html,/foamAlphaMask\[vertex\]=whiteFoamProfile\*innerFade\*outerFade\*lace/, 'The shoreline foam must reuse its static breakup mask on every update.');
 assert.match(html,/waveBodyCrestProfile=new Float32Array\(waveBodyRows\)/, 'Volumetric wave row profiles must be cached once at construction.');
 assert.match(html,/washLeadingCellular=new Float32Array\(cols\*washRows\)/, 'Wash breakup factors must be cached per full-resolution vertex.');

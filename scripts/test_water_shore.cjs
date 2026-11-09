@@ -22,7 +22,7 @@ assert.match(html,/function tideOffsetAt/);
 assert.match(html,/tideButton\('MAREA ALTA',\.28\)/);
 assert.match(html,/tideButton\('MAREA BAJA',-\.28\)/);
 assert.match(html,/function getWaterCoastDiagnostics\(\)/);
-for(const metric of ["foamActiveSegments","foamSegmentCapacity","foamValidIntersections","foamMaxOffshoreDistanceMeters","foamVerticesOutsideBand","foamUpdateLastMs"]) {
+for(const metric of ["foamActiveSegments","foamSegmentCapacity","foamValidIntersections","foamMaxOffshoreDistanceMeters","foamVerticesOutsideBand","foamUpdateLastMs","foamBackwashActiveColumns","foamBackwashPeakVelocityMetersPerSecond"]) {
  assert.ok(html.includes(metric), `Missing coastal resaca diagnostic: ${metric}`);
 }
 assert.ok(html.includes('tidalFoamLastUpdateMs=performance.now()-foamWorkStarted'));
@@ -34,7 +34,12 @@ assert.match(html,/function cachedShorelineFoamRadius\(foam,col,t=oceanTime\)/,"
 assert.match(html,/const waveBodyOffsets=\[-2\.65,-2\.05,-1\.48,-1\.02,-\.66,-\.34,-\.08,\.18,\.48,\.86,1\.34,1\.92,2\.55\]/,"The shoreline wave must have a multi-row 3D cross-section, not a single animated line.");
 assert.match(html,/VolumetricShoreBreaker_/,"The coast must create a separate volumetric wave body.");
 assert.match(html,/const lift=\(\.025\+\.22\*crest\+\.065\*rearShoulder\)/,"The wave body must retain a natural raised crest and rear shoulder with reduced artificial bulging.");
-assert.match(html,/const breakerTravel=\.62\*Math\.sin\(oceanTime\*1\.08/,"The wave crest must travel onto and away from the beach.");
+assert.match(html,/const breakerTravel=\.24\*Math\.sin\(oceanTime\*1\.08/,"The breaker remains inside the foam run-up corridor.");
+assert.match(html,/const backwashVelocity=new Float32Array\(segments\+1\)/,"Each shoreline segment must track its backwash velocity.");
+assert.match(html,/const measuredBackwashVelocity=Number\.isFinite\(previousShore\)\?retreat\/Math\.max\(\.001,foamElapsed\):0/,"Backwash must be measured from seaward shoreline movement per second.");
+assert.match(html,/const shorelineBandFade=smooth01\(\(radialOffsetFromShore\+1\.50\)\/\.18\)\*\(1-smooth01\(\(radialOffsetFromShore-\.58\)\/\.22\)\)/,"Visible foam must fade at the shoreline-band edge.");
+assert.match(html,/const trailingFoam=residual\*washTrailingProfile\[vertex\]\*\(\.18\+\.30\*backwashStrength\)\*exposedSandContact/,"Backwash strength must control exposed-sand residual foam.");
+assert.match(html,/physicalBackwashVelocity:\{implemented:true,unit:'m\/s'/,"The coast must report measured backwash speed in metres per second.");
 assert.match(html,/B\.VertexData\.ComputeNormals\(waveBodyPositions,waveBodyIndices,waveBodyNormals\)/,"The volumetric wave must receive a smooth initial normal field.");
 assert.match(html,/foam.waveBodyNormalRefreshCounter>=\(isTouchDevice\?4:2\)/,"Moving breaker normals are refreshed at a throttled cadence instead of remaining frozen.");
 assert.match(html,/for\(const foam of tidalFoamMeshes\)/);
@@ -105,7 +110,7 @@ assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.in
 assert.match(html,/colors,foamPattern,angleValues,angleCos,angleSin,index,waveBodyMesh/,"Cached shoreline directions and volumetric wave storage must be retained in the active coast state.");
 assert.match(html,/tidalFoamMeshes\.push\(\{mesh,positions,foamUvs,colors,foamPattern/,"Breaker UVs must be retained by the active coast mesh.");
 assert.match(html,/foamBreakStrength\*\.82/);
-assert.match(html,/const radialOffsets=isPerformanceMode\?\[-\.62,-\.30,0,\.30,\.62\]:\[-1\.05,-\.82,-\.59,-\.36,-\.13,\.10,\.33,\.56,\.79,1\.02,1\.25\]/);
+assert.match(html,/const radialOffsets=isPerformanceMode\?\[-\.62,-\.30,0,\.30,\.62\]:\[-1\.05,-\.82,-\.59,-\.36,-\.13,\.10,\.22,\.34,\.45,\.53,\.60\]/);
 assert.match(html,/washColors\[color\]=\.72\*\(1-whiteMix\)\+\.97\*whiteMix/,"The intertidal film must remain neutral and foam must fade toward white.");
 
 assert.match(html,/window\.NorseCoastalInteraction\.filmSurfaceHeight\(terrainY,water,filmWave\)/,"The advancing film must sit above the sand/water interface using the shared terrain sample.");

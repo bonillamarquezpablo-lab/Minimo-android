@@ -419,6 +419,14 @@ async function main() {
             'The 3 cm film probe must return a finite normalized mean alpha: ' + JSON.stringify(depth));
           assert.ok(depth?.depthRangeMeters?.min > 0.03,
             'Every sampled film vertex must be deeper than 3 cm: ' + JSON.stringify(depth));
+          const coast = diagnostic.diagnostics?.coast;
+          const visibleFoamVertices = Number(coast?.foamVerticesChecked) || 0;
+          const outsideFoamVertices = Number(coast?.foamVerticesOutsideBand) || 0;
+          assert.ok(visibleFoamVertices > 0, 'The baseline must measure visible foam vertices: ' + JSON.stringify(coast));
+          assert.equal(outsideFoamVertices, 0, 'Visible foam must remain inside the 0.8 m seaward / 1.5 m landward corridor: ' + JSON.stringify(coast));
+          assert.ok(Number(coast?.foamMaxOffshoreDistanceMeters) <= 0.80, 'Visible foam may not extend more than 0.8 m offshore: ' + JSON.stringify(coast));
+          assert.equal(coast?.physicalBackwashVelocity?.implemented, true, 'The coast must report measured backwash speed: ' + JSON.stringify(coast?.physicalBackwashVelocity));
+          assert.ok(Number.isFinite(coast?.physicalBackwashVelocity?.peakMetersPerSecond), 'Backwash speed must be finite: ' + JSON.stringify(coast?.physicalBackwashVelocity));
         }
         if (variant.id === 'no-ocean-depth-tint') {
           assert.equal(diagnostic.variantState?.oceanDepthTintEnabled, false,
