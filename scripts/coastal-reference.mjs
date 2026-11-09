@@ -350,7 +350,7 @@ async function main() {
       { id: 'previous-ocean-normal', kind: 'previous-ocean-normal' },
       { id: 'no-ocean-depth-alpha', kind: 'ocean-depth-alpha' },
       { id: 'no-ocean-vertex-alpha', kind: 'ocean-vertex-alpha' },
-      { id: 'no-ground-vertex-alpha', kind: 'ground-vertex-alpha' }
+      { id: 'no-ground-vertex-alpha', kind: 'ground-vertex-alpha' },
       { id: 'no-ocean-normal-map', kind: 'ocean-normal-map' },
       { id: 'no-ocean-specular', kind: 'ocean-specular' },
       { id: 'no-short-vertex-waves', kind: 'short-vertex-waves' }
