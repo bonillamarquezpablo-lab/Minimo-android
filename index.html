@@ -12059,7 +12059,7 @@ function update(dt){
    if(waveBody&&!diagnosticWaveBodyVisibility.has(waveBody))diagnosticWaveBodyVisibility.set(waveBody,{visible:waveBody.isVisible,enabled:typeof waveBody.isEnabled==='function'?waveBody.isEnabled():true});
   };
   const getSheetOpacityDepthDiagnostics=()=>{
-   const threshold=.55,depths=[],alphas=[];
+   const threshold=.03,depths=[],alphas=[];
    for(const foam of tidalFoamMeshes){
     if(foam.index!==activeTidalFoamIslandIndex||!foam.washDiagnosticDepths)continue;
     for(let vertex=0;vertex<foam.washDiagnosticDepths.length;vertex++){
@@ -12098,10 +12098,6 @@ function update(dt){
      tidalFoamMeshes.forEach(foam=>{rememberDiagnosticWashMesh(foam);const material=foam.washMesh.material;if(material)material.bumpTexture=disabled?null:diagnosticWashNormalMaps.get(foam.washMesh);});
     }else if(kind==='previous-ocean-normal'){
      if(diagnosticOceanNormal&&diagnosticOceanNormalSettings){diagnosticOceanNormal.level=disabled?.78:diagnosticOceanNormalSettings.level;diagnosticOceanNormal.uScale=disabled?17.5:diagnosticOceanNormalSettings.uScale;diagnosticOceanNormal.vScale=disabled?17.5:diagnosticOceanNormalSettings.vScale;M.water.bumpTexture=diagnosticOceanNormal;}
-    }else if(kind==='ocean-vertex-alpha'){
-     M.water.useVertexAlpha=disabled?false:diagnosticOceanVertexAlpha;
-    }else if(kind==='ground-vertex-alpha'){
-     ground.hasVertexAlpha=disabled?false:diagnosticGroundVertexAlpha;
     }else if(kind==='ocean-vertex-alpha'){
      M.water.useVertexAlpha=disabled?false:diagnosticOceanVertexAlpha;
     }else if(kind==='ground-vertex-alpha'){
