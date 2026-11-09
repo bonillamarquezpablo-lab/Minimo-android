@@ -29,6 +29,13 @@ DIAGNOSTIC_VARIANTS = (
     ("no-shore-foundation", "sin base bajo isla"),
     ("no-village-buildings", "sin cabañas"),
 )
+HOTSPOT_VARIANTS = (
+    ("baseline", "geometría | base"),
+    ("no-island-heightfield", "sin IslandHeightfield"),
+    ("no-submerged-sand", "sin NordicSubmergedSand"),
+    ("no-living-beach-layer", "sin LivingCoastalSand"),
+    ("no-shorebreaker-wash", "sin ShoreBreakerWash"),
+)
 LEGACY_ISOLATIONS = (
     ("ridge-occlusion__t037__natural__no-island-shadows.png", "ridge | sin sombras isla"),
     ("ridge-occlusion__t037__natural__no-packed-trails.png", "ridge | sin caminos"),
@@ -56,8 +63,9 @@ def main() -> None:
         for camera in DIAGNOSTIC_CAMERAS
         for variant, _ in DIAGNOSTIC_VARIANTS
     ]
+    hotspot_expected = [f"geometry-hotspot__t037__natural__{variant}.png" for variant, _ in HOTSPOT_VARIANTS]
     legacy_expected = [name for name, _ in LEGACY_ISOLATIONS]
-    missing = [name for name in expected + diagnostic_expected + legacy_expected if not (OUT / name).is_file()]
+    missing = [name for name in expected + diagnostic_expected + hotspot_expected + legacy_expected if not (OUT / name).is_file()]
     if missing:
         raise SystemExit("Cannot build contact sheet; missing screenshots: " + ", ".join(missing))
 
@@ -66,14 +74,15 @@ def main() -> None:
     base_rows = len(CAMERAS) * len(TIMES)
     diagnostic_rows_per_camera = (len(DIAGNOSTIC_VARIANTS) + columns - 1) // columns
     diagnostic_rows = len(DIAGNOSTIC_CAMERAS) * diagnostic_rows_per_camera
+    hotspot_rows = 1
     legacy_rows = 1
     row_height = LABEL_H + THUMB_H
-    height = HEADER_H + GAP + (base_rows + diagnostic_rows + legacy_rows) * (row_height + GAP)
+    height = HEADER_H + GAP + (base_rows + diagnostic_rows + hotspot_rows + legacy_rows) * (row_height + GAP)
     sheet = Image.new("RGB", (width, height), BG)
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
 
-    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 54 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
+    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 54 DIAGNOSTIC A/B + 5 GEOMETRY HOTSPOT A/B + LEGACY", fill=TEXT, font=font)
     draw.text((8, 25), "Baseline matrix · same camera, t=037 s, natural tide · coast and settlement source isolation",
               fill=MUTED, font=font)
 
@@ -110,12 +119,16 @@ def main() -> None:
             paste_tile(name, f"{camera} | t037 | {label}", index % columns, row + index // columns)
         row += diagnostic_rows_per_camera
 
+    for col, (variant, label) in enumerate(HOTSPOT_VARIANTS):
+        name = f"geometry-hotspot__t037__natural__{variant}.png"
+        paste_tile(name, label, col, row)
+    row += 1
     for col, (name, label) in enumerate(LEGACY_ISOLATIONS):
         paste_tile(name, label, col, row)
 
     target = OUT / "contact-sheet.png"
     sheet.save(target, format="PNG", optimize=True)
-    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 54 diagnostic A/B + legacy)")
+    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 54 diagnostic A/B + 5 hotspot A/B + legacy)")
 
 
 if __name__ == "__main__":

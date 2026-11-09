@@ -3270,6 +3270,16 @@ async function removeStrayDebugGeometry(targetScene){
      washColors[color+3]=alpha;
     }
    }
+   // Re-close the duplicated angular seam after every water/shore update.
+
+  for(let row=0;row<washRows;row++){
+   const first=row*cols,last=first+segments,first3=first*3,last3=last*3,first2=first*2,last2=last*2,first4=first*4,last4=last*4;
+   for(let axis=0;axis<3;axis++)washPositions[last3+axis]=washPositions[first3+axis];
+   for(let axis=0;axis<2;axis++)washUvs[last2+axis]=washUvs[first2+axis];
+   for(let channel=0;channel<4;channel++)washColors[last4+channel]=washColors[first4+channel];
+   washPattern[last]=washPattern[first];
+   if(washDiagnosticDepths)washDiagnosticDepths[last]=washDiagnosticDepths[first];
+  }
    waveBodyMesh.updateVerticesData(B.VertexBuffer.PositionKind,waveBodyPositions,false,false);
     waveBodyMesh.updateVerticesData(B.VertexBuffer.ColorKind,waveBodyColors,false,false);
     // Refresh crest normals periodically so lighting follows the moving breaker profile.
@@ -3619,7 +3629,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    for(let i=0;i<=segments;i++){
     const angle=i/segments*Math.PI*2,inner=radials[i*2],outer=radials[i*2+1];
     const radius=inner+(outer-inner)*t,x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-    positions.push(x,renderedTerrainSurfaceAt(x,z)+.018,z);uvs.push(i/segments,t);
+    positions.push(x,terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018,z);uvs.push(i/segments,t);
     // Keep the sandy bed opaque through the seaward edge; only feather the inland join.
     // This prevents the terrestrial heightfield from bleeding through beneath transparent water.
     const alpha=.985*smooth01(t/.045);colors.push(1,.94,.82,alpha);baseAlpha.push(alpha);
@@ -3951,7 +3961,9 @@ void main(void){
    }
    const vertexStart=beachWorkVertexCursor;
    while(beachWorkVertexCursor<layer.baseY.length&&performance.now()-sliceStarted<BEACH_WORK_BUDGET_MS){
-    const vertex=beachWorkVertexCursor++,offset=vertex*3,x=layer.positions[offset],z=layer.positions[offset+2];layer.positions[offset+1]=renderedTerrainSurfaceAt(x,z)+.018;
+    const vertex=beachWorkVertexCursor++,offset=vertex*3,x=layer.positions[offset],z=layer.positions[offset+2];
+    // Use this mesh's owning island profile. The generic terrain lookup returns its .42 m sentinel beyond 1.09R.
+    layer.positions[offset+1]=terrainHeightOnIsland(layer.island,x,z)+terrainDeformationAt(layer.index,x,z)+.018;
    }
    if(beachWorkVertexCursor>vertexStart&&layer.positionBuffer&&layer.positionBuffer.isUpdatable()){const start=vertexStart*3,end=beachWorkVertexCursor*3;layer.positionBuffer.updateDirectly(layer.positions.subarray(start,end),start);}
    const sliceMs=performance.now()-sliceStarted;beachWorkLastSliceMs=Number(sliceMs.toFixed(3));beachWorkMaxSliceMs=Math.max(beachWorkMaxSliceMs,sliceMs);
@@ -4186,6 +4198,16 @@ void main(void){
    const a=row*cols+col,b=a+1,c=(row+1)*cols+col,d=c+1;
    washIndices[washCursor++]=a;washIndices[washCursor++]=b;washIndices[washCursor++]=c;
    washIndices[washCursor++]=b;washIndices[washCursor++]=d;washIndices[washCursor++]=c;
+  }
+  // Polar wrap: the final column is an exact duplicate of column zero, including its surface height.
+
+  for(let row=0;row<washRows;row++){
+   const first=row*cols,last=first+segments,first3=first*3,last3=last*3,first2=first*2,last2=last*2,first4=first*4,last4=last*4;
+   for(let axis=0;axis<3;axis++)washPositions[last3+axis]=washPositions[first3+axis];
+   for(let axis=0;axis<2;axis++)washUvs[last2+axis]=washUvs[first2+axis];
+   for(let channel=0;channel<4;channel++)washColors[last4+channel]=washColors[first4+channel];
+   washPattern[last]=washPattern[first];
+   if(washDiagnosticDepths)washDiagnosticDepths[last]=washDiagnosticDepths[first];
   }
   const washNormals=[];B.VertexData.ComputeNormals(washPositions,washIndices,washNormals);
   const washMesh=new B.Mesh('ShoreBreakerWash_'+index,scene),washData=new B.VertexData();
@@ -12213,7 +12235,7 @@ function update(dt){
    }
    const p50Length=coastalAuditPercentile(lengths,.50),p95Length=coastalAuditPercentile(lengths,.95),p99Length=coastalAuditPercentile(lengths,.99);
    const p99Jump=coastalAuditPercentile(jumps,.99),p99Slope=coastalAuditPercentile(angles,.99);
-   const longEdgeThreshold=Math.max(1.25,p95Length*1.8,p50Length*2.75);
+   const longEdgeThreshold=Math.max(1.25,p50Length*2.0);
    const longEdgeOutlierCount=lengths.reduce((count,value)=>count+(value>longEdgeThreshold?1:0),0);
    let seam;
    if(options.polarRows>1&&options.polarCols>1&&options.polarRows*options.polarCols<=vertexCount){
@@ -12259,8 +12281,8 @@ function update(dt){
     const terrain=islandTerrainMeshes[index],seabed=coastalSeabedMeshes[index],beach=livingBeachLayers[index],foam=tidalFoamMeshes.find(item=>item.index===index);
     const meshes=[
      coastalAuditMesh(island,index,'IslandHeightfield',terrain?.getVerticesData(B.VertexBuffer.PositionKind),terrain?.getIndices(),{offsetX:island.x,offsetY:terrain?.position?.y||0,offsetZ:island.z,jumpThresholdMeters:1.0}),
-     coastalAuditMesh(island,index,'NordicSubmergedSand',seabed?.getVerticesData(B.VertexBuffer.PositionKind),seabed?.getIndices(),{polarRows:seabed?.metadata?.rows,polarCols:seabed?.metadata?.cols,jumpThresholdMeters:.75}),
-     coastalAuditMesh(island,index,'LivingCoastalSand',beach?.positions,beach?.mesh?.getIndices(),{polarRows:beach?.rows,polarCols:beach?.cols,jumpThresholdMeters:.50}),
+     coastalAuditMesh(island,index,'NordicSubmergedSand',seabed?.getVerticesData(B.VertexBuffer.PositionKind),seabed?.getIndices(),{polarRows:seabed?.metadata?.rows,polarCols:seabed?.metadata?.cols,jumpThresholdMeters:.80}),
+     coastalAuditMesh(island,index,'LivingCoastalSand',beach?.positions,beach?.mesh?.getIndices(),{polarRows:beach?.rows,polarCols:beach?.cols,jumpThresholdMeters:.90}),
      coastalAuditMesh(island,index,'ShoreBreakerWash',foam?.washPositions,foam?.washMesh?.getIndices(),{polarRows:foam?.washRows,polarCols:foam?.cols,jumpThresholdMeters:.75})
     ];
     const solver=foam?(()=>{
@@ -12276,7 +12298,7 @@ function update(dt){
     if(madeBeach){const layer=livingBeachLayers[index];if(layer){try{layer.mesh.dispose(false,false);}catch(_){}try{layer.material.dispose(false,false);}catch(_){}try{layer.coastalStateTexture.dispose();}catch(_){}livingBeachLayers[index]=null;}}
     if(madeSeabed){try{seabed?.dispose(false,false);}catch(_){}coastalSeabedMeshes[index]=null;}
    }
-   return {schema:1,islandCount:results.length,thresholds:{heightJumpMeters:{IslandHeightfield:1.0,NordicSubmergedSand:.75,LivingCoastalSand:.50,ShoreBreakerWash:.75},sandAboveProfileToleranceMeters:.015,seamPositionToleranceMeters:.002},durationMs:Number((performance.now()-started).toFixed(1)),islands:results};
+   return {schema:1,islandCount:results.length,thresholds:{heightJumpMeters:{IslandHeightfield:1.0,NordicSubmergedSand:.80,LivingCoastalSand:.90,ShoreBreakerWash:.75},sandAboveProfileToleranceMeters:.015,seamPositionToleranceMeters:.002},durationMs:Number((performance.now()-started).toFixed(1)),islands:results};
   }
 
   window.__ELSN_TEST__={

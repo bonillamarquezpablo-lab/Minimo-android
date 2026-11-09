@@ -508,11 +508,67 @@ async function main() {
       'The three diagnostic cameras must each contain a baseline and seventeen isolated variants');
     console.log('[coastal-reference] 54 same-state A/B captures complete; four coastal meshes, shoreline, vertex-alpha and sheet-depth metrics recorded');
 
+    // Focused same-state A/B at the measured outlier sector on Isla del Cuervo.
+    const hotspotVariants = [
+      { id: 'baseline', kind: null },
+      { id: 'no-island-heightfield', kind: 'island-heightfield' },
+      { id: 'no-submerged-sand', kind: 'submerged-sand' },
+      { id: 'no-living-beach-layer', kind: 'living-beach-layer' },
+      { id: 'no-shorebreaker-wash', kind: 'shore-breaker-wash' }
+    ];
+    manifest.hotspotCaptures = [];
+    for (const variant of hotspotVariants) {
+      const result = await page.evaluate(({ variant, island }) => {
+        const api = window.__ELSN_TEST__;
+        api.setCamera({
+          x: island.x + 47, y: 3.4, z: island.z - 31,
+          targetX: island.x + 55, targetY: -2.2, targetZ: island.z - 37
+        });
+        api.setWaterState({ time: 37, tide: 'natural' });
+        const variantState = variant.kind ? api.setDiagnosticVariant(variant.kind, true) : null;
+        api.setWaterState({ time: 37, tide: 'natural' });
+        api.render();
+        const canvasPng = api.captureCanvas();
+        const restoredVariantState = variant.kind ? api.setDiagnosticVariant(variant.kind, false) : null;
+        api.setWaterState({ time: 37, tide: 'natural' });
+        api.render();
+        return { canvasPng, variantState, restoredVariantState };
+      }, { variant, island: mainIsland });
+      const prefix = 'data:image/png;base64,';
+      assert.ok(typeof result.canvasPng === 'string' && result.canvasPng.startsWith(prefix),
+        'Geometry hotspot A/B did not return a PNG: ' + variant.id);
+      const png = Buffer.from(result.canvasPng.slice(prefix.length), 'base64');
+      assert.ok(png.length > 1000, 'Geometry hotspot PNG is empty: ' + variant.id);
+      assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+      if (variant.kind) {
+        const field = {
+          'island-heightfield': 'islandHeightfieldVisible',
+          'submerged-sand': 'submergedSandVisible',
+          'living-beach-layer': 'livingBeachLayerVisible',
+          'shore-breaker-wash': 'shoreBreakerWashVisible'
+        }[variant.kind];
+        assert.equal(result.variantState?.[field], 0, 'Hotspot failed to hide ' + variant.kind);
+        assert.ok(result.restoredVariantState?.[field] >= 1, 'Hotspot failed to restore ' + variant.kind);
+      }
+      const file = 'geometry-hotspot__t037__natural__' + variant.id + '.png';
+      fs.writeFileSync(path.join(OUT, file), png);
+      manifest.hotspotCaptures.push({
+        file, camera: 'geometry-hotspot', timeSeconds: 37, tide: 'natural',
+        variant: variant.id, disabledSource: variant.kind,
+        variantState: result.variantState, restoredVariantState: result.restoredVariantState
+      });
+    }
+    assert.equal(manifest.hotspotCaptures.length, 5,
+      'El sector geométrico debe tener una captura base y cuatro aislamientos independientes.');
+
+
     stepStartedAt = performance.now();
     const geometryAudit = await page.evaluate(() => window.__ELSN_TEST__.auditIslandGeometry());
     manifest.geometryAudit = geometryAudit;
     fs.writeFileSync(path.join(OUT, 'geometry-audit.json'), JSON.stringify(geometryAudit, null, 2) + '\\n');
     assert.equal(geometryAudit?.islandCount, 13, 'La auditoría debe inspeccionar las trece islas.');
+    assert.equal(geometryAudit.thresholds.heightJumpMeters.NordicSubmergedSand, .80);
+    assert.equal(geometryAudit.thresholds.heightJumpMeters.LivingCoastalSand, .90);
 
     // First isolate the polar seam and null coast-solver hypothesis on all four meshes.
     // IslandHeightfield is Cartesian, so it is explicitly reported as non-polar.

@@ -8,11 +8,25 @@ assert.match(html,/function auditIslandGeometry\(\)/);
 for(const mesh of ['IslandHeightfield','NordicSubmergedSand','LivingCoastalSand','ShoreBreakerWash']) assert.ok(html.includes("'"+mesh+"'"),'Missing '+mesh);
 assert.match(html,/maxConsecutiveNullColumns/);
 assert.match(html,/maxPositionGapMeters/);
+assert.match(html,/longEdgeThreshold=Math\.max\(1\.25,p50Length\*2\.0\)/);
 assert.match(html,/coastalAuditProfile\(island,index,'NordicSubmergedSand'/);
 assert.match(html,/coastalAuditProfile\(island,index,'LivingCoastalSand'/);
 assert.match(html,/island-heightfield/);
 assert.match(html,/g\.position=v\(cx,renderedTerrainSurfaceAt\(cx,cz\)\+\.035,cz\)/);
+const beachStart=html.indexOf('function buildLivingBeachLayer');
+const beachEnd=html.indexOf('function ensureActiveCoastalIslandSystems',beachStart);
+const beachSource=html.slice(beachStart,beachEnd);
+assert.match(beachSource,/terrainHeightOnIsland\(island,x,z\)\+terrainDeformationAt\(index,x,z\)\+\.018/);
+assert.doesNotMatch(beachSource,/renderedTerrainSurfaceAt\(x,z\)/);
+const updateStart=html.indexOf('function processBeachWorkChunk');
+const updateEnd=html.indexOf('function updateBeach',updateStart);
+const updateSource=html.slice(updateStart,updateEnd);
+assert.match(updateSource,/terrainHeightOnIsland\(layer\.island,x,z\)\+terrainDeformationAt\(layer\.index,x,z\)\+\.018/);
+assert.doesNotMatch(updateSource,/renderedTerrainSurfaceAt\(x,z\)/);
+assert.match(html,/washPositions\[last3\+axis\]=washPositions\[first3\+axis\]/);
 assert.match(runner,/diagnosticCaptures\.length, 54/);
+assert.match(runner,/geometry-hotspot/);
+assert.match(runner,/hotspotCaptures\.length, 5/);
 for (const variant of ['no-island-heightfield','no-submerged-sand','no-living-beach-layer','no-shorebreaker-wash']) {
   assert.ok(runner.includes("id: '" + variant + "'"), 'Missing independent A/B isolation for ' + variant);
 }
