@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the 36-frame coastal reference plus the ten same-state diagnostic A/B captures."""
+"""Build the 36-frame coastal reference, legacy isolation frames, and ten same-state diagnostic A/B captures."""
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
@@ -15,6 +15,10 @@ DIAGNOSTIC_VARIANTS = (
     ("no-ocean-normal-map", "sin normales"),
     ("no-ocean-specular", "sin especular"),
     ("no-short-vertex-waves", "sin ondas cortas"),
+)
+LEGACY_ISOLATIONS = (
+    ("ridge-occlusion__t037__natural__no-island-shadows.png", "ridge | sin sombras isla"),
+    ("ridge-occlusion__t037__natural__no-packed-trails.png", "ridge | sin caminos"),
 )
 THUMB_W, THUMB_H = 256, 144
 LABEL_H = 24
@@ -39,7 +43,8 @@ def main() -> None:
         for camera in DIAGNOSTIC_CAMERAS
         for variant, _ in DIAGNOSTIC_VARIANTS
     ]
-    missing = [name for name in expected + diagnostic_expected if not (OUT / name).is_file()]
+    legacy_expected = [name for name, _ in LEGACY_ISOLATIONS]
+    missing = [name for name in expected + diagnostic_expected + legacy_expected if not (OUT / name).is_file()]
     if missing:
         raise SystemExit("Cannot build contact sheet; missing screenshots: " + ", ".join(missing))
 
@@ -47,14 +52,15 @@ def main() -> None:
     width = columns * THUMB_W + (columns - 1) * GAP
     base_rows = len(CAMERAS) * len(TIMES)
     diagnostic_rows = len(DIAGNOSTIC_CAMERAS)
+    legacy_rows = 1
     row_height = LABEL_H + THUMB_H
-    height = HEADER_H + GAP + (base_rows + diagnostic_rows) * (row_height + GAP)
+    height = HEADER_H + GAP + (base_rows + diagnostic_rows + legacy_rows) * (row_height + GAP)
     sheet = Image.new("RGB", (width, height), BG)
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
 
-    draw.text((8, 7), "EL SIN NOMBRE · COASTAL REFERENCE · 36 BASE + 10 DIAGNOSTIC A/B", fill=TEXT, font=font)
-    draw.text((8, 25), "Baseline matrix above · same-state variants below · t=037 s · natural tide · 960×540 source",
+    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 10 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
+    draw.text((8, 25), "Baseline matrix · A/B same camera, t=037 s, natural tide · prior shadow/trail checks retained",
               fill=MUTED, font=font)
 
     def paste_tile(name: str, label: str, col: int, row: int) -> None:
@@ -90,9 +96,12 @@ def main() -> None:
             paste_tile(name, f"{camera} | t037 | {label}", col, row)
         row += 1
 
+    for col, (name, label) in enumerate(LEGACY_ISOLATIONS):
+        paste_tile(name, label, col, row)
+
     target = OUT / "contact-sheet.png"
     sheet.save(target, format="PNG", optimize=True)
-    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 baseline + 10 diagnostic captures)")
+    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 10 diagnostic A/B + legacy)")
 
 
 if __name__ == "__main__":
