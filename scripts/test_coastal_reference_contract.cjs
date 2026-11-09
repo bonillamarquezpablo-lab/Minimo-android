@@ -51,7 +51,7 @@ assert.match(html, /washDiagnosticDepths=coastalDiagnosticsEnabled\?new Float32A
   'Sheet depth probes must only allocate in diagnostic/test mode.');
 assert.match(html, /getSheetOpacityDepthDiagnostics/,
   'The A/B manifest must report opacity for vertices submerged by more than 3 cm.');
-assert.match(html, /if\(washDiagnosticDepths\)washDiagnosticDepths\[vertex\]=water-terrainY/,
+assert.match(html, /if\(washDiagnosticDepths\)washDiagnosticDepths\[vertex\]=waterDepth/,
   'Per-vertex film depth must be recorded through the active foam update scope.');
 assert.match(html, /debugForcedTideOffset=tide==='natural'\?null:Number\(tide\)/);
 assert.match(html,/function terrainDeformationAt\(islandIndex,x,z\)\{\s*const field=terrainDeformationFields\[islandIndex\];if\(!field\|\|!field\.active\.size\)return 0;/, 'Unchanged islands must skip bilinear foot-deformation sampling in the per-vertex coastal update.');
