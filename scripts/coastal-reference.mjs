@@ -221,6 +221,15 @@ async function main() {
           assert.equal(agreement?.sampled, 100, 'Complete all 100 analytic vertex samples');
           assert.ok(Number.isFinite(agreement?.maxAbsErrorMeters) && agreement.maxAbsErrorMeters < 0.01,
             'Analytic/drawn water surface differs by 1 cm or more: ' + JSON.stringify(agreement));
+          const lodBoundary90 = coastMetrics?.waterLodBoundary90;
+          assert.equal(lodBoundary90?.radiusMeters, 90, 'The required mobile LOD boundary must be exactly 90 m');
+          assert.equal(lodBoundary90?.samples, 36, 'Check 36 directions at the 90 m LOD boundary');
+          assert.ok(Number.isFinite(lodBoundary90?.maxHeightContinuityErrorMeters) && lodBoundary90.maxHeightContinuityErrorMeters < 0.01,
+            'Height seam at the 90 m LOD boundary: ' + JSON.stringify(lodBoundary90));
+          assert.ok(Number.isFinite(lodBoundary90?.maxRadialSlopeDifference) && lodBoundary90.maxRadialSlopeDifference < 0.005,
+            'Radial slope is not continuous at the 90 m LOD boundary: ' + JSON.stringify(lodBoundary90));
+          assert.ok(Number.isFinite(lodBoundary90?.maxNormalDiscontinuityDegrees) && lodBoundary90.maxNormalDiscontinuityDegrees < 0.5,
+            'Normals are not continuous at the 90 m LOD boundary: ' + JSON.stringify(lodBoundary90));
           const lodBoundary = coastMetrics?.waterLodBoundary;
           assert.equal(lodBoundary?.samples, 36, 'Check 36 directions at the LOD boundary');
           assert.ok(Number.isFinite(lodBoundary?.maxHeightContinuityErrorMeters) && lodBoundary.maxHeightContinuityErrorMeters < 0.01,
