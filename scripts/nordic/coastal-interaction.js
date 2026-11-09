@@ -32,8 +32,10 @@
     if (depth <= 0) return 0;
     const shorelineEntry = 0.24 * smooth01(depth / 0.30);
     const shallowBody = 0.28 * smooth01(depth / 1.65);
-    const depthBody = 0.38 * smooth01(depth / 5.5);
-    return Math.min(0.90, shorelineEntry + shallowBody + depthBody);
+    const depthBody = 0.48 * smooth01(depth / 5.5);
+    // Deep water should absorb the submerged sand almost completely, avoiding a visible
+    // hard oval at the edge of the finite seabed mesh while preserving clear shallows.
+    return Math.min(0.94, shorelineEntry + shallowBody + depthBody);
   }
 
   // The moving sheet always floats just above both the sloping sand and sea.
