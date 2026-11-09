@@ -12045,7 +12045,7 @@ function update(dt){
    if(waveBody&&!diagnosticWaveBodyVisibility.has(waveBody))diagnosticWaveBodyVisibility.set(waveBody,{visible:waveBody.isVisible,enabled:typeof waveBody.isEnabled==='function'?waveBody.isEnabled():true});
   };
   const getSheetOpacityDepthDiagnostics=()=>{
-   const threshold=.03,depths=[],alphas=[];
+   const threshold=.55,depths=[],alphas=[];
    for(const foam of tidalFoamMeshes){
     if(foam.index!==activeTidalFoamIslandIndex||!foam.washDiagnosticDepths)continue;
     for(let vertex=0;vertex<foam.washDiagnosticDepths.length;vertex++){
@@ -12088,6 +12088,10 @@ function update(dt){
      M.water.useVertexAlpha=disabled?false:diagnosticOceanVertexAlpha;
     }else if(kind==='ground-vertex-alpha'){
      ground.hasVertexAlpha=disabled?false:diagnosticGroundVertexAlpha;
+    }else if(kind==='ocean-vertex-alpha'){
+     M.water.useVertexAlpha=disabled?false:diagnosticOceanVertexAlpha;
+    }else if(kind==='ground-vertex-alpha'){
+     ground.hasVertexAlpha=disabled?false:diagnosticGroundVertexAlpha;
     }else if(kind==='ocean-depth-alpha'){
      M.water.useVertexAlpha=disabled?false:diagnosticOceanVertexAlpha;ground.hasVertexAlpha=disabled?false:diagnosticGroundVertexAlpha;
     }else if(kind==='ocean-specular'){
@@ -12096,7 +12100,7 @@ function update(dt){
     }else if(kind==='short-vertex-waves'){
      coastalDiagnosticOverrides.disableShortVertexWaves=disabled;
     }else throw new Error('Unknown coastal diagnostic variant: '+kind);
-    return {kind,disabled,waterNormalMapEnabled:!!M.water.bumpTexture,oceanVertexAlphaEnabled:!!M.water.useVertexAlpha,waterNormalLevel:M.water.bumpTexture?.level??null,waterNormalUScale:M.water.bumpTexture?.uScale??null,waterNormalVScale:M.water.bumpTexture?.vScale??null,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length,volumetricShoreBreakerVisible:tidalFoamMeshes.filter(foam=>foam.waveBodyMesh.isVisible).length,livingBeachLayerVisible:livingBeachLayers[activeBeachIslandIndex]?.mesh?.isVisible?1:0,submergedSandVisible:coastalSeabedMeshes[activeBeachIslandIndex]?.isVisible?1:0,continuousShoreFoamVisible:tidalFoamMeshes.filter(foam=>foam.mesh.isVisible).length};
+    return {kind,disabled,waterNormalMapEnabled:!!M.water.bumpTexture,oceanVertexAlphaEnabled:!!M.water.useVertexAlpha,groundVertexAlphaEnabled:!!ground.hasVertexAlpha,waterNormalLevel:M.water.bumpTexture?.level??null,waterNormalUScale:M.water.bumpTexture?.uScale??null,waterNormalVScale:M.water.bumpTexture?.vScale??null,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length,volumetricShoreBreakerVisible:tidalFoamMeshes.filter(foam=>foam.waveBodyMesh.isVisible).length,livingBeachLayerVisible:livingBeachLayers[activeBeachIslandIndex]?.mesh?.isVisible?1:0,submergedSandVisible:coastalSeabedMeshes[activeBeachIslandIndex]?.isVisible?1:0,continuousShoreFoamVisible:tidalFoamMeshes.filter(foam=>foam.mesh.isVisible).length};
    },
    sheetOpacityDepth:()=>getSheetOpacityDepthDiagnostics(),
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},
