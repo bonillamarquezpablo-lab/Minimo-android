@@ -2769,46 +2769,63 @@ async function removeStrayDebugGeometry(targetScene){
   }
  }
  for(let i=0;i<waterNormals.length;i+=3)waterNormals[i+1]=1;
- // Precompute spatial wave phases once. Every frame evaluates the same exact
- // sinusoidal waves using seven shared time sin/cos pairs instead of per-vertex trig.
- const WATER_WAVE_STRIDE=14,waterWaveBasis=new Float32Array((waterBase.length/3)*WATER_WAVE_STRIDE);
- const waterWaveTimeSin=new Float32Array(7),waterWaveTimeCos=new Float32Array(7);
- const waterWaveFrequencies=[.48,.82,-.73,1.28,-1.82,2.15,2.8];
+ // One canonical wave definition feeds the analytic solver and both rendered LOD paths.
+ const WATER_WAVE_PARAMETERS=Object.freeze({
+  components:Object.freeze([
+   Object.freeze({x:.009,z:.012,frequency:.48,amplitude:.105}),
+   Object.freeze({x:.018,z:.012,frequency:.82,amplitude:.315}),
+   Object.freeze({x:-.013,z:.027,frequency:-.73,amplitude:.225}),
+   Object.freeze({x:.052,z:.03224,frequency:1.28,amplitude:.15}),
+   Object.freeze({x:.092,z:-.092,frequency:-1.82,amplitude:.082}),
+   Object.freeze({x:.76*.145,z:-1.13*.145,frequency:2.15,amplitude:.046}),
+   Object.freeze({x:.19,z:.14,frequency:2.8,amplitude:.026})
+  ]),
+  crossCrestLift:.030,
+  shortCrestLift:.018
+ });
+ const WATER_WAVE_COMPONENTS=WATER_WAVE_PARAMETERS.components;
+ const WATER_WAVE_STRIDE=WATER_WAVE_COMPONENTS.length*2,waterWaveBasis=new Float32Array((waterBase.length/3)*WATER_WAVE_STRIDE);
+ const waterWaveTimeSin=new Float32Array(WATER_WAVE_COMPONENTS.length),waterWaveTimeCos=new Float32Array(WATER_WAVE_COMPONENTS.length);
+ const waterWaveFrequencies=WATER_WAVE_COMPONENTS.map(wave=>wave.frequency);
  for(let vertex=0;vertex<waterBase.length/3;vertex++){
   const offset=vertex*3,x=waterBase[offset],z=waterBase[offset+2],basis=vertex*WATER_WAVE_STRIDE;
-  const p0=x*.009+z*.012,p1=x*.018+z*.012,p2=-x*.013+z*.027,p3=(x+z*.62)*.052,p4=(x-z)*.092,p5=(x*.76-z*1.13)*.145,p6=x*.19+z*.14;
-  waterWaveBasis[basis]=Math.sin(p0);waterWaveBasis[basis+1]=Math.cos(p0);
-  waterWaveBasis[basis+2]=Math.sin(p1);waterWaveBasis[basis+3]=Math.cos(p1);
-  waterWaveBasis[basis+4]=Math.sin(p2);waterWaveBasis[basis+5]=Math.cos(p2);
-  waterWaveBasis[basis+6]=Math.sin(p3);waterWaveBasis[basis+7]=Math.cos(p3);
-  waterWaveBasis[basis+8]=Math.sin(p4);waterWaveBasis[basis+9]=Math.cos(p4);
-  waterWaveBasis[basis+10]=Math.sin(p5);waterWaveBasis[basis+11]=Math.cos(p5);
-  waterWaveBasis[basis+12]=Math.sin(p6);waterWaveBasis[basis+13]=Math.cos(p6);
+  for(let wave=0;wave<WATER_WAVE_COMPONENTS.length;wave++){
+   const parameter=WATER_WAVE_COMPONENTS[wave],phase=x*parameter.x+z*parameter.z,index=basis+wave*2;
+   waterWaveBasis[index]=Math.sin(phase);waterWaveBasis[index+1]=Math.cos(phase);
+  }
  }
  function updateWaterWaveTime(t){
-  for(let wave=0;wave<7;wave++){const phase=t*waterWaveFrequencies[wave];waterWaveTimeSin[wave]=Math.sin(phase);waterWaveTimeCos[wave]=Math.cos(phase);}
+  for(let wave=0;wave<WATER_WAVE_COMPONENTS.length;wave++){const phase=t*waterWaveFrequencies[wave];waterWaveTimeSin[wave]=Math.sin(phase);waterWaveTimeCos[wave]=Math.cos(phase);}
  }
  function waterWaveValueAtVertex(vertex,wave){
   const offset=vertex*WATER_WAVE_STRIDE+wave*2;
   return waterWaveBasis[offset]*waterWaveTimeCos[wave]+waterWaveBasis[offset+1]*waterWaveTimeSin[wave];
  }
+ function waterWaveDerivativeAtVertex(vertex,wave){
+  const offset=vertex*WATER_WAVE_STRIDE+wave*2;
+  return waterWaveBasis[offset+1]*waterWaveTimeCos[wave]-waterWaveBasis[offset]*waterWaveTimeSin[wave];
+ }
+ function waterHeightFromWaveValues(w0,w1,w2,w3,w4,w5,w6,t,detailFade){
+  const c=WATER_WAVE_COMPONENTS,crossWave=w3,chopWave=w4;
+  const base=w0*c[0].amplitude+w1*c[1].amplitude+w2*c[2].amplitude;
+  const detail=w3*c[3].amplitude+w4*c[4].amplitude+w5*c[5].amplitude+w6*c[6].amplitude;
+  const crest=Math.pow(Math.max(0,crossWave),3)*WATER_WAVE_PARAMETERS.crossCrestLift*oceanDepthSettings.waveCrestStrength;
+  const shortCrest=Math.pow(Math.max(0,chopWave),3)*WATER_WAVE_PARAMETERS.shortCrestLift*oceanDepthSettings.waveCrestStrength;
+  return tideOffsetAt(t)+base+(detail+crest+shortCrest)*detailFade;
+ }
  function waterFarHeightAtVertex(vertex){
-  const longSwell=waterWaveValueAtVertex(vertex,0)*.105,swellA=waterWaveValueAtVertex(vertex,1)*.315,swellB=waterWaveValueAtVertex(vertex,2)*.225;
-  const crossWave=waterWaveValueAtVertex(vertex,3),chopWave=waterWaveValueAtVertex(vertex,4);
-  const cross=crossWave*.15,chop=chopWave*.082,secondary=waterWaveValueAtVertex(vertex,5)*.046,ripple=waterWaveValueAtVertex(vertex,6)*.026;
-  const crestFoamLift=Math.pow(Math.max(0,crossWave),3)*.030*oceanDepthSettings.waveCrestStrength,shortCrest=Math.pow(Math.max(0,chopWave),3)*.018*oceanDepthSettings.waveCrestStrength;
-  const shortWaveScale=coastalDiagnosticOverrides.disableShortVertexWaves?0:1;
-  return tideOffsetAt(oceanTime)+longSwell+swellA+swellB+(cross+chop+secondary+ripple+crestFoamLift+shortCrest)*shortWaveScale;
+  return waterHeightFromWaveValues(waterWaveValueAtVertex(vertex,0),waterWaveValueAtVertex(vertex,1),waterWaveValueAtVertex(vertex,2),waterWaveValueAtVertex(vertex,3),waterWaveValueAtVertex(vertex,4),waterWaveValueAtVertex(vertex,5),waterWaveValueAtVertex(vertex,6),oceanTime,0);
  }
  function waterDetailHeightAtVertex(vertex,fade){
-  const longSwell=waterWaveValueAtVertex(vertex,0)*.105,swellA=waterWaveValueAtVertex(vertex,1)*.315,swellB=waterWaveValueAtVertex(vertex,2)*.225;
-  const crossWave=waterWaveValueAtVertex(vertex,3),chopWave=waterWaveValueAtVertex(vertex,4);
-  const cross=crossWave*.15,chop=chopWave*.082,secondary=waterWaveValueAtVertex(vertex,5)*.046,ripple=waterWaveValueAtVertex(vertex,6)*.026;
-  const crestFoamLift=Math.pow(Math.max(0,crossWave),3)*.030*oceanDepthSettings.waveCrestStrength,shortCrest=Math.pow(Math.max(0,chopWave),3)*.018*oceanDepthSettings.waveCrestStrength;
-  const shortWaveScale=coastalDiagnosticOverrides.disableShortVertexWaves?0:1;
-  return tideOffsetAt(oceanTime)+longSwell+swellA+swellB+(cross+chop+secondary+ripple+crestFoamLift+shortCrest)*fade*shortWaveScale;
+  return waterHeightFromWaveValues(waterWaveValueAtVertex(vertex,0),waterWaveValueAtVertex(vertex,1),waterWaveValueAtVertex(vertex,2),waterWaveValueAtVertex(vertex,3),waterWaveValueAtVertex(vertex,4),waterWaveValueAtVertex(vertex,5),waterWaveValueAtVertex(vertex,6),oceanTime,fade);
  }
- updateWaterWaveTime(0);
+ function updateWaterFarNormalAtVertex(vertex){
+  const c=WATER_WAVE_COMPONENTS;
+  const dx=waterWaveDerivativeAtVertex(vertex,0)*c[0].x*c[0].amplitude+waterWaveDerivativeAtVertex(vertex,1)*c[1].x*c[1].amplitude+waterWaveDerivativeAtVertex(vertex,2)*c[2].x*c[2].amplitude;
+  const dz=waterWaveDerivativeAtVertex(vertex,0)*c[0].z*c[0].amplitude+waterWaveDerivativeAtVertex(vertex,1)*c[1].z*c[1].amplitude+waterWaveDerivativeAtVertex(vertex,2)*c[2].z*c[2].amplitude;
+  const inverse=1/Math.sqrt(dx*dx+1+dz*dz),offset=vertex*3;
+  waterNormals[offset]=-dx*inverse;waterNormals[offset+1]=inverse;waterNormals[offset+2]=-dz*inverse;
+ }
  const waterActiveVertexStorage=new Uint32Array(waterBase.length/3);
  let waterActiveVertexOffsets=waterActiveVertexStorage.subarray(0,0),waterActiveMinOffset=0,waterActiveMaxOffset=-1,waterFocusX=NaN,waterFocusZ=NaN,waterLastUpdatedVertices=0,waterLastUploadedVertices=0,waterLastUploadBytes=0,waterLastUpdateMs=0,waterLastNormalMs=0;
  function refreshWaterDetailRegion(){
@@ -2840,29 +2857,25 @@ async function removeStrayDebugGeometry(targetScene){
  const waterVertexStep=isPerformanceMode?(isUltraLowEndMobile?1/6:(isGalaxyA12NachoPerformance?1/5:(isGalaxyA12LowEndMobile?1/7:(isConstrainedMobile?1/8:(isTouchDevice?1/30:1/30))))):(isTouchDevice?1/30:1/40);
  const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12NachoPerformance?1.35:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/30:1/12))))):(isTouchDevice?(isConstrainedMobile?1/8:1/10):1/15);
  const waterFarStep=isPerformanceMode?(isConstrainedMobile?.36:1/12):(isTouchDevice?.22:.14);
- function waterHeight(x,z,t=oceanTime,detailFade=1){
-  // Layered directional swells: broad North Sea swell plus shorter cross-waves and capillary ripples.
-  const longSwell=Math.sin(x*.009+z*.012+t*.48)*.105;
-  const swellA=Math.sin(x*.018+z*.012+t*.82)*.315;
-  const swellB=Math.sin(-x*.013+z*.027-t*.73)*.225;
-  const crossWave=Math.sin((x+z*.62)*.052+t*1.28);
-  const cross=crossWave*.15;
-  const chopWave=Math.sin((x-z)*.092-t*1.82);
-  const chop=chopWave*.082;
-  const secondary=Math.sin((x*.76-z*1.13)*.145+t*2.15)*.046;
-  const ripple=Math.sin(x*.19+z*.14+t*2.8)*.026;
-  // Crestas algo más tensas y asimétricas: el agua levanta la ola y rompe suavemente.
-  const crestFoamLift=Math.pow(Math.max(0,crossWave),3)*.018;
-  const shortCrest=Math.pow(Math.max(0,chopWave),3)*.010;
-  return tideOffsetAt(t)+longSwell+swellA+swellB+(cross+chop+secondary+ripple+crestFoamLift+shortCrest)*detailFade;
+ function waterDetailFadeAt(x,z){
+  const fx=Number.isFinite(waterFocusX)?waterFocusX:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.x:(onShip?ship.position.x:player.root.position.x));
+  const fz=Number.isFinite(waterFocusZ)?waterFocusZ:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.z:(onShip?ship.position.z:player.root.position.z));
+  const dx=x-fx,dz=z-fz,fadeT=Math.max(0,Math.min(1,(WATER_DETAIL_RADIUS_SQ-(dx*dx+dz*dz))/(WATER_DETAIL_RADIUS_SQ-WATER_DETAIL_FADE_START_SQ)));
+  return fadeT*fadeT*(3-2*fadeT);
  }
- // El oleaje amplio sigue animándose en todo el océano; la zona cercana recibe después
- // las crestas cortas y normales completas. Así no quedan parches congelados tras mover la cámara.
- function waterFarHeight(x,z,t=oceanTime){
-  return Math.sin(x*.009+z*.012+t*.48)*.105
-   +Math.sin(x*.018+z*.012+t*.82)*.315
-   +Math.sin(-x*.013+z*.027-t*.73)*.225+tideOffsetAt(t);
+ function waterHeight(x,z,t=oceanTime,detailFade){
+  const c=WATER_WAVE_COMPONENTS,fade=Number.isFinite(detailFade)?Math.max(0,Math.min(1,detailFade)):waterDetailFadeAt(x,z);
+  return waterHeightFromWaveValues(
+   Math.sin(x*c[0].x+z*c[0].z+t*c[0].frequency),
+   Math.sin(x*c[1].x+z*c[1].z+t*c[1].frequency),
+   Math.sin(x*c[2].x+z*c[2].z+t*c[2].frequency),
+   Math.sin(x*c[3].x+z*c[3].z+t*c[3].frequency),
+   Math.sin(x*c[4].x+z*c[4].z+t*c[4].frequency),
+   Math.sin(x*c[5].x+z*c[5].z+t*c[5].frequency),
+   Math.sin(x*c[6].x+z*c[6].z+t*c[6].frequency),t,fade);
  }
+ // The far path is the zero-detail endpoint of the same surface used by the near LOD.
+ function waterFarHeight(x,z,t=oceanTime){return waterHeight(x,z,t,0);}
  // Coastal waves respect the actual tide level plus a short run-up margin; open-ocean crests cannot float over a hill.
  function coastalWaterHeight(x,z,t=oceanTime){const meanSeaLevel=Number(ground.position.y)||0;return Math.min(waterHeight(x,z,t),meanSeaLevel+.38);}
  function createVesselFloatState(){return {heaveVelocity:0,pitchVelocity:0,rollVelocity:0};}
@@ -2929,14 +2942,33 @@ async function removeStrayDebugGeometry(targetScene){
    foamActiveMeshes:tidalFoamMeshes.length,foamActiveSegments,foamSegmentCapacity,foamValidIntersections,foamIntersectionCapacity,foamGeometryVerticesChecked,foamGeometryVerticesOutsideBand,foamVerticesChecked:foamVisibleVerticesChecked,foamVerticesOutsideBand:foamVisibleVerticesOutsideBand,foamMaxOffshoreDistanceMeters:Number(Math.max(0,foamMaxVisibleOffshoreOffset).toFixed(3)),foamUpdateLastMs:Number(tidalFoamLastUpdateMs.toFixed(3)),foamUpdateMaxMs:Number(tidalFoamMaxUpdateMs.toFixed(3)),
    coastSolver:waterDebugSolverStats?{...waterDebugSolverStats,meanMs:waterDebugSolverStats.samples?waterDebugSolverStats.totalMs/waterDebugSolverStats.samples:null,initial:{...waterDebugSolverStats.initial,meanMs:waterDebugSolverStats.initial.samples?waterDebugSolverStats.initial.totalMs/waterDebugSolverStats.initial.samples:null},animated:{...waterDebugSolverStats.animated,meanMs:waterDebugSolverStats.animated.samples?waterDebugSolverStats.animated.totalMs/waterDebugSolverStats.animated.samples:null},physicalBackwashVelocity:'no implementado'}:{implemented:false},
    renderedVertexAgreement:getWaterVertexAgreementDiagnostics(),
+   waterLodBoundary:getWaterLodBoundaryDiagnostics(),
    physicalBackwashVelocity:'no implementado'
   };
  }
- function waterNormalAt(x,z,t=oceanTime){
-  const dx=(waterHeight(x+.65,z,t)-waterHeight(x-.65,z,t))/1.3;
-  const dz=(waterHeight(x,z+.65,t)-waterHeight(x,z-.65,t))/1.3;
-  return {pitch:Math.atan2(dz,1),roll:-Math.atan2(dx,1)};
+ function waterSurfaceNormalAt(x,z,t=oceanTime,step=.25){
+  const dx=(waterHeight(x+step,z,t)-waterHeight(x-step,z,t))/(2*step),dz=(waterHeight(x,z+step,t)-waterHeight(x,z-step,t))/(2*step);
+  const inverse=1/Math.sqrt(dx*dx+1+dz*dz);
+  return {x:-dx*inverse,y:inverse,z:-dz*inverse,slopeX:dx,slopeZ:dz};
  }
+ function getWaterLodBoundaryDiagnostics(){
+  const radius=WATER_DETAIL_RADIUS,epsilon=.25,samples=36;
+  const fx=Number.isFinite(waterFocusX)?waterFocusX:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.x:(onShip?ship.position.x:player.root.position.x));
+  const fz=Number.isFinite(waterFocusZ)?waterFocusZ:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.z:(onShip?ship.position.z:player.root.position.z));
+  let maxHeightContinuityErrorMeters=0,maxRadialSlopeDifference=0,maxNormalDiscontinuityDegrees=0;
+  for(let sample=0;sample<samples;sample++){
+   const angle=sample/samples*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
+   const ix=fx+cs*(radius-epsilon),iz=fz+sn*(radius-epsilon),ex=fx+cs*radius,ez=fz+sn*radius,ox=fx+cs*(radius+epsilon),oz=fz+sn*(radius+epsilon);
+   const ih=waterHeight(ix,iz,oceanTime),eh=waterHeight(ex,ez,oceanTime),oh=waterHeight(ox,oz,oceanTime);
+   maxHeightContinuityErrorMeters=Math.max(maxHeightContinuityErrorMeters,Math.abs(eh-(ih+oh)*.5));
+   maxRadialSlopeDifference=Math.max(maxRadialSlopeDifference,Math.abs((eh-ih)/epsilon-(oh-eh)/epsilon));
+   const a=waterSurfaceNormalAt(ix,iz,oceanTime),b=waterSurfaceNormalAt(ox,oz,oceanTime),dot=Math.max(-1,Math.min(1,a.x*b.x+a.y*b.y+a.z*b.z));
+   maxNormalDiscontinuityDegrees=Math.max(maxNormalDiscontinuityDegrees,Math.acos(dot)*180/Math.PI);
+  }
+  return {implemented:true,radiusMeters:radius,samples,maxHeightContinuityErrorMeters,maxRadialSlopeDifference,maxNormalDiscontinuityDegrees};
+ }
+ function waterNormalAt(x,z,t=oceanTime){const n=waterSurfaceNormalAt(x,z,t);return {pitch:Math.atan2(-n.z,n.y),roll:Math.atan2(n.x,n.y)};}
+
  // El estado de espuma y humedad ahora pertenece a BeachState; se elimina el helper de anillos inactivo.
  function sampleRadialProfile(offsets,values,target){
   const last=offsets.length-1;
@@ -2962,15 +2994,14 @@ async function removeStrayDebugGeometry(targetScene){
   // Actualización global económica para el mar lejano: tres ondas largas, cadencia baja.
   if(farDue){
    waterFarAccumulator%=waterFarStep;
-   for(let vertex=0;vertex<waterBase.length/3;vertex++){waterPositions[vertex*3+1]=waterFarHeightAtVertex(vertex);if(waterDebugVertexTimes){waterDebugVertexTimes[vertex]=oceanTime;waterDebugVertexFades[vertex]=0;}}
+   for(let vertex=0;vertex<waterBase.length/3;vertex++){waterPositions[vertex*3+1]=waterFarHeightAtVertex(vertex);updateWaterFarNormalAtVertex(vertex);if(waterDebugVertexTimes){waterDebugVertexTimes[vertex]=oceanTime;waterDebugVertexFades[vertex]=0;}}
   }
   if(detailDue){
    waterAccumulator%=waterVertexStep;
    // La zona alrededor de la cámara conserva el oleaje completo y de mayor frecuencia.
    for(let n=0;n<waterActiveVertexOffsets.length;n++){
    const i=waterActiveVertexOffsets[n],x=waterBase[i],z=waterBase[i+2],dx=x-waterFocusX,dz=z-waterFocusZ;
-   const fadeT=Math.max(0,Math.min(1,(WATER_DETAIL_RADIUS_SQ-(dx*dx+dz*dz))/(WATER_DETAIL_RADIUS_SQ-WATER_DETAIL_FADE_START_SQ)));
-   const fade=fadeT*fadeT*(3-2*fadeT);
+   const fade=waterDetailFadeAt(x,z);
    waterPositions[i+1]=waterDetailHeightAtVertex(i/3,fade);
    if(waterDebugVertexTimes){waterDebugVertexTimes[i/3]=oceanTime;waterDebugVertexFades[i/3]=fade;}
     const waveIndex=i/3,waveCrest=Math.max(0,waterWaveValueAtVertex(waveIndex,3)),shortCrest=Math.max(0,waterWaveValueAtVertex(waveIndex,4));
@@ -2994,15 +3025,21 @@ async function removeStrayDebugGeometry(targetScene){
    ground.updateVerticesData(B.VertexBuffer.PositionKind,waterPositions,false);
    waterLastUploadedVertices=waterPositions.length/3;waterLastUploadBytes=waterPositions.byteLength;
   }
-  if((detailDue||farDue)&&waterNormalAccumulator>=waterNormalStep){
+  const detailedNormalsDue=waterNormalAccumulator>=waterNormalStep;
+  if(farDue||(detailDue&&detailedNormalsDue)){
    const normalStart=performance.now();updateWaterNormalsFast();
-   if(uploadEnd>waterActiveMinOffset&&waterNormalBuffer&&waterNormalBuffer.isUpdatable()){
-    const normalSlice=waterNormals.subarray(waterActiveMinOffset,uploadEnd);
-    waterNormalBuffer.updateDirectly(normalSlice,waterActiveMinOffset);waterLastUploadBytes+=normalSlice.byteLength;
-   }else if(uploadEnd>waterActiveMinOffset){
-    ground.updateVerticesData(B.VertexBuffer.NormalKind,waterNormals,false);waterLastUploadBytes+=waterNormals.byteLength;
-   }
-   waterLastNormalMs=performance.now()-normalStart;waterNormalAccumulator%=waterNormalStep;
+   waterLastNormalMs=performance.now()-normalStart;
+   if(detailedNormalsDue)waterNormalAccumulator%=waterNormalStep;
+  }
+  if(farDue){
+   if(waterNormalBuffer&&waterNormalBuffer.isUpdatable())waterNormalBuffer.updateDirectly(waterNormals,0);
+   else ground.updateVerticesData(B.VertexBuffer.NormalKind,waterNormals,false);
+   waterLastUploadBytes+=waterNormals.byteLength;
+  }else if(detailDue&&detailedNormalsDue&&uploadEnd>waterActiveMinOffset&&waterNormalBuffer&&waterNormalBuffer.isUpdatable()){
+   const normalSlice=waterNormals.subarray(waterActiveMinOffset,uploadEnd);
+   waterNormalBuffer.updateDirectly(normalSlice,waterActiveMinOffset);waterLastUploadBytes+=normalSlice.byteLength;
+  }else if(detailDue&&detailedNormalsDue&&uploadEnd>waterActiveMinOffset){
+   ground.updateVerticesData(B.VertexBuffer.NormalKind,waterNormals,false);waterLastUploadBytes+=waterNormals.byteLength;
   }
   if(foamDue){
   const foamWorkStarted=performance.now();
