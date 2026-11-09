@@ -35,7 +35,7 @@ assert.match(html,/const waveBodyOffsets=\[-2\.65,-2\.05,-1\.48,-1\.02,-\.66,-\.
 assert.match(html,/VolumetricShoreBreaker_/,"The coast must create a separate volumetric wave body.");
 assert.match(html,/const lift=\(\.025\+\.22\*crest\+\.065\*rearShoulder\)/,"The wave body must retain a natural raised crest and rear shoulder with reduced artificial bulging.");
 assert.match(html,/const breakerTravel=\.24\*Math\.sin\(oceanTime\*1\.08/,"The breaker remains inside the foam run-up corridor.");
-assert.match(html,/const backwashVelocity=new Float32Array\(segments\+1\)/,"Each shoreline segment must track its backwash velocity.");
+assert.match(html,/retreatResidue=new Float32Array\(segments\+1\),backwashVelocity=new Float32Array\(segments\+1\)/,"Each shoreline segment must track its backwash velocity.");
 assert.match(html,/const measuredBackwashVelocity=Number\.isFinite\(previousShore\)\?retreat\/Math\.max\(\.001,foamElapsed\):0/,"Backwash must be measured from seaward shoreline movement per second.");
 assert.match(html,/const shorelineBandFade=smooth01\(\(radialOffsetFromShore\+1\.50\)\/\.18\)\*\(1-smooth01\(\(radialOffsetFromShore-\.58\)\/\.22\)\)/,"Visible foam must fade at the shoreline-band edge.");
 assert.match(html,/const trailingFoam=residual\*washTrailingProfile\[vertex\]\*\(\.18\+\.30\*backwashStrength\)\*exposedSandContact/,"Backwash strength must control exposed-sand residual foam.");

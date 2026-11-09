@@ -3161,7 +3161,7 @@ async function removeStrayDebugGeometry(targetScene){
     const waveCrest=smooth01(.5*Math.max(0,Math.sin(breakerPhase))+.25*Math.max(0,Math.sin(breakerPhase-angularWaveStep))+.25*Math.max(0,Math.sin(breakerPhase+angularWaveStep)));
     const breakStrength=smooth01((waveCrest-.30)/.65);
     const runup=.28+.82*Math.pow(waveCrest,1.15);
-    const residual=foam.retreatResidue[col],backwashStrength=smooth01(foam.backwashVelocity[col]/.32);
+    const residual=foam.retreatResidue[col];
     for(let washRow=0;washRow<washRows;washRow++){
      const vertex=washRow*cols+col,offset=vertex*3,color=vertex*4,fraction=washFractions[washRow];
      const radius=shoreline-runup*fraction,x=island.x+cs*radius,z=island.z+sn*radius;
