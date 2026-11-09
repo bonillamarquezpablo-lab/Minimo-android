@@ -215,6 +215,20 @@ async function main() {
             api.render();
             return { diagnostics: api.diagnostics(), canvasPng: api.captureCanvas() };
           }, { cameraCase, time, tide, island: mainIsland, shoreRadius });
+          const coastMetrics = result.diagnostics?.coast;
+          const agreement = coastMetrics?.renderedVertexAgreement;
+          assert.equal(agreement?.requested, 100, 'Request 100 analytic vertex samples');
+          assert.equal(agreement?.sampled, 100, 'Complete all 100 analytic vertex samples');
+          assert.ok(Number.isFinite(agreement?.maxAbsErrorMeters) && agreement.maxAbsErrorMeters < 0.01,
+            'Analytic/drawn water surface differs by 1 cm or more: ' + JSON.stringify(agreement));
+          const lodBoundary = coastMetrics?.waterLodBoundary;
+          assert.equal(lodBoundary?.samples, 36, 'Check 36 directions at the LOD boundary');
+          assert.ok(Number.isFinite(lodBoundary?.maxHeightContinuityErrorMeters) && lodBoundary.maxHeightContinuityErrorMeters < 0.01,
+            'Height seam at LOD boundary: ' + JSON.stringify(lodBoundary));
+          assert.ok(Number.isFinite(lodBoundary?.maxRadialSlopeDifference) && lodBoundary.maxRadialSlopeDifference < 0.005,
+            'Radial slope is not continuous at the LOD boundary: ' + JSON.stringify(lodBoundary));
+          assert.ok(Number.isFinite(lodBoundary?.maxNormalDiscontinuityDegrees) && lodBoundary.maxNormalDiscontinuityDegrees < 0.5,
+            'Normals are not continuous at the LOD boundary: ' + JSON.stringify(lodBoundary));
           const renderMs = Number((performance.now() - renderStartedAt).toFixed(1));
 
           const screenshotStartedAt = performance.now();
