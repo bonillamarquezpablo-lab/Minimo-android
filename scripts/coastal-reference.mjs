@@ -481,7 +481,7 @@ async function main() {
         if (variant.id === 'baseline') manifest.sheetOpacityDiagnostics[cameraId] = diagnostic.sheetOpacity;
       }
     }
-    assert.equal(manifest.diagnosticCaptures.length, 26,
+    assert.equal(manifest.diagnosticCaptures.length, 30,
       'The two cameras must each contain a baseline and all twelve isolated variants');
     console.log('[coastal-reference] 26 same-state A/B captures complete; separate vertex-alpha and sheet-depth metrics recorded');
 
