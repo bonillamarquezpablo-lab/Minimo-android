@@ -2654,7 +2654,10 @@ async function removeStrayDebugGeometry(targetScene){
    const primary=.30*Math.sin(2*warpU+warpW)+.22*Math.sin(3*warpU-4*warpW)+.16*Math.sin(7*warpU+5*warpW)+.105*Math.sin(11*warpU-2*warpW)+.075*Math.sin(15*warpU+9*warpW)+.062*Math.sin(23*warpU-17*warpW)+.045*Math.sin(31*warpU+13*warpW)+.031*Math.sin(47*warpU-29*warpW)+.020*Math.sin(67*warpU+41*warpW);
    const rotatedU=2*warpU+warpW,rotatedW=-warpU+2*warpW;
    const secondary=.16*Math.sin(rotatedU+rotatedW)+.11*Math.sin(2*rotatedU-rotatedW)+.075*Math.sin(3*rotatedU+2*rotatedW)+.045*Math.sin(5*rotatedU-3*rotatedW);
-   return primary*.82+secondary*.18;
+   // A third tileable direction breaks the repeated diagonal interference without adding a render pass.
+   const tertiaryU=3*warpU-2*warpW,tertiaryW=2*warpU+3*warpW;
+   const tertiary=.14*Math.sin(2*tertiaryU+tertiaryW)+.10*Math.sin(3*tertiaryU-2*tertiaryW)+.07*Math.sin(5*tertiaryU+3*tertiaryW)+.045*Math.sin(7*tertiaryU-5*tertiaryW);
+   return primary*.66+secondary*.22+tertiary*.12;
   };
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
    const dx=(height((x+1)%size,y)-height((x+size-1)%size,y))*4.8;
@@ -2665,7 +2668,7 @@ async function removeStrayDebugGeometry(targetScene){
   ctx.putImageData(img,0,0);tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
  }
  const oceanWaveNormal=isPerformanceMode&&isConstrainedMobile?null:makeOceanWaveNormal();
- if(oceanWaveNormal){oceanWaveNormal.level=.34;oceanWaveNormal.uScale=8.75;oceanWaveNormal.vScale=8.75;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.34;}
+ if(oceanWaveNormal){oceanWaveNormal.level=.34;oceanWaveNormal.uScale=7.35;oceanWaveNormal.vScale=10.15;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.34;}
  else{M.water.bumpTexture=albedoNormalWater;M.water.bumpTexture.level=.24;}
  // El agua recibe un reflejo propio de las islas y del cielo nórdico.
  // El HDRI global se conserva para los materiales PBR, pero nunca se asigna al mar.
@@ -3421,14 +3424,22 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
   const colors=[];
   for(let i=0;i<positions.length;i+=3){
    const lx=positions[i],lz=positions[i+2],d=Math.hypot(lx,lz),wx=is.x+lx,wz=is.z+lz;
-   const h=terrainHeightOnIsland(is,wx,wz);
+   const coastNoise=(terrainValueNoise(wx*.12+17.2,wz*.12-8.4)-.5)*.008+Math.sin(wx*.17+wz*.11)*.0018+(terrainValueNoise(wx*.44+3.7,wz*.44-8.1)-.5)*.002;
+   const coastDistance=d+coastNoise*is.r;
+   const analyticalHeight=terrainHeightOnIsland(is,wx,wz);
+   // The main island heightfield is square. Its submerged corner skirt used to sit
+   // above the dedicated sandy seabed and show the forest-floor albedo through the sea.
+   // Keep the walkable terrain unchanged, but sink only vertices beyond the coast line
+   // below the matching seabed so NordicSubmergedSand becomes the visible underwater bed.
+   const underwaterSkirtClearanceMeters=.035;
+   const seabedY=window.NorseCoastalInteraction.seabedHeight(d,is.r,analyticalHeight);
+   const underwaterSkirt=coastDistance>is.r*1.085;
+   const h=underwaterSkirt?Math.min(analyticalHeight,seabedY-underwaterSkirtClearanceMeters):analyticalHeight;
    positions[i+1]=h;
    const slopeX=(terrainHeightOnIsland(is,wx+1,wz)-terrainHeightOnIsland(is,wx-1,wz))*.5;
    const slopeZ=(terrainHeightOnIsland(is,wx,wz+1)-terrainHeightOnIsland(is,wx,wz-1))*.5;
    const slope=Math.hypot(slopeX,slopeZ);
    const rock=Math.max(0,Math.min(.92,(h-2.7)/6.6+slope*.72));
-   const coastNoise=(terrainValueNoise(wx*.12+17.2,wz*.12-8.4)-.5)*.008+Math.sin(wx*.17+wz*.11)*.0018+(terrainValueNoise(wx*.44+3.7,wz*.44-8.1)-.5)*.002;
-   const coastDistance=d+coastNoise*is.r;
    const beach=smooth01((coastDistance/is.r-.75)/.24);
    // Variación espacial real: humedad y musgo cambian por zonas, no un tinte uniforme por isla.
    const patch=terrainValueNoise(wx*.028+17.2,wz*.028-8.4);
@@ -3465,7 +3476,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
   const deformationPositions=Float32Array.from(positions),deformationNormals=Float32Array.from(normals);
   const deformationField={island:is,index,subdivisions,gridSize,step:(is.r*2)/subdivisions,baseHeights,offsets:new Float32Array(baseHeights.length),decaySeconds:new Float32Array(baseHeights.length),active:new Set(),positions:deformationPositions,normals:deformationNormals,positionBuffer:mesh.getVertexBuffer(B.VertexBuffer.PositionKind),normalBuffer:mesh.getVertexBuffer(B.VertexBuffer.NormalKind),mesh};
   terrainDeformationFields[index]=deformationField;
-  mesh.checkCollisions=true;mesh.metadata=Object.assign({},mesh.metadata||{},{norsePhysicalHeightfield:true,norseDeformableGround:true,islandIndex:index,subdivisions});
+  mesh.checkCollisions=true;mesh.metadata=Object.assign({},mesh.metadata||{},{norsePhysicalHeightfield:true,norseDeformableGround:true,norseUnderwaterSkirtBelowSeabed:true,underwaterSkirtClearanceMeters:.035,islandIndex:index,subdivisions});
   mesh.material=islandMaterials[index%3].clone('TerrainMaterial_'+index);
   mesh.useVertexColors=true;mesh.useVertexAlpha=false;mesh.material.backFaceCulling=false;mesh.material.diffuseTexture=texGrass;mesh.material.diffuseTexture.uScale=7.2;mesh.material.diffuseTexture.vScale=7.2;mesh.material.diffuseTexture.anisotropicFilteringLevel=maxAnisotropy;mesh.material.bumpTexture=albedoNormalGrass;mesh.material.bumpTexture.level=.52;mesh.material.diffuseColor=new B.Color3(1,1,1);
   mesh.material.roughness=.96;mesh.material.needDepthPrePass=false;

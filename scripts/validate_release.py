@@ -460,7 +460,7 @@ def main() -> None:
         fail("El agua transparente no debe escribir profundidad opaca ni generar bandas; la lámina debe reutilizar normales con UV mundiales.")
     if "mesh.receiveShadows=false;mesh.castShadows=false;mesh.hasVertexAlpha=true;" not in index_html or "shore.receiveShadows=false;shore.castShadows=false;" not in index_html:
         fail("Las capas auxiliares de costa no deben proyectar ni recibir sombras duras en forma de franjas.")
-    if "applyTexture(M.water,texWater,17.5);" not in index_html or "oceanWaveNormal.uScale=8.75;oceanWaveNormal.vScale=8.75;" not in index_html or "oceanWaveNormal.level=.34;" not in index_html or ".020*Math.sin(67*warpU+41*warpW)" not in index_html:
+    if "applyTexture(M.water,texWater,17.5);" not in index_html or "oceanWaveNormal.uScale=7.35;oceanWaveNormal.vScale=10.15;" not in index_html or "oceanWaveNormal.level=.34;" not in index_html  or "tertiaryU=3*warpU-2*warpW" not in index_html or "return primary*.66+secondary*.22+tertiary*.12" not in index_html:
         fail("El mar debe tener normales direccionales de varias escalas y microondulación visible desde la cámara del jugador.")
     if "M.water.specularColor=reducedWaterProfile?new B.Color3(.18,.25,.28):new B.Color3(.52,.68,.75);" not in index_html or "M.water.specularPower=reducedWaterProfile?28:64;" not in index_html or "M.water.diffuseFresnelParameters.power=2.3;" not in index_html:
         fail("El material de agua en Calidad debe conservar reflejos rasantes legibles sin añadir pasadas de renderizado.")

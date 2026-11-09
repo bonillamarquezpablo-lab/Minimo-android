@@ -87,7 +87,7 @@ assert.match(captureRunner,/setPackedTrailVisible\(false\)/, 'The coast capture 
 assert.match(captureRunner,/no-packed-trails\.png/, 'The no-trail comparison image must be included in the reference artifact.');
 assert.match(captureRunner, /expectedCaptureCount: 36/,
   'The coastal reference must include 27 coast states plus nine mountain-occlusion states.');
-assert.match(captureRunner, /id: 'ridge-occlusion'/,
+assert.match(captureRunner, /id: 'surf-20m', distance: 20, height: 5\.5, side: 'sea', targetOffset: 10, targetY: 0\.1/,\n  'The 20 m surf view must aim at the shoreline waterline rather than the dry centre of the beach.');\nassert.match(captureRunner, /id: 'ridge-occlusion'/,
   'The camera matrix must include a direct view across the main island ridge.');
 assert.match(captureRunner, /36\/36 complete/,
   'The runner must assert and report all 36 captured views.');
