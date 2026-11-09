@@ -172,7 +172,7 @@ async function main() {
     };
     manifest.sceneWarmup = boot.sceneWarmup;
 
-    assert.equal(boot.build, '0.6.272', 'La referencia debe ser exactamente 0.6.272');
+    assert.equal(boot.build, '0.6.273', 'La referencia debe ser exactamente 0.6.273');
     assert.equal(boot.startup.worldReady, true, 'La escena costera no terminó de prepararse');
     assert.ok(boot.islands.length >= 1, 'No se encontró ninguna isla');
     assert.equal(boot.startup.consoleErrors, 0, 'El arranque registró errores de consola');
