@@ -147,6 +147,13 @@ self.addEventListener("fetch", event => {
     return;
   }
 
+  // The Nordic simulation modules are part of the offline game shell, not generic media assets.
+  // Serve them from the shell cache first so a cached game never boots without its runtime APIs.
+  if (url.pathname.includes("/scripts/nordic/")) {
+    event.respondWith(cacheFirst(request, SHELL_CACHE).catch(() => Response.error()));
+    return;
+  }
+
   if (url.pathname.includes("/assets/")) {
     event.respondWith(cacheFirst(request, ASSET_CACHE).catch(() => Response.error()));
     return;
