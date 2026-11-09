@@ -10,6 +10,7 @@ TIMES = (0, 37, 91)
 TIDES = ("natural", "high", "low")
 DIAGNOSTIC_CAMERAS = ("shore-1m", "shoreline-eye", "lod-90m")
 DIAGNOSTIC_VARIANTS = (
+    ("no-island-heightfield", "sin IslandHeightfield"),
     ("baseline", "baseline"),
     ("no-shorebreaker-wash", "sin ShoreBreakerWash"),
     ("no-volumetric-shore-breaker", "sin VolumetricShoreBreaker"),
@@ -72,7 +73,7 @@ def main() -> None:
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
 
-    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 51 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
+    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 54 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
     draw.text((8, 25), "Baseline matrix · same camera, t=037 s, natural tide · coast and settlement source isolation",
               fill=MUTED, font=font)
 
@@ -114,7 +115,7 @@ def main() -> None:
 
     target = OUT / "contact-sheet.png"
     sheet.save(target, format="PNG", optimize=True)
-    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 51 diagnostic A/B + legacy)")
+    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 54 diagnostic A/B + legacy)")
 
 
 if __name__ == "__main__":

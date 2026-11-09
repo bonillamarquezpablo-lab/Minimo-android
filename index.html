@@ -3499,7 +3499,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
   data.applyToMesh(mesh,true);
   mesh.material=coastalSeabedMaterial;mesh.useVertexColors=true;mesh.hasVertexAlpha=false;
   mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;
-  mesh.metadata=Object.assign({},mesh.metadata||{},{norseSubmergedSandyBottom:true,islandIndex:index,innerRatio,outerRatio});
+  mesh.metadata=Object.assign({},mesh.metadata||{},{norseSubmergedSandyBottom:true,islandIndex:index,innerRatio,outerRatio,segments,rows,cols});
   coastalSeabedMeshes[index]=mesh;
   return mesh;
  }
@@ -8360,7 +8360,7 @@ function createRealWeapon(type='axe'){
  }
  function buildHouse(cx,cz,scale=1){
   // Cabaña nórdica humilde: huella menor, troncos desiguales, tejado vencido y reparaciones visibles.
-  const g=newGroup('WeatheredNorseHut',null);g.position=v(cx,terrainSurfaceAt(cx,cz)+.035,cz);g.scaling=v(scale,scale,scale);
+  const g=newGroup('WeatheredNorseHut',null);g.position=v(cx,renderedTerrainSurfaceAt(cx,cz)+.035,cz);g.scaling=v(scale,scale,scale);
   // Paredes de tablones separados: no usar una caja maciza que atraviese puerta y ventanas.
   for(const end of [-1,1]){
    for(let plank=-3;plank<=3;plank++){
@@ -12179,6 +12179,106 @@ function update(dt){
    const materialAlpha=tidalFoamMeshes.find(foam=>foam.index===activeTidalFoamIslandIndex)?.washMesh.material?.alpha??null;
    return {implemented:true,activeTidalFoamIslandIndex,thresholdDepthMeters:threshold,submergedVertices:depths.length,zeroAlphaVertices:zeroAlpha,nonZeroAlphaVertices:depths.length-zeroAlpha,zeroAlphaFraction:depths.length?zeroAlpha/depths.length:null,meanVertexAlpha:alphas.length?alphaSum/alphas.length:null,maxVertexAlpha:alphas.length?maxAlpha:null,materialAlpha,maxEffectiveAlpha:alphas.length&&Number.isFinite(materialAlpha)?maxAlpha*materialAlpha:null,allVerticesOverThresholdTransparent:depths.length>0&&zeroAlpha===depths.length,depthRangeMeters:depths.length?{min:Math.min(...depths),max:Math.max(...depths)}:null};
   };
+
+  const coastalAuditPercentile=(values,p)=>{
+   if(!values.length)return 0;
+   const sorted=values.slice().sort((a,b)=>a-b);
+   return sorted[Math.min(sorted.length-1,Math.max(0,Math.ceil(p*sorted.length)-1))];
+  };
+  const coastalAuditTop=(list,item,metric,limit=8)=>{
+   if(list.length<limit){list.push(item);list.sort((a,b)=>b.metric-a.metric);return;}
+   if(metric>list[list.length-1].metric){list[list.length-1]=item;list.sort((a,b)=>b.metric-a.metric);}
+  };
+  function coastalAuditMesh(island,index,name,positions,indices,options={}){
+   if(!positions||!indices)return {name,available:false};
+   const vertexCount=Math.floor(positions.length/3),ox=options.offsetX||0,oy=options.offsetY||0,oz=options.offsetZ||0;
+   const point=vertex=>({x:Number(positions[vertex*3])+ox,y:Number(positions[vertex*3+1])+oy,z:Number(positions[vertex*3+2])+oz});
+   const edgeKeys=new Set();
+   const addEdge=(a,b)=>{if(a===b||a<0||b<0||a>=vertexCount||b>=vertexCount)return;const lo=Math.min(a,b),hi=Math.max(a,b);edgeKeys.add(lo*vertexCount+hi);};
+   for(let i=0;i+2<indices.length;i+=3){const a=Number(indices[i]),b=Number(indices[i+1]),c=Number(indices[i+2]);addEdge(a,b);addEdge(b,c);addEdge(c,a);}
+   const jumps=[],angles=[],lengths=[],topJump=[],topSlope=[],topLength=[];
+   const jumpThreshold=options.jumpThresholdMeters??.75;
+   let maxJump=0,maxSlope=0,maxLength=0,jumpOutlierCount=0,slopeOutlierCount=0;
+   for(const key of edgeKeys){
+    const aIndex=Math.floor(key/vertexCount),bIndex=key-aIndex*vertexCount,A=point(aIndex),B=point(bIndex);
+    if(![A.x,A.y,A.z,B.x,B.y,B.z].every(Number.isFinite))continue;
+    const dx=B.x-A.x,dz=B.z-A.z,dy=Math.abs(B.y-A.y),horizontal=Math.hypot(dx,dz),length=Math.hypot(horizontal,dy);
+    const slopeDeg=Math.atan2(dy,Math.max(1e-8,horizontal))*180/Math.PI;
+    jumps.push(dy);angles.push(slopeDeg);lengths.push(length);
+    maxJump=Math.max(maxJump,dy);maxSlope=Math.max(maxSlope,slopeDeg);maxLength=Math.max(maxLength,length);
+    const sample={a:{x:Number(A.x.toFixed(3)),y:Number(A.y.toFixed(3)),z:Number(A.z.toFixed(3))},b:{x:Number(B.x.toFixed(3)),y:Number(B.y.toFixed(3)),z:Number(B.z.toFixed(3))},horizontalMeters:Number(horizontal.toFixed(3)),heightJumpMeters:Number(dy.toFixed(4)),slopeDegrees:Number(slopeDeg.toFixed(2)),edgeLengthMeters:Number(length.toFixed(3))};
+    if(dy>jumpThreshold){jumpOutlierCount++;coastalAuditTop(topJump,{metric:dy,...sample},dy);}
+    if(slopeDeg>45){slopeOutlierCount++;coastalAuditTop(topSlope,{metric:slopeDeg,...sample},slopeDeg);}
+    coastalAuditTop(topLength,{metric:length,...sample},length);
+   }
+   const p50Length=coastalAuditPercentile(lengths,.50),p95Length=coastalAuditPercentile(lengths,.95),p99Length=coastalAuditPercentile(lengths,.99);
+   const p99Jump=coastalAuditPercentile(jumps,.99),p99Slope=coastalAuditPercentile(angles,.99);
+   const longEdgeThreshold=Math.max(1.25,p95Length*1.8,p50Length*2.75);
+   const longEdgeOutlierCount=lengths.reduce((count,value)=>count+(value>longEdgeThreshold?1:0),0);
+   let seam;
+   if(options.polarRows>1&&options.polarCols>1&&options.polarRows*options.polarCols<=vertexCount){
+    let maxGap=0,maxHeightGap=0,maxPlanarGap=0,worstRow=0;
+    for(let row=0;row<options.polarRows;row++){
+     const first=point(row*options.polarCols),last=point(row*options.polarCols+options.polarCols-1);
+     const planar=Math.hypot(last.x-first.x,last.z-first.z),height=Math.abs(last.y-first.y),gap=Math.hypot(planar,height);
+     if(gap>maxGap){maxGap=gap;worstRow=row;}
+     maxHeightGap=Math.max(maxHeightGap,height);maxPlanarGap=Math.max(maxPlanarGap,planar);
+    }
+    seam={applicable:true,rows:options.polarRows,columns:options.polarCols,maxPositionGapMeters:Number(maxGap.toFixed(6)),maxHeightGapMeters:Number(maxHeightGap.toFixed(6)),maxPlanarGapMeters:Number(maxPlanarGap.toFixed(6)),worstRow};
+   }else seam={applicable:false,reason:'IslandHeightfield es una rejilla cartesiana, no una malla polar con columna duplicada.'};
+   return {
+    name,available:true,vertices:vertexCount,triangles:Math.floor(indices.length/3),uniqueEdges:edgeKeys.size,
+    heightJump:{thresholdMeters:jumpThreshold,maxMeters:Number(maxJump.toFixed(4)),p99Meters:Number(p99Jump.toFixed(4)),outlierCount:jumpOutlierCount,samples:topJump.map(({metric,...sample})=>sample)},
+    slope:{maxDegrees:Number(maxSlope.toFixed(2)),p99Degrees:Number(p99Slope.toFixed(2)),over45Degrees:slopeOutlierCount,samples:topSlope.map(({metric,...sample})=>sample)},
+    triangleEdgeLength:{maxMeters:Number(maxLength.toFixed(3)),p50Meters:Number(p50Length.toFixed(3)),p95Meters:Number(p95Length.toFixed(3)),p99Meters:Number(p99Length.toFixed(3)),outlierThresholdMeters:Number(longEdgeThreshold.toFixed(3)),outlierCount:longEdgeOutlierCount,samples:topLength.filter(item=>item.metric>longEdgeThreshold).map(({metric,...sample})=>sample).slice(0,8)},
+    seam
+   };
+  }
+  function coastalAuditProfile(island,index,name,positions,kind){
+   const tolerance=.015,samples=[];let checked=0,violations=0,maxAbove=0;
+   for(let vertex=0;vertex<positions.length/3;vertex++){
+    const x=Number(positions[vertex*3]),y=Number(positions[vertex*3+1]),z=Number(positions[vertex*3+2]);
+    if(![x,y,z].every(Number.isFinite)||Math.hypot(x-island.x,z-island.z)<=island.r)continue;
+    let expected;
+    if(kind==='submerged'){
+     const distance=Math.hypot(x-island.x,z-island.z);
+     expected=window.NorseCoastalInteraction.seabedHeight(distance,island.r,terrainHeightOnIsland(island,x,z))-.003;
+    }else expected=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018;
+    const above=y-expected;checked++;maxAbove=Math.max(maxAbove,above);
+    if(above>tolerance){violations++;coastalAuditTop(samples,{metric:above,x:Number(x.toFixed(3)),y:Number(y.toFixed(3)),z:Number(z.toFixed(3)),expectedY:Number(expected.toFixed(3)),aboveProfileMeters:Number(above.toFixed(4))},above);}
+   }
+   return {name,checkedVertices:checked,toleranceMeters:tolerance,violationCount:violations,maxAboveProfileMeters:Number(maxAbove.toFixed(4)),samples};
+  }
+  function auditIslandGeometry(){
+   const started=performance.now(),results=[],savedFoams=new Set(tidalFoamMeshes.map(foam=>foam.index));
+   for(let index=0;index<land.length;index++){
+    const island=land[index],madeBeach=!livingBeachLayers[index],madeSeabed=!coastalSeabedMeshes[index],madeFoam=!savedFoams.has(index);
+    if(madeSeabed)buildCoastalSeabed(island,index);
+    if(madeBeach)buildLivingBeachLayer(island,index);
+    if(madeFoam)buildTidalFoam(island,index);
+    const terrain=islandTerrainMeshes[index],seabed=coastalSeabedMeshes[index],beach=livingBeachLayers[index],foam=tidalFoamMeshes.find(item=>item.index===index);
+    const meshes=[
+     coastalAuditMesh(island,index,'IslandHeightfield',terrain?.getVerticesData(B.VertexBuffer.PositionKind),terrain?.getIndices(),{offsetX:island.x,offsetY:terrain?.position?.y||0,offsetZ:island.z,jumpThresholdMeters:1.0}),
+     coastalAuditMesh(island,index,'NordicSubmergedSand',seabed?.getVerticesData(B.VertexBuffer.PositionKind),seabed?.getIndices(),{polarRows:seabed?.metadata?.rows,polarCols:seabed?.metadata?.cols,jumpThresholdMeters:.75}),
+     coastalAuditMesh(island,index,'LivingCoastalSand',beach?.positions,beach?.mesh?.getIndices(),{polarRows:beach?.rows,polarCols:beach?.cols,jumpThresholdMeters:.50}),
+     coastalAuditMesh(island,index,'ShoreBreakerWash',foam?.washPositions,foam?.washMesh?.getIndices(),{polarRows:foam?.washRows,polarCols:foam?.cols,jumpThresholdMeters:.75})
+    ];
+    const solver=foam?(()=>{
+     const segments=foam.segments,mask=Array.from({length:segments},(_,col)=>!Number.isFinite(foam.lastShoreline[col]));
+     const nullColumns=mask.filter(Boolean).length;let maxRun=0,current=0;
+     for(let col=0;col<segments*2;col++){if(mask[col%segments]){current=Math.min(segments,current+1);maxRun=Math.max(maxRun,current);}else current=0;}
+     return {columns:segments,finiteIntersections:segments-nullColumns,nullColumns,maxConsecutiveNullColumns:maxRun,maxNullArcDegrees:Number((maxRun/segments*360).toFixed(2)),firstColumnFinite:Number.isFinite(foam.lastShoreline[0]),lastColumnFinite:Number.isFinite(foam.lastShoreline[segments])};
+    })():null;
+    const submergedProfile=coastalAuditProfile(island,index,'NordicSubmergedSand',seabed?.getVerticesData(B.VertexBuffer.PositionKind)||[], 'submerged');
+    const beachProfile=coastalAuditProfile(island,index,'LivingCoastalSand',beach?.positions||[], 'beach');
+    results.push({islandIndex:index,island:island.name,center:{x:island.x,z:island.z},radiusMeters:island.r,meshes,shorelineSolver:solver,analyticProfileChecks:[submergedProfile,beachProfile]});
+    if(madeFoam){const at=tidalFoamMeshes.findIndex(item=>item.index===index);if(at>=0){const temp=tidalFoamMeshes.splice(at,1)[0];for(const mesh of [temp.mesh,temp.waveBodyMesh,temp.washMesh]){try{mesh?.material?.dispose(false,false);}catch(_){}try{mesh?.dispose(false,false);}catch(_){}}}}
+    if(madeBeach){const layer=livingBeachLayers[index];if(layer){try{layer.mesh.dispose(false,false);}catch(_){}try{layer.material.dispose(false,false);}catch(_){}try{layer.coastalStateTexture.dispose();}catch(_){}livingBeachLayers[index]=null;}}
+    if(madeSeabed){try{seabed?.dispose(false,false);}catch(_){}coastalSeabedMeshes[index]=null;}
+   }
+   return {schema:1,islandCount:results.length,thresholds:{heightJumpMeters:{IslandHeightfield:1.0,NordicSubmergedSand:.75,LivingCoastalSand:.50,ShoreBreakerWash:.75},sandAboveProfileToleranceMeters:.015,seamPositionToleranceMeters:.002},durationMs:Number((performance.now()-started).toFixed(1)),islands:results};
+  }
+
   window.__ELSN_TEST__={
    build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',
    islands:land.map(({x,z,r,name})=>({x,z,r,name})),
@@ -12188,7 +12288,9 @@ function update(dt){
    setPackedTrailVisible:(enabled)=>{const trails=packedTrailMeshes;trails.forEach(mesh=>{mesh.isVisible=!!enabled;if(typeof mesh.setEnabled==='function')mesh.setEnabled(!!enabled);});return {count:trails.length,visible:trails.length>0&&trails.every(mesh=>mesh.isVisible===!!enabled),states:trails.map(mesh=>({name:mesh.name,isVisible:mesh.isVisible,isEnabled:typeof mesh.isEnabled==='function'?mesh.isEnabled():null,disposed:!!mesh.isDisposed?.()}))};},
    setDiagnosticVariant:(kind,enabled)=>{
     const disabled=!!enabled;
-    if(kind==='shore-foundation'){
+    if(kind==='island-heightfield'){
+     setDiagnosticMeshVisible(islandTerrainMeshes[activeBeachIslandIndex],disabled);
+    }else if(kind==='shore-foundation'){
      setDiagnosticMeshVisible(shoreFoundationMeshes[activeBeachIslandIndex],disabled);
     }else if(kind==='village-buildings'){
      villages.flatMap(village=>village.houseGroups||[]).forEach(group=>setDiagnosticMeshVisible(group,disabled));
@@ -12229,14 +12331,15 @@ function update(dt){
     }else if(kind==='short-vertex-waves'){
      coastalDiagnosticOverrides.disableShortVertexWaves=disabled;
     }else throw new Error('Unknown coastal diagnostic variant: '+kind);
-    return {kind,disabled,shoreFoundationVisible:shoreFoundationMeshes.filter(mesh=>mesh&&mesh.isVisible).length,villageBuildingGroupsVisible:villages.flatMap(village=>village.houseGroups||[]).filter(group=>group.isVisible!==false&&(!(typeof group.isEnabled==='function')||group.isEnabled())).length,waterNormalMapEnabled:!!M.water.bumpTexture,oceanVertexAlphaEnabled:!!M.water.useVertexAlpha,groundVertexAlphaEnabled:!!ground.hasVertexAlpha,oceanDepthTintEnabled:kind==='ocean-depth-tint'?!disabled:true,nearWaterDetailEnabled:!coastalDiagnosticOverrides.disableNearWaterDetail,waterNormalLevel:M.water.bumpTexture?.level??null,waterNormalUScale:M.water.bumpTexture?.uScale??null,waterNormalVScale:M.water.bumpTexture?.vScale??null,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length,volumetricShoreBreakerVisible:tidalFoamMeshes.filter(foam=>foam.waveBodyMesh.isVisible).length,livingBeachLayerVisible:livingBeachLayers[activeBeachIslandIndex]?.mesh?.isVisible?1:0,submergedSandVisible:coastalSeabedMeshes[activeBeachIslandIndex]?.isVisible?1:0,continuousShoreFoamVisible:tidalFoamMeshes.filter(foam=>foam.mesh.isVisible).length};
+    return {kind,disabled,islandHeightfieldVisible:islandTerrainMeshes[activeBeachIslandIndex]?.isVisible?1:0,shoreFoundationVisible:shoreFoundationMeshes.filter(mesh=>mesh&&mesh.isVisible).length,villageBuildingGroupsVisible:villages.flatMap(village=>village.houseGroups||[]).filter(group=>group.isVisible!==false&&(!(typeof group.isEnabled==='function')||group.isEnabled())).length,waterNormalMapEnabled:!!M.water.bumpTexture,oceanVertexAlphaEnabled:!!M.water.useVertexAlpha,groundVertexAlphaEnabled:!!ground.hasVertexAlpha,oceanDepthTintEnabled:kind==='ocean-depth-tint'?!disabled:true,nearWaterDetailEnabled:!coastalDiagnosticOverrides.disableNearWaterDetail,waterNormalLevel:M.water.bumpTexture?.level??null,waterNormalUScale:M.water.bumpTexture?.uScale??null,waterNormalVScale:M.water.bumpTexture?.vScale??null,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length,volumetricShoreBreakerVisible:tidalFoamMeshes.filter(foam=>foam.waveBodyMesh.isVisible).length,livingBeachLayerVisible:livingBeachLayers[activeBeachIslandIndex]?.mesh?.isVisible?1:0,submergedSandVisible:coastalSeabedMeshes[activeBeachIslandIndex]?.isVisible?1:0,continuousShoreFoamVisible:tidalFoamMeshes.filter(foam=>foam.mesh.isVisible).length};
    },
+   auditIslandGeometry:()=>auditIslandGeometry(),
    settlementGrounding:()=>villages.flatMap(village=>(village.houseGroups||[]).map((group,buildingIndex)=>{
     const p=group.getAbsolutePosition?group.getAbsolutePosition():group.position;
     let nearestIsland=null,nearestDistance=Infinity,nearestIslandIndex=-1;
     land.forEach((island,islandIndex)=>{const distance=Math.hypot(p.x-island.x,p.z-island.z);if(distance<nearestDistance){nearestDistance=distance;nearestIsland=island;nearestIslandIndex=islandIndex;}});
-    const sampledTerrainY=terrainSurfaceAt(p.x,p.z);
-    return {village:village.name||String(village.index),buildingIndex,x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2)),rootY:Number(p.y.toFixed(3)),sampledTerrainY:Number(sampledTerrainY.toFixed(3)),groundClearanceMeters:Number((p.y-sampledTerrainY-.035).toFixed(3)),nearestIsland:nearestIsland?.name||null,nearestIslandIndex,distanceToIslandMeters:Number(nearestDistance.toFixed(2)),islandRadiusRatio:nearestIsland?Number((nearestDistance/nearestIsland.r).toFixed(3)):null};
+    const sampledTerrainY=renderedTerrainSurfaceAt(p.x,p.z),analyticTerrainY=terrainSurfaceAt(p.x,p.z),anchorY=p.y-.035;
+    return {village:village.name||String(village.index),buildingIndex,x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2)),rootY:Number(p.y.toFixed(3)),sampledTerrainY:Number(sampledTerrainY.toFixed(3)),analyticTerrainY:Number(analyticTerrainY.toFixed(3)),groundingErrorMeters:Number(Math.abs(anchorY-sampledTerrainY).toFixed(4)),analyticVsRenderedMeters:Number((analyticTerrainY-sampledTerrainY).toFixed(4)),groundClearanceMeters:Number((p.y-sampledTerrainY-.035).toFixed(3)),nearestIsland:nearestIsland?.name||null,nearestIslandIndex,distanceToIslandMeters:Number(nearestDistance.toFixed(2)),islandRadiusRatio:nearestIsland?Number((nearestDistance/nearestIsland.r).toFixed(3)):null};
    })),
    sheetOpacityDepth:()=>getSheetOpacityDepthDiagnostics(),
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},

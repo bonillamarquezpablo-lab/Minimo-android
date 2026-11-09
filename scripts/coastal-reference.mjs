@@ -385,6 +385,7 @@ async function main() {
       { id: 'no-short-vertex-waves', kind: 'short-vertex-waves' },
       { id: 'no-ocean-depth-tint', kind: 'ocean-depth-tint' },
       { id: 'no-near-water-detail', kind: 'near-water-detail' },
+      { id: 'no-island-heightfield', kind: 'island-heightfield' },
       { id: 'no-shore-foundation', kind: 'shore-foundation' },
       { id: 'no-village-buildings', kind: 'village-buildings' }
     ];
@@ -455,6 +456,8 @@ async function main() {
             'Near-water detail must be restored after its isolation capture');
         }
         const isolationChecks = {
+          'no-island-heightfield': ['islandHeightfieldVisible', 'IslandHeightfield'],
+          'no-shorebreaker-wash': ['shoreBreakerWashVisible', 'ShoreBreakerWash'],
           'no-volumetric-shore-breaker': ['volumetricShoreBreakerVisible', 'VolumetricShoreBreaker'],
           'no-living-beach-layer': ['livingBeachLayerVisible', 'LivingCoastalSand'],
           'no-submerged-sand': ['submergedSandVisible', 'NordicSubmergedSand'],
@@ -501,9 +504,33 @@ async function main() {
         if (variant.id === 'baseline') manifest.sheetOpacityDiagnostics[cameraId] = diagnostic.sheetOpacity;
       }
     }
-    assert.equal(manifest.diagnosticCaptures.length, 51,
-      'The three diagnostic cameras must each contain a baseline and sixteen isolated variants');
-    console.log('[coastal-reference] 51 same-state A/B captures complete; shoreline, island structures, vertex-alpha and sheet-depth metrics recorded');
+    assert.equal(manifest.diagnosticCaptures.length, 54,
+      'The three diagnostic cameras must each contain a baseline and seventeen isolated variants');
+    console.log('[coastal-reference] 54 same-state A/B captures complete; four coastal meshes, shoreline, vertex-alpha and sheet-depth metrics recorded');
+
+    stepStartedAt = performance.now();
+    const geometryAudit = await page.evaluate(() => window.__ELSN_TEST__.auditIslandGeometry());
+    manifest.geometryAudit = geometryAudit;
+    fs.writeFileSync(path.join(OUT, 'geometry-audit.json'), JSON.stringify(geometryAudit, null, 2) + '\\n');
+    assert.equal(geometryAudit?.islandCount, 13, 'La auditoría debe inspeccionar las trece islas.');
+    for (const island of geometryAudit.islands) {
+      assert.equal(island.meshes.length, 4, 'Cada isla debe incluir las cuatro mallas: ' + island.island);
+      for (const mesh of island.meshes) assert.equal(mesh.available, true, 'Falta ' + mesh.name + ' en ' + island.island);
+      for (const mesh of island.meshes) {
+        assert.ok(mesh.heightJump.maxMeters <= mesh.heightJump.thresholdMeters + 1e-6,
+          'Salto de altura fuera de umbral: ' + island.island + '/' + mesh.name + ' ' + JSON.stringify(mesh.heightJump));
+        if (mesh.seam.applicable) assert.ok(mesh.seam.maxPositionGapMeters <= .002,
+          'Costura polar abierta: ' + island.island + '/' + mesh.name + ' ' + JSON.stringify(mesh.seam));
+      }
+      for (const profile of island.analyticProfileChecks) assert.equal(profile.violationCount, 0,
+        'Arena por encima del perfil analítico: ' + island.island + '/' + profile.name + ' ' + JSON.stringify(profile));
+    }
+    manifest.timingsMs.geometryAudit = Number((performance.now() - stepStartedAt).toFixed(1));
+    const settlementGrounding = await page.evaluate(() => window.__ELSN_TEST__.settlementGrounding());
+    manifest.settlementGrounding = {houseCount:settlementGrounding.length,maximumErrorMeters:settlementGrounding.reduce((max,item)=>Math.max(max,item.groundingErrorMeters),0),houses:settlementGrounding};
+    assert.ok(settlementGrounding.length >= 3, 'No se encontraron cabañas para comprobar el apoyo.');
+    for (const house of settlementGrounding) assert.ok(Number.isFinite(house.groundingErrorMeters) && house.groundingErrorMeters < .02,
+      'Cabaña despegada de la altura de la malla dibujada: ' + JSON.stringify(house));
     assert.ok(foamCorridorResult && foamCorridorResult.visibleFoamVertices > 0,
       'The baseline must measure visible foam vertices');
     assert.equal(foamCorridorResult.outsideFoamVertices, 0,

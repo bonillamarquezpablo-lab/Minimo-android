@@ -52,7 +52,7 @@ assert.match(html, /diagnosticWashVisibility=new WeakMap\(\)/);
 assert.match(html, /diagnosticWaveBodyVisibility=new WeakMap\(\)/);
 assert.match(html, /diagnosticMeshVisibility=new WeakMap\(\)/);
 assert.match(html, /setDiagnosticMeshVisible=\(mesh,disabled\)=>/);
-for (const kind of ['living-beach-layer','submerged-sand','continuous-shore-foam']) {
+for (const kind of ['living-beach-layer','submerged-sand','continuous-shore-foam','island-heightfield']) {
   assert.ok(html.includes(`kind==='${kind}'`), `Missing isolated coastal mesh switch: ${kind}`);
 }
 assert.match(html, /kind==='volumetric-shore-breaker'/,
@@ -147,10 +147,13 @@ assert.match(captureRunner, /Ensure lazily-created coast meshes exist before sna
 assert.match(captureRunner, /api\.setWaterState\(\{ time: 37, tide: 'natural' \}\);\s*const variantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, true\) : null;\s*\/\/ Recompute vertex waves after the source toggle/);
 assert.match(captureRunner, /const restoredVariantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, false\) : null;/,
   'Diagnostic variants must be restored after the isolated frame.');
-assert.match(captureRunner, /diagnosticCaptures\.length, 51/,
-  'Three cameras must capture the baseline and sixteen independent A/B variants.');
+assert.match(captureRunner, /diagnosticCaptures\.length, 54/,
+  'Three cameras must capture the baseline and seventeen independent A/B variants.');
+assert.match(captureRunner, /no-island-heightfield/);
+assert.match(captureRunner, /auditIslandGeometry/);
+assert.match(captureRunner, /geometry-audit\.json/);
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
-assert.ok(contactSheet.includes('36 CAPTURES + 51 DIAGNOSTIC A/B'),
+assert.ok(contactSheet.includes('36 CAPTURES + 54 DIAGNOSTIC A/B'),
   'The contact sheet must label all 36 baseline frames and 51 diagnostic A/B captures.');
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
