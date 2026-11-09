@@ -565,7 +565,7 @@ async function main() {
     stepStartedAt = performance.now();
     const geometryAudit = await page.evaluate(() => window.__ELSN_TEST__.auditIslandGeometry());
     manifest.geometryAudit = geometryAudit;
-    fs.writeFileSync(path.join(OUT, 'geometry-audit.json'), JSON.stringify(geometryAudit, null, 2) + '\\n');
+    fs.writeFileSync(path.join(OUT, 'geometry-audit.json'), JSON.stringify(geometryAudit, null, 2) + '\n');
     assert.equal(geometryAudit?.islandCount, 13, 'La auditoría debe inspeccionar las trece islas.');
     assert.equal(geometryAudit.thresholds.heightJumpMeters.NordicSubmergedSand, .80);
     assert.equal(geometryAudit.thresholds.heightJumpMeters.LivingCoastalSand, .90);
@@ -613,7 +613,7 @@ async function main() {
     manifest.geometryOutliers = geometryOutliers;
     fs.writeFileSync(path.join(OUT, 'geometry-outliers.json'), JSON.stringify({
       schema: 1, islandCount: 13, outlierCount: geometryOutliers.length, outliers: geometryOutliers
-    }, null, 2) + '\\n');
+    }, null, 2) + '\n');
     for (const island of geometryAudit.islands) for (const mesh of island.meshes) {
       assert.ok(mesh.heightJump.maxMeters <= mesh.heightJump.thresholdMeters + 1e-6,
         'Salto de altura fuera de umbral: ' + island.island + '/' + mesh.name + ' ' + JSON.stringify(mesh.heightJump));
