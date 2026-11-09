@@ -391,8 +391,12 @@ def main() -> None:
     if ("const shorelineEntry = 0.24 * smooth01(depth / 0.30);" not in coastal_interaction
             or "const shallowBody = 0.28 * smooth01(depth / 1.65);" not in coastal_interaction
             or "const depthBody = 0.75 * smooth01(depth / 5.5);" not in coastal_interaction
-            or "return Math.min(0.99, shorelineEntry + shallowBody + depthBody);" not in coastal_interaction):
-        fail("La opacidad del agua debe transicionar suavemente en la orilla y absorber el lecho a profundidad.")
+            or "return Math.min(0.99, shorelineEntry + shallowBody + depthBody);" not in coastal_interaction
+            or "function waterDepth(waterlineY, seabedY)" not in coastal_interaction
+            or "return Math.max(0, Math.min(18, waterline - seabed));" not in coastal_interaction):
+        fail("La opacidad del agua debe transicionar suavemente y derivarse de la profundidad vertical real.")
+    if "const physicalDepth=window.NorseCoastalInteraction.waterDepth(waterlineY,seabedY);" not in index_html or "Math.max(depth,bathymetry)" in index_html:
+        fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
     if "SAGA DEL NORTE · CAPÍTULO I · 0.6.273" not in index_html or "EL SIN NOMBRE 0.6.273 frame error" not in index_html:
