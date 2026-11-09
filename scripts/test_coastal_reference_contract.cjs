@@ -5,6 +5,7 @@ const html = fs.readFileSync('index.html', 'utf8');
 const captureRunner = fs.readFileSync('scripts/coastal-reference.mjs', 'utf8');
 const contactSheet = fs.readFileSync('scripts/create_coastal_contact_sheet.py', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf8');
+const serviceWorker = fs.readFileSync('sw.js', 'utf8');
 
 assert.match(html, /const testModeEnabled=new URLSearchParams\(window\.location\.search\)\.get\('test'\)==='1'/);
 assert.match(html, /const coastalReferenceMode=new URLSearchParams\(window\.location\.search\)\.get\('coastref'\)==='1'/,
@@ -29,6 +30,21 @@ assert.match(html, /preserveDrawingBuffer:testModeEnabled/, 'Only test mode may 
 for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setWaterState:', 'diagnostics:', 'snapshot:', 'stop:', 'render:', 'captureCanvas:']) {
   assert.ok(html.includes(api), `Missing deterministic test hook: ${api}`);
 }
+
+assert.ok(html.indexOf('<script src="./scripts/nordic/coastal-interaction.js"></script>') < html.indexOf("root.__ELSN_COASTAL_RUNTIME_MODE__='module'"),
+  'The coastal module must be loaded before the recovery guard and before the game scene script.');
+for (const method of ['seabedHeight','waterDepth','waterOpacity','filmSurfaceHeight','filmCoverage']) {
+  assert.ok(html.includes("typeof loaded[name]==='function'") && html.includes(method),
+    `The startup guard must validate the complete coastal API, including ${method}.`);
+}
+assert.match(html, /root\.NorseCoastalInteraction=fallback/);
+assert.match(html, /root\.__ELSN_COASTAL_RUNTIME_MODE__='inline-fallback'/,
+  'A missing module must be recoverable instead of aborting the world constructor.');
+assert.match(serviceWorker, /url\.pathname\.includes\("\/scripts\/nordic\/"\)/,
+  'The service worker must intercept same-origin Nordic runtime modules.');
+assert.match(serviceWorker, /cacheFirst\(request, SHELL_CACHE\)/,
+  'Nordic runtime modules must be restored from the versioned shell cache.');
+
 assert.match(html, /window\.__ELSN_TEST__=\{/);
 assert.match(html, /setDiagnosticVariant:\(kind,enabled\)=>/,
   'Twelve independent material/geometry diagnostic switches must be test-only.');
