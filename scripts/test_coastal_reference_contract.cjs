@@ -66,6 +66,7 @@ assert.match(html,/for\(let cross=0;cross<=crossSegments;cross\+\+\)\{\s*const a
 assert.match(html,/const foamAlphaMask=new Float32Array\(cols\*rows\)/, 'Foam row/noise opacity factors must be precomputed without dropping samples.');
 assert.match(html,/retreatResidue=new Float32Array\(segments\+1\),backwashVelocity=new Float32Array\(segments\+1\)/,'Backwash must be tracked independently for every shoreline column.');
 assert.match(html,/const shorelineBandFade=smooth01\(\(radialOffsetFromShore\+1\.50\)\/\.18\)\*\(1-smooth01\(\(radialOffsetFromShore-\.58\)\/\.22\)\)/,'Visible foam must fade out beyond the measured coastal band.');
+assert.match(html,/positions\[offset\]=x;\s*positions\[offset\+1\]=foamWaterDepth>0\?water\+/,'Animated foam vertices must update world-space X and water height in their correct XYZ components.');
 assert.match(html,/physicalBackwashVelocity:\{implemented:true,unit:'m\/s'/,'The diagnostics must expose physical backwash speed in metres per second.');
 assert.match(html,/foamAlphaMask\[vertex\]=whiteFoamProfile\*innerFade\*outerFade\*lace/, 'The shoreline foam must reuse its static breakup mask on every update.');
 assert.match(html,/waveBodyCrestProfile=new Float32Array\(waveBodyRows\)/, 'Volumetric wave row profiles must be cached once at construction.');
