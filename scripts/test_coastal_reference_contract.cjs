@@ -95,7 +95,10 @@ assert.match(captureRunner, /no-volumetric-shore-breaker/);
 assert.match(captureRunner, /no-living-beach-layer/);
 assert.match(captureRunner, /no-submerged-sand/);
 assert.match(captureRunner, /no-continuous-shore-foam/);
-assert.match(captureRunner, /'no-volumetric-shore-breaker': \['volumetricShoreBreakerVisible', 'VolumetricShoreBreaker'\]/,\n  'The translucent breaker visibility must be checked in its isolated frame.');\nassert.match(captureRunner, /assert.equal\(diagnostic.variantState\?\.\[field\], 0/);\nassert.match(captureRunner, /assert.ok\(diagnostic.restoredVariantState\?\.\[field\] >= 1/);
+assert.match(captureRunner, /'no-volumetric-shore-breaker': \['volumetricShoreBreakerVisible', 'VolumetricShoreBreaker'\]/,
+  'The translucent breaker visibility must be checked in its isolated frame.');
+assert.match(captureRunner, /assert.equal\(diagnostic.variantState\?\.\[field\], 0/);
+assert.match(captureRunner, /assert.ok\(diagnostic.restoredVariantState\?\.\[field\] >= 1/);
 assert.match(captureRunner, /no-ocean-specular/);
 assert.match(captureRunner, /no-short-vertex-waves/);
 assert.match(captureRunner, /Ensure lazily-created coast meshes exist before snapshotting their original state/);
