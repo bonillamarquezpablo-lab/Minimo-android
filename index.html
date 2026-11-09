@@ -2811,7 +2811,8 @@ async function removeStrayDebugGeometry(targetScene){
   const detail=w3*c[3].amplitude+w4*c[4].amplitude+w5*c[5].amplitude+w6*c[6].amplitude;
   const crest=Math.pow(Math.max(0,crossWave),3)*WATER_WAVE_PARAMETERS.crossCrestLift*oceanDepthSettings.waveCrestStrength;
   const shortCrest=Math.pow(Math.max(0,chopWave),3)*WATER_WAVE_PARAMETERS.shortCrestLift*oceanDepthSettings.waveCrestStrength;
-  return tideOffsetAt(t)+base+(detail+crest+shortCrest)*detailFade;
+  const shortWaveScale=coastalDiagnosticOverrides.disableShortVertexWaves?0:1;
+  return tideOffsetAt(t)+base+(detail+crest+shortCrest)*detailFade*shortWaveScale;
  }
  function waterFarHeightAtVertex(vertex){
   return waterHeightFromWaveValues(waterWaveValueAtVertex(vertex,0),waterWaveValueAtVertex(vertex,1),waterWaveValueAtVertex(vertex,2),waterWaveValueAtVertex(vertex,3),waterWaveValueAtVertex(vertex,4),waterWaveValueAtVertex(vertex,5),waterWaveValueAtVertex(vertex,6),oceanTime,0);

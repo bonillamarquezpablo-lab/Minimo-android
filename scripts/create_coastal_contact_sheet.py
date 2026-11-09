@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the 36-frame coastal reference, legacy isolation frames, and ten same-state diagnostic A/B captures."""
+"""Build the 36-frame coastal reference, legacy isolation frames, and ten same-state diagnostic A/B captures (36 baseline + 10 diagnostic captures)."""
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 

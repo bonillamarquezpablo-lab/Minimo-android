@@ -81,7 +81,7 @@ assert.match(captureRunner, /no-short-vertex-waves/);
 assert.match(captureRunner, /diagnosticCaptures\.length, 10/,
   'Both cameras must capture the baseline and four isolated A/B variants.');
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
-assert.match(contactSheet, /36 baseline \+ 10 diagnostic captures/);
+assert.match(contactSheet, /36 CAPTURES \+ 10 DIAGNOSTIC A\\/B/);
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
 assert.match(contactSheet, /ridge-occlusion__t037__natural__no-island-shadows\.png/, 'The contact sheet must include a shadow-isolation A/B panel.');
