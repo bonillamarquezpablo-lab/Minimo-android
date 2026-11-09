@@ -2708,9 +2708,11 @@ async function removeStrayDebugGeometry(targetScene){
     const absoluteDistance=Math.abs(signedDistance);
     if(absoluteDistance<nearestAbsDistance){nearestAbsDistance=absoluteDistance;nearestSignedDistance=signedDistance;nearestIsland=island;}
    }
-   const depth=Math.max(0,nearestSignedDistance);
-   const bathymetry=nearestIsland?-window.NorseCoastalInteraction.seabedHeight(Math.hypot(x-nearestIsland.x,z-nearestIsland.z),nearestIsland.r,terrainHeightOnIsland(nearestIsland,x,z)):18;
-   const physicalDepth=Math.max(0,Math.min(18,Math.max(depth,bathymetry)));
+   const seabedY=nearestIsland?window.NorseCoastalInteraction.seabedHeight(Math.hypot(x-nearestIsland.x,z-nearestIsland.z),nearestIsland.r,terrainHeightOnIsland(nearestIsland,x,z)):-18;
+   // Use the actual vertical water column above the sloping bed. The previous max(radialDistance,
+   // bathymetry) approximation produced a circular alpha contour unrelated to the rendered seabed.
+   const waterlineY=Number(ground.position.y)||0;
+   const physicalDepth=window.NorseCoastalInteraction.waterDepth(waterlineY,seabedY);
    const t=smooth01(Math.min(1,physicalDepth/transition));
    const index=vertex*4;
    // Vertex tint keeps the original animated water material and all its normal/reflection detail.
