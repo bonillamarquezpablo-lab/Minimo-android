@@ -112,9 +112,12 @@ for(const label of ['Arena seca · grano','Arena húmeda · intensidad','Orilla 
 assert.ok(html.includes('./scripts/nordic/coastal-interaction.js'),"The coastal physics helper must load before the game.");
 assert.ok(html.indexOf('updateOceanDepthGradient();',html.indexOf('function smooth01'))>html.indexOf('const terrainHashCache='),'Bathymetry must initialize after terrain noise dependencies.');
 assert.ok(html.includes("applyTexture(M.water,texWater,17.5);"),"Water albedo must show readable smaller-scale surface detail.");
-assert.ok(html.includes("oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.78;"),"Quality water normals must retain fine ripples with controlled highlight density.");
+assert.ok(html.includes("oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=23.975;oceanWaveNormal.wAng=.4014257279586958;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.78;"),"Quality water normals must retain fine ripples with non-harmonic scale and rotation.");
 assert.ok(html.includes(".020*Math.sin(67*warpU+41*warpW)"),"Water normals must retain high-frequency cross-directional micro ripples.");
-assert.match(html,/new B\.DynamicTexture\('LayeredOceanWaveNormal',\{width:size,height:size\},scene,true\)/,"Ocean normal mipmaps must be generated to prevent tiled high-frequency aliasing.");
+assert.match(html,/const size=512,tau=Math\.PI\*2,tex=new B\.DynamicTexture\('LayeredOceanWaveNormal',\{width:size,height:size\},scene,true\)/,"Ocean normals must use a power-of-two mipmapped texture to prevent high-frequency tiling aliasing.");
+assert.match(html,/const bathymetry=nearestIsland\?Math\.max\(0,-terrainHeightOnIsland\(nearestIsland,x,z\)\):18/,"Nearshore opacity must follow the real irregular seabed profile rather than an oval radial depth band.");
+assert.match(html,/const farBlend=nearestIsland\?smooth01\(\(nearestRadialRatio-1\.46\)\/\.50\):1/,"Only far-offshore water may use a smooth distance-based deepening transition.");
+assert.doesNotMatch(html,/const depth=Math\.max\(0,nearestSignedDistance\)/,"The circular shoreline distance must not control shallow-water transparency.");
 assert.match(html,/rotatedU=2\*warpU\+warpW,rotatedW=-warpU\+2\*warpW/,"The ocean normal field must include a tileable second direction that breaks the repeating grid.");
 assert.match(html,/return primary\*\.82\+secondary\*\.18/,"The two directional normal layers must be blended without reducing the existing fine-wave field.");
 assert.ok(html.includes("M.water.specularColor=reducedWaterProfile?new B.Color3(.18,.25,.28):new B.Color3(.52,.68,.75);M.water.specularPower=reducedWaterProfile?28:64;"),"Quality water must retain visible but restrained specular highlights.");

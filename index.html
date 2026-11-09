@@ -2648,7 +2648,7 @@ async function removeStrayDebugGeometry(targetScene){
  M.water.bumpTexture=albedoNormalWater;M.water.bumpTexture.level=.72;albedoNormalWater.uScale=10.5;albedoNormalWater.vScale=10.5;
  // Normal map de oleaje tileable: tres escalas de crestas direccionales, sin ruido pintado en la textura.
  function makeOceanWaveNormal(){
-  const size=384,tau=Math.PI*2,tex=new B.DynamicTexture('LayeredOceanWaveNormal',{width:size,height:size},scene,true),ctx=tex.getContext(),img=ctx.createImageData(size,size);
+  const size=512,tau=Math.PI*2,tex=new B.DynamicTexture('LayeredOceanWaveNormal',{width:size,height:size},scene,true),ctx=tex.getContext(),img=ctx.createImageData(size,size);
   const height=(x,y)=>{
    const u=tau*x/size,w=tau*y/size,warpU=u+.055*Math.sin(3*u-2*w)+.026*Math.sin(8*u+5*w),warpW=w+.048*Math.sin(2*u+3*w)-.018*Math.sin(7*u-6*w);
    const primary=.30*Math.sin(2*warpU+warpW)+.22*Math.sin(3*warpU-4*warpW)+.16*Math.sin(7*warpU+5*warpW)+.105*Math.sin(11*warpU-2*warpW)+.075*Math.sin(15*warpU+9*warpW)+.062*Math.sin(23*warpU-17*warpW)+.045*Math.sin(31*warpU+13*warpW)+.031*Math.sin(47*warpU-29*warpW)+.020*Math.sin(67*warpU+41*warpW);
@@ -2665,7 +2665,7 @@ async function removeStrayDebugGeometry(targetScene){
   ctx.putImageData(img,0,0);tex.update(false);tex.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);tex.anisotropicFilteringLevel=maxAnisotropy;tex.wrapU=B.Texture.WRAP_ADDRESSMODE;tex.wrapV=B.Texture.WRAP_ADDRESSMODE;return tex;
  }
  const oceanWaveNormal=isPerformanceMode&&isConstrainedMobile?null:makeOceanWaveNormal();
- if(oceanWaveNormal){oceanWaveNormal.level=.78;oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.78;}
+ if(oceanWaveNormal){oceanWaveNormal.level=.78;oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=23.975;oceanWaveNormal.wAng=.4014257279586958;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.78;}
  else{M.water.bumpTexture=albedoNormalWater;M.water.bumpTexture.level=.24;}
  // El agua recibe un reflejo propio de las islas y del cielo nórdico.
  // El HDRI global se conserva para los materiales PBR, pero nunca se asigna al mar.
@@ -2702,15 +2702,19 @@ async function removeStrayDebugGeometry(targetScene){
   const shoreOpacity=Math.max(.08,Math.min(1,Number(oceanDepthSettings.shoreOpacity)||.86));
   for(let vertex=0;vertex<waterBase.length/3;vertex++){
    const offset=vertex*3,x=waterBase[offset],z=waterBase[offset+2];
-   let nearestSignedDistance=Infinity,nearestAbsDistance=Infinity,nearestIsland=null;
+   let nearestAbsDistance=Infinity,nearestIsland=null,nearestRadialDistance=0;
    for(const island of land){
-    const signedDistance=Math.hypot(x-island.x,z-island.z)-island.r*1.085;
-    const absoluteDistance=Math.abs(signedDistance);
-    if(absoluteDistance<nearestAbsDistance){nearestAbsDistance=absoluteDistance;nearestSignedDistance=signedDistance;nearestIsland=island;}
+    const radialDistance=Math.hypot(x-island.x,z-island.z);
+    const shoreDistance=Math.abs(radialDistance-island.r*1.085);
+    if(shoreDistance<nearestAbsDistance){nearestAbsDistance=shoreDistance;nearestIsland=island;nearestRadialDistance=radialDistance;}
    }
-   const depth=Math.max(0,nearestSignedDistance);
-   const bathymetry=nearestIsland?-window.NorseCoastalInteraction.seabedHeight(Math.hypot(x-nearestIsland.x,z-nearestIsland.z),nearestIsland.r,terrainHeightOnIsland(nearestIsland,x,z)):18;
-   const physicalDepth=Math.max(0,Math.min(18,Math.max(depth,bathymetry)));
+   // Nearshore depth follows the real irregular terrain profile, not a circular distance field.
+   const bathymetry=nearestIsland?Math.max(0,-terrainHeightOnIsland(nearestIsland,x,z)):18;
+   const nearestRadialRatio=nearestIsland?nearestRadialDistance/Math.max(.001,nearestIsland.r):Infinity;
+   // Deepen smoothly only after the seabed profile has reached its -6.2 m offshore plateau.
+   const farBlend=nearestIsland?smooth01((nearestRadialRatio-1.46)/.50):1;
+   const farDepth=nearestIsland?Math.min(18,6.2+Math.max(0,nearestRadialRatio-1.46)*7.7):18;
+   const physicalDepth=Math.max(0,Math.min(18,bathymetry+(farDepth-bathymetry)*farBlend));
    const t=smooth01(Math.min(1,physicalDepth/transition));
    const index=vertex*4;
    // Vertex tint keeps the original animated water material and all its normal/reflection detail.
