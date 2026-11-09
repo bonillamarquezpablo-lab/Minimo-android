@@ -2032,7 +2032,7 @@ async function removeStrayDebugGeometry(targetScene){
  const groundDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
  const coastalDiagnosticsEnabled=groundDebugEnabled||testModeEnabled;
   // Solo ?test=1: interruptores de aislamiento para capturas A/B; nunca activos en juego normal.
-  const coastalDiagnosticOverrides={disableShortVertexWaves:false};
+  const coastalDiagnosticOverrides={disableShortVertexWaves:false,disableNearWaterDetail:false};
  const realPlayerArmTuningEnabled=true;
  const realPlayerArmDebugState={free:{status:'ESPERANDO',reason:'',twistDeg:null},weapon:{status:'POSE ORIGINAL',reason:'',twistDeg:null}};
  let realPlayerSkeletonFrameDiagnostic='esqueleto pendiente';
@@ -2870,6 +2870,7 @@ async function removeStrayDebugGeometry(targetScene){
  const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12NachoPerformance?1.35:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/30:1/12))))):(isTouchDevice?(isConstrainedMobile?1/8:1/10):1/15);
  const waterFarStep=isPerformanceMode?(isConstrainedMobile?.36:1/12):(isTouchDevice?.22:.14);
  function waterDetailFadeAt(x,z,radius=WATER_DETAIL_RADIUS){
+  if(coastalDiagnosticOverrides.disableNearWaterDetail)return 0;
   const fx=Number.isFinite(waterFocusX)?waterFocusX:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.x:(onShip?ship.position.x:player.root.position.x));
   const fz=Number.isFinite(waterFocusZ)?waterFocusZ:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.z:(onShip?ship.position.z:player.root.position.z));
   const safeRadius=Math.max(.001,Number(radius)||WATER_DETAIL_RADIUS),radiusSq=safeRadius*safeRadius,fadeStartSq=radiusSq*.55,dx=x-fx,dz=z-fz;
@@ -12054,6 +12055,7 @@ function update(dt){
   const diagnosticOceanSpecular=M.water.specularColor.clone();
   const diagnosticOceanVertexAlpha=M.water.useVertexAlpha;
   const diagnosticGroundVertexAlpha=ground.hasVertexAlpha;
+  const diagnosticOceanDepthTintColors=oceanDepthVertexColors.slice();
   // La costa se crea de forma diferida al entrar en campaña. Guardar por identidad de malla permite aislar y restaurar las mallas que aparecen después de registrar la API.
   const diagnosticWashNormalMaps=new WeakMap();
   const diagnosticWashSpeculars=new WeakMap();
@@ -12118,10 +12120,20 @@ function update(dt){
     }else if(kind==='ocean-specular'){
      M.water.specularColor=disabled?new B.Color3(0,0,0):diagnosticOceanSpecular.clone();
      tidalFoamMeshes.forEach(foam=>{rememberDiagnosticWashMesh(foam);const material=foam.washMesh.material;if(material)material.specularColor=disabled?new B.Color3(0,0,0):diagnosticWashSpeculars.get(foam.washMesh).clone();});
+    }else if(kind==='ocean-depth-tint'){
+     for(let offset=0;offset<oceanDepthVertexColors.length;offset+=4){
+      oceanDepthVertexColors[offset]=disabled?1:diagnosticOceanDepthTintColors[offset];
+      oceanDepthVertexColors[offset+1]=disabled?1:diagnosticOceanDepthTintColors[offset+1];
+      oceanDepthVertexColors[offset+2]=disabled?1:diagnosticOceanDepthTintColors[offset+2];
+     }
+     ground.updateVerticesData(B.VertexBuffer.ColorKind,oceanDepthVertexColors,false,false);
+    }else if(kind==='near-water-detail'){
+     coastalDiagnosticOverrides.disableNearWaterDetail=disabled;
+     waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;
     }else if(kind==='short-vertex-waves'){
      coastalDiagnosticOverrides.disableShortVertexWaves=disabled;
     }else throw new Error('Unknown coastal diagnostic variant: '+kind);
-    return {kind,disabled,waterNormalMapEnabled:!!M.water.bumpTexture,oceanVertexAlphaEnabled:!!M.water.useVertexAlpha,groundVertexAlphaEnabled:!!ground.hasVertexAlpha,waterNormalLevel:M.water.bumpTexture?.level??null,waterNormalUScale:M.water.bumpTexture?.uScale??null,waterNormalVScale:M.water.bumpTexture?.vScale??null,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length,volumetricShoreBreakerVisible:tidalFoamMeshes.filter(foam=>foam.waveBodyMesh.isVisible).length,livingBeachLayerVisible:livingBeachLayers[activeBeachIslandIndex]?.mesh?.isVisible?1:0,submergedSandVisible:coastalSeabedMeshes[activeBeachIslandIndex]?.isVisible?1:0,continuousShoreFoamVisible:tidalFoamMeshes.filter(foam=>foam.mesh.isVisible).length};
+    return {kind,disabled,waterNormalMapEnabled:!!M.water.bumpTexture,oceanVertexAlphaEnabled:!!M.water.useVertexAlpha,groundVertexAlphaEnabled:!!ground.hasVertexAlpha,oceanDepthTintEnabled:kind==='ocean-depth-tint'?!disabled:true,nearWaterDetailEnabled:!coastalDiagnosticOverrides.disableNearWaterDetail,waterNormalLevel:M.water.bumpTexture?.level??null,waterNormalUScale:M.water.bumpTexture?.uScale??null,waterNormalVScale:M.water.bumpTexture?.vScale??null,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length,volumetricShoreBreakerVisible:tidalFoamMeshes.filter(foam=>foam.waveBodyMesh.isVisible).length,livingBeachLayerVisible:livingBeachLayers[activeBeachIslandIndex]?.mesh?.isVisible?1:0,submergedSandVisible:coastalSeabedMeshes[activeBeachIslandIndex]?.isVisible?1:0,continuousShoreFoamVisible:tidalFoamMeshes.filter(foam=>foam.mesh.isVisible).length};
    },
    sheetOpacityDepth:()=>getSheetOpacityDepthDiagnostics(),
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},

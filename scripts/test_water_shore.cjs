@@ -158,6 +158,9 @@ assert.match(html,/return terrainY-coastalWaterHeight\(x,z,t\);/,"The shoreline 
 assert.match(html,/waveBodyMesh\.renderingGroupId=0/,"The translucent breaker must share the terrain depth buffer.");
 assert.match(html,/washMesh\.hasVertexAlpha=true;washMesh\.renderingGroupId=0/,"The advancing water film must share the terrain depth buffer too.");
 assert.match(html,/WATER_DETAIL_RADIUS[^;]*isTouchDevice\?90:300/,"High-frequency water displacement must stay local to the active island on touch devices without reducing mesh resolution.");
+assert.match(html,/disableNearWaterDetail:false/,"Test-only LOD isolation must default to normal near-water detail.");
+assert.match(html,/if\(coastalDiagnosticOverrides\.disableNearWaterDetail\)return 0/,"Near/far LOD A/B must force one shared far-wave endpoint without changing normal gameplay.");
+assert.match(html,/diagnosticOceanDepthTintColors=oceanDepthVertexColors\.slice\(\)/,"Ocean depth tint diagnostics must preserve and restore the original RGB buffer independently from alpha.");
 assert.match(html,/const waterFarStep=isPerformanceMode\?[^;]*isTouchDevice\?\.22/,"Far-ocean geometry updates should be throttled on touch devices while local waves retain detail.");
 assert.match(html,/async function createRealGrass\(onlyIslandIndex=null,focusX=null,focusZ=null\)/,"Quality vegetation must accept one selected island and a local focus point.");
 assert.match(html,/if\(onlyIslandIndex!==null&&islandIndex!==onlyIslandIndex\)continue;/,"Grass placement must skip all inactive islands.");

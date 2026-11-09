@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the 36-frame coastal reference, legacy isolation frames, and twelve same-state diagnostic variants (36 baseline + 26 diagnostic A/B captures)."""
+"""Build the 36-frame coastal reference, legacy isolation frames, and fourteen same-state diagnostic variants (36 baseline + 30 diagnostic A/B captures)."""
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
@@ -23,6 +23,8 @@ DIAGNOSTIC_VARIANTS = (
     ("no-ocean-normal-map", "sin normales"),
     ("no-ocean-specular", "sin especular"),
     ("no-short-vertex-waves", "sin ondas cortas"),
+    ("no-ocean-depth-tint", "sin tinte de profundidad"),
+    ("no-near-water-detail", "solo oleaje lejano"),
 )
 LEGACY_ISOLATIONS = (
     ("ridge-occlusion__t037__natural__no-island-shadows.png", "ridge | sin sombras isla"),
@@ -68,7 +70,7 @@ def main() -> None:
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
 
-    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 26 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
+    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 30 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
     draw.text((8, 25), "Baseline matrix · A/B same camera, t=037 s, natural tide · prior shadow/trail checks retained",
               fill=MUTED, font=font)
 

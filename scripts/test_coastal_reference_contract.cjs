@@ -87,8 +87,11 @@ assert.match(captureRunner,/setPackedTrailVisible\(false\)/, 'The coast capture 
 assert.match(captureRunner,/no-packed-trails\.png/, 'The no-trail comparison image must be included in the reference artifact.');
 assert.match(captureRunner, /expectedCaptureCount: 36/,
   'The coastal reference must include 27 coast states plus nine mountain-occlusion states.');
-assert.match(captureRunner, /id: 'surf-20m', distance: 20, height: 5\.5, side: 'sea', targetOffset: 10, targetY: 0\.1/,
-  'The 20 m surf view must aim at the shoreline waterline rather than the dry centre of the beach.');
+assert.match(captureRunner, /id: 'surf-20m', distance: 20, height: 5\.5, side: 'sea', targetOffset: -2\.5, targetY: 0\.1/,
+  'The 20 m surf view must aim just landward of the true 1.085R waterline.');
+assert.match(captureRunner, /const shorelineRadius = island\.r \* 1\.085/);
+assert.match(captureRunner, /cameraCase\.side === 'sea' \? shorelineRadius \+ cameraCase\.distance/);
+assert.match(captureRunner, /cameraCase\.side === 'sea' \? shorelineRadius \+ cameraCase\.targetOffset/);
 assert.match(captureRunner, /id: 'ridge-occlusion'/,
   'The camera matrix must include a direct view across the main island ridge.');
 assert.match(captureRunner, /36\/36 complete/,
@@ -110,14 +113,19 @@ assert.match(captureRunner, /assert.ok\(diagnostic.restoredVariantState\?\.\[fie
 assert.match(captureRunner, /oceanVertexAlphaEnabled/);
 assert.match(captureRunner, /no-ocean-specular/);
 assert.match(captureRunner, /no-short-vertex-waves/);
+assert.match(captureRunner, /no-ocean-depth-tint/);
+assert.match(captureRunner, /no-near-water-detail/);
+assert.match(html, /coastalDiagnosticOverrides=\{disableShortVertexWaves:false,disableNearWaterDetail:false\}/);
+assert.match(html, /if\(coastalDiagnosticOverrides.disableNearWaterDetail\)return 0/);
+assert.match(html, /diagnosticOceanDepthTintColors=oceanDepthVertexColors.slice\(\)/);
 assert.match(captureRunner, /Ensure lazily-created coast meshes exist before snapshotting their original state/);
 assert.match(captureRunner, /api\.setWaterState\(\{ time: 37, tide: 'natural' \}\);\s*const variantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, true\) : null;\s*\/\/ Recompute vertex waves after the source toggle/);
 assert.match(captureRunner, /const restoredVariantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, false\) : null;/,
   'Diagnostic variants must be restored after the isolated frame.');
-assert.match(captureRunner, /diagnosticCaptures\.length, 26/,
+assert.match(captureRunner, /diagnosticCaptures\.length, 30/,
   'Both cameras must capture the baseline and twelve independent A/B variants.');
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
-assert.ok(contactSheet.includes('36 CAPTURES + 26 DIAGNOSTIC A/B'),
+assert.ok(contactSheet.includes('36 CAPTURES + 30 DIAGNOSTIC A/B'),
   'The contact sheet must label all 36 baseline frames and 26 diagnostic A/B captures.');
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');

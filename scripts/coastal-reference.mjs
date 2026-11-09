@@ -10,7 +10,7 @@ const CAMERAS = [
   // The close view stands one metre inland and looks out across the wet sand into the sea.
   // The two wider views remain offshore and look back toward the island.
   { id: 'shore-1m', distance: 1, height: 4.8, side: 'land', targetOffset: 10, targetY: 0.15 },
-  { id: 'surf-20m', distance: 20, height: 5.5, side: 'sea', targetOffset: 10, targetY: 0.1 },
+  { id: 'surf-20m', distance: 20, height: 5.5, side: 'sea', targetOffset: -2.5, targetY: 0.1 },
   { id: 'lod-90m', distance: 90, height: 22, side: 'sea', targetOffset: -0.5, targetY: 1.0 },
   // Explicit sightline across the main island ridge: catches water/foam leaking through opaque high ground.
   { id: 'ridge-occlusion', distance: 100, height: 18, side: 'ridge', targetOffset: 0, targetY: 6.5 }
@@ -223,10 +223,11 @@ async function main() {
           const result = await page.evaluate(({ cameraCase, time, tide, island, shoreRadius }) => {
             const api = window.__ELSN_TEST__;
             const ridge = cameraCase.side === 'ridge';
-            const targetX = ridge ? island.x - 25 : island.x + shoreRadius + cameraCase.targetOffset;
+            const shorelineRadius = island.r * 1.085;
+            const targetX = ridge ? island.x - 25 : island.x + (cameraCase.side === 'sea' ? shorelineRadius + cameraCase.targetOffset : shoreRadius + cameraCase.targetOffset);
             const targetZ = ridge ? island.z - 22 : island.z;
             api.setCamera({
-              x: ridge ? island.x + 75 : island.x + shoreRadius + (cameraCase.side === 'land' ? -cameraCase.distance : cameraCase.distance),
+              x: ridge ? island.x + 75 : island.x + (cameraCase.side === 'sea' ? shorelineRadius + cameraCase.distance : shoreRadius - cameraCase.distance),
               y: cameraCase.height,
               z: ridge ? island.z - 22 : island.z,
               targetX,
@@ -375,7 +376,9 @@ async function main() {
       { id: 'no-ground-vertex-alpha', kind: 'ground-vertex-alpha' },
       { id: 'no-ocean-normal-map', kind: 'ocean-normal-map' },
       { id: 'no-ocean-specular', kind: 'ocean-specular' },
-      { id: 'no-short-vertex-waves', kind: 'short-vertex-waves' }
+      { id: 'no-short-vertex-waves', kind: 'short-vertex-waves' },
+      { id: 'no-ocean-depth-tint', kind: 'ocean-depth-tint' },
+      { id: 'no-near-water-detail', kind: 'near-water-detail' }
     ];
     for (const cameraId of ['shore-1m', 'lod-90m']) {
       const cameraCase = CAMERAS.find(item => item.id === cameraId);
@@ -383,11 +386,12 @@ async function main() {
         const diagnostic = await page.evaluate(({ cameraCase, variant, island, shoreRadius }) => {
           const api = window.__ELSN_TEST__;
           const ridge = cameraCase.side === 'ridge';
+          const shorelineRadius = island.r * 1.085;
           api.setCamera({
-            x: ridge ? island.x + 75 : island.x + shoreRadius + (cameraCase.side === 'land' ? -cameraCase.distance : cameraCase.distance),
+            x: ridge ? island.x + 75 : island.x + (cameraCase.side === 'sea' ? shorelineRadius + cameraCase.distance : shoreRadius - cameraCase.distance),
             y: cameraCase.height,
             z: ridge ? island.z - 22 : island.z,
-            targetX: ridge ? island.x - 25 : island.x + shoreRadius + cameraCase.targetOffset,
+            targetX: ridge ? island.x - 25 : island.x + (cameraCase.side === 'sea' ? shorelineRadius + cameraCase.targetOffset : shoreRadius + cameraCase.targetOffset),
             targetY: cameraCase.targetY,
             targetZ: ridge ? island.z - 22 : island.z
           });
@@ -415,6 +419,20 @@ async function main() {
             'The 3 cm film probe must return a finite normalized mean alpha: ' + JSON.stringify(depth));
           assert.ok(depth?.depthRangeMeters?.min > 0.03,
             'Every sampled film vertex must be deeper than 3 cm: ' + JSON.stringify(depth));
+        }
+        if (variant.id === 'no-ocean-depth-tint') {
+          assert.equal(diagnostic.variantState?.oceanDepthTintEnabled, false,
+            'Ocean RGB depth tint must be neutralized while alpha remains enabled');
+          assert.equal(diagnostic.restoredVariantState?.oceanDepthTintEnabled, true,
+            'Ocean RGB depth tint must be restored after its isolation capture');
+          assert.equal(diagnostic.variantState?.groundVertexAlphaEnabled, true,
+            'The tint-only test must retain the ocean alpha channel');
+        }
+        if (variant.id === 'no-near-water-detail') {
+          assert.equal(diagnostic.variantState?.nearWaterDetailEnabled, false,
+            'Near-water detail must be disabled in the far-wave isolation frame');
+          assert.equal(diagnostic.restoredVariantState?.nearWaterDetailEnabled, true,
+            'Near-water detail must be restored after its isolation capture');
         }
         const isolationChecks = {
           'no-volumetric-shore-breaker': ['volumetricShoreBreakerVisible', 'VolumetricShoreBreaker'],
