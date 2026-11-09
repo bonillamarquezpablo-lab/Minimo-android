@@ -3364,8 +3364,8 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  function buildCoastalSeabed(island,index){
   // A real submerged sandy bed starts under the intertidal mesh and descends to a
   // broad stable plane. It never inherits the island's terrestrial albedo.
-  const segments=isPerformanceMode?192:512,rows=isPerformanceMode?8:14,cols=segments+1;
-  const innerRatio=1.075,outerRatio=1.46;
+  const segments=isPerformanceMode?192:512,rows=isPerformanceMode?10:20,cols=segments+1;
+  const innerRatio=1.075,outerRatio=1.92;
   const positions=new Float32Array(cols*rows*3),uvs=new Float32Array(cols*rows*2);
   const colors=new Float32Array(cols*rows*4),indices=new Uint16Array(segments*(rows-1)*6);
   for(let row=0;row<rows;row++){
@@ -3380,8 +3380,14 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
     uvs[uv]=x*.16;uvs[uv+1]=z*.16;
     const broad=terrainValueNoise(x*.13+41.7,z*.13-18.2);
     const fine=terrainValueNoise(x*.51-7.3,z*.51+27.1);
-    const tone=.94+(broad-.5)*.055+(fine-.5)*.028;
-    colors[color]=tone;colors[color+1]=tone*.985;colors[color+2]=tone*.94;colors[color+3]=1;
+    const tone=.86+(broad-.5)*.055+(fine-.5)*.028;
+    // Fade the exposed sandy bed into a deep-water blue-green tone before its outer edge.
+    // The previous pale, abruptly terminated annulus showed through the transparent sea as a grey oval.
+    const deepFade=smooth01((t-.38)/.62);
+    colors[color]=tone*(1-deepFade*.90)+.055*deepFade;
+    colors[color+1]=tone*.985*(1-deepFade*.84)+.105*deepFade;
+    colors[color+2]=tone*.94*(1-deepFade*.76)+.125*deepFade;
+    colors[color+3]=1;
    }
   }
   let cursor=0;
