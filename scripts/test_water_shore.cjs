@@ -76,7 +76,7 @@ assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.in
 assert.match(html,/washMesh,washPositions,washUvs,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows,washDiagnosticDepths\}\);/,"The moving film UV buffer and its cached static fields must be retained in the active coast state.");
 assert.match(html,/washMesh,washPositions,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows,washDiagnosticDepths\}=foam/,"The moving film update loop must unpack its optional diagnostic depth array.");
 assert.match(html,/const waterContact=1-smooth01\(\(water-terrainY-\.02\)\/\.01\)/,"The near-ground water film must fade to zero when the sea covers the sand by 3 cm.");
-assert.match(html,/const trailingFoam=residual\*washTrailingProfile\[vertex\]\.045\*waterContact/,"The near-ground film residue must fade with the same submerged-depth contact.");
+assert.ok(html.includes("const trailingFoam=residual*washTrailingProfile[vertex]*.045*waterContact"),"The near-ground film residue must fade with the same submerged-depth contact.");
 assert.match(html,/mesh\.receiveShadows=false;mesh\.castShadows=false;mesh\.hasVertexAlpha=true/,"The auxiliary wet-sand layer must not introduce hard shadow bands.");
 assert.match(html,/washMaterial\.bumpTexture=M\.water\.bumpTexture\|\|albedoNormalWater/,"The moving sheet must use animated ocean normals.");
 assert.match(html,/washMaterial\.diffuseFresnelParameters/,"The water film must have a grazing-angle Fresnel response.");
