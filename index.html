@@ -8724,7 +8724,7 @@ function createRealWeapon(type='axe'){
  // Son decoración ligera: no sustituyen aldeas, guardias, colisiones ni sistemas existentes.
  function buildIslandOutpost(vl){
   const cx=vl.x-16,cz=vl.z+13,gy=renderedTerrainSurfaceAt(cx,cz),camp=newGroup('IslandOutpost_'+vl.index,null);
-  camp.position=v(cx,gy,cz);
+  camp.position=v(cx,gy,cz);vl.islandOutpostCamp=camp;
   for(let tent=0;tent<2;tent++){
    const ox=tent===0?-2.25:2.15,oz=tent===0?-.45:.65,rot=tent===0?-.12:.16;
    cyl('OutpostTentRidge_'+vl.index+'_'+tent,camp,[ox,1.38,oz],2.15,.045,.05,M.woodLight,[Math.PI/2,0,0]);
@@ -8740,7 +8740,7 @@ function createRealWeapon(type='axe'){
   // The former +19/-16 offset put the first island's camp at (50,-33), almost 60m
   // from the origin of a 60m island, where terrainSurfaceAt returns the wet shoreline/seabed.
   const scoutX=vl.x-8,scoutZ=vl.z+18,scoutY=renderedTerrainSurfaceAt(scoutX,scoutZ),scout=newGroup('IslandScoutCamp_'+vl.index,null);
-  scout.position=v(scoutX,scoutY,scoutZ);
+  scout.position=v(scoutX,scoutY,scoutZ);vl.scoutCamp=scout;
   box('ScoutCampSupplies_'+vl.index,scout,[0,.30,0],[.92,.60,.78],M.woodDark);
   sphere('ScoutCampEmbers_'+vl.index,scout,[1.15,.13,.15],[.36,.12,.30],M.ember,8);
  }
@@ -12418,6 +12418,15 @@ function update(dt){
     const maximumFootingGapMeters=Math.max(...footingCorners.map(corner=>Math.abs(corner.gapMeters)));
     return {village:village.name||String(village.index),buildingIndex,x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2)),rootY:Number(p.y.toFixed(3)),scale,sampledTerrainY:Number(sampledTerrainY.toFixed(3)),analyticTerrainY:Number(analyticTerrainY.toFixed(3)),groundingErrorMeters:Number(Math.abs(footingBottomY-sampledTerrainY).toFixed(4)),analyticVsRenderedMeters:Number((analyticTerrainY-sampledTerrainY).toFixed(4)),groundClearanceMeters:Number((footingBottomY-sampledTerrainY).toFixed(3)),maximumFootingGapMeters:Number(maximumFootingGapMeters.toFixed(3)),footingCorners,nearestIsland:nearestIsland?.name||null,nearestIslandIndex,distanceToIslandMeters:Number(nearestDistance.toFixed(2)),islandRadiusRatio:nearestIsland?Number((nearestDistance/nearestIsland.r).toFixed(3)):null};
    })),
+   settlementCampGrounding:()=>villages.filter(village=>!village.islandGarrison).flatMap(village=>{
+    const island=land[village.index];
+    return [['IslandOutpost',village.islandOutpostCamp,5.0],['IslandScoutCamp',village.scoutCamp,2.0]].map(([kind,group,footprintRadius])=>{
+     const p=group?.getAbsolutePosition?group.getAbsolutePosition():group?.position;
+     const groundY=p?renderedTerrainSurfaceAt(p.x,p.z):NaN;
+     const radialDistance=p?Math.hypot(p.x-island.x,p.z-island.z):Infinity;
+     return {village:village.name,kind,islandIndex:village.index,x:p?.x??null,z:p?.z??null,anchorY:p?.y??null,groundY:Number(groundY.toFixed(3)),anchorErrorMeters:Number(Math.abs((p?.y??NaN)-groundY).toFixed(4)),islandRadiusRatio:Number((radialDistance/island.r).toFixed(3)),withinDryLandBand:radialDistance+footprintRadius<=island.r*.76};
+    });
+   }),
    garrisonGrounding:()=>villages.filter(village=>village.islandGarrison).map(village=>{
     const root=village.outpostRoot?.getAbsolutePosition?village.outpostRoot.getAbsolutePosition():village.outpostRoot?.position;
     const guard=village.guards?.[0]?.parts?.root;
