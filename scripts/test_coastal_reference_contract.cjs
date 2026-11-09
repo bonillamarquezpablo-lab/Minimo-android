@@ -38,6 +38,8 @@ assert.match(html, /washDiagnosticDepths=coastalDiagnosticsEnabled\?new Float32A
   'Sheet depth probes must only allocate in diagnostic/test mode.');
 assert.match(html, /getSheetOpacityDepthDiagnostics/,
   'The A/B manifest must report opacity for vertices submerged by more than 3 cm.');
+assert.match(html, /foam\.washDiagnosticDepths\[vertex\]=water-terrainY/,
+  'Per-vertex film depth must be recorded through its owning foam state.');
 assert.match(html, /debugForcedTideOffset=tide==='natural'\?null:Number\(tide\)/);
 assert.match(html,/function terrainDeformationAt\(islandIndex,x,z\)\{\s*const field=terrainDeformationFields\[islandIndex\];if\(!field\|\|!field\.active\.size\)return 0;/, 'Unchanged islands must skip bilinear foot-deformation sampling in the per-vertex coastal update.');
 assert.match(html,/const crossSegments=Math\.max\(4,Math\.ceil\(width\/\.20\)\),crossRowWidth=crossSegments\+1;/, 'Packed earth ribbons must be subdivided across their full width.');
