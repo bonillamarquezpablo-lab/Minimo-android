@@ -4289,8 +4289,13 @@ void main(void){
    // Its height quads describe the rendered triangulated base mesh; add the live
    // footprint deformation field separately because deformation updates the GPU buffer.
    if(terrain&&typeof terrain.getHeightAtCoordinates==='function'){
-    const renderedHeight=terrain.getHeightAtCoordinates(x,z);
-    if(Number.isFinite(renderedHeight))return renderedHeight+terrainDeformationAt(index,x,z);
+    // GroundMesh.getHeightAtCoordinates samples the mesh's LOCAL X/Z grid.
+    // The heightfield is translated to the island center, while callers use world X/Z.
+    // Passing world coordinates here sampled a different patch of terrain and could
+    // place buildings several metres above the actual ground (including over water).
+    const localX=x-island.x,localZ=z-island.z;
+    const renderedHeight=terrain.getHeightAtCoordinates(localX,localZ);
+    if(Number.isFinite(renderedHeight))return renderedHeight+(Number(terrain.position?.y)||0)+terrainDeformationAt(index,x,z);
    }
    return terrainSurfaceAt(x,z);
   }
