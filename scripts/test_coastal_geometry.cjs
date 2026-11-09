@@ -8,7 +8,7 @@ assert.match(html,/function auditIslandGeometry\(\)/);
 for(const mesh of ['IslandHeightfield','NordicSubmergedSand','LivingCoastalSand','ShoreBreakerWash']) assert.ok(html.includes("'"+mesh+"'"),'Missing '+mesh);
 assert.match(html,/maxConsecutiveNullColumns/);
 assert.match(html,/maxPositionGapMeters/);
-assert.match(html,/longEdgeThreshold=Math\.max\(1\.25,p50Length\*2\.0\)/);
+assert.match(html,/longEdgeThreshold=Math\\.max\\(1\\.25,p95Length\\*1\\.8,p50Length\\*2\\.75\\)/);
 assert.match(html,/coastalAuditProfile\(island,index,'NordicSubmergedSand'/);
 assert.match(html,/coastalAuditProfile\(island,index,'LivingCoastalSand'/);
 assert.match(html,/island-heightfield/);
