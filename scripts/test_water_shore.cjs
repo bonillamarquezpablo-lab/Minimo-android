@@ -134,7 +134,8 @@ assert.match(html,/const nextIndex=activeBeachIslandIndex;/,"The breaker must us
 assert.match(html,/const waterDepth=water-terrainY,waterContact=smooth01\(\(waterDepth-\.015\)\/\.22\)/,"The wave body must reuse its sampled coastal water and terrain height.");
 assert.match(html,/waveBodyPositions\[offset\+1\]=waterDepth>0\?water\+\.018\+lift:terrainY-\.045/,"Dry terrain must occlude the volumetric wave instead of lifting it above mountains.");
 assert.match(html,/const foamTerrainContact=Math\.max\(foamSubmerged,dryFoamResidue\)/,"Foam residue must fade with actual terrain/water separation.");
-assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/ComputeNormals\(waveBodyPositions/,"Do not recompute the full volumetric-wave normal field during every animation update.");
+assert.match(animateBody,/foam.waveBodyNormalRefreshCounter\+\+;/,"The moving wave must count its normal refresh cadence.");
+assert.match(animateBody,/if\(foam.waveBodyNormalRefreshCounter>=\(isTouchDevice\?4:2\)\)/,"The wave normals must refresh at a throttled cadence on touch devices and desktop.");
 assert.match(html,/if\(beachWorkLayer&&beachWorkLayer\.index!==activeBeachIslandIndex\)/,"Pending beach-state work must be cancelled when the player changes island.");
 assert.match(html,/function coastalWaterHeight\(x,z,t=oceanTime\).*meanSeaLevel\+\.38/,"The shoreline water must stop at sea level plus a short physical run-up margin.");
 assert.match(html,/return terrainY-coastalWaterHeight\(x,z,t\);/,"The shoreline intersection must use capped coastal water, not an offshore crest on a hill.");
