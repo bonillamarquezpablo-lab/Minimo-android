@@ -123,7 +123,7 @@ assert.match(captureRunner, /api\.setWaterState\(\{ time: 37, tide: 'natural' \}
 assert.match(captureRunner, /const restoredVariantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, false\) : null;/,
   'Diagnostic variants must be restored after the isolated frame.');
 assert.match(captureRunner, /diagnosticCaptures\.length, 30/,
-  'Both cameras must capture the baseline and twelve independent A/B variants.');
+  'Both cameras must capture the baseline and fourteen independent A/B variants.');
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
 assert.ok(contactSheet.includes('36 CAPTURES + 30 DIAGNOSTIC A/B'),
   'The contact sheet must label all 36 baseline frames and 26 diagnostic A/B captures.');
