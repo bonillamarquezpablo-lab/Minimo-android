@@ -423,7 +423,7 @@ async function main() {
     }
     assert.equal(manifest.diagnosticCaptures.length, 26,
       'The two cameras must each contain a baseline and all eight isolated variants');
-    console.log('[coastal-reference] 22 same-state A/B captures complete; sheet opacity/depth metrics recorded');
+    console.log('[coastal-reference] 26 same-state A/B captures complete; separate vertex-alpha and sheet-depth metrics recorded');
 
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');
