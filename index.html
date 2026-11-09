@@ -2706,18 +2706,36 @@ async function removeStrayDebugGeometry(targetScene){
   for(let vertex=0;vertex<waterBase.length/3;vertex++){
    const offset=vertex*3,x=waterBase[offset],z=waterBase[offset+2];
    let nearestAbsDistance=Infinity,nearestIsland=null,nearestRadialDistance=0;
+   let secondAbsDistance=Infinity,secondIsland=null,secondRadialDistance=0;
    for(const island of land){
     const radialDistance=Math.hypot(x-island.x,z-island.z);
     const shoreDistance=Math.abs(radialDistance-island.r*1.085);
-    if(shoreDistance<nearestAbsDistance){nearestAbsDistance=shoreDistance;nearestIsland=island;nearestRadialDistance=radialDistance;}
+    if(shoreDistance<nearestAbsDistance){
+     secondAbsDistance=nearestAbsDistance;secondIsland=nearestIsland;secondRadialDistance=nearestRadialDistance;
+     nearestAbsDistance=shoreDistance;nearestIsland=island;nearestRadialDistance=radialDistance;
+    }else if(shoreDistance<secondAbsDistance){
+     secondAbsDistance=shoreDistance;secondIsland=island;secondRadialDistance=radialDistance;
+    }
    }
    // The intertidal alpha follows the irregular rendered terrain/seabed profile.
-   // Only the far-offshore continuation uses a broad radial blend after the bed reaches its shelf.
+   // Use the closest shoreline as the primary depth source; only the far-offshore
+   // continuation blends toward the second-nearest shoreline. This avoids visible
+   // Voronoi seams where the selected island changes across the ocean vertex grid.
    const bathymetry=nearestIsland?Math.max(0,-terrainHeightOnIsland(nearestIsland,x,z)):18;
    const nearestRadialRatio=nearestIsland?nearestRadialDistance/Math.max(.001,nearestIsland.r):Infinity;
    const farBlend=nearestIsland?smooth01((nearestRadialRatio-1.46)/.50):1;
    const farDepth=nearestIsland?Math.min(18,6.2+Math.max(0,nearestRadialRatio-1.46)*7.7):18;
-   const profileDepth=Math.max(0,Math.min(18,bathymetry+(farDepth-bathymetry)*farBlend));
+   let profileDepth=Math.max(0,Math.min(18,bathymetry+(farDepth-bathymetry)*farBlend));
+   if(nearestIsland&&secondIsland&&nearestRadialDistance>nearestIsland.r*1.085&&secondRadialDistance>secondIsland.r*1.085){
+    const secondaryBathymetry=Math.max(0,-terrainHeightOnIsland(secondIsland,x,z));
+    const secondaryRadialRatio=secondRadialDistance/Math.max(.001,secondIsland.r);
+    const secondaryFarBlend=smooth01((secondaryRadialRatio-1.46)/.50);
+    const secondaryFarDepth=Math.min(18,6.2+Math.max(0,secondaryRadialRatio-1.46)*7.7);
+    const secondaryProfileDepth=Math.max(0,Math.min(18,secondaryBathymetry+(secondaryFarDepth-secondaryBathymetry)*secondaryFarBlend));
+    const coastDistanceGap=Math.max(0,secondAbsDistance-nearestAbsDistance);
+    const secondaryWeight=.5*(1-smooth01(coastDistanceGap/24));
+    profileDepth=profileDepth*(1-secondaryWeight)+secondaryProfileDepth*secondaryWeight;
+   }
    const waterlineY=Number(ground.position.y)||0;
    const seabedY=waterlineY-profileDepth;
    const physicalDepth=window.NorseCoastalInteraction.waterDepth(waterlineY,seabedY);
