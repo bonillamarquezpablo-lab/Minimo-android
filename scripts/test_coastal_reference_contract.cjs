@@ -93,6 +93,8 @@ assert.match(captureRunner, /no-shorebreaker-wash/);
 assert.match(captureRunner, /no-ocean-normal-map/);
 assert.match(captureRunner, /previous-ocean-normal/);
 assert.match(captureRunner, /no-ocean-depth-alpha/);
+assert.match(captureRunner, /no-ocean-vertex-alpha/);
+assert.match(captureRunner, /no-ground-vertex-alpha/);
 assert.match(captureRunner, /no-volumetric-shore-breaker/);
 assert.match(captureRunner, /no-living-beach-layer/);
 assert.match(captureRunner, /no-submerged-sand/);
@@ -108,10 +110,10 @@ assert.match(captureRunner, /Ensure lazily-created coast meshes exist before sna
 assert.match(captureRunner, /api\.setWaterState\(\{ time: 37, tide: 'natural' \}\);\s*const variantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, true\) : null;\s*\/\/ Recompute vertex waves after the source toggle/);
 assert.match(captureRunner, /const restoredVariantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, false\) : null;/,
   'Diagnostic variants must be restored after the isolated frame.');
-assert.match(captureRunner, /diagnosticCaptures\.length, 22/,
+assert.match(captureRunner, /diagnosticCaptures\.length, 26/,
   'Both cameras must capture the baseline and ten controlled A/B variants.');
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
-assert.ok(contactSheet.includes('36 CAPTURES + 22 DIAGNOSTIC A/B'),
+assert.ok(contactSheet.includes('36 CAPTURES + 26 DIAGNOSTIC A/B'),
   'The contact sheet must label all 36 baseline frames and 18 diagnostic A/B captures.');
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
