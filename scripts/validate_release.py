@@ -375,8 +375,18 @@ def main() -> None:
         fail("El streaming debe clasificar geometría por centro real y mantener ocultos los NPC remotos.")
     if "landIslandIndex(focus.x,focus.z)" not in index_html or "islandStreamIslandAt(focus.x,focus.z)" not in index_html:
         fail("El cambio de isla renderizada debe seguir al jugador en tierra y al drakkar en navegación.")
-    if "island.r*(1.085-coastNoise)" not in index_html or "renderedTerrainSurfaceAt(x,z)+.018" not in index_html:
-        fail("La superficie de playa debe prolongarse hasta la zona intermareal usando la altura real del perfil costero.")
+    beach_start = index_html.find("function buildLivingBeachLayer(island,index)")
+    beach_end = index_html.find("function ensureActiveCoastalIslandSystems", beach_start)
+    beach_source = index_html[beach_start:beach_end] if beach_start >= 0 and beach_end > beach_start else ""
+    work_start = index_html.find("function processBeachWorkChunk()")
+    work_end = index_html.find("function update(dt,x,z,distance,heading,running,onShip,airborne)", work_start)
+    beach_update_source = index_html[work_start:work_end] if work_start >= 0 and work_end > work_start else ""
+    if ("island.r*(1.085-coastNoise)" not in beach_source
+            or "positions.push(x,terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018,z)" not in beach_source
+            or "layer.positions[offset+1]=terrainHeightOnIsland(layer.island,x,z)+terrainDeformationAt(layer.index,x,z)+.018;" not in beach_update_source
+            or "renderedTerrainSurfaceAt(x,z)" in beach_source
+            or "renderedTerrainSurfaceAt(x,z)" in beach_update_source):
+        fail("La superficie de playa debe prolongarse hasta la zona intermareal con el perfil real de su isla, sin usar el sentinel de terreno exterior.")
     if "inlandDistance<4.8" in index_html or "wetSandCol=" in index_html or "wetBlend=wetSand" in index_html:
         fail("La arena seca no puede contener un tinte húmedo ni una franja artificial.")
     if "NorseBeachState.createCoastalGrid" not in index_html or "state.stepCell(cell,coverage,elapsed,BEACH_STATE_DEFAULTS)" not in index_html:
