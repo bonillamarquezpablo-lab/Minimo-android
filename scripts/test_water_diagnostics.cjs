@@ -25,8 +25,8 @@ assert.match(html,/P50 '\+fmt\(frameAt\(\.50\),2\)\+' · P95 '\+fmt\(frameAt\(\.
 assert.match(html,/Retirada media '\+fmt\(backwash\.meanMetersPerSecond,2\)\+' m\/s · pico '\+fmt\(backwash\.peakMetersPerSecond,2\)\+' m\/s/);
 assert.match(html,/waterDebugVertexTimes\[vertex\]=oceanTime/);
 assert.match(html,/waterDebugVertexTimes\[i\/3\]=oceanTime/);
-assert.match(html,/crossCrestLift:\.030/,'Canonical cross crest is 3cm.');
-assert.match(html,/shortCrestLift:\.018/,'Canonical short crest is 1.8cm.');
+assert.match(html,/crossCrestLift:\.072/,'Canonical cross crest is 7.2cm.');
+assert.match(html,/shortCrestLift:\.044/,'Canonical short crest is 4.4cm.');
 assert.ok(html.includes('const WATER_WAVE_PARAMETERS=Object.freeze('));
 assert.ok(html.includes('function waterHeightFromWaveValues('));
 assert.ok(html.includes('function waterFarHeightAtVertex(vertex)'));
