@@ -529,8 +529,14 @@ def main() -> None:
         fail("La defensa naval debe estar conectada al bucle, al desembarco y al guardado.")
     if "float humidity=clamp(max(wet*.58,wetEdge*.56)*wetSandStrength,0.0,.78)" not in index_html or "color=mix(color,wrackTint,wrackZone*wrackFragments*.045)" not in index_html:
         fail("La arena húmeda debe quedar cálida y difusa; los restos de arribazón no pueden formar una banda oscura.")
-    if "washMaterial.emissiveColor=new B.Color3(0,0,0)" not in index_html or "const alpha=Math.min(.72,filmAlpha+whitewater*.62+trailingFoam*.56)" not in index_html or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html:
-        fail("La lámina de agua debe permanecer neutra, visible y la espuma blanca debe seguir fragmentada.")
+    if ("washMaterial.emissiveColor=new B.Color3(0,0,0)" not in index_html
+            or "const alpha=Math.min(.80,filmAlpha+whitewater*.76+trailingFoam*.70);" not in index_html
+            or "const whitewater=breakStrength*leadingCellular*.64*shallowWashContact;" not in index_html
+            or "const trailingFoam=residual*washTrailingProfile[vertex]*.23*exposedSandContact;" not in index_html
+            or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html
+            or "const crossBreakerPhase=(foamWaveX*.31-foamWaveZ)*.041+oceanTime*.79+angle*1.2;" not in index_html
+            or "const foamWaveCrest=smooth01(primaryBreakerCrest*.78+crossBreakerCrest*.22);" not in index_html):
+        fail("La lámina debe ser neutra, con espuma fragmentada, resaca persistente y cresta multidireccional.")
     if "const runup=.28+.82*Math.pow(waveCrest,1.15)" not in index_html:
         fail("La lámina de espuma debe conservar una anchura de run-up contenida.")
     if "navalDefensePhaseUnlocked" not in index_html or "villages.every(entry=>entry.claimed)&&discoveredIslands.every(Boolean)" not in index_html:
