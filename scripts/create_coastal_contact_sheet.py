@@ -12,7 +12,10 @@ DIAGNOSTIC_CAMERAS = ("shore-1m", "lod-90m")
 DIAGNOSTIC_VARIANTS = (
     ("baseline", "baseline"),
     ("no-shorebreaker-wash", "sin ShoreBreakerWash"),
-    ("no-volumetric-shore-breaker", "sin lámina rompiente"),
+    ("no-volumetric-shore-breaker", "sin VolumetricShoreBreaker"),
+    ("no-living-beach-layer", "sin LivingCoastalSand"),
+    ("no-submerged-sand", "sin NordicSubmergedSand"),
+    ("no-continuous-shore-foam", "sin espuma costera"),
     ("no-ocean-normal-map", "sin normales"),
     ("no-ocean-specular", "sin especular"),
     ("no-short-vertex-waves", "sin ondas cortas"),
@@ -60,7 +63,7 @@ def main() -> None:
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
 
-    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 12 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
+    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 18 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
     draw.text((8, 25), "Baseline matrix · A/B same camera, t=037 s, natural tide · prior shadow/trail checks retained",
               fill=MUTED, font=font)
 
@@ -91,18 +94,19 @@ def main() -> None:
                 paste_tile(name, f"{camera} | t={time}s | {tide}", col, row)
             row += 1
 
+    diagnostic_rows_per_camera = (len(DIAGNOSTIC_VARIANTS) + columns - 1) // columns
     for camera in DIAGNOSTIC_CAMERAS:
-        for col, (variant, label) in enumerate(DIAGNOSTIC_VARIANTS):
+        for index, (variant, label) in enumerate(DIAGNOSTIC_VARIANTS):
             name = f"{camera}__t037__natural__{variant}.png"
-            paste_tile(name, f"{camera} | t037 | {label}", col, row)
-        row += 1
+            paste_tile(name, f"{camera} | t037 | {label}", index % columns, row + index // columns)
+        row += diagnostic_rows_per_camera
 
     for col, (name, label) in enumerate(LEGACY_ISOLATIONS):
         paste_tile(name, label, col, row)
 
     target = OUT / "contact-sheet.png"
     sheet.save(target, format="PNG", optimize=True)
-    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 12 diagnostic A/B + legacy)")
+    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 18 diagnostic A/B + legacy)")
 
 
 if __name__ == "__main__":

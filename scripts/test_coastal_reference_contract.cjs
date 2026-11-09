@@ -34,6 +34,11 @@ assert.match(html, /setDiagnosticVariant:\(kind,enabled\)=>/,
   'Five independent material/geometry diagnostic switches must be test-only.');
 assert.match(html, /diagnosticWashVisibility=new WeakMap\(\)/);
 assert.match(html, /diagnosticWaveBodyVisibility=new WeakMap\(\)/);
+assert.match(html, /diagnosticMeshVisibility=new WeakMap\(\)/);
+assert.match(html, /setDiagnosticMeshVisible=\(mesh,disabled\)=>/);
+for (const kind of ['living-beach-layer','submerged-sand','continuous-shore-foam']) {
+  assert.ok(html.includes(`kind==='${kind}'`), `Missing isolated coastal mesh switch: ${kind}`);
+}
 assert.match(html, /kind==='volumetric-shore-breaker'/,
   'The translucent VolumetricShoreBreaker mesh must have its own test-only isolation switch.');
 assert.match(html, /diagnosticWashNormalMaps=new WeakMap\(\)/);
@@ -87,6 +92,9 @@ assert.match(captureRunner, /36\/36 complete/,
 assert.match(captureRunner, /no-shorebreaker-wash/);
 assert.match(captureRunner, /no-ocean-normal-map/);
 assert.match(captureRunner, /no-volumetric-shore-breaker/);
+assert.match(captureRunner, /no-living-beach-layer/);
+assert.match(captureRunner, /no-submerged-sand/);
+assert.match(captureRunner, /no-continuous-shore-foam/);
 assert.match(captureRunner, /volumetricShoreBreakerVisible, 0/);
 assert.match(captureRunner, /no-ocean-specular/);
 assert.match(captureRunner, /no-short-vertex-waves/);
@@ -94,15 +102,18 @@ assert.match(captureRunner, /Ensure lazily-created coast meshes exist before sna
 assert.match(captureRunner, /api\.setWaterState\(\{ time: 37, tide: 'natural' \}\);\s*const variantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, true\) : null;\s*\/\/ Recompute vertex waves after the source toggle/);
 assert.match(captureRunner, /const restoredVariantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, false\) : null;/,
   'Diagnostic variants must be restored after the isolated frame.');
-assert.match(captureRunner, /diagnosticCaptures\.length, 12/,
-  'Both cameras must capture the baseline and five isolated A/B variants.');
+assert.match(captureRunner, /diagnosticCaptures\.length, 18/,
+  'Both cameras must capture the baseline and eight isolated A/B variants.');
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
-assert.ok(contactSheet.includes('36 CAPTURES + 12 DIAGNOSTIC A/B'),
+assert.ok(contactSheet.includes('36 CAPTURES + 18 DIAGNOSTIC A/B'),
   'The contact sheet must label all 36 baseline frames and 12 diagnostic A/B captures.');
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
 assert.match(contactSheet, /no-volumetric-shore-breaker/,
   'The contact sheet must include the isolated translucent breaker sheet.');
+assert.match(contactSheet, /no-living-beach-layer/);
+assert.match(contactSheet, /no-submerged-sand/);
+assert.match(contactSheet, /no-continuous-shore-foam/);
 assert.match(contactSheet, /ridge-occlusion__t037__natural__no-island-shadows\.png/, 'The contact sheet must include a shadow-isolation A/B panel.');
 assert.match(captureRunner, /setIslandShadowReceiving\(false\)/, 'The ridge A/B frame must isolate the main-island shadow receiver.');
 assert.match(html, /setIslandShadowReceiving:\(enabled\)=>/, 'Shadow isolation must remain available only through the test-mode hook.');
