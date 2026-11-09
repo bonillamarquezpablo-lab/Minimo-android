@@ -538,7 +538,7 @@ def main() -> None:
     if ("washMaterial.emissiveColor=new B.Color3(0,0,0)" not in index_html
             or "const alpha=Math.min(.80,filmAlpha+whitewater*.76+trailingFoam*.70);" not in index_html
             or "const whitewater=breakStrength*leadingCellular*.64*shallowWashContact;" not in index_html
-            or "const trailingFoam=residual*washTrailingProfile[vertex]*.23*exposedSandContact;" not in index_html
+            or "const trailingFoam=residual*washTrailingProfile[vertex]*(.18+.30*backwashStrength)*exposedSandContact;" not in index_html
             or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html
             or "const crossBreakerPhase=(foamWaveX*.31-foamWaveZ)*.041+oceanTime*.79+angle*1.2;" not in index_html
             or "const foamWaveCrest=smooth01(primaryBreakerCrest*.78+crossBreakerCrest*.22);" not in index_html):
