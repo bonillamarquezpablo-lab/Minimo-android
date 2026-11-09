@@ -3611,6 +3611,17 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  // and a moisture/foam state per shoreline sample. It uses the same analytical terrain height,
  // so it never changes the walkable collision profile.
  const livingBeachLayers=new Array(land.length);
+ // Match the visible beach overlay to the exact triangulated heightfield where the island exists.
+ // Beyond the circular heightfield edge, keep using the owning island's analytical seabed profile;
+ // never fall back to terrainSurfaceAt's generic offshore sentinel.
+ function livingBeachSurfaceAt(island,index,x,z){
+  const dx=x-island.x,dz=z-island.z,terrain=islandTerrainMeshes[index];
+  if(dx*dx+dz*dz<island.r*island.r&&terrain&&typeof terrain.getHeightAtCoordinates==='function'){
+   const renderedHeight=terrain.getHeightAtCoordinates(x,z);
+   if(Number.isFinite(renderedHeight))return renderedHeight+terrainDeformationAt(index,x,z)+.018;
+  }
+  return terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018;
+ }
  function buildLivingBeachLayer(island,index){
   const coastColumns=window.NorseBeachState.coastalColumnCount(island.r,isPerformanceMode,isConstrainedMobile),coastRows=isPerformanceMode?32:64;
   const segments=coastColumns,rows=isPerformanceMode?13:(isTouchDevice?15:17),cols=segments+1;
@@ -3632,7 +3643,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    for(let i=0;i<=segments;i++){
     const angle=i/segments*Math.PI*2,inner=radials[i*2],outer=radials[i*2+1];
     const radius=inner+(outer-inner)*t,x=island.x+Math.cos(angle)*radius,z=island.z+Math.sin(angle)*radius;
-    positions.push(x,terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018,z);uvs.push(i/segments,t);
+    positions.push(x,livingBeachSurfaceAt(island,index,x,z),z);uvs.push(i/segments,t);
     // Keep the sandy bed opaque through the seaward edge; only feather the inland join.
     // This prevents the terrestrial heightfield from bleeding through beneath transparent water.
     const alpha=.985*smooth01(t/.045);colors.push(1,.94,.82,alpha);baseAlpha.push(alpha);
@@ -3966,7 +3977,7 @@ void main(void){
    while(beachWorkVertexCursor<layer.baseY.length&&performance.now()-sliceStarted<BEACH_WORK_BUDGET_MS){
     const vertex=beachWorkVertexCursor++,offset=vertex*3,x=layer.positions[offset],z=layer.positions[offset+2];
     // Use this mesh's owning island profile. The generic terrain lookup returns its .42 m sentinel beyond 1.09R.
-    layer.positions[offset+1]=terrainHeightOnIsland(layer.island,x,z)+terrainDeformationAt(layer.index,x,z)+.018;
+    layer.positions[offset+1]=livingBeachSurfaceAt(layer.island,layer.index,x,z);
    }
    if(beachWorkVertexCursor>vertexStart&&layer.positionBuffer&&layer.positionBuffer.isUpdatable()){const start=vertexStart*3,end=beachWorkVertexCursor*3;layer.positionBuffer.updateDirectly(layer.positions.subarray(start,end),start);}
    const sliceMs=performance.now()-sliceStarted;beachWorkLastSliceMs=Number(sliceMs.toFixed(3));beachWorkMaxSliceMs=Math.max(beachWorkMaxSliceMs,sliceMs);
@@ -12270,7 +12281,7 @@ function update(dt){
     if(kind==='submerged'){
      const distance=Math.hypot(x-island.x,z-island.z);
      expected=window.NorseCoastalInteraction.seabedHeight(distance,island.r,terrainHeightOnIsland(island,x,z))-.003;
-    }else expected=terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018;
+    }else expected=livingBeachSurfaceAt(island,index,x,z);
     const above=y-expected;checked++;maxAbove=Math.max(maxAbove,above);
     if(above>tolerance){violations++;coastalAuditTop(samples,{metric:above,x:Number(x.toFixed(3)),y:Number(y.toFixed(3)),z:Number(z.toFixed(3)),expectedY:Number(expected.toFixed(3)),aboveProfileMeters:Number(above.toFixed(4))},above);}
    }
