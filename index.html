@@ -2031,6 +2031,8 @@ async function removeStrayDebugGeometry(targetScene){
  const playerStartupTestEnabled=new URLSearchParams(window.location.search).get('playertest')==='1';
  const groundDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
  const coastalDiagnosticsEnabled=groundDebugEnabled||testModeEnabled;
+  // Solo ?test=1: interruptores de aislamiento para capturas A/B; nunca activos en juego normal.
+  const coastalDiagnosticOverrides={disableShortVertexWaves:false};
  const realPlayerArmTuningEnabled=true;
  const realPlayerArmDebugState={free:{status:'ESPERANDO',reason:'',twistDeg:null},weapon:{status:'POSE ORIGINAL',reason:'',twistDeg:null}};
  let realPlayerSkeletonFrameDiagnostic='esqueleto pendiente';
@@ -2795,14 +2797,16 @@ async function removeStrayDebugGeometry(targetScene){
   const crossWave=waterWaveValueAtVertex(vertex,3),chopWave=waterWaveValueAtVertex(vertex,4);
   const cross=crossWave*.15,chop=chopWave*.082,secondary=waterWaveValueAtVertex(vertex,5)*.046,ripple=waterWaveValueAtVertex(vertex,6)*.026;
   const crestFoamLift=Math.pow(Math.max(0,crossWave),3)*.030*oceanDepthSettings.waveCrestStrength,shortCrest=Math.pow(Math.max(0,chopWave),3)*.018*oceanDepthSettings.waveCrestStrength;
-  return tideOffsetAt(oceanTime)+longSwell+swellA+swellB+cross+chop+secondary+ripple+crestFoamLift+shortCrest;
+  const shortWaveScale=coastalDiagnosticOverrides.disableShortVertexWaves?0:1;
+  return tideOffsetAt(oceanTime)+longSwell+swellA+swellB+(cross+chop+secondary+ripple+crestFoamLift+shortCrest)*shortWaveScale;
  }
  function waterDetailHeightAtVertex(vertex,fade){
   const longSwell=waterWaveValueAtVertex(vertex,0)*.105,swellA=waterWaveValueAtVertex(vertex,1)*.315,swellB=waterWaveValueAtVertex(vertex,2)*.225;
   const crossWave=waterWaveValueAtVertex(vertex,3),chopWave=waterWaveValueAtVertex(vertex,4);
   const cross=crossWave*.15,chop=chopWave*.082,secondary=waterWaveValueAtVertex(vertex,5)*.046,ripple=waterWaveValueAtVertex(vertex,6)*.026;
   const crestFoamLift=Math.pow(Math.max(0,crossWave),3)*.030*oceanDepthSettings.waveCrestStrength,shortCrest=Math.pow(Math.max(0,chopWave),3)*.018*oceanDepthSettings.waveCrestStrength;
-  return tideOffsetAt(oceanTime)+longSwell+swellA+swellB+(cross+chop+secondary+ripple+crestFoamLift+shortCrest)*fade;
+  const shortWaveScale=coastalDiagnosticOverrides.disableShortVertexWaves?0:1;
+  return tideOffsetAt(oceanTime)+longSwell+swellA+swellB+(cross+chop+secondary+ripple+crestFoamLift+shortCrest)*fade*shortWaveScale;
  }
  updateWaterWaveTime(0);
  const waterActiveVertexStorage=new Uint32Array(waterBase.length/3);
@@ -3091,6 +3095,7 @@ async function removeStrayDebugGeometry(targetScene){
      const terrainY=sampleRadialProfile(waveBodyOffsets,waveBodyTerrainSamples,profileOffset),water=sampleRadialProfile(waveBodyOffsets,waveBodyWaterSamples,profileOffset);
      const leadingCellular=washLeadingCellular[vertex];
      const waterContact=smooth01((water-terrainY+.03)/.13);
+     if(washDiagnosticDepths)washDiagnosticDepths[vertex]=water-terrainY;
      const whitewater=breakStrength*leadingCellular*.38*waterContact;
      const trailingFoam=residual*washTrailingProfile[vertex]*.045;
      const whiteMix=Math.min(1,whitewater*2.6+trailingFoam*2.0);
@@ -3969,7 +3974,7 @@ void main(void){
   // Lámina intermareal de alta resolución independiente de la malla oceánica gruesa.
   // Se estira hacia la playa durante la cresta y deja una línea de agua blanca y rota al romper.
   const washFractions=isPerformanceMode&&isConstrainedMobile?[1,.72,.44,.16,0,-.22]:[1,.92,.84,.76,.68,.60,.52,.44,.36,.28,.20,.12,.04,-.04,-.12];
-  const washRows=washFractions.length,washPositions=new Float32Array(cols*washRows*3),washUvs=new Float32Array(cols*washRows*2),washColors=new Float32Array(cols*washRows*4),washPattern=new Float32Array(cols*washRows);
+  const washRows=washFractions.length,washPositions=new Float32Array(cols*washRows*3),washUvs=new Float32Array(cols*washRows*2),washColors=new Float32Array(cols*washRows*4),washPattern=new Float32Array(cols*washRows),washDiagnosticDepths=coastalDiagnosticsEnabled?new Float32Array(cols*washRows):null;
   const washLeadingCellular=new Float32Array(cols*washRows),washTrailingProfile=new Float32Array(cols*washRows),washFilmCoverage=new Float32Array(cols*washRows),washLipProfile=new Float32Array(washRows);
   const washIndices=new Uint16Array(segments*(washRows-1)*6);let washCursor=0;
   for(let col=0;col<=segments;col++){
@@ -4024,7 +4029,7 @@ void main(void){
   }
   washMesh.material=washMaterial;washMesh.isPickable=false;washMesh.receiveShadows=false;washMesh.castShadows=false;
   washMesh.hasVertexAlpha=true;washMesh.renderingGroupId=0;
-  tidalFoamMeshes.push({mesh,positions,foamUvs,colors,foamPattern,foamAlphaMask,lastShoreline,retreatResidue,foamCenter,angleValues,angleCos,angleSin,island,centerX:island.x,centerZ:island.z,index,segments,rows,cols,radialOffsets,terrainProfileCenters,terrainProfile,waveBodyMesh,waveBodyPositions,waveBodyNormals,waveBodyColors,waveBodyUvs,waveBodyIndices,waveBodyOffsets,waveBodyRows,waveBodyCrestProfile,waveBodyShoulderProfile,waveBodySteepFaceProfile,waveBodyEdgeProfile,waveBodyTerrainSamples,waveBodyWaterSamples,washMesh,washPositions,washUvs,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows});
+  tidalFoamMeshes.push({mesh,positions,foamUvs,colors,foamPattern,foamAlphaMask,lastShoreline,retreatResidue,foamCenter,angleValues,angleCos,angleSin,island,centerX:island.x,centerZ:island.z,index,segments,rows,cols,radialOffsets,terrainProfileCenters,terrainProfile,waveBodyMesh,waveBodyPositions,waveBodyNormals,waveBodyColors,waveBodyUvs,waveBodyIndices,waveBodyOffsets,waveBodyRows,waveBodyCrestProfile,waveBodyShoulderProfile,waveBodySteepFaceProfile,waveBodyEdgeProfile,waveBodyTerrainSamples,waveBodyWaterSamples,washMesh,washPositions,washUvs,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows,washDiagnosticDepths});
  }
  let activeTidalFoamIslandIndex=-2;
  function syncActiveTidalFoamIsland(){
@@ -11955,6 +11960,27 @@ function update(dt){
   unhandledRejections:window.__elSinNombreStartupSmoke.unhandledRejections.length
  };
  if(testModeEnabled){
+  const diagnosticOceanNormal=M.water.bumpTexture;
+  const diagnosticOceanSpecular=M.water.specularColor.clone();
+  const diagnosticWashNormalMaps=tidalFoamMeshes.map(foam=>foam.washMesh.material?.bumpTexture||null);
+  const diagnosticWashSpeculars=tidalFoamMeshes.map(foam=>foam.washMesh.material?.specularColor?.clone?.()||new B.Color3(.58,.69,.73));
+  const diagnosticWashVisibility=tidalFoamMeshes.map(foam=>({visible:foam.washMesh.isVisible,enabled:typeof foam.washMesh.isEnabled==='function'?foam.washMesh.isEnabled():true}));
+  const getSheetOpacityDepthDiagnostics=()=>{
+   const threshold=.03,depths=[],alphas=[];
+   for(const foam of tidalFoamMeshes){
+    if(foam.index!==activeTidalFoamIslandIndex||!foam.washDiagnosticDepths)continue;
+    for(let vertex=0;vertex<foam.washDiagnosticDepths.length;vertex++){
+     const depth=foam.washDiagnosticDepths[vertex],alpha=foam.washColors[vertex*4+3];
+     if(Number.isFinite(depth)&&depth>threshold&&Number.isFinite(alpha)){
+      depths.push(depth);alphas.push(alpha);
+     }
+    }
+   }
+   let alphaSum=0,zeroAlpha=0,maxAlpha=0;
+   for(const alpha of alphas){alphaSum+=alpha;if(alpha<=1e-5)zeroAlpha++;maxAlpha=Math.max(maxAlpha,alpha);}
+   const materialAlpha=tidalFoamMeshes.find(foam=>foam.index===activeTidalFoamIslandIndex)?.washMesh.material?.alpha??null;
+   return {implemented:true,activeTidalFoamIslandIndex,thresholdDepthMeters:threshold,submergedVertices:depths.length,zeroAlphaVertices:zeroAlpha,nonZeroAlphaVertices:depths.length-zeroAlpha,zeroAlphaFraction:depths.length?zeroAlpha/depths.length:null,meanVertexAlpha:alphas.length?alphaSum/alphas.length:null,maxVertexAlpha:alphas.length?maxAlpha:null,materialAlpha,maxEffectiveAlpha:alphas.length&&Number.isFinite(materialAlpha)?maxAlpha*materialAlpha:null,allVerticesOverThresholdTransparent:depths.length>0&&zeroAlpha===depths.length,depthRangeMeters:depths.length?{min:Math.min(...depths),max:Math.max(...depths)}:null};
+  };
   window.__ELSN_TEST__={
    build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',
    islands:land.map(({x,z,r,name})=>({x,z,r,name})),
@@ -11962,6 +11988,22 @@ function update(dt){
    setCamera:({x,y,z,targetX,targetY,targetZ})=>{camera.position.set(x,y,z);camera.setTarget(new B.Vector3(targetX,targetY,targetZ));},
    setIslandShadowReceiving:(enabled)=>{const terrain=islandTerrainMeshes[0];if(!terrain)return false;terrain.receiveShadows=!!enabled;return terrain.receiveShadows===!!enabled;},
    setPackedTrailVisible:(enabled)=>{const trails=packedTrailMeshes;trails.forEach(mesh=>{mesh.isVisible=!!enabled;if(typeof mesh.setEnabled==='function')mesh.setEnabled(!!enabled);});return {count:trails.length,visible:trails.length>0&&trails.every(mesh=>mesh.isVisible===!!enabled),states:trails.map(mesh=>({name:mesh.name,isVisible:mesh.isVisible,isEnabled:typeof mesh.isEnabled==='function'?mesh.isEnabled():null,disposed:!!mesh.isDisposed?.()}))};},
+   setDiagnosticVariant:(kind,enabled)=>{
+    const disabled=!!enabled;
+    if(kind==='shore-breaker-wash'){
+     tidalFoamMeshes.forEach((foam,index)=>{const mesh=foam.washMesh,state=diagnosticWashVisibility[index];mesh.isVisible=disabled?false:state.visible;if(typeof mesh.setEnabled==='function')mesh.setEnabled(disabled?false:state.enabled);});
+    }else if(kind==='ocean-normal-map'){
+     M.water.bumpTexture=disabled?null:diagnosticOceanNormal;
+     tidalFoamMeshes.forEach((foam,index)=>{if(foam.washMesh.material)foam.washMesh.material.bumpTexture=disabled?null:diagnosticWashNormalMaps[index];});
+    }else if(kind==='ocean-specular'){
+     M.water.specularColor=disabled?new B.Color3(0,0,0):diagnosticOceanSpecular.clone();
+     tidalFoamMeshes.forEach((foam,index)=>{if(foam.washMesh.material)foam.washMesh.material.specularColor=disabled?new B.Color3(0,0,0):diagnosticWashSpeculars[index].clone();});
+    }else if(kind==='short-vertex-waves'){
+     coastalDiagnosticOverrides.disableShortVertexWaves=disabled;
+    }else throw new Error('Unknown coastal diagnostic variant: '+kind);
+    return {kind,disabled,waterNormalMapEnabled:!!M.water.bumpTexture,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length};
+   },
+   sheetOpacityDepth:()=>getSheetOpacityDepthDiagnostics(),
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},
    render:()=>scene.render(),
    captureCanvas:()=>{const targetCanvas=document.getElementById('renderCanvas');if(!targetCanvas)throw new Error('Render canvas is missing');return targetCanvas.toDataURL('image/png');},

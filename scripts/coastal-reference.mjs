@@ -40,6 +40,8 @@ const manifest = {
   captures: [],
   shadowIsolationCapture: null,
   trailIsolationCapture: null,
+  diagnosticCaptures: [],
+  sheetOpacityDiagnostics: {},
   timingsMs: {},
   consoleErrors: [],
   pageErrors: [],
@@ -313,6 +315,61 @@ async function main() {
     const trailFile = 'ridge-occlusion__t037__natural__no-packed-trails.png';
     fs.writeFileSync(path.join(OUT, trailFile), trailPng);
     manifest.trailIsolationCapture = { file: trailFile, camera: 'ridge-occlusion', timeSeconds: 37, tide: 'natural', trailMeshesHidden: trailIsolation.hidden.count, restoredAfterCapture: true };
+
+    // Same-state A/B isolation: exact same camera, t=37 s and natural tide for all five cases.
+    const diagnosticVariants = [
+      { id: 'baseline', kind: null },
+      { id: 'no-shorebreaker-wash', kind: 'shore-breaker-wash' },
+      { id: 'no-ocean-normal-map', kind: 'ocean-normal-map' },
+      { id: 'no-ocean-specular', kind: 'ocean-specular' },
+      { id: 'no-short-vertex-waves', kind: 'short-vertex-waves' }
+    ];
+    for (const cameraId of ['shore-1m', 'lod-90m']) {
+      const cameraCase = CAMERAS.find(item => item.id === cameraId);
+      for (const variant of diagnosticVariants) {
+        const diagnostic = await page.evaluate(({ cameraCase, variant, island, shoreRadius }) => {
+          const api = window.__ELSN_TEST__;
+          const ridge = cameraCase.side === 'ridge';
+          if (variant.kind) api.setDiagnosticVariant(variant.kind, true);
+          api.setCamera({
+            x: ridge ? island.x + 75 : island.x + shoreRadius + (cameraCase.side === 'land' ? -cameraCase.distance : cameraCase.distance),
+            y: cameraCase.height,
+            z: ridge ? island.z - 22 : island.z,
+            targetX: ridge ? island.x - 25 : island.x + shoreRadius + cameraCase.targetOffset,
+            targetY: cameraCase.targetY,
+            targetZ: ridge ? island.z - 22 : island.z
+          });
+          api.setWaterState({ time: 37, tide: 'natural' });
+          api.render();
+          const sheetOpacity = api.sheetOpacityDepth();
+          const diagnostics = api.diagnostics();
+          const canvasPng = api.captureCanvas();
+          if (variant.kind) api.setDiagnosticVariant(variant.kind, false);
+          api.setWaterState({ time: 37, tide: 'natural' });
+          api.render();
+          return { sheetOpacity, diagnostics, canvasPng };
+        }, { cameraCase, variant, island: mainIsland, shoreRadius });
+        const prefix = 'data:image/png;base64,';
+        assert.ok(typeof diagnostic.canvasPng === 'string' && diagnostic.canvasPng.startsWith(prefix),
+          'Diagnostic A/B capture did not return a PNG: ' + cameraId + '/' + variant.id);
+        const png = Buffer.from(diagnostic.canvasPng.slice(prefix.length), 'base64');
+        assert.ok(png.length > 1000, 'Diagnostic A/B PNG was empty: ' + cameraId + '/' + variant.id);
+        assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a',
+          'Diagnostic A/B capture does not contain a valid PNG: ' + cameraId + '/' + variant.id);
+        const file = cameraId + '__t037__natural__' + variant.id + '.png';
+        fs.writeFileSync(path.join(OUT, file), png);
+        manifest.diagnosticCaptures.push({
+          file, camera: cameraId, timeSeconds: 37, tide: 'natural',
+          variant: variant.id, disabledSource: variant.kind,
+          sheetOpacity: variant.id === 'baseline' ? diagnostic.sheetOpacity : null,
+          diagnostics: diagnostic.diagnostics
+        });
+        if (variant.id === 'baseline') manifest.sheetOpacityDiagnostics[cameraId] = diagnostic.sheetOpacity;
+      }
+    }
+    assert.equal(manifest.diagnosticCaptures.length, 10,
+      'The two cameras must each contain a baseline and all four isolated variants');
+    console.log('[coastal-reference] 10 same-state A/B captures complete; sheet opacity/depth metrics recorded');
 
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');

@@ -30,6 +30,14 @@ for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setWaterState:', 
   assert.ok(html.includes(api), `Missing deterministic test hook: ${api}`);
 }
 assert.match(html, /window\.__ELSN_TEST__=\{/);
+assert.match(html, /setDiagnosticVariant:\(kind,enabled\)=>/,
+  'Four independent material/geometry diagnostic switches must be test-only.');
+assert.match(html, /disableShortVertexWaves\?0:1/,
+  'Short vertex waves must be independently suppressible in the diagnostic render.');
+assert.match(html, /washDiagnosticDepths=coastalDiagnosticsEnabled\?new Float32Array/,
+  'Sheet depth probes must only allocate in diagnostic/test mode.');
+assert.match(html, /getSheetOpacityDepthDiagnostics/,
+  'The A/B manifest must report opacity for vertices submerged by more than 3 cm.');
 assert.match(html, /debugForcedTideOffset=tide==='natural'\?null:Number\(tide\)/);
 assert.match(html,/function terrainDeformationAt\(islandIndex,x,z\)\{\s*const field=terrainDeformationFields\[islandIndex\];if\(!field\|\|!field\.active\.size\)return 0;/, 'Unchanged islands must skip bilinear foot-deformation sampling in the per-vertex coastal update.');
 assert.match(html,/const crossSegments=Math\.max\(4,Math\.ceil\(width\/\.20\)\),crossRowWidth=crossSegments\+1;/, 'Packed earth ribbons must be subdivided across their full width.');
@@ -66,6 +74,14 @@ assert.match(captureRunner, /id: 'ridge-occlusion'/,
   'The camera matrix must include a direct view across the main island ridge.');
 assert.match(captureRunner, /36\/36 complete/,
   'The runner must assert and report all 36 captured views.');
+assert.match(captureRunner, /no-shorebreaker-wash/);
+assert.match(captureRunner, /no-ocean-normal-map/);
+assert.match(captureRunner, /no-ocean-specular/);
+assert.match(captureRunner, /no-short-vertex-waves/);
+assert.match(captureRunner, /diagnosticCaptures\.length, 10/,
+  'Both cameras must capture the baseline and four isolated A/B variants.');
+assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
+assert.match(contactSheet, /36 baseline \+ 10 diagnostic captures/);
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
 assert.match(contactSheet, /ridge-occlusion__t037__natural__no-island-shadows\.png/, 'The contact sheet must include a shadow-isolation A/B panel.');
