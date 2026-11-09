@@ -525,7 +525,7 @@ def main() -> None:
         fail("La defensa naval debe estar conectada al bucle, al desembarco y al guardado.")
     if "float humidity=clamp(max(wet*.58,wetEdge*.56)*wetSandStrength,0.0,.78)" not in index_html or "color=mix(color,wrackTint,wrackZone*wrackFragments*.045)" not in index_html:
         fail("La arena húmeda debe quedar cálida y difusa; los restos de arribazón no pueden formar una banda oscura.")
-    if "washMaterial.emissiveColor=new B.Color3(0,0,0)" not in index_html or "const alpha=Math.min(.62,filmAlpha+whitewater*.52+trailingFoam*.38)" not in index_html or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html:
+    if "washMaterial.emissiveColor=new B.Color3(0,0,0)" not in index_html or "const alpha=Math.min(.72,filmAlpha+whitewater*.62+trailingFoam*.56)" not in index_html or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html:
         fail("La lámina de agua debe permanecer neutra, visible y la espuma blanca debe seguir fragmentada.")
     if "const runup=.28+.82*Math.pow(waveCrest,1.15)" not in index_html:
         fail("La lámina de espuma debe conservar una anchura de run-up contenida.")
