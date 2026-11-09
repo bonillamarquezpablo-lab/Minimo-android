@@ -10,8 +10,8 @@ assert.match(html,/<b id="captured">0\/13<\/b>/,'El HUD debe mostrar 0/13 desde 
 assert.doesNotMatch(html,/<b id="captured">0\/4<\/b>/,'No debe quedar el contador antiguo 0/4.');
 assert.match(html,/for\(let islandIndex=4;islandIndex<land\.length;islandIndex\+\+\)makeIslandGarrison\(islandIndex\);/);
 assert.match(html,/function makeIslandGarrison\(islandIndex\)/);
-assert.match(html,/g\.position=v\(cx,renderedTerrainSurfaceAt\(cx,cz\)\+\.035,cz\)/,'Village huts must be anchored to the rendered GroundMesh, not the analytic height function.');
-assert.match(html,/groundingErrorMeters:Number\(Math\.abs\(anchorY-sampledTerrainY\)\.toFixed\(4\)\)/,'Every hut must expose its measured rendered-ground anchor error.');
+assert.match(html,/g\.position=v\(cx,renderedTerrainSurfaceAt\(cx,cz\)-\.02\*scale,cz\)/,'Each hut footing must align with the rendered GroundMesh after its scaled base offset.');
+assert.match(html,/groundingErrorMeters:Number\(Math\.abs\(footingBottomY-sampledTerrainY\)\.toFixed\(4\)\)/,'Every hut must expose its measured rendered-ground footing error.');
 assert.match(html,/auditIslandGeometry:\(\)=>auditIslandGeometry\(\)/,'The 13-island geometry audit must be available in test mode.');
 assert.match(html,/function claimVillage\(vl,restoring=false\)/);
 assert.match(html,/captured\+'\/'\+land\.length/);
