@@ -390,8 +390,8 @@ def main() -> None:
     coastal_interaction = (ROOT / "scripts" / "nordic" / "coastal-interaction.js").read_text(encoding="utf-8")
     if ("const shorelineEntry = 0.24 * smooth01(depth / 0.30);" not in coastal_interaction
             or "const shallowBody = 0.28 * smooth01(depth / 1.65);" not in coastal_interaction
-            or "const depthBody = 0.48 * smooth01(depth / 5.5);" not in coastal_interaction
-            or "return Math.min(0.94, shorelineEntry + shallowBody + depthBody);" not in coastal_interaction):
+            or "const depthBody = 0.75 * smooth01(depth / 5.5);" not in coastal_interaction
+            or "return Math.min(0.99, shorelineEntry + shallowBody + depthBody);" not in coastal_interaction):
         fail("La opacidad del agua debe transicionar suavemente en la orilla y absorber el lecho a profundidad.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
