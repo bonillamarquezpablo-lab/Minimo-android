@@ -8074,9 +8074,20 @@ function createRealWeapon(type='axe'){
   try{g.freezeWorldMatrix();g.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){ }
   return g;
  }
+ function settlementHousePosition(island,x,z,scale=1){
+  const dx=x-island.x,dz=z-island.z,distance=Math.hypot(dx,dz);
+  // Keep the complete hut footprint on the inner, stable land surface rather than
+  // centring a building on the dry/wet beach transition.
+  const footprintRadius=Math.hypot(2.01*scale,2.64*scale);
+  const safeRadius=Math.max(0,island.r*.76-footprintRadius-1.25);
+  if(distance<=safeRadius||distance<1e-6)return {x,z,adjusted:false};
+  const factor=safeRadius/distance;
+  return {x:island.x+dx*factor,z:island.z+dz*factor,adjusted:true};
+ }
  function makeVillage(index,x,z,name){
   let groundPatch=B.MeshBuilder.CreateDisc('villageClearing',{radius:10.8,tessellation:40},scene);groundPatch.rotation.x=-Math.PI/2;const villageGroundY=terrainSurfaceAt(x,z);groundPatch.position=v(x,villageGroundY+.027,z);groundPatch.material=M.grass2;groundPatch.material= M.grass2;groundPatch.isPickable=false;
-  const houseGroups=[buildHouse(x,z,.90),buildHouse(x-7,z+7,.66),buildHouse(x+8,z-5,.62)];
+  const houseSpecs=[[x,z,.90],[x-7,z+7,.66],[x+8,z-5,.62]];
+  const houseGroups=houseSpecs.map(([hx,hz,scale])=>{const position=settlementHousePosition(land[index],hx,hz,scale);return buildHouse(position.x,position.z,scale);});
   // Palisade segments leave a wide entrance toward the south.
   for(let i=0;i<22;i++){let a=i*Math.PI*2/22;if(a>1.05&&a<2.15)continue;let px=x+Math.cos(a)*12,pz=z+Math.sin(a)*12,postGroundY=terrainSurfaceAt(px,pz);let post=cyl('palisade',null,[px,postGroundY+1.25,pz],2.5,.23,.32,M.woodDark);post.rotation.z=rand(-.04,.04);worldColliders.push({type:'circle',x:px,z:pz,r:.34});}
   let flagpole=cyl('flagpole',null,[x+10,villageGroundY+2.9,z-9],5.8,.09,.09,M.woodLight);
