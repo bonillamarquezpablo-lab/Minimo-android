@@ -33,7 +33,7 @@ assert.ok(html.includes('function waterFarHeightAtVertex(vertex)'));
 assert.ok(html.includes('function waterDetailHeightAtVertex(vertex,fade)'));
 assert.ok(html.includes('function waterDetailFadeAt(x,z,radius=WATER_DETAIL_RADIUS)'));
 assert.ok(html.includes('function updateWaterFarNormalAtVertex(vertex)'));
-assert.ok(html.includes('function getWaterLodBoundaryDiagnostics()'));
+assert.ok(html.includes('function getWaterLodBoundaryDiagnostics(requestedRadius=WATER_DETAIL_RADIUS)'));
 assert.ok(html.includes('waterLodBoundary:getWaterLodBoundaryDiagnostics()'));
 assert.ok(html.includes('function waterDetailFadeAt(x,z,radius=WATER_DETAIL_RADIUS)'),'The shared LOD fade must accept an explicit mobile boundary radius.');
 assert.ok(html.includes('waterLodBoundary90:getWaterLodBoundaryDiagnostics(90)'),'Coastal diagnostics must explicitly cover the 90 m mobile LOD boundary.');
