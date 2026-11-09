@@ -17,14 +17,15 @@ assert.ok(coast.seabedHeight(60 * 1.34, 60, shoreHeight) < coast.seabedHeight(60
 assert.ok(Math.abs(coast.seabedHeight(60 * 1.46, 60, -2.9) - (-6.2)) < 1e-9);
 assert.ok(Math.abs(coast.seabedHeight(60 * 1.46, 60, shoreHeight) - (-6.2)) < 1e-9);
 
-// Opacity must ramp continuously from the exact waterline: no 52% alpha step.
+// Opacity must start continuously at the exact waterline, then quickly read as a
+// continuous shallow-water sheet without hiding the pale sand underneath.
 assert.equal(coast.waterOpacity(0), 0);
 assert.equal(coast.waterOpacity(-1), 0);
 assert.ok(coast.waterOpacity(0.01) < 0.01);
-assert.ok(coast.waterOpacity(0.10) < 0.06);
-assert.ok(coast.waterOpacity(0.30) < 0.25);
-assert.ok(coast.waterOpacity(0.50) < 0.25);
-assert.ok(coast.waterOpacity(0.65) > 0.30 && coast.waterOpacity(0.65) < 0.38);
+assert.ok(coast.waterOpacity(0.10) < 0.08);
+assert.ok(coast.waterOpacity(0.30) > 0.24 && coast.waterOpacity(0.30) < 0.32);
+assert.ok(coast.waterOpacity(0.50) > 0.27 && coast.waterOpacity(0.50) < 0.35);
+assert.ok(coast.waterOpacity(0.65) > 0.32 && coast.waterOpacity(0.65) < 0.40);
 const opacityDepths = [0, 0.001, 0.01, 0.05, 0.10, 0.20, 0.30, 0.50, 0.65, 0.8, 1, 2, 3.5, 5.5, 20];
 let previousOpacity = 0;
 for (const depth of opacityDepths) {
