@@ -8407,11 +8407,14 @@ function createRealWeapon(type='axe'){
    let islandIndex=-1;
    for(let i=0;i<land.length;i++){const island=land[i],ix=px-island.x,iz=pz-island.z;if(ix*ix+iz*iz<island.r*island.r){islandIndex=i;break;}}
    if(islandIndex<0)continue;
+   const island=land[islandIndex],footprintRadius=Math.hypot(halfX,halfZ),maxCenterRadius=island.r*.76-footprintRadius-1.25;
+   if(Math.hypot(px-island.x,pz-island.z)>maxCenterRadius)continue;
    const centerY=renderedTerrainSurfaceAt(px,pz),ys=[renderedTerrainSurfaceAt(px-halfX,pz-halfZ),renderedTerrainSurfaceAt(px+halfX,pz-halfZ),renderedTerrainSurfaceAt(px-halfX,pz+halfZ),renderedTerrainSurfaceAt(px+halfX,pz+halfZ)];
    const minY=Math.min(...ys),maxY=Math.max(...ys),range=maxY-minY,maxGap=Math.max(...ys.map(y=>Math.abs(centerY-y)));
    if(!best||maxGap<best.maxGap-1e-7||(Math.abs(maxGap-best.maxGap)<1e-7&&dx*dx+dz*dz<best.distanceSq))best={x:px,z:pz,centerY,minY,maxY,range,maxGap,distanceSq:dx*dx+dz*dz,islandIndex};
   }
-  return best||{x:cx,z:cz,minY:renderedTerrainSurfaceAt(cx,cz),maxY:renderedTerrainSurfaceAt(cx,cz),range:0,distanceSq:0,islandIndex:-1};
+  const fallbackY=renderedTerrainSurfaceAt(cx,cz);
+  return best||{x:cx,z:cz,centerY:fallbackY,minY:fallbackY,maxY:fallbackY,range:0,maxGap:0,distanceSq:0,islandIndex:-1};
  }
  function buildHouse(cx,cz,scale=1){
   // Cabaña nórdica humilde: huella menor, troncos desiguales, tejado vencido y reparaciones visibles.
@@ -8523,13 +8526,21 @@ function createRealWeapon(type='axe'){
   }
   // Huella sólida de la cabaña: el antiguo sistema solo bloqueaba cuatro paredes parciales
   // y dejaba un hueco de puerta por el que los NPC podían atravesar toda la estructura.
-  g.__norseWorldCollider=registerWorldCollider({type:'rect',x:cx,z:cz,hx:2.16*scale,hz:2.78*scale,cameraBlocker:true});
+  g.__norseWorldCollider=registerWorldCollider({type:'rect',x:houseX,z:houseZ,hx:2.16*scale,hz:2.78*scale,cameraBlocker:true});
   mergeStaticDecorByMaterial(g,'NorseHutStatic');
   addModelShadow(g);
   try{g.freezeWorldMatrix();g.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){ }
   return g;
  }
  function makeVillage(index,x,z,name){
+  // Keep the whole initial settlement, its 12 hut footprints and its outer watchtower
+  // on the dry land band. Move the settlement as one unit so flags, guards and props stay aligned.
+  const island=land[index],settlementReach= Math.hypot(10.5,-7.6)+1.35+1.25;
+  const safeVillageRadius=island.r*.76-settlementReach;
+  const villageDx=x-island.x,villageDz=z-island.z,villageDistance=Math.hypot(villageDx,villageDz);
+  if(villageDistance>safeVillageRadius&&villageDistance>1e-6){
+   const inward=safeVillageRadius/villageDistance;x=island.x+villageDx*inward;z=island.z+villageDz*inward;
+  }
   let groundPatch=B.MeshBuilder.CreateDisc('villageClearing',{radius:10.8,tessellation:40},scene);groundPatch.rotation.x=-Math.PI/2;const villageGroundY=terrainSurfaceAt(x,z);groundPatch.position=v(x,villageGroundY+.027,z);groundPatch.material=M.grass2;groundPatch.material= M.grass2;groundPatch.isPickable=false;
   const houseGroups=[buildHouse(x,z,.90),buildHouse(x-7,z+7,.66),buildHouse(x+8,z-5,.62)];
   // Palisade segments leave a wide entrance toward the south.
@@ -8712,7 +8723,7 @@ function createRealWeapon(type='axe'){
  // 0.6.100 — pequeños campamentos secundarios, uno en cada isla con asentamiento.
  // Son decoración ligera: no sustituyen aldeas, guardias, colisiones ni sistemas existentes.
  function buildIslandOutpost(vl){
-  const cx=vl.x-16,cz=vl.z+13,gy=terrainSurfaceAt(cx,cz),camp=newGroup('IslandOutpost_'+vl.index,null);
+  const cx=vl.x-16,cz=vl.z+13,gy=renderedTerrainSurfaceAt(cx,cz),camp=newGroup('IslandOutpost_'+vl.index,null);
   camp.position=v(cx,gy,cz);
   for(let tent=0;tent<2;tent++){
    const ox=tent===0?-2.25:2.15,oz=tent===0?-.45:.65,rot=tent===0?-.12:.16;
@@ -8725,7 +8736,10 @@ function createRealWeapon(type='axe'){
   box('OutpostSupplyCrate_'+vl.index,camp,[-4.1,.28,1.25],[.78,.56,.72],M.woodDark);
   sphere('OutpostHearthGlow_'+vl.index,null,[cx+4.1,gy+.22,cz+2.0],[.24,.16,.24],M.ember,8);
   // Segundo punto de acampada de la misma isla: pequeño vivac de exploradores.
-  const scoutX=vl.x+19,scoutZ=vl.z-16,scoutY=terrainSurfaceAt(scoutX,scoutZ),scout=newGroup('IslandScoutCamp_'+vl.index,null);
+  // Keep the scout supply point inside the island's dry-land footprint.
+  // The former +19/-16 offset put the first island's camp at (50,-33), almost 60m
+  // from the origin of a 60m island, where terrainSurfaceAt returns the wet shoreline/seabed.
+  const scoutX=vl.x-8,scoutZ=vl.z+18,scoutY=renderedTerrainSurfaceAt(scoutX,scoutZ),scout=newGroup('IslandScoutCamp_'+vl.index,null);
   scout.position=v(scoutX,scoutY,scoutZ);
   box('ScoutCampSupplies_'+vl.index,scout,[0,.30,0],[.92,.60,.78],M.woodDark);
   sphere('ScoutCampEmbers_'+vl.index,scout,[1.15,.13,.15],[.36,.12,.30],M.ember,8);
