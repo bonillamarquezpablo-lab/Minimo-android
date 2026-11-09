@@ -3143,7 +3143,7 @@ async function removeStrayDebugGeometry(targetScene){
   // La espuma aparece solo cuando la línea de agua retrocede y deja una película blanca en la arena.
   // La humedad de playa conserva su propia huella; esta malla dibuja únicamente el borde espumoso reciente.
   for(const foam of tidalFoamMeshes){
-   const {island,segments,rows,cols,radialOffsets,positions,colors,foamPattern,angleValues,angleCos,angleSin,index,waveBodyMesh,waveBodyNormals,waveBodyIndices,foamAlphaMask,waveBodyPositions,waveBodyColors,waveBodyOffsets,waveBodyRows,waveBodyCrestProfile,waveBodyShoulderProfile,waveBodySteepFaceProfile,waveBodyEdgeProfile,waveBodyTerrainSamples,waveBodyWaterSamples,washMesh,washPositions,washUvs,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows,washDiagnosticDepths}=foam;
+   const {island,segments,rows,cols,radialOffsets,positions,colors,foamPattern,angleValues,angleCos,angleSin,index,waveBodyMesh,waveBodyNormals,waveBodyIndices,foamAlphaMask,waveBodyPositions,waveBodyColors,waveBodyOffsets,waveBodyRows,waveBodyCrestProfile,waveBodyShoulderProfile,waveBodySteepFaceProfile,waveBodyEdgeProfile,waveBodyTerrainSamples,waveBodyWaterSamples,washMesh,washPositions,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows,washDiagnosticDepths}=foam;
    const retreatFade=Math.exp(-foamElapsed/3.4);
    for(let col=0;col<=segments;col++){
     const angle=angleValues[col],cs=angleCos[col],sn=angleSin[col];
@@ -3275,7 +3275,7 @@ async function removeStrayDebugGeometry(targetScene){
   for(let row=0;row<washRows;row++){
    const first=row*cols,last=first+segments,first3=first*3,last3=last*3,first2=first*2,last2=last*2,first4=first*4,last4=last*4;
    for(let axis=0;axis<3;axis++)washPositions[last3+axis]=washPositions[first3+axis];
-   for(let axis=0;axis<2;axis++)washUvs[last2+axis]=washUvs[first2+axis];
+   
    for(let channel=0;channel<4;channel++)washColors[last4+channel]=washColors[first4+channel];
    washPattern[last]=washPattern[first];
    if(washDiagnosticDepths)washDiagnosticDepths[last]=washDiagnosticDepths[first];
