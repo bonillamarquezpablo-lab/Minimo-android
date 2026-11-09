@@ -109,6 +109,8 @@ assert.match(html,/washFilmCoverage\[vertex\]=window\.NorseCoastalInteraction\.f
 assert.match(html,/function buildCoastalSeabed\(island,index\)/,"Each island must have an independent sandy seabed mesh.");
 assert.match(html,/coastalSeabedMaterial\.bumpTexture=texCoastalSandNormalPbr/,"The seabed must have its own normal-mapped sand material.");
 assert.match(html,/norseSubmergedSandyBottom:true/,"The seabed must be identifiable in scene metadata.");
+assert.match(html,/const innerRatio=1\.075,outerRatio=1\.92/,"The seabed must extend beyond the old abrupt 1.46-radius edge.");
+assert.match(html,/const deepFade=smooth01\(\(t-\.38\)\/\.62\)/,"The exposed seabed must fade into a deep-water tone before its outer edge.");
 assert.match(html,/window\.NorseCoastalInteraction\.waterOpacity\(physicalDepth\)/,"Shallow water must reveal the separate sand bottom without disappearing.");
 assert.match(html,/return window\.NorseCoastalInteraction\.seabedHeight\(d,is\.r,-2\.9\)/,"The old island heightfield must follow the same underwater depth profile.");
 assert.doesNotMatch(html,/const shallowAlpha=\(bathymetry<=0&&depth<=0\)/,"The old near-transparent water rule must be removed.");
