@@ -31,7 +31,7 @@ assert.ok(html.includes('const WATER_WAVE_PARAMETERS=Object.freeze('));
 assert.ok(html.includes('function waterHeightFromWaveValues('));
 assert.ok(html.includes('function waterFarHeightAtVertex(vertex)'));
 assert.ok(html.includes('function waterDetailHeightAtVertex(vertex,fade)'));
-assert.ok(html.includes('function waterDetailFadeAt(x,z)'));
+assert.ok(html.includes('function waterDetailFadeAt(x,z,radius=WATER_DETAIL_RADIUS)'));
 assert.ok(html.includes('function updateWaterFarNormalAtVertex(vertex)'));
 assert.ok(html.includes('function getWaterLodBoundaryDiagnostics()'));
 assert.ok(html.includes('waterLodBoundary:getWaterLodBoundaryDiagnostics()'));
