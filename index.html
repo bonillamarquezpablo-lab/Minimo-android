@@ -2858,10 +2858,11 @@ async function removeStrayDebugGeometry(targetScene){
  const waterVertexStep=isPerformanceMode?(isUltraLowEndMobile?1/6:(isGalaxyA12NachoPerformance?1/5:(isGalaxyA12LowEndMobile?1/7:(isConstrainedMobile?1/8:(isTouchDevice?1/30:1/30))))):(isTouchDevice?1/30:1/40);
  const waterNormalStep=isPerformanceMode?(isUltraLowEndMobile?1.5:(isGalaxyA12NachoPerformance?1.35:(isGalaxyA12LowEndMobile?1.0:(isConstrainedMobile?1/2:(isTouchDevice?1/30:1/12))))):(isTouchDevice?(isConstrainedMobile?1/8:1/10):1/15);
  const waterFarStep=isPerformanceMode?(isConstrainedMobile?.36:1/12):(isTouchDevice?.22:.14);
- function waterDetailFadeAt(x,z){
+ function waterDetailFadeAt(x,z,radius=WATER_DETAIL_RADIUS){
   const fx=Number.isFinite(waterFocusX)?waterFocusX:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.x:(onShip?ship.position.x:player.root.position.x));
   const fz=Number.isFinite(waterFocusZ)?waterFocusZ:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.z:(onShip?ship.position.z:player.root.position.z));
-  const dx=x-fx,dz=z-fz,fadeT=Math.max(0,Math.min(1,(WATER_DETAIL_RADIUS_SQ-(dx*dx+dz*dz))/(WATER_DETAIL_RADIUS_SQ-WATER_DETAIL_FADE_START_SQ)));
+  const safeRadius=Math.max(.001,Number(radius)||WATER_DETAIL_RADIUS),radiusSq=safeRadius*safeRadius,fadeStartSq=radiusSq*.55,dx=x-fx,dz=z-fz;
+  const fadeT=Math.max(0,Math.min(1,(radiusSq-(dx*dx+dz*dz))/(radiusSq-fadeStartSq)));
   return fadeT*fadeT*(3-2*fadeT);
  }
  function waterHeight(x,z,t=oceanTime,detailFade){
@@ -2944,26 +2945,29 @@ async function removeStrayDebugGeometry(targetScene){
    coastSolver:waterDebugSolverStats?{...waterDebugSolverStats,meanMs:waterDebugSolverStats.samples?waterDebugSolverStats.totalMs/waterDebugSolverStats.samples:null,initial:{...waterDebugSolverStats.initial,meanMs:waterDebugSolverStats.initial.samples?waterDebugSolverStats.initial.totalMs/waterDebugSolverStats.initial.samples:null},animated:{...waterDebugSolverStats.animated,meanMs:waterDebugSolverStats.animated.samples?waterDebugSolverStats.animated.totalMs/waterDebugSolverStats.animated.samples:null},physicalBackwashVelocity:'no implementado'}:{implemented:false},
    renderedVertexAgreement:getWaterVertexAgreementDiagnostics(),
    waterLodBoundary:getWaterLodBoundaryDiagnostics(),
+   waterLodBoundary90:getWaterLodBoundaryDiagnostics(90),
    physicalBackwashVelocity:'no implementado'
   };
  }
- function waterSurfaceNormalAt(x,z,t=oceanTime,step=.25){
-  const dx=(waterHeight(x+step,z,t)-waterHeight(x-step,z,t))/(2*step),dz=(waterHeight(x,z+step,t)-waterHeight(x,z-step,t))/(2*step);
+ function waterSurfaceNormalAt(x,z,t=oceanTime,step=.25,fadeRadius=WATER_DETAIL_RADIUS){
+  const dx=(waterHeight(x+step,z,t,waterDetailFadeAt(x+step,z,fadeRadius))-waterHeight(x-step,z,t,waterDetailFadeAt(x-step,z,fadeRadius)))/(2*step);
+  const dz=(waterHeight(x,z+step,t,waterDetailFadeAt(x,z+step,fadeRadius))-waterHeight(x,z-step,t,waterDetailFadeAt(x,z-step,fadeRadius)))/(2*step);
   const inverse=1/Math.sqrt(dx*dx+1+dz*dz);
   return {x:-dx*inverse,y:inverse,z:-dz*inverse,slopeX:dx,slopeZ:dz};
  }
- function getWaterLodBoundaryDiagnostics(){
-  const radius=WATER_DETAIL_RADIUS,epsilon=.25,samples=36;
+ function getWaterLodBoundaryDiagnostics(requestedRadius=WATER_DETAIL_RADIUS){
+  const radius=Math.max(.001,Number(requestedRadius)||WATER_DETAIL_RADIUS),epsilon=.25,samples=36;
   const fx=Number.isFinite(waterFocusX)?waterFocusX:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.x:(onShip?ship.position.x:player.root.position.x));
   const fz=Number.isFinite(waterFocusZ)?waterFocusZ:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.z:(onShip?ship.position.z:player.root.position.z));
+  const height=(x,z)=>waterHeight(x,z,oceanTime,waterDetailFadeAt(x,z,radius));
   let maxHeightContinuityErrorMeters=0,maxRadialSlopeDifference=0,maxNormalDiscontinuityDegrees=0;
   for(let sample=0;sample<samples;sample++){
    const angle=sample/samples*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
    const ix=fx+cs*(radius-epsilon),iz=fz+sn*(radius-epsilon),ex=fx+cs*radius,ez=fz+sn*radius,ox=fx+cs*(radius+epsilon),oz=fz+sn*(radius+epsilon);
-   const ih=waterHeight(ix,iz,oceanTime),eh=waterHeight(ex,ez,oceanTime),oh=waterHeight(ox,oz,oceanTime);
+   const ih=height(ix,iz),eh=height(ex,ez),oh=height(ox,oz);
    maxHeightContinuityErrorMeters=Math.max(maxHeightContinuityErrorMeters,Math.abs(eh-(ih+oh)*.5));
    maxRadialSlopeDifference=Math.max(maxRadialSlopeDifference,Math.abs((eh-ih)/epsilon-(oh-eh)/epsilon));
-   const a=waterSurfaceNormalAt(ix,iz,oceanTime),b=waterSurfaceNormalAt(ox,oz,oceanTime),dot=Math.max(-1,Math.min(1,a.x*b.x+a.y*b.y+a.z*b.z));
+   const a=waterSurfaceNormalAt(ix,iz,oceanTime,.25,radius),b=waterSurfaceNormalAt(ox,oz,oceanTime,.25,radius),dot=Math.max(-1,Math.min(1,a.x*b.x+a.y*b.y+a.z*b.z));
    maxNormalDiscontinuityDegrees=Math.max(maxNormalDiscontinuityDegrees,Math.acos(dot)*180/Math.PI);
   }
   return {implemented:true,radiusMeters:radius,samples,maxHeightContinuityErrorMeters,maxRadialSlopeDifference,maxNormalDiscontinuityDegrees};
