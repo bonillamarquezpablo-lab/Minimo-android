@@ -12386,6 +12386,19 @@ function update(dt){
     const maximumFootingGapMeters=Math.max(...footingCorners.map(corner=>Math.abs(corner.gapMeters)));
     return {village:village.name||String(village.index),buildingIndex,x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2)),rootY:Number(p.y.toFixed(3)),scale,sampledTerrainY:Number(sampledTerrainY.toFixed(3)),analyticTerrainY:Number(analyticTerrainY.toFixed(3)),groundingErrorMeters:Number(Math.abs(footingBottomY-sampledTerrainY).toFixed(4)),analyticVsRenderedMeters:Number((analyticTerrainY-sampledTerrainY).toFixed(4)),groundClearanceMeters:Number((footingBottomY-sampledTerrainY).toFixed(3)),maximumFootingGapMeters:Number(maximumFootingGapMeters.toFixed(3)),footingCorners,nearestIsland:nearestIsland?.name||null,nearestIslandIndex,distanceToIslandMeters:Number(nearestDistance.toFixed(2)),islandRadiusRatio:nearestIsland?Number((nearestDistance/nearestIsland.r).toFixed(3)):null};
    })),
+   garrisonGrounding:()=>villages.filter(village=>village.islandGarrison).map(village=>{
+    const root=village.outpostRoot?.getAbsolutePosition?village.outpostRoot.getAbsolutePosition():village.outpostRoot?.position;
+    const guard=village.guards?.[0]?.parts?.root;
+    const guardPosition=guard?.getAbsolutePosition?guard.getAbsolutePosition():guard?.position;
+    const flagPosition=village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():village.flagGroup?.position;
+    const outpostGroundY=renderedTerrainSurfaceAt(village.x,village.z);
+    const guardGroundY=guardPosition?renderedTerrainSurfaceAt(guardPosition.x,guardPosition.z):NaN;
+    const flagGroundY=flagPosition?renderedTerrainSurfaceAt(flagPosition.x,flagPosition.z):NaN;
+    const outpostErrorMeters=root?Math.abs(root.y-outpostGroundY):Infinity;
+    const guardErrorMeters=guardPosition?Math.abs(guardPosition.y-guardGroundY-.08):Infinity;
+    const flagErrorMeters=flagPosition?Math.abs((flagPosition.y-3.55)-flagGroundY):Infinity;
+    return {island:village.name,islandIndex:village.landIndex,outpostErrorMeters:Number(outpostErrorMeters.toFixed(4)),guardErrorMeters:Number(guardErrorMeters.toFixed(4)),flagErrorMeters:Number(flagErrorMeters.toFixed(4)),maximumAnchorErrorMeters:Number(Math.max(outpostErrorMeters,guardErrorMeters,flagErrorMeters).toFixed(4))};
+   }),
    sheetOpacityDepth:()=>getSheetOpacityDepthDiagnostics(),
    setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},
    render:()=>scene.render(),
