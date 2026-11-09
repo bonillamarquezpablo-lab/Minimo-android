@@ -381,12 +381,17 @@ def main() -> None:
     work_start = index_html.find("function processBeachWorkChunk()")
     work_end = index_html.find("function update(dt,x,z,distance,heading,running,onShip,airborne)", work_start)
     beach_update_source = index_html[work_start:work_end] if work_start >= 0 and work_end > work_start else ""
+    beach_surface_start = index_html.find("function livingBeachSurfaceAt(island,index,x,z)")
+    beach_surface_end = index_html.find("function buildLivingBeachLayer(island,index)", beach_surface_start)
+    beach_surface_source = index_html[beach_surface_start:beach_surface_end] if beach_surface_start >= 0 and beach_surface_end > beach_surface_start else ""
     if ("island.r*(1.085-coastNoise)" not in beach_source
-            or "positions.push(x,terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018,z)" not in beach_source
-            or "layer.positions[offset+1]=terrainHeightOnIsland(layer.island,x,z)+terrainDeformationAt(layer.index,x,z)+.018;" not in beach_update_source
+            or "positions.push(x,livingBeachSurfaceAt(island,index,x,z),z)" not in beach_source
+            or "layer.positions[offset+1]=livingBeachSurfaceAt(layer.island,layer.index,x,z);" not in beach_update_source
+            or "terrain.getHeightAtCoordinates(x,z)" not in beach_surface_source
+            or "return terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018;" not in beach_surface_source
             or "renderedTerrainSurfaceAt(x,z)" in beach_source
             or "renderedTerrainSurfaceAt(x,z)" in beach_update_source):
-        fail("La superficie de playa debe prolongarse hasta la zona intermareal con el perfil real de su isla, sin usar el sentinel de terreno exterior.")
+        fail("La superficie de playa debe coincidir con la altura interpolada de su propia malla y prolongarse con su perfil analítico, sin usar el sentinel de terreno exterior.")
     if "inlandDistance<4.8" in index_html or "wetSandCol=" in index_html or "wetBlend=wetSand" in index_html:
         fail("La arena seca no puede contener un tinte húmedo ni una franja artificial.")
     if "NorseBeachState.createCoastalGrid" not in index_html or "state.stepCell(cell,coverage,elapsed,BEACH_STATE_DEFAULTS)" not in index_html:
