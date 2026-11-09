@@ -16,6 +16,8 @@ DIAGNOSTIC_VARIANTS = (
     ("no-living-beach-layer", "sin LivingCoastalSand"),
     ("no-submerged-sand", "sin NordicSubmergedSand"),
     ("no-continuous-shore-foam", "sin espuma costera"),
+    ("previous-ocean-normal", "normales anteriores"),
+    ("no-ocean-depth-alpha", "sin alpha de profundidad"),
     ("no-ocean-normal-map", "sin normales"),
     ("no-ocean-specular", "sin especular"),
     ("no-short-vertex-waves", "sin ondas cortas"),
@@ -63,7 +65,7 @@ def main() -> None:
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
 
-    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 18 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
+    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 22 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
     draw.text((8, 25), "Baseline matrix · A/B same camera, t=037 s, natural tide · prior shadow/trail checks retained",
               fill=MUTED, font=font)
 
@@ -106,7 +108,7 @@ def main() -> None:
 
     target = OUT / "contact-sheet.png"
     sheet.save(target, format="PNG", optimize=True)
-    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 18 diagnostic A/B + legacy)")
+    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 22 diagnostic A/B + legacy)")
 
 
 if __name__ == "__main__":
