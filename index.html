@@ -6756,7 +6756,8 @@ function createWaterShoreDebugPanel(){
   metrics.textContent+='\\nVÉRTICES: '+agreement.sampled+'/'+agreement.requested+' · error medio '+fmt(agreement.meanAbsErrorMeters===null?null:agreement.meanAbsErrorMeters*100,2)+' cm · P95 '+fmt(agreement.p95AbsErrorMeters===null?null:agreement.p95AbsErrorMeters*100,2)+' cm · máx. '+fmt(agreement.maxAbsErrorMeters===null?null:agreement.maxAbsErrorMeters*100,2)+' cm';
   metrics.textContent+='\\nCPU agua: malla '+fmt(waterLastUpdateMs,2)+' ms · normales '+fmt(waterLastNormalMs,2)+' · espuma '+fmt(tidalFoamLastUpdateMs,2)+' · playa '+fmt(beachUpdateLastMs,2)+' · terreno '+fmt(groundDynamicsLastUpdateMs,2)+' · solver '+fmt(solver&&solver.lastMs,3);
   metrics.textContent+='\\nFPS '+Math.round(engine.getFps())+' · fotograma medio '+fmt(frameAverage,2)+' ms · P50 '+fmt(frameAt(.50),2)+' · P95 '+fmt(frameAt(.95),2)+' · P99 '+fmt(frameAt(.99),2);
-  metrics.textContent+='\\nVelocidad física de resaca: NO IMPLEMENTADO';
+  const backwash=coast.physicalBackwashVelocity||{};
+  metrics.textContent+='\\nRetirada media '+fmt(backwash.meanMetersPerSecond,2)+' m/s · pico '+fmt(backwash.peakMetersPerSecond,2)+' m/s · columnas activas '+(backwash.activeColumns||0);
   const recent=(timeline.longFrames||[]).slice(-4).map(item=>Math.round(item.frameMs)+'ms @ '+Math.round(item.elapsedMs/1000)+'s').join(', ')||'ninguno';
   const tasks=(timeline.tasks||[]).slice(-4).map(item=>item.name+': '+Math.round(item.durationMs)+'ms').join('\\n')||'sin tareas registradas aún';
   startup.textContent='ARRANQUE · primer fotograma '+(timeline.firstFrameAt?'registrado':'pendiente')+' · máximo '+(timeline.maxFrameMs||0).toFixed(1)+'ms\\nTareas recientes:\\n'+tasks+'\\nFotogramas largos (>24ms): '+recent+'\\nCosta: '+work.beachWorkLastSliceMs.toFixed(2)+' ms (máx '+work.beachWorkMaxSliceMs.toFixed(2)+' ms / presupuesto '+work.beachWorkBudgetMs+' ms)';
