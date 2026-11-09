@@ -633,6 +633,15 @@ async function main() {
       assert.ok(Number.isFinite(house.maximumFootingGapMeters) && house.maximumFootingGapMeters <= .15,
         'La base de la cabaña no apoya en sus cuatro esquinas (tolerancia 15 cm): ' + JSON.stringify(house));
     }
+    const garrisonGrounding = await page.evaluate(() => window.__ELSN_TEST__.garrisonGrounding());
+    manifest.garrisonGrounding = {
+      outpostCount: garrisonGrounding.length,
+      maximumAnchorErrorMeters: garrisonGrounding.reduce((max,item)=>Math.max(max,item.maximumAnchorErrorMeters),0),
+      outposts: garrisonGrounding
+    };
+    assert.equal(garrisonGrounding.length, 9, 'Deben comprobarse los nueve puestos de las islas secundarias.');
+    for (const outpost of garrisonGrounding) assert.ok(Number.isFinite(outpost.maximumAnchorErrorMeters) && outpost.maximumAnchorErrorMeters < .02,
+      'Puesto, guardia o bandera despegados más de 2 cm de su isla: ' + JSON.stringify(outpost));
     assert.ok(foamCorridorResult && foamCorridorResult.visibleFoamVertices > 0,
       'The baseline must measure visible foam vertices');
     assert.equal(foamCorridorResult.outsideFoamVertices, 0,
