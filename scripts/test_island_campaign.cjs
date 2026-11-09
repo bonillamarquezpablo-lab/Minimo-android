@@ -9,16 +9,19 @@ assert.equal((land[1].match(/\{x:/g)||[]).length,13,'El mapa debe contener exact
 assert.match(html,/<b id="captured">0\/13<\/b>/,'El HUD debe mostrar 0/13 desde el primer fotograma.');
 assert.doesNotMatch(html,/<b id="captured">0\/4<\/b>/,'No debe quedar el contador antiguo 0/4.');
 assert.match(html,/for\(let islandIndex=4;islandIndex<land\.length;islandIndex\+\+\)makeIslandGarrison\(islandIndex\);/);
-assert.match(html,/function makeIslandGarrison\\(islandIndex\\)/);
-assert.match(html,/function settlementHousePosition\\(island,x,z,scale=1\\)/,
+assert.match(html,/function makeIslandGarrison\(islandIndex\)/);
+assert.ok(html.includes("function settlementHousePosition(island,x,z,scale=1)"),
   "Village huts must use an explicit safe interior placement function.");
-assert.match(html,/const houseSpecs=\\[\\[x,z,\\.90\\],\\[x-7,z\\+7,\\.66\\],\\[x\\+8,z-5,\\.62\\]\\]/,
+assert.ok(html.includes("const houseSpecs=[[x,z,.90],[x-7,z+7,.66],[x+8,z-5,.62]];"),
   "The three existing hut positions and scales must be preserved before safety projection.");
-assert.match(html,/settlementHousePosition\\(land\\[index\\],hx,hz,scale\\)/,
+assert.ok(html.includes("settlementHousePosition(land[index],hx,hz,scale)"),
   "Every hut must be grounded against its own island, not a different nearest island.");
-const placementSource=html.match(/function settlementHousePosition\\(island,x,z,scale=1\\)\\{[\\s\\S]*?\\n \\}/);
-assert.ok(placementSource,"The full deterministic settlement placement function must be present.");
-const settlementHousePosition=new Function(placementSource[0]+"; return settlementHousePosition;")();
+const placementStart=html.indexOf("function settlementHousePosition(island,x,z,scale=1){");
+const placementEnd=html.indexOf("\n function makeVillage",placementStart);
+assert.ok(placementStart>=0&&placementEnd>placementStart,
+  "The deterministic settlement placement helper must remain a standalone pure function.");
+const placementSource=html.slice(placementStart,placementEnd).trim();
+const settlementHousePosition=new Function(placementSource+"; return settlementHousePosition;")();
 const testSettlements=[
   {island:{x:0,z:0,r:60},houses:[[31,-17,.90],[24,-10,.66],[39,-22,.62]]},
   {island:{x:135,z:14,r:31},houses:[[135,14,.90],[128,21,.66],[143,9,.62]]},
