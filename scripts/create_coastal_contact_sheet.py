@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the 36-frame coastal reference, legacy isolation frames, and ten same-state diagnostic A/B captures (36 baseline + 10 diagnostic captures)."""
+"""Build the 36-frame coastal reference, legacy isolation frames, and twelve same-state diagnostic variants (36 baseline + 26 diagnostic A/B captures)."""
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
@@ -18,6 +18,8 @@ DIAGNOSTIC_VARIANTS = (
     ("no-continuous-shore-foam", "sin espuma costera"),
     ("previous-ocean-normal", "normales anteriores"),
     ("no-ocean-depth-alpha", "sin alpha de profundidad"),
+    ("no-ocean-vertex-alpha", "sin alpha del agua"),
+    ("no-ground-vertex-alpha", "sin alpha de malla"),
     ("no-ocean-normal-map", "sin normales"),
     ("no-ocean-specular", "sin especular"),
     ("no-short-vertex-waves", "sin ondas cortas"),
@@ -65,7 +67,7 @@ def main() -> None:
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
 
-    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 22 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
+    draw.text((8, 7), "EL SIN NOMBRE · 36 CAPTURES + 26 DIAGNOSTIC A/B + LEGACY ISOLATION", fill=TEXT, font=font)
     draw.text((8, 25), "Baseline matrix · A/B same camera, t=037 s, natural tide · prior shadow/trail checks retained",
               fill=MUTED, font=font)
 
@@ -108,7 +110,7 @@ def main() -> None:
 
     target = OUT / "contact-sheet.png"
     sheet.save(target, format="PNG", optimize=True)
-    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 22 diagnostic A/B + legacy)")
+    print(f"CONTACT SHEET OK: {target} ({width}x{height}; 36 CAPTURES + 26 diagnostic A/B + legacy)")
 
 
 if __name__ == "__main__":
