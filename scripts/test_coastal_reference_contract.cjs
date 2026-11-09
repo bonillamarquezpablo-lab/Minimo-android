@@ -76,8 +76,8 @@ assert.ok(captureRunner.includes('api.captureCanvas()'),
   'Coastal reference images must be read directly from the WebGL canvas, not the HTML page');
 assert.ok(!captureRunner.includes('page.screenshot('),
   'Full-page screenshots can include menus/HUD and add unnecessary SwiftShader compositor cost');
-assert.ok(captureRunner.includes("assert.equal(boot.build, '0.6.272'"), 'The capture must inspect the exact current 0.6.272 candidate.');
-assert.match(html,/name="el-sin-nombre-build" content="0\.6\.272"/, 'The scene capture must use the synchronized 0.6.272 HTML build.');
+assert.ok(captureRunner.includes("assert.equal(boot.build, '0.6.273'"), 'The capture must inspect the exact current 0.6.273 candidate.');
+assert.match(html,/name="el-sin-nombre-build" content="0\.6\.272"/, 'The scene capture must use the synchronized 0.6.273 HTML build.');
 assert.match(html,/const vegetationTrailPaths=\[\],packedTrailMeshes=\[\]/, 'The game must keep direct references to its packed-trail meshes for deterministic test isolation.');
 assert.match(html,/packedTrailMeshes\.push\(mesh\)/, 'Every generated packed trail must be registered for the test-only A/B capture.');
 assert.match(html,/setPackedTrailVisible:\(enabled\)=>\{const trails=packedTrailMeshes/, 'The test-only API must isolate the packed-earth ribbon without changing normal gameplay.');
@@ -99,6 +99,7 @@ assert.match(captureRunner, /'no-volumetric-shore-breaker': \['volumetricShoreBr
   'The translucent breaker visibility must be checked in its isolated frame.');
 assert.match(captureRunner, /assert.equal\(diagnostic.variantState\?\.\[field\], 0/);
 assert.match(captureRunner, /assert.ok\(diagnostic.restoredVariantState\?\.\[field\] >= 1/);
+assert.match(captureRunner, /oceanVertexAlphaEnabled/);
 assert.match(captureRunner, /no-ocean-specular/);
 assert.match(captureRunner, /no-short-vertex-waves/);
 assert.match(captureRunner, /Ensure lazily-created coast meshes exist before snapshotting their original state/);
@@ -106,9 +107,9 @@ assert.match(captureRunner, /api\.setWaterState\(\{ time: 37, tide: 'natural' \}
 assert.match(captureRunner, /const restoredVariantState = variant\.kind \? api\.setDiagnosticVariant\(variant\.kind, false\) : null;/,
   'Diagnostic variants must be restored after the isolated frame.');
 assert.match(captureRunner, /diagnosticCaptures\.length, 18/,
-  'Both cameras must capture the baseline and eight isolated A/B variants.');
+  'Both cameras must capture the baseline and ten controlled A/B variants.');
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
-assert.ok(contactSheet.includes('36 CAPTURES + 18 DIAGNOSTIC A/B'),
+assert.ok(contactSheet.includes('36 CAPTURES + 22 DIAGNOSTIC A/B'),
   'The contact sheet must label all 36 baseline frames and 18 diagnostic A/B captures.');
 assert.match(contactSheet, /ridge-occlusion/, 'The contact sheet must include the direct mountain-occlusion views.');
 assert.match(contactSheet, /36 CAPTURES/, 'The contact sheet must label all 36 frames.');
