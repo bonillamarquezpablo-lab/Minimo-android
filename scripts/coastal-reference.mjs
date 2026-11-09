@@ -353,7 +353,6 @@ async function main() {
         const diagnostic = await page.evaluate(({ cameraCase, variant, island, shoreRadius }) => {
           const api = window.__ELSN_TEST__;
           const ridge = cameraCase.side === 'ridge';
-          if (variant.kind) api.setDiagnosticVariant(variant.kind, true);
           api.setCamera({
             x: ridge ? island.x + 75 : island.x + shoreRadius + (cameraCase.side === 'land' ? -cameraCase.distance : cameraCase.distance),
             y: cameraCase.height,
@@ -362,6 +361,10 @@ async function main() {
             targetY: cameraCase.targetY,
             targetZ: ridge ? island.z - 22 : island.z
           });
+          // Ensure lazily-created coast meshes exist before snapshotting their original state.
+          api.setWaterState({ time: 37, tide: 'natural' });
+          if (variant.kind) api.setDiagnosticVariant(variant.kind, true);
+          // Recompute vertex waves after the source toggle.
           api.setWaterState({ time: 37, tide: 'natural' });
           api.render();
           const sheetOpacity = api.sheetOpacityDepth();

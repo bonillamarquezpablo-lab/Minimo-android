@@ -12004,9 +12004,16 @@ function update(dt){
  if(testModeEnabled){
   const diagnosticOceanNormal=M.water.bumpTexture;
   const diagnosticOceanSpecular=M.water.specularColor.clone();
-  const diagnosticWashNormalMaps=tidalFoamMeshes.map(foam=>foam.washMesh.material?.bumpTexture||null);
-  const diagnosticWashSpeculars=tidalFoamMeshes.map(foam=>foam.washMesh.material?.specularColor?.clone?.()||new B.Color3(.58,.69,.73));
-  const diagnosticWashVisibility=tidalFoamMeshes.map(foam=>({visible:foam.washMesh.isVisible,enabled:typeof foam.washMesh.isEnabled==='function'?foam.washMesh.isEnabled():true}));
+  // La costa se crea de forma diferida al entrar en campaña. Guardar por identidad de malla permite aislar y restaurar las mallas que aparecen después de registrar la API.
+  const diagnosticWashNormalMaps=new WeakMap();
+  const diagnosticWashSpeculars=new WeakMap();
+  const diagnosticWashVisibility=new WeakMap();
+  const rememberDiagnosticWashMesh=foam=>{
+   const mesh=foam.washMesh,material=mesh.material;
+   if(!diagnosticWashNormalMaps.has(mesh))diagnosticWashNormalMaps.set(mesh,material?.bumpTexture||diagnosticOceanNormal);
+   if(!diagnosticWashSpeculars.has(mesh))diagnosticWashSpeculars.set(mesh,material?.specularColor?.clone?.()||new B.Color3(.58,.69,.73));
+   if(!diagnosticWashVisibility.has(mesh))diagnosticWashVisibility.set(mesh,{visible:mesh.isVisible,enabled:typeof mesh.isEnabled==='function'?mesh.isEnabled():true});
+  };
   const getSheetOpacityDepthDiagnostics=()=>{
    const threshold=.03,depths=[],alphas=[];
    for(const foam of tidalFoamMeshes){
@@ -12033,13 +12040,13 @@ function update(dt){
    setDiagnosticVariant:(kind,enabled)=>{
     const disabled=!!enabled;
     if(kind==='shore-breaker-wash'){
-     tidalFoamMeshes.forEach((foam,index)=>{const mesh=foam.washMesh,state=diagnosticWashVisibility[index];mesh.isVisible=disabled?false:state.visible;if(typeof mesh.setEnabled==='function')mesh.setEnabled(disabled?false:state.enabled);});
+     tidalFoamMeshes.forEach(foam=>{rememberDiagnosticWashMesh(foam);const mesh=foam.washMesh,state=diagnosticWashVisibility.get(mesh);mesh.isVisible=disabled?false:state.visible;if(typeof mesh.setEnabled==='function')mesh.setEnabled(disabled?false:state.enabled);});
     }else if(kind==='ocean-normal-map'){
      M.water.bumpTexture=disabled?null:diagnosticOceanNormal;
-     tidalFoamMeshes.forEach((foam,index)=>{if(foam.washMesh.material)foam.washMesh.material.bumpTexture=disabled?null:diagnosticWashNormalMaps[index];});
+     tidalFoamMeshes.forEach(foam=>{rememberDiagnosticWashMesh(foam);const material=foam.washMesh.material;if(material)material.bumpTexture=disabled?null:diagnosticWashNormalMaps.get(foam.washMesh);});
     }else if(kind==='ocean-specular'){
      M.water.specularColor=disabled?new B.Color3(0,0,0):diagnosticOceanSpecular.clone();
-     tidalFoamMeshes.forEach((foam,index)=>{if(foam.washMesh.material)foam.washMesh.material.specularColor=disabled?new B.Color3(0,0,0):diagnosticWashSpeculars[index].clone();});
+     tidalFoamMeshes.forEach(foam=>{rememberDiagnosticWashMesh(foam);const material=foam.washMesh.material;if(material)material.specularColor=disabled?new B.Color3(0,0,0):diagnosticWashSpeculars.get(foam.washMesh).clone();});
     }else if(kind==='short-vertex-waves'){
      coastalDiagnosticOverrides.disableShortVertexWaves=disabled;
     }else throw new Error('Unknown coastal diagnostic variant: '+kind);

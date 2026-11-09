@@ -32,6 +32,11 @@ for (const api of ['setCamera:', 'setIslandShadowReceiving:', 'setWaterState:', 
 assert.match(html, /window\.__ELSN_TEST__=\{/);
 assert.match(html, /setDiagnosticVariant:\(kind,enabled\)=>/,
   'Four independent material/geometry diagnostic switches must be test-only.');
+assert.match(html, /diagnosticWashVisibility=new WeakMap\(\)/);
+assert.match(html, /diagnosticWashNormalMaps=new WeakMap\(\)/);
+assert.match(html, /diagnosticWashSpeculars=new WeakMap\(\)/);
+assert.match(html, /rememberDiagnosticWashMesh\(foam\)/,
+  'Lazily-created shoreline meshes must be saved by identity before isolation.');
 assert.match(html, /disableShortVertexWaves\?0:1/,
   'Short vertex waves must be independently suppressible in the diagnostic render.');
 assert.match(html, /washDiagnosticDepths=coastalDiagnosticsEnabled\?new Float32Array/,
@@ -80,6 +85,8 @@ assert.match(captureRunner, /no-shorebreaker-wash/);
 assert.match(captureRunner, /no-ocean-normal-map/);
 assert.match(captureRunner, /no-ocean-specular/);
 assert.match(captureRunner, /no-short-vertex-waves/);
+assert.match(captureRunner, /Ensure lazily-created coast meshes exist before snapshotting their original state/);
+assert.match(captureRunner, /api\.setWaterState\(\{ time: 37, tide: 'natural' \}\);\s*if \(variant\.kind\) api\.setDiagnosticVariant\(variant\.kind, true\);\s*\/\/ Recompute vertex waves after the source toggle/);
 assert.match(captureRunner, /diagnosticCaptures\.length, 10/,
   'Both cameras must capture the baseline and four isolated A/B variants.');
 assert.match(contactSheet, /DIAGNOSTIC_VARIANTS/);
