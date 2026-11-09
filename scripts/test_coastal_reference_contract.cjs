@@ -76,6 +76,7 @@ assert.match(html,/for\(let step=0;step<5;step\+\+\)\{\s*const delta=sample\(rad
 assert.match(html,/const packedTrailTexture=makePatternTexture\('Packed Norse trail earth','#a18a63'/,"Packed earth trails must use a readable warm-earth albedo rather than a near-black base.");
 assert.match(html,/packedTrailMaterial\.emissiveColor=new B\.Color3\(\.22,\.15,\.07\)/,"Packed earth trails must retain a subtle brown ambient floor on shaded ridges.");
 assert.match(html,/positions\.push\(x,renderedTerrainSurfaceAt\(x,z\)\+\.055,z\)/,"Packed earth trails must remain conformed to the rendered island surface.");
+assert.match(workflow,/^  character-startup:/m,'Coastal-only validation must retain the independent real Viking GLB startup regression.');
 console.log('COASTAL REFERENCE CONTRACT OK');
 
 assert.ok(captureRunner.includes('api.captureCanvas()'),
