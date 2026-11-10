@@ -67,11 +67,15 @@ async function main(){
   report.mapMarkerVerification=await phase('verify expanded map click returns world coordinates',async()=>page.evaluate(()=>{
    const map=document.getElementById('map');if(!map)throw new Error('The tactical map canvas is missing.');
    if(!map.classList.contains('expanded'))map.click();
-   const rect=map.getBoundingClientRect(),expected={x:400,z:250},logicalX=184+expected.x*.235,logicalY=174+expected.z*.235;
-   const clientX=rect.left+logicalX/480*rect.width,clientY=rect.top+logicalY/344*rect.height;
+   const rect=map.getBoundingClientRect(),style=getComputedStyle(map),expected={x:400,z:250},logicalX=184+expected.x*.235,logicalY=174+expected.z*.235;
+   const borderLeft=parseFloat(style.borderLeftWidth)||0,borderRight=parseFloat(style.borderRightWidth)||0,borderTop=parseFloat(style.borderTopWidth)||0,borderBottom=parseFloat(style.borderBottomWidth)||0;
+   const contentWidth=Math.max(1,rect.width-borderLeft-borderRight),contentHeight=Math.max(1,rect.height-borderTop-borderBottom);
+   const objectScale=Math.min(contentWidth/map.width,contentHeight/map.height),drawnWidth=map.width*objectScale,drawnHeight=map.height*objectScale;
+   const offsetX=borderLeft+(contentWidth-drawnWidth)*.5,offsetY=borderTop+(contentHeight-drawnHeight)*.5;
+   const clientX=rect.left+offsetX+logicalX/480*drawnWidth,clientY=rect.top+offsetY+logicalY/344*drawnHeight;
    map.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientX,clientY}));
    const actual=window.__ELSN_TEST__?.mapTarget?.();
-   if(!actual||Math.abs(actual.x-expected.x)>.2||Math.abs(actual.z-expected.z)>.2)throw new Error('Map tap projection mismatch: '+JSON.stringify({expected,actual,rect:{width:rect.width,height:rect.height}}));
+   if(!actual||Math.abs(actual.x-expected.x)>.2||Math.abs(actual.z-expected.z)>.2)throw new Error('Map tap projection mismatch: '+JSON.stringify({expected,actual,rect:{width:rect.width,height:rect.height,borderLeft,borderRight,borderTop,borderBottom,drawnWidth,drawnHeight}}));
    return {expected,actual,expanded:map.classList.contains('expanded'),footer:map.getContext('2d')? 'canvas-rendered':'missing'};
   }));
   await phase('close map after coordinate projection test',async()=>{if(await page.locator('#mapClose').isVisible().catch(()=>false))await page.locator('#mapClose').click();});
