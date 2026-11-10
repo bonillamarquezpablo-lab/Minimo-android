@@ -25,6 +25,9 @@ assert.doesNotMatch(source,/probeFloatingHutAudit|\.setEnabled\(|\.position\.set
 assert.match(source,/usesGameRepairSystem:true/);
 assert.match(source,/inspectionCamera/);
 assert.match(source,/setCamera\(\{x:31,y:12,z:17,targetX:31,targetY:3,targetZ:-17\}\)/);
+assert.match(source,/captureCanvas\(\)/);
+assert.match(source,/webgl-canvas-readback/);
+assert.doesNotMatch(source,/page\.screenshot\(/);
 assert.match(workflow,/Audit habitable structure grounding independently/);
 assert.match(workflow,/if: always\(\)/);
 assert.match(workflow,/artifacts\/structure-grounding\//);
