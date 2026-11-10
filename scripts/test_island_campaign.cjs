@@ -11,6 +11,9 @@ assert.doesNotMatch(html,/<b id="captured">0\/4<\/b>/,'No debe quedar el contado
 assert.match(html,/for\(let islandIndex=4;islandIndex<land\.length;islandIndex\+\+\)makeIslandGarrison\(islandIndex\);/);
 assert.match(html,/function makeIslandGarrison\(islandIndex\)/);
 assert.match(html,/function findLevelHutFooting\(cx,cz,scale\)/,'Each hut must search locally for a naturally level four-corner footing without modifying terrain.');
+assert.match(html,/valid:false/,'A failed local footing search must be represented as invalid, never as a usable fallback.');
+assert.match(html,/if\(!footing\.valid\)g\.setEnabled\(false\)/,'A hut with no valid dry-land footing must never render at the generic offshore fallback height.');
+assert.match(html,/registerHabitableStructure\(g,'NorseHut'/,'Every village hut must enter the live structure audit, including invalid disabled huts.');
 assert.match(html,/const centerY=renderedTerrainSurfaceAt\(px,pz\),ys=\[/,'Footing placement must compare all four corners against the center of the rendered GroundMesh.');
 assert.match(html,/g\.position=v\(houseX,footing\.centerY-\.02\*scale,houseZ\)/,'Each hut footing must use the measured rendered-ground center height and scaled base offset.');
 assert.match(html,/groundingErrorMeters:Number\(Math\.abs\(footingBottomY-sampledTerrainY\)\.toFixed\(4\)\)/,'Every hut must expose its measured rendered-ground footing error.');
