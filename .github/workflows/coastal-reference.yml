@@ -63,7 +63,9 @@ jobs:
         env:
           CAPTURE_TEST_URL: http://127.0.0.1:4176/
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
-          CAPTURE_TEXTURE_TIMEOUT_MS: '60000'
+          CAPTURE_TEXTURE_TIMEOUT_MS: '20000'
+          CAPTURE_CANVAS_TIMEOUT_MS: '10000'
+          CAPTURE_CDP_TIMEOUT_MS: '4000'
         run: |
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             export CAPTURE_PLAN_JSON="$CAPTURE_PLAN_INPUT"
