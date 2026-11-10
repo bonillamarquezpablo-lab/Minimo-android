@@ -9,7 +9,7 @@ assert.match(workflow,/group: scene-capture-\$\{\{ github\.sha \}\}/);assert.mat
 assert.match(runner,/page\.addInitScript/);assert.match(runner,/Math\.imul\(1664525,state\)\+1013904223/);assert.match(runner,/prepareCaptureFrame\(\{timeoutMs:120000\}\)/);
 assert.match(runner,/__ELSN_TEST__\.render\(\)/);assert.match(runner,/createHash\('sha256'\)/);assert.match(runner,/assert\.equal\(secondHash,firstHash/);assert.match(runner,/function writeManifest\(\)/);
 assert.match(runner,/manifest\.lastUpdatedAt/);
-assert.match(runner,/fs\.writeFileSync\(temporary,JSON\.stringify\(manifest,null,2\)\+'\n'\)/,'Manifest must use a real newline escape so it stays valid JSON.');assert.match(runner,/api\.auditIslandGeometry\(\)/);assert.match(html,/unsafeVisibleBeforeRepair/);assert.match(html,/visibleInvalidAfterRepair/);
+assert.match(runner,/fs\.writeFileSync\(temporary,JSON\.stringify\(manifest,null,2\)\+'\\n'\)/,'Manifest must use a real newline escape so it stays valid JSON.');assert.match(runner,/api\.auditIslandGeometry\(\)/);assert.match(html,/unsafeVisibleBeforeRepair/);assert.match(html,/visibleInvalidAfterRepair/);
 assert.match(html,/tide==='high'\?\.28:\(tide==='low'\?-.28/);assert.match(html,/prepareCaptureFrame:async/);
 assert.match(html,/scene\.onAfterRenderObservable\.add\(/);assert.match(html,/renderedFrames>=2/);assert.match(html,/Only freeze after two actual frames/);
 console.log('CAPTURE RELIABILITY CONTRACT OK');
