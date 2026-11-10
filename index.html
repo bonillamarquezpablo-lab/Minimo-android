@@ -12590,37 +12590,47 @@ function update(dt){
    islands:land.map(({x,z,r,name})=>({x,z,r,name})),
    stop:()=>engine.stopRenderLoop(),
    prepareCaptureFrame:async({timeoutMs=120000}={})=>{
-    const started=performance.now();engine.stopRenderLoop();
-    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('Timeout esperando shaders/texturas del escenario')),timeoutMs));
-    await Promise.race([scene.whenReadyAsync(),timeout]);
+    const started=performance.now();
+    await Promise.race([scene.whenReadyAsync(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Timeout esperando la escena lista')),timeoutMs))]);
     const textures=scene.textures.filter(texture=>texture&&typeof texture.isReady==='function'&&!texture.isDisposed?.());
-    // Babylon puede marcar la escena como lista mientras texturas de carga diferida
-    // siguen pendientes. Con el bucle detenido, renderizamos explícitamente para
-    // activar esas cargas y esperamos a que todas terminen o expiren.
-    const waitForTextures=async(stage)=>{
-     let pending=textures.filter(texture=>!texture.isReady());
-     const deadline=performance.now()+timeoutMs;
-     while(pending.length&&performance.now()<deadline){
-      scene.render();
-      await new Promise(resolve=>setTimeout(resolve,100));
-      pending=textures.filter(texture=>!texture.isReady());
-     }
-     if(pending.length)throw new Error('Texturas pendientes '+stage+': '+pending.slice(0,30).map(texture=>texture.name||texture.url||'texture-unknown').join(', '));
-     return pending.length;
-    };
-    scene.render();
-    await waitForTextures('antes de compilar shaders');
+    const pendingTextures=()=>textures.filter(texture=>!texture.isReady());
+    // DynamicTexture may report not-ready until Babylon has actually drawn it once.
+    // Wait for real engine frames (not manual renders) before stopping the loop.
+    const frameBarrier=await new Promise((resolve,reject)=>{
+     let renderedFrames=0,observer=null;
+     const timer=setTimeout(()=>{
+      if(observer)scene.onAfterRenderObservable.remove(observer);
+      const pending=pendingTextures().slice(0,30).map(texture=>({
+       name:texture.name||texture.url||'texture-unknown',
+       blocking:typeof texture.isBlocking==='boolean'?texture.isBlocking:null,
+       internalReady:!!texture.getInternalTexture?.()?.isReady,
+       className:texture.getClassName?.()||null
+      }));
+      reject(new Error('Timeout esperando fotogramas y texturas inicializadas: '+JSON.stringify(pending)));
+     },timeoutMs);
+     observer=scene.onAfterRenderObservable.add(()=>{
+      renderedFrames++;
+      const pending=pendingTextures();
+      if(renderedFrames>=2&&!pending.length){
+       clearTimeout(timer);scene.onAfterRenderObservable.remove(observer);
+       resolve({renderedFrames,texturesReady:textures.length,pendingTextures:0});
+      }
+     });
+    });
+    // Only freeze after two actual frames and full texture readiness.
+    engine.stopRenderLoop();
     const materials=[...new Set(scene.meshes.map(mesh=>mesh.material).filter(Boolean))],failures=[];
     await Promise.race([Promise.all(materials.map(async material=>{
      if(typeof material.forceCompilationAsync!=='function')return;
      const mesh=scene.meshes.find(item=>item.material===material&&!item.isDisposed?.());if(!mesh)return;
      try{await material.forceCompilationAsync(mesh);}catch(error){failures.push({material:material.name||'material-unknown',error:String(error?.message||error)});}
-    })),timeout]);
-    await waitForTextures('después de compilar shaders');
+    })),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Timeout compilando shaders')),timeoutMs))]);
+    const pendingAfter=pendingTextures().map(texture=>texture.name||texture.url||'texture-unknown');
+    if(pendingAfter.length)throw new Error('Texturas no listas tras compilar shaders: '+pendingAfter.slice(0,30).join(', '));
     if(failures.length)throw new Error('Falló la compilación de shaders: '+JSON.stringify(failures.slice(0,12)));
     if(!scene.isReady())throw new Error('Babylon informa de que la escena no está lista para capturar');
     scene.render();
-    return {ready:true,meshCount:scene.meshes.length,textureCount:textures.length,materialCount:materials.length,compiledMaterials:materials.filter(material=>typeof material.forceCompilationAsync==='function').length,elapsedMs:Number((performance.now()-started).toFixed(1)),renderLoopStopped:true};
+    return {ready:true,frameBarrier,meshCount:scene.meshes.length,textureCount:textures.length,materialCount:materials.length,compiledMaterials:materials.filter(material=>typeof material.forceCompilationAsync==='function').length,elapsedMs:Number((performance.now()-started).toFixed(1)),renderLoopStopped:true};
    },
    setCamera:({x,y,z,targetX,targetY,targetZ})=>{camera.position.set(x,y,z);camera.setTarget(new B.Vector3(targetX,targetY,targetZ));},
    setIslandShadowReceiving:(enabled)=>{const terrain=islandTerrainMeshes[0];if(!terrain)return false;terrain.receiveShadows=!!enabled;return terrain.receiveShadows===!!enabled;},
