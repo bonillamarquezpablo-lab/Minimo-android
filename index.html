@@ -8882,7 +8882,7 @@ function createRealWeapon(type='axe'){
   // Blacksmith's forge, stone hearth, anvil and hammer rack: unmistakable Norse settlement landmark.
   const forgeX=vl.x-6.8,forgeZ=vl.z-1.9,forgeY=renderedTerrainSurfaceAt(forgeX,forgeZ),forge=newGroup('NorseBlacksmithForge_'+idx,null);forge.position=v(forgeX,forgeY,forgeZ);
   forge.__norseWorldCollider=registerWorldCollider({type:'circle',x:forgeX,z:forgeZ,r:1.15});
-  registerHabitableStructure(forge,'NorseBlacksmithForge',{islandIndex:idx,footprintRadius:1.25,baseOffset:0,edgeBuffer:1.25,maxRelief:.24,anchorTolerance:.02,maxVisibleDistance:205,collider:forge.__norseWorldCollider,relocatable:false});
+  registerHabitableStructure(forge,'NorseBlacksmithForge',{islandIndex:idx,footprintRadius:1.25,baseOffset:0,edgeBuffer:1.25,maxRelief:.24,anchorTolerance:.02,maxVisibleDistance:205,collider:forge.__norseWorldCollider,relocatable:true});
   box('ForgeStoneBase_'+idx,forge,[0,.28,0],[1.65,.56,1.35],M.stoneDark);
   box('ForgeIronHearth_'+idx,forge,[0,.75,.12],[1.08,.36,.86],M.darkMetal);
   const forgeCoal=sphere('ForgeGlowingCoals_'+idx,forge,[0,.98,.12],[.42,.13,.34],M.ember,12);forgeCoal.material=M.ember;
