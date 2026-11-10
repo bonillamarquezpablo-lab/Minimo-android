@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const source=fs.readFileSync('scripts/coastal-structure-grounding-smoke.mjs','utf8');
 const workflow=fs.readFileSync('.github/workflows/coastal-reference.yml','utf8');
 const html=fs.readFileSync('index.html','utf8');
+const navigation=fs.readFileSync('scripts/nordic/navigation-suite.js','utf8');
 assert.match(source,/\?test=1['\"]?/);
 assert.doesNotMatch(source,/\?test=1&coastref=1/);
 assert.match(source,/habitableStructureAudit\(\)/);
@@ -116,3 +117,26 @@ assert.match(html,/unidentifiedGeometryRoots=new Set\(\)/);
 assert.match(html,/unidentifiedGeometryRoots\.add\(node\);candidates\.add\(node\)/);
 assert.match(html,/unidentified-geometry-cluster/);
 assert.match(html,/structuralClassification/);
+
+
+// Live local minimap: nearby area, player/ship centring, heading arrow, and compact coordinates.
+assert.match(html,/function drawLocalMap\(\)/);
+assert.match(html,/if\(!map\.classList\.contains\('expanded'\)\)\{drawLocalMap\(\);return;\}/);
+assert.match(html,/focus=onShip\?ship\.position:playerPos\(\),heading=onShip\?ship\.rotation\.y:yaw/);
+assert.match(html,/const mapHeading=onShip\?ship\.rotation\.y:yaw/);
+assert.match(html,/id="mapCoords"/);
+assert.match(html,/mapCoords\.textContent=coordinates/);
+assert.match(html,/mapRefreshInterval=document\.body\.classList\.contains\('map-open'\)\?\.42:\.20/);
+assert.match(html,/width:clamp\(138px,36vw,158px\)/);
+
+// Ship camera follows the vessel with a wider default framing; camera mode selection is wired to gameplay.
+assert.match(html,/cameraMode='follow'/);
+assert.match(html,/cameraDistance\*\(onShip\?1\.65:1\)/);
+assert.match(html,/cameraMode!=='free'/);
+assert.match(html,/window\.__ELSN_CAMERA_CONTROL=/);
+assert.match(html,/cameraMode='follow';cameraManualLookUntil=0/);
+assert.match(navigation,/window\.__ELSN_CAMERA_CONTROL/);
+assert.match(navigation,/gameControl\.setMode\(mode\)/);
+assert.match(navigation,/setMode\("follow"\)/);
+
+console.log('OK: live local minimap, compass heading, coordinates and integrated follow/ship camera controls.');
