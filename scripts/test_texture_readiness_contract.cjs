@@ -39,4 +39,10 @@ assert.match(smoke,/noFootingOutliers=houseOutliers\.length===0&&campOutliers\.l
 assert.match(smoke,/structureInventoryComplete=houses\.length===12&&camps\.length===8&&garrisons\.length===9/);
 assert.match(smoke,/registeredHouses:houses\.length/);
 assert.match(smoke,/houseFootingOutliers:houseOutliers\.length/);
+assert.match(smoke,/unregisteredOffshoreAfter=Number\(offshoreAfter\?\.unregisteredCandidates\)/);
+assert.match(smoke,/offshoreInventoryComplete=Number\.isFinite\(unregisteredOffshoreAfter\)&&unregisteredOffshoreAfter===0/);
+assert.match(smoke,/&&offshoreInventoryComplete/);
+assert.match(smoke,/noUnregisteredOffshoreCandidates=Number\.isFinite\(Number\(offshore\?\.unregisteredCandidates\)\)&&Number\(offshore\.unregisteredCandidates\)===0/);
+assert.match(smoke,/&&noUnregisteredOffshoreCandidates/);
+assert.match(smoke,/unregisteredOffshoreCandidates:offshore\?\.unregisteredCandidates\?\?null/);
 console.log('TEXTURE READINESS SMOKE CONTRACT OK');
