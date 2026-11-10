@@ -12760,7 +12760,13 @@ function update(dt){
      const waterSurfaceY=(Number(ground.position.y)||0)+waterHeight(absolute.x,absolute.z,oceanTime);
      const terrainY=renderedTerrainSurfaceAt(absolute.x,absolute.z);
      const bottomAboveWaterMeters=bottomY-waterSurfaceY,bottomAboveTerrainMeters=bottomY-terrainY;
-     const offshore=coastClearanceMeters>2.5;
+     const terrainIsDry=Number.isFinite(terrainY)&&terrainY>=.22;
+     const floatingAboveWater=bottomAboveWaterMeters>.25;
+     const beyondIslandEnvelope=coastClearanceMeters>2.5;
+     // The island-radius envelope alone can miss bays and irregular shorelines. A root
+     // over wet terrain is offshore even when its coordinates fall inside that envelope.
+     const offshore=beyondIslandEnvelope||(!terrainIsDry&&floatingAboveWater);
+     const issue=offshore?(!hasMeshBounds?'offshore-root-without-mesh-bounds':(!terrainIsDry&&floatingAboveWater?'floating-over-water-no-dry-ground':(bottomAboveWaterMeters>.25?'floating-above-water':(bottomAboveWaterMeters<-.45?'submerged-offshore':'at-waterline-offshore')))):null;
      rows.push({
       name,kind:entry?.kind||'unregistered-structural-root',registered:registeredRoot,visible,enabled,
       island:nearest.name,islandIndex:nearest.islandIndex,position:{x:Number(absolute.x.toFixed(2)),y:Number(absolute.y.toFixed(2)),z:Number(absolute.z.toFixed(2))},
@@ -12768,8 +12774,8 @@ function update(dt){
       footprintRadiusMeters:Number(footprintRadius.toFixed(2)),distanceToIslandCenterMeters:Number(nearestDistance.toFixed(2)),
       distanceBeyondCoastAndFootprintMeters:Number(coastClearanceMeters.toFixed(2)),
       waterSurfaceY:Number(waterSurfaceY.toFixed(3)),bottomAboveWaterMeters:Number(bottomAboveWaterMeters.toFixed(3)),
-      terrainReferenceY:Number(terrainY.toFixed(3)),bottomAboveTerrainMeters:Number(bottomAboveTerrainMeters.toFixed(3)),
-      vertexCount:vertices,indexCount:indices,meshCount:meshRefs.length,offshore,issue:offshore?(!hasMeshBounds?'offshore-root-without-mesh-bounds':(bottomAboveWaterMeters>.25?'floating-above-water':(bottomAboveWaterMeters<-.45?'submerged-offshore':'at-waterline-offshore'))):null,
+      terrainReferenceY:Number(terrainY.toFixed(3)),terrainIsDry,bottomAboveTerrainMeters:Number(bottomAboveTerrainMeters.toFixed(3)),
+      vertexCount:vertices,indexCount:indices,meshCount:meshRefs.length,offshore,issue,
       registeredAudit:entry?{lastStatus:entry.lastStatus,lastAction:entry.lastAction,relocatable:entry.relocatable}:null
      });
     }catch(error){rows.push({name:node?.name||'unnamed-structure',inspectionError:String(error?.message||error)});}
