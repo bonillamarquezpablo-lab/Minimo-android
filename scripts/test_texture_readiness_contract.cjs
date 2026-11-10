@@ -31,8 +31,8 @@ assert.match(smoke,/unsafePairsVerified=verifiedSafeRelocationCount===unsafeBefo
 assert.match(smoke,/&&unsafePairsVerified&&offshoreClear/);
 assert.match(smoke,/visibleOffshoreAfter===0/);
 assert.match(smoke,/offshoreClear/);
-assert.match(smoke,/floatingProbePassed=floatingProbe\?\.detected===true&&floatingProbe\?\.autoDiscovered===true&&floatingProbe\?\.hidden===true/);
-assert.match(smoke,/lastAction==='hidden-no-safe-ground'/);
+assert.match(smoke,/floatingProbePassed=floatingProbe\?\.detected===true&&floatingProbe\?\.autoDiscovered===true&&floatingProbe\?\.hidden===false/);
+assert.match(smoke,/lastAction==='relocation-failed-visible'&&floatingProbe\?\.lastStatus==='unsafe'&&floatingProbe\?\.untrackedRootCount===0/);
 assert.match(smoke,/structureGatePassed/);
 assert.match(smoke,/if\(!structureGatePassed\)manifest\.verdict='fail'/);
 assert.match(smoke,/noFootingOutliers=houseOutliers\.length===0&&campOutliers\.length===0&&garrisonOutliers\.length===0/);
@@ -52,4 +52,6 @@ assert.match(smoke,/noOffshoreAfter=Number\.isFinite\(offshoreCountAfter\)&&offs
 assert.match(smoke,/&&noOffshoreAfter&&offshoreInventoryComplete/);
 assert.match(smoke,/noOffshoreStructures=Number\.isFinite\(Number\(offshore\?\.offshoreCount\)\)&&Number\(offshore\.offshoreCount\)===0/);
 assert.match(smoke,/&&noOffshoreStructures&&noUnregisteredOffshoreCandidates/);
+assert.match(smoke,/In \?test=1 the audit deliberately avoids hiding or mutating scene roots/);
+assert.match(html,/else if\(applyRepairs&&root&&typeof root\.setEnabled==='function'\)\{\s*root\.setEnabled\(false\);entry\.hiddenByAudit=true;entry\.lastAction='hidden-no-safe-ground';\s*if\(entry\.collider\)entry\.collider\.active=false;hiddenUnsafe\+\+;/);
 console.log('TEXTURE READINESS SMOKE CONTRACT OK');
