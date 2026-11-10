@@ -8768,9 +8768,16 @@ function createRealWeapon(type='axe'){
   cyl('HammerStandBar_'+idx,hammerStand,[0,1.45,0],.75,.07,.07,M.woodLight,[0,0,Math.PI/2]);
   box('HangingSmithHammerHead_'+idx,hammerStand,[0,1.44,.12],[.34,.16,.18],M.darkMetal);cyl('HangingSmithHammerHandle_'+idx,hammerStand,[0,1.14,.12],.55,.045,.045,M.woodLight);
   smokeEmitters.push({x:forgeX,y:forgeY+1.55,z:forgeZ-.48,phase:idx*1.7});
-  // Timber watchtower with a ladder and a clan pennant, placed outside the central yard.
-  const towerX=vl.x+10.5,towerZ=vl.z-7.6,towerY=terrainSurfaceAt(towerX,towerZ),tower=newGroup('NorseWatchTower_'+idx,null);tower.position=v(towerX,towerY,towerZ);
-  worldColliders.push({type:'rect',x:towerX,z:towerZ,hx:.95,hz:.95});
+  // Keep the watchtower and its full footprint on the dry interior of its own island.
+  // The previous fixed +10.5/-7.6m offset put the Cuervo tower beyond the dry-land radius.
+  const watchIsland=land[idx],rawTowerX=vl.x+10.5,rawTowerZ=vl.z-7.6;
+  const towerDx=rawTowerX-watchIsland.x,towerDz=rawTowerZ-watchIsland.z;
+  const towerDistance=Math.hypot(towerDx,towerDz),towerSafeRadius=watchIsland.r*.76-Math.hypot(1.35,1.35)-1.25;
+  const towerFactor=towerDistance>towerSafeRadius?towerSafeRadius/Math.max(.001,towerDistance):1;
+  const towerX=watchIsland.x+towerDx*towerFactor,towerZ=watchIsland.z+towerDz*towerFactor;
+  const towerY=renderedTerrainSurfaceAt(towerX,towerZ),tower=newGroup('NorseWatchTower_'+idx,null);tower.position=v(towerX,towerY,towerZ);
+  tower.__norseWorldCollider=registerWorldCollider({type:'rect',x:towerX,z:towerZ,hx:.95,hz:.95,cameraBlocker:true});
+  registerHabitableStructure(tower,'NorseWatchTower',{islandIndex:idx,footprintRadius:1.35,baseOffset:0,edgeBuffer:1.25,maxRelief:.28,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:90,collider:tower.__norseWorldCollider,relocatable:false});
   for(let side of [-1,1])for(let depth of [-1,1])cyl('WatchtowerPillar_'+idx+'_'+side+'_'+depth,tower,[side*.78,2.35,depth*.78],4.7,.17,.17,M.woodDark,[0,0,side*depth*.06]);
   box('WatchtowerPlatform_'+idx,tower,[0,3.75,0],[2.05,.28,2.05],M.woodLight);
   for(let side of [-1,1])box('WatchtowerRailing_'+idx+'_'+side,tower,[side*.91,4.28,0],[.14,.86,2.05],M.woodDark);
