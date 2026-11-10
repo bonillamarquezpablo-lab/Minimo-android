@@ -16,7 +16,7 @@ assert.match(html,/g\.position=v\(houseX,footing\.centerY-\.02\*scale,houseZ\)/,
 assert.match(html,/groundingErrorMeters:Number\(Math\.abs\(footingBottomY-sampledTerrainY\)\.toFixed\(4\)\)/,'Every hut must expose its measured rendered-ground footing error.');
 assert.match(html,/const safeVillageRadius=island\.r\*\.76-settlementReach/,'The first village must be shifted inward as a complete settlement before buildings and props are placed.');
 assert.match(html,/const settlementReach= Math\.hypot\(10\.5,-7\.6\)\+1\.35\+1\.25/,'The village placement must reserve room for the outer watchtower footprint.');
-assert.match(html,/const maxCenterRadius=island\.r\*\.76-footprintRadius-1\.25/,'Every hut candidate must keep its complete footprint inside the dry-land band.');
+assert.match(html,/maxCenterRadius=island\.r\*\.76-footprintRadius-1\.25/,'Every hut candidate must keep its complete footprint inside the dry-land band.');
 assert.match(html,/g\.position=v\(houseX,footing\.centerY-\.02\*scale,houseZ\)/);
 assert.match(html,/type:'rect',x:houseX,z:houseZ/,'The hut collision footprint must follow its corrected rendered position.');
 assert.match(html,/const cx=vl\.x,cz=vl\.z\+15/,'Outpost tents must remain beside the village on the island interior.');
