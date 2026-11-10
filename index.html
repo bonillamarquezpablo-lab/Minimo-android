@@ -8459,7 +8459,7 @@ function createRealWeapon(type='axe'){
    baseOffset:Number(options.baseOffset)||0,
    edgeBuffer:Math.max(1.0,Number(options.edgeBuffer)||1.25),
    safeRadiusFactor:Math.max(.60,Math.min(.82,Number(options.safeRadiusFactor)||.76)),
-   maxRelief:Math.max(.08,Number(options.maxRelief)||.32),
+   maxRelief:Math.max(.005,Number(options.maxRelief)||.32),
    anchorTolerance:Math.max(.005,Number(options.anchorTolerance)||.02),
    maxVisibleDistance:Math.max(60,Number(options.maxVisibleDistance)||210),
    boatVisibleDistance:Math.max(30,Number(options.boatVisibleDistance)||55),
@@ -8521,10 +8521,13 @@ function createRealWeapon(type='axe'){
   let minGroundY=centerGroundY,maxReliefMeters=0,validSamples=Number.isFinite(centerGroundY)?1:0;
   const scale=Number(root.scaling?.x)||1;
   const corners=entry.kind==='NorseHut'?[[-2.01*scale,-2.64*scale],[2.01*scale,-2.64*scale],[-2.01*scale,2.64*scale],[2.01*scale,2.64*scale]]:null;
-  const sampleCount=corners?corners.length:8;
+  const greatHallSupports=entry.kind==='NorseGreatHall'?[[-3.72,-6.35],[0,-6.35],[3.72,-6.35],[-3.72,0],[3.72,0],[-3.72,6.35],[0,6.35],[3.72,6.35]]:null;
+  const hallRotation=Number(root.rotation?.y)||0,hallCos=Math.cos(hallRotation),hallSin=Math.sin(hallRotation);
+  const sampleCount=corners?corners.length:(greatHallSupports?greatHallSupports.length:8);
   for(let i=0;i<sampleCount;i++){
    let sx,sz;
    if(corners){sx=p.x+corners[i][0];sz=p.z+corners[i][1];}
+   else if(greatHallSupports){const [lx,lz]=greatHallSupports[i];sx=p.x+lx*hallCos+lz*hallSin;sz=p.z-lx*hallSin+lz*hallCos;}
    else{const a=i*Math.PI*2/sampleCount;sx=p.x+Math.cos(a)*entry.footprintRadius;sz=p.z+Math.sin(a)*entry.footprintRadius;}
    const pointRadius=Math.hypot(sx-island.x,sz-island.z),pointY=renderedTerrainSurfaceAt(sx,sz);
    if(pointRadius>island.r*entry.safeRadiusFactor-entry.edgeBuffer||!Number.isFinite(pointY))continue;
@@ -9034,8 +9037,19 @@ function createRealWeapon(type='axe'){
  villages.forEach(vl=>{if(!vl.islandGarrison)buildIslandOutpost(vl);});
  // Nuevos lugares de la expansión: salón comunal, embarcadero, círculo del thing y baliza costera.
  function buildNorseGreatHall(x,z,index){
-  const floorY=renderedTerrainSurfaceAt(x,z),hall=newGroup('NorseGreatMeadHall_'+index,null);
+  const floorY=renderedTerrainSurfaceAt(x,z),hallRotation=index*.37;
+  const supportOffsets=[[-3.72,-6.35],[0,-6.35],[3.72,-6.35],[-3.72,0],[3.72,0],[-3.72,6.35],[0,6.35],[3.72,6.35]];
+  const supportSamples=supportOffsets.map(([lx,lz])=>{
+   const worldX=x+lx*Math.cos(hallRotation)+lz*Math.sin(hallRotation),worldZ=z-lx*Math.sin(hallRotation)+lz*Math.cos(hallRotation);
+   return {lx,lz,groundY:renderedTerrainSurfaceAt(worldX,worldZ)};
+  });
+  const hallRootY=Math.max(floorY,...supportSamples.map(point=>point.groundY)),hall=newGroup('NorseGreatMeadHall_'+index,null);
   box('GreatHallStoneFooting_'+index,hall,[0,.16,0],[8.4,.32,14.2],M.stoneDark);
+  // Stone piers follow the natural slope and support the level hall floor without flattening the island.
+  supportSamples.forEach((point,pierIndex)=>{
+   const height=Math.max(.04,hallRootY-point.groundY+.04);
+   box('GreatHallStoneSupportPier_'+index+'_'+pierIndex,hall,[point.lx,-height*.5+.02,point.lz],[.76,height,.76],M.stoneDark);
+  });
   box('GreatHallOakFloor_'+index,hall,[0,.38,0],[8.0,.18,13.7],M.woodDark);
   for(const side of [-1,1]){
    for(let row=0;row<7;row++){
@@ -9067,9 +9081,9 @@ function createRealWeapon(type='axe'){
   sphere('GreatHallRavenCrest_'+index,hall,[0,5.76,7.06],[.58,.34,.43],M.woodDark,10);
   box('GreatHallRavenBeak_'+index,hall,[0,5.72,7.48],[.30,.12,.45],M.gold,[.08,0,0]);
   mergeStaticDecorByMaterial(hall,'NorseGreatHallStatic');
-  hall.position=v(x,floorY,z);hall.rotation.y=index*.37;
+  hall.position=v(x,hallRootY,z);hall.rotation.y=hallRotation;
   hall.__norseWorldCollider=registerWorldCollider({type:'rect',x,z,hx:4.35,hz:7.45,cameraBlocker:true});
-  registerHabitableStructure(hall,'NorseGreatHall',{islandIndex:9,footprintRadius:Math.hypot(4.35,7.45),baseOffset:0,edgeBuffer:1.25,maxRelief:.30,anchorTolerance:.02,maxVisibleDistance:235,boatVisibleDistance:55,collider:hall.__norseWorldCollider,relocatable:true});
+  registerHabitableStructure(hall,'NorseGreatHall',{islandIndex:9,footprintRadius:Math.hypot(4.35,7.45),baseOffset:floorY-hallRootY,edgeBuffer:1.25,maxRelief:2.05,anchorTolerance:.02,maxVisibleDistance:235,boatVisibleDistance:55,collider:hall.__norseWorldCollider,relocatable:false});
   addModelShadow(hall,5);
   try{hall.freezeWorldMatrix();hall.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){}
   return hall;
