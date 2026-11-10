@@ -538,6 +538,13 @@ def main() -> None:
         )
 
     results = []
+    navigation_bytes = navigation_target.read_bytes()
+    results.append({
+        "path": "scripts/nordic/navigation-suite.js",
+        "bytes": len(navigation_bytes),
+        "sha256": hashlib.sha256(navigation_bytes).hexdigest(),
+        "source": "project-owned: scripts/nordic/navigation-suite.js",
+    })
     failures = []
 
     # Project-owned Nordic IBL: copy the supplied binary instead of downloading Babylon's generic environment.
