@@ -654,6 +654,11 @@ async function main() {
     assert.equal(garrisonGrounding.length, 9, 'Deben comprobarse los nueve puestos de las islas secundarias.');
     for (const outpost of garrisonGrounding) assert.ok(Number.isFinite(outpost.maximumAnchorErrorMeters) && outpost.maximumAnchorErrorMeters < .02,
       'Puesto, guardia o bandera despegados más de 2 cm de su isla: ' + JSON.stringify(outpost));
+    const floatingHutProbe = await page.evaluate(() => window.__ELSN_TEST__.probeFloatingHutAudit());
+    manifest.floatingHutProbe = floatingHutProbe;
+    assert.equal(floatingHutProbe.detected, true, 'El auditor no descubrió una cabaña flotante sin registrar.');
+    assert.equal(floatingHutProbe.hidden, true, 'El auditor dejó visible una cabaña sintética situada en mar abierto.');
+    assert.equal(floatingHutProbe.lastAction, 'hidden-no-safe-ground', 'La cabaña flotante no terminó oculta por falta de terreno seco.');
     const habitableAuditRepair = await page.evaluate(() => window.__ELSN_TEST__.repairAndAuditHabitableStructures());
     manifest.habitableAuditRepair = habitableAuditRepair;
     const habitableAudit = await page.evaluate(() => window.__ELSN_TEST__.habitableStructureAudit());
