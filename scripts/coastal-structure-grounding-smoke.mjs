@@ -5,13 +5,15 @@ import { chromium } from 'playwright';
 const BASE_URL=process.env.STRUCTURE_TEST_URL||'http://127.0.0.1:4176/';
 const OUT=path.resolve('artifacts/structure-grounding');
 const startedAt=Date.now();
-const report={schema:2,startedAt:new Date().toISOString(),finishedAt:null,build:null,renderer:'Chromium headless + ANGLE SwiftShader',mode:'baseline audit plus automatic-repair observation in a disposable test renderer',testRendererOnlyMutations:true,productionDataModified:false,phases:[],consoleErrors:[],pageErrors:[],baseline:null,postAutomaticAudit:null,runtimeRepairSimulation:null,habitableStructures:null,settlementHouses:null,settlementCamps:null,garrisons:null,summary:null,screenshot:null,verdict:'not-run',failure:null};
+const report={schema:2,startedAt:new Date().toISOString(),finishedAt:null,build:null,renderer:'Chromium headless + ANGLE SwiftShader',mode:'full normal-campaign runtime structure audit plus automatic-repair observation in a disposable test renderer',testRendererOnlyMutations:true,productionDataModified:false,phases:[],consoleErrors:[],pageErrors:[],baseline:null,postAutomaticAudit:null,runtimeRepairSimulation:null,habitableStructures:null,settlementHouses:null,settlementCamps:null,garrisons:null,summary:null,screenshot:null,verdict:'not-run',failure:null};
 function writeReport(){fs.mkdirSync(OUT,{recursive:true});const tmp=path.join(OUT,'structure-grounding.json.tmp');fs.writeFileSync(tmp,JSON.stringify(report,null,2)+'\n');fs.renameSync(tmp,path.join(OUT,'structure-grounding.json'));}
 async function phase(name,fn){const start=Date.now(),row={name,startedAt:new Date().toISOString(),status:'in-progress'};report.phases.push(row);console.log('[STRUCTURE_AUDIT] START '+name);try{const result=await fn();row.status='completed';return result;}catch(error){row.status='failed';row.error=String(error?.stack||error);throw error;}finally{row.finishedAt=new Date().toISOString();row.durationMs=Date.now()-start;console.log('[STRUCTURE_AUDIT] END '+name+' '+row.status+' '+row.durationMs+'ms');}}
 function collectStructureSnapshot(){
  const api=window.__ELSN_TEST__;
  if(!api)throw new Error('The game inspection API is not available.');
  const structures=api.habitableStructureAudit();
+ if(typeof api.auditOffshoreStructures!=='function')throw new Error('The full-runtime offshore structural-root audit is unavailable.');
+ const offshore=api.auditOffshoreStructures(1000);
  const houses=api.settlementGrounding();
  const camps=api.settlementCampGrounding();
  const garrisons=api.garrisonGrounding();
@@ -19,11 +21,14 @@ function collectStructureSnapshot(){
  const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02);
  const garrisonOutliers=garrisons.filter(item=>Number(item.maximumAnchorErrorMeters)>.02);
  return {
-  structures,houses,camps,garrisons,
+  structures,offshore,houses,camps,garrisons,
   summary:{
    structuresTotal:structures.total,grounded:structures.groundedCount,unsafe:structures.unsafeCount,
    unsafeVisibleBeforeAudit:structures.unsafeVisibleBeforeRepair,visibleInvalid:structures.visibleInvalidAfterRepair,
    autoRegisteredRoots:structures.autoRegisteredRootCount,untrackedRoots:structures.untrackedRootCount,
+   offshoreIslandCount:offshore.islandCount,offshoreRootsScanned:offshore.transformNodesScanned,
+   structuralCandidates:offshore.candidateCount,unregisteredStructuralCandidates:offshore.unregisteredCandidates,
+   offshoreStructures:offshore.offshoreCount,visibleOffshoreStructures:offshore.visibleOffshoreCount,
    houseCount:houses.length,houseOutliers:houseOutliers.length,
    houseOutlierNames:houseOutliers.map(item=>({village:item.village,buildingIndex:item.buildingIndex,groundingErrorMeters:item.groundingErrorMeters,maximumFootingGapMeters:item.maximumFootingGapMeters,dryLandFootprintMarginMeters:item.dryLandFootprintMarginMeters,footingCorners:item.footingCorners})),
    campCount:camps.length,campOutliers:campOutliers.length,campOutlierDetails:campOutliers,
@@ -42,7 +47,7 @@ async function main(){
   page=await context.newPage();page.setDefaultTimeout(60000);page.setDefaultNavigationTimeout(90000);
   page.on('pageerror',error=>report.pageErrors.push(String(error?.stack||error)));
   page.on('console',message=>{if(message.type()==='error')report.consoleErrors.push(message.text());});
-  await phase('load coast-only game',()=>page.goto(BASE_URL+'?test=1&coastref=1',{waitUntil:'domcontentloaded',timeout:90000}));
+  await phase('load full normal game runtime',()=>page.goto(BASE_URL+'?test=1',{waitUntil:'domcontentloaded',timeout:90000}));
   const audio=page.locator('#audioGateStart');
   await phase('pass audio gate and select full quality',async()=>{if(await audio.isVisible().catch(()=>false))await audio.click();await page.locator('#chooseQuality').waitFor({state:'visible',timeout:60000});await page.locator('#chooseQuality').click();});
   await phase('continue into game startup',async()=>{await page.locator('#continueUnnamed').waitFor({state:'visible',timeout:30000});await page.locator('#continueUnnamed').click();});
@@ -54,7 +59,7 @@ async function main(){
   const settled=await phase('remeasure structures after the repair pass',()=>page.evaluate(collectStructureSnapshot));
   report.baseline=baseline;report.repairPass=repairPass;report.postAutomaticAudit=settled;
   report.runtimeRepairSimulation={testMode:true,waitMs:800,usesGameRepairSystem:true,explicitRepairApiCalled:true,productionDataModified:false,repairSummary:repairPass?{total:repairPass.total,groundedCount:repairPass.groundedCount,unsafeCount:repairPass.unsafeCount,repaired:repairPass.repaired,hiddenUnsafe:repairPass.hiddenUnsafe,visibleInvalidAfterRepair:repairPass.visibleInvalidAfterRepair}:null};
-  report.habitableStructures=settled.structures;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.summary=settled.summary;
+  report.habitableStructures=settled.structures;report.offshoreAudit=settled.offshore;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.summary=settled.summary;
   report.inspectionCamera=await phase('aim inspection camera at Cuervo settlement',()=>page.evaluate(()=>window.__ELSN_TEST__.setCamera({x:40,y:14,z:3,targetX:26,targetY:2.5,targetZ:-14})));
   await phase('settle Cuervo inspection view',()=>page.waitForTimeout(500));
   const screenshotDataUrl=await phase('capture the resulting WebGL scene',()=>page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null));
@@ -63,8 +68,34 @@ async function main(){
   if(screenshot.length<1000||screenshot.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')throw new Error('The captured game canvas is not a valid PNG.');
   const screenshotFile=path.join(OUT,'structure-grounding-scene.png');fs.writeFileSync(screenshotFile,screenshot);
   report.screenshot={file:path.basename(screenshotFile),bytes:screenshot.length,method:'webgl-canvas-readback'};
-  report.verdict=settled.summary.structuresTotal>0?'measured':'inconclusive';
-  if(report.verdict==='inconclusive')throw new Error('No registered habitable structures were returned by the inspection API.');
+  const initialRows=baseline.structures.structures||[];
+  const initialUnsafe=initialRows.filter(item=>item.safe!==true);
+  const repairedRows=Array.isArray(repairPass?.structures)?repairPass.structures:[];
+  const verifiedSafeAfter=initialRows.reduce((count,item,index)=>count+(item.safe!==true&&repairedRows[index]?.safe===true?1:0),0);
+  const gate={
+   fullRuntime:true,
+   structuresTotal:report.summary.structuresTotal,
+   expectedMinimumStructures:39,
+   allInitialUnsafeVerifiedSafe:verifiedSafeAfter===initialUnsafe.length,
+   initialUnsafeCount:initialUnsafe.length,
+   verifiedSafeAfterCount:verifiedSafeAfter,
+   unsafeAfter:report.summary.unsafe,
+   visibleInvalidAfter:report.summary.visibleInvalid,
+   untrackedRootsAfter:report.summary.untrackedRoots,
+   unregisteredStructuralCandidatesAfter:report.summary.unregisteredStructuralCandidates,
+   visibleOffshoreStructuresAfter:report.summary.visibleOffshoreStructures,
+   offshoreIslandCount:report.summary.offshoreIslandCount,
+   houseCount:report.summary.houseCount,houseOutliers:report.summary.houseOutliers,
+   campCount:report.summary.campCount,campOutliers:report.summary.campOutliers,
+   garrisonCount:report.summary.garrisonCount,garrisonOutliers:report.summary.garrisonOutliers
+  };
+  report.fullRuntimeStructureGate=gate;
+  const passed=report.summary.structuresTotal>=39&&gate.allInitialUnsafeVerifiedSafe&&gate.unsafeAfter===0&&
+   gate.visibleInvalidAfter===0&&gate.untrackedRootsAfter===0&&gate.unregisteredStructuralCandidatesAfter===0&&
+   gate.visibleOffshoreStructuresAfter===0&&gate.offshoreIslandCount===13&&gate.houseCount>=12&&
+   gate.houseOutliers===0&&gate.campCount>=8&&gate.campOutliers===0&&gate.garrisonCount>=9&&gate.garrisonOutliers===0;
+  report.verdict=passed?'measured':'issues-found';
+  if(!passed)throw new Error('Full normal-runtime structure safety gate failed: '+JSON.stringify(gate));
  }catch(error){report.failure=String(error?.stack||error);report.verdict='fail';
  }finally{
   report.finishedAt=new Date().toISOString();report.elapsedMs=Date.now()-startedAt;writeReport();
