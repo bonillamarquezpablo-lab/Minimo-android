@@ -40,7 +40,9 @@ jobs:
       - name: Check smoke diagnostics
         run: |
           node --check scripts/texture-readiness-smoke.mjs
+          node --check scripts/coastal-structure-grounding-smoke.mjs
           node scripts/test_texture_readiness_contract.cjs
+          node scripts/test_coastal_structure_grounding_contract.cjs
       - name: Build complete game
         run: python scripts/build_site.py
       - name: Install Playwright and Chromium
@@ -72,12 +74,19 @@ jobs:
           status=$?
           echo "One-camera capture exit status: $status"
           exit "$status"
+      - name: Audit habitable structure grounding independently
+        if: always()
+        env:
+          STRUCTURE_TEST_URL: http://127.0.0.1:4176/
+        run: timeout --signal=TERM --kill-after=5s 150s node scripts/coastal-structure-grounding-smoke.mjs
       - name: Upload smoke PNG and texture diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: texture-readiness-smoke-${{ github.sha }}
-          path: artifacts/texture-readiness-smoke/
+          name: coastal-diagnostics-${{ github.sha }}
+          path: |
+            artifacts/texture-readiness-smoke/
+            artifacts/structure-grounding/
           if-no-files-found: warn
           retention-days: 30
   character-startup:

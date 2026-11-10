@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const source=fs.readFileSync('scripts/coastal-structure-grounding-smoke.mjs','utf8');
+const workflow=fs.readFileSync('.github/workflows/coastal-reference.yml','utf8');
+assert.match(source,/\?test=1&coastref=1/);
+assert.match(source,/habitableStructureAudit\(\)/);
+assert.match(source,/settlementGrounding\(\)/);
+assert.match(source,/settlementCampGrounding\(\)/);
+assert.match(source,/garrisonGrounding\(\)/);
+assert.match(source,/structure-grounding\.json/);
+assert.match(source,/mutationsPerformed:false/);
+assert.doesNotMatch(source,/repairAndAuditHabitableStructures|probeFloatingHutAudit|\.setEnabled\(|\.position\.set\(/);
+assert.match(workflow,/Audit habitable structure grounding independently/);
+assert.match(workflow,/if: always\(\)/);
+assert.match(workflow,/artifacts\/structure-grounding\//);
+assert.match(workflow,/if: false # Phase 1/);
+console.log('COASTAL STRUCTURE GROUNDING CONTRACT OK');
