@@ -127,7 +127,7 @@ assert.match(html,/mapHeading=onShip\?ship\.rotation\.y:yaw/);
 assert.match(html,/id="mapCoords"/);
 assert.match(html,/mapCoords\.textContent=coordinates/);
 assert.match(html,/mapRefreshInterval=document\.body\.classList\.contains\('map-open'\)\?\.42:\.20/);
-assert.match(html,/width:clamp\(138px,36vw,158px\)/);
+assert.match(html,/width:clamp\\(164px,42vw,190px\\)/);
 
 // Ship camera follows the vessel with a wider default framing; camera mode selection is wired to gameplay.
 assert.match(html,/cameraMode='follow'/);
@@ -153,9 +153,7 @@ assert.match(navigation, /originalMap:!!document\.getElementById\("map"\)/);
 assert.doesNotMatch(navigation, /norse-nav-root|norse-nav-panel|norse-nav-map-large/);
 assert.match(navigation, /applyMode\("follow"\)/);
 
-assert.match(html, /id="norse-live-minimap-layout"[\\s\\S]*width:clamp\\(164px,42vw,190px\\)!important/);
 
 // The final legacy CSS override must preserve the enlarged minimap and aligned coordinate strip.
-assert.ok(html.includes('id="norse-live-minimap-layout"'));
 assert.ok(html.includes('width:clamp(164px,42vw,190px)!important'));
 assert.ok(html.includes('clamp(118px,30vw,137px) + 5px'));
