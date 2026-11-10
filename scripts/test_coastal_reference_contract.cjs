@@ -71,7 +71,8 @@ assert.match(html, /getSheetOpacityDepthDiagnostics/,
   'The A/B manifest must report opacity for vertices submerged by more than 3 cm.');
 assert.match(html, /if\(washDiagnosticDepths\)washDiagnosticDepths\[vertex\]=waterDepth/,
   'Per-vertex film depth must be recorded through the active foam update scope.');
-assert.match(html, /debugForcedTideOffset=tide==='natural'\?null:Number\(tide\)/);
+assert.match(html, /const tideOffset=tide==='natural'\?null:\(tide==='high'\?\.28:\(tide==='low'\?-.28:Number\(tide\)\)\)/, 'Test captures must map high/low tide labels to numeric offsets.');
+assert.match(html, /debugForcedTideOffset=tideOffset/);
 assert.match(html,/function terrainDeformationAt\(islandIndex,x,z\)\{\s*const field=terrainDeformationFields\[islandIndex\];if\(!field\|\|!field\.active\.size\)return 0;/, 'Unchanged islands must skip bilinear foot-deformation sampling in the per-vertex coastal update.');
 assert.match(html,/const crossSegments=Math\.max\(4,Math\.ceil\(width\/\.20\)\),crossRowWidth=crossSegments\+1;/, 'Packed earth ribbons must be subdivided across their full width.');
 assert.match(html,/positions\.push\(x,renderedTerrainSurfaceAt\(x,z\)\+\.055,z\)/, 'Every across-width trail vertex must follow the rendered terrain mesh.');
