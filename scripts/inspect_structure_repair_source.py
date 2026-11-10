@@ -13,6 +13,7 @@ markers = [
     "relocatable",
     "lastAction",
 ]
+output = []
 for marker in markers:
     hits = []
     start = 0
@@ -22,12 +23,17 @@ for marker in markers:
             break
         hits.append(at)
         start = at + len(marker)
-    print("\\n===== "+marker+" ("+str(len(hits))+" hits shown) =====")
+    output.append("\\n===== "+marker+" ("+str(len(hits))+" hits shown) =====")
     if not hits:
-        print("NOT FOUND")
+        output.append("NOT FOUND")
         continue
     for index, at in enumerate(hits, 1):
         left = max(0, at - 1800)
         right = min(len(source), at + 2600)
-        print("--- occurrence "+str(index)+" @ "+str(at)+" ---")
-        print(source[left:right].replace("\\n", " ")[:4500])
+        output.append("--- occurrence "+str(index)+" @ "+str(at)+" ---")
+        output.append(source[left:right].replace("\\n", " ")[:4500])
+report = "\\n".join(output)
+print(report)
+target = Path("artifacts/texture-readiness-smoke/structure-repair-source-excerpts.txt")
+target.parent.mkdir(parents=True, exist_ok=True)
+target.write_text(report, encoding="utf-8")
