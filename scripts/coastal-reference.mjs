@@ -657,6 +657,7 @@ async function main() {
     const floatingHutProbe = await page.evaluate(() => window.__ELSN_TEST__.probeFloatingHutAudit());
     manifest.floatingHutProbe = floatingHutProbe;
     assert.equal(floatingHutProbe.detected, true, 'El auditor no descubrió una cabaña flotante sin registrar.');
+    assert.equal(floatingHutProbe.autoDiscovered, true, 'La cabaña flotante no entró en el registro compartido de estructuras.');
     assert.equal(floatingHutProbe.hidden, true, 'El auditor dejó visible una cabaña sintética situada en mar abierto.');
     assert.equal(floatingHutProbe.lastAction, 'hidden-no-safe-ground', 'La cabaña flotante no terminó oculta por falta de terreno seco.');
     const habitableAuditRepair = await page.evaluate(() => window.__ELSN_TEST__.repairAndAuditHabitableStructures());
