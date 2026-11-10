@@ -631,7 +631,19 @@ async function main() {
       assert.ok(Number.isFinite(house.groundingErrorMeters) && house.groundingErrorMeters < .02,
         'Base de cabaña separada más de 2 cm del terreno renderizado: ' + JSON.stringify(house));
       assert.ok(Number.isFinite(house.maximumFootingGapMeters) && house.maximumFootingGapMeters < .02,
-        'La base de la cabaña no apoya en sus cuatro esquinas (tolerancia 15 cm): ' + JSON.stringify(house));
+        'La base de la cabaña no apoya en sus cuatro esquinas (tolerancia inferior a 2 cm): ' + JSON.stringify(house));
+      assert.ok(Number.isFinite(house.dryLandFootprintMarginMeters) && house.dryLandFootprintMarginMeters >= 1.25,
+        'La huella completa de la cabaña debe conservar al menos 1,25 m respecto al borde de playa: ' + JSON.stringify(house));
+    }
+    const settlementCamps = await page.evaluate(() => window.__ELSN_TEST__.settlementCampGrounding());
+    manifest.settlementCamps = settlementCamps;
+    assert.equal(settlementCamps.length, 8,
+      'Deben comprobarse los dos campamentos de cada uno de los cuatro asentamientos.');
+    for (const camp of settlementCamps) {
+      assert.ok(Number.isFinite(camp.anchorErrorMeters) && camp.anchorErrorMeters < .02,
+        'El campamento no coincide con la altura de la malla dibujada: ' + JSON.stringify(camp));
+      assert.equal(camp.withinDryLandBand, true,
+        'Una tienda o refugio está fuera de la huella seca de su isla: ' + JSON.stringify(camp));
     }
     const garrisonGrounding = await page.evaluate(() => window.__ELSN_TEST__.garrisonGrounding());
     manifest.garrisonGrounding = {
