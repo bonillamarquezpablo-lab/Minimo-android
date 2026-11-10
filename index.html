@@ -9013,9 +9013,9 @@ function createRealWeapon(type='axe'){
  buildOuterIslandLandmarks();
  // Primer refugio del protagonista: lona remendada, dos postes, leña húmeda y un fuego pequeño.
  // No es una casa construida: es un campamento de náufrago junto al lugar donde despierta.
- const starterCampX=-35.0,starterCampZ=13.5,starterCampY=renderedTerrainSurfaceAt(starterCampX,starterCampZ);
+ const starterCampX=-40.0,starterCampZ=15.5,starterCampY=renderedTerrainSurfaceAt(starterCampX,starterCampZ);
  const starterCamp=newGroup('PoorNorseCastawayCamp',null);starterCamp.position=v(starterCampX,starterCampY,starterCampZ);
- registerHabitableStructure(starterCamp,'StarterCastawayCamp',{islandIndex:0,footprintRadius:2.5,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:90,relocatable:true});
+ registerHabitableStructure(starterCamp,'StarterCastawayCamp',{islandIndex:0,footprintRadius:2.5,baseOffset:0,edgeBuffer:1.25,safeRadiusFactor:.78,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:90,relocatable:false});
  for(const side of [-1,1]){
   cyl('CastawayLeanToPole_'+side,starterCamp,[side*.92,.88,-.32],1.78,.065,.07,M.woodDark,[0,0,side*.20]);
   cyl('CastawayTentStake_'+side,starterCamp,[side*1.02,.18,.48],.52,.045,.05,M.woodLight,[0,0,side*.16]);
