@@ -8487,7 +8487,7 @@ function createRealWeapon(type='axe'){
   if(safeCenterRadius<=0)return null;
   const maxSearchRadius=entry.kind==='NorseGreatHall'?32:(entry.kind==='NorseHut'?24:16);
   const step=.75,searchRadius=Math.min(maxSearchRadius,Math.max(4,island.r*.48));
-  const scale=Number(entry.root?.scaling?.x)||1;
+  const scale=Number(entry.root?.scaling?.x)||1,minimumDryGroundY=(Number(ground.position.y)||0)+.60;
   const sampleOffsets=entry.kind==='NorseHut'
    ?[[-2.01*scale,-2.64*scale],[2.01*scale,-2.64*scale],[-2.01*scale,2.64*scale],[2.01*scale,2.64*scale]]
    :Array.from({length:8},(_,i)=>[Math.cos(i*Math.PI/4)*entry.footprintRadius,Math.sin(i*Math.PI/4)*entry.footprintRadius]);
@@ -8497,13 +8497,13 @@ function createRealWeapon(type='axe'){
    const x=origin.x+dx,z=origin.z+dz,radial=Math.hypot(x-island.x,z-island.z);
    if(radial>safeCenterRadius)continue;
    const centerY=renderedTerrainSurfaceAt(x,z);
-   if(!Number.isFinite(centerY)||centerY<.22)continue;
+   if(!Number.isFinite(centerY)||centerY<minimumDryGroundY)continue;
    let maxRelief=0,valid=true;
    for(const [ox,oz] of sampleOffsets){
     const sx=x+ox,sz=z+oz;
     if(Math.hypot(sx-island.x,sz-island.z)>island.r*entry.safeRadiusFactor-entry.edgeBuffer){valid=false;break;}
     const y=renderedTerrainSurfaceAt(sx,sz);
-    if(!Number.isFinite(y)||y<.22){valid=false;break;}
+    if(!Number.isFinite(y)||y<minimumDryGroundY){valid=false;break;}
     maxRelief=Math.max(maxRelief,Math.abs(y-centerY));
    }
    if(!valid||maxRelief>entry.maxRelief)continue;
@@ -8523,7 +8523,7 @@ function createRealWeapon(type='axe'){
   const radialDistance=Math.hypot(p.x-island.x,p.z-island.z);
   const safeCenterRadius=island.r*entry.safeRadiusFactor-entry.footprintRadius-entry.edgeBuffer;
   const dryLandMarginMeters=safeCenterRadius-radialDistance;
-  const centerGroundY=renderedTerrainSurfaceAt(p.x,p.z),footingY=p.y+entry.baseOffset;
+  const centerGroundY=renderedTerrainSurfaceAt(p.x,p.z),footingY=p.y+entry.baseOffset,minimumDryGroundY=(Number(ground.position.y)||0)+.60;
   const anchorErrorMeters=Math.abs(footingY-centerGroundY);
   let minGroundY=centerGroundY,maxReliefMeters=0,validSamples=Number.isFinite(centerGroundY)?1:0;
   const scale=Number(root.scaling?.x)||1;
@@ -8541,15 +8541,15 @@ function createRealWeapon(type='axe'){
    validSamples++;minGroundY=Math.min(minGroundY,pointY);maxReliefMeters=Math.max(maxReliefMeters,Math.abs(pointY-centerGroundY));
   }
   const safe=radialDistance<=safeCenterRadius&&validSamples===sampleCount+1&&
-   minGroundY>=.22&&anchorErrorMeters<=entry.anchorTolerance&&maxReliefMeters<=entry.maxRelief;
+   minGroundY>=minimumDryGroundY&&anchorErrorMeters<=entry.anchorTolerance&&maxReliefMeters<=entry.maxRelief;
   const enabled=typeof root.isEnabled==='function'?root.isEnabled():root.isVisible!==false;
   return {
    safe,status:safe?'grounded':'unsafe',
-   reason:safe?'ok':(!Number.isFinite(centerGroundY)?'no-rendered-ground':(dryLandMarginMeters<0?'outside-dry-land-footprint':(minGroundY<.22?'below-dry-ground-threshold':(anchorErrorMeters>entry.anchorTolerance?'anchor-error':(maxReliefMeters>entry.maxRelief?'uneven-footprint':'footprint-outside-island'))))),
+   reason:safe?'ok':(!Number.isFinite(centerGroundY)?'no-rendered-ground':(dryLandMarginMeters<0?'outside-dry-land-footprint':(minGroundY<minimumDryGroundY?'below-coastal-dry-ground-threshold':(anchorErrorMeters>entry.anchorTolerance?'anchor-error':(maxReliefMeters>entry.maxRelief?'uneven-footprint':'footprint-outside-island'))))),
    name:root.name||entry.kind,kind:entry.kind,island:island.name,islandIndex:entry.islandIndex,
    x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2)),rootY:Number(p.y.toFixed(3)),
    centerGroundY:Number(centerGroundY.toFixed(3)),footingY:Number(footingY.toFixed(3)),
-   anchorErrorMeters:Number(anchorErrorMeters.toFixed(4)),minimumFootingGroundY:Number(minGroundY.toFixed(3)),
+   anchorErrorMeters:Number(anchorErrorMeters.toFixed(4)),minimumFootingGroundY:Number(minGroundY.toFixed(3)),minimumDryGroundY:Number(minimumDryGroundY.toFixed(3)),minimumDryClearanceMeters:Number((minGroundY-minimumDryGroundY).toFixed(3)),
    maximumFootprintReliefMeters:Number(maxReliefMeters.toFixed(3)),
    dryLandMarginMeters:Number(dryLandMarginMeters.toFixed(3)),
    islandRadiusRatio:Number((radialDistance/island.r).toFixed(3)),
@@ -8669,7 +8669,9 @@ function createRealWeapon(type='axe'){
    const island=land[islandIndex],maxCenterRadius=island.r*.76-footprintRadius-1.25;
    if(Math.hypot(px-island.x,pz-island.z)>maxCenterRadius)continue;
    const centerY=renderedTerrainSurfaceAt(px,pz),ys=[renderedTerrainSurfaceAt(px-halfX,pz-halfZ),renderedTerrainSurfaceAt(px+halfX,pz-halfZ),renderedTerrainSurfaceAt(px-halfX,pz+halfZ),renderedTerrainSurfaceAt(px+halfX,pz+halfZ)];
-   if(!Number.isFinite(centerY)||centerY<.22||ys.some(y=>!Number.isFinite(y)||y<.22))continue;
+   // Keep every hut footing sample above the maximum coastal run-up (.38 m) plus a .22 m dry margin.
+   const minimumDryGroundY=(Number(ground.position.y)||0)+.60;
+   if(!Number.isFinite(centerY)||centerY<minimumDryGroundY||ys.some(y=>!Number.isFinite(y)||y<minimumDryGroundY))continue;
    const minY=Math.min(...ys),maxY=Math.max(...ys),range=maxY-minY,maxGap=Math.max(...ys.map(y=>Math.abs(centerY-y)));
    if(maxGap>=.02)continue;
    if(!best||maxGap<best.maxGap-1e-7||(Math.abs(maxGap-best.maxGap)<1e-7&&dx*dx+dz*dz<best.distanceSq))best={x:px,z:pz,centerY,minY,maxY,range,maxGap,distanceSq:dx*dx+dz*dz,islandIndex,valid:true};
