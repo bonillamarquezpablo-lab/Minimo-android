@@ -48,11 +48,12 @@ async function main(){
   await phase('continue into game startup',async()=>{await page.locator('#continueUnnamed').waitFor({state:'visible',timeout:30000});await page.locator('#continueUnnamed').click();});
   await phase('wait for world setup',()=>page.waitForFunction(()=>window.__ELSN_TEST__&&window.__elSinNombreStartupSmoke?.worldReady===true,undefined,{timeout:180000,polling:500}));
   await phase('start a new campaign',async()=>{await page.locator('#intro.open').waitFor({state:'visible',timeout:60000});await page.locator('#newGameChoice').click();await page.waitForFunction(()=>document.body.classList.contains('game-running')&&document.querySelector('#intro')?.getAttribute('aria-hidden')==='true',undefined,{timeout:30000,polling:250});});
-  const baseline=await phase('measure baseline structure grounding before automatic repairs',()=>page.evaluate(collectStructureSnapshot));
-  await phase('allow the game automatic grounding audit to run in the disposable test scene',()=>page.waitForTimeout(2400));
-  const settled=await phase('remeasure structures after the automatic grounding audit',()=>page.evaluate(collectStructureSnapshot));
-  report.baseline=baseline;report.postAutomaticAudit=settled;
-  report.runtimeRepairSimulation={testMode:true,waitMs:2400,usesNormalGameAuditLoop:true,explicitRepairApiCalled:false,productionDataModified:false};
+  const baseline=await phase('measure baseline structure grounding before repairs',()=>page.evaluate(collectStructureSnapshot));
+  const repairPass=await phase('run the game repair system in the disposable test renderer',()=>page.evaluate(()=>window.__ELSN_TEST__.repairAndAuditHabitableStructures()));
+  await phase('allow repaired transforms and colliders to settle',()=>page.waitForTimeout(800));
+  const settled=await phase('remeasure structures after the repair pass',()=>page.evaluate(collectStructureSnapshot));
+  report.baseline=baseline;report.repairPass=repairPass;report.postAutomaticAudit=settled;
+  report.runtimeRepairSimulation={testMode:true,waitMs:800,usesNormalGameAuditLoop:true,explicitRepairApiCalled:true,productionDataModified:false,repairSummary:repairPass?{total:repairPass.total,groundedCount:repairPass.groundedCount,unsafeCount:repairPass.unsafeCount,repaired:repairPass.repaired,hiddenUnsafe:repairPass.hiddenUnsafe,visibleInvalidAfterRepair:repairPass.visibleInvalidAfterRepair}:null};
   report.habitableStructures=settled.structures;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.summary=settled.summary;
   const screenshot=await phase('capture the resulting test scene',()=>page.screenshot({type:'png',fullPage:false}));
   const screenshotFile=path.join(OUT,'structure-grounding-scene.png');fs.writeFileSync(screenshotFile,screenshot);
