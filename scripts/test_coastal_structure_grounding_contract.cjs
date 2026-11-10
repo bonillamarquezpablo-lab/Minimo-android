@@ -93,3 +93,19 @@ assert.match(html,/minimumDryGroundY=\(Number\(ground\.position\.y\)\|\|0\)\+\.6
 assert.match(html,/centerY<minimumDryGroundY/);
 assert.match(html,/minGroundY>=minimumDryGroundY/);
 assert.match(html,/minimumDryClearanceMeters/);
+
+// Identify structures from both names and grouped geometry, including unknown object roots.
+assert.match(html,/unknownRootSet=new Set\(\)/);
+assert.match(html,/unknownAssemblyExclusions/);
+assert.match(html,/unidentified-structure/);
+assert.match(html,/secondary-island-outpost/);
+assert.match(html,/scout-supply-camp/);
+assert.match(html,/watchtower/);
+assert.match(html,/island-garrison/);
+assert.match(html,/structuralEvidence/);
+assert.match(html,/camera\.rotationQuaternion=null/);
+
+// The capture report must retain semantic root identities and all nearby Cuervo structures.
+assert.match(source,/nearbyCuervoStructureRoots/);
+assert.match(source,/item\.structuralRole/);
+assert.match(source,/classificationConfidence/);
