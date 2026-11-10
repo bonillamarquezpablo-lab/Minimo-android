@@ -14,6 +14,14 @@ assert.match(html,/function findLevelHutFooting\(cx,cz,scale\)/,'Each hut must s
 assert.match(html,/const centerY=renderedTerrainSurfaceAt\(px,pz\),ys=\[/,'Footing placement must compare all four corners against the center of the rendered GroundMesh.');
 assert.match(html,/g\.position=v\(houseX,footing\.centerY-\.02\*scale,houseZ\)/,'Each hut footing must use the measured rendered-ground center height and scaled base offset.');
 assert.match(html,/groundingErrorMeters:Number\(Math\.abs\(footingBottomY-sampledTerrainY\)\.toFixed\(4\)\)/,'Every hut must expose its measured rendered-ground footing error.');
+assert.match(html,/const safeVillageRadius=island\.r\*\.76-settlementReach/,'The first village must be shifted inward as a complete settlement before buildings and props are placed.');
+assert.match(html,/const settlementReach= Math\.hypot\(10\.5,-7\.6\)\+1\.35\+1\.25/,'The village placement must reserve room for the outer watchtower footprint.');
+assert.match(html,/const maxCenterRadius=island\.r\*\.76-footprintRadius-1\.25/,'Every hut candidate must keep its complete footprint inside the dry-land band.');
+assert.match(html,/g\.position=v\(houseX,footing\.centerY-\.02\*scale,houseZ\)/);
+assert.match(html,/type:'rect',x:houseX,z:houseZ/,'The hut collision footprint must follow its corrected rendered position.');
+assert.match(html,/const cx=vl\.x,cz=vl\.z\+15/,'Outpost tents must remain beside the village on the island interior.');
+assert.match(html,/const scoutX=vl\.x-8,scoutZ=vl\.z\+18/,'Scout supplies must not use the old offshore +19/-16 offset.');
+assert.match(html,/settlementCampGrounding:/,'The test API must report both camp anchors and their dry-land footprint.');
 assert.match(html,/auditIslandGeometry:\(\)=>auditIslandGeometry\(\)/,'The 13-island geometry audit must be available in test mode.');
 assert.match(html,/function claimVillage\(vl,restoring=false\)/);
 assert.match(html,/captured\+'\/'\+land\.length/);
