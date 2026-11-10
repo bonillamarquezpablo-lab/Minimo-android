@@ -8387,44 +8387,50 @@ function createRealWeapon(type='axe'){
   function updateCamera(dt){
   if(testModeEnabled&&captureCameraOverride){camera.position.copyFrom(captureCameraOverride.position);camera.setTarget(captureCameraOverride.target);camera.fov=innerHeight>innerWidth?.84:.78;if(skyDome)skyDome.position.copyFrom(camera.position);return;}
   // La raíz solo se parenta al drakkar al embarcar; en ese caso se conserva la posición absoluta.
-  const focus=onShip?player.root.getAbsolutePosition():player.root.position;
+  const focus=onShip?ship.position:player.root.position;
   const portrait=innerHeight>innerWidth,safeDt=Math.max(0,Math.min(.10,dt||0));
   const targetX=focus.x+(onShip?0:playerVelocity.x*.045);
   const targetY=focus.y+(onShip?1.78:1.56);
   const targetZ=focus.z+(onShip?0:playerVelocity.z*.045);
   if(!cameraTargetSmoothed)cameraTargetSmoothed=new B.Vector3(targetX,targetY,targetZ);
-  const targetAlpha=Math.min(1,1-Math.exp(-safeDt*(onShip?11.5:18.0)));
+  const targetAlpha=Math.min(1,1-Math.exp(-safeDt*(onShip?7.5:18.0)));
   cameraTargetSmoothed.x+=(targetX-cameraTargetSmoothed.x)*targetAlpha;
   cameraTargetSmoothed.y+=(targetY-cameraTargetSmoothed.y)*targetAlpha;
   cameraTargetSmoothed.z+=(targetZ-cameraTargetSmoothed.z)*targetAlpha;
   const target=cameraTargetSmoothed;
-  const distance=(onShip?cameraDistance*1.16:cameraDistance)*(portrait?1.0:.96);
+  const distance=cameraDistance*(portrait?1.0:.96);
   const sinYaw=Math.sin(cameraYaw),cosYaw=Math.cos(cameraYaw);
   const horizontal=Math.cos(cameraPitch)*distance,vertical=Math.sin(cameraPitch)*distance+.28;
   const baseX=-sinYaw*horizontal+cosYaw*.40,baseY=vertical,baseZ=-cosYaw*horizontal-sinYaw*.40;
-  // La colisión se sigue comprobando al mismo intervalo, sin construir vectores temporales.
-  cameraCollisionTimer-=safeDt;
-  if(cameraCollisionTimer<=0){
-   cameraCollisionTimer=.14;
-   const candidateX=target.x+baseX,candidateY=target.y+baseY,candidateZ=target.z+baseZ;
-   const rayLength=Math.hypot(baseX,baseY,baseZ);
-   let ratio=1;
-   if(rayLength>.01){
-    const usable=Math.max(0,rayLength-1.25),invLength=1/rayLength;
-    for(let d=.70;d<usable;d+=.78){
-     const pointX=candidateX-baseX*invLength*d,pointY=candidateY-baseY*invLength*d,pointZ=candidateZ-baseZ*invLength*d;
-     if(pointY<4.25&&cameraPointBlocked(pointX,pointZ)){
-      ratio=Math.max(.28,Math.min(1,(d-.48)/rayLength));
-      break;
+  // A bordo la cámara mantiene una distancia constante y una órbita manual.
+  // La corrección automática de obstáculos se reserva para la cámara terrestre.
+  let blend=1;
+  if(!onShip){
+   cameraCollisionTimer-=safeDt;
+   if(cameraCollisionTimer<=0){
+    cameraCollisionTimer=.14;
+    const candidateX=target.x+baseX,candidateY=target.y+baseY,candidateZ=target.z+baseZ;
+    const rayLength=Math.hypot(baseX,baseY,baseZ);
+    let ratio=1;
+    if(rayLength>.01){
+     const usable=Math.max(0,rayLength-1.25),invLength=1/rayLength;
+     for(let d=.70;d<usable;d+=.78){
+      const pointX=candidateX-baseX*invLength*d,pointY=candidateY-baseY*invLength*d,pointZ=candidateZ-baseZ*invLength*d;
+      if(pointY<4.25&&cameraPointBlocked(pointX,pointZ)){
+       ratio=Math.max(.28,Math.min(1,(d-.48)/rayLength));
+       break;
+      }
      }
     }
+    cameraObstructionRatio=ratio;
    }
-   cameraObstructionRatio=ratio;
+   cameraObstructionBlend+=(cameraObstructionRatio-cameraObstructionBlend)*(1-Math.exp(-safeDt*9));
+   blend=Math.max(.28,Math.min(1,cameraObstructionBlend));
+  }else{
+   cameraCollisionTimer=0;cameraObstructionRatio=1;cameraObstructionBlend=1;
   }
-  cameraObstructionBlend+=(cameraObstructionRatio-cameraObstructionBlend)*(1-Math.exp(-safeDt*9));
-  const blend=Math.max(.28,Math.min(1,cameraObstructionBlend));
   const wantX=target.x+baseX*blend,wantY=target.y+baseY*blend,wantZ=target.z+baseZ*blend;
-  const positionAlpha=Math.min(1,1-Math.exp(-safeDt*(onShip?11.5:13.2)));
+  const positionAlpha=Math.min(1,1-Math.exp(-safeDt*(onShip?8.5:13.2)));
   camera.position.x+=(wantX-camera.position.x)*positionAlpha;
   camera.position.y+=(wantY-camera.position.y)*positionAlpha;
   camera.position.z+=(wantZ-camera.position.z)*positionAlpha;
@@ -10915,6 +10921,7 @@ function updateHUD(){
  // El panel agrupa las acciones de combate para no tapar el mundo con ocho botones permanentes.
  // The tactical map is initialized before any handlers can reference it.
  const map=document.getElementById('map'),mg=map.getContext('2d');
+ let mapTargetWorld=null;
  const stick=document.getElementById('stick'),knob=document.getElementById('knob');let pointerId=null,stickCenter={x:0,y:0};
  // The virtual stick is anchored permanently at bottom-left. It must never follow the finger,
  // because moving its DOM node can overlap the action buttons on narrow mobile screens.
@@ -10975,9 +10982,11 @@ function updateHUD(){
    // Pinch remains optional; the normal camera distance is unchanged unless the player pinches.
    cameraDistance=Math.max(6.8,Math.min(17.0,cameraPinchStart-(distance-cameraPinchDistance)*.022));
   }else{
-   const sensitivity=cameraPointerTypes.get(e.pointerId)==='mouse'?.0068:.0082;
+   const pointerType=cameraPointerTypes.get(e.pointerId);
+   const sensitivity=onShip?(pointerType==='mouse'?.0078:.010):(pointerType==='mouse'?.0068:.0082);
    cameraYaw-=dx*sensitivity;
-   cameraPitch=Math.max(.20,Math.min(.94,cameraPitch+dy*sensitivity*.66));
+   const pitchMin=onShip?.12:.20,pitchMax=onShip?.92:.94;
+   cameraPitch=Math.max(pitchMin,Math.min(pitchMax,cameraPitch+dy*sensitivity*(onShip?.72:.66)));
   }
  }
  function cameraPointerUp(e){
@@ -10992,7 +11001,18 @@ function updateHUD(){
  canvas.addEventListener('wheel',e=>{cameraDistance=Math.max(6.8,Math.min(17.0,cameraDistance+e.deltaY*.010));e.preventDefault();},{passive:false});
  window.addEventListener('blur',()=>{cameraPointers.clear();cameraPointerTypes.clear();});
  function setMapExpanded(open){map.classList.toggle('expanded',!!open);document.body.classList.toggle('map-open',!!open);if(open){mapClock=0;drawMap();}}
- map.addEventListener('click',e=>{e.stopPropagation();setMapExpanded(!map.classList.contains('expanded'));});
+ map.addEventListener('click',e=>{
+  e.stopPropagation();
+  if(!map.classList.contains('expanded')){setMapExpanded(true);return;}
+  const rect=map.getBoundingClientRect();
+  if(rect.width<=0||rect.height<=0)return;
+  const logicalX=(e.clientX-rect.left)/rect.width*480,logicalY=(e.clientY-rect.top)/rect.height*344;
+  const plot={x:12,y:40,w:342,h:264},cx=184,cy=174,scale=.235;
+  if(logicalX<plot.x||logicalX>plot.x+plot.w||logicalY<plot.y||logicalY>plot.y+plot.h)return;
+  mapTargetWorld={x:Number(((logicalX-cx)/scale).toFixed(1)),z:Number(((logicalY-cy)/scale).toFixed(1))};
+  drawMap();
+  msg('PUNTO MARCADO · X '+mapTargetWorld.x.toFixed(1)+' · Z '+mapTargetWorld.z.toFixed(1));
+ });
  document.getElementById('mapClose').addEventListener('click',()=>setMapExpanded(false));
  document.getElementById('mapBackdrop').addEventListener('click',()=>setMapExpanded(false));
  window.addEventListener('keydown',e=>{if(e.key==='Escape'){setMapExpanded(false);modelImportPanel.classList.remove('open');}});
@@ -11021,7 +11041,7 @@ function updateHUD(){
   }
   const pp=playerPos();
   if(Math.hypot(ship.position.x-pp.x,ship.position.z-pp.z)<13.5){
-   arsenalPanel.classList.remove('open');player.root.parent=ship;player.root.position=v(0,1.005,-2.75);player.root.rotation=v(0,0,0);if(realPlayerModelPivot)realPlayerModelPivot.position.y=0;onShip=true;playerVelocity.x=0;playerVelocity.z=0;blocking=false;running=false;document.getElementById('runBtn').textContent='🏃 CORRER: NO';boatVelocity=0;yaw=ship.rotation.y;cameraYaw=ship.rotation.y;msg('A bordo: JOYSTICK ARRIBA = AVANZAR · ABAJO = ATRÁS · IZQUIERDA/DERECHA = TIMÓN. La cámara acompaña el rumbo.');
+   arsenalPanel.classList.remove('open');player.root.parent=ship;player.root.position=v(0,1.005,-2.75);player.root.rotation=v(0,0,0);if(realPlayerModelPivot)realPlayerModelPivot.position.y=0;onShip=true;playerVelocity.x=0;playerVelocity.z=0;blocking=false;running=false;document.getElementById('runBtn').textContent='🏃 CORRER: NO';boatVelocity=0;yaw=ship.rotation.y;cameraYaw=ship.rotation.y;cameraPitch=.36;cameraDistance=13.2;cameraTargetSmoothed=null;cameraCollisionTimer=0;cameraObstructionRatio=1;cameraObstructionBlend=1;msg('A bordo: JOYSTICK IZQUIERDO = AVANZAR Y GIRAR · ARRASTRA LA ZONA DERECHA = MIRAR · PINZA = ZOOM. La cámara sigue el barco, pero ya no gira sola con el timón.');
   }else msg('Acércate al drakkar para embarcar.');
  }
  document.getElementById('boatBtn').addEventListener('click',embark);
@@ -11218,7 +11238,7 @@ function updateHUD(){
   for(let x=plot.x+12;x<plot.x+plot.w;x+=28){mg.beginPath();mg.moveTo(x,plot.y+5);mg.lineTo(x,plot.y+plot.h-4);mg.stroke();}
   for(let y=plot.y+8;y<plot.y+plot.h;y+=28){mg.beginPath();mg.moveTo(plot.x+5,y);mg.lineTo(plot.x+plot.w-5,y);mg.stroke();}
   mg.setLineDash([]);mg.fillStyle='rgba(223,207,164,.48)';mg.font='6px Georgia,serif';mg.textAlign='center';
-  ['−400','−200','0','200','400'].forEach((label,i)=>mg.fillText(label,plot.x+27+i*70,plot.y+9));
+  [-600,-300,0,300,600].forEach(value=>{const x=cx+value*scale;mg.fillText(String(value),x,plot.y+9);});
   mg.textAlign='left';mg.fillText('N',plot.x+5,plot.y+17);mg.fillText('S',plot.x+5,plot.y+plot.h-6);
   function islandPath(island,index,extra=0,rxScale=1){
    const x0=cx+island.x*scale,z0=cy+island.z*scale,base=island.r+extra;mg.beginPath();
@@ -11281,6 +11301,15 @@ function updateHUD(){
   mg.beginPath();mg.arc(0,0,10,0,Math.PI*2);mg.fill();mg.stroke();mg.fillStyle='#f2d397';
   mg.beginPath();mg.moveTo(0,-8);mg.lineTo(2.2,1);mg.lineTo(0,-1);mg.lineTo(-2.2,1);mg.closePath();mg.fill();
   mg.font='bold 6px Georgia,serif';mg.textAlign='center';mg.fillText('N',0,-12);mg.restore();
+  if(mapTargetWorld){
+   const marker=pt(mapTargetWorld.x,mapTargetWorld.z);
+   if(marker[0]>=plot.x&&marker[0]<=plot.x+plot.w&&marker[1]>=plot.y&&marker[1]<=plot.y+plot.h){
+    mg.save();mg.translate(marker[0],marker[1]);
+    mg.strokeStyle='#fff0bf';mg.lineWidth=1.25;mg.beginPath();mg.arc(0,0,7,0,Math.PI*2);mg.stroke();
+    mg.strokeStyle='#d96d58';mg.lineWidth=2;mg.beginPath();mg.moveTo(-10,0);mg.lineTo(10,0);mg.moveTo(0,-10);mg.lineTo(0,10);mg.stroke();
+    mg.fillStyle='#f2c47d';mg.beginPath();mg.arc(0,0,2.1,0,Math.PI*2);mg.fill();mg.restore();
+   }
+  }
   mg.restore();
   mg.fillStyle='rgba(9,24,27,.70)';mg.fillRect(side.x,side.y,side.w,side.h);mg.strokeStyle='rgba(218,181,112,.55)';mg.lineWidth=.8;mg.strokeRect(side.x+.5,side.y+.5,side.w-1,side.h-1);
   mg.fillStyle='#e8c987';mg.font='bold 7.5px Georgia,serif';mg.textAlign='left';mg.fillText('ARCHIPIÉLAGO',side.x+6,side.y+12);
@@ -11302,7 +11331,9 @@ function updateHUD(){
   mg.fillStyle='#f0d49a';mg.font='bold 10px Georgia,serif';mg.textAlign='left';mg.fillText('CARTA DE NAVEGACIÓN · MAR DEL NORTE',22,24);
   mg.fillStyle='rgba(219,205,169,.70)';mg.font='6px system-ui';mg.textAlign='right';mg.fillText('EL SIN NOMBRE / SAGA DEL NORTE',458,24);
   mg.fillStyle='rgba(7,19,23,.94)';mg.fillRect(12,309,456,25);mg.strokeStyle='rgba(225,187,118,.72)';mg.lineWidth=.85;mg.strokeRect(12,309,456,25);
-  mg.font='bold 7px Georgia,serif';mg.textAlign='left';mg.fillStyle='#e8ca8b';mg.fillText('▲ TÚ',22,325);mg.fillStyle='#e1bd79';mg.fillText('◆ CONTROLADO',74,325);mg.fillStyle='#cf8575';mg.fillText('● DESCUBIERTO',174,325);mg.fillStyle='#d4d0bb';mg.fillText('— RUTA MARÍTIMA',292,325);
+  mg.font='bold 6.4px Georgia,serif';mg.textAlign='left';mg.fillStyle='#e8ca8b';mg.fillText('▲ TÚ  ◆ CONTROLADO  ● DESCUBIERTO',22,325);
+  mg.textAlign='right';mg.fillStyle=mapTargetWorld?'#f2c47d':'#d4d0bb';
+  mg.fillText(mapTargetWorld?'X '+mapTargetWorld.x.toFixed(1)+'  Z '+mapTargetWorld.z.toFixed(1):'TOCA EL MAR PARA MARCAR',458,325);
   mg.strokeStyle='rgba(247,220,164,.90)';mg.lineWidth=1.6;mg.strokeRect(2,2,w-4,h-4);mg.strokeStyle='rgba(83,54,34,.98)';mg.lineWidth=.8;mg.strokeRect(6,6,w-12,h-12);
   [[10,10,1,1],[w-10,10,-1,1],[10,h-10,1,-1],[w-10,h-10,-1,-1]].forEach(([x,y,sx,sy])=>{mg.strokeStyle='#e3c17d';mg.lineWidth=1.3;mg.beginPath();mg.moveTo(x,y+sy*7);mg.lineTo(x,y);mg.lineTo(x+sx*7,y);mg.stroke();});
  }
@@ -11560,7 +11591,7 @@ function update(dt){
     wake.scaling.x=.82+wakeFactor*.78;wake.scaling.z=.72+wakeFactor*.92;
     wake.position.y=.42;
    }
-   yaw=ship.rotation.y;cameraYaw=B.Scalar.Lerp(cameraYaw,ship.rotation.y,Math.min(1,dt*1.5));
+   yaw=ship.rotation.y;
   }else{
    // Aceleración y frenada progresivas: el cuerpo gana velocidad y pierde inercia de forma gradual.
    const movementLocked=PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction);
@@ -12851,6 +12882,7 @@ function update(dt){
   }
   window.__ELSN_TEST__={
    build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',
+   mapTarget:()=>mapTargetWorld?{x:mapTargetWorld.x,z:mapTargetWorld.z}:null,
    islands:land.map(({x,z,r,name})=>({x,z,r,name})),
    sceneViewSnapshot:()=>{
     const position=playerPos(),cameraPosition=camera.position;
