@@ -63,3 +63,15 @@ assert.match(html,/dryFootprintSampleCount===dryFootprintSamples\.length/);
 assert.match(html,/radial<=nearest\.r\*1\.09&&Number\.isFinite\(terrain\)&&terrain>=water\+\.22/);
 assert.match(html,/footprintDrySamples:9/);
 assert.match(html,/minimumDryTerrainAboveWaterMeters:\.22/);
+
+assert.match(html,/let mapTargetWorld=null/);
+assert.match(html,/logicalX=\(e\.clientX-rect\.left\)\/rect\.width\*480,logicalY=\(e\.clientY-rect\.top\)\/rect\.height\*344/);
+assert.match(html,/mapTargetWorld=\{x:Number\(\(\(logicalX-cx\)\/scale\)\.toFixed\(1\)\),z:Number\(\(\(logicalY-cy\)\/scale\)\.toFixed\(1\)\)\}/);
+assert.match(html,/TOCA EL MAR PARA MARCAR/);
+assert.match(html,/mapTarget:\(\)=>mapTargetWorld\?\{x:mapTargetWorld\.x,z:mapTargetWorld\.z\}:null/);
+assert.match(html,/const focus=onShip\?ship\.position:player\.root\.position/);
+assert.doesNotMatch(html,/cameraYaw=B\.Scalar\.Lerp\(cameraYaw,ship\.rotation\.y/);
+assert.match(html,/cameraYaw=ship\.rotation\.y;cameraPitch=\.36;cameraDistance=13\.2/);
+assert.match(html,/const sensitivity=onShip\?/);
+assert.match(html,/cameraYaw-=dx\*sensitivity/);
+assert.match(html,/cameraObstructionBlend=1/);
