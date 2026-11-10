@@ -30,7 +30,7 @@ function collectStructureSnapshot(){
  const inventoryStructuralCandidates=(inventory?.objects||[]).filter(item=>item.category==='structure').map(item=>({name:item.name,parent:item.parent,parentChain:item.parentChain,position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,metadata:item.metadata}));
  const houseOutliers=houses.filter(item=>Math.abs(Number(item.groundingErrorMeters)||0)>.02||Number(item.maximumFootingGapMeters)>.02||Number(item.dryLandFootprintMarginMeters)<1.25);
  const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02);
- const garrisonOutliers=garrisons.filter(item=>Number(item.maximumAnchorErrorMeters)>.02);
+ const garrisonOutliers=garrisons.filter(item=>Number(item.outpostErrorMeters)>.02||Number(item.flagErrorMeters)>.02||Number(item.guardErrorMeters)>.06);
  return {
   structures,offshore,houses,camps,garrisons,view,projectedCandidates,inventoryStructuralCandidates,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
   summary:{
@@ -95,6 +95,30 @@ async function main(){
    const screenshot=await phase('capture portrait player view without WebGL canvas readback',()=>page.screenshot({path:screenshotFile,timeout:20000,animations:'disabled'}));
    report.screenshot={file:path.basename(screenshotFile),bytes:screenshot.length,method:'playwright-page-screenshot',view:'default-new-campaign-player-camera'};
   }catch(error){report.screenshotError=String(error?.message||error);}
+  // Capture the same Cuervo hut cluster from three offshore camera positions. These are
+  // diagnostic-only camera overrides in the disposable ?test=1 renderer; no world entity moves.
+  const cuervoHuts=(settled.houses||[]).filter(item=>item.nearestIslandIndex===0);
+  const targetX=cuervoHuts.length?cuervoHuts.reduce((sum,item)=>sum+item.x,0)/cuervoHuts.length:25.44;
+  const targetZ=cuervoHuts.length?cuervoHuts.reduce((sum,item)=>sum+item.z,0)/cuervoHuts.length:-14.27;
+  const seaViews=[
+   {id:'east-sea',x:92,y:9,z:-14},
+   {id:'south-sea',x:25,y:9,z:88},
+   {id:'north-sea',x:25,y:9,z:-100}
+  ];
+  report.coastalStructureViews=[];
+  for(const view of seaViews){
+   const file=path.join(OUT,'cuervo-huts-'+view.id+'.png');
+   try{
+    const camera=await page.evaluate(({x,y,z,targetX,targetZ})=>{
+     const targetY=2.5;
+     window.__ELSN_TEST__.setCamera({x,y,z,targetX,targetY,targetZ});
+     return window.__ELSN_TEST__.sceneViewSnapshot();
+    },{...view,targetX,targetZ});
+    await page.waitForTimeout(450);
+    const shot=await page.screenshot({path:file,timeout:20000,animations:'disabled'});
+    report.coastalStructureViews.push({id:view.id,file:path.basename(file),bytes:shot.length,camera,target:{x:targetX,y:2.5,z:targetZ},hutCount:cuervoHuts.length});
+   }catch(error){report.coastalStructureViews.push({id:view.id,error:String(error?.message||error)});}
+  }
   const initialRows=baseline.structures.structures||[];
   const initialUnsafe=initialRows.filter(item=>item.safe!==true);
   const repairedRows=Array.isArray(repairPass?.structures)?repairPass.structures:[];
