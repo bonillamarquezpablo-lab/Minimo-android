@@ -17,7 +17,29 @@
   function selectMapPoint(x,y){const canvas=state.mapCanvas,w=canvas.width,h=canvas.height,b=mapBounds(),pad=w*.09,sx=Math.max(1,b.maxX-b.minX),sz=Math.max(1,b.maxZ-b.minZ),scale=Math.min((w-2*pad)/sx,(h-2*pad)/sz)*state.zoom,cx=(b.minX+b.maxX)/2,cz=(b.minZ+b.maxZ)/2,px=state.panX*(w/(state.mapCanvas?.width||w)),py=state.panY*(h/(state.mapCanvas?.height||h));let best=null,bestD=Infinity;for(const island of state.islands){const ix=w/2+(island.cx-cx)*scale+px,iy=h/2+(island.cz-cz)*scale+py,d=Math.hypot(ix-x,iy-y);if(d<bestD){bestD=d;best=island;}}if(best&&bestD<Math.max(32,w*.045)){state.selectedIsland=best.name;const status=state.panel?.querySelector("#norse-nav-status");if(status)status.textContent="Isla seleccionada: "+best.name+" · "+best.width.toFixed(0)+" × "+best.depth.toFixed(0)+" m · Coordenadas "+best.cx.toFixed(0)+", "+best.cz.toFixed(0);drawMap(true);}}
   function drawMap(force=false){const now=performance.now();if(!force&&now-state.lastDraw<180)return;state.lastDraw=now;if(state.mapOpen)drawOne(state.mapCanvas);const status=state.panel?.querySelector("#norse-nav-status");if(status)status.textContent=state.islands.length+" zonas detectadas · "+state.actors.length+" marcadores · Cámara "+state.mode.toUpperCase();}
   function actorTarget(type){const found=state.actors.find(a=>a.type===type&&worldPosition(a.mesh));return found?.mesh||state.actors.find(a=>a.type==="player"&&worldPosition(a.mesh))?.mesh||null;}
-  function setMode(mode){if(!["follow","free","ship","orbit"].includes(mode))return;state.mode=mode;state.lastInput=performance.now();const B=window.BABYLON,c=state.camera,target=actorTarget(mode==="ship"?"boat":"player");if(c&&target&&mode!=="free"){try{const p=worldPosition(target);if(p&&c.setTarget&&B?.Vector3)c.setTarget(new B.Vector3(p.x,p.y+2,p.z));if("lockedTarget"in c)c.lockedTarget=target;if(mode==="orbit"&&"radius"in c)c.radius=clamp(c.radius*1.5,12,90);if(mode==="ship"&&"radius"in c)c.radius=clamp(c.radius*.78,7,38);}catch(_){}}else if(c&&"lockedTarget"in c)c.lockedTarget=null;document.querySelectorAll("#norse-nav-modes [data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));const labels={follow:"SEGUIR",free:"LIBRE",ship:"NÁUTICA",orbit:"ORBITAL"},button=document.getElementById("norse-nav-camera");if(button)button.textContent="CÁMARA: "+labels[mode];drawMap(true);}
+  function setMode(mode){
+    if(!["follow","free","ship","orbit"].includes(mode))return;
+    state.mode=mode;state.lastInput=performance.now();
+    const gameControl=window.__ELSN_CAMERA_CONTROL;
+    if(gameControl&&typeof gameControl.setMode==="function"){
+      gameControl.setMode(mode);
+    }else{
+      const B=window.BABYLON,c=state.camera,target=actorTarget(mode==="ship"?"boat":"player");
+      if(c&&target&&mode!=="free"){
+        try{
+          const p=worldPosition(target);
+          if(p&&c.setTarget&&B?.Vector3)c.setTarget(new B.Vector3(p.x,p.y+2,p.z));
+          if("lockedTarget"in c)c.lockedTarget=target;
+          if(mode==="orbit"&&"radius"in c)c.radius=clamp(c.radius*1.5,12,90);
+          if(mode==="ship"&&"radius"in c)c.radius=clamp(c.radius*1.55,16,46);
+        }catch(_){}
+      }else if(c&&"lockedTarget"in c)c.lockedTarget=null;
+    }
+    document.querySelectorAll("#norse-nav-modes [data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
+    const labels={follow:"SEGUIR",free:"LIBRE",ship:"NÁUTICA",orbit:"ORBITAL"},button=document.getElementById("norse-nav-camera");
+    if(button)button.textContent="CÁMARA: "+labels[mode];
+    drawMap(true);
+  }
   function cycleMode(){const modes=["follow","free","ship","orbit"];setMode(modes[(modes.indexOf(state.mode)+1)%modes.length]);}
   function attachCameraControls(){const canvas=state.canvas;if(!state.camera||!canvas||canvas.dataset.norseCameraAttached)return;canvas.dataset.norseCameraAttached="1";let drag=null;canvas.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"&&e.button!==2)return;if(!["free","ship","orbit"].includes(state.mode))return;drag={x:e.clientX,y:e.clientY};canvas.setPointerCapture?.(e.pointerId);},true);canvas.addEventListener("pointermove",e=>{if(!drag)return;e.stopImmediatePropagation();const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag={x:e.clientX,y:e.clientY};const cam=state.camera;if(!cam)return;state.lastInput=performance.now();if(Number.isFinite(cam.alpha)&&Number.isFinite(cam.beta)){cam.alpha-=dx*.004;cam.beta=clamp(cam.beta+dy*.003,.12,Math.PI-.12);}else if(cam.rotation){cam.rotation.y-=dx*.004;cam.rotation.x=clamp(cam.rotation.x+dy*.003,-1.35,1.35);}if(e.cancelable)e.preventDefault();},{passive:false,capture:true});const end=()=>{drag=null;};canvas.addEventListener("pointerup",end,true);canvas.addEventListener("pointercancel",end,true);canvas.addEventListener("contextmenu",e=>{if(state.mode!=="follow")e.preventDefault();});canvas.addEventListener("wheel",e=>{const cam=state.camera;if(cam&&Number.isFinite(cam.radius))cam.radius=clamp(cam.radius+Math.sign(e.deltaY)*Math.max(1,cam.radius*.08),5,180);},{passive:true});}
   function tick(){if(!state.scene||state.scene.isDisposed){state.scene=null;return;}const root=document.getElementById("norse-nav-root");if(root){const menu=entryScreenVisible();root.style.display=menu?"none":"block";if(menu&&state.mapOpen){state.mapOpen=false;state.panel?.classList.remove("open");}}const now=performance.now();if(now-state.lastDraw>180)drawMap();if(now-state.lastInput>1800&&(state.mode==="ship"||state.mode==="orbit")){const target=actorTarget(state.mode==="ship"?"boat":"player");if(target&&state.camera?.setTarget){const p=worldPosition(target);if(p){const B=window.BABYLON;state.camera.setTarget(new B.Vector3(p.x,p.y+2,p.z));}}}state.raf=requestAnimationFrame(tick);}
