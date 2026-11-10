@@ -8533,14 +8533,6 @@ function createRealWeapon(type='axe'){
   return g;
  }
  function makeVillage(index,x,z,name){
-  // Keep the whole initial settlement, its 12 hut footprints and its outer watchtower
-  // on the dry land band. Move the settlement as one unit so flags, guards and props stay aligned.
-  const island=land[index],settlementReach= Math.hypot(10.5,-7.6)+1.35+1.25;
-  const safeVillageRadius=island.r*.76-settlementReach;
-  const villageDx=x-island.x,villageDz=z-island.z,villageDistance=Math.hypot(villageDx,villageDz);
-  if(villageDistance>safeVillageRadius&&villageDistance>1e-6){
-   const inward=safeVillageRadius/villageDistance;x=island.x+villageDx*inward;z=island.z+villageDz*inward;
-  }
   let groundPatch=B.MeshBuilder.CreateDisc('villageClearing',{radius:10.8,tessellation:40},scene);groundPatch.rotation.x=-Math.PI/2;const villageGroundY=terrainSurfaceAt(x,z);groundPatch.position=v(x,villageGroundY+.027,z);groundPatch.material=M.grass2;groundPatch.material= M.grass2;groundPatch.isPickable=false;
   const houseGroups=[buildHouse(x,z,.90),buildHouse(x-7,z+7,.66),buildHouse(x+8,z-5,.62)];
   // Palisade segments leave a wide entrance toward the south.
