@@ -131,7 +131,7 @@ assert.match(html,/width:clamp\(138px,36vw,158px\)/);
 
 // Ship camera follows the vessel with a wider default framing; camera mode selection is wired to gameplay.
 assert.match(html,/cameraMode='follow'/);
-assert.match(html,/cameraDistance\*\(onShip\?1\.65:1\)/);
+assert.match(html,/cameraDistance\*\(onShip\?2\.12:1\)/);
 assert.match(html,/cameraMode!=='free'/);
 assert.match(html,/window\.__ELSN_CAMERA_CONTROL=/);
 assert.match(html,/cameraMode='follow';cameraManualLookUntil=0/);
