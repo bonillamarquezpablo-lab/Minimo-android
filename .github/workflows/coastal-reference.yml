@@ -46,6 +46,7 @@ jobs:
       - name: Build complete game
         run: python scripts/build_site.py
       - name: Install Playwright and Chromium
+        id: playwright_install
         run: |
           npm install --no-save --no-package-lock playwright
           npx playwright install --with-deps chromium
@@ -75,7 +76,7 @@ jobs:
           echo "One-camera capture exit status: $status"
           exit "$status"
       - name: Audit habitable structure grounding independently
-        if: always()
+        if: always() && steps.playwright_install.outcome == 'success'
         env:
           STRUCTURE_TEST_URL: http://127.0.0.1:4176/
         run: timeout --signal=TERM --kill-after=5s 150s node scripts/coastal-structure-grounding-smoke.mjs
