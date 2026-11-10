@@ -55,7 +55,7 @@ async function main(){
   report.baseline=baseline;report.repairPass=repairPass;report.postAutomaticAudit=settled;
   report.runtimeRepairSimulation={testMode:true,waitMs:800,usesGameRepairSystem:true,explicitRepairApiCalled:true,productionDataModified:false,repairSummary:repairPass?{total:repairPass.total,groundedCount:repairPass.groundedCount,unsafeCount:repairPass.unsafeCount,repaired:repairPass.repaired,hiddenUnsafe:repairPass.hiddenUnsafe,visibleInvalidAfterRepair:repairPass.visibleInvalidAfterRepair}:null};
   report.habitableStructures=settled.structures;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.summary=settled.summary;
-  report.inspectionCamera=await phase('aim inspection camera at Cuervo settlement',()=>page.evaluate(()=>window.__ELSN_TEST__.setCamera({x:31,y:12,z:17,targetX:31,targetY:3,targetZ:-17})));
+  report.inspectionCamera=await phase('aim inspection camera at Cuervo settlement',()=>page.evaluate(()=>window.__ELSN_TEST__.setCamera({x:40,y:14,z:3,targetX:26,targetY:2.5,targetZ:-14})));
   await phase('settle Cuervo inspection view',()=>page.waitForTimeout(500));
   const screenshotDataUrl=await phase('capture the resulting WebGL scene',()=>page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null));
   if(typeof screenshotDataUrl!=='string'||!screenshotDataUrl.startsWith('data:image/png;base64,'))throw new Error('The game canvas did not return a valid PNG data URL.');
