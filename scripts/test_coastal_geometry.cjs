@@ -80,6 +80,11 @@ console.log('COASTAL GEOMETRY CONTRACT OK: 13 islands, four coastal meshes, rend
 assert.match(html,/function registerHabitableStructure\(root,kind,options=\{\}\)/,'Every roofed structure must register in the shared grounding audit.');
 assert.match(html,/function evaluateHabitableStructure\(entry\)/,'The auditor must measure world position, rendered ground, footprint and dry-land margin.');
 assert.match(html,/function auditHabitableStructures\(applyRepairs=true\)/,'The live structure audit must be able to hide an unsafe root.');
+assert.match(html,/const roofedRootPattern=\/\^\(\?:WeatheredNorseHut/,'The live audit must discover named hut and settlement roots even if registration was skipped.');
+assert.match(html,/auto-discovered-root/,'A discovered structure must enter the shared audit registry.');
+assert.match(html,/repairAndAuditHabitableStructures:\(\)=>auditHabitableStructures\(true\)/,'Playwright must be able to run a real repair pass, not only inspect.');
+assert.match(runner,/repairAndAuditHabitableStructures\(\)/,'The browser audit must apply repairs before checking the final visible scene.');
+assert.match(html,/habitableAuditInterval=onShip \? \.5 : 1\.5/,'While sailing, the floating-structure audit must run twice per second.');
 assert.match(html,/habitableStructureAudit:\(\)=>auditHabitableStructures\(false\)/,'The audit snapshot must be available to Playwright.');
 assert.match(html,/habitableAuditAccumulator>=2\.0/,'The audit must run periodically while the world is active.');
 assert.match(html,/boatVisibleDistance:Math\.max\(45,Number\(options\.boatVisibleDistance\)\|\|95\)/,'Boat mode must use a shorter building visibility distance than land mode.');
