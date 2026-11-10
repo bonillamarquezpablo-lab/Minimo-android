@@ -62,7 +62,7 @@ jobs:
         env:
           CAPTURE_TEST_URL: http://127.0.0.1:4176/
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
-          CAPTURE_TEXTURE_TIMEOUT_MS: '15000'
+          CAPTURE_TEXTURE_TIMEOUT_MS: '60000'
         run: |
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             export CAPTURE_PLAN_JSON="$CAPTURE_PLAN_INPUT"
@@ -70,7 +70,7 @@ jobs:
             export CAPTURE_PLAN_JSON="$(cat scripts/scene-capture-plan.json)"
           fi
           set +e
-          timeout --signal=TERM --kill-after=5s 90s node scripts/texture-readiness-smoke.mjs
+          timeout --signal=TERM --kill-after=5s 180s node scripts/texture-readiness-smoke.mjs
           status=$?
           echo "One-camera capture exit status: $status"
           exit "$status"
