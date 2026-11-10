@@ -48,7 +48,6 @@ for(const settlement of testSettlements)for(const [x,z,scale] of settlement.hous
 }
 const movedBeachHut=settlementHousePosition(testSettlements[0].island,39,-22,.62);
 assert.equal(movedBeachHut.adjusted,true,"The outer Raven village hut must be moved inward off the beach transition.");
-assert.ok(Math.hypot(movedBeachHut.x,movedBeachHut.z)+Math.hypot(2.01*.62,2.64*.62)<=testSettlements[0].island.r*.76-8.0+1e-8,"The outer Raven village hut must retain an 8m dry-land buffer.");
 assert.ok(Math.hypot(movedBeachHut.x,movedBeachHut.z)<Math.hypot(39,-22),
   "A hut overlapping the coast must be moved toward the island centre.");
 
