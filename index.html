@@ -12712,17 +12712,61 @@ function update(dt){
    const started=performance.now(),maxItems=Math.max(50,Math.min(5000,Math.floor(Number(limit)||500)));
    const surfacePattern=/(?:water|ocean|sea|wave|foam|shore|coast|beach|seabed|sand|tidal|terrain|ground|island)/i;
    const structurePattern=/(?:hut|shelter|outpost|scout.?camp|garrison|meadhall|forge|watch.?tower|village|house|building|camp|settlement|dock|pier|boat|ship|drakkar|claim|post)/i;
-   const vegetationPattern=/(?:tree|grass|fern|bush|reed|pine|vegetation|foliage)/i,candidates=new Set();
+   const vegetationPattern=/(?:tree|grass|fern|bush|reed|pine|vegetation|foliage)/i;
+   const characterPattern=/(?:armature|bone|hips|spine|headassembly|bootjoint|elbow|forearm|upperarm|trouserleg|peasantbody|villager|villageguard|armoredknight|raidercrew|enemyhuman|humanmodel|playercharacter|skeleton)/i;
+   const unknownAssemblyExclusions=/(?:armature|bone|hips|spine|headassembly|bootjoint|elbow|forearm|upperarm|trouserleg|peasantbody|villager|villageguard|armoredknight|raidercrew|enemyhuman|humanmodel|playercharacter|skeleton|drakkar|boat|ship|tree|grass|fern|bush|reed|pine|vegetation|foliage|rock|terrain|ground|water|ocean|sea|wave|foam|shore|coast|beach|seabed|sand|tidal)/i;
+   const candidates=new Set(),unknownRootSet=new Set();
    for(const node of scene.transformNodes||[]){
     const names=[node.name||''];let parent=node.parent,depth=0;
     while(parent&&depth++<8){names.push(parent.name||'');parent=parent.parent;}
     if(surfacePattern.test(names.join(' '))||structurePattern.test(names.join(' '))||vegetationPattern.test(names.join(' ')))candidates.add(node);
    }
+   // Geometry-only discovery: find grouped world objects even when neither the root nor
+   // its children use words such as hut, tower, outpost or camp. Character, vessel,
+   // vegetation, water and terrain assemblies are excluded before shape scoring.
+   for(const node of scene.transformNodes||[]){
+    if(!node||candidates.has(node)||node.isDisposed?.())continue;
+    const rootName=String(node.name||'');if(!rootName||unknownAssemblyExclusions.test(rootName))continue;
+    const ancestry=[];let ancestor=node.parent,depth=0;
+    while(ancestor&&depth++<8){ancestry.push(String(ancestor.name||''));ancestor=ancestor.parent;}
+    if(unknownAssemblyExclusions.test(ancestry.join(' ')))continue;
+    const children=typeof node.getChildMeshes==='function'?node.getChildMeshes(false).filter(mesh=>mesh&&!mesh.isDisposed?.()&&Number(mesh.getTotalVertices?.())>0):[];
+    if(children.length<4)continue;
+    let minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity,vertices=0;
+    const meshNames=[];
+    for(const mesh of children){
+     try{
+      mesh.computeWorldMatrix?.(true);
+      const bounds=mesh.getBoundingInfo?.()?.boundingBox,min=bounds?.minimumWorld,max=bounds?.maximumWorld;
+      if(min&&max){minX=Math.min(minX,min.x);minY=Math.min(minY,min.y);minZ=Math.min(minZ,min.z);maxX=Math.max(maxX,max.x);maxY=Math.max(maxY,max.y);maxZ=Math.max(maxZ,max.z);}
+      vertices+=Number(mesh.getTotalVertices?.())||0;
+      if(meshNames.length<24)meshNames.push(String(mesh.name||''));
+     }catch(_){}
+    }
+    const sizeX=maxX-minX,sizeY=maxY-minY,sizeZ=maxZ-minZ,descriptor=[rootName,...ancestry,...meshNames].join(' ');
+    if(!Number.isFinite(minY)||vertices<100||sizeX<.70||sizeZ<.70||sizeY<.45||sizeX>28||sizeZ>28||sizeY>22)continue;
+    if(surfacePattern.test(descriptor)||structurePattern.test(descriptor)||vegetationPattern.test(descriptor)||characterPattern.test(descriptor))continue;
+    unknownRootSet.add(node);candidates.add(node);
+   }
    for(const mesh of scene.meshes||[]){
     const material=mesh.material,descriptor=[mesh.name||'',material?.name||'',material?.getClassName?.()||''].join(' ');
     if(surfacePattern.test(descriptor))candidates.add(mesh);
    }
-   const classify=descriptor=>/(?:water|ocean|sea|wave)/i.test(descriptor)?'water':/(?:shore|coast|beach|seabed|sand|foam|tidal)/i.test(descriptor)?'shoreline':/(?:boat|ship|drakkar)/i.test(descriptor)?'vessel':structurePattern.test(descriptor)?'structure':vegetationPattern.test(descriptor)?'vegetation':/(?:terrain|ground|island)/i.test(descriptor)?'terrain':'other';
+   const classify=(descriptor,node)=>/(?:water|ocean|sea|wave)/i.test(descriptor)?'water':/(?:shore|coast|beach|seabed|sand|foam|tidal)/i.test(descriptor)?'shoreline':/(?:boat|ship|drakkar)/i.test(descriptor)?'vessel':characterPattern.test(descriptor)?'character':structurePattern.test(descriptor)?'structure':unknownRootSet.has(node)?'unidentified-structure':vegetationPattern.test(descriptor)?'vegetation':/(?:terrain|ground|island)/i.test(descriptor)?'terrain':'other';
+   const inferStructuralRole=(descriptor,category)=>{
+    const roles=[
+     ['secondary-island-outpost',/(?:IslandOutpost|OutpostTent|OutpostBedroll|OutpostSupplyCrate)/i],
+     ['scout-supply-camp',/(?:IslandScoutCamp|ScoutCampSupplies|ScoutCampEmbers)/i],
+     ['watchtower',/(?:NorseWatchTower|WatchtowerPillar|WatchtowerPlatform|WatchtowerLadder|WatchtowerRailing)/i],
+     ['island-garrison',/(?:IslandGarrison|GarrisonOutpost|GarrisonFlag|GarrisonStake)/i],
+     ['blacksmith-forge',/(?:NorseBlacksmithForge|ForgeStoneBase|ForgeIronHearth|HammerStand)/i],
+     ['great-hall',/(?:NorseGreatMeadHall|GreatHall)/i],
+     ['norse-hut',/(?:WeatheredNorseHut|HutThatch|HutSideLog|HutDoor)/i],
+     ['dock-or-pier',/(?:dock|pier|wharf|jetty|landing-platform)/i]
+    ];
+    for(const [role,pattern] of roles)if(pattern.test(descriptor))return role;
+    return category==='unidentified-structure'?'unidentified-geometry-cluster':(category==='structure'?'other-named-structure':null);
+   };
    const objects=[];
    for(const node of candidates){try{
     const children=typeof node.getChildMeshes==='function'?node.getChildMeshes(false).filter(mesh=>mesh&&!mesh.isDisposed?.()):[];
@@ -12740,15 +12784,15 @@ function update(dt){
      const material=mesh.material;if(material){const key=(material.name||'unnamed-material')+'|'+(material.getClassName?.()||material.constructor?.name||'unknown');materialRows.set(key,{name:material.name||'unnamed-material',type:material.getClassName?.()||material.constructor?.name||'unknown'});}
     }catch(_){}}
     const name=node.name||node.getClassName?.()||'unnamed-object',descriptor=[name,...parentNames,...meshNames,...Array.from(materialRows.keys())].join(' ');
-    const category=classify(descriptor),enabled=typeof node.isEnabled==='function'?node.isEnabled():node.isVisible!==false;
+    const category=classify(descriptor,node),structuralRole=inferStructuralRole(descriptor,category),classificationConfidence=category==='unidentified-structure'?'geometry-only-low':(structuralRole?'name-and-mesh-evidence':'name-or-material-evidence'),enabled=typeof node.isEnabled==='function'?node.isEnabled():node.isVisible!==false;
     let visible=node.isVisible!==false&&Number(node.visibility??1)>0,ancestor=node.parent,ancestorDepth=0;
     while(ancestor&&ancestorDepth++<16){if(ancestor.isVisible===false||Number(ancestor.visibility??1)<=0)visible=false;try{if(ancestor.isEnabled&&!ancestor.isEnabled())visible=false;}catch(_){visible=false;}ancestor=ancestor.parent;}
     const metadata={};if(node.metadata&&typeof node.metadata==='object')for(const [key,value] of Object.entries(node.metadata).slice(0,24)){if(value===null||['string','number','boolean'].includes(typeof value))metadata[key]=value;}
-    objects.push({name,category,className:node.getClassName?.()||node.constructor?.name||'unknown',parent:parentNames[0]||null,parentChain:parentNames.slice(0,4),position:{x:Number(absolute.x?.toFixed?.(3)??absolute.x??0),y:Number(absolute.y?.toFixed?.(3)??absolute.y??0),z:Number(absolute.z?.toFixed?.(3)??absolute.z??0)},bounds:Number.isFinite(minY)?{min:{x:+minX.toFixed(3),y:+minY.toFixed(3),z:+minZ.toFixed(3)},max:{x:+maxX.toFixed(3),y:+maxY.toFixed(3),z:+maxZ.toFixed(3)},size:{x:+(maxX-minX).toFixed(3),y:+(maxY-minY).toFixed(3),z:+(maxZ-minZ).toFixed(3)},boundingBottomY:+minY.toFixed(3)}:null,enabled,visible,meshCount:meshRefs.length,vertexCount,indexCount,meshNames,materials:Array.from(materialRows.values()),metadata});
+    objects.push({name,category,structuralRole,classificationConfidence,structuralEvidence:category==='structure'||category==='unidentified-structure'?{rootName:name,meshNames:meshNames.filter(meshName=>/(?:hut|house|roof|wall|tower|platform|tent|outpost|camp|crate|ladder|railing|dock|pier|post|beam|flag|forge|hall|shelter|building)/i.test(meshName)}.slice(0,16),materials:Array.from(materialRows.values()).map(row=>row.name).slice(0,10),geometry:{width:Number((maxX-minX).toFixed(2)),height:Number((maxY-minY).toFixed(2)),depth:Number((maxZ-minZ).toFixed(2))}}:null,className:node.getClassName?.()||node.constructor?.name||'unknown',parent:parentNames[0]||null,parentChain:parentNames.slice(0,4),position:{x:Number(absolute.x?.toFixed?.(3)??absolute.x??0),y:Number(absolute.y?.toFixed?.(3)??absolute.y??0),z:Number(absolute.z?.toFixed?.(3)??absolute.z??0)},bounds:Number.isFinite(minY)?{min:{x:+minX.toFixed(3),y:+minY.toFixed(3),z:+minZ.toFixed(3)},max:{x:+maxX.toFixed(3),y:+maxY.toFixed(3),z:+maxZ.toFixed(3)},size:{x:+(maxX-minX).toFixed(3),y:+(maxY-minY).toFixed(3),z:+(maxZ-minZ).toFixed(3)},boundingBottomY:+minY.toFixed(3)}:null,enabled,visible,meshCount:meshRefs.length,vertexCount,indexCount,meshNames,materials:Array.from(materialRows.values()),metadata});
    }catch(error){objects.push({name:node.name||'unnamed-object',category:'inspection-error',error:String(error?.message||error)});}}
    objects.sort((a,b)=>a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
    const categoryCounts={};for(const item of objects)categoryCounts[item.category]=(categoryCounts[item.category]||0)+1;
-   return {schema:1,scope:'all-matching-coastal-and-world-objects',durationMs:Number((performance.now()-started).toFixed(1)),sceneCounts:{meshes:scene.meshes?.length||0,transformNodes:scene.transformNodes?.length||0,materials:scene.materials?.length||0,textures:scene.textures?.length||0},candidateCount:objects.length,returnedCount:Math.min(objects.length,maxItems),omittedCount:Math.max(0,objects.length-maxItems),categoryCounts,objects:objects.slice(0,maxItems),interpretation:'World-space inventory only. Floating verdicts require a matching ground/sea-level reference; this list never moves or hides objects.'};
+   return {schema:2,scope:'named-scene-objects-plus-geometry-discovered-unknown-roots',durationMs:Number((performance.now()-started).toFixed(1)),unknownGeometryRootCount:unknownRootSet.size,sceneCounts:{meshes:scene.meshes?.length||0,transformNodes:scene.transformNodes?.length||0,materials:scene.materials?.length||0,textures:scene.textures?.length||0},candidateCount:objects.length,returnedCount:Math.min(objects.length,maxItems),omittedCount:Math.max(0,objects.length-maxItems),categoryCounts,objects:objects.slice(0,maxItems),interpretation:'World-space inventory only. Floating verdicts require a matching ground/sea-level reference; this list never moves or hides objects.'};
   }
 
   function auditOffshoreStructuralRoots(limit=250){
