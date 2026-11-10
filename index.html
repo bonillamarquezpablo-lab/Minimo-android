@@ -12852,6 +12852,18 @@ function update(dt){
   window.__ELSN_TEST__={
    build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',
    islands:land.map(({x,z,r,name})=>({x,z,r,name})),
+   sceneViewSnapshot:()=>{
+    const position=playerPos(),cameraPosition=camera.position;
+    let target=null;try{const value=camera.getTarget?.();if(value)target={x:Number(value.x.toFixed(3)),y:Number(value.y.toFixed(3)),z:Number(value.z.toFixed(3))};}catch(_){}
+    if(!target){const direction=camera.getDirection(B.Axis.Z);target={x:Number((cameraPosition.x+direction.x*10).toFixed(3)),y:Number((cameraPosition.y+direction.y*10).toFixed(3)),z:Number((cameraPosition.z+direction.z*10).toFixed(3))};}
+    return {player:{x:Number(position.x.toFixed(3)),y:Number(position.y.toFixed(3)),z:Number(position.z.toFixed(3))},camera:{x:Number(cameraPosition.x.toFixed(3)),y:Number(cameraPosition.y.toFixed(3)),z:Number(cameraPosition.z.toFixed(3)),yaw:Number(cameraYaw.toFixed(4)),pitch:Number(cameraPitch.toFixed(4)),distance:Number(cameraDistance.toFixed(3)),fov:Number(camera.fov.toFixed(4))},target,viewport:{width:engine.getRenderWidth(),height:engine.getRenderHeight(),cssWidth:document.getElementById('renderCanvas')?.clientWidth||0,cssHeight:document.getElementById('renderCanvas')?.clientHeight||0},onShip};
+   },
+   projectWorldPoint:({x,y,z})=>{
+    const width=engine.getRenderWidth(),height=engine.getRenderHeight();
+    camera.computeWorldMatrix?.(true);scene.updateTransformMatrix?.(true);
+    const viewport=camera.viewport.toGlobal(width,height),point=B.Vector3.Project(new B.Vector3(x,y,z),B.Matrix.Identity(),scene.getTransformMatrix(),viewport);
+    return {x:Number(point.x.toFixed(2)),y:Number(point.y.toFixed(2)),depth:Number(point.z.toFixed(5)),normalizedX:Number((point.x/Math.max(1,width)).toFixed(5)),normalizedY:Number((point.y/Math.max(1,height)).toFixed(5)),inFront:point.z>=0&&point.z<=1,onScreen:point.x>=0&&point.x<=width&&point.y>=0&&point.y<=height};
+   },
    stop:()=>engine.stopRenderLoop(),
    prepareCaptureFrame:async({timeoutMs=20000,maxFrames=120}={})=>prepareCaptureFrameForCamera({timeoutMs,maxFrames}),
    getTextureReadinessForCamera:async()=> (await captureTextureReadinessSnapshot()).report,
