@@ -42,8 +42,13 @@ assert.match(html,/function registerHabitableStructure\(root,kind,options=\{\}\)
 assert.match(html,/function evaluateHabitableStructure\(entry\)/,'The auditor must measure world position, rendered ground, footprint and dry-land margin.');
 assert.match(html,/function auditHabitableStructures\(applyRepairs=true\)/,'The live structure audit must be able to hide an unsafe root.');
 assert.match(html,/habitableStructureAudit:\(\)=>auditHabitableStructures\(false\)/,'The audit snapshot must be available to Playwright.');
-assert.match(html,/habitableAuditAccumulator>=2\.0/,'The audit must run periodically while the world is active.');
-assert.match(html,/boatVisibleDistance:Math\.max\(45,Number\(options\.boatVisibleDistance\)\|\|95\)/,'Boat mode must use a shorter building visibility distance than land mode.');
+assert.match(html,/const roofedRootPattern=\/\^\(\?:WeatheredNorseHut/,'The runtime auditor must discover unregistered roofed roots by name.');
+assert.match(html,/auto-discovered-root/,'Any known roofed root outside the registry must be adopted and audited.');
+assert.match(html,/autoRegisteredRootCount/,'The audit report must disclose auto-discovered roots.');
+assert.match(html,/habitableStructureAuditAsBoat:/,'The test API must run the live audit in a simulated boat state.');
+assert.match(html,/boatVisibleDistance:55/,'Every registered roofed structure must use the 55m offshore visibility cap.');
+assert.match(html,/const habitableAuditInterval=onShip \? \.5 : 1\.5/,'The structure audit must run every 0.5 seconds while sailing and every 1.5 seconds on land.');
+assert.match(html,/boatVisibleDistance:Math\.max\(30,Number\(options\.boatVisibleDistance\)\|\|55\)/,'Boat mode must hide buildings beyond 55m while preserving the 205m land radius.');
 assert.match(html,/limit=onShip\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/,'Offshore roofs must be culled before their island terrain becomes a distant speck.');
 assert.match(html,/registerHabitableStructure\(hall,'NorseGreatHall'/,'The outer-island Great Hall must be included, not just village huts.');
 assert.match(html,/registerHabitableStructure\(camp,'IslandOutpostCamp'/);
