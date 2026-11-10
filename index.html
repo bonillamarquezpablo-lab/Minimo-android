@@ -12594,6 +12594,16 @@ function update(dt){
     }
    },
    repairAndAuditHabitableStructures:()=>auditHabitableStructures(true),
+   probeFloatingHutAudit:()=>{
+    const probe=newGroup('WeatheredNorseHut',null);
+    probe.position=v(land[0].x+land[0].r*1.40,.42,land[0].z);
+    const snapshot=auditHabitableStructures(true),entry=probe.__habitableStructureAudit;
+    const result={detected:!!entry,hidden:!(typeof probe.isEnabled==='function'?probe.isEnabled():probe.isVisible!==false),lastAction:entry?.lastAction||null,lastStatus:entry?.lastStatus||null,autoDiscovered:!!snapshot.autoRegisteredRoots?.some(item=>item.name==='WeatheredNorseHut'),untrackedRootCount:snapshot.untrackedRootCount};
+    const registryIndex=habitableStructureRegistry.findIndex(item=>item.root===probe);
+    if(registryIndex>=0)habitableStructureRegistry.splice(registryIndex,1);
+    try{probe.dispose(false,false);}catch(_){}
+    return result;
+   },
    settlementGrounding:()=>villages.flatMap(village=>(village.houseGroups||[]).map((group,buildingIndex)=>{
     const p=group.getAbsolutePosition?group.getAbsolutePosition():group.position;
     let nearestIsland=null,nearestDistance=Infinity,nearestIslandIndex=-1;
