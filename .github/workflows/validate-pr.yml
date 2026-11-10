@@ -22,6 +22,14 @@ jobs:
       - name: Extract focused structure-repair source diagnostics
         run: python scripts/inspect_structure_repair_source.py
 
+      - name: Upload structure-repair source excerpts
+        uses: actions/upload-artifact@v4
+        with:
+          name: structure-repair-source-${{ github.sha }}
+          path: artifacts/texture-readiness-smoke/structure-repair-source-excerpts.txt
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
