@@ -17,11 +17,22 @@ function collectStructureSnapshot(){
  const houses=api.settlementGrounding();
  const camps=api.settlementCampGrounding();
  const garrisons=api.garrisonGrounding();
+ const view=typeof api.sceneViewSnapshot==='function'?api.sceneViewSnapshot():null;
+ const projectedCandidates=(offshore.candidates||[]).map(item=>{
+  const x=Number(item.position?.x),z=Number(item.position?.z),bottomY=Number(item.bounds?.bottomY??item.position?.y),topY=Number(item.bounds?.topY??item.position?.y);
+  const centerY=Number.isFinite(bottomY)&&Number.isFinite(topY)?(bottomY+topY)*.5:Number(item.position?.y)||0;
+  const baseProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:bottomY,z}):null;
+  const centerProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:centerY,z}):null;
+  const topProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:topY,z}):null;
+  return {name:item.name,kind:item.kind,registered:item.registered,visible:item.visible,enabled:item.enabled,island:item.island,islandIndex:item.islandIndex,position:item.position,bounds:item.bounds,offshore:item.offshore,issue:item.issue,distanceToIslandCenterMeters:item.distanceToIslandCenterMeters,dryFootprintSampleCount:item.dryFootprintSampleCount,dryFootprintSampleTotal:item.dryFootprintSampleTotal,baseProjection,centerProjection,topProjection};
+ });
+ const inventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(1200):null;
+ const inventoryStructuralCandidates=(inventory?.objects||[]).filter(item=>item.category==='structure').map(item=>({name:item.name,parent:item.parent,parentChain:item.parentChain,position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,metadata:item.metadata}));
  const houseOutliers=houses.filter(item=>Math.abs(Number(item.groundingErrorMeters)||0)>.02||Number(item.maximumFootingGapMeters)>.02||Number(item.dryLandFootprintMarginMeters)<1.25);
  const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02);
  const garrisonOutliers=garrisons.filter(item=>Number(item.maximumAnchorErrorMeters)>.02);
  return {
-  structures,offshore,houses,camps,garrisons,
+  structures,offshore,houses,camps,garrisons,view,projectedCandidates,inventoryStructuralCandidates,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
   summary:{
    structuresTotal:structures.total,grounded:structures.groundedCount,unsafe:structures.unsafeCount,
    unsafeVisibleBeforeAudit:structures.unsafeVisibleBeforeRepair,visibleInvalid:structures.visibleInvalidAfterRepair,
@@ -43,7 +54,7 @@ async function main(){
   const marker='name="el-sin-nombre-build" content="',at=meta.indexOf(marker);
   report.build=at>=0?meta.slice(at+marker.length).split('"')[0]:null;
   browser=await phase('launch chromium',()=>chromium.launch({headless:true,timeout:60000,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist','--disable-dev-shm-usage']}));
-  const context=await browser.newContext({viewport:{width:960,height:540},deviceScaleFactor:1});
+  const context=await browser.newContext({viewport:{width:430,height:768},deviceScaleFactor:1,isMobile:true,hasTouch:true});
   page=await context.newPage();page.setDefaultTimeout(60000);page.setDefaultNavigationTimeout(90000);
   page.on('pageerror',error=>report.pageErrors.push(String(error?.stack||error)));
   page.on('console',message=>{if(message.type()==='error')report.consoleErrors.push(message.text());});
@@ -60,14 +71,15 @@ async function main(){
   report.baseline=baseline;report.repairPass=repairPass;report.postAutomaticAudit=settled;
   report.runtimeRepairSimulation={testMode:true,waitMs:800,usesGameRepairSystem:true,explicitRepairApiCalled:true,productionDataModified:false,repairSummary:repairPass?{total:repairPass.total,groundedCount:repairPass.groundedCount,unsafeCount:repairPass.unsafeCount,repaired:repairPass.repaired,hiddenUnsafe:repairPass.hiddenUnsafe,visibleInvalidAfterRepair:repairPass.visibleInvalidAfterRepair}:null};
   report.habitableStructures=settled.structures;report.offshoreAudit=settled.offshore;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.summary=settled.summary;
-  report.inspectionCamera=await phase('aim inspection camera at Cuervo settlement',()=>page.evaluate(()=>window.__ELSN_TEST__.setCamera({x:40,y:14,z:3,targetX:26,targetY:2.5,targetZ:-14})));
-  await phase('settle Cuervo inspection view',()=>page.waitForTimeout(500));
-  const screenshotDataUrl=await phase('capture the resulting WebGL scene',()=>page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null));
-  if(typeof screenshotDataUrl!=='string'||!screenshotDataUrl.startsWith('data:image/png;base64,'))throw new Error('The game canvas did not return a valid PNG data URL.');
-  const screenshot=Buffer.from(screenshotDataUrl.slice('data:image/png;base64,'.length),'base64');
-  if(screenshot.length<1000||screenshot.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')throw new Error('The captured game canvas is not a valid PNG.');
-  const screenshotFile=path.join(OUT,'structure-grounding-scene.png');fs.writeFileSync(screenshotFile,screenshot);
-  report.screenshot={file:path.basename(screenshotFile),bytes:screenshot.length,method:'webgl-canvas-readback'};
+  report.initialPlayerCamera=settled.view;
+  report.projectedStructuralCandidates=settled.projectedCandidates;
+  report.inventoryStructuralCandidates=settled.inventoryStructuralCandidates;
+  report.inventorySummary=settled.inventorySummary;
+  const screenshotFile=path.join(OUT,'structure-grounding-default-player-view.png');
+  try{
+   const screenshot=await phase('capture portrait player view without WebGL canvas readback',()=>page.screenshot({path:screenshotFile,timeout:20000,animations:'disabled'}));
+   report.screenshot={file:path.basename(screenshotFile),bytes:screenshot.length,method:'playwright-page-screenshot',view:'default-new-campaign-player-camera'};
+  }catch(error){report.screenshotError=String(error?.message||error);}
   const initialRows=baseline.structures.structures||[];
   const initialUnsafe=initialRows.filter(item=>item.safe!==true);
   const repairedRows=Array.isArray(repairPass?.structures)?repairPass.structures:[];
