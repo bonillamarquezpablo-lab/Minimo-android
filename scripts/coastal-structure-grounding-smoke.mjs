@@ -96,6 +96,22 @@ async function main(){
   report.runtimeRepairSimulation={testMode:true,waitMs:800,usesGameRepairSystem:true,explicitRepairApiCalled:true,productionDataModified:false,repairSummary:repairPass?{total:repairPass.total,groundedCount:repairPass.groundedCount,unsafeCount:repairPass.unsafeCount,repaired:repairPass.repaired,hiddenUnsafe:repairPass.hiddenUnsafe,visibleInvalidAfterRepair:repairPass.visibleInvalidAfterRepair}:null};
   report.habitableStructures=settled.structures;report.offshoreAudit=settled.offshore;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.summary=settled.summary;
   report.initialPlayerCamera=settled.view;
+ // Visually inspect each nearby structure/unknown geometry cluster from a dedicated camera.
+ // This catches invasion/endgame props even when their imported node names are meaningless.
+ report.objectInspectionCaptures=[];
+ const inspectionTargets=(settled.nearbyCuervoStructureRoots||[]).filter(item=>item.visible!==false&&item.enabled!==false).slice(0,32);
+ for(let index=0;index<inspectionTargets.length;index++){
+  const item=inspectionTargets[index],p=item.position||{},bounds=item.bounds||{},targetY=Number.isFinite(Number(bounds.bottomY))&&Number.isFinite(Number(bounds.topY))?(Number(bounds.bottomY)+Number(bounds.topY))*.5:(Number(p.y)||0)+2.5;
+  const camera={x:(Number(p.x)||0)+26,y:Math.max(8,targetY+12),z:(Number(p.z)||0)+26,targetX:Number(p.x)||0,targetY,targetZ:Number(p.z)||0};
+  const safeName=String(item.name||('object-'+index)).replace(/[^a-z0-9_-]+/gi,'-').slice(0,64);
+  const file=path.join(OUT,'cuervo-object-'+String(index+1).padStart(2,'0')+'-'+safeName+'.png');
+  try{
+   const cameraState=await page.evaluate(args=>window.__ELSN_TEST__.setCamera(args),camera);
+   await page.waitForTimeout(350);
+   const shot=await page.screenshot({path:file,timeout:20000,animations:'disabled'});
+   report.objectInspectionCaptures.push({index:index+1,file:path.basename(file),bytes:shot.length,name:item.name,role:item.role,classificationConfidence:item.confidence,position:item.position,bounds:item.bounds,meshNames:item.meshNames,materials:item.materials,grounding:item.grounding,camera:cameraState});
+  }catch(error){report.objectInspectionCaptures.push({index:index+1,name:item.name,role:item.role,position:item.position,error:String(error?.message||error)});}
+ }
   report.projectedStructuralCandidates=settled.projectedCandidates;
   report.inventoryStructuralCandidates=settled.inventoryStructuralCandidates;
   report.inventorySummary=settled.inventorySummary;
