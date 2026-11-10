@@ -675,6 +675,17 @@ async function main() {
           'Una estructura sin parcela válida no se ha ocultado: ' + JSON.stringify(structure));
       }
     }
+    const boatHabitableAudit = await page.evaluate(() => window.__ELSN_TEST__.habitableStructureAuditAsBoat({x:80,z:80}));
+    manifest.boatHabitableStructureAudit = boatHabitableAudit;
+    assert.equal(boatHabitableAudit.total,39,'El control de barco debe auditar el mismo inventario completo de 39 estructuras.');
+    assert.equal(boatHabitableAudit.untrackedRootCount,0,'No debe quedar ninguna estructura con tejado fuera del inventario durante la navegación.');
+    assert.equal(boatHabitableAudit.visibleInvalidCount,0,'No puede permanecer visible ninguna estructura sin terreno seguro en modo barco.');
+    for (const structure of boatHabitableAudit.structures) {
+      assert.ok(!structure.enabled || (structure.safe && structure.distanceToCameraMeters <= structure.visibilityLimitMeters),
+        'Una construcción aparece en el mar sin estar dentro del radio visual permitido: ' + JSON.stringify(structure));
+      if (structure.distanceToCameraMeters > structure.visibilityLimitMeters) assert.equal(structure.enabled,false,
+        'Una construcción lejana no se ocultó al navegar: ' + JSON.stringify(structure));
+    }
     assert.ok(foamCorridorResult && foamCorridorResult.visibleFoamVertices > 0,
       'The baseline must measure visible foam vertices');
     assert.equal(foamCorridorResult.outsideFoamVertices, 0,
