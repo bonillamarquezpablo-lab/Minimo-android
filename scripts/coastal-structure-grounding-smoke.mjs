@@ -57,9 +57,12 @@ async function main(){
   report.habitableStructures=settled.structures;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.summary=settled.summary;
   report.inspectionCamera=await phase('aim inspection camera at Cuervo settlement',()=>page.evaluate(()=>window.__ELSN_TEST__.setCamera({x:31,y:12,z:17,targetX:31,targetY:3,targetZ:-17})));
   await phase('settle Cuervo inspection view',()=>page.waitForTimeout(500));
-  const screenshot=await phase('capture the resulting test scene',()=>page.screenshot({type:'png',fullPage:false}));
+  const screenshotDataUrl=await phase('capture the resulting WebGL scene',()=>page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null));
+  if(typeof screenshotDataUrl!=='string'||!screenshotDataUrl.startsWith('data:image/png;base64,'))throw new Error('The game canvas did not return a valid PNG data URL.');
+  const screenshot=Buffer.from(screenshotDataUrl.slice('data:image/png;base64,'.length),'base64');
+  if(screenshot.length<1000||screenshot.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')throw new Error('The captured game canvas is not a valid PNG.');
   const screenshotFile=path.join(OUT,'structure-grounding-scene.png');fs.writeFileSync(screenshotFile,screenshot);
-  report.screenshot={file:path.basename(screenshotFile),bytes:screenshot.length};
+  report.screenshot={file:path.basename(screenshotFile),bytes:screenshot.length,method:'webgl-canvas-readback'};
   report.verdict=settled.summary.structuresTotal>0?'measured':'inconclusive';
   if(report.verdict==='inconclusive')throw new Error('No registered habitable structures were returned by the inspection API.');
  }catch(error){report.failure=String(error?.stack||error);report.verdict='fail';
