@@ -11269,7 +11269,7 @@ function updateHUD(){
   // Local navigation view: centre remains on the player/ship, like a vehicle minimap.
   // The detailed world chart is reserved for the expanded map.
   mg.setTransform(1,0,0,1,0,0);mg.clearRect(0,0,map.width,map.height);mg.setTransform(2,0,0,2,0,0);
-  const w=480,h=344,plot={x:8,y:8,w:464,h:328},cx=240,cy=172,focus=onShip?ship.position:playerPos(),heading=onShip?ship.rotation.y:yaw;
+  const w=480,h=344,plot={x:8,y:8,w:464,h:328},cx=240,cy=172,focus=playerPos(),heading=onShip?ship.rotation.y:yaw;
   const rangeX=145,scale=plot.w/rangeX,rangeZ=plot.h/scale,project=(x,z)=>[cx+(x-focus.x)*scale,cy+(z-focus.z)*scale];
   const sea=mg.createLinearGradient(0,0,w,h);sea.addColorStop(0,'#173c48');sea.addColorStop(.52,'#245765');sea.addColorStop(1,'#102b35');mg.fillStyle=sea;mg.fillRect(0,0,w,h);
   mg.save();mg.beginPath();mg.rect(plot.x,plot.y,plot.w,plot.h);mg.clip();
