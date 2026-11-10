@@ -89,7 +89,7 @@ assert.match(runner,/repairAndAuditHabitableStructures\(\)/,'The browser audit m
 assert.match(html,/habitableAuditInterval=onShip \? \.5 : 1\.5/,'While sailing, the floating-structure audit must run twice per second.');
 assert.match(html,/habitableStructureAudit:\(\)=>auditHabitableStructures\(false\)/,'The audit snapshot must be available to Playwright.');
 assert.match(html,/habitableAuditAccumulator>=habitableAuditInterval/,'The audit must run at the active land/boat cadence.');
-assert.match(html,/boatVisibleDistance:Math\.max\(45,Number\(options\.boatVisibleDistance\)\|\|95\)/,'Boat mode must use a shorter building visibility distance than land mode.');
+assert.match(html,/boatVisibleDistance:Math\.max\(30,Number\(options\.boatVisibleDistance\)\|\|55\)/,'Boat mode must use a shorter building visibility distance than land mode.');
 assert.match(html,/limit=onShip\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/,'Offshore roofs must be culled before their island terrain becomes a distant speck.');
 assert.match(html,/registerHabitableStructure\(hall,'NorseGreatHall'/);
 assert.match(html,/registerHabitableStructure\(camp,'IslandOutpostCamp'/);
