@@ -66,7 +66,7 @@ function expandPlan(input) {
 }
 const shots=expandPlan(plan);
 const manifest={schema:3,capturedAt:new Date().toISOString(),finishedAt:null,build:null,seed:CAPTURE_SEED,renderer:'Chromium headless + ANGLE SwiftShader',viewport:DEFAULT_VIEWPORT,requestedPlanCount:plan.length,expandedShotCount:shots.length,islands:[],sceneInventory:null,captures:[],failures:[],consoleErrors:[],pageErrors:[],phaseTimingsMs:{},determinism:{tested:0,failed:0},geometryAudit:null,initialPhysicalAudit:null,auditSummary:null};
-function writeManifest(){const target=path.join(OUT,'manifest.json'),temporary=target+'.tmp';fs.mkdirSync(OUT,{recursive:true});fs.writeFileSync(temporary,JSON.stringify(manifest,null,2)+'\\n');fs.renameSync(temporary,target);}
+function writeManifest(){const target=path.join(OUT,'manifest.json'),temporary=target+'.tmp';fs.mkdirSync(OUT,{recursive:true});fs.writeFileSync(temporary,JSON.stringify(manifest,null,2)+'\n');fs.renameSync(temporary,target);}
 async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
   try {
     browser=await chromium.launch({headless:true,timeout:60000,args:[
