@@ -33,6 +33,7 @@ REQUIRED_FILES = (
     "invitado/index.html",
     "sw.js",
     "scripts/nordic/coastal-interaction.js",
+    "scripts/nordic/navigation-suite.js",
     *MANIFESTS,
     "icon.svg",
     "assets/asset-manifest.json",
@@ -72,6 +73,12 @@ def main() -> None:
         fail("Hay archivos requeridos vacíos: " + ", ".join(empty))
 
     index_html = read_text("index.html")
+    navigation_js = read_text("scripts/nordic/navigation-suite.js")
+    if "./scripts/nordic/navigation-suite.js" not in index_html:
+        fail("Las entradas del juego no cargan el sistema unificado de mapas y cámaras.")
+    for required_navigation_feature in ("norse-nav-map-large", "data-mode", "function discoverIslands", "function discoverActors", "function attachCameraControls", "function setMode"):
+        if required_navigation_feature not in navigation_js:
+            fail(f"Falta una función esencial de navegación: {required_navigation_feature}")
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         index_html,
