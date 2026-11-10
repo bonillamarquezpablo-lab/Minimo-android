@@ -8,6 +8,12 @@ on:
   push:
     branches: [fix/coastal-water-surface-0.6.273]
   workflow_dispatch:
+    inputs:
+      capture_plan:
+        description: 'JSON: cámaras libres. Coordenadas absolutas o islandIndex + offsets. Máximo 200.'
+        required: true
+        type: string
+        default: '[{"id":"cuervo-desde-mar","islandIndex":0,"camera":{"x":70,"y":18,"z":-95,"targetX":0,"targetY":4,"targetZ":0}},{"id":"cuervo-desde-tierra","islandIndex":0,"camera":{"x":-35,"y":8,"z":-25,"targetX":0,"targetY":3,"targetZ":0}}]'
 
 permissions:
   contents: read
@@ -140,5 +146,59 @@ jobs:
         with:
           name: player-startup-${{ github.sha }}
           path: artifacts/player-startup/
+          if-no-files-found: warn
+          retention-days: 30
+
+  custom-capture:
+    name: Custom free-camera scene captures
+    if: github.event_name == 'workflow_dispatch' && inputs.capture_plan != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout selected branch or commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build complete game
+        run: python scripts/build_site.py
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+
+      - name: Start local built-site server
+        run: |
+          python3 -m http.server 4175 --directory dist > /tmp/elsn-custom-http.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4175/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/elsn-custom-http.log
+          exit 1
+
+      - name: Capture requested camera positions
+        env:
+          CAPTURE_TEST_URL: http://127.0.0.1:4175/
+          CAPTURE_PLAN_JSON: ${{ inputs.capture_plan }}
+        run: node scripts/custom-scene-capture.mjs
+
+      - name: Upload custom screenshots and camera manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-scene-captures-${{ github.sha }}
+          path: artifacts/custom-scene-captures/
           if-no-files-found: warn
           retention-days: 30
