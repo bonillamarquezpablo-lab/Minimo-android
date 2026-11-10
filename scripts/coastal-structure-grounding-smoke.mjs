@@ -26,7 +26,7 @@ function collectStructureSnapshot(){
   const topProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:topY,z}):null;
   return {name:item.name,kind:item.kind,registered:item.registered,visible:item.visible,enabled:item.enabled,island:item.island,islandIndex:item.islandIndex,position:item.position,bounds:item.bounds,offshore:item.offshore,issue:item.issue,distanceToIslandCenterMeters:item.distanceToIslandCenterMeters,dryFootprintSampleCount:item.dryFootprintSampleCount,dryFootprintSampleTotal:item.dryFootprintSampleTotal,baseProjection,centerProjection,topProjection};
  });
- const inventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(1200):null;
+ const inventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(300):null;
  const inventoryStructuralCandidates=(inventory?.objects||[]).filter(item=>item.category==='structure').map(item=>({name:item.name,parent:item.parent,parentChain:item.parentChain,position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,metadata:item.metadata}));
  const houseOutliers=houses.filter(item=>Math.abs(Number(item.groundingErrorMeters)||0)>.02||Number(item.maximumFootingGapMeters)>.02||Number(item.dryLandFootprintMarginMeters)<1.25);
  const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02);
@@ -78,7 +78,7 @@ async function main(){
    const toleranceWorldUnits=3.2;if(!actual||Math.abs(actual.x-expected.x)>toleranceWorldUnits||Math.abs(actual.z-expected.z)>toleranceWorldUnits)throw new Error('Map tap projection mismatch: '+JSON.stringify({expected,actual,toleranceWorldUnits,rect:{width:rect.width,height:rect.height,borderLeft,borderRight,borderTop,borderBottom,drawnWidth,drawnHeight}}));
    return {expected,actual,expanded:map.classList.contains('expanded'),footer:map.getContext('2d')? 'canvas-rendered':'missing'};
   }));
-  await phase('close map after coordinate projection test',async()=>{if(await page.locator('#mapClose').isVisible().catch(()=>false))await page.locator('#mapClose').click();});
+  await phase('close map after coordinate projection test',()=>page.evaluate(()=>{const close=document.getElementById('mapClose');if(close)close.click();else document.getElementById('map')?.classList.remove('expanded');document.getElementById('mapBackdrop')?.classList.remove('open');}));
   const baseline=await phase('measure baseline structure grounding before repairs',()=>page.evaluate(collectStructureSnapshot));
   const repairPass=await phase('run the game repair system in the disposable test renderer',()=>page.evaluate(()=>window.__ELSN_TEST__.repairAndAuditHabitableStructures()));
   await phase('allow repaired transforms and colliders to settle',()=>page.waitForTimeout(800));
