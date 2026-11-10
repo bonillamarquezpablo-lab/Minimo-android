@@ -8413,7 +8413,7 @@ function createRealWeapon(type='axe'){
    safeRadiusFactor:Math.max(.60,Math.min(.82,Number(options.safeRadiusFactor)||.76)),
    maxRelief:Math.max(.08,Number(options.maxRelief)||.32),
    anchorTolerance:Math.max(.005,Number(options.anchorTolerance)||.02),
-   maxVisibleDistance:Math.max(60,Number(options.maxVisibleDistance)||105),
+   maxVisibleDistance:Math.max(60,Number(options.maxVisibleDistance)||210),
    boatVisibleDistance:Math.max(30,Number(options.boatVisibleDistance)||55),
    collider:options.collider||null,
    relocatable:options.relocatable===true,
@@ -8529,7 +8529,7 @@ function createRealWeapon(type='axe'){
     let p;try{p=node.getAbsolutePosition?node.getAbsolutePosition():node.position;}catch(_){p=node.position;}
     let nearestDistance=Infinity;land.forEach((island,index)=>{const distance=Math.hypot(p.x-island.x,p.z-island.z);if(distance<nearestDistance){nearestDistance=distance;islandIndex=index;}});
    }
-   const entry=registerHabitableStructure(node,kind,{islandIndex,footprintRadius,baseOffset,edgeBuffer:1.25,maxRelief,anchorTolerance:.02,maxVisibleDistance:105,boatVisibleDistance:55,collider:node.__norseWorldCollider||null,relocatable:false});
+   const entry=registerHabitableStructure(node,kind,{islandIndex,footprintRadius,baseOffset,edgeBuffer:1.25,maxRelief,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,collider:node.__norseWorldCollider||null,relocatable:false});
    entry.lastAction='auto-discovered-root';autoRegisteredRoots.push({name:rootName,kind,islandIndex});
   }
   for(const entry of habitableStructureRegistry){
@@ -8712,7 +8712,7 @@ function createRealWeapon(type='axe'){
   // y dejaba un hueco de puerta por el que los NPC podían atravesar toda la estructura.
   g.__norseWorldCollider=footing.valid?registerWorldCollider({type:'rect',x:houseX,z:houseZ,hx:2.16*scale,hz:2.78*scale,cameraBlocker:true}):null;
   if(!footing.valid)g.setEnabled(false);
-  registerHabitableStructure(g,'NorseHut',{islandIndex:footing.islandIndex,footprintRadius:Math.hypot(2.01*scale,2.64*scale),baseOffset:.02*scale,edgeBuffer:1.25,maxRelief:.025,anchorTolerance:.02,maxVisibleDistance:105,boatVisibleDistance:55,collider:g.__norseWorldCollider,relocatable:false});
+  registerHabitableStructure(g,'NorseHut',{islandIndex:footing.islandIndex,footprintRadius:Math.hypot(2.01*scale,2.64*scale),baseOffset:.02*scale,edgeBuffer:1.25,maxRelief:.025,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,collider:g.__norseWorldCollider,relocatable:false});
   mergeStaticDecorByMaterial(g,'NorseHutStatic');
   addModelShadow(g);
   try{g.freezeWorldMatrix();g.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){ }
@@ -8769,7 +8769,7 @@ function createRealWeapon(type='axe'){
   const outpostGroundY=renderedTerrainSurfaceAt(island.x,island.z);
   const gy=renderedTerrainSurfaceAt(gx,gz),flagX=island.x-Math.cos(guardAngle)*2.8,flagZ=island.z-Math.sin(guardAngle)*2.8,flagY=renderedTerrainSurfaceAt(flagX,flagZ);
   const outpostRoot=newGroup('IslandGarrisonOutpost_'+islandIndex,null);outpostRoot.position=v(island.x,outpostGroundY,island.z);
-  const outpostEntry=registerHabitableStructure(outpostRoot,'IslandGarrisonOutpost',{islandIndex,footprintRadius:1.4,baseOffset:0,edgeBuffer:1.25,maxRelief:.20,anchorTolerance:.02,maxVisibleDistance:105,boatVisibleDistance:55,relocatable:true});
+  const outpostEntry=registerHabitableStructure(outpostRoot,'IslandGarrisonOutpost',{islandIndex,footprintRadius:1.4,baseOffset:0,edgeBuffer:1.25,maxRelief:.20,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:true});
   const stoneFoot=box('IslandGarrisonStoneFoot_'+islandIndex,outpostRoot,[0,.10,0],[1.9,.20,1.35],M.stoneDark);
   const supplyCrate=box('IslandGarrisonSupplyCrate_'+islandIndex,outpostRoot,[-.92,.48,.18],[.62,.64,.58],M.woodDark);
   const supplyLid=box('IslandGarrisonSupplyLid_'+islandIndex,outpostRoot,[-.92,.82,.18],[.68,.08,.62],M.woodLight);
@@ -8816,7 +8816,7 @@ function createRealWeapon(type='axe'){
   // Blacksmith's forge, stone hearth, anvil and hammer rack: unmistakable Norse settlement landmark.
   const forgeX=vl.x-6.8,forgeZ=vl.z-1.9,forgeY=renderedTerrainSurfaceAt(forgeX,forgeZ),forge=newGroup('NorseBlacksmithForge_'+idx,null);forge.position=v(forgeX,forgeY,forgeZ);
   forge.__norseWorldCollider=registerWorldCollider({type:'circle',x:forgeX,z:forgeZ,r:1.15});
-  registerHabitableStructure(forge,'NorseBlacksmithForge',{islandIndex:idx,footprintRadius:1.25,baseOffset:0,edgeBuffer:1.25,maxRelief:.24,anchorTolerance:.02,maxVisibleDistance:105,collider:forge.__norseWorldCollider,relocatable:false});
+  registerHabitableStructure(forge,'NorseBlacksmithForge',{islandIndex:idx,footprintRadius:1.25,baseOffset:0,edgeBuffer:1.25,maxRelief:.24,anchorTolerance:.02,maxVisibleDistance:205,collider:forge.__norseWorldCollider,relocatable:false});
   box('ForgeStoneBase_'+idx,forge,[0,.28,0],[1.65,.56,1.35],M.stoneDark);
   box('ForgeIronHearth_'+idx,forge,[0,.75,.12],[1.08,.36,.86],M.darkMetal);
   const forgeCoal=sphere('ForgeGlowingCoals_'+idx,forge,[0,.98,.12],[.42,.13,.34],M.ember,12);forgeCoal.material=M.ember;
@@ -8842,7 +8842,7 @@ function createRealWeapon(type='axe'){
   const towerX=watchIsland.x+towerDx*towerFactor,towerZ=watchIsland.z+towerDz*towerFactor;
   const towerY=renderedTerrainSurfaceAt(towerX,towerZ),tower=newGroup('NorseWatchTower_'+idx,null);tower.position=v(towerX,towerY,towerZ);
   tower.__norseWorldCollider=registerWorldCollider({type:'rect',x:towerX,z:towerZ,hx:.95,hz:.95,cameraBlocker:true});
-  registerHabitableStructure(tower,'NorseWatchTower',{islandIndex:idx,footprintRadius:1.35,baseOffset:0,edgeBuffer:1.25,maxRelief:.28,anchorTolerance:.02,maxVisibleDistance:105,boatVisibleDistance:55,collider:tower.__norseWorldCollider,relocatable:true});
+  registerHabitableStructure(tower,'NorseWatchTower',{islandIndex:idx,footprintRadius:1.35,baseOffset:0,edgeBuffer:1.25,maxRelief:.28,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,collider:tower.__norseWorldCollider,relocatable:true});
   for(let side of [-1,1])for(let depth of [-1,1])cyl('WatchtowerPillar_'+idx+'_'+side+'_'+depth,tower,[side*.78,2.35,depth*.78],4.7,.17,.17,M.woodDark,[0,0,side*depth*.06]);
   box('WatchtowerPlatform_'+idx,tower,[0,3.75,0],[2.05,.28,2.05],M.woodLight);
   for(let side of [-1,1])box('WatchtowerRailing_'+idx+'_'+side,tower,[side*.91,4.28,0],[.14,.86,2.05],M.woodDark);
@@ -8927,7 +8927,7 @@ function createRealWeapon(type='axe'){
  function buildIslandOutpost(vl){
   const cx=vl.x,cz=vl.z+15,gy=renderedTerrainSurfaceAt(cx,cz),camp=newGroup('IslandOutpost_'+vl.index,null);
   camp.position=v(cx,gy,cz);vl.islandOutpostCamp=camp;
-  registerHabitableStructure(camp,'IslandOutpostCamp',{islandIndex:vl.index,footprintRadius:5.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:105,boatVisibleDistance:55,relocatable:true});
+  registerHabitableStructure(camp,'IslandOutpostCamp',{islandIndex:vl.index,footprintRadius:5.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:true});
   for(let tent=0;tent<2;tent++){
    const ox=tent===0?-2.25:2.15,oz=tent===0?-.45:.65,rot=tent===0?-.12:.16;
    cyl('OutpostTentRidge_'+vl.index+'_'+tent,camp,[ox,1.38,oz],2.15,.045,.05,M.woodLight,[Math.PI/2,0,0]);
@@ -8944,7 +8944,7 @@ function createRealWeapon(type='axe'){
   // from the origin of a 60m island, where terrainSurfaceAt returns the wet shoreline/seabed.
   const scoutX=vl.x-8,scoutZ=vl.z+18,scoutY=renderedTerrainSurfaceAt(scoutX,scoutZ),scout=newGroup('IslandScoutCamp_'+vl.index,null);
   scout.position=v(scoutX,scoutY,scoutZ);vl.scoutCamp=scout;
-  registerHabitableStructure(scout,'IslandScoutCamp',{islandIndex:vl.index,footprintRadius:2.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:105,boatVisibleDistance:55,relocatable:true});
+  registerHabitableStructure(scout,'IslandScoutCamp',{islandIndex:vl.index,footprintRadius:2.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:true});
   box('ScoutCampSupplies_'+vl.index,scout,[0,.30,0],[.92,.60,.78],M.woodDark);
   sphere('ScoutCampEmbers_'+vl.index,scout,[1.15,.13,.15],[.36,.12,.30],M.ember,8);
  }
@@ -8986,7 +8986,7 @@ function createRealWeapon(type='axe'){
   mergeStaticDecorByMaterial(hall,'NorseGreatHallStatic');
   hall.position=v(x,floorY,z);hall.rotation.y=index*.37;
   hall.__norseWorldCollider=registerWorldCollider({type:'rect',x,z,hx:4.35,hz:7.45,cameraBlocker:true});
-  registerHabitableStructure(hall,'NorseGreatHall',{islandIndex:9,footprintRadius:Math.hypot(4.35,7.45),baseOffset:0,edgeBuffer:1.25,maxRelief:.30,anchorTolerance:.02,maxVisibleDistance:105,boatVisibleDistance:55,collider:hall.__norseWorldCollider,relocatable:true});
+  registerHabitableStructure(hall,'NorseGreatHall',{islandIndex:9,footprintRadius:Math.hypot(4.35,7.45),baseOffset:0,edgeBuffer:1.25,maxRelief:.30,anchorTolerance:.02,maxVisibleDistance:235,boatVisibleDistance:55,collider:hall.__norseWorldCollider,relocatable:true});
   addModelShadow(hall,5);
   try{hall.freezeWorldMatrix();hall.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){}
   return hall;
@@ -9080,7 +9080,7 @@ function createRealWeapon(type='axe'){
  // No es una casa construida: es un campamento de náufrago junto al lugar donde despierta.
  const starterCampX=-40.0,starterCampZ=15.5,starterCampY=renderedTerrainSurfaceAt(starterCampX,starterCampZ);
  const starterCamp=newGroup('PoorNorseCastawayCamp',null);starterCamp.position=v(starterCampX,starterCampY,starterCampZ);
- registerHabitableStructure(starterCamp,'StarterCastawayCamp',{islandIndex:0,footprintRadius:2.5,baseOffset:0,edgeBuffer:1.25,safeRadiusFactor:.78,maxRelief:.40,anchorTolerance:.02,maxVisibleDistance:105,boatVisibleDistance:55,relocatable:false});
+ registerHabitableStructure(starterCamp,'StarterCastawayCamp',{islandIndex:0,footprintRadius:2.5,baseOffset:0,edgeBuffer:1.25,safeRadiusFactor:.78,maxRelief:.40,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:false});
  for(const side of [-1,1]){
   cyl('CastawayLeanToPole_'+side,starterCamp,[side*.92,.88,-.32],1.78,.065,.07,M.woodDark,[0,0,side*.20]);
   cyl('CastawayTentStake_'+side,starterCamp,[side*1.02,.18,.48],.52,.045,.05,M.woodLight,[0,0,side*.16]);
