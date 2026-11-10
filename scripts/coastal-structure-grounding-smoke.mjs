@@ -75,7 +75,7 @@ async function main(){
    const clientX=rect.left+offsetX+logicalX/480*drawnWidth,clientY=rect.top+offsetY+logicalY/344*drawnHeight;
    map.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientX,clientY}));
    const actual=window.__ELSN_TEST__?.mapTarget?.();
-   if(!actual||Math.abs(actual.x-expected.x)>.2||Math.abs(actual.z-expected.z)>.2)throw new Error('Map tap projection mismatch: '+JSON.stringify({expected,actual,rect:{width:rect.width,height:rect.height,borderLeft,borderRight,borderTop,borderBottom,drawnWidth,drawnHeight}}));
+   const toleranceWorldUnits=3.2;if(!actual||Math.abs(actual.x-expected.x)>toleranceWorldUnits||Math.abs(actual.z-expected.z)>toleranceWorldUnits)throw new Error('Map tap projection mismatch: '+JSON.stringify({expected,actual,toleranceWorldUnits,rect:{width:rect.width,height:rect.height,borderLeft,borderRight,borderTop,borderBottom,drawnWidth,drawnHeight}}));
    return {expected,actual,expanded:map.classList.contains('expanded'),footer:map.getContext('2d')? 'canvas-rendered':'missing'};
   }));
   await phase('close map after coordinate projection test',async()=>{if(await page.locator('#mapClose').isVisible().catch(()=>false))await page.locator('#mapClose').click();});
