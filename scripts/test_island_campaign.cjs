@@ -18,6 +18,10 @@ assert.match(html,/const centerY=renderedTerrainSurfaceAt\(px,pz\),ys=\[/,'Footi
 assert.match(html,/g\.position=v\(houseX,footing\.centerY-\.02\*scale,houseZ\)/,'Each hut footing must use the measured rendered-ground center height and scaled base offset.');
 assert.match(html,/groundingErrorMeters:Number\(Math\.abs\(footingBottomY-sampledTerrainY\)\.toFixed\(4\)\)/,'Every hut must expose its measured rendered-ground footing error.');
 assert.match(html,/maxCenterRadius=island\.r\*\.76-footprintRadius-1\.25/,'Every hut candidate must keep its complete footprint inside the dry-land band.');
+assert.match(html,/maxRelief:Math\.max\(\.005,Number\(options\.maxRelief\)\|\|\.32\)/,'Small hut footing tolerances must not be silently widened to 8 cm.');
+assert.match(html,/GreatHallStoneSupportPier_/,'Skjoldheim Great Hall must use visible stone support piers on uneven terrain.');
+assert.match(html,/maxRelief:2\.05/,'The Great Hall audit must allow only the measured, supported natural slope.');
+assert.match(html,/hallRootY=Math\.max\(floorY,\.\.\.supportSamples\.map\(point=>point\.groundY\)\)/,'The Great Hall floor must sit level above its highest support point.');
 
 assert.ok(html.includes("function settlementHousePosition(island,x,z,scale=1)"),
   "Every settlement hut must be projected inside its own island's safe dry-land radius.");
