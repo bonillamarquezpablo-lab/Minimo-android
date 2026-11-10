@@ -87,3 +87,9 @@ assert.match(source,/clientX=rect\.left\+offsetX\+logicalX\/480\*drawnWidth/);
 // En móviles capaces, embarcar no debe reducir el radio de visibilidad de los asentamientos.
 assert.match(html,/limit=onShip&&ultraLowEndIslandStreaming\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/);
 assert.match(html,/visibilityLimitMeters=onShip&&ultraLowEndIslandStreaming\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/);
+
+// Habitable huts must stay above the maximum coastal water/run-up envelope plus a dry-ground margin.
+assert.match(html,/minimumDryGroundY=\(Number\(ground\.position\.y\)\|\|0\)\+\.60/);
+assert.match(html,/centerY<minimumDryGroundY/);
+assert.match(html,/minGroundY>=minimumDryGroundY/);
+assert.match(html,/minimumDryClearanceMeters/);
