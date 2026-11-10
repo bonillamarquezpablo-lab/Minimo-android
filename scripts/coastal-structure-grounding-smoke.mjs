@@ -83,6 +83,7 @@ async function main(){
    visibleInvalidAfter:report.summary.visibleInvalid,
    untrackedRootsAfter:report.summary.untrackedRoots,
    unregisteredStructuralCandidatesAfter:report.summary.unregisteredStructuralCandidates,
+   offshoreStructuresAfter:report.summary.offshoreStructures,
    visibleOffshoreStructuresAfter:report.summary.visibleOffshoreStructures,
    offshoreIslandCount:report.summary.offshoreIslandCount,
    houseCount:report.summary.houseCount,houseOutliers:report.summary.houseOutliers,
@@ -92,7 +93,7 @@ async function main(){
   report.fullRuntimeStructureGate=gate;
   const passed=report.summary.structuresTotal>=39&&gate.allInitialUnsafeVerifiedSafe&&gate.unsafeAfter===0&&
    gate.visibleInvalidAfter===0&&gate.untrackedRootsAfter===0&&gate.unregisteredStructuralCandidatesAfter===0&&
-   gate.visibleOffshoreStructuresAfter===0&&gate.offshoreIslandCount===13&&gate.houseCount>=12&&
+   gate.offshoreStructuresAfter===0&&gate.visibleOffshoreStructuresAfter===0&&gate.offshoreIslandCount===13&&gate.houseCount>=12&&
    gate.houseOutliers===0&&gate.campCount>=8&&gate.campOutliers===0&&gate.garrisonCount>=9&&gate.garrisonOutliers===0;
   report.verdict=passed?'measured':'issues-found';
   if(!passed)throw new Error('Full normal-runtime structure safety gate failed: '+JSON.stringify(gate));
