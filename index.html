@@ -8722,7 +8722,7 @@ function createRealWeapon(type='axe'){
   const dx=x-island.x,dz=z-island.z,distance=Math.hypot(dx,dz);
   // Project only the individual hut inward; retain village centre, guards, paths and shared props.
   const footprintRadius=Math.hypot(2.01*scale,2.64*scale);
-  const safeRadius=Math.max(0,island.r*.76-footprintRadius-1.25);
+  const safeRadius=Math.max(0,island.r*.76-footprintRadius-8.0);
   if(distance<=safeRadius||distance<1e-6)return {x,z,adjusted:false};
   const factor=safeRadius/distance;
   return {x:island.x+dx*factor,z:island.z+dz*factor,adjusted:true};
