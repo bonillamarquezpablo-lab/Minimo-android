@@ -22,7 +22,7 @@ assert.doesNotMatch(smoke,/api\.render\(\)/);
 assert.doesNotMatch(smoke,/read game build identifier/);assert.ok(smoke.indexOf('wait for render and texture convergence')<smoke.indexOf("runPhase('capture final camera PNG'"));
 assert.doesNotMatch(smoke,/capture camera baseline PNG before convergence/);
 assert.ok(smoke.indexOf("audit and repair structures in disposable test renderer")<smoke.indexOf("const convergenceResult=await runPhase('wait for render and texture convergence'"));assert.ok(smoke.indexOf("wait for render and texture convergence")<smoke.indexOf("const auditCalls=[['offshoreStructures'"));
-assert.ok(smoke.indexOf("manifest.verdict=verdict();")<smoke.indexOf("const auditCalls=[['habitableStructures'"));
+assert.ok(smoke.indexOf("manifest.verdict=verdict();")<smoke.indexOf("const auditCalls=[['offshoreStructures'"));
 assert.match(smoke,/__captureTimedOut/);
 
 assert.match(smoke,/CAPTURE_CANVAS_TIMEOUT_MS/);assert.match(smoke,/CAPTURE_CDP_TIMEOUT_MS/);assert.match(smoke,/Number\(process\.env\.CAPTURE_CANVAS_TIMEOUT_MS\)\|\|75000/);assert.match(smoke,/Number\(process\.env\.CAPTURE_CDP_TIMEOUT_MS\)\|\|8000/);assert.match(smoke,/afterFailure\?15000:CANVAS_CAPTURE_TIMEOUT_MS/);assert.match(smoke,/afterFailure\?8000:CDP_CAPTURE_TIMEOUT_MS/);
