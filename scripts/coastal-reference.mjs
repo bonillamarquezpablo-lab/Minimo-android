@@ -198,7 +198,7 @@ async function main() {
     manifest.backgroundModels = boot.backgroundModels;
     manifest.sceneWarmup = boot.sceneWarmup;
 
-    assert.equal(boot.build, '0.6.273', 'La referencia debe ser exactamente 0.6.273');
+    assert.equal(boot.build, '0.6.274', 'La referencia debe ser exactamente 0.6.274');
     assert.equal(boot.coastalRuntimeMode, 'module', 'El módulo costero externo debe cargarse desde dist; el respaldo inline no debe ocultar un error de empaquetado.');
     assert.equal(boot.coastalApiReady, true, 'Falta una o más funciones de la API costera al construir la escena.');
     assert.equal(boot.startup.worldReady, true, 'La escena costera no terminó de prepararse');

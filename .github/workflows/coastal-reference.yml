@@ -6,7 +6,7 @@ on:
   # Run the beach-only visual suite on the isolated coastal branch. This does not
   # activate the separate Pages release workflow.
   push:
-    branches: [fix/coastal-water-surface-0.6.273]
+    branches: [fix/coastal-water-surface-0.6.273, release/0.6.274-stable]
   workflow_dispatch:
 
 permissions:
@@ -15,7 +15,7 @@ permissions:
 concurrency:
   group: coastal-geometry-reference-${{ github.ref }}
   # Newer commits supersede older 36-view captures; do not let stale Playwright runs block the latest audit.
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   reference:

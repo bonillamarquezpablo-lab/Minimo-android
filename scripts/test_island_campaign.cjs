@@ -18,6 +18,39 @@ assert.match(html,/const centerY=renderedTerrainSurfaceAt\(px,pz\),ys=\[/,'Footi
 assert.match(html,/g\.position=v\(houseX,footing\.centerY-\.02\*scale,houseZ\)/,'Each hut footing must use the measured rendered-ground center height and scaled base offset.');
 assert.match(html,/groundingErrorMeters:Number\(Math\.abs\(footingBottomY-sampledTerrainY\)\.toFixed\(4\)\)/,'Every hut must expose its measured rendered-ground footing error.');
 assert.match(html,/maxCenterRadius=island\.r\*\.76-footprintRadius-1\.25/,'Every hut candidate must keep its complete footprint inside the dry-land band.');
+
+assert.ok(html.includes("function settlementHousePosition(island,x,z,scale=1)"),
+  "Every settlement hut must be projected inside its own island's safe dry-land radius.");
+assert.ok(html.includes("const houseSpecs=[[x,z,.90],[x-7,z+7,.66],[x+8,z-5,.62]];"),
+  "The three original hut offsets and scales must remain intact.");
+assert.ok(html.includes("settlementHousePosition(land[index],hx,hz,scale)"),
+  "Hut projection must use the owning island, never a nearest-island guess.");
+assert.ok(html.includes("house.__settlementProjection={requested:{x:hx,z:hz},projected:position};"),
+  "The audit must retain the original and projected coordinates for each hut.");
+const placementStart=html.indexOf("function settlementHousePosition(island,x,z,scale=1){");
+const placementEnd=html.indexOf("\\n function makeVillage",placementStart);
+assert.ok(placementStart>=0&&placementEnd>placementStart,
+  "The hut projection helper must remain independently testable.");
+const placementSource=html.slice(placementStart,placementEnd).trim();
+const settlementHousePosition=new Function(placementSource+"; return settlementHousePosition;")();
+const testSettlements=[
+  {island:{x:0,z:0,r:60},houses:[[31,-17,.90],[24,-10,.66],[39,-22,.62]]},
+  {island:{x:135,z:14,r:31},houses:[[135,14,.90],[128,21,.66],[143,9,.62]]},
+  {island:{x:-132,z:45,r:33},houses:[[-132,45,.90],[-139,52,.66],[-124,40,.62]]},
+  {island:{x:28,z:143,r:33},houses:[[28,143,.90],[21,150,.66],[36,138,.62]]}
+];
+for(const settlement of testSettlements)for(const [x,z,scale] of settlement.houses){
+  const placed=settlementHousePosition(settlement.island,x,z,scale);
+  const distance=Math.hypot(placed.x-settlement.island.x,placed.z-settlement.island.z);
+  const footprint=Math.hypot(2.01*scale,2.64*scale);
+  assert.ok(distance+footprint<=settlement.island.r*.76-1.25+1e-8,
+    "The complete hut footprint must remain at least 1.25 m inside the grass/sand transition.");
+}
+const movedBeachHut=settlementHousePosition(testSettlements[0].island,39,-22,.62);
+assert.equal(movedBeachHut.adjusted,true,"The outer Raven village hut must be moved inward off the beach transition.");
+assert.ok(Math.hypot(movedBeachHut.x,movedBeachHut.z)<Math.hypot(39,-22),
+  "A hut overlapping the coast must be moved toward the island centre.");
+
 assert.doesNotMatch(html,/safeVillageRadius=/,'Only individual huts may move; the village center and shared props must stay in place.');
 assert.match(html,/g\.position=v\(houseX,footing\.centerY-\.02\*scale,houseZ\)/);
 assert.match(html,/type:'rect',x:houseX,z:houseZ/,'The hut collision footprint must follow its corrected rendered position.');
@@ -67,4 +100,4 @@ assert.match(html,/if\(ref&&ref\.active===false\)continue/,'Inactive hidden-stru
 assert.match(html,/if\(c\.active===false\)continue/,'Inactive hidden-structure colliders must be ignored by world movement and melee.');
 assert.match(html,/withinDryLandBand/);
 
-console.log('OK: 13 islands, naval systems, and live dry-land audit for every roofed structure.');
+console.log('OK: 13 islands, 12 projected settlement huts, naval systems, and live dry-land audit for every roofed structure.');
