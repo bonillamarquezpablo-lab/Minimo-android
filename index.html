@@ -12709,7 +12709,7 @@ function update(dt){
 
 
   function getCoastalSceneInventory(limit=500){
-   const started=performance.now(),maxItems=Math.max(50,Math.min(1200,Math.floor(Number(limit)||500)));
+   const started=performance.now(),maxItems=Math.max(50,Math.min(5000,Math.floor(Number(limit)||500)));
    const surfacePattern=/(?:water|ocean|sea|wave|foam|shore|coast|beach|seabed|sand|tidal|terrain|ground|island)/i;
    const structurePattern=/(?:hut|shelter|outpost|scout.?camp|garrison|meadhall|forge|watch.?tower|village|house|building|camp|settlement|dock|pier|boat|ship|drakkar|claim|post)/i;
    const vegetationPattern=/(?:tree|grass|fern|bush|reed|pine|vegetation|foliage)/i,candidates=new Set();
