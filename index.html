@@ -2260,6 +2260,24 @@ async function removeStrayDebugGeometry(targetScene){
  if(!B||!B.Engine)throw new Error('La librería Babylon.js está incompleta o no es compatible.');
  const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:testModeEnabled,stencil:true,antialias:activeGraphicsProfile!=='performance',powerPreference:'high-performance',failIfMajorPerformanceCaveat:false},false);
  bootEngineForCleanup=engine;
+ // Diagnostic-only: count DynamicTexture uploads without affecting normal gameplay.
+ const captureDynamicTextureUpdates=new WeakMap();
+ if(testModeEnabled&&B.DynamicTexture?.prototype&&typeof B.DynamicTexture.prototype.update==='function'){
+  const originalDynamicTextureUpdate=B.DynamicTexture.prototype.update;
+  if(!originalDynamicTextureUpdate.__elsnCaptureWrapped){
+   const wrappedDynamicTextureUpdate=function(...args){
+    const prior=captureDynamicTextureUpdates.get(this)||{calls:0,firstUpdateAtMs:null,lastUpdateAtMs:null,renderLoopCountAtLastUpdate:null};
+    const now=Number(performance.now().toFixed(2));prior.calls++;
+    if(prior.firstUpdateAtMs===null)prior.firstUpdateAtMs=now;
+    prior.lastUpdateAtMs=now;
+    prior.renderLoopCountAtLastUpdate=Array.isArray(engine._activeRenderLoops)?engine._activeRenderLoops.length:null;
+    captureDynamicTextureUpdates.set(this,prior);
+    return originalDynamicTextureUpdate.apply(this,args);
+   };
+   Object.defineProperty(wrappedDynamicTextureUpdate,'__elsnCaptureWrapped',{value:true});
+   B.DynamicTexture.prototype.update=wrappedDynamicTextureUpdate;
+  }
+ }
  let contextCurrentlyLost=false,contextRecoveryTimer=null;
  canvas.addEventListener('webglcontextlost',event=>{
   event.preventDefault();contextCurrentlyLost=true;contextLostRequiresReload=false;
@@ -12585,53 +12603,86 @@ function update(dt){
    return {schema:1,islandCount:results.length,thresholds:{heightJumpMeters:{IslandHeightfield:1.0,NordicSubmergedSand:.80,LivingCoastalSand:.90,ShoreBreakerWash:.75},sandAboveProfileToleranceMeters:.015,seamPositionToleranceMeters:.002},durationMs:Number((performance.now()-started).toFixed(1)),islands:results};
   }
 
+  function collectMaterialTexturePairs(material,pairs,visited){
+   if(!material||visited.has(material))return;visited.add(material);
+   if(Array.isArray(material.subMaterials))material.subMaterials.forEach(item=>collectMaterialTexturePairs(item,pairs,visited));
+   if(typeof material.getActiveTextures==='function'){try{for(const texture of material.getActiveTextures()||[])if(texture)pairs.push({material,texture});}catch(_){}}
+  }
+  function captureTextureReadinessSnapshot(){
+   const activeCamera=scene.activeCamera||camera;let frustumPlanes=null,frustumCheckAvailable=false;
+   try{activeCamera.getViewMatrix(true);activeCamera.getProjectionMatrix(true);if(B.Frustum?.GetPlanes){frustumPlanes=B.Frustum.GetPlanes(activeCamera.getTransformationMatrix());frustumCheckAvailable=!!frustumPlanes;}}catch(_){}
+   let activeSet=null;try{const list=scene.getActiveMeshes?.();if(list){const rows=list.data&&Number.isFinite(list.length)?list.data.slice(0,list.length):(Array.isArray(list)?list:[]);activeSet=new Set(rows);}}catch(_){}
+   const usage=new Map(),visibleMaterials=new Set(),meshForMaterial=new Map();
+   const allMeshes=(scene.meshes||[]).filter(mesh=>mesh&&!mesh.isDisposed?.());
+   for(const mesh of allMeshes){
+    let enabled=true;try{enabled=typeof mesh.isEnabled==='function'?mesh.isEnabled():true;}catch(_){enabled=false;}
+    const visible=mesh.isVisible!==false&&Number(mesh.visibility)!==0;
+    const layerVisible=!activeCamera.layerMask||!mesh.layerMask||(mesh.layerMask&activeCamera.layerMask)!==0;
+    let inFrustum=null;try{if(frustumPlanes&&typeof mesh.isInFrustum==='function')inFrustum=mesh.isInFrustum(frustumPlanes);}catch(_){}
+    const active=activeSet?activeSet.has(mesh):null;
+    const cameraVisible=enabled&&visible&&layerVisible&&(inFrustum===null?!!active:inFrustum&&(active===null||active));
+    const meshInfo={name:mesh.name||mesh.id||'mesh-unknown',uniqueId:Number.isFinite(mesh.uniqueId)?mesh.uniqueId:null,enabled,visible,active,inFrustum,layerVisible,cameraVisible,material:mesh.material?.name||null};
+    const pairs=[];collectMaterialTexturePairs(mesh.material,pairs,new Set());
+    for(const pair of pairs){
+     const material=pair.material,texture=pair.texture;
+     if(!meshForMaterial.has(material))meshForMaterial.set(material,[]);if(cameraVisible)meshForMaterial.get(material).push(mesh);
+     if(!usage.has(texture))usage.set(texture,{materials:new Map(),meshes:new Map()});
+     const row=usage.get(texture);row.materials.set(material,material.name||'material-unknown');
+     const prior=row.meshes.get(mesh);if(!prior||(!prior.cameraVisible&&cameraVisible))row.meshes.set(mesh,meshInfo);
+     if(cameraVisible)visibleMaterials.add(material);
+    }
+   }
+   const textures=(scene.textures||[]).filter(texture=>texture&&!texture.isDisposed?.());
+   const describe=texture=>{
+    let internal=null;try{internal=texture.getInternalTexture?.()||texture._texture||null;}catch(_){internal=texture._texture||null;}
+    const dynamic=!!((B.DynamicTexture&&texture instanceof B.DynamicTexture)||texture.getClassName?.()==='DynamicTexture');
+    const url=(typeof texture.url==='string'&&texture.url)||(typeof texture._url==='string'&&texture._url)||(typeof internal?.url==='string'&&internal.url)||null;
+    let isReady=false;try{isReady=typeof texture.isReady==='function'?!!texture.isReady():!!internal?.isReady;}catch(_){}
+    let size=null;try{size=texture.getSize?.()||null;}catch(_){}
+    const stats=dynamic?(captureDynamicTextureUpdates.get(texture)||null):null;
+    const loadError=texture._loadingError||internal?._loadingError||internal?.error||null;
+    let loadState='ready';if(!isReady){
+     if(dynamic){if(!stats||stats.calls===0)loadState='dynamic-not-updated';else if(!internal)loadState='dynamic-no-internal-texture';else if(internal.isLoading)loadState='dynamic-uploading';else if(!internal.isReady)loadState='dynamic-internal-not-ready';else loadState='dynamic-wrapper-not-ready';}
+     else if(url){if(loadError)loadState='url-error';else if(internal?.isLoading)loadState='url-loading';else if(!internal)loadState='url-no-internal-texture';else loadState='url-not-ready';}
+     else loadState='no-source-not-ready';
+    }
+    const links=usage.get(texture)||{materials:new Map(),meshes:new Map()};const meshes=Array.from(links.meshes.values());
+    return {name:texture.name||url||'texture-unknown',type:dynamic?'DynamicTexture':(url?'URL':'no-source'),url,size:size?{width:size.width??null,height:size.height??null}:null,isReady,loadState,blocking:typeof texture.isBlocking==='boolean'?texture.isBlocking:null,loadStateDetails:{hasInternalTexture:!!internal,internalReady:typeof internal?.isReady==='boolean'?internal.isReady:null,internalLoading:typeof internal?.isLoading==='boolean'?internal.isLoading:null,internalState:internal?._state??null,loadingError:loadError?String(loadError.message||loadError):null,hasImage:!!(internal?._image||texture._image),imageComplete:(internal?._image||texture._image)?.complete??null,dynamicUpdate:stats?{calls:stats.calls,firstUpdateAtMs:stats.firstUpdateAtMs,lastUpdateAtMs:stats.lastUpdateAtMs,renderLoopCountAtLastUpdate:stats.renderLoopCountAtLastUpdate}:null,engineRenderLoopCount:Array.isArray(engine._activeRenderLoops)?engine._activeRenderLoops.length:null,documentVisibility:document.visibilityState},cameraRelevant:meshes.some(mesh=>mesh.cameraVisible),materials:Array.from(links.materials.values()),meshes};
+   };
+   const pendingTextures=textures.filter(texture=>{try{return typeof texture.isReady==='function'?!texture.isReady():true;}catch(_){return true;}}).map(describe);
+   const cameraPendingTextures=pendingTextures.filter(item=>item.cameraRelevant),offCameraPendingTextures=pendingTextures.filter(item=>!item.cameraRelevant);
+   return {report:{camera:{name:activeCamera.name||'active-camera',position:{x:Number(activeCamera.position.x.toFixed(3)),y:Number(activeCamera.position.y.toFixed(3)),z:Number(activeCamera.position.z.toFixed(3))},frustumCheckAvailable},counts:{sceneMeshes:allMeshes.length,sceneTextures:textures.length,pendingSceneTextures:pendingTextures.length,cameraRelevantPendingTextures:cameraPendingTextures.length,offCameraPendingTextures:offCameraPendingTextures.length,cameraVisibleMaterials:visibleMaterials.size},pendingTextures,cameraPendingTextures,offCameraPendingTextures},visibleMaterials,meshForMaterial};
+  }
+  async function prepareCaptureFrameForCamera({timeoutMs=15000}={}){
+   const started=performance.now(),budget=Math.max(500,Math.min(120000,Number(timeoutMs)||15000)),deadline=started+budget;let renderedFrames=0,stableReadyFrames=0;
+   scene.render();let snapshot=captureTextureReadinessSnapshot();
+   while(performance.now()<deadline){
+    snapshot=captureTextureReadinessSnapshot();
+    if(snapshot.report.cameraRelevantPendingTextures===0){}
+    if(snapshot.report.cameraPendingTextures.length===0){stableReadyFrames++;if(stableReadyFrames>=2)break;}else stableReadyFrames=0;
+    await new Promise(resolve=>requestAnimationFrame(resolve));
+    if(!Array.isArray(engine._activeRenderLoops)||engine._activeRenderLoops.length===0)scene.render();
+    renderedFrames++;
+   }
+   if(!Array.isArray(engine._activeRenderLoops)||engine._activeRenderLoops.length===0)scene.render();
+   snapshot=captureTextureReadinessSnapshot();
+   const visibleMaterials=Array.from(snapshot.visibleMaterials),compileStart=performance.now();let compilationTimedOut=false,compilation=[];
+   if(snapshot.report.cameraPendingTextures.length===0){
+    const task=Promise.all(visibleMaterials.map(async material=>{const mesh=(snapshot.meshForMaterial.get(material)||[])[0];if(!mesh||typeof material.forceCompilationAsync!=='function')return {material:material.name||'material-unknown',skipped:true};try{await material.forceCompilationAsync(mesh);return {material:material.name||'material-unknown',compiled:true};}catch(error){return {material:material.name||'material-unknown',compiled:false,error:String(error?.message||error)};}}));
+    const result=await Promise.race([task.then(value=>({value})),new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),Math.min(5000,Math.max(500,budget*.25))))]);
+    if(result.timeout)compilationTimedOut=true;else compilation=result.value;
+   }
+   scene.render();snapshot=captureTextureReadinessSnapshot();
+   const textureReady=snapshot.report.cameraPendingTextures.length===0,shaderFailures=compilation.filter(item=>item.compiled===false);
+   const ready=textureReady&&!compilationTimedOut&&!shaderFailures.length;
+   return {ready,verdict:ready?'ready':(textureReady?'shader-compilation-pending':'texture-pending'),texturePending:!textureReady,timeoutMs:budget,elapsedMs:Number((performance.now()-started).toFixed(1)),frameBarrier:{renderedFrames,stableReadyFrames,renderLoopCount:Array.isArray(engine._activeRenderLoops)?engine._activeRenderLoops.length:null,renderLoopKeptRunning:true},shaderCompilation:{attempted:visibleMaterials.length,elapsedMs:Number((performance.now()-compileStart).toFixed(1)),timedOut:compilationTimedOut,failures:shaderFailures},textureDiagnostics:snapshot.report};
+  }
   window.__ELSN_TEST__={
    build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',
    islands:land.map(({x,z,r,name})=>({x,z,r,name})),
    stop:()=>engine.stopRenderLoop(),
-   prepareCaptureFrame:async({timeoutMs=120000}={})=>{
-    const started=performance.now();
-    await Promise.race([scene.whenReadyAsync(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Timeout esperando la escena lista')),timeoutMs))]);
-    const textures=scene.textures.filter(texture=>texture&&typeof texture.isReady==='function'&&!texture.isDisposed?.());
-    const pendingTextures=()=>textures.filter(texture=>!texture.isReady());
-    // DynamicTexture may report not-ready until Babylon has actually drawn it once.
-    // Wait for real engine frames (not manual renders) before stopping the loop.
-    const frameBarrier=await new Promise((resolve,reject)=>{
-     let renderedFrames=0,observer=null;
-     const timer=setTimeout(()=>{
-      if(observer)scene.onAfterRenderObservable.remove(observer);
-      const pending=pendingTextures().slice(0,30).map(texture=>({
-       name:texture.name||texture.url||'texture-unknown',
-       blocking:typeof texture.isBlocking==='boolean'?texture.isBlocking:null,
-       internalReady:!!texture.getInternalTexture?.()?.isReady,
-       className:texture.getClassName?.()||null
-      }));
-      reject(new Error('Timeout esperando fotogramas y texturas inicializadas: '+JSON.stringify(pending)));
-     },timeoutMs);
-     observer=scene.onAfterRenderObservable.add(()=>{
-      renderedFrames++;
-      const pending=pendingTextures();
-      if(renderedFrames>=2&&!pending.length){
-       clearTimeout(timer);scene.onAfterRenderObservable.remove(observer);
-       resolve({renderedFrames,texturesReady:textures.length,pendingTextures:0});
-      }
-     });
-    });
-    // Only freeze after two actual frames and full texture readiness.
-    engine.stopRenderLoop();
-    const materials=[...new Set(scene.meshes.map(mesh=>mesh.material).filter(Boolean))],failures=[];
-    await Promise.race([Promise.all(materials.map(async material=>{
-     if(typeof material.forceCompilationAsync!=='function')return;
-     const mesh=scene.meshes.find(item=>item.material===material&&!item.isDisposed?.());if(!mesh)return;
-     try{await material.forceCompilationAsync(mesh);}catch(error){failures.push({material:material.name||'material-unknown',error:String(error?.message||error)});}
-    })),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Timeout compilando shaders')),timeoutMs))]);
-    const pendingAfter=pendingTextures().map(texture=>texture.name||texture.url||'texture-unknown');
-    if(pendingAfter.length)throw new Error('Texturas no listas tras compilar shaders: '+pendingAfter.slice(0,30).join(', '));
-    if(failures.length)throw new Error('Falló la compilación de shaders: '+JSON.stringify(failures.slice(0,12)));
-    if(!scene.isReady())throw new Error('Babylon informa de que la escena no está lista para capturar');
-    scene.render();
-    return {ready:true,frameBarrier,meshCount:scene.meshes.length,textureCount:textures.length,materialCount:materials.length,compiledMaterials:materials.filter(material=>typeof material.forceCompilationAsync==='function').length,elapsedMs:Number((performance.now()-started).toFixed(1)),renderLoopStopped:true};
-   },
+   prepareCaptureFrame:async({timeoutMs=15000}={})=>prepareCaptureFrameForCamera({timeoutMs}),
+   getTextureReadinessForCamera:()=>captureTextureReadinessSnapshot().report,
    setCamera:({x,y,z,targetX,targetY,targetZ})=>{camera.position.set(x,y,z);camera.setTarget(new B.Vector3(targetX,targetY,targetZ));},
    setIslandShadowReceiving:(enabled)=>{const terrain=islandTerrainMeshes[0];if(!terrain)return false;terrain.receiveShadows=!!enabled;return terrain.receiveShadows===!!enabled;},
    setPackedTrailVisible:(enabled)=>{const trails=packedTrailMeshes;trails.forEach(mesh=>{mesh.isVisible=!!enabled;if(typeof mesh.setEnabled==='function')mesh.setEnabled(!!enabled);});return {count:trails.length,visible:trails.length>0&&trails.every(mesh=>mesh.isVisible===!!enabled),states:trails.map(mesh=>({name:mesh.name,isVisible:mesh.isVisible,isEnabled:typeof mesh.isEnabled==='function'?mesh.isEnabled():null,disposed:!!mesh.isDisposed?.()}))};},

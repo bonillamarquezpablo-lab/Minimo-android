@@ -19,6 +19,63 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  texture-smoke:
+    name: One-camera texture readiness smoke
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check smoke diagnostics
+        run: |
+          node --check scripts/texture-readiness-smoke.mjs
+          node scripts/test_texture_readiness_contract.cjs
+      - name: Build complete game
+        run: python scripts/build_site.py
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Start local built-site server
+        run: |
+          python3 -m http.server 4176 --directory dist > /tmp/elsn-texture-smoke-http.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4176/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/elsn-texture-smoke-http.log
+          exit 1
+      - name: Prepare and capture exactly one camera
+        env:
+          CAPTURE_TEST_URL: http://127.0.0.1:4176/
+          CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
+          CAPTURE_TEXTURE_TIMEOUT_MS: '15000'
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            export CAPTURE_PLAN_JSON="$CAPTURE_PLAN_INPUT"
+          else
+            export CAPTURE_PLAN_JSON="$(cat scripts/scene-capture-plan.json)"
+          fi
+          node scripts/texture-readiness-smoke.mjs
+      - name: Upload smoke PNG and texture diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: texture-readiness-smoke-${{ github.sha }}
+          path: artifacts/texture-readiness-smoke/
+          if-no-files-found: warn
+          retention-days: 30
   character-startup:
     if: github.event_name == 'pull_request'
     name: Verify real Viking GLB startup independently
@@ -75,7 +132,7 @@ jobs:
 
   custom-capture:
     name: Custom free-camera scene captures
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
+    if: false # Phase 1: gated until the one-camera smoke passes.
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
