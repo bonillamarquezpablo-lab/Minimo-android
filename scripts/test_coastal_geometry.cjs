@@ -90,6 +90,8 @@ assert.match(html,/registerHabitableStructure\(scout,'IslandScoutCamp'/);
 assert.match(html,/registerHabitableStructure\(starterCamp,'StarterCastawayCamp'/);
 assert.match(html,/registerHabitableStructure\(forge,'NorseBlacksmithForge'/);
 assert.match(html,/registerHabitableStructure\(outpostRoot,'IslandGarrisonOutpost'/);
+assert.match(html,/registerHabitableStructure\(tower,'NorseWatchTower'/,'Village watchtowers must also be included in the dry-land audit.');
+assert.match(html,/towerSafeRadius=watchIsland\.r\*\.76-1\.35-1\.25/,'Village watchtowers must be projected inside the dry-land margin.');
 assert.match(html,/root\.setEnabled\(false\);entry\.hiddenByAudit=true/,'An invalid building must stop rendering.');
 assert.match(html,/if\(entry\.collider\)entry\.collider\.active=false/,'A hidden building must not leave an invisible collision wall.');
 assert.match(html,/if\(ref&&ref\.active===false\)continue/,'Inactive hidden-structure colliders must be ignored by movement queries.');
