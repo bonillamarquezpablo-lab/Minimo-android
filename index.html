@@ -8589,7 +8589,7 @@ function createRealWeapon(type='axe'){
    let islandIndex=-1;
    for(let i=0;i<land.length;i++){const island=land[i],ix=px-island.x,iz=pz-island.z;if(ix*ix+iz*iz<island.r*island.r){islandIndex=i;break;}}
    if(islandIndex<0)continue;
-   const island=land[islandIndex],maxCenterRadius=island.r*.76-footprintRadius-8.0;
+   const island=land[islandIndex],maxCenterRadius=island.r*.76-footprintRadius-1.25;
    if(Math.hypot(px-island.x,pz-island.z)>maxCenterRadius)continue;
    const centerY=renderedTerrainSurfaceAt(px,pz),ys=[renderedTerrainSurfaceAt(px-halfX,pz-halfZ),renderedTerrainSurfaceAt(px+halfX,pz-halfZ),renderedTerrainSurfaceAt(px-halfX,pz+halfZ),renderedTerrainSurfaceAt(px+halfX,pz+halfZ)];
    if(!Number.isFinite(centerY)||centerY<.22||ys.some(y=>!Number.isFinite(y)||y<.22))continue;
@@ -8722,9 +8722,20 @@ function createRealWeapon(type='axe'){
   const dx=x-island.x,dz=z-island.z,distance=Math.hypot(dx,dz);
   // Project only the individual hut inward; retain village centre, guards, paths and shared props.
   const footprintRadius=Math.hypot(2.01*scale,2.64*scale);
-  const safeRadius=Math.max(0,island.r*.76-footprintRadius-8.0);
+  const safeRadius=Math.max(0,island.r*.76-footprintRadius-1.25);
   if(distance<=safeRadius||distance<1e-6)return {x,z,adjusted:false};
   const factor=safeRadius/distance;
+  return {x:island.x+dx*factor,z:island.z+dz*factor,adjusted:true};
+ }
+ function settlementVillagePosition(island,x,z){
+  // Keep the entire village (huts, palisade, guards and standard) on the island,
+  // not merely each hut's centre. This moves the settlement as one group and
+  // preserves the original spacing between all buildings and shared props.
+  const settlementFootprintRadius=14.0,dryLandBuffer=8.0;
+  const safeCenterRadius=Math.max(0,island.r*.76-settlementFootprintRadius-dryLandBuffer);
+  const dx=x-island.x,dz=z-island.z,distance=Math.hypot(dx,dz);
+  if(distance<=safeCenterRadius||distance<1e-6)return {x,z,adjusted:false};
+  const factor=safeCenterRadius/distance;
   return {x:island.x+dx*factor,z:island.z+dz*factor,adjusted:true};
  }
  function makeVillage(index,x,z,name){
@@ -8753,10 +8764,10 @@ function createRealWeapon(type='axe'){
   }
   villages.push({index,x,z,name,guards,claimed:false,flag,flagGroup,flagEmblem,flagpole,houseGroups,houseOriginalMaterials:houseGroups.map(group=>group.getChildMeshes(false).map(mesh=>({mesh,material:mesh.material}))),territoryFill:null,territoryRing:null,captureAnimation:null});
  }
- makeVillage(0,31,-17,'Aldea de Cuervo');
- makeVillage(1,135,14,'Skall');
- makeVillage(2,-132,45,'Pinos');
- makeVillage(3,28,143,'Hrafn');
+ for(const [index,x,z,name] of [[0,31,-17,'Aldea de Cuervo'],[1,135,14,'Skall'],[2,-132,45,'Pinos'],[3,28,143,'Hrafn']]){
+  const placement=settlementVillagePosition(land[index],x,z);
+  makeVillage(index,placement.x,placement.z,name);
+ }
  // Nine additional island garrisons complete the archipelago's 13-island conquest layer.
  // They reuse the existing capture/recruit/save controller but avoid full village props,
  // civilians and extra campfires to keep the mobile world budget bounded.
