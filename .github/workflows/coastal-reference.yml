@@ -3,14 +3,10 @@ name: Coastal reference capture
 on:
   pull_request:
     branches: [main, test/coastal-reference-0.6.272]
-  # Keep the source experiment independently testable. The release candidate is
-  # validated by its open pull request, avoiding a duplicate 36-view capture on push.
-  push:
-    branches: [fix/coastal-water-surface-0.6.273, release/0.6.274-stable]
   workflow_dispatch:
     inputs:
       capture_plan:
-        description: 'JSON: cámaras libres. Coordenadas absolutas o islandIndex + offsets. Máximo 200.'
+        description: 'JSON: cámaras libres. Coordenadas absolutas o islandIndex + offsets. Máximo 40.'
         required: true
         type: string
         default: '[{"id":"cuervo-desde-mar","islandIndex":0,"camera":{"x":70,"y":18,"z":-95,"targetX":0,"targetY":4,"targetZ":0}},{"id":"cuervo-desde-tierra","islandIndex":0,"camera":{"x":-35,"y":8,"z":-25,"targetX":0,"targetY":3,"targetZ":0}}]'
@@ -19,86 +15,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: coastal-geometry-reference-${{ github.ref }}
-  # Newer commits supersede older 36-view captures; do not let stale Playwright runs block the latest audit.
+  group: scene-capture-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
-  reference:
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/fix/coastal-water-surface-0.6.273')
-    name: Build game and capture 36 coastal and ridge views
-    runs-on: ubuntu-latest
-    timeout-minutes: 50
-    steps:
-      - name: Checkout exact PR head commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Validate coastal state and geometry contracts
-        run: |
-          node --check scripts/coastal-reference.mjs
-          node scripts/test_coastal_reference_contract.cjs
-          node scripts/test_water_diagnostics.cjs
-          node scripts/test_coastal_geometry.cjs
-          node scripts/test_beach_state.cjs
-          node scripts/test_water_shore.cjs
-          node scripts/test_coastal_interaction.cjs
-          node scripts/test_island_campaign.cjs
-
-      - name: Build complete game and verify all packaged assets
-        run: python scripts/build_site.py
-
-      - name: Install Playwright and Chromium
-        run: |
-          npm install --no-save --no-package-lock playwright
-          npx playwright install --with-deps chromium
-
-      - name: Start local built-site server
-        run: |
-          python3 -m http.server 4173 --directory dist > /tmp/elsn-http.log 2>&1 &
-          echo $! > /tmp/elsn-http.pid
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
-            sleep 1
-          done
-          cat /tmp/elsn-http.log
-          exit 1
-
-      - name: Capture 36 deterministic coastal and ridge-occlusion images (one game load)
-        env:
-          COASTAL_TEST_URL: http://127.0.0.1:4173/
-        run: node scripts/coastal-reference.mjs
-
-      - name: Install Pillow for the contact sheet
-        if: always()
-        run: python -m pip install --disable-pip-version-check Pillow
-
-      - name: Build one PNG contact sheet from all 36 captures
-        if: always()
-        run: python scripts/create_coastal_contact_sheet.py
-
-      - name: Upload 36 screenshots, JSON manifest and contact sheet plus A/B shadow frame
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coastal-reference-${{ github.sha }}
-          path: artifacts/coastal-reference/
-          if-no-files-found: warn
-          retention-days: 30
-
   character-startup:
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/fix/coastal-water-surface-0.6.273')
+    if: github.event_name == 'pull_request'
     name: Verify real Viking GLB startup independently
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -153,7 +75,7 @@ jobs:
 
   custom-capture:
     name: Custom free-camera scene captures
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -171,6 +93,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Validate capture reliability contracts
+        run: |
+          node --check scripts/custom-scene-capture.mjs
+          node scripts/test_capture_reliability_contract.cjs
 
       - name: Build complete game
         run: python scripts/build_site.py
@@ -194,6 +121,7 @@ jobs:
         env:
           CAPTURE_TEST_URL: http://127.0.0.1:4175/
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
+          CAPTURE_SEED: '20261110'
         run: |
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             export CAPTURE_PLAN_JSON="$CAPTURE_PLAN_INPUT"

@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { chromium } from 'playwright';
 
 const BASE_URL = process.env.CAPTURE_TEST_URL || 'http://127.0.0.1:4175/';
 const OUT = path.resolve('artifacts/custom-scene-captures');
 const rawPlan = process.env.CAPTURE_PLAN_JSON || '[]';
 const plan = JSON.parse(rawPlan);
-const MAX_SHOTS = 200;
+const MAX_SHOTS = 40;
+const CAPTURE_SEED = Number.parseInt(process.env.CAPTURE_SEED || '20261110', 10) >>> 0;
 const DEFAULT_VIEWPORT = { width: 1600, height: 900, deviceScaleFactor: 1 };
 
 function finite(value, label) {
@@ -63,18 +65,9 @@ function expandPlan(input) {
   return expanded;
 }
 const shots=expandPlan(plan);
-
-function safeCall(fn) { try { return { value: fn(), error: null }; } catch (error) { return { value: null, error: String(error.stack || error) }; } }
-async function main() {
-  fs.mkdirSync(OUT,{recursive:true});
-  const manifest={
-    schema:2,capturedAt:new Date().toISOString(),finishedAt:null,build:null,
-    renderer:'Chromium headless + ANGLE SwiftShader',
-    viewport:DEFAULT_VIEWPORT,requestedPlanCount:plan.length,expandedShotCount:shots.length,
-    islands:[],sceneInventory:null,captures:[],failures:[],consoleErrors:[],pageErrors:[],
-    auditSummary:null
-  };
-  let browser;
+const manifest={schema:3,capturedAt:new Date().toISOString(),finishedAt:null,build:null,seed:CAPTURE_SEED,renderer:'Chromium headless + ANGLE SwiftShader',viewport:DEFAULT_VIEWPORT,requestedPlanCount:plan.length,expandedShotCount:shots.length,islands:[],sceneInventory:null,captures:[],failures:[],consoleErrors:[],pageErrors:[],phaseTimingsMs:{},determinism:{tested:0,failed:0},geometryAudit:null,initialPhysicalAudit:null,auditSummary:null};
+function writeManifest(){const target=path.join(OUT,'manifest.json'),temporary=target+'.tmp';fs.mkdirSync(OUT,{recursive:true});fs.writeFileSync(temporary,JSON.stringify(manifest,null,2)+'\\n');fs.renameSync(temporary,target);}
+async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
   try {
     browser=await chromium.launch({headless:true,timeout:60000,args:[
       '--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist',
@@ -83,8 +76,10 @@ async function main() {
     const context=await browser.newContext({viewport:{width:DEFAULT_VIEWPORT.width,height:DEFAULT_VIEWPORT.height},deviceScaleFactor:DEFAULT_VIEWPORT.deviceScaleFactor});
     const page=await context.newPage();
     page.setDefaultTimeout(60000);page.setDefaultNavigationTimeout(90000);
+    await page.addInitScript(({seed})=>{if(new URLSearchParams(location.search).get('test')!=='1')return;let state=seed>>>0;Math.random=()=>{state=(Math.imul(1664525,state)+1013904223)>>>0;return state/4294967296;};Object.defineProperty(window,'__ELSN_CAPTURE_SEED__',{value:seed,configurable:false});},{seed:CAPTURE_SEED});
     page.on('pageerror',e=>manifest.pageErrors.push(String(e.stack||e)));
     page.on('console',m=>{if(m.type()==='error')manifest.consoleErrors.push(m.text());});
+    const bootStarted=Date.now();
     await page.goto(BASE_URL+'?test=1&coastref=1',{waitUntil:'domcontentloaded',timeout:90000});
     const audioGate=page.locator('#audioGateStart');
     if(await audioGate.isVisible().catch(()=>false)) await audioGate.click();
@@ -96,7 +91,8 @@ async function main() {
     await page.locator('#intro.open').waitFor({state:'visible',timeout:60000});
     await page.locator('#newGameChoice').click();
     await page.waitForFunction(()=>document.body.classList.contains('game-running')&&document.querySelector('#intro')?.getAttribute('aria-hidden')==='true',undefined,{timeout:30000,polling:250});
-    await page.waitForTimeout(1200);
+    const readiness=await page.evaluate(async()=>window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs:120000}));
+    manifest.phaseTimingsMs.startupAndReadiness=Date.now()-bootStarted;manifest.readiness=readiness;manifest.phaseTimingsMs.readiness=readiness.elapsedMs;
 
     const boot=await page.evaluate(()=>{
       const api=window.__ELSN_TEST__;
@@ -111,28 +107,11 @@ async function main() {
 
     // One read-only physical audit before camera movement. It is recorded independently
     // from screenshots: audit failures must never discard an otherwise valid PNG.
-    const initialAudit=await page.evaluate(()=>{
-      const api=window.__ELSN_TEST__,result={};
-      for(const [key,method] of Object.entries({
-        structures:api.habitableStructureAudit,
-        huts:api.settlementGrounding,
-        camps:api.settlementCampGrounding,
-        garrisons:api.garrisonGrounding
-      })) {
-        try { result[key]=typeof method==='function'?method():null; }
-        catch(error){result[key+'_error']=String(error.stack||error);}
-      }
-      return result;
-    });
-    manifest.initialPhysicalAudit=initialAudit;
-    const structureRows=initialAudit.structures?.structures||[];
-    manifest.auditSummary={
-      structureCount:structureRows.length,
-      unsafeCount:initialAudit.structures?.unsafeCount??null,
-      visibleInvalidCount:initialAudit.structures?.visibleInvalidCount??null,
-      hutCount:initialAudit.huts?.length??null,
-      hutGroundingErrors:initialAudit.huts?.filter(item=>Math.abs(item.groundingErrorMeters??Infinity)>.08).length??null
-    };
+    const auditStarted=Date.now();
+    const initialAudit=await page.evaluate(()=>{const api=window.__ELSN_TEST__,result={};result.geometry=api.auditIslandGeometry();result.structuresBeforeRepair=api.habitableStructureAudit();result.repair=api.repairAndAuditHabitableStructures();result.structuresAfterRepair=api.habitableStructureAudit();for(const [key,method] of Object.entries({huts:api.settlementGrounding,camps:api.settlementCampGrounding,garrisons:api.garrisonGrounding})){try{result[key]=method();}catch(error){result[key+'_error']=String(error.stack||error);}}return result;});
+    manifest.phaseTimingsMs.oneTimeGeometryAndPhysicalAudit=Date.now()-auditStarted;
+    manifest.initialPhysicalAudit=initialAudit;manifest.geometryAudit=initialAudit.geometry;
+    manifest.auditSummary={structureCount:initialAudit.structuresAfterRepair?.total??null,unsafeVisibleBeforeRepair:initialAudit.repair?.unsafeVisibleBeforeRepair??null,visibleInvalidAfterRepair:initialAudit.repair?.visibleInvalidAfterRepair??null,unsafeCount:initialAudit.structuresAfterRepair?.unsafeCount??null,hutCount:initialAudit.huts?.length??null,hutGroundingErrors:initialAudit.huts?.filter(item=>Math.abs(item.groundingErrorMeters??Infinity)>.02).length??null,campCount:initialAudit.camps?.length??null,garrisonCount:initialAudit.garrisons?.length??null};writeManifest();
 
     for(const shot of shots) {
       const started=Date.now();
@@ -149,45 +128,26 @@ async function main() {
           api.render();
           return {camera,canvas:{width:document.getElementById('renderCanvas')?.width,height:document.getElementById('renderCanvas')?.height}};
         },{shot});
-        // Let the renderer settle after camera/water changes, then save the image first.
-        await page.waitForTimeout(Number.isFinite(shot.settleMs)?Math.max(0,Math.min(5000,shot.settleMs)):180);
-        const pngResult=await page.evaluate(()=>window.__ELSN_TEST__.captureCanvas());
-        const match=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(pngResult||'');
-        assert.ok(match,'No se obtuvo PNG.');
-        const buffer=Buffer.from(match[1],'base64');
-        assert.ok(buffer.length>1000,'PNG vacío o incompleto.');
-        assert.equal(buffer.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
-        const file=shot.id+'.png';fs.writeFileSync(path.join(OUT,file),buffer);
-
-        const telemetry=await page.evaluate(()=>{
-          const api=window.__ELSN_TEST__,out={};
-          for(const [key,method] of Object.entries({
-            diagnostics:api.diagnostics,structures:api.habitableStructureAudit,
-            huts:api.settlementGrounding,camps:api.settlementCampGrounding,garrisons:api.garrisonGrounding
-          })){
-            try{out[key]=typeof method==='function'?method():null;}
-            catch(error){out[key+'_error']=String(error.stack||error);}
-          }
-          return out;
-        });
-        manifest.captures.push({
-          id:shot.id,file,camera:prepared.camera,canvas:prepared.canvas,
-          time:shot.time??37,tide:shot.tide??'natural',bytes:buffer.length,
-          durationMs:Date.now()-started,telemetry
-        });
-        console.log('[scene-capture] '+manifest.captures.length+'/'+shots.length+' '+shot.id);
-      } catch(error) {
-        manifest.failures.push({id:shot.id,error:String(error.stack||error)});
-        console.error('[scene-capture] failed '+shot.id+': '+error.message);
-      }
+        const firstPng=await page.evaluate(()=>window.__ELSN_TEST__.captureCanvas());
+        await page.evaluate(()=>window.__ELSN_TEST__.render());
+        const secondPng=await page.evaluate(()=>window.__ELSN_TEST__.captureCanvas());
+        const firstMatch=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(firstPng||''),secondMatch=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(secondPng||'');
+        assert.ok(firstMatch&&secondMatch,'No se obtuvieron dos PNG deterministas.');
+        const buffer=Buffer.from(firstMatch[1],'base64'),secondBuffer=Buffer.from(secondMatch[1],'base64');assert.ok(buffer.length>1000,'PNG vacío o incompleto.');assert.equal(buffer.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
+        const firstHash=createHash('sha256').update(buffer).digest('hex'),secondHash=createHash('sha256').update(secondBuffer).digest('hex');manifest.determinism.tested++;if(firstHash!==secondHash)manifest.determinism.failed++;assert.equal(secondHash,firstHash,'Render no determinista en '+shot.id);
+        const file=shot.id+'.png';fs.writeFileSync(path.join(OUT,file),buffer);const telemetry=await page.evaluate(()=>({diagnostics:window.__ELSN_TEST__.diagnostics()}));
+        manifest.captures.push({id:shot.id,file,camera:prepared.camera,canvas:prepared.canvas,time:shot.time??37,tide:shot.tide??'natural',bytes:buffer.length,sha256:firstHash,durationMs:Date.now()-started,telemetry});
+        manifest.phaseTimingsMs.captureTotal=(manifest.phaseTimingsMs.captureTotal||0)+(Date.now()-started);console.log('[scene-capture] '+manifest.captures.length+'/'+shots.length+' '+shot.id);
+      } catch(error){manifest.failures.push({id:shot.id,error:String(error.stack||error)});console.error('[scene-capture] failed '+shot.id+': '+error.message);}
+      finally{manifest.lastUpdatedAt=new Date().toISOString();writeManifest();}
     }
     // Create a machine-readable index for quick triage, including every structure and
     // the capture IDs that were actually saved even when some shots failed.
-    manifest.captureIndex=manifest.captures.map(({id,file,camera,time,tide,bytes})=>({id,file,camera,time,tide,bytes}));
-    assert.ok(manifest.captures.length>0,'No se pudo guardar ninguna imagen.');
+    manifest.captureIndex=manifest.captures.map(({id,file,camera,time,tide,bytes,sha256})=>({id,file,camera,time,tide,bytes,sha256}));
+    assert.equal(manifest.captures.length,shots.length,'Capturas completas: '+manifest.captures.length+'/'+shots.length);assert.equal(manifest.determinism.failed,0,'Renders no deterministas.');
+    assert.ok(manifest.auditSummary?.visibleInvalidAfterRepair===0,'Estructuras inseguras visibles: '+JSON.stringify(manifest.auditSummary));assert.equal(manifest.auditSummary?.structureCount,39);assert.equal(manifest.auditSummary?.hutCount,12);assert.equal(manifest.auditSummary?.campCount,8);assert.equal(manifest.auditSummary?.garrisonCount,9);assert.equal(manifest.geometryAudit?.islandCount,13);assert.ok(manifest.auditSummary?.hutGroundingErrors===0);
   } finally {
-    manifest.finishedAt=new Date().toISOString();
-    fs.writeFileSync(path.join(OUT,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
+    manifest.finishedAt=new Date().toISOString();writeManifest();
     if(browser)await browser.close();
   }
   if(manifest.failures.length) {

@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const html=fs.readFileSync('index.html','utf8');
+const runner=fs.readFileSync('scripts/custom-scene-capture.mjs','utf8');
+const workflow=fs.readFileSync('.github/workflows/coastal-reference.yml','utf8');
+assert.match(workflow,/^  pull_request:/m);assert.match(workflow,/^  workflow_dispatch:/m);assert.doesNotMatch(workflow,/^  push:/m);
+assert.match(workflow,/group: scene-capture-\$\{\{ github\.sha \}\}/);assert.match(workflow,/if: github\.event_name == 'workflow_dispatch' \|\| github\.event_name == 'pull_request'/);
+assert.match(runner,/page\.addInitScript/);assert.match(runner,/Math\.imul\(1664525,state\)\+1013904223/);assert.match(runner,/prepareCaptureFrame\(\{timeoutMs:120000\}\)/);
+assert.match(runner,/__ELSN_TEST__\.render\(\)/);assert.match(runner,/createHash\('sha256'\)/);assert.match(runner,/assert\.equal\(secondHash,firstHash/);assert.match(runner,/function writeManifest\(\)/);
+assert.match(runner,/manifest\.lastUpdatedAt/);assert.match(runner,/api\.auditIslandGeometry\(\)/);assert.match(html,/unsafeVisibleBeforeRepair/);assert.match(html,/visibleInvalidAfterRepair/);
+assert.match(html,/tide==='high'\?\.28:\(tide==='low'\?-.28/);assert.match(html,/prepareCaptureFrame:async/);
+console.log('CAPTURE RELIABILITY CONTRACT OK');

@@ -8507,7 +8507,7 @@ function createRealWeapon(type='axe'){
  }
  function auditHabitableStructures(applyRepairs=true){
   const records=[],camera=scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position:null,autoRegisteredRoots=[];
-  let repaired=0,hiddenUnsafe=0,hiddenByDistance=0,visibleInvalidCount=0;
+  let repaired=0,hiddenUnsafe=0,hiddenByDistance=0,unsafeVisibleBeforeRepair=0,visibleInvalidAfterRepair=0;
   // Discover known roofed roots that were created without passing through the main registry.
   // This scan is root-only: walls, roof planks and child meshes are never separate buildings.
   const roofedRootPattern=/^(?:WeatheredNorseHut|PersistentPlayerNorseShelter|PersistentNorseShelter|IslandOutpost_\d+|IslandScoutCamp_\d+|IslandGarrisonOutpost_\d+|NorseGreatMeadHall_\d+|NorseBlacksmithForge_\d+|NorseWatchTower_\d+|PoorNorseCastawayCamp)$/;
@@ -8534,7 +8534,9 @@ function createRealWeapon(type='axe'){
   }
   for(const entry of habitableStructureRegistry){
    let result=evaluateHabitableStructure(entry),root=entry.root;
-   if(!result.safe&&applyRepairs&&entry.relocatable&&!entry.relocationAttempted&&root&&typeof root.setEnabled==='function'){
+   const enabledBeforeRepair=!!(root&&((typeof root.isEnabled==='function')?root.isEnabled():root.isVisible!==false));
+   if(!result.safe&&enabledBeforeRepair)unsafeVisibleBeforeRepair++;
+   if(!result.safe&&applyRepairs&&(entry.relocatable||testModeEnabled)&&!entry.relocationAttempted&&root&&typeof root.setEnabled==='function'){
     entry.relocationAttempted=true;
     const origin=root.getAbsolutePosition?root.getAbsolutePosition():root.position,candidate=findSafeHabitableAnchor(entry,origin);
     if(candidate){
@@ -8554,8 +8556,11 @@ function createRealWeapon(type='axe'){
     }
    }
    if(!result.safe){
-    if(result.enabled)visibleInvalidCount++;
-    if(applyRepairs&&root&&typeof root.setEnabled==='function'){
+    if(testModeEnabled){
+     if(!entry.relocationAttempted)entry.lastAction='relocation-not-attempted';
+     else if(entry.lastAction!=='relocated-to-dry-ground')entry.lastAction='relocation-failed-visible';
+     if(entry.collider)entry.collider.active=true;
+    }else if(applyRepairs&&root&&typeof root.setEnabled==='function'){
      root.setEnabled(false);entry.hiddenByAudit=true;entry.lastAction='hidden-no-safe-ground';
      if(entry.collider)entry.collider.active=false;
      hiddenUnsafe++;
@@ -8571,11 +8576,13 @@ function createRealWeapon(type='axe'){
      if(!withinDistance)hiddenByDistance++;
     }
    }
-   entry.lastStatus=result.status;const finalEnabled=!!(root&&((typeof root.isEnabled==='function')?root.isEnabled():root.isVisible!==false)),distanceToCameraMeters=camera?Math.hypot(result.x-camera.x,result.z-camera.z):0,visibilityLimitMeters=onShip?entry.boatVisibleDistance:entry.maxVisibleDistance;records.push(Object.assign({},result,{enabled:finalEnabled,distanceToCameraMeters:Number(distanceToCameraMeters.toFixed(2)),visibilityLimitMeters,lastAction:entry.lastAction}));
+   entry.lastStatus=result.status;const finalEnabled=!!(root&&((typeof root.isEnabled==='function')?root.isEnabled():root.isVisible!==false));
+   if(!result.safe&&finalEnabled)visibleInvalidAfterRepair++;
+   const distanceToCameraMeters=camera?Math.hypot(result.x-camera.x,result.z-camera.z):0,visibilityLimitMeters=onShip?entry.boatVisibleDistance:entry.maxVisibleDistance;records.push(Object.assign({},result,{enabled:finalEnabled,distanceToCameraMeters:Number(distanceToCameraMeters.toFixed(2)),visibilityLimitMeters,lastAction:entry.lastAction}));
   }
   const registeredRoots=new Set(habitableStructureRegistry.map(entry=>entry.root));
   const untrackedRoots=scene.transformNodes.filter(node=>roofedRootPattern.test(node.name||'')&&!registeredRoots.has(node)).map(node=>node.name);
-  const snapshot={schema:1,total:records.length,groundedCount:records.filter(x=>x.safe).length,unsafeCount:records.filter(x=>!x.safe).length,visibleInvalidCount,hiddenUnsafe,hiddenByDistance,repaired,autoRegisteredRootCount:autoRegisteredRoots.length,autoRegisteredRoots,untrackedRootCount:untrackedRoots.length,untrackedRoots,structures:records};
+  const snapshot={schema:2,total:records.length,groundedCount:records.filter(x=>x.safe).length,unsafeCount:records.filter(x=>!x.safe).length,unsafeVisibleBeforeRepair,visibleInvalidAfterRepair,visibleInvalidCount:visibleInvalidAfterRepair,hiddenUnsafe,hiddenByDistance,repaired,autoRegisteredRootCount:autoRegisteredRoots.length,autoRegisteredRoots,untrackedRootCount:untrackedRoots.length,untrackedRoots,structures:records};
   lastHabitableStructureAudit=snapshot;return snapshot;
  }
  function findLevelHutFooting(cx,cz,scale){
@@ -12582,6 +12589,26 @@ function update(dt){
    build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',
    islands:land.map(({x,z,r,name})=>({x,z,r,name})),
    stop:()=>engine.stopRenderLoop(),
+   prepareCaptureFrame:async({timeoutMs=120000}={})=>{
+    const started=performance.now();engine.stopRenderLoop();
+    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('Timeout esperando shaders/texturas del escenario')),timeoutMs));
+    await Promise.race([scene.whenReadyAsync(),timeout]);
+    const textures=scene.textures.filter(texture=>texture&&typeof texture.isReady==='function');
+    const pendingBefore=textures.filter(texture=>!texture.isReady()).map(texture=>texture.name||texture.url||'texture-unknown');
+    if(pendingBefore.length)throw new Error('Texturas todavía no listas: '+pendingBefore.slice(0,20).join(', '));
+    const materials=[...new Set(scene.meshes.map(mesh=>mesh.material).filter(Boolean))],failures=[];
+    await Promise.race([Promise.all(materials.map(async material=>{
+     if(typeof material.forceCompilationAsync!=='function')return;
+     const mesh=scene.meshes.find(item=>item.material===material&&!item.isDisposed?.());if(!mesh)return;
+     try{await material.forceCompilationAsync(mesh);}catch(error){failures.push({material:material.name||'material-unknown',error:String(error?.message||error)});}
+    })),timeout]);
+    const pendingAfter=textures.filter(texture=>!texture.isReady()).map(texture=>texture.name||texture.url||'texture-unknown');
+    if(failures.length)throw new Error('Falló la compilación de shaders: '+JSON.stringify(failures.slice(0,12)));
+    if(pendingAfter.length)throw new Error('Texturas pendientes tras compilar shaders: '+pendingAfter.slice(0,20).join(', '));
+    if(!scene.isReady())throw new Error('Babylon informa de que la escena no está lista para capturar');
+    scene.render();
+    return {ready:true,meshCount:scene.meshes.length,textureCount:textures.length,materialCount:materials.length,compiledMaterials:materials.filter(material=>typeof material.forceCompilationAsync==='function').length,elapsedMs:Number((performance.now()-started).toFixed(1)),renderLoopStopped:true};
+   },
    setCamera:({x,y,z,targetX,targetY,targetZ})=>{camera.position.set(x,y,z);camera.setTarget(new B.Vector3(targetX,targetY,targetZ));},
    setIslandShadowReceiving:(enabled)=>{const terrain=islandTerrainMeshes[0];if(!terrain)return false;terrain.receiveShadows=!!enabled;return terrain.receiveShadows===!!enabled;},
    setPackedTrailVisible:(enabled)=>{const trails=packedTrailMeshes;trails.forEach(mesh=>{mesh.isVisible=!!enabled;if(typeof mesh.setEnabled==='function')mesh.setEnabled(!!enabled);});return {count:trails.length,visible:trails.length>0&&trails.every(mesh=>mesh.isVisible===!!enabled),states:trails.map(mesh=>({name:mesh.name,isVisible:mesh.isVisible,isEnabled:typeof mesh.isEnabled==='function'?mesh.isEnabled():null,disposed:!!mesh.isDisposed?.()}))};},
@@ -12689,7 +12716,13 @@ function update(dt){
     return {island:village.name,islandIndex:village.landIndex,outpostErrorMeters:Number(outpostErrorMeters.toFixed(4)),guardErrorMeters:Number(guardErrorMeters.toFixed(4)),flagErrorMeters:Number(flagErrorMeters.toFixed(4)),maximumAnchorErrorMeters:Number(Math.max(outpostErrorMeters,guardErrorMeters,flagErrorMeters).toFixed(4))};
    }),
    sheetOpacityDepth:()=>getSheetOpacityDepthDiagnostics(),
-   setWaterState:({time,tide})=>{debugForcedTideOffset=tide==='natural'?null:Number(tide);oceanTime=Number(time)||0;waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;animateWater(0);},
+   setWaterState:({time,tide})=>{
+    const tideOffset=tide==='natural'?null:(tide==='high'?.28:(tide==='low'?-.28:Number(tide)));
+    if(tideOffset!==null&&!Number.isFinite(tideOffset))throw new Error('Marea no válida: '+String(tide));
+    debugForcedTideOffset=tideOffset;oceanTime=Number(time)||0;
+    waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;
+    animateWater(0);
+   },
    render:()=>scene.render(),
    captureCanvas:()=>{const targetCanvas=document.getElementById('renderCanvas');if(!targetCanvas)throw new Error('Render canvas is missing');return targetCanvas.toDataURL('image/png');},
    snapshot:()=>window.__elSinNombreWaterDebugSnapshot?.()||null,
