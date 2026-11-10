@@ -3,10 +3,10 @@ name: Coastal reference capture
 on:
   pull_request:
     branches: [main, test/coastal-reference-0.6.272]
-  # Run the beach-only visual suite on the isolated coastal branch. This does not
-  # activate the separate Pages release workflow.
+  # Keep the source experiment independently testable. The release candidate is
+  # validated by its open pull request, avoiding a duplicate 36-view capture on push.
   push:
-    branches: [fix/coastal-water-surface-0.6.273, release/0.6.274-stable]
+    branches: [fix/coastal-water-surface-0.6.273]
   workflow_dispatch:
 
 permissions:
