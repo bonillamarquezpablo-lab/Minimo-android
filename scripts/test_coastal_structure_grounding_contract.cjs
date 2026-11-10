@@ -75,3 +75,8 @@ assert.match(html,/cameraYaw=ship\.rotation\.y;cameraPitch=\.36;cameraDistance=1
 assert.match(html,/const sensitivity=onShip\?/);
 assert.match(html,/cameraYaw-=dx\*sensitivity/);
 assert.match(html,/cameraObstructionBlend=1/);
+
+assert.match(source,/verify expanded map click returns world coordinates/);
+assert.match(source,/window\.__ELSN_TEST__\?\.mapTarget\?\.\(\)/);
+assert.match(source,/Map tap projection mismatch/);
+assert.match(source,/expected=\{x:400,z:250\}/);
