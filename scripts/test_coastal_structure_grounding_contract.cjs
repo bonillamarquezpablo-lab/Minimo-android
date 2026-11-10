@@ -65,7 +65,8 @@ assert.match(html,/footprintDrySamples:9/);
 assert.match(html,/minimumDryTerrainAboveWaterMeters:\.22/);
 
 assert.match(html,/let mapTargetWorld=null/);
-assert.match(html,/logicalX=\(e\.clientX-rect\.left\)\/rect\.width\*480,logicalY=\(e\.clientY-rect\.top\)\/rect\.height\*344/);
+assert.match(html,/objectScale=Math\.min\(contentWidth\/map\.width,contentHeight\/map\.height\)/);
+assert.match(html,/logicalX=\(e\.clientX-rect\.left-offsetX\)\/drawnWidth\*480,logicalY=\(e\.clientY-rect\.top-offsetY\)\/drawnHeight\*344/);
 assert.match(html,/mapTargetWorld=\{x:Number\(\(\(logicalX-cx\)\/scale\)\.toFixed\(1\)\),z:Number\(\(\(logicalY-cy\)\/scale\)\.toFixed\(1\)\)\}/);
 assert.match(html,/TOCA EL MAR PARA MARCAR/);
 assert.match(html,/mapTarget:\(\)=>mapTargetWorld\?\{x:mapTargetWorld\.x,z:mapTargetWorld\.z\}:null/);
@@ -80,3 +81,5 @@ assert.match(source,/verify expanded map click returns world coordinates/);
 assert.match(source,/window\.__ELSN_TEST__\?\.mapTarget\?\.\(\)/);
 assert.match(source,/Map tap projection mismatch/);
 assert.match(source,/expected=\{x:400,z:250\}/);
+assert.match(source,/const objectScale=Math\.min\(contentWidth\/map\.width,contentHeight\/map\.height\)/);
+assert.match(source,/clientX=rect\.left\+offsetX\+logicalX\/480\*drawnWidth/);
