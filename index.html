@@ -8392,14 +8392,144 @@ function createRealWeapon(type='axe'){
  let collisionGrid=null;
  const smokeEmitters=[],fireLights=[],ambientPeople=[],ambientBirds=[];
  function registerWorldCollider(c){
+  if(c.active===undefined)c.active=true;
   worldColliders.push(c);
   if(collisionGrid){const ex=c.type==='circle'?c.r:c.hx,ez=c.type==='circle'?c.r:c.hz;addCollisionGridEntry('world',c,c.x-ex,c.z-ez,c.x+ex,c.z+ez);}
   return c;
  }
+ // A single registry covers every roofed/inhabitable structure, not just the twelve village huts.
+ // The audit samples the rendered heightfield, verifies the complete footprint stays on dry land,
+ // and hides unsafe roots (and their colliders) instead of allowing a floating building to render.
+ const habitableStructureRegistry=[];
+ let lastHabitableStructureAudit=null,habitableAuditAccumulator=0;
+ function registerHabitableStructure(root,kind,options={}){
+  const entry={
+   root,kind:String(kind||'unknown'),
+   islandIndex:Number.isInteger(options.islandIndex)?options.islandIndex:-1,
+   footprintRadius:Math.max(.25,Number(options.footprintRadius)||1),
+   baseOffset:Number(options.baseOffset)||0,
+   edgeBuffer:Math.max(1.0,Number(options.edgeBuffer)||1.25),
+   safeRadiusFactor:Math.max(.60,Math.min(.82,Number(options.safeRadiusFactor)||.76)),
+   maxRelief:Math.max(.08,Number(options.maxRelief)||.32),
+   anchorTolerance:Math.max(.005,Number(options.anchorTolerance)||.02),
+   maxVisibleDistance:Math.max(60,Number(options.maxVisibleDistance)||210),
+   collider:options.collider||null,
+   relocatable:options.relocatable===true,
+   enabledAtRegistration:!!(root&&(!(typeof root.isEnabled==='function')||root.isEnabled())),
+   hiddenByAudit:false,lastStatus:'not-audited',lastAction:'none'
+  };
+  if(root){root.__habitableStructureAudit=entry;habitableStructureRegistry.push(entry);}
+  return entry;
+ }
+ function findSafeHabitableAnchor(entry,origin){
+  const island=land[entry.islandIndex];if(!island)return null;
+  const safeCenterRadius=island.r*entry.safeRadiusFactor-entry.footprintRadius-entry.edgeBuffer;
+  if(safeCenterRadius<=0)return null;
+  const step=.75,searchRadius=Math.min(16,Math.max(4,island.r*.48));
+  let best=null;
+  for(let dz=-searchRadius;dz<=searchRadius+1e-6;dz+=step)for(let dx=-searchRadius;dx<=searchRadius+1e-6;dx+=step){
+   if(dx*dx+dz*dz>searchRadius*searchRadius)continue;
+   const x=origin.x+dx,z=origin.z+dz,radial=Math.hypot(x-island.x,z-island.z);
+   if(radial>safeCenterRadius)continue;
+   const centerY=renderedTerrainSurfaceAt(x,z);
+   if(!Number.isFinite(centerY)||centerY<.22)continue;
+   let maxRelief=0,valid=true;
+   for(let i=0;i<8;i++){
+    const a=i*Math.PI/4,sx=x+Math.cos(a)*entry.footprintRadius,sz=z+Math.sin(a)*entry.footprintRadius;
+    if(Math.hypot(sx-island.x,sz-island.z)>island.r*entry.safeRadiusFactor-entry.edgeBuffer){valid=false;break;}
+    const y=renderedTerrainSurfaceAt(sx,sz);
+    if(!Number.isFinite(y)||y<.22){valid=false;break;}
+    maxRelief=Math.max(maxRelief,Math.abs(y-centerY));
+   }
+   if(!valid||maxRelief>entry.maxRelief)continue;
+   const movement=dx*dx+dz*dz,score=movement+maxRelief*maxRelief*90;
+   if(!best||score<best.score)best={x,z,centerY,maxRelief,score};
+  }
+  return best;
+ }
+ function evaluateHabitableStructure(entry){
+  const root=entry.root;
+  if(!root||root.isDisposed?.())return {safe:false,status:'missing',reason:'root-missing'};
+  let p;
+  try{p=root.getAbsolutePosition?root.getAbsolutePosition():root.position;}catch(_){p=root.position;}
+  if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y)||!Number.isFinite(p.z))return {safe:false,status:'invalid-transform',reason:'non-finite-transform'};
+  const island=land[entry.islandIndex];
+  if(!island)return {safe:false,status:'unmapped',reason:'no-owning-island',x:p.x,z:p.z};
+  const radialDistance=Math.hypot(p.x-island.x,p.z-island.z);
+  const safeCenterRadius=island.r*entry.safeRadiusFactor-entry.footprintRadius-entry.edgeBuffer;
+  const dryLandMarginMeters=safeCenterRadius-radialDistance;
+  const centerGroundY=renderedTerrainSurfaceAt(p.x,p.z),footingY=p.y+entry.baseOffset;
+  const anchorErrorMeters=Math.abs(footingY-centerGroundY);
+  let minGroundY=centerGroundY,maxReliefMeters=0,validSamples=Number.isFinite(centerGroundY)?1:0;
+  const scale=Number(root.scaling?.x)||1;
+  const corners=entry.kind==='NorseHut'?[[-2.01*scale,-2.64*scale],[2.01*scale,-2.64*scale],[-2.01*scale,2.64*scale],[2.01*scale,2.64*scale]]:null;
+  const sampleCount=corners?corners.length:8;
+  for(let i=0;i<sampleCount;i++){
+   let sx,sz;
+   if(corners){sx=p.x+corners[i][0];sz=p.z+corners[i][1];}
+   else{const a=i*Math.PI*2/sampleCount;sx=p.x+Math.cos(a)*entry.footprintRadius;sz=p.z+Math.sin(a)*entry.footprintRadius;}
+   const pointRadius=Math.hypot(sx-island.x,sz-island.z),pointY=renderedTerrainSurfaceAt(sx,sz);
+   if(pointRadius>island.r*entry.safeRadiusFactor-entry.edgeBuffer||!Number.isFinite(pointY))continue;
+   validSamples++;minGroundY=Math.min(minGroundY,pointY);maxReliefMeters=Math.max(maxReliefMeters,Math.abs(pointY-centerGroundY));
+  }
+  const safe=radialDistance<=safeCenterRadius&&validSamples===sampleCount+1&&
+   minGroundY>=.22&&anchorErrorMeters<=entry.anchorTolerance&&maxReliefMeters<=entry.maxRelief;
+  const enabled=typeof root.isEnabled==='function'?root.isEnabled():root.isVisible!==false;
+  return {
+   safe,status:safe?'grounded':'unsafe',
+   reason:safe?'ok':(!Number.isFinite(centerGroundY)?'no-rendered-ground':(dryLandMarginMeters<0?'outside-dry-land-footprint':(minGroundY<.22?'below-dry-ground-threshold':(anchorErrorMeters>entry.anchorTolerance?'anchor-error':(maxReliefMeters>entry.maxRelief?'uneven-footprint':'footprint-outside-island'))))),
+   name:root.name||entry.kind,kind:entry.kind,island:island.name,islandIndex:entry.islandIndex,
+   x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2)),rootY:Number(p.y.toFixed(3)),
+   centerGroundY:Number(centerGroundY.toFixed(3)),footingY:Number(footingY.toFixed(3)),
+   anchorErrorMeters:Number(anchorErrorMeters.toFixed(4)),minimumFootingGroundY:Number(minGroundY.toFixed(3)),
+   maximumFootprintReliefMeters:Number(maxReliefMeters.toFixed(3)),
+   dryLandMarginMeters:Number(dryLandMarginMeters.toFixed(3)),
+   islandRadiusRatio:Number((radialDistance/island.r).toFixed(3)),
+   footprintRadiusMeters:Number(entry.footprintRadius.toFixed(2)),enabled
+  };
+ }
+ function auditHabitableStructures(applyRepairs=true){
+  const records=[],camera=scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position:null;
+  let repaired=0,hiddenUnsafe=0,hiddenByDistance=0,visibleInvalidCount=0;
+  for(const entry of habitableStructureRegistry){
+   let result=evaluateHabitableStructure(entry),root=entry.root;
+   if(!result.safe&&applyRepairs&&entry.relocatable&&root&&typeof root.setEnabled==='function'){
+    const origin=root.getAbsolutePosition?root.getAbsolutePosition():root.position,candidate=findSafeHabitableAnchor(entry,origin);
+    if(candidate){
+     try{root.unfreezeWorldMatrix?.();root.position.set(candidate.x,candidate.centerY-entry.baseOffset,candidate.z);root.computeWorldMatrix?.(true);
+      result=evaluateHabitableStructure(entry);if(result.safe){entry.lastAction='relocated-to-dry-ground';repaired++;}}
+     catch(_){result.safe=false;}
+    }
+   }
+   if(!result.safe){
+    if(result.enabled)visibleInvalidCount++;
+    if(applyRepairs&&root&&typeof root.setEnabled==='function'){
+     root.setEnabled(false);entry.hiddenByAudit=true;entry.lastAction='hidden-no-safe-ground';
+     if(entry.collider)entry.collider.active=false;
+     hiddenUnsafe++;
+    }
+   }else{
+    if(entry.collider)entry.collider.active=true;
+    if(applyRepairs&&root&&typeof root.setEnabled==='function'){
+     const dx=camera?result.x-camera.x:0,dz=camera?result.z-camera.z:0,limit=onShip?entry.maxVisibleDistance*.66:entry.maxVisibleDistance;
+     const withinDistance=!camera||dx*dx+dz*dz<=limit*limit;
+     const shouldEnable=entry.enabledAtRegistration&&withinDistance;
+     const currentlyEnabled=typeof root.isEnabled==='function'?root.isEnabled():root.isVisible!==false;
+     if(currentlyEnabled!==shouldEnable){root.setEnabled(shouldEnable);entry.hiddenByAudit=!shouldEnable;entry.lastAction=withinDistance?'shown-grounded':'culled-distance';}
+     if(!withinDistance)hiddenByDistance++;
+    }
+   }
+   entry.lastStatus=result.status;records.push(Object.assign({},result,{lastAction:entry.lastAction}));
+  }
+  const registeredRoots=new Set(habitableStructureRegistry.map(entry=>entry.root));
+  const untrackedRoots=scene.transformNodes.filter(node=>/^(WeatheredNorseHut|PersistentNorseShelter|IslandOutpost_\d+|IslandScoutCamp_\d+|IslandGarrisonOutpost_\d+|NorseGreatMeadHall_\d+|PoorNorseCastawayCamp)$/.test(node.name||'')&&!registeredRoots.has(node)).map(node=>node.name);
+  const snapshot={schema:1,total:records.length,groundedCount:records.filter(x=>x.safe).length,unsafeCount:records.filter(x=>!x.safe).length,visibleInvalidCount,hiddenUnsafe,hiddenByDistance,repaired,untrackedRootCount:untrackedRoots.length,untrackedRoots,structures:records};
+  lastHabitableStructureAudit=snapshot;return snapshot;
+ }
  function findLevelHutFooting(cx,cz,scale){
   // Search only a small patch around the intended hut position. Keep the terrain itself,
   // roads and trails untouched; move the hut footprint to a naturally level part of the island.
-  const halfX=2.01*scale,halfZ=2.64*scale,step=.25,radius=3.5;
+  const halfX=2.01*scale,halfZ=2.64*scale,step=.50,radius=12,footprintRadius=Math.hypot(halfX,halfZ);
   let best=null;
   for(let dz=-radius;dz<=radius+1e-6;dz+=step)for(let dx=-radius;dx<=radius+1e-6;dx+=step){
    if(dx*dx+dz*dz>radius*radius)continue;
@@ -8407,14 +8537,16 @@ function createRealWeapon(type='axe'){
    let islandIndex=-1;
    for(let i=0;i<land.length;i++){const island=land[i],ix=px-island.x,iz=pz-island.z;if(ix*ix+iz*iz<island.r*island.r){islandIndex=i;break;}}
    if(islandIndex<0)continue;
-   const island=land[islandIndex],footprintRadius=Math.hypot(halfX,halfZ),maxCenterRadius=island.r*.76-footprintRadius-1.25;
+   const island=land[islandIndex],maxCenterRadius=island.r*.76-footprintRadius-1.25;
    if(Math.hypot(px-island.x,pz-island.z)>maxCenterRadius)continue;
    const centerY=renderedTerrainSurfaceAt(px,pz),ys=[renderedTerrainSurfaceAt(px-halfX,pz-halfZ),renderedTerrainSurfaceAt(px+halfX,pz-halfZ),renderedTerrainSurfaceAt(px-halfX,pz+halfZ),renderedTerrainSurfaceAt(px+halfX,pz+halfZ)];
+   if(!Number.isFinite(centerY)||centerY<.22||ys.some(y=>!Number.isFinite(y)||y<.22))continue;
    const minY=Math.min(...ys),maxY=Math.max(...ys),range=maxY-minY,maxGap=Math.max(...ys.map(y=>Math.abs(centerY-y)));
-   if(!best||maxGap<best.maxGap-1e-7||(Math.abs(maxGap-best.maxGap)<1e-7&&dx*dx+dz*dz<best.distanceSq))best={x:px,z:pz,centerY,minY,maxY,range,maxGap,distanceSq:dx*dx+dz*dz,islandIndex};
+   if(maxGap>=.02)continue;
+   if(!best||maxGap<best.maxGap-1e-7||(Math.abs(maxGap-best.maxGap)<1e-7&&dx*dx+dz*dz<best.distanceSq))best={x:px,z:pz,centerY,minY,maxY,range,maxGap,distanceSq:dx*dx+dz*dz,islandIndex,valid:true};
   }
   const fallbackY=renderedTerrainSurfaceAt(cx,cz);
-  return best||{x:cx,z:cz,centerY:fallbackY,minY:fallbackY,maxY:fallbackY,range:0,maxGap:0,distanceSq:0,islandIndex:-1};
+  return best||{x:cx,z:cz,centerY:Number.isFinite(fallbackY)?fallbackY:0,minY:fallbackY,maxY:fallbackY,range:0,maxGap:Infinity,distanceSq:0,islandIndex:-1,valid:false};
  }
  function buildHouse(cx,cz,scale=1){
   // Cabaña nórdica humilde: huella menor, troncos desiguales, tejado vencido y reparaciones visibles.
