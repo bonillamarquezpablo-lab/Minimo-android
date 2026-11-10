@@ -12808,6 +12808,24 @@ function update(dt){
     if(!name||!structureNamePattern.test(name)||excludedRootPattern.test(name)||parentRoot(node))continue;
     candidates.add(node);
    }
+   // Geometry-only fallback: capture grouped scene roots that have no semantic name.
+   // This is essential for invasion/endgame props whose imported GLB nodes are named generically.
+   const unknownAssemblyExclusions=/(?:armature|bone|hips|spine|headassembly|bootjoint|elbow|forearm|upperarm|trouserleg|peasantbody|villager|villageguard|armoredknight|raidercrew|enemyhuman|humanmodel|playercharacter|skeleton|drakkar|boat|ship|tree|grass|fern|bush|reed|pine|vegetation|foliage|rock|terrain|ground|water|ocean|sea|wave|foam|shore|coast|beach|seabed|sand|tidal|flag|banner|weapon)/i;
+   const unidentifiedGeometryRoots=new Set();
+   for(const node of scene.transformNodes||[]){
+    if(!node||node.isDisposed?.()||candidates.has(node))continue;
+    const rootName=String(node.name||'');if(!rootName||structureNamePattern.test(rootName)||unknownAssemblyExclusions.test(rootName))continue;
+    let ancestor=node.parent,depth=0,excluded=false;
+    while(ancestor&&depth++<8){if(unknownAssemblyExclusions.test(String(ancestor.name||''))){excluded=true;break;}ancestor=ancestor.parent;}
+    if(excluded||parentRoot(node))continue;
+    const children=typeof node.getChildMeshes==='function'?node.getChildMeshes(false).filter(mesh=>mesh&&!mesh.isDisposed?.()&&Number(mesh.getTotalVertices?.())>0):[];
+    if(children.length<4)continue;
+    let minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity,vertexTotal=0;
+    for(const mesh of children){try{mesh.computeWorldMatrix?.(true);const bounds=mesh.getBoundingInfo?.()?.boundingBox,min=bounds?.minimumWorld,max=bounds?.maximumWorld;if(min&&max){minX=Math.min(minX,min.x);minY=Math.min(minY,min.y);minZ=Math.min(minZ,min.z);maxX=Math.max(maxX,max.x);maxY=Math.max(maxY,max.y);maxZ=Math.max(maxZ,max.z);}vertexTotal+=Number(mesh.getTotalVertices?.())||0;}catch(_){}}
+    const sizeX=maxX-minX,sizeY=maxY-minY,sizeZ=maxZ-minZ;
+    if(!Number.isFinite(minY)||vertexTotal<100||sizeX<.70||sizeZ<.70||sizeY<.45||sizeX>28||sizeZ>28||sizeY>22)continue;
+    unidentifiedGeometryRoots.add(node);candidates.add(node);
+   }
    const rows=[];
    for(const node of candidates){
     try{
@@ -12865,7 +12883,7 @@ function update(dt){
      const offshore=beyondIslandEnvelope||(!terrainIsDry&&floatingAboveWater);
      const issue=offshore?(!hasMeshBounds?'offshore-root-without-mesh-bounds':(!terrainIsDry&&floatingAboveWater?'floating-over-water-no-dry-ground':(bottomAboveWaterMeters>.25?'floating-above-water':(bottomAboveWaterMeters<-.45?'submerged-offshore':'at-waterline-offshore')))):null;
      rows.push({
-      name,kind:entry?.kind||'unregistered-structural-root',registered:registeredRoot,visible,enabled,
+      name,kind:entry?.kind||(unidentifiedGeometryRoots.has(node)?'unidentified-geometry-cluster':'unregistered-structural-root'),registered:registeredRoot,structuralClassification:unidentifiedGeometryRoots.has(node)?'unknown-geometry-cluster':'named-or-registered',visible,enabled,
       island:nearest.name,islandIndex:nearest.islandIndex,position:{x:Number(absolute.x.toFixed(2)),y:Number(absolute.y.toFixed(2)),z:Number(absolute.z.toFixed(2))},
       bounds:hasMeshBounds?{bottomY:Number(minY.toFixed(3)),topY:Number(maxY.toFixed(3)),size:{x:Number(sizeX.toFixed(2)),y:Number((maxY-minY).toFixed(2)),z:Number(sizeZ.toFixed(2))}}:null,geometryConfidence:hasMeshBounds?'world-mesh-bounds':'registered-root-anchor-only',
       footprintRadiusMeters:Number(footprintRadius.toFixed(2)),distanceToIslandCenterMeters:Number(nearestDistance.toFixed(2)),
