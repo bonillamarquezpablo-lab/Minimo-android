@@ -14,6 +14,7 @@ assert.match(html,/function findLevelHutFooting\(cx,cz,scale,preferredIslandInde
 assert.match(html,/valid:false/,'A failed local footing search must be represented as invalid, never as a usable fallback.');
 assert.match(html,/if\(!footing\.valid\)g\.setEnabled\(false\)/,'A hut with no valid dry-land footing must never render at the generic offshore fallback height.');
 assert.match(html,/registerHabitableStructure\(g,'NorseHut'/,'Every village hut must enter the live structure audit, including invalid disabled huts.');
+assert.match(html,/maxRelief:\.02,anchorTolerance:\.02/,'Hut repair tolerance must match the 2 cm measured-footing limit.');
 assert.match(html,/const centerY=renderedTerrainSurfaceAt\(px,pz\),ys=\[/,'Footing placement must compare all four corners against the center of the rendered GroundMesh.');
 assert.match(html,/g\.position=v\(houseX,footing\.centerY-\.02\*scale,houseZ\)/,'Each hut footing must use the measured rendered-ground center height and scaled base offset.');
 assert.match(html,/groundingErrorMeters:Number\(Math\.abs\(footingBottomY-sampledTerrainY\)\.toFixed\(4\)\)/,'Every hut must expose its measured rendered-ground footing error.');
