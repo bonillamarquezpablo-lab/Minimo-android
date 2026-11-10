@@ -8589,7 +8589,7 @@ function createRealWeapon(type='axe'){
    let islandIndex=-1;
    for(let i=0;i<land.length;i++){const island=land[i],ix=px-island.x,iz=pz-island.z;if(ix*ix+iz*iz<island.r*island.r){islandIndex=i;break;}}
    if(islandIndex<0)continue;
-   const island=land[islandIndex],maxCenterRadius=island.r*.76-footprintRadius-1.25;
+   const island=land[islandIndex],maxCenterRadius=island.r*.76-footprintRadius-8.0;
    if(Math.hypot(px-island.x,pz-island.z)>maxCenterRadius)continue;
    const centerY=renderedTerrainSurfaceAt(px,pz),ys=[renderedTerrainSurfaceAt(px-halfX,pz-halfZ),renderedTerrainSurfaceAt(px+halfX,pz-halfZ),renderedTerrainSurfaceAt(px-halfX,pz+halfZ),renderedTerrainSurfaceAt(px+halfX,pz+halfZ)];
    if(!Number.isFinite(centerY)||centerY<.22||ys.some(y=>!Number.isFinite(y)||y<.22))continue;
