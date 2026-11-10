@@ -28,7 +28,7 @@ assert.ok(html.includes("settlementHousePosition(land[index],hx,hz,scale)"),
 assert.ok(html.includes("house.__settlementProjection={requested:{x:hx,z:hz},projected:position};"),
   "The audit must retain the original and projected coordinates for each hut.");
 const placementStart=html.indexOf("function settlementHousePosition(island,x,z,scale=1){");
-const placementEnd=html.indexOf("\\n function makeVillage",placementStart);
+const placementEnd=html.indexOf("\n function makeVillage",placementStart);
 assert.ok(placementStart>=0&&placementEnd>placementStart,
   "The hut projection helper must remain independently testable.");
 const placementSource=html.slice(placementStart,placementEnd).trim();
