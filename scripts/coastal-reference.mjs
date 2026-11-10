@@ -41,6 +41,7 @@ const manifest = {
   trailIsolationCapture: null,
   diagnosticCaptures: [],
   sheetOpacityDiagnostics: {},
+  structureVisibility: [],
   timingsMs: {},
   consoleErrors: [],
   pageErrors: [],
@@ -240,10 +241,45 @@ async function main() {
               targetY: cameraCase.targetY,
               targetZ
             });
+            const structureAudit = (time === 0 && tide.id === 'natural')
+              ? api.repairAndAuditHabitableStructures()
+              : null;
             api.setWaterState({ time, tide: tide.value });
             api.render();
-            return { diagnostics: api.diagnostics(), canvasPng: api.captureCanvas() };
+            return {
+              diagnostics: api.diagnostics(),
+              structureAudit: structureAudit ? {
+                total: structureAudit.total,
+                hiddenByDistance: structureAudit.hiddenByDistance,
+                hiddenUnsafe: structureAudit.hiddenUnsafe,
+                visibleInvalidCount: structureAudit.visibleInvalidCount,
+                untrackedRootCount: structureAudit.untrackedRootCount,
+                structures: structureAudit.structures
+              } : null,
+              canvasPng: api.captureCanvas()
+            };
           }, { cameraCase, time, tide, island: mainIsland, shoreRadius });
+          if (result.structureAudit) {
+            const audit = result.structureAudit;
+            assert.equal(audit.total, 39, 'La vista debe auditar las 39 construcciones registradas.');
+            assert.equal(audit.untrackedRootCount, 0, 'La vista detectó una construcción techada sin registrar.');
+            assert.equal(audit.visibleInvalidCount, 0, 'Una construcción insegura sigue visible desde ' + cameraCase.id);
+            for (const structure of audit.structures) {
+              assert.ok(!structure.enabled || (
+                structure.safe &&
+                structure.distanceToCameraMeters <= structure.visibilityLimitMeters + 0.02
+              ), 'Una construcción lejana sigue visible desde ' + cameraCase.id + ': ' + JSON.stringify(structure));
+            }
+            manifest.structureVisibility.push({
+              camera: cameraCase.id,
+              total: audit.total,
+              hiddenByDistance: audit.hiddenByDistance,
+              hiddenUnsafe: audit.hiddenUnsafe,
+              visibleCount: audit.structures.filter(structure => structure.enabled).length,
+              visibleInvalidCount: audit.visibleInvalidCount,
+              structures: audit.structures
+            });
+          }
           const coastMetrics = result.diagnostics?.coast;
           const agreement = coastMetrics?.renderedVertexAgreement;
           assert.equal(agreement?.requested, 100, 'Request 100 analytic vertex samples');
@@ -699,6 +735,9 @@ async function main() {
 
     assert.equal(manifest.gamePageLoads, 1, 'El juego debe cargarse exactamente una vez');
     assert.equal(manifest.captures.length, 36, 'No se han generado las 36 capturas (27 estados costeros + 9 vistas de oclusión de montaña)');
+    assert.equal(manifest.structureVisibility.length, CAMERAS.length,
+      'Cada cámara costera debe volver a aplicar la visibilidad de construcciones antes de capturar.');
+
     assert.equal(manifest.consoleErrors.length, 0,
       'Errores de consola: ' + manifest.consoleErrors.join(' | '));
     assert.equal(manifest.pageErrors.length, 0,
