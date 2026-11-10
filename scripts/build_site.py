@@ -379,7 +379,7 @@ def main() -> None:
     if navigation_tag not in html:
         if "</body>" not in html:
             raise SystemExit("No se encontró </body> para instalar la navegación.")
-        html = html.replace("</body>", navigation_tag + "\\n</body>", 1)
+        html = html.replace("</body>", navigation_tag + "\n</body>", 1)
 
     (DIST / "index.html").write_text(html, encoding="utf-8")
 
