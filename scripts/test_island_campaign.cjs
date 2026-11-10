@@ -124,3 +124,9 @@ assert.match(html,/if\(c\.active===false\)continue/,'Inactive hidden-structure c
 assert.match(html,/withinDryLandBand/);
 
 console.log('OK: 13 islands, 12 projected settlement huts, naval systems, and live dry-land audit for every roofed structure.');
+
+// Habitable huts must stay above the maximum coastal water/run-up envelope plus a dry-ground margin.
+assert.match(html,/minimumDryGroundY=\(Number\(ground\.position\.y\)\|\|0\)\+\.60/);
+assert.match(html,/centerY<minimumDryGroundY/);
+assert.match(html,/minGroundY>=minimumDryGroundY/);
+assert.match(html,/minimumDryClearanceMeters/);
