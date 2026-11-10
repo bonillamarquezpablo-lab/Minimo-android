@@ -32,8 +32,10 @@ html,body{margin:0;width:100%;height:100%;min-height:100dvh;overflow:hidden;back
 #modelStatus button,#modelStatus a{display:inline-block;margin-top:6px;margin-right:5px;padding:6px 8px;border:1px solid #d8ad68aa;border-radius:7px;background:#8b5c30;color:#fff5e5;font-weight:850;font-size:9px;text-decoration:none}
 #humanModelFile{display:none}
 #notice{position:absolute;top:calc(env(safe-area-inset-top,0px) + 108px);left:50%;transform:translateX(-50%);max-width:min(76vw,420px);background:#102326d9;border:1px solid #d8ad6877;border-radius:10px;padding:7px 11px;font-size:11px;line-height:1.25;text-align:center;opacity:0;transition:opacity .18s;box-shadow:0 4px 15px #0005}
-#map{position:absolute;right:9px;top:calc(env(safe-area-inset-top,0px) + 75px);width:clamp(112px,29vw,138px);height:auto;aspect-ratio:480/344;border-radius:10px;border:1px solid #d8ad6888;background:#12353b;box-shadow:0 5px 15px #0007;pointer-events:auto;touch-action:manipulation;z-index:3;cursor:pointer}
+#map{position:absolute;right:9px;top:calc(env(safe-area-inset-top,0px) + 75px);width:clamp(138px,36vw,158px);height:auto;aspect-ratio:480/344;border-radius:10px;border:1px solid #d8ad6888;background:#12353b;box-shadow:0 5px 15px #0007;pointer-events:auto;touch-action:manipulation;z-index:3;cursor:pointer}
 #map.expanded{position:fixed;left:5vw;right:auto;top:13vh;width:90vw;height:72vh;z-index:16;border:2px solid #d8ad68;border-radius:16px;box-shadow:0 18px 65px #000d}
+#mapCoords{position:absolute;right:9px;top:calc(env(safe-area-inset-top,0px) + 75px + clamp(99px,26vw,115px) + 5px);width:clamp(138px,36vw,158px);box-sizing:border-box;padding:5px 7px;border:1px solid rgba(216,173,104,.72);border-radius:7px;background:rgba(10,28,32,.92);color:#f0d49a;font:700 8px/1.2 ui-monospace,monospace;letter-spacing:.15px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;z-index:4;box-shadow:0 3px 10px #0007}
+body.map-open #mapCoords{display:none}
 #controls{position:fixed;inset:0;display:block;pointer-events:none;z-index:10;isolation:isolate}
 /* Dos zonas de control separadas y ancladas al viewport: el joystick nunca pisa los botones. */
 #stick{position:fixed!important;left:max(12px,env(safe-area-inset-left,0px) + 12px)!important;right:auto!important;top:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 18px)!important;width:clamp(92px,25vw,112px);height:clamp(92px,25vw,112px);border-radius:50%;border:2px solid #e5d8c588;background:radial-gradient(circle,#253a39dd 0 46%,#112025f2 49% 100%);box-shadow:inset 0 0 22px #0008,0 4px 18px #0008;pointer-events:auto;touch-action:none;user-select:none;z-index:12;transform:none!important;margin:0!important}
@@ -1413,7 +1415,8 @@ body.game-running #loading{display:none!important;visibility:hidden!important;op
  <button id="frameDiagnostic" type="button" aria-label="Informe de errores" title="Toca para copiar el informe de errores" style="display:none;position:fixed;right:calc(env(safe-area-inset-right,0px) + 8px);top:50%;left:auto;bottom:auto;transform:translateY(-50%);z-index:28;width:40px;min-width:40px;height:78px;padding:7px 4px;border:1px solid #d58b68;border-radius:17px;background:#351c1bea;color:#fff0df;font:800 12px/1.1 system-ui;text-align:center;align-items:center;justify-content:center;writing-mode:vertical-rl;touch-action:manipulation;box-shadow:0 4px 14px #0008">⚠ 0</button>
  <div id="quickActions"><button id="progressBtn" type="button">📜 SAGA</button><button id="saveBtn" type="button">💾 GUARDAR</button><button id="audioToggle" type="button" aria-label="Activar o desactivar sonido">🔊</button><button id="rotateScreenBtn" type="button" aria-label="Cambiar orientación de pantalla" title="Alternar automática, horizontal y vertical">↻ AUTO</button><button id="buildCabinBtn" type="button" aria-label="Construir refugio permanente">🏚 REFUGIO · 6M/1P</button><button id="villagerModelBtn" type="button" style="display:none">📦 ALDEANOS 3D</button></div>
  <div id="mapBackdrop"></div>
- <canvas id="map" width="960" height="688" aria-label="Mapa táctico; toca para ampliar"></canvas>
+ <canvas id="map" width="960" height="688" aria-label="Minimapa local; toca para abrir la carta completa"></canvas>
+ <div id="mapCoords" aria-live="polite">X 0 · Z 0 · EXPLORANDO</div>
  <button id="mapClose" type="button" aria-label="Cerrar mapa">CERRAR MAPA ✕</button>
  <div id="statusLine">Explora · reclama aldeas · recluta supervivientes · forma tu clan</div>
  <div id="controls">
@@ -8366,7 +8369,7 @@ function createRealWeapon(type='axe'){
   M.water.reflectionTexture=null;
   console.warn('Island reflection unavailable; generic HDRI is intentionally excluded from water.',waterReflectionError);
  }
- let yaw=0,attackFacingYaw=0,cameraYaw=0,cameraPitch=.48,cameraDistance=10.35;
+ let yaw=0,attackFacingYaw=0,cameraYaw=0,cameraPitch=.48,cameraDistance=10.35,cameraMode='follow',cameraManualLookUntil=0;
  let cameraTargetSmoothed=null,cameraCollisionTimer=0,cameraObstructionRatio=1,cameraObstructionBlend=1,playerGroundYFiltered=NaN,playerVerticalVelocity=0,playerAirborne=false;
  let cameraPointers=new Map(),cameraPinchDistance=0,cameraPinchStart=0;
  function playerPos(){return player.root.getAbsolutePosition();}
@@ -8387,9 +8390,13 @@ function createRealWeapon(type='axe'){
   function updateCamera(dt){
   if(testModeEnabled&&captureCameraOverride){camera.position.copyFrom(captureCameraOverride.position);camera.setTarget(captureCameraOverride.target);camera.fov=innerHeight>innerWidth?.84:.78;if(skyDome)skyDome.position.copyFrom(camera.position);return;}
   // Mantener el foco absoluto del personaje al navegar; la cámara del barco apunta al centro del casco.
+  const portrait=innerHeight>innerWidth,safeDt=Math.max(0,Math.min(.10,dt||0));
+  if(onShip&&cameraMode!=='free'&&performance.now()>=cameraManualLookUntil){
+   const desiredYaw=Number(ship.rotation.y)||0,difference=Math.atan2(Math.sin(desiredYaw-cameraYaw),Math.cos(desiredYaw-cameraYaw));
+   cameraYaw+=difference*(1-Math.exp(-safeDt*(cameraMode==='ship'?3.4:2.1)));
+  }
   const focus=onShip?player.root.getAbsolutePosition():player.root.position;
   const cameraFocus=onShip?ship.position:focus;
-  const portrait=innerHeight>innerWidth,safeDt=Math.max(0,Math.min(.10,dt||0));
   const targetX=cameraFocus.x+(onShip?0:playerVelocity.x*.045);
   const targetY=cameraFocus.y+(onShip?1.78:1.56);
   const targetZ=cameraFocus.z+(onShip?0:playerVelocity.z*.045);
@@ -8399,9 +8406,11 @@ function createRealWeapon(type='axe'){
   cameraTargetSmoothed.y+=(targetY-cameraTargetSmoothed.y)*targetAlpha;
   cameraTargetSmoothed.z+=(targetZ-cameraTargetSmoothed.z)*targetAlpha;
   const target=cameraTargetSmoothed;
-  const distance=cameraDistance*(portrait?1.0:.96);
+  const modeDistanceScale=cameraMode==='orbit'?1.42:(cameraMode==='ship'?1.08:1);
+  const distance=cameraDistance*(onShip?1.65:1)*modeDistanceScale*(portrait?1.0:.96);
+  const effectivePitch=cameraMode==='orbit'?Math.max(cameraPitch,.60):(onShip?Math.max(cameraPitch,.43):cameraPitch);
   const sinYaw=Math.sin(cameraYaw),cosYaw=Math.cos(cameraYaw);
-  const horizontal=Math.cos(cameraPitch)*distance,vertical=Math.sin(cameraPitch)*distance+.28;
+  const horizontal=Math.cos(effectivePitch)*distance,vertical=Math.sin(effectivePitch)*distance+.28;
   const baseX=-sinYaw*horizontal+cosYaw*.40,baseY=vertical,baseZ=-cosYaw*horizontal-sinYaw*.40;
   // A bordo la cámara mantiene una distancia constante y una órbita manual.
   // La corrección automática de obstáculos se reserva para la cámara terrestre.
@@ -8443,7 +8452,28 @@ function createRealWeapon(type='axe'){
   camera.setTarget(target);
   camera.fov=portrait?.84:.78;
   skyDome.position.copyFrom(camera.position);
- } // Villages and enemy camps.
+ }
+ window.__ELSN_CAMERA_CONTROL={
+  getMode:()=>cameraMode,
+  setMode(mode){
+   if(!['follow','free','ship','orbit'].includes(mode))return false;
+   cameraMode=mode;
+   if(mode==='follow'){
+    cameraYaw=onShip?(Number(ship.rotation.y)||0):yaw;
+    cameraPitch=.48;cameraDistance=10.35;cameraManualLookUntil=0;
+   }else if(mode==='ship'){
+    if(onShip)cameraYaw=Number(ship.rotation.y)||cameraYaw;
+    cameraPitch=Math.max(cameraPitch,.43);cameraManualLookUntil=0;
+   }else if(mode==='orbit'){
+    cameraPitch=Math.max(cameraPitch,.60);cameraDistance=Math.max(cameraDistance,12);cameraManualLookUntil=0;
+   }else{
+    cameraManualLookUntil=Infinity;
+   }
+   cameraTargetSmoothed=null;cameraObstructionBlend=1;cameraObstructionRatio=1;
+   return true;
+  }
+ };
+ // Villages and enemy camps.
  const villages=[],worldColliders=[];
  let collisionGrid=null;
  const smokeEmitters=[],fireLights=[],ambientPeople=[],ambientBirds=[];
@@ -10117,7 +10147,7 @@ function villageHostileDefenders(vl){
   player.root.position=v(NEW_CAMPAIGN_SPAWN.x,terrainSurfaceAt(NEW_CAMPAIGN_SPAWN.x,NEW_CAMPAIGN_SPAWN.z)+(realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08),NEW_CAMPAIGN_SPAWN.z);
   player.root.rotation.set(0,0,0);if(realPlayerModelPivot)realPlayerModelPivot.position.y=0;
   lastSafePosition.copyFrom(player.root.position);playerVelocity.x=0;playerVelocity.z=0;
-  yaw=0;attackFacingYaw=0;cameraYaw=0;cameraPitch=.48;cameraDistance=10.35;cameraTargetSmoothed=null;
+  yaw=0;attackFacingYaw=0;cameraYaw=0;cameraPitch=.48;cameraDistance=10.35;cameraMode='follow';cameraManualLookUntil=0;cameraTargetSmoothed=null;
   playerAirborne=false;playerVerticalVelocity=0;playerGroundYFiltered=player.root.position.y;
   onShip=false;blocking=false;invuln=0;playerAction='idle';actionTimer=0;actionHit=false;combo=0;comboWindow=0;
   running=false;dodgeTimer=0;respawnWait=0;boatVelocity=0;shipAttackCooldown=0;crewVolleyCooldown=1.2;blockAge=9;cameraShake=0;combatFreeze=0;playerActualSpeed=0;playerStepDistance=0;
@@ -10923,7 +10953,7 @@ function updateHUD(){
  document.querySelectorAll('.weaponChoice').forEach(button=>button.addEventListener('click',()=>equipWeapon(button.dataset.weapon)));
  // El panel agrupa las acciones de combate para no tapar el mundo con ocho botones permanentes.
  // The tactical map is initialized before any handlers can reference it.
- const map=document.getElementById('map'),mg=map.getContext('2d');
+ const map=document.getElementById('map'),mg=map.getContext('2d'),mapCoords=document.getElementById('mapCoords');
  let mapTargetWorld=null;
  const stick=document.getElementById('stick'),knob=document.getElementById('knob');let pointerId=null,stickCenter={x:0,y:0};
  // The virtual stick is anchored permanently at bottom-left. It must never follow the finger,
@@ -10980,6 +11010,7 @@ function updateHUD(){
   cameraPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(Math.abs(dx)+Math.abs(dy)<.15)return;
   cameraGestureMoved=true;
+  if(cameraMode!=='free')cameraManualLookUntil=performance.now()+3500;
   if(cameraPointers.size>=2){
    const p=[...cameraPointers.values()],distance=Math.max(1,Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y));
    // Pinch remains optional; the normal camera distance is unchanged unless the player pinches.
@@ -11230,7 +11261,43 @@ function updateHUD(){
   woodCount-=cost;stoneCount-=stoneCost;boatLevel=lv;boatMax+=lv===1?25:lv===2?20:30;boatHp=boatMax;applyBoatAppearance(boatLevel);document.getElementById('modalText').textContent='Mejora '+lv+'/3 instalada. Casco '+boatHp+'/'+boatMax+' · velocidad '+(12.5+boatLevel*1.15).toFixed(1)+' m/s · daño '+(42+boatLevel*12+companions.length*4)+'. Se han instalado piezas visibles en el drakkar.';updateHUD();recordSagaEvent('Drakkar mejorado: nivel '+lv+'/3. Casco '+boatHp+'/'+boatMax+'.');msg('¡Mejora naval '+lv+'/3 instalada!');saveGame(true);
  }));
  // Map widget.
+ function drawLocalMap(){
+  // Local navigation view: centre remains on the player/ship, like a vehicle minimap.
+  // The detailed world chart is reserved for the expanded map.
+  mg.setTransform(1,0,0,1,0,0);mg.clearRect(0,0,map.width,map.height);mg.setTransform(2,0,0,2,0,0);
+  const w=480,h=344,plot={x:8,y:8,w:464,h:328},cx=240,cy=172,focus=onShip?ship.position:playerPos(),heading=onShip?ship.rotation.y:yaw;
+  const rangeX=180,scale=plot.w/rangeX,rangeZ=plot.h/scale,project=(x,z)=>[cx+(x-focus.x)*scale,cy+(z-focus.z)*scale];
+  const sea=mg.createLinearGradient(0,0,w,h);sea.addColorStop(0,'#173c48');sea.addColorStop(.52,'#245765');sea.addColorStop(1,'#102b35');mg.fillStyle=sea;mg.fillRect(0,0,w,h);
+  mg.save();mg.beginPath();mg.rect(plot.x,plot.y,plot.w,plot.h);mg.clip();
+  for(let ring=1;ring<=4;ring++){mg.beginPath();mg.ellipse(cx,cy,ring*rangeX*.105*scale,ring*rangeZ*.105*scale,0,0,Math.PI*2);mg.strokeStyle=ring===4?'rgba(221,202,157,.17)':'rgba(191,216,207,.075)';mg.lineWidth=ring===4?1:.7;mg.stroke();}
+  const left=Math.floor((focus.x-rangeX*.52)/20)*20,right=Math.ceil((focus.x+rangeX*.52)/20)*20,top=Math.floor((focus.z-rangeZ*.52)/20)*20,bottom=Math.ceil((focus.z+rangeZ*.52)/20)*20;
+  mg.font='6px ui-monospace,monospace';mg.fillStyle='rgba(221,213,183,.42)';mg.textAlign='left';
+  for(let x=left;x<=right;x+=20){const p=project(x,focus.z);mg.beginPath();mg.moveTo(p[0],plot.y);mg.lineTo(p[0],plot.y+plot.h);mg.strokeStyle=x%40===0?'rgba(211,222,204,.15)':'rgba(211,222,204,.075)';mg.lineWidth=.65;mg.stroke();if(x%40===0)mg.fillText(String(Math.round(x)),p[0]+2,plot.y+9);}
+  for(let z=top;z<=bottom;z+=20){const p=project(focus.x,z);mg.beginPath();mg.moveTo(plot.x,p[1]);mg.lineTo(plot.x+plot.w,p[1]);mg.strokeStyle=z%40===0?'rgba(211,222,204,.15)':'rgba(211,222,204,.075)';mg.lineWidth=.65;mg.stroke();}
+  land.forEach((island,index)=>{
+   if(Math.abs(island.x-focus.x)>rangeX*.62+island.r||Math.abs(island.z-focus.z)>rangeZ*.62+island.r)return;
+   const path=(extra,fill,stroke)=>{mg.beginPath();for(let step=0;step<=80;step++){const a=step/80*Math.PI*2,irregular=1+.028*Math.sin(a*3+index*1.31)+.018*Math.sin(a*5-index*.73)+.012*Math.cos(a*9+index*.39),radius=island.r+extra,x=island.x+Math.cos(a)*radius*irregular,z=island.z+Math.sin(a)*radius*.88*irregular,p=project(x,z);if(step===0)mg.moveTo(p[0],p[1]);else mg.lineTo(p[0],p[1]);}mg.closePath();if(fill){mg.fillStyle=fill;mg.fill();}if(stroke){mg.strokeStyle=stroke;mg.lineWidth=1.15;mg.stroke();}};
+   path(4,'rgba(190,163,117,.30)','rgba(230,202,151,.38)');path(1.4,'#b6a079','#e1c891');
+   const center=project(island.x,island.z),gradient=mg.createRadialGradient(center[0]-island.r*scale*.2,center[1]-island.r*scale*.22,1,center[0],center[1],island.r*scale);
+   gradient.addColorStop(0,'#9aa27c');gradient.addColorStop(.58,'#748367');gradient.addColorStop(1,'#455b4a');path(0,gradient,'#d6c18e');
+   for(let contour=0;contour<2;contour++){mg.beginPath();mg.ellipse(center[0]-island.r*scale*.05,center[1]-island.r*scale*.04,island.r*scale*(.60-contour*.20),island.r*scale*(.48-contour*.16),-.18,0,Math.PI*2);mg.strokeStyle='rgba(232,220,178,.24)';mg.lineWidth=.7;mg.stroke();}
+   if(Math.abs(center[0]-cx)<plot.w*.45&&Math.abs(center[1]-cy)<plot.h*.42){mg.font='bold 7px Georgia,serif';mg.textAlign='center';mg.fillStyle='rgba(248,231,190,.74)';mg.fillText(island.name.length>20?island.name.slice(0,19)+'…':island.name,center[0],center[1]-Math.min(12,island.r*scale*.20));}
+  });
+  if(Array.isArray(vegetationTrailPaths))vegetationTrailPaths.forEach(trail=>{if(!trail.points||trail.points.length<2)return;mg.beginPath();trail.points.forEach((point,index)=>{const p=project(point[0],point[1]);if(index===0)mg.moveTo(p[0],p[1]);else mg.lineTo(p[0],p[1]);});mg.strokeStyle='rgba(224,202,153,.48)';mg.lineWidth=Math.max(1,trail.width*scale*.12);mg.setLineDash([3,3]);mg.stroke();mg.setLineDash([]);});
+  villages.forEach(village=>{const p=project(village.x,village.z);if(p[0]<plot.x-8||p[0]>plot.x+plot.w+8||p[1]<plot.y-8||p[1]>plot.y+plot.h+8)return;mg.beginPath();mg.arc(p[0],p[1],village.claimed?5:3.8,0,Math.PI*2);mg.fillStyle=village.claimed?'#f1cb83':'#d27a6d';mg.strokeStyle='#17292b';mg.lineWidth=1.4;mg.fill();mg.stroke();});
+  enemyShips.forEach(enemy=>{if(enemy.sunk)return;const p=project(enemy.root.position.x,enemy.root.position.z);if(p[0]<plot.x||p[0]>plot.x+plot.w||p[1]<plot.y||p[1]>plot.y+plot.h)return;mg.save();mg.translate(p[0],p[1]);mg.rotate(-enemy.root.rotation.y);mg.fillStyle='#dc7669';mg.strokeStyle='#311f1d';mg.lineWidth=1.1;mg.beginPath();mg.moveTo(0,-8);mg.lineTo(4.5,5);mg.lineTo(0,3);mg.lineTo(-4.5,5);mg.closePath();mg.fill();mg.stroke();mg.restore();});
+  if(mapTargetWorld){const target=project(mapTargetWorld.x,mapTargetWorld.z);if(target[0]>=plot.x&&target[0]<=plot.x+plot.w&&target[1]>=plot.y&&target[1]<=plot.y+plot.h){mg.beginPath();mg.arc(target[0],target[1],7,0,Math.PI*2);mg.strokeStyle='#f4d28f';mg.lineWidth=1.5;mg.stroke();}}
+  mg.restore();
+  mg.save();mg.translate(cx,cy);mg.rotate(-heading);mg.shadowColor='rgba(0,0,0,.85)';mg.shadowBlur=9;mg.fillStyle='rgba(255,223,151,.20)';mg.beginPath();mg.moveTo(0,-30);mg.lineTo(13,13);mg.lineTo(0,7);mg.lineTo(-13,13);mg.closePath();mg.fill();mg.shadowBlur=0;mg.fillStyle='#ffe7ac';mg.strokeStyle='#12252a';mg.lineWidth=2;mg.beginPath();mg.moveTo(0,-23);mg.lineTo(9,11);mg.lineTo(0,5);mg.lineTo(-9,11);mg.closePath();mg.fill();mg.stroke();mg.restore();
+  mg.strokeStyle='rgba(255,226,171,.36)';mg.lineWidth=1;mg.beginPath();mg.moveTo(cx,cy-31);mg.lineTo(cx,cy-49);mg.stroke();mg.fillStyle='rgba(247,224,180,.88)';mg.font='bold 7px Georgia,serif';mg.textAlign='center';mg.fillText('N',cx,plot.y+11);
+  mg.fillStyle='rgba(8,23,27,.72)';mg.fillRect(plot.x+7,plot.y+plot.h-19,86,13);mg.strokeStyle='rgba(223,194,138,.32)';mg.strokeRect(plot.x+7,plot.y+plot.h-19,86,13);mg.fillStyle='#e8ce96';mg.font='6px ui-monospace,monospace';mg.textAlign='left';mg.fillText('50 m',plot.x+12,plot.y+plot.h-10);
+  mg.strokeStyle='rgba(244,218,165,.85)';mg.lineWidth=1.8;mg.strokeRect(2,2,w-4,h-4);mg.strokeStyle='rgba(75,55,37,.9)';mg.lineWidth=.8;mg.strokeRect(6,6,w-12,h-12);
+  const nearest=land.reduce((best,island)=>Math.hypot(focus.x-island.x,focus.z-island.z)<Math.hypot(focus.x-best.x,focus.z-best.z)?island:best,land[0]);
+  const coordinates='X '+focus.x.toFixed(1)+' · Z '+focus.z.toFixed(1),zone=nearest&&Math.hypot(focus.x-nearest.x,focus.z-nearest.z)<=nearest.r*1.35?nearest.name:'MAR ABIERTO';
+  if(mapCoords)mapCoords.textContent=coordinates+' · '+zone.toUpperCase();
+ }
  function drawMap(){
+  if(!map.classList.contains('expanded')){drawLocalMap();return;}
   // Carta nórdica 2x: el índice lateral evita amontonar trece nombres en la costa.
   mg.setTransform(1,0,0,1,0,0);mg.clearRect(0,0,map.width,map.height);mg.setTransform(2,0,0,2,0,0);
   const w=480,h=344,plot={x:12,y:40,w:342,h:264},side={x:362,y:40,w:106,h:264};
@@ -11304,7 +11371,7 @@ function updateHUD(){
   if(onShip)shipIcon(ship.position.x,ship.position.z,ship.rotation.y,'#ffe0a0',4.1);
   const camp=pt(STARTER_CAMP_POSITION.x,STARTER_CAMP_POSITION.z);mg.fillStyle='#d6a96a';mg.strokeStyle='#38291d';mg.lineWidth=.9;mg.beginPath();mg.moveTo(camp[0],camp[1]-4);mg.lineTo(camp[0]+4,camp[1]+3);mg.lineTo(camp[0]-4,camp[1]+3);mg.closePath();mg.fill();mg.stroke();
   if(playerShelterBuilt){const p=pt(playerShelterX,playerShelterZ);mg.fillStyle='#e6c47c';mg.fillRect(p[0]-3,p[1]-3,6,6);mg.strokeStyle='#34281b';mg.strokeRect(p[0]-3,p[1]-3,6,6);}
-  const player=playerPos(),playerPoint=pt(player.x,player.z);mg.save();mg.translate(playerPoint[0],playerPoint[1]);mg.rotate(-yaw);mg.fillStyle='#fff3d3';mg.strokeStyle='#243236';mg.lineWidth=1.05;
+  const player=playerPos(),playerPoint=pt(player.x,player.z),mapHeading=onShip?ship.rotation.y:yaw;mg.save();mg.translate(playerPoint[0],playerPoint[1]);mg.rotate(-mapHeading);mg.fillStyle='#fff3d3';mg.strokeStyle='#243236';mg.lineWidth=1.05;
   mg.beginPath();mg.moveTo(0,-6.1);mg.lineTo(4.5,4.1);mg.lineTo(0,2);mg.lineTo(-4.5,4.1);mg.closePath();mg.fill();mg.stroke();mg.restore();
   mg.save();mg.translate(plot.x+19,plot.y+25);mg.fillStyle='rgba(11,28,31,.8)';mg.strokeStyle='rgba(229,194,129,.75)';mg.lineWidth=.8;
   mg.beginPath();mg.arc(0,0,10,0,Math.PI*2);mg.fill();mg.stroke();mg.fillStyle='#f2d397';
@@ -12374,7 +12441,7 @@ function update(dt){
   try{
    if(gameStarted){
     if(combatFreeze>0){combatFreeze=Math.max(0,combatFreeze-dt);update(0);}else update(dt);
-    if(document.body.classList.contains('map-open')){mapClock+=dt;if(mapClock>.80){drawMap();mapClock=0;}}else mapClock=0;
+    mapClock+=dt;const mapRefreshInterval=document.body.classList.contains('map-open')?.42:.20;if(mapClock>=mapRefreshInterval){drawMap();mapClock=0;}
     progressClock+=dt;if(progressClock>.55){progressClock=0;const panel=document.getElementById('progressPanel');if(panel&&panel.classList.contains('open'))updateProgressPanel();}
    }
   }catch(err){
