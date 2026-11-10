@@ -109,3 +109,10 @@ assert.match(html,/camera\.rotationQuaternion=null/);
 assert.match(source,/nearbyCuervoStructureRoots/);
 assert.match(source,/item\.structuralRole/);
 assert.match(source,/classificationConfidence/);
+
+// Offshore audit must include anonymous grouped GLB assemblies, not only name-matched buildings.
+assert.match(html,/unknownAssemblyExclusions=\/\(/);
+assert.match(html,/unidentifiedGeometryRoots=new Set\(\)/);
+assert.match(html,/unidentifiedGeometryRoots\.add\(node\);candidates\.add\(node\)/);
+assert.match(html,/unidentified-geometry-cluster/);
+assert.match(html,/structuralClassification/);
