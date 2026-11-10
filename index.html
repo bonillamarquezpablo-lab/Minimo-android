@@ -13174,9 +13174,9 @@ function update(dt){
 })();
 </script>
 <style id="norse-live-minimap-layout">
-/* Final override: legacy styles farther down used to shrink the tactical map again. */
-#map:not(.expanded){position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px)!important;width:clamp(138px,36vw,158px)!important;height:auto!important;aspect-ratio:480/344!important;z-index:10!important}
-#mapCoords{position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px + clamp(99px,26vw,115px) + 5px)!important;width:clamp(138px,36vw,158px)!important;z-index:11!important}
+/* Final override: preserve the enlarged single minimap and keep coordinates aligned beneath it. */
+#map:not(.expanded){position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px)!important;width:clamp(164px,42vw,190px)!important;height:auto!important;aspect-ratio:480/344!important;z-index:10!important}
+#mapCoords{position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px + clamp(118px,30vw,137px) + 5px)!important;width:clamp(164px,42vw,190px)!important;z-index:11!important}
 body.map-open #mapCoords{display:none!important}
 </style>
 </body>
