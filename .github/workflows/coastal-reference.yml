@@ -188,16 +188,17 @@ jobs:
           cat /tmp/elsn-custom-http.log
           exit 1
 
-      - name: Load committed settlement camera plan
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "CAPTURE_PLAN_JSON=$(cat scripts/scene-capture-plan.json)" >> "$GITHUB_ENV"
-
       - name: Capture requested camera positions
         env:
           CAPTURE_TEST_URL: http://127.0.0.1:4175/
-          CAPTURE_PLAN_JSON: ${{ github.event_name == 'workflow_dispatch' && inputs.capture_plan || '' }}
-        run: node scripts/custom-scene-capture.mjs
+          CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            export CAPTURE_PLAN_JSON="$CAPTURE_PLAN_INPUT"
+          else
+            export CAPTURE_PLAN_JSON="$(cat scripts/scene-capture-plan.json)"
+          fi
+          node scripts/custom-scene-capture.mjs
 
       - name: Upload custom screenshots and camera manifest
         if: always()
