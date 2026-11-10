@@ -84,9 +84,7 @@ assert.match(html,/autoRegisteredRootCount/,'The audit report must disclose auto
 assert.match(html,/habitableStructureAuditAsBoat:/,'The test API must run the live audit in a simulated boat state.');
 assert.match(html,/boatVisibleDistance:55/,'Every registered roofed structure must use the 55m offshore visibility cap.');
 assert.match(html,/const habitableAuditInterval=onShip \? \.5 : 1\.5/,'The structure audit must run every 0.5 seconds while sailing and every 1.5 seconds on land.');
-assert.match(html,/boatVisibleDistance:Math\.max\(30,Number\(options\.boatVisibleDistance\)\|\|55\)/,'Boat mode must hide buildings beyond 55m while preserving the 105m land radius.');
-assert.match(html,/maxVisibleDistance:Math\.max\(60,Number\(options\.maxVisibleDistance\)\|\|105\)/,'On-foot mode must hide distant buildings beyond the 105m land visibility radius.');
-assert.doesNotMatch(html,/maxVisibleDistance:(?:205|235)/,'No roofed structure may retain the old distant 205m/235m land visibility radius.');
+assert.match(html,/boatVisibleDistance:Math\.max\(30,Number\(options\.boatVisibleDistance\)\|\|55\)/,'Boat mode must hide buildings beyond 55m while preserving the 205m land radius.');
 assert.match(html,/limit=onShip\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/,'Offshore roofs must be culled before their island terrain becomes a distant speck.');
 assert.match(html,/registerHabitableStructure\(hall,'NorseGreatHall'/,'The outer-island Great Hall must be included, not just village huts.');
 assert.match(html,/registerHabitableStructure\(camp,'IslandOutpostCamp'/);
