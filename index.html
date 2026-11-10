@@ -1210,12 +1210,6 @@ body.boot-failed #loading .loadBottom{width:min(520px,calc(100% - 20px))!importa
 body.game-running #loading{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 
 </style>
-<style id="norse-live-minimap-layout">
-/* Final override: legacy styles farther down used to shrink the tactical map again. */
-#map:not(.expanded){position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px)!important;width:clamp(138px,36vw,158px)!important;height:auto!important;aspect-ratio:480/344!important;z-index:10!important}
-#mapCoords{position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px + clamp(99px,26vw,115px) + 5px)!important;width:clamp(138px,36vw,158px)!important;z-index:11!important}
-body.map-open #mapCoords{display:none!important}
-</style>
 </head>
 <body class="preflight audio-gate">
 <svg id="norseIconLibrary" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
@@ -13175,5 +13169,11 @@ function update(dt){
 }
 })();
 </script>
+<style id="norse-live-minimap-layout">
+/* Final override: legacy styles farther down used to shrink the tactical map again. */
+#map:not(.expanded){position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px)!important;width:clamp(138px,36vw,158px)!important;height:auto!important;aspect-ratio:480/344!important;z-index:10!important}
+#mapCoords{position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px + clamp(99px,26vw,115px) + 5px)!important;width:clamp(138px,36vw,158px)!important;z-index:11!important}
+body.map-open #mapCoords{display:none!important}
+</style>
 </body>
 </html>
