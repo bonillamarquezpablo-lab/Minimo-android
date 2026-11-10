@@ -106,7 +106,11 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
   }
   const checks=manifest.coastalDiagnostics.checks,completed=Object.values(checks).filter(item=>item.status==='completed').length;
   const structure=checks.habitableStructures?.value,offshore=checks.offshoreStructures?.value,houses=checks.settlementGrounding?.value||[],camps=checks.settlementCamps?.value||[],garrisons=checks.garrisonGrounding?.value||[],geometry=checks.coastalGeometry?.value,water=checks.runtime?.value?.coast,floatingProbe=checks.floatingHutProbe?.value,issues=[];
-  const floatingProbePassed=floatingProbe?.detected===true&&floatingProbe?.autoDiscovered===true&&floatingProbe?.hidden===true&&floatingProbe?.lastAction==='hidden-no-safe-ground';
+  // In ?test=1 the audit deliberately avoids hiding or mutating scene roots.
+  // This synthetic offshore hut must be auto-discovered and classified unsafe without
+  // being hidden in the disposable test scene. The normal-game hide path is asserted
+  // separately against the production audit implementation in the campaign contract.
+  const floatingProbePassed=floatingProbe?.detected===true&&floatingProbe?.autoDiscovered===true&&floatingProbe?.hidden===false&&floatingProbe?.lastAction==='relocation-failed-visible'&&floatingProbe?.lastStatus==='unsafe'&&floatingProbe?.untrackedRootCount===0;
   if(!floatingProbePassed)issues.push({kind:'floating-hut-probe-failed',result:floatingProbe||null});
   if(Number(structure?.unsafeCount)>0)issues.push({kind:'unsafe-habitable-structures',count:structure.unsafeCount});
   if(Number(offshore?.visibleOffshoreCount)>0)issues.push({kind:'visible-offshore-structures',count:offshore.visibleOffshoreCount,items:(offshore.offshoreStructures||[]).filter(item=>item.visible).slice(0,30)});
