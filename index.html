@@ -12717,7 +12717,9 @@ function update(dt){
    const excludedRootPattern=/(?:villageguard|factionbadge|garrisonstandard|garrisonflag|garrisoncrossbar|garrisonflagpole|forgehammerstand|flag|banner|weapon|tree|grass|ship|boat|drakkar|dock)/i;
    const registered=new Map(habitableStructureRegistry.map(entry=>[entry.root,entry]));
    const candidates=new Set(registered.keys()),parentRoot=(node)=>{let current=node.parent,depth=0;while(current&&depth++<16){if(structureNamePattern.test(current.name||''))return current;current=current.parent;}return null;};
-   for(const node of scene.transformNodes||[]){
+   // Babylon meshes may be present in scene.meshes without a separately named TransformNode root.
+   // Scan both collections, while the parent-root check prevents counting roof/wall child meshes twice.
+   for(const node of new Set([...(scene.transformNodes||[]),...(scene.meshes||[])])){
     const name=String(node?.name||'');
     if(!name||!structureNamePattern.test(name)||excludedRootPattern.test(name)||parentRoot(node))continue;
     candidates.add(node);
@@ -12760,7 +12762,18 @@ function update(dt){
      const waterSurfaceY=(Number(ground.position.y)||0)+waterHeight(absolute.x,absolute.z,oceanTime);
      const terrainY=renderedTerrainSurfaceAt(absolute.x,absolute.z);
      const bottomAboveWaterMeters=bottomY-waterSurfaceY,bottomAboveTerrainMeters=bottomY-terrainY;
-     const terrainIsDry=Number.isFinite(terrainY)&&terrainY>=.22;
+     // Check the centre and eight points around the actual footprint. Outside an island,
+     // terrainSurfaceAt intentionally returns a seabed fallback, so height alone is not proof of dry land.
+     const footprintSamples=[{x:absolute.x,z:absolute.z}];
+     for(let sample=0;sample<8;sample++){const angle=sample*Math.PI/4;footprintSamples.push({x:absolute.x+Math.cos(angle)*footprintRadius,z:absolute.z+Math.sin(angle)*footprintRadius});}
+     const dryFootprintSamples=footprintSamples.map(point=>{
+      const radial=Math.hypot(point.x-nearest.x,point.z-nearest.z);
+      const terrain=renderedTerrainSurfaceAt(point.x,point.z);
+      const water=(Number(ground.position.y)||0)+waterHeight(point.x,point.z,oceanTime);
+      return {insideIslandEnvelope:radial<=nearest.r*1.09,terrainY:terrain,waterY:water,dry:radial<=nearest.r*1.09&&Number.isFinite(terrain)&&terrain>=water+.22};
+     });
+     const dryFootprintSampleCount=dryFootprintSamples.filter(point=>point.dry).length;
+     const terrainIsDry=dryFootprintSampleCount===dryFootprintSamples.length;
      const floatingAboveWater=bottomAboveWaterMeters>.25;
      const beyondIslandEnvelope=coastClearanceMeters>2.5;
      // The island-radius envelope alone can miss bays and irregular shorelines. A root
@@ -12774,7 +12787,9 @@ function update(dt){
       footprintRadiusMeters:Number(footprintRadius.toFixed(2)),distanceToIslandCenterMeters:Number(nearestDistance.toFixed(2)),
       distanceBeyondCoastAndFootprintMeters:Number(coastClearanceMeters.toFixed(2)),
       waterSurfaceY:Number(waterSurfaceY.toFixed(3)),bottomAboveWaterMeters:Number(bottomAboveWaterMeters.toFixed(3)),
-      terrainReferenceY:Number(terrainY.toFixed(3)),terrainIsDry,bottomAboveTerrainMeters:Number(bottomAboveTerrainMeters.toFixed(3)),
+      terrainReferenceY:Number(terrainY.toFixed(3)),terrainIsDry,dryFootprintSampleCount,dryFootprintSampleTotal:dryFootprintSamples.length,
+      dryFootprintSamples:dryFootprintSamples.map(point=>({insideIslandEnvelope:point.insideIslandEnvelope,terrainY:Number(point.terrainY.toFixed(3)),waterY:Number(point.waterY.toFixed(3)),dry:point.dry})),
+      bottomAboveTerrainMeters:Number(bottomAboveTerrainMeters.toFixed(3)),
       vertexCount:vertices,indexCount:indices,meshCount:meshRefs.length,offshore,issue,
       registeredAudit:entry?{lastStatus:entry.lastStatus,lastAction:entry.lastAction,relocatable:entry.relocatable}:null
      });
@@ -12788,10 +12803,10 @@ function update(dt){
     candidateCount:rows.length,returnedCount:Math.min(rows.length,maxItems),omittedCount:Math.max(0,rows.length-maxItems),
     registeredCandidates:rows.filter(row=>row.registered).length,unregisteredCandidates:rows.filter(row=>!row.registered).length,
     offshoreCount:offshore.length,visibleOffshoreCount:visibleOffshore.length,
-    thresholds:{coastlineRadiusFactor:1.09,minimumClearanceBeyondCoastAndFootprintMeters:2.5,aboveWaterToleranceMeters:.25},
+    thresholds:{coastlineRadiusFactor:1.09,minimumClearanceBeyondCoastAndFootprintMeters:2.5,minimumDryTerrainAboveWaterMeters:.22,aboveWaterToleranceMeters:.25,footprintDrySamples:9},
     offshoreStructures:offshore.slice(0,maxItems),candidates:rows.slice(0,maxItems),
     durationMs:Number((performance.now()-started).toFixed(1)),
-    interpretation:'A structure is only flagged offshore when its estimated whole footprint is at least 2.5 m beyond the 1.09x island shoreline envelope. Floating/submerged status compares the lowest world-space mesh bound with the live local water surface.'
+    interpretation:'A structure is flagged offshore when its footprint exceeds the island shoreline envelope, or when any of its nine footprint samples is outside the island envelope or less than 0.22 m above the live local water surface while its lowest world-space mesh bound floats above water.'
    };
   }
   const captureTexturePropertyNames=new Set(['diffuseTexture','ambientTexture','opacityTexture','reflectionTexture','emissiveTexture','specularTexture','bumpTexture','lightmapTexture','refractionTexture','albedoTexture','metallicTexture','roughnessTexture','metallicReflectanceTexture','microSurfaceTexture','reflectivityTexture','environmentBRDFTexture','baseTexture','normalTexture','occlusionTexture','opacityFresnelTexture','detailMap','transmissionTexture','thicknessTexture','iridescenceTexture','iridescenceThicknessTexture','sheenTexture','clearCoatTexture','clearCoatBumpTexture','clearCoatTintTexture','anisotropyTexture','baseWeightTexture','baseDiffuseTexture','baseRoughnessTexture','baseColorTexture','metalnessTexture','normalMapTexture','projectionTexture','renderTargetTexture']);
