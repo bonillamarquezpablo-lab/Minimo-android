@@ -74,7 +74,7 @@ async function main(){
   await phase('wait for world setup',()=>page.waitForFunction(()=>window.__ELSN_TEST__&&window.__elSinNombreStartupSmoke?.worldReady===true,undefined,{timeout:180000,polling:500}));
   await phase('start a new campaign',async()=>{await page.locator('#intro.open').waitFor({state:'visible',timeout:60000});await page.locator('#newGameChoice').click();await page.waitForFunction(()=>document.body.classList.contains('game-running')&&document.querySelector('#intro')?.getAttribute('aria-hidden')==='true',undefined,{timeout:30000,polling:250});});
   report.localNavigationVerification=await phase('verify live local minimap, compact coordinates and default follow camera',async()=>{
-   await page.waitForFunction(()=>{const coords=document.getElementById('mapCoords');return coords&&/^X\\s/.test(coords.textContent||'');},undefined,{timeout:15000,polling:200});
+   await page.waitForFunction(()=>{const coords=document.getElementById('mapCoords');return coords&&(coords.textContent||'').startsWith('X ');},undefined,{timeout:15000,polling:200});
    const result=await page.evaluate(()=>{
     const map=document.getElementById('map'),coords=document.getElementById('mapCoords'),rect=map?.getBoundingClientRect();
     const cameraMode=window.__ELSN_CAMERA_CONTROL?.getMode?.()||null;
@@ -82,7 +82,7 @@ async function main(){
     const pixel=map?.getContext('2d')?.getImageData(240,172,1,1)?.data||null;
     return {mapExists:!!map,mapExpanded:!!map?.classList.contains('expanded'),mapCssWidth:Number((rect?.width||0).toFixed(1)),mapCssHeight:Number((rect?.height||0).toFixed(1)),coordinates:coords?.textContent||'',coordinatesVisible:!!coords&&getComputedStyle(coords).display!=='none',cameraMode,navigationMode:navigation?.mode,centrePixel:pixel?Array.from(pixel):null};
    });
-   if(!result.mapExists||result.mapExpanded||!result.coordinatesVisible||!/^X\\s/.test(result.coordinates))throw new Error('Local minimap did not initialise correctly: '+JSON.stringify(result));
+   if(!result.mapExists||result.mapExpanded||!result.coordinatesVisible||!result.coordinates.startsWith('X '))throw new Error('Local minimap did not initialise correctly: '+JSON.stringify(result));
    if(result.cameraMode!=='follow')throw new Error('The campaign did not start in follow-camera mode: '+JSON.stringify(result));
    if(result.mapCssWidth<130||result.mapCssWidth>180)throw new Error('Unexpected minimap size: '+JSON.stringify(result));
    const file=path.join(OUT,'live-local-minimap.png');
