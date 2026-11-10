@@ -10,7 +10,7 @@ assert.match(html,/<b id="captured">0\/13<\/b>/,'El HUD debe mostrar 0/13 desde 
 assert.doesNotMatch(html,/<b id="captured">0\/4<\/b>/,'No debe quedar el contador antiguo 0/4.');
 assert.match(html,/for\(let islandIndex=4;islandIndex<land\.length;islandIndex\+\+\)makeIslandGarrison\(islandIndex\);/);
 assert.match(html,/function makeIslandGarrison\(islandIndex\)/);
-assert.match(html,/function findLevelHutFooting\(cx,cz,scale\)/,'Each hut must search locally for a naturally level four-corner footing without modifying terrain.');
+assert.match(html,/function findLevelHutFooting\(cx,cz,scale,preferredIslandIndex=-1\)/,'Each hut must search locally for a naturally level four-corner footing within its owning island without modifying terrain.');
 assert.match(html,/valid:false/,'A failed local footing search must be represented as invalid, never as a usable fallback.');
 assert.match(html,/if\(!footing\.valid\)g\.setEnabled\(false\)/,'A hut with no valid dry-land footing must never render at the generic offshore fallback height.');
 assert.match(html,/registerHabitableStructure\(g,'NorseHut'/,'Every village hut must enter the live structure audit, including invalid disabled huts.');
