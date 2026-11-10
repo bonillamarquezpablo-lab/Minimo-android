@@ -136,8 +136,8 @@ assert.match(html,/cameraMode!=='free'/);
 assert.match(html,/window\.__ELSN_CAMERA_CONTROL=/);
 assert.match(html,/cameraMode='follow';cameraManualLookUntil=0/);
 assert.match(navigation,/window\.__ELSN_CAMERA_CONTROL/);
-assert.match(navigation,/gameControl\.setMode\(mode\)/);
-assert.match(navigation,/setMode\("follow"\)/);
+assert.match(navigation,/control\.setMode\(mode\)/);
+assert.match(navigation,/applyMode\("follow"\)/);
 
 console.log('OK: live local minimap, compass heading, coordinates and integrated follow/ship camera controls.');
 
