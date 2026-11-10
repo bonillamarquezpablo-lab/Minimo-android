@@ -8787,7 +8787,7 @@ function createRealWeapon(type='axe'){
   // y dejaba un hueco de puerta por el que los NPC podían atravesar toda la estructura.
   g.__norseWorldCollider=footing.valid?registerWorldCollider({type:'rect',x:houseX,z:houseZ,hx:2.16*scale,hz:2.78*scale,cameraBlocker:true}):null;
   if(!footing.valid)g.setEnabled(false);
-  registerHabitableStructure(g,'NorseHut',{islandIndex:footing.islandIndex,footprintRadius:Math.hypot(2.01*scale,2.64*scale),baseOffset:.02*scale,edgeBuffer:1.25,maxRelief:.025,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,collider:g.__norseWorldCollider,relocatable:true,enableAfterRelocation:!footing.valid});
+  registerHabitableStructure(g,'NorseHut',{islandIndex:footing.islandIndex,footprintRadius:Math.hypot(2.01*scale,2.64*scale),baseOffset:.02*scale,edgeBuffer:1.25,maxRelief:.02,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,collider:g.__norseWorldCollider,relocatable:true,enableAfterRelocation:!footing.valid});
   mergeStaticDecorByMaterial(g,'NorseHutStatic');
   addModelShadow(g);
   try{g.freezeWorldMatrix();g.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){ }
