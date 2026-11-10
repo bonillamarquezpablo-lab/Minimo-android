@@ -5,9 +5,32 @@ import { chromium } from 'playwright';
 const BASE_URL=process.env.STRUCTURE_TEST_URL||'http://127.0.0.1:4176/';
 const OUT=path.resolve('artifacts/structure-grounding');
 const startedAt=Date.now();
-const report={schema:1,startedAt:new Date().toISOString(),finishedAt:null,build:null,renderer:'Chromium headless + ANGLE SwiftShader',mode:'read-only structure grounding audit',mutationsPerformed:false,phases:[],consoleErrors:[],pageErrors:[],habitableStructures:null,settlementHouses:null,settlementCamps:null,garrisons:null,summary:null,verdict:'not-run',failure:null};
+const report={schema:2,startedAt:new Date().toISOString(),finishedAt:null,build:null,renderer:'Chromium headless + ANGLE SwiftShader',mode:'baseline audit plus automatic-repair observation in a disposable test renderer',testRendererOnlyMutations:true,productionDataModified:false,phases:[],consoleErrors:[],pageErrors:[],baseline:null,postAutomaticAudit:null,runtimeRepairSimulation:null,habitableStructures:null,settlementHouses:null,settlementCamps:null,garrisons:null,summary:null,screenshot:null,verdict:'not-run',failure:null};
 function writeReport(){fs.mkdirSync(OUT,{recursive:true});const tmp=path.join(OUT,'structure-grounding.json.tmp');fs.writeFileSync(tmp,JSON.stringify(report,null,2)+'\n');fs.renameSync(tmp,path.join(OUT,'structure-grounding.json'));}
 async function phase(name,fn){const start=Date.now(),row={name,startedAt:new Date().toISOString(),status:'in-progress'};report.phases.push(row);console.log('[STRUCTURE_AUDIT] START '+name);try{const result=await fn();row.status='completed';return result;}catch(error){row.status='failed';row.error=String(error?.stack||error);throw error;}finally{row.finishedAt=new Date().toISOString();row.durationMs=Date.now()-start;console.log('[STRUCTURE_AUDIT] END '+name+' '+row.status+' '+row.durationMs+'ms');}}
+function collectStructureSnapshot(){
+ const api=window.__ELSN_TEST__;
+ if(!api)throw new Error('The game inspection API is not available.');
+ const structures=api.habitableStructureAudit();
+ const houses=api.settlementGrounding();
+ const camps=api.settlementCampGrounding();
+ const garrisons=api.garrisonGrounding();
+ const houseOutliers=houses.filter(item=>Math.abs(Number(item.groundingErrorMeters)||0)>.02||Number(item.maximumFootingGapMeters)>.02||Number(item.dryLandFootprintMarginMeters)<1.25);
+ const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02);
+ const garrisonOutliers=garrisons.filter(item=>Number(item.maximumAnchorErrorMeters)>.02);
+ return {
+  structures,houses,camps,garrisons,
+  summary:{
+   structuresTotal:structures.total,grounded:structures.groundedCount,unsafe:structures.unsafeCount,
+   unsafeVisibleBeforeAudit:structures.unsafeVisibleBeforeRepair,visibleInvalid:structures.visibleInvalidAfterRepair,
+   autoRegisteredRoots:structures.autoRegisteredRootCount,untrackedRoots:structures.untrackedRootCount,
+   houseCount:houses.length,houseOutliers:houseOutliers.length,
+   houseOutlierNames:houseOutliers.map(item=>({village:item.village,buildingIndex:item.buildingIndex,groundingErrorMeters:item.groundingErrorMeters,maximumFootingGapMeters:item.maximumFootingGapMeters,dryLandFootprintMarginMeters:item.dryLandFootprintMarginMeters,footingCorners:item.footingCorners})),
+   campCount:camps.length,campOutliers:campOutliers.length,campOutlierDetails:campOutliers,
+   garrisonCount:garrisons.length,garrisonOutliers:garrisonOutliers.length,garrisonOutlierDetails:garrisonOutliers
+  }
+ };
+}
 async function main(){
  fs.mkdirSync(OUT,{recursive:true});let browser=null,page=null;
  try{
@@ -25,31 +48,16 @@ async function main(){
   await phase('continue into game startup',async()=>{await page.locator('#continueUnnamed').waitFor({state:'visible',timeout:30000});await page.locator('#continueUnnamed').click();});
   await phase('wait for world setup',()=>page.waitForFunction(()=>window.__ELSN_TEST__&&window.__elSinNombreStartupSmoke?.worldReady===true,undefined,{timeout:180000,polling:500}));
   await phase('start a new campaign',async()=>{await page.locator('#intro.open').waitFor({state:'visible',timeout:60000});await page.locator('#newGameChoice').click();await page.waitForFunction(()=>document.body.classList.contains('game-running')&&document.querySelector('#intro')?.getAttribute('aria-hidden')==='true',undefined,{timeout:30000,polling:250});});
-  const data=await phase('measure all registered structures and hut footings',()=>page.evaluate(()=>{
-   const api=window.__ELSN_TEST__;
-   if(!api)throw new Error('The game inspection API is not available.');
-   const structures=api.habitableStructureAudit();
-   const houses=api.settlementGrounding();
-   const camps=api.settlementCampGrounding();
-   const garrisons=api.garrisonGrounding();
-   const houseOutliers=houses.filter(item=>Math.abs(Number(item.groundingErrorMeters)||0)>.02||Number(item.maximumFootingGapMeters)>.02||Number(item.dryLandFootprintMarginMeters)<1.25);
-   const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02);
-   const garrisonOutliers=garrisons.filter(item=>Number(item.maximumAnchorErrorMeters)>.02);
-   return {
-    camera:api.diagnostics?.()?.coast?.camera||null,
-    structures,houses,camps,garrisons,
-    summary:{
-     structuresTotal:structures.total,grounded:structures.groundedCount,unsafe:structures.unsafeCount,
-     unsafeVisibleBeforeAudit:structures.unsafeVisibleBeforeRepair,visibleInvalid:structures.visibleInvalidAfterRepair,
-     autoRegisteredRoots:structures.autoRegisteredRootCount,untrackedRoots:structures.untrackedRootCount,
-     houseCount:houses.length,houseOutliers:houseOutliers.length,houseOutlierNames:houseOutliers.map(item=>({village:item.village,buildingIndex:item.buildingIndex,groundingErrorMeters:item.groundingErrorMeters,maximumFootingGapMeters:item.maximumFootingGapMeters,dryLandFootprintMarginMeters:item.dryLandFootprintMarginMeters,footingCorners:item.footingCorners})),
-     campCount:camps.length,campOutliers:campOutliers.length,campOutlierDetails:campOutliers,
-     garrisonCount:garrisons.length,garrisonOutliers:garrisonOutliers.length,garrisonOutlierDetails:garrisonOutliers
-    }
-   };
-  }));
-  report.habitableStructures=data.structures;report.settlementHouses=data.houses;report.settlementCamps=data.camps;report.garrisons=data.garrisons;report.summary=data.summary;
-  report.verdict=data.summary.structuresTotal>0?'measured':'inconclusive';
+  const baseline=await phase('measure baseline structure grounding before automatic repairs',()=>page.evaluate(collectStructureSnapshot));
+  await phase('allow the game automatic grounding audit to run in the disposable test scene',()=>page.waitForTimeout(2400));
+  const settled=await phase('remeasure structures after the automatic grounding audit',()=>page.evaluate(collectStructureSnapshot));
+  report.baseline=baseline;report.postAutomaticAudit=settled;
+  report.runtimeRepairSimulation={testMode:true,waitMs:2400,usesNormalGameAuditLoop:true,explicitRepairApiCalled:false,productionDataModified:false};
+  report.habitableStructures=settled.structures;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.summary=settled.summary;
+  const screenshot=await phase('capture the resulting test scene',()=>page.screenshot({type:'png',fullPage:false}));
+  const screenshotFile=path.join(OUT,'structure-grounding-scene.png');fs.writeFileSync(screenshotFile,screenshot);
+  report.screenshot={file:path.basename(screenshotFile),bytes:screenshot.length};
+  report.verdict=settled.summary.structuresTotal>0?'measured':'inconclusive';
   if(report.verdict==='inconclusive')throw new Error('No registered habitable structures were returned by the inspection API.');
  }catch(error){report.failure=String(error?.stack||error);report.verdict='fail';
  }finally{
