@@ -21,7 +21,7 @@ assert.match(smoke,/probeFloatingHutAudit/);
 assert.doesNotMatch(smoke,/api\.render\(\)/);
 assert.doesNotMatch(smoke,/read game build identifier/);assert.ok(smoke.indexOf('wait for render and texture convergence')<smoke.indexOf("runPhase('capture final camera PNG'"));
 assert.doesNotMatch(smoke,/capture camera baseline PNG before convergence/);
-assert.ok(smoke.indexOf("audit and repair structures in disposable test renderer")<smoke.indexOf("const convergenceResult=await runPhase('wait for render and texture convergence'"));assert.ok(smoke.indexOf("wait for render and texture convergence")<smoke.indexOf("const auditCalls=[['habitableStructures'"));
+assert.ok(smoke.indexOf("audit and repair structures in disposable test renderer")<smoke.indexOf("const convergenceResult=await runPhase('wait for render and texture convergence'"));assert.ok(smoke.indexOf("wait for render and texture convergence")<smoke.indexOf("const auditCalls=[['offshoreStructures'"));
 assert.ok(smoke.indexOf("manifest.verdict=verdict();")<smoke.indexOf("const auditCalls=[['habitableStructures'"));
 assert.match(smoke,/__captureTimedOut/);
 
