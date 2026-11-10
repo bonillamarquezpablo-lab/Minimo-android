@@ -76,7 +76,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
  manifest.readiness=convergenceResult;
  manifest.textureDiagnostics=manifest.readiness?.textureDiagnostics||await runPhase('collect texture reference inventory',()=>page.evaluate(()=>window.__ELSN_TEST__?.getTextureReadinessForCamera?.()));
  manifest.actualCamera=manifest.textureDiagnostics?.camera||null;manifest.cameraVerification=cameraVerification(manifest.camera,manifest.actualCamera);manifest.runtimeDiagnostics=await runPhase('collect render performance diagnostics',()=>collectRuntimeDiagnostics(page,5000));correlateNetworkEvents();
- await runPhase('capture final camera PNG',async()=>{if(!await capturePng(page,false))throw new Error('No se pudo guardar un PNG válido de la cámara de prueba.');});
+ await runPhase('capture final camera PNG',async()=>{if(await capturePng(page,false))return;const firstFailure=manifest.captureFailure||'Initial canvas/CDP capture returned no valid PNG.';const recovered=await capturePng(page,true);manifest.captureRecovery={attempted:true,success:recovered,firstFailure};if(recovered){manifest.captureFailure=null;return;}throw new Error('No se pudo guardar un PNG válido de la cámara de prueba ni en el reintento de recuperación.');});
  manifest.verdict=verdict();
 
  try{
