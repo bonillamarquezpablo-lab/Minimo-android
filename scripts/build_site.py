@@ -362,6 +362,18 @@ def main() -> None:
     coastal_target = DIST / "scripts" / "nordic" / "coastal-interaction.js"
     shutil.copy2(coastal_source, coastal_target)
 
+    # Shared camera and cartography runtime for every game entry point.
+    navigation_source = ROOT / "scripts" / "nordic" / "navigation-suite.js"
+    if not navigation_source.is_file():
+        raise SystemExit("Falta scripts/nordic/navigation-suite.js.")
+    navigation_target = DIST / "scripts" / "nordic" / "navigation-suite.js"
+    shutil.copy2(navigation_source, navigation_target)
+    navigation_tag = '<script src="./scripts/nordic/navigation-suite.js" defer></script>'
+    if navigation_tag not in html:
+        if "</body>" not in html:
+            raise SystemExit("No se encontró </body> para instalar la navegación.")
+        html = html.replace("</body>", navigation_tag + "\\n</body>", 1)
+
     (DIST / "index.html").write_text(html, encoding="utf-8")
 
     # Root-level invite entry. The guest mode is compiled as a constant, so
