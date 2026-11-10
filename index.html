@@ -8545,7 +8545,7 @@ function createRealWeapon(type='axe'){
      if(!withinDistance)hiddenByDistance++;
     }
    }
-   entry.lastStatus=result.status;records.push(Object.assign({},result,{lastAction:entry.lastAction}));
+   entry.lastStatus=result.status;const finalEnabled=!!(root&&((typeof root.isEnabled==='function')?root.isEnabled():root.isVisible!==false)),distanceToCameraMeters=camera?Math.hypot(result.x-camera.x,result.z-camera.z):0,visibilityLimitMeters=onShip?entry.boatVisibleDistance:entry.maxVisibleDistance;records.push(Object.assign({},result,{enabled:finalEnabled,distanceToCameraMeters:Number(distanceToCameraMeters.toFixed(2)),visibilityLimitMeters,lastAction:entry.lastAction}));
   }
   const registeredRoots=new Set(habitableStructureRegistry.map(entry=>entry.root));
   const untrackedRoots=scene.transformNodes.filter(node=>roofedRootPattern.test(node.name||'')&&!registeredRoots.has(node)).map(node=>node.name);
@@ -12582,6 +12582,17 @@ function update(dt){
    },
    auditIslandGeometry:()=>auditIslandGeometry(),
    habitableStructureAudit:()=>auditHabitableStructures(false),
+   habitableStructureAuditAsBoat:({x=80,z=80}={})=>{
+    const previousOnShip=onShip,previousCameraPosition=scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.clone():null;
+    try{
+     onShip=true;
+     if(previousCameraPosition&&scene.activeCamera&&scene.activeCamera.position)scene.activeCamera.position.set(Number(x)||0,previousCameraPosition.y,Number(z)||0);
+     return auditHabitableStructures(true);
+    }finally{
+     onShip=previousOnShip;
+     if(previousCameraPosition&&scene.activeCamera&&scene.activeCamera.position){scene.activeCamera.position.copyFrom(previousCameraPosition);auditHabitableStructures(true);}
+    }
+   },
    repairAndAuditHabitableStructures:()=>auditHabitableStructures(true),
    settlementGrounding:()=>villages.flatMap(village=>(village.houseGroups||[]).map((group,buildingIndex)=>{
     const p=group.getAbsolutePosition?group.getAbsolutePosition():group.position;
