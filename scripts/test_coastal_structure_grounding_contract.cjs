@@ -140,3 +140,15 @@ assert.match(navigation,/gameControl\.setMode\(mode\)/);
 assert.match(navigation,/setMode\("follow"\)/);
 
 console.log('OK: live local minimap, compass heading, coordinates and integrated follow/ship camera controls.');
+
+// One original map only: the navigation helper must not create a duplicate overlay.
+assert.match(html, /id="map"/);
+assert.match(html, /rangeX=145/);
+assert.match(html, /Math\.PI-heading/);
+assert.match(html, /Math\.PI-mapHeading/);
+assert.match(html, /cameraFocus=focus/);
+assert.match(html, /onShip\?2\.12:1/);
+assert.match(html, /width:clamp\(164px,42vw,190px\)/);
+assert.match(navigation, /originalMap:!!document\.getElementById\("map"\)/);
+assert.doesNotMatch(navigation, /norse-nav-root|norse-nav-panel|norse-nav-map-large/);
+assert.match(navigation, /applyMode\("follow"\)/);

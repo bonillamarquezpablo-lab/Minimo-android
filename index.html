@@ -32,9 +32,9 @@ html,body{margin:0;width:100%;height:100%;min-height:100dvh;overflow:hidden;back
 #modelStatus button,#modelStatus a{display:inline-block;margin-top:6px;margin-right:5px;padding:6px 8px;border:1px solid #d8ad68aa;border-radius:7px;background:#8b5c30;color:#fff5e5;font-weight:850;font-size:9px;text-decoration:none}
 #humanModelFile{display:none}
 #notice{position:absolute;top:calc(env(safe-area-inset-top,0px) + 108px);left:50%;transform:translateX(-50%);max-width:min(76vw,420px);background:#102326d9;border:1px solid #d8ad6877;border-radius:10px;padding:7px 11px;font-size:11px;line-height:1.25;text-align:center;opacity:0;transition:opacity .18s;box-shadow:0 4px 15px #0005}
-#map{position:absolute;right:9px;top:calc(env(safe-area-inset-top,0px) + 75px);width:clamp(138px,36vw,158px);height:auto;aspect-ratio:480/344;border-radius:10px;border:1px solid #d8ad6888;background:#12353b;box-shadow:0 5px 15px #0007;pointer-events:auto;touch-action:manipulation;z-index:3;cursor:pointer}
+#map{position:absolute;right:9px;top:calc(env(safe-area-inset-top,0px) + 75px);width:clamp(164px,42vw,190px);height:auto;aspect-ratio:480/344;border-radius:10px;border:1px solid #d8ad6888;background:#12353b;box-shadow:0 5px 15px #0007;pointer-events:auto;touch-action:manipulation;z-index:3;cursor:pointer}
 #map.expanded{position:fixed;left:5vw;right:auto;top:13vh;width:90vw;height:72vh;z-index:16;border:2px solid #d8ad68;border-radius:16px;box-shadow:0 18px 65px #000d}
-#mapCoords{position:absolute;right:9px;top:calc(env(safe-area-inset-top,0px) + 75px + clamp(99px,26vw,115px) + 5px);width:clamp(138px,36vw,158px);box-sizing:border-box;padding:5px 7px;border:1px solid rgba(216,173,104,.72);border-radius:7px;background:rgba(10,28,32,.92);color:#f0d49a;font:700 8px/1.2 ui-monospace,monospace;letter-spacing:.15px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;z-index:4;box-shadow:0 3px 10px #0007}
+#mapCoords{position:absolute;right:9px;top:calc(env(safe-area-inset-top,0px) + 75px + clamp(118px,30vw,137px) + 5px);width:clamp(164px,42vw,190px);box-sizing:border-box;padding:5px 7px;border:1px solid rgba(216,173,104,.72);border-radius:7px;background:rgba(10,28,32,.92);color:#f0d49a;font:700 8px/1.2 ui-monospace,monospace;letter-spacing:.15px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;z-index:4;box-shadow:0 3px 10px #0007}
 body.map-open #mapCoords{display:none}
 #controls{position:fixed;inset:0;display:block;pointer-events:none;z-index:10;isolation:isolate}
 /* Dos zonas de control separadas y ancladas al viewport: el joystick nunca pisa los botones. */
@@ -782,6 +782,10 @@ body.preflight.audio-gate #modeSelect{display:none!important}
 }
 @media(prefers-reduced-motion:reduce){#audioGate button{transition:none!important}}
 
+/* Cartografía local ampliada: una sola carta, con mejor lectura sin invadir el joystick. */
+#map{width:clamp(164px,42vw,190px);border-width:2px;}
+#mapCoords{font-size:8.5px;min-height:22px;display:flex;align-items:center;justify-content:center;}
+#map.expanded{width:min(94vw,1040px);max-height:78dvh;}
 </style>
 <!-- EL SIN NOMBRE 0.6.185: hosted HTTPS build; engine, models, environment and Foley are bundled on the same origin. -->
 <!-- Audio Foley CC0: TinyWorlds (OGA Footsteps) y Ogrebane (OGA Battle); índices de distribución Mcamento8/open-game-sfx-index. -->
@@ -8396,9 +8400,9 @@ function createRealWeapon(type='axe'){
    cameraYaw+=difference*(1-Math.exp(-safeDt*(cameraMode==='ship'?3.4:2.1)));
   }
   const focus=onShip?player.root.getAbsolutePosition():player.root.position;
-  const cameraFocus=onShip?ship.position:focus;
+  const cameraFocus=focus;
   const targetX=cameraFocus.x+(onShip?0:playerVelocity.x*.045);
-  const targetY=cameraFocus.y+(onShip?1.78:1.56);
+  const targetY=cameraFocus.y+(onShip?1.62:1.56);
   const targetZ=cameraFocus.z+(onShip?0:playerVelocity.z*.045);
   if(!cameraTargetSmoothed)cameraTargetSmoothed=new B.Vector3(targetX,targetY,targetZ);
   const targetAlpha=Math.min(1,1-Math.exp(-safeDt*(onShip?7.5:18.0)));
@@ -8407,7 +8411,7 @@ function createRealWeapon(type='axe'){
   cameraTargetSmoothed.z+=(targetZ-cameraTargetSmoothed.z)*targetAlpha;
   const target=cameraTargetSmoothed;
   const modeDistanceScale=cameraMode==='orbit'?1.42:(cameraMode==='ship'?1.08:1);
-  const distance=cameraDistance*(onShip?1.65:1)*modeDistanceScale*(portrait?1.0:.96);
+  const distance=cameraDistance*(onShip?2.12:1)*modeDistanceScale*(portrait?1.0:.96);
   const effectivePitch=cameraMode==='orbit'?Math.max(cameraPitch,.60):(onShip?Math.max(cameraPitch,.43):cameraPitch);
   const sinYaw=Math.sin(cameraYaw),cosYaw=Math.cos(cameraYaw);
   const horizontal=Math.cos(effectivePitch)*distance,vertical=Math.sin(effectivePitch)*distance+.28;
@@ -11266,7 +11270,7 @@ function updateHUD(){
   // The detailed world chart is reserved for the expanded map.
   mg.setTransform(1,0,0,1,0,0);mg.clearRect(0,0,map.width,map.height);mg.setTransform(2,0,0,2,0,0);
   const w=480,h=344,plot={x:8,y:8,w:464,h:328},cx=240,cy=172,focus=onShip?ship.position:playerPos(),heading=onShip?ship.rotation.y:yaw;
-  const rangeX=180,scale=plot.w/rangeX,rangeZ=plot.h/scale,project=(x,z)=>[cx+(x-focus.x)*scale,cy+(z-focus.z)*scale];
+  const rangeX=145,scale=plot.w/rangeX,rangeZ=plot.h/scale,project=(x,z)=>[cx+(x-focus.x)*scale,cy+(z-focus.z)*scale];
   const sea=mg.createLinearGradient(0,0,w,h);sea.addColorStop(0,'#173c48');sea.addColorStop(.52,'#245765');sea.addColorStop(1,'#102b35');mg.fillStyle=sea;mg.fillRect(0,0,w,h);
   mg.save();mg.beginPath();mg.rect(plot.x,plot.y,plot.w,plot.h);mg.clip();
   for(let ring=1;ring<=4;ring++){mg.beginPath();mg.ellipse(cx,cy,ring*rangeX*.105*scale,ring*rangeZ*.105*scale,0,0,Math.PI*2);mg.strokeStyle=ring===4?'rgba(221,202,157,.17)':'rgba(191,216,207,.075)';mg.lineWidth=ring===4?1:.7;mg.stroke();}
@@ -11288,7 +11292,7 @@ function updateHUD(){
   enemyShips.forEach(enemy=>{if(enemy.sunk)return;const p=project(enemy.root.position.x,enemy.root.position.z);if(p[0]<plot.x||p[0]>plot.x+plot.w||p[1]<plot.y||p[1]>plot.y+plot.h)return;mg.save();mg.translate(p[0],p[1]);mg.rotate(-enemy.root.rotation.y);mg.fillStyle='#dc7669';mg.strokeStyle='#311f1d';mg.lineWidth=1.1;mg.beginPath();mg.moveTo(0,-8);mg.lineTo(4.5,5);mg.lineTo(0,3);mg.lineTo(-4.5,5);mg.closePath();mg.fill();mg.stroke();mg.restore();});
   if(mapTargetWorld){const target=project(mapTargetWorld.x,mapTargetWorld.z);if(target[0]>=plot.x&&target[0]<=plot.x+plot.w&&target[1]>=plot.y&&target[1]<=plot.y+plot.h){mg.beginPath();mg.arc(target[0],target[1],7,0,Math.PI*2);mg.strokeStyle='#f4d28f';mg.lineWidth=1.5;mg.stroke();}}
   mg.restore();
-  mg.save();mg.translate(cx,cy);mg.rotate(-heading);mg.shadowColor='rgba(0,0,0,.85)';mg.shadowBlur=9;mg.fillStyle='rgba(255,223,151,.20)';mg.beginPath();mg.moveTo(0,-30);mg.lineTo(13,13);mg.lineTo(0,7);mg.lineTo(-13,13);mg.closePath();mg.fill();mg.shadowBlur=0;mg.fillStyle='#ffe7ac';mg.strokeStyle='#12252a';mg.lineWidth=2;mg.beginPath();mg.moveTo(0,-23);mg.lineTo(9,11);mg.lineTo(0,5);mg.lineTo(-9,11);mg.closePath();mg.fill();mg.stroke();mg.restore();
+  mg.save();mg.translate(cx,cy);mg.rotate(Math.PI-heading);mg.shadowColor='rgba(0,0,0,.85)';mg.shadowBlur=9;mg.fillStyle='rgba(255,223,151,.20)';mg.beginPath();mg.moveTo(0,-36);mg.lineTo(16,15);mg.lineTo(0,8);mg.lineTo(-16,15);mg.closePath();mg.fill();mg.shadowBlur=0;mg.fillStyle='#ffe7ac';mg.strokeStyle='#12252a';mg.lineWidth=2;mg.beginPath();mg.moveTo(0,-29);mg.lineTo(11,14);mg.lineTo(0,6);mg.lineTo(-11,14);mg.closePath();mg.fill();mg.stroke();mg.restore();
   mg.strokeStyle='rgba(255,226,171,.36)';mg.lineWidth=1;mg.beginPath();mg.moveTo(cx,cy-31);mg.lineTo(cx,cy-49);mg.stroke();mg.fillStyle='rgba(247,224,180,.88)';mg.font='bold 7px Georgia,serif';mg.textAlign='center';mg.fillText('N',cx,plot.y+11);
   mg.fillStyle='rgba(8,23,27,.72)';mg.fillRect(plot.x+7,plot.y+plot.h-19,86,13);mg.strokeStyle='rgba(223,194,138,.32)';mg.strokeRect(plot.x+7,plot.y+plot.h-19,86,13);mg.fillStyle='#e8ce96';mg.font='6px ui-monospace,monospace';mg.textAlign='left';mg.fillText('50 m',plot.x+12,plot.y+plot.h-10);
   mg.strokeStyle='rgba(244,218,165,.85)';mg.lineWidth=1.8;mg.strokeRect(2,2,w-4,h-4);mg.strokeStyle='rgba(75,55,37,.9)';mg.lineWidth=.8;mg.strokeRect(6,6,w-12,h-12);
@@ -11371,7 +11375,7 @@ function updateHUD(){
   if(onShip)shipIcon(ship.position.x,ship.position.z,ship.rotation.y,'#ffe0a0',4.1);
   const camp=pt(STARTER_CAMP_POSITION.x,STARTER_CAMP_POSITION.z);mg.fillStyle='#d6a96a';mg.strokeStyle='#38291d';mg.lineWidth=.9;mg.beginPath();mg.moveTo(camp[0],camp[1]-4);mg.lineTo(camp[0]+4,camp[1]+3);mg.lineTo(camp[0]-4,camp[1]+3);mg.closePath();mg.fill();mg.stroke();
   if(playerShelterBuilt){const p=pt(playerShelterX,playerShelterZ);mg.fillStyle='#e6c47c';mg.fillRect(p[0]-3,p[1]-3,6,6);mg.strokeStyle='#34281b';mg.strokeRect(p[0]-3,p[1]-3,6,6);}
-  const player=playerPos(),playerPoint=pt(player.x,player.z),mapHeading=onShip?ship.rotation.y:yaw;mg.save();mg.translate(playerPoint[0],playerPoint[1]);mg.rotate(-mapHeading);mg.fillStyle='#fff3d3';mg.strokeStyle='#243236';mg.lineWidth=1.05;
+  const player=playerPos(),playerPoint=pt(player.x,player.z),mapHeading=onShip?ship.rotation.y:yaw;mg.save();mg.translate(playerPoint[0],playerPoint[1]);mg.rotate(Math.PI-mapHeading);mg.fillStyle='#fff3d3';mg.strokeStyle='#243236';mg.lineWidth=1.05;
   mg.beginPath();mg.moveTo(0,-6.1);mg.lineTo(4.5,4.1);mg.lineTo(0,2);mg.lineTo(-4.5,4.1);mg.closePath();mg.fill();mg.stroke();mg.restore();
   mg.save();mg.translate(plot.x+19,plot.y+25);mg.fillStyle='rgba(11,28,31,.8)';mg.strokeStyle='rgba(229,194,129,.75)';mg.lineWidth=.8;
   mg.beginPath();mg.arc(0,0,10,0,Math.PI*2);mg.fill();mg.stroke();mg.fillStyle='#f2d397';
