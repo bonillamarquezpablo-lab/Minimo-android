@@ -37,4 +37,24 @@ assert.match(html,/islandInvasion:snapshotIslandInvasion\(\)/,'El estado de la i
 assert.match(html,/restoreIslandInvasion\(d\.islandInvasion\)/,'El estado de la invasión debe recuperarse.');
 assert.match(html,/function snapshotIslandInvasion\(\)/);
 assert.match(html,/function resetIslandInvasion\(\)/);
-console.log('OK: 13 islas, HUD inicial, puestos, combate, navegación, desembarco, asedio, pérdida/reconquista y guardado de invasión.');
+
+assert.match(html,/function registerHabitableStructure\(root,kind,options=\{\}\)/,'Every roofed structure must register in the shared grounding audit.');
+assert.match(html,/function evaluateHabitableStructure\(entry\)/,'The auditor must measure world position, rendered ground, footprint and dry-land margin.');
+assert.match(html,/function auditHabitableStructures\(applyRepairs=true\)/,'The live structure audit must be able to hide an unsafe root.');
+assert.match(html,/habitableStructureAudit:\(\)=>auditHabitableStructures\(false\)/,'The audit snapshot must be available to Playwright.');
+assert.match(html,/habitableAuditAccumulator>=2\.0/,'The audit must run periodically while the world is active.');
+assert.match(html,/boatVisibleDistance:Math\.max\(45,Number\(options\.boatVisibleDistance\)\|\|95\)/,'Boat mode must use a shorter building visibility distance than land mode.');
+assert.match(html,/limit=onShip\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/,'Offshore roofs must be culled before their island terrain becomes a distant speck.');
+assert.match(html,/registerHabitableStructure\(hall,'NorseGreatHall'/,'The outer-island Great Hall must be included, not just village huts.');
+assert.match(html,/registerHabitableStructure\(camp,'IslandOutpostCamp'/);
+assert.match(html,/registerHabitableStructure\(scout,'IslandScoutCamp'/);
+assert.match(html,/registerHabitableStructure\(starterCamp,'StarterCastawayCamp'/);
+assert.match(html,/registerHabitableStructure\(forge,'NorseBlacksmithForge'/);
+assert.match(html,/registerHabitableStructure\(outpostRoot,'IslandGarrisonOutpost'/);
+assert.match(html,/root\.setEnabled\(false\);entry\.hiddenByAudit=true/,'An invalid building must stop rendering.');
+assert.match(html,/if\(entry\.collider\)entry\.collider\.active=false/,'A hidden building must not leave an invisible collision wall.');
+assert.match(html,/if\(ref&&ref\.active===false\)continue/,'Inactive hidden-structure colliders must be ignored by movement queries.');
+assert.match(html,/if\(c\.active===false\)continue/,'Inactive hidden-structure colliders must be ignored by world movement and melee.');
+assert.match(html,/withinDryLandBand/);
+
+console.log('OK: 13 islands, naval systems, and live dry-land audit for every roofed structure.');
