@@ -1,5 +1,5 @@
-import assert from 'node:assert/strict';
-import fs from 'node:fs';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const source=fs.readFileSync('scripts/coastal-structure-grounding-smoke.mjs','utf8');
 const workflow=fs.readFileSync('.github/workflows/coastal-reference.yml','utf8');
 assert.match(source,/\?test=1&coastref=1/);
