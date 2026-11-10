@@ -320,6 +320,13 @@ def main() -> None:
         if check.returncode != 0:
             raise SystemExit("JavaScript syntax validation failed:\n" + check.stderr)
     print(f"JavaScript syntax validation passed ({len(inline_scripts)} inline script block(s)).")
+    navigation_check = subprocess.run(
+        [node, "--check", str(ROOT / "scripts" / "nordic" / "navigation-suite.js")],
+        capture_output=True, text=True,
+    )
+    if navigation_check.returncode != 0:
+        raise SystemExit("Navigation runtime JavaScript syntax validation failed:\\n" + navigation_check.stderr)
+    print("Navigation runtime JavaScript syntax validation passed.")
 
     # The packaged build always prefers the same-origin, bundled files.
     html = html.replace(
