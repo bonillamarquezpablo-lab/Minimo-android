@@ -26,13 +26,19 @@ function collectStructureSnapshot(){
   const topProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:topY,z}):null;
   return {name:item.name,kind:item.kind,registered:item.registered,visible:item.visible,enabled:item.enabled,island:item.island,islandIndex:item.islandIndex,position:item.position,bounds:item.bounds,offshore:item.offshore,issue:item.issue,distanceToIslandCenterMeters:item.distanceToIslandCenterMeters,dryFootprintSampleCount:item.dryFootprintSampleCount,dryFootprintSampleTotal:item.dryFootprintSampleTotal,baseProjection,centerProjection,topProjection};
  });
- const inventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(300):null;
+ const inventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(5000):null;
  const inventoryStructuralCandidates=(inventory?.objects||[]).filter(item=>item.category==='structure').map(item=>({name:item.name,parent:item.parent,parentChain:item.parentChain,position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,metadata:item.metadata}));
+ const cuervoIsland=(api.islands||[]).find(item=>/cuervo/i.test(item.name))||(api.islands||[])[0]||{x:0,z:0,name:'unknown'};
+ const cuervoSceneRoots=(inventory?.objects||[]).filter(item=>{
+  const p=item.position||{},chain=item.parentChain||[],distance=Math.hypot((Number(p.x)||0)-cuervoIsland.x,(Number(p.z)||0)-cuervoIsland.z);
+  return distance<=110&&chain.length<=1&&Number(item.meshCount)>0&&item.category!=='vegetation'&&item.category!=='water'&&item.category!=='shoreline';
+ }).map(item=>({name:item.name,category:item.category,className:item.className,parent:item.parent,parentChain:item.parentChain,position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,meshNames:item.meshNames,materials:item.materials,metadata:item.metadata}));
+
  const houseOutliers=houses.filter(item=>Math.abs(Number(item.groundingErrorMeters)||0)>.02||Number(item.maximumFootingGapMeters)>.02||Number(item.dryLandFootprintMarginMeters)<1.25);
  const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02);
  const garrisonOutliers=garrisons.filter(item=>Number(item.outpostErrorMeters)>.02||Number(item.flagErrorMeters)>.02||Number(item.guardErrorMeters)>.06);
  return {
-  structures,offshore,houses,camps,garrisons,view,projectedCandidates,inventoryStructuralCandidates,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
+  structures,offshore,houses,camps,garrisons,view,projectedCandidates,inventoryStructuralCandidates,cuervoSceneRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
   summary:{
    structuresTotal:structures.total,grounded:structures.groundedCount,unsafe:structures.unsafeCount,
    unsafeVisibleBeforeAudit:structures.unsafeVisibleBeforeRepair,visibleInvalid:structures.visibleInvalidAfterRepair,
