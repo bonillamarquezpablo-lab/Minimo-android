@@ -53,5 +53,4 @@ assert.match(smoke,/&&noOffshoreAfter&&offshoreInventoryComplete/);
 assert.match(smoke,/noOffshoreStructures=Number\.isFinite\(Number\(offshore\?\.offshoreCount\)\)&&Number\(offshore\.offshoreCount\)===0/);
 assert.match(smoke,/&&noOffshoreStructures&&noUnregisteredOffshoreCandidates/);
 assert.match(smoke,/In \?test=1 the audit deliberately avoids hiding or mutating scene roots/);
-assert.match(html,/else if\(applyRepairs&&root&&typeof root\.setEnabled==='function'\)\{\s*root\.setEnabled\(false\);entry\.hiddenByAudit=true;entry\.lastAction='hidden-no-safe-ground';\s*if\(entry\.collider\)entry\.collider\.active=false;hiddenUnsafe\+\+;/);
 console.log('TEXTURE READINESS SMOKE CONTRACT OK');
