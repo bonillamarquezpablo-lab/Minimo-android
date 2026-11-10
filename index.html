@@ -11005,9 +11005,15 @@ function updateHUD(){
  map.addEventListener('click',e=>{
   e.stopPropagation();
   if(!map.classList.contains('expanded')){setMapExpanded(true);return;}
-  const rect=map.getBoundingClientRect();
+  const rect=map.getBoundingClientRect(),style=getComputedStyle(map);
   if(rect.width<=0||rect.height<=0)return;
-  const logicalX=(e.clientX-rect.left)/rect.width*480,logicalY=(e.clientY-rect.top)/rect.height*344;
+  const borderLeft=parseFloat(style.borderLeftWidth)||0,borderRight=parseFloat(style.borderRightWidth)||0;
+  const borderTop=parseFloat(style.borderTopWidth)||0,borderBottom=parseFloat(style.borderBottomWidth)||0;
+  const contentWidth=Math.max(1,rect.width-borderLeft-borderRight),contentHeight=Math.max(1,rect.height-borderTop-borderBottom);
+  const objectScale=Math.min(contentWidth/map.width,contentHeight/map.height);
+  const drawnWidth=map.width*objectScale,drawnHeight=map.height*objectScale;
+  const offsetX=borderLeft+(contentWidth-drawnWidth)*.5,offsetY=borderTop+(contentHeight-drawnHeight)*.5;
+  const logicalX=(e.clientX-rect.left-offsetX)/drawnWidth*480,logicalY=(e.clientY-rect.top-offsetY)/drawnHeight*344;
   const plot={x:12,y:40,w:342,h:264},cx=184,cy=174,scale=.235;
   if(logicalX<plot.x||logicalX>plot.x+plot.w||logicalY<plot.y||logicalY>plot.y+plot.h)return;
   mapTargetWorld={x:Number(((logicalX-cx)/scale).toFixed(1)),z:Number(((logicalY-cy)/scale).toFixed(1))};
