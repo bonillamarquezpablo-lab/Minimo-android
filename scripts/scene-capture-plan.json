@@ -1,0 +1,210 @@
+[
+  {
+    "id": "cuervo-norte",
+    "camera": {
+      "x": 31,
+      "y": 9,
+      "z": -45,
+      "targetX": 31,
+      "targetY": 3,
+      "targetZ": -17
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "cuervo-sur",
+    "camera": {
+      "x": 31,
+      "y": 9,
+      "z": 11,
+      "targetX": 31,
+      "targetY": 3,
+      "targetZ": -17
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "cuervo-este",
+    "camera": {
+      "x": 59,
+      "y": 9,
+      "z": -17,
+      "targetX": 31,
+      "targetY": 3,
+      "targetZ": -17
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "cuervo-oeste",
+    "camera": {
+      "x": 3,
+      "y": 9,
+      "z": -17,
+      "targetX": 31,
+      "targetY": 3,
+      "targetZ": -17
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "skall-norte",
+    "camera": {
+      "x": 135,
+      "y": 9,
+      "z": -14,
+      "targetX": 135,
+      "targetY": 3,
+      "targetZ": 14
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "skall-sur",
+    "camera": {
+      "x": 135,
+      "y": 9,
+      "z": 42,
+      "targetX": 135,
+      "targetY": 3,
+      "targetZ": 14
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "skall-este",
+    "camera": {
+      "x": 163,
+      "y": 9,
+      "z": 14,
+      "targetX": 135,
+      "targetY": 3,
+      "targetZ": 14
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "skall-oeste",
+    "camera": {
+      "x": 107,
+      "y": 9,
+      "z": 14,
+      "targetX": 135,
+      "targetY": 3,
+      "targetZ": 14
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "pinos-norte",
+    "camera": {
+      "x": -132,
+      "y": 9,
+      "z": 17,
+      "targetX": -132,
+      "targetY": 3,
+      "targetZ": 45
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "pinos-sur",
+    "camera": {
+      "x": -132,
+      "y": 9,
+      "z": 73,
+      "targetX": -132,
+      "targetY": 3,
+      "targetZ": 45
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "pinos-este",
+    "camera": {
+      "x": -104,
+      "y": 9,
+      "z": 45,
+      "targetX": -132,
+      "targetY": 3,
+      "targetZ": 45
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "pinos-oeste",
+    "camera": {
+      "x": -160,
+      "y": 9,
+      "z": 45,
+      "targetX": -132,
+      "targetY": 3,
+      "targetZ": 45
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "hrafn-norte",
+    "camera": {
+      "x": 28,
+      "y": 9,
+      "z": 115,
+      "targetX": 28,
+      "targetY": 3,
+      "targetZ": 143
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "hrafn-sur",
+    "camera": {
+      "x": 28,
+      "y": 9,
+      "z": 171,
+      "targetX": 28,
+      "targetY": 3,
+      "targetZ": 143
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "hrafn-este",
+    "camera": {
+      "x": 56,
+      "y": 9,
+      "z": 143,
+      "targetX": 28,
+      "targetY": 3,
+      "targetZ": 143
+    },
+    "time": 37,
+    "tide": "natural"
+  },
+  {
+    "id": "hrafn-oeste",
+    "camera": {
+      "x": 0,
+      "y": 9,
+      "z": 143,
+      "targetX": 28,
+      "targetY": 3,
+      "targetZ": 143
+    },
+    "time": 37,
+    "tide": "natural"
+  }
+]
