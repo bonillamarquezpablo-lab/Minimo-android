@@ -57,3 +57,8 @@ assert.match(html,/const offshore=beyondIslandEnvelope\|\|\(!terrainIsDry&&float
 assert.match(html,/floating-over-water-no-dry-ground/);
 assert.match(html,/minimumDryTerrainY:\.22/);
 console.log('COASTAL STRUCTURE GROUNDING CONTRACT OK');
+
+assert.match(html,/dryFootprintSampleCount===dryFootprintSamples\.length/);
+assert.match(html,/radial<=nearest\.r\*1\.09&&Number\.isFinite\(terrain\)&&terrain>=water\+\.22/);
+assert.match(html,/footprintDrySamples:9/);
+assert.match(html,/minimumDryTerrainAboveWaterMeters:\.22/);
