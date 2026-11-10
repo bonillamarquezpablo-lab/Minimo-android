@@ -9217,12 +9217,12 @@ function createRealWeapon(type='axe'){
   }
   for(const tree of trees){const r=(tree.radius||.6)+.48;addGrassPlacement('tree',tree,tree.x-r,tree.z-r,tree.x+r,tree.z+r);}
   for(const rock of rocks){const r=(rock.radius||.75)+.30;addGrassPlacement('rock',rock,rock.x-r,rock.z-r,rock.x+r,rock.z+r);}
-  for(const collider of worldColliders){const ex=(collider.type==='circle'?collider.r:collider.hx)+.25,ez=(collider.type==='circle'?collider.r:collider.hz)+.25;addGrassPlacement('world',collider,collider.x-ex,collider.z-ez,collider.x+ex,collider.z+ez);}
+  for(const collider of worldColliders){if(collider.active===false)continue;const ex=(collider.type==='circle'?collider.r:collider.hx)+.25,ez=(collider.type==='circle'?collider.r:collider.hz)+.25;addGrassPlacement('world',collider,collider.x-ex,collider.z-ez,collider.x+ex,collider.z+ez);}
   function grassPlacementBlocked(x,z){
    if(isVegetationTrailClearance(x,z,1.35))return true;
    if(settlements.some(q=>Math.hypot(x-q[0],z-q[1])<12.6))return true;
    const bucket=grassPlacementGrid.get(grassPlacementKey(Math.floor(x/grassPlacementCellSize),Math.floor(z/grassPlacementCellSize)));if(!bucket)return false;
-   for(const entry of bucket){const ref=entry.ref,dx=x-ref.x,dz=z-ref.z;
+   for(const entry of bucket){const ref=entry.ref;if(ref&&ref.active===false)continue;const dx=x-ref.x,dz=z-ref.z;
     if(entry.kind==='tree'){if(ref.alive&&Math.hypot(dx,dz)<(ref.radius||.6)+.48)return true;}
     else if(entry.kind==='rock'){if(ref.alive&&Math.hypot(dx,dz)<(ref.radius||.75)+.30)return true;}
     else if(ref.type==='circle'){if(Math.hypot(dx,dz)<ref.r+.25)return true;}
@@ -11193,6 +11193,7 @@ function updateHUD(){
  for(const t of trees){const r=t.radius||.48;addCollisionGridEntry('tree',t,t.x-r,t.z-r,t.x+r,t.z+r);}
  for(const rock of rocks){const r=rock.radius||.85;addCollisionGridEntry('rock',rock,rock.x-r,rock.z-r,rock.x+r,rock.z+r);}
  for(const c of worldColliders){
+  if(c.active===false)continue;
   const ex=c.type==='circle'?c.r:c.hx,ez=c.type==='circle'?c.r:c.hz;
   addCollisionGridEntry('world',c,c.x-ex,c.z-ez,c.x+ex,c.z+ez);
  }
