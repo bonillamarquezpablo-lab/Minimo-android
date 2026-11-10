@@ -12710,6 +12710,82 @@ function update(dt){
    const categoryCounts={};for(const item of objects)categoryCounts[item.category]=(categoryCounts[item.category]||0)+1;
    return {schema:1,scope:'all-matching-coastal-and-world-objects',durationMs:Number((performance.now()-started).toFixed(1)),sceneCounts:{meshes:scene.meshes?.length||0,transformNodes:scene.transformNodes?.length||0,materials:scene.materials?.length||0,textures:scene.textures?.length||0},candidateCount:objects.length,returnedCount:Math.min(objects.length,maxItems),omittedCount:Math.max(0,objects.length-maxItems),categoryCounts,objects:objects.slice(0,maxItems),interpretation:'World-space inventory only. Floating verdicts require a matching ground/sea-level reference; this list never moves or hides objects.'};
   }
+
+  function auditOffshoreStructuralRoots(limit=250){
+   const started=performance.now(),maxItems=Math.max(25,Math.min(500,Math.floor(Number(limit)||250)));
+   const structureNamePattern=/(?:weatherednorsehut|persistent(?:player)?norseshelter|norse.*(?:hut|house|shelter|cabin|longhouse|meadhall|forge|watchtower|outpost|camp)|(?:island)?(?:outpost|scoutcamp|garrisonoutpost|watchtower|blacksmithforge|castawaycamp|settlementhouse|building)(?:[_-]?\\d+)?|(?:hut|house|shelter|cabin|longhouse|meadhall)(?:[_-]?\\d+)?)/i;
+   const excludedRootPattern=/(?:villageguard|factionbadge|garrisonstandard|garrisonflag|garrisoncrossbar|garrisonflagpole|forgehammerstand|flag|banner|weapon|tree|grass|ship|boat|drakkar|dock)/i;
+   const registered=new Map(habitableStructureRegistry.map(entry=>[entry.root,entry]));
+   const candidates=new Set(registered.keys()),parentRoot=(node)=>{let current=node.parent,depth=0;while(current&&depth++<16){if(structureNamePattern.test(current.name||''))return current;current=current.parent;}return null;};
+   for(const node of scene.transformNodes||[]){
+    const name=String(node?.name||'');
+    if(!name||!structureNamePattern.test(name)||excludedRootPattern.test(name)||parentRoot(node))continue;
+    candidates.add(node);
+   }
+   const rows=[];
+   for(const node of candidates){
+    try{
+     if(!node||node.isDisposed?.())continue;
+     const name=String(node.name||node.getClassName?.()||'unnamed-structure');
+     if(excludedRootPattern.test(name))continue;
+     const entry=registered.get(node)||node.__habitableStructureAudit||null;
+     const absolute=node.getAbsolutePosition?node.getAbsolutePosition():node.position||{x:0,y:0,z:0};
+     const children=typeof node.getChildMeshes==='function'?node.getChildMeshes(false).filter(mesh=>mesh&&!mesh.isDisposed?.()):[];
+     const meshRefs=Array.from(new Set([...(typeof node.getBoundingInfo==='function'?[node]:[]),...children]));
+     let minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity,vertices=0,indices=0;
+     for(const mesh of meshRefs){
+      try{
+       mesh.computeWorldMatrix?.(true);
+       const bounds=mesh.getBoundingInfo?.()?.boundingBox,min=bounds?.minimumWorld,max=bounds?.maximumWorld;
+       if(min&&max){minX=Math.min(minX,min.x);minY=Math.min(minY,min.y);minZ=Math.min(minZ,min.z);maxX=Math.max(maxX,max.x);maxY=Math.max(maxY,max.y);maxZ=Math.max(maxZ,max.z);}
+       vertices+=Number(mesh.getTotalVertices?.())||0;indices+=Number(mesh.getTotalIndices?.())||0;
+      }catch(_){}
+     }
+     if(vertices<80||meshRefs.length<1)continue;
+     let visible=node.isVisible!==false&&Number(node.visibility??1)>0,enabled=typeof node.isEnabled==='function'?node.isEnabled():node.isVisible!==false;
+     let ancestor=node.parent,depth=0;
+     while(ancestor&&depth++<16){if(ancestor.isVisible===false||Number(ancestor.visibility??1)<=0)visible=false;try{if(ancestor.isEnabled&&!ancestor.isEnabled())visible=false;}catch(_){visible=false;}ancestor=ancestor.parent;}
+     let nearest=null,nearestDistance=Infinity;
+     for(let islandIndex=0;islandIndex<land.length;islandIndex++){
+      const island=land[islandIndex],distance=Math.hypot(absolute.x-island.x,absolute.z-island.z);
+      if(distance<nearestDistance){nearestDistance=distance;nearest={...island,islandIndex,distance};}
+     }
+     if(!nearest)continue;
+     const sizeX=Number.isFinite(minX)?maxX-minX:0,sizeZ=Number.isFinite(minZ)?maxZ-minZ:0;
+     const footprintRadius=entry?.footprintRadius||Math.max(.75,Math.min(14,Math.hypot(sizeX,sizeZ)*.5||4.2));
+     const coastlineRadius=nearest.r*1.09,coastClearanceMeters=nearestDistance-coastlineRadius-footprintRadius;
+     const bottomY=Number.isFinite(minY)?minY:Number(absolute.y)||0;
+     const waterSurfaceY=(Number(ground.position.y)||0)+waterHeight(absolute.x,absolute.z,oceanTime);
+     const terrainY=renderedTerrainSurfaceAt(absolute.x,absolute.z);
+     const bottomAboveWaterMeters=bottomY-waterSurfaceY,bottomAboveTerrainMeters=bottomY-terrainY;
+     const offshore=coastClearanceMeters>2.5;
+     rows.push({
+      name,kind:entry?.kind||'unregistered-structural-root',registered:!!registered.get(node),visible,enabled,
+      island:nearest.name,islandIndex:nearest.islandIndex,position:{x:Number(absolute.x.toFixed(2)),y:Number(absolute.y.toFixed(2)),z:Number(absolute.z.toFixed(2))},
+      bounds:Number.isFinite(minY)?{bottomY:Number(minY.toFixed(3)),topY:Number(maxY.toFixed(3)),size:{x:Number(sizeX.toFixed(2)),y:Number((maxY-minY).toFixed(2)),z:Number(sizeZ.toFixed(2))}}:null,
+      footprintRadiusMeters:Number(footprintRadius.toFixed(2)),distanceToIslandCenterMeters:Number(nearestDistance.toFixed(2)),
+      distanceBeyondCoastAndFootprintMeters:Number(coastClearanceMeters.toFixed(2)),
+      waterSurfaceY:Number(waterSurfaceY.toFixed(3)),bottomAboveWaterMeters:Number(bottomAboveWaterMeters.toFixed(3)),
+      terrainReferenceY:Number(terrainY.toFixed(3)),bottomAboveTerrainMeters:Number(bottomAboveTerrainMeters.toFixed(3)),
+      vertexCount:vertices,indexCount:indices,meshCount:meshRefs.length,offshore,issue:offshore?(bottomAboveWaterMeters>.25?'floating-above-water':(bottomAboveWaterMeters<-.45?'submerged-offshore':'at-waterline-offshore')):null,
+      registeredAudit:entry?{lastStatus:entry.lastStatus,lastAction:entry.lastAction,relocatable:entry.relocatable}:null
+     });
+    }catch(error){rows.push({name:node?.name||'unnamed-structure',inspectionError:String(error?.message||error)});}
+   }
+   rows.sort((a,b)=>(Number(b.offshore)-Number(a.offshore))||((b.distanceBeyondCoastAndFootprintMeters||0)-(a.distanceBeyondCoastAndFootprintMeters||0))||String(a.name).localeCompare(String(b.name)));
+   const offshore=rows.filter(row=>row.offshore),visibleOffshore=offshore.filter(row=>row.visible);
+   return {
+    schema:1,scope:'all-13-islands-and-all-scene-root-candidates',mutationPolicy:'read-only; no structure moved, hidden, enabled or disabled',
+    islandCount:land.length,transformNodesScanned:scene.transformNodes?.length||0,registeredStructureCount:habitableStructureRegistry.length,
+    candidateCount:rows.length,returnedCount:Math.min(rows.length,maxItems),omittedCount:Math.max(0,rows.length-maxItems),
+    registeredCandidates:rows.filter(row=>row.registered).length,unregisteredCandidates:rows.filter(row=>!row.registered).length,
+    offshoreCount:offshore.length,visibleOffshoreCount:visibleOffshore.length,
+    thresholds:{coastlineRadiusFactor:1.09,minimumClearanceBeyondCoastAndFootprintMeters:2.5,aboveWaterToleranceMeters:.25},
+    offshoreStructures:offshore.slice(0,maxItems),candidates:rows.slice(0,maxItems),
+    durationMs:Number((performance.now()-started).toFixed(1)),
+    interpretation:'A structure is only flagged offshore when its estimated whole footprint is at least 2.5 m beyond the 1.09x island shoreline envelope. Floating/submerged status compares the lowest world-space mesh bound with the live local water surface.'
+   };
+  }
   const captureTexturePropertyNames=new Set(['diffuseTexture','ambientTexture','opacityTexture','reflectionTexture','emissiveTexture','specularTexture','bumpTexture','lightmapTexture','refractionTexture','albedoTexture','metallicTexture','roughnessTexture','metallicReflectanceTexture','microSurfaceTexture','reflectivityTexture','environmentBRDFTexture','baseTexture','normalTexture','occlusionTexture','opacityFresnelTexture','detailMap','transmissionTexture','thicknessTexture','iridescenceTexture','iridescenceThicknessTexture','sheenTexture','clearCoatTexture','clearCoatBumpTexture','clearCoatTintTexture','anisotropyTexture','baseWeightTexture','baseDiffuseTexture','baseRoughnessTexture','baseColorTexture','metalnessTexture','normalMapTexture','projectionTexture','renderTargetTexture']);
   function reportTextureCaptureProgress(stage,details={}){if(!testModeEnabled)return;const payload={stage,atMs:Number(performance.now().toFixed(1)),...details};window.__ELSN_CAPTURE_PROGRESS__=payload;console.info('[TEXTURE_CAPTURE_PROGRESS]',payload);}
   async function captureTextureReadinessSnapshot(){const snapshotStartedAt=performance.now();reportTextureCaptureProgress('texture-snapshot:start',{sceneMeshes:scene.meshes?.length||0,sceneMaterials:scene.materials?.length||0,sceneTextures:scene.textures?.length||0});
@@ -12809,6 +12885,7 @@ function update(dt){
    auditIslandGeometry:()=>auditIslandGeometry(),
    auditIslandGeometryForIsland:(islandIndex)=>auditIslandGeometryScoped(islandIndex),
    coastalSceneInventory:(limit=500)=>getCoastalSceneInventory(limit),
+   auditOffshoreStructures:(limit=250)=>auditOffshoreStructuralRoots(limit),
    habitableStructureAudit:()=>auditHabitableStructures(false),
    habitableStructureAuditAsBoat:({x=80,z=80}={})=>{
     const previousOnShip=onShip,previousCameraPosition=scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.clone():null;
