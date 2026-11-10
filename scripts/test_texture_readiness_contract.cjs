@@ -45,4 +45,6 @@ assert.match(smoke,/&&offshoreInventoryComplete/);
 assert.match(smoke,/noUnregisteredOffshoreCandidates=Number\.isFinite\(Number\(offshore\?\.unregisteredCandidates\)\)&&Number\(offshore\.unregisteredCandidates\)===0/);
 assert.match(smoke,/&&noUnregisteredOffshoreCandidates/);
 assert.match(smoke,/unregisteredOffshoreCandidates:offshore\?\.unregisteredCandidates\?\?null/);
+assert.match(smoke,/const compact=item=>\(\{safe:item\.safe===true,status:item\.status\?\?null/);
+assert.match(smoke,/verifiedSafeRelocationCount=relocationPairs\.filter\(item=>item\.after\?\.safe===true\)\.length/);
 console.log('TEXTURE READINESS SMOKE CONTRACT OK');
