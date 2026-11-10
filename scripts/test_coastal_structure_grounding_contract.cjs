@@ -13,7 +13,7 @@ assert.match(source,/productionDataModified:false/);
 assert.match(source,/postAutomaticAudit/);
 assert.match(source,/repairAndAuditHabitableStructures\(\)/);
 assert.match(source,/explicitRepairApiCalled:true/);
-assert.match(source,/waitForTimeout\(2400\)/);
+assert.match(source,/waitForTimeout\(800\)/);
 assert.doesNotMatch(source,/probeFloatingHutAudit|\.setEnabled\(|\.position\.set\(/);
 assert.match(source,/usesNormalGameAuditLoop:true/);
 assert.match(workflow,/Audit habitable structure grounding independently/);
