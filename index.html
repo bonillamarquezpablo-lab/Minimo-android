@@ -8723,7 +8723,7 @@ function createRealWeapon(type='axe'){
  // 0.6.100 — pequeños campamentos secundarios, uno en cada isla con asentamiento.
  // Son decoración ligera: no sustituyen aldeas, guardias, colisiones ni sistemas existentes.
  function buildIslandOutpost(vl){
-  const cx=vl.x-16,cz=vl.z+13,gy=renderedTerrainSurfaceAt(cx,cz),camp=newGroup('IslandOutpost_'+vl.index,null);
+  const cx=vl.x,cz=vl.z+15,gy=renderedTerrainSurfaceAt(cx,cz),camp=newGroup('IslandOutpost_'+vl.index,null);
   camp.position=v(cx,gy,cz);vl.islandOutpostCamp=camp;
   for(let tent=0;tent<2;tent++){
    const ox=tent===0?-2.25:2.15,oz=tent===0?-.45:.65,rot=tent===0?-.12:.16;
