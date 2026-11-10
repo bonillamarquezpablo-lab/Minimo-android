@@ -34,4 +34,8 @@ assert.match(smoke,/floatingProbePassed=floatingProbe\?\.detected===true&&floati
 assert.match(smoke,/lastAction==='hidden-no-safe-ground'/);
 assert.match(smoke,/structureGatePassed/);
 assert.match(smoke,/if\(!structureGatePassed\)manifest\.verdict='fail'/);
+assert.match(smoke,/noFootingOutliers=houseOutliers\.length===0&&campOutliers\.length===0&&garrisonOutliers\.length===0/);
+assert.match(smoke,/structureInventoryComplete=houses\.length===12&&camps\.length===8&&garrisons\.length===9/);
+assert.match(smoke,/registeredHouses:houses\.length/);
+assert.match(smoke,/houseFootingOutliers:houseOutliers\.length/);
 console.log('TEXTURE READINESS SMOKE CONTRACT OK');
