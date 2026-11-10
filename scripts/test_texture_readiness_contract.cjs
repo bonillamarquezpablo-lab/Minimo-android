@@ -23,5 +23,5 @@ assert.ok(smoke.indexOf("wait for render and texture convergence")<smoke.indexOf
 assert.ok(smoke.indexOf("manifest.verdict=verdict();")<smoke.indexOf("const auditCalls=[['habitableStructures'"));
 assert.match(smoke,/__captureTimedOut/);
 
-assert.match(smoke,/CAPTURE_CANVAS_TIMEOUT_MS/);assert.match(smoke,/CAPTURE_CDP_TIMEOUT_MS/);assert.match(smoke,/Number\(process\.env\.CAPTURE_CANVAS_TIMEOUT_MS\)\|\|45000/);assert.match(smoke,/Number\(process\.env\.CAPTURE_CDP_TIMEOUT_MS\)\|\|8000/);assert.match(smoke,/afterFailure\?2500:CANVAS_CAPTURE_TIMEOUT_MS/);assert.match(smoke,/afterFailure\?2500:CDP_CAPTURE_TIMEOUT_MS/);
+assert.match(smoke,/CAPTURE_CANVAS_TIMEOUT_MS/);assert.match(smoke,/CAPTURE_CDP_TIMEOUT_MS/);assert.match(smoke,/Number\(process\.env\.CAPTURE_CANVAS_TIMEOUT_MS\)\|\|10000/);assert.match(smoke,/Number\(process\.env\.CAPTURE_CDP_TIMEOUT_MS\)\|\|4000/);assert.match(smoke,/afterFailure\?2500:CANVAS_CAPTURE_TIMEOUT_MS/);assert.match(smoke,/afterFailure\?2500:CDP_CAPTURE_TIMEOUT_MS/);
 console.log('TEXTURE READINESS SMOKE CONTRACT OK');
