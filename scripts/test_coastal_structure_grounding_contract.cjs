@@ -123,7 +123,7 @@ assert.match(html,/structuralClassification/);
 assert.match(html,/function drawLocalMap\(\)/);
 assert.match(html,/if\(!map\.classList\.contains\('expanded'\)\)\{drawLocalMap\(\);return;\}/);
 assert.match(html,/focus=onShip\?ship\.position:playerPos\(\),heading=onShip\?ship\.rotation\.y:yaw/);
-assert.match(html,/const mapHeading=onShip\?ship\.rotation\.y:yaw/);
+assert.match(html,/mapHeading=onShip\?ship\.rotation\.y:yaw/);
 assert.match(html,/id="mapCoords"/);
 assert.match(html,/mapCoords\.textContent=coordinates/);
 assert.match(html,/mapRefreshInterval=document\.body\.classList\.contains\('map-open'\)\?\.42:\.20/);
