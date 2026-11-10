@@ -25,6 +25,7 @@ concurrency:
 
 jobs:
   reference:
+    if: github.event_name != 'workflow_dispatch'
     name: Build game and capture 36 coastal and ridge views
     runs-on: ubuntu-latest
     timeout-minutes: 50
@@ -97,6 +98,7 @@ jobs:
           retention-days: 30
 
   character-startup:
+    if: github.event_name != 'workflow_dispatch'
     name: Verify real Viking GLB startup independently
     runs-on: ubuntu-latest
     timeout-minutes: 25
