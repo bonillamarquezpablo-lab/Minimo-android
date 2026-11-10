@@ -37,6 +37,11 @@ assert.match(html,/crossCrestLift:\.072/);
 assert.match(html,/shortCrestLift:\.044/);
 assert.match(html,/oceanWaveNormal\.level=\.43/);
 assert.match(html,/new B\.Color3\(\.70,\.82,\.88\)/);
+assert.match(html,/const oceanDepthSettings=\{transitionMeters:18,shoreOpacity:\.94,foamStrength:1,sheetStrength:\.72,waveCrestStrength:1,exaggerated:false\}/,
+  'The production shoreline water must preserve the approved 18m transition and 0.94 opacity.');
+assert.match(html,/Object\.assign\(settings,\{drySand:1,wetSand:1,shoreline:1,waterSheet:\.72,shallowWater:\.94,waves:1,foam:1,footprints:1,transitionMeters:18,shoreOpacity:\.94,/,
+  'Resetting the water debug panel must restore the same approved shoreline values.');
+
 const beachStart=html.indexOf('function buildLivingBeachLayer');
 const beachEnd=html.indexOf('function ensureActiveCoastalIslandSystems',beachStart);
 const beachSource=html.slice(beachStart,beachEnd);
