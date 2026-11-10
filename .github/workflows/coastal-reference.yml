@@ -39,6 +39,7 @@ jobs:
           node-version: '22'
       - name: Check smoke diagnostics
         run: |
+          python scripts/inspect_structure_repair_source.py
           node --check scripts/texture-readiness-smoke.mjs
           node --check scripts/coastal-structure-grounding-smoke.mjs
           node scripts/test_texture_readiness_contract.cjs
