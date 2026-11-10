@@ -8524,7 +8524,7 @@ function createRealWeapon(type='axe'){
    entry.lastStatus=result.status;records.push(Object.assign({},result,{lastAction:entry.lastAction}));
   }
   const registeredRoots=new Set(habitableStructureRegistry.map(entry=>entry.root));
-  const untrackedRoots=scene.transformNodes.filter(node=>/^(WeatheredNorseHut|PersistentPlayerNorseShelter|PersistentNorseShelter|IslandOutpost_\\d+|IslandScoutCamp_\\d+|IslandGarrisonOutpost_\\d+|NorseGreatMeadHall_\\d+|NorseBlacksmithForge_\\d+|PoorNorseCastawayCamp)$/.test(node.name||'')&&!registeredRoots.has(node)).map(node=>node.name);
+  const untrackedRoots=scene.transformNodes.filter(node=>/^(WeatheredNorseHut|PersistentPlayerNorseShelter|PersistentNorseShelter|IslandOutpost_\\d+|IslandScoutCamp_\\d+|IslandGarrisonOutpost_\\d+|NorseGreatMeadHall_\\d+|NorseBlacksmithForge_\\d+|NorseWatchTower_\\d+|PoorNorseCastawayCamp)$/.test(node.name||'')&&!registeredRoots.has(node)).map(node=>node.name);
   const snapshot={schema:1,total:records.length,groundedCount:records.filter(x=>x.safe).length,unsafeCount:records.filter(x=>!x.safe).length,visibleInvalidCount,hiddenUnsafe,hiddenByDistance,repaired,untrackedRootCount:untrackedRoots.length,untrackedRoots,structures:records};
   lastHabitableStructureAudit=snapshot;return snapshot;
  }
@@ -8772,7 +8772,7 @@ function createRealWeapon(type='axe'){
   // The previous fixed +10.5/-7.6m offset put the Cuervo tower beyond the dry-land radius.
   const watchIsland=land[idx],rawTowerX=vl.x+10.5,rawTowerZ=vl.z-7.6;
   const towerDx=rawTowerX-watchIsland.x,towerDz=rawTowerZ-watchIsland.z;
-  const towerDistance=Math.hypot(towerDx,towerDz),towerSafeRadius=watchIsland.r*.76-Math.hypot(1.35,1.35)-1.25;
+  const towerDistance=Math.hypot(towerDx,towerDz),towerSafeRadius=watchIsland.r*.76-1.35-1.25;
   const towerFactor=towerDistance>towerSafeRadius?towerSafeRadius/Math.max(.001,towerDistance):1;
   const towerX=watchIsland.x+towerDx*towerFactor,towerZ=watchIsland.z+towerDz*towerFactor;
   const towerY=renderedTerrainSurfaceAt(towerX,towerZ),tower=newGroup('NorseWatchTower_'+idx,null);tower.position=v(towerX,towerY,towerZ);
