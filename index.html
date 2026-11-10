@@ -12603,7 +12603,8 @@ function update(dt){
    }
    return {name,checkedVertices:checked,toleranceMeters:tolerance,violationCount:violations,maxAboveProfileMeters:Number(maxAbove.toFixed(4)),samples};
   }
-  function auditIslandGeometry(onlyIslandIndex=null){
+  function auditIslandGeometry(){return auditIslandGeometryScoped(null);}
+  function auditIslandGeometryScoped(onlyIslandIndex=null){
    const started=performance.now(),results=[],savedFoams=new Set(tidalFoamMeshes.map(foam=>foam.index));
    const islandIndexes=Number.isInteger(onlyIslandIndex)?[onlyIslandIndex]:Array.from({length:land.length},(_,index)=>index);
    if(islandIndexes.some(index=>index<0||index>=land.length))throw new RangeError('Invalid island index for coastal geometry audit: '+onlyIslandIndex);
@@ -12775,7 +12776,8 @@ function update(dt){
     }else throw new Error('Unknown coastal diagnostic variant: '+kind);
     return {kind,disabled,islandHeightfieldVisible:islandTerrainMeshes[activeBeachIslandIndex]?.isVisible?1:0,shoreFoundationVisible:shoreFoundationMeshes.filter(mesh=>mesh&&mesh.isVisible).length,villageBuildingGroupsVisible:villages.flatMap(village=>village.houseGroups||[]).filter(group=>group.isVisible!==false&&(!(typeof group.isEnabled==='function')||group.isEnabled())).length,waterNormalMapEnabled:!!M.water.bumpTexture,oceanVertexAlphaEnabled:!!M.water.useVertexAlpha,groundVertexAlphaEnabled:!!ground.hasVertexAlpha,oceanDepthTintEnabled:kind==='ocean-depth-tint'?!disabled:true,nearWaterDetailEnabled:!coastalDiagnosticOverrides.disableNearWaterDetail,waterNormalLevel:M.water.bumpTexture?.level??null,waterNormalUScale:M.water.bumpTexture?.uScale??null,waterNormalVScale:M.water.bumpTexture?.vScale??null,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length,volumetricShoreBreakerVisible:tidalFoamMeshes.filter(foam=>foam.waveBodyMesh.isVisible).length,livingBeachLayerVisible:livingBeachLayers[activeBeachIslandIndex]?.mesh?.isVisible?1:0,submergedSandVisible:coastalSeabedMeshes[activeBeachIslandIndex]?.isVisible?1:0,continuousShoreFoamVisible:tidalFoamMeshes.filter(foam=>foam.mesh.isVisible).length};
    },
-   auditIslandGeometry:(islandIndex=null)=>auditIslandGeometry(islandIndex),
+   auditIslandGeometry:()=>auditIslandGeometry(),
+   auditIslandGeometryForIsland:(islandIndex)=>auditIslandGeometryScoped(islandIndex),
    coastalSceneInventory:(limit=500)=>getCoastalSceneInventory(limit),
    habitableStructureAudit:()=>auditHabitableStructures(false),
    habitableStructureAuditAsBoat:({x=80,z=80}={})=>{
