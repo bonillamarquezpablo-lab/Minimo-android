@@ -27,7 +27,8 @@ assert.match(smoke,/__captureTimedOut/);
 
 assert.match(smoke,/CAPTURE_CANVAS_TIMEOUT_MS/);assert.match(smoke,/CAPTURE_CDP_TIMEOUT_MS/);assert.match(smoke,/Number\(process\.env\.CAPTURE_CANVAS_TIMEOUT_MS\)\|\|75000/);assert.match(smoke,/Number\(process\.env\.CAPTURE_CDP_TIMEOUT_MS\)\|\|8000/);assert.match(smoke,/afterFailure\?15000:CANVAS_CAPTURE_TIMEOUT_MS/);assert.match(smoke,/afterFailure\?8000:CDP_CAPTURE_TIMEOUT_MS/);
 assert.match(smoke,/verifiedSafeRelocationCount/);
-assert.match(smoke,/unsafePairsVerified===true/);
+assert.match(smoke,/unsafePairsVerified=verifiedSafeRelocationCount===unsafeBefore\.length/);
+assert.match(smoke,/&&unsafePairsVerified&&offshoreClear/);
 assert.match(smoke,/visibleOffshoreAfter===0/);
 assert.match(smoke,/offshoreClear/);
 assert.match(smoke,/floatingProbePassed=floatingProbe\?\.detected===true&&floatingProbe\?\.autoDiscovered===true&&floatingProbe\?\.hidden===true/);
