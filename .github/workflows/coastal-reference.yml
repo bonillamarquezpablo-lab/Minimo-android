@@ -14,8 +14,8 @@ permissions:
 
 concurrency:
   group: coastal-geometry-reference-${{ github.ref }}
-  # Newer commits supersede older 36-view captures; do not let stale Playwright runs block the latest audit.
-  cancel-in-progress: true
+  # Keep the full 36-view audit alive; a newer commit must not cancel the active capture.
+  cancel-in-progress: false
 
 jobs:
   reference:
