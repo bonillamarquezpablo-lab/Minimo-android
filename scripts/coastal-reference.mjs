@@ -656,8 +656,8 @@ async function main() {
       'Puesto, guardia o bandera despegados más de 2 cm de su isla: ' + JSON.stringify(outpost));
     const habitableAudit = await page.evaluate(() => window.__ELSN_TEST__.habitableStructureAudit());
     manifest.habitableStructureAudit = habitableAudit;
-    assert.equal(habitableAudit.total, 35,
-      'El inventario debe cubrir 12 cabañas, 9 puestos, 8 campamentos, 4 forjas, el gran salón y el campamento inicial: ' + JSON.stringify(habitableAudit));
+    assert.equal(habitableAudit.total, 39,
+      'El inventario debe cubrir 12 cabañas, 9 puestos, 8 campamentos, 4 forjas, 4 torres de vigilancia, el gran salón y el campamento inicial: ' + JSON.stringify(habitableAudit));
     assert.equal(habitableAudit.untrackedRootCount, 0,
       'Hay estructuras con tejado fuera del registro de auditoría: ' + JSON.stringify(habitableAudit.untrackedRoots));
     assert.equal(habitableAudit.visibleInvalidCount, 0,
