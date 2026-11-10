@@ -654,6 +654,8 @@ async function main() {
     assert.equal(garrisonGrounding.length, 9, 'Deben comprobarse los nueve puestos de las islas secundarias.');
     for (const outpost of garrisonGrounding) assert.ok(Number.isFinite(outpost.maximumAnchorErrorMeters) && outpost.maximumAnchorErrorMeters < .02,
       'Puesto, guardia o bandera despegados más de 2 cm de su isla: ' + JSON.stringify(outpost));
+    const habitableAuditRepair = await page.evaluate(() => window.__ELSN_TEST__.repairAndAuditHabitableStructures());
+    manifest.habitableAuditRepair = habitableAuditRepair;
     const habitableAudit = await page.evaluate(() => window.__ELSN_TEST__.habitableStructureAudit());
     manifest.habitableStructureAudit = habitableAudit;
     assert.equal(habitableAudit.total, 39,
