@@ -83,6 +83,8 @@ assert.match(html,/function auditHabitableStructures\(applyRepairs=true\)/,'The 
 assert.match(html,/const roofedRootPattern=\/\^\(\?:WeatheredNorseHut/,'The live audit must discover named hut and settlement roots even if registration was skipped.');
 assert.match(html,/auto-discovered-root/,'A discovered structure must enter the shared audit registry.');
 assert.match(html,/repairAndAuditHabitableStructures:\(\)=>auditHabitableStructures\(true\)/,'Playwright must be able to run a real repair pass, not only inspect.');
+assert.match(html,/probeFloatingHutAudit:\(\)=>/,'The browser suite must exercise an unregistered hut placed in open water.');
+assert.match(runner,/probeFloatingHutAudit\(\)/,'The browser suite must verify the floating-hut probe is discovered and hidden.');
 assert.match(runner,/repairAndAuditHabitableStructures\(\)/,'The browser audit must apply repairs before checking the final visible scene.');
 assert.match(html,/habitableAuditInterval=onShip \? \.5 : 1\.5/,'While sailing, the floating-structure audit must run twice per second.');
 assert.match(html,/habitableStructureAudit:\(\)=>auditHabitableStructures\(false\)/,'The audit snapshot must be available to Playwright.');
