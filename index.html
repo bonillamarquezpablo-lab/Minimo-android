@@ -4863,6 +4863,7 @@ void main(void){
   if(trees.some(tree=>tree.alive&&Math.hypot(x-tree.x,z-tree.z)<(tree.radius||.6)+clearance))return false;
   if(rocks.some(rock=>rock.alive&&Math.hypot(x-rock.x,z-rock.z)<(rock.radius||.75)+clearance*.8))return false;
   for(const collider of worldColliders){
+   if(collider.active===false)continue;
    const dx=x-collider.x,dz=z-collider.z;
    if(collider.type==='circle'){if(Math.hypot(dx,dz)<collider.r+clearance)return false;}
    else if(Math.abs(dx)<collider.hx+clearance&&Math.abs(dz)<collider.hz+clearance)return false;
@@ -4881,7 +4882,7 @@ void main(void){
      if(!isSafeShrubGroundPoint(island,x,z)||
         isVegetationTrailClearance(x,z,2.4)||
         settlements.some(s=>Math.hypot(x-s[0],z-s[1])<14)||
-        worldColliders.some(c=>Math.hypot(x-c.x,z-c.z)<(c.type==='circle'?c.r:Math.max(c.hx,c.hz))+2.4)||
+        worldColliders.some(c=>c.active!==false&&Math.hypot(x-c.x,z-c.z)<(c.type==='circle'?c.r:Math.max(c.hx,c.hz))+2.4)||
         trees.some(t=>Math.hypot(x-t.x,z-t.z)<3)||
         rocks.some(r=>Math.hypot(x-r.x,z-r.z)<(r.radius||.8)+1.5)||
         naturalShrubs.some(b=>Math.hypot(x-b.x,z-b.z)<(b.radius||.9)+1.25))continue;
@@ -4898,7 +4899,7 @@ void main(void){
      const x=candidate.x,z=candidate.z;
      if(isVegetationTrailClearance(x,z,3.2)||
         settlements.some(s=>Math.hypot(x-s[0],z-s[1])<19)||
-        worldColliders.some(c=>Math.hypot(x-c.x,z-c.z)<(c.type==='circle'?c.r:Math.max(c.hx,c.hz))+3.5)||
+        worldColliders.some(c=>c.active!==false&&Math.hypot(x-c.x,z-c.z)<(c.type==='circle'?c.r:Math.max(c.hx,c.hz))+3.5)||
         trees.some(t=>Math.hypot(x-t.x,z-t.z)<(t.radius||.6)+3.0)||
         wildlifeSpawnSpecs.some(other=>Math.hypot(x-other.x,z-other.z)<5.6))continue;
      p=candidate;break;
@@ -8329,7 +8330,7 @@ function createRealWeapon(type='axe'){
   const bucket=collisionGrid.get(collisionCellKey(cx,cz));if(!bucket)return false;
   for(const entry of bucket){
    if(entry.kind!=='world')continue;
-   const c=entry.ref;if(!c||!c.cameraBlocker)continue;
+   const c=entry.ref;if(!c||c.active===false||!c.cameraBlocker)continue;
    const dx=x-c.x,dz=z-c.z;
    if(c.type==='circle'){if(dx*dx+dz*dz<(c.r+.28)*(c.r+.28))return true;}
    else if(Math.abs(dx)<c.hx+.28&&Math.abs(dz)<c.hz+.28)return true;
@@ -8522,7 +8523,7 @@ function createRealWeapon(type='axe'){
    entry.lastStatus=result.status;records.push(Object.assign({},result,{lastAction:entry.lastAction}));
   }
   const registeredRoots=new Set(habitableStructureRegistry.map(entry=>entry.root));
-  const untrackedRoots=scene.transformNodes.filter(node=>/^(WeatheredNorseHut|PersistentNorseShelter|IslandOutpost_\d+|IslandScoutCamp_\d+|IslandGarrisonOutpost_\d+|NorseGreatMeadHall_\d+|PoorNorseCastawayCamp)$/.test(node.name||'')&&!registeredRoots.has(node)).map(node=>node.name);
+  const untrackedRoots=scene.transformNodes.filter(node=>/^(WeatheredNorseHut|PersistentPlayerNorseShelter|PersistentNorseShelter|IslandOutpost_\d+|IslandScoutCamp_\d+|IslandGarrisonOutpost_\d+|NorseGreatMeadHall_\d+|PoorNorseCastawayCamp)$/.test(node.name||'')&&!registeredRoots.has(node)).map(node=>node.name);
   const snapshot={schema:1,total:records.length,groundedCount:records.filter(x=>x.safe).length,unsafeCount:records.filter(x=>!x.safe).length,visibleInvalidCount,hiddenUnsafe,hiddenByDistance,repaired,untrackedRootCount:untrackedRoots.length,untrackedRoots,structures:records};
   lastHabitableStructureAudit=snapshot;return snapshot;
  }
@@ -8749,7 +8750,7 @@ function createRealWeapon(type='axe'){
   // Blacksmith's forge, stone hearth, anvil and hammer rack: unmistakable Norse settlement landmark.
   const forgeX=vl.x-6.8,forgeZ=vl.z-1.9,forgeY=renderedTerrainSurfaceAt(forgeX,forgeZ),forge=newGroup('NorseBlacksmithForge_'+idx,null);forge.position=v(forgeX,forgeY,forgeZ);
   forge.__norseWorldCollider=registerWorldCollider({type:'circle',x:forgeX,z:forgeZ,r:1.15});
-  registerHabitableStructure(forge,'NorseBlacksmithForge',{islandIndex:idx,footprintRadius:1.25,baseOffset:0,edgeBuffer:1.25,maxRelief:.24,anchorTolerance:.02,maxVisibleDistance:205,collider:forge.__norseWorldCollider,relocatable:true});
+  registerHabitableStructure(forge,'NorseBlacksmithForge',{islandIndex:idx,footprintRadius:1.25,baseOffset:0,edgeBuffer:1.25,maxRelief:.24,anchorTolerance:.02,maxVisibleDistance:205,collider:forge.__norseWorldCollider,relocatable:false});
   box('ForgeStoneBase_'+idx,forge,[0,.28,0],[1.65,.56,1.35],M.stoneDark);
   box('ForgeIronHearth_'+idx,forge,[0,.75,.12],[1.08,.36,.86],M.darkMetal);
   const forgeCoal=sphere('ForgeGlowingCoals_'+idx,forge,[0,.98,.12],[.42,.13,.34],M.ember,12);forgeCoal.material=M.ember;
@@ -9020,6 +9021,7 @@ function createRealWeapon(type='axe'){
  for(let i=0;i<4;i++)sphere('CastawayHearthStone_'+i,null,[starterCampX+1.40+Math.cos(i*Math.PI/2)*.42,starterCampY+.10,starterCampZ+.95+Math.sin(i*Math.PI/2)*.42],[.22,.13,.20],M.stone,8);
  campfire(starterCampX+1.40,starterCampZ+.95);
  starterCamp.__norseWorldCollider=registerWorldCollider({type:'rect',x:starterCampX,z:starterCampZ-.30,hx:1.34,hz:1.15,cameraBlocker:true});
+ if(starterCamp.__habitableStructureAudit)starterCamp.__habitableStructureAudit.collider=starterCamp.__norseWorldCollider;
  // Marker and lore are reused by the nautical map and the opening chapter.
  const STARTER_CAMP_POSITION={x:starterCampX,z:starterCampZ};
  function makePeasantFallback(name,index=0){
@@ -10397,6 +10399,7 @@ function updateHUD(){
   for(let i=1;i<steps;i++){
    const t=i/steps,x=from.x+dx*t,z=from.z+dz*t;
    for(const c of worldColliders){
+    if(c.active===false)continue;
     if(c.type==='circle'){const ox=x-c.x,oz=z-c.z;if(ox*ox+oz*oz<(c.r+.12)*(c.r+.12))return false;}
     else if(c.type==='rect'&&Math.abs(x-c.x)<c.hx+.10&&Math.abs(z-c.z)<c.hz+.10)return false;
    }
@@ -11208,7 +11211,7 @@ function updateHUD(){
    const bucket=collisionGrid.get(collisionCellKey(cx,cz));if(!bucket)continue;
    for(const entry of bucket){
     if(entry.stamp===stamp)continue;entry.stamp=stamp;
-    const ref=entry.ref,dx=x-ref.x,dz=z-ref.z;
+    const ref=entry.ref;if(ref&&ref.active===false)continue;const dx=x-ref.x,dz=z-ref.z;
     if(entry.kind==='tree'){
      if(ref.alive&&dx*dx+dz*dz<(radius+(ref.radius||.48))**2)return false;
     }else if(entry.kind==='rock'){
