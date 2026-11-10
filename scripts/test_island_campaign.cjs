@@ -43,8 +43,8 @@ for(const settlement of testSettlements)for(const [x,z,scale] of settlement.hous
   const placed=settlementHousePosition(settlement.island,x,z,scale);
   const distance=Math.hypot(placed.x-settlement.island.x,placed.z-settlement.island.z);
   const footprint=Math.hypot(2.01*scale,2.64*scale);
-  assert.ok(distance+footprint<=settlement.island.r*.76-8.0+1e-8,
-    "The complete hut footprint must remain at least 8 m inside the grass/sand transition.");
+  assert.ok(distance+footprint<=settlement.island.r*.76-1.25+1e-8,
+    "The complete hut footprint must remain at least 1.25 m inside the grass/sand transition.");
 }
 const movedBeachHut=settlementHousePosition(testSettlements[0].island,39,-22,.62);
 assert.equal(movedBeachHut.adjusted,true,"The outer Raven village hut must be moved inward off the beach transition.");
@@ -52,6 +52,20 @@ assert.ok(Math.hypot(movedBeachHut.x,movedBeachHut.z)+Math.hypot(2.01*.62,2.64*.
 assert.ok(Math.hypot(movedBeachHut.x,movedBeachHut.z)<Math.hypot(39,-22),
   "A hut overlapping the coast must be moved toward the island centre.");
 
+const villagePositionStart=html.indexOf("function settlementVillagePosition(island,x,z){");
+const villagePositionEnd=html.indexOf("\n function makeVillage",villagePositionStart);
+assert.ok(villagePositionStart>=0&&villagePositionEnd>villagePositionStart,
+  "The whole-village inland placement helper must remain independently testable.");
+const settlementVillagePosition=new Function(html.slice(villagePositionStart,villagePositionEnd).trim()+"; return settlementVillagePosition;")();
+const originalRavenVillage={x:31,z:-17};
+const movedRavenVillage=settlementVillagePosition({x:0,z:0,r:60},originalRavenVillage.x,originalRavenVillage.z);
+assert.equal(movedRavenVillage.adjusted,true,"The Raven village must move inland as one complete settlement.");
+assert.ok(Math.hypot(movedRavenVillage.x,movedRavenVillage.z)+14.0<=60*.76-8.0+1e-8,
+  "The entire Raven village footprint must retain an eight-metre dry-land buffer.");
+assert.ok(Math.abs((movedRavenVillage.x-originalRavenVillage.x)/(movedRavenVillage.z-originalRavenVillage.z)-31/-17)<1e-8,
+  "Moving the village must preserve its orientation and spacing by using one shared translation.");
+assert.match(html,/settlementVillagePosition\(land\[index\],x,z\)/,
+  "All four villages must pass through the shared inland placement helper.");
 assert.doesNotMatch(html,/safeVillageRadius=/,'Only individual huts may move; the village center and shared props must stay in place.');
 assert.match(html,/g\.position=v\(houseX,footing\.centerY-\.02\*scale,houseZ\)/);
 assert.match(html,/type:'rect',x:houseX,z:houseZ/,'The hut collision footprint must follow its corrected rendered position.');
