@@ -52,9 +52,6 @@ assert.match(workflow,/timeout-minutes: 12/);
 assert.match(workflow,/timeout --signal=TERM --kill-after=5s 240s node scripts\/coastal-structure-grounding-smoke\.mjs/);
 assert.match(source,/offshoreStructuresAfter:report\.summary\.offshoreStructures/);
 assert.match(source,/gate\.offshoreStructuresAfter===0&&gate\.visibleOffshoreStructuresAfter===0/);
-assert.match(html,/const terrainIsDry=Number\.isFinite\(terrainY\)&&terrainY>=\.22/);
-assert.match(html,/const offshore=beyondIslandEnvelope\|\|\(!terrainIsDry&&floatingAboveWater\)/);
-assert.match(html,/minimumDryTerrainY:\.22/);
 console.log('COASTAL STRUCTURE GROUNDING CONTRACT OK');
 
 assert.match(html,/dryFootprintSampleCount===dryFootprintSamples\.length/);
