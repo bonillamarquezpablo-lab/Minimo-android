@@ -8517,7 +8517,6 @@ function createRealWeapon(type='axe'){
    const entry=registerHabitableStructure(node,kind,{islandIndex,footprintRadius,baseOffset,edgeBuffer:1.25,maxRelief,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,collider:node.__norseWorldCollider||null,relocatable:false});
    entry.lastAction='auto-discovered-root';autoRegisteredRoots.push({name:rootName,kind,islandIndex});
   }
-  let repaired=0,hiddenUnsafe=0,hiddenByDistance=0,visibleInvalidCount=0;
   for(const entry of habitableStructureRegistry){
    let result=evaluateHabitableStructure(entry),root=entry.root;
    if(!result.safe&&applyRepairs&&entry.relocatable&&root&&typeof root.setEnabled==='function'){
