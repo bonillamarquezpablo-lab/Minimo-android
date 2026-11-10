@@ -8635,7 +8635,7 @@ function createRealWeapon(type='axe'){
    }else{
     if(entry.collider)entry.collider.active=true;
     if(applyRepairs&&root&&typeof root.setEnabled==='function'){
-     const dx=camera?result.x-camera.x:0,dz=camera?result.z-camera.z:0,limit=onShip?entry.boatVisibleDistance:entry.maxVisibleDistance;
+     const dx=camera?result.x-camera.x:0,dz=camera?result.z-camera.z:0,limit=onShip&&ultraLowEndIslandStreaming?entry.boatVisibleDistance:entry.maxVisibleDistance;
      const withinDistance=!camera||dx*dx+dz*dz<=limit*limit;
      const shouldEnable=entry.enabledAtRegistration&&withinDistance;
      const currentlyEnabled=typeof root.isEnabled==='function'?root.isEnabled():root.isVisible!==false;
@@ -8645,7 +8645,7 @@ function createRealWeapon(type='axe'){
    }
    entry.lastStatus=result.status;const finalEnabled=!!(root&&((typeof root.isEnabled==='function')?root.isEnabled():root.isVisible!==false));
    if(!result.safe&&finalEnabled)visibleInvalidAfterRepair++;
-   const distanceToCameraMeters=camera?Math.hypot(result.x-camera.x,result.z-camera.z):0,visibilityLimitMeters=onShip?entry.boatVisibleDistance:entry.maxVisibleDistance;records.push(Object.assign({},result,{enabled:finalEnabled,distanceToCameraMeters:Number(distanceToCameraMeters.toFixed(2)),visibilityLimitMeters,lastAction:entry.lastAction}));
+   const distanceToCameraMeters=camera?Math.hypot(result.x-camera.x,result.z-camera.z):0,visibilityLimitMeters=onShip&&ultraLowEndIslandStreaming?entry.boatVisibleDistance:entry.maxVisibleDistance;records.push(Object.assign({},result,{enabled:finalEnabled,distanceToCameraMeters:Number(distanceToCameraMeters.toFixed(2)),visibilityLimitMeters,lastAction:entry.lastAction}));
   }
   const registeredRoots=new Set(habitableStructureRegistry.map(entry=>entry.root));
   const untrackedRoots=scene.transformNodes.filter(node=>roofedRootPattern.test(node.name||'')&&!registeredRoots.has(node)).map(node=>node.name);
