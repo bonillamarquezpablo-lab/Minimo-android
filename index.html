@@ -2260,23 +2260,35 @@ async function removeStrayDebugGeometry(targetScene){
  if(!B||!B.Engine)throw new Error('La librería Babylon.js está incompleta o no es compatible.');
  const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:testModeEnabled,stencil:true,antialias:activeGraphicsProfile!=='performance',powerPreference:'high-performance',failIfMajorPerformanceCaveat:false},false);
  bootEngineForCleanup=engine;
- // Diagnostic-only: count DynamicTexture uploads without affecting normal gameplay.
- const captureDynamicTextureUpdates=new WeakMap();
- if(testModeEnabled&&B.DynamicTexture?.prototype&&typeof B.DynamicTexture.prototype.update==='function'){
-  const originalDynamicTextureUpdate=B.DynamicTexture.prototype.update;
-  if(!originalDynamicTextureUpdate.__elsnCaptureWrapped){
+ // Capture-only scheduler telemetry: prove RAF callbacks keep advancing while the smoke waits.
+ const captureRafMonitor={scheduled:0,executed:0,cancelled:0,pending:0,maxOutstanding:0,lastScheduledAtMs:null,lastExecutedAtMs:null,lastCallbackDurationMs:null};
+ if(testModeEnabled&&!window.requestAnimationFrame.__elsnCaptureWrapped){
+  const nativeRequestAnimationFrame=window.requestAnimationFrame.bind(window),nativeCancelAnimationFrame=window.cancelAnimationFrame.bind(window),pendingCaptureRaf=new Set();
+  const wrappedRequestAnimationFrame=function(callback){captureRafMonitor.scheduled++;captureRafMonitor.lastScheduledAtMs=Number(performance.now().toFixed(2));let requestId=null;requestId=nativeRequestAnimationFrame(timestamp=>{pendingCaptureRaf.delete(requestId);captureRafMonitor.pending=pendingCaptureRaf.size;captureRafMonitor.executed++;captureRafMonitor.lastExecutedAtMs=Number(performance.now().toFixed(2));const callbackStarted=performance.now();try{return callback(timestamp);}finally{captureRafMonitor.lastCallbackDurationMs=Number((performance.now()-callbackStarted).toFixed(3));}});pendingCaptureRaf.add(requestId);captureRafMonitor.pending=pendingCaptureRaf.size;captureRafMonitor.maxOutstanding=Math.max(captureRafMonitor.maxOutstanding,captureRafMonitor.pending);return requestId;};
+  const wrappedCancelAnimationFrame=function(requestId){if(pendingCaptureRaf.delete(requestId)){captureRafMonitor.pending=pendingCaptureRaf.size;captureRafMonitor.cancelled++;}return nativeCancelAnimationFrame(requestId);};
+  Object.defineProperty(wrappedRequestAnimationFrame,'__elsnCaptureWrapped',{value:true});window.requestAnimationFrame=wrappedRequestAnimationFrame;window.cancelAnimationFrame=wrappedCancelAnimationFrame;window.__ELSN_CAPTURE_RAF_MONITOR__=captureRafMonitor;
+ }
+ // Count DynamicTexture uploads in test mode, including upload errors.
+ // Capture-only DynamicTexture instrumentation. Babylon exposes DynamicTexture through
+ // a getter-only namespace, so instrument the prototype instead of replacing the export.
+ const captureDynamicTextureUpdates=new WeakMap(),captureDynamicTextureOrigins=new WeakMap();
+ const dynamicTextureUpdateInstrumentation={prototypeWrapped:false,installedAtMs:Number(performance.now().toFixed(2)),prototypeMethodAvailable:typeof B.DynamicTexture?.prototype?.update==='function',wrapError:null};
+ if(testModeEnabled&&B.DynamicTexture?.prototype&&typeof B.DynamicTexture.prototype.update==='function'&&!B.DynamicTexture.prototype.update.__elsnCaptureWrapped){
+  try{
+   const originalDynamicTextureUpdate=B.DynamicTexture.prototype.update;
    const wrappedDynamicTextureUpdate=function(...args){
-    const prior=captureDynamicTextureUpdates.get(this)||{calls:0,firstUpdateAtMs:null,lastUpdateAtMs:null,renderLoopCountAtLastUpdate:null};
-    const now=Number(performance.now().toFixed(2));prior.calls++;
-    if(prior.firstUpdateAtMs===null)prior.firstUpdateAtMs=now;
-    prior.lastUpdateAtMs=now;
+    const prior=captureDynamicTextureUpdates.get(this)||{calls:0,firstUpdateAtMs:null,lastUpdateAtMs:null,renderLoopCountAtLastUpdate:null,lastError:null,updateArguments:[],lastUpdateStack:null};
+    const now=Number(performance.now().toFixed(2));prior.calls++;if(prior.firstUpdateAtMs===null)prior.firstUpdateAtMs=now;prior.lastUpdateAtMs=now;
     prior.renderLoopCountAtLastUpdate=Array.isArray(engine._activeRenderLoops)?engine._activeRenderLoops.length:null;
-    captureDynamicTextureUpdates.set(this,prior);
-    return originalDynamicTextureUpdate.apply(this,args);
+    prior.updateArguments.push(args.slice(0,4));if(prior.updateArguments.length>8)prior.updateArguments.shift();
+    prior.lastUpdateStack=String(new Error('DynamicTexture.update call').stack||'');captureDynamicTextureUpdates.set(this,prior);
+    try{const result=originalDynamicTextureUpdate.apply(this,args);prior.lastError=null;return result;}
+    catch(error){prior.lastError=String(error?.message||error);throw error;}
    };
    Object.defineProperty(wrappedDynamicTextureUpdate,'__elsnCaptureWrapped',{value:true});
    B.DynamicTexture.prototype.update=wrappedDynamicTextureUpdate;
-  }
+   dynamicTextureUpdateInstrumentation.prototypeWrapped=B.DynamicTexture.prototype.update===wrappedDynamicTextureUpdate;
+  }catch(error){dynamicTextureUpdateInstrumentation.wrapError=String(error?.message||error);console.warn('DynamicTexture update instrumentation unavailable:',error);}
  }
  let contextCurrentlyLost=false,contextRecoveryTimer=null;
  canvas.addEventListener('webglcontextlost',event=>{
@@ -2338,6 +2350,22 @@ async function removeStrayDebugGeometry(targetScene){
   if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }
  const scene=new B.Scene(engine);
+ // Babylon notifies us once a texture is registered with the scene. This preserves the
+ // getter-only DynamicTexture export and records origin evidence before textures are used.
+ const captureKnownDynamicTextureCreators={
+  'Detailed grass albedo':{creatorFunction:'makePatternTexture',creationSource:'texGrass = makePatternTexture(\"Detailed grass albedo\", ...)'},
+  'Albedo-derived grass normal':{creatorFunction:'makeAlbedoNormal',creationSource:'albedoNormalGrass = makeAlbedoNormal(\"Albedo-derived grass normal\", texGrass, ...)'},
+  'RavenClanStandard':{creatorFunction:'startGame (inline)',creationSource:'clanBannerTexture = new B.DynamicTexture(\"RavenClanStandard\", ...) inside startGame'}
+ };
+ if(testModeEnabled&&scene.onNewTextureAddedObservable?.add){
+  scene.onNewTextureAddedObservable.add(texture=>{
+   try{
+    if(!(B.DynamicTexture&&texture instanceof B.DynamicTexture))return;
+    const known=captureKnownDynamicTextureCreators[texture.name]||null;
+    captureDynamicTextureOrigins.set(texture,{createdAtMs:Number(performance.now().toFixed(2)),creatorFunction:known?.creatorFunction||'not-mapped',creationSource:known?.creationSource||'scene.onNewTextureAddedObservable',observedAtStack:String(new Error('DynamicTexture scene registration').stack||'')});
+   }catch(error){console.warn('DynamicTexture origin observation failed:',error);}
+  });
+ }
  scene.skipPointerMovePicking=true;scene.constantlyUpdateMeshUnderPointer=false;
 
  if(scene.onAfterAnimationsObservable&&typeof scene.onAfterAnimationsObservable.add==='function'){
@@ -8214,6 +8242,7 @@ function createRealWeapon(type='axe'){
  const sagaHistory=[];
  let sprintMissionMeters=0,sprintMissionDone=false;
  const camera=new B.FreeCamera('thirdPerson',v(-40,8,-10),scene);camera.fov=.86;camera.minZ=.1;camera.maxZ=2200;scene.activeCamera=camera;
+ let captureCameraOverride=null;
  let renderPipeline=null;
  if(B.DefaultRenderingPipeline){try{
   renderPipeline=new B.DefaultRenderingPipeline('NordicSharpAA',true,scene,[camera]);
@@ -8356,6 +8385,7 @@ function createRealWeapon(type='axe'){
   return false;
  }
   function updateCamera(dt){
+  if(testModeEnabled&&captureCameraOverride){camera.position.copyFrom(captureCameraOverride.position);camera.setTarget(captureCameraOverride.target);camera.fov=innerHeight>innerWidth?.84:.78;if(skyDome)skyDome.position.copyFrom(camera.position);return;}
   // La raíz solo se parenta al drakkar al embarcar; en ese caso se conserva la posición absoluta.
   const focus=onShip?player.root.getAbsolutePosition():player.root.position;
   const portrait=innerHeight>innerWidth,safeDt=Math.max(0,Math.min(.10,dt||0));
@@ -12603,87 +12633,39 @@ function update(dt){
    return {schema:1,islandCount:results.length,thresholds:{heightJumpMeters:{IslandHeightfield:1.0,NordicSubmergedSand:.80,LivingCoastalSand:.90,ShoreBreakerWash:.75},sandAboveProfileToleranceMeters:.015,seamPositionToleranceMeters:.002},durationMs:Number((performance.now()-started).toFixed(1)),islands:results};
   }
 
-  function collectMaterialTexturePairs(material,pairs,visited){
-   if(!material||visited.has(material))return;visited.add(material);
-   if(Array.isArray(material.subMaterials))material.subMaterials.forEach(item=>collectMaterialTexturePairs(item,pairs,visited));
-   if(typeof material.getActiveTextures==='function'){try{for(const texture of material.getActiveTextures()||[])if(texture)pairs.push({material,texture});}catch(_){}}
-  }
+  const captureTexturePropertyNames=new Set(['diffuseTexture','ambientTexture','opacityTexture','reflectionTexture','emissiveTexture','specularTexture','bumpTexture','lightmapTexture','refractionTexture','albedoTexture','metallicTexture','roughnessTexture','metallicReflectanceTexture','microSurfaceTexture','reflectivityTexture','environmentBRDFTexture','baseTexture','normalTexture','occlusionTexture','opacityFresnelTexture','detailMap','transmissionTexture','thicknessTexture','iridescenceTexture','iridescenceThicknessTexture','sheenTexture','clearCoatTexture','clearCoatBumpTexture','clearCoatTintTexture','anisotropyTexture','baseWeightTexture','baseDiffuseTexture','baseRoughnessTexture','baseColorTexture','metalnessTexture','normalMapTexture','projectionTexture','renderTargetTexture']);
   function captureTextureReadinessSnapshot(){
-   const activeCamera=scene.activeCamera||camera;let frustumPlanes=null,frustumCheckAvailable=false;
-   try{activeCamera.getViewMatrix(true);activeCamera.getProjectionMatrix(true);if(B.Frustum?.GetPlanes){frustumPlanes=B.Frustum.GetPlanes(activeCamera.getTransformationMatrix());frustumCheckAvailable=!!frustumPlanes;}}catch(_){}
+   const activeCamera=scene.activeCamera||camera;let frustumPlanes=null,frustumCheckAvailable=false;try{activeCamera.getViewMatrix(true);activeCamera.getProjectionMatrix(true);if(B.Frustum?.GetPlanes){frustumPlanes=B.Frustum.GetPlanes(activeCamera.getTransformationMatrix());frustumCheckAvailable=!!frustumPlanes;}}catch(_){}
    let activeSet=null;try{const list=scene.getActiveMeshes?.();if(list){const rows=list.data&&Number.isFinite(list.length)?list.data.slice(0,list.length):(Array.isArray(list)?list:[]);activeSet=new Set(rows);}}catch(_){}
-   const usage=new Map(),visibleMaterials=new Set(),meshForMaterial=new Map();
-   const allMeshes=(scene.meshes||[]).filter(mesh=>mesh&&!mesh.isDisposed?.());
-   for(const mesh of allMeshes){
-    let enabled=true;try{enabled=typeof mesh.isEnabled==='function'?mesh.isEnabled():true;}catch(_){enabled=false;}
-    const visible=mesh.isVisible!==false&&Number(mesh.visibility)!==0;
-    const layerVisible=!activeCamera.layerMask||!mesh.layerMask||(mesh.layerMask&activeCamera.layerMask)!==0;
-    let inFrustum=null;try{if(frustumPlanes&&typeof mesh.isInFrustum==='function')inFrustum=mesh.isInFrustum(frustumPlanes);}catch(_){}
-    const active=activeSet?activeSet.has(mesh):null;
-    const cameraVisible=enabled&&visible&&layerVisible&&(inFrustum===null?!!active:inFrustum&&(active===null||active));
-    const meshInfo={name:mesh.name||mesh.id||'mesh-unknown',uniqueId:Number.isFinite(mesh.uniqueId)?mesh.uniqueId:null,enabled,visible,active,inFrustum,layerVisible,cameraVisible,material:mesh.material?.name||null};
-    const pairs=[];collectMaterialTexturePairs(mesh.material,pairs,new Set());
-    for(const pair of pairs){
-     const material=pair.material,texture=pair.texture;
-     if(!meshForMaterial.has(material))meshForMaterial.set(material,[]);if(cameraVisible)meshForMaterial.get(material).push(mesh);
-     if(!usage.has(texture))usage.set(texture,{materials:new Map(),meshes:new Map()});
-     const row=usage.get(texture);row.materials.set(material,material.name||'material-unknown');
-     const prior=row.meshes.get(mesh);if(!prior||(!prior.cameraVisible&&cameraVisible))row.meshes.set(mesh,meshInfo);
-     if(cameraVisible)visibleMaterials.add(material);
-    }
-   }
-   const textures=(scene.textures||[]).filter(texture=>texture&&!texture.isDisposed?.());
-   const describe=texture=>{
-    let internal=null;try{internal=texture.getInternalTexture?.()||texture._texture||null;}catch(_){internal=texture._texture||null;}
-    const dynamic=!!((B.DynamicTexture&&texture instanceof B.DynamicTexture)||texture.getClassName?.()==='DynamicTexture');
-    const url=(typeof texture.url==='string'&&texture.url)||(typeof texture._url==='string'&&texture._url)||(typeof internal?.url==='string'&&internal.url)||null;
-    let isReady=false;try{isReady=typeof texture.isReady==='function'?!!texture.isReady():!!internal?.isReady;}catch(_){}
-    let size=null;try{size=texture.getSize?.()||null;}catch(_){}
-    const stats=dynamic?(captureDynamicTextureUpdates.get(texture)||null):null;
-    const loadError=texture._loadingError||internal?._loadingError||internal?.error||null;
-    let loadState='ready';if(!isReady){
-     if(dynamic){if(!stats||stats.calls===0)loadState='dynamic-not-updated';else if(!internal)loadState='dynamic-no-internal-texture';else if(internal.isLoading)loadState='dynamic-uploading';else if(!internal.isReady)loadState='dynamic-internal-not-ready';else loadState='dynamic-wrapper-not-ready';}
-     else if(url){if(loadError)loadState='url-error';else if(internal?.isLoading)loadState='url-loading';else if(!internal)loadState='url-no-internal-texture';else loadState='url-not-ready';}
-     else loadState='no-source-not-ready';
-    }
-    const links=usage.get(texture)||{materials:new Map(),meshes:new Map()};const meshes=Array.from(links.meshes.values());
-    return {name:texture.name||url||'texture-unknown',type:dynamic?'DynamicTexture':(url?'URL':'no-source'),url,size:size?{width:size.width??null,height:size.height??null}:null,isReady,loadState,blocking:typeof texture.isBlocking==='boolean'?texture.isBlocking:null,loadStateDetails:{hasInternalTexture:!!internal,internalReady:typeof internal?.isReady==='boolean'?internal.isReady:null,internalLoading:typeof internal?.isLoading==='boolean'?internal.isLoading:null,internalState:internal?._state??null,loadingError:loadError?String(loadError.message||loadError):null,hasImage:!!(internal?._image||texture._image),imageComplete:(internal?._image||texture._image)?.complete??null,dynamicUpdate:stats?{calls:stats.calls,firstUpdateAtMs:stats.firstUpdateAtMs,lastUpdateAtMs:stats.lastUpdateAtMs,renderLoopCountAtLastUpdate:stats.renderLoopCountAtLastUpdate}:null,engineRenderLoopCount:Array.isArray(engine._activeRenderLoops)?engine._activeRenderLoops.length:null,documentVisibility:document.visibilityState},cameraRelevant:meshes.some(mesh=>mesh.cameraVisible),materials:Array.from(links.materials.values()),meshes};
-   };
-   const pendingTextures=textures.filter(texture=>{try{return typeof texture.isReady==='function'?!texture.isReady():true;}catch(_){return true;}}).map(describe);
-   const cameraPendingTextures=pendingTextures.filter(item=>item.cameraRelevant),offCameraPendingTextures=pendingTextures.filter(item=>!item.cameraRelevant);
-   return {report:{camera:{name:activeCamera.name||'active-camera',position:{x:Number(activeCamera.position.x.toFixed(3)),y:Number(activeCamera.position.y.toFixed(3)),z:Number(activeCamera.position.z.toFixed(3))},frustumCheckAvailable},counts:{sceneMeshes:allMeshes.length,sceneTextures:textures.length,pendingSceneTextures:pendingTextures.length,cameraRelevantPendingTextures:cameraPendingTextures.length,offCameraPendingTextures:offCameraPendingTextures.length,cameraVisibleMaterials:visibleMaterials.size},pendingTextures,cameraPendingTextures,offCameraPendingTextures},visibleMaterials,meshForMaterial};
+   const textures=new Set((scene.textures||[]).filter(t=>t&&!t.isDisposed?.())),usage=new Map(),visibleMaterials=new Set(),meshForMaterial=new Map(),scanState={errors:[],materialsScanned:new Set(),meshesScanned:0,referenceRootsScanned:0};
+   const textureLike=v=>!!v&&typeof v.isReady==='function'&&typeof v.getSize==='function'&&(typeof v.getClassName==='function'||'url'in v||'_texture'in v);
+   const add=(t,o,p)=>{if(!textureLike(t))return;textures.add(t);if(!usage.has(t))usage.set(t,[]);const a=usage.get(t);if(!a.some(r=>r.kind===o.kind&&r.name===o.name&&r.path===p))a.push({...o,path:p});};
+   const walk=(v,o,p,seen=new Set(),d=0)=>{if(v==null||d>5)return;if(textureLike(v)){add(v,o,p);return;}if(typeof v!=='object'||seen.has(v))return;seen.add(v);if(Array.isArray(v)){v.forEach((x,i)=>walk(x,o,p+'['+i+']',seen,d+1));return;}for(const k of Object.keys(v).slice(0,500)){try{walk(v[k],o,p+'.'+k,seen,d+1);}catch(e){scanState.errors.push({owner:o.name,path:p+'.'+k,error:String(e?.message||e)});}}};
+   const meshes=(scene.meshes||[]).filter(m=>m&&!m.isDisposed?.()),materials=new Set((scene.materials||[]).filter(Boolean)),materialTextures=new Map(),materialOwners=new Map();
+   for(const mesh of meshes){if(mesh.material)materials.add(mesh.material);for(const sub of mesh.subMeshes||[]){try{const m=sub.getMaterial?.();if(m)materials.add(m);}catch(e){scanState.errors.push({mesh:mesh.name,source:'subMesh.getMaterial',error:String(e?.message||e)});}}}
+   const scanMaterial=(m,seen=new Set())=>{if(!m||seen.has(m))return;seen.add(m);scanState.materialsScanned.add(m);const o={kind:'material',name:m.name||m.getClassName?.()||'material-unknown',materialType:m.getClassName?.()||m.constructor?.name||'unknown'};materialOwners.set(m,o);const before=new Set(textures);for(const k of new Set([...captureTexturePropertyNames,...Object.keys(m),'_textures','uniforms','_uniforms','textures','subMaterials'])){try{walk(m[k],o,k);}catch(e){scanState.errors.push({material:o.name,source:k,error:String(e?.message||e)});}}try{for(const t of m.getActiveTextures?.()||[])add(t,o,'getActiveTextures()');}catch(e){scanState.errors.push({material:o.name,source:'getActiveTextures',error:String(e?.message||e)});}if(Array.isArray(m.subMaterials))m.subMaterials.forEach(x=>scanMaterial(x,seen));materialTextures.set(m,new Set(Array.from(textures).filter(t=>!before.has(t)||usage.get(t)?.some(r=>r.kind==='material'&&r.name===o.name))));};
+   for(const m of materials)scanMaterial(m);
+   for(const mesh of meshes){scanState.meshesScanned++;let enabled=true;try{enabled=mesh.isEnabled?.()??true;}catch(_){enabled=false;}let visible=mesh.isVisible!==false&&Number(mesh.visibility)>0,ancestor=mesh.parent,depth=0;while(ancestor&&depth++<32){if(ancestor.isVisible===false||Number(ancestor.visibility)<=0)visible=false;try{if(ancestor.isEnabled&&!ancestor.isEnabled())enabled=false;}catch(_){enabled=false;}ancestor=ancestor.parent;}const layerVisible=!activeCamera.layerMask||!mesh.layerMask||(mesh.layerMask&activeCamera.layerMask)!==0;let inFrustum=null;try{mesh.computeWorldMatrix?.(true);if(frustumPlanes&&mesh.isInFrustum)inFrustum=!!mesh.isInFrustum(frustumPlanes);}catch(_){}const active=activeSet?.has(mesh)??null,cameraVisible=enabled&&visible&&layerVisible&&(inFrustum===null?active===true:inFrustum),thin=Number(mesh.thinInstanceCount)||0,mi={name:mesh.name||mesh.id||'mesh-unknown',enabled,visible,active,inFrustum,layerVisible,cameraVisible,thinInstanceCount:thin,hasThinInstances:thin>0,material:mesh.material?.name||null};const used=new Set();if(mesh.material)used.add(mesh.material);for(const sub of mesh.subMeshes||[]){try{const m=sub.getMaterial?.();if(m)used.add(m);}catch(_){}}for(const m of used){if(cameraVisible){if(!meshForMaterial.has(m))meshForMaterial.set(m,[]);meshForMaterial.get(m).push(mesh);visibleMaterials.add(m);}const mo=materialOwners.get(m);for(const t of materialTextures.get(m)||[]){const a=usage.get(t)||[];if(!a.some(r=>r.kind===(thin?'thin-instance-mesh':'mesh')&&r.name===mi.name&&r.material===mo?.name))a.push({kind:thin?'thin-instance-mesh':'mesh',name:mi.name,thinInstanceCount:thin,material:mo?.name,cameraRelevant:cameraVisible,path:'mesh.material'});usage.set(t,a);}}}
+   const roots=[...(scene.lights||[]).map((v,i)=>({v,o:{kind:'light',name:v.name||'light-'+i}})),...(scene.customRenderTargets||[]).map((v,i)=>({v,o:{kind:'render-target',name:v.name||'custom-render-target-'+i}})),...(scene._renderTargets||[]).map((v,i)=>({v,o:{kind:'render-target',name:v.name||'render-target-'+i}})),...(scene.postProcesses||[]).map((v,i)=>({v,o:{kind:'effect',name:v.name||'post-process-'+i}})),...(scene.reflectionProbes||[]).map((v,i)=>({v,o:{kind:'reflection-probe',name:v.name||'reflection-probe-'+i}})),...(scene.proceduralTextures||[]).map((v,i)=>({v,o:{kind:'procedural-effect',name:v.name||'procedural-texture-'+i}}))];for(const r of roots){scanState.referenceRootsScanned++;walk(r.v,r.o,'');}if(scene.environmentTexture)add(scene.environmentTexture,{kind:'scene-environment',name:'scene.environmentTexture'},'environmentTexture');
+   const inventory=Array.from(textures).map(t=>{let internal=null;try{internal=t.getInternalTexture?.()||t._texture||null;}catch(_){internal=t._texture||null;}const dynamic=!!((B.DynamicTexture&&t instanceof B.DynamicTexture)||t.getClassName?.()==='DynamicTexture'),url=t.url||t._url||internal?.url||null;let isReady=null,readinessError=null;try{isReady=typeof t.isReady==='function'?!!t.isReady():(typeof internal?.isReady==='boolean'?internal.isReady:null);}catch(e){readinessError=String(e?.message||e);}const refs=usage.get(t)||[],stats=dynamic?captureDynamicTextureUpdates.get(t)||{calls:0,firstUpdateAtMs:null,lastUpdateAtMs:null,lastError:null,updateArguments:[]}:null,origin=dynamic?captureDynamicTextureOrigins.get(t)||null:null,loadError=t._loadingError||internal?._loadingError||internal?.error||null;let loadState='ready';if(isReady!==true){if(readinessError)loadState='isready-threw';else if(dynamic){if(!stats.calls)loadState='dynamic-no-update-observed';else if(stats.lastError)loadState='dynamic-update-failed';else if(!internal)loadState='dynamic-no-internal-texture';else if(internal.isLoading)loadState='dynamic-uploading';else if(!internal.isReady)loadState='dynamic-internal-not-ready';else loadState='dynamic-wrapper-not-ready';}else if(loadError)loadState='url-load-failed';else if(internal?.isLoading)loadState='url-loading';else if(!internal)loadState='url-no-internal-texture';else if(internal.isReady===false)loadState='url-internal-not-ready';else loadState='url-state-unknown';}let size=null;try{size=t.getSize?.()||null;}catch(_){}return {name:t.name||url||'texture-unknown',type:t.getClassName?.()||(dynamic?'DynamicTexture':'Texture'),url,isReady,readinessError,internalTexture:{exists:!!internal,isReady:typeof internal?.isReady==='boolean'?internal.isReady:null,isLoading:typeof internal?.isLoading==='boolean'?internal.isLoading:null,state:internal?._state??null,loadingError:loadError?String(loadError.message||loadError):null,hasImage:!!(internal?._image||t._image),imageComplete:(internal?._image||t._image)?.complete??null},loadState,orphan:refs.length===0,referenceStatus:refs.length?'referenced':'sin referencias',references:refs,blockingForCamera:refs.some(r=>r.cameraRelevant===true),creator:origin?{createdAtMs:origin.createdAtMs,creatorFunction:origin.creatorFunction,creationSource:origin.creationSource,observedAtStack:origin.observedAtStack}:null,dynamicUpdate:stats?{...stats}:null,size:size?{width:size.width??null,height:size.height??null}:null};});
+   const pending=inventory.filter(t=>t.isReady!==true),orphans=pending.filter(t=>t.orphan),cameraPending=pending.filter(t=>t.blockingForCamera),unattributed=pending.filter(t=>!t.orphan&&!t.references.length),target=(()=>{try{const p=activeCamera.getTarget?.();return p?{x:+p.x.toFixed(3),y:+p.y.toFixed(3),z:+p.z.toFixed(3)}:null;}catch(_){return null;}})(),coverage={complete:scanState.errors.length===0,materialsScanned:scanState.materialsScanned.size,sceneMaterials:scene.materials?.length||0,meshesScanned:scanState.meshesScanned,texturesScanned:inventory.length,referenceRootsScanned:scanState.referenceRootsScanned,referencedTextures:inventory.filter(t=>!t.orphan).length,orphanTextures:inventory.filter(t=>t.orphan).length,materialScanErrors:scanState.errors};
+   return {report:{camera:{name:activeCamera.name||'active-camera',position:{x:+activeCamera.position.x.toFixed(3),y:+activeCamera.position.y.toFixed(3),z:+activeCamera.position.z.toFixed(3)},target,frustumCheckAvailable,frustumMethod:frustumCheckAvailable?'Babylon Frustum + mesh.isInFrustum':'active mesh fallback'},counts:{sceneMeshes:meshes.length,sceneMaterials:scene.materials?.length||0,materialsScanned:scanState.materialsScanned.size,sceneTextures:inventory.length,pendingSceneTextures:pending.length,cameraRelevantPendingTextures:cameraPending.length,unattributedPendingTextures:unattributed.length,orphanPendingTextures:orphans.length,cameraVisibleMaterials:visibleMaterials.size},usageCoverage:coverage,pendingTextures:pending,cameraPendingTextures:cameraPending,unattributedPendingTextures:unattributed,orphanPendingTextures:orphans,rafMonitor:window.__ELSN_CAPTURE_RAF_MONITOR__||null,dynamicTextureUpdateInstrumentation:{...dynamicTextureUpdateInstrumentation}},visibleMaterials,meshForMaterial};
   }
-  async function prepareCaptureFrameForCamera({timeoutMs=15000}={}){
-   const started=performance.now(),budget=Math.max(500,Math.min(120000,Number(timeoutMs)||15000)),deadline=started+budget;let renderedFrames=0,stableReadyFrames=0;
-   scene.render();let snapshot=captureTextureReadinessSnapshot();
-   while(performance.now()<deadline){
-    snapshot=captureTextureReadinessSnapshot();
-    if(snapshot.report.cameraRelevantPendingTextures===0){}
-    if(snapshot.report.cameraPendingTextures.length===0){stableReadyFrames++;if(stableReadyFrames>=2)break;}else stableReadyFrames=0;
-    await new Promise(resolve=>requestAnimationFrame(resolve));
-    if(!Array.isArray(engine._activeRenderLoops)||engine._activeRenderLoops.length===0)scene.render();
-    renderedFrames++;
-   }
-   if(!Array.isArray(engine._activeRenderLoops)||engine._activeRenderLoops.length===0)scene.render();
-   snapshot=captureTextureReadinessSnapshot();
-   const visibleMaterials=Array.from(snapshot.visibleMaterials),compileStart=performance.now();let compilationTimedOut=false,compilation=[];
-   if(snapshot.report.cameraPendingTextures.length===0){
-    const task=Promise.all(visibleMaterials.map(async material=>{const mesh=(snapshot.meshForMaterial.get(material)||[])[0];if(!mesh||typeof material.forceCompilationAsync!=='function')return {material:material.name||'material-unknown',skipped:true};try{await material.forceCompilationAsync(mesh);return {material:material.name||'material-unknown',compiled:true};}catch(error){return {material:material.name||'material-unknown',compiled:false,error:String(error?.message||error)};}}));
-    const result=await Promise.race([task.then(value=>({value})),new Promise(resolve=>setTimeout(()=>resolve({timeout:true}),Math.min(5000,Math.max(500,budget*.25))))]);
-    if(result.timeout)compilationTimedOut=true;else compilation=result.value;
-   }
-   scene.render();snapshot=captureTextureReadinessSnapshot();
-   const textureReady=snapshot.report.cameraPendingTextures.length===0,shaderFailures=compilation.filter(item=>item.compiled===false);
-   const ready=textureReady&&!compilationTimedOut&&!shaderFailures.length;
-   return {ready,verdict:ready?'ready':(textureReady?'shader-compilation-pending':'texture-pending'),texturePending:!textureReady,timeoutMs:budget,elapsedMs:Number((performance.now()-started).toFixed(1)),frameBarrier:{renderedFrames,stableReadyFrames,renderLoopCount:Array.isArray(engine._activeRenderLoops)?engine._activeRenderLoops.length:null,renderLoopKeptRunning:true},shaderCompilation:{attempted:visibleMaterials.length,elapsedMs:Number((performance.now()-compileStart).toFixed(1)),timedOut:compilationTimedOut,failures:shaderFailures},textureDiagnostics:snapshot.report};
+  async function prepareCaptureFrameForCamera({timeoutMs=20000,maxFrames=120}={}){
+   const started=performance.now(),budget=Math.max(1000,Math.min(120000,Number(timeoutMs)||20000)),frameLimit=Math.max(2,Math.min(600,Number(maxFrames)||120)),deadline=started+budget;let renderedFrames=0,previousHash=null,matchingPairs=0,converged=false,sceneReady=false;
+   const hashCanvas=()=>{const canvas=engine.getRenderingCanvas();if(!canvas)return null;const data=canvas.toDataURL('image/png');let hash=2166136261;for(let i=0;i<data.length;i++){hash^=data.charCodeAt(i);hash=Math.imul(hash,16777619);}return (hash>>>0).toString(16).padStart(8,'0');};
+   scene.activeCamera=camera;
+   while(renderedFrames<frameLimit&&performance.now()<deadline){await new Promise(resolve=>requestAnimationFrame(resolve));scene.render();renderedFrames++;const hash=hashCanvas();sceneReady=typeof scene.isReady==='function'&&scene.isReady()===true;if(hash&&hash===previousHash)matchingPairs++;else matchingPairs=0;previousHash=hash;if(matchingPairs>=1&&sceneReady){converged=true;break;}}
+   const snapshot=captureTextureReadinessSnapshot(),diag=snapshot.report,pending=diag.pendingTextures||[],unattributed=pending.filter(t=>!t.orphan&&!t.references.length),cameraPending=diag.cameraPendingTextures||[],complete=diag.usageCoverage.complete&&unattributed.length===0,ready=converged&&sceneReady&&cameraPending.length===0&&complete,renderLoopCount=Array.isArray(engine._activeRenderLoops)?engine._activeRenderLoops.length:0,verdict=ready?'pass':(!complete?'inconclusive':(cameraPending.length||!converged||!sceneReady?'fail':'inconclusive'));
+   return {ready,verdict,converged,sceneReady,timeoutMs:budget,maxFrames:frameLimit,elapsedMs:Number((performance.now()-started).toFixed(1)),convergence:{renderedFrames,hashMethod:'canvas-dataurl-fnv1a',lastFrameHash:previousHash,matchingConsecutiveRenderPairs:matchingPairs,requiredConsecutiveMatchingRenders:2,maxFrames:frameLimit,deadlineMs:budget,converged},frameBarrier:{renderedFrames,renderLoopCount,renderLoopKeptRunning:renderLoopCount>0,rafMonitor:window.__ELSN_CAPTURE_RAF_MONITOR__?{...window.__ELSN_CAPTURE_RAF_MONITOR__}:null},textureDiagnostics:diag};
   }
   window.__ELSN_TEST__={
    build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',
    islands:land.map(({x,z,r,name})=>({x,z,r,name})),
    stop:()=>engine.stopRenderLoop(),
-   prepareCaptureFrame:async({timeoutMs=15000}={})=>prepareCaptureFrameForCamera({timeoutMs}),
+   prepareCaptureFrame:async({timeoutMs=20000,maxFrames=120}={})=>prepareCaptureFrameForCamera({timeoutMs,maxFrames}),
    getTextureReadinessForCamera:()=>captureTextureReadinessSnapshot().report,
-   setCamera:({x,y,z,targetX,targetY,targetZ})=>{camera.position.set(x,y,z);camera.setTarget(new B.Vector3(targetX,targetY,targetZ));},
+   setCamera:({x,y,z,targetX,targetY,targetZ})=>{if(!testModeEnabled)throw new Error('Camera override is available only in test mode.');captureCameraOverride={position:new B.Vector3(x,y,z),target:new B.Vector3(targetX,targetY,targetZ),setAtMs:Number(performance.now().toFixed(2))};scene.activeCamera=camera;camera.position.copyFrom(captureCameraOverride.position);camera.setTarget(captureCameraOverride.target);if(skyDome)skyDome.position.copyFrom(camera.position);return {position:{x,y,z},target:{x:targetX,y:targetY,z:targetZ},locked:true};},
    setIslandShadowReceiving:(enabled)=>{const terrain=islandTerrainMeshes[0];if(!terrain)return false;terrain.receiveShadows=!!enabled;return terrain.receiveShadows===!!enabled;},
    setPackedTrailVisible:(enabled)=>{const trails=packedTrailMeshes;trails.forEach(mesh=>{mesh.isVisible=!!enabled;if(typeof mesh.setEnabled==='function')mesh.setEnabled(!!enabled);});return {count:trails.length,visible:trails.length>0&&trails.every(mesh=>mesh.isVisible===!!enabled),states:trails.map(mesh=>({name:mesh.name,isVisible:mesh.isVisible,isEnabled:typeof mesh.isEnabled==='function'?mesh.isEnabled():null,disposed:!!mesh.isDisposed?.()}))};},
    setDiagnosticVariant:(kind,enabled)=>{
