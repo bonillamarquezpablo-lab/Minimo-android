@@ -53,8 +53,10 @@ async function main(){
   await phase('allow repaired transforms and colliders to settle',()=>page.waitForTimeout(800));
   const settled=await phase('remeasure structures after the repair pass',()=>page.evaluate(collectStructureSnapshot));
   report.baseline=baseline;report.repairPass=repairPass;report.postAutomaticAudit=settled;
-  report.runtimeRepairSimulation={testMode:true,waitMs:800,usesNormalGameAuditLoop:true,explicitRepairApiCalled:true,productionDataModified:false,repairSummary:repairPass?{total:repairPass.total,groundedCount:repairPass.groundedCount,unsafeCount:repairPass.unsafeCount,repaired:repairPass.repaired,hiddenUnsafe:repairPass.hiddenUnsafe,visibleInvalidAfterRepair:repairPass.visibleInvalidAfterRepair}:null};
+  report.runtimeRepairSimulation={testMode:true,waitMs:800,usesGameRepairSystem:true,explicitRepairApiCalled:true,productionDataModified:false,repairSummary:repairPass?{total:repairPass.total,groundedCount:repairPass.groundedCount,unsafeCount:repairPass.unsafeCount,repaired:repairPass.repaired,hiddenUnsafe:repairPass.hiddenUnsafe,visibleInvalidAfterRepair:repairPass.visibleInvalidAfterRepair}:null};
   report.habitableStructures=settled.structures;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.summary=settled.summary;
+  report.inspectionCamera=await phase('aim inspection camera at Cuervo settlement',()=>page.evaluate(()=>window.__ELSN_TEST__.setCamera({x:31,y:12,z:17,targetX:31,targetY:3,targetZ:-17})));
+  await phase('settle Cuervo inspection view',()=>page.waitForTimeout(500));
   const screenshot=await phase('capture the resulting test scene',()=>page.screenshot({type:'png',fullPage:false}));
   const screenshotFile=path.join(OUT,'structure-grounding-scene.png');fs.writeFileSync(screenshotFile,screenshot);
   report.screenshot={file:path.basename(screenshotFile),bytes:screenshot.length};
