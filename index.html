@@ -8386,12 +8386,13 @@ function createRealWeapon(type='axe'){
  }
   function updateCamera(dt){
   if(testModeEnabled&&captureCameraOverride){camera.position.copyFrom(captureCameraOverride.position);camera.setTarget(captureCameraOverride.target);camera.fov=innerHeight>innerWidth?.84:.78;if(skyDome)skyDome.position.copyFrom(camera.position);return;}
-  // La raíz solo se parenta al drakkar al embarcar; en ese caso se conserva la posición absoluta.
-  const focus=onShip?ship.position:player.root.position;
+  // Mantener el foco absoluto del personaje al navegar; la cámara del barco apunta al centro del casco.
+  const focus=onShip?player.root.getAbsolutePosition():player.root.position;
+  const cameraFocus=onShip?ship.position:focus;
   const portrait=innerHeight>innerWidth,safeDt=Math.max(0,Math.min(.10,dt||0));
-  const targetX=focus.x+(onShip?0:playerVelocity.x*.045);
-  const targetY=focus.y+(onShip?1.78:1.56);
-  const targetZ=focus.z+(onShip?0:playerVelocity.z*.045);
+  const targetX=cameraFocus.x+(onShip?0:playerVelocity.x*.045);
+  const targetY=cameraFocus.y+(onShip?1.78:1.56);
+  const targetZ=cameraFocus.z+(onShip?0:playerVelocity.z*.045);
   if(!cameraTargetSmoothed)cameraTargetSmoothed=new B.Vector3(targetX,targetY,targetZ);
   const targetAlpha=Math.min(1,1-Math.exp(-safeDt*(onShip?7.5:18.0)));
   cameraTargetSmoothed.x+=(targetX-cameraTargetSmoothed.x)*targetAlpha;
