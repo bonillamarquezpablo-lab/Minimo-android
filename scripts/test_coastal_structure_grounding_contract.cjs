@@ -83,3 +83,7 @@ assert.match(source,/Map tap projection mismatch/);
 assert.match(source,/expected=\{x:400,z:250\}/);
 assert.match(source,/const objectScale=Math\.min\(contentWidth\/map\.width,contentHeight\/map\.height\)/);
 assert.match(source,/clientX=rect\.left\+offsetX\+logicalX\/480\*drawnWidth/);
+
+// En móviles capaces, embarcar no debe reducir el radio de visibilidad de los asentamientos.
+assert.match(html,/limit=onShip&&ultraLowEndIslandStreaming\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/);
+assert.match(html,/visibilityLimitMeters=onShip&&ultraLowEndIslandStreaming\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/);
