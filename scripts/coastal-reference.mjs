@@ -679,7 +679,7 @@ async function main() {
     manifest.boatHabitableStructureAudit = boatHabitableAudit;
     assert.equal(boatHabitableAudit.total,39,'El control de barco debe auditar el mismo inventario completo de 39 estructuras.');
     assert.equal(boatHabitableAudit.untrackedRootCount,0,'No debe quedar ninguna estructura con tejado fuera del inventario durante la navegación.');
-    assert.equal(boatHabitableAudit.visibleInvalidCount,0,'No puede permanecer visible ninguna estructura sin terreno seguro en modo barco.');
+    assert.ok(boatHabitableAudit.hiddenByDistance>0,'La simulación de navegación debe ocultar estructuras fuera del radio de 55m.');
     for (const structure of boatHabitableAudit.structures) {
       assert.ok(!structure.enabled || (structure.safe && structure.distanceToCameraMeters <= structure.visibilityLimitMeters),
         'Una construcción aparece en el mar sin estar dentro del radio visual permitido: ' + JSON.stringify(structure));
