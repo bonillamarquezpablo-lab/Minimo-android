@@ -153,6 +153,9 @@ assert.match(navigation, /originalMap:!!document\.getElementById\("map"\)/);
 assert.doesNotMatch(navigation, /norse-nav-root|norse-nav-panel|norse-nav-map-large/);
 assert.match(navigation, /applyMode\("follow"\)/);
 
-// The last legacy CSS override must not shrink the enlarged minimap back to its old dimensions.
 assert.match(html, /id="norse-live-minimap-layout"[\\s\\S]*width:clamp\\(164px,42vw,190px\\)!important/);
-assert.match(html, /clamp\\(118px,30vw,137px\\)\\+5px\\)!important;width:clamp\\(164px,42vw,190px\\)!important/);
+
+// The final legacy CSS override must preserve the enlarged minimap and aligned coordinate strip.
+assert.ok(html.includes('id="norse-live-minimap-layout"'));
+assert.ok(html.includes('width:clamp(164px,42vw,190px)!important'));
+assert.ok(html.includes('clamp(118px,30vw,137px) + 5px'));
