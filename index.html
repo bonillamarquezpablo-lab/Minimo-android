@@ -8552,7 +8552,7 @@ function createRealWeapon(type='axe'){
   // Cabaña nórdica humilde: huella menor, troncos desiguales, tejado vencido y reparaciones visibles.
   const footing=findLevelHutFooting(cx,cz,scale),houseX=footing.x,houseZ=footing.z;
   const g=newGroup('WeatheredNorseHut',null);g.scaling=v(scale,scale,scale);g.position=v(houseX,footing.centerY-.02*scale,houseZ);
-  g.__footingPlacement={requested:{x:cx,z:cz},actual:{x:houseX,z:houseZ},cornerRangeMeters:footing.range};
+  g.__footingPlacement={requested:{x:cx,z:cz},actual:{x:houseX,z:houseZ},cornerRangeMeters:footing.range,valid:!!footing.valid,islandIndex:footing.islandIndex};
   // Paredes de tablones separados: no usar una caja maciza que atraviese puerta y ventanas.
   for(const end of [-1,1]){
    for(let plank=-3;plank<=3;plank++){
@@ -8641,7 +8641,7 @@ function createRealWeapon(type='axe'){
    sphere('HutChimneyStone_'+i,g,[-1.24+Math.cos(a)*.19,2.68+Math.sin(a)*.08,-1.98],[.24,.20,.23],M.stone,8);
   }
   box('HutChimneyMouth',g,[-1.24,2.83,-1.98],[.29,.09,.29],M.woodDark);
-  if(scale>.78){g.__norseSmokeEmitter={x:cx-1.24*scale,y:g.position.y+2.92*scale,z:cz-1.98*scale,phase:rand(0,8)};smokeEmitters.push(g.__norseSmokeEmitter);}
+  if(scale>.78&&footing.valid){g.__norseSmokeEmitter={x:houseX-1.24*scale,y:g.position.y+2.92*scale,z:houseZ-1.98*scale,phase:rand(0,8)};smokeEmitters.push(g.__norseSmokeEmitter);}
   // Dos tablones de reparación, un travesaño vencido y restos: detalle medido para no sumar cientos de draw calls.
   for(let i=0;i<2;i++){
    const side=i===0?-1:1,zp=rand(-2.05,2.05),yp=rand(.50,1.45);
@@ -8658,7 +8658,9 @@ function createRealWeapon(type='axe'){
   }
   // Huella sólida de la cabaña: el antiguo sistema solo bloqueaba cuatro paredes parciales
   // y dejaba un hueco de puerta por el que los NPC podían atravesar toda la estructura.
-  g.__norseWorldCollider=registerWorldCollider({type:'rect',x:houseX,z:houseZ,hx:2.16*scale,hz:2.78*scale,cameraBlocker:true});
+  g.__norseWorldCollider=footing.valid?registerWorldCollider({type:'rect',x:houseX,z:houseZ,hx:2.16*scale,hz:2.78*scale,cameraBlocker:true}):null;
+  if(!footing.valid)g.setEnabled(false);
+  registerHabitableStructure(g,'NorseHut',{islandIndex:footing.islandIndex,footprintRadius:Math.hypot(2.01*scale,2.64*scale),baseOffset:.02*scale,edgeBuffer:1.25,maxRelief:.025,anchorTolerance:.02,maxVisibleDistance:205,collider:g.__norseWorldCollider,relocatable:false});
   mergeStaticDecorByMaterial(g,'NorseHutStatic');
   addModelShadow(g);
   try{g.freezeWorldMatrix();g.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){ }
@@ -8700,6 +8702,7 @@ function createRealWeapon(type='axe'){
   const outpostGroundY=renderedTerrainSurfaceAt(island.x,island.z);
   const gy=renderedTerrainSurfaceAt(gx,gz),flagX=island.x-Math.cos(guardAngle)*2.8,flagZ=island.z-Math.sin(guardAngle)*2.8,flagY=renderedTerrainSurfaceAt(flagX,flagZ);
   const outpostRoot=newGroup('IslandGarrisonOutpost_'+islandIndex,null);outpostRoot.position=v(island.x,outpostGroundY,island.z);
+  registerHabitableStructure(outpostRoot,'IslandGarrisonOutpost',{islandIndex,footprintRadius:1.4,baseOffset:0,edgeBuffer:1.25,maxRelief:.20,anchorTolerance:.02,maxVisibleDistance:205,relocatable:false});
   const stoneFoot=box('IslandGarrisonStoneFoot_'+islandIndex,outpostRoot,[0,.10,0],[1.9,.20,1.35],M.stoneDark);
   const supplyCrate=box('IslandGarrisonSupplyCrate_'+islandIndex,outpostRoot,[-.92,.48,.18],[.62,.64,.58],M.woodDark);
   const supplyLid=box('IslandGarrisonSupplyLid_'+islandIndex,outpostRoot,[-.92,.82,.18],[.68,.08,.62],M.woodLight);
@@ -8734,7 +8737,7 @@ function createRealWeapon(type='axe'){
  for(let row=0;row<5;row++){const y=62+row*88,x=128+(row%2?10:-10);runeFaceCtx.beginPath();runeFaceCtx.moveTo(x,y+26);runeFaceCtx.lineTo(x,y-24);runeFaceCtx.lineTo(x-24,y-4);runeFaceCtx.moveTo(x,y-3);runeFaceCtx.lineTo(x+28,y-26);runeFaceCtx.moveTo(x,y+8);runeFaceCtx.lineTo(x+24,y+28);runeFaceCtx.stroke();}
  runeFaceTexture.update(false);const runeFaceMat=new B.StandardMaterial('CarvedRunestoneFace',scene);runeFaceMat.diffuseTexture=runeFaceTexture;runeFaceMat.specularColor=new B.Color3(.05,.05,.04);
  function addNorseVillageProps(vl,idx){
-  const y=terrainSurfaceAt(vl.x,vl.z),rack=newGroup('ShieldRack_'+idx,null);rack.position=v(vl.x+5.7,y,vl.z+3.3);worldColliders.push({type:'rect',x:vl.x+5.7,z:vl.z+3.3,hx:1.32,hz:.26});
+  const y=renderedTerrainSurfaceAt(vl.x,vl.z),rack=newGroup('ShieldRack_'+idx,null);rack.position=v(vl.x+5.7,y,vl.z+3.3);worldColliders.push({type:'rect',x:vl.x+5.7,z:vl.z+3.3,hx:1.32,hz:.26});
   box('ShieldRackLeft_'+idx,rack,[-1.15,.95,0],[.14,1.95,.16],M.woodDark);box('ShieldRackRight_'+idx,rack,[1.15,.95,0],[.14,1.95,.16],M.woodDark);box('ShieldRackBeam_'+idx,rack,[0,1.78,0],[2.45,.16,.18],M.woodLight);
   for(let k=0;k<3;k++){const sx=(k-1)*.72,sh=cyl('ClanWallShield_'+idx+'_'+k,rack,[sx,1.08,.12],.13,.58,.58,[M.red,M.blueCloth,M.ochreCloth][(k+idx)%3],[Math.PI/2,0,0]);sphere('ShieldBoss_'+idx+'_'+k,rack,[sx,1.08,.205],[.12,.12,.06],M.brass,10);}
   const stoneRoot=newGroup('Runestone_'+idx,null);stoneRoot.position=v(vl.x-7.1,y,vl.z-4.7);worldColliders.push({type:'circle',x:vl.x-7.1,z:vl.z-4.7,r:.45});const stone=sphere('UprightRunestone_'+idx,stoneRoot,[0,.92,0],[.48,1.12,.30],M.stoneLight,10);stone.rotation.z=.035;
@@ -8744,8 +8747,9 @@ function createRealWeapon(type='axe'){
   const fishFrame=newGroup('FishDryingRack_'+idx,null);fishFrame.position=v(vl.x+7.7,y,vl.z+7.1);worldColliders.push({type:'rect',x:vl.x+7.7,z:vl.z+7.1,hx:.83,hz:.22});for(let side of [-1,1])cyl('FishRackPost_'+idx+'_'+side,fishFrame,[side*.72,1.05,0],2.1,.10,.12,M.woodDark);cyl('FishRackCross_'+idx,fishFrame,[0,2.0,0],1.65,.07,.07,M.woodLight,[0,0,Math.PI/2]);
   for(let f=0;f<3;f++){const fish=capsule('DryingCod_'+idx+'_'+f,fishFrame,[(f-1)*.43,1.43,.035],.56,.095,M.ochreCloth,[0,0,Math.PI/2]);fish.rotation.z=Math.PI/2;}
   // Blacksmith's forge, stone hearth, anvil and hammer rack: unmistakable Norse settlement landmark.
-  const forgeX=vl.x-6.8,forgeZ=vl.z-1.9,forgeY=terrainSurfaceAt(forgeX,forgeZ),forge=newGroup('NorseBlacksmithForge_'+idx,null);forge.position=v(forgeX,forgeY,forgeZ);
-  worldColliders.push({type:'circle',x:forgeX,z:forgeZ,r:1.15});
+  const forgeX=vl.x-6.8,forgeZ=vl.z-1.9,forgeY=renderedTerrainSurfaceAt(forgeX,forgeZ),forge=newGroup('NorseBlacksmithForge_'+idx,null);forge.position=v(forgeX,forgeY,forgeZ);
+  forge.__norseWorldCollider=registerWorldCollider({type:'circle',x:forgeX,z:forgeZ,r:1.15});
+  registerHabitableStructure(forge,'NorseBlacksmithForge',{islandIndex:idx,footprintRadius:1.25,baseOffset:0,edgeBuffer:1.25,maxRelief:.24,anchorTolerance:.02,maxVisibleDistance:205,collider:forge.__norseWorldCollider,relocatable:true});
   box('ForgeStoneBase_'+idx,forge,[0,.28,0],[1.65,.56,1.35],M.stoneDark);
   box('ForgeIronHearth_'+idx,forge,[0,.75,.12],[1.08,.36,.86],M.darkMetal);
   const forgeCoal=sphere('ForgeGlowingCoals_'+idx,forge,[0,.98,.12],[.42,.13,.34],M.ember,12);forgeCoal.material=M.ember;
@@ -8849,6 +8853,7 @@ function createRealWeapon(type='axe'){
  function buildIslandOutpost(vl){
   const cx=vl.x,cz=vl.z+15,gy=renderedTerrainSurfaceAt(cx,cz),camp=newGroup('IslandOutpost_'+vl.index,null);
   camp.position=v(cx,gy,cz);vl.islandOutpostCamp=camp;
+  registerHabitableStructure(camp,'IslandOutpostCamp',{islandIndex:vl.index,footprintRadius:5.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,relocatable:true});
   for(let tent=0;tent<2;tent++){
    const ox=tent===0?-2.25:2.15,oz=tent===0?-.45:.65,rot=tent===0?-.12:.16;
    cyl('OutpostTentRidge_'+vl.index+'_'+tent,camp,[ox,1.38,oz],2.15,.045,.05,M.woodLight,[Math.PI/2,0,0]);
@@ -8858,20 +8863,21 @@ function createRealWeapon(type='axe'){
    box('OutpostBedroll_'+vl.index+'_'+tent,camp,[ox,.13,oz+.85],[.72,.16,.95],M.fur,[0,0,rot]);
   }
   box('OutpostSupplyCrate_'+vl.index,camp,[-4.1,.28,1.25],[.78,.56,.72],M.woodDark);
-  sphere('OutpostHearthGlow_'+vl.index,null,[cx+4.1,gy+.22,cz+2.0],[.24,.16,.24],M.ember,8);
+  sphere('OutpostHearthGlow_'+vl.index,camp,[4.1,.22,2.0],[.24,.16,.24],M.ember,8);
   // Segundo punto de acampada de la misma isla: pequeño vivac de exploradores.
   // Keep the scout supply point inside the island's dry-land footprint.
   // The former +19/-16 offset put the first island's camp at (50,-33), almost 60m
   // from the origin of a 60m island, where terrainSurfaceAt returns the wet shoreline/seabed.
   const scoutX=vl.x-8,scoutZ=vl.z+18,scoutY=renderedTerrainSurfaceAt(scoutX,scoutZ),scout=newGroup('IslandScoutCamp_'+vl.index,null);
   scout.position=v(scoutX,scoutY,scoutZ);vl.scoutCamp=scout;
+  registerHabitableStructure(scout,'IslandScoutCamp',{islandIndex:vl.index,footprintRadius:2.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,relocatable:true});
   box('ScoutCampSupplies_'+vl.index,scout,[0,.30,0],[.92,.60,.78],M.woodDark);
   sphere('ScoutCampEmbers_'+vl.index,scout,[1.15,.13,.15],[.36,.12,.30],M.ember,8);
  }
  villages.forEach(vl=>{if(!vl.islandGarrison)buildIslandOutpost(vl);});
  // Nuevos lugares de la expansión: salón comunal, embarcadero, círculo del thing y baliza costera.
  function buildNorseGreatHall(x,z,index){
-  const floorY=terrainSurfaceAt(x,z),hall=newGroup('NorseGreatMeadHall_'+index,null);
+  const floorY=renderedTerrainSurfaceAt(x,z),hall=newGroup('NorseGreatMeadHall_'+index,null);
   box('GreatHallStoneFooting_'+index,hall,[0,.16,0],[8.4,.32,14.2],M.stoneDark);
   box('GreatHallOakFloor_'+index,hall,[0,.38,0],[8.0,.18,13.7],M.woodDark);
   for(const side of [-1,1]){
@@ -8905,7 +8911,8 @@ function createRealWeapon(type='axe'){
   box('GreatHallRavenBeak_'+index,hall,[0,5.72,7.48],[.30,.12,.45],M.gold,[.08,0,0]);
   mergeStaticDecorByMaterial(hall,'NorseGreatHallStatic');
   hall.position=v(x,floorY,z);hall.rotation.y=index*.37;
-  registerWorldCollider({type:'rect',x,z,hx:4.35,hz:7.45,cameraBlocker:true});
+  hall.__norseWorldCollider=registerWorldCollider({type:'rect',x,z,hx:4.35,hz:7.45,cameraBlocker:true});
+  registerHabitableStructure(hall,'NorseGreatHall',{islandIndex:9,footprintRadius:Math.hypot(4.35,7.45),baseOffset:0,edgeBuffer:1.25,maxRelief:.30,anchorTolerance:.02,maxVisibleDistance:235,collider:hall.__norseWorldCollider,relocatable:false});
   addModelShadow(hall,5);
   try{hall.freezeWorldMatrix();hall.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){}
   return hall;
@@ -8997,8 +9004,9 @@ function createRealWeapon(type='axe'){
  buildOuterIslandLandmarks();
  // Primer refugio del protagonista: lona remendada, dos postes, leña húmeda y un fuego pequeño.
  // No es una casa construida: es un campamento de náufrago junto al lugar donde despierta.
- const starterCampX=-40.0,starterCampZ=15.5,starterCampY=terrainSurfaceAt(starterCampX,starterCampZ);
+ const starterCampX=-35.0,starterCampZ=13.5,starterCampY=renderedTerrainSurfaceAt(starterCampX,starterCampZ);
  const starterCamp=newGroup('PoorNorseCastawayCamp',null);starterCamp.position=v(starterCampX,starterCampY,starterCampZ);
+ registerHabitableStructure(starterCamp,'StarterCastawayCamp',{islandIndex:0,footprintRadius:2.5,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,relocatable:true});
  for(const side of [-1,1]){
   cyl('CastawayLeanToPole_'+side,starterCamp,[side*.92,.88,-.32],1.78,.065,.07,M.woodDark,[0,0,side*.20]);
   cyl('CastawayTentStake_'+side,starterCamp,[side*1.02,.18,.48],.52,.045,.05,M.woodLight,[0,0,side*.16]);
@@ -9011,7 +9019,7 @@ function createRealWeapon(type='axe'){
  box('CastawayOldFishingNet',starterCamp,[1.38,.38,-.30],[.48,.045,.72],M.leather,[.25,0,-.18]);
  for(let i=0;i<4;i++)sphere('CastawayHearthStone_'+i,null,[starterCampX+1.40+Math.cos(i*Math.PI/2)*.42,starterCampY+.10,starterCampZ+.95+Math.sin(i*Math.PI/2)*.42],[.22,.13,.20],M.stone,8);
  campfire(starterCampX+1.40,starterCampZ+.95);
- registerWorldCollider({type:'rect',x:starterCampX,z:starterCampZ-.30,hx:1.34,hz:1.15,cameraBlocker:true});
+ starterCamp.__norseWorldCollider=registerWorldCollider({type:'rect',x:starterCampX,z:starterCampZ-.30,hx:1.34,hz:1.15,cameraBlocker:true});
  // Marker and lore are reused by the nautical map and the opening chapter.
  const STARTER_CAMP_POSITION={x:starterCampX,z:starterCampZ};
  function makePeasantFallback(name,index=0){
@@ -10897,7 +10905,9 @@ function updateHUD(){
   for(const [x,z] of candidates){if(Math.hypot(x,z)>55)continue;if(tryLandMove(x,z,.72)){plot={x,z};break;}}
   if(!plot){msg('No hay parcela libre junto al campamento para levantar el refugio.');return false;}
   playerShelterX=plot.x;playerShelterZ=plot.z;
-  playerShelterGroup=buildHouse(playerShelterX,playerShelterZ,.80);playerShelterGroup.name='PersistentPlayerNorseShelter';
+  playerShelterGroup=buildHouse(playerShelterX,playerShelterZ,.80);
+  if(!playerShelterGroup?.__footingPlacement?.valid){playerShelterGroup=null;msg('No se encontró una huella seca y nivelada para el refugio; no se han consumido materiales.');return false;}
+  playerShelterGroup.name='PersistentPlayerNorseShelter';
   playerShelterBuilt=true;
   if(!restoring){woodCount-=PLAYER_SHELTER_COST.wood;stoneCount-=PLAYER_SHELTER_COST.stone;recordSagaEvent('Levantaste un refugio de troncos junto al campamento. Coste: 6 madera y 1 piedra.');updateHUD();saveGame(true);msg('Refugio construido. Se conservará al guardar la partida.');}
   const button=document.getElementById('buildCabinBtn');if(button){button.textContent='🏚 REFUGIO ✓';button.disabled=true;button.setAttribute('aria-label','Refugio construido y guardado');}
@@ -11311,7 +11321,9 @@ function update(dt){
   updatePerformanceIslandStreaming(dt);
   updateActiveIslandGrass(dt);
   updateManagedWorldShadowCasters();
-  elapsed+=dt;const visualFocus=scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position:(onShip?ship.position:player.root.position);worldVisualFocusX=visualFocus.x;worldVisualFocusZ=visualFocus.z;const cloudWindRate=.00042+.00014*Math.sin(elapsed*.0031);skyTexture.uOffset=(elapsed*cloudWindRate)%1;
+  elapsed+=dt;const visualFocus=scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position:(onShip?ship.position:player.root.position);worldVisualFocusX=visualFocus.x;worldVisualFocusZ=visualFocus.z;
+  habitableAuditAccumulator+=dt;if(habitableAuditAccumulator>=2.0){habitableAuditAccumulator=0;auditHabitableStructures(true);}
+  const cloudWindRate=.00042+.00014*Math.sin(elapsed*.0031);skyTexture.uOffset=(elapsed*cloudWindRate)%1;
   // El cielo se desplaza con viento variable; la capa vertical acompaña el flujo atmosférico.
   skyTexture.vOffset=Math.sin(elapsed*.00009)*.012;
   const sunArc=elapsed*.00022;sunHalo.position.x=290+Math.sin(sunArc)*48;sunDisc.position.x=sunHalo.position.x;sunHalo.position.y=235+Math.sin(sunArc*.7)*22;sunDisc.position.y=sunHalo.position.y;
@@ -12533,6 +12545,7 @@ function update(dt){
     return {kind,disabled,islandHeightfieldVisible:islandTerrainMeshes[activeBeachIslandIndex]?.isVisible?1:0,shoreFoundationVisible:shoreFoundationMeshes.filter(mesh=>mesh&&mesh.isVisible).length,villageBuildingGroupsVisible:villages.flatMap(village=>village.houseGroups||[]).filter(group=>group.isVisible!==false&&(!(typeof group.isEnabled==='function')||group.isEnabled())).length,waterNormalMapEnabled:!!M.water.bumpTexture,oceanVertexAlphaEnabled:!!M.water.useVertexAlpha,groundVertexAlphaEnabled:!!ground.hasVertexAlpha,oceanDepthTintEnabled:kind==='ocean-depth-tint'?!disabled:true,nearWaterDetailEnabled:!coastalDiagnosticOverrides.disableNearWaterDetail,waterNormalLevel:M.water.bumpTexture?.level??null,waterNormalUScale:M.water.bumpTexture?.uScale??null,waterNormalVScale:M.water.bumpTexture?.vScale??null,waterSpecularColor:{r:M.water.specularColor.r,g:M.water.specularColor.g,b:M.water.specularColor.b},shortVertexWavesDisabled:coastalDiagnosticOverrides.disableShortVertexWaves,shoreBreakerWashVisible:tidalFoamMeshes.filter(foam=>foam.washMesh.isVisible).length,volumetricShoreBreakerVisible:tidalFoamMeshes.filter(foam=>foam.waveBodyMesh.isVisible).length,livingBeachLayerVisible:livingBeachLayers[activeBeachIslandIndex]?.mesh?.isVisible?1:0,submergedSandVisible:coastalSeabedMeshes[activeBeachIslandIndex]?.isVisible?1:0,continuousShoreFoamVisible:tidalFoamMeshes.filter(foam=>foam.mesh.isVisible).length};
    },
    auditIslandGeometry:()=>auditIslandGeometry(),
+   habitableStructureAudit:()=>auditHabitableStructures(false),
    settlementGrounding:()=>villages.flatMap(village=>(village.houseGroups||[]).map((group,buildingIndex)=>{
     const p=group.getAbsolutePosition?group.getAbsolutePosition():group.position;
     let nearestIsland=null,nearestDistance=Infinity,nearestIslandIndex=-1;
