@@ -13,7 +13,7 @@ assert.match(html,/coastalAuditProfile\(island,index,'NordicSubmergedSand'/);
 assert.match(html,/coastalAuditProfile\(island,index,'LivingCoastalSand'/);
 assert.match(html,/island-heightfield/);
 assert.match(html,/function findLevelHutFooting\(cx,cz,scale\)/);
-assert.match(html,/const maxCenterRadius=island\.r\*\.76-footprintRadius-1\.25/);
+assert.match(html,/maxCenterRadius=island\.r\*\.76-footprintRadius-1\.25/);
 assert.match(html,/g\.position=v\(houseX,footing\.centerY-\.02\*scale,houseZ\)/);
 assert.match(html,/type:'rect',x:houseX,z:houseZ/);
 assert.match(html,/const safeVillageRadius=island\.r\*\.76-settlementReach/);
