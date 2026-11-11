@@ -88,7 +88,7 @@ export function expandCapturePlan(input) {
       const angles = Array.isArray(zone.angles) && zone.angles.length
         ? zone.angles.map((value, angleIndex) => finite(value, id + ': angle ' + angleIndex))
         : DIRECTIONS_8;
-      if (angles.length > 16) throw new Error(id + ': máximo 16 ángulos por zona.');
+      if (angles.length > 8) throw new Error(id + ': máximo 8 ángulos por zona para respetar el presupuesto de capturas.');
       const times = Array.isArray(zone.times) && zone.times.length
         ? zone.times.map((value, timeIndex) => finite(value, id + ': time ' + timeIndex))
         : [Number(shot.time ?? 37)];
@@ -104,7 +104,7 @@ export function expandCapturePlan(input) {
       const observationHeightOffsets = Array.isArray(zone.observationHeightOffsets) && zone.observationHeightOffsets.length
         ? zone.observationHeightOffsets.map((value,offsetIndex)=>finite(value,id+': observationHeightOffsets['+offsetIndex+']'))
         : [0];
-      if (observationHeightOffsets.length > 4) throw new Error(id + ': máximo 4 alturas para la cámara de observación.');
+      if (observationHeightOffsets.length > 2) throw new Error(id + ': máximo 2 alturas para la cámara de observación.');
       zones.push({
         id,
         label: String(zone.label || shot.label || id),
