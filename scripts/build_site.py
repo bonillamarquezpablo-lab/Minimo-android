@@ -685,11 +685,16 @@ def main() -> None:
     html = html.replace("0.6.274", "0.6.275")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
-    diagnostic_build_marker = "reportVersion:'11',build:'0.6.274'"
+    # The source may already carry the new game version or a newer diagnostic
+    # report version. Normalize the unique build marker instead of assuming the
+    # inline diagnostics are still at reportVersion 11.
+    diagnostic_build_pattern = r"reportVersion:'\\d+',build:'0\\.6\\.275'"
     diagnostic_build_replacement = "reportVersion:'12',build:'0.6.275'"
-    if html.count(diagnostic_build_marker) != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación para actualizar a 0.6.275.")
-    html = html.replace(diagnostic_build_marker, diagnostic_build_replacement, 1)
+    html, diagnostic_build_count = re.subn(
+        diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
+    )
+    if diagnostic_build_count != 1:
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.275 para normalizar.")
     game_version = "0.6.275"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
