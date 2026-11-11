@@ -217,7 +217,8 @@ async function main() {
         assert.ok(!state.sunEnabled && state.moonEnabled, 'At midnight the sun must be off and moonlight must be active.');
       }
       await page.waitForTimeout(120);
-      const phaseFile = 'atmosphere-' + phase.id + '.png';
+      const phaseFile = 'atmosphere/atmosphere-' + phase.id + '.png';
+      fs.mkdirSync(path.join(OUT, 'atmosphere'), { recursive: true });
       const png = await page.locator('#renderCanvas').screenshot({ timeout: 30000 });
       assert.ok(png.length > 1000, 'Atmosphere capture is empty for ' + phase.id);
       assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'Atmosphere capture is not a valid PNG for ' + phase.id);
@@ -293,7 +294,7 @@ async function main() {
     manifest.backgroundModels = boot.backgroundModels;
     manifest.sceneWarmup = boot.sceneWarmup;
 
-    assert.equal(boot.build, '0.6.276', 'La referencia debe ser exactamente 0.6.275');
+    assert.equal(boot.build, '0.6.276', 'La referencia debe ser exactamente 0.6.276');
     assert.equal(boot.coastalRuntimeMode, 'module', 'El módulo costero externo debe cargarse desde dist; el respaldo inline no debe ocultar un error de empaquetado.');
     assert.equal(boot.coastalApiReady, true, 'Falta una o más funciones de la API costera al construir la escena.');
     assert.equal(boot.startup.worldReady, true, 'La escena costera no terminó de prepararse');
@@ -867,7 +868,7 @@ async function main() {
     fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     if (browser) await browser.close();
   }
-  console.log('COASTAL REFERENCE OK: one game load, 36 screenshots (27 coast + 9 ridge-occlusion) and JSON manifest.');
+  console.log('COASTAL REFERENCE OK: one game load, 36 coast/water screenshots, 4 atmosphere phases and JSON manifest.');
 }
 
 main().catch(error => {
