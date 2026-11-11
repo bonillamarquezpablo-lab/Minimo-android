@@ -31,8 +31,8 @@ assert.match(source,/inventoryStructuralCandidates/);assert.match(source,/unregi
 assert.match(source,/sceneViewSnapshot/);
 assert.match(source,/projectWorldPoint/);
 assert.match(source,/width:430,height:768/);
-assert.match(source,/captureCompositedPage\(page,file\)/);
-assert.match(source,/newCDPSession\(page\)/);assert.match(source,/page\.screenshot\(\{type:'png'/);assert.match(source,/bounded\(session\.send\('Page\.captureScreenshot'/);assert.match(source,/bounded\(page\.screenshot/);assert.match(source,/10000/);assert.match(source,/control\.setMode\('free'\)/);assert.match(source,/prepareCaptureFrame/);assert.match(source,/const actualPosition=actualView\?\.camera\|\|null/);assert.match(source,/cameraVerified/);assert.match(source,/physicallyUnsafe=metrics=>/);
+assert.match(source,/captureCompositedPage\(page,file,\{gameCanvas:true\}\)/);
+assert.match(source,/newCDPSession\(page\)/);assert.match(source,/page\.screenshot\(\{type:'png'/);assert.match(source,/page\.evaluate\(\(\)=>window\.__ELSN_TEST__\?\.captureCanvas/);assert.match(source,/bounded\(session\.send\('Page\.captureScreenshot'/);assert.match(source,/bounded\(page\.screenshot/);assert.match(source,/10000/);assert.match(source,/control\.setMode\('free'\)/);assert.match(source,/prepareStaticCaptureFrame/);assert.match(source,/const actualPosition=actualView\?\.camera\|\|null/);assert.match(source,/cameraVerified/);assert.match(source,/physicallyUnsafe=metrics=>/);
 assert.match(html,/sceneViewSnapshot:\(\)=>/);
 assert.match(html,/projectWorldPoint:\(\{x,y,z\}\)=>/);
 assert.match(workflow,/Audit habitable structure grounding independently/);
