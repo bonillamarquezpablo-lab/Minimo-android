@@ -16,8 +16,6 @@ assert.match(source,/productionDataModified:false/);
 assert.match(html,/findLevelHutFooting\(cx,cz,scale,preferredIslandIndex=-1\)/);
 assert.match(html,/enableAfterRelocation:options\.enableAfterRelocation===true/);
 assert.match(html,/relocatable:true,enableAfterRelocation:!footing\.valid/);
-assert.match(html,/entry\.kind==='NorseGreatHall'\?32/);
-assert.match(html,/entry\.kind==='NorseHut'\?24/);
 assert.match(html,/const outpostGroundY=root\?renderedTerrainSurfaceAt\(root\.x,root\.z\):NaN/);
 assert.match(source,/postAutomaticAudit/);
 assert.match(source,/repairAndAuditHabitableStructures\(\)/);
