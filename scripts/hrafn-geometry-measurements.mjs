@@ -7,7 +7,7 @@ const FILE=path.join(OUT,'hrafn-geometry-measurements.json');
 const BASE_URL=process.env.HRAFN_TEST_URL||'http://127.0.0.1:4176/';
 const report={schema:1,build:null,branch:process.env.GITHUB_REF_NAME||null,commit:process.env.GITHUB_SHA||null,
  method:'live Babylon scene geometry; no screenshot-derived measurements',
- conditions:{tide:'high',tideOffsetMeters:0.28,waveTimeSamples:64,waveTimeStepSeconds:0.75,
+ conditions:{tide:'high',tideOffsetMeters:0.28,waveTimeSamples:48,waveTimeStepSeconds:1,
  lodCamera:'30 m seaward of runtime coast-radius estimate, 2.5 m above mean sea level',
  ray:'actual Babylon scene.pickWithRay from the offshore camera to the measured structure base'},
  startedAt:new Date().toISOString(),finishedAt:null,sceneCaptured:false,
@@ -72,6 +72,9 @@ async function main(){
     return m.getTotalVertices?.()>100&&s.x>12&&s.z>12&&Math.abs((b.minimumWorld.x+b.maximumWorld.x)*.5-island.x)<100&&Math.abs((b.minimumWorld.z+b.maximumWorld.z)*.5-island.z)<100;
    });
    const waterSet=new Set(waterMeshes),terrainSet=new Set(terrainMeshes);
+   const waterHeightMeshes=waterMeshes.filter(m=>typeof m.getHeightAtCoordinates==='function');
+   const terrainHeightMeshes=terrainMeshes.filter(m=>typeof m.getHeightAtCoordinates==='function');
+   const heightAt=(meshes,x,z)=>{for(const m of meshes){try{m.computeWorldMatrix(true);const b=m.getBoundingInfo()?.boundingBox;if(!b||x<b.minimumWorld.x||x>b.maximumWorld.x||z<b.minimumWorld.z||z>b.maximumWorld.z)continue;const y=m.getHeightAtCoordinates(x,z);if(Number.isFinite(y))return {y,mesh:m.name};}catch(_){}}return null;};
    const allPickable=scene.meshes.filter(m=>{try{return m.isEnabled()&&m.isVisible!==false&&m.visibility>0&&m.getTotalVertices()>0;}catch(_){return false;}});
    const originalPickable=allPickable.map(m=>[m,m.isPickable]);allPickable.forEach(m=>m.isPickable=true);
    const vertical=(x,z,set,top=40)=>{const ray=new B.Ray(new B.Vector3(x,top,z),new B.Vector3(0,-1,0),100);const hit=scene.pickWithRay(ray,m=>set.has(m),false);return hit?.hit&&hit.pickedPoint?{y:hit.pickedPoint.y,mesh:hit.pickedMesh?.name||null,distance:hit.distance}:null;};
@@ -90,10 +93,11 @@ async function main(){
      const overallDrawnLowestY=childBounds.length?Math.min(...childBounds.map(b=>b.minY)):null;
      const dx=0,dz=1;
      let visibleEdge=null;
-     if(terrainMeshes.length){
+     const edgeHeightAt=(d)=>heightAt(terrainHeightMeshes,t.x+dx*d,t.z+dz*d);
+     if(terrainHeightMeshes.length){
       let last=null,lastD=null,firstMissing=null;
-      for(let d=0;d<=75;d+=.25){const q=vertical(t.x+dx*d,t.z+dz*d,terrainSet,40);if(q&&q.y>=.28){last={distance:d,y:q.y,mesh:q.mesh};lastD=d;}else if(last&&!firstMissing){firstMissing=d;break;}}
-      if(last){let lo=lastD,hi=firstMissing??Math.min(75,lastD+.25);for(let k=0;k<10;k++){const mid=(lo+hi)/2,q=vertical(t.x+dx*mid,t.z+dz*mid,terrainSet,40);if(q&&q.y>=.28)lo=mid;else hi=mid;}const edge=vertical(t.x+dx*((lo+hi)/2),t.z+dz*((lo+hi)/2),terrainSet,40);visibleEdge={distanceFromBaseMeters:Number(((lo+hi)/2).toFixed(2)),edgeTerrainY:edge?.y??null,mesh:edge?.mesh??null,method:'terrain mesh raycast along the Hrafn sea approach (+Z); last hit above mean high tide (+0.28 m), 0.25 m scan and 10-step binary refinement',direction:{x:0,z:1}};}
+      for(let d=0;d<=75;d+=.25){const q=edgeHeightAt(d);if(q&&q.y>=.28){last={distance:d,y:q.y,mesh:q.mesh};lastD=d;}else if(last&&!firstMissing){firstMissing=d;break;}}
+      if(last){let lo=lastD,hi=firstMissing??Math.min(75,lastD+.25);for(let k=0;k<10;k++){const mid=(lo+hi)/2,q=edgeHeightAt(mid);if(q&&q.y>=.28)lo=mid;else hi=mid;}const edge=edgeHeightAt((lo+hi)/2);visibleEdge={distanceFromBaseMeters:Number(((lo+hi)/2).toFixed(2)),edgeTerrainY:edge?.y??null,mesh:edge?.mesh??null,method:'GroundMesh.getHeightAtCoordinates on the rendered island heightfield along the Hrafn sea approach (+Z); last surface above mean high tide (+0.28 m), 0.25 m scan and 10-step binary refinement',direction:{x:0,z:1}};}
      }
      const edgeDistance=visibleEdge?.distanceFromBaseMeters??t.coastDistanceData??30;
      const camera={x:t.x,y:2.5,z:t.z+edgeDistance+30};
@@ -103,12 +107,12 @@ async function main(){
      const ray=new B.Ray(origin,direction,length+.05),hit=scene.pickWithRay(ray,m=>allPickable.includes(m),false);
      const rayResult=hit?.hit?{mesh:hit.pickedMesh?.name||null,material:hit.pickedMesh?.material?.name||null,distanceMeters:Number(hit.distance.toFixed(3)),point:{x:Number(hit.pickedPoint.x.toFixed(3)),y:Number(hit.pickedPoint.y.toFixed(3)),z:Number(hit.pickedPoint.z.toFixed(3))},isTargetMesh:baseMeshes.includes(hit.pickedMesh),targetReached:Math.abs(hit.distance-length)<.08}:null;
      const waveRows=[],footprint=[{x:t.x,z:t.z},{x:t.x+t.footprintRadius*.7,z:t.z},{x:t.x-t.footprintRadius*.7,z:t.z},{x:t.x,z:t.z+t.footprintRadius*.7},{x:t.x,z:t.z-t.footprintRadius*.7}];
-     for(let i=0;i<64;i++){const time=i*.75;api.setWaterState({time,tide:'high'});api.render();for(const p of footprint){const q=vertical(p.x,p.z,waterSet,30);if(q)waveRows.push({time,x:p.x,z:p.z,y:q.y,mesh:q.mesh});}}
+     for(let i=0;i<48;i++){const time=i;api.setWaterState({time,tide:'high'});api.render();for(const p of footprint){const q=heightAt(waterHeightMeshes,p.x,p.z);if(q)waveRows.push({time,x:p.x,z:p.z,y:q.y,mesh:q.mesh});}}
      const waterYs=waveRows.map(x=>x.y);
      results.push({...t,drawnBaseMeshHeight:drawnBaseY,overallDrawnLowestY,
       baseMeshRows,baseVsDrawnMeshMeters:drawnBaseY===null?null:Number((t.baseY-drawnBaseY).toFixed(4)),
       cameraOffshore30m:camera,rayFirstHit:rayResult,visibleLandEdge:visibleEdge,
-      waterDrawn:{sampleCount:waveRows.length,requestedSamples:64*footprint.length,minY:waterYs.length?Number(Math.min(...waterYs).toFixed(4)):null,maxY:waterYs.length?Number(Math.max(...waterYs).toFixed(4)):null,meshNames:[...new Set(waveRows.map(x=>x.mesh))],timespanSeconds:47.25,samplePoints:footprint.length,unhitSamples:64*footprint.length-waveRows.length},
+      waterDrawn:{sampleCount:waveRows.length,requestedSamples:48*footprint.length,minY:waterYs.length?Number(Math.min(...waterYs).toFixed(4)):null,maxY:waterYs.length?Number(Math.max(...waterYs).toFixed(4)):null,meshNames:[...new Set(waveRows.map(x=>x.mesh))],timespanSeconds:47,samplePoints:footprint.length,unhitSamples:64*footprint.length-waveRows.length},
       waterVsBase:waterYs.length?{maxAboveBase:Number((Math.max(...waterYs)-t.baseY).toFixed(4)),minAboveBase:Number((Math.min(...waterYs)-t.baseY).toFixed(4)),waterEverAboveBase:Math.max(...waterYs)>t.baseY}:null});
     }
    }finally{originalPickable.forEach(([m,v])=>{m.isPickable=v;});}
@@ -118,12 +122,12 @@ async function main(){
    overallDrawnLowestY:t.overallDrawnLowestY,analyticFormulaHeight:round(t.analyticTerrainY),renderedTerrainHeight:round(t.renderedTerrainY),
    analyticVsRenderedMeters:t.measure?.analyticVsRenderedMeters??null,dataDistanceToCoastMeters:round(t.coastDistanceData,3),
    visibleLandEdgeDistanceMeters:t.visibleLandEdge?.distanceFromBaseMeters??null,
-   visibleLandEdgeMethod:t.visibleLandEdge?.method??'not measured: terrain mesh not identified',
+   visibleLandEdgeMethod:t.visibleLandEdge?.method??'not measured: rendered GroundMesh height API unavailable',
    waterDrawn:t.waterDrawn,rayCamera:t.cameraOffshore30m,firstRayMesh:t.rayFirstHit,waterVsBase:t.waterVsBase,
    source:t.kind==='hut'?'settlementGrounding() + live mesh bounds':'settlementCampGrounding() + live support-mesh bounds'}));
   report.measurementCoverage={targets:report.structures.length,waterCandidates:report.meshDiscovery.waterCandidates.length,
    terrainCandidates:report.meshDiscovery.terrainCandidates.length,waterMeasured:report.structures.filter(x=>x.waterDrawn?.sampleCount>0).length,
-   visibleEdgeMeasured:report.structures.filter(x=>x.visibleLandEdgeDistanceMeters!==null).length,
+   visibleEdgeMeasured:report.structures.filter(x=>x.visibleLandEdgeDistanceMeters!==null).length,waterHeightFunctionAvailable:report.meshDiscovery.waterCandidates.some(x=>x.className==='GroundMesh'),
    rayMeasured:report.structures.filter(x=>x.firstRayMesh!==null).length};
   report.verdict=report.structures.length===5?'measured':'incomplete';
  }catch(error){report.errors.push(String(error?.stack||error));report.verdict='failed';process.exitCode=1;}
