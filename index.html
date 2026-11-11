@@ -2955,15 +2955,17 @@ async function removeStrayDebugGeometry(targetScene){
   return tideOffsetAt(t)+base+(detail+crest+shortCrest)*detailFade*shortWaveScale;
  }
  function waterFarHeightAtVertex(vertex){
-  return waterHeightFromWaveValues(waterWaveValueAtVertex(vertex,0),waterWaveValueAtVertex(vertex,1),waterWaveValueAtVertex(vertex,2),waterWaveValueAtVertex(vertex,3),waterWaveValueAtVertex(vertex,4),waterWaveValueAtVertex(vertex,5),waterWaveValueAtVertex(vertex,6),oceanTime,0);
+  return clampOceanHeightAtVertex(vertex,waterHeightFromWaveValues(waterWaveValueAtVertex(vertex,0),waterWaveValueAtVertex(vertex,1),waterWaveValueAtVertex(vertex,2),waterWaveValueAtVertex(vertex,3),waterWaveValueAtVertex(vertex,4),waterWaveValueAtVertex(vertex,5),waterWaveValueAtVertex(vertex,6),oceanTime,0));
  }
  function waterDetailHeightAtVertex(vertex,fade){
-  return waterHeightFromWaveValues(waterWaveValueAtVertex(vertex,0),waterWaveValueAtVertex(vertex,1),waterWaveValueAtVertex(vertex,2),waterWaveValueAtVertex(vertex,3),waterWaveValueAtVertex(vertex,4),waterWaveValueAtVertex(vertex,5),waterWaveValueAtVertex(vertex,6),oceanTime,fade);
+  return clampOceanHeightAtVertex(vertex,waterHeightFromWaveValues(waterWaveValueAtVertex(vertex,0),waterWaveValueAtVertex(vertex,1),waterWaveValueAtVertex(vertex,2),waterWaveValueAtVertex(vertex,3),waterWaveValueAtVertex(vertex,4),waterWaveValueAtVertex(vertex,5),waterWaveValueAtVertex(vertex,6),oceanTime,fade));
  }
  function updateWaterFarNormalAtVertex(vertex){
   const c=WATER_WAVE_COMPONENTS;
-  const dx=waterWaveDerivativeAtVertex(vertex,0)*c[0].x*c[0].amplitude+waterWaveDerivativeAtVertex(vertex,1)*c[1].x*c[1].amplitude+waterWaveDerivativeAtVertex(vertex,2)*c[2].x*c[2].amplitude;
-  const dz=waterWaveDerivativeAtVertex(vertex,0)*c[0].z*c[0].amplitude+waterWaveDerivativeAtVertex(vertex,1)*c[1].z*c[1].amplitude+waterWaveDerivativeAtVertex(vertex,2)*c[2].z*c[2].amplitude;
+  let dx=waterWaveDerivativeAtVertex(vertex,0)*c[0].x*c[0].amplitude+waterWaveDerivativeAtVertex(vertex,1)*c[1].x*c[1].amplitude+waterWaveDerivativeAtVertex(vertex,2)*c[2].x*c[2].amplitude;
+  let dz=waterWaveDerivativeAtVertex(vertex,0)*c[0].z*c[0].amplitude+waterWaveDerivativeAtVertex(vertex,1)*c[1].z*c[1].amplitude+waterWaveDerivativeAtVertex(vertex,2)*c[2].z*c[2].amplitude;
+  const strength=waterCoastalCapStrength[vertex]||0;
+  if(strength>0&&waterHeightFromWaveValues(waterWaveValueAtVertex(vertex,0),waterWaveValueAtVertex(vertex,1),waterWaveValueAtVertex(vertex,2),waterWaveValueAtVertex(vertex,3),waterWaveValueAtVertex(vertex,4),waterWaveValueAtVertex(vertex,5),waterWaveValueAtVertex(vertex,6),oceanTime,0)>(Number(ground.position.y)||0)+.38){dx*=1-strength;dz*=1-strength;}
   const inverse=1/Math.sqrt(dx*dx+1+dz*dz),offset=vertex*3;
   waterNormals[offset]=-dx*inverse;waterNormals[offset+1]=inverse;waterNormals[offset+2]=-dz*inverse;
  }
@@ -3021,6 +3023,25 @@ async function removeStrayDebugGeometry(targetScene){
  function waterFarHeight(x,z,t=oceanTime){return waterHeight(x,z,t,0);}
  // Coastal waves respect the actual tide level plus a short run-up margin; open-ocean crests cannot float over a hill.
  function coastalWaterHeight(x,z,t=oceanTime){const meanSeaLevel=Number(ground.position.y)||0;return Math.min(waterHeight(x,z,t),meanSeaLevel+.38);}
+ // The main ocean grid is global, so clamp its rendered vertices over every island too.
+ // Without this shared cap, high open-ocean crests can draw over low island terrain and
+ // leave only roofs visible from a ship, making grounded houses look stranded offshore.
+ const waterCoastalCapStrength=new Float32Array(waterBase.length/3);
+ for(let vertex=0;vertex<waterCoastalCapStrength.length;vertex++){
+  const offset=vertex*3,x=waterBase[offset],z=waterBase[offset+2];let strength=0;
+  for(const island of land){
+   const radial=Math.hypot(x-island.x,z-island.z)/Math.max(.001,island.r);
+   if(radial>=1.12)continue;
+   const local=1-smooth01((radial-.96)/.16);
+   if(local>strength)strength=local;
+  }
+  waterCoastalCapStrength[vertex]=strength;
+ }
+ function clampOceanHeightAtVertex(vertex,height){
+  const strength=waterCoastalCapStrength[vertex]||0;if(strength<=0)return height;
+  const cap=(Number(ground.position.y)||0)+.38,coastal=Math.min(height,cap);
+  return height+(coastal-height)*strength;
+ }
  function createVesselFloatState(){return {heaveVelocity:0,pitchVelocity:0,rollVelocity:0};}
  function updateVesselFloat(root,dt,state,options={}){
   if(!root||!state)return;
