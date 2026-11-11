@@ -76,7 +76,7 @@ def main() -> None:
     coastal_continuity_markers = (
         "function auditCoastalMeshContinuity(onlyIslandIndex=null)",
         "auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)",
-        "const thresholdMeters=.05",
+        "thresholdMeters=.05",
         "rows=isPerformanceMode?10:(isTouchDevice?64:96)",
     )
     missing_coastal_continuity_markers = [
