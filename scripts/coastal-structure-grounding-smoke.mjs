@@ -212,13 +212,27 @@ async function main(){
    unexpectedOffshoreStructures:(settled.offshore.candidates||[]).filter(item=>item.offshore&&!/^NorseRegattaBuoy_\d+$/.test(item.name||'')).length,
    hrafnRepairGate:report.hrafnRepairGate
   };
+  report.boatVisibilityRegression=await phase('verify offshore settlement visibility against all 13 island approaches',()=>page.evaluate(()=>{
+   const api=window.__ELSN_TEST__,islands=Array.isArray(api?.islands)?api.islands:[];
+   const checks=islands.map((island,index)=>{
+    const x=Number(island.x)+Number(island.r)+80,z=Number(island.z);
+    const audit=api.habitableStructureAuditAsBoat({x,z});
+    const rows=Array.isArray(audit?.structures)?audit.structures:[];
+    const violations=rows.filter(row=>row.enabled===true&&Number(row.distanceToCameraMeters)>(Number(row.visibilityLimitMeters)||55)+.02)
+     .map(row=>({name:row.name,island:row.island,islandIndex:row.islandIndex,distanceToCameraMeters:row.distanceToCameraMeters,visibilityLimitMeters:row.visibilityLimitMeters}));
+    return {islandIndex:index,islandName:island.name,boatCamera:{x,z},structuresChecked:rows.length,visibleBeyondLimit:violations};
+   });
+   return {islandCount:islands.length,checks,violationCount:checks.reduce((sum,item)=>sum+item.visibleBeyondLimit.length,0)};
+  }));
+  gate.boatVisibilityIslandSamples=report.boatVisibilityRegression.islandCount;
+  gate.boatVisibilityViolations=report.boatVisibilityRegression.violationCount;
   report.fullRuntimeStructureGate=gate;
   const hrafnTargetsMeasured=report.hrafnRepairGate.targetCount===5&&report.hrafnRepairGate.huts.length===3&&report.hrafnRepairGate.camps.length===2;
   const hrafnHutsPass=report.hrafnRepairGate.huts.length===3&&report.hrafnRepairGate.huts.every(item=>item.baseGapWithinTwoCm&&item.highTideSafe&&item.insideDryIsland);
   const hrafnCampsPass=report.hrafnRepairGate.camps.length===2&&report.hrafnRepairGate.camps.every(item=>item.anchorWithinTwoCm&&item.allSupportsWithinTwoCm&&item.highTideSafe&&item.withinDryLandBand);
   const passed=report.summary.structuresTotal>=39&&gate.allInitialUnsafeVerifiedSafe&&gate.unsafeAfter===0&&
    gate.visibleInvalidAfter===0&&gate.untrackedRootsAfter===0&&gate.unexpectedOffshoreStructures===0&&gate.offshoreIslandCount===13&&gate.houseCount>=12&&
-   gate.houseOutliers===0&&gate.campCount>=8&&gate.campOutliers===0&&gate.garrisonCount>=9&&gate.garrisonOutliers===0&&
+   gate.houseOutliers===0&&gate.campCount>=8&&gate.campOutliers===0&&gate.garrisonCount>=9&&gate.garrisonOutliers===0&&gate.boatVisibilityIslandSamples===13&&gate.boatVisibilityViolations===0&&
    hrafnTargetsMeasured&&hrafnHutsPass&&hrafnCampsPass&&report.objectInspectionCaptures.length===5&&!report.objectInspectionCaptures.some(item=>item.error);
   report.verdict=passed?'measured':'issues-found';
   if(!passed)throw new Error('Full normal-runtime structure safety gate failed: '+JSON.stringify(gate));
