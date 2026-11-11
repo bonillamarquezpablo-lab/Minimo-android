@@ -61,6 +61,23 @@ assert.match(workflow,/timeout-minutes: 12/);
 assert.match(workflow,/timeout --signal=TERM --kill-after=5s 360s node scripts\/coastal-structure-grounding-smoke\.mjs/);
 assert.match(source,/offshoreStructuresAfter:report\.summary\.offshoreStructures/);
 assert.match(source,/gate\.unexpectedOffshoreStructures===0/);
+
+// Offshore repair must search the owning island's full safe interior, keep clearance,
+// and re-enable known habitable roots instead of leaving them stranded or hidden.
+const anchorStart=html.indexOf("function findSafeHabitableAnchor(entry,origin){");
+const anchorEnd=html.indexOf("\n function evaluateHabitableStructure(entry){",anchorStart);
+assert.ok(anchorStart>=0&&anchorEnd>anchorStart,"The island-wide safe-anchor solver must remain inspectable.");
+const anchorSource=html.slice(anchorStart,anchorEnd);
+assert.match(anchorSource,/for\(let dz=-safeCenterRadius/);
+assert.match(anchorSource,/collisionGrid/);
+assert.match(anchorSource,/other\.footprintRadius/);
+assert.match(html,/node\.__footingPlacement\?\.islandIndex/);
+assert.match(html,/relocatable:true,enableAfterRelocation:true,onRelocate:/);
+assert.match(html,/entry\.enabledAtRegistration=true;entry\.lastAction='auto-discovered-root'/);
+assert.match(html,/root\.setAbsolutePosition\(targetPosition\)/);
+assert.match(html,/registerHabitableStructure\(hall,'NorseGreatHall'.*?relocatable:true/);
+assert.match(html,/registerHabitableStructure\(starterCamp,'StarterCastawayCamp'.*?relocatable:true/);
+
 console.log('COASTAL STRUCTURE GROUNDING CONTRACT OK');
 
 assert.match(html,/dryFootprintSampleCount===dryFootprintSamples\.length/);
