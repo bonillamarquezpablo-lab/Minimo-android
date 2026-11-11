@@ -81,10 +81,12 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
   const unsafePairsVerified=verifiedSafeRelocationCount===unsafeBefore.length;
   const visibleOffshoreAfter=Number(offshoreAfter?.visibleOffshoreCount);
   const offshoreCountAfter=Number(offshoreAfter?.offshoreCount);
-  const unregisteredOffshoreAfter=Number(offshoreAfter?.unregisteredCandidates);
+  const candidateCountAfter=Number(offshoreAfter?.candidateCount);
+  const returnedCountAfter=Number(offshoreAfter?.returnedCount);
+  const omittedCountAfter=Number(offshoreAfter?.omittedCount);
   const offshoreClear=Number.isFinite(visibleOffshoreAfter)&&visibleOffshoreAfter===0;
   const noOffshoreAfter=Number.isFinite(offshoreCountAfter)&&offshoreCountAfter===0;
-  const offshoreInventoryComplete=Number.isFinite(unregisteredOffshoreAfter)&&unregisteredOffshoreAfter===0;
+  const offshoreInventoryComplete=Number.isFinite(candidateCountAfter)&&Number.isFinite(returnedCountAfter)&&candidateCountAfter===returnedCountAfter&&omittedCountAfter===0;
   return {testMode:true,productionDataModified:false,before,repair,after,unsafeBefore,relocationPairs,relocatedStructures,verifiedMovedCount:relocatedStructures.length,verifiedSafeRelocationCount,unsafePairsVerified,unsafeAfter,offshoreBefore,offshoreAfter,offshoreClear,noOffshoreAfter,offshoreInventoryComplete,passed:after.total===39&&after.unsafeCount===0&&after.visibleInvalidAfterRepair===0&&after.untrackedRootCount===0&&unsafePairsVerified&&offshoreClear&&noOffshoreAfter&&offshoreInventoryComplete};
  }));if(!manifest.structureRepairSimulation?.passed){manifest.structureRepairSimulation.warning='Structure simulation gate did not pass; continuing the isolated camera capture so the offshore scene can still be inspected. The overall structure verdict remains fail.';console.warn('[CAPTURE] Structure simulation gate failed; continuing to capture the requested boat-approach camera.');}
  manifest.coastalDiagnostics.scope={camera:prepared.camera,auditIslandIndex:prepared.auditIslandIndex,geometryAuditScope:'all 13 islands',structureGroundingScope:'all registered/discovered habitable structures',mutationPolicy:'read-only; no production structure is moved, hidden or repaired'};
