@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 const BASE_URL=process.env.STRUCTURE_TEST_URL||'http://127.0.0.1:4176/';
 const OUT=path.resolve('artifacts/structure-grounding');
 const startedAt=Date.now();
-const report={schema:2,startedAt:new Date().toISOString(),finishedAt:null,build:null,renderer:'Chromium headless + ANGLE SwiftShader',mode:'full normal-campaign runtime structure audit plus automatic-repair observation in a disposable test renderer',testRendererOnlyMutations:true,productionDataModified:false,phases:[],consoleErrors:[],pageErrors:[],baseline:null,postAutomaticAudit:null,runtimeRepairSimulation:null,habitableStructures:null,settlementHouses:null,settlementCamps:null,garrisons:null,summary:null,screenshot:null,verdict:'not-run',failure:null};
+const report={schema:2,startedAt:new Date().toISOString(),finishedAt:null,build:null,renderer:'Chromium headless + ANGLE SwiftShader',mode:'full normal-campaign runtime structure audit plus automatic-repair observation in a disposable test renderer',testRendererOnlyMutations:true,productionDataModified:false,phases:[],consoleErrors:[],pageErrors:[],baseline:null,postAutomaticAudit:null,runtimeRepairSimulation:null,habitableStructures:null,settlementHouses:null,settlementCamps:null,garrisons:null,rocks:null,summary:null,screenshot:null,verdict:'not-run',failure:null};
 function writeReport(){fs.mkdirSync(OUT,{recursive:true});const tmp=path.join(OUT,'structure-grounding.json.tmp');fs.writeFileSync(tmp,JSON.stringify(report,null,2)+'\n');fs.renameSync(tmp,path.join(OUT,'structure-grounding.json'));}
 function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function bounded(value,ms){return Promise.race([Promise.resolve(value),delay(ms).then(()=>null)]);}
@@ -49,6 +49,7 @@ function collectStructureSnapshot(){
  const houses=api.settlementGrounding();
  const camps=api.settlementCampGrounding();
  const garrisons=api.garrisonGrounding();
+ const rocks=typeof api.rockGroundingAudit==='function'?api.rockGroundingAudit():null;
  const view=typeof api.sceneViewSnapshot==='function'?api.sceneViewSnapshot():null;
  const projectedCandidates=(offshore.candidates||[]).map(item=>{
   const x=Number(item.position?.x),z=Number(item.position?.z),bottomY=Number(item.bounds?.bottomY??item.position?.y),topY=Number(item.bounds?.topY??item.position?.y);
@@ -99,8 +100,9 @@ function collectStructureSnapshot(){
  const houseOutliers=houses.filter(item=>Math.abs(Number(item.groundingErrorMeters)||0)>.02||Number(item.maximumFootingGapMeters)>.02||Number(item.dryLandFootprintMarginMeters)<1.25);
  const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02||(item.supportPoints||[]).some(point=>Math.abs(Number(point.baseGapMeters)||0)>.02));
  const garrisonOutliers=garrisons.filter(item=>Number(item.outpostErrorMeters)>.02||Number(item.flagErrorMeters)>.02||Number(item.guardErrorMeters)>.06||Number(item.detachedPropCount)>0);
+ const rockOutliers=(rocks||[]).filter(item=>!item.valid||Math.abs(Number(item.gapMeters))>.02);
  return {
-  structures,offshore,houses,camps,garrisons,view,projectedCandidates,inventoryStructuralCandidates,unregisteredCandidateReview,navigationPointAudit,hrafnSceneRoots,nearbyHrafnStructureRoots,hrafnHutRoots,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
+  structures,offshore,houses,camps,garrisons,rocks,view,projectedCandidates,inventoryStructuralCandidates,unregisteredCandidateReview,navigationPointAudit,hrafnSceneRoots,nearbyHrafnStructureRoots,hrafnHutRoots,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
   summary:{
    structuresTotal:structures.total,grounded:structures.groundedCount,unsafe:structures.unsafeCount,
    unsafeVisibleBeforeAudit:structures.unsafeVisibleBeforeRepair,visibleInvalid:structures.visibleInvalidAfterRepair,
@@ -111,7 +113,8 @@ function collectStructureSnapshot(){
    houseCount:houses.length,houseOutliers:houseOutliers.length,
    houseOutlierNames:houseOutliers.map(item=>({village:item.village,buildingIndex:item.buildingIndex,groundingErrorMeters:item.groundingErrorMeters,maximumFootingGapMeters:item.maximumFootingGapMeters,dryLandFootprintMarginMeters:item.dryLandFootprintMarginMeters,footingCorners:item.footingCorners})),
    campCount:camps.length,campOutliers:campOutliers.length,campOutlierDetails:campOutliers,campSupportOutlierDetails:camps.filter(item=>(item.supportPoints||[]).some(point=>Math.abs(Number(point.baseGapMeters)||0)>.02)).map(item=>({kind:item.kind,islandIndex:item.islandIndex,x:item.x,z:item.z,supports:item.supportPoints.filter(point=>Math.abs(Number(point.baseGapMeters)||0)>.02)})),
-   garrisonCount:garrisons.length,garrisonOutliers:garrisonOutliers.length,garrisonOutlierDetails:garrisonOutliers
+   garrisonCount:garrisons.length,garrisonOutliers:garrisonOutliers.length,garrisonOutlierDetails:garrisonOutliers,
+   rockCount:(rocks||[]).length,rockOutliers:rockOutliers.length,rockOutlierDetails:rockOutliers.slice(0,80)
   }
  };
 }
