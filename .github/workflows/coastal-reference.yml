@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       capture_plan:
-        description: 'JSON: cámaras libres. Coordenadas absolutas o islandIndex + offsets. Máximo 40.'
+        description: 'JSON: cámaras, órbitas o zonas. Una zona genera vistas generales y primeros planos automáticos de cada estructura. Hasta 120 capturas.'
         required: true
         type: string
         default: '[{"id":"cuervo-desde-mar","islandIndex":0,"camera":{"x":70,"y":18,"z":-95,"targetX":0,"targetY":4,"targetZ":0}},{"id":"cuervo-desde-tierra","islandIndex":0,"camera":{"x":-35,"y":8,"z":-25,"targetX":0,"targetY":3,"targetZ":0}}]'
@@ -21,7 +21,7 @@ concurrency:
 jobs:
   texture-smoke:
     name: One-camera texture readiness smoke
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -151,10 +151,10 @@ jobs:
           retention-days: 30
 
   custom-capture:
-    name: Custom free-camera scene captures
-    if: false # Phase 1: gated until the one-camera smoke passes.
+    name: User-directed multi-camera scene inspection
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     steps:
       - name: Checkout selected branch or commit
         uses: actions/checkout@v4
@@ -166,13 +166,17 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install contact-sheet image support
+        run: python -m pip install Pillow
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Validate capture reliability contracts
+      - name: Validate capture reliability and zone-inspection contracts
         run: |
+          node --check scripts/scene-capture-inspection.mjs
           node --check scripts/custom-scene-capture.mjs
           node scripts/test_capture_reliability_contract.cjs
 
@@ -206,6 +210,10 @@ jobs:
             export CAPTURE_PLAN_JSON="$(cat scripts/scene-capture-plan.json)"
           fi
           node scripts/custom-scene-capture.mjs
+
+      - name: Build visual contact sheet and AI review index
+        if: always()
+        run: python scripts/create_scene_capture_contact_sheet.py artifacts/custom-scene-captures
 
       - name: Upload custom screenshots and camera manifest
         if: always()
