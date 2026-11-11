@@ -7,6 +7,7 @@ async function main() {
   const runner = fs.readFileSync('scripts/custom-scene-capture.mjs', 'utf8');
   const plannerSource = fs.readFileSync('scripts/scene-capture-inspection.mjs', 'utf8');
   const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf8');
+  const textureSmoke = fs.readFileSync('scripts/texture-readiness-smoke.mjs', 'utf8');
   const planner = await import('./scene-capture-inspection.mjs');
 
   assert.match(workflow,/^  pull_request:/m);
@@ -28,6 +29,8 @@ async function main() {
   assert.match(runner,/cameraReadback/);
   assert.match(runner,/createZoneInspectionShots/);
   assert.match(runner,/__ELSN_TEST__\.inspectScene\(\{inventoryLimit:5000,offshoreLimit:500\}\)/);
+  assert.match(textureSmoke,/if\(original\.zone\)/);
+  assert.match(textureSmoke,/zone\.observationPoint/);
   assert.doesNotMatch(runner,/api\.(?:auditIslandGeometry|habitableStructureAudit|auditOffshoreStructures|coastalSceneInventory|settlementGrounding)\(/,
     'The runner must call the one unified inspector, not hidden individual audit functions.');
   assert.match(html,/auditOffshoreStructuralRoots\(offshoreLimit\)/);
@@ -123,6 +126,7 @@ async function main() {
 
   assert.match(html,/inspectScene:\(\{inventoryLimit=5000,offshoreLimit=500\}=\{\}\)=>/);
   assert.match(html,/uniqueId:Number\.isInteger\(node\.uniqueId\)/);
+  assert.match(html,/single-unified-scene-inspection/);
   assert.match(html,/unsafeVisibleBeforeRepair/);
   assert.match(html,/visibleInvalidAfterRepair/);
   assert.match(html,/tide==='high'\?\.28:\(tide==='low'\?-.28/);
