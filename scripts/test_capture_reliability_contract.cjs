@@ -8,10 +8,14 @@ async function main() {
   const plannerSource = fs.readFileSync('scripts/scene-capture-inspection.mjs', 'utf8');
   const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf8');
   const textureSmoke = fs.readFileSync('scripts/texture-readiness-smoke.mjs', 'utf8');
+  const unifiedRunner = fs.readFileSync('scripts/run-unified-inspector.mjs', 'utf8');
   const planner = await import('./scene-capture-inspection.mjs');
 
   assert.match(workflow,/^  pull_request:/m);
   assert.match(workflow,/^  workflow_dispatch:/m);
+  assert.match(workflow,/^  unified-inspector:/m);
+  assert.doesNotMatch(workflow,/^  (texture-smoke|character-startup|custom-capture):/m,
+    'All checks must be invoked from one workflow job.');
   assert.doesNotMatch(workflow,/^  push:/m);
   assert.match(workflow,/group: scene-capture-\$\{\{ github\.sha \}\}/);
   assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
@@ -29,6 +33,12 @@ async function main() {
   assert.match(runner,/cameraReadback/);
   assert.match(runner,/createZoneInspectionShots/);
   assert.match(runner,/__ELSN_TEST__\.inspectScene\(\{inventoryLimit:5000,offshoreLimit:500\}\)/);
+  assert.match(unifiedRunner,/scripts\/player-startup-smoke\.mjs/);
+  assert.match(unifiedRunner,/scripts\/texture-readiness-smoke\.mjs/);
+  assert.match(unifiedRunner,/scripts\/coastal-structure-grounding-smoke\.mjs/);
+  assert.match(unifiedRunner,/scripts\/coastal-reference\.mjs/);
+  assert.match(unifiedRunner,/scripts\/custom-scene-capture\.mjs/);
+  assert.match(unifiedRunner,/Lista de estructuras detectadas/);
   assert.match(textureSmoke,/if\(original\.zone\)/);
   assert.match(textureSmoke,/zone\.observationPoint/);
   assert.doesNotMatch(runner,/api\.(?:auditIslandGeometry|habitableStructureAudit|auditOffshoreStructures|coastalSceneInventory|settlementGrounding)\(/,
@@ -130,7 +140,11 @@ async function main() {
   }]);
   assert.equal(orbit.shots.length,8,'Existing hand-authored orbit plans must keep working.');
 
-  assert.match(html,/inspectScene:\(\{inventoryLimit=5000,offshoreLimit=500\}=\{\}\)=>/);
+  assert.match(html,/inspectScene:async\(\{inventoryLimit=5000,offshoreLimit=500\}=\{\}\)=>/);
+  assert.match(html,/run\('textureReadiness',\(\)=>window\.__ELSN_TEST__\.getTextureReadinessForCamera\(\)\)/);
+  assert.match(html,/run\('rockGrounding'/);
+  assert.match(html,/run\('outerLandmarkGrounding'/);
+  assert.match(html,/run\('sheetOpacityDepth'/);
   assert.match(html,/uniqueId:Number\.isInteger\(node\.uniqueId\)/);
   assert.match(html,/single-unified-scene-inspection/);
   for (const requiredInspectorSection of [
