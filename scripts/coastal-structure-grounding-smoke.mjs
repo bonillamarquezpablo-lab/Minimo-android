@@ -50,6 +50,7 @@ function collectStructureSnapshot(){
  const camps=api.settlementCampGrounding();
  const garrisons=api.garrisonGrounding();
  const rocks=typeof api.rockGroundingAudit==='function'?api.rockGroundingAudit():null;
+ const outerLandmarks=typeof api.outerLandmarkGrounding==='function'?api.outerLandmarkGrounding():null;
  const view=typeof api.sceneViewSnapshot==='function'?api.sceneViewSnapshot():null;
  const projectedCandidates=(offshore.candidates||[]).map(item=>{
   const x=Number(item.position?.x),z=Number(item.position?.z),bottomY=Number(item.bounds?.bottomY??item.position?.y),topY=Number(item.bounds?.topY??item.position?.y);
@@ -68,7 +69,7 @@ function collectStructureSnapshot(){
   if(name==='RealVikingRightHandWeaponAnchor')return {classification:'equipped-weapon-assembly',disposition:'not-a-building',reason:'Weapon attachment and held weapon meshes'};
   if(name==='DetailedNorseHearth')return {classification:'hearth-prop',disposition:'decorative-prop',reason:'Standalone hearth/fireplace prop'};
   if(/^FirewoodRack_\d+$/.test(name))return {classification:'firewood-rack-prop',disposition:'decorative-prop',reason:'Standalone firewood rack'};
-  if(/^NorseThingstead_\d+$/.test(name))return {classification:'intentional-settlement-hall',disposition:'known-non-habitable-building',reason:'Named settlement hall; tracked separately from the 39 habitable hut/camp/garrison roots'};
+  if(/^Norse(?:Thingstead|CoastalPier|CoastalBeacon)_\d+$/.test(name))return {classification:'intentional-outer-island-landmark',disposition:'known-non-habitable-building',reason:'Named outer-island landmark; audited separately from the 39 habitable hut/camp/garrison roots'};
   return {classification:'unresolved',disposition:'requires-manual-review',reason:'No safe name-based classification'};
  };
  const unregisteredCandidateReview=projectedCandidates.filter(item=>item.registered===false).map(item=>{
@@ -102,7 +103,7 @@ function collectStructureSnapshot(){
  const garrisonOutliers=garrisons.filter(item=>Number(item.outpostErrorMeters)>.02||Number(item.flagErrorMeters)>.02||Number(item.guardErrorMeters)>.06||Number(item.detachedPropCount)>0);
  const rockOutliers=(rocks||[]).filter(item=>!item.valid||Math.abs(Number(item.gapMeters))>.02);
  return {
-  structures,offshore,houses,camps,garrisons,rocks,view,projectedCandidates,inventoryStructuralCandidates,unregisteredCandidateReview,navigationPointAudit,hrafnSceneRoots,nearbyHrafnStructureRoots,hrafnHutRoots,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
+  structures,offshore,houses,camps,garrisons,rocks,outerLandmarks,view,projectedCandidates,inventoryStructuralCandidates,unregisteredCandidateReview,navigationPointAudit,hrafnSceneRoots,nearbyHrafnStructureRoots,hrafnHutRoots,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
   summary:{
    structuresTotal:structures.total,grounded:structures.groundedCount,unsafe:structures.unsafeCount,
    unsafeVisibleBeforeAudit:structures.unsafeVisibleBeforeRepair,visibleInvalid:structures.visibleInvalidAfterRepair,
@@ -181,7 +182,7 @@ async function main(){
   report.baseline=baseline;report.repairPass=repairPass;report.postAutomaticAudit=settled;
   report.runtimeRepairSimulation={testMode:true,waitMs:800,usesGameRepairSystem:true,explicitRepairApiCalled:true,productionDataModified:false,repairSummary:repairPass?{total:repairPass.total,groundedCount:repairPass.groundedCount,unsafeCount:repairPass.unsafeCount,repaired:repairPass.repaired,hiddenUnsafe:repairPass.hiddenUnsafe,visibleInvalidAfterRepair:repairPass.visibleInvalidAfterRepair}:null};
   report.highTideTest={mode:'forced-high',seaSurfaceCapMeters:.38,requiredDryClearanceMeters:.22,waterState:await page.evaluate(()=>window.__ELSN_TEST__.diagnostics().coast)};
-  report.habitableStructures=settled.structures;report.offshoreAudit=settled.offshore;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.rocks=settled.rocks;report.summary=settled.summary;
+  report.habitableStructures=settled.structures;report.offshoreAudit=settled.offshore;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.rocks=settled.rocks;report.outerLandmarks=settled.outerLandmarks;report.summary=settled.summary;
   report.initialPlayerCamera=settled.view;report.hrafnBaseline=hrafnBaseline;
   const hrafnHouses=(settled.houses||[]).filter(item=>item.nearestIslandIndex===3).sort((a,b)=>a.buildingIndex-b.buildingIndex);
   const hrafnCamps=(settled.camps||[]).filter(item=>item.islandIndex===3).sort((a,b)=>a.kind.localeCompare(b.kind));
@@ -272,6 +273,9 @@ async function main(){
    campCount:report.summary.campCount,campOutliers:report.summary.campOutliers,
    garrisonCount:report.summary.garrisonCount,garrisonOutliers:report.summary.garrisonOutliers,
    rockCount:report.summary.rockCount,rockOutliers:report.summary.rockOutliers,
+   outerLandmarkCount:(settled.outerLandmarks||[]).length,
+   outerLandmarkErrors:(settled.outerLandmarks||[]).map(item=>({name:item.name,found:item.found,anchorErrorMeters:item.anchorErrorMeters})),
+   outerLandmarksPass:Array.isArray(settled.outerLandmarks)&&settled.outerLandmarks.length===3&&settled.outerLandmarks.every(item=>item.found===true&&Number.isFinite(Number(item.anchorErrorMeters))&&Math.abs(Number(item.anchorErrorMeters))<=.02),
    intentionalRegattaBuoys:(settled.offshore.candidates||[]).filter(item=>/^NorseRegattaBuoy_\d+$/.test(item.name||'')).length,
    unexpectedOffshoreCandidates:(settled.offshore.candidates||[]).filter(item=>item.offshore&&!/^NorseRegattaBuoy_\d+$/.test(item.name||'')).map(item=>({name:item.name,kind:item.kind,registered:item.registered,island:item.island,islandIndex:item.islandIndex,position:item.position,issue:item.issue,registeredAudit:item.registeredAudit,dryFootprintSampleCount:item.dryFootprintSampleCount,dryFootprintSampleTotal:item.dryFootprintSampleTotal})),
    unexpectedOffshoreStructures:(settled.offshore.candidates||[]).filter(item=>item.offshore&&!/^NorseRegattaBuoy_\d+$/.test(item.name||'')).length,
@@ -299,7 +303,7 @@ async function main(){
   const passed=report.summary.structuresTotal>=39&&candidateReviewComplete&&gate.allInitialUnsafeVerifiedSafe&&gate.unsafeAfter===0&&
    gate.visibleInvalidAfter===0&&gate.untrackedRootsAfter===0&&gate.unexpectedOffshoreStructures===0&&gate.offshoreIslandCount===13&&gate.houseCount>=12&&
    gate.houseOutliers===0&&gate.campCount>=8&&gate.campOutliers===0&&gate.garrisonCount>=9&&gate.garrisonOutliers===0&&gate.rockCount>0&&gate.rockOutliers===0&&gate.boatVisibilityIslandSamples===13&&gate.boatVisibilityViolations===0&&
-   hrafnTargetsMeasured&&hrafnHutsPass&&hrafnCampsPass&&report.objectInspectionCaptures.length===5&&!report.objectInspectionCaptures.some(item=>item.error);
+   hrafnTargetsMeasured&&hrafnHutsPass&&hrafnCampsPass&&gate.outerLandmarksPass&&report.objectInspectionCaptures.length===5&&!report.objectInspectionCaptures.some(item=>item.error);
   report.verdict=passed?'measured':'issues-found';
   if(!passed)throw new Error('Full normal-runtime structure safety gate failed: '+JSON.stringify(gate));
  }catch(error){report.failure=String(error?.stack||error);report.verdict='fail';
