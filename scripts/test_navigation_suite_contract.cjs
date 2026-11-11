@@ -12,10 +12,9 @@ const navigationSource = fs.readFileSync("scripts/nordic/navigation-suite.js", "
 assert.match(serviceWorker,
   /SHELL_FILES\s*=\s*\[[\s\S]*?"\.\/scripts\/nordic\/navigation-suite\.js"/,
   "The navigation suite must be part of the initial offline shell cache.");
-assert.match(html,
-  /<script\s+src=["']\.\/scripts\/nordic\/navigation-suite\.js["']\s+defer><\/script>/,
+assert.ok(html.includes('<script src="./scripts/nordic/navigation-suite.js" defer></script>'),
   "The game must load the navigation suite exactly as a deferred runtime module.");
-assert.equal((html.match(/\.\/scripts\/nordic\/navigation-suite\.js/g) || []).length, 1,
+assert.equal(html.split("./scripts/nordic/navigation-suite.js").length - 1, 1,
   "The navigation suite must not be loaded more than once.");
 
 const calls = [];
