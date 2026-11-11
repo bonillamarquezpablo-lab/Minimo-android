@@ -26,16 +26,17 @@ async function collectRuntimeDiagnostics(targetPage,timeoutMs=2500){
  return value;
 }
 function correlateNetworkEvents(){for(const texture of manifest.textureDiagnostics?.pendingTextures||[]){texture.relatedNetworkEvents=manifest.networkEvents.filter(event=>texture.url&&event.url&&sameUrl(texture.url,event.url));texture.relatedNetworkRequests=manifest.networkRequests.filter(request=>texture.url&&request.url&&sameUrl(texture.url,request.url));texture.relatedConsoleErrors=manifest.consoleErrors.filter(error=>texture.url&&String(error?.text||'').includes(texture.url));}}
-async function capturePng(page,afterFailure=false){
+async function capturePng(page,afterFailure=false,preferCdp=false){
  let buffer=null,method=null;
  const valid=value=>Buffer.isBuffer(value)&&value.length>1000&&value.subarray(0,8).toString('hex')==='89504e470d0a1a0a';
- // One bounded WebGL canvas readback; never stack more renderer-bound page evaluations after a timeout.
- let data,canvasTimedOut=false;
- const canvasTimeout=afterFailure?15000:CANVAS_CAPTURE_TIMEOUT_MS;try{data=await bounded(page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null),canvasTimeout,{__captureTimedOut:true});}catch(error){manifest.captureFailure=String(error?.message||error);canvasTimedOut=true;}
+ // Prefer a direct CDP frame when the renderer readiness probe has already stalled.
+ let data,canvasTimedOut=!!preferCdp;
+ const canvasTimeout=afterFailure?15000:CANVAS_CAPTURE_TIMEOUT_MS;
+ if(!preferCdp){try{data=await bounded(page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null),canvasTimeout,{__captureTimedOut:true});}catch(error){manifest.captureFailure=String(error?.message||error);canvasTimedOut=true;}}
  if(data?.__captureTimedOut){manifest.captureFailure='The game canvas capture did not answer within '+canvasTimeout+' ms; attempting the independent CDP screenshot channel without another page evaluation.';canvasTimedOut=true;}
  const prefix='data:image/png;base64,';
  if(typeof data==='string'&&data.startsWith(prefix)){const payload=data.slice(prefix.length);if(/^[A-Za-z0-9+/]+={0,2}$/.test(payload)){const candidate=Buffer.from(payload,'base64');if(valid(candidate)){buffer=candidate;method='game-test-canvas-preserved-buffer';}}}
- // CDP screenshot is attempted only when the canvas call returned but did not provide a valid PNG.
+ // CDP can preserve the frame even when the WebGL page evaluation is unresponsive.
  if(!valid(buffer)&&cdpSession){const cdpStarted=Date.now();try{const shot=await bounded(cdpSession.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false,optimizeForSpeed:true}),afterFailure?8000:CDP_CAPTURE_TIMEOUT_MS,null);if(shot?.data){const candidate=Buffer.from(shot.data,'base64');if(valid(candidate)){buffer=candidate;method='cdp-page-capture';}}manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'cdp-page-capture',durationMs:Date.now()-cdpStarted,success:valid(buffer),trigger:canvasTimedOut?'canvas-timeout':'canvas-unavailable'}];}catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'cdp-page-capture',durationMs:Date.now()-cdpStarted,success:false,error:String(error?.message||error)}];}}
  if(!valid(buffer)){manifest.captureFailure=manifest.captureFailure||'No valid PNG was returned by the game canvas or CDP.';return false;}
  const file=afterFailure?'smoke-timeout-current-frame.png':'smoke-first-camera.png';
@@ -85,6 +86,9 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
   return {testMode:true,productionDataModified:false,before,repair,after,unsafeBefore,relocationPairs,relocatedStructures,verifiedMovedCount:relocatedStructures.length,verifiedSafeRelocationCount,unsafePairsVerified,unsafeAfter,offshoreBefore,offshoreAfter,offshoreClear,noOffshoreAfter,offshoreInventoryComplete,passed:after.total===39&&after.unsafeCount===0&&after.visibleInvalidAfterRepair===0&&after.untrackedRootCount===0&&unsafePairsVerified&&offshoreClear&&noOffshoreAfter&&offshoreInventoryComplete};
  }));if(!manifest.structureRepairSimulation?.passed){manifest.structureRepairSimulation.warning='Structure simulation gate did not pass; continuing the isolated camera capture so the offshore scene can still be inspected. The overall structure verdict remains fail.';console.warn('[CAPTURE] Structure simulation gate failed; continuing to capture the requested boat-approach camera.');}
  manifest.coastalDiagnostics.scope={camera:prepared.camera,auditIslandIndex:prepared.auditIslandIndex,geometryAuditScope:'all 13 islands',structureGroundingScope:'all registered/discovered habitable structures',mutationPolicy:'read-only; no production structure is moved, hidden or repaired'};
+ // Save the exact offshore approach frame before texture/geometry diagnostics can stall the renderer.
+ const approachFrameSaved=await runPhase('preserve boat-approach camera frame',()=>capturePng(page,true,true));
+ manifest.approachFrameSaved=approachFrameSaved;
  const convergenceResult=await runPhase('wait for render and texture convergence',()=>bounded(page.evaluate(({timeoutMs,maxFrames})=>window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs,maxFrames}),{timeoutMs:TIMEOUT_MS,maxFrames:120}),12000,{__prepareTimedOut:true}));
  const readinessTimedOut=!!convergenceResult?.__prepareTimedOut;
  if(readinessTimedOut){manifest.readiness={ready:false,verdict:'fail',converged:false,sceneReady:false,timeoutMs:TIMEOUT_MS,externalWaitLimitMs:12000,textureDiagnostics:null,warning:'Readiness timed out; preserving the requested camera capture anyway.'};manifest.captureWarning='Render readiness did not converge; attempting direct frame capture.';}
