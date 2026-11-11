@@ -12940,7 +12940,7 @@ function update(dt){
   function auditOffshoreStructuralRoots(limit=250){
    const started=performance.now(),maxItems=Math.max(25,Math.min(500,Math.floor(Number(limit)||250)));
    const structureNamePattern=/(?:weatherednorsehut|persistent(?:player)?norseshelter|norse.*(?:hut|house|shelter|cabin|longhouse|meadhall|forge|watchtower|outpost|camp)|(?:island)?(?:outpost|scoutcamp|garrisonoutpost|watchtower|blacksmithforge|castawaycamp|settlementhouse|building)(?:[_-]?\\d+)?|(?:hut|house|shelter|cabin|longhouse|meadhall)(?:[_-]?\\d+)?)/i;
-   const excludedRootPattern=/(?:villageguard|factionbadge|garrisonstandard|garrisonflag|garrisoncrossbar|garrisonflagpole|forgehammerstand|flag|banner|weapon|tree|grass|ship|boat|drakkar|dock)/i;
+   const excludedRootPattern=/(?:villageguard|factionbadge|garrisonstandard|garrisonflag|garrisoncrossbar|garrisonflagpole|forgehammerstand|flag|banner|weapon|tree|grass|ship|boat|drakkar|dock|norseregattabuoy|regattabuoymooring|regattabuoybody|regattabuoycrest|regattabuoycollar)/i;
    const registered=new Map(habitableStructureRegistry.map(entry=>[entry.root,entry]));
    const candidates=new Set(registered.keys()),parentRoot=(node)=>{let current=node.parent,depth=0;while(current&&depth++<16){if(structureNamePattern.test(current.name||''))return current;current=current.parent;}return null;};
    // Babylon meshes may be present in scene.meshes without a separately named TransformNode root.
@@ -12952,7 +12952,7 @@ function update(dt){
    }
    // Geometry-only fallback: capture grouped scene roots that have no semantic name.
    // This is essential for invasion/endgame props whose imported GLB nodes are named generically.
-   const unknownAssemblyExclusions=/(?:armature|bone|hips|spine|headassembly|bootjoint|elbow|forearm|upperarm|trouserleg|peasantbody|villager|villageguard|armoredknight|raidercrew|enemyhuman|humanmodel|playercharacter|skeleton|drakkar|boat|ship|tree|grass|fern|bush|shrub|broadleaf|reed|pine|vegetation|foliage|rock|terrain|ground|water|ocean|sea|wave|foam|shore|coast|beach|seabed|sand|tidal|flag|banner|weapon)/i;
+   const unknownAssemblyExclusions=/(?:armature|bone|hips|spine|headassembly|bootjoint|elbow|forearm|upperarm|trouserleg|peasantbody|villager|villageguard|armoredknight|raidercrew|enemyhuman|humanmodel|playercharacter|skeleton|drakkar|boat|ship|tree|grass|fern|bush|shrub|broadleaf|reed|pine|vegetation|foliage|rock|terrain|ground|water|ocean|sea|wave|foam|shore|coast|beach|seabed|sand|tidal|flag|banner|weapon|norseregattabuoy|regattabuoymooring|regattabuoybody|regattabuoycrest|regattabuoycollar)/i;
    const unidentifiedGeometryRoots=new Set();
    for(const node of scene.transformNodes||[]){
     if(!node||node.isDisposed?.()||candidates.has(node))continue;
