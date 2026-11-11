@@ -119,7 +119,14 @@ async function main(){
     '- Guarniciones: **'+(custom?.counts?.garrisons??'no disponible')+'**',
     '- Cámaras: **'+(custom?.shots?.captured??0)+' / '+(custom?.shots?.planned??0)+'**',
     '- Fallos de cámara: **'+(custom?.shots?.failed??0)+'**','',
-    '## Archivos de salida','',...report.files.map(file=>'- artifacts/'+file),'',
+    '## Lista de estructuras detectadas','','| Código | ID interno | Nombre | Tipo | Isla | X | Y | Z | Mallas |',
+    '|---|---:|---|---|---|---:|---:|---:|---:|'
+  );
+  for(const item of (custom?.structures||[])){
+    const p=item.position||{};
+    lines.push('| '+(item.code||'—')+' | '+(item.nativeId??item.uniqueId??'—')+' | '+String(item.name||'sin nombre').replaceAll('|','/')+' | '+(item.kind||item.structuralRole||'sin clasificar')+' | '+(item.island||'sin isla')+' | '+(p.x??'—')+' | '+(p.y??'—')+' | '+(p.z??'—')+' | '+(item.meshCount??'—')+' |');
+  }
+  lines.push('','## Archivos de salida','',...report.files.map(file=>'- artifacts/'+file),'',
     '## Observaciones','',
     '- Cada estructura conserva su código, nombre, ID interno si está disponible, isla, coordenadas y geometría.',
     '- Las estructuras que no se puedan clasificar quedan como candidatas pendientes; no se descartan silenciosamente.',
