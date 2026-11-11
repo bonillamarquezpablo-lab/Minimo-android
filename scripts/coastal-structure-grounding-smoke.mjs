@@ -148,8 +148,10 @@ async function main(){
    if(result.cameraMode!=='follow')throw new Error('The campaign did not start in follow-camera mode: '+JSON.stringify(result));
    if(result.mapCssWidth<95||result.mapCssWidth>180)throw new Error('Unexpected minimap size: '+JSON.stringify(result));
    const file=path.join(OUT,'live-local-minimap.png');
-   const shot=await captureCompositedPage(page,file);
-   return {...result,screenshot:path.basename(file),screenshotBytes:shot.length};
+   let shot=null,screenshotError=null;
+   try{shot=await captureCompositedPage(page,file);}catch(error){screenshotError=String(error?.message||error);}
+   // A decorative minimap PNG must never abort the independent geometry measurements.
+   return {...result,screenshot:shot?path.basename(file):null,screenshotBytes:shot?.length||0,screenshotError};
   });
   report.mapMarkerVerification=await phase('verify expanded map click returns world coordinates',async()=>page.evaluate(()=>{
    const map=document.getElementById('map');if(!map)throw new Error('The tactical map canvas is missing.');
@@ -179,7 +181,7 @@ async function main(){
   report.baseline=baseline;report.repairPass=repairPass;report.postAutomaticAudit=settled;
   report.runtimeRepairSimulation={testMode:true,waitMs:800,usesGameRepairSystem:true,explicitRepairApiCalled:true,productionDataModified:false,repairSummary:repairPass?{total:repairPass.total,groundedCount:repairPass.groundedCount,unsafeCount:repairPass.unsafeCount,repaired:repairPass.repaired,hiddenUnsafe:repairPass.hiddenUnsafe,visibleInvalidAfterRepair:repairPass.visibleInvalidAfterRepair}:null};
   report.highTideTest={mode:'forced-high',seaSurfaceCapMeters:.38,requiredDryClearanceMeters:.22,waterState:await page.evaluate(()=>window.__ELSN_TEST__.diagnostics().coast)};
-  report.habitableStructures=settled.structures;report.offshoreAudit=settled.offshore;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.summary=settled.summary;
+  report.habitableStructures=settled.structures;report.offshoreAudit=settled.offshore;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.rocks=settled.rocks;report.summary=settled.summary;
   report.initialPlayerCamera=settled.view;report.hrafnBaseline=hrafnBaseline;
   const hrafnHouses=(settled.houses||[]).filter(item=>item.nearestIslandIndex===3).sort((a,b)=>a.buildingIndex-b.buildingIndex);
   const hrafnCamps=(settled.camps||[]).filter(item=>item.islandIndex===3).sort((a,b)=>a.kind.localeCompare(b.kind));
