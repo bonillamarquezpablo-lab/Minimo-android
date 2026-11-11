@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 const OUT=path.resolve('artifacts/hrafn-geometry');
 const FILE=path.join(OUT,'hrafn-geometry-measurements.json');
 const BASE_URL=process.env.HRAFN_TEST_URL||'http://127.0.0.1:4176/';
-const report={schema:1,build:null,branch:process.env.GITHUB_REF_NAME||null,commit:process.env.GITHUB_SHA||null,
+const report={schema:1,build:null,branch:process.env.HRAFN_PR_HEAD_BRANCH||process.env.GITHUB_HEAD_REF||process.env.GITHUB_REF_NAME||null,commit:process.env.HRAFN_PR_HEAD_SHA||process.env.GITHUB_SHA||null,
  method:'live Babylon scene geometry; no screenshot-derived measurements',
  conditions:{tide:'high',tideOffsetMeters:0.28,waveTimeSamples:32,waveTimeStepSeconds:1.5,
  lodCamera:'30 m seaward of the live visible shoreline, along the same radial bearing used by the coast-distance measurement, 2.5 m above mean sea level',
