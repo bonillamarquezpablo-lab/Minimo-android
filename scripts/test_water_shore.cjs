@@ -3,6 +3,20 @@ const fs=require('node:fs');
 const assert=require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8');
 assert.match(html,/updateOceanDepthGradient\(\)/);
+assert.match(html,/const physicalDepth=window\.NorseCoastalInteraction\.waterDepth\(waterlineY,seabedY\)/,
+  "Ocean vertex alpha must be derived from the vertical gap between sea level and the rendered seabed, not a radial island-distance mask.");
+assert.doesNotMatch(html,/Math\.max\(depth,bathymetry\)/,
+  "Do not rebuild the old radial alpha oval from a distance proxy.");
+assert.match(html,/secondAbsDistance=Infinity,secondIsland=null,secondRadialDistance=0/,
+  "Ocean depth must retain the second-nearest shoreline for a continuous offshore transition.");
+assert.match(html,/else if\(shoreDistance<secondAbsDistance\)/,
+  "The depth sampler must identify both closest island coastlines.");
+assert.match(html,/nearestRadialDistance>nearestIsland\.r\*1\.085&&secondRadialDistance>secondIsland\.r\*1\.085/,
+  "Shoreline blending must remain offshore and must not tint land as water.");
+assert.match(html,/const secondaryWeight=\.5\*\(1-smooth01\(coastDistanceGap\/24\)\)/,
+  "The two offshore depth profiles must blend smoothly over their 24 m nearest-coast transition.");
+assert.match(html,/profileDepth=profileDepth\*\(1-secondaryWeight\)\+secondaryProfileDepth\*secondaryWeight/,
+  "The water tint and alpha must share the blended depth profile.");
 assert.match(html,/oceanDepthSettings\.transitionMeters/);
 assert.match(html,/uniform float beachTime/);
 assert.match(html,/shoreFoamStrength/);
@@ -18,24 +32,33 @@ assert.match(html,/function tideOffsetAt/);
 assert.match(html,/tideButton\('MAREA ALTA',\.28\)/);
 assert.match(html,/tideButton\('MAREA BAJA',-\.28\)/);
 assert.match(html,/function getWaterCoastDiagnostics\(\)/);
-for(const metric of ["foamActiveSegments","foamSegmentCapacity","foamValidIntersections","foamMaxOffshoreDistanceMeters","foamVerticesOutsideBand","foamUpdateLastMs"]) {
+for(const metric of ["foamActiveSegments","foamSegmentCapacity","foamValidIntersections","foamMaxOffshoreDistanceMeters","foamVerticesOutsideBand","foamUpdateLastMs","foamBackwashActiveColumns","foamBackwashPeakVelocityMetersPerSecond"]) {
  assert.ok(html.includes(metric), `Missing coastal resaca diagnostic: ${metric}`);
 }
 assert.ok(html.includes('tidalFoamLastUpdateMs=performance.now()-foamWorkStarted'));
 assert.match(html,/Resaca: .*foamActiveSegments/);
 assert.match(html,/function buildTidalFoam\(island,index\)/);
+assert.match(html,/FOAM_TERRAIN_PROFILE_ROWS=41/,"The active coast must precompute a sub-metre terrain profile without reducing geometry density.");
+assert.match(html,/function sampleTidalFoamTerrainProfile\(foam,col,radius\)/,"Animated coast layers must interpolate cached terrain heights.");
+assert.match(html,/function cachedShorelineFoamRadius\(foam,col,t=oceanTime\)/,"The moving shoreline solver must reuse cached terrain heights.");
 assert.match(html,/const waveBodyOffsets=\[-2\.65,-2\.05,-1\.48,-1\.02,-\.66,-\.34,-\.08,\.18,\.48,\.86,1\.34,1\.92,2\.55\]/,"The shoreline wave must have a multi-row 3D cross-section, not a single animated line.");
 assert.match(html,/VolumetricShoreBreaker_/,"The coast must create a separate volumetric wave body.");
 assert.match(html,/const lift=\(\.025\+\.22\*crest\+\.065\*rearShoulder\)/,"The wave body must retain a natural raised crest and rear shoulder with reduced artificial bulging.");
-assert.match(html,/const breakerTravel=\.62\*Math\.sin\(oceanTime\*1\.08/,"The wave crest must travel onto and away from the beach.");
+assert.match(html,/const breakerTravel=\.24\*Math\.sin\(oceanTime\*1\.08/,"The breaker remains inside the foam run-up corridor.");
+assert.match(html,/retreatResidue=new Float32Array\(segments\+1\),backwashVelocity=new Float32Array\(segments\+1\)/,"Each shoreline segment must track its backwash velocity.");
+assert.match(html,/const measuredBackwashVelocity=Number\.isFinite\(previousShore\)\?retreat\/Math\.max\(\.001,foamElapsed\):0/,"Backwash must be measured from seaward shoreline movement per second.");
+assert.match(html,/const shorelineBandFade=smooth01\(\(radialOffsetFromShore\+1\.50\)\/\.18\)\*\(1-smooth01\(\(radialOffsetFromShore-\.58\)\/\.22\)\)/,"Visible foam must fade at the shoreline-band edge.");
+assert.match(html,/const trailingFoam=residual\*washTrailingProfile\[vertex\]\*\(\.18\+\.30\*backwashStrength\)\*exposedSandContact/,"Backwash strength must control exposed-sand residual foam.");
+assert.match(html,/physicalBackwashVelocity:\{implemented:true,unit:'m\/s'/,"The coast must report measured backwash speed in metres per second.");
 assert.match(html,/B\.VertexData\.ComputeNormals\(waveBodyPositions,waveBodyIndices,waveBodyNormals\)/,"The volumetric wave must receive a smooth initial normal field.");
-assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/ComputeNormals\(waveBodyPositions|waveBodyMesh\.updateVerticesData\(B\.VertexBuffer\.NormalKind/,"The animated wave must not rebuild its full normal field on mobile.");
+assert.match(html,/foam.waveBodyNormalRefreshCounter>=\(isTouchDevice\?4:2\)/,"Moving breaker normals are refreshed at a throttled cadence instead of remaining frozen.");
 assert.match(html,/for\(const foam of tidalFoamMeshes\)/);
 const animateStart=html.indexOf("function animateWater(dt)");
 const animateEnd=html.indexOf("function rand(a,b)",animateStart);
 const animateBody=html.slice(animateStart,animateEnd);
 assert.match(animateBody,/foamDue=tidalFoamAccumulator>=TIDAL_FOAM_UPDATE_STEP/);
 assert.match(animateBody,/const foamElapsed=foamDue\?tidalFoamAccumulator:0/);
+assert.match(animateBody,/const terrainY=sampleTidalFoamTerrainProfile\(foam,col,radius\)\+terrainDeformationAt\(index,x,z\),water=Math\.min\(waterCap,shoreWater\+waterSlope\*radial\)/,"Animated breaker vertices must reuse precomputed terrain, not recalculate the full island heightfield.");
 assert.match(animateBody,/const terrainY=sampleRadialProfile\(waveBodyOffsets,waveBodyTerrainSamples,profileOffset\),water=sampleRadialProfile\(waveBodyOffsets,waveBodyWaterSamples,profileOffset\)/,"Foam and wash must reuse the sampled radial terrain/water profile instead of resampling the heightfield for every vertex.");
 assert.match(animateBody,/const dryFoamResidue=terrainY<=\(Number\(ground\.position\.y\)\|\|0\)\+\.42/,"Dry foam residue must compare the numeric terrain height against sea level.");
 assert.match(animateBody,/waveBodyTerrainSamples\[waveRow\]=terrainY;waveBodyWaterSamples\[waveRow\]=water;/,"The volumetric wave must provide its radial samples to the foam and wash layers.");
@@ -68,16 +91,25 @@ assert.match(html,/color=mix\(color,wrackTint,wrackZone\*wrackFragments\*\.045\)
 assert.match(html,/washMaterial\.emissiveColor=new B\.Color3\(0,0,0\)/,"The intertidal water film must not glow cyan or cast colored haze.");
 assert.match(html,/M\.water\.needDepthPrePass=false;M\.water\.disableDepthWrite=true;/,"Transparent water must not write an opaque shoreline depth pre-pass.");
 assert.match(html,/washData\.uvs=washUvs/,"The advancing water film must have world-aligned UVs for the shared ocean normal map.");
+assert.match(html,/washUvs\[uv\]=x\/24\+\.5;washUvs\[uv\+1\]=z\/24\+\.5;/,"The swash normal map must be sampled at beach scale rather than stretched across the world.");
 assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/washMesh\.updateVerticesData\(B\.VertexBuffer\.UVKind,washUvs,false,false\)/,"Film UVs are static in the water-sheet coordinate frame and need no redundant upload.");
-assert.match(html,/washMesh,washPositions,washUvs,washColors,washPattern,washFractions,washRows\}\);/,"The moving film UV buffer must be retained in the active coast state.");
-assert.match(html,/washMesh,washPositions,washColors,washPattern,washFractions,washRows\}=foam/ ,"The update loop must reuse film buffers without uploading static UVs.");
-assert.match(html,/const waterContact=smooth01\(\(water-terrainY\+\.03\)\/\.13\)/,"The water film must be suppressed where the wave does not physically cover the sand.");
+assert.match(html,/washMesh,washPositions,washUvs,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows,washDiagnosticDepths\}\);/,"The moving film UV buffer and its cached static fields must be retained in the active coast state.");
+assert.match(html,/washMesh,washPositions,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows,washDiagnosticDepths\}=foam/,"The moving film update loop must unpack its optional diagnostic depth array.");
+assert.match(html,/const shallowWashContact=smooth01\(\(waterDepth-\.008\)\/\.055\)\*\(1-smooth01\(\(waterDepth-\.24\)\/\.28\)\)/,"The advancing sheet must be visible through the shallow-water band.");
+assert.match(html,/const exposedSandContact=1-smooth01\(\(waterDepth\+\.018\)\/\.12\)/,"Retreat foam must remain on exposed wet sand.");
+assert.ok(html.includes("const trailingFoam=residual*washTrailingProfile[vertex]*(.18+.30*backwashStrength)*exposedSandContact"),"Retreat foam must follow the measured backwash while remaining on exposed wet sand.");
+assert.ok(html.includes("const crossBreakerPhase=(foamWaveX*.31-foamWaveZ)*.041+oceanTime*.79+angle*1.2;"),"A smaller cross swell must break up the single-direction shoreline crest.");
+assert.ok(html.includes("const foamWaveCrest=smooth01(primaryBreakerCrest*.78+crossBreakerCrest*.22);"),"The breaker must blend two travelling wave directions.");
+assert.ok(html.includes("const whitewater=breakStrength*leadingCellular*.64*shallowWashContact;"),"Whitewater must retain a clear, broken white crest.");
+assert.ok(html.includes("const alpha=Math.min(.80,filmAlpha+whitewater*.76+trailingFoam*.70);"),"Foam must remain readable over the water film.");
+assert.ok(html.includes("vec3 wetColor=dryColor*vec3(.84,.82,.76)+vec3(.010,.009,.006);"),"Wet sand must darken naturally when saturated.");
+assert.ok(html.includes("roughness=mix(max(.70,sandRoughness),.31,humidity);"),"Wet sand must retain broad, soft highlights instead of plastic gloss.");
 assert.match(html,/mesh\.receiveShadows=false;mesh\.castShadows=false;mesh\.hasVertexAlpha=true/,"The auxiliary wet-sand layer must not introduce hard shadow bands.");
 assert.match(html,/washMaterial\.bumpTexture=M\.water\.bumpTexture\|\|albedoNormalWater/,"The moving sheet must use animated ocean normals.");
 assert.match(html,/washMaterial\.diffuseFresnelParameters/,"The water film must have a grazing-angle Fresnel response.");
 assert.match(html,/washMaterial\.opacityFresnelParameters/,"The water film must keep a controlled transparent edge.");
 assert.match(html,/const cellular=Math\.pow\(smooth01\(\(washPattern\[vertex\]-\.34\)\/\.54\),2\.0\)/,"Whitewater must break into irregular foam patches.");
-assert.match(html,/const filmAlpha=filmCoverage\*\(\.16\+\.20\*breakStrength\)\*flowPulse\*filmStrength\*waterContact/,"The advancing film must be visible but limited to actual water contact.");
+assert.match(html,/const filmAlpha=filmCoverage\*\(\.20\+\.34\*breakStrength\)\*flowPulse\*filmStrength\*shallowWashContact/,"The advancing film must stay visible in the intertidal shallow-water band.");
 assert.match(html,/const lace=smooth01\(\(foamPattern\[vertex\]-.20\)\/\.40\)/,"The white crest must break into visible foam cells.");
 assert.match(html,/angleValues=new Float32Array\(cols\),angleCos=new Float32Array\(cols\),angleSin=new Float32Array\(cols\)/);
 assert.match(html,/angle=angleValues\[col\],cs=angleCos\[col\],sn=angleSin\[col\]/);
@@ -88,14 +120,19 @@ assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.in
 assert.match(html,/colors,foamPattern,angleValues,angleCos,angleSin,index,waveBodyMesh/,"Cached shoreline directions and volumetric wave storage must be retained in the active coast state.");
 assert.match(html,/tidalFoamMeshes\.push\(\{mesh,positions,foamUvs,colors,foamPattern/,"Breaker UVs must be retained by the active coast mesh.");
 assert.match(html,/foamBreakStrength\*\.82/);
-assert.match(html,/const radialOffsets=isPerformanceMode\?\[-\.62,-\.30,0,\.30,\.62\]:\[-1\.05,-\.82,-\.59,-\.36,-\.13,\.10,\.33,\.56,\.79,1\.02,1\.25\]/);
+assert.match(html,/const radialOffsets=isPerformanceMode\?\[-\.62,-\.30,0,\.30,\.62\]:\[-1\.05,-\.82,-\.59,-\.36,-\.13,\.10,\.22,\.34,\.45,\.53,\.60\]/);
 assert.match(html,/washColors\[color\]=\.72\*\(1-whiteMix\)\+\.97\*whiteMix/,"The intertidal film must remain neutral and foam must fade toward white.");
 
 assert.match(html,/window\.NorseCoastalInteraction\.filmSurfaceHeight\(terrainY,water,filmWave\)/,"The advancing film must sit above the sand/water interface using the shared terrain sample.");
-assert.match(html,/window\.NorseCoastalInteraction\.filmCoverage\(fraction,washPattern\[vertex\]\)/,"The advancing film must fade and fragment at its edges.");
+assert.match(html,/washFilmCoverage\[vertex\]=window\.NorseCoastalInteraction\.filmCoverage\(washFractions\[row\],washPattern\[vertex\]\)/,"The advancing film must preserve its edge breakup while caching its static coverage once.");
+assert.match(html,/const underwaterSkirtClearanceMeters=\.035/,"The non-walkable island terrain skirt must sit below the sandy seabed.");
+assert.match(html,/underwaterSkirt\?Math\.min\(analyticalHeight,seabedY-underwaterSkirtClearanceMeters\):analyticalHeight/,"Only submerged vertices beyond the shoreline may be lowered below the separate seabed mesh.");
+assert.match(html,/norseUnderwaterSkirtBelowSeabed:true/,"Runtime island metadata must identify the buried terrain skirt.");
 assert.match(html,/function buildCoastalSeabed\(island,index\)/,"Each island must have an independent sandy seabed mesh.");
 assert.match(html,/coastalSeabedMaterial\.bumpTexture=texCoastalSandNormalPbr/,"The seabed must have its own normal-mapped sand material.");
 assert.match(html,/norseSubmergedSandyBottom:true/,"The seabed must be identifiable in scene metadata.");
+assert.match(html,/const innerRatio=1\.075,outerRatio=1\.92/,"The seabed must extend beyond the old abrupt 1.46-radius edge.");
+assert.match(html,/const deepFade=smooth01\(\(t-\.38\)\/\.62\)/,"The exposed seabed must fade into a deep-water tone before its outer edge.");
 assert.match(html,/window\.NorseCoastalInteraction\.waterOpacity\(physicalDepth\)/,"Shallow water must reveal the separate sand bottom without disappearing.");
 assert.match(html,/return window\.NorseCoastalInteraction\.seabedHeight\(d,is\.r,-2\.9\)/,"The old island heightfield must follow the same underwater depth profile.");
 assert.doesNotMatch(html,/const shallowAlpha=\(bathymetry<=0&&depth<=0\)/,"The old near-transparent water rule must be removed.");
@@ -107,9 +144,16 @@ for(const label of ['Arena seca · grano','Arena húmeda · intensidad','Orilla 
 assert.ok(html.includes('./scripts/nordic/coastal-interaction.js'),"The coastal physics helper must load before the game.");
 assert.ok(html.indexOf('updateOceanDepthGradient();',html.indexOf('function smooth01'))>html.indexOf('const terrainHashCache='),'Bathymetry must initialize after terrain noise dependencies.');
 assert.ok(html.includes("applyTexture(M.water,texWater,17.5);"),"Water albedo must show readable smaller-scale surface detail.");
-assert.ok(html.includes("oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;"),"Water normals must resolve sub-metre ripples at player distance.");
+assert.ok(html.includes("oceanWaveNormal.uScale=8.25;oceanWaveNormal.vScale=11.4;oceanWaveNormal.wAng=.4014257279586958;M.water.bumpTexture=oceanWaveNormal;M.water.bumpTexture.level=.43;"),"Quality water normals must retain fine ripples with non-commensurate world scales and rotation.");
+assert.match(html,/const size=512,tau=Math\.PI\*2,tex=new B\.DynamicTexture\('LayeredOceanWaveNormal'/,"Quality ocean normals must use a power-of-two mipmapped texture.");
+assert.match(html,/const bathymetry=nearestIsland\?Math\.max\(0,-terrainHeightOnIsland\(nearestIsland,x,z\)\):18/,"Nearshore water opacity must follow the irregular terrain/seabed profile.");
+assert.match(html,/const farBlend=nearestIsland\?smooth01\(\(nearestRadialRatio-1\.46\)\/\.50\):1/,"Only the far-offshore continuation may use a broad radial depth blend.");
 assert.ok(html.includes(".020*Math.sin(67*warpU+41*warpW)"),"Water normals must retain high-frequency cross-directional micro ripples.");
-assert.ok(html.includes("new B.Color3(.66,.80,.88);M.water.specularPower=reducedWaterProfile?28:88;"),"Quality water must preserve broader, brighter specular glints.");
+assert.match(html,/new B\.DynamicTexture\('LayeredOceanWaveNormal',\{width:size,height:size\},scene,true\)/,"Ocean normal mipmaps must be generated to prevent tiled high-frequency aliasing.");
+assert.match(html,/rotatedU=2\*warpU\+warpW,rotatedW=-warpU\+2\*warpW/,"The ocean normal field must include a tileable second direction that breaks the repeating grid.");
+assert.match(html,/tertiaryU=3\*warpU-2\*warpW,tertiaryW=2\*warpU\+3\*warpW/,"The ocean normal field must contain a third independent tileable wave direction.");
+assert.match(html,/return primary\*\.66\+secondary\*\.22\+tertiary\*\.12/,"The three directional normal spectra must blend while retaining the main fine-wave field.");
+assert.ok(html.includes("M.water.specularColor=reducedWaterProfile?new B.Color3(.24,.34,.38):new B.Color3(.70,.82,.88);M.water.specularPower=reducedWaterProfile?34:52;"),"Quality water must retain visible but restrained specular highlights.");
 assert.ok(html.includes("M.water.diffuseFresnelParameters.power=2.3;"),"Grazing-angle water highlights must become more legible.");
 assert.match(html,/const livingBeachLayers=new Array\(land.length\)/,"Beach shader/state arrays must be indexed by island and lazy.");
 assert.doesNotMatch(html,/land\.forEach\(buildLivingBeachLayer\)/,"Do not allocate high-resolution beach materials and state textures for all thirteen islands at startup.");
@@ -124,13 +168,17 @@ assert.match(html,/const nextIndex=activeBeachIslandIndex;/,"The breaker must us
 assert.match(html,/const waterDepth=water-terrainY,waterContact=smooth01\(\(waterDepth-\.015\)\/\.22\)/,"The wave body must reuse its sampled coastal water and terrain height.");
 assert.match(html,/waveBodyPositions\[offset\+1\]=waterDepth>0\?water\+\.018\+lift:terrainY-\.045/,"Dry terrain must occlude the volumetric wave instead of lifting it above mountains.");
 assert.match(html,/const foamTerrainContact=Math\.max\(foamSubmerged,dryFoamResidue\)/,"Foam residue must fade with actual terrain/water separation.");
-assert.doesNotMatch(html.slice(html.indexOf("function animateWater(dt)"),html.indexOf("function rand(a,b)")),/ComputeNormals\(waveBodyPositions/,"Do not recompute the full volumetric-wave normal field during every animation update.");
+assert.match(animateBody,/foam.waveBodyNormalRefreshCounter\+\+;/,"The moving wave must count its normal refresh cadence.");
+assert.match(animateBody,/if\(foam.waveBodyNormalRefreshCounter>=\(isTouchDevice\?4:2\)\)/,"The wave normals must refresh at a throttled cadence on touch devices and desktop.");
 assert.match(html,/if\(beachWorkLayer&&beachWorkLayer\.index!==activeBeachIslandIndex\)/,"Pending beach-state work must be cancelled when the player changes island.");
 assert.match(html,/function coastalWaterHeight\(x,z,t=oceanTime\).*meanSeaLevel\+\.38/,"The shoreline water must stop at sea level plus a short physical run-up margin.");
 assert.match(html,/return terrainY-coastalWaterHeight\(x,z,t\);/,"The shoreline intersection must use capped coastal water, not an offshore crest on a hill.");
 assert.match(html,/waveBodyMesh\.renderingGroupId=0/,"The translucent breaker must share the terrain depth buffer.");
 assert.match(html,/washMesh\.hasVertexAlpha=true;washMesh\.renderingGroupId=0/,"The advancing water film must share the terrain depth buffer too.");
 assert.match(html,/WATER_DETAIL_RADIUS[^;]*isTouchDevice\?90:300/,"High-frequency water displacement must stay local to the active island on touch devices without reducing mesh resolution.");
+assert.match(html,/disableNearWaterDetail:false/,"Test-only LOD isolation must default to normal near-water detail.");
+assert.match(html,/if\(coastalDiagnosticOverrides\.disableNearWaterDetail\)return 0/,"Near/far LOD A/B must force one shared far-wave endpoint without changing normal gameplay.");
+assert.match(html,/diagnosticOceanDepthTintColors=oceanDepthVertexColors\.slice\(\)/,"Ocean depth tint diagnostics must preserve and restore the original RGB buffer independently from alpha.");
 assert.match(html,/const waterFarStep=isPerformanceMode\?[^;]*isTouchDevice\?\.22/,"Far-ocean geometry updates should be throttled on touch devices while local waves retain detail.");
 assert.match(html,/async function createRealGrass\(onlyIslandIndex=null,focusX=null,focusZ=null\)/,"Quality vegetation must accept one selected island and a local focus point.");
 assert.match(html,/if\(onlyIslandIndex!==null&&islandIndex!==onlyIslandIndex\)continue;/,"Grass placement must skip all inactive islands.");

@@ -1,0 +1,107 @@
+name: Inspector único — EL SIN NOMBRE
+
+on:
+  pull_request:
+    branches: [main, test/coastal-reference-0.6.272]
+  workflow_dispatch:
+    inputs:
+      capture_plan:
+        description: 'Una sola inspección: inventario completo, texturas, estructuras, agua, costa, pruebas y cámaras desde el agua. Hasta 120 capturas.'
+        required: true
+        type: string
+        default: '[{"id":"inspeccion-unica-hrafn","zone":{"label":"Bahía de Hrafn — todas las construcciones detectadas","center":{"x":28,"y":2.2,"z":143},"radiusMeters":27,"focus":"structures","maxTargets":12,"cameraDistanceMeters":9,"angles":[0,45,90,135,180,225,270,315],"times":[37],"tides":["natural"],"observationPoint":{"x":28,"y":6,"z":236.3},"observationHeightOffsets":[0,2.5],"includeTopDown":false}}]'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scene-capture-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  unified-inspector:
+    continue-on-error: true
+    name: 'Inspector único: todas las pruebas, diagnósticos y capturas'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout exact candidate commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install report image support
+        run: python -m pip install Pillow
+
+      - name: Validate every inspector module and contract
+        run: |
+          python scripts/inspect_structure_repair_source.py
+          node --check scripts/run-unified-inspector.mjs
+          node --check scripts/player-startup-smoke.mjs
+          node --check scripts/texture-readiness-smoke.mjs
+          node --check scripts/coastal-structure-grounding-smoke.mjs
+          node --check scripts/coastal-reference.mjs
+          node --check scripts/scene-capture-inspection.mjs
+          node --check scripts/custom-scene-capture.mjs
+          node scripts/test_scene_capture_efficiency_contract.cjs
+          node scripts/test_texture_readiness_contract.cjs
+          node scripts/test_coastal_structure_grounding_contract.cjs
+          node scripts/test_capture_reliability_contract.cjs
+
+      - name: Build the complete game and packaged assets
+        run: python scripts/build_site.py
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install chromium
+          node -e "const fs=require('node:fs');const {chromium}=require('playwright');const executable=chromium.executablePath();if(!fs.existsSync(executable))throw new Error('Chromium binary missing: '+executable);console.log('Chromium ready:',executable)"
+
+      - name: Start one local server for the complete inspection
+        run: |
+          python3 -m http.server 4175 --directory dist > /tmp/elsn-unified-inspector-http.log 2>&1 &
+          echo $! > /tmp/elsn-unified-inspector-http.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4175/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/elsn-unified-inspector-http.log
+          exit 1
+
+      - name: Run the single unified inspector
+        env:
+          INSPECTOR_TEST_URL: http://127.0.0.1:4175/
+          CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
+          CAPTURE_SEED: '20261110'
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            export CAPTURE_PLAN_JSON="$CAPTURE_PLAN_INPUT"
+          else
+            export CAPTURE_PLAN_JSON="$(cat scripts/scene-capture-plan.json)"
+          fi
+          node scripts/run-unified-inspector.mjs
+
+      - name: Upload the complete inspection, captures and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-sin-nombre-inspector-unico-${{ github.sha }}
+          path: |
+            artifacts/unified-inspector/
+            artifacts/player-startup/
+            artifacts/texture-readiness-smoke/
+            artifacts/structure-grounding/
+            artifacts/coastal-reference/
+            artifacts/custom-scene-captures/
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,225 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { chromium } from 'playwright';
+const BASE_URL=process.env.CAPTURE_TEST_URL||'http://127.0.0.1:4176/';
+const OUT=path.resolve('artifacts/texture-readiness-smoke');
+const TIMEOUT_MS=Math.max(1000,Math.min(60000,Number(process.env.CAPTURE_TEXTURE_TIMEOUT_MS)||15000));
+const CANVAS_CAPTURE_TIMEOUT_MS=Math.max(2500,Math.min(30000,Number(process.env.CAPTURE_CANVAS_TIMEOUT_MS)||15000));
+const CDP_CAPTURE_TIMEOUT_MS=Math.max(1500,Math.min(12000,Number(process.env.CAPTURE_CDP_TIMEOUT_MS)||8000));
+const rawPlan=process.env.CAPTURE_PLAN_JSON||fs.readFileSync('scripts/scene-capture-plan.json','utf8'),plan=JSON.parse(rawPlan);
+const manifest={schema:5,startedAt:new Date().toISOString(),finishedAt:null,build:null,buildMetadata:null,timeoutMs:TIMEOUT_MS,hardDeadlineMs:240000,renderer:'Chromium headless + ANGLE SwiftShader',camera:null,actualCamera:null,cameraVerification:null,readiness:null,textureDiagnostics:null,structureRepairSimulation:null,coastalDiagnostics:{schema:1,status:'not-run',currentCheck:null,scope:null,checks:{},summary:null},networkEvents:[],networkRequests:[],consoleErrors:[],pageErrors:[],consoleMessages:[],phases:[],currentPhase:null,unresolvedPromises:null,timeoutDiagnostics:null,screenshot:null,verdict:'not-run',failure:null};
+function writeManifest(){fs.mkdirSync(OUT,{recursive:true});const target=path.join(OUT,'manifest.json'),temporary=target+'.tmp';fs.writeFileSync(temporary,JSON.stringify(manifest,null,2)+'\n');fs.renameSync(temporary,target);const coastalTarget=path.join(OUT,'coastal-inspection.json'),coastalTemporary=coastalTarget+'.tmp';fs.writeFileSync(coastalTemporary,JSON.stringify({schema:1,build:manifest.build,buildMetadata:manifest.buildMetadata,camera:manifest.camera,baselineScreenshot:manifest.baselineScreenshot||null,screenshot:manifest.screenshot,startedAt:manifest.startedAt,finishedAt:manifest.finishedAt,diagnostics:manifest.coastalDiagnostics},null,2)+'\n');fs.renameSync(coastalTemporary,coastalTarget);}
+function pickFirstShot(input){
+ if(!Array.isArray(input)||!input.length)throw new Error('El plan no contiene cámaras.');
+ const original=input[0],shot={...original};
+ if(original.zone){
+  const zone=original.zone,center=zone.center||{x:0,y:0,z:0};
+  const point=zone.observationPoint||{x:Number(center.x)||0,y:(Number(center.y)||0)+8,z:(Number(center.z)||0)+Math.max(20,Number(zone.radiusMeters)||20)*1.5};
+  shot.camera={x:Number(point.x),y:Number(point.y),z:Number(point.z),
+   targetX:Number(center.x)||0,targetY:Number(center.y)||0,targetZ:Number(center.z)||0};
+  shot.time=original.time??zone.times?.[0]??37;
+  shot.tide=original.tide??zone.tides?.[0]??'natural';
+  shot.inspectionFocus=zone.focus||'general';
+ }else{
+  let base={...(original.camera||original)};
+  if(Array.isArray(original.views)&&original.views.length)base={...base,...original.views[0]};
+  if(original.orbit){
+   const orbit=original.orbit,target={x:Number(orbit.targetX??base.targetX),y:Number(orbit.targetY??base.targetY),z:Number(orbit.targetZ??base.targetZ)},
+    radius=Number(orbit.radius)||Math.hypot(base.x,base.z),angle=(Number(orbit.startDegrees)||0)*Math.PI/180;
+   shot.camera={x:target.x+Math.sin(angle)*radius,y:Number(orbit.elevation??base.y),z:target.z+Math.cos(angle)*radius,targetX:target.x,targetY:target.y,targetZ:target.z};
+  }else shot.camera=base;
+ }
+ delete shot.orbit;delete shot.views;delete shot.zone;
+ return shot;
+}
+const shot=pickFirstShot(plan);
+let cdpSession=null;const requestMeta=new WeakMap(),requestStarted=new WeakMap();
+const SCRIPT_STARTED_AT=Date.now();
+async function runPhase(name,operation){const row={name,startedAt:new Date().toISOString(),startedAtElapsedMs:Date.now()-SCRIPT_STARTED_AT,status:'in_progress',durationMs:null};manifest.phases.push(row);manifest.currentPhase=name;console.log('[CAPTURE_PHASE] START '+name+' at '+row.startedAt);try{const value=await operation();row.status='completed';return value;}catch(error){row.status='failed';row.error=String(error?.message||error);throw error;}finally{row.finishedAt=new Date().toISOString();row.durationMs=Date.now()-(SCRIPT_STARTED_AT+row.startedAtElapsedMs);manifest.currentPhase=null;console.log('[CAPTURE_PHASE] END '+name+' status='+row.status+' durationMs='+row.durationMs);}}
+function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+async function bounded(value,ms,fallback){return Promise.race([Promise.resolve(value),delay(ms).then(()=>fallback)]);}
+function readStaticBuildMetadata(){const file=path.resolve('dist/index.html');if(!fs.existsSync(file))return {available:false,source:file,value:null,reason:'dist/index.html not found'};const source=fs.readFileSync(file,'utf8'),marker='name="el-sin-nombre-build" content="',at=source.indexOf(marker),value=at>=0?source.slice(at+marker.length).split('"')[0]:null;return {available:!!value,source:file,value,method:'static-built-html-meta'};}
+function near(a,b,tolerance=.025){return Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=tolerance;}
+function cameraVerification(expected,actual){const p=actual?.position,t=actual?.target,checks={positionX:near(expected?.x,p?.x),positionY:near(expected?.y,p?.y),positionZ:near(expected?.z,p?.z),targetX:near(expected?.targetX,t?.x),targetY:near(expected?.targetY,t?.y),targetZ:near(expected?.targetZ,t?.z)};return {matches:Object.values(checks).every(Boolean),tolerance:0.025,checks,expected:{position:{x:expected?.x,y:expected?.y,z:expected?.z},target:{x:expected?.targetX,y:expected?.targetY,z:expected?.targetZ}},actual};}
+function sameUrl(a,b){try{return new URL(a,BASE_URL).href===new URL(b,BASE_URL).href;}catch{return a===b;}}
+async function collectRuntimeDiagnostics(targetPage,timeoutMs=2500){
+ if(!targetPage)return null;
+ const value=await bounded(targetPage.evaluate(()=>{const d=window.getGameHealthDebug?.();if(!d)return null;const r=d.runtime||{};return {gameStarted:d.gameStarted,worldUpdatePhase:d.worldUpdatePhase,worldUpdateCount:d.worldUpdateCount,lastWorldUpdateFailure:d.lastWorldUpdateFailure,performanceAssessment:r.performanceAssessment||null,frameTimingMs:r.frameTimingMs||null,fps:r.fps??null,meshCount:r.meshCount??null,activeMeshes:r.activeMeshes??null,totalVertices:r.totalVertices??null,activeIndices:r.activeIndices??null,activeBones:r.activeBones??null,drawCalls:r.drawCalls??null,worldUpdateMs:r.worldUpdateMs??null,renderCpuMs:r.renderCpuMs??null,renderWidth:r.renderWidth??null,renderHeight:r.renderHeight??null,gpuRenderer:r.gpuRenderer??null,gpuVendor:r.gpuVendor??null,waterReflectionMeshes:r.waterReflectionMeshes??null,waterReflectionRefreshRate:r.waterReflectionRefreshRate??null,grassInstances:r.grassInstances??null,grassBatches:r.grassBatches??null,activeWorldShadowCasters:r.activeWorldShadowCasters??null,waterUpdateMs:r.waterUpdateMs??null,waterNormalMs:r.waterNormalMs??null};}),timeoutMs,null);
+ return value;
+}
+function correlateNetworkEvents(){for(const texture of manifest.textureDiagnostics?.pendingTextures||[]){texture.relatedNetworkEvents=manifest.networkEvents.filter(event=>texture.url&&event.url&&sameUrl(texture.url,event.url));texture.relatedNetworkRequests=manifest.networkRequests.filter(request=>texture.url&&request.url&&sameUrl(texture.url,request.url));texture.relatedConsoleErrors=manifest.consoleErrors.filter(error=>texture.url&&String(error?.text||'').includes(texture.url));}}
+async function capturePng(page,afterFailure=false,preferCdp=false){
+ let buffer=null,method=null;
+ const valid=value=>Buffer.isBuffer(value)&&value.length>1000&&value.subarray(0,8).toString('hex')==='89504e470d0a1a0a';
+ // Prefer a direct CDP frame when the renderer readiness probe has already stalled.
+ let data,canvasTimedOut=!!preferCdp;
+ const canvasTimeout=afterFailure?15000:CANVAS_CAPTURE_TIMEOUT_MS;
+ if(!preferCdp){try{data=await bounded(page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null),canvasTimeout,{__captureTimedOut:true});}catch(error){manifest.captureFailure=String(error?.message||error);canvasTimedOut=true;}}
+ if(data?.__captureTimedOut){manifest.captureFailure='The game canvas capture did not answer within '+canvasTimeout+' ms; attempting the independent CDP screenshot channel without another page evaluation.';canvasTimedOut=true;}
+ const prefix='data:image/png;base64,';
+ if(typeof data==='string'&&data.startsWith(prefix)){const payload=data.slice(prefix.length);if(/^[A-Za-z0-9+/]+={0,2}$/.test(payload)){const candidate=Buffer.from(payload,'base64');if(valid(candidate)){buffer=candidate;method='game-test-canvas-preserved-buffer';}}}
+ // CDP can preserve the frame even when the WebGL page evaluation is unresponsive.
+ if(!valid(buffer)&&cdpSession){const cdpStarted=Date.now();try{const shot=await bounded(cdpSession.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false,optimizeForSpeed:true}),afterFailure?8000:CDP_CAPTURE_TIMEOUT_MS,null);if(shot?.data){const candidate=Buffer.from(shot.data,'base64');if(valid(candidate)){buffer=candidate;method='cdp-page-capture';}}manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'cdp-page-capture',durationMs:Date.now()-cdpStarted,success:valid(buffer),trigger:canvasTimedOut?'canvas-timeout':'canvas-unavailable'}];}catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'cdp-page-capture',durationMs:Date.now()-cdpStarted,success:false,error:String(error?.message||error)}];}}
+ // Final independent fallback: ask Chromium to capture the composited page, not the WebGL canvas.
+ if(!valid(buffer)){
+  const playwrightStarted=Date.now();
+  try{
+   const shot=await bounded(page.screenshot({type:'png',fullPage:false,animations:'disabled'}),afterFailure?10000:12000,null);
+   if(valid(shot)){buffer=shot;method='playwright-composited-page';}
+   manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-composited-page',durationMs:Date.now()-playwrightStarted,success:valid(buffer)}];
+  }catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-composited-page',durationMs:Date.now()-playwrightStarted,success:false,error:String(error?.message||error)}];}
+ }
+ // Retry after the renderer has had time to settle; the watchdog path previously
+ // proved that Chromium can capture this same frozen frame a little later.
+ if(!valid(buffer)){
+  await delay(12000);
+  const retryStarted=Date.now();
+  try{
+   const shot=await bounded(page.screenshot({type:'png',fullPage:false,animations:'disabled'}),20000,null);
+   if(valid(shot)){buffer=shot;method='playwright-composited-page-retry';}
+   manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-composited-page-retry',durationMs:Date.now()-retryStarted,success:valid(buffer)}];
+  }catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-composited-page-retry',durationMs:Date.now()-retryStarted,success:false,error:String(error?.message||error)}];}
+ }
+ if(!valid(buffer)){manifest.captureFailure=manifest.captureFailure||'No valid PNG was returned by the game canvas, CDP or Playwright composited-page fallback.';return false;}
+ const file=afterFailure?'smoke-timeout-current-frame.png':'smoke-first-camera.png';
+ fs.writeFileSync(path.join(OUT,file),buffer);manifest.screenshot={file,bytes:buffer.length,capturedAfterFailure:!!afterFailure,frameCaptureMethod:method};return true;
+}
+function verdict(){const diag=manifest.textureDiagnostics||{},coverage=diag.usageCoverage||{},pending=diag.pendingTextures||[],unattributed=pending.filter(t=>!t.orphan&&(!Array.isArray(t.references)||!t.references.length)),cameraPending=diag.cameraPendingTextures||[],ready=manifest.readiness||{};const visualEvidenceAvailable=!!manifest.screenshot||manifest.visualCaptureDeferred===true;if(!visualEvidenceAvailable||!manifest.cameraVerification?.matches)return 'fail';if(coverage.complete!==true||unattributed.length)return 'inconclusive';if(cameraPending.length||ready.converged!==true||ready.sceneReady!==true)return 'fail';return ready.verdict==='pass'?'pass':'inconclusive';}
+async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=null,watchdogTimer=null,diagnosticStarted=false;manifest.buildMetadata=readStaticBuildMetadata();manifest.build=manifest.buildMetadata.value;writeManifest();
+ async function collectDiagnostics(reason){if(diagnosticStarted)return;diagnosticStarted=true;manifest.failure=manifest.failure||reason;const active=manifest.phases.filter(p=>p.status==='in_progress').map(p=>({name:p.name,startedAt:p.startedAt,elapsedMs:Date.now()-(SCRIPT_STARTED_AT+p.startedAtElapsedMs)}));let snapshot=null;if(page){snapshot=await bounded(page.evaluate(async()=>({pagePhase:window.__ELSN_TEST__?'game-api-ready':'game-api-not-ready',textureDiagnostics:await window.__ELSN_TEST__?.getTextureReadinessForCamera?.()||null,captureProgress:window.__ELSN_CAPTURE_PROGRESS__||null})),1000,null);if(snapshot&&snapshot.textureDiagnostics){manifest.textureDiagnostics=snapshot.textureDiagnostics;manifest.actualCamera=snapshot.textureDiagnostics.camera||null;if(manifest.camera)manifest.cameraVerification=cameraVerification(manifest.camera,manifest.actualCamera);}try{if(!manifest.screenshot)await capturePng(page,true);}catch(error){manifest.diagnosticFailure=String(error?.stack||error);}}
+ manifest.runtimeDiagnostics=manifest.runtimeDiagnostics||await collectRuntimeDiagnostics(page,2500);const pendingRequests=manifest.networkRequests.filter(r=>r.status===null&&!r.failure).map(r=>({url:r.url,resourceType:r.resourceType,startedAtMs:r.startedAtMs,elapsedMs:Date.now()-SCRIPT_STARTED_AT}));manifest.unresolvedPromises={browserPromiseIntrospection:{available:false,reason:'No se parchea window.Promise para no alterar el motor ni las bibliotecas del juego.'},activePlaywrightPromises:active.map(item=>({...item,awaitedOperation:item.name==='wait for render and texture convergence'?'page.evaluate(() => __ELSN_TEST__.prepareCaptureFrame(...))':'Playwright operation for '+item.name})),pendingNetworkRequests:pendingRequests,scopeNote:'Se registran las operaciones Playwright cuya promesa seguía pendiente y las solicitudes de red sin respuesta. Las promesas nativas internas del navegador no se enumeran de forma segura.'};manifest.timeoutDiagnostics={reason,phase:manifest.currentPhase||active[0]?.name||'between-phases',elapsedMs:Date.now()-SCRIPT_STARTED_AT,phaseTimings:manifest.phases,pendingTextures:manifest.textureDiagnostics?.pendingTextures||[],last200ConsoleMessages:manifest.consoleMessages.slice(-200),unresolvedPromises:manifest.unresolvedPromises};manifest.verdict='fail';manifest.finishedAt=new Date().toISOString();correlateNetworkEvents();try{writeManifest();}catch(error){console.error('DIAGNOSTIC MANIFEST WRITE FAILED',error);}console.error('[CAPTURE_DIAGNOSTIC_DUMP] '+JSON.stringify({phase:manifest.timeoutDiagnostics.phase,elapsedMs:manifest.timeoutDiagnostics.elapsedMs,pendingTextures:manifest.timeoutDiagnostics.pendingTextures.length,consoleMessages:manifest.timeoutDiagnostics.last200ConsoleMessages.length,unresolvedPromises:manifest.unresolvedPromises}));}
+ watchdogTimer=setTimeout(async()=>{try{await bounded(collectDiagnostics('Hard deadline watchdog at 240 seconds; external step cap 255 seconds.'),7500,null);}catch(error){manifest.failure=String(error?.stack||error);manifest.verdict='fail';manifest.finishedAt=new Date().toISOString();try{writeManifest();}catch(_){}}process.exit(124);},240000);
+ process.once('SIGTERM',async()=>{try{await bounded(collectDiagnostics('SIGTERM received at external 180-second step deadline.'),3500,null);}catch(_){}process.exit(143);});
+ try{
+ browser=await runPhase('launch chromium',()=>chromium.launch({headless:true,timeout:60000,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist','--disable-dev-shm-usage','--enable-webgl2','--force-color-profile=srgb']}));
+ const context=await runPhase('create browser context',()=>browser.newContext({viewport:{width:960,height:540},deviceScaleFactor:1}));page=await runPhase('create page',()=>context.newPage());cdpSession=await runPhase('create independent CDP screenshot channel',()=>context.newCDPSession(page));page.setDefaultTimeout(60000);page.setDefaultNavigationTimeout(90000);
+ page.on('pageerror',error=>{const text=String(error?.stack||error);manifest.pageErrors.push(text);manifest.consoleMessages.push({type:'pageerror',text,atMs:Date.now()-SCRIPT_STARTED_AT});if(manifest.consoleMessages.length>200)manifest.consoleMessages.shift();});page.on('console',message=>{const item={type:message.type(),text:message.text(),atMs:Date.now()-SCRIPT_STARTED_AT};manifest.consoleMessages.push(item);if(manifest.consoleMessages.length>200)manifest.consoleMessages.shift();if(message.type()==='error')manifest.consoleErrors.push(item);});
+ page.on('request',request=>{const item={url:request.url(),method:request.method(),resourceType:request.resourceType(),startedAtMs:Date.now()-SCRIPT_STARTED_AT,status:null,durationMs:null,failure:null,accessControlAllowOrigin:null};requestMeta.set(request,item);requestStarted.set(request,Date.now());manifest.networkRequests.push(item);});
+ page.on('response',response=>{const request=response.request(),item=requestMeta.get(request);if(item){item.status=response.status();item.durationMs=Date.now()-requestStarted.get(request);const headers=response.headers();item.accessControlAllowOrigin=headers['access-control-allow-origin']||null;item.contentType=headers['content-type']||null;}if(response.status()>=400)manifest.networkEvents.push({kind:'http-error',url:response.url(),status:response.status(),statusText:response.statusText(),resourceType:request.resourceType()});});
+ page.on('requestfailed',request=>{const item=requestMeta.get(request),failure=request.failure()?.errorText||'unknown';if(item){item.failure=failure;item.durationMs=Date.now()-requestStarted.get(request);}manifest.networkEvents.push({kind:'request-failed',url:request.url(),method:request.method(),resourceType:request.resourceType(),error:failure});});
+ await page.addInitScript(()=>{if(new URLSearchParams(location.search).get('test')!=='1')return;let state=20261110;Math.random=()=>{state=(Math.imul(1664525,state)+1013904223)>>>0;return state/4294967296;};});
+ const started=Date.now();await runPhase('navigate and load game document',()=>page.goto(BASE_URL+'?test=1&coastref=1',{waitUntil:'domcontentloaded',timeout:90000}));
+ const audioGate=page.locator('#audioGateStart');await runPhase('pass optional audio gate',async()=>{if(await audioGate.isVisible().catch(()=>false))await audioGate.click();});
+ await runPhase('wait for quality selector and choose quality',async()=>{await page.locator('#chooseQuality').waitFor({state:'visible',timeout:60000});await page.locator('#chooseQuality').click();});
+ await runPhase('continue into startup',async()=>{await page.locator('#continueUnnamed').waitFor({state:'visible',timeout:30000});await page.locator('#continueUnnamed').click();});
+ await runPhase('wait for world and player startup readiness',()=>page.waitForFunction(()=>window.__ELSN_TEST__&&window.__elSinNombreStartupSmoke?.worldReady===true,undefined,{timeout:180000,polling:500}));
+ await runPhase('open introduction and select new game',async()=>{await page.locator('#intro.open').waitFor({state:'visible',timeout:60000});await page.locator('#newGameChoice').click();});
+ await runPhase('wait for campaign scene to become active',()=>page.waitForFunction(()=>document.body.classList.contains('game-running')&&document.querySelector('#intro')?.getAttribute('aria-hidden')==='true',undefined,{timeout:30000,polling:250}));manifest.startupDurationMs=Date.now()-started;
+ const prepared=await runPhase('set and verify single camera position',()=>page.evaluate(shot=>{const api=window.__ELSN_TEST__,base=shot.camera||shot;let camera={...base};if(Number.isInteger(shot.islandIndex)){const island=api.islands[shot.islandIndex];if(!island)throw new Error('No existe la isla '+shot.islandIndex);camera={x:island.x+base.x,y:base.y,z:island.z+base.z,targetX:island.x+base.targetX,targetY:base.targetY,targetZ:island.z+base.targetZ};}const lock=api.setCamera(camera);api.setWaterState({time:shot.time??37,tide:shot.tide??'natural'});const auditIslandIndex=api.islands.reduce((best,island,index)=>Math.hypot(island.x-camera.targetX,island.z-camera.targetZ)<Math.hypot(api.islands[best].x-camera.targetX,api.islands[best].z-camera.targetZ)?index:best,0);return {camera,lock,auditIslandIndex};},shot));
+ manifest.camera=prepared.camera;manifest.cameraLock=prepared.lock;
+ // Defer the boat-approach screenshot until the scene has warmed; early WebGL/CDP captures can stall on a cold renderer.
+ manifest.approachFrameSaved=false;manifest.approachFrameDeferredUntilSceneWarm=true;
+ manifest.structureRepairSimulation=await runPhase('audit and repair structures in disposable test renderer',()=>page.evaluate(()=>{
+  const api=window.__ELSN_TEST__;if(!api||typeof api.habitableStructureAudit!=='function'||typeof api.repairAndAuditHabitableStructures!=='function')throw new Error('Structure repair test API is unavailable.');
+  const summarize=s=>({total:s.total,groundedCount:s.groundedCount,unsafeCount:s.unsafeCount,unsafeVisibleBeforeRepair:s.unsafeVisibleBeforeRepair,visibleInvalidAfterRepair:s.visibleInvalidAfterRepair,hiddenUnsafe:s.hiddenUnsafe,hiddenByDistance:s.hiddenByDistance,repaired:s.repaired,autoRegisteredRootCount:s.autoRegisteredRootCount,untrackedRootCount:s.untrackedRootCount});
+  const offshoreBefore=api.auditOffshoreStructures(300),beforeRaw=api.habitableStructureAudit(),repairRaw=api.repairAndAuditHabitableStructures(),afterRaw=api.habitableStructureAudit(),offshoreAfter=api.auditOffshoreStructures(300);
+  const before=summarize(beforeRaw),repair=summarize(repairRaw),after=summarize(afterRaw);
+  const compact=item=>({safe:item.safe===true,status:item.status??null,name:item.name,kind:item.kind,island:item.island,islandIndex:item.islandIndex,x:item.x,z:item.z,reason:item.reason,rootY:item.rootY,centerGroundY:item.centerGroundY,footingY:item.footingY,anchorErrorMeters:item.anchorErrorMeters,dryLandMarginMeters:item.dryLandMarginMeters,maximumFootprintReliefMeters:item.maximumFootprintReliefMeters,lastAction:item.lastAction,enabled:item.enabled});
+  const unsafeBefore=(beforeRaw.structures||[]).filter(item=>!item.safe).map(compact);
+  const relocationPairs=(beforeRaw.structures||[]).map((item,index)=>{if(item.safe)return null;const next=repairRaw.structures?.[index]||{},movedDistanceMeters=Math.hypot((Number(next.x)||0)-(Number(item.x)||0),(Number(next.z)||0)-(Number(item.z)||0));return {before:compact(item),after:compact(next),movedDistanceMeters:Number(movedDistanceMeters.toFixed(3)),moved:movedDistanceMeters>.05&&!!next.safe};}).filter(Boolean);
+  const relocatedStructures=relocationPairs.filter(item=>item.moved);
+  const unsafeAfter=(afterRaw.structures||[]).filter(item=>!item.safe).map(compact);
+  const verifiedSafeRelocationCount=relocationPairs.filter(item=>item.after?.safe===true).length;
+  const unsafePairsVerified=verifiedSafeRelocationCount===unsafeBefore.length;
+  const visibleOffshoreAfter=Number(offshoreAfter?.visibleOffshoreCount);
+  const offshoreCountAfter=Number(offshoreAfter?.offshoreCount);
+  const candidateCountAfter=Number(offshoreAfter?.candidateCount);
+  const returnedCountAfter=Number(offshoreAfter?.returnedCount);
+  const omittedCountAfter=Number(offshoreAfter?.omittedCount);
+  const offshoreClear=Number.isFinite(visibleOffshoreAfter)&&visibleOffshoreAfter===0;
+  const noOffshoreAfter=Number.isFinite(offshoreCountAfter)&&offshoreCountAfter===0;
+  const offshoreInventoryComplete=Number.isFinite(candidateCountAfter)&&Number.isFinite(returnedCountAfter)&&candidateCountAfter===returnedCountAfter&&omittedCountAfter===0;
+  return {testMode:true,productionDataModified:false,before,repair,after,unsafeBefore,relocationPairs,relocatedStructures,verifiedMovedCount:relocatedStructures.length,verifiedSafeRelocationCount,unsafePairsVerified,unsafeAfter,offshoreBefore,offshoreAfter,offshoreClear,noOffshoreAfter,offshoreInventoryComplete,passed:after.total===39&&after.unsafeCount===0&&after.visibleInvalidAfterRepair===0&&after.untrackedRootCount===0&&unsafePairsVerified&&offshoreClear&&noOffshoreAfter&&offshoreInventoryComplete};
+ }));if(!manifest.structureRepairSimulation?.passed){manifest.structureRepairSimulation.warning='Structure simulation gate did not pass; continuing the isolated camera capture so the offshore scene can still be inspected. The overall structure verdict remains fail.';console.warn('[CAPTURE] Structure simulation gate failed; continuing to capture the requested boat-approach camera.');}
+ manifest.coastalDiagnostics.scope={camera:prepared.camera,auditIslandIndex:prepared.auditIslandIndex,geometryAuditScope:'all 13 islands',structureGroundingScope:'all registered/discovered habitable structures',mutationPolicy:'read-only; no production structure is moved, hidden or repaired'};
+ // Let the readiness probe finish or time out before freezing the renderer for a deterministic camera frame.
+ const convergenceResult=await runPhase('wait for render and texture convergence',()=>bounded(page.evaluate(({timeoutMs,maxFrames})=>window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs,maxFrames}),{timeoutMs:TIMEOUT_MS,maxFrames:120}),12000,{__prepareTimedOut:true}));
+ const readinessTimedOut=!!convergenceResult?.__prepareTimedOut;
+ if(readinessTimedOut){manifest.readiness={ready:false,verdict:'fail',converged:false,sceneReady:false,timeoutMs:TIMEOUT_MS,externalWaitLimitMs:12000,textureDiagnostics:null,warning:'Readiness timed out; preserving the requested camera capture anyway.'};manifest.captureWarning='Render readiness did not converge; attempting direct frame capture.';}
+ else manifest.readiness=convergenceResult;
+ manifest.textureDiagnostics=manifest.readiness?.textureDiagnostics||(readinessTimedOut?null:await runPhase('collect texture reference inventory',()=>page.evaluate(()=>window.__ELSN_TEST__?.getTextureReadinessForCamera?.())));
+ manifest.actualCamera=manifest.textureDiagnostics?.camera||null;manifest.cameraVerification=cameraVerification(manifest.camera,manifest.actualCamera);
+ if(!readinessTimedOut)manifest.runtimeDiagnostics=await runPhase('collect render performance diagnostics',()=>collectRuntimeDiagnostics(page,5000));
+ correlateNetworkEvents();
+ const skipTextureScreenshot=process.env.CAPTURE_SKIP_TEXTURE_SCREENSHOT==='1';
+ if(skipTextureScreenshot){
+  manifest.visualCaptureDeferred=true;
+  manifest.visualCaptureNote='The full scene inspector owns visual evidence; this focused texture/readiness probe avoids a second heavyweight screenshot on SwiftShader.';
+  manifest.approachFrameSaved=false;
+  console.log('[CAPTURE] Visual screenshot deferred to the unified scene inspector.');
+ }else{
+  await runPhase('freeze render loop and draw one boat-approach frame',()=>page.evaluate(()=>{
+   const api=window.__ELSN_TEST__;
+   if(typeof api?.prepareStaticCaptureFrame!=='function')throw new Error('Static frame capture API is unavailable.');
+   return api.prepareStaticCaptureFrame();
+  }));
+  const approachFrameSaved=manifest.screenshot?true:await runPhase('capture boat-approach frame after scene audit',async()=>{const saved=await capturePng(page,true,false);if(!saved)throw new Error(manifest.captureFailure||'No camera PNG was captured.');return true;});
+  manifest.approachFrameSaved=!!(manifest.approachFrameSaved||approachFrameSaved);
+  await runPhase('verify bounded camera PNG capture',async()=>{if(manifest.screenshot)return;throw new Error('No valid PNG was saved by the frozen game canvas or CDP fallback.');});
+ }
+ manifest.verdict=verdict();
+
+ try{
+  const auditCalls=[['offshoreStructures','auditOffshoreStructures',[300],10000],['habitableStructures','habitableStructureAudit',[],5000],['settlementGrounding','settlementGrounding',[],5000],['settlementCamps','settlementCampGrounding',[],5000],['garrisonGrounding','garrisonGrounding',[],5000],['floatingHutProbe','probeFloatingHutAudit',[],5000],['sceneInventory','coastalSceneInventory',[1200],10000],['waterFilm','sheetOpacityDepth',[],7000],['runtime','diagnostics',[],10000],['coastalGeometry','auditIslandGeometry',[],30000]];
+  let rendererResponsive=true;
+  for(const [id,method,args,timeoutMs] of auditCalls){
+   manifest.coastalDiagnostics.currentCheck=id;writeManifest();let result;
+   try{result=await runPhase('coastal inspection: '+id,()=>bounded(page.evaluate(({method,args})=>{const api=window.__ELSN_TEST__,fn=api?.[method];if(typeof fn!=='function')return {available:false,error:'Missing test API method: '+method};const started=performance.now();try{return {available:true,durationMs:Number((performance.now()-started).toFixed(2)),value:fn(...args)};}catch(error){return {available:true,error:String(error?.stack||error),durationMs:Number((performance.now()-started).toFixed(2))};}},{method,args}),timeoutMs,{__coastalAuditTimedOut:true,method}));}
+   catch(error){result={available:false,error:String(error?.stack||error)};}
+   if(result?.__coastalAuditTimedOut){manifest.coastalDiagnostics.checks[id]={status:'timeout',method,error:'Browser main thread did not return within '+timeoutMs+' ms.'};rendererResponsive=false;manifest.coastalDiagnostics.currentCheck=null;writeManifest();break;}
+   manifest.coastalDiagnostics.checks[id]={status:result?.available&&!result.error?'completed':'failed',method,durationMs:result?.durationMs??null,value:result?.value??null,error:result?.error??null};
+   manifest.coastalDiagnostics.currentCheck=null;writeManifest();
+  }
+  const checks=manifest.coastalDiagnostics.checks,completed=Object.values(checks).filter(item=>item.status==='completed').length;
+  const structure=checks.habitableStructures?.value,offshore=checks.offshoreStructures?.value,houses=checks.settlementGrounding?.value||[],camps=checks.settlementCamps?.value||[],garrisons=checks.garrisonGrounding?.value||[],geometry=checks.coastalGeometry?.value,water=checks.runtime?.value?.coast,floatingProbe=checks.floatingHutProbe?.value,issues=[];
+  // In ?test=1 the audit deliberately avoids hiding or mutating scene roots.
+  // This synthetic offshore hut must be auto-discovered and classified unsafe without
+  // being hidden in the disposable test scene. The normal-game hide path is asserted
+  // separately against the production audit implementation in the campaign contract.
+  const floatingProbePassed=floatingProbe?.detected===true&&floatingProbe?.autoDiscovered===true&&floatingProbe?.hidden===false&&floatingProbe?.lastAction==='relocated-to-dry-ground'&&floatingProbe?.lastStatus==='grounded'&&floatingProbe?.untrackedRootCount===0;
+  if(!floatingProbePassed)issues.push({kind:'floating-hut-probe-failed',result:floatingProbe||null});
+  if(Number(structure?.unsafeCount)>0)issues.push({kind:'unsafe-habitable-structures',count:structure.unsafeCount});
+  if(Number(offshore?.visibleOffshoreCount)>0)issues.push({kind:'visible-offshore-structures',count:offshore.visibleOffshoreCount,items:(offshore.offshoreStructures||[]).filter(item=>item.visible).slice(0,30)});
+  if(Number(structure?.untrackedRootCount)>0)issues.push({kind:'untracked-roofed-roots',count:structure.untrackedRootCount});
+  const houseOutliers=houses.filter(item=>Math.abs(Number(item.groundingErrorMeters)||0)>.02||Number(item.maximumFootingGapMeters)>.02||Number(item.dryLandFootprintMarginMeters)<1.25);
+  if(houseOutliers.length)issues.push({kind:'settlement-footing-outliers',count:houseOutliers.length,items:houseOutliers.slice(0,20)});
+  const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02);
+  if(campOutliers.length)issues.push({kind:'settlement-camp-grounding-outliers',count:campOutliers.length,items:campOutliers.slice(0,20)});
+  const garrisonOutliers=garrisons.filter(item=>Number(item.maximumAnchorErrorMeters)>.02);
+  if(garrisonOutliers.length)issues.push({kind:'garrison-anchor-outliers',count:garrisonOutliers.length,items:garrisonOutliers.slice(0,20)});
+  const geometryIslands=geometry?.islands||[],geometryMeshes=geometryIslands.flatMap(island=>island.meshes||[]),analyticProfiles=geometryIslands.flatMap(island=>island.analyticProfileChecks||[]);
+  const geometryHeightJumpOutliers=geometryMeshes.reduce((sum,mesh)=>sum+(Number(mesh.heightJump?.outlierCount)||0),0);
+  const geometryProfileViolations=analyticProfiles.reduce((sum,item)=>sum+(Number(item.violationCount)||0),0);
+  const geometrySeamDiscontinuities=geometryMeshes.filter(mesh=>mesh.seam?.applicable&&(Number(mesh.seam.maxPositionGapMeters)>.002||Number(mesh.seam.maxHeightGapMeters)>.002)).length;
+  const geometrySteepEdgesOver45=geometryMeshes.reduce((sum,mesh)=>sum+(Number(mesh.slope?.over45Degrees)||0),0);
+  const geometryLongEdgeOutliers=geometryMeshes.reduce((sum,mesh)=>sum+(Number(mesh.triangleEdgeLength?.outlierCount)||0),0);
+  const geometryCheckedVertices=geometryMeshes.reduce((sum,mesh)=>sum+(Number(mesh.vertices)||0),0);
+  const geometryViolations=geometryHeightJumpOutliers+geometryProfileViolations+geometrySeamDiscontinuities;
+  if(geometryViolations)issues.push({kind:'coastal-geometry-threshold-violations',count:geometryViolations,heightJumpOutliers:geometryHeightJumpOutliers,analyticProfileViolations:geometryProfileViolations,seamDiscontinuities:geometrySeamDiscontinuities});
+
+  if(water?.renderedVertexAgreement?.maxAbsErrorMeters>=.01)issues.push({kind:'water-vertex-agreement',maxAbsErrorMeters:water.renderedVertexAgreement.maxAbsErrorMeters});
+  if(water?.waterLodBoundary90?.maxHeightContinuityErrorMeters>=.01||water?.waterLodBoundary90?.maxRadialSlopeDifference>=.005||water?.waterLodBoundary90?.maxNormalDiscontinuityDegrees>=.5)issues.push({kind:'water-lod-boundary-discontinuity',metrics:water.waterLodBoundary90});
+  if(Number(water?.foamVerticesOutsideBand)>0)issues.push({kind:'visible-foam-outside-shore-band',count:water.foamVerticesOutsideBand});
+  const gateCheckIds=['offshoreStructures','habitableStructures','floatingHutProbe','coastalGeometry','settlementGrounding','settlementCamps','garrisonGrounding'];
+  const gateChecksComplete=gateCheckIds.every(id=>checks[id]?.status==='completed');
+  const geometryScopeComplete=Number(geometry?.islandCount)===13&&geometryIslands.length===13;
+  const noVisibleOffshoreStructures=Number.isFinite(Number(offshore?.visibleOffshoreCount))&&Number(offshore.visibleOffshoreCount)===0;
+  const noOffshoreStructures=Number.isFinite(Number(offshore?.offshoreCount))&&Number(offshore.offshoreCount)===0;
+  const noUnregisteredOffshoreCandidates=Number.isFinite(Number(offshore?.unregisteredCandidates))&&Number(offshore.unregisteredCandidates)===0;
+  const noUnsafeStructures=Number(structure?.unsafeCount)===0;
+  const noUntrackedStructures=Number(structure?.untrackedRootCount)===0;
+  const noFootingOutliers=houseOutliers.length===0&&campOutliers.length===0&&garrisonOutliers.length===0;
+  const structureInventoryComplete=houses.length===12&&camps.length===8&&garrisons.length===9;
+  const structureGatePassed=rendererResponsive&&gateChecksComplete&&geometryScopeComplete&&structureInventoryComplete&&noVisibleOffshoreStructures&&noOffshoreStructures&&noUnregisteredOffshoreCandidates&&noUnsafeStructures&&noUntrackedStructures&&noFootingOutliers&&floatingProbePassed;
+  manifest.coastalDiagnostics.structureGate={status:!rendererResponsive||!gateChecksComplete||!geometryScopeComplete||!structureInventoryComplete?'incomplete':structureGatePassed?'pass':'issues-found',checksRequired:gateCheckIds,checksComplete:gateChecksComplete,geometryIslandsAudited:geometry?.islandCount??null,registeredHouses:houses.length,registeredCamps:camps.length,registeredGarrisons:garrisons.length,houseFootingOutliers:houseOutliers.length,campGroundingOutliers:campOutliers.length,garrisonAnchorOutliers:garrisonOutliers.length,noFootingOutliers,offshoreStructures:offshore?.offshoreCount??null,visibleOffshoreStructures:offshore?.visibleOffshoreCount??null,unregisteredOffshoreCandidates:offshore?.unregisteredCandidates??null,noOffshoreStructures,unsafeStructures:structure?.unsafeCount??null,untrackedRoots:structure?.untrackedRootCount??null,floatingHutProbe:{passed:floatingProbePassed,detected:floatingProbe?.detected??null,autoDiscovered:floatingProbe?.autoDiscovered??null,hidden:floatingProbe?.hidden??null,lastAction:floatingProbe?.lastAction??null}};
+  manifest.coastalDiagnostics.summary={checksCompleted:completed,checksExpected:auditCalls.length,rendererResponsive,structureGateStatus:manifest.coastalDiagnostics.structureGate.status,structuresTotal:structure?.total??null,unsafeStructures:structure?.unsafeCount??null,untrackedRoofedRoots:structure?.untrackedRootCount??null,structureRootsScanned:offshore?.transformNodesScanned??null,structuralRootCandidates:offshore?.candidateCount??null,unregisteredStructuralRoots:offshore?.unregisteredCandidates??null,offshoreStructures:offshore?.offshoreCount??null,visibleOffshoreStructures:offshore?.visibleOffshoreCount??null,settlementBuildings:houses.length,settlementFootingOutliers:houseOutliers.length,settlementCamps:camps.length,campOutliers:campOutliers.length,garrisons:garrisons.length,garrisonAnchorOutliers:garrisonOutliers.length,geometryIslandsAudited:geometry?.islandCount??null,geometryMeshesAudited:geometryMeshes.length,geometryVerticesAudited:geometryCheckedVertices,geometryViolations,geometryHeightJumpOutliers,geometryProfileViolations,geometrySeamDiscontinuities,geometrySteepEdgesOver45,geometryLongEdgeOutliers,waterFoamVerticesOutsideBand:water?.foamVerticesOutsideBand??null,waterLodBoundary90:water?.waterLodBoundary90??null,issues,offshoreStructures:offshore?.offshoreStructures??[]};
+  manifest.coastalDiagnostics.status=!rendererResponsive||completed<auditCalls.length?'incomplete':issues.length?'issues-found':'no-threshold-violations-in-sampled-scope';
+  if(!structureGatePassed)manifest.verdict='fail';
+  manifest.coastalDiagnostics.completedAt=new Date().toISOString();writeManifest();
+ }catch(auditError){manifest.coastalDiagnostics.status='incomplete';manifest.coastalDiagnostics.error=String(auditError?.stack||auditError);manifest.coastalDiagnostics.completedAt=new Date().toISOString();writeManifest();}
+
+}catch(error){manifest.failure=String(error?.stack||error);try{await collectDiagnostics('Preparation/capture failed: '+String(error?.message||error));}catch(diagnosticError){manifest.diagnosticFailure=String(diagnosticError?.stack||diagnosticError);}if(manifest.verdict==='not-run')manifest.verdict='fail';
+}finally{const pendingRequests=manifest.networkRequests.filter(r=>r.status===null&&!r.failure);manifest.unresolvedPromises=manifest.unresolvedPromises||{browserPromiseIntrospection:{available:false,reason:'No se parchea window.Promise para no alterar el juego.'},activePlaywrightPromises:manifest.phases.filter(p=>p.status==='in_progress'),pendingNetworkRequests:pendingRequests.map(r=>({url:r.url,resourceType:r.resourceType,startedAtMs:r.startedAtMs})),scopeNote:'Se registran operaciones Playwright pendientes y solicitudes sin respuesta; no se enumeran promesas nativas internas.'};manifest.finishedAt=new Date().toISOString();correlateNetworkEvents();writeManifest();const browserClosed=browser?await bounded(browser.close().then(()=>true),1500,false):true;if(!browserClosed){manifest.browserCloseTimeoutMs=1500;manifest.finishedAt=new Date().toISOString();writeManifest();console.error('Chromium did not close within 1500 ms; forcing process exit after diagnostic write.');if(watchdogTimer)clearTimeout(watchdogTimer);process.exit(manifest.verdict==='pass'?0:2);}if(watchdogTimer)clearTimeout(watchdogTimer);}
+if(manifest.verdict!=='pass'){if(manifest.verdict==='failed')manifest.verdict='fail';console.error('TEXTURE READINESS SMOKE '+manifest.verdict.toUpperCase()+': '+manifest.verdict+'; PNG='+(manifest.screenshot?.file||'none'));process.exitCode=2;}else console.log('TEXTURE READINESS SMOKE PASSED: '+manifest.camera.x+','+manifest.camera.y+','+manifest.camera.z);
+}
+main().catch(error=>{manifest.failure=String(error?.stack||error);manifest.verdict='failed';manifest.finishedAt=new Date().toISOString();writeManifest();console.error(error);process.exitCode=1;});

@@ -1,0 +1,318 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { chromium } from 'playwright';
+
+const BASE_URL=process.env.STRUCTURE_TEST_URL||'http://127.0.0.1:4176/';
+const OUT=path.resolve('artifacts/structure-grounding');
+const startedAt=Date.now();
+const report={schema:2,startedAt:new Date().toISOString(),finishedAt:null,build:null,renderer:'Chromium headless + ANGLE SwiftShader',mode:'full normal-campaign runtime structure audit plus automatic-repair observation in a disposable test renderer',testRendererOnlyMutations:true,productionDataModified:false,phases:[],consoleErrors:[],pageErrors:[],baseline:null,postAutomaticAudit:null,runtimeRepairSimulation:null,habitableStructures:null,settlementHouses:null,settlementCamps:null,garrisons:null,rocks:null,summary:null,screenshot:null,verdict:'not-run',failure:null};
+function writeReport(){fs.mkdirSync(OUT,{recursive:true});const tmp=path.join(OUT,'structure-grounding.json.tmp');fs.writeFileSync(tmp,JSON.stringify(report,null,2)+'\n');fs.renameSync(tmp,path.join(OUT,'structure-grounding.json'));}
+function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+async function bounded(value,ms){return Promise.race([Promise.resolve(value),delay(ms).then(()=>null)]);}
+async function captureCompositedPage(page,file,{gameCanvas=false}={}){
+ const valid=bytes=>Buffer.isBuffer(bytes)&&bytes.length>1000&&bytes.subarray(0,8).toString('hex')==='89504e470d0a1a0a';
+ let bytes=null,canvasError=null,cdpError=null;
+ if(gameCanvas){
+  try{
+   const data=await bounded(page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null),10000);
+   const prefix='data:image/png;base64,';
+   if(typeof data==='string'&&data.startsWith(prefix)){
+    const candidate=Buffer.from(data.slice(prefix.length),'base64');
+    if(valid(candidate))bytes=candidate;
+   }
+   if(!valid(bytes))canvasError='Game canvas did not return a valid PNG within 10 seconds.';
+  }catch(error){canvasError=String(error?.message||error);}
+ }
+ if(!valid(bytes)){
+  let session=null;
+  try{
+   session=await page.context().newCDPSession(page);
+   const result=await bounded(session.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false,optimizeForSpeed:true}),10000);
+   if(result?.data)bytes=Buffer.from(result.data,'base64');
+   if(!valid(bytes))cdpError='CDP did not return a valid PNG within 10 seconds.';
+  }catch(error){cdpError=String(error?.message||error);}
+  finally{try{await session?.detach();}catch(_){}}
+ }
+ if(!valid(bytes)){
+  try{bytes=await bounded(page.screenshot({type:'png',fullPage:false,animations:'disabled'}),10000);}catch(_){}
+ }
+ if(!valid(bytes))throw new Error('Game canvas, CDP and Playwright screenshot channels did not return a valid PNG within their 10-second limits.'+[canvasError,cdpError].filter(Boolean).join(' '));
+ fs.writeFileSync(file,bytes);return bytes;
+}
+async function phase(name,fn){const start=Date.now(),row={name,startedAt:new Date().toISOString(),status:'in-progress'};report.phases.push(row);console.log('[STRUCTURE_AUDIT] START '+name);try{const result=await fn();row.status='completed';return result;}catch(error){row.status='failed';row.error=String(error?.stack||error);throw error;}finally{row.finishedAt=new Date().toISOString();row.durationMs=Date.now()-start;console.log('[STRUCTURE_AUDIT] END '+name+' '+row.status+' '+row.durationMs+'ms');}}
+function collectStructureSnapshot(){
+ const api=window.__ELSN_TEST__;
+ if(!api)throw new Error('The game inspection API is not available.');
+ const structures=api.habitableStructureAudit();
+ if(typeof api.auditOffshoreStructures!=='function')throw new Error('The full-runtime offshore structural-root audit is unavailable.');
+ const offshore=api.auditOffshoreStructures(1000);
+ const houses=api.settlementGrounding();
+ const camps=api.settlementCampGrounding();
+ const garrisons=api.garrisonGrounding();
+ const rocks=typeof api.rockGroundingAudit==='function'?api.rockGroundingAudit():null;
+ const outerLandmarks=typeof api.outerLandmarkGrounding==='function'?api.outerLandmarkGrounding():null;
+ const view=typeof api.sceneViewSnapshot==='function'?api.sceneViewSnapshot():null;
+ const projectedCandidates=(offshore.candidates||[]).map(item=>{
+  const x=Number(item.position?.x),z=Number(item.position?.z),bottomY=Number(item.bounds?.bottomY??item.position?.y),topY=Number(item.bounds?.topY??item.position?.y);
+  const centerY=Number.isFinite(bottomY)&&Number.isFinite(topY)?(bottomY+topY)*.5:Number(item.position?.y)||0;
+  const baseProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:bottomY,z}):null;
+  const centerProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:centerY,z}):null;
+  const topProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:topY,z}):null;
+  return {name:item.name,kind:item.kind,registered:item.registered,visible:item.visible,enabled:item.enabled,island:item.island,islandIndex:item.islandIndex,position:item.position,bounds:item.bounds,offshore:item.offshore,issue:item.issue,distanceToIslandCenterMeters:item.distanceToIslandCenterMeters,dryFootprintSampleCount:item.dryFootprintSampleCount,dryFootprintSampleTotal:item.dryFootprintSampleTotal,bottomAboveWaterMeters:item.bottomAboveWaterMeters,bottomAboveTerrainMeters:item.bottomAboveTerrainMeters,waterSurfaceY:item.waterSurfaceY,terrainReferenceY:item.terrainReferenceY,dryFootprintSamples:item.dryFootprintSamples,baseProjection,centerProjection,topProjection};
+ });
+ const inventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(5000):null;
+ const structureRoots=(inventory?.objects||[]).filter(item=>(item.category==='structure'||item.category==='unidentified-structure')&&!(item.parentChain||[]).length&&Number(item.meshCount)>0);
+ const inventoryStructuralCandidates=structureRoots.map(item=>({name:item.name,category:item.category,role:item.structuralRole||'unclassified',confidence:item.classificationConfidence||'unknown',position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,meshNames:item.meshNames,materials:item.materials,structuralEvidence:item.structuralEvidence,metadata:item.metadata}));
+ const classifyUnregisteredCandidate=item=>{
+  const name=String(item.name||'');
+  if(/^PabloTheNameless(?:Body)?$/.test(name))return {classification:'player-avatar-geometry',disposition:'not-a-building',reason:'Player character root/body geometry'};
+  if(name==='RealVikingRightHandWeaponAnchor')return {classification:'equipped-weapon-assembly',disposition:'not-a-building',reason:'Weapon attachment and held weapon meshes'};
+  if(name==='DetailedNorseHearth')return {classification:'hearth-prop',disposition:'decorative-prop',reason:'Standalone hearth/fireplace prop'};
+  if(/^FirewoodRack_\d+$/.test(name))return {classification:'firewood-rack-prop',disposition:'decorative-prop',reason:'Standalone firewood rack'};
+  if(/^NorseThingstead_\d+$/.test(name))return {classification:'intentional-settlement-hall',disposition:'known-non-habitable-building',reason:'Named settlement hall; tracked separately from the 39 habitable hut/camp/garrison roots'};
+  if(/^NorseCoastal(?:Pier|Beacon)_\d+$/.test(name))return {classification:'intentional-outer-island-landmark',disposition:'known-non-habitable-building',reason:'Named outer-island landmark; audited separately from the 39 habitable hut/camp/garrison roots'};
+  return {classification:'unresolved',disposition:'requires-manual-review',reason:'No safe name-based classification'};
+ };
+ const unregisteredCandidateReview=projectedCandidates.filter(item=>item.registered===false).map(item=>{
+  const evidence=inventoryStructuralCandidates.find(root=>root.name===item.name&&Math.hypot((Number(root.position?.x)||0)-(Number(item.position?.x)||0),(Number(root.position?.z)||0)-(Number(item.position?.z)||0))<.15)||null;
+  return {...item,...classifyUnregisteredCandidate(item),inventoryEvidence:evidence?{category:evidence.category,role:evidence.role,confidence:evidence.confidence,meshCount:evidence.meshCount,vertexCount:evidence.vertexCount,meshNames:evidence.meshNames,materials:evidence.materials}:null};
+ });
+ const navigationPoint={x:28,z:236.3,confidence:'Z=236.3 read from the boat screenshots; X is clipped in the coordinate strip, so x=28 is only the known Hrafn island-centre search anchor, not the player X',zone:'MAR ABIERTO',reference:'Hrafn bay offshore approach'};
+ const pointCandidates=[...projectedCandidates.map(item=>({...item,source:'offshore-structural-audit'})),...inventoryStructuralCandidates.map(item=>({...item,source:'scene-inventory'}))]
+  .map(item=>{const p=item.position||{};return {...item,distanceToNavigationPointMeters:Number(Math.hypot((Number(p.x)||0)-navigationPoint.x,(Number(p.z)||0)-navigationPoint.z).toFixed(2))};})
+  .filter(item=>item.distanceToNavigationPointMeters<=150)
+  .sort((a,b)=>a.distanceToNavigationPointMeters-b.distanceToNavigationPointMeters);
+ const navigationPointAudit={target:navigationPoint,nearbyCandidateCount:pointCandidates.length,nearbyCandidates:pointCandidates};
+ const hrafnIsland=(api.islands||[]).find(item=>/hrafn/i.test(item.name))||(api.islands||[])[3]||{x:28,z:143,r:33,name:'Bahía de Hrafn'};
+ const hrafnSceneRoots=structureRoots.map(item=>{
+  const p=item.position||{},distance=Math.hypot((Number(p.x)||0)-hrafnIsland.x,(Number(p.z)||0)-hrafnIsland.z);
+  const audit=(offshore.candidates||[]).find(row=>row.name===item.name&&Math.abs((row.position?.x||0)-(p.x||0))<.02&&Math.abs((row.position?.z||0)-(p.z||0))<.02);
+  return {name:item.name,category:item.category,role:item.structuralRole||'unclassified',confidence:item.classificationConfidence||'unknown',island:audit?.island||hrafnIsland.name,distanceToIslandCenterMeters:Number(distance.toFixed(2)),position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,meshNames:item.meshNames,materials:item.materials,structuralEvidence:item.structuralEvidence,grounding:audit?{offshore:audit.offshore,issue:audit.issue,dryFootprintSampleCount:audit.dryFootprintSampleCount,dryFootprintSampleTotal:audit.dryFootprintSampleTotal,bottomAboveWaterMeters:audit.bottomAboveWaterMeters,bottomAboveTerrainMeters:audit.bottomAboveTerrainMeters}:null};
+ });
+ const nearbyHrafnStructureRoots=hrafnSceneRoots.filter(item=>item.distanceToIslandCenterMeters<=48).sort((a,b)=>a.distanceToIslandCenterMeters-b.distanceToIslandCenterMeters);
+ const hrafnHutRoots=hrafnSceneRoots.filter(item=>item.role==='norse-hut'||item.name==='WeatheredNorseHut').sort((a,b)=>a.distanceToIslandCenterMeters-b.distanceToIslandCenterMeters);
+ const cuervoIsland=(api.islands||[]).find(item=>/cuervo/i.test(item.name))||(api.islands||[])[0]||{x:0,z:0,name:'unknown'};
+ const cuervoSceneRoots=structureRoots.map(item=>{
+  const p=item.position||{},distance=Math.hypot((Number(p.x)||0)-cuervoIsland.x,(Number(p.z)||0)-cuervoIsland.z);
+  const audit=(offshore.candidates||[]).find(row=>row.name===item.name);
+  return {name:item.name,category:item.category,role:item.structuralRole||'unclassified',confidence:item.classificationConfidence||'unknown',island:audit?.island||cuervoIsland.name,distanceToIslandCenterMeters:Number(distance.toFixed(2)),position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,meshNames:item.meshNames,materials:item.materials,structuralEvidence:item.structuralEvidence,grounding:audit?{offshore:audit.offshore,issue:audit.issue,dryFootprintSampleCount:audit.dryFootprintSampleCount,dryFootprintSampleTotal:audit.dryFootprintSampleTotal,bottomAboveWaterMeters:audit.bottomAboveWaterMeters,bottomAboveTerrainMeters:audit.bottomAboveTerrainMeters}:null};
+ });
+ const nearbyCuervoStructureRoots=cuervoSceneRoots.filter(item=>item.distanceToIslandCenterMeters<=110).sort((a,b)=>a.distanceToIslandCenterMeters-b.distanceToIslandCenterMeters);
+
+ const houseOutliers=houses.filter(item=>Math.abs(Number(item.groundingErrorMeters)||0)>.02||Number(item.maximumFootingGapMeters)>.02||Number(item.dryLandFootprintMarginMeters)<1.25);
+ const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02||(item.supportPoints||[]).some(point=>Math.abs(Number(point.baseGapMeters)||0)>.02));
+ const garrisonOutliers=garrisons.filter(item=>Number(item.outpostErrorMeters)>.02||Number(item.flagErrorMeters)>.02||Number(item.guardErrorMeters)>.06||Number(item.detachedPropCount)>0);
+ const rockOutliers=(rocks||[]).filter(item=>!item.valid||Math.abs(Number(item.gapMeters))>.02);
+ return {
+  structures,offshore,houses,camps,garrisons,rocks,outerLandmarks,view,projectedCandidates,inventoryStructuralCandidates,unregisteredCandidateReview,navigationPointAudit,hrafnSceneRoots,nearbyHrafnStructureRoots,hrafnHutRoots,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
+  summary:{
+   structuresTotal:structures.total,grounded:structures.groundedCount,unsafe:structures.unsafeCount,
+   unsafeVisibleBeforeAudit:structures.unsafeVisibleBeforeRepair,visibleInvalid:structures.visibleInvalidAfterRepair,
+   autoRegisteredRoots:structures.autoRegisteredRootCount,untrackedRoots:structures.untrackedRootCount,
+   offshoreIslandCount:offshore.islandCount,offshoreRootsScanned:offshore.transformNodesScanned,
+   structuralCandidates:offshore.candidateCount,unregisteredStructuralCandidates:offshore.unregisteredCandidates,
+   offshoreStructures:offshore.offshoreCount,visibleOffshoreStructures:offshore.visibleOffshoreCount,
+   houseCount:houses.length,houseOutliers:houseOutliers.length,
+   houseOutlierNames:houseOutliers.map(item=>({village:item.village,buildingIndex:item.buildingIndex,groundingErrorMeters:item.groundingErrorMeters,maximumFootingGapMeters:item.maximumFootingGapMeters,dryLandFootprintMarginMeters:item.dryLandFootprintMarginMeters,footingCorners:item.footingCorners})),
+   campCount:camps.length,campOutliers:campOutliers.length,campOutlierDetails:campOutliers,campSupportOutlierDetails:camps.filter(item=>(item.supportPoints||[]).some(point=>Math.abs(Number(point.baseGapMeters)||0)>.02)).map(item=>({kind:item.kind,islandIndex:item.islandIndex,x:item.x,z:item.z,supports:item.supportPoints.filter(point=>Math.abs(Number(point.baseGapMeters)||0)>.02)})),
+   garrisonCount:garrisons.length,garrisonOutliers:garrisonOutliers.length,garrisonOutlierDetails:garrisonOutliers,
+   rockCount:(rocks||[]).length,rockOutliers:rockOutliers.length,rockOutlierDetails:rockOutliers.slice(0,80)
+  }
+ };
+}
+async function main(){
+ fs.mkdirSync(OUT,{recursive:true});let browser=null,page=null;
+ try{
+  const meta=fs.existsSync('dist/index.html')?fs.readFileSync('dist/index.html','utf8'):'';
+  const marker='name="el-sin-nombre-build" content="',at=meta.indexOf(marker);
+  report.build=at>=0?meta.slice(at+marker.length).split('"')[0]:null;
+  browser=await phase('launch chromium',()=>chromium.launch({headless:true,timeout:60000,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist','--disable-dev-shm-usage']}));
+  const context=await browser.newContext({viewport:{width:430,height:768},deviceScaleFactor:1,isMobile:true,hasTouch:true});
+  page=await context.newPage();page.setDefaultTimeout(60000);page.setDefaultNavigationTimeout(90000);
+  page.on('pageerror',error=>report.pageErrors.push(String(error?.stack||error)));
+  page.on('console',message=>{if(message.type()==='error')report.consoleErrors.push(message.text());});
+  await phase('load full normal game runtime',()=>page.goto(BASE_URL+'?test=1',{waitUntil:'domcontentloaded',timeout:90000}));
+  const audio=page.locator('#audioGateStart');
+  await phase('pass audio gate and select full quality',async()=>{if(await audio.isVisible().catch(()=>false))await audio.click();await page.locator('#chooseQuality').waitFor({state:'visible',timeout:60000});await page.locator('#chooseQuality').click();});
+  await phase('continue into game startup',async()=>{await page.locator('#continueUnnamed').waitFor({state:'visible',timeout:30000});await page.locator('#continueUnnamed').click();});
+  await phase('wait for world setup',()=>page.waitForFunction(()=>window.__ELSN_TEST__&&window.__elSinNombreStartupSmoke?.worldReady===true,undefined,{timeout:180000,polling:500}));
+  await phase('start a new campaign',async()=>{await page.locator('#intro.open').waitFor({state:'visible',timeout:60000});await page.locator('#newGameChoice').click();await page.waitForFunction(()=>document.body.classList.contains('game-running')&&document.querySelector('#intro')?.getAttribute('aria-hidden')==='true',undefined,{timeout:30000,polling:250});});
+  report.localNavigationVerification=await phase('verify live local minimap, compact coordinates and default follow camera',async()=>{
+   await page.waitForFunction(()=>{const coords=document.getElementById('mapCoords');return coords&&(coords.textContent||'').startsWith('X ');},undefined,{timeout:15000,polling:200});
+   const result=await page.evaluate(()=>{
+    const map=document.getElementById('map'),coords=document.getElementById('mapCoords'),rect=map?.getBoundingClientRect();
+    const cameraMode=window.__ELSN_CAMERA_CONTROL?.getMode?.()||null;
+    const navigation=window.__NorseNavigationSuite?.getStatus?.()||null;
+    const pixel=map?.getContext('2d')?.getImageData(240,172,1,1)?.data||null;
+    return {mapExists:!!map,mapExpanded:!!map?.classList.contains('expanded'),mapCssWidth:Number((rect?.width||0).toFixed(1)),mapCssHeight:Number((rect?.height||0).toFixed(1)),coordinates:coords?.textContent||'',coordinatesVisible:!!coords&&getComputedStyle(coords).display!=='none',cameraMode,navigationMode:navigation?.mode,centrePixel:pixel?Array.from(pixel):null};
+   });
+   if(!result.mapExists||result.mapExpanded||!result.coordinatesVisible||!result.coordinates.startsWith('X '))throw new Error('Local minimap did not initialise correctly: '+JSON.stringify(result));
+   if(result.cameraMode!=='follow')throw new Error('The campaign did not start in follow-camera mode: '+JSON.stringify(result));
+   if(result.mapCssWidth<95||result.mapCssWidth>180)throw new Error('Unexpected minimap size: '+JSON.stringify(result));
+   const file=path.join(OUT,'live-local-minimap.png');
+   let shot=null,screenshotError=null;
+   try{shot=await captureCompositedPage(page,file);}catch(error){screenshotError=String(error?.message||error);}
+   // A decorative minimap PNG must never abort the independent geometry measurements.
+   return {...result,screenshot:shot?path.basename(file):null,screenshotBytes:shot?.length||0,screenshotError};
+  });
+  report.mapMarkerVerification=await phase('verify expanded map click returns world coordinates',async()=>page.evaluate(()=>{
+   const map=document.getElementById('map');if(!map)throw new Error('The tactical map canvas is missing.');
+   if(!map.classList.contains('expanded'))map.click();
+   const rect=map.getBoundingClientRect(),style=getComputedStyle(map),expected={x:400,z:250},logicalX=184+expected.x*.235,logicalY=174+expected.z*.235;
+   const borderLeft=parseFloat(style.borderLeftWidth)||0,borderRight=parseFloat(style.borderRightWidth)||0,borderTop=parseFloat(style.borderTopWidth)||0,borderBottom=parseFloat(style.borderBottomWidth)||0;
+   const contentWidth=Math.max(1,rect.width-borderLeft-borderRight),contentHeight=Math.max(1,rect.height-borderTop-borderBottom);
+   const objectScale=Math.min(contentWidth/map.width,contentHeight/map.height),drawnWidth=map.width*objectScale,drawnHeight=map.height*objectScale;
+   const offsetX=borderLeft+(contentWidth-drawnWidth)*.5,offsetY=borderTop+(contentHeight-drawnHeight)*.5;
+   const clientX=rect.left+offsetX+logicalX/480*drawnWidth,clientY=rect.top+offsetY+logicalY/344*drawnHeight;
+   map.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientX,clientY}));
+   const actual=window.__ELSN_TEST__?.mapTarget?.();
+   const toleranceWorldUnits=3.2;if(!actual||Math.abs(actual.x-expected.x)>toleranceWorldUnits||Math.abs(actual.z-expected.z)>toleranceWorldUnits)throw new Error('Map tap projection mismatch: '+JSON.stringify({expected,actual,toleranceWorldUnits,rect:{width:rect.width,height:rect.height,borderLeft,borderRight,borderTop,borderBottom,drawnWidth,drawnHeight}}));
+   return {expected,actual,expanded:map.classList.contains('expanded'),footer:map.getContext('2d')? 'canvas-rendered':'missing'};
+  }));
+  report.expandedNavigationChart={captured:false,reason:'Map projection verified numerically; save capture budget for the five Hrafn structure views'};
+  await phase('close map after coordinate projection test',()=>page.evaluate(()=>{const close=document.getElementById('mapClose');if(close)close.click();else document.getElementById('map')?.classList.remove('expanded');document.getElementById('mapBackdrop')?.classList.remove('open');}));
+  await phase('set conservative high-tide test envelope',()=>page.evaluate(()=>window.__ELSN_TEST__.setWaterState({time:0,tide:'high'})));
+  const baseline=await phase('measure baseline structure grounding before repairs',()=>page.evaluate(collectStructureSnapshot));
+  const hrafnBaseline=await phase('select actual Hrafn structures from the live pre-repair audit',()=>({
+   houses:(baseline.houses||[]).filter(item=>item.nearestIslandIndex===3).sort((a,b)=>a.buildingIndex-b.buildingIndex),
+   camps:(baseline.camps||[]).filter(item=>item.islandIndex===3).sort((a,b)=>a.kind.localeCompare(b.kind))
+  }));
+  const repairPass=await phase('run the game repair system in the disposable test renderer',()=>page.evaluate(()=>window.__ELSN_TEST__.repairAndAuditHabitableStructures()));
+  await phase('allow repaired transforms and colliders to settle',()=>page.waitForTimeout(800));
+  const settled=await phase('remeasure structures after the repair pass',()=>page.evaluate(collectStructureSnapshot));
+  report.baseline=baseline;report.repairPass=repairPass;report.postAutomaticAudit=settled;
+  report.runtimeRepairSimulation={testMode:true,waitMs:800,usesGameRepairSystem:true,explicitRepairApiCalled:true,productionDataModified:false,repairSummary:repairPass?{total:repairPass.total,groundedCount:repairPass.groundedCount,unsafeCount:repairPass.unsafeCount,repaired:repairPass.repaired,hiddenUnsafe:repairPass.hiddenUnsafe,visibleInvalidAfterRepair:repairPass.visibleInvalidAfterRepair}:null};
+  report.highTideTest={mode:'forced-high',seaSurfaceCapMeters:.38,requiredDryClearanceMeters:.22,waterState:await page.evaluate(()=>window.__ELSN_TEST__.diagnostics().coast)};
+  report.habitableStructures=settled.structures;report.offshoreAudit=settled.offshore;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.rocks=settled.rocks;report.outerLandmarks=settled.outerLandmarks;report.summary=settled.summary;
+  report.initialPlayerCamera=settled.view;report.hrafnBaseline=hrafnBaseline;
+  const hrafnHouses=(settled.houses||[]).filter(item=>item.nearestIslandIndex===3).sort((a,b)=>a.buildingIndex-b.buildingIndex);
+  const hrafnCamps=(settled.camps||[]).filter(item=>item.islandIndex===3).sort((a,b)=>a.kind.localeCompare(b.kind));
+  const beforeHouseByIndex=new Map(hrafnBaseline.houses.map(item=>[item.buildingIndex,item]));
+  const beforeCampByKind=new Map(hrafnBaseline.camps.map(item=>[item.kind,item]));
+  const makeHouseMetrics=item=>({position:{x:item.x,z:item.z},baseHeight:Number((item.rootY+.02*item.scale).toFixed(4)),renderedTerrainBelowBase:item.sampledTerrainY,analyticTerrainHeight:item.analyticTerrainY,analyticVsRenderedMeters:item.analyticVsRenderedMeters,terrainDeformationMeters:item.terrainDeformationMeters,maximumBaseGapMeters:item.maximumStructuralBaseGapMeters,distanceToCoastMeters:item.distanceToCoastMeters,dryLandFootprintMarginMeters:item.dryLandFootprintMarginMeters,highTideDryMarginMeters:item.highTideDryMarginMeters,highTideSafe:item.highTideSafe,visualCenterOffsetMeters:item.visualCenterOffsetMeters,cause:item.cause});
+  const makeCampMetrics=item=>({position:{x:item.x,z:item.z},baseHeight:item.anchorY,renderedTerrainBelowBase:item.groundY,baseAnchorGapMeters:item.anchorErrorMeters,maximumBaseGapMeters:item.maximumBaseGapMeters,minimumRenderedTerrainY:item.minimumRenderedTerrainY,distanceToCoastMeters:item.distanceToCoastMeters,dryLandFootprintMarginMeters:item.withinDryLandBand?Number((1).toFixed(2)):null,highTideDryMarginMeters:item.highTideDryMarginMeters,highTideSafe:item.highTideSafe,withinDryLandBand:item.withinDryLandBand,supportPoints:item.supportPoints,cause:item.cause});
+  const comparison=[];
+  for(const after of hrafnHouses){
+   const before=beforeHouseByIndex.get(after.buildingIndex);if(!before)continue;
+   comparison.push({id:'HRAF-HUT-'+String(after.buildingIndex+1).padStart(2,'0'),type:'WeatheredNorseHut',island:'Bahía de Hrafn',buildingIndex:after.buildingIndex,before:makeHouseMetrics(before),after:makeHouseMetrics(after)});
+  }
+  for(const after of hrafnCamps){
+   const before=beforeCampByKind.get(after.kind);if(!before)continue;
+   comparison.push({id:'HRAF-'+after.kind.toUpperCase()+'-03',type:after.kind,island:'Bahía de Hrafn',before:makeCampMetrics(before),after:makeCampMetrics(after)});
+  }
+  report.hrafnRepairComparison=comparison;
+  const physicallyUnsafe=metrics=>!Number.isFinite(Number(metrics.maximumBaseGapMeters))||Math.abs(Number(metrics.maximumBaseGapMeters))>.02||metrics.highTideSafe!==true||!Number.isFinite(Number(metrics.dryLandFootprintMarginMeters))||Number(metrics.dryLandFootprintMarginMeters)<0;
+  const unsafeBefore=comparison.filter(row=>physicallyUnsafe(row.before));
+  const unsafeAfter=comparison.filter(row=>physicallyUnsafe(row.after));
+  report.hrafnRepairGate={
+   targetCount:comparison.length,expectedTargetCount:5,
+   unsafeBeforeCount:unsafeBefore.length,unsafeBeforeIds:unsafeBefore.map(row=>row.id),
+   unsafeAfterCount:unsafeAfter.length,unsafeAfterIds:unsafeAfter.map(row=>row.id),
+   huts:comparison.filter(row=>row.type==='WeatheredNorseHut').map(row=>({id:row.id,baseGapWithinTwoCm:row.after.maximumBaseGapMeters!==null&&Math.abs(row.after.maximumBaseGapMeters)<=.02,highTideSafe:row.after.highTideSafe===true,insideDryIsland:row.after.dryLandFootprintMarginMeters>=0,causeBefore:row.before.cause,causeAfter:row.after.cause})),
+   camps:comparison.filter(row=>row.type!=='WeatheredNorseHut').map(row=>({id:row.id,anchorWithinTwoCm:Math.abs(row.after.baseAnchorGapMeters??Infinity)<=.02,allSupportsWithinTwoCm:Math.abs(row.after.maximumBaseGapMeters??Infinity)<=.02,highTideSafe:row.after.highTideSafe===true,withinDryLandBand:row.after.withinDryLandBand===true,causeBefore:row.before.cause,causeAfter:row.after.cause}))
+  };
+  report.objectInspectionCaptures=[];
+  const inspectionTargets=comparison.map(row=>{
+   const p=row.after.position||{};
+   const root=(settled.hrafnSceneRoots||[]).filter(item=>item.visible!==false&&item.enabled!==false&&
+    (row.type==='WeatheredNorseHut'?item.name==='WeatheredNorseHut':item.name===(row.type==='IslandOutpost'?'IslandOutpost_3':'IslandScoutCamp_3')))
+    .sort((a,b)=>Math.hypot((a.position?.x||0)-p.x,(a.position?.z||0)-p.z)-Math.hypot((b.position?.x||0)-p.x,(b.position?.z||0)-p.z))[0];
+   return root?{...root,id:row.id,position:{...root.position,x:p.x,z:p.z}}:null;
+  }).filter(Boolean).slice(0,5);
+  for(let index=0;index<inspectionTargets.length;index++){
+   const item=inspectionTargets[index],p=item.position||{},targetY=(Number(p.y)||0)+1.6;
+   const camera={x:(Number(p.x)||0)+12,y:Math.max(7,targetY+8),z:(Number(p.z)||0)+12,targetX:Number(p.x)||0,targetY,targetZ:Number(p.z)||0};
+   const safeName=String(item.name||('object-'+index)).replace(/[^a-z0-9_-]+/gi,'-').slice(0,64);
+   const file=path.join(OUT,'hrafn-final-'+String(index+1).padStart(2,'0')+'-'+safeName+'-'+String(Number(p.x||0).toFixed(1))+'-'+String(Number(p.z||0).toFixed(1))+'.png');
+   try{
+    const cameraState=await page.evaluate(args=>{
+     const api=window.__ELSN_TEST__,control=window.__ELSN_CAMERA_CONTROL;
+     if(control?.setMode)control.setMode('free');
+     const applied=api.setCamera(args);
+     return {applied,mode:control?.getMode?.()||null};
+    },camera);
+    if(cameraState.mode!=='free')throw new Error('The camera controller did not enter free mode before object inspection.');
+    const frameReady=await page.evaluate(()=>{
+     const api=window.__ELSN_TEST__;
+     if(typeof api?.prepareStaticCaptureFrame!=='function')throw new Error('Static frame capture API is unavailable.');
+     return api.prepareStaticCaptureFrame();
+    });
+    const actualView=await page.evaluate(()=>window.__ELSN_TEST__?.sceneViewSnapshot?.()||null);
+    const actualPosition=actualView?.camera||null,actualTarget=actualView?.target||null;
+    const near=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=.20;
+    const cameraVerified=!!actualPosition&&!!actualTarget&&near(actualPosition.x,camera.x)&&near(actualPosition.y,camera.y)&&near(actualPosition.z,camera.z)&&near(actualTarget.x,camera.targetX)&&near(actualTarget.y,camera.targetY)&&near(actualTarget.z,camera.targetZ);
+    if(!cameraVerified)throw new Error('The live camera did not reach the requested object viewpoint: '+JSON.stringify({expected:camera,actual:actualView}));
+    const shot=await captureCompositedPage(page,file,{gameCanvas:true});
+    report.objectInspectionCaptures.push({index:index+1,id:item.id,file:path.basename(file),bytes:shot.length,name:item.name,role:item.role,position:item.position,bounds:item.bounds,meshNames:item.meshNames,materials:item.materials,camera:cameraState,actualView,frameReady,cameraVerified,captureMethod:'live-game-canvas-data-url'});
+   }catch(error){report.objectInspectionCaptures.push({index:index+1,name:item.name,role:item.role,position:item.position,error:String(error?.message||error)});}
+  }
+  report.hrafnSceneRoots=settled.hrafnSceneRoots;report.hrafnHutRoots=settled.hrafnHutRoots;
+  report.navigationPointAudit=settled.navigationPointAudit;report.projectedStructuralCandidates=settled.projectedCandidates;
+  report.inventoryStructuralCandidates=settled.inventoryStructuralCandidates;report.unregisteredCandidateReview=settled.unregisteredCandidateReview;
+  report.inventorySummary=settled.inventorySummary;
+  report.unregisteredCandidateReviewSummary={total:settled.unregisteredCandidateReview.length,notBuildings:settled.unregisteredCandidateReview.filter(item=>item.disposition==='not-a-building').length,decorativeProps:settled.unregisteredCandidateReview.filter(item=>item.disposition==='decorative-prop').length,knownNonHabitableBuildings:settled.unregisteredCandidateReview.filter(item=>item.disposition==='known-non-habitable-building').length,unresolved:settled.unregisteredCandidateReview.filter(item=>item.disposition==='requires-manual-review').length,offshore:settled.unregisteredCandidateReview.filter(item=>item.offshore===true).length,allNineDrySamples:settled.unregisteredCandidateReview.filter(item=>item.dryFootprintSampleCount===9&&item.dryFootprintSampleTotal===9).length};
+  const initialRows=baseline.structures.structures||[];
+  const initialUnsafe=initialRows.filter(item=>item.safe!==true);
+  const repairedRows=Array.isArray(repairPass?.structures)?repairPass.structures:[];
+  const verifiedSafeAfter=initialRows.reduce((count,item,index)=>count+(item.safe!==true&&repairedRows[index]?.safe===true?1:0),0);
+  const gate={
+   fullRuntime:true,
+   structuresTotal:report.summary.structuresTotal,
+   expectedMinimumStructures:39,
+   allInitialUnsafeVerifiedSafe:verifiedSafeAfter===initialUnsafe.length,
+   initialUnsafeCount:initialUnsafe.length,
+   verifiedSafeAfterCount:verifiedSafeAfter,
+   unsafeAfter:report.summary.unsafe,
+   visibleInvalidAfter:report.summary.visibleInvalid,
+   untrackedRootsAfter:report.summary.untrackedRoots,
+   unregisteredStructuralCandidatesAfter:report.summary.unregisteredStructuralCandidates,
+   unregisteredCandidateReviewSummary:report.unregisteredCandidateReviewSummary,
+   offshoreStructuresAfter:report.summary.offshoreStructures,
+   visibleOffshoreStructuresAfter:report.summary.visibleOffshoreStructures,
+   offshoreIslandCount:report.summary.offshoreIslandCount,
+   houseCount:report.summary.houseCount,houseOutliers:report.summary.houseOutliers,
+   campCount:report.summary.campCount,campOutliers:report.summary.campOutliers,
+   garrisonCount:report.summary.garrisonCount,garrisonOutliers:report.summary.garrisonOutliers,
+   rockCount:report.summary.rockCount,rockOutliers:report.summary.rockOutliers,
+   outerLandmarkCount:(settled.outerLandmarks||[]).length,
+   outerLandmarkErrors:(settled.outerLandmarks||[]).map(item=>({name:item.name,found:item.found,anchorErrorMeters:item.anchorErrorMeters})),
+   outerLandmarksPass:Array.isArray(settled.outerLandmarks)&&settled.outerLandmarks.length===3&&settled.outerLandmarks.every(item=>item.found===true&&Number.isFinite(Number(item.anchorErrorMeters))&&Math.abs(Number(item.anchorErrorMeters))<=.02),
+   intentionalRegattaBuoys:(settled.offshore.candidates||[]).filter(item=>/^NorseRegattaBuoy_\d+$/.test(item.name||'')).length,
+   unexpectedOffshoreCandidates:(settled.offshore.candidates||[]).filter(item=>item.offshore&&!/^NorseRegattaBuoy_\d+$/.test(item.name||'')).map(item=>({name:item.name,kind:item.kind,registered:item.registered,island:item.island,islandIndex:item.islandIndex,position:item.position,issue:item.issue,registeredAudit:item.registeredAudit,dryFootprintSampleCount:item.dryFootprintSampleCount,dryFootprintSampleTotal:item.dryFootprintSampleTotal})),
+   unexpectedOffshoreStructures:(settled.offshore.candidates||[]).filter(item=>item.offshore&&!/^NorseRegattaBuoy_\d+$/.test(item.name||'')).length,
+   hrafnRepairGate:report.hrafnRepairGate
+  };
+  report.boatVisibilityRegression=await phase('verify offshore settlement visibility against all 13 island approaches',()=>page.evaluate(()=>{
+   const api=window.__ELSN_TEST__,islands=Array.isArray(api?.islands)?api.islands:[];
+   const checks=islands.map((island,index)=>{
+    const x=Number(island.x)+Number(island.r)+80,z=Number(island.z);
+    const audit=api.habitableStructureAuditAsBoat({x,z});
+    const rows=Array.isArray(audit?.structures)?audit.structures:[];
+    const violations=rows.filter(row=>row.enabled===true&&Number(row.distanceToCameraMeters)>(Number(row.visibilityLimitMeters)||55)+.02)
+     .map(row=>({name:row.name,island:row.island,islandIndex:row.islandIndex,distanceToCameraMeters:row.distanceToCameraMeters,visibilityLimitMeters:row.visibilityLimitMeters}));
+    return {islandIndex:index,islandName:island.name,boatCamera:{x,z},structuresChecked:rows.length,visibleBeyondLimit:violations};
+   });
+   return {islandCount:islands.length,checks,violationCount:checks.reduce((sum,item)=>sum+item.visibleBeyondLimit.length,0)};
+  }));
+  gate.boatVisibilityIslandSamples=report.boatVisibilityRegression.islandCount;
+  gate.boatVisibilityViolations=report.boatVisibilityRegression.violationCount;
+  report.fullRuntimeStructureGate=gate;
+  const hrafnTargetsMeasured=report.hrafnRepairGate.targetCount===5&&report.hrafnRepairGate.huts.length===3&&report.hrafnRepairGate.camps.length===2;
+  const hrafnHutsPass=report.hrafnRepairGate.huts.length===3&&report.hrafnRepairGate.huts.every(item=>item.baseGapWithinTwoCm&&item.highTideSafe&&item.insideDryIsland);
+  const hrafnCampsPass=report.hrafnRepairGate.camps.length===2&&report.hrafnRepairGate.camps.every(item=>item.anchorWithinTwoCm&&item.allSupportsWithinTwoCm&&item.highTideSafe&&item.withinDryLandBand);
+  const candidateReviewComplete=report.unregisteredCandidateReviewSummary?.unresolved===0&&report.unregisteredCandidateReviewSummary?.offshore===0&&report.unregisteredCandidateReviewSummary?.total===report.summary.unregisteredStructuralCandidates;
+  const passed=report.summary.structuresTotal>=39&&candidateReviewComplete&&gate.allInitialUnsafeVerifiedSafe&&gate.unsafeAfter===0&&
+   gate.visibleInvalidAfter===0&&gate.untrackedRootsAfter===0&&gate.unexpectedOffshoreStructures===0&&gate.offshoreIslandCount===13&&gate.houseCount>=12&&
+   gate.houseOutliers===0&&gate.campCount>=8&&gate.campOutliers===0&&gate.garrisonCount>=9&&gate.garrisonOutliers===0&&gate.rockCount>0&&gate.rockOutliers===0&&gate.boatVisibilityIslandSamples===13&&gate.boatVisibilityViolations===0&&
+   hrafnTargetsMeasured&&hrafnHutsPass&&hrafnCampsPass&&gate.outerLandmarksPass&&report.objectInspectionCaptures.length===5&&!report.objectInspectionCaptures.some(item=>item.error);
+  report.verdict=passed?'measured':'issues-found';
+  if(!passed)throw new Error('Full normal-runtime structure safety gate failed: '+JSON.stringify(gate));
+ }catch(error){report.failure=String(error?.stack||error);report.verdict='fail';
+ }finally{
+  report.finishedAt=new Date().toISOString();report.elapsedMs=Date.now()-startedAt;writeReport();
+  if(browser){try{await Promise.race([browser.close(),new Promise(resolve=>setTimeout(resolve,5000))]);}catch(_){}}
+ }
+ console.log('[STRUCTURE_AUDIT_RESULT] '+JSON.stringify({verdict:report.verdict,summary:report.summary,elapsedMs:report.elapsedMs,failure:report.failure}));
+ if(report.verdict!=='measured')process.exitCode=2;
+}
+main().catch(error=>{report.failure=String(error?.stack||error);report.verdict='fail';report.finishedAt=new Date().toISOString();report.elapsedMs=Date.now()-startedAt;try{writeReport();}catch(_){}console.error(error);process.exitCode=2;});

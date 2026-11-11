@@ -39,12 +39,14 @@ function cameraAt(target, radius, elevation, angleDegrees, targetY = target.y) {
     targetZ: target.z
   };
 }
-function makeStableObjectCode(item) {
+export function makeStableObjectCode(item) {
   const p = item.position || {};
   const canonical = [
     item.name || 'unknown',
     item.kind || item.structuralRole || item.category || 'object',
     item.islandIndex ?? item.island ?? 'unknown-island',
+    item.nativeId ?? item.uniqueId ?? item.nodeId ?? item.id ?? 'no-native-id',
+    (item.meshNames || []).slice(0,12).join(','),
     Number(p.x || 0).toFixed(1),
     Number(p.y || 0).toFixed(1),
     Number(p.z || 0).toFixed(1)
@@ -58,9 +60,12 @@ export function expandCapturePlan(input) {
   }
   const shots = [];
   const zones = [];
+  const requestIds = new Set();
   for (const [index, shot] of input.entries()) {
     if (!shot || typeof shot !== 'object' || Array.isArray(shot)) throw new Error('Plan ' + index + ': objeto inválido.');
     const id = safeId(shot.id, 'Plan ' + index);
+    if (requestIds.has(id)) throw new Error('Identificador de plan duplicado: ' + id);
+    requestIds.add(id);
     validateState(shot, id);
     if (shot.zone) {
       const zone = shot.zone;
@@ -78,12 +83,12 @@ export function expandCapturePlan(input) {
       if (zone.islandIndex !== undefined && (!Number.isInteger(zone.islandIndex) || zone.islandIndex < 0)) {
         throw new Error(id + ': islandIndex debe ser un entero no negativo.');
       }
-      const maxTargets = Math.max(1, Math.min(8, Number(zone.maxTargets) || 6));
+      const maxTargets = Math.max(1, Math.min(12, Number(zone.maxTargets) || 12));
       const cameraDistanceMeters = Math.max(3, Math.min(80, Number(zone.cameraDistanceMeters) || 9));
       const angles = Array.isArray(zone.angles) && zone.angles.length
         ? zone.angles.map((value, angleIndex) => finite(value, id + ': angle ' + angleIndex))
         : DIRECTIONS_8;
-      if (angles.length > 16) throw new Error(id + ': máximo 16 ángulos por zona.');
+      if (angles.length > 8) throw new Error(id + ': máximo 8 ángulos por zona para respetar el presupuesto de capturas.');
       const times = Array.isArray(zone.times) && zone.times.length
         ? zone.times.map((value, timeIndex) => finite(value, id + ': time ' + timeIndex))
         : [Number(shot.time ?? 37)];
@@ -93,6 +98,13 @@ export function expandCapturePlan(input) {
       if (tides.some(value => !['natural','high','low'].includes(value))) {
         throw new Error(id + ': tides solo admite natural, high o low.');
       }
+      const observationPoint = zone.observationPoint && typeof zone.observationPoint === 'object'
+        ? {x:finite(zone.observationPoint.x,id+': observationPoint.x'),y:finite(zone.observationPoint.y,id+': observationPoint.y'),z:finite(zone.observationPoint.z,id+': observationPoint.z')}
+        : null;
+      const observationHeightOffsets = Array.isArray(zone.observationHeightOffsets) && zone.observationHeightOffsets.length
+        ? zone.observationHeightOffsets.map((value,offsetIndex)=>finite(value,id+': observationHeightOffsets['+offsetIndex+']'))
+        : [0];
+      if (observationHeightOffsets.length > 2) throw new Error(id + ': máximo 2 alturas para la cámara de observación.');
       zones.push({
         id,
         label: String(zone.label || shot.label || id),
@@ -106,6 +118,8 @@ export function expandCapturePlan(input) {
         angles,
         times,
         tides,
+        observationPoint,
+        observationHeightOffsets,
         includeOverview: zone.includeOverview !== false,
         includeTopDown: zone.includeTopDown !== false
       });
@@ -147,6 +161,11 @@ export function expandCapturePlan(input) {
     throw new Error('El plan supera el máximo de ' + MAX_CAPTURE_SHOTS + ' capturas.');
   }
   if (!shots.length && !zones.length) throw new Error('El plan no ha generado ninguna captura.');
+  const captureIds = new Set();
+  for (const shot of shots) {
+    if (captureIds.has(shot.id)) throw new Error('Identificador de captura duplicado: ' + shot.id);
+    captureIds.add(shot.id);
+  }
   return {shots,zones};
 }
 
@@ -162,6 +181,11 @@ export function createZoneInspectionShots(request, islands, candidates) {
     y: Number(zone.center?.y || 0),
     z: Number(zone.center?.z || 0) + origin.z
   };
+  const observationPoint = zone.observationPoint ? {
+    x:Number(zone.observationPoint.x)+(zone.absolute?0:origin.x),
+    y:Number(zone.observationPoint.y),
+    z:Number(zone.observationPoint.z)+(zone.absolute?0:origin.z)
+  } : null;
   const stateVariants = [];
   for (const time of (zone.times || [37])) {
     for (const tide of (zone.tides || ['natural'])) stateVariants.push({time,tide});
@@ -185,9 +209,13 @@ export function createZoneInspectionShots(request, islands, candidates) {
   }
   const selected = zone.focus === 'structures' ? unique.slice(0,zone.maxTargets) : [];
   const omitted = zone.focus === 'structures' ? unique.slice(zone.maxTargets) : [];
-  const addShot = (id, camera, purpose, target, state, subject = null) => {
+  const capturePrefix = request.id.slice(0,7)+'-'+createHash('sha256').update(request.id).digest('hex').slice(0,4);
+  const addShot = (suffix, camera, purpose, target, state, subject = null) => {
+    const captureId=(capturePrefix+'-'+suffix).slice(0,48);
+    if(generatedIds.has(captureId)) throw new Error('ID de captura generado duplicado: '+captureId);
+    generatedIds.add(captureId);
     shots.push({
-      id:id.slice(0,48),
+      id:captureId,
       camera,
       time:state.time,
       tide:state.tide,
@@ -199,17 +227,19 @@ export function createZoneInspectionShots(request, islands, candidates) {
       subject
     });
   };
+  const generatedIds = new Set();
   const overviewTarget = {x:center.x,y:center.y+1,z:center.z};
-  for (const state of stateVariants) {
+  for (const [stateIndex,state] of stateVariants.entries()) {
     if (zone.includeOverview) {
       const overviewAngles = zone.angles.length >= 4 ? zone.angles : DIRECTIONS_8;
-      const overviewCount = Math.min(8,overviewAngles.length);
+      const selectedOverviewAngles = overviewAngles.filter((_,index)=>index%2===0).slice(0,4);
+      const overviewCount = selectedOverviewAngles.length;
       const radius = Math.max(zone.radiusMeters*1.35,22);
       const elevation = center.y + Math.max(10,zone.radiusMeters*.42);
       for (let i=0;i<overviewCount;i++) {
-        const angle = overviewAngles[i];
+        const angle = selectedOverviewAngles[i];
         addShot(
-          request.id+'-overview-'+String(i+1).padStart(2,'0')+'-t'+String(state.time)+'-'+state.tide,
+          'overview-'+String(i+1).padStart(2,'0')+'-s'+stateIndex+'-'+state.tide,
           cameraAt(overviewTarget,radius,elevation,angle,overviewTarget.y),
           'zone-overview',
           overviewTarget,
@@ -217,7 +247,47 @@ export function createZoneInspectionShots(request, islands, candidates) {
         );
       }
     }
-    if (zone.focus === 'structures' && selected.length) {
+    if (zone.focus === 'structures') {
+      // Scale close-up density to the number of buildings so one unified run can
+      // cover up to twelve structures without silently exceeding the 120-shot budget.
+      const lowAngles = selected.length <= 5
+        ? zone.angles.slice(0,2)
+        : [zone.angles[1]??45];
+      const highAngles = selected.length <= 5 ? [45,225] : [];
+      // A fixed offshore observation point lets the user inspect every building from
+      // one real boat/water vantage instead of relying only on synthetic orbit cameras.
+      if (observationPoint) {
+        for (let heightIndex=0;heightIndex<zone.observationHeightOffsets.length;heightIndex++) {
+          const offset=zone.observationHeightOffsets[heightIndex];
+          const camera={x:observationPoint.x,y:observationPoint.y+offset,z:observationPoint.z,
+            targetX:overviewTarget.x,targetY:overviewTarget.y,targetZ:overviewTarget.z};
+          addShot('water-overview-'+String(heightIndex+1)+'-s'+stateIndex+'-'+state.tide,
+            camera,'zone-water-overview',overviewTarget,state);
+        }
+        for (const item of selected) {
+          const p = item.position;
+          const bounds = item.bounds || {};
+          const bottom = Number(bounds.bottomY ?? p.y ?? center.y);
+          const top = Number(bounds.topY ?? (bottom+4));
+          const target = {x:Number(p.x),y:Number(((bottom+top)/2).toFixed(3)),z:Number(p.z)};
+          const subject = {
+            code:item.code,nativeId:item.nativeId??item.uniqueId??item.nodeId??item.id??null,
+            name:item.name||'Unnamed structural object',
+            kind:item.kind||item.structuralRole||item.category||'unclassified',
+            island:item.island||item.islandName||null,
+            islandIndex:item.islandIndex??zone.islandIndex??null,
+            position:item.position,bounds:item.bounds||null,
+            source:item.source||'scene-structural-inventory',
+            registered:item.registered??null,meshCount:item.meshCount??null,
+            vertexCount:item.vertexCount??null,meshNames:item.meshNames||[],materials:item.materials||[]
+          };
+          const offset=zone.observationHeightOffsets[0]??0;
+          const camera={x:observationPoint.x,y:observationPoint.y+offset,z:observationPoint.z,
+            targetX:target.x,targetY:target.y,targetZ:target.z};
+          addShot(item.code.toLowerCase()+'-water-01-s'+stateIndex+'-'+state.tide,
+            camera,'structure-water-observation',target,state,subject);
+        }
+      }
       for (const item of selected) {
         const p = item.position;
         const bounds = item.bounds || {};
@@ -244,19 +314,19 @@ export function createZoneInspectionShots(request, islands, candidates) {
           meshNames:item.meshNames || [],
           materials:item.materials || []
         };
-        for (let i=0;i<zone.angles.length;i++) {
-          const angle = zone.angles[i];
-          addShot(request.id+'-'+item.code.toLowerCase()+'-low-'+String(i+1).padStart(2,'0')+'-t'+String(state.time)+'-'+state.tide,
+        for (let i=0;i<lowAngles.length;i++) {
+          const angle = lowAngles[i];
+          addShot(item.code.toLowerCase()+'-lo-'+String(i+1).padStart(2,'0')+'-s'+stateIndex+'-'+state.tide,
             cameraAt(target,distance,lowElevation,angle,target.y),'structure-low-oblique',target,state,subject);
         }
-        for (let i=0;i<Math.min(4,DIRECTIONS_4.length);i++) {
-          const angle = DIRECTIONS_4[i];
-          addShot(request.id+'-'+item.code.toLowerCase()+'-high-'+String(i+1).padStart(2,'0')+'-t'+String(state.time)+'-'+state.tide,
+        for (let i=0;i<highAngles.length;i++) {
+          const angle = highAngles[i];
+          addShot(item.code.toLowerCase()+'-hi-'+String(i+1).padStart(2,'0')+'-s'+stateIndex+'-'+state.tide,
             cameraAt(target,distance*1.2,highElevation,angle,target.y),'structure-high-oblique',target,state,subject);
         }
         if (zone.includeTopDown) {
           const camera = {x:target.x+.05,y:top+Math.max(8,objectHeight*1.5),z:target.z+.05,targetX:target.x,targetY:target.y,targetZ:target.z};
-          addShot(request.id+'-'+item.code.toLowerCase()+'-topdown-t'+String(state.time)+'-'+state.tide,
+          addShot(item.code.toLowerCase()+'-td-s'+stateIndex+'-'+state.tide,
             camera,'structure-top-down',target,state,subject);
         }
       }
@@ -268,7 +338,7 @@ export function createZoneInspectionShots(request, islands, candidates) {
       for (const [level,distance,elevation] of [['near',nearDistance,lowElevation],['elevated',farDistance,highElevation]]) {
         for (let i=0;i<zone.angles.length;i++) {
           const angle = zone.angles[i];
-          addShot(request.id+'-'+level+'-'+String(i+1).padStart(2,'0')+'-t'+String(state.time)+'-'+state.tide,
+          addShot(level+'-'+String(i+1).padStart(2,'0')+'-s'+stateIndex+'-'+state.tide,
             cameraAt(overviewTarget,distance,elevation,angle,overviewTarget.y),
             zone.focus === 'water' ? 'water-surface-angle' : zone.focus === 'coast' ? 'coastline-angle' : zone.focus === 'terrain' ? 'terrain-angle' : 'zone-angle',
             overviewTarget,state);
@@ -276,9 +346,17 @@ export function createZoneInspectionShots(request, islands, candidates) {
       }
       if (zone.includeTopDown) {
         const camera={x:center.x+.05,y:center.y+Math.max(18,zone.radiusMeters*1.5),z:center.z+.05,targetX:center.x,targetY:center.y,targetZ:center.z};
-        addShot(request.id+'-topdown-t'+String(state.time)+'-'+state.tide,camera,'zone-top-down',center,state);
+        addShot('topdown-s'+stateIndex+'-'+state.tide,camera,'zone-top-down',center,state);
       }
     }
+  }
+  const generatedIdsCheck = new Set();
+  for (const shot of shots) {
+    safeId(shot.id, 'Captura generada');
+    validateState(shot, shot.id);
+    validateCamera(shot.camera, shot.id);
+    if (generatedIdsCheck.has(shot.id)) throw new Error('ID de cámara repetido en la zona: ' + shot.id);
+    generatedIdsCheck.add(shot.id);
   }
   const report = {
     id:request.id,
@@ -287,6 +365,8 @@ export function createZoneInspectionShots(request, islands, candidates) {
     center,
     islandIndex:zone.islandIndex ?? null,
     radiusMeters:zone.radiusMeters,
+    observationPoint,
+    observationHeightOffsets:zone.observationHeightOffsets,
     candidateCount:unique.length,
     selectedTargetCount:selected.length,
     selectedTargets:selected.map(item=>({code:item.code,nativeId:item.nativeId??item.uniqueId??item.nodeId??item.id??null,name:item.name,kind:item.kind||item.structuralRole||item.category||'unclassified',island:item.island||item.islandName||null,position:item.position,bounds:item.bounds||null,source:item.source||null})),

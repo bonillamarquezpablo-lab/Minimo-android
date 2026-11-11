@@ -1,0 +1,84 @@
+name: Hrafn geometry measurements
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/hrafn-geometry-measurements.mjs'
+      - '.github/workflows/hrafn-geometry-measurements.yml'
+      - 'index.html'
+      - 'scripts/build_site.py'
+      - 'scripts/nordic/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hrafn-geometry-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    name: Measure Hrafn structures before any PNG
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check measurement script syntax
+        run: node --check scripts/hrafn-geometry-measurements.mjs
+      - name: Build complete game
+        run: python scripts/build_site.py
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install chromium
+          node -e "const fs=require('node:fs');const {chromium}=require('playwright');const executable=chromium.executablePath();if(!fs.existsSync(executable))throw new Error('Chromium binary missing: '+executable);console.log('Chromium ready:',executable)"
+      - name: Start local built-site server
+        run: |
+          python3 -m http.server 4176 --directory dist > /tmp/hrafn-http.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4176/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/hrafn-http.log
+          exit 1
+      - name: Measure geometry and write JSON only
+        env:
+          HRAFN_TEST_URL: http://127.0.0.1:4176/
+          HRAFN_PR_HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
+          HRAFN_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/hrafn-geometry-measurements.mjs
+      - name: Upload measurement JSON before PNG
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hrafn-geometry-json-${{ github.sha }}
+          path: artifacts/hrafn-geometry/hrafn-geometry-measurements.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Attempt independent PNG audit after JSON upload
+        if: always()
+        continue-on-error: true
+        env:
+          STRUCTURE_TEST_URL: http://127.0.0.1:4176/
+        run: timeout --signal=TERM --kill-after=5s 360s node scripts/coastal-structure-grounding-smoke.mjs
+      - name: Upload optional PNG audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hrafn-geometry-png-${{ github.sha }}
+          path: artifacts/structure-grounding/*.png
+          if-no-files-found: warn
+          retention-days: 30

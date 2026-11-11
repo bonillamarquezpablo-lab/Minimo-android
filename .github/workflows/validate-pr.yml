@@ -19,16 +19,42 @@ jobs:
       - name: Checkout pull request
         uses: actions/checkout@v4
 
+      - name: Extract focused structure-repair source diagnostics
+        run: python scripts/inspect_structure_repair_source.py
+
+      - name: Upload structure-repair source excerpts
+        uses: actions/upload-artifact@v4
+        with:
+          name: structure-repair-source-${{ github.sha }}
+          path: artifacts/texture-readiness-smoke/structure-repair-source-excerpts.txt
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Test offline navigation suite and four camera modes
+        run: node scripts/test_navigation_suite_contract.cjs
+
+      - name: Test bounded scene capture and animated frame integrity
+        run: node scripts/test_scene_capture_efficiency_contract.cjs
+
+      - name: Test rendered-ground structure and outpost bedroll placement
+        run: node scripts/test_coastal_structure_grounding_contract.cjs
+
+      - name: Test deterministic coastal reference hooks
+        run: node scripts/test_coastal_reference_contract.cjs
 
       - name: Test bounded startup scene warm-up
         run: node scripts/test_startup_guard.cjs
 
       - name: Test GLB background pipeline and fallbacks
         run: node scripts/test_glb_loading.cjs
+
+      - name: Test coastal mesh continuity and 5 cm seam limit
+        run: node scripts/test_coastal_mesh_continuity.cjs
 
       - name: Test animated water, foam and debug controls
         run: node scripts/test_water_shore.cjs

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "inspeccion-unica-hrafn",
+    "label": "Bahía de Hrafn — inspección unificada desde el agua",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Bahía de Hrafn — todas las construcciones detectadas",
+      "center": {
+        "x": 28,
+        "y": 2.2,
+        "z": 143
+      },
+      "radiusMeters": 27,
+      "focus": "structures",
+      "maxTargets": 12,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        0,
+        45,
+        90,
+        135,
+        180,
+        225,
+        270,
+        315
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "observationPoint": {
+        "x": 28,
+        "y": 6,
+        "z": 236.3
+      },
+      "observationHeightOffsets": [
+        0,
+        2.5
+      ],
+      "includeOverview": true,
+      "includeTopDown": false
+    }
+  }
+]

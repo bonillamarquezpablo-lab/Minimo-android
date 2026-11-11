@@ -16,7 +16,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.271 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.274 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -320,6 +320,305 @@ def main() -> None:
         if check.returncode != 0:
             raise SystemExit("JavaScript syntax validation failed:\n" + check.stderr)
     print(f"JavaScript syntax validation passed ({len(inline_scripts)} inline script block(s)).")
+    navigation_check = subprocess.run(
+        [node, "--check", str(ROOT / "scripts" / "nordic" / "navigation-suite.js")],
+        capture_output=True, text=True,
+    )
+    if navigation_check.returncode != 0:
+        raise SystemExit("Navigation runtime JavaScript syntax validation failed:\\n" + navigation_check.stderr)
+    print("Navigation runtime JavaScript syntax validation passed.")
+    # Anchor decorative terrain objects to the actual rendered GroundMesh. The
+    # analytical heightfield can differ from the rendered triangle interpolation,
+    # leaving rocks, tree trunks and shrubs visibly detached from the island.
+    ground_anchor_replacements = (
+        (
+            "function createRock(x,z){\n  const gy=terrainSurfaceAt(x,z),sx=",
+            "function createRock(x,z){\n  const gy=renderedTerrainSurfaceAt(x,z),sx=",
+            "rock",
+        ),
+        (
+            "mergeStaticDecorByMaterial(canopy,'NorseTreeCanopy');\n  root.position=v(x,terrainSurfaceAt(x,z),z);",
+            "mergeStaticDecorByMaterial(canopy,'NorseTreeCanopy');\n  root.position=v(x,renderedTerrainSurfaceAt(x,z),z);",
+            "tree",
+        ),
+        (
+            "const groundY=terrainHeightOnIsland(island,x,z),normal=terrainNormalAt(x,z,.42);\n  const root=newGroup('NaturalBroadleafShrub',null)",
+            "const groundY=renderedTerrainSurfaceAt(x,z),normal=terrainNormalAt(x,z,.42);\n  const root=newGroup('NaturalBroadleafShrub',null)",
+            "shrub",
+        ),
+    )
+    for detached_anchor, rendered_anchor, label in ground_anchor_replacements:
+        if html.count(detached_anchor) != 1:
+            raise SystemExit(f"No se encontró exactamente un anclaje de terreno para {label}.")
+        html = html.replace(detached_anchor, rendered_anchor, 1)
+
+    # Bedrolls are mats placed flat on the ground: rotate them around the vertical Y axis,
+    # not around Z (which tilted one edge into the soil by more than 7 cm).
+    bedroll_rotation_marker = "box('OutpostBedroll_'+vl.index+'_'+tent,camp,[ox,.13,oz+.85],[.72,.16,.95],M.fur,[0,0,rot]);"
+    bedroll_rotation_code = "box('OutpostBedroll_'+vl.index+'_'+tent,camp,[ox,.13,oz+.85],[.72,.16,.95],M.fur,[0,rot,0]);"
+    if html.count(bedroll_rotation_marker) != 1:
+        raise SystemExit("No se encontró exactamente la orientación original de los catres del puesto avanzado.")
+    html = html.replace(bedroll_rotation_marker, bedroll_rotation_code, 1)
+    bedroll_grounding_marker = "for(const bedroll of camp.__groundingBedrolls||[])placeBoxBase(bedroll,.08);"
+    bedroll_grounding_code = """const bedrollLowerLocalCorners=mesh=>{
+    const corners=mesh.getBoundingInfo?.()?.boundingBox?.vectors;
+    if(!Array.isArray(corners)||corners.length!==8)throw new Error('Outpost bedroll has no complete local bounds: '+mesh.name);
+    const lowerY=Math.min(...corners.map(point=>point.y));
+    return corners.filter(point=>point.y<=lowerY+1e-5);
+   };
+   const bedrollWorldLowerCorners=mesh=>{
+    mesh.computeWorldMatrix(true);
+    return bedrollLowerLocalCorners(mesh).map(point=>BABYLON.Vector3.TransformCoordinates(point,mesh.getWorldMatrix()));
+   };
+   const fitBedrollGroundPlane=samples=>{
+    const count=samples.length,cx=samples.reduce((sum,p)=>sum+p.x,0)/count,cz=samples.reduce((sum,p)=>sum+p.z,0)/count;
+    const local=samples.map(p=>({x:p.x-cx,z:p.z-cz,y:p.terrainY}));
+    const sx=local.reduce((sum,p)=>sum+p.x,0),sz=local.reduce((sum,p)=>sum+p.z,0);
+    const sxx=local.reduce((sum,p)=>sum+p.x*p.x,0),szz=local.reduce((sum,p)=>sum+p.z*p.z,0),sxz=local.reduce((sum,p)=>sum+p.x*p.z,0);
+    const sxy=local.reduce((sum,p)=>sum+p.x*p.y,0),szy=local.reduce((sum,p)=>sum+p.z*p.y,0),sy=local.reduce((sum,p)=>sum+p.y,0);
+    const matrix=[[sxx,sxz,sx,sxy],[sxz,szz,sz,szy],[sx,sz,count,sy]];
+    for(let column=0;column<3;column++){
+     let pivot=column;for(let row=column+1;row<3;row++)if(Math.abs(matrix[row][column])>Math.abs(matrix[pivot][column]))pivot=row;
+     if(Math.abs(matrix[pivot][column])<1e-10)throw new Error('Outpost bedroll terrain plane is singular.');
+     [matrix[column],matrix[pivot]]=[matrix[pivot],matrix[column]];
+     const divisor=matrix[column][column];for(let k=column;k<4;k++)matrix[column][k]/=divisor;
+     for(let row=0;row<3;row++)if(row!==column){const factor=matrix[row][column];for(let k=column;k<4;k++)matrix[row][k]-=factor*matrix[column][k];}
+    }
+    return {slopeX:matrix[0][3],slopeZ:matrix[1][3]};
+   };
+   const alignBedrollToRenderedGround=mesh=>{
+    placeBoxBase(mesh,.08);
+    const initialCorners=bedrollWorldLowerCorners(mesh);
+    const initialSamples=initialCorners.map(point=>({x:point.x,z:point.z,terrainY:renderedTerrainSurfaceAt(point.x,point.z)}));
+    if(initialSamples.length!==4||initialSamples.some(point=>!Number.isFinite(point.terrainY)))throw new Error('Outpost bedroll must have four valid ground samples: '+mesh.name);
+    const slope=fitBedrollGroundPlane(initialSamples);
+    const normal=new BABYLON.Vector3(-slope.slopeX,1,-slope.slopeZ).normalize();
+    const yaw=Number(mesh.rotation?.y)||0;
+    const yawX=new BABYLON.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+    const tangentX=yawX.subtract(normal.scale(BABYLON.Vector3.Dot(yawX,normal))).normalize();
+    const tangentZ=BABYLON.Vector3.Cross(tangentX,normal).normalize();
+    if(!Number.isFinite(tangentX.x)||!Number.isFinite(tangentZ.z))throw new Error('Outpost bedroll terrain orientation is invalid: '+mesh.name);
+    mesh.rotation.copyFromFloats(0,0,0);
+    mesh.rotationQuaternion=BABYLON.Quaternion.RotationQuaternionFromAxis(tangentX,normal,tangentZ);
+    mesh.computeWorldMatrix(true);
+    const alignedCorners=bedrollWorldLowerCorners(mesh);
+    const alignedSamples=alignedCorners.map(point=>({point,terrainY:renderedTerrainSurfaceAt(point.x,point.z)}));
+    if(alignedSamples.some(sample=>!Number.isFinite(sample.terrainY)))throw new Error('Outpost bedroll aligned corners have invalid terrain: '+mesh.name);
+    const lift=Math.max(...alignedSamples.map(sample=>sample.terrainY-sample.point.y));
+    if(!Number.isFinite(lift)||Math.abs(lift)>.30)throw new Error('Outpost bedroll slope correction is outside the safe range: '+mesh.name+' ('+lift+')');
+    mesh.position.y+=lift;
+    mesh.computeWorldMatrix(true);
+    const finalCorners=bedrollWorldLowerCorners(mesh);
+    const finalSamples=finalCorners.map(point=>({point,terrainY:renderedTerrainSurfaceAt(point.x,point.z)}));
+    const gaps=finalSamples.map(sample=>sample.point.y-sample.terrainY);
+    const maximumAbsoluteGap=Math.max(...gaps.map(Math.abs));
+    if(finalSamples.some(sample=>!Number.isFinite(sample.terrainY))||maximumAbsoluteGap>.02)
+     throw new Error('Outpost bedroll lower-corner contact exceeds 2 cm: '+mesh.name+' ('+maximumAbsoluteGap+')');
+    for(const sample of finalSamples)recordContact(mesh.name,sample.point.x,sample.point.z,sample.terrainY);
+   };
+   for(const bedroll of camp.__groundingBedrolls||[])alignBedrollToRenderedGround(bedroll);""";
+    if html.count(bedroll_grounding_marker) != 1:
+        raise SystemExit("No se encontró exactamente el asiento horizontal de los catres del puesto avanzado.")
+    html = html.replace(bedroll_grounding_marker, bedroll_grounding_code, 1)
+    bedroll_support_marker = "camp.__groundingSupportMeshes.push({mesh:bedroll,kind:'box',halfHeight:.08});"
+    bedroll_support_code = "camp.__groundingSupportMeshes.push({mesh:bedroll,kind:'oriented-box',halfHeight:.08});"
+    if html.count(bedroll_support_marker) != 1:
+        raise SystemExit("No se encontró exactamente el registro de apoyo geométrico de los catres.")
+    html = html.replace(bedroll_support_marker, bedroll_support_code, 1)
+    support_points_marker = """     const supportPoints=(group?.__groundingSupportMeshes||[]).map(entry=>{
+      const mesh=entry.mesh;if(!mesh)return null;
+      try{mesh.computeWorldMatrix(true);}catch(_){}
+      const angle=entry.kind==='tilted-cylinder'?(Number(mesh.rotation?.z)||0):0,halfHeight=Number(entry.halfHeight)||0;
+      const localX=mesh.position.x+(entry.kind==='tilted-cylinder'?Math.sin(angle)*halfHeight:0),localY=mesh.position.y-(entry.kind==='tilted-cylinder'?Math.cos(angle)*halfHeight:halfHeight),worldX=p.x+localX,worldZ=p.z+mesh.position.z,baseY=p.y+localY,terrainY=renderedTerrainSurfaceAt(worldX,worldZ);
+      return {dx:worldX-p.x,dz:worldZ-p.z,baseY,name:mesh.name,terrainY:Number(terrainY.toFixed(4)),baseGapMeters:Number((baseY-terrainY).toFixed(4)),kind:entry.kind};
+     }).filter(Boolean);"""
+    support_points_code = """     const supportPoints=(group?.__groundingSupportMeshes||[]).flatMap(entry=>{
+      const mesh=entry.mesh;if(!mesh)return [];
+      try{mesh.computeWorldMatrix(true);}catch(_){}
+      if(entry.kind==='oriented-box'){
+       const localCorners=mesh.getBoundingInfo?.()?.boundingBox?.vectors;
+       if(!Array.isArray(localCorners)||localCorners.length!==8)return [];
+       const lowestLocalY=Math.min(...localCorners.map(point=>point.y));
+       return localCorners.filter(point=>point.y<=lowestLocalY+1e-5).map(corner=>{
+        const point=BABYLON.Vector3.TransformCoordinates(corner,mesh.getWorldMatrix());
+        const terrainY=renderedTerrainSurfaceAt(point.x,point.z);
+        return {dx:point.x-p.x,dz:point.z-p.z,baseY:point.y,name:mesh.name,terrainY:Number(terrainY.toFixed(4)),baseGapMeters:Number((point.y-terrainY).toFixed(4)),kind:entry.kind};
+       });
+      }
+      const angle=entry.kind==='tilted-cylinder'?(Number(mesh.rotation?.z)||0):0,halfHeight=Number(entry.halfHeight)||0;
+      const localX=mesh.position.x+(entry.kind==='tilted-cylinder'?Math.sin(angle)*halfHeight:0),localY=mesh.position.y-(entry.kind==='tilted-cylinder'?Math.cos(angle)*halfHeight:halfHeight),worldX=p.x+localX,worldZ=p.z+mesh.position.z,baseY=p.y+localY,terrainY=renderedTerrainSurfaceAt(worldX,worldZ);
+      return [{dx:worldX-p.x,dz:worldZ-p.z,baseY,name:mesh.name,terrainY:Number(terrainY.toFixed(4)),baseGapMeters:Number((baseY-terrainY).toFixed(4)),kind:entry.kind}];
+     });"""
+    if html.count(support_points_marker) != 1:
+        raise SystemExit("No se encontró exactamente el diagnóstico de apoyos de los campamentos.")
+    html = html.replace(support_points_marker, support_points_code, 1)
+    print("OK bedroll orientation and all four lower-corner support measurements are grounded on the rendered terrain.")
+
+    # Add a runtime check for every boulder using its actual world-space bounding box.
+    rock_audit_marker = "window.__ELSN_TEST__={"
+    rock_audit_code = """window.__ELSN_TEST__={
+    outerLandmarkGrounding:()=>[
+     {name:'NorseThingstead_10',islandIndex:10,offsetY:0},
+     {name:'NorseCoastalPier_11',islandIndex:11,offsetY:.10,minimumY:.10},
+     {name:'NorseCoastalBeacon_12',islandIndex:12,offsetY:0}
+    ].map(spec=>{
+     const root=scene.getTransformNodeByName?.(spec.name)||scene.getMeshByName?.(spec.name)||null;
+     if(!root)return {name:spec.name,found:false,islandIndex:spec.islandIndex};
+     root.computeWorldMatrix?.(true);
+     const position=root.getAbsolutePosition?.()||root.position;
+     const terrainY=renderedTerrainSurfaceAt(position.x,position.z);
+     const expectedY=spec.minimumY===undefined?terrainY:Math.max(spec.minimumY,terrainY+spec.offsetY);
+     return {name:spec.name,found:true,islandIndex:spec.islandIndex,x:Number(position.x.toFixed(3)),y:Number(position.y.toFixed(4)),z:Number(position.z.toFixed(3)),terrainY:Number(terrainY.toFixed(4)),expectedY:Number(expectedY.toFixed(4)),anchorErrorMeters:Number((position.y-expectedY).toFixed(4))};
+    }),
+    rockGroundingAudit:()=>rocks.map((rock,index)=>{
+     const mesh=rock?.meshes?.[0];if(!mesh)return {index,valid:false};
+     mesh.computeWorldMatrix?.(true);
+     const bounds=mesh.getBoundingInfo?.()?.boundingBox;
+     const bottomY=Number(bounds?.minimumWorld?.y??(mesh.position.y-mesh.scaling.y*.5));
+     const terrainY=renderedTerrainSurfaceAt(rock.x,rock.z);
+     return {index,x:Number(rock.x.toFixed(3)),z:Number(rock.z.toFixed(3)),bottomY:Number(bottomY.toFixed(4)),renderedTerrainY:Number(terrainY.toFixed(4)),gapMeters:Number((bottomY-terrainY).toFixed(4)),valid:Number.isFinite(bottomY)&&Number.isFinite(terrainY)};
+    }),"""
+    if html.count(rock_audit_marker) != 1:
+        raise SystemExit("No se encontró la API de auditoría para anclar rocas.")
+    html = html.replace(rock_audit_marker, rock_audit_code, 1)
+
+    # Keep every island garrison prop attached to its registered root.
+    # Previously the flagpole, standard and three stakes were free scene roots,
+    # so distance culling of IslandGarrisonOutpost_N left them visible over the sea.
+    detached_flagpole = """  const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,null,[flagX,flagY+2.15,flagZ],4.3,.075,.075,M.woodLight);
+  const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,null);flagGroup.position=v(flagX,flagY+3.55,flagZ);"""
+    attached_flagpole = """  const garrisonWorldToLocal=(x,y,z)=>{outpostRoot.computeWorldMatrix(true);const inverse=outpostRoot.getWorldMatrix().clone();inverse.invert();return BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(x,y,z),inverse);};
+  const flagPoleLocal=garrisonWorldToLocal(flagX,flagY+2.15,flagZ);
+  const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,outpostRoot,[flagPoleLocal.x,flagPoleLocal.y,flagPoleLocal.z],4.3,.075,.075,M.woodLight);flagPole.parent=outpostRoot;
+  const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,outpostRoot);flagGroup.parent=outpostRoot;const flagGroupLocal=garrisonWorldToLocal(flagX,flagY+3.55,flagZ);flagGroup.position.copyFrom(flagGroupLocal);"""
+    flagpole_occurrences = html.count(detached_flagpole)
+    if flagpole_occurrences < 1:
+        raise SystemExit("No se encontró ninguna pareja de raíces independientes de bandera de guarnición.")
+    html = html.replace(detached_flagpole, attached_flagpole)
+    if html.count(detached_flagpole) or html.count(attached_flagpole) != flagpole_occurrences:
+        raise SystemExit("No se pudieron anclar todas las banderas de las guarniciones.")
+
+    detached_stake = """   cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,null,[px,py+.42,pz],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);"""
+    attached_stake = """   const stakeLocal=garrisonWorldToLocal(px,py+.42,pz);const stakeMesh=cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,outpostRoot,[stakeLocal.x,stakeLocal.y,stakeLocal.z],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);if(stakeMesh)stakeMesh.parent=outpostRoot;"""
+    stake_occurrences = html.count(detached_stake)
+    if stake_occurrences < 1:
+        raise SystemExit("No se encontró ninguna raíz independiente de estacas de guarnición.")
+    html = html.replace(detached_stake, attached_stake)
+    if html.count(detached_stake) or html.count(attached_stake) != stake_occurrences:
+        raise SystemExit("No se pudieron anclar todas las estacas de las guarniciones.")
+
+    # Keep the short offshore view only on explicitly detected ultra-low-end Android devices in Performance mode.
+    # Other devices retain each structure's existing normal visibility distance while aboard the ship.
+    boat_visibility_marker = "boatVisibleDistance:Math.max(30,Number(options.boatVisibleDistance)||55),"
+    boat_visibility_code = "boatVisibleDistance:isUltraLowEndMobile?Math.max(30,Number(options.boatVisibleDistance)||55):Math.max(60,Number(options.maxVisibleDistance)||205),"
+    if html.count(boat_visibility_marker) != 1:
+        raise SystemExit("No se encontró exactamente el límite de visibilidad en barco de las estructuras habitables.")
+    html = html.replace(boat_visibility_marker, boat_visibility_code, 1)
+
+    # Garrison flags now live in outpost-local coordinates. The invasion and
+    # capture controllers historically wrote world-space Y values because the
+    # flag group used to be a scene root. Convert those writes as well, or a
+    # captured/lost garrison can push its banner several metres into the sea.
+    detached_flag_base_y = "flagBaseY:flagY+3.55"
+    local_flag_base_y = "flagBaseY:flagY+3.55-outpostGroundY"
+    if html.count(detached_flag_base_y) != 1:
+        raise SystemExit("No se encontró exactamente la altura base de las banderas de guarnición.")
+    html = html.replace(detached_flag_base_y, local_flag_base_y, 1)
+
+    detached_flag_reset = "if(vl.flagGroup){vl.flagGroup.position.y=vl.flagBaseY||terrainSurfaceAt(vl.x,vl.z)+4.65;vl.flagGroup.scaling.set(1,1,1);}"
+    local_flag_reset = "if(vl.flagGroup){vl.flagGroup.position.y=vl.flagBaseY??(terrainSurfaceAt(vl.x,vl.z)+4.65);vl.flagGroup.scaling.set(1,1,1);}"
+    flag_reset_occurrences = html.count(detached_flag_reset)
+    if flag_reset_occurrences != 2:
+        raise SystemExit(f"Se esperaban dos reinicios de bandera y se encontraron {flag_reset_occurrences}.")
+    html = html.replace(detached_flag_reset, local_flag_reset)
+    if html.count(detached_flag_reset) or html.count(local_flag_reset) != flag_reset_occurrences:
+        raise SystemExit("No se pudieron adaptar los reinicios de bandera al espacio local.")
+
+    detached_capture_raise = "village.flagGroup.position.y=2.15+2.5*ease;"
+    local_capture_raise = "village.flagGroup.position.y=(village.islandGarrison?2.15-(village.outpostRoot?.position?.y||0):2.15)+2.5*ease;"
+    if html.count(detached_capture_raise) != 1:
+        raise SystemExit("No se encontró exactamente la animación de izado de bandera.")
+    html = html.replace(detached_capture_raise, local_capture_raise, 1)
+
+    # The garrison grounding probe must measure the flag group's world transform,
+    # not its local Y after the group becomes a child of IslandGarrisonOutpost_N.
+    detached_flag_measure = """    const flagPosition=village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():village.flagGroup?.position;"""
+    world_flag_measure = """    village.flagGroup?.computeWorldMatrix?.(true);
+    const flagPosition=village.flagGroup?.getAbsolutePosition?.()||village.flagGroup?.position;"""
+    if html.count(detached_flag_measure) != 1:
+        raise SystemExit("No se encontró exactamente una medición de altura de bandera de guarnición.")
+    html = html.replace(detached_flag_measure, world_flag_measure, 1)
+
+    # Audit the actual ground contact of the flagpole and verify every garrison
+    # prop is parented to the outpost. The flag cloth's origin is intentionally
+    # 3.55m above ground and must never be compared directly with the terrain.
+    detached_flag_error = """    const flagErrorMeters=flagPosition?Math.abs((flagPosition.y-3.55)-flagGroundY):Infinity;"""
+    pole_ground_error = """    const outpostRoot=village.outpostRoot||null;
+    const flagPoleMesh=scene.getMeshByName('IslandGarrisonFlagpole_'+village.landIndex);
+    flagPoleMesh?.computeWorldMatrix?.(true);
+    const flagPoleWorld=flagPoleMesh?.getAbsolutePosition?.()||null;
+    const flagPoleGroundY=flagPoleWorld?renderedTerrainSurfaceAt(flagPoleWorld.x,flagPoleWorld.z):NaN;
+    const flagErrorMeters=flagPoleWorld?Math.abs((flagPoleWorld.y-2.15)-flagPoleGroundY):Infinity;
+    const stakeMeshes=[0,1,2].map(stake=>scene.getMeshByName('IslandGarrisonStake_'+village.landIndex+'_'+stake));
+    const flagGroupMesh=village.flagGroup||scene.getTransformNodeByName?.('IslandGarrisonStandard_'+village.landIndex)||scene.getMeshByName('IslandGarrisonStandard_'+village.landIndex);
+    const detachedPropCount=[flagPoleMesh,flagGroupMesh,...stakeMeshes].filter(prop=>!prop||prop.parent!==outpostRoot).length;"""
+    if html.count(detached_flag_error) != 1:
+        raise SystemExit("No se encontró exactamente una medición de contacto de la bandera de guarnición.")
+    html = html.replace(detached_flag_error, pole_ground_error, 1)
+    detached_garrison_return = """    return {island:village.name,islandIndex:village.landIndex,outpostX:root?Number(root.x.toFixed(2)):null,outpostZ:root?Number(root.z.toFixed(2)):null,outpostErrorMeters:Number(outpostErrorMeters.toFixed(4)),guardErrorMeters:Number(guardErrorMeters.toFixed(4)),flagErrorMeters:Number(flagErrorMeters.toFixed(4)),maximumAnchorErrorMeters:Number(Math.max(outpostErrorMeters,guardErrorMeters,flagErrorMeters).toFixed(4))};"""
+    verified_garrison_return = """    return {island:village.name,islandIndex:village.landIndex,outpostX:root?Number(root.x.toFixed(2)):null,outpostZ:root?Number(root.z.toFixed(2)):null,outpostErrorMeters:Number(outpostErrorMeters.toFixed(4)),guardErrorMeters:Number(guardErrorMeters.toFixed(4)),flagErrorMeters:Number(flagErrorMeters.toFixed(4)),detachedPropCount,flagPoleParent:flagPoleMesh?.parent?.name||null,flagGroupParent:flagGroupMesh?.parent?.name||null,maximumAnchorErrorMeters:Number(Math.max(outpostErrorMeters,guardErrorMeters,flagErrorMeters).toFixed(4))};"""
+    if html.count(detached_garrison_return) != 1:
+        raise SystemExit("No se encontró exactamente un informe de anclaje de guarnición.")
+    html = html.replace(detached_garrison_return, verified_garrison_return, 1)
+
+    # After moving a garrison root, re-sample each child prop at its new world X/Z.
+    # This prevents the flagpole, standard and stakes from hovering over the shoreline.
+    detached_relocation = """      else root.position.copyFrom?root.position.copyFrom(targetPosition):root.position.set(candidate.x,candidate.centerY-entry.baseOffset,candidate.z);"""
+    reanchored_relocation = """      else root.position.copyFrom?root.position.copyFrom(targetPosition):root.position.set(candidate.x,candidate.centerY-entry.baseOffset,candidate.z);
+      if(String(root.name||'').startsWith('IslandGarrisonOutpost_')){
+       const garrison=villages.find(item=>item.outpostRoot===root);
+       const toLocal=(x,y,z)=>{root.computeWorldMatrix(true);const inverse=root.getWorldMatrix().clone();inverse.invert();return BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(x,y,z),inverse);};
+       const reanchorPart=(node,height)=>{if(!node?.position)return;node.computeWorldMatrix?.(true);const world=node.getAbsolutePosition?.();if(!world)return;const groundY=renderedTerrainSurfaceAt(world.x,world.z);node.position.copyFrom(toLocal(world.x,groundY+height,world.z));};
+       reanchorPart(scene.getMeshByName('IslandGarrisonFlagpole_'+(garrison?.landIndex??-1)),2.15);
+       const garrisonFlagGroup=garrison?.flagGroup||scene.getTransformNodeByName?.('IslandGarrisonStandard_'+(garrison?.landIndex??-1));
+       reanchorPart(garrisonFlagGroup,3.55);
+       if(garrison&&garrisonFlagGroup?.position)garrison.flagBaseY=garrisonFlagGroup.position.y;
+       for(let stake=0;stake<3;stake++)reanchorPart(scene.getMeshByName('IslandGarrisonStake_'+(garrison?.landIndex??-1)+'_'+stake),.42);
+      }"""
+    if html.count(detached_relocation) < 1:
+        raise SystemExit("No se encontró el movimiento de anclaje usado por el reparador de estructuras.")
+    html = html.replace(detached_relocation, reanchored_relocation)
+
+
+    # Align outer-island landmarks to the rendered terrain heightfield.
+    outer_landmark_anchor_replacements = (
+        (
+            "const x=island.x,z=island.z,y=terrainSurfaceAt(x,z),circle=newGroup('NorseThingstead_'+index,null),ringRadius=5.2;",
+            "const x=island.x,z=island.z,y=renderedTerrainSurfaceAt(x,z),circle=newGroup('NorseThingstead_'+index,null),ringRadius=5.2;",
+            "NorseThingstead",
+        ),
+        (
+            "pier.position=v(startX,Math.max(.10,terrainSurfaceAt(startX,startZ)+.10),startZ);pier.rotation.y=-angle;",
+            "pier.position=v(startX,Math.max(.10,renderedTerrainSurfaceAt(startX,startZ)+.10),startZ);pier.rotation.y=-angle;",
+            "NorseCoastalPier",
+        ),
+        (
+            "const x=island.x,z=island.z,y=terrainSurfaceAt(x,z),tower=newGroup('NorseCoastalBeacon_'+index,null);",
+            "const x=island.x,z=island.z,y=renderedTerrainSurfaceAt(x,z),tower=newGroup('NorseCoastalBeacon_'+index,null);",
+            "NorseCoastalBeacon",
+        ),
+    )
+    for detached_anchor, rendered_anchor, label in outer_landmark_anchor_replacements:
+        if html.count(detached_anchor) != 1:
+            raise SystemExit(f"No se encontró exactamente un anclaje original para {label}.")
+        html = html.replace(detached_anchor, rendered_anchor, 1)
+
+    # Include outer-island landmarks in the offshore structural inventory.
+    old_structure_pattern = "const structureNamePattern=/(?:weatherednorsehut|"
+    new_structure_pattern = "const structureNamePattern=/(?:norsethingstead|norsecoastalpier|norsecoastalbeacon|weatherednorsehut|"
+    if html.count(old_structure_pattern) != 1:
+        raise SystemExit("No se encontró exactamente el patrón principal del inventario estructural.")
+    html = html.replace(old_structure_pattern, new_structure_pattern, 1)
 
     # The packaged build always prefers the same-origin, bundled files.
     html = html.replace(
@@ -361,6 +660,214 @@ def main() -> None:
         raise SystemExit("Falta scripts/nordic/coastal-interaction.js.")
     coastal_target = DIST / "scripts" / "nordic" / "coastal-interaction.js"
     shutil.copy2(coastal_source, coastal_target)
+
+    # Shared camera and cartography runtime for every game entry point.
+    navigation_source = ROOT / "scripts" / "nordic" / "navigation-suite.js"
+    if not navigation_source.is_file():
+        raise SystemExit("Falta scripts/nordic/navigation-suite.js.")
+    navigation_target = DIST / "scripts" / "nordic" / "navigation-suite.js"
+    shutil.copy2(navigation_source, navigation_target)
+    navigation_tag = '<script src="./scripts/nordic/navigation-suite.js" defer></script>'
+    if navigation_tag not in html:
+        if "</body>" not in html:
+            raise SystemExit("No se encontró </body> para instalar la navegación.")
+        html = html.replace("</body>", navigation_tag + "\n</body>", 1)
+
+
+    # Release candidate 0.6.275: fix the submerged seabed profile once, keep the
+    # heightfield skirt beneath it, and verify cross-mesh contact before release.
+    if game_version != "0.6.274":
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.275; se encontró {game_version}.")
+    version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.275\2', html, count=1, flags=re.IGNORECASE)
+    if version_meta_count != 1:
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.275.")
+    html = html.replace("0.6.274", "0.6.275")
+    if "0.6.274" in html:
+        raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
+    diagnostic_build_marker = "reportVersion:'11',build:'0.6.274'"
+    diagnostic_build_replacement = "reportVersion:'12',build:'0.6.275'"
+    if html.count(diagnostic_build_marker) != 1:
+        raise SystemExit("No se encontró exactamente una identificación de compilación para actualizar a 0.6.275.")
+    html = html.replace(diagnostic_build_marker, diagnostic_build_replacement, 1)
+    game_version = "0.6.275"
+    USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+
+    coastal_profile_replacements = (
+        (
+            "const segments=isPerformanceMode?192:512,rows=isPerformanceMode?10:20,cols=segments+1;",
+            "const segments=isPerformanceMode?192:512,rows=isPerformanceMode?10:(isTouchDevice?64:96),cols=segments+1;",
+            "densidad radial de NordicSubmergedSand",
+        ),
+        (
+            "const shoreHeight=terrainHeightOnIsland(island,x,z);\n    const y=window.NorseCoastalInteraction.seabedHeight(radius,island.r,shoreHeight);",
+            "const shoreHeight=terrainHeightOnIsland(island,x,z);\n    const y=shoreHeight;",
+            "perfil submarino único de NordicSubmergedSand",
+        ),
+        (
+            "const seabedY=window.NorseCoastalInteraction.seabedHeight(d,is.r,analyticalHeight);",
+            "const seabedY=analyticalHeight-.003;",
+            "falda sumergida de IslandHeightfield",
+        ),
+        (
+            "if(kind==='submerged'){\n     const distance=Math.hypot(x-island.x,z-island.z);\n     expected=window.NorseCoastalInteraction.seabedHeight(distance,island.r,terrainHeightOnIsland(island,x,z))-.003;\n    }else expected=livingBeachSurfaceAt(island,index,x,z);",
+            "if(kind==='submerged')expected=terrainHeightOnIsland(island,x,z)-.003;\n    else expected=livingBeachSurfaceAt(island,index,x,z);",
+            "perfil analítico de la auditoría submarina",
+        ),
+        (
+            "probe.position=v(land[0].x+land[0].r*1.40,.42,land[0].z);",
+            "probe.position=v(land[0].x,.42,land[0].z+land[0].r*1.40);",
+            "sonda flotante dentro del alcance de cámara",
+        ),
+    )
+    for old_code, new_code, label in coastal_profile_replacements:
+        if html.count(old_code) != 1:
+            raise SystemExit(f"No se encontró exactamente una fórmula original para {label}.")
+        html = html.replace(old_code, new_code, 1)
+
+    # Compare the actual rendered height surfaces at their shared X/Z coordinates.
+    # The 5 cm limit applies to seams between adjacent meshes, not to natural slopes
+    # between neighbouring vertices inside one mesh.
+    coastal_continuity_marker = "  function auditIslandGeometry(){return auditIslandGeometryScoped(null);}"
+    coastal_continuity_code = r"""
+  function coastalMeshTriangleHeightAtXZ(positions,rows,cols,centerX,centerZ,x,z){
+   if(!positions||rows<2||cols<2||positions.length<rows*cols*3)return null;
+   const dx=x-centerX,dz=z-centerZ,radius=Math.hypot(dx,dz),twoPi=Math.PI*2;
+   if(!Number.isFinite(radius)||radius<1e-5)return null;
+   const angle=(Math.atan2(dz,dx)+twoPi)%twoPi;
+   const columnFloat=angle/twoPi*(cols-1),baseColumn=Math.max(0,Math.min(cols-2,Math.floor(columnFloat)));
+   const columnFraction=columnFloat-baseColumn;
+   const point=(row,column)=>{
+    const offset=(row*cols+column)*3;
+    return {x:Number(positions[offset]),y:Number(positions[offset+1]),z:Number(positions[offset+2])};
+   };
+   const inner0=Math.hypot(point(0,baseColumn).x-centerX,point(0,baseColumn).z-centerZ);
+   const inner1=Math.hypot(point(0,baseColumn+1).x-centerX,point(0,baseColumn+1).z-centerZ);
+   const outer0=Math.hypot(point(rows-1,baseColumn).x-centerX,point(rows-1,baseColumn).z-centerZ);
+   const outer1=Math.hypot(point(rows-1,baseColumn+1).x-centerX,point(rows-1,baseColumn+1).z-centerZ);
+   const inner=inner0+(inner1-inner0)*columnFraction,outer=outer0+(outer1-outer0)*columnFraction;
+   const rowFloat=Math.max(0,Math.min(rows-1,(radius-inner)/Math.max(1e-8,outer-inner)*(rows-1)));
+   const baseRow=Math.max(0,Math.min(rows-2,Math.floor(rowFloat)));
+   const triangleY=(a,b,c)=>{
+    const denominator=(b.z-c.z)*(a.x-c.x)+(c.x-b.x)*(a.z-c.z);
+    if(Math.abs(denominator)<1e-10)return null;
+    const wa=((b.z-c.z)*(x-c.x)+(c.x-b.x)*(z-c.z))/denominator;
+    const wb=((c.z-a.z)*(x-c.x)+(a.x-c.x)*(z-c.z))/denominator;
+    const wc=1-wa-wb,epsilon=1e-4;
+    if(wa< -epsilon||wb< -epsilon||wc< -epsilon||wa>1+epsilon||wb>1+epsilon||wc>1+epsilon)return null;
+    return wa*a.y+wb*b.y+wc*c.y;
+   };
+   const columns=[baseColumn,Math.max(0,baseColumn-1),Math.min(cols-2,baseColumn+1)];
+   const rowCandidates=[baseRow,Math.max(0,baseRow-1),Math.min(rows-2,baseRow+1)];
+   for(const row of rowCandidates)for(const column of columns){
+    const a=point(row,column),b=point(row,column+1),c=point(row+1,column),d=point(row+1,column+1);
+    const first=triangleY(a,b,c);if(Number.isFinite(first))return first;
+    const second=triangleY(b,d,c);if(Number.isFinite(second))return second;
+   }
+   return null;
+  }
+  function auditCoastalMeshContinuity(onlyIslandIndex=null){
+   const started=performance.now(),thresholdMeters=.05,results=[];
+   const indexes=Number.isInteger(onlyIslandIndex)?[onlyIslandIndex]:Array.from({length:land.length},(_,index)=>index);
+   if(indexes.some(index=>index<0||index>=land.length))throw new RangeError('Invalid island index for coastal continuity audit: '+onlyIslandIndex);
+   const makePair=name=>({name,sampleCount:0,missingSamples:0,maxAbsoluteGapMeters:0,outlierCount:0,worstSample:null,thresholdMeters});
+   const addPairSample=(pair,x,z,heightA,heightB)=>{
+    if(!Number.isFinite(heightA)||!Number.isFinite(heightB)){pair.missingSamples++;return;}
+    const gap=Math.abs(heightA-heightB);pair.sampleCount++;
+    if(gap>pair.maxAbsoluteGapMeters){
+     pair.maxAbsoluteGapMeters=gap;
+     pair.worstSample={x:Number(x.toFixed(3)),z:Number(z.toFixed(3)),heightA:Number(heightA.toFixed(4)),heightB:Number(heightB.toFixed(4)),gapMeters:Number(gap.toFixed(5))};
+    }
+    if(gap>thresholdMeters)pair.outlierCount++;
+   };
+   for(const index of indexes){
+    const island=land[index],madeSeabed=!coastalSeabedMeshes[index],madeBeach=!livingBeachLayers[index];
+    let islandResult=null;
+    try{
+     if(madeSeabed)buildCoastalSeabed(island,index);
+     if(madeBeach)buildLivingBeachLayer(island,index);
+     const terrain=islandTerrainMeshes[index],seabed=coastalSeabedMeshes[index],beach=livingBeachLayers[index];
+     const seabedPositions=seabed?.getVerticesData(B.VertexBuffer.PositionKind)||null;
+     const beachPositions=beach?.positions||null;
+     const terrainHeight=(x,z)=>{
+      if(!terrain||typeof terrain.getHeightAtCoordinates!=='function')return null;
+      const value=terrain.getHeightAtCoordinates(x,z);
+      return Number.isFinite(value)?value+terrainDeformationAt(index,x,z):null;
+     };
+     const islandBeach=makePair('IslandHeightfield ↔ LivingCoastalSand');
+     const beachSeabed=makePair('LivingCoastalSand ↔ NordicSubmergedSand');
+     const islandSeabed=makePair('IslandHeightfield ↔ NordicSubmergedSand');
+     const sampleAngles=96;
+     for(let angleIndex=0;angleIndex<sampleAngles;angleIndex++){
+      const angle=angleIndex/sampleAngles*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
+      // The living beach overlays the rendered heightfield at three inland/intertidal radii.
+      for(const ratio of [.80,.89,.98]){
+       const radius=island.r*ratio,x=island.x+cs*radius,z=island.z+sn*radius;
+       const heightA=terrainHeight(x,z);
+       const heightB=coastalMeshTriangleHeightAtXZ(beachPositions,beach?.rows,beach?.cols,island.x,island.z,x,z);
+       addPairSample(islandBeach,x,z,heightA,heightB);
+      }
+      // The two sandy layers share a narrow annulus. Sample its actual angle-dependent overlap.
+      if(beach&&seabed&&Array.isArray(beach.radials)&&beach.segments>0){
+       const columnFloat=angle/(Math.PI*2)*beach.segments,column=Math.min(beach.segments-1,Math.floor(columnFloat)),fraction=columnFloat-column;
+       const inner0=beach.radials[column*2],inner1=beach.radials[(column+1)*2];
+       const outer0=beach.radials[column*2+1],outer1=beach.radials[(column+1)*2+1];
+       const beachInner=inner0+(inner1-inner0)*fraction,beachOuter=outer0+(outer1-outer0)*fraction;
+       const overlapInner=Math.max(beachInner,island.r*(Number(seabed.metadata?.innerRatio)||1.075));
+       const overlapOuter=beachOuter;
+       if(overlapOuter-overlapInner>=.04){
+        const radius=(overlapInner+overlapOuter)*.5,x=island.x+cs*radius,z=island.z+sn*radius;
+        const heightA=coastalMeshTriangleHeightAtXZ(beachPositions,beach.rows,beach.cols,island.x,island.z,x,z);
+        const heightB=coastalMeshTriangleHeightAtXZ(seabedPositions,seabed.metadata?.rows,seabed.metadata?.cols,island.x,island.z,x,z);
+        addPairSample(beachSeabed,x,z,heightA,heightB);
+       }
+      }
+      // The square heightfield skirt overlaps the submerged bed only along the island's diagonal corners.
+      const radius=island.r*1.12,x=island.x+cs*radius,z=island.z+sn*radius;
+      if(Math.abs(x-island.x)<=island.r-.02&&Math.abs(z-island.z)<=island.r-.02){
+       const heightA=terrainHeight(x,z);
+       const heightB=coastalMeshTriangleHeightAtXZ(seabedPositions,seabed?.metadata?.rows,seabed?.metadata?.cols,island.x,island.z,x,z);
+       addPairSample(islandSeabed,x,z,heightA,heightB);
+      }
+     }
+     islandResult={islandIndex:index,island:island.name,radiusMeters:island.r,pairs:[islandBeach,beachSeabed,islandSeabed]};
+     for(const pair of islandResult.pairs){
+      pair.maxAbsoluteGapMeters=Number(pair.maxAbsoluteGapMeters.toFixed(5));
+      pair.passed=pair.sampleCount>=12&&pair.maxAbsoluteGapMeters<=thresholdMeters+1e-6;
+      if(pair.worstSample)pair.worstSample.gapMeters=Number(pair.worstSample.gapMeters.toFixed(5));
+     }
+    }catch(error){
+     islandResult={islandIndex:index,island:island?.name||String(index),radiusMeters:island?.r||null,pairs:[],error:String(error?.stack||error),passed:false};
+    }finally{
+     if(madeBeach){const layer=livingBeachLayers[index];if(layer){try{layer.mesh.dispose(false,false);}catch(_){}try{layer.material.dispose(false,false);}catch(_){}try{layer.coastalStateTexture.dispose();}catch(_){}livingBeachLayers[index]=null;}}
+     if(madeSeabed){const mesh=coastalSeabedMeshes[index];try{mesh?.dispose(false,false);}catch(_){}coastalSeabedMeshes[index]=null;}
+    }
+    if(islandResult){islandResult.passed=Array.isArray(islandResult.pairs)&&islandResult.pairs.length===3&&islandResult.pairs.every(pair=>pair.passed===true);results.push(islandResult);}
+   }
+   const failed=results.filter(island=>!island.passed);
+   return {schema:1,thresholdMeters,islandCount:results.length,passed:results.length===indexes.length&&failed.length===0,failedIslandCount:failed.length,durationMs:Number((performance.now()-started).toFixed(1)),islands:results};
+  }
+"""
+    if html.count(coastal_continuity_marker) != 1:
+        raise SystemExit("No se encontró exactamente el punto de inserción de la auditoría de continuidad costera.")
+    html = html.replace(coastal_continuity_marker, coastal_continuity_code + "\n" + coastal_continuity_marker, 1)
+
+    test_api_marker = "   auditIslandGeometryForIsland:(islandIndex)=>auditIslandGeometryScoped(islandIndex),"
+    test_api_replacement = test_api_marker + "\n   auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex),"
+    if html.count(test_api_marker) != 1:
+        raise SystemExit("No se pudo exponer la auditoría de continuidad entre mallas en el API de pruebas.")
+    html = html.replace(test_api_marker, test_api_replacement, 1)
+
+    # Validate the transformed runtime too; the earlier syntax check runs before these patches.
+    transformed_scripts = re.findall(r"<script\b[^>]*>(.*?)</script\s*>", html, flags=re.IGNORECASE | re.DOTALL)
+    transformed_inline_scripts = [block for block in transformed_scripts if block.strip()]
+    with tempfile.TemporaryDirectory(prefix="norse-js-transformed-check-") as temp_dir:
+        transformed_file = Path(temp_dir) / "game-inline-transformed.js"
+        transformed_file.write_text("\n".join(transformed_inline_scripts), encoding="utf-8")
+        transformed_check = subprocess.run([node, "--check", str(transformed_file)], capture_output=True, text=True)
+        if transformed_check.returncode != 0:
+            raise SystemExit("JavaScript sintácticamente inválido después de aplicar las correcciones costeras:\n" + transformed_check.stderr)
+    print("OK submerged seabed profile is applied once; 5 cm cross-mesh continuity audit is installed and syntax-checked.")
 
     (DIST / "index.html").write_text(html, encoding="utf-8")
 
@@ -519,6 +1026,13 @@ def main() -> None:
         )
 
     results = []
+    navigation_bytes = navigation_target.read_bytes()
+    results.append({
+        "path": "scripts/nordic/navigation-suite.js",
+        "bytes": len(navigation_bytes),
+        "sha256": hashlib.sha256(navigation_bytes).hexdigest(),
+        "source": "project-owned: scripts/nordic/navigation-suite.js",
+    })
     failures = []
 
     # Project-owned Nordic IBL: copy the supplied binary instead of downloading Babylon's generic environment.

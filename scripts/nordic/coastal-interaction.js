@@ -16,22 +16,35 @@
   function seabedHeight(distance, islandRadius, shoreHeight) {
     const radius = Math.max(0.001, Number(islandRadius) || 0.001);
     const ratio = Math.max(0, Number(distance) || 0) / radius;
-    if (ratio <= 1.085) return Number.isFinite(Number(shoreHeight)) ? Number(shoreHeight) : 0;
+    const shore = Number.isFinite(Number(shoreHeight)) ? Number(shoreHeight) : 0;
+    if (ratio <= 1.085) return shore;
     const descent = smooth01((ratio - 1.085) / 0.375);
-    return -2.9 - 3.3 * descent;
+    return shore + (-6.2 - shore) * descent;
   }
 
-  // Shallow water retains enough opacity to read as water, but still reveals
-  // the separate pale sand bottom. Opacity increases smoothly with depth.
+  // Shallow water must remain visibly a continuous water sheet. The previous curve
+  // stayed almost transparent over the first metre, exposing the seabed as a broad oval
+  // patch instead of reading as water. Build opacity in three continuous depth bands:
+  // a narrow shoreline entry, a clear intertidal body, and deeper water absorption.
+  // The sand remains readable under the film; no hard alpha step is introduced.
+  // Physical water depth is the vertical gap between mean sea level and the seabed.
+  // Radial distance from an island centre is not a depth measurement and produces
+  // broad oval alpha masks when interpolated across the ocean vertex grid.
+  function waterDepth(waterlineY, seabedY) {
+    const waterline = Number.isFinite(Number(waterlineY)) ? Number(waterlineY) : 0;
+    const seabed = Number.isFinite(Number(seabedY)) ? Number(seabedY) : waterline;
+    return Math.max(0, Math.min(18, waterline - seabed));
+  }
+
   function waterOpacity(depthMeters) {
     const depth = Math.max(0, Number(depthMeters) || 0);
     if (depth <= 0) return 0;
-    // Blend in gradually: the first few centimetres must not jump to 52% opacity.
-    // The near-shore ramp reaches its water-body contribution over 1.1 m;
-    // the deeper ramp retains the existing 90% opacity at 5.5 m.
-    const shallowBody = 0.52 * smooth01(depth / 1.1);
-    const depthBody = 0.38 * smooth01(depth / 5.5);
-    return Math.min(0.90, shallowBody + depthBody);
+    const shorelineEntry = 0.24 * smooth01(depth / 0.30);
+    const shallowBody = 0.28 * smooth01(depth / 1.65);
+    const depthBody = 0.75 * smooth01(depth / 5.5);
+    // Deep water should absorb the submerged sand almost completely, avoiding a visible
+    // hard oval at the edge of the finite seabed mesh while preserving clear shallows.
+    return Math.min(0.99, shorelineEntry + shallowBody + depthBody);
   }
 
   // The moving sheet always floats just above both the sloping sand and sea.
@@ -53,5 +66,5 @@
     return clamp01(landward * seaward * breakup);
   }
 
-  return Object.freeze({ seabedHeight, waterOpacity, filmSurfaceHeight, filmCoverage });
+  return Object.freeze({ seabedHeight, waterDepth, waterOpacity, filmSurfaceHeight, filmCoverage });
 });

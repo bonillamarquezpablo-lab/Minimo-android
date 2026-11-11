@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.271"
+EXPECTED_VERSION = "0.6.275"
 
 HTML_PAGES = (
     "index.html",
@@ -33,6 +33,7 @@ REQUIRED_FILES = (
     "invitado/index.html",
     "sw.js",
     "scripts/nordic/coastal-interaction.js",
+    "scripts/nordic/navigation-suite.js",
     *MANIFESTS,
     "icon.svg",
     "assets/asset-manifest.json",
@@ -72,6 +73,71 @@ def main() -> None:
         fail("Hay archivos requeridos vacíos: " + ", ".join(empty))
 
     index_html = read_text("index.html")
+    for coastal_continuity_marker in (
+        "function auditCoastalMeshContinuity(onlyIslandIndex=null)",
+        "auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)",
+        "const thresholdMeters=.05",
+        "rows=isPerformanceMode?10:(isTouchDevice?64:96)",
+    ):
+        if coastal_continuity_marker not in index_html:
+            fail("La geometría costera no incluye la reparación submarina y la auditoría de uniones de 5 cm.")
+
+    for required_garrison_parent in (
+        "IslandGarrisonFlagpole_'+islandIndex,outpostRoot",
+        "IslandGarrisonStandard_'+islandIndex,outpostRoot",
+        "IslandGarrisonStake_'+islandIndex+'_'+stake,outpostRoot",
+    ):
+        if required_garrison_parent not in index_html:
+            fail("Las banderas y estacas de cada guarnición deben heredar la visibilidad y el movimiento de su puesto.")
+    if "IslandGarrisonFlagpole_'+islandIndex,null" in index_html or "IslandGarrisonStandard_'+islandIndex,null" in index_html:
+        fail("Se ha detectado una bandera de guarnición independiente que puede quedar flotando sobre el mar.")
+    for required_garrison_link in (
+        "flagPole.parent=outpostRoot",
+        "flagGroup.parent=outpostRoot",
+        "stakeMesh.parent=outpostRoot",
+        "garrisonWorldToLocal=(x,y,z)=>",
+        "flagGroup.position.copyFrom(flagGroupLocal)",
+        "const flagPoleMesh=scene.getMeshByName('IslandGarrisonFlagpole_'+village.landIndex)",
+        "flagPoleMesh?.getAbsolutePosition?.()",
+        "const outpostRoot=village.outpostRoot||null",
+        "const detachedPropCount=[flagPoleMesh,flagGroupMesh,...stakeMeshes].filter(prop=>!prop||prop.parent!==outpostRoot).length",
+        "outpostX:root?Number(root.x.toFixed(2)):null",
+    ):
+        if required_garrison_link not in index_html:
+            fail(f"Las piezas de guarnición deben usar transformaciones reales de mundo/local y comprobar su apoyo y parentesco. Marcador ausente: {required_garrison_link}")
+
+    for required_garrison_animation in (
+        "flagBaseY:flagY+3.55-outpostGroundY",
+        "vl.flagGroup.position.y=vl.flagBaseY??(terrainSurfaceAt(vl.x,vl.z)+4.65)",
+        "village.flagGroup.position.y=(village.islandGarrison?2.15-(village.outpostRoot?.position?.y||0):2.15)+2.5*ease",
+        "garrison.flagBaseY=garrisonFlagGroup.position.y",
+    ):
+        if required_garrison_animation not in index_html:
+            fail("La bandera de guarnición debe conservar su altura correcta al capturar, perder o reiniciar un puesto.")
+    for required_outer_landmark in (
+        "NorseThingstead_",
+        "NorseCoastalPier_",
+        "NorseCoastalBeacon_",
+        "outerLandmarkGrounding:()=>",
+        "renderedTerrainSurfaceAt(x,z),circle=newGroup('NorseThingstead_'",
+        "renderedTerrainSurfaceAt(startX,startZ)+.10",
+        "renderedTerrainSurfaceAt(x,z),tower=newGroup('NorseCoastalBeacon_'",
+    ):
+        if required_outer_landmark not in index_html:
+            fail("Los tres hitos de las islas exteriores deben usar la altura del terreno realmente dibujado y exponer su auditoría.")
+
+    navigation_js = read_text("scripts/nordic/navigation-suite.js")
+    if "./scripts/nordic/navigation-suite.js" not in index_html:
+        fail("Las entradas del juego no cargan el sistema unificado de mapas y cámaras.")
+    for required_navigation_feature in ("originalMap", "applyMode", '"follow"', "cameraModeBtn"):
+        if required_navigation_feature not in navigation_js:
+            fail(f"Falta una función esencial de navegación integrada: {required_navigation_feature}")
+    if 'id="map"' not in index_html or 'id="mapCoords"' not in index_html:
+        fail("El mapa original y sus coordenadas no están presentes en la interfaz.")
+    if "rangeX=145" not in index_html or "Math.PI-heading" not in index_html:
+        fail("El minimapa local no contiene la escala detallada y la orientación del jugador.")
+    if "cameraFocus=focus" not in index_html or "onShip?2.12:1" not in index_html:
+        fail("La cámara naval no está centrada en el jugador o no tiene la distancia ampliada.")
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         index_html,
@@ -131,7 +197,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'11',build:'0.6.271'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'12',build:'0.6.275'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -347,7 +413,7 @@ def main() -> None:
         fail("Faltan los deslizadores en vivo y el restablecimiento de la Fase A.")
     if "new B.DynamicTexture('NordicTerrainAlbedo',{width:size,height:size},scene,true)" not in index_html or "new B.DynamicTexture('LivingCoastalSandAlbedo',{width:size,height:size},scene,true)" not in index_html:
         fail("Las texturas procedurales principales del suelo deben generar mipmaps.")
-    if "const packedTrailTexture=makePatternTexture('Packed Norse trail earth','#66533b',['#8e7957','#4b3a2a','#a18a62','#574633'],'sand',512,true);" not in index_html:
+    if "const packedTrailTexture=makePatternTexture('Packed Norse trail earth','#a18a63',['#d0b68a','#8c7450','#ddc79e','#a58b60'],'sand',512,true);" not in index_html:
         fail("La textura procedural de los caminos también debe generar mipmaps.")
     if "makePatternTexture(name,base,accents,style='grain',size=512,generateMipMaps=false)" not in index_html:
         fail("La generación selectiva de mipmaps de las texturas procedurales ha cambiado.")
@@ -375,8 +441,23 @@ def main() -> None:
         fail("El streaming debe clasificar geometría por centro real y mantener ocultos los NPC remotos.")
     if "landIslandIndex(focus.x,focus.z)" not in index_html or "islandStreamIslandAt(focus.x,focus.z)" not in index_html:
         fail("El cambio de isla renderizada debe seguir al jugador en tierra y al drakkar en navegación.")
-    if "island.r*(1.085-coastNoise)" not in index_html or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018" not in index_html:
-        fail("La superficie de playa debe prolongarse hasta la zona intermareal usando la altura real del perfil costero.")
+    beach_start = index_html.find("function buildLivingBeachLayer(island,index)")
+    beach_end = index_html.find("function ensureActiveCoastalIslandSystems", beach_start)
+    beach_source = index_html[beach_start:beach_end] if beach_start >= 0 and beach_end > beach_start else ""
+    work_start = index_html.find("function processBeachWorkChunk()")
+    work_end = index_html.find("function update(dt,x,z,distance,heading,running,onShip,airborne)", work_start)
+    beach_update_source = index_html[work_start:work_end] if work_start >= 0 and work_end > work_start else ""
+    beach_surface_start = index_html.find("function livingBeachSurfaceAt(island,index,x,z)")
+    beach_surface_end = index_html.find("function buildLivingBeachLayer(island,index)", beach_surface_start)
+    beach_surface_source = index_html[beach_surface_start:beach_surface_end] if beach_surface_start >= 0 and beach_surface_end > beach_surface_start else ""
+    if ("island.r*(1.085-coastNoise)" not in beach_source
+            or "positions.push(x,livingBeachSurfaceAt(island,index,x,z),z)" not in beach_source
+            or "layer.positions[offset+1]=livingBeachSurfaceAt(layer.island,layer.index,x,z);" not in beach_update_source
+            or "terrain.getHeightAtCoordinates(x,z)" not in beach_surface_source
+            or "return terrainHeightOnIsland(island,x,z)+terrainDeformationAt(index,x,z)+.018;" not in beach_surface_source
+            or "renderedTerrainSurfaceAt(x,z)" in beach_source
+            or "renderedTerrainSurfaceAt(x,z)" in beach_update_source):
+        fail("La superficie de playa debe coincidir con la altura interpolada de su propia malla y prolongarse con su perfil analítico, sin usar el sentinel de terreno exterior.")
     if "inlandDistance<4.8" in index_html or "wetSandCol=" in index_html or "wetBlend=wetSand" in index_html:
         fail("La arena seca no puede contener un tinte húmedo ni una franja artificial.")
     if "NorseBeachState.createCoastalGrid" not in index_html or "state.stepCell(cell,coverage,elapsed,BEACH_STATE_DEFAULTS)" not in index_html:
@@ -387,11 +468,19 @@ def main() -> None:
         fail("La actualización costera debe respetar su presupuesto reducido por fotograma.")
     if "TIDAL_FOAM_UPDATE_STEP=isTouchDevice?(isPerformanceMode?1/18:1/15):1/30" not in index_html or "const foamElapsed=foamDue?tidalFoamAccumulator:0" not in index_html or "Math.exp(-foamElapsed/3.4)" not in index_html or "for(let step=0;step<5;step++)" not in index_html or "const span=hi-lo,secant=lo+span*loDelta/(loDelta-hiDelta),guard=span*.04" not in index_html or "const waterDepth=water-terrainY" not in index_html or "const foamWaterDepth=water-terrainY" not in index_html or "performance.now()-sliceStarted<2.65" in index_html or "performance.now()-sliceStarted<3.55" in index_html:
         fail("La rompiente debe reutilizar alturas de agua y terreno y resolver la costa con menos evaluaciones.")
-    if "const shallowBody = 0.52 * smooth01(depth / 1.1);" not in (ROOT / "scripts" / "nordic" / "coastal-interaction.js").read_text(encoding="utf-8"):
-        fail("La opacidad del agua debe crecer progresivamente desde la línea de costa.")
-    if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html:
+    coastal_interaction = (ROOT / "scripts" / "nordic" / "coastal-interaction.js").read_text(encoding="utf-8")
+    if ("const shorelineEntry = 0.24 * smooth01(depth / 0.30);" not in coastal_interaction
+            or "const shallowBody = 0.28 * smooth01(depth / 1.65);" not in coastal_interaction
+            or "const depthBody = 0.75 * smooth01(depth / 5.5);" not in coastal_interaction
+            or "return Math.min(0.99, shorelineEntry + shallowBody + depthBody);" not in coastal_interaction
+            or "function waterDepth(waterlineY, seabedY)" not in coastal_interaction
+            or "return Math.max(0, Math.min(18, waterline - seabed));" not in coastal_interaction):
+        fail("La opacidad del agua debe transicionar suavemente y derivarse de la profundidad vertical real.")
+    if "const physicalDepth=window.NorseCoastalInteraction.waterDepth(waterlineY,seabedY);" not in index_html or "Math.max(depth,bathymetry)" in index_html:
+        fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
+    if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.271" not in index_html or "EL SIN NOMBRE 0.6.271 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.275" not in index_html or "EL SIN NOMBRE 0.6.275 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -417,8 +506,8 @@ def main() -> None:
     if "function coastalWaterHeight(x,z,t=oceanTime)" not in index_html or "meanSeaLevel+.38" not in index_html or "waveBodyMesh.renderingGroupId=0;" not in index_html or "washMesh.hasVertexAlpha=true;washMesh.renderingGroupId=0;" not in index_html:
         fail("La rompiente transparente debe respetar la profundidad del terreno y limitar el run-up a la cota física de la marea.")
     wave_update_body=index_html[index_html.find("function animateWater(dt)"):index_html.find("function rand(a,b)")]
-    if "B.VertexData.ComputeNormals(waveBodyPositions,waveBodyIndices,waveBodyNormals)" in wave_update_body:
-        fail("El mapa completo de normales de la ola no se puede reconstruir en cada actualización móvil.")
+    if "B.VertexData.ComputeNormals(waveBodyPositions,waveBodyIndices,waveBodyNormals)" not in wave_update_body or "if(foam.waveBodyNormalRefreshCounter>=(isTouchDevice?4:2))" not in wave_update_body:
+        fail("La normal geométrica de la rompiente debe actualizarse de forma periódica y acotada.")
     if "state.stepCell(cell,coverage,elapsed,BEACH_STATE_DEFAULTS)" not in index_html or "foamValue = Math.max(foamValue, leadingLace)" not in read_text("scripts/nordic/beach-state.js"):
         fail("La espuma de avance y retirada debe pertenecer al mismo estado RGBA costero.")
     shoreline_body = index_html[index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island),dirX=Math.cos(angle),dirZ=Math.sin(angle))"):index_html.find("const GROUND_PHASE_A_DEFAULTS",index_html.find("function shorelineFoamRadius(island,angle,t=oceanTime,islandIndex=land.indexOf(island),dirX=Math.cos(angle),dirZ=Math.sin(angle))"))]
@@ -444,17 +533,19 @@ def main() -> None:
         fail("La arena debe mantener continuidad opaca bajo el agua y no revelar el heightfield terrestre por el borde exterior.")
     if "function buildCoastalSeabed(island,index)" not in index_html or "norseSubmergedSandyBottom:true" not in index_html or "coastalSeabedMaterial.bumpTexture=texCoastalSandNormalPbr" not in index_html or "return window.NorseCoastalInteraction.seabedHeight(d,is.r,-2.9);" not in index_html:
         fail("El fondo submarino debe ser una malla de arena independiente con relieve propio.")
-    if "window.NorseCoastalInteraction.filmSurfaceHeight(terrainY,water,filmWave)" not in index_html or "window.NorseCoastalInteraction.filmCoverage(fraction,washPattern[vertex])" not in index_html or "washMaterial.bumpTexture=M.water.bumpTexture||albedoNormalWater" not in index_html:
+    if "window.NorseCoastalInteraction.filmSurfaceHeight(terrainY,water,filmWave)" not in index_html or "washFilmCoverage[vertex]=window.NorseCoastalInteraction.filmCoverage(washFractions[row],washPattern[vertex])" not in index_html or "washMaterial.bumpTexture=M.water.bumpTexture||albedoNormalWater" not in index_html:
         fail("La lámina de agua debe ser una superficie independiente, animada y con normales/reflejos.")
-    if "const filmAlpha=filmCoverage*(.16+.20*breakStrength)*flowPulse*filmStrength*waterContact;" not in index_html or "const lace=smooth01((foamPattern[vertex]-.20)/.40);" not in index_html or "foamBreakStrength*.82" not in index_html or "material.bumpTexture=M.water.bumpTexture||albedoNormalWater;" not in index_html or "data.uvs=foamUvs;" not in index_html or "colors,foamPattern,angleValues,angleCos,angleSin,index,waveBodyMesh" not in index_html or "VolumetricShoreBreaker_" not in index_html or "const lift=(.025+.22*crest+.065*rearShoulder)" not in index_html or "const breakerTravel=.62*Math.sin(oceanTime*1.08" not in index_html or "waveBodyMesh.updateVerticesData(B.VertexBuffer.NormalKind,waveBodyNormals,false,false)" in index_html or "tidalFoamMeshes.push({mesh,positions,foamUvs,colors,foamPattern" not in index_html or "coastalSeabedMaterial.environmentIntensity=.18;" not in index_html or "function sampleRadialProfile(offsets,values,target)" not in index_html or "waveBodyTerrainSamples[waveRow]=terrainY;waveBodyWaterSamples[waveRow]=water;" not in index_html or "const terrainY=sampleRadialProfile(waveBodyOffsets,waveBodyTerrainSamples,profileOffset)" not in index_html or "foamPattern[vertex]=" in index_html[index_html.find("function animateWater(dt)"):index_html.find("function rand(a,b)")] or "washMesh.updateVerticesData(B.VertexBuffer.UVKind,washUvs,false,false)" in index_html[index_html.find("function animateWater(dt)"):index_html.find("function rand(a,b)")] or "foam.mesh.updateVerticesData(B.VertexBuffer.UVKind,foamUvs,false,false)" in index_html[index_html.find("function animateWater(dt)"):index_html.find("function rand(a,b)")] or "const dryFoamResidue=terrainY<=(Number(ground.position.y)||0)+.42?" not in index_html:
+    if "const filmAlpha=filmCoverage*(.20+.34*breakStrength)*flowPulse*filmStrength*shallowWashContact;" not in index_html or "const lace=smooth01((foamPattern[vertex]-.20)/.40);" not in index_html or "const exposedSandContact=1-smooth01((waterDepth+.018)/.12);" not in index_html or "foamBreakStrength*.82" not in index_html or "material.bumpTexture=M.water.bumpTexture||albedoNormalWater;" not in index_html or "data.uvs=foamUvs;" not in index_html or "washUvs[uv]=x/24+.5;washUvs[uv+1]=z/24+.5;" not in index_html or "colors,foamPattern,angleValues,angleCos,angleSin,index,waveBodyMesh" not in index_html or "VolumetricShoreBreaker_" not in index_html or "const lift=(.025+.22*crest+.065*rearShoulder)" not in index_html or "const breakerTravel=.24*Math.sin(oceanTime*1.08" not in index_html or "waveBodyMesh.updateVerticesData(B.VertexBuffer.NormalKind,waveBodyNormals,false,false)" not in index_html or "tidalFoamMeshes.push({mesh,positions,foamUvs,colors,foamPattern" not in index_html or "coastalSeabedMaterial.environmentIntensity=.18;" not in index_html or "function sampleRadialProfile(offsets,values,target)" not in index_html or "waveBodyTerrainSamples[waveRow]=terrainY;waveBodyWaterSamples[waveRow]=water;" not in index_html or "const terrainY=sampleRadialProfile(waveBodyOffsets,waveBodyTerrainSamples,profileOffset)" not in index_html or "foamPattern[vertex]=" in index_html[index_html.find("function animateWater(dt)"):index_html.find("function rand(a,b)")] or "washMesh.updateVerticesData(B.VertexBuffer.UVKind,washUvs,false,false)" in index_html[index_html.find("function animateWater(dt)"):index_html.find("function rand(a,b)")] or "foam.mesh.updateVerticesData(B.VertexBuffer.UVKind,foamUvs,false,false)" in index_html[index_html.find("function animateWater(dt)"):index_html.find("function rand(a,b)")] or "const dryFoamResidue=terrainY<=(Number(ground.position.y)||0)+.42?" not in index_html:
         fail("La rompiente debe conservar volumen y textura sin recalcular normales completas ni mostrar geometría sobre la tierra.")
+    if "retreatResidue=new Float32Array(segments+1),backwashVelocity=new Float32Array(segments+1)" not in index_html or "const measuredBackwashVelocity=Number.isFinite(previousShore)?retreat/Math.max(.001,foamElapsed):0" not in index_html or "const shorelineBandFade=smooth01((radialOffsetFromShore+1.50)/.18)*(1-smooth01((radialOffsetFromShore-.58)/.22))" not in index_html or "physicalBackwashVelocity:{implemented:true,unit:'m/s'" not in index_html:
+        fail("La espuma debe mantenerse en la banda de costa y medir/usar la velocidad real de retroceso en m/s.")
     if "M.water.needDepthPrePass=false;M.water.disableDepthWrite=true;" not in index_html or "washMaterial.emissiveColor=new B.Color3(0,0,0);" not in index_html or "washData.uvs=washUvs;" not in index_html or "washMesh.updateVerticesData(B.VertexBuffer.UVKind,washUvs,false,false);" in index_html[index_html.find("function animateWater(dt)"):index_html.find("function rand(a,b)")]:
         fail("El agua transparente no debe escribir profundidad opaca ni generar bandas; la lámina debe reutilizar normales con UV mundiales.")
     if "mesh.receiveShadows=false;mesh.castShadows=false;mesh.hasVertexAlpha=true;" not in index_html or "shore.receiveShadows=false;shore.castShadows=false;" not in index_html:
         fail("Las capas auxiliares de costa no deben proyectar ni recibir sombras duras en forma de franjas.")
-    if "applyTexture(M.water,texWater,17.5);" not in index_html or "oceanWaveNormal.uScale=17.5;oceanWaveNormal.vScale=17.5;" not in index_html or ".020*Math.sin(67*warpU+41*warpW)" not in index_html:
-        fail("El mar debe tener normales direccionales de varias escalas y microondulación visible desde la cámara del jugador.")
-    if "M.water.specularPower=reducedWaterProfile?28:88;" not in index_html or "M.water.diffuseFresnelParameters.power=2.3;" not in index_html:
+    if ("applyTexture(M.water,texWater,17.5);" not in index_html or "oceanWaveNormal.uScale=8.25;oceanWaveNormal.vScale=11.4;" not in index_html or "oceanWaveNormal.level=.43;" not in index_html or "tertiaryU=3*warpU-2*warpW" not in index_html or "return primary*.66+secondary*.22+tertiary*.12" not in index_html or "crossCrestLift:.072" not in index_html or "shortCrestLift:.044" not in index_html):
+        fail("El mar debe mantener normales direccionales de varias escalas, crestas de volumen y microondulación visible desde la cámara del jugador.")
+    if "M.water.specularColor=reducedWaterProfile?new B.Color3(.24,.34,.38):new B.Color3(.70,.82,.88);" not in index_html or "M.water.specularPower=reducedWaterProfile?34:52;" not in index_html or "M.water.diffuseFresnelParameters.power=2.3;" not in index_html or "M.water.reflectionTexture.level=.78;" not in index_html:
         fail("El material de agua en Calidad debe conservar reflejos rasantes legibles sin añadir pasadas de renderizado.")
     if "float sheetFront=" in index_html or "color=mix(color,whitewater,swashMask*.56)" in index_html or "shoreSheetStrength" in index_html:
         fail("El avance del agua no puede simularse pintando el suelo de la playa.")
@@ -509,7 +600,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.271</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.275</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
@@ -525,8 +616,14 @@ def main() -> None:
         fail("La defensa naval debe estar conectada al bucle, al desembarco y al guardado.")
     if "float humidity=clamp(max(wet*.58,wetEdge*.56)*wetSandStrength,0.0,.78)" not in index_html or "color=mix(color,wrackTint,wrackZone*wrackFragments*.045)" not in index_html:
         fail("La arena húmeda debe quedar cálida y difusa; los restos de arribazón no pueden formar una banda oscura.")
-    if "washMaterial.emissiveColor=new B.Color3(0,0,0)" not in index_html or "const alpha=Math.min(.62,filmAlpha+whitewater*.52+trailingFoam*.38)" not in index_html or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html:
-        fail("La lámina de agua debe permanecer neutra, visible y la espuma blanca debe seguir fragmentada.")
+    if ("washMaterial.emissiveColor=new B.Color3(0,0,0)" not in index_html
+            or "const alpha=Math.min(.80,filmAlpha+whitewater*.76+trailingFoam*.70);" not in index_html
+            or "const whitewater=breakStrength*leadingCellular*.64*shallowWashContact;" not in index_html
+            or "const trailingFoam=residual*washTrailingProfile[vertex]*(.18+.30*backwashStrength)*exposedSandContact;" not in index_html
+            or "const cellular=Math.pow(smooth01((washPattern[vertex]-.34)/.54),2.0)" not in index_html
+            or "const crossBreakerPhase=(foamWaveX*.31-foamWaveZ)*.041+oceanTime*.79+angle*1.2;" not in index_html
+            or "const foamWaveCrest=smooth01(primaryBreakerCrest*.78+crossBreakerCrest*.22);" not in index_html):
+        fail("La lámina debe ser neutra, con espuma fragmentada, resaca persistente y cresta multidireccional.")
     if "const runup=.28+.82*Math.pow(waveCrest,1.15)" not in index_html:
         fail("La lámina de espuma debe conservar una anchura de run-up contenida.")
     if "navalDefensePhaseUnlocked" not in index_html or "villages.every(entry=>entry.claimed)&&discoveredIslands.every(Boolean)" not in index_html:
