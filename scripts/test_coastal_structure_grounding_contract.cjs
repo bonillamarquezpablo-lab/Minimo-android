@@ -171,9 +171,10 @@ const hutStart=html.indexOf("function buildHouse(cx,cz");
 const hutEnd=html.indexOf("function settlementHousePosition",hutStart);
 const hutBody=html.slice(hutStart,hutEnd);
 assert.ok(hutStart>=0&&hutEnd>hutStart,"Hut builder must remain inspectable");
-assert.ok(hutBody.indexOf("mergeStaticDecorByMaterial(g,'NorseHutStatic')")>=0);
-assert.ok(hutBody.indexOf("mergeStaticDecorByMaterial(g,'NorseHutStatic')")<hutBody.indexOf("g.scaling=v(scale,scale,scale);g.position=v(houseX"));
-assert.ok(hutBody.includes("g.__norseGeometryMergeSpace='local-before-root-transform'"));
+// Hut geometry remains as local child meshes; no post-build static merge may shift its visual centre.
+assert.doesNotMatch(hutBody,/mergeStaticDecorByMaterial\(g,'NorseHutStatic'\)/);
+assert.ok(hutBody.includes("g.scaling=v(scale,scale,scale);g.position=v(houseX,footing.centerY-.02*scale,houseZ)"));
+assert.ok(hutBody.indexOf("g.scaling=v(scale,scale,scale);g.position=v(houseX")>hutBody.indexOf("HutDarkStoneFooting"));
 
 // The two Hrafn camp roots are placed through the existing safe-anchor solver and remain functional.
 // Their tent poles, bedrolls, supply crate and embers are seated independently on the drawn heightfield.
