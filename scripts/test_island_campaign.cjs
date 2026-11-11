@@ -8,7 +8,7 @@ assert.match(build,/IslandGarrisonFlagpole_.*?outpostRoot/,'Each garrison flagpo
 assert.match(build,/IslandGarrisonStandard_.*?outpostRoot/,'Each garrison standard must inherit outpost visibility and relocation.');
 assert.match(build,/IslandGarrisonStake_.*?outpostRoot/,'Each garrison stake must inherit outpost visibility and relocation.');
 assert.match(build,/flagY\+2\.15-outpostGroundY/,'Flagpole height must remain anchored to its own rendered-ground sample.');
-assert.match(build,/py\+\.42-outpostGroundY/,'Stake height must remain anchored to its own rendered-ground sample.');
+assert.match(build,/py\+\.42-outpostGroundY/,'Stake height must remain anchored to its own rendered-ground sample.');assert.match(build,/village\.outpostRoot\?\.computeWorldMatrix\?\.\(true\);village\.flagGroup\?\.computeWorldMatrix\?\.\(true\)/,'Garrison flag grounding must be measured in world space after parenting.');
 const land=html.match(/const land=\[([\s\S]*?)\];/);
 assert.ok(land,'No se encuentra la definición del archipiélago.');
 assert.equal((land[1].match(/\{x:/g)||[]).length,13,'El mapa debe contener exactamente trece islas.');
