@@ -45,8 +45,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
 
     const boot=await page.evaluate(()=>{
       const api=window.__ELSN_TEST__;
-      return {build:api?.build,islands:api?.islands||[],startup:window.__elSinNombreStartupSmoke?.result||null,
-        meshCount:api?.diagnostics?.()?.meshCount??null};
+      return {build:api?.build,islands:api?.islands||[],startup:window.__elSinNombreStartupSmoke?.result||null};
     });
     manifest.build=boot.build;
     manifest.islands=boot.islands.map((island,index)=>({index,name:island.name,x:island.x,z:island.z,radiusMeters:island.r}));
@@ -57,63 +56,33 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
     // Inspect the untouched runtime first. This capture path is strictly read-only:
     // screenshots must show the scene as it exists, never a repaired simulation.
     const auditStarted=Date.now();
-    const initialAudit=await page.evaluate(()=>{
-      const api=window.__ELSN_TEST__,result={};
-      result.geometry=api.auditIslandGeometry();
-      result.habitableStructures=api.habitableStructureAudit();
-      result.offshore=typeof api.auditOffshoreStructures==='function'?api.auditOffshoreStructures(1000):null;
-      const sceneInventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(2000):null;
-      result.sceneInventorySummary={scannedObjectCount:sceneInventory?.objects?.length??0,scanLimit:2000};
-      for(const [key,method] of Object.entries({huts:api.settlementGrounding,camps:api.settlementCampGrounding,garrisons:api.garrisonGrounding})){
-        try{result[key]=method();}catch(error){result[key+'_error']=String(error.stack||error);}
-      }
-      const roots=(sceneInventory?.objects||[]).filter(item=>
-        (item.category==='structure'||item.category==='unidentified-structure')&&
-        !(item.parentChain||[]).length&&Number(item.meshCount)>0
-      ).map(item=>({
-        name:item.name,kind:item.structuralRole||item.category||'unclassified',
-        category:item.category,registered:item.registered??null,
-        uniqueId:item.uniqueId??item.nodeId??item.id??null,
-        island:item.island||item.islandName||null,islandIndex:item.islandIndex??null,
-        position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,
-        meshCount:item.meshCount,vertexCount:item.vertexCount,
-        meshNames:item.meshNames||[],materials:item.materials||[],
-        structuralEvidence:item.structuralEvidence||null,source:'coastal-scene-inventory'
-      }));
-      const offshore=(result.offshore?.candidates||[]).map(item=>({
-        ...item,uniqueId:item.uniqueId??item.nodeId??item.id??null,
-        source:'offshore-structural-root-audit'
-      }));
-      const combined=[...offshore,...roots],deduplicated=[];
-      for(const item of combined){
-        const p=item.position||{};
-        const duplicate=deduplicated.some(other=>other.name===item.name&&other.position&&
-          Math.hypot((Number(other.position.x)||0)-(Number(p.x)||0),(Number(other.position.z)||0)-(Number(p.z)||0))<.35);
-        if(!duplicate)deduplicated.push(item);
-      }
-      result.structuralCandidates=deduplicated;
-      return result;
-    });
+    const initialAudit=await page.evaluate(()=>window.__ELSN_TEST__.inspectScene({inventoryLimit:5000,offshoreLimit:500}));
     manifest.phaseTimingsMs.initialReadOnlyAudit=Date.now()-auditStarted;
-    manifest.initialPhysicalAudit={readOnly:true,geometry:initialAudit.geometry,habitableStructures:initialAudit.habitableStructures,
-      huts:initialAudit.huts,camps:initialAudit.camps,garrisons:initialAudit.garrisons,
-      offshoreCandidateCount:initialAudit.offshore?.candidates?.length??0,sceneInventorySummary:initialAudit.sceneInventorySummary};
+    manifest.initialPhysicalAudit=initialAudit;
     manifest.geometryAudit=initialAudit.geometry;
     manifest.objectInventory={
       readOnly:true,
       habitableStructureAudit:initialAudit.habitableStructures,
       offshoreAudit:initialAudit.offshore,
+      completeSceneInventory:initialAudit.sceneInventory,
       structuralCandidates:initialAudit.structuralCandidates
     };
-    manifest.auditSummary={
-      islandCount:initialAudit.geometry?.islandCount??null,
-      habitableStructureCount:initialAudit.habitableStructures?.total??initialAudit.habitableStructures?.structures?.length??null,
-      offshoreCandidateCount:initialAudit.offshore?.candidates?.length??0,
-      structuralCandidateCount:initialAudit.structuralCandidates.length,
-      hutCount:initialAudit.huts?.length??null,
-      campCount:initialAudit.camps?.length??null,
-      garrisonCount:initialAudit.garrisons?.length??null
+    manifest.auditSummary=initialAudit.counts;
+    manifest.unifiedInspection={
+      schema:initialAudit.schema,
+      mode:initialAudit.mode,
+      readOnly:initialAudit.readOnly,
+      sceneChanges:initialAudit.sceneChanges,
+      capturedAt:initialAudit.capturedAt,
+      durationMs:initialAudit.durationMs,
+      counts:initialAudit.counts,
+      phaseTimingsMs:initialAudit.phaseTimingsMs,
+      errors:initialAudit.errors
     };
+    if(!initialAudit.structuralCandidates)throw new Error('La inspección unificada no ha devuelto el inventario de estructuras.');
+    if(initialAudit.errors&&Object.keys(initialAudit.errors).length){
+      console.warn('[scene-inspection] Secciones con errores:',JSON.stringify(initialAudit.errors));
+    }
 
     // Resolve each requested zone against the inventory from this exact game run.
     for(const zoneRequest of expandedPlan.zones){
