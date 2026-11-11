@@ -393,6 +393,31 @@ def main() -> None:
     if html.count(detached_stake) or html.count(attached_stake) != stake_occurrences:
         raise SystemExit("No se pudieron anclar todas las estacas de las guarniciones.")
 
+    # Garrison flags now live in outpost-local coordinates. The invasion and
+    # capture controllers historically wrote world-space Y values because the
+    # flag group used to be a scene root. Convert those writes as well, or a
+    # captured/lost garrison can push its banner several metres into the sea.
+    detached_flag_base_y = "flagBaseY:flagY+3.55"
+    local_flag_base_y = "flagBaseY:flagY+3.55-outpostGroundY"
+    if html.count(detached_flag_base_y) != 1:
+        raise SystemExit("No se encontró exactamente la altura base de las banderas de guarnición.")
+    html = html.replace(detached_flag_base_y, local_flag_base_y, 1)
+
+    detached_flag_reset = "if(vl.flagGroup){vl.flagGroup.position.y=vl.flagBaseY||terrainSurfaceAt(vl.x,vl.z)+4.65;vl.flagGroup.scaling.set(1,1,1);}"
+    local_flag_reset = "if(vl.flagGroup){vl.flagGroup.position.y=vl.flagBaseY??(vl.islandGarrison?((vl.flagBaseY||0)):terrainSurfaceAt(vl.x,vl.z)+4.65);vl.flagGroup.scaling.set(1,1,1);}"
+    flag_reset_occurrences = html.count(detached_flag_reset)
+    if flag_reset_occurrences != 2:
+        raise SystemExit(f"Se esperaban dos reinicios de bandera y se encontraron {flag_reset_occurrences}.")
+    html = html.replace(detached_flag_reset, local_flag_reset)
+    if html.count(detached_flag_reset) or html.count(local_flag_reset) != flag_reset_occurrences:
+        raise SystemExit("No se pudieron adaptar los reinicios de bandera al espacio local.")
+
+    detached_capture_raise = "village.flagGroup.position.y=2.15+2.5*ease;"
+    local_capture_raise = "village.flagGroup.position.y=(village.islandGarrison?2.15-(village.outpostRoot?.position?.y||0):2.15)+2.5*ease;"
+    if html.count(detached_capture_raise) != 1:
+        raise SystemExit("No se encontró exactamente la animación de izado de bandera.")
+    html = html.replace(detached_capture_raise, local_capture_raise, 1)
+
     # The garrison grounding probe must measure the flag group's world transform,
     # not its local Y after the group becomes a child of IslandGarrisonOutpost_N.
     detached_flag_measure = """    const flagPosition=village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():village.flagGroup?.position;"""
