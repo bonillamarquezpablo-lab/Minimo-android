@@ -64,6 +64,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Attempt independent PNG audit after JSON upload
+        if: always()
         continue-on-error: true
         env:
           STRUCTURE_TEST_URL: http://127.0.0.1:4176/
