@@ -3,6 +3,12 @@ const fs=require('node:fs');
 const assert=require('node:assert/strict');
 
 const html=fs.readFileSync('index.html','utf8');
+const build=fs.readFileSync('scripts/build_site.py','utf8');
+assert.match(build,/IslandGarrisonFlagpole_.*?outpostRoot/,'Each garrison flagpole must be a child of its registered outpost so it cannot remain visible over open water.');
+assert.match(build,/IslandGarrisonStandard_.*?outpostRoot/,'Each garrison standard must inherit outpost visibility and relocation.');
+assert.match(build,/IslandGarrisonStake_.*?outpostRoot/,'Each garrison stake must inherit outpost visibility and relocation.');
+assert.match(build,/flagY\+2\.15-outpostGroundY/,'Flagpole height must remain anchored to its own rendered-ground sample.');
+assert.match(build,/py\+\.42-outpostGroundY/,'Stake height must remain anchored to its own rendered-ground sample.');
 const land=html.match(/const land=\[([\s\S]*?)\];/);
 assert.ok(land,'No se encuentra la definición del archipiélago.');
 assert.equal((land[1].match(/\{x:/g)||[]).length,13,'El mapa debe contener exactamente trece islas.');
