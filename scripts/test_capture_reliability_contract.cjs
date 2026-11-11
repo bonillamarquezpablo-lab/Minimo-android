@@ -48,9 +48,10 @@ async function main() {
   assert.match(workflow,/create_scene_capture_contact_sheet\.py/);
   assert.match(fs.readFileSync('scripts/create_scene_capture_contact_sheet.py','utf8'),/inspection-report\.md/);
   assert.match(fs.readFileSync('scripts/create_scene_capture_contact_sheet.py','utf8'),/sceneInspection/);
-  assert.match(workflow,/needs: texture-smoke/);
+  assert.match(workflow,/name: 'Inspector único: todas las pruebas, diagnósticos y capturas'/);
+  assert.match(workflow,/node scripts\/run-unified-inspector\.mjs/);
+  assert.match(workflow,/timeout-minutes: 180/);
   assert.match(workflow,/observationPoint/);
-  assert.match(workflow,/name: User-directed multi-camera scene inspection/);
   assert.match(plannerSource,/capturePrefix/);
   assert.doesNotMatch(runner,/repairAndAuditHabitableStructures/,
     'The camera inspection run must not repair or move objects before capturing the original scene.');
