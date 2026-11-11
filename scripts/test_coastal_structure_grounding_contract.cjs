@@ -15,6 +15,13 @@ assert.ok(builder.includes('local_flag_base_y = "flagBaseY:flagY+3.55-outpostGro
 assert.ok(builder.includes('local_flag_reset = "if(vl.flagGroup){vl.flagGroup.position.y=vl.flagBaseY??(terrainSurfaceAt(vl.x,vl.z)+4.65);'));
 assert.ok(builder.includes('local_capture_raise = "village.flagGroup.position.y=(village.islandGarrison?2.15-(village.outpostRoot?.position?.y||0):2.15)+2.5*ease;"'));
 assert.ok(builder.includes('garrison.flagBaseY=garrisonFlagGroup.position.y'));
+assert.ok(builder.includes("bedroll_grounding_marker = \"for(const bedroll of camp.__groundingBedrolls||[])placeBoxBase(bedroll,.08);\""));
+assert.ok(builder.includes("const placeRotatedBedrollBase=(mesh)=>{"));
+assert.ok(builder.includes("boundingBox?.vectors"));
+assert.ok(builder.includes("BABYLON.Vector3.TransformCoordinates(corner,mesh.getWorldMatrix())"));
+assert.ok(builder.includes("requiredBottomY=Math.max(...terrainSamples.map(point=>point.terrainY))"));
+assert.ok(builder.includes("placeRotatedBedrollBase(bedroll)"));
+assert.ok(builder.includes("Outpost bedroll grounding produced a non-finite correction"));
 assert.ok(builder.includes("new_structure_pattern = \"const structureNamePattern=/(?:norsethingstead|norsecoastalpier|norsecoastalbeacon|weatherednorsehut|\""));
 assert.ok(builder.includes("outerLandmarkGrounding:()=>"));
 assert.ok(builder.includes("renderedTerrainSurfaceAt(x,z),circle=newGroup('NorseThingstead_'"));
