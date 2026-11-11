@@ -360,8 +360,66 @@ def main() -> None:
         raise SystemExit("No se encontró exactamente la orientación original de los catres del puesto avanzado.")
     html = html.replace(bedroll_rotation_marker, bedroll_rotation_code, 1)
     bedroll_grounding_marker = "for(const bedroll of camp.__groundingBedrolls||[])placeBoxBase(bedroll,.08);"
+    bedroll_grounding_code = """const bedrollLowerLocalCorners=mesh=>{
+    const corners=mesh.getBoundingInfo?.()?.boundingBox?.vectors;
+    if(!Array.isArray(corners)||corners.length!==8)throw new Error('Outpost bedroll has no complete local bounds: '+mesh.name);
+    const lowerY=Math.min(...corners.map(point=>point.y));
+    return corners.filter(point=>point.y<=lowerY+1e-5);
+   };
+   const bedrollWorldLowerCorners=mesh=>{
+    mesh.computeWorldMatrix(true);
+    return bedrollLowerLocalCorners(mesh).map(point=>BABYLON.Vector3.TransformCoordinates(point,mesh.getWorldMatrix()));
+   };
+   const fitBedrollGroundPlane=samples=>{
+    const count=samples.length,cx=samples.reduce((sum,p)=>sum+p.x,0)/count,cz=samples.reduce((sum,p)=>sum+p.z,0)/count;
+    const local=samples.map(p=>({x:p.x-cx,z:p.z-cz,y:p.terrainY}));
+    const sx=local.reduce((sum,p)=>sum+p.x,0),sz=local.reduce((sum,p)=>sum+p.z,0);
+    const sxx=local.reduce((sum,p)=>sum+p.x*p.x,0),szz=local.reduce((sum,p)=>sum+p.z*p.z,0),sxz=local.reduce((sum,p)=>sum+p.x*p.z,0);
+    const sxy=local.reduce((sum,p)=>sum+p.x*p.y,0),szy=local.reduce((sum,p)=>sum+p.z*p.y,0),sy=local.reduce((sum,p)=>sum+p.y,0);
+    const matrix=[[sxx,sxz,sx,sxy],[sxz,szz,sz,szy],[sx,sz,count,sy]];
+    for(let column=0;column<3;column++){
+     let pivot=column;for(let row=column+1;row<3;row++)if(Math.abs(matrix[row][column])>Math.abs(matrix[pivot][column]))pivot=row;
+     if(Math.abs(matrix[pivot][column])<1e-10)throw new Error('Outpost bedroll terrain plane is singular.');
+     [matrix[column],matrix[pivot]]=[matrix[pivot],matrix[column]];
+     const divisor=matrix[column][column];for(let k=column;k<4;k++)matrix[column][k]/=divisor;
+     for(let row=0;row<3;row++)if(row!==column){const factor=matrix[row][column];for(let k=column;k<4;k++)matrix[row][k]-=factor*matrix[column][k];}
+    }
+    return {slopeX:matrix[0][3],slopeZ:matrix[1][3]};
+   };
+   const alignBedrollToRenderedGround=mesh=>{
+    placeBoxBase(mesh,.08);
+    const initialCorners=bedrollWorldLowerCorners(mesh);
+    const initialSamples=initialCorners.map(point=>({x:point.x,z:point.z,terrainY:renderedTerrainSurfaceAt(point.x,point.z)}));
+    if(initialSamples.length!==4||initialSamples.some(point=>!Number.isFinite(point.terrainY)))throw new Error('Outpost bedroll must have four valid ground samples: '+mesh.name);
+    const slope=fitBedrollGroundPlane(initialSamples);
+    const normal=new BABYLON.Vector3(-slope.slopeX,1,-slope.slopeZ).normalize();
+    const yaw=Number(mesh.rotation?.y)||0;
+    const yawX=new BABYLON.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+    const tangentX=yawX.subtract(normal.scale(BABYLON.Vector3.Dot(yawX,normal))).normalize();
+    const tangentZ=BABYLON.Vector3.Cross(tangentX,normal).normalize();
+    if(!Number.isFinite(tangentX.x)||!Number.isFinite(tangentZ.z))throw new Error('Outpost bedroll terrain orientation is invalid: '+mesh.name);
+    mesh.rotation.copyFromFloats(0,0,0);
+    mesh.rotationQuaternion=BABYLON.Quaternion.RotationQuaternionFromAxis(tangentX,normal,tangentZ);
+    mesh.computeWorldMatrix(true);
+    const alignedCorners=bedrollWorldLowerCorners(mesh);
+    const alignedSamples=alignedCorners.map(point=>({point,terrainY:renderedTerrainSurfaceAt(point.x,point.z)}));
+    if(alignedSamples.some(sample=>!Number.isFinite(sample.terrainY)))throw new Error('Outpost bedroll aligned corners have invalid terrain: '+mesh.name);
+    const lift=Math.max(...alignedSamples.map(sample=>sample.terrainY-sample.point.y));
+    if(!Number.isFinite(lift)||Math.abs(lift)>.30)throw new Error('Outpost bedroll slope correction is outside the safe range: '+mesh.name+' ('+lift+')');
+    mesh.position.y+=lift;
+    mesh.computeWorldMatrix(true);
+    const finalCorners=bedrollWorldLowerCorners(mesh);
+    const finalSamples=finalCorners.map(point=>({point,terrainY:renderedTerrainSurfaceAt(point.x,point.z)}));
+    const gaps=finalSamples.map(sample=>sample.point.y-sample.terrainY);
+    const maximumAbsoluteGap=Math.max(...gaps.map(Math.abs));
+    if(finalSamples.some(sample=>!Number.isFinite(sample.terrainY))||maximumAbsoluteGap>.02)
+     throw new Error('Outpost bedroll lower-corner contact exceeds 2 cm: '+mesh.name+' ('+maximumAbsoluteGap+')');
+    for(const sample of finalSamples)recordContact(mesh.name,sample.point.x,sample.point.z,sample.terrainY);
+   };
+   for(const bedroll of camp.__groundingBedrolls||[])alignBedrollToRenderedGround(bedroll);""";
     if html.count(bedroll_grounding_marker) != 1:
         raise SystemExit("No se encontró exactamente el asiento horizontal de los catres del puesto avanzado.")
+    html = html.replace(bedroll_grounding_marker, bedroll_grounding_code, 1)
     bedroll_support_marker = "camp.__groundingSupportMeshes.push({mesh:bedroll,kind:'box',halfHeight:.08});"
     bedroll_support_code = "camp.__groundingSupportMeshes.push({mesh:bedroll,kind:'oriented-box',halfHeight:.08});"
     if html.count(bedroll_support_marker) != 1:
