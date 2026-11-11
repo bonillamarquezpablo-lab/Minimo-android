@@ -53,6 +53,9 @@ jobs:
       - name: Test GLB background pipeline and fallbacks
         run: node scripts/test_glb_loading.cjs
 
+      - name: Test coastal mesh continuity and 5 cm seam limit
+        run: node scripts/test_coastal_mesh_continuity.cjs
+
       - name: Test animated water, foam and debug controls
         run: node scripts/test_water_shore.cjs
 

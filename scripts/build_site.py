@@ -673,6 +673,194 @@ def main() -> None:
             raise SystemExit("No se encontró </body> para instalar la navegación.")
         html = html.replace("</body>", navigation_tag + "\n</body>", 1)
 
+
+    # Release candidate 0.6.275: fix the submerged seabed profile once, keep the
+    # heightfield skirt beneath it, and verify cross-mesh contact before release.
+    if game_version != "0.6.274":
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.275; se encontró {game_version}.")
+    version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.275\2', html, count=1, flags=re.IGNORECASE)
+    if version_meta_count != 1:
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.275.")
+    diagnostic_build_marker = "reportVersion:'11',build:'0.6.274'"
+    diagnostic_build_replacement = "reportVersion:'12',build:'0.6.275'"
+    if html.count(diagnostic_build_marker) != 1:
+        raise SystemExit("No se encontró exactamente una identificación de compilación para actualizar a 0.6.275.")
+    html = html.replace(diagnostic_build_marker, diagnostic_build_replacement, 1)
+    game_version = "0.6.275"
+    USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+
+    coastal_profile_replacements = (
+        (
+            "const segments=isPerformanceMode?192:512,rows=isPerformanceMode?10:20,cols=segments+1;",
+            "const segments=isPerformanceMode?192:512,rows=isPerformanceMode?10:(isTouchDevice?64:96),cols=segments+1;",
+            "densidad radial de NordicSubmergedSand",
+        ),
+        (
+            "const shoreHeight=terrainHeightOnIsland(island,x,z);\n    const y=window.NorseCoastalInteraction.seabedHeight(radius,island.r,shoreHeight);",
+            "const shoreHeight=terrainHeightOnIsland(island,x,z);\n    const y=shoreHeight;",
+            "perfil submarino único de NordicSubmergedSand",
+        ),
+        (
+            "const seabedY=window.NorseCoastalInteraction.seabedHeight(d,is.r,analyticalHeight);",
+            "const seabedY=analyticalHeight-.003;",
+            "falda sumergida de IslandHeightfield",
+        ),
+        (
+            "if(kind==='submerged'){\n     const distance=Math.hypot(x-island.x,z-island.z);\n     expected=window.NorseCoastalInteraction.seabedHeight(distance,island.r,terrainHeightOnIsland(island,x,z))-.003;\n    }else expected=livingBeachSurfaceAt(island,index,x,z);",
+            "if(kind==='submerged')expected=terrainHeightOnIsland(island,x,z)-.003;\n    else expected=livingBeachSurfaceAt(island,index,x,z);",
+            "perfil analítico de la auditoría submarina",
+        ),
+    )
+    for old_code, new_code, label in coastal_profile_replacements:
+        if html.count(old_code) != 1:
+            raise SystemExit(f"No se encontró exactamente una fórmula original para {label}.")
+        html = html.replace(old_code, new_code, 1)
+
+    # Compare the actual rendered height surfaces at their shared X/Z coordinates.
+    # The 5 cm limit applies to seams between adjacent meshes, not to natural slopes
+    # between neighbouring vertices inside one mesh.
+    coastal_continuity_marker = "  function auditIslandGeometry(){return auditIslandGeometryScoped(null);}"
+    coastal_continuity_code = r"""
+  function coastalMeshTriangleHeightAtXZ(positions,rows,cols,centerX,centerZ,x,z){
+   if(!positions||rows<2||cols<2||positions.length<rows*cols*3)return null;
+   const dx=x-centerX,dz=z-centerZ,radius=Math.hypot(dx,dz),twoPi=Math.PI*2;
+   if(!Number.isFinite(radius)||radius<1e-5)return null;
+   const angle=(Math.atan2(dz,dx)+twoPi)%twoPi;
+   const columnFloat=angle/twoPi*(cols-1),baseColumn=Math.max(0,Math.min(cols-2,Math.floor(columnFloat)));
+   const columnFraction=columnFloat-baseColumn;
+   const point=(row,column)=>{
+    const offset=(row*cols+column)*3;
+    return {x:Number(positions[offset]),y:Number(positions[offset+1]),z:Number(positions[offset+2])};
+   };
+   const inner0=Math.hypot(point(0,baseColumn).x-centerX,point(0,baseColumn).z-centerZ);
+   const inner1=Math.hypot(point(0,baseColumn+1).x-centerX,point(0,baseColumn+1).z-centerZ);
+   const outer0=Math.hypot(point(rows-1,baseColumn).x-centerX,point(rows-1,baseColumn).z-centerZ);
+   const outer1=Math.hypot(point(rows-1,baseColumn+1).x-centerX,point(rows-1,baseColumn+1).z-centerZ);
+   const inner=inner0+(inner1-inner0)*columnFraction,outer=outer0+(outer1-outer0)*columnFraction;
+   const rowFloat=Math.max(0,Math.min(rows-1,(radius-inner)/Math.max(1e-8,outer-inner)*(rows-1)));
+   const baseRow=Math.max(0,Math.min(rows-2,Math.floor(rowFloat)));
+   const triangleY=(a,b,c)=>{
+    const denominator=(b.z-c.z)*(a.x-c.x)+(c.x-b.x)*(a.z-c.z);
+    if(Math.abs(denominator)<1e-10)return null;
+    const wa=((b.z-c.z)*(x-c.x)+(c.x-b.x)*(z-c.z))/denominator;
+    const wb=((c.z-a.z)*(x-c.x)+(a.x-c.x)*(z-c.z))/denominator;
+    const wc=1-wa-wb,epsilon=1e-4;
+    if(wa< -epsilon||wb< -epsilon||wc< -epsilon||wa>1+epsilon||wb>1+epsilon||wc>1+epsilon)return null;
+    return wa*a.y+wb*b.y+wc*c.y;
+   };
+   const columns=[baseColumn,Math.max(0,baseColumn-1),Math.min(cols-2,baseColumn+1)];
+   const rowCandidates=[baseRow,Math.max(0,baseRow-1),Math.min(rows-2,baseRow+1)];
+   for(const row of rowCandidates)for(const column of columns){
+    const a=point(row,column),b=point(row,column+1),c=point(row+1,column),d=point(row+1,column+1);
+    const first=triangleY(a,b,c);if(Number.isFinite(first))return first;
+    const second=triangleY(b,d,c);if(Number.isFinite(second))return second;
+   }
+   return null;
+  }
+  function auditCoastalMeshContinuity(onlyIslandIndex=null){
+   const started=performance.now(),thresholdMeters=.05,results=[];
+   const indexes=Number.isInteger(onlyIslandIndex)?[onlyIslandIndex]:Array.from({length:land.length},(_,index)=>index);
+   if(indexes.some(index=>index<0||index>=land.length))throw new RangeError('Invalid island index for coastal continuity audit: '+onlyIslandIndex);
+   const makePair=name=>({name,sampleCount:0,missingSamples:0,maxAbsoluteGapMeters:0,outlierCount:0,worstSample:null,thresholdMeters});
+   const addPairSample=(pair,x,z,heightA,heightB)=>{
+    if(!Number.isFinite(heightA)||!Number.isFinite(heightB)){pair.missingSamples++;return;}
+    const gap=Math.abs(heightA-heightB);pair.sampleCount++;
+    if(gap>pair.maxAbsoluteGapMeters){
+     pair.maxAbsoluteGapMeters=gap;
+     pair.worstSample={x:Number(x.toFixed(3)),z:Number(z.toFixed(3)),heightA:Number(heightA.toFixed(4)),heightB:Number(heightB.toFixed(4)),gapMeters:Number(gap.toFixed(5))};
+    }
+    if(gap>thresholdMeters)pair.outlierCount++;
+   };
+   for(const index of indexes){
+    const island=land[index],madeSeabed=!coastalSeabedMeshes[index],madeBeach=!livingBeachLayers[index];
+    let islandResult=null;
+    try{
+     if(madeSeabed)buildCoastalSeabed(island,index);
+     if(madeBeach)buildLivingBeachLayer(island,index);
+     const terrain=islandTerrainMeshes[index],seabed=coastalSeabedMeshes[index],beach=livingBeachLayers[index];
+     const seabedPositions=seabed?.getVerticesData(B.VertexBuffer.PositionKind)||null;
+     const beachPositions=beach?.positions||null;
+     const terrainHeight=(x,z)=>{
+      if(!terrain||typeof terrain.getHeightAtCoordinates!=='function')return null;
+      const value=terrain.getHeightAtCoordinates(x,z);
+      return Number.isFinite(value)?value+terrainDeformationAt(index,x,z):null;
+     };
+     const islandBeach=makePair('IslandHeightfield ↔ LivingCoastalSand');
+     const beachSeabed=makePair('LivingCoastalSand ↔ NordicSubmergedSand');
+     const islandSeabed=makePair('IslandHeightfield ↔ NordicSubmergedSand');
+     const sampleAngles=96;
+     for(let angleIndex=0;angleIndex<sampleAngles;angleIndex++){
+      const angle=angleIndex/sampleAngles*Math.PI*2,cs=Math.cos(angle),sn=Math.sin(angle);
+      // The living beach overlays the rendered heightfield at three inland/intertidal radii.
+      for(const ratio of [.80,.89,.98]){
+       const radius=island.r*ratio,x=island.x+cs*radius,z=island.z+sn*radius;
+       const heightA=terrainHeight(x,z);
+       const heightB=coastalMeshTriangleHeightAtXZ(beachPositions,beach?.rows,beach?.cols,island.x,island.z,x,z);
+       addPairSample(islandBeach,x,z,heightA,heightB);
+      }
+      // The two sandy layers share a narrow annulus. Sample its actual angle-dependent overlap.
+      if(beach&&seabed&&Array.isArray(beach.radials)&&beach.segments>0){
+       const columnFloat=angle/(Math.PI*2)*beach.segments,column=Math.min(beach.segments-1,Math.floor(columnFloat)),fraction=columnFloat-column;
+       const inner0=beach.radials[column*2],inner1=beach.radials[(column+1)*2];
+       const outer0=beach.radials[column*2+1],outer1=beach.radials[(column+1)*2+1];
+       const beachInner=inner0+(inner1-inner0)*fraction,beachOuter=outer0+(outer1-outer0)*fraction;
+       const overlapInner=Math.max(beachInner,island.r*(Number(seabed.metadata?.innerRatio)||1.075));
+       const overlapOuter=beachOuter;
+       if(overlapOuter-overlapInner>=.04){
+        const radius=(overlapInner+overlapOuter)*.5,x=island.x+cs*radius,z=island.z+sn*radius;
+        const heightA=coastalMeshTriangleHeightAtXZ(beachPositions,beach.rows,beach.cols,island.x,island.z,x,z);
+        const heightB=coastalMeshTriangleHeightAtXZ(seabedPositions,seabed.metadata?.rows,seabed.metadata?.cols,island.x,island.z,x,z);
+        addPairSample(beachSeabed,x,z,heightA,heightB);
+       }
+      }
+      // The square heightfield skirt overlaps the submerged bed only along the island's diagonal corners.
+      const radius=island.r*1.12,x=island.x+cs*radius,z=island.z+sn*radius;
+      if(Math.abs(x-island.x)<=island.r-.02&&Math.abs(z-island.z)<=island.r-.02){
+       const heightA=terrainHeight(x,z);
+       const heightB=coastalMeshTriangleHeightAtXZ(seabedPositions,seabed?.metadata?.rows,seabed?.metadata?.cols,island.x,island.z,x,z);
+       addPairSample(islandSeabed,x,z,heightA,heightB);
+      }
+     }
+     islandResult={islandIndex:index,island:island.name,radiusMeters:island.r,pairs:[islandBeach,beachSeabed,islandSeabed]};
+     for(const pair of islandResult.pairs){
+      pair.maxAbsoluteGapMeters=Number(pair.maxAbsoluteGapMeters.toFixed(5));
+      pair.passed=pair.sampleCount>=12&&pair.maxAbsoluteGapMeters<=thresholdMeters+1e-6;
+      if(pair.worstSample)pair.worstSample.gapMeters=Number(pair.worstSample.gapMeters.toFixed(5));
+     }
+    }catch(error){
+     islandResult={islandIndex:index,island:island?.name||String(index),radiusMeters:island?.r||null,pairs:[],error:String(error?.stack||error),passed:false};
+    }finally{
+     if(madeBeach){const layer=livingBeachLayers[index];if(layer){try{layer.mesh.dispose(false,false);}catch(_){}try{layer.material.dispose(false,false);}catch(_){}try{layer.coastalStateTexture.dispose();}catch(_){}livingBeachLayers[index]=null;}}
+     if(madeSeabed){const mesh=coastalSeabedMeshes[index];try{mesh?.dispose(false,false);}catch(_){}coastalSeabedMeshes[index]=null;}
+    }
+    if(islandResult){islandResult.passed=Array.isArray(islandResult.pairs)&&islandResult.pairs.length===3&&islandResult.pairs.every(pair=>pair.passed===true);results.push(islandResult);}
+   }
+   const failed=results.filter(island=>!island.passed);
+   return {schema:1,thresholdMeters,islandCount:results.length,passed:results.length===indexes.length&&failed.length===0,failedIslandCount:failed.length,durationMs:Number((performance.now()-started).toFixed(1)),islands:results};
+  }
+"""
+    if html.count(coastal_continuity_marker) != 1:
+        raise SystemExit("No se encontró exactamente el punto de inserción de la auditoría de continuidad costera.")
+    html = html.replace(coastal_continuity_marker, coastal_continuity_code + "\n" + coastal_continuity_marker, 1)
+
+    test_api_marker = "   auditIslandGeometryForIsland:(islandIndex)=>auditIslandGeometryScoped(islandIndex),"
+    test_api_replacement = test_api_marker + "\n   auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex),"
+    if html.count(test_api_marker) != 1:
+        raise SystemExit("No se pudo exponer la auditoría de continuidad entre mallas en el API de pruebas.")
+    html = html.replace(test_api_marker, test_api_replacement, 1)
+
+    # Validate the transformed runtime too; the earlier syntax check runs before these patches.
+    transformed_scripts = re.findall(r"<script\b[^>]*>(.*?)</script\s*>", html, flags=re.IGNORECASE | re.DOTALL)
+    transformed_inline_scripts = [block for block in transformed_scripts if block.strip()]
+    with tempfile.TemporaryDirectory(prefix="norse-js-transformed-check-") as temp_dir:
+        transformed_file = Path(temp_dir) / "game-inline-transformed.js"
+        transformed_file.write_text("\n".join(transformed_inline_scripts), encoding="utf-8")
+        transformed_check = subprocess.run([node, "--check", str(transformed_file)], capture_output=True, text=True)
+        if transformed_check.returncode != 0:
+            raise SystemExit("JavaScript sintácticamente inválido después de aplicar las correcciones costeras:\n" + transformed_check.stderr)
+    print("OK submerged seabed profile is applied once; 5 cm cross-mesh continuity audit is installed and syntax-checked.")
+
     (DIST / "index.html").write_text(html, encoding="utf-8")
 
     # Root-level invite entry. The guest mode is compiled as a constant, so

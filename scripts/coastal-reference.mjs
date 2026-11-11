@@ -199,7 +199,7 @@ async function main() {
     manifest.backgroundModels = boot.backgroundModels;
     manifest.sceneWarmup = boot.sceneWarmup;
 
-    assert.equal(boot.build, '0.6.274', 'La referencia debe ser exactamente 0.6.274');
+    assert.equal(boot.build, '0.6.275', 'La referencia debe ser exactamente 0.6.275');
     assert.equal(boot.coastalRuntimeMode, 'module', 'El módulo costero externo debe cargarse desde dist; el respaldo inline no debe ocultar un error de empaquetado.');
     assert.equal(boot.coastalApiReady, true, 'Falta una o más funciones de la API costera al construir la escena.');
     assert.equal(boot.startup.worldReady, true, 'La escena costera no terminó de prepararse');
@@ -605,6 +605,23 @@ async function main() {
     assert.equal(geometryAudit?.islandCount, 13, 'La auditoría debe inspeccionar las trece islas.');
     assert.equal(geometryAudit.thresholds.heightJumpMeters.NordicSubmergedSand, .80);
     assert.equal(geometryAudit.thresholds.heightJumpMeters.LivingCoastalSand, .90);
+
+    const meshContinuityAudit = await page.evaluate(() => window.__ELSN_TEST__.auditCoastalMeshContinuity());
+    manifest.meshContinuityAudit = meshContinuityAudit;
+    fs.writeFileSync(path.join(OUT, 'coastal-mesh-continuity.json'), JSON.stringify(meshContinuityAudit, null, 2) + '\n');
+    assert.equal(meshContinuityAudit?.islandCount, 13, 'La continuidad debe comprobar las trece islas.');
+    assert.equal(meshContinuityAudit?.thresholdMeters, .05, 'El límite entre mallas contiguas debe ser 5 cm.');
+    assert.equal(meshContinuityAudit?.passed, true,
+      'Hay una discontinuidad mayor de 5 cm entre mallas costeras contiguas: ' + JSON.stringify(meshContinuityAudit.islands.filter(island => !island.passed)));
+    for (const island of meshContinuityAudit.islands) {
+      assert.equal(island.pairs.length, 3, 'Falta una unión costera en ' + island.island);
+      for (const pair of island.pairs) {
+        assert.ok(pair.sampleCount >= 12, 'No hay suficientes muestras para ' + island.island + '/' + pair.name);
+        assert.ok(pair.maxAbsoluteGapMeters <= .05 + 1e-6,
+          'Unión costera separada más de 5 cm: ' + island.island + '/' + pair.name + ' ' + JSON.stringify(pair.worstSample));
+      }
+    }
+
 
     // First isolate the polar seam and null coast-solver hypothesis on all four meshes.
     // IslandHeightfield is Cartesian, so it is explicitly reported as non-polar.
