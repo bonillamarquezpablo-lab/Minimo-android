@@ -5,6 +5,7 @@ const html = fs.readFileSync('index.html', 'utf8');
 const captureRunner = fs.readFileSync('scripts/coastal-reference.mjs', 'utf8');
 const contactSheet = fs.readFileSync('scripts/create_coastal_contact_sheet.py', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf8');
+const unifiedRunner = fs.readFileSync('scripts/run-unified-inspector.mjs', 'utf8');
 const serviceWorker = fs.readFileSync('sw.js', 'utf8');
 
 assert.match(html, /const testModeEnabled=new URLSearchParams\(window\.location\.search\)\.get\('test'\)==='1'/);
@@ -93,7 +94,8 @@ assert.match(html,/for\(let step=0;step<5;step\+\+\)\{\s*const delta=sample\(rad
 assert.match(html,/const packedTrailTexture=makePatternTexture\('Packed Norse trail earth','#a18a63'/,"Packed earth trails must use a readable warm-earth albedo rather than a near-black base.");
 assert.match(html,/packedTrailMaterial\.emissiveColor=new B\.Color3\(\.22,\.15,\.07\)/,"Packed earth trails must retain a subtle brown ambient floor on shaded ridges.");
 assert.match(html,/positions\.push\(x,renderedTerrainSurfaceAt\(x,z\)\+\.055,z\)/,"Packed earth trails must remain conformed to the rendered island surface.");
-assert.match(workflow,/^  character-startup:/m,'Coastal-only validation must retain the independent real Viking GLB startup regression.');
+assert.match(workflow,/^  unified-inspector:/m,'All inspection phases must run under the single unified inspector job.');
+assert.match(unifiedRunner,/scripts\/player-startup-smoke\.mjs/,'The unified inspector must retain the independent real Viking GLB startup regression.');
 console.log('COASTAL REFERENCE CONTRACT OK');
 
 assert.ok(captureRunner.includes('api.captureCanvas()'),
