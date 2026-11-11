@@ -88,9 +88,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
   return {testMode:true,productionDataModified:false,before,repair,after,unsafeBefore,relocationPairs,relocatedStructures,verifiedMovedCount:relocatedStructures.length,verifiedSafeRelocationCount,unsafePairsVerified,unsafeAfter,offshoreBefore,offshoreAfter,offshoreClear,noOffshoreAfter,offshoreInventoryComplete,passed:after.total===39&&after.unsafeCount===0&&after.visibleInvalidAfterRepair===0&&after.untrackedRootCount===0&&unsafePairsVerified&&offshoreClear&&noOffshoreAfter&&offshoreInventoryComplete};
  }));if(!manifest.structureRepairSimulation?.passed){manifest.structureRepairSimulation.warning='Structure simulation gate did not pass; continuing the isolated camera capture so the offshore scene can still be inspected. The overall structure verdict remains fail.';console.warn('[CAPTURE] Structure simulation gate failed; continuing to capture the requested boat-approach camera.');}
  manifest.coastalDiagnostics.scope={camera:prepared.camera,auditIslandIndex:prepared.auditIslandIndex,geometryAuditScope:'all 13 islands',structureGroundingScope:'all registered/discovered habitable structures',mutationPolicy:'read-only; no production structure is moved, hidden or repaired'};
- // Save the exact offshore approach frame before texture/geometry diagnostics can stall the renderer.
- const approachFrameSaved=manifest.screenshot?true:await runPhase('capture boat-approach frame after scene audit',()=>capturePng(page,false,false));
- manifest.approachFrameSaved=!!(manifest.approachFrameSaved||approachFrameSaved);
+ // Let the readiness probe finish or time out before freezing the renderer for a deterministic camera frame.
  const convergenceResult=await runPhase('wait for render and texture convergence',()=>bounded(page.evaluate(({timeoutMs,maxFrames})=>window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs,maxFrames}),{timeoutMs:TIMEOUT_MS,maxFrames:120}),12000,{__prepareTimedOut:true}));
  const readinessTimedOut=!!convergenceResult?.__prepareTimedOut;
  if(readinessTimedOut){manifest.readiness={ready:false,verdict:'fail',converged:false,sceneReady:false,timeoutMs:TIMEOUT_MS,externalWaitLimitMs:12000,textureDiagnostics:null,warning:'Readiness timed out; preserving the requested camera capture anyway.'};manifest.captureWarning='Render readiness did not converge; attempting direct frame capture.';}
@@ -99,7 +97,14 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
  manifest.actualCamera=manifest.textureDiagnostics?.camera||null;manifest.cameraVerification=cameraVerification(manifest.camera,manifest.actualCamera);
  if(!readinessTimedOut)manifest.runtimeDiagnostics=await runPhase('collect render performance diagnostics',()=>collectRuntimeDiagnostics(page,5000));
  correlateNetworkEvents();
- await runPhase('verify bounded camera PNG capture',async()=>{if(manifest.screenshot)return;const saved=await capturePng(page,true,false);if(saved)return;throw new Error('No valid PNG was saved by the game canvas or CDP fallback.');});
+ await runPhase('freeze render loop and draw one boat-approach frame',()=>page.evaluate(()=>{
+  const api=window.__ELSN_TEST__;
+  if(typeof api?.prepareStaticCaptureFrame!=='function')throw new Error('Static frame capture API is unavailable.');
+  return api.prepareStaticCaptureFrame();
+ }));
+ const approachFrameSaved=manifest.screenshot?true:await runPhase('capture boat-approach frame after scene audit',()=>capturePng(page,true,false));
+ manifest.approachFrameSaved=!!(manifest.approachFrameSaved||approachFrameSaved);
+ await runPhase('verify bounded camera PNG capture',async()=>{if(manifest.screenshot)return;throw new Error('No valid PNG was saved by the frozen game canvas or CDP fallback.');});
  manifest.verdict=verdict();
 
  try{
