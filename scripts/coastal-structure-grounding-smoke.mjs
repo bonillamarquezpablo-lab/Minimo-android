@@ -153,7 +153,7 @@ async function main(){
   const hrafnCamps=(settled.camps||[]).filter(item=>/Hrafn/i.test(item.village||'')).sort((a,b)=>a.kind.localeCompare(b.kind));
   const legacyById=new Map(legacyHrafnBefore.map(item=>[item.id,item]));
   const makeHouseAfter=(item,index)=>({position:{x:item.x,z:item.z},baseHeight:Number((item.rootY+.02*item.scale).toFixed(4)),renderedTerrainBelowBase:item.sampledTerrainY,visualMeshBaseY:item.visualMeshBaseY,visualMeshBaseGapMeters:item.visualMeshBaseGapMeters,visualCenterOffsetMeters:item.visualCenterOffsetMeters,maximumBaseGapMeters:item.maximumFootingGapMeters,distanceToCoastMeters:item.distanceToCoastMeters,highTideDryMarginMeters:item.highTideDryMarginMeters,highTideSafe:item.highTideSafe,cause:item.cause});
-  const makeCampAfter=item=>({position:{x:item.x,z:item.z},baseHeight:item.anchorY,renderedTerrainBelowBase:item.groundY,baseAnchorGapMeters:item.anchorErrorMeters,maximumBaseGapMeters:item.maximumBaseGapMeters,minimumRenderedTerrainY:item.minimumRenderedTerrainY,distanceToCoastMeters:item.distanceToCoastMeters,highTideDryMarginMeters:item.highTideDryMarginMeters,highTideSafe:item.highTideSafe,supportPoints:item.supportPoints,cause:item.cause,before:item.before});
+  const makeCampAfter=item=>({position:{x:item.x,z:item.z},baseHeight:item.anchorY,renderedTerrainBelowBase:item.groundY,baseAnchorGapMeters:item.anchorErrorMeters,maximumBaseGapMeters:item.maximumBaseGapMeters,minimumRenderedTerrainY:item.minimumRenderedTerrainY,distanceToCoastMeters:item.distanceToCoastMeters,highTideDryMarginMeters:item.highTideDryMarginMeters,highTideSafe:item.highTideSafe,withinDryLandBand:item.withinDryLandBand,supportPoints:item.supportPoints,cause:item.cause,before:item.before});
   const comparison=[];
   for(let i=0;i<3;i++){
    const old=legacyById.get('HRAF-HUT-0'+(i+1)),item=hrafnHouses.find(row=>Math.abs(row.x-old.x)<.2&&Math.abs(row.z-old.z)<.2);
@@ -167,7 +167,7 @@ async function main(){
   report.hrafnRepairGate={
    targetCount:comparison.length,expectedTargetCount:5,
    huts:comparison.filter(row=>row.type==='WeatheredNorseHut').map(row=>({id:row.id,baseGapWithinTwoCm:row.after?.visualMeshBaseGapMeters!==null&&Math.abs(row.after?.visualMeshBaseGapMeters??Infinity)<=.02,visualCenterWithinQuarterMeter:(row.after?.visualCenterOffsetMeters??Infinity)<=.25,highTideSafe:row.after?.highTideSafe===true})),
-   camps:comparison.filter(row=>row.type!=='WeatheredNorseHut').map(row=>({id:row.id,anchorWithinTwoCm:Math.abs(row.after?.baseAnchorGapMeters??Infinity)<=.02,allSupportsWithinTwoCm:(row.after?.maximumBaseGapMeters??Infinity)<=.02,highTideSafe:row.after?.highTideSafe===true,withinDryLandBand:row.after?.cause==='grounded'}))
+   camps:comparison.filter(row=>row.type!=='WeatheredNorseHut').map(row=>({id:row.id,anchorWithinTwoCm:Math.abs(row.after?.baseAnchorGapMeters??Infinity)<=.02,allSupportsWithinTwoCm:(row.after?.maximumBaseGapMeters??Infinity)<=.02,highTideSafe:row.after?.highTideSafe===true,withinDryLandBand:row.after?.withinDryLandBand===true}))
   };
   report.objectInspectionCaptures=[];
   const inspectionTargets=(settled.hrafnSceneRoots||[]).filter(item=>item.visible!==false&&item.enabled!==false&&
