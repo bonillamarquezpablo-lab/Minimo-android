@@ -99,6 +99,7 @@ def main() -> None:
         "flagBaseY:flagY+3.55-outpostGroundY",
         "vl.flagGroup.position.y=vl.flagBaseY??(terrainSurfaceAt(vl.x,vl.z)+4.65)",
         "village.flagGroup.position.y=(village.islandGarrison?2.15-(village.outpostRoot?.position?.y||0):2.15)+2.5*ease",
+        "garrison.flagBaseY=garrisonFlagGroup.position.y",
     ):
         if required_garrison_animation not in index_html:
             fail("La bandera de guarnición debe conservar su altura correcta al capturar, perder o reiniciar un puesto.")
