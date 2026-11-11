@@ -51,6 +51,8 @@ for (const marker of [
   assert.ok(source.includes(marker), 'Atmosphere module is missing: ' + marker);
 }
 assert.ok(source.includes('advanceElapsed(this.elapsedSeconds, delta, this.speed)'), 'Clouds, aurora and hearth animation must share the day clock speed.');
+assert.ok(source.includes('TONEMAPPING_ACES') && source.includes('imageConfig.toneMappingEnabled = true'), 'The unified post-process must enable ACES tone mapping.');
+assert.ok(source.includes('B.ShadowGenerator.QUALITY_LOW') && source.includes('previous.usePercentageCloserFiltering = true'), 'Low graphics mode must retain shadows with reduced PCF cost.');
 assert.ok(source.includes('never hardware ray tracing'), 'The WebGL runtime must explicitly describe its lighting effects as approximations.');
 assert.ok(source.includes('const enabled = true;') && source.includes('pipeline.bloomEnabled = enabled;'), 'Bloom must remain enabled with a reduced low-profile kernel rather than disappear.');
 
