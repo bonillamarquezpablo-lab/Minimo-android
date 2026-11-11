@@ -15,8 +15,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: hrafn-geometry-${{ github.sha }}
-  cancel-in-progress: false
+  group: hrafn-geometry-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   measure:
