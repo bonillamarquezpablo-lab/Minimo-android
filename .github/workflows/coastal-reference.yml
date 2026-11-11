@@ -9,7 +9,7 @@ on:
         description: 'Una sola inspección: inventario completo, texturas, estructuras, agua, costa, pruebas y cámaras desde el agua. Hasta 120 capturas.'
         required: true
         type: string
-        default: '[{"id":"inspeccion-unica-hrafn","zone":{"label":"Bahía de Hrafn — todas las construcciones detectadas","center":{"x":28,"y":2.2,"z":143},"radiusMeters":27,"focus":"structures","maxTargets":12,"cameraDistanceMeters":9,"angles":[0,45,90,135,180,225,270,315],"times":[37],"tides":["natural"],"observationPoint":{"x":28,"y":6,"z":236.3},"observationHeightOffsets":[0,2.5]}}]'
+        default: '[{"id":"inspeccion-unica-hrafn","zone":{"label":"Bahía de Hrafn — todas las construcciones detectadas","center":{"x":28,"y":2.2,"z":143},"radiusMeters":27,"focus":"structures","maxTargets":12,"cameraDistanceMeters":9,"angles":[0,45,90,135,180,225,270,315],"times":[37],"tides":["natural"],"observationPoint":{"x":28,"y":6,"z":236.3},"observationHeightOffsets":[0,2.5],"includeTopDown":false}}]'
 
 permissions:
   contents: read
