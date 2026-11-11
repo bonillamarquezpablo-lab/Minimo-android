@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: hrafn-geometry-\${{ github.ref }}
+  group: hrafn-geometry-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -27,7 +27,7 @@ jobs:
       - name: Checkout exact PR head
         uses: actions/checkout@v4
         with:
-          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -59,7 +59,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hrafn-geometry-json-\${{ github.sha }}
+          name: hrafn-geometry-json-${{ github.sha }}
           path: artifacts/hrafn-geometry/hrafn-geometry-measurements.json
           if-no-files-found: error
           retention-days: 30
@@ -72,7 +72,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hrafn-geometry-png-\${{ github.sha }}
+          name: hrafn-geometry-png-${{ github.sha }}
           path: artifacts/structure-grounding/*.png
           if-no-files-found: warn
           retention-days: 30
