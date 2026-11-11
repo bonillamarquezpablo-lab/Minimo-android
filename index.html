@@ -8412,7 +8412,7 @@ function createRealWeapon(type='axe'){
   const target=cameraTargetSmoothed;
   const modeDistanceScale=cameraMode==='orbit'?1.42:(cameraMode==='ship'?1.08:1);
   const distance=cameraDistance*(onShip?2.12:1)*modeDistanceScale*(portrait?1.0:.96);
-  const effectivePitch=cameraMode==='orbit'?Math.max(cameraPitch,.60):(onShip?Math.max(cameraPitch,.43):cameraPitch);
+  const effectivePitch=cameraMode==='orbit'?Math.max(cameraPitch,.60):(onShip?Math.max(cameraPitch,-.02):cameraPitch);
   const sinYaw=Math.sin(cameraYaw),cosYaw=Math.cos(cameraYaw);
   const horizontal=Math.cos(effectivePitch)*distance,vertical=Math.sin(effectivePitch)*distance+.28;
   const baseX=-sinYaw*horizontal+cosYaw*.40,baseY=vertical,baseZ=-cosYaw*horizontal-sinYaw*.40;
@@ -8467,7 +8467,7 @@ function createRealWeapon(type='axe'){
     cameraPitch=.48;cameraDistance=10.35;cameraManualLookUntil=0;
    }else if(mode==='ship'){
     if(onShip)cameraYaw=Number(ship.rotation.y)||cameraYaw;
-    cameraPitch=Math.max(cameraPitch,.43);cameraManualLookUntil=0;
+    cameraPitch=Math.max(cameraPitch,.36);cameraManualLookUntil=0;
    }else if(mode==='orbit'){
     cameraPitch=Math.max(cameraPitch,.60);cameraDistance=Math.max(cameraDistance,12);cameraManualLookUntil=0;
    }else{
@@ -11023,7 +11023,7 @@ function updateHUD(){
    const pointerType=cameraPointerTypes.get(e.pointerId);
    const sensitivity=onShip?(pointerType==='mouse'?.0078:.010):(pointerType==='mouse'?.0068:.0082);
    cameraYaw-=dx*sensitivity;
-   const pitchMin=onShip?.12:.20,pitchMax=onShip?.92:.94;
+   const pitchMin=onShip?-.02:-.06,pitchMax=onShip?.92:.94;
    cameraPitch=Math.max(pitchMin,Math.min(pitchMax,cameraPitch+dy*sensitivity*(onShip?.72:.66)));
   }
  }
@@ -13174,9 +13174,12 @@ function update(dt){
 })();
 </script>
 <style id="norse-live-minimap-layout">
-/* Final override: preserve the enlarged single minimap and keep coordinates aligned beneath it. */
-#map:not(.expanded){position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px)!important;width:clamp(164px,42vw,190px)!important;height:auto!important;aspect-ratio:480/344!important;z-index:10!important}
-#mapCoords{position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px + clamp(118px,30vw,137px) + 5px)!important;width:clamp(164px,42vw,190px)!important;z-index:11!important}
+/* Compact portrait minimap; the expanded-map interaction still opens the full archipelago. */
+#map:not(.expanded){position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px)!important;height:auto!important;aspect-ratio:480/344!important;z-index:10!important}
+#mapCoords{position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px + clamp(118px,30vw,137px) + 5px)!important;z-index:11!important}
+@media (orientation: portrait){
+ #mapCoords{top:calc(env(safe-area-inset-top,0px) + 75px + clamp(79px,20.8vw,99px) + 5px)!important;width:clamp(110px,29vw,138px)!important}
+}
 body.map-open #mapCoords{display:none!important}
 </style>
 </body>
