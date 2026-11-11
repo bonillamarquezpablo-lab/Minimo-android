@@ -372,6 +372,20 @@ def main() -> None:
         raise SystemExit("No se encontró exactamente un informe de anclaje de guarnición.")
     html = html.replace(detached_garrison_return, verified_garrison_return, 1)
 
+    # After moving a garrison root, re-sample each child prop at its new world X/Z.
+    # This prevents the flagpole, standard and stakes from hovering over the shoreline.
+    detached_relocation = """      else root.position.copyFrom?root.position.copyFrom(targetPosition):root.position.set(candidate.x,candidate.centerY-entry.baseOffset,candidate.z);"""
+    reanchored_relocation = """      else root.position.copyFrom?root.position.copyFrom(targetPosition):root.position.set(candidate.x,candidate.centerY-entry.baseOffset,candidate.z);
+      if(String(root.name||'').startsWith('IslandGarrisonOutpost_')){
+       const garrison=villages.find(item=>item.outpostRoot===root);
+       const reanchorPart=(node,height)=>{if(!node?.position)return;const worldX=root.position.x+node.position.x,worldZ=root.position.z+node.position.z,groundY=renderedTerrainSurfaceAt(worldX,worldZ);node.position.y=groundY+height-root.position.y;};
+       reanchorPart(garrison?.flagpole,2.15);reanchorPart(garrison?.flagGroup,3.55);
+       for(let stake=0;stake<3;stake++)reanchorPart(scene.getMeshByName('IslandGarrisonStake_'+(garrison?.landIndex??-1)+'_'+stake),.42);
+      }"""
+    if html.count(detached_relocation) < 1:
+        raise SystemExit("No se encontró el movimiento de anclaje usado por el reparador de estructuras.")
+    html = html.replace(detached_relocation, reanchored_relocation)
+
     # The packaged build always prefers the same-origin, bundled files.
     html = html.replace(
         "async function resolveVikingAssetUrls(){\n  if(isPerformanceMode)return [VIKING_GLB_URL];\n  const urls=[VIKING_GLB_URL];",
