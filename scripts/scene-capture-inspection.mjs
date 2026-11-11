@@ -293,6 +293,14 @@ export function createZoneInspectionShots(request, islands, candidates) {
       }
     }
   }
+  const generatedIdsCheck = new Set();
+  for (const shot of shots) {
+    safeId(shot.id, 'Captura generada');
+    validateState(shot, shot.id);
+    validateCamera(shot.camera, shot.id);
+    if (generatedIdsCheck.has(shot.id)) throw new Error('ID de cámara repetido en la zona: ' + shot.id);
+    generatedIdsCheck.add(shot.id);
+  }
   const report = {
     id:request.id,
     label:zone.label,
