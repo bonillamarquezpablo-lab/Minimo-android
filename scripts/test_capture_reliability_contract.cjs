@@ -71,6 +71,9 @@ async function main() {
     {name:'Far_Hut',kind:'WeatheredNorseHut',island:'Hrafn',islandIndex:0,
       position:{x:150,y:1,z:200},bounds:{bottomY:1,topY:5,width:4,depth:4}}
   ];
+  const stableCode=planner.makeStableObjectCode(candidates[0]);
+  assert.match(stableCode,/^OBJ-[A-F0-9]{12}$/);
+  assert.equal(planner.makeStableObjectCode(candidates[0]),stableCode,'Stable object codes must be repeatable.');
   const resolved = planner.createZoneInspectionShots(planned.zones[0],[{x:100,z:200}],candidates);
   assert.equal(resolved.report.candidateCount,2,'Only structural roots inside the requested zone should be selected.');
   assert.equal(resolved.report.selectedTargetCount,2);
