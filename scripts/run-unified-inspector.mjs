@@ -21,6 +21,13 @@ function writeJson(file,value){
 function readJson(file){
   try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return null;}
 }
+function signalChildProcessTree(child,signal){
+  if(process.platform!=='win32'&&Number.isInteger(child?.pid)){
+    try{process.kill(-child.pid,signal);return true;}
+    catch(error){if(error?.code!=='ESRCH')throw error;}
+  }
+  try{return !!child?.kill(signal);}catch{return false;}
+}
 function runNodePhase(name,script,env={},timeoutMs=25*60*1000){
   return new Promise(resolve=>{
     const row={name,script,startedAt:new Date().toISOString(),status:'running',durationMs:null,exitCode:null,error:null};
@@ -28,7 +35,7 @@ function runNodePhase(name,script,env={},timeoutMs=25*60*1000){
     console.log('\\n[UNIFIED_INSPECTOR] START '+name+' — '+script);
     const phaseStarted=Date.now();
     let child;
-    try{child=spawn(process.execPath,[script],{cwd:ROOT,env:{...process.env,...env},stdio:'inherit'});}
+    try{child=spawn(process.execPath,[script],{cwd:ROOT,env:{...process.env,...env},stdio:'inherit',detached:process.platform!=='win32'});}
     catch(error){row.status='failed';row.error=String(error?.stack||error);row.durationMs=Date.now()-phaseStarted;writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});return resolve(row);}
     let settled=false,timedOut=false,timer=null,forceTimer=null,finalTimer=null;
     const timeoutMessage='Exceeded phase timeout of '+timeoutMs+' ms.';
@@ -42,12 +49,12 @@ function runNodePhase(name,script,env={},timeoutMs=25*60*1000){
     };
     timer=setTimeout(()=>{
       timedOut=true;
-      console.error('[UNIFIED_INSPECTOR] TIMEOUT '+name+' — sending SIGTERM to its process.');
-      try{child.kill('SIGTERM');}
+      console.error('[UNIFIED_INSPECTOR] TIMEOUT '+name+' — sending SIGTERM to its process tree.');
+      try{signalChildProcessTree(child,'SIGTERM');}
       catch(error){finish('timed_out',null,timeoutMessage+' SIGTERM failed: '+String(error?.message||error));return;}
       forceTimer=setTimeout(()=>{
         console.error('[UNIFIED_INSPECTOR] FORCE STOP '+name+' — sending SIGKILL.');
-        try{child.kill('SIGKILL');}catch(_){}
+        try{signalChildProcessTree(child,'SIGKILL');}catch(_){}
         finalTimer=setTimeout(()=>finish('timed_out',null,timeoutMessage+' The child did not close after SIGKILL.'),2000);
       },5000);
     },timeoutMs);
@@ -64,17 +71,31 @@ function runPythonPhase(name,script,arg,timeoutMs=5*60*1000){
     const row={name,script,startedAt:new Date().toISOString(),status:'running',durationMs:null,exitCode:null,error:null};
     phases.push(row);
     const phaseStarted=Date.now();
-    const child=spawn(process.env.PYTHON||'python3',[script,arg],{cwd:ROOT,env:process.env,stdio:'inherit'});
-    let settled=false;
+    const child=spawn(process.env.PYTHON||'python3',[script,arg],{cwd:ROOT,env:process.env,stdio:'inherit',detached:process.platform!=='win32'});
+    let settled=false,timedOut=false,timer=null,forceTimer=null,finalTimer=null;
     const finish=(status,code,error=null)=>{
-      if(settled)return;settled=true;clearTimeout(timer);
+      if(settled)return;settled=true;
+      clearTimeout(timer);clearTimeout(forceTimer);clearTimeout(finalTimer);
       Object.assign(row,{status,exitCode:code,error,finishedAt:new Date().toISOString(),durationMs:Date.now()-phaseStarted});
       writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});
       resolve(row);
     };
-    const timer=setTimeout(()=>{try{child.kill('SIGTERM');}catch{}finish('timed_out',null,'Python report timeout');},timeoutMs);
+    timer=setTimeout(()=>{
+      timedOut=true;
+      console.error('[UNIFIED_INSPECTOR] TIMEOUT '+name+' — sending SIGTERM to its process tree.');
+      try{signalChildProcessTree(child,'SIGTERM');}catch(_){}
+      forceTimer=setTimeout(()=>{
+        console.error('[UNIFIED_INSPECTOR] FORCE STOP '+name+' — sending SIGKILL.');
+        try{signalChildProcessTree(child,'SIGKILL');}catch(_){}
+        finalTimer=setTimeout(()=>finish('timed_out',null,'Python report timeout; child tree did not close after SIGKILL.'),2000);
+      },5000);
+    },timeoutMs);
     child.once('error',error=>finish('failed',null,String(error?.stack||error)));
-    child.once('close',(code,signal)=>finish(code===0?'passed':'failed',code,code===0?null:'exit='+code+' signal='+(signal||'none')));
+    child.once('close',(code,signal)=>finish(
+      timedOut?'timed_out':code===0?'passed':'failed',
+      timedOut?null:code,
+      timedOut?'Python report timeout; child terminated with '+(signal||'an unknown signal')+'.':code===0?null:'exit='+code+' signal='+(signal||'none')
+    ));
   });
 }
 function summaryFrom(file,selector){
