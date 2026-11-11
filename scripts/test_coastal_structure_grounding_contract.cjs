@@ -200,7 +200,7 @@ assert.ok(html.includes("const supportPoints=(group?.__groundingSupportMeshes||[
 assert.ok(html.includes("supportPoints:measure?.samples?.filter(point=>point.name)||[]"));
 assert.ok(html.includes("supportMeshCount:"));
 
-// High-tide smoke, before/after measurements, and five separate object captures are mandatory.
+// High-tide smoke, live before/after measurements, and per-object captures are mandatory.
 assert.ok(source.includes("setWaterState({time:0,tide:'high'})"));
 assert.ok(source.includes("hrafnBaseline"));
 assert.ok(source.includes("beforeHouseByIndex"));
