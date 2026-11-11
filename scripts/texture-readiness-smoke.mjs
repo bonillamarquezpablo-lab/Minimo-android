@@ -38,7 +38,15 @@ async function capturePng(page,afterFailure=false,preferCdp=false){
  if(typeof data==='string'&&data.startsWith(prefix)){const payload=data.slice(prefix.length);if(/^[A-Za-z0-9+/]+={0,2}$/.test(payload)){const candidate=Buffer.from(payload,'base64');if(valid(candidate)){buffer=candidate;method='game-test-canvas-preserved-buffer';}}}
  // CDP can preserve the frame even when the WebGL page evaluation is unresponsive.
  if(!valid(buffer)&&cdpSession){const cdpStarted=Date.now();try{const shot=await bounded(cdpSession.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false,optimizeForSpeed:true}),afterFailure?20000:CDP_CAPTURE_TIMEOUT_MS,null);if(shot?.data){const candidate=Buffer.from(shot.data,'base64');if(valid(candidate)){buffer=candidate;method='cdp-page-capture';}}manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'cdp-page-capture',durationMs:Date.now()-cdpStarted,success:valid(buffer),trigger:canvasTimedOut?'canvas-timeout':'canvas-unavailable'}];}catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'cdp-page-capture',durationMs:Date.now()-cdpStarted,success:false,error:String(error?.message||error)}];}}
- if(!valid(buffer)){manifest.captureFailure=manifest.captureFailure||'No valid PNG was returned by the game canvas or CDP.';return false;}
+ if(!valid(buffer)&&page){
+  const playwrightStarted=Date.now();
+  try{
+   const candidate=await bounded(page.screenshot({type:'png',fullPage:false,animations:'disabled'}),15000,null);
+   if(valid(candidate)){buffer=candidate;method='playwright-page-screenshot';}
+   manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-page-screenshot',durationMs:Date.now()-playwrightStarted,success:valid(buffer)}];
+  }catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-page-screenshot',durationMs:Date.now()-playwrightStarted,success:false,error:String(error?.message||error)}];}
+ }
+ if(!valid(buffer)){manifest.captureFailure=manifest.captureFailure||'No valid PNG was returned by the game canvas, CDP or Playwright screenshot channel.';return false;}
  const file=afterFailure?'smoke-timeout-current-frame.png':'smoke-first-camera.png';
  fs.writeFileSync(path.join(OUT,file),buffer);manifest.screenshot={file,bytes:buffer.length,capturedAfterFailure:!!afterFailure,frameCaptureMethod:method};return true;
 }
