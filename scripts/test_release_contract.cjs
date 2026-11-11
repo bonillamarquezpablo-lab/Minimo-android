@@ -21,8 +21,8 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
 }
 assert.equal(shellVersion,expectedVersion,"The service-worker cache must be synchronized with the packaged release.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.275"\)/,"The build must promote every visible source version to 0.6.276.");
-assert.match(buildSite,/game_version = "0\.6\.275"/,"The build must validate and package 0.6.276.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.276"\)/,"The build must promote every visible source version to 0.6.276.");
+assert.match(buildSite,/game_version = "0\.6\.276"/,"The build must validate and package 0.6.276.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
@@ -35,4 +35,7 @@ assert.doesNotMatch(validator,/resourceResults=await Promise\.allSettled\(\[play
 assert.ok(buildSite.includes('scripts/nordic/atmosphere-system.js'),"The release builder must package the unified atmosphere runtime.");
 assert.ok(buildSite.includes("atmosphereSystem.update(dt)"),"The single atmosphere clock must drive gameplay updates.");
 assert.ok(serviceWorker.includes("./scripts/nordic/atmosphere-system.js"),"The installed app must cache the atmosphere module offline.");
+assert.ok(buildSite.includes('atmosphere_tag = \'<script src="./scripts/nordic/atmosphere-system.js"></script>\''),"Atmosphere must load synchronously.");
+assert.ok(buildSite.includes("html.index(atmosphere_tag) > html.index(game_runtime_marker)"),"Atmosphere must load before the game runtime.");
+
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
