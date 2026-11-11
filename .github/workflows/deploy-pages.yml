@@ -36,6 +36,8 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Test offline navigation suite and four camera modes
+        run: node scripts/test_navigation_suite_contract.cjs
       - name: Test BeachState coast and toroidal footprint atlas
         run: node scripts/test_beach_state.cjs
       - name: Test three-layer coast rendering contract and water film
