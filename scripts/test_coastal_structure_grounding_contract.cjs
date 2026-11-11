@@ -64,7 +64,10 @@ assert.match(source,/gate\.unexpectedOffshoreStructures===0/);
 console.log('COASTAL STRUCTURE GROUNDING CONTRACT OK');
 
 assert.match(html,/dryFootprintSampleCount===dryFootprintSamples\.length/);
-assert.match(html,/radial<=nearest\.r\*1\.09&&Number\.isFinite\(terrain\)&&terrain>=water\+\.22/);
+assert.match(html,/const insideIslandEnvelope=radial<=nearest\.r\*1\.09/);
+assert.match(html,/insideIslandEnvelope\?coastalWaterHeight\(point\.x,point\.z,oceanTime\):waterHeight\(point\.x,point\.z,oceanTime\)/);
+assert.match(html,/dry:insideIslandEnvelope&&Number\.isFinite\(terrain\)&&terrain>=water\+\.22/);
+assert.match(html,/centerInsideIslandEnvelope\?coastalWaterHeight\(absolute\.x,absolute\.z,oceanTime\):waterHeight\(absolute\.x,absolute\.z,oceanTime\)/);
 assert.match(html,/footprintDrySamples:9/);
 assert.match(html,/minimumDryTerrainAboveWaterMeters:\.22/);
 
@@ -88,9 +91,10 @@ assert.match(source,/expected=\{x:400,z:250\}/);
 assert.match(source,/const objectScale=Math\.min\(contentWidth\/map\.width,contentHeight\/map\.height\)/);
 assert.match(source,/clientX=rect\.left\+offsetX\+logicalX\/480\*drawnWidth/);
 
-// En móviles capaces, embarcar no debe reducir el radio de visibilidad de los asentamientos.
-assert.match(html,/limit=onShip&&ultraLowEndIslandStreaming\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/);
-assert.match(html,/visibilityLimitMeters=onShip&&ultraLowEndIslandStreaming\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/);
+// En barco, todos los perfiles usan el límite de visibilidad propio del barco para no mostrar cabañas sin su isla.
+assert.match(html,/limit=onShip\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/);
+assert.match(html,/visibilityLimitMeters=onShip\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/);
+assert.doesNotMatch(html,/limit=onShip&&ultraLowEndIslandStreaming/);
 
 // Habitable huts must stay above the maximum coastal water/run-up envelope plus a dry-ground margin.
 assert.match(html,/minimumDryGroundY=\(Number\(ground\.position\.y\)\|\|0\)\+\.60/);
@@ -116,6 +120,7 @@ assert.match(source,/classificationConfidence/);
 
 // Offshore audit must include anonymous grouped GLB assemblies, not only name-matched buildings.
 assert.match(html,/unknownAssemblyExclusions=\/\(/);
+assert.match(html,/bush\|shrub\|broadleaf\|reed/);
 assert.match(html,/unidentifiedGeometryRoots=new Set\(\)/);
 assert.match(html,/unidentifiedGeometryRoots\.add\(node\);candidates\.add\(node\)/);
 assert.match(html,/unidentified-geometry-cluster/);
@@ -171,8 +176,11 @@ const hutStart=html.indexOf("function buildHouse(cx,cz");
 const hutEnd=html.indexOf("function settlementHousePosition",hutStart);
 const hutBody=html.slice(hutStart,hutEnd);
 assert.ok(hutStart>=0&&hutEnd>hutStart,"Hut builder must remain inspectable");
-// Hut geometry remains as local child meshes; no post-build static merge may shift its visual centre.
-assert.doesNotMatch(hutBody,/mergeStaticDecorByMaterial\(g,'NorseHutStatic'\)/);
+// Merge is intentionally performed while the group is identity; asymmetric roof/decoration bounds are not a double transform.
+assert.match(hutBody,/mergeStaticDecorByMaterial\(g,'NorseHutStatic',\['HutDarkStoneFooting'\]\)/);
+assert.ok(hutBody.indexOf("mergeStaticDecorByMaterial(g,'NorseHutStatic'")<hutBody.indexOf("g.scaling=v(scale,scale,scale);g.position=v(houseX"));
+assert.match(hutBody,/g\.__norseGeometryMergeSpace='local-before-root-transform'/);
+assert.match(html,/mergeSpace!==\x27local-before-root-transform\x27/);
 assert.ok(hutBody.includes("g.scaling=v(scale,scale,scale);g.position=v(houseX,footing.centerY-.02*scale,houseZ)"));
 assert.ok(hutBody.indexOf("g.scaling=v(scale,scale,scale);g.position=v(houseX")>hutBody.indexOf("HutDarkStoneFooting"));
 
