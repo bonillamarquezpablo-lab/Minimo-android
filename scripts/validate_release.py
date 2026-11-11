@@ -103,6 +103,18 @@ def main() -> None:
     ):
         if required_garrison_animation not in index_html:
             fail("La bandera de guarnición debe conservar su altura correcta al capturar, perder o reiniciar un puesto.")
+    for required_outer_landmark in (
+        "NorseThingstead_",
+        "NorseCoastalPier_",
+        "NorseCoastalBeacon_",
+        "outerLandmarkGrounding:()=>",
+        "renderedTerrainSurfaceAt(x,z),circle=newGroup('NorseThingstead_'",
+        "renderedTerrainSurfaceAt(startX,startZ)+.10",
+        "renderedTerrainSurfaceAt(x,z),tower=newGroup('NorseCoastalBeacon_'",
+    ):
+        if required_outer_landmark not in index_html:
+            fail("Los tres hitos de las islas exteriores deben usar la altura del terreno realmente dibujado y exponer su auditoría.")
+
     navigation_js = read_text("scripts/nordic/navigation-suite.js")
     if "./scripts/nordic/navigation-suite.js" not in index_html:
         fail("Las entradas del juego no cargan el sistema unificado de mapas y cámaras.")
