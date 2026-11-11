@@ -99,7 +99,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
  manifest.actualCamera=manifest.textureDiagnostics?.camera||null;manifest.cameraVerification=cameraVerification(manifest.camera,manifest.actualCamera);
  if(!readinessTimedOut)manifest.runtimeDiagnostics=await runPhase('collect render performance diagnostics',()=>collectRuntimeDiagnostics(page,5000));
  correlateNetworkEvents();
- await runPhase('capture final camera PNG',async()=>{if(manifest.screenshot)return;const recovered=await capturePng(page,true,false);manifest.captureRecovery={attempted:true,success:recovered,firstFailure:manifest.captureFailure||'The early camera frame was not saved.'};if(recovered){manifest.captureFailure=null;return;}throw new Error('No se pudo guardar un PNG válido tras los dos intentos acotados de captura.');});
+ await runPhase('verify bounded camera PNG capture',async()=>{if(manifest.screenshot)return;throw new Error('No valid PNG was saved by either of the two bounded camera-capture attempts.');});
  manifest.verdict=verdict();
 
  try{
