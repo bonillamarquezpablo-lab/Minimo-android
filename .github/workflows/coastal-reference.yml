@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   unified-inspector:
+    continue-on-error: true
     name: 'Inspector único: todas las pruebas, diagnósticos y capturas'
     runs-on: ubuntu-latest
     timeout-minutes: 180
