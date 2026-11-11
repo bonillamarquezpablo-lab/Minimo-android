@@ -23,6 +23,9 @@ assert.ok(build.includes("flagBaseY:flagY+3.55-outpostGroundY"),"The stored rese
 assert.ok(build.includes("local_capture_raise"),"Capture animation must convert its world target into local Y for garrisons.");
 assert.ok(build.includes("local_flag_reset"),"Loss/reset handling must return the standard to its local base height.");
 assert.ok(build.includes("garrison.flagBaseY=garrisonFlagGroup.position.y"),"A relocated outpost must refresh its saved local banner height.");
+assert.ok(build.includes("NorseThingstead"),"The build must anchor the outer settlement hall to the rendered terrain.");
+assert.ok(build.includes("NorseCoastalPier"),"The build must anchor the outer coastal pier to the rendered terrain.");
+assert.ok(build.includes("NorseCoastalBeacon"),"The build must anchor the outer coastal beacon to the rendered terrain.");
 const land=html.match(/const land=\[([\s\S]*?)\];/);
 assert.ok(land,'No se encuentra la definición del archipiélago.');
 assert.equal((land[1].match(/\{x:/g)||[]).length,13,'El mapa debe contener exactamente trece islas.');
