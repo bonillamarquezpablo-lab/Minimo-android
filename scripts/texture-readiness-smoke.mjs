@@ -5,7 +5,7 @@ const BASE_URL=process.env.CAPTURE_TEST_URL||'http://127.0.0.1:4176/';
 const OUT=path.resolve('artifacts/texture-readiness-smoke');
 const TIMEOUT_MS=Math.max(1000,Math.min(60000,Number(process.env.CAPTURE_TEXTURE_TIMEOUT_MS)||15000));
 const CANVAS_CAPTURE_TIMEOUT_MS=Math.max(2500,Math.min(30000,Number(process.env.CAPTURE_CANVAS_TIMEOUT_MS)||15000));
-const CDP_CAPTURE_TIMEOUT_MS=Math.max(1500,Math.min(25000,Number(process.env.CAPTURE_CDP_TIMEOUT_MS)||20000));
+const CDP_CAPTURE_TIMEOUT_MS=Math.max(1500,Math.min(12000,Number(process.env.CAPTURE_CDP_TIMEOUT_MS)||8000));
 const rawPlan=process.env.CAPTURE_PLAN_JSON||fs.readFileSync('scripts/scene-capture-plan.json','utf8'),plan=JSON.parse(rawPlan);
 const manifest={schema:5,startedAt:new Date().toISOString(),finishedAt:null,build:null,buildMetadata:null,timeoutMs:TIMEOUT_MS,hardDeadlineMs:240000,renderer:'Chromium headless + ANGLE SwiftShader',camera:null,actualCamera:null,cameraVerification:null,readiness:null,textureDiagnostics:null,structureRepairSimulation:null,coastalDiagnostics:{schema:1,status:'not-run',currentCheck:null,scope:null,checks:{},summary:null},networkEvents:[],networkRequests:[],consoleErrors:[],pageErrors:[],consoleMessages:[],phases:[],currentPhase:null,unresolvedPromises:null,timeoutDiagnostics:null,screenshot:null,verdict:'not-run',failure:null};
 function writeManifest(){fs.mkdirSync(OUT,{recursive:true});const target=path.join(OUT,'manifest.json'),temporary=target+'.tmp';fs.writeFileSync(temporary,JSON.stringify(manifest,null,2)+'\n');fs.renameSync(temporary,target);const coastalTarget=path.join(OUT,'coastal-inspection.json'),coastalTemporary=coastalTarget+'.tmp';fs.writeFileSync(coastalTemporary,JSON.stringify({schema:1,build:manifest.build,buildMetadata:manifest.buildMetadata,camera:manifest.camera,baselineScreenshot:manifest.baselineScreenshot||null,screenshot:manifest.screenshot,startedAt:manifest.startedAt,finishedAt:manifest.finishedAt,diagnostics:manifest.coastalDiagnostics},null,2)+'\n');fs.renameSync(coastalTemporary,coastalTarget);}
@@ -37,27 +37,7 @@ async function capturePng(page,afterFailure=false,preferCdp=false){
  const prefix='data:image/png;base64,';
  if(typeof data==='string'&&data.startsWith(prefix)){const payload=data.slice(prefix.length);if(/^[A-Za-z0-9+/]+={0,2}$/.test(payload)){const candidate=Buffer.from(payload,'base64');if(valid(candidate)){buffer=candidate;method='game-test-canvas-preserved-buffer';}}}
  // CDP can preserve the frame even when the WebGL page evaluation is unresponsive.
- if(!valid(buffer)&&cdpSession){const cdpStarted=Date.now();try{const shot=await bounded(cdpSession.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false,optimizeForSpeed:true}),afterFailure?20000:CDP_CAPTURE_TIMEOUT_MS,null);if(shot?.data){const candidate=Buffer.from(shot.data,'base64');if(valid(candidate)){buffer=candidate;method='cdp-page-capture';}}manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'cdp-page-capture',durationMs:Date.now()-cdpStarted,success:valid(buffer),trigger:canvasTimedOut?'canvas-timeout':'canvas-unavailable'}];}catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'cdp-page-capture',durationMs:Date.now()-cdpStarted,success:false,error:String(error?.message||error)}];}}
- if(!valid(buffer)&&page){
-  const playwrightStarted=Date.now();
-  try{
-   const candidate=await bounded(page.screenshot({type:'png',fullPage:false,animations:'disabled'}),15000,null);
-   if(valid(candidate)){buffer=candidate;method='playwright-page-screenshot';}
-   manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-page-screenshot',durationMs:Date.now()-playwrightStarted,success:valid(buffer)}];
-  }catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-page-screenshot',durationMs:Date.now()-playwrightStarted,success:false,error:String(error?.message||error)}];}
- }
- if(!valid(buffer)){
-  const canvasStarted=Date.now();
-  try{
-   const dataUrl=await bounded(page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null),15000,null);
-   const prefix='data:image/png;base64,';
-   if(typeof dataUrl==='string'&&dataUrl.startsWith(prefix)){
-    const candidate=Buffer.from(dataUrl.slice(prefix.length),'base64');
-    if(valid(candidate)){buffer=candidate;method='game-test-canvas-final-fallback';}
-   }
-   manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'game-test-canvas-final-fallback',durationMs:Date.now()-canvasStarted,success:valid(buffer)}];
-  }catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'game-test-canvas-final-fallback',durationMs:Date.now()-canvasStarted,success:false,error:String(error?.message||error)}];}
- }
+ if(!valid(buffer)&&cdpSession){const cdpStarted=Date.now();try{const shot=await bounded(cdpSession.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false,optimizeForSpeed:true}),afterFailure?8000:CDP_CAPTURE_TIMEOUT_MS,null);if(shot?.data){const candidate=Buffer.from(shot.data,'base64');if(valid(candidate)){buffer=candidate;method='cdp-page-capture';}}manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'cdp-page-capture',durationMs:Date.now()-cdpStarted,success:valid(buffer),trigger:canvasTimedOut?'canvas-timeout':'canvas-unavailable'}];}catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'cdp-page-capture',durationMs:Date.now()-cdpStarted,success:false,error:String(error?.message||error)}];}}
  if(!valid(buffer)){manifest.captureFailure=manifest.captureFailure||'No valid PNG was returned by CDP, Playwright or the final game-canvas fallback.';return false;}
  const file=afterFailure?'smoke-timeout-current-frame.png':'smoke-first-camera.png';
  fs.writeFileSync(path.join(OUT,file),buffer);manifest.screenshot={file,bytes:buffer.length,capturedAfterFailure:!!afterFailure,frameCaptureMethod:method};return true;
@@ -86,7 +66,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
  const prepared=await runPhase('set and verify single camera position',()=>page.evaluate(shot=>{const api=window.__ELSN_TEST__,base=shot.camera||shot;let camera={...base};if(Number.isInteger(shot.islandIndex)){const island=api.islands[shot.islandIndex];if(!island)throw new Error('No existe la isla '+shot.islandIndex);camera={x:island.x+base.x,y:base.y,z:island.z+base.z,targetX:island.x+base.targetX,targetY:base.targetY,targetZ:island.z+base.targetZ};}const lock=api.setCamera(camera);api.setWaterState({time:shot.time??37,tide:shot.tide??'natural'});const auditIslandIndex=api.islands.reduce((best,island,index)=>Math.hypot(island.x-camera.targetX,island.z-camera.targetZ)<Math.hypot(api.islands[best].x-camera.targetX,api.islands[best].z-camera.targetZ)?index:best,0);return {camera,lock,auditIslandIndex};},shot));
  manifest.camera=prepared.camera;manifest.cameraLock=prepared.lock;
  // Preserve the boat-approach view immediately after positioning the camera, before any structure audit or repair simulation.
- manifest.approachFrameSaved=await runPhase('capture boat-approach frame once before structure audit',()=>capturePng(page,false,true));
+ manifest.approachFrameSaved=false;manifest.approachFrameDeferredUntilSceneWarm=true;
  manifest.structureRepairSimulation=await runPhase('audit and repair structures in disposable test renderer',()=>page.evaluate(()=>{
   const api=window.__ELSN_TEST__;if(!api||typeof api.habitableStructureAudit!=='function'||typeof api.repairAndAuditHabitableStructures!=='function')throw new Error('Structure repair test API is unavailable.');
   const summarize=s=>({total:s.total,groundedCount:s.groundedCount,unsafeCount:s.unsafeCount,unsafeVisibleBeforeRepair:s.unsafeVisibleBeforeRepair,visibleInvalidAfterRepair:s.visibleInvalidAfterRepair,hiddenUnsafe:s.hiddenUnsafe,hiddenByDistance:s.hiddenByDistance,repaired:s.repaired,autoRegisteredRootCount:s.autoRegisteredRootCount,untrackedRootCount:s.untrackedRootCount});
@@ -109,7 +89,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
  }));if(!manifest.structureRepairSimulation?.passed){manifest.structureRepairSimulation.warning='Structure simulation gate did not pass; continuing the isolated camera capture so the offshore scene can still be inspected. The overall structure verdict remains fail.';console.warn('[CAPTURE] Structure simulation gate failed; continuing to capture the requested boat-approach camera.');}
  manifest.coastalDiagnostics.scope={camera:prepared.camera,auditIslandIndex:prepared.auditIslandIndex,geometryAuditScope:'all 13 islands',structureGroundingScope:'all registered/discovered habitable structures',mutationPolicy:'read-only; no production structure is moved, hidden or repaired'};
  // Save the exact offshore approach frame before texture/geometry diagnostics can stall the renderer.
- const approachFrameSaved=manifest.screenshot?true:await runPhase('retry boat-approach frame once after structure audit',()=>capturePng(page,true,true));
+ const approachFrameSaved=manifest.screenshot?true:await runPhase('capture boat-approach frame after scene audit',()=>capturePng(page,false,false));
  manifest.approachFrameSaved=!!(manifest.approachFrameSaved||approachFrameSaved);
  const convergenceResult=await runPhase('wait for render and texture convergence',()=>bounded(page.evaluate(({timeoutMs,maxFrames})=>window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs,maxFrames}),{timeoutMs:TIMEOUT_MS,maxFrames:120}),12000,{__prepareTimedOut:true}));
  const readinessTimedOut=!!convergenceResult?.__prepareTimedOut;
@@ -119,7 +99,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
  manifest.actualCamera=manifest.textureDiagnostics?.camera||null;manifest.cameraVerification=cameraVerification(manifest.camera,manifest.actualCamera);
  if(!readinessTimedOut)manifest.runtimeDiagnostics=await runPhase('collect render performance diagnostics',()=>collectRuntimeDiagnostics(page,5000));
  correlateNetworkEvents();
- await runPhase('verify bounded camera PNG capture',async()=>{if(manifest.screenshot)return;const saved=await capturePng(page,true,true);if(saved)return;throw new Error('No valid PNG was saved by the independent CDP capture attempts.');});
+ await runPhase('verify bounded camera PNG capture',async()=>{if(manifest.screenshot)return;const saved=await capturePng(page,true,false);if(saved)return;throw new Error('No valid PNG was saved by the game canvas or CDP fallback.');});
  manifest.verdict=verdict();
 
  try{
