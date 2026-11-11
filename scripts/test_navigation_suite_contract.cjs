@@ -84,7 +84,7 @@ assert.equal(children.length, 1, "Exactly one camera control must be attached to
 assert.equal(button.id, "cameraModeBtn");
 assert.equal(button.textContent, "CÁMARA: SEGUIR");
 assert.deepEqual(
-  contextWindow.__NorseNavigationSuite.getStatus(),
+  JSON.parse(JSON.stringify(contextWindow.__NorseNavigationSuite.getStatus())),
   { mode: "follow", originalMap: true, duplicateMap: false }
 );
 
