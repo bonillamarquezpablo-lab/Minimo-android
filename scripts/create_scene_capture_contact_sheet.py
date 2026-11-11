@@ -26,8 +26,6 @@ def main() -> None:
         raise SystemExit(f"Capture manifest not found: {MANIFEST}")
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     captures = manifest.get("captures") or []
-    if not captures:
-        raise SystemExit("No successful captures are available for the contact sheet.")
 
     available = []
     missing = []
@@ -37,8 +35,6 @@ def main() -> None:
             available.append((entry, image_path))
         else:
             missing.append(str(entry.get("file", "")))
-    if not available:
-        raise SystemExit("No capture PNG files were found.")
     available.sort(key=lambda pair: (
         str(pair[0].get("zoneId") or ""),
         str((pair[0].get("subject") or {}).get("code") or ""),
@@ -46,7 +42,7 @@ def main() -> None:
         str(pair[0].get("id") or ""),
     ))
 
-    rows = math.ceil(len(available) / COLUMNS)
+    rows = max(1, math.ceil(len(available) / COLUMNS))
     tile_w = THUMB_W
     tile_h = LABEL_H + THUMB_H
     width = COLUMNS * tile_w + (COLUMNS - 1) * GAP
@@ -60,6 +56,9 @@ def main() -> None:
               fill=TEXT, font=font)
     draw.text((8, 28), f"Build: {build} · read-only scene capture · grouped by zone and object",
               fill=MUTED, font=font)
+
+    if not available:
+        draw.text((12, HEADER_H + 18), "No hay capturas PNG disponibles. Consulta manifest.json y los fallos de ejecución.", fill=TEXT, font=font)
 
     for index, (entry, image_path) in enumerate(available):
         col, row = index % COLUMNS, index // COLUMNS
@@ -93,6 +92,9 @@ def main() -> None:
         "contactSheet": target.name,
         "successfulCaptures": len(available),
         "missingCaptureFiles": missing,
+        "captureFailures": manifest.get("failures") or [],
+        "consoleErrors": manifest.get("consoleErrors") or [],
+        "pageErrors": manifest.get("pageErrors") or [],
         "zones": manifest.get("zoneInspections") or [],
         "sceneInspection": manifest.get("initialPhysicalAudit") or {},
         "unifiedInspection": manifest.get("unifiedInspection") or {},
@@ -164,6 +166,15 @@ def main() -> None:
     if missing:
         report_lines.extend(["", "### Capturas ausentes", ""])
         report_lines.extend(f"- {name}" for name in missing)
+    failures = manifest.get("failures") or []
+    if failures:
+        report_lines.extend(["", "### Fallos de cámara", ""])
+        for failure in failures:
+            report_lines.append(f"- **{failure.get('id', 'sin ID')}:** {str(failure.get('error', 'error desconocido')).splitlines()[0]}")
+    if manifest.get("consoleErrors") or manifest.get("pageErrors"):
+        report_lines.extend(["", "### Errores de consola o página", ""])
+        report_lines.extend(f"- Consola: {error}" for error in (manifest.get("consoleErrors") or []))
+        report_lines.extend(f"- Página: {error}" for error in (manifest.get("pageErrors") or []))
     report_lines.extend(["", "## Archivos incluidos", "",
                          "- contact-sheet.png: todas las vistas en una sola lámina",
                          "- vision-review-index.json: inventario, diagnósticos, zonas y relación completa de capturas",
