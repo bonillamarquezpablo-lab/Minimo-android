@@ -354,6 +354,43 @@ def main() -> None:
         raise SystemExit("No se encontró exactamente una medición de altura de bandera de guarnición.")
     html = html.replace(detached_flag_measure, world_flag_measure, 1)
 
+    # Re-anchor every garrison prop after the outpost root is repaired or moved.
+    # Child props must follow the new world-space terrain height, not the island's
+    # original center/flag sample captured when the garrison was first created.
+    garrison_anchor_marker = """ for(let islandIndex=4;islandIndex<land.length;islandIndex++)makeIslandGarrison(islandIndex);"""
+    garrison_anchor_code = """ function syncIslandGarrisonGroundAnchors(){
+  for(const village of villages){
+   if(!village?.islandGarrison||!village.outpostRoot)continue;
+   const root=village.outpostRoot,base=root.position;
+   const flag=village.flagGroup;
+   if(flag?.position){
+    const wx=base.x+flag.position.x,wz=base.z+flag.position.z,groundY=renderedTerrainSurfaceAt(wx,wz);
+    if(Number.isFinite(groundY))flag.position.y=groundY-base.y+3.55;
+   }
+   const pole=village.flagpole;
+   if(pole?.position){
+    const wx=base.x+pole.position.x,wz=base.z+pole.position.z,groundY=renderedTerrainSurfaceAt(wx,wz);
+    if(Number.isFinite(groundY))pole.position.y=groundY-base.y+2.15;
+   }
+   const stakes=root.getChildMeshes?root.getChildMeshes(false):[];
+   for(const stake of stakes){
+    if(!String(stake.name||'').startsWith('IslandGarrisonStake_'+village.landIndex+'_'))continue;
+    if(!stake.position)continue;
+    const wx=base.x+stake.position.x,wz=base.z+stake.position.z,groundY=renderedTerrainSurfaceAt(wx,wz);
+    if(Number.isFinite(groundY))stake.position.y=groundY-base.y+.42;
+   }
+   root.computeWorldMatrix?.(true);flag?.computeWorldMatrix?.(true);pole?.computeWorldMatrix?.(true);
+  }
+ }"""
+    if html.count(garrison_anchor_marker) != 1:
+        raise SystemExit("No se encontró el punto único de creación de las nueve guarniciones.")
+    html = html.replace(garrison_anchor_marker, garrison_anchor_code + "\\n" + garrison_anchor_marker, 1)
+    garrison_audit_end = """lastHabitableStructureAudit=snapshot;return snapshot;"""
+    garrison_audit_end_fixed = """syncIslandGarrisonGroundAnchors();lastHabitableStructureAudit=snapshot;return snapshot;"""
+    if html.count(garrison_audit_end) != 1:
+        raise SystemExit("No se encontró el final único de la auditoría estructural.")
+    html = html.replace(garrison_audit_end, garrison_audit_end_fixed, 1)
+
     # The packaged build always prefers the same-origin, bundled files.
     html = html.replace(
         "async function resolveVikingAssetUrls(){\n  if(isPerformanceMode)return [VIKING_GLB_URL];\n  const urls=[VIKING_GLB_URL];",
