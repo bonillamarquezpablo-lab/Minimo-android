@@ -17,7 +17,7 @@ async function main() {
   assert.doesNotMatch(workflow,/^  (texture-smoke|character-startup|custom-capture):/m,
     'All checks must be invoked from one workflow job.');
   assert.doesNotMatch(workflow,/^  push:/m);
-  assert.match(workflow,/group: scene-capture-\$\{\{ github\.sha \}\}/);
+  assert.match(workflow,/group: scene-capture-\\$\\{\\{ github\\.event\\.pull_request\\.number \\|\\| github\\.ref \\}\\}/);
   assert.match(workflow,/GITHUB_EVENT_NAME/);
   assert.match(workflow,/workflow_dispatch/);
   assert.doesNotMatch(workflow,/if: false # Phase 1/);
