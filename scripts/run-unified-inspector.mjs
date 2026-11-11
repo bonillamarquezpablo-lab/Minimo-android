@@ -25,25 +25,38 @@ function runNodePhase(name,script,env={},timeoutMs=25*60*1000){
   return new Promise(resolve=>{
     const row={name,script,startedAt:new Date().toISOString(),status:'running',durationMs:null,exitCode:null,error:null};
     phases.push(row);writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});
-    console.log('\n[UNIFIED_INSPECTOR] START '+name+' — '+script);
+    console.log('\\n[UNIFIED_INSPECTOR] START '+name+' — '+script);
     const phaseStarted=Date.now();
     let child;
     try{child=spawn(process.execPath,[script],{cwd:ROOT,env:{...process.env,...env},stdio:'inherit'});}
     catch(error){row.status='failed';row.error=String(error?.stack||error);row.durationMs=Date.now()-phaseStarted;writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});return resolve(row);}
-    let settled=false;
+    let settled=false,timedOut=false,timer=null,forceTimer=null,finalTimer=null;
+    const timeoutMessage='Exceeded phase timeout of '+timeoutMs+' ms.';
     const finish=(status,code,error=null)=>{
-      if(settled)return;settled=true;clearTimeout(timer);
+      if(settled)return;settled=true;
+      clearTimeout(timer);clearTimeout(forceTimer);clearTimeout(finalTimer);
       Object.assign(row,{status,exitCode:code,error,finishedAt:new Date().toISOString(),durationMs:Date.now()-phaseStarted});
       writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});
       console.log('[UNIFIED_INSPECTOR] END '+name+' — '+status+' ('+row.durationMs+' ms)');
       resolve(row);
     };
-    const timer=setTimeout(()=>{
-      try{child.kill('SIGTERM');}catch{}
-      finish('timed_out',null,'Exceeded phase timeout of '+timeoutMs+' ms.');
+    timer=setTimeout(()=>{
+      timedOut=true;
+      console.error('[UNIFIED_INSPECTOR] TIMEOUT '+name+' — sending SIGTERM to its process.');
+      try{child.kill('SIGTERM');}
+      catch(error){finish('timed_out',null,timeoutMessage+' SIGTERM failed: '+String(error?.message||error));return;}
+      forceTimer=setTimeout(()=>{
+        console.error('[UNIFIED_INSPECTOR] FORCE STOP '+name+' — sending SIGKILL.');
+        try{child.kill('SIGKILL');}catch(_){}
+        finalTimer=setTimeout(()=>finish('timed_out',null,timeoutMessage+' The child did not close after SIGKILL.'),2000);
+      },5000);
     },timeoutMs);
-    child.once('error',error=>finish('failed',null,String(error?.stack||error)));
-    child.once('close',(code,signal)=>finish(code===0?'passed':'failed',code,code===0?null:'exit='+code+' signal='+(signal||'none')));
+    child.once('error',error=>finish(timedOut?'timed_out':'failed',null,timedOut?timeoutMessage+' '+String(error?.stack||error):String(error?.stack||error)));
+    child.once('close',(code,signal)=>finish(
+      timedOut?'timed_out':code===0?'passed':'failed',
+      timedOut?null:code,
+      timedOut?timeoutMessage+' Child terminated with '+(signal||'an unknown signal')+'.':code===0?null:'exit='+code+' signal='+(signal||'none')
+    ));
   });
 }
 function runPythonPhase(name,script,arg,timeoutMs=5*60*1000){

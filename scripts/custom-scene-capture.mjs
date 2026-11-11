@@ -58,7 +58,11 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
     const auditStarted=Date.now();
     const initialAudit=await page.evaluate(()=>window.__ELSN_TEST__.inspectScene({inventoryLimit:5000,offshoreLimit:500}));
     manifest.phaseTimingsMs.initialReadOnlyAudit=Date.now()-auditStarted;
-    initialAudit.structuralCandidates=(initialAudit.structuralCandidates||[]).map(item=>({...item,code:item.code||makeStableObjectCode(item)}));
+    const rawStructuralCandidates=initialAudit.structuralCandidates;
+    if(!Array.isArray(rawStructuralCandidates)){
+      throw new Error('La inspección unificada no devolvió una lista válida de estructuras; no se sustituirá por una lista vacía.');
+    }
+    initialAudit.structuralCandidates=rawStructuralCandidates.map(item=>({...item,code:item.code||makeStableObjectCode(item)}));
     manifest.initialPhysicalAudit=initialAudit;
     manifest.geometryAudit=initialAudit.geometry;
     manifest.objectInventory={
@@ -81,7 +85,12 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
       phaseTimingsMs:initialAudit.phaseTimingsMs,
       errors:initialAudit.errors
     };
-    if(!initialAudit.structuralCandidates)throw new Error('La inspección unificada no ha devuelto el inventario de estructuras.');
+    if(!initialAudit.sceneInventory||!Number.isFinite(Number(initialAudit.sceneInventory.returnedCount))){
+      throw new Error('La inspección no ha confirmado cuántos objetos devolvió el inventario completo de escena.');
+    }
+    if(Number(initialAudit.sceneInventory.omittedCount||0)>0){
+      throw new Error('El inventario de escena está truncado: '+initialAudit.sceneInventory.omittedCount+' objetos han quedado fuera del límite de inspección.');
+    }
     if(initialAudit.errors&&Object.keys(initialAudit.errors).length){
       console.warn('[scene-inspection] Secciones con errores:',JSON.stringify(initialAudit.errors));
     }

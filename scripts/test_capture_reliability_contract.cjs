@@ -36,6 +36,12 @@ async function main() {
   assert.match(runner,/cameraVerified:prepared\.cameraVerified/,'The camera verification must be saved in the capture manifest.');
   assert.match(runner,/createZoneInspectionShots/);
   assert.match(runner,/__ELSN_TEST__\.inspectScene\(\{inventoryLimit:5000,offshoreLimit:500\}\)/);
+  assert.match(runner,/const rawStructuralCandidates=initialAudit\.structuralCandidates;/,'A missing structural inventory must not be silently converted into an empty list.');
+  assert.match(runner,/Array\.isArray\(rawStructuralCandidates\)/,'The read-only scene capture must validate the structural inventory type.');
+  assert.match(runner,/sceneInventory\.omittedCount/,'A truncated scene inventory must fail instead of appearing complete.');
+  assert.match(unifiedRunner,/timedOut=false/,'Timed-out child processes must be tracked separately from ordinary failures.');
+  assert.match(unifiedRunner,/child\.kill\('SIGKILL'\)/,'The unified runner must force-stop a child that ignores SIGTERM.');
+
   assert.match(unifiedRunner,/scripts\/player-startup-smoke\.mjs/);
   assert.match(unifiedRunner,/scripts\/texture-readiness-smoke\.mjs/);
   assert.match(unifiedRunner,/scripts\/coastal-structure-grounding-smoke\.mjs/);
