@@ -90,8 +90,12 @@ def main() -> None:
     missing_atmosphere_markers = [marker for marker in atmosphere_markers if marker not in atmosphere_source]
     if missing_atmosphere_markers:
         fail("El sistema atmosférico unificado está incompleto: " + ", ".join(missing_atmosphere_markers))
-    if '<script src="./scripts/nordic/atmosphere-system.js" defer></script>' not in index_html:
+    atmosphere_tag = '<script src="./scripts/nordic/atmosphere-system.js"></script>'
+    game_runtime_marker = '<script>\n(function(){\n"use strict";\nwindow.addEventListener(\'error\''
+    if atmosphere_tag not in index_html:
         fail("La página principal no carga el sistema atmosférico unificado.")
+    if index_html.count(game_runtime_marker) != 1 or index_html.index(atmosphere_tag) > index_html.index(game_runtime_marker):
+        fail("El sistema atmosférico debe cargarse antes del runtime principal.")
     if "window.__ELSN_ATMOSPHERE_CONTROLS" not in index_html or "atmosphereSystem.update(dt)" not in index_html:
         fail("El reloj atmosférico no está conectado al bucle de juego y a sus controles.")
     if 'id="game-build-version"' not in index_html or f'v{EXPECTED_VERSION}</span>' not in index_html:
