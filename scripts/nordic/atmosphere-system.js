@@ -169,6 +169,7 @@
       this.disposed = false;
       this._createSkyResources();
       this._createMoonAndLights();
+      this._adjustMaterialLightBudgets();
       this._configurePostProcessing();
       this._upgradeShadowsWhenSupported();
       this._createLocalLightPool();
@@ -375,6 +376,17 @@
       }
     }
 
+    _adjustMaterialLightBudgets() {
+      const budget = this.quality === 'high' ? 4 : (this.quality === 'medium' ? 3 : 2);
+      const affected = /(terrain|grass|wood|stone|roof|hut|window|submergedsand|coastal|village|clan)/i;
+      for (const material of this.scene.materials || []) {
+        if (!material || !affected.test(String(material.name || ''))) continue;
+        if (typeof material.maxSimultaneousLights === 'number') {
+          material.maxSimultaneousLights = Math.max(material.maxSimultaneousLights, budget);
+        }
+      }
+    }
+
     _configurePostProcessing() {
       const B = this.B;
       if (this.renderPipeline) {
@@ -488,7 +500,7 @@
       }
       // Exactly two nearby fire lights stay active: one sun/moon + hemi + two fires
       // respects common four-light material budgets on mobile.
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < (this.quality === 'low' ? 1 : 2); i++) {
         const light = new B.PointLight('NorseNightHearthPool_' + i, new B.Vector3(0, 0, 0), scene);
         light.diffuse = new B.Color3(1.0, 0.43, 0.14);
         light.specular = new B.Color3(1.0, 0.30, 0.08);
@@ -671,10 +683,11 @@
         this.windowMaterial.emissiveColor.copyFrom(new B.Color3(0.8 * glow, 0.38 * glow, 0.10 * glow));
       }
       if (this.godRays) {
-        const rayFactor = state.twilight * (1 - storm * 0.85);
-        this.godRays.exposure = 0.005 + rayFactor * 0.13;
-        this.godRays.weight = 0.025 + rayFactor * 0.34;
-        this.godRays.density = 0.72 + rayFactor * 0.18;
+        const rayFactor = state.twilight * state.daylight * (1 - storm * 0.85);
+        const rayActive = rayFactor > 0.015;
+        this.godRays.exposure = rayActive ? 0.02 + rayFactor * 0.13 : 0;
+        this.godRays.weight = rayActive ? 0.04 + rayFactor * 0.34 : 0;
+        this.godRays.density = rayActive ? 0.72 + rayFactor * 0.18 : 0;
       }
       this._updateFirePool(state, focus || { x: 0, z: 0 });
       this.lastState = state;
