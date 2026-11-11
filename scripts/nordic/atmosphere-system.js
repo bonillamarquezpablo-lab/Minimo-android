@@ -331,6 +331,8 @@
         material.setTexture('starsMap', this.starsTexture);
         this.skyMaterial = material;
         this.skyDome.material = material;
+        // Free the former 1536x768 flat sky texture after the shader has replaced it.
+        if (this.skyTexture) { this.skyTexture.dispose(); this.skyTexture = null; }
       } catch (error) {
         console.warn('Atmosphere shader unavailable; retaining the authored Nordic sky fallback.', error);
       }
@@ -400,8 +402,8 @@
 
       if (this.quality !== 'low' && B.VolumetricLightScatteringPostProcess && this.sunDisc) {
         try {
-          const ratio = this.quality === 'high' ? 0.55 : 0.38;
-          const samples = this.quality === 'high' ? 64 : 36;
+          const ratio = this.quality === 'high' ? (this.isTouchDevice ? 0.34 : 0.55) : 0.32;
+          const samples = this.quality === 'high' ? (this.isTouchDevice ? 32 : 64) : 28;
           this.godRays = new B.VolumetricLightScatteringPostProcess(
             'NorseSunGodRays', ratio, this.camera, this.sunDisc, samples,
             B.Texture.BILINEAR_SAMPLINGMODE, this.engine, true);
@@ -416,21 +418,22 @@
       }
 
       // SSAO/SSR are optional high-tier screen-space approximations.
-      if (this.quality === 'high' && !this.isTouchDevice) {
+      if (this.quality === 'high') {
         try {
+          const ssaoRatio = this.isTouchDevice ? 0.28 : 0.42;
           if (B.SSAO2RenderingPipeline) {
             this.ssaoPipeline = new B.SSAO2RenderingPipeline(
-              'NorseAtmosphereSSAO2', this.scene, 0.42, [this.camera]);
+              'NorseAtmosphereSSAO2', this.scene, ssaoRatio, [this.camera]);
           } else if (B.SSAORenderingPipeline) {
             this.ssaoPipeline = new B.SSAORenderingPipeline(
-              'NorseAtmosphereSSAO', this.scene, { ssaoRatio: 0.42, combineRatio: 1.0 }, [this.camera]);
+              'NorseAtmosphereSSAO', this.scene, { ssaoRatio, combineRatio: 1.0 }, [this.camera]);
           }
         } catch (error) {
           this.ssaoPipeline = null;
           console.warn('SSAO unavailable; ambient hemisphere lighting remains active.', error);
         }
         try {
-          if (B.SSRRenderingPipeline) {
+          if (!this.isTouchDevice && B.SSRRenderingPipeline) {
             this.ssrPipeline = new B.SSRRenderingPipeline(
               'NorseAtmosphereSSR', this.scene, [this.camera]);
           }
@@ -445,7 +448,7 @@
       const B = this.B;
       const previous = this.getShadowGenerator();
       const caps = this.engine && this.engine.getCaps ? this.engine.getCaps() : {};
-      const webgl2 = Number(this.engine && this.engine.webGLVersion) >= 2 || !!caps.supportComputeShaders;
+      const webgl2 = Number(this.engine && (this.engine.webGLVersion || this.engine._webGLVersion)) >= 2 || !!caps.supportComputeShaders;
       if (!previous || this.quality === 'low' || !B.CascadedShadowGenerator || !webgl2) {
         this.shadowMode = 'standard';
         return;
@@ -463,6 +466,8 @@
         csm.darkness = 0.27;
         csm.usePercentageCloserFiltering = true;
         csm.filteringQuality = B.ShadowGenerator.QUALITY_HIGH;
+        const csmMap = csm.getShadowMap && csm.getShadowMap();
+        if (csmMap) csmMap.refreshRate = this.isTouchDevice ? 8 : 2;
         const oldMap = previous.getShadowMap && previous.getShadowMap();
         const renderList = oldMap && Array.isArray(oldMap.renderList) ? oldMap.renderList.slice() : [];
         for (const mesh of renderList) if (mesh && !(mesh.isDisposed && mesh.isDisposed())) csm.addShadowCaster(mesh, false);
@@ -622,7 +627,7 @@
           this.skyMaterial.setFloat('nightFactor', state.night);
           this.skyMaterial.setFloat('cloudCoverage', overcast);
           this.skyMaterial.setFloat('stormFactor', storm);
-          this.skyMaterial.setFloat('auroraStrength', this.quality === 'high' ? 0.095 : 0.035);
+          this.skyMaterial.setFloat('auroraStrength', this.quality === 'high' ? (weather === 'clear' ? 0.095 : 0.025) : 0.035);
           this.skyMaterial.setFloat('uTime', this.elapsedSeconds);
         } catch (error) {
           if (!this._shaderWarned) console.warn('Atmosphere shader uniform update failed.', error);
