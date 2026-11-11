@@ -52,6 +52,7 @@ jobs:
           node --check scripts/coastal-reference.mjs
           node --check scripts/scene-capture-inspection.mjs
           node --check scripts/custom-scene-capture.mjs
+          node scripts/test_scene_capture_efficiency_contract.cjs
           node scripts/test_texture_readiness_contract.cjs
           node scripts/test_coastal_structure_grounding_contract.cjs
           node scripts/test_capture_reliability_contract.cjs
