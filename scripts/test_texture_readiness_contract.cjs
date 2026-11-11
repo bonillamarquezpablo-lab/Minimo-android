@@ -52,8 +52,12 @@ assert.match(smoke,/unsafePairsVerified=verifiedSafeRelocationCount===unsafeBefo
 assert.match(smoke,/&&unsafePairsVerified&&offshoreClear/);
 assert.match(smoke,/visibleOffshoreAfter===0/);
 assert.match(smoke,/offshoreClear/);
-assert.match(smoke,/floatingProbePassed=floatingProbe\?\.detected===true&&floatingProbe\?\.autoDiscovered===true&&floatingProbe\?\.hidden===false/);
-assert.match(smoke,/lastAction==='relocated-to-dry-ground'&&floatingProbe\?\.lastStatus==='grounded'&&floatingProbe\?\.untrackedRootCount===0/);
+assert.match(smoke,/floatingProbeGrounded=floatingProbe\?\.lastStatus==='grounded'/);
+assert.match(smoke,/floatingProbe\?\.lastAction==='relocated-to-dry-ground'&&floatingProbe\?\.hidden===false/);
+assert.match(smoke,/floatingProbe\?\.lastAction==='culled-distance'&&floatingProbe\?\.hidden===true/);
+assert.match(smoke,/floatingProbeSafelyHidden=floatingProbe\?\.hidden===true&&floatingProbe\?\.lastAction==='hidden-no-safe-ground'/);
+assert.match(smoke,/floatingProbePassed=floatingProbe\?\.detected===true&&floatingProbe\?\.autoDiscovered===true&&floatingProbe\?\.untrackedRootCount===0&&\(floatingProbeGrounded\|\|floatingProbeSafelyHidden\)/);
+assert.match(smoke,/floatingProbeGrounded=floatingProbe\?\.lastStatus==='grounded'/,'The probe may be hidden only by distance culling after grounding, or by the safe no-ground fallback.');
 assert.match(smoke,/structureGatePassed/);
 assert.match(smoke,/if\(!structureGatePassed\)manifest\.verdict='fail'/);
 assert.match(smoke,/noFootingOutliers=houseOutliers\.length===0&&campOutliers\.length===0&&garrisonOutliers\.length===0/);
