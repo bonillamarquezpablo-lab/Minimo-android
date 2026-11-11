@@ -179,6 +179,11 @@ export function createZoneInspectionShots(request, islands, candidates) {
     y: Number(zone.center?.y || 0),
     z: Number(zone.center?.z || 0) + origin.z
   };
+  const observationPoint = zone.observationPoint ? {
+    x:Number(zone.observationPoint.x)+(zone.absolute?0:origin.x),
+    y:Number(zone.observationPoint.y),
+    z:Number(zone.observationPoint.z)+(zone.absolute?0:origin.z)
+  } : null;
   const stateVariants = [];
   for (const time of (zone.times || [37])) {
     for (const tide of (zone.tides || ['natural'])) stateVariants.push({time,tide});
@@ -242,7 +247,7 @@ export function createZoneInspectionShots(request, islands, candidates) {
     if (zone.focus === 'structures' && selected.length) {
       // A fixed offshore observation point lets the user inspect every building from
       // one real boat/water vantage instead of relying only on synthetic orbit cameras.
-      if (zone.observationPoint) {
+      if (observationPoint) {
         for (const item of selected) {
           const p = item.position;
           const bounds = item.bounds || {};
@@ -263,9 +268,9 @@ export function createZoneInspectionShots(request, islands, candidates) {
           for (let heightIndex=0;heightIndex<zone.observationHeightOffsets.length;heightIndex++) {
             const offset=zone.observationHeightOffsets[heightIndex];
             const camera={
-              x:zone.observationPoint.x,
-              y:zone.observationPoint.y+offset,
-              z:zone.observationPoint.z,
+              x:observationPoint.x,
+              y:observationPoint.y+offset,
+              z:observationPoint.z,
               targetX:target.x,targetY:target.y,targetZ:target.z
             };
             addShot(item.code.toLowerCase()+'-water-'+String(heightIndex+1)+'-s'+stateIndex+'-'+state.tide,
@@ -350,7 +355,7 @@ export function createZoneInspectionShots(request, islands, candidates) {
     center,
     islandIndex:zone.islandIndex ?? null,
     radiusMeters:zone.radiusMeters,
-    observationPoint:zone.observationPoint,
+    observationPoint,
     observationHeightOffsets:zone.observationHeightOffsets,
     candidateCount:unique.length,
     selectedTargetCount:selected.length,
