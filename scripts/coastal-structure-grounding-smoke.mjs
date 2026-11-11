@@ -98,7 +98,7 @@ function collectStructureSnapshot(){
 
  const houseOutliers=houses.filter(item=>Math.abs(Number(item.groundingErrorMeters)||0)>.02||Number(item.maximumFootingGapMeters)>.02||Number(item.dryLandFootprintMarginMeters)<1.25);
  const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02||(item.supportPoints||[]).some(point=>Math.abs(Number(point.baseGapMeters)||0)>.02));
- const garrisonOutliers=garrisons.filter(item=>Number(item.outpostErrorMeters)>.02||Number(item.flagErrorMeters)>.02||Number(item.guardErrorMeters)>.06);
+ const garrisonOutliers=garrisons.filter(item=>Number(item.outpostErrorMeters)>.02||Number(item.flagErrorMeters)>.02||Number(item.guardErrorMeters)>.06||Number(item.detachedPropCount)>0);
  return {
   structures,offshore,houses,camps,garrisons,view,projectedCandidates,inventoryStructuralCandidates,unregisteredCandidateReview,navigationPointAudit,hrafnSceneRoots,nearbyHrafnStructureRoots,hrafnHutRoots,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
   summary:{
