@@ -778,6 +778,7 @@ def main() -> None:
      timeOfDay:8.25,dayDurationSeconds:300
     });
     window.__ELSN_ATMOSPHERE=atmosphereSystem;
+    if(typeof syncNordicWaterReflectionIsland==='function'){activeWaterReflectionIslandIndex=-2;syncNordicWaterReflectionIsland();}
     window.__ELSN_ATMOSPHERE_CONTROLS={
      setTime:value=>atmosphereSystem.setTime(value),
      pause:()=>atmosphereSystem.pause(),
