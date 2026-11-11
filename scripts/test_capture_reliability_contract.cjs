@@ -28,7 +28,10 @@ async function main() {
   assert.match(runner,/cameraReadback/);
   assert.match(runner,/createZoneInspectionShots/);
   assert.match(runner,/auditOffshoreStructures\(1000\)/);
-  assert.match(runner,/coastalSceneInventory\(5000\)/);
+  assert.match(runner,/coastalSceneInventory\(2000\)/);
+  assert.match(workflow,/create_scene_capture_contact_sheet\\.py/);
+  assert.match(workflow,/needs: texture-smoke/);
+  assert.match(plannerSource,/capturePrefix/);
   assert.doesNotMatch(runner,/repairAndAuditHabitableStructures/,
     'The camera inspection run must not repair or move objects before capturing the original scene.');
 
