@@ -8879,7 +8879,7 @@ function createRealWeapon(type='axe'){
    sphere('HutChimneyStone_'+i,g,[-1.24+Math.cos(a)*.19,2.68+Math.sin(a)*.08,-1.98],[.24,.20,.23],M.stone,8);
   }
   box('HutChimneyMouth',g,[-1.24,2.83,-1.98],[.29,.09,.29],M.woodDark);
-  if(scale>.78&&footing.valid){g.__norseSmokeEmitter={x:houseX-1.24*scale,y:g.position.y+2.92*scale,z:houseZ-1.98*scale,phase:rand(0,8)};smokeEmitters.push(g.__norseSmokeEmitter);}
+  if(scale>.78&&footing.valid){g.__norseSmokeEmitter={x:houseX-1.24*scale,y:footing.centerY-.02*scale+2.92*scale,z:houseZ-1.98*scale,phase:rand(0,8)};smokeEmitters.push(g.__norseSmokeEmitter);}
   // Dos tablones de reparación, un travesaño vencido y restos: detalle medido para no sumar cientos de draw calls.
   for(let i=0;i<2;i++){
    const side=i===0?-1:1,zp=rand(-2.05,2.05),yp=rand(.50,1.45);
