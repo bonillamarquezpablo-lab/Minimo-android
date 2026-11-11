@@ -12985,7 +12985,7 @@ function update(dt){
 
   function auditOffshoreStructuralRoots(limit=250){
    const started=performance.now(),maxItems=Math.max(25,Math.min(500,Math.floor(Number(limit)||250)));
-   const structureNamePattern=/(?:weatherednorsehut|persistent(?:player)?norseshelter|norse.*(?:hut|house|shelter|cabin|longhouse|meadhall|forge|watchtower|outpost|camp)|(?:island)?(?:outpost|scoutcamp|garrisonoutpost|watchtower|blacksmithforge|castawaycamp|settlementhouse|building)(?:[_-]?\\d+)?|(?:hut|house|shelter|cabin|longhouse|meadhall)(?:[_-]?\\d+)?)/i;
+   const structureNamePattern=/(?:weatherednorsehut|persistent(?:player)?norseshelter|norse.*(?:hut|house|shelter|cabin|longhouse|meadhall|forge|watchtower|outpost|camp)|(?:island)?(?:outpost|scoutcamp|garrisonoutpost|watchtower|blacksmithforge|castawaycamp|settlementhouse|building)(?:[_-]?\d+)?|(?:hut|house|shelter|cabin|longhouse|meadhall)(?:[_-]?\d+)?)/i;
    const excludedRootPattern=/(?:villageguard|factionbadge|garrisonstandard|garrisonflag|garrisoncrossbar|garrisonflagpole|forgehammerstand|flag|banner|weapon|tree|grass|ship|boat|drakkar|dock|norseregattabuoy|regattabuoymooring|regattabuoybody|regattabuoycrest|regattabuoycollar)/i;
    const registered=new Map(habitableStructureRegistry.map(entry=>[entry.root,entry]));
    const candidates=new Set(registered.keys()),parentRoot=(node)=>{let current=node.parent,depth=0;while(current&&depth++<16){if(structureNamePattern.test(current.name||''))return current;current=current.parent;}return null;};
@@ -13390,7 +13390,7 @@ function update(dt){
      });
     };
     (offshore?.candidates||[]).forEach(item=>addCandidate(item,'offshore-structural-root-audit'));
-    const structuralAncestorPattern=/(?:weatherednorsehut|persistent(?:player)?norseshelter|island(?:outpost|scoutcamp|garrisonoutpost)_\\d+|norse(?:greatmeadhall|blacksmithforge|watchtower)_\\d+|(?:hut|house|shelter|cabin|longhouse|meadhall|outpost|scoutcamp|garrisonoutpost)(?:[_-]?\\d+)?)/i;
+    const structuralAncestorPattern=/(?:weatherednorsehut|persistent(?:player)?norseshelter|island(?:outpost|scoutcamp|garrisonoutpost)_\d+|norse(?:greatmeadhall|blacksmithforge|watchtower)_\d+|(?:hut|house|shelter|cabin|longhouse|meadhall|outpost|scoutcamp|garrisonoutpost)(?:[_-]?\d+)?)/i;
     (sceneInventory?.objects||[]).filter(item=>
       (item.category==='structure'||item.category==='unidentified-structure')&&
       !(item.parentChain||[]).some(parent=>structuralAncestorPattern.test(String(parent||'')))&&
