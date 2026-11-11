@@ -95,7 +95,7 @@ def main() -> None:
         "outpostX:root?Number(root.x.toFixed(2)):null",
     ):
         if required_garrison_link not in index_html:
-            fail("Las piezas de guarnición deben usar transformaciones reales de mundo/local y comprobar su apoyo y parentesco.")
+            fail(f"Las piezas de guarnición deben usar transformaciones reales de mundo/local y comprobar su apoyo y parentesco. Marcador ausente: {required_garrison_link}")
 
     for required_garrison_animation in (
         "flagBaseY:flagY+3.55-outpostGroundY",
