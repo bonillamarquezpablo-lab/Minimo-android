@@ -78,10 +78,12 @@ async function main() {
   assert.equal(resolved.report.candidateCount,2,'Only structural roots inside the requested zone should be selected.');
   assert.equal(resolved.report.selectedTargetCount,2);
   assert.equal(resolved.report.omittedTargetCount,0);
-  assert.equal(resolved.shots.length,38,'Two structures should receive 8 overview + 13 inspection + 2 offshore views each.');
+  assert.equal(resolved.shots.length,40,'Two structures should receive 8 area + 2 offshore overviews and 15 views per structure.');
   assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-low-oblique').length,16);
   assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-high-oblique').length,8);
   assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-top-down').length,2);
+  const waterOverview=resolved.shots.filter(shot=>shot.inspectionPurpose==='zone-water-overview');
+  assert.equal(waterOverview.length,2,'The full bay must also be captured from the fixed offshore viewpoint.');
   const waterShots=resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-water-observation');
   assert.equal(waterShots.length,4,'Every structure should be photographed from both heights at the fixed offshore observation point.');
   assert.ok(waterShots.every(shot=>shot.camera.x===120&&(shot.camera.y===6||shot.camera.y===8)));
@@ -104,11 +106,12 @@ async function main() {
   const wide=planner.createZoneInspectionShots(widePlan.zones[0],[{x:100,z:200}],wideCandidates);
   assert.equal(wide.report.selectedTargetCount,12,'The unified inspector should include up to twelve nearby structures.');
   assert.equal(wide.report.omittedTargetCount,1,'Any structure outside the one-run camera budget must be reported explicitly.');
-  assert.equal(wide.shots.length,92,'Twelve structures should receive adaptive multi-angle and offshore views within the 120-shot cap.');
+  assert.equal(wide.shots.length,94,'Twelve structures should receive adaptive multi-angle and offshore views within the 120-shot cap.');
   assert.ok(wide.shots.length<=planner.MAX_CAPTURE_SHOTS);
   assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-low-oblique').length,36);
   assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-high-oblique').length,12);
   assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-water-observation').length,24);
+  assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='zone-water-overview').length,2);
 
   const waterPlan = planner.expandCapturePlan([{
     id:'shore-water',
