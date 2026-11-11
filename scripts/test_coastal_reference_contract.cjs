@@ -102,7 +102,7 @@ assert.ok(captureRunner.includes('api.captureCanvas()'),
   'Coastal reference images must be read directly from the WebGL canvas, not the HTML page');
 assert.ok(!captureRunner.includes('page.screenshot('),
   'Full-page screenshots can include menus/HUD and add unnecessary SwiftShader compositor cost');
-assert.ok(captureRunner.includes("assert.equal(boot.build, '0.6.275'"), 'The capture must inspect the exact current 0.6.275 candidate.');
+assert.ok(captureRunner.includes("assert.equal(boot.build, '0.6.276'"), 'The capture must inspect the exact current 0.6.276 candidate.');
 assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The scene capture must use the synchronized 0.6.275 HTML build.');
 assert.match(html,/const vegetationTrailPaths=\[\],packedTrailMeshes=\[\]/, 'The game must keep direct references to its packed-trail meshes for deterministic test isolation.');
 assert.match(html,/packedTrailMeshes\.push\(mesh\)/, 'Every generated packed trail must be registered for the test-only A/B capture.');
