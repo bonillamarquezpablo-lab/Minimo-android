@@ -375,15 +375,21 @@ def main() -> None:
   const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,null);flagGroup.position=v(flagX,flagY+3.55,flagZ);"""
     attached_flagpole = """  const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,outpostRoot,[flagX-island.x,flagY+2.15-outpostGroundY,flagZ-island.z],4.3,.075,.075,M.woodLight);flagPole.parent=outpostRoot;
   const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,outpostRoot);flagGroup.parent=outpostRoot;flagGroup.position=v(flagX-island.x,flagY+3.55-outpostGroundY,flagZ-island.z);"""
-    if html.count(detached_flagpole) != 1:
-        raise SystemExit("No se encontró exactamente una pareja de raíces independientes de bandera de guarnición.")
-    html = html.replace(detached_flagpole, attached_flagpole, 1)
+    flagpole_occurrences = html.count(detached_flagpole)
+    if flagpole_occurrences < 1:
+        raise SystemExit("No se encontró ninguna pareja de raíces independientes de bandera de guarnición.")
+    html = html.replace(detached_flagpole, attached_flagpole)
+    if html.count(detached_flagpole) or html.count(attached_flagpole) != flagpole_occurrences:
+        raise SystemExit("No se pudieron anclar todas las banderas de las guarniciones.")
 
     detached_stake = """   cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,null,[px,py+.42,pz],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);"""
     attached_stake = """   const stakeMesh=cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,outpostRoot,[px-island.x,py+.42-outpostGroundY,pz-island.z],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);if(stakeMesh)stakeMesh.parent=outpostRoot;"""
-    if html.count(detached_stake) != 1:
-        raise SystemExit("No se encontró exactamente una raíz independiente de estacas de guarnición.")
-    html = html.replace(detached_stake, attached_stake, 1)
+    stake_occurrences = html.count(detached_stake)
+    if stake_occurrences < 1:
+        raise SystemExit("No se encontró ninguna raíz independiente de estacas de guarnición.")
+    html = html.replace(detached_stake, attached_stake)
+    if html.count(detached_stake) or html.count(attached_stake) != stake_occurrences:
+        raise SystemExit("No se pudieron anclar todas las estacas de las guarniciones.")
 
     # The garrison grounding probe must measure the flag group's world transform,
     # not its local Y after the group becomes a child of IslandGarrisonOutpost_N.
