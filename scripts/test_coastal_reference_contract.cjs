@@ -101,6 +101,10 @@ console.log('COASTAL REFERENCE CONTRACT OK');
 
 assert.ok(captureRunner.includes('api.captureCanvas()'),
   'Coastal reference images must be read directly from the WebGL canvas, not the HTML page');
+assert.match(captureRunner, /atmospherePngDataUrl = await page\.evaluate\(\(\) => window\.__ELSN_TEST__\?\.captureCanvas\(\)\)/,
+  'Atmosphere phase captures must read the animated WebGL canvas directly.');
+assert.ok(!captureRunner.includes("page.locator('#renderCanvas').screenshot"),
+  'Do not wait for an animated canvas element to become visually stable before atmosphere captures.');
 assert.ok(!captureRunner.includes('page.screenshot('),
   'Full-page screenshots can include menus/HUD and add unnecessary SwiftShader compositor cost');
 assert.ok(captureRunner.includes("assert.equal(boot.build, '0.6.276'"), 'The capture must inspect the exact current 0.6.276 candidate.');
