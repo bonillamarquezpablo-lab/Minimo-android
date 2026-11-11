@@ -14,6 +14,7 @@ assert.match(source,/garrisonGrounding\(\)/);
 assert.ok(builder.includes('local_flag_base_y = "flagBaseY:flagY+3.55-outpostGroundY"'));
 assert.ok(builder.includes('local_flag_reset = "if(vl.flagGroup){vl.flagGroup.position.y=vl.flagBaseY??(terrainSurfaceAt(vl.x,vl.z)+4.65);'));
 assert.ok(builder.includes('local_capture_raise = "village.flagGroup.position.y=(village.islandGarrison?2.15-(village.outpostRoot?.position?.y||0):2.15)+2.5*ease;"'));
+assert.ok(builder.includes('garrison.flagBaseY=garrisonFlagGroup.position.y'));
 
 assert.match(source,/structure-grounding\.json/);
 assert.match(source,/testRendererOnlyMutations:true/);
