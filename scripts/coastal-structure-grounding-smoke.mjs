@@ -208,8 +208,8 @@ async function main(){
    houseCount:report.summary.houseCount,houseOutliers:report.summary.houseOutliers,
    campCount:report.summary.campCount,campOutliers:report.summary.campOutliers,
    garrisonCount:report.summary.garrisonCount,garrisonOutliers:report.summary.garrisonOutliers,
-   intentionalRegattaBuoys:(settled.offshore.candidates||[]).filter(item=>/^NorseRegattaBuoy_\\d+$/.test(item.name||'')).length,
-   unexpectedOffshoreStructures:(settled.offshore.candidates||[]).filter(item=>item.offshore&&!/^NorseRegattaBuoy_\\d+$/.test(item.name||'')).length,
+   intentionalRegattaBuoys:(settled.offshore.candidates||[]).filter(item=>/^NorseRegattaBuoy_\d+$/.test(item.name||'')).length,
+   unexpectedOffshoreStructures:(settled.offshore.candidates||[]).filter(item=>item.offshore&&!/^NorseRegattaBuoy_\d+$/.test(item.name||'')).length,
    hrafnRepairGate:report.hrafnRepairGate
   };
   report.fullRuntimeStructureGate=gate;
