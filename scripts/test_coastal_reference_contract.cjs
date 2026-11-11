@@ -107,10 +107,10 @@ assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The source 
 assert.match(builder,/atmosphere-system\\.js/,'The release builder must package the atmospheric shader module.');
 assert.match(builder,/window\\.__ELSN_ATMOSPHERE_CONTROLS/,'The atmospheric controls must be installed in the game runtime.');
 assert.match(builder,/atmosphereSystem\\.update\\(dt\\)/,'The atmosphere clock must be updated once per game frame.');
-assert.match(captureRunner,/atmosphere-dawn\\.png/,'The scene inspector must capture dawn.');
-assert.match(captureRunner,/atmosphere-noon\\.png/,'The scene inspector must capture noon.');
-assert.match(captureRunner,/atmosphere-dusk\\.png/,'The scene inspector must capture dusk.');
-assert.match(captureRunner,/atmosphere-midnight\\.png/,'The scene inspector must capture midnight.');
+assert.ok(captureRunner.includes("id: 'dawn'"),'The scene inspector must capture dawn.');
+assert.ok(captureRunner.includes("id: 'noon'"),'The scene inspector must capture noon.');
+assert.ok(captureRunner.includes("id: 'dusk'"),'The scene inspector must capture dusk.');
+assert.ok(captureRunner.includes("id: 'midnight'"),'The scene inspector must capture midnight.');
 assert.match(html,/const vegetationTrailPaths=\[\],packedTrailMeshes=\[\]/, 'The game must keep direct references to its packed-trail meshes for deterministic test isolation.');
 assert.match(html,/packedTrailMeshes\.push\(mesh\)/, 'Every generated packed trail must be registered for the test-only A/B capture.');
 assert.match(html,/setPackedTrailVisible:\(enabled\)=>\{const trails=packedTrailMeshes/, 'The test-only API must isolate the packed-earth ribbon without changing normal gameplay.');
