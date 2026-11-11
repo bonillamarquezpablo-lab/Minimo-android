@@ -53,8 +53,16 @@ async function main(){
    });
    const matName=m=>m.material?.name||m.material?.getClassName?.()||null;
    const describe=m=>{const b=m.getBoundingInfo?.()?.boundingBox;const s=b?b.maximumWorld.subtract(b.minimumWorld):null;return {name:m.name,className:m.getClassName?.()||m.constructor?.name||null,material:matName(m),vertices:m.getTotalVertices?.()||0,isPickable:m.isPickable,visible:m.isVisible,enabled:m.isEnabled?.()??true,bounds:s?{x:Number(s.x.toFixed(1)),y:Number(s.y.toFixed(2)),z:Number(s.z.toFixed(1))}:null};};
+   const smokeAlignment=h=>{
+    const root=[...(scene.transformNodes||[]),...(scene.meshes||[])].find(n=>n.name==='WeatheredNorseHut'&&Math.hypot((n.getAbsolutePosition?n.getAbsolutePosition().x:n.position.x)-h.x,(n.getAbsolutePosition?n.getAbsolutePosition().z:n.position.z)-h.z)<.8);
+    const emitter=root?.__norseSmokeEmitter,chimney=root?.getChildMeshes?.().find(m=>m.name==='HutChimneyMouth');
+    if(!emitter||!chimney)return null;
+    chimney.computeWorldMatrix?.(true);const mouth=chimney.getAbsolutePosition();
+    const expected=.09*(h.scale||1),gap=emitter.y-mouth.y;
+    return {emitterY:Number(emitter.y.toFixed(4)),chimneyMouthCenterY:Number(mouth.y.toFixed(4)),verticalGap:Number(gap.toFixed(4)),expectedGap:Number(expected.toFixed(4)),errorMeters:Number((gap-expected).toFixed(4)),withinTwoCm:Math.abs(gap-expected)<=.02};
+   };
    const targets=[
-    ...houses.map(h=>({id:'HRAF-HUT-'+String(h.buildingIndex+1).padStart(2,'0'),kind:'hut',name:'WeatheredNorseHut',x:h.x,z:h.z,baseY:h.rootY+.02*(h.scale||1),renderedTerrainY:h.sampledTerrainY,analyticTerrainY:h.analyticTerrainY,coastDistanceData:h.distanceToCoastMeters,shorelineRadius:h.measure?.shorelineRadiusMeters,footprintRadius:Math.hypot(2.01*(h.scale||1),2.64*(h.scale||1)),measure:h.measure})),
+    ...houses.map(h=>({id:'HRAF-HUT-'+String(h.buildingIndex+1).padStart(2,'0'),kind:'hut',name:'WeatheredNorseHut',x:h.x,z:h.z,scale:h.scale,smokeEmitterAlignment:smokeAlignment(h),baseY:h.rootY+.02*(h.scale||1),renderedTerrainY:h.sampledTerrainY,analyticTerrainY:h.analyticTerrainY,coastDistanceData:h.distanceToCoastMeters,shorelineRadius:h.measure?.shorelineRadiusMeters,footprintRadius:Math.hypot(2.01*(h.scale||1),2.64*(h.scale||1)),measure:h.measure})),
     ...camps.map(c=>({id:'HRAF-'+String(c.kind).toUpperCase()+'-03',kind:'camp',name:c.kind==='IslandOutpost'?'IslandOutpost_3':'IslandScoutCamp_3',x:c.x,z:c.z,baseY:c.anchorY,renderedTerrainY:c.groundY,analyticTerrainY:c.measure?.analyticTerrainY,coastDistanceData:c.distanceToCoastMeters,shorelineRadius:c.measure?.shorelineRadiusMeters,footprintRadius:c.footprintRadiusMeters,supportPoints:c.supportPoints,measure:c.measure}))
    ];
    return {build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||null,island:{name:island.name,x:island.x,z:island.z,r:island.r},targets,
@@ -127,6 +135,10 @@ async function main(){
    visibleLandEdgeDistanceMeters:t.visibleLandEdge?.distanceFromBaseMeters??null,
    visibleLandEdgeMethod:t.visibleLandEdge?.method??'not measured: rendered GroundMesh height API unavailable',
    waterDrawn:t.waterDrawn,rayCamera:t.cameraOffshore30m,firstRayMesh:t.rayFirstHit,waterVsBase:t.waterVsBase,
+   maximumBaseGapMeters:round(t.measure?.maximumBaseGapMeters,4),highTideDryMarginMeters:round(t.measure?.highTideDryMarginMeters,4),
+   baseWithinTwoCm:Number.isFinite(Number(t.measure?.maximumBaseGapMeters))&&Number(t.measure.maximumBaseGapMeters)<=.02,
+   dryAtHighTide:Number.isFinite(Number(t.measure?.highTideDryMarginMeters))&&Number(t.measure.highTideDryMarginMeters)>=.22,
+   smokeEmitterAlignment:t.smokeEmitterAlignment||null,
    hypotheses:{a_waterDrawnAboveBase:!!(t.waterDrawn?.maxY!==null&&t.waterDrawn?.maxY>t.baseY),
     b_visibleMeshLowerThanAnalytic:!!(t.overallDrawnLowestY!==null&&t.analyticTerrainY!==null&&t.overallDrawnLowestY<t.analyticTerrainY-.02),
     b_baseMeshLowerThanAnalytic:!!(t.drawnBaseMeshHeight!==null&&t.analyticTerrainY!==null&&t.drawnBaseMeshHeight<t.analyticTerrainY-.02),
@@ -136,8 +148,13 @@ async function main(){
   report.measurementCoverage={targets:report.structures.length,waterCandidates:report.meshDiscovery.waterCandidates.length,
    terrainCandidates:report.meshDiscovery.terrainCandidates.length,waterMeasured:report.structures.filter(x=>x.waterDrawn?.sampleCount>0).length,
    visibleEdgeMeasured:report.structures.filter(x=>x.visibleLandEdgeDistanceMeters!==null).length,waterHeightFunctionAvailable:report.meshDiscovery.waterCandidates.some(x=>x.className==='GroundMesh'),
-   rayMeasured:report.structures.filter(x=>x.firstRayMesh!==null).length};
-  report.verdict=report.structures.length===5?'measured':'incomplete';
+   rayMeasured:report.structures.filter(x=>x.firstRayMesh!==null).length,
+   baseWithinTwoCm:report.structures.filter(x=>x.baseWithinTwoCm).length,dryAtHighTide:report.structures.filter(x=>x.dryAtHighTide).length,
+   smokeEmitters:report.structures.filter(x=>x.smokeEmitterAlignment).length,smokeEmittersWithinTwoCm:report.structures.filter(x=>x.smokeEmitterAlignment?.withinTwoCm).length};
+  const groundingFailures=report.structures.filter(x=>!x.baseWithinTwoCm||!x.dryAtHighTide);
+  const smokeFailures=report.structures.filter(x=>x.smokeEmitterAlignment&&!x.smokeEmitterAlignment.withinTwoCm);
+  if(groundingFailures.length||smokeFailures.length){report.errors.push('2 cm / high-tide / chimney alignment gate failed: '+JSON.stringify({groundingFailures:groundingFailures.map(x=>x.id),smokeFailures:smokeFailures.map(x=>x.id)}));report.verdict='failed';process.exitCode=1;}
+  else report.verdict=report.structures.length===5?'measured':'incomplete';
  }catch(error){report.errors.push(String(error?.stack||error));report.verdict='failed';process.exitCode=1;}
  finally{report.finishedAt=new Date().toISOString();save();try{await browser?.close();}catch(_){}}
 }
