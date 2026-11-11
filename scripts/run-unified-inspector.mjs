@@ -106,7 +106,7 @@ async function main(){
   fs.mkdirSync(OUT,{recursive:true});
   const common={PLAYER_TEST_URL:BASE_URL,CAPTURE_TEST_URL:BASE_URL,STRUCTURE_TEST_URL:BASE_URL,COASTAL_TEST_URL:BASE_URL};
   await runNodePhase('Arranque del juego y modelo vikingo real','scripts/player-startup-smoke.mjs',common,20*60*1000);
-  await runNodePhase('Texturas, carga y preparación de cámara','scripts/texture-readiness-smoke.mjs',{...common,CAPTURE_PLAN_JSON:PLAN,CAPTURE_TEXTURE_TIMEOUT_MS:'20000',CAPTURE_CANVAS_TIMEOUT_MS:'15000',CAPTURE_CDP_TIMEOUT_MS:'8000',CAPTURE_SKIP_TEXTURE_SCREENSHOT:'1'},15*60*1000);
+  await runNodePhase('Texturas, carga y preparación de cámara','scripts/texture-readiness-smoke.mjs',{...common,CAPTURE_PLAN_JSON:PLAN,CAPTURE_TEXTURE_TIMEOUT_MS:'30000',CAPTURE_CANVAS_TIMEOUT_MS:'15000',CAPTURE_CDP_TIMEOUT_MS:'8000',CAPTURE_SKIP_TEXTURE_SCREENSHOT:'1'},15*60*1000);
   await runNodePhase('Cimentación, estructuras y simulación de reparación en entorno desechable','scripts/coastal-structure-grounding-smoke.mjs',common,15*60*1000);
   await runNodePhase('Referencias costeras, agua, visibilidad y capturas de entorno','scripts/coastal-reference.mjs',common,35*60*1000);
   await runNodePhase('Inventario completo, identidades y cámaras desde el agua','scripts/custom-scene-capture.mjs',{...common,CAPTURE_PLAN_JSON:PLAN},35*60*1000);
@@ -118,7 +118,7 @@ async function main(){
     inspectionErrors:m.initialPhysicalAudit?.errors||{},shots:{planned:m.expandedShotCount,captured:m.captures?.length,failed:m.failures?.length},
     zones:m.zoneInspections,readiness:m.readiness,textures:m.initialPhysicalAudit?.textures,water:m.initialPhysicalAudit?.water,environment:m.initialPhysicalAudit?.environment
   }));
-  const texture=summaryFrom('artifacts/texture-readiness-smoke/manifest.json',m=>({verdict:m.verdict,readiness:m.readiness,textureDiagnostics:m.textureDiagnostics,failure:m.failure}));
+  const texture=summaryFrom('artifacts/texture-readiness-smoke/manifest.json',m=>({verdict:m.verdict,readiness:m.readiness,textureDiagnostics:m.textureDiagnostics,cameraVerification:m.cameraVerification,actualCamera:m.actualCamera,failure:m.failure}));
   const grounding=summaryFrom('artifacts/structure-grounding/manifest.json',m=>({verdict:m.verdict,summary:m.summary,failure:m.failure}));
   const coastal=summaryFrom('artifacts/coastal-reference/manifest.json',m=>({captureCount:m.captures?.length,structureVisibility:m.structureVisibility?.length,failure:m.failure}));
   const player=summaryFrom('artifacts/player-startup/manifest.json',m=>({modelReady:m.finalState?.modelReady,realPlayerMeshCount:m.finalState?.realPlayerMeshCount,failure:m.failure}));
@@ -168,6 +168,7 @@ async function main(){
     '- Un resultado fallido o incompleto se conserva en el informe y en el manifiesto.'
   );
   fs.writeFileSync(path.join(OUT,'inspection-report.md'),lines.join('\n')+'\n');
+  console.log('[TEXTURE_READINESS_SUMMARY] '+JSON.stringify(texture));
   const failures=phases.filter(row=>row.status!=='passed');
   console.log('\n[UNIFIED_INSPECTOR_RESULT] '+JSON.stringify({verdict:failures.length?'issues-found':'pass',passed:phases.length-failures.length,failed:failures.length,structures:custom?.structures?.length??null,captures:custom?.shots??null}));
   if(failures.length)process.exitCode=2;

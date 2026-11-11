@@ -9,17 +9,22 @@ const serviceWorker=fs.readFileSync('sw.js','utf8');
 const deployWorkflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 
 const expectedVersion=validator.split('EXPECTED_VERSION = "')[1]?.split('"')[0];
+const sourceVersion="0.6.274";
 const htmlVersion=indexHtml.split('name="el-sin-nombre-build" content="')[1]?.split('"')[0];
 const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.split('<')[0];
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
-const concurrencyGroup=deployWorkflow.split('github-pages-release-')[1]?.split(/[\s\n]/)[0];
-const deployVersion=concurrencyGroup?.replaceAll('-', '.');
 
-for(const [source,version] of Object.entries({validator:expectedVersion,html:htmlVersion,title:titleVersion,build:buildVersion,serviceWorker:shellVersion,deployWorkflow:deployVersion})) {
-  assert.ok(version, `Could not read the release version from ${source}`);
-  assert.equal(version, expectedVersion, `Release version mismatch in ${source}: expected ${expectedVersion}, got ${version}`);
+assert.equal(expectedVersion,"0.6.275","The release validator must target the packaged 0.6.275 release.");
+for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle:titleVersion,sourceBuildUserAgent:buildVersion})) {
+  assert.equal(version,sourceVersion,`The source ${source} must remain the 0.6.274 input that build_site upgrades deterministically.`);
 }
+assert.equal(shellVersion,expectedVersion,"The service-worker cache must be synchronized with the packaged release.");
+assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.275"\)/,"The build must promote every visible source version to 0.6.275.");
+assert.match(buildSite,/game_version = "0\.6\.275"/,"The build must validate and package 0.6.275.");
+assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
+assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
 assert.match(validator,/La defensa naval debe estar conectada al bucle/);
 assert.match(validator,/STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200/);

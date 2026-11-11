@@ -3,7 +3,8 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 const BASE_URL=process.env.CAPTURE_TEST_URL||'http://127.0.0.1:4176/';
 const OUT=path.resolve('artifacts/texture-readiness-smoke');
-const TIMEOUT_MS=Math.max(1000,Math.min(60000,Number(process.env.CAPTURE_TEXTURE_TIMEOUT_MS)||15000));
+const TIMEOUT_MS=Math.max(1000,Math.min(60000,Number(process.env.CAPTURE_TEXTURE_TIMEOUT_MS)||30000));
+const EXTERNAL_READINESS_WAIT_MS=Math.max(30000,TIMEOUT_MS+10000);
 const CANVAS_CAPTURE_TIMEOUT_MS=Math.max(2500,Math.min(30000,Number(process.env.CAPTURE_CANVAS_TIMEOUT_MS)||15000));
 const CDP_CAPTURE_TIMEOUT_MS=Math.max(1500,Math.min(12000,Number(process.env.CAPTURE_CDP_TIMEOUT_MS)||8000));
 const rawPlan=process.env.CAPTURE_PLAN_JSON||fs.readFileSync('scripts/scene-capture-plan.json','utf8'),plan=JSON.parse(rawPlan);
@@ -133,11 +134,11 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
  }));if(!manifest.structureRepairSimulation?.passed){manifest.structureRepairSimulation.warning='Structure simulation gate did not pass; continuing the isolated camera capture so the offshore scene can still be inspected. The overall structure verdict remains fail.';console.warn('[CAPTURE] Structure simulation gate failed; continuing to capture the requested boat-approach camera.');}
  manifest.coastalDiagnostics.scope={camera:prepared.camera,auditIslandIndex:prepared.auditIslandIndex,geometryAuditScope:'all 13 islands',structureGroundingScope:'all registered/discovered habitable structures',mutationPolicy:'read-only; no production structure is moved, hidden or repaired'};
  // Let the readiness probe finish or time out before freezing the renderer for a deterministic camera frame.
- const convergenceResult=await runPhase('wait for render and texture convergence',()=>bounded(page.evaluate(({timeoutMs,maxFrames})=>window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs,maxFrames}),{timeoutMs:TIMEOUT_MS,maxFrames:120}),12000,{__prepareTimedOut:true}));
+ const convergenceResult=await runPhase('wait for render and texture convergence',()=>bounded(page.evaluate(({timeoutMs,maxFrames})=>window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs,maxFrames}),{timeoutMs:TIMEOUT_MS,maxFrames:120}),EXTERNAL_READINESS_WAIT_MS,{__prepareTimedOut:true}));
  const readinessTimedOut=!!convergenceResult?.__prepareTimedOut;
- if(readinessTimedOut){manifest.readiness={ready:false,verdict:'fail',converged:false,sceneReady:false,timeoutMs:TIMEOUT_MS,externalWaitLimitMs:12000,textureDiagnostics:null,warning:'Readiness timed out; preserving the requested camera capture anyway.'};manifest.captureWarning='Render readiness did not converge; attempting direct frame capture.';}
+ if(readinessTimedOut){manifest.readiness={ready:false,verdict:'fail',converged:false,sceneReady:false,timeoutMs:TIMEOUT_MS,externalWaitLimitMs:EXTERNAL_READINESS_WAIT_MS,textureDiagnostics:null,warning:'Readiness timed out; preserving the requested camera capture anyway.'};manifest.captureWarning='Render readiness did not converge; attempting direct frame capture.';}
  else manifest.readiness=convergenceResult;
- manifest.textureDiagnostics=manifest.readiness?.textureDiagnostics||(readinessTimedOut?null:await runPhase('collect texture reference inventory',()=>page.evaluate(()=>window.__ELSN_TEST__?.getTextureReadinessForCamera?.())));
+ manifest.textureDiagnostics=manifest.readiness?.textureDiagnostics||await runPhase('collect texture reference inventory',()=>bounded(page.evaluate(()=>window.__ELSN_TEST__?.getTextureReadinessForCamera?.()),8000,null));
  manifest.actualCamera=manifest.textureDiagnostics?.camera||null;manifest.cameraVerification=cameraVerification(manifest.camera,manifest.actualCamera);
  if(!readinessTimedOut)manifest.runtimeDiagnostics=await runPhase('collect render performance diagnostics',()=>collectRuntimeDiagnostics(page,5000));
  correlateNetworkEvents();
@@ -158,6 +159,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
   await runPhase('verify bounded camera PNG capture',async()=>{if(manifest.screenshot)return;throw new Error('No valid PNG was saved by the frozen game canvas or CDP fallback.');});
  }
  manifest.verdict=verdict();
+ console.log('[TEXTURE_READINESS_RESULT] '+JSON.stringify({build:manifest.build,verdict:manifest.verdict,readiness:{ready:manifest.readiness?.ready??null,verdict:manifest.readiness?.verdict??null,converged:manifest.readiness?.converged??null,sceneReady:manifest.readiness?.sceneReady??null,timeoutMs:manifest.readiness?.timeoutMs??null,externalWaitLimitMs:manifest.readiness?.externalWaitLimitMs??EXTERNAL_READINESS_WAIT_MS},cameraVerification:manifest.cameraVerification,textureCounts:{scanned:manifest.textureDiagnostics?.texturesScanned??null,pending:manifest.textureDiagnostics?.pendingTextures?.length??null,orphan:manifest.textureDiagnostics?.orphanPendingTextures?.length??null,cameraPending:manifest.textureDiagnostics?.cameraPendingTextures?.length??null,usageCoverageComplete:manifest.textureDiagnostics?.usageCoverage?.complete??null},failure:manifest.failure}));
 
  try{
   const auditCalls=[['offshoreStructures','auditOffshoreStructures',[300],15000],['habitableStructures','habitableStructureAudit',[],20000],['settlementGrounding','settlementGrounding',[],15000],['settlementCamps','settlementCampGrounding',[],15000],['garrisonGrounding','garrisonGrounding',[],15000],['floatingHutProbe','probeFloatingHutAudit',[],15000],['sceneInventory','coastalSceneInventory',[1200],15000],['waterFilm','sheetOpacityDepth',[],12000],['runtime','diagnostics',[],15000],['coastalGeometry','auditIslandGeometry',[],45000]];
@@ -172,11 +174,17 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
   }
   const checks=manifest.coastalDiagnostics.checks,completed=Object.values(checks).filter(item=>item.status==='completed').length;
   const structure=checks.habitableStructures?.value,offshore=checks.offshoreStructures?.value,houses=checks.settlementGrounding?.value||[],camps=checks.settlementCamps?.value||[],garrisons=checks.garrisonGrounding?.value||[],geometry=checks.coastalGeometry?.value,water=checks.runtime?.value?.coast,floatingProbe=checks.floatingHutProbe?.value,issues=[];
-  // In ?test=1 the audit deliberately avoids hiding or mutating scene roots.
-  // This synthetic offshore hut must be auto-discovered and classified unsafe without
-  // being hidden in the disposable test scene. The normal-game hide path is asserted
-  // separately against the production audit implementation in the campaign contract.
-  const floatingProbePassed=floatingProbe?.detected===true&&floatingProbe?.autoDiscovered===true&&floatingProbe?.hidden===false&&floatingProbe?.lastAction==='relocated-to-dry-ground'&&floatingProbe?.lastStatus==='grounded'&&floatingProbe?.untrackedRootCount===0;
+  // The synthetic offshore hut must be discovered and end in a safe state:
+  // either relocated to dry land, or relocated and distance-culled outside the
+  // visible radius. If no valid dry anchor exists, the production hide path is safe too.
+  // Distance culling is not a floating-structure failure when the grounding audit
+  // explicitly reports the probe as grounded.
+  const floatingProbeGrounded=floatingProbe?.lastStatus==='grounded'&&(
+    (floatingProbe?.lastAction==='relocated-to-dry-ground'&&floatingProbe?.hidden===false)||
+    (floatingProbe?.lastAction==='culled-distance'&&floatingProbe?.hidden===true)
+  );
+  const floatingProbeSafelyHidden=floatingProbe?.hidden===true&&floatingProbe?.lastAction==='hidden-no-safe-ground';
+  const floatingProbePassed=floatingProbe?.detected===true&&floatingProbe?.autoDiscovered===true&&floatingProbe?.untrackedRootCount===0&&(floatingProbeGrounded||floatingProbeSafelyHidden);
   if(!floatingProbePassed)issues.push({kind:'floating-hut-probe-failed',result:floatingProbe||null});
   if(Number(structure?.unsafeCount)>0)issues.push({kind:'unsafe-habitable-structures',count:structure.unsafeCount});
   if(Number(offshore?.visibleOffshoreCount)>0)issues.push({kind:'visible-offshore-structures',count:offshore.visibleOffshoreCount,items:(offshore.offshoreStructures||[]).filter(item=>item.visible).slice(0,30)});

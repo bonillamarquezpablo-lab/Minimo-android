@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: scene-capture-${{ github.sha }}
+  group: scene-capture-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -93,6 +93,25 @@ jobs:
           fi
           node scripts/run-unified-inspector.mjs
 
+      - name: Upload diagnostic manifests before the visual bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-sin-nombre-diagnostics-${{ github.sha }}
+          path: |
+            artifacts/unified-inspector/manifest.json
+            artifacts/unified-inspector/inspection-report.md
+            artifacts/player-startup/manifest.json
+            artifacts/texture-readiness-smoke/manifest.json
+            artifacts/texture-readiness-smoke/coastal-inspection.json
+            artifacts/structure-grounding/manifest.json
+            artifacts/coastal-reference/*.json
+            artifacts/custom-scene-captures/manifest.json
+            artifacts/custom-scene-captures/inspection-report.md
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 1
+
       - name: Upload the complete inspection, captures and reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -107,3 +126,5 @@ jobs:
             artifacts/custom-scene-captures/
           if-no-files-found: warn
           retention-days: 30
+          compression-level: 0
+        continue-on-error: true

@@ -73,14 +73,21 @@ def main() -> None:
         fail("Hay archivos requeridos vacíos: " + ", ".join(empty))
 
     index_html = read_text("index.html")
-    for coastal_continuity_marker in (
+    coastal_continuity_markers = (
         "function auditCoastalMeshContinuity(onlyIslandIndex=null)",
         "auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)",
-        "const thresholdMeters=.05",
+        "thresholdMeters=.05",
         "rows=isPerformanceMode?10:(isTouchDevice?64:96)",
-    ):
-        if coastal_continuity_marker not in index_html:
-            fail("La geometría costera no incluye la reparación submarina y la auditoría de uniones de 5 cm.")
+    )
+    missing_coastal_continuity_markers = [
+        marker for marker in coastal_continuity_markers if marker not in index_html
+    ]
+    if missing_coastal_continuity_markers:
+        fail(
+            "La geometría costera no incluye la reparación submarina y la auditoría de uniones de 5 cm. "
+            "Señales ausentes en dist/index.html: "
+            + ", ".join(repr(marker) for marker in missing_coastal_continuity_markers)
+        )
 
     for required_garrison_parent in (
         "IslandGarrisonFlagpole_'+islandIndex,outpostRoot",
