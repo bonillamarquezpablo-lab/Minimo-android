@@ -13351,8 +13351,9 @@ function update(dt){
     const runtime=run('runtimeDiagnostics',()=>window.__ELSN_TEST__.diagnostics());
     const islands=land.map((island,index)=>({index,name:island.name,x:island.x,z:island.z,radius:island.r}));
     const structuralCandidates=[],seen=new Set();
+    const excludedStructuralRoot=/(?:villageguard|factionbadge|garrisonstandard|garrisonflag|garrisoncrossbar|garrisonflagpole|flag|banner|weapon|tree|grass|ship|boat|drakkar|dock|pier|regattabuoy)/i;
     const addCandidate=(item,source)=>{
-     if(!item||!item.position)return;
+     if(!item||!item.position||excludedStructuralRoot.test(String(item.name||'')))return;
      const p=item.position;
      const x=Number(p.x),y=Number(p.y),z=Number(p.z);
      if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(z))return;
@@ -13393,7 +13394,8 @@ function update(dt){
       (item.category==='structure'||item.category==='unidentified-structure')&&
       !(item.parentChain||[]).length&&Number(item.meshCount)>0
     ).forEach(item=>addCandidate(item,'coastal-scene-inventory'));
-    structuralCandidates.sort((a,b)=>String(a.island||'').localeCompare(String(b.island||''))||Math.hypot(a.position.x-view?.camera?.x||0,a.position.z-view?.camera?.z||0)-Math.hypot(b.position.x-view?.camera?.x||0,b.position.z-view?.camera?.z||0));
+    const distanceFromCurrentView=item=>view?.camera?Math.hypot(item.position.x-view.camera.x,item.position.z-view.camera.z):0;
+    structuralCandidates.sort((a,b)=>String(a.island||'').localeCompare(String(b.island||''))||distanceFromCurrentView(a)-distanceFromCurrentView(b));
     return {
      schema:1,mode:'single-unified-scene-inspection',readOnly:true,
      sceneChanges:{structureTransformsChanged:false,visibilityChanged:false,objectsRelocated:false,objectsDeleted:false,temporaryCoastalAuditMeshesRestored:true,habitableRootDiscoveryMayUpdateInternalRegistry:true},
