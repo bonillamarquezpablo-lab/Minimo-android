@@ -26,15 +26,15 @@ function collectStructureSnapshot(){
   const topProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:topY,z}):null;
   return {name:item.name,kind:item.kind,registered:item.registered,visible:item.visible,enabled:item.enabled,island:item.island,islandIndex:item.islandIndex,position:item.position,bounds:item.bounds,offshore:item.offshore,issue:item.issue,distanceToIslandCenterMeters:item.distanceToIslandCenterMeters,dryFootprintSampleCount:item.dryFootprintSampleCount,dryFootprintSampleTotal:item.dryFootprintSampleTotal,baseProjection,centerProjection,topProjection};
  });
+ const inventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(5000):null;
+ const structureRoots=(inventory?.objects||[]).filter(item=>(item.category==='structure'||item.category==='unidentified-structure')&&!(item.parentChain||[]).length&&Number(item.meshCount)>0);
+ const inventoryStructuralCandidates=structureRoots.map(item=>({name:item.name,category:item.category,role:item.structuralRole||'unclassified',confidence:item.classificationConfidence||'unknown',position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,meshNames:item.meshNames,materials:item.materials,structuralEvidence:item.structuralEvidence,metadata:item.metadata}));
  const navigationPoint={x:46.6,z:254.4,confidence:'approximate X inferred from the expanded-map player marker; Z read from the coordinate strip',zone:'MAR ABIERTO'};
  const pointCandidates=[...projectedCandidates.map(item=>({...item,source:'offshore-structural-audit'})),...inventoryStructuralCandidates.map(item=>({...item,source:'scene-inventory'}))]
   .map(item=>{const p=item.position||{};return {...item,distanceToNavigationPointMeters:Number(Math.hypot((Number(p.x)||0)-navigationPoint.x,(Number(p.z)||0)-navigationPoint.z).toFixed(2))};})
   .filter(item=>item.distanceToNavigationPointMeters<=150)
   .sort((a,b)=>a.distanceToNavigationPointMeters-b.distanceToNavigationPointMeters);
  const navigationPointAudit={target:navigationPoint,nearbyCandidateCount:pointCandidates.length,nearbyCandidates:pointCandidates};
- const inventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(5000):null;
- const structureRoots=(inventory?.objects||[]).filter(item=>(item.category==='structure'||item.category==='unidentified-structure')&&!(item.parentChain||[]).length&&Number(item.meshCount)>0);
- const inventoryStructuralCandidates=structureRoots.map(item=>({name:item.name,category:item.category,role:item.structuralRole||'unclassified',confidence:item.classificationConfidence||'unknown',position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,meshNames:item.meshNames,materials:item.materials,structuralEvidence:item.structuralEvidence,metadata:item.metadata}));
  const cuervoIsland=(api.islands||[]).find(item=>/cuervo/i.test(item.name))||(api.islands||[])[0]||{x:0,z:0,name:'unknown'};
  const cuervoSceneRoots=structureRoots.map(item=>{
   const p=item.position||{},distance=Math.hypot((Number(p.x)||0)-cuervoIsland.x,(Number(p.z)||0)-cuervoIsland.z);
