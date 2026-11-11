@@ -67,6 +67,7 @@ jobs:
         run: timeout --signal=TERM --kill-after=5s 360s node scripts/coastal-structure-grounding-smoke.mjs
 
       - name: Prepare and capture exactly one camera
+        if: always() && steps.playwright_install.outcome == 'success'
         env:
           CAPTURE_TEST_URL: http://127.0.0.1:4176/
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
