@@ -233,7 +233,16 @@
         "natural"
       ],
       "includeOverview": true,
-      "includeTopDown": true
+      "includeTopDown": true,
+      "observationPoint": {
+        "x": 28,
+        "y": 6,
+        "z": 236.3
+      },
+      "observationHeightOffsets": [
+        0,
+        2.5
+      ]
     }
   }
 ]
