@@ -38,6 +38,8 @@ jobs:
 
       - name: Test offline navigation suite and four camera modes
         run: node scripts/test_navigation_suite_contract.cjs
+      - name: Test rendered-ground structure and outpost bedroll placement
+        run: node scripts/test_coastal_structure_grounding_contract.cjs
       - name: Test BeachState coast and toroidal footprint atlas
         run: node scripts/test_beach_state.cjs
       - name: Test three-layer coast rendering contract and water film
