@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const html = fs.readFileSync('index.html', 'utf8');
+const builder = fs.readFileSync('scripts/build_site.py', 'utf8');
 const captureRunner = fs.readFileSync('scripts/coastal-reference.mjs', 'utf8');
 const contactSheet = fs.readFileSync('scripts/create_coastal_contact_sheet.py', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf8');
