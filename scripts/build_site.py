@@ -714,6 +714,11 @@ def main() -> None:
             "if(kind==='submerged')expected=terrainHeightOnIsland(island,x,z)-.003;\n    else expected=livingBeachSurfaceAt(island,index,x,z);",
             "perfil analítico de la auditoría submarina",
         ),
+        (
+            "probe.position=v(land[0].x+land[0].r*1.40,.42,land[0].z);",
+            "probe.position=v(land[0].x,.42,land[0].z+land[0].r*1.40);",
+            "sonda flotante dentro del alcance de cámara",
+        ),
     )
     for old_code, new_code, label in coastal_profile_replacements:
         if html.count(old_code) != 1:
