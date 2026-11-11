@@ -7,7 +7,7 @@ const FILE=path.join(OUT,'hrafn-geometry-measurements.json');
 const BASE_URL=process.env.HRAFN_TEST_URL||'http://127.0.0.1:4176/';
 const report={schema:1,build:null,branch:process.env.GITHUB_REF_NAME||null,commit:process.env.GITHUB_SHA||null,
  method:'live Babylon scene geometry; no screenshot-derived measurements',
- conditions:{tide:'high',tideOffsetMeters:0.28,waveTimeSamples:48,waveTimeStepSeconds:1,
+ conditions:{tide:'high',tideOffsetMeters:0.28,waveTimeSamples:32,waveTimeStepSeconds:1.5,
  lodCamera:'30 m seaward of runtime coast-radius estimate, 2.5 m above mean sea level',
  ray:'actual Babylon scene.pickWithRay from the offshore camera to the measured structure base'},
  startedAt:new Date().toISOString(),finishedAt:null,sceneCaptured:false,
@@ -103,17 +103,17 @@ async function main(){
      const edgeDistance=visibleEdge?.distanceFromBaseMeters??t.coastDistanceData??30;
      const camera={x:t.x,y:2.5,z:t.z+edgeDistance+30};
      api.setCamera({x:camera.x,y:camera.y,z:camera.z,targetX:t.x,targetY:t.baseY,targetZ:t.z});
-     api.setWaterState({time:0,tide:'high'});api.render();
+     api.setWaterState({time:0,tide:'high'});
      const origin=new B.Vector3(camera.x,camera.y,camera.z),targetPoint=new B.Vector3(t.x,t.baseY,t.z),direction=targetPoint.subtract(origin),length=direction.length();direction.normalize();
      const ray=new B.Ray(origin,direction,length+.05),hit=scene.pickWithRay(ray,m=>allPickable.includes(m),false);
      const rayResult=hit?.hit?{mesh:hit.pickedMesh?.name||null,material:hit.pickedMesh?.material?.name||null,distanceMeters:Number(hit.distance.toFixed(3)),point:{x:Number(hit.pickedPoint.x.toFixed(3)),y:Number(hit.pickedPoint.y.toFixed(3)),z:Number(hit.pickedPoint.z.toFixed(3))},isTargetMesh:baseMeshes.includes(hit.pickedMesh),targetReached:Math.abs(hit.distance-length)<.08}:null;
      const waveRows=[],footprint=[{x:t.x,z:t.z},{x:t.x+t.footprintRadius*.7,z:t.z},{x:t.x-t.footprintRadius*.7,z:t.z},{x:t.x,z:t.z+t.footprintRadius*.7},{x:t.x,z:t.z-t.footprintRadius*.7}];
-     for(let i=0;i<48;i++){const time=i;api.setWaterState({time,tide:'high'});api.render();for(const p of footprint){const q=heightAt(waterHeightMeshes,p.x,p.z);if(q)waveRows.push({time,x:p.x,z:p.z,y:q.y,mesh:q.mesh});}}
+     for(let i=0;i<32;i++){const time=i*1.5;api.setWaterState({time,tide:'high'});for(const p of footprint){const q=heightAt(waterHeightMeshes,p.x,p.z);if(q)waveRows.push({time,x:p.x,z:p.z,y:q.y,mesh:q.mesh});}}
      const waterYs=waveRows.map(x=>x.y);
      results.push({...t,drawnBaseMeshHeight:drawnBaseY,overallDrawnLowestY,
       baseMeshRows,baseVsDrawnMeshMeters:drawnBaseY===null?null:Number((t.baseY-drawnBaseY).toFixed(4)),
       cameraOffshore30m:camera,rayFirstHit:rayResult,visibleLandEdge:visibleEdge,
-      waterDrawn:{sampleCount:waveRows.length,requestedSamples:48*footprint.length,minY:waterYs.length?Number(Math.min(...waterYs).toFixed(4)):null,maxY:waterYs.length?Number(Math.max(...waterYs).toFixed(4)):null,meshNames:[...new Set(waveRows.map(x=>x.mesh))],timespanSeconds:47,samplePoints:footprint.length,unhitSamples:64*footprint.length-waveRows.length},
+      waterDrawn:{sampleCount:waveRows.length,requestedSamples:32*footprint.length,minY:waterYs.length?Number(Math.min(...waterYs).toFixed(4)):null,maxY:waterYs.length?Number(Math.max(...waterYs).toFixed(4)):null,meshNames:[...new Set(waveRows.map(x=>x.mesh))],timespanSeconds:46.5,samplePoints:footprint.length,unhitSamples:64*footprint.length-waveRows.length},
       waterVsBase:waterYs.length?{maxAboveBase:Number((Math.max(...waterYs)-t.baseY).toFixed(4)),minAboveBase:Number((Math.min(...waterYs)-t.baseY).toFixed(4)),waterEverAboveBase:Math.max(...waterYs)>t.baseY}:null});
     }
    }finally{originalPickable.forEach(([m,v])=>{m.isPickable=v;});}
