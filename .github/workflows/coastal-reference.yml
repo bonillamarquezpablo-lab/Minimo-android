@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
     inputs:
       capture_plan:
-        description: 'Una sola inspección: inventario completo, estructuras, agua, costa y cámaras automáticas. Puedes cambiar centro, radio y punto de cámara en el agua. Hasta 120 capturas.'
+        description: 'Una sola inspección: inventario completo, texturas, estructuras, agua, costa, pruebas y cámaras desde el agua. Hasta 120 capturas.'
         required: true
         type: string
-        default: '[{"id":"inspeccion-unica-hrafn","zone":{"label":"Bahía de Hrafn — inspección unificada desde el agua","center":{"x":28,"y":2.2,"z":143},"radiusMeters":27,"focus":"structures","maxTargets":12,"cameraDistanceMeters":9,"angles":[0,45,90,135,180,225,270,315],"times":[37],"tides":["natural"],"observationPoint":{"x":28,"y":6,"z":236.3},"observationHeightOffsets":[0,2.5]}}]'
+        default: '[{"id":"inspeccion-unica-hrafn","zone":{"label":"Bahía de Hrafn — todas las construcciones detectadas","center":{"x":28,"y":2.2,"z":143},"radiusMeters":27,"focus":"structures","maxTargets":12,"cameraDistanceMeters":9,"angles":[0,45,90,135,180,225,270,315],"times":[37],"tides":["natural"],"observationPoint":{"x":28,"y":6,"z":236.3},"observationHeightOffsets":[0,2.5]}}]'
 
 permissions:
   contents: read
@@ -19,108 +19,44 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  texture-smoke:
-    name: One-camera texture readiness smoke
-    if: github.event_name == 'pull_request'
+  unified-inspector:
+    name: 'Inspector único: todas las pruebas, diagnósticos y capturas'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 120
     steps:
       - name: Checkout exact candidate commit
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Check smoke diagnostics
+
+      - name: Install report image support
+        run: python -m pip install Pillow
+
+      - name: Validate every inspector module and contract
         run: |
           python scripts/inspect_structure_repair_source.py
+          node --check scripts/run-unified-inspector.mjs
+          node --check scripts/player-startup-smoke.mjs
           node --check scripts/texture-readiness-smoke.mjs
           node --check scripts/coastal-structure-grounding-smoke.mjs
+          node --check scripts/coastal-reference.mjs
           node --check scripts/scene-capture-inspection.mjs
           node --check scripts/custom-scene-capture.mjs
           node scripts/test_texture_readiness_contract.cjs
           node scripts/test_coastal_structure_grounding_contract.cjs
           node scripts/test_capture_reliability_contract.cjs
-      - name: Build complete game
-        run: python scripts/build_site.py
-      - name: Install Playwright and Chromium
-        id: playwright_install
-        run: |
-          npm install --no-save --no-package-lock playwright
-          npx playwright install --with-deps chromium
-      - name: Start local built-site server
-        run: |
-          python3 -m http.server 4176 --directory dist > /tmp/elsn-texture-smoke-http.log 2>&1 &
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:4176/ > /dev/null; then exit 0; fi
-            sleep 1
-          done
-          cat /tmp/elsn-texture-smoke-http.log
-          exit 1
-      - name: Prepare and capture exactly one camera
-        if: always() && steps.playwright_install.outcome == 'success'
-        env:
-          CAPTURE_TEST_URL: http://127.0.0.1:4176/
-          CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
-          CAPTURE_TEXTURE_TIMEOUT_MS: '20000'
-          CAPTURE_CANVAS_TIMEOUT_MS: '15000'
-          CAPTURE_CDP_TIMEOUT_MS: '8000'
-        run: |
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            export CAPTURE_PLAN_JSON="$CAPTURE_PLAN_INPUT"
-          else
-            export CAPTURE_PLAN_JSON="$(cat scripts/scene-capture-plan.json)"
-          fi
-          set +e
-          timeout --signal=TERM --kill-after=5s 255s node scripts/texture-readiness-smoke.mjs
-          status=$?
-          echo "One-camera capture exit status: $status"
-          exit "$status"
 
-      - name: Audit habitable structure grounding independently
-        if: always() && steps.playwright_install.outcome == 'success'
-        env:
-          STRUCTURE_TEST_URL: http://127.0.0.1:4176/
-        run: timeout --signal=TERM --kill-after=5s 360s node scripts/coastal-structure-grounding-smoke.mjs
-
-      - name: Upload smoke PNG and texture diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coastal-diagnostics-${{ github.sha }}
-          path: |
-            artifacts/texture-readiness-smoke/
-            artifacts/structure-grounding/
-          if-no-files-found: warn
-          retention-days: 30
-  character-startup:
-    if: github.event_name == 'pull_request'
-    name: Verify real Viking GLB startup independently
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - name: Checkout exact PR head commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Build complete game and verify packaged assets
+      - name: Build the complete game and packaged assets
         run: python scripts/build_site.py
 
       - name: Install Playwright and Chromium
@@ -128,83 +64,20 @@ jobs:
           npm install --no-save --no-package-lock playwright
           npx playwright install --with-deps chromium
 
-      - name: Start local built-site server
+      - name: Start one local server for the complete inspection
         run: |
-          python3 -m http.server 4174 --directory dist > /tmp/elsn-player-http.log 2>&1 &
-          echo $! > /tmp/elsn-player-http.pid
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:4174/ > /dev/null; then exit 0; fi
-            sleep 1
-          done
-          cat /tmp/elsn-player-http.log
-          exit 1
-
-      - name: Test real Viking GLB load and one in-page retry
-        env:
-          PLAYER_TEST_URL: http://127.0.0.1:4174/
-        run: node scripts/player-startup-smoke.mjs
-
-      - name: Upload independent player startup diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: player-startup-${{ github.sha }}
-          path: artifacts/player-startup/
-          if-no-files-found: warn
-          retention-days: 30
-
-  custom-capture:
-    name: 'Inspector único: inventario completo y cámaras desde el agua'
-    needs: texture-smoke
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Checkout selected branch or commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install contact-sheet image support
-        run: python -m pip install Pillow
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Validate capture reliability and zone-inspection contracts
-        run: |
-          node --check scripts/scene-capture-inspection.mjs
-          node --check scripts/custom-scene-capture.mjs
-          node scripts/test_capture_reliability_contract.cjs
-
-      - name: Build complete game
-        run: python scripts/build_site.py
-
-      - name: Install Playwright and Chromium
-        run: |
-          npm install --no-save --no-package-lock playwright
-          npx playwright install --with-deps chromium
-
-      - name: Start local built-site server
-        run: |
-          python3 -m http.server 4175 --directory dist > /tmp/elsn-custom-http.log 2>&1 &
+          python3 -m http.server 4175 --directory dist > /tmp/elsn-unified-inspector-http.log 2>&1 &
+          echo $! > /tmp/elsn-unified-inspector-http.pid
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:4175/ > /dev/null; then exit 0; fi
             sleep 1
           done
-          cat /tmp/elsn-custom-http.log
+          cat /tmp/elsn-unified-inspector-http.log
           exit 1
 
-      - name: Capture requested camera positions
+      - name: Run the single unified inspector
         env:
-          CAPTURE_TEST_URL: http://127.0.0.1:4175/
+          INSPECTOR_TEST_URL: http://127.0.0.1:4175/
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
           CAPTURE_SEED: '20261110'
         run: |
@@ -213,17 +86,19 @@ jobs:
           else
             export CAPTURE_PLAN_JSON="$(cat scripts/scene-capture-plan.json)"
           fi
-          node scripts/custom-scene-capture.mjs
+          node scripts/run-unified-inspector.mjs
 
-      - name: Build visual contact sheet and AI review index
-        if: always()
-        run: python scripts/create_scene_capture_contact_sheet.py artifacts/custom-scene-captures
-
-      - name: Upload custom screenshots and camera manifest
+      - name: Upload the complete inspection, captures and reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: custom-scene-captures-${{ github.sha }}
-          path: artifacts/custom-scene-captures/
+          name: el-sin-nombre-inspector-unico-${{ github.sha }}
+          path: |
+            artifacts/unified-inspector/
+            artifacts/player-startup/
+            artifacts/texture-readiness-smoke/
+            artifacts/structure-grounding/
+            artifacts/coastal-reference/
+            artifacts/custom-scene-captures/
           if-no-files-found: warn
           retention-days: 30
