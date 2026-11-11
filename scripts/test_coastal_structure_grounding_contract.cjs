@@ -32,7 +32,7 @@ assert.match(source,/sceneViewSnapshot/);
 assert.match(source,/projectWorldPoint/);
 assert.match(source,/width:430,height:768/);
 assert.match(source,/captureCompositedPage\(page,file\)/);
-assert.match(source,/captureCanvas/);assert.match(source,/control\.setMode\('free'\)/);assert.match(source,/prepareCaptureFrame/);assert.match(source,/cameraVerified/);assert.match(source,/live-game-canvas-data-url/);
+assert.match(source,/newCDPSession\(page\)/);assert.match(source,/page\.screenshot\(\{type:'png'/);assert.match(source,/control\.setMode\('free'\)/);assert.match(source,/prepareCaptureFrame/);assert.match(source,/const actualPosition=actualView\?\.camera\|\|null/);assert.match(source,/cameraVerified/);assert.match(source,/physicallyUnsafe=metrics=>/);
 assert.match(html,/sceneViewSnapshot:\(\)=>/);
 assert.match(html,/projectWorldPoint:\(\{x,y,z\}\)=>/);
 assert.match(workflow,/Audit habitable structure grounding independently/);
