@@ -73,6 +73,15 @@ def main() -> None:
         fail("Hay archivos requeridos vacíos: " + ", ".join(empty))
 
     index_html = read_text("index.html")
+    for required_garrison_parent in (
+        "IslandGarrisonFlagpole_'+islandIndex,outpostRoot",
+        "IslandGarrisonStandard_'+islandIndex,outpostRoot",
+        "IslandGarrisonStake_'+islandIndex+'_'+stake,outpostRoot",
+    ):
+        if required_garrison_parent not in index_html:
+            fail("Las banderas y estacas de cada guarnición deben heredar la visibilidad y el movimiento de su puesto.")
+    if "IslandGarrisonFlagpole_'+islandIndex,null" in index_html or "IslandGarrisonStandard_'+islandIndex,null" in index_html:
+        fail("Se ha detectado una bandera de guarnición independiente que puede quedar flotando sobre el mar.")
     navigation_js = read_text("scripts/nordic/navigation-suite.js")
     if "./scripts/nordic/navigation-suite.js" not in index_html:
         fail("Las entradas del juego no cargan el sistema unificado de mapas y cámaras.")
