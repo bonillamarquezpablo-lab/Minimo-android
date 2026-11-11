@@ -156,7 +156,7 @@ jobs:
   custom-capture:
     name: 'Inspector único: inventario completo y cámaras desde el agua'
     needs: texture-smoke
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.texture-smoke.result == 'success')) }}
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
