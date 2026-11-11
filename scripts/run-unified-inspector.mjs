@@ -82,7 +82,7 @@ async function main(){
   const custom=summaryFrom('artifacts/custom-scene-captures/manifest.json',m=>({
     build:m.build,counts:m.auditSummary,structures:m.initialPhysicalAudit?.structuralCandidates||[],
     inspectionErrors:m.initialPhysicalAudit?.errors||{},shots:{planned:m.expandedShotCount,captured:m.captures?.length,failed:m.failures?.length},
-    zones:m.zoneInspections,readiness:m.readiness
+    zones:m.zoneInspections,readiness:m.readiness,textures:m.initialPhysicalAudit?.textures,water:m.initialPhysicalAudit?.water,environment:m.initialPhysicalAudit?.environment
   }));
   const texture=summaryFrom('artifacts/texture-readiness-smoke/manifest.json',m=>({verdict:m.verdict,readiness:m.readiness,textureDiagnostics:m.textureDiagnostics,failure:m.failure}));
   const grounding=summaryFrom('artifacts/structure-grounding/manifest.json',m=>({verdict:m.verdict,summary:m.summary,failure:m.failure}));
@@ -117,6 +117,7 @@ async function main(){
     '- Cabañas registradas: **'+(custom?.counts?.huts??'no disponible')+'**',
     '- Campamentos: **'+(custom?.counts?.camps??'no disponible')+'**',
     '- Guarniciones: **'+(custom?.counts?.garrisons??'no disponible')+'**',
+    '- Texturas pendientes detectadas: **'+(custom?.textures?.readiness?.pendingTextures?.length??'no disponible')+'**',
     '- Cámaras: **'+(custom?.shots?.captured??0)+' / '+(custom?.shots?.planned??0)+'**',
     '- Fallos de cámara: **'+(custom?.shots?.failed??0)+'**','',
     '## Lista de estructuras detectadas','','| Código | ID interno | Nombre | Tipo | Isla | X | Y | Z | Mallas |',
