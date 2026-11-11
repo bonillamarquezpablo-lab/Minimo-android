@@ -246,7 +246,7 @@ export function createZoneInspectionShots(request, islands, candidates) {
         );
       }
     }
-    if (zone.focus === 'structures' && selected.length) {
+    if (zone.focus === 'structures') {
       // Scale close-up density to the number of buildings so one unified run can
       // cover up to twelve structures without silently exceeding the 120-shot budget.
       const lowAngles = selected.length <= 5
@@ -259,6 +259,13 @@ export function createZoneInspectionShots(request, islands, candidates) {
       // A fixed offshore observation point lets the user inspect every building from
       // one real boat/water vantage instead of relying only on synthetic orbit cameras.
       if (observationPoint) {
+        for (let heightIndex=0;heightIndex<zone.observationHeightOffsets.length;heightIndex++) {
+          const offset=zone.observationHeightOffsets[heightIndex];
+          const camera={x:observationPoint.x,y:observationPoint.y+offset,z:observationPoint.z,
+            targetX:overviewTarget.x,targetY:overviewTarget.y,targetZ:overviewTarget.z};
+          addShot('water-overview-'+String(heightIndex+1)+'-s'+stateIndex+'-'+state.tide,
+            camera,'zone-water-overview',overviewTarget,state);
+        }
         for (const item of selected) {
           const p = item.position;
           const bounds = item.bounds || {};
