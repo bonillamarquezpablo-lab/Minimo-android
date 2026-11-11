@@ -96,6 +96,13 @@ export function expandCapturePlan(input) {
       if (tides.some(value => !['natural','high','low'].includes(value))) {
         throw new Error(id + ': tides solo admite natural, high o low.');
       }
+      const observationPoint = zone.observationPoint && typeof zone.observationPoint === 'object'
+        ? {x:finite(zone.observationPoint.x,id+': observationPoint.x'),y:finite(zone.observationPoint.y,id+': observationPoint.y'),z:finite(zone.observationPoint.z,id+': observationPoint.z')}
+        : null;
+      const observationHeightOffsets = Array.isArray(zone.observationHeightOffsets) && zone.observationHeightOffsets.length
+        ? zone.observationHeightOffsets.map((value,offsetIndex)=>finite(value,id+': observationHeightOffsets['+offsetIndex+']'))
+        : [0];
+      if (observationHeightOffsets.length > 4) throw new Error(id + ': máximo 4 alturas para la cámara de observación.');
       zones.push({
         id,
         label: String(zone.label || shot.label || id),
@@ -109,6 +116,8 @@ export function expandCapturePlan(input) {
         angles,
         times,
         tides,
+        observationPoint,
+        observationHeightOffsets,
         includeOverview: zone.includeOverview !== false,
         includeTopDown: zone.includeTopDown !== false
       });
@@ -231,6 +240,39 @@ export function createZoneInspectionShots(request, islands, candidates) {
       }
     }
     if (zone.focus === 'structures' && selected.length) {
+      // A fixed offshore observation point lets the user inspect every building from
+      // one real boat/water vantage instead of relying only on synthetic orbit cameras.
+      if (zone.observationPoint) {
+        for (const item of selected) {
+          const p = item.position;
+          const bounds = item.bounds || {};
+          const bottom = Number(bounds.bottomY ?? p.y ?? center.y);
+          const top = Number(bounds.topY ?? (bottom+4));
+          const target = {x:Number(p.x),y:Number(((bottom+top)/2).toFixed(3)),z:Number(p.z)};
+          const subject = {
+            code:item.code,nativeId:item.nativeId??item.uniqueId??item.nodeId??item.id??null,
+            name:item.name||'Unnamed structural object',
+            kind:item.kind||item.structuralRole||item.category||'unclassified',
+            island:item.island||item.islandName||null,
+            islandIndex:item.islandIndex??zone.islandIndex??null,
+            position:item.position,bounds:item.bounds||null,
+            source:item.source||'scene-structural-inventory',
+            registered:item.registered??null,meshCount:item.meshCount??null,
+            vertexCount:item.vertexCount??null,meshNames:item.meshNames||[],materials:item.materials||[]
+          };
+          for (let heightIndex=0;heightIndex<zone.observationHeightOffsets.length;heightIndex++) {
+            const offset=zone.observationHeightOffsets[heightIndex];
+            const camera={
+              x:zone.observationPoint.x,
+              y:zone.observationPoint.y+offset,
+              z:zone.observationPoint.z,
+              targetX:target.x,targetY:target.y,targetZ:target.z
+            };
+            addShot(item.code.toLowerCase()+'-water-'+String(heightIndex+1)+'-s'+stateIndex+'-'+state.tide,
+              camera,'structure-water-observation',target,state,subject);
+          }
+        }
+      }
       for (const item of selected) {
         const p = item.position;
         const bounds = item.bounds || {};
@@ -308,6 +350,8 @@ export function createZoneInspectionShots(request, islands, candidates) {
     center,
     islandIndex:zone.islandIndex ?? null,
     radiusMeters:zone.radiusMeters,
+    observationPoint:zone.observationPoint,
+    observationHeightOffsets:zone.observationHeightOffsets,
     candidateCount:unique.length,
     selectedTargetCount:selected.length,
     selectedTargets:selected.map(item=>({code:item.code,nativeId:item.nativeId??item.uniqueId??item.nodeId??item.id??null,name:item.name,kind:item.kind||item.structuralRole||item.category||'unclassified',island:item.island||item.islandName||null,position:item.position,bounds:item.bounds||null,source:item.source||null})),
