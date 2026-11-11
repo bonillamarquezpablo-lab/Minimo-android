@@ -3,7 +3,8 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 const BASE_URL=process.env.CAPTURE_TEST_URL||'http://127.0.0.1:4176/';
 const OUT=path.resolve('artifacts/texture-readiness-smoke');
-const TIMEOUT_MS=Math.max(1000,Math.min(60000,Number(process.env.CAPTURE_TEXTURE_TIMEOUT_MS)||15000));
+const TIMEOUT_MS=Math.max(1000,Math.min(60000,Number(process.env.CAPTURE_TEXTURE_TIMEOUT_MS)||30000));
+const EXTERNAL_READINESS_WAIT_MS=Math.max(30000,TIMEOUT_MS+10000);
 const CANVAS_CAPTURE_TIMEOUT_MS=Math.max(2500,Math.min(30000,Number(process.env.CAPTURE_CANVAS_TIMEOUT_MS)||15000));
 const CDP_CAPTURE_TIMEOUT_MS=Math.max(1500,Math.min(12000,Number(process.env.CAPTURE_CDP_TIMEOUT_MS)||8000));
 const rawPlan=process.env.CAPTURE_PLAN_JSON||fs.readFileSync('scripts/scene-capture-plan.json','utf8'),plan=JSON.parse(rawPlan);
@@ -133,11 +134,11 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
  }));if(!manifest.structureRepairSimulation?.passed){manifest.structureRepairSimulation.warning='Structure simulation gate did not pass; continuing the isolated camera capture so the offshore scene can still be inspected. The overall structure verdict remains fail.';console.warn('[CAPTURE] Structure simulation gate failed; continuing to capture the requested boat-approach camera.');}
  manifest.coastalDiagnostics.scope={camera:prepared.camera,auditIslandIndex:prepared.auditIslandIndex,geometryAuditScope:'all 13 islands',structureGroundingScope:'all registered/discovered habitable structures',mutationPolicy:'read-only; no production structure is moved, hidden or repaired'};
  // Let the readiness probe finish or time out before freezing the renderer for a deterministic camera frame.
- const convergenceResult=await runPhase('wait for render and texture convergence',()=>bounded(page.evaluate(({timeoutMs,maxFrames})=>window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs,maxFrames}),{timeoutMs:TIMEOUT_MS,maxFrames:120}),12000,{__prepareTimedOut:true}));
+ const convergenceResult=await runPhase('wait for render and texture convergence',()=>bounded(page.evaluate(({timeoutMs,maxFrames})=>window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs,maxFrames}),{timeoutMs:TIMEOUT_MS,maxFrames:120}),EXTERNAL_READINESS_WAIT_MS,{__prepareTimedOut:true}));
  const readinessTimedOut=!!convergenceResult?.__prepareTimedOut;
- if(readinessTimedOut){manifest.readiness={ready:false,verdict:'fail',converged:false,sceneReady:false,timeoutMs:TIMEOUT_MS,externalWaitLimitMs:12000,textureDiagnostics:null,warning:'Readiness timed out; preserving the requested camera capture anyway.'};manifest.captureWarning='Render readiness did not converge; attempting direct frame capture.';}
+ if(readinessTimedOut){manifest.readiness={ready:false,verdict:'fail',converged:false,sceneReady:false,timeoutMs:TIMEOUT_MS,externalWaitLimitMs:EXTERNAL_READINESS_WAIT_MS,textureDiagnostics:null,warning:'Readiness timed out; preserving the requested camera capture anyway.'};manifest.captureWarning='Render readiness did not converge; attempting direct frame capture.';}
  else manifest.readiness=convergenceResult;
- manifest.textureDiagnostics=manifest.readiness?.textureDiagnostics||(readinessTimedOut?null:await runPhase('collect texture reference inventory',()=>page.evaluate(()=>window.__ELSN_TEST__?.getTextureReadinessForCamera?.())));
+ manifest.textureDiagnostics=manifest.readiness?.textureDiagnostics||await runPhase('collect texture reference inventory',()=>bounded(page.evaluate(()=>window.__ELSN_TEST__?.getTextureReadinessForCamera?.()),8000,null));
  manifest.actualCamera=manifest.textureDiagnostics?.camera||null;manifest.cameraVerification=cameraVerification(manifest.camera,manifest.actualCamera);
  if(!readinessTimedOut)manifest.runtimeDiagnostics=await runPhase('collect render performance diagnostics',()=>collectRuntimeDiagnostics(page,5000));
  correlateNetworkEvents();
@@ -158,6 +159,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
   await runPhase('verify bounded camera PNG capture',async()=>{if(manifest.screenshot)return;throw new Error('No valid PNG was saved by the frozen game canvas or CDP fallback.');});
  }
  manifest.verdict=verdict();
+ console.log('[TEXTURE_READINESS_RESULT] '+JSON.stringify({build:manifest.build,verdict:manifest.verdict,readiness:{ready:manifest.readiness?.ready??null,verdict:manifest.readiness?.verdict??null,converged:manifest.readiness?.converged??null,sceneReady:manifest.readiness?.sceneReady??null,timeoutMs:manifest.readiness?.timeoutMs??null,externalWaitLimitMs:manifest.readiness?.externalWaitLimitMs??EXTERNAL_READINESS_WAIT_MS},cameraVerification:manifest.cameraVerification,textureCounts:{scanned:manifest.textureDiagnostics?.texturesScanned??null,pending:manifest.textureDiagnostics?.pendingTextures?.length??null,orphan:manifest.textureDiagnostics?.orphanPendingTextures?.length??null,cameraPending:manifest.textureDiagnostics?.cameraPendingTextures?.length??null,usageCoverageComplete:manifest.textureDiagnostics?.usageCoverage?.complete??null},failure:manifest.failure}));
 
  try{
   const auditCalls=[['offshoreStructures','auditOffshoreStructures',[300],10000],['habitableStructures','habitableStructureAudit',[],5000],['settlementGrounding','settlementGrounding',[],5000],['settlementCamps','settlementCampGrounding',[],5000],['garrisonGrounding','garrisonGrounding',[],5000],['floatingHutProbe','probeFloatingHutAudit',[],5000],['sceneInventory','coastalSceneInventory',[1200],10000],['waterFilm','sheetOpacityDepth',[],7000],['runtime','diagnostics',[],10000],['coastalGeometry','auditIslandGeometry',[],30000]];
