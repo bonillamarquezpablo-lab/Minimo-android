@@ -90,7 +90,9 @@ def main() -> None:
         "flagGroup.position.copyFrom(flagGroupLocal)",
         "const flagPoleMesh=scene.getMeshByName('IslandGarrisonFlagpole_'+village.landIndex)",
         "flagPoleMesh?.getAbsolutePosition?.()",
-        "const detachedPropCount=[flagPoleMesh,flagGroupMesh,...stakeMeshes].filter(prop=>!prop||prop.parent!==root).length",
+        "const outpostRoot=village.outpostRoot||null",
+        "const detachedPropCount=[flagPoleMesh,flagGroupMesh,...stakeMeshes].filter(prop=>!prop||prop.parent!==outpostRoot).length",
+        "outpostX:root?Number(root.x.toFixed(2)):null",
     ):
         if required_garrison_link not in index_html:
             fail("Las piezas de guarnición deben usar transformaciones reales de mundo/local y comprobar su apoyo y parentesco.")
