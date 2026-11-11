@@ -333,14 +333,14 @@ def main() -> None:
     # so distance culling of IslandGarrisonOutpost_N left them visible over the sea.
     detached_flagpole = """  const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,null,[flagX,flagY+2.15,flagZ],4.3,.075,.075,M.woodLight);
   const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,null);flagGroup.position=v(flagX,flagY+3.55,flagZ);"""
-    attached_flagpole = """  const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,outpostRoot,[flagX-island.x,flagY+2.15-outpostGroundY,flagZ-island.z],4.3,.075,.075,M.woodLight);
-  const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,outpostRoot);flagGroup.position=v(flagX-island.x,flagY+3.55-outpostGroundY,flagZ-island.z);"""
+    attached_flagpole = """  const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,outpostRoot,[flagX-island.x,flagY+2.15-outpostGroundY,flagZ-island.z],4.3,.075,.075,M.woodLight);flagPole.parent=outpostRoot;
+  const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,outpostRoot);flagGroup.parent=outpostRoot;flagGroup.position=v(flagX-island.x,flagY+3.55-outpostGroundY,flagZ-island.z);"""
     if html.count(detached_flagpole) != 1:
         raise SystemExit("No se encontró exactamente una pareja de raíces independientes de bandera de guarnición.")
     html = html.replace(detached_flagpole, attached_flagpole, 1)
 
     detached_stake = """   cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,null,[px,py+.42,pz],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);"""
-    attached_stake = """   cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,outpostRoot,[px-island.x,py+.42-outpostGroundY,pz-island.z],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);"""
+    attached_stake = """   const stakeMesh=cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,outpostRoot,[px-island.x,py+.42-outpostGroundY,pz-island.z],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);if(stakeMesh)stakeMesh.parent=outpostRoot;"""
     if html.count(detached_stake) != 1:
         raise SystemExit("No se encontró exactamente una raíz independiente de estacas de guarnición.")
     html = html.replace(detached_stake, attached_stake, 1)
@@ -348,8 +348,8 @@ def main() -> None:
     # The garrison grounding probe must measure the flag group's world transform,
     # not its local Y after the group becomes a child of IslandGarrisonOutpost_N.
     detached_flag_measure = """    const flagPosition=village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():village.flagGroup?.position;"""
-    world_flag_measure = """    village.outpostRoot?.computeWorldMatrix?.(true);village.flagGroup?.computeWorldMatrix?.(true);
-    const flagPosition=village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():village.flagGroup?.position;"""
+    world_flag_measure = """    const flagLocalPosition=village.flagGroup?.position;
+    const flagPosition=root&&flagLocalPosition?{x:root.x+flagLocalPosition.x,y:root.y+flagLocalPosition.y,z:root.z+flagLocalPosition.z}:(village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():flagLocalPosition);"""
     if html.count(detached_flag_measure) != 1:
         raise SystemExit("No se encontró exactamente una medición de altura de bandera de guarnición.")
     html = html.replace(detached_flag_measure, world_flag_measure, 1)
