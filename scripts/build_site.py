@@ -328,6 +328,46 @@ def main() -> None:
         raise SystemExit("Navigation runtime JavaScript syntax validation failed:\\n" + navigation_check.stderr)
     print("Navigation runtime JavaScript syntax validation passed.")
 
+    # Anchor decorative terrain objects to the actual rendered GroundMesh. The
+    # analytical heightfield can differ from the rendered triangle interpolation,
+    # leaving rocks, tree trunks and shrubs visibly detached from the island.
+    ground_anchor_replacements = (
+        (
+            "function createRock(x,z){\\n  const gy=terrainSurfaceAt(x,z),sx=",
+            "function createRock(x,z){\\n  const gy=renderedTerrainSurfaceAt(x,z),sx=",
+            "rock",
+        ),
+        (
+            "mergeStaticDecorByMaterial(canopy,'NorseTreeCanopy');\\n  root.position=v(x,terrainSurfaceAt(x,z),z);",
+            "mergeStaticDecorByMaterial(canopy,'NorseTreeCanopy');\\n  root.position=v(x,renderedTerrainSurfaceAt(x,z),z);",
+            "tree",
+        ),
+        (
+            "const groundY=terrainHeightOnIsland(island,x,z),normal=terrainNormalAt(x,z,.42);\\n  const root=newGroup('NaturalBroadleafShrub',null)",
+            "const groundY=renderedTerrainSurfaceAt(x,z),normal=terrainNormalAt(x,z,.42);\\n  const root=newGroup('NaturalBroadleafShrub',null)",
+            "shrub",
+        ),
+    )
+    for detached_anchor, rendered_anchor, label in ground_anchor_replacements:
+        if html.count(detached_anchor) != 1:
+            raise SystemExit(f"No se encontró exactamente un anclaje de terreno para {label}.")
+        html = html.replace(detached_anchor, rendered_anchor, 1)
+
+    # Add a runtime check for every boulder using its actual world-space bounding box.
+    rock_audit_marker = "window.__ELSN_TEST__={"
+    rock_audit_code = """window.__ELSN_TEST__={
+    rockGroundingAudit:()=>rocks.map((rock,index)=>{
+     const mesh=rock?.meshes?.[0];if(!mesh)return {index,valid:false};
+     mesh.computeWorldMatrix?.(true);
+     const bounds=mesh.getBoundingInfo?.()?.boundingBox;
+     const bottomY=Number(bounds?.minimumWorld?.y??(mesh.position.y-mesh.scaling.y*.5));
+     const terrainY=renderedTerrainSurfaceAt(rock.x,rock.z);
+     return {index,x:Number(rock.x.toFixed(3)),z:Number(rock.z.toFixed(3)),bottomY:Number(bottomY.toFixed(4)),renderedTerrainY:Number(terrainY.toFixed(4)),gapMeters:Number((bottomY-terrainY).toFixed(4)),valid:Number.isFinite(bottomY)&&Number.isFinite(terrainY)};
+    }),"""
+    if html.count(rock_audit_marker) != 1:
+        raise SystemExit("No se encontró la API de auditoría para anclar rocas.")
+    html = html.replace(rock_audit_marker, rock_audit_code, 1)
+
     # Keep every island garrison prop attached to its registered root.
     # Previously the flagpole, standard and three stakes were free scene roots,
     # so distance culling of IslandGarrisonOutpost_N left them visible over the sea.
