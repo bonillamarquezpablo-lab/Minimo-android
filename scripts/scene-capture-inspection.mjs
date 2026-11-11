@@ -39,12 +39,14 @@ function cameraAt(target, radius, elevation, angleDegrees, targetY = target.y) {
     targetZ: target.z
   };
 }
-function makeStableObjectCode(item) {
+export function makeStableObjectCode(item) {
   const p = item.position || {};
   const canonical = [
     item.name || 'unknown',
     item.kind || item.structuralRole || item.category || 'object',
     item.islandIndex ?? item.island ?? 'unknown-island',
+    item.nativeId ?? item.uniqueId ?? item.nodeId ?? item.id ?? 'no-native-id',
+    (item.meshNames || []).slice(0,12).join(','),
     Number(p.x || 0).toFixed(1),
     Number(p.y || 0).toFixed(1),
     Number(p.z || 0).toFixed(1)
