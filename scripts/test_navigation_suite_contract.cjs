@@ -6,16 +6,21 @@ const vm = require("node:vm");
 
 const serviceWorker = fs.readFileSync("sw.js", "utf8");
 const html = fs.readFileSync("index.html", "utf8");
+const buildScript = fs.readFileSync("scripts/build_site.py", "utf8");
 const navigationSource = fs.readFileSync("scripts/nordic/navigation-suite.js", "utf8");
 
 // A game shell cached for offline use must also preload every required navigation module.
 assert.match(serviceWorker,
   /SHELL_FILES\s*=\s*\[[\s\S]*?"\.\/scripts\/nordic\/navigation-suite\.js"/,
   "The navigation suite must be part of the initial offline shell cache.");
-assert.ok(html.includes('<script src="./scripts/nordic/navigation-suite.js" defer></script>'),
-  "The game must load the navigation suite exactly as a deferred runtime module.");
-assert.equal(html.split("./scripts/nordic/navigation-suite.js").length - 1, 1,
-  "The navigation suite must not be loaded more than once.");
+assert.ok(html.includes('id="quickActions"') && html.includes('id="map"'),
+  "The navigation suite must mount into the original quick actions and retain the original map.");
+assert.ok(buildScript.includes('navigation_source = ROOT / "scripts" / "nordic" / "navigation-suite.js"') &&
+  buildScript.includes("shutil.copy2(navigation_source, navigation_target)"),
+  "The website build must package the project-owned navigation runtime.");
+assert.ok(buildScript.includes('navigation_tag = \'<script src="./scripts/nordic/navigation-suite.js" defer></script>\'') &&
+  buildScript.includes('html = html.replace("</body>", navigation_tag + "\\n</body>", 1)'),
+  "The website build must inject the navigation module once into the generated game entry point.");
 
 const calls = [];
 const clickHandlers = {};
