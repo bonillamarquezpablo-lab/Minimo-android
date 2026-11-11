@@ -208,6 +208,7 @@ async function main(){
    campCount:report.summary.campCount,campOutliers:report.summary.campOutliers,
    garrisonCount:report.summary.garrisonCount,garrisonOutliers:report.summary.garrisonOutliers,
    intentionalRegattaBuoys:(settled.offshore.candidates||[]).filter(item=>/^NorseRegattaBuoy_\d+$/.test(item.name||'')).length,
+   unexpectedOffshoreCandidates:(settled.offshore.candidates||[]).filter(item=>item.offshore&&!/^NorseRegattaBuoy_\d+$/.test(item.name||'')).map(item=>({name:item.name,kind:item.kind,registered:item.registered,island:item.island,islandIndex:item.islandIndex,position:item.position,issue:item.issue,registeredAudit:item.registeredAudit,dryFootprintSampleCount:item.dryFootprintSampleCount,dryFootprintSampleTotal:item.dryFootprintSampleTotal})),
    unexpectedOffshoreStructures:(settled.offshore.candidates||[]).filter(item=>item.offshore&&!/^NorseRegattaBuoy_\d+$/.test(item.name||'')).length,
    hrafnRepairGate:report.hrafnRepairGate
   };
