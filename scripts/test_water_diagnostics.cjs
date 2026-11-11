@@ -30,6 +30,13 @@ assert.match(html,/shortCrestLift:\.044/,'Canonical short crest is 4.4cm.');
 assert.ok(html.includes('const WATER_WAVE_PARAMETERS=Object.freeze('));
 assert.ok(html.includes('function waterHeightFromWaveValues('));
 assert.ok(html.includes('function waterFarHeightAtVertex(vertex)'));
+assert.ok(html.includes('const waterCoastalCapStrength=new Float32Array(waterBase.length/3)'), 'The full ocean grid must precompute a coastal cap mask for every island.');
+assert.ok(html.includes('function clampOceanHeightAtVertex(vertex,height)'), 'The rendered ocean surface must share a coastal height clamp.');
+assert.ok(html.includes('const cap=(Number(ground.position.y)||0)+.38,coastal=Math.min(height,cap)'), 'Open-ocean crests must not overtop low island terrain.');
+assert.match(html,/return clampOceanHeightAtVertex\(vertex,waterHeightFromWaveValues\([\s\S]*?oceanTime,0\)\)/, 'The far-water LOD must apply the coastal cap before uploading vertices.');
+assert.match(html,/return clampOceanHeightAtVertex\(vertex,waterHeightFromWaveValues\([\s\S]*?oceanTime,fade\)\)/, 'The near-water LOD must apply the same coastal cap before uploading vertices.');
+assert.ok(html.includes('const local=1-smooth01((radial-.96)/.16)'), 'The cap must fade smoothly beyond the submerged-sand band.');
+
 assert.ok(html.includes('function waterDetailHeightAtVertex(vertex,fade)'));
 assert.ok(html.includes('function waterDetailFadeAt(x,z,radius=WATER_DETAIL_RADIUS)'));
 assert.ok(html.includes('function updateWaterFarNormalAtVertex(vertex)'));
