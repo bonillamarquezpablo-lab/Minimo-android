@@ -874,6 +874,26 @@ def main() -> None:
             raise SystemExit("JavaScript sintácticamente inválido después de aplicar las correcciones costeras:\n" + transformed_check.stderr)
     print("OK submerged seabed profile is applied once; 5 cm cross-mesh continuity audit is installed and syntax-checked.")
 
+    # A tiny, unobtrusive build label matching the loading screen's muted gold typography.
+    version_label = (
+        f'<span id="game-build-version" aria-label="Versión {game_version}" '
+        f'title="EL SIN NOMBRE · versión {game_version}">v{game_version}</span>'
+    )
+    version_label_style = (
+        '<style id="game-build-version-style">'
+        '#game-build-version{position:fixed;right:11px;bottom:calc(env(safe-area-inset-bottom,0px) + 7px);'
+        'z-index:2147483000;pointer-events:none;user-select:none;white-space:nowrap;'
+        'font:600 7px/1.2 system-ui,sans-serif;letter-spacing:.19em;'
+        'color:rgba(226,196,135,.58);text-shadow:0 1px 3px rgba(0,0,0,.9)}'
+        '</style>'
+    )
+    if 'id="game-build-version"' in html or 'id="game-build-version-style"' in html:
+        raise SystemExit("La etiqueta de versión ya existe en el HTML fuente; se evita duplicarla.")
+    if "</head>" not in html or "</body>" not in html:
+        raise SystemExit("No se encontraron los puntos de inserción para la etiqueta discreta de versión.")
+    html = html.replace("</head>", version_label_style + "\n</head>", 1)
+    html = html.replace("</body>", version_label + "\n</body>", 1)
+
     (DIST / "index.html").write_text(html, encoding="utf-8")
 
     # Root-level invite entry. The guest mode is compiled as a constant, so
