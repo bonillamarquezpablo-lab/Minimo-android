@@ -4581,10 +4581,11 @@ void main(void){
  const trees=[],rocks=[];
  function organicLeaf(name,parent,pos,scale,material,subdivisions=1){const m=B.MeshBuilder.CreateIcoSphere(name,{radius:1,subdivisions},scene);m.parent=parent;m.position=v(...pos);m.scaling=v(...scale);m.material=material;m.isPickable=false;return m;}
  const staticMergeStats={sourceMeshes:0,mergedBatches:0,estimatedDrawCallsSaved:0};
- function mergeStaticDecorByMaterial(root,prefix){
+ function mergeStaticDecorByMaterial(root,prefix,excludeNames=[]){
   if(!B.Mesh||typeof B.Mesh.MergeMeshes!=='function'||!root||!root.getChildMeshes)return 0;
+  const excluded=new Set(Array.isArray(excludeNames)?excludeNames:[]);
   const batches=new Map();
-  const source=root.getChildMeshes(false).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0&&mesh.material&&!mesh.skeleton&&!mesh.morphTargetManager);
+  const source=root.getChildMeshes(false).filter(mesh=>mesh&&!excluded.has(mesh.name)&&mesh.getTotalVertices&&mesh.getTotalVertices()>0&&mesh.material&&!mesh.skeleton&&!mesh.morphTargetManager);
   source.forEach(mesh=>{const key=mesh.material.uniqueId||mesh.material.name||'material';if(!batches.has(key))batches.set(key,{material:mesh.material,meshes:[]});batches.get(key).meshes.push(mesh);});
   let mergedCount=0;
   batches.forEach((batch,key)=>{
@@ -8831,7 +8832,8 @@ function createRealWeapon(type='axe'){
   // Merge static hut meshes while the root is still at identity. Babylon bakes
   // each child's world matrix into the merged vertex buffer; parenting that merged
   // buffer to an already translated/scaled root would apply the root transform twice.
-  mergeStaticDecorByMaterial(g,'NorseHutStatic');
+  mergeStaticDecorByMaterial(g,'NorseHutStatic',['HutDarkStoneFooting']);
+  g.__norseFootingMesh=(g.getChildMeshes(false)||[]).find(mesh=>mesh.name==='HutDarkStoneFooting')||null;
   g.scaling=v(scale,scale,scale);g.position=v(houseX,footing.centerY-.02*scale,houseZ);
   g.__norseGeometryMergeSpace='local-before-root-transform';
   g.computeWorldMatrix(true);
@@ -9062,7 +9064,7 @@ function createRealWeapon(type='axe'){
  function buildIslandOutpost(vl){
   const cx=vl.x,cz=vl.z+15,gy=renderedTerrainSurfaceAt(cx,cz),camp=newGroup('IslandOutpost_'+vl.index,null);
   camp.position=v(cx,gy,cz);vl.islandOutpostCamp=camp;
-  const outpostEntry=registerHabitableStructure(camp,'IslandOutpostCamp',{islandIndex:vl.index,footprintRadius:5.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:true});
+  const outpostEntry=registerHabitableStructure(camp,'IslandOutpostCamp',{islandIndex:vl.index,footprintRadius:5.4,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:true});
   for(let tent=0;tent<2;tent++){
    const ox=tent===0?-2.25:2.15,oz=tent===0?-.45:.65,rot=tent===0?-.12:.16;
    cyl('OutpostTentRidge_'+vl.index+'_'+tent,camp,[ox,1.38,oz],2.15,.045,.05,M.woodLight,[Math.PI/2,0,0]);
@@ -9075,9 +9077,9 @@ function createRealWeapon(type='axe'){
   }
   const outpostCrate=box('OutpostSupplyCrate_'+vl.index,camp,[-4.1,.28,1.25],[.78,.56,.72],M.woodDark);camp.__groundingCrate=outpostCrate;if(!camp.__groundingSupportMeshes)camp.__groundingSupportMeshes=[];camp.__groundingSupportMeshes.push({mesh:outpostCrate,kind:'box',halfHeight:.28});
   const outpostHearth=sphere('OutpostHearthGlow_'+vl.index,camp,[4.1,.22,2.0],[.24,.16,.24],M.ember,8);camp.__groundingHearth=outpostHearth;if(!camp.__groundingSupportMeshes)camp.__groundingSupportMeshes=[];camp.__groundingSupportMeshes.push({mesh:outpostHearth,kind:'sphere',halfHeight:.16});
-  // Hrafn's original outpost anchor lies on a pronounced rendered slope. Reposition
-  // the same camp on the nearest dry, stable patch using the rendered heightfield.
-  if(vl.index===3){
+  // The Hrafn outpost has a steep footprint and the Cuervo outpost clips one shore sample.
+  // Re-seat both original camps on conservative dry patches using the rendered heightfield.
+  if(vl.index===3||vl.index===0){
    const before=evaluateHabitableStructure(outpostEntry);
    camp.__groundingBefore=before;
    const candidate=findSafeHabitableAnchor(outpostEntry,{x:cx,y:gy,z:cz});
@@ -13197,15 +13199,26 @@ function update(dt){
     const visualBatches=(group.getChildMeshes?.(false)||[]).filter(mesh=>String(mesh.name||'').startsWith('NorseHutStatic_Batch_'));
     let visualMinY=Infinity,visualMaxY=-Infinity,visualMinX=Infinity,visualMaxX=-Infinity,visualMinZ=Infinity,visualMaxZ=-Infinity;
     for(const mesh of visualBatches){try{mesh.computeWorldMatrix(true);const box=mesh.getBoundingInfo?.()?.boundingBox;if(!box)continue;visualMinY=Math.min(visualMinY,box.minimumWorld.y);visualMaxY=Math.max(visualMaxY,box.maximumWorld.y);visualMinX=Math.min(visualMinX,box.minimumWorld.x);visualMaxX=Math.max(visualMaxX,box.maximumWorld.x);visualMinZ=Math.min(visualMinZ,box.minimumWorld.z);visualMaxZ=Math.max(visualMaxZ,box.maximumWorld.z);}catch(_){}}
-    const visualMeshBaseY=Number.isFinite(visualMinY)?Number(visualMinY.toFixed(4)):null,visualMeshBaseGapMeters=visualMeshBaseY===null?null:Number((visualMinY-footingBottomY).toFixed(4));
+    const visualMeshLowestY=Number.isFinite(visualMinY)?Number(visualMinY.toFixed(4)):null;
+    const visualDecorationBelowFoundationMeters=visualMeshLowestY===null?null:Number((footingBottomY-visualMinY).toFixed(4));
     const visualCenterOffsetX=Number.isFinite(visualMinX)?Number((((visualMinX+visualMaxX)*.5)-p.x).toFixed(3)):null,visualCenterOffsetZ=Number.isFinite(visualMinZ)?Number((((visualMinZ+visualMaxZ)*.5)-p.z).toFixed(3)):null;
     const visualCenterOffsetMeters=visualCenterOffsetX===null?null:Number(Math.hypot(visualCenterOffsetX,visualCenterOffsetZ).toFixed(3));
-    const cause=visualCenterOffsetMeters!==null&&visualCenterOffsetMeters>.25?'root-transform-applied-twice-after-mesh-merge':(!measure.insideDryIslandFootprint?'parcel-outside-island':(Math.abs(measure.analyticVsRenderedMeters)>.02?'analytic-vs-rendered-mesh':(Math.abs(measure.terrainDeformationMeters)>.02?'beach-terrain-modification':(Math.abs(visualMeshBaseGapMeters??0)>.02?'visual-mesh-base-offset':'grounded'))));
-     return {village:village.name||String(village.index),buildingIndex,x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2)),rootY:Number(p.y.toFixed(3)),scale,sampledTerrainY:Number(sampledTerrainY.toFixed(3)),analyticTerrainY:Number(analyticTerrainY.toFixed(3)),groundingErrorMeters:Number(Math.abs(footingBottomY-sampledTerrainY).toFixed(4)),analyticVsRenderedMeters:Number((analyticTerrainY-sampledTerrainY).toFixed(4)),groundClearanceMeters:Number((footingBottomY-sampledTerrainY).toFixed(3)),maximumFootingGapMeters:Number(maximumFootingGapMeters.toFixed(4)),dryLandFootprintMarginMeters:Number(dryLandFootprintMarginMeters.toFixed(3)),footingCorners,nearestIsland:nearestIsland?.name||null,nearestIslandIndex,distanceToIslandMeters:Number(nearestDistance.toFixed(2)),islandRadiusRatio:nearestIsland?Number((nearestDistance/nearestIsland.r).toFixed(3)):null,visualBatchCount:visualBatches.length,visualMeshBaseY,visualMeshBaseGapMeters,visualCenterOffsetX,visualCenterOffsetZ,visualCenterOffsetMeters,visualGeometryAligned:visualMeshBaseGapMeters!==null&&Math.abs(visualMeshBaseGapMeters)<=.02&&visualCenterOffsetMeters<=.25,highTideDryMarginMeters:measure.highTideDryMarginMeters,highTideSafe:measure.highTideSafe,distanceToCoastMeters:measure.distanceToCoastMeters,terrainDeformationMeters:measure.terrainDeformationMeters,cause,measure};
+    const footingMesh=group.__norseFootingMesh||(group.getChildMeshes?.(false)||[]).find(mesh=>mesh.name==='HutDarkStoneFooting');
+    let footingMeshBaseY=null,footingMeshBaseGapMeters=null,footingMeshFootprintCorners=[];
+    if(footingMesh){try{
+     footingMesh.computeWorldMatrix(true);const bb=footingMesh.getBoundingInfo().boundingBox;
+     footingMeshBaseY=Number(bb.minimumWorld.y.toFixed(4));
+     const corners=[[bb.minimumWorld.x,bb.minimumWorld.z],[bb.maximumWorld.x,bb.minimumWorld.z],[bb.minimumWorld.x,bb.maximumWorld.z],[bb.maximumWorld.x,bb.maximumWorld.z]];
+     footingMeshFootprintCorners=corners.map(([x,z])=>{const terrainY=renderedTerrainSurfaceAt(x,z);return {x:Number(x.toFixed(3)),z:Number(z.toFixed(3)),terrainY:Number(terrainY.toFixed(4)),baseGapMeters:Number((footingMeshBaseY-terrainY).toFixed(4))};});
+     footingMeshBaseGapMeters=Math.max(...footingMeshFootprintCorners.map(point=>Math.abs(point.baseGapMeters)));
+    }catch(_){}}
+    const maximumStructuralBaseGapMeters=Math.max(maximumFootingGapMeters,Number(footingMeshBaseGapMeters??Infinity));
+    const cause=visualCenterOffsetMeters!==null&&visualCenterOffsetMeters>.25?'root-transform-applied-twice-after-mesh-merge':(!measure.insideDryIslandFootprint?'parcel-outside-island':(Math.abs(measure.analyticVsRenderedMeters)>.02?'analytic-vs-rendered-mesh':(Math.abs(measure.terrainDeformationMeters)>.02?'beach-terrain-modification':(maximumStructuralBaseGapMeters>.02?'foundation-base-offset':'grounded'))));
+     return {village:village.name||String(village.index),buildingIndex,x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2)),rootY:Number(p.y.toFixed(3)),scale,sampledTerrainY:Number(sampledTerrainY.toFixed(3)),analyticTerrainY:Number(analyticTerrainY.toFixed(3)),groundingErrorMeters:Number(Math.abs(footingBottomY-sampledTerrainY).toFixed(4)),analyticVsRenderedMeters:Number((analyticTerrainY-sampledTerrainY).toFixed(4)),groundClearanceMeters:Number((footingBottomY-sampledTerrainY).toFixed(3)),maximumFootingGapMeters:Number(maximumFootingGapMeters.toFixed(4)),dryLandFootprintMarginMeters:Number(dryLandFootprintMarginMeters.toFixed(3)),footingCorners,nearestIsland:nearestIsland?.name||null,nearestIslandIndex,distanceToIslandMeters:Number(nearestDistance.toFixed(2)),islandRadiusRatio:nearestIsland?Number((nearestDistance/nearestIsland.r).toFixed(3)):null,visualBatchCount:visualBatches.length,visualMeshLowestY,visualDecorationBelowFoundationMeters,footingMeshBaseY,footingMeshBaseGapMeters,maximumStructuralBaseGapMeters,footingMeshFootprintCorners,visualCenterOffsetX,visualCenterOffsetZ,visualCenterOffsetMeters,visualGeometryAligned:footingMeshBaseGapMeters!==null&&footingMeshBaseGapMeters<=.02&&visualCenterOffsetMeters<=.25,highTideDryMarginMeters:measure.highTideDryMarginMeters,highTideSafe:measure.highTideSafe,distanceToCoastMeters:measure.distanceToCoastMeters,terrainDeformationMeters:measure.terrainDeformationMeters,cause,measure};
    })),
    settlementCampGrounding:()=>villages.filter(village=>!village.islandGarrison).flatMap(village=>{
     const island=land[village.index];
-    return [['IslandOutpost',village.islandOutpostCamp,5.0],['IslandScoutCamp',village.scoutCamp,2.0]].map(([kind,group,footprintRadius])=>{
+    return [['IslandOutpost',village.islandOutpostCamp,5.4],['IslandScoutCamp',village.scoutCamp,2.0]].map(([kind,group,footprintRadius])=>{
      const p=group?.getAbsolutePosition?group.getAbsolutePosition():group?.position;
      const groundY=p?renderedTerrainSurfaceAt(p.x,p.z):NaN,radialDistance=p?Math.hypot(p.x-island.x,p.z-island.z):Infinity;
      const supportPoints=(group?.__groundingSupportMeshes||[]).map(entry=>{
