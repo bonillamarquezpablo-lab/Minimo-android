@@ -158,6 +158,6 @@ assert.ok(html.includes('clamp(79px,20.8vw,99px) + 5px'));
 assert.ok(!html.includes('width:clamp(164px,42vw,190px)!important'));
 
 // The camera can lower to a near-horizon/upward-looking angle on land and while aboard the ship.
-assert.match(html,/const pitchMin=onShip\\?-\\.02:-\\.06,pitchMax=onShip\\?\\.92:\\.94/);
-assert.match(html,/onShip\\?Math\\.max\\(cameraPitch,-\\.02\\):cameraPitch/);
+assert.ok(html.includes('const pitchMin=onShip?-.02:-.06,pitchMax=onShip?.92:.94'));
+assert.ok(html.includes('onShip?Math.max(cameraPitch,-.02):cameraPitch'));
 assert.ok(html.includes('width:clamp(164px,42vw,190px)'));
