@@ -77,5 +77,5 @@ assert.match(smoke,/noOffshoreAfter=Number\.isFinite\(offshoreCountAfter\)&&offs
 assert.match(smoke,/&&noOffshoreAfter&&offshoreInventoryComplete/);
 assert.match(smoke,/noOffshoreStructures=Number\.isFinite\(Number\(offshore\?\.offshoreCount\)\)&&Number\(offshore\.offshoreCount\)===0/);
 assert.match(smoke,/&&noOffshoreStructures&&noUnregisteredOffshoreCandidates/);
-assert.match(smoke,/In \?test=1 the audit deliberately avoids hiding or mutating scene roots/);
+assert.match(smoke,/The synthetic offshore hut must be discovered and end in a safe state/);
 console.log('TEXTURE READINESS SMOKE CONTRACT OK');
