@@ -131,6 +131,10 @@ def main() -> None:
             f"candidatos {zone.get('candidateCount')}; seleccionados {zone.get('selectedTargetCount')}; "
             f"vistas generadas {zone.get('generatedShotCount')}."
         )
+        omitted = zone.get("omittedTargets") or []
+        if omitted:
+            report_lines.append("  - Estructuras detectadas que requieren otra pasada: " +
+                                ", ".join(f"{item.get('name')} ({item.get('code')})" for item in omitted))
     report_lines.extend(["", "## Estructuras detectadas", "",
                          "| Código | ID interno | Nombre | Tipo | Isla | X | Y | Z | Base | Altura | Mallas | Fuente |",
                          "|---|---:|---|---|---|---:|---:|---:|---:|---:|---:|---|"])
