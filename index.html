@@ -13367,6 +13367,16 @@ function update(dt){
       min:rawBounds.min||null,max:rawBounds.max||null,size:rawBounds.size||null
      };
      const nativeId=item.nativeId??item.uniqueId??item.nodeId??item.id??null;
+     const duplicateIndex=structuralCandidates.findIndex(existing=>
+      (nativeId!==null&&existing.nativeId===nativeId)||
+      (String(existing.name||'')===String(item.name||'')&&Math.hypot(existing.position.x-x,existing.position.z-z)<.35)
+     );
+     if(duplicateIndex>=0){
+      const existing=structuralCandidates[duplicateIndex];
+      structuralCandidates[duplicateIndex]={...existing,...item,nativeId:existing.nativeId??nativeId,uniqueId:existing.nativeId??nativeId,
+       position:existing.position,bounds:item.bounds||existing.bounds,source:existing.source+' + '+source};
+      return;
+     }
      const key=nativeId!==null?'uid:'+nativeId:String(item.name||'unnamed')+'|'+x.toFixed(2)+'|'+z.toFixed(2);
      if(seen.has(key))return;seen.add(key);
      structuralCandidates.push({
