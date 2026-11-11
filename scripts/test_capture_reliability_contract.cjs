@@ -33,7 +33,11 @@ async function main() {
   assert.match(runner,/auditOffshoreStructures\(1000\)/);
   assert.match(runner,/coastalSceneInventory\(2000\)/);
   assert.match(workflow,/create_scene_capture_contact_sheet\.py/);
+  assert.match(fs.readFileSync('scripts/create_scene_capture_contact_sheet.py','utf8'),/inspection-report\.md/);
+  assert.match(fs.readFileSync('scripts/create_scene_capture_contact_sheet.py','utf8'),/sceneInspection/);
   assert.match(workflow,/needs: texture-smoke/);
+  assert.match(workflow,/observationPoint/);
+  assert.match(workflow,/name: User-directed multi-camera scene inspection/);
   assert.match(plannerSource,/capturePrefix/);
   assert.doesNotMatch(runner,/repairAndAuditHabitableStructures/,
     'The camera inspection run must not repair or move objects before capturing the original scene.');
