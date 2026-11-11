@@ -68,6 +68,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
       structuralCandidates:initialAudit.structuralCandidates
     };
     manifest.auditSummary=initialAudit.counts;
+    manifest.sceneInventory={...manifest.sceneInventory,meshCount:initialAudit.runtime?.meshCount??null,returnedObjectCount:initialAudit.sceneInventory?.returnedCount??null,structuralCandidateCount:initialAudit.structuralCandidates.length};
     manifest.unifiedInspection={
       schema:initialAudit.schema,
       mode:initialAudit.mode,
