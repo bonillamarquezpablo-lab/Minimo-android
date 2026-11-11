@@ -73,8 +73,10 @@ async function main() {
   assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-top-down').length,2);
   const waterShots=resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-water-observation');
   assert.equal(waterShots.length,4,'Every structure should be photographed from both heights at the fixed offshore observation point.');
-  assert.ok(waterShots.every(shot=>shot.camera.x===120&&shot.camera.y===6||shot.camera.y===8));
+  assert.ok(waterShots.every(shot=>shot.camera.x===120&&(shot.camera.y===6||shot.camera.y===8)));
   assert.ok(waterShots.every(shot=>shot.camera.z===250&&shot.subject?.code));
+  assert.equal(resolved.report.observationPoint.x,120);
+  assert.equal(resolved.report.observationPoint.z,250);
   assert.ok(resolved.shots.every(shot=>shot.subject?.code&&shot.camera&&shot.worldTarget));
   assert.ok(new Set(resolved.shots.map(shot=>shot.id)).size===resolved.shots.length,'Generated camera IDs must be unique.');
   assert.equal(resolved.report.selectedTargets[0].name,'Hut_A');
