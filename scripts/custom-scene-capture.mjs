@@ -143,10 +143,10 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
             const island=api.islands[shot.islandIndex];if(!island)throw new Error('No existe la isla '+shot.islandIndex);
             camera={x:island.x+base.x,y:base.y,z:island.z+base.z,targetX:island.x+base.targetX,targetY:base.targetY,targetZ:island.z+base.targetZ};
           }
-          const applied=api.setCamera(camera);
+          api.setCamera(camera);
           api.setWaterState({time:shot.time??37,tide:shot.tide??'natural'});
           api.render();
-          return {camera,cameraApplied:applied??null,cameraReadback:api.sceneViewSnapshot?.()??null,
+          return {camera,cameraReadback:api.sceneViewSnapshot?.()??null,
             canvas:{width:document.getElementById('renderCanvas')?.width,height:document.getElementById('renderCanvas')?.height}};
         },{shot});
         const capturedAt=new Date().toISOString();
@@ -158,7 +158,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
         const buffer=Buffer.from(firstMatch[1],'base64'),secondBuffer=Buffer.from(secondMatch[1],'base64');assert.ok(buffer.length>1000,'PNG vacío o incompleto.');assert.equal(buffer.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
         const firstHash=createHash('sha256').update(buffer).digest('hex'),secondHash=createHash('sha256').update(secondBuffer).digest('hex');manifest.determinism.tested++;if(firstHash!==secondHash)manifest.determinism.failed++;assert.equal(secondHash,firstHash,'Render no determinista en '+shot.id);
         const file=shot.id+'.png';fs.writeFileSync(path.join(OUT,file),buffer);const telemetry=await page.evaluate(()=>({diagnostics:window.__ELSN_TEST__.diagnostics()}));
-        manifest.captures.push({id:shot.id,file,capturedAt,camera:prepared.camera,cameraApplied:prepared.cameraApplied,cameraReadback:prepared.cameraReadback,
+        manifest.captures.push({id:shot.id,file,capturedAt,camera:prepared.camera,cameraReadback:prepared.cameraReadback,
           canvas:prepared.canvas,time:shot.time??37,tide:shot.tide??'natural',
           zoneId:shot.zoneId??null,zoneLabel:shot.zoneLabel??null,inspectionFocus:shot.inspectionFocus??null,
           inspectionPurpose:shot.inspectionPurpose??'manual-camera',worldTarget:shot.worldTarget??null,subject:shot.subject??null,
