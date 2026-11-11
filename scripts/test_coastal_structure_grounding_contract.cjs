@@ -45,10 +45,12 @@ assert.match(source,/captureCompositedPage\(page,file,\{gameCanvas:true\}\)/);
 assert.match(source,/newCDPSession\(page\)/);assert.match(source,/page\.screenshot\(\{type:'png'/);assert.match(source,/page\.evaluate\(\(\)=>window\.__ELSN_TEST__\?\.captureCanvas/);assert.match(source,/bounded\(session\.send\('Page\.captureScreenshot'/);assert.match(source,/bounded\(page\.screenshot/);assert.match(source,/10000/);assert.match(source,/control\.setMode\('free'\)/);assert.match(source,/prepareStaticCaptureFrame/);assert.match(source,/const actualPosition=actualView\?\.camera\|\|null/);assert.match(source,/cameraVerified/);assert.match(source,/physicallyUnsafe=metrics=>/);
 assert.match(html,/sceneViewSnapshot:\(\)=>/);
 assert.match(html,/projectWorldPoint:\(\{x,y,z\}\)=>/);
-assert.match(workflow,/Audit habitable structure grounding independently/);
+assert.match(workflow,/unified-inspector:/);
+assert.match(workflow,/node scripts\/run-unified-inspector\.mjs/);
+assert.match(fs.readFileSync('scripts/run-unified-inspector.mjs','utf8'),/Cimentación, estructuras y simulación de reparación en entorno desechable/);
 assert.match(workflow,/if: always\(\)/);
 assert.match(workflow,/artifacts\/structure-grounding\//);
-assert.match(workflow,/if: false # Phase 1/);
+
 assert.match(source,/auditOffshoreStructures\(1000\)/);
 assert.match(source,/full normal game runtime/);
 assert.match(source,/offshoreIslandCount:offshore\.islandCount/);
@@ -67,8 +69,8 @@ assert.match(source,/visibleOffshoreStructuresAfter/);
 assert.match(source,/mode:'full normal-campaign runtime structure audit plus automatic-repair observation in a disposable test renderer'/);
 assert.match(source,/report\.baseline=baseline;report\.repairPass=repairPass;report\.postAutomaticAudit=settled/);
 assert.match(source,/fullRuntimeStructureGate/);
-assert.match(workflow,/timeout-minutes: 12/);
-assert.match(workflow,/timeout --signal=TERM --kill-after=5s 360s node scripts\/coastal-structure-grounding-smoke\.mjs/);
+assert.match(workflow,/timeout-minutes: 180/);
+assert.match(fs.readFileSync('scripts/run-unified-inspector.mjs','utf8'),/scripts\/coastal-structure-grounding-smoke\.mjs/);
 assert.match(source,/offshoreStructuresAfter:report\.summary\.offshoreStructures/);
 assert.match(source,/gate\.unexpectedOffshoreStructures===0/);
 
