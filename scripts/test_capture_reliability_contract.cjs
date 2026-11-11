@@ -48,7 +48,7 @@ async function main() {
     'The runner must call the one unified inspector, not hidden individual audit functions.');
   assert.match(html,/auditOffshoreStructuralRoots\(offshoreLimit\)/);
   assert.match(html,/getCoastalSceneInventory\(inventoryLimit\)/);
-  assert.match(workflow,/create_scene_capture_contact_sheet\.py/);
+  assert.match(unifiedRunner,/create_scene_capture_contact_sheet\.py/,'The single inspector must generate the structure contact sheet.');
   assert.match(fs.readFileSync('scripts/create_scene_capture_contact_sheet.py','utf8'),/inspection-report\.md/);
   assert.match(fs.readFileSync('scripts/create_scene_capture_contact_sheet.py','utf8'),/sceneInspection/);
   assert.match(workflow,/name: 'Inspector único: todas las pruebas, diagnósticos y capturas'/);
