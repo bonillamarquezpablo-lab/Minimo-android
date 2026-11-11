@@ -161,3 +161,46 @@ assert.ok(!html.includes('width:clamp(164px,42vw,190px)!important'));
 assert.ok(html.includes('const pitchMin=onShip?-.02:-.06,pitchMax=onShip?.92:.94'));
 assert.ok(html.includes('onShip?Math.max(cameraPitch,-.02):cameraPitch'));
 assert.ok(html.includes('width:clamp(164px,42vw,190px)'));
+
+// Hrafn hut mesh merge must happen at identity, before the root position/scale is applied.
+// Babylon bakes child world matrices during MergeMeshes; a transformed parent would be applied twice.
+const hutStart=html.indexOf("function buildHouse(cx,cz");
+const hutEnd=html.indexOf("function settlementHousePosition",hutStart);
+const hutBody=html.slice(hutStart,hutEnd);
+assert.ok(hutStart>=0&&hutEnd>hutStart,"Hut builder must remain inspectable");
+assert.ok(hutBody.indexOf("mergeStaticDecorByMaterial(g,'NorseHutStatic')")>=0);
+assert.ok(hutBody.indexOf("mergeStaticDecorByMaterial(g,'NorseHutStatic')")<hutBody.indexOf("g.scaling=v(scale,scale,scale);g.position=v(houseX"));
+assert.ok(hutBody.includes("g.__norseGeometryMergeSpace='local-before-root-transform'"));
+
+// The two Hrafn camp roots are placed through the existing safe-anchor solver and remain functional.
+// Their tent poles, bedrolls, supply crate and embers are seated independently on the drawn heightfield.
+assert.ok(html.includes("const outpostEntry=registerHabitableStructure(camp,'IslandOutpostCamp'"));
+assert.ok(html.includes("const scoutEntry=registerHabitableStructure(scout,'IslandScoutCamp'"));
+assert.ok(html.includes("findSafeHabitableAnchor(outpostEntry,{x:cx,y:gy,z:cz})"));
+assert.ok(html.includes("findSafeHabitableAnchor(scoutEntry,{x:scoutX,y:scoutY,z:scoutZ})"));
+assert.ok(html.includes("camp.__groundingSupportPoints=[]"));
+assert.ok(html.includes("scout.__groundingSupportPoints=[]"));
+assert.ok(html.includes("recordContact(pole.name,worldX,worldZ,terrainY)"));
+
+// The grounding contract measures actual Babylon heightfield samples, analytical-vs-rendered delta,
+// beach deformation, distance to the sampled coast, and the conservative +0.38m high-water cap
+// plus the required additional 0.22m dry margin.
+assert.ok(html.includes("function measureRenderedFootprint(islandIndex,x,z,baseY,offsets=[])"));
+assert.ok(html.includes("const highWaterY=meanSeaLevel+.38"));
+assert.ok(html.includes("const highTideSafe=highTideDryMarginMeters>=.22"));
+assert.ok(html.includes("const distanceToCoastMeters=Number.isFinite(shorelineRadius)"));
+assert.ok(html.includes("const visualMeshBaseGapMeters"));
+assert.ok(html.includes("visualCenterOffsetMeters"));
+assert.ok(html.includes("supportPoints:group?.__groundingSupportPoints"));
+
+// High-tide smoke, before/after measurements, and five separate object captures are mandatory.
+assert.ok(source.includes("setWaterState({time:0,tide:'high'})"));
+assert.ok(source.includes("legacyHrafnBefore"));
+assert.ok(source.includes("hrafnRepairComparison"));
+assert.ok(source.includes("hrafnRepairGate"));
+assert.ok(source.includes("maximumBaseGapMeters"));
+assert.ok(source.includes("highTideSafe"));
+assert.ok(source.includes("distanceToCoastMeters"));
+assert.ok(source.includes("hrafn-final-"));
+assert.ok(source.includes("objectInspectionCaptures.length===5"));
+console.log('OK: Hrafn source transform, safe camp placement, rendered-ground + high-tide contract and before/after captures.');
