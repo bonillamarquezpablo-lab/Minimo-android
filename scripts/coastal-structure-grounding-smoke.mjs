@@ -123,65 +123,70 @@ async function main(){
    report.expandedNavigationChart={file:path.basename(file),bytes:shot.length};
   });
   await phase('close map after coordinate projection test',()=>page.evaluate(()=>{const close=document.getElementById('mapClose');if(close)close.click();else document.getElementById('map')?.classList.remove('expanded');document.getElementById('mapBackdrop')?.classList.remove('open');}));
+  await phase('set conservative high-tide test envelope',()=>page.evaluate(()=>window.__ELSN_TEST__.setWaterState({time:0,tide:'high'})));
   const baseline=await phase('measure baseline structure grounding before repairs',()=>page.evaluate(collectStructureSnapshot));
+  const legacyHrafnBefore=await phase('measure the historical Hrafn placements on the same rendered heightfield',()=>page.evaluate(()=>{
+   const api=window.__ELSN_TEST__;
+   const seeds=[
+    {id:'HRAF-HUT-01',kind:'NorseHut',islandIndex:3,x:28,z:143,baseY:.920,scale:.90,visualMeshBaseY:1.672,visualCenter:{x:53.594,z:271.801},historicalRootY:.902},
+    {id:'HRAF-HUT-02',kind:'NorseHut',islandIndex:3,x:22.5,z:148.5,baseY:.920,scale:.66,visualMeshBaseY:1.483,visualCenter:{x:37.350,z:246.453},historicalRootY:.907},
+    {id:'HRAF-HUT-03',kind:'NorseHut',islandIndex:3,x:35,z:138.5,baseY:.920,scale:.62,visualMeshBaseY:1.451,visualCenter:{x:56.839,z:224.418},historicalRootY:.908},
+    {id:'HRAF-OUTPOST-03',kind:'IslandOutpostCamp',islandIndex:3,x:28,z:158,baseY:2.587,legacyReliefMeters:1.667,legacyDryLandMarginMeters:3.830,legacyRootY:2.587},
+    {id:'HRAF-SCOUT-03',kind:'IslandScoutCamp',islandIndex:3,x:20,z:161,baseY:1.496,legacyReliefMeters:.316,legacyDryLandMarginMeters:2.132,legacyRootY:1.496}
+   ];
+   return seeds.map(seed=>{
+    const offsets=seed.kind==='NorseHut'?[-2.01,2.01].flatMap(dx=>[-2.64,2.64].map(dz=>({dx:dx*seed.scale,dz:dz*seed.scale,baseY:seed.baseY}))):Array.from({length:8},(_,i)=>({dx:Math.cos(i*Math.PI/4)*(seed.kind==='IslandOutpostCamp'?5:2),dz:Math.sin(i*Math.PI/4)*(seed.kind==='IslandOutpostCamp'?5:2),baseY:seed.baseY,baseContact:false}));
+    const measure=api.measureRenderedFootprint({islandIndex:seed.islandIndex,x:seed.x,z:seed.z,baseY:seed.baseY,offsets});
+    return {...seed,measure,legacyVisualBaseGapMeters:seed.visualMeshBaseY===undefined?null:Number((seed.visualMeshBaseY-seed.baseY).toFixed(3)),legacyVisualCenterOffsetMeters:seed.visualCenter?Number(Math.hypot(seed.visualCenter.x-seed.x,seed.visualCenter.z-seed.z).toFixed(3)):null};
+   });
+  }));
   const repairPass=await phase('run the game repair system in the disposable test renderer',()=>page.evaluate(()=>window.__ELSN_TEST__.repairAndAuditHabitableStructures()));
   await phase('allow repaired transforms and colliders to settle',()=>page.waitForTimeout(800));
   const settled=await phase('remeasure structures after the repair pass',()=>page.evaluate(collectStructureSnapshot));
   report.baseline=baseline;report.repairPass=repairPass;report.postAutomaticAudit=settled;
   report.runtimeRepairSimulation={testMode:true,waitMs:800,usesGameRepairSystem:true,explicitRepairApiCalled:true,productionDataModified:false,repairSummary:repairPass?{total:repairPass.total,groundedCount:repairPass.groundedCount,unsafeCount:repairPass.unsafeCount,repaired:repairPass.repaired,hiddenUnsafe:repairPass.hiddenUnsafe,visibleInvalidAfterRepair:repairPass.visibleInvalidAfterRepair}:null};
+  report.highTideTest={mode:'forced-high',seaSurfaceCapMeters:.38,requiredDryClearanceMeters:.22,waterState:await page.evaluate(()=>window.__ELSN_TEST__.diagnostics().coast)};
   report.habitableStructures=settled.structures;report.offshoreAudit=settled.offshore;report.settlementHouses=settled.houses;report.settlementCamps=settled.camps;report.garrisons=settled.garrisons;report.summary=settled.summary;
-  report.initialPlayerCamera=settled.view;
- // Visually inspect each nearby structure/unknown geometry cluster from a dedicated camera.
- // This catches invasion/endgame props even when their imported node names are meaningless.
- report.objectInspectionCaptures=[];
- const inspectionTargetRows=[...(settled.nearbyHrafnStructureRoots||[]),...(settled.hrafnHutRoots||[]),...(settled.navigationPointAudit?.nearbyCandidates||[])];
- const inspectionTargets=Array.from(new Map(inspectionTargetRows.map(item=>[String(item.name||'unnamed')+'|'+Number(item.position?.x||0).toFixed(1)+'|'+Number(item.position?.z||0).toFixed(1),item])).values()).filter(item=>item.visible!==false&&item.enabled!==false).slice(0,14);
- for(let index=0;index<inspectionTargets.length;index++){
-  const item=inspectionTargets[index],p=item.position||{},bounds=item.bounds||{},targetY=Number.isFinite(Number(bounds.bottomY))&&Number.isFinite(Number(bounds.topY))?(Number(bounds.bottomY)+Number(bounds.topY))*.5:(Number(p.y)||0)+2.5;
-  const camera={x:(Number(p.x)||0)+26,y:Math.max(8,targetY+12),z:(Number(p.z)||0)+26,targetX:Number(p.x)||0,targetY,targetZ:Number(p.z)||0};
-  const safeName=String(item.name||('object-'+index)).replace(/[^a-z0-9_-]+/gi,'-').slice(0,64);
-  const file=path.join(OUT,'hrafn-object-'+String(index+1).padStart(2,'0')+'-'+safeName+'-'+String(Number(p.x||0).toFixed(1))+'-'+String(Number(p.z||0).toFixed(1))+'.png');
-  try{
-   const cameraState=await page.evaluate(args=>window.__ELSN_TEST__.setCamera(args),camera);
-   await page.waitForTimeout(350);
-   const shot=await page.screenshot({path:file,timeout:20000,animations:'disabled'});
-   report.objectInspectionCaptures.push({index:index+1,file:path.basename(file),bytes:shot.length,name:item.name,role:item.role,classificationConfidence:item.confidence,position:item.position,bounds:item.bounds,meshNames:item.meshNames,materials:item.materials,grounding:item.grounding,camera:cameraState});
-  }catch(error){report.objectInspectionCaptures.push({index:index+1,name:item.name,role:item.role,position:item.position,error:String(error?.message||error)});}
- }
-  report.hrafnSceneRoots=settled.hrafnSceneRoots;
-  report.hrafnHutRoots=settled.hrafnHutRoots;
-  report.navigationPointAudit=settled.navigationPointAudit;
-  report.projectedStructuralCandidates=settled.projectedCandidates;
-  report.inventoryStructuralCandidates=settled.inventoryStructuralCandidates;
-  report.inventorySummary=settled.inventorySummary;
-  const screenshotFile=path.join(OUT,'structure-grounding-default-player-view.png');
-  try{
-   const screenshot=await phase('capture portrait player view without WebGL canvas readback',()=>page.screenshot({path:screenshotFile,timeout:20000,animations:'disabled'}));
-   report.screenshot={file:path.basename(screenshotFile),bytes:screenshot.length,method:'playwright-page-screenshot',view:'default-new-campaign-player-camera'};
-  }catch(error){report.screenshotError=String(error?.message||error);}
-  // Recreate the user's reported Hrafn approach from the south shore and from offshore.
-  // Cameras change only inside the disposable test renderer; they never move structures or save data.
-  const hrafnHuts=(settled.houses||[]).filter(item=>/Hrafn/i.test(item.village||''));
-  const targetX=28,targetZ=143;
-  const seaViews=[
-   {id:'hrafn-south-shore',x:23.3,y:4.5,z:173.7},
-   {id:'hrafn-offshore-z236',x:28,y:5.5,z:236.3},
-   {id:'hrafn-mid-bay-z254',x:28,y:6.5,z:254.4}
-  ];
-  report.hrafnApproachViews=[];
-  for(const view of seaViews){
-   const file=path.join(OUT,'hrafn-approach-'+view.id+'.png');
-   try{
-    const camera=await page.evaluate(({x,y,z,targetX,targetZ})=>{
-     const targetY=1.6;
-     window.__ELSN_TEST__.setCamera({x,y,z,targetX,targetY,targetZ});
-     return window.__ELSN_TEST__.sceneViewSnapshot();
-    },{...view,targetX,targetZ});
-    await page.waitForTimeout(350);
-    const shot=await page.screenshot({path:file,timeout:20000,animations:'disabled'});
-    report.hrafnApproachViews.push({id:view.id,file:path.basename(file),bytes:shot.length,camera,target:{x:targetX,y:1.6,z:targetZ},hutCount:hrafnHuts.length});
-   }catch(error){report.hrafnApproachViews.push({id:view.id,error:String(error?.message||error)});}
+  report.initialPlayerCamera=settled.view;report.legacyHrafnBefore=legacyHrafnBefore;
+  const hrafnHouses=(settled.houses||[]).filter(item=>item.nearestIslandIndex===3).sort((a,b)=>a.x-b.x);
+  const hrafnCamps=(settled.camps||[]).filter(item=>/Hrafn/i.test(item.village||'')).sort((a,b)=>a.kind.localeCompare(b.kind));
+  const legacyById=new Map(legacyHrafnBefore.map(item=>[item.id,item]));
+  const makeHouseAfter=(item,index)=>({position:{x:item.x,z:item.z},baseHeight:Number((item.rootY+.02*item.scale).toFixed(4)),renderedTerrainBelowBase:item.sampledTerrainY,visualMeshBaseY:item.visualMeshBaseY,visualMeshBaseGapMeters:item.visualMeshBaseGapMeters,visualCenterOffsetMeters:item.visualCenterOffsetMeters,maximumBaseGapMeters:item.maximumFootingGapMeters,distanceToCoastMeters:item.distanceToCoastMeters,highTideDryMarginMeters:item.highTideDryMarginMeters,highTideSafe:item.highTideSafe,cause:item.cause});
+  const makeCampAfter=item=>({position:{x:item.x,z:item.z},baseHeight:item.anchorY,renderedTerrainBelowBase:item.groundY,baseAnchorGapMeters:item.anchorErrorMeters,maximumBaseGapMeters:item.maximumBaseGapMeters,minimumRenderedTerrainY:item.minimumRenderedTerrainY,distanceToCoastMeters:item.distanceToCoastMeters,highTideDryMarginMeters:item.highTideDryMarginMeters,highTideSafe:item.highTideSafe,supportPoints:item.supportPoints,cause:item.cause,before:item.before});
+  const comparison=[];
+  for(let i=0;i<3;i++){
+   const old=legacyById.get('HRAF-HUT-0'+(i+1)),item=hrafnHouses.find(row=>Math.abs(row.x-old.x)<.2&&Math.abs(row.z-old.z)<.2);
+   if(item)comparison.push({id:old.id,type:'WeatheredNorseHut',island:'Bahía de Hrafn',before:{position:{x:old.x,z:old.z},baseHeight:old.baseY,renderedTerrainBelowBase:old.measure.renderedTerrainY,visualMeshBaseY:old.visualMeshBaseY,visualMeshBaseGapMeters:old.legacyVisualBaseGapMeters,visualCenterOffsetMeters:old.legacyVisualCenterOffsetMeters,distanceToCoastMeters:old.measure.distanceToCoastMeters,highTideDryMarginMeters:old.measure.highTideDryMarginMeters,highTideSafe:old.measure.highTideSafe,cause:'root-transform-applied-twice-after-mesh-merge'},after:makeHouseAfter(item)});
   }
+  for(const oldId of ['HRAF-OUTPOST-03','HRAF-SCOUT-03']){
+   const old=legacyById.get(oldId),item=hrafnCamps.find(row=>(oldId.includes('OUTPOST')?row.kind==='IslandOutpost':row.kind==='IslandScoutCamp'));
+   if(item)comparison.push({id:oldId,type:item.kind,island:'Bahía de Hrafn',before:{position:{x:old.x,z:old.z},baseHeight:old.baseY,renderedTerrainBelowBase:old.measure.renderedTerrainY,baseAnchorGapMeters:old.measure.baseGapMeters,maximumFootprintReliefMeters:old.legacyReliefMeters,dryLandMarginMeters:old.legacyDryLandMarginMeters,distanceToCoastMeters:old.measure.distanceToCoastMeters,highTideDryMarginMeters:old.measure.highTideDryMarginMeters,highTideSafe:old.measure.highTideSafe,cause:'uneven-footprint-on-rendered-slope'},after:makeCampAfter(item)});
+  }
+  report.hrafnRepairComparison=comparison;
+  report.hrafnRepairGate={
+   targetCount:comparison.length,expectedTargetCount:5,
+   huts:comparison.filter(row=>row.type==='WeatheredNorseHut').map(row=>({id:row.id,baseGapWithinTwoCm:row.after?.visualMeshBaseGapMeters!==null&&Math.abs(row.after?.visualMeshBaseGapMeters??Infinity)<=.02,visualCenterWithinQuarterMeter:(row.after?.visualCenterOffsetMeters??Infinity)<=.25,highTideSafe:row.after?.highTideSafe===true})),
+   camps:comparison.filter(row=>row.type!=='WeatheredNorseHut').map(row=>({id:row.id,anchorWithinTwoCm:Math.abs(row.after?.baseAnchorGapMeters??Infinity)<=.02,allSupportsWithinTwoCm:(row.after?.maximumBaseGapMeters??Infinity)<=.02,highTideSafe:row.after?.highTideSafe===true,withinDryLandBand:row.after?.cause==='grounded'}))
+  };
+  report.objectInspectionCaptures=[];
+  const inspectionTargets=(settled.hrafnSceneRoots||[]).filter(item=>item.visible!==false&&item.enabled!==false&&
+   (item.name==='WeatheredNorseHut'||item.name==='IslandOutpost_3'||item.name==='IslandScoutCamp_3'))
+   .sort((a,b)=>{const ai=a.name==='WeatheredNorseHut'?0:(a.name==='IslandOutpost_3'?1:2),bi=b.name==='WeatheredNorseHut'?0:(b.name==='IslandOutpost_3'?1:2);return ai-bi||(a.position?.x||0)-(b.position?.x||0);}).slice(0,5);
+  for(let index=0;index<inspectionTargets.length;index++){
+   const item=inspectionTargets[index],p=item.position||{},targetY=(Number(p.y)||0)+1.6;
+   const camera={x:(Number(p.x)||0)+12,y:Math.max(7,targetY+8),z:(Number(p.z)||0)+12,targetX:Number(p.x)||0,targetY,targetZ:Number(p.z)||0};
+   const safeName=String(item.name||('object-'+index)).replace(/[^a-z0-9_-]+/gi,'-').slice(0,64);
+   const file=path.join(OUT,'hrafn-final-'+String(index+1).padStart(2,'0')+'-'+safeName+'-'+String(Number(p.x||0).toFixed(1))+'-'+String(Number(p.z||0).toFixed(1))+'.png');
+   try{
+    const cameraState=await page.evaluate(args=>window.__ELSN_TEST__.setCamera(args),camera);
+    await page.waitForTimeout(250);
+    const shot=await page.screenshot({path:file,timeout:20000,animations:'disabled'});
+    report.objectInspectionCaptures.push({index:index+1,file:path.basename(file),bytes:shot.length,name:item.name,role:item.role,position:item.position,bounds:item.bounds,meshNames:item.meshNames,materials:item.materials,camera:cameraState});
+   }catch(error){report.objectInspectionCaptures.push({index:index+1,name:item.name,role:item.role,position:item.position,error:String(error?.message||error)});}
+  }
+  report.hrafnSceneRoots=settled.hrafnSceneRoots;report.hrafnHutRoots=settled.hrafnHutRoots;
+  report.navigationPointAudit=settled.navigationPointAudit;report.projectedStructuralCandidates=settled.projectedCandidates;
+  report.inventoryStructuralCandidates=settled.inventoryStructuralCandidates;report.inventorySummary=settled.inventorySummary;
   const initialRows=baseline.structures.structures||[];
   const initialUnsafe=initialRows.filter(item=>item.safe!==true);
   const repairedRows=Array.isArray(repairPass?.structures)?repairPass.structures:[];
@@ -202,13 +207,19 @@ async function main(){
    offshoreIslandCount:report.summary.offshoreIslandCount,
    houseCount:report.summary.houseCount,houseOutliers:report.summary.houseOutliers,
    campCount:report.summary.campCount,campOutliers:report.summary.campOutliers,
-   garrisonCount:report.summary.garrisonCount,garrisonOutliers:report.summary.garrisonOutliers
+   garrisonCount:report.summary.garrisonCount,garrisonOutliers:report.summary.garrisonOutliers,
+   intentionalRegattaBuoys:(settled.offshore.candidates||[]).filter(item=>/^NorseRegattaBuoy_\\d+$/.test(item.name||'')).length,
+   unexpectedOffshoreStructures:(settled.offshore.candidates||[]).filter(item=>item.offshore&&!/^NorseRegattaBuoy_\\d+$/.test(item.name||'')).length,
+   hrafnRepairGate:report.hrafnRepairGate
   };
   report.fullRuntimeStructureGate=gate;
+  const hrafnTargetsMeasured=report.hrafnRepairGate.targetCount===5;
+  const hrafnHutsPass=report.hrafnRepairGate.huts.length===3&&report.hrafnRepairGate.huts.every(item=>item.baseGapWithinTwoCm&&item.visualCenterWithinQuarterMeter&&item.highTideSafe);
+  const hrafnCampsPass=report.hrafnRepairGate.camps.length===2&&report.hrafnRepairGate.camps.every(item=>item.anchorWithinTwoCm&&item.allSupportsWithinTwoCm&&item.highTideSafe&&item.withinDryLandBand);
   const passed=report.summary.structuresTotal>=39&&gate.allInitialUnsafeVerifiedSafe&&gate.unsafeAfter===0&&
-   gate.visibleInvalidAfter===0&&gate.untrackedRootsAfter===0&&gate.unregisteredStructuralCandidatesAfter===0&&
-   gate.offshoreStructuresAfter===0&&gate.visibleOffshoreStructuresAfter===0&&gate.offshoreIslandCount===13&&gate.houseCount>=12&&
-   gate.houseOutliers===0&&gate.campCount>=8&&gate.campOutliers===0&&gate.garrisonCount>=9&&gate.garrisonOutliers===0;
+   gate.visibleInvalidAfter===0&&gate.untrackedRootsAfter===0&&gate.unexpectedOffshoreStructures===0&&gate.offshoreIslandCount===13&&gate.houseCount>=12&&
+   gate.houseOutliers===0&&gate.campCount>=8&&gate.campOutliers===0&&gate.garrisonCount>=9&&gate.garrisonOutliers===0&&
+   hrafnTargetsMeasured&&hrafnHutsPass&&hrafnCampsPass&&report.objectInspectionCaptures.length===5&&!report.objectInspectionCaptures.some(item=>item.error);
   report.verdict=passed?'measured':'issues-found';
   if(!passed)throw new Error('Full normal-runtime structure safety gate failed: '+JSON.stringify(gate));
  }catch(error){report.failure=String(error?.stack||error);report.verdict='fail';
