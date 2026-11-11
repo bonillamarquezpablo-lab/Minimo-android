@@ -1,4 +1,4 @@
-name: Coastal reference capture
+name: Inspector único — EL SIN NOMBRE
 
 on:
   pull_request:
@@ -154,7 +154,7 @@ jobs:
           retention-days: 30
 
   custom-capture:
-    name: User-directed multi-camera scene inspection
+    name: Inspector único: inventario completo y cámaras desde el agua
     needs: texture-smoke
     if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.texture-smoke.result == 'success')) }}
     runs-on: ubuntu-latest
