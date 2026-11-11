@@ -9077,9 +9077,9 @@ function createRealWeapon(type='axe'){
   }
   const outpostCrate=box('OutpostSupplyCrate_'+vl.index,camp,[-4.1,.28,1.25],[.78,.56,.72],M.woodDark);camp.__groundingCrate=outpostCrate;if(!camp.__groundingSupportMeshes)camp.__groundingSupportMeshes=[];camp.__groundingSupportMeshes.push({mesh:outpostCrate,kind:'box',halfHeight:.28});
   const outpostHearth=sphere('OutpostHearthGlow_'+vl.index,camp,[4.1,.22,2.0],[.24,.16,.24],M.ember,8);camp.__groundingHearth=outpostHearth;if(!camp.__groundingSupportMeshes)camp.__groundingSupportMeshes=[];camp.__groundingSupportMeshes.push({mesh:outpostHearth,kind:'sphere',halfHeight:.16});
-  // The Hrafn outpost has a steep footprint and the Cuervo outpost clips one shore sample.
-  // Re-seat both original camps on conservative dry patches using the rendered heightfield.
-  if(vl.index===3||vl.index===0){
+  // Every secondary outpost is checked against its own island's rendered dry-ground heightfield.
+  // Re-seat its root when needed, then place each ground-contact mesh on its actual local terrain.
+  {
    const before=evaluateHabitableStructure(outpostEntry);
    camp.__groundingBefore=before;
    const candidate=findSafeHabitableAnchor(outpostEntry,{x:cx,y:gy,z:cz});
@@ -9111,7 +9111,7 @@ function createRealWeapon(type='axe'){
   const scoutEntry=registerHabitableStructure(scout,'IslandScoutCamp',{islandIndex:vl.index,footprintRadius:2.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:true});
   const scoutSupplies=box('ScoutCampSupplies_'+vl.index,scout,[0,.30,0],[.92,.60,.78],M.woodDark);if(!scout.__groundingSupportMeshes)scout.__groundingSupportMeshes=[];scout.__groundingSupportMeshes.push({mesh:scoutSupplies,kind:'box',halfHeight:.30});
   const scoutEmbers=sphere('ScoutCampEmbers_'+vl.index,scout,[1.15,.13,.15],[.36,.12,.30],M.ember,8);scout.__groundingSupportMeshes.push({mesh:scoutEmbers,kind:'sphere',halfHeight:.12});
-  if(vl.index===3){
+  {
    const before=evaluateHabitableStructure(scoutEntry);
    scout.__groundingBefore=before;
    const candidate=findSafeHabitableAnchor(scoutEntry,{x:scoutX,y:scoutY,z:scoutZ});
