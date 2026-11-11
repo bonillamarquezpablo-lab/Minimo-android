@@ -629,11 +629,19 @@ def main() -> None:
         " async function resolveCivilianHumanAssetUrls(){\n  const urls=[CIVILIAN_HUMAN_GLB_URL];",
         " async function resolveCivilianHumanAssetUrls(){\n  return [CIVILIAN_HUMAN_GLB_URL];\n  const urls=[CIVILIAN_HUMAN_GLB_URL];"
     )
-    atmosphere_tag = '<script src="./scripts/nordic/atmosphere-system.js" defer></script>'
+    # Load the atmosphere runtime synchronously before the monolithic game script.
+    # A deferred script at </body> executes only after parsing, which is too late:
+    # the game constructs AtmosphereSystem while its inline runtime is evaluated.
+    atmosphere_tag = '<script src="./scripts/nordic/atmosphere-system.js"></script>'
+    game_runtime_marker = '<script>\n(function(){\n"use strict";\nwindow.addEventListener(\'error\''
+    if html.count(game_runtime_marker) != 1:
+        raise SystemExit("No se encontró exactamente el inicio del runtime principal para instalar la atmósfera.")
+    if html.count(atmosphere_tag) > 1:
+        raise SystemExit("La etiqueta del sistema atmosférico aparece duplicada.")
     if atmosphere_tag not in html:
-        if "</body>" not in html:
-            raise SystemExit("No se encontró </body> para instalar la atmósfera.")
-        html = html.replace("</body>", atmosphere_tag + "\n</body>", 1)
+        html = html.replace(game_runtime_marker, atmosphere_tag + "\n" + game_runtime_marker, 1)
+    if html.index(atmosphere_tag) > html.index(game_runtime_marker):
+        raise SystemExit("El sistema atmosférico debe cargarse antes del runtime principal.")
 
     required = [
         "assets/vendor/babylon.js",
