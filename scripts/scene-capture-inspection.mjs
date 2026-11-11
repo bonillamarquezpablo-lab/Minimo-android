@@ -185,9 +185,10 @@ export function createZoneInspectionShots(request, islands, candidates) {
   }
   const selected = zone.focus === 'structures' ? unique.slice(0,zone.maxTargets) : [];
   const omitted = zone.focus === 'structures' ? unique.slice(zone.maxTargets) : [];
-  const addShot = (id, camera, purpose, target, state, subject = null) => {
+  const capturePrefix = request.id.slice(0,12);
+  const addShot = (suffix, camera, purpose, target, state, subject = null) => {
     shots.push({
-      id:id.slice(0,48),
+      id:(capturePrefix+'-'+suffix).slice(0,48),
       camera,
       time:state.time,
       tide:state.tide,
@@ -200,7 +201,7 @@ export function createZoneInspectionShots(request, islands, candidates) {
     });
   };
   const overviewTarget = {x:center.x,y:center.y+1,z:center.z};
-  for (const state of stateVariants) {
+  for (const [stateIndex,state] of stateVariants.entries()) {
     if (zone.includeOverview) {
       const overviewAngles = zone.angles.length >= 4 ? zone.angles : DIRECTIONS_8;
       const overviewCount = Math.min(8,overviewAngles.length);
@@ -209,7 +210,7 @@ export function createZoneInspectionShots(request, islands, candidates) {
       for (let i=0;i<overviewCount;i++) {
         const angle = overviewAngles[i];
         addShot(
-          request.id+'-overview-'+String(i+1).padStart(2,'0')+'-t'+String(state.time)+'-'+state.tide,
+          'overview-'+String(i+1).padStart(2,'0')+'-s'+stateIndex+'-'+state.tide,
           cameraAt(overviewTarget,radius,elevation,angle,overviewTarget.y),
           'zone-overview',
           overviewTarget,
@@ -246,17 +247,17 @@ export function createZoneInspectionShots(request, islands, candidates) {
         };
         for (let i=0;i<zone.angles.length;i++) {
           const angle = zone.angles[i];
-          addShot(request.id+'-'+item.code.toLowerCase()+'-low-'+String(i+1).padStart(2,'0')+'-t'+String(state.time)+'-'+state.tide,
+          addShot(item.code.toLowerCase()+'-lo-'+String(i+1).padStart(2,'0')+'-s'+stateIndex+'-'+state.tide,
             cameraAt(target,distance,lowElevation,angle,target.y),'structure-low-oblique',target,state,subject);
         }
         for (let i=0;i<Math.min(4,DIRECTIONS_4.length);i++) {
           const angle = DIRECTIONS_4[i];
-          addShot(request.id+'-'+item.code.toLowerCase()+'-high-'+String(i+1).padStart(2,'0')+'-t'+String(state.time)+'-'+state.tide,
+          addShot(item.code.toLowerCase()+'-hi-'+String(i+1).padStart(2,'0')+'-s'+stateIndex+'-'+state.tide,
             cameraAt(target,distance*1.2,highElevation,angle,target.y),'structure-high-oblique',target,state,subject);
         }
         if (zone.includeTopDown) {
           const camera = {x:target.x+.05,y:top+Math.max(8,objectHeight*1.5),z:target.z+.05,targetX:target.x,targetY:target.y,targetZ:target.z};
-          addShot(request.id+'-'+item.code.toLowerCase()+'-topdown-t'+String(state.time)+'-'+state.tide,
+          addShot(item.code.toLowerCase()+'-td-s'+stateIndex+'-'+state.tide,
             camera,'structure-top-down',target,state,subject);
         }
       }
@@ -268,7 +269,7 @@ export function createZoneInspectionShots(request, islands, candidates) {
       for (const [level,distance,elevation] of [['near',nearDistance,lowElevation],['elevated',farDistance,highElevation]]) {
         for (let i=0;i<zone.angles.length;i++) {
           const angle = zone.angles[i];
-          addShot(request.id+'-'+level+'-'+String(i+1).padStart(2,'0')+'-t'+String(state.time)+'-'+state.tide,
+          addShot(level+'-'+String(i+1).padStart(2,'0')+'-s'+stateIndex+'-'+state.tide,
             cameraAt(overviewTarget,distance,elevation,angle,overviewTarget.y),
             zone.focus === 'water' ? 'water-surface-angle' : zone.focus === 'coast' ? 'coastline-angle' : zone.focus === 'terrain' ? 'terrain-angle' : 'zone-angle',
             overviewTarget,state);
@@ -276,7 +277,7 @@ export function createZoneInspectionShots(request, islands, candidates) {
       }
       if (zone.includeTopDown) {
         const camera={x:center.x+.05,y:center.y+Math.max(18,zone.radiusMeters*1.5),z:center.z+.05,targetX:center.x,targetY:center.y,targetZ:center.z};
-        addShot(request.id+'-topdown-t'+String(state.time)+'-'+state.tide,camera,'zone-top-down',center,state);
+        addShot('topdown-s'+stateIndex+'-'+state.tide,camera,'zone-top-down',center,state);
       }
     }
   }
