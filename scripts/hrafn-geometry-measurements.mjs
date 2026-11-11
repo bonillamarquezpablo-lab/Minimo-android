@@ -153,6 +153,16 @@ async function main(){
      const x=island.x+towardCrow.x*offsetMeters,z=island.z+towardCrow.z*offsetMeters;
      const ground=heightAt(visibleHeightfields,x,z),water=heightAt(waterHeightMeshes,x,z),supportedByLand=!!(ground&&(!water||ground.y>water.y));
      const surfaceY=supportedByLand?ground.y:(water?.y??.28),camera={x,y:surfaceY+1.7,z};
+     api.setCamera({x:camera.x,y:camera.y,z:camera.z,targetX:island.x,targetY:1.2,targetZ:island.z});
+     api.setWaterState({time:0,tide:'high'});
+     const waterLodDiagnostics=api.diagnostics()?.coast||null;
+     const waterDetailRadius=Number(waterLodDiagnostics?.waterLodBoundary?.radiusMeters)||null;
+     const detailFadeAt=(px,pz)=>{
+      if(!waterDetailRadius)return null;
+      const distance=Math.hypot(px-camera.x,pz-camera.z),r2=waterDetailRadius*waterDetailRadius,start=r2*.55;
+      const t=Math.max(0,Math.min(1,(r2-distance*distance)/(r2-start)));
+      return {distanceMeters:Number(distance.toFixed(3)),fade:Number((t*t*(3-2*t)).toFixed(4))};
+     };
      const viewRows=[];
      for(const t of targets.filter(item=>item.kind==='hut')){
       const targetPoint=new B.Vector3(t.x,t.baseY,t.z),origin=new B.Vector3(camera.x,camera.y,camera.z);
@@ -195,8 +205,8 @@ async function main(){
       viewRows.push({structureId:t.id,base:{x:round(t.x,3),y:round(t.baseY,4),z:round(t.z,3)},
        camera:{...camera,eyeHeightMeters:1.7,supportSurface:supportedByLand?'rendered island ground':'rendered ocean surface',
         supportMesh:supportedByLand?ground.mesh:(water?.mesh??null),supportSurfaceY:round(surfaceY,4)},
-       cameraToBaseDistanceMeters:round(targetDistance,3),firstRayHit:first,
-       visibleLandEdgeFromBaseTowardCrow:firstLandExit,secondDryLandEntryFromBase:secondLandEntry,
+       cameraToBaseDistanceMeters:round(targetDistance,3),waterDetailAtBase:detailFadeAt(t.x,t.z),
+       firstRayHit:first,visibleLandEdgeFromBaseTowardCrow:firstLandExit,secondDryLandEntryFromBase:secondLandEntry,
        nearestLandEdgeDistanceMeters:firstLandExit?.lastDryDistanceMeters??null,
        dryLandRunsAlongView:dryRuns,submergedTerrainSamples:submergedCount,hiddenTerrainSamples:hiddenCount,
        sampledPoints:samples.length,minVisibleTerrainMinusWaterMeters:Number.isFinite(minClearance)?round(minClearance,4):null,
@@ -207,6 +217,9 @@ async function main(){
       crowCentreDistanceMeters:round(Math.hypot(x-crow.x,z-crow.z),3),hrafnCentreDistanceMeters:offsetMeters,
       crowBeachRelation:round(Math.hypot(x-crow.x,z-crow.z)-crow.r*1.085,3),crowCoastApproximateSignedDistanceMeters:round(Math.hypot(x-crow.x,z-crow.z)-crow.r*1.085,3),
       cameraAboveLocalSurfaceMeters:1.7,viewRows,terrainMeshes:terrainByIsland,
+      waterDetailRadiusMeters:waterDetailRadius,waterLodDiagnostics:waterLodDiagnostics?.waterLodBoundary??null,
+      waterLodDiagnosticsAt90Meters:waterLodDiagnostics?.waterLodBoundary90??null,
+      renderedWaterVertexAgreement:waterLodDiagnostics?.renderedVertexAgreement??null,
       streamingDiagnostics:window.__ELSN_ISLAND_STREAMING__||window.__elSinNombreIslandStreaming||null});
     }
    return {measurements:results,cameraTests};
