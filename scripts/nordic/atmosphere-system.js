@@ -189,6 +189,10 @@
       return normalizeTime(current + Math.max(0, Number(dt) || 0) *
         (Number.isFinite(speed) ? speed : 1) * 24 / duration);
     }
+    static advanceElapsed(current, dt, speed) {
+      return Math.max(0, Number(current) || 0) +
+        Math.max(0, Number(dt) || 0) * clamp(Number(speed) || 0, 0, 32);
+    }
 
     setTime(value) {
       this.timeOfDay = normalizeTime(value);
@@ -551,7 +555,7 @@
       if (!this.paused && delta > 0) {
         this.timeOfDay = AtmosphereSystem.advanceTime(
           this.timeOfDay, delta * this.speed, this.dayDurationSeconds, 1);
-        this.elapsedSeconds += delta;
+        this.elapsedSeconds = AtmosphereSystem.advanceElapsed(this.elapsedSeconds, delta, this.speed);
       }
       const B = this.B, state = computeSolarState(this.timeOfDay);
       const weather = this.weather;
