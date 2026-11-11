@@ -385,7 +385,7 @@ def main() -> None:
  }"""
     if html.count(garrison_anchor_marker) != 1:
         raise SystemExit("No se encontró el punto único de creación de las nueve guarniciones.")
-    html = html.replace(garrison_anchor_marker, garrison_anchor_code + "\\n" + garrison_anchor_marker, 1)
+    html = html.replace(garrison_anchor_marker, garrison_anchor_code + "\n" + garrison_anchor_marker, 1)
     garrison_audit_end = """lastHabitableStructureAudit=snapshot;return snapshot;"""
     garrison_audit_end_fixed = """syncIslandGarrisonGroundAnchors();lastHabitableStructureAudit=snapshot;return snapshot;"""
     if html.count(garrison_audit_end) != 1:
