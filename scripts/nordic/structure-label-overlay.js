@@ -1,7 +1,7 @@
 (function(){
   "use strict";
   const params=new URLSearchParams(location.search);
-  if(params.get("debug")!=="structures")return;
+  if(params.get("debug")!=="structures"||params.get("test")!=="1")return;
   const style=document.createElement("style");
   style.textContent=`
     #elsn-structure-label-layer{position:fixed;inset:0;z-index:2147483000;pointer-events:none;overflow:hidden;font:600 11px/1.35 system-ui,sans-serif}
