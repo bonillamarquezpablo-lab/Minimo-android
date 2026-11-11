@@ -19,6 +19,10 @@ markers = [
     "garrisonFlagpole",
     "garrisonOutpost",
     "function createIslandGarrison",
+    "garrisonGrounding:()=>",
+    "flagBaseY",
+    "flagErrorMeters",
+    "function makeIslandGarrison(islandIndex)",
 ]
 output = []
 for marker in markers:
