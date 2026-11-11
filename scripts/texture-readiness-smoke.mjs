@@ -47,6 +47,17 @@ async function capturePng(page,afterFailure=false,preferCdp=false){
    manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-composited-page',durationMs:Date.now()-playwrightStarted,success:valid(buffer)}];
   }catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-composited-page',durationMs:Date.now()-playwrightStarted,success:false,error:String(error?.message||error)}];}
  }
+ // Retry after the renderer has had time to settle; the watchdog path previously
+ // proved that Chromium can capture this same frozen frame a little later.
+ if(!valid(buffer)){
+  await delay(12000);
+  const retryStarted=Date.now();
+  try{
+   const shot=await bounded(page.screenshot({type:'png',fullPage:false,animations:'disabled'}),20000,null);
+   if(valid(shot)){buffer=shot;method='playwright-composited-page-retry';}
+   manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-composited-page-retry',durationMs:Date.now()-retryStarted,success:valid(buffer)}];
+  }catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-composited-page-retry',durationMs:Date.now()-retryStarted,success:false,error:String(error?.message||error)}];}
+ }
  if(!valid(buffer)){manifest.captureFailure=manifest.captureFailure||'No valid PNG was returned by the game canvas, CDP or Playwright composited-page fallback.';return false;}
  const file=afterFailure?'smoke-timeout-current-frame.png':'smoke-first-camera.png';
  fs.writeFileSync(path.join(OUT,file),buffer);manifest.screenshot={file,bytes:buffer.length,capturedAfterFailure:!!afterFailure,frameCaptureMethod:method};return true;
