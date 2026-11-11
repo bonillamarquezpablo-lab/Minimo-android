@@ -84,7 +84,7 @@ async function capturePng(page,afterFailure=false,preferCdp=false){
  const file=afterFailure?'smoke-timeout-current-frame.png':'smoke-first-camera.png';
  fs.writeFileSync(path.join(OUT,file),buffer);manifest.screenshot={file,bytes:buffer.length,capturedAfterFailure:!!afterFailure,frameCaptureMethod:method};return true;
 }
-function verdict(){const diag=manifest.textureDiagnostics||{},coverage=diag.usageCoverage||{},pending=diag.pendingTextures||[],unattributed=pending.filter(t=>!t.orphan&&(!Array.isArray(t.references)||!t.references.length)),cameraPending=diag.cameraPendingTextures||[],ready=manifest.readiness||{};if(!manifest.screenshot||!manifest.cameraVerification?.matches)return 'fail';if(coverage.complete!==true||unattributed.length)return 'inconclusive';if(cameraPending.length||ready.converged!==true||ready.sceneReady!==true)return 'fail';return ready.verdict==='pass'?'pass':'inconclusive';}
+function verdict(){const diag=manifest.textureDiagnostics||{},coverage=diag.usageCoverage||{},pending=diag.pendingTextures||[],unattributed=pending.filter(t=>!t.orphan&&(!Array.isArray(t.references)||!t.references.length)),cameraPending=diag.cameraPendingTextures||[],ready=manifest.readiness||{};const visualEvidenceAvailable=!!manifest.screenshot||manifest.visualCaptureDeferred===true;if(!visualEvidenceAvailable||!manifest.cameraVerification?.matches)return 'fail';if(coverage.complete!==true||unattributed.length)return 'inconclusive';if(cameraPending.length||ready.converged!==true||ready.sceneReady!==true)return 'fail';return ready.verdict==='pass'?'pass':'inconclusive';}
 async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=null,watchdogTimer=null,diagnosticStarted=false;manifest.buildMetadata=readStaticBuildMetadata();manifest.build=manifest.buildMetadata.value;writeManifest();
  async function collectDiagnostics(reason){if(diagnosticStarted)return;diagnosticStarted=true;manifest.failure=manifest.failure||reason;const active=manifest.phases.filter(p=>p.status==='in_progress').map(p=>({name:p.name,startedAt:p.startedAt,elapsedMs:Date.now()-(SCRIPT_STARTED_AT+p.startedAtElapsedMs)}));let snapshot=null;if(page){snapshot=await bounded(page.evaluate(async()=>({pagePhase:window.__ELSN_TEST__?'game-api-ready':'game-api-not-ready',textureDiagnostics:await window.__ELSN_TEST__?.getTextureReadinessForCamera?.()||null,captureProgress:window.__ELSN_CAPTURE_PROGRESS__||null})),1000,null);if(snapshot&&snapshot.textureDiagnostics){manifest.textureDiagnostics=snapshot.textureDiagnostics;manifest.actualCamera=snapshot.textureDiagnostics.camera||null;if(manifest.camera)manifest.cameraVerification=cameraVerification(manifest.camera,manifest.actualCamera);}try{if(!manifest.screenshot)await capturePng(page,true);}catch(error){manifest.diagnosticFailure=String(error?.stack||error);}}
  manifest.runtimeDiagnostics=manifest.runtimeDiagnostics||await collectRuntimeDiagnostics(page,2500);const pendingRequests=manifest.networkRequests.filter(r=>r.status===null&&!r.failure).map(r=>({url:r.url,resourceType:r.resourceType,startedAtMs:r.startedAtMs,elapsedMs:Date.now()-SCRIPT_STARTED_AT}));manifest.unresolvedPromises={browserPromiseIntrospection:{available:false,reason:'No se parchea window.Promise para no alterar el motor ni las bibliotecas del juego.'},activePlaywrightPromises:active.map(item=>({...item,awaitedOperation:item.name==='wait for render and texture convergence'?'page.evaluate(() => __ELSN_TEST__.prepareCaptureFrame(...))':'Playwright operation for '+item.name})),pendingNetworkRequests:pendingRequests,scopeNote:'Se registran las operaciones Playwright cuya promesa seguía pendiente y las solicitudes de red sin respuesta. Las promesas nativas internas del navegador no se enumeran de forma segura.'};manifest.timeoutDiagnostics={reason,phase:manifest.currentPhase||active[0]?.name||'between-phases',elapsedMs:Date.now()-SCRIPT_STARTED_AT,phaseTimings:manifest.phases,pendingTextures:manifest.textureDiagnostics?.pendingTextures||[],last200ConsoleMessages:manifest.consoleMessages.slice(-200),unresolvedPromises:manifest.unresolvedPromises};manifest.verdict='fail';manifest.finishedAt=new Date().toISOString();correlateNetworkEvents();try{writeManifest();}catch(error){console.error('DIAGNOSTIC MANIFEST WRITE FAILED',error);}console.error('[CAPTURE_DIAGNOSTIC_DUMP] '+JSON.stringify({phase:manifest.timeoutDiagnostics.phase,elapsedMs:manifest.timeoutDiagnostics.elapsedMs,pendingTextures:manifest.timeoutDiagnostics.pendingTextures.length,consoleMessages:manifest.timeoutDiagnostics.last200ConsoleMessages.length,unresolvedPromises:manifest.unresolvedPromises}));}
@@ -141,14 +141,22 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
  manifest.actualCamera=manifest.textureDiagnostics?.camera||null;manifest.cameraVerification=cameraVerification(manifest.camera,manifest.actualCamera);
  if(!readinessTimedOut)manifest.runtimeDiagnostics=await runPhase('collect render performance diagnostics',()=>collectRuntimeDiagnostics(page,5000));
  correlateNetworkEvents();
- await runPhase('freeze render loop and draw one boat-approach frame',()=>page.evaluate(()=>{
-  const api=window.__ELSN_TEST__;
-  if(typeof api?.prepareStaticCaptureFrame!=='function')throw new Error('Static frame capture API is unavailable.');
-  return api.prepareStaticCaptureFrame();
- }));
- const approachFrameSaved=manifest.screenshot?true:await runPhase('capture boat-approach frame after scene audit',async()=>{const saved=await capturePng(page,true,false);if(!saved)throw new Error(manifest.captureFailure||'No camera PNG was captured.');return true;});
- manifest.approachFrameSaved=!!(manifest.approachFrameSaved||approachFrameSaved);
- await runPhase('verify bounded camera PNG capture',async()=>{if(manifest.screenshot)return;throw new Error('No valid PNG was saved by the frozen game canvas or CDP fallback.');});
+ const skipTextureScreenshot=process.env.CAPTURE_SKIP_TEXTURE_SCREENSHOT==='1';
+ if(skipTextureScreenshot){
+  manifest.visualCaptureDeferred=true;
+  manifest.visualCaptureNote='The full scene inspector owns visual evidence; this focused texture/readiness probe avoids a second heavyweight screenshot on SwiftShader.';
+  manifest.approachFrameSaved=false;
+  console.log('[CAPTURE] Visual screenshot deferred to the unified scene inspector.');
+ }else{
+  await runPhase('freeze render loop and draw one boat-approach frame',()=>page.evaluate(()=>{
+   const api=window.__ELSN_TEST__;
+   if(typeof api?.prepareStaticCaptureFrame!=='function')throw new Error('Static frame capture API is unavailable.');
+   return api.prepareStaticCaptureFrame();
+  }));
+  const approachFrameSaved=manifest.screenshot?true:await runPhase('capture boat-approach frame after scene audit',async()=>{const saved=await capturePng(page,true,false);if(!saved)throw new Error(manifest.captureFailure||'No camera PNG was captured.');return true;});
+  manifest.approachFrameSaved=!!(manifest.approachFrameSaved||approachFrameSaved);
+  await runPhase('verify bounded camera PNG capture',async()=>{if(manifest.screenshot)return;throw new Error('No valid PNG was saved by the frozen game canvas or CDP fallback.');});
+ }
  manifest.verdict=verdict();
 
  try{
