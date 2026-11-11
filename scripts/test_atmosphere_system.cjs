@@ -31,6 +31,9 @@ assert.ok(near(Atmosphere.advanceTime(10, 150, 300, 1), 22), '150 seconds must a
 assert.ok(near(Atmosphere.advanceTime(22, 150, 300, 1), 10), 'The day clock must wrap after midnight');
 assert.ok(near(Atmosphere.advanceTime(10, 150, 300, 2), 10), 'Double speed must advance a full 24-hour cycle');
 assert.ok(near(Atmosphere.advanceTime(10, 0, 300, 1), 10), 'A paused/zero-delta update must preserve time');
+assert.ok(near(Atmosphere.advanceElapsed(10, 1, 2), 12), 'Clouds, aurora and hearth flicker must follow doubled simulation speed');
+assert.ok(near(Atmosphere.advanceElapsed(10, 1, 1), 11), 'Atmospheric animation time must follow the normal simulation clock');
+assert.ok(near(Atmosphere.advanceElapsed(10, 1, 0), 10), 'Atmospheric animations must freeze when day speed is zero');
 
 const source = fs.readFileSync(path.join(__dirname, 'nordic', 'atmosphere-system.js'), 'utf8');
 for (const marker of [
@@ -47,6 +50,7 @@ for (const marker of [
 ]) {
   assert.ok(source.includes(marker), 'Atmosphere module is missing: ' + marker);
 }
+assert.ok(source.includes('advanceElapsed(this.elapsedSeconds, delta, this.speed)'), 'Clouds, aurora and hearth animation must share the day clock speed.');
 assert.ok(source.includes('never hardware ray tracing'), 'The WebGL runtime must explicitly describe its lighting effects as approximations.');
 assert.ok(source.includes('const enabled = true;') && source.includes('pipeline.bloomEnabled = enabled;'), 'Bloom must remain enabled with a reduced low-profile kernel rather than disappear.');
 
