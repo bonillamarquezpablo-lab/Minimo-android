@@ -67,7 +67,7 @@ jobs:
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
           CAPTURE_TEXTURE_TIMEOUT_MS: '20000'
           CAPTURE_CANVAS_TIMEOUT_MS: '15000'
-          CAPTURE_CDP_TIMEOUT_MS: '8000'
+          CAPTURE_CDP_TIMEOUT_MS: '20000'
         run: |
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             export CAPTURE_PLAN_JSON="$CAPTURE_PLAN_INPUT"
