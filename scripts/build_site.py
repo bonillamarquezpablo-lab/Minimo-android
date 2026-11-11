@@ -328,6 +328,23 @@ def main() -> None:
         raise SystemExit("Navigation runtime JavaScript syntax validation failed:\\n" + navigation_check.stderr)
     print("Navigation runtime JavaScript syntax validation passed.")
 
+    # Keep every island garrison prop attached to its registered root.
+    # Previously the flagpole, standard and three stakes were free scene roots,
+    # so distance culling of IslandGarrisonOutpost_N left them visible over the sea.
+    detached_flagpole = """  const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,null,[flagX,flagY+2.15,flagZ],4.3,.075,.075,M.woodLight);
+  const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,null);flagGroup.position=v(flagX,flagY+3.55,flagZ);"""
+    attached_flagpole = """  const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,outpostRoot,[flagX-island.x,flagY+2.15-outpostGroundY,flagZ-island.z],4.3,.075,.075,M.woodLight);
+  const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,outpostRoot);flagGroup.position=v(flagX-island.x,flagY+3.55-outpostGroundY,flagZ-island.z);"""
+    if html.count(detached_flagpole) != 1:
+        raise SystemExit("No se encontró exactamente una pareja de raíces independientes de bandera de guarnición.")
+    html = html.replace(detached_flagpole, attached_flagpole, 1)
+
+    detached_stake = """   cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,null,[px,py+.42,pz],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);"""
+    attached_stake = """   cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,outpostRoot,[px-island.x,py+.42-outpostGroundY,pz-island.z],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);"""
+    if html.count(detached_stake) != 1:
+        raise SystemExit("No se encontró exactamente una raíz independiente de estacas de guarnición.")
+    html = html.replace(detached_stake, attached_stake, 1)
+
     # The packaged build always prefers the same-origin, bundled files.
     html = html.replace(
         "async function resolveVikingAssetUrls(){\n  if(isPerformanceMode)return [VIKING_GLB_URL];\n  const urls=[VIKING_GLB_URL];",
