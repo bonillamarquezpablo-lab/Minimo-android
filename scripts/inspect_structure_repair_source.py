@@ -12,6 +12,13 @@ markers = [
     "hiddenByAudit",
     "relocatable",
     "lastAction",
+    "function auditOffshoreStructuralRoots",
+    "IslandGarrisonFlagpole_",
+    "IslandGarrisonOutpost_",
+    "function updatePerformanceIslandStreaming",
+    "garrisonFlagpole",
+    "garrisonOutpost",
+    "function createIslandGarrison",
 ]
 output = []
 for marker in markers:
@@ -29,9 +36,9 @@ for marker in markers:
         continue
     for index, at in enumerate(hits, 1):
         left = max(0, at - 1800)
-        right = min(len(source), at + 2600)
+        right = min(len(source), at + 5200)
         output.append("--- occurrence "+str(index)+" @ "+str(at)+" ---")
-        output.append(source[left:right].replace("\\n", " ")[:4500])
+        output.append(source[left:right].replace("\\n", " ")[:6500])
 report = "\\n".join(output)
 print(report)
 target = Path("artifacts/texture-readiness-smoke/structure-repair-source-excerpts.txt")
