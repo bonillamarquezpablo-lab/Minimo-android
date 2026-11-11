@@ -38,7 +38,16 @@ async function capturePng(page,afterFailure=false,preferCdp=false){
  if(typeof data==='string'&&data.startsWith(prefix)){const payload=data.slice(prefix.length);if(/^[A-Za-z0-9+/]+={0,2}$/.test(payload)){const candidate=Buffer.from(payload,'base64');if(valid(candidate)){buffer=candidate;method='game-test-canvas-preserved-buffer';}}}
  // CDP can preserve the frame even when the WebGL page evaluation is unresponsive.
  if(!valid(buffer)&&cdpSession){const cdpStarted=Date.now();try{const shot=await bounded(cdpSession.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false,optimizeForSpeed:true}),afterFailure?8000:CDP_CAPTURE_TIMEOUT_MS,null);if(shot?.data){const candidate=Buffer.from(shot.data,'base64');if(valid(candidate)){buffer=candidate;method='cdp-page-capture';}}manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'cdp-page-capture',durationMs:Date.now()-cdpStarted,success:valid(buffer),trigger:canvasTimedOut?'canvas-timeout':'canvas-unavailable'}];}catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'cdp-page-capture',durationMs:Date.now()-cdpStarted,success:false,error:String(error?.message||error)}];}}
- if(!valid(buffer)){manifest.captureFailure=manifest.captureFailure||'No valid PNG was returned by CDP, Playwright or the final game-canvas fallback.';return false;}
+ // Final independent fallback: ask Chromium to capture the composited page, not the WebGL canvas.
+ if(!valid(buffer)){
+  const playwrightStarted=Date.now();
+  try{
+   const shot=await bounded(page.screenshot({type:'png',fullPage:false,animations:'disabled'}),afterFailure?10000:12000,null);
+   if(valid(shot)){buffer=shot;method='playwright-composited-page';}
+   manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-composited-page',durationMs:Date.now()-playwrightStarted,success:valid(buffer)}];
+  }catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-composited-page',durationMs:Date.now()-playwrightStarted,success:false,error:String(error?.message||error)}];}
+ }
+ if(!valid(buffer)){manifest.captureFailure=manifest.captureFailure||'No valid PNG was returned by the game canvas, CDP or Playwright composited-page fallback.';return false;}
  const file=afterFailure?'smoke-timeout-current-frame.png':'smoke-first-camera.png';
  fs.writeFileSync(path.join(OUT,file),buffer);manifest.screenshot={file,bytes:buffer.length,capturedAfterFailure:!!afterFailure,frameCaptureMethod:method};return true;
 }
@@ -104,7 +113,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
   if(typeof api?.prepareStaticCaptureFrame!=='function')throw new Error('Static frame capture API is unavailable.');
   return api.prepareStaticCaptureFrame();
  }));
- const approachFrameSaved=manifest.screenshot?true:await runPhase('capture boat-approach frame after scene audit',()=>capturePng(page,true,false));
+ const approachFrameSaved=manifest.screenshot?true:await runPhase('capture boat-approach frame after scene audit',async()=>{const saved=await capturePng(page,true,false);if(!saved)throw new Error(manifest.captureFailure||'No camera PNG was captured.');return true;});
  manifest.approachFrameSaved=!!(manifest.approachFrameSaved||approachFrameSaved);
  await runPhase('verify bounded camera PNG capture',async()=>{if(manifest.screenshot)return;throw new Error('No valid PNG was saved by the frozen game canvas or CDP fallback.');});
  manifest.verdict=verdict();
