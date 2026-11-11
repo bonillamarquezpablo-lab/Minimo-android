@@ -42,8 +42,8 @@ function collectStructureSnapshot(){
   if(/^PabloTheNameless(?:Body)?$/.test(name))return {classification:'player-avatar-geometry',disposition:'not-a-building',reason:'Player character root/body geometry'};
   if(name==='RealVikingRightHandWeaponAnchor')return {classification:'equipped-weapon-assembly',disposition:'not-a-building',reason:'Weapon attachment and held weapon meshes'};
   if(name==='DetailedNorseHearth')return {classification:'hearth-prop',disposition:'decorative-prop',reason:'Standalone hearth/fireplace prop'};
-  if(/^FirewoodRack_\\d+$/.test(name))return {classification:'firewood-rack-prop',disposition:'decorative-prop',reason:'Standalone firewood rack'};
-  if(/^NorseThingstead_\\d+$/.test(name))return {classification:'intentional-settlement-hall',disposition:'known-non-habitable-building',reason:'Named settlement hall; tracked separately from the 39 habitable hut/camp/garrison roots'};
+  if(/^FirewoodRack_\d+$/.test(name))return {classification:'firewood-rack-prop',disposition:'decorative-prop',reason:'Standalone firewood rack'};
+  if(/^NorseThingstead_\d+$/.test(name))return {classification:'intentional-settlement-hall',disposition:'known-non-habitable-building',reason:'Named settlement hall; tracked separately from the 39 habitable hut/camp/garrison roots'};
   return {classification:'unresolved',disposition:'requires-manual-review',reason:'No safe name-based classification'};
  };
  const unregisteredCandidateReview=projectedCandidates.filter(item=>item.registered===false).map(item=>{
