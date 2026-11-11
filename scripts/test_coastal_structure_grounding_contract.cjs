@@ -58,7 +58,7 @@ assert.match(source,/mode:'full normal-campaign runtime structure audit plus aut
 assert.match(source,/report\.baseline=baseline;report\.repairPass=repairPass;report\.postAutomaticAudit=settled/);
 assert.match(source,/fullRuntimeStructureGate/);
 assert.match(workflow,/timeout-minutes: 12/);
-assert.match(workflow,/timeout --signal=TERM --kill-after=5s 240s node scripts\/coastal-structure-grounding-smoke\.mjs/);
+assert.match(workflow,/timeout --signal=TERM --kill-after=5s 360s node scripts\/coastal-structure-grounding-smoke\.mjs/);
 assert.match(source,/offshoreStructuresAfter:report\.summary\.offshoreStructures/);
 assert.match(source,/gate\.unexpectedOffshoreStructures===0/);
 console.log('COASTAL STRUCTURE GROUNDING CONTRACT OK');
