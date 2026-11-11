@@ -7,20 +7,22 @@ const OUT=path.resolve('artifacts/structure-grounding');
 const startedAt=Date.now();
 const report={schema:2,startedAt:new Date().toISOString(),finishedAt:null,build:null,renderer:'Chromium headless + ANGLE SwiftShader',mode:'full normal-campaign runtime structure audit plus automatic-repair observation in a disposable test renderer',testRendererOnlyMutations:true,productionDataModified:false,phases:[],consoleErrors:[],pageErrors:[],baseline:null,postAutomaticAudit:null,runtimeRepairSimulation:null,habitableStructures:null,settlementHouses:null,settlementCamps:null,garrisons:null,summary:null,screenshot:null,verdict:'not-run',failure:null};
 function writeReport(){fs.mkdirSync(OUT,{recursive:true});const tmp=path.join(OUT,'structure-grounding.json.tmp');fs.writeFileSync(tmp,JSON.stringify(report,null,2)+'\n');fs.renameSync(tmp,path.join(OUT,'structure-grounding.json'));}
+function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+async function bounded(value,ms){return Promise.race([Promise.resolve(value),delay(ms).then(()=>null)]);}
 async function captureCompositedPage(page,file){
+ const valid=bytes=>Buffer.isBuffer(bytes)&&bytes.length>1000&&bytes.subarray(0,8).toString('hex')==='89504e470d0a1a0a';
+ let bytes=null,cdpError=null;
  const session=await page.context().newCDPSession(page);
  try{
-  let bytes=null;
-  try{
-   const result=await session.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false,optimizeForSpeed:true});
-   if(result?.data)bytes=Buffer.from(result.data,'base64');
-  }catch(_){}
-  if(!bytes||bytes.length<1000||bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'){
-   bytes=await page.screenshot({type:'png',fullPage:false,animations:'disabled'});
-  }
-  if(!bytes||bytes.length<1000||bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')throw new Error('CDP and Playwright did not return a valid PNG frame.');
-  fs.writeFileSync(file,bytes);return bytes;
- }finally{try{await session.detach();}catch(_){}}
+  const result=await bounded(session.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false,optimizeForSpeed:true}),10000);
+  if(result?.data)bytes=Buffer.from(result.data,'base64');
+ }catch(error){cdpError=String(error?.message||error);}
+ finally{try{await session.detach();}catch(_){}}
+ if(!valid(bytes)){
+  try{bytes=await bounded(page.screenshot({type:'png',fullPage:false,animations:'disabled'}),10000);}catch(_){}
+ }
+ if(!valid(bytes))throw new Error('CDP and Playwright screenshot channels did not return a valid PNG within their 10-second limits.'+(cdpError?' CDP: '+cdpError:''));
+ fs.writeFileSync(file,bytes);return bytes;
 }
 async function phase(name,fn){const start=Date.now(),row={name,startedAt:new Date().toISOString(),status:'in-progress'};report.phases.push(row);console.log('[STRUCTURE_AUDIT] START '+name);try{const result=await fn();row.status='completed';return result;}catch(error){row.status='failed';row.error=String(error?.stack||error);throw error;}finally{row.finishedAt=new Date().toISOString();row.durationMs=Date.now()-start;console.log('[STRUCTURE_AUDIT] END '+name+' '+row.status+' '+row.durationMs+'ms');}}
 function collectStructureSnapshot(){
