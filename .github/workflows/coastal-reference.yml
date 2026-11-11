@@ -42,8 +42,11 @@ jobs:
           python scripts/inspect_structure_repair_source.py
           node --check scripts/texture-readiness-smoke.mjs
           node --check scripts/coastal-structure-grounding-smoke.mjs
+          node --check scripts/scene-capture-inspection.mjs
+          node --check scripts/custom-scene-capture.mjs
           node scripts/test_texture_readiness_contract.cjs
           node scripts/test_coastal_structure_grounding_contract.cjs
+          node scripts/test_capture_reliability_contract.cjs
       - name: Build complete game
         run: python scripts/build_site.py
       - name: Install Playwright and Chromium
