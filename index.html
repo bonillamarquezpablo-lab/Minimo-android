@@ -13072,7 +13072,7 @@ function update(dt){
   }
   function measureRenderedFootprint(islandIndex,x,z,baseY,offsets=[]){
    const island=land[islandIndex];if(!island)return {safe:false,reason:'unknown-island'};
-   const points=[{x,z,baseY},...(offsets||[]).map(point=>({x:x+Number(point.dx||0),z:z+Number(point.dz||0),baseY:Number.isFinite(point.baseY)?point.baseY:baseY+Number(point.baseOffset||0),name:point.name||null}))];
+   const points=[{x,z,baseY,baseContact:true},...(offsets||[]).map(point=>({x:x+Number(point.dx||0),z:z+Number(point.dz||0),baseY:Number.isFinite(point.baseY)?point.baseY:baseY+Number(point.baseOffset||0),baseContact:point.baseContact!==false,name:point.name||null}))];
    const samples=points.map(point=>{const terrainY=renderedTerrainSurfaceAt(point.x,point.z);return {...point,terrainY:Number(terrainY.toFixed(4)),baseGapMeters:Number((point.baseY-terrainY).toFixed(4)),analyticTerrainY:Number(terrainSurfaceAt(point.x,point.z).toFixed(4)),deformationMeters:Number(terrainDeformationAt(islandIndex,point.x,point.z).toFixed(4))};});
    const minTerrainY=Math.min(...samples.map(point=>point.terrainY)),supportSamples=samples.filter((point,index)=>index===0||point.baseContact!==false),maxBaseGapMeters=Math.max(...supportSamples.map(point=>Math.abs(point.baseGapMeters)));
    const meanSeaLevel=Number(ground.position.y)||0,highWaterY=meanSeaLevel+.38,highTideDryMarginMeters=Number((minTerrainY-highWaterY).toFixed(4));
@@ -13081,7 +13081,7 @@ function update(dt){
    const distanceToCoastMeters=Number.isFinite(shorelineRadius)?Number((shorelineRadius-radialDistance).toFixed(3)):null;
    const centerTerrainY=renderedTerrainSurfaceAt(x,z),analyticCenterY=terrainSurfaceAt(x,z),analyticVsRenderedMeters=Number((analyticCenterY-centerTerrainY).toFixed(4));
    const terrainDeformationMeters=Number(terrainDeformationAt(islandIndex,x,z).toFixed(4));
-   const insideDryIslandFootprint=radialDistance<=island.r*.76;
+   const measuredFootprintRadius=Math.max(0,...(offsets||[]).map(point=>Math.hypot(Number(point.dx)||0,Number(point.dz)||0))),insideDryIslandFootprint=radialDistance+measuredFootprintRadius+1.25<=island.r*.76;
    const baseWithinTwoCm=maxBaseGapMeters<=.02;
    const highTideSafe=highTideDryMarginMeters>=.22;
    const cause=!insideDryIslandFootprint?'parcel-outside-island':(Math.abs(analyticVsRenderedMeters)>.02?'analytic-vs-rendered-mesh':(Math.abs(terrainDeformationMeters)>.02?'beach-terrain-modification':(maxBaseGapMeters>.02?'base-not-seated-on-rendered-terrain':(!highTideSafe?'inside-high-tide-water':'grounded'))));
