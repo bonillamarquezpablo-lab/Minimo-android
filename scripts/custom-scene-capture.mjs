@@ -62,11 +62,12 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
       result.geometry=api.auditIslandGeometry();
       result.habitableStructures=api.habitableStructureAudit();
       result.offshore=typeof api.auditOffshoreStructures==='function'?api.auditOffshoreStructures(1000):null;
-      result.scene=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(5000):null;
+      const sceneInventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(2000):null;
+      result.sceneInventorySummary={scannedObjectCount:sceneInventory?.objects?.length??0,scanLimit:2000};
       for(const [key,method] of Object.entries({huts:api.settlementGrounding,camps:api.settlementCampGrounding,garrisons:api.garrisonGrounding})){
         try{result[key]=method();}catch(error){result[key+'_error']=String(error.stack||error);}
       }
-      const roots=(result.scene?.objects||[]).filter(item=>
+      const roots=(sceneInventory?.objects||[]).filter(item=>
         (item.category==='structure'||item.category==='unidentified-structure')&&
         !(item.parentChain||[]).length&&Number(item.meshCount)>0
       ).map(item=>({
@@ -96,7 +97,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
     manifest.phaseTimingsMs.initialReadOnlyAudit=Date.now()-auditStarted;
     manifest.initialPhysicalAudit={readOnly:true,geometry:initialAudit.geometry,habitableStructures:initialAudit.habitableStructures,
       huts:initialAudit.huts,camps:initialAudit.camps,garrisons:initialAudit.garrisons,
-      offshoreCandidateCount:initialAudit.offshore?.candidates?.length??0};
+      offshoreCandidateCount:initialAudit.offshore?.candidates?.length??0,sceneInventorySummary:initialAudit.sceneInventorySummary};
     manifest.geometryAudit=initialAudit.geometry;
     manifest.objectInventory={
       readOnly:true,
@@ -164,7 +165,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
     // the capture IDs that were actually saved even when some shots failed.
     manifest.captureIndex=manifest.captures.map(({id,file,camera,cameraReadback,time,tide,bytes,sha256,zoneId,zoneLabel,inspectionFocus,inspectionPurpose,worldTarget,subject})=>
       ({id,file,camera,cameraReadback,time,tide,bytes,sha256,zoneId,zoneLabel,inspectionFocus,inspectionPurpose,worldTarget,subject}));
-    fs.writeFileSync(path.join(OUT,'capture-index.json'),JSON.stringify({schema:1,build:manifest.build,zoneInspections:manifest.zoneInspections,captures:manifest.captureIndex},null,2)+'\\n');
+    fs.writeFileSync(path.join(OUT,'capture-index.json'),JSON.stringify({schema:1,build:manifest.build,zoneInspections:manifest.zoneInspections,captures:manifest.captureIndex},null,2)+'\n');
     assert.equal(manifest.captures.length,shots.length,'Capturas completas: '+manifest.captures.length+'/'+shots.length);
     assert.equal(manifest.determinism.failed,0,'Renders no deterministas.');
     assert.equal(manifest.geometryAudit?.islandCount,13,'La auditoría geométrica no ha reconocido las 13 islas.');
