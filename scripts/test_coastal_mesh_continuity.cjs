@@ -15,6 +15,8 @@ assert.ok(build.includes('rows=isPerformanceMode?10:(isTouchDevice?64:96)'),
   'Quality radial density must be increased while Performance keeps its established budget.');
 assert.ok(build.includes('function auditCoastalMeshContinuity(onlyIslandIndex=null)'),
   'The runtime must expose the cross-mesh continuity audit.');
+assert.ok(build.includes("probe.position=v(land[0].x,.42,land[0].z+land[0].r*1.40);"),
+  'The synthetic offshore-hut probe must remain inside the test camera visibility radius after safe-ground relocation.');
 assert.ok(build.includes('const thresholdMeters=.05'),
   'Cross-mesh seam tolerance must be fixed at 5 cm.');
 assert.ok(build.includes('auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)'),
