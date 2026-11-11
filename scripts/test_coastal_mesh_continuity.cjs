@@ -20,6 +20,10 @@ assert.ok(build.includes('const thresholdMeters=.05'),
 assert.ok(build.includes('auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)'),
   'The browser test API must expose the cross-mesh audit.');
 assert.ok(release.includes('EXPECTED_VERSION = "0.6.275"'));
+assert.ok(build.includes('html = html.replace("0.6.274", "0.6.275")'));
+assert.ok(release.includes('SAGA DEL NORTE · CAPÍTULO I · 0.6.275'));
+assert.ok(release.includes('Capítulo I: Un hombre sin tierra · 0.6.275'));
+
 assert.ok(release.includes('function auditCoastalMeshContinuity(onlyIslandIndex=null)'));
 assert.ok(runner.includes("auditCoastalMeshContinuity()"));
 assert.ok(runner.includes("meshContinuityAudit?.thresholdMeters, .05"));

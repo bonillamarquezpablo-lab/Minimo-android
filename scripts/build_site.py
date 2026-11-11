@@ -682,6 +682,9 @@ def main() -> None:
     html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.275\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
         raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.275.")
+    html = html.replace("0.6.274", "0.6.275")
+    if "0.6.274" in html:
+        raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     diagnostic_build_marker = "reportVersion:'11',build:'0.6.274'"
     diagnostic_build_replacement = "reportVersion:'12',build:'0.6.275'"
     if html.count(diagnostic_build_marker) != 1:
