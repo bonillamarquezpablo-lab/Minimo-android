@@ -58,9 +58,12 @@ export function expandCapturePlan(input) {
   }
   const shots = [];
   const zones = [];
+  const requestIds = new Set();
   for (const [index, shot] of input.entries()) {
     if (!shot || typeof shot !== 'object' || Array.isArray(shot)) throw new Error('Plan ' + index + ': objeto inválido.');
     const id = safeId(shot.id, 'Plan ' + index);
+    if (requestIds.has(id)) throw new Error('Identificador de plan duplicado: ' + id);
+    requestIds.add(id);
     validateState(shot, id);
     if (shot.zone) {
       const zone = shot.zone;
@@ -147,6 +150,11 @@ export function expandCapturePlan(input) {
     throw new Error('El plan supera el máximo de ' + MAX_CAPTURE_SHOTS + ' capturas.');
   }
   if (!shots.length && !zones.length) throw new Error('El plan no ha generado ninguna captura.');
+  const captureIds = new Set();
+  for (const shot of shots) {
+    if (captureIds.has(shot.id)) throw new Error('Identificador de captura duplicado: ' + shot.id);
+    captureIds.add(shot.id);
+  }
   return {shots,zones};
 }
 
@@ -185,10 +193,13 @@ export function createZoneInspectionShots(request, islands, candidates) {
   }
   const selected = zone.focus === 'structures' ? unique.slice(0,zone.maxTargets) : [];
   const omitted = zone.focus === 'structures' ? unique.slice(zone.maxTargets) : [];
-  const capturePrefix = request.id.slice(0,12);
+  const capturePrefix = request.id.slice(0,7)+'-'+createHash('sha256').update(request.id).digest('hex').slice(0,4);
   const addShot = (suffix, camera, purpose, target, state, subject = null) => {
+    const captureId=(capturePrefix+'-'+suffix).slice(0,48);
+    if(generatedIds.has(captureId)) throw new Error('ID de captura generado duplicado: '+captureId);
+    generatedIds.add(captureId);
     shots.push({
-      id:(capturePrefix+'-'+suffix).slice(0,48),
+      id:captureId,
       camera,
       time:state.time,
       tide:state.tide,
@@ -200,6 +211,7 @@ export function createZoneInspectionShots(request, islands, candidates) {
       subject
     });
   };
+  const generatedIds = new Set();
   const overviewTarget = {x:center.x,y:center.y+1,z:center.z};
   for (const [stateIndex,state] of stateVariants.entries()) {
     if (zone.includeOverview) {
