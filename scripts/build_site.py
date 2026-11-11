@@ -356,6 +356,19 @@ def main() -> None:
     # Add a runtime check for every boulder using its actual world-space bounding box.
     rock_audit_marker = "window.__ELSN_TEST__={"
     rock_audit_code = """window.__ELSN_TEST__={
+    outerLandmarkGrounding:()=>[
+     {name:'NorseThingstead_10',islandIndex:10,offsetY:0},
+     {name:'NorseCoastalPier_11',islandIndex:11,offsetY:.10,minimumY:.10},
+     {name:'NorseCoastalBeacon_12',islandIndex:12,offsetY:0}
+    ].map(spec=>{
+     const root=scene.getTransformNodeByName?.(spec.name)||scene.getMeshByName?.(spec.name)||null;
+     if(!root)return {name:spec.name,found:false,islandIndex:spec.islandIndex};
+     root.computeWorldMatrix?.(true);
+     const position=root.getAbsolutePosition?.()||root.position;
+     const terrainY=renderedTerrainSurfaceAt(position.x,position.z);
+     const expectedY=spec.minimumY===undefined?terrainY:Math.max(spec.minimumY,terrainY+spec.offsetY);
+     return {name:spec.name,found:true,islandIndex:spec.islandIndex,x:Number(position.x.toFixed(3)),y:Number(position.y.toFixed(4)),z:Number(position.z.toFixed(3)),terrainY:Number(terrainY.toFixed(4)),expectedY:Number(expectedY.toFixed(4)),anchorErrorMeters:Number((position.y-expectedY).toFixed(4))};
+    }),
     rockGroundingAudit:()=>rocks.map((rock,index)=>{
      const mesh=rock?.meshes?.[0];if(!mesh)return {index,valid:false};
      mesh.computeWorldMatrix?.(true);
@@ -465,6 +478,37 @@ def main() -> None:
     if html.count(detached_relocation) < 1:
         raise SystemExit("No se encontró el movimiento de anclaje usado por el reparador de estructuras.")
     html = html.replace(detached_relocation, reanchored_relocation)
+
+
+    # Align outer-island landmarks to the rendered terrain heightfield.
+    outer_landmark_anchor_replacements = (
+        (
+            "const x=island.x,z=island.z,y=terrainSurfaceAt(x,z),circle=newGroup('NorseThingstead_'+index,null),ringRadius=5.2;",
+            "const x=island.x,z=island.z,y=renderedTerrainSurfaceAt(x,z),circle=newGroup('NorseThingstead_'+index,null),ringRadius=5.2;",
+            "NorseThingstead",
+        ),
+        (
+            "pier.position=v(startX,Math.max(.10,terrainSurfaceAt(startX,startZ)+.10),startZ);pier.rotation.y=-angle;",
+            "pier.position=v(startX,Math.max(.10,renderedTerrainSurfaceAt(startX,startZ)+.10),startZ);pier.rotation.y=-angle;",
+            "NorseCoastalPier",
+        ),
+        (
+            "const x=island.x,z=island.z,y=terrainSurfaceAt(x,z),tower=newGroup('NorseCoastalBeacon_'+index,null);",
+            "const x=island.x,z=island.z,y=renderedTerrainSurfaceAt(x,z),tower=newGroup('NorseCoastalBeacon_'+index,null);",
+            "NorseCoastalBeacon",
+        ),
+    )
+    for detached_anchor, rendered_anchor, label in outer_landmark_anchor_replacements:
+        if html.count(detached_anchor) != 1:
+            raise SystemExit(f"No se encontró exactamente un anclaje original para {label}.")
+        html = html.replace(detached_anchor, rendered_anchor, 1)
+
+    # Include outer-island landmarks in the offshore structural inventory.
+    old_structure_pattern = "const structureNamePattern=/(?:weatherednorsehut|"
+    new_structure_pattern = "const structureNamePattern=/(?:norsethingstead|norsecoastalpier|norsecoastalbeacon|weatherednorsehut|"
+    if html.count(old_structure_pattern) != 1:
+        raise SystemExit("No se encontró exactamente el patrón principal del inventario estructural.")
+    html = html.replace(old_structure_pattern, new_structure_pattern, 1)
 
     # The packaged build always prefers the same-origin, bundled files.
     html = html.replace(
