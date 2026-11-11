@@ -94,12 +94,73 @@ def main() -> None:
         "successfulCaptures": len(available),
         "missingCaptureFiles": missing,
         "zones": manifest.get("zoneInspections") or [],
+        "sceneInspection": manifest.get("initialPhysicalAudit") or {},
+        "unifiedInspection": manifest.get("unifiedInspection") or {},
         "captures": manifest.get("captureIndex") or [],
     }
     (OUT / "vision-review-index.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+    inspection = manifest.get("initialPhysicalAudit") or {}
+    counts = inspection.get("counts") or {}
+    candidates = inspection.get("structuralCandidates") or []
+    errors = inspection.get("errors") or {}
+    report_lines = [
+        "# EL SIN NOMBRE — Informe único de inspección",
+        "",
+        f"- Build: **{build}**",
+        f"- Fecha: **{manifest.get('capturedAt') or 'no disponible'}**",
+        "- Modo: inspección de lectura; no mueve, oculta ni elimina construcciones",
+        f"- Capturas correctas: **{len(available)} / {len(captures)}**",
+        f"- Islas: **{counts.get('islands', 'no disponible')}**",
+        f"- Objetos estructurales candidatos: **{counts.get('structuralCandidates', len(candidates))}**",
+        f"- Cabañas registradas: **{counts.get('huts', 'no disponible')}**",
+        f"- Campamentos: **{counts.get('camps', 'no disponible')}**",
+        f"- Guarniciones: **{counts.get('garrisons', 'no disponible')}**",
+        "",
+        "## Punto de observación y zonas",
+        "",
+    ]
+    for zone in manifest.get("zoneInspections") or []:
+        point = zone.get("observationPoint") or {}
+        report_lines.append(
+            f"- **{zone.get('label') or zone.get('id')}** — centro {zone.get('center')}; "
+            f"radio {zone.get('radiusMeters')} m; cámara en agua {point or 'no configurada'}; "
+            f"candidatos {zone.get('candidateCount')}; seleccionados {zone.get('selectedTargetCount')}; "
+            f"vistas generadas {zone.get('generatedShotCount')}."
+        )
+    report_lines.extend(["", "## Estructuras detectadas", "",
+                         "| Código | ID interno | Nombre | Tipo | Isla | X | Y | Z | Base | Altura | Mallas | Fuente |",
+                         "|---|---:|---|---|---|---:|---:|---:|---:|---:|---:|---|"])
+    for item in candidates:
+        pos = item.get("position") or {}
+        bounds = item.get("bounds") or {}
+        report_lines.append(
+            f"| {item.get('code') or 'pendiente'} | {item.get('nativeId') or item.get('uniqueId') or '—'} | "
+            f"{str(item.get('name') or 'sin nombre').replace('|', '/')} | "
+            f"{item.get('kind') or item.get('structuralRole') or 'sin clasificar'} | "
+            f"{item.get('island') or 'sin isla'} | {pos.get('x', '—')} | {pos.get('y', '—')} | {pos.get('z', '—')} | "
+            f"{bounds.get('bottomY', '—')} | {bounds.get('topY', '—')} | "
+            f"{item.get('meshCount', '—')} | {item.get('source', '—')} |"
+        )
+    report_lines.extend(["", "## Estado de las comprobaciones", ""])
+    for key, duration in (inspection.get("phaseTimingsMs") or {}).items():
+        report_lines.append(f"- {key}: {duration} ms")
+    if errors:
+        report_lines.extend(["", "### Errores de secciones", ""])
+        for key, error in errors.items():
+            report_lines.append(f"- **{key}:** {str(error).splitlines()[0]}")
+    if missing:
+        report_lines.extend(["", "### Capturas ausentes", ""])
+        report_lines.extend(f"- {name}" for name in missing)
+    report_lines.extend(["", "## Archivos incluidos", "",
+                         "- contact-sheet.png: todas las vistas en una sola lámina",
+                         "- vision-review-index.json: inventario, diagnósticos, zonas y relación completa de capturas",
+                         "- manifest.json: datos originales de ejecución y telemetría",
+                         "- PNG individuales: cada cámara con su identificador y objetivo", ""])
+    (OUT / "inspection-report.md").write_text("\n".join(report_lines), encoding="utf-8")
     print(f"SCENE CONTACT SHEET OK: {target} ({width}x{height}; {len(available)} captures)")
     if missing:
         print("WARN Missing PNGs: " + ", ".join(missing))
