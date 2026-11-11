@@ -633,7 +633,7 @@ def main() -> None:
     if atmosphere_tag not in html:
         if "</body>" not in html:
             raise SystemExit("No se encontró </body> para instalar la atmósfera.")
-        html = html.replace("</body>", atmosphere_tag + "\\n</body>", 1)
+        html = html.replace("</body>", atmosphere_tag + "\n</body>", 1)
 
     required = [
         "assets/vendor/babylon.js",
@@ -702,8 +702,8 @@ def main() -> None:
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
-    diagnostic_build_pattern = r"reportVersion:'\d+',build:'0\.6\.275'"
-    diagnostic_build_replacement = "reportVersion:'12',build:'0.6.276'"
+    diagnostic_build_pattern = r"reportVersion:'\d+',build:'0\.6\.274'"
+    diagnostic_build_replacement = "reportVersion:'13',build:'0.6.276'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
@@ -713,6 +713,12 @@ def main() -> None:
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     coastal_profile_replacements = (
+        (
+            "  const cloudWindRate=.00042+.00014*Math.sin(elapsed*.0031);skyTexture.uOffset=(elapsed*cloudWindRate)%1;\n  // El cielo se desplaza con viento variable; la capa vertical acompaña el flujo atmosférico.\n  skyTexture.vOffset=Math.sin(elapsed*.00009)*.012;\n  const sunArc=elapsed*.00022;sunHalo.position.x=290+Math.sin(sunArc)*48;sunDisc.position.x=sunHalo.position.x;sunHalo.position.y=235+Math.sin(sunArc*.7)*22;sunDisc.position.y=sunHalo.position.y;\n  sun.direction.x=-.42+Math.sin(sunArc)*.055;sun.direction.z=.22+Math.cos(sunArc)*.045;hemi.intensity=.84+.035*Math.sin(elapsed*.002);sun.intensity=1.38+.08*Math.sin(elapsed*.0017);\n  animateWater(dt);",
+            "  if(atmosphereSystem)atmosphereSystem.update(dt);\n  else{\n   const cloudWindRate=.00042+.00014*Math.sin(elapsed*.0031);skyTexture.uOffset=(elapsed*cloudWindRate)%1;\n   skyTexture.vOffset=Math.sin(elapsed*.00009)*.012;\n   const sunArc=elapsed*.00022;sunHalo.position.x=290+Math.sin(sunArc)*48;sunDisc.position.x=sunHalo.position.x;sunHalo.position.y=235+Math.sin(sunArc*.7)*22;sunDisc.position.y=sunHalo.position.y;\n   sun.direction.x=-.42+Math.sin(sunArc)*.055;sun.direction.z=.22+Math.cos(sunArc)*.045;hemi.intensity=.84+.035*Math.sin(elapsed*.002);sun.intensity=1.38+.08*Math.sin(elapsed*.0017);\n  }\n  animateWater(dt);",
+            "unified atmospheric clock replacing the legacy pseudo-sun arc",
+        ),
+
         (
             "const segments=isPerformanceMode?192:512,rows=isPerformanceMode?10:20,cols=segments+1;",
             "const segments=isPerformanceMode?192:512,rows=isPerformanceMode?10:(isTouchDevice?64:96),cols=segments+1;",
@@ -743,6 +749,41 @@ def main() -> None:
         if html.count(old_code) != 1:
             raise SystemExit(f"No se encontró exactamente una fórmula original para {label}.")
         html = html.replace(old_code, new_code, 1)
+
+    atmosphere_init_marker = "function update(dt){"
+    atmosphere_init_code = r"""
+  let atmosphereSystem=null;
+  try{
+   if(typeof window.NorseAtmosphereSystem==='function'){
+    atmosphereSystem=new window.NorseAtmosphereSystem({
+     B,scene,camera,engine,sunLight:sun,hemiLight:hemi,skyDome,sunDisc,sunHalo,skyTexture,renderPipeline,
+     waterMaterial:M.water,windowMaterial:M.windowGlow,hearths:hearthStates,fireLights,
+     focusProvider:()=>onShip?ship.position:player.root.position,
+     getShadowGenerator:()=>shadowGen,
+     setShadowGenerator:generator=>{shadowGen=generator;},
+     isPerformanceMode,isTouchDevice,isConstrainedMobile,reportedMemory,
+     timeOfDay:8.25,dayDurationSeconds:300
+    });
+    window.__ELSN_ATMOSPHERE=atmosphereSystem;
+    window.__ELSN_ATMOSPHERE_CONTROLS={
+     setTime:value=>atmosphereSystem.setTime(value),
+     pause:()=>atmosphereSystem.pause(),
+     resume:()=>atmosphereSystem.resume(),
+     setSpeed:value=>atmosphereSystem.setSpeed(value),
+     setDayDuration:value=>atmosphereSystem.setDayDuration(value),
+     setWeather:value=>atmosphereSystem.setWeather(value),
+     setClimate:value=>atmosphereSystem.setClimate(value),
+     state:()=>atmosphereSystem.getState()
+    };
+   }else console.warn('NorseAtmosphereSystem no está disponible; se conserva el cielo de respaldo.');
+  }catch(atmosphereError){
+   atmosphereSystem=null;
+   console.error('No se pudo inicializar NorseAtmosphereSystem; se conserva el cielo de respaldo.',atmosphereError);
+  }
+"""
+    if html.count(atmosphere_init_marker) != 1:
+        raise SystemExit("No se encontró exactamente una función update(dt) para instalar el sistema atmosférico.")
+    html = html.replace(atmosphere_init_marker, atmosphere_init_code + "\n" + atmosphere_init_marker, 1)
 
     # Compare the actual rendered height surfaces at their shared X/Z coordinates.
     # The 5 cm limit applies to seams between adjacent meshes, not to natural slopes
