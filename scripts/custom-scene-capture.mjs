@@ -169,7 +169,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
         // camera-verified rendered frame instead of requiring two successive frames
         // to have identical pixels (which would reject correct animation).
         const framePng=await page.evaluate(()=>window.__ELSN_TEST__.captureCanvas());
-        const frameMatch=/^data:image\\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(framePng||'');
+        const frameMatch=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(framePng||'');
         assert.ok(frameMatch,'No se obtuvo un PNG de la escena.');
         const buffer=Buffer.from(frameMatch[1],'base64');
         assert.ok(buffer.length>1000,'PNG vacío o incompleto.');
