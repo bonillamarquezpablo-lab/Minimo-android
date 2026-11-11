@@ -362,7 +362,39 @@ def main() -> None:
     bedroll_grounding_marker = "for(const bedroll of camp.__groundingBedrolls||[])placeBoxBase(bedroll,.08);"
     if html.count(bedroll_grounding_marker) != 1:
         raise SystemExit("No se encontró exactamente el asiento horizontal de los catres del puesto avanzado.")
-    print("OK bedroll orientation: yaw on the ground plane; vertical half-height remains 0.08 m.")
+    bedroll_support_marker = "camp.__groundingSupportMeshes.push({mesh:bedroll,kind:'box',halfHeight:.08});"
+    bedroll_support_code = "camp.__groundingSupportMeshes.push({mesh:bedroll,kind:'oriented-box',halfHeight:.08});"
+    if html.count(bedroll_support_marker) != 1:
+        raise SystemExit("No se encontró exactamente el registro de apoyo geométrico de los catres.")
+    html = html.replace(bedroll_support_marker, bedroll_support_code, 1)
+    support_points_marker = """     const supportPoints=(group?.__groundingSupportMeshes||[]).map(entry=>{
+      const mesh=entry.mesh;if(!mesh)return null;
+      try{mesh.computeWorldMatrix(true);}catch(_){}
+      const angle=entry.kind==='tilted-cylinder'?(Number(mesh.rotation?.z)||0):0,halfHeight=Number(entry.halfHeight)||0;
+      const localX=mesh.position.x+(entry.kind==='tilted-cylinder'?Math.sin(angle)*halfHeight:0),localY=mesh.position.y-(entry.kind==='tilted-cylinder'?Math.cos(angle)*halfHeight:halfHeight),worldX=p.x+localX,worldZ=p.z+mesh.position.z,baseY=p.y+localY,terrainY=renderedTerrainSurfaceAt(worldX,worldZ);
+      return {dx:worldX-p.x,dz:worldZ-p.z,baseY,name:mesh.name,terrainY:Number(terrainY.toFixed(4)),baseGapMeters:Number((baseY-terrainY).toFixed(4)),kind:entry.kind};
+     }).filter(Boolean);"""
+    support_points_code = """     const supportPoints=(group?.__groundingSupportMeshes||[]).flatMap(entry=>{
+      const mesh=entry.mesh;if(!mesh)return [];
+      try{mesh.computeWorldMatrix(true);}catch(_){}
+      if(entry.kind==='oriented-box'){
+       const corners=mesh.getBoundingInfo?.()?.boundingBox?.vectors;
+       if(!Array.isArray(corners)||corners.length!==8)return [];
+       const worldCorners=corners.map(corner=>BABYLON.Vector3.TransformCoordinates(corner,mesh.getWorldMatrix()));
+       const lowestY=Math.min(...worldCorners.map(point=>point.y));
+       return worldCorners.filter(point=>point.y<=lowestY+1e-5).map(point=>{
+        const terrainY=renderedTerrainSurfaceAt(point.x,point.z);
+        return {dx:point.x-p.x,dz:point.z-p.z,baseY:point.y,name:mesh.name,terrainY:Number(terrainY.toFixed(4)),baseGapMeters:Number((point.y-terrainY).toFixed(4)),kind:entry.kind};
+       });
+      }
+      const angle=entry.kind==='tilted-cylinder'?(Number(mesh.rotation?.z)||0):0,halfHeight=Number(entry.halfHeight)||0;
+      const localX=mesh.position.x+(entry.kind==='tilted-cylinder'?Math.sin(angle)*halfHeight:0),localY=mesh.position.y-(entry.kind==='tilted-cylinder'?Math.cos(angle)*halfHeight:halfHeight),worldX=p.x+localX,worldZ=p.z+mesh.position.z,baseY=p.y+localY,terrainY=renderedTerrainSurfaceAt(worldX,worldZ);
+      return [{dx:worldX-p.x,dz:worldZ-p.z,baseY,name:mesh.name,terrainY:Number(terrainY.toFixed(4)),baseGapMeters:Number((baseY-terrainY).toFixed(4)),kind:entry.kind}];
+     });"""
+    if html.count(support_points_marker) != 1:
+        raise SystemExit("No se encontró exactamente el diagnóstico de apoyos de los campamentos.")
+    html = html.replace(support_points_marker, support_points_code, 1)
+    print("OK bedroll orientation and all four lower-corner support measurements are grounded on the rendered terrain.")
 
     # Add a runtime check for every boulder using its actual world-space bounding box.
     rock_audit_marker = "window.__ELSN_TEST__={"
