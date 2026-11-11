@@ -82,9 +82,18 @@ def main() -> None:
             fail("Las banderas y estacas de cada guarnición deben heredar la visibilidad y el movimiento de su puesto.")
     if "IslandGarrisonFlagpole_'+islandIndex,null" in index_html or "IslandGarrisonStandard_'+islandIndex,null" in index_html:
         fail("Se ha detectado una bandera de guarnición independiente que puede quedar flotando sobre el mar.")
-    for required_garrison_link in ("flagPole.parent=outpostRoot", "flagGroup.parent=outpostRoot", "stakeMesh.parent=outpostRoot", "flagLocalPosition=village.flagGroup?.position", "x:root.x+flagLocalPosition.x,y:root.y+flagLocalPosition.y,z:root.z+flagLocalPosition.z"):
+    for required_garrison_link in (
+        "flagPole.parent=outpostRoot",
+        "flagGroup.parent=outpostRoot",
+        "stakeMesh.parent=outpostRoot",
+        "garrisonWorldToLocal=(x,y,z)=>",
+        "flagGroup.position.copyFrom(flagGroupLocal)",
+        "const flagPoleMesh=scene.getMeshByName('IslandGarrisonFlagpole_'+village.landIndex)",
+        "flagPoleMesh?.getAbsolutePosition?.()",
+        "const detachedPropCount=[flagPoleMesh,flagGroupMesh,...stakeMeshes].filter(prop=>!prop||prop.parent!==root).length",
+    ):
         if required_garrison_link not in index_html:
-            fail("Las piezas de guarnición deben heredar el puesto y su auditoría debe reconstruir la posición mundial de la bandera.")
+            fail("Las piezas de guarnición deben usar transformaciones reales de mundo/local y comprobar su apoyo y parentesco.")
     navigation_js = read_text("scripts/nordic/navigation-suite.js")
     if "./scripts/nordic/navigation-suite.js" not in index_html:
         fail("Las entradas del juego no cargan el sistema unificado de mapas y cámaras.")
