@@ -373,8 +373,10 @@ def main() -> None:
     # so distance culling of IslandGarrisonOutpost_N left them visible over the sea.
     detached_flagpole = """  const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,null,[flagX,flagY+2.15,flagZ],4.3,.075,.075,M.woodLight);
   const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,null);flagGroup.position=v(flagX,flagY+3.55,flagZ);"""
-    attached_flagpole = """  const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,outpostRoot,[flagX-island.x,flagY+2.15-outpostGroundY,flagZ-island.z],4.3,.075,.075,M.woodLight);flagPole.parent=outpostRoot;
-  const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,outpostRoot);flagGroup.parent=outpostRoot;flagGroup.position=v(flagX-island.x,flagY+3.55-outpostGroundY,flagZ-island.z);"""
+    attached_flagpole = """  const garrisonWorldToLocal=(x,y,z)=>{outpostRoot.computeWorldMatrix(true);const inverse=outpostRoot.getWorldMatrix().clone();inverse.invert();return BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(x,y,z),inverse);};
+  const flagPoleLocal=garrisonWorldToLocal(flagX,flagY+2.15,flagZ);
+  const flagPole=cyl('IslandGarrisonFlagpole_'+islandIndex,outpostRoot,[flagPoleLocal.x,flagPoleLocal.y,flagPoleLocal.z],4.3,.075,.075,M.woodLight);flagPole.parent=outpostRoot;
+  const flagGroup=newGroup('IslandGarrisonStandard_'+islandIndex,outpostRoot);flagGroup.parent=outpostRoot;const flagGroupLocal=garrisonWorldToLocal(flagX,flagY+3.55,flagZ);flagGroup.position.copyFrom(flagGroupLocal);"""
     flagpole_occurrences = html.count(detached_flagpole)
     if flagpole_occurrences < 1:
         raise SystemExit("No se encontró ninguna pareja de raíces independientes de bandera de guarnición.")
@@ -383,7 +385,7 @@ def main() -> None:
         raise SystemExit("No se pudieron anclar todas las banderas de las guarniciones.")
 
     detached_stake = """   cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,null,[px,py+.42,pz],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);"""
-    attached_stake = """   const stakeMesh=cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,outpostRoot,[px-island.x,py+.42-outpostGroundY,pz-island.z],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);if(stakeMesh)stakeMesh.parent=outpostRoot;"""
+    attached_stake = """   const stakeLocal=garrisonWorldToLocal(px,py+.42,pz);const stakeMesh=cyl('IslandGarrisonStake_'+islandIndex+'_'+stake,outpostRoot,[stakeLocal.x,stakeLocal.y,stakeLocal.z],.84,.10,.14,M.woodDark,[Math.sin(a)*.07,0,Math.cos(a)*-.07]);if(stakeMesh)stakeMesh.parent=outpostRoot;"""
     stake_occurrences = html.count(detached_stake)
     if stake_occurrences < 1:
         raise SystemExit("No se encontró ninguna raíz independiente de estacas de guarnición.")
@@ -394,8 +396,8 @@ def main() -> None:
     # The garrison grounding probe must measure the flag group's world transform,
     # not its local Y after the group becomes a child of IslandGarrisonOutpost_N.
     detached_flag_measure = """    const flagPosition=village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():village.flagGroup?.position;"""
-    world_flag_measure = """    const flagLocalPosition=village.flagGroup?.position;
-    const flagPosition=root&&flagLocalPosition?{x:root.x+flagLocalPosition.x,y:root.y+flagLocalPosition.y,z:root.z+flagLocalPosition.z}:(village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():flagLocalPosition);"""
+    world_flag_measure = """    village.flagGroup?.computeWorldMatrix?.(true);
+    const flagPosition=village.flagGroup?.getAbsolutePosition?.()||village.flagGroup?.position;"""
     if html.count(detached_flag_measure) != 1:
         raise SystemExit("No se encontró exactamente una medición de altura de bandera de guarnición.")
     html = html.replace(detached_flag_measure, world_flag_measure, 1)
@@ -404,16 +406,19 @@ def main() -> None:
     # prop is parented to the outpost. The flag cloth's origin is intentionally
     # 3.55m above ground and must never be compared directly with the terrain.
     detached_flag_error = """    const flagErrorMeters=flagPosition?Math.abs((flagPosition.y-3.55)-flagGroundY):Infinity;"""
-    pole_ground_error = """    const flagPolePosition=village.flagpole?.position,flagPoleWorld=root&&flagPolePosition?{x:root.x+flagPolePosition.x,y:root.y+flagPolePosition.y,z:root.z+flagPolePosition.z}:null;
+    pole_ground_error = """    const flagPoleMesh=scene.getMeshByName('IslandGarrisonFlagpole_'+village.landIndex);
+    flagPoleMesh?.computeWorldMatrix?.(true);
+    const flagPoleWorld=flagPoleMesh?.getAbsolutePosition?.()||null;
     const flagPoleGroundY=flagPoleWorld?renderedTerrainSurfaceAt(flagPoleWorld.x,flagPoleWorld.z):NaN;
     const flagErrorMeters=flagPoleWorld?Math.abs((flagPoleWorld.y-2.15)-flagPoleGroundY):Infinity;
     const stakeMeshes=[0,1,2].map(stake=>scene.getMeshByName('IslandGarrisonStake_'+village.landIndex+'_'+stake));
-    const detachedPropCount=[village.flagpole,village.flagGroup,...stakeMeshes].filter(prop=>!prop||prop.parent!==village.outpostRoot).length;"""
+    const flagGroupMesh=village.flagGroup||scene.getTransformNodeByName?.('IslandGarrisonStandard_'+village.landIndex)||scene.getMeshByName('IslandGarrisonStandard_'+village.landIndex);
+    const detachedPropCount=[flagPoleMesh,flagGroupMesh,...stakeMeshes].filter(prop=>!prop||prop.parent!==root).length;"""
     if html.count(detached_flag_error) != 1:
         raise SystemExit("No se encontró exactamente una medición de contacto de la bandera de guarnición.")
     html = html.replace(detached_flag_error, pole_ground_error, 1)
     detached_garrison_return = """    return {island:village.name,islandIndex:village.landIndex,outpostX:root?Number(root.x.toFixed(2)):null,outpostZ:root?Number(root.z.toFixed(2)):null,outpostErrorMeters:Number(outpostErrorMeters.toFixed(4)),guardErrorMeters:Number(guardErrorMeters.toFixed(4)),flagErrorMeters:Number(flagErrorMeters.toFixed(4)),maximumAnchorErrorMeters:Number(Math.max(outpostErrorMeters,guardErrorMeters,flagErrorMeters).toFixed(4))};"""
-    verified_garrison_return = """    return {island:village.name,islandIndex:village.landIndex,outpostX:root?Number(root.x.toFixed(2)):null,outpostZ:root?Number(root.z.toFixed(2)):null,outpostErrorMeters:Number(outpostErrorMeters.toFixed(4)),guardErrorMeters:Number(guardErrorMeters.toFixed(4)),flagErrorMeters:Number(flagErrorMeters.toFixed(4)),detachedPropCount,flagPoleParent:village.flagpole?.parent?.name||null,flagGroupParent:village.flagGroup?.parent?.name||null,maximumAnchorErrorMeters:Number(Math.max(outpostErrorMeters,guardErrorMeters,flagErrorMeters).toFixed(4))};"""
+    verified_garrison_return = """    return {island:village.name,islandIndex:village.landIndex,outpostX:root?.position?Number(root.position.x.toFixed(2)):null,outpostZ:root?.position?Number(root.position.z.toFixed(2)):null,outpostErrorMeters:Number(outpostErrorMeters.toFixed(4)),guardErrorMeters:Number(guardErrorMeters.toFixed(4)),flagErrorMeters:Number(flagErrorMeters.toFixed(4)),detachedPropCount,flagPoleParent:flagPoleMesh?.parent?.name||null,flagGroupParent:flagGroupMesh?.parent?.name||null,maximumAnchorErrorMeters:Number(Math.max(outpostErrorMeters,guardErrorMeters,flagErrorMeters).toFixed(4))};"""
     if html.count(detached_garrison_return) != 1:
         raise SystemExit("No se encontró exactamente un informe de anclaje de guarnición.")
     html = html.replace(detached_garrison_return, verified_garrison_return, 1)
@@ -424,8 +429,10 @@ def main() -> None:
     reanchored_relocation = """      else root.position.copyFrom?root.position.copyFrom(targetPosition):root.position.set(candidate.x,candidate.centerY-entry.baseOffset,candidate.z);
       if(String(root.name||'').startsWith('IslandGarrisonOutpost_')){
        const garrison=villages.find(item=>item.outpostRoot===root);
-       const reanchorPart=(node,height)=>{if(!node?.position)return;const worldX=root.position.x+node.position.x,worldZ=root.position.z+node.position.z,groundY=renderedTerrainSurfaceAt(worldX,worldZ);node.position.y=groundY+height-root.position.y;};
-       reanchorPart(garrison?.flagpole,2.15);reanchorPart(garrison?.flagGroup,3.55);
+       const toLocal=(x,y,z)=>{root.computeWorldMatrix(true);const inverse=root.getWorldMatrix().clone();inverse.invert();return BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(x,y,z),inverse);};
+       const reanchorPart=(node,height)=>{if(!node?.position)return;node.computeWorldMatrix?.(true);const world=node.getAbsolutePosition?.();if(!world)return;const groundY=renderedTerrainSurfaceAt(world.x,world.z);node.position.copyFrom(toLocal(world.x,groundY+height,world.z));};
+       reanchorPart(scene.getMeshByName('IslandGarrisonFlagpole_'+(garrison?.landIndex??-1)),2.15);
+       reanchorPart(garrison?.flagGroup||scene.getTransformNodeByName?.('IslandGarrisonStandard_'+(garrison?.landIndex??-1)),3.55);
        for(let stake=0;stake<3;stake++)reanchorPart(scene.getMeshByName('IslandGarrisonStake_'+(garrison?.landIndex??-1)+'_'+stake),.42);
       }"""
     if html.count(detached_relocation) < 1:
