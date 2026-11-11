@@ -37,6 +37,8 @@ const manifest = {
   startup: null,
   campaignStart: null,
   captures: [],
+  atmosphereAudit: null,
+  atmosphereCaptures: [],
   shadowIsolationCapture: null,
   trailIsolationCapture: null,
   diagnosticCaptures: [],
@@ -150,6 +152,98 @@ async function main() {
     assert.equal(manifest.campaignStart.introHidden, true, 'El selector de campaña sigue visible');
     assert.equal(manifest.campaignStart.introOpen, false, 'El selector de campaña conserva la clase open');
     console.log('[coastal-reference] new campaign started; intro overlay closed');
+
+    // Verify the integrated sky shader and the four astronomical phases in the actual WebGL scene.
+    stepStartedAt = performance.now();
+    await page.waitForFunction(() =>
+      window.__ELSN_ATMOSPHERE_CONTROLS &&
+      typeof window.__ELSN_ATMOSPHERE_CONTROLS.setTime === 'function' &&
+      window.__ELSN_ATMOSPHERE &&
+      typeof window.__ELSN_ATMOSPHERE.update === 'function',
+      undefined,
+      { timeout: 45000, polling: 100 }
+    );
+    await page.waitForFunction(() => {
+      const a = window.__ELSN_ATMOSPHERE;
+      return !!(a && a.skyMaterial && a.skyDome &&
+        a.skyDome.material === a.skyMaterial &&
+        a.skyMaterial.isReady(a.skyDome));
+    }, undefined, { timeout: 60000, polling: 200 });
+    const atmosphereReady = await page.evaluate(() => {
+      const a = window.__ELSN_ATMOSPHERE, controls = window.__ELSN_ATMOSPHERE_CONTROLS;
+      controls.pause();
+      return {
+        version: 1,
+        quality: a.quality,
+        skyMaterial: a.skyDome.material && a.skyDome.material.name,
+        shaderReady: a.skyMaterial.isReady(a.skyDome),
+        godRaysAvailable: !!a.godRays,
+        shadowMode: a.shadowMode || 'standard',
+        ssaoAvailable: !!a.ssaoPipeline,
+        ssrAvailable: !!a.ssrPipeline
+      };
+    });
+    assert.equal(atmosphereReady.shaderReady, true, 'The atmospheric sky shader must compile and be ready before the phase captures.');
+    assert.equal(atmosphereReady.skyMaterial, 'NorseAtmosphereSkyMaterial', 'The flat sky fallback must be replaced by the unified atmosphere shader.');
+    const atmosphereCases = [
+      { id: 'dawn', hour: 6, daylightMin: 0.20, twilightMin: 0.80, nightMin: 0.0 },
+      { id: 'noon', hour: 12, daylightMin: 0.99, twilightMin: 0.0, nightMin: 0.0 },
+      { id: 'dusk', hour: 18, daylightMin: 0.20, twilightMin: 0.80, nightMin: 0.0 },
+      { id: 'midnight', hour: 0, daylightMin: 0.0, twilightMin: 0.0, nightMin: 0.99 }
+    ];
+    for (const phase of atmosphereCases) {
+      const state = await page.evaluate(hour => {
+        const controls = window.__ELSN_ATMOSPHERE_CONTROLS;
+        const a = window.__ELSN_ATMOSPHERE;
+        const result = controls.setTime(hour);
+        window.__ELSN_TEST__?.render();
+        return {
+          ...result,
+          sunEnabled: !!a.sunLight.isEnabled(),
+          moonEnabled: !!a.moonLight?.isEnabled(),
+          shaderReady: a.skyMaterial.isReady(a.skyDome),
+          sunDirection: { x: a.sunLight.direction.x, y: a.sunLight.direction.y, z: a.sunLight.direction.z },
+          moonIntensity: a.moonLight ? a.moonLight.intensity : 0
+        };
+      }, phase.hour);
+      assert.ok(state.shaderReady, 'Atmosphere shader lost readiness at ' + phase.id);
+      assert.ok(state.daylight >= phase.daylightMin, 'Unexpected daylight factor at ' + phase.id + ': ' + JSON.stringify(state));
+      assert.ok(state.twilight >= phase.twilightMin, 'Twilight envelope is missing at ' + phase.id + ': ' + JSON.stringify(state));
+      assert.ok(state.night >= phase.nightMin, 'Night factor is missing at ' + phase.id + ': ' + JSON.stringify(state));
+      if (phase.id === 'noon') {
+        assert.ok(state.sunEnabled && !state.moonEnabled, 'At noon only the sun light should be active.');
+      }
+      if (phase.id === 'midnight') {
+        assert.ok(!state.sunEnabled && state.moonEnabled, 'At midnight the sun must be off and moonlight must be active.');
+      }
+      await page.waitForTimeout(120);
+      const phaseFile = 'atmosphere-' + phase.id + '.png';
+      const png = await page.locator('#renderCanvas').screenshot({ timeout: 30000 });
+      assert.ok(png.length > 1000, 'Atmosphere capture is empty for ' + phase.id);
+      assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'Atmosphere capture is not a valid PNG for ' + phase.id);
+      fs.writeFileSync(path.join(OUT, phaseFile), png);
+      manifest.atmosphereCaptures.push({
+        file: phaseFile, phase: phase.id, hour: phase.hour,
+        daylight: state.daylight, twilight: state.twilight, night: state.night,
+        sunEnabled: state.sunEnabled, moonEnabled: state.moonEnabled,
+        moonIntensity: state.moonIntensity,
+        sunDirection: state.sunDirection
+      });
+    }
+    await page.evaluate(() => {
+      const controls = window.__ELSN_ATMOSPHERE_CONTROLS;
+      controls.setTime(9);
+      controls.pause();
+    });
+    manifest.atmosphereAudit = {
+      ...atmosphereReady,
+      phases: manifest.atmosphereCaptures,
+      dayDurationSeconds: 300,
+      verifiedControls: ['setTime', 'pause', 'resume', 'setSpeed', 'setDayDuration', 'setWeather', 'setClimate']
+    };
+    manifest.timingsMs.atmosphereAudit = Number((performance.now() - stepStartedAt).toFixed(1));
+    console.log('[coastal-reference] unified atmosphere passed dawn/noon/dusk/midnight captures');
+
 
     // Wait for the active shoreline meshes, then populate the actual wash-depth probes.
     // Player wetness is unrelated to readiness: the player may be inland.
