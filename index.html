@@ -9068,13 +9068,13 @@ function createRealWeapon(type='axe'){
    cyl('OutpostTentRidge_'+vl.index+'_'+tent,camp,[ox,1.38,oz],2.15,.045,.05,M.woodLight,[Math.PI/2,0,0]);
    const poleA=cyl('OutpostTentPoleA_'+vl.index+'_'+tent,camp,[ox-.82,.72,oz+.48],1.48,.045,.05,M.woodDark,[0,0,-.30]);
    const poleB=cyl('OutpostTentPoleB_'+vl.index+'_'+tent,camp,[ox+.82,.72,oz+.48],1.48,.045,.05,M.woodDark,[0,0,.30]);
-   if(!camp.__groundingPoles)camp.__groundingPoles=[];camp.__groundingPoles.push(poleA,poleB);
+   if(!camp.__groundingPoles)camp.__groundingPoles=[];camp.__groundingPoles.push(poleA,poleB);if(!camp.__groundingSupportMeshes)camp.__groundingSupportMeshes=[];camp.__groundingSupportMeshes.push({mesh:poleA,kind:'tilted-cylinder',halfHeight:.74},{mesh:poleB,kind:'tilted-cylinder',halfHeight:.74});
    box('OutpostTentCloth_'+vl.index+'_'+tent,camp,[ox,1.05,oz],[2.05,.10,1.48],M.ochreCloth,[.36,0,rot]);
    const bedroll=box('OutpostBedroll_'+vl.index+'_'+tent,camp,[ox,.13,oz+.85],[.72,.16,.95],M.fur,[0,0,rot]);
-   if(!camp.__groundingBedrolls)camp.__groundingBedrolls=[];camp.__groundingBedrolls.push(bedroll);
+   if(!camp.__groundingBedrolls)camp.__groundingBedrolls=[];camp.__groundingBedrolls.push(bedroll);if(!camp.__groundingSupportMeshes)camp.__groundingSupportMeshes=[];camp.__groundingSupportMeshes.push({mesh:bedroll,kind:'box',halfHeight:.08});
   }
-  const outpostCrate=box('OutpostSupplyCrate_'+vl.index,camp,[-4.1,.28,1.25],[.78,.56,.72],M.woodDark);camp.__groundingCrate=outpostCrate;
-  const outpostHearth=sphere('OutpostHearthGlow_'+vl.index,camp,[4.1,.22,2.0],[.24,.16,.24],M.ember,8);camp.__groundingHearth=outpostHearth;
+  const outpostCrate=box('OutpostSupplyCrate_'+vl.index,camp,[-4.1,.28,1.25],[.78,.56,.72],M.woodDark);camp.__groundingCrate=outpostCrate;if(!camp.__groundingSupportMeshes)camp.__groundingSupportMeshes=[];camp.__groundingSupportMeshes.push({mesh:outpostCrate,kind:'box',halfHeight:.28});
+  const outpostHearth=sphere('OutpostHearthGlow_'+vl.index,camp,[4.1,.22,2.0],[.24,.16,.24],M.ember,8);camp.__groundingHearth=outpostHearth;if(!camp.__groundingSupportMeshes)camp.__groundingSupportMeshes=[];camp.__groundingSupportMeshes.push({mesh:outpostHearth,kind:'sphere',halfHeight:.16});
   // Hrafn's original outpost anchor lies on a pronounced rendered slope. Reposition
   // the same camp on the nearest dry, stable patch using the rendered heightfield.
   if(vl.index===3){
@@ -9107,8 +9107,8 @@ function createRealWeapon(type='axe'){
   const scoutX=vl.x-8,scoutZ=vl.z+18,scoutY=renderedTerrainSurfaceAt(scoutX,scoutZ),scout=newGroup('IslandScoutCamp_'+vl.index,null);
   scout.position=v(scoutX,scoutY,scoutZ);vl.scoutCamp=scout;
   const scoutEntry=registerHabitableStructure(scout,'IslandScoutCamp',{islandIndex:vl.index,footprintRadius:2.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:true});
-  const scoutSupplies=box('ScoutCampSupplies_'+vl.index,scout,[0,.30,0],[.92,.60,.78],M.woodDark);
-  const scoutEmbers=sphere('ScoutCampEmbers_'+vl.index,scout,[1.15,.13,.15],[.36,.12,.30],M.ember,8);
+  const scoutSupplies=box('ScoutCampSupplies_'+vl.index,scout,[0,.30,0],[.92,.60,.78],M.woodDark);if(!scout.__groundingSupportMeshes)scout.__groundingSupportMeshes=[];scout.__groundingSupportMeshes.push({mesh:scoutSupplies,kind:'box',halfHeight:.30});
+  const scoutEmbers=sphere('ScoutCampEmbers_'+vl.index,scout,[1.15,.13,.15],[.36,.12,.30],M.ember,8);scout.__groundingSupportMeshes.push({mesh:scoutEmbers,kind:'sphere',halfHeight:.12});
   if(vl.index===3){
    const before=evaluateHabitableStructure(scoutEntry);
    scout.__groundingBefore=before;
@@ -13208,7 +13208,13 @@ function update(dt){
     return [['IslandOutpost',village.islandOutpostCamp,5.0],['IslandScoutCamp',village.scoutCamp,2.0]].map(([kind,group,footprintRadius])=>{
      const p=group?.getAbsolutePosition?group.getAbsolutePosition():group?.position;
      const groundY=p?renderedTerrainSurfaceAt(p.x,p.z):NaN,radialDistance=p?Math.hypot(p.x-island.x,p.z-island.z):Infinity;
-     const supportPoints=(group?.__groundingSupportPoints||[]).map(point=>({dx:point.x-p.x,dz:point.z-p.z,baseY:point.baseY,name:point.name}));
+     const supportPoints=(group?.__groundingSupportMeshes||[]).map(entry=>{
+      const mesh=entry.mesh;if(!mesh)return null;
+      try{mesh.computeWorldMatrix(true);}catch(_){}
+      const angle=entry.kind==='tilted-cylinder'?(Number(mesh.rotation?.z)||0):0,halfHeight=Number(entry.halfHeight)||0;
+      const localX=mesh.position.x+(entry.kind==='tilted-cylinder'?Math.sin(angle)*halfHeight:0),localY=mesh.position.y-(entry.kind==='tilted-cylinder'?Math.cos(angle)*halfHeight:halfHeight),worldX=p.x+localX,worldZ=p.z+mesh.position.z,baseY=p.y+localY,terrainY=renderedTerrainSurfaceAt(worldX,worldZ);
+      return {dx:worldX-p.x,dz:worldZ-p.z,baseY,name:mesh.name,terrainY:Number(terrainY.toFixed(4)),baseGapMeters:Number((baseY-terrainY).toFixed(4)),kind:entry.kind};
+     }).filter(Boolean);
      const ringOffsets=Array.from({length:8},(_,i)=>({dx:Math.cos(i*Math.PI/4)*footprintRadius,dz:Math.sin(i*Math.PI/4)*footprintRadius,baseY:renderedTerrainSurfaceAt(p.x+Math.cos(i*Math.PI/4)*footprintRadius,p.z+Math.sin(i*Math.PI/4)*footprintRadius),baseContact:false}));
      const measure=p?measureRenderedFootprint(village.index,p.x,p.z,p.y,[...supportPoints,...ringOffsets]):null;
      return {village:village.name,kind,islandIndex:village.index,x:p?.x??null,z:p?.z??null,anchorY:p?.y??null,groundY:Number(groundY.toFixed(3)),anchorErrorMeters:Number(Math.abs((p?.y??NaN)-groundY).toFixed(4)),islandRadiusRatio:Number((radialDistance/island.r).toFixed(3)),withinDryLandBand:radialDistance+footprintRadius<=island.r*.76,footprintRadiusMeters:footprintRadius,supportPoints:group?.__groundingSupportPoints||[],maximumBaseGapMeters:measure?.maximumBaseGapMeters??null,minimumRenderedTerrainY:measure?.minimumRenderedTerrainY??null,highWaterY:measure?.highWaterY??null,highTideDryMarginMeters:measure?.highTideDryMarginMeters??null,highTideSafe:measure?.highTideSafe??false,distanceToCoastMeters:measure?.distanceToCoastMeters??null,analyticVsRenderedMeters:measure?.analyticVsRenderedMeters??null,terrainDeformationMeters:measure?.terrainDeformationMeters??null,cause:measure?.cause??'missing-root',before:group?.__groundingBefore??null,measure};
