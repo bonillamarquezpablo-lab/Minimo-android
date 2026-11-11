@@ -222,7 +222,7 @@ async function main() {
       // Read the WebGL drawing buffer directly. Playwright's element screenshot waits
       // for visual stability, which can never be reached while the game canvas animates.
       const atmospherePngDataUrl = await page.evaluate(() => window.__ELSN_TEST__?.captureCanvas());
-      const atmospherePngMatch = /^data:image\\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(atmospherePngDataUrl || '');
+      const atmospherePngMatch = /^data:image[.]png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(atmospherePngDataUrl || '');
       assert.ok(atmospherePngMatch, 'Atmosphere canvas readback did not return a PNG data URL for ' + phase.id);
       const png = Buffer.from(atmospherePngMatch[1], 'base64');
       assert.ok(png.length > 1000, 'Atmosphere capture is empty for ' + phase.id);
