@@ -88,20 +88,20 @@ async function main(){
      const drawnBaseY=baseMeshRows.length?Math.min(...baseMeshRows.map(m=>m.minY).filter(Number.isFinite)):null;
      const childBounds=children.map(meshBounds).filter(Boolean);
      const overallDrawnLowestY=childBounds.length?Math.min(...childBounds.map(b=>b.minY)):null;
-     const radius=Math.max(1,Number(t.shorelineRadius)||Number(t.coastDistanceData)||1);
-     let dx=t.x-island.x,dz=t.z-island.z,len=Math.hypot(dx,dz);if(len<.01){dx=0;dz=1;len=1;}dx/=len;dz/=len;
-     const camera={x:island.x+dx*(radius+30),y:2.5,z:island.z+dz*(radius+30)};
+     const dx=0,dz=1;
+     let visibleEdge=null;
+     if(terrainMeshes.length){
+      let last=null,lastD=null,firstMissing=null;
+      for(let d=0;d<=75;d+=.25){const q=vertical(t.x+dx*d,t.z+dz*d,terrainSet,40);if(q&&q.y>=.28){last={distance:d,y:q.y,mesh:q.mesh};lastD=d;}else if(last&&!firstMissing){firstMissing=d;break;}}
+      if(last){let lo=lastD,hi=firstMissing??Math.min(75,lastD+.25);for(let k=0;k<10;k++){const mid=(lo+hi)/2,q=vertical(t.x+dx*mid,t.z+dz*mid,terrainSet,40);if(q&&q.y>=.28)lo=mid;else hi=mid;}const edge=vertical(t.x+dx*((lo+hi)/2),t.z+dz*((lo+hi)/2),terrainSet,40);visibleEdge={distanceFromBaseMeters:Number(((lo+hi)/2).toFixed(2)),edgeTerrainY:edge?.y??null,mesh:edge?.mesh??null,method:'terrain mesh raycast along the Hrafn sea approach (+Z); last hit above mean high tide (+0.28 m), 0.25 m scan and 10-step binary refinement',direction:{x:0,z:1}};}
+     }
+     const edgeDistance=visibleEdge?.distanceFromBaseMeters??t.coastDistanceData??30;
+     const camera={x:t.x,y:2.5,z:t.z+edgeDistance+30};
      api.setCamera({x:camera.x,y:camera.y,z:camera.z,targetX:t.x,targetY:t.baseY,targetZ:t.z});
      api.setWaterState({time:0,tide:'high'});api.render();
      const origin=new B.Vector3(camera.x,camera.y,camera.z),targetPoint=new B.Vector3(t.x,t.baseY,t.z),direction=targetPoint.subtract(origin),length=direction.length();direction.normalize();
      const ray=new B.Ray(origin,direction,length+.05),hit=scene.pickWithRay(ray,m=>allPickable.includes(m),false);
      const rayResult=hit?.hit?{mesh:hit.pickedMesh?.name||null,material:hit.pickedMesh?.material?.name||null,distanceMeters:Number(hit.distance.toFixed(3)),point:{x:Number(hit.pickedPoint.x.toFixed(3)),y:Number(hit.pickedPoint.y.toFixed(3)),z:Number(hit.pickedPoint.z.toFixed(3))},isTargetMesh:baseMeshes.includes(hit.pickedMesh),targetReached:Math.abs(hit.distance-length)<.08}:null;
-     let visibleEdge=null;
-     if(terrainMeshes.length){
-      let last=null,lastD=null,firstMissing=null;
-      for(let d=0;d<=75;d+=.25){const q=vertical(t.x+dx*d,t.z+dz*d,terrainSet,40);if(q&&q.y>=.28){last={distance:d,y:q.y,mesh:q.mesh};lastD=d;}else if(last&&!firstMissing){firstMissing=d;break;}}
-      if(last){let lo=lastD,hi=firstMissing??Math.min(75,lastD+.25);for(let k=0;k<10;k++){const mid=(lo+hi)/2,q=vertical(t.x+dx*mid,t.z+dz*mid,terrainSet,40);if(q&&q.y>=.28)lo=mid;else hi=mid;}const edge=vertical(t.x+dx*((lo+hi)/2),t.z+dz*((lo+hi)/2),terrainSet,40);visibleEdge={distanceFromBaseMeters:Number(((lo+hi)/2).toFixed(2)),edgeTerrainY:edge?.y??null,mesh:edge?.mesh??null,method:'terrain mesh raycast; last hit above mean high tide (+0.28 m), 0.25 m scan and 10-step binary refinement',direction:{x:Number(dx.toFixed(4)),z:Number(dz.toFixed(4))}};}
-     }
      const waveRows=[],footprint=[{x:t.x,z:t.z},{x:t.x+t.footprintRadius*.7,z:t.z},{x:t.x-t.footprintRadius*.7,z:t.z},{x:t.x,z:t.z+t.footprintRadius*.7},{x:t.x,z:t.z-t.footprintRadius*.7}];
      for(let i=0;i<64;i++){const time=i*.75;api.setWaterState({time,tide:'high'});api.render();for(const p of footprint){const q=vertical(p.x,p.z,waterSet,30);if(q)waveRows.push({time,x:p.x,z:p.z,y:q.y,mesh:q.mesh});}}
      const waterYs=waveRows.map(x=>x.y);
@@ -113,7 +113,7 @@ async function main(){
     }
    }finally{originalPickable.forEach(([m,v])=>{m.isPickable=v;});}
    return results;
-  }),{targets:snapshot.targets,island:snapshot.island});
+  },{targets:snapshot.targets,island:snapshot.island}));
   report.structures=measured.map(t=>({id:t.id,kind:t.kind,baseHeight:round(t.baseY),drawnMeshBaseHeight:t.drawnBaseMeshHeight,
    overallDrawnLowestY:t.overallDrawnLowestY,analyticFormulaHeight:round(t.analyticTerrainY),renderedTerrainHeight:round(t.renderedTerrainY),
    analyticVsRenderedMeters:t.measure?.analyticVsRenderedMeters??null,dataDistanceToCoastMeters:round(t.coastDistanceData,3),
