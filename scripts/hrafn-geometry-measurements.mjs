@@ -8,7 +8,7 @@ const BASE_URL=process.env.HRAFN_TEST_URL||'http://127.0.0.1:4176/';
 const report={schema:1,build:null,branch:process.env.GITHUB_REF_NAME||null,commit:process.env.GITHUB_SHA||null,
  method:'live Babylon scene geometry; no screenshot-derived measurements',
  conditions:{tide:'high',tideOffsetMeters:0.28,waveTimeSamples:32,waveTimeStepSeconds:1.5,
- lodCamera:'30 m seaward of runtime coast-radius estimate, 2.5 m above mean sea level',
+ lodCamera:'30 m seaward of the live visible shoreline, along the same radial bearing used by the coast-distance measurement, 2.5 m above mean sea level',
  ray:'actual Babylon scene.pickWithRay from the offshore camera to the measured structure base'},
  startedAt:new Date().toISOString(),finishedAt:null,sceneCaptured:false,
  meshDiscovery:{waterCandidates:[],terrainCandidates:[]},structures:[],phases:[],errors:[],verdict:'incomplete'};
@@ -38,6 +38,7 @@ async function main(){
    const api=window.__ELSN_TEST__,scene=window.__ELSN_MEASURE_SCENE__;
    if(!api)throw new Error('Missing __ELSN_TEST__ API');
    if(!scene||!window.__ELSN_MEASURE_BABYLON__)throw new Error('Babylon Scene hook did not capture the live scene');
+   api.setWaterState({time:0,tide:'high'});
    const houses=api.settlementGrounding().filter(x=>x.nearestIslandIndex===3).sort((a,b)=>a.buildingIndex-b.buildingIndex);
    const camps=api.settlementCampGrounding().filter(x=>x.islandIndex===3).sort((a,b)=>String(a.kind).localeCompare(String(b.kind)));
    const island=api.islands?.[3]||{x:28,z:143,r:33,name:'Bahía de Hrafn'};
@@ -56,11 +57,11 @@ async function main(){
     ...houses.map(h=>({id:'HRAF-HUT-'+String(h.buildingIndex+1).padStart(2,'0'),kind:'hut',name:'WeatheredNorseHut',x:h.x,z:h.z,baseY:h.rootY+.02*(h.scale||1),renderedTerrainY:h.sampledTerrainY,analyticTerrainY:h.analyticTerrainY,coastDistanceData:h.distanceToCoastMeters,shorelineRadius:h.measure?.shorelineRadiusMeters,footprintRadius:Math.hypot(2.01*(h.scale||1),2.64*(h.scale||1)),measure:h.measure})),
     ...camps.map(c=>({id:'HRAF-'+String(c.kind).toUpperCase()+'-03',kind:'camp',name:c.kind==='IslandOutpost'?'IslandOutpost_3':'IslandScoutCamp_3',x:c.x,z:c.z,baseY:c.anchorY,renderedTerrainY:c.groundY,analyticTerrainY:c.measure?.analyticTerrainY,coastDistanceData:c.distanceToCoastMeters,shorelineRadius:c.measure?.shorelineRadiusMeters,footprintRadius:c.footprintRadiusMeters,supportPoints:c.supportPoints,measure:c.measure}))
    ];
-   return {island:{name:island.name,x:island.x,z:island.z,r:island.r},targets,
+   return {build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||null,island:{name:island.name,x:island.x,z:island.z,r:island.r},targets,
     waterCandidates:water.map(describe),terrainCandidates:terrain.map(describe),
     structureInventory:inventory.objects.filter(o=>['WeatheredNorseHut','IslandOutpost_3','IslandScoutCamp_3'].includes(o.name)).slice(0,30).map(o=>({name:o.name,position:o.position,bounds:o.bounds,meshNames:o.meshNames}))};
   }));
-  report.sceneCaptured=true;report.meshDiscovery.waterCandidates=snapshot.waterCandidates;report.meshDiscovery.terrainCandidates=snapshot.terrainCandidates;report.island=snapshot.island;
+  report.sceneCaptured=true;report.build=snapshot.build||null;report.meshDiscovery.waterCandidates=snapshot.waterCandidates;report.meshDiscovery.terrainCandidates=snapshot.terrainCandidates;report.island=snapshot.island;
   if(snapshot.targets.length!==5)throw new Error('Expected 5 Hrafn structures; found '+snapshot.targets.length);
   const measured=await phase('measure drawn bases, visible land edge, water extrema and offshore rays',()=>page.evaluate(({targets,island})=>{
    const api=window.__ELSN_TEST__,scene=window.__ELSN_MEASURE_SCENE__,B=window.__ELSN_MEASURE_BABYLON__;
@@ -92,39 +93,45 @@ async function main(){
      const drawnBaseY=baseMeshRows.length?Math.min(...baseMeshRows.map(m=>m.minY).filter(Number.isFinite)):null;
      const childBounds=children.map(meshBounds).filter(Boolean);
      const overallDrawnLowestY=childBounds.length?Math.min(...childBounds.map(b=>b.minY)):null;
-     const dx=0,dz=1;
+     let dx=t.x-island.x,dz=t.z-island.z,len=Math.hypot(dx,dz);
+     if(len<.01){dx=0;dz=1;len=1;}dx/=len;dz/=len;
      let visibleEdge=null;
      const edgeHeightAt=(d)=>heightAt(terrainHeightMeshes,t.x+dx*d,t.z+dz*d);
      if(terrainHeightMeshes.length){
       let last=null,lastD=null,firstMissing=null;
       for(let d=0;d<=75;d+=.25){const q=edgeHeightAt(d);if(q&&q.y>=.28){last={distance:d,y:q.y,mesh:q.mesh};lastD=d;}else if(last&&!firstMissing){firstMissing=d;break;}}
-      if(last){let lo=lastD,hi=firstMissing??Math.min(75,lastD+.25);for(let k=0;k<10;k++){const mid=(lo+hi)/2,q=edgeHeightAt(mid);if(q&&q.y>=.28)lo=mid;else hi=mid;}const edge=edgeHeightAt((lo+hi)/2);visibleEdge={distanceFromBaseMeters:Number(((lo+hi)/2).toFixed(2)),edgeTerrainY:edge?.y??null,mesh:edge?.mesh??null,method:'GroundMesh.getHeightAtCoordinates on the rendered island heightfield along the Hrafn sea approach (+Z); last surface above mean high tide (+0.28 m), 0.25 m scan and 10-step binary refinement',direction:{x:0,z:1}};}
+      if(last){let lo=lastD,hi=firstMissing??Math.min(75,lastD+.25);for(let k=0;k<10;k++){const mid=(lo+hi)/2,q=edgeHeightAt(mid);if(q&&q.y>=.28)lo=mid;else hi=mid;}const edge=edgeHeightAt((lo+hi)/2);visibleEdge={distanceFromBaseMeters:Number(((lo+hi)/2).toFixed(2)),edgeTerrainY:edge?.y??null,mesh:edge?.mesh??null,method:'GroundMesh.getHeightAtCoordinates on the rendered island heightfield along the same radial bearing as the coast-distance measurement; last surface above mean high tide (+0.28 m), 0.25 m scan and 10-step binary refinement',direction:{x:Number(dx.toFixed(4)),z:Number(dz.toFixed(4))}};}
      }
      const edgeDistance=visibleEdge?.distanceFromBaseMeters??t.coastDistanceData??30;
-     const camera={x:t.x,y:2.5,z:t.z+edgeDistance+30};
+     const camera={x:t.x+dx*(edgeDistance+30),y:2.5,z:t.z+dz*(edgeDistance+30)};
      api.setCamera({x:camera.x,y:camera.y,z:camera.z,targetX:t.x,targetY:t.baseY,targetZ:t.z});
      api.setWaterState({time:0,tide:'high'});
      const origin=new B.Vector3(camera.x,camera.y,camera.z),targetPoint=new B.Vector3(t.x,t.baseY,t.z),direction=targetPoint.subtract(origin),length=direction.length();direction.normalize();
      const ray=new B.Ray(origin,direction,length+.05),hit=scene.pickWithRay(ray,m=>allPickable.includes(m),false);
-     const rayResult=hit?.hit?{mesh:hit.pickedMesh?.name||null,material:hit.pickedMesh?.material?.name||null,distanceMeters:Number(hit.distance.toFixed(3)),point:{x:Number(hit.pickedPoint.x.toFixed(3)),y:Number(hit.pickedPoint.y.toFixed(3)),z:Number(hit.pickedPoint.z.toFixed(3))},isTargetMesh:baseMeshes.includes(hit.pickedMesh),targetReached:Math.abs(hit.distance-length)<.08}:null;
+     const rayResult=hit?.hit?{mesh:hit.pickedMesh?.name||null,material:hit.pickedMesh?.material?.name||null,distanceMeters:Number(hit.distance.toFixed(3)),point:{x:Number(hit.pickedPoint.x.toFixed(3)),y:Number(hit.pickedPoint.y.toFixed(3)),z:Number(hit.pickedPoint.z.toFixed(3))},isTargetMesh:baseMeshes.includes(hit.pickedMesh),targetReached:Math.abs(hit.distance-length)<.08,targetDistanceMeters:Number(length.toFixed(3))}:null;
      const waveRows=[],footprint=[{x:t.x,z:t.z},{x:t.x+t.footprintRadius*.7,z:t.z},{x:t.x-t.footprintRadius*.7,z:t.z},{x:t.x,z:t.z+t.footprintRadius*.7},{x:t.x,z:t.z-t.footprintRadius*.7}];
      for(let i=0;i<32;i++){const time=i*1.5;api.setWaterState({time,tide:'high'});for(const p of footprint){const q=heightAt(waterHeightMeshes,p.x,p.z);if(q)waveRows.push({time,x:p.x,z:p.z,y:q.y,mesh:q.mesh});}}
      const waterYs=waveRows.map(x=>x.y);
      results.push({...t,drawnBaseMeshHeight:drawnBaseY,overallDrawnLowestY,
       baseMeshRows,baseVsDrawnMeshMeters:drawnBaseY===null?null:Number((t.baseY-drawnBaseY).toFixed(4)),
       cameraOffshore30m:camera,rayFirstHit:rayResult,visibleLandEdge:visibleEdge,
-      waterDrawn:{sampleCount:waveRows.length,requestedSamples:32*footprint.length,minY:waterYs.length?Number(Math.min(...waterYs).toFixed(4)):null,maxY:waterYs.length?Number(Math.max(...waterYs).toFixed(4)):null,meshNames:[...new Set(waveRows.map(x=>x.mesh))],timespanSeconds:46.5,samplePoints:footprint.length,unhitSamples:64*footprint.length-waveRows.length},
+      waterDrawn:{sampleCount:waveRows.length,requestedSamples:32*footprint.length,minY:waterYs.length?Number(Math.min(...waterYs).toFixed(4)):null,maxY:waterYs.length?Number(Math.max(...waterYs).toFixed(4)):null,meshNames:[...new Set(waveRows.map(x=>x.mesh))],timespanSeconds:46.5,samplePoints:footprint.length,unhitSamples:32*footprint.length-waveRows.length},
       waterVsBase:waterYs.length?{maxAboveBase:Number((Math.max(...waterYs)-t.baseY).toFixed(4)),minAboveBase:Number((Math.min(...waterYs)-t.baseY).toFixed(4)),waterEverAboveBase:Math.max(...waterYs)>t.baseY}:null});
     }
    }finally{originalPickable.forEach(([m,v])=>{m.isPickable=v;});}
    return results;
   },{targets:snapshot.targets,island:snapshot.island}));
   report.structures=measured.map(t=>({id:t.id,kind:t.kind,baseHeight:round(t.baseY),drawnMeshBaseHeight:t.drawnBaseMeshHeight,
-   overallDrawnLowestY:t.overallDrawnLowestY,analyticFormulaHeight:round(t.analyticTerrainY),renderedTerrainHeight:round(t.renderedTerrainY),
+   overallDrawnLowestY:t.overallDrawnLowestY,baseMeshRows:t.baseMeshRows,baseVsDrawnMeshMeters:t.baseVsDrawnMeshMeters,analyticFormulaHeight:round(t.analyticTerrainY),renderedTerrainHeight:round(t.renderedTerrainY),
    analyticVsRenderedMeters:t.measure?.analyticVsRenderedMeters??null,dataDistanceToCoastMeters:round(t.coastDistanceData,3),
    visibleLandEdgeDistanceMeters:t.visibleLandEdge?.distanceFromBaseMeters??null,
    visibleLandEdgeMethod:t.visibleLandEdge?.method??'not measured: rendered GroundMesh height API unavailable',
    waterDrawn:t.waterDrawn,rayCamera:t.cameraOffshore30m,firstRayMesh:t.rayFirstHit,waterVsBase:t.waterVsBase,
+   hypotheses:{a_waterDrawnAboveBase:!!(t.waterDrawn?.maxY!==null&&t.waterDrawn?.maxY>t.baseY),
+    b_visibleMeshLowerThanAnalytic:!!(t.overallDrawnLowestY!==null&&t.analyticTerrainY!==null&&t.overallDrawnLowestY<t.analyticTerrainY-.02),
+    b_baseMeshLowerThanAnalytic:!!(t.drawnBaseMeshHeight!==null&&t.analyticTerrainY!==null&&t.drawnBaseMeshHeight<t.analyticTerrainY-.02),
+    c_visibleEdgeFartherThanData:!!(t.visibleLandEdge?.distanceFromBaseMeters!==null&&t.coastDistanceData!==null&&t.visibleLandEdge.distanceFromBaseMeters>t.coastDistanceData+.02),
+    d_externalMeshBlocksRay:!!(t.rayFirstHit&&!t.rayFirstHit.isTargetMesh&&!t.rayFirstHit.targetReached)},
    source:t.kind==='hut'?'settlementGrounding() + live mesh bounds':'settlementCampGrounding() + live support-mesh bounds'}));
   report.measurementCoverage={targets:report.structures.length,waterCandidates:report.meshDiscovery.waterCandidates.length,
    terrainCandidates:report.meshDiscovery.terrainCandidates.length,waterMeasured:report.structures.filter(x=>x.waterDrawn?.sampleCount>0).length,
