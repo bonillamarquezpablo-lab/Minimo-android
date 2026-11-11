@@ -4,6 +4,10 @@ const assert=require('node:assert/strict');
 
 const html=fs.readFileSync('index.html','utf8');
 const build=fs.readFileSync('scripts/build_site.py','utf8');
+assert.ok(build.includes("const gy=renderedTerrainSurfaceAt(x,z),sx="),"Boulders must use the rendered terrain mesh height.");
+assert.ok(build.includes("root.position=v(x,renderedTerrainSurfaceAt(x,z),z);"),"Tree trunks must begin at the rendered ground surface.");
+assert.ok(build.includes("const groundY=renderedTerrainSurfaceAt(x,z),normal=terrainNormalAt(x,z,.42);"),"Shrubs must sit on the rendered terrain surface.");
+assert.ok(build.includes("rockGroundingAudit:()=>rocks.map"),"The runtime must expose ground-contact measurements for every boulder.");
 assert.match(build,/IslandGarrisonFlagpole_.*?outpostRoot/,'Each garrison flagpole must be a child of its registered outpost so it cannot remain visible over open water.');
 assert.match(build,/IslandGarrisonStandard_.*?outpostRoot/,'Each garrison standard must inherit outpost visibility and relocation.');
 assert.match(build,/IslandGarrisonStake_.*?outpostRoot/,'Each garrison stake must inherit outpost visibility and relocation.');
