@@ -416,6 +416,16 @@
         }
       }
 
+      // Use Babylon's ACES tone mapper for the scene and the active post-process.
+      const acesToneMapping = B.ImageProcessingConfiguration &&
+        B.ImageProcessingConfiguration.TONEMAPPING_ACES;
+      for (const imageConfig of [this.scene.imageProcessingConfiguration,
+        this.renderPipeline && this.renderPipeline.imageProcessing]) {
+        if (!imageConfig) continue;
+        imageConfig.toneMappingEnabled = true;
+        if (Number.isFinite(acesToneMapping)) imageConfig.toneMappingType = acesToneMapping;
+      }
+
       if (this.quality !== 'low' && B.VolumetricLightScatteringPostProcess && this.sunDisc) {
         try {
           const ratio = this.quality === 'high' ? (this.isTouchDevice ? 0.34 : 0.55) : 0.32;
@@ -465,6 +475,16 @@
       const previous = this.getShadowGenerator();
       const caps = this.engine && this.engine.getCaps ? this.engine.getCaps() : {};
       const webgl2 = Number(this.engine && (this.engine.webGLVersion || this.engine._webGLVersion)) >= 2 || !!caps.supportComputeShaders;
+      if (previous && this.quality === 'low' && B.ShadowGenerator &&
+          Number.isFinite(B.ShadowGenerator.QUALITY_LOW)) {
+        try {
+          // Keep the existing dynamic shadow map, but use low-cost PCF filtering on constrained devices.
+          previous.usePercentageCloserFiltering = true;
+          previous.filteringQuality = B.ShadowGenerator.QUALITY_LOW;
+        } catch (error) {
+          console.warn('Low-tier shadow filtering could not be reduced; existing shadows remain active.', error);
+        }
+      }
       if (!previous || this.quality === 'low' || !B.CascadedShadowGenerator || !webgl2) {
         this.shadowMode = 'standard';
         return;
