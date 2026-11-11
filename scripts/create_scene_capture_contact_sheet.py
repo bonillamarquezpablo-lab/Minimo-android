@@ -120,6 +120,11 @@ def main() -> None:
         f"- Campamentos: **{counts.get('camps', 'no disponible')}**",
         f"- Guarniciones: **{counts.get('garrisons', 'no disponible')}**",
         "",
+        f"- Preparación de texturas: **{(manifest.get('readiness') or {}).get('verdict', 'no disponible')}**",
+        f"- Escena lista para captura: **{(manifest.get('readiness') or {}).get('ready', 'no disponible')}**",
+        f"- Marea registrada: **{((inspection.get('water') or {}).get('debugSnapshot') or {}).get('tide', {}).get('mode', 'no disponible')}**",
+        f"- Cámara inicial: **{((inspection.get('water') or {}).get('debugSnapshot') or {}).get('camera', {}).get('position', 'no disponible')}**",
+        f"- FPS: **{((inspection.get('water') or {}).get('debugSnapshot') or {}).get('fps', 'no disponible')}**",
         "## Punto de observación y zonas",
         "",
     ]
