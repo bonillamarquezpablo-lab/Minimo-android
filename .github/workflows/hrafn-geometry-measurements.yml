@@ -54,6 +54,8 @@ jobs:
       - name: Measure geometry and write JSON only
         env:
           HRAFN_TEST_URL: http://127.0.0.1:4176/
+          HRAFN_PR_HEAD_BRANCH: ${{ github.head_ref || github.ref_name }}
+          HRAFN_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/hrafn-geometry-measurements.mjs
       - name: Upload measurement JSON before PNG
         if: always()
