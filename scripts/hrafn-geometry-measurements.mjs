@@ -228,7 +228,10 @@ async function main(){
   },{targets:snapshot.targets,island:snapshot.island}));
   report.cameraVisibilityTests=measured.cameraTests;
   report.structures=measured.measurements.map(t=>({id:t.id,kind:t.kind,baseHeight:round(t.baseY),drawnMeshBaseHeight:t.drawnBaseMeshHeight,
-   overallDrawnLowestY:t.overallDrawnLowestY,baseMeshRows:t.baseMeshRows,baseVsDrawnMeshMeters:t.baseVsDrawnMeshMeters,analyticFormulaHeight:round(t.analyticTerrainY),renderedTerrainHeight:round(t.renderedTerrainY),
+   overallDrawnLowestY:t.overallDrawnLowestY,baseMeshRows:t.baseMeshRows,baseVsDrawnMeshMeters:t.baseVsDrawnMeshMeters,
+   supportContactSamples:t.measure?.samples?.filter(point=>point.name)||[],
+   maximumSupportContactGapMeters:t.measure?.maximumBaseGapMeters??null,
+   analyticFormulaHeight:round(t.analyticTerrainY),renderedTerrainHeight:round(t.renderedTerrainY),
    analyticVsRenderedMeters:t.measure?.analyticVsRenderedMeters??null,dataDistanceToCoastMeters:round(t.coastDistanceData,3),
    visibleLandEdgeDistanceMeters:t.visibleLandEdge?.distanceFromBaseMeters??null,
    waveAlignedVisibleLandEdgeDistanceMeters:t.wetAlignedEdge?.distanceFromBaseMeters??null,
