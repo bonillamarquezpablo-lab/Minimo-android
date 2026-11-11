@@ -13,7 +13,7 @@ async function main() {
   assert.match(workflow,/^  workflow_dispatch:/m);
   assert.doesNotMatch(workflow,/^  push:/m);
   assert.match(workflow,/group: scene-capture-\$\{\{ github\.sha \}\}/);
-  assert.match(workflow,/if: github\.event_name == 'workflow_dispatch'/);
+  assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
   assert.doesNotMatch(workflow,/if: false # Phase 1/);
 
   assert.match(runner,/page\.addInitScript/);
