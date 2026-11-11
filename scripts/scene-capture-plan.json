@@ -199,5 +199,41 @@
     "tide": "natural",
     "settlement": "hrafn",
     "settleMs": 300
+  },
+  {
+    "id": "hrafn-structures-auto",
+    "label": "Bahía de Hrafn — inventario visual de construcciones",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Bahía de Hrafn",
+      "center": {
+        "x": 28,
+        "y": 2.2,
+        "z": 143
+      },
+      "radiusMeters": 27,
+      "focus": "structures",
+      "maxTargets": 5,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        0,
+        45,
+        90,
+        135,
+        180,
+        225,
+        270,
+        315
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
+      "includeTopDown": true
+    }
   }
 ]
