@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { chromium } from 'playwright';
-import { expandCapturePlan, createZoneInspectionShots, MAX_CAPTURE_SHOTS } from './scene-capture-inspection.mjs';
+import { expandCapturePlan, createZoneInspectionShots, makeStableObjectCode, MAX_CAPTURE_SHOTS } from './scene-capture-inspection.mjs';
 
 const BASE_URL = process.env.CAPTURE_TEST_URL || 'http://127.0.0.1:4175/';
 const OUT = path.resolve('artifacts/custom-scene-captures');
@@ -58,6 +58,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
     const auditStarted=Date.now();
     const initialAudit=await page.evaluate(()=>window.__ELSN_TEST__.inspectScene({inventoryLimit:5000,offshoreLimit:500}));
     manifest.phaseTimingsMs.initialReadOnlyAudit=Date.now()-auditStarted;
+    initialAudit.structuralCandidates=(initialAudit.structuralCandidates||[]).map(item=>({...item,code:item.code||makeStableObjectCode(item)}));
     manifest.initialPhysicalAudit=initialAudit;
     manifest.geometryAudit=initialAudit.geometry;
     manifest.objectInventory={
