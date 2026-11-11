@@ -9,19 +9,34 @@ const report={schema:2,startedAt:new Date().toISOString(),finishedAt:null,build:
 function writeReport(){fs.mkdirSync(OUT,{recursive:true});const tmp=path.join(OUT,'structure-grounding.json.tmp');fs.writeFileSync(tmp,JSON.stringify(report,null,2)+'\n');fs.renameSync(tmp,path.join(OUT,'structure-grounding.json'));}
 function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function bounded(value,ms){return Promise.race([Promise.resolve(value),delay(ms).then(()=>null)]);}
-async function captureCompositedPage(page,file){
+async function captureCompositedPage(page,file,{gameCanvas=false}={}){
  const valid=bytes=>Buffer.isBuffer(bytes)&&bytes.length>1000&&bytes.subarray(0,8).toString('hex')==='89504e470d0a1a0a';
- let bytes=null,cdpError=null;
- const session=await page.context().newCDPSession(page);
- try{
-  const result=await bounded(session.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false,optimizeForSpeed:true}),10000);
-  if(result?.data)bytes=Buffer.from(result.data,'base64');
- }catch(error){cdpError=String(error?.message||error);}
- finally{try{await session.detach();}catch(_){}}
+ let bytes=null,canvasError=null,cdpError=null;
+ if(gameCanvas){
+  try{
+   const data=await bounded(page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null),10000);
+   const prefix='data:image/png;base64,';
+   if(typeof data==='string'&&data.startsWith(prefix)){
+    const candidate=Buffer.from(data.slice(prefix.length),'base64');
+    if(valid(candidate))bytes=candidate;
+   }
+   if(!valid(bytes))canvasError='Game canvas did not return a valid PNG within 10 seconds.';
+  }catch(error){canvasError=String(error?.message||error);}
+ }
+ if(!valid(bytes)){
+  let session=null;
+  try{
+   session=await page.context().newCDPSession(page);
+   const result=await bounded(session.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false,optimizeForSpeed:true}),10000);
+   if(result?.data)bytes=Buffer.from(result.data,'base64');
+   if(!valid(bytes))cdpError='CDP did not return a valid PNG within 10 seconds.';
+  }catch(error){cdpError=String(error?.message||error);}
+  finally{try{await session?.detach();}catch(_){}}
+ }
  if(!valid(bytes)){
   try{bytes=await bounded(page.screenshot({type:'png',fullPage:false,animations:'disabled'}),10000);}catch(_){}
  }
- if(!valid(bytes))throw new Error('CDP and Playwright screenshot channels did not return a valid PNG within their 10-second limits.'+(cdpError?' CDP: '+cdpError:''));
+ if(!valid(bytes))throw new Error('Game canvas, CDP and Playwright screenshot channels did not return a valid PNG within their 10-second limits.'+[canvasError,cdpError].filter(Boolean).join(' '));
  fs.writeFileSync(file,bytes);return bytes;
 }
 async function phase(name,fn){const start=Date.now(),row={name,startedAt:new Date().toISOString(),status:'in-progress'};report.phases.push(row);console.log('[STRUCTURE_AUDIT] START '+name);try{const result=await fn();row.status='completed';return result;}catch(error){row.status='failed';row.error=String(error?.stack||error);throw error;}finally{row.finishedAt=new Date().toISOString();row.durationMs=Date.now()-start;console.log('[STRUCTURE_AUDIT] END '+name+' '+row.status+' '+row.durationMs+'ms');}}
@@ -210,13 +225,17 @@ async function main(){
      return {applied,mode:control?.getMode?.()||null};
     },camera);
     if(cameraState.mode!=='free')throw new Error('The camera controller did not enter free mode before object inspection.');
-    const frameReady=await page.evaluate(async()=>window.__ELSN_TEST__?.prepareCaptureFrame?.({timeoutMs:8000,maxFrames:60})||null);
+    const frameReady=await page.evaluate(()=>{
+     const api=window.__ELSN_TEST__;
+     if(typeof api?.prepareStaticCaptureFrame!=='function')throw new Error('Static frame capture API is unavailable.');
+     return api.prepareStaticCaptureFrame();
+    });
     const actualView=await page.evaluate(()=>window.__ELSN_TEST__?.sceneViewSnapshot?.()||null);
     const actualPosition=actualView?.camera||null,actualTarget=actualView?.target||null;
     const near=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=.20;
     const cameraVerified=!!actualPosition&&!!actualTarget&&near(actualPosition.x,camera.x)&&near(actualPosition.y,camera.y)&&near(actualPosition.z,camera.z)&&near(actualTarget.x,camera.targetX)&&near(actualTarget.y,camera.targetY)&&near(actualTarget.z,camera.targetZ);
     if(!cameraVerified)throw new Error('The live camera did not reach the requested object viewpoint: '+JSON.stringify({expected:camera,actual:actualView}));
-    const shot=await captureCompositedPage(page,file);
+    const shot=await captureCompositedPage(page,file,{gameCanvas:true});
     report.objectInspectionCaptures.push({index:index+1,id:item.id,file:path.basename(file),bytes:shot.length,name:item.name,role:item.role,position:item.position,bounds:item.bounds,meshNames:item.meshNames,materials:item.materials,camera:cameraState,actualView,frameReady,cameraVerified,captureMethod:'live-game-canvas-data-url'});
    }catch(error){report.objectInspectionCaptures.push({index:index+1,name:item.name,role:item.role,position:item.position,error:String(error?.message||error)});}
   }
