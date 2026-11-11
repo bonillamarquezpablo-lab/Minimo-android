@@ -83,7 +83,7 @@ export function expandCapturePlan(input) {
       if (zone.islandIndex !== undefined && (!Number.isInteger(zone.islandIndex) || zone.islandIndex < 0)) {
         throw new Error(id + ': islandIndex debe ser un entero no negativo.');
       }
-      const maxTargets = Math.max(1, Math.min(8, Number(zone.maxTargets) || 6));
+      const maxTargets = Math.max(1, Math.min(12, Number(zone.maxTargets) || 12));
       const cameraDistanceMeters = Math.max(3, Math.min(80, Number(zone.cameraDistanceMeters) || 9));
       const angles = Array.isArray(zone.angles) && zone.angles.length
         ? zone.angles.map((value, angleIndex) => finite(value, id + ': angle ' + angleIndex))
@@ -247,6 +247,15 @@ export function createZoneInspectionShots(request, islands, candidates) {
       }
     }
     if (zone.focus === 'structures' && selected.length) {
+      // Scale close-up density to the number of buildings so one unified run can
+      // cover up to twelve structures without silently exceeding the 120-shot budget.
+      const lowAngles = selected.length <= 5
+        ? zone.angles
+        : selected.length <= 10
+          ? zone.angles.filter((_,index)=>index%2===1).slice(0,4)
+          : [zone.angles[1]??45,zone.angles[4]??180,zone.angles[7]??315];
+      const highAngles = selected.length <= 5 ? DIRECTIONS_4
+        : selected.length <= 10 ? [45,225] : [135];
       // A fixed offshore observation point lets the user inspect every building from
       // one real boat/water vantage instead of relying only on synthetic orbit cameras.
       if (observationPoint) {
@@ -306,13 +315,13 @@ export function createZoneInspectionShots(request, islands, candidates) {
           meshNames:item.meshNames || [],
           materials:item.materials || []
         };
-        for (let i=0;i<zone.angles.length;i++) {
-          const angle = zone.angles[i];
+        for (let i=0;i<lowAngles.length;i++) {
+          const angle = lowAngles[i];
           addShot(item.code.toLowerCase()+'-lo-'+String(i+1).padStart(2,'0')+'-s'+stateIndex+'-'+state.tide,
             cameraAt(target,distance,lowElevation,angle,target.y),'structure-low-oblique',target,state,subject);
         }
-        for (let i=0;i<Math.min(4,DIRECTIONS_4.length);i++) {
-          const angle = DIRECTIONS_4[i];
+        for (let i=0;i<highAngles.length;i++) {
+          const angle = highAngles[i];
           addShot(item.code.toLowerCase()+'-hi-'+String(i+1).padStart(2,'0')+'-s'+stateIndex+'-'+state.tide,
             cameraAt(target,distance*1.2,highElevation,angle,target.y),'structure-high-oblique',target,state,subject);
         }
