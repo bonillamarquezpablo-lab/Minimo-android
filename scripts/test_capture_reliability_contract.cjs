@@ -30,8 +30,8 @@ async function main() {
   assert.match(runner,/__ELSN_TEST__\.inspectScene\(\{inventoryLimit:5000,offshoreLimit:500\}\)/);
   assert.doesNotMatch(runner,/api\.(?:auditIslandGeometry|habitableStructureAudit|auditOffshoreStructures|coastalSceneInventory|settlementGrounding)\(/,
     'The runner must call the one unified inspector, not hidden individual audit functions.');
-  assert.match(runner,/auditOffshoreStructures\(1000\)/);
-  assert.match(runner,/coastalSceneInventory\(2000\)/);
+  assert.match(html,/auditOffshoreStructuralRoots\(offshoreLimit\)/);
+  assert.match(html,/getCoastalSceneInventory\(inventoryLimit\)/);
   assert.match(workflow,/create_scene_capture_contact_sheet\.py/);
   assert.match(fs.readFileSync('scripts/create_scene_capture_contact_sheet.py','utf8'),/inspection-report\.md/);
   assert.match(fs.readFileSync('scripts/create_scene_capture_contact_sheet.py','utf8'),/sceneInspection/);
@@ -102,7 +102,7 @@ async function main() {
   }]);
   assert.equal(orbit.shots.length,8,'Existing hand-authored orbit plans must keep working.');
 
-  assert.match(html,/inspectScene:\(\{inventoryLimit=5000,offshoreLimit=500\}=\)\s*=>/);
+  assert.match(html,/inspectScene:\(\{inventoryLimit=5000,offshoreLimit=500\}=\{\}\)=>/);
   assert.match(html,/uniqueId:Number\.isInteger\(node\.uniqueId\)/);
   assert.match(html,/unsafeVisibleBeforeRepair/);
   assert.match(html,/visibleInvalidAfterRepair/);
