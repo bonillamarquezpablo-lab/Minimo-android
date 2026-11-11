@@ -13335,20 +13335,24 @@ function update(dt){
    captureCanvas:()=>{const targetCanvas=document.getElementById('renderCanvas');if(!targetCanvas)throw new Error('Render canvas is missing');return targetCanvas.toDataURL('image/png');},
    snapshot:()=>window.__elSinNombreWaterDebugSnapshot?.()||null,
    retryViking:()=>loadHumanViking(),
-   inspectScene:({inventoryLimit=5000,offshoreLimit=500}={})=>{
+   inspectScene:async({inventoryLimit=5000,offshoreLimit=500}={})=>{
     const started=performance.now(),phaseTimingsMs={},errors={};
-    const run=(key,fn)=>{const at=performance.now();try{const value=fn();phaseTimingsMs[key]=Number((performance.now()-at).toFixed(2));return value;}catch(error){phaseTimingsMs[key]=Number((performance.now()-at).toFixed(2));errors[key]=String(error?.stack||error);return null;}};
-    const view=run('sceneViewSnapshot',()=>window.__ELSN_TEST__.sceneViewSnapshot());
-    const geometry=run('islandGeometry',()=>auditIslandGeometry());
-    const habitableStructures=run('habitableStructureAudit',()=>auditHabitableStructures(false));
-    const offshore=run('offshoreStructureAudit',()=>auditOffshoreStructuralRoots(offshoreLimit));
-    const sceneInventory=run('completeSceneInventory',()=>getCoastalSceneInventory(inventoryLimit));
-    const huts=run('settlementGrounding',()=>window.__ELSN_TEST__.settlementGrounding());
-    const camps=run('settlementCampGrounding',()=>window.__ELSN_TEST__.settlementCampGrounding());
-    const garrisons=run('garrisonGrounding',()=>window.__ELSN_TEST__.garrisonGrounding());
-    const coast=run('waterAndCoastDiagnostics',()=>getWaterCoastDiagnostics());
-    const waterSnapshot=run('waterDebugSnapshot',()=>window.__elSinNombreWaterDebugSnapshot?.()||null);
-    const runtime=run('runtimeDiagnostics',()=>window.__ELSN_TEST__.diagnostics());
+    const run=async(key,fn)=>{const at=performance.now();try{const value=await fn();phaseTimingsMs[key]=Number((performance.now()-at).toFixed(2));return value;}catch(error){phaseTimingsMs[key]=Number((performance.now()-at).toFixed(2));errors[key]=String(error?.stack||error);return null;}};
+    const view=await run('sceneViewSnapshot',()=>window.__ELSN_TEST__.sceneViewSnapshot());
+    const geometry=await run('islandGeometry',()=>auditIslandGeometry());
+    const habitableStructures=await run('habitableStructureAudit',()=>auditHabitableStructures(false));
+    const offshore=await run('offshoreStructureAudit',()=>auditOffshoreStructuralRoots(offshoreLimit));
+    const sceneInventory=await run('completeSceneInventory',()=>getCoastalSceneInventory(inventoryLimit));
+    const huts=await run('settlementGrounding',()=>window.__ELSN_TEST__.settlementGrounding());
+    const camps=await run('settlementCampGrounding',()=>window.__ELSN_TEST__.settlementCampGrounding());
+    const garrisons=await run('garrisonGrounding',()=>window.__ELSN_TEST__.garrisonGrounding());
+    const coast=await run('waterAndCoastDiagnostics',()=>getWaterCoastDiagnostics());
+    const waterSnapshot=await run('waterDebugSnapshot',()=>window.__elSinNombreWaterDebugSnapshot?.()||null);
+    const runtime=await run('runtimeDiagnostics',()=>window.__ELSN_TEST__.diagnostics());
+    const textureReadiness=await run('textureReadiness',()=>window.__ELSN_TEST__.getTextureReadinessForCamera());
+    const rocks=await run('rockGrounding',()=>window.__ELSN_TEST__.rockGroundingAudit?.()??null);
+    const outerLandmarks=await run('outerLandmarkGrounding',()=>window.__ELSN_TEST__.outerLandmarkGrounding?.()??null);
+    const sheetOpacity=await run('sheetOpacityDepth',()=>window.__ELSN_TEST__.sheetOpacityDepth?.()??null);
     const islands=land.map((island,index)=>({index,name:island.name,x:island.x,z:island.z,radius:island.r}));
     const structuralCandidates=[],seen=new Set();
     const excludedStructuralRoot=/(?:villageguard|factionbadge|garrisonstandard|garrisonflag|garrisoncrossbar|garrisonflagpole|flag|banner|weapon|tree|grass|ship|boat|drakkar|dock|pier|regattabuoy)/i;
@@ -13404,7 +13408,8 @@ function update(dt){
      capturedAt:new Date().toISOString(),durationMs:Number((performance.now()-started).toFixed(1)),
      build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',
      view,islands,geometry,habitableStructures,offshore,sceneInventory,
-     settlements:{huts,camps,garrisons},water:{coast,debugSnapshot:waterSnapshot},
+     settlements:{huts,camps,garrisons},environment:{rocks,outerLandmarks,sheetOpacity},water:{coast,debugSnapshot:waterSnapshot},
+     textures:{readiness:textureReadiness},
      runtime,structuralCandidates,
      counts:{
       islands:islands.length,
@@ -13415,7 +13420,10 @@ function update(dt){
       offshoreCandidates:offshore?.candidateCount??null,
       huts:Array.isArray(huts)?huts.length:null,
       camps:Array.isArray(camps)?camps.length:null,
-      garrisons:Array.isArray(garrisons)?garrisons.length:null
+      garrisons:Array.isArray(garrisons)?garrisons.length:null,
+      rocks:Array.isArray(rocks)?rocks.length:null,
+      outerLandmarks:Array.isArray(outerLandmarks)?outerLandmarks.length:null,
+      texturesPending:textureReadiness?.pendingTextures?.length??null
      },
      phaseTimingsMs,errors,
      interpretation:'Single consolidated read-only inspection. No structure is moved, hidden, deleted or repaired. Temporary audit geometry is cleaned up; newly discovered habitable roots may be registered internally for diagnosis.'
