@@ -26,6 +26,12 @@ function collectStructureSnapshot(){
   const topProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:topY,z}):null;
   return {name:item.name,kind:item.kind,registered:item.registered,visible:item.visible,enabled:item.enabled,island:item.island,islandIndex:item.islandIndex,position:item.position,bounds:item.bounds,offshore:item.offshore,issue:item.issue,distanceToIslandCenterMeters:item.distanceToIslandCenterMeters,dryFootprintSampleCount:item.dryFootprintSampleCount,dryFootprintSampleTotal:item.dryFootprintSampleTotal,baseProjection,centerProjection,topProjection};
  });
+ const navigationPoint={x:46.6,z:254.4,confidence:'approximate X inferred from the expanded-map player marker; Z read from the coordinate strip',zone:'MAR ABIERTO'};
+ const pointCandidates=[...projectedCandidates.map(item=>({...item,source:'offshore-structural-audit'})),...inventoryStructuralCandidates.map(item=>({...item,source:'scene-inventory'}))]
+  .map(item=>{const p=item.position||{};return {...item,distanceToNavigationPointMeters:Number(Math.hypot((Number(p.x)||0)-navigationPoint.x,(Number(p.z)||0)-navigationPoint.z).toFixed(2))};})
+  .filter(item=>item.distanceToNavigationPointMeters<=150)
+  .sort((a,b)=>a.distanceToNavigationPointMeters-b.distanceToNavigationPointMeters);
+ const navigationPointAudit={target:navigationPoint,nearbyCandidateCount:pointCandidates.length,nearbyCandidates:pointCandidates};
  const inventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(5000):null;
  const structureRoots=(inventory?.objects||[]).filter(item=>(item.category==='structure'||item.category==='unidentified-structure')&&!(item.parentChain||[]).length&&Number(item.meshCount)>0);
  const inventoryStructuralCandidates=structureRoots.map(item=>({name:item.name,category:item.category,role:item.structuralRole||'unclassified',confidence:item.classificationConfidence||'unknown',position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,meshNames:item.meshNames,materials:item.materials,structuralEvidence:item.structuralEvidence,metadata:item.metadata}));
@@ -41,7 +47,7 @@ function collectStructureSnapshot(){
  const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02);
  const garrisonOutliers=garrisons.filter(item=>Number(item.outpostErrorMeters)>.02||Number(item.flagErrorMeters)>.02||Number(item.guardErrorMeters)>.06);
  return {
-  structures,offshore,houses,camps,garrisons,view,projectedCandidates,inventoryStructuralCandidates,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
+  structures,offshore,houses,camps,garrisons,view,projectedCandidates,inventoryStructuralCandidates,navigationPointAudit,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
   summary:{
    structuresTotal:structures.total,grounded:structures.groundedCount,unsafe:structures.unsafeCount,
    unsafeVisibleBeforeAudit:structures.unsafeVisibleBeforeRepair,visibleInvalid:structures.visibleInvalidAfterRepair,
@@ -120,7 +126,8 @@ async function main(){
  // Visually inspect each nearby structure/unknown geometry cluster from a dedicated camera.
  // This catches invasion/endgame props even when their imported node names are meaningless.
  report.objectInspectionCaptures=[];
- const inspectionTargets=(settled.nearbyCuervoStructureRoots||[]).filter(item=>item.visible!==false&&item.enabled!==false).slice(0,32);
+ const inspectionTargetRows=[...(settled.nearbyCuervoStructureRoots||[]),...(settled.navigationPointAudit?.nearbyCandidates||[])];
+ const inspectionTargets=Array.from(new Map(inspectionTargetRows.map(item=>[String(item.name||'unnamed')+'|'+Number(item.position?.x||0).toFixed(1)+'|'+Number(item.position?.z||0).toFixed(1),item])).values()).filter(item=>item.visible!==false&&item.enabled!==false).slice(0,48);
  for(let index=0;index<inspectionTargets.length;index++){
   const item=inspectionTargets[index],p=item.position||{},bounds=item.bounds||{},targetY=Number.isFinite(Number(bounds.bottomY))&&Number.isFinite(Number(bounds.topY))?(Number(bounds.bottomY)+Number(bounds.topY))*.5:(Number(p.y)||0)+2.5;
   const camera={x:(Number(p.x)||0)+26,y:Math.max(8,targetY+12),z:(Number(p.z)||0)+26,targetX:Number(p.x)||0,targetY,targetZ:Number(p.z)||0};
@@ -133,6 +140,7 @@ async function main(){
    report.objectInspectionCaptures.push({index:index+1,file:path.basename(file),bytes:shot.length,name:item.name,role:item.role,classificationConfidence:item.confidence,position:item.position,bounds:item.bounds,meshNames:item.meshNames,materials:item.materials,grounding:item.grounding,camera:cameraState});
   }catch(error){report.objectInspectionCaptures.push({index:index+1,name:item.name,role:item.role,position:item.position,error:String(error?.message||error)});}
  }
+  report.navigationPointAudit=settled.navigationPointAudit;
   report.projectedStructuralCandidates=settled.projectedCandidates;
   report.inventoryStructuralCandidates=settled.inventoryStructuralCandidates;
   report.inventorySummary=settled.inventorySummary;
