@@ -190,7 +190,7 @@ async function main(){
        const q=stateAt(d);samples.push(q);
        if(q.submerged)submergedCount++;if(q.hidden)hiddenCount++;
        if(Number.isFinite(q.terrainAboveWater))minClearance=Math.min(minClearance,q.terrainAboveWater);
-       if(q.dry&&q.allGround&&Math.abs(d/5-Math.roundPage(d/5))<.051){
+       if(q.dry&&q.allGround&&Math.abs(d/5-Math.round(d/5))<.051){
         const measured=api.measureRenderedFootprint({islandIndex:q.allGround.islandIndex,x:t.x+viewDirection.x*d,z:t.z+viewDirection.z*d,baseY:q.allGround.y,offsets:[]});
         if(Number.isFinite(measured?.analyticVsRenderedMeters)){maxAnalyticDelta=Math.max(maxAnalyticDelta,Math.abs(measured.analyticVsRenderedMeters));analyticSamples++;}
        }
