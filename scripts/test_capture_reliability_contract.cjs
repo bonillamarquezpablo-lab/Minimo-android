@@ -104,7 +104,7 @@ async function main() {
   assert.ok(waterShots.every(shot=>shot.camera.z===250&&shot.subject?.code));
   assert.equal(resolved.report.observationPoint.x,120);
   assert.equal(resolved.report.observationPoint.z,250);
-  assert.ok(resolved.shots.every(shot=>shot.camera&&shot.worldTarget&&(shot.inspectionPurpose==='zone-overview'||shot.subject?.code)));
+  assert.ok(resolved.shots.every(shot=>shot.camera&&shot.worldTarget&&(['zone-overview','zone-water-overview'].includes(shot.inspectionPurpose)||shot.subject?.code)));
   assert.ok(new Set(resolved.shots.map(shot=>shot.id)).size===resolved.shots.length,'Generated camera IDs must be unique.');
   assert.equal(resolved.report.selectedTargets[0].name,'Hut_A');
 
