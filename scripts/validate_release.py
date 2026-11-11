@@ -73,6 +73,10 @@ def main() -> None:
         fail("Hay archivos requeridos vacíos: " + ", ".join(empty))
 
     index_html = read_text("index.html")
+    if 'id="game-build-version"' not in index_html or f'v{EXPECTED_VERSION}</span>' not in index_html:
+        fail("La pantalla no muestra la versión exacta en una etiqueta discreta.")
+    if 'font:600 7px/1.2 system-ui,sans-serif' not in index_html or 'color:rgba(226,196,135,.58)' not in index_html:
+        fail("La etiqueta de versión no conserva el tamaño mínimo y el acabado dorado discreto.")
     coastal_continuity_markers = (
         "function auditCoastalMeshContinuity(onlyIslandIndex=null)",
         "auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)",
