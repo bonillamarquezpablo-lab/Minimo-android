@@ -152,7 +152,12 @@ assert.doesNotMatch(navigation, /norse-nav-root|norse-nav-panel|norse-nav-map-la
 assert.match(navigation, /applyMode\("follow"\)/);
 
 
-// The final legacy CSS override must preserve the enlarged minimap and aligned coordinate strip.
-assert.ok(html.includes('width:clamp(164px,42vw,190px)!important'));
-assert.ok(html.includes('clamp(118px,30vw,137px) + 5px'));
+// Portrait minimap stays compact and keeps its coordinate strip aligned to the rendered height.
+assert.ok(html.includes('width:clamp(110px,29vw,138px)'));
+assert.ok(html.includes('clamp(79px,20.8vw,99px) + 5px'));
+assert.ok(!html.includes('width:clamp(164px,42vw,190px)!important'));
+
+// The camera can lower to a near-horizon/upward-looking angle on land and while aboard the ship.
+assert.match(html,/const pitchMin=onShip\\?-\\.02:-\\.06,pitchMax=onShip\\?\\.92:\\.94/);
+assert.match(html,/onShip\\?Math\\.max\\(cameraPitch,-\\.02\\):cameraPitch/);
 assert.ok(html.includes('width:clamp(164px,42vw,190px)'));
