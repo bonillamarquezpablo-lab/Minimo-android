@@ -8,9 +8,12 @@ const startedAt=Date.now();
 const report={schema:2,startedAt:new Date().toISOString(),finishedAt:null,build:null,renderer:'Chromium headless + ANGLE SwiftShader',mode:'full normal-campaign runtime structure audit plus automatic-repair observation in a disposable test renderer',testRendererOnlyMutations:true,productionDataModified:false,phases:[],consoleErrors:[],pageErrors:[],baseline:null,postAutomaticAudit:null,runtimeRepairSimulation:null,habitableStructures:null,settlementHouses:null,settlementCamps:null,garrisons:null,summary:null,screenshot:null,verdict:'not-run',failure:null};
 function writeReport(){fs.mkdirSync(OUT,{recursive:true});const tmp=path.join(OUT,'structure-grounding.json.tmp');fs.writeFileSync(tmp,JSON.stringify(report,null,2)+'\n');fs.renameSync(tmp,path.join(OUT,'structure-grounding.json'));}
 async function captureCompositedPage(page,file){
- const session=await page.context().newCDPSession(page);
- try{const result=await session.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});const bytes=Buffer.from(result.data,'base64');fs.writeFileSync(file,bytes);return bytes;}
- finally{try{await session.detach();}catch(_){}}
+ const encoded=await page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null);
+ const prefix='data:image/png;base64,';
+ if(typeof encoded!=='string'||!encoded.startsWith(prefix))throw new Error('The live game canvas did not return a PNG data URL.');
+ const bytes=Buffer.from(encoded.slice(prefix.length),'base64');
+ if(bytes.length<1000||bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')throw new Error('The live game canvas returned an invalid PNG frame.');
+ fs.writeFileSync(file,bytes);return bytes;
 }
 async function phase(name,fn){const start=Date.now(),row={name,startedAt:new Date().toISOString(),status:'in-progress'};report.phases.push(row);console.log('[STRUCTURE_AUDIT] START '+name);try{const result=await fn();row.status='completed';return result;}catch(error){row.status='failed';row.error=String(error?.stack||error);throw error;}finally{row.finishedAt=new Date().toISOString();row.durationMs=Date.now()-start;console.log('[STRUCTURE_AUDIT] END '+name+' '+row.status+' '+row.durationMs+'ms');}}
 function collectStructureSnapshot(){
@@ -29,11 +32,24 @@ function collectStructureSnapshot(){
   const baseProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:bottomY,z}):null;
   const centerProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:centerY,z}):null;
   const topProjection=typeof api.projectWorldPoint==='function'?api.projectWorldPoint({x,y:topY,z}):null;
-  return {name:item.name,kind:item.kind,registered:item.registered,visible:item.visible,enabled:item.enabled,island:item.island,islandIndex:item.islandIndex,position:item.position,bounds:item.bounds,offshore:item.offshore,issue:item.issue,distanceToIslandCenterMeters:item.distanceToIslandCenterMeters,dryFootprintSampleCount:item.dryFootprintSampleCount,dryFootprintSampleTotal:item.dryFootprintSampleTotal,baseProjection,centerProjection,topProjection};
+  return {name:item.name,kind:item.kind,registered:item.registered,visible:item.visible,enabled:item.enabled,island:item.island,islandIndex:item.islandIndex,position:item.position,bounds:item.bounds,offshore:item.offshore,issue:item.issue,distanceToIslandCenterMeters:item.distanceToIslandCenterMeters,dryFootprintSampleCount:item.dryFootprintSampleCount,dryFootprintSampleTotal:item.dryFootprintSampleTotal,bottomAboveWaterMeters:item.bottomAboveWaterMeters,bottomAboveTerrainMeters:item.bottomAboveTerrainMeters,waterSurfaceY:item.waterSurfaceY,terrainReferenceY:item.terrainReferenceY,dryFootprintSamples:item.dryFootprintSamples,baseProjection,centerProjection,topProjection};
  });
  const inventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(5000):null;
  const structureRoots=(inventory?.objects||[]).filter(item=>(item.category==='structure'||item.category==='unidentified-structure')&&!(item.parentChain||[]).length&&Number(item.meshCount)>0);
  const inventoryStructuralCandidates=structureRoots.map(item=>({name:item.name,category:item.category,role:item.structuralRole||'unclassified',confidence:item.classificationConfidence||'unknown',position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,meshNames:item.meshNames,materials:item.materials,structuralEvidence:item.structuralEvidence,metadata:item.metadata}));
+ const classifyUnregisteredCandidate=item=>{
+  const name=String(item.name||'');
+  if(/^PabloTheNameless(?:Body)?$/.test(name))return {classification:'player-avatar-geometry',disposition:'not-a-building',reason:'Player character root/body geometry'};
+  if(name==='RealVikingRightHandWeaponAnchor')return {classification:'equipped-weapon-assembly',disposition:'not-a-building',reason:'Weapon attachment and held weapon meshes'};
+  if(name==='DetailedNorseHearth')return {classification:'hearth-prop',disposition:'decorative-prop',reason:'Standalone hearth/fireplace prop'};
+  if(/^FirewoodRack_\\d+$/.test(name))return {classification:'firewood-rack-prop',disposition:'decorative-prop',reason:'Standalone firewood rack'};
+  if(/^NorseThingstead_\\d+$/.test(name))return {classification:'intentional-settlement-hall',disposition:'known-non-habitable-building',reason:'Named settlement hall; tracked separately from the 39 habitable hut/camp/garrison roots'};
+  return {classification:'unresolved',disposition:'requires-manual-review',reason:'No safe name-based classification'};
+ };
+ const unregisteredCandidateReview=projectedCandidates.filter(item=>item.registered===false).map(item=>{
+  const evidence=inventoryStructuralCandidates.find(root=>root.name===item.name&&Math.hypot((Number(root.position?.x)||0)-(Number(item.position?.x)||0),(Number(root.position?.z)||0)-(Number(item.position?.z)||0))<.15)||null;
+  return {...item,...classifyUnregisteredCandidate(item),inventoryEvidence:evidence?{category:evidence.category,role:evidence.role,confidence:evidence.confidence,meshCount:evidence.meshCount,vertexCount:evidence.vertexCount,meshNames:evidence.meshNames,materials:evidence.materials}:null};
+ });
  const navigationPoint={x:28,z:236.3,confidence:'Z=236.3 read from the boat screenshots; X is clipped in the coordinate strip, so x=28 is only the known Hrafn island-centre search anchor, not the player X',zone:'MAR ABIERTO',reference:'Hrafn bay offshore approach'};
  const pointCandidates=[...projectedCandidates.map(item=>({...item,source:'offshore-structural-audit'})),...inventoryStructuralCandidates.map(item=>({...item,source:'scene-inventory'}))]
   .map(item=>{const p=item.position||{};return {...item,distanceToNavigationPointMeters:Number(Math.hypot((Number(p.x)||0)-navigationPoint.x,(Number(p.z)||0)-navigationPoint.z).toFixed(2))};})
@@ -60,7 +76,7 @@ function collectStructureSnapshot(){
  const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02||(item.supportPoints||[]).some(point=>Math.abs(Number(point.baseGapMeters)||0)>.02));
  const garrisonOutliers=garrisons.filter(item=>Number(item.outpostErrorMeters)>.02||Number(item.flagErrorMeters)>.02||Number(item.guardErrorMeters)>.06);
  return {
-  structures,offshore,houses,camps,garrisons,view,projectedCandidates,inventoryStructuralCandidates,navigationPointAudit,hrafnSceneRoots,nearbyHrafnStructureRoots,hrafnHutRoots,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
+  structures,offshore,houses,camps,garrisons,view,projectedCandidates,inventoryStructuralCandidates,unregisteredCandidateReview,navigationPointAudit,hrafnSceneRoots,nearbyHrafnStructureRoots,hrafnHutRoots,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
   summary:{
    structuresTotal:structures.total,grounded:structures.groundedCount,unsafe:structures.unsafeCount,
    unsafeVisibleBeforeAudit:structures.unsafeVisibleBeforeRepair,visibleInvalid:structures.visibleInvalidAfterRepair,
@@ -177,15 +193,28 @@ async function main(){
    const safeName=String(item.name||('object-'+index)).replace(/[^a-z0-9_-]+/gi,'-').slice(0,64);
    const file=path.join(OUT,'hrafn-final-'+String(index+1).padStart(2,'0')+'-'+safeName+'-'+String(Number(p.x||0).toFixed(1))+'-'+String(Number(p.z||0).toFixed(1))+'.png');
    try{
-    const cameraState=await page.evaluate(args=>window.__ELSN_TEST__.setCamera(args),camera);
-    await page.waitForTimeout(250);
+    const cameraState=await page.evaluate(args=>{
+     const api=window.__ELSN_TEST__,control=window.__ELSN_CAMERA_CONTROL;
+     if(control?.setMode)control.setMode('free');
+     const applied=api.setCamera(args);
+     return {applied,mode:control?.getMode?.()||null};
+    },camera);
+    if(cameraState.mode!=='free')throw new Error('The camera controller did not enter free mode before object inspection.');
+    const frameReady=await page.evaluate(async()=>window.__ELSN_TEST__?.prepareCaptureFrame?.({timeoutMs:8000,maxFrames:60})||null);
+    const actualView=await page.evaluate(()=>window.__ELSN_TEST__?.sceneViewSnapshot?.()||null);
+    const actualPosition=actualView?.camera?.position||null,actualTarget=actualView?.target||null;
+    const near=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=.20;
+    const cameraVerified=!!actualPosition&&!!actualTarget&&near(actualPosition.x,camera.x)&&near(actualPosition.y,camera.y)&&near(actualPosition.z,camera.z)&&near(actualTarget.x,camera.targetX)&&near(actualTarget.y,camera.targetY)&&near(actualTarget.z,camera.targetZ);
+    if(!cameraVerified)throw new Error('The live camera did not reach the requested object viewpoint: '+JSON.stringify({expected:camera,actual:actualView}));
     const shot=await captureCompositedPage(page,file);
-    report.objectInspectionCaptures.push({index:index+1,id:item.id,file:path.basename(file),bytes:shot.length,name:item.name,role:item.role,position:item.position,bounds:item.bounds,meshNames:item.meshNames,materials:item.materials,camera:cameraState});
+    report.objectInspectionCaptures.push({index:index+1,id:item.id,file:path.basename(file),bytes:shot.length,name:item.name,role:item.role,position:item.position,bounds:item.bounds,meshNames:item.meshNames,materials:item.materials,camera:cameraState,actualView,frameReady,cameraVerified,captureMethod:'live-game-canvas-data-url'});
    }catch(error){report.objectInspectionCaptures.push({index:index+1,name:item.name,role:item.role,position:item.position,error:String(error?.message||error)});}
   }
   report.hrafnSceneRoots=settled.hrafnSceneRoots;report.hrafnHutRoots=settled.hrafnHutRoots;
   report.navigationPointAudit=settled.navigationPointAudit;report.projectedStructuralCandidates=settled.projectedCandidates;
-  report.inventoryStructuralCandidates=settled.inventoryStructuralCandidates;report.inventorySummary=settled.inventorySummary;
+  report.inventoryStructuralCandidates=settled.inventoryStructuralCandidates;report.unregisteredCandidateReview=settled.unregisteredCandidateReview;
+  report.inventorySummary=settled.inventorySummary;
+  report.unregisteredCandidateReviewSummary={total:settled.unregisteredCandidateReview.length,notBuildings:settled.unregisteredCandidateReview.filter(item=>item.disposition==='not-a-building').length,decorativeProps:settled.unregisteredCandidateReview.filter(item=>item.disposition==='decorative-prop').length,knownNonHabitableBuildings:settled.unregisteredCandidateReview.filter(item=>item.disposition==='known-non-habitable-building').length,unresolved:settled.unregisteredCandidateReview.filter(item=>item.disposition==='requires-manual-review').length,offshore:settled.unregisteredCandidateReview.filter(item=>item.offshore===true).length,allNineDrySamples:settled.unregisteredCandidateReview.filter(item=>item.dryFootprintSampleCount===9&&item.dryFootprintSampleTotal===9).length};
   const initialRows=baseline.structures.structures||[];
   const initialUnsafe=initialRows.filter(item=>item.safe!==true);
   const repairedRows=Array.isArray(repairPass?.structures)?repairPass.structures:[];
@@ -201,6 +230,7 @@ async function main(){
    visibleInvalidAfter:report.summary.visibleInvalid,
    untrackedRootsAfter:report.summary.untrackedRoots,
    unregisteredStructuralCandidatesAfter:report.summary.unregisteredStructuralCandidates,
+   unregisteredCandidateReviewSummary:report.unregisteredCandidateReviewSummary,
    offshoreStructuresAfter:report.summary.offshoreStructures,
    visibleOffshoreStructuresAfter:report.summary.visibleOffshoreStructures,
    offshoreIslandCount:report.summary.offshoreIslandCount,
@@ -230,7 +260,8 @@ async function main(){
   const hrafnTargetsMeasured=report.hrafnRepairGate.targetCount===5&&report.hrafnRepairGate.huts.length===3&&report.hrafnRepairGate.camps.length===2;
   const hrafnHutsPass=report.hrafnRepairGate.huts.length===3&&report.hrafnRepairGate.huts.every(item=>item.baseGapWithinTwoCm&&item.highTideSafe&&item.insideDryIsland);
   const hrafnCampsPass=report.hrafnRepairGate.camps.length===2&&report.hrafnRepairGate.camps.every(item=>item.anchorWithinTwoCm&&item.allSupportsWithinTwoCm&&item.highTideSafe&&item.withinDryLandBand);
-  const passed=report.summary.structuresTotal>=39&&gate.allInitialUnsafeVerifiedSafe&&gate.unsafeAfter===0&&
+  const candidateReviewComplete=report.unregisteredCandidateReviewSummary?.unresolved===0&&report.unregisteredCandidateReviewSummary?.offshore===0&&report.unregisteredCandidateReviewSummary?.total===report.summary.unregisteredStructuralCandidates;
+  const passed=report.summary.structuresTotal>=39&&candidateReviewComplete&&gate.allInitialUnsafeVerifiedSafe&&gate.unsafeAfter===0&&
    gate.visibleInvalidAfter===0&&gate.untrackedRootsAfter===0&&gate.unexpectedOffshoreStructures===0&&gate.offshoreIslandCount===13&&gate.houseCount>=12&&
    gate.houseOutliers===0&&gate.campCount>=8&&gate.campOutliers===0&&gate.garrisonCount>=9&&gate.garrisonOutliers===0&&gate.boatVisibilityIslandSamples===13&&gate.boatVisibilityViolations===0&&
    hrafnTargetsMeasured&&hrafnHutsPass&&hrafnCampsPass&&report.objectInspectionCaptures.length===5&&!report.objectInspectionCaptures.some(item=>item.error);
