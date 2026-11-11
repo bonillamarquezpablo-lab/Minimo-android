@@ -7,6 +7,7 @@ assert.match(html,/const waterDebugVertexFades=coastalDiagnosticsEnabled\?new Fl
 assert.match(html,/const coastalDiagnosticsEnabled=groundDebugEnabled\\|\\|testModeEnabled/, 'Debug buffers are enabled only by existing debug mode or the isolated test mode.');
 assert.match(html,/function getWaterVertexAgreementDiagnostics\(\)/);
 assert.match(html,/waterHeight\(x,z,time,fade\)/);
+assert.match(html,/analytic=baseY\+clampOceanHeightAtVertex\(vertex,waterHeight\(x,z,time,fade\)\)/, 'Water vertex diagnostics must compare against the same coastal-clamped surface that is rendered.');
 assert.match(html,/function recordWaterCoastSolverDiagnostic\(/);
 assert.match(html,/phase='animated'/, 'Shoreline root-finding diagnostics must distinguish initial construction from animated updates.');
 assert.match(html,/initial:createWaterCoastSolverStats\(\),animated:createWaterCoastSolverStats\(\)/, 'Initial and animated shoreline solver samples must be reported separately.');
