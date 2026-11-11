@@ -13174,12 +13174,9 @@ function update(dt){
 })();
 </script>
 <style id="norse-live-minimap-layout">
-/* Compact portrait minimap; the expanded-map interaction still opens the full archipelago. */
-#map:not(.expanded){position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px)!important;height:auto!important;aspect-ratio:480/344!important;z-index:10!important}
-#mapCoords{position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px + clamp(118px,30vw,137px) + 5px)!important;z-index:11!important}
-@media (orientation: portrait){
- #mapCoords{top:calc(env(safe-area-inset-top,0px) + 75px + clamp(79px,20.8vw,99px) + 5px)!important;width:clamp(110px,29vw,138px)!important}
-}
+/* Final mobile override: reduce the minimap without changing the expanded archipelago chart. */
+#map:not(.expanded){position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px)!important;width:clamp(124px,31vw,144px)!important;height:auto!important;aspect-ratio:480/344!important;z-index:10!important}
+#mapCoords{position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px + clamp(95px,22.5vw,108px) + 5px)!important;width:clamp(124px,31vw,144px)!important;z-index:11!important}
 body.map-open #mapCoords{display:none!important}
 </style>
 </body>
