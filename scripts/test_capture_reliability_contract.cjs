@@ -169,9 +169,9 @@ async function main() {
   assert.match(html,/visibleInvalidAfterRepair/);
   assert.match(html,/tide==='high'\?\.28:\(tide==='low'\?-.28/);
   assert.match(html,/prepareCaptureFrame:async/);
-  assert.match(html,/scene\.onAfterRenderObservable\.add\(/);
-  assert.match(html,/renderedFrames>=2/);
-  assert.match(html,/Only freeze after two actual frames/);
+  assert.match(html,/frameCountNow=renderedFrames/,'Capture convergence must read the live game render-loop frame counter.');
+  assert.match(html,/sceneReady=readyFrameStreak>=1/,'Capture must wait for a real post-camera game frame, not freeze the render loop.');
+  assert.match(html,/barrierMethod:'render-loop-frame-counter-one-post-camera-frame'/,'The readiness report must identify the actual render-frame barrier.');
 
   console.log('CAPTURE RELIABILITY + ZONE INSPECTION CONTRACT OK');
 }
