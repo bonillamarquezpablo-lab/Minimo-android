@@ -2883,7 +2883,7 @@ async function removeStrayDebugGeometry(targetScene){
    const vertex=waterDebugSampleIndices[n],time=waterDebugVertexTimes[vertex],fade=waterDebugVertexFades[vertex];
    if(!Number.isFinite(time)||!Number.isFinite(fade))continue;
    const offset=vertex*3,x=waterBase[offset],z=waterBase[offset+2];
-   const drawn=baseY+waterPositions[offset+1],analytic=baseY+waterHeight(x,z,time,fade);
+   const drawn=baseY+waterPositions[offset+1],analytic=baseY+clampOceanHeightAtVertex(vertex,waterHeight(x,z,time,fade));
    const error=Math.abs(drawn-analytic);
    if(Number.isFinite(error))errors.push(error);
   }
