@@ -48,6 +48,7 @@ for (const marker of [
   assert.ok(source.includes(marker), 'Atmosphere module is missing: ' + marker);
 }
 assert.ok(source.includes('never hardware ray tracing'), 'The WebGL runtime must explicitly describe its lighting effects as approximations.');
+assert.ok(source.includes('const enabled = true;') && source.includes('pipeline.bloomEnabled = enabled;'), 'Bloom must remain enabled with a reduced low-profile kernel rather than disappear.');
 
 const buildSource = fs.readFileSync(path.join(__dirname, 'build_site.py'), 'utf8');
 const sourceHtml = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
