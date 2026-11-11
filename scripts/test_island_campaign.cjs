@@ -104,7 +104,8 @@ assert.match(html,/habitableStructureAuditAsBoat:/,'The test API must run the li
 assert.match(html,/boatVisibleDistance:55/,'Every registered roofed structure must use the 55m offshore visibility cap.');
 assert.match(html,/const habitableAuditInterval=onShip \? \.5 : 1\.5/,'The structure audit must run every 0.5 seconds while sailing and every 1.5 seconds on land.');
 assert.match(html,/boatVisibleDistance:Math\.max\(30,Number\(options\.boatVisibleDistance\)\|\|55\)/,'Boat mode must hide buildings beyond 55m while preserving the 205m land radius.');
-assert.match(html,/limit=onShip&&ultraLowEndIslandStreaming\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/,'Only ultra-low-end Performance devices use the short boat visibility cap; capable phones keep the normal land visibility range.');
+assert.match(html,/limit=onShip\?entry\.boatVisibleDistance:entry\.maxVisibleDistance/,'All devices use the short boat visibility cap so remote huts are not rendered over open water without their island.');
+assert.doesNotMatch(html,/limit=onShip&&ultraLowEndIslandStreaming/,'Boat-side visibility must not depend on the hardware performance tier.');
 assert.match(html,/registerHabitableStructure\(hall,'NorseGreatHall'/,'The outer-island Great Hall must be included, not just village huts.');
 assert.match(html,/registerHabitableStructure\(camp,'IslandOutpostCamp'/);
 assert.match(html,/registerHabitableStructure\(scout,'IslandScoutCamp'/);
