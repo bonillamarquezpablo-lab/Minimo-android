@@ -47,7 +47,8 @@ async function main() {
 
   assert.match(runner,/const rawStructuralCandidates=initialAudit\.structuralCandidates;/,'A missing structural inventory must not be silently converted into an empty list.');
   assert.match(runner,/Array\.isArray\(rawStructuralCandidates\)/,'The read-only scene capture must validate the structural inventory type.');
-  assert.match(runner,/sceneInventory\.omittedCount/,'A truncated scene inventory must fail instead of appearing complete.');
+  assert.match(runner,/completeInventory\.omittedCount\|\|0\)!==0/,'A truncated scene inventory must fail instead of appearing complete.');
+  assert.match(runner,/completeOffshore\.omittedCount\|\|0\)!==0/,'A truncated offshore structural inventory must fail instead of appearing complete.');
   assert.match(unifiedRunner,/timedOut=false/,'Timed-out child processes must be tracked separately from ordinary failures.');
   assert.match(unifiedRunner,/child\.kill\('SIGKILL'\)/,'The unified runner must force-stop a child that ignores SIGTERM.');
 
