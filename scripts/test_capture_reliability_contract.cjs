@@ -25,9 +25,10 @@ async function main() {
   assert.match(runner,/page\.addInitScript/);
   assert.match(runner,/Math\.imul\(1664525,state\)\+1013904223/);
   assert.match(runner,/prepareCaptureFrame\(\{timeoutMs:120000\}\)/);
-  assert.match(runner,/__ELSN_TEST__\.render\(\)/);
   assert.match(runner,/createHash\('sha256'\)/);
-  assert.match(runner,/assert\.equal\(secondHash,firstHash/);
+  assert.match(runner,/pixelComparison='not-applicable-animated-scene'/);
+  assert.match(runner,/const framePng=await page\.evaluate/);
+  assert.doesNotMatch(runner,/assert\.equal\(secondHash,firstHash/,'Animated water and vegetation must not be rejected by exact pixel hashes.');
   assert.match(runner,/function writeManifest\(\)/);
   assert.match(runner,/manifest\.lastUpdatedAt/);
   assert.match(runner,/capture-index\.json/);
@@ -62,6 +63,8 @@ async function main() {
   assert.match(unifiedRunner,/scripts\/custom-scene-capture\.mjs/);
   assert.match(unifiedRunner,/Lista de estructuras detectadas/);
   assert.match(textureSmoke,/if\(original\.zone\)/);
+  assert.match(textureSmoke,/visualCaptureDeferred===true/);
+  assert.match(unifiedRunner,/CAPTURE_SKIP_TEXTURE_SCREENSHOT:'1'/);
   assert.match(textureSmoke,/zone\.observationPoint/);
   assert.doesNotMatch(runner,/api\.(?:auditIslandGeometry|habitableStructureAudit|auditOffshoreStructures|coastalSceneInventory|settlementGrounding)\(/,
     'The runner must call the one unified inspector, not hidden individual audit functions.');
@@ -111,15 +114,16 @@ async function main() {
   assert.equal(resolved.report.candidateCount,2,'Only structural roots inside the requested zone should be selected.');
   assert.equal(resolved.report.selectedTargetCount,2);
   assert.equal(resolved.report.omittedTargetCount,0);
-  assert.equal(resolved.shots.length,40,'Two structures should receive 8 area + 2 offshore overviews and 15 views per structure.');
-  assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-low-oblique').length,16);
-  assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-high-oblique').length,8);
+  assert.equal(resolved.shots.length,20,'Two structures should receive four area views, two offshore overviews, two water views, and bounded local angles.');
+  assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='zone-overview').length,4);
+  assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-low-oblique').length,4);
+  assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-high-oblique').length,4);
   assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-top-down').length,2);
   const waterOverview=resolved.shots.filter(shot=>shot.inspectionPurpose==='zone-water-overview');
   assert.equal(waterOverview.length,2,'The full bay must also be captured from the fixed offshore viewpoint.');
   const waterShots=resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-water-observation');
-  assert.equal(waterShots.length,4,'Every structure should be photographed from both heights at the fixed offshore observation point.');
-  assert.ok(waterShots.every(shot=>shot.camera.x===120&&(shot.camera.y===6||shot.camera.y===8)));
+  assert.equal(waterShots.length,2,'Every structure should receive one clear observation from the fixed offshore viewpoint.');
+  assert.ok(waterShots.every(shot=>shot.camera.x===120&&shot.camera.y===6));
   assert.ok(waterShots.every(shot=>shot.camera.z===250&&shot.subject?.code));
   assert.equal(resolved.report.observationPoint.x,120);
   assert.equal(resolved.report.observationPoint.z,250);
@@ -129,7 +133,7 @@ async function main() {
 
   const widePlan=planner.expandCapturePlan([{
     id:'all-structures',
-    zone:{islandIndex:0,center:{x:0,y:0,z:0},radiusMeters:30,focus:'structures',maxTargets:12,
+    zone:{islandIndex:0,center:{x:0,y:0,z:0},radiusMeters:30,focus:'structures',maxTargets:12,includeTopDown:false,
       observationPoint:{x:0,y:6,z:80},observationHeightOffsets:[0,2.5]}
   }]);
   const wideCandidates=Array.from({length:13},(_,index)=>({
@@ -139,11 +143,13 @@ async function main() {
   const wide=planner.createZoneInspectionShots(widePlan.zones[0],[{x:100,z:200}],wideCandidates);
   assert.equal(wide.report.selectedTargetCount,12,'The unified inspector should include up to twelve nearby structures.');
   assert.equal(wide.report.omittedTargetCount,1,'Any structure outside the one-run camera budget must be reported explicitly.');
-  assert.equal(wide.shots.length,94,'Twelve structures should receive adaptive multi-angle and offshore views within the 120-shot cap.');
+  assert.equal(wide.shots.length,30,'Twelve structures should receive one close view and one water view each, plus four overviews and two water heights.');
   assert.ok(wide.shots.length<=planner.MAX_CAPTURE_SHOTS);
-  assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-low-oblique').length,36);
-  assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-high-oblique').length,12);
-  assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-water-observation').length,24);
+  assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='zone-overview').length,4);
+  assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-low-oblique').length,12);
+  assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-high-oblique').length,0);
+  assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-top-down').length,0);
+  assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-water-observation').length,12);
   assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='zone-water-overview').length,2);
 
   const waterPlan = planner.expandCapturePlan([{
