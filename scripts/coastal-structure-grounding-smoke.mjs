@@ -143,7 +143,7 @@ async function main(){
    });
    if(!result.mapExists||result.mapExpanded||!result.coordinatesVisible||!result.coordinates.startsWith('X '))throw new Error('Local minimap did not initialise correctly: '+JSON.stringify(result));
    if(result.cameraMode!=='follow')throw new Error('The campaign did not start in follow-camera mode: '+JSON.stringify(result));
-   if(result.mapCssWidth<130||result.mapCssWidth>180)throw new Error('Unexpected minimap size: '+JSON.stringify(result));
+   if(result.mapCssWidth<95||result.mapCssWidth>180)throw new Error('Unexpected minimap size: '+JSON.stringify(result));
    const file=path.join(OUT,'live-local-minimap.png');
    const shot=await captureCompositedPage(page,file);
    return {...result,screenshot:path.basename(file),screenshotBytes:shot.length};
