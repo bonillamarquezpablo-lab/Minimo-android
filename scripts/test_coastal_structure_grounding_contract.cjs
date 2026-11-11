@@ -15,6 +15,12 @@ assert.ok(builder.includes('local_flag_base_y = "flagBaseY:flagY+3.55-outpostGro
 assert.ok(builder.includes('local_flag_reset = "if(vl.flagGroup){vl.flagGroup.position.y=vl.flagBaseY??(terrainSurfaceAt(vl.x,vl.z)+4.65);'));
 assert.ok(builder.includes('local_capture_raise = "village.flagGroup.position.y=(village.islandGarrison?2.15-(village.outpostRoot?.position?.y||0):2.15)+2.5*ease;"'));
 assert.ok(builder.includes('garrison.flagBaseY=garrisonFlagGroup.position.y'));
+assert.ok(builder.includes("new_structure_pattern = \"const structureNamePattern=/(?:norsethingstead|norsecoastalpier|norsecoastalbeacon|weatherednorsehut|\""));
+assert.ok(builder.includes("outerLandmarkGrounding:()=>"));
+assert.ok(builder.includes("renderedTerrainSurfaceAt(x,z),circle=newGroup('NorseThingstead_'"));
+assert.ok(builder.includes("renderedTerrainSurfaceAt(startX,startZ)+.10"));
+assert.ok(builder.includes("renderedTerrainSurfaceAt(x,z),tower=newGroup('NorseCoastalBeacon_'"));
+
 
 assert.match(source,/structure-grounding\.json/);
 assert.match(source,/testRendererOnlyMutations:true/);
@@ -31,7 +37,7 @@ assert.doesNotMatch(source,/probeFloatingHutAudit|\.setEnabled\(|\.position\.set
 assert.match(source,/usesGameRepairSystem:true/);
 assert.match(source,/initialPlayerCamera/);
 assert.match(source,/projectedStructuralCandidates/);
-assert.match(source,/inventoryStructuralCandidates/);assert.match(source,/unregisteredCandidateReview/);assert.match(source,/player-avatar-geometry/);assert.match(source,/equipped-weapon-assembly/);assert.match(source,/hearth-prop/);assert.match(source,/firewood-rack-prop/);assert.match(source,/intentional-settlement-hall/);assert.match(source,/candidateReviewComplete/);
+assert.match(source,/inventoryStructuralCandidates/);assert.match(source,/unregisteredCandidateReview/);assert.match(source,/player-avatar-geometry/);assert.match(source,/equipped-weapon-assembly/);assert.match(source,/hearth-prop/);assert.match(source,/firewood-rack-prop/);assert.match(source,/intentional-outer-island-landmark/);assert.match(source,/candidateReviewComplete/);
 assert.match(source,/sceneViewSnapshot/);
 assert.match(source,/projectWorldPoint/);
 assert.match(source,/width:430,height:768/);
