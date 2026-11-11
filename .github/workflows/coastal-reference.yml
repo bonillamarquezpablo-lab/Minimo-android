@@ -62,7 +62,8 @@ jobs:
       - name: Install Playwright and Chromium
         run: |
           npm install --no-save --no-package-lock playwright
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
+          node -e "const fs=require('node:fs');const {chromium}=require('playwright');const executable=chromium.executablePath();if(!fs.existsSync(executable))throw new Error('Chromium binary missing: '+executable);console.log('Chromium ready:',executable)"
 
       - name: Start one local server for the complete inspection
         run: |
