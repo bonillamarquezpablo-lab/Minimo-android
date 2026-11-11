@@ -203,6 +203,8 @@ assert.ok(source.includes("setWaterState({time:0,tide:'high'})"));
 assert.ok(source.includes("legacyHrafnBefore"));
 assert.ok(source.includes("hrafnRepairComparison"));
 assert.ok(source.includes("hrafnRepairGate"));
+assert.ok(source.includes("withinDryLandBand:item.withinDryLandBand"));
+assert.ok(source.includes("withinDryLandBand:row.after?.withinDryLandBand===true"));
 assert.ok(source.includes("maximumBaseGapMeters"));
 assert.ok(source.includes("highTideSafe"));
 assert.ok(source.includes("distanceToCoastMeters"));
