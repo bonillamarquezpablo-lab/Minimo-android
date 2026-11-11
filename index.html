@@ -9066,13 +9066,15 @@ function createRealWeapon(type='axe'){
   for(let tent=0;tent<2;tent++){
    const ox=tent===0?-2.25:2.15,oz=tent===0?-.45:.65,rot=tent===0?-.12:.16;
    cyl('OutpostTentRidge_'+vl.index+'_'+tent,camp,[ox,1.38,oz],2.15,.045,.05,M.woodLight,[Math.PI/2,0,0]);
-   cyl('OutpostTentPoleA_'+vl.index+'_'+tent,camp,[ox-.82,.72,oz+.48],1.48,.045,.05,M.woodDark,[0,0,-.30]);
-   cyl('OutpostTentPoleB_'+vl.index+'_'+tent,camp,[ox+.82,.72,oz+.48],1.48,.045,.05,M.woodDark,[0,0,.30]);
+   const poleA=cyl('OutpostTentPoleA_'+vl.index+'_'+tent,camp,[ox-.82,.72,oz+.48],1.48,.045,.05,M.woodDark,[0,0,-.30]);
+   const poleB=cyl('OutpostTentPoleB_'+vl.index+'_'+tent,camp,[ox+.82,.72,oz+.48],1.48,.045,.05,M.woodDark,[0,0,.30]);
+   if(!camp.__groundingPoles)camp.__groundingPoles=[];camp.__groundingPoles.push(poleA,poleB);
    box('OutpostTentCloth_'+vl.index+'_'+tent,camp,[ox,1.05,oz],[2.05,.10,1.48],M.ochreCloth,[.36,0,rot]);
-   box('OutpostBedroll_'+vl.index+'_'+tent,camp,[ox,.13,oz+.85],[.72,.16,.95],M.fur,[0,0,rot]);
+   const bedroll=box('OutpostBedroll_'+vl.index+'_'+tent,camp,[ox,.13,oz+.85],[.72,.16,.95],M.fur,[0,0,rot]);
+   if(!camp.__groundingBedrolls)camp.__groundingBedrolls=[];camp.__groundingBedrolls.push(bedroll);
   }
-  const outpostCrate=box('OutpostSupplyCrate_'+vl.index,camp,[-4.1,.28,1.25],[.78,.56,.72],M.woodDark);
-  const outpostHearth=sphere('OutpostHearthGlow_'+vl.index,camp,[4.1,.22,2.0],[.24,.16,.24],M.ember,8);
+  const outpostCrate=box('OutpostSupplyCrate_'+vl.index,camp,[-4.1,.28,1.25],[.78,.56,.72],M.woodDark);camp.__groundingCrate=outpostCrate;
+  const outpostHearth=sphere('OutpostHearthGlow_'+vl.index,camp,[4.1,.22,2.0],[.24,.16,.24],M.ember,8);camp.__groundingHearth=outpostHearth;
   // Hrafn's original outpost anchor lies on a pronounced rendered slope. Reposition
   // the same camp on the nearest dry, stable patch using the rendered heightfield.
   if(vl.index===3){
@@ -9083,11 +9085,20 @@ function createRealWeapon(type='axe'){
     camp.position.set(candidate.x,candidate.centerY,candidate.z);camp.computeWorldMatrix(true);
     outpostEntry.initialPlacement={x:cx,y:gy,z:cz};outpostEntry.lastAction='placed-on-rendered-dry-ground-at-construction';
    }
-   // Re-seat the supply props and hearth on the sampled rendered terrain without
-   // changing their geometry, materials, or gameplay identity.
-   const placeBoxBase=(mesh,halfHeight)=>{const wx=camp.position.x+mesh.position.x,wz=camp.position.z+mesh.position.z;mesh.position.y=renderedTerrainSurfaceAt(wx,wz)-camp.position.y+halfHeight;};
-   const placeSphereBase=(mesh,halfHeight)=>{const wx=camp.position.x+mesh.position.x,wz=camp.position.z+mesh.position.z;mesh.position.y=renderedTerrainSurfaceAt(wx,wz)-camp.position.y+halfHeight;};
-   placeBoxBase(outpostCrate,.28);placeSphereBase(outpostHearth,.16);
+   // Seat each visible ground contact against the drawn terrain, rather than
+   // forcing a large tent frame to pretend the whole slope is one flat plane.
+   camp.__groundingSupportPoints=[];
+   const recordContact=(name,x,z,baseY)=>camp.__groundingSupportPoints.push({name,x:Number(x.toFixed(3)),z:Number(z.toFixed(3)),baseY:Number(baseY.toFixed(3))});
+   for(const pole of camp.__groundingPoles||[]){
+    const halfHeight=.74,angle=Number(pole.rotation.z)||0;
+    const bottomLocalX=pole.position.x+Math.sin(angle)*halfHeight,bottomLocalY=pole.position.y-Math.cos(angle)*halfHeight;
+    const worldX=camp.position.x+bottomLocalX,worldZ=camp.position.z+pole.position.z,terrainY=renderedTerrainSurfaceAt(worldX,worldZ);
+    pole.position.y+=terrainY-(camp.position.y+bottomLocalY);recordContact(pole.name,worldX,worldZ,terrainY);
+   }
+   const placeBoxBase=(mesh,halfHeight)=>{const wx=camp.position.x+mesh.position.x,wz=camp.position.z+mesh.position.z,terrainY=renderedTerrainSurfaceAt(wx,wz);mesh.position.y=terrainY-camp.position.y+halfHeight;recordContact(mesh.name,wx,wz,terrainY);};
+   const placeSphereBase=(mesh,halfHeight)=>{const wx=camp.position.x+mesh.position.x,wz=camp.position.z+mesh.position.z,terrainY=renderedTerrainSurfaceAt(wx,wz);mesh.position.y=terrainY-camp.position.y+halfHeight;recordContact(mesh.name,wx,wz,terrainY);};
+   for(const bedroll of camp.__groundingBedrolls||[])placeBoxBase(bedroll,.08);
+   placeBoxBase(outpostCrate,.28);placeSphereBase(outpostHearth,.16);camp.computeWorldMatrix(true);
   }
   // Segundo punto de acampada de la misma isla: pequeño vivac de exploradores.
   // Keep the scout supply point inside the island's dry-land footprint.
@@ -9106,9 +9117,11 @@ function createRealWeapon(type='axe'){
     scout.position.set(candidate.x,candidate.centerY,candidate.z);scout.computeWorldMatrix(true);
     scoutEntry.initialPlacement={x:scoutX,y:scoutY,z:scoutZ};scoutEntry.lastAction='placed-on-rendered-dry-ground-at-construction';
    }
-   const placeBoxBase=(mesh,halfHeight)=>{const wx=scout.position.x+mesh.position.x,wz=scout.position.z+mesh.position.z;mesh.position.y=renderedTerrainSurfaceAt(wx,wz)-scout.position.y+halfHeight;};
-   const placeSphereBase=(mesh,halfHeight)=>{const wx=scout.position.x+mesh.position.x,wz=scout.position.z+mesh.position.z;mesh.position.y=renderedTerrainSurfaceAt(wx,wz)-scout.position.y+halfHeight;};
-   placeBoxBase(scoutSupplies,.30);placeSphereBase(scoutEmbers,.12);
+   scout.__groundingSupportPoints=[];
+   const recordContact=(name,x,z,baseY)=>scout.__groundingSupportPoints.push({name,x:Number(x.toFixed(3)),z:Number(z.toFixed(3)),baseY:Number(baseY.toFixed(3))});
+   const placeBoxBase=(mesh,halfHeight)=>{const wx=scout.position.x+mesh.position.x,wz=scout.position.z+mesh.position.z,terrainY=renderedTerrainSurfaceAt(wx,wz);mesh.position.y=terrainY-scout.position.y+halfHeight;recordContact(mesh.name,wx,wz,terrainY);};
+   const placeSphereBase=(mesh,halfHeight)=>{const wx=scout.position.x+mesh.position.x,wz=scout.position.z+mesh.position.z,terrainY=renderedTerrainSurfaceAt(wx,wz);mesh.position.y=terrainY-scout.position.y+halfHeight;recordContact(mesh.name,wx,wz,terrainY);};
+   placeBoxBase(scoutSupplies,.30);placeSphereBase(scoutEmbers,.12);scout.computeWorldMatrix(true);
   }
  }
  villages.forEach(vl=>{if(!vl.islandGarrison)buildIslandOutpost(vl);});
@@ -13056,6 +13069,23 @@ function update(dt){
    const snapshotStarted=performance.now();reportTextureCaptureProgress('texture-snapshot:call-start',{captureFrames,gameFrameCount:renderedFrames});const snapshot=await captureTextureReadinessSnapshot();const snapshotDurationMs=performance.now()-snapshotStarted;const diag=snapshot.report,pending=diag.pendingTextures||[],unattributed=pending.filter(t=>!t.orphan&&!t.references.length),cameraPending=diag.cameraPendingTextures||[],complete=diag.usageCoverage.complete&&unattributed.length===0,ready=converged&&sceneReady&&cameraPending.length===0&&complete,renderLoopCount=Array.isArray(engine._activeRenderLoops)?engine._activeRenderLoops.length:0,verdict=ready?'pass':(!complete?'inconclusive':(cameraPending.length||!converged||!sceneReady?'fail':'inconclusive'));
    reportTextureCaptureProgress('convergence:complete',{captureFrames,converged,sceneReady,verdict,snapshotDurationMs:Number(snapshotDurationMs.toFixed(1)),pendingTextures:pending.length,cameraPendingTextures:cameraPending.length});
    return {ready,verdict,converged,sceneReady,timeoutMs:budget,maxFrames:frameLimit,elapsedMs:Number((performance.now()-started).toFixed(1)),convergence:{pollSamples:captureFrames,gameRenderFrames:renderedFrames-initialGameFrameCount,barrierMethod:'render-loop-frame-counter-one-post-camera-frame',sampleIntervalMs,consecutiveReadySamples:readyFrameStreak,requiredConsecutiveReadySamples:1,maxFrames:frameLimit,deadlineMs:budget,converged,snapshotDurationMs:Number(snapshotDurationMs.toFixed(1))},frameBarrier:{pollSamples:captureFrames,gameRenderFrames:renderedFrames-initialGameFrameCount,renderLoopCount,renderLoopKeptRunning:renderLoopCount>0,sampleIntervalMs,rafMonitor:window.__ELSN_CAPTURE_RAF_MONITOR__?{...window.__ELSN_CAPTURE_RAF_MONITOR__}:null},textureDiagnostics:diag};
+  }
+  function measureRenderedFootprint(islandIndex,x,z,baseY,offsets=[]){
+   const island=land[islandIndex];if(!island)return {safe:false,reason:'unknown-island'};
+   const points=[{x,z,baseY},...(offsets||[]).map(point=>({x:x+Number(point.dx||0),z:z+Number(point.dz||0),baseY:Number.isFinite(point.baseY)?point.baseY:baseY+Number(point.baseOffset||0),name:point.name||null}))];
+   const samples=points.map(point=>{const terrainY=renderedTerrainSurfaceAt(point.x,point.z);return {...point,terrainY:Number(terrainY.toFixed(4)),baseGapMeters:Number((point.baseY-terrainY).toFixed(4)),analyticTerrainY:Number(terrainSurfaceAt(point.x,point.z).toFixed(4)),deformationMeters:Number(terrainDeformationAt(islandIndex,point.x,point.z).toFixed(4))};});
+   const minTerrainY=Math.min(...samples.map(point=>point.terrainY)),maxBaseGapMeters=Math.max(...samples.map(point=>Math.abs(point.baseGapMeters)));
+   const meanSeaLevel=Number(ground.position.y)||0,highWaterY=meanSeaLevel+.38,highTideDryMarginMeters=Number((minTerrainY-highWaterY).toFixed(4));
+   const radialDistance=Math.hypot(x-island.x,z-island.z),angle=Math.atan2(z-island.z,x-island.x);
+   const shorelineRadius=shorelineFoamRadius(island,angle,oceanTime,islandIndex);
+   const distanceToCoastMeters=Number.isFinite(shorelineRadius)?Number((shorelineRadius-radialDistance).toFixed(3)):null;
+   const centerTerrainY=renderedTerrainSurfaceAt(x,z),analyticCenterY=terrainSurfaceAt(x,z),analyticVsRenderedMeters=Number((analyticCenterY-centerTerrainY).toFixed(4));
+   const terrainDeformationMeters=Number(terrainDeformationAt(islandIndex,x,z).toFixed(4));
+   const insideDryIslandFootprint=radialDistance<=island.r*.76;
+   const baseWithinTwoCm=maxBaseGapMeters<=.02;
+   const highTideSafe=highTideDryMarginMeters>=.22;
+   const cause=!insideDryIslandFootprint?'parcel-outside-island':(Math.abs(analyticVsRenderedMeters)>.02?'analytic-vs-rendered-mesh':(Math.abs(terrainDeformationMeters)>.02?'beach-terrain-modification':(maxBaseGapMeters>.02?'base-not-seated-on-rendered-terrain':(!highTideSafe?'inside-high-tide-water':'grounded'))));
+   return {island:island.name,islandIndex,x:Number(x.toFixed(3)),z:Number(z.toFixed(3)),baseY:Number(baseY.toFixed(4)),renderedTerrainY:Number(centerTerrainY.toFixed(4)),analyticTerrainY:Number(analyticCenterY.toFixed(4)),analyticVsRenderedMeters,terrainDeformationMeters,baseGapMeters:Number((baseY-centerTerrainY).toFixed(4)),maximumBaseGapMeters:Number(maxBaseGapMeters.toFixed(4)),minimumRenderedTerrainY:Number(minTerrainY.toFixed(4)),highWaterY:Number(highWaterY.toFixed(4)),highTideDryMarginMeters,highTideSafe,distanceToCoastMeters,shorelineRadiusMeters:Number.isFinite(shorelineRadius)?Number(shorelineRadius.toFixed(3)):null,insideDryIslandFootprint,baseWithinTwoCm,cause,samples};
   }
   window.__ELSN_TEST__={
    build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',
