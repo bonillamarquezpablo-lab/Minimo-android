@@ -44,11 +44,13 @@
       title.textContent=(row.offshore?"⚠ ":"")+String(row.name||"estructura sin nombre");
       const detail=document.createElement("div");
       detail.textContent=String(row.kind||"estructura")+" · "+String(row.island||"isla desconocida");
+      const identity=document.createElement("div");
+      identity.textContent="ID interno: "+(row.name||"sin nombre");
       const coords=document.createElement("div");
       coords.textContent="X "+fmt(row.position.x)+" · Y "+fmt(row.position.y)+" · Z "+fmt(row.position.z);
       const status=document.createElement("div");
       status.textContent=row.offshore?(row.issue||"posible estructura flotante"):(row.registered?"registrada":"candidata sin registrar");
-      el.append(title,detail,coords,status);layer.appendChild(el);
+      el.append(title,detail,identity,coords,status);layer.appendChild(el);
       labels.push({el,row,index});
     }
     started=true;
@@ -64,12 +66,14 @@
     for(const item of labels){
       const {row,el}=item,p=row.position;
       const distance=Math.hypot(p.x-camera.x,p.z-camera.z);
-      if(distance>500||!row.visible||!row.enabled){el.style.display="none";continue;}
+      if(distance>140||!row.visible||!row.enabled){el.style.display="none";continue;}
       let projected;
       try{projected=api.projectWorldPoint({x:p.x,y:(row.bounds?.topY??p.y+3.2)+.45,z:p.z});}catch(_){}
       if(!projected?.inFront||!projected?.onScreen){el.style.display="none";continue;}
       el.style.display="block";
-      el.style.left=projected.x+"px";el.style.top=projected.y+"px";
+      const viewport=api.sceneViewSnapshot()?.viewport;
+      const cssWidth=viewport?.cssWidth||window.innerWidth,cssHeight=viewport?.cssHeight||window.innerHeight;
+      el.style.left=(projected.normalizedX*cssWidth)+"px";el.style.top=(projected.normalizedY*cssHeight)+"px";
     }
     requestAnimationFrame(update);
   }
