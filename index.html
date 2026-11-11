@@ -13074,7 +13074,7 @@ function update(dt){
    const island=land[islandIndex];if(!island)return {safe:false,reason:'unknown-island'};
    const points=[{x,z,baseY},...(offsets||[]).map(point=>({x:x+Number(point.dx||0),z:z+Number(point.dz||0),baseY:Number.isFinite(point.baseY)?point.baseY:baseY+Number(point.baseOffset||0),name:point.name||null}))];
    const samples=points.map(point=>{const terrainY=renderedTerrainSurfaceAt(point.x,point.z);return {...point,terrainY:Number(terrainY.toFixed(4)),baseGapMeters:Number((point.baseY-terrainY).toFixed(4)),analyticTerrainY:Number(terrainSurfaceAt(point.x,point.z).toFixed(4)),deformationMeters:Number(terrainDeformationAt(islandIndex,point.x,point.z).toFixed(4))};});
-   const minTerrainY=Math.min(...samples.map(point=>point.terrainY)),maxBaseGapMeters=Math.max(...samples.map(point=>Math.abs(point.baseGapMeters)));
+   const minTerrainY=Math.min(...samples.map(point=>point.terrainY)),supportSamples=samples.filter((point,index)=>index===0||point.baseContact!==false),maxBaseGapMeters=Math.max(...supportSamples.map(point=>Math.abs(point.baseGapMeters)));
    const meanSeaLevel=Number(ground.position.y)||0,highWaterY=meanSeaLevel+.38,highTideDryMarginMeters=Number((minTerrainY-highWaterY).toFixed(4));
    const radialDistance=Math.hypot(x-island.x,z-island.z),angle=Math.atan2(z-island.z,x-island.x);
    const shorelineRadius=shorelineFoamRadius(island,angle,oceanTime,islandIndex);
@@ -13090,6 +13090,7 @@ function update(dt){
   window.__ELSN_TEST__={
    build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',
    mapTarget:()=>mapTargetWorld?{x:mapTargetWorld.x,z:mapTargetWorld.z}:null,
+   measureRenderedFootprint:({islandIndex,x,z,baseY,offsets=[]}={})=>measureRenderedFootprint(islandIndex,Number(x),Number(z),Number(baseY),offsets),
    islands:land.map(({x,z,r,name})=>({x,z,r,name})),
    sceneViewSnapshot:()=>{
     const position=playerPos(),cameraPosition=camera.position;
@@ -13188,18 +13189,29 @@ function update(dt){
     let nearestIsland=null,nearestDistance=Infinity,nearestIslandIndex=-1;
     land.forEach((island,islandIndex)=>{const distance=Math.hypot(p.x-island.x,p.z-island.z);if(distance<nearestDistance){nearestDistance=distance;nearestIsland=island;nearestIslandIndex=islandIndex;}});
     const scale=Number(group.scaling?.x)||1,sampledTerrainY=renderedTerrainSurfaceAt(p.x,p.z),analyticTerrainY=terrainSurfaceAt(p.x,p.z),footingBottomY=p.y+.02*scale;
-    const footingCorners=[[-2.01,-2.64],[2.01,-2.64],[-2.01,2.64],[2.01,2.64]].map(([dx,dz])=>{const x=p.x+dx*scale,z=p.z+dz*scale,terrainY=renderedTerrainSurfaceAt(x,z);return {x:Number(x.toFixed(2)),z:Number(z.toFixed(2)),terrainY:Number(terrainY.toFixed(3)),gapMeters:Number((footingBottomY-terrainY).toFixed(3))};});
-    const maximumFootingGapMeters=Math.max(...footingCorners.map(corner=>Math.abs(corner.gapMeters)));
+    const cornerOffsets=[[-2.01*scale,-2.64*scale],[2.01*scale,-2.64*scale],[-2.01*scale,2.64*scale],[2.01*scale,2.64*scale]];
+    const footingCorners=cornerOffsets.map(([dx,dz])=>{const x=p.x+dx,z=p.z+dz,terrainY=renderedTerrainSurfaceAt(x,z);return {x:Number(x.toFixed(2)),z:Number(z.toFixed(2)),terrainY:Number(terrainY.toFixed(3)),gapMeters:Number((footingBottomY-terrainY).toFixed(3))};});
+    const measure=measureRenderedFootprint(nearestIslandIndex,p.x,p.z,footingBottomY,cornerOffsets.map(([dx,dz])=>({dx,dz,baseY:footingBottomY})));
+    const maximumFootingGapMeters=measure.maximumBaseGapMeters;
     const footprintRadius=Math.hypot(2.01*scale,2.64*scale),dryLandFootprintMarginMeters=nearestIsland?nearestIsland.r*.76-nearestDistance-footprintRadius:-Infinity;
-     return {village:village.name||String(village.index),buildingIndex,x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2)),rootY:Number(p.y.toFixed(3)),scale,sampledTerrainY:Number(sampledTerrainY.toFixed(3)),analyticTerrainY:Number(analyticTerrainY.toFixed(3)),groundingErrorMeters:Number(Math.abs(footingBottomY-sampledTerrainY).toFixed(4)),analyticVsRenderedMeters:Number((analyticTerrainY-sampledTerrainY).toFixed(4)),groundClearanceMeters:Number((footingBottomY-sampledTerrainY).toFixed(3)),maximumFootingGapMeters:Number(maximumFootingGapMeters.toFixed(3)),dryLandFootprintMarginMeters:Number(dryLandFootprintMarginMeters.toFixed(3)),footingCorners,nearestIsland:nearestIsland?.name||null,nearestIslandIndex,distanceToIslandMeters:Number(nearestDistance.toFixed(2)),islandRadiusRatio:nearestIsland?Number((nearestDistance/nearestIsland.r).toFixed(3)):null};
+    const visualBatches=(group.getChildMeshes?.(false)||[]).filter(mesh=>String(mesh.name||'').startsWith('NorseHutStatic_Batch_'));
+    let visualMinY=Infinity,visualMaxY=-Infinity,visualMinX=Infinity,visualMaxX=-Infinity,visualMinZ=Infinity,visualMaxZ=-Infinity;
+    for(const mesh of visualBatches){try{mesh.computeWorldMatrix(true);const box=mesh.getBoundingInfo?.()?.boundingBox;if(!box)continue;visualMinY=Math.min(visualMinY,box.minimumWorld.y);visualMaxY=Math.max(visualMaxY,box.maximumWorld.y);visualMinX=Math.min(visualMinX,box.minimumWorld.x);visualMaxX=Math.max(visualMaxX,box.maximumWorld.x);visualMinZ=Math.min(visualMinZ,box.minimumWorld.z);visualMaxZ=Math.max(visualMaxZ,box.maximumWorld.z);}catch(_){}}
+    const visualMeshBaseY=Number.isFinite(visualMinY)?Number(visualMinY.toFixed(4)):null,visualMeshBaseGapMeters=visualMeshBaseY===null?null:Number((visualMinY-footingBottomY).toFixed(4));
+    const visualCenterOffsetX=Number.isFinite(visualMinX)?Number((((visualMinX+visualMaxX)*.5)-p.x).toFixed(3)):null,visualCenterOffsetZ=Number.isFinite(visualMinZ)?Number((((visualMinZ+visualMaxZ)*.5)-p.z).toFixed(3)):null;
+    const visualCenterOffsetMeters=visualCenterOffsetX===null?null:Number(Math.hypot(visualCenterOffsetX,visualCenterOffsetZ).toFixed(3));
+    const cause=visualCenterOffsetMeters!==null&&visualCenterOffsetMeters>.25?'root-transform-applied-twice-after-mesh-merge':(!measure.insideDryIslandFootprint?'parcel-outside-island':(Math.abs(measure.analyticVsRenderedMeters)>.02?'analytic-vs-rendered-mesh':(Math.abs(measure.terrainDeformationMeters)>.02?'beach-terrain-modification':(Math.abs(visualMeshBaseGapMeters??0)>.02?'visual-mesh-base-offset':'grounded'))));
+     return {village:village.name||String(village.index),buildingIndex,x:Number(p.x.toFixed(2)),z:Number(p.z.toFixed(2)),rootY:Number(p.y.toFixed(3)),scale,sampledTerrainY:Number(sampledTerrainY.toFixed(3)),analyticTerrainY:Number(analyticTerrainY.toFixed(3)),groundingErrorMeters:Number(Math.abs(footingBottomY-sampledTerrainY).toFixed(4)),analyticVsRenderedMeters:Number((analyticTerrainY-sampledTerrainY).toFixed(4)),groundClearanceMeters:Number((footingBottomY-sampledTerrainY).toFixed(3)),maximumFootingGapMeters:Number(maximumFootingGapMeters.toFixed(4)),dryLandFootprintMarginMeters:Number(dryLandFootprintMarginMeters.toFixed(3)),footingCorners,nearestIsland:nearestIsland?.name||null,nearestIslandIndex,distanceToIslandMeters:Number(nearestDistance.toFixed(2)),islandRadiusRatio:nearestIsland?Number((nearestDistance/nearestIsland.r).toFixed(3)):null,visualBatchCount:visualBatches.length,visualMeshBaseY,visualMeshBaseGapMeters,visualCenterOffsetX,visualCenterOffsetZ,visualCenterOffsetMeters,visualGeometryAligned:visualMeshBaseGapMeters!==null&&Math.abs(visualMeshBaseGapMeters)<=.02&&visualCenterOffsetMeters<=.25,highTideDryMarginMeters:measure.highTideDryMarginMeters,highTideSafe:measure.highTideSafe,distanceToCoastMeters:measure.distanceToCoastMeters,terrainDeformationMeters:measure.terrainDeformationMeters,cause,measure};
    })),
    settlementCampGrounding:()=>villages.filter(village=>!village.islandGarrison).flatMap(village=>{
     const island=land[village.index];
     return [['IslandOutpost',village.islandOutpostCamp,5.0],['IslandScoutCamp',village.scoutCamp,2.0]].map(([kind,group,footprintRadius])=>{
      const p=group?.getAbsolutePosition?group.getAbsolutePosition():group?.position;
-     const groundY=p?renderedTerrainSurfaceAt(p.x,p.z):NaN;
-     const radialDistance=p?Math.hypot(p.x-island.x,p.z-island.z):Infinity;
-     return {village:village.name,kind,islandIndex:village.index,x:p?.x??null,z:p?.z??null,anchorY:p?.y??null,groundY:Number(groundY.toFixed(3)),anchorErrorMeters:Number(Math.abs((p?.y??NaN)-groundY).toFixed(4)),islandRadiusRatio:Number((radialDistance/island.r).toFixed(3)),withinDryLandBand:radialDistance+footprintRadius<=island.r*.76};
+     const groundY=p?renderedTerrainSurfaceAt(p.x,p.z):NaN,radialDistance=p?Math.hypot(p.x-island.x,p.z-island.z):Infinity;
+     const supportPoints=(group?.__groundingSupportPoints||[]).map(point=>({dx:point.x-p.x,dz:point.z-p.z,baseY:point.baseY,name:point.name}));
+     const ringOffsets=Array.from({length:8},(_,i)=>({dx:Math.cos(i*Math.PI/4)*footprintRadius,dz:Math.sin(i*Math.PI/4)*footprintRadius,baseY:renderedTerrainSurfaceAt(p.x+Math.cos(i*Math.PI/4)*footprintRadius,p.z+Math.sin(i*Math.PI/4)*footprintRadius),baseContact:false}));
+     const measure=p?measureRenderedFootprint(village.index,p.x,p.z,p.y,[...supportPoints,...ringOffsets]):null;
+     return {village:village.name,kind,islandIndex:village.index,x:p?.x??null,z:p?.z??null,anchorY:p?.y??null,groundY:Number(groundY.toFixed(3)),anchorErrorMeters:Number(Math.abs((p?.y??NaN)-groundY).toFixed(4)),islandRadiusRatio:Number((radialDistance/island.r).toFixed(3)),withinDryLandBand:radialDistance+footprintRadius<=island.r*.76,footprintRadiusMeters:footprintRadius,supportPoints:group?.__groundingSupportPoints||[],maximumBaseGapMeters:measure?.maximumBaseGapMeters??null,minimumRenderedTerrainY:measure?.minimumRenderedTerrainY??null,highWaterY:measure?.highWaterY??null,highTideDryMarginMeters:measure?.highTideDryMarginMeters??null,highTideSafe:measure?.highTideSafe??false,distanceToCoastMeters:measure?.distanceToCoastMeters??null,analyticVsRenderedMeters:measure?.analyticVsRenderedMeters??null,terrainDeformationMeters:measure?.terrainDeformationMeters??null,cause:measure?.cause??'missing-root',before:group?.__groundingBefore??null,measure};
     });
    }),
    garrisonGrounding:()=>villages.filter(village=>village.islandGarrison).map(village=>{
