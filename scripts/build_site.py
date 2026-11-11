@@ -334,17 +334,17 @@ def main() -> None:
     ground_anchor_replacements = (
         (
             "function createRock(x,z){\n  const gy=terrainSurfaceAt(x,z),sx=",
-            "function createRock(x,z){\\n  const gy=renderedTerrainSurfaceAt(x,z),sx=",
+            "function createRock(x,z){\n  const gy=renderedTerrainSurfaceAt(x,z),sx=",
             "rock",
         ),
         (
             "mergeStaticDecorByMaterial(canopy,'NorseTreeCanopy');\n  root.position=v(x,terrainSurfaceAt(x,z),z);",
-            "mergeStaticDecorByMaterial(canopy,'NorseTreeCanopy');\\n  root.position=v(x,renderedTerrainSurfaceAt(x,z),z);",
+            "mergeStaticDecorByMaterial(canopy,'NorseTreeCanopy');\n  root.position=v(x,renderedTerrainSurfaceAt(x,z),z);",
             "tree",
         ),
         (
             "const groundY=terrainHeightOnIsland(island,x,z),normal=terrainNormalAt(x,z,.42);\n  const root=newGroup('NaturalBroadleafShrub',null)",
-            "const groundY=renderedTerrainSurfaceAt(x,z),normal=terrainNormalAt(x,z,.42);\\n  const root=newGroup('NaturalBroadleafShrub',null)",
+            "const groundY=renderedTerrainSurfaceAt(x,z),normal=terrainNormalAt(x,z,.42);\n  const root=newGroup('NaturalBroadleafShrub',null)",
             "shrub",
         ),
     )
