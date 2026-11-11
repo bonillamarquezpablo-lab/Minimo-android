@@ -507,6 +507,14 @@ def main() -> None:
     if html.count(detached_stake) or html.count(attached_stake) != stake_occurrences:
         raise SystemExit("No se pudieron anclar todas las estacas de las guarniciones.")
 
+    # Keep the short offshore view only on explicitly detected ultra-low-end Android devices in Performance mode.
+    # Other devices retain each structure's existing normal visibility distance while aboard the ship.
+    boat_visibility_marker = "boatVisibleDistance:Math.max(30,Number(options.boatVisibleDistance)||55),"
+    boat_visibility_code = "boatVisibleDistance:isUltraLowEndMobile?Math.max(30,Number(options.boatVisibleDistance)||55):Math.max(60,Number(options.maxVisibleDistance)||205),"
+    if html.count(boat_visibility_marker) != 1:
+        raise SystemExit("No se encontró exactamente el límite de visibilidad en barco de las estructuras habitables.")
+    html = html.replace(boat_visibility_marker, boat_visibility_code, 1)
+
     # Garrison flags now live in outpost-local coordinates. The invasion and
     # capture controllers historically wrote world-space Y values because the
     # flag group used to be a scene root. Convert those writes as well, or a
