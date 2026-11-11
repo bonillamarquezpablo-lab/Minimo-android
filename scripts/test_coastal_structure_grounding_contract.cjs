@@ -27,12 +27,12 @@ assert.doesNotMatch(source,/probeFloatingHutAudit|\.setEnabled\(|\.position\.set
 assert.match(source,/usesGameRepairSystem:true/);
 assert.match(source,/initialPlayerCamera/);
 assert.match(source,/projectedStructuralCandidates/);
-assert.match(source,/inventoryStructuralCandidates/);
+assert.match(source,/inventoryStructuralCandidates/);assert.match(source,/unregisteredCandidateReview/);assert.match(source,/player-avatar-geometry/);assert.match(source,/equipped-weapon-assembly/);assert.match(source,/hearth-prop/);assert.match(source,/firewood-rack-prop/);assert.match(source,/intentional-settlement-hall/);assert.match(source,/candidateReviewComplete/);
 assert.match(source,/sceneViewSnapshot/);
 assert.match(source,/projectWorldPoint/);
 assert.match(source,/width:430,height:768/);
 assert.match(source,/captureCompositedPage\(page,file\)/);
-assert.doesNotMatch(source,/captureCanvas|setCamera\(\{x:40,y:14,z:3/);
+assert.match(source,/captureCanvas/);assert.match(source,/control\.setMode\('free'\)/);assert.match(source,/prepareCaptureFrame/);assert.match(source,/cameraVerified/);assert.match(source,/live-game-canvas-data-url/);
 assert.match(html,/sceneViewSnapshot:\(\)=>/);
 assert.match(html,/projectWorldPoint:\(\{x,y,z\}\)=>/);
 assert.match(workflow,/Audit habitable structure grounding independently/);
