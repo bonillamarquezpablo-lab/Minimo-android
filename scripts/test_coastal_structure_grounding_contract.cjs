@@ -189,7 +189,7 @@ assert.ok(html.includes("recordContact(pole.name,worldX,worldZ,terrainY)"));
 // beach deformation, distance to the sampled coast, and the conservative +0.38m high-water cap
 // plus the required additional 0.22m dry margin.
 assert.ok(html.includes("function measureRenderedFootprint(islandIndex,x,z,baseY,offsets=[])"));
-assert.ok(html.includes("const highWaterY=meanSeaLevel+.38"));
+assert.ok(html.includes("highWaterY=meanSeaLevel+.38"));
 assert.ok(html.includes("const highTideSafe=highTideDryMarginMeters>=.22"));
 assert.ok(html.includes("const distanceToCoastMeters=Number.isFinite(shorelineRadius)"));
 assert.ok(html.includes("const visualMeshBaseGapMeters"));
