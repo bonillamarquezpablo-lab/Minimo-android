@@ -209,7 +209,7 @@ assert.doesNotMatch(source,/legacyHrafnBefore|legacyById|visualCenterOffsetMeter
 assert.ok(source.includes("hrafnRepairComparison"));
 assert.ok(source.includes("hrafnRepairGate"));
 assert.ok(source.includes("withinDryLandBand:item.withinDryLandBand"));
-assert.ok(source.includes("withinDryLandBand:row.after?.withinDryLandBand===true"));
+assert.ok(source.includes("withinDryLandBand:item.after.withinDryLandBand===true"));
 assert.ok(source.includes("maximumBaseGapMeters"));
 assert.ok(source.includes("highTideSafe"));
 assert.ok(source.includes("distanceToCoastMeters"));
