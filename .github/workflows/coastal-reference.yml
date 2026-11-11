@@ -155,7 +155,8 @@ jobs:
 
   custom-capture:
     name: User-directed multi-camera scene inspection
-    if: github.event_name == 'workflow_dispatch'
+    needs: texture-smoke
+    if: \u0024{{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.texture-smoke.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
