@@ -348,8 +348,9 @@ def main() -> None:
     # The garrison grounding probe must measure the flag group's world transform,
     # not its local Y after the group becomes a child of IslandGarrisonOutpost_N.
     detached_flag_measure = """    const flagPosition=village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():village.flagGroup?.position;"""
-    world_flag_measure = """    const flagLocalPosition=village.flagGroup?.position;
-    const flagPosition=root&&flagLocalPosition?{x:root.x+flagLocalPosition.x,y:root.y+flagLocalPosition.y,z:root.z+flagLocalPosition.z}:(village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():flagLocalPosition);"""
+    world_flag_measure = """    village.outpostRoot?.computeWorldMatrix?.(true);village.flagGroup?.computeWorldMatrix?.(true);
+    const flagLocalPosition=village.flagGroup?.position,flagWorldPosition=root&&flagLocalPosition?{x:root.x+flagLocalPosition.x,y:root.y+flagLocalPosition.y,z:root.z+flagLocalPosition.z}:null;
+    const flagPosition=flagWorldPosition|| (village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():flagLocalPosition);"""
     if html.count(detached_flag_measure) != 1:
         raise SystemExit("No se encontró exactamente una medición de altura de bandera de guarnición.")
     html = html.replace(detached_flag_measure, world_flag_measure, 1)
