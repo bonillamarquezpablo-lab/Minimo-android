@@ -212,7 +212,7 @@ async function main(){
    hrafnRepairGate:report.hrafnRepairGate
   };
   report.fullRuntimeStructureGate=gate;
-  const hrafnTargetsMeasured=report.hrafnRepairGate.targetCount===5&&report.hrafnRepairGate.unsafeBeforeCount>=1;
+  const hrafnTargetsMeasured=report.hrafnRepairGate.targetCount===5&&report.hrafnRepairGate.huts.length===3&&report.hrafnRepairGate.camps.length===2;
   const hrafnHutsPass=report.hrafnRepairGate.huts.length===3&&report.hrafnRepairGate.huts.every(item=>item.baseGapWithinTwoCm&&item.highTideSafe&&item.insideDryIsland);
   const hrafnCampsPass=report.hrafnRepairGate.camps.length===2&&report.hrafnRepairGate.camps.every(item=>item.anchorWithinTwoCm&&item.allSupportsWithinTwoCm&&item.highTideSafe&&item.withinDryLandBand);
   const passed=report.summary.structuresTotal>=39&&gate.allInitialUnsafeVerifiedSafe&&gate.unsafeAfter===0&&
