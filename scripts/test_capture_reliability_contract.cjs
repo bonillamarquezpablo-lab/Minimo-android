@@ -133,6 +133,20 @@ async function main() {
   assert.match(html,/inspectScene:\(\{inventoryLimit=5000,offshoreLimit=500\}=\{\}\)=>/);
   assert.match(html,/uniqueId:Number\.isInteger\(node\.uniqueId\)/);
   assert.match(html,/single-unified-scene-inspection/);
+  for (const requiredInspectorSection of [
+    'auditIslandGeometry()',
+    'auditHabitableStructures(false)',
+    'auditOffshoreStructuralRoots(offshoreLimit)',
+    'getCoastalSceneInventory(inventoryLimit)',
+    'settlementGrounding()',
+    'settlementCampGrounding()',
+    'garrisonGrounding()',
+    'getWaterCoastDiagnostics()',
+    'window.__elSinNombreWaterDebugSnapshot',
+    'diagnostics()'
+  ]) {
+    assert.ok(html.includes(requiredInspectorSection),'The unified inspector is missing: '+requiredInspectorSection);
+  }
   assert.match(html,/unsafeVisibleBeforeRepair/);
   assert.match(html,/visibleInvalidAfterRepair/);
   assert.match(html,/tide==='high'\?\.28:\(tide==='low'\?-.28/);
