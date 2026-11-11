@@ -32,6 +32,8 @@ async function main() {
   assert.match(runner,/manifest\.lastUpdatedAt/);
   assert.match(runner,/capture-index\.json/);
   assert.match(runner,/cameraReadback/);
+  assert.match(runner,/if\(!cameraVerified\)/,'A capture must fail unless the live camera reaches its requested position and target.');
+  assert.match(runner,/cameraVerified:prepared\.cameraVerified/,'The camera verification must be saved in the capture manifest.');
   assert.match(runner,/createZoneInspectionShots/);
   assert.match(runner,/__ELSN_TEST__\.inspectScene\(\{inventoryLimit:5000,offshoreLimit:500\}\)/);
   assert.match(unifiedRunner,/scripts\/player-startup-smoke\.mjs/);
