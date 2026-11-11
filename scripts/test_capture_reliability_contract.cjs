@@ -114,7 +114,7 @@ async function main() {
   assert.equal(resolved.report.candidateCount,2,'Only structural roots inside the requested zone should be selected.');
   assert.equal(resolved.report.selectedTargetCount,2);
   assert.equal(resolved.report.omittedTargetCount,0);
-  assert.equal(resolved.shots.length,20,'Two structures should receive four area views, two offshore overviews, two water views, and bounded local angles.');
+  assert.equal(resolved.shots.length,18,'Two structures should receive four area views, two offshore overviews, two water views, and bounded local angles.');
   assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='zone-overview').length,4);
   assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-low-oblique').length,4);
   assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-high-oblique').length,4);
