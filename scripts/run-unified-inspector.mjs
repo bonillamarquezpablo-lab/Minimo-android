@@ -120,7 +120,7 @@ async function main(){
   }));
   const texture=summaryFrom('artifacts/texture-readiness-smoke/manifest.json',m=>({verdict:m.verdict,readiness:m.readiness,textureDiagnostics:m.textureDiagnostics,cameraVerification:m.cameraVerification,actualCamera:m.actualCamera,failure:m.failure}));
   const grounding=summaryFrom('artifacts/structure-grounding/manifest.json',m=>({verdict:m.verdict,summary:m.summary,failure:m.failure}));
-  const coastal=summaryFrom('artifacts/coastal-reference/manifest.json',m=>({captureCount:m.captures?.length,structureVisibility:m.structureVisibility?.length,failure:m.failure}));
+  const coastal=summaryFrom('artifacts/coastal-reference/manifest.json',m=>({captureCount:m.captures?.length,atmosphereAudit:m.atmosphereAudit,atmosphereCaptureCount:m.atmosphereCaptures?.length,structureVisibility:m.structureVisibility?.length,failure:m.failure}));
   const player=summaryFrom('artifacts/player-startup/manifest.json',m=>({modelReady:m.finalState?.modelReady,realPlayerMeshCount:m.finalState?.realPlayerMeshCount,failure:m.failure}));
   const report={
     schema:1,mode:'single-entrypoint-multi-phase-inspection',readOnlyForMainCapture:true,
