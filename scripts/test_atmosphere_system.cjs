@@ -48,6 +48,6 @@ for (const marker of [
 ]) {
   assert.ok(source.includes(marker), 'Atmosphere module is missing: ' + marker);
 }
-assert.ok(!/hardware ray tracing/i.test(source), 'The WebGL atmosphere must not claim hardware ray tracing');
+assert.ok(source.includes('never hardware ray tracing'), 'The WebGL runtime must explicitly describe its lighting effects as approximations.');
 
 console.log('OK unified atmosphere: 24-hour solar arc, twilight, moon/night state, configurable 300-second clock, layered clouds, stars, optional god rays, bloom, adaptive shadows and pooled hearth lighting.');
