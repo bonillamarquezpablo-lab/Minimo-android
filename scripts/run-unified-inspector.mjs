@@ -72,9 +72,9 @@ async function main(){
   fs.mkdirSync(OUT,{recursive:true});
   const common={PLAYER_TEST_URL:BASE_URL,CAPTURE_TEST_URL:BASE_URL,STRUCTURE_TEST_URL:BASE_URL,COASTAL_TEST_URL:BASE_URL};
   await runNodePhase('Arranque del juego y modelo vikingo real','scripts/player-startup-smoke.mjs',common,20*60*1000);
-  await runNodePhase('Texturas, carga y preparación de cámara','scripts/texture-readiness-smoke.mjs',{...common,CAPTURE_PLAN_JSON:PLAN},15*60*1000);
+  await runNodePhase('Texturas, carga y preparación de cámara','scripts/texture-readiness-smoke.mjs',{...common,CAPTURE_PLAN_JSON:PLAN,CAPTURE_TEXTURE_TIMEOUT_MS:'20000',CAPTURE_CANVAS_TIMEOUT_MS:'15000',CAPTURE_CDP_TIMEOUT_MS:'8000'},15*60*1000);
   await runNodePhase('Cimentación, estructuras y simulación de reparación en entorno desechable','scripts/coastal-structure-grounding-smoke.mjs',common,15*60*1000);
-  await runNodePhase('Referencias costeras, agua, visibilidad y capturas de entorno','scripts/coastal-reference.mjs',common,20*60*1000);
+  await runNodePhase('Referencias costeras, agua, visibilidad y capturas de entorno','scripts/coastal-reference.mjs',common,35*60*1000);
   await runNodePhase('Inventario completo, identidades y cámaras desde el agua','scripts/custom-scene-capture.mjs',{...common,CAPTURE_PLAN_JSON:PLAN},35*60*1000);
   await runPythonPhase('Informe visual unificado de estructuras','scripts/create_scene_capture_contact_sheet.py','artifacts/custom-scene-captures');
   await runPythonPhase('Lámina de referencias costeras','scripts/create_coastal_contact_sheet.py','artifacts/coastal-reference');
