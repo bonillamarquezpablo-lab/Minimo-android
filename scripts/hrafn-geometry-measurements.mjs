@@ -84,7 +84,9 @@ async function main(){
    const waterSet=new Set(waterMeshes),terrainSet=new Set(terrainMeshes);
    const waterHeightMeshes=waterMeshes.filter(m=>typeof m.getHeightAtCoordinates==='function');
    const terrainHeightMeshes=terrainMeshes.filter(m=>typeof m.getHeightAtCoordinates==='function');
-   const heightAt=(meshes,x,z)=>{for(const m of meshes){try{m.computeWorldMatrix(true);const b=m.getBoundingInfo()?.boundingBox;if(!b||x<b.minimumWorld.x||x>b.maximumWorld.x||z<b.minimumWorld.z||z>b.maximumWorld.z)continue;const y=m.getHeightAtCoordinates(x,z);if(Number.isFinite(y))return {y,mesh:m.name};}catch(_){}}return null;};
+   const allHeightfields=scene.meshes.filter(m=>/^IslandHeightfield_\\d+$/.test(m.name||'')&&typeof m.getHeightAtCoordinates==='function');
+   const visibleHeightfields=allHeightfields.filter(m=>{try{return m.isEnabled()&&m.isVisible!==false&&m.visibility>0;}catch(_){return false;}});
+   const heightAt=(meshes,x,z)=>{for(const m of meshes){try{m.computeWorldMatrix(true);const b=m.getBoundingInfo()?.boundingBox;if(!b||x<b.minimumWorld.x||x>b.maximumWorld.x||z<b.minimumWorld.z||z>b.maximumWorld.z)continue;const y=m.getHeightAtCoordinates(x,z);if(Number.isFinite(y))return {y,mesh:m.name,islandIndex:Number(m.metadata?.islandIndex??String(m.name).split('_').pop())};}catch(_){}}return null;};
    const allPickable=scene.meshes.filter(m=>{try{return m.isEnabled()&&m.isVisible!==false&&m.visibility>0&&m.getTotalVertices()>0;}catch(_){return false;}});
    const originalPickable=allPickable.map(m=>[m,m.isPickable]);allPickable.forEach(m=>m.isPickable=true);
    const vertical=(x,z,set,top=40)=>{const ray=new B.Ray(new B.Vector3(x,top,z),new B.Vector3(0,-1,0),100);const hit=scene.pickWithRay(ray,m=>set.has(m),false);return hit?.hit&&hit.pickedPoint?{y:hit.pickedPoint.y,mesh:hit.pickedMesh?.name||null,distance:hit.distance}:null;};
@@ -120,19 +122,100 @@ async function main(){
      const waveRows=[],footprint=[{x:t.x,z:t.z},{x:t.x+t.footprintRadius*.7,z:t.z},{x:t.x-t.footprintRadius*.7,z:t.z},{x:t.x,z:t.z+t.footprintRadius*.7},{x:t.x,z:t.z-t.footprintRadius*.7}];
      for(let i=0;i<32;i++){const time=i*1.5;api.setWaterState({time,tide:'high'});for(const p of footprint){const q=heightAt(waterHeightMeshes,p.x,p.z);if(q)waveRows.push({time,x:p.x,z:p.z,y:q.y,mesh:q.mesh});}}
      const waterYs=waveRows.map(x=>x.y);
+     const wetAlignedEdgeAt=d=>{
+      const x=t.x+dx*d,z=t.z+dz*d,ground=heightAt(terrainHeightMeshes,x,z),water=heightAt(waterHeightMeshes,x,z);
+      return ground&&water?{dry:ground.y>=water.y,groundY:ground.y,waterY:water.y,mesh:ground.mesh}:null;
+     };
+     let wetLast=null,wetFirst=null;
+     for(let d=0;d<=75;d+=.25){const q=wetAlignedEdgeAt(d);if(q?.dry)wetLast=d;else if(wetLast!==null){wetFirst=d;break;}}
+     let wetAlignedEdge=null;
+     if(wetLast!==null){let lo=wetLast,hi=wetFirst??Math.min(75,wetLast+.25);for(let k=0;k<12;k++){const mid=(lo+hi)/2,q=wetAlignedEdgeAt(mid);if(q?.dry)lo=mid;else hi=mid;}const q=wetAlignedEdgeAt((lo+hi)/2);wetAlignedEdge={distanceFromBaseMeters:Number(((lo+hi)/2).toFixed(3)),groundY:q?.groundY??null,waterY:q?.waterY??null,mesh:q?.mesh??null,method:'rendered GroundMesh vs rendered ocean height, high tide at time=0'};}
      results.push({...t,drawnBaseMeshHeight:drawnBaseY,overallDrawnLowestY,
       baseMeshRows,baseVsDrawnMeshMeters:drawnBaseY===null?null:Number((t.baseY-drawnBaseY).toFixed(4)),
-      cameraOffshore30m:camera,rayFirstHit:rayResult,visibleLandEdge:visibleEdge,
+      cameraOffshore30m:camera,rayFirstHit:rayResult,visibleLandEdge:visibleEdge,wetAlignedEdge,
+      fixedEdgeMinusDataMeters:visibleEdge?.distanceFromBaseMeters!=null&&t.coastDistanceData!=null?Number((visibleEdge.distanceFromBaseMeters-t.coastDistanceData).toFixed(3)):null,
+      waveAlignedEdgeMinusDataMeters:wetAlignedEdge?.distanceFromBaseMeters!=null&&t.coastDistanceData!=null?Number((wetAlignedEdge.distanceFromBaseMeters-t.coastDistanceData).toFixed(3)):null,
       waterDrawn:{sampleCount:waveRows.length,requestedSamples:32*footprint.length,minY:waterYs.length?Number(Math.min(...waterYs).toFixed(4)):null,maxY:waterYs.length?Number(Math.max(...waterYs).toFixed(4)):null,meshNames:[...new Set(waveRows.map(x=>x.mesh))],timespanSeconds:46.5,samplePoints:footprint.length,unhitSamples:32*footprint.length-waveRows.length},
       waterVsBase:waterYs.length?{maxAboveBase:Number((Math.max(...waterYs)-t.baseY).toFixed(4)),minAboveBase:Number((Math.min(...waterYs)-t.baseY).toFixed(4)),waterEverAboveBase:Math.max(...waterYs)>t.baseY}:null});
     }
-   }finally{originalPickable.forEach(([m,v])=>{m.isPickable=v;});}
-   return results;
+
+    const crow=(api.islands||[])[0]||{x:0,z:0,r:60,name:'Isla del Cuervo'};
+    const span=Math.hypot(crow.x-island.x,crow.z-island.z),towardCrow={x:(crow.x-island.x)/span,z:(crow.z-island.z)/span};
+    const terrainByIsland=allHeightfields.map(m=>{
+     const index=Number(m.metadata?.islandIndex??String(m.name).split('_').pop()),b=m.getBoundingInfo?.()?.boundingBox;
+     return {index,name:m.name,subdivisions:m.metadata?.subdivisions??null,vertices:m.getTotalVertices?.()||0,
+      enabled:m.isEnabled?.()??true,visible:m.isVisible!==false,visibility:Number(m.visibility??1),
+      bounds:b?{minY:Number(b.minimumWorld.y.toFixed(3)),maxY:Number(b.maximumWorld.y.toFixed(3))}:null};
+    }).filter(x=>x.index===0||x.index===3);
+    const cameraTests=[];
+    for(const offsetMeters of [60,90,120]){
+     const x=island.x+towardCrow.x*offsetMeters,z=island.z+towardCrow.z*offsetMeters;
+     const ground=heightAt(visibleHeightfields,x,z),water=heightAt(waterHeightMeshes,x,z),supportedByLand=!!(ground&&(!water||ground.y>water.y));
+     const surfaceY=supportedByLand?ground.y:(water?.y??.28),camera={x,y:surfaceY+1.7,z};
+     const viewRows=[];
+     for(const t of targets.filter(item=>item.kind==='hut')){
+      const targetPoint=new B.Vector3(t.x,t.baseY,t.z),origin=new B.Vector3(camera.x,camera.y,camera.z);
+      const delta=targetPoint.subtract(origin),targetDistance=delta.length();delta.normalize();
+      api.setCamera({x:camera.x,y:camera.y,z:camera.z,targetX:t.x,targetY:t.baseY,targetZ:t.z});
+      const viewRay=new B.Ray(origin,delta,targetDistance+.05),viewHit=scene.pickWithRay(viewRay,m=>allPickable.includes(m),false);
+      const first=viewHit?.hit?{mesh:viewHit.pickedMesh?.name||null,material:viewHit.pickedMesh?.material?.name||null,
+       distanceFromCameraMeters:Number(viewHit.distance.toFixed(3)),
+       distanceFromBaseMeters:Number(Math.max(0,targetDistance-viewHit.distance).toFixed(3)),
+       point:{x:Number(viewHit.pickedPoint.x.toFixed(3)),y:Number(viewHit.pickedPoint.y.toFixed(3)),z:Number(viewHit.pickedPoint.z.toFixed(3))},
+       isTargetMesh:(viewHit.pickedMesh?.name||'')==='HutDarkStoneFooting',
+       isTerrain:/^IslandHeightfield_\\d+$/.test(viewHit.pickedMesh?.name||''),isWater:(viewHit.pickedMesh?.name||'')==='ocean'}:null;
+      const samples=[],step=.5;
+      const stateAt=d=>{
+       const px=t.x+towardCrow.x*d,pz=t.z+towardCrow.z*d,g=heightAt(visibleHeightfields,px,pz),
+        allG=heightAt(allHeightfields,px,pz),w=heightAt(waterHeightMeshes,px,pz);
+       return {d,ground:g,allGround:allG,water:w,dry:!!(g&&(!w||g.y>=w.y)),
+        submerged:!!(g&&w&&g.y<w.y),hidden:!!(!g&&allG),
+        terrainAboveWater:g&&w?Number((g.y-w.y).toFixed(4)):null};
+      };
+      let firstLandExit=null,secondLandEntry=null,previousDry=null,seenWater=false,submergedCount=0,hiddenCount=0,minClearance=Infinity,maxAnalyticDelta=0,analyticSamples=0;
+      for(let d=0;d<=targetDistance;d+=step){
+       const q=stateAt(d);samples.push(q);
+       if(q.submerged)submergedCount++;if(q.hidden)hiddenCount++;
+       if(Number.isFinite(q.terrainAboveWater))minClearance=Math.min(minClearance,q.terrainAboveWater);
+       if(q.dry&&q.allGround&&Math.abs(d/5-Math.round(d/5))<.051){
+        const measured=api.measureRenderedFootprint({islandIndex:q.allGround.islandIndex,x:t.x+towardCrow.x*d,z:t.z+towardCrow.z*d,baseY:q.allGround.y,offsets:[]});
+        if(Number.isFinite(measured?.analyticVsRenderedMeters)){maxAnalyticDelta=Math.max(maxAnalyticDelta,Math.abs(measured.analyticVsRenderedMeters));analyticSamples++;}
+       }
+       if(previousDry===true&&!q.dry&&!firstLandExit){firstLandExit={distanceFromBaseMeters:Number(d.toFixed(2)),lastDryDistanceMeters:Number((d-step).toFixed(2)),groundY:q.allGround?.y??null,waterY:q.water?.y??null};seenWater=true;}
+       if(seenWater&&q.dry&&!secondLandEntry){secondLandEntry={distanceFromBaseMeters:Number(d.toFixed(2)),mesh:q.ground?.mesh||null,islandIndex:q.ground?.islandIndex??null};}
+       previousDry=q.dry;
+      }
+      const dryRuns=[];let runStart=null,runIsland=null;
+      for(const q of samples){if(q.dry){if(runStart===null){runStart=q.d;runIsland=q.ground?.islandIndex??null;}}else if(runStart!==null){dryRuns.push({start:Number(runStart.toFixed(2)),end:Number((q.d-step).toFixed(2)),islandIndex:runIsland});runStart=null;runIsland=null;}}
+      if(runStart!==null)dryRuns.push({start:Number(runStart.toFixed(2)),end:Number(targetDistance.toFixed(2)),islandIndex:runIsland});
+      const clearances=samples.filter(q=>Number.isFinite(q.terrainAboveWater)).map(q=>q.terrainAboveWater);
+      const targetState=stateAt(0);
+      viewRows.push({structureId:t.id,base:{x:round(t.x,3),y:round(t.baseY,4),z:round(t.z,3)},
+       camera:{...camera,eyeHeightMeters:1.7,supportSurface:supportedByLand?'rendered island ground':'rendered ocean surface',
+        supportMesh:supportedByLand?ground.mesh:(water?.mesh??null),supportSurfaceY:round(surfaceY,4)},
+       cameraToBaseDistanceMeters:round(targetDistance,3),firstRayHit:first,
+       visibleLandEdgeFromBaseTowardCrow:firstLandExit,secondDryLandEntryFromBase:secondLandEntry,
+       nearestLandEdgeDistanceMeters:firstLandExit?.lastDryDistanceMeters??null,
+       dryLandRunsAlongView:dryRuns,submergedTerrainSamples:submergedCount,hiddenTerrainSamples:hiddenCount,
+       sampledPoints:samples.length,minVisibleTerrainMinusWaterMeters:Number.isFinite(minClearance)?round(minClearance,4):null,
+       maxAbsRenderedVsAnalyticTerrainMeters:round(maxAnalyticDelta,4),analyticComparisonSamples:analyticSamples,
+       targetTerrainState:targetState.ground?{mesh:targetState.ground.mesh,terrainMinusWater:targetState.terrainAboveWater}:null});
+     }
+     cameraTests.push({distanceFromHrafnCentreMeters:offsetMeters,cameraPosition:camera,terrainSupport:supportedByLand?'land':'water',
+      crowCentreDistanceMeters:round(Math.hypot(x-crow.x,z-crow.z),3),hrafnCentreDistanceMeters:offsetMeters,
+      crowBeachRelation:round(Math.hypot(x-crow.x,z-crow.z)-crow.r*1.085,3),
+      cameraAboveLocalSurfaceMeters:1.7,viewRows,terrainMeshes:terrainByIsland,
+      streamingDiagnostics:window.__ELSN_ISLAND_STREAMING__||window.__elSinNombreIslandStreaming||null});
+    }
+   return {measurements:results,cameraTests};
   },{targets:snapshot.targets,island:snapshot.island}));
-  report.structures=measured.map(t=>({id:t.id,kind:t.kind,baseHeight:round(t.baseY),drawnMeshBaseHeight:t.drawnBaseMeshHeight,
+  report.cameraVisibilityTests=measured.cameraTests;
+  report.structures=measured.measurements.map(t=>({id:t.id,kind:t.kind,baseHeight:round(t.baseY),drawnMeshBaseHeight:t.drawnBaseMeshHeight,
    overallDrawnLowestY:t.overallDrawnLowestY,baseMeshRows:t.baseMeshRows,baseVsDrawnMeshMeters:t.baseVsDrawnMeshMeters,analyticFormulaHeight:round(t.analyticTerrainY),renderedTerrainHeight:round(t.renderedTerrainY),
    analyticVsRenderedMeters:t.measure?.analyticVsRenderedMeters??null,dataDistanceToCoastMeters:round(t.coastDistanceData,3),
    visibleLandEdgeDistanceMeters:t.visibleLandEdge?.distanceFromBaseMeters??null,
+   waveAlignedVisibleLandEdgeDistanceMeters:t.wetAlignedEdge?.distanceFromBaseMeters??null,
+   fixedEdgeMinusFormulaMeters:t.fixedEdgeMinusDataMeters??null,waveAlignedEdgeMinusFormulaMeters:t.waveAlignedEdgeMinusDataMeters??null,
    visibleLandEdgeMethod:t.visibleLandEdge?.method??'not measured: rendered GroundMesh height API unavailable',
    waterDrawn:t.waterDrawn,rayCamera:t.cameraOffshore30m,firstRayMesh:t.rayFirstHit,waterVsBase:t.waterVsBase,
    maximumBaseGapMeters:round(t.measure?.maximumBaseGapMeters,4),highTideDryMarginMeters:round(t.measure?.highTideDryMarginMeters,4),
@@ -147,10 +230,11 @@ async function main(){
    source:t.kind==='hut'?'settlementGrounding() + live mesh bounds':'settlementCampGrounding() + live support-mesh bounds'}));
   report.measurementCoverage={targets:report.structures.length,waterCandidates:report.meshDiscovery.waterCandidates.length,
    terrainCandidates:report.meshDiscovery.terrainCandidates.length,waterMeasured:report.structures.filter(x=>x.waterDrawn?.sampleCount>0).length,
-   visibleEdgeMeasured:report.structures.filter(x=>x.visibleLandEdgeDistanceMeters!==null).length,waterHeightFunctionAvailable:report.meshDiscovery.waterCandidates.some(x=>x.className==='GroundMesh'),
+   visibleEdgeMeasured:report.structures.filter(x=>x.visibleLandEdgeDistanceMeters!==null).length,waveAlignedEdgeMeasured:report.structures.filter(x=>x.waveAlignedVisibleLandEdgeDistanceMeters!==null).length,waterHeightFunctionAvailable:report.meshDiscovery.waterCandidates.some(x=>x.className==='GroundMesh'),
    rayMeasured:report.structures.filter(x=>x.firstRayMesh!==null).length,
    baseWithinTwoCm:report.structures.filter(x=>x.baseWithinTwoCm).length,dryAtHighTide:report.structures.filter(x=>x.dryAtHighTide).length,
-   smokeEmitters:report.structures.filter(x=>x.smokeEmitterAlignment).length,smokeEmittersWithinTwoCm:report.structures.filter(x=>x.smokeEmitterAlignment?.withinTwoCm).length};
+   smokeEmitters:report.structures.filter(x=>x.smokeEmitterAlignment).length,smokeEmittersWithinTwoCm:report.structures.filter(x=>x.smokeEmitterAlignment?.withinTwoCm).length,
+   cameraDistancesMeters:report.cameraVisibilityTests.map(x=>x.distanceFromHrafnCentreMeters),cameraViewRows:report.cameraVisibilityTests.reduce((n,x)=>n+x.viewRows.length,0)};
   const groundingFailures=report.structures.filter(x=>!x.baseWithinTwoCm||!x.dryAtHighTide);
   const smokeFailures=report.structures.filter(x=>x.smokeEmitterAlignment&&!x.smokeEmitterAlignment.withinTwoCm);
   if(groundingFailures.length||smokeFailures.length){report.errors.push('2 cm / high-tide / chimney alignment gate failed: '+JSON.stringify({groundingFailures:groundingFailures.map(x=>x.id),smokeFailures:smokeFailures.map(x=>x.id)}));report.verdict='failed';process.exitCode=1;}
