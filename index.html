@@ -8538,21 +8538,56 @@ function createRealWeapon(type='axe'){
   return entry;
  }
  function findSafeHabitableAnchor(entry,origin){
-  const island=land[entry.islandIndex];if(!island)return null;
+  const island=land[entry.islandIndex];if(!island||!origin)return null;
   const safeCenterRadius=island.r*entry.safeRadiusFactor-entry.footprintRadius-entry.edgeBuffer;
   if(safeCenterRadius<=0)return null;
-  const maxSearchRadius=entry.kind==='NorseGreatHall'?32:(entry.kind==='NorseHut'?24:16);
-  const step=.75,searchRadius=Math.min(maxSearchRadius,Math.max(4,island.r*.48));
-  const scale=Number(entry.root?.scaling?.x)||1,minimumDryGroundY=(Number(ground.position.y)||0)+.60;
-  const sampleOffsets=entry.kind==='NorseHut'
-   ?[[-2.01*scale,-2.64*scale],[2.01*scale,-2.64*scale],[-2.01*scale,2.64*scale],[2.01*scale,2.64*scale]]
-   :Array.from({length:8},(_,i)=>[Math.cos(i*Math.PI/4)*entry.footprintRadius,Math.sin(i*Math.PI/4)*entry.footprintRadius]);
+  const step=.75,scale=Number(entry.root?.scaling?.x)||1,minimumDryGroundY=(Number(ground.position.y)||0)+.60;
+  const hutCorners=[[-2.01*scale,-2.64*scale],[2.01*scale,-2.64*scale],[-2.01*scale,2.64*scale],[2.01*scale,2.64*scale]];
+  const hallSupports=[[-3.72,-6.35],[0,-6.35],[3.72,-6.35],[-3.72,0],[3.72,0],[-3.72,6.35],[0,6.35],[3.72,6.35]];
+  const rotation=Number(entry.root?.rotation?.y)||0,cos=Math.cos(rotation),sin=Math.sin(rotation);
+  const sampleOffsets=entry.kind==='NorseHut'?hutCorners:(entry.kind==='NorseGreatHall'
+   ?hallSupports.map(([x,z])=>[x*cos+z*sin,-x*sin+z*cos])
+   :Array.from({length:8},(_,i)=>[Math.cos(i*Math.PI/4)*entry.footprintRadius,Math.sin(i*Math.PI/4)*entry.footprintRadius]));
+  const hasClearance=(x,z)=>{
+   // Keep repaired structures separated even when an older root had no collider.
+   for(const other of habitableStructureRegistry){
+    if(other===entry||!other.root||other.root.isDisposed?.()||other.islandIndex!==entry.islandIndex)continue;
+    let p;try{p=other.root.getAbsolutePosition?other.root.getAbsolutePosition():other.root.position;}catch(_){p=other.root.position;}
+    if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.z))continue;
+    const minimumSpacing=Math.max(2.4,entry.footprintRadius*.72+other.footprintRadius*.72+.6);
+    if((x-p.x)*(x-p.x)+(z-p.z)*(z-p.z)<minimumSpacing*minimumSpacing)return false;
+   }
+   // The same spatial index used by player movement prevents placing a hut over rocks,
+   // trees, camps or existing world colliders. Ignore this structure's own old collider.
+   if(collisionGrid){
+    const clearanceRadius=Math.max(.9,entry.footprintRadius*.62),x0=Math.floor((x-clearanceRadius)/COLLISION_CELL_SIZE),x1=Math.floor((x+clearanceRadius)/COLLISION_CELL_SIZE),z0=Math.floor((z-clearanceRadius)/COLLISION_CELL_SIZE),z1=Math.floor((z+clearanceRadius)/COLLISION_CELL_SIZE),stamp=++collisionQueryStamp;
+    for(let cx=x0;cx<=x1;cx++)for(let cz=z0;cz<=z1;cz++){
+     const bucket=collisionGrid.get(collisionCellKey(cx,cz));if(!bucket)continue;
+     for(const collision of bucket){
+      if(collision.stamp===stamp)continue;collision.stamp=stamp;
+      const ref=collision.ref;if(!ref||ref===entry.collider||ref.active===false)continue;
+      const dx=x-(Number(ref.x)||0),dz=z-(Number(ref.z)||0);
+      if(collision.kind==='tree'){
+       if(ref.alive&&dx*dx+dz*dz<(clearanceRadius+(ref.radius||.48)+.35)**2)return false;
+      }else if(collision.kind==='rock'){
+       if(ref.alive&&dx*dx+dz*dz<(clearanceRadius+(ref.radius||.85)+.35)**2)return false;
+      }else if(ref.type==='circle'){
+       if(dx*dx+dz*dz<(clearanceRadius+(Number(ref.r)||0)+.35)**2)return false;
+      }else if(Number.isFinite(ref.hx)&&Number.isFinite(ref.hz)){
+       const nearestX=Math.max(0,Math.abs(dx)-ref.hx),nearestZ=Math.max(0,Math.abs(dz)-ref.hz);
+       if(nearestX*nearestX+nearestZ*nearestZ<(clearanceRadius+.35)**2)return false;
+      }
+     }
+    }
+   }
+   return true;
+  };
   let best=null;
-  for(let dz=-searchRadius;dz<=searchRadius+1e-6;dz+=step)for(let dx=-searchRadius;dx<=searchRadius+1e-6;dx+=step){
-   if(dx*dx+dz*dz>searchRadius*searchRadius)continue;
-   const x=origin.x+dx,z=origin.z+dz,radial=Math.hypot(x-island.x,z-island.z);
-   if(radial>safeCenterRadius)continue;
-   const centerY=renderedTerrainSurfaceAt(x,z);
+  // Search the entire safe interior of the owning island, not a 16–24 m circle around
+  // a bad offshore spawn point. This lets a genuinely displaced root find land again.
+  for(let dz=-safeCenterRadius;dz<=safeCenterRadius+1e-6;dz+=step)for(let dx=-safeCenterRadius;dx<=safeCenterRadius+1e-6;dx+=step){
+   if(dx*dx+dz*dz>safeCenterRadius*safeCenterRadius)continue;
+   const x=island.x+dx,z=island.z+dz,centerY=renderedTerrainSurfaceAt(x,z);
    if(!Number.isFinite(centerY)||centerY<minimumDryGroundY)continue;
    let maxRelief=0,valid=true;
    for(const [ox,oz] of sampleOffsets){
@@ -8562,9 +8597,9 @@ function createRealWeapon(type='axe'){
     if(!Number.isFinite(y)||y<minimumDryGroundY){valid=false;break;}
     maxRelief=Math.max(maxRelief,Math.abs(y-centerY));
    }
-   if(!valid||maxRelief>entry.maxRelief)continue;
-   const movement=dx*dx+dz*dz,score=movement+maxRelief*maxRelief*90;
-   if(!best||score<best.score)best={x,z,centerY,maxRelief,score};
+   if(!valid||maxRelief>entry.maxRelief||!hasClearance(x,z))continue;
+   const moveX=x-origin.x,moveZ=z-origin.z,movement=moveX*moveX+moveZ*moveZ,score=movement+maxRelief*maxRelief*110;
+   if(!best||score<best.score)best={x,z,centerY,maxRelief,score,islandIndex:entry.islandIndex};
   }
   return best;
  }
@@ -8646,11 +8681,20 @@ function createRealWeapon(type='axe'){
     else if(indexed[1]==='NorseWatchTower'){kind='NorseWatchTower';footprintRadius=1.6;baseOffset=0;maxRelief=.28;}
    }else if(rootName==='PoorNorseCastawayCamp'){kind='StarterCastawayCamp';islandIndex=0;footprintRadius=2.5;baseOffset=0;maxRelief=.26;}
    if(!Number.isInteger(islandIndex)||islandIndex<0||islandIndex>=land.length){
-    let p;try{p=node.getAbsolutePosition?node.getAbsolutePosition():node.position;}catch(_){p=node.position;}
-    let nearestDistance=Infinity;land.forEach((island,index)=>{const distance=Math.hypot(p.x-island.x,p.z-island.z);if(distance<nearestDistance){nearestDistance=distance;islandIndex=index;}});
+    const hintedIslandIndex=Number(node.__footingPlacement?.islandIndex??node.__habitableIslandIndex??node.metadata?.islandIndex);
+    if(Number.isInteger(hintedIslandIndex)&&hintedIslandIndex>=0&&hintedIslandIndex<land.length)islandIndex=hintedIslandIndex;
+    else{
+     let p;try{p=node.getAbsolutePosition?node.getAbsolutePosition():node.position;}catch(_){p=node.position;}
+     let nearestDistance=Infinity;land.forEach((island,index)=>{const distance=Math.hypot(p.x-island.x,p.z-island.z);if(distance<nearestDistance){nearestDistance=distance;islandIndex=index;}});
+    }
    }
-   const entry=registerHabitableStructure(node,kind,{islandIndex,footprintRadius,baseOffset,edgeBuffer:1.25,maxRelief,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,collider:node.__norseWorldCollider||null,relocatable:false});
-   entry.lastAction='auto-discovered-root';autoRegisteredRoots.push({name:rootName,kind,islandIndex});
+   const entry=registerHabitableStructure(node,kind,{islandIndex,footprintRadius,baseOffset,edgeBuffer:1.25,maxRelief,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,collider:node.__norseWorldCollider||null,relocatable:true,enableAfterRelocation:true,onRelocate:(candidate)=>{
+    if(node.__footingPlacement){node.__footingPlacement.actual={x:candidate.x,z:candidate.z};node.__footingPlacement.valid=true;node.__footingPlacement.islandIndex=islandIndex;}
+    if(node.__norseSmokeEmitter){const scale=Number(node.scaling?.x)||1;node.__norseSmokeEmitter.x=candidate.x-1.24*scale;node.__norseSmokeEmitter.y=candidate.centerY-baseOffset+2.92*scale;node.__norseSmokeEmitter.z=candidate.z-1.98*scale;}
+   }});
+   // These exact root names are known habitable buildings. Re-admit an auto-discovered
+   // root after relocation even when an earlier audit had disabled it while offshore.
+   entry.enabledAtRegistration=true;entry.lastAction='auto-discovered-root';autoRegisteredRoots.push({name:rootName,kind,islandIndex});
   }
   for(const entry of habitableStructureRegistry){
    let result=evaluateHabitableStructure(entry),root=entry.root;
@@ -8664,7 +8708,9 @@ function createRealWeapon(type='axe'){
       const colliderOffsetX=entry.collider?entry.collider.x-origin.x:0,colliderOffsetZ=entry.collider?entry.collider.z-origin.z:0;
       const children=root.getChildMeshes?root.getChildMeshes(false):[];
       root.unfreezeWorldMatrix?.();children.forEach(mesh=>mesh.unfreezeWorldMatrix?.());
-      root.position.set(candidate.x,candidate.centerY-entry.baseOffset,candidate.z);
+      const targetPosition=new B.Vector3(candidate.x,candidate.centerY-entry.baseOffset,candidate.z);
+      if(root.parent&&typeof root.setAbsolutePosition==='function')root.setAbsolutePosition(targetPosition);
+      else root.position.copyFrom?root.position.copyFrom(targetPosition):root.position.set(candidate.x,candidate.centerY-entry.baseOffset,candidate.z);
       root.computeWorldMatrix?.(true);children.forEach(mesh=>mesh.computeWorldMatrix?.(true));
       if(entry.collider)relocateHabitableCollider(entry.collider,candidate.x+colliderOffsetX,candidate.z+colliderOffsetZ);
       if(entry.onRelocate)entry.onRelocate(candidate,origin);
@@ -9196,7 +9242,7 @@ function createRealWeapon(type='axe'){
   mergeStaticDecorByMaterial(hall,'NorseGreatHallStatic');
   hall.position=v(x,hallRootY,z);hall.rotation.y=hallRotation;
   hall.__norseWorldCollider=registerWorldCollider({type:'rect',x,z,hx:4.35,hz:7.45,cameraBlocker:true});
-  registerHabitableStructure(hall,'NorseGreatHall',{islandIndex:9,footprintRadius:Math.hypot(4.35,7.45),baseOffset:floorY-hallRootY,edgeBuffer:1.25,maxRelief:2.05,anchorTolerance:.02,maxVisibleDistance:235,boatVisibleDistance:55,collider:hall.__norseWorldCollider,relocatable:false});
+  registerHabitableStructure(hall,'NorseGreatHall',{islandIndex:9,footprintRadius:Math.hypot(4.35,7.45),baseOffset:floorY-hallRootY,edgeBuffer:1.25,maxRelief:2.05,anchorTolerance:.02,maxVisibleDistance:235,boatVisibleDistance:55,collider:hall.__norseWorldCollider,relocatable:true});
   addModelShadow(hall,5);
   try{hall.freezeWorldMatrix();hall.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){}
   return hall;
@@ -9290,7 +9336,7 @@ function createRealWeapon(type='axe'){
  // No es una casa construida: es un campamento de náufrago junto al lugar donde despierta.
  const starterCampX=-40.0,starterCampZ=15.5,starterCampY=renderedTerrainSurfaceAt(starterCampX,starterCampZ);
  const starterCamp=newGroup('PoorNorseCastawayCamp',null);starterCamp.position=v(starterCampX,starterCampY,starterCampZ);
- registerHabitableStructure(starterCamp,'StarterCastawayCamp',{islandIndex:0,footprintRadius:2.5,baseOffset:0,edgeBuffer:1.25,safeRadiusFactor:.78,maxRelief:.40,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:false});
+ registerHabitableStructure(starterCamp,'StarterCastawayCamp',{islandIndex:0,footprintRadius:2.5,baseOffset:0,edgeBuffer:1.25,safeRadiusFactor:.78,maxRelief:.40,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:true});
  for(const side of [-1,1]){
   cyl('CastawayLeanToPole_'+side,starterCamp,[side*.92,.88,-.32],1.78,.065,.07,M.woodDark,[0,0,side*.20]);
   cyl('CastawayTentStake_'+side,starterCamp,[side*1.02,.18,.48],.52,.045,.05,M.woodLight,[0,0,side*.16]);
