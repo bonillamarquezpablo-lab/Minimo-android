@@ -27,6 +27,9 @@ async function main() {
   assert.match(runner,/capture-index\.json/);
   assert.match(runner,/cameraReadback/);
   assert.match(runner,/createZoneInspectionShots/);
+  assert.match(runner,/__ELSN_TEST__\.inspectScene\(\{inventoryLimit:5000,offshoreLimit:500\}\)/);
+  assert.doesNotMatch(runner,/api\.(?:auditIslandGeometry|habitableStructureAudit|auditOffshoreStructures|coastalSceneInventory|settlementGrounding)\(/,
+    'The runner must call the one unified inspector, not hidden individual audit functions.');
   assert.match(runner,/auditOffshoreStructures\(1000\)/);
   assert.match(runner,/coastalSceneInventory\(2000\)/);
   assert.match(workflow,/create_scene_capture_contact_sheet\.py/);
@@ -46,7 +49,8 @@ async function main() {
     id:'hrafn-structures',
     zone:{
       islandIndex:0,center:{x:0,y:0,z:0},radiusMeters:25,
-      focus:'structures',maxTargets:2,cameraDistanceMeters:9
+      focus:'structures',maxTargets:2,cameraDistanceMeters:9,
+      observationPoint:{x:20,y:6,z:50},observationHeightOffsets:[0,2]
     }
   }]);
   assert.equal(planned.shots.length,0,'Zone requests should be expanded after the live world inventory is collected.');
@@ -63,10 +67,14 @@ async function main() {
   assert.equal(resolved.report.candidateCount,2,'Only structural roots inside the requested zone should be selected.');
   assert.equal(resolved.report.selectedTargetCount,2);
   assert.equal(resolved.report.omittedTargetCount,0);
-  assert.equal(resolved.shots.length,34,'Two structures should receive 8 overview + 13 inspection views each.');
+  assert.equal(resolved.shots.length,38,'Two structures should receive 8 overview + 13 inspection + 2 offshore views each.');
   assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-low-oblique').length,16);
   assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-high-oblique').length,8);
   assert.equal(resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-top-down').length,2);
+  const waterShots=resolved.shots.filter(shot=>shot.inspectionPurpose==='structure-water-observation');
+  assert.equal(waterShots.length,4,'Every structure should be photographed from both heights at the fixed offshore observation point.');
+  assert.ok(waterShots.every(shot=>shot.camera.x===120&&shot.camera.y===6||shot.camera.y===8));
+  assert.ok(waterShots.every(shot=>shot.camera.z===250&&shot.subject?.code));
   assert.ok(resolved.shots.every(shot=>shot.subject?.code&&shot.camera&&shot.worldTarget));
   assert.ok(new Set(resolved.shots.map(shot=>shot.id)).size===resolved.shots.length,'Generated camera IDs must be unique.');
   assert.equal(resolved.report.selectedTargets[0].name,'Hut_A');
@@ -88,6 +96,8 @@ async function main() {
   }]);
   assert.equal(orbit.shots.length,8,'Existing hand-authored orbit plans must keep working.');
 
+  assert.match(html,/inspectScene:\(\{inventoryLimit=5000,offshoreLimit=500\}=\)\s*=>/);
+  assert.match(html,/uniqueId:Number\.isInteger\(node\.uniqueId\)/);
   assert.match(html,/unsafeVisibleBeforeRepair/);
   assert.match(html,/visibleInvalidAfterRepair/);
   assert.match(html,/tide==='high'\?\.28:\(tide==='low'\?-.28/);
