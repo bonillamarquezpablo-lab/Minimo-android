@@ -46,7 +46,19 @@ async function capturePng(page,afterFailure=false,preferCdp=false){
    manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-page-screenshot',durationMs:Date.now()-playwrightStarted,success:valid(buffer)}];
   }catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'playwright-page-screenshot',durationMs:Date.now()-playwrightStarted,success:false,error:String(error?.message||error)}];}
  }
- if(!valid(buffer)){manifest.captureFailure=manifest.captureFailure||'No valid PNG was returned by the game canvas, CDP or Playwright screenshot channel.';return false;}
+ if(!valid(buffer)){
+  const canvasStarted=Date.now();
+  try{
+   const dataUrl=await bounded(page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null),15000,null);
+   const prefix='data:image/png;base64,';
+   if(typeof dataUrl==='string'&&dataUrl.startsWith(prefix)){
+    const candidate=Buffer.from(dataUrl.slice(prefix.length),'base64');
+    if(valid(candidate)){buffer=candidate;method='game-test-canvas-final-fallback';}
+   }
+   manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'game-test-canvas-final-fallback',durationMs:Date.now()-canvasStarted,success:valid(buffer)}];
+  }catch(error){manifest.captureAttempts=[...(manifest.captureAttempts||[]),{method:'game-test-canvas-final-fallback',durationMs:Date.now()-canvasStarted,success:false,error:String(error?.message||error)}];}
+ }
+ if(!valid(buffer)){manifest.captureFailure=manifest.captureFailure||'No valid PNG was returned by CDP, Playwright or the final game-canvas fallback.';return false;}
  const file=afterFailure?'smoke-timeout-current-frame.png':'smoke-first-camera.png';
  fs.writeFileSync(path.join(OUT,file),buffer);manifest.screenshot={file,bytes:buffer.length,capturedAfterFailure:!!afterFailure,frameCaptureMethod:method};return true;
 }
