@@ -44,8 +44,11 @@ assert.match(source,/full normal game runtime/);
 assert.match(source,/offshoreIslandCount:offshore\.islandCount/);
 assert.match(source,/unregisteredStructuralCandidates:offshore\.unregisteredCandidates/);
 assert.match(source,/allInitialUnsafeVerifiedSafe/);
-assert.match(source,/visibleOffshoreStructuresAfter===0/);
-assert.match(source,/unregisteredStructuralCandidatesAfter===0/);
+// Intentional regatta buoys are permitted offshore; all other offshore structures still fail.
+assert.match(source,/intentionalRegattaBuoys/);
+assert.match(source,/unexpectedOffshoreStructures/);
+assert.match(source,/unexpectedOffshoreStructures===0/);
+assert.match(source,/unregisteredStructuralCandidatesAfter/);
 assert.match(source,/offshoreIslandCount===13/);
 assert.match(source,/report\.offshoreAudit=settled\.offshore/);
 assert.match(source,/offshoreRootsScanned/);
@@ -57,7 +60,7 @@ assert.match(source,/fullRuntimeStructureGate/);
 assert.match(workflow,/timeout-minutes: 12/);
 assert.match(workflow,/timeout --signal=TERM --kill-after=5s 240s node scripts\/coastal-structure-grounding-smoke\.mjs/);
 assert.match(source,/offshoreStructuresAfter:report\.summary\.offshoreStructures/);
-assert.match(source,/gate\.offshoreStructuresAfter===0&&gate\.visibleOffshoreStructuresAfter===0/);
+assert.match(source,/gate\.unexpectedOffshoreStructures===0/);
 console.log('COASTAL STRUCTURE GROUNDING CONTRACT OK');
 
 assert.match(html,/dryFootprintSampleCount===dryFootprintSamples\.length/);
