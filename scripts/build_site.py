@@ -345,6 +345,15 @@ def main() -> None:
         raise SystemExit("No se encontró exactamente una raíz independiente de estacas de guarnición.")
     html = html.replace(detached_stake, attached_stake, 1)
 
+    # The garrison grounding probe must measure the flag group's world transform,
+    # not its local Y after the group becomes a child of IslandGarrisonOutpost_N.
+    detached_flag_measure = """    const flagPosition=village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():village.flagGroup?.position;"""
+    world_flag_measure = """    village.outpostRoot?.computeWorldMatrix?.(true);village.flagGroup?.computeWorldMatrix?.(true);
+    const flagPosition=village.flagGroup?.getAbsolutePosition?village.flagGroup.getAbsolutePosition():village.flagGroup?.position;"""
+    if html.count(detached_flag_measure) != 1:
+        raise SystemExit("No se encontró exactamente una medición de altura de bandera de guarnición.")
+    html = html.replace(detached_flag_measure, world_flag_measure, 1)
+
     # The packaged build always prefers the same-origin, bundled files.
     html = html.replace(
         "async function resolveVikingAssetUrls(){\n  if(isPerformanceMode)return [VIKING_GLB_URL];\n  const urls=[VIKING_GLB_URL];",
