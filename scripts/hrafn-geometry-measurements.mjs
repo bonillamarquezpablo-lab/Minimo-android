@@ -224,6 +224,7 @@ async function main(){
       streamingDiagnostics:window.__ELSN_ISLAND_STREAMING__||window.__elSinNombreIslandStreaming||null});
     }
    return {measurements:results,cameraTests};
+   }finally{originalPickable.forEach(([m,v])=>{m.isPickable=v;});}
   },{targets:snapshot.targets,island:snapshot.island}));
   report.cameraVisibilityTests=measured.cameraTests;
   report.structures=measured.measurements.map(t=>({id:t.id,kind:t.kind,baseHeight:round(t.baseY),drawnMeshBaseHeight:t.drawnBaseMeshHeight,
