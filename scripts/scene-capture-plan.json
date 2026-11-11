@@ -41,7 +41,7 @@
         2.5
       ],
       "includeOverview": true,
-      "includeTopDown": true
+      "includeTopDown": false
     }
   }
 ]
