@@ -121,6 +121,11 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
       shots.push(...resolved.shots);
       manifest.zoneInspections.push(resolved.report);
     }
+    const globalCaptureIds=new Set();
+    for(const shot of shots){
+      if(globalCaptureIds.has(shot.id))throw new Error('ID de captura duplicado entre cámaras y zonas: '+shot.id);
+      globalCaptureIds.add(shot.id);
+    }
     if(shots.length<1||shots.length>MAX_SHOTS){
       throw new Error('El plan final debe generar entre 1 y '+MAX_SHOTS+' capturas; ha generado '+shots.length+'. Reduce maxTargets, angles, times o tides.');
     }
@@ -144,6 +149,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
           return {camera,cameraApplied:applied??null,cameraReadback:api.sceneViewSnapshot?.()??null,
             canvas:{width:document.getElementById('renderCanvas')?.width,height:document.getElementById('renderCanvas')?.height}};
         },{shot});
+        const capturedAt=new Date().toISOString();
         const firstPng=await page.evaluate(()=>window.__ELSN_TEST__.captureCanvas());
         await page.evaluate(()=>window.__ELSN_TEST__.render());
         const secondPng=await page.evaluate(()=>window.__ELSN_TEST__.captureCanvas());
@@ -152,7 +158,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
         const buffer=Buffer.from(firstMatch[1],'base64'),secondBuffer=Buffer.from(secondMatch[1],'base64');assert.ok(buffer.length>1000,'PNG vacío o incompleto.');assert.equal(buffer.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
         const firstHash=createHash('sha256').update(buffer).digest('hex'),secondHash=createHash('sha256').update(secondBuffer).digest('hex');manifest.determinism.tested++;if(firstHash!==secondHash)manifest.determinism.failed++;assert.equal(secondHash,firstHash,'Render no determinista en '+shot.id);
         const file=shot.id+'.png';fs.writeFileSync(path.join(OUT,file),buffer);const telemetry=await page.evaluate(()=>({diagnostics:window.__ELSN_TEST__.diagnostics()}));
-        manifest.captures.push({id:shot.id,file,camera:prepared.camera,cameraApplied:prepared.cameraApplied,cameraReadback:prepared.cameraReadback,
+        manifest.captures.push({id:shot.id,file,capturedAt,camera:prepared.camera,cameraApplied:prepared.cameraApplied,cameraReadback:prepared.cameraReadback,
           canvas:prepared.canvas,time:shot.time??37,tide:shot.tide??'natural',
           zoneId:shot.zoneId??null,zoneLabel:shot.zoneLabel??null,inspectionFocus:shot.inspectionFocus??null,
           inspectionPurpose:shot.inspectionPurpose??'manual-camera',worldTarget:shot.worldTarget??null,subject:shot.subject??null,
