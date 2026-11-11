@@ -35,6 +35,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Test offline navigation suite and four camera modes
+        run: node scripts/test_navigation_suite_contract.cjs
+
       - name: Test deterministic coastal reference hooks
         run: node scripts/test_coastal_reference_contract.cjs
 
