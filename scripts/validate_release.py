@@ -82,8 +82,9 @@ def main() -> None:
             fail("Las banderas y estacas de cada guarnición deben heredar la visibilidad y el movimiento de su puesto.")
     if "IslandGarrisonFlagpole_'+islandIndex,null" in index_html or "IslandGarrisonStandard_'+islandIndex,null" in index_html:
         fail("Se ha detectado una bandera de guarnición independiente que puede quedar flotando sobre el mar.")
-    if "village.outpostRoot?.computeWorldMatrix?.(true);village.flagGroup?.computeWorldMatrix?.(true);" not in index_html:
-        fail("La auditoría de guarniciones debe medir la bandera en coordenadas absolutas tras el cambio de jerarquía.")
+    for required_garrison_link in ("flagPole.parent=outpostRoot", "flagGroup.parent=outpostRoot", "stakeMesh.parent=outpostRoot", "flagLocalPosition=village.flagGroup?.position", "x:root.x+flagLocalPosition.x,y:root.y+flagLocalPosition.y,z:root.z+flagLocalPosition.z"):
+        if required_garrison_link not in index_html:
+            fail("Las piezas de guarnición deben heredar el puesto y su auditoría debe reconstruir la posición mundial de la bandera.")
     navigation_js = read_text("scripts/nordic/navigation-suite.js")
     if "./scripts/nordic/navigation-suite.js" not in index_html:
         fail("Las entradas del juego no cargan el sistema unificado de mapas y cámaras.")
