@@ -9,7 +9,7 @@ on:
         description: 'JSON: cámaras, órbitas o zonas. Una zona genera vistas generales y primeros planos automáticos de cada estructura. Hasta 120 capturas.'
         required: true
         type: string
-        default: '[{"id":"cuervo-desde-mar","islandIndex":0,"camera":{"x":70,"y":18,"z":-95,"targetX":0,"targetY":4,"targetZ":0}},{"id":"cuervo-desde-tierra","islandIndex":0,"camera":{"x":-35,"y":8,"z":-25,"targetX":0,"targetY":3,"targetZ":0}}]'
+        default: '[{"id":"hrafn-structures-auto","zone":{"label":"Bahía de Hrafn","center":{"x":28,"y":2.2,"z":143},"radiusMeters":27,"focus":"structures","maxTargets":5,"cameraDistanceMeters":9,"angles":[0,45,90,135,180,225,270,315],"times":[37],"tides":["natural"]}}]'
 
 permissions:
   contents: read
