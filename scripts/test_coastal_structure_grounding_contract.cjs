@@ -193,7 +193,8 @@ assert.ok(html.includes("function measureRenderedFootprint(islandIndex,x,z,baseY
 assert.ok(html.includes("highWaterY=meanSeaLevel+.38"));
 assert.ok(html.includes("const highTideSafe=highTideDryMarginMeters>=.22"));
 assert.ok(html.includes("const distanceToCoastMeters=Number.isFinite(shorelineRadius)"));
-assert.ok(/visualMeshBaseGapMeters=/.test(html));
+assert.ok(/footingMeshBaseGapMeters=/.test(html));
+assert.ok(/maximumStructuralBaseGapMeters=/.test(html));
 assert.ok(html.includes("visualCenterOffsetMeters"));
 assert.ok(html.includes("const supportPoints=(group?.__groundingSupportMeshes||[])"));
 assert.ok(html.includes("supportPoints:measure?.samples?.filter(point=>point.name)||[]"));
@@ -201,7 +202,10 @@ assert.ok(html.includes("supportMeshCount:"));
 
 // High-tide smoke, before/after measurements, and five separate object captures are mandatory.
 assert.ok(source.includes("setWaterState({time:0,tide:'high'})"));
-assert.ok(source.includes("legacyHrafnBefore"));
+assert.ok(source.includes("hrafnBaseline"));
+assert.ok(source.includes("beforeHouseByIndex"));
+assert.ok(source.includes("beforeCampByKind"));
+assert.doesNotMatch(source,/legacyHrafnBefore|legacyById|visualCenterOffsetMeters/);
 assert.ok(source.includes("hrafnRepairComparison"));
 assert.ok(source.includes("hrafnRepairGate"));
 assert.ok(source.includes("withinDryLandBand:item.withinDryLandBand"));
