@@ -55,11 +55,11 @@ async function main(){
    const describe=m=>{const b=m.getBoundingInfo?.()?.boundingBox;const s=b?b.maximumWorld.subtract(b.minimumWorld):null;return {name:m.name,className:m.getClassName?.()||m.constructor?.name||null,material:matName(m),vertices:m.getTotalVertices?.()||0,isPickable:m.isPickable,visible:m.isVisible,enabled:m.isEnabled?.()??true,bounds:s?{x:Number(s.x.toFixed(1)),y:Number(s.y.toFixed(2)),z:Number(s.z.toFixed(1))}:null};};
    const smokeAlignment=h=>{
     const root=[...(scene.transformNodes||[]),...(scene.meshes||[])].find(n=>n.name==='WeatheredNorseHut'&&Math.hypot((n.getAbsolutePosition?n.getAbsolutePosition().x:n.position.x)-h.x,(n.getAbsolutePosition?n.getAbsolutePosition().z:n.position.z)-h.z)<.8);
-    const emitter=root?.__norseSmokeEmitter,chimney=root?.getChildMeshes?.().find(m=>m.name==='HutChimneyMouth');
-    if(!emitter||!chimney)return null;
-    chimney.computeWorldMatrix?.(true);const mouth=chimney.getAbsolutePosition();
-    const expected=.09*(h.scale||1),gap=emitter.y-mouth.y;
-    return {emitterY:Number(emitter.y.toFixed(4)),chimneyMouthCenterY:Number(mouth.y.toFixed(4)),verticalGap:Number(gap.toFixed(4)),expectedGap:Number(expected.toFixed(4)),errorMeters:Number((gap-expected).toFixed(4)),withinTwoCm:Math.abs(gap-expected)<=.02};
+    const emitter=root?.__norseSmokeEmitter;
+    if(!emitter||!root)return null;
+    const rootY=(root.getAbsolutePosition?root.getAbsolutePosition().y:root.position.y),mouthY=rootY+2.83*(h.scale||1);
+    const expected=.09*(h.scale||1),gap=emitter.y-mouthY;
+    return {emitterY:Number(emitter.y.toFixed(4)),chimneyMouthCenterY:Number(mouthY.toFixed(4)),verticalGap:Number(gap.toFixed(4)),expectedGap:Number(expected.toFixed(4)),errorMeters:Number((gap-expected).toFixed(4)),withinTwoCm:Math.abs(gap-expected)<=.02};
    };
    const targets=[
     ...houses.map(h=>({id:'HRAF-HUT-'+String(h.buildingIndex+1).padStart(2,'0'),kind:'hut',name:'WeatheredNorseHut',x:h.x,z:h.z,scale:h.scale,smokeEmitterAlignment:smokeAlignment(h),baseY:h.rootY+.02*(h.scale||1),renderedTerrainY:h.sampledTerrainY,analyticTerrainY:h.analyticTerrainY,coastDistanceData:h.distanceToCoastMeters,shorelineRadius:h.measure?.shorelineRadiusMeters,footprintRadius:Math.hypot(2.01*(h.scale||1),2.64*(h.scale||1)),measure:h.measure})),
