@@ -466,7 +466,7 @@
         return;
       }
       try {
-        const mapSize = this.isTouchDevice ? 1024 : 2048;
+        const mapSize = this.isTouchDevice ? (this.quality === 'high' ? 2048 : 1024) : 2048;
         const csm = new B.CascadedShadowGenerator(mapSize, this.sunLight);
         csm.numCascades = this.isTouchDevice ? 2 : 3;
         csm.lambda = 0.72;
