@@ -31,7 +31,7 @@ assert.match(source,/inventoryStructuralCandidates/);
 assert.match(source,/sceneViewSnapshot/);
 assert.match(source,/projectWorldPoint/);
 assert.match(source,/width:430,height:768/);
-assert.match(source,/page\.screenshot\(/);
+assert.match(source,/captureCompositedPage\(page,file\)/);
 assert.doesNotMatch(source,/captureCanvas|setCamera\(\{x:40,y:14,z:3/);
 assert.match(html,/sceneViewSnapshot:\(\)=>/);
 assert.match(html,/projectWorldPoint:\(\{x,y,z\}\)=>/);
