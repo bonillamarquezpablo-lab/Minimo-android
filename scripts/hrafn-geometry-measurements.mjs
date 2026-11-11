@@ -33,6 +33,7 @@ async function main(){
   await phase('continue startup',async()=>{await page.locator('#continueUnnamed').waitFor({state:'visible',timeout:30000});await page.locator('#continueUnnamed').click();});
   await phase('wait for world',()=>page.waitForFunction(()=>window.__ELSN_TEST__&&window.__elSinNombreStartupSmoke?.worldReady===true,undefined,{timeout:180000,polling:500}));
   await phase('start new campaign',async()=>{await page.locator('#intro.open').waitFor({state:'visible',timeout:60000});await page.locator('#newGameChoice').click();await page.waitForFunction(()=>document.body.classList.contains('game-running'),undefined,{timeout:30000,polling:250});});
+  report.staticFrame=await phase('stop automatic render loop for deterministic sampling',()=>page.evaluate(()=>window.__ELSN_TEST__.prepareStaticCaptureFrame()));
   const snapshot=await phase('collect live structure and scene data',()=>page.evaluate(()=>{
    const api=window.__ELSN_TEST__,scene=window.__ELSN_MEASURE_SCENE__;
    if(!api)throw new Error('Missing __ELSN_TEST__ API');
