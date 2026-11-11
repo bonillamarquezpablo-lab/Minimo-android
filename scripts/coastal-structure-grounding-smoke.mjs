@@ -8,12 +8,19 @@ const startedAt=Date.now();
 const report={schema:2,startedAt:new Date().toISOString(),finishedAt:null,build:null,renderer:'Chromium headless + ANGLE SwiftShader',mode:'full normal-campaign runtime structure audit plus automatic-repair observation in a disposable test renderer',testRendererOnlyMutations:true,productionDataModified:false,phases:[],consoleErrors:[],pageErrors:[],baseline:null,postAutomaticAudit:null,runtimeRepairSimulation:null,habitableStructures:null,settlementHouses:null,settlementCamps:null,garrisons:null,summary:null,screenshot:null,verdict:'not-run',failure:null};
 function writeReport(){fs.mkdirSync(OUT,{recursive:true});const tmp=path.join(OUT,'structure-grounding.json.tmp');fs.writeFileSync(tmp,JSON.stringify(report,null,2)+'\n');fs.renameSync(tmp,path.join(OUT,'structure-grounding.json'));}
 async function captureCompositedPage(page,file){
- const encoded=await page.evaluate(()=>window.__ELSN_TEST__?.captureCanvas?.()||null);
- const prefix='data:image/png;base64,';
- if(typeof encoded!=='string'||!encoded.startsWith(prefix))throw new Error('The live game canvas did not return a PNG data URL.');
- const bytes=Buffer.from(encoded.slice(prefix.length),'base64');
- if(bytes.length<1000||bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')throw new Error('The live game canvas returned an invalid PNG frame.');
- fs.writeFileSync(file,bytes);return bytes;
+ const session=await page.context().newCDPSession(page);
+ try{
+  let bytes=null;
+  try{
+   const result=await session.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false,optimizeForSpeed:true});
+   if(result?.data)bytes=Buffer.from(result.data,'base64');
+  }catch(_){}
+  if(!bytes||bytes.length<1000||bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'){
+   bytes=await page.screenshot({type:'png',fullPage:false,animations:'disabled'});
+  }
+  if(!bytes||bytes.length<1000||bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')throw new Error('CDP and Playwright did not return a valid PNG frame.');
+  fs.writeFileSync(file,bytes);return bytes;
+ }finally{try{await session.detach();}catch(_){}}
 }
 async function phase(name,fn){const start=Date.now(),row={name,startedAt:new Date().toISOString(),status:'in-progress'};report.phases.push(row);console.log('[STRUCTURE_AUDIT] START '+name);try{const result=await fn();row.status='completed';return result;}catch(error){row.status='failed';row.error=String(error?.stack||error);throw error;}finally{row.finishedAt=new Date().toISOString();row.durationMs=Date.now()-start;console.log('[STRUCTURE_AUDIT] END '+name+' '+row.status+' '+row.durationMs+'ms');}}
 function collectStructureSnapshot(){
@@ -170,8 +177,9 @@ async function main(){
    comparison.push({id:'HRAF-'+after.kind.toUpperCase()+'-03',type:after.kind,island:'Bahía de Hrafn',before:makeCampMetrics(before),after:makeCampMetrics(after)});
   }
   report.hrafnRepairComparison=comparison;
-  const unsafeBefore=comparison.filter(row=>row.before.cause!=='grounded'&&row.before.cause!=='ok');
-  const unsafeAfter=comparison.filter(row=>row.after.cause!=='grounded'&&row.after.cause!=='ok');
+  const physicallyUnsafe=metrics=>!Number.isFinite(Number(metrics.maximumBaseGapMeters))||Math.abs(Number(metrics.maximumBaseGapMeters))>.02||metrics.highTideSafe!==true||!Number.isFinite(Number(metrics.dryLandFootprintMarginMeters))||Number(metrics.dryLandFootprintMarginMeters)<0;
+  const unsafeBefore=comparison.filter(row=>physicallyUnsafe(row.before));
+  const unsafeAfter=comparison.filter(row=>physicallyUnsafe(row.after));
   report.hrafnRepairGate={
    targetCount:comparison.length,expectedTargetCount:5,
    unsafeBeforeCount:unsafeBefore.length,unsafeBeforeIds:unsafeBefore.map(row=>row.id),
@@ -202,7 +210,7 @@ async function main(){
     if(cameraState.mode!=='free')throw new Error('The camera controller did not enter free mode before object inspection.');
     const frameReady=await page.evaluate(async()=>window.__ELSN_TEST__?.prepareCaptureFrame?.({timeoutMs:8000,maxFrames:60})||null);
     const actualView=await page.evaluate(()=>window.__ELSN_TEST__?.sceneViewSnapshot?.()||null);
-    const actualPosition=actualView?.camera?.position||null,actualTarget=actualView?.target||null;
+    const actualPosition=actualView?.camera||null,actualTarget=actualView?.target||null;
     const near=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=.20;
     const cameraVerified=!!actualPosition&&!!actualTarget&&near(actualPosition.x,camera.x)&&near(actualPosition.y,camera.y)&&near(actualPosition.z,camera.z)&&near(actualTarget.x,camera.targetX)&&near(actualTarget.y,camera.targetY)&&near(actualTarget.z,camera.targetZ);
     if(!cameraVerified)throw new Error('The live camera did not reach the requested object viewpoint: '+JSON.stringify({expected:camera,actual:actualView}));
