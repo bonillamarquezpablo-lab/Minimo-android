@@ -13390,9 +13390,11 @@ function update(dt){
      });
     };
     (offshore?.candidates||[]).forEach(item=>addCandidate(item,'offshore-structural-root-audit'));
+    const structuralAncestorPattern=/(?:weatherednorsehut|persistent(?:player)?norseshelter|island(?:outpost|scoutcamp|garrisonoutpost)_\\d+|norse(?:greatmeadhall|blacksmithforge|watchtower)_\\d+|(?:hut|house|shelter|cabin|longhouse|meadhall|outpost|scoutcamp|garrisonoutpost)(?:[_-]?\\d+)?)/i;
     (sceneInventory?.objects||[]).filter(item=>
       (item.category==='structure'||item.category==='unidentified-structure')&&
-      !(item.parentChain||[]).length&&Number(item.meshCount)>0
+      !(item.parentChain||[]).some(parent=>structuralAncestorPattern.test(String(parent||'')))&&
+      Number(item.meshCount)>0
     ).forEach(item=>addCandidate(item,'coastal-scene-inventory'));
     const distanceFromCurrentView=item=>view?.camera?Math.hypot(item.position.x-view.camera.x,item.position.z-view.camera.z):0;
     structuralCandidates.sort((a,b)=>String(a.island||'').localeCompare(String(b.island||''))||distanceFromCurrentView(a)-distanceFromCurrentView(b));
