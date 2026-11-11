@@ -11298,7 +11298,8 @@ function updateHUD(){
   mg.strokeStyle='rgba(244,218,165,.85)';mg.lineWidth=1.8;mg.strokeRect(2,2,w-4,h-4);mg.strokeStyle='rgba(75,55,37,.9)';mg.lineWidth=.8;mg.strokeRect(6,6,w-12,h-12);
   const nearest=land.reduce((best,island)=>Math.hypot(focus.x-island.x,focus.z-island.z)<Math.hypot(focus.x-best.x,focus.z-best.z)?island:best,land[0]);
   const coordinates='X '+focus.x.toFixed(1)+' · Z '+focus.z.toFixed(1),zone=nearest&&Math.hypot(focus.x-nearest.x,focus.z-nearest.z)<=nearest.r*1.35?nearest.name:'MAR ABIERTO';
-  if(mapCoords)mapCoords.textContent=coordinates+' · '+zone.toUpperCase();
+  // Keep the complete X/Z pair visible on narrow phones; the zone is already shown in the HUD island label.
+  if(mapCoords)mapCoords.textContent=coordinates;
  }
  function drawMap(){
   if(!map.classList.contains('expanded')){drawLocalMap();return;}
