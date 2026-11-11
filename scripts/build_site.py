@@ -327,17 +327,6 @@ def main() -> None:
     if navigation_check.returncode != 0:
         raise SystemExit("Navigation runtime JavaScript syntax validation failed:\\n" + navigation_check.stderr)
     print("Navigation runtime JavaScript syntax validation passed.")
-    structure_overlay_source = ROOT / "scripts" / "nordic" / "structure-label-overlay.js"
-    if not structure_overlay_source.is_file():
-        raise SystemExit("Falta scripts/nordic/structure-label-overlay.js.")
-    structure_overlay_check = subprocess.run(
-        [node, "--check", str(structure_overlay_source)],
-        capture_output=True, text=True,
-    )
-    if structure_overlay_check.returncode != 0:
-        raise SystemExit("Structure label overlay JavaScript syntax validation failed:\\n" + structure_overlay_check.stderr)
-    print("Structure label overlay JavaScript syntax validation passed.")
-
     # Anchor decorative terrain objects to the actual rendered GroundMesh. The
     # analytical heightfield can differ from the rendered triangle interpolation,
     # leaving rocks, tree trunks and shrubs visibly detached from the island.
@@ -573,18 +562,6 @@ def main() -> None:
         if "</body>" not in html:
             raise SystemExit("No se encontró </body> para instalar la navegación.")
         html = html.replace("</body>", navigation_tag + "\n</body>", 1)
-
-    # Opt-in world-space labels for identifying the exact structure roots in the live scene.
-    # The overlay is inert unless the user opens ?test=1&debug=structures.
-    structure_overlay_source = ROOT / "scripts" / "nordic" / "structure-label-overlay.js"
-    structure_overlay_target = DIST / "scripts" / "nordic" / "structure-label-overlay.js"
-    structure_overlay_target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(structure_overlay_source, structure_overlay_target)
-    structure_overlay_tag = '<script src="./scripts/nordic/structure-label-overlay.js" defer></script>'
-    if structure_overlay_tag not in html:
-        if "</body>" not in html:
-            raise SystemExit("No se encontró </body> para instalar las etiquetas de estructuras.")
-        html = html.replace("</body>", structure_overlay_tag + "\\n</body>", 1)
 
     (DIST / "index.html").write_text(html, encoding="utf-8")
 
