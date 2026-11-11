@@ -232,11 +232,12 @@ export function createZoneInspectionShots(request, islands, candidates) {
   for (const [stateIndex,state] of stateVariants.entries()) {
     if (zone.includeOverview) {
       const overviewAngles = zone.angles.length >= 4 ? zone.angles : DIRECTIONS_8;
-      const overviewCount = Math.min(8,overviewAngles.length);
+      const selectedOverviewAngles = overviewAngles.filter((_,index)=>index%2===0).slice(0,4);
+      const overviewCount = selectedOverviewAngles.length;
       const radius = Math.max(zone.radiusMeters*1.35,22);
       const elevation = center.y + Math.max(10,zone.radiusMeters*.42);
       for (let i=0;i<overviewCount;i++) {
-        const angle = overviewAngles[i];
+        const angle = selectedOverviewAngles[i];
         addShot(
           'overview-'+String(i+1).padStart(2,'0')+'-s'+stateIndex+'-'+state.tide,
           cameraAt(overviewTarget,radius,elevation,angle,overviewTarget.y),
@@ -250,12 +251,9 @@ export function createZoneInspectionShots(request, islands, candidates) {
       // Scale close-up density to the number of buildings so one unified run can
       // cover up to twelve structures without silently exceeding the 120-shot budget.
       const lowAngles = selected.length <= 5
-        ? zone.angles
-        : selected.length <= 10
-          ? zone.angles.filter((_,index)=>index%2===1).slice(0,4)
-          : [zone.angles[1]??45,zone.angles[4]??180,zone.angles[7]??315];
-      const highAngles = selected.length <= 5 ? DIRECTIONS_4
-        : selected.length <= 10 ? [45,225] : [135];
+        ? zone.angles.slice(0,2)
+        : [zone.angles[1]??45];
+      const highAngles = selected.length <= 5 ? [45,225] : [];
       // A fixed offshore observation point lets the user inspect every building from
       // one real boat/water vantage instead of relying only on synthetic orbit cameras.
       if (observationPoint) {
@@ -283,17 +281,11 @@ export function createZoneInspectionShots(request, islands, candidates) {
             registered:item.registered??null,meshCount:item.meshCount??null,
             vertexCount:item.vertexCount??null,meshNames:item.meshNames||[],materials:item.materials||[]
           };
-          for (let heightIndex=0;heightIndex<zone.observationHeightOffsets.length;heightIndex++) {
-            const offset=zone.observationHeightOffsets[heightIndex];
-            const camera={
-              x:observationPoint.x,
-              y:observationPoint.y+offset,
-              z:observationPoint.z,
-              targetX:target.x,targetY:target.y,targetZ:target.z
-            };
-            addShot(item.code.toLowerCase()+'-water-'+String(heightIndex+1)+'-s'+stateIndex+'-'+state.tide,
-              camera,'structure-water-observation',target,state,subject);
-          }
+          const offset=zone.observationHeightOffsets[0]??0;
+          const camera={x:observationPoint.x,y:observationPoint.y+offset,z:observationPoint.z,
+            targetX:target.x,targetY:target.y,targetZ:target.z};
+          addShot(item.code.toLowerCase()+'-water-01-s'+stateIndex+'-'+state.tide,
+            camera,'structure-water-observation',target,state,subject);
         }
       }
       for (const item of selected) {
