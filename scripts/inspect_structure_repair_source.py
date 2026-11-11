@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Print focused, read-only source excerpts for the habitable-structure repair path."""
 from pathlib import Path
-source = Path("index.html").read_text(encoding="utf-8")
+built_source = Path("dist/index.html")
+source_path = built_source if built_source.is_file() else Path("index.html")
+source = source_path.read_text(encoding="utf-8")
+print("INSPECTED_RUNTIME_SOURCE=" + str(source_path))
 markers = [
     "probeFloatingHutAudit",
     "relocation-failed-visible",
