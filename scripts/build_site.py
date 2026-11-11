@@ -352,6 +352,31 @@ def main() -> None:
             raise SystemExit(f"No se encontró exactamente un anclaje de terreno para {label}.")
         html = html.replace(detached_anchor, rendered_anchor, 1)
 
+    # Seat rotated outpost bedrolls by their real transformed lower corners.
+    # Treating a tilted box as an axis-aligned .08 m half-height made one edge
+    # penetrate the rendered ground by 7 cm on Hrafn.
+    bedroll_grounding_marker = "for(const bedroll of camp.__groundingBedrolls||[])placeBoxBase(bedroll,.08);"
+    bedroll_grounding_code = """const placeRotatedBedrollBase=(mesh)=>{
+    mesh.computeWorldMatrix(true);
+    const localCorners=mesh.getBoundingInfo?.()?.boundingBox?.vectors;
+    if(!Array.isArray(localCorners)||localCorners.length!==8)throw new Error('Outpost bedroll has no complete local bounding box: '+mesh.name);
+    const worldCorners=localCorners.map(corner=>BABYLON.Vector3.TransformCoordinates(corner,mesh.getWorldMatrix()));
+    const lowestY=Math.min(...worldCorners.map(point=>point.y));
+    const bottomCorners=worldCorners.filter(point=>point.y<=lowestY+1e-5);
+    const terrainSamples=bottomCorners.map(point=>({x:point.x,z:point.z,terrainY:renderedTerrainSurfaceAt(point.x,point.z)}));
+    if(!terrainSamples.length||terrainSamples.some(point=>!Number.isFinite(point.terrainY)))throw new Error('Outpost bedroll touches outside the rendered terrain: '+mesh.name);
+    const requiredBottomY=Math.max(...terrainSamples.map(point=>point.terrainY));
+    const lift=requiredBottomY-lowestY;
+    if(!Number.isFinite(lift))throw new Error('Outpost bedroll grounding produced a non-finite correction: '+mesh.name);
+    mesh.position.y+=lift;
+    mesh.computeWorldMatrix(true);
+    for(const point of terrainSamples)recordContact(mesh.name,point.x,point.z,point.terrainY);
+   };
+   for(const bedroll of camp.__groundingBedrolls||[])placeRotatedBedrollBase(bedroll);"""
+    if html.count(bedroll_grounding_marker) != 1:
+        raise SystemExit("No se encontró exactamente el bucle de apoyo de los catres del puesto avanzado.")
+    html = html.replace(bedroll_grounding_marker, bedroll_grounding_code, 1)
+
     # Add a runtime check for every boulder using its actual world-space bounding box.
     rock_audit_marker = "window.__ELSN_TEST__={"
     rock_audit_code = """window.__ELSN_TEST__={
