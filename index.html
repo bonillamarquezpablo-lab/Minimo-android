@@ -8721,7 +8721,7 @@ function createRealWeapon(type='axe'){
  function buildHouse(cx,cz,scale=1,ownerIslandIndex=-1){
   // Cabaña nórdica humilde: huella menor, troncos desiguales, tejado vencido y reparaciones visibles.
   const footing=findLevelHutFooting(cx,cz,scale,ownerIslandIndex),houseX=footing.x,houseZ=footing.z;
-  const g=newGroup('WeatheredNorseHut',null);g.scaling=v(scale,scale,scale);g.position=v(houseX,footing.centerY-.02*scale,houseZ);
+  const g=newGroup('WeatheredNorseHut',null);
   g.__footingPlacement={requested:{x:cx,z:cz},actual:{x:houseX,z:houseZ},cornerRangeMeters:footing.range,valid:!!footing.valid,islandIndex:footing.islandIndex};
   // Paredes de tablones separados: no usar una caja maciza que atraviese puerta y ventanas.
   for(const end of [-1,1]){
@@ -8828,10 +8828,16 @@ function createRealWeapon(type='axe'){
   }
   // Huella sólida de la cabaña: el antiguo sistema solo bloqueaba cuatro paredes parciales
   // y dejaba un hueco de puerta por el que los NPC podían atravesar toda la estructura.
+  // Merge static hut meshes while the root is still at identity. Babylon bakes
+  // each child's world matrix into the merged vertex buffer; parenting that merged
+  // buffer to an already translated/scaled root would apply the root transform twice.
+  mergeStaticDecorByMaterial(g,'NorseHutStatic');
+  g.scaling=v(scale,scale,scale);g.position=v(houseX,footing.centerY-.02*scale,houseZ);
+  g.__norseGeometryMergeSpace='local-before-root-transform';
+  g.computeWorldMatrix(true);
   g.__norseWorldCollider=footing.valid?registerWorldCollider({type:'rect',x:houseX,z:houseZ,hx:2.16*scale,hz:2.78*scale,cameraBlocker:true}):null;
   if(!footing.valid)g.setEnabled(false);
   registerHabitableStructure(g,'NorseHut',{islandIndex:footing.islandIndex,footprintRadius:Math.hypot(2.01*scale,2.64*scale),baseOffset:.02*scale,edgeBuffer:1.25,maxRelief:.02,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,collider:g.__norseWorldCollider,relocatable:true,enableAfterRelocation:!footing.valid});
-  mergeStaticDecorByMaterial(g,'NorseHutStatic');
   addModelShadow(g);
   try{g.freezeWorldMatrix();g.getChildMeshes(false).forEach(mesh=>mesh.freezeWorldMatrix());}catch(_){ }
   return g;
@@ -9056,7 +9062,7 @@ function createRealWeapon(type='axe'){
  function buildIslandOutpost(vl){
   const cx=vl.x,cz=vl.z+15,gy=renderedTerrainSurfaceAt(cx,cz),camp=newGroup('IslandOutpost_'+vl.index,null);
   camp.position=v(cx,gy,cz);vl.islandOutpostCamp=camp;
-  registerHabitableStructure(camp,'IslandOutpostCamp',{islandIndex:vl.index,footprintRadius:5.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:true});
+  const outpostEntry=registerHabitableStructure(camp,'IslandOutpostCamp',{islandIndex:vl.index,footprintRadius:5.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:true});
   for(let tent=0;tent<2;tent++){
    const ox=tent===0?-2.25:2.15,oz=tent===0?-.45:.65,rot=tent===0?-.12:.16;
    cyl('OutpostTentRidge_'+vl.index+'_'+tent,camp,[ox,1.38,oz],2.15,.045,.05,M.woodLight,[Math.PI/2,0,0]);
@@ -9065,17 +9071,45 @@ function createRealWeapon(type='axe'){
    box('OutpostTentCloth_'+vl.index+'_'+tent,camp,[ox,1.05,oz],[2.05,.10,1.48],M.ochreCloth,[.36,0,rot]);
    box('OutpostBedroll_'+vl.index+'_'+tent,camp,[ox,.13,oz+.85],[.72,.16,.95],M.fur,[0,0,rot]);
   }
-  box('OutpostSupplyCrate_'+vl.index,camp,[-4.1,.28,1.25],[.78,.56,.72],M.woodDark);
-  sphere('OutpostHearthGlow_'+vl.index,camp,[4.1,.22,2.0],[.24,.16,.24],M.ember,8);
+  const outpostCrate=box('OutpostSupplyCrate_'+vl.index,camp,[-4.1,.28,1.25],[.78,.56,.72],M.woodDark);
+  const outpostHearth=sphere('OutpostHearthGlow_'+vl.index,camp,[4.1,.22,2.0],[.24,.16,.24],M.ember,8);
+  // Hrafn's original outpost anchor lies on a pronounced rendered slope. Reposition
+  // the same camp on the nearest dry, stable patch using the rendered heightfield.
+  if(vl.index===3){
+   const before=evaluateHabitableStructure(outpostEntry);
+   camp.__groundingBefore=before;
+   const candidate=findSafeHabitableAnchor(outpostEntry,{x:cx,y:gy,z:cz});
+   if(candidate){
+    camp.position.set(candidate.x,candidate.centerY,candidate.z);camp.computeWorldMatrix(true);
+    outpostEntry.initialPlacement={x:cx,y:gy,z:cz};outpostEntry.lastAction='placed-on-rendered-dry-ground-at-construction';
+   }
+   // Re-seat the supply props and hearth on the sampled rendered terrain without
+   // changing their geometry, materials, or gameplay identity.
+   const placeBoxBase=(mesh,halfHeight)=>{const wx=camp.position.x+mesh.position.x,wz=camp.position.z+mesh.position.z;mesh.position.y=renderedTerrainSurfaceAt(wx,wz)-camp.position.y+halfHeight;};
+   const placeSphereBase=(mesh,halfHeight)=>{const wx=camp.position.x+mesh.position.x,wz=camp.position.z+mesh.position.z;mesh.position.y=renderedTerrainSurfaceAt(wx,wz)-camp.position.y+halfHeight;};
+   placeBoxBase(outpostCrate,.28);placeSphereBase(outpostHearth,.16);
+  }
   // Segundo punto de acampada de la misma isla: pequeño vivac de exploradores.
   // Keep the scout supply point inside the island's dry-land footprint.
   // The former +19/-16 offset put the first island's camp at (50,-33), almost 60m
   // from the origin of a 60m island, where terrainSurfaceAt returns the wet shoreline/seabed.
   const scoutX=vl.x-8,scoutZ=vl.z+18,scoutY=renderedTerrainSurfaceAt(scoutX,scoutZ),scout=newGroup('IslandScoutCamp_'+vl.index,null);
   scout.position=v(scoutX,scoutY,scoutZ);vl.scoutCamp=scout;
-  registerHabitableStructure(scout,'IslandScoutCamp',{islandIndex:vl.index,footprintRadius:2.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:true});
-  box('ScoutCampSupplies_'+vl.index,scout,[0,.30,0],[.92,.60,.78],M.woodDark);
-  sphere('ScoutCampEmbers_'+vl.index,scout,[1.15,.13,.15],[.36,.12,.30],M.ember,8);
+  const scoutEntry=registerHabitableStructure(scout,'IslandScoutCamp',{islandIndex:vl.index,footprintRadius:2.0,baseOffset:0,edgeBuffer:1.25,maxRelief:.26,anchorTolerance:.02,maxVisibleDistance:205,boatVisibleDistance:55,relocatable:true});
+  const scoutSupplies=box('ScoutCampSupplies_'+vl.index,scout,[0,.30,0],[.92,.60,.78],M.woodDark);
+  const scoutEmbers=sphere('ScoutCampEmbers_'+vl.index,scout,[1.15,.13,.15],[.36,.12,.30],M.ember,8);
+  if(vl.index===3){
+   const before=evaluateHabitableStructure(scoutEntry);
+   scout.__groundingBefore=before;
+   const candidate=findSafeHabitableAnchor(scoutEntry,{x:scoutX,y:scoutY,z:scoutZ});
+   if(candidate){
+    scout.position.set(candidate.x,candidate.centerY,candidate.z);scout.computeWorldMatrix(true);
+    scoutEntry.initialPlacement={x:scoutX,y:scoutY,z:scoutZ};scoutEntry.lastAction='placed-on-rendered-dry-ground-at-construction';
+   }
+   const placeBoxBase=(mesh,halfHeight)=>{const wx=scout.position.x+mesh.position.x,wz=scout.position.z+mesh.position.z;mesh.position.y=renderedTerrainSurfaceAt(wx,wz)-scout.position.y+halfHeight;};
+   const placeSphereBase=(mesh,halfHeight)=>{const wx=scout.position.x+mesh.position.x,wz=scout.position.z+mesh.position.z;mesh.position.y=renderedTerrainSurfaceAt(wx,wz)-scout.position.y+halfHeight;};
+   placeBoxBase(scoutSupplies,.30);placeSphereBase(scoutEmbers,.12);
+  }
  }
  villages.forEach(vl=>{if(!vl.islandGarrison)buildIslandOutpost(vl);});
  // Nuevos lugares de la expansión: salón comunal, embarcadero, círculo del thing y baliza costera.
