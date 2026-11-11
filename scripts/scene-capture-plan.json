@@ -1,212 +1,11 @@
 [
   {
-    "id": "hrafn-desde-drakkar-z236",
-    "camera": {
-      "x": 28,
-      "y": 6,
-      "z": 236.3,
-      "targetX": 28,
-      "targetY": 1.1,
-      "targetZ": 143
-    },
-    "time": 37,
-    "tide": "natural",
-    "settlement": "hrafn",
-    "notes": "Boat-approach view using the Z coordinate visible in the user's screenshot; X=28 is the Hrafn island-centre anchor because the screenshot clips player X."
-  },
-  {
-    "id": "cuervo-cenital",
-    "camera": {
-      "x": 31,
-      "y": 58,
-      "z": -16.9,
-      "targetX": 31,
-      "targetY": 0,
-      "targetZ": -17
-    },
-    "time": 37,
-    "tide": "natural",
-    "settlement": "cuervo",
-    "settleMs": 300
-  },
-  {
-    "id": "cuervo-rasante",
-    "camera": {
-      "x": 31,
-      "y": 4.5,
-      "z": 7,
-      "targetX": 31,
-      "targetY": 2.2,
-      "targetZ": -17
-    },
-    "time": 37,
-    "tide": "natural",
-    "settlement": "cuervo",
-    "settleMs": 300
-  },
-  {
-    "id": "skall-orbita",
-    "camera": {
-      "x": 135,
-      "y": 12,
-      "z": 48,
-      "targetX": 135,
-      "targetY": 3,
-      "targetZ": 14
-    },
-    "orbit": {
-      "count": 8,
-      "radius": 34,
-      "elevation": 12,
-      "targetX": 135,
-      "targetY": 3,
-      "targetZ": 14
-    },
-    "time": 37,
-    "tide": "natural",
-    "settlement": "skall"
-  },
-  {
-    "id": "skall-cenital",
-    "camera": {
-      "x": 135,
-      "y": 58,
-      "z": 14.1,
-      "targetX": 135,
-      "targetY": 0,
-      "targetZ": 14
-    },
-    "time": 37,
-    "tide": "natural",
-    "settlement": "skall",
-    "settleMs": 300
-  },
-  {
-    "id": "skall-rasante",
-    "camera": {
-      "x": 135,
-      "y": 4.5,
-      "z": 38,
-      "targetX": 135,
-      "targetY": 2.2,
-      "targetZ": 14
-    },
-    "time": 37,
-    "tide": "natural",
-    "settlement": "skall",
-    "settleMs": 300
-  },
-  {
-    "id": "pinos-orbita",
-    "camera": {
-      "x": -132,
-      "y": 12,
-      "z": 79,
-      "targetX": -132,
-      "targetY": 3,
-      "targetZ": 45
-    },
-    "orbit": {
-      "count": 8,
-      "radius": 34,
-      "elevation": 12,
-      "targetX": -132,
-      "targetY": 3,
-      "targetZ": 45
-    },
-    "time": 37,
-    "tide": "natural",
-    "settlement": "pinos"
-  },
-  {
-    "id": "pinos-cenital",
-    "camera": {
-      "x": -132,
-      "y": 58,
-      "z": 45.1,
-      "targetX": -132,
-      "targetY": 0,
-      "targetZ": 45
-    },
-    "time": 37,
-    "tide": "natural",
-    "settlement": "pinos",
-    "settleMs": 300
-  },
-  {
-    "id": "pinos-rasante",
-    "camera": {
-      "x": -132,
-      "y": 4.5,
-      "z": 69,
-      "targetX": -132,
-      "targetY": 2.2,
-      "targetZ": 45
-    },
-    "time": 37,
-    "tide": "natural",
-    "settlement": "pinos",
-    "settleMs": 300
-  },
-  {
-    "id": "hrafn-orbita",
-    "camera": {
-      "x": 28,
-      "y": 12,
-      "z": 177,
-      "targetX": 28,
-      "targetY": 3,
-      "targetZ": 143
-    },
-    "orbit": {
-      "count": 8,
-      "radius": 34,
-      "elevation": 12,
-      "targetX": 28,
-      "targetY": 3,
-      "targetZ": 143
-    },
-    "time": 37,
-    "tide": "natural",
-    "settlement": "hrafn"
-  },
-  {
-    "id": "hrafn-cenital",
-    "camera": {
-      "x": 28,
-      "y": 58,
-      "z": 143.1,
-      "targetX": 28,
-      "targetY": 0,
-      "targetZ": 143
-    },
-    "time": 37,
-    "tide": "natural",
-    "settlement": "hrafn",
-    "settleMs": 300
-  },
-  {
-    "id": "hrafn-rasante",
-    "camera": {
-      "x": 28,
-      "y": 4.5,
-      "z": 167,
-      "targetX": 28,
-      "targetY": 2.2,
-      "targetZ": 143
-    },
-    "time": 37,
-    "tide": "natural",
-    "settlement": "hrafn",
-    "settleMs": 300
-  },
-  {
-    "id": "hrafn-structures-auto",
-    "label": "Bahía de Hrafn — inventario visual de construcciones",
+    "id": "inspeccion-unica-hrafn",
+    "label": "Bahía de Hrafn — inspección unificada desde el agua",
     "time": 37,
     "tide": "natural",
     "zone": {
-      "label": "Bahía de Hrafn",
+      "label": "Bahía de Hrafn — todas las construcciones detectadas",
       "center": {
         "x": 28,
         "y": 2.2,
@@ -214,7 +13,7 @@
       },
       "radiusMeters": 27,
       "focus": "structures",
-      "maxTargets": 5,
+      "maxTargets": 12,
       "cameraDistanceMeters": 9,
       "angles": [
         0,
@@ -232,8 +31,6 @@
       "tides": [
         "natural"
       ],
-      "includeOverview": true,
-      "includeTopDown": true,
       "observationPoint": {
         "x": 28,
         "y": 6,
@@ -242,7 +39,9 @@
       "observationHeightOffsets": [
         0,
         2.5
-      ]
+      ],
+      "includeOverview": true,
+      "includeTopDown": true
     }
   }
 ]
