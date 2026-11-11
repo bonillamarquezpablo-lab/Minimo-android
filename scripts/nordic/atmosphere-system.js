@@ -392,12 +392,12 @@
       if (this.renderPipeline) {
         try {
           const pipeline = this.renderPipeline;
-          const enabled = this.quality !== 'low';
+          const enabled = true;
           pipeline.bloomEnabled = enabled;
-          pipeline.bloomThreshold = 0.94;
-          pipeline.bloomWeight = this.quality === 'high' ? 0.18 : 0.13;
-          pipeline.bloomKernel = this.quality === 'high' ? 56 : 36;
-          pipeline.bloomScale = this.quality === 'high' ? 0.45 : 0.32;
+          pipeline.bloomThreshold = this.quality === 'low' ? 0.98 : 0.94;
+          pipeline.bloomWeight = this.quality === 'high' ? 0.18 : (this.quality === 'medium' ? 0.13 : 0.075);
+          pipeline.bloomKernel = this.quality === 'high' ? 56 : (this.quality === 'medium' ? 36 : 20);
+          pipeline.bloomScale = this.quality === 'high' ? 0.45 : (this.quality === 'medium' ? 0.32 : 0.20);
           pipeline.imageProcessingEnabled = true;
           pipeline.fxaaEnabled = true;
           pipeline.grainEnabled = false;
