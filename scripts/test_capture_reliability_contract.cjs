@@ -38,6 +38,10 @@ async function main() {
   assert.match(runner,/__ELSN_TEST__\.inspectScene\(\{inventoryLimit:5000,offshoreLimit:500\}\)/);
   assert.match(runner,/supervisorVisibility=await page\.evaluate/,'The unified scene capture must verify supervisor UI invisibility.');
   assert.match(runner,/visibleDiagnosticElements/,'Visible debug/inspector overlays must be rejected.');
+  assert.match(runner,/initialAudit\.errors&&Object\.keys\(initialAudit\.errors\)\.length/,'Any failed scene-inspection section must fail the global capture gate.');
+  assert.match(runner,/completeInventory\.returnedCount\)!==Number\(completeInventory\.candidateCount\)/,'The full scene inventory must be untruncated.');
+  assert.match(runner,/completeOffshore\.returnedCount\)!==Number\(completeOffshore\.candidateCount\)/,'The offshore structural inventory must be untruncated.');
+
   assert.match(runner,/assert\.deepEqual\(supervisorVisibility\.visibleDiagnosticElements,\[\]/,'No debug or inspector panel may appear during automated inspection.');
   assert.match(runner,/debugFlagsEnabled/,'The supervisor test must prove debug-only UI flags remain disabled.');
 

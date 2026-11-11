@@ -105,14 +105,22 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
       phaseTimingsMs:initialAudit.phaseTimingsMs,
       errors:initialAudit.errors
     };
-    if(!initialAudit.sceneInventory||!Number.isFinite(Number(initialAudit.sceneInventory.returnedCount))){
-      throw new Error('La inspección no ha confirmado cuántos objetos devolvió el inventario completo de escena.');
-    }
-    if(Number(initialAudit.sceneInventory.omittedCount||0)>0){
-      throw new Error('El inventario de escena está truncado: '+initialAudit.sceneInventory.omittedCount+' objetos han quedado fuera del límite de inspección.');
-    }
     if(initialAudit.errors&&Object.keys(initialAudit.errors).length){
-      console.warn('[scene-inspection] Secciones con errores:',JSON.stringify(initialAudit.errors));
+      throw new Error('La inspección global tiene secciones fallidas; no se declarará completa: '+JSON.stringify(initialAudit.errors));
+    }
+    const completeInventory=initialAudit.sceneInventory;
+    if(!completeInventory||!Number.isFinite(Number(completeInventory.candidateCount))||
+      !Number.isFinite(Number(completeInventory.returnedCount))||
+      Number(completeInventory.returnedCount)!==Number(completeInventory.candidateCount)||
+      Number(completeInventory.omittedCount||0)!==0){
+      throw new Error('El inventario general de escena no está completo: '+JSON.stringify(completeInventory));
+    }
+    const completeOffshore=initialAudit.offshore;
+    if(!completeOffshore||!Number.isFinite(Number(completeOffshore.candidateCount))||
+      !Number.isFinite(Number(completeOffshore.returnedCount))||
+      Number(completeOffshore.returnedCount)!==Number(completeOffshore.candidateCount)||
+      Number(completeOffshore.omittedCount||0)!==0){
+      throw new Error('El inventario de estructuras mar adentro no está completo: '+JSON.stringify(completeOffshore));
     }
 
     // Resolve each requested zone against the inventory from this exact game run.
