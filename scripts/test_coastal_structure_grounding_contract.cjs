@@ -5,6 +5,8 @@ const workflow=fs.readFileSync('.github/workflows/coastal-reference.yml','utf8')
 const html=fs.readFileSync('index.html','utf8');
 const navigation=fs.readFileSync('scripts/nordic/navigation-suite.js','utf8');
 const builder=fs.readFileSync('scripts/build_site.py','utf8');
+assert.ok(builder.includes('boat_visibility_marker = "boatVisibleDistance:Math.max(30,Number(options.boatVisibleDistance)||55),"'));
+assert.ok(builder.includes('boatVisibleDistance:isUltraLowEndMobile?Math.max(30,Number(options.boatVisibleDistance)||55):Math.max(60,Number(options.maxVisibleDistance)||205),'));
 assert.match(source,/\?test=1['\"]?/);
 assert.doesNotMatch(source,/\?test=1&coastref=1/);
 assert.match(source,/habitableStructureAudit\(\)/);
