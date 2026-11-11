@@ -117,7 +117,14 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
           api.setCamera(camera);
           api.setWaterState({time:shot.time??37,tide:shot.tide??'natural'});
           api.render();
-          return {camera,cameraReadback:api.sceneViewSnapshot?.()??null,
+          const cameraReadback=api.sceneViewSnapshot?.()??null;
+          const actualPosition=cameraReadback?.camera||null,actualTarget=cameraReadback?.target||null;
+          const near=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=.20;
+          const cameraVerified=!!actualPosition&&!!actualTarget&&
+            near(actualPosition.x,camera.x)&&near(actualPosition.y,camera.y)&&near(actualPosition.z,camera.z)&&
+            near(actualTarget.x,camera.targetX)&&near(actualTarget.y,camera.targetY)&&near(actualTarget.z,camera.targetZ);
+          if(!cameraVerified)throw new Error('La cámara real no alcanzó el punto solicitado: '+JSON.stringify({expected:camera,actual:cameraReadback}));
+          return {camera,cameraReadback,cameraVerified,
             canvas:{width:document.getElementById('renderCanvas')?.width,height:document.getElementById('renderCanvas')?.height}};
         },{shot});
         const capturedAt=new Date().toISOString();
@@ -129,7 +136,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
         const buffer=Buffer.from(firstMatch[1],'base64'),secondBuffer=Buffer.from(secondMatch[1],'base64');assert.ok(buffer.length>1000,'PNG vacío o incompleto.');assert.equal(buffer.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
         const firstHash=createHash('sha256').update(buffer).digest('hex'),secondHash=createHash('sha256').update(secondBuffer).digest('hex');manifest.determinism.tested++;if(firstHash!==secondHash)manifest.determinism.failed++;assert.equal(secondHash,firstHash,'Render no determinista en '+shot.id);
         const file=shot.id+'.png';fs.writeFileSync(path.join(OUT,file),buffer);const telemetry=await page.evaluate(()=>({diagnostics:window.__ELSN_TEST__.diagnostics()}));
-        manifest.captures.push({id:shot.id,file,capturedAt,camera:prepared.camera,cameraReadback:prepared.cameraReadback,
+        manifest.captures.push({id:shot.id,file,capturedAt,camera:prepared.camera,cameraVerified:prepared.cameraVerified,cameraReadback:prepared.cameraReadback,
           canvas:prepared.canvas,time:shot.time??37,tide:shot.tide??'natural',
           zoneId:shot.zoneId??null,zoneLabel:shot.zoneLabel??null,inspectionFocus:shot.inspectionFocus??null,
           inspectionPurpose:shot.inspectionPurpose??'manual-camera',worldTarget:shot.worldTarget??null,subject:shot.subject??null,
@@ -140,8 +147,8 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
     }
     // Create a machine-readable index for quick triage, including every structure and
     // the capture IDs that were actually saved even when some shots failed.
-    manifest.captureIndex=manifest.captures.map(({id,file,camera,cameraReadback,time,tide,bytes,sha256,zoneId,zoneLabel,inspectionFocus,inspectionPurpose,worldTarget,subject})=>
-      ({id,file,camera,cameraReadback,time,tide,bytes,sha256,zoneId,zoneLabel,inspectionFocus,inspectionPurpose,worldTarget,subject}));
+    manifest.captureIndex=manifest.captures.map(({id,file,camera,cameraVerified,cameraReadback,time,tide,bytes,sha256,zoneId,zoneLabel,inspectionFocus,inspectionPurpose,worldTarget,subject})=>
+      ({id,file,camera,cameraVerified,cameraReadback,time,tide,bytes,sha256,zoneId,zoneLabel,inspectionFocus,inspectionPurpose,worldTarget,subject}));
     fs.writeFileSync(path.join(OUT,'capture-index.json'),JSON.stringify({schema:1,build:manifest.build,zoneInspections:manifest.zoneInspections,captures:manifest.captureIndex},null,2)+'\n');
     assert.equal(manifest.captures.length,shots.length,'Capturas completas: '+manifest.captures.length+'/'+shots.length);
     assert.equal(manifest.determinism.failed,0,'Renders no deterministas.');
