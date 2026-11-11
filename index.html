@@ -13374,7 +13374,7 @@ function update(dt){
      if(duplicateIndex>=0){
       const existing=structuralCandidates[duplicateIndex];
       structuralCandidates[duplicateIndex]={...existing,...item,nativeId:existing.nativeId??nativeId,uniqueId:existing.nativeId??nativeId,
-       position:existing.position,bounds:item.bounds||existing.bounds,source:existing.source+' + '+source};
+       position:existing.position,bounds:normalizedBounds||existing.bounds,source:existing.source+' + '+source};
       return;
      }
      const key=nativeId!==null?'uid:'+nativeId:String(item.name||'unnamed')+'|'+x.toFixed(2)+'|'+z.toFixed(2);
