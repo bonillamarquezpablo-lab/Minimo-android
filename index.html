@@ -13130,6 +13130,13 @@ function update(dt){
     return {x:Number(point.x.toFixed(2)),y:Number(point.y.toFixed(2)),depth:Number(point.z.toFixed(5)),normalizedX:Number((point.x/Math.max(1,width)).toFixed(5)),normalizedY:Number((point.y/Math.max(1,height)).toFixed(5)),inFront:point.z>=0&&point.z<=1,onScreen:point.x>=0&&point.x<=width&&point.y>=0&&point.y<=height};
    },
    stop:()=>engine.stopRenderLoop(),
+   prepareStaticCaptureFrame:()=>{
+    const reflectionWasEnabled=!!(nordicWaterMirror&&M.water.reflectionTexture===nordicWaterMirror);
+    if(reflectionWasEnabled)M.water.reflectionTexture=null;
+    engine.stopRenderLoop();
+    scene.render();
+    return {renderLoopStopped:true,manualFrameRendered:true,waterReflectionDisabled:reflectionWasEnabled,waterReflectionMeshes:nordicWaterMirror?.renderList?.length||0};
+   },
    prepareCaptureFrame:async({timeoutMs=20000,maxFrames=120}={})=>prepareCaptureFrameForCamera({timeoutMs,maxFrames}),
    getTextureReadinessForCamera:async()=> (await captureTextureReadinessSnapshot()).report,
    setCamera:({x,y,z,targetX,targetY,targetZ})=>{if(!testModeEnabled)throw new Error('Camera override is available only in test mode.');captureCameraOverride={position:new B.Vector3(x,y,z),target:new B.Vector3(targetX,targetY,targetZ),setAtMs:Number(performance.now().toFixed(2))};scene.activeCamera=camera;camera.rotationQuaternion=null;camera.rotation.set(0,0,0);camera.position.copyFrom(captureCameraOverride.position);camera.setTarget(captureCameraOverride.target);camera.computeWorldMatrix?.(true);scene.updateTransformMatrix?.(true);if(skyDome)skyDome.position.copyFrom(camera.position);return {position:{x,y,z},target:{x:targetX,y:targetY,z:targetZ},locked:true};},
