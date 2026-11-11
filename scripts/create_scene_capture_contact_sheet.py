@@ -97,7 +97,7 @@ def main() -> None:
         "captures": manifest.get("captureIndex") or [],
     }
     (OUT / "vision-review-index.json").write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2) + "\\n",
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     print(f"SCENE CONTACT SHEET OK: {target} ({width}x{height}; {len(available)} captures)")
