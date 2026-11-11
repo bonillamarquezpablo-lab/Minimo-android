@@ -36,7 +36,6 @@ const source = fs.readFileSync(path.join(__dirname, 'nordic', 'atmosphere-system
 for (const marker of [
   'VolumetricLightScatteringPostProcess',
   'CascadedShadowGenerator',
-  'DefaultRenderingPipeline',
   'bloomEnabled = enabled',
   'NorseNightHearthPool_',
   'cloudLayerA',
@@ -51,6 +50,8 @@ for (const marker of [
 assert.ok(source.includes('never hardware ray tracing'), 'The WebGL runtime must explicitly describe its lighting effects as approximations.');
 
 const buildSource = fs.readFileSync(path.join(__dirname, 'build_site.py'), 'utf8');
+
+assert.ok(buildSource.includes('B.DefaultRenderingPipeline'), 'The game must provide the existing default rendering pipeline to the atmosphere system.');
 assert.ok(buildSource.includes('scripts/nordic/atmosphere-system.js'), 'The atmosphere runtime must be packaged.');
 assert.ok(buildSource.includes('atmosphere_tag = \'<script src="./scripts/nordic/atmosphere-system.js"></script>\''), 'The atmosphere runtime must load synchronously before the main game script.');
 assert.ok(buildSource.includes('html.index(atmosphere_tag) > html.index(game_runtime_marker)'), 'The atmosphere module must precede the monolithic game runtime.');
