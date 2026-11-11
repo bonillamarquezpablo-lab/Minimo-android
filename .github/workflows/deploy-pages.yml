@@ -10,10 +10,10 @@ on:
 permissions:
   contents: read
 
-# A new release group lets the validated build supersede an orphaned older Pages publish.
+# One release pipeline per branch; newer main commits replace older queued builds.
 concurrency:
-  group: github-pages-release-0-6-274
-  cancel-in-progress: false
+  group: github-pages-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -74,39 +74,15 @@ jobs:
         with:
           path: ./dist
 
-  recover-pages:
-    name: Release orphaned GitHub Pages deployment
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      actions: write
-      pages: write
-    steps:
-      - name: Cancel stuck workflow attempts and stale Pages deployment
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Retire known orphaned attempts from previous Pages incidents.
-          gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/42413262099/cancel" || true
-          gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/42414967473/cancel" || true
-          # The 0.6.226 deploy-pages step remained in progress after build and upload succeeded.
-          # This newer, fully validated 0.6.227 release supersedes that orphaned attempt.
-          gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/42421155099/cancel" || true
-          # Pages deployment IDs are commit SHAs, not Actions run IDs.
-          gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/6b242b60daac742a4d4a6aa7f51bcdfd4db49772/cancel" || true
-          gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/f8c0f011c0fb168db466bf6c7477fc4e141ceb71/cancel" || true
-          echo "Recovery requests sent. The next job will create a fresh Pages deployment."
-
   deploy:
-    name: Publish the exact validated build
+    name: Publish the exact validated build on GitHub Pages
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [build, recover-pages]
+    needs: [build]
     permissions:
       contents: read
       pages: write
