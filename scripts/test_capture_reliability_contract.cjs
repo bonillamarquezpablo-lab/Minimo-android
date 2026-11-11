@@ -91,7 +91,7 @@ async function main() {
 
   const widePlan=planner.expandCapturePlan([{
     id:'all-structures',
-    zone:{center:{x:0,y:0,z:0},radiusMeters:30,focus:'structures',maxTargets:12,
+    zone:{islandIndex:0,center:{x:0,y:0,z:0},radiusMeters:30,focus:'structures',maxTargets:12,
       observationPoint:{x:0,y:6,z:80},observationHeightOffsets:[0,2.5]}
   }]);
   const wideCandidates=Array.from({length:13},(_,index)=>({
