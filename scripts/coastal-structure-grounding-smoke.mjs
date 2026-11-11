@@ -7,6 +7,11 @@ const OUT=path.resolve('artifacts/structure-grounding');
 const startedAt=Date.now();
 const report={schema:2,startedAt:new Date().toISOString(),finishedAt:null,build:null,renderer:'Chromium headless + ANGLE SwiftShader',mode:'full normal-campaign runtime structure audit plus automatic-repair observation in a disposable test renderer',testRendererOnlyMutations:true,productionDataModified:false,phases:[],consoleErrors:[],pageErrors:[],baseline:null,postAutomaticAudit:null,runtimeRepairSimulation:null,habitableStructures:null,settlementHouses:null,settlementCamps:null,garrisons:null,summary:null,screenshot:null,verdict:'not-run',failure:null};
 function writeReport(){fs.mkdirSync(OUT,{recursive:true});const tmp=path.join(OUT,'structure-grounding.json.tmp');fs.writeFileSync(tmp,JSON.stringify(report,null,2)+'\n');fs.renameSync(tmp,path.join(OUT,'structure-grounding.json'));}
+async function captureCompositedPage(page,file){
+ const session=await page.context().newCDPSession(page);
+ try{const result=await session.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});const bytes=Buffer.from(result.data,'base64');fs.writeFileSync(file,bytes);return bytes;}
+ finally{try{await session.detach();}catch(_){}}
+}
 async function phase(name,fn){const start=Date.now(),row={name,startedAt:new Date().toISOString(),status:'in-progress'};report.phases.push(row);console.log('[STRUCTURE_AUDIT] START '+name);try{const result=await fn();row.status='completed';return result;}catch(error){row.status='failed';row.error=String(error?.stack||error);throw error;}finally{row.finishedAt=new Date().toISOString();row.durationMs=Date.now()-start;console.log('[STRUCTURE_AUDIT] END '+name+' '+row.status+' '+row.durationMs+'ms');}}
 function collectStructureSnapshot(){
  const api=window.__ELSN_TEST__;
@@ -100,7 +105,7 @@ async function main(){
    if(result.cameraMode!=='follow')throw new Error('The campaign did not start in follow-camera mode: '+JSON.stringify(result));
    if(result.mapCssWidth<130||result.mapCssWidth>180)throw new Error('Unexpected minimap size: '+JSON.stringify(result));
    const file=path.join(OUT,'live-local-minimap.png');
-   const shot=await page.screenshot({path:file,timeout:20000,animations:'disabled'});
+   const shot=await captureCompositedPage(page,file);
    return {...result,screenshot:path.basename(file),screenshotBytes:shot.length};
   });
   report.mapMarkerVerification=await phase('verify expanded map click returns world coordinates',async()=>page.evaluate(()=>{
@@ -117,11 +122,7 @@ async function main(){
    const toleranceWorldUnits=3.2;if(!actual||Math.abs(actual.x-expected.x)>toleranceWorldUnits||Math.abs(actual.z-expected.z)>toleranceWorldUnits)throw new Error('Map tap projection mismatch: '+JSON.stringify({expected,actual,toleranceWorldUnits,rect:{width:rect.width,height:rect.height,borderLeft,borderRight,borderTop,borderBottom,drawnWidth,drawnHeight}}));
    return {expected,actual,expanded:map.classList.contains('expanded'),footer:map.getContext('2d')? 'canvas-rendered':'missing'};
   }));
-  await phase('capture expanded full navigation chart',async()=>{
-   const file=path.join(OUT,'expanded-navigation-chart.png');
-   const shot=await page.screenshot({path:file,timeout:20000,animations:'disabled'});
-   report.expandedNavigationChart={file:path.basename(file),bytes:shot.length};
-  });
+  report.expandedNavigationChart={captured:false,reason:'Map projection verified numerically; save capture budget for the five Hrafn structure views'};
   await phase('close map after coordinate projection test',()=>page.evaluate(()=>{const close=document.getElementById('mapClose');if(close)close.click();else document.getElementById('map')?.classList.remove('expanded');document.getElementById('mapBackdrop')?.classList.remove('open');}));
   await phase('set conservative high-tide test envelope',()=>page.evaluate(()=>window.__ELSN_TEST__.setWaterState({time:0,tide:'high'})));
   const baseline=await phase('measure baseline structure grounding before repairs',()=>page.evaluate(collectStructureSnapshot));
@@ -180,7 +181,7 @@ async function main(){
    try{
     const cameraState=await page.evaluate(args=>window.__ELSN_TEST__.setCamera(args),camera);
     await page.waitForTimeout(250);
-    const shot=await page.screenshot({path:file,timeout:20000,animations:'disabled'});
+    const shot=await captureCompositedPage(page,file);
     report.objectInspectionCaptures.push({index:index+1,file:path.basename(file),bytes:shot.length,name:item.name,role:item.role,position:item.position,bounds:item.bounds,meshNames:item.meshNames,materials:item.materials,camera:cameraState});
    }catch(error){report.objectInspectionCaptures.push({index:index+1,name:item.name,role:item.role,position:item.position,error:String(error?.message||error)});}
   }
