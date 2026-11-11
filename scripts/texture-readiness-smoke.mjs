@@ -9,7 +9,29 @@ const CDP_CAPTURE_TIMEOUT_MS=Math.max(1500,Math.min(12000,Number(process.env.CAP
 const rawPlan=process.env.CAPTURE_PLAN_JSON||fs.readFileSync('scripts/scene-capture-plan.json','utf8'),plan=JSON.parse(rawPlan);
 const manifest={schema:5,startedAt:new Date().toISOString(),finishedAt:null,build:null,buildMetadata:null,timeoutMs:TIMEOUT_MS,hardDeadlineMs:240000,renderer:'Chromium headless + ANGLE SwiftShader',camera:null,actualCamera:null,cameraVerification:null,readiness:null,textureDiagnostics:null,structureRepairSimulation:null,coastalDiagnostics:{schema:1,status:'not-run',currentCheck:null,scope:null,checks:{},summary:null},networkEvents:[],networkRequests:[],consoleErrors:[],pageErrors:[],consoleMessages:[],phases:[],currentPhase:null,unresolvedPromises:null,timeoutDiagnostics:null,screenshot:null,verdict:'not-run',failure:null};
 function writeManifest(){fs.mkdirSync(OUT,{recursive:true});const target=path.join(OUT,'manifest.json'),temporary=target+'.tmp';fs.writeFileSync(temporary,JSON.stringify(manifest,null,2)+'\n');fs.renameSync(temporary,target);const coastalTarget=path.join(OUT,'coastal-inspection.json'),coastalTemporary=coastalTarget+'.tmp';fs.writeFileSync(coastalTemporary,JSON.stringify({schema:1,build:manifest.build,buildMetadata:manifest.buildMetadata,camera:manifest.camera,baselineScreenshot:manifest.baselineScreenshot||null,screenshot:manifest.screenshot,startedAt:manifest.startedAt,finishedAt:manifest.finishedAt,diagnostics:manifest.coastalDiagnostics},null,2)+'\n');fs.renameSync(coastalTemporary,coastalTarget);}
-function pickFirstShot(input){if(!Array.isArray(input)||!input.length)throw new Error('El plan no contiene cámaras.');const original=input[0],shot={...original};let base={...(original.camera||original)};if(Array.isArray(original.views)&&original.views.length)base={...base,...original.views[0]};if(original.orbit){const orbit=original.orbit,target={x:Number(orbit.targetX??base.targetX),y:Number(orbit.targetY??base.targetY),z:Number(orbit.targetZ??base.targetZ)},radius=Number(orbit.radius)||Math.hypot(base.x,base.z),angle=(Number(orbit.startDegrees)||0)*Math.PI/180;shot.camera={x:target.x+Math.sin(angle)*radius,y:Number(orbit.elevation??base.y),z:target.z+Math.cos(angle)*radius,targetX:target.x,targetY:target.y,targetZ:target.z};}else shot.camera=base;delete shot.orbit;delete shot.views;return shot;}
+function pickFirstShot(input){
+ if(!Array.isArray(input)||!input.length)throw new Error('El plan no contiene cámaras.');
+ const original=input[0],shot={...original};
+ if(original.zone){
+  const zone=original.zone,center=zone.center||{x:0,y:0,z:0};
+  const point=zone.observationPoint||{x:Number(center.x)||0,y:(Number(center.y)||0)+8,z:(Number(center.z)||0)+Math.max(20,Number(zone.radiusMeters)||20)*1.5};
+  shot.camera={x:Number(point.x),y:Number(point.y),z:Number(point.z),
+   targetX:Number(center.x)||0,targetY:Number(center.y)||0,targetZ:Number(center.z)||0};
+  shot.time=original.time??zone.times?.[0]??37;
+  shot.tide=original.tide??zone.tides?.[0]??'natural';
+  shot.inspectionFocus=zone.focus||'general';
+ }else{
+  let base={...(original.camera||original)};
+  if(Array.isArray(original.views)&&original.views.length)base={...base,...original.views[0]};
+  if(original.orbit){
+   const orbit=original.orbit,target={x:Number(orbit.targetX??base.targetX),y:Number(orbit.targetY??base.targetY),z:Number(orbit.targetZ??base.targetZ)},
+    radius=Number(orbit.radius)||Math.hypot(base.x,base.z),angle=(Number(orbit.startDegrees)||0)*Math.PI/180;
+   shot.camera={x:target.x+Math.sin(angle)*radius,y:Number(orbit.elevation??base.y),z:target.z+Math.cos(angle)*radius,targetX:target.x,targetY:target.y,targetZ:target.z};
+  }else shot.camera=base;
+ }
+ delete shot.orbit;delete shot.views;delete shot.zone;
+ return shot;
+}
 const shot=pickFirstShot(plan);
 let cdpSession=null;const requestMeta=new WeakMap(),requestStarted=new WeakMap();
 const SCRIPT_STARTED_AT=Date.now();
