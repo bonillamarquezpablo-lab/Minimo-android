@@ -69,7 +69,8 @@ function collectStructureSnapshot(){
   if(name==='RealVikingRightHandWeaponAnchor')return {classification:'equipped-weapon-assembly',disposition:'not-a-building',reason:'Weapon attachment and held weapon meshes'};
   if(name==='DetailedNorseHearth')return {classification:'hearth-prop',disposition:'decorative-prop',reason:'Standalone hearth/fireplace prop'};
   if(/^FirewoodRack_\d+$/.test(name))return {classification:'firewood-rack-prop',disposition:'decorative-prop',reason:'Standalone firewood rack'};
-  if(/^Norse(?:Thingstead|CoastalPier|CoastalBeacon)_\d+$/.test(name))return {classification:'intentional-outer-island-landmark',disposition:'known-non-habitable-building',reason:'Named outer-island landmark; audited separately from the 39 habitable hut/camp/garrison roots'};
+  if(/^NorseThingstead_\d+$/.test(name))return {classification:'intentional-settlement-hall',disposition:'known-non-habitable-building',reason:'Named settlement hall; tracked separately from the 39 habitable hut/camp/garrison roots'};
+  if(/^NorseCoastal(?:Pier|Beacon)_\d+$/.test(name))return {classification:'intentional-outer-island-landmark',disposition:'known-non-habitable-building',reason:'Named outer-island landmark; audited separately from the 39 habitable hut/camp/garrison roots'};
   return {classification:'unresolved',disposition:'requires-manual-review',reason:'No safe name-based classification'};
  };
  const unregisteredCandidateReview=projectedCandidates.filter(item=>item.registered===false).map(item=>{
