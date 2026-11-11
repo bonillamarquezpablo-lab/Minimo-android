@@ -152,9 +152,9 @@ assert.doesNotMatch(navigation, /norse-nav-root|norse-nav-panel|norse-nav-map-la
 assert.match(navigation, /applyMode\("follow"\)/);
 
 
-// Portrait minimap stays compact and keeps its coordinate strip aligned to the rendered height.
-assert.ok(html.includes('width:clamp(110px,29vw,138px)'));
-assert.ok(html.includes('clamp(79px,20.8vw,99px) + 5px'));
+// Portrait minimap stays compact despite legacy later CSS width rules and keeps coordinates aligned.
+assert.ok(html.includes('width:clamp(124px,31vw,144px)!important'));
+assert.ok(html.includes('clamp(95px,22.5vw,108px) + 5px'));
 assert.ok(!html.includes('width:clamp(164px,42vw,190px)!important'));
 
 // The camera can lower to a near-horizon/upward-looking angle on land and while aboard the ship.
