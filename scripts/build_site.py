@@ -436,11 +436,11 @@ def main() -> None:
       const mesh=entry.mesh;if(!mesh)return [];
       try{mesh.computeWorldMatrix(true);}catch(_){}
       if(entry.kind==='oriented-box'){
-       const corners=mesh.getBoundingInfo?.()?.boundingBox?.vectors;
-       if(!Array.isArray(corners)||corners.length!==8)return [];
-       const worldCorners=corners.map(corner=>BABYLON.Vector3.TransformCoordinates(corner,mesh.getWorldMatrix()));
-       const lowestY=Math.min(...worldCorners.map(point=>point.y));
-       return worldCorners.filter(point=>point.y<=lowestY+1e-5).map(point=>{
+       const localCorners=mesh.getBoundingInfo?.()?.boundingBox?.vectors;
+       if(!Array.isArray(localCorners)||localCorners.length!==8)return [];
+       const lowestLocalY=Math.min(...localCorners.map(point=>point.y));
+       return localCorners.filter(point=>point.y<=lowestLocalY+1e-5).map(corner=>{
+        const point=BABYLON.Vector3.TransformCoordinates(corner,mesh.getWorldMatrix());
         const terrainY=renderedTerrainSurfaceAt(point.x,point.z);
         return {dx:point.x-p.x,dz:point.z-p.z,baseY:point.y,name:mesh.name,terrainY:Number(terrainY.toFixed(4)),baseGapMeters:Number((point.y-terrainY).toFixed(4)),kind:entry.kind};
        });
