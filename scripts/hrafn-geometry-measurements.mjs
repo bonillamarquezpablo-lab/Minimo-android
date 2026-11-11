@@ -73,6 +73,7 @@ async function main(){
   if(snapshot.targets.length!==5)throw new Error('Expected 5 Hrafn structures; found '+snapshot.targets.length);
   const measured=await phase('measure drawn bases, visible land edge, water extrema and offshore rays',()=>page.evaluate(({targets,island})=>{
    const api=window.__ELSN_TEST__,scene=window.__ELSN_MEASURE_SCENE__,B=window.__ELSN_MEASURE_BABYLON__;
+   const roundPage=(value,digits=3)=>Number.isFinite(Number(value))?Number(Number(value).toFixed(digits)):null;
    const waterRx=/(water|ocean|sea.?surface|ocean.?surface)/i,excludeWater=/(foam|spray|reflection|ripple|wash|backwash|shore|seabed|depth.?tint)/i;
    const waterMeshes=scene.meshes.filter(m=>waterRx.test(m.name||'')&&!excludeWater.test(m.name||'')&&m.getTotalVertices?.()>20);
    const terrainMeshes=scene.meshes.filter(m=>{
@@ -189,7 +190,7 @@ async function main(){
        const q=stateAt(d);samples.push(q);
        if(q.submerged)submergedCount++;if(q.hidden)hiddenCount++;
        if(Number.isFinite(q.terrainAboveWater))minClearance=Math.min(minClearance,q.terrainAboveWater);
-       if(q.dry&&q.allGround&&Math.abs(d/5-Math.round(d/5))<.051){
+       if(q.dry&&q.allGround&&Math.abs(d/5-Math.roundPage(d/5))<.051){
         const measured=api.measureRenderedFootprint({islandIndex:q.allGround.islandIndex,x:t.x+viewDirection.x*d,z:t.z+viewDirection.z*d,baseY:q.allGround.y,offsets:[]});
         if(Number.isFinite(measured?.analyticVsRenderedMeters)){maxAnalyticDelta=Math.max(maxAnalyticDelta,Math.abs(measured.analyticVsRenderedMeters));analyticSamples++;}
        }
@@ -202,20 +203,20 @@ async function main(){
       if(runStart!==null)dryRuns.push({start:Number(runStart.toFixed(2)),end:Number(targetDistance.toFixed(2)),islandIndex:runIsland});
       const clearances=samples.filter(q=>Number.isFinite(q.terrainAboveWater)).map(q=>q.terrainAboveWater);
       const targetState=stateAt(0);
-      viewRows.push({structureId:t.id,base:{x:round(t.x,3),y:round(t.baseY,4),z:round(t.z,3)},
+      viewRows.push({structureId:t.id,base:{x:roundPage(t.x,3),y:roundPage(t.baseY,4),z:roundPage(t.z,3)},
        camera:{...camera,eyeHeightMeters:1.7,supportSurface:supportedByLand?'rendered island ground':'rendered ocean surface',
-        supportMesh:supportedByLand?ground.mesh:(water?.mesh??null),supportSurfaceY:round(surfaceY,4)},
-       cameraToBaseDistanceMeters:round(targetDistance,3),waterDetailAtBase:detailFadeAt(t.x,t.z),
+        supportMesh:supportedByLand?ground.mesh:(water?.mesh??null),supportSurfaceY:roundPage(surfaceY,4)},
+       cameraToBaseDistanceMeters:roundPage(targetDistance,3),waterDetailAtBase:detailFadeAt(t.x,t.z),
        firstRayHit:first,visibleLandEdgeFromBaseTowardCrow:firstLandExit,secondDryLandEntryFromBase:secondLandEntry,
        nearestLandEdgeDistanceMeters:firstLandExit?.lastDryDistanceMeters??null,
        dryLandRunsAlongView:dryRuns,submergedTerrainSamples:submergedCount,hiddenTerrainSamples:hiddenCount,
-       sampledPoints:samples.length,minVisibleTerrainMinusWaterMeters:Number.isFinite(minClearance)?round(minClearance,4):null,
-       maxAbsRenderedVsAnalyticTerrainMeters:round(maxAnalyticDelta,4),analyticComparisonSamples:analyticSamples,
+       sampledPoints:samples.length,minVisibleTerrainMinusWaterMeters:Number.isFinite(minClearance)?roundPage(minClearance,4):null,
+       maxAbsRenderedVsAnalyticTerrainMeters:roundPage(maxAnalyticDelta,4),analyticComparisonSamples:analyticSamples,
        targetTerrainState:targetState.ground?{mesh:targetState.ground.mesh,terrainMinusWater:targetState.terrainAboveWater}:null});
      }
      cameraTests.push({distanceFromHrafnCentreMeters:offsetMeters,cameraPosition:camera,terrainSupport:supportedByLand?'land':'water',
-      crowCentreDistanceMeters:round(Math.hypot(x-crow.x,z-crow.z),3),hrafnCentreDistanceMeters:offsetMeters,
-      crowBeachRelation:round(Math.hypot(x-crow.x,z-crow.z)-crow.r*1.085,3),crowCoastApproximateSignedDistanceMeters:round(Math.hypot(x-crow.x,z-crow.z)-crow.r*1.085,3),
+      crowCentreDistanceMeters:roundPage(Math.hypot(x-crow.x,z-crow.z),3),hrafnCentreDistanceMeters:offsetMeters,
+      crowBeachRelation:roundPage(Math.hypot(x-crow.x,z-crow.z)-crow.r*1.085,3),crowCoastApproximateSignedDistanceMeters:roundPage(Math.hypot(x-crow.x,z-crow.z)-crow.r*1.085,3),
       cameraAboveLocalSurfaceMeters:1.7,viewRows,terrainMeshes:terrainByIsland,
       waterDetailRadiusMeters:waterDetailRadius,waterLodDiagnostics:waterLodDiagnostics?.waterLodBoundary??null,
       waterLodDiagnosticsAt90Meters:waterLodDiagnostics?.waterLodBoundary90??null,
