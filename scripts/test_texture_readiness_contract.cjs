@@ -41,7 +41,7 @@ assert.match(smoke,/&&unsafePairsVerified&&offshoreClear/);
 assert.match(smoke,/visibleOffshoreAfter===0/);
 assert.match(smoke,/offshoreClear/);
 assert.match(smoke,/floatingProbePassed=floatingProbe\?\.detected===true&&floatingProbe\?\.autoDiscovered===true&&floatingProbe\?\.hidden===false/);
-assert.match(smoke,/lastAction==='relocation-failed-visible'&&floatingProbe\?\.lastStatus==='unsafe'&&floatingProbe\?\.untrackedRootCount===0/);
+assert.match(smoke,/lastAction==='relocated-to-dry-ground'&&floatingProbe\?\.lastStatus==='grounded'&&floatingProbe\?\.untrackedRootCount===0/);
 assert.match(smoke,/structureGatePassed/);
 assert.match(smoke,/if\(!structureGatePassed\)manifest\.verdict='fail'/);
 assert.match(smoke,/noFootingOutliers=houseOutliers\.length===0&&campOutliers\.length===0&&garrisonOutliers\.length===0/);
