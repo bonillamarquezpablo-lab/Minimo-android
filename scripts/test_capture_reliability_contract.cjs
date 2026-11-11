@@ -43,6 +43,7 @@ async function main() {
     'The camera inspection run must not repair or move objects before capturing the original scene.');
 
   assert.match(plannerSource,/MAX_CAPTURE_SHOTS = 120/);
+  assert.match(plannerSource,/Math\.min\(12, Number\(zone\.maxTargets\) \|\| 12\)/);
   assert.match(plannerSource,/structure-low-oblique/);
   assert.match(plannerSource,/structure-high-oblique/);
   assert.match(plannerSource,/structure-top-down/);
@@ -84,6 +85,24 @@ async function main() {
   assert.ok(resolved.shots.every(shot=>shot.subject?.code&&shot.camera&&shot.worldTarget));
   assert.ok(new Set(resolved.shots.map(shot=>shot.id)).size===resolved.shots.length,'Generated camera IDs must be unique.');
   assert.equal(resolved.report.selectedTargets[0].name,'Hut_A');
+
+  const widePlan=planner.expandCapturePlan([{
+    id:'all-structures',
+    zone:{center:{x:0,y:0,z:0},radiusMeters:30,focus:'structures',maxTargets:12,
+      observationPoint:{x:0,y:6,z:80},observationHeightOffsets:[0,2.5]}
+  }]);
+  const wideCandidates=Array.from({length:13},(_,index)=>({
+    name:'Structure_'+index,kind:'NorseHut',island:'Hrafn',islandIndex:0,
+    position:{x:100+index,y:1,z:200},bounds:{bottomY:1,topY:5,width:4,depth:4},meshCount:10,vertexCount:600
+  }));
+  const wide=planner.createZoneInspectionShots(widePlan.zones[0],[{x:100,z:200}],wideCandidates);
+  assert.equal(wide.report.selectedTargetCount,12,'The unified inspector should include up to twelve nearby structures.');
+  assert.equal(wide.report.omittedTargetCount,1,'Any structure outside the one-run camera budget must be reported explicitly.');
+  assert.equal(wide.shots.length,92,'Twelve structures should receive adaptive multi-angle and offshore views within the 120-shot cap.');
+  assert.ok(wide.shots.length<=planner.MAX_CAPTURE_SHOTS);
+  assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-low-oblique').length,36);
+  assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-high-oblique').length,12);
+  assert.equal(wide.shots.filter(shot=>shot.inspectionPurpose==='structure-water-observation').length,24);
 
   const waterPlan = planner.expandCapturePlan([{
     id:'shore-water',
