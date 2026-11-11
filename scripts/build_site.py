@@ -891,8 +891,8 @@ def main() -> None:
         raise SystemExit("La etiqueta de versión ya existe en el HTML fuente; se evita duplicarla.")
     if "</head>" not in html or "</body>" not in html:
         raise SystemExit("No se encontraron los puntos de inserción para la etiqueta discreta de versión.")
-    html = html.replace("</head>", version_label_style + "\\n</head>", 1)
-    html = html.replace("</body>", version_label + "\\n</body>", 1)
+    html = html.replace("</head>", version_label_style + "\n</head>", 1)
+    html = html.replace("</body>", version_label + "\n</body>", 1)
 
     (DIST / "index.html").write_text(html, encoding="utf-8")
 
