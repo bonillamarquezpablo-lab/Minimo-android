@@ -219,7 +219,12 @@ async function main() {
       await page.waitForTimeout(120);
       const phaseFile = 'atmosphere/atmosphere-' + phase.id + '.png';
       fs.mkdirSync(path.join(OUT, 'atmosphere'), { recursive: true });
-      const png = await page.locator('#renderCanvas').screenshot({ timeout: 30000 });
+      // Read the WebGL drawing buffer directly. Playwright's element screenshot waits
+      // for visual stability, which can never be reached while the game canvas animates.
+      const atmospherePngDataUrl = await page.evaluate(() => window.__ELSN_TEST__?.captureCanvas());
+      const atmospherePngMatch = /^data:image\\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(atmospherePngDataUrl || '');
+      assert.ok(atmospherePngMatch, 'Atmosphere canvas readback did not return a PNG data URL for ' + phase.id);
+      const png = Buffer.from(atmospherePngMatch[1], 'base64');
       assert.ok(png.length > 1000, 'Atmosphere capture is empty for ' + phase.id);
       assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'Atmosphere capture is not a valid PNG for ' + phase.id);
       fs.writeFileSync(path.join(OUT, phaseFile), png);
