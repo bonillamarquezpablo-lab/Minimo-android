@@ -31,7 +31,7 @@ assert.match(html,/function getCoastalSceneInventory\(limit=500\)/);
 assert.match(html,/function auditOffshoreStructuralRoots\(limit=250\)/);
 assert.match(html,/excludedRootPattern=.*norseregattabuoy.*regattabuoymooring.*regattabuoybody.*regattabuoycrest.*regattabuoycollar/,'Intentional race-course buoys must not be reported as floating huts or settlements.');
 assert.match(html,/unknownAssemblyExclusions=.*norseregattabuoy.*regattabuoymooring.*regattabuoybody.*regattabuoycrest.*regattabuoycollar/,'Regatta buoy geometry must be excluded from generic unknown-building discovery.');assert.match(html,/const hasMeshBounds=Number\.isFinite\(minY\),registeredRoot=registered\.has\(node\)/);assert.match(html,/geometryConfidence:hasMeshBounds/);assert.match(html,/offshore-root-without-mesh-bounds/);assert.doesNotMatch(html,/if\(vertices<80\|\|meshRefs\.length<1\)continue/);assert.match(html,/auditOffshoreStructures:\(limit=250\)=>auditOffshoreStructuralRoots\(limit\)/);
-assert.match(smoke,/auditOffshoreStructures/);assert.match(smoke,/offshoreStructures/);assert.match(smoke,/auditIslandGeometry',\[\],30000/);assert.match(smoke,/coastalSceneInventory',\[1200\],10000/);
+assert.match(smoke,/auditOffshoreStructures/);assert.match(smoke,/offshoreStructures/);assert.match(smoke,/auditIslandGeometry',\[\],45000/);assert.match(smoke,/coastalSceneInventory',\[1200\],15000/);
 assert.match(html,/boundingBottomY/);
 assert.match(html,/coastalSceneInventory:\(limit=500\)=>getCoastalSceneInventory\(limit\)/);
 assert.match(html,/function auditIslandGeometryScoped\(onlyIslandIndex=null\)/);
