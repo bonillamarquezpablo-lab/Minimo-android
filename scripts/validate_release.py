@@ -94,6 +94,14 @@ def main() -> None:
     ):
         if required_garrison_link not in index_html:
             fail("Las piezas de guarnición deben usar transformaciones reales de mundo/local y comprobar su apoyo y parentesco.")
+
+    for required_garrison_animation in (
+        "flagBaseY:flagY+3.55-outpostGroundY",
+        "vl.flagGroup.position.y=vl.flagBaseY??(terrainSurfaceAt(vl.x,vl.z)+4.65)",
+        "village.flagGroup.position.y=(village.islandGarrison?2.15-(village.outpostRoot?.position?.y||0):2.15)+2.5*ease",
+    ):
+        if required_garrison_animation not in index_html:
+            fail("La bandera de guarnición debe conservar su altura correcta al capturar, perder o reiniciar un puesto.")
     navigation_js = read_text("scripts/nordic/navigation-suite.js")
     if "./scripts/nordic/navigation-suite.js" not in index_html:
         fail("Las entradas del juego no cargan el sistema unificado de mapas y cámaras.")
