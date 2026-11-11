@@ -40,6 +40,26 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
     await page.locator('#intro.open').waitFor({state:'visible',timeout:60000});
     await page.locator('#newGameChoice').click();
     await page.waitForFunction(()=>document.body.classList.contains('game-running')&&document.querySelector('#intro')?.getAttribute('aria-hidden')==='true',undefined,{timeout:30000,polling:250});
+    const supervisorVisibility=await page.evaluate(()=>{
+      const params=new URLSearchParams(location.search);
+      const debugFlagsEnabled=['debug','armdebug','grassdebug'].filter(key=>params.get(key)==='1');
+      const diagnosticIds=new Set(['groundPhaseAPanel','waterShoreDebugPanel','grassDebugPanel','realPlayerArmDebugPanel','realPlayerArmDeviationPanel','realPlayerArmTuneDock','realPlayerArmTuneToggle','realPlayerArmTunePanel']);
+      const visible=element=>{
+        const style=getComputedStyle(element),rect=element.getBoundingClientRect();
+        return style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)>0&&rect.width>0&&rect.height>0&&rect.bottom>0&&rect.right>0&&rect.top<innerHeight&&rect.left<innerWidth;
+      };
+      const visibleDiagnosticElements=[...document.querySelectorAll('[id]')]
+        .filter(element=>diagnosticIds.has(element.id)||/(?:debug|diagnostic|inspector).*(?:panel|dock|toggle|controls)|(?:panel|dock|toggle|controls).*(?:debug|diagnostic|inspector)/i.test(element.id))
+        .filter(visible)
+        .map(element=>({id:element.id,tag:element.tagName,ariaLabel:element.getAttribute('aria-label')||null}));
+      return {testMode:params.get('test')==='1',debugFlagsEnabled,visibleDiagnosticElements,apiAvailable:!!window.__ELSN_TEST__};
+    });
+    manifest.supervisorVisibility={...supervisorVisibility,verified:supervisorVisibility.testMode&&supervisorVisibility.debugFlagsEnabled.length===0&&supervisorVisibility.visibleDiagnosticElements.length===0&&supervisorVisibility.apiAvailable};
+    assert.equal(supervisorVisibility.testMode,true,'The supervisor visibility test must run in isolated test mode.');
+    assert.deepEqual(supervisorVisibility.debugFlagsEnabled,[],'Debug UI query flags must remain disabled during supervisor inspection.');
+    assert.deepEqual(supervisorVisibility.visibleDiagnosticElements,[],'The hidden supervisor must not add visible debug, diagnostic or inspector panels to the game UI.');
+    assert.equal(supervisorVisibility.apiAvailable,true,'The internal supervisor API must remain available to the automated inspector.');
+
     const readiness=await page.evaluate(async()=>window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs:120000}));
     manifest.phaseTimingsMs.startupAndReadiness=Date.now()-bootStarted;manifest.readiness=readiness;manifest.phaseTimingsMs.readiness=readiness.elapsedMs;
 

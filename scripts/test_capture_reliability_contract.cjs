@@ -36,6 +36,11 @@ async function main() {
   assert.match(runner,/cameraVerified:prepared\.cameraVerified/,'The camera verification must be saved in the capture manifest.');
   assert.match(runner,/createZoneInspectionShots/);
   assert.match(runner,/__ELSN_TEST__\.inspectScene\(\{inventoryLimit:5000,offshoreLimit:500\}\)/);
+  assert.match(runner,/supervisorVisibility=await page\.evaluate/,'The unified scene capture must verify supervisor UI invisibility.');
+  assert.match(runner,/visibleDiagnosticElements/,'Visible debug/inspector overlays must be rejected.');
+  assert.match(runner,/assert\.deepEqual\(supervisorVisibility\.visibleDiagnosticElements,\[\]/,'No debug or inspector panel may appear during automated inspection.');
+  assert.match(runner,/debugFlagsEnabled/,'The supervisor test must prove debug-only UI flags remain disabled.');
+
   assert.match(runner,/const rawStructuralCandidates=initialAudit\.structuralCandidates;/,'A missing structural inventory must not be silently converted into an empty list.');
   assert.match(runner,/Array\.isArray\(rawStructuralCandidates\)/,'The read-only scene capture must validate the structural inventory type.');
   assert.match(runner,/sceneInventory\.omittedCount/,'A truncated scene inventory must fail instead of appearing complete.');
