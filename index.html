@@ -8513,7 +8513,7 @@ function createRealWeapon(type='axe'){
  // The audit samples the rendered heightfield, verifies the complete footprint stays on dry land,
  // and hides unsafe roots (and their colliders) instead of allowing a floating building to render.
  const habitableStructureRegistry=[];
- let lastHabitableStructureAudit=null,habitableAuditAccumulator=0;
+ let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;
  function registerHabitableStructure(root,kind,options={}){
   const entry={
    root,kind:String(kind||'unknown'),
