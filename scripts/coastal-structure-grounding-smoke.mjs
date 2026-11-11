@@ -29,12 +29,20 @@ function collectStructureSnapshot(){
  const inventory=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(5000):null;
  const structureRoots=(inventory?.objects||[]).filter(item=>(item.category==='structure'||item.category==='unidentified-structure')&&!(item.parentChain||[]).length&&Number(item.meshCount)>0);
  const inventoryStructuralCandidates=structureRoots.map(item=>({name:item.name,category:item.category,role:item.structuralRole||'unclassified',confidence:item.classificationConfidence||'unknown',position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,meshNames:item.meshNames,materials:item.materials,structuralEvidence:item.structuralEvidence,metadata:item.metadata}));
- const navigationPoint={x:46.6,z:254.4,confidence:'approximate X inferred from the expanded-map player marker; Z read from the coordinate strip',zone:'MAR ABIERTO'};
+ const navigationPoint={x:28,z:236.3,confidence:'Z=236.3 read from the boat screenshots; X is clipped in the coordinate strip, so x=28 is only the known Hrafn island-centre search anchor, not the player X',zone:'MAR ABIERTO',reference:'Hrafn bay offshore approach'};
  const pointCandidates=[...projectedCandidates.map(item=>({...item,source:'offshore-structural-audit'})),...inventoryStructuralCandidates.map(item=>({...item,source:'scene-inventory'}))]
   .map(item=>{const p=item.position||{};return {...item,distanceToNavigationPointMeters:Number(Math.hypot((Number(p.x)||0)-navigationPoint.x,(Number(p.z)||0)-navigationPoint.z).toFixed(2))};})
   .filter(item=>item.distanceToNavigationPointMeters<=150)
   .sort((a,b)=>a.distanceToNavigationPointMeters-b.distanceToNavigationPointMeters);
  const navigationPointAudit={target:navigationPoint,nearbyCandidateCount:pointCandidates.length,nearbyCandidates:pointCandidates};
+ const hrafnIsland=(api.islands||[]).find(item=>/hrafn/i.test(item.name))||(api.islands||[])[3]||{x:28,z:143,r:33,name:'Bahía de Hrafn'};
+ const hrafnSceneRoots=structureRoots.map(item=>{
+  const p=item.position||{},distance=Math.hypot((Number(p.x)||0)-hrafnIsland.x,(Number(p.z)||0)-hrafnIsland.z);
+  const audit=(offshore.candidates||[]).find(row=>row.name===item.name&&Math.abs((row.position?.x||0)-(p.x||0))<.02&&Math.abs((row.position?.z||0)-(p.z||0))<.02);
+  return {name:item.name,category:item.category,role:item.structuralRole||'unclassified',confidence:item.classificationConfidence||'unknown',island:audit?.island||hrafnIsland.name,distanceToIslandCenterMeters:Number(distance.toFixed(2)),position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,meshCount:item.meshCount,vertexCount:item.vertexCount,meshNames:item.meshNames,materials:item.materials,structuralEvidence:item.structuralEvidence,grounding:audit?{offshore:audit.offshore,issue:audit.issue,dryFootprintSampleCount:audit.dryFootprintSampleCount,dryFootprintSampleTotal:audit.dryFootprintSampleTotal,bottomAboveWaterMeters:audit.bottomAboveWaterMeters,bottomAboveTerrainMeters:audit.bottomAboveTerrainMeters}:null};
+ });
+ const nearbyHrafnStructureRoots=hrafnSceneRoots.filter(item=>item.distanceToIslandCenterMeters<=48).sort((a,b)=>a.distanceToIslandCenterMeters-b.distanceToIslandCenterMeters);
+ const hrafnHutRoots=hrafnSceneRoots.filter(item=>item.role==='norse-hut'||item.name==='WeatheredNorseHut').sort((a,b)=>a.distanceToIslandCenterMeters-b.distanceToIslandCenterMeters);
  const cuervoIsland=(api.islands||[]).find(item=>/cuervo/i.test(item.name))||(api.islands||[])[0]||{x:0,z:0,name:'unknown'};
  const cuervoSceneRoots=structureRoots.map(item=>{
   const p=item.position||{},distance=Math.hypot((Number(p.x)||0)-cuervoIsland.x,(Number(p.z)||0)-cuervoIsland.z);
@@ -47,7 +55,7 @@ function collectStructureSnapshot(){
  const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02);
  const garrisonOutliers=garrisons.filter(item=>Number(item.outpostErrorMeters)>.02||Number(item.flagErrorMeters)>.02||Number(item.guardErrorMeters)>.06);
  return {
-  structures,offshore,houses,camps,garrisons,view,projectedCandidates,inventoryStructuralCandidates,navigationPointAudit,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
+  structures,offshore,houses,camps,garrisons,view,projectedCandidates,inventoryStructuralCandidates,navigationPointAudit,hrafnSceneRoots,nearbyHrafnStructureRoots,hrafnHutRoots,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
   summary:{
    structuresTotal:structures.total,grounded:structures.groundedCount,unsafe:structures.unsafeCount,
    unsafeVisibleBeforeAudit:structures.unsafeVisibleBeforeRepair,visibleInvalid:structures.visibleInvalidAfterRepair,
@@ -126,13 +134,13 @@ async function main(){
  // Visually inspect each nearby structure/unknown geometry cluster from a dedicated camera.
  // This catches invasion/endgame props even when their imported node names are meaningless.
  report.objectInspectionCaptures=[];
- const inspectionTargetRows=[...(settled.nearbyCuervoStructureRoots||[]),...(settled.navigationPointAudit?.nearbyCandidates||[])];
- const inspectionTargets=Array.from(new Map(inspectionTargetRows.map(item=>[String(item.name||'unnamed')+'|'+Number(item.position?.x||0).toFixed(1)+'|'+Number(item.position?.z||0).toFixed(1),item])).values()).filter(item=>item.visible!==false&&item.enabled!==false).slice(0,48);
+ const inspectionTargetRows=[...(settled.nearbyHrafnStructureRoots||[]),...(settled.hrafnHutRoots||[]),...(settled.navigationPointAudit?.nearbyCandidates||[])];
+ const inspectionTargets=Array.from(new Map(inspectionTargetRows.map(item=>[String(item.name||'unnamed')+'|'+Number(item.position?.x||0).toFixed(1)+'|'+Number(item.position?.z||0).toFixed(1),item])).values()).filter(item=>item.visible!==false&&item.enabled!==false).slice(0,14);
  for(let index=0;index<inspectionTargets.length;index++){
   const item=inspectionTargets[index],p=item.position||{},bounds=item.bounds||{},targetY=Number.isFinite(Number(bounds.bottomY))&&Number.isFinite(Number(bounds.topY))?(Number(bounds.bottomY)+Number(bounds.topY))*.5:(Number(p.y)||0)+2.5;
   const camera={x:(Number(p.x)||0)+26,y:Math.max(8,targetY+12),z:(Number(p.z)||0)+26,targetX:Number(p.x)||0,targetY,targetZ:Number(p.z)||0};
   const safeName=String(item.name||('object-'+index)).replace(/[^a-z0-9_-]+/gi,'-').slice(0,64);
-  const file=path.join(OUT,'cuervo-object-'+String(index+1).padStart(2,'0')+'-'+safeName+'.png');
+  const file=path.join(OUT,'hrafn-object-'+String(index+1).padStart(2,'0')+'-'+safeName+'-'+String(Number(p.x||0).toFixed(1))+'-'+String(Number(p.z||0).toFixed(1))+'.png');
   try{
    const cameraState=await page.evaluate(args=>window.__ELSN_TEST__.setCamera(args),camera);
    await page.waitForTimeout(350);
@@ -140,6 +148,8 @@ async function main(){
    report.objectInspectionCaptures.push({index:index+1,file:path.basename(file),bytes:shot.length,name:item.name,role:item.role,classificationConfidence:item.confidence,position:item.position,bounds:item.bounds,meshNames:item.meshNames,materials:item.materials,grounding:item.grounding,camera:cameraState});
   }catch(error){report.objectInspectionCaptures.push({index:index+1,name:item.name,role:item.role,position:item.position,error:String(error?.message||error)});}
  }
+  report.hrafnSceneRoots=settled.hrafnSceneRoots;
+  report.hrafnHutRoots=settled.hrafnHutRoots;
   report.navigationPointAudit=settled.navigationPointAudit;
   report.projectedStructuralCandidates=settled.projectedCandidates;
   report.inventoryStructuralCandidates=settled.inventoryStructuralCandidates;
@@ -149,29 +159,28 @@ async function main(){
    const screenshot=await phase('capture portrait player view without WebGL canvas readback',()=>page.screenshot({path:screenshotFile,timeout:20000,animations:'disabled'}));
    report.screenshot={file:path.basename(screenshotFile),bytes:screenshot.length,method:'playwright-page-screenshot',view:'default-new-campaign-player-camera'};
   }catch(error){report.screenshotError=String(error?.message||error);}
-  // Capture the same Cuervo hut cluster from three offshore camera positions. These are
-  // diagnostic-only camera overrides in the disposable ?test=1 renderer; no world entity moves.
-  const cuervoHuts=(settled.houses||[]).filter(item=>item.nearestIslandIndex===0);
-  const targetX=25.0,targetZ=-5.0;
+  // Recreate the user's reported Hrafn approach from the south shore and from offshore.
+  // Cameras change only inside the disposable test renderer; they never move structures or save data.
+  const hrafnHuts=(settled.houses||[]).filter(item=>/Hrafn/i.test(item.village||''));
+  const targetX=28,targetZ=143;
   const seaViews=[
-   {id:'west-sea',x:-65,y:11,z:-5},
-   {id:'south-sea',x:25,y:12,z:72},
-   {id:'east-sea',x:88,y:11,z:-5},
-   {id:'north-sea',x:25,y:12,z:-78}
+   {id:'hrafn-south-shore',x:23.3,y:4.5,z:173.7},
+   {id:'hrafn-offshore-z236',x:28,y:5.5,z:236.3},
+   {id:'hrafn-mid-bay-z254',x:28,y:6.5,z:254.4}
   ];
-  report.coastalStructureViews=[];
+  report.hrafnApproachViews=[];
   for(const view of seaViews){
-   const file=path.join(OUT,'cuervo-huts-'+view.id+'.png');
+   const file=path.join(OUT,'hrafn-approach-'+view.id+'.png');
    try{
     const camera=await page.evaluate(({x,y,z,targetX,targetZ})=>{
-     const targetY=2.5;
+     const targetY=1.6;
      window.__ELSN_TEST__.setCamera({x,y,z,targetX,targetY,targetZ});
      return window.__ELSN_TEST__.sceneViewSnapshot();
     },{...view,targetX,targetZ});
-    await page.waitForTimeout(450);
+    await page.waitForTimeout(350);
     const shot=await page.screenshot({path:file,timeout:20000,animations:'disabled'});
-    report.coastalStructureViews.push({id:view.id,file:path.basename(file),bytes:shot.length,camera,target:{x:targetX,y:2.5,z:targetZ},hutCount:cuervoHuts.length});
-   }catch(error){report.coastalStructureViews.push({id:view.id,error:String(error?.message||error)});}
+    report.hrafnApproachViews.push({id:view.id,file:path.basename(file),bytes:shot.length,camera,target:{x:targetX,y:1.6,z:targetZ},hutCount:hrafnHuts.length});
+   }catch(error){report.hrafnApproachViews.push({id:view.id,error:String(error?.message||error)});}
   }
   const initialRows=baseline.structures.structures||[];
   const initialUnsafe=initialRows.filter(item=>item.safe!==true);
