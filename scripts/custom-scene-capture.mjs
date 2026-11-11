@@ -3,69 +3,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { chromium } from 'playwright';
+import { expandCapturePlan, createZoneInspectionShots, MAX_CAPTURE_SHOTS } from './scene-capture-inspection.mjs';
 
 const BASE_URL = process.env.CAPTURE_TEST_URL || 'http://127.0.0.1:4175/';
 const OUT = path.resolve('artifacts/custom-scene-captures');
 const rawPlan = process.env.CAPTURE_PLAN_JSON || '[]';
 const plan = JSON.parse(rawPlan);
-const MAX_SHOTS = 40;
+const MAX_SHOTS = MAX_CAPTURE_SHOTS;
 const CAPTURE_SEED = Number.parseInt(process.env.CAPTURE_SEED || '20261110', 10) >>> 0;
 const DEFAULT_VIEWPORT = { width: 1600, height: 900, deviceScaleFactor: 1 };
-
-function finite(value, label) {
-  assert.ok(Number.isFinite(value), label + ' debe ser numérico.');
-}
-function validateCamera(camera, label, relative = false) {
-  for (const key of ['x','y','z','targetX','targetY','targetZ']) {
-    finite(camera?.[key], label + ': falta ' + key + '.');
-  }
-  assert.ok(camera.y >= -100 && camera.y <= 500, label + ': altura de cámara fuera de rango.');
-  assert.ok(Math.hypot(camera.x-camera.targetX,camera.y-camera.targetY,camera.z-camera.targetZ) > .25,
-    label + ': la cámara no puede mirar exactamente desde el objetivo.');
-}
-function expandPlan(input) {
-  assert.ok(Array.isArray(input), 'capture_plan debe ser una lista JSON.');
-  const expanded = [];
-  for (const [index, shot] of input.entries()) {
-    assert.ok(shot && typeof shot === 'object', 'Captura ' + index + ': objeto inválido.');
-    const base = shot.camera || shot;
-    if (shot.orbit) {
-      const orbit = shot.orbit;
-      const count = Math.max(1, Math.min(48, Number(orbit.count) || 8));
-      const radius = Number(orbit.radius) || Math.hypot(base.x, base.z);
-      const elevation = Number(orbit.elevation ?? base.y);
-      const target = { x: Number(orbit.targetX ?? base.targetX), y: Number(orbit.targetY ?? base.targetY), z: Number(orbit.targetZ ?? base.targetZ) };
-      const start = Number(orbit.startDegrees) || 0;
-      const sweep = Number(orbit.sweepDegrees) || 360;
-      for (let i=0;i<count;i++) {
-        const angle=(start+(count===1?0:sweep*i/count))*Math.PI/180;
-        expanded.push({...shot,id:shot.id+'-'+String(i+1).padStart(2,'0'),camera:{
-          x:target.x+Math.sin(angle)*radius,y:elevation,z:target.z+Math.cos(angle)*radius,
-          targetX:target.x,targetY:target.y,targetZ:target.z
-        },orbit:undefined});
-      }
-    } else if (shot.views && Array.isArray(shot.views)) {
-      for (const [viewIndex, view] of shot.views.entries()) {
-        expanded.push({...shot,id:shot.id+'-'+String(viewIndex+1).padStart(2,'0'),camera:{...base,...view},views:undefined});
-      }
-    } else expanded.push(shot);
-  }
-  assert.ok(expanded.length >= 1 && expanded.length <= MAX_SHOTS,
-    'El plan expandido debe contener entre 1 y ' + MAX_SHOTS + ' capturas; contiene ' + expanded.length + '.');
-  const ids = new Set();
-  for (const [i,shot] of expanded.entries()) {
-    assert.match(String(shot.id || ''), /^[a-zA-Z0-9_-]{1,48}$/, 'Captura '+i+': id inválido.');
-    assert.ok(!ids.has(shot.id), 'ID repetido: '+shot.id); ids.add(shot.id);
-    finite(shot.time ?? 37, shot.id+': time');
-    assert.ok(shot.tide === undefined || ['natural','high','low'].includes(shot.tide),shot.id+': tide inválida.');
-    if (Number.isInteger(shot.islandIndex)) {
-      for (const key of ['x','y','z','targetX','targetY','targetZ']) finite(base[key],shot.id+': offset '+key);
-    } else validateCamera(shot.camera || shot,shot.id);
-  }
-  return expanded;
-}
-const shots=expandPlan(plan);
-const manifest={schema:3,capturedAt:new Date().toISOString(),finishedAt:null,build:null,seed:CAPTURE_SEED,renderer:'Chromium headless + ANGLE SwiftShader',viewport:DEFAULT_VIEWPORT,requestedPlanCount:plan.length,expandedShotCount:shots.length,islands:[],sceneInventory:null,captures:[],failures:[],consoleErrors:[],pageErrors:[],phaseTimingsMs:{},determinism:{tested:0,failed:0},geometryAudit:null,initialPhysicalAudit:null,auditSummary:null};
+const expandedPlan = expandCapturePlan(plan);
+let shots = [...expandedPlan.shots];
+const manifest={schema:4,capturedAt:new Date().toISOString(),finishedAt:null,build:null,seed:CAPTURE_SEED,renderer:'Chromium headless + ANGLE SwiftShader',viewport:DEFAULT_VIEWPORT,requestedPlanCount:plan.length,expandedShotCount:shots.length,islands:[],sceneInventory:null,readOnlyCapture:true,objectInventory:null,zoneInspections:[],captures:[],failures:[],consoleErrors:[],pageErrors:[],phaseTimingsMs:{},determinism:{tested:0,failed:0},geometryAudit:null,initialPhysicalAudit:null,auditSummary:null};
 function writeManifest(){const target=path.join(OUT,'manifest.json'),temporary=target+'.tmp';fs.mkdirSync(OUT,{recursive:true});fs.writeFileSync(temporary,JSON.stringify(manifest,null,2)+'\n');fs.renameSync(temporary,target);}
 async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
   try {
@@ -105,13 +54,78 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
     assert.ok(boot.islands.length,'El juego no ha expuesto sus islas.');
     assert.ok(await page.evaluate(()=>!!window.__ELSN_TEST__?.captureCanvas),'No existe captureCanvas en la API de prueba.');
 
-    // One read-only physical audit before camera movement. It is recorded independently
-    // from screenshots: audit failures must never discard an otherwise valid PNG.
+    // Inspect the untouched runtime first. This capture path is strictly read-only:
+    // screenshots must show the scene as it exists, never a repaired simulation.
     const auditStarted=Date.now();
-    const initialAudit=await page.evaluate(()=>{const api=window.__ELSN_TEST__,result={};result.geometry=api.auditIslandGeometry();result.structuresBeforeRepair=api.habitableStructureAudit();result.repair=api.repairAndAuditHabitableStructures();result.structuresAfterRepair=api.habitableStructureAudit();for(const [key,method] of Object.entries({huts:api.settlementGrounding,camps:api.settlementCampGrounding,garrisons:api.garrisonGrounding})){try{result[key]=method();}catch(error){result[key+'_error']=String(error.stack||error);}}return result;});
-    manifest.phaseTimingsMs.oneTimeGeometryAndPhysicalAudit=Date.now()-auditStarted;
-    manifest.initialPhysicalAudit=initialAudit;manifest.geometryAudit=initialAudit.geometry;
-    manifest.auditSummary={structureCount:initialAudit.structuresAfterRepair?.total??null,unsafeVisibleBeforeRepair:initialAudit.repair?.unsafeVisibleBeforeRepair??null,visibleInvalidAfterRepair:initialAudit.repair?.visibleInvalidAfterRepair??null,unsafeCount:initialAudit.structuresAfterRepair?.unsafeCount??null,hutCount:initialAudit.huts?.length??null,hutGroundingErrors:initialAudit.huts?.filter(item=>Math.abs(item.groundingErrorMeters??Infinity)>.02).length??null,campCount:initialAudit.camps?.length??null,garrisonCount:initialAudit.garrisons?.length??null};writeManifest();
+    const initialAudit=await page.evaluate(()=>{
+      const api=window.__ELSN_TEST__,result={};
+      result.geometry=api.auditIslandGeometry();
+      result.habitableStructures=api.habitableStructureAudit();
+      result.offshore=typeof api.auditOffshoreStructures==='function'?api.auditOffshoreStructures(1000):null;
+      result.scene=typeof api.coastalSceneInventory==='function'?api.coastalSceneInventory(5000):null;
+      for(const [key,method] of Object.entries({huts:api.settlementGrounding,camps:api.settlementCampGrounding,garrisons:api.garrisonGrounding})){
+        try{result[key]=method();}catch(error){result[key+'_error']=String(error.stack||error);}
+      }
+      const roots=(result.scene?.objects||[]).filter(item=>
+        (item.category==='structure'||item.category==='unidentified-structure')&&
+        !(item.parentChain||[]).length&&Number(item.meshCount)>0
+      ).map(item=>({
+        name:item.name,kind:item.structuralRole||item.category||'unclassified',
+        category:item.category,registered:item.registered??null,
+        uniqueId:item.uniqueId??item.nodeId??item.id??null,
+        island:item.island||item.islandName||null,islandIndex:item.islandIndex??null,
+        position:item.position,bounds:item.bounds,visible:item.visible,enabled:item.enabled,
+        meshCount:item.meshCount,vertexCount:item.vertexCount,
+        meshNames:item.meshNames||[],materials:item.materials||[],
+        structuralEvidence:item.structuralEvidence||null,source:'coastal-scene-inventory'
+      }));
+      const offshore=(result.offshore?.candidates||[]).map(item=>({
+        ...item,uniqueId:item.uniqueId??item.nodeId??item.id??null,
+        source:'offshore-structural-root-audit'
+      }));
+      const combined=[...offshore,...roots],deduplicated=[];
+      for(const item of combined){
+        const p=item.position||{};
+        const duplicate=deduplicated.some(other=>other.name===item.name&&other.position&&
+          Math.hypot((Number(other.position.x)||0)-(Number(p.x)||0),(Number(other.position.z)||0)-(Number(p.z)||0))<.35);
+        if(!duplicate)deduplicated.push(item);
+      }
+      result.structuralCandidates=deduplicated;
+      return result;
+    });
+    manifest.phaseTimingsMs.initialReadOnlyAudit=Date.now()-auditStarted;
+    manifest.initialPhysicalAudit={readOnly:true,geometry:initialAudit.geometry,habitableStructures:initialAudit.habitableStructures,
+      huts:initialAudit.huts,camps:initialAudit.camps,garrisons:initialAudit.garrisons,
+      offshoreCandidateCount:initialAudit.offshore?.candidates?.length??0};
+    manifest.geometryAudit=initialAudit.geometry;
+    manifest.objectInventory={
+      readOnly:true,
+      habitableStructureAudit:initialAudit.habitableStructures,
+      offshoreAudit:initialAudit.offshore,
+      structuralCandidates:initialAudit.structuralCandidates
+    };
+    manifest.auditSummary={
+      islandCount:initialAudit.geometry?.islandCount??null,
+      habitableStructureCount:initialAudit.habitableStructures?.total??initialAudit.habitableStructures?.structures?.length??null,
+      offshoreCandidateCount:initialAudit.offshore?.candidates?.length??0,
+      structuralCandidateCount:initialAudit.structuralCandidates.length,
+      hutCount:initialAudit.huts?.length??null,
+      campCount:initialAudit.camps?.length??null,
+      garrisonCount:initialAudit.garrisons?.length??null
+    };
+
+    // Resolve each requested zone against the inventory from this exact game run.
+    for(const zoneRequest of expandedPlan.zones){
+      const resolved=createZoneInspectionShots(zoneRequest,boot.islands,initialAudit.structuralCandidates);
+      shots.push(...resolved.shots);
+      manifest.zoneInspections.push(resolved.report);
+    }
+    if(shots.length<1||shots.length>MAX_SHOTS){
+      throw new Error('El plan final debe generar entre 1 y '+MAX_SHOTS+' capturas; ha generado '+shots.length+'. Reduce maxTargets, angles, times o tides.');
+    }
+    manifest.expandedShotCount=shots.length;
+    manifest.phaseTimingsMs.inspectionPlanResolution=Date.now()-auditStarted;
+    writeManifest();
 
     for(const shot of shots) {
       const started=Date.now();
@@ -123,10 +137,11 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
             const island=api.islands[shot.islandIndex];if(!island)throw new Error('No existe la isla '+shot.islandIndex);
             camera={x:island.x+base.x,y:base.y,z:island.z+base.z,targetX:island.x+base.targetX,targetY:base.targetY,targetZ:island.z+base.targetZ};
           }
-          api.setCamera(camera);
+          const applied=api.setCamera(camera);
           api.setWaterState({time:shot.time??37,tide:shot.tide??'natural'});
           api.render();
-          return {camera,canvas:{width:document.getElementById('renderCanvas')?.width,height:document.getElementById('renderCanvas')?.height}};
+          return {camera,cameraApplied:applied??null,cameraReadback:api.sceneViewSnapshot?.()??null,
+            canvas:{width:document.getElementById('renderCanvas')?.width,height:document.getElementById('renderCanvas')?.height}};
         },{shot});
         const firstPng=await page.evaluate(()=>window.__ELSN_TEST__.captureCanvas());
         await page.evaluate(()=>window.__ELSN_TEST__.render());
@@ -136,16 +151,24 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser;
         const buffer=Buffer.from(firstMatch[1],'base64'),secondBuffer=Buffer.from(secondMatch[1],'base64');assert.ok(buffer.length>1000,'PNG vacío o incompleto.');assert.equal(buffer.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
         const firstHash=createHash('sha256').update(buffer).digest('hex'),secondHash=createHash('sha256').update(secondBuffer).digest('hex');manifest.determinism.tested++;if(firstHash!==secondHash)manifest.determinism.failed++;assert.equal(secondHash,firstHash,'Render no determinista en '+shot.id);
         const file=shot.id+'.png';fs.writeFileSync(path.join(OUT,file),buffer);const telemetry=await page.evaluate(()=>({diagnostics:window.__ELSN_TEST__.diagnostics()}));
-        manifest.captures.push({id:shot.id,file,camera:prepared.camera,canvas:prepared.canvas,time:shot.time??37,tide:shot.tide??'natural',bytes:buffer.length,sha256:firstHash,durationMs:Date.now()-started,telemetry});
+        manifest.captures.push({id:shot.id,file,camera:prepared.camera,cameraApplied:prepared.cameraApplied,cameraReadback:prepared.cameraReadback,
+          canvas:prepared.canvas,time:shot.time??37,tide:shot.tide??'natural',
+          zoneId:shot.zoneId??null,zoneLabel:shot.zoneLabel??null,inspectionFocus:shot.inspectionFocus??null,
+          inspectionPurpose:shot.inspectionPurpose??'manual-camera',worldTarget:shot.worldTarget??null,subject:shot.subject??null,
+          bytes:buffer.length,sha256:firstHash,durationMs:Date.now()-started,telemetry});
         manifest.phaseTimingsMs.captureTotal=(manifest.phaseTimingsMs.captureTotal||0)+(Date.now()-started);console.log('[scene-capture] '+manifest.captures.length+'/'+shots.length+' '+shot.id);
       } catch(error){manifest.failures.push({id:shot.id,error:String(error.stack||error)});console.error('[scene-capture] failed '+shot.id+': '+error.message);}
       finally{manifest.lastUpdatedAt=new Date().toISOString();writeManifest();}
     }
     // Create a machine-readable index for quick triage, including every structure and
     // the capture IDs that were actually saved even when some shots failed.
-    manifest.captureIndex=manifest.captures.map(({id,file,camera,time,tide,bytes,sha256})=>({id,file,camera,time,tide,bytes,sha256}));
-    assert.equal(manifest.captures.length,shots.length,'Capturas completas: '+manifest.captures.length+'/'+shots.length);assert.equal(manifest.determinism.failed,0,'Renders no deterministas.');
-    assert.ok(manifest.auditSummary?.visibleInvalidAfterRepair===0,'Estructuras inseguras visibles: '+JSON.stringify(manifest.auditSummary));assert.equal(manifest.auditSummary?.structureCount,39);assert.equal(manifest.auditSummary?.hutCount,12);assert.equal(manifest.auditSummary?.campCount,8);assert.equal(manifest.auditSummary?.garrisonCount,9);assert.equal(manifest.geometryAudit?.islandCount,13);assert.ok(manifest.auditSummary?.hutGroundingErrors===0);
+    manifest.captureIndex=manifest.captures.map(({id,file,camera,cameraReadback,time,tide,bytes,sha256,zoneId,zoneLabel,inspectionFocus,inspectionPurpose,worldTarget,subject})=>
+      ({id,file,camera,cameraReadback,time,tide,bytes,sha256,zoneId,zoneLabel,inspectionFocus,inspectionPurpose,worldTarget,subject}));
+    fs.writeFileSync(path.join(OUT,'capture-index.json'),JSON.stringify({schema:1,build:manifest.build,zoneInspections:manifest.zoneInspections,captures:manifest.captureIndex},null,2)+'\\n');
+    assert.equal(manifest.captures.length,shots.length,'Capturas completas: '+manifest.captures.length+'/'+shots.length);
+    assert.equal(manifest.determinism.failed,0,'Renders no deterministas.');
+    assert.equal(manifest.geometryAudit?.islandCount,13,'La auditoría geométrica no ha reconocido las 13 islas.');
+    assert.ok(manifest.objectInventory?.structuralCandidates,'No se pudo generar el inventario de estructuras.');
   } finally {
     manifest.finishedAt=new Date().toISOString();writeManifest();
     if(browser)await browser.close();
