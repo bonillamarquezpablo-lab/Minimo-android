@@ -21,7 +21,7 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
 }
 assert.equal(shellVersion,expectedVersion,"The service-worker cache must be synchronized with the packaged release.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.279"\)/,"The build must promote every visible source version to 0.6.280.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.280"\)/,"The build must promote every visible source version to 0.6.280.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2.10:(isTouchDevice?1.80:1.85)"),"High-headroom touch devices must start with a sharper quality render scale.");
 assert.ok(buildSite.includes("qualityDprStableSamples>=3") && buildSite.includes("qualityDprSlowSamples>=1"),"Resolution must react quickly to drops and recover gradually.");
 assert.ok(buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"Adaptive resolution must be applied through Babylon hardware scaling.");
@@ -31,7 +31,7 @@ assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/loa
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
 assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.includes("thinInstanceBatch"),"Water reflections must filter non-essential foliage and instance batches.");
 assert.ok(buildSite.includes("renderPipeline.fxaaEnabled=!highHeadroomQualityMobile"),"Flagship mobile quality must avoid FXAA softness when native MSAA is used.");
-assert.match(buildSite,/game_version = "0\.6\.279"/,"The build must validate and package 0.6.280.");
+assert.match(buildSite,/game_version = "0\.6\.280"/,"The build must validate and package 0.6.280.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
