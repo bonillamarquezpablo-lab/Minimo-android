@@ -6,7 +6,8 @@ assert.match(html,/function loadWildlifeModels\(\)\s*\{\s*if\(!wildlifeModelsLoa
 assert.match(html,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/);
 assert.match(html,/const npcStartupPromise=coastalReferenceMode\?Promise\.resolve\(0\):startNpcHumanModels\(\)/);
 assert.match(html,/if\(!requiredReady\)throw new Error\('NPC obligatorios de la isla inicial incompletos/);
-assert.match(html,/await loadWildlifeModels\(\)/);
+assert.match(html,/const faunaTasks=\[loadWildlifeModels\(\)\]/);
+assert.match(html,/faunaTasks\.push\(loadRiggedCoastalGulls\(\)\)/);
 assert.match(html,/const assetUrl=urls\[index\],controller=new AbortController\(\),timeout=setTimeout\(\(\)=>controller\.abort\(\),30000\)/);
 assert.doesNotMatch(html,/const warriorPartsToLoad=isPerformanceMode\s*\?\s*\[\]/);
 assert.doesNotMatch(html,/const civilianPartsToLoad=isPerformanceMode\s*\?\s*\[\]/);
