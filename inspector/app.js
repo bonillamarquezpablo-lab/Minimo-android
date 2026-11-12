@@ -136,14 +136,20 @@
       }
       const manifest=await fetchProgress(run);
       progressData=manifest;
-      let jobs={jobs:[]};
-      // Progress manifests are published as static JSON every phase transition; only
-      // ask the Actions API for step-level detail when the runner has not published one.
-      const needsJobFallback=!manifest?.phases?.length;
-      const jobsInterval=currentToken?20000:150000;
-      if(needsJobFallback&&(force||now-lastJobsFetchAt>=jobsInterval)){
-        jobs=await apiGet(API+'/actions/runs/'+run.id+'/jobs?per_page=100').catch(()=>({jobs:[]}));
-        lastJobsFetchAt=Date.now();jobsData=jobs;jobsRunId=run.id;
+      let jobs={jobs:[]},jobsError=null;
+      // A pull_request run cannot safely publish a progress manifest with a write token.
+      // Poll the public Actions jobs endpoint frequently instead of leaving a stale
+      // "Preparación" card on screen for minutes.
+      const jobsInterval=run.status==='in_progress'?12000:30000;
+      const shouldRefreshJobs=force||jobsRunId!==run.id||now-lastJobsFetchAt>=jobsInterval;
+      if(shouldRefreshJobs){
+        try{
+          jobs=await apiGet(API+'/actions/runs/'+run.id+'/jobs?per_page=100');
+          jobsData=jobs;jobsRunId=run.id;lastJobsFetchAt=Date.now();
+        }catch(error){
+          jobsError=error;
+          if(jobsData&&jobsRunId===run.id)jobs=jobsData;
+        }
       }else if(jobsData&&jobsRunId===run.id){
         jobs=jobsData;
       }
@@ -155,13 +161,22 @@
       renderTelemetry(manifest);
       const latest=jobs.jobs?.find(job=>job.status==='in_progress');
       const current=latest?.steps?.find(step=>step.status==='in_progress');
-      $('runPhaseDescription').textContent=phases.length
-        ?$('runPhaseDescription').textContent
-        :current?'Fase activa: '+current.name+' · El inspector está trabajando dentro del navegador de pruebas.'
-        :run.status==='queued'?'En cola de GitHub Actions. El runner aún no ha comenzado; el panel seguirá comprobando la asignación.'
-        :run.status==='in_progress'?'El runner está iniciado, pero todavía no ha publicado una fase. Última actualización: '+niceDate(run.updated_at)+'.'
-        :'Esperando a que GitHub asigne un runner y publique los primeros pasos.';
-      $('updatedAt').textContent='Datos actualizados '+new Date().toLocaleTimeString('es-ES')+' · progreso en vivo';
+      if(!phases.length&&!allSteps.length&&run.status==='in_progress'){
+        $('runPhaseTitle').textContent='Runner activo · detalle pendiente';
+        $('runPhaseDescription').textContent=jobsError
+          ?'GitHub no ha permitido leer los pasos ('+jobsError.message+'). La ejecución sigue marcada como activa; no se inventa un porcentaje.'
+          :'El runner está activo, pero GitHub aún no ha devuelto sus pasos. Se volverán a consultar en 12 segundos.';
+        $('progressValue').textContent='En curso';
+        $('overviewProgress').textContent='En curso';
+        $('progressCircle').style.strokeDashoffset='141.4';
+        $('progressTrack').style.width='indeterminate';
+        $('stepList').innerHTML='<div class="empty-state"><div><strong>Auditoría en ejecución</strong>Esperando los pasos reales de GitHub Actions. No se muestra un 0% engañoso ni se inventan fases.</div></div>';
+      }else if(!phases.length&&current){
+        $('runPhaseDescription').textContent='Paso activo: '+current.name+'. GitHub Actions todavía no expone las subfases internas del proceso.';
+      }else if(!phases.length&&run.status==='queued'){
+        $('runPhaseDescription').textContent='En cola de GitHub Actions. El runner aún no ha comenzado.';
+      }
+      $('updatedAt').textContent='Actualizado '+new Date().toLocaleTimeString('es-ES')+' · '+(phases.length?'telemetría interna':allSteps.length?'pasos de GitHub Actions':'estado de ejecución');
       // The run card links to the workflow directly; no separate artifacts element exists.
       setConnection('GitHub conectado',true);lastError=null;
     }catch(error){
