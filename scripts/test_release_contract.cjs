@@ -21,7 +21,7 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
 }
 assert.equal(shellVersion,expectedVersion,"The service-worker cache must be synchronized with the packaged release.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.288"\)/,"The build must promote every visible source version to 0.6.289.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.289"\)/,"The build must promote every visible source version to 0.6.289.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr"),"The flagship profile must initialise adaptive scaling from the actual native render scale.");
 assert.ok(buildSite.includes("qualityDprFloor=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.50:1.0):1.15)") && buildSite.includes("qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.45:1.70):1.85)"),"Native render scale must stay inside a device-aware non-blurry quality range.");
 assert.ok(buildSite.includes("qualityDprStableSamples>=4") && buildSite.includes("qualityDprSlowSamples>=1"),"Resolution must react to FPS drops and recover only after stable frame pacing.");
@@ -31,7 +31,7 @@ assert.ok(buildSite.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"'
 assert.ok(buildSite.includes('"loaderVersion": BABYLON_VERSION') && buildSite.includes('"defaultBackend": "WebGL2-preferred"'),"The asset manifest must record the exact Babylon/glTF loader pair and validated backend.");
 assert.ok(buildSite.includes("new B.EngineInstrumentation(engine)") && buildSite.includes("new B.SceneInstrumentation(scene)"),"The build must expose Babylon-native profiling only to diagnostics.");
 assert.ok(buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"Adaptive resolution must be applied through Babylon hardware scaling.");
-assert.match(buildSite,/BABYLON_VERSION = "8\.2\.2"/,"The packaged engine must include the DynamicTexture null-update fix.");
+assert.match(buildSite,/BABYLON_VERSION = "9\.35\.0"/,"The packaged engine must include the DynamicTexture null-update fix.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/babylon.js"'),"The engine URL must use the pinned Babylon version.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/loaders/babylonjs.loaders.min.js"'),"The glTF loader must match the engine version.");
 
@@ -41,7 +41,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.match(buildSite,/game_version = "0\.6\.288"/,"The build must validate and package 0.6.289.");
+assert.match(buildSite,/game_version = "0\.6\.289"/,"The build must validate and package 0.6.289.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");

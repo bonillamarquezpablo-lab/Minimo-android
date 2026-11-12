@@ -116,7 +116,7 @@ assert.match(captureRunner, /assert\.equal\(boot\.build, EXPECTED_BUILD,/,
   'The coast capture must validate against the release validator instead of a hard-coded historical version.');
 assert.match(captureRunner, /const EXPECTED_BUILD = process\.env\.EXPECTED_GAME_VERSION \|\| fs\.readFileSync\('scripts\/validate_release\.py'/,
   'The visual audit must derive its expected release from the active validator.');
-assert.match(validator, /EXPECTED_VERSION = "0\.6\.288"/,
+assert.match(validator, /EXPECTED_VERSION = "0\.6\.289"/,
   'The release validator must target the current 0.6.289 candidate.');
 assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The source HTML remains 0.6.274 and is promoted to 0.6.289 by the release builder.');
 assert.ok(builder.includes('atmosphere-system.js'),'The release builder must package the atmospheric shader module.');
