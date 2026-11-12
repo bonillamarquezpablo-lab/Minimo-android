@@ -17,7 +17,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.274 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
-BABYLON_VERSION = "8.2.2"
+BABYLON_VERSION = "9.35.0"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -1418,6 +1418,14 @@ def main() -> None:
     manifest = {
         "game": "EL SIN NOMBRE",
         "version": game_version,
+        "engine": {
+            "name": "Babylon.js",
+            "version": BABYLON_VERSION,
+            "distribution": "UMD",
+            "loaderVersion": BABYLON_VERSION,
+            "defaultBackend": "WebGL2-preferred",
+            "webGpu": "capability-probed; not enabled for gameplay yet",
+        },
         "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
         "assets": results,
     }
