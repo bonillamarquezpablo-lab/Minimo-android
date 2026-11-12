@@ -118,7 +118,7 @@ self.addEventListener("fetch", event => {
   // Let GitHub Pages serve its own inspector/index.html instead of falling back
   // to the game shell when the game-specific navigation validator rejects it.
   const inspectorPath = new URL("./inspector/", self.registration.scope).pathname;
-  const inspectorRoot = inspectorPath.replace(/\\/+$/, "");
+  const inspectorRoot = inspectorPath.replace(/\/+$/, "");
   if (url.pathname === inspectorRoot || url.pathname.startsWith(inspectorPath)) return;
 
   if (request.mode === "navigate") {
