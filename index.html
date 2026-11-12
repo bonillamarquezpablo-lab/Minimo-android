@@ -7401,6 +7401,7 @@ if(realPlayerArmDebugEnabled){
   if(String(originLabel||'').includes('descarga automática'))return true;
   return saveVikingToWebCache(blob);
  }
+ const VIKING_WEB_CACHE='el-sin-nombre-models-'+(document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown');
  async function readVikingFromWebCache(){
   try{if(!window.caches)return null;const hit=await window.caches.match(VIKING_GLB_URL);return hit?await hit.blob():null;}
   catch(err){console.info('La caché web no está disponible para este HTML local:',err);return null;}
