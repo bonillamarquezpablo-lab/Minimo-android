@@ -21,12 +21,33 @@ function phaseLevel(name){
 }
 const startedAt=new Date().toISOString();
 const started=Date.now();
+const STATUS_TOKEN=process.env.INSPECTOR_GITHUB_TOKEN||'';
+const STATUS_REPOSITORY=process.env.GITHUB_REPOSITORY||'';
+const STATUS_RUN_ID=process.env.GITHUB_RUN_ID||'';
+const STATUS_BRANCH=process.env.INSPECTOR_STATUS_BRANCH||'inspector-status';
+let progressQueue=Promise.resolve();
+let statusSha=null;
+function queueProgressPublish(){
+  if(!STATUS_TOKEN||!STATUS_REPOSITORY||!STATUS_RUN_ID)return;
+  progressQueue=progressQueue.then(async()=>{
+    const manifest=readJson(path.join(OUT,'manifest.json'));
+    if(!manifest)return;
+    const endpoint='https://api.github.com/repos/'+STATUS_REPOSITORY+'/contents/runs/'+STATUS_RUN_ID+'.json';
+    const payload={message:'Update inspector progress for run '+STATUS_RUN_ID,content:Buffer.from(JSON.stringify(manifest,null,2)+'\\n').toString('base64'),branch:STATUS_BRANCH};
+    if(statusSha)payload.sha=statusSha;
+    const response=await fetch(endpoint,{method:'PUT',headers:{Accept:'application/vnd.github+json',Authorization:'Bearer '+STATUS_TOKEN,'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!response.ok)throw new Error('GitHub progress update failed: HTTP '+response.status+' '+(await response.text()).slice(0,500));
+    const saved=await response.json();
+    statusSha=saved.content?.sha||null;
+  }).catch(error=>console.error('[INSPECTOR_PROGRESS_PUBLISH_FAILED]',String(error?.message||error)));
+}
 
 function writeJson(file,value){
   fs.mkdirSync(path.dirname(file),{recursive:true});
   const temporary=file+'.tmp';
   fs.writeFileSync(temporary,JSON.stringify(value,null,2)+'\n');
   fs.renameSync(temporary,file);
+  if(file===path.join(OUT,'manifest.json'))queueProgressPublish();
 }
 function readJson(file){
   try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return null;}
@@ -207,6 +228,7 @@ async function main(){
   console.log('[TEXTURE_READINESS_SUMMARY] '+JSON.stringify(texture));
   const failures=phases.filter(row=>row.status!=='passed'&&row.status!=='skipped');
   console.log('\n[UNIFIED_INSPECTOR_RESULT] '+JSON.stringify({verdict:failures.length?'issues-found':'pass',passed:phases.filter(row=>row.status==='passed').length,skipped:phases.filter(row=>row.status==='skipped').length,failed:failures.length,structures:custom?.structures?.length??null,captures:custom?.shots??null}));
+  await progressQueue;
   if(failures.length)process.exitCode=2;
 }
 main().catch(error=>{console.error('[UNIFIED_INSPECTOR_FATAL]',error);process.exitCode=1;});
