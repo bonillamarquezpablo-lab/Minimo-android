@@ -41,6 +41,404 @@
         2.5
       ],
       "includeOverview": true,
+      "includeTopDown": false,
+      "islandIndex": 3,
+      "absolute": true
+    }
+  },
+  {
+    "id": "inspeccion-isla-01",
+    "label": "Isla 1 — inspección estructural",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Isla 1 — construcciones detectadas",
+      "islandIndex": 0,
+      "center": {
+        "x": 0,
+        "y": 2.2,
+        "z": 0
+      },
+      "radiusMeters": 24,
+      "focus": "structures",
+      "maxTargets": 1,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        45,
+        225,
+        315,
+        135
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
+      "includeTopDown": false
+    }
+  },
+  {
+    "id": "inspeccion-isla-02",
+    "label": "Isla 2 — inspección estructural",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Isla 2 — construcciones detectadas",
+      "islandIndex": 1,
+      "center": {
+        "x": 0,
+        "y": 2.2,
+        "z": 0
+      },
+      "radiusMeters": 24,
+      "focus": "structures",
+      "maxTargets": 1,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        45,
+        225,
+        315,
+        135
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
+      "includeTopDown": false
+    }
+  },
+  {
+    "id": "inspeccion-isla-03",
+    "label": "Isla 3 — inspección estructural",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Isla 3 — construcciones detectadas",
+      "islandIndex": 2,
+      "center": {
+        "x": 0,
+        "y": 2.2,
+        "z": 0
+      },
+      "radiusMeters": 24,
+      "focus": "structures",
+      "maxTargets": 1,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        45,
+        225,
+        315,
+        135
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
+      "includeTopDown": false
+    }
+  },
+  {
+    "id": "inspeccion-isla-05",
+    "label": "Isla 5 — inspección estructural",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Isla 5 — construcciones detectadas",
+      "islandIndex": 4,
+      "center": {
+        "x": 0,
+        "y": 2.2,
+        "z": 0
+      },
+      "radiusMeters": 24,
+      "focus": "structures",
+      "maxTargets": 1,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        45,
+        225,
+        315,
+        135
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
+      "includeTopDown": false
+    }
+  },
+  {
+    "id": "inspeccion-isla-06",
+    "label": "Isla 6 — inspección estructural",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Isla 6 — construcciones detectadas",
+      "islandIndex": 5,
+      "center": {
+        "x": 0,
+        "y": 2.2,
+        "z": 0
+      },
+      "radiusMeters": 24,
+      "focus": "structures",
+      "maxTargets": 1,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        45,
+        225,
+        315,
+        135
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
+      "includeTopDown": false
+    }
+  },
+  {
+    "id": "inspeccion-isla-07",
+    "label": "Isla 7 — inspección estructural",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Isla 7 — construcciones detectadas",
+      "islandIndex": 6,
+      "center": {
+        "x": 0,
+        "y": 2.2,
+        "z": 0
+      },
+      "radiusMeters": 24,
+      "focus": "structures",
+      "maxTargets": 1,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        45,
+        225,
+        315,
+        135
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
+      "includeTopDown": false
+    }
+  },
+  {
+    "id": "inspeccion-isla-08",
+    "label": "Isla 8 — inspección estructural",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Isla 8 — construcciones detectadas",
+      "islandIndex": 7,
+      "center": {
+        "x": 0,
+        "y": 2.2,
+        "z": 0
+      },
+      "radiusMeters": 24,
+      "focus": "structures",
+      "maxTargets": 1,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        45,
+        225,
+        315,
+        135
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
+      "includeTopDown": false
+    }
+  },
+  {
+    "id": "inspeccion-isla-09",
+    "label": "Isla 9 — inspección estructural",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Isla 9 — construcciones detectadas",
+      "islandIndex": 8,
+      "center": {
+        "x": 0,
+        "y": 2.2,
+        "z": 0
+      },
+      "radiusMeters": 24,
+      "focus": "structures",
+      "maxTargets": 1,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        45,
+        225,
+        315,
+        135
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
+      "includeTopDown": false
+    }
+  },
+  {
+    "id": "inspeccion-isla-10",
+    "label": "Isla 10 — inspección estructural",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Isla 10 — construcciones detectadas",
+      "islandIndex": 9,
+      "center": {
+        "x": 0,
+        "y": 2.2,
+        "z": 0
+      },
+      "radiusMeters": 24,
+      "focus": "structures",
+      "maxTargets": 1,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        45,
+        225,
+        315,
+        135
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
+      "includeTopDown": false
+    }
+  },
+  {
+    "id": "inspeccion-isla-11",
+    "label": "Isla 11 — inspección estructural",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Isla 11 — construcciones detectadas",
+      "islandIndex": 10,
+      "center": {
+        "x": 0,
+        "y": 2.2,
+        "z": 0
+      },
+      "radiusMeters": 24,
+      "focus": "structures",
+      "maxTargets": 1,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        45,
+        225,
+        315,
+        135
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
+      "includeTopDown": false
+    }
+  },
+  {
+    "id": "inspeccion-isla-12",
+    "label": "Isla 12 — inspección estructural",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Isla 12 — construcciones detectadas",
+      "islandIndex": 11,
+      "center": {
+        "x": 0,
+        "y": 2.2,
+        "z": 0
+      },
+      "radiusMeters": 24,
+      "focus": "structures",
+      "maxTargets": 1,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        45,
+        225,
+        315,
+        135
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
+      "includeTopDown": false
+    }
+  },
+  {
+    "id": "inspeccion-isla-13",
+    "label": "Isla 13 — inspección estructural",
+    "time": 37,
+    "tide": "natural",
+    "zone": {
+      "label": "Isla 13 — construcciones detectadas",
+      "islandIndex": 12,
+      "center": {
+        "x": 0,
+        "y": 2.2,
+        "z": 0
+      },
+      "radiusMeters": 24,
+      "focus": "structures",
+      "maxTargets": 1,
+      "cameraDistanceMeters": 9,
+      "angles": [
+        45,
+        225,
+        315,
+        135
+      ],
+      "times": [
+        37
+      ],
+      "tides": [
+        "natural"
+      ],
+      "includeOverview": true,
       "includeTopDown": false
     }
   }
