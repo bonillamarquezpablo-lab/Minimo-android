@@ -17,9 +17,13 @@
       "cameraDistanceMeters": 9,
       "angles": [
         0,
+        45,
         90,
+        135,
         180,
-        270
+        225,
+        270,
+        315
       ],
       "times": [
         37
