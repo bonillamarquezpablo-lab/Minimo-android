@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main, feature/unified-atmosphere-system, test/coastal-reference-0.6.272]
+    branches: [main, feature/unified-atmosphere-system, test/coastal-reference-0.6.272, fix/graphics-quality-validation-0.6.277]
   workflow_dispatch:
     inputs:
       inspection_level:
