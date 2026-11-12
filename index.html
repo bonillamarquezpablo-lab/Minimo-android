@@ -6196,6 +6196,7 @@ void main(void){
   return enemyHumanLoadPromise;
  }
  async function importEnemyHumanFile(file){
+  if(startupAssetsReady||gameStarted)throw new Error('No se permiten importaciones GLB después de entrar en la partida.');
   if(!file||!file.name.toLowerCase().endsWith('.glb'))throw new Error('Selecciona un archivo GLB de caballero enemigo.');
   if(/viking|protagonista|player/i.test(file.name))throw new Error('Ese archivo es el vikingo del protagonista; no se permite usarlo como guerrero.');
   if(!await isValidGLB(file))throw new Error('El archivo seleccionado no es un GLB válido de caballero enemigo.');
@@ -6218,6 +6219,7 @@ void main(void){
   });
  }
  async function importCivilianHumanFile(file){
+  if(startupAssetsReady||gameStarted)throw new Error('No se permiten importaciones GLB después de entrar en la partida.');
   if(!file||!String(file.name||'').toLowerCase().endsWith('.glb'))throw new Error('Selecciona el archivo man-base-character-rigged.glb.');
   if(!await isValidGLB(file))throw new Error('El archivo seleccionado no es un GLB válido (debe superar 500 KB y empezar por glTF).');
   if(playerHumanBlob&&await sameBlobBytes(file,playerHumanBlob))throw new Error('Ese archivo coincide con el protagonista; selecciona el Man Base Mesh de aldeanos.');
@@ -7502,6 +7504,7 @@ if(realPlayerArmDebugEnabled){
   setModelStatus(saved?'Vikingo cargado y guardado en este navegador. No tendrás que buscar el GLB en las próximas aperturas, si Chrome conserva este origen.':'Vikingo cargado, pero Chrome no permite guardar datos para este archivo local. Se intentará de nuevo la descarga automática al abrir.',true);
  }
  async function loadHumanViking(file=null){
+  if(startupAssetsReady||gameStarted)throw new Error('La importación de personajes está cerrada después de entrar en la partida.');
   if(realPlayerBusy||realPlayerReady)return;
   realPlayerBusy=true;setModelStatus(file?'Importando el GLB y guardándolo…':'Buscando el vikingo guardado en este navegador…',true);
   try{
