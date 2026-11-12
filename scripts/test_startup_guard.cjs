@@ -9,6 +9,19 @@ const ready=html.indexOf('startupAssetsReady=true;',start);
 assert.ok(start>=0&&ready>start,'La barrera de carga debe preceder a startupAssetsReady.');
 const barrier=html.slice(start,ready);
 
+// Shared startup state must be initialized before diagnostic panels and GLB loaders can read it.
+const startupStateDeclaration='let onShip=false,gameStarted=false,startupAssetsReady=false;';
+const startupStatePosition=html.indexOf(startupStateDeclaration);
+assert.ok(startupStatePosition>=0&&startupStatePosition<html.indexOf('function getWaterCoastDiagnostics()'),
+  'onShip must be initialized before the first coast diagnostics refresh.');
+assert.ok(startupStatePosition<html.indexOf('async function loadHumanViking(file=null)'),
+  'gameStarted/startupAssetsReady must be initialized before the protagonist loader runs.');
+assert.doesNotMatch(html,/let health=100,[^\\n]*onShip=false/,
+  'onShip must not be redeclared later in the game-state declaration.');
+assert.doesNotMatch(html,/let gameStarted=false/,'gameStarted must have a single early initialization.');
+assert.doesNotMatch(html,/firstFrameRendered=false,startupAssetsReady=false/,
+  'startupAssetsReady must not be redeclared after the protagonist loader.');
+
 for(const marker of [
   'const npcStartupPromise=coastalReferenceMode?Promise.resolve(0):startNpcHumanModels();',
   'await Promise.all([playerHumanLoadPromise,npcStartupPromise])',
