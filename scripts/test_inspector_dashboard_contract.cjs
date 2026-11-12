@@ -25,6 +25,7 @@ for(const marker of ['@media(max-width:720px)','compare-stage','radar-map','metr
 assert.ok(runner.includes('publishComparisonPreviews'),'Unified inspector must publish web-readable A/B previews.');
 assert.ok(runner.includes('m.islands||[]'),'The 13-island inventory must be included in the published run manifest.');
 assert.ok(runner.includes('m.habitableStructures||[]'),'The radar needs measured structure grounding details.');
+assert.ok(runner.includes('m.initialPhysicalAudit?.structuralCandidates||[]'),'The radar needs the scene inventory of structural candidates.');
 for(const phase of ['dawn','noon','dusk','midnight'])assert.ok(previewReport.includes('phase_id + "-before.jpg"')||previewReport.includes('phase_id + "-" + label + ".jpg"'),'Missing compressed visual previews.');
 assert.ok(previewReport.includes('preview_width = 480'),'Preview publication must use bounded image sizes.');
 assert.ok(!/gh[pousr]_[A-Za-z0-9_]{20,}/.test(html+app),'No GitHub credential may be embedded in the static dashboard.');
