@@ -24,7 +24,7 @@ assert.match(html,/const warriorPartsToLoad=humanEnemyParts\.filter\(p=>\/\^Vill
 assert.match(html,/const civilianPartsToLoad=humanCivilianParts\.slice\(0,lowMemoryNpcBudget\?1:2\)/);
 assert.match(html,/if\(!requiredReady\)throw new Error\('NPC obligatorios de la isla inicial incompletos/);
 assert.match(html,/RECURSO OBLIGATORIO: escena y shaders · agotado el plazo de 90 segundos/);
-assert.match(html,/Fauna opcional: plazo de 30 segundos agotado/);
+assert.match(html,/timer=setTimeout\(\(\)=>controller\.abort\(\),45000\)/);
 
 // No deferred NPC/fauna task is allowed to be started after the playable screen is released.
 assert.doesNotMatch(html,/setTimeout\(startDeferredWorldModels/);
