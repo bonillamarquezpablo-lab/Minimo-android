@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main, feature/unified-atmosphere-system, test/coastal-reference-0.6.272, fix/graphics-quality-validation-0.6.277]
+    branches: [main, feature/tiered-inspector-levels, feature/unified-atmosphere-system, test/coastal-reference-0.6.272, fix/graphics-quality-validation-0.6.277]
   workflow_dispatch:
     inputs:
       inspection_level:
@@ -117,6 +117,7 @@ jobs:
           node scripts/test_texture_readiness_contract.cjs
           node scripts/test_coastal_structure_grounding_contract.cjs
           node scripts/test_capture_reliability_contract.cjs
+          node scripts/test_inspector_dashboard_contract.cjs
 
       - name: Build the complete game and packaged assets
         run: python scripts/build_site.py
@@ -130,7 +131,7 @@ jobs:
       - name: Start baseline and candidate game servers for the unified inspection
         env:
           INSPECTOR_LEVEL: ${{ inputs.inspection_level || 'deep' }}
-          INSPECTOR_GITHUB_TOKEN: ${{ github.token }}
+          INSPECTOR_GITHUB_TOKEN: ${{ github.event_name == 'workflow_dispatch' && github.token || '' }}
           INSPECTOR_STATUS_BRANCH: inspector-status
         run: |
           if [ "$INSPECTOR_LEVEL" = "deep" ]; then
