@@ -204,7 +204,7 @@ jobs:
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
           CAPTURE_SEED: '20261110'
           INSPECTOR_LEVEL: ${{ inputs.inspection_level || ((github.event_name == 'push' || github.event_name == 'pull_request') && 'deep' || 'complete') }}
-          INSPECTOR_GITHUB_TOKEN: ${{ github.event_name != 'pull_request' && github.token || '' }}
+          INSPECTOR_GITHUB_TOKEN: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.token || '' }}
           INSPECTOR_STATUS_BRANCH: inspector-status
         run: |
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
