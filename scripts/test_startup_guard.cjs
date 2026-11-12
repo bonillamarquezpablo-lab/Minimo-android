@@ -27,7 +27,7 @@ assert.match(html,/timer=setTimeout\(\(\)=>controller\.abort\(\),45000\)/);
 
 // No deferred NPC/fauna task is allowed to be started after the playable screen is released.
 assert.doesNotMatch(html,/setTimeout\(startDeferredWorldModels/);
-assert.match(html,/if\(deferredWorldModelsStarted\|\|coastalReferenceMode\|\|startupAssetsReady\|\|gameStarted\)return/);
+assert.doesNotMatch(html,/function startDeferredWorldModels\(\)/,'No debe existir una ruta de carga diferida de NPC/fauna.');
 assert.match(html,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/);
 
 // Keep the constrained-device budgets and Quality grass behavior.
