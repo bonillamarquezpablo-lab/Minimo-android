@@ -16,7 +16,7 @@ for(const marker of [
 for(const marker of [
  "actions/workflows/'+WORKFLOW+'/dispatches","workflow_dispatch","sessionStorage.setItem",
  "inspector-status","clipPath","differenceImage","medianFps","medianWorldUpdateCpuMs",
- "renderRadar","structuralCandidates","bottomAboveTerrainMeters","habitableStructures",
+ "renderRadar","custom?.structures","bottomAboveTerrainMeters","habitableStructures",
  "Amanecer","Mediodía","Atardecer","Noche"
 ])assert.ok(app.includes(marker),'Missing Inspector Center application feature: '+marker);
 assert.ok(!app.includes('localStorage'),'The dashboard must not persist GitHub tokens in localStorage.');
