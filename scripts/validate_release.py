@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.290"
+EXPECTED_VERSION = "0.6.291"
 
 HTML_PAGES = (
     "index.html",
@@ -270,7 +270,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'16',build:'0.6.290'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'16',build:'0.6.291'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     for marker in (
         "babylonEngineVersion:String(B.Engine.Version||'unknown')",
@@ -323,12 +323,12 @@ def main() -> None:
         fail("Rendimiento debe omitir el pase de reflejos del agua; Calidad lo conserva.")
     if "const oceanWaveNormal=isPerformanceMode&&isConstrainedMobile?null:makeOceanWaveNormal()" not in index_html:
         fail("Los móviles de gama alta conservan el normal de oleaje; solo perfiles limitados mantienen la reserva.")
-    if "try{await playerHumanLoadPromise;" not in index_html or "const backgroundNpcTask=startNpcHumanModels().then(" not in index_html or "const backgroundFaunaTask=Promise.resolve(backgroundNpcTask)" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
-        fail("El vikingo debe tener prioridad y los GLB secundarios/fauna deben cargar en segundo plano, secuencialmente y sin bloquear la entrada.")
+    if "try{await playerHumanLoadPromise;" not in index_html or "function startDeferredWorldModels()" not in index_html or "setTimeout(startDeferredWorldModels,180);" not in index_html or "const backgroundNpcTask=startNpcHumanModels();" not in index_html or "Promise.allSettled([backgroundNpcTask,backgroundFaunaTask]).then(" not in index_html:
+        fail("El vikingo debe tener prioridad y los GLB secundarios/fauna deben continuar en segundo plano después de mostrar el selector.")
     if "await scene.whenReadyAsync();" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html or "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" in index_html:
         fail("La sincronización de escena debe tener tiempo límite y permitir continuar si falla.")
-    if "audioPreloadResult=await startupAudioPreload" not in index_html:
-        fail("Rendimiento debe completar la precarga de audio antes de abrir la intro.")
+    if "audioPreloadResult=await startupAudioPreload" in index_html or "startupAudioPreload.then(" not in index_html:
+        fail("La precarga de audio debe continuar en segundo plano y no bloquear la entrada.")
     if "protagonistStageTimer=setTimeout" in index_html or "await playerHumanLoadPromise" not in index_html:
         fail("El GLB protagonista debe tener un límite de espera y permitir entrar usando su reserva cuando falle.")
     if "sceneWarmupStatus='completed-with-errors'" not in index_html or "blocking:true,warmupFrames:2" not in index_html:
@@ -571,7 +571,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.290" not in index_html or "EL SIN NOMBRE 0.6.290 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.291" not in index_html or "EL SIN NOMBRE 0.6.291 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -691,7 +691,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.290</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.291</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
@@ -741,10 +741,10 @@ def main() -> None:
         fail("La hierba debe seguir el área cercana y no cargar islas hasta desembarcar.")
     if "leavesPerClump=isPerformanceMode?8:10" not in index_html or "const show=batch.islandIndex===visibleGrassIslandIndex;" not in index_html or "const chunkSize=56,grassBatches=new Map();" not in index_html or "const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));" not in index_html:
         fail("La hierba de Calidad debe conservar el detalle y limitar la generación al área local.")
-    if "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
-        fail("La generación inicial de hierba de Calidad debe terminar antes de abrir el juego y mantener la carga secundaria.")
-    if "try{audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" in index_html:
-        fail("La precarga completa de audio debe finalizar antes de abrir la partida en ambos perfiles gráficos.")
+    if "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "recordStartupTask('Hierba 3D inicial de Calidad'" not in index_html or "function startDeferredWorldModels()" not in index_html:
+        fail("La hierba inicial de Calidad debe estar lista antes de entrar y los GLB secundarios deben cargarse después.")
+    if "try{audioPreloadResult=await startupAudioPreload" in index_html or "startupAudioPreload.then(" not in index_html:
+        fail("La precarga de audio debe ser no bloqueante en ambos perfiles gráficos.")
     if "antialias:activeGraphicsProfile!=='performance'" not in index_html or "(isTouchDevice?2048:" not in index_html:
         fail("El perfil de calidad en iPhone debe conservar antialiasing y sombras de alta resolución.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
@@ -759,7 +759,7 @@ def main() -> None:
         fail("El perfil A12 Nacho no aplica los límites de malla de agua y actualización previstos.")
     if "shadowGen=(!isConstrainedMobile||isUltraLowEndMobile||isGalaxyA12LowEndMobile)" not in index_html or "const enterRadius=isConstrainedMobile?58:175" not in index_html:
         fail("El perfil A10/A12 no activa sombras dinámicas acotadas por distancia.")
-    if "const warriorPartsToLoad=isIOSDevice?" not in index_html or "const civilianPartsToLoad=isIOSDevice?" not in index_html or "const backgroundNpcTask=startNpcHumanModels().then(" not in index_html:
+    if "const warriorPartsToLoad=isIOSDevice?" not in index_html or "const civilianPartsToLoad=isIOSDevice?" not in index_html or "function startDeferredWorldModels()" not in index_html or "const backgroundNpcTask=startNpcHumanModels();" not in index_html:
         fail("Los NPC deben conservar sus GLB y terminar de importarse en segundo plano en todos los perfiles.")
     if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
         fail("Falta la distribución uniforme con separación mínima.")
@@ -783,7 +783,7 @@ def main() -> None:
         fail("Falta la importación GLB con esqueleto de ciervo, venado y lobo.")
     if "const animalCount=idx===0?3:(idx<4?1:0);" not in index_html:
         fail("La fauna debe conservar el roster completo en Rendimiento y Calidad.")
-    if "const performanceDensity=isConstrainedMobile?" not in index_html or "leavesPerClump=isPerformanceMode?8:10" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
+    if "const performanceDensity=isConstrainedMobile?" not in index_html or "leavesPerClump=isPerformanceMode?8:10" not in index_html or "audioPreloadResult=await startupAudioPreload" in index_html or "startupAudioPreload.then(" not in index_html or "Promise.allSettled([backgroundNpcTask,backgroundFaunaTask]).then(" not in index_html:
         fail("El ajuste de hierba preexistente de Rendimiento debe mantenerse y la fauna debe cargar después sin recortar su roster.")
     if "const civilianWarmupPromise=civilianTotal?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html:
         fail("La preparación de aldeanos debe compartir la misma promesa de carga y reutilizar el resultado al instanciarlos.")
