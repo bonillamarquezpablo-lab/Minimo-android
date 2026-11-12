@@ -123,8 +123,11 @@ async function main(){
   await runNodePhase('Cimentación, estructuras y simulación de reparación en entorno desechable','scripts/coastal-structure-grounding-smoke.mjs',common,15*60*1000);
   await runNodePhase('Referencias costeras, agua, visibilidad y capturas de entorno','scripts/coastal-reference.mjs',common,35*60*1000);
   await runNodePhase('Inventario completo, identidades y cámaras desde el agua','scripts/custom-scene-capture.mjs',{...common,CAPTURE_PLAN_JSON:PLAN},20*60*1000);
-  await runPythonPhase('Informe visual unificado de estructuras','scripts/create_scene_capture_contact_sheet.py','artifacts/custom-scene-captures');
-  await runPythonPhase('Lámina de referencias costeras','scripts/create_coastal_contact_sheet.py','artifacts/coastal-reference');
+  // These two report builders read separate artifact folders, so they can safely run together.
+  await Promise.all([
+    runPythonPhase('Informe visual unificado de estructuras','scripts/create_scene_capture_contact_sheet.py','artifacts/custom-scene-captures'),
+    runPythonPhase('Lámina de referencias costeras','scripts/create_coastal_contact_sheet.py','artifacts/coastal-reference')
+  ]);
 
   // The A/B comparator is a mandatory phase of this one-entrypoint inspection.
   // Missing baseline/candidate URLs fail the inspector instead of silently skipping the comparison.
