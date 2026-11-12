@@ -10328,7 +10328,6 @@ function villageHostileDefenders(vl){
   try{engine.resize();scene.activeCamera=camera;updateCamera(1/30);drawMap();}catch(introViewError){console.warn('La cámara inicial se ajustará antes de elegir campaña:',introViewError);}
   if(introOverlay){introOverlay.setAttribute('aria-hidden','false');introOverlay.classList.add('open');}
   MenuMusic.start();
-  setTimeout(startDeferredWorldModels,180);
   console.info('Selector de campaña listo.',{partidasDisponibles:getAvailableCampaignSaves().length});
  }
  function resetCampaignForNewGame(){
@@ -12428,24 +12427,7 @@ function update(dt){
   },error=>{recordStartupTask('GLB caballeros y aldeanos',npcLoadStarted,performance.now(),'failed',{message:String(error&&error.message||error)});throw error;});
   return enemyHumanLoadTask;
  }
- let deferredWorldModelsStarted=false;
- function startDeferredWorldModels(){
-  if(deferredWorldModelsStarted||coastalReferenceMode||startupAssetsReady||gameStarted)return;
-  deferredWorldModelsStarted=true;
-  const secondaryModelsStartedAt=performance.now();
-  const backgroundNpcTask=startNpcHumanModels();
-  window.__elSinNombreBackgroundModelTasks={startedAt:new Date().toISOString(),npc:'pending',fauna:'pending',order:'protagonista y escena principal primero; GLB secundarios en segundo plano después de mostrar el selector'};
-  const backgroundFaunaTask=Promise.resolve(backgroundNpcTask).catch(error=>{
-   console.warn('La carga NPC terminó parcialmente; se conservan sus cuerpos de reserva:',error);
-  }).then(()=>{startupTaskCurrent='GLB fauna';return loadWildlifeModels();});
-  Promise.allSettled([backgroundNpcTask,backgroundFaunaTask]).then(results=>{
-   window.__elSinNombreBackgroundModelTasks.completedAt=new Date().toISOString();
-   window.__elSinNombreBackgroundModelTasks.npc=results[0].status;
-   window.__elSinNombreBackgroundModelTasks.fauna=results[1].status;
-   recordStartupTask('GLB secundarios y fauna en segundo plano',secondaryModelsStartedAt,performance.now(),'complete',{npc:results[0].status,fauna:results[1].status});
-   console.info('Carga secundaria completada después de abrir el selector.',window.__elSinNombreBackgroundModelTasks);
-  });
- }
+
  let enemyHumanRetryPromise=null,enemyHumanRetryAttempts=0,enemyHumanRetryScheduled=false;
  function hasMissingEnemyVikings(){
   // Los NPC procedurales son la representación provisional mientras se importan los GLB.
