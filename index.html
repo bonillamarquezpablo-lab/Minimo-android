@@ -9889,7 +9889,7 @@ function createRealWeapon(type='axe'){
    let response,blob;try{
     response=await fetch(gullUrl,{mode:'cors',cache:'force-cache',credentials:'omit',signal:controller.signal});
     if(!response.ok)throw new Error('HTTP '+response.status);
-    blob=await response.blob();
+    blob=await responseBlobWithProgress(response,'Cargando fauna alada · gaviotas',68,70);
    }catch(error){if(error&&error.name==='AbortError')throw new Error('Gaviotas: descarga agotó el plazo de 45 segundos.');throw error;}
    finally{clearTimeout(downloadTimer);}
    if(!(blob&&blob.size>100000))throw new Error('GLB de gaviota vacío o incompleto');
