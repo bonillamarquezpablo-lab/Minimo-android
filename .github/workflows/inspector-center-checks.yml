@@ -21,7 +21,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate GitHub Actions YAML syntax
+        run: ruby -e 'require "yaml"; ARGV.each { |path| YAML.load_file(path, aliases: true); puts "YAML OK: #{path}" }' .github/workflows/coastal-reference.yml .github/workflows/deploy-pages.yml .github/workflows/inspector-center-checks.yml
       - name: Validate inspector runner syntax
         run: node --check scripts/run-unified-inspector.mjs
+      - name: Validate visual comparison contract
+        run: node scripts/test_hrafn_before_after_contract.cjs
       - name: Validate dashboard script and security contract
         run: node scripts/test_inspector_dashboard_contract.cjs
+      - name: Validate workflow and version-routing contracts
+        run: node scripts/test_inspector_workflows_contract.cjs
