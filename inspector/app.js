@@ -84,10 +84,12 @@
     const failed=normalized.filter(p=>p.status==='failed'||p.status==='timed_out').length;
     const running=normalized.find(p=>p.status==='running'||p.status==='in_progress');
     const percent=normalized.length?Math.round(done/normalized.length*100):0;
-    $('progressValue').textContent=percent+'%';
-    $('overviewProgress').textContent=percent+'%';
-    $('progressCircle').style.strokeDashoffset=188.5-(188.5*percent/100);
-    $('progressTrack').style.width=percent+'%';
+    const indeterminate=!!running&&done===0&&normalized.length===1;
+    $('progressValue').textContent=indeterminate?'En curso':percent+'%';
+    $('overviewProgress').textContent=indeterminate?'En curso':percent+'%';
+    $('progressCircle').style.strokeDashoffset=indeterminate?141.4:188.5-(188.5*percent/100);
+    $('progressTrack').style.width=indeterminate?'':percent+'%';
+    $('progressTrack').classList.toggle('indeterminate',indeterminate);
     $('runPhaseTitle').textContent=failed?failed+' fase(s) requieren revisión':running?running.name:done===normalized.length&&normalized.length?'Inspección completada':'Preparando el entorno';
     $('runPhaseDescription').textContent=running?'En curso ahora mismo · '+formatElapsed(Date.now()-Date.parse(running.startedAt||new Date().toISOString())):failed?'El informe conserva los errores concretos para poder corregirlos.':done===normalized.length&&normalized.length?'Todas las fases publicadas han terminado.':'Los pasos del runner ya están disponibles; el detalle de cada fase aparecerá conforme se publique.';
     if(!normalized.length){$('stepList').innerHTML='<div class="empty-state"><div><strong>Preparando la auditoría</strong>GitHub ha aceptado la ejecución. Los pasos aparecerán en cuanto arranque el runner.</div></div>';return;}
@@ -169,7 +171,8 @@
         $('progressValue').textContent='En curso';
         $('overviewProgress').textContent='En curso';
         $('progressCircle').style.strokeDashoffset='141.4';
-        $('progressTrack').style.width='indeterminate';
+        $('progressTrack').style.width='';
+        $('progressTrack').classList.add('indeterminate');
         $('stepList').innerHTML='<div class="empty-state"><div><strong>Auditoría en ejecución</strong>Esperando los pasos reales de GitHub Actions. No se muestra un 0% engañoso ni se inventan fases.</div></div>';
       }else if(!phases.length&&current){
         $('runPhaseDescription').textContent='Paso activo: '+current.name+'. GitHub Actions todavía no expone las subfases internas del proceso.';
