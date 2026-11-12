@@ -17,7 +17,8 @@ for(const marker of [
   'sceneReadyTimeout',
   'RECURSO OBLIGATORIO: efectos de sonido',
   "loadWildlifeModels()",
-  "faunaTasks.push(loadRiggedCoastalGulls())"
+  "faunaTasks.push({name:\'Gaviotas 3D\',promise:loadRiggedCoastalGulls()})",
+  "await Promise.allSettled(faunaTasks.map(task=>task.promise))"
 ]) assert.ok(barrier.includes(marker),'Falta una dependencia de arranque obligatorio/medido: '+marker);
 
 assert.match(html,/throw new Error\('RECURSO OBLIGATORIO: Vikingo protagonista/);
@@ -34,6 +35,7 @@ assert.doesNotMatch(html,/caches\.match\(VIKING_GLB_URL\)/,
 assert.match(html,/function disposeLateGlbResult\(result,model,stage\)/);
 assert.match(html,/pending\.then\(result=>\{if\(timedOut\)disposeLateGlbResult\(result,model,stage\);?\},\(\)=>\{\}\)/,
   'Timed-out SceneLoader imports must be disposed if Babylon resolves them late.');
+assert.match(html,/const faunaResults=await Promise\.allSettled\(faunaTasks\.map\(task=>task\.promise\)\)/, 'Every optional fauna task must settle before player entry, even when one task fails.');
 assert.doesNotMatch(html,/RECURSO OBLIGATORIO: importación de fauna sin finalizar/,
   'Fauna timeout/failure is optional and must not block game entry.');
 assert.match(html,/fauna:isPerformanceMode\?'disabled-performance':'blocking-optional'/);
