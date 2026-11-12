@@ -79,12 +79,12 @@
 
   function renderSteps(phases,jobSteps){
     const normalized=phases?.length?phases.map(p=>({name:p.name||p.script,status:p.status==='completed'?'passed':p.status,startedAt:p.startedAt,durationMs:p.durationMs,error:p.error})):
-      (jobSteps||[]).map(step=>({name:step.name,status:step.status==='completed'?(step.conclusion==='success'?'passed':step.conclusion==='failure'?'failed':step.conclusion==='skipped'?'skipped':'completed'):step.status==='in_progress'?'running':'pending',startedAt:step.started_at,completedAt:step.completed_at,conclusion:step.conclusion}));
+      (jobSteps||[]).map(step=>({name:step.name,status:step.status==='completed'?(step.conclusion==='success'?'passed':step.conclusion==='failure'||step.conclusion==='cancelled'?'failed':step.conclusion==='skipped'?'skipped':'completed'):step.status==='in_progress'?'running':'pending',startedAt:step.started_at,completedAt:step.completed_at,conclusion:step.conclusion}));
     const done=normalized.filter(p=>['passed','completed','skipped'].includes(p.status)).length;
     const failed=normalized.filter(p=>p.status==='failed'||p.status==='timed_out').length;
     const running=normalized.find(p=>p.status==='running'||p.status==='in_progress');
     const percent=normalized.length?Math.round(done/normalized.length*100):0;
-    const indeterminate=!!running&&done===0&&normalized.length===1;
+    const indeterminate=!!running&&(running.name==='Run the single unified inspector'||(done===0&&normalized.length===1));
     $('progressValue').textContent=indeterminate?'En curso':percent+'%';
     $('overviewProgress').textContent=indeterminate?'En curso':percent+'%';
     $('progressCircle').style.strokeDashoffset=indeterminate?141.4:188.5-(188.5*percent/100);
@@ -99,7 +99,7 @@
       return '<div class="step '+(done?'done':bad?'failed':now?'current':'')+'"><span class="step-icon">'+icon+'</span><span class="step-name">'+esc(p.name||'Fase')+(p.error?'<br><small>'+esc(p.error)+'</small>':'')+'</span><span class="step-time">'+(p.durationMs!=null?formatElapsed(p.durationMs):statusName(p.status))+'</span></div>';
     }).join('');
   }
-  function statusName(s){return ({pending:'Pendiente',queued:'En cola',running:'En curso',in_progress:'En curso',skipped:'Omitida'})[s]||s||'Pendiente';}
+  function statusName(s){return ({pending:'Pendiente',queued:'En cola',running:'En curso',in_progress:'En curso',skipped:'Omitida',failed:'Fallida'})[s]||s||'Pendiente';}
 
   async function apiGet(url){
     const headers={Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};if(currentToken)headers.Authorization='Bearer '+currentToken;
