@@ -47,10 +47,11 @@
       "name": "Inventario completo, identidades y cámaras desde el agua",
       "script": "scripts/custom-scene-capture.mjs",
       "startedAt": "2026-11-12T04:03:10.744Z",
-      "status": "running",
-      "durationMs": null,
-      "exitCode": null,
-      "error": null
+      "status": "passed",
+      "durationMs": 298922,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-12T04:08:09.666Z"
     }
   ],
   "finishedAt": null
