@@ -10,11 +10,11 @@ const atmosphere=fs.readFileSync('scripts/nordic/atmosphere-system.js','utf8');
 for(const marker of [
   'highTierGpuMatch=',
   'highHeadroomQualityMobile=',
-  'const fsr1Candidate=false;',
-  'qualityDprFloor=highHeadroomQualityMobile?1.0',
-  'qualityDprCeiling=highHeadroomQualityMobile?1.65',
-  'highHeadroomQualityMobile?1.50:(isTouchDevice?1.25:1.85)',
-  'qualityDprCurrent=qualityDpr',
+  'const fsr1Candidate=!!(!isPerformanceMode&&highHeadroomQualityMobile',
+  'qualityDprFloor=fsr1Candidate ? .72',
+  'qualityDprCeiling=fsr1Candidate ? .92',
+  'highHeadroomQualityMobile?2.45:(isTouchDevice?1.80:1.85)',
+  'qualityDprCurrent=fsr1Candidate?fsr1InputScale:qualityDpr',
   'qualityDprStableSamples>=3',
   'qualityDprSlowSamples>=1',
   'severeFps=targetFrameRate>=87?50:36',
@@ -23,7 +23,7 @@ for(const marker of [
   'let targetFrameRate=60,observedFpsCeiling=60',
   'engine.setHardwareScalingLevel(1/qualityDprCurrent)',
   'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))',
-  'renderPipeline.sharpen.edgeAmount=.20',
+  'renderPipeline.sharpen.edgeAmount=.34',
   'list.length<180',
   'nordicWaterMirror.refreshRate=isTouchDevice?(highHeadroomQualityMobile?30:20):8',
   'shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))',
@@ -35,7 +35,7 @@ for(const marker of [
   'highHeadroomQualityMobile,reportedMemory',
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
-assert.ok(!builder.includes('const fsr1Candidate=!!('), 'The experimental two-pass FSR path must not be activated on mobile.');
+assert.ok(builder.includes('fsr1Candidate=!!(!isPerformanceMode&&highHeadroomQualityMobile'), 'Flagship phones must use the validated high-resolution FSR1 path.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"), 'Native engine antialiasing must remain enabled in Quality.');
 assert.ok(gameSource.includes('targetFps:targetFrameRate') && gameSource.includes('framesOver90BudgetPct'), 'The runtime must report frame-budget diagnostics.');
 assert.ok(gameSource.includes('engine.setHardwareScalingLevel') || builder.includes('engine.setHardwareScalingLevel'), 'Adaptive native render scale must be applied through Babylon.');
@@ -46,4 +46,4 @@ assert.ok(atmosphere.includes("this.quality === 'low' || this.isTouchDevice"), '
 assert.ok(validator.includes('missing_graphics_quality'), 'The release validator must reject missing mobile rendering guardrails.');
 assert.ok(validator.includes('this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;'), 'The atmosphere hardware tier must be checked by release validation.');
 
-console.log('OK graphics quality: native WebGL rendering, 1.50 flagship starting scale, adaptive 1.0–1.65 range, native 2x MSAA, dedicated mobile-high atmosphere, no mobile FSR1/SSAO/god-rays/CSM.');
+console.log('OK graphics quality: native WebGL rendering, 2.45 flagship source scale, adaptive FSR1 input range, native 2x MSAA, dedicated mobile-high atmosphere, no mobile FSR1/SSAO/god-rays/CSM.');
