@@ -6031,8 +6031,8 @@ void main(void){
  async function loadEnemyHumanCharacters(){
   if(enemyHumanLoadPromise)return enemyHumanLoadPromise;
   enemyHumanLoadPromise=(async()=>{
-   // En Rendimiento se conservan todos los NPC y su IA con el modelo procedural ligero;
-   // solo los tres guardianes del campamento y cuatro aldeanos cercanos reciben GLB de alta carga.
+   // Los GLB de la isla inicial se preparan antes de entrar: tres guardianes y dos aldeanos en Calidad;
+   // en A10/A12 se reduce a un guardián y un aldeano para proteger la memoria.
    const lowMemoryNpcBudget=!!(isUltraLowEndMobile||isGalaxyA12LowEndMobile||isGalaxyA12NachoPerformance);
    const warriorPartsToLoad=humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,lowMemoryNpcBudget?1:3);
    const civilianPartsToLoad=humanCivilianParts.slice(0,lowMemoryNpcBudget?1:2);
@@ -12430,7 +12430,7 @@ function update(dt){
  function startNpcHumanModels(){
   if(enemyHumanModelsStarted)return enemyHumanLoadTask;
   enemyHumanModelsStarted=true;
-  console.info('Preparando GLB de caballeros y aldeanos después de mostrar el selector; los cuerpos provisionales ya están en el mundo.');
+  console.info('Preparando GLB obligatorios de guardianes y aldeanos antes de mostrar el selector; la entrada queda bloqueada hasta validarlos.');
   const npcLoadStarted=performance.now();startupTaskCurrent='GLB caballeros y aldeanos';
   enemyHumanLoadTask=loadEnemyHumanCharacters().then(value=>{
    const lowMemoryNpcBudget=!!(isUltraLowEndMobile||isGalaxyA12LowEndMobile||isGalaxyA12NachoPerformance);
