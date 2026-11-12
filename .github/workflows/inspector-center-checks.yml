@@ -2,9 +2,9 @@ name: Inspector Center — dashboard checks
 
 on:
   push:
-    branches: [feature/inspector-center-dashboard]
+    branches: [feature/inspector-center-dashboard, fix/inspector-workflow-and-runtime-guards]
   pull_request:
-    branches: [feature/tiered-inspector-levels]
+    branches: [feature/tiered-inspector-levels, feature/inspector-center-dashboard]
 
 permissions:
   contents: read
