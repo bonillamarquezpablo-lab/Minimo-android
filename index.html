@@ -13332,7 +13332,7 @@ function update(dt){
     animateWater(0);
    },
    render:()=>scene.render(),
-   captureCanvas:()=>{const targetCanvas=document.getElementById('renderCanvas');if(!targetCanvas)throw new Error('Render canvas is missing');return targetCanvas.toDataURL('image/png');},
+   captureCanvas:()=>{const targetCanvas=document.getElementById('renderCanvas');if(!targetCanvas)throw new Error('Render canvas is missing');scene.render();return targetCanvas.toDataURL('image/png');},
    snapshot:()=>window.__elSinNombreWaterDebugSnapshot?.()||null,
    retryViking:()=>loadHumanViking(),
    inspectScene:async({inventoryLimit=5000,offshoreLimit=500}={})=>{
