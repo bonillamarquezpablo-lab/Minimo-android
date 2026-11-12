@@ -604,9 +604,8 @@
           nearest1 = h; nearest1D2 = d2;
         }
       }
-      const candidates = [nearest0, nearest1];
       for (let i = 0; i < this.firePool.length; i++) {
-        const slot = this.firePool[i], h = candidates[i] || null;
+        const slot = this.firePool[i], h = (i === 0 ? nearest0 : nearest1) || null;
         if (!h || (i > 0 && this.firePool.length < 2)) {
           slot.source = null;
           slot.light.intensity = 0;
@@ -783,12 +782,11 @@
           this.waterMaterial.reflectionFresnelParameters.rightColor.copyFrom(waterColor);
         }
         if (this.waterMaterial.diffuseFresnelParameters) {
-          this.waterMaterial.diffuseFresnelParameters.rightColor.copyFrom(
-            this._waterDeep.copyFrom(this._waterDeep);
-          const shallow = this._waterShallow;
-          this.waterMaterial.diffuseFresnelParameters.rightColor.r = mix(this._waterDeep.r, shallow.r, state.daylight);
-          this.waterMaterial.diffuseFresnelParameters.rightColor.g = mix(this._waterDeep.g, shallow.g, state.daylight);
-          this.waterMaterial.diffuseFresnelParameters.rightColor.b = mix(this._waterDeep.b, shallow.b, state.daylight);
+          const diffuseColor = this.waterMaterial.diffuseFresnelParameters.rightColor;
+          const deep = this._waterDeep, shallow = this._waterShallow;
+          diffuseColor.r = mix(deep.r, shallow.r, state.daylight);
+          diffuseColor.g = mix(deep.g, shallow.g, state.daylight);
+          diffuseColor.b = mix(deep.b, shallow.b, state.daylight);
         }
       }
       if (this.windowMaterial && this.windowMaterial.emissiveColor) {
