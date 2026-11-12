@@ -9533,10 +9533,12 @@ function createRealWeapon(type='axe'){
  // but the eye now reads individual tufts and depth rather than a flat green carpet.
  // Keep the count outside createRealGrass(): grassMesh itself is local to that builder.
  let grassInstanceCount=0,grassBatchCount=0,grassWindAccumulator=0,grassWindClock=0;const grassWindMeshes=[];let grassWindBasePositions=null,grassWindPositions=null;
- const qualityGrassLodBatches=[];let qualityGrassLodAccumulator=0,qualityGrassVisibleBatchCount=0;
+ const qualityGrassLodBatches=[];let qualityGrassLodAccumulator=0,qualityGrassVisibleBatchCount=0;const GRASS_STREAM_RECENTER_DISTANCE=isTouchDevice?58:46;let grassStagingResources=null;
  let grassBatchMaterial=null,grassStreamActiveIslandIndex=-2,grassStreamPromise=null,grassStreamCenterX=NaN,grassStreamCenterZ=NaN;
- async function createRealGrass(onlyIslandIndex=null,focusX=null,focusZ=null){
-  grassDebugIslandStats.length=0;
+ async function createRealGrass(onlyIslandIndex=null,focusX=null,focusZ=null,staging=false){
+  const buildGrassBatches=[],buildGrassMeshes=[],buildGrassIslandStats=[];
+  if(!staging)grassDebugIslandStats.length=0;
+  if(staging)grassStagingResources={meshes:buildGrassMeshes,material:null};
   const positions=[],indices=[],colors=[];
   // Natural olive greens: the previous palette rendered as almost-black cut-outs.
   const shades=[[.32,.41,.20],[.38,.47,.23],[.44,.51,.27],[.29,.37,.18],[.36,.45,.22],[.41,.48,.25]];
@@ -9576,15 +9578,16 @@ function createRealWeapon(type='axe'){
   grassDebugLeavesPerClump=leavesPerClump;
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
   const vertexData=new B.VertexData();vertexData.positions=positions;vertexData.indices=indices;vertexData.normals=normals;vertexData.colors=colors;
-  const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);grassBatchMaterial=gm;
+  const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);if(!staging)grassBatchMaterial=gm;else if(grassStagingResources)grassStagingResources.material=gm;
   gm.diffuseColor=new B.Color3(1,1,1);gm.specularColor=new B.Color3(.018,.022,.012);gm.specularPower=7;gm.backFaceCulling=false;gm.twoSidedLighting=true;gm.emissiveColor=new B.Color3(.012,.018,.006);gm.useVertexColors=true;
   const chunkSize=56,grassBatches=new Map();let count=0;
   // Yield according to measured CPU time, not a fixed number of grass placements.
   // This keeps the loading screen responsive without changing density or placement rules.
   let grassStartupSliceStartedAt=performance.now(),grassLastProgressUpdateAt=0;
   const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;
+  const grassBuildSliceBudgetMs=staging?(isTouchDevice?3.5:6):grassStartupSliceBudgetMs;
   const yieldGrassStartupIfNeeded=async(islandIndex,placed,want)=>{
-   const now=performance.now();if(now-grassStartupSliceStartedAt<grassStartupSliceBudgetMs)return false;
+   const now=performance.now();if(now-grassStartupSliceStartedAt<grassBuildSliceBudgetMs)return false;
    if(now-grassLastProgressUpdateAt>=90){
     const phase=(islandIndex+placed/Math.max(1,want))/land.length;
     setLoadingProgress(60+phase*8,'Distribuyendo vegetación 3D · Isla '+(islandIndex+1)+'/'+land.length+' · '+placed.toLocaleString('es-ES')+'/'+want.toLocaleString('es-ES')+' grupos');
@@ -9685,16 +9688,16 @@ function createRealWeapon(type='axe'){
    const candidateCells=new Uint32Array(gridSide*gridSide);
    for(let i=0;i<candidateCells.length;i++){
     candidateCells[i]=i;
-    if((i&8191)===8191&&performance.now()-grassStartupSliceStartedAt>=grassStartupSliceBudgetMs)await yieldGrassStartupIfNeeded(islandIndex,placed,want);
+    if((i&8191)===8191&&performance.now()-grassStartupSliceStartedAt>=grassBuildSliceBudgetMs)await yieldGrassStartupIfNeeded(islandIndex,placed,want);
    }
    for(let i=candidateCells.length-1;i>0;i--){
     const j=Math.floor(Math.random()*(i+1)),tmp=candidateCells[i];candidateCells[i]=candidateCells[j];candidateCells[j]=tmp;
-    if((i&8191)===0&&performance.now()-grassStartupSliceStartedAt>=grassStartupSliceBudgetMs)await yieldGrassStartupIfNeeded(islandIndex,placed,want);
+    if((i&8191)===0&&performance.now()-grassStartupSliceStartedAt>=grassBuildSliceBudgetMs)await yieldGrassStartupIfNeeded(islandIndex,placed,want);
    }
    for(const sample of candidateCells){
     if(placed>=want)break;
     tries++;
-    if((tries&7)===0&&performance.now()-grassStartupSliceStartedAt>=grassStartupSliceBudgetMs)await yieldGrassStartupIfNeeded(islandIndex,placed,want);
+    if((tries&7)===0&&performance.now()-grassStartupSliceStartedAt>=grassBuildSliceBudgetMs)await yieldGrassStartupIfNeeded(islandIndex,placed,want);
     const col=sample%gridSide,row=Math.floor(sample/gridSide);
     const dx0=(col+.5)/gridSide*radius*2-radius,dz0=(row+.5)/gridSide*radius*2-radius;
     if(dx0*dx0+dz0*dz0>radius*radius)continue;
@@ -9711,7 +9714,7 @@ function createRealWeapon(type='axe'){
     if(dx*dx+dz*dz>radius*radius)continue;
     for(let attempt=0;attempt<4&&placed<want;attempt++){
      tries++;
-     if((tries&7)===0&&performance.now()-grassStartupSliceStartedAt>=grassStartupSliceBudgetMs)await yieldGrassStartupIfNeeded(islandIndex,placed,want);
+     if((tries&7)===0&&performance.now()-grassStartupSliceStartedAt>=grassBuildSliceBudgetMs)await yieldGrassStartupIfNeeded(islandIndex,placed,want);
      const x=centerX-radius+(col+.5+rand(-jitter,jitter))*cellSize;
      const z=centerZ-radius+(row+.5+rand(-jitter,jitter))*cellSize;
      tryPlaceGrass(x,z);
@@ -9721,18 +9724,18 @@ function createRealWeapon(type='axe'){
    // Completa solamente las celdas que hayan caído sobre árboles, roca, pendiente o asentamientos.
    while(placed<want&&tries<want*8){
     tries++;
-    if((tries&7)===0&&performance.now()-grassStartupSliceStartedAt>=grassStartupSliceBudgetMs)await yieldGrassStartupIfNeeded(islandIndex,placed,want);
+    if((tries&7)===0&&performance.now()-grassStartupSliceStartedAt>=grassBuildSliceBudgetMs)await yieldGrassStartupIfNeeded(islandIndex,placed,want);
     const angle=Math.random()*Math.PI*2,rad=Math.sqrt(Math.random())*radius;
     tryPlaceGrass(centerX+Math.cos(angle)*rad,centerZ+Math.sin(angle)*rad);
    }
    await yieldGrassStartupIfNeeded(islandIndex,placed,want);
    const totalGridCells=Math.max(1,Math.round(Math.PI*.25*gridSide*gridSide));
-   grassDebugIslandStats.push({name:island.name||('ISLA '+(islandIndex+1)),target:want,placed,fillPct:Math.round(placed/Math.max(1,want)*100),occupiedCells:occupiedGridCellCount,totalGridCells,gridPct:Math.min(100,Math.round(occupiedGridCellCount/totalGridCells*100))});
+   buildGrassIslandStats.push({name:island.name||('ISLA '+(islandIndex+1)),target:want,placed,fillPct:Math.round(placed/Math.max(1,want)*100),occupiedCells:occupiedGridCellCount,totalGridCells,gridPct:Math.min(100,Math.round(occupiedGridCellCount/totalGridCells*100))});
   }
   let grassUploadBatch=0,grassUploadSliceStartedAt=performance.now();
   for(const batch of grassBatches.values()){
    const grassMesh=new B.Mesh('NordicGroundCover_'+batch.islandIndex+'_'+batch.cellX+'_'+batch.cellZ,scene);
-   vertexData.applyToMesh(grassMesh);grassMesh.material=gm;grassMesh.isPickable=false;grassMesh.receiveShadows=false;
+   vertexData.applyToMesh(grassMesh);grassMesh.material=gm;grassMesh.setEnabled(!staging);grassMesh.isPickable=false;grassMesh.receiveShadows=false;buildGrassMeshes.push(grassMesh);
    // Keep the source clump on the ground plane; instance transforms contain the actual terrain height.
    grassMesh.position.set(0,0,0);grassMesh.computeWorldMatrix(true);
    grassMesh.thinInstanceSetBuffer('matrix',new Float32Array(batch.matrices),16,true);
@@ -9741,28 +9744,60 @@ function createRealWeapon(type='axe'){
    grassMesh.doNotSyncBoundingInfo=false;
    let batchX=0,batchZ=0;for(let matrixOffset=12;matrixOffset<batch.matrices.length;matrixOffset+=16){batchX+=batch.matrices[matrixOffset];batchZ+=batch.matrices[matrixOffset+2];}
    const batchInstances=Math.max(1,batch.matrices.length/16);
-   qualityGrassLodBatches.push({mesh:grassMesh,x:batchX/batchInstances,z:batchZ/batchInstances,islandIndex:batch.islandIndex});
+   buildGrassBatches.push({mesh:grassMesh,x:batchX/batchInstances,z:batchZ/batchInstances,islandIndex:batch.islandIndex});
    grassUploadBatch++;
-   if(performance.now()-grassUploadSliceStartedAt>=grassStartupSliceBudgetMs){await yieldStartupFrame();grassUploadSliceStartedAt=performance.now();}
+   if(performance.now()-grassUploadSliceStartedAt>=grassBuildSliceBudgetMs){await yieldStartupFrame();grassUploadSliceStartedAt=performance.now();}
   }
+  const completedGrassBuild={batches:buildGrassBatches,meshes:buildGrassMeshes,material:gm,count,batchCount:grassBatches.size,islandStats:buildGrassIslandStats};
+  if(staging){grassStagingResources=null;return completedGrassBuild;}
+  qualityGrassLodBatches.push(...buildGrassBatches);
   grassInstanceCount=count;grassBatchCount=grassBatches.size;
   // Publica únicamente el recuento real ya generado para el panel ?debug=1.
   grassDebugClumpCount=count;grassDebugBatchCount=grassBatches.size;
-  console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:grassDebugLeavesPerClump,instancesPerIsland:grassDebugIslandStats,spatialBatches:grassBatchCount,chunkSize});
+  grassDebugIslandStats.push(...buildGrassIslandStats);
+  console.info('Visible Nordic ground cover created',{clumps:count,leavesPerClump:grassDebugLeavesPerClump,instancesPerIsland:buildGrassIslandStats,spatialBatches:grassBatchCount,chunkSize});
+  return completedGrassBuild;
  }
  async function streamActiveIslandGrass(index,focusX,focusZ){
   if(isPerformanceMode)return;
   const sameIsland=index===grassStreamActiveIslandIndex;
-  const moved=Number.isFinite(focusX)&&Number.isFinite(focusZ)&&Math.hypot(focusX-grassStreamCenterX,focusZ-grassStreamCenterZ)>=38;
+  const moved=Number.isFinite(focusX)&&Number.isFinite(focusZ)&&Math.hypot(focusX-grassStreamCenterX,focusZ-grassStreamCenterZ)>=GRASS_STREAM_RECENTER_DISTANCE;
   if(sameIsland&&!moved)return;
-  for(const batch of qualityGrassLodBatches){try{if(batch.mesh&&!(batch.mesh.isDisposed&&batch.mesh.isDisposed()))batch.mesh.dispose(false,false);}catch(_){}}
-  qualityGrassLodBatches.length=0;qualityGrassVisibleBatchCount=0;
-  if(grassBatchMaterial){try{grassBatchMaterial.dispose(false,false);}catch(_){}grassBatchMaterial=null;}
-  grassInstanceCount=0;grassBatchCount=0;grassDebugClumpCount=0;grassDebugBatchCount=0;grassDebugIslandStats.length=0;
-  grassStreamActiveIslandIndex=-1;
-  if(Number.isInteger(index)&&index>=0&&index<land.length){grassStreamCenterX=focusX;grassStreamCenterZ=focusZ;await createRealGrass(index,focusX,focusZ);}else{grassStreamCenterX=NaN;grassStreamCenterZ=NaN;}
-  grassStreamActiveIslandIndex=index;
-  qualityGrassLodAccumulator=.22;
+  const validIsland=Number.isInteger(index)&&index>=0&&index<land.length;
+  if(!validIsland){
+   const retiredGrassBatches=qualityGrassLodBatches.splice(0,qualityGrassLodBatches.length);
+   for(const batch of retiredGrassBatches){try{if(batch.mesh&&!(batch.mesh.isDisposed&&batch.mesh.isDisposed()))batch.mesh.dispose(false,false);}catch(_){}}
+   if(grassBatchMaterial){try{grassBatchMaterial.dispose(false,false);}catch(_){}grassBatchMaterial=null;}
+   grassInstanceCount=0;grassBatchCount=0;grassDebugClumpCount=0;grassDebugBatchCount=0;grassDebugIslandStats.length=0;
+   grassStreamActiveIslandIndex=index;grassStreamCenterX=NaN;grassStreamCenterZ=NaN;
+   qualityGrassVisibleBatchCount=0;qualityGrassLodAccumulator=.22;
+   return;
+  }
+  const previousMaterial=grassBatchMaterial;
+  try{
+   // Build disabled batches beside the live cover; swap only after every new chunk is ready.
+   const stagedGrass=await createRealGrass(index,focusX,focusZ,true);
+   const retiredGrassBatches=qualityGrassLodBatches.splice(0,qualityGrassLodBatches.length);
+   qualityGrassLodBatches.push(...stagedGrass.batches);
+   for(const batch of stagedGrass.batches){batch.mesh.setEnabled(true);batch.mesh.isVisible=true;}
+   for(const batch of retiredGrassBatches){try{if(batch.mesh&&!(batch.mesh.isDisposed&&batch.mesh.isDisposed()))batch.mesh.dispose(false,false);}catch(_){}}
+   if(previousMaterial&&previousMaterial!==stagedGrass.material){try{previousMaterial.dispose(false,false);}catch(_){}}
+   grassBatchMaterial=stagedGrass.material;
+   grassInstanceCount=stagedGrass.count;grassBatchCount=stagedGrass.batchCount;
+   grassDebugClumpCount=stagedGrass.count;grassDebugBatchCount=stagedGrass.batchCount;
+   grassDebugIslandStats.length=0;grassDebugIslandStats.push(...stagedGrass.islandStats);
+   grassStreamActiveIslandIndex=index;grassStreamCenterX=focusX;grassStreamCenterZ=focusZ;
+   qualityGrassVisibleBatchCount=stagedGrass.batches.length;qualityGrassLodAccumulator=.22;
+   console.info('Visible Nordic ground cover swapped atomically',{clumps:grassInstanceCount,batches:grassBatchCount,island:index});
+  }catch(error){
+   const pendingGrass=grassStagingResources;
+   if(pendingGrass){
+    for(const mesh of pendingGrass.meshes){try{if(mesh&&!(mesh.isDisposed&&mesh.isDisposed()))mesh.dispose(false,false);}catch(_){}}
+    if(pendingGrass.material){try{pendingGrass.material.dispose(false,false);}catch(_){}}
+   }
+   grassStagingResources=null;
+   throw error;
+  }
  }
  function updateActiveIslandGrass(dt){
   if(isPerformanceMode)return;
@@ -9777,13 +9812,14 @@ function createRealWeapon(type='axe'){
   }
   if(onShip||bestRatio>1.09)currentIsland=-1;
   const sameIsland=currentIsland===grassStreamActiveIslandIndex;
-  const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=38;
+  const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=GRASS_STREAM_RECENTER_DISTANCE;
   if((!sameIsland||moved)&&!grassStreamPromise){
    grassStreamPromise=streamActiveIslandGrass(currentIsland,focus.x,focus.z).catch(error=>{console.error('No se pudo cargar la hierba cercana de la isla activa:',error);}).finally(()=>{grassStreamPromise=null;});
   }
   let visible=0;
+  const visibleGrassIslandIndex=grassStreamPromise?grassStreamActiveIslandIndex:currentIsland;
   for(const batch of qualityGrassLodBatches){
-   const show=batch.islandIndex===currentIsland;
+   const show=batch.islandIndex===visibleGrassIslandIndex;
    if(batch.mesh.isVisible!==show)batch.mesh.isVisible=show;
    if(show)visible++;
   }
