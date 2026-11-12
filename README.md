@@ -10,7 +10,15 @@ https://bonillamarquezpablo-lab.github.io/Minimo-android/
 
 No utilizar enlaces raw de GitHub, jsDelivr o raw.githack para ejecutar la página como destino final.
 
-## Inspector independiente\n\nEl panel de auditorías vive fuera del videojuego y se publica en:\n\nhttps://bonillamarquezpablo-lab.github.io/Minimo-android/inspector/\n\nPermite consultar la última ejecución y el avance de cada fase. Para iniciar una auditoría, abre el flujo de GitHub Actions desde el panel y confirma allí el nivel elegido; no se guardan claves de acceso en el navegador.\n\n## Activación inicial (una sola vez)
+## Inspector independiente
+
+El panel de auditorías vive fuera del videojuego y se publica en:
+
+https://bonillamarquezpablo-lab.github.io/Minimo-android/inspector/
+
+Permite consultar la última ejecución y el avance de cada fase. Para iniciar una auditoría, abre el flujo de GitHub Actions desde el panel y confirma allí el nivel elegido; no se guardan claves de acceso en el navegador.
+
+## Activación inicial (una sola vez)
 
 La compilación del paquete ya está automatizada. GitHub Pages aún debe habilitarse una vez desde la configuración del repositorio:
 
