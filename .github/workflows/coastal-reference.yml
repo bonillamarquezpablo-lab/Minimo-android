@@ -6,6 +6,7 @@ on:
   pull_request:
     paths-ignore:
       - 'vercel.json'
+      - '.github/workflows/**'
     branches: [main, test/coastal-reference-0.6.272]
   workflow_dispatch:
     inputs:
