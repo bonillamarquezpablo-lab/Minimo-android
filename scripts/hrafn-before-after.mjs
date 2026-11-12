@@ -15,6 +15,37 @@ const phases = [
   { id: 'midnight', hour: 0 }
 ];
 
+
+async function capturePhaseFrame(page, hour, label, phaseId) {
+  const captureResult = await page.evaluate(hour => {
+    const clock = window.__ELSN_ATMOSPHERE_CONTROLS;
+    const api = window.__ELSN_TEST__;
+    clock.pause();
+    const clockState = clock.setTime(hour);
+    api.render();
+    return { clockState, dataUrl: api.captureCanvas() };
+  }, hour);
+  const match = /^data:image\\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(captureResult.dataUrl || '');
+  let bytes = match ? Buffer.from(match[1], 'base64') : null;
+  let method = 'game-canvas-readback';
+  const valid = value => Buffer.isBuffer(value) && value.length > 10000 &&
+    value.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';
+  if (!valid(bytes)) {
+    const session = await page.context().newCDPSession(page);
+    try {
+      const shot = await session.send('Page.captureScreenshot', {
+        format: 'png', fromSurface: true, captureBeyondViewport: false, optimizeForSpeed: true
+      });
+      bytes = Buffer.from(shot.data || '', 'base64');
+      method = 'cdp-composited-frame';
+    } finally {
+      await session.detach().catch(() => {});
+    }
+  }
+  if (!valid(bytes)) throw new Error(label + ' ' + phaseId + ': neither WebGL readback nor compositor returned a valid PNG.');
+  return { clockState: captureResult.clockState, bytes, method };
+}
+
 if (!beforeUrl || !afterUrl) {
   console.error('HRAFN_BEFORE_URL and HRAFN_AFTER_URL are required; refusing to invent a baseline.');
   process.exit(2);
@@ -95,12 +126,38 @@ async function bootGame(label, url) {
   await page.locator('#continueUnnamed').waitFor({ state: 'visible', timeout: 30000 });
   await page.locator('#continueUnnamed').click();
 
-  await page.waitForFunction(
-    () => window.__ELSN_TEST__ && window.__elSinNombreStartupSmoke &&
-      window.__elSinNombreStartupSmoke.worldReady === true,
-    undefined,
-    { timeout: 180000, polling: 500 }
-  );
+  const startupStartedAt = Date.now();
+  try {
+    await page.waitForFunction(
+      () => window.__ELSN_TEST__ && window.__elSinNombreStartupSmoke &&
+        window.__elSinNombreStartupSmoke.worldReady === true,
+      undefined,
+      { timeout: 240000, polling: 500 }
+    );
+  } catch (error) {
+    const startupDiagnostics = await page.evaluate(() => ({
+      readyState: document.readyState,
+      bodyClass: document.body?.className || '',
+      testApiAvailable: !!window.__ELSN_TEST__,
+      startupSmoke: window.__elSinNombreStartupSmoke || null,
+      qualitySelectorVisible: !!document.querySelector('#chooseQuality'),
+      continueButtonVisible: !!document.querySelector('#continueUnnamed'),
+      introVisible: !!document.querySelector('#intro'),
+      canvasCount: document.querySelectorAll('canvas').length,
+      canvasSizes: [...document.querySelectorAll('canvas')].map(canvas => ({
+        width: canvas.width, height: canvas.height,
+        clientWidth: canvas.clientWidth, clientHeight: canvas.clientHeight
+      }))
+    })).catch(() => ({ evaluationFailed: true }));
+    manifest.builds[label] = {
+      url, startupReady: false, startupWaitMs: Date.now() - startupStartedAt,
+      pageErrors: errors, consoleErrors, startupDiagnostics
+    };
+    saveManifest();
+    throw new Error(label + ' startup did not reach worldReady after ' +
+      (Date.now() - startupStartedAt) + ' ms. Diagnostics: ' +
+      JSON.stringify(startupDiagnostics) + '. Original error: ' + String(error?.message || error));
+  }
   await page.locator('#intro.open').waitFor({ state: 'visible', timeout: 60000 });
   await page.locator('#newGameChoice').click();
   await page.waitForFunction(
@@ -149,42 +206,20 @@ async function bootGame(label, url) {
 }
 
 async function capture(page, label, phase) {
-  const captureResult = await page.evaluate(hour => {
-    const clock = window.__ELSN_ATMOSPHERE_CONTROLS;
-    const api = window.__ELSN_TEST__;
-    clock.pause();
-    const clockState = clock.setTime(hour);
-    // Change the clock, render and read the WebGL buffer before another RAF can clear it.
-    const dataUrl = api.captureCanvas();
-    return { clockState, dataUrl };
-  }, phase.hour);
-  const clockState = captureResult.clockState;
-
+  const result = await capturePhaseFrame(page, phase.hour, label, phase.id);
+  const clockState = result.clockState;
   if (clockState && Number.isFinite(clockState.timeOfDay) &&
       Math.abs(clockState.timeOfDay - phase.hour) > 0.01) {
     throw new Error(label + ' clock did not settle at ' + phase.hour + ':00.');
   }
-
-  const dataUrl = captureResult.dataUrl;
-  if (typeof dataUrl !== 'string' || !/^data:image[.]png;base64,/.test(dataUrl)) {
-    throw new Error(label + ' ' + phase.id + ': canvas capture did not return PNG data.');
-  }
-  const bytes = Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64');
-  if (bytes.length < 10000 || bytes[0] !== 0x89 || bytes[1] !== 0x50 ||
-      bytes[2] !== 0x4e || bytes[3] !== 0x47) {
-    throw new Error(label + ' ' + phase.id + ': captured PNG is invalid or unexpectedly small.');
-  }
-
   const directory = path.join(output, label);
   fs.mkdirSync(directory, { recursive: true });
   const file = path.join(directory, phase.id + '.png');
-  fs.writeFileSync(file, bytes);
+  fs.writeFileSync(file, result.bytes);
   return {
-    label,
-    phase: phase.id,
-    hour: phase.hour,
+    label, phase: phase.id, hour: phase.hour,
     file: path.relative(process.cwd(), file),
-    bytes: bytes.length,
+    bytes: result.bytes.length, method: result.method,
     clock: clockState || null
   };
 }
