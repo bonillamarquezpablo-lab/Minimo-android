@@ -11,6 +11,14 @@ const HRAFN_BEFORE_URL=process.env.HRAFN_BEFORE_URL||'';
 const HRAFN_AFTER_URL=process.env.HRAFN_AFTER_URL||'';
 const PLAN=process.env.CAPTURE_PLAN_JSON||fs.readFileSync(path.join(ROOT,'scripts/scene-capture-plan.json'),'utf8');
 const phases=[];
+const INSPECTOR_LEVEL=process.env.INSPECTOR_LEVEL||'deep';
+const LEVEL_RANK={quick:1,complete:2,deep:3};
+if(!(INSPECTOR_LEVEL in LEVEL_RANK))throw new Error('INSPECTOR_LEVEL must be quick, complete or deep.');
+function phaseLevel(name){
+  if(/Comparación visual ANTES\/DESPUÉS|Informe visual ANTES\/DESPUÉS/.test(name))return 3;
+  if(/Referencias costeras|Inventario completo|Informe visual unificado|Lámina de referencias/.test(name))return 2;
+  return 1;
+}
 const startedAt=new Date().toISOString();
 const started=Date.now();
 
@@ -33,7 +41,9 @@ function signalChildProcessTree(child,signal){
 function runNodePhase(name,script,env={},timeoutMs=25*60*1000){
   return new Promise(resolve=>{
     const row={name,script,startedAt:new Date().toISOString(),status:'running',durationMs:null,exitCode:null,error:null};
-    phases.push(row);writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});
+    phases.push(row);
+    if(phaseLevel(name)>LEVEL_RANK[INSPECTOR_LEVEL]){Object.assign(row,{status:'skipped',finishedAt:new Date().toISOString(),durationMs:0,error:'Not required by '+INSPECTOR_LEVEL+' inspection level.'});writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});console.log('[UNIFIED_INSPECTOR] SKIP '+name+' — level '+INSPECTOR_LEVEL);return resolve(row);}
+    writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});
     console.log('\\n[UNIFIED_INSPECTOR] START '+name+' — '+script);
     const phaseStarted=Date.now();
     let child;
@@ -72,6 +82,7 @@ function runPythonPhase(name,script,arg,timeoutMs=5*60*1000){
   return new Promise(resolve=>{
     const row={name,script,startedAt:new Date().toISOString(),status:'running',durationMs:null,exitCode:null,error:null};
     phases.push(row);
+    if(phaseLevel(name)>LEVEL_RANK[INSPECTOR_LEVEL]){Object.assign(row,{status:'skipped',finishedAt:new Date().toISOString(),durationMs:0,error:'Not required by '+INSPECTOR_LEVEL+' inspection level.'});writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});console.log('[UNIFIED_INSPECTOR] SKIP '+name+' — level '+INSPECTOR_LEVEL);return resolve(row);}
     const phaseStarted=Date.now();
     const child=spawn(process.env.PYTHON||'python3',[script,arg],{cwd:ROOT,env:process.env,stdio:'inherit',detached:process.platform!=='win32'});
     let settled=false,timedOut=false,timer=null,forceTimer=null,finalTimer=null;
@@ -135,7 +146,7 @@ async function main(){
   const player=summaryFrom('artifacts/player-startup/manifest.json',m=>({modelReady:m.finalState?.modelReady,realPlayerMeshCount:m.finalState?.realPlayerMeshCount,failure:m.failure}));
   const beforeAfter=summaryFrom('artifacts/hrafn-before-after/manifest.json',m=>({method:m.method,seed:m.captureSeed,phases:m.phases?.map(p=>({id:p.id,hour:p.hour,comparison:p.comparison||null})),warnings:m.warnings,failure:m.failure}));
   const report={
-    schema:1,mode:'single-entrypoint-multi-phase-inspection',readOnlyForMainCapture:true,
+    schema:1,mode:'tiered-single-entrypoint-inspection',level:INSPECTOR_LEVEL,readOnlyForMainCapture:true,
     note:'Las comprobaciones de reparación se ejecutan en navegadores de prueba desechables; no modifican la partida ni los archivos publicados.',
     startedAt,finishedAt:new Date().toISOString(),durationMs:Date.now()-started,
     baseUrl:BASE_URL,phases,results:{player,texture,grounding,coastal,custom,beforeAfter},
@@ -191,8 +202,8 @@ async function main(){
   );
   fs.writeFileSync(path.join(OUT,'inspection-report.md'),lines.join('\n')+'\n');
   console.log('[TEXTURE_READINESS_SUMMARY] '+JSON.stringify(texture));
-  const failures=phases.filter(row=>row.status!=='passed');
-  console.log('\n[UNIFIED_INSPECTOR_RESULT] '+JSON.stringify({verdict:failures.length?'issues-found':'pass',passed:phases.length-failures.length,failed:failures.length,structures:custom?.structures?.length??null,captures:custom?.shots??null}));
+  const failures=phases.filter(row=>row.status!=='passed'&&row.status!=='skipped');
+  console.log('\n[UNIFIED_INSPECTOR_RESULT] '+JSON.stringify({verdict:failures.length?'issues-found':'pass',passed:phases.filter(row=>row.status==='passed').length,skipped:phases.filter(row=>row.status==='skipped').length,failed:failures.length,structures:custom?.structures?.length??null,captures:custom?.shots??null}));
   if(failures.length)process.exitCode=2;
 }
 main().catch(error=>{console.error('[UNIFIED_INSPECTOR_FATAL]',error);process.exitCode=1;});
