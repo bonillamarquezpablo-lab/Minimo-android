@@ -24,5 +24,6 @@ for(const marker of [
 assert.ok(builder.includes('isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52'),'The dedicated Performance profile must keep its existing resolution safeguards.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"),"Quality profile antialiasing must remain enabled.");
 assert.ok(validator.includes('missing_graphics_quality'),'The release validator must reject a missing quality uplift.');
+assert.ok(validator.includes('procedural_texture_signature') && validator.includes('highHeadroomQualityMobile'), 'The release validator must accept the built 1K adaptive procedural texture while preserving mipmap checks.');
 
 console.log('OK graphics quality: high-headroom resolution, adaptive FPS protection, high-detail textures and unchanged Performance profile.');
