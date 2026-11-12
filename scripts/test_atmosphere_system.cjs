@@ -54,7 +54,11 @@ assert.ok(source.includes('advanceElapsed(this.elapsedSeconds, delta, this.speed
 assert.ok(source.includes('TONEMAPPING_ACES') && source.includes('imageConfig.toneMappingEnabled = true'), 'The unified post-process must enable ACES tone mapping.');
 assert.ok(source.includes('B.ShadowGenerator.QUALITY_LOW') && source.includes('previous.usePercentageCloserFiltering = true'), 'Low graphics mode must retain shadows with reduced PCF cost.');
 assert.ok(source.includes('never hardware ray tracing'), 'The WebGL runtime must explicitly describe its lighting effects as approximations.');
-assert.ok(source.includes('const enabled = true;') && source.includes('pipeline.bloomEnabled = enabled;'), 'Bloom must remain enabled with a reduced low-profile kernel rather than disappear.');
+assert.ok(source.includes("this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;") && source.includes("this.quality === 'mobile-high'"), 'Flagship touch devices must use the dedicated mobile-high tier.');
+assert.ok(source.includes("const enabled = this.quality !== 'low';") && source.includes('pipeline.bloomEnabled = enabled;'), 'Bloom must remain active in Quality and be omitted only from the Performance profile.');
+assert.ok(source.includes('pipeline.fxaaEnabled = !mobileHigh;'), 'Mobile-high must use native MSAA without an extra FXAA pass.');
+assert.ok(source.includes("this.quality === 'high' && !this.isTouchDevice"), 'God rays and SSAO must remain desktop-only.');
+assert.ok(source.includes("this.quality === 'low' || this.isTouchDevice"), 'Touch devices must not create the cascaded-shadow multipass.');
 
 const buildSource = fs.readFileSync(path.join(__dirname, 'build_site.py'), 'utf8');
 const sourceHtml = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
@@ -62,6 +66,7 @@ assert.ok(sourceHtml.includes('B.DefaultRenderingPipeline'), 'The game must prov
 assert.ok(buildSource.includes('scripts/nordic/atmosphere-system.js'), 'The atmosphere runtime must be packaged.');
 assert.ok(buildSource.includes('atmosphere_tag = \'<script src="./scripts/nordic/atmosphere-system.js"></script>\''), 'The atmosphere runtime must load synchronously before the main game script.');
 assert.ok(buildSource.includes('html.index(atmosphere_tag) > html.index(game_runtime_marker)'), 'The atmosphere module must precede the monolithic game runtime.');
+assert.ok(buildSource.includes('highHeadroomQualityMobile,reportedMemory'), 'The builder must pass GPU capability into the atmosphere quality selector.');
 assert.ok(buildSource.includes('if(atmosphereSystem)atmosphereSystem.update(dt);'),
   'The single atmosphere clock must update from the world loop');
 assert.ok(buildSource.includes('setTime:value=>atmosphereSystem.setTime(value)') &&
