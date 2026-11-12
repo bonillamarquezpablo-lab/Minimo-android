@@ -67,10 +67,11 @@
       "name": "Lámina de referencias costeras",
       "script": "scripts/create_coastal_contact_sheet.py",
       "startedAt": "2026-11-12T23:56:41.186Z",
-      "status": "running",
-      "durationMs": null,
-      "exitCode": null,
-      "error": null
+      "status": "passed",
+      "durationMs": 4316,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-12T23:56:45.502Z"
     }
   ],
   "finishedAt": null
