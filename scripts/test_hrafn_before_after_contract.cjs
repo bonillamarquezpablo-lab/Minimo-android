@@ -46,7 +46,7 @@ for (const token of [
   "default: 'feature/unified-atmosphere-system'",
   'Build the baseline game in an isolated worktree',
   '4176',
-  'HRAFN_BEFORE_URL: http://127.0.0.1:4176/',
+  "HRAFN_BEFORE_URL: ${{ (github.event_name != 'workflow_dispatch' || inputs.inspection_level == 'deep') && 'http://127.0.0.1:4176/' || '' }}",
   'HRAFN_AFTER_URL: http://127.0.0.1:4175/',
   'artifacts/hrafn-before-after/'
 ]) {
