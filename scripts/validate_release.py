@@ -463,7 +463,7 @@ def main() -> None:
         fail("Las texturas procedurales principales del suelo deben generar mipmaps.")
     if "const packedTrailTexture=makePatternTexture('Packed Norse trail earth','#a18a63',['#d0b68a','#8c7450','#ddc79e','#a58b60'],'sand',512,true);" not in index_html:
         fail("La textura procedural de los caminos también debe generar mipmaps.")
-    if "makePatternTexture(name,base,accents,style='grain',size=512,generateMipMaps=false)" not in index_html:
+    if "makePatternTexture(name,base,accents,style='grain',size=highHeadroomQualityMobile?1024:512,generateMipMaps=false)" not in index_html:
         fail("La generación selectiva de mipmaps de las texturas procedurales ha cambiado.")
     if "mesh.material.diffuseTexture.anisotropicFilteringLevel=maxAnisotropy" not in index_html or "tex.anisotropicFilteringLevel=maxAnisotropy" not in index_html:
         fail("No se conserva el filtrado anisotrópico de las texturas procedurales.")
