@@ -8359,6 +8359,7 @@ function createRealWeapon(type='axe'){
   glow.addColorStop(0,'rgba(239,196,132,.22)');glow.addColorStop(.45,'rgba(226,187,135,.09)');glow.addColorStop(1,'rgba(226,187,135,0)');
   ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
  }
+ let skyTextureUploadRetried=false;
  makeFractalNordicSky(skyCtx,1536,768);
  skyTexture.update(false);skyTexture.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);skyTexture.anisotropicFilteringLevel=maxAnisotropy;skyTexture.wrapU=B.Texture.WRAP_ADDRESSMODE;skyTexture.wrapV=B.Texture.CLAMP_ADDRESSMODE;
  const skyDome=B.MeshBuilder.CreateSphere('NordicSkyDome',{diameter:1800,segments:48,sideOrientation:B.Mesh.BACKSIDE},scene);skyDome.position.copyFrom(camera.position);skyDome.isPickable=false;skyDome.infiniteDistance=true;
@@ -12596,6 +12597,14 @@ function update(dt){
    if(!scene.activeCamera)scene.activeCamera=camera;
    adaptRenderQuality(dt);
    const renderStarted=performance.now();scene.render();lastRenderCpuMs=performance.now()-renderStarted;
+   // DynamicTexture can be constructed before Babylon's first render target is active.
+   // Re-submit the already-painted sky canvas once after the first real frame if its
+   // internal GPU texture was not allocated by the startup update.
+   if(!skyTextureUploadRetried&&!skyTexture.getInternalTexture?.()){
+    skyTextureUploadRetried=true;
+    skyTexture.update(false);
+    if(!skyTexture.getInternalTexture?.())console.warn('NordicCloudSky has no internal GPU texture after its first render-loop upload retry.');
+   }
    renderedFrames++;
    if(!firstFrameRendered){
     firstFrameRendered=true;startupTimeline.firstFrameAt=performance.now();startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
