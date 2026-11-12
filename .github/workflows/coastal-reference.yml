@@ -49,6 +49,8 @@ jobs:
         run: |
           python scripts/inspect_structure_repair_source.py
           node --check scripts/run-unified-inspector.mjs
+          node --check scripts/hrafn-before-after.mjs
+          node scripts/test_hrafn_before_after_contract.cjs
           node --check scripts/player-startup-smoke.mjs
           node --check scripts/texture-readiness-smoke.mjs
           node --check scripts/coastal-structure-grounding-smoke.mjs
