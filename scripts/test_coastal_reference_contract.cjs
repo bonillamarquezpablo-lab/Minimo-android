@@ -8,6 +8,7 @@ const contactSheet = fs.readFileSync('scripts/create_coastal_contact_sheet.py', 
 const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf8');
 const unifiedRunner = fs.readFileSync('scripts/run-unified-inspector.mjs', 'utf8');
 const serviceWorker = fs.readFileSync('sw.js', 'utf8');
+const validator = fs.readFileSync('scripts/validate_release.py', 'utf8');
 
 assert.match(html, /const testModeEnabled=new URLSearchParams\(window\.location\.search\)\.get\('test'\)==='1'/);
 assert.match(html, /const coastalReferenceMode=new URLSearchParams\(window\.location\.search\)\.get\('coastref'\)==='1'/,
@@ -101,14 +102,23 @@ console.log('COASTAL REFERENCE CONTRACT OK');
 
 assert.ok(captureRunner.includes('api.captureCanvas()'),
   'Coastal reference images must be read directly from the WebGL canvas, not the HTML page');
-assert.match(captureRunner, /atmospherePngDataUrl = await page\.evaluate\(\(\) => window\.__ELSN_TEST__\?\.captureCanvas\(\)\)/,
-  'Atmosphere phase captures must read the animated WebGL canvas directly.');
+assert.match(captureRunner, /const dataUrl = await withCaptureTimeout\(page\.evaluate\(\(\) => \{/,
+  'Atmosphere phase captures must use a bounded WebGL canvas readback.');
+assert.match(captureRunner, /api\.render\(\);\s*return api\.captureCanvas\(\);/,
+  'Atmosphere captures must render and read the animated WebGL canvas directly.');
+assert.match(captureRunner, /session\.send\('Page\.captureScreenshot'/,
+  'A compositor PNG fallback must remain available when WebGL readback is unavailable.');
 assert.ok(!captureRunner.includes("page.locator('#renderCanvas').screenshot"),
   'Do not wait for an animated canvas element to become visually stable before atmosphere captures.');
 assert.ok(!captureRunner.includes('page.screenshot('),
   'Full-page screenshots can include menus/HUD and add unnecessary SwiftShader compositor cost');
-assert.ok(captureRunner.includes("assert.equal(boot.build, '0.6.276'"), 'The capture must inspect the exact current 0.6.276 candidate.');
-assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The source HTML remains 0.6.274 and is promoted to 0.6.276 by the release builder.');
+assert.match(captureRunner, /assert\.equal\(boot\.build, EXPECTED_BUILD,/,
+  'The coast capture must validate against the release validator instead of a hard-coded historical version.');
+assert.match(captureRunner, /const EXPECTED_BUILD = process\.env\.EXPECTED_GAME_VERSION \|\| fs\.readFileSync\('scripts\/validate_release\.py'/,
+  'The visual audit must derive its expected release from the active validator.');
+assert.match(validator, /EXPECTED_VERSION = "0\.6\.285"/,
+  'The release validator must target the current 0.6.285 candidate.');
+assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The source HTML remains 0.6.274 and is promoted to 0.6.285 by the release builder.');
 assert.ok(builder.includes('atmosphere-system.js'),'The release builder must package the atmospheric shader module.');
 assert.ok(builder.includes('window.__ELSN_ATMOSPHERE_CONTROLS'),'The atmospheric controls must be installed in the game runtime.');
 assert.ok(builder.includes('atmosphereSystem.update(dt)'),'The atmosphere clock must be updated once per game frame.');

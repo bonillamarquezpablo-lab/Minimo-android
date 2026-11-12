@@ -141,9 +141,10 @@
       this.isPerformanceMode = !!o.isPerformanceMode;
       this.isTouchDevice = !!o.isTouchDevice;
       this.isConstrainedMobile = !!o.isConstrainedMobile;
+      this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;
       this.reportedMemory = Number(o.reportedMemory) || 0;
       this.quality = this.isPerformanceMode || this.isConstrainedMobile ? 'low' :
-        ((!this.isTouchDevice || this.reportedMemory >= 8) ? 'high' : 'medium');
+        (this.isTouchDevice ? (this.highHeadroomQualityMobile ? 'mobile-high' : 'medium') : 'high');
       this.timeOfDay = normalizeTime(o.timeOfDay == null ? 8.25 : o.timeOfDay);
       this.dayDurationSeconds = clamp(Number(o.dayDurationSeconds) || 300, 60, 3600);
       this.speed = 1;
@@ -381,7 +382,7 @@
     }
 
     _adjustMaterialLightBudgets() {
-      const budget = this.quality === 'high' ? 4 : (this.quality === 'medium' ? 3 : 2);
+      const budget = this.quality === 'high' ? 4 : ((this.quality === 'mobile-high' || this.quality === 'medium') ? 3 : 2);
       const affected = /(terrain|grass|wood|stone|roof|hut|window|submergedsand|coastal|village|clan)/i;
       for (const material of this.scene.materials || []) {
         if (!material || !affected.test(String(material.name || ''))) continue;
@@ -396,18 +397,20 @@
       if (this.renderPipeline) {
         try {
           const pipeline = this.renderPipeline;
-          const enabled = true;
+          const mobileHigh = this.quality === 'mobile-high';
+          const enabled = this.quality !== 'low';
           pipeline.bloomEnabled = enabled;
           pipeline.bloomThreshold = this.quality === 'low' ? 0.98 : 0.94;
-          pipeline.bloomWeight = this.quality === 'high' ? 0.18 : (this.quality === 'medium' ? 0.13 : 0.075);
-          pipeline.bloomKernel = this.quality === 'high' ? 56 : (this.quality === 'medium' ? 36 : 20);
-          pipeline.bloomScale = this.quality === 'high' ? 0.45 : (this.quality === 'medium' ? 0.32 : 0.20);
+          pipeline.bloomWeight = this.quality === 'high' ? 0.18 : (mobileHigh ? 0.09 : (this.quality === 'medium' ? 0.13 : 0.075));
+          pipeline.bloomKernel = this.quality === 'high' ? 56 : (mobileHigh ? 24 : (this.quality === 'medium' ? 36 : 20));
+          pipeline.bloomScale = this.quality === 'high' ? 0.45 : (mobileHigh ? 0.24 : (this.quality === 'medium' ? 0.32 : 0.20));
           pipeline.imageProcessingEnabled = true;
-          pipeline.fxaaEnabled = true;
+          // Native mobile MSAA is already active; avoid a second FXAA softening pass.
+          pipeline.fxaaEnabled = !mobileHigh;
           pipeline.grainEnabled = false;
           pipeline.chromaticAberrationEnabled = false;
           if (pipeline.imageProcessing) {
-            pipeline.imageProcessing.vignetteEnabled = this.quality === 'high';
+            pipeline.imageProcessing.vignetteEnabled = this.quality === 'high' && !this.isTouchDevice;
             pipeline.imageProcessing.vignetteWeight = 0.20;
             pipeline.imageProcessing.vignetteColor = new B.Color4(0.008, 0.014, 0.025, 0);
           }
@@ -426,7 +429,7 @@
         if (Number.isFinite(acesToneMapping)) imageConfig.toneMappingType = acesToneMapping;
       }
 
-      if (this.quality !== 'low' && B.VolumetricLightScatteringPostProcess && this.sunDisc) {
+      if (this.quality === 'high' && !this.isTouchDevice && B.VolumetricLightScatteringPostProcess && this.sunDisc) {
         try {
           const ratio = this.quality === 'high' ? (this.isTouchDevice ? 0.34 : 0.55) : 0.32;
           const samples = this.quality === 'high' ? (this.isTouchDevice ? 32 : 64) : 28;
@@ -444,9 +447,9 @@
       }
 
       // SSAO/SSR are optional high-tier screen-space approximations.
-      if (this.quality === 'high') {
+      if (this.quality === 'high' && !this.isTouchDevice) {
         try {
-          const ssaoRatio = this.isTouchDevice ? 0.28 : 0.42;
+          const ssaoRatio = 0.42;
           if (B.SSAO2RenderingPipeline) {
             this.ssaoPipeline = new B.SSAO2RenderingPipeline(
               'NorseAtmosphereSSAO2', this.scene, ssaoRatio, [this.camera]);
@@ -485,7 +488,7 @@
           console.warn('Low-tier shadow filtering could not be reduced; existing shadows remain active.', error);
         }
       }
-      if (!previous || this.quality === 'low' || !B.CascadedShadowGenerator || !webgl2) {
+      if (!previous || this.quality === 'low' || this.isTouchDevice || !B.CascadedShadowGenerator || !webgl2) {
         this.shadowMode = 'standard';
         return;
       }
