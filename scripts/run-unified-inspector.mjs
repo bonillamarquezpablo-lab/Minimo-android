@@ -7,6 +7,8 @@ const ROOT=process.cwd();
 const ARTIFACTS=path.resolve('artifacts');
 const OUT=path.join(ARTIFACTS,'unified-inspector');
 const BASE_URL=process.env.INSPECTOR_TEST_URL||process.env.CAPTURE_TEST_URL||'http://127.0.0.1:4175/';
+const HRAFN_BEFORE_URL=process.env.HRAFN_BEFORE_URL||'';
+const HRAFN_AFTER_URL=process.env.HRAFN_AFTER_URL||'';
 const PLAN=process.env.CAPTURE_PLAN_JSON||fs.readFileSync(path.join(ROOT,'scripts/scene-capture-plan.json'),'utf8');
 const phases=[];
 const startedAt=new Date().toISOString();
@@ -113,6 +115,15 @@ async function main(){
   await runPythonPhase('Informe visual unificado de estructuras','scripts/create_scene_capture_contact_sheet.py','artifacts/custom-scene-captures');
   await runPythonPhase('Lámina de referencias costeras','scripts/create_coastal_contact_sheet.py','artifacts/coastal-reference');
 
+  // The A/B comparator is a mandatory phase of this one-entrypoint inspection.
+  // Missing baseline/candidate URLs fail the inspector instead of silently skipping the comparison.
+  await runNodePhase('Comparación visual ANTES/DESPUÉS — cuatro fases horarias','scripts/hrafn-before-after.mjs',{
+    HRAFN_BEFORE_URL,HRAFN_AFTER_URL,
+    HRAFN_COMPARE_OUT:'artifacts/hrafn-before-after',
+    HRAFN_CAPTURE_SEED:process.env.CAPTURE_SEED||'20261110'
+  },35*60*1000);
+  await runPythonPhase('Informe visual ANTES/DESPUÉS y mapas de diferencias','scripts/create_hrafn_ab_report.py','artifacts/hrafn-before-after');
+
   const custom=summaryFrom('artifacts/custom-scene-captures/manifest.json',m=>({
     build:m.build,counts:m.auditSummary,structures:m.initialPhysicalAudit?.structuralCandidates||[],
     inspectionErrors:m.initialPhysicalAudit?.errors||{},shots:{planned:m.expandedShotCount,captured:m.captures?.length,failed:m.failures?.length},
@@ -122,16 +133,23 @@ async function main(){
   const grounding=summaryFrom('artifacts/structure-grounding/manifest.json',m=>({verdict:m.verdict,summary:m.summary,failure:m.failure}));
   const coastal=summaryFrom('artifacts/coastal-reference/manifest.json',m=>({captureCount:m.captures?.length,atmosphereAudit:m.atmosphereAudit,atmosphereCaptureCount:m.atmosphereCaptures?.length,structureVisibility:m.structureVisibility?.length,failure:m.failure}));
   const player=summaryFrom('artifacts/player-startup/manifest.json',m=>({modelReady:m.finalState?.modelReady,realPlayerMeshCount:m.finalState?.realPlayerMeshCount,failure:m.failure}));
+  const beforeAfter=summaryFrom('artifacts/hrafn-before-after/manifest.json',m=>({method:m.method,seed:m.captureSeed,phases:m.phases?.map(p=>({id:p.id,hour:p.hour,comparison:p.comparison||null})),warnings:m.warnings,failure:m.failure}));
   const report={
     schema:1,mode:'single-entrypoint-multi-phase-inspection',readOnlyForMainCapture:true,
     note:'Las comprobaciones de reparación se ejecutan en navegadores de prueba desechables; no modifican la partida ni los archivos publicados.',
     startedAt,finishedAt:new Date().toISOString(),durationMs:Date.now()-started,
-    baseUrl:BASE_URL,phases,results:{player,texture,grounding,coastal,custom},
+    baseUrl:BASE_URL,phases,results:{player,texture,grounding,coastal,custom,beforeAfter},
     files:[
       'player-startup/manifest.json','texture-readiness-smoke/manifest.json',
       'structure-grounding/manifest.json','coastal-reference/manifest.json',
       'custom-scene-captures/manifest.json','custom-scene-captures/inspection-report.md',
-      'custom-scene-captures/contact-sheet.png','custom-scene-captures/vision-review-index.json'
+      'custom-scene-captures/contact-sheet.png','custom-scene-captures/vision-review-index.json',
+      'hrafn-before-after/manifest.json','hrafn-before-after/report.md',
+      'hrafn-before-after/before/','hrafn-before-after/after/',
+      'hrafn-before-after/comparison-dawn.jpg','hrafn-before-after/comparison-noon.jpg',
+      'hrafn-before-after/comparison-dusk.jpg','hrafn-before-after/comparison-midnight.jpg',
+      'hrafn-before-after/difference-dawn.png','hrafn-before-after/difference-noon.png',
+      'hrafn-before-after/difference-dusk.png','hrafn-before-after/difference-midnight.png'
     ]
   };
   writeJson(path.join(OUT,'manifest.json'),report);
@@ -154,6 +172,10 @@ async function main(){
     '- Texturas pendientes detectadas: **'+(custom?.textures?.readiness?.pendingTextures?.length??'no disponible')+'**',
     '- Cámaras: **'+(custom?.shots?.captured??0)+' / '+(custom?.shots?.planned??0)+'**',
     '- Fallos de cámara: **'+(custom?.shots?.failed??0)+'**','',
+    '## Comparación visual antes/después','',
+    '- Fases capturadas: **'+(beforeAfter?.phases?.length??0)+' / 4**',
+    '- Semilla compartida: **'+(beforeAfter?.seed??'no disponible')+'**',
+    '- Informe: **artifacts/hrafn-before-after/report.md**','',
     '## Lista de estructuras detectadas','','| Código | ID interno | Nombre | Tipo | Isla | X | Y | Z | Mallas |',
     '|---|---:|---|---|---|---:|---:|---:|---:|'
   );
