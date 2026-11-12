@@ -17,7 +17,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.274 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
-BABYLON_VERSION = "8.2.2"
+BABYLON_VERSION = "9.35.0"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
@@ -697,32 +697,31 @@ def main() -> None:
         html = html.replace("</body>", navigation_tag + "\n</body>", 1)
 
 
-    # Release candidate 0.6.288: restore flagship render clarity while preserving the
+    # Release candidate 0.6.289: restore flagship render clarity while preserving the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.288; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.289; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.288\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.289\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.288.")
-    html = html.replace("0.6.274", "0.6.288")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.289.")
+    html = html.replace("0.6.274", "0.6.289")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'16',build:'0.6.288'"
+    diagnostic_build_replacement = "reportVersion:'16',build:'0.6.289'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.288 para normalizar.")
-    game_version = "0.6.288"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.289 para normalizar.")
+    game_version = "0.6.289"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
-    # 0.6.288 graphics repair: restore the sharp flagship FSR1 path and 2.45x source detail.
-    # Preserve the dedicated Performance profile and reserve higher source resolution for capable GPUs.
+    # 0.6.289 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
     quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
     quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
  const highHeadroomQualityMobile=!!(!isPerformanceMode&&isTouchDevice&&!constrainedHardware&&((reportedMemory>=8&&(Number(navigator.hardwareConcurrency)||0)>=8)||highTierGpuMatch));
@@ -735,6 +734,57 @@ def main() -> None:
     if html.count(quality_profile_marker) != 1:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
     html = html.replace(quality_profile_marker, quality_profile_code, 1)
+
+    # La página fuente conserva un bloque FSR1 antiguo. El único camino activo es
+    # el escalado adaptativo nativo de Babylon; protegemos el bloque heredado.
+    legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"
+    if html.count(legacy_fsr_guard) != 1:
+        raise SystemExit("No se encontró exactamente un bloque FSR heredado para proteger.")
+    html = html.replace(legacy_fsr_guard, "if(false){", 1)
+
+    # Instrumentación nativa de Babylon disponible solo para inspector/perfil.
+    scene_marker = "const scene=new B.Scene(engine);"
+    scene_profile_code = r"""
+ // Optional Babylon-native profiler. Normal gameplay keeps instrumentation disabled.
+ const profileDiagnosticsEnabled=!!(testModeEnabled||new URLSearchParams(window.location.search).get('profile')==='1');
+ let engineInstrumentation=null,sceneInstrumentation=null;
+ const safePerfCounterValue=(counter,scale=1)=>{
+  const value=Number(counter&&counter.current);
+  return Number.isFinite(value)?Number((value/scale).toFixed(3)):null;
+ };
+ if(profileDiagnosticsEnabled){
+  try{
+   if(B.EngineInstrumentation){
+    engineInstrumentation=new B.EngineInstrumentation(engine);
+    engineInstrumentation.captureGPUFrameTime=true;
+    engineInstrumentation.captureShaderCompilationTime=true;
+   }
+   if(B.SceneInstrumentation){
+    sceneInstrumentation=new B.SceneInstrumentation(scene);
+    sceneInstrumentation.captureActiveMeshesEvaluationTime=true;
+    sceneInstrumentation.captureRenderTargetsRenderTime=true;
+    sceneInstrumentation.captureFrameTime=true;
+    sceneInstrumentation.captureRenderTime=true;
+    sceneInstrumentation.captureCameraRenderTime=true;
+   }
+   console.info('Babylon native profiling enabled',{
+    engineInstrumentation:!!engineInstrumentation,
+    sceneInstrumentation:!!sceneInstrumentation,
+    gpuTimerSupported:!!(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter)
+   });
+  }catch(profileError){console.warn('Babylon native profiling unavailable; gameplay rendering is unchanged.',profileError);}
+ }
+"""
+    if html.count(scene_marker) != 1:
+        raise SystemExit("No se encontró exactamente una construcción de escena Babylon.")
+    html = html.replace(scene_marker, scene_marker + "\n" + scene_profile_code, 1)
+
+    runtime_diagnostics_marker = "webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,"
+    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,engineGpuFrameMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
+    if html.count(runtime_diagnostics_marker) != 1:
+        raise SystemExit("No se encontró exactamente un bloque runtime para el diagnóstico.")
+    html = html.replace(runtime_diagnostics_marker,runtime_diagnostics_replacement,1)
+
 
     quality_adaptive_marker = r""" let fpsSample=0,qualityDprCurrent=qualityDpr;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
@@ -1410,6 +1460,14 @@ def main() -> None:
     manifest = {
         "game": "EL SIN NOMBRE",
         "version": game_version,
+        "engine": {
+            "name": "Babylon.js",
+            "version": BABYLON_VERSION,
+            "distribution": "UMD",
+            "loaderVersion": BABYLON_VERSION,
+            "defaultBackend": "WebGL2-preferred",
+            "webGpu": "capability-probed; not enabled for gameplay yet",
+        },
         "builtFrom": "bonillamarquezpablo-lab/Minimo-android",
         "assets": results,
     }

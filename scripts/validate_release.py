@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.288"
+EXPECTED_VERSION = "0.6.289"
 
 HTML_PAGES = (
     "index.html",
@@ -206,6 +206,13 @@ def main() -> None:
     asset_manifest = json.loads(read_text("assets/asset-manifest.json"))
     if asset_manifest.get("game") != "EL SIN NOMBRE" or asset_manifest.get("version") != version:
         fail("El manifiesto de recursos no corresponde al juego y versión publicados.")
+    engine_manifest = asset_manifest.get("engine")
+    if not isinstance(engine_manifest, dict):
+        fail("El manifiesto no declara el motor gráfico.")
+    if engine_manifest.get("name") != "Babylon.js" or engine_manifest.get("version") != "9.35.0" or engine_manifest.get("loaderVersion") != "9.35.0":
+        fail("El motor Babylon y el cargador glTF no están fijados a la misma versión 9.35.0.")
+    if engine_manifest.get("distribution") != "UMD" or engine_manifest.get("defaultBackend") != "WebGL2-preferred":
+        fail("La distribución Babylon o el backend validado no corresponden a producción.")
     entries = asset_manifest.get("assets")
     if not isinstance(entries, list) or not entries:
         fail("El manifiesto no contiene una lista válida de recursos.")
@@ -263,8 +270,20 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'16',build:'0.6.288'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'16',build:'0.6.289'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
+    for marker in (
+        "babylonEngineVersion:String(B.Engine.Version||'unknown')",
+        "engineBackend:graphicsContext&&",
+        "webGpuApiAvailable:typeof navigator.gpu!=='undefined'",
+        "new B.EngineInstrumentation(engine)",
+        "new B.SceneInstrumentation(scene)",
+        "profileDiagnosticsEnabled",
+    ):
+        if marker not in index_html:
+            fail("Falta instrumentación/diagnóstico real de Babylon: " + marker)
+    if "if(false){" not in index_html or "if(fsr1Candidate){" in index_html:
+        fail("El arranque aún contiene una rama FSR heredada sin proteger.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
     if "function refreshPlayerGroundNormal(x,z)" not in index_html or "const normal=refreshPlayerGroundNormal(player.root.position.x,player.root.position.z);" not in index_html or "playerGroundNormalForMovement=playerGroundNormalCache" not in index_html:
@@ -552,7 +571,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.288" not in index_html or "EL SIN NOMBRE 0.6.288 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.289" not in index_html or "EL SIN NOMBRE 0.6.289 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -672,7 +691,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.288</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.289</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
