@@ -25,6 +25,8 @@ assert.ok(!app.includes('localStorage'),'The dashboard must not persist GitHub t
 assert.ok(app.includes('Authorization:\'Bearer \'+currentToken'),'The token must be sent only in the direct GitHub API request.');
 assert.ok(app.includes("const jobsInterval=run.status==='in_progress'?12000:30000"),'Active runs must refresh real GitHub job steps every 12 seconds.');
 assert.ok(app.includes("$('progressValue').textContent=indeterminate?'En curso':percent+'%'"),'A single long-running step must not be displayed as a misleading 0%.');
+assert.ok(app.includes("running.name==='Run the single unified inspector'"),'The monolithic inspector phase must use indeterminate progress, not a misleading percentage.');
+assert.ok(app.includes("step.conclusion==='failure'||step.conclusion==='cancelled'"),'Cancelled GitHub steps must not be rendered as successful.');
 assert.ok(app.includes('Esperando datos verificables'),'Missing job data must be explained without inventing progress.');
 assert.ok(css.includes('.progress-track span.indeterminate'),'The dashboard needs a visible indeterminate progress animation.');
 for(const marker of ['@media(max-width:720px)','compare-stage','radar-map','metric-card','prefers-reduced-motion'])assert.ok(css.includes(marker),'Missing responsive visual system: '+marker);
