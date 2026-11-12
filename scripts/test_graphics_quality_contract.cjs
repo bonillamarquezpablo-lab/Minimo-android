@@ -40,7 +40,7 @@ for(const marker of [
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
 assert.ok(gameSource.includes('FsrEasuF(') && gameSource.includes('FsrRcasF('), 'FSR1 EASU and RCAS shaders must be embedded in the game source.');
-assert.ok(gameSource.includes('norseFsr1EASU') && gameSource.includes('norseFsr1RCAS') && gameSource.includes('window.__ELSN_FSR1'), 'FSR1 must expose both real post-process stages and runtime diagnostics.');
+assert.ok(gameSource.includes('norseFsr1Easu') && gameSource.includes('norseFsr1Rcas') && gameSource.includes('window.__ELSN_FSR1'), 'FSR1 must expose both real post-process stages and runtime diagnostics.');
 assert.ok(gameSource.includes('fsr1SourcePostProcess.samples=Math.max(1,Math.min(2,maxFsrSamples))'), 'The FSR1 source pass must use available MSAA for its anti-aliased input.');
 assert.ok(builder.includes('isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52'),'The dedicated Performance profile must keep its existing resolution safeguards.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"),"Quality profile antialiasing must remain enabled.");
