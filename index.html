@@ -5982,12 +5982,22 @@ void main(void){
   catch(err){console.info('No se pudo conservar el GLB enemigo entre sesiones:',err);return false;}finally{if(db)db.close();}
  }
  async function readCivilianHumanCache(){
-  let db;try{db=await openVikingCache();const record=await new Promise((resolve,reject)=>{const tx=db.transaction(VIKING_CACHE_STORE,'readonly');const req=tx.objectStore(VIKING_CACHE_STORE).get(CIVILIAN_HUMAN_CACHE_KEY);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error||new Error('No se pudo leer la caché de plebeyos.'));});return record&&record.blob instanceof Blob&&await isValidGLB(record.blob)?record.blob:null;}
-  catch(err){console.info('La caché propia de plebeyos aún no existe:',err);return null;}finally{if(db)db.close();}
+  try{
+   if(!window.caches)return null;
+   const manualCache=await window.caches.open(VIKING_WEB_CACHE);
+   const manual=await manualCache.match(CIVILIAN_HUMAN_GLB_URL);
+   const hit=manual||await window.caches.match(CIVILIAN_HUMAN_GLB_URL);
+   const blob=hit?await hit.blob():null;
+   return blob instanceof Blob&&await isValidGLB(blob)?blob:null;
+  }catch(err){console.info('La caché Cache API de aldeanos no está disponible:',err);return null;}
  }
  async function saveCivilianHumanCache(blob){
-  let db;try{db=await openVikingCache();await new Promise((resolve,reject)=>{const tx=db.transaction(VIKING_CACHE_STORE,'readwrite');tx.objectStore(VIKING_CACHE_STORE).put({blob,name:'man-base-character-rigged.glb',origin:'Grab3D CC0 · Man Base Mesh rigged · civilian only',savedAt:Date.now()},CIVILIAN_HUMAN_CACHE_KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('No se pudo guardar la caché de plebeyos.'));tx.onabort=()=>reject(tx.error||new Error('Se canceló el guardado de plebeyos.'));});return true;}
-  catch(err){console.info('No se pudo conservar el modelo de plebeyos:',err);return false;}finally{if(db)db.close();}
+  try{
+   if(!window.caches||!(blob instanceof Blob)||!await isValidGLB(blob))return false;
+   const cache=await window.caches.open(VIKING_WEB_CACHE);
+   await cache.put(CIVILIAN_HUMAN_GLB_URL,new Response(blob,{headers:{'Content-Type':'model/gltf-binary','Cache-Control':'public,max-age=31536000'}}));
+   return true;
+  }catch(err){console.info('No se pudo conservar el modelo de aldeanos en Cache API:',err);return false;}
  }
  async function resolveCivilianHumanAssetUrls(){
   const urls=[CIVILIAN_HUMAN_GLB_URL];
