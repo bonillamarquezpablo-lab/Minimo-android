@@ -16,7 +16,11 @@ async function main() {
   assert.match(workflow,/^  unified-inspector:/m);
   assert.doesNotMatch(workflow,/^  (texture-smoke|character-startup|custom-capture):/m,
     'All checks must be invoked from one workflow job.');
-  assert.match(workflow,/^  push:\n    branches: \[main\]/m);
+  const pushBranches = workflow.match(/^  push:\\n    branches: \\[([^\\]]+)\\]/m);
+  assert.ok(pushBranches, 'The inspector workflow must keep an explicit push trigger.');
+  const pushBranchNames = pushBranches[1].split(',').map(branch => branch.trim());
+  assert.ok(pushBranchNames.includes('main'), 'Production changes must continue to be validated on main.');
+  assert.ok(pushBranchNames.includes('feature/hrafn-before-after-inspector'), 'The Hrafn integration branch must be validated on push.');
   assert.match(workflow,/group: scene-capture-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}/);
   assert.match(workflow,/GITHUB_EVENT_NAME/);
   assert.match(workflow,/workflow_dispatch/);
