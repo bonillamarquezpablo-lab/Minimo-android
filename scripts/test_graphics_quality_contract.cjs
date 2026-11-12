@@ -5,51 +5,45 @@ const assert=require('node:assert/strict');
 const builder=fs.readFileSync('scripts/build_site.py','utf8');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const gameSource=fs.readFileSync('index.html','utf8');
+const atmosphere=fs.readFileSync('scripts/nordic/atmosphere-system.js','utf8');
 
 for(const marker of [
   'highTierGpuMatch=',
   'highHeadroomQualityMobile=',
-  '!isPerformanceMode&&isTouchDevice&&!constrainedHardware',
-  'qualityDprFloor=fsr1Candidate ? .72',
-  'qualityDprCeiling=fsr1Candidate ? .92',
-  'qualityDpr=fsr1Candidate?fsr1OutputDpr:',
-  'const fsr1OutputDpr=Math.min(deviceDpr,isTouchDevice?2.50:deviceDpr)',
-  'fsr1InputScale=.87',
-  'fsr1SourcePostProcess._options=fsr1InputScale',
-  'fsr1InputScale=.87',
-  'renderPipeline.fxaaEnabled=!fsr1Candidate',
-  'renderPipeline.imageProcessingEnabled=false',
+  'const fsr1Candidate=false;',
+  'qualityDprFloor=highHeadroomQualityMobile?1.0',
+  'qualityDprCeiling=highHeadroomQualityMobile?1.65',
+  'highHeadroomQualityMobile?1.50:(isTouchDevice?1.25:1.85)',
+  'qualityDprCurrent=qualityDpr',
   'qualityDprStableSamples>=3',
   'qualityDprSlowSamples>=1',
-  'severeFps=targetFrameRate>=87?48:32',
+  'severeFps=targetFrameRate>=87?50:36',
+  'moderateFps=targetFrameRate>=87?72:48',
   'stableFps=targetFrameRate>=87?87:57',
   'let targetFrameRate=60,observedFpsCeiling=60',
-  'renderPipeline.fxaaEnabled=!fsr1Candidate',
-  'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?1:4,maxSamples))',
-  'renderPipeline.sharpenEnabled=true',
-  'renderPipeline.sharpen.edgeAmount=.34',
+  'engine.setHardwareScalingLevel(1/qualityDprCurrent)',
+  'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))',
+  'renderPipeline.sharpen.edgeAmount=.20',
   'list.length<180',
   'nordicWaterMirror.refreshRate=isTouchDevice?(highHeadroomQualityMobile?30:20):8',
   'shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))',
   'reflectionFilteredMeshCount',
   'tinyReflectionDetail=vertexCount<96',
-  'engine.setHardwareScalingLevel(1/qualityDprCurrent)',
-  'severeFps=targetFrameRate>=87?48:32',
-  'moderateFps=targetFrameRate>=87?72:46',
-  'stableFps=targetFrameRate>=87?87:57',
   'size=highHeadroomQualityMobile?1024:512',
   'highHeadroomQualityMobile?2048:1024',
-  'const size=highHeadroomQualityMobile?512:256'
+  'const size=highHeadroomQualityMobile?512:256',
+  'highHeadroomQualityMobile,reportedMemory',
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
-assert.ok(gameSource.includes('FsrEasuF(') && gameSource.includes('FsrRcasF('), 'FSR1 EASU and RCAS shaders must be embedded in the game source.');
-assert.ok(gameSource.includes('effectiveSourceDpr:()=>Number((qualityDpr*fsr1InputScale).toFixed(3))'), 'FSR1 diagnostics must expose effective source detail.');
-assert.ok(gameSource.includes('targetFps:targetFrameRate') && gameSource.includes('framesOver90BudgetPct'), 'The runtime must report the 90-FPS frame budget.');
-assert.ok(gameSource.includes('norseFsr1Easu') && gameSource.includes('norseFsr1Rcas') && gameSource.includes('window.__ELSN_FSR1'), 'FSR1 must expose both real post-process stages and runtime diagnostics.');
-assert.ok(gameSource.includes('fsr1SourcePostProcess.samples=Math.max(1,Math.min(2,maxFsrSamples))'), 'The FSR1 source pass must use available MSAA for its anti-aliased input.');
-assert.ok(builder.includes('isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52'),'The dedicated Performance profile must keep its existing resolution safeguards.');
-assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"),"Quality profile antialiasing must remain enabled.");
-assert.ok(validator.includes('missing_graphics_quality'),'The release validator must reject a missing quality uplift.');
-assert.ok(validator.includes('procedural_texture_signature') && validator.includes('highHeadroomQualityMobile'), 'The release validator must accept the built 1K adaptive procedural texture while preserving mipmap checks.');
+assert.ok(!builder.includes('const fsr1Candidate=!!('), 'The experimental two-pass FSR path must not be activated on mobile.');
+assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"), 'Native engine antialiasing must remain enabled in Quality.');
+assert.ok(gameSource.includes('targetFps:targetFrameRate') && gameSource.includes('framesOver90BudgetPct'), 'The runtime must report frame-budget diagnostics.');
+assert.ok(gameSource.includes('engine.setHardwareScalingLevel') || builder.includes('engine.setHardwareScalingLevel'), 'Adaptive native render scale must be applied through Babylon.');
+assert.ok(atmosphere.includes("this.quality === 'mobile-high'"), 'Flagship touch devices must use the dedicated mobile-high atmosphere tier.');
+assert.ok(atmosphere.includes('pipeline.fxaaEnabled = !mobileHigh;'), 'The mobile-high tier must not stack FXAA on top of native MSAA.');
+assert.ok(atmosphere.includes("this.quality === 'high' && !this.isTouchDevice"), 'Volumetric rays and SSAO must remain desktop-only.');
+assert.ok(atmosphere.includes("this.quality === 'low' || this.isTouchDevice"), 'Touch devices must keep one standard shadow map instead of a cascaded shadow pass.');
+assert.ok(validator.includes('missing_graphics_quality'), 'The release validator must reject missing mobile rendering guardrails.');
+assert.ok(validator.includes('this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;'), 'The atmosphere hardware tier must be checked by release validation.');
 
-console.log('OK graphics quality: WebGL FSR1 EASU+RCAS, adaptive input scale, conditional FXAA, high-detail textures and unchanged Performance profile.');
+console.log('OK graphics quality: native WebGL rendering, 1.50 flagship starting scale, adaptive 1.0–1.65 range, native 2x MSAA, dedicated mobile-high atmosphere, no mobile FSR1/SSAO/god-rays/CSM.');
