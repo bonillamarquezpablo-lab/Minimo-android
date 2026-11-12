@@ -31,7 +31,7 @@ assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/loa
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
 assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.includes("thinInstanceBatch") && buildSite.includes("list.length<260"),"Water reflections must filter non-essential foliage, instance batches and limit pass submissions.");
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?(highHeadroomQualityMobile?24:20):8"),"Mobile quality uses image sharpening and a throttled, smaller reflection pass.");
-assert.ok(buildSite.includes("renderPipeline.fxaaEnabled=!highHeadroomQualityMobile"),"Flagship mobile quality must avoid FXAA softness when native MSAA is used.");
+assert.ok(buildSite.includes("renderPipeline.fxaaEnabled=!fsr1Candidate"),"Flagship mobile quality must avoid FXAA softness when native MSAA is used.");
 assert.match(buildSite,/game_version = "0\.6\.282"/,"The build must validate and package 0.6.282.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
