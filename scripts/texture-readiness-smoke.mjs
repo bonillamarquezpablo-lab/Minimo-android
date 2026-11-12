@@ -91,7 +91,7 @@ function classifyUnregisteredCandidate(item){
  if(name==='RealVikingRightHandWeaponAnchor')return {classification:'equipped-weapon-assembly',disposition:'not-a-building'};
  if(name==='DetailedNorseHearth')return {classification:'hearth-prop',disposition:'decorative-prop'};
  if(/^FirewoodRack_\d+$/.test(name))return {classification:'firewood-rack-prop',disposition:'decorative-prop'};
- if(/^NorseThingstead_\\d+$/.test(name))return {classification:'intentional-settlement-hall',disposition:'known-non-habitable-building'};
+ if(/^NorseThingstead_\d+$/.test(name))return {classification:'intentional-settlement-hall',disposition:'known-non-habitable-building'};
  if(/^NorseCoastal(?:Pier|Beacon)_\\d+$/.test(name))return {classification:'intentional-outer-island-landmark',disposition:'known-non-habitable-building'};
  return {classification:'unresolved',disposition:'requires-manual-review'};
 }
