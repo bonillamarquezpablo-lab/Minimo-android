@@ -155,8 +155,8 @@ async function main() {
 
     await page.evaluate(() => {
       const audit = window.__startupPostEntryAudit = { calls: [], network: [], resources: [], entryAt: null };
-      const isAudioStream = value => /\\.(?:mp3|ogg|wav|m4a)(?:$|[?#])/i.test(String(value || ''));
-      const isGlb = value => /\\.glb(?:$|[?#])/i.test(String(value || ''));
+      const isAudioStream = value => /\.(?:mp3|ogg|wav|m4a)(?:$|[?#])/i.test(String(value || ''));
+      const isGlb = value => /\.glb(?:$|[?#])/i.test(String(value || ''));
       const entryObserver = new MutationObserver(() => {
         if (!audit.entryAt && document.body.classList.contains('game-running')) audit.entryAt = performance.now();
       });
