@@ -9881,17 +9881,13 @@ function createRealWeapon(type='axe'){
   }
  }
  
- // Distant gulls circle the coast; simple articulated wings keep them cheap on mobile.
- for(let i=0;i<(isUltraLowEndMobile?3:(isGalaxyA12NachoPerformance?3:(isGalaxyA12LowEndMobile?4:9)));i++){
-  const root=newGroup('CoastalGull_'+i,null),body=sphere('GullBody_'+i,root,[0,0,0],[.24,.115,.43],distantGullMaterial,10);
-  const left=box('GullLeftWing_'+i,root,[-.39,.015,0],[.78,.045,.15],distantGullMaterial,[0,0,-.08]);
-  const right=box('GullRightWing_'+i,root,[.39,.015,0],[.78,.045,.15],distantGullMaterial,[0,0,.08]);
-  root.position=v(-36+Math.cos(i)*18,10+i%3*1.4,-18+Math.sin(i)*18);ambientBirds.push({root,left,right,phase:i*1.2,radius:18+i*1.65,alt:9+i%3*1.9,speed:.070+i*.004,procedural:true});
- }
+ // No se crean gaviotas provisionales: la fauna GLB se prepara antes de entrar.
  async function loadRiggedCoastalGulls(){
   const gullUrl='./assets/models/Seagull.glb';
   try{
-   const response=await fetch(gullUrl,{mode:'cors',cache:'force-cache',credentials:'omit'});if(!response.ok)throw new Error('HTTP '+response.status);
+   const controller=new AbortController(),downloadTimer=setTimeout(()=>controller.abort(),45000);
+   let response;try{response=await fetch(gullUrl,{mode:'cors',cache:'force-cache',credentials:'omit',signal:controller.signal});}catch(error){if(error&&error.name==='AbortError')throw new Error('Gaviotas: descarga agotó el plazo de 45 segundos.');throw error;}finally{clearTimeout(downloadTimer);}
+   if(!response.ok)throw new Error('HTTP '+response.status);
    const blob=await response.blob();if(!(blob.size>100000))throw new Error('GLB de gaviota vacío o incompleto');
    const objectUrl=URL.createObjectURL(blob);let container;try{container=await timedGlbStage('Gaviotas','importación Babylon',()=>B.SceneLoader.LoadAssetContainerAsync('',objectUrl,scene,null,'.glb'),blob.size);}finally{URL.revokeObjectURL(objectUrl);}
    if(!container||!container.instantiateModelsToScene)throw new Error('Babylon no pudo crear el contenedor de gaviota');
@@ -9925,9 +9921,9 @@ function createRealWeapon(type='axe'){
    }
    if(realBirds.length){ambientBirds.forEach(b=>{if(b.procedural)b.root.setEnabled(false);});ambientBirds.splice(0,ambientBirds.length,...realBirds);console.info('Gaviotas riggeadas cargadas',{count:realBirds.length,animation:realBirds.map(b=>b.animation&&b.animation.name),license:'CC0'});}
    else throw new Error('El GLB se importó sin mallas instanciables');
-  }catch(err){console.warn('Se conserva la gaviota animada de reserva; no se cargó el modelo riggeado:',err);}
+  }catch(err){console.warn('Fauna opcional: gaviotas GLB no disponibles antes de entrar:',err);if(/agotó el plazo/i.test(String(err&&err.message||err)))throw err;}
  }
- if(!isUltraLowEndMobile&&!isGalaxyA12LowEndMobile)loadRiggedCoastalGulls();
+
  // Partículas reutilizables: evita crear y destruir geometría en cada impacto.
  const effects=[],effectPool=[];
  const MAX_ACTIVE_EFFECTS=isUltraLowEndMobile?48:(isGalaxyA12NachoPerformance?56:(isGalaxyA12LowEndMobile?72:(isConstrainedMobile?96:180)));
@@ -12855,7 +12851,7 @@ function update(dt){
 
  if(!coastalReferenceMode){
   const faunaStartedAt=performance.now();
-  try{await loadWildlifeModels();recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'ready',{loaded:ambientFauna.length});}
+  try{const faunaTasks=[loadWildlifeModels()];if(!isPerformanceMode)faunaTasks.push(loadRiggedCoastalGulls());await Promise.all(faunaTasks);recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'ready',{loaded:ambientFauna.length,gulls:ambientBirds.filter(b=>b.real).length});}
   catch(faunaError){recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'optional-failed',{message:String(faunaError&&faunaError.message||faunaError)});console.warn('Fauna opcional no disponible antes de entrar:',faunaError);if(/agotó el plazo/i.test(String(faunaError&&faunaError.message||faunaError)))throw new Error('RECURSO OBLIGATORIO: importación de fauna sin finalizar · '+String(faunaError&&faunaError.message||faunaError));}
  }
  const startupMemoryTextures=new Set(),startupMemoryGeometry=new Set();
