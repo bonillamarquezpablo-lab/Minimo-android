@@ -16,7 +16,7 @@ async function main() {
   assert.match(workflow,/^  unified-inspector:/m);
   assert.doesNotMatch(workflow,/^  (texture-smoke|character-startup|custom-capture):/m,
     'All checks must be invoked from one workflow job.');
-  const pushBranches = workflow.match(/^  push:\\n    branches: \\[([^\\]]+)\\]/m);
+  const pushBranches = workflow.match(/^  push:\n    branches: \[([^\]]+)\]/m);
   assert.ok(pushBranches, 'The inspector workflow must keep an explicit push trigger.');
   const pushBranchNames = pushBranches[1].split(',').map(branch => branch.trim());
   assert.ok(pushBranchNames.includes('main'), 'Production changes must continue to be validated on main.');
