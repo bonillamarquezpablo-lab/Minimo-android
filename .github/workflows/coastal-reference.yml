@@ -40,7 +40,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: scene-capture-${{ github.event.pull_request.number || github.ref }}
+  group: scene-capture-${{ github.event.pull_request.number || github.ref }}${{ github.event_name == 'pull_request' && github.event.pull_request.number == 121 && ' -visual-skip-once' || '' }}
   cancel-in-progress: false
 
 jobs:
@@ -116,6 +116,7 @@ jobs:
           node --check scripts/run-unified-inspector.mjs
           node --check scripts/hrafn-before-after.mjs
           node scripts/test_hrafn_before_after_contract.cjs
+          node scripts/test_inspector_capture_skip_contract.cjs
           node --check scripts/player-startup-smoke.mjs
           node --check scripts/texture-readiness-smoke.mjs
           node --check scripts/coastal-structure-grounding-smoke.mjs
@@ -167,6 +168,7 @@ jobs:
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
           CAPTURE_SEED: '20261110'
           INSPECTOR_LEVEL: ${{ inputs.inspection_level || (github.event_name == 'push' && 'deep' || 'complete') }}
+          INSPECTOR_SKIP_VISUAL_CAPTURES: ${{ github.event_name == 'pull_request' && github.event.pull_request.number == 121 && '1' || '0' }}
           INSPECTOR_GITHUB_TOKEN: ${{ github.event_name != 'pull_request' && github.token || '' }}
           INSPECTOR_STATUS_BRANCH: inspector-status
         run: |
