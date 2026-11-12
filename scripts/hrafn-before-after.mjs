@@ -25,7 +25,7 @@ async function capturePhaseFrame(page, hour, label, phaseId) {
     api.render();
     return { clockState, dataUrl: api.captureCanvas() };
   }, hour);
-  const match = /^data:image\\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(captureResult.dataUrl || '');
+  const match = /^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(captureResult.dataUrl || '');
   let bytes = match ? Buffer.from(match[1], 'base64') : null;
   let method = 'game-canvas-readback';
   const valid = value => Buffer.isBuffer(value) && value.length > 10000 &&
