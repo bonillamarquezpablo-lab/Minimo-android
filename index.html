@@ -6,7 +6,6 @@
 <meta name="theme-color" content="#172a2d">
 <meta name="el-sin-nombre-build" content="0.6.274">
 <meta name="el-sin-nombre-repair" content="0.6.229 frame pacing and CPU allocation reduction without visual reductions">
-<link rel="preload" as="audio" href="./assets/audio/menu/winter_s_final_toll.mp3" type="audio/mpeg" fetchpriority="high">
 <link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">
 <link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">
 <link rel="preconnect" href="https://grab3d.com" crossorigin>
@@ -1939,7 +1938,7 @@ let preflightMenuMusic=null;
 function ensurePreflightMenuMusic(){
  if(preflightMenuMusic||typeof Audio==='undefined')return preflightMenuMusic;
  preflightMenuMusic=new Audio();
- preflightMenuMusic.preload='auto';
+ preflightMenuMusic.preload='none';
  preflightMenuMusic.src=PREFLIGHT_MENU_MUSIC_SOURCE;
  preflightMenuMusic.loop=true;
  preflightMenuMusic.volume=PREFLIGHT_MENU_MUSIC_VOLUME;
@@ -10270,7 +10269,7 @@ function villageHostileDefenders(vl){
   const VOLUME=.12;
   function ensure(){
    if(audio||typeof Audio==='undefined')return audio;
-   audio=new Audio();audio.preload='auto';audio.src=SOURCE;audio.loop=true;audio.volume=VOLUME;audio.playsInline=true;
+   audio=new Audio();audio.preload='none';audio.src=SOURCE;audio.loop=true;audio.volume=VOLUME;audio.playsInline=true;
    window.__elSinNombrePreflightMenuMusic=audio;
    audio.addEventListener('error',()=>console.warn('No se pudo cargar la banda sonora del menú:',SOURCE));
    return audio;
