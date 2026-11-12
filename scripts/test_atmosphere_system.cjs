@@ -54,6 +54,10 @@ assert.ok(source.includes('advanceElapsed(this.elapsedSeconds, delta, this.speed
 assert.ok(source.includes('TONEMAPPING_ACES') && source.includes('imageConfig.toneMappingEnabled = true'), 'The unified post-process must enable ACES tone mapping.');
 assert.ok(source.includes('B.ShadowGenerator.QUALITY_LOW') && source.includes('previous.usePercentageCloserFiltering = true'), 'Low graphics mode must retain shadows with reduced PCF cost.');
 assert.ok(source.includes('never hardware ray tracing'), 'The WebGL runtime must explicitly describe its lighting effects as approximations.');
+assert.ok(source.includes("this.moonLight.intensity = 0.24 * state.night"), 'Moonlight must keep the terrain readable after sunset.');
+assert.ok(source.includes("0.34 + 0.72 * state.daylight + 0.075 * state.twilight + 0.18 * state.night"), 'Hemisphere fill light must preserve night-time visibility.');
+assert.ok(source.includes("this.scene.environmentIntensity = 0.16 + 0.42 * state.daylight + 0.055 * state.twilight + 0.045 * state.night"), 'Environment reflections must retain a night-time floor.');
+assert.ok(source.includes("state.night * 0.075"), 'Exposure must compensate for the night profile without flattening daylight.');
 assert.ok(source.includes("this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;") && source.includes("this.quality === 'mobile-high'"), 'Flagship touch devices must use the dedicated mobile-high tier.');
 assert.ok(source.includes("const enabled = this.quality !== 'low';") && source.includes('pipeline.bloomEnabled = enabled;'), 'Bloom must remain active in Quality and be omitted only from the Performance profile.');
 assert.ok(source.includes('pipeline.fxaaEnabled = !mobileHigh;'), 'Mobile-high must use native MSAA without an extra FXAA pass.');
