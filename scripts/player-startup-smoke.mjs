@@ -144,8 +144,11 @@ async function main() {
 
     // Wait for the complete blocking startup barrier, then audit every import/network
     // entry point across the first 20 seconds of actual gameplay.
+    const blockingBarrierStartedAt = performance.now();
     await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true,
       undefined, { timeout: 180000, polling: 250 });
+    manifest.blockingStartupMs = Number((performance.now() - blockingBarrierStartedAt).toFixed(1));
+    manifest.memoryEstimate = await page.evaluate(() => window.__elSinNombreStartupMemoryEstimate || null);
     const npcRoster = await page.evaluate(() => window.__elSinNombreStartupNpcRoster || null);
     assert.ok(npcRoster && npcRoster.ready === true,
       'Los NPC GLB obligatorios de la isla inicial no están listos: ' + JSON.stringify(npcRoster));
@@ -230,8 +233,23 @@ async function main() {
     manifest.postEntryErrors = finalErrors;
     assert.deepEqual(finalErrors, { consoleErrors: 0, runtimeErrors: 0, unhandledRejections: 0 },
       'Se detectaron errores durante los primeros 20 segundos de partida.');
-    console.log('[player-startup] blocking startup + no post-entry GLB + first 20s: ' +
-      JSON.stringify({ npcRoster, perf20s, postEntryAudit: manifest.postEntryAudit, postEntryErrors: finalErrors }));
+    // Repeat in the same browser profile to measure the Service Worker/Cache API warm path.
+    const cachedLaunchStartedAt = performance.now();
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
+    const cachedAudioGate = page.locator('#audioGateStart');
+    if (await cachedAudioGate.isVisible().catch(() => false)) await cachedAudioGate.click({ timeout: 30000 });
+    await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
+    await page.locator('#chooseQuality').click();
+    await page.locator('#continueUnnamed').waitFor({ state: 'visible', timeout: 30000 });
+    await page.locator('#continueUnnamed').click();
+    const cachedBarrierStartedAt = performance.now();
+    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true,
+      undefined, { timeout: 180000, polling: 250 });
+    manifest.cachedNavigationAndProfileMs = Number((cachedBarrierStartedAt - cachedLaunchStartedAt).toFixed(1));
+    manifest.cachedBlockingStartupMs = Number((performance.now() - cachedBarrierStartedAt).toFixed(1));
+    manifest.cachedMemoryEstimate = await page.evaluate(() => window.__elSinNombreStartupMemoryEstimate || null);
+    console.log('[player-startup] first/cached startup + first 20s: ' +
+      JSON.stringify({ npcRoster, memoryEstimate: manifest.memoryEstimate, cachedMemoryEstimate: manifest.cachedMemoryEstimate, perf20s, postEntryAudit: manifest.postEntryAudit, postEntryErrors: finalErrors, cachedNavigationAndProfileMs: manifest.cachedNavigationAndProfileMs, cachedBlockingStartupMs: manifest.cachedBlockingStartupMs }));
   } catch (error) {
     manifest.failure = String(error && error.stack || error);
     throw error;
