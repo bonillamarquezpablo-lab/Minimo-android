@@ -180,7 +180,7 @@ assert.match(html,/disableNearWaterDetail:false/,"Test-only LOD isolation must d
 assert.match(html,/if\(coastalDiagnosticOverrides\.disableNearWaterDetail\)return 0/,"Near/far LOD A/B must force one shared far-wave endpoint without changing normal gameplay.");
 assert.match(html,/diagnosticOceanDepthTintColors=oceanDepthVertexColors\.slice\(\)/,"Ocean depth tint diagnostics must preserve and restore the original RGB buffer independently from alpha.");
 assert.match(html,/const waterFarStep=isPerformanceMode\?[^;]*isTouchDevice\?\.22/,"Far-ocean geometry updates should be throttled on touch devices while local waves retain detail.");
-assert.match(html,/async function createRealGrass\(onlyIslandIndex=null,focusX=null,focusZ=null\)/,"Quality vegetation must accept one selected island and a local focus point.");
+assert.match(html,/async function createRealGrass\(onlyIslandIndex=null,focusX=null,focusZ=null,staging=false\)/,"Quality vegetation must accept one selected island and a local focus point.");
 assert.match(html,/if\(onlyIslandIndex!==null&&islandIndex!==onlyIslandIndex\)continue;/,"Grass placement must skip all inactive islands.");
 assert.match(html,/const radius=Math\.min\(92,safeLandRadius\)/,"Quality grass must be generated only within a useful local radius.");
 assert.match(html,/const centerX=Number\.isFinite\(focusX\)\?focusX:island\.x,centerZ=Number\.isFinite\(focusZ\)\?focusZ:island\.z/,"Grass sampling must be centered on the player's local area.");
@@ -189,8 +189,11 @@ assert.match(html,/if\(isPerformanceMode\)return;/,"Performance must skip grass 
 assert.match(html,/if\(onShip\|\|bestRatio>1\.09\)currentIsland=-1/,"Grass on another island must wait until the player disembarks.");
 assert.match(html,/if\(!isPerformanceMode\)\{[\s\S]*?await createRealGrass\(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ\)/,"Only Quality prepares nearby grass before gameplay starts.");
 assert.match(html,/function updateActiveIslandGrass\(dt\)/,"Quality-only active-area grass streaming must be available.");
-assert.match(html,/Math\.hypot\(focus\.x-grassStreamCenterX,focus\.z-grassStreamCenterZ\)>=38/,"The local grass area must recenter as the player moves.");
-assert.match(html,/const show=batch\.islandIndex===currentIsland/,"All grass batches belonging to the occupied island must remain visible.");
+assert.match(html,/Math\.hypot\(focus\.x-grassStreamCenterX,focus\.z-grassStreamCenterZ\)>=GRASS_STREAM_RECENTER_DISTANCE/,"The local grass area must recenter as the player moves.");
+assert.match(html,/const show=batch\.islandIndex===visibleGrassIslandIndex/,"All grass batches belonging to the occupied island must remain visible.");
 assert.match(html,/grassStream:\{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise\}/,"Runtime diagnostics must expose the active grass island and pending streaming state.");
+assert.match(html,/Visible Nordic ground cover swapped atomically/,"Grass must swap only after the staged replacement is ready.");
+assert.match(html,/grassMesh\.setEnabled\(!staging\)/,"New grass batches must stay hidden until their atomic activation.");
+assert.match(html,/grassBuildSliceBudgetMs=staging\?\(isTouchDevice\?3\.5:6\)/,"Runtime grass generation must yield in short frame slices.");
 assert.match(html,/const leavesPerClump=isPerformanceMode\?8:10/,"Quality grass blade detail must be preserved while island streaming changes.");
 console.log('OK: separate seabed, translucent moving water film, white foam, wet sand and detailed multi-scale ocean surface.');
