@@ -260,6 +260,6 @@ async function main(){
   if(groundingFailures.length||smokeFailures.length){report.errors.push('2 cm / high-tide / chimney alignment gate failed: '+JSON.stringify({groundingFailures:groundingFailures.map(x=>x.id),smokeFailures:smokeFailures.map(x=>x.id)}));report.verdict='failed';process.exitCode=1;}
   else report.verdict=report.structures.length===5?'measured':'incomplete';
  }catch(error){report.errors.push(String(error?.stack||error));report.verdict='failed';process.exitCode=1;}
- finally{report.finishedAt=new Date().toISOString();save();try{await browser?.close();}catch(_){}}
+ finally{report.finishedAt=new Date().toISOString();save();if(report.verdict!=='measured')console.error('[HRAFN_GEOMETRY_RESULT] '+JSON.stringify({verdict:report.verdict,errors:report.errors,phases:report.phases}));else console.log('[HRAFN_GEOMETRY_RESULT] '+JSON.stringify({verdict:report.verdict,measurementCoverage:report.measurementCoverage,structures:report.structures.map(x=>({id:x.id,baseWithinTwoCm:x.baseWithinTwoCm,dryAtHighTide:x.dryAtHighTide,smokeEmitter:x.smokeEmitterAlignment?.withinTwoCm??null}))}));try{await browser?.close();}catch(_){}}
 }
 main();
