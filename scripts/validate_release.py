@@ -741,8 +741,8 @@ def main() -> None:
         fail("La hierba debe seguir el área cercana y no cargar islas hasta desembarcar.")
     if "leavesPerClump=isPerformanceMode?8:10" not in index_html or "const show=batch.islandIndex===visibleGrassIslandIndex;" not in index_html or "const chunkSize=56,grassBatches=new Map();" not in index_html or "const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));" not in index_html:
         fail("La hierba de Calidad debe conservar el detalle y limitar la generación al área local.")
-    if "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "recordStartupTask('Hierba 3D inicial de Calidad'" not in index_html or "function startDeferredWorldModels()" not in index_html:
-        fail("La hierba inicial de Calidad debe estar lista antes de entrar y los GLB secundarios deben cargarse después.")
+    if "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "recordStartupTask('Hierba 3D inicial de Calidad'" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
+        fail("La hierba inicial de Calidad y los GLB de la isla inicial deben estar listos antes de entrar.")
     if "audioPreloadResult=await startupAudioPreload" not in index_html or "RECURSO OBLIGATORIO: efectos de sonido" not in index_html or "startupAudioPreload.then(" not in index_html:
         fail("Los efectos de sonido deben terminar antes de entrar; la música continúa en streaming.")
     if "antialias:activeGraphicsProfile!=='performance'" not in index_html or "(isTouchDevice?2048:" not in index_html:
