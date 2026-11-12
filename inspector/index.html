@@ -22,7 +22,7 @@ main{max-width:900px;margin:auto;padding:28px 18px 56px}.top{display:flex;justif
 <button class="level" data-level="deep" aria-pressed="false"><b>Profundo</b><small>Comparación antes/después y cuatro horas</small></button>
 </div>
 <a class="primary" id="launch" href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/workflows/coastal-reference.yml" target="_blank" rel="noopener">Abrir ejecución en GitHub ↗</a>
-<div class="meta">Por seguridad, el inicio se confirma en GitHub. No se guarda ninguna clave de acceso en esta página. En GitHub pulsa «Run workflow» y selecciona el nivel elegido aquí.</div>
+<div class="meta" id="levelhint">Nivel seleccionado: Rápido. Confírmalo también al abrir GitHub. Por seguridad, el inicio se confirma allí; esta página no guarda claves de acceso.</div>
 </section>
 <section class="panel">
 <div class="statusline"><h2 style="margin:0">Inspección más reciente</h2><span class="pill" id="runstate">Buscando…</span></div>
@@ -39,7 +39,9 @@ main{max-width:900px;margin:auto;padding:28px 18px 56px}.top{display:flex;justif
 <script>
 const owner='bonillamarquezpablo-lab',repo='Minimo-android',workflow='coastal-reference.yml';
 let level='quick',timer=null;
-document.querySelectorAll('[data-level]').forEach(b=>b.addEventListener('click',()=>{level=b.dataset.level;document.querySelectorAll('[data-level]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));}));
+const levelNames={quick:'Rápido',complete:'Completo',deep:'Profundo'};
+const levelHint=document.getElementById('levelhint');
+document.querySelectorAll('[data-level]').forEach(b=>b.addEventListener('click',()=>{level=b.dataset.level;document.querySelectorAll('[data-level]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));levelHint.textContent='Nivel seleccionado: '+levelNames[level]+'. Confírmalo también al abrir GitHub. Por seguridad, el inicio se confirma allí; esta página no guarda claves de acceso.';}));
 const launch=document.getElementById('launch');
 launch.href='https://github.com/'+owner+'/'+repo+'/actions/workflows/'+workflow;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -55,7 +57,10 @@ let progress=null;try{const pr=await fetch(raw,{cache:'no-store'});if(pr.ok)prog
 document.getElementById('runstate').textContent=statusLabel(run.status==='completed'?(run.conclusion==='success'?'passed':'failed'):run.status);
 document.getElementById('runstate').className='pill '+(run.status==='in_progress'?'running':run.conclusion==='success'?'success':run.status==='completed'?'failure':'');
 document.getElementById('runinfo').innerHTML='<div><strong>#'+run.run_number+'</strong> · '+esc(run.name||'Inspector único')+'</div><div class="meta">Rama: '+esc(run.head_branch)+' · Inicio: '+new Date(run.created_at).toLocaleString('es-ES')+'</div><div class="meta"><a href="'+esc(run.html_url)+'" target="_blank" rel="noopener">Abrir ejecución y registros en GitHub ↗</a></div>';
-const phases=progress?.phases||[];document.getElementById('phases').innerHTML=phases.length?phases.map(p=>phaseMarkup(p,Date.now())).join(''):'<div class="empty">Las fases aparecerán aquí cuando arranque el inspector. También puedes consultar los pasos en GitHub.</div>';
+const phases=progress?.phases||[];
+let currentStep='';
+try{const jr=await fetch('https://api.github.com/repos/'+owner+'/'+repo+'/actions/runs/'+runid+'/jobs?per_page=100',{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});if(jr.ok){const jd=await jr.json();const job=(jd.jobs||[]).find(x=>x.status==='in_progress');const step=job?.steps?.find(x=>x.status==='in_progress');if(step)currentStep=step.name;}}catch{}
+document.getElementById('phases').innerHTML=phases.length?phases.map(p=>phaseMarkup(p,Date.now())).join(''):(currentStep?'<div class="phase"><strong>Preparación:</strong> '+esc(currentStep)+'<div class="meta">La auditoría está preparando el entorno.</div></div>':'<div class="empty">Las fases aparecerán aquí cuando arranque el inspector. También puedes consultar los pasos en GitHub.</div>');
 document.getElementById('updated').textContent='Actualizado: '+new Date().toLocaleTimeString('es-ES');
 }catch(e){document.getElementById('connection').textContent='Sin conexión';document.getElementById('runinfo').textContent='No se pudo consultar GitHub: '+e.message}}
 refresh();timer=setInterval(refresh,15000);
