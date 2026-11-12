@@ -118,7 +118,7 @@ assert.match(captureRunner, /const EXPECTED_BUILD = process\.env\.EXPECTED_GAME_
   'The visual audit must derive its expected release from the active validator.');
 assert.match(validator, /EXPECTED_VERSION = "0\.6\.288"/,
   'The release validator must target the current 0.6.288 candidate.');
-assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The source HTML remains 0.6.274 and is promoted to 0.6.287 by the release builder.');
+assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The source HTML remains 0.6.274 and is promoted to 0.6.288 by the release builder.');
 assert.ok(builder.includes('atmosphere-system.js'),'The release builder must package the atmospheric shader module.');
 assert.ok(builder.includes('window.__ELSN_ATMOSPHERE_CONTROLS'),'The atmospheric controls must be installed in the game runtime.');
 assert.ok(builder.includes('atmosphereSystem.update(dt)'),'The atmosphere clock must be updated once per game frame.');
