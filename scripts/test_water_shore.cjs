@@ -194,8 +194,9 @@ assert.match(html,/Math\.hypot\(focus\.x-grassStreamCenterX,focus\.z-grassStream
 assert.match(html,/const show=batch\.islandIndex===visibleGrassIslandIndex/,"All grass batches belonging to the occupied island must remain visible.");
 assert.match(html,/grassStream:\{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise\}/,"Runtime diagnostics must expose the active grass island and pending streaming state.");
 assert.match(html,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/,"Protagonist and initial-island NPC GLBs must block entry.");
-assert.match(html,/const faunaTasks=\[loadWildlifeModels\(\)\]/,"Quality wildlife must join the blocking startup barrier.");
-assert.match(html,/faunaTasks\.push\(loadRiggedCoastalGulls\(\)\)/,"Rigged gull imports must also finish before entry.");
+assert.match(html,/const faunaTasks=\[\{name:\'Fauna terrestre\',promise:loadWildlifeModels\(\)\}\]/,"Quality wildlife must join the blocking startup barrier.");
+assert.match(html,/faunaTasks\.push\(\{name:\'Gaviotas 3D\',promise:loadRiggedCoastalGulls\(\)\}\)/,"Rigged gull imports must also finish before entry.");
+assert.match(html,/await Promise\.allSettled\(faunaTasks\.map\(task=>task\.promise\)\)/,"No optional wildlife task may remain alive after entry.");
 assert.match(html,/startupAudioPreload\.then\(/,"Sound effects are prepared before entry while music remains streamed.");
 assert.match(html,/audioPreloadResult=await startupAudioPreload/,"Sound effects must be ready before entry.");
 assert.match(html,/RECURSO OBLIGATORIO: efectos de sonido/,"Missing sound effects must fail with a named startup resource.");
