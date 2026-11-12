@@ -4,6 +4,7 @@ const assert=require('node:assert/strict');
 const workflow=fs.readFileSync('.github/workflows/coastal-reference.yml','utf8');
 const pages=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 const readme=fs.readFileSync('README.md','utf8');
+const vercel=JSON.parse(fs.readFileSync('vercel.json','utf8'));
 
 assert.match(pages,/- name: Include the independent Inspector Center in the published site\n\s+run: \|\n\s+mkdir -p dist\/inspector\n\s+cp -R inspector\/\. dist\/inspector\//,
   'Pages workflow must contain a real multiline run step for the Inspector Center.');
@@ -11,6 +12,9 @@ assert.doesNotMatch(pages,/\\\\n\\s+run:/,
   'Pages workflow must not contain literal backslash-n sequences in place of YAML newlines.');
 assert.match(readme,/^## Inspector independiente\n\n/m,
   'README Inspector Center heading must be a real Markdown heading.');
+
+assert.equal(vercel.git?.deploymentEnabled,false,
+  'Vercel must not automatically deploy on pushes; manual deployments remain available through the dashboard or CLI.');
 
 assert.match(workflow,/paths-ignore:/,
   'Tooling-only pull requests should not launch the expensive visual game inspection.');
