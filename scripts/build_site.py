@@ -710,7 +710,7 @@ def main() -> None:
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
-    diagnostic_build_pattern = r"reportVersion:'\d+',build:'0\.6\.276'"
+    diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
     diagnostic_build_replacement = "reportVersion:'14',build:'0.6.277'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
