@@ -216,7 +216,13 @@ async function main(){
     '- Texturas pendientes detectadas: **'+(custom?.textures?.readiness?.pendingTextures?.length??'no disponible')+'**',
     '- Cámaras: **'+(custom?.shots?.captured??0)+' / '+(custom?.shots?.planned??0)+'**',
     '- Fallos de cámara: **'+(custom?.shots?.failed??0)+'**','',
-    ...(INSPECTOR_LEVEL==='deep'?[\n      '## Comparación visual antes/después','',\n      '- Fases capturadas: **'+(beforeAfter?.phases?.length??0)+' / 4**',\n      '- Semilla compartida: **'+(beforeAfter?.seed??'no disponible')+'**',\n      '- Informe: **artifacts/hrafn-before-after/report.md**',''\n    ]:[]),\n    '## Lista de estructuras detectadas','','| Código | ID interno | Nombre | Tipo | Isla | X | Y | Z | Mallas |
+    ...(INSPECTOR_LEVEL==='deep'?[
+      '## Comparación visual antes/después','',
+      '- Fases capturadas: **'+(beforeAfter?.phases?.length??0)+' / 4**',
+      '- Semilla compartida: **'+(beforeAfter?.seed??'no disponible')+'**',
+      '- Informe: **artifacts/hrafn-before-after/report.md**',''
+    ]:[]),
+    '## Lista de estructuras detectadas','','| Código | ID interno | Nombre | Tipo | Isla | X | Y | Z | Mallas |
     '|---|---:|---|---|---|---:|---:|---:|---:|'
   );
   for(const item of (custom?.structures||[])){
