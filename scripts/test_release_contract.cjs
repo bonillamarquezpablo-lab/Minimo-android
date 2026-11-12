@@ -45,6 +45,10 @@ assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not 
 assert.ok(indexHtml.includes("babylonEngineVersion:String(B.Engine.Version||'unknown')"),"Runtime diagnostics must expose the actual Babylon.js build.");
 assert.ok(indexHtml.includes("webGpuApiAvailable:typeof navigator.gpu!=='undefined'"),"Runtime diagnostics must report whether the browser exposes WebGPU.");
 assert.ok(indexHtml.includes("engineBackend:graphicsContext&&"),"Runtime diagnostics must distinguish the actual WebGL backend.");
+assert.ok(indexHtml.includes("new B.EngineInstrumentation(engine)") && indexHtml.includes("new B.SceneInstrumentation(scene)"),"The opt-in profiler must use Babylon native engine and scene instrumentation.");
+assert.ok(indexHtml.includes("profileDiagnosticsEnabled=!!(testModeEnabled||new URLSearchParams(window.location.search).get('profile')==='1')"),"Babylon profiling must remain opt-in and absent from normal gameplay.");
+assert.ok(indexHtml.includes("engineInstrumentation.captureGPUFrameTime=true") && indexHtml.includes("sceneInstrumentation.captureRenderTargetsRenderTime=true"),"Profiling must distinguish GPU work from scene and render-target CPU costs.");
+assert.ok(validator.includes("safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6)"),"Release validation must keep GPU profiling telemetry wired into the diagnostic report.");
 assert.ok(buildSite.includes('"version": BABYLON_VERSION'),"The packaged asset manifest must declare the pinned engine version.");
 assert.ok(validator.includes('engine_manifest.get("version") != "9.35.0"'),"Release validation must reject a build with the wrong Babylon engine version.");
 assert.match(validator,/La defensa naval debe estar conectada al bucle/);
