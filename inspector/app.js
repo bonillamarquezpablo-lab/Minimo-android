@@ -17,7 +17,7 @@
   const number=(v,d=1)=>Number.isFinite(Number(v))?Number(v).toLocaleString('es-ES',{maximumFractionDigits:d}):'—';
   const formatElapsed=ms=>{if(!Number.isFinite(ms)||ms<0)return '—';const s=Math.round(ms/1000);if(s<60)return s+' s';const m=Math.floor(s/60),r=s%60;return m+' min '+String(r).padStart(2,'0')+' s';};
   let chosenLevel='deep',activeRun=null,progressData=null,jobsData=null,activePhase='dawn',comparePosition=50,differenceVisible=false,radarData=null,selectedIsland=null,selectedStructure=null;
-  let currentToken='',refreshTimer=null,fetchBusy=false,launching=false,latestRuns=[],lastError=null,lastRunsFetchAt=0,lastJobsFetchAt=0;
+  let currentToken='',refreshTimer=null,fetchBusy=false,launching=false,latestRuns=[],lastError=null,lastRunsFetchAt=0,lastJobsFetchAt=0,jobsRunId=null;
 
   function setConnection(text,online){$('connection').textContent=text;$('connection').classList.toggle('online',!!online);}
   function setMessage(text,type=''){const node=$('launchMessage');node.textContent=text;node.className='inline-state'+(type?' '+type:'');}
@@ -143,8 +143,8 @@
       const jobsInterval=currentToken?20000:90000;
       if(needsJobFallback&&(force||now-lastJobsFetchAt>=jobsInterval)){
         jobs=await apiGet(API+'/actions/runs/'+run.id+'/jobs?per_page=100').catch(()=>({jobs:[]}));
-        lastJobsFetchAt=Date.now();jobsData=jobs;
-      }else if(jobsData&&activeRun?.id===run.id){
+        lastJobsFetchAt=Date.now();jobsData=jobs;jobsRunId=run.id;
+      }else if(jobsData&&jobsRunId===run.id){
         jobs=jobsData;
       }
       const phases=manifest?.phases||[];
