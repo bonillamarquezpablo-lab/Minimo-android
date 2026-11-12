@@ -24,7 +24,7 @@ assert.match(capture,/api\.render\(\);/);
 assert.match(capture,/Page\.captureScreenshot/);
 assert.match(capture,/cdp-composited-frame/);
 assert.match(capture,/timeout: 240000/);
-assert.match(capture,/startupDiagnostics/);
+assert.match(capture,/startupDiagnostics/);assert.match(capture,/sequential/);assert.match(capture,/safeClosePage/);assert.match(capture,/safeCloseBrowser/);assert.match(capture,/withTimeout/);assert.match(capture,/width: 960, height: 540/);assert.match(coastal,/withCaptureTimeout/);assert.match(coastal,/15000/);
 assert.match(coastal,/captureAtmospherePng/);
 assert.match(coastal,/api\.render\(\);/);
 assert.match(coastal,/Page\.captureScreenshot/);
