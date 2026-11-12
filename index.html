@@ -3387,6 +3387,7 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
   const isDynamic=!!(previous&&(previous instanceof B.DynamicTexture||previous.getClassName?.()==='DynamicTexture'));
   if(!isDynamic||typeof previous.dispose!=='function')return replacement;
   let referencedElsewhere=false;
+  try{referencedElsewhere=(material.getActiveTextures?.()||[]).includes(previous);}catch(_){}
   for(const owner of scene.materials||[]){
    if(!owner||owner===material)continue;
    try{if((owner.getActiveTextures?.()||[]).includes(previous)){referencedElsewhere=true;break;}}catch(_){}
