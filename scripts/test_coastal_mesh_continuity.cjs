@@ -13,6 +13,10 @@ assert.ok(build.includes('const seabedY=analyticalHeight-.003;'),
   'IslandHeightfield skirt must sit under the same once-evaluated seabed profile.');
 assert.ok(build.includes('rows=isPerformanceMode?10:(isTouchDevice?64:96)'),
   'Quality radial density must be increased while Performance keeps its established budget.');
+assert.ok(build.includes('const segments=coastColumns,rows=isPerformanceMode?15:(isTouchDevice?64:96),cols=segments+1;')===false,
+  'Build patch must not silently change the established low-memory performance beach budget.');
+assert.ok(build.includes('const segments=coastColumns,rows=isPerformanceMode?13:(isTouchDevice?64:96),cols=segments+1;'),
+  'Quality beach radial density must match the corresponding 64/96-row submerged seabed and avoid triangulation gaps.');
 assert.ok(build.includes('function auditCoastalMeshContinuity(onlyIslandIndex=null)'),
   'The runtime must expose the cross-mesh continuity audit.');
 assert.ok(build.includes("probe.position=v(land[0].x,.42,land[0].z+land[0].r*1.40);"),
@@ -22,6 +26,8 @@ assert.ok(build.includes('thresholdMeters=.05'),
 assert.ok(build.includes('auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)'),
   'The browser test API must expose the cross-mesh audit.');
 assert.ok(release.includes('EXPECTED_VERSION = "0.6.291"'));
+assert.ok(release.includes('rows=isPerformanceMode?13:(isTouchDevice?64:96)'),
+  'Release validation must require the high-detail coast resolution while retaining the low-memory profile.');
 assert.ok(build.includes('html = html.replace("0.6.274", "0.6.291")'));
 assert.ok(release.includes('SAGA DEL NORTE · CAPÍTULO I · 0.6.291'));
 assert.ok(release.includes('Capítulo I: Un hombre sin tierra · 0.6.291'));

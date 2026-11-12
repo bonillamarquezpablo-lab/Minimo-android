@@ -62,6 +62,21 @@ for phase in manifest["phases"]:
     difference_name = "difference-" + phase_id + ".png"
     sheet.save(root / comparison_name, quality=94, optimize=True)
     enhanced.save(root / difference_name, optimize=True)
+    # Publish lightweight, same-size previews for the static Inspector Center.
+    # Originals remain in the workflow artifact; the web panel receives only bounded thumbnails.
+    preview_dir = root / "previews"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    preview_width = 480
+    for label, image in (("before", before), ("after", after)):
+        scale = min(1.0, preview_width / image.width)
+        preview_size = (max(1, round(image.width * scale)), max(1, round(image.height * scale)))
+        preview = image.resize(preview_size, Image.Resampling.LANCZOS)
+        preview.save(preview_dir / (phase_id + "-" + label + ".jpg"), quality=82, optimize=True, progressive=True)
+    diff_scale = min(1.0, preview_width / enhanced.width)
+    diff_size = (max(1, round(enhanced.width * diff_scale)), max(1, round(enhanced.height * diff_scale)))
+    enhanced.resize(diff_size, Image.Resampling.LANCZOS).save(
+        preview_dir / (phase_id + "-difference.jpg"), quality=82, optimize=True, progressive=True
+    )
 
     phase["comparison"] = {
         "width": before.width,

@@ -16,7 +16,7 @@ const SKIP_VISUAL_CAPTURES=process.env.INSPECTOR_SKIP_VISUAL_CAPTURES==='1';
 const LEVEL_RANK={quick:1,complete:2,deep:3};
 if(!(INSPECTOR_LEVEL in LEVEL_RANK))throw new Error('INSPECTOR_LEVEL must be quick, complete or deep.');
 function phaseLevel(name){
-  if(/Comparación visual ANTES\/DESPUÉS|Informe visual ANTES\/DESPUÉS/.test(name))return 3;
+  if(/Comparación (?:visual|gráfica).*ANTES\/DESPUÉS|Informe visual ANTES\/DESPUÉS/.test(name))return 3;
   if(/Referencias costeras|Inventario completo|Informe visual unificado|Lámina de referencias/.test(name))return 2;
   return 1;
 }
@@ -67,6 +67,31 @@ function writeJson(file,value){
 function readJson(file){
   try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return null;}
 }
+async function publishComparisonPreviews(){
+  if(!STATUS_TOKEN||!STATUS_REPOSITORY||!STATUS_RUN_ID)return {};
+  const root=path.resolve('artifacts/hrafn-before-after/previews');
+  const phases=['dawn','noon','dusk','midnight'];
+  const previews={};
+  const headers={Accept:'application/vnd.github+json',Authorization:'Bearer '+STATUS_TOKEN,'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'};
+  for(const phase of phases){
+    previews[phase]={};
+    for(const kind of ['before','after','difference']){
+      const file=path.join(root,phase+'-'+kind+'.jpg');
+      if(!fs.existsSync(file))continue;
+      const relative='runs/'+STATUS_RUN_ID+'/previews/'+phase+'-'+kind+'.jpg';
+      const endpoint='https://api.github.com/repos/'+STATUS_REPOSITORY+'/contents/'+relative;
+      const existing=await fetch(endpoint+'?ref='+encodeURIComponent(STATUS_BRANCH),{headers,cache:'no-store'});
+      const payload={message:'Publish '+phase+' '+kind+' comparison preview for run '+STATUS_RUN_ID,content:fs.readFileSync(file).toString('base64'),branch:STATUS_BRANCH};
+      if(existing.ok){const previous=await existing.json();if(previous.sha)payload.sha=previous.sha;}
+      else if(existing.status!==404)throw new Error('Could not inspect existing preview '+relative+': HTTP '+existing.status);
+      const response=await fetch(endpoint,{method:'PUT',headers,body:JSON.stringify(payload)});
+      if(!response.ok)throw new Error('Could not publish preview '+relative+': HTTP '+response.status+' '+(await response.text()).slice(0,350));
+      previews[phase][kind]='https://raw.githubusercontent.com/'+STATUS_REPOSITORY+'/'+STATUS_BRANCH+'/'+relative;
+    }
+  }
+  console.log('[INSPECTOR_PREVIEWS_PUBLISHED] '+JSON.stringify({runId:STATUS_RUN_ID,phases:Object.keys(previews),assets:Object.values(previews).reduce((n,row)=>n+Object.keys(row).length,0)}));
+  return previews;
+}
 function signalChildProcessTree(child,signal){
   if(process.platform!=='win32'&&Number.isInteger(child?.pid)){
     try{process.kill(-child.pid,signal);return true;}
@@ -108,11 +133,13 @@ function runNodePhase(name,script,env={},timeoutMs=25*60*1000){
       },5000);
     },timeoutMs);
     child.once('error',error=>finish(timedOut?'timed_out':'failed',null,timedOut?timeoutMessage+' '+String(error?.stack||error):String(error?.stack||error)));
-    child.once('close',(code,signal)=>finish(
-      timedOut?'timed_out':code===0?'passed':'failed',
-      timedOut?null:code,
-      timedOut?timeoutMessage+' Child terminated with '+(signal||'an unknown signal')+'.':code===0?null:'exit='+code+' signal='+(signal||'none')
-    ));
+    // `close` can be delayed by inherited stdio held open by orphaned browser/worker
+    // descendants. Settle on the direct child `exit` event and clean its process group.
+    child.once('exit',(code,signal)=>{
+      if(timedOut)return; // The timeout path still SIGKILLs the whole group before settling.
+      try{signalChildProcessTree(child,'SIGTERM');}catch(_){}
+      finish(code===0?'passed':'failed',code,code===0?null:'exit='+code+' signal='+(signal||'none'));
+    });
   });
 }
 function runPythonPhase(name,script,arg,timeoutMs=5*60*1000){
@@ -144,11 +171,12 @@ function runPythonPhase(name,script,arg,timeoutMs=5*60*1000){
       },5000);
     },timeoutMs);
     child.once('error',error=>finish('failed',null,String(error?.stack||error)));
-    child.once('close',(code,signal)=>finish(
-      timedOut?'timed_out':code===0?'passed':'failed',
-      timedOut?null:code,
-      timedOut?'Python report timeout; child terminated with '+(signal||'an unknown signal')+'.':code===0?null:'exit='+code+' signal='+(signal||'none')
-    ));
+    // Do not wait for `close`: descendants can keep inherited stdio alive after Python exits.
+    child.once('exit',(code,signal)=>{
+      if(timedOut)return;
+      try{signalChildProcessTree(child,'SIGTERM');}catch(_){}
+      finish(code===0?'passed':'failed',code,code===0?null:'exit='+code+' signal='+(signal||'none'));
+    });
   });
 }
 function summaryFrom(file,selector){
@@ -169,8 +197,8 @@ async function main(){
     runPythonPhase('Lámina de referencias costeras','scripts/create_coastal_contact_sheet.py','artifacts/coastal-reference')
   ]);
 
-  // The A/B comparator is a mandatory phase of this one-entrypoint inspection.
-  // Missing baseline/candidate URLs fail the inspector instead of silently skipping the comparison.
+  // The mobile A/B comparator is part of deep inspections only.
+  // Complete inspections must not fabricate an unavailable before-image baseline.
   await runNodePhase('Comparación gráfica móvil S26 Ultra ANTES/DESPUÉS + FPS — cuatro fases horarias','scripts/hrafn-before-after.mjs',{
     HRAFN_BEFORE_URL,HRAFN_AFTER_URL,
     HRAFN_COMPARE_OUT:'artifacts/hrafn-before-after',
@@ -178,16 +206,17 @@ async function main(){
   },35*60*1000);
   await runPythonPhase('Informe visual ANTES/DESPUÉS y mapas de diferencias','scripts/create_hrafn_ab_report.py','artifacts/hrafn-before-after');
 
+  const comparisonPreviews=await publishComparisonPreviews().catch(error=>{console.error('[INSPECTOR_PREVIEW_PUBLISH_FAILED]',String(error?.message||error));return {};});
   const custom=summaryFrom('artifacts/custom-scene-captures/manifest.json',m=>({
-    build:m.build,counts:m.auditSummary,structures:m.initialPhysicalAudit?.structuralCandidates||[],
+    build:m.build,islands:m.islands||[],counts:m.auditSummary,structures:m.initialPhysicalAudit?.structuralCandidates||[],
     inspectionErrors:m.initialPhysicalAudit?.errors||{},shots:{planned:m.expandedShotCount,captured:m.captures?.length,failed:m.failures?.length},
     zones:m.zoneInspections,readiness:m.readiness,textures:m.initialPhysicalAudit?.textures,water:m.initialPhysicalAudit?.water,environment:m.initialPhysicalAudit?.environment
   }));
   const texture=summaryFrom('artifacts/texture-readiness-smoke/manifest.json',m=>({verdict:m.verdict,readiness:m.readiness,textureDiagnostics:m.textureDiagnostics,cameraVerification:m.cameraVerification,actualCamera:m.actualCamera,failure:m.failure}));
-  const grounding=summaryFrom('artifacts/structure-grounding/manifest.json',m=>({verdict:m.verdict,summary:m.summary,failure:m.failure}));
+  const grounding=summaryFrom('artifacts/structure-grounding/manifest.json',m=>({verdict:m.verdict,summary:m.summary,habitableStructures:m.habitableStructures||[],settlementHouses:m.settlementHouses||[],settlementCamps:m.settlementCamps||[],garrisons:m.garrisons||[],offshoreAudit:m.offshoreAudit||null,outerLandmarks:m.outerLandmarks||[],rocks:m.rocks||[],failure:m.failure}));
   const coastal=summaryFrom('artifacts/coastal-reference/manifest.json',m=>({captureCount:m.captures?.length,atmosphereAudit:m.atmosphereAudit,atmosphereCaptureCount:m.atmosphereCaptures?.length,structureVisibility:m.structureVisibility?.length,failure:m.failure}));
   const player=summaryFrom('artifacts/player-startup/manifest.json',m=>({modelReady:m.finalState?.modelReady,realPlayerMeshCount:m.finalState?.realPlayerMeshCount,failure:m.failure}));
-  const beforeAfter=summaryFrom('artifacts/hrafn-before-after/manifest.json',m=>({method:m.method,seed:m.captureSeed,deviceProfile:m.deviceProfile,renderer:m.renderer,builds:Object.fromEntries(['before','after'].map(label=>{const build=m.builds?.[label]||{};return [label,{build:build.build||null,performance:build.performance||null}];})),phases:m.phases?.map(p=>({id:p.id,hour:p.hour,comparison:p.comparison||null})),warnings:m.warnings,failure:m.failure}));
+  const beforeAfter=summaryFrom('artifacts/hrafn-before-after/manifest.json',m=>({method:m.method,seed:m.captureSeed,deviceProfile:m.deviceProfile,renderer:m.renderer,builds:Object.fromEntries(['before','after'].map(label=>{const build=m.builds?.[label]||{};return [label,{build:build.build||null,performance:build.performance||null}];})),phases:m.phases?.map(p=>({id:p.id,hour:p.hour,comparison:p.comparison||null})),previews:comparisonPreviews,warnings:m.warnings,failure:m.failure}));
   const report={
     schema:1,mode:'tiered-single-entrypoint-inspection',level:INSPECTOR_LEVEL,readOnlyForMainCapture:true,visualCapturesSkipped:SKIP_VISUAL_CAPTURES,
     note:SKIP_VISUAL_CAPTURES?'Pasada temporal de compilación y auditoría de arranque: las capturas costeras, las panorámicas de escena y la comparación Hrafn se han omitido; el código de captura permanece intacto.':'Las comprobaciones de reparación se ejecutan en navegadores de prueba desechables; no modifican la partida ni los archivos publicados.',

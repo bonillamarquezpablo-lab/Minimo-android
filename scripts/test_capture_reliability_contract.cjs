@@ -21,7 +21,7 @@ async function main() {
   const pushBranchNames = pushBranches[1].split(',').map(branch => branch.trim());
   assert.ok(pushBranchNames.includes('main'), 'Production changes must continue to be validated on main.');
   assert.match(workflow,/group: scene-capture-s26-graphics-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}/);
-  assert.match(workflow,/cancel-in-progress: true/);
+  assert.match(workflow,/cancel-in-progress: false/);
   assert.match(workflow,/GITHUB_EVENT_NAME/);
   assert.match(workflow,/workflow_dispatch/);
   assert.doesNotMatch(workflow,/if: false # Phase 1/);
@@ -58,7 +58,7 @@ async function main() {
   assert.match(unifiedRunner,/detached:process\.platform!==\'win32\'/,'Inspection child processes must have an isolated process group on Unix runners.');
   assert.match(unifiedRunner,/process\.kill\(-child\.pid,signal\)/,'Timeouts must signal the complete child process group, including Chromium.');
   assert.match(unifiedRunner,/signalChildProcessTree\(child,\'SIGKILL\'\)/,'The unified runner must force-stop a child tree that ignores SIGTERM.');
-  assert.match(unifiedRunner,/Python report timeout; child terminated/,'Python report phases must wait for termination rather than resolving immediately after SIGTERM.');
+  assert.match(unifiedRunner,/child\.once\('exit'/,'Python report phases must settle on direct child exit instead of waiting for inherited stdio close.');
 
   assert.match(unifiedRunner,/scripts\/player-startup-smoke\.mjs/);
   assert.match(unifiedRunner,/scripts\/texture-readiness-smoke\.mjs/);

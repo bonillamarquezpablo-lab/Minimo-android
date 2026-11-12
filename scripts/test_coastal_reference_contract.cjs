@@ -116,9 +116,9 @@ assert.match(captureRunner, /assert\.equal\(boot\.build, EXPECTED_BUILD,/,
   'The coast capture must validate against the release validator instead of a hard-coded historical version.');
 assert.match(captureRunner, /const EXPECTED_BUILD = process\.env\.EXPECTED_GAME_VERSION \|\| fs\.readFileSync\('scripts\/validate_release\.py'/,
   'The visual audit must derive its expected release from the active validator.');
-assert.match(validator, /EXPECTED_VERSION = "0\.6\.289"/,
-  'The release validator must target the current 0.6.289 candidate.');
-assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The source HTML remains 0.6.274 and is promoted to 0.6.289 by the release builder.');
+assert.match(validator, /EXPECTED_VERSION = "0\.6\.291"/,
+  'The release validator must target the current 0.6.291 candidate.');
+assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The source HTML remains 0.6.274 and is promoted to 0.6.291 by the release builder.');
 assert.ok(builder.includes('atmosphere-system.js'),'The release builder must package the atmospheric shader module.');
 assert.ok(builder.includes('window.__ELSN_ATMOSPHERE_CONTROLS'),'The atmospheric controls must be installed in the game runtime.');
 assert.ok(builder.includes('atmosphereSystem.update(dt)'),'The atmosphere clock must be updated once per game frame.');
@@ -190,8 +190,8 @@ assert.match(contactSheet, /no-continuous-shore-foam/);
 assert.match(contactSheet, /ridge-occlusion__t037__natural__no-island-shadows\.png/, 'The contact sheet must include a shadow-isolation A/B panel.');
 assert.match(captureRunner, /setIslandShadowReceiving\(false\)/, 'The ridge A/B frame must isolate the main-island shadow receiver.');
 assert.match(html, /setIslandShadowReceiving:\(enabled\)=>/, 'Shadow isolation must remain available only through the test-mode hook.');
-assert.ok(workflow.includes('cancel-in-progress: true'),
-  'The newest deep graphics audit must supersede stale, long-running inspector runs.');
+assert.ok(workflow.includes('cancel-in-progress: false'),
+  'A new commit must not cancel an active deep graphics audit; keep the latest pending run.');
 
 // The coast solver and static foam profile caches are guarded by the assertions above.
 

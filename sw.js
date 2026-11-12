@@ -26,7 +26,9 @@ self.addEventListener("activate", event => {
 function isInvalidVikingGlbResponse(response, request) {
   if (!response) return true;
   const requestedUrl = new URL(request.url);
-  if (!requestedUrl.pathname.endsWith("/assets/models/viking-rigged.glb")) return false;
+  // Every GLB must remain a same-resource binary response: never cache HTML, redirects,
+  // cross-origin SSO pages, or an unrelated URL under a model filename.
+  if (!/\.glb$/i.test(requestedUrl.pathname)) return false;
   let responseUrl;
   try {
     responseUrl = new URL(response.url || request.url);
@@ -34,12 +36,15 @@ function isInvalidVikingGlbResponse(response, request) {
     return true;
   }
   const contentType = (response.headers.get("content-type") || "").toLowerCase();
-  // Vercel SSO puede devolver una página HTML 200 bajo la ruta del GLB.
-  // Nunca debemos almacenarla ni reutilizarla como si fuera el modelo.
-  return response.redirected ||
+  // A CDN/SSO/proxy can return an HTML 200 or redirect at a GLB URL.
+  // Never store or reuse that response as a model.
+  const isBinaryGlb = contentType.includes("model/gltf-binary") ||
+    contentType.includes("application/octet-stream") ||
+    contentType.includes("binary/octet-stream");
+  return response.type === "opaque" || response.redirected ||
     responseUrl.origin !== requestedUrl.origin ||
     responseUrl.pathname !== requestedUrl.pathname ||
-    contentType.includes("text/html");
+    contentType.includes("text/html") || !isBinaryGlb;
 }
 
 async function networkFirst(request, cacheName) {

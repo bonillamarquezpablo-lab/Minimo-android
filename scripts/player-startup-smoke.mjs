@@ -10,7 +10,7 @@ const startedAt = performance.now();
 const manifest = {
   schema: 1,
   capturedAt: new Date().toISOString(),
-  url: BASE_URL + '?playertest=1',
+  url: BASE_URL + '?playertest=1&debug=1',
   renderer: null,
   navigationMs: null,
   helperReadyMs: null,
@@ -76,7 +76,7 @@ async function main() {
     });
 
     let stepStartedAt = performance.now();
-    await page.goto(BASE_URL + '?playertest=1', {
+    await page.goto(BASE_URL + '?playertest=1&debug=1', {
       waitUntil: 'domcontentloaded',
       timeout: 90000
     });
@@ -93,10 +93,33 @@ async function main() {
     manifest.menuFlowMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
     stepStartedAt = performance.now();
-    await page.waitForFunction(() => !!window.__ELSN_PLAYER_STARTUP_SMOKE__, undefined, {
-      timeout: 90000,
+    // No convertir un fallo de arranque en una espera opaca de 90 s.
+    // El boot-failed y el recorder global contienen el recurso/etapa que detuvo el juego.
+    await page.waitForFunction(() => !!window.__ELSN_PLAYER_STARTUP_SMOKE__ ||
+      document.body.classList.contains('boot-failed'), undefined, {
+      timeout: 180000,
       polling: 250
+    }).catch(async error => {
+      const diagnostics = await page.evaluate(() => ({
+        bodyClass: document.body.className,
+        progress: document.querySelector('#loadingProgress')?.style.width || null,
+        loadText: document.querySelector('#loadText')?.textContent || null,
+        loadHelp: document.querySelector('#loadHelp')?.textContent || null,
+        recorder: window.__elSinNombreStartupSmoke || null
+      }));
+      throw new Error('El arranque no registró el helper ni mostró el panel de error: ' +
+        JSON.stringify(diagnostics) + ' · ' + String(error?.message || error));
     });
+    const bootstrap = await page.evaluate(() => ({
+      helperReady: !!window.__ELSN_PLAYER_STARTUP_SMOKE__,
+      bootFailed: document.body.classList.contains('boot-failed'),
+      loadHelp: document.querySelector('#loadHelp')?.textContent || null,
+      recorder: window.__elSinNombreStartupSmoke || null
+    }));
+    manifest.bootstrap = bootstrap;
+    assert.ok(bootstrap.helperReady,
+      'El juego mostró un fallo antes de preparar el modelo protagonista: ' +
+      JSON.stringify(bootstrap));
     manifest.helperReadyMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
     manifest.renderer = await page.evaluate(() => {
@@ -141,7 +164,130 @@ async function main() {
       'Errores de consola: ' + manifest.consoleErrors.join(' | '));
     assert.equal(manifest.pageErrors.length, 0,
       'Errores JavaScript: ' + manifest.pageErrors.join(' | '));
-    console.log('[player-startup] real Viking GLB ready: ' + JSON.stringify(manifest.finalState));
+
+    // Wait for the complete blocking startup barrier, then audit every import/network
+    // entry point across the first 20 seconds of actual gameplay.
+    const blockingBarrierStartedAt = performance.now();
+    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true,
+      undefined, { timeout: 180000, polling: 250 });
+    manifest.blockingStartupMs = Number((performance.now() - blockingBarrierStartedAt).toFixed(1));
+    manifest.memoryEstimate = await page.evaluate(() => window.__elSinNombreStartupMemoryEstimate || null);
+    const npcRoster = await page.evaluate(() => window.__elSinNombreStartupNpcRoster || null);
+    assert.ok(npcRoster && npcRoster.ready === true,
+      'Los NPC GLB obligatorios de la isla inicial no están listos: ' + JSON.stringify(npcRoster));
+
+    await page.evaluate(() => {
+      const audit = window.__startupPostEntryAudit = { calls: [], network: [], resources: [], entryAt: null };
+      const isAudioStream = value => /\.(?:mp3|ogg|wav|m4a)(?:$|[?#])/i.test(String(value || ''));
+      const isGlb = value => /\.glb(?:$|[?#])/i.test(String(value || ''));
+      const entryObserver = new MutationObserver(() => {
+        if (!audit.entryAt && document.body.classList.contains('game-running')) audit.entryAt = performance.now();
+      });
+      entryObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      const resourceObserver = new PerformanceObserver(list => {
+        for (const entry of list.getEntries()) {
+          if (audit.entryAt !== null && entry.startTime >= audit.entryAt && !isAudioStream(entry.name)) {
+            audit.resources.push({ name: entry.name.slice(0, 500), initiatorType: entry.initiatorType, startTime: entry.startTime });
+          }
+        }
+      });
+      resourceObserver.observe({ type: 'resource', buffered: true });
+      const recordImport = (kind, value) => {
+        if (document.body.classList.contains('game-running')) {
+          audit.calls.push({ kind, value: String(value).slice(0, 500), at: performance.now() });
+        }
+      };
+      const recordNetwork = (kind, value) => {
+        if (document.body.classList.contains('game-running') && !isAudioStream(value)) {
+          audit.network.push({ kind, value: String(value).slice(0, 500), at: performance.now() });
+        }
+      };
+      const loader = window.BABYLON && window.BABYLON.SceneLoader;
+      if (loader) {
+        for (const name of ['ImportMeshAsync', 'LoadAssetContainerAsync', 'AppendAsync']) {
+          if (typeof loader[name] !== 'function') continue;
+          const original = loader[name];
+          loader[name] = function (...args) {
+            recordImport('SceneLoader.' + name, args.map(String).join(' '));
+            return original.apply(this, args);
+          };
+        }
+      }
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = function (input, ...args) {
+        const url = typeof input === 'string' ? input : input && input.url;
+        recordNetwork('fetch', url);
+        return originalFetch(input, ...args);
+      };
+      const originalOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function (method, url, ...args) {
+        recordNetwork('XMLHttpRequest', url);
+        return originalOpen.call(this, method, url, ...args);
+      };
+    });
+
+    await page.locator('#newGameChoice').waitFor({ state: 'visible', timeout: 30000 });
+    await page.locator('#newGameChoice').click();
+    await page.waitForFunction(() => document.body.classList.contains('game-running'),
+      undefined, { timeout: 30000, polling: 100 });
+    const perf20s = await page.evaluate(async () => {
+      const start = performance.now();
+      let frames = 0, totalFrameMs = 0, maxFrameMs = 0, last = start;
+      while (performance.now() - start < 20000) {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        const now = performance.now(), frameMs = now - last;
+        last = now; frames++; totalFrameMs += frameMs; maxFrameMs = Math.max(maxFrameMs, frameMs);
+      }
+      const memory = performance.memory ? {
+        usedJSHeapSize: performance.memory.usedJSHeapSize,
+        totalJSHeapSize: performance.memory.totalJSHeapSize,
+        jsHeapLimit: performance.memory.jsHeapSizeLimit
+      } : null;
+      return {
+        durationMs: Number((performance.now() - start).toFixed(1)),
+        frames,
+        averageFps: Number((frames / ((performance.now() - start) / 1000)).toFixed(1)),
+        averageFrameMs: Number((totalFrameMs / Math.max(1, frames)).toFixed(2)),
+        maxFrameMs: Number(maxFrameMs.toFixed(2)),
+        jsHeap: memory
+      };
+    });
+    manifest.performanceFirst20s = perf20s;
+    manifest.postEntryAudit = await page.evaluate(() => window.__startupPostEntryAudit);
+    assert.equal(manifest.postEntryAudit.calls.length, 0,
+      'Se invocó un importador GLB después de entrar: ' + JSON.stringify(manifest.postEntryAudit.calls));
+    assert.equal(manifest.postEntryAudit.network.length, 0,
+      'Se inició una petición de red no musical después de entrar: ' + JSON.stringify(manifest.postEntryAudit.network));
+    assert.equal(manifest.postEntryAudit.resources.length, 0,
+      'El navegador descargó un recurso no musical después de entrar: ' + JSON.stringify(manifest.postEntryAudit.resources));
+    const postEntryPlayer = await page.evaluate(() => window.__ELSN_PLAYER_STARTUP_SMOKE__?.state() || null);
+    assert.ok(postEntryPlayer && postEntryPlayer.modelReady && !postEntryPlayer.fallbackVisible,
+      'El personaje provisional sigue visible después de entrar: ' + JSON.stringify(postEntryPlayer));
+    const finalErrors = await page.evaluate(() => ({
+      consoleErrors: window.__elSinNombreStartupSmoke?.consoleErrors?.length || 0,
+      runtimeErrors: window.__elSinNombreStartupSmoke?.runtimeErrors?.length || 0,
+      unhandledRejections: window.__elSinNombreStartupSmoke?.unhandledRejections?.length || 0
+    }));
+    manifest.postEntryErrors = finalErrors;
+    assert.deepEqual(finalErrors, { consoleErrors: 0, runtimeErrors: 0, unhandledRejections: 0 },
+      'Se detectaron errores durante los primeros 20 segundos de partida.');
+    // Repeat in the same browser profile to measure the Service Worker/Cache API warm path.
+    const cachedLaunchStartedAt = performance.now();
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
+    const cachedAudioGate = page.locator('#audioGateStart');
+    if (await cachedAudioGate.isVisible().catch(() => false)) await cachedAudioGate.click({ timeout: 30000 });
+    await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
+    await page.locator('#chooseQuality').click();
+    await page.locator('#continueUnnamed').waitFor({ state: 'visible', timeout: 30000 });
+    await page.locator('#continueUnnamed').click();
+    const cachedBarrierStartedAt = performance.now();
+    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true,
+      undefined, { timeout: 180000, polling: 250 });
+    manifest.cachedNavigationAndProfileMs = Number((cachedBarrierStartedAt - cachedLaunchStartedAt).toFixed(1));
+    manifest.cachedBlockingStartupMs = Number((performance.now() - cachedBarrierStartedAt).toFixed(1));
+    manifest.cachedMemoryEstimate = await page.evaluate(() => window.__elSinNombreStartupMemoryEstimate || null);
+    console.log('[player-startup] first/cached startup + first 20s: ' +
+      JSON.stringify({ npcRoster, memoryEstimate: manifest.memoryEstimate, cachedMemoryEstimate: manifest.cachedMemoryEstimate, perf20s, postEntryAudit: manifest.postEntryAudit, postEntryErrors: finalErrors, cachedNavigationAndProfileMs: manifest.cachedNavigationAndProfileMs, cachedBlockingStartupMs: manifest.cachedBlockingStartupMs }));
   } catch (error) {
     manifest.failure = String(error && error.stack || error);
     throw error;

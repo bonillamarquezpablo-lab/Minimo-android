@@ -875,6 +875,11 @@ def main() -> None:
             "densidad radial de NordicSubmergedSand",
         ),
         (
+            "const segments=coastColumns,rows=isPerformanceMode?13:(isTouchDevice?15:17),cols=segments+1;",
+            "const segments=coastColumns,rows=isPerformanceMode?13:(isTouchDevice?64:96),cols=segments+1;",
+            "densidad radial de LivingCoastalSand para coincidir con la triangulación del fondo submarino",
+        ),
+        (
             "const shoreHeight=terrainHeightOnIsland(island,x,z);\n    const y=window.NorseCoastalInteraction.seabedHeight(radius,island.r,shoreHeight);",
             "const shoreHeight=terrainHeightOnIsland(island,x,z);\n    const y=shoreHeight;",
             "perfil submarino único de NordicSubmergedSand",

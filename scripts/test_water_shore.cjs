@@ -81,7 +81,8 @@ assert.match(html,/const span=hi-lo,secant=lo\+span\*loDelta\/\(loDelta-hiDelta\
 assert.doesNotMatch(html,/performance\.now\(\)-sliceStarted<2\.65|performance\.now\(\)-sliceStarted<3\.55/);
 assert.match(html,/requestAnimationFrame\(processBeachWorkChunk\)/);
 assert.match(html,/startupTimeline:getStartupTimelineSnapshot\(\)/);
-assert.match(html,/backgroundFaunaTask=Promise\.resolve\(backgroundNpcTask\)/);
+assert.match(html,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/);
+
 assert.doesNotMatch(html,/vec3 n=normalize\(vNormalW\).*\n float wetHighlight[\s\S]*\n color\+=vec3\([^\n]+\);\n vec3 n=normalize\(vNormalW\)/);
 assert.ok(html.includes("const segments=isPerformanceMode?(isConstrainedMobile?112:160):Math.max(512,Math.min(2048,Math.ceil(Math.PI*2*island.r/.30)));"),"Quality shore breaker must use approximately 30 cm coastal segments");
 assert.ok(html.includes("const subdivisions=Math.min(360,Math.max(112,Math.ceil(is.r*2/(isTouchDevice?.42:.36))));"),"All island coasts must keep sub-0.42 m heightfield sampling");
@@ -192,9 +193,13 @@ assert.match(html,/function updateActiveIslandGrass\(dt\)/,"Quality-only active-
 assert.match(html,/Math\.hypot\(focus\.x-grassStreamCenterX,focus\.z-grassStreamCenterZ\)>=GRASS_STREAM_RECENTER_DISTANCE/,"The local grass area must recenter as the player moves.");
 assert.match(html,/const show=batch\.islandIndex===visibleGrassIslandIndex/,"All grass batches belonging to the occupied island must remain visible.");
 assert.match(html,/grassStream:\{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise\}/,"Runtime diagnostics must expose the active grass island and pending streaming state.");
-assert.match(html,/setTimeout\(startDeferredWorldModels,180\)/,"Secondary GLB loading should start after the selector appears.");
-assert.match(html,/startupAudioPreload\.then\(/,"Audio should preload in parallel without holding the start screen.");
-assert.doesNotMatch(html,/audioPreloadResult=await startupAudioPreload/,"Startup must not await every sound file.");
+assert.match(html,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/,"Protagonist and initial-island NPC GLBs must block entry.");
+assert.match(html,/const faunaTasks=\[\{name:\'Fauna terrestre\',promise:loadWildlifeModels\(\)\}\]/,"Quality wildlife must join the blocking startup barrier.");
+assert.match(html,/faunaTasks\.push\(\{name:\'Gaviotas 3D\',promise:loadRiggedCoastalGulls\(\)\}\)/,"Rigged gull imports must also finish before entry.");
+assert.match(html,/await Promise\.allSettled\(faunaTasks\.map\(task=>task\.promise\)\)/,"No optional wildlife task may remain alive after entry.");
+assert.match(html,/startupAudioPreload\.then\(/,"Sound effects are prepared before entry while music remains streamed.");
+assert.match(html,/audioPreloadResult=await startupAudioPreload/,"Sound effects must be ready before entry.");
+assert.match(html,/RECURSO OBLIGATORIO: efectos de sonido/,"Missing sound effects must fail with a named startup resource.");
 assert.match(html,/recordStartupTask\('Hierba 3D inicial de Calidad'/,"Initial Quality grass build time should be measured.");
 assert.match(html,/Visible Nordic ground cover swapped atomically/,"Grass must swap only after the staged replacement is ready.");
 assert.match(html,/grassMesh\.setEnabled\(!staging\)/,"New grass batches must stay hidden until their atomic activation.");
