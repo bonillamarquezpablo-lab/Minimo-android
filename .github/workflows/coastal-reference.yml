@@ -33,7 +33,7 @@ on:
         description: 'Una sola inspección: inventario completo, texturas, estructuras, agua, costa, pruebas y cámaras desde el agua. Hasta 120 capturas.'
         required: false
         type: string
-        default: '[{"id":"inspeccion-unica-hrafn","zone":{"label":"Bahía de Hrafn — todas las construcciones detectadas","center":{"x":28,"y":2.2,"z":143},"radiusMeters":27,"focus":"structures","maxTargets":12,"cameraDistanceMeters":9,"angles":[0,45,90,135,180,225,270,315],"times":[37],"tides":["natural"],"observationPoint":{"x":28,"y":6,"z":236.3},"observationHeightOffsets":[0,2.5],"includeTopDown":false}}]'
+        default: ''
 
 permissions:
   contents: write
@@ -207,7 +207,7 @@ jobs:
           INSPECTOR_GITHUB_TOKEN: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.token || '' }}
           INSPECTOR_STATUS_BRANCH: inspector-status
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ -n "$CAPTURE_PLAN_INPUT" ]; then
             export CAPTURE_PLAN_JSON="$CAPTURE_PLAN_INPUT"
           else
             export CAPTURE_PLAN_JSON="$(cat scripts/scene-capture-plan.json)"
