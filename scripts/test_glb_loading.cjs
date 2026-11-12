@@ -14,7 +14,7 @@ assert.doesNotMatch(html,/const civilianPartsToLoad=isPerformanceMode\s*\?\s*\[\
 assert.ok(html.includes('const animalCount=isPerformanceMode?0:(idx===0?3:0);'),'Quality fauna is limited to the initial island and Performance disables it.');
 assert.match(html,/function timedGlbStage\(/);
 assert.match(html,/function disposeLateGlbResult\(result,model,stage\)/);
-assert.match(html,/pending\.then\(result=>\{if\(timedOut\)disposeLateGlbResult\(result,model,stage\)\}/,
+assert.match(html,/pending\.then\(result=>\{if\(timedOut\)disposeLateGlbResult\(result,model,stage\);?\},\(\)=>\{\}\)/,
   'A GLB import that resolves after its timeout must be cleaned up.');
 assert.doesNotMatch(html,/RECURSO OBLIGATORIO: importación de fauna sin finalizar/,
   'A timed-out optional wildlife load cannot keep the player at the loading screen.');
