@@ -12,6 +12,7 @@ assert.match(runner,/SKIP_VISUAL_CAPTURES&&phaseLevel\(name\)>1/);
 assert.match(runner,/INSPECTOR_LEVEL==='deep'&&!SKIP_VISUAL_CAPTURES/,
   'Deep visual comparison must run again when the temporary workflow bypass is removed.');
 
+// Re-enable the full browser inspector after the manual review.
 // PR 121 is temporarily build-only while the user manually tests the game.
 // Contract validation and the complete site build stay active; browser inspection is skipped.
 assert.match(workflow,/manual-game-test-no-inspector/);
