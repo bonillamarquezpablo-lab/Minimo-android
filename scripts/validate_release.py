@@ -463,8 +463,12 @@ def main() -> None:
         fail("Las texturas procedurales principales del suelo deben generar mipmaps.")
     if "const packedTrailTexture=makePatternTexture('Packed Norse trail earth','#a18a63',['#d0b68a','#8c7450','#ddc79e','#a58b60'],'sand',512,true);" not in index_html:
         fail("La textura procedural de los caminos también debe generar mipmaps.")
-    if "makePatternTexture(name,base,accents,style='grain',size=512,generateMipMaps=false)" not in index_html:
-        fail("La generación selectiva de mipmaps de las texturas procedurales ha cambiado.")
+    procedural_texture_signature = re.search(
+        r"function\\s+makePatternTexture\\s*\\(\\s*name\\s*,\\s*base\\s*,\\s*accents\\s*,\\s*style\\s*=\\s*['\\\"]grain['\\\"]\\s*,\\s*size\\s*=\\s*highHeadroomQualityMobile\\s*\\?\\s*1024\\s*:\\s*512\\s*,\\s*generateMipMaps\\s*=\\s*false\\s*\\)",
+        index_html,
+    )
+    if not procedural_texture_signature:
+        fail("La textura procedural debe usar resolución adaptativa de 1K y conservar la generación selectiva de mipmaps.")
     if "mesh.material.diffuseTexture.anisotropicFilteringLevel=maxAnisotropy" not in index_html or "tex.anisotropicFilteringLevel=maxAnisotropy" not in index_html:
         fail("No se conserva el filtrado anisotrópico de las texturas procedurales.")
     if "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);" not in index_html:
