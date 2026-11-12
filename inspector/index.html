@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10151f">
+<title>Inspector Center · EL SIN NOMBRE</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1018;--panel:#141c28;--line:#263449;--muted:#9aabc1;--text:#edf3fb;--blue:#76a9ff;--green:#53d49a;--amber:#f2bf69;--red:#ff8585}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#18263a 0,#0b1018 55%);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:900px;margin:auto;padding:28px 18px 56px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:24px}.eyebrow{color:var(--blue);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}.muted{color:var(--muted)}h1{font-size:clamp(28px,5vw,42px);line-height:1.08;margin:8px 0}h2{font-size:18px;margin:0 0 14px}.panel{background:linear-gradient(145deg,#172233,#111925);border:1px solid var(--line);border-radius:18px;padding:20px;margin:14px 0;box-shadow:0 14px 38px #0003}.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.level{background:#0f1723;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:13px;text-align:left;cursor:pointer}.level[aria-pressed=true]{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue);background:#182b45}.level b{display:block;font-size:15px}.level small{color:var(--muted)}.primary{display:inline-flex;align-items:center;justify-content:center;background:var(--blue);color:#071321;text-decoration:none;border:0;border-radius:12px;padding:13px 18px;font-weight:800;margin-top:16px;min-height:48px}.primary:hover{filter:brightness(1.08)}.statusline{display:flex;justify-content:space-between;gap:12px;align-items:center}.pill{font-size:12px;border-radius:99px;padding:4px 10px;background:#263449;color:var(--muted)}.pill.running{background:#463719;color:var(--amber)}.pill.success{background:#123b30;color:var(--green)}.pill.failure{background:#4a2026;color:var(--red)}.phase{padding:12px 0;border-top:1px solid var(--line)}.phase:first-child{border-top:0}.phasehead{display:flex;justify-content:space-between;gap:12px;font-size:14px}.bar{height:7px;border-radius:99px;background:#263449;overflow:hidden;margin-top:8px}.fill{height:100%;background:var(--blue);width:0%;transition:width .25s}.fill.done{background:var(--green)}.meta{font-size:12px;color:var(--muted);margin-top:4px}.empty{text-align:center;padding:22px;color:var(--muted)}a{color:var(--blue)}.footer{font-size:12px;color:var(--muted);margin-top:20px}@media(max-width:560px){.levels{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.panel{padding:16px}}
+</style>
+</head>
+<body><main>
+<header class="top"><div><div class="eyebrow">Centro de control independiente</div><h1>EL SIN NOMBRE<br>Inspector Center</h1><div class="muted">Auditorías del juego desde fuera del juego.</div></div><span class="pill" id="connection">Conectando…</span></header>
+<section class="panel">
+<h2>Iniciar una inspección</h2>
+<div class="muted" style="margin-bottom:13px">Elige el alcance. El inspector ejecuta las pruebas correspondientes y reúne todos los resultados.</div>
+<div class="levels" role="group" aria-label="Nivel de inspección">
+<button class="level" data-level="quick" aria-pressed="true"><b>Rápido</b><small>Comprobaciones esenciales</small></button>
+<button class="level" data-level="complete" aria-pressed="false"><b>Completo</b><small>Escena, estructuras, agua y vegetación</small></button>
+<button class="level" data-level="deep" aria-pressed="false"><b>Profundo</b><small>Comparación antes/después y cuatro horas</small></button>
+</div>
+<a class="primary" id="launch" href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/workflows/coastal-reference.yml" target="_blank" rel="noopener">Abrir ejecución en GitHub ↗</a>
+<div class="meta">Por seguridad, el inicio se confirma en GitHub. No se guarda ninguna clave de acceso en esta página. En GitHub pulsa «Run workflow» y selecciona el nivel elegido aquí.</div>
+</section>
+<section class="panel">
+<div class="statusline"><h2 style="margin:0">Inspección más reciente</h2><span class="pill" id="runstate">Buscando…</span></div>
+<div id="runinfo" class="empty">Consultando el estado de GitHub Actions…</div>
+<div id="phases"></div>
+<div class="meta" id="updated"></div>
+</section>
+<section class="panel">
+<h2>Qué incluye</h2>
+<div class="muted">Arranque del jugador · carga de texturas · cimentación y estructuras · agua y costas · inventario de las islas · capturas · comparación visual cuando corresponda · informe final y artefactos descargables.</div>
+</section>
+<div class="footer">Panel independiente. Las inspecciones se ejecutan en GitHub Actions; el juego no necesita incorporar este panel ni sus controles.</div>
+</main>
+<script>
+const owner='bonillamarquezpablo-lab',repo='Minimo-android',workflow='coastal-reference.yml';
+let level='quick',timer=null;
+document.querySelectorAll('[data-level]').forEach(b=>b.addEventListener('click',()=>{level=b.dataset.level;document.querySelectorAll('[data-level]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));}));
+const launch=document.getElementById('launch');
+launch.href='https://github.com/'+owner+'/'+repo+'/actions/workflows/'+workflow;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function statusLabel(s){return ({queued:'En cola',in_progress:'En ejecución',completed:'Finalizada',passed:'Completada',failed:'Fallida',timed_out:'Tiempo agotado',skipped:'No necesaria'})[s]||s||'Pendiente'}
+function phaseMarkup(p,now){const done=['passed','completed'].includes(p.status),running=p.status==='running';const elapsed=p.durationMs??(running&&p.startedAt?Math.max(0,now-Date.parse(p.startedAt)):null);return '<div class="phase"><div class="phasehead"><strong>'+esc(p.name)+'</strong><span class="muted">'+esc(statusLabel(p.status))+'</span></div><div class="bar"><div class="fill '+(done?'done':'')+'" style="width:'+(done?100:running?12:0)+'%"></div></div><div class="meta">'+(elapsed==null?'':(elapsed/1000).toFixed(0)+' s')+(p.error?' · '+esc(p.error):'')+'</div></div>'}
+async function refresh(){try{
+const r=await fetch('https://api.github.com/repos/'+owner+'/'+repo+'/actions/workflows/'+workflow+'/runs?per_page=1',{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
+if(!r.ok)throw new Error('GitHub API '+r.status);
+const data=await r.json(),run=data.workflow_runs?.[0];document.getElementById('connection').textContent='Conectado a GitHub';
+if(!run){document.getElementById('runinfo').textContent='Todavía no hay inspecciones registradas.';return}
+const runid=run.id,raw='https://raw.githubusercontent.com/'+owner+'/'+repo+'/inspector-status/runs/'+runid+'.json?x='+Date.now();
+let progress=null;try{const pr=await fetch(raw,{cache:'no-store'});if(pr.ok)progress=await pr.json()}catch{}
+document.getElementById('runstate').textContent=statusLabel(run.status==='completed'?(run.conclusion==='success'?'passed':'failed'):run.status);
+document.getElementById('runstate').className='pill '+(run.status==='in_progress'?'running':run.conclusion==='success'?'success':run.status==='completed'?'failure':'');
+document.getElementById('runinfo').innerHTML='<div><strong>#'+run.run_number+'</strong> · '+esc(run.name||'Inspector único')+'</div><div class="meta">Rama: '+esc(run.head_branch)+' · Inicio: '+new Date(run.created_at).toLocaleString('es-ES')+'</div><div class="meta"><a href="'+esc(run.html_url)+'" target="_blank" rel="noopener">Abrir ejecución y registros en GitHub ↗</a></div>';
+const phases=progress?.phases||[];document.getElementById('phases').innerHTML=phases.length?phases.map(p=>phaseMarkup(p,Date.now())).join(''):'<div class="empty">Las fases aparecerán aquí cuando arranque el inspector. También puedes consultar los pasos en GitHub.</div>';
+document.getElementById('updated').textContent='Actualizado: '+new Date().toLocaleTimeString('es-ES');
+}catch(e){document.getElementById('connection').textContent='Sin conexión';document.getElementById('runinfo').textContent='No se pudo consultar GitHub: '+e.message}}
+refresh();timer=setInterval(refresh,15000);
+</script></body></html>
