@@ -4,6 +4,7 @@ const assert=require('node:assert/strict');
 
 const builder=fs.readFileSync('scripts/build_site.py','utf8');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
+const gameSource=fs.readFileSync('index.html','utf8');
 
 for(const marker of [
   'highTierGpuMatch=',
