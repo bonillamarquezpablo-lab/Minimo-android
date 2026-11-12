@@ -19,11 +19,16 @@ for (const token of [
   assert.ok(capture.includes(token), 'Missing deterministic A/B capture feature: ' + token);
 }
 
-assert.match(capture,/const captureResult = await page\.evaluate\(hour =>/,
-  'The selected atmosphere time and PNG must be captured in one browser task.');
-assert.match(capture,/const dataUrl = api\.captureCanvas\(\)/);
-assert.doesNotMatch(capture,/requestAnimationFrame\(\(\) => requestAnimationFrame\(resolve\)\)/,
-  'Do not let an intervening animation frame clear the captured WebGL drawing buffer.');
+assert.match(capture,/capturePhaseFrame/);
+assert.match(capture,/api\.render\(\);/);
+assert.match(capture,/Page\.captureScreenshot/);
+assert.match(capture,/cdp-composited-frame/);
+assert.match(capture,/timeout: 240000/);
+assert.match(capture,/startupDiagnostics/);
+assert.match(coastal,/captureAtmospherePng/);
+assert.match(coastal,/api\.render\(\);/);
+assert.match(coastal,/Page\.captureScreenshot/);
+assert.match(coastal,/captureMethod: atmosphereCapture\.method/);
 
 for (const token of [
   'ImageChops.difference', 'ANTES', 'DESPUÉS',
