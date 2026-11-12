@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.285"
+EXPECTED_VERSION = "0.6.286"
 
 HTML_PAGES = (
     "index.html",
@@ -233,11 +233,11 @@ def main() -> None:
     graphics_quality_markers = (
         "highTierGpuMatch=",
         "highHeadroomQualityMobile=",
-        "const fsr1Candidate=false;",
-        "qualityDprFloor=highHeadroomQualityMobile?1.0",
-        "qualityDprCeiling=highHeadroomQualityMobile?1.65",
-        "highHeadroomQualityMobile?1.50:(isTouchDevice?1.25:1.85)",
-        "qualityDprCurrent=qualityDpr",
+        "const fsr1Candidate=!!(!isPerformanceMode&&highHeadroomQualityMobile",
+        "qualityDprFloor=fsr1Candidate ? .72",
+        "qualityDprCeiling=fsr1Candidate ? .92",
+        "highHeadroomQualityMobile?2.45:(isTouchDevice?1.80:1.85)",
+        "qualityDprCurrent=fsr1Candidate?fsr1InputScale:qualityDpr",
         "qualityDprStableSamples>=3",
         "qualityDprSlowSamples>=1",
         "severeFps=targetFrameRate>=87?50:36",
@@ -246,7 +246,7 @@ def main() -> None:
         "let targetFrameRate=60,observedFpsCeiling=60",
         "engine.setHardwareScalingLevel(1/qualityDprCurrent)",
         "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))",
-        "renderPipeline.sharpen.edgeAmount=.20",
+        "renderPipeline.sharpen.edgeAmount=.34",
         "style='grain',size=highHeadroomQualityMobile?1024:512",
         "'sand',isPerformanceMode?(isConstrainedMobile?256:512):(highHeadroomQualityMobile?2048:1024),true)",
         "const size=isPerformanceMode?(isConstrainedMobile?512:768):(highHeadroomQualityMobile?2048:1024)",
@@ -255,8 +255,6 @@ def main() -> None:
     missing_graphics_quality = [marker for marker in graphics_quality_markers if marker not in index_html]
     if missing_graphics_quality:
         fail("El perfil nativo de gama alta, la resolución adaptativa o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
-    if "const fsr1Candidate=false;" not in index_html:
-        fail("La ruta FSR1 experimental no debe activarse en móviles antes de una validación física específica.")
 
     if "const TERRAIN_HASH_CACHE_LIMIT=65536;" not in index_html or "terrainHashCacheSlots" not in index_html or "terrainHashCacheEntries:terrainHashCache.size" not in index_html:
         fail("La caché determinista de ruido del terreno debe estar acotada y diagnosticada.")
@@ -264,7 +262,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'15',build:'0.6.285'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'16',build:'0.6.286'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -280,9 +278,9 @@ def main() -> None:
         fail("La hierba cercana debe actualizarse solo en Calidad y limitarse a la isla activa.")
     if "function syncNordicWaterReflectionIsland()" not in index_html or "syncNordicWaterReflectionIsland();" not in index_html or "activeWaterReflectionIslandIndex" not in index_html:
         fail("El espejo del agua debe actualizarse solo con la isla activa.")
-    if "const mirrorSize=isTouchDevice?(isConstrainedMobile?320:(highHeadroomQualityMobile?320:448)):1024" not in index_html or "nordicWaterMirror.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE)" not in index_html or "anisotropicFilteringLevel=Math.min(8,maxAnisotropy)" not in index_html or "reflectionFilteredMeshCount" not in index_html or "tinyReflectionDetail=vertexCount<96" not in index_html or "list.length<180" not in index_html or "reflectionLimitDiscardedMeshCount" not in index_html or "nordicWaterMirror.refreshRate=isTouchDevice?(highHeadroomQualityMobile?30:20):8" not in index_html:
+    if "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024" not in index_html or "nordicWaterMirror.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE)" not in index_html or "anisotropicFilteringLevel=Math.min(8,maxAnisotropy)" not in index_html or "reflectionFilteredMeshCount" not in index_html or "tinyReflectionDetail=vertexCount<96" not in index_html or "list.length<180" not in index_html or "reflectionLimitDiscardedMeshCount" not in index_html or "nordicWaterMirror.refreshRate=isTouchDevice?12:8" not in index_html:
         fail("El reflejo de Calidad debe mantener resolución alta y filtrado trilineal/aniso sin cambiar la cadencia de actualización.")
-    if "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))" not in index_html or "renderPipeline.sharpen.edgeAmount=.20" not in index_html or "shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))" not in index_html:
+    if "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))" not in index_html or "renderPipeline.sharpen.edgeAmount=.34" not in index_html or "shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))" not in index_html:
         fail("El perfil móvil de gama alta debe usar MSAA nativo, nitidez moderada, sombras cacheadas y reflejos filtrados.")
     if "const boneCount=skeletons.reduce" not in index_html or "skinnedVertexCount<600" not in index_html or "const attachedBounds=boundsForMeshes(meshes)" not in index_html:
         fail("La fauna debe validar el cuerpo riggeado y alinear el modelo tras reparentar sus raíces.")
@@ -553,7 +551,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.285" not in index_html or "EL SIN NOMBRE 0.6.285 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.286" not in index_html or "EL SIN NOMBRE 0.6.286 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -673,7 +671,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.285</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.286</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
