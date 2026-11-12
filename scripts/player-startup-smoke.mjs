@@ -154,15 +154,28 @@ async function main() {
       'Los NPC GLB obligatorios de la isla inicial no están listos: ' + JSON.stringify(npcRoster));
 
     await page.evaluate(() => {
-      const audit = window.__startupPostEntryAudit = { calls: [], network: [] };
+      const audit = window.__startupPostEntryAudit = { calls: [], network: [], resources: [], entryAt: null };
+      const isAudioStream = value => /\\.(?:mp3|ogg|wav|m4a)(?:$|[?#])/i.test(String(value || ''));
       const isGlb = value => /\\.glb(?:$|[?#])/i.test(String(value || ''));
+      const entryObserver = new MutationObserver(() => {
+        if (!audit.entryAt && document.body.classList.contains('game-running')) audit.entryAt = performance.now();
+      });
+      entryObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      const resourceObserver = new PerformanceObserver(list => {
+        for (const entry of list.getEntries()) {
+          if (audit.entryAt !== null && entry.startTime >= audit.entryAt && !isAudioStream(entry.name)) {
+            audit.resources.push({ name: entry.name.slice(0, 500), initiatorType: entry.initiatorType, startTime: entry.startTime });
+          }
+        }
+      });
+      resourceObserver.observe({ type: 'resource', buffered: true });
       const recordImport = (kind, value) => {
         if (document.body.classList.contains('game-running')) {
           audit.calls.push({ kind, value: String(value).slice(0, 500), at: performance.now() });
         }
       };
       const recordNetwork = (kind, value) => {
-        if (document.body.classList.contains('game-running') && isGlb(value)) {
+        if (document.body.classList.contains('game-running') && !isAudioStream(value)) {
           audit.network.push({ kind, value: String(value).slice(0, 500), at: performance.now() });
         }
       };
@@ -221,7 +234,9 @@ async function main() {
     assert.equal(manifest.postEntryAudit.calls.length, 0,
       'Se invocó un importador GLB después de entrar: ' + JSON.stringify(manifest.postEntryAudit.calls));
     assert.equal(manifest.postEntryAudit.network.length, 0,
-      'Se descargó un GLB después de entrar: ' + JSON.stringify(manifest.postEntryAudit.network));
+      'Se inició una petición de red no musical después de entrar: ' + JSON.stringify(manifest.postEntryAudit.network));
+    assert.equal(manifest.postEntryAudit.resources.length, 0,
+      'El navegador descargó un recurso no musical después de entrar: ' + JSON.stringify(manifest.postEntryAudit.resources));
     const postEntryPlayer = await page.evaluate(() => window.__ELSN_PLAYER_STARTUP_SMOKE__?.state() || null);
     assert.ok(postEntryPlayer && postEntryPlayer.modelReady && !postEntryPlayer.fallbackVisible,
       'El personaje provisional sigue visible después de entrar: ' + JSON.stringify(postEntryPlayer));
