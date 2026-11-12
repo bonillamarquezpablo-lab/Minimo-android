@@ -17,12 +17,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: scene-capture-${{ github.event.pull_request.number || github.ref }}
+  group: scene-capture-${{ github.event.pull_request.number || github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
   unified-inspector:
-    continue-on-error: true
     name: 'Inspector único: todas las pruebas, diagnósticos y capturas'
     runs-on: ubuntu-latest
     timeout-minutes: 180

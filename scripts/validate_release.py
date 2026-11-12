@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.275"
+EXPECTED_VERSION = "0.6.276"
 
 HTML_PAGES = (
     "index.html",
@@ -34,6 +34,7 @@ REQUIRED_FILES = (
     "sw.js",
     "scripts/nordic/coastal-interaction.js",
     "scripts/nordic/navigation-suite.js",
+    "scripts/nordic/atmosphere-system.js",
     *MANIFESTS,
     "icon.svg",
     "assets/asset-manifest.json",
@@ -73,6 +74,30 @@ def main() -> None:
         fail("Hay archivos requeridos vacíos: " + ", ".join(empty))
 
     index_html = read_text("index.html")
+    atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
+    atmosphere_markers = (
+        "class AtmosphereSystem",
+        "static computeSolarState(value)",
+        "setTime(value)",
+        "setDayDuration(seconds)",
+        "setSpeed(value)",
+        "VolumetricLightScatteringPostProcess",
+        "CascadedShadowGenerator",
+        "NorseNightHearthPool_",
+        "norseAtmosphereFragmentShader",
+        "auroraStrength",
+    )
+    missing_atmosphere_markers = [marker for marker in atmosphere_markers if marker not in atmosphere_source]
+    if missing_atmosphere_markers:
+        fail("El sistema atmosférico unificado está incompleto: " + ", ".join(missing_atmosphere_markers))
+    atmosphere_tag = '<script src="./scripts/nordic/atmosphere-system.js"></script>'
+    game_runtime_marker = '<script>\n(function(){\n"use strict";\nwindow.addEventListener(\'error\''
+    if atmosphere_tag not in index_html:
+        fail("La página principal no carga el sistema atmosférico unificado.")
+    if index_html.count(game_runtime_marker) != 1 or index_html.index(atmosphere_tag) > index_html.index(game_runtime_marker):
+        fail("El sistema atmosférico debe cargarse antes del runtime principal.")
+    if "window.__ELSN_ATMOSPHERE_CONTROLS" not in index_html or "atmosphereSystem.update(dt)" not in index_html:
+        fail("El reloj atmosférico no está conectado al bucle de juego y a sus controles.")
     if 'id="game-build-version"' not in index_html or f'v{EXPECTED_VERSION}</span>' not in index_html:
         fail("La pantalla no muestra la versión exacta en una etiqueta discreta.")
     if 'font:600 7px/1.2 system-ui,sans-serif' not in index_html or 'color:rgba(226,196,135,.58)' not in index_html:
@@ -208,7 +233,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'12',build:'0.6.275'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'13',build:'0.6.276'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -491,7 +516,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.275" not in index_html or "EL SIN NOMBRE 0.6.275 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.276" not in index_html or "EL SIN NOMBRE 0.6.276 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -611,7 +636,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.275</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.276</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")

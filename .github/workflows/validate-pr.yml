@@ -68,6 +68,9 @@ jobs:
       - name: Test automatic startup smoke recorder and player.modelReady
         run: node scripts/test_startup_smoke.cjs
 
+      - name: Test unified day-night atmosphere, effects and runtime integration
+        run: node scripts/test_atmosphere_system.cjs
+
       - name: Test BeachState coast and toroidal footprint atlas
         run: node scripts/test_beach_state.cjs
       - name: Test 13-island campaign and naval invasion integration

@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const html = fs.readFileSync('index.html', 'utf8');
+const builder = fs.readFileSync('scripts/build_site.py', 'utf8');
 const captureRunner = fs.readFileSync('scripts/coastal-reference.mjs', 'utf8');
 const contactSheet = fs.readFileSync('scripts/create_coastal_contact_sheet.py', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf8');
@@ -95,15 +96,31 @@ assert.match(html,/const packedTrailTexture=makePatternTexture\('Packed Norse tr
 assert.match(html,/packedTrailMaterial\.emissiveColor=new B\.Color3\(\.22,\.15,\.07\)/,"Packed earth trails must retain a subtle brown ambient floor on shaded ridges.");
 assert.match(html,/positions\.push\(x,renderedTerrainSurfaceAt\(x,z\)\+\.055,z\)/,"Packed earth trails must remain conformed to the rendered island surface.");
 assert.match(workflow,/^  unified-inspector:/m,'All inspection phases must run under the single unified inspector job.');
+assert.doesNotMatch(workflow,/^    continue-on-error:\s*true$/m,'The unified inspector must make failed phases block the workflow.');
 assert.match(unifiedRunner,/scripts\/player-startup-smoke\.mjs/,'The unified inspector must retain the independent real Viking GLB startup regression.');
 console.log('COASTAL REFERENCE CONTRACT OK');
 
 assert.ok(captureRunner.includes('api.captureCanvas()'),
   'Coastal reference images must be read directly from the WebGL canvas, not the HTML page');
+assert.match(captureRunner, /const atmosphereCapture = await page\.evaluate\(hour =>/);
+assert.match(captureRunner, /const dataUrl = api\.captureCanvas\(\)/,
+  'Atmosphere phase time changes and fresh WebGL PNG readback must occur in the same browser task.');
+assert.match(captureRunner, /const atmospherePngDataUrl = atmosphereCapture\.dataUrl/);
+assert.doesNotMatch(captureRunner, /waitForTimeout\(120\)/,
+  'Do not let an intervening animation frame invalidate the WebGL drawing buffer.');
+assert.ok(!captureRunner.includes("page.locator('#renderCanvas').screenshot"),
+  'Do not wait for an animated canvas element to become visually stable before atmosphere captures.');
 assert.ok(!captureRunner.includes('page.screenshot('),
   'Full-page screenshots can include menus/HUD and add unnecessary SwiftShader compositor cost');
-assert.ok(captureRunner.includes("assert.equal(boot.build, '0.6.275'"), 'The capture must inspect the exact current 0.6.275 candidate.');
-assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The scene capture must use the synchronized 0.6.275 HTML build.');
+assert.ok(captureRunner.includes("assert.equal(boot.build, '0.6.276'"), 'The capture must inspect the exact current 0.6.276 candidate.');
+assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The source HTML remains 0.6.274 and is promoted to 0.6.276 by the release builder.');
+assert.ok(builder.includes('atmosphere-system.js'),'The release builder must package the atmospheric shader module.');
+assert.ok(builder.includes('window.__ELSN_ATMOSPHERE_CONTROLS'),'The atmospheric controls must be installed in the game runtime.');
+assert.ok(builder.includes('atmosphereSystem.update(dt)'),'The atmosphere clock must be updated once per game frame.');
+assert.ok(captureRunner.includes("id: 'dawn'"),'The scene inspector must capture dawn.');
+assert.ok(captureRunner.includes("id: 'noon'"),'The scene inspector must capture noon.');
+assert.ok(captureRunner.includes("id: 'dusk'"),'The scene inspector must capture dusk.');
+assert.ok(captureRunner.includes("id: 'midnight'"),'The scene inspector must capture midnight.');
 assert.match(html,/const vegetationTrailPaths=\[\],packedTrailMeshes=\[\]/, 'The game must keep direct references to its packed-trail meshes for deterministic test isolation.');
 assert.match(html,/packedTrailMeshes\.push\(mesh\)/, 'Every generated packed trail must be registered for the test-only A/B capture.');
 assert.match(html,/setPackedTrailVisible:\(enabled\)=>\{const trails=packedTrailMeshes/, 'The test-only API must isolate the packed-earth ribbon without changing normal gameplay.');

@@ -629,6 +629,20 @@ def main() -> None:
         " async function resolveCivilianHumanAssetUrls(){\n  const urls=[CIVILIAN_HUMAN_GLB_URL];",
         " async function resolveCivilianHumanAssetUrls(){\n  return [CIVILIAN_HUMAN_GLB_URL];\n  const urls=[CIVILIAN_HUMAN_GLB_URL];"
     )
+    # Load the atmosphere runtime synchronously before the monolithic game script.
+    # A deferred script at </body> executes only after parsing, which is too late:
+    # the game constructs AtmosphereSystem while its inline runtime is evaluated.
+    atmosphere_tag = '<script src="./scripts/nordic/atmosphere-system.js"></script>'
+    game_runtime_marker = '<script>\n(function(){\n"use strict";\nwindow.addEventListener(\'error\''
+    if html.count(game_runtime_marker) != 1:
+        raise SystemExit("No se encontró exactamente el inicio del runtime principal para instalar la atmósfera.")
+    if html.count(atmosphere_tag) > 1:
+        raise SystemExit("La etiqueta del sistema atmosférico aparece duplicada.")
+    if atmosphere_tag not in html:
+        html = html.replace(game_runtime_marker, atmosphere_tag + "\n" + game_runtime_marker, 1)
+    if html.index(atmosphere_tag) > html.index(game_runtime_marker):
+        raise SystemExit("El sistema atmosférico debe cargarse antes del runtime principal.")
+
     required = [
         "assets/vendor/babylon.js",
         "assets/vendor/meshopt_decoder.js",
@@ -640,6 +654,7 @@ def main() -> None:
         "navigator.serviceWorker.register",
         "./scripts/nordic/beach-state.js",
         "./scripts/nordic/coastal-interaction.js",
+        "./scripts/nordic/atmosphere-system.js",
         "window.NorseBeachState",
     ]
     for item in required:
@@ -667,6 +682,13 @@ def main() -> None:
         raise SystemExit("Falta scripts/nordic/navigation-suite.js.")
     navigation_target = DIST / "scripts" / "nordic" / "navigation-suite.js"
     shutil.copy2(navigation_source, navigation_target)
+
+    atmosphere_source = ROOT / "scripts" / "nordic" / "atmosphere-system.js"
+    if not atmosphere_source.is_file():
+        raise SystemExit("Falta scripts/nordic/atmosphere-system.js.")
+    atmosphere_target = DIST / "scripts" / "nordic" / "atmosphere-system.js"
+    shutil.copy2(atmosphere_source, atmosphere_target)
+
     navigation_tag = '<script src="./scripts/nordic/navigation-suite.js" defer></script>'
     if navigation_tag not in html:
         if "</body>" not in html:
@@ -674,31 +696,42 @@ def main() -> None:
         html = html.replace("</body>", navigation_tag + "\n</body>", 1)
 
 
-    # Release candidate 0.6.275: fix the submerged seabed profile once, keep the
+    # Release candidate 0.6.276: fix the submerged seabed profile once, keep the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.275; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.276; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.275\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.276\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.275.")
-    html = html.replace("0.6.274", "0.6.275")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.276.")
+    html = html.replace("0.6.274", "0.6.276")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
-    diagnostic_build_pattern = r"reportVersion:'\d+',build:'0\.6\.275'"
-    diagnostic_build_replacement = "reportVersion:'12',build:'0.6.275'"
+    diagnostic_build_pattern = r"reportVersion:'\d+',build:'0\.6\.276'"
+    diagnostic_build_replacement = "reportVersion:'13',build:'0.6.276'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.275 para normalizar.")
-    game_version = "0.6.275"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.276 para normalizar.")
+    game_version = "0.6.276"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     coastal_profile_replacements = (
+        (
+            "if(mesh===skyDome||mesh===sunHalo||mesh===sunDisc){list.push(mesh);continue;}",
+            "if(mesh===skyDome||mesh===sunHalo||mesh===sunDisc||(window.__ELSN_ATMOSPHERE&&(mesh===window.__ELSN_ATMOSPHERE.moonDisc||mesh===window.__ELSN_ATMOSPHERE.moonHalo))){list.push(mesh);continue;}",
+            "moon disc and halo in the existing Nordic water mirror",
+        ),
+        (
+            "  const cloudWindRate=.00042+.00014*Math.sin(elapsed*.0031);skyTexture.uOffset=(elapsed*cloudWindRate)%1;\n  // El cielo se desplaza con viento variable; la capa vertical acompaña el flujo atmosférico.\n  skyTexture.vOffset=Math.sin(elapsed*.00009)*.012;\n  const sunArc=elapsed*.00022;sunHalo.position.x=290+Math.sin(sunArc)*48;sunDisc.position.x=sunHalo.position.x;sunHalo.position.y=235+Math.sin(sunArc*.7)*22;sunDisc.position.y=sunHalo.position.y;\n  sun.direction.x=-.42+Math.sin(sunArc)*.055;sun.direction.z=.22+Math.cos(sunArc)*.045;hemi.intensity=.84+.035*Math.sin(elapsed*.002);sun.intensity=1.38+.08*Math.sin(elapsed*.0017);\n  animateWater(dt);",
+            "  if(atmosphereSystem)atmosphereSystem.update(dt);\n  else{\n   const cloudWindRate=.00042+.00014*Math.sin(elapsed*.0031);skyTexture.uOffset=(elapsed*cloudWindRate)%1;\n   skyTexture.vOffset=Math.sin(elapsed*.00009)*.012;\n   const sunArc=elapsed*.00022;sunHalo.position.x=290+Math.sin(sunArc)*48;sunDisc.position.x=sunHalo.position.x;sunHalo.position.y=235+Math.sin(sunArc*.7)*22;sunDisc.position.y=sunHalo.position.y;\n   sun.direction.x=-.42+Math.sin(sunArc)*.055;sun.direction.z=.22+Math.cos(sunArc)*.045;hemi.intensity=.84+.035*Math.sin(elapsed*.002);sun.intensity=1.38+.08*Math.sin(elapsed*.0017);\n  }\n  animateWater(dt);",
+            "unified atmospheric clock replacing the legacy pseudo-sun arc",
+        ),
+
         (
             "const segments=isPerformanceMode?192:512,rows=isPerformanceMode?10:20,cols=segments+1;",
             "const segments=isPerformanceMode?192:512,rows=isPerformanceMode?10:(isTouchDevice?64:96),cols=segments+1;",
@@ -729,6 +762,42 @@ def main() -> None:
         if html.count(old_code) != 1:
             raise SystemExit(f"No se encontró exactamente una fórmula original para {label}.")
         html = html.replace(old_code, new_code, 1)
+
+    atmosphere_init_marker = "function update(dt){"
+    atmosphere_init_code = r"""
+  let atmosphereSystem=null;
+  try{
+   if(typeof window.NorseAtmosphereSystem==='function'){
+    atmosphereSystem=new window.NorseAtmosphereSystem({
+     B,scene,camera,engine,sunLight:sun,hemiLight:hemi,skyDome,sunDisc,sunHalo,skyTexture,renderPipeline,
+     waterMaterial:M.water,windowMaterial:M.windowGlow,hearths:hearthStates,fireLights,
+     focusProvider:()=>onShip?ship.position:player.root.position,
+     getShadowGenerator:()=>shadowGen,
+     setShadowGenerator:generator=>{shadowGen=generator;},
+     isPerformanceMode,isTouchDevice,isConstrainedMobile,reportedMemory,
+     timeOfDay:8.25,dayDurationSeconds:300
+    });
+    window.__ELSN_ATMOSPHERE=atmosphereSystem;
+    if(typeof syncNordicWaterReflectionIsland==='function'){activeWaterReflectionIslandIndex=-2;syncNordicWaterReflectionIsland();}
+    window.__ELSN_ATMOSPHERE_CONTROLS={
+     setTime:value=>atmosphereSystem.setTime(value),
+     pause:()=>atmosphereSystem.pause(),
+     resume:()=>atmosphereSystem.resume(),
+     setSpeed:value=>atmosphereSystem.setSpeed(value),
+     setDayDuration:value=>atmosphereSystem.setDayDuration(value),
+     setWeather:value=>atmosphereSystem.setWeather(value),
+     setClimate:value=>atmosphereSystem.setClimate(value),
+     state:()=>atmosphereSystem.getState()
+    };
+   }else console.warn('NorseAtmosphereSystem no está disponible; se conserva el cielo de respaldo.');
+  }catch(atmosphereError){
+   atmosphereSystem=null;
+   console.error('No se pudo inicializar NorseAtmosphereSystem; se conserva el cielo de respaldo.',atmosphereError);
+  }
+"""
+    if html.count(atmosphere_init_marker) != 1:
+        raise SystemExit("No se encontró exactamente una función update(dt) para instalar el sistema atmosférico.")
+    html = html.replace(atmosphere_init_marker, atmosphere_init_code + "\n" + atmosphere_init_marker, 1)
 
     # Compare the actual rendered height surfaces at their shared X/Z coordinates.
     # The 5 cm limit applies to seams between adjacent meshes, not to natural slopes
@@ -1051,6 +1120,13 @@ def main() -> None:
         )
 
     results = []
+    atmosphere_bytes = atmosphere_target.read_bytes()
+    results.append({
+        "path": "scripts/nordic/atmosphere-system.js",
+        "bytes": len(atmosphere_bytes),
+        "sha256": hashlib.sha256(atmosphere_bytes).hexdigest(),
+        "source": "project-owned: scripts/nordic/atmosphere-system.js",
+    })
     navigation_bytes = navigation_target.read_bytes()
     results.append({
         "path": "scripts/nordic/navigation-suite.js",
