@@ -3069,6 +3069,7 @@ async function removeStrayDebugGeometry(targetScene){
   }
   return {centre,bow,stern,port,starboard,targetY,targetPitch,targetRoll};
  }
+ let onShip=false,gameStarted=false,startupAssetsReady=false;
  function getWaterCoastDiagnostics(){
   const focus=onShip?ship.position:player.root.position,baseSeaLevel=Number(ground.position.y)||0,tideOffset=tideOffsetAt(oceanTime),localSurface=waterHeight(focus.x,focus.z,oceanTime),active=livingBeachLayers[activeBeachIslandIndex]||null;
   let shorelineRadius=null,wetBandRadius=null,wetBandPeak=0,wetBandDistanceMeters=null;
@@ -8323,7 +8324,7 @@ function createRealWeapon(type='axe'){
   msg('Equipo: '+({club:'palo',axe:'hacha',sword:'espada',spear:'lanza',pickaxe:'pico de minería'}[type])+'.');
   return true;
  }
- let health=100,stamina=100,woodCount=0,stoneCount=0,kills=0,captured=0,weaponLevel=0,blocking=false,onShip=false,invuln=0,playerAction='idle',actionTimer=0,actionHit=false,combo=0,comboWindow=0,blockAge=9,cameraShake=0,combatFreeze=0,dodgeTimer=0,respawnWait=0,running=false,healCooldown=0,boatVelocity=0,boatBaseY=-.10,shipAttackCooldown=0,crewVolleyCooldown=1.2;
+ let health=100,stamina=100,woodCount=0,stoneCount=0,kills=0,captured=0,weaponLevel=0,blocking=false,invuln=0,playerAction='idle',actionTimer=0,actionHit=false,combo=0,comboWindow=0,blockAge=9,cameraShake=0,combatFreeze=0,dodgeTimer=0,respawnWait=0,running=false,healCooldown=0,boatVelocity=0,boatBaseY=-.10,shipAttackCooldown=0,crewVolleyCooldown=1.2;
  const playerBoatFloatState=createVesselFloatState();
  const sagaHistory=[];
  let sprintMissionMeters=0,sprintMissionDone=false;
@@ -10363,7 +10364,7 @@ function villageHostileDefenders(vl){
  window.addEventListener('pagehide',()=>{MenuMusic.stop();GameplayMusic.stop();},{once:true});
  document.addEventListener('keydown',e=>{const target=e.target;if(target&&(target.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)))return;if(String(e.key||'').toLowerCase()==='m'&&!e.repeat){const state=NorseAudio.toggle();MenuMusic.setMuted(state);GameplayMusic.setMuted(state);msg(state?'Sonido desactivado':'Sonido activado');}});
  const audioToggleButton=document.getElementById('audioToggle');if(audioToggleButton)audioToggleButton.addEventListener('click',()=>{NorseAudio.unlock();const state=NorseAudio.toggle();MenuMusic.setMuted(state);GameplayMusic.setMuted(state);audioToggleButton.textContent=state?'🔇':'🔊';msg(state?'Sonido desactivado':'Sonido activado');});
- const introOverlay=document.getElementById('intro'),newGameChoiceButton=document.getElementById('newGameChoice'),loadGameChoiceButton=document.getElementById('loadGameChoice');let gameStarted=false;
+ const introOverlay=document.getElementById('intro'),newGameChoiceButton=document.getElementById('newGameChoice'),loadGameChoiceButton=document.getElementById('loadGameChoice');
  function showStartScreen(){
   // Se presenta directamente la elección de campaña sobre el mundo preparado.
   // La simulación y el HUD permanecen ocultos hasta que el jugador elija una tarjeta.
@@ -12645,7 +12646,7 @@ function update(dt){
  islandStreamBuildGroups();
  updatePerformanceIslandStreaming(0,true);
  let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;
- let firstFrameRendered=false,startupAssetsReady=false,startScreenShown=false,frameErrorShown=false,lastFrameErrorAt=0,renderedFrames=0;
+ let firstFrameRendered=false,startScreenShown=false,frameErrorShown=false,lastFrameErrorAt=0,renderedFrames=0;
  const frameDiagnostic=document.getElementById('frameDiagnostic');
  function reportFrameError(stage,error){
   const now=performance.now(),detail=String(error&&error.message||error||'error desconocido');
