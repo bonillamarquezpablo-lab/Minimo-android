@@ -59,6 +59,13 @@ assert.ok(source.includes("const enabled = this.quality !== 'low';") && source.i
 assert.ok(source.includes('pipeline.fxaaEnabled = !mobileHigh;'), 'Mobile-high must use native MSAA without an extra FXAA pass.');
 assert.ok(source.includes("this.quality === 'high' && !this.isTouchDevice"), 'God rays and SSAO must remain desktop-only.');
 assert.ok(source.includes("this.quality === 'low' || this.isTouchDevice"), 'Touch devices must not create the cascaded-shadow multipass.');
+assert.ok(source.includes("this.moonLight.intensity = 0.28 * state.night"), "Night moonlight must retain visible detail.");
+assert.ok(source.includes("this.hemiLight.intensity = 0.25 + 0.70 * state.daylight + 0.06 * state.twilight"), "Night ambient illumination must not collapse toward black.");
+assert.ok(source.includes("this.scene.environmentIntensity = 0.16 + 0.44 * state.daylight + 0.04 * state.twilight"), "PBR environment illumination must remain present at night.");
+assert.ok(source.includes("mix(1.12, 1.08, state.daylight)"), "Night exposure must stay readable while preserving daylight exposure.");
+assert.ok(source.includes("this._sunVector = new B.Vector3(0, 1, 0)") && source.includes("this._fogColor = new B.Color3(0, 0, 0)"), "Atmosphere frame values must be reused instead of allocated every render frame.");
+assert.ok(source.includes("Turn off the local pool once when daylight returns") && source.includes("Pick the nearest one or two hearths in a single pass"), "Hearth lights must avoid per-frame day scans and recurring candidate-array sorts.");
+
 
 const buildSource = fs.readFileSync(path.join(__dirname, 'build_site.py'), 'utf8');
 const sourceHtml = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
