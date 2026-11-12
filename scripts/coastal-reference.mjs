@@ -6,6 +6,8 @@ import { chromium } from 'playwright';
 
 const BASE_URL = process.env.COASTAL_TEST_URL || 'http://127.0.0.1:4173/';
 const OUT = path.resolve('artifacts/coastal-reference');
+const EXPECTED_BUILD = process.env.EXPECTED_GAME_VERSION || fs.readFileSync('scripts/validate_release.py', 'utf8').match(/^EXPECTED_VERSION = \"([^\"]+)\"/m)?.[1];
+if (!EXPECTED_BUILD) throw new Error('The release validator does not expose EXPECTED_VERSION; refusing a stale coastal baseline.');
 
 async function withCaptureTimeout(promise, timeoutMs, label) {
   let timer;
@@ -354,7 +356,7 @@ async function main() {
     manifest.backgroundModels = boot.backgroundModels;
     manifest.sceneWarmup = boot.sceneWarmup;
 
-    assert.equal(boot.build, '0.6.276', 'La referencia debe ser exactamente 0.6.276');
+    assert.equal(boot.build, EXPECTED_BUILD, 'La referencia costera debe coincidir con la versión validada por scripts/validate_release.py: ' + EXPECTED_BUILD);
     assert.equal(boot.coastalRuntimeMode, 'module', 'El módulo costero externo debe cargarse desde dist; el respaldo inline no debe ocultar un error de empaquetado.');
     assert.equal(boot.coastalApiReady, true, 'Falta una o más funciones de la API costera al construir la escena.');
     assert.equal(boot.startup.worldReady, true, 'La escena costera no terminó de prepararse');

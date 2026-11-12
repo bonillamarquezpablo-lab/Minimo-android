@@ -53,20 +53,29 @@ const phases = [
 
 
 async function capturePhaseFrame(page, hour, label, phaseId) {
-  const captureResult = await withTimeout(page.evaluate(hour => {
+  const clockState = await withTimeout(page.evaluate(hour => {
     const clock = window.__ELSN_ATMOSPHERE_CONTROLS;
     const api = window.__ELSN_TEST__;
-    if (!clock || !api || typeof api.render !== 'function' || typeof api.captureCanvas !== 'function') {
+    if (!clock || !api || typeof api.captureCanvas !== 'function') {
       throw new Error('Atmosphere clock or game capture API is unavailable.');
     }
     clock.pause();
-    const clockState = clock.setTime(hour);
-    api.render();
+    return clock.setTime(hour);
+  }, hour), 15000, label + ' ' + phaseId + ' clock update');
+  // Let the normal render loop present the changed lighting. Do not force a second
+  // synchronous scene.render(): on SwiftShader that duplicates the heaviest frame
+  // and can block the Playwright protocol for tens of seconds.
+  await page.waitForTimeout(750);
+  const captureResult = await withTimeout(page.evaluate(() => {
+    const api = window.__ELSN_TEST__;
+    if (!api || typeof api.captureCanvas !== 'function') {
+      throw new Error('The game canvas capture API is unavailable.');
+    }
     let dataUrl = null, canvasError = null;
     try { dataUrl = api.captureCanvas(); }
     catch (error) { canvasError = String(error?.message || error); }
-    return { clockState, dataUrl, canvasError };
-  }, hour), 20000, label + ' ' + phaseId + ' phase render');
+    return { dataUrl, canvasError };
+  }), 60000, label + ' ' + phaseId + ' canvas readback');
   const match = /^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(captureResult.dataUrl || '');
   let bytes = match ? Buffer.from(match[1], 'base64') : null;
   let method = 'game-canvas-readback';
@@ -85,7 +94,7 @@ async function capturePhaseFrame(page, hour, label, phaseId) {
     }
   }
   if (!valid(bytes)) throw new Error(label + ' ' + phaseId + ': neither WebGL readback nor compositor returned a valid PNG. Canvas: ' + (captureResult.canvasError || 'invalid/empty PNG'));
-  return { clockState: captureResult.clockState, bytes, method };
+  return { clockState, bytes, method };
 }
 
 if (!beforeUrl || !afterUrl) {

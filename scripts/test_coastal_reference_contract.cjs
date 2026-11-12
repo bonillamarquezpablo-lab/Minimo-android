@@ -180,8 +180,8 @@ assert.match(contactSheet, /no-continuous-shore-foam/);
 assert.match(contactSheet, /ridge-occlusion__t037__natural__no-island-shadows\.png/, 'The contact sheet must include a shadow-isolation A/B panel.');
 assert.match(captureRunner, /setIslandShadowReceiving\(false\)/, 'The ridge A/B frame must isolate the main-island shadow receiver.');
 assert.match(html, /setIslandShadowReceiving:\(enabled\)=>/, 'Shadow isolation must remain available only through the test-mode hook.');
-assert.ok(workflow.includes('cancel-in-progress: false'),
-  'A later PR commit must not cancel a long-running 27-image reference capture');
+assert.ok(workflow.includes('cancel-in-progress: true'),
+  'The newest deep graphics audit must supersede stale, long-running inspector runs.');
 
 // The coast solver and static foam profile caches are guarded by the assertions above.
 
