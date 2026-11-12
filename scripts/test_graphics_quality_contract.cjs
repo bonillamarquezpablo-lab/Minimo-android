@@ -52,7 +52,7 @@ assert.ok(builder.includes("if(sameIsland)return;") && builder.includes("if(!sam
 assert.ok(builder.includes("const grassIsland=land[index]") && builder.includes("grassStreamCenterX=grassIsland.x"), "Quality grass streaming must anchor a generated field to the island, not the moving player.");
 assert.ok(gameSource.includes("const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);"), "The grass density must remain unchanged while preventing costly rebuilds.");
 assert.ok(atmosphere.includes("this.moonLight.intensity = 0.28 * state.night"), "Night lighting must retain enough moonlight to read the playable world.");
-assert.ok(atmosphere.includes("this.hemiLight.intensity = 0.25 + 0.70 * state.daylight + 0.06 * state.twilight"), "Night ambient fill must not collapse to near zero.");
+assert.ok(atmosphere.includes("this.hemiLight.intensity = 0.25 + 0.65 * state.daylight + 0.045 * state.twilight"), "Night ambient fill must not collapse to near zero.");
 assert.ok(atmosphere.includes("mix(1.12, 1.08, state.daylight)"), "Night exposure must remain readable without changing daylight exposure.");
 assert.ok(atmosphere.includes("this._sunVector = new B.Vector3(0, 1, 0)"), "The atmosphere must reuse vector/color scratch objects instead of allocating them each frame.");
 
