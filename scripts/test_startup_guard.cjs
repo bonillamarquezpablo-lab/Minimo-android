@@ -27,6 +27,18 @@ assert.match(html,/if\(!requiredReady\)throw new Error\('NPC obligatorios de la 
 assert.match(html,/if\(startupAssetsReady\|\|gameStarted\)throw new Error\('No se permiten importaciones GLB después de entrar en la partida\.'/);
 assert.match(html,/estimatedWorkingSetBytes/);
 assert.match(html,/const VIKING_WEB_CACHE='el-sin-nombre-models-'/);
+assert.match(html,/async function readVikingFromWebCache\(\)[\s\S]*?caches\.open\(VIKING_WEB_CACHE\)[\s\S]*?cache\.match\(VIKING_GLB_URL\)/,
+  'The official protagonist lookup must read only the exact build-versioned Cache API bucket.');
+assert.doesNotMatch(html,/caches\.match\(VIKING_GLB_URL\)/,
+  'A global cache search must not bypass the protagonist cache version.');
+assert.match(html,/function disposeLateGlbResult\(result,model,stage\)/);
+assert.match(html,/pending\.then\(result=>\{if\(timedOut\)disposeLateGlbResult\(result,model,stage\)\}/,
+  'Timed-out SceneLoader imports must be disposed if Babylon resolves them late.');
+assert.doesNotMatch(html,/RECURSO OBLIGATORIO: importación de fauna sin finalizar/,
+  'Fauna timeout/failure is optional and must not block game entry.');
+assert.match(html,/fauna:'blocking-optional'/);
+assert.match(html,/npcBackgroundLoad:'blocking-before-entry',faunaBackgroundLoad:'optional-before-entry'/);
+assert.match(html,/No se pudo identificar un roster obligatorio de guardianes y aldeanos/);
 assert.doesNotMatch(html,/cached=await readVikingFromBrowser\(\)/,'El GLB oficial del protagonista no debe duplicarse en IndexedDB.');
 assert.match(html,/async function saveCivilianHumanCache\(blob\)[\s\S]*?caches\.open\(VIKING_WEB_CACHE\)/,'El GLB civil debe usar Cache API y no duplicarse en IndexedDB.');
 assert.match(html,/RECURSO OBLIGATORIO: escena y shaders · agotado el plazo de 90 segundos/);
