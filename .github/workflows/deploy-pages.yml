@@ -36,6 +36,10 @@ jobs:
 
       - name: Test offline navigation suite and four camera modes
         run: node scripts/test_navigation_suite_contract.cjs
+      - name: Test adaptive graphics quality without sacrificing Performance profile
+        run: node scripts/test_graphics_quality_contract.cjs
+      - name: Test release version and packaging contract
+        run: node scripts/test_release_contract.cjs
       - name: Test unified day-night atmosphere clock and APIs
         run: node scripts/test_atmosphere_system.cjs
       - name: Test bounded scene capture and animated frame integrity
