@@ -15,6 +15,7 @@ for(const marker of [
   'scene.whenReadyAsync()',
   'scene.compileMaterialsAsync()',
   'sceneReadyTimeout',
+  'RECURSO OBLIGATORIO: efectos de sonido',
   "loadWildlifeModels()"
 ]) assert.ok(barrier.includes(marker),'Falta una dependencia de arranque obligatorio/medido: '+marker);
 
@@ -24,6 +25,8 @@ assert.match(html,/const civilianPartsToLoad=humanCivilianParts\.slice\(0,lowMem
 assert.match(html,/if\(!requiredReady\)throw new Error\('NPC obligatorios de la isla inicial incompletos/);
 assert.match(html,/if\(startupAssetsReady\|\|gameStarted\)throw new Error\('No se permiten importaciones GLB después de entrar en la partida\.'/);
 assert.match(html,/estimatedWorkingSetBytes/);
+assert.match(html,/const VIKING_WEB_CACHE='el-sin-nombre-models-'/);
+assert.doesNotMatch(html,/cached=await readVikingFromBrowser\(\)/,'El GLB oficial del protagonista no debe duplicarse en IndexedDB.');
 assert.match(html,/RECURSO OBLIGATORIO: escena y shaders · agotado el plazo de 90 segundos/);
 assert.match(html,/timer=setTimeout\(\(\)=>controller\.abort\(\),45000\)/);
 
