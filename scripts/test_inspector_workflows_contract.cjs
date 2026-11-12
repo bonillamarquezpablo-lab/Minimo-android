@@ -9,7 +9,9 @@ assert.match(workflow,/Isolate each candidate commit so a stale runner cannot bl
 assert.match(workflow,/group: scene-capture-s26-graphics-.*github\.sha/);
 assert.match(workflow,/workflow_dispatch:/);
 assert.match(workflow,/default: ''/);
-assert.match(workflow,/github\.event_name == 'pull_request'.*github\.event_name == 'push'/);\nassert.match(workflow,/INSPECTOR_LEVEL:.*github\.event_name == 'pull_request'.*'deep'/);\nassert.match(workflow,/git fetch --no-tags origin "\$BASE_REF"/);
+assert.match(workflow,/github\.event_name == 'pull_request'.*github\.event_name == 'push'/);
+assert.match(workflow,/INSPECTOR_LEVEL:.*github\.event_name == 'pull_request'.*'deep'/);
+assert.match(workflow,/git fetch --no-tags origin "\$BASE_REF"/);
 assert.match(workflow,/git rev-parse "\$GITHUB_SHA\^"/);
 assert.match(workflow,/for attempt in \$\(seq 1 32\); do/);
 assert.match(workflow,/CANDIDATE_VERSION=/);
