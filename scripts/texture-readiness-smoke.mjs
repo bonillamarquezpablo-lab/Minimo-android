@@ -148,15 +148,6 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
  const readinessTimedOut=!!convergenceResult?.__prepareTimedOut;
  if(readinessTimedOut){manifest.readiness={ready:false,verdict:'fail',converged:false,sceneReady:false,timeoutMs:TIMEOUT_MS,externalWaitLimitMs:EXTERNAL_READINESS_WAIT_MS,textureDiagnostics:null,warning:'Readiness timed out; preserving the requested camera capture anyway.'};manifest.captureWarning='Render readiness did not converge; attempting direct frame capture.';}
  else manifest.readiness=convergenceResult;
- // Freeze the test renderer before the exhaustive texture/reference walk. On SwiftShader,
- // the 5,000+ mesh scene can monopolize the main thread while the live render loop competes
- // with the inspector; a deterministic static frame keeps the full audit responsive without
- // changing production rendering or reducing scene quality.
- await runPhase('freeze render loop for complete texture inventory',()=>page.evaluate(()=>{
-  const api=window.__ELSN_TEST__;
-  if(typeof api?.prepareStaticCaptureFrame!=='function')throw new Error('Static frame capture API is unavailable.');
-  return api.prepareStaticCaptureFrame();
- }));
  manifest.textureDiagnostics=manifest.readiness?.textureDiagnostics||await runPhase('collect texture reference inventory',()=>bounded(page.evaluate(()=>window.__ELSN_TEST__?.getTextureReadinessForCamera?.()),8000,null));
  manifest.actualCamera=manifest.textureDiagnostics?.camera||null;manifest.cameraVerification=cameraVerification(manifest.camera,manifest.actualCamera);
  if(!readinessTimedOut)manifest.runtimeDiagnostics=await runPhase('collect render performance diagnostics',()=>collectRuntimeDiagnostics(page,5000));
@@ -168,6 +159,11 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
   manifest.approachFrameSaved=false;
   console.log('[CAPTURE] Visual screenshot deferred to the unified scene inspector.');
  }else{
+  await runPhase('freeze render loop and draw one boat-approach frame',()=>page.evaluate(()=>{
+   const api=window.__ELSN_TEST__;
+   if(typeof api?.prepareStaticCaptureFrame!=='function')throw new Error('Static frame capture API is unavailable.');
+   return api.prepareStaticCaptureFrame();
+  }));
   const approachFrameSaved=manifest.screenshot?true:await runPhase('capture boat-approach frame after scene audit',async()=>{const saved=await capturePng(page,true,false);if(!saved)throw new Error(manifest.captureFailure||'No camera PNG was captured.');return true;});
   manifest.approachFrameSaved=!!(manifest.approachFrameSaved||approachFrameSaved);
   await runPhase('verify bounded camera PNG capture',async()=>{if(manifest.screenshot)return;throw new Error('No valid PNG was saved by the frozen game canvas or CDP fallback.');});
