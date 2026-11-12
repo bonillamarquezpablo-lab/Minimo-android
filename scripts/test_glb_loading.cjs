@@ -12,6 +12,8 @@ assert.doesNotMatch(html,/const warriorPartsToLoad=isPerformanceMode\s*\?\s*\[\]
 assert.doesNotMatch(html,/const civilianPartsToLoad=isPerformanceMode\s*\?\s*\[\]/);
 assert.doesNotMatch(html,/const animalCount=isPerformanceMode\?0/);
 assert.match(html,/function timedGlbStage\(/);
+assert.match(html,/timeoutMs=60000/);
+assert.match(html,/agotó el plazo de '\+timeoutMs\+' ms/);
 assert.match(html,/window\.__elSinNombreGlbTimings=glbTimingRecords/);
 assert.match(html,/originalFallback:true/);
 console.log('OK: GLB timing, one-shot background loads, and original model fallback.');
