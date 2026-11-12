@@ -16,7 +16,8 @@ for(const marker of [
   'scene.compileMaterialsAsync()',
   'sceneReadyTimeout',
   'RECURSO OBLIGATORIO: efectos de sonido',
-  "loadWildlifeModels()"
+  "loadWildlifeModels()",
+  "faunaTasks.push(loadRiggedCoastalGulls())"
 ]) assert.ok(barrier.includes(marker),'Falta una dependencia de arranque obligatorio/medido: '+marker);
 
 assert.match(html,/throw new Error\('RECURSO OBLIGATORIO: Vikingo protagonista/);
@@ -41,6 +42,8 @@ assert.match(html,/const lowMemoryNpcBudget=!!\(isUltraLowEndMobile\|\|isGalaxyA
 assert.match(html,/await createRealGrass\(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ\)/);
 assert.match(html,/console\.info\('Hierba desactivada en modo Rendimiento\.'/);
 assert.match(html,/const animalCount=isPerformanceMode\?0:\(idx===0\?3:0\)/);
+assert.doesNotMatch(html,/loadRiggedCoastalGulls\(\);/,'The gull GLB must not be imported in a fire-and-forget task.');
+assert.doesNotMatch(html,/CoastalGull_\+i/,'Procedural gull stand-ins must not be displayed.');
 
 // Music remains HTMLAudio; effects use the Web Audio context only after unlock.
 assert.match(html,/new Audio\(\);audio\.preload='none';audio\.src=SOURCE/);
