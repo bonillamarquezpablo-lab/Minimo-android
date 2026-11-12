@@ -72,6 +72,15 @@
       "exitCode": 1,
       "error": "exit=1 signal=none",
       "finishedAt": "2026-11-12T04:08:09.724Z"
+    },
+    {
+      "name": "Comparación visual ANTES/DESPUÉS — cuatro fases horarias",
+      "script": "scripts/hrafn-before-after.mjs",
+      "startedAt": "2026-11-12T04:08:12.360Z",
+      "status": "running",
+      "durationMs": null,
+      "exitCode": null,
+      "error": null
     }
   ],
   "finishedAt": null
