@@ -696,29 +696,103 @@ def main() -> None:
         html = html.replace("</body>", navigation_tag + "\n</body>", 1)
 
 
-    # Release candidate 0.6.276: fix the submerged seabed profile once, keep the
+    # Release candidate 0.6.277: fix the submerged seabed profile once, keep the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.276; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.277; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.276\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.277\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.276.")
-    html = html.replace("0.6.274", "0.6.276")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.277.")
+    html = html.replace("0.6.274", "0.6.277")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'0\.6\.276'"
-    diagnostic_build_replacement = "reportVersion:'13',build:'0.6.276'"
+    diagnostic_build_replacement = "reportVersion:'14',build:'0.6.277'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.276 para normalizar.")
-    game_version = "0.6.276"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.277 para normalizar.")
+    game_version = "0.6.277"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+
+    # 0.6.277 graphics uplift: sharper render resolution on phones with GPU headroom.
+    # The dedicated Performance profile is deliberately unchanged.
+    quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
+    quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
+ const highHeadroomQualityMobile=!!(isTouchDevice&&!constrainedHardware&&((reportedMemory>=8&&(Number(navigator.hardwareConcurrency)||0)>=8)||highTierGpuMatch));
+ const qualityDprFloor=Math.min(deviceDpr,isTouchDevice?1.80:1.85);
+ const qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.40:1.80):1.85);
+ const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,highHeadroomQualityMobile?2.10:(isTouchDevice?1.80:1.85));"""
+    if html.count(quality_profile_marker) != 1:
+        raise SystemExit("No se encontró exactamente una política original de resolución.")
+    html = html.replace(quality_profile_marker, quality_profile_code, 1)
+
+    quality_adaptive_marker = r""" let fpsSample=0,qualityDprCurrent=qualityDpr;
+ let lastWorldUpdateMs=0,lastRenderCpuMs=0;
+ const targetFrameRate=120;
+ function adaptRenderQuality(dt){
+  // Monitor-only: never lower resolution, DPR, shadow-map size or visual fidelity at runtime.
+  fpsSample+=dt;if(fpsSample<(isConstrainedMobile?1.5:2.5))return;fpsSample=0;
+  const fps=engine.getFps();
+  if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
+ }"""
+    quality_adaptive_code = r""" let fpsSample=0,qualityDprCurrent=qualityDpr;
+ let qualityDprStableSamples=0,qualityDprSlowSamples=0;
+ let lastWorldUpdateMs=0,lastRenderCpuMs=0;
+ const targetFrameRate=120;
+ function adaptRenderQuality(dt){
+  fpsSample+=dt;if(fpsSample<(isConstrainedMobile?1.5:2.5))return;fpsSample=0;
+  const fps=engine.getFps();
+  if(!isPerformanceMode&&highHeadroomQualityMobile){
+   if(fps<55){
+    qualityDprSlowSamples++;qualityDprStableSamples=0;
+    if(qualityDprSlowSamples>=2&&qualityDprCurrent>qualityDprFloor+.01){
+     qualityDprCurrent=Math.max(qualityDprFloor,Number((qualityDprCurrent-.12).toFixed(2)));
+     engine.setHardwareScalingLevel(1/qualityDprCurrent);qualityDprSlowSamples=0;
+     console.info('EL SIN NOMBRE: resolución interna reducida para proteger la fluidez.',{fps:Math.round(fps),renderDpr:qualityDprCurrent});
+    }
+   }else if(fps>=59){
+    qualityDprStableSamples++;qualityDprSlowSamples=0;
+    if(qualityDprStableSamples>=6&&qualityDprCurrent<qualityDprCeiling-.01){
+     qualityDprCurrent=Math.min(qualityDprCeiling,Number((qualityDprCurrent+.10).toFixed(2)));
+     engine.setHardwareScalingLevel(1/qualityDprCurrent);qualityDprStableSamples=0;
+     console.info('EL SIN NOMBRE: resolución interna elevada con margen estable de GPU.',{fps:Math.round(fps),renderDpr:qualityDprCurrent});
+    }
+   }else{qualityDprStableSamples=0;qualityDprSlowSamples=0;}
+  }
+  if(fps<24)console.info('Diagnóstico de rendimiento (fidelidad protegida)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
+ }"""
+    if html.count(quality_adaptive_marker) != 1:
+        raise SystemExit("No se encontró exactamente la función original de supervisión de resolución.")
+    html = html.replace(quality_adaptive_marker, quality_adaptive_code, 1)
+
+    high_res_texture_replacements = (
+        ("function makePatternTexture(name,base,accents,style='grain',size=512,generateMipMaps=false){",
+         "function makePatternTexture(name,base,accents,style='grain',size=highHeadroomQualityMobile?1024:512,generateMipMaps=false){",
+         "default material textures"),
+        ("'sand',isPerformanceMode?(isConstrainedMobile?256:512):1024,true)",
+         "'sand',isPerformanceMode?(isConstrainedMobile?256:512):(highHeadroomQualityMobile?2048:1024),true)",
+         "sand albedo"),
+        ("const size=isPerformanceMode?(isConstrainedMobile?512:768):1024;",
+         "const size=isPerformanceMode?(isConstrainedMobile?512:768):(highHeadroomQualityMobile?2048:1024);",
+         "coastal sand"),
+        ("'water',isConstrainedMobile?512:768)",
+         "'water',isPerformanceMode?(isConstrainedMobile?512:768):(highHeadroomQualityMobile?1024:768))",
+         "water texture"),
+        ("const size=256,tex=new B.DynamicTexture(name,{width:size,height:size},scene,false),ctx=tex.getContext(),img=ctx.createImageData(size,size);",
+         "const size=highHeadroomQualityMobile?512:256,tex=new B.DynamicTexture(name,{width:size,height:size},scene,false),ctx=tex.getContext(),img=ctx.createImageData(size,size);",
+         "detail normal maps"),
+    )
+    for old_code,new_code,label in high_res_texture_replacements:
+        if html.count(old_code) != 1:
+            raise SystemExit(f"No se encontró exactamente una fórmula original para {label}.")
+        html = html.replace(old_code,new_code,1)
+    print("OK: materiales 1K, arena 2K y normales 512 px para teléfonos con margen gráfico.")
 
     coastal_profile_replacements = (
         (
