@@ -22,6 +22,8 @@ assert.match(html,/throw new Error\('RECURSO OBLIGATORIO: Vikingo protagonista/)
 assert.match(html,/const warriorPartsToLoad=humanEnemyParts\.filter\(p=>\/\^VillageGuard0_\//);
 assert.match(html,/const civilianPartsToLoad=humanCivilianParts\.slice\(0,lowMemoryNpcBudget\?1:2\)/);
 assert.match(html,/if\(!requiredReady\)throw new Error\('NPC obligatorios de la isla inicial incompletos/);
+assert.match(html,/if\(startupAssetsReady\|\|gameStarted\)throw new Error\('No se permiten importaciones GLB después de entrar en la partida\.'/);
+assert.match(html,/estimatedWorkingSetBytes/);
 assert.match(html,/RECURSO OBLIGATORIO: escena y shaders · agotado el plazo de 90 segundos/);
 assert.match(html,/timer=setTimeout\(\(\)=>controller\.abort\(\),45000\)/);
 
