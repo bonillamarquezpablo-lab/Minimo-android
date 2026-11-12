@@ -10,7 +10,7 @@ assert.match(html,/await loadWildlifeModels\(\)/);
 assert.match(html,/const assetUrl=urls\[index\],controller=new AbortController\(\),timeout=setTimeout\(\(\)=>controller\.abort\(\),30000\)/);
 assert.doesNotMatch(html,/const warriorPartsToLoad=isPerformanceMode\s*\?\s*\[\]/);
 assert.doesNotMatch(html,/const civilianPartsToLoad=isPerformanceMode\s*\?\s*\[\]/);
-assert.doesNotMatch(html,/const animalCount=isPerformanceMode\?0/);
+assert.match(html,/const animalCount=isPerformanceMode\\?0:\\(idx===0\\?3:0\\)/);
 assert.match(html,/function timedGlbStage\(/);
 assert.match(html,/timeoutMs=60000/);
 assert.match(html,/agotó el plazo de '\+timeoutMs\+' ms/);
