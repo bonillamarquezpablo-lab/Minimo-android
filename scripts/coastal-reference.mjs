@@ -192,20 +192,27 @@ async function main() {
       { id: 'midnight', hour: 0, daylightMin: 0.0, twilightMin: 0.0, nightMin: 0.99 }
     ];
     for (const phase of atmosphereCases) {
-      const state = await page.evaluate(hour => {
+      const atmosphereCapture = await page.evaluate(hour => {
         const controls = window.__ELSN_ATMOSPHERE_CONTROLS;
         const a = window.__ELSN_ATMOSPHERE;
+        const api = window.__ELSN_TEST__;
         const result = controls.setTime(hour);
-        window.__ELSN_TEST__?.render();
+        // Render and read the drawing buffer synchronously in the same browser task.
+        // This prevents another animation frame from clearing the WebGL buffer first.
+        const dataUrl = api.captureCanvas();
         return {
-          ...result,
-          sunEnabled: !!a.sunLight.isEnabled(),
-          moonEnabled: !!a.moonLight?.isEnabled(),
-          shaderReady: a.skyMaterial.isReady(a.skyDome),
-          sunDirection: { x: a.sunLight.direction.x, y: a.sunLight.direction.y, z: a.sunLight.direction.z },
-          moonIntensity: a.moonLight ? a.moonLight.intensity : 0
+          state: {
+            ...result,
+            sunEnabled: !!a.sunLight.isEnabled(),
+            moonEnabled: !!a.moonLight?.isEnabled(),
+            shaderReady: a.skyMaterial.isReady(a.skyDome),
+            sunDirection: { x: a.sunLight.direction.x, y: a.sunLight.direction.y, z: a.sunLight.direction.z },
+            moonIntensity: a.moonLight ? a.moonLight.intensity : 0
+          },
+          dataUrl
         };
       }, phase.hour);
+      const state = atmosphereCapture.state;
       assert.ok(state.shaderReady, 'Atmosphere shader lost readiness at ' + phase.id);
       assert.ok(state.daylight >= phase.daylightMin, 'Unexpected daylight factor at ' + phase.id + ': ' + JSON.stringify(state));
       assert.ok(state.twilight >= phase.twilightMin, 'Twilight envelope is missing at ' + phase.id + ': ' + JSON.stringify(state));
@@ -216,12 +223,10 @@ async function main() {
       if (phase.id === 'midnight') {
         assert.ok(!state.sunEnabled && state.moonEnabled, 'At midnight the sun must be off and moonlight must be active.');
       }
-      await page.waitForTimeout(120);
       const phaseFile = 'atmosphere/atmosphere-' + phase.id + '.png';
       fs.mkdirSync(path.join(OUT, 'atmosphere'), { recursive: true });
-      // Read the WebGL drawing buffer directly. Playwright's element screenshot waits
-      // for visual stability, which can never be reached while the game canvas animates.
-      const atmospherePngDataUrl = await page.evaluate(() => window.__ELSN_TEST__?.captureCanvas());
+      // The PNG is returned by the same synchronous browser task that set the phase.
+      const atmospherePngDataUrl = atmosphereCapture.dataUrl;
       const atmospherePngMatch = /^data:image[.]png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(atmospherePngDataUrl || '');
       assert.ok(atmospherePngMatch, 'Atmosphere canvas readback did not return a PNG data URL for ' + phase.id);
       const png = Buffer.from(atmospherePngMatch[1], 'base64');
