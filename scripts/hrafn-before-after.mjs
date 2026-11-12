@@ -64,7 +64,7 @@ async function capturePhaseFrame(page, hour, label, phaseId) {
     try { dataUrl = api.captureCanvas(); }
     catch (error) { canvasError = String(error?.message || error); }
     return { clockState, dataUrl, canvasError };
-  }, hour), 20000, label + ' ' + phaseId + ' phase render`);
+  }, hour), 20000, label + ' ' + phaseId + ' phase render');
   const match = /^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(captureResult.dataUrl || '');
   let bytes = match ? Buffer.from(match[1], 'base64') : null;
   let method = 'game-canvas-readback';
