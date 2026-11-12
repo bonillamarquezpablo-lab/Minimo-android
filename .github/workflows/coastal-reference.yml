@@ -9,6 +9,7 @@ on:
       - '.github/workflows/**'
       - 'inspector/**'
       - 'README.md'
+      - 'vercel.json'
       - 'scripts/run-unified-inspector.mjs'
       - 'scripts/test_inspector_dashboard_contract.cjs'
       - 'scripts/test_inspector_workflows_contract.cjs'
