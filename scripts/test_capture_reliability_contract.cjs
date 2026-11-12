@@ -21,7 +21,7 @@ async function main() {
   const pushBranchNames = pushBranches[1].split(',').map(branch => branch.trim());
   assert.ok(pushBranchNames.includes('main'), 'Production changes must continue to be validated on main.');
   assert.match(workflow,/group: scene-capture-s26-graphics-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}/);
-  assert.match(workflow,/cancel-in-progress: true/);
+  assert.match(workflow,/cancel-in-progress: false/);
   assert.match(workflow,/GITHUB_EVENT_NAME/);
   assert.match(workflow,/workflow_dispatch/);
   assert.doesNotMatch(workflow,/if: false # Phase 1/);
