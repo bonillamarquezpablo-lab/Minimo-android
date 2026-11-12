@@ -149,20 +149,23 @@ async function bootGame(label, url) {
 }
 
 async function capture(page, label, phase) {
-  const clockState = await page.evaluate(async hour => {
+  const captureResult = await page.evaluate(hour => {
     const clock = window.__ELSN_ATMOSPHERE_CONTROLS;
+    const api = window.__ELSN_TEST__;
     clock.pause();
-    const state = clock.setTime(hour);
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    return state;
+    const clockState = clock.setTime(hour);
+    // Change the clock, render and read the WebGL buffer before another RAF can clear it.
+    const dataUrl = api.captureCanvas();
+    return { clockState, dataUrl };
   }, phase.hour);
+  const clockState = captureResult.clockState;
 
   if (clockState && Number.isFinite(clockState.timeOfDay) &&
       Math.abs(clockState.timeOfDay - phase.hour) > 0.01) {
     throw new Error(label + ' clock did not settle at ' + phase.hour + ':00.');
   }
 
-  const dataUrl = await page.evaluate(() => window.__ELSN_TEST__.captureCanvas());
+  const dataUrl = captureResult.dataUrl;
   if (typeof dataUrl !== 'string' || !/^data:image[.]png;base64,/.test(dataUrl)) {
     throw new Error(label + ' ' + phase.id + ': canvas capture did not return PNG data.');
   }
