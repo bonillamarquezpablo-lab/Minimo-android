@@ -6022,8 +6022,9 @@ void main(void){
   enemyHumanLoadPromise=(async()=>{
    // En Rendimiento se conservan todos los NPC y su IA con el modelo procedural ligero;
    // solo los tres guardianes del campamento y cuatro aldeanos cercanos reciben GLB de alta carga.
-   const warriorPartsToLoad=isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts;
-   const civilianPartsToLoad=isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts;
+   const lowMemoryNpcBudget=!!(isUltraLowEndMobile||isGalaxyA12LowEndMobile||isGalaxyA12NachoPerformance);
+   const warriorPartsToLoad=humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,lowMemoryNpcBudget?1:3);
+   const civilianPartsToLoad=humanCivilianParts.slice(0,lowMemoryNpcBudget?1:2);
    const warriorTotal=warriorPartsToLoad.length,civilianTotal=civilianPartsToLoad.length,homeGuardTotal=warriorPartsToLoad.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).length,total=warriorTotal+civilianTotal;
    if(!total){setAssetLoadingProgress('enemy',100,'No hay personajes secundarios pendientes.');return 0;}
    setAssetLoadingProgress('enemy',2,'Preparando guardianes, aldeanos y guerreros…');
@@ -6172,7 +6173,7 @@ void main(void){
     showCivilianModelInstaller(civilianTotal>0&&loadedCivilians<civilianTotal);
     const summary='DEFENSORES DE CUERVO GLB: '+loadedHomeGuards+'/'+homeGuardTotal+' · OTROS GUERREROS GLB: '+(loadedWarriors-loadedHomeGuards)+'/'+(warriorTotal-homeGuardTotal)+' · ALDEANOS VISIBLES (RESERVA): '+civilianTotal+'/'+civilianTotal+' · MODELOS HUMANOS GLB: '+loadedCivilians+'/'+civilianTotal;
     report(summary,loaded===total);
-    const status=summary+(loadedCivilians<civilianTotal?' · Se mantienen '+civilianTotal+' aldeanos provisionales; instala el GLB para mejorar sus modelos.':' · Modelos y animaciones revisados.');
+    const status=summary+(loadedCivilians<civilianTotal?' · Faltan modelos humanos obligatorios de la isla inicial.':' · Modelos y animaciones revisados.');
     setModelStatus(status,true);
     if(failures.length){
      const civilianFetchBlocked=failures.some(reason=>/Aldeanos:.*(Failed to fetch|NetworkError|CORS|fetch)/i.test(reason));
@@ -6181,13 +6182,15 @@ void main(void){
      if(modelStatusText)modelStatusText.textContent='Carga parcial de personajes. '+failures.slice(0,3).join(' · ');
      console.warn('NPC roster has partial failures',{loadedWarriors,warriorTotal,loadedCivilians,civilianTotal,failures:failures.slice(0,20)});
     }
-    console.info('Prioritised Norse NPC roster ready',{loadedWarriors,warriorTotal,loadedCivilians,civilianTotal,failures:failures.length,firstVillageDefendersFirst:true,civiliansBeforeDistantWarriors:true,loadedHomeGuards,homeGuardTotal});
+    const requiredReady=loadedHomeGuards===homeGuardTotal&&loadedCivilians===civilianTotal&&homeGuardTotal>0&&civilianTotal>0;
+    console.info('Prioritised Norse NPC roster ready',{loadedWarriors,warriorTotal,loadedCivilians,civilianTotal,failures:failures.length,firstVillageDefendersFirst:true,civiliansBeforeDistantWarriors:true,loadedHomeGuards,homeGuardTotal,requiredReady});
+    if(!requiredReady)throw new Error('NPC obligatorios de la isla inicial incompletos: guardianes '+loadedHomeGuards+'/'+homeGuardTotal+', aldeanos '+loadedCivilians+'/'+civilianTotal+'. '+failures.slice(0,3).join(' · '));
     return loaded;
    }catch(err){
     const detail=(err&&err.message)?err.message:String(err||'error desconocido');
     const text='PERSONAJES SECUNDARIOS 3D NO CARGADOS: '+detail;
     showCivilianModelInstaller(humanCivilianParts.length>0);
-    console.error(text,err);report('Carga parcial de personajes. Revisa PERSONAJES 3D.',false);if(modelStatusText)modelStatusText.textContent=text+'. Se mantienen los personajes de reserva.';setAssetLoadingProgress('enemy',100,'Quedan personajes provisionales visibles.');return loadedWarriors+loadedCivilians;
+    console.error(text,err);report('Fallo de personajes obligatorios. Pulsa REINTENTAR.',false);if(modelStatusText)modelStatusText.textContent=text;setAssetLoadingProgress('enemy',100,'Fallaron personajes obligatorios.');throw new Error(text);
    }
   })();
   return enemyHumanLoadPromise;
@@ -7530,9 +7533,10 @@ if(realPlayerArmDebugEnabled){
    if(realWeaponHolder){realWeaponHolder.dispose(false,true);realWeaponHolder=null;}if(realPlayerModel){realPlayerModel.dispose(false,true);realPlayerModel=null;}if(realPlayerModelPivot){realPlayerModelPivot.dispose(false,false);realPlayerModelPivot=null;}
    realWeaponAnchorCalibrated=false;realWeaponAnchorType='';realWeaponPoseOverride=null;realWeaponSocketNode=null;realWeaponSocketMode='pivot';realWeaponGroups={};realPlayerAnimations={walk:null,run:null,idle:null,attack:null};realHandNode=null;realUpperArmNode=null;realForearmNode=null;realSpineNode=null;
    const detail=(err&&err.message)?err.message:String(err||'error desconocido');
-   console.error('Fallo del Vikingo humano; personaje provisional activo. Etapa:',lastVikingStage,'Detalle:',detail,err);
+   console.error('Fallo del Vikingo humano; no se permite entrar con el personaje provisional. Etapa:',lastVikingStage,'Detalle:',detail,err);
    const friendly='Modelo humano del protagonista no disponible ('+lastVikingStage+'). Se mantiene el personaje de reserva; abre PERSONAJES 3D para ver el detalle.';
    setModelStatus(friendly,true);
+   throw new Error('RECURSO OBLIGATORIO: Vikingo protagonista · '+lastVikingStage+' · '+detail);
   }finally{realPlayerBusy=false;}
  }
  window.__retryVikingModel=()=>{if(!startupAssetsReady&&!gameStarted&&!realPlayerReady&&!realPlayerBusy&&navigator.onLine)loadHumanViking();};
@@ -12429,7 +12433,7 @@ function update(dt){
  }
  let deferredWorldModelsStarted=false;
  function startDeferredWorldModels(){
-  if(deferredWorldModelsStarted||coastalReferenceMode)return;
+  if(deferredWorldModelsStarted||coastalReferenceMode||startupAssetsReady||gameStarted)return;
   deferredWorldModelsStarted=true;
   const secondaryModelsStartedAt=performance.now();
   const backgroundNpcTask=startNpcHumanModels();
@@ -12771,14 +12775,15 @@ function update(dt){
  // El protagonista y todo el roster previsto para el perfil se importan antes del selector.
  // En Rendimiento se conserva el conjunto humano ligero ya definido; los demás NPC mantienen sus cuerpos, colisiones e IA procedurales.
  // Si un GLB falla, se usa su reserva antes de abrir la partida, sin iniciar otra importación durante el juego.
- setLoadingProgress(82,'Esperando a que termine de importarse el vikingo principal…');
+ setLoadingProgress(82,'Preparando protagonista y NPC de la isla inicial…');
  const protagonistStageStarted=performance.now();let protagonistResult={status:'finished'};
+ const npcStartupPromise=coastalReferenceMode?Promise.resolve(0):startNpcHumanModels();
  if(coastalReferenceMode){
   protagonistResult.status='skipped-coastal-reference';
   console.info('Referencia costera: importación del protagonista aislada en el job de arranque de personaje.');
  }else{
-  try{await playerHumanLoadPromise;protagonistResult.status=realPlayerReady?'finished':'fallback';}
-  catch(error){protagonistResult={status:'failed',error};}
+  try{await Promise.all([playerHumanLoadPromise,npcStartupPromise]);protagonistResult.status=realPlayerReady?'finished':'failed';}
+  catch(error){protagonistResult={status:'failed',error};throw new Error('RECURSO OBLIGATORIO: '+(realPlayerReady?'NPC de la isla inicial':'Vikingo protagonista')+' · '+String(error&&error.message||error));}
   recordGlbTiming('Vikingo','espera total de protagonista',performance.now()-protagonistStageStarted,playerHumanBlob&&playerHumanBlob.size||0,protagonistResult.status==='finished');
   recordStartupTask('GLB protagonista',protagonistStageStarted,performance.now(),protagonistResult.status,{modelReady:realPlayerReady});
   console.info('Importación del vikingo terminada antes de abrir la partida.',{protagonist:protagonistResult.status,realPlayerReady,profile:activeGraphicsProfile});
@@ -12824,7 +12829,10 @@ function update(dt){
     console.info('Referencia costera: tres fotogramas preparados sin bloquearse en la compilación completa de materiales.',window.__elSinNombreStartupSceneWarmup);
    }else{
     // En el juego real la pantalla de carga permanece hasta que Babylon declara lista la escena completa.
-    await scene.whenReadyAsync();
+    const sceneReadyTimeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('RECURSO OBLIGATORIO: escena y shaders · agotado el plazo de 90 segundos')),90000));
+    const sceneReadyTasks=[scene.whenReadyAsync()];
+    if(typeof scene.compileMaterialsAsync==='function')sceneReadyTasks.push(scene.compileMaterialsAsync());
+    await Promise.race([Promise.all(sceneReadyTasks),sceneReadyTimeout]);
     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
     try{if(typeof scene.getWaitingItemsCount==='function')waitingItemsAfter=scene.getWaitingItemsCount();}catch(_){waitingItemsAfter=null;}
     sceneWarmupStatus='ready';
@@ -12842,6 +12850,11 @@ function update(dt){
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
  }
 
+ if(!coastalReferenceMode){
+  const faunaStartedAt=performance.now();
+  try{await Promise.race([loadWildlifeModels(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Fauna opcional: plazo de 30 segundos agotado')),30000))]);recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'ready',{loaded:ambientFauna.length});}
+  catch(faunaError){recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'optional-failed',{message:String(faunaError&&faunaError.message||faunaError)});console.warn('Fauna opcional no disponible antes de entrar:',faunaError);}
+ }
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
  console.info('EL SIN NOMBRE 0.6.274 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
