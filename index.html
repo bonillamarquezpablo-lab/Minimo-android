@@ -12843,6 +12843,38 @@ function update(dt){
   try{await loadWildlifeModels();recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'ready',{loaded:ambientFauna.length});}
   catch(faunaError){recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'optional-failed',{message:String(faunaError&&faunaError.message||faunaError)});console.warn('Fauna opcional no disponible antes de entrar:',faunaError);}
  }
+ const startupMemoryTextures=new Set(),startupMemoryGeometry=new Set();
+ let startupTextureBytes=0,startupGeometryBytes=0;
+ for(const texture of scene.textures||[]){
+  try{
+   const size=texture.getSize?.();if(!size||!size.width||!size.height)continue;
+   const faces=texture.isCube?6:1,mips=texture.noMipmap?1:1.34;
+   const key=[size.width,size.height,faces,texture.name||''].join(':');
+   if(startupMemoryTextures.has(key))continue;startupMemoryTextures.add(key);
+   startupTextureBytes+=Math.ceil(size.width*size.height*4*faces*mips);
+  }catch(_){}
+ }
+ for(const mesh of scene.meshes||[]){
+  try{
+   const geometry=mesh.geometry;if(!geometry)continue;
+   const key=geometry.uniqueId??geometry;
+   if(startupMemoryGeometry.has(key))continue;startupMemoryGeometry.add(key);
+   const vertices=Math.max(0,Number(geometry.getTotalVertices?.())||0);
+   const indices=Math.max(0,Number(geometry.getTotalIndices?.())||0);
+   startupGeometryBytes+=vertices*48+indices*4;
+  }catch(_){}
+ }
+ const startupKnownGlbBytes=(playerHumanBlob?.size||0)+[...(wildlifeBlobs?.values?.()||[])].reduce((sum,blob)=>sum+(blob?.size||0),0);
+ window.__elSinNombreStartupMemoryEstimate={
+  textureGpuEstimateBytes:startupTextureBytes,
+  geometryGpuEstimateBytes:startupGeometryBytes,
+  knownCompressedGlbBytes:startupKnownGlbBytes,
+  estimatedWorkingSetBytes:Math.ceil(startupTextureBytes+startupGeometryBytes+startupKnownGlbBytes*1.7+32*1024*1024),
+  textureCount:startupMemoryTextures.size,geometryCount:startupMemoryGeometry.size,
+  sceneMeshCount:scene.meshes?.length||0,
+  method:'heuristic: RGBA GPU textures with mip allowance + unique geometry buffers + known compressed GLB working copies + 32 MiB engine/runtime allowance; not a device RSS measurement'
+ };
+ console.info('Startup memory estimate',window.__elSinNombreStartupMemoryEstimate);
  const engineStored=false; // Babylon se sirve desde el mismo origen y Service Worker.
  console.info('EL SIN NOMBRE 0.6.274 preparación completa:',{
   motorGuardado:engineStored,vikingoCargado:realPlayerReady,
