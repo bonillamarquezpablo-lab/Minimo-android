@@ -105,10 +105,24 @@ jobs:
         env:
           HRAFN_BASE_SHA: ${{ steps.baseline.outputs.sha }}
         run: |
+          CANDIDATE_VERSION="$(sed -n 's/^EXPECTED_VERSION = "\([^"]*\)"/\1/p' scripts/validate_release.py | head -n1)"
+          if [ -z "$CANDIDATE_VERSION" ]; then
+            echo "Cannot determine the candidate game version from scripts/validate_release.py."
+            exit 1
+          fi
           BASELINE_SHA="$HRAFN_BASE_SHA"
           BASELINE_BUILT=0
           for attempt in 1 2 3 4; do
             git worktree add --detach "$RUNNER_TEMP/hrafn-before-source" "$BASELINE_SHA"
+            BASELINE_VERSION="$(sed -n 's/^EXPECTED_VERSION = "\([^"]*\)"/\1/p' "$RUNNER_TEMP/hrafn-before-source/scripts/validate_release.py" | head -n1)"
+            if [ "$BASELINE_VERSION" = "$CANDIDATE_VERSION" ]; then
+              echo "Skipping baseline $BASELINE_SHA: it is the same game release $BASELINE_VERSION as the candidate."
+              git worktree remove --force "$RUNNER_TEMP/hrafn-before-source"
+              NEXT_SHA="$(git rev-parse "$BASELINE_SHA^" 2>/dev/null || true)"
+              if [ -z "$NEXT_SHA" ]; then break; fi
+              BASELINE_SHA="$NEXT_SHA"
+              continue
+            fi
             if python "$RUNNER_TEMP/hrafn-before-source/scripts/build_site.py"; then
               BASELINE_BUILT=1
               break
@@ -116,16 +130,14 @@ jobs:
             echo "Baseline $BASELINE_SHA failed on attempt $attempt; looking for the previous buildable release."
             git worktree remove --force "$RUNNER_TEMP/hrafn-before-source"
             NEXT_SHA="$(git rev-parse "$BASELINE_SHA^" 2>/dev/null || true)"
-            if [ -z "$NEXT_SHA" ]; then
-              break
-            fi
+            if [ -z "$NEXT_SHA" ]; then break; fi
             BASELINE_SHA="$NEXT_SHA"
           done
           if [ "$BASELINE_BUILT" -ne 1 ]; then
-            echo "No buildable baseline found in the four-commit recovery window."
+            echo "No distinct buildable baseline found in the four-commit recovery window."
             exit 1
           fi
-          echo "Hrafn A/B baseline selected: $BASELINE_SHA"
+          echo "Hrafn A/B baseline selected: $BASELINE_SHA (release $BASELINE_VERSION; candidate $CANDIDATE_VERSION)"
           mv "$RUNNER_TEMP/hrafn-before-source/dist" "$RUNNER_TEMP/hrafn-before-dist"
           test -s "$RUNNER_TEMP/hrafn-before-dist/index.html"
 

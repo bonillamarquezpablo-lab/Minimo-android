@@ -349,6 +349,9 @@ try {
   before = null;
 
   after = await bootGame('after', afterUrl);
+  if (manifest.builds.before.build && manifest.builds.after.build && manifest.builds.before.build === manifest.builds.after.build) {
+    throw new Error('A/B comparison refused: before and after resolve to the same game release ' + manifest.builds.after.build + '.');
+  }
   for (const phase of phases) {
     const shot = await capture(after.page, 'after', phase);
     afterCaptures.push(shot);

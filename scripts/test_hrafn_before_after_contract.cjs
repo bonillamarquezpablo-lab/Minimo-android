@@ -17,6 +17,8 @@ assert.match(capture,/hardwareConcurrency/);
 assert.match(capture,/capturePhaseFrame/);
 assert.match(capture,/Page\.captureScreenshot/);
 assert.match(capture,/medianFrameP95Ms/);
+assert.match(capture,/manifest\.builds\.before\.build === manifest\.builds\.after\.build/);
+assert.match(capture,/A\/B comparison refused: before and after resolve to the same game release/);
 for(const token of ['ImageChops.difference','ANTES','DESPUÉS','changedPixelRatio','meanAbsoluteRgbDelta','beforeEdgeEnergy','afterEdgeEnergy','edgeEnergyDeltaPct','Frame time p95 (ms)','DPR efectivo de entrada FSR1','Viewport mismatch','report.md']){
   assert.ok(report.includes(token),'Missing visual/performance report feature: '+token);
 }
