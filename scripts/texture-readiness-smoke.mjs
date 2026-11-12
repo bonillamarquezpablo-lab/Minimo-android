@@ -90,7 +90,7 @@ function classifyUnregisteredCandidate(item){
  if(/^PabloTheNameless(?:Body)?$/.test(name))return {classification:'player-avatar-geometry',disposition:'not-a-building'};
  if(name==='RealVikingRightHandWeaponAnchor')return {classification:'equipped-weapon-assembly',disposition:'not-a-building'};
  if(name==='DetailedNorseHearth')return {classification:'hearth-prop',disposition:'decorative-prop'};
- if(/^FirewoodRack_\\d+$/.test(name))return {classification:'firewood-rack-prop',disposition:'decorative-prop'};
+ if(/^FirewoodRack_\d+$/.test(name))return {classification:'firewood-rack-prop',disposition:'decorative-prop'};
  if(/^NorseThingstead_\\d+$/.test(name))return {classification:'intentional-settlement-hall',disposition:'known-non-habitable-building'};
  if(/^NorseCoastal(?:Pier|Beacon)_\\d+$/.test(name))return {classification:'intentional-outer-island-landmark',disposition:'known-non-habitable-building'};
  return {classification:'unresolved',disposition:'requires-manual-review'};
@@ -172,7 +172,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
  console.log('[TEXTURE_READINESS_RESULT] '+JSON.stringify({build:manifest.build,verdict:manifest.verdict,readiness:{ready:manifest.readiness?.ready??null,verdict:manifest.readiness?.verdict??null,converged:manifest.readiness?.converged??null,sceneReady:manifest.readiness?.sceneReady??null,timeoutMs:manifest.readiness?.timeoutMs??null,externalWaitLimitMs:manifest.readiness?.externalWaitLimitMs??EXTERNAL_READINESS_WAIT_MS},cameraVerification:manifest.cameraVerification,textureCounts:{scanned:manifest.textureDiagnostics?.texturesScanned??null,pending:manifest.textureDiagnostics?.pendingTextures?.length??null,orphan:manifest.textureDiagnostics?.orphanPendingTextures?.length??null,cameraPending:manifest.textureDiagnostics?.cameraPendingTextures?.length??null,usageCoverageComplete:manifest.textureDiagnostics?.usageCoverage?.complete??null},failure:manifest.failure}));
 
  try{
-  const auditCalls=[['offshoreStructures','auditOffshoreStructures',[300],15000],['habitableStructures','habitableStructureAudit',[],20000],['settlementGrounding','settlementGrounding',[],15000],['settlementCamps','settlementCampGrounding',[],15000],['garrisonGrounding','garrisonGrounding',[],15000],['floatingHutProbe','probeFloatingHutAudit',[],15000],['sceneInventory','coastalSceneInventory',[1200],15000],['waterFilm','sheetOpacityDepth',[],12000],['runtime','diagnostics',[],15000],['coastalGeometry','auditIslandGeometry',[],45000]];
+  const auditCalls=[['offshoreStructures','auditOffshoreStructures',[300],15000],['habitableStructures','habitableStructureAudit',[],20000],['settlementGrounding','settlementGrounding',[],15000],['settlementCamps','settlementCampGrounding',[],15000],['garrisonGrounding','garrisonGrounding',[],15000],['outerLandmarks','outerLandmarkGrounding',[],15000],['floatingHutProbe','probeFloatingHutAudit',[],15000],['sceneInventory','coastalSceneInventory',[1200],15000],['waterFilm','sheetOpacityDepth',[],12000],['runtime','diagnostics',[],15000],['coastalGeometry','auditIslandGeometry',[],45000]];
   let rendererResponsive=true;
   for(const [id,method,args,timeoutMs] of auditCalls){
    manifest.coastalDiagnostics.currentCheck=id;writeManifest();let result;
@@ -218,7 +218,7 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
   if(water?.renderedVertexAgreement?.maxAbsErrorMeters>=.01)issues.push({kind:'water-vertex-agreement',maxAbsErrorMeters:water.renderedVertexAgreement.maxAbsErrorMeters});
   if(water?.waterLodBoundary90?.maxHeightContinuityErrorMeters>=.01||water?.waterLodBoundary90?.maxRadialSlopeDifference>=.005||water?.waterLodBoundary90?.maxNormalDiscontinuityDegrees>=.5)issues.push({kind:'water-lod-boundary-discontinuity',metrics:water.waterLodBoundary90});
   if(Number(water?.foamVerticesOutsideBand)>0)issues.push({kind:'visible-foam-outside-shore-band',count:water.foamVerticesOutsideBand});
-  const gateCheckIds=['offshoreStructures','habitableStructures','floatingHutProbe','coastalGeometry','settlementGrounding','settlementCamps','garrisonGrounding'];
+  const gateCheckIds=['offshoreStructures','habitableStructures','floatingHutProbe','coastalGeometry','settlementGrounding','settlementCamps','garrisonGrounding','outerLandmarks'];
   const gateChecksComplete=gateCheckIds.every(id=>checks[id]?.status==='completed');
   const geometryScopeComplete=Number(geometry?.islandCount)===13&&geometryIslands.length===13;
   const noVisibleOffshoreStructures=Number.isFinite(Number(offshore?.visibleOffshoreCount))&&Number(offshore.visibleOffshoreCount)===0;
@@ -229,6 +229,8 @@ async function main(){fs.mkdirSync(OUT,{recursive:true});let browser=null,page=n
   const outerLandmarksPassed=intentionalOuterLandmarks.length===3&&intentionalOuterLandmarks.every(item=>
     item.found===true&&Number.isFinite(Number(item.anchorErrorMeters))&&Math.abs(Number(item.anchorErrorMeters))<=.02);
   const noUnregisteredOffshoreCandidates=unresolvedUnregisteredCandidates.length===0;
+  if(unresolvedUnregisteredCandidates.length)issues.push({kind:'unclassified-structural-candidates',count:unresolvedUnregisteredCandidates.length,items:unresolvedUnregisteredCandidates.map(item=>({name:item.name,kind:item.kind}))});
+  if(!outerLandmarksPassed)issues.push({kind:'outer-landmark-grounding-failed',items:intentionalOuterLandmarks});
   const noUnsafeStructures=Number(structure?.unsafeCount)===0;
   const noUntrackedStructures=Number(structure?.untrackedRootCount)===0;
   const noFootingOutliers=houseOutliers.length===0&&campOutliers.length===0&&garrisonOutliers.length===0;
