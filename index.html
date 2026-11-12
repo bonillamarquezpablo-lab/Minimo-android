@@ -5488,7 +5488,7 @@ void main(void){
  const ENEMY_HUMAN_CACHE_KEY='armored-knight-rigged-glb-v6';
  const CIVILIAN_HUMAN_GLB_URL=new URL('./assets/models/man-base-character-rigged.glb',document.baseURI).href;
  const CIVILIAN_HUMAN_CACHE_KEY='norse-peasant-man-rigged-glb-v3';
- let enemyHumanContainer=null,civilianHumanContainer=null,enemyHumanLoadPromise=null;
+ let enemyHumanContainer=null,civilianHumanContainer=null,enemyHumanLoadPromise=null,enemyHumanSourceBytes=0,civilianHumanSourceBytes=0;
  const enemyModelFileInput=document.getElementById('enemyModelFile');
  const civilianModelFileInput=document.getElementById('civilianModelFile');
  const chooseCivilianModelButton=document.getElementById('chooseCivilianModel');
@@ -6124,7 +6124,7 @@ void main(void){
        if(playerHumanBlob&&await sameBlobBytes(knightBlob,playerHumanBlob))throw new Error('Grab3D devolvió el mismo GLB del protagonista en la URL del caballero; se ha bloqueado para no duplicar tu personaje.');
        await saveEnemyHumanCache(knightBlob);knightSource='Grab3D · Armored Knight';
       }
-      knightContainer=await containerFromBlob(knightBlob,'El caballero acorazado');enemyHumanContainer=knightContainer;
+      enemyHumanSourceBytes=knightBlob.size;knightContainer=await containerFromBlob(knightBlob,'El caballero acorazado');enemyHumanContainer=knightContainer;
       console.info('Knight GLB ready',{source:knightSource,bytes:knightBlob.size,asset:ENEMY_HUMAN_GLB_URL});
      }catch(knightError){
       const reason=(knightError&&knightError.message)?knightError.message:String(knightError||'error desconocido');
@@ -6153,7 +6153,7 @@ void main(void){
        if(!civilianBlob){report('Localizando el modelo humano rigged de los aldeanos…');const downloaded=await downloadCivilianGLB();civilianBlob=downloaded.blob;civilianSource='Grab3D · Man Base Mesh rigged · '+downloaded.url;await saveCivilianHumanCache(civilianBlob);}
       }
       if(playerHumanBlob&&await sameBlobBytes(civilianBlob,playerHumanBlob))throw new Error('Bloqueado: el modelo de aldeanos coincide con el protagonista.');
-      const civilianContainer=await containerFromBlob(civilianBlob,'El modelo independiente de los aldeanos');civilianHumanContainer=civilianContainer;
+      civilianHumanSourceBytes=civilianBlob.size;const civilianContainer=await containerFromBlob(civilianBlob,'El modelo independiente de los aldeanos');civilianHumanContainer=civilianContainer;
       for(let i=0;i<civilianPartsToLoad.length;i++){
        const parts=civilianPartsToLoad[i];if(parts.realHuman&&parts.realHuman.role==='civilian'){loadedCivilians++;continue;}
        let inst=null;
@@ -12864,7 +12864,7 @@ function update(dt){
    startupGeometryBytes+=vertices*48+indices*4;
   }catch(_){}
  }
- const startupKnownGlbBytes=(playerHumanBlob?.size||0)+[...(wildlifeBlobs?.values?.()||[])].reduce((sum,blob)=>sum+(blob?.size||0),0);
+ const startupKnownGlbBytes=(playerHumanBlob?.size||0)+(enemyHumanSourceBytes||0)+(civilianHumanSourceBytes||0)+[...(wildlifeBlobs?.values?.()||[])].reduce((sum,blob)=>sum+(blob?.size||0),0);
  window.__elSinNombreStartupMemoryEstimate={
   textureGpuEstimateBytes:startupTextureBytes,
   geometryGpuEstimateBytes:startupGeometryBytes,
