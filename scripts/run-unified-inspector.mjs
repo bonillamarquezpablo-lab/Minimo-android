@@ -33,6 +33,11 @@ function queueProgressPublish(){
     const manifest=readJson(path.join(OUT,'manifest.json'));
     if(!manifest)return;
     const endpoint='https://api.github.com/repos/'+STATUS_REPOSITORY+'/contents/runs/'+STATUS_RUN_ID+'.json';
+    if(!statusSha){
+      const existing=await fetch(endpoint+'?ref='+encodeURIComponent(STATUS_BRANCH),{headers:{Accept:'application/vnd.github+json',Authorization:'Bearer '+STATUS_TOKEN,'X-GitHub-Api-Version':'2022-11-28'}});
+      if(existing.ok)statusSha=(await existing.json()).sha||null;
+      else if(existing.status!==404)throw new Error('Could not read existing progress record: HTTP '+existing.status);
+    }
     const payload={message:'Update inspector progress for run '+STATUS_RUN_ID,content:Buffer.from(JSON.stringify(manifest,null,2)+'\n').toString('base64'),branch:STATUS_BRANCH};
     if(statusSha)payload.sha=statusSha;
     const response=await fetch(endpoint,{method:'PUT',headers:{Accept:'application/vnd.github+json',Authorization:'Bearer '+STATUS_TOKEN,'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'},body:JSON.stringify(payload)});
