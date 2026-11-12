@@ -78,7 +78,7 @@ jobs:
     name: Publish the exact validated build on GitHub Pages
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/hrafn-before-after-inspector')
     environment:
-      name: github-pages
+      name: github-pages-candidate
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
