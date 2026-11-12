@@ -697,42 +697,41 @@ def main() -> None:
         html = html.replace("</body>", navigation_tag + "\n</body>", 1)
 
 
-    # Release candidate 0.6.287: restore flagship render clarity while preserving the
+    # Release candidate 0.6.288: restore flagship render clarity while preserving the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.287; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.288; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.287\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.288\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.287.")
-    html = html.replace("0.6.274", "0.6.287")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.288.")
+    html = html.replace("0.6.274", "0.6.288")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'16',build:'0.6.287'"
+    diagnostic_build_replacement = "reportVersion:'16',build:'0.6.288'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.287 para normalizar.")
-    game_version = "0.6.287"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.288 para normalizar.")
+    game_version = "0.6.288"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
-    # 0.6.287 graphics repair: restore the sharp flagship FSR1 path and 2.45x source detail.
+    # 0.6.288 graphics repair: restore the sharp flagship FSR1 path and 2.45x source detail.
     # Preserve the dedicated Performance profile and reserve higher source resolution for capable GPUs.
     quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
     quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
  const highHeadroomQualityMobile=!!(!isPerformanceMode&&isTouchDevice&&!constrainedHardware&&((reportedMemory>=8&&(Number(navigator.hardwareConcurrency)||0)>=8)||highTierGpuMatch));
- const fsr1Candidate=!!(!isPerformanceMode&&highHeadroomQualityMobile&&engine._gl&&typeof engine._gl.texStorage2D==='function'&&B.PostProcess&&B.PassPostProcess&&B.Effect&&B.Effect.ShadersStore);
- const fsr1OutputDpr=Math.min(deviceDpr,isTouchDevice?2.50:deviceDpr);
- const qualityDprFloor=fsr1Candidate ? .72 : Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.80:1.60):1.65);
- const qualityDprCeiling=fsr1Candidate ? .92 : Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?3.00:1.80):1.85);
- const legacyQualityDpr=Math.min(deviceDpr,highHeadroomQualityMobile?2.45:(isTouchDevice?1.80:1.85));
- const qualityDpr=fsr1Candidate?fsr1OutputDpr:(isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):legacyQualityDpr);
- let fsr1Active=false,fsr1SourcePostProcess=null,fsr1InputScale=.87;"""
+ // Native Babylon hardware scaling only; no inactive FSR1 candidate or fake input-scale state.
+ const qualityDprFloor=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.50:1.0):1.15);
+ const qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.45:1.70):1.85);
+ const qualityDpr=isPerformanceMode
+  ?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile?.62:(constrainedHardware?.78:(isTouchDevice?1.0:1.35))))))
+  :Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.10:1.45):1.65);"""
     if html.count(quality_profile_marker) != 1:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
     html = html.replace(quality_profile_marker, quality_profile_code, 1)
@@ -746,17 +745,10 @@ def main() -> None:
   const fps=engine.getFps();
   if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
-    quality_adaptive_code = r""" let fpsSample=0,qualityDprCurrent=fsr1Candidate?fsr1InputScale:qualityDpr;
+    quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr;
  let qualityDprStableSamples=0,qualityDprSlowSamples=0;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
  let targetFrameRate=60,observedFpsCeiling=60;
- function setFsrInputScale(next){
-  if(!fsr1SourcePostProcess)return;
-  fsr1InputScale=Math.max(qualityDprFloor,Math.min(qualityDprCeiling,Number(next.toFixed(3))));
-  fsr1SourcePostProcess._options=fsr1InputScale;
-  fsr1SourcePostProcess.markTextureDirty();
-  qualityDprCurrent=fsr1InputScale;
- }
  function adaptRenderQuality(dt){
   const sampleWindow=highHeadroomQualityMobile?1.0:(isConstrainedMobile?1.5:2.0);
   fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<sampleWindow)return;fpsSample=0;
@@ -764,29 +756,29 @@ def main() -> None:
   if(highHeadroomQualityMobile)observedFpsCeiling=Math.max(observedFpsCeiling,Math.min(120,fps));
   targetFrameRate=highHeadroomQualityMobile?Math.min(90,observedFpsCeiling):60;
   if(!isPerformanceMode&&highHeadroomQualityMobile){
-   const severeFps=targetFrameRate>=87?50:36,moderateFps=targetFrameRate>=87?72:48,stableFps=targetFrameRate>=87?87:57;
+   const severeFps=targetFrameRate>=87?54:38,moderateFps=targetFrameRate>=87?72:50,stableFps=targetFrameRate>=87?86:58;
    if(fps<severeFps){qualityDprSlowSamples++;qualityDprStableSamples=0;}
    else if(fps<moderateFps){qualityDprSlowSamples++;qualityDprStableSamples=0;}
    else if(fps>=stableFps){qualityDprStableSamples++;qualityDprSlowSamples=0;}
    else{qualityDprStableSamples=0;qualityDprSlowSamples=0;}
    if(qualityDprSlowSamples>=1&&qualityDprCurrent>qualityDprFloor+.005){
-    const step=fsr1Active?(fps<severeFps?.08:.035):(fps<severeFps?.16:.07);
+    const step=fps<severeFps?.12:.06;
     const next=Math.max(qualityDprFloor,Number((qualityDprCurrent-step).toFixed(3)));
     if(next<qualityDprCurrent-.003){
-     if(fsr1Active)setFsrInputScale(next);
-     else{qualityDprCurrent=next;engine.setHardwareScalingLevel(1/qualityDprCurrent);}
-     console.info(fsr1Active?'EL SIN NOMBRE FSR1: escala de entrada reducida para recuperar FPS.':'EL SIN NOMBRE: resolución interna ajustada para proteger la fluidez.',{fps:Math.round(fps),renderDpr:qualityDprCurrent,fsr1Active});
+     qualityDprCurrent=next;
+     engine.setHardwareScalingLevel(1/qualityDprCurrent);
+     console.info('EL SIN NOMBRE: resolución interna nativa ajustada para recuperar FPS.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent});
     }
     qualityDprSlowSamples=0;
-   }else if(qualityDprStableSamples>=3&&qualityDprCurrent<qualityDprCeiling-.005){
-    const next=Math.min(qualityDprCeiling,Number((qualityDprCurrent+(fsr1Active ? .025 : .08)).toFixed(3)));
-    if(fsr1Active)setFsrInputScale(next);
-    else{qualityDprCurrent=next;engine.setHardwareScalingLevel(1/qualityDprCurrent);}
+   }else if(qualityDprStableSamples>=4&&qualityDprCurrent<qualityDprCeiling-.005){
+    const next=Math.min(qualityDprCeiling,Number((qualityDprCurrent+.04).toFixed(3)));
+    qualityDprCurrent=next;
+    engine.setHardwareScalingLevel(1/qualityDprCurrent);
     qualityDprStableSamples=0;
-    console.info(fsr1Active?'EL SIN NOMBRE FSR1: escala de entrada recuperada con margen de GPU.':'EL SIN NOMBRE: resolución interna elevada con margen estable de GPU.',{fps:Math.round(fps),renderDpr:qualityDprCurrent,fsr1Active});
+    console.info('EL SIN NOMBRE: resolución interna nativa elevada tras estabilidad de GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent});
    }
   }
-  if(fps<24)console.info('Diagnóstico de rendimiento (GPU bajo presión)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,fsr1InputScale:fsr1Active?fsr1InputScale:null,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
+  if(fps<24)console.info('Diagnóstico de rendimiento (GPU bajo presión)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
     if html.count(quality_adaptive_marker) != 1:
         raise SystemExit("No se encontró exactamente la función original de supervisión de resolución.")
@@ -874,8 +866,8 @@ def main() -> None:
         ),
         (
             "renderPipeline.fxaaEnabled=true;renderPipeline.bloomEnabled=false;renderPipeline.grainEnabled=false;renderPipeline.chromaticAberrationEnabled=false;",
-            "renderPipeline.fxaaEnabled=!fsr1Candidate;renderPipeline.bloomEnabled=false;renderPipeline.grainEnabled=false;renderPipeline.chromaticAberrationEnabled=false;",
-            "use FSR1 EASU/RCAS instead of a second softening FXAA pass on supported high-headroom devices",
+            "renderPipeline.fxaaEnabled=!highHeadroomQualityMobile;renderPipeline.bloomEnabled=false;renderPipeline.grainEnabled=false;renderPipeline.chromaticAberrationEnabled=false;",
+            "avoid stacking FXAA on native 2x MSAA in the flagship quality profile",
         ),
         (
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?1:4,maxSamples));",
@@ -915,7 +907,7 @@ def main() -> None:
         (
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));",
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));if(highHeadroomQualityMobile&&renderPipeline.sharpen){renderPipeline.sharpenEnabled=true;renderPipeline.sharpen.edgeAmount=.34;renderPipeline.sharpen.colorAmount=.92;}",
-            "use native 2x MSAA and restrained sharpening for flagship mobile without the experimental FSR1 pass",
+            "use native 2x MSAA and restrained sharpening for flagship mobile without a second spatial upscaling pass",
         ),
     )
     for old_code, new_code, label in coastal_profile_replacements:

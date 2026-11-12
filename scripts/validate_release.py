@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.287"
+EXPECTED_VERSION = "0.6.288"
 
 HTML_PAGES = (
     "index.html",
@@ -77,7 +77,8 @@ def main() -> None:
     atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
     atmosphere_markers = (
         "class AtmosphereSystem",
-        "static computeSolarState(value)",
+        "static computeSolarState(value, target)",
+        "static computeLightingProfile(value)",
         "setTime(value)",
         "setDayDuration(seconds)",
         "setSpeed(value)",
@@ -233,16 +234,16 @@ def main() -> None:
     graphics_quality_markers = (
         "highTierGpuMatch=",
         "highHeadroomQualityMobile=",
-        "const fsr1Candidate=!!(!isPerformanceMode&&highHeadroomQualityMobile",
-        "qualityDprFloor=fsr1Candidate ? .72",
-        "qualityDprCeiling=fsr1Candidate ? .92",
-        "highHeadroomQualityMobile?2.45:(isTouchDevice?1.80:1.85)",
-        "qualityDprCurrent=fsr1Candidate?fsr1InputScale:qualityDpr",
-        "qualityDprStableSamples>=3",
+        "qualityDprFloor=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.50:1.0):1.15)",
+        "qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.45:1.70):1.85)",
+        "qualityDprCurrent=qualityDpr",
+        "qualityDprStableSamples>=4",
+        "const step=fps<severeFps?.12:.06",
+        "qualityDprCurrent+.04",
         "qualityDprSlowSamples>=1",
-        "severeFps=targetFrameRate>=87?50:36",
-        "moderateFps=targetFrameRate>=87?72:48",
-        "stableFps=targetFrameRate>=87?87:57",
+        "severeFps=targetFrameRate>=87?54:38",
+        "moderateFps=targetFrameRate>=87?72:50",
+        "stableFps=targetFrameRate>=87?86:58",
         "let targetFrameRate=60,observedFpsCeiling=60",
         "engine.setHardwareScalingLevel(1/qualityDprCurrent)",
         "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))",
@@ -262,7 +263,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'16',build:'0.6.287'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'16',build:'0.6.288'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -551,7 +552,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.287" not in index_html or "EL SIN NOMBRE 0.6.287 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.288" not in index_html or "EL SIN NOMBRE 0.6.288 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -671,7 +672,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.287</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.288</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")

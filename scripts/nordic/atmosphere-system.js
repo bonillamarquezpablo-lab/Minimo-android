@@ -14,21 +14,35 @@
   };
   const normalizeTime = value => ((Number(value) % 24) + 24) % 24;
 
-  function computeSolarState(value) {
+  function computeSolarState(value, target) {
     const timeOfDay = normalizeTime(value);
     // 06:00 sunrise, 12:00 solar noon, 18:00 sunset, 00:00 midnight.
     const angle = (timeOfDay / 24) * Math.PI * 2 - Math.PI / 2;
     const altitude = Math.sin(angle);
     const length = Math.hypot(Math.cos(angle), altitude, 0.16 * Math.sin(angle * 0.5)) || 1;
-    const sunDirection = {
-      x: Math.cos(angle) / length,
-      y: altitude / length,
-      z: (0.16 * Math.sin(angle * 0.5)) / length
-    };
-    const daylight = smooth(-0.11, 0.19, altitude);
-    const night = 1 - smooth(-0.17, 0.025, altitude);
-    const twilight = clamp(1 - Math.abs(altitude) / 0.34, 0, 1) * (1 - night * 0.42);
-    return { timeOfDay, angle, altitude, sunDirection, daylight, twilight, night };
+    const state = target || {};
+    const sunDirection = state.sunDirection || (state.sunDirection = { x: 0, y: 0, z: 0 });
+    sunDirection.x = Math.cos(angle) / length;
+    sunDirection.y = altitude / length;
+    sunDirection.z = (0.16 * Math.sin(angle * 0.5)) / length;
+    state.timeOfDay = timeOfDay;
+    state.angle = angle;
+    state.altitude = altitude;
+    state.daylight = smooth(-0.11, 0.19, altitude);
+    state.night = 1 - smooth(-0.17, 0.025, altitude);
+    state.twilight = clamp(1 - Math.abs(altitude) / 0.34, 0, 1) * (1 - state.night * 0.42);
+    return state;
+  }
+
+  function computeLightingProfile(state, target) {
+    const profile = target || {};
+    // Preserve the dark Nordic sky while lifting terrain and character readability.
+    profile.hemisphereIntensity = 0.24 + 0.72 * state.daylight + 0.16 * state.twilight + 0.04 * state.night;
+    profile.moonIntensity = 0.20 * state.night;
+    profile.environmentIntensity = 0.16 + 0.42 * state.daylight + 0.12 * state.twilight + 0.045 * state.night;
+    profile.exposure = 1.00 + 0.08 * state.daylight + 0.12 * state.twilight + 0.06 * state.night;
+    profile.contrast = mix(1.06, 1.00, state.night);
+    return profile;
   }
 
   function seededNoiseTexture(B, scene, name, seed, width, height, cloudShape) {
@@ -168,6 +182,35 @@
       this.ssrPipeline = null;
       this.firePool = [];
       this.disposed = false;
+      // Reuse frame-hot vectors and colours to avoid per-frame garbage collection.
+      this._solarState = { sunDirection: { x: 0, y: 0, z: 0 } };
+      this._lightingProfile = {};
+      this._sunVector = new this.B.Vector3(0, 1, 0);
+      this._moonVector = new this.B.Vector3(0, -1, 0);
+      this._lightPosition = new this.B.Vector3(0, 0, 0);
+      this._sunPoint = new this.B.Vector3(0, 0, 0);
+      this._moonPoint = new this.B.Vector3(0, 0, 0);
+      this._sunColor = new this.B.Color3(1, 0.94, 0.82);
+      this._sunSpecularColor = new this.B.Color3(0.72, 0.78, 0.86);
+      this._coolNightColor = new this.B.Color3(0.25, 0.34, 0.52);
+      this._dayAmbientColor = new this.B.Color3(0.72, 0.82, 0.92);
+      this._nightGroundColor = new this.B.Color3(0.055, 0.070, 0.11);
+      this._dayGroundColor = new this.B.Color3(0.15, 0.19, 0.13);
+      this._horizonDayColor = new this.B.Color3(0.40, 0.59, 0.66);
+      this._horizonDuskColor = new this.B.Color3(0.40, 0.19, 0.20);
+      this._horizonNightColor = new this.B.Color3(0.020, 0.034, 0.068);
+      this._stormFogColor = new this.B.Color3(0.18, 0.22, 0.27);
+      this._fogColor = new this.B.Color3(0, 0, 0);
+      this._clearColor = new this.B.Color4(0, 0, 0, 1);
+      this._waterDayColor = new this.B.Color3(0.70, 0.82, 0.88);
+      this._waterDuskColor = new this.B.Color3(0.62, 0.39, 0.31);
+      this._waterNightColor = new this.B.Color3(0.18, 0.27, 0.43);
+      this._waterColor = new this.B.Color3(0, 0, 0);
+      this._waterDiffuseDayColor = new this.B.Color3(0.66, 0.82, 0.87);
+      this._waterDiffuseNightColor = new this.B.Color3(0.10, 0.17, 0.28);
+      this._waterDiffuseColor = new this.B.Color3(0, 0, 0);
+      this._windowGlowColor = new this.B.Color3(0, 0, 0);
+      this._fallbackFocus = { x: 0, y: 0, z: 0 };
       this._createSkyResources();
       this._createMoonAndLights();
       this._adjustMaterialLightBudgets();
@@ -184,7 +227,8 @@
     }
 
     static normalizeTime(value) { return normalizeTime(value); }
-    static computeSolarState(value) { return computeSolarState(value); }
+    static computeSolarState(value, target) { return computeSolarState(value, target); }
+    static computeLightingProfile(value) { return computeLightingProfile(computeSolarState(value)); }
     static advanceTime(current, dt, dayDurationSeconds, speed) {
       const duration = clamp(Number(dayDurationSeconds) || 300, 1, 86400);
       return normalizeTime(current + Math.max(0, Number(dt) || 0) *
@@ -580,63 +624,100 @@
           this.timeOfDay, delta * this.speed, this.dayDurationSeconds, 1);
         this.elapsedSeconds = AtmosphereSystem.advanceElapsed(this.elapsedSeconds, delta, this.speed);
       }
-      const B = this.B, state = computeSolarState(this.timeOfDay);
+      const B = this.B;
+      const state = computeSolarState(this.timeOfDay, this._solarState);
+      const lighting = computeLightingProfile(state, this._lightingProfile);
       const weather = this.weather;
       const storm = weather === 'storm' ? 1 : 0;
       const overcast = weather === 'overcast' ? 0.82 : (weather === 'fog' ? 0.54 : (storm ? 0.96 : 0.44));
       const extraFog = weather === 'fog' ? 0.75 : (storm ? 0.42 : (weather === 'overcast' ? 0.18 : 0));
       const focus = this.focusProvider ? this.focusProvider() : this.camera.position;
       const sun = state.sunDirection;
-      const sunVector = new B.Vector3(sun.x, sun.y, sun.z);
-      const moonVector = sunVector.scale(-1);
-      const sunColor = new B.Color3(
-        mix(1.0, 1.0, state.twilight),
-        mix(0.94, 0.47, state.twilight),
-        mix(0.82, 0.24, state.twilight)
-      );
-      const coolNight = new B.Color3(0.22, 0.31, 0.49);
+      const sunVector = this._sunVector;
+      sunVector.x = sun.x; sunVector.y = sun.y; sunVector.z = sun.z;
+      const moonVector = this._moonVector;
+      moonVector.x = -sun.x; moonVector.y = -sun.y; moonVector.z = -sun.z;
+      const sunColor = this._sunColor;
+      sunColor.r = 1.0;
+      sunColor.g = mix(0.94, 0.47, state.twilight);
+      sunColor.b = mix(0.82, 0.24, state.twilight);
+
       if (this.sunLight) {
-        this.sunLight.direction.copyFrom(sunVector.scale(-1));
-        if (focus && this.sunLight.position) this.sunLight.position.copyFrom(focus.add(sunVector.scale(180)));
+        this.sunLight.direction.x = -sun.x;
+        this.sunLight.direction.y = -sun.y;
+        this.sunLight.direction.z = -sun.z;
+        if (focus && this.sunLight.position) {
+          this._lightPosition.x = focus.x + sun.x * 180;
+          this._lightPosition.y = focus.y + sun.y * 180;
+          this._lightPosition.z = focus.z + sun.z * 180;
+          this.sunLight.position.copyFrom(this._lightPosition);
+        }
         this.sunLight.diffuse.copyFrom(sunColor);
-        this.sunLight.specular.copyFrom(new B.Color3(0.72, 0.78, 0.86));
+        this.sunLight.specular.copyFrom(this._sunSpecularColor);
         this.sunLight.intensity = 1.42 * state.daylight * (0.36 + 0.64 * smooth(0.0, 0.54, state.altitude));
         this.sunLight.setEnabled(state.daylight >= state.night && state.daylight > 0.012);
       }
+
       if (this.moonLight) {
-        this.moonLight.direction.copyFrom(moonVector.scale(-1));
-        if (focus && this.moonLight.position) this.moonLight.position.copyFrom(focus.add(moonVector.scale(150)));
-        this.moonLight.intensity = 0.13 * state.night * (1 - storm * 0.48);
+        this.moonLight.direction.x = sun.x;
+        this.moonLight.direction.y = sun.y;
+        this.moonLight.direction.z = sun.z;
+        if (focus && this.moonLight.position) {
+          this._lightPosition.x = focus.x - sun.x * 150;
+          this._lightPosition.y = focus.y - sun.y * 150;
+          this._lightPosition.z = focus.z - sun.z * 150;
+          this.moonLight.position.copyFrom(this._lightPosition);
+        }
+        this.moonLight.intensity = lighting.moonIntensity * (1 - storm * 0.48);
         this.moonLight.setEnabled(state.night > state.daylight && state.night > 0.025);
       }
+
       if (this.hemiLight) {
-        this.hemiLight.intensity = 0.12 + 0.78 * state.daylight + 0.045 * state.twilight;
-        this.hemiLight.diffuse.copyFrom(B.Color3.Lerp(coolNight, new B.Color3(0.72, 0.82, 0.92), state.daylight));
-        this.hemiLight.groundColor.copyFrom(B.Color3.Lerp(
-          new B.Color3(0.035, 0.055, 0.095), new B.Color3(0.15, 0.19, 0.13), state.daylight));
+        this.hemiLight.intensity = lighting.hemisphereIntensity;
+        this.hemiLight.diffuse.r = mix(this._coolNightColor.r, this._dayAmbientColor.r, state.daylight);
+        this.hemiLight.diffuse.g = mix(this._coolNightColor.g, this._dayAmbientColor.g, state.daylight);
+        this.hemiLight.diffuse.b = mix(this._coolNightColor.b, this._dayAmbientColor.b, state.daylight);
+        this.hemiLight.groundColor.r = mix(this._nightGroundColor.r, this._dayGroundColor.r, state.daylight);
+        this.hemiLight.groundColor.g = mix(this._nightGroundColor.g, this._dayGroundColor.g, state.daylight);
+        this.hemiLight.groundColor.b = mix(this._nightGroundColor.b, this._dayGroundColor.b, state.daylight);
       }
       if (this.scene.environmentTexture && 'environmentIntensity' in this.scene) {
-        this.scene.environmentIntensity = 0.08 + 0.44 * state.daylight + 0.035 * state.twilight;
+        this.scene.environmentIntensity = lighting.environmentIntensity;
       }
 
-      const horizonDay = new B.Color3(0.40, 0.59, 0.66);
-      const horizonDusk = new B.Color3(0.40, 0.19, 0.20);
-      const horizonNight = new B.Color3(0.012, 0.023, 0.055);
-      const fogColor = B.Color3.Lerp(horizonNight, horizonDay, state.daylight);
-      fogColor.copyFrom(B.Color3.Lerp(fogColor, horizonDusk, state.twilight * 0.78));
-      if (storm) fogColor.copyFrom(B.Color3.Lerp(fogColor, new B.Color3(0.18, 0.22, 0.27), 0.55));
+      const fogColor = this._fogColor;
+      fogColor.r = mix(this._horizonNightColor.r, this._horizonDayColor.r, state.daylight);
+      fogColor.g = mix(this._horizonNightColor.g, this._horizonDayColor.g, state.daylight);
+      fogColor.b = mix(this._horizonNightColor.b, this._horizonDayColor.b, state.daylight);
+      const duskMix = state.twilight * 0.78;
+      fogColor.r = mix(fogColor.r, this._horizonDuskColor.r, duskMix);
+      fogColor.g = mix(fogColor.g, this._horizonDuskColor.g, duskMix);
+      fogColor.b = mix(fogColor.b, this._horizonDuskColor.b, duskMix);
+      if (storm) {
+        fogColor.r = mix(fogColor.r, this._stormFogColor.r, 0.55);
+        fogColor.g = mix(fogColor.g, this._stormFogColor.g, 0.55);
+        fogColor.b = mix(fogColor.b, this._stormFogColor.b, 0.55);
+      }
       this.scene.fogMode = B.Scene.FOGMODE_EXP;
       this.scene.fogColor.copyFrom(fogColor);
       const climateBoost = this.fogClimate === 'fjord' ? 0.22 : (this.fogClimate === 'coast' ? 0.10 : 0);
       this.scene.fogDensity = clamp(this.baseFogDensity *
         (1 + state.twilight * 0.60 + state.night * 0.22 + climateBoost + extraFog), 0.00035, 0.00155);
-      this.scene.clearColor = new B.Color4(fogColor.r * 0.70, fogColor.g * 0.70, fogColor.b * 0.78, 1);
+      this._clearColor.r = fogColor.r * 0.70;
+      this._clearColor.g = fogColor.g * 0.70;
+      this._clearColor.b = fogColor.b * 0.78;
+      this._clearColor.a = 1;
+      this.scene.clearColor.copyFrom(this._clearColor);
 
       if (this.sunDisc && this.sunHalo) {
         const visible = clamp(state.daylight * 0.88 + state.twilight * 0.36, 0, 1);
-        const point = sunVector.scale(680);
+        const point = this._sunPoint;
+        point.x = sun.x * 680; point.y = sun.y * 680; point.z = sun.z * 680;
         this.sunDisc.position.copyFrom(point);
-        this.sunHalo.position.copyFrom(point.scale(1.012));
+        this._lightPosition.x = point.x * 1.012;
+        this._lightPosition.y = point.y * 1.012;
+        this._lightPosition.z = point.z * 1.012;
+        this.sunHalo.position.copyFrom(this._lightPosition);
         this.sunDisc.visibility = visible;
         this.sunHalo.visibility = visible;
         const material = this.sunDisc.material;
@@ -646,9 +727,13 @@
       }
       if (this.moonDisc && this.moonHalo) {
         const visible = state.night * (1 - storm * 0.58);
-        const point = moonVector.scale(670);
+        const point = this._moonPoint;
+        point.x = -sun.x * 670; point.y = -sun.y * 670; point.z = -sun.z * 670;
         this.moonDisc.position.copyFrom(point);
-        this.moonHalo.position.copyFrom(point.scale(1.018));
+        this._lightPosition.x = point.x * 1.018;
+        this._lightPosition.y = point.y * 1.018;
+        this._lightPosition.z = point.z * 1.018;
+        this.moonHalo.position.copyFrom(this._lightPosition);
         this.moonDisc.visibility = visible;
         this.moonHalo.visibility = visible;
         this.moonDisc.setEnabled(visible > 0.025);
@@ -682,32 +767,39 @@
         this.cloudB.vOffset = (this.elapsedSeconds * 0.000012) % 1;
       }
       if (this.renderPipeline && this.renderPipeline.imageProcessing) {
-        const exposure = mix(0.88, 1.08, state.daylight) + state.twilight * 0.055;
-        this.renderPipeline.imageProcessing.exposure = exposure;
-        this.renderPipeline.imageProcessing.contrast = mix(1.08, 1.02, state.night);
+        this.renderPipeline.imageProcessing.exposure = lighting.exposure;
+        this.renderPipeline.imageProcessing.contrast = lighting.contrast;
       }
       if (this.scene.imageProcessingConfiguration) {
-        this.scene.imageProcessingConfiguration.exposure = mix(0.88, 1.08, state.daylight) + state.twilight * 0.055;
-        this.scene.imageProcessingConfiguration.contrast = mix(1.08, 1.02, state.night);
+        this.scene.imageProcessingConfiguration.exposure = lighting.exposure;
+        this.scene.imageProcessingConfiguration.contrast = lighting.contrast;
       }
       if (this.waterMaterial) {
-        const waterDay = new B.Color3(0.70, 0.82, 0.88);
-        const waterDusk = new B.Color3(0.62, 0.39, 0.31);
-        const waterNight = new B.Color3(0.18, 0.27, 0.43);
-        const waterColor = B.Color3.Lerp(waterNight, waterDay, state.daylight);
-        waterColor.copyFrom(B.Color3.Lerp(waterColor, waterDusk, state.twilight * 0.72));
+        const waterColor = this._waterColor;
+        waterColor.r = mix(this._waterNightColor.r, this._waterDayColor.r, state.daylight);
+        waterColor.g = mix(this._waterNightColor.g, this._waterDayColor.g, state.daylight);
+        waterColor.b = mix(this._waterNightColor.b, this._waterDayColor.b, state.daylight);
+        const duskWaterMix = state.twilight * 0.72;
+        waterColor.r = mix(waterColor.r, this._waterDuskColor.r, duskWaterMix);
+        waterColor.g = mix(waterColor.g, this._waterDuskColor.g, duskWaterMix);
+        waterColor.b = mix(waterColor.b, this._waterDuskColor.b, duskWaterMix);
         this.waterMaterial.specularColor.copyFrom(waterColor);
         if (this.waterMaterial.reflectionFresnelParameters) {
           this.waterMaterial.reflectionFresnelParameters.rightColor.copyFrom(waterColor);
         }
         if (this.waterMaterial.diffuseFresnelParameters) {
-          this.waterMaterial.diffuseFresnelParameters.rightColor.copyFrom(
-            B.Color3.Lerp(new B.Color3(0.10, 0.17, 0.28), new B.Color3(0.66, 0.82, 0.87), state.daylight));
+          this._waterDiffuseColor.r = mix(this._waterDiffuseNightColor.r, this._waterDiffuseDayColor.r, state.daylight);
+          this._waterDiffuseColor.g = mix(this._waterDiffuseNightColor.g, this._waterDiffuseDayColor.g, state.daylight);
+          this._waterDiffuseColor.b = mix(this._waterDiffuseNightColor.b, this._waterDiffuseDayColor.b, state.daylight);
+          this.waterMaterial.diffuseFresnelParameters.rightColor.copyFrom(this._waterDiffuseColor);
         }
       }
       if (this.windowMaterial && this.windowMaterial.emissiveColor) {
         const glow = 0.08 + state.night * 0.52;
-        this.windowMaterial.emissiveColor.copyFrom(new B.Color3(0.8 * glow, 0.38 * glow, 0.10 * glow));
+        this._windowGlowColor.r = 0.8 * glow;
+        this._windowGlowColor.g = 0.38 * glow;
+        this._windowGlowColor.b = 0.10 * glow;
+        this.windowMaterial.emissiveColor.copyFrom(this._windowGlowColor);
       }
       if (this.godRays) {
         const rayFactor = state.twilight * state.daylight * (1 - storm * 0.85);
@@ -716,7 +808,7 @@
         this.godRays.weight = rayActive ? 0.04 + rayFactor * 0.34 : 0;
         this.godRays.density = rayActive ? 0.72 + rayFactor * 0.18 : 0;
       }
-      this._updateFirePool(state, focus || { x: 0, z: 0 });
+      this._updateFirePool(state, focus || this._fallbackFocus);
       this.lastState = state;
       return this.getState();
     }

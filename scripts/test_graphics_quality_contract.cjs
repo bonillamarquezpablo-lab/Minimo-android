@@ -10,16 +10,16 @@ const atmosphere=fs.readFileSync('scripts/nordic/atmosphere-system.js','utf8');
 for(const marker of [
   'highTierGpuMatch=',
   'highHeadroomQualityMobile=',
-  'const fsr1Candidate=!!(!isPerformanceMode&&highHeadroomQualityMobile',
-  'qualityDprFloor=fsr1Candidate ? .72',
-  'qualityDprCeiling=fsr1Candidate ? .92',
-  'highHeadroomQualityMobile?2.45:(isTouchDevice?1.80:1.85)',
-  'qualityDprCurrent=fsr1Candidate?fsr1InputScale:qualityDpr',
-  'qualityDprStableSamples>=3',
+  'qualityDprFloor=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.50:1.0):1.15)',
+  'qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.45:1.70):1.85)',
+  'qualityDprCurrent=qualityDpr',
+  'qualityDprStableSamples>=4',
+  'const step=fps<severeFps?.12:.06',
+  'qualityDprCurrent+.04',
   'qualityDprSlowSamples>=1',
-  'severeFps=targetFrameRate>=87?50:36',
-  'moderateFps=targetFrameRate>=87?72:48',
-  'stableFps=targetFrameRate>=87?87:57',
+  'severeFps=targetFrameRate>=87?54:38',
+  'moderateFps=targetFrameRate>=87?72:50',
+  'stableFps=targetFrameRate>=87?86:58',
   'let targetFrameRate=60,observedFpsCeiling=60',
   'engine.setHardwareScalingLevel(1/qualityDprCurrent)',
   'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))',
@@ -35,7 +35,8 @@ for(const marker of [
   'highHeadroomQualityMobile,reportedMemory',
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
-assert.ok(builder.includes('fsr1Candidate=!!(!isPerformanceMode&&highHeadroomQualityMobile'), 'Flagship phones must use the validated high-resolution FSR1 path.');
+assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)'), 'Flagship phones must adapt native Babylon render scale from the actual initial scale.');
+assert.ok(!builder.includes('fsr1Candidate') && !builder.includes('fsr1InputScale'), 'No inactive FSR1 state may override native device resolution.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"), 'Native engine antialiasing must remain enabled in Quality.');
 assert.ok(gameSource.includes('const waterNormalLeftOffsets=new Uint32Array(waterBase.length/3)'), 'Water normal neighbour indices must be cached without changing the rendered mesh.');
 assert.ok(gameSource.includes('waterNormalInvDx[count]=1/(waterBase[right]-waterBase[left]||1)'), 'Water normal grid spacing must be precomputed when the detail region changes.');
@@ -49,4 +50,4 @@ assert.ok(atmosphere.includes("this.quality === 'low' || this.isTouchDevice"), '
 assert.ok(validator.includes('missing_graphics_quality'), 'The release validator must reject missing mobile rendering guardrails.');
 assert.ok(validator.includes('this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;'), 'The atmosphere hardware tier must be checked by release validation.');
 
-console.log('OK graphics quality: native WebGL rendering, 2.45 flagship source scale, adaptive FSR1 input range, native 2x MSAA, dedicated mobile-high atmosphere, desktop-only SSAO/god-rays/CSM.');
+console.log('OK graphics quality: native WebGL rendering, 2.45 flagship source scale, native adaptive render scale, native 2x MSAA, dedicated mobile-high atmosphere, desktop-only SSAO/god-rays/CSM.');
