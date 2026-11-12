@@ -114,6 +114,13 @@ self.addEventListener("fetch", event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  // The Inspector Center is a separate static site, not a game route.
+  // Let GitHub Pages serve its own inspector/index.html instead of falling back
+  // to the game shell when the game-specific navigation validator rejects it.
+  const inspectorPath = new URL("./inspector/", self.registration.scope).pathname;
+  const inspectorRoot = inspectorPath.replace(/\\/+$/, "");
+  if (url.pathname === inspectorRoot || url.pathname.startsWith(inspectorPath)) return;
+
   if (request.mode === "navigate") {
     const guestFilePath = url.pathname.endsWith("/guest.html");
     const guestPath = /\/(?:guest|invitado)(?:\/|\/index\.html)?$/.test(url.pathname);
