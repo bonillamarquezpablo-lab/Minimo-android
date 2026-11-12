@@ -17,7 +17,7 @@
   const number=(v,d=1)=>Number.isFinite(Number(v))?Number(v).toLocaleString('es-ES',{maximumFractionDigits:d}):'—';
   const formatElapsed=ms=>{if(!Number.isFinite(ms)||ms<0)return '—';const s=Math.round(ms/1000);if(s<60)return s+' s';const m=Math.floor(s/60),r=s%60;return m+' min '+String(r).padStart(2,'0')+' s';};
   let chosenLevel='deep',activeRun=null,progressData=null,jobsData=null,activePhase='dawn',comparePosition=50,differenceVisible=false,radarData=null,selectedIsland=null,selectedStructure=null;
-  let currentToken='',refreshTimer=null,fetchBusy=false,launching=false,latestRuns=[],lastError=null;
+  let currentToken='',refreshTimer=null,fetchBusy=false,launching=false,latestRuns=[],lastError=null,lastRunsFetchAt=0,lastJobsFetchAt=0;
 
   function setConnection(text,online){$('connection').textContent=text;$('connection').classList.toggle('online',!!online);}
   function setMessage(text,type=''){const node=$('launchMessage');node.textContent=text;node.className='inline-state'+(type?' '+type:'');}
@@ -100,7 +100,8 @@
   function statusName(s){return ({pending:'Pendiente',queued:'En cola',running:'En curso',in_progress:'En curso',skipped:'Omitida'})[s]||s||'Pendiente';}
 
   async function apiGet(url){
-    const response=await fetch(url,{headers:{Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'},cache:'no-store'});
+    const headers={Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};if(currentToken)headers.Authorization='Bearer '+currentToken;
+    const response=await fetch(url,{headers,cache:'no-store'});
     if(!response.ok)throw new Error('GitHub API '+response.status);
     return response.json();
   }
@@ -117,41 +118,55 @@
   async function refreshDashboard(force=false){
     if(fetchBusy&&!force)return;fetchBusy=true;
     try{
-      const list=await apiGet(API+'/actions/workflows/'+WORKFLOW+'/runs?per_page=12');
-      latestRuns=list.workflow_runs||[];
-      const run=findLatestInspectorRun(latestRuns);
-      if(run){activeRun=run;renderRunShell(run);}
-      else{activeRun=null;renderRunShell(null);}
-      const [manifest,jobs]=run?await Promise.all([
-        fetchProgress(run),apiGet(API+'/actions/runs/'+run.id+'/jobs?per_page=100').catch(()=>({jobs:[]}))
-      ]):[null,{jobs:[]}];
-      progressData=manifest;jobsData=jobs;
-      if(run){
-        const phases=manifest?.phases||[];
-        const allSteps=(jobs.jobs||[]).flatMap(job=>(job.steps||[]).map(step=>({...step,jobName:job.name})));
-        renderSteps(phases,allSteps);
-        renderCompare(manifest);
-        renderRadar(manifest);
-        renderTelemetry(manifest);
-        const latest=jobs.jobs?.find(job=>job.status==='in_progress');
-        const current=latest?.steps?.find(step=>step.status==='in_progress');
-        $('runPhaseDescription').textContent=phases.length
-          ?$('runPhaseDescription').textContent
-          :current?'Fase activa: '+current.name+' · El inspector está trabajando dentro del navegador de pruebas.':'La auditoría está preparando el entorno.';
-        $('updatedAt').textContent='Datos actualizados '+new Date().toLocaleTimeString('es-ES');
-        $('runArtifactsLink').href=run.html_url?run.html_url+'#artifacts':'#';
-      }else{
-        renderCompare(null);renderRadar(null);renderTelemetry(null);$('updatedAt').textContent='Sin ejecuciones recientes';
+      const now=Date.now();
+      const metadataInterval=currentToken?25000:90000;
+      const needRunRefresh=force||!activeRun||now-lastRunsFetchAt>=metadataInterval;
+      if(needRunRefresh){
+        const list=await apiGet(API+'/actions/workflows/'+WORKFLOW+'/runs?per_page=12');
+        latestRuns=list.workflow_runs||[];
+        activeRun=findLatestInspectorRun(latestRuns);
+        lastRunsFetchAt=Date.now();
+        renderRunShell(activeRun);
       }
-      setConnection('GitHub conectado',true);
-      lastError=null;
+      const run=activeRun;
+      if(!run){
+        renderRunShell(null);renderCompare(null);renderRadar(null);renderTelemetry(null);
+        $('updatedAt').textContent='Sin ejecuciones recientes';
+        setConnection('GitHub conectado',true);lastError=null;return;
+      }
+      const manifest=await fetchProgress(run);
+      progressData=manifest;
+      let jobs={jobs:[]};
+      // Progress manifests are published as static JSON every phase transition; only
+      // ask the Actions API for step-level detail when the runner has not published one.
+      const needsJobFallback=!manifest?.phases?.length;
+      const jobsInterval=currentToken?20000:90000;
+      if(needsJobFallback&&(force||now-lastJobsFetchAt>=jobsInterval)){
+        jobs=await apiGet(API+'/actions/runs/'+run.id+'/jobs?per_page=100').catch(()=>({jobs:[]}));
+        lastJobsFetchAt=Date.now();jobsData=jobs;
+      }else if(jobsData&&activeRun?.id===run.id){
+        jobs=jobsData;
+      }
+      const phases=manifest?.phases||[];
+      const allSteps=(jobs.jobs||[]).flatMap(job=>(job.steps||[]).map(step=>({...step,jobName:job.name})));
+      renderSteps(phases,allSteps);
+      renderCompare(manifest);
+      renderRadar(manifest);
+      renderTelemetry(manifest);
+      const latest=jobs.jobs?.find(job=>job.status==='in_progress');
+      const current=latest?.steps?.find(step=>step.status==='in_progress');
+      $('runPhaseDescription').textContent=phases.length
+        ?$('runPhaseDescription').textContent
+        :current?'Fase activa: '+current.name+' · El inspector está trabajando dentro del navegador de pruebas.':'La auditoría está preparando el entorno.';
+      $('updatedAt').textContent='Datos actualizados '+new Date().toLocaleTimeString('es-ES')+' · progreso en vivo';
+      $('runArtifactsLink').href=run.html_url?run.html_url+'#artifacts':'#';
+      setConnection('GitHub conectado',true);lastError=null;
     }catch(error){
       lastError=error;setConnection('Sin conexión',false);
       $('updatedAt').textContent='No se pudo actualizar: '+error.message;
       if(!activeRun)$('runPhaseDescription').textContent='No se pudo consultar GitHub. Comprueba la conexión e inténtalo de nuevo.';
     }finally{fetchBusy=false;}
   }
-
   async function findNewDispatch(existingIds,ref,clickedAt){
     const until=Date.now()+35000;
     while(Date.now()<until){
