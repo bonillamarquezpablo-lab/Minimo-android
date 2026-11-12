@@ -118,7 +118,7 @@ function runPythonPhase(name,script,arg,timeoutMs=5*60*1000){
       if(settled)return;settled=true;
       clearTimeout(timer);clearTimeout(forceTimer);clearTimeout(finalTimer);
       Object.assign(row,{status,exitCode:code,error,finishedAt:new Date().toISOString(),durationMs:Date.now()-phaseStarted});
-      writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});
+      writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});
       resolve(row);
     };
     timer=setTimeout(()=>{
