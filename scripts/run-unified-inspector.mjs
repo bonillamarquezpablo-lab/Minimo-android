@@ -74,14 +74,14 @@ function runNodePhase(name,script,env={},timeoutMs=25*60*1000){
     const phaseStarted=Date.now();
     let child;
     try{child=spawn(process.execPath,[script],{cwd:ROOT,env:{...process.env,...env},stdio:'inherit',detached:process.platform!=='win32'});}
-    catch(error){row.status='failed';row.error=String(error?.stack||error);row.durationMs=Date.now()-phaseStarted;writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});return resolve(row);}
+    catch(error){row.status='failed';row.error=String(error?.stack||error);row.durationMs=Date.now()-phaseStarted;writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});return resolve(row);}
     let settled=false,timedOut=false,timer=null,forceTimer=null,finalTimer=null;
     const timeoutMessage='Exceeded phase timeout of '+timeoutMs+' ms.';
     const finish=(status,code,error=null)=>{
       if(settled)return;settled=true;
       clearTimeout(timer);clearTimeout(forceTimer);clearTimeout(finalTimer);
       Object.assign(row,{status,exitCode:code,error,finishedAt:new Date().toISOString(),durationMs:Date.now()-phaseStarted});
-      writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});
+      writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});
       console.log('[UNIFIED_INSPECTOR] END '+name+' — '+status+' ('+row.durationMs+' ms)');
       resolve(row);
     };
