@@ -32,7 +32,7 @@ assert.match(html,/async function readVikingFromWebCache\(\)[\s\S]*?caches\.open
 assert.doesNotMatch(html,/caches\.match\(VIKING_GLB_URL\)/,
   'A global cache search must not bypass the protagonist cache version.');
 assert.match(html,/function disposeLateGlbResult\(result,model,stage\)/);
-assert.match(html,/pending\.then\(result=>\{if\(timedOut\)disposeLateGlbResult\(result,model,stage\)\}/,
+assert.match(html,/pending\.then\(result=>\{if\(timedOut\)disposeLateGlbResult\(result,model,stage\);?\},\(\)=>\{\}\)/,
   'Timed-out SceneLoader imports must be disposed if Babylon resolves them late.');
 assert.doesNotMatch(html,/RECURSO OBLIGATORIO: importación de fauna sin finalizar/,
   'Fauna timeout/failure is optional and must not block game entry.');
