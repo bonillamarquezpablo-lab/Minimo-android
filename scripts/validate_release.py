@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.285"
+EXPECTED_VERSION = "0.6.286"
 
 HTML_PAGES = (
     "index.html",
@@ -233,11 +233,11 @@ def main() -> None:
     graphics_quality_markers = (
         "highTierGpuMatch=",
         "highHeadroomQualityMobile=",
-        "const fsr1Candidate=false;",
-        "qualityDprFloor=highHeadroomQualityMobile?1.0",
-        "qualityDprCeiling=highHeadroomQualityMobile?1.65",
-        "highHeadroomQualityMobile?1.50:(isTouchDevice?1.25:1.85)",
-        "qualityDprCurrent=qualityDpr",
+        "const fsr1Candidate=!!(!isPerformanceMode&&highHeadroomQualityMobile",
+        "qualityDprFloor=fsr1Candidate ? .72",
+        "qualityDprCeiling=fsr1Candidate ? .92",
+        "highHeadroomQualityMobile?2.45:(isTouchDevice?1.80:1.85)",
+        "qualityDprCurrent=fsr1Candidate?fsr1InputScale:qualityDpr",
         "qualityDprStableSamples>=3",
         "qualityDprSlowSamples>=1",
         "severeFps=targetFrameRate>=87?50:36",
@@ -246,7 +246,7 @@ def main() -> None:
         "let targetFrameRate=60,observedFpsCeiling=60",
         "engine.setHardwareScalingLevel(1/qualityDprCurrent)",
         "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))",
-        "renderPipeline.sharpen.edgeAmount=.20",
+        "renderPipeline.sharpen.edgeAmount=.34",
         "style='grain',size=highHeadroomQualityMobile?1024:512",
         "'sand',isPerformanceMode?(isConstrainedMobile?256:512):(highHeadroomQualityMobile?2048:1024),true)",
         "const size=isPerformanceMode?(isConstrainedMobile?512:768):(highHeadroomQualityMobile?2048:1024)",
@@ -255,8 +255,6 @@ def main() -> None:
     missing_graphics_quality = [marker for marker in graphics_quality_markers if marker not in index_html]
     if missing_graphics_quality:
         fail("El perfil nativo de gama alta, la resolución adaptativa o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
-    if "const fsr1Candidate=false;" not in index_html:
-        fail("La ruta FSR1 experimental no debe activarse en móviles antes de una validación física específica.")
 
     if "const TERRAIN_HASH_CACHE_LIMIT=65536;" not in index_html or "terrainHashCacheSlots" not in index_html or "terrainHashCacheEntries:terrainHashCache.size" not in index_html:
         fail("La caché determinista de ruido del terreno debe estar acotada y diagnosticada.")
@@ -264,7 +262,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'15',build:'0.6.285'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'16',build:'0.6.286'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
