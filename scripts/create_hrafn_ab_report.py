@@ -6,8 +6,8 @@ from PIL import Image, ImageChops, ImageEnhance, ImageDraw
 root=Path(sys.argv[1] if len(sys.argv)>1 else 'artifacts/hrafn-before-after')
 manifest=json.loads((root/'manifest.json').read_text())
 for phase in manifest['phases']:
-    before=Image.open(root/phase['before']['file'].split('before/',1)[-1]).convert('RGB')
-    after=Image.open(root/phase['after']['file'].split('after/',1)[-1]).convert('RGB')
+    before=Image.open(root/'before'/f"{phase['id']}.png").convert('RGB')
+    after=Image.open(root/'after'/f"{phase['id']}.png").convert('RGB')
     if before.size != after.size:
         after=after.resize(before.size)
     diff=ImageChops.difference(before,after)
