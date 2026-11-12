@@ -168,6 +168,31 @@
       this.ssrPipeline = null;
       this.firePool = [];
       this.disposed = false;
+      // Reuse frame-local lighting values. The atmosphere update runs every rendered frame;
+      // keeping these scratch objects avoids a stream of short-lived Babylon objects/GC work.
+      const B = this.B;
+      this._sunVector = new B.Vector3(0, 1, 0);
+      this._moonVector = new B.Vector3(0, -1, 0);
+      this._sunPoint = new B.Vector3(0, 0, 0);
+      this._sunHaloPoint = new B.Vector3(0, 0, 0);
+      this._moonPoint = new B.Vector3(0, 0, 0);
+      this._moonHaloPoint = new B.Vector3(0, 0, 0);
+      this._sunColor = new B.Color3(1, 0.94, 0.82);
+      this._coolNight = new B.Color3(0.30, 0.39, 0.55);
+      this._fogColor = new B.Color3(0, 0, 0);
+      this._clearColor = new B.Color4(0, 0, 0, 1);
+      this._horizonDay = new B.Color3(0.40, 0.59, 0.66);
+      this._horizonDusk = new B.Color3(0.40, 0.19, 0.20);
+      this._horizonNight = new B.Color3(0.024, 0.039, 0.075);
+      this._nightGroundColor = new B.Color3(0.105, 0.13, 0.18);
+      this._dayGroundColor = new B.Color3(0.15, 0.19, 0.13);
+      this._waterColor = new B.Color3(0, 0, 0);
+      this._waterDay = new B.Color3(0.70, 0.82, 0.88);
+      this._waterDusk = new B.Color3(0.62, 0.39, 0.31);
+      this._waterNight = new B.Color3(0.18, 0.27, 0.43);
+      this._waterDeep = new B.Color3(0.10, 0.17, 0.28);
+      this._waterShallow = new B.Color3(0.66, 0.82, 0.87);
+      this._windowGlowColor = new B.Color3(0, 0, 0);
       this._createSkyResources();
       this._createMoonAndLights();
       this._adjustMaterialLightBudgets();
@@ -542,7 +567,20 @@
       if (!this.firePool.length) return;
       const now = this.elapsedSeconds;
       const nightOn = state.night > 0.18;
-      if (now - this.lastFirePoolUpdate < 0.28 && nightOn) {
+      if (!nightOn) {
+        // Turn off the local pool once when daylight returns; do not rescan/toggle
+        // every hearth on every daytime frame.
+        for (const slot of this.firePool) {
+          if (slot.source || slot.light.isEnabled()) {
+            slot.source = null;
+            slot.light.intensity = 0;
+            slot.light.setEnabled(false);
+          }
+        }
+        this.lastFirePoolUpdate = now;
+        return;
+      }
+      if (now - this.lastFirePoolUpdate < 0.28) {
         for (const slot of this.firePool) {
           if (slot.source && !slot.source.extinguished) {
             slot.light.intensity = (0.54 + Math.sin(now * 8.2 + slot.phase) * 0.12) * state.night;
@@ -551,19 +589,30 @@
         return;
       }
       this.lastFirePoolUpdate = now;
-      const candidates = nightOn ? this.fireHearths.filter(h => h && !h.extinguished).map(h => {
-        const dx = h.x - focus.x, dz = h.z - focus.z;
-        return { h, d2: dx * dx + dz * dz };
-      }).filter(x => x.d2 < 52 * 52).sort((a, b) => a.d2 - b.d2).slice(0, this.firePool.length) : [];
+      // Pick the nearest one or two hearths in a single pass. Avoid filter/map/sort
+      // arrays and temporary candidate objects in the recurring lighting update.
+      let nearest0 = null, nearest1 = null;
+      let nearest0D2 = 52 * 52, nearest1D2 = 52 * 52;
+      for (const h of this.fireHearths) {
+        if (!h || h.extinguished) continue;
+        const dx = h.x - focus.x, dz = h.z - focus.z, d2 = dx * dx + dz * dz;
+        if (d2 >= 52 * 52) continue;
+        if (d2 < nearest0D2) {
+          nearest1 = nearest0; nearest1D2 = nearest0D2;
+          nearest0 = h; nearest0D2 = d2;
+        } else if (d2 < nearest1D2) {
+          nearest1 = h; nearest1D2 = d2;
+        }
+      }
+      const candidates = [nearest0, nearest1];
       for (let i = 0; i < this.firePool.length; i++) {
-        const slot = this.firePool[i], candidate = candidates[i] || null;
-        if (!candidate) {
+        const slot = this.firePool[i], h = candidates[i] || null;
+        if (!h || (i > 0 && this.firePool.length < 2)) {
           slot.source = null;
           slot.light.intensity = 0;
           slot.light.setEnabled(false);
           continue;
         }
-        const h = candidate.h;
         slot.source = h;
         slot.light.position.set(h.x, h.floorY + 1.0, h.z);
         slot.light.range = 11.5;
@@ -587,56 +636,84 @@
       const extraFog = weather === 'fog' ? 0.75 : (storm ? 0.42 : (weather === 'overcast' ? 0.18 : 0));
       const focus = this.focusProvider ? this.focusProvider() : this.camera.position;
       const sun = state.sunDirection;
-      const sunVector = new B.Vector3(sun.x, sun.y, sun.z);
-      const moonVector = sunVector.scale(-1);
-      const sunColor = new B.Color3(
-        mix(1.0, 1.0, state.twilight),
-        mix(0.94, 0.47, state.twilight),
-        mix(0.82, 0.24, state.twilight)
-      );
-      const coolNight = new B.Color3(0.22, 0.31, 0.49);
+      const sunVector = this._sunVector;
+      sunVector.x = sun.x; sunVector.y = sun.y; sunVector.z = sun.z;
+      const moonVector = this._moonVector;
+      moonVector.x = -sun.x; moonVector.y = -sun.y; moonVector.z = -sun.z;
+      const sunColor = this._sunColor;
+      sunColor.r = 1.0;
+      sunColor.g = mix(0.94, 0.47, state.twilight);
+      sunColor.b = mix(0.82, 0.24, state.twilight);
+      const coolNight = this._coolNight;
       if (this.sunLight) {
-        this.sunLight.direction.copyFrom(sunVector.scale(-1));
-        if (focus && this.sunLight.position) this.sunLight.position.copyFrom(focus.add(sunVector.scale(180)));
+        this.sunLight.direction.x = -sun.x;
+        this.sunLight.direction.y = -sun.y;
+        this.sunLight.direction.z = -sun.z;
+        if (focus && this.sunLight.position) {
+          this.sunLight.position.x = focus.x + sun.x * 180;
+          this.sunLight.position.y = focus.y + sun.y * 180;
+          this.sunLight.position.z = focus.z + sun.z * 180;
+        }
         this.sunLight.diffuse.copyFrom(sunColor);
-        this.sunLight.specular.copyFrom(new B.Color3(0.72, 0.78, 0.86));
+        this.sunLight.specular.r = 0.72; this.sunLight.specular.g = 0.78; this.sunLight.specular.b = 0.86;
         this.sunLight.intensity = 1.42 * state.daylight * (0.36 + 0.64 * smooth(0.0, 0.54, state.altitude));
         this.sunLight.setEnabled(state.daylight >= state.night && state.daylight > 0.012);
       }
       if (this.moonLight) {
-        this.moonLight.direction.copyFrom(moonVector.scale(-1));
-        if (focus && this.moonLight.position) this.moonLight.position.copyFrom(focus.add(moonVector.scale(150)));
-        this.moonLight.intensity = 0.13 * state.night * (1 - storm * 0.48);
+        this.moonLight.direction.x = sun.x;
+        this.moonLight.direction.y = sun.y;
+        this.moonLight.direction.z = sun.z;
+        if (focus && this.moonLight.position) {
+          this.moonLight.position.x = focus.x - sun.x * 150;
+          this.moonLight.position.y = focus.y - sun.y * 150;
+          this.moonLight.position.z = focus.z - sun.z * 150;
+        }
+        this.moonLight.intensity = 0.28 * state.night * (1 - storm * 0.48);
         this.moonLight.setEnabled(state.night > state.daylight && state.night > 0.025);
       }
       if (this.hemiLight) {
-        this.hemiLight.intensity = 0.12 + 0.78 * state.daylight + 0.045 * state.twilight;
-        this.hemiLight.diffuse.copyFrom(B.Color3.Lerp(coolNight, new B.Color3(0.72, 0.82, 0.92), state.daylight));
-        this.hemiLight.groundColor.copyFrom(B.Color3.Lerp(
-          new B.Color3(0.035, 0.055, 0.095), new B.Color3(0.15, 0.19, 0.13), state.daylight));
+        this.hemiLight.intensity = 0.25 + 0.70 * state.daylight + 0.06 * state.twilight;
+        this.hemiLight.diffuse.r = mix(coolNight.r, 0.72, state.daylight);
+        this.hemiLight.diffuse.g = mix(coolNight.g, 0.82, state.daylight);
+        this.hemiLight.diffuse.b = mix(coolNight.b, 0.92, state.daylight);
+        const nightGround = this._nightGroundColor, dayGround = this._dayGroundColor;
+        this.hemiLight.groundColor.r = mix(nightGround.r, dayGround.r, state.daylight);
+        this.hemiLight.groundColor.g = mix(nightGround.g, dayGround.g, state.daylight);
+        this.hemiLight.groundColor.b = mix(nightGround.b, dayGround.b, state.daylight);
       }
       if (this.scene.environmentTexture && 'environmentIntensity' in this.scene) {
-        this.scene.environmentIntensity = 0.08 + 0.44 * state.daylight + 0.035 * state.twilight;
+        this.scene.environmentIntensity = 0.16 + 0.44 * state.daylight + 0.04 * state.twilight;
       }
 
-      const horizonDay = new B.Color3(0.40, 0.59, 0.66);
-      const horizonDusk = new B.Color3(0.40, 0.19, 0.20);
-      const horizonNight = new B.Color3(0.012, 0.023, 0.055);
-      const fogColor = B.Color3.Lerp(horizonNight, horizonDay, state.daylight);
-      fogColor.copyFrom(B.Color3.Lerp(fogColor, horizonDusk, state.twilight * 0.78));
-      if (storm) fogColor.copyFrom(B.Color3.Lerp(fogColor, new B.Color3(0.18, 0.22, 0.27), 0.55));
+      const horizonDay = this._horizonDay, horizonDusk = this._horizonDusk, horizonNight = this._horizonNight;
+      const fogColor = this._fogColor;
+      const duskBlend = state.twilight * 0.78, stormBlend = storm ? 0.55 : 0;
+      let fogR = mix(horizonNight.r, horizonDay.r, state.daylight);
+      let fogG = mix(horizonNight.g, horizonDay.g, state.daylight);
+      let fogB = mix(horizonNight.b, horizonDay.b, state.daylight);
+      fogR = mix(fogR, horizonDusk.r, duskBlend);
+      fogG = mix(fogG, horizonDusk.g, duskBlend);
+      fogB = mix(fogB, horizonDusk.b, duskBlend);
+      fogColor.r = mix(fogR, 0.18, stormBlend);
+      fogColor.g = mix(fogG, 0.22, stormBlend);
+      fogColor.b = mix(fogB, 0.27, stormBlend);
       this.scene.fogMode = B.Scene.FOGMODE_EXP;
       this.scene.fogColor.copyFrom(fogColor);
       const climateBoost = this.fogClimate === 'fjord' ? 0.22 : (this.fogClimate === 'coast' ? 0.10 : 0);
       this.scene.fogDensity = clamp(this.baseFogDensity *
         (1 + state.twilight * 0.60 + state.night * 0.22 + climateBoost + extraFog), 0.00035, 0.00155);
-      this.scene.clearColor = new B.Color4(fogColor.r * 0.70, fogColor.g * 0.70, fogColor.b * 0.78, 1);
+      const clearColor = this._clearColor;
+      clearColor.r = fogColor.r * 0.70; clearColor.g = fogColor.g * 0.70;
+      clearColor.b = fogColor.b * 0.78; clearColor.a = 1;
+      this.scene.clearColor.copyFrom(clearColor);
 
       if (this.sunDisc && this.sunHalo) {
         const visible = clamp(state.daylight * 0.88 + state.twilight * 0.36, 0, 1);
-        const point = sunVector.scale(680);
+        const point = this._sunPoint, haloPoint = this._sunHaloPoint;
+        point.x = sun.x * 680; point.y = sun.y * 680; point.z = sun.z * 680;
+        haloPoint.x = point.x * 1.012; haloPoint.y = point.y * 1.012; haloPoint.z = point.z * 1.012;
         this.sunDisc.position.copyFrom(point);
-        this.sunHalo.position.copyFrom(point.scale(1.012));
+        this.sunHalo.position.copyFrom(haloPoint);
         this.sunDisc.visibility = visible;
         this.sunHalo.visibility = visible;
         const material = this.sunDisc.material;
@@ -646,9 +723,11 @@
       }
       if (this.moonDisc && this.moonHalo) {
         const visible = state.night * (1 - storm * 0.58);
-        const point = moonVector.scale(670);
+        const point = this._moonPoint, haloPoint = this._moonHaloPoint;
+        point.x = -sun.x * 670; point.y = -sun.y * 670; point.z = -sun.z * 670;
+        haloPoint.x = point.x * 1.018; haloPoint.y = point.y * 1.018; haloPoint.z = point.z * 1.018;
         this.moonDisc.position.copyFrom(point);
-        this.moonHalo.position.copyFrom(point.scale(1.018));
+        this.moonHalo.position.copyFrom(haloPoint);
         this.moonDisc.visibility = visible;
         this.moonHalo.visibility = visible;
         this.moonDisc.setEnabled(visible > 0.025);
@@ -682,32 +761,41 @@
         this.cloudB.vOffset = (this.elapsedSeconds * 0.000012) % 1;
       }
       if (this.renderPipeline && this.renderPipeline.imageProcessing) {
-        const exposure = mix(0.88, 1.08, state.daylight) + state.twilight * 0.055;
+        const exposure = mix(1.12, 1.08, state.daylight) + state.twilight * 0.055;
         this.renderPipeline.imageProcessing.exposure = exposure;
         this.renderPipeline.imageProcessing.contrast = mix(1.08, 1.02, state.night);
       }
       if (this.scene.imageProcessingConfiguration) {
-        this.scene.imageProcessingConfiguration.exposure = mix(0.88, 1.08, state.daylight) + state.twilight * 0.055;
+        this.scene.imageProcessingConfiguration.exposure = mix(1.12, 1.08, state.daylight) + state.twilight * 0.055;
         this.scene.imageProcessingConfiguration.contrast = mix(1.08, 1.02, state.night);
       }
       if (this.waterMaterial) {
-        const waterDay = new B.Color3(0.70, 0.82, 0.88);
-        const waterDusk = new B.Color3(0.62, 0.39, 0.31);
-        const waterNight = new B.Color3(0.18, 0.27, 0.43);
-        const waterColor = B.Color3.Lerp(waterNight, waterDay, state.daylight);
-        waterColor.copyFrom(B.Color3.Lerp(waterColor, waterDusk, state.twilight * 0.72));
+        const waterDay = this._waterDay, waterDusk = this._waterDusk, waterNight = this._waterNight;
+        const waterColor = this._waterColor, duskBlend = state.twilight * 0.72;
+        waterColor.r = mix(waterNight.r, waterDay.r, state.daylight);
+        waterColor.g = mix(waterNight.g, waterDay.g, state.daylight);
+        waterColor.b = mix(waterNight.b, waterDay.b, state.daylight);
+        waterColor.r = mix(waterColor.r, waterDusk.r, duskBlend);
+        waterColor.g = mix(waterColor.g, waterDusk.g, duskBlend);
+        waterColor.b = mix(waterColor.b, waterDusk.b, duskBlend);
         this.waterMaterial.specularColor.copyFrom(waterColor);
         if (this.waterMaterial.reflectionFresnelParameters) {
           this.waterMaterial.reflectionFresnelParameters.rightColor.copyFrom(waterColor);
         }
         if (this.waterMaterial.diffuseFresnelParameters) {
           this.waterMaterial.diffuseFresnelParameters.rightColor.copyFrom(
-            B.Color3.Lerp(new B.Color3(0.10, 0.17, 0.28), new B.Color3(0.66, 0.82, 0.87), state.daylight));
+            this._waterDeep.copyFrom(this._waterDeep);
+          const shallow = this._waterShallow;
+          this.waterMaterial.diffuseFresnelParameters.rightColor.r = mix(this._waterDeep.r, shallow.r, state.daylight);
+          this.waterMaterial.diffuseFresnelParameters.rightColor.g = mix(this._waterDeep.g, shallow.g, state.daylight);
+          this.waterMaterial.diffuseFresnelParameters.rightColor.b = mix(this._waterDeep.b, shallow.b, state.daylight);
         }
       }
       if (this.windowMaterial && this.windowMaterial.emissiveColor) {
         const glow = 0.08 + state.night * 0.52;
-        this.windowMaterial.emissiveColor.copyFrom(new B.Color3(0.8 * glow, 0.38 * glow, 0.10 * glow));
+        const glowColor = this._windowGlowColor;
+        glowColor.r = 0.8 * glow; glowColor.g = 0.38 * glow; glowColor.b = 0.10 * glow;
+        this.windowMaterial.emissiveColor.copyFrom(glowColor);
       }
       if (this.godRays) {
         const rayFactor = state.twilight * state.daylight * (1 - storm * 0.85);
