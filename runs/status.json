@@ -1,0 +1,4 @@
+{
+  "schema": 1,
+  "description": "Estado de progreso por ejecución; los ficheros se publican desde GitHub Actions."
+}
