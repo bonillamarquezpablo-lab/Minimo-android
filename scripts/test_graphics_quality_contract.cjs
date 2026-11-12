@@ -23,8 +23,9 @@ for(const marker of [
   'reflectionFilteredMeshCount',
   'tinyReflectionDetail=vertexCount<96',
   'engine.setHardwareScalingLevel(1/qualityDprCurrent)',
-  'fps<55',
-  'fps>=59',
+  'fps<32',
+  'fps<46',
+  'fps>=57',
   'size=highHeadroomQualityMobile?1024:512',
   'highHeadroomQualityMobile?2048:1024',
   'const size=highHeadroomQualityMobile?512:256'
