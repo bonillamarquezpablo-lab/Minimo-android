@@ -23,6 +23,7 @@ for(const marker of [
 ])assert.ok(app.includes(marker),'Missing Inspector Center application feature: '+marker);
 assert.ok(!app.includes('localStorage'),'The dashboard must not persist GitHub tokens in localStorage.');
 assert.ok(app.includes('Authorization:\'Bearer \'+currentToken'),'The token must be sent only in the direct GitHub API request.');
+assert.ok(app.includes("$('runArtifactsLink').href=run.html_url+'#artifacts'"),'The evidence link must open the active run artifacts.');
 assert.ok(app.includes("const jobsInterval=run.status==='in_progress'?12000:30000"),'Active runs must refresh real GitHub job steps every 12 seconds.');
 assert.ok(app.includes("$('progressValue').textContent=indeterminate?'En curso':percent+'%'"),'A single long-running step must not be displayed as a misleading 0%.');
 assert.ok(app.includes("running.name==='Run the single unified inspector'"),'The monolithic inspector phase must use indeterminate progress, not a misleading percentage.');
