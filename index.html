@@ -9886,9 +9886,13 @@ function createRealWeapon(type='axe'){
   const gullUrl='./assets/models/Seagull.glb';
   try{
    const controller=new AbortController(),downloadTimer=setTimeout(()=>controller.abort(),45000);
-   let response;try{response=await fetch(gullUrl,{mode:'cors',cache:'force-cache',credentials:'omit',signal:controller.signal});}catch(error){if(error&&error.name==='AbortError')throw new Error('Gaviotas: descarga agotó el plazo de 45 segundos.');throw error;}finally{clearTimeout(downloadTimer);}
-   if(!response.ok)throw new Error('HTTP '+response.status);
-   const blob=await response.blob();if(!(blob.size>100000))throw new Error('GLB de gaviota vacío o incompleto');
+   let response,blob;try{
+    response=await fetch(gullUrl,{mode:'cors',cache:'force-cache',credentials:'omit',signal:controller.signal});
+    if(!response.ok)throw new Error('HTTP '+response.status);
+    blob=await response.blob();
+   }catch(error){if(error&&error.name==='AbortError')throw new Error('Gaviotas: descarga agotó el plazo de 45 segundos.');throw error;}
+   finally{clearTimeout(downloadTimer);}
+   if(!(blob&&blob.size>100000))throw new Error('GLB de gaviota vacío o incompleto');
    const objectUrl=URL.createObjectURL(blob);let container;try{container=await timedGlbStage('Gaviotas','importación Babylon',()=>B.SceneLoader.LoadAssetContainerAsync('',objectUrl,scene,null,'.glb'),blob.size);}finally{URL.revokeObjectURL(objectUrl);}
    if(!container||!container.instantiateModelsToScene)throw new Error('Babylon no pudo crear el contenedor de gaviota');
    const realBirds=[];
