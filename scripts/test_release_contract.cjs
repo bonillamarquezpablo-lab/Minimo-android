@@ -21,7 +21,7 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
 }
 assert.equal(shellVersion,expectedVersion,"The service-worker cache must be synchronized with the packaged release.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.284"\)/,"The build must promote every visible source version to 0.6.285.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.285"\)/,"The build must promote every visible source version to 0.6.285.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?1.50:(isTouchDevice?1.25:1.85)"),"High-headroom touch devices must start with a balanced native render scale.");
 assert.ok(buildSite.includes("qualityDprStableSamples>=3") && buildSite.includes("qualityDprSlowSamples>=1"),"Resolution must react quickly to drops and recover gradually.");
 assert.ok(buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"Adaptive resolution must be applied through Babylon hardware scaling.");
@@ -36,7 +36,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.20") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?(highHeadroomQualityMobile?30:20):8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.match(buildSite,/game_version = "0\.6\.284"/,"The build must validate and package 0.6.285.");
+assert.match(buildSite,/game_version = "0\.6\.285"/,"The build must validate and package 0.6.285.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
