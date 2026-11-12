@@ -8321,8 +8321,8 @@ function createRealWeapon(type='axe'){
     effect.setFloat('sharpness',.42);
    };
    fsr1Active=true;
-   window.__ELSN_FSR1={enabled:true,method:'EASU + RCAS',inputScale:()=>fsr1InputScale,source:()=>({width:fsr1SourcePostProcess.width,height:fsr1SourcePostProcess.height}),output:()=>({width:fsr1RcasPostProcess.width,height:fsr1RcasPostProcess.height})};
-   console.info('EL SIN NOMBRE: FidelityFX FSR1 WebGL activo (EASU + RCAS).',{inputScale:fsr1InputScale,msaa:fsr1SourcePostProcess.samples,outputDpr:deviceDpr});
+   window.__ELSN_FSR1={enabled:true,method:'EASU + RCAS',outputDpr:qualityDpr,inputScale:()=>fsr1InputScale,source:()=>({width:fsr1SourcePostProcess.width,height:fsr1SourcePostProcess.height}),output:()=>({width:fsr1RcasPostProcess.width,height:fsr1RcasPostProcess.height})};
+   console.info('EL SIN NOMBRE: FidelityFX FSR1 WebGL activo (EASU + RCAS).',{inputScale:fsr1InputScale,msaa:fsr1SourcePostProcess.samples,outputDpr:qualityDpr});
   }catch(fsr1Error){
    console.error('FSR1 no pudo inicializarse; se restaura el perfil de calidad convencional.',fsr1Error);
    for(const postProcess of [fsr1RcasPostProcess,fsr1EasuPostProcess,fsr1SourcePostProcess]){
