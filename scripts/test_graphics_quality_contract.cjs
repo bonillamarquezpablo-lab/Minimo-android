@@ -13,14 +13,9 @@ for(const marker of [
   'qualityDprFloor=fsr1Candidate ? .48',
   'qualityDprCeiling=fsr1Candidate ? .74',
   'qualityDpr=fsr1Candidate?deviceDpr:',
-  'norseFsr1EASU',
-  'norseFsr1RCAS',
-  'FsrEasuF(',
-  'FsrRcasF(',
   'fsr1SourcePostProcess._options=fsr1InputScale',
   'renderPipeline.fxaaEnabled=!fsr1Candidate',
   'renderPipeline.imageProcessingEnabled=false',
-  'window.__ELSN_FSR1',
   'qualityDprStableSamples>=3',
   'qualityDprSlowSamples>=1',
   'fps<32',
@@ -28,7 +23,6 @@ for(const marker of [
   'const targetFrameRate=60',
   'renderPipeline.fxaaEnabled=!fsr1Candidate',
   'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?1:4,maxSamples))',
-  'fsr1SourcePostProcess.samples=Math.max(1,Math.min(2,maxFsrSamples))',
   'renderPipeline.sharpenEnabled=true',
   'renderPipeline.sharpen.edgeAmount=.34',
   'list.length<260',
@@ -46,6 +40,8 @@ for(const marker of [
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
 assert.ok(gameSource.includes('FsrEasuF(') && gameSource.includes('FsrRcasF('), 'FSR1 EASU and RCAS shaders must be embedded in the game source.');
+assert.ok(gameSource.includes('norseFsr1EASU') && gameSource.includes('norseFsr1RCAS') && gameSource.includes('window.__ELSN_FSR1'), 'FSR1 must expose both real post-process stages and runtime diagnostics.');
+assert.ok(gameSource.includes('fsr1SourcePostProcess.samples=Math.max(1,Math.min(2,maxFsrSamples))'), 'The FSR1 source pass must use available MSAA for its anti-aliased input.');
 assert.ok(builder.includes('isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52'),'The dedicated Performance profile must keep its existing resolution safeguards.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"),"Quality profile antialiasing must remain enabled.");
 assert.ok(validator.includes('missing_graphics_quality'),'The release validator must reject a missing quality uplift.');
