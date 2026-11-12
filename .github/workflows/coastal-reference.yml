@@ -7,6 +7,15 @@ on:
     branches: [main, feature/unified-atmosphere-system, test/coastal-reference-0.6.272]
   workflow_dispatch:
     inputs:
+      inspection_level:
+        description: 'Nivel de inspección: rápido para cambios pequeños, completo para cambios importantes o profundo antes de publicar.'
+        required: true
+        type: choice
+        options:
+          - quick
+          - complete
+          - deep
+        default: quick
       before_ref:
         description: 'Rama o etiqueta que sirve como ANTES de la comparación visual.'
         required: true
@@ -78,6 +87,7 @@ jobs:
           echo "Hrafn baseline: $BASE_REF ($BASE_SHA)"
 
       - name: Build the baseline game in an isolated worktree
+        if: github.event_name != 'workflow_dispatch' || inputs.inspection_level == 'deep'
         env:
           HRAFN_BASE_SHA: ${{ steps.baseline.outputs.sha }}
         run: |
@@ -116,15 +126,19 @@ jobs:
           node -e "const fs=require('node:fs');const {chromium}=require('playwright');const executable=chromium.executablePath();if(!fs.existsSync(executable))throw new Error('Chromium binary missing: '+executable);console.log('Chromium ready:',executable)"
 
       - name: Start baseline and candidate game servers for the unified inspection
+        env:
+          INSPECTOR_LEVEL: ${{ inputs.inspection_level || 'deep' }}
         run: |
-          python3 -m http.server 4176 --directory "$RUNNER_TEMP/hrafn-before-dist" > /tmp/elsn-hrafn-before-http.log 2>&1 &
-          echo $! > /tmp/elsn-hrafn-before-http.pid
+          if [ "$INSPECTOR_LEVEL" = "deep" ]; then
+            python3 -m http.server 4176 --directory "$RUNNER_TEMP/hrafn-before-dist" > /tmp/elsn-hrafn-before-http.log 2>&1 &
+            echo $! > /tmp/elsn-hrafn-before-http.pid
+          fi
           python3 -m http.server 4175 --directory dist > /tmp/elsn-hrafn-after-http.log 2>&1 &
           echo $! > /tmp/elsn-hrafn-after-http.pid
           for attempt in $(seq 1 45); do
             BEFORE_OK=0
             AFTER_OK=0
-            curl --fail --silent http://127.0.0.1:4176/ > /dev/null && BEFORE_OK=1 || true
+            if [ "$INSPECTOR_LEVEL" = "deep" ]; then curl --fail --silent http://127.0.0.1:4176/ > /dev/null && BEFORE_OK=1 || true; else BEFORE_OK=1; fi
             curl --fail --silent http://127.0.0.1:4175/ > /dev/null && AFTER_OK=1 || true
             if [ "$BEFORE_OK" = "1" ] && [ "$AFTER_OK" = "1" ]; then exit 0; fi
             sleep 1
@@ -136,10 +150,11 @@ jobs:
       - name: Run the single unified inspector
         env:
           INSPECTOR_TEST_URL: http://127.0.0.1:4175/
-          HRAFN_BEFORE_URL: http://127.0.0.1:4176/
+          HRAFN_BEFORE_URL: ${{ inputs.inspection_level == 'deep' && 'http://127.0.0.1:4176/' || '' }}
           HRAFN_AFTER_URL: http://127.0.0.1:4175/
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
           CAPTURE_SEED: '20261110'
+          INSPECTOR_LEVEL: ${{ inputs.inspection_level || 'deep' }}
         run: |
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             export CAPTURE_PLAN_JSON="$CAPTURE_PLAN_INPUT"
