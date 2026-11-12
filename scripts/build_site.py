@@ -737,7 +737,7 @@ def main() -> None:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
     html = html.replace(quality_profile_marker, quality_profile_code, 1)
 
-    quality_adaptive_marker = r""" let fpsSample=0,qualityDprCurrent=fsr1Candidate?fsr1InputScale:qualityDpr;
+    quality_adaptive_marker = r""" let fpsSample=0,qualityDprCurrent=qualityDpr;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
  const targetFrameRate=120;
  function adaptRenderQuality(dt){
