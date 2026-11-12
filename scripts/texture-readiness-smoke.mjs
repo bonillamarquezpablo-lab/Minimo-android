@@ -92,7 +92,7 @@ function classifyUnregisteredCandidate(item){
  if(name==='DetailedNorseHearth')return {classification:'hearth-prop',disposition:'decorative-prop'};
  if(/^FirewoodRack_\d+$/.test(name))return {classification:'firewood-rack-prop',disposition:'decorative-prop'};
  if(/^NorseThingstead_\d+$/.test(name))return {classification:'intentional-settlement-hall',disposition:'known-non-habitable-building'};
- if(/^NorseCoastal(?:Pier|Beacon)_\\d+$/.test(name))return {classification:'intentional-outer-island-landmark',disposition:'known-non-habitable-building'};
+ if(/^NorseCoastal(?:Pier|Beacon)_\d+$/.test(name))return {classification:'intentional-outer-island-landmark',disposition:'known-non-habitable-building'};
  return {classification:'unresolved',disposition:'requires-manual-review'};
 }
 function verdict(){const diag=manifest.textureDiagnostics||{},coverage=diag.usageCoverage||{},pending=diag.pendingTextures||[],unattributed=pending.filter(t=>!t.orphan&&(!Array.isArray(t.references)||!t.references.length)),cameraPending=diag.cameraPendingTextures||[],ready=manifest.readiness||{};const visualEvidenceAvailable=!!manifest.screenshot||manifest.visualCaptureDeferred===true;if(!visualEvidenceAvailable||!manifest.cameraVerification?.matches)return 'fail';if(coverage.complete!==true||unattributed.length)return 'inconclusive';if(cameraPending.length||ready.converged!==true||ready.sceneReady!==true)return 'fail';return ready.verdict==='pass'?'pass':'inconclusive';}
