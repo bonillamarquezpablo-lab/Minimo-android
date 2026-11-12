@@ -93,10 +93,33 @@ async function main() {
     manifest.menuFlowMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
     stepStartedAt = performance.now();
-    await page.waitForFunction(() => !!window.__ELSN_PLAYER_STARTUP_SMOKE__, undefined, {
-      timeout: 90000,
+    // No convertir un fallo de arranque en una espera opaca de 90 s.
+    // El boot-failed y el recorder global contienen el recurso/etapa que detuvo el juego.
+    await page.waitForFunction(() => !!window.__ELSN_PLAYER_STARTUP_SMOKE__ ||
+      document.body.classList.contains('boot-failed'), undefined, {
+      timeout: 180000,
       polling: 250
+    }).catch(async error => {
+      const diagnostics = await page.evaluate(() => ({
+        bodyClass: document.body.className,
+        progress: document.querySelector('#loadingProgress')?.style.width || null,
+        loadText: document.querySelector('#loadText')?.textContent || null,
+        loadHelp: document.querySelector('#loadHelp')?.textContent || null,
+        recorder: window.__elSinNombreStartupSmoke || null
+      }));
+      throw new Error('El arranque no registró el helper ni mostró el panel de error: ' +
+        JSON.stringify(diagnostics) + ' · ' + String(error?.message || error));
     });
+    const bootstrap = await page.evaluate(() => ({
+      helperReady: !!window.__ELSN_PLAYER_STARTUP_SMOKE__,
+      bootFailed: document.body.classList.contains('boot-failed'),
+      loadHelp: document.querySelector('#loadHelp')?.textContent || null,
+      recorder: window.__elSinNombreStartupSmoke || null
+    }));
+    manifest.bootstrap = bootstrap;
+    assert.ok(bootstrap.helperReady,
+      'El juego mostró un fallo antes de preparar el modelo protagonista: ' +
+      JSON.stringify(bootstrap));
     manifest.helperReadyMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
     manifest.renderer = await page.evaluate(() => {
