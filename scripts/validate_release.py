@@ -103,6 +103,8 @@ def main() -> None:
         fail("El sistema atmosférico debe cargarse antes del runtime principal.")
     if "window.__ELSN_ATMOSPHERE_CONTROLS" not in index_html or "atmosphereSystem.update(dt)" not in index_html:
         fail("El reloj atmosférico no está conectado al bucle de juego y a sus controles.")
+    if "babylonEngineVersion:String(B.Engine.Version||'unknown')" not in index_html or "webGpuApiAvailable:typeof navigator.gpu!=='undefined'" not in index_html or "engineBackend:graphicsContext&&" not in index_html:
+        fail("El diagnóstico debe identificar la versión real de Babylon, el backend WebGL y la disponibilidad de la API WebGPU.")
     if 'id="game-build-version"' not in index_html or f'v{EXPECTED_VERSION}</span>' not in index_html:
         fail("La pantalla no muestra la versión exacta en una etiqueta discreta.")
     if 'font:600 7px/1.2 system-ui,sans-serif' not in index_html or 'color:rgba(226,196,135,.58)' not in index_html:
