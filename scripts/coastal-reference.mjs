@@ -38,7 +38,7 @@ async function captureAtmospherePng(page, phaseId) {
       api.render();
       return api.captureCanvas();
     }), 30000, phaseId + ' WebGL canvas render/readback');
-    const match = /^data:image\\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl || '');
+    const match = /^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl || '');
     if (match) {
       const bytes = Buffer.from(match[1], 'base64');
       if (validPng(bytes)) return { bytes, method: 'game-canvas-readback', attempts };
