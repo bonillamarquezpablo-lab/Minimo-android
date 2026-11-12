@@ -112,7 +112,7 @@ jobs:
           fi
           BASELINE_SHA="$HRAFN_BASE_SHA"
           BASELINE_BUILT=0
-          for attempt in 1 2 3 4 5 6 7 8; do
+          for attempt in $(seq 1 32); do
             git worktree add --detach "$RUNNER_TEMP/hrafn-before-source" "$BASELINE_SHA"
             BASELINE_VERSION="$(sed -n 's/^EXPECTED_VERSION = "\([^"]*\)"/\1/p' "$RUNNER_TEMP/hrafn-before-source/scripts/validate_release.py" | head -n1)"
             if [ "$BASELINE_VERSION" = "$CANDIDATE_VERSION" ]; then
@@ -134,7 +134,7 @@ jobs:
             BASELINE_SHA="$NEXT_SHA"
           done
           if [ "$BASELINE_BUILT" -ne 1 ]; then
-            echo "No distinct buildable baseline found in the eight-commit recovery window."
+            echo "No distinct buildable baseline found in the 32-commit recovery window."
             exit 1
           fi
           echo "Hrafn A/B baseline selected: $BASELINE_SHA (release $BASELINE_VERSION; candidate $CANDIDATE_VERSION)"
