@@ -169,16 +169,28 @@ async function bootGame(label, url) {
   const startupStartedAt = Date.now();
   try {
     await page.waitForFunction(
-      () => window.__ELSN_TEST__ && window.__elSinNombreStartupSmoke &&
-        window.__elSinNombreStartupSmoke.worldReady === true,
+      () => window.__elSinNombreStartupSmoke?.worldReady === true ||
+        !!document.querySelector('#intro.open'),
       undefined,
       { timeout: 240000, polling: 500 }
+    );
+    // Older baseline builds may expose the visible ready intro a frame before
+    // their optional test API is attached. Treat UI readiness and test-API
+    // readiness as separate gates so failures are attributed accurately.
+    await page.waitForFunction(
+      () => !!window.__ELSN_TEST__ &&
+        typeof window.__ELSN_TEST__.prepareCaptureFrame === 'function' &&
+        typeof window.__ELSN_TEST__.captureCanvas === 'function',
+      undefined,
+      { timeout: 30000, polling: 250 }
     );
   } catch (error) {
     const startupDiagnostics = await withTimeout(page.evaluate(() => ({
       readyState: document.readyState,
       bodyClass: document.body?.className || '',
       testApiAvailable: !!window.__ELSN_TEST__,
+      testApiMethods: window.__ELSN_TEST__ ? Object.keys(window.__ELSN_TEST__).filter(key => /capture|render|prepare/i.test(key)) : [],
+      introOpen: !!document.querySelector('#intro.open'),
       startupSmoke: window.__elSinNombreStartupSmoke || null,
       qualitySelectorVisible: !!document.querySelector('#chooseQuality'),
       continueButtonVisible: !!document.querySelector('#continueUnnamed'),
