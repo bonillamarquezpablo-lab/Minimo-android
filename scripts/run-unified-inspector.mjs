@@ -12,12 +12,22 @@ const HRAFN_AFTER_URL=process.env.HRAFN_AFTER_URL||'';
 const PLAN=process.env.CAPTURE_PLAN_JSON||fs.readFileSync(path.join(ROOT,'scripts/scene-capture-plan.json'),'utf8');
 const phases=[];
 const INSPECTOR_LEVEL=process.env.INSPECTOR_LEVEL||'deep';
+const SKIP_VISUAL_CAPTURES=process.env.INSPECTOR_SKIP_VISUAL_CAPTURES==='1';
 const LEVEL_RANK={quick:1,complete:2,deep:3};
 if(!(INSPECTOR_LEVEL in LEVEL_RANK))throw new Error('INSPECTOR_LEVEL must be quick, complete or deep.');
 function phaseLevel(name){
   if(/Comparación visual ANTES\/DESPUÉS|Informe visual ANTES\/DESPUÉS/.test(name))return 3;
   if(/Referencias costeras|Inventario completo|Informe visual unificado|Lámina de referencias/.test(name))return 2;
   return 1;
+}
+function phaseSkipReason(name){
+  if(SKIP_VISUAL_CAPTURES&&phaseLevel(name)>1){
+    return 'Visual capture phases temporarily bypassed for this candidate smoke run.';
+  }
+  if(phaseLevel(name)>LEVEL_RANK[INSPECTOR_LEVEL]){
+    return 'Not required by '+INSPECTOR_LEVEL+' inspection level.';
+  }
+  return null;
 }
 const startedAt=new Date().toISOString();
 const started=Date.now();
@@ -68,7 +78,8 @@ function runNodePhase(name,script,env={},timeoutMs=25*60*1000){
   return new Promise(resolve=>{
     const row={name,script,startedAt:new Date().toISOString(),status:'running',durationMs:null,exitCode:null,error:null};
     phases.push(row);
-    if(phaseLevel(name)>LEVEL_RANK[INSPECTOR_LEVEL]){Object.assign(row,{status:'skipped',finishedAt:new Date().toISOString(),durationMs:0,error:'Not required by '+INSPECTOR_LEVEL+' inspection level.'});writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});console.log('[UNIFIED_INSPECTOR] SKIP '+name+' — level '+INSPECTOR_LEVEL);return resolve(row);}
+    const skipReason=phaseSkipReason(name);
+    if(skipReason){Object.assign(row,{status:'skipped',finishedAt:new Date().toISOString(),durationMs:0,error:skipReason});writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,visualCapturesSkipped:SKIP_VISUAL_CAPTURES,phases,finishedAt:null});console.log('[UNIFIED_INSPECTOR] SKIP '+name+' — '+skipReason);return resolve(row);}
     writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});
     console.log('\\n[UNIFIED_INSPECTOR] START '+name+' — '+script);
     const phaseStarted=Date.now();
@@ -108,7 +119,8 @@ function runPythonPhase(name,script,arg,timeoutMs=5*60*1000){
   return new Promise(resolve=>{
     const row={name,script,startedAt:new Date().toISOString(),status:'running',durationMs:null,exitCode:null,error:null};
     phases.push(row);
-    if(phaseLevel(name)>LEVEL_RANK[INSPECTOR_LEVEL]){Object.assign(row,{status:'skipped',finishedAt:new Date().toISOString(),durationMs:0,error:'Not required by '+INSPECTOR_LEVEL+' inspection level.'});writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});console.log('[UNIFIED_INSPECTOR] SKIP '+name+' — level '+INSPECTOR_LEVEL);return resolve(row);}
+    const skipReason=phaseSkipReason(name);
+    if(skipReason){Object.assign(row,{status:'skipped',finishedAt:new Date().toISOString(),durationMs:0,error:skipReason});writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,visualCapturesSkipped:SKIP_VISUAL_CAPTURES,phases,finishedAt:null});console.log('[UNIFIED_INSPECTOR] SKIP '+name+' — '+skipReason);return resolve(row);}
     const phaseStarted=Date.now();
     let child;
     try{child=spawn(process.env.PYTHON||'python3',[script,arg],{cwd:ROOT,env:process.env,stdio:'inherit',detached:process.platform!=='win32'});}
@@ -177,16 +189,19 @@ async function main(){
   const player=summaryFrom('artifacts/player-startup/manifest.json',m=>({modelReady:m.finalState?.modelReady,realPlayerMeshCount:m.finalState?.realPlayerMeshCount,failure:m.failure}));
   const beforeAfter=summaryFrom('artifacts/hrafn-before-after/manifest.json',m=>({method:m.method,seed:m.captureSeed,phases:m.phases?.map(p=>({id:p.id,hour:p.hour,comparison:p.comparison||null})),warnings:m.warnings,failure:m.failure}));
   const report={
-    schema:1,mode:'tiered-single-entrypoint-inspection',level:INSPECTOR_LEVEL,readOnlyForMainCapture:true,
-    note:'Las comprobaciones de reparación se ejecutan en navegadores de prueba desechables; no modifican la partida ni los archivos publicados.',
+    schema:1,mode:'tiered-single-entrypoint-inspection',level:INSPECTOR_LEVEL,readOnlyForMainCapture:true,visualCapturesSkipped:SKIP_VISUAL_CAPTURES,
+    note:SKIP_VISUAL_CAPTURES?'Pasada temporal de compilación y auditoría de arranque: las capturas costeras, las panorámicas de escena y la comparación Hrafn se han omitido; el código de captura permanece intacto.':'Las comprobaciones de reparación se ejecutan en navegadores de prueba desechables; no modifican la partida ni los archivos publicados.',
     startedAt,finishedAt:new Date().toISOString(),durationMs:Date.now()-started,
     baseUrl:BASE_URL,phases,results:{player,texture,grounding,coastal,custom,beforeAfter},
     files:[
       'player-startup/manifest.json','texture-readiness-smoke/manifest.json',
-      'structure-grounding/manifest.json','coastal-reference/manifest.json',
-      'custom-scene-captures/manifest.json','custom-scene-captures/inspection-report.md',
-      'custom-scene-captures/contact-sheet.png','custom-scene-captures/vision-review-index.json',
-      ...(INSPECTOR_LEVEL==='deep'?[
+      'structure-grounding/manifest.json',
+      ...(SKIP_VISUAL_CAPTURES?[]:[
+        'coastal-reference/manifest.json','custom-scene-captures/manifest.json',
+        'custom-scene-captures/inspection-report.md','custom-scene-captures/contact-sheet.png',
+        'custom-scene-captures/vision-review-index.json'
+      ]),
+      ...(INSPECTOR_LEVEL==='deep'&&!SKIP_VISUAL_CAPTURES?[
         'hrafn-before-after/manifest.json','hrafn-before-after/report.md',
         'hrafn-before-after/before/','hrafn-before-after/after/',
         'hrafn-before-after/comparison-dawn.jpg','hrafn-before-after/comparison-noon.jpg',
