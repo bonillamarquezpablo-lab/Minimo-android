@@ -40,7 +40,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: scene-capture-${{ github.event.pull_request.number || github.ref }}${{ github.event_name == 'pull_request' && github.event.pull_request.number == 121 && ' -visual-skip-once' || '' }}
+  group: scene-capture-${{ github.event.pull_request.number || github.ref }}${{ github.event_name == 'pull_request' && github.event.pull_request.number == 121 && '-visual-skip-once' || '' }}
   cancel-in-progress: false
 
 jobs:
