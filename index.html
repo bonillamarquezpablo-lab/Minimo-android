@@ -12797,6 +12797,7 @@ function update(dt){
   recordStartupTask('Precarga de audio en segundo plano',audioLoadStarted,performance.now(),'fallback',{message:String(audioError&&audioError.message||audioError)});
   console.warn('La precarga de audio terminó con recursos no disponibles:',audioError);
  });
+ setLoadingProgress(85,'Precargando efectos de sonido…');
  try{
   audioPreloadResult=await startupAudioPreload;
   if(!audioPreloadResult.total||audioPreloadResult.failed||audioPreloadResult.pending)throw new Error('Efectos listos '+audioPreloadResult.ready+'/'+audioPreloadResult.total+', fallidos '+audioPreloadResult.failed+', pendientes '+audioPreloadResult.pending);
