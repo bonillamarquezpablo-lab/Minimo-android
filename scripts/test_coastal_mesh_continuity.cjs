@@ -21,7 +21,7 @@ assert.ok(build.includes('thresholdMeters=.05'),
   'Cross-mesh seam tolerance must be fixed at 5 cm.');
 assert.ok(build.includes('auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)'),
   'The browser test API must expose the cross-mesh audit.');
-assert.ok(release.includes('EXPECTED_VERSION = "0.6.289"'));
+assert.ok(release.includes('EXPECTED_VERSION = "0.6.290"'));
 assert.ok(build.includes('html = html.replace("0.6.274", "0.6.289")'));
 assert.ok(release.includes('SAGA DEL NORTE · CAPÍTULO I · 0.6.289'));
 assert.ok(release.includes('Capítulo I: Un hombre sin tierra · 0.6.289'));
