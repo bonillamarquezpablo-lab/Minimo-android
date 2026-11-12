@@ -8,6 +8,7 @@ const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 for(const marker of [
   'highTierGpuMatch=',
   'highHeadroomQualityMobile=',
+  '!isPerformanceMode&&isTouchDevice&&!constrainedHardware',
   'qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.40:1.80):1.85)',
   'qualityDprStableSamples>=6',
   'qualityDprSlowSamples>=2',
