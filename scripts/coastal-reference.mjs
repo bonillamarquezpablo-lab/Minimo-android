@@ -7,18 +7,32 @@ import { chromium } from 'playwright';
 const BASE_URL = process.env.COASTAL_TEST_URL || 'http://127.0.0.1:4173/';
 const OUT = path.resolve('artifacts/coastal-reference');
 
+async function withCaptureTimeout(promise, timeoutMs, label) {
+  let timer;
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(label + ' exceeded ' + timeoutMs + ' ms')), timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function captureAtmospherePng(page, phaseId) {
   const attempts = [];
   const validPng = bytes => Buffer.isBuffer(bytes) && bytes.length > 1000 &&
     bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const dataUrl = await page.evaluate(() => {
+      const dataUrl = await withCaptureTimeout(page.evaluate(() => {
         const api = window.__ELSN_TEST__;
         if (!api || typeof api.render !== 'function' || typeof api.captureCanvas !== 'function') return null;
         api.render();
         return api.captureCanvas();
-      });
+      }), 15000, phaseId + ' WebGL canvas render/readback');
       const match = /^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl || '');
       if (match) {
         const bytes = Buffer.from(match[1], 'base64');
@@ -34,17 +48,17 @@ async function captureAtmospherePng(page, phaseId) {
   // readback is unavailable. It does not modify the scene or its rendering quality.
   let session;
   try {
-    session = await page.context().newCDPSession(page);
-    const shot = await session.send('Page.captureScreenshot', {
+    session = await withCaptureTimeout(page.context().newCDPSession(page), 5000, phaseId + ' CDP session creation');
+    const shot = await withCaptureTimeout(session.send('Page.captureScreenshot', {
       format: 'png', fromSurface: true, captureBeyondViewport: false, optimizeForSpeed: true
-    });
+    }), 15000, phaseId + ' compositor PNG capture');
     const bytes = Buffer.from(shot.data || '', 'base64');
     if (validPng(bytes)) return { bytes, method: 'cdp-composited-frame', attempts };
     attempts.push({ method: 'cdp-composited-frame', success: false, bytes: bytes.length });
   } catch (error) {
     attempts.push({ method: 'cdp-composited-frame', success: false, error: String(error?.message || error) });
   } finally {
-    if (session) await session.detach().catch(() => {});
+    if (session) await withCaptureTimeout(session.detach(), 2000, phaseId + ' CDP session detach').catch(() => {});
   }
   throw new Error('No valid PNG could be captured for ' + phaseId + ': ' + JSON.stringify(attempts));
 }
