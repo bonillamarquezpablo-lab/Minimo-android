@@ -39,6 +39,7 @@ assert.match(html,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromis
 assert.match(html,/const lowMemoryNpcBudget=!!\(isUltraLowEndMobile\|\|isGalaxyA12LowEndMobile\|\|isGalaxyA12NachoPerformance\)/);
 assert.match(html,/await createRealGrass\(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ\)/);
 assert.match(html,/console\.info\('Hierba desactivada en modo Rendimiento\.'/);
+assert.match(html,/const animalCount=isPerformanceMode\?0:\(idx===0\?3:0\)/);
 
 // Music remains HTMLAudio; effects use the Web Audio context only after unlock.
 assert.match(html,/new Audio\(\);audio\.preload='auto';audio\.src=SOURCE/);
