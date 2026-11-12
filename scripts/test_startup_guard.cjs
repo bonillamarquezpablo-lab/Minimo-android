@@ -16,7 +16,7 @@ assert.ok(startupStatePosition>=0&&startupStatePosition<html.indexOf('function g
   'onShip must be initialized before the first coast diagnostics refresh.');
 assert.ok(startupStatePosition<html.indexOf('async function loadHumanViking(file=null)'),
   'gameStarted/startupAssetsReady must be initialized before the protagonist loader runs.');
-assert.doesNotMatch(html,/let health=100,[^\\n]*onShip=false/,
+assert.doesNotMatch(html,/let health=100,[^\\r\\n]*onShip=false/,
   'onShip must not be redeclared later in the game-state declaration.');
 assert.doesNotMatch(html,/let gameStarted=false/,'gameStarted must have a single early initialization.');
 assert.doesNotMatch(html,/firstFrameRendered=false,startupAssetsReady=false/,
