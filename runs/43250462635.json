@@ -57,10 +57,11 @@
       "name": "Informe visual unificado de estructuras",
       "script": "scripts/create_scene_capture_contact_sheet.py",
       "startedAt": "2026-11-12T15:51:58.111Z",
-      "status": "running",
-      "durationMs": null,
-      "exitCode": null,
-      "error": null
+      "status": "passed",
+      "durationMs": 2895,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-12T15:52:01.006Z"
     },
     {
       "name": "Lámina de referencias costeras",
@@ -71,6 +72,15 @@
       "exitCode": 1,
       "error": "exit=1 signal=none",
       "finishedAt": "2026-11-12T15:51:58.163Z"
+    },
+    {
+      "name": "Comparación gráfica móvil S26 Ultra ANTES/DESPUÉS + FPS — cuatro fases horarias",
+      "script": "scripts/hrafn-before-after.mjs",
+      "startedAt": "2026-11-12T15:52:01.007Z",
+      "status": "running",
+      "durationMs": null,
+      "exitCode": null,
+      "error": null
     }
   ],
   "finishedAt": null
