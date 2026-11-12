@@ -1,0 +1,25 @@
+name: Inspector Center — dashboard checks
+
+on:
+  pull_request:
+    branches: [feature/tiered-inspector-levels]
+
+permissions:
+  contents: read
+
+jobs:
+  dashboard:
+    name: Validate independent dashboard and progress publisher
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout proposed dashboard
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate inspector runner syntax
+        run: node --check scripts/run-unified-inspector.mjs
+      - name: Validate dashboard script and security contract
+        run: node scripts/test_inspector_dashboard_contract.cjs
