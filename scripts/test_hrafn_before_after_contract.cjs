@@ -36,7 +36,8 @@ for (const token of [
 }
 
 for (const token of [
-  'feature/hrafn-before-after-inspector',
+  'feature/unified-atmosphere-system',
+  "default: 'feature/unified-atmosphere-system'",
   'Build the baseline game in an isolated worktree',
   '4176',
   'HRAFN_BEFORE_URL: http://127.0.0.1:4176/',
