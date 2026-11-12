@@ -222,7 +222,7 @@ async function main(){
       '- Semilla compartida: **'+(beforeAfter?.seed??'no disponible')+'**',
       '- Informe: **artifacts/hrafn-before-after/report.md**',''
     ]:[]),
-    '## Lista de estructuras detectadas','','| Código | ID interno | Nombre | Tipo | Isla | X | Y | Z | Mallas |
+    '## Lista de estructuras detectadas','','| Código | ID interno | Nombre | Tipo | Isla | X | Y | Z | Mallas |',
     '|---|---:|---|---|---|---:|---:|---:|---:|'
   );
   for(const item of (custom?.structures||[])){
