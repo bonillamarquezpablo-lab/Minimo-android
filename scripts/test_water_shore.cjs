@@ -193,9 +193,11 @@ assert.match(html,/function updateActiveIslandGrass\(dt\)/,"Quality-only active-
 assert.match(html,/Math\.hypot\(focus\.x-grassStreamCenterX,focus\.z-grassStreamCenterZ\)>=GRASS_STREAM_RECENTER_DISTANCE/,"The local grass area must recenter as the player moves.");
 assert.match(html,/const show=batch\.islandIndex===visibleGrassIslandIndex/,"All grass batches belonging to the occupied island must remain visible.");
 assert.match(html,/grassStream:\{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise\}/,"Runtime diagnostics must expose the active grass island and pending streaming state.");
-assert.match(html,/setTimeout\(startDeferredWorldModels,180\)/,"Secondary GLB loading should start after the selector appears.");
+assert.match(html,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/,"Protagonist and initial-island NPC GLBs must block entry.");
+assert.match(html,/await loadWildlifeModels\(\)/,"Quality fauna must be prepared before entry.");
 assert.match(html,/startupAudioPreload\.then\(/,"Audio should preload in parallel without holding the start screen.");
-assert.doesNotMatch(html,/audioPreloadResult=await startupAudioPreload/,"Startup must not await every sound file.");
+assert.match(html,/audioPreloadResult=await startupAudioPreload/,"Sound effects must be ready before entry.");
+assert.match(html,/RECURSO OBLIGATORIO: efectos de sonido/,"Missing sound effects must fail with a named startup resource.");
 assert.match(html,/recordStartupTask\('Hierba 3D inicial de Calidad'/,"Initial Quality grass build time should be measured.");
 assert.match(html,/Visible Nordic ground cover swapped atomically/,"Grass must swap only after the staged replacement is ready.");
 assert.match(html,/grassMesh\.setEnabled\(!staging\)/,"New grass batches must stay hidden until their atomic activation.");
