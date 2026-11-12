@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
 const capture = fs.readFileSync('scripts/hrafn-before-after.mjs', 'utf8');
+const coastal = fs.readFileSync('scripts/coastal-reference.mjs', 'utf8');
 const report = fs.readFileSync('scripts/create_hrafn_ab_report.py', 'utf8');
 const inspector = fs.readFileSync('scripts/run-unified-inspector.mjs', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf8');
@@ -12,7 +13,7 @@ for (const token of [
   "id: 'dawn'", "id: 'noon'", "id: 'dusk'", "id: 'midnight'",
   'captureCanvas()', 'clock.pause()', 'clock.setTime(hour)',
   '__ELSN_CAPTURE_SEED__', 'prepareCaptureFrame({ timeoutMs: 120000 })',
-  'worldReady === true', '#chooseQuality', '#continueUnnamed', '#newGameChoice',
+  'worldReady === true', 'timeout: 240000', 'startupDiagnostics', '#chooseQuality', '#continueUnnamed', '#newGameChoice',
   'Math.imul(1664525, state) + 1013904223'
 ]) {
   assert.ok(capture.includes(token), 'Missing deterministic A/B capture feature: ' + token);
