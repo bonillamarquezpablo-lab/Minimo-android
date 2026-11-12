@@ -17,15 +17,16 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.274 (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
+BABYLON_VERSION = "8.2.2"
 TIMEOUT = 90
 
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
 DOWNLOADS = {
     "assets/vendor/babylon.js": (
-        "https://cdn.babylonjs.com/v7.54.3/babylon.js", 500_000, "script"
+        f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/babylon.js", 500_000, "script"
     ),
     "assets/vendor/babylonjs.loaders.min.js": (
-        "https://cdn.babylonjs.com/v7.54.3/loaders/babylonjs.loaders.min.js", 20_000, "script"
+        f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/loaders/babylonjs.loaders.min.js", 20_000, "script"
     ),
     "assets/vendor/meshopt_decoder.js": (
         "https://cdn.babylonjs.com/meshopt_decoder.js", 2_000, "script"
@@ -696,31 +697,31 @@ def main() -> None:
         html = html.replace("</body>", navigation_tag + "\n</body>", 1)
 
 
-    # Release candidate 0.6.278: fix the submerged seabed profile once, keep the
+    # Release candidate 0.6.279: fix the submerged seabed profile once, keep the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.278; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.279; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.278\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.279\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.278.")
-    html = html.replace("0.6.274", "0.6.278")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.279.")
+    html = html.replace("0.6.274", "0.6.279")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'14',build:'0.6.278'"
+    diagnostic_build_replacement = "reportVersion:'14',build:'0.6.279'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.278 para normalizar.")
-    game_version = "0.6.278"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.279 para normalizar.")
+    game_version = "0.6.279"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
-    # 0.6.278 graphics uplift: sharper render resolution on phones with GPU headroom.
+    # 0.6.279 graphics uplift: sharper render resolution on phones with GPU headroom.
     # The dedicated Performance profile is deliberately unchanged.
     quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
     quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
