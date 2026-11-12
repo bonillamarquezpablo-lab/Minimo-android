@@ -8,6 +8,8 @@ const css=fs.readFileSync('inspector/style.css','utf8');
 const runner=fs.readFileSync('scripts/run-unified-inspector.mjs','utf8');
 const previewReport=fs.readFileSync('scripts/create_hrafn_ab_report.py','utf8');
 new vm.Script(app,{filename:'inspector/app.js'});
+const referencedIds=[...app.matchAll(/\\$\\('([^']+)'\\)/g)].map(match=>match[1]);
+for(const id of new Set(referencedIds))assert.ok(html.includes('id=\"'+id+'\"'),'Missing DOM element referenced by app.js: '+id);
 for(const marker of [
  'Rápido','Completo','Profundo','id="launchButton"','id="githubToken"',
  'id="compareRange"','id="differenceToggle"','id="radarSvg"','id="telemetryGrid"',
