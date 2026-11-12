@@ -119,7 +119,7 @@
     if(fetchBusy&&!force)return;fetchBusy=true;
     try{
       const now=Date.now();
-      const metadataInterval=currentToken?15000:30000;
+      const metadataInterval=currentToken?25000:150000;
       const needRunRefresh=force||!activeRun||now-lastRunsFetchAt>=metadataInterval;
       if(needRunRefresh){
         const list=await apiGet(API+'/actions/workflows/'+WORKFLOW+'/runs?per_page=12');
@@ -140,7 +140,7 @@
       // Progress manifests are published as static JSON every phase transition; only
       // ask the Actions API for step-level detail when the runner has not published one.
       const needsJobFallback=!manifest?.phases?.length;
-      const jobsInterval=currentToken?12000:20000;
+      const jobsInterval=currentToken?20000:150000;
       if(needsJobFallback&&(force||now-lastJobsFetchAt>=jobsInterval)){
         jobs=await apiGet(API+'/actions/runs/'+run.id+'/jobs?per_page=100').catch(()=>({jobs:[]}));
         lastJobsFetchAt=Date.now();jobsData=jobs;jobsRunId=run.id;
