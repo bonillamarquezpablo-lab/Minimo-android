@@ -3377,6 +3377,23 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
   waterLastUpdateMs=performance.now()-workStart;
  }
  function rand(a,b){return a+Math.random()*(b-a)}
+ // Material.clone() clones its DynamicTextures. When a slot is immediately replaced,
+ // those copies become detached scene textures with no owner and no GPU upload. Release
+ // only the fresh clone when no other material still references it.
+ function replaceClonedDynamicTexture(material,property,replacement){
+  const previous=material?.[property];
+  if(previous===replacement)return replacement;
+  material[property]=replacement;
+  const isDynamic=!!(previous&&(previous instanceof B.DynamicTexture||previous.getClassName?.()==='DynamicTexture'));
+  if(!isDynamic||typeof previous.dispose!=='function')return replacement;
+  let referencedElsewhere=false;
+  for(const owner of scene.materials||[]){
+   if(!owner||owner===material)continue;
+   try{if((owner.getActiveTextures?.()||[]).includes(previous)){referencedElsewhere=true;break;}}catch(_){}
+  }
+  if(!referencedElsewhere&&!previous.isDisposed?.())previous.dispose();
+  return replacement;
+ }
  const islandMaterials=[M.grass,M.grass2,M.darkGrass];
  const settlements=[[31,-17],[135,14],[-132,45],[28,143]];
  const mountainProfiles=land.map((is,i)=>({x:is.x+(i===0?-25:i===1?15:i===2?-12:i===3?10:0),z:is.z+(i===0?-22:i===1?-10:i===2?8:i===3?15:-4),height:i===0?11.5:(i<4?5.0:3.8),sx:i===0?17:Math.max(9,is.r*.34),sz:i===0?23:Math.max(10,is.r*.38)}));
@@ -3657,7 +3674,9 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
   terrainDeformationFields[index]=deformationField;
   mesh.checkCollisions=true;mesh.metadata=Object.assign({},mesh.metadata||{},{norsePhysicalHeightfield:true,norseDeformableGround:true,norseUnderwaterSkirtBelowSeabed:true,underwaterSkirtClearanceMeters:.035,islandIndex:index,subdivisions});
   mesh.material=islandMaterials[index%3].clone('TerrainMaterial_'+index);
-  mesh.useVertexColors=true;mesh.useVertexAlpha=false;mesh.material.backFaceCulling=false;mesh.material.diffuseTexture=texGrass;mesh.material.diffuseTexture.uScale=7.2;mesh.material.diffuseTexture.vScale=7.2;mesh.material.diffuseTexture.anisotropicFilteringLevel=maxAnisotropy;mesh.material.bumpTexture=albedoNormalGrass;mesh.material.bumpTexture.level=.52;mesh.material.diffuseColor=new B.Color3(1,1,1);
+  replaceClonedDynamicTexture(mesh.material,'diffuseTexture',texGrass);
+  replaceClonedDynamicTexture(mesh.material,'bumpTexture',albedoNormalGrass);
+  mesh.useVertexColors=true;mesh.useVertexAlpha=false;mesh.material.backFaceCulling=false;mesh.material.diffuseTexture.uScale=7.2;mesh.material.diffuseTexture.vScale=7.2;mesh.material.diffuseTexture.anisotropicFilteringLevel=maxAnisotropy;mesh.material.bumpTexture.level=.52;mesh.material.diffuseColor=new B.Color3(1,1,1);
   mesh.material.roughness=.96;mesh.material.needDepthPrePass=false;
   if(B.PBRMaterial){
    const terrainPBR=new B.PBRMaterial('NordicGroundPBR_'+index,scene);
@@ -5177,7 +5196,7 @@ void main(void){
  for(let i=0;i<54;i++){const x=(i*47+19)%256,y=(i*83+31)%256;wornPennantCtx.beginPath();wornPennantCtx.moveTo(x,y);wornPennantCtx.lineTo(x+(i%2?5:2),y+(i%3?1:7));wornPennantCtx.stroke();}
  wornPennantCtx.globalAlpha=.42;wornPennantCtx.clearRect(245,58,6,17);wornPennantCtx.clearRect(244,132,8,12);wornPennantCtx.clearRect(246,207,6,18);wornPennantCtx.restore();
  wornPennantTexture.update(false);wornPennantTexture.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE);wornPennantTexture.anisotropicFilteringLevel=4;
- const wornPennantMaterial=M.playerBanner.clone('WeatheredDrakkarPennantMaterial');wornPennantMaterial.diffuseTexture=wornPennantTexture;wornPennantMaterial.diffuseColor=new B.Color3(.84,.82,.73);wornPennantMaterial.specularColor=new B.Color3(.025,.022,.018);wornPennantMaterial.roughness=.98;wornPennantMaterial.backFaceCulling=false;
+ const wornPennantMaterial=M.playerBanner.clone('WeatheredDrakkarPennantMaterial');replaceClonedDynamicTexture(wornPennantMaterial,'diffuseTexture',wornPennantTexture);wornPennantMaterial.diffuseColor=new B.Color3(.84,.82,.73);wornPennantMaterial.specularColor=new B.Color3(.025,.022,.018);wornPennantMaterial.roughness=.98;wornPennantMaterial.backFaceCulling=false;
  const pennantColumns=12,pennantRows=6,pennantIndices=[],pennantUvs=[],pennantBasePositions=[];
  const pennantTornEdge=[0,.025,.008,.050,.014,.036,0,.060,.012,.040,.006,.052,0];
  for(let row=0;row<=pennantRows;row++)for(let col=0;col<=pennantColumns;col++){
