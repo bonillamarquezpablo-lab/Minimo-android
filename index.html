@@ -2970,6 +2970,9 @@ async function removeStrayDebugGeometry(targetScene){
   waterNormals[offset]=-dx*inverse;waterNormals[offset+1]=inverse;waterNormals[offset+2]=-dz*inverse;
  }
  const waterActiveVertexStorage=new Uint32Array(waterBase.length/3);
+ // Precompute the four finite-difference neighbours and inverse grid spacing when the detail region changes.
+ // The water mesh, vertex positions, normals and sampling density are unchanged; this only removes repeated index math per normal pass.
+ const waterNormalLeftOffsets=new Uint32Array(waterBase.length/3),waterNormalRightOffsets=new Uint32Array(waterBase.length/3),waterNormalUpOffsets=new Uint32Array(waterBase.length/3),waterNormalDownOffsets=new Uint32Array(waterBase.length/3),waterNormalInvDx=new Float32Array(waterBase.length/3),waterNormalInvDz=new Float32Array(waterBase.length/3);
  let waterActiveVertexOffsets=waterActiveVertexStorage.subarray(0,0),waterActiveMinOffset=0,waterActiveMaxOffset=-1,waterFocusX=NaN,waterFocusZ=NaN,waterLastUpdatedVertices=0,waterLastUploadedVertices=0,waterLastUploadBytes=0,waterLastUpdateMs=0,waterLastNormalMs=0;
  function refreshWaterDetailRegion(){
   const activeCamera=scene.activeCamera,focus=activeCamera&&activeCamera.position?activeCamera.position:(onShip?ship.position:player.root.position);
@@ -2977,17 +2980,14 @@ async function removeStrayDebugGeometry(targetScene){
   if(waterActiveVertexOffsets.length&&dx*dx+dz*dz<576)return;
   waterFocusX=fx;waterFocusZ=fz;
   let count=0,minOffset=Infinity,maxOffset=-1;
-  for(let i=0;i<waterBase.length;i+=3){const x=waterBase[i]-fx,z=waterBase[i+2]-fz;if(x*x+z*z<=WATER_DETAIL_RADIUS_SQ){waterActiveVertexStorage[count++]=i;if(i<minOffset)minOffset=i;if(i>maxOffset)maxOffset=i;}}
+  for(let i=0;i<waterBase.length;i+=3){const x=waterBase[i]-fx,z=waterBase[i+2]-fz;if(x*x+z*z<=WATER_DETAIL_RADIUS_SQ){const vertex=i/3,row=Math.floor(vertex/waterGridSize),col=vertex-row*waterGridSize,left=(row*waterGridSize+Math.max(0,col-1))*3,right=(row*waterGridSize+Math.min(waterGridSize-1,col+1))*3,up=(Math.max(0,row-1)*waterGridSize+col)*3,down=(Math.min(waterGridSize-1,row+1)*waterGridSize+col)*3;waterNormalLeftOffsets[count]=left;waterNormalRightOffsets[count]=right;waterNormalUpOffsets[count]=up;waterNormalDownOffsets[count]=down;waterNormalInvDx[count]=1/(waterBase[right]-waterBase[left]||1);waterNormalInvDz[count]=1/(waterBase[down+2]-waterBase[up+2]||1);waterActiveVertexStorage[count++]=i;if(i<minOffset)minOffset=i;if(i>maxOffset)maxOffset=i;}}
   // Reuse one typed buffer rather than allocating a JS array and copying it on every camera-region shift.
   waterActiveVertexOffsets=waterActiveVertexStorage.subarray(0,count);waterActiveMinOffset=Number.isFinite(minOffset)?minOffset:0;waterActiveMaxOffset=maxOffset;
  }
  function updateWaterNormalsFast(){
   for(let n=0;n<waterActiveVertexOffsets.length;n++){
-   const offset=waterActiveVertexOffsets[n],vertex=offset/3,row=Math.floor(vertex/waterGridSize),col=vertex-row*waterGridSize;
-   const left=(row*waterGridSize+Math.max(0,col-1))*3,right=(row*waterGridSize+Math.min(waterGridSize-1,col+1))*3;
-   const up=(Math.max(0,row-1)*waterGridSize+col)*3,down=(Math.min(waterGridSize-1,row+1)*waterGridSize+col)*3;
-   const dx=waterBase[right]-waterBase[left]||1,dz=waterBase[down+2]-waterBase[up+2]||1;
-   const nx=-(waterPositions[right+1]-waterPositions[left+1])/dx,nz=-(waterPositions[down+1]-waterPositions[up+1])/dz;
+   const offset=waterActiveVertexOffsets[n],left=waterNormalLeftOffsets[n],right=waterNormalRightOffsets[n],up=waterNormalUpOffsets[n],down=waterNormalDownOffsets[n];
+   const nx=-(waterPositions[right+1]-waterPositions[left+1])*waterNormalInvDx[n],nz=-(waterPositions[down+1]-waterPositions[up+1])*waterNormalInvDz[n];
    const inv=1/Math.sqrt(nx*nx+1+nz*nz);
    waterNormals[offset]=nx*inv;waterNormals[offset+1]=inv;waterNormals[offset+2]=nz*inv;
   }
