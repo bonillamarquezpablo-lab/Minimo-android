@@ -323,14 +323,14 @@ def main() -> None:
         fail("Rendimiento debe omitir el pase de reflejos del agua; Calidad lo conserva.")
     if "const oceanWaveNormal=isPerformanceMode&&isConstrainedMobile?null:makeOceanWaveNormal()" not in index_html:
         fail("Los móviles de gama alta conservan el normal de oleaje; solo perfiles limitados mantienen la reserva.")
-    if "try{await playerHumanLoadPromise;" not in index_html or "function startDeferredWorldModels()" not in index_html or "setTimeout(startDeferredWorldModels,180);" not in index_html or "const backgroundNpcTask=startNpcHumanModels();" not in index_html or "Promise.allSettled([backgroundNpcTask,backgroundFaunaTask]).then(" not in index_html:
-        fail("El vikingo debe tener prioridad y los GLB secundarios/fauna deben continuar en segundo plano después de mostrar el selector.")
-    if "await scene.whenReadyAsync();" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html or "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" in index_html:
-        fail("La sincronización de escena debe tener tiempo límite y permitir continuar si falla.")
-    if "audioPreloadResult=await startupAudioPreload" in index_html or "startupAudioPreload.then(" not in index_html:
-        fail("La precarga de audio debe continuar en segundo plano y no bloquear la entrada.")
-    if "protagonistStageTimer=setTimeout" in index_html or "await playerHumanLoadPromise" not in index_html:
-        fail("El GLB protagonista debe tener un límite de espera y permitir entrar usando su reserva cuando falle.")
+    if "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html or "function startNpcHumanModels()" not in index_html or "if(!requiredReady)throw new Error('NPC obligatorios de la isla inicial incompletos" not in index_html:
+        fail("El protagonista y los NPC GLB obligatorios de la isla inicial deben estar listos antes de entrar.")
+    if "await scene.whenReadyAsync();" not in index_html or "scene.compileMaterialsAsync()" not in index_html or "sceneReadyTimeout" not in index_html or "RECURSO OBLIGATORIO: escena y shaders" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html:
+        fail("La escena y los shaders deben estar preparados con un plazo cerrado; un fallo obligatorio debe detener el arranque.")
+    if "audioPreloadResult=await startupAudioPreload" not in index_html or "RECURSO OBLIGATORIO: efectos de sonido" not in index_html or "startupAudioPreload.then(" not in index_html:
+        fail("Los efectos de sonido deben estar listos antes de entrar; la música debe seguir en streaming.")
+    if "RECURSO OBLIGATORIO: Vikingo protagonista" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
+        fail("El GLB protagonista no puede sustituirse por un cuerpo provisional para entrar.")
     if "sceneWarmupStatus='completed-with-errors'" not in index_html or "blocking:true,warmupFrames:2" not in index_html:
         fail("Los errores de warm-up no esencial deben registrarse y no cancelar el arranque.")
     if "GLB protagonist pipeline timing" not in index_html:
@@ -743,8 +743,8 @@ def main() -> None:
         fail("La hierba de Calidad debe conservar el detalle y limitar la generación al área local.")
     if "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "recordStartupTask('Hierba 3D inicial de Calidad'" not in index_html or "function startDeferredWorldModels()" not in index_html:
         fail("La hierba inicial de Calidad debe estar lista antes de entrar y los GLB secundarios deben cargarse después.")
-    if "try{audioPreloadResult=await startupAudioPreload" in index_html or "startupAudioPreload.then(" not in index_html:
-        fail("La precarga de audio debe ser no bloqueante en ambos perfiles gráficos.")
+    if "audioPreloadResult=await startupAudioPreload" not in index_html or "RECURSO OBLIGATORIO: efectos de sonido" not in index_html or "startupAudioPreload.then(" not in index_html:
+        fail("Los efectos de sonido deben terminar antes de entrar; la música continúa en streaming.")
     if "antialias:activeGraphicsProfile!=='performance'" not in index_html or "(isTouchDevice?2048:" not in index_html:
         fail("El perfil de calidad en iPhone debe conservar antialiasing y sombras de alta resolución.")
     if "const leavesPerClump=isPerformanceMode?8:10;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
@@ -759,8 +759,8 @@ def main() -> None:
         fail("El perfil A12 Nacho no aplica los límites de malla de agua y actualización previstos.")
     if "shadowGen=(!isConstrainedMobile||isUltraLowEndMobile||isGalaxyA12LowEndMobile)" not in index_html or "const enterRadius=isConstrainedMobile?58:175" not in index_html:
         fail("El perfil A10/A12 no activa sombras dinámicas acotadas por distancia.")
-    if "const warriorPartsToLoad=isIOSDevice?" not in index_html or "const civilianPartsToLoad=isIOSDevice?" not in index_html or "function startDeferredWorldModels()" not in index_html or "const backgroundNpcTask=startNpcHumanModels();" not in index_html:
-        fail("Los NPC deben conservar sus GLB y terminar de importarse en segundo plano en todos los perfiles.")
+    if "const warriorPartsToLoad=humanEnemyParts.filter(p=>/^VillageGuard0_/" not in index_html or "const civilianPartsToLoad=humanCivilianParts.slice(0,lowMemoryNpcBudget?1:2)" not in index_html or "const lowMemoryNpcBudget=!!(isUltraLowEndMobile||isGalaxyA12LowEndMobile||isGalaxyA12NachoPerformance)" not in index_html:
+        fail("Los NPC GLB de la isla inicial deben cargarse antes de entrar con presupuesto reducido en A10/A12.")
     if "const gridSide=Math.ceil(Math.sqrt(want*1.60))" not in index_html or "const minSpacing=cellSize*.24" not in index_html:
         fail("Falta la distribución uniforme con separación mínima.")
     if "const grids=[grid(4,4),grid(10,10),grid(24,24),grid(60,60),grid(144,144),grid(288,288)];" not in index_html:
@@ -783,7 +783,7 @@ def main() -> None:
         fail("Falta la importación GLB con esqueleto de ciervo, venado y lobo.")
     if "const animalCount=idx===0?3:(idx<4?1:0);" not in index_html:
         fail("La fauna debe conservar el roster completo en Rendimiento y Calidad.")
-    if "const performanceDensity=isConstrainedMobile?" not in index_html or "leavesPerClump=isPerformanceMode?8:10" not in index_html or "audioPreloadResult=await startupAudioPreload" in index_html or "startupAudioPreload.then(" not in index_html or "Promise.allSettled([backgroundNpcTask,backgroundFaunaTask]).then(" not in index_html:
+    if "const performanceDensity=isConstrainedMobile?" not in index_html or "leavesPerClump=isPerformanceMode?8:10" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("El ajuste de hierba preexistente de Rendimiento debe mantenerse y la fauna debe cargar después sin recortar su roster.")
     if "const civilianWarmupPromise=civilianTotal?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html:
         fail("La preparación de aldeanos debe compartir la misma promesa de carga y reutilizar el resultado al instanciarlos.")
