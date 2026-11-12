@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const workflow=fs.readFileSync('.github/workflows/coastal-reference.yml','utf8');
+const rs=fs.readFileSync('scripts/run-unified-inspector.mjs','utf8');
 const center=fs.readFileSync('.github/workflows/inspector-center-checks.yml','utf8');
 assert.match(workflow,/cancel-in-progress: false/);
 assert.match(workflow,/Do not kill a 2–3 hour full inspection/);
@@ -20,5 +21,6 @@ assert.match(workflow,/node scripts\/test_hrafn_before_after_contract\.cjs/);
 assert.doesNotMatch(workflow,/feature\/unified-atmosphere-system|manual-game-test-no-inspector|pull_request\.number\s*[!=]=\s*121/);
 assert.match(center,/branches: \[main\]/);
 assert.doesNotMatch(center,/feature\/inspector-center-dashboard|feature\/tiered-inspector-levels/);
+assert.ok(rs.includes("child.once('exit'"),'Inspector phases must settle on child exit rather than waiting for inherited stdio close.');
 assert.ok(rs.includes("child.once('exit'"),'Inspector phases must settle on child exit rather than waiting for inherited stdio close.');
 console.log('Inspector workflow routing and baseline fallback contract: OK');
