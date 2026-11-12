@@ -7,7 +7,41 @@ const beforeUrl = process.env.HRAFN_BEFORE_URL;
 const afterUrl = process.env.HRAFN_AFTER_URL;
 const output = path.resolve(process.env.HRAFN_COMPARE_OUT || 'artifacts/hrafn-before-after');
 const captureSeed = Number.parseInt(process.env.HRAFN_CAPTURE_SEED || process.env.CAPTURE_SEED || '20261110', 10) >>> 0;
-const viewport = { width: 1280, height: 720 };
+const viewport = { width: 960, height: 540 };
+
+async function withTimeout(promise, timeoutMs, label) {
+  let timer;
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(label + ' exceeded ' + timeoutMs + ' ms')), timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+async function safeClosePage(page) {
+  if (!page) return;
+  try {
+    await withTimeout(page.close({ runBeforeUnload: false }), 5000, 'Page close').catch(() => {});
+  } catch (_) {}
+}
+async function safeCloseBrowser(browser) {
+  if (!browser) return;
+  let closed = false;
+  const closing = browser.close().then(() => { closed = true; }).catch(() => {});
+  await withTimeout(closing, 7000, 'Browser close').catch(() => {});
+  if (!closed) {
+    const process = browser.process?.();
+    if (process && !process.killed) {
+      try { process.kill('SIGKILL'); } catch (_) {}
+    }
+    await withTimeout(closing, 2000, 'Browser forced shutdown').catch(() => {});
+  }
+}
+
 const phases = [
   { id: 'dawn', hour: 6 },
   { id: 'noon', hour: 12 },
@@ -17,32 +51,38 @@ const phases = [
 
 
 async function capturePhaseFrame(page, hour, label, phaseId) {
-  const captureResult = await page.evaluate(hour => {
+  const captureResult = await withTimeout(page.evaluate(hour => {
     const clock = window.__ELSN_ATMOSPHERE_CONTROLS;
     const api = window.__ELSN_TEST__;
+    if (!clock || !api || typeof api.render !== 'function' || typeof api.captureCanvas !== 'function') {
+      throw new Error('Atmosphere clock or game capture API is unavailable.');
+    }
     clock.pause();
     const clockState = clock.setTime(hour);
     api.render();
-    return { clockState, dataUrl: api.captureCanvas() };
-  }, hour);
+    let dataUrl = null, canvasError = null;
+    try { dataUrl = api.captureCanvas(); }
+    catch (error) { canvasError = String(error?.message || error); }
+    return { clockState, dataUrl, canvasError };
+  }, hour), 20000, label + ' ' + phaseId + ' phase render`);
   const match = /^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(captureResult.dataUrl || '');
   let bytes = match ? Buffer.from(match[1], 'base64') : null;
   let method = 'game-canvas-readback';
   const valid = value => Buffer.isBuffer(value) && value.length > 10000 &&
     value.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';
   if (!valid(bytes)) {
-    const session = await page.context().newCDPSession(page);
+    const session = await withTimeout(page.context().newCDPSession(page), 5000, 'CDP session creation');
     try {
-      const shot = await session.send('Page.captureScreenshot', {
+      const shot = await withTimeout(session.send('Page.captureScreenshot', {
         format: 'png', fromSurface: true, captureBeyondViewport: false, optimizeForSpeed: true
-      });
+      }), 15000, label + ' ' + phaseId + ' compositor capture');
       bytes = Buffer.from(shot.data || '', 'base64');
       method = 'cdp-composited-frame';
     } finally {
-      await session.detach().catch(() => {});
+      await withTimeout(session.detach(), 2000, 'CDP session detach').catch(() => {});
     }
   }
-  if (!valid(bytes)) throw new Error(label + ' ' + phaseId + ': neither WebGL readback nor compositor returned a valid PNG.');
+  if (!valid(bytes)) throw new Error(label + ' ' + phaseId + ': neither WebGL readback nor compositor returned a valid PNG. Canvas: ' + (captureResult.canvasError || 'invalid/empty PNG'));
   return { clockState: captureResult.clockState, bytes, method };
 }
 
@@ -135,7 +175,7 @@ async function bootGame(label, url) {
       { timeout: 240000, polling: 500 }
     );
   } catch (error) {
-    const startupDiagnostics = await page.evaluate(() => ({
+    const startupDiagnostics = await withTimeout(page.evaluate(() => ({
       readyState: document.readyState,
       bodyClass: document.body?.className || '',
       testApiAvailable: !!window.__ELSN_TEST__,
@@ -148,7 +188,7 @@ async function bootGame(label, url) {
         width: canvas.width, height: canvas.height,
         clientWidth: canvas.clientWidth, clientHeight: canvas.clientHeight
       }))
-    })).catch(() => ({ evaluationFailed: true }));
+    })), 5000, label + ' startup diagnostics').catch(() => ({ evaluationFailedOrRendererBlocked: true }));
     manifest.builds[label] = {
       url, startupReady: false, startupWaitMs: Date.now() - startupStartedAt,
       pageErrors: errors, consoleErrors, startupDiagnostics
@@ -228,30 +268,50 @@ let before = null;
 let after = null;
 try {
   fs.mkdirSync(output, { recursive: true });
+  const beforeCaptures = [];
+  const afterCaptures = [];
+
+  // Do not keep two complete 13-island worlds rendering at once. Sequential
+  // capture preserves the same seed, viewport and clock phases while halving
+  // peak WebGL/CPU pressure on SwiftShader.
   before = await bootGame('before', beforeUrl);
-  after = await bootGame('after', afterUrl);
-
   for (const phase of phases) {
-    const beforeCapture = await capture(before.page, 'before', phase);
-    const afterCapture = await capture(after.page, 'after', phase);
-    manifest.phases.push({
-      id: phase.id,
-      hour: phase.hour,
-      before: beforeCapture,
-      after: afterCapture
-    });
+    const shot = await capture(before.page, 'before', phase);
+    beforeCaptures.push(shot);
+    manifest.builds.before.captures = beforeCaptures.slice();
     saveManifest();
-    console.log('[HRAFN_AB_CAPTURE] ' + phase.id +
-      ' before=' + beforeCapture.bytes + 'B after=' + afterCapture.bytes + 'B');
+    console.log('[HRAFN_AB_CAPTURE] before/' + phase.id + ' bytes=' + shot.bytes + ' method=' + shot.method);
   }
+  await safeClosePage(before.page);
+  before = null;
 
-  if (before.errors.length || after.errors.length) {
-    manifest.warnings.push('One or more page errors were recorded; inspect the build diagnostics before accepting the comparison.');
+  after = await bootGame('after', afterUrl);
+  for (const phase of phases) {
+    const shot = await capture(after.page, 'after', phase);
+    afterCaptures.push(shot);
+    manifest.builds.after.captures = afterCaptures.slice();
+    saveManifest();
+    console.log('[HRAFN_AB_CAPTURE] after/' + phase.id + ' bytes=' + shot.bytes + ' method=' + shot.method);
+  }
+  await safeClosePage(after.page);
+  after = null;
+
+  manifest.phases = phases.map((phase, index) => ({
+    id: phase.id,
+    hour: phase.hour,
+    before: beforeCaptures[index],
+    after: afterCaptures[index]
+  }));
+  if (manifest.builds.before.pageErrors?.length || manifest.builds.after.pageErrors?.length ||
+      manifest.builds.before.consoleErrors?.length || manifest.builds.after.consoleErrors?.length) {
+    manifest.warnings.push('One or more page or console errors were recorded; inspect the build diagnostics before accepting the comparison.');
   }
   saveManifest();
   console.log('[HRAFN_AB_RESULT] ' + JSON.stringify({
     captured: manifest.phases.length,
     seed: captureSeed,
+    viewport,
+    sequentialBuildCapture: true,
     output
   }));
 } catch (error) {
@@ -259,8 +319,9 @@ try {
   saveManifest();
   console.error('[HRAFN_AB_FATAL]', manifest.failure);
   process.exitCode = 1;
+}
 } finally {
-  if (before?.page) await before.page.close().catch(() => {});
-  if (after?.page) await after.page.close().catch(() => {});
-  await browser.close().catch(() => {});
+  if (before?.page) await safeClosePage(before.page);
+  if (after?.page) await safeClosePage(after.page);
+  await safeCloseBrowser(browser);
 }
