@@ -27,33 +27,35 @@ async function captureAtmospherePng(page, phaseId) {
   const attempts = [];
   const validPng = bytes => Buffer.isBuffer(bytes) && bytes.length > 1000 &&
     bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const dataUrl = await withCaptureTimeout(page.evaluate(() => {
-        const api = window.__ELSN_TEST__;
-        if (!api || typeof api.render !== 'function' || typeof api.captureCanvas !== 'function') return null;
-        api.render();
-        return api.captureCanvas();
-      }), 15000, phaseId + ' WebGL canvas render/readback');
-      const match = /^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl || '');
-      if (match) {
-        const bytes = Buffer.from(match[1], 'base64');
-        if (validPng(bytes)) return { bytes, method: 'game-canvas-readback', attempts };
-      }
-      attempts.push({ attempt, method: 'game-canvas-readback', success: false, resultType: typeof dataUrl });
-    } catch (error) {
-      attempts.push({ attempt, method: 'game-canvas-readback', success: false, error: String(error?.message || error) });
+
+  // SwiftShader can spend a long time resolving a full-resolution WebGL frame.
+  // Make one bounded canvas readback attempt; retrying the same blocked renderer
+  // only queues more work and starves the independent compositor fallback.
+  try {
+    const dataUrl = await withCaptureTimeout(page.evaluate(() => {
+      const api = window.__ELSN_TEST__;
+      if (!api || typeof api.render !== 'function' || typeof api.captureCanvas !== 'function') return null;
+      api.render();
+      return api.captureCanvas();
+    }), 30000, phaseId + ' WebGL canvas render/readback');
+    const match = /^data:image\\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl || '');
+    if (match) {
+      const bytes = Buffer.from(match[1], 'base64');
+      if (validPng(bytes)) return { bytes, method: 'game-canvas-readback', attempts };
     }
-    await page.waitForTimeout(80 * attempt);
+    attempts.push({ method: 'game-canvas-readback', success: false, resultType: typeof dataUrl });
+  } catch (error) {
+    attempts.push({ method: 'game-canvas-readback', success: false, error: String(error?.message || error) });
   }
-  // The independent compositor channel preserves the visible game frame when WebGL
-  // readback is unavailable. It does not modify the scene or its rendering quality.
+
+  // The compositor is independent of WebGL readback. Keep this fallback short:
+  // a failed WebGL readback must not cause a second long queue on a stalled renderer.
   let session;
   try {
     session = await withCaptureTimeout(page.context().newCDPSession(page), 5000, phaseId + ' CDP session creation');
     const shot = await withCaptureTimeout(session.send('Page.captureScreenshot', {
       format: 'png', fromSurface: true, captureBeyondViewport: false, optimizeForSpeed: true
-    }), 15000, phaseId + ' compositor PNG capture');
+    }), 10000, phaseId + ' compositor PNG capture');
     const bytes = Buffer.from(shot.data || '', 'base64');
     if (validPng(bytes)) return { bytes, method: 'cdp-composited-frame', attempts };
     attempts.push({ method: 'cdp-composited-frame', success: false, bytes: bytes.length });
@@ -244,6 +246,13 @@ async function main() {
     });
     assert.equal(atmosphereReady.shaderReady, true, 'The atmospheric sky shader must compile and be ready before the phase captures.');
     assert.equal(atmosphereReady.skyMaterial, 'NorseAtmosphereSkyMaterial', 'The flat sky fallback must be replaced by the unified atmosphere shader.');
+    // The coastal reference runs on Chromium SwiftShader, not the S26 GPU.
+    // Capture the four atmosphere reference frames at a smaller viewport so
+    // software rasterization/readback does not stall on the full 960x540 frame.
+    // This is CI capture resolution only; it does not change game quality settings.
+    await page.setViewportSize({ width: 640, height: 360 });
+    await page.waitForTimeout(250);
+    manifest.atmosphereCaptureViewport = { width: 640, height: 360, reason: 'SwiftShader bounded reference capture' };
     const atmosphereCases = [
       { id: 'dawn', hour: 6, daylightMin: 0.20, twilightMin: 0.80, nightMin: 0.0 },
       { id: 'noon', hour: 12, daylightMin: 0.99, twilightMin: 0.0, nightMin: 0.0 },
@@ -293,6 +302,8 @@ async function main() {
         sunDirection: state.sunDirection
       });
     }
+    await page.setViewportSize({ width: 960, height: 540 });
+    await page.waitForTimeout(250);
     await page.evaluate(() => {
       const controls = window.__ELSN_ATMOSPHERE_CONTROLS;
       controls.setTime(9);
