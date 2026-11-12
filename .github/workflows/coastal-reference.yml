@@ -1,4 +1,5 @@
 name: Inspector único — EL SIN NOMBRE
+# S26 Ultra graphics audit: always compare mobile visuals and runtime frame budgets before release.
 
 on:
   push:
@@ -104,15 +105,27 @@ jobs:
         env:
           HRAFN_BASE_SHA: ${{ steps.baseline.outputs.sha }}
         run: |
-          git worktree add --detach "$RUNNER_TEMP/hrafn-before-source" "$HRAFN_BASE_SHA"
-          if ! python "$RUNNER_TEMP/hrafn-before-source/scripts/build_site.py"; then
-            echo "Baseline build failed; retrying against its immediate parent (last known buildable snapshot)."
+          BASELINE_SHA="$HRAFN_BASE_SHA"
+          BASELINE_BUILT=0
+          for attempt in 1 2 3 4; do
+            git worktree add --detach "$RUNNER_TEMP/hrafn-before-source" "$BASELINE_SHA"
+            if python "$RUNNER_TEMP/hrafn-before-source/scripts/build_site.py"; then
+              BASELINE_BUILT=1
+              break
+            fi
+            echo "Baseline $BASELINE_SHA failed on attempt $attempt; looking for the previous buildable release."
             git worktree remove --force "$RUNNER_TEMP/hrafn-before-source"
-            FALLBACK_SHA="$(git rev-parse "$HRAFN_BASE_SHA^")"
-            git worktree add --detach "$RUNNER_TEMP/hrafn-before-source" "$FALLBACK_SHA"
-            python "$RUNNER_TEMP/hrafn-before-source/scripts/build_site.py"
-            echo "Hrafn A/B baseline fallback selected: $FALLBACK_SHA"
+            NEXT_SHA="$(git rev-parse "$BASELINE_SHA^" 2>/dev/null || true)"
+            if [ -z "$NEXT_SHA" ]; then
+              break
+            fi
+            BASELINE_SHA="$NEXT_SHA"
+          done
+          if [ "$BASELINE_BUILT" -ne 1 ]; then
+            echo "No buildable baseline found in the four-commit recovery window."
+            exit 1
           fi
+          echo "Hrafn A/B baseline selected: $BASELINE_SHA"
           mv "$RUNNER_TEMP/hrafn-before-source/dist" "$RUNNER_TEMP/hrafn-before-dist"
           test -s "$RUNNER_TEMP/hrafn-before-dist/index.html"
 
