@@ -45,7 +45,7 @@ assert.match(html,/const animalCount=isPerformanceMode\?0:\(idx===0\?3:0\)/);
 // Music remains HTMLAudio; effects use the Web Audio context only after unlock.
 assert.match(html,/new Audio\(\);audio\.preload='none';audio\.src=SOURCE/);
 assert.match(html,/preflightMenuMusic\.preload='none'/);
-assert.match(html,/preflightMenuMusic\\.preload='none'/);
+
 assert.doesNotMatch(html,/rel="preload" as="audio"/,'Music must not be preloaded as a full audio resource.');
 assert.match(html,/const startupAudioPreload=NorseAudio\.preloadAll\(6500\)/);
 assert.doesNotMatch(html,/decodeAudioData\([^)]*menu|decodeAudioData\([^)]*gameplay/i);
