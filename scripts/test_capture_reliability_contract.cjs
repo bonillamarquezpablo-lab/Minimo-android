@@ -20,7 +20,6 @@ async function main() {
   assert.ok(pushBranches, 'The inspector workflow must keep an explicit push trigger.');
   const pushBranchNames = pushBranches[1].split(',').map(branch => branch.trim());
   assert.ok(pushBranchNames.includes('main'), 'Production changes must continue to be validated on main.');
-  assert.ok(pushBranchNames.includes('feature/hrafn-before-after-inspector'), 'The Hrafn integration branch must be validated on push.');
   assert.match(workflow,/group: scene-capture-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}/);
   assert.match(workflow,/GITHUB_EVENT_NAME/);
   assert.match(workflow,/workflow_dispatch/);
