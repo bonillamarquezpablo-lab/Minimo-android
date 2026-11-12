@@ -64,6 +64,7 @@
       $('runState').textContent='Sin ejecuciones';$('runState').className='status-pill';
       $('runNumber').textContent='—';$('runBranch').textContent='Aún no hay auditorías registradas.';
       $('runDate').textContent='Pulsa “Iniciar inspección” para comenzar desde aquí.';
+      $('runArtifactsLink').href=API+'/actions';
       $('runPhaseTitle').textContent='Esperando la primera ejecución';$('runPhaseDescription').textContent='El panel mostrará cada fase sin tener que abrir GitHub.';
       $('progressValue').textContent='0%';$('progressCircle').style.strokeDashoffset=188.5;$('progressTrack').style.width='0%';
       $('stepList').innerHTML='<div class="empty-state"><div><strong>El historial está vacío</strong>La primera ejecución aparecerá aquí automáticamente.</div></div>';
@@ -75,6 +76,7 @@
     $('runBranch').textContent='Rama: '+(run.head_branch||'—')+' · '+(run.event==='workflow_dispatch'?'Inicio desde el panel':run.event==='pull_request'?'Pull request':'Ejecución automática');
     $('runDate').textContent='Iniciada: '+niceDate(run.created_at)+' · Commit '+String(run.head_sha||'').slice(0,8);
     $('runTechnicalLink').href=run.html_url||'#';
+    $('runArtifactsLink').href=run.html_url?(run.html_url+'#artifacts'):(API+'/actions');
   }
 
   function renderSteps(phases,jobSteps){
