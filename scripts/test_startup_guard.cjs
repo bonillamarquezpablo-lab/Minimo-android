@@ -27,6 +27,7 @@ assert.match(html,/if\(startupAssetsReady\|\|gameStarted\)throw new Error\('No s
 assert.match(html,/estimatedWorkingSetBytes/);
 assert.match(html,/const VIKING_WEB_CACHE='el-sin-nombre-models-'/);
 assert.doesNotMatch(html,/cached=await readVikingFromBrowser\(\)/,'El GLB oficial del protagonista no debe duplicarse en IndexedDB.');
+assert.match(html,/async function saveCivilianHumanCache\(blob\)[\s\S]*?caches\.open\(VIKING_WEB_CACHE\)/,'El GLB civil debe usar Cache API y no duplicarse en IndexedDB.');
 assert.match(html,/RECURSO OBLIGATORIO: escena y shaders · agotado el plazo de 90 segundos/);
 assert.match(html,/timer=setTimeout\(\(\)=>controller\.abort\(\),45000\)/);
 
