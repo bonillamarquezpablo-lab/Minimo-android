@@ -171,7 +171,7 @@ async function main(){
 
   // The A/B comparator is a mandatory phase of this one-entrypoint inspection.
   // Missing baseline/candidate URLs fail the inspector instead of silently skipping the comparison.
-  await runNodePhase('Comparación visual ANTES/DESPUÉS — cuatro fases horarias','scripts/hrafn-before-after.mjs',{
+  await runNodePhase('Comparación gráfica móvil S26 Ultra ANTES/DESPUÉS + FPS — cuatro fases horarias','scripts/hrafn-before-after.mjs',{
     HRAFN_BEFORE_URL,HRAFN_AFTER_URL,
     HRAFN_COMPARE_OUT:'artifacts/hrafn-before-after',
     HRAFN_CAPTURE_SEED:process.env.CAPTURE_SEED||'20261110'
@@ -187,7 +187,7 @@ async function main(){
   const grounding=summaryFrom('artifacts/structure-grounding/manifest.json',m=>({verdict:m.verdict,summary:m.summary,failure:m.failure}));
   const coastal=summaryFrom('artifacts/coastal-reference/manifest.json',m=>({captureCount:m.captures?.length,atmosphereAudit:m.atmosphereAudit,atmosphereCaptureCount:m.atmosphereCaptures?.length,structureVisibility:m.structureVisibility?.length,failure:m.failure}));
   const player=summaryFrom('artifacts/player-startup/manifest.json',m=>({modelReady:m.finalState?.modelReady,realPlayerMeshCount:m.finalState?.realPlayerMeshCount,failure:m.failure}));
-  const beforeAfter=summaryFrom('artifacts/hrafn-before-after/manifest.json',m=>({method:m.method,seed:m.captureSeed,phases:m.phases?.map(p=>({id:p.id,hour:p.hour,comparison:p.comparison||null})),warnings:m.warnings,failure:m.failure}));
+  const beforeAfter=summaryFrom('artifacts/hrafn-before-after/manifest.json',m=>({method:m.method,seed:m.captureSeed,deviceProfile:m.deviceProfile,renderer:m.renderer,builds:Object.fromEntries(['before','after'].map(label=>{const build=m.builds?.[label]||{};return [label,{build:build.build||null,performance:build.performance||null}];})),phases:m.phases?.map(p=>({id:p.id,hour:p.hour,comparison:p.comparison||null})),warnings:m.warnings,failure:m.failure}));
   const report={
     schema:1,mode:'tiered-single-entrypoint-inspection',level:INSPECTOR_LEVEL,readOnlyForMainCapture:true,visualCapturesSkipped:SKIP_VISUAL_CAPTURES,
     note:SKIP_VISUAL_CAPTURES?'Pasada temporal de compilación y auditoría de arranque: las capturas costeras, las panorámicas de escena y la comparación Hrafn se han omitido; el código de captura permanece intacto.':'Las comprobaciones de reparación se ejecutan en navegadores de prueba desechables; no modifican la partida ni los archivos publicados.',

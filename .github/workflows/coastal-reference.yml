@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main, feature/unified-atmosphere-system, test/coastal-reference-0.6.272, fix/graphics-quality-validation-0.6.277, feature/tiered-inspector-levels, feature/inspector-center-dashboard, fix/inspector-workflow-and-runtime-guards]
+    branches: [main]
     paths-ignore:
       - '.github/workflows/**'
       - 'inspector/**'
@@ -29,7 +29,7 @@ on:
         description: 'Rama o etiqueta que sirve como ANTES de la comparación visual.'
         required: false
         type: string
-        default: 'feature/unified-atmosphere-system'
+        default: ''
       capture_plan:
         description: 'Una sola inspección: inventario completo, texturas, estructuras, agua, costa, pruebas y cámaras desde el agua. Hasta 120 capturas.'
         required: false
@@ -40,7 +40,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: scene-capture-${{ github.event.pull_request.number || github.ref }}${{ github.event_name == 'pull_request' && github.event.pull_request.number == 121 && '-manual-game-test-no-inspector' || '' }}
+  group: scene-capture-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -82,12 +82,11 @@ jobs:
               BASE_REF="main^"
             fi
           elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ -n "$DISPATCH_BASE_REF" ]; then
-            BASE_REF="$DISPATCH_BASE_REF"
+            git fetch --no-tags origin "$DISPATCH_BASE_REF"
+            BASE_SHA="$(git rev-parse FETCH_HEAD)"
           else
-            BASE_REF="feature/unified-atmosphere-system"
+            BASE_SHA="$(git rev-parse "$GITHUB_SHA^")"
           fi
-          git fetch --no-tags origin "$BASE_REF"
-          BASE_SHA="$(git rev-parse FETCH_HEAD)"
           if [ "$BASE_SHA" = "$GITHUB_SHA" ]; then
             echo "Baseline and candidate resolve to the same commit; refusing a meaningless A/B comparison."
             exit 1
@@ -128,24 +127,11 @@ jobs:
           node scripts/test_coastal_structure_grounding_contract.cjs
           node scripts/test_capture_reliability_contract.cjs
           node scripts/test_inspector_dashboard_contract.cjs
+          node scripts/test_inspector_workflows_contract.cjs
+          node scripts/test_graphics_quality_contract.cjs
 
       - name: Build the complete game and packaged assets
         run: python scripts/build_site.py
-
-      # TEMPORARY: PR 121 is being handed to the user for a manual game test.
-      # Keep static contracts and the full game build, but do not launch the inspector.
-      - name: Record temporary inspector bypass for manual game test
-        if: github.event_name == 'pull_request' && github.event.pull_request.number == 121
-        run: |
-          mkdir -p artifacts/unified-inspector
-          cat > artifacts/unified-inspector/manifest.json <<'JSON'
-          {
-            "schema": 1,
-            "status": "temporarily_skipped",
-            "reason": "Manual game test requested; static contracts and full game build were executed.",
-            "re_enable_after_manual_game_test": true
-          }
-          JSON
 
       - name: Install Playwright and Chromium
         if: github.event_name != 'pull_request' || github.event.pull_request.number != 121

@@ -2,9 +2,23 @@ name: Inspector Center — dashboard checks
 
 on:
   push:
-    branches: [feature/inspector-center-dashboard, fix/inspector-workflow-and-runtime-guards]
+    branches: [main]
+    paths:
+      - 'inspector/**'
+      - '.github/workflows/**'
+      - 'scripts/run-unified-inspector.mjs'
+      - 'scripts/hrafn-before-after.mjs'
+      - 'scripts/test_hrafn_before_after_contract.cjs'
+      - 'scripts/test_inspector_*.cjs'
   pull_request:
-    branches: [feature/tiered-inspector-levels, feature/inspector-center-dashboard]
+    branches: [main]
+    paths:
+      - 'inspector/**'
+      - '.github/workflows/**'
+      - 'scripts/run-unified-inspector.mjs'
+      - 'scripts/hrafn-before-after.mjs'
+      - 'scripts/test_hrafn_before_after_contract.cjs'
+      - 'scripts/test_inspector_*.cjs'
 
 permissions:
   contents: read

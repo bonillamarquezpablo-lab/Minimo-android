@@ -31,6 +31,11 @@ main{max-width:900px;margin:auto;padding:28px 18px 56px}.top{display:flex;justif
 <div class="meta" id="updated"></div>
 </section>
 <section class="panel">
+<div class="statusline"><h2 style="margin:0">Comparativa gráfica S26 Ultra</h2><a id="artifacts" href="#" target="_blank" rel="noopener">Capturas e informes ↗</a></div>
+<div id="comparison" class="empty">Esperando los resultados ANTES/DESPUÉS de la auditoría profunda…</div>
+<div class="meta" id="comparisonnote">Se emula el perfil móvil y DPR del S26 Ultra; el renderer de CI sigue siendo SwiftShader, no la GPU Adreno física.</div>
+</section>
+<section class="panel">
 <h2>Qué incluye</h2>
 <div class="muted">Arranque del jugador · carga de texturas · cimentación y estructuras · agua y costas · inventario de las islas · capturas · comparación visual cuando corresponda · informe final y artefactos descargables.</div>
 </section>
@@ -57,6 +62,17 @@ let progress=null;try{const pr=await fetch(raw,{cache:'no-store'});if(pr.ok)prog
 document.getElementById('runstate').textContent=statusLabel(run.status==='completed'?(run.conclusion==='success'?'passed':'failed'):run.status);
 document.getElementById('runstate').className='pill '+(run.status==='in_progress'?'running':run.conclusion==='success'?'success':run.status==='completed'?'failure':'');
 document.getElementById('runinfo').innerHTML='<div><strong>#'+run.run_number+'</strong> · '+esc(run.name||'Inspector único')+'</div><div class="meta">Rama: '+esc(run.head_branch)+' · Inicio: '+new Date(run.created_at).toLocaleString('es-ES')+'</div><div class="meta"><a href="'+esc(run.html_url)+'" target="_blank" rel="noopener">Abrir ejecución y registros en GitHub ↗</a></div>';
+const artifacts=document.getElementById('artifacts');artifacts.href=run.html_url+'#artifacts';
+const beforeAfter=progress?.results?.beforeAfter||null,builds=beforeAfter?.builds||{};
+const beforePerf=builds.before?.performance||null,afterPerf=builds.after?.performance||null;
+const metric=(label,a,b)=>'<tr><td>'+esc(label)+'</td><td>'+esc(a??'n/d')+'</td><td>'+esc(b??'n/d')+'</td></tr>';
+if(beforePerf&&afterPerf){
+ document.getElementById('comparison').innerHTML='<div class="meta">Antes: '+esc(builds.before?.build||'n/d')+' · Después: '+esc(builds.after?.build||'n/d')+'</div><table style="width:100%;border-collapse:collapse;margin-top:10px"><thead><tr><th style="text-align:left">Métrica</th><th>Antes</th><th>Después</th></tr></thead><tbody>'+
+ metric('FPS mediana',beforePerf.medianFps,afterPerf.medianFps)+metric('Frame time p95 (ms)',beforePerf.medianFrameP95Ms,afterPerf.medianFrameP95Ms)+metric('CPU mundo (ms)',beforePerf.medianWorldUpdateCpuMs,afterPerf.medianWorldUpdateCpuMs)+metric('CPU render (ms)',beforePerf.medianRenderSubmissionCpuMs,afterPerf.medianRenderSubmissionCpuMs)+metric('FSR1 DPR efectivo',beforePerf.fsr1?.effectiveSourceDpr,afterPerf.fsr1?.effectiveSourceDpr)+
+ '</tbody></table><div class="meta">Renderer: '+esc(beforeAfter.renderer||'n/d')+' · Capturas: '+esc(beforeAfter.phases?.length??0)+'/4 · Mapas de diferencias en los artefactos.</div>';
+}else{
+ document.getElementById('comparison').textContent=run.status==='completed'?'La comparación no contiene métricas completas. Revisa el informe de GitHub.':'La comparación aparecerá cuando termine la auditoría ANTES/DESPUÉS.';
+}
 const phases=progress?.phases||[];
 let currentStep='';
 try{const jr=await fetch('https://api.github.com/repos/'+owner+'/'+repo+'/actions/runs/'+runid+'/jobs?per_page=100',{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});if(jr.ok){const jd=await jr.json();const job=(jd.jobs||[]).find(x=>x.status==='in_progress');const step=job?.steps?.find(x=>x.status==='in_progress');if(step)currentStep=step.name;}}catch{}

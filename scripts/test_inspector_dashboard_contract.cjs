@@ -6,6 +6,6 @@ const start=html.indexOf('<script>');
 const end=html.indexOf('</script>',start);
 assert.ok(start>=0&&end>start,'Inspector dashboard must contain one inline application script.');
 new vm.Script(html.slice(start+8,end),{filename:'inspector/index.html'});
-for(const marker of ['Rápido','Completo','Profundo','actions/workflows/','inspector-status/runs/','setInterval(refresh,15000)'])assert.ok(html.includes(marker),'Missing dashboard contract marker: '+marker);
+for(const marker of ['Rápido','Completo','Profundo','actions/workflows/','inspector-status/runs/','setInterval(refresh,15000)','Comparativa gráfica S26 Ultra','medianFps','medianFrameP95Ms','#artifacts'])assert.ok(html.includes(marker),'Missing dashboard contract marker: '+marker);
 assert.ok(!/gh[pousr]_[A-Za-z0-9_]{20,}/.test(html),'Dashboard must never contain a GitHub credential.');
 console.log('Inspector Center dashboard contract: OK');

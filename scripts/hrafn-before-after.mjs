@@ -7,7 +7,9 @@ const beforeUrl = process.env.HRAFN_BEFORE_URL;
 const afterUrl = process.env.HRAFN_AFTER_URL;
 const output = path.resolve(process.env.HRAFN_COMPARE_OUT || 'artifacts/hrafn-before-after');
 const captureSeed = Number.parseInt(process.env.HRAFN_CAPTURE_SEED || process.env.CAPTURE_SEED || '20261110', 10) >>> 0;
-const viewport = { width: 960, height: 540 };
+const viewport = { width: 384, height: 832 };
+const deviceScaleFactor = 3.75;
+const deviceProfile = { name: 'Samsung Galaxy S26 Ultra (emulado)', model: 'SM-S948B', deviceScaleFactor, deviceMemoryGB: 12, hardwareConcurrency: 8, touch: true, rendererLimit: 'CI usa ANGLE SwiftShader, no la GPU Adreno física' };
 
 async function withTimeout(promise, timeoutMs, label) {
   let timer;
@@ -112,16 +114,18 @@ const browser = await chromium.launch({
 const manifest = {
   schema: 2,
   createdAt: new Date().toISOString(),
-  method: 'same-seed-same-browser-same-viewport-same-game-state-four-clock-phases',
-  renderer: 'Chromium headless + ANGLE SwiftShader',
-  viewport: { ...viewport, deviceScaleFactor: 1 },
+  method: 'same-seed-same-browser-same-S26-Ultra-mobile-emulation-same-game-state-four-clock-phases-plus-performance-sampling',
+  renderer: 'Chromium headless + ANGLE SwiftShader (software; no es benchmark físico del S26 Ultra)',
+  deviceProfile,
+  viewport: { ...viewport, deviceScaleFactor },
   captureSeed,
   beforeUrl,
   afterUrl,
   builds: {},
   phases: [],
   warnings: [
-    'Pixel differences identify changes; they do not decide whether a change is visually better.',
+    'Pixel differences identify changes; edge energy is an auxiliary sharpness indicator, not a subjective quality verdict.',
+    'Performance values use S26 Ultra capability emulation on SwiftShader; they are not physical Adreno measurements.',
     'Both versions use the same deterministic random seed, menu flow, scene-readiness gate and frozen clock.'
   ]
 };
@@ -133,8 +137,51 @@ function saveManifest() {
   fs.renameSync(temporary, path.join(output, 'manifest.json'));
 }
 
+
+async function sampleGraphicsPerformance(page, label) {
+  await page.waitForTimeout(8000);
+  const samples = [];
+  for (let index = 0; index < 8; index++) {
+    const sample = await withTimeout(page.evaluate(() => {
+      if (typeof window.getGameHealthDebug !== 'function') throw new Error('getGameHealthDebug() is unavailable.');
+      const health = window.getGameHealthDebug(), runtime = health.runtime || {}, fsr = window.__ELSN_FSR1 || null;
+      const water = typeof window.__elSinNombreWaterDebugSnapshot === 'function' ? window.__elSinNombreWaterDebugSnapshot() : null;
+      return {
+        build: document.querySelector('meta[name="el-sin-nombre-build"]')?.content || null,
+        profile: runtime.graphicsProfile || null, fps: runtime.fps ?? health.fps ?? null,
+        frameTiming: runtime.frameTimingMs || null, performanceAssessment: runtime.performanceAssessment || null,
+        renderDpr: runtime.renderDpr ?? null, renderWidth: runtime.renderWidth ?? null, renderHeight: runtime.renderHeight ?? null,
+        drawCalls: runtime.drawCalls ?? null, activeMeshes: runtime.activeMeshes ?? null, totalVertices: runtime.totalVertices ?? null,
+        worldUpdateMs: runtime.worldUpdateMs ?? null, renderCpuMs: runtime.renderCpuMs ?? null,
+        gpuRenderer: runtime.gpuRenderer || null, gpuVendor: runtime.gpuVendor || null, webglVersion: runtime.webglVersion || null,
+        devicePixelRatio: runtime.devicePixelRatio ?? window.devicePixelRatio, isTouchDevice: runtime.isTouchDevice ?? null,
+        deviceMemory: runtime.deviceMemory ?? navigator.deviceMemory ?? null, hardwareConcurrency: runtime.hardwareConcurrency ?? navigator.hardwareConcurrency ?? null,
+        fsr1: fsr ? { enabled:fsr.enabled===true, method:fsr.method||null, outputDpr:fsr.outputDpr??null,
+          inputScale:typeof fsr.inputScale==='function'?fsr.inputScale():null,
+          effectiveSourceDpr:typeof fsr.effectiveSourceDpr==='function'?fsr.effectiveSourceDpr():null,
+          source:typeof fsr.source==='function'?fsr.source():null, output:typeof fsr.output==='function'?fsr.output():null,
+          reason:fsr.reason||null } : null,
+        waterTimings: water?.timings || null
+      };
+    }), 10000, label + ' graphics telemetry sample');
+    samples.push(sample);
+    if (index < 7) await page.waitForTimeout(1000);
+  }
+  const median = values => { const sorted=values.filter(Number.isFinite).sort((a,b)=>a-b); if(!sorted.length)return null; const m=Math.floor(sorted.length/2); return Number((sorted.length%2?sorted[m]:(sorted[m-1]+sorted[m])/2).toFixed(3)); };
+  const values = key => samples.map(sample=>Number(sample[key])).filter(Number.isFinite);
+  const fpsValues=values('fps'),p95Values=samples.map(s=>Number(s.frameTiming?.p95)).filter(Number.isFinite),p99Values=samples.map(s=>Number(s.frameTiming?.p99)).filter(Number.isFinite);
+  const last=samples[samples.length-1]||{};
+  return {label,sampleCount:samples.length,medianFps:median(fpsValues),minimumFps:fpsValues.length?Math.min(...fpsValues):null,
+    medianFrameP95Ms:median(p95Values),medianFrameP99Ms:median(p99Values),medianWorldUpdateCpuMs:median(values('worldUpdateMs')),
+    medianRenderSubmissionCpuMs:median(values('renderCpuMs')),medianDrawCalls:median(values('drawCalls')),
+    profile:last.profile,build:last.build,renderDpr:last.renderDpr,renderWidth:last.renderWidth,renderHeight:last.renderHeight,
+    gpuRenderer:last.gpuRenderer,gpuVendor:last.gpuVendor,webglVersion:last.webglVersion,devicePixelRatio:last.devicePixelRatio,
+    isTouchDevice:last.isTouchDevice,deviceMemory:last.deviceMemory,hardwareConcurrency:last.hardwareConcurrency,
+    fsr1:last.fsr1,performanceAssessment:last.performanceAssessment,samples};
+}
+
 async function bootGame(label, url) {
-  const page = await browser.newPage({ viewport, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport, deviceScaleFactor, isMobile: true, hasTouch: true, userAgent: 'Mozilla/5.0 (Linux; Android 17; SM-S948B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36' });
   page.setDefaultTimeout(60000);
   page.setDefaultNavigationTimeout(90000);
   const errors = [];
@@ -145,6 +192,8 @@ async function bootGame(label, url) {
   });
 
   await page.addInitScript(({ seed }) => {
+    Object.defineProperty(Object.getPrototypeOf(navigator), 'deviceMemory', { configurable: true, get: () => 12 });
+    Object.defineProperty(Object.getPrototypeOf(navigator), 'hardwareConcurrency', { configurable: true, get: () => 8 });
     if (new URLSearchParams(location.search).get('test') !== '1') return;
     let state = seed >>> 0;
     Math.random = () => {
@@ -241,9 +290,11 @@ async function bootGame(label, url) {
     };
   });
 
+  const performance = await sampleGraphicsPerformance(page, label);
   manifest.builds[label] = {
     url,
     build: readiness.build,
+    performance,
     worldReady: readiness.worldReady,
     gameRunning: readiness.gameRunning,
     readiness: readiness.readiness,

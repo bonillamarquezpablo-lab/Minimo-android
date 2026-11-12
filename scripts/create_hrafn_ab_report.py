@@ -4,7 +4,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageEnhance, ImageDraw, ImageStat
+from PIL import Image, ImageChops, ImageEnhance, ImageDraw, ImageFilter, ImageStat
 
 root = Path(sys.argv[1] if len(sys.argv) > 1 else "artifacts/hrafn-before-after")
 manifest_path = root / "manifest.json"
@@ -48,6 +48,9 @@ for phase in manifest["phases"]:
     changed_pixels = sum(histogram[1:])
     changed_ratio = changed_pixels / max(1, total_pixels)
     mean_rgb_delta = sum(ImageStat.Stat(difference).mean) / 3
+    before_edge_energy = ImageStat.Stat(before.convert('L').filter(ImageFilter.FIND_EDGES)).mean[0]
+    after_edge_energy = ImageStat.Stat(after.convert('L').filter(ImageFilter.FIND_EDGES)).mean[0]
+    edge_energy_delta_pct = ((after_edge_energy / before_edge_energy) - 1) * 100 if before_edge_energy > 0 else None
 
     sheet = Image.new("RGB", (before.width * 2, before.height + 52), "#171717")
     sheet.paste(before, (0, 52))
@@ -67,6 +70,9 @@ for phase in manifest["phases"]:
         "totalPixels": total_pixels,
         "changedPixelRatio": round(changed_ratio, 6),
         "meanAbsoluteRgbDelta": round(mean_rgb_delta, 4),
+        "beforeEdgeEnergy": round(before_edge_energy, 4),
+        "afterEdgeEnergy": round(after_edge_energy, 4),
+        "edgeEnergyDeltaPct": round(edge_energy_delta_pct, 2) if edge_energy_delta_pct is not None else None,
         "comparisonImage": comparison_name,
         "differenceImage": difference_name
     }
@@ -79,11 +85,47 @@ for phase in manifest["phases"]:
         difference_name + ") |"
     )
 
+before_perf = (manifest.get("builds", {}).get("before") or {}).get("performance") or {}
+after_perf = (manifest.get("builds", {}).get("after") or {}).get("performance") or {}
+report_lines.extend([
+    "",
+    "## Rendimiento — emulación móvil S26 Ultra",
+    "",
+    "| Métrica | Antes | Después |",
+    "|---|---:|---:|",
+])
+for label, before_value, after_value in (
+    ("FPS mediana", before_perf.get("medianFps"), after_perf.get("medianFps")),
+    ("FPS mínimo muestreado", before_perf.get("minimumFps"), after_perf.get("minimumFps")),
+    ("Frame time p95 (ms)", before_perf.get("medianFrameP95Ms"), after_perf.get("medianFrameP95Ms")),
+    ("Frame time p99 (ms)", before_perf.get("medianFrameP99Ms"), after_perf.get("medianFrameP99Ms")),
+    ("CPU actualización mundo (ms)", before_perf.get("medianWorldUpdateCpuMs"), after_perf.get("medianWorldUpdateCpuMs")),
+    ("CPU envío de render (ms)", before_perf.get("medianRenderSubmissionCpuMs"), after_perf.get("medianRenderSubmissionCpuMs")),
+    ("Draw calls", before_perf.get("medianDrawCalls"), after_perf.get("medianDrawCalls")),
+    ("DPR efectivo de entrada FSR1", (before_perf.get("fsr1") or {}).get("effectiveSourceDpr"), (after_perf.get("fsr1") or {}).get("effectiveSourceDpr")),
+):
+    report_lines.append("| " + label + " | " + (str(before_value) if before_value is not None else "n/d") + " | " + (str(after_value) if after_value is not None else "n/d") + " |")
+report_lines.extend([
+    "",
+    "Renderer de CI: ANGLE SwiftShader (software). El perfil móvil de alta capacidad se emula, pero no se mide la GPU Adreno física.",
+    "",
+    "## Indicador auxiliar de detalle",
+    "",
+    "| Fase | Energía de bordes antes | Energía de bordes después | Cambio |",
+    "|---|---:|---:|---:|",
+])
+for phase in manifest["phases"]:
+    comparison = phase.get("comparison") or {}
+    report_lines.append(
+        "| " + str(phase.get("id")) + " | " + str(comparison.get("beforeEdgeEnergy", "n/d")) +
+        " | " + str(comparison.get("afterEdgeEnergy", "n/d")) +
+        " | " + str(comparison.get("edgeEnergyDeltaPct", "n/d")) + "% |"
+    )
 report_lines.extend([
     "",
     "## Interpretación",
     "",
-    "El mapa de diferencias amplifica los píxeles modificados. Una diferencia alta no significa automáticamente una mejora o un empeoramiento: hay que revisar las imágenes lado a lado y los diagnósticos del inspector.",
+    "El mapa de diferencias amplifica los píxeles modificados. La energía de bordes es un indicador auxiliar: un valor mayor no demuestra por sí solo una mejora; hay que revisar las imágenes lado a lado y los diagnósticos.",
     "",
     "## Builds comparadas",
     "",
