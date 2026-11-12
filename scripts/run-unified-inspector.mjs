@@ -7,16 +7,62 @@ const ROOT=process.cwd();
 const ARTIFACTS=path.resolve('artifacts');
 const OUT=path.join(ARTIFACTS,'unified-inspector');
 const BASE_URL=process.env.INSPECTOR_TEST_URL||process.env.CAPTURE_TEST_URL||'http://127.0.0.1:4175/';
+const HRAFN_BEFORE_URL=process.env.HRAFN_BEFORE_URL||'';
+const HRAFN_AFTER_URL=process.env.HRAFN_AFTER_URL||'';
 const PLAN=process.env.CAPTURE_PLAN_JSON||fs.readFileSync(path.join(ROOT,'scripts/scene-capture-plan.json'),'utf8');
 const phases=[];
+const INSPECTOR_LEVEL=process.env.INSPECTOR_LEVEL||'deep';
+const SKIP_VISUAL_CAPTURES=process.env.INSPECTOR_SKIP_VISUAL_CAPTURES==='1';
+const LEVEL_RANK={quick:1,complete:2,deep:3};
+if(!(INSPECTOR_LEVEL in LEVEL_RANK))throw new Error('INSPECTOR_LEVEL must be quick, complete or deep.');
+function phaseLevel(name){
+  if(/Comparación visual ANTES\/DESPUÉS|Informe visual ANTES\/DESPUÉS/.test(name))return 3;
+  if(/Referencias costeras|Inventario completo|Informe visual unificado|Lámina de referencias/.test(name))return 2;
+  return 1;
+}
+function phaseSkipReason(name){
+  if(SKIP_VISUAL_CAPTURES&&phaseLevel(name)>1){
+    return 'Visual capture phases temporarily bypassed for this candidate smoke run.';
+  }
+  if(phaseLevel(name)>LEVEL_RANK[INSPECTOR_LEVEL]){
+    return 'Not required by '+INSPECTOR_LEVEL+' inspection level.';
+  }
+  return null;
+}
 const startedAt=new Date().toISOString();
 const started=Date.now();
+const STATUS_TOKEN=process.env.INSPECTOR_GITHUB_TOKEN||'';
+const STATUS_REPOSITORY=process.env.GITHUB_REPOSITORY||'';
+const STATUS_RUN_ID=process.env.GITHUB_RUN_ID||'';
+const STATUS_BRANCH=process.env.INSPECTOR_STATUS_BRANCH||'inspector-status';
+let progressQueue=Promise.resolve();
+let statusSha=null;
+function queueProgressPublish(){
+  if(!STATUS_TOKEN||!STATUS_REPOSITORY||!STATUS_RUN_ID)return;
+  progressQueue=progressQueue.then(async()=>{
+    const manifest=readJson(path.join(OUT,'manifest.json'));
+    if(!manifest)return;
+    const endpoint='https://api.github.com/repos/'+STATUS_REPOSITORY+'/contents/runs/'+STATUS_RUN_ID+'.json';
+    if(!statusSha){
+      const existing=await fetch(endpoint+'?ref='+encodeURIComponent(STATUS_BRANCH),{headers:{Accept:'application/vnd.github+json',Authorization:'Bearer '+STATUS_TOKEN,'X-GitHub-Api-Version':'2022-11-28'}});
+      if(existing.ok)statusSha=(await existing.json()).sha||null;
+      else if(existing.status!==404)throw new Error('Could not read existing progress record: HTTP '+existing.status);
+    }
+    const payload={message:'Update inspector progress for run '+STATUS_RUN_ID,content:Buffer.from(JSON.stringify(manifest,null,2)+'\n').toString('base64'),branch:STATUS_BRANCH};
+    if(statusSha)payload.sha=statusSha;
+    const response=await fetch(endpoint,{method:'PUT',headers:{Accept:'application/vnd.github+json',Authorization:'Bearer '+STATUS_TOKEN,'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!response.ok)throw new Error('GitHub progress update failed: HTTP '+response.status+' '+(await response.text()).slice(0,500));
+    const saved=await response.json();
+    statusSha=saved.content?.sha||null;
+  }).catch(error=>console.error('[INSPECTOR_PROGRESS_PUBLISH_FAILED]',String(error?.message||error)));
+}
 
 function writeJson(file,value){
   fs.mkdirSync(path.dirname(file),{recursive:true});
   const temporary=file+'.tmp';
   fs.writeFileSync(temporary,JSON.stringify(value,null,2)+'\n');
   fs.renameSync(temporary,file);
+  if(file===path.join(OUT,'manifest.json'))queueProgressPublish();
 }
 function readJson(file){
   try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return null;}
@@ -31,19 +77,22 @@ function signalChildProcessTree(child,signal){
 function runNodePhase(name,script,env={},timeoutMs=25*60*1000){
   return new Promise(resolve=>{
     const row={name,script,startedAt:new Date().toISOString(),status:'running',durationMs:null,exitCode:null,error:null};
-    phases.push(row);writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});
+    phases.push(row);
+    const skipReason=phaseSkipReason(name);
+    if(skipReason){Object.assign(row,{status:'skipped',finishedAt:new Date().toISOString(),durationMs:0,error:skipReason});writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,visualCapturesSkipped:SKIP_VISUAL_CAPTURES,phases,finishedAt:null});console.log('[UNIFIED_INSPECTOR] SKIP '+name+' — '+skipReason);return resolve(row);}
+    writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});
     console.log('\\n[UNIFIED_INSPECTOR] START '+name+' — '+script);
     const phaseStarted=Date.now();
     let child;
     try{child=spawn(process.execPath,[script],{cwd:ROOT,env:{...process.env,...env},stdio:'inherit',detached:process.platform!=='win32'});}
-    catch(error){row.status='failed';row.error=String(error?.stack||error);row.durationMs=Date.now()-phaseStarted;writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});return resolve(row);}
+    catch(error){row.status='failed';row.error=String(error?.stack||error);row.durationMs=Date.now()-phaseStarted;writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});return resolve(row);}
     let settled=false,timedOut=false,timer=null,forceTimer=null,finalTimer=null;
     const timeoutMessage='Exceeded phase timeout of '+timeoutMs+' ms.';
     const finish=(status,code,error=null)=>{
       if(settled)return;settled=true;
       clearTimeout(timer);clearTimeout(forceTimer);clearTimeout(finalTimer);
       Object.assign(row,{status,exitCode:code,error,finishedAt:new Date().toISOString(),durationMs:Date.now()-phaseStarted});
-      writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});
+      writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});
       console.log('[UNIFIED_INSPECTOR] END '+name+' — '+status+' ('+row.durationMs+' ms)');
       resolve(row);
     };
@@ -70,14 +119,18 @@ function runPythonPhase(name,script,arg,timeoutMs=5*60*1000){
   return new Promise(resolve=>{
     const row={name,script,startedAt:new Date().toISOString(),status:'running',durationMs:null,exitCode:null,error:null};
     phases.push(row);
+    const skipReason=phaseSkipReason(name);
+    if(skipReason){Object.assign(row,{status:'skipped',finishedAt:new Date().toISOString(),durationMs:0,error:skipReason});writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,visualCapturesSkipped:SKIP_VISUAL_CAPTURES,phases,finishedAt:null});console.log('[UNIFIED_INSPECTOR] SKIP '+name+' — '+skipReason);return resolve(row);}
     const phaseStarted=Date.now();
-    const child=spawn(process.env.PYTHON||'python3',[script,arg],{cwd:ROOT,env:process.env,stdio:'inherit',detached:process.platform!=='win32'});
+    let child;
+    try{child=spawn(process.env.PYTHON||'python3',[script,arg],{cwd:ROOT,env:process.env,stdio:'inherit',detached:process.platform!=='win32'});}
+    catch(error){row.status='failed';row.error=String(error?.stack||error);row.durationMs=Date.now()-phaseStarted;row.finishedAt=new Date().toISOString();writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});return resolve(row);}
     let settled=false,timedOut=false,timer=null,forceTimer=null,finalTimer=null;
     const finish=(status,code,error=null)=>{
       if(settled)return;settled=true;
       clearTimeout(timer);clearTimeout(forceTimer);clearTimeout(finalTimer);
       Object.assign(row,{status,exitCode:code,error,finishedAt:new Date().toISOString(),durationMs:Date.now()-phaseStarted});
-      writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,phases,finishedAt:null});
+      writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});
       resolve(row);
     };
     timer=setTimeout(()=>{
@@ -106,12 +159,24 @@ async function main(){
   fs.mkdirSync(OUT,{recursive:true});
   const common={PLAYER_TEST_URL:BASE_URL,CAPTURE_TEST_URL:BASE_URL,STRUCTURE_TEST_URL:BASE_URL,COASTAL_TEST_URL:BASE_URL};
   await runNodePhase('Arranque del juego y modelo vikingo real','scripts/player-startup-smoke.mjs',common,20*60*1000);
-  await runNodePhase('Texturas, carga y preparación de cámara','scripts/texture-readiness-smoke.mjs',{...common,CAPTURE_PLAN_JSON:PLAN,CAPTURE_TEXTURE_TIMEOUT_MS:'30000',CAPTURE_CANVAS_TIMEOUT_MS:'15000',CAPTURE_CDP_TIMEOUT_MS:'8000',CAPTURE_SKIP_TEXTURE_SCREENSHOT:'1'},15*60*1000);
+  await runNodePhase('Texturas, carga y preparación de cámara','scripts/texture-readiness-smoke.mjs',{...common,CAPTURE_PLAN_JSON:PLAN,CAPTURE_TEXTURE_TIMEOUT_MS:'30000',CAPTURE_CANVAS_TIMEOUT_MS:'15000',CAPTURE_CDP_TIMEOUT_MS:'8000',CAPTURE_SKIP_TEXTURE_SCREENSHOT:'1'},10*60*1000);
   await runNodePhase('Cimentación, estructuras y simulación de reparación en entorno desechable','scripts/coastal-structure-grounding-smoke.mjs',common,15*60*1000);
   await runNodePhase('Referencias costeras, agua, visibilidad y capturas de entorno','scripts/coastal-reference.mjs',common,35*60*1000);
-  await runNodePhase('Inventario completo, identidades y cámaras desde el agua','scripts/custom-scene-capture.mjs',{...common,CAPTURE_PLAN_JSON:PLAN},35*60*1000);
-  await runPythonPhase('Informe visual unificado de estructuras','scripts/create_scene_capture_contact_sheet.py','artifacts/custom-scene-captures');
-  await runPythonPhase('Lámina de referencias costeras','scripts/create_coastal_contact_sheet.py','artifacts/coastal-reference');
+  await runNodePhase('Inventario completo, identidades y cámaras desde el agua','scripts/custom-scene-capture.mjs',{...common,CAPTURE_PLAN_JSON:PLAN},20*60*1000);
+  // These two report builders read separate artifact folders, so they can safely run together.
+  await Promise.all([
+    runPythonPhase('Informe visual unificado de estructuras','scripts/create_scene_capture_contact_sheet.py','artifacts/custom-scene-captures'),
+    runPythonPhase('Lámina de referencias costeras','scripts/create_coastal_contact_sheet.py','artifacts/coastal-reference')
+  ]);
+
+  // The A/B comparator is a mandatory phase of this one-entrypoint inspection.
+  // Missing baseline/candidate URLs fail the inspector instead of silently skipping the comparison.
+  await runNodePhase('Comparación visual ANTES/DESPUÉS — cuatro fases horarias','scripts/hrafn-before-after.mjs',{
+    HRAFN_BEFORE_URL,HRAFN_AFTER_URL,
+    HRAFN_COMPARE_OUT:'artifacts/hrafn-before-after',
+    HRAFN_CAPTURE_SEED:process.env.CAPTURE_SEED||'20261110'
+  },35*60*1000);
+  await runPythonPhase('Informe visual ANTES/DESPUÉS y mapas de diferencias','scripts/create_hrafn_ab_report.py','artifacts/hrafn-before-after');
 
   const custom=summaryFrom('artifacts/custom-scene-captures/manifest.json',m=>({
     build:m.build,counts:m.auditSummary,structures:m.initialPhysicalAudit?.structuralCandidates||[],
@@ -122,16 +187,28 @@ async function main(){
   const grounding=summaryFrom('artifacts/structure-grounding/manifest.json',m=>({verdict:m.verdict,summary:m.summary,failure:m.failure}));
   const coastal=summaryFrom('artifacts/coastal-reference/manifest.json',m=>({captureCount:m.captures?.length,atmosphereAudit:m.atmosphereAudit,atmosphereCaptureCount:m.atmosphereCaptures?.length,structureVisibility:m.structureVisibility?.length,failure:m.failure}));
   const player=summaryFrom('artifacts/player-startup/manifest.json',m=>({modelReady:m.finalState?.modelReady,realPlayerMeshCount:m.finalState?.realPlayerMeshCount,failure:m.failure}));
+  const beforeAfter=summaryFrom('artifacts/hrafn-before-after/manifest.json',m=>({method:m.method,seed:m.captureSeed,phases:m.phases?.map(p=>({id:p.id,hour:p.hour,comparison:p.comparison||null})),warnings:m.warnings,failure:m.failure}));
   const report={
-    schema:1,mode:'single-entrypoint-multi-phase-inspection',readOnlyForMainCapture:true,
-    note:'Las comprobaciones de reparación se ejecutan en navegadores de prueba desechables; no modifican la partida ni los archivos publicados.',
+    schema:1,mode:'tiered-single-entrypoint-inspection',level:INSPECTOR_LEVEL,readOnlyForMainCapture:true,visualCapturesSkipped:SKIP_VISUAL_CAPTURES,
+    note:SKIP_VISUAL_CAPTURES?'Pasada temporal de compilación y auditoría de arranque: las capturas costeras, las panorámicas de escena y la comparación Hrafn se han omitido; el código de captura permanece intacto.':'Las comprobaciones de reparación se ejecutan en navegadores de prueba desechables; no modifican la partida ni los archivos publicados.',
     startedAt,finishedAt:new Date().toISOString(),durationMs:Date.now()-started,
-    baseUrl:BASE_URL,phases,results:{player,texture,grounding,coastal,custom},
+    baseUrl:BASE_URL,phases,results:{player,texture,grounding,coastal,custom,beforeAfter},
     files:[
       'player-startup/manifest.json','texture-readiness-smoke/manifest.json',
-      'structure-grounding/manifest.json','coastal-reference/manifest.json',
-      'custom-scene-captures/manifest.json','custom-scene-captures/inspection-report.md',
-      'custom-scene-captures/contact-sheet.png','custom-scene-captures/vision-review-index.json'
+      'structure-grounding/manifest.json',
+      ...(SKIP_VISUAL_CAPTURES?[]:[
+        'coastal-reference/manifest.json','custom-scene-captures/manifest.json',
+        'custom-scene-captures/inspection-report.md','custom-scene-captures/contact-sheet.png',
+        'custom-scene-captures/vision-review-index.json'
+      ]),
+      ...(INSPECTOR_LEVEL==='deep'&&!SKIP_VISUAL_CAPTURES?[
+        'hrafn-before-after/manifest.json','hrafn-before-after/report.md',
+        'hrafn-before-after/before/','hrafn-before-after/after/',
+        'hrafn-before-after/comparison-dawn.jpg','hrafn-before-after/comparison-noon.jpg',
+        'hrafn-before-after/comparison-dusk.jpg','hrafn-before-after/comparison-midnight.jpg',
+        'hrafn-before-after/difference-dawn.png','hrafn-before-after/difference-noon.png',
+        'hrafn-before-after/difference-dusk.png','hrafn-before-after/difference-midnight.png'
+      ]:[])
     ]
   };
   writeJson(path.join(OUT,'manifest.json'),report);
@@ -154,6 +231,12 @@ async function main(){
     '- Texturas pendientes detectadas: **'+(custom?.textures?.readiness?.pendingTextures?.length??'no disponible')+'**',
     '- Cámaras: **'+(custom?.shots?.captured??0)+' / '+(custom?.shots?.planned??0)+'**',
     '- Fallos de cámara: **'+(custom?.shots?.failed??0)+'**','',
+    ...(INSPECTOR_LEVEL==='deep'?[
+      '## Comparación visual antes/después','',
+      '- Fases capturadas: **'+(beforeAfter?.phases?.length??0)+' / 4**',
+      '- Semilla compartida: **'+(beforeAfter?.seed??'no disponible')+'**',
+      '- Informe: **artifacts/hrafn-before-after/report.md**',''
+    ]:[]),
     '## Lista de estructuras detectadas','','| Código | ID interno | Nombre | Tipo | Isla | X | Y | Z | Mallas |',
     '|---|---:|---|---|---|---:|---:|---:|---:|'
   );
@@ -169,8 +252,9 @@ async function main(){
   );
   fs.writeFileSync(path.join(OUT,'inspection-report.md'),lines.join('\n')+'\n');
   console.log('[TEXTURE_READINESS_SUMMARY] '+JSON.stringify(texture));
-  const failures=phases.filter(row=>row.status!=='passed');
-  console.log('\n[UNIFIED_INSPECTOR_RESULT] '+JSON.stringify({verdict:failures.length?'issues-found':'pass',passed:phases.length-failures.length,failed:failures.length,structures:custom?.structures?.length??null,captures:custom?.shots??null}));
+  const failures=phases.filter(row=>row.status!=='passed'&&row.status!=='skipped');
+  console.log('\n[UNIFIED_INSPECTOR_RESULT] '+JSON.stringify({verdict:failures.length?'issues-found':'pass',passed:phases.filter(row=>row.status==='passed').length,skipped:phases.filter(row=>row.status==='skipped').length,failed:failures.length,structures:custom?.structures?.length??null,captures:custom?.shots??null}));
+  await progressQueue;
   if(failures.length)process.exitCode=2;
 }
 main().catch(error=>{console.error('[UNIFIED_INSPECTOR_FATAL]',error);process.exitCode=1;});

@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 
-# One release pipeline per branch; newer main commits replace older queued builds.
+# Publish only the validated main release; feature branches never deploy to production Pages.
 concurrency:
   group: github-pages-${{ github.ref }}
   cancel-in-progress: true
@@ -36,6 +36,10 @@ jobs:
 
       - name: Test offline navigation suite and four camera modes
         run: node scripts/test_navigation_suite_contract.cjs
+      - name: Test adaptive graphics quality without sacrificing Performance profile
+        run: node scripts/test_graphics_quality_contract.cjs
+      - name: Test release version and packaging contract
+        run: node scripts/test_release_contract.cjs
       - name: Test unified day-night atmosphere clock and APIs
         run: node scripts/test_atmosphere_system.cjs
       - name: Test bounded scene capture and animated frame integrity
@@ -55,6 +59,11 @@ jobs:
 
       - name: Download all resources, build dist and run release validation
         run: python scripts/build_site.py
+
+      - name: Include the independent Inspector Center in the published site
+        run: |
+          mkdir -p dist/inspector
+          cp -R inspector/. dist/inspector/
 
       - name: Upload validated site for PR inspection
         uses: actions/upload-artifact@v4

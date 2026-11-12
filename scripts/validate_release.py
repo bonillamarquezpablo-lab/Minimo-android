@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.276"
+EXPECTED_VERSION = "0.6.278"
 
 HTML_PAGES = (
     "index.html",
@@ -225,15 +225,27 @@ def main() -> None:
         fail("Falta el socket visible del palo anclado a la palma en espacio del jugador.")
     if "function findRightGripBones" not in index_html or "applyRealPlayerClubGripPose" not in index_html:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
-    if "Math.min(deviceDpr,isTouchDevice?1.80:1.85)" not in index_html:
-        fail("Calidad debe limitar la resolución interna para reducir el coste de GPU sin recortar efectos.")
+    graphics_quality_markers = (
+        "highHeadroomQualityMobile?2.10:(isTouchDevice?1.80:1.85)",
+        "qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.40:1.80):1.85)",
+        "qualityDprStableSamples>=6",
+        "qualityDprSlowSamples>=2",
+        "engine.setHardwareScalingLevel(1/qualityDprCurrent)",
+        "style='grain',size=highHeadroomQualityMobile?1024:512",
+        "'sand',isPerformanceMode?(isConstrainedMobile?256:512):(highHeadroomQualityMobile?2048:1024),true)",
+        "const size=isPerformanceMode?(isConstrainedMobile?512:768):(highHeadroomQualityMobile?2048:1024)",
+        "const size=highHeadroomQualityMobile?512:256",
+    )
+    missing_graphics_quality = [marker for marker in graphics_quality_markers if marker not in index_html]
+    if missing_graphics_quality:
+        fail("La mejora de nitidez adaptativa o las texturas de alta calidad están incompletas: " + ", ".join(missing_graphics_quality))
     if "const TERRAIN_HASH_CACHE_LIMIT=65536;" not in index_html or "terrainHashCacheSlots" not in index_html or "terrainHashCacheEntries:terrainHashCache.size" not in index_html:
         fail("La caché determinista de ruido del terreno debe estar acotada y diagnosticada.")
     if "const GROUND_RELAX_INTERVAL=1/30;" not in index_html or "groundRelaxAccumulator>=GROUND_RELAX_INTERVAL" not in index_html:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'13',build:'0.6.276'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'14',build:'0.6.278'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -451,8 +463,12 @@ def main() -> None:
         fail("Las texturas procedurales principales del suelo deben generar mipmaps.")
     if "const packedTrailTexture=makePatternTexture('Packed Norse trail earth','#a18a63',['#d0b68a','#8c7450','#ddc79e','#a58b60'],'sand',512,true);" not in index_html:
         fail("La textura procedural de los caminos también debe generar mipmaps.")
-    if "makePatternTexture(name,base,accents,style='grain',size=512,generateMipMaps=false)" not in index_html:
-        fail("La generación selectiva de mipmaps de las texturas procedurales ha cambiado.")
+    procedural_texture_signature = re.search(
+        r"function\s+makePatternTexture\s*\(\s*name\s*,\s*base\s*,\s*accents\s*,\s*style='grain'\s*,\s*size\s*=\s*highHeadroomQualityMobile\s*\?\s*1024\s*:\s*512\s*,\s*generateMipMaps\s*=\s*false\s*\)",
+        index_html,
+    )
+    if not procedural_texture_signature:
+        fail("La textura procedural debe usar resolución adaptativa de 1K y conservar la generación selectiva de mipmaps.")
     if "mesh.material.diffuseTexture.anisotropicFilteringLevel=maxAnisotropy" not in index_html or "tex.anisotropicFilteringLevel=maxAnisotropy" not in index_html:
         fail("No se conserva el filtrado anisotrópico de las texturas procedurales.")
     if "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);" not in index_html:
@@ -516,7 +532,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.276" not in index_html or "EL SIN NOMBRE 0.6.276 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.278" not in index_html or "EL SIN NOMBRE 0.6.278 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -636,7 +652,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.276</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.278</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")

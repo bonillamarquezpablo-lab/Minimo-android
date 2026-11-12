@@ -4,20 +4,43 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main, test/coastal-reference-0.6.272]
+    branches: [main, feature/unified-atmosphere-system, test/coastal-reference-0.6.272, fix/graphics-quality-validation-0.6.277, feature/tiered-inspector-levels, feature/inspector-center-dashboard, fix/inspector-workflow-and-runtime-guards]
+    paths-ignore:
+      - '.github/workflows/**'
+      - 'inspector/**'
+      - 'README.md'
+      - 'vercel.json'
+      - 'scripts/run-unified-inspector.mjs'
+      - 'scripts/test_inspector_dashboard_contract.cjs'
+      - 'scripts/test_inspector_workflows_contract.cjs'
+      - 'scripts/test_hrafn_before_after_contract.cjs'
   workflow_dispatch:
     inputs:
+      inspection_level:
+        description: 'Nivel de inspección: rápido para cambios pequeños, completo para cambios importantes o profundo antes de publicar.'
+        required: true
+        type: choice
+        options:
+          - quick
+          - complete
+          - deep
+        default: quick
+      before_ref:
+        description: 'Rama o etiqueta que sirve como ANTES de la comparación visual.'
+        required: false
+        type: string
+        default: 'feature/unified-atmosphere-system'
       capture_plan:
         description: 'Una sola inspección: inventario completo, texturas, estructuras, agua, costa, pruebas y cámaras desde el agua. Hasta 120 capturas.'
-        required: true
+        required: false
         type: string
         default: '[{"id":"inspeccion-unica-hrafn","zone":{"label":"Bahía de Hrafn — todas las construcciones detectadas","center":{"x":28,"y":2.2,"z":143},"radiusMeters":27,"focus":"structures","maxTargets":12,"cameraDistanceMeters":9,"angles":[0,45,90,135,180,225,270,315],"times":[37],"tides":["natural"],"observationPoint":{"x":28,"y":6,"z":236.3},"observationHeightOffsets":[0,2.5],"includeTopDown":false}}]'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: scene-capture-${{ github.event.pull_request.number || github.ref }}-${{ github.sha }}
+  group: scene-capture-${{ github.event.pull_request.number || github.ref }}${{ github.event_name == 'pull_request' && github.event.pull_request.number == 121 && '-manual-game-test-no-inspector' || '' }}
   cancel-in-progress: false
 
 jobs:
@@ -30,6 +53,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -41,13 +65,58 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Resolve the exact baseline commit for before/after
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep')
+        id: baseline
+        shell: bash
+        env:
+          PULL_REQUEST_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          DISPATCH_BASE_REF: ${{ inputs.before_ref }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BASE_REF="$PULL_REQUEST_BASE_SHA"
+          elif [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" = "main" ]; then
+            BASE_REF="$PUSH_BEFORE_SHA"
+            if [ -z "$BASE_REF" ] || [[ "$BASE_REF" =~ ^0+$ ]]; then
+              BASE_REF="main^"
+            fi
+          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ -n "$DISPATCH_BASE_REF" ]; then
+            BASE_REF="$DISPATCH_BASE_REF"
+          else
+            BASE_REF="feature/unified-atmosphere-system"
+          fi
+          git fetch --no-tags origin "$BASE_REF"
+          BASE_SHA="$(git rev-parse FETCH_HEAD)"
+          if [ "$BASE_SHA" = "$GITHUB_SHA" ]; then
+            echo "Baseline and candidate resolve to the same commit; refusing a meaningless A/B comparison."
+            exit 1
+          fi
+          echo "ref=$BASE_REF" >> "$GITHUB_OUTPUT"
+          echo "sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "Hrafn baseline: $BASE_REF ($BASE_SHA)"
+
+      - name: Build the baseline game in an isolated worktree
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep')
+        env:
+          HRAFN_BASE_SHA: ${{ steps.baseline.outputs.sha }}
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/hrafn-before-source" "$HRAFN_BASE_SHA"
+          python "$RUNNER_TEMP/hrafn-before-source/scripts/build_site.py"
+          mv "$RUNNER_TEMP/hrafn-before-source/dist" "$RUNNER_TEMP/hrafn-before-dist"
+          test -s "$RUNNER_TEMP/hrafn-before-dist/index.html"
+
       - name: Install report image support
+        if: github.event_name != 'pull_request' || github.event.pull_request.number != 121
         run: python -m pip install Pillow
 
       - name: Validate every inspector module and contract
         run: |
           python scripts/inspect_structure_repair_source.py
           node --check scripts/run-unified-inspector.mjs
+          node --check scripts/hrafn-before-after.mjs
+          node scripts/test_hrafn_before_after_contract.cjs
+          node scripts/test_inspector_capture_skip_contract.cjs
           node --check scripts/player-startup-smoke.mjs
           node --check scripts/texture-readiness-smoke.mjs
           node --check scripts/coastal-structure-grounding-smoke.mjs
@@ -58,32 +127,67 @@ jobs:
           node scripts/test_texture_readiness_contract.cjs
           node scripts/test_coastal_structure_grounding_contract.cjs
           node scripts/test_capture_reliability_contract.cjs
+          node scripts/test_inspector_dashboard_contract.cjs
 
       - name: Build the complete game and packaged assets
         run: python scripts/build_site.py
 
+      # TEMPORARY: PR 121 is being handed to the user for a manual game test.
+      # Keep static contracts and the full game build, but do not launch the inspector.
+      - name: Record temporary inspector bypass for manual game test
+        if: github.event_name == 'pull_request' && github.event.pull_request.number == 121
+        run: |
+          mkdir -p artifacts/unified-inspector
+          cat > artifacts/unified-inspector/manifest.json <<'JSON'
+          {
+            "schema": 1,
+            "status": "temporarily_skipped",
+            "reason": "Manual game test requested; static contracts and full game build were executed.",
+            "re_enable_after_manual_game_test": true
+          }
+          JSON
+
       - name: Install Playwright and Chromium
+        if: github.event_name != 'pull_request' || github.event.pull_request.number != 121
         run: |
           npm install --no-save --no-package-lock playwright
           npx playwright install chromium
           node -e "const fs=require('node:fs');const {chromium}=require('playwright');const executable=chromium.executablePath();if(!fs.existsSync(executable))throw new Error('Chromium binary missing: '+executable);console.log('Chromium ready:',executable)"
 
-      - name: Start one local server for the complete inspection
+      - name: Start baseline and candidate game servers for the unified inspection
+        if: github.event_name != 'pull_request' || github.event.pull_request.number != 121
+        env:
+          INSPECTOR_LEVEL: ${{ inputs.inspection_level || (github.event_name == 'push' && 'deep' || 'complete') }}
         run: |
-          python3 -m http.server 4175 --directory dist > /tmp/elsn-unified-inspector-http.log 2>&1 &
-          echo $! > /tmp/elsn-unified-inspector-http.pid
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:4175/ > /dev/null; then exit 0; fi
+          if [ "$INSPECTOR_LEVEL" = "deep" ]; then
+            python3 -m http.server 4176 --directory "$RUNNER_TEMP/hrafn-before-dist" > /tmp/elsn-hrafn-before-http.log 2>&1 &
+            echo $! > /tmp/elsn-hrafn-before-http.pid
+          fi
+          python3 -m http.server 4175 --directory dist > /tmp/elsn-hrafn-after-http.log 2>&1 &
+          echo $! > /tmp/elsn-hrafn-after-http.pid
+          for attempt in $(seq 1 45); do
+            BEFORE_OK=0
+            AFTER_OK=0
+            if [ "$INSPECTOR_LEVEL" = "deep" ]; then curl --fail --silent http://127.0.0.1:4176/ > /dev/null && BEFORE_OK=1 || true; else BEFORE_OK=1; fi
+            curl --fail --silent http://127.0.0.1:4175/ > /dev/null && AFTER_OK=1 || true
+            if [ "$BEFORE_OK" = "1" ] && [ "$AFTER_OK" = "1" ]; then exit 0; fi
             sleep 1
           done
-          cat /tmp/elsn-unified-inspector-http.log
+          cat /tmp/elsn-hrafn-before-http.log
+          cat /tmp/elsn-hrafn-after-http.log
           exit 1
 
       - name: Run the single unified inspector
+        if: github.event_name != 'pull_request' || github.event.pull_request.number != 121
         env:
           INSPECTOR_TEST_URL: http://127.0.0.1:4175/
+          HRAFN_BEFORE_URL: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep')) && 'http://127.0.0.1:4176/' || '' }}
+          HRAFN_AFTER_URL: http://127.0.0.1:4175/
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
           CAPTURE_SEED: '20261110'
+          INSPECTOR_LEVEL: ${{ inputs.inspection_level || (github.event_name == 'push' && 'deep' || 'complete') }}
+          INSPECTOR_GITHUB_TOKEN: ${{ github.event_name != 'pull_request' && github.token || '' }}
+          INSPECTOR_STATUS_BRANCH: inspector-status
         run: |
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             export CAPTURE_PLAN_JSON="$CAPTURE_PLAN_INPUT"
@@ -123,6 +227,7 @@ jobs:
             artifacts/structure-grounding/
             artifacts/coastal-reference/
             artifacts/custom-scene-captures/
+            artifacts/hrafn-before-after/
           if-no-files-found: warn
           retention-days: 30
           compression-level: 0
