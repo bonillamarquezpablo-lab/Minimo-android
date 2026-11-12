@@ -2,13 +2,13 @@ name: Build and deploy EL SIN NOMBRE
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/hrafn-before-after-inspector]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# One release pipeline per branch; newer main commits replace older queued builds.
+# One release pipeline per branch; the validated candidate can be published without merging into main.
 concurrency:
   group: github-pages-${{ github.ref }}
   cancel-in-progress: true
@@ -76,7 +76,7 @@ jobs:
 
   deploy:
     name: Publish the exact validated build on GitHub Pages
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/hrafn-before-after-inspector')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
