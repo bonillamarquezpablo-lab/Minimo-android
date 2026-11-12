@@ -7,11 +7,9 @@ on:
   pull_request:
     branches: [main]
     paths-ignore:
-      - '.github/workflows/**'
       - 'inspector/**'
       - 'README.md'
       - 'vercel.json'
-      - 'scripts/run-unified-inspector.mjs'
       - 'scripts/test_inspector_dashboard_contract.cjs'
       - 'scripts/test_inspector_workflows_contract.cjs'
       - 'scripts/test_hrafn_before_after_contract.cjs'
@@ -41,9 +39,8 @@ permissions:
   contents: write
 
 concurrency:
-  # Do not kill a 2–3 hour full inspection just because a follow-up commit lands.
-  # GitHub keeps one active run and the newest pending run for this PR/ref.
-  group: scene-capture-s26-graphics-${{ github.event.pull_request.number || github.ref }}
+  # Isolate each candidate commit so a stale runner cannot block the newest inspection.
+  group: scene-capture-s26-graphics-${{ github.event.pull_request.number || github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
@@ -69,7 +66,7 @@ jobs:
           node-version: '22'
 
       - name: Resolve the exact baseline commit for before/after
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep')
+        if: github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep')
         id: baseline
         shell: bash
         env:
@@ -79,6 +76,7 @@ jobs:
         run: |
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             BASE_REF="$PULL_REQUEST_BASE_SHA"
+            BASE_SHA="$PULL_REQUEST_BASE_SHA"
           elif [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" = "main" ]; then
             BASE_REF="$PUSH_BEFORE_SHA"
             if [ -z "$BASE_REF" ] || [[ "$BASE_REF" =~ ^0+$ ]]; then
@@ -178,7 +176,7 @@ jobs:
 
       - name: Start baseline and candidate game servers for the unified inspection
         env:
-          INSPECTOR_LEVEL: ${{ inputs.inspection_level || (github.event_name == 'push' && 'deep' || 'complete') }}
+          INSPECTOR_LEVEL: ${{ inputs.inspection_level || ((github.event_name == 'push' || github.event_name == 'pull_request') && 'deep' || 'complete') }}
         run: |
           if [ "$INSPECTOR_LEVEL" = "deep" ]; then
             python3 -m http.server 4176 --directory "$RUNNER_TEMP/hrafn-before-dist" > /tmp/elsn-hrafn-before-http.log 2>&1 &
@@ -201,7 +199,7 @@ jobs:
       - name: Run the single unified inspector
         env:
           INSPECTOR_TEST_URL: http://127.0.0.1:4175/
-          HRAFN_BEFORE_URL: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep')) && 'http://127.0.0.1:4176/' || '' }}
+          HRAFN_BEFORE_URL: ${{ ((github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep')) && 'http://127.0.0.1:4176/' || '' }}
           HRAFN_AFTER_URL: http://127.0.0.1:4175/
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
           CAPTURE_SEED: '20261110'
