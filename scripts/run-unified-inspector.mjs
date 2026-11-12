@@ -110,7 +110,9 @@ function runPythonPhase(name,script,arg,timeoutMs=5*60*1000){
     phases.push(row);
     if(phaseLevel(name)>LEVEL_RANK[INSPECTOR_LEVEL]){Object.assign(row,{status:'skipped',finishedAt:new Date().toISOString(),durationMs:0,error:'Not required by '+INSPECTOR_LEVEL+' inspection level.'});writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});console.log('[UNIFIED_INSPECTOR] SKIP '+name+' — level '+INSPECTOR_LEVEL);return resolve(row);}
     const phaseStarted=Date.now();
-    const child=spawn(process.env.PYTHON||'python3',[script,arg],{cwd:ROOT,env:process.env,stdio:'inherit',detached:process.platform!=='win32'});
+    let child;
+    try{child=spawn(process.env.PYTHON||'python3',[script,arg],{cwd:ROOT,env:process.env,stdio:'inherit',detached:process.platform!=='win32'});}
+    catch(error){row.status='failed';row.error=String(error?.stack||error);row.durationMs=Date.now()-phaseStarted;row.finishedAt=new Date().toISOString();writeJson(path.join(OUT,'manifest.json'),{schema:1,startedAt,level:INSPECTOR_LEVEL,phases,finishedAt:null});return resolve(row);}
     let settled=false,timedOut=false,timer=null,forceTimer=null,finalTimer=null;
     const finish=(status,code,error=null)=>{
       if(settled)return;settled=true;
@@ -184,12 +186,14 @@ async function main(){
       'structure-grounding/manifest.json','coastal-reference/manifest.json',
       'custom-scene-captures/manifest.json','custom-scene-captures/inspection-report.md',
       'custom-scene-captures/contact-sheet.png','custom-scene-captures/vision-review-index.json',
-      'hrafn-before-after/manifest.json','hrafn-before-after/report.md',
-      'hrafn-before-after/before/','hrafn-before-after/after/',
-      'hrafn-before-after/comparison-dawn.jpg','hrafn-before-after/comparison-noon.jpg',
-      'hrafn-before-after/comparison-dusk.jpg','hrafn-before-after/comparison-midnight.jpg',
-      'hrafn-before-after/difference-dawn.png','hrafn-before-after/difference-noon.png',
-      'hrafn-before-after/difference-dusk.png','hrafn-before-after/difference-midnight.png'
+      ...(INSPECTOR_LEVEL==='deep'?[
+        'hrafn-before-after/manifest.json','hrafn-before-after/report.md',
+        'hrafn-before-after/before/','hrafn-before-after/after/',
+        'hrafn-before-after/comparison-dawn.jpg','hrafn-before-after/comparison-noon.jpg',
+        'hrafn-before-after/comparison-dusk.jpg','hrafn-before-after/comparison-midnight.jpg',
+        'hrafn-before-after/difference-dawn.png','hrafn-before-after/difference-noon.png',
+        'hrafn-before-after/difference-dusk.png','hrafn-before-after/difference-midnight.png'
+      ]:[])
     ]
   };
   writeJson(path.join(OUT,'manifest.json'),report);
@@ -212,11 +216,7 @@ async function main(){
     '- Texturas pendientes detectadas: **'+(custom?.textures?.readiness?.pendingTextures?.length??'no disponible')+'**',
     '- Cámaras: **'+(custom?.shots?.captured??0)+' / '+(custom?.shots?.planned??0)+'**',
     '- Fallos de cámara: **'+(custom?.shots?.failed??0)+'**','',
-    '## Comparación visual antes/después','',
-    '- Fases capturadas: **'+(beforeAfter?.phases?.length??0)+' / 4**',
-    '- Semilla compartida: **'+(beforeAfter?.seed??'no disponible')+'**',
-    '- Informe: **artifacts/hrafn-before-after/report.md**','',
-    '## Lista de estructuras detectadas','','| Código | ID interno | Nombre | Tipo | Isla | X | Y | Z | Mallas |',
+    ...(INSPECTOR_LEVEL==='deep'?[\n      '## Comparación visual antes/después','',\n      '- Fases capturadas: **'+(beforeAfter?.phases?.length??0)+' / 4**',\n      '- Semilla compartida: **'+(beforeAfter?.seed??'no disponible')+'**',\n      '- Informe: **artifacts/hrafn-before-after/report.md**',''\n    ]:[]),\n    '## Lista de estructuras detectadas','','| Código | ID interno | Nombre | Tipo | Isla | X | Y | Z | Mallas |
     '|---|---:|---|---|---|---:|---:|---:|---:|'
   );
   for(const item of (custom?.structures||[])){
