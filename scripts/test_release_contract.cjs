@@ -15,13 +15,13 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.281","The release validator must target the packaged 0.6.281 release.");
+assert.equal(expectedVersion,"0.6.282","The release validator must target the packaged 0.6.282 release.");
 for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle:titleVersion,sourceBuildUserAgent:buildVersion})) {
   assert.equal(version,sourceVersion,`The source ${source} must remain the 0.6.274 input that build_site upgrades deterministically.`);
 }
 assert.equal(shellVersion,expectedVersion,"The service-worker cache must be synchronized with the packaged release.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.281"\)/,"The build must promote every visible source version to 0.6.281.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.282"\)/,"The build must promote every visible source version to 0.6.282.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2.45:(isTouchDevice?1.80:1.85)"),"High-headroom touch devices must start with a sharper quality render scale.");
 assert.ok(buildSite.includes("qualityDprStableSamples>=3") && buildSite.includes("qualityDprSlowSamples>=1"),"Resolution must react quickly to drops and recover gradually.");
 assert.ok(buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"Adaptive resolution must be applied through Babylon hardware scaling.");
@@ -32,7 +32,7 @@ assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headro
 assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.includes("thinInstanceBatch") && buildSite.includes("list.length<260"),"Water reflections must filter non-essential foliage, instance batches and limit pass submissions.");
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?(highHeadroomQualityMobile?24:20):8"),"Mobile quality uses image sharpening and a throttled, smaller reflection pass.");
 assert.ok(buildSite.includes("renderPipeline.fxaaEnabled=!highHeadroomQualityMobile"),"Flagship mobile quality must avoid FXAA softness when native MSAA is used.");
-assert.match(buildSite,/game_version = "0\.6\.281"/,"The build must validate and package 0.6.281.");
+assert.match(buildSite,/game_version = "0\.6\.282"/,"The build must validate and package 0.6.282.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");

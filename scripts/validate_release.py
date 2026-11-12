@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.281"
+EXPECTED_VERSION = "0.6.282"
 
 HTML_PAGES = (
     "index.html",
@@ -226,9 +226,16 @@ def main() -> None:
     if "function findRightGripBones" not in index_html or "applyRealPlayerClubGripPose" not in index_html:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
     graphics_quality_markers = (
-        "highHeadroomQualityMobile?2.45:(isTouchDevice?1.80:1.85)",
-        "qualityDprFloor=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.80:1.60):1.65)",
-        "qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?3.00:1.80):1.85)",
+        "qualityDpr=fsr1Candidate?deviceDpr:",
+        "qualityDprFloor=fsr1Candidate ? .48",
+        "qualityDprCeiling=fsr1Candidate ? .74",
+        "norseFsr1EASU",
+        "norseFsr1RCAS",
+        "fsr1SourcePostProcess._options=fsr1InputScale",
+        "FsrEasuF(",
+        "FsrRcasF(",
+        
+        
         "qualityDprStableSamples>=3",
         "qualityDprSlowSamples>=1",
         "fps<32",
@@ -236,6 +243,9 @@ def main() -> None:
         "fps>=57",
         "const targetFrameRate=60",
         "engine.setHardwareScalingLevel(1/qualityDprCurrent)",
+        "renderPipeline.fxaaEnabled=!fsr1Candidate",
+        "renderPipeline.imageProcessingEnabled=false",
+        "window.__ELSN_FSR1",
         "style='grain',size=highHeadroomQualityMobile?1024:512",
         "'sand',isPerformanceMode?(isConstrainedMobile?256:512):(highHeadroomQualityMobile?2048:1024),true)",
         "const size=isPerformanceMode?(isConstrainedMobile?512:768):(highHeadroomQualityMobile?2048:1024)",
@@ -250,7 +260,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'14',build:'0.6.281'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'14',build:'0.6.282'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:60" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -539,7 +549,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.281" not in index_html or "EL SIN NOMBRE 0.6.281 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.282" not in index_html or "EL SIN NOMBRE 0.6.282 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -659,7 +669,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.281</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.282</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")

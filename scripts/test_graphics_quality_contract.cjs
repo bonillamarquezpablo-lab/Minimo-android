@@ -10,15 +10,25 @@ for(const marker of [
   'highTierGpuMatch=',
   'highHeadroomQualityMobile=',
   '!isPerformanceMode&&isTouchDevice&&!constrainedHardware',
-  'qualityDprFloor=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.80:1.60):1.65)',
-  'qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?3.00:1.80):1.85)',
+  'qualityDprFloor=fsr1Candidate ? .48',
+  'qualityDprCeiling=fsr1Candidate ? .74',
+  'qualityDpr=fsr1Candidate?deviceDpr:',
+  'norseFsr1EASU',
+  'norseFsr1RCAS',
+  'FsrEasuF(',
+  'FsrRcasF(',
+  'fsr1SourcePostProcess._options=fsr1InputScale',
+  'renderPipeline.fxaaEnabled=!fsr1Candidate',
+  'renderPipeline.imageProcessingEnabled=false',
+  'window.__ELSN_FSR1',
   'qualityDprStableSamples>=3',
   'qualityDprSlowSamples>=1',
   'fps<32',
   'fps>=57',
   'const targetFrameRate=60',
-  'renderPipeline.fxaaEnabled=!highHeadroomQualityMobile',
+  'renderPipeline.fxaaEnabled=!fsr1Candidate',
   'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?1:4,maxSamples))',
+  'fsr1SourcePostProcess.samples=Math.max(1,Math.min(2,maxFsrSamples))',
   'renderPipeline.sharpenEnabled=true',
   'renderPipeline.sharpen.edgeAmount=.34',
   'list.length<260',
@@ -35,9 +45,10 @@ for(const marker of [
   'const size=highHeadroomQualityMobile?512:256'
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
+assert.ok(gameSource.includes('FsrEasuF(') && gameSource.includes('FsrRcasF('), 'FSR1 EASU and RCAS shaders must be embedded in the game source.');
 assert.ok(builder.includes('isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52'),'The dedicated Performance profile must keep its existing resolution safeguards.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"),"Quality profile antialiasing must remain enabled.");
 assert.ok(validator.includes('missing_graphics_quality'),'The release validator must reject a missing quality uplift.');
 assert.ok(validator.includes('procedural_texture_signature') && validator.includes('highHeadroomQualityMobile'), 'The release validator must accept the built 1K adaptive procedural texture while preserving mipmap checks.');
 
-console.log('OK graphics quality: high-headroom resolution, adaptive FPS protection, high-detail textures and unchanged Performance profile.');
+console.log('OK graphics quality: WebGL FSR1 EASU+RCAS, adaptive input scale, conditional FXAA, high-detail textures and unchanged Performance profile.');
