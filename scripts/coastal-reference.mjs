@@ -6,6 +6,49 @@ import { chromium } from 'playwright';
 
 const BASE_URL = process.env.COASTAL_TEST_URL || 'http://127.0.0.1:4173/';
 const OUT = path.resolve('artifacts/coastal-reference');
+
+async function captureAtmospherePng(page, phaseId) {
+  const attempts = [];
+  const validPng = bytes => Buffer.isBuffer(bytes) && bytes.length > 1000 &&
+    bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const dataUrl = await page.evaluate(() => {
+        const api = window.__ELSN_TEST__;
+        if (!api || typeof api.render !== 'function' || typeof api.captureCanvas !== 'function') return null;
+        api.render();
+        return api.captureCanvas();
+      });
+      const match = /^data:image\\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(dataUrl || '');
+      if (match) {
+        const bytes = Buffer.from(match[1], 'base64');
+        if (validPng(bytes)) return { bytes, method: 'game-canvas-readback', attempts };
+      }
+      attempts.push({ attempt, method: 'game-canvas-readback', success: false, resultType: typeof dataUrl });
+    } catch (error) {
+      attempts.push({ attempt, method: 'game-canvas-readback', success: false, error: String(error?.message || error) });
+    }
+    await page.waitForTimeout(80 * attempt);
+  }
+  // The independent compositor channel preserves the visible game frame when WebGL
+  // readback is unavailable. It does not modify the scene or its rendering quality.
+  let session;
+  try {
+    session = await page.context().newCDPSession(page);
+    const shot = await session.send('Page.captureScreenshot', {
+      format: 'png', fromSurface: true, captureBeyondViewport: false, optimizeForSpeed: true
+    });
+    const bytes = Buffer.from(shot.data || '', 'base64');
+    if (validPng(bytes)) return { bytes, method: 'cdp-composited-frame', attempts };
+    attempts.push({ method: 'cdp-composited-frame', success: false, bytes: bytes.length });
+  } catch (error) {
+    attempts.push({ method: 'cdp-composited-frame', success: false, error: String(error?.message || error) });
+  } finally {
+    if (session) await session.detach().catch(() => {});
+  }
+  throw new Error('No valid PNG could be captured for ' + phaseId + ': ' + JSON.stringify(attempts));
+}
+
 const CAMERAS = [
   // The close view stands one metre inland and looks out across the wet sand into the sea.
   // The two wider views remain offshore and look back toward the island.
@@ -219,17 +262,15 @@ async function main() {
       await page.waitForTimeout(120);
       const phaseFile = 'atmosphere/atmosphere-' + phase.id + '.png';
       fs.mkdirSync(path.join(OUT, 'atmosphere'), { recursive: true });
-      // Read the WebGL drawing buffer directly. Playwright's element screenshot waits
-      // for visual stability, which can never be reached while the game canvas animates.
-      const atmospherePngDataUrl = await page.evaluate(() => window.__ELSN_TEST__?.captureCanvas());
-      const atmospherePngMatch = /^data:image[.]png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(atmospherePngDataUrl || '');
-      assert.ok(atmospherePngMatch, 'Atmosphere canvas readback did not return a PNG data URL for ' + phase.id);
-      const png = Buffer.from(atmospherePngMatch[1], 'base64');
-      assert.ok(png.length > 1000, 'Atmosphere capture is empty for ' + phase.id);
-      assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'Atmosphere capture is not a valid PNG for ' + phase.id);
+      // Re-render immediately before readback, then use an independent compositor
+      // fallback if Chromium exposes an empty WebGL drawing buffer for this phase.
+      const atmosphereCapture = await captureAtmospherePng(page, phase.id);
+      const png = atmosphereCapture.bytes;
       fs.writeFileSync(path.join(OUT, phaseFile), png);
       manifest.atmosphereCaptures.push({
         file: phaseFile, phase: phase.id, hour: phase.hour,
+        captureMethod: atmosphereCapture.method,
+        captureAttempts: atmosphereCapture.attempts,
         daylight: state.daylight, twilight: state.twilight, night: state.night,
         sunEnabled: state.sunEnabled, moonEnabled: state.moonEnabled,
         moonIntensity: state.moonIntensity,
