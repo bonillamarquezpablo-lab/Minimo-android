@@ -41,8 +41,10 @@ permissions:
   contents: write
 
 concurrency:
+  # Do not kill a 2–3 hour full inspection just because a follow-up commit lands.
+  # GitHub keeps one active run and the newest pending run for this PR/ref.
   group: scene-capture-s26-graphics-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   unified-inspector:
