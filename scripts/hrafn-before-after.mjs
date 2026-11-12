@@ -319,7 +319,6 @@ try {
   saveManifest();
   console.error('[HRAFN_AB_FATAL]', manifest.failure);
   process.exitCode = 1;
-}
 } finally {
   if (before?.page) await safeClosePage(before.page);
   if (after?.page) await safeClosePage(after.page);
