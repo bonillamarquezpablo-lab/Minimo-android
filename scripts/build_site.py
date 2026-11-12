@@ -697,31 +697,31 @@ def main() -> None:
         html = html.replace("</body>", navigation_tag + "\n</body>", 1)
 
 
-    # Release candidate 0.6.287: restore flagship render clarity while preserving the
+    # Release candidate 0.6.288: restore flagship render clarity while preserving the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.287; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.288; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.287\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.288\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.287.")
-    html = html.replace("0.6.274", "0.6.287")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.288.")
+    html = html.replace("0.6.274", "0.6.288")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'16',build:'0.6.287'"
+    diagnostic_build_replacement = "reportVersion:'16',build:'0.6.288'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.287 para normalizar.")
-    game_version = "0.6.287"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.288 para normalizar.")
+    game_version = "0.6.288"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
-    # 0.6.287 graphics repair: restore the sharp flagship FSR1 path and 2.45x source detail.
+    # 0.6.288 graphics repair: restore the sharp flagship FSR1 path and 2.45x source detail.
     # Preserve the dedicated Performance profile and reserve higher source resolution for capable GPUs.
     quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
     quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
@@ -916,6 +916,26 @@ def main() -> None:
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));",
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));if(highHeadroomQualityMobile&&renderPipeline.sharpen){renderPipeline.sharpenEnabled=true;renderPipeline.sharpen.edgeAmount=.34;renderPipeline.sharpen.colorAmount=.92;}",
             "use native 2x MSAA and restrained sharpening for flagship mobile without the experimental FSR1 pass",
+        ),
+        (
+            "  const sameIsland=index===grassStreamActiveIslandIndex;\n  const moved=Number.isFinite(focusX)&&Number.isFinite(focusZ)&&Math.hypot(focusX-grassStreamCenterX,focusZ-grassStreamCenterZ)>=38;\n  if(sameIsland&&!moved)return;",
+            "  const sameIsland=index===grassStreamActiveIslandIndex;\n  if(sameIsland)return;",
+            "keep quality grass resident while traversing the same island",
+        ),
+        (
+            "if(Number.isInteger(index)&&index>=0&&index<land.length){grassStreamCenterX=focusX;grassStreamCenterZ=focusZ;await createRealGrass(index,focusX,focusZ);}else{grassStreamCenterX=NaN;grassStreamCenterZ=NaN;}",
+            "if(Number.isInteger(index)&&index>=0&&index<land.length){const grassIsland=land[index];grassStreamCenterX=grassIsland.x;grassStreamCenterZ=grassIsland.z;await createRealGrass(index,grassStreamCenterX,grassStreamCenterZ);}else{grassStreamCenterX=NaN;grassStreamCenterZ=NaN;}",
+            "anchor the one-time quality grass build to the island center",
+        ),
+        (
+            "  const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=38;\n  if((!sameIsland||moved)&&!grassStreamPromise){",
+            "  if(!sameIsland&&!grassStreamPromise){",
+            "stream quality grass only when the player changes islands",
+        ),
+        (
+            "const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);\n  grassStreamActiveIslandIndex=initialGrassIslandIndex;\n  grassStreamCenterX=player.root.position.x;grassStreamCenterZ=player.root.position.z;\n  await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);",
+            "const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);\n  const initialGrassIsland=land[initialGrassIslandIndex];\n  grassStreamActiveIslandIndex=initialGrassIslandIndex;\n  grassStreamCenterX=initialGrassIsland?initialGrassIsland.x:player.root.position.x;grassStreamCenterZ=initialGrassIsland?initialGrassIsland.z:player.root.position.z;\n  await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);",
+            "build initial quality grass once around the complete starter island",
         ),
     )
     for old_code, new_code, label in coastal_profile_replacements:
