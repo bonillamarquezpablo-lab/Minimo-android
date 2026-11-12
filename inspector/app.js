@@ -301,7 +301,7 @@
     const ring=make('circle',{cx:w/2,cy:h/2,r:205,fill:'none',stroke:'#4d7190','stroke-opacity':'.2','stroke-dasharray':'4 8'});svg.appendChild(ring);
     const labels=[];
     islands.forEach((island,index)=>{
-      const x=mapX(Number(island.x)||0),y=mapY(Number(island.z)||0),radius=Math.max(15,Math.min(43,(Number(island.r)||18)*scale*.36));
+      const islandRadius=Number(island.r??island.radiusMeters)||18,x=mapX(Number(island.x)||0),y=mapY(Number(island.z)||0),radius=Math.max(15,Math.min(43,islandRadius*scale*.36));
       const owned=structures.filter(s=>Number(s.islandIndex)===index||s.island===island.name);
       const states=owned.map(s=>measuredGrounding(s,grounding).state);
       const hasBad=states.includes('misaligned'),allMeasured=states.length>0&&states.every(s=>s!=='unknown'),state=hasBad?'misaligned':allMeasured?'grounded':'unknown';
