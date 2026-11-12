@@ -25,9 +25,11 @@ assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.287"\)/,"The b
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2.45:(isTouchDevice?1.80:1.85)"),"High-headroom touch devices must start with a high-detail FSR1 source render scale.");
 assert.ok(buildSite.includes("qualityDprStableSamples>=3") && buildSite.includes("qualityDprSlowSamples>=1"),"Resolution must react quickly to drops and recover gradually.");
 assert.ok(buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"Adaptive resolution must be applied through Babylon hardware scaling.");
-assert.match(buildSite,/BABYLON_VERSION = "8\.2\.2"/,"The packaged engine must include the DynamicTexture null-update fix.");
+assert.match(buildSite,/BABYLON_VERSION = "9\.35\.0"/,"The packaged engine must use the latest verified stable Babylon release; this retains the DynamicTexture fixes introduced in 8.2.2.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/babylon.js"'),"The engine URL must use the pinned Babylon version.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/loaders/babylonjs.loaders.min.js"'),"The glTF loader must match the engine version.");
+assert.ok(buildSite.includes('"loaderVersion": BABYLON_VERSION'),"The glTF loader and engine must remain on the exact same Babylon release.");
+assert.ok(buildSite.includes('"defaultBackend": "WebGL2-preferred"'),"The validated WebGL path must remain the production backend until WebGPU passes an on-device A/B test.");
 assert.ok(buildSite.includes("const fsr1Candidate=!!(!isPerformanceMode&&highHeadroomQualityMobile"),"The experimental FSR1 path must be enabled for capable flagship GPUs with a validated fallback.");
 assert.ok(buildSite.includes("qualityDprFloor=fsr1Candidate ? .72") && buildSite.includes("qualityDprCeiling=fsr1Candidate ? .92"),"Flagship mobile resolution must remain native and adapt within a controlled render-scale range.");
 assert.ok(buildSite.includes("let targetFrameRate=60,observedFpsCeiling=60"),"The S26 profile must adapt to 60 or 90 FPS according to the observed browser refresh ceiling.");
