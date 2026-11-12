@@ -205,6 +205,13 @@ def main() -> None:
     asset_manifest = json.loads(read_text("assets/asset-manifest.json"))
     if asset_manifest.get("game") != "EL SIN NOMBRE" or asset_manifest.get("version") != version:
         fail("El manifiesto de recursos no corresponde al juego y versión publicados.")
+    engine_manifest = asset_manifest.get("engine") or {}
+    if engine_manifest.get("name") != "Babylon.js" or engine_manifest.get("version") != "9.35.0":
+        fail("El paquete no incluye la versión validada de Babylon.js 9.35.0.")
+    if engine_manifest.get("loaderVersion") != engine_manifest.get("version"):
+        fail("El cargador glTF no coincide con la versión del motor Babylon.js.")
+    if engine_manifest.get("distribution") != "UMD" or engine_manifest.get("defaultBackend") != "WebGL2-preferred":
+        fail("La distribución UMD y la ruta WebGL validada deben conservarse para esta candidata.")
     entries = asset_manifest.get("assets")
     if not isinstance(entries, list) or not entries:
         fail("El manifiesto no contiene una lista válida de recursos.")
