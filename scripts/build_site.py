@@ -697,37 +697,37 @@ def main() -> None:
         html = html.replace("</body>", navigation_tag + "\n</body>", 1)
 
 
-    # Release candidate 0.6.279: fix the submerged seabed profile once, keep the
+    # Release candidate 0.6.280: fix the submerged seabed profile once, keep the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.279; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.280; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.279\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.280\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.279.")
-    html = html.replace("0.6.274", "0.6.279")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.280.")
+    html = html.replace("0.6.274", "0.6.280")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'14',build:'0.6.279'"
+    diagnostic_build_replacement = "reportVersion:'14',build:'0.6.280'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.279 para normalizar.")
-    game_version = "0.6.279"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.280 para normalizar.")
+    game_version = "0.6.280"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
-    # 0.6.279 graphics uplift: sharper render resolution on phones with GPU headroom.
+    # 0.6.280 graphics uplift: sharper render resolution on phones with GPU headroom.
     # The dedicated Performance profile is deliberately unchanged.
     quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
     quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
  const highHeadroomQualityMobile=!!(!isPerformanceMode&&isTouchDevice&&!constrainedHardware&&((reportedMemory>=8&&(Number(navigator.hardwareConcurrency)||0)>=8)||highTierGpuMatch));
- const qualityDprFloor=Math.min(deviceDpr,isTouchDevice?1.80:1.85);
- const qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.40:1.80):1.85);
+ const qualityDprFloor=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.50:1.60):1.65);
+ const qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.85:1.80):1.85);
  const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,highHeadroomQualityMobile?2.10:(isTouchDevice?1.80:1.85));"""
     if html.count(quality_profile_marker) != 1:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
@@ -745,28 +745,32 @@ def main() -> None:
     quality_adaptive_code = r""" let fpsSample=0,qualityDprCurrent=qualityDpr;
  let qualityDprStableSamples=0,qualityDprSlowSamples=0;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
- const targetFrameRate=120;
+ const targetFrameRate=60;
  function adaptRenderQuality(dt){
-  fpsSample+=dt;if(fpsSample<(isConstrainedMobile?1.5:2.5))return;fpsSample=0;
+  // GPU-aware controller: react quickly to severe drops, then recover resolution gradually.
+  const sampleWindow=highHeadroomQualityMobile?1.25:(isConstrainedMobile?1.5:2.0);
+  fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<sampleWindow)return;fpsSample=0;
   const fps=engine.getFps();
   if(!isPerformanceMode&&highHeadroomQualityMobile){
-   if(fps<55){
-    qualityDprSlowSamples++;qualityDprStableSamples=0;
-    if(qualityDprSlowSamples>=2&&qualityDprCurrent>qualityDprFloor+.01){
-     qualityDprCurrent=Math.max(qualityDprFloor,Number((qualityDprCurrent-.12).toFixed(2)));
-     engine.setHardwareScalingLevel(1/qualityDprCurrent);qualityDprSlowSamples=0;
-     console.info('EL SIN NOMBRE: resolución interna reducida para proteger la fluidez.',{fps:Math.round(fps),renderDpr:qualityDprCurrent});
+   if(fps<32){qualityDprSlowSamples++;qualityDprStableSamples=0;}
+   else if(fps<46){qualityDprSlowSamples++;qualityDprStableSamples=0;}
+   else if(fps>=57){qualityDprStableSamples++;qualityDprSlowSamples=0;}
+   else{qualityDprStableSamples=0;qualityDprSlowSamples=0;}
+   if(qualityDprSlowSamples>=1&&qualityDprCurrent>qualityDprFloor+.01){
+    const step=fps<32?.18:.10;
+    const next=Math.max(qualityDprFloor,Number((qualityDprCurrent-step).toFixed(2)));
+    if(next<qualityDprCurrent-.005){
+     qualityDprCurrent=next;engine.setHardwareScalingLevel(1/qualityDprCurrent);
+     console.info('EL SIN NOMBRE: resolución interna ajustada para proteger la fluidez.',{fps:Math.round(fps),renderDpr:qualityDprCurrent});
     }
-   }else if(fps>=59){
-    qualityDprStableSamples++;qualityDprSlowSamples=0;
-    if(qualityDprStableSamples>=6&&qualityDprCurrent<qualityDprCeiling-.01){
-     qualityDprCurrent=Math.min(qualityDprCeiling,Number((qualityDprCurrent+.10).toFixed(2)));
-     engine.setHardwareScalingLevel(1/qualityDprCurrent);qualityDprStableSamples=0;
-     console.info('EL SIN NOMBRE: resolución interna elevada con margen estable de GPU.',{fps:Math.round(fps),renderDpr:qualityDprCurrent});
-    }
-   }else{qualityDprStableSamples=0;qualityDprSlowSamples=0;}
+    qualityDprSlowSamples=0;
+   }else if(qualityDprStableSamples>=3&&qualityDprCurrent<qualityDprCeiling-.01){
+    qualityDprCurrent=Math.min(qualityDprCeiling,Number((qualityDprCurrent+.08).toFixed(2)));
+    engine.setHardwareScalingLevel(1/qualityDprCurrent);qualityDprStableSamples=0;
+    console.info('EL SIN NOMBRE: resolución interna elevada con margen estable de GPU.',{fps:Math.round(fps),renderDpr:qualityDprCurrent});
+   }
   }
-  if(fps<24)console.info('Diagnóstico de rendimiento (fidelidad protegida)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
+  if(fps<24)console.info('Diagnóstico de rendimiento (GPU bajo presión)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
     if html.count(quality_adaptive_marker) != 1:
         raise SystemExit("No se encontró exactamente la función original de supervisión de resolución.")
@@ -831,6 +835,37 @@ def main() -> None:
             "probe.position=v(land[0].x+land[0].r*1.40,.42,land[0].z);",
             "probe.position=v(land[0].x,.42,land[0].z+land[0].r*1.40);",
             "sonda flotante dentro del alcance de cámara",
+
+        (
+            "if(typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix(true);\\n    const bounds=mesh.getBoundingInfo&&mesh.getBoundingInfo();\\n    const center=bounds&&bounds.boundingBox?bounds.boundingBox.centerWorld:(mesh.getAbsolutePosition&&mesh.getAbsolutePosition());\\n    if(!center)continue;\\n    const island=land[islandIndex],dx=center.x-island.x,dz=center.z-island.z,reach=island.r+26;",
+            "if(typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix(true);\\n    const bounds=mesh.getBoundingInfo&&mesh.getBoundingInfo();\\n    const center=bounds&&bounds.boundingBox?bounds.boundingBox.centerWorld:(mesh.getAbsolutePosition&&mesh.getAbsolutePosition());\\n    if(!center)continue;\\n    const meshName=String(mesh.name||'');\\n    const vertexCount=Number(mesh.getTotalVertices&&mesh.getTotalVertices())||0;\\n    const worldExtent=bounds?.boundingBox?.extendSizeWorld||bounds?.boundingBox?.extendSize;\\n    const maxExtent=worldExtent?Math.max(worldExtent.x,worldExtent.y,worldExtent.z):Infinity;\\n    const foliageMesh=/(?:grass|foliage|leaf|leaves|branch|needle|shrub|bush|flower|fern|plant)/i.test(meshName);\\n    const thinInstanceBatch=(Number(mesh.thinInstanceCount)||0)>0;\\n    const majorReflector=/(?:tree|pine|oak|rock|boulder|hut|house|hall|tower|outpost|ship|drakkar|viking|player|guard|warrior|raider|terrain|ground|beach|coast)/i.test(meshName);\\n    const tinyReflectionDetail=vertexCount<96&&maxExtent<.85&&!majorReflector;\\n    if(foliageMesh||thinInstanceBatch||tinyReflectionDetail){reflectionFilteredMeshCount++;continue;}\\n    const island=land[islandIndex],dx=center.x-island.x,dz=center.z-island.z,reach=island.r+26;",
+            "Filter foliage batches and tiny details out of the water mirror while retaining major silhouettes",
+        ),
+        (
+            "  list.length=0;",
+            "  list.length=0;let reflectionFilteredMeshCount=0;",
+            "count filtered reflection meshes",
+        ),
+        (
+            "  console.info('Nordic water reflection island updated',{islandIndex,reflectedMeshes:list.length});",
+            "  console.info('Nordic water reflection island updated',{islandIndex,reflectedMeshes:list.length,filteredFoliageAndTinyDetails:reflectionFilteredMeshCount});",
+            "report reflection culling effectiveness",
+        ),
+        (
+            "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:2);",
+            "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?3:4));",
+            "cache high-quality shadows for three/four frames on mobile",
+        ),
+        (
+            "renderPipeline.fxaaEnabled=true;renderPipeline.bloomEnabled=false;renderPipeline.grainEnabled=false;renderPipeline.chromaticAberrationEnabled=false;",
+            "renderPipeline.fxaaEnabled=!highHeadroomQualityMobile;renderPipeline.bloomEnabled=false;renderPipeline.grainEnabled=false;renderPipeline.chromaticAberrationEnabled=false;",
+            "avoid FXAA softness on high-headroom devices with MSAA",
+        ),
+        (
+            "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?1:4,maxSamples));",
+            "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));",
+            "enable 2x MSAA on high-headroom touch devices",
+        ),
         ),
     )
     for old_code, new_code, label in coastal_profile_replacements:
