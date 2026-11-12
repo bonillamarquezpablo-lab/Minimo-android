@@ -7393,24 +7393,14 @@ if(realPlayerArmDebugEnabled){
   });
  }
  async function saveVikingToBrowser(blob,originLabel){
-  let db;try{
-   if(!(blob instanceof Blob)||blob.size<2000000)throw new Error('El GLB no es válido para guardarlo.');
-   db=await openVikingCache();
-   await new Promise((resolve,reject)=>{const tx=db.transaction(VIKING_CACHE_STORE,'readwrite');tx.objectStore(VIKING_CACHE_STORE).put({blob,name:'viking-rigged.glb',origin:originLabel,savedAt:Date.now()},VIKING_CACHE_KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('No se pudo guardar el vikingo.'));tx.onabort=()=>reject(tx.error||new Error('Se canceló el guardado.'));});
-   console.info('Viking GLB saved in browser storage',{bytes:blob.size,origin:originLabel});
-  }catch(err){console.warn('No se pudo guardar el GLB en IndexedDB:',err);}
-  finally{if(db)db.close();}
-  await saveVikingToWebCache(blob);
-  return true;
+  if(!(blob instanceof Blob)||blob.size<2000000)throw new Error('El GLB no es válido para guardarlo.');
+  // The official protagonist GLB is already stored by the version-fingerprinted
+  // Service Worker asset cache. Only user-selected files need the dedicated Cache API.
+  if(String(originLabel||'').includes('descarga automática'))return true;
+  return saveVikingToWebCache(blob);
  }
- async function readVikingFromBrowser(){
-  const db=await openVikingCache();
-  try{return await new Promise((resolve,reject)=>{const tx=db.transaction(VIKING_CACHE_STORE,'readonly'),req=tx.objectStore(VIKING_CACHE_STORE).get(VIKING_CACHE_KEY);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error||new Error('No se pudo leer el modelo guardado.'));});}
-  finally{db.close();}
- }
- const VIKING_WEB_CACHE='el-sin-nombre-models-v1';
  async function readVikingFromWebCache(){
-  try{if(!window.caches)return null;const cache=await window.caches.open(VIKING_WEB_CACHE);const hit=await cache.match(VIKING_GLB_URL);return hit?await hit.blob():null;}
+  try{if(!window.caches)return null;const hit=await window.caches.match(VIKING_GLB_URL);return hit?await hit.blob():null;}
   catch(err){console.info('La caché web no está disponible para este HTML local:',err);return null;}
  }
  async function saveVikingToWebCache(blob){
@@ -7518,10 +7508,8 @@ if(realPlayerArmDebugEnabled){
    if(!B.SceneLoader||!B.GLTFFileLoader)throw new Error('No está cargado el complemento glTF de Babylon.js.');
    if(file)await importHumanVikingFromFile(file);
    else{
-    let cached=null;setAssetLoadingProgress('player',3,'3/3 · Buscando tu vikingo guardado…');
-    try{cached=await readVikingFromBrowser();}catch(cacheErr){console.info('IndexedDB no está disponible en este archivo local:',cacheErr);}
-    let cachedBlob=cached&&cached.blob instanceof Blob&&await isValidGLB(cached.blob)?cached.blob:null;
-    if(!cachedBlob)cachedBlob=await readVikingFromWebCache();
+    setAssetLoadingProgress('player',3,'3/3 · Buscando el GLB en la caché versionada…');
+    const cachedBlob=await readVikingFromWebCache();
     if(cachedBlob&&await isValidGLB(cachedBlob)){
      try{setAssetLoadingProgress('player',20,'3/3 · Recuperando tu vikingo…');await importHumanVikingBlob(cachedBlob,'caché local del navegador');setAssetLoadingProgress('player',100,'Vikingo protagonista listo.');}
      catch(cacheImportError){console.warn('El vikingo guardado no se pudo importar; se descargará de nuevo:',cacheImportError);await clearVikingBrowserCache();await importHumanVikingFromUrl();}
