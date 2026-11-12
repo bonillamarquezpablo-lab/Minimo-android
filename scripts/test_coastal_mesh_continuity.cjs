@@ -26,6 +26,8 @@ assert.ok(build.includes('thresholdMeters=.05'),
 assert.ok(build.includes('auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)'),
   'The browser test API must expose the cross-mesh audit.');
 assert.ok(release.includes('EXPECTED_VERSION = "0.6.291"'));
+assert.ok(release.includes('rows=isPerformanceMode?13:(isTouchDevice?64:96)'),
+  'Release validation must require the high-detail coast resolution while retaining the low-memory profile.');
 assert.ok(build.includes('html = html.replace("0.6.274", "0.6.291")'));
 assert.ok(release.includes('SAGA DEL NORTE · CAPÍTULO I · 0.6.291'));
 assert.ok(release.includes('Capítulo I: Un hombre sin tierra · 0.6.291'));
