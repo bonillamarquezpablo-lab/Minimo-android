@@ -12,7 +12,6 @@ const barrier=html.slice(start,ready);
 for(const marker of [
   'const npcStartupPromise=coastalReferenceMode?Promise.resolve(0):startNpcHumanModels();',
   'await Promise.all([playerHumanLoadPromise,npcStartupPromise])',
-  "RECURSO OBLIGATORIO: Vikingo protagonista",
   'scene.whenReadyAsync()',
   'scene.compileMaterialsAsync()',
   'sceneReadyTimeout',
