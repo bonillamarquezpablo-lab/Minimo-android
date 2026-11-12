@@ -7414,8 +7414,12 @@ if(realPlayerArmDebugEnabled){
  }
  const VIKING_WEB_CACHE='el-sin-nombre-models-'+(document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown');
  async function readVikingFromWebCache(){
-  try{if(!window.caches)return null;const hit=await window.caches.match(VIKING_GLB_URL);return hit?await hit.blob():null;}
-  catch(err){console.info('La caché web no está disponible para este HTML local:',err);return null;}
+  try{
+   if(!window.caches)return null;
+   const cache=await window.caches.open(VIKING_WEB_CACHE);
+   const hit=await cache.match(VIKING_GLB_URL);
+   return hit?await hit.blob():null;
+  }catch(err){console.info('La caché web versionada no está disponible para este HTML local:',err);return null;}
  }
  async function saveVikingToWebCache(blob){
   try{if(!window.caches||!(blob instanceof Blob))return false;const cache=await window.caches.open(VIKING_WEB_CACHE);await cache.put(VIKING_GLB_URL,new Response(blob,{headers:{'Content-Type':'model/gltf-binary','Cache-Control':'public,max-age=31536000'}}));return true;}
@@ -7437,10 +7441,34 @@ if(realPlayerArmDebugEnabled){
   window.__elSinNombreGlbTimings=glbTimingRecords;
   console.info('GLB timing',record);
  }
+ function disposeLateGlbResult(result,model,stage){
+  if(!result)return;
+  try{
+   if(typeof result.dispose==='function'){
+    result.dispose();
+   }else{
+    const nodes=[...(result.transformNodes||[]),...(result.meshes||[])];
+    const roots=[...new Set(nodes)].filter(node=>node&&(!node.parent||node.parent===scene));
+    roots.forEach(node=>{try{if(!(typeof node.isDisposed==='function'&&node.isDisposed()))node.dispose(false,true);}catch(_){}});
+    (result.animationGroups||[]).forEach(group=>{try{group.stop();group.dispose();}catch(_){}});
+    (result.particleSystems||[]).forEach(system=>{try{system.dispose();}catch(_){}});
+    (result.skeletons||[]).forEach(skeleton=>{try{skeleton.dispose();}catch(_){}});
+    (result.geometries||[]).forEach(geometry=>{try{geometry.dispose();}catch(_){}});
+   }
+   console.warn('GLB tardío descartado tras vencer su plazo; no se permite pop-in:',{model,stage});
+  }catch(error){console.warn('No se pudo limpiar el resultado GLB tardío:',{model,stage,error:String(error&&error.message||error)});}
+ }
  async function timedGlbStage(model,stage,operation,bytes=0,timeoutMs=60000){
-  const started=performance.now();let timer=null;
-  const deadline=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(model+' · '+stage+' agotó el plazo de '+timeoutMs+' ms')),timeoutMs);});
-  try{const result=await Promise.race([operation(),deadline]);recordGlbTiming(model,stage,performance.now()-started,bytes,true);return result;}
+  const started=performance.now();let timer=null,timedOut=false;
+  const pending=Promise.resolve().then(operation);
+  // SceneLoader no expone AbortSignal en todas las rutas glTF. Si la importación
+  // termina después de su plazo, liberar su contenedor/mallas antes de que puedan
+  // aparecer de forma tardía en la escena.
+  pending.then(result=>{if(timedOut)disposeLateGlbResult(result,model,stage);},()=>{});
+  const deadline=new Promise((_,reject)=>{
+   timer=setTimeout(()=>{timedOut=true;reject(new Error(model+' · '+stage+' agotó el plazo de '+timeoutMs+' ms'));},timeoutMs);
+  });
+  try{const result=await Promise.race([pending,deadline]);recordGlbTiming(model,stage,performance.now()-started,bytes,true);return result;}
   catch(error){recordGlbTiming(model,stage,performance.now()-started,bytes,false);throw error;}
   finally{if(timer!==null)clearTimeout(timer);}
  }
@@ -12436,6 +12464,7 @@ function update(dt){
    const lowMemoryNpcBudget=!!(isUltraLowEndMobile||isGalaxyA12LowEndMobile||isGalaxyA12NachoPerformance);
    const requiredWarriors=humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,lowMemoryNpcBudget?1:3);
    const requiredCivilians=humanCivilianParts.slice(0,lowMemoryNpcBudget?1:2);
+   if(!requiredWarriors.length||!requiredCivilians.length)throw new Error('No se pudo identificar un roster obligatorio de guardianes y aldeanos para la isla inicial.');
    const readyWarriors=requiredWarriors.filter(p=>p.realHuman&&p.realHuman.role==='knight').length;
    const readyCivilians=requiredCivilians.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length;
    window.__elSinNombreStartupNpcRoster={requiredWarriors:requiredWarriors.length,readyWarriors,requiredCivilians:requiredCivilians.length,readyCivilians,lowMemoryNpcBudget,ready:readyWarriors===requiredWarriors.length&&readyCivilians===requiredCivilians.length};
@@ -12778,8 +12807,15 @@ function update(dt){
   protagonistResult.status='skipped-coastal-reference';
   console.info('Referencia costera: importación del protagonista aislada en el job de arranque de personaje.');
  }else{
-  try{await Promise.all([playerHumanLoadPromise,npcStartupPromise]);protagonistResult.status=realPlayerReady?'finished':'failed';}
-  catch(error){protagonistResult={status:'failed',error};throw new Error('RECURSO OBLIGATORIO: '+(realPlayerReady?'NPC de la isla inicial':'Vikingo protagonista')+' · '+String(error&&error.message||error));}
+  try{
+   await Promise.all([playerHumanLoadPromise,npcStartupPromise]);
+   protagonistResult.status=realPlayerReady?'finished':'failed';
+   if(window.__elSinNombreBackgroundModelTasks)window.__elSinNombreBackgroundModelTasks.npc='ready-before-entry';
+  }catch(error){
+   protagonistResult={status:'failed',error};
+   if(window.__elSinNombreBackgroundModelTasks)window.__elSinNombreBackgroundModelTasks.npc='required-failed';
+   throw new Error('RECURSO OBLIGATORIO: '+(realPlayerReady?'NPC de la isla inicial':'Vikingo protagonista')+' · '+String(error&&error.message||error));
+  }
   recordGlbTiming('Vikingo','espera total de protagonista',performance.now()-protagonistStageStarted,playerHumanBlob&&playerHumanBlob.size||0,protagonistResult.status==='finished');
   recordStartupTask('GLB protagonista',protagonistStageStarted,performance.now(),protagonistResult.status,{modelReady:realPlayerReady});
   console.info('Importación del vikingo terminada antes de abrir la partida.',{protagonist:protagonistResult.status,realPlayerReady,profile:activeGraphicsProfile});
@@ -12802,19 +12838,21 @@ function update(dt){
   if(!audioPreloadResult.total||audioPreloadResult.failed||audioPreloadResult.pending)throw new Error('Efectos listos '+audioPreloadResult.ready+'/'+audioPreloadResult.total+', fallidos '+audioPreloadResult.failed+', pendientes '+audioPreloadResult.pending);
   recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'ready',audioPreloadResult);
  }catch(audioRequiredError){throw new Error('RECURSO OBLIGATORIO: efectos de sonido · '+String(audioRequiredError&&audioRequiredError.message||audioRequiredError));}
- // El selector se abre con los cuerpos provisionales ya visibles; los GLB secundarios se cargan después.
+ // Protagonista y NPC obligatorios ya han sido validados. La fauna opcional
+ // también se intenta preparar aquí, antes de liberar la entrada a la campaña.
  setLoadingProgress(87,'Preparando escena y recursos principales…');
  if(coastalReferenceMode){
-  window.__elSinNombreBackgroundModelTasks={startedAt:new Date().toISOString(),completedAt:new Date().toISOString(),npc:'skipped-coastal-reference',fauna:'skipped-coastal-reference',order:'validación de personajes aislada en el job de arranque de personaje'};
+  window.__elSinNombreBackgroundModelTasks={startedAt:new Date().toISOString(),completedAt:new Date().toISOString(),npc:'skipped-coastal-reference',fauna:'skipped-coastal-reference',order:'aislamiento de referencia; no representa el arranque normal'};
  }else{
-  window.__elSinNombreBackgroundModelTasks={startedAt:null,npc:'queued',fauna:'queued',order:'GLB secundarios y fauna después de mostrar el selector'};
+  window.__elSinNombreBackgroundModelTasks={startedAt:new Date().toISOString(),npc:'blocking-required',fauna:isPerformanceMode?'disabled-performance':'blocking-optional',order:'NPC obligatorios y fauna opcional antes de liberar la campaña'};
  }
  setLoadingProgress(97,coastalReferenceMode?'Preparando shaders y texturas de costa…':'Preparando shaders y texturas principales…');
 
  let sceneWarmupStatus='unavailable';
  try{
   removeStrayDebugGeometry(scene);
-  if(scene&&typeof scene.whenReadyAsync==='function'){
+  if(!scene||typeof scene.whenReadyAsync!=='function')throw new Error('La API scene.whenReadyAsync no está disponible; no se puede verificar la escena obligatoria.');
+  {
    const sceneWarmupStartedAt=performance.now();let waitingItemsBefore=null,waitingItemsAfter=null;
    try{if(typeof scene.getWaitingItemsCount==='function')waitingItemsBefore=scene.getWaitingItemsCount();}catch(_){waitingItemsBefore=null;}
    startupTaskCurrent='compilación de shaders y preparación de texturas';
@@ -12855,8 +12893,17 @@ function update(dt){
 
  if(!coastalReferenceMode){
   const faunaStartedAt=performance.now();
-  try{const faunaTasks=[loadWildlifeModels()];if(!isPerformanceMode)faunaTasks.push(loadRiggedCoastalGulls());await Promise.all(faunaTasks);recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'ready',{loaded:ambientFauna.length,gulls:ambientBirds.filter(b=>b.real).length});}
-  catch(faunaError){recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'optional-failed',{message:String(faunaError&&faunaError.message||faunaError)});console.warn('Fauna opcional no disponible antes de entrar:',faunaError);if(/agotó el plazo/i.test(String(faunaError&&faunaError.message||faunaError)))throw new Error('RECURSO OBLIGATORIO: importación de fauna sin finalizar · '+String(faunaError&&faunaError.message||faunaError));}
+  try{
+   const faunaTasks=[loadWildlifeModels()];if(!isPerformanceMode)faunaTasks.push(loadRiggedCoastalGulls());
+   await Promise.all(faunaTasks);
+   if(window.__elSinNombreBackgroundModelTasks)window.__elSinNombreBackgroundModelTasks.fauna=isPerformanceMode?'disabled-performance':'ready-before-entry';
+   recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'ready',{loaded:ambientFauna.length,gulls:ambientBirds.filter(b=>b.real).length});
+  }
+  catch(faunaError){
+   if(window.__elSinNombreBackgroundModelTasks)window.__elSinNombreBackgroundModelTasks.fauna='optional-failed';
+   recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'optional-failed',{message:String(faunaError&&faunaError.message||faunaError)});
+   console.warn('Fauna opcional descartada antes de entrar; el arranque continúa sin cuerpos tardíos:',faunaError);
+  }
  }
  const startupMemoryTextures=new Set(),startupMemoryGeometry=new Set();
  let startupTextureBytes=0,startupGeometryBytes=0;
@@ -12897,8 +12944,8 @@ function update(dt){
   guerrerosEnMundo:humanEnemyParts.length,
   aldeanosHumanos:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,
   aldeanosEnMundo:humanCivilianParts.length,
-   npcLoadFinished:window.__elSinNombreBackgroundModelTasks&&window.__elSinNombreBackgroundModelTasks.npc==='fulfilled',faunaLoadFinished:window.__elSinNombreBackgroundModelTasks&&window.__elSinNombreBackgroundModelTasks.fauna==='fulfilled',audio:audioPreloadResult,
-  vegetationMerge:staticMergeStats,sceneWarmupStatus,npcBackgroundLoad:'deferred-after-selector',faunaBackgroundLoad:'deferred-after-selector'
+   npcLoadFinished:window.__elSinNombreBackgroundModelTasks&&window.__elSinNombreBackgroundModelTasks.npc==='ready-before-entry',faunaLoadFinished:window.__elSinNombreBackgroundModelTasks&&window.__elSinNombreBackgroundModelTasks.fauna==='ready-before-entry',audio:audioPreloadResult,
+  vegetationMerge:staticMergeStats,sceneWarmupStatus,npcBackgroundLoad:'blocking-before-entry',faunaBackgroundLoad:'optional-before-entry'
  });
  
  setLoadingProgress(98,'Comprobando que todo está listo…');
