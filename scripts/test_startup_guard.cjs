@@ -36,7 +36,7 @@ assert.match(html,/pending\.then\(result=>\{if\(timedOut\)disposeLateGlbResult\(
   'Timed-out SceneLoader imports must be disposed if Babylon resolves them late.');
 assert.doesNotMatch(html,/RECURSO OBLIGATORIO: importación de fauna sin finalizar/,
   'Fauna timeout/failure is optional and must not block game entry.');
-assert.match(html,/fauna:'blocking-optional'/);
+assert.match(html,/fauna:isPerformanceMode\?'disabled-performance':'blocking-optional'/);
 assert.match(html,/npcBackgroundLoad:'blocking-before-entry',faunaBackgroundLoad:'optional-before-entry'/);
 assert.match(html,/No se pudo identificar un roster obligatorio de guardianes y aldeanos/);
 assert.doesNotMatch(html,/cached=await readVikingFromBrowser\(\)/,'El GLB oficial del protagonista no debe duplicarse en IndexedDB.');
