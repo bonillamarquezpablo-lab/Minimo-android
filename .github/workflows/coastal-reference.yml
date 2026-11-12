@@ -81,10 +81,14 @@ jobs:
             if [ -z "$BASE_REF" ] || [[ "$BASE_REF" =~ ^0+$ ]]; then
               BASE_REF="main^"
             fi
+            git fetch --no-tags origin "$BASE_REF"
+            BASE_SHA="$(git rev-parse FETCH_HEAD)"
           elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ -n "$DISPATCH_BASE_REF" ]; then
-            git fetch --no-tags origin "$DISPATCH_BASE_REF"
+            BASE_REF="$DISPATCH_BASE_REF"
+            git fetch --no-tags origin "$BASE_REF"
             BASE_SHA="$(git rev-parse FETCH_HEAD)"
           else
+            BASE_REF="$GITHUB_SHA^"
             BASE_SHA="$(git rev-parse "$GITHUB_SHA^")"
           fi
           if [ "$BASE_SHA" = "$GITHUB_SHA" ]; then
@@ -101,12 +105,18 @@ jobs:
           HRAFN_BASE_SHA: ${{ steps.baseline.outputs.sha }}
         run: |
           git worktree add --detach "$RUNNER_TEMP/hrafn-before-source" "$HRAFN_BASE_SHA"
-          python "$RUNNER_TEMP/hrafn-before-source/scripts/build_site.py"
+          if ! python "$RUNNER_TEMP/hrafn-before-source/scripts/build_site.py"; then
+            echo "Baseline build failed; retrying against its immediate parent (last known buildable snapshot)."
+            git worktree remove --force "$RUNNER_TEMP/hrafn-before-source"
+            FALLBACK_SHA="$(git rev-parse "$HRAFN_BASE_SHA^")"
+            git worktree add --detach "$RUNNER_TEMP/hrafn-before-source" "$FALLBACK_SHA"
+            python "$RUNNER_TEMP/hrafn-before-source/scripts/build_site.py"
+            echo "Hrafn A/B baseline fallback selected: $FALLBACK_SHA"
+          fi
           mv "$RUNNER_TEMP/hrafn-before-source/dist" "$RUNNER_TEMP/hrafn-before-dist"
           test -s "$RUNNER_TEMP/hrafn-before-dist/index.html"
 
       - name: Install report image support
-        if: github.event_name != 'pull_request' || github.event.pull_request.number != 121
         run: python -m pip install Pillow
 
       - name: Validate every inspector module and contract
@@ -134,14 +144,12 @@ jobs:
         run: python scripts/build_site.py
 
       - name: Install Playwright and Chromium
-        if: github.event_name != 'pull_request' || github.event.pull_request.number != 121
         run: |
           npm install --no-save --no-package-lock playwright
           npx playwright install chromium
           node -e "const fs=require('node:fs');const {chromium}=require('playwright');const executable=chromium.executablePath();if(!fs.existsSync(executable))throw new Error('Chromium binary missing: '+executable);console.log('Chromium ready:',executable)"
 
       - name: Start baseline and candidate game servers for the unified inspection
-        if: github.event_name != 'pull_request' || github.event.pull_request.number != 121
         env:
           INSPECTOR_LEVEL: ${{ inputs.inspection_level || (github.event_name == 'push' && 'deep' || 'complete') }}
         run: |
@@ -164,7 +172,6 @@ jobs:
           exit 1
 
       - name: Run the single unified inspector
-        if: github.event_name != 'pull_request' || github.event.pull_request.number != 121
         env:
           INSPECTOR_TEST_URL: http://127.0.0.1:4175/
           HRAFN_BEFORE_URL: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep')) && 'http://127.0.0.1:4176/' || '' }}

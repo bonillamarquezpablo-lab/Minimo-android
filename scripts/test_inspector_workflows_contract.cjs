@@ -5,10 +5,12 @@ const workflow=fs.readFileSync('.github/workflows/coastal-reference.yml','utf8')
 const center=fs.readFileSync('.github/workflows/inspector-center-checks.yml','utf8');
 assert.match(workflow,/workflow_dispatch:/);
 assert.match(workflow,/default: ''/);
+assert.match(workflow,/git fetch --no-tags origin "\$BASE_REF"/);
 assert.match(workflow,/git rev-parse "\$GITHUB_SHA\^"/);
+assert.match(workflow,/retrying against its immediate parent/);
 assert.match(workflow,/node scripts\/test_graphics_quality_contract\.cjs/);
 assert.match(workflow,/node scripts\/test_hrafn_before_after_contract\.cjs/);
-assert.doesNotMatch(workflow,/feature\/unified-atmosphere-system|manual-game-test-no-inspector|pull_request\.number == 121/);
+assert.doesNotMatch(workflow,/feature\/unified-atmosphere-system|manual-game-test-no-inspector|pull_request\.number\s*[!=]=\s*121/);
 assert.match(center,/branches: \[main\]/);
 assert.doesNotMatch(center,/feature\/inspector-center-dashboard|feature\/tiered-inspector-levels/);
-console.log('Inspector workflow routing contract: OK');
+console.log('Inspector workflow routing and baseline fallback contract: OK');

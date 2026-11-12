@@ -240,9 +240,9 @@ def main() -> None:
         
         "qualityDprStableSamples>=3",
         "qualityDprSlowSamples>=1",
-        "fps<48",
-        "fps<72",
-        "fps>=87",
+        "severeFps=targetFrameRate>=87?48:32",
+        "moderateFps=targetFrameRate>=87?72:46",
+        "stableFps=targetFrameRate>=87?87:57",
         "let targetFrameRate=60,observedFpsCeiling=60",
         "engine.setHardwareScalingLevel(1/qualityDprCurrent)",
         "renderPipeline.fxaaEnabled=!fsr1Candidate",

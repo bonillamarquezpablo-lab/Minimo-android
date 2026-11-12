@@ -27,6 +27,6 @@ for(const token of ['Build the baseline game in an isolated worktree','git rev-p
   assert.ok(workflow.includes(token),'Workflow missing exact parent baseline/mobile A/B wiring: '+token);
 }
 assert.doesNotMatch(workflow,/feature\/unified-atmosphere-system/);
-assert.doesNotMatch(workflow,/manual-game-test-no-inspector|pull_request\.number == 121/);
+assert.doesNotMatch(workflow,/manual-game-test-no-inspector|pull_request\.number\s*[!=]=\s*121/);
 assert.doesNotMatch(workflow,/^    continue-on-error:\s*true$/m);
 console.log('S26 ULTRA MOBILE A/B + PERFORMANCE + VISUAL INSPECTOR CONTRACT OK');
