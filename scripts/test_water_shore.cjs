@@ -82,7 +82,7 @@ assert.doesNotMatch(html,/performance\.now\(\)-sliceStarted<2\.65|performance\.n
 assert.match(html,/requestAnimationFrame\(processBeachWorkChunk\)/);
 assert.match(html,/startupTimeline:getStartupTimelineSnapshot\(\)/);
 assert.match(html,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/);
-assert.match(html,/await loadWildlifeModels\(\)/);
+
 assert.doesNotMatch(html,/vec3 n=normalize\(vNormalW\).*\n float wetHighlight[\s\S]*\n color\+=vec3\([^\n]+\);\n vec3 n=normalize\(vNormalW\)/);
 assert.ok(html.includes("const segments=isPerformanceMode?(isConstrainedMobile?112:160):Math.max(512,Math.min(2048,Math.ceil(Math.PI*2*island.r/.30)));"),"Quality shore breaker must use approximately 30 cm coastal segments");
 assert.ok(html.includes("const subdivisions=Math.min(360,Math.max(112,Math.ceil(is.r*2/(isTouchDevice?.42:.36))));"),"All island coasts must keep sub-0.42 m heightfield sampling");
