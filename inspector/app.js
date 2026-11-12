@@ -119,7 +119,7 @@
     if(fetchBusy&&!force)return;fetchBusy=true;
     try{
       const now=Date.now();
-      const metadataInterval=currentToken?25000:90000;
+      const metadataInterval=currentToken?15000:30000;
       const needRunRefresh=force||!activeRun||now-lastRunsFetchAt>=metadataInterval;
       if(needRunRefresh){
         const list=await apiGet(API+'/actions/workflows/'+WORKFLOW+'/runs?per_page=12');
@@ -140,7 +140,7 @@
       // Progress manifests are published as static JSON every phase transition; only
       // ask the Actions API for step-level detail when the runner has not published one.
       const needsJobFallback=!manifest?.phases?.length;
-      const jobsInterval=currentToken?20000:90000;
+      const jobsInterval=currentToken?12000:20000;
       if(needsJobFallback&&(force||now-lastJobsFetchAt>=jobsInterval)){
         jobs=await apiGet(API+'/actions/runs/'+run.id+'/jobs?per_page=100').catch(()=>({jobs:[]}));
         lastJobsFetchAt=Date.now();jobsData=jobs;jobsRunId=run.id;
@@ -157,9 +157,12 @@
       const current=latest?.steps?.find(step=>step.status==='in_progress');
       $('runPhaseDescription').textContent=phases.length
         ?$('runPhaseDescription').textContent
-        :current?'Fase activa: '+current.name+' · El inspector está trabajando dentro del navegador de pruebas.':'La auditoría está preparando el entorno.';
+        :current?'Fase activa: '+current.name+' · El inspector está trabajando dentro del navegador de pruebas.'
+        :run.status==='queued'?'En cola de GitHub Actions. El runner aún no ha comenzado; el panel seguirá comprobando la asignación.'
+        :run.status==='in_progress'?'El runner está iniciado, pero todavía no ha publicado una fase. Última actualización: '+niceDate(run.updated_at)+'.'
+        :'Esperando a que GitHub asigne un runner y publique los primeros pasos.';
       $('updatedAt').textContent='Datos actualizados '+new Date().toLocaleTimeString('es-ES')+' · progreso en vivo';
-      $('runArtifactsLink').href=run.html_url?run.html_url+'#artifacts':'#';
+      // The run card links to the workflow directly; no separate artifacts element exists.
       setConnection('GitHub conectado',true);lastError=null;
     }catch(error){
       lastError=error;setConnection('Sin conexión',false);
