@@ -25,7 +25,7 @@ for(const marker of [
   'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))',
   'renderPipeline.sharpen.edgeAmount=.34',
   'list.length<180',
-  'nordicWaterMirror.refreshRate=isTouchDevice?(highHeadroomQualityMobile?30:20):8',
+  'nordicWaterMirror.refreshRate=isTouchDevice?12:8',
   'shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))',
   'reflectionFilteredMeshCount',
   'tinyReflectionDetail=vertexCount<96',
@@ -46,4 +46,4 @@ assert.ok(atmosphere.includes("this.quality === 'low' || this.isTouchDevice"), '
 assert.ok(validator.includes('missing_graphics_quality'), 'The release validator must reject missing mobile rendering guardrails.');
 assert.ok(validator.includes('this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;'), 'The atmosphere hardware tier must be checked by release validation.');
 
-console.log('OK graphics quality: native WebGL rendering, 2.45 flagship source scale, adaptive FSR1 input range, native 2x MSAA, dedicated mobile-high atmosphere, no mobile FSR1/SSAO/god-rays/CSM.');
+console.log('OK graphics quality: native WebGL rendering, 2.45 flagship source scale, adaptive FSR1 input range, native 2x MSAA, dedicated mobile-high atmosphere, desktop-only SSAO/god-rays/CSM.');
