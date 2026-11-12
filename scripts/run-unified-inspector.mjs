@@ -16,7 +16,7 @@ const SKIP_VISUAL_CAPTURES=process.env.INSPECTOR_SKIP_VISUAL_CAPTURES==='1';
 const LEVEL_RANK={quick:1,complete:2,deep:3};
 if(!(INSPECTOR_LEVEL in LEVEL_RANK))throw new Error('INSPECTOR_LEVEL must be quick, complete or deep.');
 function phaseLevel(name){
-  if(/Comparación visual ANTES\/DESPUÉS|Informe visual ANTES\/DESPUÉS/.test(name))return 3;
+  if(/Comparación (?:visual|gráfica).*ANTES\/DESPUÉS|Informe visual ANTES\/DESPUÉS/.test(name))return 3;
   if(/Referencias costeras|Inventario completo|Informe visual unificado|Lámina de referencias/.test(name))return 2;
   return 1;
 }
@@ -169,8 +169,8 @@ async function main(){
     runPythonPhase('Lámina de referencias costeras','scripts/create_coastal_contact_sheet.py','artifacts/coastal-reference')
   ]);
 
-  // The A/B comparator is a mandatory phase of this one-entrypoint inspection.
-  // Missing baseline/candidate URLs fail the inspector instead of silently skipping the comparison.
+  // The mobile A/B comparator is part of deep inspections only.
+  // Complete inspections must not fabricate an unavailable before-image baseline.
   await runNodePhase('Comparación gráfica móvil S26 Ultra ANTES/DESPUÉS + FPS — cuatro fases horarias','scripts/hrafn-before-after.mjs',{
     HRAFN_BEFORE_URL,HRAFN_AFTER_URL,
     HRAFN_COMPARE_OUT:'artifacts/hrafn-before-after',
