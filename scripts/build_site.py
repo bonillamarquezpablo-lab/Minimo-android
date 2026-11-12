@@ -835,7 +835,7 @@ def main() -> None:
             "probe.position=v(land[0].x+land[0].r*1.40,.42,land[0].z);",
             "probe.position=v(land[0].x,.42,land[0].z+land[0].r*1.40);",
             "sonda flotante dentro del alcance de cámara",
-
+        ),
         (
             "if(typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix(true);\\n    const bounds=mesh.getBoundingInfo&&mesh.getBoundingInfo();\\n    const center=bounds&&bounds.boundingBox?bounds.boundingBox.centerWorld:(mesh.getAbsolutePosition&&mesh.getAbsolutePosition());\\n    if(!center)continue;\\n    const island=land[islandIndex],dx=center.x-island.x,dz=center.z-island.z,reach=island.r+26;",
             "if(typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix(true);\\n    const bounds=mesh.getBoundingInfo&&mesh.getBoundingInfo();\\n    const center=bounds&&bounds.boundingBox?bounds.boundingBox.centerWorld:(mesh.getAbsolutePosition&&mesh.getAbsolutePosition());\\n    if(!center)continue;\\n    const meshName=String(mesh.name||'');\\n    const vertexCount=Number(mesh.getTotalVertices&&mesh.getTotalVertices())||0;\\n    const worldExtent=bounds?.boundingBox?.extendSizeWorld||bounds?.boundingBox?.extendSize;\\n    const maxExtent=worldExtent?Math.max(worldExtent.x,worldExtent.y,worldExtent.z):Infinity;\\n    const foliageMesh=/(?:grass|foliage|leaf|leaves|branch|needle|shrub|bush|flower|fern|plant)/i.test(meshName);\\n    const thinInstanceBatch=(Number(mesh.thinInstanceCount)||0)>0;\\n    const majorReflector=/(?:tree|pine|oak|rock|boulder|hut|house|hall|tower|outpost|ship|drakkar|viking|player|guard|warrior|raider|terrain|ground|beach|coast)/i.test(meshName);\\n    const tinyReflectionDetail=vertexCount<96&&maxExtent<.85&&!majorReflector;\\n    if(foliageMesh||thinInstanceBatch||tinyReflectionDetail){reflectionFilteredMeshCount++;continue;}\\n    const island=land[islandIndex],dx=center.x-island.x,dz=center.z-island.z,reach=island.r+26;",
@@ -865,7 +865,6 @@ def main() -> None:
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?1:4,maxSamples));",
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));",
             "enable 2x MSAA on high-headroom touch devices",
-        ),
         ),
     )
     for old_code, new_code, label in coastal_profile_replacements:
