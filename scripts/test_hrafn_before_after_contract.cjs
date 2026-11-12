@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const runner=fs.readFileSync('scripts/hrafn-before-after.mjs','utf8');
+const report=fs.readFileSync('scripts/create_hrafn_ab_report.py','utf8');
+assert.match(runner,/HRAFN_BEFORE_URL/);
+assert.match(runner,/HRAFN_AFTER_URL/);
+assert.match(runner,/same-browser-same-viewport-same-clock-phases/);
+assert.match(runner,/\['dawn','noon','dusk','midnight'\]/);
+assert.match(runner,/captureCanvas\(\)/);
+assert.match(runner,/clock\.pause\(\);clock\.setTime\(hour\)/);
+assert.match(report,/ImageChops\.difference/);
+assert.match(report,/ANTES/);
+assert.match(report,/DESPUÉS/);
+console.log('HRAFN BEFORE/AFTER CONTRACT OK');
