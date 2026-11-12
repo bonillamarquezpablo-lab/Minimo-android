@@ -92,7 +92,7 @@
     $('progressTrack').classList.toggle('indeterminate',indeterminate);
     $('runPhaseTitle').textContent=failed?failed+' fase(s) requieren revisión':running?running.name:done===normalized.length&&normalized.length?'Inspección completada':'Preparando el entorno';
     $('runPhaseDescription').textContent=running?'En curso ahora mismo · '+formatElapsed(Date.now()-Date.parse(running.startedAt||new Date().toISOString())):failed?'El informe conserva los errores concretos para poder corregirlos.':done===normalized.length&&normalized.length?'Todas las fases publicadas han terminado.':'Los pasos del runner ya están disponibles; el detalle de cada fase aparecerá conforme se publique.';
-    if(!normalized.length){$('stepList').innerHTML='<div class="empty-state"><div><strong>Preparando la auditoría</strong>GitHub ha aceptado la ejecución. Los pasos aparecerán en cuanto arranque el runner.</div></div>';return;}
+    if(!normalized.length){$('stepList').innerHTML='<div class="empty-state"><div><strong>Esperando datos verificables</strong>El panel no inventará fases ni porcentajes. Consultará el estado real de GitHub y mostrará aquí los pasos en cuanto estén disponibles.</div></div>';return;}
     $('stepList').innerHTML=normalized.map(p=>{
       const done=['passed','completed','skipped'].includes(p.status),bad=['failed','timed_out'].includes(p.status),now=['running','in_progress'].includes(p.status);
       const icon=done?'✓':bad?'!':now?'<span class="spin"></span>':'·';
