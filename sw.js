@@ -38,10 +38,13 @@ function isInvalidVikingGlbResponse(response, request) {
   const contentType = (response.headers.get("content-type") || "").toLowerCase();
   // A CDN/SSO/proxy can return an HTML 200 or redirect at a GLB URL.
   // Never store or reuse that response as a model.
-  return response.redirected ||
+  const isBinaryGlb = contentType.includes("model/gltf-binary") ||
+    contentType.includes("application/octet-stream") ||
+    contentType.includes("binary/octet-stream");
+  return response.type === "opaque" || response.redirected ||
     responseUrl.origin !== requestedUrl.origin ||
     responseUrl.pathname !== requestedUrl.pathname ||
-    contentType.includes("text/html");
+    contentType.includes("text/html") || !isBinaryGlb;
 }
 
 async function networkFirst(request, cacheName) {
