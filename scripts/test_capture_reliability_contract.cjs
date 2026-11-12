@@ -58,7 +58,7 @@ async function main() {
   assert.match(unifiedRunner,/detached:process\.platform!==\'win32\'/,'Inspection child processes must have an isolated process group on Unix runners.');
   assert.match(unifiedRunner,/process\.kill\(-child\.pid,signal\)/,'Timeouts must signal the complete child process group, including Chromium.');
   assert.match(unifiedRunner,/signalChildProcessTree\(child,\'SIGKILL\'\)/,'The unified runner must force-stop a child tree that ignores SIGTERM.');
-  assert.match(unifiedRunner,/Python report timeout; child terminated/,'Python report phases must wait for termination rather than resolving immediately after SIGTERM.');
+  assert.match(unifiedRunner,/child\.once\('exit'/,'Python report phases must settle on direct child exit instead of waiting for inherited stdio close.');
 
   assert.match(unifiedRunner,/scripts\/player-startup-smoke\.mjs/);
   assert.match(unifiedRunner,/scripts\/texture-readiness-smoke\.mjs/);
