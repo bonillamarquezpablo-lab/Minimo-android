@@ -697,38 +697,38 @@ def main() -> None:
         html = html.replace("</body>", navigation_tag + "\n</body>", 1)
 
 
-    # Release candidate 0.6.280: fix the submerged seabed profile once, keep the
+    # Release candidate 0.6.281: fix the submerged seabed profile once, keep the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.280; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.281; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.280\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.281\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.280.")
-    html = html.replace("0.6.274", "0.6.280")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.281.")
+    html = html.replace("0.6.274", "0.6.281")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'14',build:'0.6.280'"
+    diagnostic_build_replacement = "reportVersion:'14',build:'0.6.281'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.280 para normalizar.")
-    game_version = "0.6.280"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.281 para normalizar.")
+    game_version = "0.6.281"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
-    # 0.6.280 graphics uplift: sharper render resolution on phones with GPU headroom.
+    # 0.6.281 graphics uplift: sharper render resolution on phones with GPU headroom.
     # The dedicated Performance profile is deliberately unchanged.
     quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
     quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
  const highHeadroomQualityMobile=!!(!isPerformanceMode&&isTouchDevice&&!constrainedHardware&&((reportedMemory>=8&&(Number(navigator.hardwareConcurrency)||0)>=8)||highTierGpuMatch));
- const qualityDprFloor=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.50:1.60):1.65);
- const qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.85:1.80):1.85);
- const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,highHeadroomQualityMobile?2.10:(isTouchDevice?1.80:1.85));"""
+ const qualityDprFloor=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.80:1.60):1.65);
+ const qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?3.00:1.80):1.85);
+ const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,highHeadroomQualityMobile?2.45:(isTouchDevice?1.80:1.85));"""
     if html.count(quality_profile_marker) != 1:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
     html = html.replace(quality_profile_marker, quality_profile_code, 1)
@@ -865,6 +865,41 @@ def main() -> None:
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?1:4,maxSamples));",
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));",
             "enable 2x MSAA on high-headroom touch devices",
+        ),
+        (
+            "  list.length=0;let reflectionFilteredMeshCount=0;",
+            "  list.length=0;let reflectionFilteredMeshCount=0,reflectionLimitDiscardedMeshCount=0;",
+            "count filtered reflection meshes",
+        ),
+        (
+            "if(dx*dx+dz*dz<reach*reach)list.push(mesh);",
+            "if(dx*dx+dz*dz<reach*reach){if(list.length<260)list.push(mesh);else reflectionLimitDiscardedMeshCount++;}",
+            "cap the reflected island draw list at 260 representative meshes",
+        ),
+        (
+            "  console.info('Nordic water reflection island updated',{islandIndex,reflectedMeshes:list.length,filteredFoliageAndTinyDetails:reflectionFilteredMeshCount});",
+            "  console.info('Nordic water reflection island updated',{islandIndex,reflectedMeshes:list.length,filteredFoliageAndTinyDetails:reflectionFilteredMeshCount,reflectionLimitDiscardedMeshCount});",
+            "report water-reflection draw-list cap",
+        ),
+        (
+            "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024;",
+            "const mirrorSize=isTouchDevice?(isConstrainedMobile?320:(highHeadroomQualityMobile?384:448)):1024;",
+            "reduce mobile mirror target size while retaining a live water reflection",
+        ),
+        (
+            "nordicWaterMirror.refreshRate=isTouchDevice?12:8;",
+            "nordicWaterMirror.refreshRate=isTouchDevice?(highHeadroomQualityMobile?24:20):8;",
+            "refresh the mobile water mirror once every 20–24 frames",
+        ),
+        (
+            "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?3:4));",
+            "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?6:4));",
+            "reuse high-quality mobile shadows for six frames",
+        ),
+        (
+            "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));",
+            "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?1:4,maxSamples));if(highHeadroomQualityMobile&&renderPipeline.sharpen){renderPipeline.sharpenEnabled=true;renderPipeline.sharpen.edgeAmount=.34;renderPipeline.sharpen.colorAmount=.92;}",
+            "use the native antialiased canvas and edge-aware sharpening instead of costly post-process MSAA",
         ),
     )
     for old_code, new_code, label in coastal_profile_replacements:
