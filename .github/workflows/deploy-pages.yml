@@ -60,7 +60,12 @@ jobs:
       - name: Download all resources, build dist and run release validation
         run: python scripts/build_site.py
 
-      - name: Include the independent Inspector Center in the published site\n        run: |\n          mkdir -p dist/inspector\n          cp -R inspector/. dist/inspector/\n\n      - name: Upload validated site for PR inspection
+      - name: Include the independent Inspector Center in the published site
+        run: |
+          mkdir -p dist/inspector
+          cp -R inspector/. dist/inspector/
+
+      - name: Upload validated site for PR inspection
         uses: actions/upload-artifact@v4
         with:
           name: el-sin-nombre-site-${{ github.sha }}
