@@ -96,13 +96,18 @@ assert.match(html,/const packedTrailTexture=makePatternTexture\('Packed Norse tr
 assert.match(html,/packedTrailMaterial\.emissiveColor=new B\.Color3\(\.22,\.15,\.07\)/,"Packed earth trails must retain a subtle brown ambient floor on shaded ridges.");
 assert.match(html,/positions\.push\(x,renderedTerrainSurfaceAt\(x,z\)\+\.055,z\)/,"Packed earth trails must remain conformed to the rendered island surface.");
 assert.match(workflow,/^  unified-inspector:/m,'All inspection phases must run under the single unified inspector job.');
+assert.doesNotMatch(workflow,/^    continue-on-error:\s*true$/m,'The unified inspector must make failed phases block the workflow.');
 assert.match(unifiedRunner,/scripts\/player-startup-smoke\.mjs/,'The unified inspector must retain the independent real Viking GLB startup regression.');
 console.log('COASTAL REFERENCE CONTRACT OK');
 
 assert.ok(captureRunner.includes('api.captureCanvas()'),
   'Coastal reference images must be read directly from the WebGL canvas, not the HTML page');
-assert.match(captureRunner, /atmospherePngDataUrl = await page\.evaluate\(\(\) => window\.__ELSN_TEST__\?\.captureCanvas\(\)\)/,
-  'Atmosphere phase captures must read the animated WebGL canvas directly.');
+assert.match(captureRunner, /const atmosphereCapture = await page\.evaluate\(hour =>/);
+assert.match(captureRunner, /const dataUrl = api\.captureCanvas\(\)/,
+  'Atmosphere phase time changes and fresh WebGL PNG readback must occur in the same browser task.');
+assert.match(captureRunner, /const atmospherePngDataUrl = atmosphereCapture\.dataUrl/);
+assert.doesNotMatch(captureRunner, /waitForTimeout\(120\)/,
+  'Do not let an intervening animation frame invalidate the WebGL drawing buffer.');
 assert.ok(!captureRunner.includes("page.locator('#renderCanvas').screenshot"),
   'Do not wait for an animated canvas element to become visually stable before atmosphere captures.');
 assert.ok(!captureRunner.includes('page.screenshot('),
