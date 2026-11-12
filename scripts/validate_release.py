@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.287"
+EXPECTED_VERSION = "0.6.288"
 
 HTML_PAGES = (
     "index.html",
@@ -103,6 +103,17 @@ def main() -> None:
         fail("El sistema atmosférico debe cargarse antes del runtime principal.")
     if "window.__ELSN_ATMOSPHERE_CONTROLS" not in index_html or "atmosphereSystem.update(dt)" not in index_html:
         fail("El reloj atmosférico no está conectado al bucle de juego y a sus controles.")
+    for marker in (
+        "this.moonLight.intensity = 0.28 * state.night",
+        "this.hemiLight.intensity = 0.25 + 0.70 * state.daylight + 0.06 * state.twilight",
+        "this.scene.environmentIntensity = 0.16 + 0.44 * state.daylight + 0.04 * state.twilight",
+        "mix(1.12, 1.08, state.daylight)",
+        "this._nightGroundColor = new B.Color3(0.105, 0.13, 0.18)",
+        "this._sunVector = new B.Vector3(0, 1, 0)",
+    ):
+        if marker not in atmosphere_source:
+            fail("La iluminación nocturna y el uso de valores reutilizables deben evitar una escena demasiado oscura y asignaciones por fotograma.")
+
     if 'id="game-build-version"' not in index_html or f'v{EXPECTED_VERSION}</span>' not in index_html:
         fail("La pantalla no muestra la versión exacta en una etiqueta discreta.")
     if 'font:600 7px/1.2 system-ui,sans-serif' not in index_html or 'color:rgba(226,196,135,.58)' not in index_html:
@@ -262,7 +273,7 @@ def main() -> None:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
     if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
         fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
-    if "reportVersion:'16',build:'0.6.287'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'16',build:'0.6.288'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:60" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
@@ -551,7 +562,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.287" not in index_html or "EL SIN NOMBRE 0.6.287 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.288" not in index_html or "EL SIN NOMBRE 0.6.288 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?15:17)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -671,7 +682,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.287</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.288</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
@@ -715,10 +726,10 @@ def main() -> None:
         fail("La generación de vegetación debe ceder el control según tiempo real de CPU.")
     if "const occupiedGridCells=new Uint8Array(gridSide*gridSide)" not in index_html or "const terrainHashCache=new Map()," not in index_html:
         fail("La generación del terreno y la hierba debe reutilizar buffers compactos y hashes deterministas.")
-    if "const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);" not in index_html or "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "async function createRealGrass(onlyIslandIndex=null,focusX=null,focusZ=null)" not in index_html or "if(onlyIslandIndex!==null&&islandIndex!==onlyIslandIndex)continue;" not in index_html or "const radius=Math.min(92,safeLandRadius);" not in index_html or "if(!isPerformanceMode){" not in index_html or "console.info('Hierba desactivada en modo Rendimiento.');" not in index_html:
-        fail("Solo Calidad debe generar hierba local; Rendimiento debe desactivarla completamente.")
-    if "async function streamActiveIslandGrass(index,focusX,focusZ)" not in index_html or "(!sameIsland||moved)&&!grassStreamPromise" not in index_html or "createRealGrass(index,focusX,focusZ)" not in index_html or "grassStream:{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise}" not in index_html or "if(onShip||bestRatio>1.09)currentIsland=-1" not in index_html:
-        fail("La hierba debe seguir el área cercana y no cargar islas hasta desembarcar.")
+    if "const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);" not in index_html or "const initialGrassIsland=land[initialGrassIslandIndex];" not in index_html or "grassStreamCenterX=initialGrassIsland?initialGrassIsland.x" not in index_html or "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "async function createRealGrass(onlyIslandIndex=null,focusX=null,focusZ=null)" not in index_html or "if(onlyIslandIndex!==null&&islandIndex!==onlyIslandIndex)continue;" not in index_html or "const radius=Math.min(92,safeLandRadius);" not in index_html or "if(!isPerformanceMode){" not in index_html or "console.info('Hierba desactivada en modo Rendimiento.');" not in index_html:
+        fail("La hierba inicial debe anclarse al centro de la isla y conservar su densidad en Calidad.")
+    if "async function streamActiveIslandGrass(index,focusX,focusZ)" not in index_html or "if(sameIsland)return;" not in index_html or "if(!sameIsland&&!grassStreamPromise)" not in index_html or "const grassIsland=land[index]" not in index_html or "grassStreamCenterX=grassIsland.x" not in index_html or "createRealGrass(index,grassStreamCenterX,grassStreamCenterZ)" not in index_html or "grassStream:{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise}" not in index_html or "if(onShip||bestRatio>1.09)currentIsland=-1" not in index_html:
+        fail("La hierba de Calidad debe mantenerse residente al recorrer una isla y reconstruirse solo al cambiar de isla.")
     if "leavesPerClump=isPerformanceMode?8:10" not in index_html or "const show=batch.islandIndex===currentIsland;" not in index_html or "const chunkSize=56,grassBatches=new Map();" not in index_html or "const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));" not in index_html:
         fail("La hierba de Calidad debe conservar el detalle y limitar la generación al área local.")
     if "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "await Promise.allSettled([backgroundNpcTask,backgroundFaunaTask])" not in index_html:
