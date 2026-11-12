@@ -13,6 +13,10 @@ const { pathToFileURL } = require("node:url");
   assert.equal(zone.zone.includeTopDown, false,
     "The production inspection plan must avoid redundant top-down shots in the bounded run.");
 
+  assert.equal(plan.length, 13, "The inspection plan must cover every island in the archipelago.");
+  assert.deepEqual(plan.map(item => item.zone.islandIndex).sort((a,b)=>a-b), Array.from({length:13},(_,index)=>index),
+    "Every island must have exactly one structural capture zone.");
+  const islands = Array.from({length:13},(_,index)=>({name:"Island "+index,x:index*100,z:0,r:16}));
   const candidates = Array.from({ length: 12 }, (_, index) => ({
     name: "InspectionTarget_" + index,
     code: "OBJ-" + String(index).padStart(4, "0"),
@@ -22,7 +26,7 @@ const { pathToFileURL } = require("node:url");
     bounds: { bottomY: 0.9, topY: 3.2, width: 2, depth: 2 },
     source: "contract-test"
   }));
-  const { shots, report } = createZoneInspectionShots(zone, [], candidates);
+  const { shots, report } = createZoneInspectionShots(zone, islands, candidates);
   assert.equal(report.selectedTargetCount, 12);
   assert.equal(report.generatedShotCount, 30,
     "The unified inspection must keep all twelve structures, four overviews and both water heights within a bounded 30-shot plan.");
@@ -31,6 +35,18 @@ const { pathToFileURL } = require("node:url");
   assert.equal(shots.filter(shot => shot.inspectionPurpose === "structure-water-observation").length, 12);
   assert.equal(shots.filter(shot => shot.inspectionPurpose === "structure-low-oblique").length, 12);
   assert.equal(shots.filter(shot => shot.inspectionPurpose === "structure-high-oblique" || shot.inspectionPurpose === "structure-top-down").length, 0);
+  const islandCandidates = Array.from({length:13},(_,index)=>({
+    name:"IslandStructure_"+index,code:"ISLAND-"+index,nativeId:100+index,kind:"test-structure",
+    islandIndex:index,position:{x:index*100,y:1,z:0},
+    bounds:{bottomY:.9,topY:3.2,width:2,depth:2},source:"contract-test"
+  }));
+  const totalIslandShots = plan.reduce((total,item)=>{
+    const generated=createZoneInspectionShots(item,islands,islandCandidates);
+    assert.ok(generated.report.selectedTargetCount<=1,"Each island zone must stay within its one-target budget.");
+    return total+generated.shots.length;
+  },0);
+  assert.ok(totalIslandShots<=120,"All 13 islands must fit the 120-shot production budget; generated "+totalIslandShots+".");
+  assert.equal(totalIslandShots,102,"The full archipelago plan should remain at 102 camera-verified shots.");
   assert.ok(source.includes("pixelComparison='not-applicable-animated-scene'"),
     "Animated water and vegetation must not be rejected by an exact two-frame pixel hash.");
   assert.ok(source.includes("const framePng=await page.evaluate"),
