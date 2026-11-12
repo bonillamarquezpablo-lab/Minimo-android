@@ -12893,17 +12893,15 @@ function update(dt){
 
  if(!coastalReferenceMode){
   const faunaStartedAt=performance.now();
-  try{
-   const faunaTasks=[loadWildlifeModels()];if(!isPerformanceMode)faunaTasks.push(loadRiggedCoastalGulls());
-   await Promise.all(faunaTasks);
-   if(window.__elSinNombreBackgroundModelTasks)window.__elSinNombreBackgroundModelTasks.fauna=isPerformanceMode?'disabled-performance':'ready-before-entry';
-   recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'ready',{loaded:ambientFauna.length,gulls:ambientBirds.filter(b=>b.real).length});
-  }
-  catch(faunaError){
-   if(window.__elSinNombreBackgroundModelTasks)window.__elSinNombreBackgroundModelTasks.fauna='optional-failed';
-   recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),'optional-failed',{message:String(faunaError&&faunaError.message||faunaError)});
-   console.warn('Fauna opcional descartada antes de entrar; el arranque continúa sin cuerpos tardíos:',faunaError);
-  }
+  const faunaTasks=[{name:'Fauna terrestre',promise:loadWildlifeModels()}];
+  if(!isPerformanceMode)faunaTasks.push({name:'Gaviotas 3D',promise:loadRiggedCoastalGulls()});
+  // No liberar la entrada por el primer fallo: el resto de tareas opcionales debe
+  // terminar también, para que nada importe o aparezca detrás del jugador.
+  const faunaResults=await Promise.allSettled(faunaTasks.map(task=>task.promise));
+  const faunaFailures=faunaResults.flatMap((result,index)=>result.status==='rejected'?[{name:faunaTasks[index].name,message:String(result.reason&&result.reason.message||result.reason)}]:[]);
+  if(window.__elSinNombreBackgroundModelTasks)window.__elSinNombreBackgroundModelTasks.fauna=isPerformanceMode?'disabled-performance':faunaFailures.length?'optional-failed':'ready-before-entry';
+  recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),faunaFailures.length?'optional-failed':'ready',{loaded:ambientFauna.length,gulls:ambientBirds.filter(b=>b.real).length,failures:faunaFailures});
+  if(faunaFailures.length)console.warn('La fauna opcional terminó con fallos antes de liberar la entrada; no quedan importaciones en segundo plano:',faunaFailures);
  }
  const startupMemoryTextures=new Set(),startupMemoryGeometry=new Set();
  let startupTextureBytes=0,startupGeometryBytes=0;
