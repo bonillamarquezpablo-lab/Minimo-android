@@ -77,7 +77,8 @@ def main() -> None:
     atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
     atmosphere_markers = (
         "class AtmosphereSystem",
-        "static computeSolarState(value)",
+        "static computeSolarState(value, target)",
+        "static computeLightingProfile(value)",
         "setTime(value)",
         "setDayDuration(seconds)",
         "setSpeed(value)",
