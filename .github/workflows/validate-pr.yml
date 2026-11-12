@@ -65,6 +65,9 @@ jobs:
       - name: Test release validator startup contract
         run: node scripts/test_release_contract.cjs
 
+      - name: Test adaptive graphics quality without sacrificing Performance profile
+        run: node scripts/test_graphics_quality_contract.cjs
+
       - name: Test automatic startup smoke recorder and player.modelReady
         run: node scripts/test_startup_smoke.cjs
 
