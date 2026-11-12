@@ -58,6 +58,8 @@
     return {label:'Fallida',kind:'failure',done:true};
   }
   function renderRunShell(run){
+    $('overviewRun').textContent=run?'#'+run.run_number:'—';
+    $('overviewRunFoot').textContent=run?(run.head_branch||'Rama desconocida'):'Sin ejecuciones registradas';
     if(!run){
       $('runState').textContent='Sin ejecuciones';$('runState').className='status-pill';
       $('runNumber').textContent='—';$('runBranch').textContent='Aún no hay auditorías registradas.';
@@ -83,6 +85,7 @@
     const running=normalized.find(p=>p.status==='running'||p.status==='in_progress');
     const percent=normalized.length?Math.round(done/normalized.length*100):0;
     $('progressValue').textContent=percent+'%';
+    $('overviewProgress').textContent=percent+'%';
     $('progressCircle').style.strokeDashoffset=188.5-(188.5*percent/100);
     $('progressTrack').style.width=percent+'%';
     $('runPhaseTitle').textContent=failed?failed+' fase(s) requieren revisión':running?running.name:done===normalized.length&&normalized.length?'Inspección completada':'Preparando el entorno';
@@ -321,6 +324,9 @@
     const misaligned=structures.filter(s=>measuredGrounding(s,grounding).state==='misaligned').length;
     const unknown=structures.length-grounded-misaligned;
     $('radarStats').textContent=islands.length+' islas · '+structures.length+' objetos candidatos';
+    $('overviewIslands').textContent=String(islands.length);
+    $('overviewStructures').textContent=String(structures.length);
+    $('overviewStructuresFoot').textContent='Candidatos detectados en escena';
     $('radarCounts').innerHTML='<div class="radar-count"><b style="color:var(--green)">'+grounded+'</b><span>Apoyo ≤ 2 cm</span></div><div class="radar-count"><b style="color:var(--red)">'+misaligned+'</b><span>Desnivel &gt; 2 cm</span></div><div class="radar-count"><b>'+unknown+'</b><span>Sin medición</span></div>';
     if(selectedIsland==null||selectedIsland>=islands.length)selectedIsland=3<islands.length?3:0;
     selectIsland(selectedIsland);
