@@ -22,7 +22,8 @@ jobs:
         with:
           node-version: '22'
       - name: Validate GitHub Actions YAML syntax
-        run: ruby -e 'require "yaml"; ARGV.each { |path| YAML.load_file(path, aliases: true); puts "YAML OK: #{path}" }' .github/workflows/coastal-reference.yml .github/workflows/deploy-pages.yml .github/workflows/inspector-center-checks.yml
+        run: |
+          ruby -e 'require "yaml"; ARGV.each { |path| YAML.load_file(path, aliases: true); puts "YAML OK: #{path}" }' .github/workflows/coastal-reference.yml .github/workflows/deploy-pages.yml .github/workflows/inspector-center-checks.yml
       - name: Validate inspector runner syntax
         run: node --check scripts/run-unified-inspector.mjs
       - name: Validate visual comparison contract
