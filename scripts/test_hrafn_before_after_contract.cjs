@@ -25,7 +25,7 @@ for(const token of ['ImageChops.difference','ANTES','DESPUÉS','changedPixelRati
 for(const token of ['scripts/hrafn-before-after.mjs','scripts/create_hrafn_ab_report.py','HRAFN_BEFORE_URL','HRAFN_AFTER_URL','artifacts/hrafn-before-after/report.md','Comparación gráfica móvil S26 Ultra']){
   assert.ok(inspector.includes(token),'Unified inspector missing A/B phase: '+token);
 }
-for(const token of ['Build the baseline game in an isolated worktree','git rev-parse "$GITHUB_SHA^"','for attempt in 1 2 3 4; do','No buildable baseline found in the four-commit recovery window','4176','HRAFN_BEFORE_URL:','HRAFN_AFTER_URL: http://127.0.0.1:4175/','artifacts/hrafn-before-after/']){
+for(const token of ['Build the baseline game in an isolated worktree','git rev-parse "$GITHUB_SHA^"','for attempt in 1 2 3 4 5 6 7 8; do','No distinct buildable baseline found in the eight-commit recovery window','4176','HRAFN_BEFORE_URL:','HRAFN_AFTER_URL: http://127.0.0.1:4175/','artifacts/hrafn-before-after/']){
   assert.ok(workflow.includes(token),'Workflow missing exact parent baseline/mobile A/B wiring: '+token);
 }
 assert.doesNotMatch(workflow,/feature\/unified-atmosphere-system/);
