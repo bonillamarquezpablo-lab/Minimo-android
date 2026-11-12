@@ -40,9 +40,14 @@ const { pathToFileURL } = require("node:url");
     islandIndex:index,position:{x:index*100,y:1,z:0},
     bounds:{bottomY:.9,topY:3.2,width:2,depth:2},source:"contract-test"
   }));
+  const allCandidates = [...candidates,...islandCandidates.filter(item=>item.islandIndex!==3)];
   const totalIslandShots = plan.reduce((total,item)=>{
-    const generated=createZoneInspectionShots(item,islands,islandCandidates);
-    assert.ok(generated.report.selectedTargetCount<=1,"Each island zone must stay within its one-target budget.");
+    const generated=createZoneInspectionShots(item,islands,allCandidates);
+    if(item.zone.islandIndex!==3) {
+      assert.ok(generated.report.selectedTargetCount<=1,"Each non-Hrafn island zone must stay within its one-target budget.");
+    } else {
+      assert.equal(generated.report.selectedTargetCount,12,"Hrafn must retain the full twelve-target precision inspection.");
+    }
     return total+generated.shots.length;
   },0);
   assert.ok(totalIslandShots<=120,"All 13 islands must fit the 120-shot production budget; generated "+totalIslandShots+".");
@@ -64,5 +69,5 @@ const { pathToFileURL } = require("node:url");
   const coastal = fs.readFileSync("scripts/coastal-reference.mjs", "utf8");
   assert.ok(coastal.includes("floatingHutSafeOutcome"),
     "The synthetic offshore probe must accept either safe hiding or verified relocation onto dry ground.");
-  console.log("SCENE CAPTURE EFFICIENCY CONTRACT PASSED: 12 structures, 30 camera-verified PNGs, no false animated-frame hash failures.");
+  console.log("SCENE CAPTURE EFFICIENCY CONTRACT PASSED: all 13 islands, 102 bounded camera-verified PNGs, no false animated-frame hash failures.");
 })().catch(error => { console.error(error); process.exitCode = 1; });
