@@ -153,9 +153,14 @@ async function main() {
     await page.evaluate(() => {
       const audit = window.__startupPostEntryAudit = { calls: [], network: [] };
       const isGlb = value => /\\.glb(?:$|[?#])/i.test(String(value || ''));
-      const record = (kind, value) => {
-        if (document.body.classList.contains('game-running') && isGlb(value)) {
+      const recordImport = (kind, value) => {
+        if (document.body.classList.contains('game-running')) {
           audit.calls.push({ kind, value: String(value).slice(0, 500), at: performance.now() });
+        }
+      };
+      const recordNetwork = (kind, value) => {
+        if (document.body.classList.contains('game-running') && isGlb(value)) {
+          audit.network.push({ kind, value: String(value).slice(0, 500), at: performance.now() });
         }
       };
       const loader = window.BABYLON && window.BABYLON.SceneLoader;
@@ -164,7 +169,7 @@ async function main() {
           if (typeof loader[name] !== 'function') continue;
           const original = loader[name];
           loader[name] = function (...args) {
-            record('SceneLoader.' + name, args.map(String).join(' '));
+            recordImport('SceneLoader.' + name, args.map(String).join(' '));
             return original.apply(this, args);
           };
         }
@@ -172,12 +177,12 @@ async function main() {
       const originalFetch = window.fetch.bind(window);
       window.fetch = function (input, ...args) {
         const url = typeof input === 'string' ? input : input && input.url;
-        record('fetch', url);
+        recordNetwork('fetch', url);
         return originalFetch(input, ...args);
       };
       const originalOpen = XMLHttpRequest.prototype.open;
       XMLHttpRequest.prototype.open = function (method, url, ...args) {
-        record('XMLHttpRequest', url);
+        recordNetwork('XMLHttpRequest', url);
         return originalOpen.call(this, method, url, ...args);
       };
     });
