@@ -729,7 +729,7 @@ def main() -> None:
         fail("La identidad de invitado debe permanecer aislada de la identidad de la campaña real.")
     if "function buildShoreFoam(" in index_html or "const shorelineWaves=[]" in index_html:
         fail("El helper buildShoreFoam sin uso debe desaparecer únicamente en el último hito.")
-    if "await scene.whenReadyAsync();" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html or "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" in index_html:
+    if "scene.whenReadyAsync()" not in index_html or "scene.compileMaterialsAsync()" not in index_html or "sceneReadyTimeout" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html or "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" in index_html:
         fail("La preparación gráfica global debe estar acotada por timeout en ambos perfiles.")
     if "const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;" not in index_html or "const grassBuildSliceBudgetMs=staging?(isTouchDevice?3.5:6):grassStartupSliceBudgetMs;" not in index_html or "await yieldGrassStartupIfNeeded(islandIndex,placed,want);" not in index_html:
         fail("La generación de vegetación debe ceder el control según tiempo real de CPU.")
