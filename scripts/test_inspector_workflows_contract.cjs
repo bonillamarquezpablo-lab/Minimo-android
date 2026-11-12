@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const workflow=fs.readFileSync('.github/workflows/coastal-reference.yml','utf8');
 const center=fs.readFileSync('.github/workflows/inspector-center-checks.yml','utf8');
+assert.match(workflow,/cancel-in-progress: true/);
 assert.match(workflow,/workflow_dispatch:/);
 assert.match(workflow,/default: ''/);
 assert.match(workflow,/git fetch --no-tags origin "\$BASE_REF"/);
