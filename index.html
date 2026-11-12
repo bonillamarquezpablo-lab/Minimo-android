@@ -12807,8 +12807,13 @@ function update(dt){
  }).catch(audioError=>{
   audioPreloadResult={total:0,ready:0,failed:1,pending:0,status:'fallback'};
   recordStartupTask('Precarga de audio en segundo plano',audioLoadStarted,performance.now(),'fallback',{message:String(audioError&&audioError.message||audioError)});
-  console.warn('La precarga de audio terminó con recursos no disponibles; se conservan las reservas:',audioError);
+  console.warn('La precarga de audio terminó con recursos no disponibles:',audioError);
  });
+ try{
+  audioPreloadResult=await startupAudioPreload;
+  if(!audioPreloadResult.total||audioPreloadResult.failed||audioPreloadResult.pending)throw new Error('Efectos listos '+audioPreloadResult.ready+'/'+audioPreloadResult.total+', fallidos '+audioPreloadResult.failed+', pendientes '+audioPreloadResult.pending);
+  recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'ready',audioPreloadResult);
+ }catch(audioRequiredError){throw new Error('RECURSO OBLIGATORIO: efectos de sonido · '+String(audioRequiredError&&audioRequiredError.message||audioRequiredError));}
  // El selector se abre con los cuerpos provisionales ya visibles; los GLB secundarios se cargan después.
  setLoadingProgress(87,'Preparando escena y recursos principales…');
  if(coastalReferenceMode){
@@ -12857,6 +12862,7 @@ function update(dt){
   recordStartupTask('Shaders, texturas y escena',performance.now(),performance.now(),'fallback',{message:String(warmupError&&warmupError.message||warmupError)});
   console.warn('La escena informó un error al preparar los recursos; se conserva la reserva antes de entrar:',warmupError);
   try{if(engine&&typeof engine.resize==='function')engine.resize();}catch(_){ }
+  throw new Error('RECURSO OBLIGATORIO: escena y shaders · '+String(warmupError&&warmupError.message||warmupError));
  }
 
  if(!coastalReferenceMode){
