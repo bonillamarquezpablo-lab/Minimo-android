@@ -67,7 +67,7 @@ assert.match(smoke,/houseFootingOutliers:houseOutliers\.length/);
 assert.match(smoke,/candidateCountAfter=Number\(offshoreAfter\?\.candidateCount\)/);
 assert.match(smoke,/offshoreInventoryComplete=Number\.isFinite\(candidateCountAfter\)&&Number\.isFinite\(returnedCountAfter\)&&candidateCountAfter===returnedCountAfter&&omittedCountAfter===0/);
 assert.match(smoke,/&&offshoreInventoryComplete/);
-assert.match(smoke,/noUnregisteredOffshoreCandidates=Number\.isFinite\(Number\(offshore\?\.unregisteredCandidates\)\)&&Number\(offshore\.unregisteredCandidates\)===0/);
+assert.match(smoke,/noUnregisteredOffshoreCandidates=unresolvedUnregisteredCandidates\\.length===0/);
 assert.match(smoke,/&&noUnregisteredOffshoreCandidates/);
 assert.match(smoke,/unregisteredOffshoreCandidates:offshore\?\.unregisteredCandidates\?\?null/);
 assert.match(smoke,/const compact=item=>\(\{safe:item\.safe===true,status:item\.status\?\?null/);
