@@ -746,7 +746,7 @@ def main() -> None:
   const fps=engine.getFps();
   if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
-    quality_adaptive_code = r""" let fpsSample=0,qualityDprCurrent=qualityDpr;
+    quality_adaptive_code = r""" let fpsSample=0,qualityDprCurrent=fsr1Candidate?fsr1InputScale:qualityDpr;
  let qualityDprStableSamples=0,qualityDprSlowSamples=0;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
  let targetFrameRate=60,observedFpsCeiling=60;
