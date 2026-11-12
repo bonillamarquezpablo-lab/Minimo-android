@@ -671,7 +671,7 @@
         this.moonLight.setEnabled(state.night > state.daylight && state.night > 0.025);
       }
       if (this.hemiLight) {
-        this.hemiLight.intensity = 0.25 + 0.70 * state.daylight + 0.06 * state.twilight;
+        this.hemiLight.intensity = 0.25 + 0.65 * state.daylight + 0.045 * state.twilight;
         this.hemiLight.diffuse.r = mix(coolNight.r, 0.72, state.daylight);
         this.hemiLight.diffuse.g = mix(coolNight.g, 0.82, state.daylight);
         this.hemiLight.diffuse.b = mix(coolNight.b, 0.92, state.daylight);
@@ -681,7 +681,7 @@
         this.hemiLight.groundColor.b = mix(nightGround.b, dayGround.b, state.daylight);
       }
       if (this.scene.environmentTexture && 'environmentIntensity' in this.scene) {
-        this.scene.environmentIntensity = 0.16 + 0.44 * state.daylight + 0.04 * state.twilight;
+        this.scene.environmentIntensity = 0.16 + 0.36 * state.daylight + 0.035 * state.twilight;
       }
 
       const horizonDay = this._horizonDay, horizonDusk = this._horizonDusk, horizonNight = this._horizonNight;
