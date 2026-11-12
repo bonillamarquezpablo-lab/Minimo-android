@@ -152,7 +152,7 @@ jobs:
       - name: Run the single unified inspector
         env:
           INSPECTOR_TEST_URL: http://127.0.0.1:4175/
-          HRAFN_BEFORE_URL: ${{ github.event_name != 'workflow_dispatch' || inputs.inspection_level == 'deep' && 'http://127.0.0.1:4176/' || '' }}
+          HRAFN_BEFORE_URL: ${{ (github.event_name != 'workflow_dispatch' || inputs.inspection_level == 'deep') && 'http://127.0.0.1:4176/' || '' }}
           HRAFN_AFTER_URL: http://127.0.0.1:4175/
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
           CAPTURE_SEED: '20261110'
