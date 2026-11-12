@@ -105,8 +105,8 @@ def main() -> None:
         fail("El reloj atmosférico no está conectado al bucle de juego y a sus controles.")
     for marker in (
         "this.moonLight.intensity = 0.28 * state.night",
-        "this.hemiLight.intensity = 0.25 + 0.70 * state.daylight + 0.06 * state.twilight",
-        "this.scene.environmentIntensity = 0.16 + 0.44 * state.daylight + 0.04 * state.twilight",
+        "this.hemiLight.intensity = 0.25 + 0.65 * state.daylight + 0.045 * state.twilight",
+        "this.scene.environmentIntensity = 0.16 + 0.36 * state.daylight + 0.035 * state.twilight",
         "mix(1.12, 1.08, state.daylight)",
         "this._nightGroundColor = new B.Color3(0.105, 0.13, 0.18)",
         "this._sunVector = new B.Vector3(0, 1, 0)",
