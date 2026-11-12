@@ -28,7 +28,7 @@ function isInvalidVikingGlbResponse(response, request) {
   const requestedUrl = new URL(request.url);
   // Every GLB must remain a same-resource binary response: never cache HTML, redirects,
   // cross-origin SSO pages, or an unrelated URL under a model filename.
-  if (!/\\.glb$/i.test(requestedUrl.pathname)) return false;
+  if (!/\.glb$/i.test(requestedUrl.pathname)) return false;
   let responseUrl;
   try {
     responseUrl = new URL(response.url || request.url);
