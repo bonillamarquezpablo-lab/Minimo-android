@@ -133,11 +133,13 @@ function runNodePhase(name,script,env={},timeoutMs=25*60*1000){
       },5000);
     },timeoutMs);
     child.once('error',error=>finish(timedOut?'timed_out':'failed',null,timedOut?timeoutMessage+' '+String(error?.stack||error):String(error?.stack||error)));
-    child.once('close',(code,signal)=>finish(
-      timedOut?'timed_out':code===0?'passed':'failed',
-      timedOut?null:code,
-      timedOut?timeoutMessage+' Child terminated with '+(signal||'an unknown signal')+'.':code===0?null:'exit='+code+' signal='+(signal||'none')
-    ));
+    // `close` can be delayed by inherited stdio held open by orphaned browser/worker
+    // descendants. Settle on the direct child `exit` event and clean its process group.
+    child.once('exit',(code,signal)=>{
+      if(timedOut)return; // The timeout path still SIGKILLs the whole group before settling.
+      try{signalChildProcessTree(child,'SIGTERM');}catch(_){}
+      finish(code===0?'passed':'failed',code,code===0?null:'exit='+code+' signal='+(signal||'none'));
+    });
   });
 }
 function runPythonPhase(name,script,arg,timeoutMs=5*60*1000){
@@ -169,11 +171,12 @@ function runPythonPhase(name,script,arg,timeoutMs=5*60*1000){
       },5000);
     },timeoutMs);
     child.once('error',error=>finish('failed',null,String(error?.stack||error)));
-    child.once('close',(code,signal)=>finish(
-      timedOut?'timed_out':code===0?'passed':'failed',
-      timedOut?null:code,
-      timedOut?'Python report timeout; child terminated with '+(signal||'an unknown signal')+'.':code===0?null:'exit='+code+' signal='+(signal||'none')
-    ));
+    // Do not wait for `close`: descendants can keep inherited stdio alive after Python exits.
+    child.once('exit',(code,signal)=>{
+      if(timedOut)return;
+      try{signalChildProcessTree(child,'SIGTERM');}catch(_){}
+      finish(code===0?'passed':'failed',code,code===0?null:'exit='+code+' signal='+(signal||'none'));
+    });
   });
 }
 function summaryFrom(file,selector){
