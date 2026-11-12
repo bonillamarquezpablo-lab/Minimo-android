@@ -21,7 +21,7 @@ assert.match(workflow,/name: Install report image support\s+if: github\.event_na
 assert.match(workflow,/name: Install Playwright and Chromium\s+if: github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.number != 121/);
 assert.match(workflow,/name: Start baseline and candidate game servers for the unified inspection\s+if: github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.number != 121/);
 assert.match(workflow,/name: Run the single unified inspector\s+if: github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.number != 121/);
-assert.match(workflow,/re_enable_after_manual_game_test: true/);
+assert.ok(workflow.includes('"re_enable_after_manual_game_test": true'));
 assert.ok(workflow.includes('node scripts/test_inspector_capture_skip_contract.cjs'));
 assert.match(workflow,/cancel-in-progress: false/,
   'The manual-test bypass must not cancel the older inspection execution.');
