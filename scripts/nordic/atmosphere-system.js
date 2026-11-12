@@ -227,7 +227,7 @@
     }
 
     static normalizeTime(value) { return normalizeTime(value); }
-    static computeSolarState(value) { return computeSolarState(value); }
+    static computeSolarState(value, target) { return computeSolarState(value, target); }
     static computeLightingProfile(value) { return computeLightingProfile(computeSolarState(value)); }
     static advanceTime(current, dt, dayDurationSeconds, speed) {
       const duration = clamp(Number(dayDurationSeconds) || 300, 1, 86400);
