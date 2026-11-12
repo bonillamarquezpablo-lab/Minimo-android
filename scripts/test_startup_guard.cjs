@@ -42,7 +42,7 @@ assert.match(html,/const startupAudioPreload=NorseAudio\.preloadAll\(6500\)/);
 assert.doesNotMatch(html,/decodeAudioData\([^)]*menu|decodeAudioData\([^)]*gameplay/i);
 
 // Cache must reject all GLB HTML/redirect substitutions, not only the protagonist asset.
-assert.match(sw,/if \(!\/\\\\\.glb\$\/i\.test\(requestedUrl\.pathname\)\) return false/);
+assert.ok(sw.includes('if (!/\\.glb$/i.test(requestedUrl.pathname)) return false;'),'El service worker debe validar todos los GLB.');
 assert.match(sw,/response\.redirected/);
 assert.match(sw,/contentType\.includes\("text\/html"\)/);
 console.log('OK: protagonist + initial-island NPC + scene/shaders block entry; fauna is bounded optional; no deferred import path.');
