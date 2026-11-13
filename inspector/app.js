@@ -17,7 +17,7 @@
   const niceDate=value=>value?new Date(value).toLocaleString('es-ES',{dateStyle:'medium',timeStyle:'short'}):'—';
   const number=(v,d=1)=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?Number(v).toLocaleString('es-ES',{maximumFractionDigits:d}):'—';
   const formatElapsed=ms=>{if(!Number.isFinite(ms)||ms<0)return '—';const s=Math.round(ms/1000);if(s<60)return s+' s';const m=Math.floor(s/60),r=s%60;return m+' min '+String(r).padStart(2,'0')+' s';};
-  let chosenLevel='deep',activeRun=null,progressData=null,jobsData=null,activePhase='dawn',comparePosition=50,differenceVisible=false,radarData=null,selectedIsland=null,selectedStructure=null;
+  let chosenLevel='quick',activeRun=null,progressData=null,jobsData=null,activePhase='dawn',comparePosition=50,differenceVisible=false,radarData=null,selectedIsland=null,selectedStructure=null;
   let currentToken='',refreshTimer=null,fetchBusy=false,launching=false,latestRuns=[],activeRuns=[],selectedRunId=null,lastError=null,lastRunsFetchAt=0,lastJobsFetchAt=0,jobsRunId=null;
   const apiResponseCache=new Map();
   let lastGoodManifest=null,lastGoodRun=null,lastGoodLookupAt=0;
@@ -349,7 +349,7 @@
   }
   function openGithubWorkflow(){
     window.open(GITHUB_WORKFLOW,'_blank','noopener');
-    setMessage('GitHub se ha abierto. Selecciona main, elige el mismo nivel que aquí y pulsa “Run workflow”. No necesitas un token.','success');
+    setMessage('GitHub se ha abierto. Elige la rama y el nivel de auditoría. Rápido viene seleccionado; el Inspector solo se ejecutará cuando confirmes “Run workflow”. No necesitas un token.','success');
   }
   async function launchInspection(){
     if(launching)return;
@@ -647,7 +647,7 @@
   const GUIDE_STEPS=[
     {target:'#overview',title:'1. Resumen',text:'Aquí ves cuántas pruebas están en marcha o en cola, además del inventario más reciente de islas y estructuras.'},
     {target:'#activeRunsList',title:'2. Pruebas activas',text:'Esta lista reúne todas las ejecuciones que siguen en marcha o esperan turno. Toca cualquiera para abrir sus detalles.'},
-    {target:'#control .launch-panel',title:'3. Iniciar una inspección',text:'Elige Rápido, Completo o Profundo y pulsa Iniciar inspección. Sin conexión directa, se abrirá GitHub para confirmar el inicio.'},
+    {target:'#control .launch-panel',title:'3. Iniciar una inspección',text:'Elige Rápido, Completo o Profundo solo cuando necesites esta auditoría. Sin conexión directa, se abrirá GitHub y tendrás que confirmar el inicio.'},
     {target:'.run-panel',title:'4. Detalle de la prueba',text:'Aquí ves el estado, los pasos, el tiempo transcurrido y las capturas de la ejecución que hayas seleccionado.'},
     {target:'#telemetria',title:'5. Rendimiento',text:'FPS más alto es mejor; tiempo por fotograma más bajo es mejor. Las gráficas muestran solo mediciones disponibles.'},
     {target:'#radar',title:'6. Mapa de las islas',text:'Toca una isla para consultar sus objetos y mediciones. Verde: apoyo correcto; rojo: desnivel; gris: pendiente de medir.'},
@@ -704,7 +704,7 @@
     $('refreshNow').addEventListener('click',()=>refreshDashboard(true));
     $('artifactsLink').addEventListener('click',()=>{if(activeRun?.html_url)window.open(activeRun.html_url+'#artifacts','_blank','noopener');});
   }
-  loadSessionToken();setLevel('deep');bindEvents();refreshDashboard(true);
+  loadSessionToken();setLevel('quick');bindEvents();refreshDashboard(true);
   refreshTimer=setInterval(()=>refreshDashboard(false),12000);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshDashboard(true);});
 })();
