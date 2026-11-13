@@ -205,7 +205,8 @@ console.log('OK: live local minimap, compass heading, coordinates and integrated
 // One original map only: the navigation helper must not create a duplicate overlay.
 assert.match(html, /id="map"/);
 assert.match(html, /rangeX=145/);
-assert.match(html, /Math\.PI-heading/);
+assert.match(html, /mg\.rotate\(heading-Math\.PI\)/);
+assert.match(html, /mg\.save\(\);mg\.translate\(cx,cy\);mg\.shadowColor=/);
 assert.match(html, /Math\.PI-mapHeading/);
 assert.match(html, /cameraFocus=focus/);
 assert.match(html, /onShip\?2\.12:1/);
