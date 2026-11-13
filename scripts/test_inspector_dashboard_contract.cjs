@@ -21,13 +21,13 @@ for(const id of new Set(referencedIds))assert.ok(html.includes('id=\"'+id+'\"'),
 for(const marker of [
  'Rápido','Completo','Profundo','id="launchButton"','id="githubToken"',
  'id="compareRange"','id="differenceToggle"','id="radarSvg"','id="telemetryGrid"',
- 'id="technicalJson"','id="guideFab"','id="guidePanel"','id="guideStepTitle"','id="guideNext"','id="guidePrev"','id="guideClose"','id="guideFinish"','id="runPhaseStatus"','id="evidenceGrid"','id="evidenceStatus"','id="startInGithub"','id="performanceChart"','id="memoryChart"','id="performanceSummary"','id="memorySummary"','style.css','app.js'
+ 'id="technicalJson"','id="guideFab"','id="lastGoodNotice"','id="lastGoodTitle"','id="lastGoodDescription"','id="lastGoodRun"','id="tokenSettingsButton"','id="fpsGaugeArc"','id="fpsGaugeNeedle"','id="frameGaugeArc"','id="worldCpuGaugeArc"','id="renderCpuGaugeArc"','id="guidePanel"','id="guideStepTitle"','id="guideNext"','id="guidePrev"','id="guideClose"','id="guideFinish"','id="runPhaseStatus"','id="evidenceGrid"','id="evidenceStatus"','id="performanceChart"','id="memoryChart"','id="performanceSummary"','id="memorySummary"','style.css','app.js'
 ])assert.ok(html.includes(marker),'Missing Inspector Center UI element: '+marker);
 for(const marker of [
  "actions/workflows/'+WORKFLOW+'/dispatches","workflow_dispatch","sessionStorage.setItem",
- "inspector-status","clipPath","differenceImage","medianFps","medianWorldUpdateCpuMs","GITHUB_WORKFLOW","openGithubWorkflow","startInGithub","renderEvidence","evidenceGrid","safeEvidenceUrl","phaseGuide",
+ "inspector-status","clipPath","differenceImage","medianFps","medianWorldUpdateCpuMs","GITHUB_WORKFLOW","openGithubWorkflow","renderEvidence","evidenceGrid","safeEvidenceUrl","phaseGuide",
  "renderRadar","custom?.structures","bottomAboveTerrainMeters","habitableStructures",
- "Amanecer","Mediodía","Atardecer","Noche","renderPerformanceGraph","renderMemoryGraph","heapUsedMB","/39 estructuras detectadas"
+ "Amanecer","Mediodía","Atardecer","Noche","renderPerformanceGraph","renderMemoryGraph","heapUsedMB","structures.length+' edificios · '+candidates.length+' candidatos'"
 ])assert.ok(app.includes(marker),'Missing Inspector Center application feature: '+marker);
 assert.ok(!app.includes('localStorage'),'The dashboard must not persist GitHub tokens in localStorage.');
 assert.ok(app.includes('Authorization:\'Bearer \'+currentToken'),'The token must be sent only in the direct GitHub API request.');
@@ -54,12 +54,17 @@ assert.ok(sampler.includes('heapUsedMB')&&sampler.includes('heapInitialMB')&&sam
 assert.ok(sampler.includes('__ELSN_INSPECTOR_HEAP_TRACE')&&sampler.includes('setInterval(capture, 250)'),'The heap chart must sample the entry transition as well as the stable play window.');
 assert.ok(sampler.includes('performance.memory'),'Heap memory must be measured only through Chromium performance.memory.');
 assert.ok(sampler.includes("value!==null&&value!==undefined&&value!==''"),'Missing heap samples must not be converted to zero.');
-assert.ok(app.includes("target:'#control .levels'")&&app.includes("title:'1. Elige la prueba'"),'The guided tour must begin at the first actionable control.');
-assert.ok(app.indexOf("title:'1. Elige la prueba'")<app.indexOf("title:'2. Pulsa Iniciar inspección'")&&app.indexOf("title:'2. Pulsa Iniciar inspección'")<app.indexOf("title:'3. Mira cómo trabaja'"),'The guided tour must follow choose, launch, monitor order.');
-assert.ok(app.includes("window.scrollTo({top:Math.max(0,top),behavior:'smooth'})"),'Guide navigation must align the selected target below the fixed header.');
-assert.ok(html.includes('id="guideFab"')&&html.indexOf('id="guideFab"')<html.indexOf('id="connection"'),'Help control must remain visible in the header.');
-assert.ok(app.includes("svg.setAttribute('data-live',String(activeRun?.status==='in_progress'))")&&app.includes('radar-sweep-ring'),'Radar animation must be tied to a real active run and real inventory.');
+const guideStart=app.indexOf('  const GUIDE_STEPS=['),guideEnd=app.indexOf('\n  ];',guideStart);
+const guideTargets=[...app.slice(guideStart,guideEnd).matchAll(/target:'([^']+)'/g)].map(match=>match[1]);
+assert.deepEqual(guideTargets,['#overview','#control .launch-panel','.run-panel','#telemetria','#radar','#comparativa'],'The guide must follow the combined PR #135 visual section order.');
+assert.ok(html.includes('<header class="topbar">')&&html.indexOf('id="guideFab"')<html.indexOf('</header>'),'Help must be opened from the top header.');
+assert.ok(!html.includes('id="guideStart"')&&!app.includes("$('guideStart').addEventListener"),'The page must not show a guide launch card.');
 assert.ok(app.includes("activeRun?.status==='in_progress'?'La prueba aún está trabajando."),'Empty performance charts must explain that the inspection is still running.');
 assert.ok(app.includes("activeRun?.status==='in_progress'?'Las imágenes aún se están preparando."),'An empty comparison must distinguish waiting from a failed/missing result.');
 assert.ok(app.includes("activeRun?.status==='in_progress'?'El inspector aún no ha llegado al inventario del mundo."),'The radar must explain when its data is still being collected.');
-console.log('Inspector Center guided-tour, no-token launch, live phase status, embedded evidence and dashboard contracts: OK');
+assert.ok(app.includes('function hasUsableReport(manifest)')&&app.includes('function loadLastGoodManifest')&&app.includes('function composeDisplayManifest'),'The dashboard must keep the latest finished report while a new run is active.');
+assert.ok(app.includes('renderLastGoodNotice')&&html.includes('id="lastGoodNotice"'),'The dashboard must identify the source of retained data.');
+assert.ok(app.includes('function renderGauge')&&app.includes('function animateChartLines')&&app.includes('function animateCounter'),'The dashboard must animate the measured gauges, lines and counters.');
+assert.ok(app.includes("item.category==='structure'")&&app.includes("item.category==='unidentified-structure'"),'Confirmed structures and unknown geometry candidates must be separated.');
+assert.ok(css.includes('.radar-map.is-scanning:before')&&css.includes('.island-contour')&&css.includes('.sky-art'),'The radar and day/night cards must have live vector visuals.');
+console.log('Inspector Center ordered guide, last-good state, live gauges, chart animation and radar visuals: OK');

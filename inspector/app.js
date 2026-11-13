@@ -19,6 +19,7 @@
   const formatElapsed=ms=>{if(!Number.isFinite(ms)||ms<0)return '—';const s=Math.round(ms/1000);if(s<60)return s+' s';const m=Math.floor(s/60),r=s%60;return m+' min '+String(r).padStart(2,'0')+' s';};
   let chosenLevel='deep',activeRun=null,progressData=null,jobsData=null,activePhase='dawn',comparePosition=50,differenceVisible=false,radarData=null,selectedIsland=null,selectedStructure=null;
   let currentToken='',refreshTimer=null,fetchBusy=false,launching=false,latestRuns=[],lastError=null,lastRunsFetchAt=0,lastJobsFetchAt=0,jobsRunId=null;
+  let lastGoodManifest=null,lastGoodRun=null,lastGoodLookupAt=0;
 
   function setConnection(text,online){$('connection').textContent=text;$('connection').classList.toggle('online',!!online);}
   function setMessage(text,type=''){const node=$('launchMessage');node.textContent=text;node.className='inline-state'+(type?' '+type:'');}
@@ -44,6 +45,8 @@
     else{try{sessionStorage.removeItem('elsn_inspector_token');}catch(_){}}
     $('tokenState').textContent=$('sessionKeep').checked?'Token guardado hasta cerrar esta pestaña.':'Token cargado solo en memoria hasta salir o recargar.';
   }
+  $('tokenSettingsButton').addEventListener('click',()=>{const open=!$('tokenDetails').open;$('tokenDetails').open=open;$('tokenSettingsButton').setAttribute('aria-expanded',String(open));if(open)$('tokenDetails').scrollIntoView({behavior:'smooth',block:'nearest'});});
+  $('tokenDetails').addEventListener('toggle',()=>$('tokenSettingsButton').setAttribute('aria-expanded',String($('tokenDetails').open)));
   $('saveToken').addEventListener('click',saveToken);
   $('clearToken').addEventListener('click',()=>{$('githubToken').value='';currentToken='';try{sessionStorage.removeItem('elsn_inspector_token');}catch(_){}$('tokenState').textContent='Token eliminado de esta sesión.';});
   $('toggleToken').addEventListener('click',()=>{const input=$('githubToken');input.type=input.type==='password'?'text':'password';$('toggleToken').textContent=input.type==='password'?'Mostrar':'Ocultar';});
@@ -140,6 +143,31 @@
   function findLatestInspectorRun(runs){
     return (runs||[]).find(run=>run.name?.includes('Inspector único')||run.path?.includes(WORKFLOW))||null;
   }
+  function hasUsableReport(manifest){return !!(manifest?.finishedAt&&((manifest.results?.custom?.islands?.length||0)>0||(manifest.results?.beforeAfter?.phases?.length||0)>0||Object.keys(manifest.results?.beforeAfter?.previews||{}).length>0));}
+  async function loadLastGoodManifest(excludeRunId=null,force=false){
+    if(!force&&lastGoodManifest&&lastGoodRun&&Date.now()-lastGoodLookupAt<180000)return lastGoodManifest;
+    const candidates=(latestRuns||[]).filter(r=>r.id!==excludeRunId&&r.status==='completed'&&(r.name?.includes('Inspector único')||r.path?.includes(WORKFLOW))).slice(0,15);
+    for(const candidate of candidates){try{const report=await fetchProgress(candidate);if(hasUsableReport(report)){lastGoodManifest=report;lastGoodRun=candidate;lastGoodLookupAt=Date.now();return report;}}catch(_){}}
+    lastGoodLookupAt=Date.now();return lastGoodManifest;
+  }
+  function composeDisplayManifest(live,fallback){
+    if(!fallback)return live?{...live,_sourceRun:activeRun,_isLastGood:false}:null;
+    const lr=live?.results||{},old=fallback.results||{};
+    const custom=((lr.custom?.islands?.length||0)>0||(lr.custom?.structures?.length||0)>0)?lr.custom:old.custom;
+    const lba=lr.beforeAfter||{},oba=old.beforeAfter||{};
+    const hasVisual=(lba.phases?.length||0)>0||Object.keys(lba.previews||{}).length>0||!!lba.builds?.after?.performance?.samples?.length;
+    const beforeAfter=hasVisual?{...oba,...lba,previews:{...(oba.previews||{}),...(lba.previews||{})},builds:{...(oba.builds||{}),...(lba.builds||{})},phases:lba.phases?.length?lba.phases:oba.phases}:oba;
+    const results={...old,...lr,custom,beforeAfter};
+    for(const key of ['player','texture','grounding','coastal'])if(!lr[key]||!Object.keys(lr[key]||{}).length)results[key]=old[key];
+    const liveFinished=hasUsableReport(live);
+    return {...(liveFinished?fallback:live||fallback),...(live||{}),results,phases:live?.phases?.length?live.phases:fallback.phases,_sourceRun:liveFinished?activeRun:lastGoodRun,_isLastGood:!liveFinished&&!!lastGoodRun&&lastGoodRun.id!==activeRun?.id};
+  }
+  function renderLastGoodNotice(display){
+    const source=display?._sourceRun,show=!!(display?._isLastGood&&source);$('lastGoodNotice').hidden=!show;if(!show)return;
+    $('lastGoodTitle').textContent='Mostrando los últimos datos finalizados · informe #'+(source.run_number||'—');
+    $('lastGoodDescription').textContent='La inspección nueva sigue en marcha. Estos son los últimos datos disponibles'+(source.conclusion&&source.conclusion!=='success'?' · el informe terminó con avisos':'')+'; se sustituirán cuando lleguen resultados nuevos.';
+    $('lastGoodRun').textContent='INFORME #'+(source.run_number||'—');
+  }
   async function refreshDashboard(force=false){
     if(fetchBusy&&!force)return;fetchBusy=true;
     try{
@@ -147,7 +175,7 @@
       const metadataInterval=currentToken?25000:150000;
       const needRunRefresh=force||!activeRun||now-lastRunsFetchAt>=metadataInterval;
       if(needRunRefresh){
-        const list=await apiGet(API+'/actions/workflows/'+WORKFLOW+'/runs?per_page=12');
+        const list=await apiGet(API+'/actions/workflows/'+WORKFLOW+'/runs?per_page=50');
         latestRuns=list.workflow_runs||[];
         activeRun=findLatestInspectorRun(latestRuns);
         lastRunsFetchAt=Date.now();
@@ -155,12 +183,18 @@
       }
       const run=activeRun;
       if(!run){
-        renderRunShell(null);renderCompare(null);renderRadar(null);renderTelemetry(null);
+        await loadLastGoodManifest(null,force&&!lastGoodManifest);
+        const display=composeDisplayManifest(null,lastGoodManifest);renderLastGoodNotice(display);
+        renderRunShell(null);renderEvidence(display);renderCompare(display);renderRadar(display);renderTelemetry(display);
         $('updatedAt').textContent='Sin ejecuciones recientes';
         setConnection('GitHub conectado',true);lastError=null;return;
       }
       const manifest=await fetchProgress(run);
       progressData=manifest;
+      if(hasUsableReport(manifest)){lastGoodManifest=manifest;lastGoodRun=run;lastGoodLookupAt=Date.now();}
+      else await loadLastGoodManifest(run.id,force&&!lastGoodManifest);
+      const displayManifest=composeDisplayManifest(manifest,lastGoodManifest);
+      renderLastGoodNotice(displayManifest);
       let jobs={jobs:[]},jobsError=null;
       // A pull_request run cannot safely publish a progress manifest with a write token.
       // Poll the public Actions jobs endpoint frequently instead of leaving a stale
@@ -181,10 +215,10 @@
       const phases=manifest?.phases||[];
       const allSteps=(jobs.jobs||[]).flatMap(job=>(job.steps||[]).map(step=>({...step,jobName:job.name})));
       renderSteps(phases,allSteps);
-      renderEvidence(manifest);
-      renderCompare(manifest);
-      renderRadar(manifest);
-      renderTelemetry(manifest);
+      renderEvidence(displayManifest);
+      renderCompare(displayManifest);
+      renderRadar(displayManifest);
+      renderTelemetry(displayManifest);
       const latest=jobs.jobs?.find(job=>job.status==='in_progress');
       const current=latest?.steps?.find(step=>step.status==='in_progress');
       if(!phases.length&&!allSteps.length&&run.status==='in_progress'){
@@ -230,7 +264,6 @@
     window.open(GITHUB_WORKFLOW,'_blank','noopener');
     setMessage('GitHub se ha abierto. Selecciona main, elige el mismo nivel que aquí y pulsa “Run workflow”. No necesitas un token.','success');
   }
-  $('startInGithub').addEventListener('click',openGithubWorkflow);
   async function launchInspection(){
     if(launching)return;
     saveToken();
@@ -312,6 +345,7 @@
       '<text x="48" y="204" class="chart-axis">Entrada</text><text x="676" y="204" text-anchor="end" class="chart-axis">Muestras posteriores</text>'+
       svgLine(bf,yFps,'#7596bf','7 6')+svgLine(af,yFps,'#65dbe1')+
       svgLine(bm,yMs,'#a27ec5','7 6')+svgLine(am,yMs,'#f4bd68');
+    animateChartLines(svg);
     const currentFps=after?.medianFps,currentMs=after?.medianFrameP95Ms;
     $('performanceSummary').textContent='Actual: '+number(currentFps,0)+' FPS · '+number(currentMs,1)+' ms p95. Valores objetivo: ≥60 FPS y ≤16,6 ms.';
   }
@@ -327,20 +361,36 @@
     const grid=[0,1,2,3].map(i=>'<line x1="48" y1="'+(18+i*45)+'" x2="676" y2="'+(18+i*45)+'" class="chart-grid-line"/>').join('');
     svg.innerHTML=grid+'<text x="8" y="20" class="chart-axis">MB</text><text x="48" y="184" class="chart-axis">Entrada</text><text x="676" y="184" text-anchor="end" class="chart-axis">Después</text>'+
       svgLine(bf,y,'#7596bf','7 6')+svgLine(af,y,'#65dbe1');
+    animateChartLines(svg);
     const peak=Math.max(...all),first=af[0]?.value??bf[0]?.value,last=af.at(-1)?.value??bf.at(-1)?.value;
     $('memorySummary').textContent='Entrada: '+number(first,1)+' MB · pico: '+number(peak,1)+' MB · última lectura: '+number(last,1)+' MB.';
   }
+  function renderGauge(prefix,value,max,unit,mode){
+    const arc=$(prefix+'Arc'),needle=$(prefix+'Needle'),valueNode=$(prefix+'Value'),stateNode=$(prefix+'State'),card=$(prefix+'Card');
+    const valid=value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value));if(!arc||!needle||!valueNode||!stateNode||!card)return;
+    if(!valid){arc.style.strokeDasharray='0 100';needle.setAttribute('x2','80');needle.setAttribute('y2','78');valueNode.textContent='—';stateNode.textContent='Sin medición';card.dataset.state='unknown';return;}
+    const n=Number(value),fraction=Math.max(0,Math.min(1,n/max)),angle=Math.PI-fraction*Math.PI;
+    arc.style.strokeDasharray=(fraction*100)+' 100';needle.setAttribute('x2',(80+50*Math.cos(angle)).toFixed(2));needle.setAttribute('y2',(78-50*Math.sin(angle)).toFixed(2));
+    valueNode.textContent=number(n,mode==='fps'?0:1)+' '+unit;
+    const status=mode==='fps'?(n>=55?'Fluido':n>=30?'Justo':'Lento'):(n<=8?'Fluido':n<=16.7?'Justo':'Lento');stateNode.textContent=status;card.dataset.state=status.toLowerCase();
+  }
+  function animateChartLines(svg){if(!svg)return;svg.querySelectorAll('polyline').forEach((line,i)=>{try{const len=line.getTotalLength();line.style.strokeDasharray=String(len);line.style.strokeDashoffset=String(len);line.getBoundingClientRect();line.style.transition='stroke-dashoffset '+(950+i*160)+'ms cubic-bezier(.2,.7,.25,1)';requestAnimationFrame(()=>{line.style.strokeDashoffset='0';});}catch(_){}});}
+  function animateCounter(node,target){if(!node||!Number.isFinite(Number(target)))return;const next=Number(target),prev=Number(node.dataset.countValue??0);node.dataset.countValue=String(next);if(prev===next){node.textContent=String(next);return;}const start=performance.now(),duration=650;const step=now=>{const t=Math.min(1,(now-start)/duration),e=1-Math.pow(1-t,3);node.textContent=String(Math.round(prev+(next-prev)*e));if(t<1)requestAnimationFrame(step);};requestAnimationFrame(step);}
   function renderTelemetry(manifest){
     const data=manifest?.results?.beforeAfter,builds=data?.builds||{},before=builds.before?.performance,after=builds.after?.performance;
     renderPerformanceGraph(before,after);
     renderMemoryGraph(before,after);
+    renderGauge('fpsGauge',after?.medianFps,60,'FPS','fps');
+    renderGauge('frameGauge',after?.medianFrameP95Ms,60,'ms','lower');
+    renderGauge('worldCpuGauge',after?.medianWorldUpdateCpuMs,33.3,'ms','lower');
+    renderGauge('renderCpuGauge',after?.medianRenderSubmissionCpuMs,33.3,'ms','lower');
     $('worldCpuValue').textContent=after?.medianWorldUpdateCpuMs==null?'—':number(after.medianWorldUpdateCpuMs,2)+' ms';
     $('renderCpuValue').textContent=after?.medianRenderSubmissionCpuMs==null?'—':number(after.medianRenderSubmissionCpuMs,2)+' ms';
     $('worldCpuUnit').textContent=after?.medianWorldUpdateCpuMs==null?(activeRun?.status==='in_progress'?'Esperando la fase de rendimiento':'Esta ejecución no informó esta lectura'):'Tiempo de actualización · menor es mejor';
     $('renderCpuUnit').textContent=after?.medianRenderSubmissionCpuMs==null?(activeRun?.status==='in_progress'?'Esperando la fase de rendimiento':'Esta ejecución no informó esta lectura'):'Tiempo de envío a render · menor es mejor';
     const renderer=data?.renderer||'Sin datos de renderizador';
     $('telemetryCaveat').textContent=renderer.includes('SwiftShader')
-      ?'CI usa Chromium + ANGLE SwiftShader. Esta emulación no mide la GPU Adreno física, la VRAM ni la RAM total del S26 Ultra. La gráfica de memoria, cuando existe, solo mide el heap JavaScript que Chromium expone.'
+      ?'Datos del laboratorio Chromium + SwiftShader: permiten comparar versiones, pero no miden la GPU Adreno ni la RAM total del móvil. El tiempo de render es tiempo de CPU, no porcentaje de uso de GPU.'
       :'Las lecturas pertenecen al entorno indicado por el informe; no se atribuyen al hardware físico sin una medición en el dispositivo.';
     const diagnostics={run:activeRun?.id,level:manifest?.level,renderer,builds,results:manifest?.results,phases:manifest?.phases};
     $('technicalJson').textContent=JSON.stringify(diagnostics,null,2);
@@ -359,10 +409,12 @@
       if(before||after)ready++;
       const visual=(before||after)
         ?'<div class="evidence-pair">'+(before?'<a href="'+esc(before)+'" target="_blank" rel="noopener"><img src="'+esc(before)+'" alt="'+phase.label+' · antes" loading="lazy"><span>ANTES</span></a>':'<div class="evidence-missing">ANTES pendiente</div>')+(after?'<a href="'+esc(after)+'" target="_blank" rel="noopener"><img src="'+esc(after)+'" alt="'+phase.label+' · después" loading="lazy"><span>DESPUÉS</span></a>':'<div class="evidence-missing">DESPUÉS pendiente</div>')+'</div>'
-        :'<div class="evidence-empty-tile">'+(activeRun?.status==='in_progress'?'Preparando captura':'Sin captura')+'</div>';
+        :'<div class="evidence-empty-tile">'+(manifest?._isLastGood?'Incluida en el informe anterior':activeRun?.status==='in_progress'?'Preparando captura':'Sin captura')+'</div>'; 
       return '<article class="evidence-card"><div class="evidence-card-head"><strong>'+phase.label+'</strong><small>'+phase.time+'</small></div>'+visual+'</article>';
     }).join('');
-    $('evidenceGrid').innerHTML=cards;
+    const source=manifest?._sourceRun;
+    const archiveLink=!ready&&source?.html_url?'<a class="evidence-archive-link" href="'+esc(source.html_url+'#artifacts')+'" target="_blank" rel="noopener">Ver capturas y archivos del informe #'+esc(source.run_number)+'</a>':'';
+    $('evidenceGrid').innerHTML=cards+archiveLink;
     $('evidenceStatus').textContent=ready+'/4 horas con imágenes';
     $('evidenceGrid').classList.toggle('waiting',!ready);
     $('evidenceGrid').setAttribute('aria-label',ready?ready+' de cuatro fases horarias con capturas':'Las capturas de las cuatro horas aún no están disponibles');
@@ -385,7 +437,10 @@
     const beforeImage=$('beforeImage'),afterImage=$('afterImage'),differenceImage=$('differenceImage');
     if(!selected?.before||!selected?.after){
       beforeImage.removeAttribute('src');afterImage.removeAttribute('src');differenceImage.removeAttribute('src');
-      $('compareEmpty').hidden=false;$('compareStage').hidden=true;$('compareEmpty').textContent=activeRun?.status==='in_progress'?'Las imágenes aún se están preparando. Aparecerán cuando la inspección llegue a la comparación visual. No tienes que hacer nada.':manifest?'Esta ejecución terminó sin publicar miniaturas. Revisa sus evidencias o inicia una inspección profunda.':'Cuando termine una inspección profunda aparecerán aquí las cuatro comparativas.';
+      $('compareEmpty').hidden=false;$('compareStage').hidden=true;
+      const source=manifest?._sourceRun,hasRecordedPhases=(data?.phases?.length||0)>0;
+      const archive=source?.html_url&&hasRecordedPhases?'<p><a href="'+esc(source.html_url+'#artifacts')+'" target="_blank" rel="noopener">Abrir las capturas completas del informe #'+esc(source.run_number)+' ↗</a></p>':'';
+      $('compareEmpty').innerHTML='<div><strong>'+(hasRecordedPhases?'Hay '+data.phases.length+' horarios comparados':'Esperando capturas de comparación')+'</strong>'+(hasRecordedPhases?'El informe contiene la comparación, pero no publicó miniaturas para mostrarlas aquí.':activeRun?.status==='in_progress'?'Las imágenes aún se están preparando.':'Esta ejecución no publicó imágenes de comparación.')+archive+'</div>';
       $('phaseMeta').textContent=ready.length+' / 4 fases disponibles';
       return;
     }
@@ -426,8 +481,11 @@
 
   function renderRadar(manifest){
     const custom=manifest?.results?.custom,grounding=manifest?.results?.grounding;
-    const islands=custom?.islands||[],structures=(custom?.structures||[]).filter(item=>['structure','unidentified-structure'].includes(item.category)&&coordinate(item));
-    radarData={islands,structures,grounding};
+    const islands=custom?.islands||[];
+    const allItems=(custom?.structures||[]).filter(item=>['structure','unidentified-structure'].includes(item.category)&&coordinate(item));
+    const structures=allItems.filter(item=>item.category==='structure'),candidates=allItems.filter(item=>item.category==='unidentified-structure');
+    radarData={islands,structures:allItems,confirmedStructures:structures,candidates,grounding};
+    const radarMap=$('radarSvg')?.closest('.radar-map');if(radarMap)radarMap.classList.toggle('is-scanning',activeRun?.status==='in_progress');
     if(!islands.length){
       $('radarSvg').innerHTML='';$('radarSvg').removeAttribute('data-live');
       $('radarEmpty').hidden=false;
@@ -449,6 +507,7 @@
     const bg=make('rect',{x:0,y:0,width:w,height:h,fill:'transparent'});svg.appendChild(bg);
     const ring=make('circle',{cx:w/2,cy:h/2,r:205,fill:'none',stroke:'#4d7190','stroke-opacity':'.2','stroke-dasharray':'4 8'});svg.appendChild(ring);
     const sweep=make('circle',{cx:w/2,cy:h/2,r:Math.min(w,h)*.39,class:'radar-sweep-ring'});svg.appendChild(sweep);
+    const labels=[];
     islands.forEach((island,index)=>{
       const islandRadius=Number(island.r??island.radiusMeters)||18,x=mapX(Number(island.x)||0),y=mapY(Number(island.z)||0),radius=Math.max(15,Math.min(43,islandRadius*scale*.36));
       const owned=structures.filter(s=>Number(s.islandIndex)===index||s.island===island.name);
@@ -456,10 +515,12 @@
       const hasBad=states.includes('misaligned'),allMeasured=states.length>0&&states.every(s=>s!=='unknown'),state=hasBad?'misaligned':allMeasured?'grounded':'unknown';
       const g=make('g',{tabindex:'0',role:'button','aria-label':'Seleccionar '+(island.name||('Isla '+(index+1))),'data-island':index});
       const outline=make('ellipse',{cx:x,cy:y,rx:radius*1.2,ry:radius*.83,transform:'rotate('+(index*17-30)+' '+x+' '+y+')',class:'island-shape '+(index===selectedIsland?'selected':'')});
+      const contourOne=make('ellipse',{cx:x,cy:y,rx:radius*.88,ry:radius*.61,transform:'rotate('+(index*17-30)+' '+x+' '+y+')',class:'island-contour'});
+      const contourTwo=make('ellipse',{cx:x,cy:y,rx:radius*.58,ry:radius*.39,transform:'rotate('+(index*17-30)+' '+x+' '+y+')',class:'island-contour'});
       const node=make('circle',{cx:x,cy:y,r:6.5,class:'island-node'});
       const label=make('text',{x:x,y:y+radius+19,'text-anchor':'middle',class:'island-label'});label.textContent=(index+1)+'. '+(island.name||'Isla');
-      g.append(outline,node,label);g.addEventListener('click',()=>selectIsland(index));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectIsland(index);}});svg.appendChild(g);
-      const statusCircle=make('circle',{cx:x+radius*.9,cy:y-radius*.6,r:5.5,fill:state==='grounded'?'#52d5a0':state==='misaligned'?'#ff777f':'#91a5bd',stroke:'#091522','stroke-width':2});svg.appendChild(statusCircle);
+      g.append(outline,contourOne,contourTwo,node,label);g.addEventListener('click',()=>selectIsland(index));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectIsland(index);}});svg.appendChild(g);
+      const statusCircle=make('circle',{cx:x+radius*.9,cy:y-radius*.6,r:5.5,fill:state==='grounded'?'#52d5a0':state==='misaligned'?'#ff777f':'#91a5bd',stroke:'#091522','stroke-width':2,class:state==='misaligned'?'island-warning':''});svg.appendChild(statusCircle);
       owned.forEach((s,j)=>{
         const p=coordinate(s),m=measuredGrounding(s,grounding),angle=((j*137.508)+index*23)*Math.PI/180;
         const sx=mapX(p.x)+Math.cos(angle)*Math.min(15,(j%4)*3),sy=mapY(p.z)+Math.sin(angle)*Math.min(15,(j%4)*3);
@@ -472,11 +533,10 @@
     const grounded=structures.filter(s=>measuredGrounding(s,grounding).state==='grounded').length;
     const misaligned=structures.filter(s=>measuredGrounding(s,grounding).state==='misaligned').length;
     const unknown=structures.length-grounded-misaligned;
-    $('radarStats').textContent=islands.length+' islas · '+structures.length+'/39 estructuras detectadas';
-    $('overviewIslands').textContent=String(islands.length);
-    $('overviewStructures').textContent=String(structures.length);
-    $('overviewStructuresFoot').textContent='Detectadas · objetivo 39';
-    $('radarCounts').innerHTML='<div class="radar-count"><b style="color:var(--green)">'+grounded+'</b><span>Apoyo ≤ 2 cm</span></div><div class="radar-count"><b style="color:var(--red)">'+misaligned+'</b><span>Desnivel &gt; 2 cm</span></div><div class="radar-count"><b>'+unknown+'</b><span>Sin medición</span></div>';
+    $('radarStats').textContent=islands.length+' islas · '+structures.length+' edificios · '+candidates.length+' candidatos';
+    animateCounter($('overviewIslands'),islands.length);animateCounter($('overviewStructures'),structures.length);
+    $('overviewStructuresFoot').textContent=candidates.length+' objetos por clasificar';
+    $('radarCounts').innerHTML='<div class="radar-count"><b>'+structures.length+'</b><span>Edificios confirmados</span></div><div class="radar-count"><b style="color:var(--green)">'+grounded+'</b><span>Apoyo correcto</span></div><div class="radar-count"><b style="color:var(--red)">'+misaligned+'</b><span>Con desnivel</span></div><div class="radar-count"><b>'+unknown+'</b><span>Sin medir</span></div><div class="radar-count"><b>'+candidates.length+'</b><span>Por clasificar</span></div>';
     if(selectedIsland==null||selectedIsland>=islands.length)selectedIsland=3<islands.length?3:0;
     selectIsland(selectedIsland);
   }
@@ -498,14 +558,13 @@
 
 
   const GUIDE_STEPS=[
-    {target:'#control .levels',title:'1. Elige la prueba',text:'Primero elige qué quieres revisar: Rápido comprueba que el juego arranca; Completo revisa el mundo; Profundo añade las gráficas y las cuatro horas. Para una revisión completa, deja Profundo.'},
-    {target:'#launchButton',title:'2. Pulsa Iniciar inspección',text:'Pulsa este botón. Si no has conectado GitHub, se abrirá la página oficial para confirmar la prueba. Elige la rama main y pulsa Run workflow. No necesitas crear ni pegar ningún token.'},
-    {target:'.run-panel',title:'3. Mira cómo trabaja',text:'Esta tarjeta te cuenta qué está haciendo ahora, qué terminó y si algo necesita revisión. El círculo solo muestra un porcentaje cuando GitHub ha dado datos reales; si no, verás que sigue trabajando.'},
-    {target:'#evidenceGrid',title:'4. Mira las capturas aquí',text:'Las cuatro horas aparecen en esta tarjeta cuando se generan. Pulsa una miniatura para ampliarla. Si aún no hay imágenes, verás que están preparándose; no tienes que buscarlas en los logs.'},
-    {target:'#telemetria',title:'5. Comprueba si va fluido',text:'60 FPS es el objetivo. Menos de 16,6 ms por fotograma es mejor. La memoria es solo la que Chromium deja medir; no es toda la RAM ni la memoria gráfica del móvil.'},
-    {target:'#radar',title:'6. Explora las islas',text:'Toca una isla y después una estructura. Verde significa apoyo correcto (hasta 2 cm); rojo, desnivel mayor de 2 cm; gris, todavía sin medir. Solo se dibujan posiciones reales.'},
-    {target:'#comparativa',title:'7. Compara los cambios',text:'Elige amanecer, mediodía, atardecer o noche. Cuando haya dos capturas, mueve la barra para descubrir el DESPUÉS. Puedes activar el mapa de diferencias para localizar cambios.'}
-  ];
+    {target:'#overview',title:'1. Resumen',text:'Esta es la portada. Aquí ves la última inspección, su estado y cuántas islas y estructuras se han encontrado.'},
+    {target:'#control .launch-panel',title:'2. Iniciar una inspección',text:'Elige Rápido, Completo o Profundo y pulsa Iniciar inspección. Sin conexión directa, se abrirá GitHub para confirmar Run workflow. El engranaje contiene los ajustes avanzados.'},
+    {target:'.run-panel',title:'3. Seguir la inspección',text:'Aquí ves qué está comprobando, cuánto tiempo lleva, los pasos de la prueba y las capturas disponibles.'},
+    {target:'#telemetria',title:'4. Rendimiento',text:'Mira los indicadores: FPS más alto es mejor; tiempo por fotograma más bajo es mejor. Las gráficas usan las mediciones disponibles, no cifras inventadas.'},
+    {target:'#radar',title:'5. Mapa de las islas',text:'Cada isla se coloca con coordenadas del juego. Toca una isla y después un punto para ver sus objetos. Verde: apoyo correcto; rojo: desnivel; gris: pendiente o sin clasificar.'},
+    {target:'#comparativa',title:'6. Comparar versiones',text:'Elige amanecer, mediodía, atardecer o noche. Cuando haya capturas, desliza para comparar ANTES y DESPUÉS.'}
+  ];;
   let guideIndex=0,guideActive=false,guideHighlighted=null;
   function clearGuideHighlight(){
     if(guideHighlighted)guideHighlighted.classList.remove('guide-focus');
@@ -526,9 +585,10 @@
       guideHighlighted=target;
       target.classList.add('guide-focus');
       if(step.target==='#tokenDetails'&&!currentToken)$('tokenDetails').open=true;
-      const header=document.querySelector('.topbar');
-      const top=(target.getBoundingClientRect().top+window.scrollY)-(header?.getBoundingClientRect().height||0)-18;
-      window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+      const stickyHeader=document.querySelector('.topbar');
+      const offset=(stickyHeader?.getBoundingClientRect().height||0)+18;
+      const targetTop=target.getBoundingClientRect().top+window.scrollY-offset;
+      window.scrollTo({top:Math.max(0,targetTop),behavior:'smooth'});
     }
   }
   function openGuide(){

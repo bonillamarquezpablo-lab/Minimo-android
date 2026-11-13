@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#080d16">
 <meta name="description" content="Panel visual de auditoría, geometría, rendimiento y comparativas de EL SIN NOMBRE.">
 <title>Inspector Center · EL SIN NOMBRE</title>
-<link rel="stylesheet" href="style.css?v=20261113.8">
+<link rel="stylesheet" href="style.css?v=20261113.9">
 </head>
 <body>
 <div class="app-shell">
@@ -20,7 +20,7 @@
     <nav class="nav" aria-label="Navegación principal">
       <a href="#control">01 · Inspección</a><a href="#telemetria">02 · Rendimiento</a><a href="#radar">03 · Islas</a><a href="#comparativa">04 · Comparación</a>
     </nav>
-    <div class="topbar-actions"><button class="guide-fab" id="guideFab" type="button" aria-label="Abrir guía paso a paso">? <span>Guía</span></button><span class="connection" id="connection"><span class="dot"></span>Conectando</span></div>
+    <div class="topbar-actions"><button class="guide-fab" id="guideFab" type="button" aria-label="Abrir guía y ayuda" title="Ayuda paso a paso">? <span>Ayuda</span></button><span class="connection" id="connection"><span class="dot"></span>Conectando</span></div>
   </header>
 
   <main id="inicio">
@@ -38,6 +38,11 @@
       <article class="overview-card"><div class="overview-label">Archipiélago</div><div class="overview-value" id="overviewIslands">13</div><div class="overview-foot">Islas del mundo de juego</div></article>
       <article class="overview-card"><div class="overview-label">Objetos estructurales</div><div class="overview-value" id="overviewStructures">—</div><div class="overview-foot" id="overviewStructuresFoot">Pendientes del inventario</div></article>
     </section>
+    <div class="last-good-banner" id="lastGoodNotice" hidden role="status" aria-live="polite">
+      <span class="last-good-pulse" aria-hidden="true"></span>
+      <div><strong id="lastGoodTitle">Mostrando los últimos datos finalizados</strong><p id="lastGoodDescription">Se conservarán mientras llega la nueva inspección.</p></div>
+      <span class="last-good-run" id="lastGoodRun">—</span>
+    </div>
 
     <section class="section" id="control">
       <div class="section-heading">
@@ -56,9 +61,8 @@
             <div class="field"><label for="targetBranch">Rama que se inspecciona</label><input id="targetBranch" value="main" autocomplete="off" spellcheck="false"></div>
             <div class="field"><label for="beforeRef">Referencia ANTES · opcional</label><input id="beforeRef" placeholder="Automática: versión anterior" autocomplete="off" spellcheck="false"></div>
           </div>
-          <button class="primary" id="launchButton" type="button">Iniciar inspección <span aria-hidden="true">↗</span></button>
+          <div class="launch-actions"><button class="primary" id="launchButton" type="button">Iniciar inspección <span aria-hidden="true">↗</span></button><button class="token-gear" id="tokenSettingsButton" type="button" aria-label="Ajustes avanzados de conexión" aria-controls="tokenDetails" aria-expanded="false" title="Ajustes avanzados">⚙</button></div>
           <p class="inline-state" id="launchMessage" role="status" aria-live="polite">Nivel elegido: <strong id="selectedLevel">Profundo</strong>. Sin token, se abrirá GitHub para confirmar el inicio.</p>
-          <button class="small-button github-start" id="startInGithub" type="button">Abrir GitHub Actions sin token ↗</button>
 
           <details class="token-box" id="tokenDetails">
             <summary>Conexión directa · opcional</summary>
@@ -104,7 +108,7 @@
           </div>
           <div class="chart-legend"><span><i class="legend-line fps"></i> FPS DESPUÉS</span><span><i class="legend-line frame"></i> Frame time DESPUÉS</span><span><i class="legend-line baseline"></i> ANTES</span><span><i class="legend-line target"></i> Objetivo</span></div>
           <svg id="performanceChart" viewBox="0 0 720 238" role="img" aria-label="Gráfica temporal de FPS y tiempo de fotograma con líneas objetivo"></svg>
-          <div class="chart-summary" id="performanceSummary">Esperando muestras de rendimiento.</div>
+          <div class="chart-summary" id="performanceSummary">Esperando muestras de rendimiento.</div><div class="gauge-pair"><div class="gauge-card" id="fpsGaugeCard"><svg class="semigauge" viewBox="0 0 160 94" role="img" aria-label="FPS"><path class="gauge-track" d="M 18 78 A 62 62 0 0 1 142 78" pathLength="100"/><path class="gauge-arc" id="fpsGaugeArc" d="M 18 78 A 62 62 0 0 1 142 78" pathLength="100"/><line class="gauge-needle" id="fpsGaugeNeedle" x1="80" y1="78" x2="80" y2="29"/><circle class="gauge-hub" cx="80" cy="78" r="5"/></svg><strong id="fpsGaugeValue">—</strong><span class="gauge-label">FPS</span><small id="fpsGaugeState">Esperando datos</small></div><div class="gauge-card" id="frameGaugeCard"><svg class="semigauge" viewBox="0 0 160 94" role="img" aria-label="Tiempo por fotograma"><path class="gauge-track" d="M 18 78 A 62 62 0 0 1 142 78" pathLength="100"/><path class="gauge-arc" id="frameGaugeArc" d="M 18 78 A 62 62 0 0 1 142 78" pathLength="100"/><line class="gauge-needle" id="frameGaugeNeedle" x1="80" y1="78" x2="80" y2="29"/><circle class="gauge-hub" cx="80" cy="78" r="5"/></svg><strong id="frameGaugeValue">—</strong><span class="gauge-label">Tiempo por fotograma</span><small id="frameGaugeState">Esperando datos</small></div></div>
         </article>
         <article class="chart-card memory-card">
           <div class="chart-card-head">
@@ -115,14 +119,8 @@
           <svg id="memoryChart" viewBox="0 0 720 190" role="img" aria-label="Gráfica de memoria del heap JavaScript durante la entrada al juego"></svg>
           <div class="chart-summary" id="memorySummary">Esperando una lectura de heap.</div>
         </article>
-        <article class="metric-card cpu-card">
-          <div class="metric-head"><span class="metric-icon">◇</span><span class="metric-name">CPU · actualización del mundo</span></div>
-          <div class="metric-value" id="worldCpuValue">—</div><div class="metric-unit" id="worldCpuUnit">Esperando mediciones de la inspección</div>
-        </article>
-        <article class="metric-card cpu-card">
-          <div class="metric-head"><span class="metric-icon">▧</span><span class="metric-name">CPU · envío de render</span></div>
-          <div class="metric-value" id="renderCpuValue">—</div><div class="metric-unit" id="renderCpuUnit">Esperando mediciones de la inspección</div>
-        </article>
+<article class="metric-card cpu-card gauge-metric-card"><div class="metric-head"><span class="metric-icon">◇</span><span class="metric-name">CPU · actualización del mundo</span></div><div class="gauge-card" id="worldCpuGaugeCard"><svg class="semigauge" viewBox="0 0 160 94" role="img" aria-label="Actualización"><path class="gauge-track" d="M 18 78 A 62 62 0 0 1 142 78" pathLength="100"/><path class="gauge-arc" id="worldCpuGaugeArc" d="M 18 78 A 62 62 0 0 1 142 78" pathLength="100"/><line class="gauge-needle" id="worldCpuGaugeNeedle" x1="80" y1="78" x2="80" y2="29"/><circle class="gauge-hub" cx="80" cy="78" r="5"/></svg><strong id="worldCpuGaugeValue">—</strong><span class="gauge-label">Actualización</span><small id="worldCpuGaugeState">Esperando datos</small></div><div class="metric-value" id="worldCpuValue">—</div><div class="metric-unit" id="worldCpuUnit">Esperando mediciones de la inspección</div></article>
+<article class="metric-card cpu-card gauge-metric-card"><div class="metric-head"><span class="metric-icon">▧</span><span class="metric-name">CPU · envío de render</span></div><div class="gauge-card" id="renderCpuGaugeCard"><svg class="semigauge" viewBox="0 0 160 94" role="img" aria-label="Preparación de render"><path class="gauge-track" d="M 18 78 A 62 62 0 0 1 142 78" pathLength="100"/><path class="gauge-arc" id="renderCpuGaugeArc" d="M 18 78 A 62 62 0 0 1 142 78" pathLength="100"/><line class="gauge-needle" id="renderCpuGaugeNeedle" x1="80" y1="78" x2="80" y2="29"/><circle class="gauge-hub" cx="80" cy="78" r="5"/></svg><strong id="renderCpuGaugeValue">—</strong><span class="gauge-label">Preparación de render</span><small id="renderCpuGaugeState">Esperando datos</small></div><div class="metric-value" id="renderCpuValue">—</div><div class="metric-unit" id="renderCpuUnit">Esperando mediciones de la inspección</div></article>
       </div>
       <div class="telemetry-caveat" id="telemetryCaveat">La prueba usa Chromium + ANGLE SwiftShader. No es una medición física de la GPU Adreno ni de la RAM total del S26 Ultra.</div>
       <details class="technical"><summary>Ver datos originales y diagnóstico</summary><pre id="technicalJson">Los diagnósticos aparecerán aquí cuando la inspección publique su manifiesto.</pre></details>
@@ -160,10 +158,10 @@
       <article class="panel compare-panel">
         <div class="panel-title"><h3><span id="phaseName">Amanecer</span> <span class="muted" id="phaseTime">06:00</span></h3><span class="step-label"><span id="beforeBuild">—</span> → <span id="afterBuild">—</span></span></div>
         <div class="phase-tabs" role="group" aria-label="Fase horaria">
-          <button class="phase-tab" data-phase="dawn" type="button" aria-pressed="true"><span class="phase-thumb"><img alt="" loading="lazy"><span class="phase-placeholder">Pendiente</span></span><strong>Amanecer</strong><small>06:00 · luz fría</small></button>
-          <button class="phase-tab" data-phase="noon" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"><span class="phase-placeholder">Pendiente</span></span><strong>Mediodía</strong><small>12:00 · luz alta</small></button>
-          <button class="phase-tab" data-phase="dusk" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"><span class="phase-placeholder">Pendiente</span></span><strong>Atardecer</strong><small>18:00 · luz cálida</small></button>
-          <button class="phase-tab" data-phase="midnight" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"><span class="phase-placeholder">Pendiente</span></span><strong>Noche</strong><small>00:00 · iluminación nocturna</small></button>
+          <button class="phase-tab" data-phase="dawn" type="button" aria-pressed="true"><span class="phase-thumb"><img alt="" loading="lazy"><span class="phase-placeholder">Pendiente</span><svg class="sky-art dawn" viewBox="0 0 120 52" aria-hidden="true"><path d="M0 39 Q30 34 60 39 T120 39M0 46 Q30 41 60 46 T120 46" fill="none" stroke="currentColor" stroke-opacity=".5" stroke-width="2"/><circle cx="60" cy="31" r="10" fill="#f3c27c"/></svg></span><strong>Amanecer</strong><small>06:00 · luz fría</small></button>
+          <button class="phase-tab" data-phase="noon" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"><span class="phase-placeholder">Pendiente</span><svg class="sky-art noon" viewBox="0 0 120 52" aria-hidden="true"><path d="M0 40 Q30 35 60 40 T120 40" fill="none" stroke="currentColor" stroke-opacity=".55" stroke-width="2"/><circle cx="60" cy="18" r="11" fill="#f7d47a"/><g stroke="#f7d47a" stroke-width="2" stroke-linecap="round"><path d="M60 2v6M60 29v6M44 18h6M70 18h6M48 6l4 4M68 26l4 4M72 6l-4 4M52 26l-4 4"/></g></svg></span><strong>Mediodía</strong><small>12:00 · luz alta</small></button>
+          <button class="phase-tab" data-phase="dusk" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"><span class="phase-placeholder">Pendiente</span><svg class="sky-art dusk" viewBox="0 0 120 52" aria-hidden="true"><path d="M0 39 Q30 34 60 39 T120 39M0 46 Q30 41 60 46 T120 46" fill="none" stroke="currentColor" stroke-opacity=".5" stroke-width="2"/><circle cx="60" cy="37" r="10" fill="#ee966e"/></svg></span><strong>Atardecer</strong><small>18:00 · luz cálida</small></button>
+          <button class="phase-tab" data-phase="midnight" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"><span class="phase-placeholder">Pendiente</span><svg class="sky-art midnight" viewBox="0 0 120 52" aria-hidden="true"><path d="M0 40 Q30 35 60 40 T120 40M0 46 Q30 41 60 46 T120 46" fill="none" stroke="currentColor" stroke-opacity=".5" stroke-width="2"/><path d="M63 8a13 13 0 1 0 13 18A11 11 0 0 1 63 8Z" fill="#bed4f9"/><g fill="#e7efff"><circle cx="36" cy="13" r="1.4"/><circle cx="91" cy="11" r="1.2"/><circle cx="102" cy="27" r="1"/></g></svg></span><strong>Noche</strong><small>00:00 · iluminación nocturna</small></button>
         </div>
         <div class="compare-layout">
           <div>
@@ -210,6 +208,6 @@
     <button class="guide-finish" id="guideFinish" type="button">Terminar guía</button>
   </aside>
 </div>
-<script src="app.js?v=20261113.8" defer></script>
+<script src="app.js?v=20261113.9" defer></script>
 </body>
 </html>
