@@ -114,7 +114,7 @@
           <button class="primary" id="liveGameStart" type="button">Abrir juego para medir</button>
           <button class="small-button" id="liveGameSample" type="button" disabled>Tomar muestra</button>
           <button class="small-button" id="liveGameStop" type="button" disabled>Detener medición</button>
-          <span id="liveDiagnosticStatus" role="status" aria-live="polite">Esperando que abras el juego.</span>
+          <label class="live-device-confirm"><input id="livePhysicalDevice" type="checkbox"> Estoy usando este Inspector en el Galaxy S26 Ultra físico</label><span id="liveDiagnosticStatus" role="status" aria-live="polite">Esperando que abras el juego.</span>
         </div>
         <div class="live-game-frame-wrap" id="liveGameFrameWrap" hidden>
           <iframe id="liveGameFrame" title="EL SIN NOMBRE · sesión de medición" loading="lazy" allow="fullscreen; gamepad" referrerpolicy="strict-origin-when-cross-origin"></iframe>
@@ -245,6 +245,6 @@
     <button class="guide-finish" id="guideFinish" type="button">Terminar guía</button>
   </aside>
 </div>
-<script src="app.js?v=20261113.11" defer></script>
+<script src="app.js?v=20261113.11" defer></script>\n<script type="module" src="phase1-live.js?v=1"></script>
 </body>
 </html>
