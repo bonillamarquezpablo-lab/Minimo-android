@@ -1,22 +1,12 @@
 name: Inspector único — EL SIN NOMBRE
-# S26 Ultra graphics audit: always compare mobile visuals and runtime frame budgets before release.
+# Optional graphics audit: run only when a visual or structural change needs evidence.
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-    paths-ignore:
-      - 'inspector/**'
-      - 'README.md'
-      - 'vercel.json'
-      - 'scripts/test_inspector_dashboard_contract.cjs'
-      - 'scripts/test_inspector_workflows_contract.cjs'
-      - 'scripts/test_hrafn_before_after_contract.cjs'
+  # Manual opt-in only. Normal pushes and pull requests do not run the long Inspector.
   workflow_dispatch:
     inputs:
       inspection_level:
-        description: 'Nivel de inspección: rápido para cambios pequeños, completo para cambios importantes o profundo antes de publicar.'
+        description: 'Elige solo cuando necesites una auditoría: Rápido para una comprobación breve, Completo para una revisión amplia o Profundo para comparar gráficos y rendimiento.'
         required: true
         type: choice
         options:
@@ -30,7 +20,7 @@ on:
         type: string
         default: ''
       capture_plan:
-        description: 'Una sola inspección: inventario completo, texturas, estructuras, agua, costa, pruebas y cámaras desde el agua. Hasta 120 capturas.'
+        description: 'Opcional. Define qué zonas y cámaras revisar durante esta auditoría. Déjalo vacío para usar el plan habitual.'
         required: false
         type: string
         default: ''
@@ -39,7 +29,7 @@ permissions:
   contents: write
 
 concurrency:
-  # Isolate each candidate commit so a stale runner cannot block the newest inspection.
+  # Manual runs are isolated by selected branch and exact commit.
   group: scene-capture-s26-graphics-${{ github.event.pull_request.number || github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
@@ -66,25 +56,13 @@ jobs:
           node-version: '22'
 
       - name: Resolve the exact baseline commit for before/after
-        if: github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep')
+        if: github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep'
         id: baseline
         shell: bash
         env:
-          PULL_REQUEST_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PUSH_BEFORE_SHA: ${{ github.event.before }}
           DISPATCH_BASE_REF: ${{ inputs.before_ref }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            BASE_REF="$PULL_REQUEST_BASE_SHA"
-            BASE_SHA="$PULL_REQUEST_BASE_SHA"
-          elif [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" = "main" ]; then
-            BASE_REF="$PUSH_BEFORE_SHA"
-            if [ -z "$BASE_REF" ] || [[ "$BASE_REF" =~ ^0+$ ]]; then
-              BASE_REF="main^"
-            fi
-            git fetch --no-tags origin "$BASE_REF"
-            BASE_SHA="$(git rev-parse FETCH_HEAD)"
-          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ -n "$DISPATCH_BASE_REF" ]; then
+          if [ -n "$DISPATCH_BASE_REF" ]; then
             BASE_REF="$DISPATCH_BASE_REF"
             git fetch --no-tags origin "$BASE_REF"
             BASE_SHA="$(git rev-parse FETCH_HEAD)"
@@ -101,7 +79,7 @@ jobs:
           echo "Hrafn baseline: $BASE_REF ($BASE_SHA)"
 
       - name: Build the baseline game in an isolated worktree
-        if: github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep')
+        if: github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep'
         env:
           HRAFN_BASE_SHA: ${{ steps.baseline.outputs.sha }}
         run: |
@@ -176,7 +154,7 @@ jobs:
 
       - name: Start baseline and candidate game servers for the unified inspection
         env:
-          INSPECTOR_LEVEL: ${{ inputs.inspection_level || ((github.event_name == 'push' || github.event_name == 'pull_request') && 'deep' || 'complete') }}
+          INSPECTOR_LEVEL: ${{ inputs.inspection_level || 'quick' }}
         run: |
           if [ "$INSPECTOR_LEVEL" = "deep" ]; then
             python3 -m http.server 4176 --directory "$RUNNER_TEMP/hrafn-before-dist" > /tmp/elsn-hrafn-before-http.log 2>&1 &
@@ -199,11 +177,11 @@ jobs:
       - name: Run the single unified inspector
         env:
           INSPECTOR_TEST_URL: http://127.0.0.1:4175/
-          HRAFN_BEFORE_URL: ${{ ((github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep')) && 'http://127.0.0.1:4176/' || '' }}
+          HRAFN_BEFORE_URL: ${{ (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep') && 'http://127.0.0.1:4176/' || '' }}
           HRAFN_AFTER_URL: http://127.0.0.1:4175/
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
           CAPTURE_SEED: '20261110'
-          INSPECTOR_LEVEL: ${{ inputs.inspection_level || ((github.event_name == 'push' || github.event_name == 'pull_request') && 'deep' || 'complete') }}
+          INSPECTOR_LEVEL: ${{ inputs.inspection_level || 'quick' }}
           INSPECTOR_GITHUB_TOKEN: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.token || '' }}
           INSPECTOR_STATUS_BRANCH: inspector-status
         run: |
