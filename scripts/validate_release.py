@@ -489,7 +489,7 @@ def main() -> None:
         fail("Faltan las métricas por isla del diagnóstico de hierba.")
     if "const STARTUP_PERF_DEBUG_ENABLED=new URLSearchParams(window.location.search).get('debug')==='1';" not in index_html:
         fail("La medición de etapas de carga debe estar limitada a ?debug=1.")
-    if "const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('armdebug')==='1';" not in index_html or "const groundDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';" not in index_html:
+    if "const realPlayerArmDebugEnabled=new URLSearchParams(window.location.search).get('armdebug')==='1';" not in index_html or "const groundDebugEnabled=new URLSearchParams(window.location.search).get('grounddebug')==='1';" not in index_html:
         fail("El diagnóstico del suelo debe estar separado del diagnóstico anatómico de brazos.")
     for metric in ("estimateDebugTextureMemoryMB()", "activeTriangles", "drawCalls", "averageFps", "p95FrameMs", "p5Fps", "TIEMPOS POR TRAMO DE PROGRESO DE CARGA:"):
         if metric not in index_html:
