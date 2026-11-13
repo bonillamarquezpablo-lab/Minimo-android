@@ -18,7 +18,7 @@ assert.equal(finiteOrNull({ value: 3 }), null);
 
 assert.equal(percentile([10, 20, 30, 40], 0.5), 25);
 assert.equal(percentile([], 0.95), null);
-assert.equal(percentile([null, '', 'bad', -1], 0.95), 0);
+assert.equal(percentile([null, '', 'bad', -1], 0.95), null);
 
 const summary = summarizeFrameTimes([8.2, 8.4, 16.7, 4.1, null, 'bad'], 120);
 assert.equal(summary.sampleCount, 4);
