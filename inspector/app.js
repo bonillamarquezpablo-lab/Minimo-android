@@ -645,12 +645,13 @@
 
 
   const GUIDE_STEPS=[
-    {target:'#overview',title:'1. Resumen',text:'Esta es la portada. Aquí ves la última inspección, su estado y cuántas islas y estructuras se han encontrado.'},
-    {target:'#control .launch-panel',title:'2. Iniciar una inspección',text:'Elige Rápido, Completo o Profundo y pulsa Iniciar inspección. Sin conexión directa, se abrirá GitHub para confirmar Run workflow. El engranaje contiene los ajustes avanzados.'},
-    {target:'.run-panel',title:'3. Seguir la inspección',text:'Aquí ves qué está comprobando, cuánto tiempo lleva, los pasos de la prueba y las capturas disponibles.'},
-    {target:'#telemetria',title:'4. Rendimiento',text:'Mira los indicadores: FPS más alto es mejor; tiempo por fotograma más bajo es mejor. Las gráficas usan las mediciones disponibles, no cifras inventadas.'},
-    {target:'#radar',title:'5. Mapa de las islas',text:'Cada isla se coloca con coordenadas del juego. Toca una isla y después un punto para ver sus objetos. Verde: apoyo correcto; rojo: desnivel; gris: pendiente o sin clasificar.'},
-    {target:'#comparativa',title:'6. Comparar versiones',text:'Elige amanecer, mediodía, atardecer o noche. Cuando haya capturas, desliza para comparar ANTES y DESPUÉS.'}
+    {target:'#overview',title:'1. Resumen',text:'Aquí ves cuántas pruebas están en marcha o en cola, además del inventario más reciente de islas y estructuras.'},
+    {target:'#activeRunsList',title:'2. Pruebas activas',text:'Esta lista reúne todas las ejecuciones que siguen en marcha o esperan turno. Toca cualquiera para abrir sus detalles.'},
+    {target:'#control .launch-panel',title:'3. Iniciar una inspección',text:'Elige Rápido, Completo o Profundo y pulsa Iniciar inspección. Sin conexión directa, se abrirá GitHub para confirmar el inicio.'},
+    {target:'.run-panel',title:'4. Detalle de la prueba',text:'Aquí ves el estado, los pasos, el tiempo transcurrido y las capturas de la ejecución que hayas seleccionado.'},
+    {target:'#telemetria',title:'5. Rendimiento',text:'FPS más alto es mejor; tiempo por fotograma más bajo es mejor. Las gráficas muestran solo mediciones disponibles.'},
+    {target:'#radar',title:'6. Mapa de las islas',text:'Toca una isla para consultar sus objetos y mediciones. Verde: apoyo correcto; rojo: desnivel; gris: pendiente de medir.'},
+    {target:'#comparativa',title:'7. Comparar versiones',text:'Elige amanecer, mediodía, atardecer o noche y desliza para comparar ANTES y DESPUÉS cuando haya capturas.'}
   ];;
   let guideIndex=0,guideActive=false,guideHighlighted=null;
   function clearGuideHighlight(){
