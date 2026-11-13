@@ -217,7 +217,6 @@ jobs:
         env:
           LAB_AI_API_KEY: ${{ secrets.LAB_AI_API_KEY }}
           LAB_AI_MODEL: ${{ vars.LAB_AI_MODEL }}
-          LAB_AI_RESPONSES_URL: ${{ vars.LAB_AI_RESPONSES_URL }}
         run: node scripts/ai-visual-review.mjs
 
       - name: Upload diagnostic manifests before the visual bundle
