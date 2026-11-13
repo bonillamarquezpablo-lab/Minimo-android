@@ -1,10 +1,11 @@
 /**
  * EL SIN NOMBRE · Phase 1 diagnostic core
  *
- * Pure, dependency-free helpers for normalizing telemetry and classifying evidence.
- * Values are never inferred: unavailable measurements remain null.
+ * Pure helpers. Missing, stale or contradictory evidence is never converted
+ * into a healthy value or an automatic root-cause diagnosis.
  */
-export const DIAGNOSTIC_SCHEMA_VERSION = 1;
+export const DIAGNOSTIC_SCHEMA_VERSION = 2;
+export const DEFAULT_TARGET_FPS = 120;
 
 export const MEASUREMENT_SOURCES = Object.freeze({
   gameRuntime: 'game-runtime',
@@ -14,14 +15,21 @@ export const MEASUREMENT_SOURCES = Object.freeze({
 });
 
 export function finiteOrNull(value) {
-  if (value === null || value === undefined || value === '') return null;
+  if (value === null || value === undefined || typeof value === 'boolean') return null;
+  if (typeof value === 'string' && value.trim() === '') return null;
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
 
+function nonNegativeOrNull(value) {
+  const number = finiteOrNull(value);
+  return number !== null && number >= 0 ? number : null;
+}
+
 export function percentile(values, fraction) {
   if (!Array.isArray(values) || !Number.isFinite(fraction) || fraction < 0 || fraction > 1) return null;
-  const sorted = values.map(finiteOrNull).filter(value => value !== null).sort((a, b) => a - b);
+  const sorted = values.map(nonNegativeOrNull).filter(value => value !== null).sort((a, b) => a - b);
   if (!sorted.length) return null;
   const position = (sorted.length - 1) * fraction;
   const lower = Math.floor(position), upper = Math.ceil(position);
@@ -30,17 +38,20 @@ export function percentile(values, fraction) {
   return Number(value.toFixed(3));
 }
 
-export function summarizeFrameTimes(frameTimesMs, targetFps = 60) {
+export function summarizeFrameTimes(frameTimesMs, targetFps = DEFAULT_TARGET_FPS) {
   const values = Array.isArray(frameTimesMs)
-    ? frameTimesMs.map(finiteOrNull).filter(value => value !== null && value >= 0)
+    ? frameTimesMs.map(nonNegativeOrNull).filter(value => value !== null && value > 0)
     : [];
-  const targetFrameMs = Number.isFinite(targetFps) && targetFps > 0 ? 1000 / targetFps : null;
+  const validTarget = Number.isFinite(targetFps) && targetFps > 0;
+  const targetFrameMs = validTarget ? 1000 / targetFps : null;
   const overBudget = targetFrameMs === null ? null : values.filter(value => value > targetFrameMs).length;
   const severeJank = targetFrameMs === null ? null : values.filter(value => value > targetFrameMs * 2).length;
+  const averageMs = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
   return {
     sampleCount: values.length,
-    targetFps,
+    targetFps: validTarget ? targetFps : null,
     targetFrameMs: targetFrameMs === null ? null : Number(targetFrameMs.toFixed(3)),
+    averageMs: averageMs === null ? null : Number(averageMs.toFixed(3)),
     medianMs: percentile(values, 0.5),
     p95Ms: percentile(values, 0.95),
     p99Ms: percentile(values, 0.99),
@@ -50,6 +61,32 @@ export function summarizeFrameTimes(frameTimesMs, targetFps = 60) {
     overBudgetRate: values.length && overBudget !== null ? Number((overBudget / values.length).toFixed(4)) : null,
     severeJankRate: values.length && severeJank !== null ? Number((severeJank / values.length).toFixed(4)) : null
   };
+}
+
+export function normalizeFrameTiming(raw = {}) {
+  const sampleValue = nonNegativeOrNull(raw?.samples);
+  const sampleCount = sampleValue === null ? null : Math.floor(sampleValue);
+  const hasSamples = sampleCount !== null && sampleCount > 0;
+  const read = key => hasSamples ? nonNegativeOrNull(raw?.[key]) : null;
+  const timing = {
+    sampleCount: hasSamples ? sampleCount : 0,
+    averageMs: read('average'),
+    p50Ms: read('p50'),
+    p95Ms: read('p95'),
+    p99Ms: read('p99')
+  };
+  const warnings = [];
+  if (!hasSamples) warnings.push('El motor todavía no ha publicado una ventana válida de tiempos de fotograma.');
+  if (hasSamples && timing.p50Ms === null && timing.p95Ms === null && timing.p99Ms === null) {
+    warnings.push('El contador informa de muestras, pero no entrega percentiles utilizables.');
+  }
+  if (timing.p50Ms !== null && timing.p95Ms !== null && timing.p95Ms < timing.p50Ms) {
+    warnings.push('Datos incoherentes: p95 es inferior a p50.');
+  }
+  if (timing.p95Ms !== null && timing.p99Ms !== null && timing.p99Ms < timing.p95Ms) {
+    warnings.push('Datos incoherentes: p99 es inferior a p95.');
+  }
+  return { ...timing, warnings };
 }
 
 export function describeMeasurement(value, source, unit = null) {
@@ -66,28 +103,138 @@ export function buildDeviceEvidence(input = {}) {
   const isCi = input.environment === 'ci-emulation';
   const browser = input.browser || {};
   const webgl = input.webgl || {};
+  const source = isCi ? MEASUREMENT_SOURCES.ciEmulation : MEASUREMENT_SOURCES.browserApi;
   return {
     environment: isCi ? 'ci-emulation' : (input.environment || 'unknown'),
-    physicalDeviceConfirmed: input.physicalDeviceConfirmed === true,
+    physicalDeviceUserDeclared: input.physicalDeviceUserDeclared === true,
+    physicalDeviceVerified: false,
     userAgent: typeof browser.userAgent === 'string' ? browser.userAgent : null,
     platform: typeof browser.platform === 'string' ? browser.platform : null,
-    deviceMemoryGB: describeMeasurement(browser.deviceMemoryGB, isCi ? MEASUREMENT_SOURCES.ciEmulation : MEASUREMENT_SOURCES.browserApi, 'GB'),
-    hardwareConcurrency: describeMeasurement(browser.hardwareConcurrency, isCi ? MEASUREMENT_SOURCES.ciEmulation : MEASUREMENT_SOURCES.browserApi, 'logical-cores'),
+    reportedDeviceMemoryGB: describeMeasurement(browser.deviceMemoryGB, source, 'GB-estimados-del-navegador'),
+    reportedLogicalProcessors: describeMeasurement(browser.hardwareConcurrency, source, 'procesadores-logicos-reportados'),
     devicePixelRatio: describeMeasurement(browser.devicePixelRatio, MEASUREMENT_SOURCES.browserApi, 'ratio'),
     webglVersion: typeof webgl.version === 'string' ? webgl.version : null,
     gpuVendor: typeof webgl.vendor === 'string' ? webgl.vendor : null,
     gpuRenderer: typeof webgl.renderer === 'string' ? webgl.renderer : null,
-    gpuTimerQuery: webgl.timerQuery === true ? 'extension-available-not-a-timing-measurement' : 'unavailable',
     thermalState: { value: null, source: null, status: 'unavailable-in-browser' },
-    gpuTemperatureC: { value: null, source: null, status: 'unavailable-in-browser' },
     systemRamUsedMB: { value: null, source: null, status: 'unavailable-in-browser' },
-    vramUsedMB: { value: null, source: null, status: 'unavailable-in-browser' }
+    vramUsedMB: { value: null, source: null, status: 'unavailable-in-browser' },
+    gpuTemperatureC: { value: null, source: null, status: 'unavailable-in-browser' }
   };
 }
 
-export function classifyFinding({ evidenceCount = 0, repeated = false, confidence = 0 } = {}) {
-  if (!Number.isFinite(evidenceCount) || evidenceCount < 1) return 'sin-datos-suficientes';
-  if (repeated === true && confidence >= 0.85) return 'confirmado';
-  if (confidence >= 0.55) return 'probable';
-  return 'sin-datos-suficientes';
+export function normalizeGameTelemetry(health, browser = {}, options = {}) {
+  const available = !!health && typeof health === 'object';
+  const runtime = available && health.runtime && typeof health.runtime === 'object' ? health.runtime : {};
+  const frameTiming = normalizeFrameTiming(runtime.frameTimingMs);
+  const worldUpdateCount = nonNegativeOrNull(health?.worldUpdateCount);
+  const reportedFps = finiteOrNull(runtime.fps ?? health?.fps);
+  const memory = options.memory && typeof options.memory === 'object' ? options.memory : {};
+  const heapUsedBytes = nonNegativeOrNull(memory.usedJSHeapSize);
+  const heapLimitBytes = nonNegativeOrNull(memory.jsHeapSizeLimit);
+  const device = buildDeviceEvidence({
+    environment: options.environment || 'browser',
+    physicalDeviceUserDeclared: options.physicalDeviceUserDeclared === true,
+    browser: {
+      userAgent: browser.userAgent,
+      platform: browser.platform,
+      deviceMemoryGB: browser.deviceMemory,
+      hardwareConcurrency: browser.hardwareConcurrency,
+      devicePixelRatio: browser.devicePixelRatio
+    },
+    webgl: {
+      version: runtime.webglVersion,
+      vendor: runtime.gpuVendor,
+      renderer: runtime.gpuRenderer
+    }
+  });
+  const measurements = {
+    fps: reportedFps,
+    worldUpdateMs: nonNegativeOrNull(runtime.worldUpdateMs),
+    renderCpuMs: nonNegativeOrNull(runtime.renderCpuMs),
+    gpuFrameMs: nonNegativeOrNull(runtime.engineGpuFrameMs),
+    sceneFrameMs: nonNegativeOrNull(runtime.sceneFrameMs),
+    sceneRenderMs: nonNegativeOrNull(runtime.sceneRenderMs),
+    activeMeshesEvaluationMs: nonNegativeOrNull(runtime.activeMeshesEvaluationMs),
+    renderTargetsMs: nonNegativeOrNull(runtime.renderTargetsMs),
+    cameraRenderMs: nonNegativeOrNull(runtime.cameraRenderMs),
+    shaderCompilationMs: nonNegativeOrNull(runtime.shaderCompilationMs),
+    drawCalls: nonNegativeOrNull(runtime.drawCalls ?? runtime.sceneDrawCalls),
+    activeMeshes: nonNegativeOrNull(runtime.activeMeshes),
+    meshCount: nonNegativeOrNull(runtime.meshCount),
+    totalVertices: nonNegativeOrNull(runtime.totalVertices),
+    renderWidth: nonNegativeOrNull(runtime.renderWidth),
+    renderHeight: nonNegativeOrNull(runtime.renderHeight),
+    renderDpr: nonNegativeOrNull(runtime.renderDpr),
+    jsHeapUsedMB: heapUsedBytes === null ? null : Number((heapUsedBytes / 1048576).toFixed(2)),
+    jsHeapLimitMB: heapLimitBytes === null ? null : Number((heapLimitBytes / 1048576).toFixed(2))
+  };
+  const warnings = [...frameTiming.warnings];
+  if (!available) warnings.push('No se ha podido acceder a getGameHealthDebug().');
+  if (available && typeof health.gameStarted !== 'boolean') warnings.push('El estado de partida no está definido por el motor.');
+  if (runtime.profileDiagnosticsEnabled !== true) warnings.push('La instrumentación detallada de Babylon no está activada; los contadores GPU pueden no estar disponibles.');
+  if (measurements.gpuFrameMs === null) warnings.push('No hay un tiempo GPU medido; no se puede atribuir el cuello de botella a la GPU.');
+  if (measurements.worldUpdateMs === null || measurements.renderCpuMs === null) warnings.push('Faltan tiempos de trabajo de CPU del juego; no se puede atribuir un cuello de botella a CPU.');
+  if (heapUsedBytes === null) warnings.push('El navegador no expone el heap JavaScript en esta sesión.');
+  return {
+    gameStarted: typeof health?.gameStarted === 'boolean' ? health.gameStarted : null,
+    worldUpdateCount,
+    worldUpdatePhase: typeof health?.worldUpdatePhase === 'string' ? health.worldUpdatePhase : null,
+    lastWorldUpdateFailure: typeof health?.lastWorldUpdateFailure === 'string' ? health.lastWorldUpdateFailure : null,
+    graphicsProfile: typeof runtime.graphicsProfile === 'string' ? runtime.graphicsProfile : null,
+    reportedGameTargetFps: finiteOrNull(runtime.performanceAssessment?.targetFps),
+    profileDiagnosticsEnabled: runtime.profileDiagnosticsEnabled === true,
+    frameTiming,
+    measurements,
+    device,
+    dataQuality: {
+      healthApiAvailable: available,
+      validFrameWindow: frameTiming.sampleCount > 0 && frameTiming.p95Ms !== null,
+      warnings
+    },
+    source: {
+      fps: 'game-runtime',
+      frameTiming: 'game-runtime-frame-window',
+      cpuTimings: 'game-runtime-javascript-wall-clock',
+      gpuTiming: measurements.gpuFrameMs === null ? 'unavailable-or-not-sampled' : 'babylon-engine-instrumentation',
+      heap: heapUsedBytes === null ? 'unavailable' : 'browser-performance.memory'
+    }
+  };
+}
+
+export function classifyFinding({ evidenceCount = 0, repeated = false, confidence = 0, independentSessions = 1 } = {}) {
+  if (!Number.isFinite(evidenceCount) || evidenceCount < 3) return 'sin-datos-suficientes';
+  if (!Number.isFinite(confidence) || confidence < 0.55) return 'sin-datos-suficientes';
+  if (repeated === true && independentSessions >= 2 && evidenceCount >= 5 && confidence >= 0.85) return 'confirmado';
+  return 'probable';
+}
+
+export function analyzeFrameStability(samples, targetFps = DEFAULT_TARGET_FPS, independentSessions = 1) {
+  const targetFrameMs = Number.isFinite(targetFps) && targetFps > 0 ? 1000 / targetFps : null;
+  const valid = Array.isArray(samples) ? samples.filter(sample =>
+    sample?.game?.frameTiming?.sampleCount > 0 &&
+    sample.game.frameTiming.p50Ms !== null &&
+    sample.game.frameTiming.p95Ms !== null
+  ) : [];
+  const medianBreaches = targetFrameMs === null ? [] : valid.filter(sample => sample.game.frameTiming.p50Ms > targetFrameMs);
+  const tailBreaches = targetFrameMs === null ? [] : valid.filter(sample => sample.game.frameTiming.p95Ms > targetFrameMs);
+  const breachRate = valid.length ? medianBreaches.length / valid.length : null;
+  const repeated = medianBreaches.length >= 3 && breachRate >= 0.7;
+  const confidence = breachRate === null ? 0 : Math.min(0.99, breachRate * (0.55 + Math.min(valid.length, 10) * 0.045));
+  return {
+    targetFps,
+    targetFrameMs: targetFrameMs === null ? null : Number(targetFrameMs.toFixed(3)),
+    validIntervals: valid.length,
+    medianBreachIntervals: medianBreaches.length,
+    p95BreachIntervals: tailBreaches.length,
+    medianBreachRate: breachRate === null ? null : Number(breachRate.toFixed(3)),
+    status: classifyFinding({ evidenceCount: valid.length, repeated, confidence, independentSessions }),
+    interpretation: valid.length < 3
+      ? 'Se necesitan al menos tres intervalos válidos para valorar estabilidad.'
+      : repeated
+        ? 'La mediana supera repetidamente el presupuesto de fotograma; es una incidencia de rendimiento probable, no una causa raíz confirmada.'
+        : tailBreaches.length
+          ? 'La mediana se mantiene dentro del presupuesto, pero el p95 muestra pérdidas puntuales de estabilidad.'
+          : 'Las muestras disponibles no muestran una pérdida sostenida del presupuesto de fotograma.'
+  };
 }
