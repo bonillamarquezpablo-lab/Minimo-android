@@ -749,8 +749,10 @@ def main() -> None:
  const profileDiagnosticsEnabled=!!(testModeEnabled||new URLSearchParams(window.location.search).get('profile')==='1');
  let engineInstrumentation=null,sceneInstrumentation=null;
  const safePerfCounterValue=(counter,scale=1)=>{
-  const value=Number(counter&&counter.current);
-  return Number.isFinite(value)?Number((value/scale).toFixed(3)):null;
+  // A missing profiler counter is unavailable evidence, never a measured 0 ms.
+  if(!profileDiagnosticsEnabled||!counter||counter.current===null||counter.current===undefined)return null;
+  const value=Number(counter.current);
+  return Number.isFinite(value)&&value>=0?Number((value/scale).toFixed(3)):null;
  };
  if(profileDiagnosticsEnabled){
   try{
