@@ -220,7 +220,7 @@ export function analyzeFrameStability(samples, targetFps = DEFAULT_TARGET_FPS, i
   const tailBreaches = targetFrameMs === null ? [] : valid.filter(sample => sample.game.frameTiming.p95Ms > targetFrameMs);
   const breachRate = valid.length ? medianBreaches.length / valid.length : null;
   const repeated = medianBreaches.length >= 3 && breachRate >= 0.7;
-  const confidence = breachRate === null ? 0 : Math.min(0.99, breachRate * (0.55 + Math.min(valid.length, 10) * 0.045));
+  const confidence = breachRate === null ? 0 : Math.min(0.99, breachRate * (0.70 + Math.min(valid.length, 10) * 0.03));
   return {
     targetFps,
     targetFrameMs: targetFrameMs === null ? null : Number(targetFrameMs.toFixed(3)),
