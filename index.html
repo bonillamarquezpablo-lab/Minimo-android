@@ -13859,8 +13859,15 @@ function update(dt){
  // al menos un fotograma; así no aparece un canvas blanco durante el arranque.
  }catch(err){console.error('EL SIN NOMBRE startGame failed',err);throw err;}
 }
+window.__ELSN_NPC_AGENT_CONTEXT__ = Object.freeze({
+ protocolVersion:1,
+ getCivilianRoster:()=>ambientPeople.slice(),
+ isGameStarted:()=>!!gameStarted
+});
 })();
 </script>
+<script src="./scripts/npc-agent-core.js" defer></script>
+<script src="./scripts/npc-agent-runtime.js" defer></script>
 <style id="norse-live-minimap-layout">
 /* Final mobile override: reduce the minimap without changing the expanded archipelago chart. */
 #map:not(.expanded){position:absolute!important;left:auto!important;right:9px!important;top:calc(env(safe-area-inset-top,0px) + 75px)!important;width:clamp(124px,31vw,144px)!important;height:auto!important;aspect-ratio:480/344!important;z-index:10!important}

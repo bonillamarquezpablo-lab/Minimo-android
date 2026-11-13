@@ -328,6 +328,11 @@ def main() -> None:
     if navigation_check.returncode != 0:
         raise SystemExit("Navigation runtime JavaScript syntax validation failed:\\n" + navigation_check.stderr)
     print("Navigation runtime JavaScript syntax validation passed.")
+    for script_name in ("npc-agent-core.js", "npc-agent-runtime.js"):
+        npc_check = subprocess.run([node, "--check", str(ROOT / "scripts" / script_name)], capture_output=True, text=True)
+        if npc_check.returncode != 0:
+            raise SystemExit(f"NPC specialist runtime syntax validation failed ({script_name}):\\n" + npc_check.stderr)
+    print("NPC specialist runtime JavaScript syntax validation passed.")
     # Anchor decorative terrain objects to the actual rendered GroundMesh. The
     # analytical heightfield can differ from the rendered triangle interpolation,
     # leaving rocks, tree trunks and shrubs visibly detached from the island.
@@ -1310,6 +1315,16 @@ def main() -> None:
         if not source.exists():
             raise SystemExit(f"Falta el archivo de despliegue: {name}")
         shutil.copy2(source, DIST / name)
+
+    # Include the civilian NPC specialist runtime in every published entry point.
+    for script_name in ("npc-agent-core.js", "npc-agent-runtime.js"):
+        source = ROOT / "scripts" / script_name
+        if not source.is_file():
+            raise SystemExit(f"Falta el módulo de especialistas NPC: {script_name}")
+        target = DIST / "scripts" / script_name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        print(f"OK scripts/{script_name}: módulo de especialistas NPC empaquetado.")
 
     # Every generated PWA entry must point at this exact code version.
     guest_start_urls = {

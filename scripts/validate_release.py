@@ -35,6 +35,8 @@ REQUIRED_FILES = (
     "scripts/nordic/coastal-interaction.js",
     "scripts/nordic/navigation-suite.js",
     "scripts/nordic/atmosphere-system.js",
+    "scripts/npc-agent-core.js",
+    "scripts/npc-agent-runtime.js",
     *MANIFESTS,
     "icon.svg",
     "assets/asset-manifest.json",
@@ -104,6 +106,24 @@ def main() -> None:
         fail("El sistema atmosférico debe cargarse antes del runtime principal.")
     if "window.__ELSN_ATMOSPHERE_CONTROLS" not in index_html or "atmosphereSystem.update(dt)" not in index_html:
         fail("El reloj atmosférico no está conectado al bucle de juego y a sus controles.")
+    npc_agent_markers = (
+        "window.__ELSN_NPC_AGENT_CONTEXT__",
+        "getCivilianRoster:()=>ambientPeople.slice()",
+        '<script src="./scripts/npc-agent-core.js" defer></script>',
+        '<script src="./scripts/npc-agent-runtime.js" defer></script>',
+    )
+    if any(marker not in index_html for marker in npc_agent_markers):
+        fail("Los especialistas NPC deben conectarse exclusivamente al roster civil y cargarse en todas las entradas.")
+    npc_core = read_text("scripts/npc-agent-core.js")
+    npc_runtime = read_text("scripts/npc-agent-runtime.js")
+    for marker in ("performance", "water-coast", "terrain-structures", "materials-lighting", "isEligibleCivilian", "normalizeRemoteEnvelope"):
+        if marker not in npc_core:
+            fail("Falta una función o especialidad del núcleo NPC: " + marker)
+    for marker in ("elsn-npc-shared-memory", "indexedDB", "BroadcastChannel", "__ELSN_NPC_AGENT_SYSTEM__", "credentials: \"include\"", "X-CSRF-Token"):
+        if marker not in npc_runtime:
+            fail("Falta una función de memoria compartida o puente seguro de agentes: " + marker)
+    if "humanEnemyParts" in npc_runtime or "loadHumanViking" in npc_runtime or "createViking" in npc_runtime:
+        fail("El runtime de especialistas no puede acceder ni modificar guerreros o al vikingo.")
     if 'id="game-build-version"' not in index_html or f'v{EXPECTED_VERSION}</span>' not in index_html:
         fail("La pantalla no muestra la versión exacta en una etiqueta discreta.")
     if 'font:600 7px/1.2 system-ui,sans-serif' not in index_html or 'color:rgba(226,196,135,.58)' not in index_html:
