@@ -225,3 +225,13 @@ assert.match(html,/if\(ratio<=\.975\)\{pressGround/,"Water-side particle effects
 assert.match(html,/footstepOutsideLand,beachSteps,footstepsWaterSide,wetSteps/,"Runtime telemetry must reveal whether feet are discarded at the shoreline boundary.");
 assert.match(html,/groundDynamics:GroundDynamics\.counts\(\)/,"The live debug snapshot must expose footstep and particle counters.");
 assert.match(html,/setInterval\(refreshDiagnostics,1000\)/,"The water debug panel must refresh live measurements during device testing.");
+
+assert.match(html,/grainMaterial\.diffuseTexture=null/,"Water droplets must not inherit the brown sand albedo.");
+assert.match(html,/particle\.size=wet\?rand\(\.068,\.104\)/,"Wet particles must be large enough to read as visible water droplets.");
+assert.match(html,/particle\.life=particle\.maxLife=wet\?rand\(\.55,\.82\)/,"Water droplets must persist long enough to be seen at mobile frame rates.");
+assert.match(html,/Number\.isFinite\(shoreRadius\)&&shoreDistance<2\.6/,"Wet contact must cover the near-shore damp-sand band.");
+assert.match(html,/waterHeight\(x,z,oceanTime\)>groundY-\.48/,"Wet contact must include the actual shallow-water height gap.");
+assert.match(html,/wetness>\.035/,"The wetness atlas must trigger footstep splashes on damp sand.");
+assert.match(html,/RENDIMIENTO: .*assessment\.bottleneckHint/,"The live panel must identify CPU versus GPU/driver bottlenecks.");
+assert.match(html,/runtime\.gpuRenderer/,"The live panel must expose the actual mobile GPU renderer.");
+assert.match(html,/reportVersion:'12',build:document\.querySelector/,"The copied health report must use the deployed build metadata rather than a stale hardcoded release.");
