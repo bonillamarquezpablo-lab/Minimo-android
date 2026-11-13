@@ -82,6 +82,16 @@
       "exitCode": 0,
       "error": null,
       "finishedAt": "2026-11-13T03:01:23.232Z"
+    },
+    {
+      "name": "Informe visual ANTES/DESPUÉS y mapas de diferencias",
+      "script": "scripts/create_hrafn_ab_report.py",
+      "startedAt": "2026-11-13T03:01:23.233Z",
+      "status": "passed",
+      "durationMs": 1853,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-13T03:01:25.086Z"
     }
   ],
   "finishedAt": null
