@@ -251,3 +251,66 @@ input[type=range]{width:100%;accent-color:var(--blue);min-height:30px;cursor:ew-
  .token-input{flex-direction:column}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+
+/* Visual-first dashboard: charts and live evidence take priority over explanatory copy. */
+.hero{grid-template-columns:1fr;padding:22px 0 10px}
+h1{font-size:clamp(27px,3.4vw,42px);line-height:1.02;margin:7px 0 6px;letter-spacing:-.045em}
+.hero-copy p{font-size:13px}
+.overview{margin:4px 0 18px}
+.section{margin-top:22px}
+.section-heading{margin-bottom:11px}
+.section-heading h2{font-size:clamp(21px,2.6vw,28px)}
+.section-heading p{font-size:12px;margin-top:4px}
+.telemetry-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,.8fr);gap:11px}
+.chart-card{min-width:0;padding:17px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,#15253a,#101a29)}
+.performance-card{grid-column:1}
+.memory-card{grid-column:2}
+.chart-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.chart-card-head h3{font-size:15px;margin:0;letter-spacing:-.02em}
+.chart-card-head p{font-size:10px;color:var(--muted);margin:3px 0 0}
+.chart-help{position:relative;flex:none}
+.chart-help summary{width:25px;height:25px;display:grid;place-items:center;list-style:none;border:1px solid #466385;border-radius:50%;background:#1a3049;color:#b9d4f4;font-size:13px;font-weight:850;cursor:pointer}
+.chart-help summary::-webkit-details-marker{display:none}
+.chart-help[open] summary{border-color:var(--cyan);color:var(--cyan)}
+.chart-help>div{position:absolute;z-index:12;right:0;top:32px;width:min(280px,78vw);padding:12px 13px;border:1px solid #3b5878;border-radius:12px;background:#0b1624;box-shadow:0 14px 38px #0009;color:var(--muted);font-size:11px;line-height:1.45}
+.chart-legend{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin:11px 0 2px;color:var(--muted);font-size:9px;font-weight:750}
+.chart-legend span{display:inline-flex;align-items:center;gap:6px}
+.legend-line{display:inline-block;width:17px;height:3px;border-radius:8px;background:var(--cyan)}
+.legend-line.fps,.legend-line.memory{background:var(--cyan)}
+.legend-line.frame{background:var(--amber)}
+.legend-line.baseline{height:0;border-top:2px dashed #7596bf;background:transparent}
+.legend-line.target{height:0;border-top:2px dashed var(--green);background:transparent}
+#performanceChart,#memoryChart{display:block;width:100%;height:auto;overflow:visible;margin-top:5px}
+.chart-grid-line{stroke:#36506c;stroke-opacity:.42;stroke-width:1}
+.chart-target{stroke:var(--green);stroke-width:1.7;stroke-dasharray:5 5;opacity:.9}
+.chart-target-alt{opacity:.62}
+.chart-target-label{fill:var(--green);font-size:10px;font-weight:800}
+.chart-axis{fill:#8298b4;font-size:10px}
+.chart-empty{fill:#91a6c0;font-size:13px}
+.chart-summary{min-height:18px;color:var(--muted);font-size:10px;margin-top:3px}
+.cpu-card{min-height:104px}
+.cpu-card .metric-value{font-size:23px;margin:7px 0 0}
+.telemetry-caveat{font-size:10px;padding:10px 12px;margin-top:10px}
+.technical{margin-top:10px}
+.panel-title-tools{display:flex;align-items:center;gap:10px}
+.radar-map{min-height:320px}
+.radar-map svg{min-height:320px}
+.progress-ring strong{font-size:12px;line-height:1.05;max-width:54px;padding:7px;text-align:center;white-space:normal}
+.progress-ring strong.is-label{font-size:10px;letter-spacing:-.02em}
+.phase-tab:disabled{opacity:.48;cursor:not-allowed}
+@media(max-width:1000px){
+  .telemetry-grid{grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr)}
+}
+@media(max-width:720px){
+  .hero{padding:16px 0 7px}
+  .overview{margin-bottom:14px}
+  .telemetry-grid{grid-template-columns:1fr}
+  .performance-card,.memory-card{grid-column:auto}
+  .chart-card{padding:13px}
+  #performanceChart{min-height:170px}
+  #memoryChart{min-height:140px}
+  .chart-legend{gap:9px;font-size:8px}
+  .radar-map,.radar-map svg{min-height:290px}
+  .section{margin-top:19px}
+}

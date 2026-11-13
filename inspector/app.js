@@ -14,7 +14,7 @@
   const $=id=>document.getElementById(id);
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const niceDate=value=>value?new Date(value).toLocaleString('es-ES',{dateStyle:'medium',timeStyle:'short'}):'—';
-  const number=(v,d=1)=>Number.isFinite(Number(v))?Number(v).toLocaleString('es-ES',{maximumFractionDigits:d}):'—';
+  const number=(v,d=1)=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?Number(v).toLocaleString('es-ES',{maximumFractionDigits:d}):'—';
   const formatElapsed=ms=>{if(!Number.isFinite(ms)||ms<0)return '—';const s=Math.round(ms/1000);if(s<60)return s+' s';const m=Math.floor(s/60),r=s%60;return m+' min '+String(r).padStart(2,'0')+' s';};
   let chosenLevel='deep',activeRun=null,progressData=null,jobsData=null,activePhase='dawn',comparePosition=50,differenceVisible=false,radarData=null,selectedIsland=null,selectedStructure=null;
   let currentToken='',refreshTimer=null,fetchBusy=false,launching=false,latestRuns=[],lastError=null,lastRunsFetchAt=0,lastJobsFetchAt=0,jobsRunId=null;
@@ -88,6 +88,7 @@
     const percent=normalized.length?Math.round(done/normalized.length*100):0;
     const indeterminate=!!running&&(running.name==='Run the single unified inspector'||(done===0&&normalized.length===1));
     $('progressValue').textContent=indeterminate?'En curso':percent+'%';
+    $('progressValue').classList.toggle('is-label',indeterminate);
     $('overviewProgress').textContent=indeterminate?'En curso':percent+'%';
     $('progressCircle').style.strokeDashoffset=indeterminate?141.4:188.5-(188.5*percent/100);
     $('progressTrack').style.width=indeterminate?'':percent+'%';
@@ -238,23 +239,79 @@
     if(Math.abs(pct)<.5)return {label:'Prácticamente igual',kind:'neutral'};
     return {label:(pct>0?'+':'')+number(pct,0)+'% · '+(good?'mejora':'empeora'),kind:good?'good':'bad'};
   }
+  function chartLine(samples,key,nestedKey=null){
+    return (samples||[]).map(sample=>{
+      const raw=nestedKey?sample?.[nestedKey]?.[key]:sample?.[key];
+      if(raw===null||raw===undefined||raw==='')return null;
+      const value=Number(raw);
+      return Number.isFinite(value)?{value}:null;
+    }).filter(Boolean).map((point,index)=>({...point,index}));
+  }
+  function svgLine(points,mapY,color,dash=''){
+    if(!points.length)return '';
+    const width=628,left=48,right=676,top=18,bottom=178;
+    const lastIndex=Math.max(1,points[points.length-1]?.index||0);
+    const coords=points.map(point=>{
+      const x=left+(points.length===1?(right-left)/2:point.index/lastIndex*(right-left));
+      return x.toFixed(1)+','+mapY(point.value,top,bottom).toFixed(1);
+    }).join(' ');
+    return '<polyline points="'+coords+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" '+(dash?'stroke-dasharray="'+dash+'"':'')+'/>';
+  }
+  function renderPerformanceGraph(before,after){
+    const svg=$('performanceChart');
+    const bf=chartLine(before?.samples,'fps'),af=chartLine(after?.samples,'fps');
+    const bm=chartLine(before?.samples,'p95','frameTiming'),am=chartLine(after?.samples,'p95','frameTiming');
+    const allFps=[...bf,...af].map(p=>p.value),allMs=[...bm,...am].map(p=>p.value);
+    if(!allFps.length&&!allMs.length){
+      svg.innerHTML='<text x="360" y="112" text-anchor="middle" class="chart-empty">La inspección profunda todavía no ha publicado muestras.</text>';
+      $('performanceSummary').textContent='Sin datos: no se dibuja una línea simulada.';
+      return;
+    }
+    const maxFps=Math.max(75,Math.ceil(Math.max(60,...allFps)/15)*15);
+    const maxMs=Math.max(33.2,Math.ceil(Math.max(16.6,...allMs)/10)*10);
+    const yFps=v=>178-(v/maxFps)*160,yMs=v=>178-(v/maxMs)*160;
+    const grid=[0,1,2,3,4].map(i=>{
+      const y=18+i*40;
+      return '<line x1="48" y1="'+y+'" x2="676" y2="'+y+'" class="chart-grid-line"/>';
+    }).join('');
+    const fpsTarget=yFps(60),msTarget=yMs(16.6);
+    svg.innerHTML=grid+
+      '<line x1="48" y1="'+fpsTarget+'" x2="676" y2="'+fpsTarget+'" class="chart-target"/>'+
+      '<line x1="48" y1="'+msTarget+'" x2="676" y2="'+msTarget+'" class="chart-target chart-target-alt"/>'+
+      '<text x="8" y="22" class="chart-axis">FPS</text><text x="712" y="22" text-anchor="end" class="chart-axis">ms</text>'+
+      '<text x="50" y="'+(fpsTarget-6)+'" class="chart-target-label">60 FPS</text>'+
+      '<text x="674" y="'+(msTarget-6)+'" text-anchor="end" class="chart-target-label">16,6 ms</text>'+
+      '<text x="48" y="204" class="chart-axis">Entrada</text><text x="676" y="204" text-anchor="end" class="chart-axis">Muestras posteriores</text>'+
+      svgLine(bf,yFps,'#7596bf','7 6')+svgLine(af,yFps,'#65dbe1')+
+      svgLine(bm,yMs,'#a27ec5','7 6')+svgLine(am,yMs,'#f4bd68');
+    const currentFps=after?.medianFps,currentMs=after?.medianFrameP95Ms;
+    $('performanceSummary').textContent='Actual: '+number(currentFps,0)+' FPS · '+number(currentMs,1)+' ms p95. Valores objetivo: ≥60 FPS y ≤16,6 ms.';
+  }
+  function renderMemoryGraph(before,after){
+    const svg=$('memoryChart'),bf=chartLine(before?.samples,'heapUsedMB'),af=chartLine(after?.samples,'heapUsedMB');
+    const all=[...bf,...af].map(p=>p.value);
+    if(!all.length){
+      svg.innerHTML='<text x="360" y="100" text-anchor="middle" class="chart-empty">Chromium no ha expuesto lecturas del heap en esta ejecución.</text>';
+      $('memorySummary').textContent='No disponible; no equivale a memoria RAM ni GPU.';
+      return;
+    }
+    const max=Math.max(32,Math.ceil(Math.max(...all)*1.18/16)*16),y=v=>158-(v/max)*135;
+    const grid=[0,1,2,3].map(i=>'<line x1="48" y1="'+(18+i*45)+'" x2="676" y2="'+(18+i*45)+'" class="chart-grid-line"/>').join('');
+    svg.innerHTML=grid+'<text x="8" y="20" class="chart-axis">MB</text><text x="48" y="184" class="chart-axis">Entrada</text><text x="676" y="184" text-anchor="end" class="chart-axis">Después</text>'+
+      svgLine(bf,y,'#7596bf','7 6')+svgLine(af,y,'#65dbe1');
+    const peak=Math.max(...all),first=af[0]?.value??bf[0]?.value,last=af.at(-1)?.value??bf.at(-1)?.value;
+    $('memorySummary').textContent='Entrada: '+number(first,1)+' MB · pico: '+number(peak,1)+' MB · última lectura: '+number(last,1)+' MB.';
+  }
   function renderTelemetry(manifest){
     const data=manifest?.results?.beforeAfter,builds=data?.builds||{},before=builds.before?.performance,after=builds.after?.performance;
-    const defs=[
-      {key:'medianFps',label:'FPS medianas',unit:'fps',direction:'higher',icon:'◴',digits:0},
-      {key:'medianFrameP95Ms',label:'Frame time p95',unit:'ms · menor es mejor',direction:'lower',icon:'⌁',digits:1},
-      {key:'medianWorldUpdateCpuMs',label:'CPU mundo',unit:'ms · menor es mejor',direction:'lower',icon:'◇',digits:1},
-      {key:'medianRenderSubmissionCpuMs',label:'CPU render',unit:'ms · menor es mejor',direction:'lower',icon:'▧',digits:1}
-    ];
-    $('telemetryGrid').innerHTML=defs.map(def=>{
-      const a=before?.[def.key],b=after?.[def.key],delta=metricDelta(a,b,def.direction),max=Math.max(1,Number(a)||0,Number(b)||0);
-      const w1=Math.max(2,Math.min(100,(Number(a)||0)/max*100)),w2=Math.max(2,Math.min(100,(Number(b)||0)/max*100));
-      return '<article class="metric-card"><div class="metric-head"><span class="metric-icon">'+def.icon+'</span><span class="metric-name">'+def.label+'</span></div><div class="metric-value">'+number(b,def.digits)+' <span class="metric-unit">'+def.unit+'</span></div><span class="metric-delta '+delta.kind+'">'+esc(delta.label)+'</span><div class="metric-bars"><div class="metric-bar-row"><span>Antes</span><div class="metric-bar-track"><div class="metric-bar-fill" style="width:'+w1+'%"></div></div><b>'+number(a,def.digits)+'</b></div><div class="metric-bar-row"><span>Ahora</span><div class="metric-bar-track"><div class="metric-bar-fill after" style="width:'+w2+'%"></div></div><b>'+number(b,def.digits)+'</b></div></div></article>';
-    }).join('');
+    renderPerformanceGraph(before,after);
+    renderMemoryGraph(before,after);
+    $('worldCpuValue').textContent=number(after?.medianWorldUpdateCpuMs,2)+' ms';
+    $('renderCpuValue').textContent=number(after?.medianRenderSubmissionCpuMs,2)+' ms';
     const renderer=data?.renderer||'Sin datos de renderizador';
     $('telemetryCaveat').textContent=renderer.includes('SwiftShader')
-      ?'Importante: esta comparativa emula el perfil del S26 Ultra, pero se ejecuta con Chromium + ANGLE SwiftShader en software. No representa FPS físicos de la GPU Adreno. Los tiempos extremos de render deben interpretarse como limitación del entorno CI, no como benchmark del teléfono.'
-      :'Los valores pertenecen al entorno indicado por el informe. No se atribuyen al hardware físico sin una medición en el dispositivo.';
+      ?'CI usa Chromium + ANGLE SwiftShader. Esta emulación no mide la GPU Adreno física, la VRAM ni la RAM total del S26 Ultra. La gráfica de memoria, cuando existe, solo mide el heap JavaScript que Chromium expone.'
+      :'Las lecturas pertenecen al entorno indicado por el informe; no se atribuyen al hardware físico sin una medición en el dispositivo.';
     const diagnostics={run:activeRun?.id,level:manifest?.level,renderer,builds,results:manifest?.results,phases:manifest?.phases};
     $('technicalJson').textContent=JSON.stringify(diagnostics,null,2);
   }
@@ -361,10 +418,10 @@
     const grounded=structures.filter(s=>measuredGrounding(s,grounding).state==='grounded').length;
     const misaligned=structures.filter(s=>measuredGrounding(s,grounding).state==='misaligned').length;
     const unknown=structures.length-grounded-misaligned;
-    $('radarStats').textContent=islands.length+' islas · '+structures.length+' objetos candidatos';
+    $('radarStats').textContent=islands.length+' islas · '+structures.length+'/39 estructuras detectadas';
     $('overviewIslands').textContent=String(islands.length);
     $('overviewStructures').textContent=String(structures.length);
-    $('overviewStructuresFoot').textContent='Candidatos detectados en escena';
+    $('overviewStructuresFoot').textContent='Detectadas · objetivo 39';
     $('radarCounts').innerHTML='<div class="radar-count"><b style="color:var(--green)">'+grounded+'</b><span>Apoyo ≤ 2 cm</span></div><div class="radar-count"><b style="color:var(--red)">'+misaligned+'</b><span>Desnivel &gt; 2 cm</span></div><div class="radar-count"><b>'+unknown+'</b><span>Sin medición</span></div>';
     if(selectedIsland==null||selectedIsland>=islands.length)selectedIsland=3<islands.length?3:0;
     selectIsland(selectedIsland);

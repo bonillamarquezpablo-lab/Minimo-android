@@ -147,42 +147,53 @@ function saveManifest() {
 }
 
 
-async function sampleGraphicsPerformance(page, label) {
+async function sampleGraphicsPerformance(page, label, startupHeapTrace = []) {
+  const samples = (startupHeapTrace || []).map(sample => ({...sample, sampleLabel:'Carga / entrada'}));
+  const sampleStartedAt = Date.now();
+  const collect = async () => withTimeout(page.evaluate(() => {
+    if (typeof window.getGameHealthDebug !== 'function') throw new Error('getGameHealthDebug() is unavailable.');
+    const health = window.getGameHealthDebug(), runtime = health.runtime || {}, fsr = window.__ELSN_FSR1 || null;
+    const water = typeof window.__elSinNombreWaterDebugSnapshot === 'function' ? window.__elSinNombreWaterDebugSnapshot() : null;
+    const memory = performance.memory && typeof performance.memory === 'object' ? performance.memory : null;
+    const toMB = value => value!==null&&value!==undefined&&Number.isFinite(Number(value)) ? Number((Number(value) / 1048576).toFixed(2)) : null;
+    return {
+      build: document.querySelector('meta[name="el-sin-nombre-build"]')?.content || null,
+      profile: runtime.graphicsProfile || null, fps: runtime.fps ?? health.fps ?? null,
+      frameTiming: runtime.frameTimingMs || null, performanceAssessment: runtime.performanceAssessment || null,
+      renderDpr: runtime.renderDpr ?? null, renderWidth: runtime.renderWidth ?? null, renderHeight: runtime.renderHeight ?? null,
+      drawCalls: runtime.drawCalls ?? null, activeMeshes: runtime.activeMeshes ?? null, totalVertices: runtime.totalVertices ?? null,
+      worldUpdateMs: runtime.worldUpdateMs ?? null, renderCpuMs: runtime.renderCpuMs ?? null,
+      gpuRenderer: runtime.gpuRenderer || null, gpuVendor: runtime.gpuVendor || null, webglVersion: runtime.webglVersion || null,
+      devicePixelRatio: runtime.devicePixelRatio ?? window.devicePixelRatio, isTouchDevice: runtime.isTouchDevice ?? null,
+      deviceMemory: runtime.deviceMemory ?? navigator.deviceMemory ?? null, hardwareConcurrency: runtime.hardwareConcurrency ?? navigator.hardwareConcurrency ?? null,
+      heapUsedMB: memory ? toMB(memory.usedJSHeapSize) : null,
+      heapTotalMB: memory ? toMB(memory.totalJSHeapSize) : null,
+      heapLimitMB: memory ? toMB(memory.jsHeapSizeLimit) : null,
+      fsr1: fsr ? { enabled:fsr.enabled===true, method:fsr.method||null, outputDpr:fsr.outputDpr??null,
+        inputScale:typeof fsr.inputScale==='function'?fsr.inputScale():null,
+        effectiveSourceDpr:typeof fsr.effectiveSourceDpr==='function'?fsr.effectiveSourceDpr():null,
+        source:typeof fsr.source==='function'?fsr.source():null, output:typeof fsr.output==='function'?fsr.output():null,
+        reason:fsr.reason||null } : null,
+      waterTimings: water?.timings || null
+    };
+  }), 10000, label + ' graphics telemetry sample');
+  const initial = await collect();
+  samples.push({...initial, elapsedMs:0, sampleLabel:'Entrada'});
   await page.waitForTimeout(8000);
-  const samples = [];
   for (let index = 0; index < 8; index++) {
-    const sample = await withTimeout(page.evaluate(() => {
-      if (typeof window.getGameHealthDebug !== 'function') throw new Error('getGameHealthDebug() is unavailable.');
-      const health = window.getGameHealthDebug(), runtime = health.runtime || {}, fsr = window.__ELSN_FSR1 || null;
-      const water = typeof window.__elSinNombreWaterDebugSnapshot === 'function' ? window.__elSinNombreWaterDebugSnapshot() : null;
-      return {
-        build: document.querySelector('meta[name="el-sin-nombre-build"]')?.content || null,
-        profile: runtime.graphicsProfile || null, fps: runtime.fps ?? health.fps ?? null,
-        frameTiming: runtime.frameTimingMs || null, performanceAssessment: runtime.performanceAssessment || null,
-        renderDpr: runtime.renderDpr ?? null, renderWidth: runtime.renderWidth ?? null, renderHeight: runtime.renderHeight ?? null,
-        drawCalls: runtime.drawCalls ?? null, activeMeshes: runtime.activeMeshes ?? null, totalVertices: runtime.totalVertices ?? null,
-        worldUpdateMs: runtime.worldUpdateMs ?? null, renderCpuMs: runtime.renderCpuMs ?? null,
-        gpuRenderer: runtime.gpuRenderer || null, gpuVendor: runtime.gpuVendor || null, webglVersion: runtime.webglVersion || null,
-        devicePixelRatio: runtime.devicePixelRatio ?? window.devicePixelRatio, isTouchDevice: runtime.isTouchDevice ?? null,
-        deviceMemory: runtime.deviceMemory ?? navigator.deviceMemory ?? null, hardwareConcurrency: runtime.hardwareConcurrency ?? navigator.hardwareConcurrency ?? null,
-        fsr1: fsr ? { enabled:fsr.enabled===true, method:fsr.method||null, outputDpr:fsr.outputDpr??null,
-          inputScale:typeof fsr.inputScale==='function'?fsr.inputScale():null,
-          effectiveSourceDpr:typeof fsr.effectiveSourceDpr==='function'?fsr.effectiveSourceDpr():null,
-          source:typeof fsr.source==='function'?fsr.source():null, output:typeof fsr.output==='function'?fsr.output():null,
-          reason:fsr.reason||null } : null,
-        waterTimings: water?.timings || null
-      };
-    }), 10000, label + ' graphics telemetry sample');
-    samples.push(sample);
+    const sample = await collect();
+    samples.push({...sample, elapsedMs:Date.now()-sampleStartedAt, sampleLabel:'Estable '+(index+1)});
     if (index < 7) await page.waitForTimeout(1000);
   }
   const median = values => { const sorted=values.filter(Number.isFinite).sort((a,b)=>a-b); if(!sorted.length)return null; const m=Math.floor(sorted.length/2); return Number((sorted.length%2?sorted[m]:(sorted[m-1]+sorted[m])/2).toFixed(3)); };
-  const values = key => samples.map(sample=>Number(sample[key])).filter(Number.isFinite);
-  const fpsValues=values('fps'),p95Values=samples.map(s=>Number(s.frameTiming?.p95)).filter(Number.isFinite),p99Values=samples.map(s=>Number(s.frameTiming?.p99)).filter(Number.isFinite);
-  const last=samples[samples.length-1]||{};
+  const values = key => samples.map(sample=>sample[key]).filter(value=>value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value))).map(Number);
+  const fpsValues=values('fps'),p95Values=samples.map(s=>s.frameTiming?.p95).filter(v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))).map(Number),p99Values=samples.map(s=>s.frameTiming?.p99).filter(v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))).map(Number);
+  const heapValues=values('heapUsedMB'),last=samples[samples.length-1]||{};
   return {label,sampleCount:samples.length,medianFps:median(fpsValues),minimumFps:fpsValues.length?Math.min(...fpsValues):null,
     medianFrameP95Ms:median(p95Values),medianFrameP99Ms:median(p99Values),medianWorldUpdateCpuMs:median(values('worldUpdateMs')),
     medianRenderSubmissionCpuMs:median(values('renderCpuMs')),medianDrawCalls:median(values('drawCalls')),
+    heapInitialMB:samples[0]?.heapUsedMB??null,heapPeakMB:heapValues.length?Math.max(...heapValues):null,
+    heapFinalMB:last.heapUsedMB??null,heapSampleCount:heapValues.length,
     profile:last.profile,build:last.build,renderDpr:last.renderDpr,renderWidth:last.renderWidth,renderHeight:last.renderHeight,
     gpuRenderer:last.gpuRenderer,gpuVendor:last.gpuVendor,webglVersion:last.webglVersion,devicePixelRatio:last.devicePixelRatio,
     isTouchDevice:last.isTouchDevice,deviceMemory:last.deviceMemory,hardwareConcurrency:last.hardwareConcurrency,
@@ -269,6 +280,24 @@ async function bootGame(label, url) {
       JSON.stringify(startupDiagnostics) + '. Original error: ' + String(error?.message || error));
   }
   await page.locator('#intro.open').waitFor({ state: 'visible', timeout: 60000 });
+  // Start a bounded 250 ms heap trace before the player enters the world.
+  // It records the transition into the playable scene, not device-wide RAM/VRAM.
+  await page.evaluate(() => {
+    const trace = { startedAt: performance.now(), samples: [], timer: null };
+    const capture = () => {
+      const memory = performance.memory;
+      if (!memory || !Number.isFinite(memory.usedJSHeapSize)) return;
+      trace.samples.push({
+        elapsedMs: Math.round(performance.now() - trace.startedAt),
+        heapUsedMB: Number((memory.usedJSHeapSize / 1048576).toFixed(2)),
+        heapTotalMB: Number((memory.totalJSHeapSize / 1048576).toFixed(2)),
+        heapLimitMB: Number((memory.jsHeapSizeLimit / 1048576).toFixed(2))
+      });
+    };
+    capture();
+    trace.timer = window.setInterval(capture, 250);
+    window.__ELSN_INSPECTOR_HEAP_TRACE = trace;
+  });
   await page.locator('#newGameChoice').click();
   await page.waitForFunction(
     () => document.body.classList.contains('game-running') &&
@@ -299,7 +328,22 @@ async function bootGame(label, url) {
     };
   });
 
-  const performance = await sampleGraphicsPerformance(page, label);
+  const startupHeapTrace = await page.evaluate(() => {
+    const trace = window.__ELSN_INSPECTOR_HEAP_TRACE;
+    if (!trace) return [];
+    if (trace.timer) window.clearInterval(trace.timer);
+    const memory = performance.memory;
+    if (memory && Number.isFinite(memory.usedJSHeapSize)) {
+      trace.samples.push({
+        elapsedMs: Math.round(performance.now() - trace.startedAt),
+        heapUsedMB: Number((memory.usedJSHeapSize / 1048576).toFixed(2)),
+        heapTotalMB: Number((memory.totalJSHeapSize / 1048576).toFixed(2)),
+        heapLimitMB: Number((memory.jsHeapSizeLimit / 1048576).toFixed(2))
+      });
+    }
+    return trace.samples;
+  });
+  const performance = await sampleGraphicsPerformance(page, label, startupHeapTrace);
   manifest.builds[label] = {
     url,
     build: readiness.build,
