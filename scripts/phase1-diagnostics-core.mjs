@@ -256,15 +256,19 @@ export function analyzeFrameStability(samples, targetFps = DEFAULT_TARGET_FPS, i
     priority = 'P3';
   }
   const possibleCauses = [];
+  let stageCauseDetected = false;
   const stageThreshold = targetFrameMs === null ? null : targetFrameMs * 0.8;
   if (hasEvidence && stageThreshold !== null && medianGpuFrameMs !== null && medianGpuFrameMs >= stageThreshold) {
     possibleCauses.push('El contador de tiempo GPU consume una parte importante del presupuesto; investigar carga de shaders, reflejos, sombras y efectos.');
+    stageCauseDetected = true;
   }
   if (hasEvidence && stageThreshold !== null && medianWorldUpdateMs !== null && medianWorldUpdateMs >= stageThreshold) {
     possibleCauses.push('La actualización del mundo consume una parte importante del presupuesto; investigar simulación, IA y lógica por fotograma.');
+    stageCauseDetected = true;
   }
   if (hasEvidence && stageThreshold !== null && medianRenderCpuMs !== null && medianRenderCpuMs >= stageThreshold) {
     possibleCauses.push('El envío de render consume una parte importante del presupuesto; revisar draw calls, mallas y preparación de escena.');
+    stageCauseDetected = true;
   }
   if (hasEvidence && evidenceStatus !== 'sin-incidencia-observada' && possibleCauses.length === 0) {
     possibleCauses.push('La telemetría actual no permite atribuir la causa a CPU o GPU; se necesitan mediciones adicionales.');
@@ -294,7 +298,7 @@ export function analyzeFrameStability(samples, targetFps = DEFAULT_TARGET_FPS, i
     severity,
     priority,
     possibleCauses,
-    causeAttribution: possibleCauses.length ? 'candidata-no-confirmada' : 'sin-atribucion',
+    causeAttribution: stageCauseDetected ? 'candidata-no-confirmada' : 'sin-atribucion',
     recommendedChecks,
     interpretation: valid.length < 3
       ? 'Se necesitan al menos tres intervalos válidos para valorar estabilidad.'
