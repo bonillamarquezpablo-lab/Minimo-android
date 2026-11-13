@@ -18,7 +18,8 @@
   const number=(v,d=1)=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?Number(v).toLocaleString('es-ES',{maximumFractionDigits:d}):'—';
   const formatElapsed=ms=>{if(!Number.isFinite(ms)||ms<0)return '—';const s=Math.round(ms/1000);if(s<60)return s+' s';const m=Math.floor(s/60),r=s%60;return m+' min '+String(r).padStart(2,'0')+' s';};
   let chosenLevel='deep',activeRun=null,progressData=null,jobsData=null,activePhase='dawn',comparePosition=50,differenceVisible=false,radarData=null,selectedIsland=null,selectedStructure=null;
-  let currentToken='',refreshTimer=null,fetchBusy=false,launching=false,latestRuns=[],lastError=null,lastRunsFetchAt=0,lastJobsFetchAt=0,jobsRunId=null;
+  let currentToken='',refreshTimer=null,fetchBusy=false,launching=false,latestRuns=[],activeRuns=[],selectedRunId=null,lastError=null,lastRunsFetchAt=0,lastJobsFetchAt=0,jobsRunId=null;
+  const apiResponseCache=new Map();
   let lastGoodManifest=null,lastGoodRun=null,lastGoodLookupAt=0;
 
   function setConnection(text,online){$('connection').textContent=text;$('connection').classList.toggle('online',!!online);}
@@ -55,36 +56,89 @@
 
   function statusInfo(run){
     if(!run)return {label:'Sin ejecuciones',kind:'',done:false};
-    if(run.status!=='completed')return {label:run.status==='in_progress'?'En ejecución':'En cola',kind:'running',done:false};
+    if(run.status==='in_progress')return {label:'En marcha',kind:'running',done:false};
+    if(run.status==='queued')return {label:'En cola',kind:'queued',done:false};
+    if(run.status==='waiting')return {label:'En espera',kind:'queued',done:false};
+    if(run.status==='requested')return {label:'Solicitada',kind:'queued',done:false};
     if(run.conclusion==='success')return {label:'Superada',kind:'success',done:true};
     if(run.conclusion==='cancelled')return {label:'Cancelada',kind:'failure',done:true};
     if(run.conclusion==='timed_out')return {label:'Tiempo agotado',kind:'failure',done:true};
     return {label:'Fallida',kind:'failure',done:true};
   }
   function renderRunShell(run){
-    $('overviewRun').textContent=run?'#'+run.run_number:'—';
-    $('overviewRunFoot').textContent=run?(run.head_branch||'Rama desconocida'):'Sin ejecuciones registradas';
     if(!run){
       $('runState').textContent='Sin ejecuciones';$('runState').className='status-pill';
-      $('runNumber').textContent='—';$('runBranch').textContent='Aún no hay auditorías registradas.';
-      $('runDate').textContent='Pulsa “Iniciar inspección” para comenzar desde aquí.';
-      $('runArtifactsLink').href=API+'/actions';
+      $('runNumber').textContent='—';$('runBranch').textContent='Todavía no hay pruebas registradas.';
+      $('runDate').textContent='Inicia una revisión para verla aquí.';
+      $('runArtifactsLink').href=API+'/actions';$('runTechnicalLink').href=API+'/actions';
       $('runPhaseStatus').textContent='SIN EJECUCIONES';
-      $('runPhaseTitle').textContent='Esperando la primera prueba';$('runPhaseDescription').textContent='Elige un nivel y pulsa Iniciar inspección.';
+      $('runPhaseTitle').textContent='Esperando una prueba';
+      $('runPhaseDescription').textContent='Elige un nivel y pulsa Iniciar inspección.';
+      $('progressValue').textContent='—';$('progressValue').classList.remove('is-spinning');
+      $('progressCircle').style.strokeDashoffset='188.5';$('progressTrack').style.width='0%';$('progressTrack').classList.remove('indeterminate');
       renderEvidence(null);
-      $('progressValue').textContent='0%';$('progressCircle').style.strokeDashoffset=188.5;$('progressTrack').style.width='0%';
-      $('stepList').innerHTML='<div class="empty-state"><div><strong>El historial está vacío</strong>La primera ejecución aparecerá aquí automáticamente.</div></div>';
+      $('stepList').innerHTML='<div class="empty-state"><div><strong>No hay una ejecución seleccionada</strong>Cuando empiece una prueba, sus pasos aparecerán aquí.</div></div>';
       return;
     }
     const state=statusInfo(run);
     $('runState').textContent=state.label;$('runState').className='status-pill '+state.kind;
-    $('runNumber').innerHTML='#'+esc(run.run_number)+' <span>· Inspector único</span>';
+    $('runNumber').innerHTML='#'+esc(run.run_number)+' <span>· '+(run.id===selectedRunId?'seleccionada':'historial')+'</span>';
     $('runBranch').textContent='Rama: '+(run.head_branch||'—')+' · '+(run.event==='workflow_dispatch'?'Inicio desde el panel':run.event==='pull_request'?'Pull request':'Ejecución automática');
     $('runDate').textContent='Iniciada: '+niceDate(run.created_at)+' · Commit '+String(run.head_sha||'').slice(0,8);
     $('runTechnicalLink').href=run.html_url||'#';
     $('runArtifactsLink').href=run.html_url?(run.html_url+'#artifacts'):(API+'/actions');
+    if(run.status==='queued'||run.status==='waiting'||run.status==='requested'){
+      $('runPhaseStatus').textContent='EN COLA';
+      $('runPhaseTitle').textContent='Esperando a GitHub';
+      $('runPhaseDescription').textContent='La prueba está registrada, pero todavía no ha empezado a ejecutarse.';
+      $('progressValue').textContent='—';$('progressValue').classList.remove('is-spinning');
+      $('progressCircle').style.strokeDashoffset='188.5';$('progressTrack').style.width='0%';$('progressTrack').classList.remove('indeterminate');
+    }
   }
 
+  function isInspectorRun(run){
+    return !!(run&&(run.name?.includes('Inspector único')||run.path?.includes(WORKFLOW)));
+  }
+  function runAgeLabel(run){
+    const stamp=Date.parse(run.run_started_at||run.created_at||'');
+    return Number.isFinite(stamp)?'hace '+formatElapsed(Date.now()-stamp):'tiempo no disponible';
+  }
+  function renderActiveRuns(){
+    activeRuns=(latestRuns||[]).filter(run=>isInspectorRun(run)&&['in_progress','queued','waiting','requested'].includes(run.status))
+      .sort((a,b)=>Date.parse(b.created_at||0)-Date.parse(a.created_at||0));
+    const running=activeRuns.filter(run=>run.status==='in_progress').length;
+    const queued=activeRuns.length-running;
+    $('overviewRunning').textContent=String(running);
+    $('overviewRunningFoot').textContent=running===1?'1 prueba ejecutándose':running+' pruebas ejecutándose';
+    $('overviewQueued').textContent=String(queued);
+    $('overviewQueuedFoot').textContent=queued===1?'1 prueba esperando turno':queued+' pruebas esperando turno';
+    $('activeRunCount').textContent=String(activeRuns.length);
+    $('activeRunsSubtitle').textContent=activeRuns.length
+      ?running+' en marcha · '+queued+' en cola. Selecciona una para ver sus pasos.'
+      :'No hay pruebas en marcha ni en cola. Puedes iniciar una revisión nueva.';
+    const list=$('activeRunsList');
+    if(!activeRuns.length){
+      list.innerHTML='<div class="active-runs-empty"><strong>No hay inspecciones activas</strong>Cuando inicies una prueba, aparecerá aquí con su estado real. El último informe se conserva más abajo.</div>';
+      return;
+    }
+    list.innerHTML=activeRuns.map(run=>{
+      const info=statusInfo(run),selected=run.id===activeRun?.id;
+      const line=run.status==='in_progress'?'En marcha '+runAgeLabel(run):'En cola '+runAgeLabel(run);
+      return '<button type="button" class="active-run-card '+(selected?'selected':'')+'" data-active-run="'+esc(run.id)+'" aria-pressed="'+String(selected)+'">'+
+        '<span class="active-run-top"><strong class="active-run-number">#'+esc(run.run_number)+'</strong><span class="active-run-status '+info.kind+'"><i></i>'+info.label+'</span><span class="active-run-time">'+esc(line)+'</span></span>'+
+        '<span class="active-run-branch">'+esc(run.head_branch||'Rama desconocida')+' <span>· '+esc(String(run.head_sha||'').slice(0,8))+'</span></span>'+
+        '<span class="active-run-track '+(run.status==='in_progress'?'is-running':'is-queued')+'"><i></i></span>'+
+        '<span class="active-run-bottom"><span>'+(run.event==='pull_request'?'Pull request':run.event==='workflow_dispatch'?'Iniciada desde el panel':'Ejecución automática')+'</span><b>'+(selected?'DETALLE ABIERTO':'VER DETALLE →')+'</b></span></button>';
+    }).join('');
+    list.querySelectorAll('[data-active-run]').forEach(button=>button.addEventListener('click',()=>selectActiveRun(button.dataset.activeRun)));
+  }
+  function selectActiveRun(id){
+    const run=activeRuns.find(item=>String(item.id)===String(id));
+    if(!run)return;
+    selectedRunId=run.id;activeRun=run;progressData=null;jobsData=null;jobsRunId=null;lastJobsFetchAt=0;
+    renderActiveRuns();renderRunShell(run);
+    if(!fetchBusy)refreshDashboard(true);
+  }
   function phaseGuide(name){
     const value=String(name||'');
     if(/Arranque del juego|modelo vikingo/i.test(value))return {title:'Arrancando el juego',detail:'Cargando al vikingo y esperando a que el mundo esté listo.'};
@@ -102,21 +156,26 @@
     const done=normalized.filter(p=>['passed','completed','skipped'].includes(p.status)).length;
     const failed=normalized.filter(p=>p.status==='failed'||p.status==='timed_out').length;
     const running=normalized.find(p=>p.status==='running'||p.status==='in_progress');
-    const percent=normalized.length?Math.round(done/normalized.length*100):0;
-    const indeterminate=!!running&&(running.name==='Run the single unified inspector'||(done===0&&normalized.length===1));
-    $('progressValue').textContent=indeterminate?'↻':percent+'%';
+    const queued=['queued','waiting','requested'].includes(activeRun?.status);
+    const percent=normalized.length?Math.round(done/normalized.length*100):null;
+    const indeterminate=!queued&&activeRun?.status==='in_progress'&&done===0;
+    $('progressValue').textContent=queued?'—':indeterminate?'↻':percent===null?'—':percent+'%';
     $('progressValue').classList.toggle('is-spinning',indeterminate);
-    $('overviewProgress').textContent=indeterminate?'En curso':percent+'%';
-    $('progressCircle').style.strokeDashoffset=indeterminate?141.4:188.5-(188.5*percent/100);
-    $('progressTrack').style.width=indeterminate?'':percent+'%';
+    $('progressCircle').style.strokeDashoffset=indeterminate?'141.4':percent===null?'188.5':188.5-(188.5*percent/100);
+    $('progressTrack').style.width=indeterminate?'':(percent??0)+'%';
     $('progressTrack').classList.toggle('indeterminate',indeterminate);
     const runningGuide=running?phaseGuide(running.name):null;
-    $('runPhaseStatus').textContent=running?(failed?'EN CURSO · CON AVISOS':'EN CURSO'):failed?'REVISAR':done===normalized.length&&normalized.length?'COMPLETADA':'PREPARANDO';
-    $('runPhaseTitle').textContent=running?runningGuide.title:failed?failed+' comprobación(es) necesitan revisión':done===normalized.length&&normalized.length?'Inspección completada':'Preparando la siguiente fase';
-    $('runPhaseDescription').textContent=running
-      ?runningGuide.detail+' Tiempo en esta fase: '+formatElapsed(Date.now()-Date.parse(running.startedAt||new Date().toISOString()))+'. '+(done?done+' fase(s) terminadas.':'')
-      :failed?'Hay resultados que necesitan revisión. Abre los pasos para ver cuáles.':done===normalized.length&&normalized.length?'Todas las fases publicadas han terminado.':'Los pasos aparecerán aquí conforme avance la prueba.';
-    if(!normalized.length){$('stepList').innerHTML='<div class="empty-state"><div><strong>Esperando datos reales</strong>GitHub todavía no ha publicado los pasos de esta inspección.</div></div>';return;}
+    $('runPhaseStatus').textContent=queued?'EN COLA':running?(failed?'EN CURSO · CON AVISOS':'EN CURSO'):failed?'REVISAR':done===normalized.length&&normalized.length?'COMPLETADA':'PREPARANDO';
+    $('runPhaseTitle').textContent=queued?'Esperando a que GitHub asigne un runner':running?runningGuide.title:failed?failed+' comprobación(es) necesitan revisión':done===normalized.length&&normalized.length?'Inspección completada':'Preparando la siguiente fase';
+    $('runPhaseDescription').textContent=queued
+      ?'La prueba está en cola. Todavía no ha empezado; el porcentaje aparecerá cuando GitHub publique sus pasos.'
+      :running
+        ?runningGuide.detail+' Tiempo en esta fase: '+formatElapsed(Date.now()-Date.parse(running.startedAt||new Date().toISOString()))+'. '+(done?done+' fase(s) terminadas.':'Aún no hay fases terminadas; mostramos actividad, no un 0% engañoso.')
+        :failed?'Hay resultados que necesitan revisión. Abre los pasos para ver cuáles.':done===normalized.length&&normalized.length?'Todas las fases publicadas han terminado.':'Los pasos aparecerán aquí conforme avance la prueba.';
+    if(!normalized.length){
+      $('stepList').innerHTML='<div class="empty-state"><div><strong>'+(queued?'Esperando turno':activeRun?.status==='in_progress'?'La prueba está en marcha':'Sin pasos publicados')+'</strong>'+(queued?'GitHub todavía no ha iniciado esta ejecución.':activeRun?.status==='in_progress'?'GitHub aún no ha publicado el detalle de sus pasos. Se actualizará automáticamente.':'No hay pasos disponibles para esta ejecución.')+'</div></div>';
+      return;
+    }
     $('stepList').innerHTML=normalized.map(p=>{
       const passed=['passed','completed','skipped'].includes(p.status),bad=['failed','timed_out'].includes(p.status),now=['running','in_progress'].includes(p.status);
       const icon=passed?'✓':bad?'!':now?'<span class="spin"></span>':'·';
@@ -128,10 +187,16 @@
   function statusName(s){return ({pending:'Pendiente',queued:'En cola',running:'En curso',in_progress:'En curso',skipped:'Omitida',failed:'Fallida'})[s]||s||'Pendiente';}
 
   async function apiGet(url){
-    const headers={Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};if(currentToken)headers.Authorization='Bearer '+currentToken;
+    const headers={Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+    const cached=apiResponseCache.get(url);
+    if(currentToken)headers.Authorization='Bearer '+currentToken;
+    if(cached?.etag)headers['If-None-Match']=cached.etag;
     const response=await fetch(url,{headers,cache:'no-store'});
+    if(response.status===304&&cached)return cached.data;
     if(!response.ok)throw new Error('GitHub API '+response.status);
-    return response.json();
+    const data=await response.json();
+    apiResponseCache.set(url,{etag:response.headers.get('ETag')||'',data});
+    return data;
   }
   async function fetchProgress(run){
     try{
@@ -141,7 +206,10 @@
     return null;
   }
   function findLatestInspectorRun(runs){
-    return (runs||[]).find(run=>run.name?.includes('Inspector único')||run.path?.includes(WORKFLOW))||null;
+    const matching=(runs||[]).filter(isInspectorRun);
+    const live=matching.filter(run=>['in_progress','queued','waiting','requested'].includes(run.status));
+    const selected=live.find(run=>String(run.id)===String(selectedRunId));
+    return selected||live.find(run=>run.status==='in_progress')||live[0]||matching[0]||null;
   }
   function hasUsableReport(manifest){return !!(manifest?.finishedAt&&((manifest.results?.custom?.islands?.length||0)>0||(manifest.results?.beforeAfter?.phases?.length||0)>0||Object.keys(manifest.results?.beforeAfter?.previews||{}).length>0));}
   async function loadLastGoodManifest(excludeRunId=null,force=false){
@@ -163,22 +231,32 @@
     return {...(liveFinished?fallback:live||fallback),...(live||{}),results,phases:live?.phases?.length?live.phases:fallback.phases,_sourceRun:liveFinished?activeRun:lastGoodRun,_isLastGood:!liveFinished&&!!lastGoodRun&&lastGoodRun.id!==activeRun?.id};
   }
   function renderLastGoodNotice(display){
-    const source=display?._sourceRun,show=!!(display?._isLastGood&&source);$('lastGoodNotice').hidden=!show;if(!show)return;
-    $('lastGoodTitle').textContent='Mostrando los últimos datos finalizados · informe #'+(source.run_number||'—');
-    $('lastGoodDescription').textContent='La inspección nueva sigue en marcha. Estos son los últimos datos disponibles'+(source.conclusion&&source.conclusion!=='success'?' · el informe terminó con avisos':'')+'; se sustituirán cuando lleguen resultados nuevos.';
+    const source=display?._sourceRun,show=!!(display?._isLastGood&&source);
+    $('lastGoodNotice').hidden=!show;if(!show)return;
+    const running=activeRuns.filter(run=>run.status==='in_progress').length;
+    const queued=activeRuns.length-running;
+    $('lastGoodTitle').textContent='Último informe disponible · #'+(source.run_number||'—');
+    const stateText=running?running+' prueba(s) en marcha':queued?queued+' prueba(s) en cola':'no hay pruebas activas ahora';
+    $('lastGoodDescription').textContent='Se muestran los datos del informe anterior mientras '+stateText+'. Se actualizarán cuando la nueva inspección publique resultados.';
+    if(source.conclusion&&source.conclusion!=='success')$('lastGoodDescription').textContent+=' El informe anterior terminó con avisos o fallos.';
     $('lastGoodRun').textContent='INFORME #'+(source.run_number||'—');
   }
   async function refreshDashboard(force=false){
     if(fetchBusy&&!force)return;fetchBusy=true;
     try{
       const now=Date.now();
-      const metadataInterval=currentToken?25000:150000;
-      const needRunRefresh=force||!activeRun||now-lastRunsFetchAt>=metadataInterval;
+      const listUrl=API+'/actions/workflows/'+WORKFLOW+'/runs?per_page=50';
+      const listCache=apiResponseCache.get(listUrl);
+      const metadataInterval=currentToken?25000:(listCache?.etag?12000:120000);
+      const needRunRefresh=force||!lastRunsFetchAt||now-lastRunsFetchAt>=metadataInterval;
       if(needRunRefresh){
-        const list=await apiGet(API+'/actions/workflows/'+WORKFLOW+'/runs?per_page=50');
+        const list=await apiGet(listUrl);
         latestRuns=list.workflow_runs||[];
+        activeRuns=latestRuns.filter(run=>isInspectorRun(run)&&['in_progress','queued','waiting','requested'].includes(run.status));
         activeRun=findLatestInspectorRun(latestRuns);
+        selectedRunId=activeRun?.id??null;
         lastRunsFetchAt=Date.now();
+        renderActiveRuns();
         renderRunShell(activeRun);
       }
       const run=activeRun;
@@ -199,11 +277,13 @@
       // A pull_request run cannot safely publish a progress manifest with a write token.
       // Poll the public Actions jobs endpoint frequently instead of leaving a stale
       // "Preparación" card on screen for minutes.
-      const jobsInterval=run.status==='in_progress'?12000:30000;
+      const jobsUrl=API+'/actions/runs/'+run.id+'/jobs?per_page=100';
+      const jobsCache=apiResponseCache.get(jobsUrl);
+      const jobsInterval=currentToken?12000:(jobsCache?.etag?12000:120000);
       const shouldRefreshJobs=force||jobsRunId!==run.id||now-lastJobsFetchAt>=jobsInterval;
       if(shouldRefreshJobs){
         try{
-          jobs=await apiGet(API+'/actions/runs/'+run.id+'/jobs?per_page=100');
+          jobs=await apiGet(jobsUrl);
           jobsData=jobs;jobsRunId=run.id;lastJobsFetchAt=Date.now();
         }catch(error){
           jobsError=error;
@@ -229,7 +309,6 @@
         $('progressValue').textContent='↻';
         $('progressValue').classList.add('is-spinning');
         $('runPhaseStatus').textContent='EN CURSO';
-        $('overviewProgress').textContent='En curso';
         $('progressCircle').style.strokeDashoffset='141.4';
         $('progressTrack').style.width='';
         $('progressTrack').classList.add('indeterminate');
@@ -254,7 +333,7 @@
       try{
         const list=await apiGet(API+'/actions/workflows/'+WORKFLOW+'/runs?per_page=15');
         const found=(list.workflow_runs||[]).find(r=>!existingIds.has(r.id)&&r.event==='workflow_dispatch'&&r.head_branch===ref&&Date.parse(r.created_at)>=clickedAt-90000);
-        if(found){activeRun=found;renderRunShell(found);return found;}
+        if(found){activeRun=found;selectedRunId=found.id;renderRunShell(found);return found;}
       }catch(_){}
       await new Promise(resolve=>setTimeout(resolve,2200));
     }
