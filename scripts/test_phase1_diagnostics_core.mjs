@@ -95,6 +95,9 @@ assert.equal(tooShort.status, 'sin-datos-suficientes');
 const probable = analyzeFrameStability([sample(10), sample(11), sample(10), sample(9)], 120);
 assert.equal(probable.status, 'probable');
 assert.equal(probable.medianBreachIntervals, 4);
+assert.equal(probable.severity, 'alta');
+assert.equal(probable.priority, 'P1');
+assert.equal(probable.causeAttribution, 'sin-atribucion');
 const confirmed = analyzeFrameStability([sample(10), sample(11), sample(10), sample(9), sample(10)], 120, 2);
 assert.equal(confirmed.status, 'confirmado');
 const tailOnly = analyzeFrameStability([
@@ -103,5 +106,20 @@ const tailOnly = analyzeFrameStability([
   { game: { frameTiming: { sampleCount: 120, p50Ms: 8.0, p95Ms: 12, p99Ms: 17 } } }
 ], 120);
 assert.match(tailOnly.interpretation, /p95/);
+assert.equal(tailOnly.severity, 'media');
+assert.equal(tailOnly.priority, 'P2');
+
+const stagePressure = analyzeFrameStability([
+  { game: { frameTiming: { sampleCount: 120, p50Ms: 10, p95Ms: 13, p99Ms: 17 }, measurements: { worldUpdateMs: 7.4, renderCpuMs: 2, gpuFrameMs: null } } },
+  { game: { frameTiming: { sampleCount: 120, p50Ms: 10, p95Ms: 13, p99Ms: 17 }, measurements: { worldUpdateMs: 7.2, renderCpuMs: 2.1, gpuFrameMs: null } } },
+  { game: { frameTiming: { sampleCount: 120, p50Ms: 10, p95Ms: 13, p99Ms: 17 }, measurements: { worldUpdateMs: 7.6, renderCpuMs: 2.2, gpuFrameMs: null } } }
+], 120);
+assert.equal(stagePressure.status, 'probable');
+assert.equal(stagePressure.causeAttribution, 'candidata-no-confirmada');
+assert.ok(stagePressure.possibleCauses.some(value => value.includes('actualización del mundo')));
+
+const noIssue = analyzeFrameStability([sample(7.5), sample(7.8), sample(7.9)], 120);
+assert.equal(noIssue.status, 'sin-incidencia-observada');
+assert.equal(noIssue.severity, 'sin-incidencia-observada');
 
 console.log('Phase 1 diagnostic core contracts: OK');
