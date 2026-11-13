@@ -7,7 +7,7 @@ const center=fs.readFileSync('.github/workflows/inspector-center-checks.yml','ut
 const hrafn=fs.readFileSync('.github/workflows/hrafn-geometry-measurements.yml','utf8');
 const validate=fs.readFileSync('.github/workflows/validate-pr.yml','utf8');
 assert.match(workflow,/cancel-in-progress: false/);
-assert.match(workflow,/Isolate each candidate commit so a stale runner cannot block the newest inspection/);
+assert.match(workflow,/Manual runs are isolated by selected branch and exact commit/);
 assert.match(workflow,/group: scene-capture-s26-graphics-.*github\.sha/);
 assert.match(workflow,/workflow_dispatch:/);
 const mainTriggers=workflow.slice(workflow.indexOf('on:\n'),workflow.indexOf('\npermissions:'));
