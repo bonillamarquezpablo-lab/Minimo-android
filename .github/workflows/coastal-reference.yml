@@ -201,7 +201,6 @@ jobs:
 
       - name: Run autonomous specialist NPCs
         if: always()
-        continue-on-error: true
         env:
           INSPECTOR_GITHUB_TOKEN: ${{ github.token }}
           INSPECTOR_STATUS_BRANCH: inspector-status
@@ -209,7 +208,6 @@ jobs:
 
       - name: Validate autonomous specialist agent contracts
         if: always()
-        continue-on-error: true
         run: node scripts/test_autonomous_lab_agents.mjs
 
       - name: Upload diagnostic manifests before the visual bundle
