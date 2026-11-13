@@ -14,7 +14,7 @@ for(const id of new Set(referencedIds))assert.ok(html.includes('id=\"'+id+'\"'),
 for(const marker of [
  'Rápido','Completo','Profundo','id="launchButton"','id="githubToken"',
  'id="compareRange"','id="differenceToggle"','id="radarSvg"','id="telemetryGrid"',
- 'id="technicalJson"','id="guideFab"','id="guidePanel"','id="guideStepTitle"','id="guideNext"','id="guidePrev"','id="guideClose"','id="guideFinish"','id="runPhaseStatus"','id="evidenceGrid"','id="evidenceStatus"','id="startInGithub"','id="performanceChart"','id="memoryChart"','id="performanceSummary"','id="memorySummary"','style.css','app.js'
+ 'id="technicalJson"','id="guideFab"','id="lastGoodNotice"','id="lastGoodTitle"','id="lastGoodDescription"','id="lastGoodRun"','id="tokenSettingsButton"','id="fpsGaugeArc"','id="fpsGaugeNeedle"','id="frameGaugeArc"','id="worldCpuGaugeArc"','id="renderCpuGaugeArc"','id="guidePanel"','id="guideStepTitle"','id="guideNext"','id="guidePrev"','id="guideClose"','id="guideFinish"','id="runPhaseStatus"','id="evidenceGrid"','id="evidenceStatus"','id="startInGithub"','id="performanceChart"','id="memoryChart"','id="performanceSummary"','id="memorySummary"','style.css','app.js'
 ])assert.ok(html.includes(marker),'Missing Inspector Center UI element: '+marker);
 for(const marker of [
  "actions/workflows/'+WORKFLOW+'/dispatches","workflow_dispatch","sessionStorage.setItem",
@@ -55,4 +55,9 @@ assert.ok(!html.includes('id="guideStart"')&&!app.includes("$('guideStart').addE
 assert.ok(app.includes("activeRun?.status==='in_progress'?'La prueba aún está trabajando."),'Empty performance charts must explain that the inspection is still running.');
 assert.ok(app.includes("activeRun?.status==='in_progress'?'Las imágenes aún se están preparando."),'An empty comparison must distinguish waiting from a failed/missing result.');
 assert.ok(app.includes("activeRun?.status==='in_progress'?'El inspector aún no ha llegado al inventario del mundo."),'The radar must explain when its data is still being collected.');
-console.log('Inspector Center guided-tour, no-token launch, live phase status, embedded evidence and dashboard contracts: OK');
+assert.ok(app.includes('function hasUsableReport(manifest)')&&app.includes('function loadLastGoodManifest')&&app.includes('function composeDisplayManifest'),'The dashboard must keep the latest finished report while a new run is active.');
+assert.ok(app.includes('renderLastGoodNotice')&&html.includes('id="lastGoodNotice"'),'The dashboard must identify the source of retained data.');
+assert.ok(app.includes('function renderGauge')&&app.includes('function animateChartLines')&&app.includes('function animateCounter'),'The dashboard must animate the measured gauges, lines and counters.');
+assert.ok(app.includes("item.category==='structure'")&&app.includes("item.category==='unidentified-structure'"),'Confirmed structures and unknown geometry candidates must be separated.');
+assert.ok(css.includes('.radar-map.is-scanning:before')&&css.includes('.island-contour')&&css.includes('.sky-art'),'The radar and day/night cards must have live vector visuals.');
+console.log('Inspector Center ordered guide, last-good state, live gauges, chart animation and radar visuals: OK');
