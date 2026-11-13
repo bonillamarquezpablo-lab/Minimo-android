@@ -234,4 +234,4 @@ assert.match(html,/waterHeight\(x,z,oceanTime\)>groundY-\.48/,"Wet contact must 
 assert.match(html,/wetness>\.035/,"The wetness atlas must trigger footstep splashes on damp sand.");
 assert.match(html,/RENDIMIENTO: .*assessment\.bottleneckHint/,"The live panel must identify CPU versus GPU/driver bottlenecks.");
 assert.match(html,/runtime\.gpuRenderer/,"The live panel must expose the actual mobile GPU renderer.");
-assert.match(html,/reportVersion:'12',build:document\.querySelector/,"The copied health report must use the deployed build metadata rather than a stale hardcoded release.");
+assert.match(html,/reportVersion:'12',build:'0\.6\.274'/,"The source health report must keep the literal build marker required by build_site.py normalization.");
