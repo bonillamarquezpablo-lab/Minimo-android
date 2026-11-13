@@ -154,6 +154,35 @@ import {
       ? fmt(values.renderWidth, 0) + ' × ' + fmt(values.renderHeight, 0) : '—');
     setMetric('liveHeap', fmt(values.jsHeapUsedMB, 1, ' MB'));
     const analysis = sessionAnalysis();
+    const statusLabels = {
+      'confirmado': 'Confirmado en varias sesiones',
+      'probable': 'Incidencia probable',
+      'sin-datos-suficientes': 'Faltan evidencias',
+      'sin-incidencia-observada': 'Sin incidencia observada'
+    };
+    const severityLabels = {
+      critica: 'Crítica', alta: 'Alta', media: 'Media', baja: 'Baja',
+      'sin-determinar': 'Sin determinar', 'sin-incidencia-observada': 'Sin incidencia observada'
+    };
+    setMetric('liveFindingStatus', statusLabels[analysis.status] || analysis.status);
+    setMetric('liveFindingSeverity', severityLabels[analysis.severity] || analysis.severity);
+    setMetric('liveFindingPriority', analysis.priority || 'Sin asignar');
+    $('liveFindingInterpretation').textContent = analysis.interpretation;
+    const renderList = (id, items, fallback) => {
+      const list = $(id);
+      list.replaceChildren();
+      const values = items && items.length ? items : [fallback];
+      for (const value of values) {
+        const item = document.createElement('li');
+        item.textContent = value;
+        list.appendChild(item);
+      }
+    };
+    renderList('liveFindingCauses', analysis.possibleCauses,
+      analysis.status === 'sin-incidencia-observada'
+        ? 'No se ha observado un problema de frame time en los intervalos recogidos.'
+        : 'No es posible atribuir una causa todavía; faltan datos o repetición.');
+    renderList('liveFindingNextSteps', analysis.recommendedChecks, 'Recoger más muestras comparables.');
     $('liveDiagnosticJson').textContent = JSON.stringify(buildReport(sample), null, 2);
     $('liveDiagnosticSource').textContent =
       'Origen: juego en navegador · Perfil: ' + (game.graphicsProfile || 'no informado') +
