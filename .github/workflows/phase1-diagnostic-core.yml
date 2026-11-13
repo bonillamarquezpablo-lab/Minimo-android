@@ -8,6 +8,7 @@ on:
       - 'scripts/test_phase1_live_contract.mjs'
       - 'scripts/test_phase1_build_diagnostics.mjs'
       - 'scripts/build_site.py'
+      - 'PHASE1-DIAGNOSTIC-CONTRACT.md'
       - 'inspector/phase1-live.js'
       - 'inspector/index.html'
       - 'inspector/style.css'
