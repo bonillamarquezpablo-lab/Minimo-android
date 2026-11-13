@@ -11,14 +11,18 @@ const HRAFN_BEFORE_URL=process.env.HRAFN_BEFORE_URL||'';
 const HRAFN_AFTER_URL=process.env.HRAFN_AFTER_URL||'';
 const PLAN=process.env.CAPTURE_PLAN_JSON||fs.readFileSync(path.join(ROOT,'scripts/scene-capture-plan.json'),'utf8');
 const phases=[];
-const INSPECTOR_LEVEL=process.env.INSPECTOR_LEVEL||'deep';
+const INSPECTOR_LEVEL=process.env.INSPECTOR_LEVEL||'quick';
 const SKIP_VISUAL_CAPTURES=process.env.INSPECTOR_SKIP_VISUAL_CAPTURES==='1';
 const LEVEL_RANK={quick:1,complete:2,deep:3};
 if(!(INSPECTOR_LEVEL in LEVEL_RANK))throw new Error('INSPECTOR_LEVEL must be quick, complete or deep.');
 function phaseLevel(name){
+  // Quick: only confirm the game and real Viking model start.
+  if(/Arranque del juego y modelo vikingo real/.test(name))return 1;
+  // Complete: add textures, structure grounding, coasts, world inventory and their reports.
+  if(/Texturas, carga y preparación de cámara|Cimentación, estructuras|Referencias costeras|Inventario completo|Informe visual unificado|Lámina de referencias/.test(name))return 2;
+  // Deep: visual A/B comparison, four times of day and performance.
   if(/Comparación (?:visual|gráfica).*ANTES\/DESPUÉS|Informe visual ANTES\/DESPUÉS/.test(name))return 3;
-  if(/Referencias costeras|Inventario completo|Informe visual unificado|Lámina de referencias/.test(name))return 2;
-  return 1;
+  return 2;
 }
 function phaseSkipReason(name){
   if(SKIP_VISUAL_CAPTURES&&phaseLevel(name)>1){

@@ -19,7 +19,7 @@ for(const [id,label] of [['control','01 · OPERACIONES'],['telemetria','02 · GR
 const referencedIds=app.split("$('").slice(1).map(part=>part.split("'")[0]);
 for(const id of new Set(referencedIds))assert.ok(html.includes('id=\"'+id+'\"'),'Missing DOM element referenced by app.js: '+id);
 for(const marker of [
- 'Rápido','Completo','Profundo','id="launchButton"','id="githubToken"',
+ 'Rápido','Completo','Profundo','data-level="quick" aria-pressed="true"','data-level="deep" aria-pressed="false"','id="launchButton"','id="githubToken"',
  'id="compareRange"','id="differenceToggle"','id="radarSvg"','id="telemetryGrid"',
  'id="technicalJson"','id="guideFab"','id="lastGoodNotice"','id="lastGoodTitle"','id="lastGoodDescription"','id="lastGoodRun"','id="tokenSettingsButton"','id="fpsGaugeArc"','id="fpsGaugeNeedle"','id="frameGaugeArc"','id="worldCpuGaugeArc"','id="renderCpuGaugeArc"','id="guidePanel"','id="guideStepTitle"','id="guideNext"','id="guidePrev"','id="guideClose"','id="guideFinish"','id="runPhaseStatus"','id="evidenceGrid"','id="evidenceStatus"','id="performanceChart"','id="memoryChart"','id="performanceSummary"','id="memorySummary"','style.css','app.js'
 ])assert.ok(html.includes(marker),'Missing Inspector Center UI element: '+marker);
@@ -29,19 +29,26 @@ for(const marker of [
  "renderRadar","custom?.structures","bottomAboveTerrainMeters","habitableStructures",
  "Amanecer","Mediodía","Atardecer","Noche","renderPerformanceGraph","renderMemoryGraph","heapUsedMB","structures.length+' edificios · '+candidates.length+' candidatos'"
 ])assert.ok(app.includes(marker),'Missing Inspector Center application feature: '+marker);
+assert.ok(app.includes("let chosenLevel='quick'")&&app.includes("setLevel('quick');bindEvents()"),'Quick must be the default inspection depth.');
 assert.ok(!app.includes('localStorage'),'The dashboard must not persist GitHub tokens in localStorage.');
 assert.ok(app.includes('Authorization:\'Bearer \'+currentToken'),'The token must be sent only in the direct GitHub API request.');
 assert.ok(app.includes("$('runArtifactsLink').href=run.html_url?")&&app.includes("run.html_url+'#artifacts'"),'The full evidence archive must remain reachable.');
 assert.ok(app.includes("if(!currentToken){openGithubWorkflow();return;}")&&app.includes("window.open(GITHUB_WORKFLOW"),'A no-token user must be able to start from GitHub without creating a personal access token.');
 assert.ok(app.includes("$('evidenceGrid').innerHTML=cards")&&app.includes('previews[phase.id]'),'The run card must render available before/after previews inline.');
-assert.ok(app.includes("const jobsInterval=run.status==='in_progress'?12000:30000"),'Active runs must refresh real GitHub job steps every 12 seconds.');
-assert.ok(app.includes("$('progressValue').textContent=indeterminate?'↻':percent+'%'"),'The progress ring must use a compact activity symbol, not a long status phrase.');
+assert.ok(app.includes("const jobsInterval=currentToken?12000:(jobsCache?.etag?12000:120000)"),'The selected run must refresh live GitHub job steps, with a rate-limit-safe fallback when conditional requests are unavailable.');
+assert.ok(app.includes("If-None-Match")&&app.includes("response.status===304"),'GitHub API polling must reuse ETags so unchanged data does not consume the API rate limit.');
+assert.ok(app.includes("const metadataInterval=currentToken?25000:(listCache?.etag?12000:120000)"),'The active-run list must refresh automatically without over-polling an unauthenticated API.');
+assert.ok(app.includes("$('progressValue').textContent=queued?'—':indeterminate?'↻':percent===null?'—':percent+'%'"),'The progress ring must distinguish queued, indeterminate and measured progress without showing a false zero.');
 assert.ok(app.includes("runningGuide.title")&&app.includes("runningGuide.detail")&&app.includes('Tiempo en esta fase'),'The status panel must explain the active phase and elapsed time.');
 assert.ok(app.includes("v!==null&&v!==undefined&&v!==''")&&app.includes("raw===null||raw===undefined||raw===''"),'Missing telemetry values must remain unavailable, never be plotted as zero.');
-assert.ok(app.includes("running.name==='Run the single unified inspector'"),'The monolithic inspector phase must use indeterminate progress, not a misleading percentage.');
+assert.ok(app.includes("activeRun?.status==='in_progress'&&done===0"),'An active run with no completed phases must use indeterminate progress, not a misleading percentage.');
 assert.ok(app.includes("step.conclusion==='failure'||step.conclusion==='cancelled'"),'Cancelled GitHub steps must not be rendered as successful.');
-assert.ok(app.includes('Esperando datos reales'),'Missing job data must be explained without inventing progress.');
+assert.ok(app.includes('GitHub aún no ha publicado el detalle de sus pasos')&&app.includes('No hay pasos disponibles para esta ejecución'),'Missing job data must be explained without inventing progress.');
 assert.ok(css.includes('.progress-track span.indeterminate'),'The dashboard needs a visible indeterminate progress animation.');
+assert.ok(html.includes('id="activeRunsList"')&&html.includes('id="activeRunCount"')&&html.includes('id="overviewRunning"')&&html.includes('id="overviewQueued"'),'The dashboard must show all active runs and separate running from queued counts.');
+assert.ok(app.includes('function renderActiveRuns()')&&app.includes('function selectActiveRun(id)'),'Every active execution must be visible and selectable from the dashboard.');
+assert.ok(app.includes("['in_progress','queued','waiting','requested'].includes(run.status)"),'The live list must include both running and waiting executions.');
+assert.ok(css.includes('.active-run-card.selected')&&css.includes('.active-run-track.is-running'),'Active executions need clear selection and a live visual state.');
 for(const marker of ['@media(max-width:720px)','evidence-inline','evidence-pair','progress-ring strong.is-spinning','guide-panel','guide-focus','guide-fab','phase-placeholder','compare-stage','radar-map','metric-card','chart-card','chart-target','chart-help','prefers-reduced-motion'])assert.ok(css.includes(marker),'Missing responsive visual system: '+marker);
 assert.ok(runner.includes('publishComparisonPreviews'),'Unified inspector must publish web-readable A/B previews.');
 assert.ok(runner.includes('m.islands||[]'),'The 13-island inventory must be included in the published run manifest.');
@@ -56,7 +63,7 @@ assert.ok(sampler.includes('performance.memory'),'Heap memory must be measured o
 assert.ok(sampler.includes("value!==null&&value!==undefined&&value!==''"),'Missing heap samples must not be converted to zero.');
 const guideStart=app.indexOf('  const GUIDE_STEPS=['),guideEnd=app.indexOf('\n  ];',guideStart);
 const guideTargets=[...app.slice(guideStart,guideEnd).matchAll(/target:'([^']+)'/g)].map(match=>match[1]);
-assert.deepEqual(guideTargets,['#overview','#control .launch-panel','.run-panel','#telemetria','#radar','#comparativa'],'The guide must follow the combined PR #135 visual section order.');
+assert.deepEqual(guideTargets,['#overview','#activeRunsList','#control .launch-panel','.run-panel','#telemetria','#radar','#comparativa'],'The guide must follow the live-run-first dashboard order.');
 assert.ok(html.includes('<header class="topbar">')&&html.indexOf('id="guideFab"')<html.indexOf('</header>'),'Help must be opened from the top header.');
 assert.ok(!html.includes('id="guideStart"')&&!app.includes("$('guideStart').addEventListener"),'The page must not show a guide launch card.');
 assert.ok(app.includes("activeRun?.status==='in_progress'?'La prueba aún está trabajando."),'Empty performance charts must explain that the inspection is still running.');

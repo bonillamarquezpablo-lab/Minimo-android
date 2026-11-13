@@ -244,3 +244,28 @@ assert.match(html,/if\(panel.id==='grassDebugPanel'\)/,"The secondary vegetation
 assert.match(html,/section\.appendChild\(summary\);section\.appendChild\(panel\)/,"The vegetation detail must not open over the game by default.");
 assert.match(html,/getGroundDebugDrawer\(\)\.style\.display=open\?'block':'none'/,"The diagnostic toggle must show and hide one drawer without reloading the game.");
 assert.match(html,/aria-expanded/,"The diagnostic toggle must expose its expanded state accessibly.");
+
+
+// Phase 1 performance audit: observational only; no render-quality/gameplay mutation.
+for (const marker of [
+ 'PERF_AUDIT_CAPACITY=120',
+ 'perfAuditSamples={frame:new Float32Array',
+ 'function getPerformanceAuditReport()',
+ 'window.__elSinNombrePerformanceAudit=',
+ "addScenario('A · CAMPAMENTO','campamento')",
+ "addScenario('B · VEGETACIÓN','vegetacion')",
+ "addScenario('C · COSTA','costa')",
+ 'EXPORTAR INFORME JSON',
+ 'beginPerfGpuQuery()',
+ 'endPerfGpuQuery(perfGpuQuery)',
+ 'recordPerformanceAuditFrame(rawFrameMs)',
+ 'EXT_disjoint_timer_query_webgl2',
+ 'EXT_disjoint_timer_query',
+ "measurement:'EXT_disjoint_timer_query; asynchronous sampled every 15 frames; unavailable is not zero'",
+ 'worldMs:world',
+ 'renderSubmissionMs:render',
+ 'drawCalls:{source:',
+ 'activeTriangles:Math.round'
+]) assert.ok(html.includes(marker), 'Missing Phase 1 performance audit contract: '+marker);
+assert.match(html,/max-height:min\(34dvh,360px\)/,'Performance controls must stay inside the existing compact diagnostic drawer.');
+assert.match(html,/No modifica calidad ni sistemas del juego/,'Phase 1 instrumentation must remain observational.');
