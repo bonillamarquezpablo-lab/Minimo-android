@@ -28,7 +28,9 @@ Los eventos programados de GitHub Actions solo se ejecutan desde la rama predete
 
 - Cada conclusión debe enlazar con un dato o artefacto concreto.
 - \`null\`, ausente y no medido nunca equivalen a cero.
-- Una fase omitida no cuenta como aprobada.
+- Una fase omitida no cuenta como aprobada. Los estados desconocidos tampoco se convierten en fallos ni en aprobaciones: quedan como evidencia incompleta.
+- Los especialistas solo clasifican fallos con estados explícitos (`failed`, `failure`, `error`, `timed_out` o `cancelled`). Las fases nuevas o no reconocidas se contabilizan aparte.
+- La extracción de FPS y frame time usa nombres de campos normalizados; si el objeto de rendimiento existe pero no contiene una métrica reconocible, el informe lo marca como no utilizable.
 - Chromium/SwiftShader se marca como entorno de emulación, nunca como resultado de Adreno.
 - La comparación de píxeles es evidencia, no un juicio automático de calidad.
 - No se inventa CPU total, RAM Android, VRAM ni temperatura cuando el navegador no los expone.
@@ -37,7 +39,7 @@ Los eventos programados de GitHub Actions solo se ejecutan desde la rama predete
 
 ## Autonomía y límites de reparación
 
-La primera entrega automatiza recopilación, clasificación, asignación de tareas y publicación de los informes. No cambia el código del juego ni despliega reparaciones.
+La primera entrega automatiza recopilación, clasificación, asignación de tareas y publicación de los informes. Las pruebas de los especialistas son ahora una barrera obligatoria del workflow: si el análisis o sus contratos fallan, la ejecución no puede aparecer como correcta. No cambia el código del juego ni despliega reparaciones.
 
 Los agentes capaces de razonar visualmente sobre imágenes, investigar fuera del repositorio y escribir parches necesitan un proveedor de modelos externo. Eso exige una credencial guardada como secreto de GitHub Actions y un presupuesto de API separado. El secreto no se incluye en el código ni se puede deducir de la suscripción ChatGPT.
 
