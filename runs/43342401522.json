@@ -52,6 +52,25 @@
       "exitCode": 0,
       "error": null,
       "finishedAt": "2026-11-13T01:24:16.066Z"
+    },
+    {
+      "name": "Informe visual unificado de estructuras",
+      "script": "scripts/create_scene_capture_contact_sheet.py",
+      "startedAt": "2026-11-13T01:24:16.067Z",
+      "status": "running",
+      "durationMs": null,
+      "exitCode": null,
+      "error": null
+    },
+    {
+      "name": "Lámina de referencias costeras",
+      "script": "scripts/create_coastal_contact_sheet.py",
+      "startedAt": "2026-11-13T01:24:16.069Z",
+      "status": "passed",
+      "durationMs": 3348,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-13T01:24:19.417Z"
     }
   ],
   "finishedAt": null
