@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#080d16">
 <meta name="description" content="Panel visual de auditoría, geometría, rendimiento y comparativas de EL SIN NOMBRE.">
 <title>Inspector Center · EL SIN NOMBRE</title>
-<link rel="stylesheet" href="style.css?v=20261113.4">
+<link rel="stylesheet" href="style.css?v=20261113.5">
 </head>
 <body>
 <div class="app-shell">
@@ -30,9 +30,13 @@
         <h1>Estado del mundo</h1>
         <p>Lecturas y evidencias de la última inspección.</p>
       </div>
+      <div class="guide-strip">
+        <div class="guide-strip-copy"><strong>¿Primera vez en el Inspector?</strong><span>Te enseño qué tocar y qué significa cada resultado, paso a paso.</span></div>
+        <button class="guide-start" id="guideStart" type="button">Empezar guía <span aria-hidden="true">→</span></button>
+      </div>
     </section>
 
-    <section class="overview" aria-label="Resumen del sistema">
+    <section class="overview" id="overview" aria-label="Resumen del sistema">
       <article class="overview-card"><div class="overview-label">Última ejecución</div><div class="overview-value" id="overviewRun">—</div><div class="overview-foot" id="overviewRunFoot">Consultando historial</div></article>
       <article class="overview-card"><div class="overview-label">Progreso</div><div class="overview-value" id="overviewProgress">—</div><div class="overview-foot">Fases terminadas de la inspección</div></article>
       <article class="overview-card"><div class="overview-label">Archipiélago</div><div class="overview-value" id="overviewIslands">13</div><div class="overview-foot">Islas del mundo de juego</div></article>
@@ -69,11 +73,11 @@
         </article>
         <article class="metric-card cpu-card">
           <div class="metric-head"><span class="metric-icon">◇</span><span class="metric-name">CPU · actualización del mundo</span></div>
-          <div class="metric-value" id="worldCpuValue">—</div><div class="metric-unit">ms por lectura · menor es mejor</div>
+          <div class="metric-value" id="worldCpuValue">—</div><div class="metric-unit" id="worldCpuUnit">Esperando mediciones de la inspección</div>
         </article>
         <article class="metric-card cpu-card">
           <div class="metric-head"><span class="metric-icon">▧</span><span class="metric-name">CPU · envío de render</span></div>
-          <div class="metric-value" id="renderCpuValue">—</div><div class="metric-unit">ms por lectura · menor es mejor</div>
+          <div class="metric-value" id="renderCpuValue">—</div><div class="metric-unit" id="renderCpuUnit">Esperando mediciones de la inspección</div>
         </article>
       </div>
       <div class="telemetry-caveat" id="telemetryCaveat">La prueba usa Chromium + ANGLE SwiftShader. No es una medición física de la GPU Adreno ni de la RAM total del S26 Ultra.</div>
@@ -110,10 +114,10 @@
       <article class="panel compare-panel">
         <div class="panel-title"><h3><span id="phaseName">Amanecer</span> <span class="muted" id="phaseTime">06:00</span></h3><span class="step-label"><span id="beforeBuild">—</span> → <span id="afterBuild">—</span></span></div>
         <div class="phase-tabs" role="group" aria-label="Fase horaria">
-          <button class="phase-tab" data-phase="dawn" type="button" aria-pressed="true"><span class="phase-thumb"><img alt="" loading="lazy"></span><strong>Amanecer</strong><small>06:00 · luz fría</small></button>
-          <button class="phase-tab" data-phase="noon" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"></span><strong>Mediodía</strong><small>12:00 · luz alta</small></button>
-          <button class="phase-tab" data-phase="dusk" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"></span><strong>Atardecer</strong><small>18:00 · luz cálida</small></button>
-          <button class="phase-tab" data-phase="midnight" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"></span><strong>Noche</strong><small>00:00 · iluminación nocturna</small></button>
+          <button class="phase-tab" data-phase="dawn" type="button" aria-pressed="true"><span class="phase-thumb"><img alt="" loading="lazy"><span class="phase-placeholder">Pendiente</span></span><strong>Amanecer</strong><small>06:00 · luz fría</small></button>
+          <button class="phase-tab" data-phase="noon" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"><span class="phase-placeholder">Pendiente</span></span><strong>Mediodía</strong><small>12:00 · luz alta</small></button>
+          <button class="phase-tab" data-phase="dusk" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"><span class="phase-placeholder">Pendiente</span></span><strong>Atardecer</strong><small>18:00 · luz cálida</small></button>
+          <button class="phase-tab" data-phase="midnight" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"><span class="phase-placeholder">Pendiente</span></span><strong>Noche</strong><small>00:00 · iluminación nocturna</small></button>
         </div>
         <div class="compare-layout">
           <div>
@@ -146,9 +150,9 @@
         <article class="panel launch-panel">
           <div class="panel-title"><h3>Iniciar una inspección</h3><span class="step-label">Nueva ejecución</span></div>
           <div class="levels" role="group" aria-label="Nivel de inspección">
-            <button class="level" type="button" data-level="quick" aria-pressed="false"><strong>Rápido</strong><small>Arranque y comprobaciones esenciales</small></button>
-            <button class="level" type="button" data-level="complete" aria-pressed="false"><strong>Completo</strong><small>Escena, estructuras, agua y vegetación</small></button>
-            <button class="level" type="button" data-level="deep" aria-pressed="true"><strong>Profundo</strong><small>Comparación ANTES / DESPUÉS y cuatro horas</small></button>
+            <button class="level" type="button" data-level="quick" aria-pressed="false"><strong>Rápido</strong><small>¿Solo quieres comprobar que arranca?</small></button>
+            <button class="level" type="button" data-level="complete" aria-pressed="false"><strong>Completo</strong><small>Revisión general del mundo y sus objetos</small></button>
+            <button class="level" type="button" data-level="deep" aria-pressed="true"><strong>Profundo</strong><small>Revisión completa + gráficas y 4 horarios</small></button>
           </div>
           <div class="field-row">
             <div class="field"><label for="targetBranch">Rama que se inspecciona</label><input id="targetBranch" value="main" autocomplete="off" spellcheck="false"></div>
@@ -187,7 +191,19 @@
     </section>
     <footer class="footer"><span>EL SIN NOMBRE · Inspector Center · Panel de auditoría independiente</span><span>Los inicios se envían directamente a GitHub Actions; los registros completos siguen disponibles en <a id="artifactsLink" href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions" target="_blank" rel="noopener">el historial técnico ↗</a>.</span></footer>
   </main>
+  <button class="guide-fab" id="guideFab" type="button" aria-label="Abrir guía paso a paso">? <span>Guía</span></button>
+  <aside class="guide-panel" id="guidePanel" hidden role="dialog" aria-modal="false" aria-labelledby="guideStepTitle" aria-live="polite">
+    <div class="guide-panel-top"><span id="guideStepMeta">PASO 1 DE 7</span><button class="guide-close" id="guideClose" type="button" aria-label="Cerrar guía">×</button></div>
+    <div class="guide-panel-progress"><span id="guideProgress"></span></div>
+    <h2 id="guideStepTitle">Vamos paso a paso</h2>
+    <p id="guideStepText">Te explicaré cómo usar el Inspector.</p>
+    <div class="guide-panel-actions">
+      <button class="guide-secondary" id="guidePrev" type="button">Anterior</button>
+      <button class="guide-primary" id="guideNext" type="button">Siguiente →</button>
+    </div>
+    <button class="guide-finish" id="guideFinish" type="button">Terminar guía</button>
+  </aside>
 </div>
-<script src="app.js?v=20261113.4" defer></script>
+<script src="app.js?v=20261113.5" defer></script>
 </body>
 </html>

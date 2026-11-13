@@ -264,7 +264,7 @@
     const allFps=[...bf,...af].map(p=>p.value),allMs=[...bm,...am].map(p=>p.value);
     if(!allFps.length&&!allMs.length){
       svg.innerHTML='<text x="360" y="112" text-anchor="middle" class="chart-empty">La inspección profunda todavía no ha publicado muestras.</text>';
-      $('performanceSummary').textContent='Sin datos: no se dibuja una línea simulada.';
+      $('performanceSummary').textContent=activeRun?.status==='in_progress'?'La prueba aún está trabajando. Las muestras aparecerán al llegar a la fase de rendimiento.':'Esta ejecución no publicó muestras de rendimiento. Consulta sus evidencias.';
       return;
     }
     const maxFps=Math.max(75,Math.ceil(Math.max(60,...allFps)/15)*15);
@@ -292,7 +292,7 @@
     const all=[...bf,...af].map(p=>p.value);
     if(!all.length){
       svg.innerHTML='<text x="360" y="100" text-anchor="middle" class="chart-empty">Chromium no ha expuesto lecturas del heap en esta ejecución.</text>';
-      $('memorySummary').textContent='No disponible; no equivale a memoria RAM ni GPU.';
+      $('memorySummary').textContent=activeRun?.status==='in_progress'?'Aún no se han tomado muestras. La lectura llega durante la entrada al mundo.':'Chromium no publicó lecturas del heap en esta ejecución; no equivale a RAM ni GPU.';
       return;
     }
     const max=Math.max(32,Math.ceil(Math.max(...all)*1.18/16)*16),y=v=>158-(v/max)*135;
@@ -306,8 +306,10 @@
     const data=manifest?.results?.beforeAfter,builds=data?.builds||{},before=builds.before?.performance,after=builds.after?.performance;
     renderPerformanceGraph(before,after);
     renderMemoryGraph(before,after);
-    $('worldCpuValue').textContent=number(after?.medianWorldUpdateCpuMs,2)+' ms';
-    $('renderCpuValue').textContent=number(after?.medianRenderSubmissionCpuMs,2)+' ms';
+    $('worldCpuValue').textContent=after?.medianWorldUpdateCpuMs==null?'—':number(after.medianWorldUpdateCpuMs,2)+' ms';
+    $('renderCpuValue').textContent=after?.medianRenderSubmissionCpuMs==null?'—':number(after.medianRenderSubmissionCpuMs,2)+' ms';
+    $('worldCpuUnit').textContent=after?.medianWorldUpdateCpuMs==null?(activeRun?.status==='in_progress'?'Esperando la fase de rendimiento':'Esta ejecución no informó esta lectura'):'Tiempo de actualización · menor es mejor';
+    $('renderCpuUnit').textContent=after?.medianRenderSubmissionCpuMs==null?(activeRun?.status==='in_progress'?'Esperando la fase de rendimiento':'Esta ejecución no informó esta lectura'):'Tiempo de envío a render · menor es mejor';
     const renderer=data?.renderer||'Sin datos de renderizador';
     $('telemetryCaveat').textContent=renderer.includes('SwiftShader')
       ?'CI usa Chromium + ANGLE SwiftShader. Esta emulación no mide la GPU Adreno física, la VRAM ni la RAM total del S26 Ultra. La gráfica de memoria, cuando existe, solo mide el heap JavaScript que Chromium expone.'
@@ -327,12 +329,14 @@
       button.setAttribute('aria-pressed',String(button.dataset.phase===activePhase));
       const img=button.querySelector('img');
       if(img&&item?.after){img.src=item.after;img.alt=p.label+' — después';}
+      const placeholder=button.querySelector('.phase-placeholder');
+      if(placeholder)placeholder.textContent=item?.before&&item?.after?'Lista':'Pendiente';
     });
     const selected=previews[activePhase];
     const beforeImage=$('beforeImage'),afterImage=$('afterImage'),differenceImage=$('differenceImage');
     if(!selected?.before||!selected?.after){
       beforeImage.removeAttribute('src');afterImage.removeAttribute('src');differenceImage.removeAttribute('src');
-      $('compareEmpty').hidden=false;$('compareStage').hidden=true;$('compareEmpty').textContent=manifest?'Esta ejecución no publicó miniaturas para el comparador. Inicia una auditoría profunda para generar las cuatro fases.':'Cuando termine una auditoría profunda aparecerán aquí las cuatro comparativas, sin enlaces externos.';
+      $('compareEmpty').hidden=false;$('compareStage').hidden=true;$('compareEmpty').textContent=activeRun?.status==='in_progress'?'Las imágenes aún se están preparando. Aparecerán cuando la inspección llegue a la comparación visual. No tienes que hacer nada.':manifest?'Esta ejecución terminó sin publicar miniaturas. Revisa sus evidencias o inicia una inspección profunda.':'Cuando termine una inspección profunda aparecerán aquí las cuatro comparativas.';
       $('phaseMeta').textContent=ready.length+' / 4 fases disponibles';
       return;
     }
@@ -378,8 +382,8 @@
     if(!islands.length){
       $('radarSvg').innerHTML='';
       $('radarEmpty').hidden=false;
-      $('radarEmpty').textContent='El inventario de las 13 islas todavía no está disponible en esta ejecución. El radar se completará al terminar la inspección unificada; no se dibujan posiciones estimadas.';
-      $('radarDetail').innerHTML='<div class="empty-state"><div><strong>Sin inventario geométrico</strong>Se necesitan coordenadas reales del motor Babylon.</div></div>';
+      $('radarEmpty').textContent=activeRun?.status==='in_progress'?'El inspector aún no ha llegado al inventario del mundo. Las 13 islas y sus estructuras aparecerán cuando termine esa fase. No tienes que tocar nada.':'Esta ejecución no publicó el inventario de islas. Revisa sus evidencias; no se dibujan posiciones estimadas.';
+      $('radarDetail').innerHTML='<div class="empty-state"><div><strong>'+(activeRun?.status==='in_progress'?'Esperando el inventario':'Sin inventario geométrico')+'</strong>'+(activeRun?.status==='in_progress'?'La auditoría todavía está recopilando los datos de la escena.':'Esta ejecución no contiene coordenadas reales del motor Babylon.')+'</div></div>';
       $('radarStats').textContent='Pendiente de datos';
       return;
     }
@@ -441,6 +445,61 @@
     $('radarDetail').innerHTML=detail;
     $('radarDetail').querySelectorAll('[data-structure-code]').forEach(button=>button.addEventListener('click',()=>{const code=button.dataset.structureCode;selectedStructure=rows.find(r=>String(r.code||r.uniqueId||r.name)===code)||null;renderRadarDetail();}));
   }
+
+
+  const GUIDE_STEPS=[
+    {target:'#overview',title:'1. El resumen: ¿cómo está el juego?',text:'Aquí ves la última inspección, su estado y cuántas islas y estructuras ha encontrado. “En curso” significa que la prueba sigue trabajando; no es un resultado malo.'},
+    {target:'#control .levels',title:'2. Elige qué quieres comprobar',text:'Rápido: comprueba el arranque. Completo: revisa mundo, estructuras, agua y vegetación. Profundo: añade la comparación visual y las cuatro horas del día. Para una revisión general, usa Profundo.'},
+    {target:'#tokenDetails',title:'3. Autoriza y lanza la prueba',text:'Pulsa “Iniciar inspección”. Para lanzarla desde esta página necesitas un token personal de GitHub limitado a este repositorio, con permiso Actions: Read and write. No compartas ese token con nadie. Después pulsa “Aplicar token” y vuelve a iniciar.'},
+    {target:'.run-panel',title:'4. Mira si está trabajando',text:'Esta tarjeta es el seguimiento. “En ejecución” significa que sigue activa; la fase indica qué está haciendo. Usa “Actualizar ahora” para consultar el estado. Al terminar, abre “Capturas y evidencias” para ver los archivos.'},
+    {target:'#telemetria',title:'5. Entiende las gráficas',text:'FPS: más alto es mejor; el objetivo es 60. Frame time: más bajo es mejor; 16,6 ms equivale a 60 FPS. La memoria mide solo el heap JavaScript de Chromium, no toda la RAM ni la GPU. Un guion (—) significa “sin dato”, nunca cero.'},
+    {target:'#radar',title:'6. Revisa las islas',text:'Toca una isla para ver sus datos y después toca un punto para ver una estructura. Verde: apoyo dentro de 2 cm. Rojo: desnivel mayor de 2 cm. Gris: todavía no se ha medido. El objetivo del inventario es 13 islas y 39 estructuras.'},
+    {target:'#comparativa',title:'7. Compara antes y después',text:'Elige amanecer, mediodía, atardecer o noche. Cuando haya capturas, mueve la barra para revelar la versión DESPUÉS y activa el mapa de diferencias para localizar cambios. Si ves “Pendiente”, la inspección aún no ha publicado esa imagen.'}
+  ];
+  let guideIndex=0,guideActive=false,guideHighlighted=null;
+  function clearGuideHighlight(){
+    if(guideHighlighted)guideHighlighted.classList.remove('guide-focus');
+    guideHighlighted=null;
+  }
+  function showGuideStep(index){
+    guideIndex=Math.max(0,Math.min(GUIDE_STEPS.length-1,index));
+    const step=GUIDE_STEPS[guideIndex];
+    $('guideStepMeta').textContent='PASO '+(guideIndex+1)+' DE '+GUIDE_STEPS.length;
+    $('guideStepTitle').textContent=step.title;
+    $('guideStepText').textContent=step.text;
+    $('guideProgress').style.width=((guideIndex+1)/GUIDE_STEPS.length*100)+'%';
+    $('guidePrev').disabled=guideIndex===0;
+    $('guideNext').textContent=guideIndex===GUIDE_STEPS.length-1?'Volver al principio ↺':'Siguiente →';
+    clearGuideHighlight();
+    const target=document.querySelector(step.target);
+    if(target){
+      guideHighlighted=target;
+      target.classList.add('guide-focus');
+      if(step.target==='#tokenDetails'&&!currentToken)$('tokenDetails').open=true;
+      target.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  }
+  function openGuide(){
+    guideActive=true;
+    $('guidePanel').hidden=false;
+    $('guideFab').hidden=true;
+    document.body.classList.add('guide-open');
+    showGuideStep(0);
+  }
+  function closeGuide(){
+    guideActive=false;
+    clearGuideHighlight();
+    $('guidePanel').hidden=true;
+    $('guideFab').hidden=false;
+    document.body.classList.remove('guide-open');
+  }
+  $('guideStart').addEventListener('click',openGuide);
+  $('guideFab').addEventListener('click',openGuide);
+  $('guideClose').addEventListener('click',closeGuide);
+  $('guideFinish').addEventListener('click',closeGuide);
+  $('guidePrev').addEventListener('click',()=>showGuideStep(guideIndex-1));
+  $('guideNext').addEventListener('click',()=>guideIndex===GUIDE_STEPS.length-1?showGuideStep(0):showGuideStep(guideIndex+1));
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&guideActive)closeGuide();});
 
   function bindEvents(){
     $('refreshNow').addEventListener('click',()=>refreshDashboard(true));
