@@ -85,7 +85,7 @@ jobs:
           echo "Hrafn baseline: $BASE_REF ($BASE_SHA)"
 
       - name: Build the baseline game in an isolated worktree
-        if: github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep'
+        if: (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep') || (github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0')
         env:
           HRAFN_BASE_SHA: ${{ steps.baseline.outputs.sha }}
         run: |
@@ -188,7 +188,7 @@ jobs:
           HRAFN_AFTER_URL: http://127.0.0.1:4175/
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
           CAPTURE_SEED: '20261110'
-          INSPECTOR_LEVEL: ${{ inputs.inspection_level || 'quick' }}
+          INSPECTOR_LEVEL: ${{ inputs.inspection_level || ((github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0') && 'deep') || (github.event_name == 'schedule' && 'complete') || 'quick' }}
           INSPECTOR_GITHUB_TOKEN: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.token || '' }}
           INSPECTOR_STATUS_BRANCH: inspector-status
         run: |
