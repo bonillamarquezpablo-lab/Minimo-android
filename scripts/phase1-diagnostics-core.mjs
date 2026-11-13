@@ -218,23 +218,92 @@ export function analyzeFrameStability(samples, targetFps = DEFAULT_TARGET_FPS, i
   ) : [];
   const medianBreaches = targetFrameMs === null ? [] : valid.filter(sample => sample.game.frameTiming.p50Ms > targetFrameMs);
   const tailBreaches = targetFrameMs === null ? [] : valid.filter(sample => sample.game.frameTiming.p95Ms > targetFrameMs);
-  const breachRate = valid.length ? medianBreaches.length / valid.length : null;
-  const repeated = medianBreaches.length >= 3 && breachRate >= 0.7;
-  const confidence = breachRate === null ? 0 : Math.min(0.99, breachRate * (0.70 + Math.min(valid.length, 10) * 0.03));
+  const medianBreachRate = valid.length ? medianBreaches.length / valid.length : null;
+  const tailBreachRate = valid.length ? tailBreaches.length / valid.length : null;
+  const repeated = (medianBreaches.length >= 3 && medianBreachRate >= 0.7) ||
+    (tailBreaches.length >= 3 && tailBreachRate >= 0.7);
+  const strongestRate = medianBreachRate === null ? (tailBreachRate || 0) : Math.max(medianBreachRate, tailBreachRate || 0);
+  const confidence = valid.length ? Math.min(0.99, strongestRate * (0.70 + Math.min(valid.length, 10) * 0.03)) : 0;
+  const evidenceStatus = repeated
+    ? classifyFinding({ evidenceCount: valid.length, repeated, confidence, independentSessions })
+    : valid.length >= 3 && medianBreaches.length === 0 && tailBreaches.length === 0
+      ? 'sin-incidencia-observada'
+      : 'sin-datos-suficientes';
+  const medianP50Ms = percentile(valid.map(sample => sample.game.frameTiming.p50Ms), 0.5);
+  const medianP95Ms = percentile(valid.map(sample => sample.game.frameTiming.p95Ms), 0.5);
+  const medianP99Ms = percentile(valid.map(sample => sample.game.frameTiming.p99Ms), 0.5);
+  const medianStage = key => percentile(valid.map(sample => sample.game.measurements?.[key]), 0.5);
+  const medianWorldUpdateMs = medianStage('worldUpdateMs');
+  const medianRenderCpuMs = medianStage('renderCpuMs');
+  const medianGpuFrameMs = medianStage('gpuFrameMs');
+  const hasEvidence = valid.length >= 3;
+  let severity = 'sin-determinar';
+  let priority = 'sin-asignar';
+  if (hasEvidence && evidenceStatus === 'sin-incidencia-observada') {
+    severity = 'sin-incidencia-observada';
+    priority = 'sin-accion';
+  } else if (hasEvidence && medianP50Ms !== null && medianP50Ms >= targetFrameMs * 2) {
+    severity = 'critica';
+    priority = 'P1';
+  } else if (hasEvidence && medianBreaches.length >= 3 && medianBreachRate >= 0.7) {
+    severity = 'alta';
+    priority = 'P1';
+  } else if (hasEvidence && tailBreaches.length >= 3 && tailBreachRate >= 0.7) {
+    severity = 'media';
+    priority = 'P2';
+  } else if (hasEvidence && (medianBreaches.length || tailBreaches.length)) {
+    severity = 'baja';
+    priority = 'P3';
+  }
+  const possibleCauses = [];
+  const stageThreshold = targetFrameMs === null ? null : targetFrameMs * 0.8;
+  if (hasEvidence && stageThreshold !== null && medianGpuFrameMs !== null && medianGpuFrameMs >= stageThreshold) {
+    possibleCauses.push('El contador de tiempo GPU consume una parte importante del presupuesto; investigar carga de shaders, reflejos, sombras y efectos.');
+  }
+  if (hasEvidence && stageThreshold !== null && medianWorldUpdateMs !== null && medianWorldUpdateMs >= stageThreshold) {
+    possibleCauses.push('La actualización del mundo consume una parte importante del presupuesto; investigar simulación, IA y lógica por fotograma.');
+  }
+  if (hasEvidence && stageThreshold !== null && medianRenderCpuMs !== null && medianRenderCpuMs >= stageThreshold) {
+    possibleCauses.push('El envío de render consume una parte importante del presupuesto; revisar draw calls, mallas y preparación de escena.');
+  }
+  if (hasEvidence && evidenceStatus !== 'sin-incidencia-observada' && possibleCauses.length === 0) {
+    possibleCauses.push('La telemetría actual no permite atribuir la causa a CPU o GPU; se necesitan mediciones adicionales.');
+  }
+  const recommendedChecks = evidenceStatus === 'sin-incidencia-observada'
+    ? ['Repetir la medición en otras islas y estados del mundo.', 'Comparar con otra sesión en el mismo perfil gráfico.']
+    : [
+        'Repetir la prueba con la misma isla, cámara, perfil y estado del mundo.',
+        'Comparar una sesión normal con otra usando el perfilador GPU opcional.',
+        'No modificar calidad ni funciones hasta identificar una causa con evidencia.'
+      ];
   return {
     targetFps,
     targetFrameMs: targetFrameMs === null ? null : Number(targetFrameMs.toFixed(3)),
     validIntervals: valid.length,
     medianBreachIntervals: medianBreaches.length,
     p95BreachIntervals: tailBreaches.length,
-    medianBreachRate: breachRate === null ? null : Number(breachRate.toFixed(3)),
-    status: classifyFinding({ evidenceCount: valid.length, repeated, confidence, independentSessions }),
+    medianBreachRate: medianBreachRate === null ? null : Number(medianBreachRate.toFixed(3)),
+    p95BreachRate: tailBreachRate === null ? null : Number(tailBreachRate.toFixed(3)),
+    medianP50Ms,
+    medianP95Ms,
+    medianP99Ms,
+    medianWorldUpdateMs,
+    medianRenderCpuMs,
+    medianGpuFrameMs,
+    status: evidenceStatus,
+    severity,
+    priority,
+    possibleCauses,
+    causeAttribution: possibleCauses.length ? 'candidata-no-confirmada' : 'sin-atribucion',
+    recommendedChecks,
     interpretation: valid.length < 3
       ? 'Se necesitan al menos tres intervalos válidos para valorar estabilidad.'
-      : repeated
-        ? 'La mediana supera repetidamente el presupuesto de fotograma; es una incidencia de rendimiento probable, no una causa raíz confirmada.'
-        : tailBreaches.length
-          ? 'La mediana se mantiene dentro del presupuesto, pero el p95 muestra pérdidas puntuales de estabilidad.'
-          : 'Las muestras disponibles no muestran una pérdida sostenida del presupuesto de fotograma.'
+      : evidenceStatus === 'sin-incidencia-observada'
+        ? 'Las muestras disponibles no muestran una pérdida del presupuesto de fotograma.'
+        : medianBreaches.length >= 3 && medianBreachRate >= 0.7
+          ? 'La mediana supera repetidamente el presupuesto; la incidencia de rendimiento es probable, pero la causa raíz aún no está confirmada.'
+          : tailBreaches.length >= 3 && tailBreachRate >= 0.7
+            ? 'La mediana puede mantenerse dentro del presupuesto, pero el p95 supera repetidamente el límite; hay una pérdida probable de estabilidad.'
+            : 'Hay lecturas fuera del presupuesto, pero aún no se repiten lo suficiente para confirmar una incidencia.'
   };
 }
