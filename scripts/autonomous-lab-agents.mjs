@@ -373,7 +373,9 @@ async function main() {
   }));
 }
 
-main().catch(error => {
-  console.error('[AUTONOMOUS_SPECIALISTS_FATAL]', error);
-  process.exitCode = 1;
-});
+if (process.env.AUTONOMOUS_AGENTS_TEST !== '1') {
+  main().catch(error => {
+    console.error('[AUTONOMOUS_SPECIALISTS_FATAL]', error);
+    process.exitCode = 1;
+  });
+}
