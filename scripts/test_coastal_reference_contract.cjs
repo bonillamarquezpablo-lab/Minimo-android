@@ -21,8 +21,8 @@ assert.match(html, /npc:'skipped-coastal-reference'/);
 assert.match(html, /fauna:'skipped-coastal-reference'/);
 assert.match(html, /window\.__ELSN_PLAYER_STARTUP_SMOKE__/,
   'The independent player startup job needs its own in-page diagnostics');
-assert.match(html, /const groundDebugEnabled=new URLSearchParams\(window\.location\.search\)\.get\('debug'\)==='1'/,
-  'The existing ground diagnostics must remain controlled only by ?debug=1');
+assert.match(html, /const groundDebugEnabled=new URLSearchParams\(window\.location\.search\)\.get\('grounddebug'\)==='1'/,
+  'Terrain and coastal tuning panels must require explicit ?grounddebug=1, not ordinary performance diagnostics');
 assert.match(html, /const coastalDiagnosticsEnabled=groundDebugEnabled\|\|testModeEnabled/,
   'The test-only coastal metrics must use an independent flag');
 assert.doesNotMatch(html, /const groundDebugEnabled=testModeEnabled/,
