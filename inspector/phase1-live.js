@@ -162,10 +162,11 @@ import { buildDeviceEvidence, classifyFinding } from '../scripts/phase1-diagnost
 
   frame.addEventListener('load', () => {
     if ($('liveGameFrameWrap').hidden) return;
-    setStatus('Juego cargado. Inicia una partida; el Inspector empezará a medir cuando el juego exponga su diagnóstico.');
+    $('liveGameSample').disabled = false;
+    setStatus('Juego cargado. Inicia una partida; la medición automática comenzará cuando el juego confirme que ha arrancado. También puedes tomar una muestra manual.');
     const wait = window.setInterval(() => {
       const sample = readSnapshot();
-      if (sample && sample.gameStarted) {
+      if (sample && sample.gameStarted === true) {
         window.clearInterval(wait);
         startSampling();
       }
