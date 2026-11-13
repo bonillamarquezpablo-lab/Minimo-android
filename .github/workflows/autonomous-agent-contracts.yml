@@ -6,6 +6,8 @@ on:
     paths:
       - 'scripts/autonomous-lab-agents.mjs'
       - 'scripts/test_autonomous_lab_agents.mjs'
+      - 'scripts/ai-visual-review.mjs'
+      - 'scripts/test_ai_visual_review.mjs'
       - 'AUTONOMOUS-LAB-AGENTS.md'
       - '.github/workflows/autonomous-agent-contracts.yml'
       - '.github/workflows/coastal-reference.yml'
@@ -41,3 +43,7 @@ jobs:
         run: node --check scripts/autonomous-lab-agents.mjs
       - name: Run specialist contract tests
         run: node scripts/test_autonomous_lab_agents.mjs
+      - name: Check multimodal visual review syntax
+        run: node --check scripts/ai-visual-review.mjs
+      - name: Run multimodal visual review safety contracts
+        run: node scripts/test_ai_visual_review.mjs
