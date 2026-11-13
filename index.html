@@ -6891,12 +6891,37 @@ function updateGrassDebugPanel(){
   ...islands
  ].join('\n');
 }
+function registerGroundDebugPanel(panel){
+ panel.dataset.groundDebugPanel='1';
+ panel.style.display='none';
+ document.body.appendChild(panel);
+}
+function createGroundDebugToggle(){
+ if(!groundDebugEnabled)return;
+ const button=document.createElement('button');
+ button.id='groundDebugToggle';
+ button.type='button';
+ button.textContent='DIAG';
+ button.setAttribute('aria-label','Mostrar diagnóstico');
+ button.setAttribute('aria-expanded','false');
+ button.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:8px;z-index:100000;min-width:48px;padding:7px 10px;border:1px solid #d8ad68;border-radius:9px;background:rgba(5,18,20,.92);color:#f5e8cf;font:900 10px ui-monospace,monospace;box-shadow:0 2px 9px #0009;touch-action:manipulation;pointer-events:auto';
+ let open=false;
+ button.addEventListener('click',()=>{
+  open=!open;
+  document.querySelectorAll('[data-ground-debug-panel="1"]').forEach(panel=>{panel.style.display=open?'block':'none';});
+  button.textContent=open?'CERRAR':'DIAG';
+  button.setAttribute('aria-label',open?'Ocultar diagnóstico':'Mostrar diagnóstico');
+  button.setAttribute('aria-expanded',String(open));
+ });
+ document.body.appendChild(button);
+}
+createGroundDebugToggle();
 if(grassDebugEnabled){
  grassDebugPanel=document.createElement('pre');
  grassDebugPanel.id='grassDebugPanel';
  grassDebugPanel.setAttribute('aria-label','Diagnóstico de densidad y distribución de la hierba 3D');
  grassDebugPanel.style.cssText='position:fixed;left:8px;top:calc(env(safe-area-inset-top,0px) + 112px);z-index:99998;width:min(88vw,340px);max-height:34vh;overflow:auto;margin:0;padding:8px 10px;border:1px solid #d8ad68;border-radius:8px;background:rgba(5,12,14,.91);color:#f5e8cf;font:9px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;pointer-events:auto;touch-action:pan-y;box-shadow:0 3px 12px #0009';
- document.body.appendChild(grassDebugPanel);
+ registerGroundDebugPanel(grassDebugPanel);
  window.setInterval(updateGrassDebugPanel,500);
  updateGrassDebugPanel();
 }
@@ -6949,7 +6974,7 @@ function createGroundPhaseAPanel(){
   });
   apply();
  });
- controls.appendChild(reset);details.appendChild(controls);panel.appendChild(details);document.body.appendChild(panel);
+ controls.appendChild(reset);details.appendChild(controls);panel.appendChild(details);registerGroundDebugPanel(panel);
  window.__elSinNombreGroundPhaseA={defaults:Object.assign({},GROUND_PHASE_A_DEFAULTS),apply:()=>apply()};
 }
 createGroundPhaseAPanel();
@@ -7061,7 +7086,7 @@ function createWaterShoreDebugPanel(){
    frameTimingMs:health&&health.runtime?health.runtime.frameTimingMs:null,fps:health&&health.runtime?health.runtime.fps:engine.getFps()
   };
  };
- controls.appendChild(reset);document.body.appendChild(panel);apply();refreshDiagnostics();
+ controls.appendChild(reset);registerGroundDebugPanel(panel);apply();refreshDiagnostics();
 }
 createWaterShoreDebugPanel();
 

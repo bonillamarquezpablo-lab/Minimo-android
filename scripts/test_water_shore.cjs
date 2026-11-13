@@ -235,3 +235,9 @@ assert.match(html,/wetness>\.035/,"The wetness atlas must trigger footstep splas
 assert.match(html,/RENDIMIENTO: .*assessment\.bottleneckHint/,"The live panel must identify CPU versus GPU/driver bottlenecks.");
 assert.match(html,/runtime\.gpuRenderer/,"The live panel must expose the actual mobile GPU renderer.");
 assert.match(html,/reportVersion:'12',build:'0\.6\.274'/,"The source health report must keep the literal build marker required by build_site.py normalization.");
+
+assert.match(html,/function registerGroundDebugPanel\(panel\)/,"Diagnostic panels must be registered in a hideable group.");
+assert.match(html,/panel\.style\.display='none'/,"All diagnostics must start collapsed so the game can be started normally.");
+assert.match(html,/id='groundDebugToggle'/,"A compact on-screen diagnostic toggle must be available.");
+assert.match(html,/panel\.style\.display=open\?'block':'none'/,"The diagnostic toggle must show and hide every panel without reloading the game.");
+assert.match(html,/aria-expanded/,"The diagnostic toggle must expose its expanded state accessibly.");
