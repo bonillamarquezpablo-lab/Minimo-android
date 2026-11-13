@@ -184,11 +184,11 @@ assert.match(html,/structuralClassification/);
 // Live local minimap: nearby area, player/ship centring, heading arrow, and compact coordinates.
 assert.match(html,/function drawLocalMap\(\)/);
 assert.match(html,/if\(!map\.classList\.contains\('expanded'\)\)\{drawLocalMap\(\);return;\}/);
-assert.match(html,/focus=playerPos\(\),heading=onShip\?ship\.rotation\.y:yaw/);
+assert.match(html,/focus=playerPos\(\),heading=smoothLocalMapHeading\(onShip\?ship\.rotation\.y:yaw\)/);
 assert.match(html,/mapHeading=onShip\?ship\.rotation\.y:yaw/);
 assert.match(html,/id="mapCoords"/);
 assert.match(html,/mapCoords\.textContent=coordinates/);
-assert.match(html,/mapRefreshInterval=document\.body\.classList\.contains\('map-open'\)\?\.42:\.20/);
+assert.match(html,/mapRefreshInterval=document\.body\.classList\.contains\('map-open'\)\?\.42:\.05/);
 
 // Ship camera follows the vessel with a wider default framing; camera mode selection is wired to gameplay.
 assert.match(html,/cameraMode='follow'/);

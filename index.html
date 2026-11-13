@@ -11513,11 +11513,24 @@ function updateHUD(){
   woodCount-=cost;stoneCount-=stoneCost;boatLevel=lv;boatMax+=lv===1?25:lv===2?20:30;boatHp=boatMax;applyBoatAppearance(boatLevel);document.getElementById('modalText').textContent='Mejora '+lv+'/3 instalada. Casco '+boatHp+'/'+boatMax+' · velocidad '+(12.5+boatLevel*1.15).toFixed(1)+' m/s · daño '+(42+boatLevel*12+companions.length*4)+'. Se han instalado piezas visibles en el drakkar.';updateHUD();recordSagaEvent('Drakkar mejorado: nivel '+lv+'/3. Casco '+boatHp+'/'+boatMax+'.');msg('¡Mejora naval '+lv+'/3 instalada!');saveGame(true);
  }));
  // Map widget.
+ // Smooth the heading with frame-time-based exponential interpolation. The shortest
+ // angular path avoids a full spin when yaw crosses the -PI/PI boundary.
+ let localMapHeading=null,localMapHeadingTime=0;
+ function smoothLocalMapHeading(target,now=performance.now()){
+  if(!Number.isFinite(target))return localMapHeading??0;
+  if(localMapHeading===null){localMapHeading=target;localMapHeadingTime=now;return localMapHeading;}
+  const elapsed=Math.max(0,Math.min(.12,(now-localMapHeadingTime)/1000));
+  localMapHeadingTime=now;
+  const delta=Math.atan2(Math.sin(target-localMapHeading),Math.cos(target-localMapHeading));
+  const blend=1-Math.exp(-elapsed/.075);
+  localMapHeading+=delta*blend;
+  return localMapHeading;
+ }
  function drawLocalMap(){
   // Local navigation view: centre remains on the player/ship, like a vehicle minimap.
   // The detailed world chart is reserved for the expanded map.
   mg.setTransform(1,0,0,1,0,0);mg.clearRect(0,0,map.width,map.height);mg.setTransform(2,0,0,2,0,0);
-  const w=480,h=344,plot={x:8,y:8,w:464,h:328},cx=240,cy=172,focus=playerPos(),heading=onShip?ship.rotation.y:yaw;
+  const w=480,h=344,plot={x:8,y:8,w:464,h:328},cx=240,cy=172,focus=playerPos(),heading=smoothLocalMapHeading(onShip?ship.rotation.y:yaw);
   const rangeX=145,scale=plot.w/rangeX,rangeZ=plot.h/scale,project=(x,z)=>[cx+(x-focus.x)*scale,cy+(z-focus.z)*scale];
   const sea=mg.createLinearGradient(0,0,w,h);sea.addColorStop(0,'#173c48');sea.addColorStop(.52,'#245765');sea.addColorStop(1,'#102b35');mg.fillStyle=sea;mg.fillRect(0,0,w,h);
   mg.save();mg.beginPath();mg.rect(plot.x,plot.y,plot.w,plot.h);mg.clip();mg.translate(cx,cy);mg.rotate(heading-Math.PI);mg.translate(-cx,-cy);
@@ -12704,7 +12717,7 @@ function update(dt){
   try{
    if(gameStarted){
     if(combatFreeze>0){combatFreeze=Math.max(0,combatFreeze-dt);update(0);}else update(dt);
-    mapClock+=dt;const mapRefreshInterval=document.body.classList.contains('map-open')?.42:.20;if(mapClock>=mapRefreshInterval){drawMap();mapClock=0;}
+    mapClock+=dt;const mapRefreshInterval=document.body.classList.contains('map-open')?.42:.05;if(mapClock>=mapRefreshInterval){drawMap();mapClock=0;}
     progressClock+=dt;if(progressClock>.55){progressClock=0;const panel=document.getElementById('progressPanel');if(panel&&panel.classList.contains('open'))updateProgressPanel();}
    }
   }catch(err){
