@@ -5,12 +5,24 @@ on:
     paths:
       - 'scripts/phase1-diagnostics-core.mjs'
       - 'scripts/test_phase1_diagnostics_core.mjs'
+      - 'scripts/test_phase1_live_contract.mjs'
+      - 'scripts/test_phase1_build_diagnostics.mjs'
+      - 'scripts/build_site.py'
+      - 'inspector/phase1-live.js'
+      - 'inspector/index.html'
+      - 'inspector/style.css'
       - '.github/workflows/phase1-diagnostic-core.yml'
   push:
     branches: ['phase1/diagnostic-foundation']
     paths:
       - 'scripts/phase1-diagnostics-core.mjs'
       - 'scripts/test_phase1_diagnostics_core.mjs'
+      - 'scripts/test_phase1_live_contract.mjs'
+      - 'scripts/test_phase1_build_diagnostics.mjs'
+      - 'scripts/build_site.py'
+      - 'inspector/phase1-live.js'
+      - 'inspector/index.html'
+      - 'inspector/style.css'
       - '.github/workflows/phase1-diagnostic-core.yml'
   workflow_dispatch:
 
@@ -35,5 +47,11 @@ jobs:
           node-version: 22
       - name: Check live inspector module syntax
         run: node --check inspector/phase1-live.js
-      - name: Run diagnostic core tests
+      - name: Test diagnostic core
         run: node scripts/test_phase1_diagnostics_core.mjs
+      - name: Test live Inspector contract
+        run: node scripts/test_phase1_live_contract.mjs
+      - name: Test build-time profiling guard
+        run: node scripts/test_phase1_build_diagnostics.mjs
+      - name: Validate build script syntax
+        run: python -m py_compile scripts/build_site.py
