@@ -32,6 +32,8 @@ Un contador inexistente o no disponible se representa como \`null\`, nunca como 
 - Los percentiles incoherentes generan advertencias de calidad de datos.
 - Tres intervalos válidos como mínimo para una clasificación probable de estabilidad.
 - Una sola sesión no puede producir un resultado confirmado. La confirmación requiere repetición y al menos dos sesiones independientes.
+- El informe añade gravedad y prioridad a las incidencias repetidas. La gravedad mide el impacto observado; no demuestra la causa raíz.
+- CPU, GPU y render se proponen como causas candidatas solo cuando sus propios contadores muestran tiempos elevados. La atribución sigue marcada como no confirmada.
 - Superar el presupuesto de frame time identifica una observación de rendimiento; no identifica por sí solo si la causa es CPU, GPU, memoria, temperatura o red.
 - La falta de temperatura, RAM total o VRAM se muestra como limitación, no como cero ni como fallo.
 
