@@ -13,6 +13,14 @@ assert.ok(serviceWorker.includes('"./scripts/nordic/navigation-suite.js"'),
   "The navigation suite must be part of the initial offline shell cache.");
 assert.ok(html.includes('id="quickActions"') && html.includes('id="map"'),
   "The navigation suite must mount into the original quick actions and retain the original map.");
+assert.ok(html.includes("function smoothLocalMapHeading(target,now=performance.now())"),
+  "The minimap heading must be smoothed using elapsed frame time.");
+assert.ok(html.includes("Math.atan2(Math.sin(target-localMapHeading),Math.cos(target-localMapHeading))"),
+  "Heading smoothing must interpolate across the shortest angular path at the yaw wrap boundary.");
+assert.ok(html.includes("const blend=1-Math.exp(-elapsed/.075)"),
+  "Heading smoothing must use frame-rate-independent exponential interpolation.");
+assert.ok(html.includes("mapClock+=dt;const mapRefreshInterval=document.body.classList.contains('map-open')?.42:.05"),
+  "The local minimap must refresh at 20 Hz while the expanded world map keeps its lower refresh rate.");
 assert.ok(html.includes("mg.translate(cx,cy);mg.rotate(heading-Math.PI);mg.translate(-cx,-cy);"),
   "The local minimap must rotate its world around a fixed player marker.");
 assert.ok(html.includes("mg.save();mg.translate(cx,cy);mg.shadowColor="),
