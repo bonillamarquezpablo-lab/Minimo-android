@@ -49,3 +49,6 @@ assert.ok(rs.includes("return 3;")&&rs.includes("Informe visual ANTES"),'Deep mu
 assert.ok(rs.includes("phaseLevel(name)>LEVEL_RANK[INSPECTOR_LEVEL]"),'The selected inspection level must skip higher-cost phases.');
 assert.ok(rs.includes("child.once('exit'"),'Inspector phases must settle on child exit rather than waiting for inherited stdio close.');
 console.log('Inspector workflow routing and baseline fallback contract: OK');
+
+assert.match(workflow,/Run optional read-only multimodal visual review[\\s\\S]*?LAB_AI_API_KEY/,'The optional visual review must use a repository secret.');
+assert.match(workflow,/artifacts\/ai-visual-review\//,'The AI visual report must be retained as an artifact.');
