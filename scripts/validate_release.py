@@ -677,6 +677,10 @@ def main() -> None:
         fail("Las salpicaduras deben utilizar el pool de partículas instanciadas.")
     if "const count=wet?(running?8:6):(running?6:4)" not in index_html or "particles[particleCursor++%maxParticles]" not in index_html:
         fail("La emisión de arena/agua debe mantener partículas reutilizables y visibles.")
+    if "const shoreRadius=shorelineFoamRadius(island,Math.atan2(dz,dx),oceanTime),shoreDistance=shoreRadius-d;" not in index_html or "Number.isFinite(shoreDistance)&&shoreDistance<1.45" not in index_html or "waterHeight(x,z,oceanTime)>groundY-.20" not in index_html:
+        fail("Las pisadas en la banda de contacto de la orilla deben volver a activar las salpicaduras antes de la inmersión completa.")
+    if "particle.r=wet?.83:.78;particle.g=wet?.91:.61;particle.b=wet?.95:.40;particle.a=wet?.92:.82;" not in index_html:
+        fail("Las partículas de agua deben conservar el acabado claro y visible de las salpicaduras originales.")
     if "lastStepX=x;lastStepZ=z;hasLastStepPosition=true" not in index_html or "stepX=lastStepX+segmentX*t,stepZ=lastStepZ+segmentZ*t" not in index_html:
         fail("Cada pisada debe interpolarse en su posición real a lo largo del desplazamiento, sin apilar varias huellas al final del fotograma.")
     if "segmentLength>Math.max(4,distance*2+1)" not in index_html or "hasLastStepPosition=false" not in index_html:
