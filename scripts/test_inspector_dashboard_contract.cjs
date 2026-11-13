@@ -42,7 +42,7 @@ assert.ok(app.includes("runningGuide.title")&&app.includes("runningGuide.detail"
 assert.ok(app.includes("v!==null&&v!==undefined&&v!==''")&&app.includes("raw===null||raw===undefined||raw===''"),'Missing telemetry values must remain unavailable, never be plotted as zero.');
 assert.ok(app.includes("activeRun?.status==='in_progress'&&done===0"),'An active run with no completed phases must use indeterminate progress, not a misleading percentage.');
 assert.ok(app.includes("step.conclusion==='failure'||step.conclusion==='cancelled'"),'Cancelled GitHub steps must not be rendered as successful.');
-assert.ok(app.includes('Esperando datos reales'),'Missing job data must be explained without inventing progress.');
+assert.ok(app.includes('GitHub aún no ha publicado el detalle de sus pasos')&&app.includes('No hay pasos disponibles para esta ejecución'),'Missing job data must be explained without inventing progress.');
 assert.ok(css.includes('.progress-track span.indeterminate'),'The dashboard needs a visible indeterminate progress animation.');
 assert.ok(html.includes('id="activeRunsList"')&&html.includes('id="activeRunCount"')&&html.includes('id="overviewRunning"')&&html.includes('id="overviewQueued"'),'The dashboard must show all active runs and separate running from queued counts.');
 assert.ok(app.includes('function renderActiveRuns()')&&app.includes('function selectActiveRun(id)'),'Every active execution must be visible and selectable from the dashboard.');
