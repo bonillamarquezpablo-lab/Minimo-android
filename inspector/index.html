@@ -46,7 +46,7 @@
 
     <section class="section" id="control">
       <div class="section-heading">
-        <div><div class="section-kicker">01 · OPERACIONES</div><h2>Control de inspecciones</h2><p>Consulta todas las pruebas activas o inicia una nueva revisión.</p></div>
+        <div><div class="section-kicker">01 · OPERACIONES</div><h2>Auditoría bajo demanda</h2><p>Esta herramienta es opcional: úsala para comparar oleaje, estructuras, texturas o iluminación cuando un cambio lo justifique. No se ejecuta con cada compilación.</p></div>
         <span class="section-index">RUN CONTROL</span>
       </div>
       <article class="panel active-runs-panel" aria-labelledby="activeRunsTitle">
@@ -60,18 +60,18 @@
       </article>
       <div class="control-grid">
         <article class="panel launch-panel">
-          <div class="panel-title"><h3>Iniciar una inspección</h3><span class="step-label">Nueva ejecución</span></div>
+          <div class="panel-title"><h3>Iniciar una auditoría (opcional)</h3><span class="step-label">Solo cuando la necesites</span></div>
           <div class="levels" role="group" aria-label="Nivel de inspección">
-            <button class="level" type="button" data-level="quick" aria-pressed="false"><strong>Rápido</strong><small>¿Solo quieres comprobar que arranca?</small></button>
+            <button class="level" type="button" data-level="quick" aria-pressed="true"><strong>Rápido</strong><small>¿Solo quieres comprobar que arranca?</small></button>
             <button class="level" type="button" data-level="complete" aria-pressed="false"><strong>Completo</strong><small>Revisión general del mundo y sus objetos</small></button>
-            <button class="level" type="button" data-level="deep" aria-pressed="true"><strong>Profundo</strong><small>Revisión completa + gráficas y 4 horarios</small></button>
+            <button class="level" type="button" data-level="deep" aria-pressed="false"><strong>Profundo</strong><small>Revisión completa + gráficas y 4 horarios</small></button>
           </div>
           <div class="field-row">
             <div class="field"><label for="targetBranch">Rama que se inspecciona</label><input id="targetBranch" value="main" autocomplete="off" spellcheck="false"></div>
             <div class="field"><label for="beforeRef">Referencia ANTES · opcional</label><input id="beforeRef" placeholder="Automática: versión anterior" autocomplete="off" spellcheck="false"></div>
           </div>
-          <div class="launch-actions"><button class="primary" id="launchButton" type="button">Iniciar inspección <span aria-hidden="true">↗</span></button><button class="token-gear" id="tokenSettingsButton" type="button" aria-label="Ajustes avanzados de conexión" aria-controls="tokenDetails" aria-expanded="false" title="Ajustes avanzados">⚙</button></div>
-          <p class="inline-state" id="launchMessage" role="status" aria-live="polite">Nivel elegido: <strong id="selectedLevel">Profundo</strong>. Sin token, se abrirá GitHub para confirmar el inicio.</p>
+          <div class="launch-actions"><button class="primary" id="launchButton" type="button">Ejecutar auditoría <span aria-hidden="true">↗</span></button><button class="token-gear" id="tokenSettingsButton" type="button" aria-label="Ajustes avanzados de conexión" aria-controls="tokenDetails" aria-expanded="false" title="Ajustes avanzados">⚙</button></div>
+          <p class="inline-state" id="launchMessage" role="status" aria-live="polite">Nivel elegido: <strong id="selectedLevel">Rápido</strong>. No se iniciará nada hasta que confirmes la ejecución en GitHub.</p>
 
           <details class="token-box" id="tokenDetails">
             <summary>Conexión directa · opcional</summary>
