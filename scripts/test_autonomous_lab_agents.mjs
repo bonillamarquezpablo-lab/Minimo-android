@@ -15,20 +15,24 @@ const report = analyzeEvidence({
     phases: [
       { name: 'Arranque', script: 'startup.mjs', status: 'passed', durationMs: 1000 },
       { name: 'Costas', script: 'coastal.mjs', status: 'failed', error: 'capture timeout' },
-      { name: 'Comparación Hrafn', script: 'hrafn.mjs', status: 'skipped' }
+      { name: 'Comparación Hrafn', script: 'hrafn.mjs', status: 'skipped' },
+      { name: 'Fase nueva', script: 'new-phase.mjs', status: 'not-run' }
     ]
   },
   player: { finalState: { modelReady: true } },
   texture: { readiness: { pendingTextures: ['missing-a.png'] } },
   grounding: { verdict: 'misaligned', summary: { errors: 1 } },
   custom: { captures: [{ id: 'shot-1' }], structures: [{ id: 'hut-1' }] },
-  beforeAfter: { builds: { before: { performance: { averageFps: 60 } }, after: { performance: { averageFps: 52 } } } },
+  beforeAfter: { builds: { before: { performance: { averageFps: 60 } }, after: { performance: { averageFps: 52, frameTimeP95Ms: 19.5 } } } },
   files: []
 });
 
 assert.equal(report.summary.passed, 1);
 assert.equal(report.summary.failed, 1);
 assert.equal(report.summary.skipped, 1);
+assert.equal(report.summary.unknown, 1);
+assert.equal(report.agents.find(agent => agent.id === 'npc-validation').status, 'incomplete-evidence');
+assert.ok(report.agents.find(agent => agent.id === 'npc-performance').findings.some(finding => finding.metric === 'frameTimeP95' && finding.value === 19.5));
 assert.ok(report.tasks.some(task => task.id === 'investigate-coastal-mjs'));
 assert.ok(report.tasks.some(task => task.id === 'investigate-fps-regression'));
 assert.ok(report.tasks.some(task => task.id === 'inspect-world-grounding'));
