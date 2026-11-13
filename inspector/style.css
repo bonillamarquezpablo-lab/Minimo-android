@@ -483,3 +483,16 @@ h1{font-size:clamp(27px,3.4vw,42px);line-height:1.02;margin:7px 0 6px;letter-spa
 @media(prefers-reduced-motion:reduce){
  .live-indicator i,.active-run-track.is-running i,.progress-track.indeterminate span{animation:none}
 }
+
+/* Phase 1 · live diagnostic session */
+.live-diagnostic-card{display:grid;gap:16px}
+.live-diagnostic-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#liveDiagnosticStatus{color:var(--muted,#9aa8b8);font-size:.88rem}
+.live-game-frame-wrap{width:100%;overflow:hidden;border:1px solid var(--line,rgba(255,255,255,.12));border-radius:14px;background:#05080d}
+#liveGameFrame{display:block;width:100%;height:min(76vh,760px);min-height:480px;border:0;background:#05080d}
+.live-diagnostic-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.live-diagnostic-grid>div{padding:14px;border:1px solid var(--line,rgba(255,255,255,.12));border-radius:12px;background:rgba(255,255,255,.025);display:grid;gap:7px}
+.live-diagnostic-grid span{font-size:.78rem;color:var(--muted,#9aa8b8)}
+.live-diagnostic-grid strong{font-size:1.35rem;font-variant-numeric:tabular-nums}
+.live-diagnostic-note{font-size:.84rem;line-height:1.5;color:var(--muted,#9aa8b8)}
+@media(max-width:650px){.live-diagnostic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#liveGameFrame{min-height:420px}}
