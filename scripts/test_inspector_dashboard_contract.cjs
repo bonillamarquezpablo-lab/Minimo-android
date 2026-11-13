@@ -14,25 +14,28 @@ for(const id of new Set(referencedIds))assert.ok(html.includes('id=\"'+id+'\"'),
 for(const marker of [
  'Rápido','Completo','Profundo','id="launchButton"','id="githubToken"',
  'id="compareRange"','id="differenceToggle"','id="radarSvg"','id="telemetryGrid"',
- 'id="technicalJson"','id="guideStart"','id="guideFab"','id="guidePanel"','id="guideStepTitle"','id="guideNext"','id="guidePrev"','id="guideClose"','id="guideFinish"','id="performanceChart"','id="memoryChart"','id="performanceSummary"','id="memorySummary"','style.css','app.js'
+ 'id="technicalJson"','id="guideStart"','id="guideFab"','id="guidePanel"','id="guideStepTitle"','id="guideNext"','id="guidePrev"','id="guideClose"','id="guideFinish"','id="runPhaseStatus"','id="evidenceGrid"','id="evidenceStatus"','id="startInGithub"','id="performanceChart"','id="memoryChart"','id="performanceSummary"','id="memorySummary"','style.css','app.js'
 ])assert.ok(html.includes(marker),'Missing Inspector Center UI element: '+marker);
 for(const marker of [
  "actions/workflows/'+WORKFLOW+'/dispatches","workflow_dispatch","sessionStorage.setItem",
- "inspector-status","clipPath","differenceImage","medianFps","medianWorldUpdateCpuMs",
+ "inspector-status","clipPath","differenceImage","medianFps","medianWorldUpdateCpuMs","GITHUB_WORKFLOW","openGithubWorkflow","startInGithub","renderEvidence","evidenceGrid","safeEvidenceUrl","phaseGuide",
  "renderRadar","custom?.structures","bottomAboveTerrainMeters","habitableStructures",
  "Amanecer","Mediodía","Atardecer","Noche","renderPerformanceGraph","renderMemoryGraph","heapUsedMB","/39 estructuras detectadas"
 ])assert.ok(app.includes(marker),'Missing Inspector Center application feature: '+marker);
 assert.ok(!app.includes('localStorage'),'The dashboard must not persist GitHub tokens in localStorage.');
 assert.ok(app.includes('Authorization:\'Bearer \'+currentToken'),'The token must be sent only in the direct GitHub API request.');
-assert.ok(app.includes("$('runArtifactsLink').href=run.html_url?")&&app.includes("run.html_url+'#artifacts'"),'The evidence link must open the active run artifacts.');
+assert.ok(app.includes("$('runArtifactsLink').href=run.html_url?")&&app.includes("run.html_url+'#artifacts'"),'The full evidence archive must remain reachable.');
+assert.ok(app.includes("if(!currentToken){openGithubWorkflow();return;}")&&app.includes("window.open(GITHUB_WORKFLOW"),'A no-token user must be able to start from GitHub without creating a personal access token.');
+assert.ok(app.includes("$('evidenceGrid').innerHTML=cards")&&app.includes('previews[phase.id]'),'The run card must render available before/after previews inline.');
 assert.ok(app.includes("const jobsInterval=run.status==='in_progress'?12000:30000"),'Active runs must refresh real GitHub job steps every 12 seconds.');
-assert.ok(app.includes("$('progressValue').textContent=indeterminate?'En curso':percent+'%'"),'A single long-running step must not be displayed as a misleading 0%.');
+assert.ok(app.includes("$('progressValue').textContent=indeterminate?'↻':percent+'%'"),'The progress ring must use a compact activity symbol, not a long status phrase.');
+assert.ok(app.includes("runningGuide.title")&&app.includes("runningGuide.detail")&&app.includes('Tiempo en esta fase'),'The status panel must explain the active phase and elapsed time.');
 assert.ok(app.includes("v!==null&&v!==undefined&&v!==''")&&app.includes("raw===null||raw===undefined||raw===''"),'Missing telemetry values must remain unavailable, never be plotted as zero.');
 assert.ok(app.includes("running.name==='Run the single unified inspector'"),'The monolithic inspector phase must use indeterminate progress, not a misleading percentage.');
 assert.ok(app.includes("step.conclusion==='failure'||step.conclusion==='cancelled'"),'Cancelled GitHub steps must not be rendered as successful.');
 assert.ok(app.includes('Esperando datos verificables'),'Missing job data must be explained without inventing progress.');
 assert.ok(css.includes('.progress-track span.indeterminate'),'The dashboard needs a visible indeterminate progress animation.');
-for(const marker of ['@media(max-width:720px)','guide-panel','guide-focus','guide-fab','phase-placeholder','compare-stage','radar-map','metric-card','chart-card','chart-target','chart-help','prefers-reduced-motion'])assert.ok(css.includes(marker),'Missing responsive visual system: '+marker);
+for(const marker of ['@media(max-width:720px)','evidence-inline','evidence-pair','progress-ring strong.is-spinning','guide-panel','guide-focus','guide-fab','phase-placeholder','compare-stage','radar-map','metric-card','chart-card','chart-target','chart-help','prefers-reduced-motion'])assert.ok(css.includes(marker),'Missing responsive visual system: '+marker);
 assert.ok(runner.includes('publishComparisonPreviews'),'Unified inspector must publish web-readable A/B previews.');
 assert.ok(runner.includes('m.islands||[]'),'The 13-island inventory must be included in the published run manifest.');
 assert.ok(runner.includes('m.habitableStructures||[]'),'The radar needs measured structure grounding details.');
@@ -48,4 +51,4 @@ assert.ok((app.match(/target:'#(?:overview|control|telemetria|radar|comparativa)
 assert.ok(app.includes("activeRun?.status==='in_progress'?'La prueba aún está trabajando."),'Empty performance charts must explain that the inspection is still running.');
 assert.ok(app.includes("activeRun?.status==='in_progress'?'Las imágenes aún se están preparando."),'An empty comparison must distinguish waiting from a failed/missing result.');
 assert.ok(app.includes("activeRun?.status==='in_progress'?'El inspector aún no ha llegado al inventario del mundo."),'The radar must explain when its data is still being collected.');
-console.log('Inspector Center guided-tour, plain-language states, visual dashboard, secure launch and evidence contracts: OK');
+console.log('Inspector Center guided-tour, no-token launch, live phase status, embedded evidence and dashboard contracts: OK');
