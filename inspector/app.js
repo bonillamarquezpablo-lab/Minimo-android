@@ -545,7 +545,6 @@
     $('guideFab').hidden=false;
     document.body.classList.remove('guide-open');
   }
-  $('guideStart').addEventListener('click',openGuide);
   $('guideFab').addEventListener('click',openGuide);
   $('guideClose').addEventListener('click',closeGuide);
   $('guideFinish').addEventListener('click',closeGuide);
