@@ -56,8 +56,11 @@ assert.match(html,/for\(const foam of tidalFoamMeshes\)/);
 const animateStart=html.indexOf("function animateWater(dt)");
 const animateEnd=html.indexOf("function rand(a,b)",animateStart);
 const animateBody=html.slice(animateStart,animateEnd);
-assert.match(animateBody,/foamDue=tidalFoamAccumulator>=TIDAL_FOAM_UPDATE_STEP/);
-assert.match(animateBody,/const foamElapsed=foamDue\?tidalFoamAccumulator:0/);
+assert.match(animateBody,/foamDue=!tidalFoamWorkPending&&tidalFoamAccumulator>=TIDAL_FOAM_UPDATE_STEP/);
+assert.match(animateBody,/const foamWorkDue=tidalFoamWorkPending,foamElapsed=foamWorkDue\?tidalFoamWorkElapsed:0/);
+assert.match(animateBody,/foam._norseUpdateColumn/);
+assert.match(animateBody,/performance\.now\(\)-foamWorkStarted>=TIDAL_FOAM_WORK_SLICE_MS/);
+assert.match(animateBody,/if\(foamWorkComplete\)\{tidalFoamWorkPending=false;tidalFoamWorkElapsed=0;\}/);
 assert.match(animateBody,/const terrainY=sampleTidalFoamTerrainProfile\(foam,col,radius\)\+terrainDeformationAt\(index,x,z\),water=Math\.min\(waterCap,shoreWater\+waterSlope\*radial\)/,"Animated breaker vertices must reuse precomputed terrain, not recalculate the full island heightfield.");
 assert.match(animateBody,/const terrainY=sampleRadialProfile\(waveBodyOffsets,waveBodyTerrainSamples,profileOffset\),water=sampleRadialProfile\(waveBodyOffsets,waveBodyWaterSamples,profileOffset\)/,"Foam and wash must reuse the sampled radial terrain/water profile instead of resampling the heightfield for every vertex.");
 assert.match(animateBody,/const dryFoamResidue=terrainY<=\(Number\(ground\.position\.y\)\|\|0\)\+\.42/,"Dry foam residue must compare the numeric terrain height against sea level.");
@@ -72,14 +75,15 @@ assert.match(animateBody,/const foamWaterDepth=water-terrainY/,"Foam water depth
 assert.match(animateBody,/if\(detailDue\)refreshWaterDetailRegion\(\)/);
 assert.match(animateBody,/Math\.exp\(-foamElapsed\/3\.4\)/);
 assert.doesNotMatch(animateBody,/Math\.exp\(-dt\/3\.4\)/);
-assert.match(animateBody,/if\(!farDue&&!detailDue&&!foamDue\)return;[\s\S]*?if\(foamDue\)\{[\s\S]*?for\(const foam of tidalFoamMeshes\)/);
+assert.match(animateBody,/if\(!farDue&&!detailDue&&!foamWorkDue\)return;[\s\S]*?if\(foamWorkDue\)\{[\s\S]*?for\(const foam of tidalFoamMeshes\)/);
 assert.match(html,/BEACH_WORK_BUDGET_MS=isTouchDevice\?1\.5:2\.0/);
 assert.match(html,/BEACH_CELL_BUDGET_MS=BEACH_WORK_BUDGET_MS\*\.68/);
 assert.match(html,/TIDAL_FOAM_UPDATE_STEP=isTouchDevice\?\(isPerformanceMode\?1\/18:1\/15\):1\/30/);
 assert.match(html,/for\(let step=0;step<5;step\+\+\)/);
 assert.match(html,/const span=hi-lo,secant=lo\+span\*loDelta\/\(loDelta-hiDelta\),guard=span\*\.04/);
 assert.doesNotMatch(html,/performance\.now\(\)-sliceStarted<2\.65|performance\.now\(\)-sliceStarted<3\.55/);
-assert.match(html,/requestAnimationFrame\(processBeachWorkChunk\)/);
+assert.match(html,/function scheduleBeachWorkChunk\(\)\{if\(beachWorkScheduled\|\|!beachWorkLayer\)return;beachWorkScheduled=true;\}/);
+assert.match(html,/if\(beachWorkScheduled\)processBeachWorkChunk\(\)/);
 assert.match(html,/startupTimeline:getStartupTimelineSnapshot\(\)/);
 assert.match(html,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/);
 
@@ -206,3 +210,9 @@ assert.match(html,/grassMesh\.setEnabled\(!staging\)/,"New grass batches must st
 assert.match(html,/grassBuildSliceBudgetMs=staging\?\(isTouchDevice\?3\.5:6\)/,"Runtime grass generation must yield in short frame slices.");
 assert.match(html,/const leavesPerClump=isPerformanceMode\?8:10/,"Quality grass blade detail must be preserved while island streaming changes.");
 console.log('OK: separate seabed, translucent moving water film, white foam, wet sand and detailed multi-scale ocean surface.');
+
+assert.match(html,/function footstepShorelineRadius\(island,angle,t=oceanTime\)/,"Footstep splashes must use the legacy uncapped ocean-line solver independently of the rendered foam solver.");
+assert.match(html,/return ground-waterHeight\(x,z,t\)/,"Footstep contact must intersect the actual wave height, not the shoreline visual cap.");
+assert.match(html,/for\(let step=0;step<13;step\+\+\)/,"The footstep contact solver must preserve the robust 13-step bisection.");
+assert.match(html,/waterParticlesEmitted\+=count/,"Runtime metrics must count actual water particle emissions.");
+assert.match(html,/TIDAL_FOAM_WORK_SLICE_MS=isTouchDevice\?1\.35:2\.0/,"The existing full-resolution coast must use a bounded per-frame work slice.");
