@@ -389,3 +389,12 @@ h1{font-size:clamp(27px,3.4vw,42px);line-height:1.02;margin:7px 0 6px;letter-spa
   .evidence-inline{gap:7px}
   .evidence-card{padding:7px}
 }
+
+/* Help lives in the header; guide follows the reading order from top to bottom. */
+.topbar-actions{display:flex;align-items:center;gap:9px;flex:none}
+.guide-fab{position:relative;right:auto;bottom:auto;z-index:22;display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid #45698e;border-radius:999px;background:#162b43;color:#eaf4ff;box-shadow:none;font-size:11px;font-weight:850;cursor:pointer}
+.guide-fab:hover{border-color:var(--cyan);background:#1b3652}
+.guide-fab[hidden]{display:none}
+.hero{grid-template-columns:1fr}
+@media(max-width:1000px){.topbar-actions{gap:7px}.guide-fab span{display:none}}
+@media(max-width:720px){.topbar{gap:8px}.brand{min-width:0;flex:1}.topbar-actions{gap:6px}.guide-fab{width:34px;height:34px;justify-content:center;padding:0;font-size:15px}}

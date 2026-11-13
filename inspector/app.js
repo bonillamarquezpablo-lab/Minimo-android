@@ -497,13 +497,12 @@
 
 
   const GUIDE_STEPS=[
-    {target:'#overview',title:'1. El resumen: ¿cómo está el juego?',text:'Aquí ves la última inspección, su estado y cuántas islas y estructuras ha encontrado. “En curso” significa que la prueba sigue trabajando; no es un resultado malo.'},
-    {target:'#control .levels',title:'2. Elige qué quieres comprobar',text:'Rápido: comprueba el arranque. Completo: revisa mundo, estructuras, agua y vegetación. Profundo: añade la comparación visual y las cuatro horas del día. Para una revisión general, usa Profundo.'},
-    {target:'#control .launch-panel',title:'3. Inicia la inspección',text:'Pulsa “Iniciar inspección”. Sin token se abrirá GitHub: elige la rama main, selecciona el mismo nivel y pulsa “Run workflow”. No necesitas crear ni pegar ningún código. La conexión directa es opcional.'},
-    {target:'.run-panel',title:'4. Mira cómo avanza',text:'Aquí verás qué está comprobando ahora, cuánto lleva y qué fases terminaron o necesitan revisión. Las imágenes aparecerán aquí mismo al publicarse. “Todos los archivos” abre el expediente completo.'},
-    {target:'#telemetria',title:'5. Entiende las gráficas',text:'FPS: más alto es mejor; el objetivo es 60. Frame time: más bajo es mejor; 16,6 ms equivale a 60 FPS. La memoria mide solo el heap JavaScript de Chromium, no toda la RAM ni la GPU. Un guion (—) significa “sin dato”, nunca cero.'},
-    {target:'#radar',title:'6. Revisa las islas',text:'Toca una isla para ver sus datos y después toca un punto para ver una estructura. Verde: apoyo dentro de 2 cm. Rojo: desnivel mayor de 2 cm. Gris: todavía no se ha medido. El objetivo del inventario es 13 islas y 39 estructuras.'},
-    {target:'#comparativa',title:'7. Compara antes y después',text:'Elige amanecer, mediodía, atardecer o noche. Cuando haya capturas, mueve la barra para revelar la versión DESPUÉS y activa el mapa de diferencias para localizar cambios. Si ves “Pendiente”, la inspección aún no ha publicado esa imagen.'}
+    {target:'#overview',title:'1. Resumen',text:'Esta es la portada. Aquí ves qué inspección hay, si sigue trabajando y cuántas islas y edificios se han encontrado.'},
+    {target:'#telemetria',title:'2. Rendimiento',text:'Mira los indicadores: FPS más alto es mejor; tiempo por fotograma más bajo es mejor. Las gráficas muestran lo que midió la prueba, no una cifra inventada.'},
+    {target:'#radar',title:'3. Mapa de las islas',text:'Cada isla se coloca con coordenadas del juego. Toca una isla y después un punto para ver sus objetos. Verde: apoyo correcto; rojo: desnivel; gris: pendiente o sin clasificar.'},
+    {target:'#comparativa',title:'4. Comparar versiones',text:'Elige amanecer, mediodía, atardecer o noche. Cuando haya capturas, desliza la barra para descubrir qué cambió entre ANTES y DESPUÉS.'},
+    {target:'#control .launch-panel',title:'5. Iniciar una inspección',text:'Elige Rápido, Completo o Profundo y pulsa Iniciar inspección. Sin conexión directa, se abrirá GitHub para que confirmes Run workflow. El engranaje guarda los ajustes avanzados.'},
+    {target:'.run-panel',title:'6. Seguir la inspección',text:'Aquí ves qué está comprobando, cuánto tiempo lleva y las capturas que ya están disponibles.'}
   ];
   let guideIndex=0,guideActive=false,guideHighlighted=null;
   function clearGuideHighlight(){
@@ -525,7 +524,10 @@
       guideHighlighted=target;
       target.classList.add('guide-focus');
       if(step.target==='#tokenDetails'&&!currentToken)$('tokenDetails').open=true;
-      target.scrollIntoView({behavior:'smooth',block:'center'});
+      const stickyHeader=document.querySelector('.topbar');
+      const offset=(stickyHeader?.getBoundingClientRect().height||0)+18;
+      const targetTop=target.getBoundingClientRect().top+window.scrollY-offset;
+      window.scrollTo({top:Math.max(0,targetTop),behavior:'smooth'});
     }
   }
   function openGuide(){
@@ -542,7 +544,6 @@
     $('guideFab').hidden=false;
     document.body.classList.remove('guide-open');
   }
-  $('guideStart').addEventListener('click',openGuide);
   $('guideFab').addEventListener('click',openGuide);
   $('guideClose').addEventListener('click',closeGuide);
   $('guideFinish').addEventListener('click',closeGuide);

@@ -14,7 +14,7 @@ for(const id of new Set(referencedIds))assert.ok(html.includes('id=\"'+id+'\"'),
 for(const marker of [
  'Rápido','Completo','Profundo','id="launchButton"','id="githubToken"',
  'id="compareRange"','id="differenceToggle"','id="radarSvg"','id="telemetryGrid"',
- 'id="technicalJson"','id="guideStart"','id="guideFab"','id="guidePanel"','id="guideStepTitle"','id="guideNext"','id="guidePrev"','id="guideClose"','id="guideFinish"','id="runPhaseStatus"','id="evidenceGrid"','id="evidenceStatus"','id="startInGithub"','id="performanceChart"','id="memoryChart"','id="performanceSummary"','id="memorySummary"','style.css','app.js'
+ 'id="technicalJson"','id="guideFab"','id="guidePanel"','id="guideStepTitle"','id="guideNext"','id="guidePrev"','id="guideClose"','id="guideFinish"','id="runPhaseStatus"','id="evidenceGrid"','id="evidenceStatus"','id="startInGithub"','id="performanceChart"','id="memoryChart"','id="performanceSummary"','id="memorySummary"','style.css','app.js'
 ])assert.ok(html.includes(marker),'Missing Inspector Center UI element: '+marker);
 for(const marker of [
  "actions/workflows/'+WORKFLOW+'/dispatches","workflow_dispatch","sessionStorage.setItem",
@@ -47,7 +47,7 @@ assert.ok(sampler.includes('heapUsedMB')&&sampler.includes('heapInitialMB')&&sam
 assert.ok(sampler.includes('__ELSN_INSPECTOR_HEAP_TRACE')&&sampler.includes('setInterval(capture, 250)'),'The heap chart must sample the entry transition as well as the stable play window.');
 assert.ok(sampler.includes('performance.memory'),'Heap memory must be measured only through Chromium performance.memory.');
 assert.ok(sampler.includes("value!==null&&value!==undefined&&value!==''"),'Missing heap samples must not be converted to zero.');
-assert.ok((app.match(/target:'#(?:overview|control|telemetria|radar|comparativa)|target:'.run-panel|target:'.tokenDetails'/g)||[]).length>=7,'The guided tour must explain every major Inspector section.');
+const guideStart=app.indexOf('  const GUIDE_STEPS=['),guideEnd=app.indexOf('\n  ];',guideStart);\nconst guideTargets=[...app.slice(guideStart,guideEnd).matchAll(/target:'([^']+)'/g)].map(match=>match[1]);\nassert.deepEqual(guideTargets,['#overview','#telemetria','#radar','#comparativa','#control .launch-panel','.run-panel'],'The guide must follow the visible page from top to bottom.');\nassert.ok(html.includes('<header class="topbar">')&&html.indexOf('id="guideFab"')<html.indexOf('</header>'),'Help must be opened from the top header.');\nassert.ok(!html.includes('id="guideStart"')&&!app.includes("$('guideStart').addEventListener"),'The page must not show a guide launch card.');
 assert.ok(app.includes("activeRun?.status==='in_progress'?'La prueba aún está trabajando."),'Empty performance charts must explain that the inspection is still running.');
 assert.ok(app.includes("activeRun?.status==='in_progress'?'Las imágenes aún se están preparando."),'An empty comparison must distinguish waiting from a failed/missing result.');
 assert.ok(app.includes("activeRun?.status==='in_progress'?'El inspector aún no ha llegado al inventario del mundo."),'The radar must explain when its data is still being collected.');
