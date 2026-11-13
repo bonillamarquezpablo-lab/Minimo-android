@@ -57,7 +57,7 @@ export function analyzeEvidence(evidence = {}) {
   const beforePerformance = beforeAfter?.builds?.before?.performance || null;
   const afterFps = getNumberDeep(afterPerformance, ['averagefps', 'avgfps', 'medianfps', 'fps']);
   const beforeFps = getNumberDeep(beforePerformance, ['averagefps', 'avgfps', 'medianfps', 'fps']);
-  const afterP95 = getNumberDeep(afterPerformance, ['p95frametime', 'frametimep95ms', 'p95ms', 'framep95ms']);
+  const afterP95 = getNumberDeep(afterPerformance, ['p95frametime', 'p95frametimems', 'frametimep95ms', 'p95ms', 'framep95ms']);
   const pendingTextures = countArray(texture?.readiness?.pendingTextures)
     ?? countArray(custom?.readiness?.pendingTextures);
   const captures = countArray(custom?.captures);
