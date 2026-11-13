@@ -27,7 +27,7 @@ for(const marker of [
  "actions/workflows/'+WORKFLOW+'/dispatches","workflow_dispatch","sessionStorage.setItem",
  "inspector-status","clipPath","differenceImage","medianFps","medianWorldUpdateCpuMs","GITHUB_WORKFLOW","openGithubWorkflow","renderEvidence","evidenceGrid","safeEvidenceUrl","phaseGuide",
  "renderRadar","custom?.structures","bottomAboveTerrainMeters","habitableStructures",
- "Amanecer","Mediodía","Atardecer","Noche","renderPerformanceGraph","renderMemoryGraph","heapUsedMB","/39 estructuras detectadas"
+ "Amanecer","Mediodía","Atardecer","Noche","renderPerformanceGraph","renderMemoryGraph","heapUsedMB","structures.length+' edificios · '+candidates.length+' candidatos'"
 ])assert.ok(app.includes(marker),'Missing Inspector Center application feature: '+marker);
 assert.ok(!app.includes('localStorage'),'The dashboard must not persist GitHub tokens in localStorage.');
 assert.ok(app.includes('Authorization:\'Bearer \'+currentToken'),'The token must be sent only in the direct GitHub API request.');
