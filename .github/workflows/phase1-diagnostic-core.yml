@@ -33,5 +33,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Check live inspector module syntax
+        run: node --check inspector/phase1-live.js
       - name: Run diagnostic core tests
         run: node scripts/test_phase1_diagnostics_core.mjs
