@@ -3945,8 +3945,10 @@ void main(void){
   const particles=Array.from({length:maxParticles},(_,slot)=>({slot,life:0,maxLife:1,age:0,x:0,y:-1000,z:0,vx:0,vy:0,vz:0,size:.02,groundY:0,wet:false,r:.7,g:.6,b:.45,a:.8}));
 // One thin-instance batch replaces the per-footstep Sphere mesh create/dispose loop.
   const grainMaterial=new B.StandardMaterial('GroundSplashParticleMaterial',scene);
-  grainMaterial.diffuseTexture=texCoastalSand;grainMaterial.diffuseColor=new B.Color3(1,1,1);
-  grainMaterial.specularColor=new B.Color3(.22,.24,.22);grainMaterial.specularPower=26;
+  // The same thin-instance pool carries dry grains and wet droplets. Keep the pool untextured so
+  // the wet per-instance ice-blue colour is not multiplied by the brown sand albedo.
+  grainMaterial.diffuseTexture=null;grainMaterial.diffuseColor=new B.Color3(1,1,1);
+  grainMaterial.emissiveColor=new B.Color3(.035,.055,.075);grainMaterial.specularColor=new B.Color3(.62,.78,.88);grainMaterial.specularPower=38;
   grainMaterial.useVertexColors=true;grainMaterial.useVertexAlpha=true;grainMaterial.alpha=1;grainMaterial.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
   const grainMesh=B.MeshBuilder.CreateSphere('GroundSplashParticleBatch',{diameter:1,segments:6},scene);
   const grainMatrices=new Float32Array(maxParticles*16),grainColors=new Float32Array(maxParticles*4);
@@ -4042,9 +4044,9 @@ void main(void){
     const particle=particles[particleCursor++%maxParticles],angle=heading+Math.PI+rand(-1.15,1.15),speed=rand(wet?.22:.14,wet?.82:(running?.72:.46)),distance=rand(.055,.16);
     particle.x=x+Math.sin(angle)*distance;particle.z=z+Math.cos(angle)*distance;particle.y=surfaceY+(wet?.035:.045);
     particle.groundY=surfaceY;particle.vx=Math.sin(angle)*speed;particle.vz=Math.cos(angle)*speed;
-    particle.vy=wet?rand(.82,1.58):rand(.42,running?.98:.72);
-    particle.life=particle.maxLife=wet?rand(.40,.68):rand(.32,.56);particle.age=0;particle.size=wet?rand(.030,.054):rand(.018,.036);particle.wet=wet;
-    particle.r=wet?.83:.78;particle.g=wet?.91:.61;particle.b=wet?.95:.40;particle.a=wet?.92:.82;
+    particle.vy=wet?rand(1.15,1.95):rand(.42,running?.98:.72);
+    particle.life=particle.maxLife=wet?rand(.55,.82):rand(.32,.56);particle.age=0;particle.size=wet?rand(.068,.104):rand(.018,.036);particle.wet=wet;
+    particle.r=wet?.72:.78;particle.g=wet?.94:.61;particle.b=wet?1:.40;particle.a=wet?.98:.82;
    }
   }
   function footstepShorelineRadius(island,angle,t=oceanTime){
@@ -4084,7 +4086,7 @@ void main(void){
    const waterCovered=coastalWaterHeight(x,z,oceanTime)>groundY+.035;
    if(beach){beachSteps++;if(ratio>.975)footstepsWaterSide++;if(!Number.isFinite(shoreRadius))shorelineSolveMisses++;}
    // Evaluate the full beach-to-shallow-water profile; only stamp the solid island surface.
-   const wet=beach&&((Number.isFinite(shoreRadius)&&shoreDistance<1.45)||waterHeight(x,z,oceanTime)>groundY-.20||wetness>.08||waterCovered);
+   const wet=beach&&((Number.isFinite(shoreRadius)&&shoreDistance<2.6)||waterHeight(x,z,oceanTime)>groundY-.48||wetness>.035||waterCovered);
    if(wet)wetSteps++;
    if(ratio<=.975){pressGround(x,z,islandIndex,wet,beach,heading);makeFootprint(islandIndex,x,z,heading,wet,beach,running,waterCovered);}
    kickSandGrains(x,z,heading,wet,running,groundY);
@@ -7028,6 +7030,10 @@ function createWaterShoreDebugPanel(){
   metrics.textContent+='\\nCPU agua: malla '+fmt(waterLastUpdateMs,2)+' ms · normales '+fmt(waterLastNormalMs,2)+' · espuma '+fmt(tidalFoamLastUpdateMs,2)+' · playa '+fmt(beachUpdateLastMs,2)+' · terreno '+fmt(groundDynamicsLastUpdateMs,2)+' · solver '+fmt(solver&&solver.lastMs,3);
   metrics.textContent+='\\nFPS '+Math.round(engine.getFps())+' · fotograma medio '+fmt(frameAverage,2)+' ms · P50 '+fmt(frameAt(.50),2)+' · P95 '+fmt(frameAt(.95),2)+' · P99 '+fmt(frameAt(.99),2);
   metrics.textContent+='\\nPISADAS: '+work.footstepAttempts+' intentos · '+work.footstepsEmitted+' pasos · '+work.beachSteps+' costa · '+work.footstepsWaterSide+' borde agua · '+work.wetSteps+' húmedas · '+work.footstepOutsideLand+' fuera banda · '+work.shorelineSolveMisses+' fallos solver · '+work.waterParticlesEmitted+' partículas emitidas / '+work.wetParticlesAlive+' vivas';
+  const health=typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug():null;
+  const runtime=health&&health.runtime?health.runtime:{},assessment=runtime.performanceAssessment||{};
+  metrics.textContent+='\\nRENDIMIENTO: '+(assessment.bottleneckHint||'sin diagnóstico')+' · mundo '+fmt(runtime.worldUpdateMs,2)+' ms · render CPU '+fmt(runtime.renderCpuMs,2)+' ms';
+  metrics.textContent+='\\nGPU: '+(runtime.gpuRenderer||'no disponible')+' · DPR '+fmt(runtime.renderDpr,2)+' · resolución '+(runtime.renderWidth||'?')+'×'+(runtime.renderHeight||'?')+' · draw calls '+(runtime.drawCalls??'?')+' · mallas activas '+(runtime.activeMeshes??'?');
   const backwash=coast.physicalBackwashVelocity||{};
   metrics.textContent+='\\nRetirada media '+fmt(backwash.meanMetersPerSecond,2)+' m/s · pico '+fmt(backwash.peakMetersPerSecond,2)+' m/s · columnas activas '+(backwash.activeColumns||0);
   const recent=(timeline.longFrames||[]).slice(-4).map(item=>Math.round(item.frameMs)+'ms @ '+Math.round(item.elapsedMs/1000)+'s').join(', ')||'ninguno';
@@ -7051,6 +7057,7 @@ function createWaterShoreDebugPanel(){
    settings:{...settings},coast:getWaterCoastDiagnostics(),renderedVertexAgreement:getWaterVertexAgreementDiagnostics(),groundDynamics:GroundDynamics.counts(),
    coastSolver:waterDebugSolverStats?{...waterDebugSolverStats}:null,
    timings:{waterLastUpdateMs,waterLastNormalMs,tidalFoamLastUpdateMs,beachUpdateLastMs,groundDynamicsLastUpdateMs},
+   performance:health&&health.runtime?health.runtime:null,playerFootDiagnostics:health&&health.player?health.player:null,
    frameTimingMs:health&&health.runtime?health.runtime.frameTimingMs:null,fps:health&&health.runtime?health.runtime.fps:engine.getFps()
   };
  };
@@ -10580,7 +10587,7 @@ function villageHostileDefenders(vl){
   const playerWalk=realPlayerAnimations.walk,playerRun=realPlayerAnimations.run;
   let activeSpray=0;for(const particle of vesselSprayParticles)if(particle.life>0)activeSpray++;
   return {
-   reportVersion:'11',build:'0.6.274',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
+   reportVersion:'12',build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||'unknown',gameStarted,worldUpdatePhase,worldUpdateCount,groundDynamics:GroundDynamics.counts(),groundDynamicsUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(2)),beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),
    beachState:{activeIslandIndex:activeBeachIslandIndex,activeIsland:activeBeachLayer?activeBeachLayer.island.name:null,columns:activeBeachLayer?activeBeachLayer.coastalState.columns:0,rows:activeBeachLayer?activeBeachLayer.coastalState.rows:0,updatedCellsLast:beachUpdateCellsLast,updatedCellsTotal:beachUpdateCellsTotal,cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,textureUploads:beachStateTextureUploads,updateHz:12,workBudgetMs:GroundDynamics.counts().beachWorkBudgetMs,lastSliceMs:GroundDynamics.counts().beachWorkLastSliceMs,maxSliceMs:GroundDynamics.counts().beachWorkMaxSliceMs,pending:GroundDynamics.counts().beachWorkPending},waterline:getWaterCoastDiagnostics(),startupTimeline:getStartupTimelineSnapshot(),
    lastWorldUpdateFailure,diagnosticTotalCount,errors:gameDiagnosticEvents.slice(-60),
    animationFailureLog:animationFailureLog.slice(-30),
