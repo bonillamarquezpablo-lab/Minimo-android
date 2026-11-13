@@ -7,6 +7,7 @@ async function main() {
   const runner = fs.readFileSync('scripts/custom-scene-capture.mjs', 'utf8');
   const plannerSource = fs.readFileSync('scripts/scene-capture-inspection.mjs', 'utf8');
   const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf8');
+  const capturePlan = JSON.parse(fs.readFileSync('scripts/scene-capture-plan.json', 'utf8'));
   const textureSmoke = fs.readFileSync('scripts/texture-readiness-smoke.mjs', 'utf8');
   const unifiedRunner = fs.readFileSync('scripts/run-unified-inspector.mjs', 'utf8');
   const planner = await import('./scene-capture-inspection.mjs');
@@ -80,7 +81,15 @@ async function main() {
   assert.match(workflow,/name: 'Inspector único: todas las pruebas, diagnósticos y capturas'/);
   assert.match(workflow,/node scripts\/run-unified-inspector\.mjs/);
   assert.match(workflow,/timeout-minutes: 180/);
-  assert.match(workflow,/observationPoint/);
+  assert.match(workflow,/cat scripts\/scene-capture-plan\.json/,
+    'The workflow must use the shared capture plan instead of duplicating the default plan in YAML.');
+  assert.equal(capturePlan.length,13,'The shared capture plan must contain one zone for every island.');
+  assert.deepEqual(capturePlan.map(item=>item.zone.islandIndex).sort((a,b)=>a-b),Array.from({length:13},(_,index)=>index),
+    'The shared capture plan must cover island indices 0 through 12 exactly once.');
+  const hrafnPlan=capturePlan.find(item=>item.zone.islandIndex===3)?.zone;
+  assert.ok(hrafnPlan?.observationPoint,'Hrafn must retain its fixed offshore observation point.');
+  assert.equal(hrafnPlan.observationPoint.x,28);
+  assert.equal(hrafnPlan.observationPoint.z,236.3);
   assert.match(plannerSource,/capturePrefix/);
   assert.doesNotMatch(runner,/repairAndAuditHabitableStructures/,
     'The camera inspection run must not repair or move objects before capturing the original scene.');
