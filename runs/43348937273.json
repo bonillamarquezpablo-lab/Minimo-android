@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "startedAt": "2026-11-13T02:00:19.981Z",
+  "level": "deep",
+  "phases": [
+    {
+      "name": "Arranque del juego y modelo vikingo real",
+      "script": "scripts/player-startup-smoke.mjs",
+      "startedAt": "2026-11-13T02:00:19.982Z",
+      "status": "failed",
+      "durationMs": 186409,
+      "exitCode": 1,
+      "error": "exit=1 signal=none",
+      "finishedAt": "2026-11-13T02:03:26.392Z"
+    }
+  ],
+  "finishedAt": null
+}
