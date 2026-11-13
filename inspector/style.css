@@ -469,7 +469,8 @@ h1{font-size:clamp(27px,3.4vw,42px);line-height:1.02;margin:7px 0 6px;letter-spa
 @keyframes inspector-live-pulse{50%{box-shadow:0 0 0 8px rgba(101,219,225,0)}}
 @keyframes inspector-run-scan{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
 .run-phase-status{min-height:11px}
-.progress-track.indeterminate span{width:34%;animation:inspector-run-scan 1.8s ease-in-out infinite}
+.progress-track span.indeterminate{width:34%;animation:inspector-run-scan 1.8s ease-in-out infinite}
+.status-pill.queued{border-color:rgba(244,189,104,.26);background:rgba(244,189,104,.09);color:var(--amber)}
 @media(max-width:720px){
  .active-runs-panel{padding:14px;border-radius:18px}
  .active-runs-head{align-items:flex-start;flex-direction:column;gap:8px}
