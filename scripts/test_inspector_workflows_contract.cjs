@@ -52,4 +52,6 @@ console.log('Inspector workflow routing and baseline fallback contract: OK');
 
 const aiReviewStep=workflow.split('      - name: Run optional read-only multimodal visual review')[1]?.split('\\n      - name:')[0] || '';
 assert.ok(aiReviewStep.includes('LAB_AI_API_KEY'),'The optional visual review must use a repository secret.');
+assert.ok(aiReviewStep.includes('LAB_AI_MODEL'),'The optional visual review must use a configured vision model.');
+assert.ok(!aiReviewStep.includes('LAB_AI_RESPONSES_URL'),'The API secret must not be sent to a configurable endpoint.');
 assert.ok(workflow.includes('artifacts/ai-visual-review/'),'The AI visual report must be retained as an artifact.');
