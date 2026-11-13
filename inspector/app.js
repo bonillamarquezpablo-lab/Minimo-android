@@ -440,7 +440,7 @@
       $('compareEmpty').hidden=false;$('compareStage').hidden=true;
       const source=manifest?._sourceRun,hasRecordedPhases=(data?.phases?.length||0)>0;
       const archive=source?.html_url&&hasRecordedPhases?'<p><a href="'+esc(source.html_url+'#artifacts')+'" target="_blank" rel="noopener">Abrir las capturas completas del informe #'+esc(source.run_number)+' ↗</a></p>':'';
-      $('compareEmpty').innerHTML='<div><strong>'+(hasRecordedPhases?'Hay '+data.phases.length+' horarios comparados':'Esperando capturas de comparación')+'</strong>'+(hasRecordedPhases?'El informe contiene la comparación, pero no publicó miniaturas para mostrarlas aquí.':'Las imágenes aparecerán cuando la inspección profunda las publique.')+archive+'</div>';
+      $('compareEmpty').innerHTML='<div><strong>'+(hasRecordedPhases?'Hay '+data.phases.length+' horarios comparados':'Esperando capturas de comparación')+'</strong>'+(hasRecordedPhases?'El informe contiene la comparación, pero no publicó miniaturas para mostrarlas aquí.':activeRun?.status==='in_progress'?'Las imágenes aún se están preparando.':'Esta ejecución no publicó imágenes de comparación.')+archive+'</div>';
       $('phaseMeta').textContent=ready.length+' / 4 fases disponibles';
       return;
     }
