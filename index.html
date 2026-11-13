@@ -2100,6 +2100,88 @@ async function removeStrayDebugGeometry(targetScene){
  let grassDebugClumpCount=0,grassDebugBatchCount=0,grassDebugLeavesPerClump=7,grassDebugIslandStats=[],grassDebugPanel=null;
  const grassDebugEnabled=groundDebugEnabled||new URLSearchParams(window.location.search).get('grassdebug')==='1';
  const fpsFrameSamples=new Float32Array(120);let fpsFrameSampleCount=0,fpsFrameSampleCursor=0;
+ const PERF_AUDIT_CAPACITY=120;
+ const perfAuditSamples={frame:new Float32Array(PERF_AUDIT_CAPACITY),world:new Float32Array(PERF_AUDIT_CAPACITY),render:new Float32Array(PERF_AUDIT_CAPACITY),drawCalls:new Float32Array(PERF_AUDIT_CAPACITY),gpu:new Float32Array(PERF_AUDIT_CAPACITY)};
+ let perfAuditCount=0,perfAuditCursor=0,perfAuditScenario='sin seleccionar',perfAuditScenarioStartedAt=performance.now(),perfAuditFrameCounter=0;
+ const perfAuditReports=[];
+ const perfGpuPending=[];
+ let perfGpuExtension=null,perfGpuMode='unavailable',perfGpuActiveQuery=null,perfGpuDisjoint=false;
+ function initPerfGpuTimer(){
+  try{
+   const gl=engine&&engine._gl;
+   if(!gl)return;
+   if(typeof gl.beginQuery==='function'&&typeof gl.createQuery==='function'){
+    perfGpuExtension=gl.getExtension('EXT_disjoint_timer_query_webgl2');
+    if(perfGpuExtension){perfGpuMode='webgl2';return;}
+   }
+   const ext=gl.getExtension('EXT_disjoint_timer_query');
+   if(ext&&typeof ext.beginQueryEXT==='function'){perfGpuExtension=ext;perfGpuMode='webgl1';return;}
+   perfGpuMode='unsupported';
+  }catch(_){perfGpuMode='unavailable';}
+ }
+ function beginPerfGpuQuery(){
+  if(perfGpuMode==='unavailable')initPerfGpuTimer();
+  if(!perfGpuExtension||perfGpuActiveQuery||perfGpuFrameCounter%15!==0)return null;
+  try{
+   const gl=engine._gl,query=perfGpuMode==='webgl2'?gl.createQuery():perfGpuExtension.createQueryEXT();
+   if(!query)return null;
+   if(perfGpuMode==='webgl2')gl.beginQuery(perfGpuExtension.TIME_ELAPSED_EXT,query);
+   else perfGpuExtension.beginQueryEXT(perfGpuExtension.TIME_ELAPSED_EXT,query);
+   perfGpuActiveQuery=query;return query;
+  }catch(_){return null;}
+ }
+ function endPerfGpuQuery(query){
+  if(!query||query!==perfGpuActiveQuery)return;
+  try{
+   const gl=engine._gl;
+   if(perfGpuMode==='webgl2')gl.endQuery(perfGpuExtension.TIME_ELAPSED_EXT);
+   else perfGpuExtension.endQueryEXT(perfGpuExtension.TIME_ELAPSED_EXT);
+   perfGpuPending.push(query);perfGpuActiveQuery=null;
+  }catch(_){perfGpuActiveQuery=null;}
+ }
+ function pollPerfGpuQueries(){
+  if(!perfGpuExtension||!perfGpuPending.length)return;
+  try{
+   const gl=engine._gl,disjoint=!!gl.getParameter(perfGpuExtension.GPU_DISJOINT_EXT);
+   if(disjoint){perfGpuDisjoint=true;while(perfGpuPending.length){const q=perfGpuPending.shift();if(perfGpuMode==='webgl2')gl.deleteQuery(q);else perfGpuExtension.deleteQueryEXT(q);}return;}
+   for(let i=perfGpuPending.length-1;i>=0;i--){
+    const q=perfGpuPending[i],available=perfGpuMode==='webgl2'?gl.getQueryParameter(q,gl.QUERY_RESULT_AVAILABLE):perfGpuExtension.getQueryObjectEXT(q,perfGpuExtension.QUERY_RESULT_AVAILABLE_EXT);
+    if(!available)continue;
+    const ns=perfGpuMode==='webgl2'?gl.getQueryParameter(q,gl.QUERY_RESULT):perfGpuExtension.getQueryObjectEXT(q,perfGpuExtension.QUERY_RESULT_EXT);
+    if(Number.isFinite(ns)&&ns>=0){const c=perfAuditCursor;perfAuditSamples.gpu[c]=ns/1e6;}
+    if(perfGpuMode==='webgl2')gl.deleteQuery(q);else perfGpuExtension.deleteQueryEXT(q);
+    perfGpuPending.splice(i,1);
+   }
+  }catch(_){perfGpuMode='error';}
+ }
+ function recordPerformanceAuditFrame(frameMs){
+  pollPerfGpuQueries();
+  const c=perfAuditCursor,draw=Number(engine&&engine._drawCalls&&engine._drawCalls.current);
+  perfAuditSamples.frame[c]=Number.isFinite(frameMs)?frameMs:0;
+  perfAuditSamples.world[c]=Number.isFinite(lastWorldUpdateMs)?lastWorldUpdateMs:0;
+  perfAuditSamples.render[c]=Number.isFinite(lastRenderCpuMs)?lastRenderCpuMs:0;
+  perfAuditSamples.drawCalls[c]=Number.isFinite(draw)&&draw>=0?draw:-1;
+  perfAuditCursor=(c+1)%PERF_AUDIT_CAPACITY;perfAuditCount=Math.min(PERF_AUDIT_CAPACITY,perfAuditCount+1);perfAuditFrameCounter++;
+ }
+ function perfAuditStats(source){
+  const values=[];for(let i=0;i<perfAuditCount;i++){const v=source[i];if(Number.isFinite(v)&&v>=0)values.push(v);}
+  values.sort((a,b)=>a-b);
+  const at=p=>values.length?Number(values[Math.min(values.length-1,Math.floor((values.length-1)*p))].toFixed(2)):null;
+  return {samples:values.length,mean:values.length?Number((values.reduce((a,b)=>a+b,0)/values.length).toFixed(2)):null,p50:at(.50),p95:at(.95),p99:at(.99),max:at(1)};
+ }
+ function getPerformanceAuditReport(){
+  const frame=perfAuditStats(perfAuditSamples.frame),world=perfAuditStats(perfAuditSamples.world),render=perfAuditStats(perfAuditSamples.render),draw=perfAuditStats(perfAuditSamples.drawCalls),gpu=perfAuditStats(perfAuditSamples.gpu);
+  return {schema:'elsn-performance-audit-v1',scenario:perfAuditScenario,capturedAt:new Date().toISOString(),durationSeconds:Number(((performance.now()-perfAuditScenarioStartedAt)/1000).toFixed(1)),build:document.querySelector('meta[name="el-sin-nombre-build"]')?.content||null,graphicsProfile:activeGraphicsProfile,device:{userAgent:navigator.userAgent,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,dpr:deviceDpr,renderDpr:qualityDprCurrent,renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),webglVersion:graphicsVersion,gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor},fps:{average:frame.mean&&frame.mean>0?Number((1000/frame.mean).toFixed(2)):null,frameMs:frame,over16_67ms:perfAuditCount?Array.from(perfAuditSamples.frame.slice(0,perfAuditCount)).filter(v=>v>1000/60).length:null},cpu:{worldMs:world,renderSubmissionMs:render,combinedMeanMs:world.mean!==null&&render.mean!==null?Number((world.mean+render.mean).toFixed(2)):null},drawCalls:{source:'engine._drawCalls.current (Babylon internal per-frame counter; verify against inspector)',stats:draw},gpu:{status:perfGpuMode,disjointObserved:perfGpuDisjoint,samples:gpu,measurement:'EXT_disjoint_timer_query; asynchronous sampled every 15 frames; unavailable is not zero'},scene:{meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeTriangles:Math.round(((scene.getActiveIndices&&scene.getActiveIndices())||0)/3),materialCount:scene.materials.length,textureCount:scene.textures.length,grassInstances:grassInstanceCount,grassBatches:grassBatchCount,waterVertices:waterPositions.length/3}};
+ }
+ function resetPerformanceAuditScenario(name){
+  if(perfAuditScenario!=='sin seleccionar'&&perfAuditCount>=30)perfAuditReports.push(getPerformanceAuditReport());
+  perfAuditScenario=name;perfAuditScenarioStartedAt=performance.now();perfAuditCount=0;perfAuditCursor=0;perfAuditFrameCounter=0;
+  Object.values(perfAuditSamples).forEach(array=>array.fill(0));
+  perfGpuPending.splice(0).forEach(q=>{try{const gl=engine._gl;if(perfGpuMode==='webgl2')gl.deleteQuery(q);else perfGpuExtension?.deleteQueryEXT(q);}catch(_){}});
+  if(perfAuditStatus)perfAuditStatus.textContent='Capturando '+name+' · reúne 120 fotogramas';
+ }
+ window.__elSinNombrePerformanceAudit={setScenario:resetPerformanceAuditScenario,snapshot:()=>({current:getPerformanceAuditReport(),scenarios:perfAuditReports.slice()}),exportJson:()=>JSON.stringify({schema:'elsn-performance-audit-bundle-v1',exportedAt:new Date().toISOString(),scenarios:perfAuditReports.concat(perfAuditScenario!=='sin seleccionar'?[getPerformanceAuditReport()]:[])},null,2)};
+
  const startupTimeline={firstFrameAt:0,firstFrameElapsedMs:null,gameStartedAt:0,gameStartElapsedMs:null,maxFrameMs:0,postFirstFrameSamples:0,longFrames:[],tasks:[]};
  const startupTimelineBootAt=performance.now();let startupTaskCurrent='preparación de escena';
  function recordStartupTask(name,startedAt,endedAt,status='ready',detail=null){const durationMs=Math.max(0,endedAt-startedAt);startupTimeline.tasks.push({name,durationMs:Number(durationMs.toFixed(2)),status,detail,at:new Date().toISOString()});if(startupTimeline.tasks.length>80)startupTimeline.tasks.shift();startupTaskCurrent='idle';return durationMs;}
@@ -6930,6 +7012,23 @@ function createGroundDebugToggle(){
  document.body.appendChild(button);
 }
 createGroundDebugToggle();
+let perfAuditStatus=null;
+if(groundDebugEnabled){
+ const auditPanel=document.createElement('section');
+ auditPanel.id='performanceAuditPanel';
+ auditPanel.style.cssText='margin:0 0 7px;padding:8px;border:1px solid #d8ad68;border-radius:8px;background:rgba(10,22,24,.96);color:#f5e8cf;font:8px/1.35 ui-monospace,monospace';
+ const heading=document.createElement('div');heading.textContent='FASE 1 · AUDITORÍA DE RENDIMIENTO';heading.style.cssText='font-weight:900;color:#e6c27f;margin-bottom:5px';auditPanel.appendChild(heading);
+ const explanation=document.createElement('div');explanation.textContent='Selecciona el escenario y deja correr 120 fotogramas. No modifica calidad ni sistemas del juego.';explanation.style.marginBottom='6px';auditPanel.appendChild(explanation);
+ const controls=document.createElement('div');controls.style.cssText='display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px';
+ const addScenario=(label,key)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.style.cssText='padding:7px 3px;border:1px solid #d8ad6888;border-radius:5px;background:#263735;color:#fff2d8;font:800 8px ui-monospace,monospace;touch-action:manipulation';b.addEventListener('click',()=>{resetPerformanceAuditScenario(key);});controls.appendChild(b);};
+ addScenario('A · CAMPAMENTO','campamento');addScenario('B · VEGETACIÓN','vegetacion');addScenario('C · COSTA','costa');auditPanel.appendChild(controls);
+ perfAuditStatus=document.createElement('div');perfAuditStatus.style.cssText='margin:6px 0;color:#e6c27f';perfAuditStatus.textContent='Sin escenario seleccionado · esperando';auditPanel.appendChild(perfAuditStatus);
+ const exportButton=document.createElement('button');exportButton.type='button';exportButton.textContent='EXPORTAR INFORME JSON';exportButton.style.cssText='width:100%;padding:7px;border:1px solid #d8ad68;border-radius:5px;background:#4a3825;color:#fff2d8;font:900 8px ui-monospace,monospace;touch-action:manipulation';
+ exportButton.addEventListener('click',()=>{try{const report=window.__elSinNombrePerformanceAudit.exportJson();const blob=new Blob([report],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='elsn-performance-audit.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(error){perfAuditStatus.textContent='No se pudo exportar: '+String(error.message||error);}});
+ auditPanel.appendChild(exportButton);getGroundDebugDrawer().appendChild(auditPanel);
+ window.setInterval(()=>{if(!perfAuditStatus||perfAuditScenario==='sin seleccionar')return;const report=getPerformanceAuditReport();perfAuditStatus.textContent=perfAuditScenario+' · '+perfAuditCount+'/120 fotogramas · FPS medio '+(report.fps.average??'—')+' · draw calls P95 '+(report.drawCalls.stats.p95??'—')+' · GPU '+report.gpu.status;},1000);
+}
+
 if(grassDebugEnabled){
  grassDebugPanel=document.createElement('pre');
  grassDebugPanel.id='grassDebugPanel';
@@ -10632,7 +10731,7 @@ function villageHostileDefenders(vl){
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
    boat:{onShip,velocity:Number(boatVelocity.toFixed(3)),position:{x:Number(ship.position.x.toFixed(2)),y:Number(ship.position.y.toFixed(2)),z:Number(ship.position.z.toFixed(2))},rotation:{x:Number(ship.rotation.x.toFixed(3)),y:Number(ship.rotation.y.toFixed(3)),z:Number(ship.rotation.z.toFixed(3))},flatWakeStrips:shipWake.map(w=>({name:w.name,enabled:w.isEnabled()})),activeSprayParticles:activeSpray,sprayCapacity:VESSEL_SPRAY_COUNT},
-   runtime:{performanceAssessment:{targetFps:targetFrameRate,frameBudget60Ms:Number(frameBudget60Ms.toFixed(2)),frameBudget90Ms:Number(frameBudget90Ms.toFixed(2)),frameBudget30Ms:Number(frameBudget30Ms.toFixed(2)),framesOver60Budget:framesOver60,framesOver60BudgetPct:frameTimes.length?Number((framesOver60/frameTimes.length*100).toFixed(1)):null,framesOver90Budget:framesOver90,framesOver90BudgetPct:frameTimes.length?Number((framesOver90/frameTimes.length*100).toFixed(1)):null,framesOver30Budget:framesOver30,framesOver30BudgetPct:frameTimes.length?Number((framesOver30/frameTimes.length*100).toFixed(1)):null,worldUpdateCpuMs:worldCpuMs,sceneRenderSubmissionCpuMs:renderSubmitCpuMs,combinedMeasuredCpuMs:Number(measuredCpuMs.toFixed(2)),bottleneckHint:performanceBottleneck,gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'},frameTimingMs:{samples:frameTimes.length,average:frameAverage,p50:frameAt(.50),p95:frameAt(.95),p99:frameAt(.99),max:frameTimes.length?Number(frameTimes[frameTimes.length-1].toFixed(2)):null},graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,galaxyA12NachoPerformanceProfile:isGalaxyA12NachoPerformance,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,activeFoamIsland:activeBeachIslandIndex,waterReflectionIsland:activeWaterReflectionIslandIndex,waterReflectionMeshes:nordicWaterMirror&&nordicWaterMirror.renderList?nordicWaterMirror.renderList.length:0,waterReflectionRefreshRate:nordicWaterMirror&&nordicWaterMirror.refreshRate||0,waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),terrainHashCacheEntries:terrainHashCache.size,terrainHashCacheLimit:TERRAIN_HASH_CACHE_LIMIT,groundRelaxHz:30,enemyAiRateCapHz:isConstrainedMobile?20:60,companionAiRateCapHz:isConstrainedMobile?15:60,grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassVisibleBatches:qualityGrassVisibleBatchCount,grassTotalBatches:qualityGrassLodBatches.length,grassStream:{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise},grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,devicePixelRatio:deviceDpr,screen:{width:screen.width||null,height:screen.height||null,innerWidth:window.innerWidth||null,innerHeight:window.innerHeight||null,visibilityState:document.visibilityState},isTouchDevice,textureCount:scene.textures.length,materialCount:scene.materials.length,hardwareMaxTextureSize:engine.getCaps().maxTextureSize||null,hardwareMaxRenderbufferSize:engine.getCaps().maxRenderbufferSize||null,userAgent:navigator.userAgent},
+   runtime:{performanceAudit:window.__elSinNombrePerformanceAudit?window.__elSinNombrePerformanceAudit.snapshot():null,performanceAssessment:{targetFps:targetFrameRate,frameBudget60Ms:Number(frameBudget60Ms.toFixed(2)),frameBudget90Ms:Number(frameBudget90Ms.toFixed(2)),frameBudget30Ms:Number(frameBudget30Ms.toFixed(2)),framesOver60Budget:framesOver60,framesOver60BudgetPct:frameTimes.length?Number((framesOver60/frameTimes.length*100).toFixed(1)):null,framesOver90Budget:framesOver90,framesOver90BudgetPct:frameTimes.length?Number((framesOver90/frameTimes.length*100).toFixed(1)):null,framesOver30Budget:framesOver30,framesOver30BudgetPct:frameTimes.length?Number((framesOver30/frameTimes.length*100).toFixed(1)):null,worldUpdateCpuMs:worldCpuMs,sceneRenderSubmissionCpuMs:renderSubmitCpuMs,combinedMeasuredCpuMs:Number(measuredCpuMs.toFixed(2)),bottleneckHint:performanceBottleneck,gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'},frameTimingMs:{samples:frameTimes.length,average:frameAverage,p50:frameAt(.50),p95:frameAt(.95),p99:frameAt(.99),max:frameTimes.length?Number(frameTimes[frameTimes.length-1].toFixed(2)):null},graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,galaxyA12NachoPerformanceProfile:isGalaxyA12NachoPerformance,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,activeFoamIsland:activeBeachIslandIndex,waterReflectionIsland:activeWaterReflectionIslandIndex,waterReflectionMeshes:nordicWaterMirror&&nordicWaterMirror.renderList?nordicWaterMirror.renderList.length:0,waterReflectionRefreshRate:nordicWaterMirror&&nordicWaterMirror.refreshRate||0,waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),terrainHashCacheEntries:terrainHashCache.size,terrainHashCacheLimit:TERRAIN_HASH_CACHE_LIMIT,groundRelaxHz:30,enemyAiRateCapHz:isConstrainedMobile?20:60,companionAiRateCapHz:isConstrainedMobile?15:60,grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassVisibleBatches:qualityGrassVisibleBatchCount,grassTotalBatches:qualityGrassLodBatches.length,grassStream:{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise},grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,devicePixelRatio:deviceDpr,screen:{width:screen.width||null,height:screen.height||null,innerWidth:window.innerWidth||null,innerHeight:window.innerHeight||null,visibilityState:document.visibilityState},isTouchDevice,textureCount:scene.textures.length,materialCount:scene.materials.length,hardwareMaxTextureSize:engine.getCaps().maxTextureSize||null,hardwareMaxRenderbufferSize:engine.getCaps().maxRenderbufferSize||null,userAgent:navigator.userAgent},
    wildlife:ambientFauna.map(animal=>({kind:animal.kind,island:animal.homeIslandIndex,meshes:animal.meshCount,bones:animal.skeletonBoneCount,skinnedVertices:animal.skinnedVertexCount,dimensions:animal.dimensions,animation:animal.activeAnimation&&animal.activeAnimation.name||null,meshNames:animal.meshNames})),
    npcs:{enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,ambientPeople:ambientPeople.length,ambientMoving:ambientPeople.filter(n=>Number(n.parts.actualMoveSpeed)>.1).length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,npcClips:humanEnemyParts.filter(p=>p.realHuman).slice(0,8).map(p=>({name:p.name,walk:p.realHuman.walk&&p.realHuman.walk.name,walkPlaying:!!(p.realHuman.walk&&p.realHuman.walk.isPlaying),current:p.realHuman.current&&p.realHuman.current.name,enabled:p.root.isEnabled()}))}
   };
@@ -12822,7 +12921,7 @@ function update(dt){
   try{
    if(!scene.activeCamera)scene.activeCamera=camera;
    adaptRenderQuality(dt);
-   const renderStarted=performance.now();scene.render();lastRenderCpuMs=performance.now()-renderStarted;
+   const perfGpuQuery=beginPerfGpuQuery();const renderStarted=performance.now();scene.render();lastRenderCpuMs=performance.now()-renderStarted;endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);
    // DynamicTexture can be constructed before Babylon's first render target is active.
    // Re-submit the already-painted sky canvas once after the first real frame if its
    // internal GPU texture was not allocated by the startup update.
