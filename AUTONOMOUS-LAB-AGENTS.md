@@ -1,0 +1,53 @@
+# EL SIN NOMBRE — Laboratorio autónomo y NPC especialistas
+
+## Objetivo
+
+Permitir que el proyecto inspeccione y mida una compilación sin que el jugador tenga que abrir el juego. GitHub Actions construye el juego en un runner aislado, arranca Chromium, ejecuta el Inspector unificado y conserva los resultados como artefactos. Los NPC especialistas analizan los manifiestos y convierten las observaciones en tareas priorizadas.
+
+Esto es una ejecución de laboratorio en la nube. No mantiene abierto el navegador del móvil ni reproduce la GPU Adreno física del Galaxy S26 Ultra.
+
+## Rutina prevista
+
+- Cada noche a las 02:17 en \`Europe/Madrid\`: inspección completa de arranque, texturas, cimentación, estructuras, costa, agua, inventario y capturas.
+- Cada domingo a las 02:47 en \`Europe/Madrid\`: inspección profunda con comparación antes/después y rendimiento cuando el baseline es válido.
+- Se conserva también la ejecución manual rápida/completa/profunda del Inspector.
+
+Los eventos programados de GitHub Actions solo se ejecutan desde la rama predeterminada. Por tanto, esta rutina empieza cuando el cambio esté incorporado a \`main\`; una PR abierta no activa todavía el horario.
+
+## NPC especialistas
+
+| NPC | Responsabilidad | Entradas |
+|---|---|---|
+| Eira — Rendimiento | FPS, frame time, etapas CPU/JavaScript, GPU si está disponible, draw calls y arranque | Hrafn, Player Startup, telemetría del juego |
+| Sól — Calidad visual | Agua, espuma, sombras, iluminación, materiales, texturas y regresiones de captura | Capturas sincronizadas, láminas e informes |
+| Ulf — Mundo y geometría | Islas, terreno, orillas, cimentación, edificios flotantes/intersecciones y recursos | Auditoría de estructuras, grounding y texturas |
+| Týr — Pruebas y validación | Arranque, contratos, fases fallidas/omitidas, artefactos y regresiones | Manifiesto del Inspector y pruebas CI |
+| Coordinador | Une las conclusiones, elimina duplicados y crea una lista priorizada de tareas | Todos los informes |
+
+## Contrato de evidencia
+
+- Cada conclusión debe enlazar con un dato o artefacto concreto.
+- \`null\`, ausente y no medido nunca equivalen a cero.
+- Una fase omitida no cuenta como aprobada.
+- Chromium/SwiftShader se marca como entorno de emulación, nunca como resultado de Adreno.
+- La comparación de píxeles es evidencia, no un juicio automático de calidad.
+- No se inventa CPU total, RAM Android, VRAM ni temperatura cuando el navegador no los expone.
+- Las regresiones de FPS requieren baseline comparable, misma semilla y mismo perfil.
+- Ningún diagnóstico visual o geométrico puede justificar por sí solo borrar contenido o bajar calidad gráfica.
+
+## Autonomía y límites de reparación
+
+La primera entrega automatiza recopilación, clasificación, asignación de tareas y publicación de los informes. No cambia el código del juego ni despliega reparaciones.
+
+Los agentes capaces de razonar visualmente sobre imágenes, investigar fuera del repositorio y escribir parches necesitan un proveedor de modelos externo. Eso exige una credencial guardada como secreto de GitHub Actions y un presupuesto de API separado. El secreto no se incluye en el código ni se puede deducir de la suscripción ChatGPT.
+
+Cuando se incorpore esa capa, cada especialista deberá trabajar en una rama efímera, proponer un parche, ejecutar pruebas unitarias, smoke tests y comparación visual, y descartar el cambio si falla cualquier protección. Ninguna reparación debe llegar a producción si no mantiene las funciones, la identidad visual y la calidad gráfica.
+
+## Artefactos
+
+Cada ejecución produce:
+
+- \`artifacts/unified-inspector/manifest.json\` y \`inspection-report.md\`.
+- Informes originales de arranque, texturas, geometría, costa, capturas y comparación Hrafn.
+- \`artifacts/autonomous-agents/report.json\` y \`report.md\`, con el estado de cada especialista y sus tareas.
+- Una copia JSON del informe de especialistas en la rama \`inspector-status\`, asociada al ID de la ejecución.
