@@ -104,6 +104,34 @@
       </div>
     </section>
 
+    <section class="section" id="diagnostico-en-vivo">
+      <div class="section-heading">
+        <div><div class="section-kicker">FASE 1 · MEDICIÓN DIRECTA</div><h2>Diagnóstico en vivo</h2><p>Abre el juego aquí y juega con normalidad. El inspector leerá las métricas que el propio juego expone, sin cambiar su calidad ni sus ajustes.</p></div>
+        <span class="section-index">SESIÓN LOCAL</span>
+      </div>
+      <article class="chart-card live-diagnostic-card">
+        <div class="live-diagnostic-actions">
+          <button class="primary" id="liveGameStart" type="button">Abrir juego para medir</button>
+          <button class="small-button" id="liveGameSample" type="button" disabled>Tomar muestra</button>
+          <button class="small-button" id="liveGameStop" type="button" disabled>Detener medición</button>
+          <span id="liveDiagnosticStatus" role="status" aria-live="polite">Esperando que abras el juego.</span>
+        </div>
+        <div class="live-game-frame-wrap" id="liveGameFrameWrap" hidden>
+          <iframe id="liveGameFrame" title="EL SIN NOMBRE · sesión de medición" loading="lazy" allow="fullscreen; gamepad" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        </div>
+        <div class="live-diagnostic-grid">
+          <div><span>FPS del juego</span><strong id="liveFps">—</strong></div>
+          <div><span>Frame time p95</span><strong id="liveP95">—</strong></div>
+          <div><span>Frame time p99</span><strong id="liveP99">—</strong></div>
+          <div><span>CPU actualización</span><strong id="liveWorldCpu">—</strong></div>
+          <div><span>CPU envío de render</span><strong id="liveRenderCpu">—</strong></div>
+          <div><span>Heap JavaScript</span><strong id="liveHeap">—</strong></div>
+        </div>
+        <div class="live-diagnostic-note" id="liveDiagnosticSource">Los datos aparecerán cuando el juego esté iniciado. Las métricas de CPU son tiempos de trabajo JavaScript, no porcentajes de uso de CPU/GPU.</div>
+        <details class="technical"><summary>Ver evidencia de esta sesión</summary><pre id="liveDiagnosticJson">Sin muestras todavía.</pre></details>
+      </article>
+    </section>
+
     <section class="section" id="telemetria">
       <div class="section-heading">
         <div><div class="section-kicker">02 · GRÁFICAS</div><h2>Rendimiento</h2><p>FPS, tiempo por fotograma y memoria del heap JavaScript.</p></div>
