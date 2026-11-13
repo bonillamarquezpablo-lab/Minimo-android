@@ -2991,8 +2991,9 @@ async function removeStrayDebugGeometry(targetScene){
    waterNormals[offset]=nx*inv;waterNormals[offset+1]=inv;waterNormals[offset+2]=nz*inv;
   }
  }
- let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0,waterFarAccumulator=0,tidalFoamAccumulator=0;
+ let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0,waterFarAccumulator=0,tidalFoamAccumulator=0,tidalFoamWorkPending=false,tidalFoamWorkElapsed=0;
  const TIDAL_FOAM_UPDATE_STEP=isTouchDevice?(isPerformanceMode?1/18:1/15):1/30;
+ const TIDAL_FOAM_WORK_SLICE_MS=isTouchDevice?1.35:2.0;
  let debugForcedTideOffset=null;
  const TIDE_PERIOD_SECONDS=240,TIDE_NATURAL_AMPLITUDE=.10;
  function tideOffsetAt(t=oceanTime){if(Number.isFinite(debugForcedTideOffset))return debugForcedTideOffset;return Math.sin((t/TIDE_PERIOD_SECONDS)*Math.PI*2)*TIDE_NATURAL_AMPLITUDE;}
@@ -3158,10 +3159,11 @@ async function removeStrayDebugGeometry(targetScene){
   syncActiveTidalFoamIsland();
 
   syncNordicWaterReflectionIsland();
-  const farDue=waterFarAccumulator>=waterFarStep,detailDue=waterAccumulator>=waterVertexStep,foamDue=tidalFoamAccumulator>=TIDAL_FOAM_UPDATE_STEP;
-  const foamElapsed=foamDue?tidalFoamAccumulator:0;
-  if(foamDue)tidalFoamAccumulator%=TIDAL_FOAM_UPDATE_STEP;
-  if(!farDue&&!detailDue&&!foamDue)return;
+  const farDue=waterFarAccumulator>=waterFarStep,detailDue=waterAccumulator>=waterVertexStep;
+  const foamDue=!tidalFoamWorkPending&&tidalFoamAccumulator>=TIDAL_FOAM_UPDATE_STEP;
+  if(foamDue){tidalFoamWorkElapsed=tidalFoamAccumulator;tidalFoamAccumulator=0;tidalFoamWorkPending=true;for(const foam of tidalFoamMeshes)foam._norseUpdateColumn=0;}
+  const foamWorkDue=tidalFoamWorkPending,foamElapsed=foamWorkDue?tidalFoamWorkElapsed:0;
+  if(!farDue&&!detailDue&&!foamWorkDue)return;
   const workStart=performance.now();if(detailDue)refreshWaterDetailRegion();
   // Actualización global económica para el mar lejano: tres ondas largas, cadencia baja.
   if(farDue){
@@ -3213,14 +3215,15 @@ async function removeStrayDebugGeometry(targetScene){
   }else if(detailDue&&detailedNormalsDue&&uploadEnd>waterActiveMinOffset){
    ground.updateVerticesData(B.VertexBuffer.NormalKind,waterNormals,false);waterLastUploadBytes+=waterNormals.byteLength;
   }
-  if(foamDue){
-  const foamWorkStarted=performance.now();
+  if(foamWorkDue){
+  const foamWorkStarted=performance.now();let foamWorkComplete=true;
   // La espuma aparece solo cuando la línea de agua retrocede y deja una película blanca en la arena.
   // La humedad de playa conserva su propia huella; esta malla dibuja únicamente el borde espumoso reciente.
   for(const foam of tidalFoamMeshes){
    const {island,segments,rows,cols,radialOffsets,positions,colors,foamPattern,angleValues,angleCos,angleSin,index,waveBodyMesh,waveBodyNormals,waveBodyIndices,foamAlphaMask,waveBodyPositions,waveBodyColors,waveBodyOffsets,waveBodyRows,waveBodyCrestProfile,waveBodyShoulderProfile,waveBodySteepFaceProfile,waveBodyEdgeProfile,waveBodyTerrainSamples,waveBodyWaterSamples,washMesh,washPositions,washColors,washPattern,washLeadingCellular,washTrailingProfile,washFilmCoverage,washLipProfile,washFractions,washRows,washDiagnosticDepths}=foam;
    const retreatFade=Math.exp(-foamElapsed/3.4);
-   for(let col=0;col<=segments;col++){
+   let col=Number.isInteger(foam._norseUpdateColumn)?foam._norseUpdateColumn:0;
+   for(;col<=segments;col++){
     const angle=angleValues[col],cs=angleCos[col],sn=angleSin[col];
     const shoreline=cachedShorelineFoamRadius(foam,col,oceanTime);
     if(!Number.isFinite(shoreline)){
@@ -3344,7 +3347,11 @@ async function removeStrayDebugGeometry(targetScene){
      washColors[color+2]=.85*(1-whiteMix)+1*whiteMix;
      washColors[color+3]=alpha;
     }
+    if((col&7)===7&&performance.now()-foamWorkStarted>=TIDAL_FOAM_WORK_SLICE_MS){col++;break;}
    }
+   foam._norseUpdateColumn=col;
+   if(col<=segments){foamWorkComplete=false;continue;}
+   foam._norseUpdateColumn=0;
    // Re-close the duplicated angular seam after every water/shore update.
 
   for(let row=0;row<washRows;row++){
@@ -3371,6 +3378,7 @@ async function removeStrayDebugGeometry(targetScene){
   }
   tidalFoamLastUpdateMs=performance.now()-foamWorkStarted;
   tidalFoamMaxUpdateMs=Math.max(tidalFoamMaxUpdateMs,tidalFoamLastUpdateMs);
+  if(foamWorkComplete){tidalFoamWorkPending=false;tidalFoamWorkElapsed=0;}
   }
 M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset=(oceanTime*.007)%1;
   if(M.water.bumpTexture){M.water.bumpTexture.uOffset=(oceanTime*.0078)%1;M.water.bumpTexture.vOffset=(-oceanTime*.0058)%1;}
@@ -3865,7 +3873,7 @@ void main(void){
  const beachUpdateSamples=new Float32Array(120);let beachUpdateSampleCount=0,beachUpdateSampleCursor=0;
  const GroundDynamics=(()=>{
   const maxParticles=isPerformanceMode?22:48;
-  let stepDistance=0,alternateFoot=0,beachClock=0,particleCursor=0,lastStepX=0,lastStepZ=0,hasLastStepPosition=false,footstepsEmitted=0,lastFootstepSegmentLength=0,groundRelaxAccumulator=0;
+  let stepDistance=0,alternateFoot=0,beachClock=0,particleCursor=0,lastStepX=0,lastStepZ=0,hasLastStepPosition=false,footstepsEmitted=0,lastFootstepSegmentLength=0,groundRelaxAccumulator=0,footstepAttempts=0,beachSteps=0,wetSteps=0,shorelineSolveMisses=0,waterParticlesEmitted=0;
   let footprintAtlasDirty=false,footprintAtlasClock=0,lastAtlasFollowX=NaN,lastAtlasFollowZ=NaN;
   const GROUND_RELAX_INTERVAL=1/30;
   const FOOTPRINT_ATLAS_SIZE=512,FOOTPRINT_WORLD_SIZE=16;
@@ -4029,6 +4037,7 @@ void main(void){
   }
   function kickSandGrains(x,z,heading,wet,running,groundY){
    const count=wet?(running?8:6):(running?6:4),surfaceY=wet?Math.max(groundY,waterHeight(x,z,oceanTime)):groundY;
+   if(wet)waterParticlesEmitted+=count;
    for(let i=0;i<count;i++){
     const particle=particles[particleCursor++%maxParticles],angle=heading+Math.PI+rand(-1.15,1.15),speed=rand(wet?.22:.14,wet?.82:(running?.72:.46)),distance=rand(.055,.16);
     particle.x=x+Math.sin(angle)*distance;particle.z=z+Math.cos(angle)*distance;particle.y=surfaceY+(wet?.035:.045);
@@ -4038,17 +4047,35 @@ void main(void){
     particle.r=wet?.83:.78;particle.g=wet?.91:.61;particle.b=wet?.95:.40;particle.a=wet?.92:.82;
    }
   }
+  function footstepShorelineRadius(island,angle,t=oceanTime){
+   const islandIndex=land.indexOf(island),surfaceLimitSq=(island.r*1.09)**2,dirX=Math.cos(angle),dirZ=Math.sin(angle);
+   const sample=radius=>{
+    const x=island.x+dirX*radius,z=island.z+dirZ*radius,dx=x-island.x,dz=z-island.z;
+    const ground=dx*dx+dz*dz<surfaceLimitSq?terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z):.42;
+    return ground-waterHeight(x,z,t);
+   };
+   let lo=island.r*.70,hi=island.r*1.09,loDelta=sample(lo),hiDelta=sample(hi);
+   if(!Number.isFinite(loDelta)||!Number.isFinite(hiDelta)||loDelta<=0||hiDelta>=0)return null;
+   for(let step=0;step<13;step++){
+    const mid=(lo+hi)*.5;
+    if(sample(mid)>0)lo=mid;else hi=mid;
+   }
+   return (lo+hi)*.5;
+  }
   function addStep(x,z,heading,running){
+   footstepAttempts++;
    const islandIndex=landIslandIndex(x,z);if(islandIndex<0)return;
    const island=land[islandIndex],dx=x-island.x,dz=z-island.z,d=Math.hypot(dx,dz);
    const ratio=d/island.r,beach=ratio>.748&&ratio<.976;
    const groundY=terrainSurfaceAt(x,z),beachLayer=livingBeachLayers[islandIndex];
-   const shoreRadius=shorelineFoamRadius(island,Math.atan2(dz,dx),oceanTime),shoreDistance=shoreRadius-d;
+   const shoreRadius=beach?footstepShorelineRadius(island,Math.atan2(dz,dx),oceanTime):null;
+   const shoreDistance=Number.isFinite(shoreRadius)?shoreRadius-d:Infinity;
    const wetness=beachLayer?beachLayer.coastalState.sampleWetnessBilinear(x,z,island.x,island.z):0;
    const waterCovered=coastalWaterHeight(x,z,oceanTime)>groundY+.035;
-   // Keep the live coastal-state test, but restore the legacy near-shore contact band:
-   // the foot should splash as the water reaches the boot, not only after the ground is submerged.
-   const wet=beach&&(wetness>.08||waterCovered||(Number.isFinite(shoreDistance)&&shoreDistance<1.45)||waterHeight(x,z,oceanTime)>groundY-.20);
+   if(beach){beachSteps++;if(!Number.isFinite(shoreRadius))shorelineSolveMisses++;}
+   // Foot contact uses the same uncapped ocean intersection as the original splash system.
+   const wet=beach&&((Number.isFinite(shoreRadius)&&shoreDistance<1.45)||waterHeight(x,z,oceanTime)>groundY-.20||wetness>.08||waterCovered);
+   if(wet)wetSteps++;
    pressGround(x,z,islandIndex,wet,beach,heading);makeFootprint(islandIndex,x,z,heading,wet,beach,running,waterCovered);kickSandGrains(x,z,heading,wet,running,groundY);
   }
   const BEACH_STATE_DEFAULTS=Object.freeze({drySeconds:24,foamSeconds:7,foamDeposit:.56});
@@ -4057,7 +4084,8 @@ void main(void){
   const BEACH_CELL_BUDGET_MS=BEACH_WORK_BUDGET_MS*.68;
   let beachWorkLayer=null,beachWorkCellCursor=0,beachWorkVertexCursor=0,beachWorkScheduled=false;
   let beachWorkStartedAt=0,beachWorkLastSliceMs=0,beachWorkMaxSliceMs=0,beachWorkCellsProcessed=0;
-  function scheduleBeachWorkChunk(){if(beachWorkScheduled||!beachWorkLayer)return;beachWorkScheduled=true;requestAnimationFrame(processBeachWorkChunk);}
+  // Process coastal simulation slices from GroundDynamics.update, never in a competing rAF loop.
+  function scheduleBeachWorkChunk(){if(beachWorkScheduled||!beachWorkLayer)return;beachWorkScheduled=true;}
   function processBeachWorkChunk(){
    beachWorkScheduled=false;const layer=beachWorkLayer;if(!layer)return;
    const sliceStarted=performance.now(),sliceNow=sliceStarted*.001,state=layer.coastalState,field=terrainDeformationFields[layer.index];
@@ -4096,6 +4124,7 @@ void main(void){
   function update(dt,x,z,distance,heading,running,onShip,airborne){
    const groundDynamicsStartedAt=performance.now();
    if(!Number.isFinite(dt)||dt<=0)return;
+   if(beachWorkScheduled)processBeachWorkChunk();
    groundRelaxAccumulator+=dt;
    if(groundRelaxAccumulator>=GROUND_RELAX_INTERVAL){
     const relaxStep=groundRelaxAccumulator;groundRelaxAccumulator=0;relaxGround(relaxStep);
@@ -4160,7 +4189,7 @@ void main(void){
    groundDynamicsLastUpdateMs=performance.now()-groundDynamicsStartedAt;
   }
   function reset(){stepDistance=0;alternateFoot=0;hasLastStepPosition=false;footstepsEmitted=0;lastFootstepSegmentLength=0;groundRelaxAccumulator=0;lastAtlasFollowX=NaN;lastAtlasFollowZ=NaN;}
-  return {update,reset,setFootprintStrength:value=>footprintMaterial.setFloat('footprintStrength',Math.max(0,Number(value)||0)),counts:()=>({imprints:footprintAtlas.activePixels(),footprintAtlas:footprintAtlas.dimensions(),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3)),beachWorkBudgetMs:BEACH_WORK_BUDGET_MS,beachWorkPending:!!beachWorkLayer,beachWorkLastSliceMs,beachWorkMaxSliceMs:Number(beachWorkMaxSliceMs.toFixed(3)),beachWorkCellsProcessed})};
+  return {update,reset,setFootprintStrength:value=>footprintMaterial.setFloat('footprintStrength',Math.max(0,Number(value)||0)),counts:()=>({imprints:footprintAtlas.activePixels(),footprintAtlas:footprintAtlas.dimensions(),particles:particles.reduce((count,item)=>count+(item.life>0?1:0),0),imprintDrawCalls:1,splashDrawCalls:1,footstepsEmitted,footstepAttempts,beachSteps,wetSteps,shorelineSolveMisses,waterParticlesEmitted,lastFootstepSegmentLength:Number(lastFootstepSegmentLength.toFixed(3)),pendingStepDistance:Number(stepDistance.toFixed(3)),beachWorkBudgetMs:BEACH_WORK_BUDGET_MS,beachWorkPending:!!beachWorkLayer,beachWorkLastSliceMs,beachWorkMaxSliceMs:Number(beachWorkMaxSliceMs.toFixed(3)),beachWorkCellsProcessed})};
  })(); const tidalFoamMeshes=[];
  let tidalFoamLastUpdateMs=0,tidalFoamMaxUpdateMs=0;
  function buildTidalFoam(island,index){

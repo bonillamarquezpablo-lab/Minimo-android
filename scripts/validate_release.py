@@ -559,7 +559,7 @@ def main() -> None:
         fail("Calidad debe dimensionar columnas según perímetro; Rendimiento conserva 256/512.")
     if "const layer=livingBeachLayers[activeBeachIslandIndex]||null" not in index_html or "beachUpdateCellsLast=beachWorkCellsProcessed" not in index_html or "cpuUpdateP95Ms:beachCpuP95" not in index_html or "BEACH_WORK_BUDGET_MS=isTouchDevice?1.5:2.0" not in index_html or "BEACH_CELL_BUDGET_MS=BEACH_WORK_BUDGET_MS*.68" not in index_html:
         fail("La actualización costera debe respetar su presupuesto reducido por fotograma.")
-    if "TIDAL_FOAM_UPDATE_STEP=isTouchDevice?(isPerformanceMode?1/18:1/15):1/30" not in index_html or "const foamElapsed=foamDue?tidalFoamAccumulator:0" not in index_html or "Math.exp(-foamElapsed/3.4)" not in index_html or "for(let step=0;step<5;step++)" not in index_html or "const span=hi-lo,secant=lo+span*loDelta/(loDelta-hiDelta),guard=span*.04" not in index_html or "const waterDepth=water-terrainY" not in index_html or "const foamWaterDepth=water-terrainY" not in index_html or "performance.now()-sliceStarted<2.65" in index_html or "performance.now()-sliceStarted<3.55" in index_html:
+    if "TIDAL_FOAM_UPDATE_STEP=isTouchDevice?(isPerformanceMode?1/18:1/15):1/30" not in index_html or "const foamWorkDue=tidalFoamWorkPending,foamElapsed=foamWorkDue?tidalFoamWorkElapsed:0" not in index_html or "Math.exp(-foamElapsed/3.4)" not in index_html or "for(let step=0;step<5;step++)" not in index_html or "const span=hi-lo,secant=lo+span*loDelta/(loDelta-hiDelta),guard=span*.04" not in index_html or "const waterDepth=water-terrainY" not in index_html or "const foamWaterDepth=water-terrainY" not in index_html or "performance.now()-sliceStarted<2.65" in index_html or "performance.now()-sliceStarted<3.55" in index_html:
         fail("La rompiente debe reutilizar alturas de agua y terreno y resolver la costa con menos evaluaciones.")
     coastal_interaction = (ROOT / "scripts" / "nordic" / "coastal-interaction.js").read_text(encoding="utf-8")
     if ("const shorelineEntry = 0.24 * smooth01(depth / 0.30);" not in coastal_interaction
@@ -677,10 +677,18 @@ def main() -> None:
         fail("Las salpicaduras deben utilizar el pool de partículas instanciadas.")
     if "const count=wet?(running?8:6):(running?6:4)" not in index_html or "particles[particleCursor++%maxParticles]" not in index_html:
         fail("La emisión de arena/agua debe mantener partículas reutilizables y visibles.")
-    if "const shoreRadius=shorelineFoamRadius(island,Math.atan2(dz,dx),oceanTime),shoreDistance=shoreRadius-d;" not in index_html or "Number.isFinite(shoreDistance)&&shoreDistance<1.45" not in index_html or "waterHeight(x,z,oceanTime)>groundY-.20" not in index_html:
-        fail("Las pisadas en la banda de contacto de la orilla deben volver a activar las salpicaduras antes de la inmersión completa.")
+    if "function footstepShorelineRadius(island,angle,t=oceanTime)" not in index_html or "for(let step=0;step<13;step++)" not in index_html or "return ground-waterHeight(x,z,t);" not in index_html:
+        fail("Las pisadas deben usar el cruce real y sin recorte del oleaje, con el solucionador de costa original.")
+    if "const shoreRadius=beach?footstepShorelineRadius(island,Math.atan2(dz,dx),oceanTime):null;" not in index_html or "Number.isFinite(shoreRadius)&&shoreDistance<1.45" not in index_html:
+        fail("Las salpicaduras deben evaluar la banda de contacto con el solucionador propio de las pisadas.")
+    if "waterParticlesEmitted+=count" not in index_html or "footstepAttempts,beachSteps,wetSteps,shorelineSolveMisses,waterParticlesEmitted" not in index_html:
+        fail("El diagnóstico debe distinguir pisadas, contactos de playa, pisadas húmedas y partículas de agua emitidas.")
     if "particle.r=wet?.83:.78;particle.g=wet?.91:.61;particle.b=wet?.95:.40;particle.a=wet?.92:.82;" not in index_html:
         fail("Las partículas de agua deben conservar el acabado claro y visible de las salpicaduras originales.")
+    if "TIDAL_FOAM_WORK_SLICE_MS=isTouchDevice?1.35:2.0" not in index_html or "foam._norseUpdateColumn" not in index_html or "if(foamWorkComplete){tidalFoamWorkPending=false;tidalFoamWorkElapsed=0;}" not in index_html:
+        fail("La rompiente de resolución completa debe repartirse en fragmentos acotados sin perder columnas ni buffers.")
+    if "function scheduleBeachWorkChunk(){if(beachWorkScheduled||!beachWorkLayer)return;beachWorkScheduled=true;}" not in index_html or "if(beachWorkScheduled)processBeachWorkChunk();" not in index_html:
+        fail("La simulación de playa debe compartir el bucle principal, sin competir con un segundo requestAnimationFrame.")
     if "lastStepX=x;lastStepZ=z;hasLastStepPosition=true" not in index_html or "stepX=lastStepX+segmentX*t,stepZ=lastStepZ+segmentZ*t" not in index_html:
         fail("Cada pisada debe interpolarse en su posición real a lo largo del desplazamiento, sin apilar varias huellas al final del fotograma.")
     if "segmentLength>Math.max(4,distance*2+1)" not in index_html or "hasLastStepPosition=false" not in index_html:
