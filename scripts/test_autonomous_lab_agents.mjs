@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { analyzeEvidence } from './autonomous-lab-agents.mjs';
+process.env.AUTONOMOUS_AGENTS_TEST = '1';
+const { analyzeEvidence } = await import('./autonomous-lab-agents.mjs');
 
 const empty = analyzeEvidence({});
 assert.equal(empty.summary.phases, 0);
