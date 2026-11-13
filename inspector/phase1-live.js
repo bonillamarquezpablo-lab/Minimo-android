@@ -70,12 +70,28 @@ import {
             maximumDurationMs: longTasks.length ? Number(Math.max(...longTasks.map(entry => Number(entry.duration) || 0)).toFixed(2)) : 0
           }
         : { supported: false, count: null, totalDurationMs: null, maximumDurationMs: null };
+      let waterDiagnostics = { available: false, timings: null, note: 'The game did not expose its water debug snapshot.' };
+      if (typeof win.__elSinNombreWaterDebugSnapshot === 'function') {
+        try {
+          const waterSnapshot = win.__elSinNombreWaterDebugSnapshot();
+          const waterTimings = waterSnapshot && typeof waterSnapshot === 'object' ? waterSnapshot.timings : null;
+          waterDiagnostics = {
+            available: !!waterSnapshot,
+            timings: waterTimings && typeof waterTimings === 'object'
+              ? JSON.parse(JSON.stringify(waterTimings)) : null,
+            note: null
+          };
+        } catch (waterError) {
+          waterDiagnostics = { available: false, timings: null, note: String(waterError?.message || waterError) };
+        }
+      }
       lastReadError = null;
       return {
         capturedAt: new Date().toISOString(),
         visible: document.visibilityState === 'visible',
         game,
         longTasks: longTaskSummary,
+        waterDiagnostics,
         qualityWarnings,
         gameBuild: win.document.querySelector('meta[name="el-sin-nombre-build"]')?.content || null,
         gameUrl: win.location.href
