@@ -27,10 +27,11 @@
       "name": "Cimentación, estructuras y simulación de reparación en entorno desechable",
       "script": "scripts/coastal-structure-grounding-smoke.mjs",
       "startedAt": "2026-11-13T00:24:48.779Z",
-      "status": "running",
-      "durationMs": null,
-      "exitCode": null,
-      "error": null
+      "status": "passed",
+      "durationMs": 93886,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-13T00:26:22.668Z"
     }
   ],
   "finishedAt": null
