@@ -402,3 +402,35 @@ h1{font-size:clamp(27px,3.4vw,42px);line-height:1.02;margin:7px 0 6px;letter-spa
 @keyframes island-pulse{50%{r:10;opacity:.65}}
 @media(max-width:720px){.topbar-actions{gap:7px}.guide-fab{padding:8px 10px;font-size:11px}.guide-panel{max-height:38vh}}
 @media(prefers-reduced-motion:reduce){#radarSvg[data-live="true"] .radar-sweep-ring,#radarSvg[data-live="true"] .island-node{animation:none}}
+
+/* Retained last report, animated live gauges and topographic radar. */
+.last-good-banner{display:flex;align-items:center;gap:12px;margin:0 0 17px;padding:12px 14px;border:1px solid rgba(101,219,225,.28);border-radius:15px;background:linear-gradient(110deg,rgba(20,64,74,.58),rgba(17,31,47,.85))}
+.last-good-banner[hidden]{display:none}.last-good-banner>div{min-width:0;flex:1}
+.last-good-banner strong{display:block;font-size:12px}.last-good-banner p{margin:2px 0 0;color:var(--muted);font-size:10px;line-height:1.4}
+.last-good-pulse{width:10px;height:10px;flex:none;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 5px rgba(101,219,225,.11);animation:retained-pulse 1.8s ease-in-out infinite}
+.last-good-run{flex:none;color:var(--cyan);font-size:9px;font-weight:900;letter-spacing:.08em}
+@keyframes retained-pulse{50%{box-shadow:0 0 0 9px rgba(101,219,225,0)}}
+.launch-actions{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:9px;align-items:stretch}.launch-actions .primary{width:100%;min-width:0}
+.token-gear{display:grid;place-items:center;border:1px solid var(--line);border-radius:14px;background:#1a2b42;color:#bbd3f2;font-size:21px;cursor:pointer;transition:transform .18s,border-color .18s}
+.token-gear:hover,.token-gear[aria-expanded=true]{border-color:var(--cyan);color:var(--cyan);transform:rotate(20deg)}
+.gauge-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.gauge-card{min-width:0;text-align:center;padding:8px;border:1px solid var(--line-soft);border-radius:14px;background:rgba(8,17,28,.57)}
+.semigauge{display:block;width:min(100%,150px);height:auto;margin:0 auto -4px;overflow:visible}
+.gauge-track,.gauge-arc{fill:none;stroke-width:8;stroke-linecap:round}.gauge-track{stroke:#2b4058}.gauge-arc{stroke:var(--subtle);transition:stroke-dasharray .75s cubic-bezier(.2,.7,.25,1),stroke .3s}
+.gauge-needle{stroke:#dceaff;stroke-width:2.8;stroke-linecap:round;transition:x2 .75s cubic-bezier(.2,.7,.25,1),y2 .75s cubic-bezier(.2,.7,.25,1)}.gauge-hub{fill:#dceaff;stroke:#172a42;stroke-width:2}
+.gauge-card strong{display:block;font-size:15px;font-weight:900}.gauge-label{display:block;color:var(--muted);font-size:9px;font-weight:750}.gauge-card small{display:block;margin-top:3px;color:var(--subtle);font-size:8px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.gauge-card[data-state=fluido] .gauge-arc{stroke:var(--green)}.gauge-card[data-state=justo] .gauge-arc{stroke:var(--amber)}.gauge-card[data-state=lento] .gauge-arc{stroke:var(--red)}.gauge-card[data-state=unknown] .gauge-arc{stroke:#49627c}
+.gauge-metric-card .gauge-card{margin:8px auto 5px;max-width:180px}.gauge-metric-card .metric-value{font-size:18px;margin:3px 0}.gauge-metric-card .metric-unit{font-size:9px}
+.radar-map.is-scanning:before{content:"";position:absolute;z-index:2;inset:-10%;pointer-events:none;border-radius:50%;background:conic-gradient(from 0deg,transparent 0deg,rgba(101,219,225,0) 286deg,rgba(101,219,225,.03) 310deg,rgba(101,219,225,.24) 350deg,rgba(101,219,225,0) 360deg);mask:radial-gradient(ellipse,transparent 0 17%,#000 18% 100%);animation:radar-sweep 7s linear infinite;mix-blend-mode:screen}
+@keyframes radar-sweep{to{transform:rotate(360deg)}}
+.island-contour{fill:none;stroke:#8fd8c8;stroke-opacity:.23;stroke-width:1;stroke-dasharray:2 3;pointer-events:none}
+.radar-map.is-scanning .island-node{animation:island-signal 2.1s ease-in-out infinite}
+@keyframes island-signal{50%{r:9;filter:drop-shadow(0 0 6px rgba(101,219,225,.75))}}
+.island-warning,.structure-node.misaligned{animation:warning-signal 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes warning-signal{50%{opacity:.35;transform:scale(1.6)}}
+.sky-art{position:absolute;inset:0;width:100%;height:100%;padding:3px 9px;pointer-events:none;opacity:.9}
+.sky-art.dawn{color:#eab28a}.sky-art.noon{color:#e8d28d}.sky-art.dusk{color:#e98f70}.sky-art.midnight{color:#9cb7e7}
+.phase-tab:has(img[src]) .sky-art{opacity:0}.phase-thumb{position:relative;overflow:hidden;background:linear-gradient(180deg,#14253a,#0c1928)}
+.evidence-archive-link{grid-column:1/-1;display:block;padding:10px;border:1px solid #3b5878;border-radius:10px;background:#14243a;text-align:center;text-decoration:none;font-size:10px;font-weight:800}
+@media(max-width:720px){.last-good-banner{align-items:flex-start;padding:10px 11px;gap:9px}.last-good-run{font-size:8px}.gauge-pair{gap:6px}.gauge-card{padding:5px}.gauge-card strong{font-size:13px}.gauge-label{font-size:8px}.gauge-card small{font-size:7px}.gauge-metric-card .metric-name{font-size:9px}}
+@media(max-width:390px){.last-good-run{display:none}}
