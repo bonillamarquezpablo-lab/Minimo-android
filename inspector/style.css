@@ -505,3 +505,14 @@ h1{font-size:clamp(27px,3.4vw,42px);line-height:1.02;margin:7px 0 6px;letter-spa
 .live-diagnostic-grid strong{overflow-wrap:anywhere}
 @media(min-width:1000px){.live-diagnostic-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:650px){.live-device-confirm{width:100%;align-items:flex-start}.live-diagnostic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.live-finding-panel{display:grid;gap:13px;padding:16px;border:1px solid rgba(101,219,225,.18);border-radius:14px;background:rgba(7,16,27,.5)}
+.live-finding-head{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
+.live-finding-head>div{display:grid;gap:5px}
+.live-finding-head span,.live-finding-columns strong{color:var(--muted,#9aa8b8);font-size:.77rem}
+.live-finding-head strong{font-size:1rem;overflow-wrap:anywhere}
+#liveFindingInterpretation{margin:0;color:var(--text,#e5edf7);font-size:.9rem;line-height:1.5}
+.live-finding-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.live-finding-columns ul{margin:7px 0 0;padding-left:19px;color:var(--muted,#9aa8b8);font-size:.82rem;line-height:1.5}
+.live-finding-columns li+li{margin-top:5px}
+@media(max-width:650px){.live-finding-head{grid-template-columns:1fr 1fr}.live-finding-head>div:first-child{grid-column:1/-1}.live-finding-columns{grid-template-columns:1fr}}
