@@ -12,6 +12,7 @@ Medir el juego mientras se ejecuta en el dispositivo objetivo, separar observaci
 | Actualización del mundo y envío de render | Tiempos de etapa del motor / JavaScript | Duración de esas etapas; no porcentaje total de CPU |
 | Tiempo GPU | Babylon EngineInstrumentation, opcional | Solo se informa cuando el contador GPU entrega un valor |
 | Draw calls, mallas, vértices y resolución | Runtime del juego | Carga de escena y configuración efectiva observada |
+| Tiempos del sistema de agua | Snapshot de depuración existente del juego, cuando está disponible | Duraciones que el propio sistema de agua exponga; no una evaluación visual automática |
 | Heap JavaScript | \`performance.memory\`, cuando Chromium lo permite | Memoria del heap JS; no RAM total del teléfono |
 | Device Memory y hardwareConcurrency | Navegador | Estimaciones/capacidades reportadas; no uso real de RAM o CPU |
 | Temperatura, RAM total, VRAM | No expuestas por la página web | No disponibles; requieren una vía Android nativa o herramienta externa |
