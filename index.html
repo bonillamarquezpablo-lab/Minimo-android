@@ -4035,7 +4035,7 @@ void main(void){
     particle.groundY=surfaceY;particle.vx=Math.sin(angle)*speed;particle.vz=Math.cos(angle)*speed;
     particle.vy=wet?rand(.82,1.58):rand(.42,running?.98:.72);
     particle.life=particle.maxLife=wet?rand(.40,.68):rand(.32,.56);particle.age=0;particle.size=wet?rand(.030,.054):rand(.018,.036);particle.wet=wet;
-    particle.r=wet?.66:.78;particle.g=wet?.59:.61;particle.b=wet?.45:.40;particle.a=wet?.78:.82;
+    particle.r=wet?.83:.78;particle.g=wet?.91:.61;particle.b=wet?.95:.40;particle.a=wet?.92:.82;
    }
   }
   function addStep(x,z,heading,running){
@@ -4043,9 +4043,12 @@ void main(void){
    const island=land[islandIndex],dx=x-island.x,dz=z-island.z,d=Math.hypot(dx,dz);
    const ratio=d/island.r,beach=ratio>.748&&ratio<.976;
    const groundY=terrainSurfaceAt(x,z),beachLayer=livingBeachLayers[islandIndex];
+   const shoreRadius=shorelineFoamRadius(island,Math.atan2(dz,dx),oceanTime),shoreDistance=shoreRadius-d;
    const wetness=beachLayer?beachLayer.coastalState.sampleWetnessBilinear(x,z,island.x,island.z):0;
    const waterCovered=coastalWaterHeight(x,z,oceanTime)>groundY+.035;
-   const wet=beach&&(wetness>.08||waterCovered);
+   // Keep the live coastal-state test, but restore the legacy near-shore contact band:
+   // the foot should splash as the water reaches the boot, not only after the ground is submerged.
+   const wet=beach&&(wetness>.08||waterCovered||(Number.isFinite(shoreDistance)&&shoreDistance<1.45)||waterHeight(x,z,oceanTime)>groundY-.20);
    pressGround(x,z,islandIndex,wet,beach,heading);makeFootprint(islandIndex,x,z,heading,wet,beach,running,waterCovered);kickSandGrains(x,z,heading,wet,running,groundY);
   }
   const BEACH_STATE_DEFAULTS=Object.freeze({drySeconds:24,foamSeconds:7,foamDeposit:.56});
