@@ -22,9 +22,10 @@ const report = analyzeEvidence({
   player: { finalState: { modelReady: true } },
   texture: { readiness: { pendingTextures: ['missing-a.png'] } },
   grounding: { verdict: 'misaligned', summary: { errors: 1 } },
-  custom: { captures: [{ id: 'shot-1' }], structures: [{ id: 'hut-1' }] },
+  coastal: { captureCount: 4 },
+  custom: { shots: { captured: 3, planned: 3 }, structures: [{ id: 'hut-1' }] },
   beforeAfter: { builds: { before: { performance: { averageFps: 60 } }, after: { performance: { averageFps: 52, frameTimeP95Ms: 19.5 } } } },
-  files: []
+  files: ['custom-scene-captures/contact-sheet.png']
 });
 
 assert.equal(report.summary.passed, 1);
@@ -39,6 +40,10 @@ assert.ok(report.tasks.some(task => task.id === 'investigate-fps-regression'));
 assert.ok(report.tasks.some(task => task.id === 'inspect-world-grounding'));
 assert.equal(report.agents.find(agent => agent.id === 'npc-performance').status, 'evidence-found');
 assert.equal(report.agents.find(agent => agent.id === 'npc-world-geometry').status, 'evidence-found');
+const visual = report.agents.find(agent => agent.id === 'npc-visual-quality');
+assert.ok(visual.findings.some(finding => finding.metric === 'sceneCaptures' && finding.value === 3));
+assert.ok(visual.findings.some(finding => finding.metric === 'coastalCaptures' && finding.value === 4));
+assert.ok(visual.findings.some(finding => finding.metric === 'sceneContactSheet' && finding.value === 'available'));
 assert.equal(report.autonomy.deployment, false);
 
 console.log('Autonomous specialist agent contracts: OK');
