@@ -118,7 +118,11 @@ assert.equal(stagePressure.status, 'probable');
 assert.equal(stagePressure.causeAttribution, 'candidata-no-confirmada');
 assert.ok(stagePressure.possibleCauses.some(value => value.includes('actualización del mundo')));
 
-const noIssue = analyzeFrameStability([sample(7.5), sample(7.8), sample(7.9)], 120);
+const noIssue = analyzeFrameStability([
+  { game: { frameTiming: { sampleCount: 120, p50Ms: 7.5, p95Ms: 8.1, p99Ms: 8.3 } } },
+  { game: { frameTiming: { sampleCount: 120, p50Ms: 7.8, p95Ms: 8.2, p99Ms: 8.3 } } },
+  { game: { frameTiming: { sampleCount: 120, p50Ms: 7.9, p95Ms: 8.2, p99Ms: 8.3 } } }
+], 120);
 assert.equal(noIssue.status, 'sin-incidencia-observada');
 assert.equal(noIssue.severity, 'sin-incidencia-observada');
 
