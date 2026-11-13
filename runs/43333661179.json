@@ -77,10 +77,11 @@
       "name": "Comparación gráfica móvil S26 Ultra ANTES/DESPUÉS + FPS — cuatro fases horarias",
       "script": "scripts/hrafn-before-after.mjs",
       "startedAt": "2026-11-13T00:22:21.485Z",
-      "status": "running",
-      "durationMs": null,
-      "exitCode": null,
-      "error": null
+      "status": "passed",
+      "durationMs": 315424,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-13T00:27:36.910Z"
     }
   ],
   "finishedAt": null
