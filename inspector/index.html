@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#080d16">
 <meta name="description" content="Panel visual de auditoría, geometría, rendimiento y comparativas de EL SIN NOMBRE.">
 <title>Inspector Center · EL SIN NOMBRE</title>
-<link rel="stylesheet" href="style.css?v=phase1-live-1">
+<link rel="stylesheet" href="style.css?v=phase1-live-2">
 </head>
 <body>
 <div class="app-shell">
@@ -106,7 +106,7 @@
 
     <section class="section" id="diagnostico-en-vivo">
       <div class="section-heading">
-        <div><div class="section-kicker">FASE 1 · MEDICIÓN DIRECTA</div><h2>Diagnóstico en vivo</h2><p>Abre el juego aquí y juega con normalidad. El objetivo de referencia es 120 FPS (8,33 ms por fotograma). El inspector leerá las métricas que el propio juego expone, sin cambiar su calidad ni sus ajustes.</p></div>
+        <div><div class="section-kicker">FASE 1 · MEDICIÓN DIRECTA</div><h2>Diagnóstico en vivo</h2><p>Abre el juego aquí y juega con normalidad. La referencia es 120 FPS (8,33 ms por fotograma), no una promesa de que el motor ya los alcance. La medición normal no activa el perfilador GPU; puedes solicitarlo aparte para una inspección más profunda.</p></div>
         <span class="section-index">SESIÓN LOCAL</span>
       </div>
       <article class="chart-card live-diagnostic-card">
@@ -114,20 +114,28 @@
           <button class="primary" id="liveGameStart" type="button">Abrir juego para medir</button>
           <button class="small-button" id="liveGameSample" type="button" disabled>Tomar muestra</button>
           <button class="small-button" id="liveGameStop" type="button" disabled>Detener medición</button>
-          <label class="live-device-confirm"><input id="livePhysicalDevice" type="checkbox"> Estoy usando este Inspector en el Galaxy S26 Ultra físico</label><span id="liveDiagnosticStatus" role="status" aria-live="polite">Esperando que abras el juego.</span>
+          <label class="live-device-confirm"><input id="livePhysicalDevice" type="checkbox"> Declaro que esta sesión se ejecuta en mi Galaxy S26 Ultra</label><label class="live-device-confirm"><input id="liveEnableGpuProfiler" type="checkbox"> Activar perfilador GPU (puede añadir carga)</label><span id="liveDiagnosticStatus" role="status" aria-live="polite">Esperando que abras el juego.</span>
         </div>
         <div class="live-game-frame-wrap" id="liveGameFrameWrap" hidden>
           <iframe id="liveGameFrame" title="EL SIN NOMBRE · sesión de medición" loading="lazy" allow="fullscreen; gamepad" referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
         <div class="live-diagnostic-grid">
           <div><span>FPS del juego</span><strong id="liveFps">—</strong></div>
+          <div><span>Frame time p50</span><strong id="liveP50">—</strong></div>
           <div><span>Frame time p95</span><strong id="liveP95">—</strong></div>
           <div><span>Frame time p99</span><strong id="liveP99">—</strong></div>
-          <div><span>CPU actualización</span><strong id="liveWorldCpu">—</strong></div>
-          <div><span>CPU envío de render</span><strong id="liveRenderCpu">—</strong></div>
+          <div><span>CPU · actualización del mundo</span><strong id="liveWorldCpu">—</strong></div>
+          <div><span>CPU · envío de render</span><strong id="liveRenderCpu">—</strong></div>
+          <div><span>GPU · tiempo de fotograma</span><strong id="liveGpu">—</strong></div>
+          <div><span>Babylon · tiempo de render</span><strong id="liveSceneRender">—</strong></div>
+          <div><span>Draw calls</span><strong id="liveDrawCalls">—</strong></div>
+          <div><span>Mallas activas</span><strong id="liveActiveMeshes">—</strong></div>
+          <div><span>Resolución interna</span><strong id="liveRenderSize">—</strong></div>
           <div><span>Heap JavaScript</span><strong id="liveHeap">—</strong></div>
         </div>
-        <div class="live-diagnostic-note" id="liveDiagnosticSource">Los datos aparecerán cuando el juego esté iniciado. Las métricas de CPU son tiempos de trabajo JavaScript, no porcentajes de uso de CPU/GPU.</div>
+        <div class="live-diagnostic-note" id="liveDiagnosticSource">Los datos aparecerán cuando el juego esté iniciado.</div>
+        <div class="live-diagnostic-actions"><button class="small-button" id="liveDownloadReport" type="button">Descargar informe JSON</button></div>
+        <p class="live-diagnostic-note">El navegador no ofrece temperatura del SoC/GPU, uso total de CPU, RAM total ni VRAM. El indicador de dispositivo es una declaración manual, no una comprobación técnica. Los resultados de CI/SwiftShader no representan la GPU real del teléfono.</p>
         <details class="technical"><summary>Ver evidencia de esta sesión</summary><pre id="liveDiagnosticJson">Sin muestras todavía.</pre></details>
       </article>
     </section>
@@ -245,6 +253,6 @@
     <button class="guide-finish" id="guideFinish" type="button">Terminar guía</button>
   </aside>
 </div>
-<script src="app.js?v=20261113.11" defer></script>\n<script type="module" src="phase1-live.js?v=1"></script>
+<script src="app.js?v=20261113.11" defer></script>\n<script type="module" src="phase1-live.js?v=2"></script>
 </body>
 </html>
