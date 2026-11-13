@@ -1,0 +1,37 @@
+name: Phase 1 diagnostic core
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/phase1-diagnostics-core.mjs'
+      - 'scripts/test_phase1_diagnostics_core.mjs'
+      - '.github/workflows/phase1-diagnostic-core.yml'
+  push:
+    branches: ['phase1/diagnostic-foundation']
+    paths:
+      - 'scripts/phase1-diagnostics-core.mjs'
+      - 'scripts/test_phase1_diagnostics_core.mjs'
+      - '.github/workflows/phase1-diagnostic-core.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase1-diagnostic-core-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Validate evidence and measurement contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run diagnostic core tests
+        run: node scripts/test_phase1_diagnostics_core.mjs
