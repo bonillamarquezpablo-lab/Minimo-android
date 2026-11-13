@@ -236,8 +236,11 @@ assert.match(html,/RENDIMIENTO: .*assessment\.bottleneckHint/,"The live panel mu
 assert.match(html,/runtime\.gpuRenderer/,"The live panel must expose the actual mobile GPU renderer.");
 assert.match(html,/reportVersion:'12',build:'0\.6\.274'/,"The source health report must keep the literal build marker required by build_site.py normalization.");
 
-assert.match(html,/function registerGroundDebugPanel\(panel\)/,"Diagnostic panels must be registered in a hideable group.");
-assert.match(html,/panel\.style\.display='none'/,"All diagnostics must start collapsed so the game can be started normally.");
-assert.match(html,/id='groundDebugToggle'/,"A compact on-screen diagnostic toggle must be available.");
-assert.match(html,/panel\.style\.display=open\?'block':'none'/,"The diagnostic toggle must show and hide every panel without reloading the game.");
+assert.match(html,/function getGroundDebugDrawer\(\)/,"All debug sections must share one drawer instead of overlapping independent windows.");
+assert.match(html,/id='groundDebugDrawer'/,"The diagnostics must render inside one compact drawer.");
+assert.match(html,/max-height:min\(34dvh,360px\)/,"The diagnostics drawer must be bounded on mobile screens.");
+assert.match(html,/overflow-y:auto/,"Long diagnostics must scroll inside the drawer rather than cover the entire game.");
+assert.match(html,/if\(panel.id==='grassDebugPanel'\)/,"The secondary vegetation report must be folded into an expandable section.");
+assert.match(html,/section\.appendChild\(summary\);section\.appendChild\(panel\)/,"The vegetation detail must not open over the game by default.");
+assert.match(html,/getGroundDebugDrawer\(\)\.style\.display=open\?'block':'none'/,"The diagnostic toggle must show and hide one drawer without reloading the game.");
 assert.match(html,/aria-expanded/,"The diagnostic toggle must expose its expanded state accessibly.");
