@@ -9,6 +9,7 @@ assert.match(source, /phase1-diagnostics=1&profile=1/);
 assert.match(source, /physicalDeviceUserDeclared/);
 assert.doesNotMatch(source, /canvas\.getContext\(/, 'The inspector must not request a WebGL context from the game canvas.');
 assert.match(source, /visibilityState/);
+assert.match(source, /__elSinNombreWaterDebugSnapshot/);
 assert.match(source, /liveDownloadReport/);
 assert.match(source, /180000/);
 for (const id of [
