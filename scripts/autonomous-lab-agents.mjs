@@ -64,7 +64,7 @@ export function analyzeEvidence(evidence = {}) {
   const captures = countArray(custom?.shots?.captured) ?? countArray(custom?.captures);
   const structureCount = countArray(custom?.structures);
   const groundingVerdict = grounding?.verdict ?? null;
-  const normalizedFiles = Array.isArray(evidence.files) ? evidence.files.map(file => String(file).replace(/^artifacts\\//, '')) : [];
+  const normalizedFiles = Array.isArray(evidence.files) ? evidence.files.map(file => String(file).replace(/^artifacts\//, '')) : [];
   const contactSheet = normalizedFiles.includes('custom-scene-captures/contact-sheet.png') || normalizedFiles.includes('artifacts/custom-scene-captures/contact-sheet.png');
   const coastalCaptureCount = countArray(coastal?.captureCount) ?? countArray(coastal?.captures);
 
