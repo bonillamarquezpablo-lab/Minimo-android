@@ -2087,7 +2087,7 @@ async function removeStrayDebugGeometry(targetScene){
  const testModeEnabled=new URLSearchParams(window.location.search).get('test')==='1';
  const coastalReferenceMode=new URLSearchParams(window.location.search).get('coastref')==='1';
  const playerStartupTestEnabled=new URLSearchParams(window.location.search).get('playertest')==='1';
- const groundDebugEnabled=new URLSearchParams(window.location.search).get('debug')==='1';
+ const groundDebugEnabled=new URLSearchParams(window.location.search).get('grounddebug')==='1';
  const coastalDiagnosticsEnabled=groundDebugEnabled||testModeEnabled;
   // Solo ?test=1: interruptores de aislamiento para capturas A/B; nunca activos en juego normal.
   const coastalDiagnosticOverrides={disableShortVertexWaves:false,disableNearWaterDetail:false};
