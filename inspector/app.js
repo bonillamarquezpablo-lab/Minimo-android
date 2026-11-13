@@ -3,6 +3,7 @@
   const OWNER='bonillamarquezpablo-lab', REPO='Minimo-android', WORKFLOW='coastal-reference.yml';
   const STATUS_BRANCH='inspector-status';
   const API='https://api.github.com/repos/'+OWNER+'/'+REPO;
+  const GITHUB_WORKFLOW='https://github.com/'+OWNER+'/'+REPO+'/actions/workflows/'+WORKFLOW;
   const RAW='https://raw.githubusercontent.com/'+OWNER+'/'+REPO+'/'+STATUS_BRANCH;
   const PHASES=[
     {id:'dawn',label:'Amanecer',time:'06:00',short:'Alba'},
@@ -65,7 +66,9 @@
       $('runNumber').textContent='—';$('runBranch').textContent='Aún no hay auditorías registradas.';
       $('runDate').textContent='Pulsa “Iniciar inspección” para comenzar desde aquí.';
       $('runArtifactsLink').href=API+'/actions';
-      $('runPhaseTitle').textContent='Esperando la primera ejecución';$('runPhaseDescription').textContent='El panel mostrará cada fase sin tener que abrir GitHub.';
+      $('runPhaseStatus').textContent='SIN EJECUCIONES';
+      $('runPhaseTitle').textContent='Esperando la primera prueba';$('runPhaseDescription').textContent='Elige un nivel y pulsa Iniciar inspección.';
+      renderEvidence(null);
       $('progressValue').textContent='0%';$('progressCircle').style.strokeDashoffset=188.5;$('progressTrack').style.width='0%';
       $('stepList').innerHTML='<div class="empty-state"><div><strong>El historial está vacío</strong>La primera ejecución aparecerá aquí automáticamente.</div></div>';
       return;
@@ -79,6 +82,17 @@
     $('runArtifactsLink').href=run.html_url?(run.html_url+'#artifacts'):(API+'/actions');
   }
 
+  function phaseGuide(name){
+    const value=String(name||'');
+    if(/Arranque del juego|modelo vikingo/i.test(value))return {title:'Arrancando el juego',detail:'Cargando al vikingo y esperando a que el mundo esté listo.'};
+    if(/Texturas|preparación de cámara/i.test(value))return {title:'Comprobando gráficos',detail:'Revisando texturas, materiales y preparación de las cámaras.'};
+    if(/Cimentación|estructuras|reparación/i.test(value))return {title:'Midiendo las construcciones',detail:'Comprobando si las casas y estructuras apoyan bien en el terreno.'};
+    if(/Referencias costeras|agua|visibilidad/i.test(value))return {title:'Revisando costa y agua',detail:'Comprobando playas, agua, visibilidad y capturas del entorno.'};
+    if(/Comparación.*ANTES|ANTES.*DESPUÉS/i.test(value))return {title:'Comparando las versiones',detail:'Preparando las imágenes de antes y después en las cuatro horas.'};
+    if(/Inventario|islas|estructuras/i.test(value))return {title:'Contando el mundo',detail:'Buscando islas, objetos y estructuras con sus coordenadas reales.'};
+    if(/Informe visual|capturas|cámaras/i.test(value))return {title:'Preparando las evidencias',detail:'Guardando las capturas y el informe de inspección.'};
+    return {title:'Comprobando el mundo',detail:value||'Ejecutando las pruebas del Inspector.'};
+  }
   function renderSteps(phases,jobSteps){
     const normalized=phases?.length?phases.map(p=>({name:p.name||p.script,status:p.status==='completed'?'passed':p.status,startedAt:p.startedAt,durationMs:p.durationMs,error:p.error})):
       (jobSteps||[]).map(step=>({name:step.name,status:step.status==='completed'?(step.conclusion==='success'?'passed':step.conclusion==='failure'||step.conclusion==='cancelled'?'failed':step.conclusion==='skipped'?'skipped':'completed'):step.status==='in_progress'?'running':'pending',startedAt:step.started_at,completedAt:step.completed_at,conclusion:step.conclusion}));
@@ -87,19 +101,25 @@
     const running=normalized.find(p=>p.status==='running'||p.status==='in_progress');
     const percent=normalized.length?Math.round(done/normalized.length*100):0;
     const indeterminate=!!running&&(running.name==='Run the single unified inspector'||(done===0&&normalized.length===1));
-    $('progressValue').textContent=indeterminate?'En curso':percent+'%';
-    $('progressValue').classList.toggle('is-label',indeterminate);
+    $('progressValue').textContent=indeterminate?'↻':percent+'%';
+    $('progressValue').classList.toggle('is-spinning',indeterminate);
     $('overviewProgress').textContent=indeterminate?'En curso':percent+'%';
     $('progressCircle').style.strokeDashoffset=indeterminate?141.4:188.5-(188.5*percent/100);
     $('progressTrack').style.width=indeterminate?'':percent+'%';
     $('progressTrack').classList.toggle('indeterminate',indeterminate);
-    $('runPhaseTitle').textContent=failed?failed+' fase(s) requieren revisión':running?running.name:done===normalized.length&&normalized.length?'Inspección completada':'Preparando el entorno';
-    $('runPhaseDescription').textContent=running?'En curso ahora mismo · '+formatElapsed(Date.now()-Date.parse(running.startedAt||new Date().toISOString())):failed?'El informe conserva los errores concretos para poder corregirlos.':done===normalized.length&&normalized.length?'Todas las fases publicadas han terminado.':'Los pasos del runner ya están disponibles; el detalle de cada fase aparecerá conforme se publique.';
-    if(!normalized.length){$('stepList').innerHTML='<div class="empty-state"><div><strong>Esperando datos verificables</strong>El panel no inventará fases ni porcentajes. Consultará el estado real de GitHub y mostrará aquí los pasos en cuanto estén disponibles.</div></div>';return;}
+    const runningGuide=running?phaseGuide(running.name):null;
+    $('runPhaseStatus').textContent=running?(failed?'EN CURSO · CON AVISOS':'EN CURSO'):failed?'REVISAR':done===normalized.length&&normalized.length?'COMPLETADA':'PREPARANDO';
+    $('runPhaseTitle').textContent=running?runningGuide.title:failed?failed+' comprobación(es) necesitan revisión':done===normalized.length&&normalized.length?'Inspección completada':'Preparando la siguiente fase';
+    $('runPhaseDescription').textContent=running
+      ?runningGuide.detail+' Tiempo en esta fase: '+formatElapsed(Date.now()-Date.parse(running.startedAt||new Date().toISOString()))+'. '+(done?done+' fase(s) terminadas.':'')
+      :failed?'Hay resultados que necesitan revisión. Abre los pasos para ver cuáles.':done===normalized.length&&normalized.length?'Todas las fases publicadas han terminado.':'Los pasos aparecerán aquí conforme avance la prueba.';
+    if(!normalized.length){$('stepList').innerHTML='<div class="empty-state"><div><strong>Esperando datos reales</strong>GitHub todavía no ha publicado los pasos de esta inspección.</div></div>';return;}
     $('stepList').innerHTML=normalized.map(p=>{
-      const done=['passed','completed','skipped'].includes(p.status),bad=['failed','timed_out'].includes(p.status),now=['running','in_progress'].includes(p.status);
-      const icon=done?'✓':bad?'!':now?'<span class="spin"></span>':'·';
-      return '<div class="step '+(done?'done':bad?'failed':now?'current':'')+'"><span class="step-icon">'+icon+'</span><span class="step-name">'+esc(p.name||'Fase')+(p.error?'<br><small>'+esc(p.error)+'</small>':'')+'</span><span class="step-time">'+(p.durationMs!=null?formatElapsed(p.durationMs):statusName(p.status))+'</span></div>';
+      const passed=['passed','completed','skipped'].includes(p.status),bad=['failed','timed_out'].includes(p.status),now=['running','in_progress'].includes(p.status);
+      const icon=passed?'✓':bad?'!':now?'<span class="spin"></span>':'·';
+      const label=bad?'Necesita revisión':passed?(p.status==='skipped'?'Omitida':'Terminada'):now?'En curso':'Pendiente';
+      const friendly=phaseGuide(p.name);
+      return '<div class="step '+(passed?'done':bad?'failed':now?'current':'')+'"><span class="step-icon">'+icon+'</span><span class="step-name">'+esc(friendly.title)+(p.error?'<br><small>'+esc(p.error)+'</small>':'')+'</span><span class="step-time">'+(p.durationMs!=null?formatElapsed(p.durationMs):label)+'</span></div>';
     }).join('');
   }
   function statusName(s){return ({pending:'Pendiente',queued:'En cola',running:'En curso',in_progress:'En curso',skipped:'Omitida',failed:'Fallida'})[s]||s||'Pendiente';}
@@ -161,6 +181,7 @@
       const phases=manifest?.phases||[];
       const allSteps=(jobs.jobs||[]).flatMap(job=>(job.steps||[]).map(step=>({...step,jobName:job.name})));
       renderSteps(phases,allSteps);
+      renderEvidence(manifest);
       renderCompare(manifest);
       renderRadar(manifest);
       renderTelemetry(manifest);
@@ -171,7 +192,9 @@
         $('runPhaseDescription').textContent=jobsError
           ?'GitHub no ha permitido leer los pasos ('+jobsError.message+'). La ejecución sigue marcada como activa; no se inventa un porcentaje.'
           :'El runner está activo, pero GitHub aún no ha devuelto sus pasos. Se volverán a consultar en 12 segundos.';
-        $('progressValue').textContent='En curso';
+        $('progressValue').textContent='↻';
+        $('progressValue').classList.add('is-spinning');
+        $('runPhaseStatus').textContent='EN CURSO';
         $('overviewProgress').textContent='En curso';
         $('progressCircle').style.strokeDashoffset='141.4';
         $('progressTrack').style.width='';
@@ -203,10 +226,15 @@
     }
     return null;
   }
+  function openGithubWorkflow(){
+    window.open(GITHUB_WORKFLOW,'_blank','noopener');
+    setMessage('GitHub se ha abierto. Selecciona main, elige el mismo nivel que aquí y pulsa “Run workflow”. No necesitas un token.','success');
+  }
+  $('startInGithub').addEventListener('click',openGithubWorkflow);
   async function launchInspection(){
     if(launching)return;
     saveToken();
-    if(!currentToken){$('tokenDetails').open=true;setMessage('Añade un token de acceso fino con permiso Actions: write para este repositorio. No saldrás del Inspector Center.','error');return;}
+    if(!currentToken){openGithubWorkflow();return;}
     const ref=$('targetBranch').value.trim()||'main';
     const beforeRef=$('beforeRef').value.trim();
     if(!/^[A-Za-z0-9._/-]+$/.test(ref)){setMessage('La rama contiene caracteres no válidos.','error');return;}
@@ -318,6 +346,27 @@
     $('technicalJson').textContent=JSON.stringify(diagnostics,null,2);
   }
 
+  function safeEvidenceUrl(value){
+    const prefix='https://raw.githubusercontent.com/'+OWNER+'/'+REPO+'/inspector-status/';
+    return typeof value==='string'&&value.startsWith(prefix)?value:'';
+  }
+  function renderEvidence(manifest){
+    const previews=manifest?.results?.beforeAfter?.previews||{};
+    let ready=0;
+    const cards=PHASES.map(phase=>{
+      const row=previews[phase.id]||{};
+      const before=safeEvidenceUrl(row.before),after=safeEvidenceUrl(row.after);
+      if(before||after)ready++;
+      const visual=(before||after)
+        ?'<div class="evidence-pair">'+(before?'<a href="'+esc(before)+'" target="_blank" rel="noopener"><img src="'+esc(before)+'" alt="'+phase.label+' · antes" loading="lazy"><span>ANTES</span></a>':'<div class="evidence-missing">ANTES pendiente</div>')+(after?'<a href="'+esc(after)+'" target="_blank" rel="noopener"><img src="'+esc(after)+'" alt="'+phase.label+' · después" loading="lazy"><span>DESPUÉS</span></a>':'<div class="evidence-missing">DESPUÉS pendiente</div>')+'</div>'
+        :'<div class="evidence-empty-tile">'+(activeRun?.status==='in_progress'?'Preparando captura':'Sin captura')+'</div>';
+      return '<article class="evidence-card"><div class="evidence-card-head"><strong>'+phase.label+'</strong><small>'+phase.time+'</small></div>'+visual+'</article>';
+    }).join('');
+    $('evidenceGrid').innerHTML=cards;
+    $('evidenceStatus').textContent=ready+'/4 horas con imágenes';
+    $('evidenceGrid').classList.toggle('waiting',!ready);
+    $('evidenceGrid').setAttribute('aria-label',ready?ready+' de cuatro fases horarias con capturas':'Las capturas de las cuatro horas aún no están disponibles');
+  }
   function renderCompare(manifest){
     const data=manifest?.results?.beforeAfter,previews=data?.previews||{};
     $('beforeBuild').textContent=data?.builds?.before?.build||'—';
@@ -450,8 +499,8 @@
   const GUIDE_STEPS=[
     {target:'#overview',title:'1. El resumen: ¿cómo está el juego?',text:'Aquí ves la última inspección, su estado y cuántas islas y estructuras ha encontrado. “En curso” significa que la prueba sigue trabajando; no es un resultado malo.'},
     {target:'#control .levels',title:'2. Elige qué quieres comprobar',text:'Rápido: comprueba el arranque. Completo: revisa mundo, estructuras, agua y vegetación. Profundo: añade la comparación visual y las cuatro horas del día. Para una revisión general, usa Profundo.'},
-    {target:'#tokenDetails',title:'3. Autoriza y lanza la prueba',text:'Pulsa “Iniciar inspección”. Para lanzarla desde esta página necesitas un token personal de GitHub limitado a este repositorio, con permiso Actions: Read and write. No compartas ese token con nadie. Después pulsa “Aplicar token” y vuelve a iniciar.'},
-    {target:'.run-panel',title:'4. Mira si está trabajando',text:'Esta tarjeta es el seguimiento. “En ejecución” significa que sigue activa; la fase indica qué está haciendo. Usa “Actualizar ahora” para consultar el estado. Al terminar, abre “Capturas y evidencias” para ver los archivos.'},
+    {target:'#control .launch-panel',title:'3. Inicia la inspección',text:'Pulsa “Iniciar inspección”. Sin token se abrirá GitHub: elige la rama main, selecciona el mismo nivel y pulsa “Run workflow”. No necesitas crear ni pegar ningún código. La conexión directa es opcional.'},
+    {target:'.run-panel',title:'4. Mira cómo avanza',text:'Aquí verás qué está comprobando ahora, cuánto lleva y qué fases terminaron o necesitan revisión. Las imágenes aparecerán aquí mismo al publicarse. “Todos los archivos” abre el expediente completo.'},
     {target:'#telemetria',title:'5. Entiende las gráficas',text:'FPS: más alto es mejor; el objetivo es 60. Frame time: más bajo es mejor; 16,6 ms equivale a 60 FPS. La memoria mide solo el heap JavaScript de Chromium, no toda la RAM ni la GPU. Un guion (—) significa “sin dato”, nunca cero.'},
     {target:'#radar',title:'6. Revisa las islas',text:'Toca una isla para ver sus datos y después toca un punto para ver una estructura. Verde: apoyo dentro de 2 cm. Rojo: desnivel mayor de 2 cm. Gris: todavía no se ha medido. El objetivo del inventario es 13 islas y 39 estructuras.'},
     {target:'#comparativa',title:'7. Compara antes y después',text:'Elige amanecer, mediodía, atardecer o noche. Cuando haya capturas, mueve la barra para revelar la versión DESPUÉS y activa el mapa de diferencias para localizar cambios. Si ves “Pendiente”, la inspección aún no ha publicado esa imagen.'}

@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#080d16">
 <meta name="description" content="Panel visual de auditoría, geometría, rendimiento y comparativas de EL SIN NOMBRE.">
 <title>Inspector Center · EL SIN NOMBRE</title>
-<link rel="stylesheet" href="style.css?v=20261113.5">
+<link rel="stylesheet" href="style.css?v=20261113.6">
 </head>
 <body>
 <div class="app-shell">
@@ -159,18 +159,19 @@
             <div class="field"><label for="beforeRef">Referencia ANTES · opcional</label><input id="beforeRef" placeholder="Automática: versión anterior" autocomplete="off" spellcheck="false"></div>
           </div>
           <button class="primary" id="launchButton" type="button">Iniciar inspección <span aria-hidden="true">↗</span></button>
-          <p class="inline-state" id="launchMessage" role="status" aria-live="polite">Nivel seleccionado: <strong id="selectedLevel">Profundo</strong>. El token solo se envía a GitHub para solicitar el workflow.</p>
+          <p class="inline-state" id="launchMessage" role="status" aria-live="polite">Nivel elegido: <strong id="selectedLevel">Profundo</strong>. Sin token, se abrirá GitHub para confirmar el inicio.</p>
+          <button class="small-button github-start" id="startInGithub" type="button">Abrir GitHub Actions sin token ↗</button>
 
           <details class="token-box" id="tokenDetails">
-            <summary>Autorizar el inicio directo desde esta página</summary>
-            <p>GitHub exige un token de acceso fino para lanzar workflows desde una web estática. Créalo limitado a este repositorio con permiso <strong>Actions: Read and write</strong>. El token se envía directamente a api.github.com; esta página no lo transmite a ningún servidor propio.</p>
+            <summary>Conexión directa · opcional</summary>
+            <p>Solo hace falta si quieres iniciar pruebas sin salir de este panel. Permiso necesario: <strong>Actions: Read and write</strong>. El token se envía directamente a GitHub; nunca lo pegues en este chat.</p>
             <div class="token-input"><input id="githubToken" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Token de acceso fino de GitHub"><button class="small-button" id="toggleToken" type="button">Mostrar</button></div>
             <div class="token-actions">
               <label><input id="sessionKeep" type="checkbox"> Mantener hasta cerrar esta pestaña</label>
               <button class="small-button" id="saveToken" type="button">Aplicar token</button>
               <button class="small-button" id="clearToken" type="button">Eliminar</button>
             </div>
-            <p class="token-foot" id="tokenState">No hay token cargado. Por seguridad, no se usa localStorage ni se conserva entre sesiones.</p>
+            <p class="token-foot" id="tokenState">Sin token también puedes iniciar desde GitHub con el botón azul.</p>
           </details>
         </article>
 
@@ -180,10 +181,12 @@
             <span class="status-pill" id="runState">Buscando</span>
           </div>
           <div class="progress-row">
-            <div class="progress-ring"><svg viewBox="0 0 72 72" aria-hidden="true"><circle class="track" cx="36" cy="36" r="30"/><circle class="value" id="progressCircle" cx="36" cy="36" r="30"/></svg><strong id="progressValue">0%</strong></div>
-            <div class="progress-copy"><strong id="runPhaseTitle">Preparando el entorno</strong><p id="runPhaseDescription">La auditoría está consultando GitHub Actions.</p><div class="progress-track"><span id="progressTrack"></span></div></div>
+            <div class="progress-ring"><svg viewBox="0 0 72 72" aria-hidden="true"><circle class="track" cx="36" cy="36" r="30"/><circle class="value" id="progressCircle" cx="36" cy="36" r="30"/></svg><strong id="progressValue" aria-label="Progreso">0%</strong></div>
+            <div class="progress-copy"><span class="run-phase-status" id="runPhaseStatus">PREPARANDO</span><strong id="runPhaseTitle">Preparando el entorno</strong><p id="runPhaseDescription">La auditoría está consultando GitHub Actions.</p><div class="progress-track"><span id="progressTrack"></span></div></div>
           </div>
-          <div class="panel-title"><h3>Secuencia de trabajo</h3><span class="run-links"><a id="runArtifactsLink" href="#" target="_blank" rel="noopener">Capturas y evidencias ↗</a><a id="runTechnicalLink" href="#" target="_blank" rel="noopener">Logs ↗</a></span></div>
+          <div class="panel-title"><h3>Capturas de esta inspección</h3><span class="step-label" id="evidenceStatus">Esperando imágenes</span></div>
+          <div class="evidence-inline" id="evidenceGrid" aria-live="polite"><div class="evidence-empty">Las capturas aparecerán aquí automáticamente cuando estén listas.</div></div>
+          <div class="panel-title run-actions-title"><h3>Pasos de la prueba</h3><span class="run-links"><a id="runArtifactsLink" href="#" target="_blank" rel="noopener">Todos los archivos ↗</a><a id="runTechnicalLink" href="#" target="_blank" rel="noopener">Logs ↗</a></span></div>
           <div class="step-list" id="stepList"><div class="empty-state"><div><strong>Conectando con el inspector</strong>Los pasos aparecerán aquí, uno por uno.</div></div></div>
           <div class="footer-meta"><span id="updatedAt">Actualizando automáticamente</span><button class="small-button" id="refreshNow" type="button">Actualizar ahora</button></div>
         </article>
@@ -204,6 +207,6 @@
     <button class="guide-finish" id="guideFinish" type="button">Terminar guía</button>
   </aside>
 </div>
-<script src="app.js?v=20261113.5" defer></script>
+<script src="app.js?v=20261113.6" defer></script>
 </body>
 </html>
