@@ -50,7 +50,7 @@ assert.ok(rs.includes("phaseLevel(name)>LEVEL_RANK[INSPECTOR_LEVEL]"),'The selec
 assert.ok(rs.includes("child.once('exit'"),'Inspector phases must settle on child exit rather than waiting for inherited stdio close.');
 console.log('Inspector workflow routing and baseline fallback contract: OK');
 
-const aiReviewStep=workflow.split('      - name: Run optional read-only multimodal visual review')[1]?.split('\\n      - name:')[0] || '';
+const aiReviewStep=workflow.match(/- name: Run optional read-only multimodal visual review([\\s\\S]*?)(?=\\n      - name:)/)?.[1] || '';
 assert.ok(aiReviewStep.includes('LAB_AI_API_KEY'),'The optional visual review must use a repository secret.');
 assert.ok(aiReviewStep.includes('LAB_AI_MODEL'),'The optional visual review must use a configured vision model.');
 assert.ok(!aiReviewStep.includes('LAB_AI_RESPONSES_URL'),'The API secret must not be sent to a configurable endpoint.');
