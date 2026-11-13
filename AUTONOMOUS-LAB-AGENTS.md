@@ -48,7 +48,7 @@ Se incorpora `scripts/ai-visual-review.mjs`, una pasarela de solo lectura compat
 Para activarla, el propietario debe añadir en GitHub Actions:
 - Secret `LAB_AI_API_KEY` con una clave de API del proveedor.
 - Repository variable `LAB_AI_MODEL` con un modelo habilitado para visión en la cuenta.
-- Opcionalmente, `LAB_AI_RESPONSES_URL` si se usa un endpoint compatible distinto.
+La clave se envía exclusivamente al endpoint oficial `https://api.openai.com/v1/responses`; no se permite redirigirla a una URL configurable.
 
 La suscripción ChatGPT no equivale a una clave API ni incluye automáticamente saldo de API. El uso puede generar costes independientes.
 
