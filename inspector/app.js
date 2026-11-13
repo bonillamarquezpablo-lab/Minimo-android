@@ -14,7 +14,7 @@
   const $=id=>document.getElementById(id);
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const niceDate=value=>value?new Date(value).toLocaleString('es-ES',{dateStyle:'medium',timeStyle:'short'}):'—';
-  const number=(v,d=1)=>Number.isFinite(Number(v))?Number(v).toLocaleString('es-ES',{maximumFractionDigits:d}):'—';
+  const number=(v,d=1)=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?Number(v).toLocaleString('es-ES',{maximumFractionDigits:d}):'—';
   const formatElapsed=ms=>{if(!Number.isFinite(ms)||ms<0)return '—';const s=Math.round(ms/1000);if(s<60)return s+' s';const m=Math.floor(s/60),r=s%60;return m+' min '+String(r).padStart(2,'0')+' s';};
   let chosenLevel='deep',activeRun=null,progressData=null,jobsData=null,activePhase='dawn',comparePosition=50,differenceVisible=false,radarData=null,selectedIsland=null,selectedStructure=null;
   let currentToken='',refreshTimer=null,fetchBusy=false,launching=false,latestRuns=[],lastError=null,lastRunsFetchAt=0,lastJobsFetchAt=0,jobsRunId=null;
@@ -242,6 +242,7 @@
   function chartLine(samples,key,nestedKey=null){
     return (samples||[]).map((sample,index)=>{
       const raw=nestedKey?sample?.[nestedKey]?.[key]:sample?.[key];
+      if(raw===null||raw===undefined||raw==='')return null;
       const value=Number(raw);
       return Number.isFinite(value)?{index,value}:null;
     }).filter(Boolean);

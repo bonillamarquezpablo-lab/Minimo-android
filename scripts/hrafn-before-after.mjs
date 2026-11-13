@@ -186,8 +186,8 @@ async function sampleGraphicsPerformance(page, label) {
     if (index < 7) await page.waitForTimeout(1000);
   }
   const median = values => { const sorted=values.filter(Number.isFinite).sort((a,b)=>a-b); if(!sorted.length)return null; const m=Math.floor(sorted.length/2); return Number((sorted.length%2?sorted[m]:(sorted[m-1]+sorted[m])/2).toFixed(3)); };
-  const values = key => samples.map(sample=>Number(sample[key])).filter(Number.isFinite);
-  const fpsValues=values('fps'),p95Values=samples.map(s=>Number(s.frameTiming?.p95)).filter(Number.isFinite),p99Values=samples.map(s=>Number(s.frameTiming?.p99)).filter(Number.isFinite);
+  const values = key => samples.map(sample=>sample[key]).filter(value=>value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value))).map(Number);
+  const fpsValues=values('fps'),p95Values=samples.map(s=>s.frameTiming?.p95).filter(v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))).map(Number),p99Values=samples.map(s=>s.frameTiming?.p99).filter(v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))).map(Number);
   const heapValues=values('heapUsedMB'),last=samples[samples.length-1]||{};
   return {label,sampleCount:samples.length,medianFps:median(fpsValues),minimumFps:fpsValues.length?Math.min(...fpsValues):null,
     medianFrameP95Ms:median(p95Values),medianFrameP99Ms:median(p99Values),medianWorldUpdateCpuMs:median(values('worldUpdateMs')),

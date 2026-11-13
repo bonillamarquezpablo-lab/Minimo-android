@@ -27,6 +27,7 @@ assert.ok(app.includes('Authorization:\'Bearer \'+currentToken'),'The token must
 assert.ok(app.includes("$('runArtifactsLink').href=run.html_url?")&&app.includes("run.html_url+'#artifacts'"),'The evidence link must open the active run artifacts.');
 assert.ok(app.includes("const jobsInterval=run.status==='in_progress'?12000:30000"),'Active runs must refresh real GitHub job steps every 12 seconds.');
 assert.ok(app.includes("$('progressValue').textContent=indeterminate?'En curso':percent+'%'"),'A single long-running step must not be displayed as a misleading 0%.');
+assert.ok(app.includes("v!==null&&v!==undefined&&v!==''")&&app.includes("raw===null||raw===undefined||raw===''"),'Missing telemetry values must remain unavailable, never be plotted as zero.');
 assert.ok(app.includes("running.name==='Run the single unified inspector'"),'The monolithic inspector phase must use indeterminate progress, not a misleading percentage.');
 assert.ok(app.includes("step.conclusion==='failure'||step.conclusion==='cancelled'"),'Cancelled GitHub steps must not be rendered as successful.');
 assert.ok(app.includes('Esperando datos verificables'),'Missing job data must be explained without inventing progress.');
@@ -41,4 +42,5 @@ assert.ok(previewReport.includes('preview_width = 480'),'Preview publication mus
 assert.ok(!/gh[pousr]_[A-Za-z0-9_]{20,}/.test(html+app),'No GitHub credential may be embedded in the static dashboard.');
 assert.ok(sampler.includes('heapUsedMB')&&sampler.includes('heapInitialMB')&&sampler.includes('heapPeakMB'),'Performance sampling must capture entry and post-entry JavaScript heap readings.');
 assert.ok(sampler.includes('performance.memory'),'Heap memory must be measured only through Chromium performance.memory.');
+assert.ok(sampler.includes("value!==null&&value!==undefined&&value!==''"),'Missing heap samples must not be converted to zero.');
 console.log('Inspector Center visual dashboard, live performance/heap charts, secure launch, A/B previews and island radar contract: OK');
