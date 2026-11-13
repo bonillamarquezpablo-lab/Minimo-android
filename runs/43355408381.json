@@ -57,10 +57,11 @@
       "name": "Informe visual unificado de estructuras",
       "script": "scripts/create_scene_capture_contact_sheet.py",
       "startedAt": "2026-11-13T03:15:12.079Z",
-      "status": "running",
-      "durationMs": null,
-      "exitCode": null,
-      "error": null
+      "status": "passed",
+      "durationMs": 8063,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-13T03:15:20.142Z"
     },
     {
       "name": "Lámina de referencias costeras",
