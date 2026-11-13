@@ -262,7 +262,7 @@ for (const marker of [
  'EXT_disjoint_timer_query_webgl2',
  'EXT_disjoint_timer_query',
  "measurement:'EXT_disjoint_timer_query; asynchronous sampled every 15 frames; unavailable is not zero'",
- 'worldUpdateMs:world',
+ 'worldMs:world',
  'renderSubmissionMs:render',
  'drawCalls:{source:',
  'activeTriangles:Math.round'
