@@ -148,41 +148,52 @@ function saveManifest() {
 
 
 async function sampleGraphicsPerformance(page, label) {
-  await page.waitForTimeout(8000);
   const samples = [];
+  const sampleStartedAt = Date.now();
+  const collect = async () => withTimeout(page.evaluate(() => {
+    if (typeof window.getGameHealthDebug !== 'function') throw new Error('getGameHealthDebug() is unavailable.');
+    const health = window.getGameHealthDebug(), runtime = health.runtime || {}, fsr = window.__ELSN_FSR1 || null;
+    const water = typeof window.__elSinNombreWaterDebugSnapshot === 'function' ? window.__elSinNombreWaterDebugSnapshot() : null;
+    const memory = performance.memory && typeof performance.memory === 'object' ? performance.memory : null;
+    const toMB = value => Number.isFinite(Number(value)) ? Number((Number(value) / 1048576).toFixed(2)) : null;
+    return {
+      build: document.querySelector('meta[name="el-sin-nombre-build"]')?.content || null,
+      profile: runtime.graphicsProfile || null, fps: runtime.fps ?? health.fps ?? null,
+      frameTiming: runtime.frameTimingMs || null, performanceAssessment: runtime.performanceAssessment || null,
+      renderDpr: runtime.renderDpr ?? null, renderWidth: runtime.renderWidth ?? null, renderHeight: runtime.renderHeight ?? null,
+      drawCalls: runtime.drawCalls ?? null, activeMeshes: runtime.activeMeshes ?? null, totalVertices: runtime.totalVertices ?? null,
+      worldUpdateMs: runtime.worldUpdateMs ?? null, renderCpuMs: runtime.renderCpuMs ?? null,
+      gpuRenderer: runtime.gpuRenderer || null, gpuVendor: runtime.gpuVendor || null, webglVersion: runtime.webglVersion || null,
+      devicePixelRatio: runtime.devicePixelRatio ?? window.devicePixelRatio, isTouchDevice: runtime.isTouchDevice ?? null,
+      deviceMemory: runtime.deviceMemory ?? navigator.deviceMemory ?? null, hardwareConcurrency: runtime.hardwareConcurrency ?? navigator.hardwareConcurrency ?? null,
+      heapUsedMB: memory ? toMB(memory.usedJSHeapSize) : null,
+      heapTotalMB: memory ? toMB(memory.totalJSHeapSize) : null,
+      heapLimitMB: memory ? toMB(memory.jsHeapSizeLimit) : null,
+      fsr1: fsr ? { enabled:fsr.enabled===true, method:fsr.method||null, outputDpr:fsr.outputDpr??null,
+        inputScale:typeof fsr.inputScale==='function'?fsr.inputScale():null,
+        effectiveSourceDpr:typeof fsr.effectiveSourceDpr==='function'?fsr.effectiveSourceDpr():null,
+        source:typeof fsr.source==='function'?fsr.source():null, output:typeof fsr.output==='function'?fsr.output():null,
+        reason:fsr.reason||null } : null,
+      waterTimings: water?.timings || null
+    };
+  }), 10000, label + ' graphics telemetry sample');
+  const initial = await collect();
+  samples.push({...initial, elapsedMs:0, sampleLabel:'Entrada'});
+  await page.waitForTimeout(8000);
   for (let index = 0; index < 8; index++) {
-    const sample = await withTimeout(page.evaluate(() => {
-      if (typeof window.getGameHealthDebug !== 'function') throw new Error('getGameHealthDebug() is unavailable.');
-      const health = window.getGameHealthDebug(), runtime = health.runtime || {}, fsr = window.__ELSN_FSR1 || null;
-      const water = typeof window.__elSinNombreWaterDebugSnapshot === 'function' ? window.__elSinNombreWaterDebugSnapshot() : null;
-      return {
-        build: document.querySelector('meta[name="el-sin-nombre-build"]')?.content || null,
-        profile: runtime.graphicsProfile || null, fps: runtime.fps ?? health.fps ?? null,
-        frameTiming: runtime.frameTimingMs || null, performanceAssessment: runtime.performanceAssessment || null,
-        renderDpr: runtime.renderDpr ?? null, renderWidth: runtime.renderWidth ?? null, renderHeight: runtime.renderHeight ?? null,
-        drawCalls: runtime.drawCalls ?? null, activeMeshes: runtime.activeMeshes ?? null, totalVertices: runtime.totalVertices ?? null,
-        worldUpdateMs: runtime.worldUpdateMs ?? null, renderCpuMs: runtime.renderCpuMs ?? null,
-        gpuRenderer: runtime.gpuRenderer || null, gpuVendor: runtime.gpuVendor || null, webglVersion: runtime.webglVersion || null,
-        devicePixelRatio: runtime.devicePixelRatio ?? window.devicePixelRatio, isTouchDevice: runtime.isTouchDevice ?? null,
-        deviceMemory: runtime.deviceMemory ?? navigator.deviceMemory ?? null, hardwareConcurrency: runtime.hardwareConcurrency ?? navigator.hardwareConcurrency ?? null,
-        fsr1: fsr ? { enabled:fsr.enabled===true, method:fsr.method||null, outputDpr:fsr.outputDpr??null,
-          inputScale:typeof fsr.inputScale==='function'?fsr.inputScale():null,
-          effectiveSourceDpr:typeof fsr.effectiveSourceDpr==='function'?fsr.effectiveSourceDpr():null,
-          source:typeof fsr.source==='function'?fsr.source():null, output:typeof fsr.output==='function'?fsr.output():null,
-          reason:fsr.reason||null } : null,
-        waterTimings: water?.timings || null
-      };
-    }), 10000, label + ' graphics telemetry sample');
-    samples.push(sample);
+    const sample = await collect();
+    samples.push({...sample, elapsedMs:Date.now()-sampleStartedAt, sampleLabel:'Estable '+(index+1)});
     if (index < 7) await page.waitForTimeout(1000);
   }
   const median = values => { const sorted=values.filter(Number.isFinite).sort((a,b)=>a-b); if(!sorted.length)return null; const m=Math.floor(sorted.length/2); return Number((sorted.length%2?sorted[m]:(sorted[m-1]+sorted[m])/2).toFixed(3)); };
   const values = key => samples.map(sample=>Number(sample[key])).filter(Number.isFinite);
   const fpsValues=values('fps'),p95Values=samples.map(s=>Number(s.frameTiming?.p95)).filter(Number.isFinite),p99Values=samples.map(s=>Number(s.frameTiming?.p99)).filter(Number.isFinite);
-  const last=samples[samples.length-1]||{};
+  const heapValues=values('heapUsedMB'),last=samples[samples.length-1]||{};
   return {label,sampleCount:samples.length,medianFps:median(fpsValues),minimumFps:fpsValues.length?Math.min(...fpsValues):null,
     medianFrameP95Ms:median(p95Values),medianFrameP99Ms:median(p99Values),medianWorldUpdateCpuMs:median(values('worldUpdateMs')),
     medianRenderSubmissionCpuMs:median(values('renderCpuMs')),medianDrawCalls:median(values('drawCalls')),
+    heapInitialMB:samples[0]?.heapUsedMB??null,heapPeakMB:heapValues.length?Math.max(...heapValues):null,
+    heapFinalMB:last.heapUsedMB??null,heapSampleCount:heapValues.length,
     profile:last.profile,build:last.build,renderDpr:last.renderDpr,renderWidth:last.renderWidth,renderHeight:last.renderHeight,
     gpuRenderer:last.gpuRenderer,gpuVendor:last.gpuVendor,webglVersion:last.webglVersion,devicePixelRatio:last.devicePixelRatio,
     isTouchDevice:last.isTouchDevice,deviceMemory:last.deviceMemory,hardwareConcurrency:last.hardwareConcurrency,

@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#080d16">
 <meta name="description" content="Panel visual de auditoría, geometría, rendimiento y comparativas de EL SIN NOMBRE.">
 <title>Inspector Center · EL SIN NOMBRE</title>
-<link rel="stylesheet" href="style.css?v=20261113.3">
+<link rel="stylesheet" href="style.css?v=20261113.4">
 </head>
 <body>
 <div class="app-shell">
@@ -26,14 +26,10 @@
   <main id="inicio">
     <section class="hero">
       <div class="hero-copy">
-        <div class="eyebrow">Centro de mando independiente</div>
-        <h1>La salud del mundo,<br>de un vistazo.</h1>
-        <p>Inspecciona arranque, estructuras, costa y rendimiento. Revisa las cuatro horas del día y explora cada isla sin salir de este panel.</p>
+        <div class="eyebrow">INSPECTOR CENTER · RESUMEN</div>
+        <h1>Estado del mundo</h1>
+        <p>Lecturas y evidencias de la última inspección.</p>
       </div>
-      <aside class="hero-aside">
-        <strong>Una ventana al motor, no otro formulario.</strong>
-        <p>Las comprobaciones se ejecutan en GitHub Actions. El panel recibe resultados y evidencias directamente; el juego y las partidas permanecen aislados.</p>
-      </aside>
     </section>
 
     <section class="overview" aria-label="Resumen del sistema">
@@ -43,9 +39,107 @@
       <article class="overview-card"><div class="overview-label">Objetos estructurales</div><div class="overview-value" id="overviewStructures">—</div><div class="overview-foot" id="overviewStructuresFoot">Pendientes del inventario</div></article>
     </section>
 
+    
+    
+    
+    
+    <section class="section" id="telemetria">
+      <div class="section-heading">
+        <div><div class="section-kicker">01 · GRÁFICAS</div><h2>Rendimiento</h2><p>FPS, tiempo por fotograma y memoria del heap JavaScript.</p></div>
+        <span class="section-index">DATOS MEDIDOS</span>
+      </div>
+      <div class="telemetry-grid" id="telemetryGrid">
+        <article class="chart-card performance-card">
+          <div class="chart-card-head">
+            <div><h3>FPS y frame time</h3><p>Objetivo: 60 FPS · 16,6 ms</p></div>
+            <details class="chart-help"><summary aria-label="Ayuda: FPS y frame time">?</summary><div>FPS: cuadros por segundo; 60 es el objetivo. Frame time p95: tiempo que tarda el 95 % de los fotogramas; cuanto menor, mejor. La línea verde marca 60 FPS y 16,6 ms. Las líneas discontinuas son ANTES.</div></details>
+          </div>
+          <div class="chart-legend"><span><i class="legend-line fps"></i> FPS DESPUÉS</span><span><i class="legend-line frame"></i> Frame time DESPUÉS</span><span><i class="legend-line baseline"></i> ANTES</span><span><i class="legend-line target"></i> Objetivo</span></div>
+          <svg id="performanceChart" viewBox="0 0 720 238" role="img" aria-label="Gráfica temporal de FPS y tiempo de fotograma con líneas objetivo"></svg>
+          <div class="chart-summary" id="performanceSummary">Esperando muestras de rendimiento.</div>
+        </article>
+        <article class="chart-card memory-card">
+          <div class="chart-card-head">
+            <div><h3>Memoria JavaScript</h3><p>Heap del navegador · MB</p></div>
+            <details class="chart-help"><summary aria-label="Ayuda: memoria JavaScript">?</summary><div>Mide el heap JavaScript expuesto por Chromium desde que entra la partida y durante las lecturas posteriores. No es la RAM total del móvil ni la memoria de vídeo (VRAM); esas cifras no están disponibles en esta prueba.</div></details>
+          </div>
+          <div class="chart-legend"><span><i class="legend-line memory"></i> DESPUÉS</span><span><i class="legend-line baseline"></i> ANTES</span></div>
+          <svg id="memoryChart" viewBox="0 0 720 190" role="img" aria-label="Gráfica de memoria del heap JavaScript durante la entrada al juego"></svg>
+          <div class="chart-summary" id="memorySummary">Esperando una lectura de heap.</div>
+        </article>
+        <article class="metric-card cpu-card">
+          <div class="metric-head"><span class="metric-icon">◇</span><span class="metric-name">CPU · actualización del mundo</span></div>
+          <div class="metric-value" id="worldCpuValue">—</div><div class="metric-unit">ms por lectura · menor es mejor</div>
+        </article>
+        <article class="metric-card cpu-card">
+          <div class="metric-head"><span class="metric-icon">▧</span><span class="metric-name">CPU · envío de render</span></div>
+          <div class="metric-value" id="renderCpuValue">—</div><div class="metric-unit">ms por lectura · menor es mejor</div>
+        </article>
+      </div>
+      <div class="telemetry-caveat" id="telemetryCaveat">La prueba usa Chromium + ANGLE SwiftShader. No es una medición física de la GPU Adreno ni de la RAM total del S26 Ultra.</div>
+      <details class="technical"><summary>Ver datos originales y diagnóstico</summary><pre id="technicalJson">Los diagnósticos aparecerán aquí cuando la inspección publique su manifiesto.</pre></details>
+    </section>
+
+    <section class="section" id="radar">
+      <div class="section-heading">
+        <div><div class="section-kicker">02 · MAPA DEL MUNDO</div><h2>Radar táctico del archipiélago</h2><p>Toca una isla o estructura para consultar coordenadas y apoyo. Verde: hasta 2 cm; rojo: más de 2 cm; gris: sin medir.</p></div>
+        <span class="section-index">13 ISLAS</span>
+      </div>
+      <article class="panel radar-panel">
+        <div class="panel-title"><h3>13 islas · 39 estructuras</h3><div class="panel-title-tools"><span class="step-label" id="radarStats">Esperando inventario</span><details class="chart-help"><summary aria-label="Ayuda: radar de islas">?</summary><div>Cada isla usa coordenadas reales del motor. Los puntos son estructuras: verde = apoyo dentro de 2 cm; rojo = desnivel superior a 2 cm; gris = falta medición. El contador muestra lo detectado de un objetivo de 39, no completa datos ausentes.</div></details></div></div>
+        <div class="radar-layout">
+          <div>
+            <div class="radar-map">
+              <svg id="radarSvg" viewBox="0 0 900 540" role="img" aria-label="Mapa vectorial interactivo de las trece islas"></svg>
+              <div class="empty-state" id="radarEmpty"><div><strong>El radar se está preparando</strong>El inventario de islas y estructuras se dibujará con coordenadas reales de Babylon, no con posiciones estimadas.</div></div>
+            </div>
+            <div class="radar-legend"><span class="legend-item"><i class="legend-dot green"></i> Apoyo ≤ 2 cm</span><span class="legend-item"><i class="legend-dot red"></i> Desnivel &gt; 2 cm</span><span class="legend-item"><i class="legend-dot"></i> Sin medir</span><span class="legend-item">● Isla · punto pequeño: estructura</span></div>
+            <div class="radar-footer">La inspección principal es de solo lectura. Los estados se obtienen de las mediciones geométricas y de los informes de cimentación; los elementos sin medida no se marcan como correctos.</div>
+          </div>
+          <aside class="radar-side" id="radarDetail"><div class="empty-state"><div><strong>Selecciona una isla</strong>El detalle de sus estructuras y apoyos aparecerá aquí.</div></div></aside>
+        </div>
+        <div class="radar-counts" id="radarCounts"></div>
+      </article>
+    </section>
+
+    <section class="section" id="comparativa">
+      <div class="section-heading">
+        <div><div class="section-kicker">03 · EVIDENCIA VISUAL</div><h2>Comparador ANTES / DESPUÉS</h2><p>Elige una hora y desliza para comparar las dos versiones.</p></div>
+        <span class="section-index">S26 ULTRA · A/B</span>
+      </div>
+      <article class="panel compare-panel">
+        <div class="panel-title"><h3><span id="phaseName">Amanecer</span> <span class="muted" id="phaseTime">06:00</span></h3><span class="step-label"><span id="beforeBuild">—</span> → <span id="afterBuild">—</span></span></div>
+        <div class="phase-tabs" role="group" aria-label="Fase horaria">
+          <button class="phase-tab" data-phase="dawn" type="button" aria-pressed="true"><span class="phase-thumb"><img alt="" loading="lazy"></span><strong>Amanecer</strong><small>06:00 · luz fría</small></button>
+          <button class="phase-tab" data-phase="noon" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"></span><strong>Mediodía</strong><small>12:00 · luz alta</small></button>
+          <button class="phase-tab" data-phase="dusk" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"></span><strong>Atardecer</strong><small>18:00 · luz cálida</small></button>
+          <button class="phase-tab" data-phase="midnight" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"></span><strong>Noche</strong><small>00:00 · iluminación nocturna</small></button>
+        </div>
+        <div class="compare-layout">
+          <div>
+            <div class="compare-stage" id="compareStage" hidden>
+              <img id="beforeImage" alt="Escena ANTES">
+              <img id="afterImage" class="after-layer" alt="Escena DESPUÉS">
+              <img id="differenceImage" class="difference-layer" alt="Mapa de diferencias">
+              <span class="compare-tag before" id="beforeTag">ANTES</span><span class="compare-tag after" id="afterTag">DESPUÉS</span><span class="compare-divider" id="compareDivider"></span>
+            </div>
+            <div class="empty-state" id="compareEmpty"><div><strong>Esperando capturas de comparación</strong>Una inspección profunda publica las ocho imágenes y los cuatro mapas de diferencias para este visor.</div></div>
+          </div>
+          <aside class="compare-controls">
+            <h3>Comparación táctil</h3><p>Arrastra el control o desliza sobre la imagen para comparar las dos versiones.</p>
+            <div class="range-label"><span>Antes</span><span>Revelar después</span></div>
+            <input id="compareRange" type="range" min="0" max="100" value="50" aria-label="Deslizador de comparación antes y después">
+            <div class="toggle-row"><label for="differenceToggle">Superponer mapa de diferencias</label><input class="switch" id="differenceToggle" type="checkbox"></div>
+            <div class="phase-stats"><div class="phase-stat"><span>Lectura de esta fase</span><strong id="phaseMeta">0 / 4 fases disponibles</strong></div><div class="phase-stat"><span>Prueba visual</span><strong>Capturas sincronizadas</strong></div></div>
+          </aside>
+        </div>
+        <div class="compare-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg><span>Las imágenes se capturan con la misma semilla, cámara y hora del día. El comparador usa pruebas de Chromium; las diferencias de píxeles son evidencia visual, no una valoración automática de calidad.</span></div>
+      </article>
+    </section>
+
     <section class="section" id="control">
       <div class="section-heading">
-        <div><div class="section-kicker">01 · Operaciones</div><h2>Inspección en directo</h2><p>Elige la profundidad y lanza la auditoría desde aquí. El estado y los pasos aparecen en esta misma pantalla.</p></div>
+        <div><div class="section-kicker">04 · OPERACIONES</div><h2>Inspección en directo</h2><p>Elige la profundidad y ejecuta la auditoría.</p></div>
         <span class="section-index">RUN CONTROL</span>
       </div>
       <div class="control-grid">
@@ -91,79 +185,9 @@
         </article>
       </div>
     </section>
-
-    <section class="section" id="comparativa">
-      <div class="section-heading">
-        <div><div class="section-kicker">02 · Evidencia visual</div><h2>Comparador ANTES / DESPUÉS</h2><p>Desliza sobre la escena para revelar el cambio. Selecciona amanecer, mediodía, atardecer o noche; activa el mapa de diferencias cuando necesites localizar modificaciones.</p></div>
-        <span class="section-index">S26 ULTRA · A/B</span>
-      </div>
-      <article class="panel compare-panel">
-        <div class="panel-title"><h3><span id="phaseName">Amanecer</span> <span class="muted" id="phaseTime">06:00</span></h3><span class="step-label"><span id="beforeBuild">—</span> → <span id="afterBuild">—</span></span></div>
-        <div class="phase-tabs" role="group" aria-label="Fase horaria">
-          <button class="phase-tab" data-phase="dawn" type="button" aria-pressed="true"><span class="phase-thumb"><img alt="" loading="lazy"></span><strong>Amanecer</strong><small>06:00 · luz fría</small></button>
-          <button class="phase-tab" data-phase="noon" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"></span><strong>Mediodía</strong><small>12:00 · luz alta</small></button>
-          <button class="phase-tab" data-phase="dusk" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"></span><strong>Atardecer</strong><small>18:00 · luz cálida</small></button>
-          <button class="phase-tab" data-phase="midnight" type="button" aria-pressed="false"><span class="phase-thumb"><img alt="" loading="lazy"></span><strong>Noche</strong><small>00:00 · iluminación nocturna</small></button>
-        </div>
-        <div class="compare-layout">
-          <div>
-            <div class="compare-stage" id="compareStage" hidden>
-              <img id="beforeImage" alt="Escena ANTES">
-              <img id="afterImage" class="after-layer" alt="Escena DESPUÉS">
-              <img id="differenceImage" class="difference-layer" alt="Mapa de diferencias">
-              <span class="compare-tag before" id="beforeTag">ANTES</span><span class="compare-tag after" id="afterTag">DESPUÉS</span><span class="compare-divider" id="compareDivider"></span>
-            </div>
-            <div class="empty-state" id="compareEmpty"><div><strong>Esperando capturas de comparación</strong>Una inspección profunda publica las ocho imágenes y los cuatro mapas de diferencias para este visor.</div></div>
-          </div>
-          <aside class="compare-controls">
-            <h3>Comparación táctil</h3><p>Arrastra el control o desliza sobre la imagen para comparar las dos versiones.</p>
-            <div class="range-label"><span>Antes</span><span>Revelar después</span></div>
-            <input id="compareRange" type="range" min="0" max="100" value="50" aria-label="Deslizador de comparación antes y después">
-            <div class="toggle-row"><label for="differenceToggle">Superponer mapa de diferencias</label><input class="switch" id="differenceToggle" type="checkbox"></div>
-            <div class="phase-stats"><div class="phase-stat"><span>Lectura de esta fase</span><strong id="phaseMeta">0 / 4 fases disponibles</strong></div><div class="phase-stat"><span>Prueba visual</span><strong>Capturas sincronizadas</strong></div></div>
-          </aside>
-        </div>
-        <div class="compare-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg><span>Las imágenes se capturan con la misma semilla, cámara y hora del día. El comparador usa pruebas de Chromium; las diferencias de píxeles son evidencia visual, no una valoración automática de calidad.</span></div>
-      </article>
-    </section>
-
-    <section class="section" id="radar">
-      <div class="section-heading">
-        <div><div class="section-kicker">03 · Geometría del mundo</div><h2>Radar táctico del archipiélago</h2><p>Selecciona una isla o un objeto para consultar su identidad, coordenadas y evidencia de apoyo. Verde: diferencia de apoyo hasta 2 cm. Rojo: desnivel superior a 2 cm. Gris: todavía sin medición geométrica.</p></div>
-        <span class="section-index">13 ISLAS</span>
-      </div>
-      <article class="panel radar-panel">
-        <div class="panel-title"><h3>Mapa estructural</h3><span class="step-label" id="radarStats">Esperando inventario</span></div>
-        <div class="radar-layout">
-          <div>
-            <div class="radar-map">
-              <svg id="radarSvg" viewBox="0 0 900 540" role="img" aria-label="Mapa vectorial interactivo de las trece islas"></svg>
-              <div class="empty-state" id="radarEmpty"><div><strong>El radar se está preparando</strong>El inventario de islas y estructuras se dibujará con coordenadas reales de Babylon, no con posiciones estimadas.</div></div>
-            </div>
-            <div class="radar-legend"><span class="legend-item"><i class="legend-dot green"></i> Apoyo ≤ 2 cm</span><span class="legend-item"><i class="legend-dot red"></i> Desnivel &gt; 2 cm</span><span class="legend-item"><i class="legend-dot"></i> Sin medir</span><span class="legend-item">● Isla · punto pequeño: estructura</span></div>
-            <div class="radar-footer">La inspección principal es de solo lectura. Los estados se obtienen de las mediciones geométricas y de los informes de cimentación; los elementos sin medida no se marcan como correctos.</div>
-          </div>
-          <aside class="radar-side" id="radarDetail"><div class="empty-state"><div><strong>Selecciona una isla</strong>El detalle de sus estructuras y apoyos aparecerá aquí.</div></div></aside>
-        </div>
-        <div class="radar-counts" id="radarCounts"></div>
-      </article>
-    </section>
-
-    <section class="section" id="telemetria">
-      <div class="section-heading">
-        <div><div class="section-kicker">04 · Rendimiento y diagnóstico</div><h2>Telemetría con contexto</h2><p>Las variaciones se etiquetan como mejora o empeoramiento según el sentido de cada métrica. Los datos crudos quedan detrás del desplegable.</p></div>
-        <span class="section-index">KPIs</span>
-      </div>
-      <div class="telemetry-grid" id="telemetryGrid">
-        <article class="metric-card"><div class="metric-name">Esperando mediciones</div><div class="metric-value">—</div><div class="metric-unit">Las tarjetas se completarán con el A/B.</div></article>
-      </div>
-      <div class="telemetry-caveat" id="telemetryCaveat">El perfil S26 Ultra emulado no equivale a una prueba física de la GPU Adreno. El entorno CI utiliza ANGLE SwiftShader.</div>
-      <details class="technical"><summary>Diagnóstico técnico y valores originales (JSON)</summary><pre id="technicalJson">Los diagnósticos aparecerán aquí cuando la inspección publique su manifiesto.</pre></details>
-    </section>
-
     <footer class="footer"><span>EL SIN NOMBRE · Inspector Center · Panel de auditoría independiente</span><span>Los inicios se envían directamente a GitHub Actions; los registros completos siguen disponibles en <a id="artifactsLink" href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions" target="_blank" rel="noopener">el historial técnico ↗</a>.</span></footer>
   </main>
 </div>
-<script src="app.js?v=20261113.3" defer></script>
+<script src="app.js?v=20261113.4" defer></script>
 </body>
 </html>
