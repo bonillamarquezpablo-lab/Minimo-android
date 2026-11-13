@@ -1,180 +1,262 @@
-import { buildDeviceEvidence, classifyFinding } from '../scripts/phase1-diagnostics-core.mjs';
+import {
+  DIAGNOSTIC_SCHEMA_VERSION, DEFAULT_TARGET_FPS, analyzeFrameStability, normalizeGameTelemetry
+} from '../scripts/phase1-diagnostics-core.mjs';
 
 (() => {
   const $ = id => document.getElementById(id);
   const frame = $('liveGameFrame');
   const history = [];
-  let timer = null;
-  let startedAt = null;
+  const MAX_SAMPLES = 180;
+  const SAMPLE_INTERVAL_MS = 1000;
+  let sampleTimer = null;
+  let waitTimer = null;
+  let sessionStartedAt = null;
   let lastSnapshot = null;
+  let lastWorldUpdateCount = null;
+  let unchangedWorldPolls = 0;
+  let lastReadError = null;
 
   const fmt = (value, digits = 1, suffix = '') =>
     value === null || value === undefined || !Number.isFinite(Number(value))
       ? '—' : Number(value).toLocaleString('es-ES', { maximumFractionDigits: digits }) + suffix;
 
-  function setStatus(message) { $('liveDiagnosticStatus').textContent = message; }
+  function setStatus(message) {
+    const target = $('liveDiagnosticStatus');
+    if (target) target.textContent = message;
+  }
+
+  function setMetric(id, value) {
+    const target = $(id);
+    if (target) target.textContent = value;
+  }
 
   function readSnapshot() {
     try {
-      const win = frame.contentWindow;
-      if (!win || win.location.origin !== window.location.origin) return null;
-      if (typeof win.getGameHealthDebug !== 'function') return null;
-      const health = win.getGameHealthDebug();
-      const runtime = health?.runtime || {};
-      const memory = win.performance?.memory || null;
-      const canvas = win.document.querySelector('canvas');
-      let webgl = {};
-      if (canvas) {
-        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-        if (gl) {
-          const ext = gl.getExtension('WEBGL_debug_renderer_info');
-          webgl = {
-            version: gl.getParameter(gl.VERSION),
-            vendor: ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : null,
-            renderer: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : null,
-            timerQuery: !!(gl.getExtension('EXT_disjoint_timer_query_webgl2') || gl.getExtension('EXT_disjoint_timer_query'))
-          };
-        }
+      const win = frame?.contentWindow;
+      if (!win || win.location.origin !== window.location.origin) {
+        lastReadError = 'El juego todavía no está disponible o no comparte el origen del Inspector.';
+        return null;
       }
-      const ua = win.navigator.userAgent || '';
-      const physicalConfirmed = $('livePhysicalDevice').checked;
-      const deviceEvidence = buildDeviceEvidence({
-        environment: 'browser',
-        physicalDeviceConfirmed: physicalConfirmed,
-        browser: {
-          userAgent: ua,
-          platform: win.navigator.platform,
-          deviceMemoryGB: win.navigator.deviceMemory,
-          hardwareConcurrency: win.navigator.hardwareConcurrency,
-          devicePixelRatio: win.devicePixelRatio
-        },
-        webgl
+      if (typeof win.getGameHealthDebug !== 'function') {
+        lastReadError = 'El juego no ha publicado getGameHealthDebug().';
+        return null;
+      }
+      const health = win.getGameHealthDebug();
+      if (!health || typeof health !== 'object') {
+        lastReadError = 'El motor ha devuelto una respuesta de diagnóstico vacía.';
+        return null;
+      }
+      const memory = win.performance?.memory || null;
+      const game = normalizeGameTelemetry(health, win.navigator || {}, {
+        memory,
+        physicalDeviceUserDeclared: $('livePhysicalDevice').checked,
+        environment: 'browser'
       });
-      const timing = runtime.frameTimingMs || {};
-      const sample = {
+      const worldCount = game.worldUpdateCount;
+      if (worldCount !== null && worldCount === lastWorldUpdateCount) unchangedWorldPolls++;
+      else unchangedWorldPolls = 0;
+      lastWorldUpdateCount = worldCount;
+      const qualityWarnings = [...game.dataQuality.warnings];
+      if (unchangedWorldPolls >= 3 && game.gameStarted === true && document.visibilityState === 'visible') {
+        qualityWarnings.push('El contador de actualización del mundo no avanza en tres lecturas; puede existir una pausa o telemetría detenida.');
+      }
+      const longTasks = typeof win.performance?.getEntriesByType === 'function'
+        ? win.performance.getEntriesByType('longtask') : null;
+      const longTaskSummary = Array.isArray(longTasks)
+        ? {
+            supported: true,
+            count: longTasks.length,
+            totalDurationMs: Number(longTasks.reduce((sum, entry) => sum + (Number(entry.duration) || 0), 0).toFixed(2)),
+            maximumDurationMs: longTasks.length ? Number(Math.max(...longTasks.map(entry => Number(entry.duration) || 0)).toFixed(2)) : 0
+          }
+        : { supported: false, count: null, totalDurationMs: null, maximumDurationMs: null };
+      lastReadError = null;
+      return {
         capturedAt: new Date().toISOString(),
-        gameStarted: health?.gameStarted ?? null,
-        fps: Number.isFinite(Number(runtime.fps ?? health?.fps)) ? Number(runtime.fps ?? health.fps) : null,
-        frameTiming: {
-          samples: timing.samples ?? null,
-          averageMs: timing.average ?? null,
-          p50Ms: timing.p50 ?? null,
-          p95Ms: timing.p95 ?? null,
-          p99Ms: timing.p99 ?? null
-        },
-        worldUpdateMs: runtime.worldUpdateMs ?? null,
-        renderCpuMs: runtime.renderCpuMs ?? null,
-        heapUsedMB: memory?.usedJSHeapSize ? Number((memory.usedJSHeapSize / 1048576).toFixed(2)) : null,
-        heapLimitMB: memory?.jsHeapSizeLimit ? Number((memory.jsHeapSizeLimit / 1048576).toFixed(2)) : null,
-        drawCalls: runtime.drawCalls ?? null,
-        activeMeshes: runtime.activeMeshes ?? null,
-        renderWidth: runtime.renderWidth ?? null,
-        renderHeight: runtime.renderHeight ?? null,
-        graphicsProfile: runtime.graphicsProfile ?? null,
-        performanceAssessment: runtime.performanceAssessment ?? null,
-        device: deviceEvidence,
-        evidence: {
-          fps: 'game-runtime',
-          frameTiming: 'game-runtime',
-          cpuTimings: 'game-runtime-javascript-wall-clock',
-          heap: memory ? 'browser-performance.memory' : 'unavailable',
-          gpuTiming: 'not-measured'
-        }
+        visible: document.visibilityState === 'visible',
+        game,
+        longTasks: longTaskSummary,
+        qualityWarnings,
+        gameBuild: win.document.querySelector('meta[name="el-sin-nombre-build"]')?.content || null,
+        gameUrl: win.location.href
       };
-      return sample;
     } catch (error) {
-      setStatus('No se pudo leer el juego: ' + String(error?.message || error));
+      lastReadError = String(error?.message || error);
       return null;
     }
   }
 
-  function render(sample) {
-    $('liveFps').textContent = fmt(sample.fps, 0);
-    $('liveP95').textContent = fmt(sample.frameTiming.p95Ms, 2, ' ms');
-    $('liveP99').textContent = fmt(sample.frameTiming.p99Ms, 2, ' ms');
-    $('liveWorldCpu').textContent = fmt(sample.worldUpdateMs, 2, ' ms');
-    $('liveRenderCpu').textContent = fmt(sample.renderCpuMs, 2, ' ms');
-    $('liveHeap').textContent = fmt(sample.heapUsedMB, 1, ' MB');
-    $('liveDiagnosticJson').textContent = JSON.stringify({
-      schemaVersion: 1,
-      sessionStartedAt: startedAt,
+  function sessionAnalysis() {
+    return analyzeFrameStability(history, DEFAULT_TARGET_FPS, 1);
+  }
+
+  function buildReport(latest = lastSnapshot) {
+    return {
+      schemaVersion: DIAGNOSTIC_SCHEMA_VERSION,
+      project: 'EL SIN NOMBRE',
+      sessionStartedAt,
+      generatedAt: new Date().toISOString(),
+      sampleIntervalMs: SAMPLE_INTERVAL_MS,
       sampleCount: history.length,
-      status: classifyFinding({ evidenceCount: history.length, repeated: history.length >= 3, confidence: history.length >= 3 ? 0.9 : 0.6 }),
-      latest: sample,
-      recentSamples: history.slice(-30),
+      objective: { fps: DEFAULT_TARGET_FPS, frameBudgetMs: Number((1000 / DEFAULT_TARGET_FPS).toFixed(3)) },
+      sessionFinding: sessionAnalysis(),
+      latest,
+      recentSamples: history.slice(-60),
+      measurementContract: {
+        fpsAndFrameTiming: 'Game runtime. Real device measurements only when the game itself is running on that device.',
+        cpuTimings: 'JavaScript/Babylon wall-clock stage durations, not operating-system CPU utilization.',
+        gpuTiming: 'Optional Babylon EngineInstrumentation timer. Null means not measured; it is never treated as 0 ms.',
+        memory: 'Only JavaScript heap exposed by Chromium, not Android system RAM or GPU VRAM.',
+        deviceIdentity: 'The device checkbox is a user declaration, not hardware attestation.',
+        temperature: 'Android SoC/GPU temperature is not exposed by this web page.'
+      },
       limitations: [
-        'FPS y frame timing proceden del diagnóstico interno del juego.',
-        'Los tiempos CPU son duraciones de trabajo JavaScript; no son porcentajes de CPU.',
-        'WebGL timer query disponible no equivale a una medición GPU.',
-        'Temperatura, RAM total y VRAM no están disponibles desde este navegador.',
-        'La confirmación de dispositivo físico es una declaración manual del usuario.'
+        'Chromium CI / SwiftShader results are emulation and cannot be presented as Galaxy S26 Ultra GPU performance.',
+        'Browser APIs do not expose total CPU utilization, Android system RAM usage, VRAM usage or SoC/GPU temperature.',
+        'A GPU timer value is shown only when the optional profiler is enabled and Babylon publishes a valid counter.',
+        'A single session can produce a probable finding; confirmation requires at least two independent sessions.',
+        'Visual quality requires synchronized captures and inspection; FPS alone cannot prove a visual defect.'
       ]
-    }, null, 2);
-    const source = sample.device.physicalDeviceConfirmed
-      ? 'Dispositivo físico confirmado manualmente · ' + sample.device.userAgent
-      : 'Sesión de navegador no confirmada como dispositivo físico · ' + (sample.device.userAgent || 'UA no disponible');
-    $('liveDiagnosticSource').textContent = source + '. La medición GPU, temperatura y RAM total no están disponibles aquí.';
+    };
+  }
+
+  function render(sample) {
+    const game = sample.game;
+    const values = game.measurements;
+    const timing = game.frameTiming;
+    setMetric('liveFps', fmt(values.fps, 0));
+    setMetric('liveP50', fmt(timing.p50Ms, 2, ' ms'));
+    setMetric('liveP95', fmt(timing.p95Ms, 2, ' ms'));
+    setMetric('liveP99', fmt(timing.p99Ms, 2, ' ms'));
+    setMetric('liveWorldCpu', fmt(values.worldUpdateMs, 2, ' ms'));
+    setMetric('liveRenderCpu', fmt(values.renderCpuMs, 2, ' ms'));
+    setMetric('liveGpu', fmt(values.gpuFrameMs, 2, ' ms'));
+    setMetric('liveSceneRender', fmt(values.sceneRenderMs, 2, ' ms'));
+    setMetric('liveDrawCalls', fmt(values.drawCalls, 0));
+    setMetric('liveActiveMeshes', fmt(values.activeMeshes, 0));
+    setMetric('liveRenderSize', values.renderWidth !== null && values.renderHeight !== null
+      ? fmt(values.renderWidth, 0) + ' × ' + fmt(values.renderHeight, 0) : '—');
+    setMetric('liveHeap', fmt(values.jsHeapUsedMB, 1, ' MB'));
+    const analysis = sessionAnalysis();
+    $('liveDiagnosticJson').textContent = JSON.stringify(buildReport(sample), null, 2);
+    $('liveDiagnosticSource').textContent =
+      'Origen: juego en navegador · Perfil: ' + (game.graphicsProfile || 'no informado') +
+      ' · Diagnóstico GPU: ' + (game.profileDiagnosticsEnabled ? 'instrumentación solicitada' : 'no activada') +
+      ' · Dispositivo: ' + (game.device.physicalDeviceUserDeclared ? 'declarado por el usuario, no verificado' : 'no declarado') +
+      ' · Estabilidad: ' + analysis.status + '. Temperatura y memoria total del sistema: no disponibles desde esta página.';
   }
 
   function takeSample() {
+    if (document.visibilityState !== 'visible') {
+      setStatus('Medición pausada: la pestaña está en segundo plano y sus tiempos no serían representativos.');
+      return;
+    }
     const sample = readSnapshot();
     if (!sample) {
-      setStatus('Esperando a que el juego termine de iniciar y publique sus datos de diagnóstico.');
+      setStatus(lastReadError || 'Esperando a que el juego publique sus datos.');
       return;
     }
     lastSnapshot = sample;
-    history.push(sample);
-    if (history.length > 120) history.shift();
+    if (sample.game.gameStarted === true && sample.game.dataQuality.validFrameWindow) {
+      history.push(sample);
+      if (history.length > MAX_SAMPLES) history.shift();
+    }
     render(sample);
-    setStatus('Midiendo · ' + history.length + ' muestras · última lectura ' + new Date(sample.capturedAt).toLocaleTimeString('es-ES'));
+    setStatus(sample.game.gameStarted === true
+      ? 'Midiendo · ' + history.length + ' intervalos válidos · lectura ' + new Date(sample.capturedAt).toLocaleTimeString('es-ES')
+      : 'Juego cargado, pero todavía no hay una partida activa. Inicia la partida para medir.');
   }
 
   function startSampling() {
-    if (timer) return;
-    startedAt = new Date().toISOString();
+    if (sampleTimer) return;
+    sessionStartedAt = new Date().toISOString();
     history.length = 0;
+    lastWorldUpdateCount = null;
+    unchangedWorldPolls = 0;
     $('liveGameSample').disabled = false;
     $('liveGameStop').disabled = false;
     takeSample();
-    timer = window.setInterval(takeSample, 1000);
+    sampleTimer = window.setInterval(takeSample, SAMPLE_INTERVAL_MS);
   }
 
   function stopSampling() {
-    if (timer) window.clearInterval(timer);
-    timer = null;
+    if (sampleTimer) window.clearInterval(sampleTimer);
+    if (waitTimer) window.clearInterval(waitTimer);
+    sampleTimer = null;
+    waitTimer = null;
     $('liveGameStop').disabled = true;
     $('liveGameSample').disabled = !lastSnapshot;
-    setStatus('Medición detenida · ' + history.length + ' muestras conservadas en esta sesión.');
+    setStatus('Medición detenida · ' + history.length + ' intervalos válidos conservados en esta sesión.');
   }
 
-  $('liveGameStart').addEventListener('click', () => {
+  function beginGameLoad() {
     stopSampling();
     history.length = 0;
+    sessionStartedAt = null;
     lastSnapshot = null;
-    $('liveDiagnosticJson').textContent = 'Esperando muestras todavía.';
+    lastReadError = null;
+    $('liveDiagnosticJson').textContent = 'Esperando a que el juego publique los datos.';
     $('liveGameFrameWrap').hidden = false;
-    $('liveGameFrame').src = '../?phase1-diagnostics=1';
     $('liveGameStart').disabled = true;
-    $('liveGameStop').disabled = true;
     $('liveGameSample').disabled = true;
-    setStatus('Cargando el juego. Cuando aparezca, inicia una partida y la medición comenzará automáticamente.');
-  });
+    $('liveGameStop').disabled = true;
+    lastWorldUpdateCount = null;
+    unchangedWorldPolls = 0;
+    const profiler = $('liveEnableGpuProfiler').checked;
+    const query = profiler ? '?phase1-diagnostics=1&profile=1' : '?phase1-diagnostics=1';
+    frame.src = '../' + query;
+    setStatus(profiler
+      ? 'Cargando el juego con instrumentación GPU opcional. Puede añadir algo de carga al diagnóstico.'
+      : 'Cargando el juego en modo normal. Se medirá el rendimiento sin activar el perfilador detallado.');
+  }
 
-  frame.addEventListener('load', () => {
-    if ($('liveGameFrameWrap').hidden) return;
-    $('liveGameSample').disabled = false;
-    setStatus('Juego cargado. Inicia una partida; la medición automática comenzará cuando el juego confirme que ha arrancado. También puedes tomar una muestra manual.');
-    const wait = window.setInterval(() => {
+  function beginWaitingForGame() {
+    if (waitTimer) window.clearInterval(waitTimer);
+    let elapsed = 0;
+    waitTimer = window.setInterval(() => {
+      elapsed += SAMPLE_INTERVAL_MS;
       const sample = readSnapshot();
-      if (sample && sample.gameStarted === true) {
-        window.clearInterval(wait);
+      if (sample && sample.game.gameStarted === true) {
+        window.clearInterval(waitTimer);
+        waitTimer = null;
         startSampling();
+      } else if (elapsed >= 180000) {
+        window.clearInterval(waitTimer);
+        waitTimer = null;
+        setStatus(lastReadError || 'No se ha detectado una partida activa en tres minutos. No se han inventado métricas.');
       }
-    }, 1000);
-    window.setTimeout(() => window.clearInterval(wait), 180000);
-  });
+    }, SAMPLE_INTERVAL_MS);
+  }
 
+  $('liveGameStart').addEventListener('click', beginGameLoad);
   $('liveGameSample').addEventListener('click', takeSample);
   $('liveGameStop').addEventListener('click', stopSampling);
+  frame.addEventListener('load', () => {
+    if ($('liveGameFrameWrap').hidden) return;
+    $('liveGameStart').disabled = false;
+    $('liveGameSample').disabled = false;
+    setStatus('Juego cargado. Inicia una partida; la medición comenzará automáticamente cuando el motor lo confirme.');
+    beginWaitingForGame();
+  });
+  frame.addEventListener('error', () => {
+    $('liveGameStart').disabled = false;
+    setStatus('No se pudo cargar el juego en el Inspector. Puedes volver a intentarlo.');
+  });
+  $('liveDownloadReport').addEventListener('click', () => {
+    const report = buildReport();
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'el-sin-nombre-diagnostico-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') setStatus('Medición pausada en segundo plano para evitar datos sesgados.');
+    else if (sampleTimer) takeSample();
+  });
   window.addEventListener('beforeunload', stopSampling);
 })();
