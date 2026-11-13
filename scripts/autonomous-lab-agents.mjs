@@ -40,8 +40,11 @@ export function analyzeEvidence(evidence = {}) {
   const unified = evidence.unified || null;
   const results = unified?.results || {};
   const phases = Array.isArray(unified?.phases) ? unified.phases : [];
-  const failedPhases = phases.filter(row => !['passed', 'skipped'].includes(row.status));
-  const skippedPhases = phases.filter(row => row.status === 'skipped');
+  const normalizedPhaseStatus = row => String(row?.status || '').toLowerCase();
+  const failedPhases = phases.filter(row => ['failed', 'failure', 'error', 'timed_out', 'cancelled'].includes(normalizedPhaseStatus(row)));
+  const skippedPhases = phases.filter(row => normalizedPhaseStatus(row) === 'skipped');
+  const passedPhases = phases.filter(row => normalizedPhaseStatus(row) === 'passed');
+  const unknownPhases = phases.filter(row => !['passed', 'skipped', 'failed', 'failure', 'error', 'timed_out', 'cancelled'].includes(normalizedPhaseStatus(row)));
 
   const player = evidence.player || null;
   const texture = evidence.texture || null;
@@ -54,7 +57,7 @@ export function analyzeEvidence(evidence = {}) {
   const beforePerformance = beforeAfter?.builds?.before?.performance || null;
   const afterFps = getNumberDeep(afterPerformance, ['averagefps', 'avgfps', 'medianfps', 'fps']);
   const beforeFps = getNumberDeep(beforePerformance, ['averagefps', 'avgfps', 'medianfps', 'fps']);
-  const afterP95 = getNumberDeep(afterPerformance, ['p95frametime ms', 'frametimep95ms', 'p95ms', 'framep95ms']);
+  const afterP95 = getNumberDeep(afterPerformance, ['p95frametime', 'frametimep95ms', 'p95ms', 'framep95ms']);
   const pendingTextures = countArray(texture?.readiness?.pendingTextures)
     ?? countArray(custom?.readiness?.pendingTextures);
   const captures = countArray(custom?.captures);
@@ -66,6 +69,9 @@ export function analyzeEvidence(evidence = {}) {
 
   // NPC 01 — Performance specialist.
   const performanceFindings = [];
+  if (afterPerformance && afterFps === null) {
+    performanceFindings.push({ status: 'unusable-or-unknown', metric: 'afterFps', value: null, evidence: 'Hrafn performance object exists but contains no recognized finite FPS field.' });
+  }
   if (afterFps !== null) {
     performanceFindings.push({
       status: 'measured',
@@ -170,8 +176,8 @@ export function analyzeEvidence(evidence = {}) {
     id: 'npc-validation',
     role: 'Especialista de pruebas y validación',
     scope: ['startup', 'test contracts', 'phase results', 'artifacts', 'regression gates'],
-    status: failedPhases.length ? 'issues-found' : (phases.length ? 'passed-or-skipped' : 'no-run-data'),
-    findings: qaFindings,
+    status: failedPhases.length ? 'issues-found' : (unknownPhases.length ? 'incomplete-evidence' : (phases.length ? 'passed-or-skipped' : 'no-run-data')),
+    findings: qaFindings.concat(unknownPhases.map(row => ({ status: 'unknown-phase-status', phase: row.name ?? null, result: row.status ?? null, error: row.error ?? null }))),
     guardrail: 'Skipped phases are not passes. Missing test evidence never counts as a successful validation.'
   });
 
@@ -251,9 +257,10 @@ export function analyzeEvidence(evidence = {}) {
     summary: {
       inspectionLevel: unified?.level ?? null,
       phases: phases.length,
-      passed: phases.filter(row => row.status === 'passed').length,
+      passed: passedPhases.length,
       failed: failedPhases.length,
       skipped: skippedPhases.length,
+      unknown: unknownPhases.length,
       evidenceMissing: missing
     },
     agents,
@@ -281,7 +288,7 @@ function renderMarkdown(report) {
     '- Ejecución: ' + (report.run.url || report.run.id || 'local'),
     '- Commit: ' + (report.run.commit || 'no disponible'),
     '- Nivel: ' + (report.summary.inspectionLevel || 'no disponible'),
-    '- Fases: ' + report.summary.passed + ' correctas · ' + report.summary.failed + ' fallidas · ' + report.summary.skipped + ' omitidas',
+    '- Fases: ' + report.summary.passed + ' correctas · ' + report.summary.failed + ' fallidas · ' + report.summary.skipped + ' omitidas · ' + (report.summary.unknown || 0) + ' sin clasificar',
     '',
     '## Especialistas',
     ''
