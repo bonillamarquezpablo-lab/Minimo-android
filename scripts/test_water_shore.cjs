@@ -216,3 +216,12 @@ assert.match(html,/return ground-waterHeight\(x,z,t\)/,"Footstep contact must in
 assert.match(html,/for\(let step=0;step<13;step\+\+\)/,"The footstep contact solver must preserve the robust 13-step bisection.");
 assert.match(html,/waterParticlesEmitted\+=count/,"Runtime metrics must count actual water particle emissions.");
 assert.match(html,/TIDAL_FOAM_WORK_SLICE_MS=isTouchDevice\?1\.35:2\.0/,"The existing full-resolution coast must use a bounded per-frame work slice.");
+
+assert.match(html,/function footstepIslandIndex\(x,z\)/,"Footstep routing must include the intertidal profile beyond the land-only collision boundary.");
+assert.match(html,/const islandIndex=footstepIslandIndex\(x,z\)/,"Footsteps must use the coast-aware island lookup.");
+assert.match(html,/ratio<=1\.09&&ratio<nearestRatio/,"The coast-aware lookup must stop at the end of the terrain/water profile.");
+assert.match(html,/const ratio=d\/island\.r,beach=ratio>\.748&&ratio<1\.09/,"The beach interaction band must include the shallow-water margin.");
+assert.match(html,/if\(ratio<=\.975\)\{pressGround/,"Water-side particle effects must not stamp the underwater terrain deformation grid.");
+assert.match(html,/footstepOutsideLand,beachSteps,footstepsWaterSide,wetSteps/,"Runtime telemetry must reveal whether feet are discarded at the shoreline boundary.");
+assert.match(html,/groundDynamics:GroundDynamics\.counts\(\)/,"The live debug snapshot must expose footstep and particle counters.");
+assert.match(html,/setInterval\(refreshDiagnostics,1000\)/,"The water debug panel must refresh live measurements during device testing.");
