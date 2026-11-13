@@ -20,7 +20,8 @@ async function main(){
  fs.mkdirSync(OUT,{recursive:true});let browser=null,page=null;
  try{
   browser=await phase('launch chromium',()=>chromium.launch({headless:true,timeout:60000,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist','--disable-dev-shm-usage']}));
-  const context=await browser.newContext({viewport:{width:430,height:768},deviceScaleFactor:1,isMobile:true,hasTouch:true});
+  // Match the established player-startup smoke viewport: the campaign selector is not exposed in the narrow mobile intro layout.
+  const context=await browser.newContext({viewport:{width:960,height:540},deviceScaleFactor:1});
   page=await context.newPage();page.setDefaultTimeout(60000);page.setDefaultNavigationTimeout(90000);
   await page.addInitScript(()=>{
    let BValue;
@@ -32,7 +33,7 @@ async function main(){
   await phase('select full quality',async()=>{if(await audio.isVisible().catch(()=>false))await audio.click();await page.locator('#chooseQuality').waitFor({state:'visible',timeout:60000});await page.locator('#chooseQuality').click();});
   await phase('continue startup',async()=>{await page.locator('#continueUnnamed').waitFor({state:'visible',timeout:30000});await page.locator('#continueUnnamed').click();});
   await phase('wait for world',()=>page.waitForFunction(()=>window.__ELSN_TEST__&&window.__elSinNombreStartupSmoke?.worldReady===true,undefined,{timeout:180000,polling:500}));
-  await phase('start new campaign',async()=>{const choice=page.locator('#newGameChoice');await choice.waitFor({state:'visible',timeout:60000});await choice.click();await page.waitForFunction(()=>document.body.classList.contains('game-running')&&document.querySelector('#intro')?.getAttribute('aria-hidden')==='true',undefined,{timeout:30000,polling:250});});
+  await phase('start new campaign',async()=>{await page.locator('#newGameChoice').waitFor({state:'visible',timeout:30000});await page.locator('#newGameChoice').click();await page.waitForFunction(()=>document.body.classList.contains('game-running'),undefined,{timeout:30000,polling:100});});
   report.staticFrame=await phase('stop automatic render loop for deterministic sampling',()=>page.evaluate(()=>window.__ELSN_TEST__.prepareStaticCaptureFrame()));
   const snapshot=await phase('collect live structure and scene data',()=>page.evaluate(()=>{
    const api=window.__ELSN_TEST__,scene=window.__ELSN_MEASURE_SCENE__;
