@@ -133,6 +133,18 @@
           <div><span>Resolución interna</span><strong id="liveRenderSize">—</strong></div>
           <div><span>Heap JavaScript</span><strong id="liveHeap">—</strong></div>
         </div>
+        <section class="live-finding-panel" aria-live="polite" aria-label="Resultado del diagnóstico">
+          <div class="live-finding-head">
+            <div><span>Resultado de la sesión</span><strong id="liveFindingStatus">Sin muestras suficientes</strong></div>
+            <div><span>Gravedad</span><strong id="liveFindingSeverity">Sin determinar</strong></div>
+            <div><span>Prioridad</span><strong id="liveFindingPriority">Sin asignar</strong></div>
+          </div>
+          <p id="liveFindingInterpretation">Inicia una partida para recoger intervalos válidos.</p>
+          <div class="live-finding-columns">
+            <div><strong>Posibles causas (no confirmadas)</strong><ul id="liveFindingCauses"><li>Aún no hay evidencias suficientes.</li></ul></div>
+            <div><strong>Siguientes comprobaciones</strong><ul id="liveFindingNextSteps"><li>Repetir la medición en condiciones comparables.</li></ul></div>
+          </div>
+        </section>
         <div class="live-diagnostic-note" id="liveDiagnosticSource">Los datos aparecerán cuando el juego esté iniciado.</div>
         <div class="live-diagnostic-actions"><button class="small-button" id="liveDownloadReport" type="button">Descargar informe JSON</button></div>
         <p class="live-diagnostic-note">El navegador no ofrece temperatura del SoC/GPU, uso total de CPU, RAM total ni VRAM. El indicador de dispositivo es una declaración manual, no una comprobación técnica. Los resultados de CI/SwiftShader no representan la GPU real del teléfono.</p>
