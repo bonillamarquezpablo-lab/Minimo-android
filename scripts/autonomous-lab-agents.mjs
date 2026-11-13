@@ -14,7 +14,8 @@ function readJson(relativePath) {
 }
 
 function countArray(value) {
-  return Array.isArray(value) ? value.length : null;
+  if (Array.isArray(value)) return value.length;
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
 function getNumberDeep(source, aliases, depth = 0) {
@@ -60,10 +61,12 @@ export function analyzeEvidence(evidence = {}) {
   const afterP95 = getNumberDeep(afterPerformance, ['p95frametime', 'p95frametimems', 'frametimep95ms', 'p95ms', 'framep95ms']);
   const pendingTextures = countArray(texture?.readiness?.pendingTextures)
     ?? countArray(custom?.readiness?.pendingTextures);
-  const captures = countArray(custom?.captures);
+  const captures = countArray(custom?.shots?.captured) ?? countArray(custom?.captures);
   const structureCount = countArray(custom?.structures);
   const groundingVerdict = grounding?.verdict ?? null;
-  const contactSheet = evidence.files?.includes('artifacts/custom-scene-captures/contact-sheet.png') || false;
+  const normalizedFiles = Array.isArray(evidence.files) ? evidence.files.map(file => String(file).replace(/^artifacts\\//, '')) : [];
+  const contactSheet = normalizedFiles.includes('custom-scene-captures/contact-sheet.png') || normalizedFiles.includes('artifacts/custom-scene-captures/contact-sheet.png');
+  const coastalCaptureCount = countArray(coastal?.captureCount) ?? countArray(coastal?.captures);
 
   const agents = [];
 
@@ -119,8 +122,8 @@ export function analyzeEvidence(evidence = {}) {
   // NPC 02 — Visual quality specialist. Captures are evidence, not an automatic quality verdict.
   const visualFindings = [];
   if (captures !== null) visualFindings.push({ metric: 'sceneCaptures', value: captures, unit: 'captures' });
-  if (countArray(coastal?.captures) !== null) {
-    visualFindings.push({ metric: 'coastalCaptures', value: countArray(coastal.captures), unit: 'captures' });
+  if (coastalCaptureCount !== null) {
+    visualFindings.push({ metric: 'coastalCaptures', value: coastalCaptureCount, unit: 'captures' });
   }
   if (contactSheet) visualFindings.push({ metric: 'sceneContactSheet', value: 'available', unit: 'artifact' });
   visualFindings.push({
@@ -222,7 +225,7 @@ export function analyzeEvidence(evidence = {}) {
       nextAction: 'Comprobar el contrato del perfilador y mantener separados los resultados emulados de los obtenidos en Adreno.'
     });
   }
-  if (!evidence.files?.includes('artifacts/custom-scene-captures/contact-sheet.png')) {
+  if (!contactSheet) {
     tasks.push({
       id: 'collect-visual-evidence',
       priority: 'P2',
