@@ -47,10 +47,30 @@
       "name": "Inventario completo, identidades y cámaras desde el agua",
       "script": "scripts/custom-scene-capture.mjs",
       "startedAt": "2026-11-13T01:37:38.233Z",
+      "status": "passed",
+      "durationMs": 330014,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-13T01:43:08.247Z"
+    },
+    {
+      "name": "Informe visual unificado de estructuras",
+      "script": "scripts/create_scene_capture_contact_sheet.py",
+      "startedAt": "2026-11-13T01:43:08.248Z",
       "status": "running",
       "durationMs": null,
       "exitCode": null,
       "error": null
+    },
+    {
+      "name": "Lámina de referencias costeras",
+      "script": "scripts/create_coastal_contact_sheet.py",
+      "startedAt": "2026-11-13T01:43:08.250Z",
+      "status": "passed",
+      "durationMs": 3555,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-13T01:43:11.805Z"
     }
   ],
   "finishedAt": null
