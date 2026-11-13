@@ -176,7 +176,7 @@ def main() -> None:
             fail(f"Falta una función esencial de navegación integrada: {required_navigation_feature}")
     if 'id="map"' not in index_html or 'id="mapCoords"' not in index_html:
         fail("El mapa original y sus coordenadas no están presentes en la interfaz.")
-    if "rangeX=145" not in index_html or "Math.PI-heading" not in index_html:
+    if "rangeX=145" not in index_html or "mg.rotate(heading-Math.PI)" not in index_html:
         fail("El minimapa local no contiene la escala detallada y la orientación del jugador.")
     if "mg.rotate(heading-Math.PI)" not in index_html or "mg.rotate(Math.PI-heading)" in index_html:
         fail("El minimapa local debe girar el mundo con el rumbo y mantener fijo el marcador del jugador.")
