@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#080d16">
 <meta name="description" content="Panel visual de auditoría, geometría, rendimiento y comparativas de EL SIN NOMBRE.">
 <title>Inspector Center · EL SIN NOMBRE</title>
-<link rel="stylesheet" href="style.css?v=20261113.9">
+<link rel="stylesheet" href="style.css?v=20261113.10">
 </head>
 <body>
 <div class="app-shell">
@@ -27,14 +27,14 @@
     <section class="hero">
       <div class="hero-copy">
         <div class="eyebrow">INSPECTOR CENTER · RESUMEN</div>
-        <h1>Estado del mundo</h1>
-        <p>Lecturas y evidencias de la última inspección.</p>
+        <h1>Centro de inspección</h1>
+        <p>Control claro de las pruebas, sus resultados y el rendimiento del juego.</p>
       </div>
     </section>
 
     <section class="overview" id="overview" aria-label="Resumen del sistema">
-      <article class="overview-card"><div class="overview-label">Última ejecución</div><div class="overview-value" id="overviewRun">—</div><div class="overview-foot" id="overviewRunFoot">Consultando historial</div></article>
-      <article class="overview-card"><div class="overview-label">Progreso</div><div class="overview-value" id="overviewProgress">—</div><div class="overview-foot">Fases terminadas de la inspección</div></article>
+      <article class="overview-card"><div class="overview-label">En marcha</div><div class="overview-value" id="overviewRunning">—</div><div class="overview-foot" id="overviewRunningFoot">Consultando GitHub</div></article>
+      <article class="overview-card"><div class="overview-label">En cola</div><div class="overview-value" id="overviewQueued">—</div><div class="overview-foot" id="overviewQueuedFoot">Esperando datos</div></article>
       <article class="overview-card"><div class="overview-label">Archipiélago</div><div class="overview-value" id="overviewIslands">13</div><div class="overview-foot">Islas del mundo de juego</div></article>
       <article class="overview-card"><div class="overview-label">Objetos estructurales</div><div class="overview-value" id="overviewStructures">—</div><div class="overview-foot" id="overviewStructuresFoot">Pendientes del inventario</div></article>
     </section>
@@ -46,9 +46,18 @@
 
     <section class="section" id="control">
       <div class="section-heading">
-        <div><div class="section-kicker">01 · OPERACIONES</div><h2>Inspección en directo</h2><p>Elige la profundidad y ejecuta la auditoría.</p></div>
+        <div><div class="section-kicker">01 · OPERACIONES</div><h2>Control de inspecciones</h2><p>Consulta todas las pruebas activas o inicia una nueva revisión.</p></div>
         <span class="section-index">RUN CONTROL</span>
       </div>
+      <article class="panel active-runs-panel" aria-labelledby="activeRunsTitle">
+        <div class="active-runs-head">
+          <div><div class="step-label">SEGUIMIENTO AUTOMÁTICO</div><h3 id="activeRunsTitle">Ejecuciones activas <span class="active-run-count" id="activeRunCount">0</span></h3><p id="activeRunsSubtitle">Consultando las pruebas de GitHub Actions…</p></div>
+          <span class="live-indicator"><i></i> ACTUALIZACIÓN AUTOMÁTICA</span>
+        </div>
+        <div class="active-runs-list" id="activeRunsList" aria-live="polite">
+          <div class="active-runs-empty"><strong>Buscando ejecuciones</strong>Las pruebas en curso y en cola aparecerán aquí.</div>
+        </div>
+      </article>
       <div class="control-grid">
         <article class="panel launch-panel">
           <div class="panel-title"><h3>Iniciar una inspección</h3><span class="step-label">Nueva ejecución</span></div>
@@ -79,14 +88,14 @@
 
         <article class="panel run-panel">
           <div class="run-top">
-            <div><div class="step-label">Ejecución más reciente</div><div class="run-number" id="runNumber">—</div><div class="run-meta" id="runBranch">Consultando rama</div><div class="run-meta" id="runDate">Consultando inicio</div></div>
+            <div><div class="step-label">Detalle de la ejecución seleccionada</div><div class="run-number" id="runNumber">—</div><div class="run-meta" id="runBranch">Consultando rama</div><div class="run-meta" id="runDate">Consultando inicio</div></div>
             <span class="status-pill" id="runState">Buscando</span>
           </div>
           <div class="progress-row">
-            <div class="progress-ring"><svg viewBox="0 0 72 72" aria-hidden="true"><circle class="track" cx="36" cy="36" r="30"/><circle class="value" id="progressCircle" cx="36" cy="36" r="30"/></svg><strong id="progressValue" aria-label="Progreso">0%</strong></div>
+            <div class="progress-ring"><svg viewBox="0 0 72 72" aria-hidden="true"><circle class="track" cx="36" cy="36" r="30"/><circle class="value" id="progressCircle" cx="36" cy="36" r="30"/></svg><strong id="progressValue" aria-label="Progreso">—</strong></div>
             <div class="progress-copy"><span class="run-phase-status" id="runPhaseStatus">PREPARANDO</span><strong id="runPhaseTitle">Preparando el entorno</strong><p id="runPhaseDescription">La auditoría está consultando GitHub Actions.</p><div class="progress-track"><span id="progressTrack"></span></div></div>
           </div>
-          <div class="panel-title"><h3>Capturas de esta inspección</h3><span class="step-label" id="evidenceStatus">Esperando imágenes</span></div>
+          <div class="panel-title"><h3>Capturas</h3><span class="step-label" id="evidenceStatus">Esperando imágenes</span></div>
           <div class="evidence-inline" id="evidenceGrid" aria-live="polite"><div class="evidence-empty">Las capturas aparecerán aquí automáticamente cuando estén listas.</div></div>
           <div class="panel-title run-actions-title"><h3>Pasos de la prueba</h3><span class="run-links"><a id="runArtifactsLink" href="#" target="_blank" rel="noopener">Todos los archivos ↗</a><a id="runTechnicalLink" href="#" target="_blank" rel="noopener">Logs ↗</a></span></div>
           <div class="step-list" id="stepList"><div class="empty-state"><div><strong>Conectando con el inspector</strong>Los pasos aparecerán aquí, uno por uno.</div></div></div>
@@ -208,6 +217,6 @@
     <button class="guide-finish" id="guideFinish" type="button">Terminar guía</button>
   </aside>
 </div>
-<script src="app.js?v=20261113.9" defer></script>
+<script src="app.js?v=20261113.10" defer></script>
 </body>
 </html>
