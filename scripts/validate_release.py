@@ -683,14 +683,16 @@ def main() -> None:
         fail("Las pisadas de costa deben poder resolverse en la franja intermareal hasta 1.09R, sin reutilizar el límite de huellas.")
     if "const ratio=d/island.r,beach=ratio>.748&&ratio<1.09;" not in index_html or "if(ratio<=.975){pressGround" not in index_html:
         fail("La detección de salpicaduras debe cubrir la arena mojada y el borde de agua sin deformar el fondo submarino.")
-    if "const shoreRadius=beach?footstepShorelineRadius(island,Math.atan2(dz,dx),oceanTime):null;" not in index_html or "Number.isFinite(shoreRadius)&&shoreDistance<1.45" not in index_html:
-        fail("Las salpicaduras deben evaluar la banda de contacto con el solucionador propio de las pisadas.")
+    if "const shoreRadius=beach?footstepShorelineRadius(island,Math.atan2(dz,dx),oceanTime):null;" not in index_html or "Number.isFinite(shoreRadius)&&shoreDistance<2.6" not in index_html or "waterHeight(x,z,oceanTime)>groundY-.48" not in index_html or "wetness>.035" not in index_html:
+        fail("Las salpicaduras deben reconocer la franja de arena mojada y el contacto próximo al oleaje.")
     if "waterParticlesEmitted+=count" not in index_html or "footstepOutsideLand,beachSteps,footstepsWaterSide,wetSteps,shorelineSolveMisses,waterParticlesEmitted" not in index_html:
         fail("El diagnóstico debe distinguir pisadas descartadas, pasos de playa, borde de agua, pisadas húmedas y partículas de agua emitidas.")
     if "groundDynamics:GroundDynamics.counts()" not in index_html or "setInterval(refreshDiagnostics,1000)" not in index_html:
         fail("El panel debe refrescar y exponer los contadores de pisadas y partículas durante la prueba real.")
-    if "particle.r=wet?.83:.78;particle.g=wet?.91:.61;particle.b=wet?.95:.40;particle.a=wet?.92:.82;" not in index_html:
-        fail("Las partículas de agua deben conservar el acabado claro y visible de las salpicaduras originales.")
+    if "grainMaterial.diffuseTexture=null" not in index_html or "particle.size=wet?rand(.068,.104)" not in index_html or "particle.life=particle.maxLife=wet?rand(.55,.82)" not in index_html or "particle.r=wet?.72:.78;particle.g=wet?.94:.61;particle.b=wet?1:.40;particle.a=wet?.98:.82;" not in index_html:
+        fail("Las gotas de agua deben ser suficientemente grandes y contrastadas sobre la textura marina.")
+    if "RENDIMIENTO: '+(assessment.bottleneckHint" not in index_html or "runtime.gpuRenderer" not in index_html or "runtime.renderDpr" not in index_html:
+        fail("El panel de costa debe mostrar la hipótesis de cuello de botella y el perfil real de renderizado.")
     if "TIDAL_FOAM_WORK_SLICE_MS=isTouchDevice?1.35:2.0" not in index_html or "foam._norseUpdateColumn" not in index_html or "if(foamWorkComplete){tidalFoamWorkPending=false;tidalFoamWorkElapsed=0;}" not in index_html:
         fail("La rompiente de resolución completa debe repartirse en fragmentos acotados sin perder columnas ni buffers.")
     if "function scheduleBeachWorkChunk(){if(beachWorkScheduled||!beachWorkLayer)return;beachWorkScheduled=true;}" not in index_html or "if(beachWorkScheduled)processBeachWorkChunk();" not in index_html:
