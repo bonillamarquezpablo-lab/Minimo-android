@@ -15,10 +15,10 @@ assert.match(source, /180000/);
 for (const id of [
   'liveP50','liveP95','liveP99','liveWorldCpu','liveRenderCpu','liveGpu',
   'liveSceneRender','liveDrawCalls','liveActiveMeshes','liveRenderSize','liveHeap',
-  'liveEnableGpuProfiler','liveDownloadReport'
+  'liveEnableGpuProfiler','liveDownloadReport','liveFindingStatus','liveFindingSeverity','liveFindingPriority','liveFindingInterpretation','liveFindingCauses','liveFindingNextSteps'
 ]) {
   assert.ok(html.includes('id="' + id + '"'), 'Inspector HTML is missing ' + id);
   assert.ok(source.includes("'" + id + "'"), 'Inspector script does not use ' + id);
 }
-assert.match(html, /phase1-live\.js\?v=2/);
+assert.match(html, /phase1-live\.js\?v=3/);
 console.log('Phase 1 live inspector contracts: OK');
