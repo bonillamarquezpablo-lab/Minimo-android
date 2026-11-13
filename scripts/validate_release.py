@@ -693,8 +693,12 @@ def main() -> None:
         fail("Las gotas de agua deben ser suficientemente grandes y contrastadas sobre la textura marina.")
     if "RENDIMIENTO: '+(assessment.bottleneckHint" not in index_html or "runtime.gpuRenderer" not in index_html or "runtime.renderDpr" not in index_html:
         fail("El panel de costa debe mostrar la hipótesis de cuello de botella y el perfil real de renderizado.")
-    if "function registerGroundDebugPanel(panel)" not in index_html or "panel.style.display='none'" not in index_html or "id='groundDebugToggle'" not in index_html or "panel.style.display=open?'block':'none'" not in index_html:
-        fail("Los paneles de diagnóstico deben arrancar ocultos y abrirse/cerrarse con un control flotante sin bloquear el inicio de partida.")
+    if "function getGroundDebugDrawer()" not in index_html or "id='groundDebugDrawer'" not in index_html or "max-height:min(34dvh,360px)" not in index_html or "overflow-y:auto" not in index_html:
+        fail("Los diagnósticos deben compartir un único cajón móvil de altura limitada y desplazamiento interno.")
+    if "if(panel.id==='grassDebugPanel')" not in index_html or "section.appendChild(summary);section.appendChild(panel)" not in index_html:
+        fail("El informe secundario de vegetación debe permanecer plegado hasta que el usuario lo abra.")
+    if "getGroundDebugDrawer().style.display=open?'block':'none'" not in index_html or "id='groundDebugToggle'" not in index_html or "aria-expanded" not in index_html:
+        fail("El control DIAG debe abrir y cerrar el cajón único sin reiniciar la partida.")
     if "TIDAL_FOAM_WORK_SLICE_MS=isTouchDevice?1.35:2.0" not in index_html or "foam._norseUpdateColumn" not in index_html or "if(foamWorkComplete){tidalFoamWorkPending=false;tidalFoamWorkElapsed=0;}" not in index_html:
         fail("La rompiente de resolución completa debe repartirse en fragmentos acotados sin perder columnas ni buffers.")
     if "function scheduleBeachWorkChunk(){if(beachWorkScheduled||!beachWorkLayer)return;beachWorkScheduled=true;}" not in index_html or "if(beachWorkScheduled)processBeachWorkChunk();" not in index_html:
