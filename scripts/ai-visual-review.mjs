@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = process.cwd();
 const OUT_DIR = path.resolve('artifacts/ai-visual-review');
@@ -133,7 +134,7 @@ async function main() {
   console.log('[AI_VISUAL_REVIEW] ' + JSON.stringify({ status: report.status, observations: report.observations?.length || 0, images: report.imagesFound || [] }));
 }
 
-if (process.env.AI_VISUAL_REVIEW_TEST !== '1') {
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch(error => {
     console.error('[AI_VISUAL_REVIEW_FAILED]', error.message);
     process.exitCode = 1;
