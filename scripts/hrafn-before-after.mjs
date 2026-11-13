@@ -147,15 +147,15 @@ function saveManifest() {
 }
 
 
-async function sampleGraphicsPerformance(page, label) {
-  const samples = [];
+async function sampleGraphicsPerformance(page, label, startupHeapTrace = []) {
+  const samples = (startupHeapTrace || []).map(sample => ({...sample, sampleLabel:'Carga / entrada'}));
   const sampleStartedAt = Date.now();
   const collect = async () => withTimeout(page.evaluate(() => {
     if (typeof window.getGameHealthDebug !== 'function') throw new Error('getGameHealthDebug() is unavailable.');
     const health = window.getGameHealthDebug(), runtime = health.runtime || {}, fsr = window.__ELSN_FSR1 || null;
     const water = typeof window.__elSinNombreWaterDebugSnapshot === 'function' ? window.__elSinNombreWaterDebugSnapshot() : null;
     const memory = performance.memory && typeof performance.memory === 'object' ? performance.memory : null;
-    const toMB = value => Number.isFinite(Number(value)) ? Number((Number(value) / 1048576).toFixed(2)) : null;
+    const toMB = value => value!==null&&value!==undefined&&Number.isFinite(Number(value)) ? Number((Number(value) / 1048576).toFixed(2)) : null;
     return {
       build: document.querySelector('meta[name="el-sin-nombre-build"]')?.content || null,
       profile: runtime.graphicsProfile || null, fps: runtime.fps ?? health.fps ?? null,
@@ -280,6 +280,24 @@ async function bootGame(label, url) {
       JSON.stringify(startupDiagnostics) + '. Original error: ' + String(error?.message || error));
   }
   await page.locator('#intro.open').waitFor({ state: 'visible', timeout: 60000 });
+  // Start a bounded 250 ms heap trace before the player enters the world.
+  // It records the transition into the playable scene, not device-wide RAM/VRAM.
+  await page.evaluate(() => {
+    const trace = { startedAt: performance.now(), samples: [], timer: null };
+    const capture = () => {
+      const memory = performance.memory;
+      if (!memory || !Number.isFinite(memory.usedJSHeapSize)) return;
+      trace.samples.push({
+        elapsedMs: Math.round(performance.now() - trace.startedAt),
+        heapUsedMB: Number((memory.usedJSHeapSize / 1048576).toFixed(2)),
+        heapTotalMB: Number((memory.totalJSHeapSize / 1048576).toFixed(2)),
+        heapLimitMB: Number((memory.jsHeapSizeLimit / 1048576).toFixed(2))
+      });
+    };
+    capture();
+    trace.timer = window.setInterval(capture, 250);
+    window.__ELSN_INSPECTOR_HEAP_TRACE = trace;
+  });
   await page.locator('#newGameChoice').click();
   await page.waitForFunction(
     () => document.body.classList.contains('game-running') &&
@@ -310,7 +328,22 @@ async function bootGame(label, url) {
     };
   });
 
-  const performance = await sampleGraphicsPerformance(page, label);
+  const startupHeapTrace = await page.evaluate(() => {
+    const trace = window.__ELSN_INSPECTOR_HEAP_TRACE;
+    if (!trace) return [];
+    if (trace.timer) window.clearInterval(trace.timer);
+    const memory = performance.memory;
+    if (memory && Number.isFinite(memory.usedJSHeapSize)) {
+      trace.samples.push({
+        elapsedMs: Math.round(performance.now() - trace.startedAt),
+        heapUsedMB: Number((memory.usedJSHeapSize / 1048576).toFixed(2)),
+        heapTotalMB: Number((memory.totalJSHeapSize / 1048576).toFixed(2)),
+        heapLimitMB: Number((memory.jsHeapSizeLimit / 1048576).toFixed(2))
+      });
+    }
+    return trace.samples;
+  });
+  const performance = await sampleGraphicsPerformance(page, label, startupHeapTrace);
   manifest.builds[label] = {
     url,
     build: readiness.build,

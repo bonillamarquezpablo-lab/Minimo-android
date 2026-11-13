@@ -41,6 +41,7 @@ for(const phase of ['dawn','noon','dusk','midnight'])assert.ok(previewReport.inc
 assert.ok(previewReport.includes('preview_width = 480'),'Preview publication must use bounded image sizes.');
 assert.ok(!/gh[pousr]_[A-Za-z0-9_]{20,}/.test(html+app),'No GitHub credential may be embedded in the static dashboard.');
 assert.ok(sampler.includes('heapUsedMB')&&sampler.includes('heapInitialMB')&&sampler.includes('heapPeakMB'),'Performance sampling must capture entry and post-entry JavaScript heap readings.');
+assert.ok(sampler.includes('__ELSN_INSPECTOR_HEAP_TRACE')&&sampler.includes('setInterval(capture, 250)'),'The heap chart must sample the entry transition as well as the stable play window.');
 assert.ok(sampler.includes('performance.memory'),'Heap memory must be measured only through Chromium performance.memory.');
 assert.ok(sampler.includes("value!==null&&value!==undefined&&value!==''"),'Missing heap samples must not be converted to zero.');
 console.log('Inspector Center visual dashboard, live performance/heap charts, secure launch, A/B previews and island radar contract: OK');

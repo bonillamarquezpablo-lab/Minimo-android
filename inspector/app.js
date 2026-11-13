@@ -240,18 +240,19 @@
     return {label:(pct>0?'+':'')+number(pct,0)+'% · '+(good?'mejora':'empeora'),kind:good?'good':'bad'};
   }
   function chartLine(samples,key,nestedKey=null){
-    return (samples||[]).map((sample,index)=>{
+    return (samples||[]).map(sample=>{
       const raw=nestedKey?sample?.[nestedKey]?.[key]:sample?.[key];
       if(raw===null||raw===undefined||raw==='')return null;
       const value=Number(raw);
-      return Number.isFinite(value)?{index,value}:null;
-    }).filter(Boolean);
+      return Number.isFinite(value)?{value}:null;
+    }).filter(Boolean).map((point,index)=>({...point,index}));
   }
   function svgLine(points,mapY,color,dash=''){
     if(!points.length)return '';
     const width=628,left=48,right=676,top=18,bottom=178;
+    const lastIndex=Math.max(1,points[points.length-1]?.index||0);
     const coords=points.map(point=>{
-      const x=left+(points.length===1?(right-left)/2:point.index/(Math.max(1,8))*(right-left));
+      const x=left+(points.length===1?(right-left)/2:point.index/lastIndex*(right-left));
       return x.toFixed(1)+','+mapY(point.value,top,bottom).toFixed(1);
     }).join(' ');
     return '<polyline points="'+coords+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" '+(dash?'stroke-dasharray="'+dash+'"':'')+'/>';
