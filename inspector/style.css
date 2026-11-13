@@ -389,3 +389,16 @@ h1{font-size:clamp(27px,3.4vw,42px);line-height:1.02;margin:7px 0 6px;letter-spa
   .evidence-inline{gap:7px}
   .evidence-card{padding:7px}
 }
+
+/* Header help and guided tour: stable order, no automatic jump to the page footer. */
+.topbar-actions{display:flex;align-items:center;gap:12px;flex:none}
+.guide-fab{position:static;z-index:2;right:auto;bottom:auto;padding:9px 12px;box-shadow:none;border-color:#42658a;background:#172c45}
+.guide-panel{max-height:min(42vh,340px);overflow:auto;bottom:max(12px,env(safe-area-inset-bottom))}
+.guide-focus{scroll-margin-top:112px}
+.radar-map{position:relative;overflow:hidden}
+#radarSvg[data-live="true"] .radar-sweep-ring{fill:none;stroke:#65dbe1;stroke-width:2;stroke-opacity:.7;stroke-dasharray:4 8;transform-origin:450px 270px;animation:radar-sweep 9s linear infinite}
+#radarSvg[data-live="true"] .island-node{animation:island-pulse 2.4s ease-in-out infinite}
+@keyframes radar-sweep{to{transform:rotate(360deg)}}
+@keyframes island-pulse{50%{r:10;opacity:.65}}
+@media(max-width:720px){.topbar-actions{gap:7px}.guide-fab{padding:8px 10px;font-size:11px}.guide-panel{max-height:38vh}}
+@media(prefers-reduced-motion:reduce){#radarSvg[data-live="true"] .radar-sweep-ring,#radarSvg[data-live="true"] .island-node{animation:none}}

@@ -429,7 +429,7 @@
     const islands=custom?.islands||[],structures=(custom?.structures||[]).filter(item=>['structure','unidentified-structure'].includes(item.category)&&coordinate(item));
     radarData={islands,structures,grounding};
     if(!islands.length){
-      $('radarSvg').innerHTML='';
+      $('radarSvg').innerHTML='';$('radarSvg').removeAttribute('data-live');
       $('radarEmpty').hidden=false;
       $('radarEmpty').textContent=activeRun?.status==='in_progress'?'El inspector aún no ha llegado al inventario del mundo. Las 13 islas y sus estructuras aparecerán cuando termine esa fase. No tienes que tocar nada.':'Esta ejecución no publicó el inventario de islas. Revisa sus evidencias; no se dibujan posiciones estimadas.';
       $('radarDetail').innerHTML='<div class="empty-state"><div><strong>'+(activeRun?.status==='in_progress'?'Esperando el inventario':'Sin inventario geométrico')+'</strong>'+(activeRun?.status==='in_progress'?'La auditoría todavía está recopilando los datos de la escena.':'Esta ejecución no contiene coordenadas reales del motor Babylon.')+'</div></div>';
@@ -437,7 +437,8 @@
       return;
     }
     $('radarEmpty').hidden=true;
-    const svg=$('radarSvg'),ns='http://www.w3.org/2000/svg';svg.innerHTML='';
+    const svg=$('radarSvg');svg.setAttribute('data-live',String(activeRun?.status==='in_progress'));
+    const ns='http://www.w3.org/2000/svg';svg.innerHTML='';
     const minX=Math.min(...islands.map(i=>Number(i.x)||0)),maxX=Math.max(...islands.map(i=>Number(i.x)||0));
     const minZ=Math.min(...islands.map(i=>Number(i.z)||0)),maxZ=Math.max(...islands.map(i=>Number(i.z)||0));
     const pad=76,w=900,h=540,spanX=Math.max(1,maxX-minX),spanZ=Math.max(1,maxZ-minZ);
@@ -447,7 +448,7 @@
     const make=(tag,attrs={})=>{const node=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>node.setAttribute(k,String(v)));return node;};
     const bg=make('rect',{x:0,y:0,width:w,height:h,fill:'transparent'});svg.appendChild(bg);
     const ring=make('circle',{cx:w/2,cy:h/2,r:205,fill:'none',stroke:'#4d7190','stroke-opacity':'.2','stroke-dasharray':'4 8'});svg.appendChild(ring);
-    const labels=[];
+    const sweep=make('circle',{cx:w/2,cy:h/2,r:Math.min(w,h)*.39,class:'radar-sweep-ring'});svg.appendChild(sweep);
     islands.forEach((island,index)=>{
       const islandRadius=Number(island.r??island.radiusMeters)||18,x=mapX(Number(island.x)||0),y=mapY(Number(island.z)||0),radius=Math.max(15,Math.min(43,islandRadius*scale*.36));
       const owned=structures.filter(s=>Number(s.islandIndex)===index||s.island===island.name);
@@ -497,13 +498,13 @@
 
 
   const GUIDE_STEPS=[
-    {target:'#overview',title:'1. El resumen: ¿cómo está el juego?',text:'Aquí ves la última inspección, su estado y cuántas islas y estructuras ha encontrado. “En curso” significa que la prueba sigue trabajando; no es un resultado malo.'},
-    {target:'#control .levels',title:'2. Elige qué quieres comprobar',text:'Rápido: comprueba el arranque. Completo: revisa mundo, estructuras, agua y vegetación. Profundo: añade la comparación visual y las cuatro horas del día. Para una revisión general, usa Profundo.'},
-    {target:'#control .launch-panel',title:'3. Inicia la inspección',text:'Pulsa “Iniciar inspección”. Sin token se abrirá GitHub: elige la rama main, selecciona el mismo nivel y pulsa “Run workflow”. No necesitas crear ni pegar ningún código. La conexión directa es opcional.'},
-    {target:'.run-panel',title:'4. Mira cómo avanza',text:'Aquí verás qué está comprobando ahora, cuánto lleva y qué fases terminaron o necesitan revisión. Las imágenes aparecerán aquí mismo al publicarse. “Todos los archivos” abre el expediente completo.'},
-    {target:'#telemetria',title:'5. Entiende las gráficas',text:'FPS: más alto es mejor; el objetivo es 60. Frame time: más bajo es mejor; 16,6 ms equivale a 60 FPS. La memoria mide solo el heap JavaScript de Chromium, no toda la RAM ni la GPU. Un guion (—) significa “sin dato”, nunca cero.'},
-    {target:'#radar',title:'6. Revisa las islas',text:'Toca una isla para ver sus datos y después toca un punto para ver una estructura. Verde: apoyo dentro de 2 cm. Rojo: desnivel mayor de 2 cm. Gris: todavía no se ha medido. El objetivo del inventario es 13 islas y 39 estructuras.'},
-    {target:'#comparativa',title:'7. Compara antes y después',text:'Elige amanecer, mediodía, atardecer o noche. Cuando haya capturas, mueve la barra para revelar la versión DESPUÉS y activa el mapa de diferencias para localizar cambios. Si ves “Pendiente”, la inspección aún no ha publicado esa imagen.'}
+    {target:'#control .levels',title:'1. Elige la prueba',text:'Primero elige qué quieres revisar: Rápido comprueba que el juego arranca; Completo revisa el mundo; Profundo añade las gráficas y las cuatro horas. Para una revisión completa, deja Profundo.'},
+    {target:'#launchButton',title:'2. Pulsa Iniciar inspección',text:'Pulsa este botón. Si no has conectado GitHub, se abrirá la página oficial para confirmar la prueba. Elige la rama main y pulsa Run workflow. No necesitas crear ni pegar ningún token.'},
+    {target:'.run-panel',title:'3. Mira cómo trabaja',text:'Esta tarjeta te cuenta qué está haciendo ahora, qué terminó y si algo necesita revisión. El círculo solo muestra un porcentaje cuando GitHub ha dado datos reales; si no, verás que sigue trabajando.'},
+    {target:'#evidenceGrid',title:'4. Mira las capturas aquí',text:'Las cuatro horas aparecen en esta tarjeta cuando se generan. Pulsa una miniatura para ampliarla. Si aún no hay imágenes, verás que están preparándose; no tienes que buscarlas en los logs.'},
+    {target:'#telemetria',title:'5. Comprueba si va fluido',text:'60 FPS es el objetivo. Menos de 16,6 ms por fotograma es mejor. La memoria es solo la que Chromium deja medir; no es toda la RAM ni la memoria gráfica del móvil.'},
+    {target:'#radar',title:'6. Explora las islas',text:'Toca una isla y después una estructura. Verde significa apoyo correcto (hasta 2 cm); rojo, desnivel mayor de 2 cm; gris, todavía sin medir. Solo se dibujan posiciones reales.'},
+    {target:'#comparativa',title:'7. Compara los cambios',text:'Elige amanecer, mediodía, atardecer o noche. Cuando haya dos capturas, mueve la barra para descubrir el DESPUÉS. Puedes activar el mapa de diferencias para localizar cambios.'}
   ];
   let guideIndex=0,guideActive=false,guideHighlighted=null;
   function clearGuideHighlight(){
@@ -525,7 +526,9 @@
       guideHighlighted=target;
       target.classList.add('guide-focus');
       if(step.target==='#tokenDetails'&&!currentToken)$('tokenDetails').open=true;
-      target.scrollIntoView({behavior:'smooth',block:'center'});
+      const header=document.querySelector('.topbar');
+      const top=(target.getBoundingClientRect().top+window.scrollY)-(header?.getBoundingClientRect().height||0)-18;
+      window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
     }
   }
   function openGuide(){
@@ -542,7 +545,6 @@
     $('guideFab').hidden=false;
     document.body.classList.remove('guide-open');
   }
-  $('guideStart').addEventListener('click',openGuide);
   $('guideFab').addEventListener('click',openGuide);
   $('guideClose').addEventListener('click',closeGuide);
   $('guideFinish').addEventListener('click',closeGuide);

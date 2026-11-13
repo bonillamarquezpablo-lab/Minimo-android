@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#080d16">
 <meta name="description" content="Panel visual de auditoría, geometría, rendimiento y comparativas de EL SIN NOMBRE.">
 <title>Inspector Center · EL SIN NOMBRE</title>
-<link rel="stylesheet" href="style.css?v=20261113.6">
+<link rel="stylesheet" href="style.css?v=20261113.7">
 </head>
 <body>
 <div class="app-shell">
@@ -20,7 +20,7 @@
     <nav class="nav" aria-label="Navegación principal">
       <a href="#control">Inspección</a><a href="#comparativa">Antes / después</a><a href="#radar">Radar de islas</a><a href="#telemetria">Telemetría</a>
     </nav>
-    <span class="connection" id="connection"><span class="dot"></span>Conectando</span>
+    <div class="topbar-actions"><button class="guide-fab" id="guideFab" type="button" aria-label="Abrir guía paso a paso">? <span>Guía</span></button><span class="connection" id="connection"><span class="dot"></span>Conectando</span></div>
   </header>
 
   <main id="inicio">
@@ -29,10 +29,6 @@
         <div class="eyebrow">INSPECTOR CENTER · RESUMEN</div>
         <h1>Estado del mundo</h1>
         <p>Lecturas y evidencias de la última inspección.</p>
-      </div>
-      <div class="guide-strip">
-        <div class="guide-strip-copy"><strong>¿Primera vez en el Inspector?</strong><span>Te enseño qué tocar y qué significa cada resultado, paso a paso.</span></div>
-        <button class="guide-start" id="guideStart" type="button">Empezar guía <span aria-hidden="true">→</span></button>
       </div>
     </section>
 
@@ -194,7 +190,6 @@
     </section>
     <footer class="footer"><span>EL SIN NOMBRE · Inspector Center · Panel de auditoría independiente</span><span>Los inicios se envían directamente a GitHub Actions; los registros completos siguen disponibles en <a id="artifactsLink" href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions" target="_blank" rel="noopener">el historial técnico ↗</a>.</span></footer>
   </main>
-  <button class="guide-fab" id="guideFab" type="button" aria-label="Abrir guía paso a paso">? <span>Guía</span></button>
   <aside class="guide-panel" id="guidePanel" hidden role="dialog" aria-modal="false" aria-labelledby="guideStepTitle" aria-live="polite">
     <div class="guide-panel-top"><span id="guideStepMeta">PASO 1 DE 7</span><button class="guide-close" id="guideClose" type="button" aria-label="Cerrar guía">×</button></div>
     <div class="guide-panel-progress"><span id="guideProgress"></span></div>
@@ -207,6 +202,6 @@
     <button class="guide-finish" id="guideFinish" type="button">Terminar guía</button>
   </aside>
 </div>
-<script src="app.js?v=20261113.6" defer></script>
+<script src="app.js?v=20261113.7" defer></script>
 </body>
 </html>
