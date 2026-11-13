@@ -679,10 +679,16 @@ def main() -> None:
         fail("La emisión de arena/agua debe mantener partículas reutilizables y visibles.")
     if "function footstepShorelineRadius(island,angle,t=oceanTime)" not in index_html or "for(let step=0;step<13;step++)" not in index_html or "return ground-waterHeight(x,z,t);" not in index_html:
         fail("Las pisadas deben usar el cruce real y sin recorte del oleaje, con el solucionador de costa original.")
+    if "function footstepIslandIndex(x,z)" not in index_html or "const islandIndex=footstepIslandIndex(x,z)" not in index_html or "ratio<=1.09&&ratio<nearestRatio" not in index_html:
+        fail("Las pisadas de costa deben poder resolverse en la franja intermareal hasta 1.09R, sin reutilizar el límite de huellas.")
+    if "const ratio=d/island.r,beach=ratio>.748&&ratio<1.09;" not in index_html or "if(ratio<=.975){pressGround" not in index_html:
+        fail("La detección de salpicaduras debe cubrir la arena mojada y el borde de agua sin deformar el fondo submarino.")
     if "const shoreRadius=beach?footstepShorelineRadius(island,Math.atan2(dz,dx),oceanTime):null;" not in index_html or "Number.isFinite(shoreRadius)&&shoreDistance<1.45" not in index_html:
         fail("Las salpicaduras deben evaluar la banda de contacto con el solucionador propio de las pisadas.")
-    if "waterParticlesEmitted+=count" not in index_html or "footstepAttempts,beachSteps,wetSteps,shorelineSolveMisses,waterParticlesEmitted" not in index_html:
-        fail("El diagnóstico debe distinguir pisadas, contactos de playa, pisadas húmedas y partículas de agua emitidas.")
+    if "waterParticlesEmitted+=count" not in index_html or "footstepOutsideLand,beachSteps,footstepsWaterSide,wetSteps,shorelineSolveMisses,waterParticlesEmitted" not in index_html:
+        fail("El diagnóstico debe distinguir pisadas descartadas, pasos de playa, borde de agua, pisadas húmedas y partículas de agua emitidas.")
+    if "groundDynamics:GroundDynamics.counts()" not in index_html or "setInterval(refreshDiagnostics,1000)" not in index_html:
+        fail("El panel debe refrescar y exponer los contadores de pisadas y partículas durante la prueba real.")
     if "particle.r=wet?.83:.78;particle.g=wet?.91:.61;particle.b=wet?.95:.40;particle.a=wet?.92:.82;" not in index_html:
         fail("Las partículas de agua deben conservar el acabado claro y visible de las salpicaduras originales.")
     if "TIDAL_FOAM_WORK_SLICE_MS=isTouchDevice?1.35:2.0" not in index_html or "foam._norseUpdateColumn" not in index_html or "if(foamWorkComplete){tidalFoamWorkPending=false;tidalFoamWorkElapsed=0;}" not in index_html:
