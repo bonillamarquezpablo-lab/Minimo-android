@@ -19,7 +19,7 @@ for(const [id,label] of [['control','01 · OPERACIONES'],['telemetria','02 · GR
 const referencedIds=app.split("$('").slice(1).map(part=>part.split("'")[0]);
 for(const id of new Set(referencedIds))assert.ok(html.includes('id=\"'+id+'\"'),'Missing DOM element referenced by app.js: '+id);
 for(const marker of [
- 'Rápido','Completo','Profundo','id="launchButton"','id="githubToken"',
+ 'Rápido','Completo','Profundo','data-level="quick" aria-pressed="true"','data-level="deep" aria-pressed="false"','id="launchButton"','id="githubToken"',
  'id="compareRange"','id="differenceToggle"','id="radarSvg"','id="telemetryGrid"',
  'id="technicalJson"','id="guideFab"','id="lastGoodNotice"','id="lastGoodTitle"','id="lastGoodDescription"','id="lastGoodRun"','id="tokenSettingsButton"','id="fpsGaugeArc"','id="fpsGaugeNeedle"','id="frameGaugeArc"','id="worldCpuGaugeArc"','id="renderCpuGaugeArc"','id="guidePanel"','id="guideStepTitle"','id="guideNext"','id="guidePrev"','id="guideClose"','id="guideFinish"','id="runPhaseStatus"','id="evidenceGrid"','id="evidenceStatus"','id="performanceChart"','id="memoryChart"','id="performanceSummary"','id="memorySummary"','style.css','app.js'
 ])assert.ok(html.includes(marker),'Missing Inspector Center UI element: '+marker);
@@ -29,6 +29,7 @@ for(const marker of [
  "renderRadar","custom?.structures","bottomAboveTerrainMeters","habitableStructures",
  "Amanecer","Mediodía","Atardecer","Noche","renderPerformanceGraph","renderMemoryGraph","heapUsedMB","structures.length+' edificios · '+candidates.length+' candidatos'"
 ])assert.ok(app.includes(marker),'Missing Inspector Center application feature: '+marker);
+assert.ok(app.includes("let chosenLevel='quick'")&&app.includes("setLevel('quick');bindEvents()"),'Quick must be the default inspection depth.');
 assert.ok(!app.includes('localStorage'),'The dashboard must not persist GitHub tokens in localStorage.');
 assert.ok(app.includes('Authorization:\'Bearer \'+currentToken'),'The token must be sent only in the direct GitHub API request.');
 assert.ok(app.includes("$('runArtifactsLink').href=run.html_url?")&&app.includes("run.html_url+'#artifacts'"),'The full evidence archive must remain reachable.');
