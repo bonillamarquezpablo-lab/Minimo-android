@@ -1,4 +1,4 @@
-name: Inspector único — EL SIN NOMBRE
+name: Inspector único (bajo demanda) — EL SIN NOMBRE
 # Optional graphics audit: run only when a visual or structural change needs evidence.
 
 on:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       inspection_level:
-        description: 'Elige solo cuando necesites una auditoría: Rápido para una comprobación breve, Completo para una revisión amplia o Profundo para comparar gráficos y rendimiento.'
+        description: 'Rápido solo comprueba el arranque. Completo revisa texturas, estructuras, costa e inventario. Profundo añade comparación visual y rendimiento. El Inspector no se ejecuta automáticamente.'
         required: true
         type: choice
         options:
@@ -120,6 +120,7 @@ jobs:
           test -s "$RUNNER_TEMP/hrafn-before-dist/index.html"
 
       - name: Install report image support
+        if: inputs.inspection_level != 'quick'
         run: python -m pip install Pillow
 
       - name: Validate every inspector module and contract
@@ -152,7 +153,7 @@ jobs:
           npx playwright install chromium
           node -e "const fs=require('node:fs');const {chromium}=require('playwright');const executable=chromium.executablePath();if(!fs.existsSync(executable))throw new Error('Chromium binary missing: '+executable);console.log('Chromium ready:',executable)"
 
-      - name: Start baseline and candidate game servers for the unified inspection
+      - name: Start candidate game server (and baseline only for Deep)
         env:
           INSPECTOR_LEVEL: ${{ inputs.inspection_level || 'quick' }}
         run: |
