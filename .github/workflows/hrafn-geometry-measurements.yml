@@ -1,21 +1,14 @@
 name: Hrafn geometry measurements
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'scripts/hrafn-geometry-measurements.mjs'
-      - '.github/workflows/hrafn-geometry-measurements.yml'
-      - 'index.html'
-      - 'scripts/build_site.py'
-      - 'scripts/nordic/**'
+  # Manual opt-in only; geometry measurements are not part of every pull request.
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: hrafn-geometry-${{ github.event.pull_request.number || github.ref }}
+  group: hrafn-geometry-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout exact PR head
+      - name: Checkout selected revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
