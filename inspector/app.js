@@ -93,6 +93,13 @@
       $('runPhaseDescription').textContent='La prueba está registrada, pero todavía no ha empezado a ejecutarse.';
       $('progressValue').textContent='—';$('progressValue').classList.remove('is-spinning');
       $('progressCircle').style.strokeDashoffset='188.5';$('progressTrack').style.width='0%';$('progressTrack').classList.remove('indeterminate');
+    }else if(run.status==='in_progress'){
+      $('runPhaseStatus').textContent='EN CURSO';
+      $('runPhaseTitle').textContent='Conectando con esta prueba';
+      $('runPhaseDescription').textContent='Consultando los pasos reales de GitHub Actions.';
+      $('progressValue').textContent='↻';$('progressValue').classList.add('is-spinning');
+      $('progressCircle').style.strokeDashoffset='141.4';$('progressTrack').style.width='';$('progressTrack').classList.add('indeterminate');
+      $('stepList').innerHTML='<div class="empty-state"><div><strong>Prueba seleccionada</strong>Consultando sus pasos actuales.</div></div>';
     }
   }
 
@@ -250,12 +257,12 @@
       const metadataInterval=currentToken?25000:(listCache?.etag?12000:120000);
       const needRunRefresh=force||!lastRunsFetchAt||now-lastRunsFetchAt>=metadataInterval;
       if(needRunRefresh){
+        lastRunsFetchAt=Date.now();
         const list=await apiGet(listUrl);
         latestRuns=list.workflow_runs||[];
         activeRuns=latestRuns.filter(run=>isInspectorRun(run)&&['in_progress','queued','waiting','requested'].includes(run.status));
         activeRun=findLatestInspectorRun(latestRuns);
         selectedRunId=activeRun?.id??null;
-        lastRunsFetchAt=Date.now();
         renderActiveRuns();
         renderRunShell(activeRun);
       }
@@ -282,6 +289,7 @@
       const jobsInterval=currentToken?12000:(jobsCache?.etag?12000:120000);
       const shouldRefreshJobs=force||jobsRunId!==run.id||now-lastJobsFetchAt>=jobsInterval;
       if(shouldRefreshJobs){
+        lastJobsFetchAt=Date.now();
         try{
           jobs=await apiGet(jobsUrl);
           jobsData=jobs;jobsRunId=run.id;lastJobsFetchAt=Date.now();
