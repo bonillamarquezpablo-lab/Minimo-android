@@ -33,7 +33,7 @@ assert.ok(app.includes("runningGuide.title")&&app.includes("runningGuide.detail"
 assert.ok(app.includes("v!==null&&v!==undefined&&v!==''")&&app.includes("raw===null||raw===undefined||raw===''"),'Missing telemetry values must remain unavailable, never be plotted as zero.');
 assert.ok(app.includes("running.name==='Run the single unified inspector'"),'The monolithic inspector phase must use indeterminate progress, not a misleading percentage.');
 assert.ok(app.includes("step.conclusion==='failure'||step.conclusion==='cancelled'"),'Cancelled GitHub steps must not be rendered as successful.');
-assert.ok(app.includes('Esperando datos verificables'),'Missing job data must be explained without inventing progress.');
+assert.ok(app.includes('Esperando datos reales'),'Missing job data must be explained without inventing progress.');
 assert.ok(css.includes('.progress-track span.indeterminate'),'The dashboard needs a visible indeterminate progress animation.');
 for(const marker of ['@media(max-width:720px)','evidence-inline','evidence-pair','progress-ring strong.is-spinning','guide-panel','guide-focus','guide-fab','phase-placeholder','compare-stage','radar-map','metric-card','chart-card','chart-target','chart-help','prefers-reduced-motion'])assert.ok(css.includes(marker),'Missing responsive visual system: '+marker);
 assert.ok(runner.includes('publishComparisonPreviews'),'Unified inspector must publish web-readable A/B previews.');
