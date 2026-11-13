@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = process.cwd();
 const OUT_DIR = path.resolve('artifacts/ai-visual-review');
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
+const MAX_TOTAL_IMAGE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_STATUSES = new Set(['review-required', 'no-visible-issue', 'insufficient-evidence']);
 
 export function validateReview(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -15,6 +17,9 @@ export function validateReview(value) {
     throw new Error('AI response is missing observations[].');
   }
   const allowedSeverity = new Set(['critical', 'high', 'medium', 'low', 'informational']);
+  if (value.overallStatus !== undefined && !ALLOWED_STATUSES.has(value.overallStatus)) {
+    throw new Error('AI response contains an unsupported overallStatus.');
+  }
   const observations = value.observations.map((item, index) => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
       throw new Error('Observation ' + index + ' must be an object.');
@@ -22,15 +27,17 @@ export function validateReview(value) {
     if (typeof item.summary !== 'string' || !item.summary.trim()) {
       throw new Error('Observation ' + index + ' needs a non-empty summary.');
     }
-    const severity = allowedSeverity.has(item.severity) ? item.severity : 'informational';
-    const evidence = Array.isArray(item.evidence) ? item.evidence.filter(x => typeof x === 'string').slice(0, 8) : [];
+    if (!allowedSeverity.has(item.severity)) throw new Error('Observation ' + index + ' has an unsupported severity.');
+    const severity = item.severity;
+    const evidence = Array.isArray(item.evidence) ? item.evidence.filter(x => typeof x === 'string' && x.trim()).slice(0, 8).map(x => x.slice(0, 300)) : [];
+    if (!evidence.length) throw new Error('Observation ' + index + ' must cite at least one visible evidence location.');
     const recommendation = typeof item.recommendation === 'string' ? item.recommendation.slice(0, 1200) : '';
     return { severity, summary: item.summary.slice(0, 1000), evidence, recommendation, confidence: Number.isFinite(item.confidence) ? Math.max(0, Math.min(1, item.confidence)) : null };
   });
   return {
     schema: 1,
     status: 'completed',
-    overallStatus: typeof value.overallStatus === 'string' ? value.overallStatus.slice(0, 80) : 'review-required',
+    overallStatus: ALLOWED_STATUSES.has(value.overallStatus) ? value.overallStatus : 'insufficient-evidence',
     observations,
     safety: {
       codeChangesMade: false,
@@ -62,12 +69,14 @@ function imageData(relativePath) {
   const stat = fs.statSync(fullPath);
   if (!stat.isFile() || stat.size <= 0 || stat.size > MAX_IMAGE_BYTES) return null;
   const ext = path.extname(fullPath).toLowerCase();
-  const mime = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : 'image/png';
+  const mime = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : ext === '.png' ? 'image/png' : null;
+  if (!mime) return null;
   return { name: path.basename(fullPath), data: 'data:' + mime + ';base64,' + fs.readFileSync(fullPath).toString('base64') };
 }
 
 async function callModel(apiKey, model, manifest, images) {
-  const endpoint = process.env.LAB_AI_RESPONSES_URL || 'https://api.openai.com/v1/responses';
+  // Never send the repository API secret to a configurable third-party endpoint.
+  const endpoint = 'https://api.openai.com/v1/responses';
   const content = [{ type: 'input_text', text: buildPrompt(manifest) }];
   for (const item of images) content.push({ type: 'input_text', text: 'Image evidence: ' + item.name }, { type: 'input_image', image_url: item.data });
   const controller = new AbortController();
@@ -76,7 +85,26 @@ async function callModel(apiKey, model, manifest, images) {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, input: [{ role: 'user', content }], max_output_tokens: 3000 }),
+      body: JSON.stringify({
+        model,
+        input: [{ role: 'user', content }],
+        max_output_tokens: 3000,
+        text: { format: { type: 'json_schema', name: 'visual_review', strict: true, schema: {
+          type: 'object', additionalProperties: false,
+          required: ['overallStatus', 'observations'],
+          properties: {
+            overallStatus: { type: 'string', enum: ['review-required', 'no-visible-issue', 'insufficient-evidence'] },
+            observations: { type: 'array', items: { type: 'object', additionalProperties: false,
+              required: ['severity', 'summary', 'evidence', 'recommendation', 'confidence'],
+              properties: {
+                severity: { type: 'string', enum: ['critical', 'high', 'medium', 'low', 'informational'] },
+                summary: { type: 'string' }, evidence: { type: 'array', items: { type: 'string' } },
+                recommendation: { type: 'string' }, confidence: { type: ['number', 'null'] }
+              }
+            } }
+          }
+        } } }
+      }),
       signal: controller.signal
     });
     if (!response.ok) throw new Error('Visual model returned HTTP ' + response.status + ': ' + (await response.text()).slice(0, 800));
@@ -101,6 +129,8 @@ async function main() {
     'artifacts/coastal-reference/contact-sheet.png'
   ];
   const images = imagePaths.map(imageData).filter(Boolean);
+  const totalImageBytes = images.reduce((sum, item) => sum + Buffer.byteLength(item.data, 'utf8'), 0);
+  const imageBudgetExceeded = totalImageBytes > MAX_TOTAL_IMAGE_BYTES;
   const apiKey = process.env.LAB_AI_API_KEY;
   const model = process.env.LAB_AI_MODEL;
   let report;
@@ -112,8 +142,8 @@ async function main() {
       imagesFound: images.map(item => item.name),
       codeChangesMade: false
     };
-  } else if (!images.length) {
-    report = { schema: 1, status: 'insufficient-evidence', reason: 'No supported contact-sheet images were found.', imagesFound: [], codeChangesMade: false };
+  } else if (!images.length || imageBudgetExceeded) {
+    report = { schema: 1, status: 'insufficient-evidence', reason: imageBudgetExceeded ? 'Combined contact-sheet payload exceeds the 10 MiB safety limit.' : 'No supported contact-sheet images were found.', imagesFound: images.map(item => item.name), codeChangesMade: false };
   } else {
     report = await callModel(apiKey, model, manifest, images);
     report.imagesFound = images.map(item => item.name);
