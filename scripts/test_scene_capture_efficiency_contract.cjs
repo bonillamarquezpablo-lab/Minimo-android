@@ -40,14 +40,10 @@ const { pathToFileURL } = require("node:url");
     islandIndex:index,position:{x:index*100,y:1,z:0},
     bounds:{bottomY:.9,topY:3.2,width:2,depth:2},source:"contract-test"
   }));
-  const allCandidates = [...candidates,...islandCandidates.filter(item=>item.islandIndex!==3)];
-  const totalIslandShots = plan.reduce((total,item)=>{
-    const generated=createZoneInspectionShots(item,islands,allCandidates);
-    if(item.zone.islandIndex!==3) {
-      assert.ok(generated.report.selectedTargetCount<=1,"Each non-Hrafn island zone must stay within its one-target budget.");
-    } else {
-      assert.equal(generated.report.selectedTargetCount,12,"Hrafn must retain the full twelve-target precision inspection.");
-    }
+  const otherIslandZones = plan.filter(item=>item.zone.islandIndex!==3);
+  const totalIslandShots = shots.length + otherIslandZones.reduce((total,item)=>{
+    const generated=createZoneInspectionShots(item,islands,islandCandidates);
+    assert.equal(generated.report.selectedTargetCount,1,"Each non-Hrafn island must inspect its selected structural target.");
     return total+generated.shots.length;
   },0);
   assert.ok(totalIslandShots<=120,"All 13 islands must fit the 120-shot production budget; generated "+totalIslandShots+".");
