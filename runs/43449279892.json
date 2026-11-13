@@ -1,7 +1,14 @@
 {
   "schema": 1,
-  "startedAt": "2026-11-13T15:07:16.451Z",
+  "mode": "tiered-single-entrypoint-inspection",
   "level": "deep",
+  "readOnlyForMainCapture": true,
+  "visualCapturesSkipped": false,
+  "note": "Las comprobaciones de reparación se ejecutan en navegadores de prueba desechables; no modifican la partida ni los archivos publicados.",
+  "startedAt": "2026-11-13T15:07:16.451Z",
+  "finishedAt": "2026-11-13T15:18:37.997Z",
+  "durationMs": 681545,
+  "baseUrl": "http://127.0.0.1:4175/",
   "phases": [
     {
       "name": "Arranque del juego y modelo vikingo real",
@@ -82,7 +89,1164 @@
       "exitCode": 1,
       "error": "exit=1 signal=none",
       "finishedAt": "2026-11-13T15:18:37.942Z"
+    },
+    {
+      "name": "Informe visual ANTES/DESPUÉS y mapas de diferencias",
+      "script": "scripts/create_hrafn_ab_report.py",
+      "startedAt": "2026-11-13T15:18:37.943Z",
+      "status": "failed",
+      "durationMs": 51,
+      "exitCode": 1,
+      "error": "exit=1 signal=none",
+      "finishedAt": "2026-11-13T15:18:37.994Z"
     }
   ],
-  "finishedAt": null
+  "results": {
+    "player": {
+      "modelReady": true,
+      "realPlayerMeshCount": 1,
+      "failure": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('#newGameChoice') to be visible\n    63 × locator resolved to hidden <button type=\"button\" id=\"newGameChoice\" class=\"campaignCard campaignNew\">…</button>\n\n    at main (/home/runner/work/Minimo-android/Minimo-android/scripts/player-startup-smoke.mjs:229:42)"
+    },
+    "texture": {
+      "verdict": "fail",
+      "readiness": null,
+      "textureDiagnostics": {
+        "scanScheduling": {
+          "walkedObjects": 296,
+          "yieldCount": 61,
+          "yieldedMs": 226.5,
+          "budgetExceeded": false,
+          "scanBudgetMs": 15000
+        },
+        "camera": {
+          "name": "thirdPerson",
+          "position": {
+            "x": -40,
+            "y": 8,
+            "z": -10
+          },
+          "target": {
+            "x": -40,
+            "y": 8,
+            "z": -9
+          },
+          "frustumCheckAvailable": true,
+          "frustumMethod": "Babylon Frustum + mesh.isInFrustum"
+        },
+        "counts": {
+          "sceneMeshes": 5377,
+          "sceneMaterials": 141,
+          "materialsScanned": 141,
+          "sceneTextures": 49,
+          "pendingSceneTextures": 2,
+          "cameraRelevantPendingTextures": 0,
+          "unattributedPendingTextures": 0,
+          "orphanPendingTextures": 1,
+          "cameraVisibleMaterials": 64
+        },
+        "usageCoverage": {
+          "complete": true,
+          "budgetExceeded": false,
+          "scanBudgetMs": 15000,
+          "materialsScanned": 141,
+          "sceneMaterials": 141,
+          "meshesScanned": 5377,
+          "texturesScanned": 49,
+          "referenceRootsScanned": 11,
+          "referencedTextures": 39,
+          "orphanTextures": 10,
+          "materialScanErrors": []
+        },
+        "pendingTextures": [
+          {
+            "name": "sceneprePassRT",
+            "type": "Texture",
+            "url": null,
+            "isReady": false,
+            "readinessError": null,
+            "internalTexture": {
+              "exists": false,
+              "isReady": null,
+              "isLoading": null,
+              "state": null,
+              "loadingError": null,
+              "hasImage": false,
+              "imageComplete": null
+            },
+            "loadState": "url-no-internal-texture",
+            "orphan": true,
+            "referenceStatus": "sin referencias",
+            "references": [],
+            "blockingForCamera": false,
+            "creator": null,
+            "dynamicUpdate": null,
+            "size": {
+              "width": 0,
+              "height": 0
+            },
+            "relatedNetworkEvents": [],
+            "relatedNetworkRequests": [],
+            "relatedConsoleErrors": []
+          },
+          {
+            "name": "NordicCloudSky",
+            "type": "DynamicTexture",
+            "url": null,
+            "isReady": false,
+            "readinessError": null,
+            "internalTexture": {
+              "exists": false,
+              "isReady": null,
+              "isLoading": null,
+              "state": null,
+              "loadingError": null,
+              "hasImage": false,
+              "imageComplete": null
+            },
+            "loadState": "dynamic-no-internal-texture",
+            "orphan": false,
+            "referenceStatus": "referenced",
+            "references": [
+              {
+                "kind": "material",
+                "name": "NordicSkyMaterial",
+                "materialType": "StandardMaterial",
+                "path": "emissiveTexture"
+              },
+              {
+                "kind": "material",
+                "name": "NordicSkyMaterial",
+                "materialType": "StandardMaterial",
+                "path": "getActiveTextures()"
+              }
+            ],
+            "blockingForCamera": false,
+            "creator": {
+              "createdAtMs": 14830.8,
+              "creatorFunction": "not-mapped",
+              "creationSource": "scene.onNewTextureAddedObservable",
+              "observedAtStack": "Error: DynamicTexture scene registration\n    at s.callback (http://127.0.0.1:4175/?test=1&coastref=1:2519:246)\n    at a.notifyObservers (blob:http://127.0.0.1:4175/006da126-fe62-4c61-bbfd-4e910f9fc2d3:1:15440)\n    at sc.addTexture (blob:http://127.0.0.1:4175/006da126-fe62-4c61-bbfd-4e910f9fc2d3:1:560004)\n    at new e (blob:http://127.0.0.1:4175/006da126-fe62-4c61-bbfd-4e910f9fc2d3:1:1164744)\n    at new i (blob:http://127.0.0.1:4175/006da126-fe62-4c61-bbfd-4e910f9fc2d3:1:1174648)\n    at new xy (blob:http://127.0.0.1:4175/006da126-fe62-4c61-bbfd-4e910f9fc2d3:1:1814378)\n    at startGame (http://127.0.0.1:4175/?test=1&coastref=1:8634:19)\n    at bootEngine (http://127.0.0.1:4175/?test=1&coastref=1:1872:10)"
+            },
+            "dynamicUpdate": {
+              "calls": 1,
+              "firstUpdateAtMs": 14899.7,
+              "lastUpdateAtMs": 14899.7,
+              "renderLoopCountAtLastUpdate": 0,
+              "lastError": null,
+              "updateArguments": [
+                [
+                  false
+                ]
+              ],
+              "lastUpdateStack": "Error: DynamicTexture.update call\n    at xy.wrappedDynamicTextureUpdate (http://127.0.0.1:4175/?test=1&coastref=1:2374:34)\n    at startGame (http://127.0.0.1:4175/?test=1&coastref=1:8695:13)\n    at bootEngine (http://127.0.0.1:4175/?test=1&coastref=1:1872:10)"
+            },
+            "size": {
+              "width": 1536,
+              "height": 768
+            },
+            "relatedNetworkEvents": [],
+            "relatedNetworkRequests": [],
+            "relatedConsoleErrors": []
+          }
+        ],
+        "cameraPendingTextures": [],
+        "unattributedPendingTextures": [],
+        "orphanPendingTextures": [
+          {
+            "name": "sceneprePassRT",
+            "type": "Texture",
+            "url": null,
+            "isReady": false,
+            "readinessError": null,
+            "internalTexture": {
+              "exists": false,
+              "isReady": null,
+              "isLoading": null,
+              "state": null,
+              "loadingError": null,
+              "hasImage": false,
+              "imageComplete": null
+            },
+            "loadState": "url-no-internal-texture",
+            "orphan": true,
+            "referenceStatus": "sin referencias",
+            "references": [],
+            "blockingForCamera": false,
+            "creator": null,
+            "dynamicUpdate": null,
+            "size": {
+              "width": 0,
+              "height": 0
+            },
+            "relatedNetworkEvents": [],
+            "relatedNetworkRequests": [],
+            "relatedConsoleErrors": []
+          }
+        ],
+        "rafMonitor": {
+          "scheduled": 3142,
+          "executed": 3141,
+          "cancelled": 0,
+          "pending": 1,
+          "maxOutstanding": 3,
+          "lastScheduledAtMs": 81236.1,
+          "lastExecutedAtMs": 81235.8,
+          "lastCallbackDurationMs": 0.3
+        },
+        "dynamicTextureUpdateInstrumentation": {
+          "prototypeWrapped": true,
+          "installedAtMs": 3935.4,
+          "prototypeMethodAvailable": true,
+          "wrapError": null
+        }
+      },
+      "cameraVerification": null,
+      "actualCamera": {
+        "name": "thirdPerson",
+        "position": {
+          "x": -40,
+          "y": 8,
+          "z": -10
+        },
+        "target": {
+          "x": -40,
+          "y": 8,
+          "z": -9
+        },
+        "frustumCheckAvailable": true,
+        "frustumMethod": "Babylon Frustum + mesh.isInFrustum"
+      },
+      "failure": "locator.waitFor: Timeout 60000ms exceeded.\nCall log:\n  - waiting for locator('#intro.open') to be visible\n\n    at /home/runner/work/Minimo-android/Minimo-android/scripts/texture-readiness-smoke.mjs:117:101\n    at runPhase (/home/runner/work/Minimo-android/Minimo-android/scripts/texture-readiness-smoke.mjs:39:317)\n    at main (/home/runner/work/Minimo-android/Minimo-android/scripts/texture-readiness-smoke.mjs:117:8)"
+    },
+    "grounding": null,
+    "coastal": {
+      "captureCount": 0,
+      "atmosphereAudit": null,
+      "atmosphereCaptureCount": 0,
+      "structureVisibility": 0,
+      "failure": "locator.waitFor: Timeout 60000ms exceeded.\nCall log:\n  - waiting for locator('#intro.open') to be visible\n\n    at main (/home/runner/work/Minimo-android/Minimo-android/scripts/coastal-reference.mjs:196:39)"
+    },
+    "custom": {
+      "build": null,
+      "islands": [],
+      "counts": null,
+      "structures": [],
+      "inspectionErrors": {},
+      "shots": {
+        "planned": 0,
+        "captured": 0,
+        "failed": 0
+      },
+      "zones": []
+    },
+    "beforeAfter": {
+      "method": "same-seed-same-browser-same-S26-Ultra-mobile-emulation-same-game-state-four-clock-phases-plus-performance-sampling",
+      "seed": 20261110,
+      "deviceProfile": {
+        "name": "Samsung Galaxy S26 Ultra (emulado)",
+        "model": "SM-S948B",
+        "deviceScaleFactor": 3.75,
+        "deviceMemoryGB": 12,
+        "hardwareConcurrency": 8,
+        "touch": true,
+        "rendererLimit": "CI usa ANGLE SwiftShader, no la GPU Adreno física"
+      },
+      "renderer": "Chromium headless + ANGLE SwiftShader (software; no es benchmark físico del S26 Ultra)",
+      "builds": {
+        "before": {
+          "build": "0.6.290",
+          "performance": {
+            "label": "before",
+            "sampleCount": 57,
+            "medianFps": 0,
+            "minimumFps": 0,
+            "medianFrameP95Ms": 6485.6,
+            "medianFrameP99Ms": 13039.6,
+            "medianWorldUpdateCpuMs": 39.3,
+            "medianRenderSubmissionCpuMs": 21.4,
+            "medianDrawCalls": 333,
+            "heapInitialMB": 1020.43,
+            "heapPeakMB": 1020.43,
+            "heapFinalMB": 1020.43,
+            "heapSampleCount": 57,
+            "profile": "quality",
+            "build": "0.6.290",
+            "renderDpr": 1.74,
+            "renderWidth": 668,
+            "renderHeight": 1447,
+            "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+            "gpuVendor": "Google Inc. (Google)",
+            "webglVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+            "devicePixelRatio": 3.75,
+            "isTouchDevice": true,
+            "deviceMemory": 12,
+            "hardwareConcurrency": 8,
+            "fsr1": null,
+            "performanceAssessment": {
+              "targetFps": 60,
+              "frameBudget60Ms": 16.67,
+              "frameBudget90Ms": 11.11,
+              "frameBudget30Ms": 33.33,
+              "framesOver60Budget": 57,
+              "framesOver60BudgetPct": 95,
+              "framesOver90Budget": 60,
+              "framesOver90BudgetPct": 100,
+              "framesOver30Budget": 42,
+              "framesOver30BudgetPct": 70,
+              "worldUpdateCpuMs": 39.3,
+              "sceneRenderSubmissionCpuMs": 21.4,
+              "combinedMeasuredCpuMs": 60.7,
+              "bottleneckHint": "GPU, driver or browser compositor likely; GPU time is not directly measured",
+              "gpuTimerQuery": "not measured; scene.render duration is CPU wall-clock only"
+            },
+            "samples": [
+              {
+                "elapsedMs": 0,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 250,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 500,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 750,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 1000,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 1250,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 1500,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 1750,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 2001,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 2253,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 2502,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 2754,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 3000,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 3250,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 3500,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 3750,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 4001,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 4251,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 4504,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 4750,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 5000,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 5250,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 5500,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 5750,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 6000,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 6250,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 6500,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 6750,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 7000,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 7250,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 7500,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 7751,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 8000,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 8250,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 8500,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 8750,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 9000,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 9250,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 9501,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 9750,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 10000,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 10253,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 10500,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 17249,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 37535,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 37763,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 38001,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "elapsedMs": 38028,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "sampleLabel": "Carga / entrada"
+              },
+              {
+                "build": "0.6.290",
+                "profile": "quality",
+                "fps": 0,
+                "frameTiming": {
+                  "samples": 60,
+                  "average": 1780.93,
+                  "p50": 60.5,
+                  "p95": 6485.6,
+                  "p99": 13039.6,
+                  "max": 29523.2
+                },
+                "performanceAssessment": {
+                  "targetFps": 60,
+                  "frameBudget60Ms": 16.67,
+                  "frameBudget90Ms": 11.11,
+                  "frameBudget30Ms": 33.33,
+                  "framesOver60Budget": 57,
+                  "framesOver60BudgetPct": 95,
+                  "framesOver90Budget": 60,
+                  "framesOver90BudgetPct": 100,
+                  "framesOver30Budget": 42,
+                  "framesOver30BudgetPct": 70,
+                  "worldUpdateCpuMs": 39.3,
+                  "sceneRenderSubmissionCpuMs": 21.4,
+                  "combinedMeasuredCpuMs": 60.7,
+                  "bottleneckHint": "GPU, driver or browser compositor likely; GPU time is not directly measured",
+                  "gpuTimerQuery": "not measured; scene.render duration is CPU wall-clock only"
+                },
+                "renderDpr": 1.74,
+                "renderWidth": 668,
+                "renderHeight": 1447,
+                "drawCalls": 333,
+                "activeMeshes": 21,
+                "totalVertices": 9103716,
+                "worldUpdateMs": 39.3,
+                "renderCpuMs": 21.4,
+                "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+                "gpuVendor": "Google Inc. (Google)",
+                "webglVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+                "devicePixelRatio": 3.75,
+                "isTouchDevice": true,
+                "deviceMemory": 12,
+                "hardwareConcurrency": 8,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "fsr1": null,
+                "waterTimings": null,
+                "elapsedMs": 0,
+                "sampleLabel": "Entrada"
+              },
+              {
+                "build": "0.6.290",
+                "profile": "quality",
+                "fps": 0,
+                "frameTiming": {
+                  "samples": 60,
+                  "average": 1780.93,
+                  "p50": 60.5,
+                  "p95": 6485.6,
+                  "p99": 13039.6,
+                  "max": 29523.2
+                },
+                "performanceAssessment": {
+                  "targetFps": 60,
+                  "frameBudget60Ms": 16.67,
+                  "frameBudget90Ms": 11.11,
+                  "frameBudget30Ms": 33.33,
+                  "framesOver60Budget": 57,
+                  "framesOver60BudgetPct": 95,
+                  "framesOver90Budget": 60,
+                  "framesOver90BudgetPct": 100,
+                  "framesOver30Budget": 42,
+                  "framesOver30BudgetPct": 70,
+                  "worldUpdateCpuMs": 39.3,
+                  "sceneRenderSubmissionCpuMs": 21.4,
+                  "combinedMeasuredCpuMs": 60.7,
+                  "bottleneckHint": "GPU, driver or browser compositor likely; GPU time is not directly measured",
+                  "gpuTimerQuery": "not measured; scene.render duration is CPU wall-clock only"
+                },
+                "renderDpr": 1.74,
+                "renderWidth": 668,
+                "renderHeight": 1447,
+                "drawCalls": 333,
+                "activeMeshes": 21,
+                "totalVertices": 9103716,
+                "worldUpdateMs": 39.3,
+                "renderCpuMs": 21.4,
+                "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+                "gpuVendor": "Google Inc. (Google)",
+                "webglVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+                "devicePixelRatio": 3.75,
+                "isTouchDevice": true,
+                "deviceMemory": 12,
+                "hardwareConcurrency": 8,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "fsr1": null,
+                "waterTimings": null,
+                "elapsedMs": 8046,
+                "sampleLabel": "Estable 1"
+              },
+              {
+                "build": "0.6.290",
+                "profile": "quality",
+                "fps": 0,
+                "frameTiming": {
+                  "samples": 60,
+                  "average": 1780.93,
+                  "p50": 60.5,
+                  "p95": 6485.6,
+                  "p99": 13039.6,
+                  "max": 29523.2
+                },
+                "performanceAssessment": {
+                  "targetFps": 60,
+                  "frameBudget60Ms": 16.67,
+                  "frameBudget90Ms": 11.11,
+                  "frameBudget30Ms": 33.33,
+                  "framesOver60Budget": 57,
+                  "framesOver60BudgetPct": 95,
+                  "framesOver90Budget": 60,
+                  "framesOver90BudgetPct": 100,
+                  "framesOver30Budget": 42,
+                  "framesOver30BudgetPct": 70,
+                  "worldUpdateCpuMs": 39.3,
+                  "sceneRenderSubmissionCpuMs": 21.4,
+                  "combinedMeasuredCpuMs": 60.7,
+                  "bottleneckHint": "GPU, driver or browser compositor likely; GPU time is not directly measured",
+                  "gpuTimerQuery": "not measured; scene.render duration is CPU wall-clock only"
+                },
+                "renderDpr": 1.74,
+                "renderWidth": 668,
+                "renderHeight": 1447,
+                "drawCalls": 333,
+                "activeMeshes": 21,
+                "totalVertices": 9103716,
+                "worldUpdateMs": 39.3,
+                "renderCpuMs": 21.4,
+                "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+                "gpuVendor": "Google Inc. (Google)",
+                "webglVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+                "devicePixelRatio": 3.75,
+                "isTouchDevice": true,
+                "deviceMemory": 12,
+                "hardwareConcurrency": 8,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "fsr1": null,
+                "waterTimings": null,
+                "elapsedMs": 9060,
+                "sampleLabel": "Estable 2"
+              },
+              {
+                "build": "0.6.290",
+                "profile": "quality",
+                "fps": 0,
+                "frameTiming": {
+                  "samples": 60,
+                  "average": 1780.93,
+                  "p50": 60.5,
+                  "p95": 6485.6,
+                  "p99": 13039.6,
+                  "max": 29523.2
+                },
+                "performanceAssessment": {
+                  "targetFps": 60,
+                  "frameBudget60Ms": 16.67,
+                  "frameBudget90Ms": 11.11,
+                  "frameBudget30Ms": 33.33,
+                  "framesOver60Budget": 57,
+                  "framesOver60BudgetPct": 95,
+                  "framesOver90Budget": 60,
+                  "framesOver90BudgetPct": 100,
+                  "framesOver30Budget": 42,
+                  "framesOver30BudgetPct": 70,
+                  "worldUpdateCpuMs": 39.3,
+                  "sceneRenderSubmissionCpuMs": 21.4,
+                  "combinedMeasuredCpuMs": 60.7,
+                  "bottleneckHint": "GPU, driver or browser compositor likely; GPU time is not directly measured",
+                  "gpuTimerQuery": "not measured; scene.render duration is CPU wall-clock only"
+                },
+                "renderDpr": 1.74,
+                "renderWidth": 668,
+                "renderHeight": 1447,
+                "drawCalls": 333,
+                "activeMeshes": 21,
+                "totalVertices": 9103716,
+                "worldUpdateMs": 39.3,
+                "renderCpuMs": 21.4,
+                "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+                "gpuVendor": "Google Inc. (Google)",
+                "webglVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+                "devicePixelRatio": 3.75,
+                "isTouchDevice": true,
+                "deviceMemory": 12,
+                "hardwareConcurrency": 8,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "fsr1": null,
+                "waterTimings": null,
+                "elapsedMs": 10068,
+                "sampleLabel": "Estable 3"
+              },
+              {
+                "build": "0.6.290",
+                "profile": "quality",
+                "fps": 0,
+                "frameTiming": {
+                  "samples": 60,
+                  "average": 1780.93,
+                  "p50": 60.5,
+                  "p95": 6485.6,
+                  "p99": 13039.6,
+                  "max": 29523.2
+                },
+                "performanceAssessment": {
+                  "targetFps": 60,
+                  "frameBudget60Ms": 16.67,
+                  "frameBudget90Ms": 11.11,
+                  "frameBudget30Ms": 33.33,
+                  "framesOver60Budget": 57,
+                  "framesOver60BudgetPct": 95,
+                  "framesOver90Budget": 60,
+                  "framesOver90BudgetPct": 100,
+                  "framesOver30Budget": 42,
+                  "framesOver30BudgetPct": 70,
+                  "worldUpdateCpuMs": 39.3,
+                  "sceneRenderSubmissionCpuMs": 21.4,
+                  "combinedMeasuredCpuMs": 60.7,
+                  "bottleneckHint": "GPU, driver or browser compositor likely; GPU time is not directly measured",
+                  "gpuTimerQuery": "not measured; scene.render duration is CPU wall-clock only"
+                },
+                "renderDpr": 1.74,
+                "renderWidth": 668,
+                "renderHeight": 1447,
+                "drawCalls": 333,
+                "activeMeshes": 21,
+                "totalVertices": 9103716,
+                "worldUpdateMs": 39.3,
+                "renderCpuMs": 21.4,
+                "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+                "gpuVendor": "Google Inc. (Google)",
+                "webglVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+                "devicePixelRatio": 3.75,
+                "isTouchDevice": true,
+                "deviceMemory": 12,
+                "hardwareConcurrency": 8,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "fsr1": null,
+                "waterTimings": null,
+                "elapsedMs": 11084,
+                "sampleLabel": "Estable 4"
+              },
+              {
+                "build": "0.6.290",
+                "profile": "quality",
+                "fps": 0,
+                "frameTiming": {
+                  "samples": 60,
+                  "average": 1780.93,
+                  "p50": 60.5,
+                  "p95": 6485.6,
+                  "p99": 13039.6,
+                  "max": 29523.2
+                },
+                "performanceAssessment": {
+                  "targetFps": 60,
+                  "frameBudget60Ms": 16.67,
+                  "frameBudget90Ms": 11.11,
+                  "frameBudget30Ms": 33.33,
+                  "framesOver60Budget": 57,
+                  "framesOver60BudgetPct": 95,
+                  "framesOver90Budget": 60,
+                  "framesOver90BudgetPct": 100,
+                  "framesOver30Budget": 42,
+                  "framesOver30BudgetPct": 70,
+                  "worldUpdateCpuMs": 39.3,
+                  "sceneRenderSubmissionCpuMs": 21.4,
+                  "combinedMeasuredCpuMs": 60.7,
+                  "bottleneckHint": "GPU, driver or browser compositor likely; GPU time is not directly measured",
+                  "gpuTimerQuery": "not measured; scene.render duration is CPU wall-clock only"
+                },
+                "renderDpr": 1.74,
+                "renderWidth": 668,
+                "renderHeight": 1447,
+                "drawCalls": 333,
+                "activeMeshes": 21,
+                "totalVertices": 9103716,
+                "worldUpdateMs": 39.3,
+                "renderCpuMs": 21.4,
+                "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+                "gpuVendor": "Google Inc. (Google)",
+                "webglVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+                "devicePixelRatio": 3.75,
+                "isTouchDevice": true,
+                "deviceMemory": 12,
+                "hardwareConcurrency": 8,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "fsr1": null,
+                "waterTimings": null,
+                "elapsedMs": 12093,
+                "sampleLabel": "Estable 5"
+              },
+              {
+                "build": "0.6.290",
+                "profile": "quality",
+                "fps": 0,
+                "frameTiming": {
+                  "samples": 60,
+                  "average": 1780.93,
+                  "p50": 60.5,
+                  "p95": 6485.6,
+                  "p99": 13039.6,
+                  "max": 29523.2
+                },
+                "performanceAssessment": {
+                  "targetFps": 60,
+                  "frameBudget60Ms": 16.67,
+                  "frameBudget90Ms": 11.11,
+                  "frameBudget30Ms": 33.33,
+                  "framesOver60Budget": 57,
+                  "framesOver60BudgetPct": 95,
+                  "framesOver90Budget": 60,
+                  "framesOver90BudgetPct": 100,
+                  "framesOver30Budget": 42,
+                  "framesOver30BudgetPct": 70,
+                  "worldUpdateCpuMs": 39.3,
+                  "sceneRenderSubmissionCpuMs": 21.4,
+                  "combinedMeasuredCpuMs": 60.7,
+                  "bottleneckHint": "GPU, driver or browser compositor likely; GPU time is not directly measured",
+                  "gpuTimerQuery": "not measured; scene.render duration is CPU wall-clock only"
+                },
+                "renderDpr": 1.74,
+                "renderWidth": 668,
+                "renderHeight": 1447,
+                "drawCalls": 333,
+                "activeMeshes": 21,
+                "totalVertices": 9103716,
+                "worldUpdateMs": 39.3,
+                "renderCpuMs": 21.4,
+                "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+                "gpuVendor": "Google Inc. (Google)",
+                "webglVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+                "devicePixelRatio": 3.75,
+                "isTouchDevice": true,
+                "deviceMemory": 12,
+                "hardwareConcurrency": 8,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "fsr1": null,
+                "waterTimings": null,
+                "elapsedMs": 13101,
+                "sampleLabel": "Estable 6"
+              },
+              {
+                "build": "0.6.290",
+                "profile": "quality",
+                "fps": 0,
+                "frameTiming": {
+                  "samples": 60,
+                  "average": 1780.93,
+                  "p50": 60.5,
+                  "p95": 6485.6,
+                  "p99": 13039.6,
+                  "max": 29523.2
+                },
+                "performanceAssessment": {
+                  "targetFps": 60,
+                  "frameBudget60Ms": 16.67,
+                  "frameBudget90Ms": 11.11,
+                  "frameBudget30Ms": 33.33,
+                  "framesOver60Budget": 57,
+                  "framesOver60BudgetPct": 95,
+                  "framesOver90Budget": 60,
+                  "framesOver90BudgetPct": 100,
+                  "framesOver30Budget": 42,
+                  "framesOver30BudgetPct": 70,
+                  "worldUpdateCpuMs": 39.3,
+                  "sceneRenderSubmissionCpuMs": 21.4,
+                  "combinedMeasuredCpuMs": 60.7,
+                  "bottleneckHint": "GPU, driver or browser compositor likely; GPU time is not directly measured",
+                  "gpuTimerQuery": "not measured; scene.render duration is CPU wall-clock only"
+                },
+                "renderDpr": 1.74,
+                "renderWidth": 668,
+                "renderHeight": 1447,
+                "drawCalls": 333,
+                "activeMeshes": 21,
+                "totalVertices": 9103716,
+                "worldUpdateMs": 39.3,
+                "renderCpuMs": 21.4,
+                "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+                "gpuVendor": "Google Inc. (Google)",
+                "webglVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+                "devicePixelRatio": 3.75,
+                "isTouchDevice": true,
+                "deviceMemory": 12,
+                "hardwareConcurrency": 8,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "fsr1": null,
+                "waterTimings": null,
+                "elapsedMs": 14112,
+                "sampleLabel": "Estable 7"
+              },
+              {
+                "build": "0.6.290",
+                "profile": "quality",
+                "fps": 0,
+                "frameTiming": {
+                  "samples": 60,
+                  "average": 1780.93,
+                  "p50": 60.5,
+                  "p95": 6485.6,
+                  "p99": 13039.6,
+                  "max": 29523.2
+                },
+                "performanceAssessment": {
+                  "targetFps": 60,
+                  "frameBudget60Ms": 16.67,
+                  "frameBudget90Ms": 11.11,
+                  "frameBudget30Ms": 33.33,
+                  "framesOver60Budget": 57,
+                  "framesOver60BudgetPct": 95,
+                  "framesOver90Budget": 60,
+                  "framesOver90BudgetPct": 100,
+                  "framesOver30Budget": 42,
+                  "framesOver30BudgetPct": 70,
+                  "worldUpdateCpuMs": 39.3,
+                  "sceneRenderSubmissionCpuMs": 21.4,
+                  "combinedMeasuredCpuMs": 60.7,
+                  "bottleneckHint": "GPU, driver or browser compositor likely; GPU time is not directly measured",
+                  "gpuTimerQuery": "not measured; scene.render duration is CPU wall-clock only"
+                },
+                "renderDpr": 1.74,
+                "renderWidth": 668,
+                "renderHeight": 1447,
+                "drawCalls": 333,
+                "activeMeshes": 21,
+                "totalVertices": 9103716,
+                "worldUpdateMs": 39.3,
+                "renderCpuMs": 21.4,
+                "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+                "gpuVendor": "Google Inc. (Google)",
+                "webglVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+                "devicePixelRatio": 3.75,
+                "isTouchDevice": true,
+                "deviceMemory": 12,
+                "hardwareConcurrency": 8,
+                "heapUsedMB": 1020.43,
+                "heapTotalMB": 1077.65,
+                "heapLimitMB": 3585.82,
+                "fsr1": null,
+                "waterTimings": null,
+                "elapsedMs": 15123,
+                "sampleLabel": "Estable 8"
+              }
+            ]
+          }
+        },
+        "after": {
+          "build": null,
+          "performance": null
+        }
+      },
+      "phases": [],
+      "previews": {
+        "dawn": {},
+        "noon": {},
+        "dusk": {},
+        "midnight": {}
+      },
+      "warnings": [
+        "Pixel differences identify changes; edge energy is an auxiliary sharpness indicator, not a subjective quality verdict.",
+        "Performance values use S26 Ultra capability emulation on SwiftShader; they are not physical Adreno measurements.",
+        "Both versions use the same deterministic random seed, menu flow, scene-readiness gate and frozen clock."
+      ],
+      "failure": "locator.waitFor: Timeout 60000ms exceeded.\nCall log:\n  - waiting for locator('#intro.open') to be visible\n\n    at bootGame (/home/runner/work/Minimo-android/Minimo-android/scripts/hrafn-before-after.mjs:282:37)\n    at async file:///home/runner/work/Minimo-android/Minimo-android/scripts/hrafn-before-after.mjs:404:11"
+    }
+  },
+  "files": [
+    "player-startup/manifest.json",
+    "texture-readiness-smoke/manifest.json",
+    "structure-grounding/manifest.json",
+    "coastal-reference/manifest.json",
+    "custom-scene-captures/manifest.json",
+    "custom-scene-captures/inspection-report.md",
+    "custom-scene-captures/contact-sheet.png",
+    "custom-scene-captures/vision-review-index.json",
+    "hrafn-before-after/manifest.json",
+    "hrafn-before-after/report.md",
+    "hrafn-before-after/before/",
+    "hrafn-before-after/after/",
+    "hrafn-before-after/comparison-dawn.jpg",
+    "hrafn-before-after/comparison-noon.jpg",
+    "hrafn-before-after/comparison-dusk.jpg",
+    "hrafn-before-after/comparison-midnight.jpg",
+    "hrafn-before-after/difference-dawn.png",
+    "hrafn-before-after/difference-noon.png",
+    "hrafn-before-after/difference-dusk.png",
+    "hrafn-before-after/difference-midnight.png"
+  ]
 }
