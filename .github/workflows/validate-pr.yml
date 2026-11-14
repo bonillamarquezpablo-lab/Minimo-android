@@ -52,6 +52,8 @@ jobs:
 
       - name: Test civilian NPC specialists and shared-memory contract
         run: node scripts/test_npc_agent_core.cjs
+      - name: Test dialogue, civilian outfit, footprint and session diagnostics
+        run: node scripts/test_npc_dialogue_core.cjs && node scripts/test_runtime_issue_diagnostics.cjs && node --check scripts/npc-dialogue-runtime.js && node --check scripts/game-session-recorder.js
 
       - name: Check NPC specialist runtime syntax
         run: node --check scripts/npc-agent-core.js && node --check scripts/npc-agent-runtime.js
