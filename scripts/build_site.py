@@ -1013,13 +1013,6 @@ def main() -> None:
         raise SystemExit("No se encontró el contador drawCalls del informe de salud.")
     html = html.replace(health_draw_marker, health_draw_replacement, 1)
 
-    runtime_diagnostics_replacement = runtime_diagnostics_replacement.replace(
-        "enemyAiRateCapHz:isConstrainedMobile?20:60,companionAiRateCapHz:isConstrainedMobile?15:60,",
-        "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60),companionAiRateCapHz:isConstrainedMobile?15:(isTouchDevice?30:60),"
-    )
-    if "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in runtime_diagnostics_replacement:
-        raise SystemExit("No se pudo actualizar la telemetría de cadencia AI móvil.")
-
     diagnostic_ai_budget_marker = "enemyAiRateCapHz:isConstrainedMobile?20:60,companionAiRateCapHz:isConstrainedMobile?15:60,"
     diagnostic_ai_budget_replacement = "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60),companionAiRateCapHz:isConstrainedMobile?15:(isTouchDevice?30:60),"
     if html.count(diagnostic_ai_budget_marker) != 1:
