@@ -50,8 +50,6 @@ assert.ok(rs.includes("phaseLevel(name)>LEVEL_RANK[INSPECTOR_LEVEL]"),'The selec
 assert.ok(rs.includes("child.once('exit'"),'Inspector phases must settle on child exit rather than waiting for inherited stdio close.');
 console.log('Inspector workflow routing and baseline fallback contract: OK');
 
-const aiReviewStep=workflow.match(/- name: Run optional read-only multimodal visual review([\s\S]*?)(?=\n      - name:)/)?.[1] || '';
-assert.ok(aiReviewStep.includes('LAB_AI_API_KEY'),'The optional visual review must use a repository secret.');
-assert.ok(aiReviewStep.includes('LAB_AI_MODEL'),'The optional visual review must use a configured vision model.');
-assert.ok(!aiReviewStep.includes('LAB_AI_RESPONSES_URL'),'The API secret must not be sent to a configurable endpoint.');
-assert.ok(workflow.includes('artifacts/ai-visual-review/'),'The AI visual report must be retained as an artifact.');
+assert.doesNotMatch(workflow,/Run optional read-only multimodal visual review/,'The Inspector must not call an external vision API.');
+assert.doesNotMatch(workflow,/LAB_AI_API_KEY|LAB_AI_MODEL|ai-visual-review/,'The inspection workflow must not require external AI credentials or run a paid vision service.');
+console.log('Inspector workflow has no external visual AI dependency: OK');
