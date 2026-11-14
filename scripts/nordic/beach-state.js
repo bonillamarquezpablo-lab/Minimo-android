@@ -196,7 +196,9 @@
       const power = Math.round(clamp01(strength === undefined ? 0.85 : strength) * 255);
       const tick = wrapTick(currentTick);
       const c = Math.cos(heading || 0), s = Math.sin(heading || 0);
-      const halfWidth = 0.155, halfLength = 0.245;
+      // Huella de bota de adulto: talón estrecho, arco suave y una sola puntera redondeada.
+      // La silueta se mantiene continua; no se dibujan cinco lóbulos que parezcan una runa.
+      const halfLength = 0.19;
       const radius = Math.ceil(halfLength / pixelSize) + 1;
       const center = logicalCell(x, z);
       let changed = false;
@@ -206,26 +208,18 @@
           const wz = originZ + (py + 0.5) * pixelSize - z;
           const localX = wx * c - wz * s, localZ = wx * s + wz * c;
           const longitudinal = localZ / halfLength;
-          // Viking boot silhouette: narrower arch, rounded heel, broad forefoot,
-          // and five individually rounded toe lobes rather than one oval stamp.
           let halfWidthAtZ;
-          if (longitudinal < -0.48) halfWidthAtZ = 0.083 + 0.022 * smooth01((longitudinal + 1) / 0.52);
-          else if (longitudinal < 0.08) halfWidthAtZ = 0.105 - 0.032 * smooth01((longitudinal + 0.48) / 0.56);
-          else halfWidthAtZ = 0.073 + 0.072 * smooth01((longitudinal - 0.08) / 0.55);
-          const bodyDistance = Math.max(Math.abs(localX) / halfWidthAtZ, Math.abs(localZ) / (halfLength * 0.76));
-          const toeOffsets = [-0.104, -0.052, 0, 0.052, 0.104];
-          const toeCenters = [0.170, 0.198, 0.218, 0.194, 0.160];
-          const toeRadii = [0.026, 0.030, 0.033, 0.029, 0.024];
-          let toeDistance = Infinity;
-          for (let toe = 0; toe < toeOffsets.length; toe++) {
-            const tx = localX - toeOffsets[toe], tz = localZ - toeCenters[toe];
-            toeDistance = Math.min(toeDistance, Math.hypot(tx / toeRadii[toe], tz / 0.048));
-          }
-          const distance = Math.min(bodyDistance, toeDistance);
-          if (distance > 1.12) continue;
-          const edge = 1 - smooth01((distance - 0.72) / 0.40);
-          const archGroove = longitudinal > -0.38 && longitudinal < 0.20 && Math.abs(localX) < 0.050 ? 0.82 : 1;
-          const raisedRim = Math.exp(-Math.pow((distance - 0.92) / 0.075, 2)) * 0.18;
+          if (longitudinal < -0.42) halfWidthAtZ = 0.048 + 0.012 * smooth01((longitudinal + 1) / 0.58);
+          else if (longitudinal < 0.18) halfWidthAtZ = 0.060 - 0.012 * smooth01((longitudinal + 0.42) / 0.60);
+          else halfWidthAtZ = 0.048 + 0.026 * smooth01((longitudinal - 0.18) / 0.82);
+          const bodyDistance = Math.max(Math.abs(localX) / halfWidthAtZ, Math.abs(localZ) / (halfLength * 0.90));
+          const toeCapDistance = Math.hypot(localX / 0.074, (localZ - 0.136) / 0.052);
+          const heelCapDistance = Math.hypot(localX / 0.053, (localZ + 0.142) / 0.043);
+          const distance = Math.min(bodyDistance, toeCapDistance, heelCapDistance);
+          if (distance > 1.08) continue;
+          const edge = 1 - smooth01((distance - 0.70) / 0.38);
+          const archGroove = longitudinal > -0.30 && longitudinal < 0.20 && Math.abs(localX) < 0.026 ? 0.95 : 1;
+          const raisedRim = Math.exp(-Math.pow((distance - 0.94) / 0.085, 2)) * 0.08;
           const value = Math.round(power * clamp01(edge * archGroove + raisedRim));
           const cell = physicalIndex(px, py);
           if (value > 0 && value >= values[cell]) {
