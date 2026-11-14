@@ -901,7 +901,29 @@ def main() -> None:
     # Mobile runtime stability without visual downgrades.
     # Guard DynamicTexture uploads against stale/disposed scene owners.
     live_texture_guard_marker = " let engineInstrumentation=null,sceneInstrumentation=null;"
-    live_texture_guard = r""" const isLiveDynamicTexture=texture=>{
+    live_texture_guard = r""" const dynamicTexturePrototype=B.DynamicTexture&&B.DynamicTexture.prototype;
+ if(dynamicTexturePrototype&&typeof dynamicTexturePrototype._getEngine==='function'&&!dynamicTexturePrototype._getEngine.__elsnSafeOwnerEngine){
+  const originalDynamicTextureGetEngine=dynamicTexturePrototype._getEngine;
+  const safeDynamicTextureGetEngine=function(...args){
+   let resolved=null;
+   try{resolved=originalDynamicTextureGetEngine.apply(this,args);}catch(_){}
+   if(resolved)return resolved;
+   try{
+    const disposed=typeof this.isDisposed==='function'?this.isDisposed():this.isDisposed===true;
+    if(disposed)return null;
+    const ownerScene=typeof this.getScene==='function'?this.getScene():null;
+    if(ownerScene!==scene||typeof ownerScene.getEngine!=='function')return null;
+    const ownerEngine=ownerScene.getEngine();
+    const engineDisposed=typeof ownerEngine.isDisposed==='function'?ownerEngine.isDisposed():ownerEngine.isDisposed===true;
+    if(ownerEngine!==engine||engineDisposed)return null;
+    window.__ELSN_DYNAMIC_TEXTURE_ENGINE_RECOVERIES=(window.__ELSN_DYNAMIC_TEXTURE_ENGINE_RECOVERIES||0)+1;
+    return ownerEngine;
+   }catch(_){return null;}
+  };
+  Object.defineProperty(safeDynamicTextureGetEngine,'__elsnSafeOwnerEngine',{value:true});
+  dynamicTexturePrototype._getEngine=safeDynamicTextureGetEngine;
+ }
+ const isLiveDynamicTexture=texture=>{
   try{
    if(!texture||typeof texture.update!=='function')return false;
    const disposed=typeof texture.isDisposed==='function'?texture.isDisposed():texture.isDisposed===true;
@@ -909,16 +931,26 @@ def main() -> None:
    const ownerScene=typeof texture.getScene==='function'?texture.getScene():null;
    if(!ownerScene||ownerScene!==scene||typeof ownerScene.getEngine!=='function')return false;
    const ownerEngine=ownerScene.getEngine();
+   const textureEngine=typeof texture._getEngine==='function'?texture._getEngine():null;
    const engineDisposed=typeof ownerEngine.isDisposed==='function'?ownerEngine.isDisposed():ownerEngine.isDisposed===true;
-   return ownerEngine===engine&&!engineDisposed;
+   return ownerEngine===engine&&textureEngine===engine&&!engineDisposed;
   }catch(_){return false;}
  };
+ if(dynamicTexturePrototype&&typeof dynamicTexturePrototype.update==='function'&&!dynamicTexturePrototype.update.__elsnSafeUpdate){
+  const originalDynamicTextureUpdate=dynamicTexturePrototype.update;
+  const safeDynamicTextureUpdate=function(...args){
+   if(!isLiveDynamicTexture(this)){
+    window.__ELSN_DYNAMIC_TEXTURE_UPDATE_SKIPS=(window.__ELSN_DYNAMIC_TEXTURE_UPDATE_SKIPS||0)+1;
+    return false;
+   }
+   return originalDynamicTextureUpdate.apply(this,args);
+  };
+  Object.defineProperty(safeDynamicTextureUpdate,'__elsnSafeUpdate',{value:true});
+  dynamicTexturePrototype.update=safeDynamicTextureUpdate;
+ }
  const updateDynamicTextureSafely=(texture,...args)=>{
-  if(!isLiveDynamicTexture(texture)){
-   window.__ELSN_DYNAMIC_TEXTURE_UPDATE_SKIPS=(window.__ELSN_DYNAMIC_TEXTURE_UPDATE_SKIPS||0)+1;
-   return false;
-  }
-  texture.update(...args);return true;
+  if(!isLiveDynamicTexture(texture))return false;
+  return texture.update(...args)!==false;
  };
 """
     if html.count(live_texture_guard_marker) != 1:
