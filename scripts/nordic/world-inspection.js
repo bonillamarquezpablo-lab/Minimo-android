@@ -251,9 +251,20 @@
       const centerSample = heightSamples.find(sample => sample.sample === 'center') || heightSamples[0];
       const objectTopY = bounds.max.y;
       const objectBottomY = bounds.min.y;
-      const fullyBuried = objectTopY < minGroundY - 0.15;
-      const penetrationDepth = centerSample.y - objectBottomY;
-      const penetrates = !fullyBuried && penetrationDepth > 0.35 && objectTopY >= minGroundY - 0.15;
+      // 8 cm tolerance catches genuinely buried props without flagging tiny numerical seams.
+      // These are candidates for human review; the audit never moves or hides scene objects.
+      const burialToleranceMeters = 0.08;
+      const terrainClearanceSamples = heightSamples.map(sample => ({
+        sample: sample.sample,
+        x: round(sample.x, 3),
+        z: round(sample.z, 3),
+        terrainY: round(sample.y, 3),
+        objectBottomY: round(objectBottomY, 3),
+        bottomBelowTerrainMeters: round(sample.y - objectBottomY, 3)
+      }));
+      const penetrationDepth = Math.max(...terrainClearanceSamples.map(sample => sample.bottomBelowTerrainMeters));
+      const fullyBuried = objectTopY < minGroundY - burialToleranceMeters;
+      const penetrates = !fullyBuried && penetrationDepth > burialToleranceMeters;
       if (!fullyBuried && !penetrates) continue;
       let nearestIsland = null;
       for (let islandIndex = 0; islandIndex < (Array.isArray(context.land) ? context.land.length : 0); islandIndex++) {
@@ -288,8 +299,12 @@
             minimumSampledGroundY: round(minGroundY, 3),
             maximumSampledGroundY: round(maxGroundY, 3),
             sampledPoints: heightSamples.length,
+            burialToleranceMeters,
+            objectBottomY: round(objectBottomY, 3),
+            objectTopY: round(objectTopY, 3),
             buriedDepthMeters: fullyBuried ? round(minGroundY - objectTopY, 3) : null,
-            penetrationDepthMeters: round(penetrationDepth, 3)
+            penetrationDepthMeters: round(penetrationDepth, 3),
+            terrainClearanceSamples
           },
           nearestIsland
         });
