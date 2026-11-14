@@ -250,20 +250,95 @@
     await saveSession();
   }
 
+  function percentile(values, ratio) {
+    const valid = values.filter(value => value !== null && Number.isFinite(value)).sort((a, b) => a - b);
+    if (!valid.length) return null;
+    const index = (valid.length - 1) * ratio;
+    const lower = Math.floor(index), upper = Math.ceil(index);
+    return Number((valid[lower] + (valid[upper] - valid[lower]) * (index - lower)).toFixed(2));
+  }
+
+  function buildSessionSummary(session) {
+    const samples = Array.isArray(session.samples) ? session.samples : [];
+    const values = key => samples.map(sample => number(key(sample))).filter(value => value !== null);
+    const fps = values(sample => sample.fps);
+    const p95 = values(sample => sample.frameTiming && sample.frameTiming.p95Ms);
+    const p99 = values(sample => sample.frameTiming && sample.frameTiming.p99Ms);
+    const world = values(sample => sample.cpu && sample.cpu.worldUpdateMs);
+    const render = values(sample => sample.cpu && sample.cpu.renderCpuMs);
+    const gpu = values(sample => sample.gpu && sample.gpu.frameMs);
+    const median = list => percentile(list, .5);
+    const medianWorld = median(world), medianRender = median(render), medianGpu = median(gpu);
+    const stages = [
+      { name: "actualizacion-del-mundo", value: medianWorld },
+      { name: "preparacion-render-CPU", value: medianRender },
+      { name: "GPU", value: medianGpu }
+    ].filter(item => item.value !== null).sort((a, b) => b.value - a.value);
+    const targetFps = percentile(values(sample => sample.targetFps), .5) || 60;
+    return {
+      sampleCount: samples.length,
+      durationSeconds: session.startedAt && session.finishedAt
+        ? Math.max(0, Math.round((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / 1000)) : null,
+      targetFps,
+      fps: { minimum: fps.length ? Math.min(...fps) : null, average: fps.length ? Number((fps.reduce((sum, value) => sum + value, 0) / fps.length).toFixed(2)) : null, median: median(fps), p10: percentile(fps, .1) },
+      frameTimeMs: { p95Median: median(p95), p99Median: median(p99), worstP95: p95.length ? Math.max(...p95) : null },
+      stutterIntervalsOver33ms: p95.filter(value => value > 33.33).length,
+      cpu: { worldUpdateMedianMs: medianWorld, renderPreparationMedianMs: medianRender },
+      gpu: { frameMedianMs: medianGpu },
+      probableBottleneck: stages.length && stages[0].value >= 4 ? stages[0].name : "sin-atribucion-suficiente",
+      bottleneckEvidence: stages,
+      caveat: "Atribución orientativa basada en medianas disponibles; los contadores ausentes no se interpretan como cero."
+    };
+  }
+
+  function captureFinalWorldInspection() {
+    if (typeof window.getGameWorldInspectionSnapshot !== "function") return null;
+    try {
+      const snapshot = window.getGameWorldInspectionSnapshot({ maxMeshes: 5000, maxActors: 500, includeMeshes: true });
+      const terrain = snapshot && snapshot.terrainObjects;
+      return {
+        capturedAt: snapshot && snapshot.capturedAt || new Date().toISOString(),
+        source: snapshot && snapshot.source || "Babylon.js runtime",
+        scene: snapshot && snapshot.scene || null,
+        terrainObjects: terrain ? {
+          checkedCount: terrain.checkedCount,
+          candidateCount: terrain.candidateCount,
+          fullyBuriedCount: terrain.fullyBuriedCount,
+          penetratingCount: terrain.penetratingCount,
+          unmeasurableCount: terrain.unmeasurableCount,
+          complete: terrain.complete,
+          terrainHeightSource: terrain.terrainHeightSource,
+          items: (terrain.items || []).slice(0, 100)
+        } : null,
+        structureAudit: snapshot && snapshot.structures && snapshot.structures.audit || null,
+        terrain: snapshot && snapshot.terrain || null,
+        islands: snapshot && snapshot.islands || null
+      };
+    } catch (error) {
+      return { error: text(error && error.message || error, 240), capturedAt: new Date().toISOString() };
+    }
+  }
+
   async function finishSession(reason) {
     if (state.sampleTimer) window.clearInterval(state.sampleTimer);
     state.sampleTimer = null;
     if (!state.session) return;
-    state.session.finishedAt = new Date().toISOString();
-    state.session.lastUpdatedAt = state.session.finishedAt;
-    state.session.status = reason === "pagehide" ? "interrupted" : "completed";
-    state.session.endReason = reason;
+    const current = state.session;
+    current.finishedAt = new Date().toISOString();
+    current.lastUpdatedAt = current.finishedAt;
+    current.status = reason === "pagehide" ? "interrupted" : "completed";
+    current.endReason = reason;
+    current.summary = buildSessionSummary(current);
+    if (reason !== "pagehide") current.finalWorldInspection = captureFinalWorldInspection();
     await saveSession();
     window.__ELSN_SESSION_RECORDER_STATUS__ = {
       active: false,
-      sessionId: state.session.sessionId,
-      sampleCount: state.session.sampleCount,
-      status: state.session.status
+      sessionId: current.sessionId,
+      sampleCount: current.sampleCount,
+      status: current.status,
+      summary: current.summary,
+      terrainObjectCandidates: current.finalWorldInspection && current.finalWorldInspection.terrainObjects
+        ? current.finalWorldInspection.terrainObjects.candidateCount : null
     };
     state.session = null;
   }
