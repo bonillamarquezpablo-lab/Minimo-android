@@ -167,6 +167,13 @@
         frameMs: number(runtime.engineGpuFrameMs),
         sceneRenderMs: number(runtime.sceneRenderMs)
       },
+      sceneTimings: {
+        frameMs: number(runtime.sceneFrameMs),
+        activeMeshesEvaluationMs: number(runtime.activeMeshesEvaluationMs),
+        renderTargetsMs: number(runtime.renderTargetsMs),
+        cameraRenderMs: number(runtime.cameraRenderMs),
+        shaderCompilationMs: number(runtime.shaderCompilationMs)
+      },
       scene: {
         drawCalls: number(runtime.drawCalls ?? runtime.sceneDrawCalls),
         activeMeshes: number(runtime.activeMeshes),
@@ -175,7 +182,10 @@
         renderWidth: number(runtime.renderWidth),
         renderHeight: number(runtime.renderHeight),
         renderDpr: number(runtime.renderDpr),
-        graphicsProfile: text(runtime.graphicsProfile, 40)
+        graphicsProfile: text(runtime.graphicsProfile, 40),
+        profileDiagnosticsEnabled: runtime.profileDiagnosticsEnabled === true,
+        engineBackend: text(runtime.engineBackend, 32),
+        gpuRenderer: text(runtime.gpuRenderer, 120)
       },
       playerPosition: readPlayerLocation(health),
       waterDiagnostics: readWaterDiagnostics()
@@ -267,12 +277,19 @@
     const world = values(sample => sample.cpu && sample.cpu.worldUpdateMs);
     const render = values(sample => sample.cpu && sample.cpu.renderCpuMs);
     const gpu = values(sample => sample.gpu && sample.gpu.frameMs);
+    const sceneRender = values(sample => sample.gpu && sample.gpu.sceneRenderMs);
+    const activeMeshes = values(sample => sample.sceneTimings && sample.sceneTimings.activeMeshesEvaluationMs);
+    const renderTargets = values(sample => sample.sceneTimings && sample.sceneTimings.renderTargetsMs);
     const median = list => percentile(list, .5);
     const medianWorld = median(world), medianRender = median(render), medianGpu = median(gpu);
+    const medianSceneRender = median(sceneRender), medianActiveMeshes = median(activeMeshes), medianRenderTargets = median(renderTargets);
     const stages = [
-      { name: "actualizacion-del-mundo", value: medianWorld },
-      { name: "preparacion-render-CPU", value: medianRender },
-      { name: "GPU", value: medianGpu }
+      { name: "actualizacion-del-mundo", value: medianWorld, source: "CPU del juego" },
+      { name: "preparacion-render-CPU", value: medianRender, source: "CPU del navegador/motor" },
+      { name: "evaluacion-mallas-activas", value: medianActiveMeshes, source: "Babylon SceneInstrumentation" },
+      { name: "render-targets", value: medianRenderTargets, source: "Babylon SceneInstrumentation" },
+      { name: "render-escena", value: medianSceneRender, source: "Babylon SceneInstrumentation" },
+      { name: "GPU", value: medianGpu, source: "Babylon EngineInstrumentation" }
     ].filter(item => item.value !== null).sort((a, b) => b.value - a.value);
     const targetFps = percentile(values(sample => sample.targetFps), .5) || 60;
     return {
@@ -284,9 +301,11 @@
       frameTimeMs: { p95Median: median(p95), p99Median: median(p99), worstP95: p95.length ? Math.max(...p95) : null },
       stutterIntervalsOver33ms: p95.filter(value => value > 33.33).length,
       cpu: { worldUpdateMedianMs: medianWorld, renderPreparationMedianMs: medianRender },
-      gpu: { frameMedianMs: medianGpu },
+      gpu: { frameMedianMs: medianGpu, sceneRenderMedianMs: medianSceneRender },
+      sceneTimings: { activeMeshesEvaluationMedianMs: medianActiveMeshes, renderTargetsMedianMs: medianRenderTargets },
       probableBottleneck: stages.length && stages[0].value >= 4 ? stages[0].name : "sin-atribucion-suficiente",
       bottleneckEvidence: stages,
+      gpuProfilerEnabled: samples.some(sample => sample.scene && sample.scene.profileDiagnosticsEnabled === true),
       caveat: "Atribución orientativa basada en medianas disponibles; los contadores ausentes no se interpretan como cero."
     };
   }
