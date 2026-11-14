@@ -113,9 +113,29 @@
           if (metric !== null) timings[text(key, 64)] = metric;
         }
       }
-      return { available: true, measurements, timings };
+      const groundDynamics = {};
+      if (source.groundDynamics && typeof source.groundDynamics === "object") {
+        for (const [key, value] of Object.entries(source.groundDynamics).slice(0, 32)) {
+          const metric = number(value);
+          if (metric !== null) groundDynamics[text(key, 64)] = metric;
+        }
+      }
+      return { available: true, measurements, timings, groundDynamics };
     } catch (_) {
       return { available: false, measurements: {}, timings: {} };
+    }
+  }
+
+  function readNpcDialogueDiagnostics() {
+    const api = window.__ELSN_NPC_DIALOGUES__;
+    if (!api || typeof api.getSnapshot !== "function") return { available: false, reason: "runtime-no-registrado" };
+    try {
+      const snapshot = api.getSnapshot();
+      return snapshot && typeof snapshot === "object"
+        ? { available: true, ...snapshot }
+        : { available: false, reason: "snapshot-vacio" };
+    } catch (error) {
+      return { available: false, reason: text(error && error.message || error, 180) };
     }
   }
 
@@ -188,6 +208,7 @@
         gpuRenderer: text(runtime.gpuRenderer, 120)
       },
       playerPosition: readPlayerLocation(health),
+      npcDialogues: readNpcDialogueDiagnostics(),
       waterDiagnostics: readWaterDiagnostics()
     };
   }
@@ -310,15 +331,51 @@
     };
   }
 
-  function captureFinalWorldInspection() {
+  function captureFinalWorldInspection(options) {
     if (typeof window.getGameWorldInspectionSnapshot !== "function") return null;
     try {
-      const snapshot = window.getGameWorldInspectionSnapshot({ maxMeshes: 10000, maxActors: 500, includeMeshes: true });
+      const limits = options && typeof options === "object" ? options : {};
+      const snapshot = window.getGameWorldInspectionSnapshot({
+        maxMeshes: number(limits.maxMeshes) || 1800,
+        maxActors: number(limits.maxActors) || 250,
+        includeMeshes: limits.includeMeshes !== false
+      });
       const terrain = snapshot && snapshot.terrainObjects;
+      const structureData = snapshot && snapshot.structures;
+      const meshData = snapshot && snapshot.meshes;
+      const actors = snapshot && snapshot.actors;
       return {
         capturedAt: snapshot && snapshot.capturedAt || new Date().toISOString(),
         source: snapshot && snapshot.source || "Babylon.js runtime",
         scene: snapshot && snapshot.scene || null,
+        collisions: snapshot && snapshot.collisions || null,
+        structures: structureData ? {
+          registeredCount: structureData.registeredCount,
+          registered: (structureData.registered || []).slice(0, 300),
+          auditAvailable: structureData.auditAvailable === true,
+          audit: structureData.audit || null
+        } : null,
+        actors: actors ? {
+          player: actors.player || null,
+          hostileVillageGuards: actors.hostileVillageGuards || null,
+          campGuards: actors.campGuards || null,
+          companions: actors.companions || null,
+          ambientPeople: actors.ambientPeople || null,
+          wildlife: actors.wildlife || null,
+          enemyShipCrew: actors.enemyShipCrew || null,
+          villages: actors.villages || null
+        } : null,
+        meshDiagnostics: meshData ? {
+          count: meshData.count,
+          returned: meshData.returned,
+          truncated: meshData.truncated,
+          included: meshData.included,
+          invalidTransformCount: meshData.invalidTransformCount,
+          invalidTransforms: (meshData.invalidTransforms || []).slice(0, 80),
+          structureCandidates: (meshData.items || []).filter(mesh =>
+            /hut|house|hall|dock|pier|boat|raft|palisade|shelter|fence|platform|workbench/i.test(String(mesh.name || ""))
+          ).slice(0, 180)
+        } : null,
         terrainObjects: terrain ? {
           checkedCount: terrain.checkedCount,
           candidateCount: terrain.candidateCount,
@@ -329,7 +386,7 @@
           terrainHeightSource: terrain.terrainHeightSource,
           items: (terrain.items || []).slice(0, 100)
         } : null,
-        structureAudit: snapshot && snapshot.structures && snapshot.structures.audit || null,
+        structureAudit: structureData && structureData.audit || null,
         terrain: snapshot && snapshot.terrain || null,
         islands: snapshot && snapshot.islands || null
       };
@@ -337,7 +394,6 @@
       return { error: text(error && error.message || error, 240), capturedAt: new Date().toISOString() };
     }
   }
-
   async function finishSession(reason) {
     if (state.sampleTimer) window.clearInterval(state.sampleTimer);
     state.sampleTimer = null;
@@ -348,7 +404,9 @@
     current.status = reason === "pagehide" ? "interrupted" : "completed";
     current.endReason = reason;
     current.summary = buildSessionSummary(current);
-    if (reason !== "pagehide") current.finalWorldInspection = captureFinalWorldInspection();
+    current.finalWorldInspection = reason === "pagehide"
+      ? captureFinalWorldInspection({ maxMeshes: 120, maxActors: 120, includeMeshes: false })
+      : captureFinalWorldInspection();
     await saveSession();
     window.__ELSN_SESSION_RECORDER_STATUS__ = {
       active: false,
