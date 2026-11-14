@@ -82,14 +82,78 @@ async function main() {
     });
     manifest.navigationMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
-    // The game boots only after the user chooses a profile and completes the identity screen.
+    // Follow the real first-run/returning-player flow. Returning players already have
+    // an identity and the game moves directly from the profile selector into booting;
+    // first-run players see the identity dialog and must explicitly continue without a name.
     stepStartedAt = performance.now();
     const audioGate = page.locator('#audioGateStart');
     if (await audioGate.isVisible().catch(() => false)) await audioGate.click({ timeout: 30000 });
     await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
     await page.locator('#chooseQuality').click();
-    await page.locator('#continueUnnamed').waitFor({ state: 'visible', timeout: 30000 });
-    await page.locator('#continueUnnamed').click();
+
+    const readPreflightState = () => page.evaluate(() => {
+      const identity = document.getElementById('identitySetup');
+      const mode = document.getElementById('modeSelect');
+      const loading = document.getElementById('loading');
+      const continueButton = document.getElementById('continueUnnamed');
+      const visible = element => !!element &&
+        getComputedStyle(element).display !== 'none' &&
+        getComputedStyle(element).visibility !== 'hidden';
+      return {
+        bodyClass: document.body.className,
+        identityAriaHidden: identity?.getAttribute('aria-hidden') ?? null,
+        identityVisible: visible(identity) && identity?.getAttribute('aria-hidden') !== 'true',
+        continueUnnamedVisible: visible(continueButton),
+        modeAriaHidden: mode?.getAttribute('aria-hidden') ?? null,
+        booting: document.body.classList.contains('booting'),
+        bootFailed: document.body.classList.contains('boot-failed'),
+        loadingVisible: visible(loading),
+        identityStored: localStorage.getItem('el-sin-nombre-identity-main-v1') !== null,
+        legacyCampaignStored: localStorage.getItem('el-sin-nombre-campaign-v1') !== null
+      };
+    });
+
+    try {
+      await page.waitForFunction(() => {
+        const identity = document.getElementById('identitySetup');
+        const loading = document.getElementById('loading');
+        const identityVisible = !!identity &&
+          identity.getAttribute('aria-hidden') !== 'true' &&
+          getComputedStyle(identity).display !== 'none';
+        const booting = document.body.classList.contains('booting') ||
+          (!!loading && getComputedStyle(loading).display !== 'none');
+        return identityVisible || booting || document.body.classList.contains('boot-failed');
+      }, undefined, { timeout: 15000, polling: 50 });
+    } catch (error) {
+      const diagnostics = await readPreflightState();
+      await fs.promises.writeFile(path.join(OUT, 'preflight-dom.html'), await page.content());
+      await page.screenshot({ path: path.join(OUT, 'preflight-failure.png'), fullPage: true }).catch(() => {});
+      throw new Error('El selector de perfil no pasó a identidad ni al arranque. Estado: ' +
+        JSON.stringify(diagnostics) + ' · ' + String(error?.message || error));
+    }
+
+    const preflightState = await readPreflightState();
+    manifest.preflightState = preflightState;
+    if (preflightState.bootFailed) {
+      throw new Error('El juego marcó boot-failed antes de iniciar el motor: ' +
+        JSON.stringify(preflightState));
+    }
+    if (preflightState.identityVisible && preflightState.continueUnnamedVisible) {
+      await page.locator('#continueUnnamed').click({ timeout: 15000 });
+      manifest.identityFlow = 'first-run-anonymous';
+    } else if (preflightState.booting) {
+      manifest.identityFlow = 'returning-player-auto-boot';
+    } else {
+      await fs.promises.writeFile(path.join(OUT, 'preflight-dom.html'), await page.content());
+      throw new Error('El estado del preflight no coincide con primera partida ni retorno: ' +
+        JSON.stringify(preflightState));
+    }
+
+    await page.waitForFunction(() => document.body.classList.contains('booting') ||
+      document.body.classList.contains('boot-failed'), undefined, {
+      timeout: 15000,
+      polling: 50
+    });
     manifest.menuFlowMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
     stepStartedAt = performance.now();
@@ -226,7 +290,24 @@ async function main() {
       };
     });
 
-    await page.locator('#newGameChoice').waitFor({ state: 'visible', timeout: 30000 });
+    // worldReady marks the resource barrier, but the campaign selector is exposed only
+    // after the first real render frame. Wait for that UI transition rather than racing it.
+    await page.locator('#intro.open').waitFor({ state: 'visible', timeout: 60000 });
+    const introReady = await page.evaluate(() => ({
+      bodyClass: document.body.className,
+      ariaHidden: document.getElementById('intro')?.getAttribute('aria-hidden') ?? null,
+      open: document.getElementById('intro')?.classList.contains('open') ?? false,
+      newGameVisible: (() => {
+        const button = document.getElementById('newGameChoice');
+        return !!button && getComputedStyle(button).display !== 'none' &&
+          getComputedStyle(button).visibility !== 'hidden';
+      })()
+    }));
+    manifest.campaignSelector = introReady;
+    if (!introReady.open || introReady.ariaHidden === 'true' || !introReady.newGameVisible) {
+      throw new Error('La barrera de recursos terminó pero el selector de campaña no se mostró: ' +
+        JSON.stringify(introReady));
+    }
     await page.locator('#newGameChoice').click();
     await page.waitForFunction(() => document.body.classList.contains('game-running'),
       undefined, { timeout: 30000, polling: 100 });
@@ -278,11 +359,91 @@ async function main() {
     if (await cachedAudioGate.isVisible().catch(() => false)) await cachedAudioGate.click({ timeout: 30000 });
     await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
     await page.locator('#chooseQuality').click();
-    await page.locator('#continueUnnamed').waitFor({ state: 'visible', timeout: 30000 });
-    await page.locator('#continueUnnamed').click();
+
+    // A warm launch has a saved identity: it can enter booting directly and must not
+    // wait for the first-run-only "continue without name" button.
+    await page.waitForFunction(() => {
+      const identity = document.getElementById('identitySetup');
+      const loading = document.getElementById('loading');
+      const visible = element => !!element &&
+        getComputedStyle(element).display !== 'none' &&
+        getComputedStyle(element).visibility !== 'hidden';
+      const identityVisible = visible(identity) && identity?.getAttribute('aria-hidden') !== 'true';
+      const booting = document.body.classList.contains('booting') ||
+        (visible(loading) && !document.body.classList.contains('boot-failed'));
+      return identityVisible || booting || document.body.classList.contains('boot-failed');
+    }, undefined, { timeout: 30000, polling: 50 });
+    const cachedPreflightState = await page.evaluate(() => {
+      const identity = document.getElementById('identitySetup');
+      const loading = document.getElementById('loading');
+      const continueButton = document.getElementById('continueUnnamed');
+      const visible = element => !!element &&
+        getComputedStyle(element).display !== 'none' &&
+        getComputedStyle(element).visibility !== 'hidden';
+      return {
+        bodyClass: document.body.className,
+        identityVisible: visible(identity) && identity?.getAttribute('aria-hidden') !== 'true',
+        continueUnnamedVisible: visible(continueButton),
+        booting: document.body.classList.contains('booting') || visible(loading),
+        bootFailed: document.body.classList.contains('boot-failed'),
+        identityStored: localStorage.getItem('el-sin-nombre-identity-main-v1') !== null
+      };
+    });
+    manifest.cachedPreflightState = cachedPreflightState;
+    if (cachedPreflightState.bootFailed) {
+      throw new Error('El arranque con caché falló antes de preparar el mundo: ' +
+        JSON.stringify(cachedPreflightState));
+    }
+    if (cachedPreflightState.identityVisible && cachedPreflightState.continueUnnamedVisible) {
+      await page.locator('#continueUnnamed').click({ timeout: 15000 });
+      manifest.cachedIdentityFlow = 'first-run-anonymous';
+    } else if (cachedPreflightState.booting) {
+      manifest.cachedIdentityFlow = 'returning-player-auto-boot';
+    } else {
+      throw new Error('El segundo arranque no coincide con primera partida ni jugador guardado: ' +
+        JSON.stringify(cachedPreflightState));
+    }
     const cachedBarrierStartedAt = performance.now();
-    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true,
+    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
+      document.body.classList.contains('boot-failed'),
       undefined, { timeout: 180000, polling: 250 });
+    if (await page.evaluate(() => document.body.classList.contains('boot-failed'))) {
+      throw new Error('El arranque con caché terminó en boot-failed: ' +
+        JSON.stringify(await page.evaluate(() => ({
+          loadHelp: document.querySelector('#loadHelp')?.textContent || null,
+          recorder: window.__elSinNombreStartupSmoke || null
+        }))));
+    }
+    const cachedPlayerState = await page.evaluate(() => ({
+      player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state() || null,
+      recorder: window.__elSinNombreStartupSmoke || null,
+      bootFailed: document.body.classList.contains('boot-failed')
+    }));
+    manifest.cachedPlayerState = cachedPlayerState;
+    assert.equal(cachedPlayerState.bootFailed, false,
+      'El segundo arranque marcó boot-failed.');
+    assert.equal(cachedPlayerState.player?.modelReady, true,
+      'El protagonista real no quedó listo en el arranque con caché: ' +
+      JSON.stringify(cachedPlayerState.player));
+    assert.ok(cachedPlayerState.player?.realPlayerMeshCount > 0,
+      'El segundo arranque no contiene mallas reales del protagonista.');
+    assert.equal(cachedPlayerState.player?.fallbackVisible, false,
+      'El personaje provisional sigue visible en el arranque con caché.');
+    assert.equal(cachedPlayerState.recorder?.worldReady, true,
+      'La barrera completa no quedó lista en el arranque con caché.');
+    assert.equal((cachedPlayerState.recorder?.consoleErrors || []).length, 0,
+      'Errores de consola en el segundo arranque: ' +
+      JSON.stringify(cachedPlayerState.recorder?.consoleErrors || []));
+    assert.equal((cachedPlayerState.recorder?.runtimeErrors || []).length, 0,
+      'Errores de ejecución en el segundo arranque: ' +
+      JSON.stringify(cachedPlayerState.recorder?.runtimeErrors || []));
+    assert.equal((cachedPlayerState.recorder?.unhandledRejections || []).length, 0,
+      'Promesas rechazadas en el segundo arranque: ' +
+      JSON.stringify(cachedPlayerState.recorder?.unhandledRejections || []));
+    assert.equal(manifest.consoleErrors.length, 0,
+      'Errores de consola del navegador tras ambos arranques: ' + manifest.consoleErrors.join(' | '));
+    assert.equal(manifest.pageErrors.length, 0,
+      'Errores JavaScript del navegador tras ambos arranques: ' + manifest.pageErrors.join(' | '));
     manifest.cachedNavigationAndProfileMs = Number((cachedBarrierStartedAt - cachedLaunchStartedAt).toFixed(1));
     manifest.cachedBlockingStartupMs = Number((performance.now() - cachedBarrierStartedAt).toFixed(1));
     manifest.cachedMemoryEstimate = await page.evaluate(() => window.__elSinNombreStartupMemoryEstimate || null);
