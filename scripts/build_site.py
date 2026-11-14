@@ -837,9 +837,7 @@ def main() -> None:
     quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
     quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
  const highHeadroomQualityMobile=!!(!isPerformanceMode&&isTouchDevice&&!constrainedHardware&&((reportedMemory>=8&&(Number(navigator.hardwareConcurrency)||0)>=8)||highTierGpuMatch));
- // Native Babylon hardware scaling only; no inactive FSR1 candidate or fake input-scale state.
- const qualityDprFloor=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.50:1.0):1.15);
- const qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.45:1.70):1.85);
+ // Quality fixes its native render scale at startup. Runtime FPS drops must never lower image quality.
  const qualityDpr=isPerformanceMode
   ?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile?.62:(constrainedHardware?.78:(isTouchDevice?1.0:1.35))))))
   :Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.10:1.45):1.65);"""
@@ -910,39 +908,18 @@ def main() -> None:
   if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
     quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr;
- let qualityDprStableSamples=0,qualityDprSlowSamples=0;
- let lastWorldUpdateMs=0,lastRenderCpuMs=0;
- let targetFrameRate=60,observedFpsCeiling=60;
+ let targetFrameRate=60,observedFpsCeiling=60,lastQualityWarningAt=0;
  function adaptRenderQuality(dt){
   const sampleWindow=highHeadroomQualityMobile?1.0:(isConstrainedMobile?1.5:2.0);
   fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<sampleWindow)return;fpsSample=0;
   const fps=engine.getFps();
   if(highHeadroomQualityMobile)observedFpsCeiling=Math.max(observedFpsCeiling,Math.min(120,fps));
   targetFrameRate=highHeadroomQualityMobile?Math.min(90,observedFpsCeiling):60;
-  if(!isPerformanceMode&&highHeadroomQualityMobile){
-   const severeFps=targetFrameRate>=87?54:38,moderateFps=targetFrameRate>=87?72:50,stableFps=targetFrameRate>=87?86:58;
-   if(fps<severeFps){qualityDprSlowSamples++;qualityDprStableSamples=0;}
-   else if(fps<moderateFps){qualityDprSlowSamples++;qualityDprStableSamples=0;}
-   else if(fps>=stableFps){qualityDprStableSamples++;qualityDprSlowSamples=0;}
-   else{qualityDprStableSamples=0;qualityDprSlowSamples=0;}
-   if(qualityDprSlowSamples>=1&&qualityDprCurrent>qualityDprFloor+.005){
-    const step=fps<severeFps?.12:.06;
-    const next=Math.max(qualityDprFloor,Number((qualityDprCurrent-step).toFixed(3)));
-    if(next<qualityDprCurrent-.003){
-     qualityDprCurrent=next;
-     engine.setHardwareScalingLevel(1/qualityDprCurrent);
-     console.info('EL SIN NOMBRE: resolución interna nativa ajustada para recuperar FPS.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent});
-    }
-    qualityDprSlowSamples=0;
-   }else if(qualityDprStableSamples>=4&&qualityDprCurrent<qualityDprCeiling-.005){
-    const next=Math.min(qualityDprCeiling,Number((qualityDprCurrent+.04).toFixed(3)));
-    qualityDprCurrent=next;
-    engine.setHardwareScalingLevel(1/qualityDprCurrent);
-    qualityDprStableSamples=0;
-    console.info('EL SIN NOMBRE: resolución interna nativa elevada tras estabilidad de GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent});
-   }
+  // The initial Quality scale is locked for the session: no CPU hitch can trigger a resolution downgrade.
+  if(fps<24&&performance.now()-lastQualityWarningAt>=4000){
+   lastQualityWarningAt=performance.now();
+   console.warn('EL SIN NOMBRE: FPS bajo con resolución de Calidad protegida.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
   }
-  if(fps<24)console.info('Diagnóstico de rendimiento (GPU bajo presión)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
     if html.count(quality_adaptive_marker) != 1:
         raise SystemExit("No se encontró exactamente la función original de supervisión de resolución.")
