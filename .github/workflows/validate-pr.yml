@@ -76,6 +76,9 @@ jobs:
       - name: Test adaptive graphics quality without sacrificing Performance profile
         run: node scripts/test_graphics_quality_contract.cjs
 
+      - name: Test mobile runtime stability without reducing visual quality
+        run: node scripts/test_mobile_runtime_stability.cjs
+
       - name: Test automatic startup smoke recorder and player.modelReady
         run: node scripts/test_startup_smoke.cjs
 
