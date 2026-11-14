@@ -39,12 +39,28 @@ const penetratingMesh = {
     maximumWorld: { x: 10.5, y: 1.6, z: 8.5 }
   } })
 };
+const footprintOverlay = {
+  ...mesh, uniqueId: 10, name: 'NorseMovingFootprints', id: 'footprint-overlay',
+  position: { x: 0, y: 0, z: 0 },
+  getBoundingInfo: () => ({ boundingBox: {
+    minimumWorld: { x: -8, y: 0, z: -8 },
+    maximumWorld: { x: 8, y: 0, z: 8 }
+  } })
+};
+const offshoreProp = {
+  ...mesh, uniqueId: 11, name: 'OffshoreMooring', id: 'offshore-mooring',
+  position: { x: 1000, y: -1, z: 1000 },
+  getBoundingInfo: () => ({ boundingBox: {
+    minimumWorld: { x: 999.5, y: -2, z: 999.5 },
+    maximumWorld: { x: 1000.5, y: -1, z: 1000.5 }
+  } })
+};
 const textureReady = { name: 'ready', isReady: () => true, getSize: () => ({ width: 512, height: 512 }) };
 const texturePending = { name: 'pending', isReady: () => false, getSize: () => ({ width: 256, height: 256 }) };
 const root = { name: 'PlayerRoot', position: { x: 3, y: 2, z: -4 }, isEnabled: () => true };
 const snapshot = capture({
   scene: {
-    meshes: [mesh, buriedMesh, penetratingMesh], transformNodes: [root], materials: [{ name: 'wood' }],
+    meshes: [mesh, buriedMesh, penetratingMesh, footprintOverlay, offshoreProp], transformNodes: [root], materials: [{ name: 'wood' }],
     textures: [textureReady, texturePending], animationGroups: [{ name: 'Walk', isPlaying: true, targetedAnimations: [{}] }],
     collisionsEnabled: true, getActiveMeshes: () => ({ length: 1 }), getTotalVertices: () => 24
   },
@@ -73,6 +89,13 @@ assert.equal(snapshot.terrainObjects.items[0].bounds.max.y, -2);
 assert.equal(snapshot.terrainObjects.items[0].terrain.objectBottomY, -3);
 assert.equal(snapshot.terrainObjects.items[0].terrain.terrainClearanceSamples.length, 5);
 assert.ok(snapshot.terrainObjects.items[0].terrain.penetrationDepthMeters > 0.08);
+assert.equal(snapshot.terrainObjects.candidateCount, 2,
+  'Surface overlays and offshore props must not be reported as land-grounding defects.');
+assert.ok(snapshot.terrainObjects.items.every(item => item.nearestIsland !== null));
+assert.equal(snapshot.terrainObjects.meshInventoryCount, 5);
+assert.equal(snapshot.terrainObjects.meshInventoryReturned, 5);
+assert.equal(snapshot.terrainObjects.complete, true);
+
 
 assert.equal(snapshot.actors.player.groundY, 1.25);
 assert.equal(snapshot.actors.player.modelReady, false);

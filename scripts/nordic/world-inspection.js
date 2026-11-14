@@ -109,7 +109,7 @@
     if (!scene || !Array.isArray(scene.meshes)) {
       throw new Error('Babylon scene is not available for world inspection.');
     }
-    const maxMeshes = Math.max(100, Math.min(5000, Math.floor(Number(options.maxMeshes) || 2500)));
+    const maxMeshes = Math.max(100, Math.min(10000, Math.floor(Number(options.maxMeshes) || 2500)));
     const maxActors = Math.max(20, Math.min(500, Math.floor(Number(options.maxActors) || 180)));
     const includeMeshes = options.includeMeshes !== false;
     const allMeshes = scene.meshes;
@@ -217,7 +217,8 @@
     let terrainObjectUnmeasurableCount = 0;
     let terrainObjectBuriedCount = 0;
     let terrainObjectPenetratingCount = 0;
-    const terrainSkipName = /(?:heightfield|terrain|water[-_ ]?surface|sea[-_ ]?surface|shore|beach|submerged|seabed|foam|reflection|sky|cloud|particle|splash|shadowmap|ground[-_ ]?surface)/i;
+    // Exclude terrain overlays and surface ribbons from solid-object grounding checks.
+    const terrainSkipName = /(?:heightfield|terrain|water[-_ ]?surface|sea[-_ ]?surface|shore|beach|submerged|seabed|foam|reflection|sky|cloud|particle|splash|shadowmap|ground[-_ ]?surface|footprint|packedearthtrail|trail|road|path|decal|surfaceoverlay)/i;
     for (let meshIndex = 0; meshIndex < meshRows.length; meshIndex++) {
       const row = meshRows[meshIndex];
       const mesh = selectedMeshes[meshIndex];
@@ -230,6 +231,22 @@
       const minX = bounds.min.x, maxX = bounds.max.x;
       const minZ = bounds.min.z, maxZ = bounds.max.z;
       const midX = (minX + maxX) / 2, midZ = (minZ + maxZ) / 2;
+      let nearestIsland = null;
+      for (let islandIndex = 0; islandIndex < (Array.isArray(context.land) ? context.land.length : 0); islandIndex++) {
+        const island = context.land[islandIndex];
+        if (!island || !finite(island.x) || !finite(island.z) || !finite(island.r) || island.r <= 0) continue;
+        const distance = Math.hypot(midX - island.x, midZ - island.z);
+        if (distance <= island.r * 1.15 && (!nearestIsland || distance < nearestIsland.distanceMeters)) {
+          nearestIsland = {
+            index: islandIndex,
+            name: String(island.name || 'Island ' + (islandIndex + 1)),
+            distanceMeters: round(distance, 2)
+          };
+        }
+      }
+      // The terrain height provider falls back to sea level outside islands.
+      // Ship hardware, buoys and offshore anchors are not land-grounding defects.
+      if (!nearestIsland) continue;
       const points = [
         { x: midX, z: midZ, sample: 'center' },
         { x: minX, z: minZ, sample: 'south-west' },
@@ -251,8 +268,6 @@
       const centerSample = heightSamples.find(sample => sample.sample === 'center') || heightSamples[0];
       const objectTopY = bounds.max.y;
       const objectBottomY = bounds.min.y;
-      // 8 cm tolerance catches genuinely buried props without flagging tiny numerical seams.
-      // These are candidates for human review; the audit never moves or hides scene objects.
       const burialToleranceMeters = 0.08;
       const terrainClearanceSamples = heightSamples.map(sample => ({
         sample: sample.sample,
@@ -262,26 +277,15 @@
         objectBottomY: round(objectBottomY, 3),
         bottomBelowTerrainMeters: round(sample.y - objectBottomY, 3)
       }));
-      const penetrationDepth = Math.max(...terrainClearanceSamples.map(sample => sample.bottomBelowTerrainMeters));
+      // Use the centre sample for base penetration. The highest corner on a slope
+      // is not a valid reason to report a rock/tree-root as buried.
+      const centerPenetrationDepth = centerSample.y - objectBottomY;
       const fullyBuried = objectTopY < minGroundY - burialToleranceMeters;
-      const penetrates = !fullyBuried && penetrationDepth > burialToleranceMeters;
+      const penetrates = !fullyBuried && centerPenetrationDepth > burialToleranceMeters;
       if (!fullyBuried && !penetrates) continue;
-      let nearestIsland = null;
-      for (let islandIndex = 0; islandIndex < (Array.isArray(context.land) ? context.land.length : 0); islandIndex++) {
-        const island = context.land[islandIndex];
-        if (!island || !finite(island.x) || !finite(island.z) || !finite(island.r) || island.r <= 0) continue;
-        const distance = Math.hypot(midX - island.x, midZ - island.z);
-        if (distance <= island.r * 1.15 && (!nearestIsland || distance < nearestIsland.distanceMeters)) {
-          nearestIsland = {
-            index: islandIndex,
-            name: String(island.name || 'Island ' + (islandIndex + 1)),
-            distanceMeters: round(distance, 2)
-          };
-        }
-      }
       if (fullyBuried) terrainObjectBuriedCount++;
       else terrainObjectPenetratingCount++;
-      if (terrainObjectItems.length < 200) {
+      if (terrainObjectItems.length < 500) {
         terrainObjectItems.push({
           uniqueId: row.uniqueId,
           name: row.name,
@@ -303,7 +307,7 @@
             objectBottomY: round(objectBottomY, 3),
             objectTopY: round(objectTopY, 3),
             buriedDepthMeters: fullyBuried ? round(minGroundY - objectTopY, 3) : null,
-            penetrationDepthMeters: round(penetrationDepth, 3),
+            penetrationDepthMeters: round(centerPenetrationDepth, 3),
             terrainClearanceSamples
           },
           nearestIsland
@@ -319,6 +323,8 @@
       returned: terrainObjectItems.length,
       truncated: Math.max(0, terrainObjectBuriedCount + terrainObjectPenetratingCount - terrainObjectItems.length),
       complete: includeMeshes && meshRows.length === allMeshes.length && !!terrainHeightAt,
+      meshInventoryCount: allMeshes.length,
+      meshInventoryReturned: meshRows.length,
       terrainHeightSource: terrainHeightAt ? 'rendered-terrain-surface' : 'unavailable',
       items: terrainObjectItems
     };

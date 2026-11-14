@@ -420,7 +420,7 @@ async function main() {
         return { available: false, reason: 'getGameWorldInspectionSnapshot is not exposed by the built game.' };
       }
       const snapshot = window.getGameWorldInspectionSnapshot({
-        includeMeshes: true, maxMeshes: 5000, maxActors: 180
+        includeMeshes: true, maxMeshes: 10000, maxActors: 180
       });
       const actorCounts = Object.fromEntries(
         ['hostileVillageGuards','campGuards','companions','enemyShipCrew','wildlife','ambientPeople','ambientBirds']

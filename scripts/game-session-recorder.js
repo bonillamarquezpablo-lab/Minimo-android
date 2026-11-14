@@ -313,7 +313,7 @@
   function captureFinalWorldInspection() {
     if (typeof window.getGameWorldInspectionSnapshot !== "function") return null;
     try {
-      const snapshot = window.getGameWorldInspectionSnapshot({ maxMeshes: 5000, maxActors: 500, includeMeshes: true });
+      const snapshot = window.getGameWorldInspectionSnapshot({ maxMeshes: 10000, maxActors: 500, includeMeshes: true });
       const terrain = snapshot && snapshot.terrainObjects;
       return {
         capturedAt: snapshot && snapshot.capturedAt || new Date().toISOString(),
