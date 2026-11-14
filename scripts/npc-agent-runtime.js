@@ -372,7 +372,6 @@
       for (const task of queued) {
         const accepted = await bridgeFetch("/v1/tasks", {
           method: "POST",
-          headers: { "Accept": "application/json", "Content-Type": "application/json" },
           headers: { "Accept": "application/json", "Content-Type": "application/json", "X-CSRF-Token": state.bridge.csrfToken },
           body: JSON.stringify(task)
         });
