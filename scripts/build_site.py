@@ -908,6 +908,8 @@ def main() -> None:
   if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
     quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr;
+ // Shared frame-loop timing state; keep these bindings for the existing world update instrumentation.
+ let lastWorldUpdateMs=0,lastRenderCpuMs=0;
  let targetFrameRate=60,observedFpsCeiling=60,lastQualityWarningAt=0;
  function adaptRenderQuality(dt){
   const sampleWindow=highHeadroomQualityMobile?1.0:(isConstrainedMobile?1.5:2.0);
