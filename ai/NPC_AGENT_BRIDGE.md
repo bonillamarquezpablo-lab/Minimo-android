@@ -56,7 +56,7 @@ await window.__ELSN_NPC_AGENT_SYSTEM__.connectExternalBridge(
 
 The endpoint must implement:
 
-1. `GET /v1/health` — JSON with `protocolVersion: 1` and capabilities `tasks:submit`, `events:read`.
+1. `GET /v1/health` — JSON with `protocolVersion: 1`, capabilities `tasks:submit` and `events:read`, and a `csrfToken` string of 16–512 characters. The browser sends this token in `X-CSRF-Token` on task submissions.
 2. `POST /v1/tasks` — accepts a task payload with a stable task idempotency key and responds with `{ "accepted": true, "remoteTaskId": "..." }`.
 3. `GET /v1/events?cursor=...` — responds with `{ "protocolVersion": 1, "events": [], "nextCursor": "..." }`.
 
