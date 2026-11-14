@@ -82,14 +82,78 @@ async function main() {
     });
     manifest.navigationMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
-    // The game boots only after the user chooses a profile and completes the identity screen.
+    // Follow the real first-run/returning-player flow. Returning players already have
+    // an identity and the game moves directly from the profile selector into booting;
+    // first-run players see the identity dialog and must explicitly continue without a name.
     stepStartedAt = performance.now();
     const audioGate = page.locator('#audioGateStart');
     if (await audioGate.isVisible().catch(() => false)) await audioGate.click({ timeout: 30000 });
     await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
     await page.locator('#chooseQuality').click();
-    await page.locator('#continueUnnamed').waitFor({ state: 'visible', timeout: 30000 });
-    await page.locator('#continueUnnamed').click();
+
+    const readPreflightState = () => page.evaluate(() => {
+      const identity = document.getElementById('identitySetup');
+      const mode = document.getElementById('modeSelect');
+      const loading = document.getElementById('loading');
+      const continueButton = document.getElementById('continueUnnamed');
+      const visible = element => !!element &&
+        getComputedStyle(element).display !== 'none' &&
+        getComputedStyle(element).visibility !== 'hidden';
+      return {
+        bodyClass: document.body.className,
+        identityAriaHidden: identity?.getAttribute('aria-hidden') ?? null,
+        identityVisible: visible(identity) && identity?.getAttribute('aria-hidden') !== 'true',
+        continueUnnamedVisible: visible(continueButton),
+        modeAriaHidden: mode?.getAttribute('aria-hidden') ?? null,
+        booting: document.body.classList.contains('booting'),
+        bootFailed: document.body.classList.contains('boot-failed'),
+        loadingVisible: visible(loading),
+        identityStored: localStorage.getItem('el-sin-nombre-identity-main-v1') !== null,
+        legacyCampaignStored: localStorage.getItem('el-sin-nombre-campaign-v1') !== null
+      };
+    });
+
+    try {
+      await page.waitForFunction(() => {
+        const identity = document.getElementById('identitySetup');
+        const loading = document.getElementById('loading');
+        const identityVisible = !!identity &&
+          identity.getAttribute('aria-hidden') !== 'true' &&
+          getComputedStyle(identity).display !== 'none';
+        const booting = document.body.classList.contains('booting') ||
+          (!!loading && getComputedStyle(loading).display !== 'none');
+        return identityVisible || booting || document.body.classList.contains('boot-failed');
+      }, undefined, { timeout: 15000, polling: 50 });
+    } catch (error) {
+      const diagnostics = await readPreflightState();
+      await fs.promises.writeFile(path.join(OUT, 'preflight-dom.html'), await page.content());
+      await page.screenshot({ path: path.join(OUT, 'preflight-failure.png'), fullPage: true }).catch(() => {});
+      throw new Error('El selector de perfil no pasó a identidad ni al arranque. Estado: ' +
+        JSON.stringify(diagnostics) + ' · ' + String(error?.message || error));
+    }
+
+    const preflightState = await readPreflightState();
+    manifest.preflightState = preflightState;
+    if (preflightState.bootFailed) {
+      throw new Error('El juego marcó boot-failed antes de iniciar el motor: ' +
+        JSON.stringify(preflightState));
+    }
+    if (preflightState.identityVisible && preflightState.continueUnnamedVisible) {
+      await page.locator('#continueUnnamed').click({ timeout: 15000 });
+      manifest.identityFlow = 'first-run-anonymous';
+    } else if (preflightState.booting) {
+      manifest.identityFlow = 'returning-player-auto-boot';
+    } else {
+      await fs.promises.writeFile(path.join(OUT, 'preflight-dom.html'), await page.content());
+      throw new Error('El estado del preflight no coincide con primera partida ni retorno: ' +
+        JSON.stringify(preflightState));
+    }
+
+    await page.waitForFunction(() => document.body.classList.contains('booting') ||
+      document.body.classList.contains('boot-failed'), undefined, {
+      timeout: 15000,
+      polling: 50
+    });
     manifest.menuFlowMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
     stepStartedAt = performance.now();
