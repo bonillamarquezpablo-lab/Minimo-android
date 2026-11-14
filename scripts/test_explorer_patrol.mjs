@@ -24,7 +24,7 @@ assert.match(patrol, /drawCalls/);
 assert.match(patrol, /worldUpdateMs/);
 assert.match(patrol, /renderCpuMs/);
 assert.match(patrol, /Math\.abs\(maxShoreStep\) > 0\.05/);
-assert.match(patrol, /Math\.abs\(gap\) > 0\.02/);
+assert.match(patrol, /if \(gap > 0\.02\)/, 'Only typed support measurements may trigger the 2 cm grounding threshold.');
 assert.match(patrol, /const structureSources = \[/, 'Grounding measurements must be selected by their owning audit family.');
 assert.match(patrol, /maximumFootingGapMeters/);
 assert.match(patrol, /maximumSupportPointGapMeters/);
