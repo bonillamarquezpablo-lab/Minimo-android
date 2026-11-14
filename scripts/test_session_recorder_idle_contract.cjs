@@ -1,0 +1,17 @@
+"use strict";
+const fs=require("node:fs");
+const assert=require("node:assert/strict");
+const source=fs.readFileSync("scripts/game-session-recorder.js","utf8");
+assert.match(source,/function queueIdleSample\(\)/);
+assert.match(source,/window\.requestIdleCallback\(run\)/);
+assert.match(source,/window\.setInterval\(queueIdleSample, SAMPLE_INTERVAL_MS\)/);
+assert.doesNotMatch(source,/setInterval\(sampleAndSave, SAMPLE_INTERVAL_MS\)/);
+assert.match(source,/new window\.PerformanceObserver/);
+assert.match(source,/observer\.observe\(\{ type: "longtask", buffered: true \}\)/);
+assert.match(source,/window-blur/);
+assert.match(source,/window-focus/);
+assert.match(source,/visibility-/);
+assert.match(source,/drawCallsPerSecond/);
+assert.match(source,/diagnosticsReadMs/);
+assert.match(source,/cancelQueuedIdleSample\(\)/);
+console.log("session recorder idle-performance contract: PASS");
