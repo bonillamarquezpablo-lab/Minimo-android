@@ -74,6 +74,10 @@ assert.ok(npcRuntime.includes("function isInspectorCenterPath()") && npcRuntime.
 assert.ok(!npcRuntime.includes("context.getCivilianRoster") && !npcRuntime.includes("npc.aiAgent"),"The game runtime must not attach specialist metadata to civilian actors.");
 assert.ok(sessionRecorder.includes("elsn-game-session-reports") && sessionRecorder.includes("MAX_SAMPLES_PER_SESSION = 360"),"Session reports must be stored locally with bounded samples.");
 assert.ok(sessionRecorder.includes("window.top !== window.self"),"Embedded Inspector test runs must not pollute player session history.");
+assert.ok(sessionRecorder.includes("buildSessionSummary") && sessionRecorder.includes("probableBottleneck"),"Completed match reports must summarize FPS, frame-time and CPU/GPU bottleneck evidence.");
+assert.ok(sessionRecorder.includes("captureFinalWorldInspection") && sessionRecorder.includes("terrainObjects"),"Completed match reports must retain the final terrain-object audit and coordinates.");
+assert.ok(sessionRecorder.includes("maxMeshes: 5000"),"The final world audit must request the complete bounded scene inventory.");
+assert.ok(fs.readFileSync('inspector/npc-agents.js','utf8').includes("Ver informe técnico y coordenadas"),"Inspector Center must expose the saved report and terrain-coordinate evidence.");
 
 
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
