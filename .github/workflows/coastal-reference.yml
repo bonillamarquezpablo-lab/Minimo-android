@@ -149,8 +149,6 @@ jobs:
           node scripts/test_inspector_dashboard_contract.cjs
           node scripts/test_inspector_workflows_contract.cjs
           node scripts/test_graphics_quality_contract.cjs
-          node --check scripts/ai-visual-review.mjs
-          node scripts/test_ai_visual_review.mjs
 
       - name: Build the complete game and packaged assets
         run: python scripts/build_site.py
@@ -212,13 +210,6 @@ jobs:
         if: always()
         run: node scripts/test_autonomous_lab_agents.mjs
 
-      - name: Run optional read-only multimodal visual review
-        if: always()
-        env:
-          LAB_AI_API_KEY: ${{ secrets.LAB_AI_API_KEY }}
-          LAB_AI_MODEL: ${{ vars.LAB_AI_MODEL }}
-        run: node scripts/ai-visual-review.mjs
-
       - name: Upload diagnostic manifests before the visual bundle
         if: always()
         uses: actions/upload-artifact@v4
@@ -235,7 +226,6 @@ jobs:
             artifacts/custom-scene-captures/manifest.json
             artifacts/custom-scene-captures/inspection-report.md
             artifacts/autonomous-agents/
-            artifacts/ai-visual-review/
           if-no-files-found: warn
           retention-days: 30
           compression-level: 1
