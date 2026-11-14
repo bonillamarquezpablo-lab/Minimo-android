@@ -128,7 +128,7 @@ export function analyzeEvidence(evidence = {}) {
   if (contactSheet) visualFindings.push({ metric: 'sceneContactSheet', value: 'available', unit: 'artifact' });
   visualFindings.push({
     status: 'visual-judgement-pending',
-    message: 'No visual defect is confirmed from file counts or pixel differences alone. A vision-capable reviewer must inspect synchronized captures.'
+    message: 'No visual defect is confirmed from file counts or pixel differences alone. Synchronized captures remain available for human review; automated geometry checks use Babylon.js runtime evidence.'
   });
   agents.push({
     id: 'npc-visual-quality',
