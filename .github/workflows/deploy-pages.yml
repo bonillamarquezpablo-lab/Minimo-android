@@ -17,7 +17,7 @@ jobs:
   build:
     name: Build and validate the complete game
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
     permissions:
       contents: read
     steps:
@@ -56,6 +56,11 @@ jobs:
         run: node scripts/test_coastal_interaction.cjs
       - name: Test 13-island campaign and naval invasion integration
         run: node scripts/test_island_campaign.cjs
+      - name: Test runtime and offline Service Worker publication gate
+        run: node scripts/test_game_runtime_acceptance_contract.cjs
+
+      - name: Validate the local HTTPS acceptance server
+        run: python -m py_compile scripts/start_https_static_server.py
 
       - name: Download all resources, build dist and run release validation
         run: python scripts/build_site.py
@@ -65,6 +70,41 @@ jobs:
           mkdir -p dist/inspector
           cp -R inspector/. dist/inspector/
 
+      - name: Install Playwright and Chromium for real startup acceptance
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+
+      - name: Start the built release on local HTTPS for Service Worker acceptance
+        shell: bash
+        run: |
+          mkdir -p artifacts/player-startup
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout "$RUNNER_TEMP/player-test.key" -out "$RUNNER_TEMP/player-test.crt" -days 1 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+          python scripts/start_https_static_server.py --directory dist --bind 127.0.0.1 --port 4175 --cert "$RUNNER_TEMP/player-test.crt" --key "$RUNNER_TEMP/player-test.key" > artifacts/player-startup/https-server.log 2>&1 &
+          echo $! > artifacts/player-startup/https-server.pid
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --insecure https://localhost:4175/ > /dev/null; then
+              echo "Built release HTTPS server is responding."
+              exit 0
+            fi
+            sleep 1
+          done
+          cat artifacts/player-startup/https-server.log
+          exit 1
+
+      - name: Verify startup, required NPCs, gameplay and offline Service Worker restart before publish
+        env:
+          PLAYER_TEST_URL: https://localhost:4175/
+        run: node scripts/player-startup-smoke.mjs
+
+      - name: Preserve runtime acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-sin-nombre-runtime-release-${{ github.sha }}
+          path: artifacts/player-startup/
+          if-no-files-found: warn
+          retention-days: 30
       - name: Upload validated site for PR inspection
         uses: actions/upload-artifact@v4
         with:
