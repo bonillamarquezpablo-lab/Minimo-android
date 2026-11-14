@@ -11,7 +11,8 @@ assert.match(source,/observer\.observe\(\{ type: "longtask", buffered: true \}\)
 assert.match(source,/window-blur/);
 assert.match(source,/window-focus/);
 assert.match(source,/visibility-/);
-assert.match(source,/drawCallsPerSecond/);
+assert.match(source,/drawCallsObservedDelta/);
+assert.match(source,/longTaskObserverSupported/);
 assert.match(source,/diagnosticsReadMs/);
 assert.match(source,/cancelQueuedIdleSample\(\)/);
 console.log("session recorder idle-performance contract: PASS");
