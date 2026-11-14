@@ -1579,7 +1579,7 @@ def main() -> None:
     sw_path = DIST / "sw.js"
     sw_source = sw_path.read_text(encoding="utf-8")
     shell_match = re.search(r'const SHELL_CACHE = "el-sin-nombre-shell-([^"]+)";', sw_source)
-    if not shell_match or shell_match.group(1) != game_version:
+    if not shell_match or not (shell_match.group(1) == game_version or shell_match.group(1).startswith(game_version + "-")):
         actual = shell_match.group(1) if shell_match else "no declarada"
         raise SystemExit(
             f"Versión de caché del service worker desincronizada: "
