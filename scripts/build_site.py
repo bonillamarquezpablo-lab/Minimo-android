@@ -634,6 +634,7 @@ def main() -> None:
     # A deferred script at </body> executes only after parsing, which is too late:
     # the game constructs AtmosphereSystem while its inline runtime is evaluated.
     atmosphere_tag = '<script src="./scripts/nordic/atmosphere-system.js"></script>'
+    world_inspection_tag = '<script src="./scripts/nordic/world-inspection.js"></script>'
     game_runtime_marker = '<script>\n(function(){\n"use strict";\nwindow.addEventListener(\'error\''
     if html.count(game_runtime_marker) != 1:
         raise SystemExit("No se encontró exactamente el inicio del runtime principal para instalar la atmósfera.")
@@ -643,6 +644,12 @@ def main() -> None:
         html = html.replace(game_runtime_marker, atmosphere_tag + "\n" + game_runtime_marker, 1)
     if html.index(atmosphere_tag) > html.index(game_runtime_marker):
         raise SystemExit("El sistema atmosférico debe cargarse antes del runtime principal.")
+    if html.count(world_inspection_tag) > 1:
+        raise SystemExit("La etiqueta del inspector del mundo aparece duplicada.")
+    if world_inspection_tag not in html:
+        html = html.replace(game_runtime_marker, world_inspection_tag + "\n" + game_runtime_marker, 1)
+    if html.index(world_inspection_tag) > html.index(game_runtime_marker):
+        raise SystemExit("El inspector del mundo debe cargarse antes del runtime principal.")
 
     required = [
         "assets/vendor/babylon.js",
@@ -689,6 +696,17 @@ def main() -> None:
         raise SystemExit("Falta scripts/nordic/atmosphere-system.js.")
     atmosphere_target = DIST / "scripts" / "nordic" / "atmosphere-system.js"
     shutil.copy2(atmosphere_source, atmosphere_target)
+
+    world_inspection_source = ROOT / "scripts" / "nordic" / "world-inspection.js"
+    if not world_inspection_source.is_file():
+        raise SystemExit("Falta scripts/nordic/world-inspection.js.")
+    world_inspection_target = DIST / "scripts" / "nordic" / "world-inspection.js"
+    shutil.copy2(world_inspection_source, world_inspection_target)
+    world_inspection_check = subprocess.run(
+        [node, "--check", str(world_inspection_source)], capture_output=True, text=True,
+    )
+    if world_inspection_check.returncode != 0:
+        raise SystemExit("World inspection runtime JavaScript syntax validation failed:\n" + world_inspection_check.stderr)
 
     navigation_tag = '<script src="./scripts/nordic/navigation-suite.js" defer></script>'
     if navigation_tag not in html:
@@ -1140,6 +1158,28 @@ def main() -> None:
     if html.count(test_api_marker) != 1:
         raise SystemExit("No se pudo exponer la auditoría de continuidad entre mallas en el API de pruebas.")
     html = html.replace(test_api_marker, test_api_replacement, 1)
+
+    # Expose a read-only, on-demand snapshot from the same lexical scope as the Babylon scene.
+    # This function is called only when the Inspector user requests a world capture.
+    world_snapshot_marker = " window.copyGameHealthDebug=()=>{"
+    world_snapshot_code = r"""
+ window.getGameWorldInspectionSnapshot=(options={})=>{
+  if(!window.ELSNWorldInspection||typeof window.ELSNWorldInspection.capture!=='function'){
+   throw new Error('El módulo de inspección del mundo no está disponible.');
+  }
+  const health=typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug():null;
+  return window.ELSNWorldInspection.capture({
+   scene,land,player,villages,enemies,campGuards,companions,enemyShips,ambientFauna,ambientPeople,ambientBirds,
+   worldColliders,habitableStructureRegistry,lastHabitableStructureAudit,islandTerrainMeshes,
+   terrainHeightAt:(x,z)=>renderedTerrainSurfaceAt(x,z),
+   playerDiagnostics:health?.player||null,
+   runtime:{gameStarted:health?.gameStarted===true,worldUpdatePhase:health?.worldUpdatePhase??null,worldUpdateCount:health?.worldUpdateCount??null,fps:health?.runtime?.fps??null,graphicsProfile:health?.runtime?.graphicsProfile??null}
+  },options);
+ };
+"""
+    if html.count(world_snapshot_marker) != 1:
+        raise SystemExit("No se encontró exactamente una API de copia del diagnóstico para exponer la inspección del mundo.")
+    html = html.replace(world_snapshot_marker, world_snapshot_code + "\n" + world_snapshot_marker, 1)
 
     # Validate the transformed runtime too; the earlier syntax check runs before these patches.
     transformed_scripts = re.findall(r"<script\b[^>]*>(.*?)</script\s*>", html, flags=re.IGNORECASE | re.DOTALL)

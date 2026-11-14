@@ -152,6 +152,50 @@
       </article>
     </section>
 
+
+    <section class="section" id="mundo">
+      <div class="section-heading">
+        <div><div class="section-kicker">03 · BABYLON.JS</div><h2>Inspección del mundo 3D</h2><p>Captura puntual y de solo lectura de la escena real: geometría, islas, estructuras, NPCs, animaciones, colisiones y texturas. No se ejecuta continuamente y no modifica el juego.</p></div>
+        <span class="section-index">ESTADO DEL MUNDO</span>
+      </div>
+      <article class="chart-card live-diagnostic-card">
+        <div class="live-diagnostic-actions">
+          <button class="primary" id="worldInspectionCapture" type="button" disabled>Capturar estado del mundo</button>
+          <span id="worldInspectionStatus" role="status" aria-live="polite">Abre el juego en el panel de diagnóstico para habilitar la captura.</span>
+        </div>
+        <div class="live-diagnostic-grid">
+          <div><span>Islas registradas</span><strong id="worldIslandsCount">—</strong></div>
+          <div><span>Mallas en escena</span><strong id="worldMeshCount">—</strong></div>
+          <div><span>Nodos transformables</span><strong id="worldTransformCount">—</strong></div>
+          <div><span>Estructuras auditadas</span><strong id="worldStructureCount">—</strong></div>
+          <div><span>Estructuras inseguras</span><strong id="worldUnsafeCount">—</strong></div>
+          <div><span>Inseguras aún visibles</span><strong id="worldVisibleUnsafeCount">—</strong></div>
+          <div><span>NPCs / actores</span><strong id="worldActorCount">—</strong></div>
+          <div><span>Tripulación enemiga</span><strong id="worldShipCrewCount">—</strong></div>
+          <div><span>Texturas pendientes</span><strong id="worldPendingTextures">—</strong></div>
+          <div><span>Grupos de animación</span><strong id="worldAnimationGroups">—</strong></div>
+          <div><span>Mallas con colisiones</span><strong id="worldCollisionCount">—</strong></div>
+          <div><span>Transformaciones inválidas</span><strong id="worldInvalidTransformCount">—</strong></div>
+          <div><span>FPS al capturar</span><strong id="worldFps">—</strong></div>
+          <div><span>Colisionadores registrados</span><strong id="worldColliderCount">—</strong></div>
+          <div><span>Rango de alturas del terreno</span><strong id="worldTerrainRange">—</strong></div>
+        </div>
+        <section class="live-finding-panel" aria-live="polite" aria-label="Hallazgos de inspección del mundo">
+          <div class="live-finding-head">
+            <div><span>Resultado de la inspección</span><strong id="worldInspectionFindingStatus">Sin captura</strong></div>
+            <div><span>Prioridad máxima</span><strong id="worldInspectionFindingSeverity">—</strong></div>
+          </div>
+          <p id="worldInspectionFindingSummary">La captura se realiza únicamente cuando la solicitas.</p>
+          <div class="live-finding-columns">
+            <div><strong>Hallazgos y evidencias</strong><ul id="worldInspectionFindings"><li>Sin hallazgos todavía.</li></ul></div>
+            <div><strong>Calidad de datos</strong><ul id="worldInspectionQuality"><li>Esperando la primera captura.</li></ul></div>
+          </div>
+        </section>
+        <div class="live-diagnostic-actions"><button class="small-button" id="worldInspectionDownload" type="button" disabled>Descargar informe del mundo</button></div>
+        <details class="technical"><summary>Ver inventario completo de Babylon.js</summary><pre id="worldInspectionJson">Sin captura todavía.</pre></details>
+      </article>
+    </section>
+
     <section class="section" id="telemetria">
       <div class="section-heading">
         <div><div class="section-kicker">02 · GRÁFICAS</div><h2>Rendimiento</h2><p>FPS, tiempo por fotograma y memoria del heap JavaScript.</p></div>
