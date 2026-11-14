@@ -1,0 +1,39 @@
+name: Phase 2 autonomous repair safety contracts
+
+on:
+  push:
+    branches: ['phase2/autonomous-repair-safety']
+    paths:
+      - 'scripts/autonomous-repair.mjs'
+      - 'scripts/test_autonomous_repair.mjs'
+      - '.github/workflows/autonomous-repair.yml'
+      - '.github/workflows/phase2-repair-contracts.yml'
+      - 'AUTONOMOUS-REPAIR-PHASE2.md'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/autonomous-repair.mjs'
+      - 'scripts/test_autonomous_repair.mjs'
+      - '.github/workflows/autonomous-repair.yml'
+      - '.github/workflows/phase2-repair-contracts.yml'
+      - 'AUTONOMOUS-REPAIR-PHASE2.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repair-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate repair engine syntax
+        run: node --check scripts/autonomous-repair.mjs
+      - name: Validate repair safety contracts
+        run: node scripts/test_autonomous_repair.mjs
+      - name: Validate existing specialist contracts
+        run: node scripts/test_autonomous_lab_agents.mjs

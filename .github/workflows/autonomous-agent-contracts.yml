@@ -9,8 +9,11 @@ on:
       - 'AUTONOMOUS-LAB-AGENTS.md'
       - '.github/workflows/autonomous-agent-contracts.yml'
       - '.github/workflows/coastal-reference.yml'
+      - 'scripts/autonomous-repair.mjs'
+      - 'scripts/test_autonomous_repair.mjs'
+      - '.github/workflows/autonomous-repair.yml'
   push:
-    branches: ['phase1/diagnostic-foundation']
+    branches: ['phase2/autonomous-repair-safety']
     paths:
       - 'scripts/autonomous-lab-agents.mjs'
       - 'scripts/test_autonomous_lab_agents.mjs'
@@ -18,6 +21,9 @@ on:
       - 'AUTONOMOUS-LAB-AGENTS.md'
       - '.github/workflows/autonomous-agent-contracts.yml'
       - '.github/workflows/coastal-reference.yml'
+      - 'scripts/autonomous-repair.mjs'
+      - 'scripts/test_autonomous_repair.mjs'
+      - '.github/workflows/autonomous-repair.yml'
 
 permissions:
   contents: read
@@ -42,4 +48,8 @@ jobs:
         run: node --check scripts/autonomous-lab-agents.mjs
       - name: Run specialist contract tests
         run: node scripts/test_autonomous_lab_agents.mjs
+      - name: Check repair validator syntax
+        run: node --check scripts/autonomous-repair.mjs
+      - name: Run repair validator contracts
+        run: node scripts/test_autonomous_repair.mjs
 
