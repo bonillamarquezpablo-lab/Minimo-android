@@ -18,7 +18,7 @@ const mesh = {
   getTotalVertices: () => 24, getTotalIndices: () => 36,
   computeWorldMatrix() {},
   getBoundingInfo: () => ({ boundingBox: {
-    minimumWorld: { x: 2, y: 1, z: -5 },
+    minimumWorld: { x: 2, y: 1.5, z: -5 },
     maximumWorld: { x: 4, y: 3, z: -3 }
   } })
 };
@@ -70,6 +70,9 @@ assert.equal(snapshot.terrainObjects.items[0].name, 'BuriedProp');
 assert.equal(snapshot.terrainObjects.items[0].worldPosition.x, 9);
 assert.equal(snapshot.terrainObjects.items[0].terrain.centerGroundY, 1.25);
 assert.equal(snapshot.terrainObjects.items[0].bounds.max.y, -2);
+assert.equal(snapshot.terrainObjects.items[0].terrain.objectBottomY, -3);
+assert.equal(snapshot.terrainObjects.items[0].terrain.terrainClearanceSamples.length, 5);
+assert.ok(snapshot.terrainObjects.items[0].terrain.penetrationDepthMeters > 0.08);
 
 assert.equal(snapshot.actors.player.groundY, 1.25);
 assert.equal(snapshot.actors.player.modelReady, false);
