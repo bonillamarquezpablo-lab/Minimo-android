@@ -31,14 +31,16 @@ DOWNLOADS = {
     "assets/vendor/meshopt_decoder.js": (
         "https://cdn.babylonjs.com/meshopt_decoder.js", 2_000, "script"
     ),
+    # Grab3D download URLs use the canonical model slug as the directory and
+    # keep the "-rigged" suffix only in the exported filename.
     "assets/models/viking-rigged.glb": (
-        "https://grab3d.com/dl/viking-rigged/viking-rigged.glb", 1_000_000, "glb"
+        "https://grab3d.com/dl/viking/viking-rigged.glb", 1_000_000, "glb"
     ),
     "assets/models/armored-knight-rigged.glb": (
-        "https://grab3d.com/dl/armored-knight-rigged/armored-knight-rigged.glb", 1_000_000, "glb"
+        "https://grab3d.com/dl/armored-knight/armored-knight-rigged.glb", 1_000_000, "glb"
     ),
     "assets/models/man-base-character-rigged.glb": (
-        "https://grab3d.com/dl/man-base-character-rigged/man-base-character-rigged.glb", 1_000_000, "glb"
+        "https://grab3d.com/dl/man-base-character/man-base-character-rigged.glb", 1_000_000, "glb"
     ),
     "assets/downloads/Ground060_2K-JPG.zip": (
         "https://ambientcg.com/get?file=Ground060_2K-JPG.zip", 1_000_000, "zip"
