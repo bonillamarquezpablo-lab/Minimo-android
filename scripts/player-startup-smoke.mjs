@@ -359,11 +359,61 @@ async function main() {
     if (await cachedAudioGate.isVisible().catch(() => false)) await cachedAudioGate.click({ timeout: 30000 });
     await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
     await page.locator('#chooseQuality').click();
-    await page.locator('#continueUnnamed').waitFor({ state: 'visible', timeout: 30000 });
-    await page.locator('#continueUnnamed').click();
+
+    // A warm launch has a saved identity: it can enter booting directly and must not
+    // wait for the first-run-only "continue without name" button.
+    await page.waitForFunction(() => {
+      const identity = document.getElementById('identitySetup');
+      const loading = document.getElementById('loading');
+      const visible = element => !!element &&
+        getComputedStyle(element).display !== 'none' &&
+        getComputedStyle(element).visibility !== 'hidden';
+      const identityVisible = visible(identity) && identity?.getAttribute('aria-hidden') !== 'true';
+      const booting = document.body.classList.contains('booting') ||
+        (visible(loading) && !document.body.classList.contains('boot-failed'));
+      return identityVisible || booting || document.body.classList.contains('boot-failed');
+    }, undefined, { timeout: 30000, polling: 50 });
+    const cachedPreflightState = await page.evaluate(() => {
+      const identity = document.getElementById('identitySetup');
+      const loading = document.getElementById('loading');
+      const continueButton = document.getElementById('continueUnnamed');
+      const visible = element => !!element &&
+        getComputedStyle(element).display !== 'none' &&
+        getComputedStyle(element).visibility !== 'hidden';
+      return {
+        bodyClass: document.body.className,
+        identityVisible: visible(identity) && identity?.getAttribute('aria-hidden') !== 'true',
+        continueUnnamedVisible: visible(continueButton),
+        booting: document.body.classList.contains('booting') || visible(loading),
+        bootFailed: document.body.classList.contains('boot-failed'),
+        identityStored: localStorage.getItem('el-sin-nombre-identity-main-v1') !== null
+      };
+    });
+    manifest.cachedPreflightState = cachedPreflightState;
+    if (cachedPreflightState.bootFailed) {
+      throw new Error('El arranque con caché falló antes de preparar el mundo: ' +
+        JSON.stringify(cachedPreflightState));
+    }
+    if (cachedPreflightState.identityVisible && cachedPreflightState.continueUnnamedVisible) {
+      await page.locator('#continueUnnamed').click({ timeout: 15000 });
+      manifest.cachedIdentityFlow = 'first-run-anonymous';
+    } else if (cachedPreflightState.booting) {
+      manifest.cachedIdentityFlow = 'returning-player-auto-boot';
+    } else {
+      throw new Error('El segundo arranque no coincide con primera partida ni jugador guardado: ' +
+        JSON.stringify(cachedPreflightState));
+    }
     const cachedBarrierStartedAt = performance.now();
-    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true,
+    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
+      document.body.classList.contains('boot-failed'),
       undefined, { timeout: 180000, polling: 250 });
+    if (await page.evaluate(() => document.body.classList.contains('boot-failed'))) {
+      throw new Error('El arranque con caché terminó en boot-failed: ' +
+        JSON.stringify(await page.evaluate(() => ({
+          loadHelp: document.querySelector('#loadHelp')?.textContent || null,
+          recorder: window.__elSinNombreStartupSmoke || null
+        }))));
+    }
     manifest.cachedNavigationAndProfileMs = Number((cachedBarrierStartedAt - cachedLaunchStartedAt).toFixed(1));
     manifest.cachedBlockingStartupMs = Number((performance.now() - cachedBarrierStartedAt).toFixed(1));
     manifest.cachedMemoryEstimate = await page.evaluate(() => window.__elSinNombreStartupMemoryEstimate || null);
