@@ -1,5 +1,5 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.291";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.291-report2";
 const ASSET_CACHE = "el-sin-nombre-assets-pending-build-0.6.204";
 const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./scripts/nordic/beach-state.js", "./scripts/nordic/coastal-interaction.js", "./scripts/nordic/navigation-suite.js", "./scripts/nordic/atmosphere-system.js", "./scripts/nordic/world-inspection.js", "./scripts/npc-agent-core.js", "./scripts/npc-agent-runtime.js", "./scripts/game-session-recorder.js", "./scripts/npc-dialogue-core.js", "./scripts/npc-dialogue-runtime.js", "./scripts/npc-dialogue.css", "./icon.svg"];
 
