@@ -38,6 +38,8 @@ jobs:
         run: node scripts/test_navigation_suite_contract.cjs
       - name: Test adaptive graphics quality without sacrificing Performance profile
         run: node scripts/test_graphics_quality_contract.cjs
+      - name: Test mobile runtime stability without reducing visual quality
+        run: node scripts/test_mobile_runtime_stability.cjs
       - name: Test civilian NPC specialists and shared-memory contract
         run: node scripts/test_npc_agent_core.cjs
       - name: Test autonomous civilian dialogue and four-bubble cap
