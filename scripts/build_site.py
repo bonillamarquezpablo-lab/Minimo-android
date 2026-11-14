@@ -809,31 +809,31 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.292: restore flagship render clarity while preserving the
+    # Release candidate 0.6.293: restore flagship render clarity while preserving the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.292; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.293; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.292\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.293\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.292.")
-    html = html.replace("0.6.274", "0.6.292")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.293.")
+    html = html.replace("0.6.274", "0.6.293")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'16',build:'0.6.292'"
+    diagnostic_build_replacement = "reportVersion:'16',build:'0.6.293'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.292 para normalizar.")
-    game_version = "0.6.292"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.293 para normalizar.")
+    game_version = "0.6.293"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
-    # 0.6.292 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
+    # 0.6.293 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
     quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
     quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
  const highHeadroomQualityMobile=!!(!isPerformanceMode&&isTouchDevice&&!constrainedHardware&&((reportedMemory>=8&&(Number(navigator.hardwareConcurrency)||0)>=8)||highTierGpuMatch));
@@ -896,6 +896,129 @@ def main() -> None:
     if html.count(runtime_diagnostics_marker) != 1:
         raise SystemExit("No se encontró exactamente un bloque runtime para el diagnóstico.")
     html = html.replace(runtime_diagnostics_marker,runtime_diagnostics_replacement,1)
+
+
+    # Mobile runtime stability without visual downgrades.
+    # Guard DynamicTexture uploads against stale/disposed scene owners.
+    live_texture_guard_marker = " let engineInstrumentation=null,sceneInstrumentation=null;"
+    live_texture_guard = r""" const isLiveDynamicTexture=texture=>{
+  try{
+   if(!texture||typeof texture.update!=='function')return false;
+   const disposed=typeof texture.isDisposed==='function'?texture.isDisposed():texture.isDisposed===true;
+   if(disposed)return false;
+   const ownerScene=typeof texture.getScene==='function'?texture.getScene():null;
+   if(!ownerScene||ownerScene!==scene||typeof ownerScene.getEngine!=='function')return false;
+   const ownerEngine=ownerScene.getEngine();
+   const engineDisposed=typeof ownerEngine.isDisposed==='function'?ownerEngine.isDisposed():ownerEngine.isDisposed===true;
+   return ownerEngine===engine&&!engineDisposed;
+  }catch(_){return false;}
+ };
+ const updateDynamicTextureSafely=(texture,...args)=>{
+  if(!isLiveDynamicTexture(texture)){
+   window.__ELSN_DYNAMIC_TEXTURE_UPDATE_SKIPS=(window.__ELSN_DYNAMIC_TEXTURE_UPDATE_SKIPS||0)+1;
+   return false;
+  }
+  texture.update(...args);return true;
+ };
+"""
+    if html.count(live_texture_guard_marker) != 1:
+        raise SystemExit("No se encontró el punto único para proteger DynamicTexture.")
+    html = html.replace(live_texture_guard_marker, live_texture_guard + "\n" + live_texture_guard_marker, 1)
+
+    # A coastal job belongs to one island. Cancel it before disposing that island's
+    # DynamicTexture; otherwise a stale final upload can call Babylon with a null engine.
+    beach_chunk_marker = "beachWorkScheduled=false;const layer=beachWorkLayer;if(!layer)return;\n   const sliceStarted=performance.now()"
+    beach_chunk_replacement = "beachWorkScheduled=false;const layer=beachWorkLayer;if(!layer)return;\n   if(layer.index!==activeBeachIslandIndex||!layer.mesh||(typeof layer.mesh.isDisposed==='function'&&layer.mesh.isDisposed())||!isLiveDynamicTexture(layer.coastalStateTexture)){beachWorkLayer=null;beachWorkCellCursor=0;beachWorkVertexCursor=0;beachWorkCellsProcessed=0;return;}\n   const sliceStarted=performance.now()"
+    if html.count(beach_chunk_marker) != 1:
+        raise SystemExit("No se encontró el inicio único del trabajo costero.")
+    html = html.replace(beach_chunk_marker, beach_chunk_replacement, 1)
+
+    beach_switch_marker = "if(previousIndex>=0&&previousIndex!==nextIndex)disposeActiveCoastalIslandSystems(previousIndex);"
+    beach_switch_replacement = """if(previousIndex>=0&&previousIndex!==nextIndex){
+   if(beachWorkLayer&&beachWorkLayer.index===previousIndex){beachWorkLayer=null;beachWorkCellCursor=0;beachWorkVertexCursor=0;beachWorkCellsProcessed=0;beachWorkScheduled=false;}
+   disposeActiveCoastalIslandSystems(previousIndex);
+  }"""
+    if html.count(beach_switch_marker) != 1:
+        raise SystemExit("No se encontró el cambio único de isla costera.")
+    html = html.replace(beach_switch_marker, beach_switch_replacement, 1)
+
+    # Use the same live-owner guard for the three runtime DynamicTexture upload paths.
+    for old, new, expected in (
+        ("footprintTexture.update(footprintAtlas.textureData());", "updateDynamicTextureSafely(footprintTexture,footprintAtlas.textureData());", 1),
+        ("layer.coastalStateTexture.update(state.rgba);beachStateTextureUploads++;", "if(updateDynamicTextureSafely(layer.coastalStateTexture,state.rgba))beachStateTextureUploads++;", 1),
+        ("skyTexture.update(false);", "updateDynamicTextureSafely(skyTexture,false);", 2),
+    ):
+        if html.count(old) != expected:
+            raise SystemExit("Número inesperado de actualizaciones DynamicTexture: " + old)
+        html = html.replace(old, new)
+
+    # Incremental discovery: avoid scanning all 5,000+ TransformNodes twice every 1.5 s.
+    # Existing roots are indexed once; future habitable roots are queued by Babylon's
+    # onNewTransformNodeAddedObservable and consumed on the next integrity audit.
+    audit_discovery_marker = "  const trackedBeforeDiscovery=new Set(habitableStructureRegistry.map(entry=>entry.root));\n  for(const node of scene.transformNodes){"
+    audit_discovery_replacement = """  if(!auditHabitableStructures.discoveryQueue){
+   const initialQueue=new Set(scene.transformNodes.filter(node=>roofedRootPattern.test(node.name||'')));
+   auditHabitableStructures.discoveryQueue=initialQueue;
+   if(scene.onNewTransformNodeAddedObservable&&typeof scene.onNewTransformNodeAddedObservable.add==='function'){
+    scene.onNewTransformNodeAddedObservable.add(node=>{if(node&&roofedRootPattern.test(node.name||''))initialQueue.add(node);});
+   }
+  }
+  const discoveryQueue=auditHabitableStructures.discoveryQueue;
+  const pendingDiscovery=Array.from(discoveryQueue);discoveryQueue.clear();
+  const trackedBeforeDiscovery=new Set(habitableStructureRegistry.map(entry=>entry.root));
+  for(const node of pendingDiscovery){"""
+    if html.count(audit_discovery_marker) != 1:
+        raise SystemExit("No se encontró el escaneo único de raíces habitables.")
+    html = html.replace(audit_discovery_marker, audit_discovery_replacement, 1)
+
+    untracked_marker = "const untrackedRoots=scene.transformNodes.filter(node=>roofedRootPattern.test(node.name||'')&&!registeredRoots.has(node)).map(node=>node.name);"
+    untracked_replacement = "const untrackedRoots=Array.from(discoveryQueue).filter(node=>roofedRootPattern.test(node.name||'')&&!registeredRoots.has(node)).map(node=>node.name);"
+    if html.count(untracked_marker) != 1:
+        raise SystemExit("No se encontró el segundo escaneo completo de raíces habitables.")
+    html = html.replace(untracked_marker, untracked_replacement, 1)
+
+    # Preserve full-rate player/rendering while capping expensive touch-device combat
+    # and companion decision passes at 30 Hz; constrained mobiles retain their existing caps.
+    for old, new in (
+        ("const enemyAiInterval=isConstrainedMobile?.05:(1/60);", "const enemyAiInterval=isTouchDevice?(isConstrainedMobile?.05:(1/30)):(1/60);"),
+        ("const companionAiInterval=isConstrainedMobile?.0667:(1/60);", "const companionAiInterval=isTouchDevice?(isConstrainedMobile?.0667:(1/30)):(1/60);"),
+    ):
+        if html.count(old) != 1:
+            raise SystemExit("No se encontró la cadencia AI esperada: " + old)
+        html = html.replace(old, new, 1)
+
+    # Babylon's raw draw-call counter is cumulative in this runtime. Report the
+    # per-rendered-frame delta rather than a growing session total.
+    draw_state_marker = "let perfAuditCount=0,perfAuditCursor=0,perfAuditScenario='sin seleccionar',perfAuditScenarioStartedAt=performance.now(),perfAuditFrameCounter=0;"
+    draw_state_replacement = draw_state_marker + "\n let lastObservedDrawCallsTotal=null,lastObservedDrawCallsPerFrame=null;"
+    if html.count(draw_state_marker) != 1:
+        raise SystemExit("No se encontró el estado único del auditor de rendimiento.")
+    html = html.replace(draw_state_marker, draw_state_replacement, 1)
+
+    draw_read_marker = "const c=perfAuditCursor,draw=Number(engine&&engine._drawCalls&&engine._drawCalls.current);"
+    draw_read_replacement = """const c=perfAuditCursor,currentDrawTotal=Number(engine&&engine._drawCalls&&engine._drawCalls.current);
+  let draw=-1;
+  if(Number.isFinite(currentDrawTotal)&&currentDrawTotal>=0){
+   if(lastObservedDrawCallsTotal!==null&&currentDrawTotal>=lastObservedDrawCallsTotal)draw=currentDrawTotal-lastObservedDrawCallsTotal;
+   lastObservedDrawCallsTotal=currentDrawTotal;
+   if(draw>=0)lastObservedDrawCallsPerFrame=draw;
+  }"""
+    if html.count(draw_read_marker) != 1:
+        raise SystemExit("No se encontró el contador acumulativo de draw calls.")
+    html = html.replace(draw_read_marker, draw_read_replacement, 1)
+
+    health_draw_marker = "drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,"
+    health_draw_replacement = "drawCalls:Number.isFinite(lastObservedDrawCallsPerFrame)?lastObservedDrawCallsPerFrame:null,drawCallsCumulativeRaw:Number(engine._drawCalls&&engine._drawCalls.current)||0,drawCallsMeasurement:'per-rendered-frame delta; cumulative raw counter retained separately',"
+    if html.count(health_draw_marker) != 1:
+        raise SystemExit("No se encontró el contador drawCalls del informe de salud.")
+    html = html.replace(health_draw_marker, health_draw_replacement, 1)
+
+    runtime_diagnostics_replacement = runtime_diagnostics_replacement.replace(
+        "enemyAiRateCapHz:isConstrainedMobile?20:60,companionAiRateCapHz:isConstrainedMobile?15:60,",
+        "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60),companionAiRateCapHz:isConstrainedMobile?15:(isTouchDevice?30:60),"
+    )
+    if "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in runtime_diagnostics_replacement:
+        raise SystemExit("No se pudo actualizar la telemetría de cadencia AI móvil.")
 
 
     quality_adaptive_marker = r""" let fpsSample=0,qualityDprCurrent=qualityDpr;
