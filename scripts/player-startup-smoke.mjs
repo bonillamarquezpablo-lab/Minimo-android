@@ -420,7 +420,7 @@ async function main() {
         return { available: false, reason: 'getGameWorldInspectionSnapshot is not exposed by the built game.' };
       }
       const snapshot = window.getGameWorldInspectionSnapshot({
-        includeMeshes: true, maxMeshes: 2500, maxActors: 180
+        includeMeshes: true, maxMeshes: 5000, maxActors: 180
       });
       const actorCounts = Object.fromEntries(
         ['hostileVillageGuards','campGuards','companions','enemyShipCrew','wildlife','ambientPeople','ambientBirds']
@@ -444,6 +444,17 @@ async function main() {
           complete: snapshot.islands?.complete ?? false
         },
         terrain: snapshot.terrain,
+        terrainObjects: snapshot.terrainObjects ? {
+          checkedCount: snapshot.terrainObjects.checkedCount,
+          candidateCount: snapshot.terrainObjects.candidateCount,
+          fullyBuriedCount: snapshot.terrainObjects.fullyBuriedCount,
+          penetratingCount: snapshot.terrainObjects.penetratingCount,
+          unmeasurableCount: snapshot.terrainObjects.unmeasurableCount,
+          complete: snapshot.terrainObjects.complete,
+          truncated: snapshot.terrainObjects.truncated,
+          terrainHeightSource: snapshot.terrainObjects.terrainHeightSource,
+          items: snapshot.terrainObjects.items
+        } : null,
         collisions: {
           sceneCollisionsEnabled: snapshot.collisions?.sceneCollisionsEnabled ?? null,
           collisionEnabledMeshCount: snapshot.collisions?.collisionEnabledMeshCount ?? null,
@@ -478,6 +489,19 @@ async function main() {
     assert.equal(manifest.worldInspection.islands.complete, true);
     assert.equal(manifest.worldInspection.terrain.islandsSampled, 13,
       'No se pudieron muestrear las alturas de las 13 islas.');
+    assert.ok(manifest.worldInspection.terrainObjects,
+      'No se obtuvo la auditoría de objetos frente al terreno.');
+    assert.equal(manifest.worldInspection.terrainObjects.complete, true,
+      'La auditoría no cubrió todo el inventario de mallas.');
+    assert.ok(manifest.worldInspection.terrainObjects.items.every(item =>
+      Number.isFinite(item.worldPosition?.x) &&
+      Number.isFinite(item.worldPosition?.y) &&
+      Number.isFinite(item.worldPosition?.z) &&
+      Number.isFinite(item.bounds?.min?.y) &&
+      Number.isFinite(item.bounds?.max?.y) &&
+      Number.isFinite(item.terrain?.centerGroundY)),
+      'Un candidato del terreno no tiene coordenadas y alturas mundiales verificables.');
+
     assert.ok(manifest.worldInspection.scene.meshCount > 0,
       'La escena de Babylon no contiene mallas en el snapshot.');
     assert.ok(manifest.worldInspection.meshInventory.returned > 0,
@@ -487,23 +511,90 @@ async function main() {
 
     const perf20s = await page.evaluate(async () => {
       const start = performance.now();
-      let frames = 0, totalFrameMs = 0, maxFrameMs = 0, last = start;
+      let frames = 0, totalFrameMs = 0, maxFrameMs = 0, last = start, lastDiagnostic = start;
+      const runtimeSamples = [];
+      const captureRuntime = () => {
+        if (typeof window.getGameHealthDebug !== "function") return;
+        const health = window.getGameHealthDebug();
+        const runtime = health?.runtime || {};
+        const frame = runtime.frameTimingMs || {};
+        runtimeSamples.push({
+          capturedAt: new Date().toISOString(),
+          fps: runtime.fps ?? health?.fps ?? null,
+          targetFps: runtime.performanceAssessment?.targetFps ?? null,
+          frameTiming: {
+            p50Ms: frame.p50 ?? null, p95Ms: frame.p95 ?? null,
+            p99Ms: frame.p99 ?? null, maxMs: frame.max ?? null
+          },
+          cpu: {
+            worldUpdateMs: runtime.worldUpdateMs ?? null,
+            renderCpuMs: runtime.renderCpuMs ?? null
+          },
+          sceneTimings: {
+            frameMs: runtime.sceneFrameMs ?? null,
+            activeMeshesEvaluationMs: runtime.activeMeshesEvaluationMs ?? null,
+            renderTargetsMs: runtime.renderTargetsMs ?? null,
+            cameraRenderMs: runtime.cameraRenderMs ?? null,
+            shaderCompilationMs: runtime.shaderCompilationMs ?? null
+          },
+          gpu: {
+            frameMs: runtime.engineGpuFrameMs ?? null,
+            sceneRenderMs: runtime.sceneRenderMs ?? null
+          },
+          scene: {
+            drawCalls: runtime.drawCalls ?? runtime.sceneDrawCalls ?? null,
+            activeMeshes: runtime.activeMeshes ?? null,
+            meshCount: runtime.meshCount ?? null,
+            totalVertices: runtime.totalVertices ?? null,
+            graphicsProfile: runtime.graphicsProfile ?? null,
+            profileDiagnosticsEnabled: runtime.profileDiagnosticsEnabled ?? false,
+            engineBackend: runtime.engineBackend ?? null,
+            gpuRenderer: runtime.gpuRenderer ?? null
+          }
+        });
+      };
       while (performance.now() - start < 20000) {
         await new Promise(resolve => requestAnimationFrame(resolve));
         const now = performance.now(), frameMs = now - last;
         last = now; frames++; totalFrameMs += frameMs; maxFrameMs = Math.max(maxFrameMs, frameMs);
+        if (now - lastDiagnostic >= 1000) {
+          captureRuntime();
+          lastDiagnostic = now;
+        }
       }
+      captureRuntime();
       const memory = performance.memory ? {
         usedJSHeapSize: performance.memory.usedJSHeapSize,
         totalJSHeapSize: performance.memory.totalJSHeapSize,
         jsHeapLimit: performance.memory.jsHeapSizeLimit
       } : null;
+      const median = getter => {
+        const values = runtimeSamples.map(getter).filter(value => typeof value === "number" && Number.isFinite(value)).sort((a,b)=>a-b);
+        if (!values.length) return null;
+        const mid = Math.floor(values.length / 2);
+        return Number((values.length % 2 ? values[mid] : (values[mid-1]+values[mid])/2).toFixed(3));
+      };
       return {
         durationMs: Number((performance.now() - start).toFixed(1)),
         frames,
         averageFps: Number((frames / ((performance.now() - start) / 1000)).toFixed(1)),
         averageFrameMs: Number((totalFrameMs / Math.max(1, frames)).toFixed(2)),
         maxFrameMs: Number(maxFrameMs.toFixed(2)),
+        runtimeSampleCount: runtimeSamples.length,
+        runtimeSamples,
+        runtimeStageMedians: {
+          worldUpdateMs: median(sample => sample.cpu.worldUpdateMs),
+          renderCpuMs: median(sample => sample.cpu.renderCpuMs),
+          sceneFrameMs: median(sample => sample.sceneTimings.frameMs),
+          activeMeshesEvaluationMs: median(sample => sample.sceneTimings.activeMeshesEvaluationMs),
+          renderTargetsMs: median(sample => sample.sceneTimings.renderTargetsMs),
+          cameraRenderMs: median(sample => sample.sceneTimings.cameraRenderMs),
+          shaderCompilationMs: median(sample => sample.sceneTimings.shaderCompilationMs),
+          gpuFrameMs: median(sample => sample.gpu.frameMs),
+          sceneRenderMs: median(sample => sample.gpu.sceneRenderMs),
+          p95Ms: median(sample => sample.frameTiming.p95Ms),
+          p99Ms: median(sample => sample.frameTiming.p99Ms)
+        },
         jsHeap: memory
       };
     });

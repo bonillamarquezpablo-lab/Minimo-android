@@ -107,6 +107,18 @@
     }
   }
 
+  function downloadJson(payload, filename) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   function renderReports() {
     const host = $("npcAgentsReports");
     host.replaceChildren();
@@ -133,24 +145,33 @@
         " · CPU mundo: " + fmt(summary.cpu && summary.cpu.worldUpdateMedianMs, 2) + " ms" +
         " · CPU render: " + fmt(summary.cpu && summary.cpu.renderPreparationMedianMs, 2) + " ms" +
         " · GPU: " + fmt(summary.gpu && summary.gpu.frameMedianMs, 2) + " ms" +
-        " · evaluación mallas: " + fmt(summary.sceneTimings && summary.sceneTimings.activeMeshesEvaluationMedianMs, 2) + " ms" +
+        " · mallas activas: " + fmt(summary.sceneTimings && summary.sceneTimings.activeMeshesEvaluationMedianMs, 2) + " ms" +
         " · render targets: " + fmt(summary.sceneTimings && summary.sceneTimings.renderTargetsMedianMs, 2) + " ms");
       const terrainLine = make("p", "live-diagnostic-note",
         "Objetos bajo terreno: " + fmt(terrain.candidateCount, 0) +
         " · completamente enterrados: " + fmt(terrain.fullyBuriedCount, 0) +
         " · con intersección: " + fmt(terrain.penetratingCount, 0) +
         " · auditoría completa: " + (terrain.complete === true ? "sí" : terrain.complete === false ? "no" : "sin captura"));
+      const actions = make("div", "npc-report-actions");
+      const save = make("button", "small-button", "Guardar informe JSON");
+      save.type = "button";
+      const safeId = text(report.sessionId, 64).replace(/[^a-z0-9_-]/gi, "") || "sin-id";
+      save.addEventListener("click", () => downloadJson(report, "el-sin-nombre-partida-" + safeId + ".json"));
+      actions.appendChild(save);
       const details = make("details", "technical");
       const summaryLabel = make("summary", "", "Ver informe técnico y coordenadas");
       const evidence = {
         sessionId: report.sessionId, startedAt: report.startedAt, finishedAt: report.finishedAt,
         gameBuild: report.gameBuild, status: report.status, summary,
-        terrainObjects: (terrain.items || []).slice(0, 40),
+        scene: world.scene || null,
+        terrain: world.terrain || null,
+        terrainObjects: (terrain.items || []).slice(0, 100),
+        structures: world.structureAudit || null,
         worldInspectionError: world.error || null
       };
       const pre = make("pre", "npc-agent-evidence", JSON.stringify(evidence, null, 2));
       details.append(summaryLabel, pre);
-      item.append(heading, meta, metrics, diagnosis, terrainLine, details);
+      item.append(heading, meta, metrics, diagnosis, terrainLine, actions, details);
       host.appendChild(item);
     }
     if (!reports.length) host.appendChild(make("p", "live-diagnostic-note", "Todavía no hay informes de partidas guardados en este navegador."));

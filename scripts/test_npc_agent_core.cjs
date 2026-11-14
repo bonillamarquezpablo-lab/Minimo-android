@@ -123,7 +123,12 @@ assert.doesNotMatch(recorderSource, /BABYLON|MeshBuilder|new B\.Mesh/,
   "Session recording must not create game meshes or characters.");
 assert.ok(inspectorHtml.includes('id="inteligencia-npc"'));
 assert.ok(inspectorHtml.includes('id="npcAgentsSpecialists"'));
-assert.ok(inspectorHtml.includes("npc-agents.js?v=2"));
+assert.ok(inspectorHtml.includes("npc-agents.js?v=3"));
+const inspectorAppSource = fs.readFileSync("inspector/npc-agents.js", "utf8");
+assert.ok(inspectorAppSource.includes("Guardar informe JSON"));
+assert.ok(inspectorAppSource.includes("downloadJson"));
+assert.ok(inspectorAppSource.includes("Ver informe técnico y coordenadas"));
+
 
 console.log("NPC agent core contract: all checks passed.");
 
