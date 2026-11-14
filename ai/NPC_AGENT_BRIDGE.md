@@ -68,7 +68,7 @@ The browser sends requests with `credentials: "include"`; it never sends a beare
 - return observations, diagnoses, task proposals and task results only;
 - never expose provider keys or GitHub credentials to the browser.
 
-Remote events are allowlisted and size-limited. Unknown event types (including code execution or patch application) are discarded. External agents can investigate the repository and prepare a proposed change in an isolated branch through the bridge's server-side tooling, but integration and merge remain human-approved.
+Remote events are allowlisted and size-limited. Unknown event types (including code execution or patch application) are discarded. External agents may return observations, diagnoses and patch proposals as data only. The current bridge protocol does not create branches, commits, pull requests, or repository changes; integration remains a separate human-controlled step.
 
 ## Current connection status
 
