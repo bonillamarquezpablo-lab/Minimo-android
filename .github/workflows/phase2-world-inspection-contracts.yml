@@ -9,6 +9,7 @@ on:
       - 'scripts/test_phase2_world_inspection.mjs'
       - 'scripts/test_phase2_build_contract.mjs'
       - 'scripts/player-startup-smoke.mjs'
+      - 'scripts/player-startup-smoke.mjs'
       - 'inspector/phase1-live.js'
       - 'inspector/index.html'
       - 'scripts/build_site.py'
@@ -16,7 +17,7 @@ on:
       - 'sw.js'
       - '.github/workflows/phase2-world-inspection-contracts.yml'
   pull_request:
-    branches: ['phase1/diagnostic-foundation']
+    branches: ['main']
     paths:
       - 'scripts/nordic/world-inspection.js'
       - 'scripts/phase2-world-inspection-core.mjs'
