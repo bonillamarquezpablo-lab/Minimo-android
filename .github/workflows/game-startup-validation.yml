@@ -1,0 +1,112 @@
+name: Main game startup validation
+
+on:
+  push:
+    branches:
+      - fix/main-player-startup-validation
+    paths:
+      - 'index.html'
+      - 'scripts/player-startup-smoke.mjs'
+      - 'scripts/test_player_startup_flow_contract.cjs'
+      - '.github/workflows/game-startup-validation.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'index.html'
+      - 'scripts/player-startup-smoke.mjs'
+      - 'scripts/test_player_startup_flow_contract.cjs'
+      - '.github/workflows/game-startup-validation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game-startup-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  startup:
+    name: Build, regression contracts and real-player browser smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check player smoke syntax and first-run/returning-player contract
+        run: |
+          node --check scripts/player-startup-smoke.mjs
+          node scripts/test_player_startup_flow_contract.cjs
+
+      - name: Run game regression contracts
+        run: |
+          node scripts/test_navigation_suite_contract.cjs
+          node scripts/test_graphics_quality_contract.cjs
+          node scripts/test_release_contract.cjs
+          node scripts/test_startup_guard.cjs
+          node scripts/test_glb_loading.cjs
+          node scripts/test_startup_smoke.cjs
+          node scripts/test_atmosphere_system.cjs
+          node scripts/test_scene_capture_efficiency_contract.cjs
+          node scripts/test_coastal_structure_grounding_contract.cjs
+          node scripts/test_beach_state.cjs
+          node scripts/test_water_shore.cjs
+          node scripts/test_coastal_mesh_continuity.cjs
+          node scripts/test_coastal_interaction.cjs
+          node scripts/test_island_campaign.cjs
+
+      - name: Build and validate the complete game
+        run: |
+          python scripts/build_site.py
+          test -s dist/index.html
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+          node -e "const fs=require('node:fs');const {chromium}=require('playwright');if(!fs.existsSync(chromium.executablePath()))throw new Error('Chromium binary missing');console.log('Chromium ready:',chromium.executablePath())"
+
+      - name: Start the built game
+        run: |
+          python3 -m http.server 4174 --directory dist > /tmp/elsn-startup-http.log 2>&1 &
+          echo $! > /tmp/elsn-startup-http.pid
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:4174/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/elsn-startup-http.log
+          exit 1
+
+      - name: Test real protagonist GLB, startup barrier and first 20 seconds of gameplay
+        env:
+          PLAYER_TEST_URL: http://127.0.0.1:4174/
+        run: node scripts/player-startup-smoke.mjs
+
+      - name: Stop the game server
+        if: always()
+        run: |
+          if [ -f /tmp/elsn-startup-http.pid ]; then
+            kill "$(cat /tmp/elsn-startup-http.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload startup evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-game-startup-evidence-${{ github.run_id }}
+          path: artifacts/player-startup/
+          if-no-files-found: warn
+          retention-days: 30
