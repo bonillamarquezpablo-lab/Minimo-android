@@ -1,12 +1,18 @@
-name: Inspector único (bajo demanda) — EL SIN NOMBRE
+name: Laboratorio nocturno y agentes especialistas — EL SIN NOMBRE
 # Optional graphics audit: run only when a visual or structural change needs evidence.
 
 on:
-  # Manual opt-in only. Normal pushes and pull requests do not run the long Inspector.
+  # Runs the complete cloud lab nightly and a deep A/B pass every Sunday.
+  schedule:
+    - cron: '17 2 * * *'
+      timezone: 'Europe/Madrid'
+    - cron: '47 2 * * 0'
+      timezone: 'Europe/Madrid'
+  # Manual runs remain available at quick, complete or deep levels.
   workflow_dispatch:
     inputs:
       inspection_level:
-        description: 'Rápido solo comprueba el arranque. Completo revisa texturas, estructuras, costa e inventario. Profundo añade comparación visual y rendimiento. El Inspector no se ejecuta automáticamente.'
+        description: 'Rápido comprueba el arranque. Completo revisa texturas, estructuras, costa e inventario. Profundo añade comparación visual y rendimiento. También hay inspecciones nocturnas automáticas.'
         required: true
         type: choice
         options:
@@ -56,7 +62,7 @@ jobs:
           node-version: '22'
 
       - name: Resolve the exact baseline commit for before/after
-        if: github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep'
+        if: (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep') || (github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0')
         id: baseline
         shell: bash
         env:
@@ -79,7 +85,7 @@ jobs:
           echo "Hrafn baseline: $BASE_REF ($BASE_SHA)"
 
       - name: Build the baseline game in an isolated worktree
-        if: github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep'
+        if: (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep') || (github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0')
         env:
           HRAFN_BASE_SHA: ${{ steps.baseline.outputs.sha }}
         run: |
@@ -155,7 +161,7 @@ jobs:
 
       - name: Start candidate game server (and baseline only for Deep)
         env:
-          INSPECTOR_LEVEL: ${{ inputs.inspection_level || 'quick' }}
+          INSPECTOR_LEVEL: ${{ inputs.inspection_level || ((github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0') && 'deep') || (github.event_name == 'schedule' && 'complete') || 'quick' }}
         run: |
           if [ "$INSPECTOR_LEVEL" = "deep" ]; then
             python3 -m http.server 4176 --directory "$RUNNER_TEMP/hrafn-before-dist" > /tmp/elsn-hrafn-before-http.log 2>&1 &
@@ -178,11 +184,11 @@ jobs:
       - name: Run the single unified inspector
         env:
           INSPECTOR_TEST_URL: http://127.0.0.1:4175/
-          HRAFN_BEFORE_URL: ${{ (github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep') && 'http://127.0.0.1:4176/' || '' }}
+          HRAFN_BEFORE_URL: ${{ ((github.event_name == 'workflow_dispatch' && inputs.inspection_level == 'deep') || (github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0')) && 'http://127.0.0.1:4176/' || '' }}
           HRAFN_AFTER_URL: http://127.0.0.1:4175/
           CAPTURE_PLAN_INPUT: ${{ inputs.capture_plan }}
           CAPTURE_SEED: '20261110'
-          INSPECTOR_LEVEL: ${{ inputs.inspection_level || 'quick' }}
+          INSPECTOR_LEVEL: ${{ inputs.inspection_level || ((github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0') && 'deep') || (github.event_name == 'schedule' && 'complete') || 'quick' }}
           INSPECTOR_GITHUB_TOKEN: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.token || '' }}
           INSPECTOR_STATUS_BRANCH: inspector-status
         run: |
@@ -192,6 +198,17 @@ jobs:
             export CAPTURE_PLAN_JSON="$(cat scripts/scene-capture-plan.json)"
           fi
           node scripts/run-unified-inspector.mjs
+
+      - name: Run autonomous specialist NPCs
+        if: always()
+        env:
+          INSPECTOR_GITHUB_TOKEN: ${{ github.token }}
+          INSPECTOR_STATUS_BRANCH: inspector-status
+        run: node scripts/autonomous-lab-agents.mjs
+
+      - name: Validate autonomous specialist agent contracts
+        if: always()
+        run: node scripts/test_autonomous_lab_agents.mjs
 
       - name: Upload diagnostic manifests before the visual bundle
         if: always()
@@ -208,6 +225,7 @@ jobs:
             artifacts/coastal-reference/*.json
             artifacts/custom-scene-captures/manifest.json
             artifacts/custom-scene-captures/inspection-report.md
+            artifacts/autonomous-agents/
           if-no-files-found: warn
           retention-days: 30
           compression-level: 1
@@ -225,6 +243,7 @@ jobs:
             artifacts/coastal-reference/
             artifacts/custom-scene-captures/
             artifacts/hrafn-before-after/
+            artifacts/autonomous-agents/
           if-no-files-found: warn
           retention-days: 30
           compression-level: 0

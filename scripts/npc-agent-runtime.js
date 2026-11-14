@@ -244,7 +244,13 @@
       roleCounts: counts,
       memoryCount: state.events.size,
       pendingExternalTasks: state.outbox.size,
-      bridge: Object.assign({}, state.bridge, { endpoint: state.bridge.endpoint ? "[configured]" : null })
+      bridge: {
+        status: state.bridge.status,
+        endpoint: state.bridge.endpoint ? "[configured]" : null,
+        lastSyncAt: state.bridge.lastSyncAt,
+        lastError: state.bridge.lastError,
+        cursorAvailable: Boolean(state.bridge.cursor)
+      }
     };
   }
 

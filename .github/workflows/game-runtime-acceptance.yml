@@ -1,0 +1,104 @@
+name: Game runtime acceptance — EL SIN NOMBRE
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game-runtime-acceptance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-play:
+    name: Build, boot, enter gameplay and verify cached restart
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate the runtime acceptance gate itself
+        run: node scripts/test_game_runtime_acceptance_contract.cjs
+
+      - name: Validate game, world-inspection and graphics regression contracts
+        run: |
+          node scripts/test_navigation_suite_contract.cjs
+          node scripts/test_scene_capture_efficiency_contract.cjs
+          node scripts/test_coastal_structure_grounding_contract.cjs
+          node scripts/test_coastal_reference_contract.cjs
+          node scripts/test_startup_guard.cjs
+          node scripts/test_glb_loading.cjs
+          node scripts/test_coastal_mesh_continuity.cjs
+          node scripts/test_water_shore.cjs
+          node scripts/test_cc0_texture_pack.cjs
+          node scripts/test_release_contract.cjs
+          node scripts/test_graphics_quality_contract.cjs
+          node scripts/test_startup_smoke.cjs
+          node scripts/test_atmosphere_system.cjs
+          node scripts/test_beach_state.cjs
+          node scripts/test_island_campaign.cjs
+          node scripts/test_phase1_diagnostics_core.mjs
+          node scripts/test_phase1_live_contract.mjs
+          node scripts/test_phase2_world_inspection.mjs
+          node scripts/test_phase2_build_contract.mjs
+
+      - name: Build the complete release package
+        run: |
+          python -m py_compile scripts/build_site.py scripts/validate_release.py scripts/start_https_static_server.py
+          python scripts/build_site.py
+          test -s dist/index.html
+          test -s dist/assets/asset-manifest.json
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+          node -e "const fs=require('node:fs');const {chromium}=require('playwright');const p=chromium.executablePath();if(!fs.existsSync(p))throw new Error('Chromium missing: '+p);console.log('Chromium ready:',p)"
+
+      - name: Start the built game on a local HTTPS server
+        shell: bash
+        run: |
+          mkdir -p artifacts/player-startup
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout "$RUNNER_TEMP/player-test.key" -out "$RUNNER_TEMP/player-test.crt" -days 1 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+          python scripts/start_https_static_server.py --directory dist --bind 127.0.0.1 --port 4175 --cert "$RUNNER_TEMP/player-test.crt" --key "$RUNNER_TEMP/player-test.key" > artifacts/player-startup/https-server.log 2>&1 &
+          echo $! > artifacts/player-startup/https-server.pid
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --insecure https://localhost:4175/ > /dev/null; then
+              echo "Built game HTTPS server is responding."
+              exit 0
+            fi
+            sleep 1
+          done
+          cat artifacts/player-startup/https-server.log
+          exit 1
+
+      - name: Launch the game, enter a real session and test Service Worker offline restart
+        env:
+          PLAYER_TEST_URL: https://localhost:4175/
+        run: node scripts/player-startup-smoke.mjs
+
+      - name: Upload runtime evidence, screenshots and server logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-sin-nombre-runtime-acceptance-${{ github.sha }}
+          path: artifacts/player-startup/
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 1

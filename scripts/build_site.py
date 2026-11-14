@@ -328,11 +328,6 @@ def main() -> None:
     if navigation_check.returncode != 0:
         raise SystemExit("Navigation runtime JavaScript syntax validation failed:\\n" + navigation_check.stderr)
     print("Navigation runtime JavaScript syntax validation passed.")
-    for script_name in ("npc-agent-core.js", "npc-agent-runtime.js"):
-        npc_check = subprocess.run([node, "--check", str(ROOT / "scripts" / script_name)], capture_output=True, text=True)
-        if npc_check.returncode != 0:
-            raise SystemExit(f"NPC specialist runtime syntax validation failed ({script_name}):\\n" + npc_check.stderr)
-    print("NPC specialist runtime JavaScript syntax validation passed.")
     # Anchor decorative terrain objects to the actual rendered GroundMesh. The
     # analytical heightfield can differ from the rendered triangle interpolation,
     # leaving rocks, tree trunks and shrubs visibly detached from the island.
@@ -639,6 +634,7 @@ def main() -> None:
     # A deferred script at </body> executes only after parsing, which is too late:
     # the game constructs AtmosphereSystem while its inline runtime is evaluated.
     atmosphere_tag = '<script src="./scripts/nordic/atmosphere-system.js"></script>'
+    world_inspection_tag = '<script src="./scripts/nordic/world-inspection.js"></script>'
     game_runtime_marker = '<script>\n(function(){\n"use strict";\nwindow.addEventListener(\'error\''
     if html.count(game_runtime_marker) != 1:
         raise SystemExit("No se encontró exactamente el inicio del runtime principal para instalar la atmósfera.")
@@ -648,6 +644,12 @@ def main() -> None:
         html = html.replace(game_runtime_marker, atmosphere_tag + "\n" + game_runtime_marker, 1)
     if html.index(atmosphere_tag) > html.index(game_runtime_marker):
         raise SystemExit("El sistema atmosférico debe cargarse antes del runtime principal.")
+    if html.count(world_inspection_tag) > 1:
+        raise SystemExit("La etiqueta del inspector del mundo aparece duplicada.")
+    if world_inspection_tag not in html:
+        html = html.replace(game_runtime_marker, world_inspection_tag + "\n" + game_runtime_marker, 1)
+    if html.index(world_inspection_tag) > html.index(game_runtime_marker):
+        raise SystemExit("El inspector del mundo debe cargarse antes del runtime principal.")
 
     required = [
         "assets/vendor/babylon.js",
@@ -694,6 +696,30 @@ def main() -> None:
         raise SystemExit("Falta scripts/nordic/atmosphere-system.js.")
     atmosphere_target = DIST / "scripts" / "nordic" / "atmosphere-system.js"
     shutil.copy2(atmosphere_source, atmosphere_target)
+
+    world_inspection_source = ROOT / "scripts" / "nordic" / "world-inspection.js"
+    if not world_inspection_source.is_file():
+        raise SystemExit("Falta scripts/nordic/world-inspection.js.")
+    world_inspection_target = DIST / "scripts" / "nordic" / "world-inspection.js"
+    shutil.copy2(world_inspection_source, world_inspection_target)
+    world_inspection_check = subprocess.run(
+        [node, "--check", str(world_inspection_source)], capture_output=True, text=True,
+    )
+    if world_inspection_check.returncode != 0:
+        raise SystemExit("World inspection runtime JavaScript syntax validation failed:\n" + world_inspection_check.stderr)
+ 
+    # The civilian NPC specialist runtime is part of the existing game shell.
+    for script_name in ("npc-agent-core.js", "npc-agent-runtime.js"):
+        script_source = ROOT / "scripts" / script_name
+        if not script_source.is_file():
+            raise SystemExit(f"Falta el módulo de especialistas NPC: {script_name}")
+        npc_check = subprocess.run([node, "--check", str(script_source)], capture_output=True, text=True)
+        if npc_check.returncode != 0:
+            raise SystemExit(f"NPC specialist runtime syntax validation failed ({script_name}):\\n" + npc_check.stderr)
+        script_target = DIST / "scripts" / script_name
+        script_target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(script_source, script_target)
+        print(f"OK scripts/{script_name}: módulo NPC validado y empaquetado.")
 
     navigation_tag = '<script src="./scripts/nordic/navigation-suite.js" defer></script>'
     if navigation_tag not in html:
@@ -754,8 +780,10 @@ def main() -> None:
  const profileDiagnosticsEnabled=!!(testModeEnabled||new URLSearchParams(window.location.search).get('profile')==='1');
  let engineInstrumentation=null,sceneInstrumentation=null;
  const safePerfCounterValue=(counter,scale=1)=>{
-  const value=Number(counter&&counter.current);
-  return Number.isFinite(value)?Number((value/scale).toFixed(3)):null;
+  // A missing profiler counter is unavailable evidence, never a measured 0 ms.
+  if(!profileDiagnosticsEnabled||!counter||counter.current===null||counter.current===undefined)return null;
+  const value=Number(counter.current);
+  return Number.isFinite(value)&&value>=0?Number((value/scale).toFixed(3)):null;
  };
  if(profileDiagnosticsEnabled){
   try{
@@ -1144,6 +1172,28 @@ def main() -> None:
         raise SystemExit("No se pudo exponer la auditoría de continuidad entre mallas en el API de pruebas.")
     html = html.replace(test_api_marker, test_api_replacement, 1)
 
+    # Expose a read-only, on-demand snapshot from the same lexical scope as the Babylon scene.
+    # This function is called only when the Inspector user requests a world capture.
+    world_snapshot_marker = " window.copyGameHealthDebug=()=>{"
+    world_snapshot_code = r"""
+ window.getGameWorldInspectionSnapshot=(options={})=>{
+  if(!window.ELSNWorldInspection||typeof window.ELSNWorldInspection.capture!=='function'){
+   throw new Error('El módulo de inspección del mundo no está disponible.');
+  }
+  const health=typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug():null;
+  return window.ELSNWorldInspection.capture({
+   scene,land,player,villages,enemies,campGuards,companions,enemyShips,ambientFauna,ambientPeople,ambientBirds,
+   worldColliders,habitableStructureRegistry,lastHabitableStructureAudit,islandTerrainMeshes,
+   terrainHeightAt:(x,z)=>renderedTerrainSurfaceAt(x,z),
+   playerDiagnostics:health?.player||null,
+   runtime:{gameStarted:health?.gameStarted===true,worldUpdatePhase:health?.worldUpdatePhase??null,worldUpdateCount:health?.worldUpdateCount??null,fps:health?.runtime?.fps??null,graphicsProfile:health?.runtime?.graphicsProfile??null}
+  },options);
+ };
+"""
+    if html.count(world_snapshot_marker) != 1:
+        raise SystemExit("No se encontró exactamente una API de copia del diagnóstico para exponer la inspección del mundo.")
+    html = html.replace(world_snapshot_marker, world_snapshot_code + "\n" + world_snapshot_marker, 1)
+
     # Validate the transformed runtime too; the earlier syntax check runs before these patches.
     transformed_scripts = re.findall(r"<script\b[^>]*>(.*?)</script\s*>", html, flags=re.IGNORECASE | re.DOTALL)
     transformed_inline_scripts = [block for block in transformed_scripts if block.strip()]
@@ -1315,16 +1365,6 @@ def main() -> None:
         if not source.exists():
             raise SystemExit(f"Falta el archivo de despliegue: {name}")
         shutil.copy2(source, DIST / name)
-
-    # Include the civilian NPC specialist runtime in every published entry point.
-    for script_name in ("npc-agent-core.js", "npc-agent-runtime.js"):
-        source = ROOT / "scripts" / script_name
-        if not source.is_file():
-            raise SystemExit(f"Falta el módulo de especialistas NPC: {script_name}")
-        target = DIST / "scripts" / script_name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
-        print(f"OK scripts/{script_name}: módulo de especialistas NPC empaquetado.")
 
     # Every generated PWA entry must point at this exact code version.
     guest_start_urls = {

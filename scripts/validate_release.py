@@ -35,6 +35,7 @@ REQUIRED_FILES = (
     "scripts/nordic/coastal-interaction.js",
     "scripts/nordic/navigation-suite.js",
     "scripts/nordic/atmosphere-system.js",
+    "scripts/nordic/world-inspection.js",
     "scripts/npc-agent-core.js",
     "scripts/npc-agent-runtime.js",
     *MANIFESTS,
@@ -77,6 +78,11 @@ def main() -> None:
 
     index_html = read_text("index.html")
     atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
+    world_inspection_source = read_text("scripts/nordic/world-inspection.js")
+    if "root.ELSNWorldInspection" not in world_inspection_source or "capture(context" not in world_inspection_source:
+        raise SystemExit("World inspection runtime is missing its public read-only capture API.")
+    if "./scripts/nordic/world-inspection.js" not in index_html:
+        raise SystemExit("index.html is missing the world inspection runtime script.")
     atmosphere_markers = (
         "class AtmosphereSystem",
         "static computeSolarState(value, target)",
@@ -106,24 +112,36 @@ def main() -> None:
         fail("El sistema atmosférico debe cargarse antes del runtime principal.")
     if "window.__ELSN_ATMOSPHERE_CONTROLS" not in index_html or "atmosphereSystem.update(dt)" not in index_html:
         fail("El reloj atmosférico no está conectado al bucle de juego y a sus controles.")
+    npc_agent_core_source = read_text("scripts/npc-agent-core.js")
+    npc_agent_runtime_source = read_text("scripts/npc-agent-runtime.js")
     npc_agent_markers = (
         "window.__ELSN_NPC_AGENT_CONTEXT__",
         "getCivilianRoster:()=>ambientPeople.slice()",
         '<script src="./scripts/npc-agent-core.js" defer></script>',
         '<script src="./scripts/npc-agent-runtime.js" defer></script>',
     )
-    if any(marker not in index_html for marker in npc_agent_markers):
-        fail("Los especialistas NPC deben conectarse exclusivamente al roster civil y cargarse en todas las entradas.")
-    npc_core = read_text("scripts/npc-agent-core.js")
-    npc_runtime = read_text("scripts/npc-agent-runtime.js")
-    for marker in ("performance", "water-coast", "terrain-structures", "materials-lighting", "isEligibleCivilian", "normalizeRemoteEnvelope"):
-        if marker not in npc_core:
-            fail("Falta una función o especialidad del núcleo NPC: " + marker)
-    for marker in ("elsn-npc-shared-memory", "indexedDB", "BroadcastChannel", "__ELSN_NPC_AGENT_SYSTEM__", "credentials: \"include\"", "X-CSRF-Token"):
-        if marker not in npc_runtime:
-            fail("Falta una función de memoria compartida o puente seguro de agentes: " + marker)
-    if "humanEnemyParts" in npc_runtime or "loadHumanViking" in npc_runtime or "createViking" in npc_runtime:
-        fail("El runtime de especialistas no puede acceder ni modificar guerreros o al vikingo.")
+    missing_npc_agent_markers = [marker for marker in npc_agent_markers if marker not in index_html]
+    if missing_npc_agent_markers:
+        fail("Los especialistas NPC no están conectados al roster civil y al runtime del juego: " + ", ".join(missing_npc_agent_markers))
+    for required_npc_marker in (
+        "function isEligibleCivilian(npc)",
+        'parts.role !== "civilian"',
+        "npc.recruited === true",
+        "function normalizeBridgeEndpoint(value)",
+        'url.protocol !== "https:"',
+    ):
+        if required_npc_marker not in npc_agent_core_source:
+            fail("El núcleo de especialistas NPC no mantiene las restricciones de identidad y HTTPS: " + required_npc_marker)
+    for required_bridge_marker in (
+        'credentials: "include"',
+        '"X-CSRF-Token": state.bridge.csrfToken',
+        "new BroadcastChannel(",
+        "cursorAvailable: Boolean(state.bridge.cursor)",
+    ):
+        if required_bridge_marker not in npc_agent_runtime_source:
+            fail("El puente de especialistas NPC no conserva su contrato de sesión, CSRF y memoria: " + required_bridge_marker)
+    if "bridge: Object.assign({}, state.bridge" in npc_agent_runtime_source:
+        fail("La instantánea exportable no debe exponer el token CSRF privado del puente.")
     if 'id="game-build-version"' not in index_html or f'v{EXPECTED_VERSION}</span>' not in index_html:
         fail("La pantalla no muestra la versión exacta en una etiqueta discreta.")
     if 'font:600 7px/1.2 system-ui,sans-serif' not in index_html or 'color:rgba(226,196,135,.58)' not in index_html:

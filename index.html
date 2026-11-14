@@ -2121,7 +2121,7 @@ async function removeStrayDebugGeometry(targetScene){
  }
  function beginPerfGpuQuery(){
   if(perfGpuMode==='unavailable')initPerfGpuTimer();
-  if(!perfGpuExtension||perfGpuActiveQuery||perfGpuFrameCounter%15!==0)return null;
+  if(!perfGpuExtension||perfGpuActiveQuery||perfAuditFrameCounter%15!==0)return null;
   try{
    const gl=engine._gl,query=perfGpuMode==='webgl2'?gl.createQuery():perfGpuExtension.createQueryEXT();
    if(!query)return null;
@@ -10443,7 +10443,7 @@ function villageHostileDefenders(vl){
     let settled=false;const finish=()=>{if(settled)return;settled=true;const ready=all.filter(a=>a.readyState>=2).length,failed=all.filter(a=>!!a.error).length;resolve({total:all.length,ready,failed,pending:all.length-ready-failed});};
     const check=()=>{if(all.every(a=>a.readyState>=2||a.error))finish();};
     all.forEach(a=>{a.addEventListener('loadeddata',check,{once:true});a.addEventListener('canplaythrough',check,{once:true});a.addEventListener('error',check,{once:true});});
-    setTimeout(finish,Math.max(500,Math.min(9000,Number(maxWaitMs)||6000)));check();
+    setTimeout(finish,Math.max(500,Math.min(30000,Number(maxWaitMs)||6000)));check();
    });
   }
   function playFoley(kind,volume=.30){if(!mediaUnlocked||muted)return false;const groups=foleyPools[kind];if(!groups||!groups.length)return false;const variants=groups[foleyIndex++%groups.length];if(!variants||!variants.length)return false;const audio=variants.find(a=>a.paused||a.ended)||variants[foleyIndex%variants.length];try{audio.pause();audio.currentTime=0;audio.volume=Math.max(0,Math.min(.9,volume));audio.playbackRate=.985+Math.random()*.035;const result=audio.play();if(result&&typeof result.catch==='function')result.catch(()=>{});return true;}catch(_){return false;}}
@@ -10549,7 +10549,7 @@ function villageHostileDefenders(vl){
   }
   return {start,stop,setMuted};
  })();
- const startupAudioPreload=NorseAudio.preloadAll(6500);
+ const startupAudioPreload=NorseAudio.preloadAll(new URLSearchParams(window.location.search).get('test')==='1'?30000:6500);
  document.addEventListener('pointerdown',()=>{NorseAudio.unlock();if(!document.body.classList.contains('game-running'))MenuMusic.start();},{once:true,passive:true});
  document.addEventListener('keydown',()=>NorseAudio.unlock(),{once:true});
  window.addEventListener('pagehide',()=>{MenuMusic.stop();GameplayMusic.stop();},{once:true});

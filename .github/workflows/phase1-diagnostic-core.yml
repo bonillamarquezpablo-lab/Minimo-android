@@ -1,0 +1,58 @@
+name: Phase 1 diagnostic core
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/phase1-diagnostics-core.mjs'
+      - 'scripts/test_phase1_diagnostics_core.mjs'
+      - 'scripts/test_phase1_live_contract.mjs'
+      - 'scripts/test_phase1_build_diagnostics.mjs'
+      - 'scripts/build_site.py'
+      - 'PHASE1-DIAGNOSTIC-CONTRACT.md'
+      - 'inspector/phase1-live.js'
+      - 'inspector/index.html'
+      - 'inspector/style.css'
+      - '.github/workflows/phase1-diagnostic-core.yml'
+  push:
+    branches: ['phase1/diagnostic-foundation']
+    paths:
+      - 'scripts/phase1-diagnostics-core.mjs'
+      - 'scripts/test_phase1_diagnostics_core.mjs'
+      - 'scripts/test_phase1_live_contract.mjs'
+      - 'scripts/test_phase1_build_diagnostics.mjs'
+      - 'scripts/build_site.py'
+      - 'inspector/phase1-live.js'
+      - 'inspector/index.html'
+      - 'inspector/style.css'
+      - '.github/workflows/phase1-diagnostic-core.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase1-diagnostic-core-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Validate evidence and measurement contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check live inspector module syntax
+        run: node --check inspector/phase1-live.js
+      - name: Test diagnostic core
+        run: node scripts/test_phase1_diagnostics_core.mjs
+      - name: Test live Inspector contract
+        run: node scripts/test_phase1_live_contract.mjs
+      - name: Test build-time profiling guard
+        run: node scripts/test_phase1_build_diagnostics.mjs
+      - name: Validate build script syntax
+        run: python -m py_compile scripts/build_site.py

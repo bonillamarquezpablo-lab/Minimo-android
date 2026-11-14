@@ -55,6 +55,7 @@ jobs:
 
       - name: Check NPC specialist runtime syntax
         run: node --check scripts/npc-agent-core.js && node --check scripts/npc-agent-runtime.js
+
       - name: Test GLB background pipeline and fallbacks
         run: node scripts/test_glb_loading.cjs
 

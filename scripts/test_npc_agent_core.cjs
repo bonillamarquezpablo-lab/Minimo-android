@@ -1,6 +1,8 @@
 "use strict";
 const assert = require("node:assert/strict");
 const Core = require("./npc-agent-core.js");
+const fs = require("node:fs");
+const runtimeSource = fs.readFileSync("scripts/npc-agent-runtime.js", "utf8");
 
 assert.equal(Core.PROTOCOL_VERSION, 1);
 assert.equal(Core.ROLES.length, 4);
@@ -68,3 +70,12 @@ assert.equal(Core.normalizeTask({ action: "apply-patch", goal: "cambiar código"
 assert.equal(Core.normalizeTask({ action: "investigate", goal: "Analizar tirones", detail: "Sin cambiar el motor" }, agent).ok, true);
 
 console.log("NPC agent core contract: all checks passed.");
+
+assert.match(runtimeSource, /cursorAvailable: Boolean\(state\.bridge\.cursor\)/,
+  "The public bridge snapshot may expose cursor presence, not the opaque cursor value.");
+assert.doesNotMatch(runtimeSource, /bridge: Object\.assign\(\{\}, state\.bridge/,
+  "getSnapshot/exportSnapshot must not serialize the live bridge CSRF token.");
+assert.match(runtimeSource, /credentials: "include"/,
+  "The external bridge must continue using its authenticated session.");
+assert.match(runtimeSource, /"X-CSRF-Token": state\.bridge\.csrfToken/,
+  "Task submission must retain explicit CSRF protection.");

@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#080d16">
 <meta name="description" content="Panel visual de auditoría, geometría, rendimiento y comparativas de EL SIN NOMBRE.">
 <title>Inspector Center · EL SIN NOMBRE</title>
-<link rel="stylesheet" href="style.css?v=20261113.11">
+<link rel="stylesheet" href="style.css?v=phase1-live-3">
 </head>
 <body>
 <div class="app-shell">
@@ -18,7 +18,7 @@
       <span class="brand-name">EL SIN NOMBRE<span class="brand-sub">INSPECTOR CENTER · CONTROL DE CALIDAD</span></span>
     </a>
     <nav class="nav" aria-label="Navegación principal">
-      <a href="#control">01 · Operaciones</a><a href="#telemetria">02 · Rendimiento</a><a href="#radar">03 · Islas</a><a href="#comparativa">04 · Comparación</a>
+      <a href="#control">01 · Operaciones</a><a href="#patrulla-exploradores">02 · Patrulla</a><a href="#telemetria">03 · Rendimiento</a><a href="#radar">04 · Islas</a><a href="#comparativa">05 · Comparación</a>
     </nav>
     <div class="topbar-actions"><button class="guide-fab" id="guideFab" type="button" aria-label="Abrir guía y ayuda" title="Ayuda paso a paso">? <span>Ayuda</span></button><span class="connection" id="connection"><span class="dot"></span>Conectando</span></div>
   </header>
@@ -43,6 +43,25 @@
       <div><strong id="lastGoodTitle">Mostrando los últimos datos finalizados</strong><p id="lastGoodDescription">Se conservarán mientras llega la nueva inspección.</p></div>
       <span class="last-good-run" id="lastGoodRun">—</span>
     </div>
+
+    <section class="section" id="patrulla-exploradores">
+      <div class="section-heading">
+        <div><div class="section-kicker">NIVEL 1 · SENTIDOS Y PATRULLA</div><h2>Nivel 1 — Patrulla de Exploradores</h2><p>Eira, Sól, Ulf y Týr recorren puntos de observación de las 13 islas con la API de prueba de Babylon.js. La cámara se mueve solo en ?test=1; no se crean NPCs ni se altera una partida normal.</p></div>
+        <span class="section-index">LECTURAS REALES</span>
+      </div>
+      <article class="panel patrol-dashboard">
+        <div class="patrol-dashboard-head">
+          <div><div class="step-label">PATRULLA AUTOMÁTICA · CADA 6 HORAS</div><h3>Estado de los exploradores</h3><p id="patrolMeta">Esperando el primer informe de GitHub Actions.</p></div>
+          <div class="patrol-actions"><button class="small-button" id="patrolRefresh" type="button">Actualizar informe</button><button class="primary" id="patrolRunWorkflow" type="button">Abrir ejecución manual ↗</button></div>
+        </div>
+        <div class="patrol-status-row"><strong class="patrol-overall-state warning" id="patrolState">Sin informe disponible</strong><span id="patrolRenderer">Entorno pendiente</span><span id="patrolUpdated">—</span></div>
+        <div class="patrol-agent-grid" id="patrolAgents">
+          <div class="patrol-empty">La primera patrulla aparecerá aquí cuando termine una ejecución de GitHub Actions.</div>
+        </div>
+        <p class="patrol-caveat" id="patrolCaveat">Los sensores no disponibles permanecen como pendientes de medir. La patrulla no simula locomoción ni inventa lecturas.</p>
+        <details class="technical"><summary>Ver informe JSON completo</summary><pre id="patrolReportJson">Sin informe todavía.</pre></details>
+      </article>
+    </section>
 
     <section class="section" id="control">
       <div class="section-heading">
@@ -102,6 +121,98 @@
           <div class="footer-meta"><span id="updatedAt">Actualizando automáticamente</span><button class="small-button" id="refreshNow" type="button">Actualizar ahora</button></div>
         </article>
       </div>
+    </section>
+
+    <section class="section" id="diagnostico-en-vivo">
+      <div class="section-heading">
+        <div><div class="section-kicker">FASE 1 · MEDICIÓN DIRECTA</div><h2>Diagnóstico en vivo</h2><p>Abre el juego aquí y juega con normalidad. La referencia es 120 FPS (8,33 ms por fotograma), no una promesa de que el motor ya los alcance. La medición normal no activa el perfilador GPU; puedes solicitarlo aparte para una inspección más profunda.</p></div>
+        <span class="section-index">SESIÓN LOCAL</span>
+      </div>
+      <article class="chart-card live-diagnostic-card">
+        <div class="live-diagnostic-actions">
+          <button class="primary" id="liveGameStart" type="button">Abrir juego para medir</button>
+          <button class="small-button" id="liveGameSample" type="button" disabled>Tomar muestra</button>
+          <button class="small-button" id="liveGameStop" type="button" disabled>Detener medición</button>
+          <label class="live-device-confirm"><input id="livePhysicalDevice" type="checkbox"> Declaro que esta sesión se ejecuta en mi Galaxy S26 Ultra</label><label class="live-device-confirm"><input id="liveEnableGpuProfiler" type="checkbox"> Activar perfilador GPU (puede añadir carga)</label><span id="liveDiagnosticStatus" role="status" aria-live="polite">Esperando que abras el juego.</span>
+        </div>
+        <div class="live-game-frame-wrap" id="liveGameFrameWrap" hidden>
+          <iframe id="liveGameFrame" title="EL SIN NOMBRE · sesión de medición" loading="lazy" allow="fullscreen; gamepad" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        </div>
+        <div class="live-diagnostic-grid">
+          <div><span>FPS del juego</span><strong id="liveFps">—</strong></div>
+          <div><span>Frame time p50</span><strong id="liveP50">—</strong></div>
+          <div><span>Frame time p95</span><strong id="liveP95">—</strong></div>
+          <div><span>Frame time p99</span><strong id="liveP99">—</strong></div>
+          <div><span>CPU · actualización del mundo</span><strong id="liveWorldCpu">—</strong></div>
+          <div><span>CPU · envío de render</span><strong id="liveRenderCpu">—</strong></div>
+          <div><span>GPU · tiempo de fotograma</span><strong id="liveGpu">—</strong></div>
+          <div><span>Babylon · tiempo de render</span><strong id="liveSceneRender">—</strong></div>
+          <div><span>Draw calls</span><strong id="liveDrawCalls">—</strong></div>
+          <div><span>Mallas activas</span><strong id="liveActiveMeshes">—</strong></div>
+          <div><span>Resolución interna</span><strong id="liveRenderSize">—</strong></div>
+          <div><span>Heap JavaScript</span><strong id="liveHeap">—</strong></div>
+        </div>
+        <section class="live-finding-panel" aria-live="polite" aria-label="Resultado del diagnóstico">
+          <div class="live-finding-head">
+            <div><span>Resultado de la sesión</span><strong id="liveFindingStatus">Sin muestras suficientes</strong></div>
+            <div><span>Gravedad</span><strong id="liveFindingSeverity">Sin determinar</strong></div>
+            <div><span>Prioridad</span><strong id="liveFindingPriority">Sin asignar</strong></div>
+          </div>
+          <p id="liveFindingInterpretation">Inicia una partida para recoger intervalos válidos.</p>
+          <div class="live-finding-columns">
+            <div><strong>Posibles causas (no confirmadas)</strong><ul id="liveFindingCauses"><li>Aún no hay evidencias suficientes.</li></ul></div>
+            <div><strong>Siguientes comprobaciones</strong><ul id="liveFindingNextSteps"><li>Repetir la medición en condiciones comparables.</li></ul></div>
+          </div>
+        </section>
+        <div class="live-diagnostic-note" id="liveDiagnosticSource">Los datos aparecerán cuando el juego esté iniciado.</div>
+        <div class="live-diagnostic-actions"><button class="small-button" id="liveDownloadReport" type="button">Descargar informe JSON</button></div>
+        <p class="live-diagnostic-note">El navegador no ofrece temperatura del SoC/GPU, uso total de CPU, RAM total ni VRAM. El indicador de dispositivo es una declaración manual, no una comprobación técnica. Los resultados de CI/SwiftShader no representan la GPU real del teléfono.</p>
+        <details class="technical"><summary>Ver evidencia de esta sesión</summary><pre id="liveDiagnosticJson">Sin muestras todavía.</pre></details>
+      </article>
+    </section>
+
+
+    <section class="section" id="mundo">
+      <div class="section-heading">
+        <div><div class="section-kicker">03 · BABYLON.JS</div><h2>Inspección del mundo 3D</h2><p>Captura puntual y de solo lectura de la escena real: geometría, islas, estructuras, NPCs, animaciones, colisiones y texturas. No se ejecuta continuamente y no modifica el juego.</p></div>
+        <span class="section-index">ESTADO DEL MUNDO</span>
+      </div>
+      <article class="chart-card live-diagnostic-card">
+        <div class="live-diagnostic-actions">
+          <button class="primary" id="worldInspectionCapture" type="button" disabled>Capturar estado del mundo</button>
+          <span id="worldInspectionStatus" role="status" aria-live="polite">Abre el juego en el panel de diagnóstico para habilitar la captura.</span>
+        </div>
+        <div class="live-diagnostic-grid">
+          <div><span>Islas registradas</span><strong id="worldIslandsCount">—</strong></div>
+          <div><span>Mallas en escena</span><strong id="worldMeshCount">—</strong></div>
+          <div><span>Nodos transformables</span><strong id="worldTransformCount">—</strong></div>
+          <div><span>Estructuras auditadas</span><strong id="worldStructureCount">—</strong></div>
+          <div><span>Estructuras inseguras</span><strong id="worldUnsafeCount">—</strong></div>
+          <div><span>Inseguras aún visibles</span><strong id="worldVisibleUnsafeCount">—</strong></div>
+          <div><span>NPCs / actores</span><strong id="worldActorCount">—</strong></div>
+          <div><span>Tripulación enemiga</span><strong id="worldShipCrewCount">—</strong></div>
+          <div><span>Texturas pendientes</span><strong id="worldPendingTextures">—</strong></div>
+          <div><span>Grupos de animación</span><strong id="worldAnimationGroups">—</strong></div>
+          <div><span>Mallas con colisiones</span><strong id="worldCollisionCount">—</strong></div>
+          <div><span>Transformaciones inválidas</span><strong id="worldInvalidTransformCount">—</strong></div>
+          <div><span>FPS al capturar</span><strong id="worldFps">—</strong></div>
+          <div><span>Colisionadores registrados</span><strong id="worldColliderCount">—</strong></div>
+          <div><span>Rango de alturas del terreno</span><strong id="worldTerrainRange">—</strong></div>
+        </div>
+        <section class="live-finding-panel" aria-live="polite" aria-label="Hallazgos de inspección del mundo">
+          <div class="live-finding-head">
+            <div><span>Resultado de la inspección</span><strong id="worldInspectionFindingStatus">Sin captura</strong></div>
+            <div><span>Prioridad máxima</span><strong id="worldInspectionFindingSeverity">—</strong></div>
+          </div>
+          <p id="worldInspectionFindingSummary">La captura se realiza únicamente cuando la solicitas.</p>
+          <div class="live-finding-columns">
+            <div><strong>Hallazgos y evidencias</strong><ul id="worldInspectionFindings"><li>Sin hallazgos todavía.</li></ul></div>
+            <div><strong>Calidad de datos</strong><ul id="worldInspectionQuality"><li>Esperando la primera captura.</li></ul></div>
+          </div>
+        </section>
+        <div class="live-diagnostic-actions"><button class="small-button" id="worldInspectionDownload" type="button" disabled>Descargar informe del mundo</button></div>
+        <details class="technical"><summary>Ver inventario completo de Babylon.js</summary><pre id="worldInspectionJson">Sin captura todavía.</pre></details>
+      </article>
     </section>
 
     <section class="section" id="telemetria">
@@ -217,6 +328,7 @@
     <button class="guide-finish" id="guideFinish" type="button">Terminar guía</button>
   </aside>
 </div>
-<script src="app.js?v=20261113.11" defer></script>
+<script src="app.js?v=20261113.11" defer></script>\n<script type="module" src="phase1-live.js?v=3"></script>
+<script src="explorer-patrol.js?v=1" defer></script>
 </body>
 </html>

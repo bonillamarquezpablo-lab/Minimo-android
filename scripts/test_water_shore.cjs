@@ -257,6 +257,7 @@ for (const marker of [
  "addScenario('C · COSTA','costa')",
  'EXPORTAR INFORME JSON',
  'beginPerfGpuQuery()',
+ 'perfAuditFrameCounter%15!==0',
  'endPerfGpuQuery(perfGpuQuery)',
  'recordPerformanceAuditFrame(rawFrameMs)',
  'EXT_disjoint_timer_query_webgl2',
@@ -267,5 +268,6 @@ for (const marker of [
  'drawCalls:{source:',
  'activeTriangles:Math.round'
 ]) assert.ok(html.includes(marker), 'Missing Phase 1 performance audit contract: '+marker);
+assert.ok(!html.includes('perfGpuFrameCounter'),'GPU timer sampling must use the initialized performance audit frame counter.');
 assert.match(html,/max-height:min\(34dvh,360px\)/,'Performance controls must stay inside the existing compact diagnostic drawer.');
 assert.match(html,/No modifica calidad ni sistemas del juego/,'Phase 1 instrumentation must remain observational.');
