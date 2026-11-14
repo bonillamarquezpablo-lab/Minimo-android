@@ -126,6 +126,9 @@ def main() -> None:
     for marker in ("elsn-game-session-reports", "MAX_SAMPLES_PER_SESSION = 360", "MAX_STORED_SESSIONS = 20", 'classList.contains("game-running")', "window.top !== window.self"):
         if marker not in session_recorder_source:
             fail("El registrador de sesiones no conserva su contrato de almacenamiento acotado y modo juego: " + marker)
+    for marker in ("function queueIdleSample()", "requestIdleCallback", "new window.PerformanceObserver", '"longtask"', "drawCallsPerSecond", "diagnosticsReadMs"):
+        if marker not in session_recorder_source:
+            fail("El registrador debe medir y diferir las tareas de telemetría: " + marker)
     npc_agent_core_source = read_text("scripts/npc-agent-core.js")
     npc_agent_runtime_source = read_text("scripts/npc-agent-runtime.js")
     dialogue_core_source = read_text("scripts/npc-dialogue-core.js")
@@ -145,6 +148,8 @@ def main() -> None:
     for marker in ("BABYLON.Vector3.Project", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
+    if "computeWorldMatrix(true)" in dialogue_runtime_source or "RANGE_SQUARED" not in dialogue_runtime_source:
+        fail("Los diálogos no deben forzar matrices de cada NPC ni recorrer proximidad con cálculos redundantes.")
     if any(marker in dialogue_runtime_source for marker in ("new BABYLON.Mesh", "MeshBuilder", "requestAnimationFrame")):
         fail("El runtime de diálogos no debe crear meshes 3D ni añadir trabajo permanente por fotograma.")
     if ".elsn-npc-bubble-message" not in dialogue_style_source or "pointer-events:none" not in dialogue_style_source:
@@ -341,18 +346,10 @@ def main() -> None:
     graphics_quality_markers = (
         "highTierGpuMatch=",
         "highHeadroomQualityMobile=",
-        "qualityDprFloor=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.50:1.0):1.15)",
-        "qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.45:1.70):1.85)",
         "qualityDprCurrent=qualityDpr",
-        "qualityDprStableSamples>=4",
-        "const step=fps<severeFps?.12:.06",
-        "qualityDprCurrent+.04",
-        "qualityDprSlowSamples>=1",
-        "severeFps=targetFrameRate>=87?54:38",
-        "moderateFps=targetFrameRate>=87?72:50",
-        "stableFps=targetFrameRate>=87?86:58",
+        "qualityScaleLockedForSession:true",
         "let targetFrameRate=60,observedFpsCeiling=60",
-        "engine.setHardwareScalingLevel(1/qualityDprCurrent)",
+        "FPS bajo con resolución de Calidad protegida",
         "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))",
         "renderPipeline.sharpen.edgeAmount=.34",
         "style='grain',size=highHeadroomQualityMobile?1024:512",
@@ -362,7 +359,9 @@ def main() -> None:
     )
     missing_graphics_quality = [marker for marker in graphics_quality_markers if marker not in index_html]
     if missing_graphics_quality:
-        fail("El perfil nativo de gama alta, la resolución adaptativa o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
+        fail("El perfil nativo de gama alta, la resolución protegida o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
+    if "qualityDprSlowSamples" in index_html or "qualityDprStableSamples" in index_html or "qualityDprFloor" in index_html or "qualityDprCeiling" in index_html:
+        fail("El perfil Calidad no debe reducir ni modificar el DPR durante una partida.")
 
     if "const TERRAIN_HASH_CACHE_LIMIT=65536;" not in index_html or "terrainHashCacheSlots" not in index_html or "terrainHashCacheEntries:terrainHashCache.size" not in index_html:
         fail("La caché determinista de ruido del terreno debe estar acotada y diagnosticada.")
