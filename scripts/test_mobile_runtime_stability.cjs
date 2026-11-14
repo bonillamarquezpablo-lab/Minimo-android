@@ -8,6 +8,11 @@ const source = fs.readFileSync('index.html', 'utf8');
 
 for (const marker of [
   'const isLiveDynamicTexture=texture=>',
+  'const dynamicTexturePrototype=B.DynamicTexture&&B.DynamicTexture.prototype;',
+  '__elsnSafeOwnerEngine',
+  '__elsnSafeUpdate',
+  '__ELSN_DYNAMIC_TEXTURE_ENGINE_RECOVERIES',
+  'textureEngine===engine',
   'updateDynamicTextureSafely(footprintTexture,footprintAtlas.textureData())',
   'updateDynamicTextureSafely(layer.coastalStateTexture,state.rgba)',
   'updateDynamicTextureSafely(skyTexture,false)',
