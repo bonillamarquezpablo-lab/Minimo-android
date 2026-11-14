@@ -44,9 +44,13 @@ const riggedModelDownloads = {
 for (const [model, url] of Object.entries(riggedModelDownloads)) {
   assert.ok(buildSite.includes(url), `The ${model} rigged model must use Grab3D's canonical model-slug download path.`);
 }
-assert.ok(!/https:\/\/grab3d\\.com\/dl\/(?:viking|armored-knight|man-base-character)-rigged\//.test(buildSite),
-  "Rig suffixes belong to exported filenames, not Grab3D model directory slugs.");
-
+for (const staleUrl of [
+  "https://grab3d.com/dl/viking-rigged/viking-rigged.glb",
+  "https://grab3d.com/dl/armored-knight-rigged/armored-knight-rigged.glb",
+  "https://grab3d.com/dl/man-base-character-rigged/man-base-character-rigged.glb",
+]) {
+  assert.ok(!buildSite.includes(staleUrl), "The rigged export suffix must not be used as the Grab3D model directory slug.");
+}
 
 assert.ok(buildSite.includes("let targetFrameRate=60,observedFpsCeiling=60"),"The S26 profile must adapt to 60 or 90 FPS according to the observed browser refresh ceiling.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
