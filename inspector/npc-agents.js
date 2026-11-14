@@ -81,7 +81,10 @@
           gameBuild: report.gameBuild,
           sampleCount: report.sampleCount,
           latestFps: latest && latest.fps,
-          latestP95Ms: latest && latest.frameTiming && latest.frameTiming.p95Ms
+          latestP95Ms: latest && latest.frameTiming && latest.frameTiming.p95Ms,
+          summary: report.summary || null,
+          terrainObjectCandidates: report.finalWorldInspection?.terrainObjects?.items?.slice(0, 40) || [],
+          terrainObjectAuditComplete: report.finalWorldInspection?.terrainObjects?.complete === true
         }
       });
       ids.add(id);
@@ -116,9 +119,36 @@
         (report.status === "active" ? "sesión abierta" : report.status === "interrupted" ? "sesión interrumpida" : "sesión finalizada") +
         " · " + text(report.sessionId).slice(0, 12));
       const last = report.samples && report.samples.length ? report.samples[report.samples.length - 1] : null;
-      const metrics = make("p", "", "Último FPS: " + fmt(last && last.fps, 0) +
-        " · p95: " + fmt(last && last.frameTiming && last.frameTiming.p95Ms, 2) + " ms");
-      item.append(heading, meta, metrics);
+      const summary = report.summary || {};
+      const fps = summary.fps || {};
+      const frame = summary.frameTimeMs || {};
+      const world = report.finalWorldInspection || {};
+      const terrain = world.terrainObjects || {};
+      const metrics = make("p", "", "FPS medio: " + fmt(fps.average, 1) +
+        " · mínimo: " + fmt(fps.minimum, 0) +
+        " · p95 mediano: " + fmt(frame.p95Median, 2) + " ms" +
+        " · último FPS: " + fmt(last && last.fps, 0));
+      const diagnosis = make("p", "live-diagnostic-note",
+        "Cuello de botella orientativo: " + text(summary.probableBottleneck || "sin atribución") +
+        " · CPU mundo: " + fmt(summary.cpu && summary.cpu.worldUpdateMedianMs, 2) + " ms" +
+        " · CPU render: " + fmt(summary.cpu && summary.cpu.renderPreparationMedianMs, 2) + " ms" +
+        " · GPU: " + fmt(summary.gpu && summary.gpu.frameMedianMs, 2) + " ms");
+      const terrainLine = make("p", "live-diagnostic-note",
+        "Objetos bajo terreno: " + fmt(terrain.candidateCount, 0) +
+        " · completamente enterrados: " + fmt(terrain.fullyBuriedCount, 0) +
+        " · con intersección: " + fmt(terrain.penetratingCount, 0) +
+        " · auditoría completa: " + (terrain.complete === true ? "sí" : terrain.complete === false ? "no" : "sin captura"));
+      const details = make("details", "technical");
+      const summaryLabel = make("summary", "", "Ver informe técnico y coordenadas");
+      const evidence = {
+        sessionId: report.sessionId, startedAt: report.startedAt, finishedAt: report.finishedAt,
+        gameBuild: report.gameBuild, status: report.status, summary,
+        terrainObjects: (terrain.items || []).slice(0, 40),
+        worldInspectionError: world.error || null
+      };
+      const pre = make("pre", "npc-agent-evidence", JSON.stringify(evidence, null, 2));
+      details.append(summaryLabel, pre);
+      item.append(heading, meta, metrics, diagnosis, terrainLine, details);
       host.appendChild(item);
     }
     if (!reports.length) host.appendChild(make("p", "live-diagnostic-note", "Todavía no hay informes de partidas guardados en este navegador."));
