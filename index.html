@@ -2121,7 +2121,7 @@ async function removeStrayDebugGeometry(targetScene){
  }
  function beginPerfGpuQuery(){
   if(perfGpuMode==='unavailable')initPerfGpuTimer();
-  if(!perfGpuExtension||perfGpuActiveQuery||perfGpuFrameCounter%15!==0)return null;
+  if(!perfGpuExtension||perfGpuActiveQuery||perfAuditFrameCounter%15!==0)return null;
   try{
    const gl=engine._gl,query=perfGpuMode==='webgl2'?gl.createQuery():perfGpuExtension.createQueryEXT();
    if(!query)return null;
