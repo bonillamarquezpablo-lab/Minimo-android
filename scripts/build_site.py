@@ -31,16 +31,16 @@ DOWNLOADS = {
     "assets/vendor/meshopt_decoder.js": (
         "https://cdn.babylonjs.com/meshopt_decoder.js", 2_000, "script"
     ),
-    # Grab3D download URLs use the canonical model slug as the directory and
-    # keep the "-rigged" suffix only in the exported filename.
+    # Grab3D publishes each rigged variant in its own `<slug>-rigged` package,
+    # separate from the static model package, as declared by its rigged.files API.
     "assets/models/viking-rigged.glb": (
-        "https://grab3d.com/dl/viking/viking-rigged.glb", 1_000_000, "glb"
+        "https://grab3d.com/dl/viking-rigged/viking-rigged.glb", 1_000_000, "glb"
     ),
     "assets/models/armored-knight-rigged.glb": (
-        "https://grab3d.com/dl/armored-knight/armored-knight-rigged.glb", 1_000_000, "glb"
+        "https://grab3d.com/dl/armored-knight-rigged/armored-knight-rigged.glb", 1_000_000, "glb"
     ),
     "assets/models/man-base-character-rigged.glb": (
-        "https://grab3d.com/dl/man-base-character/man-base-character-rigged.glb", 1_000_000, "glb"
+        "https://grab3d.com/dl/man-base-character-rigged/man-base-character-rigged.glb", 1_000_000, "glb"
     ),
     "assets/downloads/Ground060_2K-JPG.zip": (
         "https://ambientcg.com/get?file=Ground060_2K-JPG.zip", 1_000_000, "zip"
@@ -1501,11 +1501,17 @@ def main() -> None:
     })
     print(f"OK assets/environmentSpecular.env: {len(environment_bytes):,} bytes (entorno nórdico local)")
 
+    # Fetch unrelated assets concurrently, but keep large Grab3D rigged packages
+    # on a single connection. Parallel 11–15 MB character downloads to the same
+    # host previously timed out together on the GitHub runner.
+    grab3d_downloads = {}
     with ThreadPoolExecutor(max_workers=6) as pool:
-        jobs = {
-            pool.submit(fetch, url, DIST / relative, minimum, kind): relative
-            for relative, (url, minimum, kind) in DOWNLOADS.items()
-        }
+        jobs = {}
+        for relative, (url, minimum, kind) in DOWNLOADS.items():
+            if url.startswith("https://grab3d.com/"):
+                grab3d_downloads[relative] = (url, minimum, kind)
+                continue
+            jobs[pool.submit(fetch, url, DIST / relative, minimum, kind)] = relative
         for job in as_completed(jobs):
             relative = jobs[job]
             try:
@@ -1515,6 +1521,17 @@ def main() -> None:
             except Exception as exc:
                 failures.append((relative, str(exc)))
                 print(f"ERROR {relative}: {exc}", file=sys.stderr)
+
+    if grab3d_downloads:
+        print("Descargando modelos rigged de Grab3D secuencialmente para evitar timeouts por concurrencia.")
+    for relative, (url, minimum, kind) in grab3d_downloads.items():
+        try:
+            result = fetch(url, DIST / relative, minimum, kind)
+            results.append(result)
+            print(f"OK {relative}: {result['bytes']:,} bytes")
+        except Exception as exc:
+            failures.append((relative, str(exc)))
+            print(f"ERROR {relative}: {exc}", file=sys.stderr)
 
     if failures:
         print("\nNo se publica una versión incompleta:", file=sys.stderr)
