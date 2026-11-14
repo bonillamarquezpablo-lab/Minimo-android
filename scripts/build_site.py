@@ -771,7 +771,7 @@ def main() -> None:
 
 
     # Read-only player dialogue bridge: reuses existing villagers and creates no actors.
-    dialogue_bridge_marker = "})();\\n</script>"
+    dialogue_bridge_marker = "})();" + chr(10) + "</script>"
     dialogue_bridge_code = r"""
  // Player-facing dialogue bridge. Inspector specialist identities remain in their own runtime.
  window.__ELSN_GAME_DIALOGUE_BRIDGE__=Object.freeze({
@@ -789,13 +789,13 @@ def main() -> None:
 """
     if html.count(dialogue_bridge_marker) != 1:
         raise SystemExit("No se encontró exactamente una salida del runtime para conectar los diálogos NPC.")
-    html = html.replace(dialogue_bridge_marker, dialogue_bridge_code + "\\n})();\\n</script>", 1)
+    html = html.replace(dialogue_bridge_marker, dialogue_bridge_code + chr(10) + "})();" + chr(10) + "</script>", 1)
 
     dialogue_style_tag = '<link rel="stylesheet" href="./scripts/npc-dialogue.css">'
     if dialogue_style_tag not in html:
         if "</head>" not in html:
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
-        html = html.replace("</head>", dialogue_style_tag + "\\n</head>", 1)
+        html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
@@ -805,7 +805,7 @@ def main() -> None:
         if dialogue_tag not in html:
             if "</body>" not in html:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
-            html = html.replace("</body>", dialogue_tag + "\\n</body>", 1)
+            html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
     # Release candidate 0.6.291: restore flagship render clarity while preserving the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
