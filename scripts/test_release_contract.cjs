@@ -37,21 +37,17 @@ assert.match(buildSite,/BABYLON_VERSION = "9\.35\.0"/,"The packaged engine must 
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/babylon.js"'),"The engine URL must use the pinned Babylon version.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/loaders/babylonjs.loaders.min.js"'),"The glTF loader must match the engine version.");
 const riggedModelDownloads = {
-  viking: "https://grab3d.com/dl/viking/viking-rigged.glb",
-  armoredKnight: "https://grab3d.com/dl/armored-knight/armored-knight-rigged.glb",
-  manBase: "https://grab3d.com/dl/man-base-character/man-base-character-rigged.glb",
+  viking: "https://grab3d.com/dl/viking-rigged/viking-rigged.glb",
+  armoredKnight: "https://grab3d.com/dl/armored-knight-rigged/armored-knight-rigged.glb",
+  manBase: "https://grab3d.com/dl/man-base-character-rigged/man-base-character-rigged.glb",
 };
 for (const [model, url] of Object.entries(riggedModelDownloads)) {
-  assert.ok(buildSite.includes(url), `The ${model} rigged model must use Grab3D's canonical model-slug download path.`);
+  assert.ok(buildSite.includes(url), `The ${model} model must use the rigged-package URL returned by Grab3D.`);
 }
-for (const staleUrl of [
-  "https://grab3d.com/dl/viking-rigged/viking-rigged.glb",
-  "https://grab3d.com/dl/armored-knight-rigged/armored-knight-rigged.glb",
-  "https://grab3d.com/dl/man-base-character-rigged/man-base-character-rigged.glb",
-]) {
-  assert.ok(!buildSite.includes(staleUrl), "The rigged export suffix must not be used as the Grab3D model directory slug.");
-}
-
+assert.ok(buildSite.includes('if url.startswith("https://grab3d.com/")'),
+  "Large rigged packages from Grab3D must be removed from the concurrent download pool.");
+assert.ok(buildSite.includes("for relative, (url, minimum, kind) in grab3d_downloads.items():"),
+  "Grab3D model downloads must be serialized while preserving all validation.");
 assert.ok(buildSite.includes("let targetFrameRate=60,observedFpsCeiling=60"),"The S26 profile must adapt to 60 or 90 FPS according to the observed browser refresh ceiling.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
 assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.includes("thinInstanceBatch") && buildSite.includes("list.length<180"),"Water reflections must filter non-essential foliage, instance batches and limit pass submissions.");
