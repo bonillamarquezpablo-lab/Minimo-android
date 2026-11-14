@@ -126,7 +126,7 @@ def main() -> None:
     for marker in ("elsn-game-session-reports", "MAX_SAMPLES_PER_SESSION = 360", "MAX_STORED_SESSIONS = 20", 'classList.contains("game-running")', "window.top !== window.self"):
         if marker not in session_recorder_source:
             fail("El registrador de sesiones no conserva su contrato de almacenamiento acotado y modo juego: " + marker)
-    for marker in ("function queueIdleSample()", "requestIdleCallback", "new window.PerformanceObserver", '"longtask"', "drawCallsPerSecond", "diagnosticsReadMs"):
+    for marker in ("function queueIdleSample()", "requestIdleCallback", "new window.PerformanceObserver", '"longtask"', "drawCallsObservedDelta", "semantics-unverified", "longTaskObserverSupported", "diagnosticsReadMs"):
         if marker not in session_recorder_source:
             fail("El registrador debe medir y diferir las tareas de telemetría: " + marker)
     npc_agent_core_source = read_text("scripts/npc-agent-core.js")
