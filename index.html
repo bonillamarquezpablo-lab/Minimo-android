@@ -5752,8 +5752,6 @@ void main(void){
   const collar=rig.spine
    ?box('PeasantTunicCollar_'+index,rig.spine,[0,.225*inv,.018*inv],[.25*inv,.055*inv,.13*inv],trim)
    :box('PeasantTunicCollar_'+index,modelRoot,[0,1.38*inv,.025*inv],[.25*inv,.055*inv,.13*inv],trim);
-  box('CivilianWorkApron_'+index,modelRoot,[0,.79*inv,.205*inv],[.34*inv,.43*inv,.035*inv],trim,[0,0,job%2?.035:-.025]);
-  box('CivilianApronHem_'+index,modelRoot,[0,.565*inv,.222*inv],[.34*inv,.045*inv,.030*inv],M.woodLight);
   box('CivilianWoolBelt_'+index,modelRoot,[0,1.00*inv,.185*inv],[.56*inv,.075*inv,.045*inv],M.leather);
   box('CivilianBeltPouch_'+index,modelRoot,[.255*inv,.94*inv,.205*inv],[.12*inv,.14*inv,.09*inv],trim,[0,0,-.10]);
   // No capa larga ni panel rígido detrás: evita la silueta de carcasa/cilindro.
@@ -8760,6 +8758,15 @@ function createRealWeapon(type='axe'){
    camera.position.x+=Math.sin(elapsed*47)*shake;
    camera.position.y+=Math.cos(elapsed*61)*shake*.35;
   }
+  // Ground guard: a manually lowered camera may never cross the rendered terrain.
+  // Sample only near the ground so the normal cinematic camera adds no per-frame cost.
+  if(!onShip&&camera.position.y<target.y+2.15){
+   const cameraGroundY=renderedTerrainSurfaceAt(camera.position.x,camera.position.z);
+   if(Number.isFinite(cameraGroundY)){
+    const minimumCameraY=cameraGroundY+1.70;
+    if(camera.position.y<minimumCameraY)camera.position.y=minimumCameraY;
+   }
+  }
   camera.setTarget(target);
   camera.fov=portrait?.84:.78;
   skyDome.position.copyFrom(camera.position);
@@ -9652,8 +9659,6 @@ function createRealWeapon(type='axe'){
   box(name+'_WoolBelt',body,[0,.94,.275],[.72,.105,.075],M.leather);
   box(name+'_BeltBuckle',body,[.045,.94,.32],[.12,.13,.035],M.brass);
   box(name+'_BeltPouch',body,[.34,.86,.27],[.20,.23,.15],trim,[0,0,-.10]);
-  box(name+'_ApronFront',body,[0,.69,.292],[.43,.54,.045],job===1?M.woodDark:trim,[0,0,job%2?.035:-.025]);
-  box(name+'_ApronHem',body,[0,.415,.315],[.46,.065,.045],M.woodLight);
   for(let k=0;k<5;k++)box(name+'_TunicStitch_'+k,body,[-.24+k*.12,.52,.31],[.025,.018,.012],M.ochreCloth);
   const headGroup=newGroup(name+'_HeadAssembly',body);headGroup.position=v(0,1.80,.025);
   sphere(name+'_Face',headGroup,[0,0,.005],[.205,.265,.20],skin,20);
@@ -9748,9 +9753,7 @@ function createRealWeapon(type='axe'){
     if(/AnatomicalTunic|tunicHem|splitSkirt|furMantle/i.test(mesh.name))mesh.material=civilianCloth;
     if(/beltBuckle|bootStrap|bootCuff/i.test(mesh.name))mesh.material=civilianTrim;
    });
-   // Delantal de trabajo y pañuelo: silueta de vecino, no de combatiente.
-   box('CivilianWorkApron_'+vi+'_'+n,parts.body,[0,.76,.405],[.48,.66,.045],civilianTrim,[0,0,(n===0?-.025:.025)]);
-   box('CivilianApronHem_'+vi+'_'+n,parts.body,[0,.43,.435],[.50,.07,.05],M.woodLight);
+   // Pañuelo ligero; sin placas ni delantales rígidos sobre el torso.
    box('CivilianScarf_'+vi+'_'+n,parts.body,[0,1.78,.19],[.56,.18,.12],civilianCloth,[.12,0,0]);
    const startX=vl.x+(n===0?-3.6:3.9),startZ=vl.z+(n===0?4.3:-3.2);
    parts.root.position=v(startX,terrainSurfaceAt(startX,startZ)+.08,startZ);parts.root.scaling=v(.82,.82,.82);attachContactShadow(parts.root,'VillagerShadow_'+vi+'_'+n,.64);addModelShadow(parts.root,3);
@@ -11755,6 +11758,8 @@ function updateHUD(){
  }
  function drawMap(){
   if(!map.classList.contains('expanded')){drawLocalMap();return;}
+  // La carta ampliada comparte el rumbo suavizado del minimapa local.
+  const heading=smoothLocalMapHeading(onShip?ship.rotation.y:yaw);
   // Carta nórdica 2x: el índice lateral evita amontonar trece nombres en la costa.
   mg.setTransform(1,0,0,1,0,0);mg.clearRect(0,0,map.width,map.height);mg.setTransform(2,0,0,2,0,0);
   const w=480,h=344,plot={x:12,y:40,w:342,h:264},side={x:362,y:40,w:106,h:264};
