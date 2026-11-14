@@ -10,7 +10,7 @@
   const SAMPLE_INTERVAL_MS = 10000;
   const MAX_SAMPLES_PER_SESSION = 360;
   const MAX_STORED_SESSIONS = 20;
-  const state = { db: null, opening: null, session: null, sampleTimer: null, monitorTimer: null, starting: false, saving: false };
+  const state = { db: null, opening: null, session: null, sampleTimer: null, monitorTimer: null, starting: false, saving: false, sampleQueued: false, sampleHandle: null, sampleHandleKind: null, longTaskObserver: null };
 
   function number(value) {
     if (value === null || value === undefined || typeof value === "boolean" || value === "") return null;
@@ -52,6 +52,58 @@
     });
   }
 
+  function recordDeviceEvent(type) {
+    if (!state.session) return;
+    if (!Array.isArray(state.session.deviceEvents)) state.session.deviceEvents = [];
+    state.session.deviceEvents.push({
+      type: text(type, 48),
+      capturedAt: new Date().toISOString(),
+      visibility: text(document.visibilityState, 16)
+    });
+    if (state.session.deviceEvents.length > 64) state.session.deviceEvents.shift();
+  }
+
+  function installLongTaskObserver() {
+    if (typeof window.PerformanceObserver !== "function") return;
+    try {
+      const supported = window.PerformanceObserver.supportedEntryTypes;
+      if (Array.isArray(supported) && !supported.includes("longtask")) return;
+      const observer = new window.PerformanceObserver(list => {
+        if (!state.session) return;
+        if (!Array.isArray(state.session.longTasks)) state.session.longTasks = [];
+        for (const entry of list.getEntries()) {
+          const origin = number(window.performance && window.performance.timeOrigin);
+          const start = number(entry.startTime);
+          const at = origin !== null && start !== null ? new Date(origin + start).toISOString() : new Date().toISOString();
+          const attribution = Array.from(entry.attribution || []).slice(0, 3).map(item => ({
+            name: text(item.name, 80),
+            containerType: text(item.containerType, 32),
+            containerName: text(item.containerName, 80),
+            containerId: text(item.containerId, 80)
+          }));
+          state.session.longTasks.push({
+            capturedAt: at,
+            durationMs: Number(Math.max(0, Number(entry.duration) || 0).toFixed(2)),
+            name: text(entry.name, 48),
+            attribution
+          });
+          if (state.session.longTasks.length > 64) state.session.longTasks.shift();
+        }
+      });
+      observer.observe({ type: "longtask", buffered: true });
+      state.longTaskObserver = observer;
+    } catch (_) {
+      state.longTaskObserver = null;
+    }
+  }
+
+  function stopSessionDiagnostics() {
+    if (state.longTaskObserver) {
+      try { state.longTaskObserver.disconnect(); } catch (_) {}
+      state.longTaskObserver = null;
+    }
+  }
+
   async function saveSession() {
     if (!state.session) return false;
     if (state.saving) {
@@ -59,7 +111,7 @@
       if (!state.session) return false;
     }
     const current = state.session;
-    const snapshot = JSON.parse(JSON.stringify(current));
+    const snapshot = typeof window.structuredClone === "function" ? window.structuredClone(current) : JSON.parse(JSON.stringify(current));
     const job = (async () => {
       const db = await openDatabase();
       const transaction = db.transaction(STORE, "readwrite");
@@ -142,12 +194,13 @@
 
   function readSample() {
     if (document.visibilityState !== "visible" || typeof window.getGameHealthDebug !== "function") return null;
+    const readStartedAt = window.performance && typeof window.performance.now === "function" ? window.performance.now() : 0;
     let health;
     try { health = window.getGameHealthDebug(); } catch (_) { return null; }
     if (!health || !document.body || !document.body.classList.contains("game-running")) return null;
     const runtime = health.runtime && typeof health.runtime === "object" ? health.runtime : {};
     const rawFrame = runtime.frameTimingMs && typeof runtime.frameTimingMs === "object" ? runtime.frameTimingMs : {};
-    return {
+    const sample = {
       capturedAt: new Date().toISOString(),
       targetFps: number(runtime.performanceAssessment && runtime.performanceAssessment.targetFps),
       fps: number(runtime.fps ?? health.fps),
@@ -185,11 +238,14 @@
         graphicsProfile: text(runtime.graphicsProfile, 40),
         profileDiagnosticsEnabled: runtime.profileDiagnosticsEnabled === true,
         engineBackend: text(runtime.engineBackend, 32),
-        gpuRenderer: text(runtime.gpuRenderer, 120)
+        gpuRenderer: text(runtime.gpuRenderer, 120),
+        drawCallsCounterSemantics: "raw-runtime-counter"
       },
       playerPosition: readPlayerLocation(health),
       waterDiagnostics: readWaterDiagnostics()
     };
+    sample.diagnosticsReadMs = readStartedAt > 0 ? Number(Math.max(0, window.performance.now() - readStartedAt).toFixed(2)) : null;
+    return sample;
   }
 
   async function beginSession() {
@@ -224,11 +280,14 @@
         sampleIntervalMs: SAMPLE_INTERVAL_MS,
         sampleCount: 0,
         truncatedSamples: 0,
-        samples: []
+        samples: [],
+        longTasks: [],
+        deviceEvents: []
       };
+      installLongTaskObserver();
       appendSample(initial);
       await saveSession();
-      state.sampleTimer = window.setInterval(sampleAndSave, SAMPLE_INTERVAL_MS);
+      state.sampleTimer = window.setInterval(queueIdleSample, SAMPLE_INTERVAL_MS);
       window.__ELSN_SESSION_RECORDER_STATUS__ = { active: true, sessionId: state.session.sessionId, sampleIntervalMs: SAMPLE_INTERVAL_MS };
     } catch (error) {
       window.__ELSN_SESSION_RECORDER_STATUS__ = { active: false, error: text(error && error.message || error, 180) };
@@ -239,6 +298,22 @@
 
   function appendSample(sample) {
     if (!state.session || !sample) return;
+    const previous = state.session.samples[state.session.samples.length - 1] || null;
+    const currentDrawCalls = number(sample.scene && sample.scene.drawCalls);
+    const previousDrawCalls = number(previous && previous.scene && previous.scene.drawCalls);
+    const elapsedSeconds = previous && previous.capturedAt
+      ? Math.max(0, (Date.parse(sample.capturedAt) - Date.parse(previous.capturedAt)) / 1000) : 0;
+    if (currentDrawCalls !== null && previousDrawCalls !== null &&
+        currentDrawCalls >= previousDrawCalls && elapsedSeconds > 0) {
+      sample.scene.drawCallsDelta = currentDrawCalls - previousDrawCalls;
+      sample.scene.drawCallsPerSecond = Number((sample.scene.drawCallsDelta / elapsedSeconds).toFixed(1));
+      sample.scene.drawCallsCounterSemantics = "monotonic-cumulative-between-samples";
+    } else {
+      sample.scene.drawCallsDelta = null;
+      sample.scene.drawCallsPerSecond = null;
+      sample.scene.drawCallsCounterSemantics = "raw-runtime-counter-unclassified";
+    }
+    sample.longTaskCountAtSample = Array.isArray(state.session.longTasks) ? state.session.longTasks.length : 0;
     state.session.samples.push(sample);
     state.session.sampleCount++;
     if (state.session.samples.length > MAX_SAMPLES_PER_SESSION) {
@@ -246,6 +321,47 @@
       state.session.truncatedSamples++;
     }
     state.session.lastUpdatedAt = sample.capturedAt;
+  }
+
+  function cancelQueuedIdleSample() {
+    if (state.sampleHandle !== null && state.sampleHandle !== undefined) {
+      try {
+        if (state.sampleHandleKind === "idle" && typeof window.cancelIdleCallback === "function") {
+          window.cancelIdleCallback(state.sampleHandle);
+        } else if (state.sampleHandleKind === "timeout") {
+          window.clearTimeout(state.sampleHandle);
+        }
+      } catch (_) {}
+    }
+    state.sampleHandle = null;
+    state.sampleHandleKind = null;
+    state.sampleQueued = false;
+  }
+
+  function queueIdleSample() {
+    if (!state.session || state.sampleQueued || document.visibilityState !== "visible") return;
+    state.sampleQueued = true;
+    const run = deadline => {
+      state.sampleHandle = null;
+      state.sampleHandleKind = null;
+      state.sampleQueued = false;
+      if (!state.session || document.visibilityState !== "visible") return;
+      // Do not run a diagnostic read when Chrome has no idle budget available.
+      if (deadline && (deadline.didTimeout || (typeof deadline.timeRemaining === "function" && deadline.timeRemaining() < 3))) {
+        queueIdleSample();
+        return;
+      }
+      sampleAndSave().catch(error => {
+        if (state.session) state.session.storageError = text(error && error.message || error, 180);
+      });
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      state.sampleHandleKind = "idle";
+      state.sampleHandle = window.requestIdleCallback(run);
+    } else {
+      state.sampleHandleKind = "timeout";
+      state.sampleHandle = window.setTimeout(() => run(null), 1000);
+    }
   }
 
   async function sampleAndSave() {
@@ -276,6 +392,10 @@
     const p99 = values(sample => sample.frameTiming && sample.frameTiming.p99Ms);
     const world = values(sample => sample.cpu && sample.cpu.worldUpdateMs);
     const render = values(sample => sample.cpu && sample.cpu.renderCpuMs);
+    const telemetryRead = values(sample => sample.diagnosticsReadMs);
+    const drawCallsPerSecond = values(sample => sample.scene && sample.scene.drawCallsPerSecond);
+    const longTasks = Array.isArray(session.longTasks) ? session.longTasks : [];
+    const longTaskDurations = longTasks.map(item => number(item.durationMs)).filter(value => value !== null);
     const gpu = values(sample => sample.gpu && sample.gpu.frameMs);
     const sceneRender = values(sample => sample.gpu && sample.gpu.sceneRenderMs);
     const activeMeshes = values(sample => sample.sceneTimings && sample.sceneTimings.activeMeshesEvaluationMs);
@@ -303,6 +423,19 @@
       cpu: { worldUpdateMedianMs: medianWorld, renderPreparationMedianMs: medianRender },
       gpu: { frameMedianMs: medianGpu, sceneRenderMedianMs: medianSceneRender },
       sceneTimings: { activeMeshesEvaluationMedianMs: medianActiveMeshes, renderTargetsMedianMs: medianRenderTargets },
+      diagnostics: { medianReadMs: median(telemetryRead), maximumReadMs: telemetryRead.length ? Math.max(...telemetryRead) : null },
+      sceneCounters: {
+        drawCallsCounterSemantics: samples.find(sample => sample.scene && sample.scene.drawCallsCounterSemantics)?.scene.drawCallsCounterSemantics || "unclassified",
+        drawCallsPerSecondMedian: median(drawCallsPerSecond),
+        drawCallsPerSecondMaximum: drawCallsPerSecond.length ? Math.max(...drawCallsPerSecond) : null
+      },
+      longTasks: {
+        supported: longTasks.length > 0,
+        count: longTasks.length,
+        totalDurationMs: Number(longTaskDurations.reduce((sum, value) => sum + value, 0).toFixed(2)),
+        maximumDurationMs: longTaskDurations.length ? Math.max(...longTaskDurations) : null
+      },
+      deviceEvents: Array.isArray(session.deviceEvents) ? session.deviceEvents.length : 0,
       probableBottleneck: stages.length && stages[0].value >= 4 ? stages[0].name : "sin-atribucion-suficiente",
       bottleneckEvidence: stages,
       gpuProfilerEnabled: samples.some(sample => sample.scene && sample.scene.profileDiagnosticsEnabled === true),
@@ -341,14 +474,16 @@
   async function finishSession(reason) {
     if (state.sampleTimer) window.clearInterval(state.sampleTimer);
     state.sampleTimer = null;
+    cancelQueuedIdleSample();
     if (!state.session) return;
     const current = state.session;
     current.finishedAt = new Date().toISOString();
     current.lastUpdatedAt = current.finishedAt;
     current.status = reason === "pagehide" ? "interrupted" : "completed";
     current.endReason = reason;
-    current.summary = buildSessionSummary(current);
     if (reason !== "pagehide") current.finalWorldInspection = captureFinalWorldInspection();
+    stopSessionDiagnostics();
+    current.summary = buildSessionSummary(current);
     await saveSession();
     window.__ELSN_SESSION_RECORDER_STATUS__ = {
       active: false,
@@ -377,10 +512,18 @@
     const observer = new MutationObserver(monitorGameState);
     observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
     document.addEventListener("visibilitychange", () => {
+      recordDeviceEvent("visibility-" + document.visibilityState);
       if (document.visibilityState === "visible") {
         monitorGameState();
-        if (state.session) sampleAndSave();
+        queueIdleSample();
+      } else {
+        cancelQueuedIdleSample();
       }
+    });
+    window.addEventListener("blur", () => recordDeviceEvent("window-blur"));
+    window.addEventListener("focus", () => {
+      recordDeviceEvent("window-focus");
+      queueIdleSample();
     });
     window.addEventListener("pagehide", () => {
       if (state.monitorTimer) window.clearInterval(state.monitorTimer);
