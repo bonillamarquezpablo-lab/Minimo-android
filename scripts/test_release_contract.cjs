@@ -76,7 +76,7 @@ assert.ok(sessionRecorder.includes("elsn-game-session-reports") && sessionRecord
 assert.ok(sessionRecorder.includes("window.top !== window.self"),"Embedded Inspector test runs must not pollute player session history.");
 assert.ok(sessionRecorder.includes("buildSessionSummary") && sessionRecorder.includes("probableBottleneck"),"Completed match reports must summarize FPS, frame-time and CPU/GPU bottleneck evidence.");
 assert.ok(sessionRecorder.includes("captureFinalWorldInspection") && sessionRecorder.includes("terrainObjects"),"Completed match reports must retain the final terrain-object audit and coordinates.");
-assert.ok(sessionRecorder.includes("maxMeshes: 5000"),"The final world audit must request the complete bounded scene inventory.");
+assert.ok(sessionRecorder.includes("maxMeshes: 10000"),"The final world audit must request the complete bounded scene inventory.");
 assert.ok(fs.readFileSync('inspector/npc-agents.js','utf8').includes("Ver informe técnico y coordenadas"),"Inspector Center must expose the saved report and terrain-coordinate evidence.");
 
 
