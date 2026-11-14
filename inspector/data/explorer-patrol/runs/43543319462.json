@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "project": "EL SIN NOMBRE",
+  "level": 1,
+  "mode": "test-only-read-only-observer-patrol",
+  "startedAt": "2026-11-14T01:55:13.756Z",
+  "finishedAt": "2026-11-14T01:58:15.145Z",
+  "build": null,
+  "renderer": "Chromium headless + ANGLE SwiftShader",
+  "query": "?test=1",
+  "run": {
+    "id": "43543319462",
+    "url": "https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/runs/43543319462",
+    "branch": "level1/explorer-patrol",
+    "sha": "f81731178203e82a6e6a05546f4fe317cda7b312"
+  },
+  "world": {
+    "expectedIslands": 13,
+    "visitedIslands": 0,
+    "islands": []
+  },
+  "agents": [],
+  "limitations": [
+    "La patrulla mueve únicamente la cámara de observación de la API de prueba; no mueve NPCs ni controla la partida normal.",
+    "El motor de juego no expone actualmente una orden de locomoción de NPC para recorrer rutas físicas.",
+    "Los contadores de pisadas y salpicaduras solo se consideran observados cuando el juego los publica; esta patrulla no inventa pasos.",
+    "La cobertura de hierba por isla solo se declara si el motor publica un contador por isla; un contador global no demuestra cobertura individual.",
+    "El catálogo de actividades por isla no está expuesto como contrato estructurado; no se inventan actividades ausentes.",
+    "Chromium/SwiftShader no representa la GPU Adreno física del dispositivo."
+  ],
+  "consoleErrors": [
+    "EL SIN NOMBRE startGame failed Error: RECURSO OBLIGATORIO: efectos de sonido · Efectos listos 0/38, fallidos 0, pendientes 38\n    at startGame (http://127.0.0.1:4175/?test=1:13224:35)\n    at async bootEngine (http://127.0.0.1:4175/?test=1:1872:4)",
+    "EL SIN NOMBRE boot error Error: RECURSO OBLIGATORIO: efectos de sonido · Efectos listos 0/38, fallidos 0, pendientes 38\n    at startGame (http://127.0.0.1:4175/?test=1:13224:35)\n    at async bootEngine (http://127.0.0.1:4175/?test=1:1872:4)",
+    "EL SIN NOMBRE · detalle de arranque: Babylon.js se descargó, pero el juego falló al construir la escena: RECURSO OBLIGATORIO: efectos de sonido · Efectos listos 0/38, fallidos 0, pendientes 38. Puedes volver a intentarlo.Comprueba Internet y abre el juego con un navegador actualizado compatible con WebGL."
+  ],
+  "pageErrors": [],
+  "failures": [
+    {
+      "phase": "runner",
+      "error": "page.waitForFunction: Timeout 180000ms exceeded.\n    at startGame (/home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:186:14)\n    at async main (/home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:306:5)"
+    }
+  ],
+  "verdict": "failed"
+}
