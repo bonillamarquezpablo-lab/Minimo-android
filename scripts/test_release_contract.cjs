@@ -21,7 +21,7 @@ assert.equal(expectedVersion,"0.6.291","The release validator must target the pa
 for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle:titleVersion,sourceBuildUserAgent:buildVersion})) {
   assert.equal(version,sourceVersion,`The source ${source} must remain the 0.6.274 input that build_site upgrades deterministically.`);
 }
-assert.equal(shellVersion,expectedVersion,"The service-worker cache must be synchronized with the packaged release.");
+assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
 assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.291"\)/,"The build must promote every visible source version to 0.6.291.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr"),"The flagship profile must initialise adaptive scaling from the actual native render scale.");
