@@ -414,6 +414,36 @@ async function main() {
           recorder: window.__elSinNombreStartupSmoke || null
         }))));
     }
+    const cachedPlayerState = await page.evaluate(() => ({
+      player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state() || null,
+      recorder: window.__elSinNombreStartupSmoke || null,
+      bootFailed: document.body.classList.contains('boot-failed')
+    }));
+    manifest.cachedPlayerState = cachedPlayerState;
+    assert.equal(cachedPlayerState.bootFailed, false,
+      'El segundo arranque marcó boot-failed.');
+    assert.equal(cachedPlayerState.player?.modelReady, true,
+      'El protagonista real no quedó listo en el arranque con caché: ' +
+      JSON.stringify(cachedPlayerState.player));
+    assert.ok(cachedPlayerState.player?.realPlayerMeshCount > 0,
+      'El segundo arranque no contiene mallas reales del protagonista.');
+    assert.equal(cachedPlayerState.player?.fallbackVisible, false,
+      'El personaje provisional sigue visible en el arranque con caché.');
+    assert.equal(cachedPlayerState.recorder?.worldReady, true,
+      'La barrera completa no quedó lista en el arranque con caché.');
+    assert.equal((cachedPlayerState.recorder?.consoleErrors || []).length, 0,
+      'Errores de consola en el segundo arranque: ' +
+      JSON.stringify(cachedPlayerState.recorder?.consoleErrors || []));
+    assert.equal((cachedPlayerState.recorder?.runtimeErrors || []).length, 0,
+      'Errores de ejecución en el segundo arranque: ' +
+      JSON.stringify(cachedPlayerState.recorder?.runtimeErrors || []));
+    assert.equal((cachedPlayerState.recorder?.unhandledRejections || []).length, 0,
+      'Promesas rechazadas en el segundo arranque: ' +
+      JSON.stringify(cachedPlayerState.recorder?.unhandledRejections || []));
+    assert.equal(manifest.consoleErrors.length, 0,
+      'Errores de consola del navegador tras ambos arranques: ' + manifest.consoleErrors.join(' | '));
+    assert.equal(manifest.pageErrors.length, 0,
+      'Errores JavaScript del navegador tras ambos arranques: ' + manifest.pageErrors.join(' | '));
     manifest.cachedNavigationAndProfileMs = Number((cachedBarrierStartedAt - cachedLaunchStartedAt).toFixed(1));
     manifest.cachedBlockingStartupMs = Number((performance.now() - cachedBarrierStartedAt).toFixed(1));
     manifest.cachedMemoryEstimate = await page.evaluate(() => window.__elSinNombreStartupMemoryEstimate || null);
