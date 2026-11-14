@@ -28,4 +28,12 @@ assert.match(smoke, /cachedIdentityFlow = 'first-run-anonymous'/,
   'A cached launch without a saved identity must still support first-run setup.'); 
 assert.match(smoke, /cachedPreflightState\.bootFailed/,
   'A cached launch must surface boot-failed rather than timing out opaquely.'); 
+assert.match(smoke, /manifest\.cachedPlayerState = cachedPlayerState/,
+  'The warm-cache launch must verify the real protagonist readiness again.');
+assert.match(smoke, /cachedPlayerState\.player\?\.modelReady, true/,
+  'The protagonist model must remain ready after a cached reload.');
+assert.match(smoke, /cachedPlayerState\.player\?\.fallbackVisible, false/,
+  'The provisional player body must not reappear after a cached reload.');
+assert.match(smoke, /cachedPlayerState\.recorder\?\.worldReady, true/,
+  'The full startup barrier must be ready after a cached reload.');
 console.log('PLAYER STARTUP FLOW CONTRACT OK: first-run and returning-player paths are both explicit.');
