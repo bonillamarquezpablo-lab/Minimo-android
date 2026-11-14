@@ -132,7 +132,9 @@
         "Cuello de botella orientativo: " + text(summary.probableBottleneck || "sin atribución") +
         " · CPU mundo: " + fmt(summary.cpu && summary.cpu.worldUpdateMedianMs, 2) + " ms" +
         " · CPU render: " + fmt(summary.cpu && summary.cpu.renderPreparationMedianMs, 2) + " ms" +
-        " · GPU: " + fmt(summary.gpu && summary.gpu.frameMedianMs, 2) + " ms");
+        " · GPU: " + fmt(summary.gpu && summary.gpu.frameMedianMs, 2) + " ms" +
+        " · evaluación mallas: " + fmt(summary.sceneTimings && summary.sceneTimings.activeMeshesEvaluationMedianMs, 2) + " ms" +
+        " · render targets: " + fmt(summary.sceneTimings && summary.sceneTimings.renderTargetsMedianMs, 2) + " ms");
       const terrainLine = make("p", "live-diagnostic-note",
         "Objetos bajo terreno: " + fmt(terrain.candidateCount, 0) +
         " · completamente enterrados: " + fmt(terrain.fullyBuriedCount, 0) +
