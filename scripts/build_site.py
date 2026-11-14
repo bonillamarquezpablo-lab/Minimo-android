@@ -1020,6 +1020,12 @@ def main() -> None:
     if "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in runtime_diagnostics_replacement:
         raise SystemExit("No se pudo actualizar la telemetría de cadencia AI móvil.")
 
+    diagnostic_ai_budget_marker = "enemyAiRateCapHz:isConstrainedMobile?20:60,companionAiRateCapHz:isConstrainedMobile?15:60,"
+    diagnostic_ai_budget_replacement = "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60),companionAiRateCapHz:isConstrainedMobile?15:(isTouchDevice?30:60),"
+    if html.count(diagnostic_ai_budget_marker) != 1:
+        raise SystemExit("No se encontró el bloque único de telemetría de cadencia AI.")
+    html = html.replace(diagnostic_ai_budget_marker, diagnostic_ai_budget_replacement, 1)
+
 
     quality_adaptive_marker = r""" let fpsSample=0,qualityDprCurrent=qualityDpr;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
