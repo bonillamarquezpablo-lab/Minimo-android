@@ -20,4 +20,12 @@ assert.match(smoke, /preflight-dom\.html/,
   'Unexpected preflight states must retain the DOM for diagnosis.');
 assert.match(smoke, /El selector de perfil no pasó a identidad ni al arranque/,
   'A blocked preflight must fail with actionable state instead of timing out on a hidden button.');
+assert.match(smoke, /manifest\.cachedPreflightState = cachedPreflightState/,
+  'The warm-cache launch must record its own observed preflight state.'); 
+assert.match(smoke, /cachedIdentityFlow = 'returning-player-auto-boot'/,
+  'A cached launch with a saved identity must use the returning-player path.'); 
+assert.match(smoke, /cachedIdentityFlow = 'first-run-anonymous'/,
+  'A cached launch without a saved identity must still support first-run setup.'); 
+assert.match(smoke, /cachedPreflightState\.bootFailed/,
+  'A cached launch must surface boot-failed rather than timing out opaquely.'); 
 console.log('PLAYER STARTUP FLOW CONTRACT OK: first-run and returning-player paths are both explicit.');
