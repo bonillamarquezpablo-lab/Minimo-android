@@ -14,7 +14,6 @@ on:
     paths:
       - 'scripts/autonomous-lab-agents.mjs'
       - 'scripts/test_autonomous_lab_agents.mjs'
-      - 'scripts/ai-visual-review.mjs'
       - 'scripts/test_ai_visual_review.mjs'
       - 'AUTONOMOUS-LAB-AGENTS.md'
       - '.github/workflows/autonomous-agent-contracts.yml'
