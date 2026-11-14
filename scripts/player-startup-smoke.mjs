@@ -290,7 +290,24 @@ async function main() {
       };
     });
 
-    await page.locator('#newGameChoice').waitFor({ state: 'visible', timeout: 30000 });
+    // worldReady marks the resource barrier, but the campaign selector is exposed only
+    // after the first real render frame. Wait for that UI transition rather than racing it.
+    await page.locator('#intro.open').waitFor({ state: 'visible', timeout: 60000 });
+    const introReady = await page.evaluate(() => ({
+      bodyClass: document.body.className,
+      ariaHidden: document.getElementById('intro')?.getAttribute('aria-hidden') ?? null,
+      open: document.getElementById('intro')?.classList.contains('open') ?? false,
+      newGameVisible: (() => {
+        const button = document.getElementById('newGameChoice');
+        return !!button && getComputedStyle(button).display !== 'none' &&
+          getComputedStyle(button).visibility !== 'hidden';
+      })()
+    }));
+    manifest.campaignSelector = introReady;
+    if (!introReady.open || introReady.ariaHidden === 'true' || !introReady.newGameVisible) {
+      throw new Error('La barrera de recursos terminó pero el selector de campaña no se mostró: ' +
+        JSON.stringify(introReady));
+    }
     await page.locator('#newGameChoice').click();
     await page.waitForFunction(() => document.body.classList.contains('game-running'),
       undefined, { timeout: 30000, polling: 100 });
