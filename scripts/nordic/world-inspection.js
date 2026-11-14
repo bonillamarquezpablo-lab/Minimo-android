@@ -208,6 +208,106 @@
       };
     });
 
+
+    // Compare visible mesh bounds with the rendered terrain at the same world-space X/Z.
+    // This is an audit only: it never hides, moves, deletes or repairs scene objects.
+    const terrainMeshSet = new Set((Array.isArray(context.islandTerrainMeshes) ? context.islandTerrainMeshes : []).filter(Boolean));
+    const terrainObjectItems = [];
+    let terrainObjectCheckedCount = 0;
+    let terrainObjectUnmeasurableCount = 0;
+    let terrainObjectBuriedCount = 0;
+    let terrainObjectPenetratingCount = 0;
+    const terrainSkipName = /(?:heightfield|terrain|water[-_ ]?surface|sea[-_ ]?surface|shore|beach|submerged|seabed|foam|reflection|sky|cloud|particle|splash|shadowmap|ground[-_ ]?surface)/i;
+    for (let meshIndex = 0; meshIndex < meshRows.length; meshIndex++) {
+      const row = meshRows[meshIndex];
+      const mesh = selectedMeshes[meshIndex];
+      const bounds = row && row.bounds;
+      if (!row || !mesh || !row.enabled || !row.visible || terrainMeshSet.has(mesh) ||
+          terrainSkipName.test(row.name) || !bounds || bounds.finite !== true ||
+          !bounds.min || !bounds.max || !bounds.size ||
+          bounds.size.x > 100 || bounds.size.z > 100 || bounds.size.y > 100 ||
+          !(row.vertices > 0)) continue;
+      const minX = bounds.min.x, maxX = bounds.max.x;
+      const minZ = bounds.min.z, maxZ = bounds.max.z;
+      const midX = (minX + maxX) / 2, midZ = (minZ + maxZ) / 2;
+      const points = [
+        { x: midX, z: midZ, sample: 'center' },
+        { x: minX, z: minZ, sample: 'south-west' },
+        { x: minX, z: maxZ, sample: 'north-west' },
+        { x: maxX, z: minZ, sample: 'south-east' },
+        { x: maxX, z: maxZ, sample: 'north-east' }
+      ];
+      const heightSamples = terrainHeightAt ? points.map(point => {
+        const y = safeCall(() => terrainHeightAt(point.x, point.z), null);
+        return finite(y) ? { ...point, y } : null;
+      }).filter(Boolean) : [];
+      if (heightSamples.length < 3) {
+        terrainObjectUnmeasurableCount++;
+        continue;
+      }
+      terrainObjectCheckedCount++;
+      const minGroundY = Math.min(...heightSamples.map(sample => sample.y));
+      const maxGroundY = Math.max(...heightSamples.map(sample => sample.y));
+      const centerSample = heightSamples.find(sample => sample.sample === 'center') || heightSamples[0];
+      const objectTopY = bounds.max.y;
+      const objectBottomY = bounds.min.y;
+      const fullyBuried = objectTopY < minGroundY - 0.15;
+      const penetrationDepth = centerSample.y - objectBottomY;
+      const penetrates = !fullyBuried && penetrationDepth > 0.35 && objectTopY >= minGroundY - 0.15;
+      if (!fullyBuried && !penetrates) continue;
+      let nearestIsland = null;
+      for (let islandIndex = 0; islandIndex < (Array.isArray(context.land) ? context.land.length : 0); islandIndex++) {
+        const island = context.land[islandIndex];
+        if (!island || !finite(island.x) || !finite(island.z) || !finite(island.r) || island.r <= 0) continue;
+        const distance = Math.hypot(midX - island.x, midZ - island.z);
+        if (distance <= island.r * 1.15 && (!nearestIsland || distance < nearestIsland.distanceMeters)) {
+          nearestIsland = {
+            index: islandIndex,
+            name: String(island.name || 'Island ' + (islandIndex + 1)),
+            distanceMeters: round(distance, 2)
+          };
+        }
+      }
+      if (fullyBuried) terrainObjectBuriedCount++;
+      else terrainObjectPenetratingCount++;
+      if (terrainObjectItems.length < 200) {
+        terrainObjectItems.push({
+          uniqueId: row.uniqueId,
+          name: row.name,
+          id: row.id,
+          parent: row.parent,
+          material: row.material,
+          vertices: row.vertices,
+          enabled: row.enabled,
+          visible: row.visible,
+          status: fullyBuried ? 'fully-buried' : 'penetrates-terrain',
+          worldPosition: row.position,
+          bounds: { min: bounds.min, max: bounds.max, size: bounds.size },
+          terrain: {
+            centerGroundY: round(centerSample.y, 3),
+            minimumSampledGroundY: round(minGroundY, 3),
+            maximumSampledGroundY: round(maxGroundY, 3),
+            sampledPoints: heightSamples.length,
+            buriedDepthMeters: fullyBuried ? round(minGroundY - objectTopY, 3) : null,
+            penetrationDepthMeters: round(penetrationDepth, 3)
+          },
+          nearestIsland
+        });
+      }
+    }
+    const terrainObjectAudit = {
+      checkedCount: terrainObjectCheckedCount,
+      candidateCount: terrainObjectBuriedCount + terrainObjectPenetratingCount,
+      fullyBuriedCount: terrainObjectBuriedCount,
+      penetratingCount: terrainObjectPenetratingCount,
+      unmeasurableCount: terrainObjectUnmeasurableCount,
+      returned: terrainObjectItems.length,
+      truncated: Math.max(0, terrainObjectBuriedCount + terrainObjectPenetratingCount - terrainObjectItems.length),
+      complete: includeMeshes && meshRows.length === allMeshes.length && !!terrainHeightAt,
+      terrainHeightSource: terrainHeightAt ? 'rendered-terrain-surface' : 'unavailable',
+      items: terrainObjectItems
+    };
+
     const player = context.player || null;
     const playerRoot = player && player.root;
     const playerPosition = readPosition(playerRoot);
@@ -349,6 +449,7 @@
         sampleCount: islands.reduce((sum, island) => sum + island.terrainHeights.validSampleCount, 0),
         overallHeightRange: overallTerrainRange
       },
+      terrainObjects: terrainObjectAudit,
       islands: {
         expectedCount: 13,
         count: islands.length,

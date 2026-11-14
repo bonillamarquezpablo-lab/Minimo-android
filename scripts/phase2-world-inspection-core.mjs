@@ -62,6 +62,43 @@ export function analyzeWorldInspectionSnapshot(snapshot) {
     }
   }
 
+
+  const terrainObjects = snapshot.terrainObjects || {};
+  const terrainObjectItems = Array.isArray(terrainObjects.items) ? terrainObjects.items : [];
+  const fullyBuried = terrainObjectItems.filter(item => item.status === 'fully-buried');
+  const penetrating = terrainObjectItems.filter(item => item.status === 'penetrates-terrain');
+  if ((terrainObjects.fullyBuriedCount || fullyBuried.length) > 0) {
+    add('high', 'visible-meshes-below-terrain', 'Hay mallas visibles cuyo volumen completo queda por debajo de la altura muestreada del terreno. Se incluyen sus coordenadas y límites mundiales.', {
+      count: terrainObjects.fullyBuriedCount ?? fullyBuried.length,
+      complete: terrainObjects.complete === true,
+      objects: fullyBuried.slice(0, 60).map(item => ({
+        uniqueId: item.uniqueId, name: item.name, id: item.id, parent: item.parent,
+        worldPosition: item.worldPosition, bounds: item.bounds, terrain: item.terrain,
+        nearestIsland: item.nearestIsland
+      }))
+    });
+  }
+  if ((terrainObjects.penetratingCount || penetrating.length) > 0) {
+    add('medium', 'visible-meshes-intersect-terrain', 'Hay mallas visibles que penetran el terreno por encima del umbral de 35 cm; deben revisarse antes de moverlas porque algunas raíces o apoyos pueden ser intencionados.', {
+      count: terrainObjects.penetratingCount ?? penetrating.length,
+      complete: terrainObjects.complete === true,
+      objects: penetrating.slice(0, 60).map(item => ({
+        uniqueId: item.uniqueId, name: item.name, id: item.id, parent: item.parent,
+        worldPosition: item.worldPosition, bounds: item.bounds, terrain: item.terrain,
+        nearestIsland: item.nearestIsland
+      }))
+    });
+  }
+  if (terrainObjects.complete !== true) {
+    add('info', 'terrain-object-audit-incomplete', 'La auditoría de objetos bajo terreno no cubrió todas las mallas visibles o no dispuso de la función de altura del terreno.', {
+      checked: terrainObjects.checkedCount ?? null,
+      candidates: terrainObjects.candidateCount ?? null,
+      unmeasurable: terrainObjects.unmeasurableCount ?? null,
+      returned: terrainObjects.returned ?? terrainObjectItems.length,
+      truncated: terrainObjects.truncated ?? null
+    });
+  }
+
   const pendingTextures = snapshot.textures?.pendingCount;
   if (finite(pendingTextures) && pendingTextures > 0) {
     add('medium', 'textures-pending-at-capture', 'Había texturas pendientes en el instante de la captura. Esto no demuestra un fallo de carga.', {

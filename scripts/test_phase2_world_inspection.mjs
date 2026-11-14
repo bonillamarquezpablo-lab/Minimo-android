@@ -22,12 +22,29 @@ const mesh = {
     maximumWorld: { x: 4, y: 3, z: -3 }
   } })
 };
+
+const buriedMesh = {
+  ...mesh, uniqueId: 8, name: 'BuriedProp', id: 'buried-prop',
+  position: { x: 9, y: -2.5, z: 8 },
+  getBoundingInfo: () => ({ boundingBox: {
+    minimumWorld: { x: 8.5, y: -3, z: 7.5 },
+    maximumWorld: { x: 9.5, y: -2, z: 8.5 }
+  } })
+};
+const penetratingMesh = {
+  ...mesh, uniqueId: 9, name: 'EmbeddedCrate', id: 'embedded-crate',
+  position: { x: 10, y: 1, z: 8 },
+  getBoundingInfo: () => ({ boundingBox: {
+    minimumWorld: { x: 9.5, y: 0.4, z: 7.5 },
+    maximumWorld: { x: 10.5, y: 1.6, z: 8.5 }
+  } })
+};
 const textureReady = { name: 'ready', isReady: () => true, getSize: () => ({ width: 512, height: 512 }) };
 const texturePending = { name: 'pending', isReady: () => false, getSize: () => ({ width: 256, height: 256 }) };
 const root = { name: 'PlayerRoot', position: { x: 3, y: 2, z: -4 }, isEnabled: () => true };
 const snapshot = capture({
   scene: {
-    meshes: [mesh], transformNodes: [root], materials: [{ name: 'wood' }],
+    meshes: [mesh, buriedMesh, penetratingMesh], transformNodes: [root], materials: [{ name: 'wood' }],
     textures: [textureReady, texturePending], animationGroups: [{ name: 'Walk', isPlaying: true, targetedAnimations: [{}] }],
     collisionsEnabled: true, getActiveMeshes: () => ({ length: 1 }), getTotalVertices: () => 24
   },
@@ -47,6 +64,13 @@ assert.equal(snapshot.kind, 'babylon-world-inspection');
 assert.equal(snapshot.islands.count, 13);
 assert.equal(snapshot.scene.pendingTextureCount, 1);
 assert.equal(snapshot.meshes.items[0].bounds.finite, true);
+assert.equal(snapshot.terrainObjects.fullyBuriedCount, 1);
+assert.equal(snapshot.terrainObjects.penetratingCount, 1);
+assert.equal(snapshot.terrainObjects.items[0].name, 'BuriedProp');
+assert.equal(snapshot.terrainObjects.items[0].worldPosition.x, 9);
+assert.equal(snapshot.terrainObjects.items[0].terrain.centerGroundY, 1.25);
+assert.equal(snapshot.terrainObjects.items[0].bounds.max.y, -2);
+
 assert.equal(snapshot.actors.player.groundY, 1.25);
 assert.equal(snapshot.actors.player.modelReady, false);
 assert.equal(snapshot.terrain.islandsSampled, 13);
@@ -60,6 +84,9 @@ assert.equal(snapshot.animations.playingCount, 1);
 const report = analyzeWorldInspectionSnapshot(snapshot);
 assert.equal(report.status, 'findings');
 assert.ok(report.findings.some(item => item.code === 'unsafe-structure-visible'));
+assert.ok(report.findings.some(item => item.code === 'visible-meshes-below-terrain'));
+assert.ok(report.findings.some(item => item.code === 'visible-meshes-intersect-terrain'));
+
 assert.ok(report.findings.some(item => item.code === 'textures-pending-at-capture'));
 
 const truncated = capture({
