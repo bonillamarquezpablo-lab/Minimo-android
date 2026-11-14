@@ -260,23 +260,72 @@ function classifyAgents(global, islandRows) {
       batches: findMetric(entry, ['batches','grassBatches']) };
   });
   if (perIslandGrass.some(row => row.instances === null)) solMissing.push('La cobertura de hierba por isla no está expuesta; el contador global no demuestra las 13 zonas.');
-  if (p95 !== null && p95 > (1000 / 60)) solIssues.push({ severity: 'warning', title: 'Frame time p95 por encima de 60 FPS', detail: 'La medición de laboratorio es ' + p95.toFixed(2) + ' ms. Chromium/SwiftShader no equivale a la GPU física del móvil.' });
+  if (p95 !== null) solMissing.push('El p95 de ' + p95.toFixed(2) + ' ms procede de Chromium/SwiftShader; no permite diagnosticar los FPS de la GPU física del móvil.');
 
-  const structureRows = [
-    ...rowsOf(global.structures.habitable),
-    ...rowsOf(global.structures.houses),
-    ...rowsOf(global.structures.camps),
-    ...rowsOf(global.structures.garrisons)
+  const structureSources = [
+    { id: 'habitable', rows: rowsOf(global.structures.habitable), fields: ['anchorErrorMeters'] },
+    { id: 'houses', rows: rowsOf(global.structures.houses), fields: ['groundingErrorMeters', 'maximumFootingGapMeters', 'maximumStructuralBaseGapMeters'] },
+    { id: 'camps', rows: rowsOf(global.structures.camps), fields: ['anchorErrorMeters', 'maximumBaseGapMeters'] },
+    { id: 'garrisons', rows: rowsOf(global.structures.garrisons), fields: ['outpostErrorMeters', 'guardErrorMeters', 'flagErrorMeters', 'maximumAnchorErrorMeters'] }
   ];
   const uLfMeasured = [];
   const ulfIssues = [];
   const ulfMissing = [];
-  for (const row of structureRows) {
-    const gap = findMetric(row, ['maximumBaseGapMeters','baseAnchorGapMeters','maximumStructuralBaseGapMeters','bottomAboveTerrainMeters','anchorErrorMeters','gapMeters']);
-    if (gap === null) continue;
-    const islandIndex = finite(row.islandIndex ?? row.nearestIslandIndex);
-    uLfMeasured.push({ islandIndex, name: row.name || row.kind || 'Estructura', gapMeters: gap });
-    if (Math.abs(gap) > 0.02) ulfIssues.push({ severity: 'critical', title: 'Estructura fuera de tolerancia de 2 cm', detail: (row.name || row.kind || 'Estructura') + ' presenta ' + (gap * 100).toFixed(1) + ' cm de diferencia en su apoyo.', islandIndex });
+  for (const group of structureSources) {
+    for (const row of group.rows) {
+      if (!row || typeof row !== 'object') continue;
+      const measurements = {};
+      for (const field of group.fields) {
+        const value = finite(row[field]);
+        if (value !== null) measurements[field] = value;
+      }
+      // Camp support contacts are a typed measurement. Never recursively search an
+      // arbitrary nested object for a property named "gapMeters".
+      if (group.id === 'camps' && Array.isArray(row.supportPoints)) {
+        const contacts = row.supportPoints.map((point, index) => ({
+          index, name: String(point?.name || ''),
+          baseGapMeters: finite(point?.baseGapMeters)
+        })).filter(point => point.baseGapMeters !== null);
+        if (contacts.length) {
+          measurements.supportPointGaps = contacts;
+          measurements.maximumSupportPointGapMeters = Math.max(...contacts.map(point => Math.abs(point.baseGapMeters)));
+        }
+      }
+      const measuredValues = Object.entries(measurements)
+        .filter(([key, value]) => key !== 'supportPointGaps' && typeof value === 'number');
+      const islandIndex = finite(row.islandIndex ?? row.nearestIslandIndex);
+      const base = {
+        source: group.id,
+        islandIndex,
+        name: row.name || row.kind || 'Estructura',
+        kind: row.kind || null,
+        x: finite(row.x),
+        z: finite(row.z),
+        measurements
+      };
+      if (group.id === 'habitable' && row.safe === false && row.enabled === true) {
+        ulfIssues.push({
+          severity: 'critical',
+          title: 'Estructura insegura visible',
+          detail: (row.name || row.kind || 'Estructura') + ' continúa visible según la auditoría de cimentación.',
+          islandIndex
+        });
+      }
+      if (!measuredValues.length && measurements.maximumSupportPointGapMeters === undefined) continue;
+      const gap = Math.max(
+        ...measuredValues.map(([, value]) => Math.abs(value)),
+        measurements.maximumSupportPointGapMeters || 0
+      );
+      uLfMeasured.push({ ...base, gapMeters: gap });
+      if (gap > 0.02) {
+        ulfIssues.push({
+          severity: 'critical',
+          title: 'Estructura fuera de tolerancia de 2 cm',
+          detail: (row.name || row.kind || 'Estructura') + ' presenta ' + (gap * 100).toFixed(1) + ' cm de diferencia en una medición explícita de apoyo.',
+          islandIndex
+        });
+      }
+    }
   }
   if (!uLfMeasured.length) ulfMissing.push('No se encontraron medidas de cimentación con resolución suficiente para aplicar la tolerancia de 2 cm.');
   const movementSupported = global.movementSupported === true;
