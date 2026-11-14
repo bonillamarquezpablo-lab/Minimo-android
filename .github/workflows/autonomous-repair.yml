@@ -1,0 +1,138 @@
+name: Guarded repair validation — EL SIN NOMBRE
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: Only main is eligible for validation
+        required: true
+        default: main
+        type: string
+      task:
+        description: Evidence-backed repair task
+        required: true
+        type: string
+      source_paths:
+        description: Exact eligible files, comma-separated (index.html or scripts/nordic/*.js)
+        required: true
+        type: string
+      patch:
+        description: Unified diff prepared for validation (no model/API is called)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guarded-repair-\${{ github.workflow }}-\${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-only:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Validate request bounds
+        env:
+          TASK: \${{ inputs.task }}
+          PATHS: \${{ inputs.source_paths }}
+          BASE_REF: \${{ inputs.base_ref }}
+        run: |
+          test "\${#TASK}" -le 1800
+          test -n "$TASK"
+          test -n "$PATHS"
+          case "$BASE_REF" in main) ;; *) echo "Only main is an approved base"; exit 1;; esac
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Stage supplied patch (no external AI/API)
+        env:
+          REPAIR_TASK: \${{ inputs.task }}
+          REPAIR_SOURCE_PATHS: \${{ inputs.source_paths }}
+          REPAIR_PATCH: \${{ inputs.patch }}
+        run: node scripts/autonomous-repair.mjs stage
+
+      - name: Apply only allowlisted patch
+        env:
+          REPAIR_SOURCE_PATHS: \${{ inputs.source_paths }}
+        run: node scripts/autonomous-repair.mjs apply
+
+      - name: Run game regression suite
+        run: |
+          node scripts/test_navigation_suite_contract.cjs
+          node scripts/test_scene_capture_efficiency_contract.cjs
+          node scripts/test_coastal_structure_grounding_contract.cjs
+          node scripts/test_coastal_reference_contract.cjs
+          node scripts/test_startup_guard.cjs
+          node scripts/test_glb_loading.cjs
+          node scripts/test_coastal_mesh_continuity.cjs
+          node scripts/test_water_shore.cjs
+          node scripts/test_cc0_texture_pack.cjs
+          node scripts/test_release_contract.cjs
+          node scripts/test_graphics_quality_contract.cjs
+          node scripts/test_startup_smoke.cjs
+          node scripts/test_atmosphere_system.cjs
+          node scripts/test_beach_state.cjs
+          node scripts/test_island_campaign.cjs
+          node scripts/test_autonomous_repair.mjs
+
+      - name: Build and validate game
+        run: |
+          python scripts/build_site.py
+          test -s dist/index.html
+
+      - name: Install Playwright and Chromium for real browser startup validation
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+
+      - name: Start the built game for browser smoke
+        run: |
+          python3 -m http.server 4174 --directory dist > /tmp/elsn-repair-http.log 2>&1 &
+          echo $! > /tmp/elsn-repair-http.pid
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:4174/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/elsn-repair-http.log
+          exit 1
+
+      - name: Execute real game startup and first 20 seconds of gameplay
+        env:
+          PLAYER_TEST_URL: http://127.0.0.1:4174/
+        run: node scripts/player-startup-smoke.mjs
+
+      - name: Stop local game server
+        if: always()
+        run: |
+          if [ -f /tmp/elsn-repair-http.pid ]; then
+            kill "$(cat /tmp/elsn-repair-http.pid)" 2>/dev/null || true
+          fi
+
+      - name: Final static audit
+        env:
+          REPAIR_SOURCE_PATHS: \${{ inputs.source_paths }}
+        run: node scripts/autonomous-repair.mjs audit
+
+      - name: Upload repair evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guarded-repair-\${{ github.run_id }}
+          path: |
+            artifacts/autonomous-repair/
+            artifacts/player-startup/
+          if-no-files-found: warn
+          retention-days: 30

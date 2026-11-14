@@ -53,3 +53,11 @@ Cada ejecución produce:
 - Informes originales de arranque, texturas, geometría, costa, capturas y comparación Hrafn.
 - \`artifacts/autonomous-agents/report.json\` y \`report.md\`, con el estado de cada especialista y sus tareas.
 - Una copia JSON del informe de especialistas en la rama \`inspector-status\`, asociada al ID de la ejecución.
+
+## Fase 2 — Validación aislada de reparaciones existentes
+
+La propuesta se implementa mediante `scripts/autonomous-repair.mjs` y `.github/workflows/autonomous-repair.yml`. El workflow manual valida un parche explícito en un runner efímero, ejecuta las regresiones del juego, construye el paquete y conserva evidencias.
+
+La ejecución no crea ramas, no hace commits, no abre pull requests, no fusiona cambios ni despliega. Si una comprobación falla, el parche solo queda como artefacto de diagnóstico y nunca modifica el repositorio. Solo admite `index.html` y `scripts/nordic/*.js`, limita el tamaño y rechaza rutas o construcciones de riesgo.
+
+La validación no sustituye la revisión del cambio. No demuestra equivalencia visual ni el rendimiento de la GPU Adreno física.
