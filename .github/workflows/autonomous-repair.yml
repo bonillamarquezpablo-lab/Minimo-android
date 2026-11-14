@@ -25,7 +25,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: guarded-repair-\${{ github.workflow }}-\${{ github.ref }}
+  group: guarded-repair-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -36,11 +36,11 @@ jobs:
     steps:
       - name: Validate request bounds
         env:
-          TASK: \${{ inputs.task }}
-          PATHS: \${{ inputs.source_paths }}
-          BASE_REF: \${{ inputs.base_ref }}
+          TASK: ${{ inputs.task }}
+          PATHS: ${{ inputs.source_paths }}
+          BASE_REF: ${{ inputs.base_ref }}
         run: |
-          test "\${#TASK}" -le 1800
+          test "${#TASK}" -le 1800
           test -n "$TASK"
           test -n "$PATHS"
           case "$BASE_REF" in main) ;; *) echo "Only main is an approved base"; exit 1;; esac
@@ -59,14 +59,14 @@ jobs:
 
       - name: Stage supplied patch (no external AI/API)
         env:
-          REPAIR_TASK: \${{ inputs.task }}
-          REPAIR_SOURCE_PATHS: \${{ inputs.source_paths }}
-          REPAIR_PATCH: \${{ inputs.patch }}
+          REPAIR_TASK: ${{ inputs.task }}
+          REPAIR_SOURCE_PATHS: ${{ inputs.source_paths }}
+          REPAIR_PATCH: ${{ inputs.patch }}
         run: node scripts/autonomous-repair.mjs stage
 
       - name: Apply only allowlisted patch
         env:
-          REPAIR_SOURCE_PATHS: \${{ inputs.source_paths }}
+          REPAIR_SOURCE_PATHS: ${{ inputs.source_paths }}
         run: node scripts/autonomous-repair.mjs apply
 
       - name: Run game regression suite
@@ -123,14 +123,14 @@ jobs:
 
       - name: Final static audit
         env:
-          REPAIR_SOURCE_PATHS: \${{ inputs.source_paths }}
+          REPAIR_SOURCE_PATHS: ${{ inputs.source_paths }}
         run: node scripts/autonomous-repair.mjs audit
 
       - name: Upload repair evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: guarded-repair-\${{ github.run_id }}
+          name: guarded-repair-${{ github.run_id }}
           path: |
             artifacts/autonomous-repair/
             artifacts/player-startup/
