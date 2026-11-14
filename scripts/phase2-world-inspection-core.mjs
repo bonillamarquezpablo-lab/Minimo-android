@@ -79,7 +79,7 @@ export function analyzeWorldInspectionSnapshot(snapshot) {
     });
   }
   if ((terrainObjects.penetratingCount || penetrating.length) > 0) {
-    add('medium', 'visible-meshes-intersect-terrain', 'Hay mallas visibles que penetran el terreno por encima del umbral de 35 cm; deben revisarse antes de moverlas porque algunas raíces o apoyos pueden ser intencionados.', {
+    add('medium', 'visible-meshes-intersect-terrain', 'Hay mallas visibles que penetran el terreno por encima del umbral de 8 cm; deben revisarse antes de moverlas porque algunas raíces o apoyos pueden ser intencionados.', {
       count: terrainObjects.penetratingCount ?? penetrating.length,
       complete: terrainObjects.complete === true,
       objects: penetrating.slice(0, 60).map(item => ({
