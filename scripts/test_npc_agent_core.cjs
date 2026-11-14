@@ -2,6 +2,7 @@
 const assert = require("node:assert/strict");
 const Core = require("./npc-agent-core.js");
 const fs = require("node:fs");
+const vm = require("node:vm");
 const runtimeSource = fs.readFileSync("scripts/npc-agent-runtime.js", "utf8");
 
 assert.equal(Core.PROTOCOL_VERSION, 1);
@@ -68,6 +69,61 @@ assert.equal(remote.cursor, "cursor-2");
 const agent = civilians[0];
 assert.equal(Core.normalizeTask({ action: "apply-patch", goal: "cambiar código" }, agent).ok, false);
 assert.equal(Core.normalizeTask({ action: "investigate", goal: "Analizar tirones", detail: "Sin cambiar el motor" }, agent).ok, true);
+
+const recorderSource = fs.readFileSync("scripts/game-session-recorder.js", "utf8");
+const inspectorHtml = fs.readFileSync("inspector/index.html", "utf8");
+assert.deepEqual(Core.SPECIALISTS.map(agent => agent.name), ["Eira", "Sól", "Ulf", "Týr"]);
+assert.deepEqual(Core.SPECIALISTS.map(agent => agent.roleId), Core.ROLES.map(role => role.id));
+
+const makeReport = sessionId => ({
+  sessionId,
+  samples: Array.from({ length: 3 }, (_, index) => ({
+    capturedAt: new Date(Date.UTC(2026, 10, 14, 10, index)).toISOString(),
+    targetFps: 120,
+    frameTiming: { p95Ms: 20 }
+  }))
+});
+const singleSessionAnalysis = Core.analyzeSessionReports([makeReport("one")]);
+assert.equal(singleSessionAnalysis.independentPerformanceSessions, 1);
+assert.equal(singleSessionAnalysis.specialists.find(agent => agent.id === "eira").status, "probable",
+  "One session may produce a probable finding but must never confirm a repeated fault.");
+const repeatedAnalysis = Core.analyzeSessionReports([makeReport("one"), makeReport("two")]);
+assert.equal(repeatedAnalysis.independentPerformanceSessions, 2);
+assert.equal(Core.analyzeSessionReports([makeReport("duplicate"), makeReport("duplicate")]).independentPerformanceSessions, 1,
+  "Duplicate copies of one session must not count as independent confirmation.");
+assert.equal(repeatedAnalysis.specialists.find(agent => agent.id === "eira").status, "confirmado");
+const stableReport = sessionId => ({
+  sessionId,
+  samples: Array.from({ length: 3 }, () => ({ targetFps: 120, frameTiming: { p95Ms: 7 } }))
+});
+assert.equal(Core.analyzeSessionReports([stableReport("a"), stableReport("b")])
+  .specialists.find(agent => agent.id === "eira").status, "sin-incidencia-observada");
+assert.equal(Core.analyzeSessionReports([])
+  .specialists.find(agent => agent.id === "eira").status, "sin-datos-suficientes");
+assert.ok(runtimeSource.includes("function isInspectorCenterPath()"));
+const gameWindow = {
+  location: { pathname: "/Minimo-android/guest/" },
+  ELSN_NPC_AGENT_CORE: Core,
+  indexedDB: { open() { throw new Error("NPC memory must not open from a gameplay page."); } }
+};
+vm.runInNewContext(runtimeSource, { window: gameWindow });
+assert.equal(gameWindow.__ELSN_NPC_AGENT_SYSTEM__, undefined,
+  "The specialists must not initialize while the player is on a game route.");
+
+assert.ok(runtimeSource.includes("Core.SPECIALISTS.map"));
+assert.doesNotMatch(runtimeSource, /context\.getCivilianRoster|npc\.aiAgent/,
+  "Inspector specialists must not be assigned to game civilians.");
+assert.ok(recorderSource.includes("elsn-game-session-reports"));
+assert.ok(recorderSource.includes("window.top !== window.self"),"Inspector diagnostic iframes must not be misclassified as player sessions.");
+assert.ok(recorderSource.includes("MAX_SAMPLES_PER_SESSION = 360"));
+assert.ok(recorderSource.includes("MAX_STORED_SESSIONS = 20"));
+assert.ok(recorderSource.includes('classList.contains("game-running")'));
+assert.ok(recorderSource.includes("player && player.actor && player.actor.position,\n      player"),"Session reports must capture the actual x/y/z player position exposed by the game health API.");
+assert.doesNotMatch(recorderSource, /BABYLON|MeshBuilder|new B\.Mesh/,
+  "Session recording must not create game meshes or characters.");
+assert.ok(inspectorHtml.includes('id="inteligencia-npc"'));
+assert.ok(inspectorHtml.includes('id="npcAgentsSpecialists"'));
+assert.ok(inspectorHtml.includes("npc-agents.js?v=1"));
 
 console.log("NPC agent core contract: all checks passed.");
 

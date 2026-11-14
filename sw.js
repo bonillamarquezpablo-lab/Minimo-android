@@ -1,7 +1,7 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
 const SHELL_CACHE = "el-sin-nombre-shell-0.6.291";
 const ASSET_CACHE = "el-sin-nombre-assets-pending-build-0.6.204";
-const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./scripts/nordic/beach-state.js", "./scripts/nordic/coastal-interaction.js", "./scripts/nordic/navigation-suite.js", "./scripts/nordic/atmosphere-system.js", "./scripts/nordic/world-inspection.js", "./scripts/npc-agent-core.js", "./scripts/npc-agent-runtime.js", "./icon.svg"];
+const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./scripts/nordic/beach-state.js", "./scripts/nordic/coastal-interaction.js", "./scripts/nordic/navigation-suite.js", "./scripts/nordic/atmosphere-system.js", "./scripts/nordic/world-inspection.js", "./scripts/npc-agent-core.js", "./scripts/npc-agent-runtime.js", "./scripts/game-session-recorder.js", "./icon.svg"];
 
 self.addEventListener("install", event => {
   event.waitUntil(
@@ -161,7 +161,7 @@ self.addEventListener("fetch", event => {
 
   // The Nordic simulation modules are part of the offline game shell, not generic media assets.
   // Serve them from the shell cache first so a cached game never boots without its runtime APIs.
-  if (url.pathname.includes("/scripts/nordic/") || url.pathname.endsWith("/scripts/npc-agent-core.js") || url.pathname.endsWith("/scripts/npc-agent-runtime.js")) {
+  if (url.pathname.includes("/scripts/nordic/") || url.pathname.endsWith("/scripts/npc-agent-core.js") || url.pathname.endsWith("/scripts/npc-agent-runtime.js") || url.pathname.endsWith("/scripts/game-session-recorder.js")) {
     event.respondWith(cacheFirst(request, SHELL_CACHE).catch(() => Response.error()));
     return;
   }

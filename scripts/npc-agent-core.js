@@ -56,6 +56,128 @@
     });
   }
 
+
+  const SPECIALISTS = Object.freeze([
+    Object.freeze({ id: "npc-agent:eira", npcId: "Eira", name: "Eira", roleId: "performance", roleName: "Rendimiento", domain: "performance", focus: "FPS, estabilidad y tirones", protocolVersion: PROTOCOL_VERSION }),
+    Object.freeze({ id: "npc-agent:sol", npcId: "Sól", name: "Sól", roleId: "water-coast", roleName: "Agua y costa", domain: "water-coast", focus: "Agua, orillas y transiciones costeras", protocolVersion: PROTOCOL_VERSION }),
+    Object.freeze({ id: "npc-agent:ulf", npcId: "Ulf", name: "Ulf", roleId: "terrain-structures", roleName: "Terreno y estructuras", domain: "terrain-structures", focus: "Terreno, obstáculos, estructuras y colisiones", protocolVersion: PROTOCOL_VERSION }),
+    Object.freeze({ id: "npc-agent:tyr", npcId: "Týr", name: "Týr", roleId: "materials-lighting", roleName: "Materiales e iluminación", domain: "materials-lighting", focus: "Texturas, materiales, iluminación y sombras", protocolVersion: PROTOCOL_VERSION })
+  ]);
+
+  function finiteMetric(value) {
+    if (value === null || value === undefined || value === "" || typeof value === "boolean") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function medianMetric(values) {
+    const sorted = values.map(finiteMetric).filter(value => value !== null).sort((a, b) => a - b);
+    if (!sorted.length) return null;
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+
+  function analyzeSessionReports(reports) {
+    const seenSessionIds = new Set();
+    const source = Array.isArray(reports) ? reports.filter(report => {
+      if (!report || typeof report !== "object" || !Array.isArray(report.samples)) return false;
+      const sessionId = String(report.sessionId || "").trim();
+      if (!sessionId || seenSessionIds.has(sessionId)) return false;
+      seenSessionIds.add(sessionId);
+      return true;
+    }) : [];
+    const performanceSessions = [];
+    const allWindows = [];
+    let waterEvidenceSamples = 0;
+
+    for (const report of source) {
+      const valid = report.samples.map(sample => {
+        const frame = sample && sample.frameTiming && typeof sample.frameTiming === "object" ? sample.frameTiming : {};
+        const p95 = finiteMetric(frame.p95Ms);
+        const targetFps = finiteMetric(sample && sample.targetFps);
+        return p95 !== null && targetFps !== null && targetFps > 0
+          ? { p95Ms: p95, targetFps, capturedAt: sample.capturedAt || null }
+          : null;
+      }).filter(Boolean);
+      if (valid.length) allWindows.push(...valid);
+      if (valid.length >= 3) {
+        const breached = valid.filter(window => window.p95Ms > 1000 / window.targetFps).length;
+        performanceSessions.push({
+          sessionId: String(report.sessionId || ""),
+          validWindows: valid.length,
+          breachRate: breached / valid.length,
+          medianP95Ms: medianMetric(valid.map(window => window.p95Ms))
+        });
+      }
+      waterEvidenceSamples += report.samples.filter(sample =>
+        sample && sample.waterDiagnostics && sample.waterDiagnostics.available === true
+      ).length;
+    }
+
+    const validWindows = allWindows.length;
+    const independentSessions = performanceSessions.length;
+    const breachedWindows = allWindows.filter(window => window.p95Ms > 1000 / window.targetFps).length;
+    const breachRate = validWindows ? breachedWindows / validWindows : null;
+    const medianP95Ms = medianMetric(allWindows.map(window => window.p95Ms));
+    let performanceStatus = "sin-datos-suficientes";
+    let performanceSummary = "Eira necesita al menos tres intervalos válidos con p95 y objetivo de FPS registrados.";
+    let confidence = null;
+
+    if (validWindows >= 3 && independentSessions >= 1) {
+      confidence = Math.min(0.99, 0.55 + Math.min(validWindows, 12) * 0.025 + Math.min(independentSessions - 1, 3) * 0.05);
+      if (independentSessions >= 2 && validWindows >= 5 && breachRate >= 0.7) {
+        performanceStatus = "confirmado";
+        performanceSummary = "La pérdida de presupuesto de fotograma se repite en varias sesiones independientes. La causa raíz aún necesita comprobación.";
+      } else if (breachRate >= 0.5) {
+        performanceStatus = "probable";
+        performanceSummary = "Una parte importante de las ventanas registradas supera el objetivo de fotograma. Hace falta correlacionar isla, escena y etapa del motor.";
+      } else if (breachRate <= 0.15) {
+        performanceStatus = "sin-incidencia-observada";
+        performanceSummary = "Las ventanas disponibles no muestran una superación repetida del objetivo. Esto no garantiza que todas las zonas estén libres de tirones.";
+      } else {
+        performanceStatus = "sin-datos-suficientes";
+        performanceSummary = "Las lecturas son variables y todavía no permiten clasificar la estabilidad con seguridad.";
+      }
+    }
+
+    const specialists = [
+      {
+        id: "eira", name: "Eira", roleId: "performance", status: performanceStatus,
+        summary: performanceSummary,
+        evidence: { sessionsWithThreeValidWindows: independentSessions, validWindows, breachedWindows, breachRate: breachRate === null ? null : Number(breachRate.toFixed(3)), medianP95Ms: medianP95Ms === null ? null : Number(medianP95Ms.toFixed(2)), confidence }
+      },
+      {
+        id: "sol", name: "Sól", roleId: "water-coast",
+        status: waterEvidenceSamples ? "evidencia-recogida" : "sin-datos-suficientes",
+        summary: waterEvidenceSamples
+          ? "Hay lecturas del subsistema de agua guardadas. Se muestran como evidencia; todavía no se aplican umbrales automáticos sin una referencia validada."
+          : "Todavía no hay lecturas suficientes del subsistema de agua en los informes guardados.",
+        evidence: { samplesWithWaterDiagnostics: waterEvidenceSamples }
+      },
+      {
+        id: "ulf", name: "Ulf", roleId: "terrain-structures",
+        status: "pendiente-recorrido-fisico",
+        summary: "La inspección geométrica está disponible, pero la patrulla física con navegación y colisiones reales aún no está implementada.",
+        evidence: { physicalNavigationActive: false }
+      },
+      {
+        id: "tyr", name: "Týr", roleId: "materials-lighting",
+        status: "pendiente-capturas-visuales",
+        summary: "Los informes de sesión todavía no contienen capturas comparables de materiales e iluminación.",
+        evidence: { synchronizedVisualCaptures: 0 }
+      }
+    ];
+
+    return {
+      schemaVersion: 1,
+      reportCount: source.length,
+      validPerformanceWindows: validWindows,
+      independentPerformanceSessions: independentSessions,
+      specialists,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
   function byteLength(value) {
     if (typeof TextEncoder === "function") return new TextEncoder().encode(value).length;
     return unescape(encodeURIComponent(value)).length;
@@ -160,6 +282,8 @@
   return Object.freeze({
     PROTOCOL_VERSION,
     ROLES,
+    SPECIALISTS,
+    analyzeSessionReports,
     EVENT_KINDS: Object.freeze(Array.from(EVENT_KINDS)),
     REMOTE_EVENT_KINDS: Object.freeze(Array.from(REMOTE_EVENT_KINDS)),
     parseVillagerName,

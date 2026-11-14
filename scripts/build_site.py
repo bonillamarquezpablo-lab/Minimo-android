@@ -721,11 +721,36 @@ def main() -> None:
         shutil.copy2(script_source, script_target)
         print(f"OK scripts/{script_name}: módulo NPC validado y empaquetado.")
 
+    # Lightweight local session recorder: no scene objects or render assets are created.
+    session_recorder_source = ROOT / "scripts" / "game-session-recorder.js"
+    if not session_recorder_source.is_file():
+        raise SystemExit("Falta scripts/game-session-recorder.js.")
+    session_recorder_check = subprocess.run([node, "--check", str(session_recorder_source)], capture_output=True, text=True)
+    if session_recorder_check.returncode != 0:
+        raise SystemExit("Game session recorder syntax validation failed:\n" + session_recorder_check.stderr)
+    inspector_agent_ui_source = ROOT / "inspector" / "npc-agents.js"
+    if not inspector_agent_ui_source.is_file():
+        raise SystemExit("Falta inspector/npc-agents.js.")
+    inspector_agent_ui_check = subprocess.run([node, "--check", str(inspector_agent_ui_source)], capture_output=True, text=True)
+    if inspector_agent_ui_check.returncode != 0:
+        raise SystemExit("Inspector NPC agent UI syntax validation failed:\n" + inspector_agent_ui_check.stderr)
+    session_recorder_target = DIST / "scripts" / "game-session-recorder.js"
+    session_recorder_target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(session_recorder_source, session_recorder_target)
+
     navigation_tag = '<script src="./scripts/nordic/navigation-suite.js" defer></script>'
     if navigation_tag not in html:
         if "</body>" not in html:
             raise SystemExit("No se encontró </body> para instalar la navegación.")
         html = html.replace("</body>", navigation_tag + "\n</body>", 1)
+
+    session_recorder_tag = '<script src="./scripts/game-session-recorder.js" defer></script>'
+    if html.count(session_recorder_tag) > 1:
+        raise SystemExit("La etiqueta del registrador de sesiones aparece duplicada.")
+    if session_recorder_tag not in html:
+        if "</body>" not in html:
+            raise SystemExit("No se encontró </body> para instalar el registrador de sesiones.")
+        html = html.replace("</body>", session_recorder_tag + "\n</body>", 1)
 
 
     # Release candidate 0.6.291: restore flagship render clarity while preserving the

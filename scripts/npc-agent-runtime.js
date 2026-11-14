@@ -1,9 +1,13 @@
 (function () {
   "use strict";
-  if (!window || !window.ELSN_NPC_AGENT_CORE || !window.__ELSN_NPC_AGENT_CONTEXT__) return;
+  function isInspectorCenterPath() {
+    const segments = String(window.location && window.location.pathname || "").split("/").filter(Boolean);
+    const last = segments[segments.length - 1] || "";
+    return last === "inspector" || (last === "index.html" && segments[segments.length - 2] === "inspector");
+  }
+  if (typeof window === "undefined" || !window.ELSN_NPC_AGENT_CORE || !isInspectorCenterPath()) return;
 
   const Core = window.ELSN_NPC_AGENT_CORE;
-  const context = window.__ELSN_NPC_AGENT_CONTEXT__;
   const DB_NAME = "elsn-npc-shared-memory";
   const DB_VERSION = 1;
   const MAX_MEMORY_EVENTS = 500;
@@ -106,21 +110,9 @@
     catch (_) { return false; }
   }
 
-  function civilianRoster() {
-    let roster = [];
-    try { roster = context.getCivilianRoster(); } catch (error) { console.warn("Civilian roster unavailable:", error); }
-    return Array.isArray(roster) ? roster.filter(Core.isEligibleCivilian) : [];
-  }
-
   function refreshAgents() {
-    state.agents = civilianRoster().map(npc => {
-      const agent = Core.assignCivilianAgent(npc);
-      if (agent) {
-        // Metadata only: no meshes, transforms, materials, animation groups or movement are touched.
-        npc.aiAgent = agent;
-      }
-      return agent;
-    }).filter(Boolean);
+    // Inspector-only specialist identities. No game civilian or renderable actor is touched.
+    state.agents = Core.SPECIALISTS.map(agent => Object.assign({}, agent));
     return state.agents.slice();
   }
 

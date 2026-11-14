@@ -38,6 +38,7 @@ REQUIRED_FILES = (
     "scripts/nordic/world-inspection.js",
     "scripts/npc-agent-core.js",
     "scripts/npc-agent-runtime.js",
+    "scripts/game-session-recorder.js",
     *MANIFESTS,
     "icon.svg",
     "assets/asset-manifest.json",
@@ -112,26 +113,41 @@ def main() -> None:
         fail("El sistema atmosférico debe cargarse antes del runtime principal.")
     if "window.__ELSN_ATMOSPHERE_CONTROLS" not in index_html or "atmosphereSystem.update(dt)" not in index_html:
         fail("El reloj atmosférico no está conectado al bucle de juego y a sus controles.")
+    session_recorder_source = read_text("scripts/game-session-recorder.js")
+    if '<script src="./scripts/game-session-recorder.js" defer></script>' not in index_html:
+        fail("El juego no carga el registrador ligero de informes de sesión.")
+    if "function isInspectorCenterPath()" not in read_text("scripts/npc-agent-runtime.js"):
+        fail("El runtime de especialistas debe quedar aislado del modo juego y ejecutarse solo en Inspector Center.")
+    if "const SPECIALISTS = Object.freeze([" not in read_text("scripts/npc-agent-core.js") or "function analyzeSessionReports(reports)" not in read_text("scripts/npc-agent-core.js"):
+        fail("Falta el catálogo de especialistas o el análisis conservador de informes.")
+    for marker in ("elsn-game-session-reports", "MAX_SAMPLES_PER_SESSION = 360", "MAX_STORED_SESSIONS = 20", 'classList.contains("game-running")', "window.top !== window.self"):
+        if marker not in session_recorder_source:
+            fail("El registrador de sesiones no conserva su contrato de almacenamiento acotado y modo juego: " + marker)
     npc_agent_core_source = read_text("scripts/npc-agent-core.js")
     npc_agent_runtime_source = read_text("scripts/npc-agent-runtime.js")
-    npc_agent_markers = (
+    game_specialist_markers = (
         "window.__ELSN_NPC_AGENT_CONTEXT__",
         "getCivilianRoster:()=>ambientPeople.slice()",
         '<script src="./scripts/npc-agent-core.js" defer></script>',
         '<script src="./scripts/npc-agent-runtime.js" defer></script>',
     )
-    missing_npc_agent_markers = [marker for marker in npc_agent_markers if marker not in index_html]
-    if missing_npc_agent_markers:
-        fail("Los especialistas NPC no están conectados al roster civil y al runtime del juego: " + ", ".join(missing_npc_agent_markers))
+    if any(marker in index_html for marker in game_specialist_markers):
+        fail("El juego no debe cargar ni inicializar especialistas; su runtime pertenece exclusivamente al Inspector Center.")
     for required_npc_marker in (
         "function isEligibleCivilian(npc)",
         'parts.role !== "civilian"',
         "npc.recruited === true",
+        "const SPECIALISTS = Object.freeze([",
+        "function analyzeSessionReports(reports)",
         "function normalizeBridgeEndpoint(value)",
         'url.protocol !== "https:"',
     ):
         if required_npc_marker not in npc_agent_core_source:
             fail("El núcleo de especialistas NPC no mantiene las restricciones de identidad y HTTPS: " + required_npc_marker)
+    if "function isInspectorCenterPath()" not in npc_agent_runtime_source or "Core.SPECIALISTS.map" not in npc_agent_runtime_source:
+        fail("El runtime de especialistas debe ejecutarse solo en Inspector Center y usar identidades de especialista independientes.")
+    if "context.getCivilianRoster" in npc_agent_runtime_source or "npc.aiAgent" in npc_agent_runtime_source:
+        fail("El runtime del Inspector no debe etiquetar personajes civiles de la partida.")
     for required_bridge_marker in (
         'credentials: "include"',
         '"X-CSRF-Token": state.bridge.csrfToken',

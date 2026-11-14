@@ -1,75 +1,67 @@
-# EL SIN NOMBRE — NPC specialists and external agent bridge
+# EL SIN NOMBRE — Inspector NPC specialists and external agent bridge
 
-## Existing villagers assigned as specialists
+## Inspector-only specialist identities
 
-Only neutral civilian villagers named `Villager_<village>_<slot>` are eligible. The game roster is filtered again at runtime: the character parts must be marked `civilian=true` and `role="civilian"`, and the villager must not have been recruited. The player, Viking protagonist, guards, warriors, invasion units and companions are not eligible.
-
-The assignment is deterministic and does not depend on the NPC's appearance:
+The specialist runtime is loaded by Inspector Center only. The player-facing game HTML does not load or initialize the specialist runtime, does not tag civilian actors, and does not instantiate extra models, skeletons, animations or colliders for inspection.
 
 | Specialist | Responsibility |
 | --- | --- |
-| Performance | FPS, frame times, p95/p99, stutters and regression evidence |
-| Water and coast | Waves, foam, reflections, splashes and shoreline transitions |
-| Terrain and structures | Island geometry, heightfields, settlement placement, grounding and collisions |
-| Materials and lighting | Textures, PBR materials, lights and shadows |
+| Eira | Performance, FPS, frame times, p95/p99 and stutter evidence |
+| Sól | Water, foam, reflections, splashes and shoreline transitions |
+| Ulf | Island terrain, structures, obstacles and collision investigation |
+| Týr | Materials, PBR textures, lighting and shadows |
 
-The assignment is metadata only. It does not change meshes, materials, transforms, animation groups, weapons, routes, speed, or the game update loop.
+These are logical Inspector identities in this stage. Physical navigation and obstacle avoidance are not yet active; the Inspector must not report a camera visit as a physical patrol.
 
-## Shared memory
+## Session reports
 
-The browser runtime stores event records, task outbox items and the external cursor in IndexedDB. Tabs on the same origin exchange new records using BroadcastChannel. When IndexedDB is unavailable, the system reports that it has fallen back to session-only memory. The retained event history is bounded to 500 entries.
+The game writes a small local report while a real top-level player session is active. Embedded Inspector diagnostic runs are excluded. Reports are stored in IndexedDB database \`elsn-game-session-reports\`, independently from game saves. Sampling is bounded to one reading every 10 seconds, 360 samples per session, and 20 retained sessions. The payload contains the game build, timing/FPS measurements where available, selected CPU/GPU/scene metrics, optional player coordinates if exposed by the health API, and compact water-debug measurements.
 
-The in-game API is exposed as `window.__ELSN_NPC_AGENT_SYSTEM__`:
+The recorder does not create meshes, characters or physics objects. It does not run a continuous profiler. The Inspector Center reads the same-origin report database and imports report summaries into the specialists' shared memory.
 
-- `await api.ready`
-- `api.listAgents()` and `api.listRoles()`
-- `await api.getSnapshot()`
-- `await api.getMemory({ domain, limit })`
-- `await api.remember(event)`
-- `await api.submitTask(npcId, { action, goal, detail })`
-- `await api.exportSnapshot()`
-- `await api.connectExternalBridge(endpoint)`
-- `api.disconnectExternalBridge()`
-- `await api.syncExternal()`
+## Local specialist intelligence
 
-Tasks accept only `investigate` or `propose-fix`. A task is a request for an external specialist to inspect evidence and return findings. No remote event can execute JavaScript, edit files, deploy a build, or merge code.
+Eira currently applies a conservative evidence rule to the saved performance windows. A single session can only produce a probable observation; a repeated finding requires independent sessions and enough valid samples. Missing target FPS or p95 values remain unavailable rather than being treated as zero.
+
+Sól records the presence of water diagnostics without declaring a defect until a validated threshold exists. Ulf remains pending until physical navigation and collision tests are implemented. Týr remains pending until synchronized visual evidence is available. No diagnosis is silently promoted to a confirmed root cause.
+
+The shared memory stores events, task outbox items and the external cursor in IndexedDB database \`elsn-npc-shared-memory\`. Its event history is bounded to 500 entries. Tabs on the same origin exchange new records through BroadcastChannel.
+
+The Inspector API is exposed as \`window.__ELSN_NPC_AGENT_SYSTEM__\`:
+
+- \`await api.ready\`
+- \`api.listAgents()\` and \`api.listRoles()\`
+- \`await api.getSnapshot()\`
+- \`await api.getMemory({ domain, limit })\`
+- \`await api.remember(event)\`
+- \`await api.submitTask(npcId, { action, goal, detail })\`
+- \`await api.exportSnapshot()\`
+- \`await api.connectExternalBridge(endpoint)\`
+- \`api.disconnectExternalBridge()\`
+- \`await api.syncExternal()\`
+
+Tasks accept only \`investigate\` or \`propose-fix\`. External responses remain data-only: no remote event can execute JavaScript, edit repository files, deploy a build or merge code.
 
 ## External bridge protocol v1
 
-The game is a static GitHub Pages site, so it must not contain a model-provider key, GitHub token, or other long-lived secret. A separate HTTPS service must authenticate the browser with a secure session cookie and call external agents server-side.
+The game is a static GitHub Pages site, so it must not contain a model-provider key, GitHub token or other long-lived secret. A separate HTTPS service must authenticate the Inspector browser with a secure session cookie and call external agents server-side.
 
-Configure an endpoint at runtime by defining this before the runtime script executes:
+Configure an endpoint on the Inspector page before the specialist runtime loads:
 
-```js
+\`\`\`js
 window.__ELSN_NPC_AGENT_BRIDGE_CONFIG__ = {
   endpoint: "https://YOUR-SECURE-BRIDGE.example"
 };
-```
-
-Or connect from the browser API:
-
-```js
-await window.__ELSN_NPC_AGENT_SYSTEM__.connectExternalBridge(
-  "https://YOUR-SECURE-BRIDGE.example"
-);
-```
+\`\`\`
 
 The endpoint must implement:
 
-1. `GET /v1/health` — JSON with `protocolVersion: 1`, capabilities `tasks:submit` and `events:read`, and a `csrfToken` string of 16–512 characters. The browser sends this token in `X-CSRF-Token` on task submissions.
-2. `POST /v1/tasks` — accepts a task payload with a stable task idempotency key and responds with `{ "accepted": true, "remoteTaskId": "..." }`.
-3. `GET /v1/events?cursor=...` — responds with `{ "protocolVersion": 1, "events": [], "nextCursor": "..." }`.
+1. \`GET /v1/health\` — JSON with \`protocolVersion: 1\`, capabilities \`tasks:submit\` and \`events:read\`, and a \`csrfToken\` string of 16–512 characters.
+2. \`POST /v1/tasks\` — accepts a task payload with a stable idempotency key.
+3. \`GET /v1/events?cursor=...\` — returns allowlisted observations, diagnoses, task proposals and task results.
 
-The browser sends requests with `credentials: "include"`; it never sends a bearer token. The bridge must:
-- allow only the exact GitHub Pages origin through credentialed CORS;
-- use a Secure, HttpOnly session cookie, server-side authorization, exact Origin validation and CSRF-token validation;
-- validate user/session permissions and rate-limit requests;
-- validate and cap every payload;
-- return observations, diagnoses, task proposals and task results only;
-- never expose provider keys or GitHub credentials to the browser.
-
-Remote events are allowlisted and size-limited. Unknown event types (including code execution or patch application) are discarded. External agents may return observations, diagnoses and patch proposals as data only. The current bridge protocol does not create branches, commits, pull requests, or repository changes; integration remains a separate human-controlled step.
+The browser sends requests with \`credentials: "include"\`; it never sends a bearer token. The bridge must enforce exact-origin credentialed CORS, a Secure/HttpOnly session cookie, Origin and CSRF validation, authorization and rate limits. Provider keys and GitHub credentials stay server-side.
 
 ## Current connection status
 
-The client adapter and protocol contract are included, but a live external connection is not active until a real HTTPS bridge endpoint and authenticated session are supplied. With no endpoint configured, local shared memory and the task outbox continue to work; pending tasks can be exported with `exportSnapshot()`.
+The local memory and Inspector API work without a remote bridge. A live external AI connection is not active until a real HTTPS endpoint and authenticated session are configured. The current local analysis is deterministic and evidence-based; it is not a connected ChatGPT model and does not autonomously apply repairs.

@@ -18,7 +18,7 @@
       <span class="brand-name">EL SIN NOMBRE<span class="brand-sub">INSPECTOR CENTER · CONTROL DE CALIDAD</span></span>
     </a>
     <nav class="nav" aria-label="Navegación principal">
-      <a href="#control">01 · Operaciones</a><a href="#patrulla-exploradores">02 · Patrulla</a><a href="#telemetria">03 · Rendimiento</a><a href="#radar">04 · Islas</a><a href="#comparativa">05 · Comparación</a>
+      <a href="#control">01 · Operaciones</a><a href="#patrulla-exploradores">02 · Patrulla</a><a href="#telemetria">03 · Rendimiento</a><a href="#radar">04 · Islas</a><a href="#comparativa">05 · Comparación</a><a href="#inteligencia-npc">06 · Especialistas</a>
     </nav>
     <div class="topbar-actions"><button class="guide-fab" id="guideFab" type="button" aria-label="Abrir guía y ayuda" title="Ayuda paso a paso">? <span>Ayuda</span></button><span class="connection" id="connection"><span class="dot"></span>Conectando</span></div>
   </header>
@@ -314,6 +314,36 @@
 
 
 
+    <section class="section" id="inteligencia-npc">
+      <div class="section-heading">
+        <div><div class="section-kicker">FASE 3 · ESPECIALISTAS</div><h2>Inteligencia y memoria de NPCs</h2><p>Informes locales de las partidas, análisis por especialidad y memoria persistente. Este panel pertenece al Inspector Center; los especialistas no se instancian como personajes adicionales durante el juego.</p></div>
+        <span class="section-index">MEMORIA LOCAL</span>
+      </div>
+      <article class="chart-card live-diagnostic-card">
+        <div class="live-diagnostic-actions">
+          <button class="primary" id="npcAgentsRefresh" type="button">Actualizar informes</button>
+          <button class="small-button" id="npcAgentsExport" type="button">Exportar informes y análisis</button>
+          <span id="npcAgentsStatus" role="status" aria-live="polite">Esperando la memoria local de especialistas.</span>
+        </div>
+        <div class="live-diagnostic-grid">
+          <div><span>Partidas guardadas</span><strong id="npcAgentsSessionCount">—</strong></div>
+          <div><span>Lecturas acumuladas</span><strong id="npcAgentsSampleCount">—</strong></div>
+          <div><span>Especialistas</span><strong>4</strong></div>
+          <div><span>Modo juego</span><strong>Sin agentes físicos</strong></div>
+        </div>
+        <h3>Estado de los especialistas</h3>
+        <div class="telemetry-grid" id="npcAgentsSpecialists">
+          <p class="live-diagnostic-note">Cargando Eira, Sól, Ulf y Týr…</p>
+        </div>
+        <h3>Informes recientes de partidas</h3>
+        <div class="telemetry-grid" id="npcAgentsReports">
+          <p class="live-diagnostic-note">Todavía no se han leído informes.</p>
+        </div>
+        <details class="technical"><summary>Memoria compartida de especialistas</summary><ul id="npcAgentsMemory"><li>Esperando registros.</li></ul></details>
+        <p class="live-diagnostic-note">El análisis de rendimiento es local y basado en mediciones. El puente de IA externo no se considera conectado mientras no exista un servicio HTTPS autenticado. Las reparaciones no se aplican automáticamente ni se publican sin validación y supervisión.</p>
+      </article>
+    </section>
+
     <footer class="footer"><span>EL SIN NOMBRE · Inspector Center · Panel de auditoría independiente</span><span>Los inicios se envían directamente a GitHub Actions; los registros completos siguen disponibles en <a id="artifactsLink" href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions" target="_blank" rel="noopener">el historial técnico ↗</a>.</span></footer>
   </main>
   <aside class="guide-panel" id="guidePanel" hidden role="dialog" aria-modal="false" aria-labelledby="guideStepTitle" aria-live="polite">
@@ -330,5 +360,8 @@
 </div>
 <script src="app.js?v=20261113.11" defer></script>\n<script type="module" src="phase1-live.js?v=3"></script>
 <script src="explorer-patrol.js?v=1" defer></script>
+<script src="../scripts/npc-agent-core.js" defer></script>
+<script src="../scripts/npc-agent-runtime.js" defer></script>
+<script src="npc-agents.js?v=1" defer></script>
 </body>
 </html>

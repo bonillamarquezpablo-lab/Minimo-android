@@ -58,12 +58,21 @@ assert.ok(buildSite.includes("atmosphereSystem.update(dt)"),"The single atmosphe
 assert.ok(serviceWorker.includes("./scripts/nordic/atmosphere-system.js"),"The installed app must cache the atmosphere module offline.");
 assert.ok(buildSite.includes('atmosphere_tag = \'<script src="./scripts/nordic/atmosphere-system.js"></script>\''),"Atmosphere must load synchronously.");
 assert.ok(buildSite.includes("html.index(atmosphere_tag) > html.index(game_runtime_marker)"),"Atmosphere must load before the game runtime.");
-assert.ok(indexHtml.includes("window.__ELSN_NPC_AGENT_CONTEXT__") && indexHtml.includes("getCivilianRoster:()=>ambientPeople.slice()"),"NPC specialists must be attached only to the existing civilian roster.");
-assert.ok(indexHtml.includes('<script src="./scripts/npc-agent-core.js" defer></script>') && indexHtml.includes('<script src="./scripts/npc-agent-runtime.js" defer></script>'),"NPC specialist modules must load after the game context is defined.");
+assert.ok(!indexHtml.includes("window.__ELSN_NPC_AGENT_CONTEXT__") && !indexHtml.includes("getCivilianRoster:()=>ambientPeople.slice()"),"The game runtime must not create or assign inspector specialists.");
+assert.ok(!indexHtml.includes('<script src="./scripts/npc-agent-core.js" defer></script>') && !indexHtml.includes('<script src="./scripts/npc-agent-runtime.js" defer></script>'),"Specialist modules must not be loaded by the player-facing game entry point.");
 assert.ok(buildSite.includes('for script_name in ("npc-agent-core.js", "npc-agent-runtime.js")'),"The release builder must syntax-check and package both NPC specialist modules.");
 assert.ok(serviceWorker.includes("./scripts/npc-agent-core.js") && serviceWorker.includes("./scripts/npc-agent-runtime.js"),"The offline shell must cache both NPC specialist modules.");
 assert.ok(npcCore.includes("function isEligibleCivilian(npc)") && npcCore.includes('parts.role !== "civilian"'),"Only existing civilian NPCs may receive specialist metadata.");
 assert.ok(npcRuntime.includes("BroadcastChannel") && npcRuntime.includes("elsn-npc-shared-memory"),"Shared NPC memory must retain the existing cross-tab IndexedDB contract.");
 assert.ok(!npcRuntime.includes("eval(") && !npcRuntime.includes("new Function("),"Remote specialist responses must remain data-only.");
+
+const sessionRecorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
+assert.ok(buildSite.includes('scripts/game-session-recorder.js') && buildSite.includes('session_recorder_tag'),"The release builder must package and inject the local session recorder.");
+assert.ok(serviceWorker.includes("./scripts/game-session-recorder.js"),"The installed game must cache the session recorder offline.");
+assert.ok(npcRuntime.includes("function isInspectorCenterPath()") && npcRuntime.includes("Core.SPECIALISTS.map"),"The specialist runtime must execute only in Inspector Center with virtual specialist identities.");
+assert.ok(!npcRuntime.includes("context.getCivilianRoster") && !npcRuntime.includes("npc.aiAgent"),"The game runtime must not attach specialist metadata to civilian actors.");
+assert.ok(sessionRecorder.includes("elsn-game-session-reports") && sessionRecorder.includes("MAX_SAMPLES_PER_SESSION = 360"),"Session reports must be stored locally with bounded samples.");
+assert.ok(sessionRecorder.includes("window.top !== window.self"),"Embedded Inspector test runs must not pollute player session history.");
+
 
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
