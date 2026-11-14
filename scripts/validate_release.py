@@ -367,8 +367,8 @@ def main() -> None:
         fail("La caché determinista de ruido del terreno debe estar acotada y diagnosticada.")
     if "const GROUND_RELAX_INTERVAL=1/30;" not in index_html or "groundRelaxAccumulator>=GROUND_RELAX_INTERVAL" not in index_html:
         fail("La relajación del terreno debe acumular el tiempo completo y ejecutarse a 30 Hz.")
-    if "const enemyAiInterval=isConstrainedMobile?.05:(1/60);" not in index_html or "const companionAiInterval=isConstrainedMobile?.0667:(1/60);" not in index_html:
-        fail("La IA debe limitar el trabajo redundante a 60 Hz sin alterar la cadencia de perfiles móviles limitados.")
+    if "const enemyAiInterval=isTouchDevice?(isConstrainedMobile?.05:(1/30)):(1/60);" not in index_html or "const companionAiInterval=isTouchDevice?(isConstrainedMobile?.0667:(1/30)):(1/60);" not in index_html:
+        fail("La IA debe limitar las pasadas costosas de móviles a 30 Hz sin alterar los límites de dispositivos restringidos ni escritorio.")
     if "reportVersion:'16',build:'0.6.293'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     for marker in (
