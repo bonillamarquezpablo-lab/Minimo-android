@@ -24,15 +24,14 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
 assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.292"\)/,"The build must promote every visible source version to 0.6.292.");
-assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr"),"The flagship profile must initialise adaptive scaling from the actual native render scale.");
-assert.ok(buildSite.includes("qualityDprFloor=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.50:1.0):1.15)") && buildSite.includes("qualityDprCeiling=Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.45:1.70):1.85)"),"Native render scale must stay inside a device-aware non-blurry quality range.");
-assert.ok(buildSite.includes("qualityDprStableSamples>=4") && buildSite.includes("qualityDprSlowSamples>=1"),"Resolution must react to FPS drops and recover only after stable frame pacing.");
-assert.ok(buildSite.includes("const step=fps<severeFps?.12:.06") && buildSite.includes("qualityDprCurrent+.04"),"Adaptive scaling must lower faster than it recovers.");
+assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true"),"Quality must keep its initially selected native render scale for the full session.");
+assert.ok(!buildSite.includes("qualityDprFloor") && !buildSite.includes("qualityDprCeiling") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples") && !buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"A CPU hitch must never trigger automatic resolution reduction in Quality.");
+assert.ok(buildSite.includes("highHeadroomQualityMobile?2.10:1.45"),"The high-headroom mobile Quality startup scale must remain intact.");
 assert.ok(!buildSite.includes("fsr1Candidate") && !buildSite.includes("fsr1InputScale"),"The build must not retain an inactive FSR1 scaling path.");
 assert.ok(buildSite.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && buildSite.includes('html.replace(legacy_fsr_guard, "if(false){", 1)'),"The legacy FSR branch must be guarded before scene startup.");
 assert.ok(buildSite.includes('"loaderVersion": BABYLON_VERSION') && buildSite.includes('"defaultBackend": "WebGL2-preferred"'),"The asset manifest must record the exact Babylon/glTF loader pair and validated backend.");
 assert.ok(buildSite.includes("new B.EngineInstrumentation(engine)") && buildSite.includes("new B.SceneInstrumentation(scene)"),"The build must expose Babylon-native profiling only to diagnostics.");
-assert.ok(buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"Adaptive resolution must be applied through Babylon hardware scaling.");
+assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true") && !buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"The Quality render scale must stay fixed during gameplay; runtime CPU pressure must not reduce image quality.");
 assert.match(buildSite,/BABYLON_VERSION = "9\.35\.0"/,"The packaged engine must include the DynamicTexture null-update fix.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/babylon.js"'),"The engine URL must use the pinned Babylon version.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/loaders/babylonjs.loaders.min.js"'),"The glTF loader must match the engine version.");
@@ -79,6 +78,7 @@ assert.ok(npcRuntime.includes("BroadcastChannel") && npcRuntime.includes("elsn-n
 assert.ok(!npcRuntime.includes("eval(") && !npcRuntime.includes("new Function("),"Remote specialist responses must remain data-only.");
 
 const sessionRecorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
+const sessionIdleTest=fs.readFileSync('scripts/test_session_recorder_idle_contract.cjs','utf8');
 assert.ok(buildSite.includes('scripts/game-session-recorder.js') && buildSite.includes('session_recorder_tag'),"The release builder must package and inject the local session recorder.");
 assert.ok(serviceWorker.includes("./scripts/game-session-recorder.js"),"The installed game must cache the session recorder offline.");
 assert.ok(npcRuntime.includes("function isInspectorCenterPath()") && npcRuntime.includes("Core.SPECIALISTS.map"),"The specialist runtime must execute only in Inspector Center with virtual specialist identities.");
@@ -86,6 +86,8 @@ assert.ok(!npcRuntime.includes("context.getCivilianRoster") && !npcRuntime.inclu
 assert.ok(sessionRecorder.includes("elsn-game-session-reports") && sessionRecorder.includes("MAX_SAMPLES_PER_SESSION = 360"),"Session reports must be stored locally with bounded samples.");
 assert.ok(sessionRecorder.includes("window.top !== window.self"),"Embedded Inspector test runs must not pollute player session history.");
 assert.ok(sessionRecorder.includes("buildSessionSummary") && sessionRecorder.includes("probableBottleneck"),"Completed match reports must summarize FPS, frame-time and CPU/GPU bottleneck evidence.");
+assert.ok(sessionRecorder.includes("queueIdleSample") && sessionRecorder.includes("requestIdleCallback") && sessionRecorder.includes("longtask"),"Telemetry must defer heavy reads until idle and capture browser long tasks.");
+assert.ok(sessionRecorder.includes("drawCallsObservedDelta") && sessionRecorder.includes("semantics-unverified") && sessionRecorder.includes("diagnosticsReadMs") && sessionRecorder.includes("longTaskObserverSupported") && sessionIdleTest.includes("session recorder idle-performance contract"),"Reports must preserve unknown draw-call semantics, measure telemetry overhead and report actual Long Task API support.");
 assert.ok(sessionRecorder.includes("captureFinalWorldInspection") && sessionRecorder.includes("terrainObjects"),"Completed match reports must retain the final terrain-object audit and coordinates.");
 assert.ok(sessionRecorder.includes("maxMeshes: 10000"),"The final world audit must request the complete bounded scene inventory.");
 assert.ok(fs.readFileSync('inspector/npc-agents.js','utf8').includes("Ver informe técnico y coordenadas"),"Inspector Center must expose the saved report and terrain-coordinate evidence.");

@@ -8,6 +8,9 @@ const input=Array.from({length:9},(_,i)=>({id:"npc-"+i,distance:i+1,priority:i==
 const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
 assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);assert.match(runtime,/BABYLON\.Vector3\.Project/);assert.match(runtime,/Core\.POSITION_UPDATE_MS/);assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
 assert.doesNotMatch(runtime,/new BABYLON\.Mesh|MeshBuilder|new B\.Mesh|requestAnimationFrame/);
+assert.doesNotMatch(runtime,/computeWorldMatrix\(true\)/,"NPC dialogue ticks must not force-recompute every character's world matrix.");
+assert.match(runtime,/RANGE_SQUARED/,"Nearby NPC filtering must use squared distances before sorting the small visible set.");
+assert.match(runtime,/projectionScratch/,"Bubble projection should reuse its scratch vector and identity matrix.");
 assert.match(builder,/__ELSN_GAME_DIALOGUE_BRIDGE__/);assert.match(builder,/npc-dialogue-core\.js/);assert.match(builder,/npc-dialogue-runtime\.js/);assert.match(builder,/npc-dialogue\.css/);assert.match(builder,/maxVisibleBubbles:4/);
 assert.match(worker,/\.\/scripts\/npc-dialogue-core\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue-runtime\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue\.css/);assert.match(validator,/scripts\/npc-dialogue-core\.js/);assert.match(validator,/maxVisibleBubbles:4/);
 console.log("NPC ambient dialogue contract: PASS (four-bubble limit, range, scheduling, projection and offline packaging).");
