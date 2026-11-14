@@ -18,7 +18,17 @@ for (let village = 0; village < 8; village++) {
 }
 assert.deepEqual(new Set(civilians.map(agent => agent.roleId)), new Set(Core.ROLES.map(role => role.id)));
 assert.equal(Core.roleForVillager("Villager_2_1").id, "water-coast");
-assert.equal(Core.roleForVillager("Villager_2_1").id, Core.roleForVillager("Villager_2_1").id, "The same villager must keep the same specialist role across reads.");
+const deterministicSample = {
+  parts: { name: "Villager_2_1", civilian: true, role: "civilian" },
+  recruited: false
+};
+const firstAssignment = Core.assignCivilianAgent(deterministicSample);
+const reconstructedAssignment = Core.assignCivilianAgent({
+  parts: { ...deterministicSample.parts },
+  recruited: false
+});
+assert.deepEqual(reconstructedAssignment, firstAssignment,
+  "The same civilian identity must receive the same specialist assignment after reconstruction.");
 assert.equal(Core.roleForVillager("VillageGuard0_0"), null);
 assert.equal(Core.roleForVillager("Viking"), null);
 assert.equal(Core.isEligibleCivilian({ parts: { name: "VillageGuard0_0", civilian: false, role: "warrior" } }), false);
