@@ -41,20 +41,9 @@ Los eventos programados de GitHub Actions solo se ejecutan desde la rama predete
 
 La primera entrega automatiza recopilación, clasificación, asignación de tareas y publicación de los informes. Las pruebas de los especialistas son ahora una barrera obligatoria del workflow: si el análisis o sus contratos fallan, la ejecución no puede aparecer como correcta. No cambia el código del juego ni despliega reparaciones.
 
-### Revisión visual multimodal opcional
+## Inspección visual
 
-Se incorpora `scripts/ai-visual-review.mjs`, una pasarela de solo lectura compatible con la API Responses de OpenAI. Consume las láminas de captura, el informe de especialistas y genera `artifacts/ai-visual-review/report.json` y `report.md`. Si falta la credencial o el modelo, deja el estado `skipped` de forma explícita; nunca finge que una revisión IA se ejecutó. Valida el JSON de salida, limita el tamaño de las imágenes y no aplica cambios de código.
-
-Para activarla, el propietario debe añadir en GitHub Actions:
-- Secret `LAB_AI_API_KEY` con una clave de API del proveedor.
-- Repository variable `LAB_AI_MODEL` con un modelo habilitado para visión en la cuenta.
-La clave se envía exclusivamente al endpoint oficial `https://api.openai.com/v1/responses`; no se permite redirigirla a una URL configurable.
-
-La suscripción ChatGPT no equivale a una clave API ni incluye automáticamente saldo de API. El uso puede generar costes independientes.
-
-Los agentes capaces de investigar, escribir parches y abrir PR necesitan una segunda fase separada con permisos mínimos y credenciales de escritura. No se habilitan aquí: una respuesta de modelo no debe convertirse directamente en código ejecutable ni en un despliegue.
-
-Cuando se incorpore esa capa, cada especialista deberá trabajar en una rama efímera, proponer un parche, ejecutar pruebas unitarias, smoke tests y comparación visual, y descartar el cambio si falla cualquier protección. Ninguna reparación debe llegar a producción si no mantiene las funciones, la identidad visual y la calidad gráfica.
+Las capturas sincronizadas son evidencias para revisión humana. Los especialistas automáticos no emiten juicios visuales basándose únicamente en recuentos o diferencias de píxeles. La detección geométrica y estructural se apoya en datos del motor Babylon.js, sin servicios externos de visión ni credenciales de proveedor.
 
 ## Artefactos
 
