@@ -39,6 +39,9 @@ REQUIRED_FILES = (
     "scripts/npc-agent-core.js",
     "scripts/npc-agent-runtime.js",
     "scripts/game-session-recorder.js",
+    "scripts/npc-dialogue-core.js",
+    "scripts/npc-dialogue-runtime.js",
+    "scripts/npc-dialogue.css",
     *MANIFESTS,
     "icon.svg",
     "assets/asset-manifest.json",
@@ -125,6 +128,27 @@ def main() -> None:
             fail("El registrador de sesiones no conserva su contrato de almacenamiento acotado y modo juego: " + marker)
     npc_agent_core_source = read_text("scripts/npc-agent-core.js")
     npc_agent_runtime_source = read_text("scripts/npc-agent-runtime.js")
+    dialogue_core_source = read_text("scripts/npc-dialogue-core.js")
+    dialogue_runtime_source = read_text("scripts/npc-dialogue-runtime.js")
+    dialogue_style_source = read_text("scripts/npc-dialogue.css")
+    for marker in (
+        '<link rel="stylesheet" href="./scripts/npc-dialogue.css">',
+        '<script src="./scripts/npc-dialogue-core.js" defer></script>',
+        '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
+        "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
+        "maxVisibleBubbles:4",
+    ):
+        if marker not in index_html:
+            fail("El juego no integra correctamente los diálogos ambientales: " + marker)
+    if "const MAX_VISIBLE_BUBBLES=4" not in dialogue_core_source or "MAX_RANGE_METERS=18" not in dialogue_core_source:
+        fail("El núcleo de diálogos debe mantener cuatro bocadillos como máximo y un radio de 18 metros.")
+    for marker in ("BABYLON.Vector3.Project", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
+        if marker not in dialogue_runtime_source:
+            fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
+    if any(marker in dialogue_runtime_source for marker in ("new BABYLON.Mesh", "MeshBuilder", "requestAnimationFrame")):
+        fail("El runtime de diálogos no debe crear meshes 3D ni añadir trabajo permanente por fotograma.")
+    if ".elsn-npc-bubble-message" not in dialogue_style_source or "pointer-events:none" not in dialogue_style_source:
+        fail("La capa de bocadillos debe ser ligera y no interceptar los controles del juego.")
     game_specialist_markers = (
         "window.__ELSN_NPC_AGENT_CONTEXT__",
         "getCivilianRoster:()=>ambientPeople.slice()",

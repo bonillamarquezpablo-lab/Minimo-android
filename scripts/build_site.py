@@ -738,6 +738,23 @@ def main() -> None:
     session_recorder_target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(session_recorder_source, session_recorder_target)
 
+    # Player-facing ambient dialogue is isolated from Inspector specialist identities.
+    for script_name in ("npc-dialogue-core.js", "npc-dialogue-runtime.js"):
+        script_source = ROOT / "scripts" / script_name
+        if not script_source.is_file():
+            raise SystemExit(f"Falta el módulo de diálogos NPC: {script_name}")
+        dialogue_check = subprocess.run([node, "--check", str(script_source)], capture_output=True, text=True)
+        if dialogue_check.returncode != 0:
+            raise SystemExit(f"NPC dialogue syntax validation failed ({script_name}):\\n" + dialogue_check.stderr)
+        script_target = DIST / "scripts" / script_name
+        script_target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(script_source, script_target)
+    dialogue_style_source = ROOT / "scripts" / "npc-dialogue.css"
+    if not dialogue_style_source.is_file():
+        raise SystemExit("Falta scripts/npc-dialogue.css.")
+    dialogue_style_target = DIST / "scripts" / "npc-dialogue.css"
+    shutil.copy2(dialogue_style_source, dialogue_style_target)
+
     navigation_tag = '<script src="./scripts/nordic/navigation-suite.js" defer></script>'
     if navigation_tag not in html:
         if "</body>" not in html:
@@ -752,6 +769,43 @@ def main() -> None:
             raise SystemExit("No se encontró </body> para instalar el registrador de sesiones.")
         html = html.replace("</body>", session_recorder_tag + "\n</body>", 1)
 
+
+    # Read-only player dialogue bridge: reuses existing villagers and creates no actors.
+    dialogue_bridge_marker = "})();\\n</script>"
+    dialogue_bridge_code = r"""
+ // Player-facing dialogue bridge. Inspector specialist identities remain in their own runtime.
+ window.__ELSN_GAME_DIALOGUE_BRIDGE__=Object.freeze({
+  maxVisibleBubbles:4,
+  getSnapshot:()=>{
+   const focus=typeof playerPos==='function'?playerPos():player.root.position;
+   return {
+    active:!!gameStarted,
+    playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
+    people:ambientPeople,scene,camera:scene.activeCamera||camera,engine,
+    canvas:engine.getRenderingCanvas(),BABYLON:B
+   };
+  }
+ });
+"""
+    if html.count(dialogue_bridge_marker) != 1:
+        raise SystemExit("No se encontró exactamente una salida del runtime para conectar los diálogos NPC.")
+    html = html.replace(dialogue_bridge_marker, dialogue_bridge_code + "\\n})();\\n</script>", 1)
+
+    dialogue_style_tag = '<link rel="stylesheet" href="./scripts/npc-dialogue.css">'
+    if dialogue_style_tag not in html:
+        if "</head>" not in html:
+            raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
+        html = html.replace("</head>", dialogue_style_tag + "\\n</head>", 1)
+    for dialogue_tag in (
+        '<script src="./scripts/npc-dialogue-core.js" defer></script>',
+        '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
+    ):
+        if html.count(dialogue_tag) > 1:
+            raise SystemExit("Una etiqueta del runtime de diálogos NPC aparece duplicada.")
+        if dialogue_tag not in html:
+            if "</body>" not in html:
+                raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
+            html = html.replace("</body>", dialogue_tag + "\\n</body>", 1)
 
     # Release candidate 0.6.291: restore flagship render clarity while preserving the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.

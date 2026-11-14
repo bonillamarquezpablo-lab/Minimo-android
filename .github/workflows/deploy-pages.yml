@@ -40,8 +40,10 @@ jobs:
         run: node scripts/test_graphics_quality_contract.cjs
       - name: Test civilian NPC specialists and shared-memory contract
         run: node scripts/test_npc_agent_core.cjs
-      - name: Check NPC specialist runtime syntax
-        run: node --check scripts/npc-agent-core.js && node --check scripts/npc-agent-runtime.js
+      - name: Test autonomous civilian dialogue and four-bubble cap
+        run: node scripts/test_npc_dialogue_core.cjs
+      - name: Check NPC specialist and dialogue runtime syntax
+        run: node --check scripts/npc-agent-core.js && node --check scripts/npc-agent-runtime.js && node --check scripts/npc-dialogue-core.js && node --check scripts/npc-dialogue-runtime.js
       - name: Test release version and packaging contract
         run: node scripts/test_release_contract.cjs
       - name: Test unified day-night atmosphere clock and APIs

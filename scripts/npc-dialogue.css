@@ -1,0 +1,14 @@
+/* Four reusable HTML speech bubbles anchored to existing civilian heads. */
+.elsn-npc-dialogue-layer{position:fixed;inset:0;z-index:15;overflow:hidden;pointer-events:none;user-select:none;-webkit-user-select:none}
+.elsn-npc-dialogue-layer[hidden],.elsn-npc-bubble[hidden]{display:none!important}
+.elsn-npc-bubble{position:fixed;left:0;top:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:max-content;max-width:min(218px,62vw);padding:7px 10px 8px;border:1px solid rgba(218,180,111,.72);border-radius:11px 11px 11px 4px;background:linear-gradient(145deg,rgba(18,27,27,.96),rgba(10,16,17,.94));color:#f7edda;box-shadow:0 4px 16px rgba(0,0,0,.38),0 0 0 1px rgba(0,0,0,.22);opacity:0;transform-origin:50% 100%;transition:opacity 160ms ease;will-change:transform,opacity;contain:layout paint style;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.elsn-npc-bubble.is-visible{opacity:1}
+.elsn-npc-bubble:after{content:"";position:absolute;left:13px;bottom:-6px;width:10px;height:10px;background:rgba(14,21,21,.97);border-right:1px solid rgba(218,180,111,.65);border-bottom:1px solid rgba(218,180,111,.65);transform:rotate(45deg)}
+.elsn-npc-bubble-role{color:#d9b777;font-size:8px;font-weight:800;line-height:1.15;letter-spacing:.10em;text-transform:uppercase}
+.elsn-npc-bubble-kind{color:rgba(231,218,194,.66);font-size:7px;font-weight:700;line-height:1.1;letter-spacing:.12em}
+.elsn-npc-bubble-message{color:#fff8e9;font-size:11px;font-weight:550;line-height:1.32;overflow-wrap:anywhere;white-space:normal}
+.elsn-npc-bubble[data-kind="thought"]{border-style:dashed;border-color:rgba(192,200,190,.7);background:linear-gradient(145deg,rgba(29,34,34,.94),rgba(14,19,20,.94))}
+.elsn-npc-bubble[data-kind="thought"] .elsn-npc-bubble-role{color:#c5c7b6}
+.elsn-npc-bubble[data-kind="action"]{border-color:rgba(151,183,157,.72);background:linear-gradient(145deg,rgba(19,34,29,.96),rgba(10,19,17,.95))}
+.elsn-npc-bubble[data-kind="action"] .elsn-npc-bubble-role{color:#afd0ae}
+@media(prefers-reduced-motion:reduce){.elsn-npc-bubble{transition:none}}
