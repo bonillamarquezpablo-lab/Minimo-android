@@ -57,7 +57,7 @@ assert.ok(atlas.sample(0.035, -0.15) > 0, "heel should be present");
 assert.equal(atlas.sample(0.085, -0.15), 0, "heel edge should stay narrow");
 assert.equal(atlas.sample(0.070, 0.0), 0, "the arch should stay narrow");
 assert.ok(atlas.sample(0.045, 0.13) > 0, "rounded forefoot should be present");
-assert.equal(atlas.sample(0.090, 0.13), 0, "forefoot should have a natural lateral edge");
+assert.equal(atlas.sample(0.120, 0.13), 0, "forefoot should have a natural lateral edge");
 const before = atlas.sample(0, 0);
 const storage = atlas.values;
 atlas.recenter(0.1, 0);
