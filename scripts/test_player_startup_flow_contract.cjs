@@ -12,6 +12,10 @@ assert.match(smoke, /identityFlow = 'returning-player-auto-boot'/,
   'A saved identity must be allowed to proceed directly into boot.');
 assert.match(smoke, /preflightState: preflightState|manifest\.preflightState = preflightState/,
   'The startup manifest must preserve the observed preflight state.');
+assert.match(smoke, /#intro\\.open/,
+  'The smoke must wait for the first rendered campaign selector after the resource barrier.');
+assert.match(smoke, /manifest\\.campaignSelector = introReady/,
+  'The smoke must record whether the campaign selector became visible.');
 assert.match(smoke, /preflight-dom\.html/,
   'Unexpected preflight states must retain the DOM for diagnosis.');
 assert.match(smoke, /El selector de perfil no pasó a identidad ni al arranque/,
