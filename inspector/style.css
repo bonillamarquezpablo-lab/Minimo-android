@@ -516,3 +516,52 @@ h1{font-size:clamp(27px,3.4vw,42px);line-height:1.02;margin:7px 0 6px;letter-spa
 .live-finding-columns ul{margin:7px 0 0;padding-left:19px;color:var(--muted,#9aa8b8);font-size:.82rem;line-height:1.5}
 .live-finding-columns li+li{margin-top:5px}
 @media(max-width:650px){.live-finding-head{grid-template-columns:1fr 1fr}.live-finding-head>div:first-child{grid-column:1/-1}.live-finding-columns{grid-template-columns:1fr}}
+
+/* Nivel 1 — Patrulla de Exploradores */
+.patrol-dashboard{display:grid;gap:18px}
+.patrol-dashboard-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+.patrol-dashboard-head h3{margin:5px 0 6px}
+.patrol-dashboard-head p{margin:0;color:var(--muted,#9aa8b8);font-size:.84rem;line-height:1.5}
+.patrol-actions{display:flex;gap:8px;flex-wrap:wrap}
+.patrol-status-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1px solid rgba(145,165,189,.18);border-radius:12px;background:rgba(7,16,27,.42);color:var(--muted,#9aa8b8);font-size:.78rem}
+.patrol-overall-state,.patrol-severity{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:6px 10px;font-size:.74rem;font-weight:800;letter-spacing:.02em}
+.patrol-overall-state.ok,.patrol-severity.ok{color:#75e0b5;background:rgba(82,213,160,.12);border:1px solid rgba(82,213,160,.28)}
+.patrol-overall-state.warning,.patrol-severity.warning,.patrol-severity.unknown{color:#f2c879;background:rgba(242,200,121,.11);border:1px solid rgba(242,200,121,.25)}
+.patrol-overall-state.critical,.patrol-severity.critical{color:#ff9299;background:rgba(255,119,127,.11);border:1px solid rgba(255,119,127,.28)}
+.patrol-agent-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.patrol-agent{min-width:0;padding:16px;border:1px solid rgba(145,165,189,.2);border-radius:14px;background:rgba(7,16,27,.46);display:grid;align-content:start;gap:12px}
+.patrol-agent.patrol-state-critical{border-color:rgba(255,119,127,.35)}
+.patrol-agent.patrol-state-warning,.patrol-agent.patrol-state-unknown{border-color:rgba(242,200,121,.28)}
+.patrol-agent-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.patrol-agent-name{display:block;font-size:1.05rem;font-weight:800;color:var(--text,#e5edf7)}
+.patrol-agent-role{display:block;margin-top:3px;color:var(--muted,#9aa8b8);font-size:.78rem}
+.patrol-agent-summary{margin:0;color:var(--text,#e5edf7);font-size:.84rem;line-height:1.5}
+.patrol-readings{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.patrol-readings>div{min-width:0;padding:9px 10px;border-radius:9px;background:rgba(255,255,255,.035)}
+.patrol-readings dt{color:var(--muted,#9aa8b8);font-size:.72rem;line-height:1.35}
+.patrol-readings dd{margin:4px 0 0;color:var(--text,#e5edf7);font-size:.94rem;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.patrol-issues{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.patrol-issue{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:11px;border-radius:10px;background:rgba(255,255,255,.035);border-left:3px solid #f2c879}
+.patrol-issue.patrol-critical{border-left-color:#ff777f}
+.patrol-issue strong{display:block;color:var(--text,#e5edf7);font-size:.8rem}
+.patrol-issue p{margin:4px 0 0;color:var(--muted,#9aa8b8);font-size:.78rem;line-height:1.45}
+.patrol-copy{flex:none;border:1px solid rgba(101,219,225,.3);border-radius:8px;background:rgba(101,219,225,.08);color:var(--cyan,#65dbe1);padding:7px 9px;font:inherit;font-size:.73rem;font-weight:700;cursor:pointer}
+.patrol-copy:hover{background:rgba(101,219,225,.16)}
+.patrol-pending{padding-top:2px;color:var(--muted,#9aa8b8);font-size:.78rem}
+.patrol-pending summary{cursor:pointer;font-weight:700}
+.patrol-pending ul{padding-left:18px;line-height:1.5}
+.patrol-pending li+li{margin-top:4px}
+.patrol-muted,.patrol-empty{margin:0;color:var(--muted,#9aa8b8);font-size:.8rem;line-height:1.5}
+.patrol-empty{padding:22px;border:1px dashed rgba(145,165,189,.25);border-radius:12px;text-align:center}
+.patrol-caveat{margin:0;padding:12px 14px;border-radius:10px;background:rgba(145,165,189,.07);color:var(--muted,#9aa8b8);font-size:.76rem;line-height:1.55}
+@media(max-width:760px){
+  .patrol-dashboard-head{display:grid}
+  .patrol-agent-grid{grid-template-columns:1fr}
+  .patrol-actions{width:100%}
+  .patrol-actions button{flex:1}
+}
+@media(max-width:430px){
+  .patrol-agent-head{display:grid}
+  .patrol-issue{display:grid}
+  .patrol-copy{justify-self:start}
+}

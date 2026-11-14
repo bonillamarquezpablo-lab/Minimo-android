@@ -77,7 +77,9 @@ assert.match(html,/new Audio\(\);audio\.preload='none';audio\.src=SOURCE/);
 assert.match(html,/preflightMenuMusic\.preload='none'/);
 
 assert.doesNotMatch(html,/rel="preload" as="audio"/,'Music must not be preloaded as a full audio resource.');
-assert.match(html,/const startupAudioPreload=NorseAudio\.preloadAll\(6500\)/);
+assert.match(html,/const startupAudioPreload=NorseAudio\.preloadAll\(new URLSearchParams\(window\.location\.search\)\.get\('test'\)==='1'\?30000:6500\)/);
+assert.match(html,/Math\.min\(30000,Number\(maxWaitMs\)\|\|6000\)/,
+  'The patrol-only audio preload budget may increase, but normal gameplay must retain its 6500 ms argument.');
 assert.doesNotMatch(html,/decodeAudioData\([^)]*menu|decodeAudioData\([^)]*gameplay/i);
 
 // Cache must reject all GLB HTML/redirect substitutions, not only the protagonist asset.

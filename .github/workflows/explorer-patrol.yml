@@ -1,0 +1,94 @@
+name: Patrulla Nivel 1 — Exploradores EL SIN NOMBRE
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - level1/explorer-patrol
+
+permissions:
+  contents: write
+
+concurrency:
+  group: explorer-patrol-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  patrol:
+    name: Recorrido aislado por las 13 islas
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact test candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate patrol contracts
+        run: |
+          node --check scripts/explorer-patrol.mjs
+          node --check scripts/publish-explorer-patrol.mjs
+          node scripts/test_explorer_patrol.mjs
+
+      - name: Build the complete test game
+        run: python scripts/build_site.py
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+          node -e "const fs=require('node:fs');const {chromium}=require('playwright');if(!fs.existsSync(chromium.executablePath()))throw new Error('Chromium binary missing');console.log('Chromium ready:',chromium.executablePath())"
+
+      - name: Start isolated game server
+        run: |
+          python3 -m http.server 4175 --directory dist > /tmp/elsn-patrol-http.log 2>&1 &
+          echo $! > /tmp/elsn-patrol-http.pid
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:4175/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/elsn-patrol-http.log
+          exit 1
+
+      - name: Run Level 1 observer patrol in ?test=1
+        env:
+          PATROL_TEST_URL: http://127.0.0.1:4175/
+        run: node scripts/explorer-patrol.mjs
+
+      - name: Stop isolated game server
+        if: always()
+        run: |
+          if [ -f /tmp/elsn-patrol-http.pid ]; then
+            kill "$(cat /tmp/elsn-patrol-http.pid)" 2>/dev/null || true
+          fi
+
+      - name: Publish JSON to Inspector Center status branch
+        if: always() && hashFiles('artifacts/explorer-patrol/report.json') != ''
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          PATROL_STATUS_BRANCH: inspector-status
+        run: node scripts/publish-explorer-patrol.mjs
+
+      - name: Upload patrol report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: explorer-patrol-${{ github.run_id }}
+          path: artifacts/explorer-patrol/report.json
+          if-no-files-found: warn
+          retention-days: 30
