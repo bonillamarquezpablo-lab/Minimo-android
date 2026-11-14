@@ -334,12 +334,7 @@
   function captureFinalWorldInspection(options) {
     if (typeof window.getGameWorldInspectionSnapshot !== "function") return null;
     try {
-      const limits = options && typeof options === "object" ? options : {};
-      const snapshot = window.getGameWorldInspectionSnapshot({
-        maxMeshes: number(limits.maxMeshes) || 1800,
-        maxActors: number(limits.maxActors) || 250,
-        includeMeshes: limits.includeMeshes !== false
-      });
+      const snapshot = window.getGameWorldInspectionSnapshot(options || { maxMeshes: 10000, maxActors: 500, includeMeshes: true });
       const terrain = snapshot && snapshot.terrainObjects;
       const structureData = snapshot && snapshot.structures;
       const meshData = snapshot && snapshot.meshes;
