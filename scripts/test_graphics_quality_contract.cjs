@@ -29,6 +29,7 @@ for(const marker of [
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
 assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleLockedForSession:true'), 'Quality must preserve the initial native render scale throughout gameplay.');
+assert.ok(builder.includes('let lastWorldUpdateMs=0,lastRenderCpuMs=0;'), 'Shared frame-loop timing bindings must remain available after the Quality-scale change.');
 assert.ok(!builder.includes('qualityDprSlowSamples') && !builder.includes('qualityDprStableSamples') && !builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)'), 'No runtime CPU/FPS event may lower or change Quality resolution.');
 assert.ok(!builder.includes('fsr1Candidate') && !builder.includes('fsr1InputScale'), 'No inactive FSR1 state may override native device resolution.');
 assert.ok(builder.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && builder.includes('html.replace(legacy_fsr_guard, "if(false){", 1)'), 'The obsolete FSR block must be guarded before scene construction.');
