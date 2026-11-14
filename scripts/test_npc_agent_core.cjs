@@ -17,7 +17,8 @@ for (let village = 0; village < 8; village++) {
   }
 }
 assert.deepEqual(new Set(civilians.map(agent => agent.roleId)), new Set(Core.ROLES.map(role => role.id)));
-assert.equal(Core.roleForVillager("Villager_2_1").id, Core.roleForVillager("Villager_2_1").id);
+assert.equal(Core.roleForVillager("Villager_2_1").id, "water-coast");
+assert.equal(Core.roleForVillager("Villager_2_1").id, Core.roleForVillager("Villager_2_1").id, "The same villager must keep the same specialist role across reads.");
 assert.equal(Core.roleForVillager("VillageGuard0_0"), null);
 assert.equal(Core.roleForVillager("Viking"), null);
 assert.equal(Core.isEligibleCivilian({ parts: { name: "VillageGuard0_0", civilian: false, role: "warrior" } }), false);
