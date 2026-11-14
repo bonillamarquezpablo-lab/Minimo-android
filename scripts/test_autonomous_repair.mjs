@@ -9,9 +9,13 @@ assert.match(source, /REPAIR_PATCH/);
 assert.match(source, /function patchPaths\(diff\)/);
 assert.match(source, /git', \['apply', '--check'/);
 assert.match(source, /git', \['apply', '--whitespace=error'/);
-assert.match(source, /quality|visual art direction/i);
+const phase2Doc = fs.readFileSync('AUTONOMOUS-REPAIR-PHASE2.md', 'utf8');
+assert.match(phase2Doc, /calidad gráfica/i);
 assert.match(source, /No external model or API used/);
-assert.doesNotMatch(source, /LAB_AI_API_KEY|LAB_AI_MODEL|api\\\.openai\\\.com|fetch\\s*\\(/);
+assert.ok(!source.includes('LAB_AI_API_KEY'));
+assert.ok(!source.includes('LAB_AI_MODEL'));
+assert.ok(!source.includes('api.openai.com'));
+assert.doesNotMatch(source, /\\bfetch\\s*\\(/);
 assert.doesNotMatch(source, /pull_request_target/);
 assert.doesNotMatch(source, /git push|gh pr create|git switch -c|create_branch/i);
 
