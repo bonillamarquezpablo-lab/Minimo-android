@@ -25,6 +25,14 @@ assert.match(patrol, /worldUpdateMs/);
 assert.match(patrol, /renderCpuMs/);
 assert.match(patrol, /Math\.abs\(maxShoreStep\) > 0\.05/);
 assert.match(patrol, /Math\.abs\(gap\) > 0\.02/);
+assert.match(patrol, /const structureSources = \[/, 'Grounding measurements must be selected by their owning audit family.');
+assert.match(patrol, /maximumFootingGapMeters/);
+assert.match(patrol, /maximumSupportPointGapMeters/);
+assert.match(patrol, /supportPoints\.map\(\(point, index\)/);
+assert.doesNotMatch(patrol, /findMetric\(row, \['maximumBaseGapMeters'/, 'An arbitrary nested gapMeters value must never be promoted to a structural failure.');
+assert.match(patrol, /El p95 de .*SwiftShader/);
+assert.doesNotMatch(patrol, /p95 !== null && p95 > \(1000 \/ 60\)/, 'SwiftShader timing must not be reported as physical mobile GPU performance.');
+
 assert.match(patrol, /movementSupported/);
 assert.match(patrol, /const movementSupported = \['walkRoute','moveNpcAlongPath','moveAgentTo','navigateNpc'\]/);
 assert.match(patrol, /global\.movementSupported === true/);
