@@ -92,6 +92,7 @@
       });
       observer.observe({ type: "longtask", buffered: true });
       state.longTaskObserver = observer;
+      if (state.session) state.session.longTaskObserverSupported = true;
     } catch (_) {
       state.longTaskObserver = null;
     }
@@ -282,6 +283,7 @@
         truncatedSamples: 0,
         samples: [],
         longTasks: [],
+        longTaskObserverSupported: false,
         deviceEvents: []
       };
       installLongTaskObserver();
@@ -305,12 +307,10 @@
       ? Math.max(0, (Date.parse(sample.capturedAt) - Date.parse(previous.capturedAt)) / 1000) : 0;
     if (currentDrawCalls !== null && previousDrawCalls !== null &&
         currentDrawCalls >= previousDrawCalls && elapsedSeconds > 0) {
-      sample.scene.drawCallsDelta = currentDrawCalls - previousDrawCalls;
-      sample.scene.drawCallsPerSecond = Number((sample.scene.drawCallsDelta / elapsedSeconds).toFixed(1));
-      sample.scene.drawCallsCounterSemantics = "monotonic-cumulative-between-samples";
+      sample.scene.drawCallsObservedDelta = currentDrawCalls - previousDrawCalls;
+      sample.scene.drawCallsCounterSemantics = "monotonic-across-sampled-observations-semantics-unverified";
     } else {
-      sample.scene.drawCallsDelta = null;
-      sample.scene.drawCallsPerSecond = null;
+      sample.scene.drawCallsObservedDelta = null;
       sample.scene.drawCallsCounterSemantics = "raw-runtime-counter-unclassified";
     }
     sample.longTaskCountAtSample = Array.isArray(state.session.longTasks) ? state.session.longTasks.length : 0;
@@ -393,7 +393,7 @@
     const world = values(sample => sample.cpu && sample.cpu.worldUpdateMs);
     const render = values(sample => sample.cpu && sample.cpu.renderCpuMs);
     const telemetryRead = values(sample => sample.diagnosticsReadMs);
-    const drawCallsPerSecond = values(sample => sample.scene && sample.scene.drawCallsPerSecond);
+    const drawCallsObservedDelta = values(sample => sample.scene && sample.scene.drawCallsObservedDelta);
     const longTasks = Array.isArray(session.longTasks) ? session.longTasks : [];
     const longTaskDurations = longTasks.map(item => number(item.durationMs)).filter(value => value !== null);
     const gpu = values(sample => sample.gpu && sample.gpu.frameMs);
@@ -425,12 +425,12 @@
       sceneTimings: { activeMeshesEvaluationMedianMs: medianActiveMeshes, renderTargetsMedianMs: medianRenderTargets },
       diagnostics: { medianReadMs: median(telemetryRead), maximumReadMs: telemetryRead.length ? Math.max(...telemetryRead) : null },
       sceneCounters: {
-        drawCallsCounterSemantics: samples.find(sample => sample.scene && sample.scene.drawCallsCounterSemantics)?.scene.drawCallsCounterSemantics || "unclassified",
-        drawCallsPerSecondMedian: median(drawCallsPerSecond),
-        drawCallsPerSecondMaximum: drawCallsPerSecond.length ? Math.max(...drawCallsPerSecond) : null
+        drawCallsCounterSemantics: samples.find(sample => sample.scene && sample.scene.drawCallsCounterSemantics && sample.scene.drawCallsCounterSemantics !== "raw-runtime-counter-unclassified")?.scene.drawCallsCounterSemantics || "unclassified",
+        drawCallsObservedDeltaMedian: median(drawCallsObservedDelta),
+        drawCallsObservedDeltaMaximum: drawCallsObservedDelta.length ? Math.max(...drawCallsObservedDelta) : null
       },
       longTasks: {
-        supported: longTasks.length > 0,
+        supported: session.longTaskObserverSupported === true,
         count: longTasks.length,
         totalDurationMs: Number(longTaskDurations.reduce((sum, value) => sum + value, 0).toFixed(2)),
         maximumDurationMs: longTaskDurations.length ? Math.max(...longTaskDurations) : null
