@@ -260,6 +260,28 @@ def main() -> None:
         fail("El minimapa local debe girar el mundo con el rumbo y mantener fijo el marcador del jugador.")
     if "cameraFocus=focus" not in index_html or "onShip?2.12:1" not in index_html:
         fail("La cámara naval no está centrada en el jugador o no tiene la distancia ampliada.")
+    expanded_map_heading = (
+        "function drawMap(){\\n"
+        "  if(!map.classList.contains('expanded')){drawLocalMap();return;}\\n"
+        "  // La carta ampliada comparte el rumbo suavizado del minimapa local.\\n"
+        "  const heading=smoothLocalMapHeading(onShip?ship.rotation.y:yaw);"
+    )
+    if expanded_map_heading not in index_html:
+        fail("La carta ampliada debe declarar el rumbo antes de girar la brújula.")
+    for marker in (
+        "renderedTerrainSurfaceAt(camera.position.x,camera.position.z)",
+        "minimumCameraY=cameraGroundY+1.70",
+    ):
+        if marker not in index_html:
+            fail("La cámara terrestre debe conservar una separación mínima respecto al terreno renderizado.")
+    for obsolete_civilian_prop in (
+        "CivilianWorkApron_",
+        "CivilianApronHem_",
+        "_ApronFront",
+        "_ApronHem",
+    ):
+        if obsolete_civilian_prop in index_html:
+            fail("Se ha reintroducido el delantal rígido que sobresalía del torso de los aldeanos.")
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         index_html,
