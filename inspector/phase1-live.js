@@ -1,6 +1,7 @@
 import {
   DIAGNOSTIC_SCHEMA_VERSION, DEFAULT_TARGET_FPS, analyzeFrameStability, normalizeGameTelemetry
 } from '../scripts/phase1-diagnostics-core.mjs';
+import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspection-core.mjs';
 
 (() => {
   const $ = id => document.getElementById(id);
@@ -15,6 +16,8 @@ import {
   let lastWorldUpdateCount = null;
   let unchangedWorldPolls = 0;
   let lastReadError = null;
+  let lastWorldInspection = null;
+  let lastWorldInspectionAnalysis = null;
 
   const fmt = (value, digits = 1, suffix = '') =>
     value === null || value === undefined || !Number.isFinite(Number(value))
@@ -102,6 +105,89 @@ import {
     }
   }
 
+  function renderWorldInspection(snapshot) {
+    const analysis = analyzeWorldInspectionSnapshot(snapshot);
+    lastWorldInspection = snapshot;
+    lastWorldInspectionAnalysis = analysis;
+    const scene = snapshot.scene || {};
+    const islands = snapshot.islands || {};
+    const structureAudit = snapshot.structures?.audit;
+    const actorCounts = snapshot.actors || {};
+    const actorTotal = ['hostileVillageGuards','campGuards','companions','enemyShipCrew','wildlife','ambientPeople','ambientBirds']
+      .reduce((sum, key) => sum + (Number(actorCounts[key]?.count) || 0), 0);
+    setMetric('worldIslandsCount', String(islands.count ?? '—') + (islands.complete ? ' / 13' : ''));
+    setMetric('worldMeshCount', fmt(scene.meshCount, 0));
+    setMetric('worldTransformCount', fmt(scene.transformNodeCount, 0));
+    setMetric('worldStructureCount', fmt(structureAudit?.total, 0));
+    setMetric('worldUnsafeCount', fmt(structureAudit?.unsafeCount, 0));
+    setMetric('worldVisibleUnsafeCount', fmt(structureAudit?.visibleInvalidAfterRepair, 0));
+    setMetric('worldActorCount', fmt(actorTotal, 0));
+    setMetric('worldShipCrewCount', fmt(actorCounts.enemyShipCrew?.count, 0));
+    setMetric('worldPendingTextures', fmt(snapshot.textures?.pendingCount, 0));
+    setMetric('worldAnimationGroups', fmt(snapshot.animations?.count, 0));
+    setMetric('worldCollisionCount', fmt(scene.collisionEnabledMeshCount, 0));
+    setMetric('worldInvalidTransformCount', fmt(snapshot.meshes?.invalidTransformCount, 0));
+    setMetric('worldFps', fmt(snapshot.runtime?.fps, 0));
+    setMetric('worldColliderCount', fmt(snapshot.collisions?.customColliderCount, 0));
+    const terrainRange = snapshot.terrain?.overallHeightRange;
+    setMetric('worldTerrainRange', terrainRange ? fmt(terrainRange.minimum, 2, ' m') + ' – ' + fmt(terrainRange.maximum, 2, ' m') : '—');
+    const severityLabels = { high: 'Alta', medium: 'Media', info: 'Informativa', none: 'Sin incidencias observadas', unknown: 'No disponible' };
+    setMetric('worldInspectionFindingStatus', analysis.status);
+    setMetric('worldInspectionFindingSeverity', severityLabels[analysis.severity] || analysis.severity);
+    $('worldInspectionFindingSummary').textContent =
+      analysis.findings.length
+        ? 'Hallazgos: ' + analysis.findings.length + ' · incidencias: ' + analysis.summary.issues + ' · avisos / evidencias incompletas: ' + analysis.summary.warnings
+        : 'No se han observado anomalías en esta captura. Esto no demuestra que todo el mundo esté libre de errores.';
+    const renderList = (id, values, fallback) => {
+      const list = $(id);
+      list.replaceChildren();
+      const entries = values && values.length ? values : [fallback];
+      for (const value of entries) {
+        const item = document.createElement('li');
+        item.textContent = value;
+        list.appendChild(item);
+      }
+    };
+    renderList('worldInspectionFindings', analysis.findings.map(item =>
+      '[' + (severityLabels[item.severity] || item.severity) + '] ' + item.message +
+      (item.evidence ? ' · ' + JSON.stringify(item.evidence) : '')
+    ), 'No hay hallazgos en esta captura.');
+    const quality = snapshot.dataQuality || {};
+    renderList('worldInspectionQuality', [
+      'Inventario de 13 islas: ' + (quality.islandRegistryComplete ? 'completo' : 'incompleto'),
+      'Inventario de mallas: ' + (quality.fullMeshInventory ? 'completo' : 'parcial o limitado'),
+      'Auditoría de estructuras: ' + (quality.structureAuditAvailable ? 'disponible' : 'todavía no disponible'),
+      'Disponibilidad de texturas: ' + (quality.textureReadinessComplete ? 'consultada' : 'parcial'),
+      'Muestras de altura: ' + (quality.terrainSamplesAvailable ? 'disponibles' : 'incompletas'),
+      'Inventario de colisionadores: ' + (quality.colliderInventoryComplete ? 'completo' : 'limitado')
+    ], 'Calidad de datos no disponible.');
+    $('worldInspectionJson').textContent = JSON.stringify({ snapshot, analysis }, null, 2);
+    $('worldInspectionDownload').disabled = false;
+  }
+
+  function captureWorldInspection() {
+    try {
+      const win = frame?.contentWindow;
+      if (!win || win.location.origin !== window.location.origin) {
+        throw new Error('El juego todavía no está disponible en el mismo origen.');
+      }
+      if (typeof win.getGameWorldInspectionSnapshot !== 'function') {
+        throw new Error('El juego aún no ha publicado la API de inspección. Espera a que termine el arranque y vuelve a capturar.');
+      }
+      $('worldInspectionCapture').disabled = true;
+      $('worldInspectionStatus').textContent = 'Leyendo la escena Babylon.js…';
+      const snapshot = win.getGameWorldInspectionSnapshot({ includeMeshes: true, maxMeshes: 2500, maxActors: 180 });
+      renderWorldInspection(snapshot);
+      $('worldInspectionStatus').textContent =
+        'Captura puntual completada · ' + new Date(snapshot.capturedAt).toLocaleTimeString('es-ES') +
+        ' · ' + snapshot.scene.meshCount + ' mallas inspeccionadas.';
+    } catch (error) {
+      $('worldInspectionStatus').textContent = String(error?.message || error);
+    } finally {
+      $('worldInspectionCapture').disabled = false;
+    }
+  }
+
   function sessionAnalysis() {
     return analyzeFrameStability(history, DEFAULT_TARGET_FPS, 1);
   }
@@ -117,6 +203,8 @@ import {
       objective: { fps: DEFAULT_TARGET_FPS, frameBudgetMs: Number((1000 / DEFAULT_TARGET_FPS).toFixed(3)) },
       sessionFinding: sessionAnalysis(),
       latest,
+      worldInspection: lastWorldInspection,
+      worldInspectionAnalysis: lastWorldInspectionAnalysis,
       recentSamples: history.slice(-60),
       measurementContract: {
         fpsAndFrameTiming: 'Game runtime. Real device measurements only when the game itself is running on that device.',
@@ -240,6 +328,12 @@ import {
     sessionStartedAt = null;
     lastSnapshot = null;
     lastReadError = null;
+    lastWorldInspection = null;
+    lastWorldInspectionAnalysis = null;
+    $('worldInspectionCapture').disabled = true;
+    $('worldInspectionDownload').disabled = true;
+    $('worldInspectionJson').textContent = 'Sin captura todavía.';
+    $('worldInspectionStatus').textContent = 'Cargando el juego…';
     $('liveDiagnosticJson').textContent = 'Esperando a que el juego publique los datos.';
     $('liveGameFrameWrap').hidden = false;
     $('liveGameStart').disabled = true;
@@ -274,16 +368,30 @@ import {
   }
 
   $('liveGameStart').addEventListener('click', beginGameLoad);
+  $('worldInspectionCapture').addEventListener('click', captureWorldInspection);
+  $('worldInspectionDownload').addEventListener('click', () => {
+    if (!lastWorldInspection) return;
+    const blob = new Blob([JSON.stringify({snapshot:lastWorldInspection,analysis:lastWorldInspectionAnalysis}, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'el-sin-nombre-mundo-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
+    document.body.appendChild(link); link.click(); link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
   $('liveGameSample').addEventListener('click', takeSample);
   $('liveGameStop').addEventListener('click', stopSampling);
   frame.addEventListener('load', () => {
     if ($('liveGameFrameWrap').hidden) return;
     $('liveGameStart').disabled = false;
     $('liveGameSample').disabled = false;
+    $('worldInspectionCapture').disabled = false;
+    $('worldInspectionStatus').textContent = 'Juego cargado. La captura del mundo está disponible cuando el motor termine de arrancar.';
     setStatus('Juego cargado. Inicia una partida; la medición comenzará automáticamente cuando el motor lo confirme.');
     beginWaitingForGame();
   });
   frame.addEventListener('error', () => {
+    $('worldInspectionCapture').disabled = true;
     $('liveGameStart').disabled = false;
     setStatus('No se pudo cargar el juego en el Inspector. Puedes volver a intentarlo.');
   });

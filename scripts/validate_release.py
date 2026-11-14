@@ -35,6 +35,7 @@ REQUIRED_FILES = (
     "scripts/nordic/coastal-interaction.js",
     "scripts/nordic/navigation-suite.js",
     "scripts/nordic/atmosphere-system.js",
+    "scripts/nordic/world-inspection.js",
     *MANIFESTS,
     "icon.svg",
     "assets/asset-manifest.json",
@@ -75,6 +76,11 @@ def main() -> None:
 
     index_html = read_text("index.html")
     atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
+    world_inspection_source = read_text("scripts/nordic/world-inspection.js")
+    if "root.ELSNWorldInspection" not in world_inspection_source or "capture(context" not in world_inspection_source:
+        raise SystemExit("World inspection runtime is missing its public read-only capture API.")
+    if "./scripts/nordic/world-inspection.js" not in index_html:
+        raise SystemExit("index.html is missing the world inspection runtime script.")
     atmosphere_markers = (
         "class AtmosphereSystem",
         "static computeSolarState(value, target)",

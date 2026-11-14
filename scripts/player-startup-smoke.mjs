@@ -290,9 +290,10 @@ async function main() {
       };
     });
 
-    // worldReady marks the resource barrier, but the campaign selector is exposed only
-    // after the first real render frame. Wait for that UI transition rather than racing it.
+    // worldReady means resources are prepared; wait for the real rendered intro before selecting a campaign.
     await page.locator('#intro.open').waitFor({ state: 'visible', timeout: 60000 });
+    await page.locator('#newGameChoice').waitFor({ state: 'visible', timeout: 30000 });
+    // Keep the stricter first-render/intro validation already present on main.
     const introReady = await page.evaluate(() => ({
       bodyClass: document.body.className,
       ariaHidden: document.getElementById('intro')?.getAttribute('aria-hidden') ?? null,
@@ -309,8 +310,93 @@ async function main() {
         JSON.stringify(introReady));
     }
     await page.locator('#newGameChoice').click();
-    await page.waitForFunction(() => document.body.classList.contains('game-running'),
+    await page.waitForFunction(() => document.body.classList.contains('game-running') &&
+      document.querySelector('#intro')?.getAttribute('aria-hidden') === 'true',
       undefined, { timeout: 30000, polling: 100 });
+
+    // Snapshot only after an actual campaign has started and the world update loop has run.
+    // game-running is set synchronously by beginSaga(); wait for at least one real update tick
+    // so the capture cannot race the first render-loop callback.
+    manifest.worldInspectionCapturedAfterEntry = true;
+    await page.waitForFunction(() => {
+      if (!document.body.classList.contains('game-running') ||
+          typeof window.getGameHealthDebug !== 'function') return false;
+      const health = window.getGameHealthDebug();
+      return Number(health?.worldUpdateCount) > 0;
+    }, undefined, { timeout: 15000, polling: 100 });
+    manifest.worldUpdateCountAtCapture = await page.evaluate(() =>
+      window.getGameHealthDebug()?.worldUpdateCount ?? null);
+    // Verify the inspector is connected to the real Babylon scene, not a mocked snapshot.
+    manifest.worldInspection = await page.evaluate(() => {
+      if (typeof window.getGameWorldInspectionSnapshot !== 'function') {
+        return { available: false, reason: 'getGameWorldInspectionSnapshot is not exposed by the built game.' };
+      }
+      const snapshot = window.getGameWorldInspectionSnapshot({
+        includeMeshes: true, maxMeshes: 2500, maxActors: 180
+      });
+      const actorCounts = Object.fromEntries(
+        ['hostileVillageGuards','campGuards','companions','enemyShipCrew','wildlife','ambientPeople','ambientBirds']
+          .map(key => [key, snapshot.actors?.[key]?.count ?? null])
+      );
+      return {
+        available: true,
+        kind: snapshot.kind,
+        schemaVersion: snapshot.schemaVersion,
+        gameStarted: snapshot.runtime?.gameStarted ?? null,
+        worldUpdateCount: snapshot.runtime?.worldUpdateCount ?? null,
+        fps: snapshot.runtime?.fps ?? null,
+        scene: {
+          meshCount: snapshot.scene?.meshCount ?? null,
+          transformNodeCount: snapshot.scene?.transformNodeCount ?? null,
+          textureCount: snapshot.scene?.textureCount ?? null,
+          animationGroupCount: snapshot.scene?.animationGroupCount ?? null
+        },
+        islands: {
+          count: snapshot.islands?.count ?? null,
+          complete: snapshot.islands?.complete ?? false
+        },
+        terrain: snapshot.terrain,
+        collisions: {
+          sceneCollisionsEnabled: snapshot.collisions?.sceneCollisionsEnabled ?? null,
+          collisionEnabledMeshCount: snapshot.collisions?.collisionEnabledMeshCount ?? null,
+          customColliderCount: snapshot.collisions?.customColliderCount ?? null,
+          invalidPositionCount: snapshot.collisions?.invalidPositionCount ?? null
+        },
+        meshInventory: {
+          count: snapshot.meshes?.count ?? null,
+          returned: snapshot.meshes?.returned ?? null,
+          truncated: snapshot.meshes?.truncated ?? null,
+          invalidTransformCount: snapshot.meshes?.invalidTransformCount ?? null
+        },
+        structures: {
+          registeredCount: snapshot.structures?.registeredCount ?? null,
+          auditAvailable: snapshot.structures?.auditAvailable ?? false,
+          auditTotal: snapshot.structures?.audit?.total ?? null
+        },
+        player: snapshot.actors?.player ?? null,
+        actorCounts
+      };
+    });
+    assert.equal(manifest.worldInspection.available, true,
+      'La página construida no expone la API de inspección de Babylon.js: ' +
+      JSON.stringify(manifest.worldInspection));
+    assert.equal(manifest.worldInspection.kind, 'babylon-world-inspection');
+    assert.equal(manifest.worldInspection.gameStarted, true,
+      'La captura Babylon debe tomarse después de iniciar la campaña real.');
+    assert.ok(manifest.worldInspection.worldUpdateCount > 0,
+      'La captura Babylon debe observar al menos un tick real del bucle de actualización.');
+    assert.equal(manifest.worldInspection.islands.count, 13,
+      'La captura del mundo no contiene las 13 islas.');
+    assert.equal(manifest.worldInspection.islands.complete, true);
+    assert.equal(manifest.worldInspection.terrain.islandsSampled, 13,
+      'No se pudieron muestrear las alturas de las 13 islas.');
+    assert.ok(manifest.worldInspection.scene.meshCount > 0,
+      'La escena de Babylon no contiene mallas en el snapshot.');
+    assert.ok(manifest.worldInspection.meshInventory.returned > 0,
+      'No se devolvió el inventario de mallas.');
+    assert.ok(manifest.worldInspection.player,
+      'El jugador no aparece en el snapshot del mundo.');
+
     const perf20s = await page.evaluate(async () => {
       const start = performance.now();
       let frames = 0, totalFrameMs = 0, maxFrameMs = 0, last = start;

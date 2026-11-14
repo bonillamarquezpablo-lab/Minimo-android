@@ -1,0 +1,95 @@
+name: Phase 2 · Babylon world inspection contracts
+
+on:
+  push:
+    branches: ['phase2/babylon-world-inspection']
+    paths:
+      - 'scripts/nordic/world-inspection.js'
+      - 'scripts/phase2-world-inspection-core.mjs'
+      - 'scripts/test_phase2_world_inspection.mjs'
+      - 'scripts/test_phase2_build_contract.mjs'
+      - 'scripts/player-startup-smoke.mjs'
+      - 'inspector/phase1-live.js'
+      - 'inspector/index.html'
+      - 'scripts/build_site.py'
+      - 'scripts/validate_release.py'
+      - 'sw.js'
+      - '.github/workflows/phase2-world-inspection-contracts.yml'
+  pull_request:
+    branches: ['phase1/diagnostic-foundation']
+    paths:
+      - 'scripts/nordic/world-inspection.js'
+      - 'scripts/phase2-world-inspection-core.mjs'
+      - 'scripts/test_phase2_world_inspection.mjs'
+      - 'scripts/test_phase2_build_contract.mjs'
+      - 'inspector/phase1-live.js'
+      - 'inspector/index.html'
+      - 'scripts/build_site.py'
+      - 'scripts/validate_release.py'
+      - 'sw.js'
+      - '.github/workflows/phase2-world-inspection-contracts.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase2-world-inspection-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  world-inspection-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript modules
+        run: |
+          node --check scripts/nordic/world-inspection.js
+          node --check scripts/phase2-world-inspection-core.mjs
+          node --check inspector/phase1-live.js
+          node --check scripts/player-startup-smoke.mjs
+      - name: Run Babylon world snapshot tests
+        run: node scripts/test_phase2_world_inspection.mjs
+      - name: Verify builder, Inspector and offline cache wiring
+        run: node scripts/test_phase2_build_contract.mjs
+      - name: Run Inspector live contracts
+        run: node scripts/test_phase1_live_contract.mjs
+      - name: Validate Python build and release scripts
+        run: python -m py_compile scripts/build_site.py scripts/validate_release.py
+
+      - name: Build complete game and validate packaged release
+        run: python scripts/build_site.py
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install chromium
+      - name: Start local candidate server
+        run: |
+          python3 -m http.server 4175 --directory dist > /tmp/elsn-world-inspection-http.log 2>&1 &
+          echo $! > /tmp/elsn-world-inspection-http.pid
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:4175/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/elsn-world-inspection-http.log
+          exit 1
+      - name: Run real Babylon gameplay and world-inspection smoke
+        env:
+          PLAYER_TEST_URL: http://127.0.0.1:4175/
+        run: node scripts/player-startup-smoke.mjs
+      - name: Upload real-scene inspection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-babylon-world-inspection
+          path: artifacts/player-startup/
+          if-no-files-found: ignore
