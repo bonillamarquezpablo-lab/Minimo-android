@@ -10549,7 +10549,7 @@ function villageHostileDefenders(vl){
   }
   return {start,stop,setMuted};
  })();
- const startupAudioPreload=NorseAudio.preloadAll(new URLSearchParams(window.location.search).get('test')==='1'?30000:6500);
+ let startupAudioPreload=NorseAudio.preloadAll(new URLSearchParams(window.location.search).get('test')==='1'?30000:6500);
  document.addEventListener('pointerdown',()=>{NorseAudio.unlock();if(!document.body.classList.contains('game-running'))MenuMusic.start();},{once:true,passive:true});
  document.addEventListener('keydown',()=>NorseAudio.unlock(),{once:true});
  window.addEventListener('pagehide',()=>{MenuMusic.stop();GameplayMusic.stop();},{once:true});
@@ -13040,6 +13040,10 @@ function update(dt){
  setLoadingProgress(85,'Precargando efectos de sonido…');
  try{
   audioPreloadResult=await startupAudioPreload;
+  if(audioPreloadResult.pending&&!audioPreloadResult.failed){
+   console.info('La precarga inicial expiró antes de que el navegador comenzara a descargar todos los efectos; se reintenta desde la barrera de entrada.',audioPreloadResult);
+   audioPreloadResult=await NorseAudio.preloadAll(30000);
+  }
   if(!audioPreloadResult.total||audioPreloadResult.failed||audioPreloadResult.pending)throw new Error('Efectos listos '+audioPreloadResult.ready+'/'+audioPreloadResult.total+', fallidos '+audioPreloadResult.failed+', pendientes '+audioPreloadResult.pending);
   recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'ready',audioPreloadResult);
  }catch(audioRequiredError){throw new Error('RECURSO OBLIGATORIO: efectos de sonido · '+String(audioRequiredError&&audioRequiredError.message||audioRequiredError));}

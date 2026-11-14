@@ -385,6 +385,8 @@ def main() -> None:
         fail("La escena y los shaders deben estar preparados con un plazo cerrado; un fallo obligatorio debe detener el arranque.")
     if "audioPreloadResult=await startupAudioPreload" not in index_html or "RECURSO OBLIGATORIO: efectos de sonido" not in index_html or "startupAudioPreload.then(" not in index_html:
         fail("Los efectos de sonido deben estar listos antes de entrar; la música debe seguir en streaming.")
+    if "if(audioPreloadResult.pending&&!audioPreloadResult.failed)" not in index_html or "audioPreloadResult=await NorseAudio.preloadAll(30000)" not in index_html:
+        fail("Una precarga de sonido pendiente debe reintentarse en la barrera de entrada; no se permite fallar antes de que el navegador comience a descargar tras la primera interacción.")
     if "RECURSO OBLIGATORIO: Vikingo protagonista" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("El GLB protagonista no puede sustituirse por un cuerpo provisional para entrar.")
     if "sceneWarmupStatus='completed-with-errors'" not in index_html or "blocking:true,warmupFrames:2" not in index_html:

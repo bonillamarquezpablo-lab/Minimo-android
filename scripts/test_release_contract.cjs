@@ -49,6 +49,7 @@ assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must p
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
 assert.match(validator,/La defensa naval debe estar conectada al bucle/);
 assert.match(validator,/STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200/);
+assert.ok(indexHtml.includes("audioPreloadResult=await NorseAudio.preloadAll(30000)"),"The required audio barrier must retry a still-pending first preload without skipping any sound effect.");
 assert.match(validator,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/);
 assert.match(validator,/scene\.compileMaterialsAsync\(\)/);
 assert.match(validator,/rows=isPerformanceMode\?13/);
