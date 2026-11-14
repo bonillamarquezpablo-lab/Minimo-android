@@ -18,7 +18,7 @@
       <span class="brand-name">EL SIN NOMBRE<span class="brand-sub">INSPECTOR CENTER · CONTROL DE CALIDAD</span></span>
     </a>
     <nav class="nav" aria-label="Navegación principal">
-      <a href="#control">01 · Operaciones</a><a href="#telemetria">02 · Rendimiento</a><a href="#radar">03 · Islas</a><a href="#comparativa">04 · Comparación</a>
+      <a href="#control">01 · Operaciones</a><a href="#patrulla-exploradores">02 · Patrulla</a><a href="#telemetria">03 · Rendimiento</a><a href="#radar">04 · Islas</a><a href="#comparativa">05 · Comparación</a>
     </nav>
     <div class="topbar-actions"><button class="guide-fab" id="guideFab" type="button" aria-label="Abrir guía y ayuda" title="Ayuda paso a paso">? <span>Ayuda</span></button><span class="connection" id="connection"><span class="dot"></span>Conectando</span></div>
   </header>
@@ -43,6 +43,25 @@
       <div><strong id="lastGoodTitle">Mostrando los últimos datos finalizados</strong><p id="lastGoodDescription">Se conservarán mientras llega la nueva inspección.</p></div>
       <span class="last-good-run" id="lastGoodRun">—</span>
     </div>
+
+    <section class="section" id="patrulla-exploradores">
+      <div class="section-heading">
+        <div><div class="section-kicker">NIVEL 1 · SENTIDOS Y PATRULLA</div><h2>Nivel 1 — Patrulla de Exploradores</h2><p>Eira, Sól, Ulf y Týr recorren puntos de observación de las 13 islas con la API de prueba de Babylon.js. La cámara se mueve solo en ?test=1; no se crean NPCs ni se altera una partida normal.</p></div>
+        <span class="section-index">LECTURAS REALES</span>
+      </div>
+      <article class="panel patrol-dashboard">
+        <div class="patrol-dashboard-head">
+          <div><div class="step-label">PATRULLA AUTOMÁTICA · CADA 6 HORAS</div><h3>Estado de los exploradores</h3><p id="patrolMeta">Esperando el primer informe de GitHub Actions.</p></div>
+          <div class="patrol-actions"><button class="small-button" id="patrolRefresh" type="button">Actualizar informe</button><button class="primary" id="patrolRunWorkflow" type="button">Abrir ejecución manual ↗</button></div>
+        </div>
+        <div class="patrol-status-row"><strong class="patrol-overall-state warning" id="patrolState">Sin informe disponible</strong><span id="patrolRenderer">Entorno pendiente</span><span id="patrolUpdated">—</span></div>
+        <div class="patrol-agent-grid" id="patrolAgents">
+          <div class="patrol-empty">La primera patrulla aparecerá aquí cuando termine una ejecución de GitHub Actions.</div>
+        </div>
+        <p class="patrol-caveat" id="patrolCaveat">Los sensores no disponibles permanecen como pendientes de medir. La patrulla no simula locomoción ni inventa lecturas.</p>
+        <details class="technical"><summary>Ver informe JSON completo</summary><pre id="patrolReportJson">Sin informe todavía.</pre></details>
+      </article>
+    </section>
 
     <section class="section" id="control">
       <div class="section-heading">
@@ -310,5 +329,6 @@
   </aside>
 </div>
 <script src="app.js?v=20261113.11" defer></script>\n<script type="module" src="phase1-live.js?v=3"></script>
+<script src="explorer-patrol.js?v=1" defer></script>
 </body>
 </html>
