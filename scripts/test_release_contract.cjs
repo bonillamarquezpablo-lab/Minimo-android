@@ -31,7 +31,7 @@ assert.ok(!buildSite.includes("fsr1Candidate") && !buildSite.includes("fsr1Input
 assert.ok(buildSite.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && buildSite.includes('html.replace(legacy_fsr_guard, "if(false){", 1)'),"The legacy FSR branch must be guarded before scene startup.");
 assert.ok(buildSite.includes('"loaderVersion": BABYLON_VERSION') && buildSite.includes('"defaultBackend": "WebGL2-preferred"'),"The asset manifest must record the exact Babylon/glTF loader pair and validated backend.");
 assert.ok(buildSite.includes("new B.EngineInstrumentation(engine)") && buildSite.includes("new B.SceneInstrumentation(scene)"),"The build must expose Babylon-native profiling only to diagnostics.");
-assert.ok(buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"Adaptive resolution must be applied through Babylon hardware scaling.");
+assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true") && !buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"The Quality render scale must stay fixed during gameplay; runtime CPU pressure must not reduce image quality.");
 assert.match(buildSite,/BABYLON_VERSION = "9\.35\.0"/,"The packaged engine must include the DynamicTexture null-update fix.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/babylon.js"'),"The engine URL must use the pinned Babylon version.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/loaders/babylonjs.loaders.min.js"'),"The glTF loader must match the engine version.");
