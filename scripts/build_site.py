@@ -707,6 +707,19 @@ def main() -> None:
     )
     if world_inspection_check.returncode != 0:
         raise SystemExit("World inspection runtime JavaScript syntax validation failed:\n" + world_inspection_check.stderr)
+ 
+    # The civilian NPC specialist runtime is part of the existing game shell.
+    for script_name in ("npc-agent-core.js", "npc-agent-runtime.js"):
+        script_source = ROOT / "scripts" / script_name
+        if not script_source.is_file():
+            raise SystemExit(f"Falta el módulo de especialistas NPC: {script_name}")
+        npc_check = subprocess.run([node, "--check", str(script_source)], capture_output=True, text=True)
+        if npc_check.returncode != 0:
+            raise SystemExit(f"NPC specialist runtime syntax validation failed ({script_name}):\\n" + npc_check.stderr)
+        script_target = DIST / "scripts" / script_name
+        script_target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(script_source, script_target)
+        print(f"OK scripts/{script_name}: módulo NPC validado y empaquetado.")
 
     navigation_tag = '<script src="./scripts/nordic/navigation-suite.js" defer></script>'
     if navigation_tag not in html:

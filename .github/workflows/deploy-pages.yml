@@ -38,6 +38,10 @@ jobs:
         run: node scripts/test_navigation_suite_contract.cjs
       - name: Test adaptive graphics quality without sacrificing Performance profile
         run: node scripts/test_graphics_quality_contract.cjs
+      - name: Test civilian NPC specialists and shared-memory contract
+        run: node scripts/test_npc_agent_core.cjs
+      - name: Check NPC specialist runtime syntax
+        run: node --check scripts/npc-agent-core.js && node --check scripts/npc-agent-runtime.js
       - name: Test release version and packaging contract
         run: node scripts/test_release_contract.cjs
       - name: Test unified day-night atmosphere clock and APIs
