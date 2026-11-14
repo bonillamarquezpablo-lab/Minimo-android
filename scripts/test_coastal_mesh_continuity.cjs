@@ -38,4 +38,4 @@ assert.ok(runner.includes("meshContinuityAudit?.thresholdMeters, .05"));
 assert.ok(runner.includes("meshContinuityAudit?.passed, true"));
 assert.ok(deploy.includes('node scripts/test_coastal_mesh_continuity.cjs'));
 assert.ok(validate.includes('node scripts/test_coastal_mesh_continuity.cjs'));
-console.log('COASTAL MESH CONTINUITY CONTRACT OK: single seabed profile, 5 cm cross-mesh seam audit, 0.6.292 release.');
+console.log('COASTAL MESH CONTINUITY CONTRACT OK: single seabed profile, 5 cm cross-mesh seam audit, 0.6.293 release.');
