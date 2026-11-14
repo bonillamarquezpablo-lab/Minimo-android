@@ -1,0 +1,45 @@
+name: Autonomous specialist agent contracts
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/autonomous-lab-agents.mjs'
+      - 'scripts/test_autonomous_lab_agents.mjs'
+      - 'AUTONOMOUS-LAB-AGENTS.md'
+      - '.github/workflows/autonomous-agent-contracts.yml'
+      - '.github/workflows/coastal-reference.yml'
+  push:
+    branches: ['phase1/diagnostic-foundation']
+    paths:
+      - 'scripts/autonomous-lab-agents.mjs'
+      - 'scripts/test_autonomous_lab_agents.mjs'
+      - 'scripts/test_ai_visual_review.mjs'
+      - 'AUTONOMOUS-LAB-AGENTS.md'
+      - '.github/workflows/autonomous-agent-contracts.yml'
+      - '.github/workflows/coastal-reference.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: autonomous-agent-contracts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Validate autonomous specialist evidence contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check specialist coordinator syntax
+        run: node --check scripts/autonomous-lab-agents.mjs
+      - name: Run specialist contract tests
+        run: node scripts/test_autonomous_lab_agents.mjs
+
