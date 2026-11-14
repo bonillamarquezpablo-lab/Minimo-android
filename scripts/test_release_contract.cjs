@@ -36,6 +36,17 @@ assert.ok(buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent
 assert.match(buildSite,/BABYLON_VERSION = "9\.35\.0"/,"The packaged engine must include the DynamicTexture null-update fix.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/babylon.js"'),"The engine URL must use the pinned Babylon version.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/loaders/babylonjs.loaders.min.js"'),"The glTF loader must match the engine version.");
+const riggedModelDownloads = {
+  viking: "https://grab3d.com/dl/viking/viking-rigged.glb",
+  armoredKnight: "https://grab3d.com/dl/armored-knight/armored-knight-rigged.glb",
+  manBase: "https://grab3d.com/dl/man-base-character/man-base-character-rigged.glb",
+};
+for (const [model, url] of Object.entries(riggedModelDownloads)) {
+  assert.ok(buildSite.includes(url), `The ${model} rigged model must use Grab3D's canonical model-slug download path.`);
+}
+assert.ok(!/https:\/\/grab3d\\.com\/dl\/(?:viking|armored-knight|man-base-character)-rigged\//.test(buildSite),
+  "Rig suffixes belong to exported filenames, not Grab3D model directory slugs.");
+
 
 assert.ok(buildSite.includes("let targetFrameRate=60,observedFpsCeiling=60"),"The S26 profile must adapt to 60 or 90 FPS according to the observed browser refresh ceiling.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
