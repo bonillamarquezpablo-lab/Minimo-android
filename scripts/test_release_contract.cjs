@@ -87,6 +87,7 @@ assert.ok(npcRuntime.includes("BroadcastChannel") && npcRuntime.includes("elsn-n
 assert.ok(!npcRuntime.includes("eval(") && !npcRuntime.includes("new Function("),"Remote specialist responses must remain data-only.");
 
 const sessionRecorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
+assert.ok(buildSite.includes('meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason') && sessionRecorder.includes('meshSelectionDynamicSamplesByReason: runtime.meshSelectionDynamicSamplesByReason || null'),"Reports must preserve the reason and parent-chain evidence for dynamic selection.");
 const sessionIdleTest=fs.readFileSync('scripts/test_session_recorder_idle_contract.cjs','utf8');
 assert.ok(buildSite.includes('scripts/game-session-recorder.js') && buildSite.includes('session_recorder_tag'),"The release builder must package and inject the local session recorder.");
 assert.ok(serviceWorker.includes("./scripts/game-session-recorder.js"),"The installed game must cache the session recorder offline.");
