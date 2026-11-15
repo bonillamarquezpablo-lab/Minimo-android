@@ -892,7 +892,7 @@ def main() -> None:
  // are registered as dynamic content so movement, animation and gameplay remain intact.
  const spatialActorNamePattern=/^(?:player|pablo|pablothe|viking|human|civilian|npc|enemy|raider|guard|warrior|villager|peasant|companion|wildlife|animal|fauna|deer|wolf|stag|gull|bird|ship|boat|drakkar|mast|sail|rudder|flag|banner|pennant|weapon|shield|arrow|projectile|corpse|capture|falling|damage)/i;
  const spatialActorCamelNamePattern=/(?:Player|Pablo|Viking|NPC|Enemy|Raider|Guard|Warrior|Villager|Peasant|Companion|Wildlife|Deer|Wolf|Stag|Gull|Bird|Ship|Boat|Drakkar|Flag|Banner|Pennant|Weapon|Shield|Arrow|Projectile|Corpse|Capture|Damage)/;
- const spatialVegetationMotionPattern=/^(?:mixedForestTree|treeCanopyWindPivot|fallingTree|fallingForestTree)/i;
+ const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;
  const spatialWaterMotionPattern=/^(?:ocean|water|nordicWater|coastalWater|coastalWave|waterFilm|tidalFoam|shoreBreakerWash|beachState|activeBeach|activeShore)/i;
  const spatialEffectMotionPattern=/^(?:fire|flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
  const spatialDynamicStatsPattern=/^(?:vesselWaterSpray|drakkarWake|tidalFoam|particle|projectile|arrow)/i;
@@ -925,11 +925,11 @@ def main() -> None:
   spatialSelectionStats.dynamicContentRatio=sceneCount?Number((dynamicCount/sceneCount).toFixed(4)):null;
   publishSpatialSelectionStats();
  };
- const addSpatialDynamicMesh=(mesh,reason=null)=>{
+ const addSpatialDynamicMesh=(mesh,reason=null,force=false)=>{
   const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
   if(!mesh||!dynamic||typeof dynamic.push!=='function'||mesh.__elsnSpatialDynamic)return;
   const classification=reason||spatialDynamicReasonForMesh(mesh);
-  if(!classification)return;
+  if(!classification&&!force)return;
   mesh.__elsnSpatialDynamic=true;
   mesh.__elsnSpatialDynamicReason=classification;
   if(typeof dynamic.indexOf==='function'){
@@ -951,7 +951,9 @@ def main() -> None:
   updateSpatialSelectionCounts();
  };
  if(scene.onNewMeshAddedObservable&&typeof scene.onNewMeshAddedObservable.add==='function'){
-  scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh);});
+  // Meshes born after the index is built cannot be assumed static: constructions,
+  // actors, equipment, effects and streamed objects stay in Babylon's dynamic list.
+  scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,'created-after-octree',true);});
  }
  if(scene.onMeshRemovedObservable&&typeof scene.onMeshRemovedObservable.add==='function'){
   scene.onMeshRemovedObservable.add(removeSpatialDynamicMesh);
@@ -967,6 +969,11 @@ def main() -> None:
     throw new Error('Babylon no devolvió la lista dinámica de la selección espacial.');
    }
    spatialSelectionOctree=octree;
+   // Keep Babylon's own overflow/out-of-bounds dynamic entries tracked for safe removal.
+   for(const mesh of Array.from(octree.dynamicContent))if(mesh&&!mesh.__elsnSpatialDynamic){
+    mesh.__elsnSpatialDynamic=true;mesh.__elsnSpatialDynamicReason='octree-initial-dynamic';
+    spatialSelectionStats.dynamicReasons['octree-initial-dynamic']=(spatialSelectionStats.dynamicReasons['octree-initial-dynamic']||0)+1;
+   }
    for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh);
    spatialSelectionStats.enabled=true;
    spatialSelectionStats.sceneMeshCount=meshCount;
