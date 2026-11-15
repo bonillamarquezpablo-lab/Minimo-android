@@ -117,12 +117,12 @@ assert.ok(unifiedRecorder.includes('largestVisibleMeshes') && unifiedRecorder.in
 assert.ok(unifiedRecorder.includes('compactActors') && unifiedRecorder.includes('pendingCount: number(textures.pendingCount)'),"Completed match reports must retain compact NPC, animation and texture-readiness evidence.");
 assert.ok(unifiedInspector.includes('function renderWorldEvidence(world)') && unifiedInspector.includes('function renderCorrelations(report, values)'),"The unified report must explain world geometry and cross-correlate performance evidence.");
 assert.ok(unifiedInspector.includes('function reportComparison(current, previous)') && unifiedInspector.includes('reports[1]||null'),"The unified report must compare the latest session with the previous saved session.");
-assert.ok(unifiedInspectorHtml.includes('unified-workbench.css?v=2') && unifiedInspectorHtml.includes('unified-workbench.js?v=2'),"The Inspector Center must load the updated integrated workbench assets.");
+assert.ok(unifiedInspectorHtml.includes('unified-workbench.css?v=3') && unifiedInspectorHtml.includes('unified-workbench.js?v=3'),"The Inspector Center must load the updated integrated workbench assets.");
 assert.ok(unifiedInspectorCss.includes('.wb-evidence-list') && unifiedInspectorCss.includes('.wb-evidence-row'),"World evidence and session comparisons must use readable compact layouts.");
 
 const npcCoreWithIntelligence=fs.readFileSync('scripts/npc-agent-core.js','utf8');
 assert.ok(npcCoreWithIntelligence.includes('function analyzeSessionIntelligence(report, events)'),"Specialists must analyze the current session using real recorded evidence.");
-assert.ok(unifiedInspector.includes('function buildSpecialistIntelligence(report, rememberResults)') && unifiedInspector.includes('API.remember'),"Session diagnoses must be connected to persistent specialist memory.");
+assert.ok(unifiedInspector.includes('function buildSpecialistIntelligence(report, rememberResults)') && unifiedInspector.includes('api.remember'),"Session diagnoses must be connected to persistent specialist memory.");
 assert.ok(unifiedInspector.includes('renderSpecialistIntelligence(intelligence)') && unifiedInspector.includes('wbSpecialistCards'),"The unified session report must show the four specialists in a plain-language panel.");
 assert.ok(npcCoreWithIntelligence.includes('automaticWorldChanges: false') && npcCoreWithIntelligence.includes('automaticCodeChanges: false'),"Local autonomy must remain read-only until a repair is explicitly approved.");
 assert.ok(unifiedInspectorHtml.includes('unified-workbench.css?v=3') && unifiedInspectorHtml.includes('unified-workbench.js?v=3'),"The specialist report must load the current uncached workbench assets.");
