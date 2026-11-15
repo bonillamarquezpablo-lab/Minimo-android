@@ -149,6 +149,14 @@ const repeatedPerformance = Core.analyzeSessionIntelligence(integratedReport, []
 assert.equal(repeatedPerformance.specialists.find(agent => agent.id === "eira").status, "confirmado",
   "Eira may confirm a recurring performance regression only after at least two independent saved sessions.");
 assert.equal(repeatedPerformance.specialists.find(agent => agent.id === "eira").evidence.historicalSessionsAnalyzed, 2);
+const differentBuildReport = JSON.parse(JSON.stringify(previousPerformanceReport));
+differentBuildReport.sessionId = "session-intelligence-other-build";
+differentBuildReport.gameBuild = "0.6.300";
+const isolatedBuildPerformance = Core.analyzeSessionIntelligence(integratedReport, [], [integratedReport, differentBuildReport]);
+assert.equal(isolatedBuildPerformance.specialists.find(agent => agent.id === "eira").status, "probable",
+  "Performance evidence from another game build must not confirm a current-build regression.");
+assert.equal(isolatedBuildPerformance.specialists.find(agent => agent.id === "eira").evidence.historicalSessionsAnalyzed, 1);
+
 
 assert.equal(intelligence.specialists.find(agent => agent.id === "sol").status, "evidencia-recogida");
 const ulfIntelligence = intelligence.specialists.find(agent => agent.id === "ulf");
