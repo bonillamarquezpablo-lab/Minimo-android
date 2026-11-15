@@ -15,7 +15,7 @@ assert.match(source,/p95-supera-1\.5x-presupuesto/);
 assert.match(source,/fps-por-debajo-del-75%-objetivo/);
 assert.match(source,/function recordRuntimeError\(/);
 assert.match(source,/unhandled-rejection/);
-assert.match(source,/jsHeapUsedBytes/);
+assert.match(source,/usedJSHeapSizeBytes/);
 assert.match(source,/sampleCoverage/);
 assert.match(source,/relatedLongTasks/);
 assert.match(source,/relatedRuntimeErrors/);
