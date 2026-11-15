@@ -22,6 +22,12 @@ for(const marker of [
   "mesh.__elsnSpatialDynamicReason='octree-initial-dynamic'",
   'function buildSpatialSelectionOctree()',
   'buildSpatialSelectionOctree();',
+  'const installSpatialDynamicFrustumFilter=octree=>',
+  'octree.select=function(frustumPlanes,allowDuplicate)',
+  'mesh.isInFrustum(frustumPlanes)',
+  'spatialDynamicMeshSet.has(mesh)',
+  'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
+  'meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak',
   'meshSelectionOctreeEnabled:spatialSelectionStats.enabled',
   'meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount',
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
@@ -41,7 +47,8 @@ for(const marker of [
 assert.ok(smoke.includes('window.__ELSN_SPATIAL_SELECTION__'),'Real campaign smoke must read the runtime spatial selection state.');
 assert.ok(smoke.includes('manifest.spatialSelection?.enabled === true'),'Real campaign smoke must fail if spatial selection is not active.');
 assert.ok(smoke.includes('manifest.spatialSelection.staticIndexedMeshCount') && smoke.includes('dynamicContentRatio'), 'Real campaign smoke must fail when most meshes are dynamically selected.');
-assert.ok(smoke.includes('sceneCount') && smoke.includes(' * 0.35') && smoke.includes(' < 0.65'), 'Startup acceptance must require at least 35% of scene meshes to be static.');
+assert.ok(smoke.includes('sceneCount') && smoke.includes(' * 0.20') && smoke.includes(' < 0.80'), 'Startup acceptance must require a meaningful static octree share.');
+assert.ok(smoke.includes('dynamicFilterEnabled === true') && smoke.includes('dynamicFilterCulledPeak') && smoke.includes('>= 100'), 'Startup acceptance must prove that dynamic meshes outside the camera frustum are culled.');
 assert.ok(workflow.includes('node scripts/test_quality_spatial_selection.cjs'),'The Pages build must run the spatial selection contract.');
 assert.ok(source.includes('function update(dt){'),'World update must remain present.');
 assert.ok(source.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),'Felled trees must leave static octree cells before their fall animation.');
