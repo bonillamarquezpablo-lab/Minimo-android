@@ -26,13 +26,13 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.300","The release validator must target the packaged 0.6.300 release.");
+assert.equal(expectedVersion,"0.6.301","The release validator must target the packaged 0.6.301 release.");
 for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle:titleVersion,sourceBuildUserAgent:buildVersion})) {
   assert.equal(version,sourceVersion,`The source ${source} must remain the 0.6.274 input that build_site upgrades deterministically.`);
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.300"\)/,"The build must promote every visible source version to 0.6.300.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.301"\)/,"The build must promote every visible source version to 0.6.301.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true"),"Quality must keep its initially selected native render scale for the full session.");
 assert.ok(!buildSite.includes("qualityDprFloor") && !buildSite.includes("qualityDprCeiling") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples") && !buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"A CPU hitch must never trigger automatic resolution reduction in Quality.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2.10:1.45"),"The high-headroom mobile Quality startup scale must remain intact.");
@@ -62,7 +62,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.match(buildSite,/game_version = "0\.6\.300"/,"The build must validate and package 0.6.300.");
+assert.match(buildSite,/game_version = "0\.6\.301"/,"The build must validate and package 0.6.301.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
@@ -107,5 +107,34 @@ const inspectorReports=fs.readFileSync('inspector/npc-agents.js','utf8');
 assert.ok(inspectorReports.includes("Ver informe técnico y coordenadas"),"Inspector Center must expose the saved report and terrain-coordinate evidence.");
 assert.ok(inspectorReports.includes("incidentList") && inspectorReports.includes("worstSamples") && inspectorReports.includes("anomalyEvents"),"Inspector Center must expose grouped performance incidents, worst windows and diagnostic context.");
 
+
+
+const unifiedRecorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
+const unifiedInspector=fs.readFileSync('inspector/unified-workbench.js','utf8');
+const unifiedInspectorHtml=fs.readFileSync('inspector/index.html','utf8');
+const unifiedInspectorCss=fs.readFileSync('inspector/unified-workbench.css','utf8');
+assert.ok(unifiedRecorder.includes('largestVisibleMeshes') && unifiedRecorder.includes('invalidTransformCount') && unifiedRecorder.includes('collisionEnabledMeshCount'),"Completed match reports must retain bounded mesh, transform and collider evidence for deeper inspection.");
+assert.ok(unifiedRecorder.includes('compactActors') && unifiedRecorder.includes('pendingCount: number(textures.pendingCount)'),"Completed match reports must retain compact NPC, animation and texture-readiness evidence.");
+assert.ok(unifiedInspector.includes('function renderWorldEvidence(world)') && unifiedInspector.includes('function renderCorrelations(report, values)'),"The unified report must explain world geometry and cross-correlate performance evidence.");
+assert.ok(unifiedInspector.includes('function reportComparison(current, previous)') && unifiedInspector.includes('reports[1]||null'),"The unified report must compare the latest session with the previous saved session.");
+assert.ok(unifiedInspectorHtml.includes('unified-workbench.css?v=4') && unifiedInspectorHtml.includes('unified-workbench.js?v=4'),"The Inspector Center must load the updated integrated workbench assets.");
+assert.ok(unifiedInspectorCss.includes('.wb-evidence-list') && unifiedInspectorCss.includes('.wb-evidence-row'),"World evidence and session comparisons must use readable compact layouts.");
+
+const npcCoreWithIntelligence=fs.readFileSync('scripts/npc-agent-core.js','utf8');
+assert.ok(npcCoreWithIntelligence.includes('function analyzeSessionIntelligence(report, events, historicalReports)'),"Specialists must analyze the current session using real recorded evidence.");
+assert.ok(npcCoreWithIntelligence.includes('function analyzeObserverPatrol(report, currentBuild)'),"The independent 13-island patrol must be analyzed separately.");
+assert.ok(npcCoreWithIntelligence.includes("historicalSessionsAnalyzed") && unifiedInspector.includes("historicalReports"),"Specialists must use the saved session history to identify recurring issues.");
+assert.ok(npcCoreWithIntelligence.includes("nextStep: bounded(nextStep") && unifiedInspector.includes("wb-patrol-next-step"),"Patrol findings must carry safe and understandable next-check guidance.");
+assert.ok(unifiedInspector.includes('PATROL_REPORT_URL') && unifiedInspector.includes('observerPatrol: latestPatrolIntelligence'),"The latest independent patrol must be attached to the exported report without merging it into gameplay-session measurements.");
+assert.ok(unifiedInspector.includes('La patrulla utilizó') || npcCoreWithIntelligence.includes('GPU Adreno'),"Software-rendered patrol results must never be presented as physical mobile GPU measurements.");
+
+assert.ok(unifiedInspector.includes('function buildSpecialistIntelligence(report, rememberResults, historicalReports)') && unifiedInspector.includes('api.remember'),"Session diagnoses must be connected to persistent specialist memory.");
+assert.ok(unifiedInspector.includes('renderSpecialistIntelligence(intelligence)') && unifiedInspector.includes('wbSpecialistCards'),"The unified session report must show the four specialists in a plain-language panel.");
+assert.ok(npcCoreWithIntelligence.includes('automaticWorldChanges: false') && npcCoreWithIntelligence.includes('automaticCodeChanges: false'),"Local autonomy must remain read-only until a repair is explicitly approved.");
+assert.ok(unifiedInspectorHtml.includes('unified-workbench.css?v=4') && unifiedInspectorHtml.includes('unified-workbench.js?v=4'),"The specialist report must load the current uncached workbench assets.");
+assert.ok(unifiedInspectorCss.includes('.wb-specialist-grid') && unifiedInspectorCss.includes('.wb-specialist-location'),"Specialist findings and measured world coordinates must be readable on mobile.");
+
+new (require('node:vm').Script)(unifiedInspector,{filename:'inspector/unified-workbench.js'});
+new (require('node:vm').Script)(unifiedRecorder,{filename:'scripts/game-session-recorder.js'});
 
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');

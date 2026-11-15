@@ -40,6 +40,8 @@
   ];
   let activePage = 0;
   let latestReport = null;
+  let latestPatrolIntelligence = null;
+  let latestPatrolRaw = null;
   let deck = null;
   let tabButtons = [];
 
@@ -88,6 +90,36 @@
           <div class="wb-card-eyebrow">CALIDAD DEL INFORME</div><h3>Comprobando cobertura</h3>
           <p>Se distinguirán las mediciones ausentes de los valores cero.</p>
         </article>
+      </div>
+      <section class="wb-report-card wb-report-specialists" id="wbReportSpecialists">
+        <div class="wb-card-eyebrow">INTELIGENCIA AUTÓNOMA · CUATRO ESPECIALISTAS</div>
+        <h3>Lo que han descubierto nuestros especialistas</h3>
+        <p>Revisan la partida, reúnen pruebas y recuerdan los resultados para comparar futuras sesiones. No cambian el mundo ni reducen la calidad gráfica por su cuenta.</p>
+        <div id="wbSpecialistSummary" class="wb-specialist-summary">Preparando análisis…</div>
+        <div id="wbSpecialistCards" class="wb-specialist-grid"><p>Esperando los datos de la partida.</p></div>
+      </section>
+      <section class="wb-report-card wb-patrol-report" id="wbPatrolReport">
+        <div class="wb-card-eyebrow">PATRULLA AUTÓNOMA · 13 ISLAS</div>
+        <h3>Último recorrido independiente</h3>
+        <p id="wbPatrolMeta">Consultando el último recorrido publicado…</p>
+        <div id="wbPatrolSummary" class="wb-patrol-summary"></div>
+        <div id="wbPatrolAgents" class="wb-patrol-agents"><p>Buscando observaciones.</p></div>
+        <div id="wbPatrolCautions" class="wb-patrol-cautions"></div>
+        <p><a href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/workflows/explorer-patrol.yml" target="_blank" rel="noopener noreferrer">Abrir o ejecutar la patrulla completa</a></p>
+      </section>
+      <section class="wb-report-card">
+        <div class="wb-card-eyebrow">ANÁLISIS CRUZADO</div><h3>Relaciones entre posibles causas</h3>
+        <div id="wbReportCorrelations" class="wb-action-list"><p>Esperando mediciones.</p></div>
+      </section>
+      <div class="wb-report-columns">
+        <section class="wb-report-card" id="wbReportWorld">
+          <div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D</div><h3>Geometría, físicas y objetos</h3>
+          <p>El inventario de la escena se incorporará al informe final cuando la partida termine normalmente.</p>
+        </section>
+        <section class="wb-report-card" id="wbReportComparison">
+          <div class="wb-card-eyebrow">EVOLUCIÓN ENTRE PARTIDAS</div><h3>Comparación con la sesión anterior</h3>
+          <p>Se necesitan dos informes completos del mismo navegador para comparar.</p>
+        </section>
       </div>
       <div class="wb-report-columns">
         <section class="wb-report-card">
@@ -268,8 +300,327 @@
     return '<article class="wb-action-item wb-'+severity+'"><span class="wb-action-label">'+label+'</span><div><strong>'+esc(title)+'</strong><p>'+esc(body)+'</p></div></article>';
   }
 
-  function renderReport(report,sourceLabel) {
-    latestReport = report;
+  function renderWorldEvidence(world) {
+    const host = $("wbReportWorld");
+    if (!host) return;
+    if (!world) {
+      host.innerHTML = '<div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D</div><h3>Inspección final no disponible</h3><p>La partida no guardó una captura final del mundo. No se puede concluir que las mallas, objetos o colisiones estén correctos.</p>';
+      return;
+    }
+    if (world.error) {
+      host.innerHTML = '<div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D</div><h3>No se pudo capturar la escena</h3><p>'+esc(world.error)+'</p>';
+      return;
+    }
+    const meshes = world.meshes || {};
+    const terrain = world.terrainObjects || {};
+    const collisions = world.collisions || {};
+    const structures = world.structureAudit || {};
+    const textures = world.textures || {};
+    const buried = finite(terrain.fullyBuriedCount) ?? 0;
+    const penetrating = finite(terrain.penetratingCount) ?? 0;
+    const invalidTransforms = finite(meshes.invalidTransformCount) ?? 0;
+    const invalidColliders = finite(collisions.invalidPositionCount) ?? 0;
+    const unsafeVisible = finite(structures.visibleInvalidAfterRepair) ?? finite(structures.unsafeVisibleBeforeRepair);
+    const largest = Array.isArray(meshes.largestVisibleMeshes) ? meshes.largestVisibleMeshes.slice(0,5) : [];
+    const actorGroups = Object.entries(world.actors || {}).filter(([,group])=>group && typeof group==="object");
+    const actorTotal = actorGroups.reduce((sum,[,group])=>sum+(finite(group.count)??(group.returned?.length||0)),0);
+    const texturePending = finite(textures.pendingCount);
+    const rows = [
+      ["Mallas inventariadas",fmt(meshes.count,0)+(meshes.truncated>0?" · inventario parcial":"")],
+      ["Objetos enterrados",fmt(buried,0)],
+      ["Objetos que penetran el terreno",fmt(penetrating,0)],
+      ["Transformaciones inválidas",fmt(invalidTransforms,0)],
+      ["Colisionadores con posición inválida",fmt(invalidColliders,0)],
+      ["Estructuras inseguras visibles",fmt(unsafeVisible,0)],
+      ["Texturas pendientes",texturePending===null?"Sin medir":fmt(texturePending,0)],
+      ["Actores registrados",fmt(actorTotal,0)]
+    ];
+    const rowHtml=rows.map(([label,value])=>'<div class="wb-evidence-row"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>').join("");
+    const largestHtml=largest.length?'<div class="wb-evidence-subtitle">Mallas visibles con más vértices (no implica que estén defectuosas)</div>'+largest.map(item=>'<div class="wb-evidence-row"><span>'+esc(item.name||"Malla sin nombre")+' · '+esc(item.material||"sin material")+'</span><strong>'+esc(fmt(item.vertices,0))+' vértices</strong></div>').join(""):'<p>No hay inventario de mallas detallado en este informe.</p>';
+    const caveat = world.dataQuality && world.dataQuality.fullMeshInventory===false
+      ? "El inventario de mallas está truncado o incompleto; los recuentos no representan toda la escena."
+      : "Lectura de solo inspección: no mueve, oculta ni elimina objetos.";
+    host.innerHTML='<div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D · '+esc(world.source||"Babylon.js")+'</div><h3>Geometría, físicas y objetos</h3>'+
+      '<div class="wb-evidence-list">'+rowHtml+'</div>'+largestHtml+
+      '<p>'+esc(caveat)+'</p>';
+  }
+
+  function reportComparison(current, previous) {
+    const host=$("wbReportComparison");
+    if(!host)return;
+    if(!previous){
+      host.innerHTML='<div class="wb-card-eyebrow">EVOLUCIÓN ENTRE PARTIDAS</div><h3>Sin sesión anterior</h3><p>Cuando haya dos partidas guardadas, se compararán fluidez, tiempos de fotograma, mallas, memoria y errores. No se mezclan datos de dispositivos o builds distintos sin indicarlo.</p>';
+      return;
+    }
+    const metrics=report=>{
+      const samples=Array.isArray(report.samples)?report.samples:[];
+      const summary=report.summary||{};
+      const fps=summary.fps||{};
+      const frame=summary.frameTimeMs||{};
+      const fpsValues=valuesAt(samples,"fps");
+      return {
+        average:finite(fps.average)??(fpsValues.length?fpsValues.reduce((a,b)=>a+b,0)/fpsValues.length:null),
+        minimum:finite(fps.minimum)??(fpsValues.length?Math.min(...fpsValues):null),
+        p95:finite(frame.p95Median)??median(valuesAt(samples,"frameTiming.p95Ms")),
+        meshes:median(valuesAt(samples,"scene.meshCount")),
+        heap:finite((summary.memory||{}).jsHeapUsedMedianMB),
+        errors:Array.isArray(report.runtimeErrors)?report.runtimeErrors.length:0
+      };
+    };
+    const now=metrics(current),before=metrics(previous);
+    const comparable=current.gameBuild===previous.gameBuild;
+    const diff=(a,b,invert=false)=>a===null||b===null?"Sin datos":(a===b?"Sin cambio":((invert?(a<b):(a>b))?"Mejora":"Empeora")+" · "+fmt(Math.abs(a-b),1));
+    const rows=[
+      ["FPS medios",diff(now.average,before.average)],
+      ["FPS mínimos",diff(now.minimum,before.minimum)],
+      ["Frame time p95",diff(now.p95,before.p95,true)],
+      ["Mallas medias",now.meshes===null||before.meshes===null?"Sin datos":(now.meshes===before.meshes?"Sin cambio":"Cambio · "+fmt(now.meshes-before.meshes,0)+" mallas; no implica mejora por sí solo")],
+      ["Memoria JavaScript",diff(now.heap,before.heap,true)],
+      ["Errores JavaScript",diff(now.errors,before.errors,true)]
+    ];
+    host.innerHTML='<div class="wb-card-eyebrow">EVOLUCIÓN ENTRE PARTIDAS</div><h3>'+(comparable?"Mismo build":"Builds diferentes")+'</h3>'+
+      '<p>Actual: '+esc(current.gameBuild||"desconocido")+' · Anterior: '+esc(previous.gameBuild||"desconocido")+'. '+(comparable?"Comparación orientativa de sesiones guardadas.":"La comparación se muestra con cautela porque cambió la versión del juego.")+'</p>'+
+      '<div class="wb-evidence-list">'+rows.map(([label,value])=>'<div class="wb-evidence-row"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>').join("")+'</div>';
+  }
+
+  function renderCorrelations(report, values) {
+    const host=$("wbReportCorrelations");
+    if(!host)return;
+    const {p95,renderCpu,worldCpu,gpuValues,grass,shadows,meshCounts,vertices}=values;
+    const items=[];
+    const poor=p95!==null&&p95>20;
+    if(poor&&renderCpu!==null&&renderCpu>8&&meshCounts.length&&vertices.length)
+      items.push(reportFinding("warning","Carga de escena y preparación de render coinciden","Hay tiempos altos de preparación CPU junto con una escena de geometría considerable. Medir selección de mallas, materiales y sombras por separado."));
+    if(poor&&worldCpu!==null&&worldCpu>8)
+      items.push(reportFinding("warning","La actualización del mundo puede estar contribuyendo","El tiempo de actualización CPU coincide con ventanas de baja fluidez. Revisar IA, físicas, navegación y sistemas de mundo sin desactivarlos."));
+    if(poor&&grass.length&&shadows.length)
+      items.push(reportFinding("warning","Vegetación y sombras merecen una prueba controlada","Se registran instancias de hierba y emisores de sombra durante la pérdida de fluidez. Comparar el coste de ambos subsistemas en una ruta idéntica; no asumir causalidad."));
+    if(poor&&gpuValues.length)
+      items.push(reportFinding("warning","Hay tiempo GPU medido durante la pérdida de fluidez","Contrastar el tiempo GPU con CPU y frame time para distinguir saturación de GPU de esperas del pipeline."));
+    if(poor&&!gpuValues.length)
+      items.push(reportFinding("critical","Falta evidencia para separar CPU y GPU","La sesión muestra inestabilidad, pero no hay tiempo GPU válido. Activar el perfilador opcional en una segunda sesión comparable."));
+    if(!items.length)
+      items.push(reportFinding("info","Sin correlaciones suficientes","Se necesitan muestras simultáneas y suficientes para relacionar carga gráfica, actualización del mundo y tiempos de fotograma."));
+    host.innerHTML=items.join("");
+  }
+
+  const PATROL_REPORT_URL = "https://raw.githubusercontent.com/bonillamarquezpablo-lab/Minimo-android/inspector-status/inspector/data/explorer-patrol/latest.json";
+
+  async function loadLatestObserverPatrol(currentBuild) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 9000);
+    try {
+      const response = await fetch(PATROL_REPORT_URL + "?t=" + Date.now(), {
+        method: "GET", cache: "no-store", mode: "cors", credentials: "omit",
+        headers: { "Accept": "application/json" }, signal: controller.signal
+      });
+      if (!response.ok) throw new Error("No hay una patrulla publicada disponible (HTTP " + response.status + ").");
+      const body = await response.text();
+      if (body.length > 2 * 1024 * 1024) throw new Error("El informe de patrulla supera el límite de lectura.");
+      const parsed = JSON.parse(body);
+      latestPatrolRaw = parsed;
+      const core = window.ELSN_NPC_AGENT_CORE;
+      if (!core || typeof core.analyzeObserverPatrol !== "function") throw new Error("El análisis de patrulla no está disponible.");
+      const analyzed = core.analyzeObserverPatrol(parsed, currentBuild);
+      if (!analyzed) throw new Error("El informe publicado no corresponde a una patrulla compatible.");
+      return analyzed;
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+
+  async function rememberObserverPatrol(patrol) {
+    const api = window.__ELSN_NPC_AGENT_SYSTEM__;
+    if (!patrol || !api || typeof api.remember !== "function") return;
+    try {
+      if (api.ready) await api.ready;
+      for (const agent of patrol.agents.slice(0, 8)) {
+        const safeName = String(agent.name || "agent").toLowerCase().replace(/[^a-z0-9_-]/g, "-").slice(0, 36);
+        const evidence = {
+          source: "observer-patrol",
+          patrolRunId: patrol.runId,
+          patrolRunSha: patrol.runSha,
+          patrolBuild: patrol.build,
+          renderer: patrol.renderer,
+          finishedAt: patrol.finishedAt,
+          verdict: patrol.verdict,
+          issueCount: agent.issues.length,
+          issues: agent.issues.slice(0, 6).map(issue => ({
+            title: issue.title, detail: issue.detail, severity: issue.severity,
+            islandIndex: issue.islandIndex, position: issue.position
+          })),
+          missing: agent.missing.slice(0, 6)
+        };
+        try {
+          await api.remember({
+            id: "observer-patrol:" + patrol.runId + ":" + safeName,
+            source: "system",
+            npcId: agent.name,
+            roleId: "general",
+            domain: "observer-patrol",
+            kind: agent.issues.length ? "diagnosis" : "observation",
+            status: agent.severity,
+            summary: "Patrulla independiente · " + agent.name + ": " + (agent.summary || "lectura registrada"),
+            evidence
+          });
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  function renderObserverPatrol(patrol, error) {
+    const meta = $("wbPatrolMeta");
+    const summary = $("wbPatrolSummary");
+    const host = $("wbPatrolAgents");
+    const cautions = $("wbPatrolCautions");
+    if (!meta || !summary || !host || !cautions) return;
+    if (!patrol) {
+      meta.textContent = error || "Todavía no hay un recorrido publicado. Puedes iniciar uno desde el enlace inferior.";
+      summary.replaceChildren();
+      host.innerHTML = '<p>No hay datos independientes de patrulla disponibles. El informe de tus partidas sigue funcionando por separado.</p>';
+      cautions.replaceChildren();
+      return;
+    }
+    meta.textContent = "Build " + patrol.build + " · " + (patrol.finishedAt ? niceDate(patrol.finishedAt) : "fecha no disponible") +
+      " · " + patrol.renderer;
+    summary.innerHTML =
+      '<span><strong>' + esc(patrol.world.visitedIslands ?? "—") + '/' + esc(patrol.world.expectedIslands ?? "—") + '</strong> islas recorridas</span>' +
+      '<span><strong>' + esc(patrol.issueCount) + '</strong> avisos o fallos registrados</span>' +
+      '<span><strong>' + esc(patrol.missingCount) + '</strong> comprobaciones pendientes</span>';
+    host.innerHTML = patrol.agents.map(agent => {
+      const state = agent.severity === "critical" ? "critical" : agent.severity === "warning" ? "warning" :
+        agent.severity === "ok" ? "ok" : "unknown";
+      const issues = agent.issues.map(issue => {
+        const island = issue.islandIndex === null ? "" : " · Isla " + (issue.islandIndex + 1);
+        const pos = issue.position
+          ? " · X " + fmt(issue.position.x, 2) + " · Z " + fmt(issue.position.z, 2)
+          : "";
+        const severity = issue.severity === "critical" ? "Fallo detectado" :
+          issue.severity === "warning" ? "Aviso" : "Dato";
+        const nextStep = issue.nextStep ? '<p class="wb-patrol-next-step"><strong>Siguiente revisión:</strong> ' + esc(issue.nextStep) + '</p>' : "";
+        return '<div class="wb-patrol-issue"><span class="wb-patrol-issue-status">' + severity + '</span><div><strong>' + esc(issue.title) + '</strong><p>' + esc(issue.detail) + esc(island + pos) + '</p>' + nextStep + '</div></div>';
+      }).join("");
+      const missing = agent.missing.length
+        ? '<details class="wb-patrol-missing"><summary>Pendiente de comprobar (' + agent.missing.length + ')</summary><ul>' + agent.missing.map(item => '<li>' + esc(item) + '</li>').join("") + '</ul></details>' : "";
+      return '<article class="wb-patrol-agent wb-patrol-' + state + '">' +
+        '<div class="wb-patrol-agent-head"><div><strong>' + esc(agent.specialization || "Especialidad no informada") + '</strong><span>Agente de patrulla: ' + esc(agent.name) + '</span></div>' +
+        '<span>' + (state === "critical" ? "Incidencias" : state === "warning" ? "Avisos" : state === "ok" ? "Comprobado" : "Datos incompletos") + '</span></div>' +
+        '<p>' + esc(agent.summary) + '</p>' +
+        (issues || '<p class="wb-patrol-none">Sin fallos confirmados en las comprobaciones disponibles.</p>') + missing +
+        '</article>';
+    }).join("");
+    cautions.innerHTML = patrol.cautions.map(item => '<p>' + esc(item) + '</p>').join("");
+    if (patrol.runUrl) cautions.insertAdjacentHTML("beforeend",
+      '<p><a href="' + esc(patrol.runUrl) + '" target="_blank" rel="noopener noreferrer">Ver ejecución y pruebas originales</a></p>');
+  }
+
+  function specialistStatusLabel(status) {
+    const labels = {
+      "confirmado": "Repetido en varias partidas",
+      "probable": "Posible problema",
+      "necesita-revision": "Hay algo que revisar",
+      "sin-incidencia-observada": "Sin problema observado",
+      "evidencia-recogida": "Datos recogidos",
+      "sin-datos-suficientes": "Faltan datos"
+    };
+    return labels[status] || "Estado no confirmado";
+  }
+
+  function specialistSourceLabel(source) {
+    return source === "external-agent" ? "Agente conectado" :
+      source === "operator" ? "Anotación del Inspector" :
+      source === "npc" ? "Observación del especialista" : "Registro";
+  }
+
+  function renderSpecialistIntelligence(intelligence) {
+    const summaryHost = $("wbSpecialistSummary");
+    const cardsHost = $("wbSpecialistCards");
+    if (!summaryHost || !cardsHost) return;
+    if (!intelligence || !Array.isArray(intelligence.specialists)) {
+      summaryHost.textContent = "El análisis de especialistas no está disponible en este navegador.";
+      cardsHost.innerHTML = '<p>La partida conserva su informe técnico; no se ha podido cargar el módulo de inteligencia.</p>';
+      return;
+    }
+    const summary = intelligence.summary || {};
+    const review = finite(summary.needReview) ?? 0;
+    const observations = finite(summary.recordedSpecialistObservations) ?? 0;
+    summaryHost.innerHTML =
+      '<span class="wb-specialist-count"><strong>'+esc(summary.specialists||0)+'</strong> especialistas</span>'+
+      '<span class="wb-specialist-count"><strong>'+esc(review)+'</strong> con puntos por revisar</span>'+
+      '<span class="wb-specialist-count"><strong>'+esc(observations)+'</strong> observaciones asociadas</span>'+
+      '<span class="wb-specialist-safety">Análisis y memoria activos · Reparaciones automáticas desactivadas</span>';
+    cardsHost.innerHTML = intelligence.specialists.map(specialist => {
+      const status = String(specialist.status || "sin-datos-suficientes");
+      const severity = status === "necesita-revision" || status === "confirmado" ? "warning" :
+        status === "probable" ? "warning" : status === "sin-incidencia-observada" ? "good" : "neutral";
+      const findingHtml = (Array.isArray(specialist.findings) ? specialist.findings : []).slice(0,8).map(finding => {
+        const badge = finding.severity === "critical" ? "Prioridad alta" :
+          finding.severity === "warning" ? "Revisar" : "Dato recogido";
+        const locations = Array.isArray(finding.locations) && finding.locations.length
+          ? '<div class="wb-specialist-location">'+finding.locations.map(item=>'<span>'+esc(item)+'</span>').join("")+'</div>' : "";
+        return '<div class="wb-specialist-finding"><span class="wb-specialist-finding-tag">'+badge+'</span><div><strong>'+esc(finding.title||"Hallazgo")+'</strong><p>'+esc(finding.summary||"")+'</p>'+locations+'</div></div>';
+      }).join("");
+      const observationHtml = (Array.isArray(specialist.observations) ? specialist.observations : []).slice(0,6).map(event =>
+        '<div class="wb-specialist-observation"><strong>'+esc(specialistSourceLabel(event.source))+'</strong><p>'+esc(event.summary||"")+'</p></div>'
+      ).join("");
+      const noFinding = !findingHtml ? '<p class="wb-specialist-empty">'+
+        (status === "sin-incidencia-observada" ? "No se han encontrado incidencias en las comprobaciones realizadas." :
+          status === "evidencia-recogida" ? "Se han guardado mediciones, pero aún no permiten confirmar un fallo." :
+            "Todavía faltan datos para emitir una conclusión fiable.")+'</p>' : "";
+      return '<article class="wb-specialist-card wb-specialist-'+severity+'">'+
+        '<div class="wb-specialist-card-head"><div><span class="wb-specialist-name">'+esc(specialist.name)+'</span><span class="wb-specialist-role">'+esc(specialist.roleId==="performance"?"Rendimiento":specialist.roleId==="water-coast"?"Agua y costa":specialist.roleId==="terrain-structures"?"Terreno y estructuras":"Materiales e iluminación")+'</span></div>'+
+        '<span class="wb-specialist-status">'+esc(specialistStatusLabel(status))+'</span></div>'+
+        '<p class="wb-specialist-summary-text">'+esc(specialist.summary||"Sin resumen disponible.")+'</p>'+
+        findingHtml+noFinding+
+        (observationHtml ? '<div class="wb-specialist-observations"><strong>Observaciones guardadas</strong>'+observationHtml+'</div>' : "")+
+        '</article>';
+    }).join("");
+  }
+
+  async function buildSpecialistIntelligence(report, rememberResults, historicalReports) {
+    const core = window.ELSN_NPC_AGENT_CORE;
+    if (!core || typeof core.analyzeSessionIntelligence !== "function") return null;
+    const api = window.__ELSN_NPC_AGENT_SYSTEM__;
+    let memory = [];
+    if (api) {
+      try {
+        if (api.ready) await api.ready;
+        if (typeof api.getMemory === "function") memory = await api.getMemory({ limit: 200 });
+      } catch (_) {}
+    }
+    const intelligence = core.analyzeSessionIntelligence(report, memory, historicalReports);
+    if (rememberResults && api && typeof api.remember === "function" && report && report.sessionId) {
+      const names = { "performance":"Eira", "water-coast":"Sól", "terrain-structures":"Ulf", "materials-lighting":"Týr" };
+      for (const specialist of intelligence.specialists) {
+        try {
+          await api.remember({
+            id: "session-intelligence:" + String(report.sessionId).slice(0,100) + ":" + specialist.id + ":v1",
+            source: "system",
+            npcId: names[specialist.roleId] || specialist.name,
+            roleId: specialist.roleId,
+            domain: specialist.roleId,
+            kind: "diagnosis",
+            status: specialist.status,
+            confidence: specialist.confidence,
+            summary: specialist.summary,
+            evidence: {
+              sessionId: report.sessionId,
+              gameBuild: report.gameBuild || null,
+              specialistStatus: specialist.status,
+              findings: (specialist.findings || []).slice(0,6).map(finding => ({
+                title: finding.title, summary: finding.summary, severity: finding.severity
+              })),
+              metrics: specialist.evidence || {}
+            }
+          });
+        } catch (_) {}
+      }
+    }
+    return intelligence;
+  }
+
+  function renderReport(report,sourceLabel,previousReport=null,intelligence=null) {
+    latestReport = Object.assign({}, report, { specialistIntelligence: intelligence || null, observerPatrol: latestPatrolIntelligence || null });
     $("wbReportExport").disabled = false;
     const samples = Array.isArray(report.samples) ? report.samples : [];
     const summary = report.summary || {};
@@ -371,7 +722,11 @@
       reportFinding(drawCallsUnverified?"warning":"info","Contador de llamadas de dibujo",drawCallsUnverified?"El campo drawCallsCounterSemantics indica que su significado no está clasificado o verificado. No se usa para decidir qué optimizar hasta calibrar el contador.":"El informe incluye una clasificación del contador; aun así se debe contrastar con el perfilador de Babylon.")
     ].join("");
     $("wbReportFindings").innerHTML = findings;
-    $("wbReportJson").textContent = JSON.stringify(report,null,2);
+    renderWorldEvidence(report.finalWorldInspection || null);
+    renderSpecialistIntelligence(intelligence);
+    reportComparison(report,previousReport);
+    renderCorrelations(report,{p95,renderCpu,worldCpu,gpuValues,grass,shadows,meshCounts,vertices});
+    $("wbReportJson").textContent = JSON.stringify(latestReport,null,2);
     $("wbReportVerdict").insertAdjacentHTML("beforeend",sparkline(samples));
   }
 
@@ -391,13 +746,25 @@
 
   async function loadReport() {
     const state=$("wbReportState");
-    state.textContent="Actualizando el informe local…";
+    state.textContent="Actualizando informes y memoria de especialistas…";
+    let reports = [];
     try {
+      try {
+        latestPatrolIntelligence = await loadLatestObserverPatrol(null);
+        renderObserverPatrol(latestPatrolIntelligence);
+        await rememberObserverPatrol(latestPatrolIntelligence);
+      } catch (patrolError) {
+        latestPatrolRaw = null;
+        latestPatrolIntelligence = null;
+        renderObserverPatrol(null, String(patrolError && patrolError.message || patrolError));
+      }
       const db=await openDb();
       if (!db.objectStoreNames.contains(STORE)) {
-        db.close(); state.textContent="Todavía no hay partidas guardadas en este navegador."; return;
+        db.close();
+        state.textContent="Todavía no hay partidas guardadas en este navegador. La última patrulla independiente se muestra por separado.";
+        return;
       }
-      const reports=await new Promise((resolve,reject)=>{
+      reports=await new Promise((resolve,reject)=>{
         const tx=db.transaction(STORE,"readonly");
         const request=tx.objectStore(STORE).getAll();
         request.onsuccess=()=>resolve((request.result||[]).sort((a,b)=>Date.parse(b.startedAt||"")-Date.parse(a.startedAt||"")));
@@ -405,10 +772,15 @@
       });
       db.close();
       if (!reports.length) {
-        state.textContent="Todavía no hay informes guardados. Juega una partida para que el registrador cree el primero.";
+        state.textContent="Todavía no hay informes de partidas guardados. La patrulla independiente queda disponible arriba.";
         return;
       }
-      renderReport(reports[0],"Última partida guardada");
+      const intelligence = await buildSpecialistIntelligence(reports[0], reports[0].status === "completed", reports);
+      if (latestPatrolRaw && window.ELSN_NPC_AGENT_CORE) {
+        latestPatrolIntelligence = window.ELSN_NPC_AGENT_CORE.analyzeObserverPatrol(latestPatrolRaw, reports[0].gameBuild || null) || latestPatrolIntelligence;
+        renderObserverPatrol(latestPatrolIntelligence);
+      }
+      renderReport(reports[0],"Última partida guardada",reports[1]||null,intelligence);
     } catch(error) {
       state.textContent="No se pudo leer el historial: "+String(error&&error.message||error);
     }
@@ -430,7 +802,12 @@
         const parsed=JSON.parse(await file.text());
         const report=Array.isArray(parsed)?parsed[0]:parsed.report||parsed;
         if(!report||!Array.isArray(report.samples))throw new Error("El archivo no contiene una partida con muestras.");
-        renderReport(report,"Archivo importado");
+        const intelligence = await buildSpecialistIntelligence(report, false);
+        if (latestPatrolRaw && window.ELSN_NPC_AGENT_CORE) {
+          latestPatrolIntelligence = window.ELSN_NPC_AGENT_CORE.analyzeObserverPatrol(latestPatrolRaw, report.gameBuild || null);
+          renderObserverPatrol(latestPatrolIntelligence);
+        }
+        renderReport(report,"Archivo importado",null,intelligence);
       } catch(error) {
         $("wbReportState").textContent="No se pudo abrir el JSON: "+String(error&&error.message||error);
       } finally {event.target.value="";}

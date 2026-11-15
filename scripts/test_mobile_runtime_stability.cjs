@@ -69,8 +69,8 @@ assert.ok(source.includes('groundRecovery:{...groundRecoveryDiagnostics'), 'Grou
 assert.ok(source.includes('function updateWildlife(dt)'), 'Wildlife behavior must remain present.');
 assert.ok(source.includes('function update(dt){'), 'The full game world update must remain present.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'22\',build:\'0.6.300\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.300"'), 'Release validator must target version 0.6.300.');
+assert.ok(validator.includes('reportVersion:\'23\',build:\'0.6.301\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.301"'), 'Release validator must target version 0.6.301.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 
