@@ -414,6 +414,10 @@ async function main() {
     manifest.worldUpdateWaitMs = Number((performance.now() - worldUpdateWaitStartedAt).toFixed(1));
     manifest.worldUpdateCountAtCapture = await page.evaluate(() =>
       window.getGameHealthDebug()?.worldUpdateCount ?? null);
+    await page.waitForFunction(() => {
+      const state = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.();
+      return !!state && state.active === true;
+    }, undefined, { timeout: 10000, polling: 100 });
     manifest.npcDialogueSmoke = await page.evaluate(() => {
       const bridge = window.__ELSN_GAME_DIALOGUE_BRIDGE__;
       const runtime = window.__ELSN_NPC_DIALOGUES__;
