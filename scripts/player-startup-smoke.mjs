@@ -474,6 +474,9 @@ async function main() {
       JSON.stringify(manifest.npcDialogueSmoke));
     assert.equal(manifest.npcDialogueSmoke.bridgeReady, true,
       'El puente de diálogos no quedó preparado: ' + JSON.stringify(manifest.npcDialogueSmoke));
+    assert.ok(Number(manifest.npcDialogueSmoke.peopleInWorld) > 0,
+      'El puente no encontró raíces NPC reales en la escena: ' + JSON.stringify(manifest.npcDialogueSmoke));
+
     assert.equal(manifest.npcDialogueSmoke.active, true,
       'El sistema de diálogos no detectó la partida activa: ' + JSON.stringify(manifest.npcDialogueSmoke));
     if (Number(manifest.npcDialogueSmoke.nearbyPeople) > 0) {
