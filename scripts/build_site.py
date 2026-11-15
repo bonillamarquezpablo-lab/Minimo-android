@@ -827,9 +827,15 @@ def main() -> None:
  window.__ELSN_GAME_DIALOGUE_BRIDGE__=Object.freeze({
   maxVisibleBubbles:4,
   getSnapshot:()=>{
-   const focus=typeof playerPos==='function'?playerPos():player.root.position;
+   let focus=null;
+   try{if(typeof playerPos==='function')focus=playerPos();}catch(_){}
+   if(!focus||!Number.isFinite(Number(focus.x))||!Number.isFinite(Number(focus.z))){
+    try{focus=player&&player.root&&player.root.position||null;}catch(_){}
+   }
+   if(!focus||!Number.isFinite(Number(focus.x))||!Number.isFinite(Number(focus.z)))focus={x:0,y:0,z:0};
    const atmosphere=window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getState==='function'?window.__ELSN_ATMOSPHERE.getState():null;
-   const islandIndex=typeof landIslandIndex==='function'?landIslandIndex(focus.x,focus.z):-1;
+   let islandIndex=-1;
+   try{if(typeof landIslandIndex==='function')islandIndex=landIslandIndex(focus.x,focus.z);}catch(_){};
    return {
     active:!!(document.body&&document.body.classList.contains('game-running')),
     playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
