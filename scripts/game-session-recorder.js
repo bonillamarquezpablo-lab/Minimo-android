@@ -306,7 +306,11 @@
         profileDiagnosticsEnabled: runtime.profileDiagnosticsEnabled === true,
         engineBackend: text(runtime.engineBackend, 32),
         gpuRenderer: text(runtime.gpuRenderer, 120),
-        drawCallsCounterSemantics: "raw-runtime-counter"
+        drawCallsCounterSemantics: "raw-runtime-counter",
+        meshSelectionOctreeEnabled: runtime.meshSelectionOctreeEnabled === true,
+        meshSelectionSceneMeshCount: number(runtime.meshSelectionSceneMeshCount),
+        meshSelectionDynamicMeshCount: number(runtime.meshSelectionDynamicMeshCount),
+        meshSelectionBuildMs: number(runtime.meshSelectionBuildMs)
       },
       memory: {
         usedJSHeapSizeBytes: number(browserMemory && browserMemory.usedJSHeapSize),
