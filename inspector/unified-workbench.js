@@ -368,7 +368,7 @@
       reportFinding("info","Hierba y sombras","Hierba: "+fmt(grassMin,0)+"–"+fmt(grassMax,0)+" instancias; emisores de sombra: hasta "+fmt(shadowMax,0)+". Agua: pico de actualización "+fmtMs(waterMax)+"."),
       reportFinding("info","Selección de mallas dinámicas","El sistema clasifica unas "+fmt(dynamicMeshCount,0)+" mallas como dinámicas. Motivos registrados: "+Object.entries(dynamicReasons).map(([key,value])=>key+" "+fmt(value,0)).slice(0,4).join(" · ")+". Coste máximo del filtro: "+fmtMs(dynamicFilterMaxMs)+"."),
       reportFinding("info","Tareas largas durante el juego","Antes de iniciar: "+fmt(preStartTasks.length,0)+" tareas / "+fmt(preStartDuration,0)+" ms. Durante la sesión: "+fmt(inGameTasks.length,0)+" tareas / "+fmt(inGameDuration,0)+" ms."),
-      reportFinding(drawCallsUnverified?"warning":"info","Contador de llamadas de dibujo",drawCallsUnverified?"El campo drawCallsCounterSemantics indica que su significado no está clasificado o verificado. No se usa para decidir qué optimizar hasta calibrarlo.":"El informe incluye una clasificación del contador; aun así se debe contrastar con el perfilador de Babylon.")
+      reportFinding(drawCallsUnverified?"warning":"info","Contador de llamadas de dibujo",drawCallsUnverified?"El campo drawCallsCounterSemantics indica que su significado no está clasificado o verificado. No se usa para decidir qué optimizar hasta calibrar el contador.":"El informe incluye una clasificación del contador; aun así se debe contrastar con el perfilador de Babylon.")
     ].join("");
     $("wbReportFindings").innerHTML = findings;
     $("wbReportJson").textContent = JSON.stringify(report,null,2);
