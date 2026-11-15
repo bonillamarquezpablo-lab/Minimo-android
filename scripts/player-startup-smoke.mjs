@@ -434,7 +434,13 @@ async function main() {
           bridge = snapshot ? {
             active: snapshot.active,
             peopleCount: Array.isArray(snapshot.people) ? snapshot.people.length : null,
-            playerPosition: snapshot.playerPosition
+            peopleCounts: snapshot.peopleCounts || null,
+            playerPosition: snapshot.playerPosition,
+            people: Array.isArray(snapshot.people) ? snapshot.people.slice(0, 20).map(actor => {
+              const root = actor?.parts?.root || actor?.root || actor?.actor || actor;
+              const position = root?.getAbsolutePosition?.() || root?.position || null;
+              return { name: root?.name || actor?.name || null, x: Number(position?.x), y: Number(position?.y), z: Number(position?.z) };
+            }) : []
           } : null;
         } catch (bridgeError) {
           bridge = { error: String(bridgeError?.message || bridgeError) };
