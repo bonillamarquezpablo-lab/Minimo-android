@@ -32,7 +32,10 @@ assert.match(runtime,/RANGE_SQUARED/,"Nearby NPC filtering must use squared dist
 assert.match(runtime,/function rootOf\(n\).*n\.parts&&n\.parts\.root\|\|n\.root\|\|n\.actor\|\|n/,"Dialogue must resolve NPCs stored as parts.root, root, actor, or a direct Babylon node.");assert.match(runtime,/function idOf\(n\).*root&&root\.name/,"NPC identity must fall back to the resolved Babylon node name.");assert.match(runtime,/Number\.isFinite\(Number\(s\.playerPosition\.x\)\)/,"Invalid player positions must not silently place NPCs at the world origin.");assert.match(runtime,/layer\.style\.zIndex="2147483000"/,"Dialogue bubbles must render above the game canvas and HUD.");
 assert.match(runtime,/snapshotFailures/,"Dialogue runtime must surface bridge snapshot errors for diagnosis.");
 assert.match(runtime,/bridgeReportedActive/,"Dialogue runtime must expose the bridge's active-game signal.");
-assert.match(builder,/let focus=null;[\\s\\S]*?player&&player\.root&&player\.root\.position/,"Dialogue bridge must safely resolve the active player's world position.");
+const dialogueFocusStart=builder.indexOf("let focus=null;");
+const dialoguePlayerFallback=builder.indexOf("player&&player.root&&player.root.position",dialogueFocusStart);
+assert.ok(dialogueFocusStart>=0&&dialoguePlayerFallback>dialogueFocusStart,
+ "Dialogue bridge must safely resolve the active player's world position.");
 assert.match(runtime,/function remember\(state,content\)/);
 assert.match(runtime,/function isProjectable\(npc,s\)/,"The scheduler must reject NPCs whose head anchors are outside the active camera view.");
 assert.match(runtime,/inView=nearby\.filter\(x=>isProjectable\(x\.npc,s\)\)/,"Ambient dialogue must only be scheduled for on-screen NPCs.");
