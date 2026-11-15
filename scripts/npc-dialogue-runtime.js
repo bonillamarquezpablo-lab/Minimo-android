@@ -51,8 +51,27 @@ function partnerFor(item,nearby){let best=null,bestDistance=7.5;for(const candid
 function queueReply(npc,content,dueAt){pending.push({npc,content,dueAt});if(pending.length>4)pending.shift();}
 function processPending(now,ids){for(let i=0;i<pending.length;){const entry=pending[i];if(entry.dueAt>now){i++;continue;}pending.splice(i,1);if(!ids.has(idOf(entry.npc)))continue;startBubble(entry.npc,entry.content,now,4300);break;}}
 function remember(state,content){if(!content)return;if(content.topic){state.recentTopics.push(content.topic);if(state.recentTopics.length>3)state.recentTopics.shift();}if(content.text){state.recentTexts.push(content.text);if(state.recentTexts.length>5)state.recentTexts.shift();}}
+function isProjectable(npc,s){
+ if(!npc||!s||!s.scene||!s.engine||!s.camera||!s.canvas||!enabled(npc))return false;
+ const root=rootOf(npc),rootPos=worldPosition(root);
+ if(!rootPos||distance(rootPos,s.playerPosition)>RANGE)return false;
+ const BABYLON=s.BABYLON||window.BABYLON;
+ if(!BABYLON||!BABYLON.Vector3||!BABYLON.Matrix)return false;
+ try{
+  const anchor=npc.parts&&npc.parts.head&&typeof npc.parts.head.getAbsolutePosition==="function"?npc.parts.head:root;
+  const ap=worldPosition(anchor);if(!ap)return false;
+  if(!projectionIdentity)projectionIdentity=BABYLON.Matrix.Identity();
+  if(!projectionScratch)projectionScratch=new BABYLON.Vector3(0,0,0);
+  const world=projectionScratch.copyFrom(ap);world.y+=anchor===root?2.12:.48;
+  const width=s.engine.getRenderWidth(),height=s.engine.getRenderHeight(),rect=s.canvas.getBoundingClientRect();
+  if(!(width>0&&height>0&&rect.width>0&&rect.height>0))return false;
+  const viewport=s.camera.viewport&&typeof s.camera.viewport.toGlobal==="function"?s.camera.viewport.toGlobal(width,height):{x:0,y:0,width,height};
+  const p=BABYLON.Vector3.Project(world,projectionIdentity,s.scene.getTransformMatrix(),viewport);
+  return !!(p&&p.z>0&&p.z<1&&p.x>=viewport.x&&p.x<=viewport.x+viewport.width&&p.y>=viewport.y&&p.y<=viewport.y+viewport.height);
+ }catch(error){diagnostics.lastError=String(error&&error.message||error);return false;}
+}
 function schedule(now,nearby,s){
- const world=s&&s.world||{},selected=Core.selectVisibleBubbles(nearby.map(x=>({item:x,distance:x.distance,priority:x.distance<7?3:(x.distance<14?2:1),visible:true})),MAX_BUBBLES).map(x=>x.item);
+ const world=s&&s.world||{},inView=nearby.filter(x=>isProjectable(x.npc,s)),selected=Core.selectVisibleBubbles(inView.map(x=>({item:x,distance:x.distance,priority:x.distance<7?3:(x.distance<14?2:1),visible:true})),MAX_BUBBLES).map(x=>x.item);
  const due=selected.filter(x=>stateFor(x.id,now).nextAt<=now&&!slots.some(slot=>slot.current&&slot.current.id===x.id));
  if(!due.length)return;
  due.sort((a,b)=>a.distance-b.distance);
