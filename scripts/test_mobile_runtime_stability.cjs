@@ -54,13 +54,17 @@ for (const marker of [
 
 assert.ok(builder.includes('audit_discovery_replacement = """'), 'The full scene scan must be replaced with queued root discovery.');
 assert.ok(builder.includes('untracked_replacement = "const untrackedRoots=Array.from(discoveryQueue)'), 'The second full scene scan must be replaced with queue diagnostics.');
+assert.ok(builder.includes('beach_cancel_api_marker = '), 'The build must expose coastal cancellation through GroundDynamics, which owns the private job state.');
+assert.ok(builder.includes('GroundDynamics.cancelBeachWorkForIsland(previousIndex);'), 'Island switches must cancel coastal work through the owning subsystem API.');
+assert.ok(!builder.includes('if(beachWorkLayer&&beachWorkLayer.index===previousIndex)'), 'The outer island switch must never access the IIFE-private beachWorkLayer variable.');
+assert.ok(validator.includes('cancelBeachWorkForIsland:index=>'), 'Release validation must require the scoped coastal cancellation API.');
 assert.ok(source.includes('function auditHabitableStructures(applyRepairs=true)'), 'Habitable structure integrity audit must remain present.');
 assert.ok(source.includes('function processBeachWorkChunk()'), 'Incremental coastal simulation must remain present.');
 assert.ok(source.includes('function animateWater(dt)'), 'Animated water system must remain present.');
 assert.ok(source.includes('function updateWildlife(dt)'), 'Wildlife behavior must remain present.');
 assert.ok(source.includes('function update(dt){'), 'The full game world update must remain present.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'19\',build:\'0.6.297\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.297"'), 'Release validator must target version 0.6.297.');
+assert.ok(validator.includes('reportVersion:\'19\',build:\'0.6.298\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.298"'), 'Release validator must target version 0.6.298.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
