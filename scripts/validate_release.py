@@ -379,6 +379,8 @@ def main() -> None:
         "function buildSpatialSelectionOctree()",
         "buildSpatialSelectionOctree();",
         "meshSelectionOctreeEnabled:spatialSelectionStats.enabled",
+        "meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount",
+        "meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio",
     )
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
