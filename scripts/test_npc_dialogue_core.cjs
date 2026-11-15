@@ -9,6 +9,17 @@ const danger=Core.chooseAmbientMessage({parts:{variant:1}},{enemyNearby:true},()
 assert.equal(danger.topic,"danger");
 const stone=Core.chooseAmbientMessage({parts:{variant:2}},{stone:0},()=>0,{});
 assert.equal(stone.topic,"stone");assert.match(stone.text,/piedra|granito|pico/i);
+const measuredMissing=Core.contextualLines(Core.roleForVariant(2),{wood:null,stone:null});
+assert.equal(measuredMissing.filter(line=>line.topic==="wood"||line.topic==="stone").length,0,
+  "Unmeasured wood and stone reserves must not be treated as zero.");
+const stoneOnly=Core.contextualLines(Core.roleForVariant(2),{wood:null,stone:20});
+assert.equal(stoneOnly.some(line=>line.topic==="wood"),false,
+  "A measured stone reserve must not make a missing wood reserve appear empty.");
+assert.equal(stoneOnly.some(line=>line.topic==="stone"),false);
+const lowStoneOnly=Core.contextualLines(Core.roleForVariant(2),{wood:null,stone:0});
+assert.equal(lowStoneOnly.some(line=>line.topic==="stone"),true,
+  "A measured zero stone reserve must still produce a relevant warning.");
+assert.equal(lowStoneOnly.some(line=>line.topic==="wood"),false);
 const remembered=Core.chooseAmbientMessage({parts:{variant:0}},{night:true},()=>0,{recentTopics:["night"]});
 assert.notEqual(remembered.topic,"night","An NPC must not repeat the same contextual topic immediately.");
 const ex=Core.chooseExchange({parts:{variant:0}},{parts:{variant:3}},()=>0,{night:true});assert.equal(ex.length,2);assert.ok(ex.every(x=>x.kind==="speech"&&x.topic==="night"&&x.text));
