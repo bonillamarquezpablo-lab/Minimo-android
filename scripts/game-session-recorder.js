@@ -314,6 +314,7 @@
         meshSelectionDynamicContentRatio: number(runtime.meshSelectionDynamicContentRatio),
         meshSelectionInitialDynamicCount: number(runtime.meshSelectionInitialDynamicCount),
         meshSelectionDynamicReasons: runtime.meshSelectionDynamicReasons || null,
+        meshSelectionDynamicSamplesByReason: runtime.meshSelectionDynamicSamplesByReason || null,
         meshSelectionBuildMs: number(runtime.meshSelectionBuildMs)
       },
       memory: {
