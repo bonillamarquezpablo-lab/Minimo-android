@@ -14,5 +14,5 @@ for(const marker of ["workbench-tabs","workbench-deck","scroll-snap-type:x manda
 for(const marker of ["sampleCoverage","gpuProfilerEnabled","drawCallsCounterSemantics","finalWorldInspection","longTasks","grassInstances","activeWorldShadowCasters"])
   assert.ok(js.includes(marker),"Advanced report analysis missing: "+marker);
 assert.ok(js.includes("No se usa para decidir qué optimizar hasta calibrar el contador"),"Unverified draw-call counters must not guide optimization.");
-assert.ok(js.includes("El 95 % de los fotogramas"),"The report must explain frame-time percentiles in plain language.");
+assert.ok(js.includes("La mediana del percentil 95 por ventana"),"The report must explain frame-time percentiles in plain language.");
 console.log("Unified horizontal Inspector workbench + understandable advanced session report: PASS");
