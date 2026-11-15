@@ -497,7 +497,8 @@
           : "";
         const severity = issue.severity === "critical" ? "Fallo detectado" :
           issue.severity === "warning" ? "Aviso" : "Dato";
-        return '<div class="wb-patrol-issue"><span class="wb-patrol-issue-status">' + severity + '</span><div><strong>' + esc(issue.title) + '</strong><p>' + esc(issue.detail) + esc(island + pos) + '</p></div></div>';
+        const nextStep = issue.nextStep ? '<p class="wb-patrol-next-step"><strong>Siguiente revisión:</strong> ' + esc(issue.nextStep) + '</p>' : "";
+        return '<div class="wb-patrol-issue"><span class="wb-patrol-issue-status">' + severity + '</span><div><strong>' + esc(issue.title) + '</strong><p>' + esc(issue.detail) + esc(island + pos) + '</p>' + nextStep + '</div></div>';
       }).join("");
       const missing = agent.missing.length
         ? '<details class="wb-patrol-missing"><summary>Pendiente de comprobar (' + agent.missing.length + ')</summary><ul>' + agent.missing.map(item => '<li>' + esc(item) + '</li>').join("") + '</ul></details>' : "";
