@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.294"
+EXPECTED_VERSION = "0.6.295"
 
 HTML_PAGES = (
     "index.html",
@@ -123,10 +123,10 @@ def main() -> None:
         fail("El runtime de especialistas debe quedar aislado del modo juego y ejecutarse solo en Inspector Center.")
     if "const SPECIALISTS = Object.freeze([" not in read_text("scripts/npc-agent-core.js") or "function analyzeSessionReports(reports)" not in read_text("scripts/npc-agent-core.js"):
         fail("Falta el catálogo de especialistas o el análisis conservador de informes.")
-    for marker in ("elsn-game-session-reports", "MAX_SAMPLES_PER_SESSION = 360", "MAX_STORED_SESSIONS = 20", 'classList.contains("game-running")', "window.top !== window.self"):
+    for marker in ("elsn-game-session-reports", "SAMPLE_INTERVAL_MS = 2500", "PERSIST_INTERVAL_MS = 10000", "MAX_SAMPLES_PER_SESSION = 1440", "MAX_ANOMALIES_PER_SESSION = 120", "MAX_STORED_SESSIONS = 20", 'classList.contains("game-running")', "window.top !== window.self"):
         if marker not in session_recorder_source:
             fail("El registrador de sesiones no conserva su contrato de almacenamiento acotado y modo juego: " + marker)
-    for marker in ("function queueIdleSample()", "requestIdleCallback", "new window.PerformanceObserver", '"longtask"', "drawCallsObservedDelta", "semantics-unverified", "longTaskObserverSupported", "diagnosticsReadMs"):
+    for marker in ("function queueIdleSample()", "requestIdleCallback", "new window.PerformanceObserver", '"longtask"', "drawCallsObservedDelta", "semantics-unverified", "longTaskObserverSupported", "diagnosticsReadMs", "recordPerformanceAnomaly", "runtimeErrors", "persistSession"):
         if marker not in session_recorder_source:
             fail("El registrador debe medir y diferir las tareas de telemetría: " + marker)
     npc_agent_core_source = read_text("scripts/npc-agent-core.js")
