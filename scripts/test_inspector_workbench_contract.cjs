@@ -14,6 +14,7 @@ assert.ok(js.includes("SwiftShader") || js.includes("softwareRenderer"),"Patrol 
 
 assert.ok(js.includes("function renderSpecialistIntelligence") && js.includes("function buildSpecialistIntelligence"),"Specialist findings must be rendered and hydrated from the shared memory.");
 assert.ok(js.includes("api.remember") && js.includes("specialistIntelligence"),"The report must persist per-session specialist diagnoses and export them.");
+assert.ok(js.includes("analyzeSessionIntelligence(report, memory, historicalReports)") && js.includes("reports[0], reports[0].status === \"completed\", reports"),"Eira must review multiple independent saved sessions to recognize recurring performance issues.");
 assert.ok(js.includes("automaticCodeChanges: false") || js.includes("No cambian el mundo"),"Specialist analysis must remain read-only.");
 for(const id of ["wbReportMetrics","wbReportVerdict","wbReportIntegrity","wbReportActions","wbReportFindings","wbReportJson","wbReportImport","wbReportSpecialists","wbSpecialistSummary","wbSpecialistCards"])
   assert.ok(js.includes(id),"Unified report view missing: "+id);
