@@ -14,6 +14,8 @@ assert.equal(Core.actorIdentity({root:directRoot}),"direct-root");
 assert.equal(Core.actorIdentity(nestedRoot),"nested-root");
 const input=Array.from({length:9},(_,i)=>({id:"npc-"+i,distance:i+1,priority:i===7?4:1,visible:true})),visible=Core.selectVisibleBubbles(input,99);assert.equal(visible.length,4);assert.equal(visible[0].id,"npc-7");assert.ok(visible.every(x=>x.distance<=26));assert.deepEqual(Core.selectVisibleBubbles(input,0),[]);
 const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
+const playerSmoke=fs.readFileSync("scripts/player-startup-smoke.mjs","utf8");
+assert.match(playerSmoke,/playerdialoguetest=1/);assert.match(playerSmoke,/movePlayerNearNpcForTest/);
 assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);assert.match(runtime,/BABYLON\.Vector3\.Project/);assert.match(runtime,/Core\.POSITION_UPDATE_MS/);assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
 assert.doesNotMatch(runtime,/new BABYLON\.Mesh|MeshBuilder|new B\.Mesh|requestAnimationFrame/);
 assert.doesNotMatch(runtime,/computeWorldMatrix\(true\)/,"NPC dialogue ticks must not force-recompute every character's world matrix.");
