@@ -933,6 +933,7 @@ def main() -> None:
   if(!classification&&!force)return;
   mesh.__elsnSpatialDynamic=true;
   mesh.__elsnSpatialDynamicReason=classification;
+  mesh.__elsnSpatialFreshUntilRenderId=(typeof scene.getRenderId==='function'?scene.getRenderId():0)+2;
   if(typeof dynamic.indexOf==='function'){
    if(dynamic.indexOf(mesh)<0)dynamic.push(mesh);
   }else dynamic.push(mesh);
@@ -982,6 +983,7 @@ def main() -> None:
    for(const mesh of Array.from(octree.dynamicContent))if(mesh&&!mesh.__elsnSpatialDynamic){
     spatialDynamicMeshSet.add(mesh);
     mesh.__elsnSpatialDynamic=true;mesh.__elsnSpatialDynamicReason='octree-initial-dynamic';
+    mesh.__elsnSpatialFreshUntilRenderId=(typeof scene.getRenderId==='function'?scene.getRenderId():0)+2;
     spatialSelectionStats.dynamicReasons['octree-initial-dynamic']=(spatialSelectionStats.dynamicReasons['octree-initial-dynamic']||0)+1;
    }
    for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh);
@@ -1004,11 +1006,24 @@ def main() -> None:
       if(mesh&&spatialDynamicMeshSet.has(mesh)){
        candidates++;
        try{
-        if(mesh.alwaysSelectAsActiveMesh||mesh.skeleton||mesh.morphTargetManager)keep=true;
+        if(mesh.alwaysSelectAsActiveMesh||mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0)keep=true;
+        else if(typeof scene.getRenderId==='function'&&scene.getRenderId()<=(mesh.__elsnSpatialFreshUntilRenderId||-1))keep=true;
         else{
-         // Refresh a dirty transform before reading its world-space bounding volume.
-         if(typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix();
-         if(typeof mesh.isInFrustum==='function')keep=mesh.isInFrustum(frustumPlanes);
+         // Use the last completed world-space bounding sphere with a 1.75 m
+         // motion margin. This avoids forcing matrix updates on thousands of
+         // off-screen meshes; newly created/moved entries get a two-frame grace.
+         const bounds=typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
+         const sphere=bounds&&bounds.boundingSphere,center=sphere&&sphere.centerWorld;
+         const radius=Number(sphere&&sphere.radiusWorld);
+         if(!center||!Number.isFinite(center.x)||!Number.isFinite(center.y)||!Number.isFinite(center.z)||!Number.isFinite(radius))keep=true;
+         else{
+          const paddedRadius=Math.max(0,radius)+1.75;
+          for(let planeIndex=0;planeIndex<6;planeIndex++){
+           const plane=frustumPlanes[planeIndex];
+           if(!plane||typeof plane.dotCoordinate!=='function'){keep=true;break;}
+           if(plane.dotCoordinate(center)<-paddedRadius){keep=false;break;}
+          }
+         }
         }
        }catch(_){spatialSelectionStats.dynamicFilterErrors++;keep=true;}
        if(!keep){culled++;continue;}
