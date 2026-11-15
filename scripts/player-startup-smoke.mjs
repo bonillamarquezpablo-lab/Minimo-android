@@ -422,6 +422,12 @@ async function main() {
       'La selección espacial se construyó antes de terminar el montaje de la escena.');
     assert.ok(Number(manifest.spatialSelection.dynamicMeshCount) > 0,
       'No se registraron meshes dinámicos; los actores y efectos podrían quedar fuera de la selección.');
+    assert.ok(Number(manifest.spatialSelection.staticIndexedMeshCount) >= Number(manifest.spatialSelection.sceneMeshCount) * 0.35,
+      'El octree está clasificando demasiados meshes estáticos como dinámicos: ' +
+      JSON.stringify(manifest.spatialSelection));
+    assert.ok(Number(manifest.spatialSelection.dynamicContentRatio) < 0.65,
+      'La selección espacial no alcanza una proporción útil de geometría estática indexada: ' +
+      JSON.stringify(manifest.spatialSelection));
     // Verify the inspector is connected to the real Babylon scene, not a mocked snapshot.
     manifest.worldInspection = await page.evaluate(() => {
       if (typeof window.getGameWorldInspectionSnapshot !== 'function') {
