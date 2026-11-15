@@ -70,7 +70,7 @@ assert.ok(source.includes('function updateWildlife(dt)'), 'Wildlife behavior mus
 assert.ok(source.includes('function update(dt){'), 'The full game world update must remain present.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
 assert.ok(validator.includes('reportVersion:\'22\',build:\'0.6.300\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.299"'), 'Release validator must target version 0.6.299.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.300"'), 'Release validator must target version 0.6.300.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 
