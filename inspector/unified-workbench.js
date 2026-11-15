@@ -299,7 +299,12 @@
     const inGameTasks = longTasks.filter(task=>!preStartTasks.includes(task));
     const preStartDuration = preStartTasks.reduce((sum,task)=>sum+(finite(task.durationMs)||0),0);
     const inGameDuration = inGameTasks.reduce((sum,task)=>sum+(finite(task.durationMs)||0),0);
-    const longTaskMax = Math.max(0,...longTasks.map(task=>finite(task.durationMs)||0));
+    const preStartMax = Math.max(0,...preStartTasks.map(task=>finite(task.durationMs)||0));
+    const drawCallsSemantics = samples.map(sample=>sample.scene&&sample.scene.drawCallsCounterSemantics).filter(Boolean);
+    const drawCallsUnverified = !drawCallsSemantics.length || drawCallsSemantics.some(value=>/unclassified|unverified/i.test(String(value)));
+    const dynamicReasons = samples.map(sample=>sample.scene&&sample.scene.meshSelectionDynamicReasons).find(Boolean) || {};
+    const dynamicMeshCount = median(valuesAt(samples,"scene.meshSelectionDynamicMeshCount"));
+    const dynamicFilterMaxMs = Math.max(0,...valuesAt(samples,"scene.meshSelectionDynamicFilterMaxMs"));
     const anomalies = Array.isArray(report.anomalies) ? report.anomalies : [];
     const criticalAnomalies = finite(summary.criticalAnomalyEvents) ?? anomalies.filter(item=>item.severity==="critical").length;
     const runtimeErrors = Array.isArray(report.runtimeErrors) ? report.runtimeErrors.length : 0;
@@ -327,7 +332,7 @@
       p95!==null && p95>20 ? "Hay tirones y pérdida de estabilidad" : "No se detecta una caída grave en este registro";
     const mainBody = [
       "La partida registró "+(avgFps===null?"sin medición":fmt(avgFps,1)+" FPS")+" de media y llegó a "+fmt(minFps,0)+" FPS en su peor lectura.",
-      "El 95 % de los fotogramas quedó dentro de aproximadamente "+(p95===null?"sin medir":fmtMs(p95))+" o menos. Para 60 FPS, el presupuesto es 16,7 ms.",
+      "La mediana del percentil 95 por ventana fue "+(p95===null?"sin medir":fmtMs(p95))+". Para mantener 60 FPS buscamos no superar 16,7 ms.",
       "Esto confirma falta de estabilidad en varios tramos; no identifica por sí solo si la causa final es CPU o GPU."
     ];
     renderCard("wbReportVerdict","RESULTADO DE LA PARTIDA",mainVerdict,mainBody,"wb-report-primary");
@@ -339,7 +344,7 @@
     renderCard("wbReportIntegrity","FIABILIDAD DE LOS DATOS",status,[
       fmt(samples.length,0)+" muestras en "+fmt(duration,0)+" segundos; cobertura registrada: "+(coverageRate===null?"no calculada":fmt(coverageRate*100,1)+"%")+".",
       report.endReason==="pagehide" ? reason : "Cierre: "+status+".",
-      "Errores JavaScript: "+runtimeErrors+". La ausencia de errores de código no descarta fallos visuales, físicos o de navegación."
+      "Anomalías de rendimiento: "+fmt(anomalies.length,0)+"; graves: "+fmt(criticalAnomalies,0)+". Errores JavaScript: "+runtimeErrors+". Cero errores de código no descarta fallos visuales, físicos o de navegación."
     ]);
     $("wbReportMetrics").innerHTML =
       metricCard("FPS medios",fmt(avgFps,1),"Mínimo: "+fmt(minFps,0)+" FPS")+
@@ -351,7 +356,7 @@
     $("wbReportMeta").textContent = "Sesión "+String(report.sessionId||"").slice(0,12)+" · "+fmt(samples.length,0)+" lecturas · "+reason;
     $("wbReportActions").innerHTML = [
       noGpu ? reportFinding("critical","Medir la GPU en una ejecución controlada","No hay tiempos GPU en este informe. Repetir una ruta idéntica con el perfilador Babylon activado; no cambiar la calidad gráfica.") : "",
-      preStartTasks.length ? reportFinding("critical","Separar el bloqueo de arranque","Antes de empezar a medir hubo "+preStartTasks.length+" tareas largas que suman "+fmt(preStartDuration,0)+" ms; la mayor duró "+fmt(longTaskMax,0)+" ms. Auditar carga inicial, texturas, GLB y compilación de shaders.") : "",
+      preStartTasks.length ? reportFinding("critical","Separar el bloqueo de arranque","Antes de empezar a medir hubo "+preStartTasks.length+" tareas largas que suman "+fmt(preStartDuration,0)+" ms; la mayor duró "+fmt(preStartMax,0)+" ms. Auditar carga inicial, texturas, GLB y compilación de shaders.") : "",
       grassGrowth!==null ? reportFinding("warning","Revisar la creación de hierba y vegetación","Las instancias registradas pasaron de "+fmt(grassMin,0)+" a "+fmt(grassMax,0)+" (+"+fmt(grassGrowth,0)+"%). Comprobar generación repetida por zonas y liberación de lotes; el aumento no demuestra por sí solo duplicados.") : "",
       renderCpu!==null||worldCpu!==null ? reportFinding("warning","Perfilar la preparación del fotograma en CPU","Medianas: preparación de render "+fmtMs(renderCpu)+" y actualización del mundo "+fmtMs(worldCpu)+". Separar lógica, selección de mallas, sombras y preparación de render.") : "",
       noWorldSnapshot ? reportFinding("warning","Completar el inventario del mundo 3D","La sesión no guarda una captura final por malla. Ejecutar la inspección del mundo para identificar objetos, materiales, texturas, transformaciones y colisionadores concretos.") : "",
@@ -361,8 +366,9 @@
       reportFinding(p95!==null&&p95>20?"critical":"info","Ritmo de fotogramas","p95 mediano: "+fmtMs(p95)+"; p99 mediano: "+fmtMs(p99)+"; peor fotograma: "+fmtMs(maxFrame)+"."),
       reportFinding("warning","Carga de escena","Mallas: "+fmt(meshFirst,0)+" al inicio y "+fmt(meshLast,0)+" al final; vértices máximos: "+fmt(vertexMax===null?null:vertexMax/1e6,2)+" millones; jerarquías y materiales aún requieren inspección detallada."),
       reportFinding("info","Hierba y sombras","Hierba: "+fmt(grassMin,0)+"–"+fmt(grassMax,0)+" instancias; emisores de sombra: hasta "+fmt(shadowMax,0)+". Agua: pico de actualización "+fmtMs(waterMax)+"."),
+      reportFinding("info","Selección de mallas dinámicas","El sistema clasifica unas "+fmt(dynamicMeshCount,0)+" mallas como dinámicas. Motivos registrados: "+Object.entries(dynamicReasons).map(([key,value])=>key+" "+fmt(value,0)).slice(0,4).join(" · ")+". Coste máximo del filtro: "+fmtMs(dynamicFilterMaxMs)+"."),
       reportFinding("info","Tareas largas durante el juego","Antes de iniciar: "+fmt(preStartTasks.length,0)+" tareas / "+fmt(preStartDuration,0)+" ms. Durante la sesión: "+fmt(inGameTasks.length,0)+" tareas / "+fmt(inGameDuration,0)+" ms."),
-      reportFinding("warning","Contador de llamadas de dibujo","El propio informe marca su significado como no verificado. No se usa para decidir qué optimizar hasta calibrar el contador.")
+      reportFinding(drawCallsUnverified?"warning":"info","Contador de llamadas de dibujo",drawCallsUnverified?"El campo drawCallsCounterSemantics indica que su significado no está clasificado o verificado. No se usa para decidir qué optimizar hasta calibrarlo.":"El informe incluye una clasificación del contador; aun así se debe contrastar con el perfilador de Babylon.")
     ].join("");
     $("wbReportFindings").innerHTML = findings;
     $("wbReportJson").textContent = JSON.stringify(report,null,2);
