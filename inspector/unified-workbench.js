@@ -41,6 +41,7 @@
   let activePage = 0;
   let latestReport = null;
   let latestPatrolIntelligence = null;
+  let latestPatrolRaw = null;
   let deck = null;
   let tabButtons = [];
 
@@ -417,6 +418,7 @@
       const body = await response.text();
       if (body.length > 2 * 1024 * 1024) throw new Error("El informe de patrulla supera el límite de lectura.");
       const parsed = JSON.parse(body);
+      latestPatrolRaw = parsed;
       const core = window.ELSN_NPC_AGENT_CORE;
       if (!core || typeof core.analyzeObserverPatrol !== "function") throw new Error("El análisis de patrulla no está disponible.");
       const analyzed = core.analyzeObserverPatrol(parsed, currentBuild);
@@ -772,10 +774,9 @@
         return;
       }
       const intelligence = await buildSpecialistIntelligence(reports[0], reports[0].status === "completed");
-      if (latestPatrolIntelligence) {
-        latestPatrolIntelligence = await loadLatestObserverPatrol(reports[0].gameBuild || null).catch(() => latestPatrolIntelligence);
+      if (latestPatrolRaw && window.ELSN_NPC_AGENT_CORE) {
+        latestPatrolIntelligence = window.ELSN_NPC_AGENT_CORE.analyzeObserverPatrol(latestPatrolRaw, reports[0].gameBuild || null) || latestPatrolIntelligence;
         renderObserverPatrol(latestPatrolIntelligence);
-        await rememberObserverPatrol(latestPatrolIntelligence);
       }
       renderReport(reports[0],"Última partida guardada",reports[1]||null,intelligence);
     } catch(error) {
