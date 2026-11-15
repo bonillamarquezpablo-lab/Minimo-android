@@ -27,6 +27,7 @@ for(const marker of [
   'meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount',
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
   'meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio',
+  'meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason',
   'meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount',
   'meshSelectionBuildMs:spatialSelectionStats.buildMs'
 ]) assert.ok(builder.includes(marker),'Missing dynamic-safe spatial selection guard: '+marker);
