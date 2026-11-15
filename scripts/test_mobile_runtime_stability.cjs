@@ -39,7 +39,7 @@ for (const marker of [
   'meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason',
   'const installSpatialDynamicFrustumFilter=octree=>',
   'octree.select=function(frustumPlanes,allowDuplicate)',
-  'boundingSphere.centerWorld',
+  'sphere&&sphere.centerWorld',
   'meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak',
   'mesh.__elsnSpatialFreshUntilRenderId',
   'plane.dotCoordinate(center)<-paddedRadius',
