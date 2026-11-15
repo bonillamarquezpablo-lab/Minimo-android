@@ -414,6 +414,14 @@ async function main() {
     manifest.worldUpdateWaitMs = Number((performance.now() - worldUpdateWaitStartedAt).toFixed(1));
     manifest.worldUpdateCountAtCapture = await page.evaluate(() =>
       window.getGameHealthDebug()?.worldUpdateCount ?? null);
+    manifest.spatialSelection = await page.evaluate(() => window.__ELSN_SPATIAL_SELECTION__ || null);
+    assert.ok(manifest.spatialSelection?.enabled === true,
+      'La compilación no activó la selección espacial Babylon en la escena principal: ' +
+      JSON.stringify(manifest.spatialSelection));
+    assert.ok(Number(manifest.spatialSelection.sceneMeshCount) >= 512,
+      'La selección espacial se construyó antes de terminar el montaje de la escena.');
+    assert.ok(Number(manifest.spatialSelection.dynamicMeshCount) > 0,
+      'No se registraron meshes dinámicos; los actores y efectos podrían quedar fuera de la selección.');
     // Verify the inspector is connected to the real Babylon scene, not a mocked snapshot.
     manifest.worldInspection = await page.evaluate(() => {
       if (typeof window.getGameWorldInspectionSnapshot !== 'function') {
