@@ -174,6 +174,7 @@
     if (top) top.after(shell);
     else main.prepend(shell);
     tabButtons = Array.from(tabs.querySelectorAll(".workbench-tab"));
+    setActiveTab(0);
     const oldNav = document.querySelector(".topbar .nav");
     if (oldNav) {
       oldNav.querySelectorAll("a[href^='#']").forEach(anchor => {
@@ -189,14 +190,16 @@
         });
       });
     }
-    const observer = new IntersectionObserver(entries => {
-      const visible = entries.filter(entry => entry.isIntersecting)
-        .sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
-      if (!visible) return;
-      const index = Number(visible.target.dataset.pageIndex);
-      if (Number.isInteger(index)) setActiveTab(index);
-    },{root:deck,threshold:[.45,.65,.85]});
-    pages.forEach(entry=>observer.observe(entry.page));
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(entries => {
+        const visible = entries.filter(entry => entry.isIntersecting)
+          .sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+        if (!visible) return;
+        const index = Number(visible.target.dataset.pageIndex);
+        if (Number.isInteger(index)) setActiveTab(index);
+      },{root:deck,threshold:[.45,.65,.85]});
+      pages.forEach(entry=>observer.observe(entry.page));
+    }
     deck.addEventListener("keydown",event=>{
       if (!["ArrowLeft","ArrowRight"].includes(event.key)) return;
       event.preventDefault();
