@@ -1219,9 +1219,10 @@ def main() -> None:
    const radius=Math.max(sx,sz)*.50;
    return {meshes:[r,cap],x,z,radius,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
   }"""
-    if html.count(mineable_rock_marker) != 1:
-        raise SystemExit("No se encontró exactamente la función createRock original.")
-    html = html.replace(mineable_rock_marker, mineable_rock_replacement, 1)
+    mineable_rock_pattern = r"(?m)^[ \t]*function createRock\\(x,z\\)\\{\\n.*?\\n[ \t]*\\}"
+    html, mineable_rock_count = re.subn(mineable_rock_pattern, lambda _match: mineable_rock_replacement, html, count=1, flags=re.DOTALL)
+    if mineable_rock_count != 1:
+        raise SystemExit(f"No se encontró una única función createRock para transformar: {mineable_rock_count} coincidencias.")
 
     # Never stamp the ground footprint atlas on top of resource boulders or registered structures.
     footprint_surface_marker = """function makeFootprint(islandIndex,x,z,heading,wet,beach,running,waterCovered=false){
@@ -1259,9 +1260,10 @@ def main() -> None:
    const strength=wet?.90:(beach?.78:.58),currentTick=Math.floor((performance.now()*.001)/.25)%65536;
    if(footprintAtlas.stamp(x,z,heading,strength,currentTick))footprintAtlasDirty=true;
   }"""
-    if html.count(footprint_surface_marker) != 1:
-        raise SystemExit("No se encontró exactamente la función makeFootprint original.")
-    html = html.replace(footprint_surface_marker, footprint_surface_replacement, 1)
+    footprint_surface_pattern = r"(?m)^[ \t]*function makeFootprint\\(islandIndex,x,z,heading,wet,beach,running,waterCovered=false\\)\\{\\n.*?\\n[ \t]*\\}"
+    html, footprint_surface_count = re.subn(footprint_surface_pattern, lambda _match: footprint_surface_replacement, html, count=1, flags=re.DOTALL)
+    if footprint_surface_count != 1:
+        raise SystemExit(f"No se encontró una única función makeFootprint para transformar: {footprint_surface_count} coincidencias.")
 
     # Incremental discovery: avoid scanning all 5,000+ TransformNodes twice every 1.5 s.
     # Existing roots are indexed once; future habitable roots are queued by Babylon's
