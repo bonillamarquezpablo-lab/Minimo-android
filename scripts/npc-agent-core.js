@@ -203,7 +203,27 @@
     }, extra || {});
     const specialists = [];
 
-    const history = Array.isArray(historicalReports) && historicalReports.length ? historicalReports : [report];
+    const historySource = Array.isArray(historicalReports) && historicalReports.length ? historicalReports : [report];
+    const currentDevice = report && report.device || {};
+    const comparableHistory = historySource.filter(item => {
+      if (!item || !item.sessionId || !Array.isArray(item.samples)) return false;
+      if (item.sessionId === sessionId) return true;
+      if (!report.gameBuild || item.gameBuild !== report.gameBuild) return false;
+      const previousDevice = item.device || {};
+      const fields = ["userAgent", "devicePixelRatio", "hardwareConcurrency", "deviceMemoryGB"];
+      for (const field of fields) {
+        const left = currentDevice[field], right = previousDevice[field];
+        if (left !== null && left !== undefined && right !== null && right !== undefined && String(left) !== String(right)) return false;
+      }
+      const currentScreen = currentDevice.screen || {};
+      const previousScreen = previousDevice.screen || {};
+      for (const field of ["width", "height"]) {
+        const left = finiteMetric(currentScreen[field]), right = finiteMetric(previousScreen[field]);
+        if (left !== null && right !== null && left !== right) return false;
+      }
+      return true;
+    });
+    const history = comparableHistory.length ? comparableHistory : [report];
     const performance = analyzeSessionReports(history).specialists.find(item => item.id === "eira");
     specialists.push({
       id: "eira", name: "Eira", roleId: "performance",
@@ -218,7 +238,7 @@
         evidence: event.evidence || null
       })),
       evidence: Object.assign({}, performance ? performance.evidence : {}, {
-        historicalSessionsAnalyzed: history.filter(item => item && item.sessionId && Array.isArray(item.samples)).length
+        historicalSessionsAnalyzed: history.length
       })
     });
 
