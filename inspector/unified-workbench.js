@@ -577,7 +577,7 @@
     }).join("");
   }
 
-  async function buildSpecialistIntelligence(report, rememberResults) {
+  async function buildSpecialistIntelligence(report, rememberResults, historicalReports) {
     const core = window.ELSN_NPC_AGENT_CORE;
     if (!core || typeof core.analyzeSessionIntelligence !== "function") return null;
     const api = window.__ELSN_NPC_AGENT_SYSTEM__;
@@ -588,7 +588,7 @@
         if (typeof api.getMemory === "function") memory = await api.getMemory({ limit: 200 });
       } catch (_) {}
     }
-    const intelligence = core.analyzeSessionIntelligence(report, memory);
+    const intelligence = core.analyzeSessionIntelligence(report, memory, historicalReports);
     if (rememberResults && api && typeof api.remember === "function" && report && report.sessionId) {
       const names = { "performance":"Eira", "water-coast":"Sól", "terrain-structures":"Ulf", "materials-lighting":"Týr" };
       for (const specialist of intelligence.specialists) {
@@ -775,7 +775,7 @@
         state.textContent="Todavía no hay informes de partidas guardados. La patrulla independiente queda disponible arriba.";
         return;
       }
-      const intelligence = await buildSpecialistIntelligence(reports[0], reports[0].status === "completed");
+      const intelligence = await buildSpecialistIntelligence(reports[0], reports[0].status === "completed", reports);
       if (latestPatrolRaw && window.ELSN_NPC_AGENT_CORE) {
         latestPatrolIntelligence = window.ELSN_NPC_AGENT_CORE.analyzeObserverPatrol(latestPatrolRaw, reports[0].gameBuild || null) || latestPatrolIntelligence;
         renderObserverPatrol(latestPatrolIntelligence);
