@@ -4450,7 +4450,7 @@ void main(void){
   const washMesh=new B.Mesh('ShoreBreakerWash_'+index,scene),washData=new B.VertexData();
   washData.positions=washPositions;washData.indices=washIndices;washData.normals=washNormals;washData.uvs=washUvs;washData.colors=washColors;washData.applyToMesh(washMesh,true);
   const washMaterial=new B.StandardMaterial('ShoreBreakerWaterFilmMaterial_'+index,scene);
-  washMaterial.diffuseColor=new B.Color3(.86,.93,.95);washMaterial.emissiveColor=new B.Color3(.08,.11,.12);
+  washMaterial.diffuseColor=new B.Color3(.86,.93,.95);washMaterial.emissiveColor=new B.Color3(0,0,0);
   washMaterial.specularColor=new B.Color3(.58,.69,.73);washMaterial.specularPower=72;
   washMaterial.bumpTexture=M.water.bumpTexture||albedoNormalWater;
   washMaterial.useVertexColors=true;washMaterial.useVertexAlpha=true;washMaterial.backFaceCulling=false;
