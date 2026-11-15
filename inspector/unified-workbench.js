@@ -503,7 +503,7 @@
       const missing = agent.missing.length
         ? '<details class="wb-patrol-missing"><summary>Pendiente de comprobar (' + agent.missing.length + ')</summary><ul>' + agent.missing.map(item => '<li>' + esc(item) + '</li>').join("") + '</ul></details>' : "";
       return '<article class="wb-patrol-agent wb-patrol-' + state + '">' +
-        '<div class="wb-patrol-agent-head"><div><strong>' + esc(agent.name) + '</strong><span>' + esc(agent.specialization) + '</span></div>' +
+        '<div class="wb-patrol-agent-head"><div><strong>' + esc(agent.specialization || "Especialidad no informada") + '</strong><span>Agente de patrulla: ' + esc(agent.name) + '</span></div>' +
         '<span>' + (state === "critical" ? "Incidencias" : state === "warning" ? "Avisos" : state === "ok" ? "Comprobado" : "Datos incompletos") + '</span></div>' +
         '<p>' + esc(agent.summary) + '</p>' +
         (issues || '<p class="wb-patrol-none">Sin fallos confirmados en las comprobaciones disponibles.</p>') + missing +
