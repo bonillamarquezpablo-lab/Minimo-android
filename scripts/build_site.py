@@ -985,7 +985,7 @@ def main() -> None:
         raise SystemExit("No se encontró el punto único para preparar la selección espacial antes de la campaña.")
     html = html.replace(
         spatial_startup_marker,
-        spatial_startup_marker + "\\n    buildSpatialSelectionOctree();",
+        spatial_startup_marker + "\n    buildSpatialSelectionOctree();",
         1,
     )
 
