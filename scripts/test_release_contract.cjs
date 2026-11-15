@@ -73,6 +73,7 @@ assert.match(validator,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupP
 assert.match(validator,/sceneReadyTasks=\[waitForInitialViewReadiness\(\)\]/);
 assert.ok(buildSite.includes("initial_view_marker") && buildSite.includes("stableReadyFrames") && buildSite.includes("mesh.isReady(true)"),"The startup barrier must wait for the actual camera-visible meshes and settled scene assets, not every off-screen island shader.");
 assert.ok(buildSite.includes("full_scene_compile_marker") && buildSite.includes("avoid a duplicate all-island compile pass"),"The release builder must remove the redundant full-scene material compilation while retaining the blocking readiness barrier.");
+assert.ok(buildSite.includes("const mineableGraniteMaterial=M.stoneLight;") && buildSite.includes("cap.material=M.stone;") && !buildSite.includes("M.stone.clone('MineableGraniteMaterial')"),"Mineable granite deposits must reuse preloaded scene materials to avoid an unready cloned shader variant.");
 assert.match(validator,/rows=isPerformanceMode\?13/);
 assert.doesNotMatch(validator,/resourceResults=await Promise\.allSettled\(\[playerHumanLoadPromise,startNpcHumanModels\(\)\]\)/);
 assert.ok(buildSite.includes('scripts/nordic/atmosphere-system.js'),"The release builder must package the unified atmosphere runtime.");
