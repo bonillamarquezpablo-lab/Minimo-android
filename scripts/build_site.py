@@ -826,7 +826,7 @@ def main() -> None:
  // Player-facing dialogue bridge. Inspector specialist identities remain in their own runtime.
  window.__ELSN_GAME_DIALOGUE_BRIDGE__=Object.freeze({
   maxVisibleBubbles:4,
-  getSnapshot:()=>{
+  getSnapshot:(()=>{let dialoguePeopleCache=null;return ()=>{
    let focus=null;
    try{if(typeof playerPos==='function')focus=playerPos();}catch(_){}
    if(!focus||!Number.isFinite(Number(focus.x))||!Number.isFinite(Number(focus.z))){
@@ -839,12 +839,30 @@ def main() -> None:
    return {
     active:!!(document.body&&document.body.classList.contains('game-running')),
     playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
-    people:ambientPeople.concat(campGuards.filter(guard=>guard&&guard.alive!==false)),
-    world:{night:!!(atmosphere&&atmosphere.night>=0.55),onShip:!!onShip,enemyNearby:typeof nearEnemies==='function'&&nearEnemies(),health:Number(health),healthLow:Number(health)<=35,wood:Number(woodCount),stone:Number(stoneCount),captured:Number(captured)||0,islandName:islandIndex>=0&&land[islandIndex]?String(land[islandIndex].name||''):''},
+    people:(()=>{
+     if(!active)return [];
+     if(!dialoguePeopleCache){
+      const candidates=[].concat(Array.isArray(scene.transformNodes)?scene.transformNodes:[],Array.isArray(scene.meshes)?scene.meshes:[]);
+      const seen=new Set(),found=[];
+      for(const node of candidates){
+       if(!node||seen.has(node))continue;
+       seen.add(node);
+       const name=String(node.name||'');
+       const match=/^(?:Villager_(\\d+)_(\\d+)|VillageGuard(\\d+)_(\\d+))$/.exec(name);
+       if(!match)continue;
+       const villageIndex=Number(match[1]!==undefined?match[1]:match[3]);
+       const slot=Number(match[2]!==undefined?match[2]:match[4]);
+       found.push({name,root:node,parts:{name,root:node,variant:villageIndex*2+slot,civilian:match[1]!==undefined,role:match[1]!==undefined?'civilian':'warrior'},recruited:false});
+      }
+      dialoguePeopleCache=found;
+     }
+     return dialoguePeopleCache;
+    })(),
+    world:{night:!!(atmosphere&&atmosphere.night>=0.55),onShip:typeof onShip!=='undefined'&&!!onShip,enemyNearby:typeof nearEnemies==='function'&&nearEnemies(),health:typeof health!=='undefined'?Number(health):null,healthLow:typeof health!=='undefined'&&Number(health)<=35,wood:typeof woodCount!=='undefined'?Number(woodCount):null,stone:typeof stoneCount!=='undefined'?Number(stoneCount):null,captured:typeof captured!=='undefined'?Number(captured)||0:0,islandName:typeof land!=='undefined'&&islandIndex>=0&&land[islandIndex]?String(land[islandIndex].name||''):''},
     scene,engine,camera:scene.activeCamera||camera,
     canvas:engine.getRenderingCanvas(),BABYLON:B
    };
-  }
+  };})()
  });
 """
     if html.count(dialogue_bridge_marker) != 1:
