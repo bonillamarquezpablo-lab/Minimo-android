@@ -50,6 +50,10 @@ jobs:
         run: node scripts/test_session_recorder_idle_contract.cjs
       - name: Check NPC specialist and dialogue runtime syntax
         run: node --check scripts/npc-agent-core.js && node --check scripts/npc-agent-runtime.js && node --check scripts/npc-dialogue-core.js && node --check scripts/npc-dialogue-runtime.js
+      - name: Test the existing Inspector dashboard and preserve its controls
+        run: node scripts/test_inspector_dashboard_contract.cjs
+      - name: Test the unified horizontal Inspector and session report
+        run: node scripts/test_inspector_workbench_contract.cjs
       - name: Test release version and packaging contract
         run: node scripts/test_release_contract.cjs
       - name: Test unified day-night atmosphere clock and APIs
