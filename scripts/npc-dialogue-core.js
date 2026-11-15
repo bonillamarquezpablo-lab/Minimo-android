@@ -1,6 +1,6 @@
 (function(root,factory){const api=factory();if(typeof module==="object"&&module.exports)module.exports=api;if(root)root.ELSN_NPC_DIALOGUE_CORE=api;})(typeof globalThis!=="undefined"?globalThis:this,function(){
 "use strict";
-const MAX_VISIBLE_BUBBLES=4,MAX_RANGE_METERS=18,POSITION_UPDATE_MS=100,SCHEDULER_INTERVAL_MS=1400;
+const MAX_VISIBLE_BUBBLES=4,MAX_RANGE_METERS=26,POSITION_UPDATE_MS=100,SCHEDULER_INTERVAL_MS=1400;
 const ROLES=Object.freeze([
 Object.freeze({id:"fisher",name:"Pescador",thoughts:["La marea está cambiando; habrá que revisar las redes.","El mar siempre encuentra la forma de sorprendernos.","Ojalá la próxima travesía traiga buena pesca.","Conozco una cala donde el agua parece tranquila."],speech:["Hoy las redes pesan poco.","Cuando cambie el viento, saldré a pescar.","¿Has visto cómo se mueve el agua junto a las rocas?","Necesitamos más cuerda para las redes."],actions:["Observa el estado del mar.","Se prepara para su próxima tarea."]}),
 Object.freeze({id:"farmer",name:"Campesino",thoughts:["La tierra necesita cuidados antes de la próxima cosecha.","Hay que reparar la cerca antes de que anochezca.","No podemos desperdiciar ni una sola provisión.","El invierno siempre llega antes de lo que parece."],speech:["Hoy toca revisar los cultivos.","La cosecha saldrá adelante si cuidamos la tierra.","Me faltan herramientas para terminar el trabajo.","Las provisiones deben durar hasta la próxima estación."],actions:["Comprueba las provisiones del poblado.","Revisa el terreno de trabajo."]}),

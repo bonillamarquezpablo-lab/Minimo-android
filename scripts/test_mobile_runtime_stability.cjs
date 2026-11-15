@@ -73,3 +73,8 @@ assert.ok(validator.includes('reportVersion:\'21\',build:\'0.6.299\''), 'Release
 assert.ok(validator.includes('EXPECTED_VERSION = "0.6.299"'), 'Release validator must target version 0.6.299.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
+
+assert.ok(!source.includes('worldColliders.push({'), 'Structures must not bypass the live spatial-hash collider registrar.');
+assert.ok(source.includes('habitableColliderBackfillCount'), 'Unregistered habitable roots must receive a conservative collision footprint.');
+assert.ok(source.includes('fallbackShorelineRadius(island)'), 'The foam solver must retain a valid shoreline anchor when a numerical bracket disappears.');
+assert.ok(validator.includes('bootstrapAttempts++<80'), 'Dialogue startup must retry until the game bridge is ready.');

@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.299"
+EXPECTED_VERSION = "0.6.300"
 
 HTML_PAGES = (
     "index.html",
@@ -143,7 +143,7 @@ def main() -> None:
     ):
         if marker not in index_html:
             fail("El juego no integra correctamente los diálogos ambientales: " + marker)
-    if "const MAX_VISIBLE_BUBBLES=4" not in dialogue_core_source or "MAX_RANGE_METERS=18" not in dialogue_core_source:
+    if "const MAX_VISIBLE_BUBBLES=4" not in dialogue_core_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
         fail("El núcleo de diálogos debe mantener cuatro bocadillos como máximo y un radio de 18 metros.")
     for marker in ("BABYLON.Vector3.Project", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
@@ -154,6 +154,12 @@ def main() -> None:
         fail("El runtime de diálogos no debe crear meshes 3D ni añadir trabajo permanente por fotograma.")
     if ".elsn-npc-bubble-message" not in dialogue_style_source or "pointer-events:none" not in dialogue_style_source:
         fail("La capa de bocadillos debe ser ligera y no interceptar los controles del juego.")
+    if "z-index:1200" not in dialogue_style_source or "bootstrapAttempts++<80" not in dialogue_runtime_source or "projectionFailures" not in dialogue_runtime_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
+        fail("El diálogo ambiental debe reintentar el puente, admitir NPC cercanos y exponer fallos de proyección.")
+    if "worldColliders.push({" in index_html or "registerWorldCollider({" not in index_html or "habitableColliderBackfillCount" not in index_html:
+        fail("Todos los colisionadores de estructuras deben incorporarse a la rejilla espacial activa.")
+    if "fallbackShorelineRadius(island)" not in index_html or "emissiveColor=new B.Color3(.12,.15,.16)" not in index_html or "foamVisibility=Math.max(Math.min(.94,foamStrength/.16),.22+foamBreakStrength*.72)" not in index_html:
+        fail("La espuma de rompiente debe conservar un anclaje válido y seguir siendo visible por la noche.")
     game_specialist_markers = (
         "window.__ELSN_NPC_AGENT_CONTEXT__",
         "getCivilianRoster:()=>ambientPeople.slice()",
@@ -391,7 +397,7 @@ def main() -> None:
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
-    if "reportVersion:'21',build:'0.6.299'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'22',build:'0.6.300'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     for marker in (
         "babylonEngineVersion:String(B.Engine.Version||'unknown')",
@@ -694,7 +700,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.299" not in index_html or "EL SIN NOMBRE 0.6.299 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.300" not in index_html or "EL SIN NOMBRE 0.6.300 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?64:96)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -844,7 +850,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.299</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.300</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")

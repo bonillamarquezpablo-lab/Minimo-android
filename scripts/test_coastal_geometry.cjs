@@ -108,3 +108,9 @@ assert.match(html,/root\.setEnabled\(false\);entry\.hiddenByAudit=true/,'An inva
 assert.match(html,/if\(entry\.collider\)entry\.collider\.active=false/,'A hidden building must not leave an invisible collision wall.');
 assert.match(html,/if\(ref&&ref\.active===false\)continue/,'Inactive hidden-structure colliders must be ignored by movement queries.');
 assert.match(html,/if\(c\.active===false\)continue/,'Inactive hidden-structure colliders must be ignored by world movement and melee.');
+
+assert.equal(html.split('worldColliders.push({').length-1, 0, 'No structure collider may bypass registerWorldCollider.');
+assert.ok(html.includes('habitableColliderBackfillCount'), 'Habitable roots missing explicit colliders must receive a spatial footprint.');
+assert.ok(html.includes('return fallbackShorelineRadius(island);'), 'A failed shoreline solver must preserve a visible coast anchor.');
+assert.ok(html.includes('foamVisibility=Math.max(Math.min(.94,foamStrength/.16),.22+foamBreakStrength*.72)'), 'Foam must remain readable during weak crest/backwash phases.');
+assert.ok(html.includes('emissiveColor=new B.Color3(.12,.15,.16)'), 'White foam must remain legible at night.');
