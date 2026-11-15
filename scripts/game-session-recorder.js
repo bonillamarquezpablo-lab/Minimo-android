@@ -689,10 +689,59 @@
     try {
       const snapshot = window.getGameWorldInspectionSnapshot({ maxMeshes: 10000, maxActors: 500, includeMeshes: true });
       const terrain = snapshot && snapshot.terrainObjects;
+      const meshInventory = snapshot && snapshot.meshes;
+      const meshItems = Array.isArray(meshInventory && meshInventory.items) ? meshInventory.items : [];
+      const largestMeshes = meshItems.filter(item => item && item.visible !== false && item.enabled !== false)
+        .slice().sort((a, b) => (number(b.vertices) || 0) - (number(a.vertices) || 0)).slice(0, 120)
+        .map(item => ({
+          uniqueId: number(item.uniqueId), name: text(item.name, 120), id: text(item.id, 120),
+          parent: text(item.parent, 120), material: text(item.material, 120),
+          vertices: number(item.vertices), indices: number(item.indices),
+          position: item.position || null, bounds: item.bounds || null,
+          checkCollisions: item.checkCollisions === true,
+          skeleton: item.skeleton || null
+        }));
+      const actors = snapshot && snapshot.actors || {};
+      const compactActors = {};
+      for (const key of ["player", "hostileVillageGuards", "campGuards", "companions", "wildlife", "ambientPeople", "ambientBirds", "enemyShipCrew"]) {
+        const group = actors[key];
+        if (!group) continue;
+        compactActors[key] = Array.isArray(group.returned)
+          ? { count: number(group.count), truncated: number(group.truncated), returned: group.returned.slice(0, 120) }
+          : group;
+      }
+      const collisions = snapshot && snapshot.collisions;
+      const textures = snapshot && snapshot.textures;
       return {
+        schemaVersion: 1,
         capturedAt: snapshot && snapshot.capturedAt || new Date().toISOString(),
         source: snapshot && snapshot.source || "Babylon.js runtime",
         scene: snapshot && snapshot.scene || null,
+        meshes: meshInventory ? {
+          count: number(meshInventory.count), returned: number(meshInventory.returned),
+          truncated: number(meshInventory.truncated), included: meshInventory.included === true,
+          invalidTransformCount: number(meshInventory.invalidTransformCount),
+          invalidTransforms: (meshInventory.invalidTransforms || []).slice(0, 100),
+          largestVisibleMeshes: largestMeshes
+        } : null,
+        collisions: collisions ? {
+          sceneCollisionsEnabled: collisions.sceneCollisionsEnabled === true,
+          collisionEnabledMeshCount: number(collisions.collisionEnabledMeshCount),
+          customColliderCount: number(collisions.customColliderCount),
+          returned: number(collisions.returned), truncated: number(collisions.truncated),
+          invalidPositionCount: number(collisions.invalidPositionCount),
+          items: (collisions.items || []).slice(0, 500)
+        } : null,
+        actors: compactActors,
+        animations: snapshot && snapshot.animations ? {
+          count: number(snapshot.animations.count), playingCount: number(snapshot.animations.playingCount),
+          items: (snapshot.animations.items || []).slice(0, 200)
+        } : null,
+        textures: textures ? {
+          count: number(textures.count), pendingCount: number(textures.pendingCount),
+          unknownReadinessCount: number(textures.unknownReadinessCount),
+          items: (textures.items || []).slice(0, 200)
+        } : null,
         terrainObjects: terrain ? {
           checkedCount: terrain.checkedCount,
           candidateCount: terrain.candidateCount,
@@ -701,11 +750,16 @@
           unmeasurableCount: terrain.unmeasurableCount,
           complete: terrain.complete,
           terrainHeightSource: terrain.terrainHeightSource,
-          items: (terrain.items || []).slice(0, 100)
+          items: (terrain.items || []).slice(0, 200)
         } : null,
         structureAudit: snapshot && snapshot.structures && snapshot.structures.audit || null,
+        structures: snapshot && snapshot.structures ? {
+          registeredCount: number(snapshot.structures.registeredCount),
+          registered: (snapshot.structures.registered || []).slice(0, 300)
+        } : null,
         terrain: snapshot && snapshot.terrain || null,
-        islands: snapshot && snapshot.islands || null
+        islands: snapshot && snapshot.islands || null,
+        dataQuality: snapshot && snapshot.dataQuality || null
       };
     } catch (error) {
       return { error: text(error && error.message || error, 240), capturedAt: new Date().toISOString() };
