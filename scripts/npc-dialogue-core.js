@@ -30,7 +30,7 @@ function chooseAmbientMessage(npc,context,random,memory){
  const contextual=contextualLines(role,ctx),recent=new Set(Array.isArray(mem.recentTopics)?mem.recentTopics:[]);
  const fresh=contextual.filter(x=>!recent.has(x.topic));
  let selected=null;
- if(fresh.length&&rand(random)<(ctx.enemyNearby||ctx.healthLow||ctx.night||ctx.onShip?.86:.72))selected=choose(fresh,random);
+ if(fresh.length&&rand(random)<((ctx.enemyNearby||ctx.healthLow||ctx.night||ctx.onShip)?0.86:0.72))selected=choose(fresh,random);
  if(!selected&&ctx.isWalking===true&&rand(random)<.22)selected={topic:"work",kind:"action",text:role.id==="farmer"?"Revisa el terreno y comprueba que el camino esté despejado.":role.id==="smith"?"Vuelve a la fragua; todavía queda trabajo por hacer.":"Continúa con tu tarea y mantén los ojos abiertos."};
  if(!selected)selected={topic:"daily-"+role.id,kind:rand(random)<.22?"thought":"speech",text:choose(rand(random)<.5?role.thoughts:role.speech,random)};
  return{kind:selected.kind,topic:selected.topic,roleId:role.id,roleName:role.name,text:selected.text};
