@@ -28,25 +28,45 @@
   }
 
   function writeRecoverySnapshot(report) {
-    if (!report || !report.sessionId || !window.localStorage) return false;
+    if (!report || !report.sessionId) return false;
     try {
+      const storage = window.localStorage;
+      if (!storage) return false;
       const snapshot = typeof window.structuredClone === "function"
         ? window.structuredClone(report) : JSON.parse(JSON.stringify(report));
       const samples = Array.isArray(snapshot.samples) ? snapshot.samples : [];
-      const omittedSamples = Math.max(0, samples.length - MAX_RECOVERY_SAMPLES);
-      if (omittedSamples) snapshot.samples = samples.slice(-MAX_RECOVERY_SAMPLES);
-      snapshot.recovery = {
-        source: "pagehide-local-storage",
-        capturedAt: new Date().toISOString(),
-        originalSampleCount: Number(snapshot.sampleCount || samples.length),
-        sampleHistoryTruncated: omittedSamples
-      };
-      window.localStorage.setItem(RECOVERY_STORAGE_KEY, JSON.stringify({
-        schemaVersion: 1,
-        savedAt: snapshot.recovery.capturedAt,
-        report: snapshot
-      }));
-      return true;
+      const originalSampleCount = Number(snapshot.sampleCount || samples.length);
+      const keepOptions = Array.from(new Set([
+        Math.min(MAX_RECOVERY_SAMPLES, samples.length),
+        Math.min(180, samples.length),
+        Math.min(90, samples.length),
+        Math.min(30, samples.length),
+        0
+      ]));
+      let lastError = null;
+      for (const keepCount of keepOptions) {
+        const omittedSamples = Math.max(0, samples.length - keepCount);
+        snapshot.samples = keepCount ? samples.slice(-keepCount) : [];
+        snapshot.recovery = {
+          source: "pagehide-local-storage",
+          capturedAt: new Date().toISOString(),
+          originalSampleCount,
+          retainedSampleCount: keepCount,
+          sampleHistoryTruncated: omittedSamples
+        };
+        try {
+          storage.setItem(RECOVERY_STORAGE_KEY, JSON.stringify({
+            schemaVersion: 1,
+            savedAt: snapshot.recovery.capturedAt,
+            report: snapshot
+          }));
+          return true;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      report.recoveryStorageError = text(lastError && lastError.message || lastError || "No se pudo guardar una copia de emergencia.", 180);
+      return false;
     } catch (error) {
       report.recoveryStorageError = text(error && error.message || error, 180);
       return false;
