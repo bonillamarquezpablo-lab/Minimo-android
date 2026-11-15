@@ -134,6 +134,9 @@ def main() -> None:
     dialogue_core_source = read_text("scripts/npc-dialogue-core.js")
     dialogue_runtime_source = read_text("scripts/npc-dialogue-runtime.js")
     dialogue_style_source = read_text("scripts/npc-dialogue.css")
+    builder_source = (ROOT / "scripts" / "build_site.py").read_text(encoding="utf-8")
+    if 'dialogue_bridge_marker = " window.copyGameHealthDebug=()=>{"' not in builder_source:
+        fail("El puente de diálogos debe compartir el ámbito real del jugador y la API de inspección del mundo.")
     for marker in (
         '<link rel="stylesheet" href="./scripts/npc-dialogue.css">',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
@@ -141,7 +144,6 @@ def main() -> None:
         "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
         "maxVisibleBubbles:4",
         "canvas:engine.getRenderingCanvas(),engine,BABYLON:B",
-        'dialogue_bridge_marker = " window.copyGameHealthDebug=()=>{"',
     ):
         if marker not in index_html:
             fail("El juego no integra correctamente los diálogos ambientales: " + marker)
