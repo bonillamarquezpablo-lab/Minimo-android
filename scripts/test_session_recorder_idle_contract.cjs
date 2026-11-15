@@ -20,7 +20,7 @@ assert.match(source,/sampleCoverage/);
 assert.match(source,/relatedLongTasks/);
 assert.match(source,/relatedRuntimeErrors/);
 assert.match(source,/waterReflectionMeshes/);
-assert.match(source,/atmosphere\.getState/);
+assert.match(source,/liveAtmosphere\.getState/);
 assert.match(source,/sample\.atmosphere/);
 assert.match(source,/lightingConditions/);
 assert.match(source,/fpsAverage/);
