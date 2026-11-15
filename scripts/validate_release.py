@@ -452,7 +452,7 @@ def main() -> None:
         fail("Los móviles de gama alta conservan el normal de oleaje; solo perfiles limitados mantienen la reserva.")
     if "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html or "function startNpcHumanModels()" not in index_html or "if(!requiredReady)throw new Error('NPC obligatorios de la isla inicial incompletos" not in index_html:
         fail("El protagonista y los NPC GLB obligatorios de la isla inicial deben estar listos antes de entrar.")
-    if "scene.whenReadyAsync()" not in index_html or "scene.compileMaterialsAsync()" not in index_html or "sceneReadyTimeout" not in index_html or "RECURSO OBLIGATORIO: escena y shaders" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html:
+    if "sceneReadyTasks=[scene.whenReadyAsync()]" not in index_html or "scene.compileMaterialsAsync()" in index_html or "sceneReadyTimeout" not in index_html or "RECURSO OBLIGATORIO: escena y shaders" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html:
         fail("La escena y los shaders deben estar preparados con un plazo cerrado; un fallo obligatorio debe detener el arranque.")
     if "audioPreloadResult=await startupAudioPreload" not in index_html or "RECURSO OBLIGATORIO: efectos de sonido" not in index_html or "startupAudioPreload.then(" not in index_html:
         fail("Los efectos de sonido deben estar listos antes de entrar; la música debe seguir en streaming.")
@@ -888,7 +888,7 @@ def main() -> None:
         fail("La identidad de invitado debe permanecer aislada de la identidad de la campaña real.")
     if "function buildShoreFoam(" in index_html or "const shorelineWaves=[]" in index_html:
         fail("El helper buildShoreFoam sin uso debe desaparecer únicamente en el último hito.")
-    if "scene.whenReadyAsync()" not in index_html or "scene.compileMaterialsAsync()" not in index_html or "sceneReadyTimeout" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html or "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" in index_html:
+    if "sceneReadyTasks=[scene.whenReadyAsync()]" not in index_html or "scene.compileMaterialsAsync()" in index_html or "sceneReadyTimeout" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html or "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" in index_html:
         fail("La preparación gráfica global debe estar acotada por timeout en ambos perfiles.")
     if "const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;" not in index_html or "const grassBuildSliceBudgetMs=staging?(isTouchDevice?3.5:6):grassStartupSliceBudgetMs;" not in index_html or "await yieldGrassStartupIfNeeded(islandIndex,placed,want);" not in index_html:
         fail("La generación de vegetación debe ceder el control según tiempo real de CPU.")
