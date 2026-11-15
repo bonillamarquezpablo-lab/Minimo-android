@@ -26,6 +26,12 @@ for(const marker of ["sampleCoverage","gpuProfilerEnabled","drawCallsCounterSema
 assert.ok(js.includes("Copiar informe para ChatGPT") && js.includes("navigator.clipboard.writeText"),"The short report must offer one-click copy of the complete ChatGPT evidence.");
 assert.ok(js.includes("summary.lightingConditions") && js.includes("nightDropPercent"),"The summary must compare day and night FPS when both are measured.");
 assert.ok(js.includes("summary.npcDialogue") && js.includes("dialogueEvidence.bubblesStarted"),"The short summary must reveal whether NPC dialogues were created and projected.");
+assert.ok(js.includes('elsn-game-session-recovery-v1') && js.includes("function readRecoveryReport"),"The Inspector must detect a game session recovered from the pagehide journal.");
+assert.ok(js.includes("function reconcileRecoveryReport") && js.includes("persistRecoveredReport"),"The Inspector must merge the emergency report into IndexedDB without deleting previous sessions.");
+assert.ok(js.includes("function reportUpdatedAt") && js.includes("sortReportsNewestFirst"),"The latest report must be selected using its last update/finish time, not only its start time.");
+assert.ok(js.includes("recoveredFromEmergency") && js.includes("Última partida recuperada del guardado de emergencia"),"Recovered sessions must be identified clearly in the report.");
+const loadReportSource=js.slice(js.indexOf("async function loadReport"),js.indexOf("function bindReportActions"));
+assert.ok(loadReportSource.includes("await reconcileRecoveryReport(reports)") && loadReportSource.includes("sortReportsNewestFirst(reports)"),"Recovery and timestamp ordering must run before rendering the latest session.");
 assert.ok(css.includes(".wb-quick-read") && css.includes(".wb-report-full"),"The concise summary and collapsed technical report must have their own styles.");
 assert.ok(js.includes("No se usa para decidir qué optimizar hasta calibrar el contador"),"Unverified draw-call counters must not guide optimization.");
 assert.ok(js.includes("La mediana del percentil 95 por ventana"),"The report must explain frame-time percentiles in plain language.");

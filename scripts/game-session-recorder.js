@@ -13,6 +13,8 @@
   const MAX_ANOMALIES_PER_SESSION = 120;
   const MAX_RUNTIME_ERRORS_PER_SESSION = 80;
   const MAX_STORED_SESSIONS = 20;
+  const RECOVERY_STORAGE_KEY = "elsn-game-session-recovery-v1";
+  const MAX_RECOVERY_SAMPLES = 360;
   const state = { db: null, opening: null, session: null, sampleTimer: null, persistTimer: null, monitorTimer: null, starting: false, saving: false, sampleQueued: false, sampleHandle: null, sampleHandleKind: null, longTaskObserver: null };
 
   function number(value) {
@@ -23,6 +25,63 @@
 
   function text(value, limit) {
     return String(value == null ? "" : value).replace(/[\u0000-\u001F]/g, "").slice(0, limit);
+  }
+
+  function writeRecoverySnapshot(report) {
+    if (!report || !report.sessionId) return false;
+    try {
+      const storage = window.localStorage;
+      if (!storage) return false;
+      const snapshot = typeof window.structuredClone === "function"
+        ? window.structuredClone(report) : JSON.parse(JSON.stringify(report));
+      const samples = Array.isArray(snapshot.samples) ? snapshot.samples : [];
+      const originalSampleCount = Number(snapshot.sampleCount || samples.length);
+      const keepOptions = Array.from(new Set([
+        Math.min(MAX_RECOVERY_SAMPLES, samples.length),
+        Math.min(180, samples.length),
+        Math.min(90, samples.length),
+        Math.min(30, samples.length),
+        0
+      ]));
+      let lastError = null;
+      for (const keepCount of keepOptions) {
+        const omittedSamples = Math.max(0, samples.length - keepCount);
+        snapshot.samples = keepCount ? samples.slice(-keepCount) : [];
+        snapshot.recovery = {
+          source: "pagehide-local-storage",
+          capturedAt: new Date().toISOString(),
+          originalSampleCount,
+          retainedSampleCount: keepCount,
+          sampleHistoryTruncated: omittedSamples
+        };
+        try {
+          storage.setItem(RECOVERY_STORAGE_KEY, JSON.stringify({
+            schemaVersion: 1,
+            savedAt: snapshot.recovery.capturedAt,
+            report: snapshot
+          }));
+          return true;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      report.recoveryStorageError = text(lastError && lastError.message || lastError || "No se pudo guardar una copia de emergencia.", 180);
+      return false;
+    } catch (error) {
+      report.recoveryStorageError = text(error && error.message || error, 180);
+      return false;
+    }
+  }
+
+  function clearRecoverySnapshot(sessionId) {
+    try {
+      const raw = window.localStorage && window.localStorage.getItem(RECOVERY_STORAGE_KEY);
+      if (!raw) return;
+      const envelope = JSON.parse(raw);
+      if (!sessionId || envelope && envelope.report && envelope.report.sessionId === sessionId) {
+        window.localStorage.removeItem(RECOVERY_STORAGE_KEY);
+      }
+    } catch (_) {}
   }
 
   function openDatabase() {
@@ -183,6 +242,7 @@
     state.saving = job;
     try {
       await job;
+      clearRecoverySnapshot(current.sessionId);
       return true;
     } catch (error) {
       if (state.session === current) state.session.storageError = text(error && error.message || error, 180);
@@ -854,7 +914,9 @@
     if (reason !== "pagehide") current.finalWorldInspection = captureFinalWorldInspection();
     stopSessionDiagnostics();
     current.summary = buildSessionSummary(current);
-    await saveSession();
+    writeRecoverySnapshot(current);
+    const saved = await saveSession();
+    if (!saved) writeRecoverySnapshot(current);
     window.__ELSN_SESSION_RECORDER_STATUS__ = {
       active: false,
       sessionId: current.sessionId,

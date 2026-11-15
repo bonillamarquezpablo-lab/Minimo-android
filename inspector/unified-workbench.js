@@ -3,6 +3,7 @@
   const DB_NAME = "elsn-game-session-reports";
   const DB_VERSION = 1;
   const STORE = "sessions";
+  const RECOVERY_STORAGE_KEY = "elsn-game-session-recovery-v1";
   const $ = id => document.getElementById(id);
   const esc = value => String(value == null ? "" : value).replace(/[&<>"']/g, ch => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -740,6 +741,10 @@
     }else{
       quickLines.push("No hay todavía mediciones del sistema de diálogos en esta partida.");
     }
+    if(report.recoveredFromEmergency){
+      const omitted = Number(report.recovery && report.recovery.sampleHistoryTruncated || 0);
+      quickLines.push("Esta sesión se recuperó del guardado de emergencia al salir del juego."+(omitted>0?" Se conservaron las últimas 360 muestras; el resumen numérico cubre la sesión completa.":""));
+    }
     if(runtimeErrors>0)quickLines.push("Se registraron "+fmt(runtimeErrors,0)+" errores durante la partida.");
     if(anomalies.length>0)quickLines.push("Se detectaron "+fmt(anomalies.length,0)+" avisos de rendimiento.");
     $("wbQuickReadTitle").textContent = quickTitle;
@@ -783,6 +788,90 @@
     });
   }
 
+  function reportUpdatedAt(report) {
+    for (const key of ["lastUpdatedAt", "finishedAt", "startedAt"]) {
+      const value = Date.parse(report && report[key] || "");
+      if (Number.isFinite(value)) return value;
+    }
+    return 0;
+  }
+
+  function sortReportsNewestFirst(reports) {
+    return reports.sort((a, b) => {
+      const updatedDifference = reportUpdatedAt(b) - reportUpdatedAt(a);
+      if (updatedDifference) return updatedDifference;
+      const startDifference = Date.parse(b && b.startedAt || "") - Date.parse(a && a.startedAt || "");
+      return Number.isFinite(startDifference) ? startDifference : 0;
+    });
+  }
+
+  function readRecoveryReport() {
+    try {
+      const raw = window.localStorage && window.localStorage.getItem(RECOVERY_STORAGE_KEY);
+      if (!raw) return null;
+      const envelope = JSON.parse(raw);
+      const report = envelope && envelope.report;
+      if (!report || !report.sessionId || !report.startedAt || !Array.isArray(report.samples)) return null;
+      report.recoveredFromEmergency = true;
+      report.recoverySavedAt = envelope.savedAt || report.recovery && report.recovery.capturedAt || null;
+      return report;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function persistRecoveredReport(report) {
+    const db = await openDb();
+    try {
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        const store = tx.objectStore(STORE);
+        const request = store.get(report.sessionId);
+        request.onsuccess = () => {
+          const existing = request.result;
+          if (!existing || reportUpdatedAt(report) >= reportUpdatedAt(existing)) store.put(report);
+        };
+        request.onerror = () => reject(request.error || new Error("No se pudo reconciliar el informe recuperado."));
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error("Falló la reconciliación del informe recuperado."));
+        tx.onabort = () => reject(tx.error || new Error("Se canceló la reconciliación del informe recuperado."));
+      });
+    } finally {
+      db.close();
+    }
+  }
+
+  function clearRecoveryReport(report) {
+    try {
+      const raw = window.localStorage && window.localStorage.getItem(RECOVERY_STORAGE_KEY);
+      if (!raw) return;
+      const envelope = JSON.parse(raw);
+      if (envelope && envelope.report && envelope.report.sessionId === report.sessionId) {
+        window.localStorage.removeItem(RECOVERY_STORAGE_KEY);
+      }
+    } catch (_) {}
+  }
+
+  async function reconcileRecoveryReport(reports) {
+    const recovered = readRecoveryReport();
+    if (!recovered) return false;
+    const existingIndex = reports.findIndex(report => report.sessionId === recovered.sessionId);
+    const existing = existingIndex >= 0 ? reports[existingIndex] : null;
+    if (existing && reportUpdatedAt(existing) > reportUpdatedAt(recovered)) {
+      clearRecoveryReport(recovered);
+      return false;
+    }
+    if (existingIndex >= 0) reports[existingIndex] = recovered;
+    else reports.push(recovered);
+    try {
+      await persistRecoveredReport(recovered);
+      clearRecoveryReport(recovered);
+    } catch (_) {
+      // Keep the local recovery copy; the report can still be displayed this time.
+    }
+    return true;
+  }
+
   async function loadReport() {
     const state=$("wbReportState");
     state.textContent="Actualizando informes y memoria de especialistas…";
@@ -806,10 +895,12 @@
       reports=await new Promise((resolve,reject)=>{
         const tx=db.transaction(STORE,"readonly");
         const request=tx.objectStore(STORE).getAll();
-        request.onsuccess=()=>resolve((request.result||[]).sort((a,b)=>Date.parse(b.startedAt||"")-Date.parse(a.startedAt||"")));
+        request.onsuccess=()=>resolve(request.result||[]);
         request.onerror=()=>reject(request.error||new Error("No se pudo leer el historial."));
       });
       db.close();
+      const recoveredLatestSession = await reconcileRecoveryReport(reports);
+      sortReportsNewestFirst(reports);
       if (!reports.length) {
         state.textContent="Todavía no hay informes de partidas guardados. La patrulla independiente queda disponible arriba.";
         return;
@@ -819,7 +910,7 @@
         latestPatrolIntelligence = window.ELSN_NPC_AGENT_CORE.analyzeObserverPatrol(latestPatrolRaw, reports[0].gameBuild || null) || latestPatrolIntelligence;
         renderObserverPatrol(latestPatrolIntelligence);
       }
-      renderReport(reports[0],"Última partida guardada",reports[1]||null,intelligence);
+      renderReport(reports[0],recoveredLatestSession ? "Última partida recuperada del guardado de emergencia" : "Última partida guardada",reports[1]||null,intelligence);
     } catch(error) {
       state.textContent="No se pudo leer el historial: "+String(error&&error.message||error);
     }
