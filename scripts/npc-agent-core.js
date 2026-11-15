@@ -178,6 +178,211 @@
     };
   }
 
+  function analyzeSessionIntelligence(report, events) {
+    const sessionId = boundedText(report && report.sessionId, 160);
+    const samples = Array.isArray(report && report.samples) ? report.samples : [];
+    const world = report && report.finalWorldInspection && typeof report.finalWorldInspection === "object"
+      ? report.finalWorldInspection : null;
+    const sessionEvents = (Array.isArray(events) ? events : []).filter(event => {
+      const evidence = event && event.evidence;
+      return event && ["observation", "diagnosis", "task-result"].includes(event.kind) &&
+        event.source !== "system" && evidence && String(evidence.sessionId || "") === sessionId &&
+        sessionId && ["npc", "external-agent", "operator"].includes(event.source);
+    });
+    const roles = [
+      { id: "performance", npcId: "Eira", name: "Eira" },
+      { id: "water-coast", npcId: "Sól", name: "Sól" },
+      { id: "terrain-structures", npcId: "Ulf", name: "Ulf" },
+      { id: "materials-lighting", npcId: "Týr", name: "Týr" }
+    ];
+    const byRole = roleId => sessionEvents.filter(event => event.roleId === roleId);
+    const findings = (title, summary, severity, extra) => Object.assign({
+      title: boundedText(title, 120),
+      summary: boundedText(summary, 500),
+      severity: severity || "info"
+    }, extra || {});
+    const specialists = [];
+
+    const performance = analyzeSessionReports([report]).specialists.find(item => item.id === "eira");
+    specialists.push({
+      id: "eira", name: "Eira", roleId: "performance",
+      status: performance ? performance.status : "sin-datos-suficientes",
+      summary: performance ? performance.summary : "No hay mediciones suficientes para revisar la fluidez.",
+      confidence: performance && performance.evidence ? performance.evidence.confidence : null,
+      findings: performance ? [findings("Fluidez de la partida", performance.summary,
+        performance.status === "confirmado" ? "critical" : performance.status === "probable" ? "warning" : "info")] : [],
+      observations: byRole("performance").slice(0, 8).map(event => ({
+        source: event.source, summary: boundedText(event.summary, 500),
+        status: event.status, confidence: finiteMetric(event.confidence), createdAt: event.createdAt,
+        evidence: event.evidence || null
+      })),
+      evidence: performance ? performance.evidence : {}
+    });
+
+    const waterSamples = samples.map(sample => sample && sample.waterDiagnostics)
+      .filter(item => item && item.available === true);
+    const waterMeasures = {};
+    for (const key of ["wetSteps", "waterParticlesEmitted", "activeSplashParticles", "aliveSplashParticles", "maxShoreStepMeters", "maximumShoreStepMeters"]) {
+      const values = waterSamples.map(item => finiteMetric(item.measurements && item.measurements[key])).filter(value => value !== null);
+      if (values.length) waterMeasures[key] = { latest: values[values.length - 1], maximum: Math.max(...values), readings: values.length };
+    }
+    const waterStatus = waterSamples.length ? "evidencia-recogida" : "sin-datos-suficientes";
+    specialists.push({
+      id: "sol", name: "Sól", roleId: "water-coast",
+      status: waterStatus,
+      summary: waterSamples.length
+        ? "Sól ha reunido " + waterSamples.length + " lecturas del agua y la costa. Son mediciones reales, pero todavía no bastan para declarar que la espuma o las orillas estén bien o mal."
+        : "En esta partida no se guardaron lecturas directas del sistema de agua y costa.",
+      confidence: null,
+      findings: waterSamples.length
+        ? [findings("Mediciones de agua y costa", "Se han guardado " + waterSamples.length + " lecturas. Las variaciones quedan disponibles para compararlas con otra partida equivalente.", "info")]
+        : [],
+      observations: byRole("water-coast").slice(0, 8).map(event => ({
+        source: event.source, summary: boundedText(event.summary, 500),
+        status: event.status, confidence: finiteMetric(event.confidence), createdAt: event.createdAt,
+        evidence: event.evidence || null
+      })),
+      evidence: { samples: waterSamples.length, measurements: waterMeasures }
+    });
+
+    const terrain = world && world.terrainObjects || {};
+    const meshes = world && world.meshes || {};
+    const collisions = world && world.collisions || {};
+    const structures = world && world.structureAudit || {};
+    const buried = finiteMetric(terrain.fullyBuriedCount) || 0;
+    const penetrating = finiteMetric(terrain.penetratingCount) || 0;
+    const invalidTransforms = finiteMetric(meshes.invalidTransformCount) || 0;
+    const invalidColliders = finiteMetric(collisions.invalidPositionCount) || 0;
+    const unsafeStructures = finiteMetric(structures.visibleInvalidAfterRepair) ?? finiteMetric(structures.unsafeVisibleBeforeRepair) ?? 0;
+    const untrackedRoots = finiteMetric(structures.untrackedRootCount) || 0;
+    const physicalFindings = [];
+    const terrainItems = Array.isArray(terrain.items) ? terrain.items : [];
+    const positionText = position => {
+      if (!position || typeof position !== "object") return "";
+      const parts = ["x", "y", "z"].filter(key => finiteMetric(position[key]) !== null)
+        .map(key => key.toUpperCase() + " " + Number(position[key]).toFixed(2));
+      return parts.length ? parts.join(" · ") : "";
+    };
+    if (buried + penetrating > 0) {
+      const details = terrainItems.filter(item => item && ["fully-buried", "penetrates-terrain"].includes(item.status)).slice(0, 8)
+        .map(item => {
+          const location = positionText(item.worldPosition);
+          const island = item.nearestIsland && item.nearestIsland.name ? " · " + boundedText(item.nearestIsland.name, 80) : "";
+          return boundedText(item.name || item.id || "Objeto sin nombre", 100) +
+            (item.status === "fully-buried" ? " (enterrado)" : " (atraviesa el terreno)") +
+            (location ? " · " + location : "") + island;
+        });
+      physicalFindings.push(findings("Objetos dentro del terreno",
+        buried + " objetos aparecen enterrados y " + penetrating + " atraviesan el terreno." +
+        (details.length ? " Ejemplos: " + details.join("; ") : ""), "critical",
+        { locations: details }));
+    }
+    if (invalidTransforms > 0) physicalFindings.push(findings("Objetos con posiciones o giros incorrectos",
+      "La inspección ha encontrado " + invalidTransforms + " transformaciones que necesitan revisión.", "warning"));
+    if (invalidColliders > 0) physicalFindings.push(findings("Colisiones con datos inválidos",
+      "Hay " + invalidColliders + " colisionadores cuya posición no se ha podido validar.", "warning"));
+    if (unsafeStructures > 0) physicalFindings.push(findings("Estructuras que aún necesitan revisión",
+      "La última auditoría registra " + unsafeStructures + " estructuras visibles con problemas después de la comprobación.", "critical"));
+    if (untrackedRoots > 0) physicalFindings.push(findings("Estructuras fuera del registro",
+      "Se han encontrado " + untrackedRoots + " estructuras que no figuran en el registro habitual.", "warning"));
+    const worldComplete = !!world && !world.error &&
+      terrain.complete === true && (!world.dataQuality || world.dataQuality.fullMeshInventory !== false);
+    const worldStatus = physicalFindings.length ? "necesita-revision" :
+      worldComplete ? "sin-incidencia-observada" : "sin-datos-suficientes";
+    specialists.push({
+      id: "ulf", name: "Ulf", roleId: "terrain-structures",
+      status: worldStatus,
+      summary: !world || world.error
+        ? "No hay una inspección final válida del terreno y las estructuras en esta partida."
+        : physicalFindings.length
+          ? "Ulf ha encontrado elementos concretos que necesitan revisión. Se conservan sus nombres y coordenadas cuando están disponibles."
+          : worldComplete
+            ? "La inspección completa no ha detectado los problemas incluidos en esta comprobación. Esto no descarta defectos que el análisis no mida."
+            : "La inspección no muestra incidencias en los datos disponibles, pero está incompleta y no permite dar el mundo por revisado.",
+      confidence: worldComplete ? 0.85 : null,
+      findings: physicalFindings,
+      observations: byRole("terrain-structures").slice(0, 8).map(event => ({
+        source: event.source, summary: boundedText(event.summary, 500),
+        status: event.status, confidence: finiteMetric(event.confidence), createdAt: event.createdAt,
+        evidence: event.evidence || null
+      })),
+      evidence: {
+        worldCaptured: !!world && !world.error,
+        terrainComplete: terrain.complete === true,
+        fullyBuried: buried, penetrating, invalidTransforms, invalidColliders,
+        unsafeStructures, untrackedRoots,
+        sampleLocations: terrainItems.slice(0, 8).map(item => ({
+          name: boundedText(item && (item.name || item.id), 100),
+          status: item && item.status || null,
+          position: item && item.worldPosition || null,
+          nearestIsland: item && item.nearestIsland || null
+        }))
+      }
+    });
+
+    const textures = world && world.textures || {};
+    const textureCount = finiteMetric(textures.count);
+    const pendingTextures = finiteMetric(textures.pendingCount);
+    const unknownTextures = finiteMetric(textures.unknownReadinessCount);
+    const shadowValues = samples.map(sample => finiteMetric(sample && sample.subsystems && sample.subsystems.activeWorldShadowCasters)).filter(value => value !== null);
+    const materialFindings = [];
+    if (pendingTextures !== null && pendingTextures > 0) materialFindings.push(findings("Texturas pendientes de cargar",
+      "La inspección final registra " + pendingTextures + " texturas pendientes.", "warning"));
+    if (unknownTextures !== null && unknownTextures > 0) materialFindings.push(findings("Texturas sin estado confirmado",
+      "No se pudo confirmar la carga de " + unknownTextures + " texturas.", "info"));
+    const materialStatus = materialFindings.some(item => item.severity === "warning") ? "necesita-revision" :
+      textureCount !== null ? "evidencia-recogida" : "sin-datos-suficientes";
+    specialists.push({
+      id: "tyr", name: "Týr", roleId: "materials-lighting",
+      status: materialStatus,
+      summary: textureCount === null
+        ? "No hay un inventario de texturas disponible. Tampoco se han guardado capturas visuales comparables para valorar materiales e iluminación."
+        : materialFindings.length
+          ? "Týr ha detectado texturas cuyo estado necesita comprobarse. Los datos no permiten juzgar por sí solos el aspecto visual."
+          : "La inspección registró " + textureCount + " texturas y no señaló cargas pendientes. La calidad de materiales, luces y sombras todavía requiere una comparación visual.",
+      confidence: null,
+      findings: materialFindings.length ? materialFindings :
+        textureCount !== null ? [findings("Estado de las texturas", "Inventario disponible: " + textureCount + " texturas; lecturas de sombras durante la partida: " + (shadowValues.length ? Math.max(...shadowValues) : "sin medir") + ". No equivale a una aprobación visual.", "info")] : [],
+      observations: byRole("materials-lighting").slice(0, 8).map(event => ({
+        source: event.source, summary: boundedText(event.summary, 500),
+        status: event.status, confidence: finiteMetric(event.confidence), createdAt: event.createdAt,
+        evidence: event.evidence || null
+      })),
+      evidence: {
+        textureCount, pendingTextures, unknownTextures,
+        maximumShadowCasters: shadowValues.length ? Math.max(...shadowValues) : null,
+        visualComparisonAvailable: false
+      }
+    });
+
+    for (const specialist of specialists) {
+      const name = roles.find(role => role.id === specialist.roleId);
+      specialist.npcId = name ? name.npcId : specialist.name;
+    }
+    const needsReview = specialists.filter(item => item.status === "necesita-revision").length;
+    const observedIssues = specialists.reduce((sum, item) => sum + item.findings.filter(finding => finding.severity === "critical" || finding.severity === "warning").length, 0);
+    return {
+      schemaVersion: 1,
+      sessionId,
+      gameBuild: boundedText(report && report.gameBuild, 40) || null,
+      generatedAt: new Date().toISOString(),
+      autonomy: {
+        localAnalysis: true,
+        sessionMemory: true,
+        specialistEvents: sessionEvents.length,
+        automaticWorldChanges: false,
+        automaticCodeChanges: false
+      },
+      summary: {
+        specialists: specialists.length,
+        needReview: needsReview,
+        findingsToReview: observedIssues,
+        recordedSpecialistObservations: sessionEvents.length
+      },
+      specialists
+    };
+  }
+
   function byteLength(value) {
     if (typeof TextEncoder === "function") return new TextEncoder().encode(value).length;
     return unescape(encodeURIComponent(value)).length;
@@ -284,6 +489,7 @@
     ROLES,
     SPECIALISTS,
     analyzeSessionReports,
+    analyzeSessionIntelligence,
     EVENT_KINDS: Object.freeze(Array.from(EVENT_KINDS)),
     REMOTE_EVENT_KINDS: Object.freeze(Array.from(REMOTE_EVENT_KINDS)),
     parseVillagerName,
