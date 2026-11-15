@@ -24,7 +24,7 @@ for(const marker of [
   'buildSpatialSelectionOctree();',
   'const installSpatialDynamicFrustumFilter=octree=>',
   'octree.select=function(frustumPlanes,allowDuplicate)',
-  'boundingSphere.centerWorld',
+  'sphere&&sphere.centerWorld',
   'spatialDynamicMeshSet.has(mesh)',
   'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
   'meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak',
