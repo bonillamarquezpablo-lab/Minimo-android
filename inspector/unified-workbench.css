@@ -57,7 +57,7 @@
 .wb-technical-details>p{color:var(--muted,#9eafc1);font-size:.75rem;line-height:1.5}
 .wb-technical-details pre{max-height:55vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:#bfd0df;font-size:.68rem;line-height:1.5}
 @media(max-width:900px){
- .workbench-report-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .wb-report-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
  .wb-report-grid{grid-template-columns:1fr 1fr}
  .wb-report-primary{grid-column:1/-1}
 }
