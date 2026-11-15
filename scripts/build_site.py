@@ -821,7 +821,7 @@ def main() -> None:
 
 
     # Read-only player dialogue bridge: reuses existing villagers and creates no actors.
-    dialogue_bridge_marker = " window.copyGameHealthDebug=()=>" + "{"
+    dialogue_bridge_marker = " window.copyGameHealthDebug=()=>{"
     dialogue_bridge_code = r"""
  // Player-facing dialogue bridge. Inspector specialist identities remain in their own runtime.
  window.__ELSN_GAME_DIALOGUE_BRIDGE__=Object.freeze({
