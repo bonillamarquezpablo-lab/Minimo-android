@@ -142,6 +142,14 @@ const intelligence = Core.analyzeSessionIntelligence(integratedReport, [
 ]);
 assert.equal(intelligence.specialists.length, 4);
 assert.equal(intelligence.specialists.find(agent => agent.id === "eira").status, "probable");
+
+const previousPerformanceReport = JSON.parse(JSON.stringify(integratedReport));
+previousPerformanceReport.sessionId = "session-intelligence-test-previous";
+const repeatedPerformance = Core.analyzeSessionIntelligence(integratedReport, [], [integratedReport, previousPerformanceReport]);
+assert.equal(repeatedPerformance.specialists.find(agent => agent.id === "eira").status, "confirmado",
+  "Eira may confirm a recurring performance regression only after at least two independent saved sessions.");
+assert.equal(repeatedPerformance.specialists.find(agent => agent.id === "eira").evidence.historicalSessionsAnalyzed, 2);
+
 assert.equal(intelligence.specialists.find(agent => agent.id === "sol").status, "evidencia-recogida");
 const ulfIntelligence = intelligence.specialists.find(agent => agent.id === "ulf");
 assert.equal(ulfIntelligence.status, "necesita-revision");
