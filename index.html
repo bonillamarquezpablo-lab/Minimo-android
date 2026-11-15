@@ -5737,24 +5737,12 @@ void main(void){
  function makeCivilianLook(parts,modelRoot,rig,scale,index){
   const inv=1/Math.max(.001,scale),job=index%4;
   const cloth=[M.ochreCloth,M.blueCloth,M.greenCloth,M.red][job],trim=[M.leather,M.woodLight,M.brass,M.ochreCloth][job];
-  // Sin túnica tubular rígida: el GLB conserva su silueta y la ropa funcional sigue los huesos.
-  // Las prendas de pierna se parentan a muslos/pantorrillas; el delantal es corto y estrecho.
-  // Pantalón de lana y polainas: oculta los shorts modernos del modelo base bajo ropa nórdica.
+  // Sin túnicas, delantales, collares ni cinturones superpuestos:
+  // se conserva la silueta original del GLB y solo se añaden prendas funcionales en las piernas.
   const trouserLeft=capsule('PeasantWoolTrouserL_'+index,rig.leftUpperLeg||modelRoot,rig.leftUpperLeg?[0,-.12,0]:[-.16,.42,.005],.62*inv,.105*inv,M.woodDark);
   const trouserRight=capsule('PeasantWoolTrouserR_'+index,rig.rightUpperLeg||modelRoot,rig.rightUpperLeg?[0,-.12,0]:[.16,.42,.005],.62*inv,.105*inv,M.woodDark);
   const gaiterLeft=capsule('PeasantLeatherGaiterL_'+index,rig.leftLowerLeg||modelRoot,rig.leftLowerLeg?[0,-.10,.015]:[-.16,.14,.04],.38*inv,.10*inv,M.leather);
   const gaiterRight=capsule('PeasantLeatherGaiterR_'+index,rig.rightLowerLeg||modelRoot,rig.rightLowerLeg?[0,-.10,.015]:[.16,.14,.04],.38*inv,.10*inv,M.leather);
-  // Prenda de lana corta anclada al torso, no una capa tubular rígida.
-  const tunicParent=rig.spine||modelRoot;
-  const tunicPosition=rig.spine?[0,.025*inv,.012*inv]:[0,1.08*inv,.012*inv];
-  const tunic=capsule('PeasantShortWoolTunic_'+index,tunicParent,tunicPosition,.62*inv,.205*inv,cloth);
-  tunic.isPickable=false;
-  const collar=rig.spine
-   ?box('PeasantTunicCollar_'+index,rig.spine,[0,.225*inv,.018*inv],[.25*inv,.055*inv,.13*inv],trim)
-   :box('PeasantTunicCollar_'+index,modelRoot,[0,1.38*inv,.025*inv],[.25*inv,.055*inv,.13*inv],trim);
-  box('CivilianWoolBelt_'+index,modelRoot,[0,1.00*inv,.185*inv],[.56*inv,.075*inv,.045*inv],M.leather);
-  box('CivilianBeltPouch_'+index,modelRoot,[.255*inv,.94*inv,.205*inv],[.12*inv,.14*inv,.09*inv],trim,[0,0,-.10]);
-  // No capa larga ni panel rígido detrás: evita la silueta de carcasa/cilindro.
   const head=rig.head||modelRoot;
   if(job===0||job===3){
    sphere('CivilianWoolHood_'+index,head,[0,.04*inv,-.035*inv],[.30*inv,.20*inv,.29*inv],job===0?M.blueCloth:M.ochreCloth,18);
@@ -5781,7 +5769,7 @@ void main(void){
    box('TraderShoulderSatchel_'+index,modelRoot,[.39*inv,1.20*inv,-.20*inv],[.36*inv,.39*inv,.17*inv],M.leather,[0,0,-.12]);
    box('TraderSatchelFlap_'+index,modelRoot,[.39*inv,1.34*inv,-.095*inv],[.30*inv,.15*inv,.035*inv],M.woodLight);
   }
-  parts.civilianLook={job,cloth,trim,garments:[trouserLeft,trouserRight,gaiterLeft,gaiterRight,tunic,collar]};
+  parts.civilianLook={job,cloth,trim,garments:[trouserLeft,trouserRight,gaiterLeft,gaiterRight]};
  }
  function clipHasBilateralLegMotion(group){
   // Un clip solo se admite si anima ambas piernas y las hace alternar.
