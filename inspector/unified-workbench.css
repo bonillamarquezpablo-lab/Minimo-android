@@ -72,3 +72,12 @@
  .workbench-tab{min-height:39px;padding:8px 12px;font-size:.76rem}
  .workbench-page{padding-left:0;padding-right:0}
 }
+
+.wb-evidence-list{display:grid;gap:0;margin:12px 0}
+.wb-evidence-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:8px 0;border-top:1px solid rgba(145,165,189,.13);font-size:.76rem}
+.wb-evidence-row:first-child{border-top:0}
+.wb-evidence-row span{color:var(--muted,#9eafc1);min-width:0}
+.wb-evidence-row strong{color:#e5d1b0;text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.wb-evidence-subtitle{margin:14px 0 4px;color:#d8b27d;font-size:.66rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+#wbReportCorrelations .wb-action-item{padding:10px 0}
+#wbReportWorld>p,#wbReportComparison>p{font-size:.74rem;line-height:1.55;color:var(--muted,#9eafc1)}
