@@ -809,31 +809,31 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.295: restore flagship render clarity while preserving the
+    # Release candidate 0.6.296: restore flagship render clarity while preserving the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.295; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.296; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.295\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.296\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.295.")
-    html = html.replace("0.6.274", "0.6.295")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.296.")
+    html = html.replace("0.6.274", "0.6.296")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'17',build:'0.6.295'"
+    diagnostic_build_replacement = "reportVersion:'18',build:'0.6.296'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.295 para normalizar.")
-    game_version = "0.6.295"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.296 para normalizar.")
+    game_version = "0.6.296"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
-    # 0.6.295 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
+    # 0.6.296 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
     quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
     quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
  const highHeadroomQualityMobile=!!(!isPerformanceMode&&isTouchDevice&&!constrainedHardware&&((reportedMemory>=8&&(Number(navigator.hardwareConcurrency)||0)>=8)||highTierGpuMatch));
@@ -886,16 +886,108 @@ def main() -> None:
    });
   }catch(profileError){console.warn('Babylon native profiling unavailable; gameplay rendering is unchanged.',profileError);}
  }
+
+ // High-mesh-count spatial selection for Babylon.js.
+ // Static scene meshes stay indexed; moving actors/effects and every later-created mesh
+ // are registered as dynamic content so movement, animation and gameplay remain intact.
+ const spatialDynamicNamePattern=/(?:player|viking|npc|enemy|raider|guard|warrior|villager|peasant|companion|animal|fauna|deer|wolf|stag|gull|bird|ship|boat|drakkar|mast|sail|rudder|pennant|flag|banner|tree|canopy|wind|grass|foliage|leaf|leaves|shrub|bush|fire|flame|ember|smoke|particle|spray|foam|wake|water|ocean|shore|beach|tide|wave|cloud|sky|sun|moon|shadow|footprint|weapon|shield|arrow|projectile|buoy|debris|rock|boulder|torch|lantern|light|gate|door|bridge|install|craft|construction|outpost|village|camp|forge|tower|hall|hut|building|garrison|regatta|splash|wreck|corpse|capture|falling|damage)/i;
+ let spatialSelectionOctree=null;
+ const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,buildMs:null,error:null};
+ const publishSpatialSelectionStats=()=>{
+  try{window.__ELSN_SPATIAL_SELECTION__={...spatialSelectionStats};}catch(_){}
+ };
+ const isSpatialDynamicMesh=mesh=>{
+  for(let node=mesh;node&&node!==scene;node=node.parent){
+   if(spatialDynamicNamePattern.test(String(node.name||'')))return true;
+   if(node.skeleton||node.morphTargetManager||(Array.isArray(node.animations)&&node.animations.length))return true;
+   if(Number(node.thinInstanceCount)>0||Number(node.billboardMode)>0)return true;
+  }
+  return false;
+ };
+ const addSpatialDynamicMesh=mesh=>{
+  const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
+  if(!mesh||!dynamic||typeof dynamic.push!=='function'||mesh.__elsnSpatialDynamic)return;
+  mesh.__elsnSpatialDynamic=true;
+  dynamic.push(mesh);
+  spatialSelectionStats.dynamicMeshCount=dynamic.length;
+  publishSpatialSelectionStats();
+ };
+ const removeSpatialDynamicMesh=mesh=>{
+  const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
+  if(!mesh||!mesh.__elsnSpatialDynamic)return;
+  if(dynamic&&typeof dynamic.indexOf==='function'){
+   const index=dynamic.indexOf(mesh);if(index>=0)dynamic.splice(index,1);
+   spatialSelectionStats.dynamicMeshCount=dynamic.length;
+  }
+  try{delete mesh.__elsnSpatialDynamic;}catch(_){mesh.__elsnSpatialDynamic=false;}
+  publishSpatialSelectionStats();
+ };
+ if(scene.onNewMeshAddedObservable&&typeof scene.onNewMeshAddedObservable.add==='function'){
+  scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh);});
+ }
+ if(scene.onMeshRemovedObservable&&typeof scene.onMeshRemovedObservable.add==='function'){
+  scene.onMeshRemovedObservable.add(removeSpatialDynamicMesh);
+ }
+ function buildSpatialSelectionOctree(){
+  if(spatialSelectionOctree)return true;
+  if(scene.meshes.length<512||typeof scene.createOrUpdateSelectionOctree!=='function')return false;
+  if(!scene.onNewMeshAddedObservable||typeof scene.onNewMeshAddedObservable.add!=='function')return false;
+  const startedAt=performance.now(),meshCount=scene.meshes.length;
+  try{
+   const octree=scene.createOrUpdateSelectionOctree(64,3);
+   if(!octree||!octree.dynamicContent||typeof octree.dynamicContent.push!=='function'){
+    throw new Error('Babylon no devolvió la lista dinámica de la selección espacial.');
+   }
+   spatialSelectionOctree=octree;
+   for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh);
+   spatialSelectionStats.enabled=true;
+   spatialSelectionStats.sceneMeshCount=meshCount;
+   spatialSelectionStats.dynamicMeshCount=octree.dynamicContent.length;
+   spatialSelectionStats.buildMs=Number((performance.now()-startedAt).toFixed(2));
+   spatialSelectionStats.error=null;
+   publishSpatialSelectionStats();
+   console.info('Babylon spatial selection ready',{
+    sceneMeshes:meshCount,
+    dynamicMeshes:spatialSelectionStats.dynamicMeshCount,
+    staticIndexedMeshes:Math.max(0,meshCount-spatialSelectionStats.dynamicMeshCount),
+    maxDepth:3,
+    maxCapacity:64,
+    buildMs:spatialSelectionStats.buildMs
+   });
+   return true;
+  }catch(error){
+   spatialSelectionOctree=null;
+   spatialSelectionStats.enabled=false;
+   spatialSelectionStats.sceneMeshCount=meshCount;
+   spatialSelectionStats.dynamicMeshCount=0;
+   spatialSelectionStats.buildMs=Number((performance.now()-startedAt).toFixed(2));
+   spatialSelectionStats.error=String(error&&error.message||error).slice(0,220);
+   publishSpatialSelectionStats();
+   console.warn('Babylon spatial selection unavailable; original scene selection remains active.',error);
+   return false;
+  }
+ }
+
 """
     if html.count(scene_marker) != 1:
         raise SystemExit("No se encontró exactamente una construcción de escena Babylon.")
     html = html.replace(scene_marker, scene_marker + "\n" + scene_profile_code, 1)
 
     runtime_diagnostics_marker = "webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,"
-    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,engineGpuFrameMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
+    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionBuildMs:spatialSelectionStats.buildMs,engineGpuFrameMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
     if html.count(runtime_diagnostics_marker) != 1:
         raise SystemExit("No se encontró exactamente un bloque runtime para el diagnóstico.")
     html = html.replace(runtime_diagnostics_marker,runtime_diagnostics_replacement,1)
+
+    # Build a spatial index only after the complete world is ready, before the campaign selector.
+    spatial_startup_marker = "if(firstFrameRendered&&startupAssetsReady&&!startScreenShown){"
+    if html.count(spatial_startup_marker) != 1:
+        raise SystemExit("No se encontró el punto único para preparar la selección espacial antes de la campaña.")
+    html = html.replace(
+        spatial_startup_marker,
+        spatial_startup_marker + "\n    buildSpatialSelectionOctree();",
+        1,
+    )
 
 
     # Mobile runtime stability without visual downgrades.

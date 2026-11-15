@@ -29,6 +29,12 @@ for (const marker of [
   'diagnostic_ai_budget_marker',
   'diagnostic_ai_budget_replacement',
   'qualityDprCurrent=qualityDpr',
+  'scene.createOrUpdateSelectionOctree(64,3)',
+  'scene.onNewMeshAddedObservable.add',
+  'scene.onMeshRemovedObservable.add',
+  'function buildSpatialSelectionOctree()',
+  'buildSpatialSelectionOctree();',
+  'meshSelectionOctreeEnabled:spatialSelectionStats.enabled',
   'qualityScaleLockedForSession:true'
 ]) {
   assert.ok(builder.includes(marker), 'Missing mobile stability guardrail: ' + marker);
@@ -42,7 +48,7 @@ assert.ok(source.includes('function animateWater(dt)'), 'Animated water system m
 assert.ok(source.includes('function updateWildlife(dt)'), 'Wildlife behavior must remain present.');
 assert.ok(source.includes('function update(dt){'), 'The full game world update must remain present.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'17\',build:\'0.6.295\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.295"'), 'Release validator must target version 0.6.295.');
+assert.ok(validator.includes('reportVersion:\'18\',build:\'0.6.296\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.296"'), 'Release validator must target version 0.6.296.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
