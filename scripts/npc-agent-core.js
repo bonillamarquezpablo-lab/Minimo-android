@@ -178,7 +178,7 @@
     };
   }
 
-  function analyzeSessionIntelligence(report, events) {
+  function analyzeSessionIntelligence(report, events, historicalReports) {
     const sessionId = boundedText(report && report.sessionId, 160);
     const samples = Array.isArray(report && report.samples) ? report.samples : [];
     const world = report && report.finalWorldInspection && typeof report.finalWorldInspection === "object"
@@ -203,7 +203,8 @@
     }, extra || {});
     const specialists = [];
 
-    const performance = analyzeSessionReports([report]).specialists.find(item => item.id === "eira");
+    const history = Array.isArray(historicalReports) && historicalReports.length ? historicalReports : [report];
+    const performance = analyzeSessionReports(history).specialists.find(item => item.id === "eira");
     specialists.push({
       id: "eira", name: "Eira", roleId: "performance",
       status: performance ? performance.status : "sin-datos-suficientes",
@@ -216,7 +217,9 @@
         status: event.status, confidence: finiteMetric(event.confidence), createdAt: event.createdAt,
         evidence: event.evidence || null
       })),
-      evidence: performance ? performance.evidence : {}
+      evidence: Object.assign({}, performance ? performance.evidence : {}, {
+        historicalSessionsAnalyzed: history.filter(item => item && item.sessionId && Array.isArray(item.samples)).length
+      })
     });
 
     const waterSamples = samples.map(sample => sample && sample.waterDiagnostics)
