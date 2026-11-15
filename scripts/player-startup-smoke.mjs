@@ -87,7 +87,7 @@ async function main() {
     });
 
     let stepStartedAt = performance.now();
-    await page.goto(BASE_URL + '?playertest=1&debug=1', {
+    await page.goto(BASE_URL + '?playertest=1&debug=1&playerdialoguetest=1', {
       waitUntil: 'domcontentloaded',
       timeout: 90000
     });
