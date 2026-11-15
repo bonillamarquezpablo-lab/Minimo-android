@@ -180,6 +180,7 @@ const patrolFixture = {
     readings: {
       structures: [
         { name: "IslandGarrisonOutpost_4", islandIndex: 4, x: 146, z: -132, measurements: { maximumAnchorErrorMeters: 0.0043 } },
+        { name: "Estructura", islandIndex: 0, x: 24.69, z: -13.35, gapMeters: 0, measurements: { maximumFootingGapMeters: 0 } },
         { name: "Estructura", islandIndex: 0, x: 13.69, z: -4.35, gapMeters: 0.3982, measurements: { maximumFootingGapMeters: 0.3982 } }
       ]
     }
