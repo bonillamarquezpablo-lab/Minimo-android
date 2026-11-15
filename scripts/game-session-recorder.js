@@ -279,6 +279,29 @@
         };
       }
     } catch (_) {}
+    let npcDialogue = null;
+    try {
+      const dialogueRuntime = window.__ELSN_NPC_DIALOGUES__;
+      if (dialogueRuntime && typeof dialogueRuntime.getSnapshot === "function") {
+        const state = dialogueRuntime.getSnapshot();
+        npcDialogue = {
+          bridgeReady: state.bridgeReady === true,
+          active: state.active === true,
+          bridgeActive: state.bridgeActive === true,
+          worldPeopleCount: number(state.worldPeopleCount),
+          nearbyCount: number(state.nearbyCount),
+          bubblesStarted: number(state.bubblesStarted),
+          projectionAttempts: number(state.projectionAttempts),
+          projectionSuccesses: number(state.projectionSuccesses),
+          renderedBubbleCount: number(state.renderedBubbleCount),
+          activeBubbleCount: number(state.activeBubbleCount),
+          lastError: text(state.lastError, 220),
+          projectionFailures: state.projectionFailures && typeof state.projectionFailures === "object"
+            ? Object.fromEntries(Object.entries(state.projectionFailures).slice(0, 12).map(([key,value])=>[text(key,64),number(value)]))
+            : {}
+        };
+      }
+    } catch (_) {}
     const sample = {
       capturedAt: new Date().toISOString(),
       targetFps: number(runtime.performanceAssessment && runtime.performanceAssessment.targetFps),
@@ -369,6 +392,7 @@
         activeWorldShadowCasters: number(runtime.activeWorldShadowCasters)
       },
       atmosphere,
+      npcDialogue,
       playerPosition: readPlayerLocation(health),
       waterDiagnostics: readWaterDiagnostics()
     };
@@ -662,6 +686,17 @@
       };
     };
     const lightingConditions = { day: lightingGroup(false), night: lightingGroup(true) };
+    const dialogueSamples = samples.map(sample=>sample.npcDialogue).filter(Boolean);
+    const latestDialogue = dialogueSamples.length ? dialogueSamples[dialogueSamples.length-1] : null;
+    const dialogueSummary = {
+      sampleCount: dialogueSamples.length,
+      peopleObservedMaximum: dialogueSamples.length ? Math.max(...dialogueSamples.map(x=>number(x.worldPeopleCount)||0)) : null,
+      nearbyMaximum: dialogueSamples.length ? Math.max(...dialogueSamples.map(x=>number(x.nearbyCount)||0)) : null,
+      bubblesStarted: dialogueSamples.length ? Math.max(...dialogueSamples.map(x=>number(x.bubblesStarted)||0)) : null,
+      projectionAttempts: dialogueSamples.reduce((sum,x)=>sum+(number(x.projectionAttempts)||0),0),
+      projectionSuccesses: dialogueSamples.reduce((sum,x)=>sum+(number(x.projectionSuccesses)||0),0),
+      latest: latestDialogue
+    };
     const expectedSamples = session.startedAt && session.finishedAt
       ? Math.max(1, Math.floor((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / SAMPLE_INTERVAL_MS) + 1)
       : null;
@@ -672,6 +707,7 @@
       targetFps,
       fps: { minimum: fps.length ? Math.min(...fps) : null, average: fps.length ? Number((fps.reduce((sum, value) => sum + value, 0) / fps.length).toFixed(2)) : null, median: median(fps), p10: percentile(fps, .1) },
       lightingConditions,
+      npcDialogue: dialogueSummary,
       frameTimeMs: {
         p95Median: median(p95),
         p99Median: median(p99),
