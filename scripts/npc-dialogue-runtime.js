@@ -19,12 +19,12 @@ const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";lay
 function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null};}
 for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i));
 const random=()=>Math.random(),between=(a,b)=>a+random()*(b-a);
-function idOf(n){return String(n&&n.parts&&(n.parts.name||(n.parts.root&&n.parts.root.name))||n&&n.name||"");}
-function rootOf(n){return n&&n.parts&&n.parts.root||null;}
-function worldPosition(node){if(!node)return null;try{return typeof node.getAbsolutePosition==="function"?node.getAbsolutePosition():node.position||null;}catch(_){return null;}}
+function rootOf(n){return n&&(n.parts&&n.parts.root||n.root||n.actor||n.parts&&n.parts.actor||null);}
+function idOf(n){const root=rootOf(n);return String(n&&n.parts&&(n.parts.name||n.parts.id)||(root&&(root.name||root.id))||n&&(n.name||n.id)||"");}
+function worldPosition(node){if(!node)return null;try{if(typeof node.getAbsolutePosition==="function"){const p=node.getAbsolutePosition();if(p&&Number.isFinite(Number(p.x))&&Number.isFinite(Number(p.z)))return p;}const p=node.position||node;return p&&Number.isFinite(Number(p.x))&&Number.isFinite(Number(p.z))?p:null;}catch(_){return null;}}
 function distance(a,b){return a&&b?Math.hypot(Number(a.x)-Number(b.x),Number(a.z)-Number(b.z)):Infinity;}
 function distanceSquared(a,b){if(!a||!b)return Infinity;const dx=Number(a.x)-Number(b.x),dz=Number(a.z)-Number(b.z);return dx*dx+dz*dz;}
-function enabled(n){const r=rootOf(n);if(!r)return false;try{return typeof r.isEnabled!=="function"||r.isEnabled();}catch(_){return false;}}
+function enabled(n){const r=rootOf(n);if(!r)return false;try{return typeof r.isEnabled!=="function"||r.isEnabled()!==false;}catch(_){return false;}}
 function blockingUi(){if(document.body.classList.contains("map-open"))return true;const intro=document.getElementById("intro");return!!(intro&&intro.classList.contains("open"));}
 function snapshot(){try{return Bridge.getSnapshot();}catch(error){console.warn("NPC dialogue snapshot:",error);return null;}}
 function nearbyPeople(s){
