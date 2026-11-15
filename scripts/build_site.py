@@ -1232,13 +1232,29 @@ def main() -> None:
   }"""
     footprint_surface_replacement = """function makeFootprint(islandIndex,x,z,heading,wet,beach,running,waterCovered=false){
    if(waterCovered)return;
-   for(const rock of rocks){if(rock.alive&&Math.hypot(x-rock.x,z-rock.z)<(rock.radius||.75)+.34)return;}
-   for(const collider of worldColliders){
-    if(collider.active===false)continue;
-    const dx=x-collider.x,dz=z-collider.z;
-    if(collider.type==='circle'){if(dx*dx+dz*dz<(collider.r+.24)*(collider.r+.24))return;}
-    else if(Math.abs(dx)<collider.hx+.24&&Math.abs(dz)<collider.hz+.24)return;
+   let blocked=false;
+   if(collisionGrid&&typeof collisionCellKey==='function'){
+    const bucket=collisionGrid.get(collisionCellKey(Math.floor(x/COLLISION_CELL_SIZE),Math.floor(z/COLLISION_CELL_SIZE)));
+    if(bucket)for(const entry of bucket){
+     const ref=entry&&entry.ref;if(!ref||ref.active===false)continue;
+     const dx=x-ref.x,dz=z-ref.z;
+     if(entry.kind==='tree'&&ref.alive&&dx*dx+dz*dz<((ref.radius||.48)+.28)**2){blocked=true;break;}
+     if(entry.kind==='rock'&&ref.alive&&dx*dx+dz*dz<((ref.radius||.75)+.34)**2){blocked=true;break;}
+     if(entry.kind==='world'){
+      if(ref.type==='circle'&&dx*dx+dz*dz<(ref.r+.24)*(ref.r+.24)){blocked=true;break;}
+      if(ref.type!=='circle'&&Math.abs(dx)<ref.hx+.24&&Math.abs(dz)<ref.hz+.24){blocked=true;break;}
+     }
+    }
+   }else{
+    for(const rock of rocks)if(rock.alive&&Math.hypot(x-rock.x,z-rock.z)<(rock.radius||.75)+.34){blocked=true;break;}
+    if(!blocked)for(const tree of trees)if(tree.alive&&Math.hypot(x-tree.x,z-tree.z)<(tree.radius||.48)+.28){blocked=true;break;}
+    if(!blocked)for(const collider of worldColliders){
+     if(collider.active===false)continue;
+     const dx=x-collider.x,dz=z-collider.z;
+     if(collider.type==='circle'?dx*dx+dz*dz<(collider.r+.24)*(collider.r+.24):Math.abs(dx)<collider.hx+.24&&Math.abs(dz)<collider.hz+.24){blocked=true;break;}
+    }
    }
+   if(blocked)return;
    syncFootprintAtlasFocus(x,z);
    const strength=wet?.90:(beach?.78:.58),currentTick=Math.floor((performance.now()*.001)/.25)%65536;
    if(footprintAtlas.stamp(x,z,heading,strength,currentTick))footprintAtlasDirty=true;
