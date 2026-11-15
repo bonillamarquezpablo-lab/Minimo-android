@@ -108,4 +108,16 @@ assert.ok(inspectorReports.includes("Ver informe técnico y coordenadas"),"Inspe
 assert.ok(inspectorReports.includes("incidentList") && inspectorReports.includes("worstSamples") && inspectorReports.includes("anomalyEvents"),"Inspector Center must expose grouped performance incidents, worst windows and diagnostic context.");
 
 
+
+const unifiedRecorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
+const unifiedInspector=fs.readFileSync('inspector/unified-workbench.js','utf8');
+const unifiedInspectorHtml=fs.readFileSync('inspector/index.html','utf8');
+const unifiedInspectorCss=fs.readFileSync('inspector/unified-workbench.css','utf8');
+assert.ok(unifiedRecorder.includes('largestVisibleMeshes') && unifiedRecorder.includes('invalidTransformCount') && unifiedRecorder.includes('collisionEnabledMeshCount'),"Completed match reports must retain bounded mesh, transform and collider evidence for deeper inspection.");
+assert.ok(unifiedRecorder.includes('compactActors') && unifiedRecorder.includes('pendingCount: number(textures.pendingCount)'),"Completed match reports must retain compact NPC, animation and texture-readiness evidence.");
+assert.ok(unifiedInspector.includes('function renderWorldEvidence(world)') && unifiedInspector.includes('function renderCorrelations(report, values)'),"The unified report must explain world geometry and cross-correlate performance evidence.");
+assert.ok(unifiedInspector.includes('function reportComparison(current, previous)') && unifiedInspector.includes('reports[1]||null'),"The unified report must compare the latest session with the previous saved session.");
+assert.ok(unifiedInspectorHtml.includes('unified-workbench.css?v=2') && unifiedInspectorHtml.includes('unified-workbench.js?v=2'),"The Inspector Center must load the updated integrated workbench assets.");
+assert.ok(unifiedInspectorCss.includes('.wb-evidence-list') && unifiedInspectorCss.includes('.wb-evidence-row'),"World evidence and session comparisons must use readable compact layouts.");
+
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
