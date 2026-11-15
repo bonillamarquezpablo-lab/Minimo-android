@@ -147,6 +147,7 @@ jobs:
           node scripts/test_coastal_structure_grounding_contract.cjs
           node scripts/test_capture_reliability_contract.cjs
           node scripts/test_inspector_dashboard_contract.cjs
+          node scripts/test_inspector_workbench_contract.cjs
           node scripts/test_inspector_workflows_contract.cjs
           node scripts/test_graphics_quality_contract.cjs
 
