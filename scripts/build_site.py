@@ -773,7 +773,7 @@ def main() -> None:
 
 
     # Read-only player dialogue bridge: reuses existing villagers and creates no actors.
-    dialogue_bridge_marker = "})();" + chr(10) + "</script>"
+    dialogue_bridge_marker = " window.copyGameHealthDebug=()=>{"
     dialogue_bridge_code = r"""
  // Player-facing dialogue bridge. Inspector specialist identities remain in their own runtime.
  window.__ELSN_GAME_DIALOGUE_BRIDGE__=Object.freeze({
@@ -794,8 +794,8 @@ def main() -> None:
  });
 """
     if html.count(dialogue_bridge_marker) != 1:
-        raise SystemExit("No se encontró exactamente una salida del runtime para conectar los diálogos NPC.")
-    html = html.replace(dialogue_bridge_marker, dialogue_bridge_code + chr(10) + "})();" + chr(10) + "</script>", 1)
+        raise SystemExit("No se encontró exactamente el bloque de diagnóstico con acceso al jugador para conectar los diálogos NPC.")
+    html = html.replace(dialogue_bridge_marker, dialogue_bridge_code + chr(10) + dialogue_bridge_marker, 1)
 
     dialogue_style_tag = '<link rel="stylesheet" href="./scripts/npc-dialogue.css">'
     if dialogue_style_tag not in html:
