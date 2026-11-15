@@ -210,7 +210,9 @@
       if (item.sessionId === sessionId) return true;
       if (!report.gameBuild || item.gameBuild !== report.gameBuild) return false;
       const previousDevice = item.device || {};
-      const fields = ["userAgent", "devicePixelRatio", "hardwareConcurrency", "deviceMemoryGB"];
+      if (!currentDevice.userAgent || !previousDevice.userAgent ||
+          String(currentDevice.userAgent) !== String(previousDevice.userAgent)) return false;
+      const fields = ["devicePixelRatio", "hardwareConcurrency", "deviceMemoryGB"];
       for (const field of fields) {
         const left = currentDevice[field], right = previousDevice[field];
         if (left !== null && left !== undefined && right !== null && right !== undefined && String(left) !== String(right)) return false;
