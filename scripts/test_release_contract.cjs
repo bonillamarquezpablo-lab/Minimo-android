@@ -117,11 +117,15 @@ assert.ok(unifiedRecorder.includes('largestVisibleMeshes') && unifiedRecorder.in
 assert.ok(unifiedRecorder.includes('compactActors') && unifiedRecorder.includes('pendingCount: number(textures.pendingCount)'),"Completed match reports must retain compact NPC, animation and texture-readiness evidence.");
 assert.ok(unifiedInspector.includes('function renderWorldEvidence(world)') && unifiedInspector.includes('function renderCorrelations(report, values)'),"The unified report must explain world geometry and cross-correlate performance evidence.");
 assert.ok(unifiedInspector.includes('function reportComparison(current, previous)') && unifiedInspector.includes('reports[1]||null'),"The unified report must compare the latest session with the previous saved session.");
-assert.ok(unifiedInspectorHtml.includes('unified-workbench.css?v=3') && unifiedInspectorHtml.includes('unified-workbench.js?v=3'),"The Inspector Center must load the updated integrated workbench assets.");
+assert.ok(unifiedInspectorHtml.includes('unified-workbench.css?v=4') && unifiedInspectorHtml.includes('unified-workbench.js?v=4'),"The Inspector Center must load the updated integrated workbench assets.");
 assert.ok(unifiedInspectorCss.includes('.wb-evidence-list') && unifiedInspectorCss.includes('.wb-evidence-row'),"World evidence and session comparisons must use readable compact layouts.");
 
 const npcCoreWithIntelligence=fs.readFileSync('scripts/npc-agent-core.js','utf8');
 assert.ok(npcCoreWithIntelligence.includes('function analyzeSessionIntelligence(report, events)'),"Specialists must analyze the current session using real recorded evidence.");
+assert.ok(npcCoreWithIntelligence.includes('function analyzeObserverPatrol(report, currentBuild)'),"The independent 13-island patrol must be analyzed separately.");
+assert.ok(unifiedInspector.includes('PATROL_REPORT_URL') && unifiedInspector.includes('observerPatrol: latestPatrolIntelligence'),"The latest independent patrol must be attached to the exported report without merging it into gameplay-session measurements.");
+assert.ok(unifiedInspector.includes('La patrulla utilizó') || npcCoreWithIntelligence.includes('GPU Adreno'),"Software-rendered patrol results must never be presented as physical mobile GPU measurements.");
+
 assert.ok(unifiedInspector.includes('function buildSpecialistIntelligence(report, rememberResults)') && unifiedInspector.includes('api.remember'),"Session diagnoses must be connected to persistent specialist memory.");
 assert.ok(unifiedInspector.includes('renderSpecialistIntelligence(intelligence)') && unifiedInspector.includes('wbSpecialistCards'),"The unified session report must show the four specialists in a plain-language panel.");
 assert.ok(npcCoreWithIntelligence.includes('automaticWorldChanges: false') && npcCoreWithIntelligence.includes('automaticCodeChanges: false'),"Local autonomy must remain read-only until a repair is explicitly approved.");
