@@ -1211,10 +1211,10 @@ def main() -> None:
   function createRock(x,z){
    const gy=terrainSurfaceAt(x,z),sx=rand(.72,1.02),sy=rand(.70,.94),sz=rand(.68,1.00);
    const r=B.MeshBuilder.CreateIcoSphere('graniteBoulder',{radius:1,subdivisions:2,flat:true},scene);
-   r.position=v(x,gy+sy*.40,z);r.scaling=v(sx,sy,sz);r.material=mineableGraniteMaterial;r.isPickable=false;r.receiveShadows=true;
+   r.position=v(x,gy+sy*.40,z);r.scaling=v(sx,sy,sz);r.material=mineableGraniteMaterial;r.isPickable=true;r.receiveShadows=true;
    r.rotation.set(rand(-.10,.10),rand(0,Math.PI*2),rand(-.12,.12));
    const cap=B.MeshBuilder.CreateIcoSphere('rockFacet',{radius:1,subdivisions:1,flat:true},scene);
-   cap.position=v(x-sx*.14,gy+sy*.65,z-sz*.11);cap.scaling=v(sx*.52,sy*.30,sz*.48);cap.material=M.stoneLight;cap.isPickable=false;cap.receiveShadows=true;
+   cap.position=v(x-sx*.14,gy+sy*.65,z-sz*.11);cap.scaling=v(sx*.52,sy*.30,sz*.48);cap.material=M.stoneLight;cap.isPickable=true;cap.receiveShadows=true;
    cap.rotation.set(rand(-.12,.12),r.rotation.y+.42,rand(-.10,.10));
    const radius=Math.max(sx,sz)*.50;
    return {meshes:[r,cap],x,z,radius,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
