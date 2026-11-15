@@ -54,7 +54,7 @@
     const page = node("section","workbench-page workbench-report-page");
     page.id = "workbench-report";
     page.setAttribute("aria-labelledby","wbReportTitle");
-    page.innerHTML = \`
+    page.innerHTML = `
       <div class="workbench-page-heading">
         <div><div class="workbench-kicker">INFORME INTELIGENTE · PARTIDA</div>
           <h2 id="wbReportTitle">Informe de la última partida</h2>
@@ -103,7 +103,7 @@
         <summary>Ver datos originales y mediciones avanzadas</summary>
         <p>Esta vista conserva el JSON completo. Los valores no disponibles permanecen como «sin medir»; no se convierten en ceros.</p>
         <pre id="wbReportJson">Todavía no hay un informe cargado.</pre>
-      </details>\`;
+      </details>`;
     return page;
   }
 
