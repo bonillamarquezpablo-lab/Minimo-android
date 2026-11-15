@@ -173,11 +173,13 @@
           "ERROR · " + when + " · " + text(error.kind) + " · " + text(error.message) +
           (error.resourcePath ? " · " + text(error.resourcePath) : "")));
       }
+      if (!recentErrors.length) errorList.appendChild(make("p", "live-diagnostic-note", "No se registraron errores JavaScript ni fallos de carga durante la sesión."));
       const diagnosis = make("p", "live-diagnostic-note",
         "Cuello de botella orientativo: " + text(summary.probableBottleneck || "sin atribución") +
         " · CPU mundo: " + fmt(summary.cpu && summary.cpu.worldUpdateMedianMs, 2) + " ms" +
         " · CPU render: " + fmt(summary.cpu && summary.cpu.renderPreparationMedianMs, 2) + " ms" +
         " · GPU: " + fmt(summary.gpu && summary.gpu.frameMedianMs, 2) + " ms" +
+        " · heap JS: " + fmt(summary.memory && summary.memory.jsHeapUsedMedianMB, 1) + " MB" +
         " · mallas activas: " + fmt(summary.sceneTimings && summary.sceneTimings.activeMeshesEvaluationMedianMs, 2) + " ms" +
         " · render targets: " + fmt(summary.sceneTimings && summary.sceneTimings.renderTargetsMedianMs, 2) + " ms");
       const terrainLine = make("p", "live-diagnostic-note",
