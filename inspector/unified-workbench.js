@@ -754,6 +754,7 @@
         renderObserverPatrol(latestPatrolIntelligence);
         await rememberObserverPatrol(latestPatrolIntelligence);
       } catch (patrolError) {
+        latestPatrolRaw = null;
         latestPatrolIntelligence = null;
         renderObserverPatrol(null, String(patrolError && patrolError.message || patrolError));
       }
@@ -802,6 +803,10 @@
         const report=Array.isArray(parsed)?parsed[0]:parsed.report||parsed;
         if(!report||!Array.isArray(report.samples))throw new Error("El archivo no contiene una partida con muestras.");
         const intelligence = await buildSpecialistIntelligence(report, false);
+        if (latestPatrolRaw && window.ELSN_NPC_AGENT_CORE) {
+          latestPatrolIntelligence = window.ELSN_NPC_AGENT_CORE.analyzeObserverPatrol(latestPatrolRaw, report.gameBuild || null);
+          renderObserverPatrol(latestPatrolIntelligence);
+        }
         renderReport(report,"Archivo importado",null,intelligence);
       } catch(error) {
         $("wbReportState").textContent="No se pudo abrir el JSON: "+String(error&&error.message||error);
