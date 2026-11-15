@@ -12,33 +12,44 @@ if(!Core||!Bridge||typeof Bridge.getSnapshot!=="function"){
  return;
 }
 const MAX_BUBBLES=Core.MAX_VISIBLE_BUBBLES,RANGE=Core.MAX_RANGE_METERS,slots=[],metadata=new Map(),pending=[];
-const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,worldPeopleCount:0,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},lastError:""};
+const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,worldPeopleCount:0,resolvedPeopleCount:0,missingRootCount:0,missingIdentityCount:0,nearestNpcDistanceMeters:null,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},lastError:""};
 let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projectionIdentity=null,projectionScratch=null;
 const RANGE_SQUARED=RANGE*RANGE;
 const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.dataset.maxBubbles=String(MAX_BUBBLES);document.body.appendChild(layer);
 function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null};}
 for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i));
 const random=()=>Math.random(),between=(a,b)=>a+random()*(b-a);
-function idOf(n){return String(n&&n.parts&&(n.parts.name||(n.parts.root&&n.parts.root.name))||n&&n.name||"");}
-function rootOf(n){return n&&n.parts&&n.parts.root||null;}
+function idOf(n){return Core.actorIdentity(n);}
+function rootOf(n){return Core.actorRoot(n);}
 function worldPosition(node){if(!node)return null;try{return typeof node.getAbsolutePosition==="function"?node.getAbsolutePosition():node.position||null;}catch(_){return null;}}
 function distance(a,b){return a&&b?Math.hypot(Number(a.x)-Number(b.x),Number(a.z)-Number(b.z)):Infinity;}
 function distanceSquared(a,b){if(!a||!b)return Infinity;const dx=Number(a.x)-Number(b.x),dz=Number(a.z)-Number(b.z);return dx*dx+dz*dz;}
-function enabled(n){const r=rootOf(n);if(!r)return false;try{return typeof r.isEnabled!=="function"||r.isEnabled();}catch(_){return false;}}
+function enabled(n){const r=rootOf(n);if(!r)return false;try{if(typeof r.isEnabled==="function")return r.isEnabled();return r.isVisible!==false;}catch(_){return false;}}
 function blockingUi(){if(document.body.classList.contains("map-open"))return true;const intro=document.getElementById("intro");return!!(intro&&intro.classList.contains("open"));}
 function snapshot(){try{return Bridge.getSnapshot();}catch(error){console.warn("NPC dialogue snapshot:",error);return null;}}
 function nearbyPeople(s){
- diagnostics.worldPeopleCount=Array.isArray(s&&s.people)?s.people.length:0;
+ const people=Array.isArray(s&&s.people)?s.people:[];
+ diagnostics.worldPeopleCount=people.length;
+ diagnostics.resolvedPeopleCount=0;
+ diagnostics.missingRootCount=0;
+ diagnostics.missingIdentityCount=0;
+ diagnostics.nearestNpcDistanceMeters=null;
  if(!s||!s.active||!s.playerPosition||!Array.isArray(s.people)){diagnostics.nearbyCount=0;return[];}
- const result=[],people=s.people,focus=s.playerPosition;
+ const result=[],focus=s.playerPosition;
+ let nearest=Infinity;
  for(let i=0;i<people.length;i++){
-  const npc=people[i];if(!npc||npc.recruited===true||!enabled(npc))continue;
-  const root=rootOf(npc);if(!root)continue;
+  const npc=people[i];if(!npc||npc.recruited===true||npc.alive===false)continue;
+  const root=rootOf(npc);if(!root){diagnostics.missingRootCount++;continue;}
+  diagnostics.resolvedPeopleCount++;
+  if(!enabled(npc))continue;
   const position=worldPosition(root);if(!position)continue;
-  const d2=distanceSquared(position,focus);if(!Number.isFinite(d2)||d2>RANGE_SQUARED)continue;
-  const id=idOf(npc);if(!id)continue;
-  result.push({npc,id,position,distance:Math.sqrt(d2)});
+  const d2=distanceSquared(position,focus);if(!Number.isFinite(d2))continue;
+  const d=Math.sqrt(d2);if(d<nearest)nearest=d;
+  if(d2>RANGE_SQUARED)continue;
+  const id=idOf(npc);if(!id){diagnostics.missingIdentityCount++;continue;}
+  result.push({npc,id,position,distance:d});
  }
+ diagnostics.nearestNpcDistanceMeters=Number.isFinite(nearest)?Number(nearest.toFixed(2)):null;
  diagnostics.nearbyCount=result.length;
  return result;
 }
@@ -83,7 +94,7 @@ function render(s){const active=!!(s&&s.active&&!document.hidden&&!blockingUi())
 function schedulerTick(){const now=Date.now(),s=snapshot();diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}expire(now);const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));processPending(now,ids);schedule(now,nearby);render(s);}
 function positionTick(){render(snapshot());}
 function start(){if(schedulerHandle||positionHandle)return;schedulerHandle=window.setInterval(()=>{try{schedulerTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC dialogue scheduler recovered:",e);}},Core.SCHEDULER_INTERVAL_MS);positionHandle=window.setInterval(()=>{try{positionTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC bubble projection recovered:",e);}},Core.POSITION_UPDATE_MS);}
-start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,active:!!lastActive,maxVisibleBubbles:MAX_BUBBLES,activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
+start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,active:!!lastActive,maxVisibleBubbles:MAX_BUBBLES,activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.role.textContent,kind:s.kind.textContent,text:s.message.textContent})),nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
 }
 boot();
 })();
