@@ -11,6 +11,7 @@ assert.ok(js.includes('id="wbReportSpecialists"'),"Unified report must include s
 assert.ok(js.includes('id="wbPatrolReport"') && js.includes("loadLatestObserverPatrol"),"The unified report must load the independent 13-island patrol.");
 assert.ok(js.includes("PATROL_REPORT_URL") && js.includes("rememberObserverPatrol"),"The latest patrol must enter the shared specialist memory.");
 assert.ok(js.includes("patrol.cautions.map") && js.includes("wbPatrolCautions"),"The interface must display the provenance and renderer cautions produced by the patrol analyzer.");
+assert.ok(js.includes("Agente de patrulla:") && js.includes("agent.specialization"),"Patrol roles must be shown as published rather than silently reassigned to session specialists.");
 
 assert.ok(js.includes("function renderSpecialistIntelligence") && js.includes("function buildSpecialistIntelligence"),"Specialist findings must be rendered and hydrated from the shared memory.");
 assert.ok(js.includes("api.remember") && js.includes("specialistIntelligence"),"The report must persist per-session specialist diagnoses and export them.");
