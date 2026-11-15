@@ -372,7 +372,7 @@ def main() -> None:
     for dynamic_texture_guard in ("__elsnSafeOwnerEngine", "__elsnSafeUpdate", "__ELSN_DYNAMIC_TEXTURE_ENGINE_RECOVERIES", "textureEngine===engine"):
         if dynamic_texture_guard not in index_html:
             fail("La actualización de DynamicTexture debe recuperar el motor vivo o descartar de forma segura una textura huérfana: " + dynamic_texture_guard)
-    if "reportVersion:'16',build:'0.6.295'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'17',build:'0.6.295'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     for marker in (
         "babylonEngineVersion:String(B.Engine.Version||'unknown')",
