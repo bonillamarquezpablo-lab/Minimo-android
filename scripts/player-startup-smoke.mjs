@@ -10,7 +10,7 @@ const startedAt = performance.now();
 const manifest = {
   schema: 1,
   capturedAt: new Date().toISOString(),
-  url: BASE_URL + '?playertest=1&debug=1',
+  url: BASE_URL + '?playertest=1&debug=1&playerdialoguetest=1',
   renderer: null,
   navigationMs: null,
   helperReadyMs: null,
@@ -415,6 +415,16 @@ async function main() {
 
     // Player-facing NPC dialogue must be visible over a real nearby character,
     // not merely packaged or syntactically valid.
+    const npcDialogueApproach = await page.evaluate(() =>
+      window.__ELSN_GAME_DIALOGUE_BRIDGE__?.movePlayerNearNpcForTest?.() || null
+    );
+    manifest.npcDialogueTestApproach = npcDialogueApproach;
+    if (!npcDialogueApproach?.ok) {
+      throw new Error('No se pudo acercar al protagonista a un NPC real para validar el diálogo: ' +
+        JSON.stringify(npcDialogueApproach));
+    }
+    await page.waitForTimeout(500);
+
     const npcDialogueWaitStartedAt = performance.now();
     try {
       await page.waitForFunction(() => {
