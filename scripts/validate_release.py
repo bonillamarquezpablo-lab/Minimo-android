@@ -381,6 +381,10 @@ def main() -> None:
         "meshSelectionOctreeEnabled:spatialSelectionStats.enabled",
         "meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount",
         "meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio",
+        "const installSpatialDynamicFrustumFilter=octree=>",
+        "octree.select=function(frustumPlanes,allowDuplicate)",
+        "mesh.isInFrustum(frustumPlanes)",
+        "meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled",
     )
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
