@@ -115,7 +115,7 @@ assert.doesNotMatch(runtimeSource, /context\.getCivilianRoster|npc\.aiAgent/,
   "Inspector specialists must not be assigned to game civilians.");
 assert.ok(recorderSource.includes("elsn-game-session-reports"));
 assert.ok(recorderSource.includes("window.top !== window.self"),"Inspector diagnostic iframes must not be misclassified as player sessions.");
-assert.ok(recorderSource.includes("MAX_SAMPLES_PER_SESSION = 360"));
+assert.ok(recorderSource.includes("MAX_SAMPLES_PER_SESSION = 1440"));
 assert.ok(recorderSource.includes("MAX_STORED_SESSIONS = 20"));
 assert.ok(recorderSource.includes('classList.contains("game-running")'));
 assert.ok(recorderSource.includes("player && player.actor && player.actor.position,\n      player"),"Session reports must capture the actual x/y/z player position exposed by the game health API.");
