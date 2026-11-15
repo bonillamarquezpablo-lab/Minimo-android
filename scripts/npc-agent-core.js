@@ -359,7 +359,10 @@
       const name = roles.find(role => role.id === specialist.roleId);
       specialist.npcId = name ? name.npcId : specialist.name;
     }
-    const needsReview = specialists.filter(item => item.status === "necesita-revision").length;
+    const needsReview = specialists.filter(item =>
+      ["confirmado", "probable", "necesita-revision"].includes(item.status) ||
+      item.findings.some(finding => finding.severity === "critical" || finding.severity === "warning")
+    ).length;
     const observedIssues = specialists.reduce((sum, item) => sum + item.findings.filter(finding => finding.severity === "critical" || finding.severity === "warning").length, 0);
     return {
       schemaVersion: 1,
