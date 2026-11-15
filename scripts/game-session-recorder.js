@@ -7,10 +7,13 @@
   const DB_NAME = "elsn-game-session-reports";
   const DB_VERSION = 1;
   const STORE = "sessions";
-  const SAMPLE_INTERVAL_MS = 10000;
-  const MAX_SAMPLES_PER_SESSION = 360;
+  const SAMPLE_INTERVAL_MS = 2500;
+  const PERSIST_INTERVAL_MS = 10000;
+  const MAX_SAMPLES_PER_SESSION = 1440;
+  const MAX_ANOMALIES_PER_SESSION = 120;
+  const MAX_RUNTIME_ERRORS_PER_SESSION = 80;
   const MAX_STORED_SESSIONS = 20;
-  const state = { db: null, opening: null, session: null, sampleTimer: null, monitorTimer: null, starting: false, saving: false, sampleQueued: false, sampleHandle: null, sampleHandleKind: null, longTaskObserver: null };
+  const state = { db: null, opening: null, session: null, sampleTimer: null, persistTimer: null, monitorTimer: null, starting: false, saving: false, sampleQueued: false, sampleHandle: null, sampleHandleKind: null, longTaskObserver: null };
 
   function number(value) {
     if (value === null || value === undefined || typeof value === "boolean" || value === "") return null;
@@ -61,6 +64,62 @@
       visibility: text(document.visibilityState, 16)
     });
     if (state.session.deviceEvents.length > 64) state.session.deviceEvents.shift();
+  }
+
+  function recordRuntimeError(kind, message, details) {
+    if (!state.session) return;
+    if (!Array.isArray(state.session.runtimeErrors)) state.session.runtimeErrors = [];
+    const entry = {
+      capturedAt: new Date().toISOString(),
+      kind: text(kind, 40),
+      message: text(message || "Error sin mensaje", 240),
+      resourcePath: details && details.resourcePath ? text(details.resourcePath, 180) : null,
+      resourceTag: details && details.resourceTag ? text(details.resourceTag, 24) : null,
+      source: details && details.source ? text(details.source, 180) : null,
+      line: details ? number(details.line) : null,
+      column: details ? number(details.column) : null
+    };
+    const previous = state.session.runtimeErrors[state.session.runtimeErrors.length - 1];
+    if (previous && previous.kind === entry.kind && previous.message === entry.message &&
+        Date.parse(entry.capturedAt) - Date.parse(previous.capturedAt) < 1000) return;
+    state.session.runtimeErrors.push(entry);
+    if (state.session.runtimeErrors.length > MAX_RUNTIME_ERRORS_PER_SESSION) state.session.runtimeErrors.shift();
+  }
+
+  function safeResourcePath(value) {
+    if (!value) return null;
+    try {
+      const url = new URL(String(value), window.location && window.location.href);
+      return url.origin + url.pathname;
+    } catch (_) {
+      return text(value, 180).split("?")[0].split("#")[0];
+    }
+  }
+
+  function handleRuntimeError(event) {
+    if (!state.session || !event) return;
+    const target = event.target;
+    if (target && target !== window) {
+      const tag = text(target.tagName || "resource", 24).toLowerCase();
+      const url = target.currentSrc || target.src || target.href || "";
+      recordRuntimeError("resource-load", "No se pudo cargar un recurso " + tag, {
+        resourcePath: safeResourcePath(url),
+        resourceTag: tag
+      });
+      return;
+    }
+    recordRuntimeError("javascript-error", event.message || "Error JavaScript", {
+      source: safeResourcePath(event.filename),
+      line: event.lineno,
+      column: event.colno
+    });
+  }
+
+  function handleUnhandledRejection(event) {
+    if (!state.session) return;
+    const reason = event && event.reason;
+    recordRuntimeError("unhandled-rejection",
+      reason && reason.message ? reason.message : String(reason || "Promesa rechazada sin detalle"));
   }
 
   function installLongTaskObserver() {
@@ -213,6 +272,9 @@
         p99Ms: number(rawFrame.p99),
         maxMs: number(rawFrame.max)
       },
+      worldUpdateCount: number(health.worldUpdateCount),
+      worldUpdatePhase: text(health.worldUpdatePhase, 64),
+      lastWorldUpdateFailure: text(health.lastWorldUpdateFailure, 220),
       cpu: {
         worldUpdateMs: number(runtime.worldUpdateMs),
         renderCpuMs: number(runtime.renderCpuMs)
@@ -233,6 +295,8 @@
         activeMeshes: number(runtime.activeMeshes),
         meshCount: number(runtime.meshCount),
         totalVertices: number(runtime.totalVertices),
+        activeIndices: number(runtime.activeIndices),
+        activeBones: number(runtime.activeBones),
         renderWidth: number(runtime.renderWidth),
         renderHeight: number(runtime.renderHeight),
         renderDpr: number(runtime.renderDpr),
@@ -241,6 +305,15 @@
         engineBackend: text(runtime.engineBackend, 32),
         gpuRenderer: text(runtime.gpuRenderer, 120),
         drawCallsCounterSemantics: "raw-runtime-counter"
+      },
+      subsystems: {
+        waterUpdateMs: number(runtime.waterUpdateMs),
+        waterNormalMs: number(runtime.waterNormalMs),
+        waterReflectionMeshes: number(runtime.waterReflectionMeshes),
+        waterReflectionRefreshRate: number(runtime.waterReflectionRefreshRate),
+        grassInstances: number(runtime.grassInstances),
+        grassBatches: number(runtime.grassBatches),
+        activeWorldShadowCasters: number(runtime.activeWorldShadowCasters)
       },
       playerPosition: readPlayerLocation(health),
       waterDiagnostics: readWaterDiagnostics()
@@ -276,12 +349,26 @@
         device: {
           userAgent: text(window.navigator && window.navigator.userAgent, 220),
           devicePixelRatio: number(window.devicePixelRatio),
-          hardwareConcurrency: number(window.navigator && window.navigator.hardwareConcurrency)
+          hardwareConcurrency: number(window.navigator && window.navigator.hardwareConcurrency),
+          deviceMemoryGB: number(window.navigator && window.navigator.deviceMemory),
+          maxTouchPoints: number(window.navigator && window.navigator.maxTouchPoints),
+          screen: {
+            width: number(window.screen && window.screen.width),
+            height: number(window.screen && window.screen.height)
+          },
+          viewport: {
+            width: number(window.innerWidth),
+            height: number(window.innerHeight)
+          },
+          connectionType: text(window.navigator && window.navigator.connection && window.navigator.connection.effectiveType, 24) || null
         },
         sampleIntervalMs: SAMPLE_INTERVAL_MS,
+        persistIntervalMs: PERSIST_INTERVAL_MS,
         sampleCount: 0,
         truncatedSamples: 0,
         samples: [],
+        anomalies: [],
+        runtimeErrors: [],
         longTasks: [],
         longTaskObserverSupported: false,
         deviceEvents: []
@@ -290,12 +377,75 @@
       appendSample(initial);
       await saveSession();
       state.sampleTimer = window.setInterval(queueIdleSample, SAMPLE_INTERVAL_MS);
-      window.__ELSN_SESSION_RECORDER_STATUS__ = { active: true, sessionId: state.session.sessionId, sampleIntervalMs: SAMPLE_INTERVAL_MS };
+      state.persistTimer = window.setInterval(persistSession, PERSIST_INTERVAL_MS);
+      window.__ELSN_SESSION_RECORDER_STATUS__ = {
+        active: true,
+        sessionId: state.session.sessionId,
+        sampleIntervalMs: SAMPLE_INTERVAL_MS,
+        persistIntervalMs: PERSIST_INTERVAL_MS
+      };
     } catch (error) {
       window.__ELSN_SESSION_RECORDER_STATUS__ = { active: false, error: text(error && error.message || error, 180) };
     } finally {
       state.starting = false;
     }
+  }
+
+  function recordPerformanceAnomaly(sample) {
+    if (!state.session || !sample) return;
+    const targetFps = number(sample.targetFps);
+    const frameBudgetMs = targetFps !== null && targetFps > 0 ? 1000 / targetFps : null;
+    const p95 = number(sample.frameTiming && sample.frameTiming.p95Ms);
+    const p99 = number(sample.frameTiming && sample.frameTiming.p99Ms);
+    const max = number(sample.frameTiming && sample.frameTiming.maxMs);
+    const fps = number(sample.fps);
+    const signals = [];
+    if (frameBudgetMs !== null && p95 !== null && p95 >= frameBudgetMs * 1.5) signals.push("p95-supera-1.5x-presupuesto");
+    if (frameBudgetMs !== null && p99 !== null && p99 >= frameBudgetMs * 2) signals.push("p99-supera-2x-presupuesto");
+    if (frameBudgetMs !== null && max !== null && max >= frameBudgetMs * 3) signals.push("pico-maximo-supera-3x-presupuesto");
+    if (targetFps !== null && fps !== null && fps < targetFps * 0.75) signals.push("fps-por-debajo-del-75%-objetivo");
+    if (!signals.length) return;
+    const critical = (frameBudgetMs !== null && ((p95 !== null && p95 >= frameBudgetMs * 2.5) ||
+      (p99 !== null && p99 >= frameBudgetMs * 3))) || (targetFps !== null && fps !== null && fps < targetFps * 0.45);
+    const severity = critical ? "critical" : "warning";
+    sample.performanceAnomaly = { severity, signals };
+    const anomalies = state.session.anomalies || (state.session.anomalies = []);
+    const capturedAt = sample.capturedAt || new Date().toISOString();
+    const previous = anomalies[anomalies.length - 1];
+    if (previous && Date.parse(capturedAt) - Date.parse(previous.lastSeenAt || previous.startedAt) <= 6500) {
+      previous.lastSeenAt = capturedAt;
+      previous.observations = Number(previous.observations || 1) + 1;
+      previous.severity = previous.severity === "critical" || critical ? "critical" : "warning";
+      previous.signals = Array.from(new Set([...(previous.signals || []), ...signals])).slice(0, 8);
+      previous.peakP95Ms = Math.max(Number(previous.peakP95Ms || 0), p95 || 0) || null;
+      previous.peakP99Ms = Math.max(Number(previous.peakP99Ms || 0), p99 || 0) || null;
+      previous.peakMaxFrameMs = Math.max(Number(previous.peakMaxFrameMs || 0), max || 0) || null;
+      previous.minimumFps = previous.minimumFps === null || previous.minimumFps === undefined
+        ? fps : (fps === null ? previous.minimumFps : Math.min(previous.minimumFps, fps));
+      previous.lastPlayerPosition = sample.playerPosition || previous.lastPlayerPosition || null;
+      previous.lastScene = sample.scene || previous.lastScene || null;
+      return;
+    }
+    anomalies.push({
+      startedAt: capturedAt,
+      lastSeenAt: capturedAt,
+      severity,
+      observations: 1,
+      signals,
+      targetFps,
+      frameBudgetMs: frameBudgetMs === null ? null : Number(frameBudgetMs.toFixed(2)),
+      peakP95Ms: p95,
+      peakP99Ms: p99,
+      peakMaxFrameMs: max,
+      minimumFps: fps,
+      cpu: sample.cpu || null,
+      gpu: sample.gpu || null,
+      sceneTimings: sample.sceneTimings || null,
+      subsystems: sample.subsystems || null,
+      playerPosition: sample.playerPosition || null,
+      scene: sample.scene || null
+    });
+    if (anomalies.length > MAX_ANOMALIES_PER_SESSION) anomalies.shift();
   }
 
   function appendSample(sample) {
@@ -321,6 +471,7 @@
       state.session.truncatedSamples++;
     }
     state.session.lastUpdatedAt = sample.capturedAt;
+    recordPerformanceAnomaly(sample);
   }
 
   function cancelQueuedIdleSample() {
@@ -347,24 +498,25 @@
       state.sampleQueued = false;
       if (!state.session || document.visibilityState !== "visible") return;
       // Do not run a diagnostic read when Chrome has no idle budget available.
-      if (deadline && (deadline.didTimeout || (typeof deadline.timeRemaining === "function" && deadline.timeRemaining() < 3))) {
+      if (deadline && !deadline.didTimeout &&
+          typeof deadline.timeRemaining === "function" && deadline.timeRemaining() < 2) {
         queueIdleSample();
         return;
       }
-      sampleAndSave().catch(error => {
+      sampleAndAppend().catch(error => {
         if (state.session) state.session.storageError = text(error && error.message || error, 180);
       });
     };
     if (typeof window.requestIdleCallback === "function") {
       state.sampleHandleKind = "idle";
-      state.sampleHandle = window.requestIdleCallback(run);
+      state.sampleHandle = window.requestIdleCallback(run, { timeout: 1600 });
     } else {
       state.sampleHandleKind = "timeout";
       state.sampleHandle = window.setTimeout(() => run(null), 1000);
     }
   }
 
-  async function sampleAndSave() {
+  async function sampleAndAppend() {
     if (!state.session) return;
     if (!document.body || !document.body.classList.contains("game-running")) {
       await finishSession("game-stopped");
@@ -373,7 +525,11 @@
     const sample = readSample();
     if (!sample) return;
     appendSample(sample);
-    await saveSession();
+  }
+
+  function persistSession() {
+    if (!state.session || state.saving) return;
+    saveSession();
   }
 
   function percentile(values, ratio) {
@@ -390,11 +546,15 @@
     const fps = values(sample => sample.fps);
     const p95 = values(sample => sample.frameTiming && sample.frameTiming.p95Ms);
     const p99 = values(sample => sample.frameTiming && sample.frameTiming.p99Ms);
+    const frameMax = values(sample => sample.frameTiming && sample.frameTiming.maxMs);
     const world = values(sample => sample.cpu && sample.cpu.worldUpdateMs);
     const render = values(sample => sample.cpu && sample.cpu.renderCpuMs);
     const telemetryRead = values(sample => sample.diagnosticsReadMs);
     const drawCallsObservedDelta = values(sample => sample.scene && sample.scene.drawCallsObservedDelta);
     const longTasks = Array.isArray(session.longTasks) ? session.longTasks : [];
+    const anomalies = Array.isArray(session.anomalies) ? session.anomalies : [];
+    const runtimeErrors = Array.isArray(session.runtimeErrors) ? session.runtimeErrors : [];
+    const criticalAnomalies = anomalies.filter(item => item && item.severity === "critical").length;
     const longTaskDurations = longTasks.map(item => number(item.durationMs)).filter(value => value !== null);
     const gpu = values(sample => sample.gpu && sample.gpu.frameMs);
     const sceneRender = values(sample => sample.gpu && sample.gpu.sceneRenderMs);
@@ -418,8 +578,26 @@
         ? Math.max(0, Math.round((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / 1000)) : null,
       targetFps,
       fps: { minimum: fps.length ? Math.min(...fps) : null, average: fps.length ? Number((fps.reduce((sum, value) => sum + value, 0) / fps.length).toFixed(2)) : null, median: median(fps), p10: percentile(fps, .1) },
-      frameTimeMs: { p95Median: median(p95), p99Median: median(p99), worstP95: p95.length ? Math.max(...p95) : null },
+      frameTimeMs: {
+        p95Median: median(p95),
+        p99Median: median(p99),
+        worstP95: p95.length ? Math.max(...p95) : null,
+        worstP99: p99.length ? Math.max(...p99) : null,
+        worstFrameMax: frameMax.length ? Math.max(...frameMax) : null
+      },
       stutterIntervalsOver33ms: p95.filter(value => value > 33.33).length,
+      anomalyEvents: anomalies.length,
+      criticalAnomalyEvents: criticalAnomalies,
+      runtimeErrorCount: runtimeErrors.length,
+      sampleIntervalMs: number(session.sampleIntervalMs),
+      persistIntervalMs: number(session.persistIntervalMs),
+      sampleCoverage: {
+        recorded: samples.length,
+        expected: session.startedAt && session.finishedAt
+          ? Math.max(1, Math.floor((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / SAMPLE_INTERVAL_MS) + 1)
+          : null,
+        truncatedSamples: number(session.truncatedSamples) || 0
+      },
       cpu: { worldUpdateMedianMs: medianWorld, renderPreparationMedianMs: medianRender },
       gpu: { frameMedianMs: medianGpu, sceneRenderMedianMs: medianSceneRender },
       sceneTimings: { activeMeshesEvaluationMedianMs: medianActiveMeshes, renderTargetsMedianMs: medianRenderTargets },
@@ -473,7 +651,9 @@
 
   async function finishSession(reason) {
     if (state.sampleTimer) window.clearInterval(state.sampleTimer);
+    if (state.persistTimer) window.clearInterval(state.persistTimer);
     state.sampleTimer = null;
+    state.persistTimer = null;
     cancelQueuedIdleSample();
     if (!state.session) return;
     const current = state.session;
@@ -518,8 +698,11 @@
         queueIdleSample();
       } else {
         cancelQueuedIdleSample();
+        persistSession();
       }
     });
+    window.addEventListener("error", handleRuntimeError, true);
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
     window.addEventListener("blur", () => recordDeviceEvent("window-blur"));
     window.addEventListener("focus", () => {
       recordDeviceEvent("window-focus");
