@@ -289,6 +289,15 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
+    # Footprints are transparent world decals. Keep them in rendering group 0 so
+    # Babylon shares the opaque world's depth buffer; group 1 can clear depth and
+    # make the decal appear through houses and other occluders.
+    footprint_render_group_marker = "footprintMesh.renderingGroupId=1;footprintMesh.hasVertexAlpha=true;"
+    footprint_render_group_replacement = "footprintMesh.renderingGroupId=0;footprintMesh.hasVertexAlpha=true;"
+    if html.count(footprint_render_group_marker) != 1:
+        raise SystemExit("No se encontró exactamente la malla única de huellas para corregir su profundidad.")
+    html = html.replace(footprint_render_group_marker, footprint_render_group_replacement, 1)
+    print("OK footprints share the main opaque depth buffer.")
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         html,
@@ -783,7 +792,7 @@ def main() -> None:
    return {
     active:!!gameStarted,
     playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
-    people:ambientPeople.concat(campGuards.filter(guard=>guard&&guard.alive!==false)),scene,camera:scene.activeCamera||camera,
+    people:ambientPeople.concat(campGuards.filter(guard=>guard&&guard.alive!==false)),engine,scene,camera:scene.activeCamera||camera,
     canvas:engine.getRenderingCanvas(),BABYLON:B
    };
   }
@@ -809,31 +818,31 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.300: restore flagship render clarity while preserving the
+    # Release candidate 0.6.301: restore flagship render clarity while preserving the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.300; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.301; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.300\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.301\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.300.")
-    html = html.replace("0.6.274", "0.6.300")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.301.")
+    html = html.replace("0.6.274", "0.6.301")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'22',build:'0.6.300'"
+    diagnostic_build_replacement = "reportVersion:'23',build:'0.6.301'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.300 para normalizar.")
-    game_version = "0.6.300"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.301 para normalizar.")
+    game_version = "0.6.301"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
-    # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
+    # 0.6.301 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
     quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
     quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
  const highHeadroomQualityMobile=!!(!isPerformanceMode&&isTouchDevice&&!constrainedHardware&&((reportedMemory>=8&&(Number(navigator.hardwareConcurrency)||0)>=8)||highTierGpuMatch));
