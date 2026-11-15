@@ -414,6 +414,62 @@ async function main() {
     manifest.worldUpdateWaitMs = Number((performance.now() - worldUpdateWaitStartedAt).toFixed(1));
     manifest.worldUpdateCountAtCapture = await page.evaluate(() =>
       window.getGameHealthDebug()?.worldUpdateCount ?? null);
+    await page.waitForFunction(() => {
+      const state = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.();
+      return !!state && state.active === true;
+    }, undefined, { timeout: 10000, polling: 100 }).catch(async error => {
+      const diagnostics = await page.evaluate(() => {
+        let bridge = null, bridgeError = '';
+        try { bridge = window.__ELSN_GAME_DIALOGUE_BRIDGE__?.getSnapshot?.() ?? null; }
+        catch (failure) { bridgeError = String(failure?.stack || failure); }
+        return {
+          bodyClass: document.body.className,
+          introAriaHidden: document.getElementById('intro')?.getAttribute('aria-hidden') ?? null,
+          bridgeError,
+          bridgeActive: bridge?.active ?? null,
+          peopleInWorld: bridge?.people?.length ?? null,
+          playerPosition: bridge?.playerPosition ?? null,
+          gameHealth: (() => {
+            try {
+              const health = window.getGameHealthDebug?.();
+              return { gameStarted: health?.gameStarted ?? null, worldUpdateCount: health?.worldUpdateCount ?? null };
+            } catch (failure) { return { error: String(failure) }; }
+          })(),
+          runtime: window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.() ?? null
+        };
+      });
+      manifest.npcDialogueWaitDiagnostic = diagnostics;
+      await fs.promises.writeFile(path.join(OUT, 'npc-dialogue-wait-diagnostic.json'),
+        JSON.stringify(diagnostics, null, 2));
+      await page.screenshot({ path: path.join(OUT, 'npc-dialogue-wait-failure.png'), fullPage: true }).catch(() => {});
+      throw new Error('El runtime de diálogos no detectó la partida activa: ' +
+        JSON.stringify(diagnostics) + ' · ' + String(error?.message || error));
+    });
+    // Dialogue diagnostics are observational only. The player validates the visible dialogue in normal gameplay.
+    manifest.npcDialogueSmoke = await page.evaluate(() => {
+      const bridge = window.__ELSN_GAME_DIALOGUE_BRIDGE__;
+      const runtime = window.__ELSN_NPC_DIALOGUES__;
+      if (!bridge || typeof bridge.getSnapshot !== 'function' ||
+          !runtime || typeof runtime.getSnapshot !== 'function') {
+        return { available: false, bridgePresent: !!bridge, runtimePresent: !!runtime };
+      }
+      const state = runtime.getSnapshot();
+      const world = bridge.getSnapshot();
+      return {
+        available: true,
+        bridgeReady: state.bridgeReady === true,
+        active: state.bridgeActive === true,
+        peopleInWorld: state.worldPeopleCount,
+        nearbyPeople: state.nearbyCount,
+        bubblesStarted: state.bubblesStarted,
+        projectionAttempts: state.projectionAttempts,
+        projectionSuccesses: state.projectionSuccesses,
+        visibleBubbles: state.renderedBubbleCount,
+        projectionFailures: state.projectionFailures,
+        lastError: state.lastError || '',
+        worldSnapshotActive: world.active === true
+      };
+    });
     manifest.spatialSelection = await page.evaluate(() => window.__ELSN_SPATIAL_SELECTION__ || null);
     assert.ok(manifest.spatialSelection?.enabled === true,
       'La compilación no activó la selección espacial Babylon en la escena principal: ' +
@@ -624,6 +680,16 @@ async function main() {
       };
     });
     manifest.performanceFirst20s = perf20s;
+    // NPC dialogue visibility is deliberately not a CI acceptance criterion:
+    // do not teleport the player or steer the camera to force a bubble. The player checks this in-game.
+    manifest.npcDialoguePlayerValidation = {
+      owner: 'manual-player',
+      automatedVisualAcceptance: false,
+      diagnostics: await page.evaluate(() => ({
+        runtime: window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.() ?? null,
+        nearbyNPCs: window.__ELSN_GAME_DIALOGUE_BRIDGE__?.getSnapshot?.()?.people?.length ?? null
+      }))
+    };
     manifest.postEntryAudit = await page.evaluate(() => window.__startupPostEntryAudit);
     assert.equal(manifest.postEntryAudit.calls.length, 0,
       'Se invocó un importador GLB después de entrar: ' + JSON.stringify(manifest.postEntryAudit.calls));

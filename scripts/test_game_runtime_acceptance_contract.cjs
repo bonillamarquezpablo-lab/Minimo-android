@@ -53,6 +53,11 @@ for (const marker of [
   "postEntryAudit.network.length",
   "postEntryAudit.resources.length",
   "worldUpdateWaitDiagnostic",
+  "npcDialogueSmoke",
+  "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
+  "window.__ELSN_NPC_DIALOGUES__",
+  "bubblesStarted",
+  "projectionAttempts",
   "identityPreferencePersisted",
   "cachedIdentityPreferencePersisted",
   "navigator.serviceWorker.controller",
@@ -67,4 +72,8 @@ for (const marker of [
 ]) {
   assert.ok(smoke.includes(marker), 'Runtime smoke is missing acceptance check: ' + marker);
 }
+assert.match(smoke, /automatedVisualAcceptance: false/,
+  'Visible NPC dialogue acceptance must remain with the player.'); 
+assert.doesNotMatch(smoke, /npcDialogueApproach|npcDialogueVisibilityWait|__ELSN_NPC_DIALOGUE_SMOKE_RESTORE__/,
+  'Startup CI must not teleport the player or approve NPC dialogue visibility.');
 console.log('Game runtime and offline Service Worker acceptance contract: PASS');

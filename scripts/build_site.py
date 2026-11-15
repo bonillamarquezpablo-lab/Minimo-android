@@ -299,6 +299,54 @@ def main() -> None:
     game_version = version_match.group(1).strip()
     if not re.fullmatch(r"\d+\.\d+\.\d+", game_version):
         raise SystemExit(f"Versión del juego no válida en index.html: {game_version!r}")
+    # Babylon's scene.whenReadyAsync() already waits for textures and shader readiness.
+    # Calling scene.compileMaterialsAsync() as a second, full-scene pass recompiles every
+    # material across all 13 islands, including off-screen variants, and can stall for
+    # minutes on software renderers without improving readiness of the first view.
+    # Keep the blocking scene readiness barrier and its two rendered warm-up frames.
+    full_scene_compile_marker = "if(typeof scene.compileMaterialsAsync==='function')sceneReadyTasks.push(scene.compileMaterialsAsync());"
+    if html.count(full_scene_compile_marker) != 1:
+        raise SystemExit("No se encontró la única compilación redundante de todos los materiales.")
+    html = html.replace(
+        full_scene_compile_marker,
+        "// The initial camera render now checks its own mesh/material readiness; avoid a duplicate all-island compile pass."
+    , 1)
+
+    # Wait for resources used by the initial camera view, not every off-screen island mesh.
+    # The game loop is already rendering behind the blocking load screen. Each frame we
+    # inspect Babylon's actual active render list, ask those meshes to finish their material
+    # variants, and wait until scene texture requests have settled for three stable frames.
+    # Off-screen island shaders are compiled by Babylon when that island becomes visible.
+    initial_view_marker = "const sceneReadyTasks=[scene.whenReadyAsync()];"
+    initial_view_replacement = r"""const waitForInitialViewReadiness=async()=>{
+    let readyFrames=0,lastDiagnostic=null;
+    const started=performance.now();
+    while(performance.now()-started<85000){
+     await new Promise(resolve=>requestAnimationFrame(resolve));
+     const active=typeof scene.getActiveMeshes==='function'?scene.getActiveMeshes():null;
+     const activeMeshes=active&&Array.isArray(active.data)?active.data.slice(0,active.length):[];
+     const notReady=[];
+     for(const mesh of activeMeshes){
+      if(!mesh||mesh.isBlocked||mesh.isVisible===false)continue;
+      try{if(typeof mesh.isReady==='function'&&!mesh.isReady(true))notReady.push(String(mesh.name||mesh.id||'mesh').slice(0,100));}
+      catch(error){notReady.push(String(mesh.name||mesh.id||'mesh').slice(0,80)+': '+String(error&&error.message||error).slice(0,100));}
+     }
+     let waitingItems=null;
+     try{if(typeof scene.getWaitingItemsCount==='function')waitingItems=scene.getWaitingItemsCount();}catch(_){waitingItems=null;}
+     const firstFrame=firstFrameRendered===true;
+     const assetsSettled=waitingItems===null||waitingItems===0;
+     const ready=firstFrame&&activeMeshes.length>0&&notReady.length===0&&assetsSettled;
+     readyFrames=ready?readyFrames+1:0;
+     lastDiagnostic={firstFrameRendered:firstFrame,activeMeshCount:activeMeshes.length,notReadyMeshCount:notReady.length,notReadyMeshes:notReady.slice(0,16),waitingItems,stableReadyFrames:readyFrames,elapsedMs:Number((performance.now()-started).toFixed(1))};
+     if(readyFrames>=3)return lastDiagnostic;
+    }
+    throw new Error('La vista inicial no completó tres fotogramas estables: '+JSON.stringify(lastDiagnostic));
+   };
+   const sceneReadyTasks=[waitForInitialViewReadiness()];"""
+    if html.count(initial_view_marker) != 1:
+        raise SystemExit("No se encontró la única barrera global de disponibilidad de escena para sustituirla por la comprobación de vista inicial.")
+    html = html.replace(initial_view_marker, initial_view_replacement, 1)
+
     global USER_AGENT
     USER_AGENT = (
         f"EL-SIN-NOMBRE-WebBuild/{game_version} "
@@ -773,25 +821,54 @@ def main() -> None:
 
 
     # Read-only player dialogue bridge: reuses existing villagers and creates no actors.
-    dialogue_bridge_marker = "})();" + chr(10) + "</script>"
+    dialogue_bridge_marker = " window.copyGameHealthDebug=()=>{"
     dialogue_bridge_code = r"""
  // Player-facing dialogue bridge. Inspector specialist identities remain in their own runtime.
  window.__ELSN_GAME_DIALOGUE_BRIDGE__=Object.freeze({
   maxVisibleBubbles:4,
-  getSnapshot:()=>{
-   const focus=typeof playerPos==='function'?playerPos():player.root.position;
+  getSnapshot:(()=>{let dialoguePeopleCache=null;return ()=>{
+   let focus=null;
+   try{if(typeof playerPos==='function')focus=playerPos();}catch(_){}
+   if(!focus||!Number.isFinite(Number(focus.x))||!Number.isFinite(Number(focus.z))){
+    try{focus=player&&player.root&&player.root.position||null;}catch(_){}
+   }
+   if(!focus||!Number.isFinite(Number(focus.x))||!Number.isFinite(Number(focus.z)))focus={x:0,y:0,z:0};
+   const atmosphere=window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getState==='function'?window.__ELSN_ATMOSPHERE.getState():null;
+   let islandIndex=-1;
+   try{if(typeof landIslandIndex==='function')islandIndex=landIslandIndex(focus.x,focus.z);}catch(_){};
+   const active=!!(document.body&&document.body.classList.contains('game-running'));
    return {
-    active:!!gameStarted,
+    active,
     playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
-    people:ambientPeople.concat(campGuards.filter(guard=>guard&&guard.alive!==false)),scene,camera:scene.activeCamera||camera,
+    people:(()=>{
+     if(!active)return [];
+     if(!dialoguePeopleCache){
+      const candidates=[].concat(Array.isArray(scene.transformNodes)?scene.transformNodes:[],Array.isArray(scene.meshes)?scene.meshes:[]);
+      const seen=new Set(),found=[];
+      for(const node of candidates){
+       if(!node||seen.has(node))continue;
+       seen.add(node);
+       const name=String(node.name||'');
+       const match=/^(?:Villager_(\d+)_(\d+)|VillageGuard(\d+)_(\d+))$/.exec(name);
+       if(!match)continue;
+       const villageIndex=Number(match[1]!==undefined?match[1]:match[3]);
+       const slot=Number(match[2]!==undefined?match[2]:match[4]);
+       found.push({name,root:node,parts:{name,root:node,variant:villageIndex*2+slot,civilian:match[1]!==undefined,role:match[1]!==undefined?'civilian':'warrior'},recruited:false});
+      }
+      dialoguePeopleCache=found;
+     }
+     return dialoguePeopleCache;
+    })(),
+    world:{night:!!(atmosphere&&atmosphere.night>=0.55),onShip:typeof onShip!=='undefined'&&!!onShip,enemyNearby:typeof nearEnemies==='function'&&nearEnemies(),health:typeof health!=='undefined'?Number(health):null,healthLow:typeof health!=='undefined'&&Number(health)<=35,wood:typeof woodCount!=='undefined'?Number(woodCount):null,stone:typeof stoneCount!=='undefined'?Number(stoneCount):null,captured:typeof captured!=='undefined'?Number(captured)||0:0,islandName:typeof land!=='undefined'&&islandIndex>=0&&land[islandIndex]?String(land[islandIndex].name||''):''},
+    scene,engine,camera:scene.activeCamera||camera,
     canvas:engine.getRenderingCanvas(),BABYLON:B
    };
-  }
+  };})()
  });
 """
     if html.count(dialogue_bridge_marker) != 1:
         raise SystemExit("No se encontró exactamente una salida del runtime para conectar los diálogos NPC.")
-    html = html.replace(dialogue_bridge_marker, dialogue_bridge_code + chr(10) + "})();" + chr(10) + "</script>", 1)
+    html = html.replace(dialogue_bridge_marker, dialogue_bridge_code + chr(10) + dialogue_bridge_marker, 1)
 
     dialogue_style_tag = '<link rel="stylesheet" href="./scripts/npc-dialogue.css">'
     if dialogue_style_tag not in html:
@@ -809,28 +886,28 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.301: restore flagship render clarity while preserving the
+    # Release candidate 0.6.302: restore flagship render clarity while preserving the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.301; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.302; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.301\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.302\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.301.")
-    html = html.replace("0.6.274", "0.6.301")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.302.")
+    html = html.replace("0.6.274", "0.6.302")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'23',build:'0.6.301'"
+    diagnostic_build_replacement = "reportVersion:'24',build:'0.6.302'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.301 para normalizar.")
-    game_version = "0.6.301"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.302 para normalizar.")
+    game_version = "0.6.302"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -1191,6 +1268,73 @@ def main() -> None:
         if html.count(old) != expected:
             raise SystemExit("Número inesperado de actualizaciones DynamicTexture: " + old)
         html = html.replace(old, new)
+
+    # Make the existing mineable granite deposits read as angular rock, not smooth black orbs.
+    mineable_rock_marker = """function createRock(x,z){
+  const gy=renderedTerrainSurfaceAt(x,z),sx=rand(1.0,1.8),sy=rand(1.0,1.6),sz=rand(1,1.7);
+  let r=sphere('graniteBoulder',null,[x,gy+sy*.49,z],[sx,sy,sz],M.stone,12);
+  let cap=sphere('rockFacet',null,[x-.18,gy+sy*.72,z-.10],[sx*.62,sy*.36,sz*.62],M.stoneLight,10);
+  return {meshes:[r,cap],x,z,radius:Math.max(sx,sz)*.48,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
+ }"""
+    mineable_rock_replacement = """// Reuse the existing, already-loaded granite materials. Cloning a new StandardMaterial
+  // here creates a new shader variant that can remain unready on mobile/software GPUs.
+  const mineableGraniteMaterial=M.stoneLight;
+  function createRock(x,z){
+   const gy=renderedTerrainSurfaceAt(x,z),sx=rand(.72,1.02),sy=rand(.70,.94),sz=rand(.68,1.00);
+   const r=B.MeshBuilder.CreateIcoSphere('graniteBoulder',{radius:1,subdivisions:2,flat:true},scene);
+   r.position=v(x,gy+sy*.40,z);r.scaling=v(sx,sy,sz);r.material=mineableGraniteMaterial;r.isPickable=true;r.receiveShadows=true;
+   r.rotation.set(rand(-.10,.10),rand(0,Math.PI*2),rand(-.12,.12));
+   const cap=B.MeshBuilder.CreateIcoSphere('rockFacet',{radius:1,subdivisions:1,flat:true},scene);
+   cap.position=v(x-sx*.14,gy+sy*.65,z-sz*.11);cap.scaling=v(sx*.52,sy*.30,sz*.48);cap.material=M.stone;cap.isPickable=true;cap.receiveShadows=true;
+   cap.rotation.set(rand(-.12,.12),r.rotation.y+.42,rand(-.10,.10));
+   const radius=Math.max(sx,sz)*.50;
+   return {meshes:[r,cap],x,z,radius,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
+  }"""
+    mineable_rock_pattern = r"(?m)^[ \t]*function createRock\(x,z\)\{\n.*?\n[ \t]*\}"
+    html, mineable_rock_count = re.subn(mineable_rock_pattern, lambda _match: mineable_rock_replacement, html, count=1, flags=re.DOTALL)
+    if mineable_rock_count != 1:
+        raise SystemExit(f"No se encontró una única función createRock para transformar: {mineable_rock_count} coincidencias.")
+
+    # Never stamp the ground footprint atlas on top of resource boulders or registered structures.
+    footprint_surface_marker = """function makeFootprint(islandIndex,x,z,heading,wet,beach,running,waterCovered=false){
+   if(waterCovered)return;
+   syncFootprintAtlasFocus(x,z);
+   const strength=wet?.90:(beach?.78:.58),currentTick=Math.floor((performance.now()*.001)/.25)%65536;
+   if(footprintAtlas.stamp(x,z,heading,strength,currentTick))footprintAtlasDirty=true;
+  }"""
+    footprint_surface_replacement = """function makeFootprint(islandIndex,x,z,heading,wet,beach,running,waterCovered=false){
+   if(waterCovered)return;
+   let blocked=false;
+   if(collisionGrid&&typeof collisionCellKey==='function'){
+    const bucket=collisionGrid.get(collisionCellKey(Math.floor(x/COLLISION_CELL_SIZE),Math.floor(z/COLLISION_CELL_SIZE)));
+    if(bucket)for(const entry of bucket){
+     const ref=entry&&entry.ref;if(!ref||ref.active===false)continue;
+     const dx=x-ref.x,dz=z-ref.z;
+     if(entry.kind==='tree'&&ref.alive&&dx*dx+dz*dz<((ref.radius||.48)+.28)**2){blocked=true;break;}
+     if(entry.kind==='rock'&&ref.alive&&dx*dx+dz*dz<((ref.radius||.75)+.34)**2){blocked=true;break;}
+     if(entry.kind==='world'){
+      if(ref.type==='circle'&&dx*dx+dz*dz<(ref.r+.24)*(ref.r+.24)){blocked=true;break;}
+      if(ref.type!=='circle'&&Math.abs(dx)<ref.hx+.24&&Math.abs(dz)<ref.hz+.24){blocked=true;break;}
+     }
+    }
+   }else{
+    for(const rock of rocks)if(rock.alive&&Math.hypot(x-rock.x,z-rock.z)<(rock.radius||.75)+.34){blocked=true;break;}
+    if(!blocked)for(const tree of trees)if(tree.alive&&Math.hypot(x-tree.x,z-tree.z)<(tree.radius||.48)+.28){blocked=true;break;}
+    if(!blocked)for(const collider of worldColliders){
+     if(collider.active===false)continue;
+     const dx=x-collider.x,dz=z-collider.z;
+     if(collider.type==='circle'?dx*dx+dz*dz<(collider.r+.24)*(collider.r+.24):Math.abs(dx)<collider.hx+.24&&Math.abs(dz)<collider.hz+.24){blocked=true;break;}
+    }
+   }
+   if(blocked)return;
+   syncFootprintAtlasFocus(x,z);
+   const strength=wet?.90:(beach?.78:.58),currentTick=Math.floor((performance.now()*.001)/.25)%65536;
+   if(footprintAtlas.stamp(x,z,heading,strength,currentTick))footprintAtlasDirty=true;
+  }"""
+    footprint_surface_pattern = r"(?m)^[ \t]*function makeFootprint\(islandIndex,x,z,heading,wet,beach,running,waterCovered=false\)\{\n.*?\n[ \t]*\}"
+    html, footprint_surface_count = re.subn(footprint_surface_pattern, lambda _match: footprint_surface_replacement, html, count=1, flags=re.DOTALL)
+    if footprint_surface_count != 1:
+        raise SystemExit(f"No se encontró una única función makeFootprint para transformar: {footprint_surface_count} coincidencias.")
 
     # Incremental discovery: avoid scanning all 5,000+ TransformNodes twice every 1.5 s.
     # Existing roots are indexed once; future habitable roots are queued by Babylon's

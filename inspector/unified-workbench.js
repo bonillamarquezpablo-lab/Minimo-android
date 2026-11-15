@@ -58,83 +58,93 @@
     page.setAttribute("aria-labelledby","wbReportTitle");
     page.innerHTML = `
       <div class="workbench-page-heading">
-        <div><div class="workbench-kicker">INFORME INTELIGENTE · PARTIDA</div>
-          <h2 id="wbReportTitle">Informe de la última partida</h2>
-          <p id="wbReportMeta">Uniendo rendimiento, escenas, calidad de datos y recomendaciones en una sola lectura.</p>
+        <div><div class="workbench-kicker">CENTRO DE INSPECCIÓN · PARTIDAS</div>
+          <h2 id="wbReportTitle">Resumen de la partida</h2>
+          <p id="wbReportMeta">Aquí tienes lo importante. El análisis completo queda guardado para revisarlo después.</p>
         </div>
         <div class="workbench-report-actions">
           <button class="wb-button" id="wbReportRefresh" type="button">Actualizar</button>
-          <button class="wb-button" id="wbReportExport" type="button" disabled>Exportar</button>
-          <label class="wb-button wb-file-button" for="wbReportImport">Abrir informe JSON</label>
-          <input id="wbReportImport" type="file" accept=".json,application/json" hidden>
+          <button class="wb-button" id="wbReportCopy" type="button" disabled>Copiar informe para ChatGPT</button>
+          <button class="wb-button" id="wbReportExport" type="button" disabled>Descargar informe</button>
         </div>
       </div>
       <div class="wb-report-state" id="wbReportState" role="status" aria-live="polite">Buscando informes guardados en este navegador…</div>
+      <article class="wb-report-card wb-quick-read" id="wbQuickRead">
+        <div class="wb-card-eyebrow">LO IMPORTANTE</div>
+        <h3 id="wbQuickReadTitle">Esperando datos de la partida</h3>
+        <p id="wbQuickReadBody">Cuando termines una partida, aquí verás si ha ido bien o qué problema debo investigar. No necesitas leer el informe técnico.</p>
+      </article>
       <div class="wb-report-metrics" id="wbReportMetrics">
         <article class="wb-stat"><span>FPS medios</span><strong>—</strong><small>Esperando informe</small></article>
         <article class="wb-stat"><span>FPS mínimos</span><strong>—</strong><small>Esperando informe</small></article>
-        <article class="wb-stat"><span>Estabilidad p95</span><strong>—</strong><small>Esperando informe</small></article>
-        <article class="wb-stat"><span>Mallas de escena</span><strong>—</strong><small>Esperando informe</small></article>
-        <article class="wb-stat"><span>Memoria JS</span><strong>—</strong><small>Esperando informe</small></article>
+        <article class="wb-stat"><span>Fluidez</span><strong>—</strong><small>Esperando informe</small></article>
       </div>
-      <div class="wb-report-grid">
-        <article class="wb-report-card wb-report-primary" id="wbReportVerdict">
-          <div class="wb-card-eyebrow">LECTURA PRINCIPAL</div><h3>Esperando datos</h3>
-          <p>El informe aparecerá aquí con una explicación en lenguaje normal.</p>
-        </article>
-        <article class="wb-report-card" id="wbReportDevice">
-          <div class="wb-card-eyebrow">DISPOSITIVO Y MOTOR</div><h3>Entorno de ejecución</h3>
-          <p>La GPU y el backend se mostrarán cuando estén disponibles.</p>
-        </article>
-        <article class="wb-report-card" id="wbReportIntegrity">
-          <div class="wb-card-eyebrow">CALIDAD DEL INFORME</div><h3>Comprobando cobertura</h3>
-          <p>Se distinguirán las mediciones ausentes de los valores cero.</p>
-        </article>
-      </div>
-      <section class="wb-report-card wb-report-specialists" id="wbReportSpecialists">
-        <div class="wb-card-eyebrow">INTELIGENCIA AUTÓNOMA · CUATRO ESPECIALISTAS</div>
-        <h3>Lo que han descubierto nuestros especialistas</h3>
-        <p>Revisan la partida, reúnen pruebas y recuerdan los resultados para comparar futuras sesiones. No cambian el mundo ni reducen la calidad gráfica por su cuenta.</p>
-        <div id="wbSpecialistSummary" class="wb-specialist-summary">Preparando análisis…</div>
-        <div id="wbSpecialistCards" class="wb-specialist-grid"><p>Esperando los datos de la partida.</p></div>
-      </section>
-      <section class="wb-report-card wb-patrol-report" id="wbPatrolReport">
-        <div class="wb-card-eyebrow">PATRULLA AUTÓNOMA · 13 ISLAS</div>
-        <h3>Último recorrido independiente</h3>
-        <p id="wbPatrolMeta">Consultando el último recorrido publicado…</p>
-        <div id="wbPatrolSummary" class="wb-patrol-summary"></div>
-        <div id="wbPatrolAgents" class="wb-patrol-agents"><p>Buscando observaciones.</p></div>
-        <div id="wbPatrolCautions" class="wb-patrol-cautions"></div>
-        <p><a href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/workflows/explorer-patrol.yml" target="_blank" rel="noopener noreferrer">Abrir o ejecutar la patrulla completa</a></p>
-      </section>
-      <section class="wb-report-card">
-        <div class="wb-card-eyebrow">ANÁLISIS CRUZADO</div><h3>Relaciones entre posibles causas</h3>
-        <div id="wbReportCorrelations" class="wb-action-list"><p>Esperando mediciones.</p></div>
-      </section>
-      <div class="wb-report-columns">
-        <section class="wb-report-card" id="wbReportWorld">
-          <div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D</div><h3>Geometría, físicas y objetos</h3>
-          <p>El inventario de la escena se incorporará al informe final cuando la partida termine normalmente.</p>
+      <details class="wb-report-full" id="wbReportMore">
+        <summary>Ver análisis completo y pruebas guardadas</summary>
+        <div class="wb-report-grid">
+          <article class="wb-report-card wb-report-primary" id="wbReportVerdict">
+            <div class="wb-card-eyebrow">LECTURA PRINCIPAL</div><h3>Esperando datos</h3>
+            <p>El informe aparecerá aquí con una explicación en lenguaje normal.</p>
+          </article>
+          <article class="wb-report-card" id="wbReportDevice">
+            <div class="wb-card-eyebrow">DISPOSITIVO Y MOTOR</div><h3>Entorno de ejecución</h3>
+            <p>La GPU y el backend se mostrarán cuando estén disponibles.</p>
+          </article>
+          <article class="wb-report-card" id="wbReportIntegrity">
+            <div class="wb-card-eyebrow">CALIDAD DEL INFORME</div><h3>Comprobando cobertura</h3>
+            <p>Se distinguirán las mediciones ausentes de los valores cero.</p>
+          </article>
+        </div>
+        <section class="wb-report-card wb-report-specialists" id="wbReportSpecialists">
+          <div class="wb-card-eyebrow">INTELIGENCIA AUTÓNOMA · CUATRO ESPECIALISTAS</div>
+          <h3>Lo que han descubierto nuestros especialistas</h3>
+          <p>Revisan la partida, reúnen pruebas y recuerdan los resultados para comparar futuras sesiones. No cambian el mundo ni reducen la calidad gráfica por su cuenta.</p>
+          <div id="wbSpecialistSummary" class="wb-specialist-summary">Preparando análisis…</div>
+          <div id="wbSpecialistCards" class="wb-specialist-grid"><p>Esperando los datos de la partida.</p></div>
         </section>
-        <section class="wb-report-card" id="wbReportComparison">
-          <div class="wb-card-eyebrow">EVOLUCIÓN ENTRE PARTIDAS</div><h3>Comparación con la sesión anterior</h3>
-          <p>Se necesitan dos informes completos del mismo navegador para comparar.</p>
-        </section>
-      </div>
-      <div class="wb-report-columns">
-        <section class="wb-report-card">
-          <div class="wb-card-eyebrow">PLAN DE REPARACIÓN</div><h3>Qué debemos revisar primero</h3>
-          <div id="wbReportActions" class="wb-action-list"><p>Esperando informe.</p></div>
+        <section class="wb-report-card wb-patrol-report" id="wbPatrolReport">
+          <div class="wb-card-eyebrow">PATRULLA AUTÓNOMA · 13 ISLAS</div>
+          <h3>Último recorrido independiente</h3>
+          <p id="wbPatrolMeta">Consultando el último recorrido publicado…</p>
+          <div id="wbPatrolSummary" class="wb-patrol-summary"></div>
+          <div id="wbPatrolAgents" class="wb-patrol-agents"><p>Buscando observaciones.</p></div>
+          <div id="wbPatrolCautions" class="wb-patrol-cautions"></div>
+          <p><a href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/workflows/explorer-patrol.yml" target="_blank" rel="noopener noreferrer">Abrir o ejecutar la patrulla completa</a></p>
         </section>
         <section class="wb-report-card">
-          <div class="wb-card-eyebrow">PISTAS TÉCNICAS EXPLICADAS</div><h3>Qué puede estar ocurriendo</h3>
-          <div id="wbReportFindings" class="wb-action-list"><p>Esperando informe.</p></div>
+          <div class="wb-card-eyebrow">ANÁLISIS CRUZADO</div><h3>Relaciones entre posibles causas</h3>
+          <div id="wbReportCorrelations" class="wb-action-list"><p>Esperando mediciones.</p></div>
         </section>
-      </div>
-      <details class="wb-technical-details">
-        <summary>Ver datos originales y mediciones avanzadas</summary>
-        <p>Esta vista conserva el JSON completo. Los valores no disponibles permanecen como «sin medir»; no se convierten en ceros.</p>
-        <pre id="wbReportJson">Todavía no hay un informe cargado.</pre>
+        <div class="wb-report-columns">
+          <section class="wb-report-card" id="wbReportWorld">
+            <div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D</div><h3>Geometría, físicas y objetos</h3>
+            <p>El inventario de la escena se incorporará al informe final cuando la partida termine normalmente.</p>
+          </section>
+          <section class="wb-report-card" id="wbReportComparison">
+            <div class="wb-card-eyebrow">EVOLUCIÓN ENTRE PARTIDAS</div><h3>Comparación con la sesión anterior</h3>
+            <p>Se necesitan dos informes completos del mismo navegador para comparar.</p>
+          </section>
+        </div>
+        <div class="wb-report-columns">
+          <section class="wb-report-card">
+            <div class="wb-card-eyebrow">PLAN DE REPARACIÓN</div><h3>Qué debemos revisar primero</h3>
+            <div id="wbReportActions" class="wb-action-list"><p>Esperando informe.</p></div>
+          </section>
+          <section class="wb-report-card">
+            <div class="wb-card-eyebrow">PISTAS TÉCNICAS EXPLICADAS</div><h3>Qué puede estar ocurriendo</h3>
+            <div id="wbReportFindings" class="wb-action-list"><p>Esperando informe.</p></div>
+          </section>
+        </div>
+        <details class="wb-technical-details">
+          <summary>Ver datos originales y mediciones avanzadas</summary>
+          <p>Esta vista conserva el JSON completo. Los valores no disponibles permanecen como «sin medir»; no se convierten en ceros.</p>
+          <pre id="wbReportJson">Todavía no hay un informe cargado.</pre>
+        </details>
+        <div class="workbench-report-actions">
+          <button class="wb-button" id="wbReportExportFull" type="button" disabled>Descargar todos los datos</button>
+          <label class="wb-button wb-file-button" for="wbReportImport">Importar informe de una partida</label>
+          <input id="wbReportImport" type="file" accept=".json,application/json" hidden>
+        </div>
       </details>`;
     return page;
   }
@@ -622,6 +632,8 @@
   function renderReport(report,sourceLabel,previousReport=null,intelligence=null) {
     latestReport = Object.assign({}, report, { specialistIntelligence: intelligence || null, observerPatrol: latestPatrolIntelligence || null });
     $("wbReportExport").disabled = false;
+    $("wbReportCopy").disabled = false;
+    $("wbReportExportFull").disabled = false;
     const samples = Array.isArray(report.samples) ? report.samples : [];
     const summary = report.summary || {};
     const fps = summary.fps || {};
@@ -634,6 +646,14 @@
     const p99 = finite(frame.p99Median) ?? median(valuesAt(samples,"frameTiming.p99Ms"));
     const avgFps = finite(fps.average) ?? (valuesAt(samples,"fps").length ? valuesAt(samples,"fps").reduce((a,b)=>a+b,0)/valuesAt(samples,"fps").length : null);
     const minFps = finite(fps.minimum) ?? (valuesAt(samples,"fps").length ? Math.min(...valuesAt(samples,"fps")) : null);
+    const dayNight = summary.lightingConditions || {};
+    const dayPerformance = dayNight.day || {};
+    const nightPerformance = dayNight.night || {};
+    const hasDayNightComparison = Number(dayPerformance.sampleCount)>0 && Number(nightPerformance.sampleCount)>0;
+    const dayAverage = finite(dayPerformance.fpsAverage);
+    const nightAverage = finite(nightPerformance.fpsAverage);
+    const nightDropPercent = hasDayNightComparison && dayAverage!==null && dayAverage>0 && nightAverage!==null
+      ? Number(((dayAverage-nightAverage)/dayAverage*100).toFixed(1)) : null;
     const maxFrame = finite(frame.worstFrameMax) ?? Math.max(0,...valuesAt(samples,"frameTiming.maxMs"));
     const meshCounts = valuesAt(samples,"scene.meshCount");
     const vertices = valuesAt(samples,"scene.totalVertices");
@@ -698,13 +718,32 @@
       "Anomalías de rendimiento: "+fmt(anomalies.length,0)+"; graves: "+fmt(criticalAnomalies,0)+". Errores JavaScript: "+runtimeErrors+". Cero errores de código no descarta fallos visuales, físicos o de navegación."
     ]);
     $("wbReportMetrics").innerHTML =
-      metricCard("FPS medios",fmt(avgFps,1),"Mínimo: "+fmt(minFps,0)+" FPS")+
-      metricCard("FPS mínimos",fmt(minFps,0),"Peor lectura de la sesión")+
-      metricCard("Estabilidad p95",p95===null?"Sin medir":fmt(p95,1)+" ms","Presupuesto a 60 FPS: 16,7 ms")+
-      metricCard("Mallas de escena",meshLast===null?"—":fmt(meshLast,0),vertexMax===null?"Vértices sin medir":"Hasta "+fmt(vertexMax/1e6,2)+" millones de vértices")+
-      metricCard("Memoria JavaScript",memory.jsHeapUsedMedianMB===undefined?"—":fmt(memory.jsHeapUsedMedianMB,1)+" MiB","Máximo: "+fmt(memory.jsHeapUsedMaximumMB,1)+" MiB");
+      metricCard("FPS medios",fmt(avgFps,1),"Media de toda la partida")+
+      metricCard("FPS mínimos",fmt(minFps,0),"Peor lectura registrada")+
+      metricCard("Fluidez",p95===null?"Sin medir":fmt(p95,1)+" ms","Tiempo de fotograma p95");
     $("wbReportState").innerHTML = '<strong>'+esc(sourceLabel||"Informe local")+'</strong><span>'+esc(niceDate(report.startedAt))+' · '+esc(report.gameBuild||"versión desconocida")+' · '+esc(status)+'</span>';
-    $("wbReportMeta").textContent = "Sesión "+String(report.sessionId||"").slice(0,12)+" · "+fmt(samples.length,0)+" lecturas · "+reason;
+    $("wbReportMeta").textContent = "Partida "+esc(niceDate(report.startedAt))+" · "+fmt(samples.length,0)+" mediciones guardadas.";
+    const quickTitle = avgFps===null ? "No hay mediciones suficientes" :
+      avgFps<15 ? "La partida fue muy lenta" :
+      avgFps<25 ? "La partida perdió mucha fluidez" :
+      avgFps<45 ? "La partida tuvo algunos tirones" : "La partida mantuvo una buena fluidez";
+    const quickLines = [];
+    quickLines.push(avgFps===null ? "No se pudo calcular la media de FPS." : "Media de "+fmt(avgFps,1)+" FPS y mínimo de "+fmt(minFps,0)+" FPS.");
+    if(hasDayNightComparison && dayAverage!==null && nightAverage!==null){
+      quickLines.push("De día: "+fmt(dayAverage,1)+" FPS. De noche: "+fmt(nightAverage,1)+" FPS."+(nightDropPercent!==null&&nightDropPercent>10?" La caída nocturna fue del "+fmt(nightDropPercent,0)+"%.":""));
+    }else{
+      quickLines.push("Aún no hay suficientes mediciones separadas entre día y noche.");
+    }
+    const dialogueEvidence = summary.npcDialogue || {};
+    if(Number(dialogueEvidence.sampleCount)>0){
+      quickLines.push("Diálogos: "+fmt(dialogueEvidence.bubblesStarted,0)+" intervenciones iniciadas, "+fmt(dialogueEvidence.projectionSuccesses,0)+" colocaciones visuales correctas y hasta "+fmt(dialogueEvidence.nearbyMaximum,0)+" personajes cercanos.");
+    }else{
+      quickLines.push("No hay todavía mediciones del sistema de diálogos en esta partida.");
+    }
+    if(runtimeErrors>0)quickLines.push("Se registraron "+fmt(runtimeErrors,0)+" errores durante la partida.");
+    if(anomalies.length>0)quickLines.push("Se detectaron "+fmt(anomalies.length,0)+" avisos de rendimiento.");
+    $("wbQuickReadTitle").textContent = quickTitle;
+    $("wbQuickReadBody").textContent = quickLines.join(" ");
     $("wbReportActions").innerHTML = [
       noGpu ? reportFinding("critical","Medir la GPU en una ejecución controlada","No hay tiempos GPU en este informe. Repetir una ruta idéntica con el perfilador Babylon activado; no cambiar la calidad gráfica.") : "",
       preStartTasks.length ? reportFinding("critical","Separar el bloqueo de arranque","Antes de empezar a medir hubo "+preStartTasks.length+" tareas largas que suman "+fmt(preStartDuration,0)+" ms; la mayor duró "+fmt(preStartMax,0)+" ms. Auditar carga inicial, texturas, GLB y compilación de shaders.") : "",
@@ -788,12 +827,32 @@
 
   function bindReportActions() {
     $("wbReportRefresh").addEventListener("click",loadReport);
-    $("wbReportExport").addEventListener("click",()=>{
+    const exportLatestReport=()=>{
       if(!latestReport)return;
       const blob=new Blob([JSON.stringify(latestReport,null,2)],{type:"application/json"});
       const url=URL.createObjectURL(blob),link=document.createElement("a");
       link.href=url;link.download="el-sin-nombre-informe-"+(latestReport.gameBuild||"partida")+".json";
       document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+    };
+    $("wbReportExport").addEventListener("click",exportLatestReport);
+    $("wbReportExportFull").addEventListener("click",exportLatestReport);
+    $("wbReportCopy").addEventListener("click",async()=>{
+      if(!latestReport)return;
+      const json=JSON.stringify(latestReport,null,2);
+      try{
+        if(navigator.clipboard&&typeof navigator.clipboard.writeText==="function"){
+          await navigator.clipboard.writeText(json);
+        }else{
+          const area=document.createElement("textarea");area.value=json;
+          area.setAttribute("readonly","");area.style.position="fixed";area.style.opacity="0";
+          document.body.appendChild(area);area.select();
+          const copied=document.execCommand("copy");area.remove();
+          if(!copied)throw new Error("El navegador no permitió copiar el informe.");
+        }
+        $("wbReportState").textContent="Informe completo copiado. Pégalo en tu conversación con ChatGPT.";
+      }catch(error){
+        $("wbReportState").textContent="No se pudo copiar el informe. Usa «Descargar informe» para guardarlo.";
+      }
     });
     $("wbReportImport").addEventListener("change",async event=>{
       const file=event.target.files&&event.target.files[0];

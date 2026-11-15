@@ -262,6 +262,46 @@
     const rawFrame = runtime.frameTimingMs && typeof runtime.frameTimingMs === "object" ? runtime.frameTimingMs : {};
     const browserMemory = window.performance && window.performance.memory && typeof window.performance.memory === "object"
       ? window.performance.memory : null;
+    let atmosphere = null;
+    try {
+      const liveAtmosphere = window.__ELSN_ATMOSPHERE;
+      if (liveAtmosphere && typeof liveAtmosphere.getState === "function") {
+        const state = liveAtmosphere.getState();
+        atmosphere = {
+          timeOfDay: number(state.timeOfDay),
+          night: number(state.night),
+          daylight: number(state.daylight),
+          twilight: number(state.twilight),
+          weather: text(state.weather, 24),
+          quality: text(state.quality, 24),
+          shadowMode: text(state.shadowMode, 24),
+          visualUpdateIntervalMs: number(state.visualUpdateIntervalMs)
+        };
+      }
+    } catch (_) {}
+    let npcDialogue = null;
+    try {
+      const dialogueRuntime = window.__ELSN_NPC_DIALOGUES__;
+      if (dialogueRuntime && typeof dialogueRuntime.getSnapshot === "function") {
+        const state = dialogueRuntime.getSnapshot();
+        npcDialogue = {
+          bridgeReady: state.bridgeReady === true,
+          active: state.active === true,
+          bridgeActive: state.bridgeActive === true,
+          worldPeopleCount: number(state.worldPeopleCount),
+          nearbyCount: number(state.nearbyCount),
+          bubblesStarted: number(state.bubblesStarted),
+          projectionAttempts: number(state.projectionAttempts),
+          projectionSuccesses: number(state.projectionSuccesses),
+          renderedBubbleCount: number(state.renderedBubbleCount),
+          activeBubbleCount: number(state.activeBubbleCount),
+          lastError: text(state.lastError, 220),
+          projectionFailures: state.projectionFailures && typeof state.projectionFailures === "object"
+            ? Object.fromEntries(Object.entries(state.projectionFailures).slice(0, 12).map(([key,value])=>[text(key,64),number(value)]))
+            : {}
+        };
+      }
+    } catch (_) {}
     const sample = {
       capturedAt: new Date().toISOString(),
       targetFps: number(runtime.performanceAssessment && runtime.performanceAssessment.targetFps),
@@ -351,6 +391,8 @@
         grassBatches: number(runtime.grassBatches),
         activeWorldShadowCasters: number(runtime.activeWorldShadowCasters)
       },
+      atmosphere,
+      npcDialogue,
       playerPosition: readPlayerLocation(health),
       waterDiagnostics: readWaterDiagnostics()
     };
@@ -626,6 +668,35 @@
       { name: "GPU", value: medianGpu, source: "Babylon EngineInstrumentation" }
     ].filter(item => item.value !== null).sort((a, b) => b.value - a.value);
     const targetFps = percentile(values(sample => sample.targetFps), .5) || 60;
+    const lightingGroup = night => {
+      const selected = samples.filter(sample => sample.atmosphere &&
+        Number.isFinite(Number(sample.atmosphere.night)) &&
+        (Number(sample.atmosphere.night) >= 0.55) === night);
+      const groupFps = selected.map(sample => number(sample.fps)).filter(value => value !== null);
+      const groupP95 = selected.map(sample => number(sample.frameTiming && sample.frameTiming.p95Ms)).filter(value => value !== null);
+      return {
+        sampleCount: selected.length,
+        fpsAverage: groupFps.length ? Number((groupFps.reduce((sum,value)=>sum+value,0)/groupFps.length).toFixed(2)) : null,
+        fpsMinimum: groupFps.length ? Math.min(...groupFps) : null,
+        p95MedianMs: percentile(groupP95,0.5),
+        timeOfDayRange: selected.length ? {
+          first: number(selected[0].atmosphere.timeOfDay),
+          last: number(selected[selected.length-1].atmosphere.timeOfDay)
+        } : null
+      };
+    };
+    const lightingConditions = { day: lightingGroup(false), night: lightingGroup(true) };
+    const dialogueSamples = samples.map(sample=>sample.npcDialogue).filter(Boolean);
+    const latestDialogue = dialogueSamples.length ? dialogueSamples[dialogueSamples.length-1] : null;
+    const dialogueSummary = {
+      sampleCount: dialogueSamples.length,
+      peopleObservedMaximum: dialogueSamples.length ? Math.max(...dialogueSamples.map(x=>number(x.worldPeopleCount)||0)) : null,
+      nearbyMaximum: dialogueSamples.length ? Math.max(...dialogueSamples.map(x=>number(x.nearbyCount)||0)) : null,
+      bubblesStarted: dialogueSamples.length ? Math.max(...dialogueSamples.map(x=>number(x.bubblesStarted)||0)) : null,
+      projectionAttempts: dialogueSamples.reduce((sum,x)=>sum+(number(x.projectionAttempts)||0),0),
+      projectionSuccesses: dialogueSamples.reduce((sum,x)=>sum+(number(x.projectionSuccesses)||0),0),
+      latest: latestDialogue
+    };
     const expectedSamples = session.startedAt && session.finishedAt
       ? Math.max(1, Math.floor((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / SAMPLE_INTERVAL_MS) + 1)
       : null;
@@ -635,6 +706,8 @@
         ? Math.max(0, Math.round((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / 1000)) : null,
       targetFps,
       fps: { minimum: fps.length ? Math.min(...fps) : null, average: fps.length ? Number((fps.reduce((sum, value) => sum + value, 0) / fps.length).toFixed(2)) : null, median: median(fps), p10: percentile(fps, .1) },
+      lightingConditions,
+      npcDialogue: dialogueSummary,
       frameTimeMs: {
         p95Median: median(p95),
         p99Median: median(p99),

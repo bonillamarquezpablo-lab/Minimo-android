@@ -37,11 +37,11 @@
   function computeLightingProfile(state, target) {
     const profile = target || {};
     // Preserve the dark Nordic sky while lifting terrain and character readability.
-    profile.hemisphereIntensity = 0.24 + 0.72 * state.daylight + 0.16 * state.twilight + 0.04 * state.night;
+    profile.hemisphereIntensity = 0.30 + 0.72 * state.daylight + 0.16 * state.twilight + 0.06 * state.night;
     profile.moonIntensity = 0.20 * state.night;
-    profile.environmentIntensity = 0.16 + 0.42 * state.daylight + 0.12 * state.twilight + 0.045 * state.night;
-    profile.exposure = 1.00 + 0.08 * state.daylight + 0.12 * state.twilight + 0.06 * state.night;
-    profile.contrast = mix(1.06, 1.00, state.night);
+    profile.environmentIntensity = 0.20 + 0.42 * state.daylight + 0.12 * state.twilight + 0.065 * state.night;
+    profile.exposure = 1.02 + 0.08 * state.daylight + 0.12 * state.twilight + 0.10 * state.night;
+    profile.contrast = mix(1.045, 1.00, state.night);
     return profile;
   }
 
@@ -181,6 +181,12 @@
       this.ssaoPipeline = null;
       this.ssrPipeline = null;
       this.firePool = [];
+      // The solar clock keeps advancing every frame; expensive material/light writes are
+      // coalesced to a stable cadence. This keeps night effects without per-frame overhead.
+      this._visualUpdateAccumulator = 0;
+      this._visualUpdateInterval = this.isTouchDevice
+        ? (this.quality === 'mobile-high' ? 1 / 24 : (this.quality === 'medium' ? 1 / 15 : 1 / 12))
+        : 1 / 30;
       this.disposed = false;
       // Reuse frame-hot vectors and colours to avoid per-frame garbage collection.
       this._solarState = { sunDirection: { x: 0, y: 0, z: 0 } };
@@ -280,7 +286,8 @@
         shadowMode: this.shadowMode || 'standard',
         godRays: !!this.godRays,
         ssao: !!this.ssaoPipeline,
-        ssr: !!this.ssrPipeline
+        ssr: !!this.ssrPipeline,
+        visualUpdateIntervalMs: Number((this._visualUpdateInterval * 1000).toFixed(2))
       };
     }
 
@@ -624,6 +631,12 @@
           this.timeOfDay, delta * this.speed, this.dayDurationSeconds, 1);
         this.elapsedSeconds = AtmosphereSystem.advanceElapsed(this.elapsedSeconds, delta, this.speed);
       }
+      this._visualUpdateAccumulator += delta;
+      if (force !== true && this._visualUpdateAccumulator < this._visualUpdateInterval) {
+        return this.lastState ? this.getState() : null;
+      }
+      this._visualUpdateAccumulator = force === true ? 0 :
+        this._visualUpdateAccumulator % this._visualUpdateInterval;
       const B = this.B;
       const state = computeSolarState(this.timeOfDay, this._solarState);
       const lighting = computeLightingProfile(state, this._lightingProfile);

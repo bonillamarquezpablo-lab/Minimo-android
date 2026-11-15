@@ -12,11 +12,11 @@ if(!Core||!Bridge||typeof Bridge.getSnapshot!=="function"){
  return;
 }
 const MAX_BUBBLES=Core.MAX_VISIBLE_BUBBLES,RANGE=Core.MAX_RANGE_METERS,slots=[],metadata=new Map(),pending=[];
-const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,worldPeopleCount:0,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},lastError:""};
+const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,worldPeopleCount:0,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:""};
 let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projectionIdentity=null,projectionScratch=null;
 const RANGE_SQUARED=RANGE*RANGE;
-const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.zIndex="2147483000";layer.dataset.maxBubbles=String(MAX_BUBBLES);document.body.appendChild(layer);
-function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null};}
+const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="2147483000";layer.dataset.maxBubbles=String(MAX_BUBBLES);document.body.appendChild(layer);
+function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;node.style.position="fixed";node.style.left="0";node.style.top="0";node.style.margin="0";node.style.pointerEvents="none";node.style.zIndex=String(2147483001+index);const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null};}
 for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i));
 const random=()=>Math.random(),between=(a,b)=>a+random()*(b-a);
 function rootOf(n){return n&&(n.parts&&n.parts.root||n.root||n.actor||n);}
@@ -25,8 +25,9 @@ function worldPosition(node){if(!node)return null;try{const p=typeof node.getAbs
 function distance(a,b){return a&&b?Math.hypot(Number(a.x)-Number(b.x),Number(a.z)-Number(b.z)):Infinity;}
 function distanceSquared(a,b){if(!a||!b)return Infinity;const dx=Number(a.x)-Number(b.x),dz=Number(a.z)-Number(b.z);return dx*dx+dz*dz;}
 function enabled(n){const r=rootOf(n);if(!r)return false;try{return (typeof r.isEnabled!=="function"||r.isEnabled())&&r.isVisible!==false&&r.visibility!==0;}catch(_){return false;}}
-function blockingUi(){if(document.body.classList.contains("map-open"))return true;const intro=document.getElementById("intro");return!!(intro&&intro.classList.contains("open"));}
-function snapshot(){try{return Bridge.getSnapshot();}catch(error){console.warn("NPC dialogue snapshot:",error);return null;}}
+function refreshProjectionMatrices(s){if(!s||!s.scene)return;try{if(typeof s.scene.updateTransformMatrix==="function")s.scene.updateTransformMatrix(true);else if(s.camera){if(typeof s.camera.getViewMatrix==="function")s.camera.getViewMatrix(true);if(typeof s.camera.getProjectionMatrix==="function")s.camera.getProjectionMatrix(true);}}catch(error){diagnostics.lastError=String(error&&error.message||error);}}
+function blockingUi(){if(document.body.classList.contains("map-open"))return true;const intro=document.getElementById("intro");return!!(intro&&intro.classList.contains("open")&&intro.getAttribute("aria-hidden")!=="true");}
+function snapshot(){try{const value=Bridge.getSnapshot();diagnostics.bridgeError="";diagnostics.bridgeReportedActive=!!(value&&value.active);return value;}catch(error){diagnostics.snapshotFailures++;diagnostics.bridgeError=String(error&&error.message||error);diagnostics.lastError=diagnostics.bridgeError;console.warn("NPC dialogue snapshot:",error);return null;}}
 function nearbyPeople(s){
  diagnostics.worldPeopleCount=Array.isArray(s&&s.people)?s.people.length:0;
  if(!s||!s.active||!s.playerPosition||!Number.isFinite(Number(s.playerPosition.x))||!Number.isFinite(Number(s.playerPosition.z))||!Array.isArray(s.people)){diagnostics.nearbyCount=0;return[];}
@@ -42,15 +43,66 @@ function nearbyPeople(s){
  diagnostics.nearbyCount=result.length;
  return result;
 }
-function stateFor(id,now){let s=metadata.get(id);if(!s){s={nextAt:now+between(1200,2800),lastSpokeAt:0};metadata.set(id,s);}return s;}
+function stateFor(id,now){let s=metadata.get(id);if(!s){s={nextAt:now+between(700,1500),lastSpokeAt:0,recentTopics:[],recentTexts:[] };metadata.set(id,s);}return s;}
 function slotFor(id){return slots.find(s=>s.current&&s.current.id===id)||slots.find(s=>!s.current);}
-function startBubble(npc,content,now,duration){const id=idOf(npc);if(!id||!content||!content.text)return false;const slot=slotFor(id);if(!slot)return false;const kind=["thought","speech","action"].includes(content.kind)?content.kind:"speech";slot.current={id,npc,kind,expiresAt:now+(duration||3900)};slot.role.textContent=String(content.roleName||"Habitante").slice(0,24);slot.kind.textContent=kind==="thought"?"PIENSA":kind==="action"?"HACE":"DICE";slot.message.textContent=String(content.text).slice(0,120);slot.node.dataset.kind=kind;slot.node.hidden=false;slot.node.classList.remove("is-visible");void slot.node.offsetWidth;slot.node.classList.add("is-visible");diagnostics.bubblesStarted++;return true;}
+function startBubble(npc,content,now,duration){const id=idOf(npc);if(!id||!content||!content.text)return false;const slot=slotFor(id);if(!slot)return false;const kind=["thought","speech","action"].includes(content.kind)?content.kind:"speech";slot.current={id,npc,kind,expiresAt:now+(duration||3900)};slot.role.textContent=String(content.roleName||"Habitante").slice(0,24);slot.kind.textContent=kind==="thought"?"PIENSA":kind==="action"?"HACE":"DICE";slot.message.textContent=String(content.text).slice(0,120);slot.node.dataset.kind=kind;slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");slot.node.classList.remove("is-visible");void slot.node.offsetWidth;slot.node.classList.add("is-visible");diagnostics.bubblesStarted++;return true;}
 function clearSlot(slot){slot.current=null;slot.node.classList.remove("is-visible");slot.node.hidden=true;slot.node.style.transform="";}
 function expire(now){for(const slot of slots)if(slot.current&&slot.current.expiresAt<=now)clearSlot(slot);}
 function partnerFor(item,nearby){let best=null,bestDistance=7.5;for(const candidate of nearby){if(candidate.id===item.id||candidate.npc.villageIndex!==item.npc.villageIndex)continue;if(slots.some(s=>s.current&&s.current.id===candidate.id))continue;const d=distance(item.position,candidate.position);if(d<bestDistance){best=candidate;bestDistance=d;}}return best;}
 function queueReply(npc,content,dueAt){pending.push({npc,content,dueAt});if(pending.length>4)pending.shift();}
-function processPending(now,ids){for(let i=0;i<pending.length;){const entry=pending[i];if(entry.dueAt>now){i++;continue;}pending.splice(i,1);if(!ids.has(idOf(entry.npc)))continue;startBubble(entry.npc,entry.content,now,3900);break;}}
-function schedule(now,nearby){const selected=Core.selectVisibleBubbles(nearby.map(x=>({item:x,distance:x.distance,priority:x.distance<7?2:1,visible:true})),MAX_BUBBLES).map(x=>x.item);const due=selected.filter(x=>stateFor(x.id,now).nextAt<=now&&!slots.some(s=>s.current&&s.current.id===x.id));if(!due.length)return;due.sort((a,b)=>a.distance-b.distance);const chosen=due[Math.floor(random()*Math.min(due.length,3))],state=stateFor(chosen.id,now),context={isWalking:Number(chosen.npc.parts&&chosen.npc.parts.actualMoveSpeed)>.08,playerClose:chosen.distance<7};const partner=partnerFor(chosen,nearby);if(partner&&random()<.38){const exchange=Core.chooseExchange(chosen.npc,partner.npc,random);if(startBubble(chosen.npc,exchange[0],now,4300)){queueReply(partner.npc,exchange[1],now+1450);const other=stateFor(partner.id,now);other.nextAt=now+between(18000,26000);state.nextAt=now+between(19000,28000);state.lastSpokeAt=now;other.lastSpokeAt=now;return;}}if(startBubble(chosen.npc,Core.chooseAmbientMessage(chosen.npc,context,random),now,3900)){state.lastSpokeAt=now;state.nextAt=now+between(10000,16000);}else state.nextAt=now+3500;}
+function processPending(now,ids){for(let i=0;i<pending.length;){const entry=pending[i];if(entry.dueAt>now){i++;continue;}pending.splice(i,1);if(!ids.has(idOf(entry.npc)))continue;startBubble(entry.npc,entry.content,now,4300);break;}}
+function remember(state,content){if(!content)return;if(content.topic){state.recentTopics.push(content.topic);if(state.recentTopics.length>3)state.recentTopics.shift();}if(content.text){state.recentTexts.push(content.text);if(state.recentTexts.length>5)state.recentTexts.shift();}}
+function isProjectable(npc,s){
+ const id=idOf(npc);
+ const reject=reason=>{diagnostics.projectionCandidateFailures[reason]=(diagnostics.projectionCandidateFailures[reason]||0)+1;diagnostics.lastProjectionCandidate={id,reason};return false;};
+ if(!npc||!s||!s.scene||!s.engine||!s.camera||!s.canvas||!enabled(npc))return reject("missing-scene-camera-canvas-or-disabled-npc");
+ const root=rootOf(npc),rootPos=worldPosition(root);
+ if(!rootPos||distance(rootPos,s.playerPosition)>RANGE)return reject("missing-root-or-outside-range");
+ const BABYLON=s.BABYLON||window.BABYLON;
+ if(!BABYLON||!BABYLON.Vector3||!BABYLON.Matrix)return reject("babylon-project-unavailable");
+ try{
+  const anchor=npc.parts&&npc.parts.head&&typeof npc.parts.head.getAbsolutePosition==="function"?npc.parts.head:root;
+  const ap=worldPosition(anchor);if(!ap)return reject("head-anchor-unavailable");
+  if(!projectionIdentity)projectionIdentity=BABYLON.Matrix.Identity();
+  if(!projectionScratch)projectionScratch=new BABYLON.Vector3(0,0,0);
+  const world=projectionScratch.copyFrom(ap);world.y+=anchor===root?2.12:.48;
+  const width=s.engine.getRenderWidth(),height=s.engine.getRenderHeight(),rect=s.canvas.getBoundingClientRect();
+  if(!(width>0&&height>0&&rect.width>0&&rect.height>0))return reject("zero-rendering-viewport");
+  const viewport=s.camera.viewport&&typeof s.camera.viewport.toGlobal==="function"?s.camera.viewport.toGlobal(width,height):{x:0,y:0,width,height};
+  const transform=s.scene.getTransformMatrix();
+  const p=BABYLON.Vector3.Project(world,projectionIdentity,transform,viewport);
+  if(!p||![p.x,p.y,p.z].every(Number.isFinite))return reject("invalid-projected-point");
+  diagnostics.lastProjectionCandidate={id,x:Number(p.x.toFixed(2)),y:Number(p.y.toFixed(2)),z:Number(p.z.toFixed(4)),viewport:{x:viewport.x,y:viewport.y,width:viewport.width,height:viewport.height},render:{width,height},css:{width:rect.width,height:rect.height}};
+  if(!(p.z>0&&p.z<1))return reject("outside-depth");
+  if(p.x<viewport.x||p.x>viewport.x+viewport.width)return reject("outside-horizontal-frustum");
+  if(p.y<viewport.y||p.y>viewport.y+viewport.height)return reject("outside-vertical-frustum");
+  return true;
+ }catch(error){diagnostics.lastError=String(error&&error.message||error);return reject("projection-exception");}
+}
+function schedule(now,nearby,s){
+ refreshProjectionMatrices(s);
+ const world=s&&s.world||{},inView=nearby.filter(x=>isProjectable(x.npc,s)),selected=Core.selectVisibleBubbles(inView.map(x=>({item:x,distance:x.distance,priority:x.distance<7?3:(x.distance<14?2:1),visible:true})),MAX_BUBBLES).map(x=>x.item);
+ const due=selected.filter(x=>stateFor(x.id,now).nextAt<=now&&!slots.some(slot=>slot.current&&slot.current.id===x.id));
+ if(!due.length)return;
+ due.sort((a,b)=>a.distance-b.distance);
+ const chosen=due[Math.floor(random()*Math.min(due.length,3))],state=stateFor(chosen.id,now);
+ const context={isWalking:Number(chosen.npc.parts&&chosen.npc.parts.actualMoveSpeed)>.08,playerClose:chosen.distance<8,night:world.night===true,onShip:world.onShip===true,enemyNearby:world.enemyNearby===true,healthLow:world.healthLow===true,wood:world.wood,stone:world.stone,recentCapture:world.recentCapture===true};
+ const partner=partnerFor(chosen,nearby);
+ if(partner&&random()<.42){
+  const exchange=Core.chooseExchange(chosen.npc,partner.npc,random,context);
+  if(startBubble(chosen.npc,exchange[0],now,4600)){
+   remember(state,exchange[0]);queueReply(partner.npc,exchange[1],now+1350);
+   const other=stateFor(partner.id,now);remember(other,exchange[1]);
+   other.nextAt=now+between(14000,21000);state.nextAt=now+between(9000,13000);
+   state.lastSpokeAt=now;other.lastSpokeAt=now;return;
+  }
+ }
+ const content=Core.chooseAmbientMessage(chosen.npc,context,random,state);
+ if(startBubble(chosen.npc,content,now,4300)){
+  remember(state,content);state.lastSpokeAt=now;
+  state.nextAt=now+between(5600,9000);
+ }else state.nextAt=now+2400;
+}
 function project(slot,s){
  const c=slot.current;
  const hide=reason=>{diagnostics.projectionFailures[reason]=(diagnostics.projectionFailures[reason]||0)+1;slot.node.hidden=true;return false;};
@@ -76,11 +128,11 @@ function project(slot,s){
   if(p.x<viewport.x||p.x>viewport.x+viewport.width||p.y<viewport.y||p.y>viewport.y+viewport.height)return hide("outside-screen");
   const x=rect.left+p.x*(rect.width/width),y=rect.top+p.y*(rect.height/height),stack=slots.indexOf(slot)*9;
   slot.node.style.transform="translate3d("+x.toFixed(1)+"px,"+(y-12-stack).toFixed(1)+"px,0) translate(-50%,-100%)";
-  slot.node.hidden=false;diagnostics.projectionSuccesses++;return true;
+  slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");diagnostics.projectionSuccesses++;return true;
  }catch(error){diagnostics.lastError=String(error&&error.message||error);return hide("projection-exception");}
 }
-function render(s){const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;return;}for(const slot of slots){if(slot.current)project(slot,s);else slot.node.hidden=true;}renderedCount=slots.filter(slot=>slot.current&&!slot.node.hidden).length;}
-function schedulerTick(){const now=Date.now(),s=snapshot();diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}expire(now);const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));processPending(now,ids);schedule(now,nearby);render(s);}
+function render(s){refreshProjectionMatrices(s);const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;layer.setAttribute("aria-hidden",String(!active));if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;return;}for(const slot of slots){if(slot.current)project(slot,s);else slot.node.hidden=true;}renderedCount=slots.filter(slot=>slot.current&&!slot.node.hidden).length;}
+function schedulerTick(){const now=Date.now(),s=snapshot();diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}expire(now);const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));processPending(now,ids);schedule(now,nearby,s);render(s);}
 function positionTick(){render(snapshot());}
 function start(){if(schedulerHandle||positionHandle)return;schedulerHandle=window.setInterval(()=>{try{schedulerTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC dialogue scheduler recovered:",e);}},Core.SCHEDULER_INTERVAL_MS);positionHandle=window.setInterval(()=>{try{positionTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC bubble projection recovered:",e);}},Core.POSITION_UPDATE_MS);}
 start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,active:!!lastActive,maxVisibleBubbles:MAX_BUBBLES,activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
