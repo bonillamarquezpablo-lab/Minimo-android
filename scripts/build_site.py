@@ -783,7 +783,7 @@ def main() -> None:
    return {
     active:!!gameStarted,
     playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
-    people:ambientPeople.concat(campGuards.filter(guard=>guard&&guard.alive!==false)),scene,camera:scene.activeCamera||camera,
+    people:ambientPeople.concat(campGuards.filter(guard=>guard&&guard.alive!==false)),scene,engine,camera:scene.activeCamera||camera,
     canvas:engine.getRenderingCanvas(),BABYLON:B
    };
   }
