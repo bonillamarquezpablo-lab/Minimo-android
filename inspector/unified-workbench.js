@@ -89,6 +89,20 @@
           <p>Se distinguirán las mediciones ausentes de los valores cero.</p>
         </article>
       </div>
+      <section class="wb-report-card">
+        <div class="wb-card-eyebrow">ANÁLISIS CRUZADO</div><h3>Relaciones entre posibles causas</h3>
+        <div id="wbReportCorrelations" class="wb-action-list"><p>Esperando mediciones.</p></div>
+      </section>
+      <div class="wb-report-columns">
+        <section class="wb-report-card" id="wbReportWorld">
+          <div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D</div><h3>Geometría, físicas y objetos</h3>
+          <p>El inventario de la escena se incorporará al informe final cuando la partida termine normalmente.</p>
+        </section>
+        <section class="wb-report-card" id="wbReportComparison">
+          <div class="wb-card-eyebrow">EVOLUCIÓN ENTRE PARTIDAS</div><h3>Comparación con la sesión anterior</h3>
+          <p>Se necesitan dos informes completos del mismo navegador para comparar.</p>
+        </section>
+      </div>
       <div class="wb-report-columns">
         <section class="wb-report-card">
           <div class="wb-card-eyebrow">PLAN DE REPARACIÓN</div><h3>Qué debemos revisar primero</h3>
@@ -268,7 +282,111 @@
     return '<article class="wb-action-item wb-'+severity+'"><span class="wb-action-label">'+label+'</span><div><strong>'+esc(title)+'</strong><p>'+esc(body)+'</p></div></article>';
   }
 
-  function renderReport(report,sourceLabel) {
+  function renderWorldEvidence(world) {
+    const host = $("wbReportWorld");
+    if (!host) return;
+    if (!world) {
+      host.innerHTML = '<div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D</div><h3>Inspección final no disponible</h3><p>La partida no guardó una captura final del mundo. No se puede concluir que las mallas, objetos o colisiones estén correctos.</p>';
+      return;
+    }
+    if (world.error) {
+      host.innerHTML = '<div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D</div><h3>No se pudo capturar la escena</h3><p>'+esc(world.error)+'</p>';
+      return;
+    }
+    const meshes = world.meshes || {};
+    const terrain = world.terrainObjects || {};
+    const collisions = world.collisions || {};
+    const structures = world.structureAudit || {};
+    const textures = world.textures || {};
+    const buried = finite(terrain.fullyBuriedCount) ?? 0;
+    const penetrating = finite(terrain.penetratingCount) ?? 0;
+    const invalidTransforms = finite(meshes.invalidTransformCount) ?? 0;
+    const invalidColliders = finite(collisions.invalidPositionCount) ?? 0;
+    const unsafeVisible = finite(structures.visibleInvalidAfterRepair) ?? finite(structures.unsafeVisibleBeforeRepair);
+    const largest = Array.isArray(meshes.largestVisibleMeshes) ? meshes.largestVisibleMeshes.slice(0,5) : [];
+    const actorGroups = Object.entries(world.actors || {}).filter(([,group])=>group && typeof group==="object");
+    const actorTotal = actorGroups.reduce((sum,[,group])=>sum+(finite(group.count)??(group.returned?.length||0)),0);
+    const texturePending = finite(textures.pendingCount);
+    const rows = [
+      ["Mallas inventariadas",fmt(meshes.count,0)+(meshes.truncated>0?" · inventario parcial":"")],
+      ["Objetos enterrados",fmt(buried,0)],
+      ["Objetos que penetran el terreno",fmt(penetrating,0)],
+      ["Transformaciones inválidas",fmt(invalidTransforms,0)],
+      ["Colisionadores con posición inválida",fmt(invalidColliders,0)],
+      ["Estructuras inseguras visibles",fmt(unsafeVisible,0)],
+      ["Texturas pendientes",texturePending===null?"Sin medir":fmt(texturePending,0)],
+      ["Actores registrados",fmt(actorTotal,0)]
+    ];
+    const rowHtml=rows.map(([label,value])=>'<div class="wb-evidence-row"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>').join("");
+    const largestHtml=largest.length?'<div class="wb-evidence-subtitle">Mallas visibles con más vértices (no implica que estén defectuosas)</div>'+largest.map(item=>'<div class="wb-evidence-row"><span>'+esc(item.name||"Malla sin nombre")+' · '+esc(item.material||"sin material")+'</span><strong>'+esc(fmt(item.vertices,0))+' vértices</strong></div>').join(""):'<p>No hay inventario de mallas detallado en este informe.</p>';
+    const caveat = world.dataQuality && world.dataQuality.fullMeshInventory===false
+      ? "El inventario de mallas está truncado o incompleto; los recuentos no representan toda la escena."
+      : "Lectura de solo inspección: no mueve, oculta ni elimina objetos.";
+    host.innerHTML='<div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D · '+esc(world.source||"Babylon.js")+'</div><h3>Geometría, físicas y objetos</h3>'+
+      '<div class="wb-evidence-list">'+rowHtml+'</div>'+largestHtml+
+      '<p>'+esc(caveat)+'</p>';
+  }
+
+  function reportComparison(current, previous) {
+    const host=$("wbReportComparison");
+    if(!host)return;
+    if(!previous){
+      host.innerHTML='<div class="wb-card-eyebrow">EVOLUCIÓN ENTRE PARTIDAS</div><h3>Sin sesión anterior</h3><p>Cuando haya dos partidas guardadas, se compararán fluidez, tiempos de fotograma, mallas, memoria y errores. No se mezclan datos de dispositivos o builds distintos sin indicarlo.</p>';
+      return;
+    }
+    const metrics=report=>{
+      const samples=Array.isArray(report.samples)?report.samples:[];
+      const summary=report.summary||{};
+      const fps=summary.fps||{};
+      const frame=summary.frameTimeMs||{};
+      const fpsValues=valuesAt(samples,"fps");
+      return {
+        average:finite(fps.average)??(fpsValues.length?fpsValues.reduce((a,b)=>a+b,0)/fpsValues.length:null),
+        minimum:finite(fps.minimum)??(fpsValues.length?Math.min(...fpsValues):null),
+        p95:finite(frame.p95Median)??median(valuesAt(samples,"frameTiming.p95Ms")),
+        meshes:median(valuesAt(samples,"scene.meshCount")),
+        heap:finite((summary.memory||{}).jsHeapUsedMedianMB),
+        errors:Array.isArray(report.runtimeErrors)?report.runtimeErrors.length:0
+      };
+    };
+    const now=metrics(current),before=metrics(previous);
+    const comparable=current.gameBuild===previous.gameBuild;
+    const diff=(a,b,invert=false)=>a===null||b===null?"Sin datos":(a===b?"Sin cambio":((invert?(a<b):(a>b))?"Mejora":"Empeora")+" · "+fmt(Math.abs(a-b),1));
+    const rows=[
+      ["FPS medios",diff(now.average,before.average)],
+      ["FPS mínimos",diff(now.minimum,before.minimum)],
+      ["Frame time p95",diff(now.p95,before.p95,true)],
+      ["Mallas medias",diff(now.meshes,before.meshes,true)],
+      ["Memoria JavaScript",diff(now.heap,before.heap,true)],
+      ["Errores JavaScript",diff(now.errors,before.errors,true)]
+    ];
+    host.innerHTML='<div class="wb-card-eyebrow">EVOLUCIÓN ENTRE PARTIDAS</div><h3>'+(comparable?"Mismo build":"Builds diferentes")+'</h3>'+
+      '<p>Actual: '+esc(current.gameBuild||"desconocido")+' · Anterior: '+esc(previous.gameBuild||"desconocido")+'. '+(comparable?"Comparación orientativa de sesiones guardadas.":"La comparación se muestra con cautela porque cambió la versión del juego.")+'</p>'+
+      '<div class="wb-evidence-list">'+rows.map(([label,value])=>'<div class="wb-evidence-row"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>').join("")+'</div>';
+  }
+
+  function renderCorrelations(report, values) {
+    const host=$("wbReportCorrelations");
+    if(!host)return;
+    const {p95,renderCpu,worldCpu,gpuValues,grass,shadows,meshCounts,vertices}=values;
+    const items=[];
+    const poor=p95!==null&&p95>20;
+    if(poor&&renderCpu!==null&&renderCpu>8&&meshCounts.length&&vertices.length)
+      items.push(reportFinding("warning","Carga de escena y preparación de render coinciden","Hay tiempos altos de preparación CPU junto con una escena de geometría considerable. Medir selección de mallas, materiales y sombras por separado."));
+    if(poor&&worldCpu!==null&&worldCpu>8)
+      items.push(reportFinding("warning","La actualización del mundo puede estar contribuyendo","El tiempo de actualización CPU coincide con ventanas de baja fluidez. Revisar IA, físicas, navegación y sistemas de mundo sin desactivarlos."));
+    if(poor&&grass.length&&shadows.length)
+      items.push(reportFinding("warning","Vegetación y sombras merecen una prueba controlada","Se registran instancias de hierba y emisores de sombra durante la pérdida de fluidez. Comparar el coste de ambos subsistemas en una ruta idéntica; no asumir causalidad."));
+    if(poor&&gpuValues.length)
+      items.push(reportFinding("warning","Hay tiempo GPU medido durante la pérdida de fluidez","Contrastar el tiempo GPU con CPU y frame time para distinguir saturación de GPU de esperas del pipeline."));
+    if(poor&&!gpuValues.length)
+      items.push(reportFinding("critical","Falta evidencia para separar CPU y GPU","La sesión muestra inestabilidad, pero no hay tiempo GPU válido. Activar el perfilador opcional en una segunda sesión comparable."));
+    if(!items.length)
+      items.push(reportFinding("info","Sin correlaciones suficientes","Se necesitan muestras simultáneas y suficientes para relacionar carga gráfica, actualización del mundo y tiempos de fotograma."));
+    host.innerHTML=items.join("");
+  }
+
+  function renderReport(report,sourceLabel,previousReport=null) {
     latestReport = report;
     $("wbReportExport").disabled = false;
     const samples = Array.isArray(report.samples) ? report.samples : [];
@@ -371,6 +489,9 @@
       reportFinding(drawCallsUnverified?"warning":"info","Contador de llamadas de dibujo",drawCallsUnverified?"El campo drawCallsCounterSemantics indica que su significado no está clasificado o verificado. No se usa para decidir qué optimizar hasta calibrar el contador.":"El informe incluye una clasificación del contador; aun así se debe contrastar con el perfilador de Babylon.")
     ].join("");
     $("wbReportFindings").innerHTML = findings;
+    renderWorldEvidence(report.finalWorldInspection || null);
+    reportComparison(report,previousReport);
+    renderCorrelations(report,{p95,renderCpu,worldCpu,gpuValues,grass,shadows,meshCounts,vertices});
     $("wbReportJson").textContent = JSON.stringify(report,null,2);
     $("wbReportVerdict").insertAdjacentHTML("beforeend",sparkline(samples));
   }
@@ -408,7 +529,7 @@
         state.textContent="Todavía no hay informes guardados. Juega una partida para que el registrador cree el primero.";
         return;
       }
-      renderReport(reports[0],"Última partida guardada");
+      renderReport(reports[0],"Última partida guardada",reports[1]||null);
     } catch(error) {
       state.textContent="No se pudo leer el historial: "+String(error&&error.message||error);
     }
