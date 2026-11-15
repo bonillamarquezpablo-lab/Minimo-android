@@ -411,6 +411,13 @@
     sample.performanceAnomaly = { severity, signals };
     const anomalies = state.session.anomalies || (state.session.anomalies = []);
     const capturedAt = sample.capturedAt || new Date().toISOString();
+    const eventTime = Date.parse(capturedAt);
+    const relatedLongTasks = (state.session.longTasks || []).filter(item =>
+      Math.abs(Date.parse(item.capturedAt || "") - eventTime) <= 5000
+    ).slice(-8);
+    const relatedRuntimeErrors = (state.session.runtimeErrors || []).filter(item =>
+      Math.abs(Date.parse(item.capturedAt || "") - eventTime) <= 10000
+    ).slice(-8);
     const previous = anomalies[anomalies.length - 1];
     if (previous && Date.parse(capturedAt) - Date.parse(previous.lastSeenAt || previous.startedAt) <= 6500) {
       previous.lastSeenAt = capturedAt;
@@ -424,6 +431,12 @@
         ? fps : (fps === null ? previous.minimumFps : Math.min(previous.minimumFps, fps));
       previous.lastPlayerPosition = sample.playerPosition || previous.lastPlayerPosition || null;
       previous.lastScene = sample.scene || previous.lastScene || null;
+      previous.relatedLongTasks = Array.from(new Map(
+        [...(previous.relatedLongTasks || []), ...relatedLongTasks].map(item => [item.capturedAt, item])
+      ).values()).slice(-8);
+      previous.relatedRuntimeErrors = Array.from(new Map(
+        [...(previous.relatedRuntimeErrors || []), ...relatedRuntimeErrors].map(item => [item.capturedAt, item])
+      ).values()).slice(-8);
       return;
     }
     anomalies.push({
@@ -442,6 +455,9 @@
       gpu: sample.gpu || null,
       sceneTimings: sample.sceneTimings || null,
       subsystems: sample.subsystems || null,
+      waterDiagnostics: sample.waterDiagnostics || null,
+      relatedLongTasks,
+      relatedRuntimeErrors,
       playerPosition: sample.playerPosition || null,
       scene: sample.scene || null
     });
@@ -586,6 +602,7 @@
         worstFrameMax: frameMax.length ? Math.max(...frameMax) : null
       },
       stutterIntervalsOver33ms: p95.filter(value => value > 33.33).length,
+      stutterIntervalsOverBudget: p95.filter(value => value > 1000 / targetFps * 1.5).length,
       anomalyEvents: anomalies.length,
       criticalAnomalyEvents: criticalAnomalies,
       runtimeErrorCount: runtimeErrors.length,
