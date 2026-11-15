@@ -397,7 +397,7 @@
     const agents = report.agents.slice(0, 12).map(agent => {
       const issues = (Array.isArray(agent.issues) ? agent.issues : []).slice(0, 40).map(issue => {
         const textToMatch = [issue.title, issue.detail].map(value => String(value || "")).join(" ");
-        let match = structureRows.find(row => row && row.name && String(row.name).length > 8 &&
+        let match = structureRows.find(row => row && row.name && /[_-]\\d+$/.test(String(row.name)) &&
           textToMatch.includes(String(row.name)) &&
           (finiteMetric(issue.islandIndex) === null || finiteMetric(row.islandIndex) === finiteMetric(issue.islandIndex)));
         const measuredGapCm = /(\\d+(?:[.,]\\d+)?)\\s*cm/i.exec(textToMatch);
