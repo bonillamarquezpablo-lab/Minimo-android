@@ -171,10 +171,17 @@ const patrolFixture = {
       title: "Estructura insegura visible",
       detail: "IslandGarrisonOutpost_4 continúa visible según la auditoría.",
       severity: "critical", islandIndex: 4
+    }, {
+      title: "Estructura fuera de tolerancia de 2 cm",
+      detail: "Estructura presenta 39.8 cm de diferencia en una medición explícita de apoyo.",
+      severity: "critical", islandIndex: 0
     }],
     missing: ["No hay locomoción de NPC para recorrer rutas físicas."],
     readings: {
-      structures: [{ name: "IslandGarrisonOutpost_4", islandIndex: 4, x: 146, z: -132, measurements: { maximumAnchorErrorMeters: 0.0043 } }]
+      structures: [
+        { name: "IslandGarrisonOutpost_4", islandIndex: 4, x: 146, z: -132, measurements: { maximumAnchorErrorMeters: 0.0043 } },
+        { name: "Estructura", islandIndex: 0, x: 13.69, z: -4.35, gapMeters: 0.3982, measurements: { maximumFootingGapMeters: 0.3982 } }
+      ]
     }
   }, {
     name: "Eira", specialization: "Costa y pisadas", severity: "unknown",
@@ -191,6 +198,10 @@ const patrolUlf = patrolAnalysis.agents.find(agent => agent.name === "Ulf");
 assert.equal(patrolUlf.issues[0].position.x, 146);
 assert.equal(patrolUlf.issues[0].position.z, -132);
 assert.equal(patrolUlf.issues[0].position.islandIndex, 4);
+assert.equal(patrolUlf.issues[1].position.x, 13.69, "A measured footing gap must be matched to the correct structure on the same island.");
+assert.equal(patrolUlf.issues[1].position.z, -4.35);
+assert.ok(patrolUlf.issues[1].nextStep.includes("puntos de apoyo"));
+
 assert.ok(patrolAnalysis.cautions.some(item => item.includes("no al build actual")));
 assert.ok(patrolAnalysis.cautions.some(item => item.includes("GPU Adreno")));
 assert.equal(Core.analyzeObserverPatrol(Object.assign({}, patrolFixture, { mode: "gameplay-session" }), "0.6.301"), null,
