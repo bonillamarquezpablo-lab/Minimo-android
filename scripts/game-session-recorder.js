@@ -325,6 +325,16 @@
         meshSelectionDynamicFilterLastMs: number(runtime.meshSelectionDynamicFilterLastMs),
         meshSelectionDynamicFilterMaxMs: number(runtime.meshSelectionDynamicFilterMaxMs),
         meshSelectionDynamicFilterErrors: number(runtime.meshSelectionDynamicFilterErrors),
+        meshSelectionDynamicFrustumEnabled: runtime.meshSelectionDynamicFrustumEnabled === true,
+        meshSelectionDynamicFilterPasses: number(runtime.meshSelectionDynamicFilterPasses),
+        meshSelectionDynamicFilterCandidates: number(runtime.meshSelectionDynamicFilterCandidates),
+        meshSelectionDynamicFilterSelected: number(runtime.meshSelectionDynamicFilterSelected),
+        meshSelectionDynamicFilterCulled: number(runtime.meshSelectionDynamicFilterCulled),
+        meshSelectionDynamicFilterCulledPeak: number(runtime.meshSelectionDynamicFilterCulledPeak),
+        meshSelectionDynamicFilterTotalCulled: number(runtime.meshSelectionDynamicFilterTotalCulled),
+        meshSelectionDynamicFilterLastMs: number(runtime.meshSelectionDynamicFilterLastMs),
+        meshSelectionDynamicFilterMaxMs: number(runtime.meshSelectionDynamicFilterMaxMs),
+        meshSelectionDynamicFilterErrors: number(runtime.meshSelectionDynamicFilterErrors),
         meshSelectionBuildMs: number(runtime.meshSelectionBuildMs)
       },
       memory: {
