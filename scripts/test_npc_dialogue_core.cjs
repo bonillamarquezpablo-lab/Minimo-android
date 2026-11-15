@@ -23,6 +23,8 @@ assert.match(runtime,/snapshotFailures/,"Dialogue runtime must surface bridge sn
 assert.match(runtime,/bridgeReportedActive/,"Dialogue runtime must expose the bridge's active-game signal.");
 assert.match(builder,/let focus=null;[\\s\\S]*?player&&player\.root&&player\.root\.position/,"Dialogue bridge must safely resolve the active player's world position.");
 assert.match(runtime,/function remember\(state,content\)/);
+assert.match(runtime,/function isProjectable\(npc,s\)/,"The scheduler must reject NPCs whose head anchors are outside the active camera view.");
+assert.match(runtime,/inView=nearby\.filter\(x=>isProjectable\(x\.npc,s\)\)/,"Ambient dialogue must only be scheduled for on-screen NPCs.");
 assert.match(runtime,/schedule\(now,nearby,s\)/);
 assert.match(runtime,/Core\.chooseAmbientMessage\(chosen\.npc,context,random,state\)/);
 assert.match(runtime,/Core\.chooseExchange\(chosen\.npc,partner\.npc,random,context\)/);
