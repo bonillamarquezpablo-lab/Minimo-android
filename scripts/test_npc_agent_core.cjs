@@ -103,7 +103,7 @@ assert.equal(Core.analyzeSessionReports([])
 
 const integratedReport = {
   sessionId: "session-intelligence-test",
-  gameBuild: "0.6.301",
+  gameBuild: "0.6.302",
   status: "completed",
   device: { userAgent: "ELSN-Test-Device", devicePixelRatio: 3, hardwareConcurrency: 8, deviceMemoryGB: 8, screen: { width: 412, height: 915 } },
   samples: Array.from({ length: 3 }, (_, index) => ({
@@ -215,7 +215,7 @@ const patrolFixture = {
     readings: { wetSteps: null }
   }]
 };
-const patrolAnalysis = Core.analyzeObserverPatrol(patrolFixture, "0.6.301");
+const patrolAnalysis = Core.analyzeObserverPatrol(patrolFixture, "0.6.302");
 assert.equal(patrolAnalysis.runId, "43675326364");
 assert.equal(patrolAnalysis.world.coverageComplete, true);
 assert.equal(patrolAnalysis.sameBuild, false, "An older patrol must be kept separate from the current game build.");
@@ -231,7 +231,7 @@ assert.ok(patrolUlf.issues[1].nextStep.includes("puntos de apoyo"));
 assert.ok(patrolAnalysis.cautions.some(item => item.includes("no al build actual")));
 assert.ok(patrolAnalysis.cautions.some(item => item.includes("GPU Adreno")));
 assert.ok(patrolAnalysis.cautions.some(item => item.includes("no se reasignan automáticamente")),"Patrol assignments must remain distinct from match specialist roles.");
-assert.equal(Core.analyzeObserverPatrol(Object.assign({}, patrolFixture, { mode: "gameplay-session" }), "0.6.301"), null,
+assert.equal(Core.analyzeObserverPatrol(Object.assign({}, patrolFixture, { mode: "gameplay-session" }), "0.6.302"), null,
   "Only the explicitly read-only observer patrol format may enter the patrol report.");
 const memoryWithPatrol = Core.analyzeSessionIntelligence(integratedReport, [
   { id: "session-event", source: "npc", kind: "observation", roleId: "terrain-structures",
