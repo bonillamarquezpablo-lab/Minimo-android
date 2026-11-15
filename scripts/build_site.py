@@ -890,6 +890,7 @@ def main() -> None:
  // High-mesh-count spatial selection for Babylon.js.
  // Static scene meshes stay indexed; moving actors/effects and every later-created mesh
  // are registered as dynamic content so movement, animation and gameplay remain intact.
+ // Only known moving roots, animated rigs and live water/effect meshes stay dynamic; static foliage, rocks and structures remain in the octree.
  const spatialActorNamePattern=/^(?:player|pablo|pablothe|viking|human|civilian|npc|enemy|raider|guard|warrior|villager|peasant|companion|wildlife|animal|fauna|deer|wolf|stag|gull|bird|ship|boat|drakkar|mast|sail|rudder|flag|banner|pennant|weapon|shield|arrow|projectile|corpse|capture|falling|damage)/i;
  const spatialActorCamelNamePattern=/(?:Player|Pablo|Viking|NPC|Enemy|Raider|Guard|Warrior|Villager|Peasant|Companion|Wildlife|Deer|Wolf|Stag|Gull|Bird|Ship|Boat|Drakkar|Flag|Banner|Pennant|Weapon|Shield|Arrow|Projectile|Corpse|Capture|Damage)/;
  const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;
