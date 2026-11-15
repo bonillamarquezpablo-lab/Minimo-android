@@ -783,6 +783,12 @@ async function main() {
         })).filter(item => item.text);
       return { diagnostics, visibleBubbles };
     });
+    // Restore the actual campaign spawn after collecting the projected-bubble evidence.
+    await page.evaluate(() => {
+      const restore = window.__ELSN_NPC_DIALOGUE_SMOKE_RESTORE__;
+      if (typeof restore === 'function') restore();
+      delete window.__ELSN_NPC_DIALOGUE_SMOKE_RESTORE__;
+    });
     manifest.npcDialogueCheck = npcDialogueCheck;
     assert.ok(npcDialogueCheck.diagnostics?.bridgeReady,
       'El puente de diálogos NPC no quedó conectado: ' + JSON.stringify(npcDialogueCheck));
