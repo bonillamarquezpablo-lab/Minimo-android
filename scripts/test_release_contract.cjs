@@ -90,7 +90,9 @@ assert.ok(sessionRecorder.includes("queueIdleSample") && sessionRecorder.include
 assert.ok(sessionRecorder.includes("drawCallsObservedDelta") && sessionRecorder.includes("semantics-unverified") && sessionRecorder.includes("diagnosticsReadMs") && sessionRecorder.includes("longTaskObserverSupported") && sessionRecorder.includes("recordPerformanceAnomaly") && sessionRecorder.includes("runtimeErrors") && sessionIdleTest.includes("session recorder idle-performance contract"),"Reports must capture anomaly windows and runtime/resource failures while preserving telemetry safeguards.");
 assert.ok(sessionRecorder.includes("captureFinalWorldInspection") && sessionRecorder.includes("terrainObjects"),"Completed match reports must retain the final terrain-object audit and coordinates.");
 assert.ok(sessionRecorder.includes("maxMeshes: 10000"),"The final world audit must request the complete bounded scene inventory.");
-assert.ok(fs.readFileSync('inspector/npc-agents.js','utf8').includes("Ver informe técnico y coordenadas"),"Inspector Center must expose the saved report and terrain-coordinate evidence.");
+const inspectorReports=fs.readFileSync('inspector/npc-agents.js','utf8');
+assert.ok(inspectorReports.includes("Ver informe técnico y coordenadas"),"Inspector Center must expose the saved report and terrain-coordinate evidence.");
+assert.ok(inspectorReports.includes("incidentList") && inspectorReports.includes("worstSamples") && inspectorReports.includes("anomalyEvents"),"Inspector Center must expose grouped performance incidents, worst windows and diagnostic context.");
 
 
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
