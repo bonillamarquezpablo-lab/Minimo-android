@@ -891,11 +891,10 @@ def main() -> None:
  // Static scene meshes stay indexed; moving actors/effects and every later-created mesh
  // are registered as dynamic content so movement, animation and gameplay remain intact.
  // Only known moving roots, animated rigs and live water/effect meshes stay dynamic; static foliage, rocks and structures remain in the octree.
- const spatialActorNamePattern=/^(?:player|pablo|pablothe|viking|human|civilian|npc|enemy|raider|guard|warrior|villager|peasant|companion|wildlife|animal|fauna|deer|wolf|stag|gull|bird|ship|boat|drakkar|mast|sail|rudder|flag|banner|pennant|weapon|shield|arrow|projectile|corpse|capture|falling|damage)/i;
- const spatialActorCamelNamePattern=/(?:Player|Pablo|Viking|NPC|Enemy|Raider|Guard|Warrior|Villager|Peasant|Companion|Wildlife|Deer|Wolf|Stag|Gull|Bird|Ship|Boat|Drakkar|Flag|Banner|Pennant|Weapon|Shield|Arrow|Projectile|Corpse|Capture|Damage)/;
+ const spatialActorRootPattern=/^(?:PabloTheNameless|RealHumanVikingRoot|EnemyHumanFallPivot_\\d+|VillageGuard\\d+_\\d+|Villager_\\d+_\\d+|RaiderLongship_\\d+|Drakkar|Wildlife(?:Root)?_?\\d*|Deer(?:Root)?_?\\d*|Wolf(?:Root)?_?\\d*|Stag(?:Root)?_?\\d*|AmbientPerson_?\\d*|AmbientBird_?\\d*)$/i;
  const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;
  const spatialWaterMotionPattern=/^(?:ocean|water|nordicWater|coastalWater|coastalWave|waterFilm|tidalFoam|shoreBreakerWash|beachState|activeBeach|activeShore)/i;
- const spatialEffectMotionPattern=/^(?:fire|flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
+ const spatialEffectMotionPattern=/^(?:flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
  const spatialDynamicStatsPattern=/^(?:vesselWaterSpray|drakkarWake|tidalFoam|particle|projectile|arrow)/i;
  let spatialSelectionOctree=null;
  const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},buildMs:null,error:null};
@@ -906,7 +905,7 @@ def main() -> None:
   for(let node=mesh;node&&node!==scene;node=node.parent){
    const name=String(node.name||'');
    if(node.skeleton||node.morphTargetManager||(Array.isArray(node.animations)&&node.animations.length))return 'animated-rig';
-   if(spatialActorNamePattern.test(name)||spatialActorCamelNamePattern.test(name))return 'actor-or-vehicle';
+   if(spatialActorRootPattern.test(name))return 'actor-or-vehicle';
    if(spatialVegetationMotionPattern.test(name))return 'vegetation-motion';
    if(spatialWaterMotionPattern.test(name))return 'water-or-coast';
    if(spatialEffectMotionPattern.test(name))return 'particle-or-effect';
