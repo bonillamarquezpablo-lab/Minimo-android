@@ -7,7 +7,11 @@ const css=fs.readFileSync("inspector/unified-workbench.css","utf8");
 new Function(js);
 for(const id of ["diagnostico-en-vivo","telemetria","mundo","radar","comparativa","inteligencia-npc","patrulla-exploradores","control"])
   assert.ok(html.includes('id="'+id+'"'),"Existing Inspector capability must remain: "+id);
-for(const id of ["wbReportMetrics","wbReportVerdict","wbReportIntegrity","wbReportActions","wbReportFindings","wbReportJson","wbReportImport"])
+assert.ok(js.includes('id="wbReportSpecialists"'),"Unified report must include specialist findings.");
+assert.ok(js.includes("function renderSpecialistIntelligence") && js.includes("function buildSpecialistIntelligence"),"Specialist findings must be rendered and hydrated from the shared memory.");
+assert.ok(js.includes("API.remember") && js.includes("specialistIntelligence"),"The report must persist per-session specialist diagnoses and export them.");
+assert.ok(js.includes("automaticCodeChanges: false") || js.includes("No cambian el mundo"),"Specialist analysis must remain read-only.");
+for(const id of ["wbReportMetrics","wbReportVerdict","wbReportIntegrity","wbReportActions","wbReportFindings","wbReportJson","wbReportImport","wbReportSpecialists","wbSpecialistSummary","wbSpecialistCards"])
   assert.ok(js.includes(id),"Unified report view missing: "+id);
 for(const marker of ["workbench-tabs","workbench-deck","scroll-snap-type:x mandatory","overflow-x:auto","wb-report-metrics"])
   assert.ok(css.includes(marker),"Horizontal unified layout missing: "+marker);
