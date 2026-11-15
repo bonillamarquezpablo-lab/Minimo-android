@@ -781,13 +781,16 @@ def main() -> None:
   getSnapshot:()=>{
    const playerRoot=player&&(player.root||player.actor||player);
    const focus=typeof playerPos==='function'?playerPos():(playerRoot&&(typeof playerRoot.getAbsolutePosition==='function'?playerRoot.getAbsolutePosition():playerRoot.position));
-   const people=[];
-   if(typeof ambientPeople!=='undefined'&&Array.isArray(ambientPeople))people.push(...ambientPeople);
-   if(typeof campGuards!=='undefined'&&Array.isArray(campGuards))people.push(...campGuards.filter(guard=>guard&&guard.alive!==false));
+   const people=[],seenRoots=new Set();
+   const addGroup=group=>{if(!Array.isArray(group))return;for(const actor of group){if(!actor||actor.alive===false||actor.recruited===true)continue;const root=actor.parts&&actor.parts.root||actor.root||actor.actor||actor;if(!root||seenRoots.has(root))continue;seenRoots.add(root);people.push(actor);}};
+   addGroup(typeof ambientPeople!=='undefined'?ambientPeople:[]);
+   addGroup(typeof campGuards!=='undefined'?campGuards:[]);
+   addGroup(typeof enemies!=='undefined'?enemies:[]);
+   addGroup(typeof companions!=='undefined'?companions:[]);
    return {
     active:!!gameStarted,
     playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
-    people,scene,camera:scene.activeCamera||camera,
+    people,peopleCounts:{ambientPeople:Array.isArray(ambientPeople)?ambientPeople.length:0,campGuards:Array.isArray(campGuards)?campGuards.length:0,enemies:Array.isArray(enemies)?enemies.length:0,companions:Array.isArray(companions)?companions.length:0},scene,camera:scene.activeCamera||camera,
     canvas:engine.getRenderingCanvas(),engine,BABYLON:B
    };
   }
