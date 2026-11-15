@@ -9,7 +9,7 @@ for(const id of ["diagnostico-en-vivo","telemetria","mundo","radar","comparativa
   assert.ok(html.includes('id="'+id+'"'),"Existing Inspector capability must remain: "+id);
 assert.ok(js.includes('id="wbReportSpecialists"'),"Unified report must include specialist findings.");
 assert.ok(js.includes("function renderSpecialistIntelligence") && js.includes("function buildSpecialistIntelligence"),"Specialist findings must be rendered and hydrated from the shared memory.");
-assert.ok(js.includes("API.remember") && js.includes("specialistIntelligence"),"The report must persist per-session specialist diagnoses and export them.");
+assert.ok(js.includes("api.remember") && js.includes("specialistIntelligence"),"The report must persist per-session specialist diagnoses and export them.");
 assert.ok(js.includes("automaticCodeChanges: false") || js.includes("No cambian el mundo"),"Specialist analysis must remain read-only.");
 for(const id of ["wbReportMetrics","wbReportVerdict","wbReportIntegrity","wbReportActions","wbReportFindings","wbReportJson","wbReportImport","wbReportSpecialists","wbSpecialistSummary","wbSpecialistCards"])
   assert.ok(js.includes(id),"Unified report view missing: "+id);
