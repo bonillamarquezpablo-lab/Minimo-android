@@ -12,7 +12,7 @@ if(!Core||!Bridge||typeof Bridge.getSnapshot!=="function"){
  return;
 }
 const MAX_BUBBLES=Core.MAX_VISIBLE_BUBBLES,RANGE=Core.MAX_RANGE_METERS,slots=[],metadata=new Map(),pending=[];
-const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,worldPeopleCount:0,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},lastError:""};
+const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,worldPeopleCount:0,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:""};
 let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projectionIdentity=null,projectionScratch=null;
 const RANGE_SQUARED=RANGE*RANGE;
 const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="2147483000";layer.dataset.maxBubbles=String(MAX_BUBBLES);document.body.appendChild(layer);
@@ -25,6 +25,7 @@ function worldPosition(node){if(!node)return null;try{const p=typeof node.getAbs
 function distance(a,b){return a&&b?Math.hypot(Number(a.x)-Number(b.x),Number(a.z)-Number(b.z)):Infinity;}
 function distanceSquared(a,b){if(!a||!b)return Infinity;const dx=Number(a.x)-Number(b.x),dz=Number(a.z)-Number(b.z);return dx*dx+dz*dz;}
 function enabled(n){const r=rootOf(n);if(!r)return false;try{return (typeof r.isEnabled!=="function"||r.isEnabled())&&r.isVisible!==false&&r.visibility!==0;}catch(_){return false;}}
+function refreshProjectionMatrices(s){if(!s||!s.scene)return;try{if(typeof s.scene.updateTransformMatrix==="function")s.scene.updateTransformMatrix(true);else if(s.camera){if(typeof s.camera.getViewMatrix==="function")s.camera.getViewMatrix(true);if(typeof s.camera.getProjectionMatrix==="function")s.camera.getProjectionMatrix(true);}}catch(error){diagnostics.lastError=String(error&&error.message||error);}}
 function blockingUi(){if(document.body.classList.contains("map-open"))return true;const intro=document.getElementById("intro");return!!(intro&&intro.classList.contains("open")&&intro.getAttribute("aria-hidden")!=="true");}
 function snapshot(){try{const value=Bridge.getSnapshot();diagnostics.bridgeError="";diagnostics.bridgeReportedActive=!!(value&&value.active);return value;}catch(error){diagnostics.snapshotFailures++;diagnostics.bridgeError=String(error&&error.message||error);diagnostics.lastError=diagnostics.bridgeError;console.warn("NPC dialogue snapshot:",error);return null;}}
 function nearbyPeople(s){
@@ -52,25 +53,34 @@ function queueReply(npc,content,dueAt){pending.push({npc,content,dueAt});if(pend
 function processPending(now,ids){for(let i=0;i<pending.length;){const entry=pending[i];if(entry.dueAt>now){i++;continue;}pending.splice(i,1);if(!ids.has(idOf(entry.npc)))continue;startBubble(entry.npc,entry.content,now,4300);break;}}
 function remember(state,content){if(!content)return;if(content.topic){state.recentTopics.push(content.topic);if(state.recentTopics.length>3)state.recentTopics.shift();}if(content.text){state.recentTexts.push(content.text);if(state.recentTexts.length>5)state.recentTexts.shift();}}
 function isProjectable(npc,s){
- if(!npc||!s||!s.scene||!s.engine||!s.camera||!s.canvas||!enabled(npc))return false;
+ const id=idOf(npc);
+ const reject=reason=>{diagnostics.projectionCandidateFailures[reason]=(diagnostics.projectionCandidateFailures[reason]||0)+1;diagnostics.lastProjectionCandidate={id,reason};return false;};
+ if(!npc||!s||!s.scene||!s.engine||!s.camera||!s.canvas||!enabled(npc))return reject("missing-scene-camera-canvas-or-disabled-npc");
  const root=rootOf(npc),rootPos=worldPosition(root);
- if(!rootPos||distance(rootPos,s.playerPosition)>RANGE)return false;
+ if(!rootPos||distance(rootPos,s.playerPosition)>RANGE)return reject("missing-root-or-outside-range");
  const BABYLON=s.BABYLON||window.BABYLON;
- if(!BABYLON||!BABYLON.Vector3||!BABYLON.Matrix)return false;
+ if(!BABYLON||!BABYLON.Vector3||!BABYLON.Matrix)return reject("babylon-project-unavailable");
  try{
   const anchor=npc.parts&&npc.parts.head&&typeof npc.parts.head.getAbsolutePosition==="function"?npc.parts.head:root;
-  const ap=worldPosition(anchor);if(!ap)return false;
+  const ap=worldPosition(anchor);if(!ap)return reject("head-anchor-unavailable");
   if(!projectionIdentity)projectionIdentity=BABYLON.Matrix.Identity();
   if(!projectionScratch)projectionScratch=new BABYLON.Vector3(0,0,0);
   const world=projectionScratch.copyFrom(ap);world.y+=anchor===root?2.12:.48;
   const width=s.engine.getRenderWidth(),height=s.engine.getRenderHeight(),rect=s.canvas.getBoundingClientRect();
-  if(!(width>0&&height>0&&rect.width>0&&rect.height>0))return false;
+  if(!(width>0&&height>0&&rect.width>0&&rect.height>0))return reject("zero-rendering-viewport");
   const viewport=s.camera.viewport&&typeof s.camera.viewport.toGlobal==="function"?s.camera.viewport.toGlobal(width,height):{x:0,y:0,width,height};
-  const p=BABYLON.Vector3.Project(world,projectionIdentity,s.scene.getTransformMatrix(),viewport);
-  return !!(p&&p.z>0&&p.z<1&&p.x>=viewport.x&&p.x<=viewport.x+viewport.width&&p.y>=viewport.y&&p.y<=viewport.y+viewport.height);
- }catch(error){diagnostics.lastError=String(error&&error.message||error);return false;}
+  const transform=s.scene.getTransformMatrix();
+  const p=BABYLON.Vector3.Project(world,projectionIdentity,transform,viewport);
+  if(!p||![p.x,p.y,p.z].every(Number.isFinite))return reject("invalid-projected-point");
+  diagnostics.lastProjectionCandidate={id,x:Number(p.x.toFixed(2)),y:Number(p.y.toFixed(2)),z:Number(p.z.toFixed(4)),viewport:{x:viewport.x,y:viewport.y,width:viewport.width,height:viewport.height},render:{width,height},css:{width:rect.width,height:rect.height}};
+  if(!(p.z>0&&p.z<1))return reject("outside-depth");
+  if(p.x<viewport.x||p.x>viewport.x+viewport.width)return reject("outside-horizontal-frustum");
+  if(p.y<viewport.y||p.y>viewport.y+viewport.height)return reject("outside-vertical-frustum");
+  return true;
+ }catch(error){diagnostics.lastError=String(error&&error.message||error);return reject("projection-exception");}
 }
 function schedule(now,nearby,s){
+ refreshProjectionMatrices(s);
  const world=s&&s.world||{},inView=nearby.filter(x=>isProjectable(x.npc,s)),selected=Core.selectVisibleBubbles(inView.map(x=>({item:x,distance:x.distance,priority:x.distance<7?3:(x.distance<14?2:1),visible:true})),MAX_BUBBLES).map(x=>x.item);
  const due=selected.filter(x=>stateFor(x.id,now).nextAt<=now&&!slots.some(slot=>slot.current&&slot.current.id===x.id));
  if(!due.length)return;
@@ -121,7 +131,7 @@ function project(slot,s){
   slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");diagnostics.projectionSuccesses++;return true;
  }catch(error){diagnostics.lastError=String(error&&error.message||error);return hide("projection-exception");}
 }
-function render(s){const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;layer.setAttribute("aria-hidden",String(!active));if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;return;}for(const slot of slots){if(slot.current)project(slot,s);else slot.node.hidden=true;}renderedCount=slots.filter(slot=>slot.current&&!slot.node.hidden).length;}
+function render(s){refreshProjectionMatrices(s);const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;layer.setAttribute("aria-hidden",String(!active));if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;return;}for(const slot of slots){if(slot.current)project(slot,s);else slot.node.hidden=true;}renderedCount=slots.filter(slot=>slot.current&&!slot.node.hidden).length;}
 function schedulerTick(){const now=Date.now(),s=snapshot();diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}expire(now);const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));processPending(now,ids);schedule(now,nearby,s);render(s);}
 function positionTick(){render(snapshot());}
 function start(){if(schedulerHandle||positionHandle)return;schedulerHandle=window.setInterval(()=>{try{schedulerTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC dialogue scheduler recovered:",e);}},Core.SCHEDULER_INTERVAL_MS);positionHandle=window.setInterval(()=>{try{positionTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC bubble projection recovered:",e);}},Core.POSITION_UPDATE_MS);}
