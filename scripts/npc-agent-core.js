@@ -508,7 +508,8 @@
         sameBuild === false ? "Esta patrulla corresponde al build " + bounded(report.build, 40) + ", no al build actual " + bounded(currentBuild, 40) + ". Sus hallazgos se muestran como evidencia independiente." : "",
         sameBuild === null ? "No se conoce el build de la partida actual; no se puede confirmar que ambas mediciones correspondan a la misma versión." : "",
         isSoftwareRenderer ? "La patrulla utilizó " + renderer + ". Sus tiempos de FPS y render no representan la GPU Adreno ni la fluidez real del móvil." : "",
-        "La patrulla mueve una cámara de prueba en un entorno aislado; no equivale a una partida normal ni a una ruta física recorrida por NPCs."
+        "La patrulla mueve una cámara de prueba en un entorno aislado; no equivale a una partida normal ni a una ruta física recorrida por NPCs.",
+        "Los nombres y especialidades de esta patrulla se conservan tal como fueron publicados; no se reasignan automáticamente a las especialidades del análisis de partida."
       ].filter(Boolean)
     };
   }
