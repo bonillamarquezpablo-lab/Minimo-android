@@ -58,83 +58,93 @@
     page.setAttribute("aria-labelledby","wbReportTitle");
     page.innerHTML = `
       <div class="workbench-page-heading">
-        <div><div class="workbench-kicker">INFORME INTELIGENTE · PARTIDA</div>
-          <h2 id="wbReportTitle">Informe de la última partida</h2>
-          <p id="wbReportMeta">Uniendo rendimiento, escenas, calidad de datos y recomendaciones en una sola lectura.</p>
+        <div><div class="workbench-kicker">CENTRO DE INSPECCIÓN · PARTIDAS</div>
+          <h2 id="wbReportTitle">Resumen de la partida</h2>
+          <p id="wbReportMeta">Aquí tienes lo importante. El análisis completo queda guardado para revisarlo después.</p>
         </div>
         <div class="workbench-report-actions">
           <button class="wb-button" id="wbReportRefresh" type="button">Actualizar</button>
-          <button class="wb-button" id="wbReportExport" type="button" disabled>Exportar</button>
-          <label class="wb-button wb-file-button" for="wbReportImport">Abrir informe JSON</label>
-          <input id="wbReportImport" type="file" accept=".json,application/json" hidden>
+          <button class="wb-button" id="wbReportCopy" type="button" disabled>Copiar informe para ChatGPT</button>
+          <button class="wb-button" id="wbReportExport" type="button" disabled>Descargar informe</button>
         </div>
       </div>
       <div class="wb-report-state" id="wbReportState" role="status" aria-live="polite">Buscando informes guardados en este navegador…</div>
+      <article class="wb-report-card wb-quick-read" id="wbQuickRead">
+        <div class="wb-card-eyebrow">LO IMPORTANTE</div>
+        <h3 id="wbQuickReadTitle">Esperando datos de la partida</h3>
+        <p id="wbQuickReadBody">Cuando termines una partida, aquí verás si ha ido bien o qué problema debo investigar. No necesitas leer el informe técnico.</p>
+      </article>
       <div class="wb-report-metrics" id="wbReportMetrics">
         <article class="wb-stat"><span>FPS medios</span><strong>—</strong><small>Esperando informe</small></article>
         <article class="wb-stat"><span>FPS mínimos</span><strong>—</strong><small>Esperando informe</small></article>
-        <article class="wb-stat"><span>Estabilidad p95</span><strong>—</strong><small>Esperando informe</small></article>
-        <article class="wb-stat"><span>Mallas de escena</span><strong>—</strong><small>Esperando informe</small></article>
-        <article class="wb-stat"><span>Memoria JS</span><strong>—</strong><small>Esperando informe</small></article>
+        <article class="wb-stat"><span>Fluidez</span><strong>—</strong><small>Esperando informe</small></article>
       </div>
-      <div class="wb-report-grid">
-        <article class="wb-report-card wb-report-primary" id="wbReportVerdict">
-          <div class="wb-card-eyebrow">LECTURA PRINCIPAL</div><h3>Esperando datos</h3>
-          <p>El informe aparecerá aquí con una explicación en lenguaje normal.</p>
-        </article>
-        <article class="wb-report-card" id="wbReportDevice">
-          <div class="wb-card-eyebrow">DISPOSITIVO Y MOTOR</div><h3>Entorno de ejecución</h3>
-          <p>La GPU y el backend se mostrarán cuando estén disponibles.</p>
-        </article>
-        <article class="wb-report-card" id="wbReportIntegrity">
-          <div class="wb-card-eyebrow">CALIDAD DEL INFORME</div><h3>Comprobando cobertura</h3>
-          <p>Se distinguirán las mediciones ausentes de los valores cero.</p>
-        </article>
-      </div>
-      <section class="wb-report-card wb-report-specialists" id="wbReportSpecialists">
-        <div class="wb-card-eyebrow">INTELIGENCIA AUTÓNOMA · CUATRO ESPECIALISTAS</div>
-        <h3>Lo que han descubierto nuestros especialistas</h3>
-        <p>Revisan la partida, reúnen pruebas y recuerdan los resultados para comparar futuras sesiones. No cambian el mundo ni reducen la calidad gráfica por su cuenta.</p>
-        <div id="wbSpecialistSummary" class="wb-specialist-summary">Preparando análisis…</div>
-        <div id="wbSpecialistCards" class="wb-specialist-grid"><p>Esperando los datos de la partida.</p></div>
-      </section>
-      <section class="wb-report-card wb-patrol-report" id="wbPatrolReport">
-        <div class="wb-card-eyebrow">PATRULLA AUTÓNOMA · 13 ISLAS</div>
-        <h3>Último recorrido independiente</h3>
-        <p id="wbPatrolMeta">Consultando el último recorrido publicado…</p>
-        <div id="wbPatrolSummary" class="wb-patrol-summary"></div>
-        <div id="wbPatrolAgents" class="wb-patrol-agents"><p>Buscando observaciones.</p></div>
-        <div id="wbPatrolCautions" class="wb-patrol-cautions"></div>
-        <p><a href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/workflows/explorer-patrol.yml" target="_blank" rel="noopener noreferrer">Abrir o ejecutar la patrulla completa</a></p>
-      </section>
-      <section class="wb-report-card">
-        <div class="wb-card-eyebrow">ANÁLISIS CRUZADO</div><h3>Relaciones entre posibles causas</h3>
-        <div id="wbReportCorrelations" class="wb-action-list"><p>Esperando mediciones.</p></div>
-      </section>
-      <div class="wb-report-columns">
-        <section class="wb-report-card" id="wbReportWorld">
-          <div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D</div><h3>Geometría, físicas y objetos</h3>
-          <p>El inventario de la escena se incorporará al informe final cuando la partida termine normalmente.</p>
+      <details class="wb-report-full" id="wbReportMore">
+        <summary>Ver análisis completo y pruebas guardadas</summary>
+        <div class="wb-report-grid">
+          <article class="wb-report-card wb-report-primary" id="wbReportVerdict">
+            <div class="wb-card-eyebrow">LECTURA PRINCIPAL</div><h3>Esperando datos</h3>
+            <p>El informe aparecerá aquí con una explicación en lenguaje normal.</p>
+          </article>
+          <article class="wb-report-card" id="wbReportDevice">
+            <div class="wb-card-eyebrow">DISPOSITIVO Y MOTOR</div><h3>Entorno de ejecución</h3>
+            <p>La GPU y el backend se mostrarán cuando estén disponibles.</p>
+          </article>
+          <article class="wb-report-card" id="wbReportIntegrity">
+            <div class="wb-card-eyebrow">CALIDAD DEL INFORME</div><h3>Comprobando cobertura</h3>
+            <p>Se distinguirán las mediciones ausentes de los valores cero.</p>
+          </article>
+        </div>
+        <section class="wb-report-card wb-report-specialists" id="wbReportSpecialists">
+          <div class="wb-card-eyebrow">INTELIGENCIA AUTÓNOMA · CUATRO ESPECIALISTAS</div>
+          <h3>Lo que han descubierto nuestros especialistas</h3>
+          <p>Revisan la partida, reúnen pruebas y recuerdan los resultados para comparar futuras sesiones. No cambian el mundo ni reducen la calidad gráfica por su cuenta.</p>
+          <div id="wbSpecialistSummary" class="wb-specialist-summary">Preparando análisis…</div>
+          <div id="wbSpecialistCards" class="wb-specialist-grid"><p>Esperando los datos de la partida.</p></div>
         </section>
-        <section class="wb-report-card" id="wbReportComparison">
-          <div class="wb-card-eyebrow">EVOLUCIÓN ENTRE PARTIDAS</div><h3>Comparación con la sesión anterior</h3>
-          <p>Se necesitan dos informes completos del mismo navegador para comparar.</p>
-        </section>
-      </div>
-      <div class="wb-report-columns">
-        <section class="wb-report-card">
-          <div class="wb-card-eyebrow">PLAN DE REPARACIÓN</div><h3>Qué debemos revisar primero</h3>
-          <div id="wbReportActions" class="wb-action-list"><p>Esperando informe.</p></div>
+        <section class="wb-report-card wb-patrol-report" id="wbPatrolReport">
+          <div class="wb-card-eyebrow">PATRULLA AUTÓNOMA · 13 ISLAS</div>
+          <h3>Último recorrido independiente</h3>
+          <p id="wbPatrolMeta">Consultando el último recorrido publicado…</p>
+          <div id="wbPatrolSummary" class="wb-patrol-summary"></div>
+          <div id="wbPatrolAgents" class="wb-patrol-agents"><p>Buscando observaciones.</p></div>
+          <div id="wbPatrolCautions" class="wb-patrol-cautions"></div>
+          <p><a href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/workflows/explorer-patrol.yml" target="_blank" rel="noopener noreferrer">Abrir o ejecutar la patrulla completa</a></p>
         </section>
         <section class="wb-report-card">
-          <div class="wb-card-eyebrow">PISTAS TÉCNICAS EXPLICADAS</div><h3>Qué puede estar ocurriendo</h3>
-          <div id="wbReportFindings" class="wb-action-list"><p>Esperando informe.</p></div>
+          <div class="wb-card-eyebrow">ANÁLISIS CRUZADO</div><h3>Relaciones entre posibles causas</h3>
+          <div id="wbReportCorrelations" class="wb-action-list"><p>Esperando mediciones.</p></div>
         </section>
-      </div>
-      <details class="wb-technical-details">
-        <summary>Ver datos originales y mediciones avanzadas</summary>
-        <p>Esta vista conserva el JSON completo. Los valores no disponibles permanecen como «sin medir»; no se convierten en ceros.</p>
-        <pre id="wbReportJson">Todavía no hay un informe cargado.</pre>
+        <div class="wb-report-columns">
+          <section class="wb-report-card" id="wbReportWorld">
+            <div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D</div><h3>Geometría, físicas y objetos</h3>
+            <p>El inventario de la escena se incorporará al informe final cuando la partida termine normalmente.</p>
+          </section>
+          <section class="wb-report-card" id="wbReportComparison">
+            <div class="wb-card-eyebrow">EVOLUCIÓN ENTRE PARTIDAS</div><h3>Comparación con la sesión anterior</h3>
+            <p>Se necesitan dos informes completos del mismo navegador para comparar.</p>
+          </section>
+        </div>
+        <div class="wb-report-columns">
+          <section class="wb-report-card">
+            <div class="wb-card-eyebrow">PLAN DE REPARACIÓN</div><h3>Qué debemos revisar primero</h3>
+            <div id="wbReportActions" class="wb-action-list"><p>Esperando informe.</p></div>
+          </section>
+          <section class="wb-report-card">
+            <div class="wb-card-eyebrow">PISTAS TÉCNICAS EXPLICADAS</div><h3>Qué puede estar ocurriendo</h3>
+            <div id="wbReportFindings" class="wb-action-list"><p>Esperando informe.</p></div>
+          </section>
+        </div>
+        <details class="wb-technical-details">
+          <summary>Ver datos originales y mediciones avanzadas</summary>
+          <p>Esta vista conserva el JSON completo. Los valores no disponibles permanecen como «sin medir»; no se convierten en ceros.</p>
+          <pre id="wbReportJson">Todavía no hay un informe cargado.</pre>
+        </details>
+        <div class="workbench-report-actions">
+          <button class="wb-button" id="wbReportExportFull" type="button" disabled>Descargar todos los datos</button>
+          <label class="wb-button wb-file-button" for="wbReportImport">Importar informe de una partida</label>
+          <input id="wbReportImport" type="file" accept=".json,application/json" hidden>
+        </div>
       </details>`;
     return page;
   }
