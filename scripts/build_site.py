@@ -299,6 +299,19 @@ def main() -> None:
     game_version = version_match.group(1).strip()
     if not re.fullmatch(r"\d+\.\d+\.\d+", game_version):
         raise SystemExit(f"Versión del juego no válida en index.html: {game_version!r}")
+    # Babylon's scene.whenReadyAsync() already waits for textures and shader readiness.
+    # Calling scene.compileMaterialsAsync() as a second, full-scene pass recompiles every
+    # material across all 13 islands, including off-screen variants, and can stall for
+    # minutes on software renderers without improving readiness of the first view.
+    # Keep the blocking scene readiness barrier and its two rendered warm-up frames.
+    full_scene_compile_marker = "if(typeof scene.compileMaterialsAsync==='function')sceneReadyTasks.push(scene.compileMaterialsAsync());"
+    if html.count(full_scene_compile_marker) != 1:
+        raise SystemExit("No se encontró la única compilación redundante de todos los materiales.")
+    html = html.replace(
+        full_scene_compile_marker,
+        "// scene.whenReadyAsync() already checks scene/material/texture readiness; avoid a duplicate all-island compile pass."
+    , 1)
+
     global USER_AGENT
     USER_AGENT = (
         f"EL-SIN-NOMBRE-WebBuild/{game_version} "
