@@ -40,6 +40,7 @@
   ];
   let activePage = 0;
   let latestReport = null;
+  let latestPatrolIntelligence = null;
   let deck = null;
   let tabButtons = [];
 
@@ -96,7 +97,16 @@
         <div id="wbSpecialistSummary" class="wb-specialist-summary">Preparando análisis…</div>
         <div id="wbSpecialistCards" class="wb-specialist-grid"><p>Esperando los datos de la partida.</p></div>
       </section>
-            <section class="wb-report-card">
+      <section class="wb-report-card wb-patrol-report" id="wbPatrolReport">
+        <div class="wb-card-eyebrow">PATRULLA AUTÓNOMA · 13 ISLAS</div>
+        <h3>Último recorrido independiente</h3>
+        <p id="wbPatrolMeta">Consultando el último recorrido publicado…</p>
+        <div id="wbPatrolSummary" class="wb-patrol-summary"></div>
+        <div id="wbPatrolAgents" class="wb-patrol-agents"><p>Buscando observaciones.</p></div>
+        <div id="wbPatrolCautions" class="wb-patrol-cautions"></div>
+        <p><a href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/workflows/explorer-patrol.yml" target="_blank" rel="noopener noreferrer">Abrir o ejecutar la patrulla completa</a></p>
+      </section>
+      <section class="wb-report-card">
         <div class="wb-card-eyebrow">ANÁLISIS CRUZADO</div><h3>Relaciones entre posibles causas</h3>
         <div id="wbReportCorrelations" class="wb-action-list"><p>Esperando mediciones.</p></div>
       </section>
@@ -393,6 +403,114 @@
     host.innerHTML=items.join("");
   }
 
+  const PATROL_REPORT_URL = "https://raw.githubusercontent.com/bonillamarquezpablo-lab/Minimo-android/inspector-status/inspector/data/explorer-patrol/latest.json";
+
+  async function loadLatestObserverPatrol(currentBuild) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 9000);
+    try {
+      const response = await fetch(PATROL_REPORT_URL + "?t=" + Date.now(), {
+        method: "GET", cache: "no-store", mode: "cors", credentials: "omit",
+        headers: { "Accept": "application/json" }, signal: controller.signal
+      });
+      if (!response.ok) throw new Error("No hay una patrulla publicada disponible (HTTP " + response.status + ").");
+      const body = await response.text();
+      if (body.length > 2 * 1024 * 1024) throw new Error("El informe de patrulla supera el límite de lectura.");
+      const parsed = JSON.parse(body);
+      const core = window.ELSN_NPC_AGENT_CORE;
+      if (!core || typeof core.analyzeObserverPatrol !== "function") throw new Error("El análisis de patrulla no está disponible.");
+      const analyzed = core.analyzeObserverPatrol(parsed, currentBuild);
+      if (!analyzed) throw new Error("El informe publicado no corresponde a una patrulla compatible.");
+      return analyzed;
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+
+  async function rememberObserverPatrol(patrol) {
+    const api = window.__ELSN_NPC_AGENT_SYSTEM__;
+    if (!patrol || !api || typeof api.remember !== "function") return;
+    try {
+      if (api.ready) await api.ready;
+      for (const agent of patrol.agents.slice(0, 8)) {
+        const safeName = String(agent.name || "agent").toLowerCase().replace(/[^a-z0-9_-]/g, "-").slice(0, 36);
+        const evidence = {
+          source: "observer-patrol",
+          patrolRunId: patrol.runId,
+          patrolRunSha: patrol.runSha,
+          patrolBuild: patrol.build,
+          renderer: patrol.renderer,
+          finishedAt: patrol.finishedAt,
+          verdict: patrol.verdict,
+          issueCount: agent.issues.length,
+          issues: agent.issues.slice(0, 6).map(issue => ({
+            title: issue.title, detail: issue.detail, severity: issue.severity,
+            islandIndex: issue.islandIndex, position: issue.position
+          })),
+          missing: agent.missing.slice(0, 6)
+        };
+        try {
+          await api.remember({
+            id: "observer-patrol:" + patrol.runId + ":" + safeName,
+            source: "system",
+            npcId: agent.name,
+            roleId: "general",
+            domain: "observer-patrol",
+            kind: agent.issues.length ? "diagnosis" : "observation",
+            status: agent.severity,
+            summary: "Patrulla independiente · " + agent.name + ": " + (agent.summary || "lectura registrada"),
+            evidence
+          });
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  function renderObserverPatrol(patrol, error) {
+    const meta = $("wbPatrolMeta");
+    const summary = $("wbPatrolSummary");
+    const host = $("wbPatrolAgents");
+    const cautions = $("wbPatrolCautions");
+    if (!meta || !summary || !host || !cautions) return;
+    if (!patrol) {
+      meta.textContent = error || "Todavía no hay un recorrido publicado. Puedes iniciar uno desde el enlace inferior.";
+      summary.replaceChildren();
+      host.innerHTML = '<p>No hay datos independientes de patrulla disponibles. El informe de tus partidas sigue funcionando por separado.</p>';
+      cautions.replaceChildren();
+      return;
+    }
+    meta.textContent = "Build " + patrol.build + " · " + (patrol.finishedAt ? niceDate(patrol.finishedAt) : "fecha no disponible") +
+      " · " + patrol.renderer;
+    summary.innerHTML =
+      '<span><strong>' + esc(patrol.world.visitedIslands ?? "—") + '/' + esc(patrol.world.expectedIslands ?? "—") + '</strong> islas recorridas</span>' +
+      '<span><strong>' + esc(patrol.issueCount) + '</strong> avisos o fallos registrados</span>' +
+      '<span><strong>' + esc(patrol.missingCount) + '</strong> comprobaciones pendientes</span>';
+    host.innerHTML = patrol.agents.map(agent => {
+      const state = agent.severity === "critical" ? "critical" : agent.severity === "warning" ? "warning" :
+        agent.severity === "ok" ? "ok" : "unknown";
+      const issues = agent.issues.map(issue => {
+        const island = issue.islandIndex === null ? "" : " · Isla " + (issue.islandIndex + 1);
+        const pos = issue.position
+          ? " · X " + fmt(issue.position.x, 2) + " · Z " + fmt(issue.position.z, 2)
+          : "";
+        const severity = issue.severity === "critical" ? "Fallo detectado" :
+          issue.severity === "warning" ? "Aviso" : "Dato";
+        return '<div class="wb-patrol-issue"><span class="wb-patrol-issue-status">' + severity + '</span><div><strong>' + esc(issue.title) + '</strong><p>' + esc(issue.detail) + esc(island + pos) + '</p></div></div>';
+      }).join("");
+      const missing = agent.missing.length
+        ? '<details class="wb-patrol-missing"><summary>Pendiente de comprobar (' + agent.missing.length + ')</summary><ul>' + agent.missing.map(item => '<li>' + esc(item) + '</li>').join("") + '</ul></details>' : "";
+      return '<article class="wb-patrol-agent wb-patrol-' + state + '">' +
+        '<div class="wb-patrol-agent-head"><div><strong>' + esc(agent.name) + '</strong><span>' + esc(agent.specialization) + '</span></div>' +
+        '<span>' + (state === "critical" ? "Incidencias" : state === "warning" ? "Avisos" : state === "ok" ? "Comprobado" : "Datos incompletos") + '</span></div>' +
+        '<p>' + esc(agent.summary) + '</p>' +
+        (issues || '<p class="wb-patrol-none">Sin fallos confirmados en las comprobaciones disponibles.</p>') + missing +
+        '</article>';
+    }).join("");
+    cautions.innerHTML = patrol.cautions.map(item => '<p>' + esc(item) + '</p>').join("");
+    if (patrol.runUrl) cautions.insertAdjacentHTML("beforeend",
+      '<p><a href="' + esc(patrol.runUrl) + '" target="_blank" rel="noopener noreferrer">Ver ejecución y pruebas originales</a></p>');
+  }
+
   function specialistStatusLabel(status) {
     const labels = {
       "confirmado": "Repetido en varias partidas",
@@ -499,7 +617,7 @@
   }
 
   function renderReport(report,sourceLabel,previousReport=null,intelligence=null) {
-    latestReport = Object.assign({}, report, { specialistIntelligence: intelligence || null });
+    latestReport = Object.assign({}, report, { specialistIntelligence: intelligence || null, observerPatrol: latestPatrolIntelligence || null });
     $("wbReportExport").disabled = false;
     const samples = Array.isArray(report.samples) ? report.samples : [];
     const summary = report.summary || {};
@@ -605,7 +723,7 @@
     renderSpecialistIntelligence(intelligence);
     reportComparison(report,previousReport);
     renderCorrelations(report,{p95,renderCpu,worldCpu,gpuValues,grass,shadows,meshCounts,vertices});
-    $("wbReportJson").textContent = JSON.stringify(report,null,2);
+    $("wbReportJson").textContent = JSON.stringify(latestReport,null,2);
     $("wbReportVerdict").insertAdjacentHTML("beforeend",sparkline(samples));
   }
 
@@ -625,13 +743,24 @@
 
   async function loadReport() {
     const state=$("wbReportState");
-    state.textContent="Actualizando el informe local…";
+    state.textContent="Actualizando informes y memoria de especialistas…";
+    let reports = [];
     try {
+      try {
+        latestPatrolIntelligence = await loadLatestObserverPatrol(null);
+        renderObserverPatrol(latestPatrolIntelligence);
+        await rememberObserverPatrol(latestPatrolIntelligence);
+      } catch (patrolError) {
+        latestPatrolIntelligence = null;
+        renderObserverPatrol(null, String(patrolError && patrolError.message || patrolError));
+      }
       const db=await openDb();
       if (!db.objectStoreNames.contains(STORE)) {
-        db.close(); state.textContent="Todavía no hay partidas guardadas en este navegador."; return;
+        db.close();
+        state.textContent="Todavía no hay partidas guardadas en este navegador. La última patrulla independiente se muestra por separado.";
+        return;
       }
-      const reports=await new Promise((resolve,reject)=>{
+      reports=await new Promise((resolve,reject)=>{
         const tx=db.transaction(STORE,"readonly");
         const request=tx.objectStore(STORE).getAll();
         request.onsuccess=()=>resolve((request.result||[]).sort((a,b)=>Date.parse(b.startedAt||"")-Date.parse(a.startedAt||"")));
@@ -639,10 +768,15 @@
       });
       db.close();
       if (!reports.length) {
-        state.textContent="Todavía no hay informes guardados. Juega una partida para que el registrador cree el primero.";
+        state.textContent="Todavía no hay informes de partidas guardados. La patrulla independiente queda disponible arriba.";
         return;
       }
       const intelligence = await buildSpecialistIntelligence(reports[0], reports[0].status === "completed");
+      if (latestPatrolIntelligence) {
+        latestPatrolIntelligence = await loadLatestObserverPatrol(reports[0].gameBuild || null).catch(() => latestPatrolIntelligence);
+        renderObserverPatrol(latestPatrolIntelligence);
+        await rememberObserverPatrol(latestPatrolIntelligence);
+      }
       renderReport(reports[0],"Última partida guardada",reports[1]||null,intelligence);
     } catch(error) {
       state.textContent="No se pudo leer el historial: "+String(error&&error.message||error);
