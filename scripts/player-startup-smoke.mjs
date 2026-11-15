@@ -740,17 +740,31 @@ async function main() {
       }
       const target = candidates[0];
       const originalPosition = playerRoot.position.clone();
+      const camera = world.camera || scene.activeCamera || null;
+      const originalCameraTarget = camera && typeof camera.getTarget === 'function'
+        ? camera.getTarget().clone() : null;
       window.__ELSN_NPC_DIALOGUE_SMOKE_RESTORE__ = () => {
         playerRoot.position.copyFrom(originalPosition);
         if (typeof playerRoot.computeWorldMatrix === 'function') playerRoot.computeWorldMatrix(true);
+        if (originalCameraTarget && camera && typeof camera.setTarget === 'function') {
+          camera.setTarget(originalCameraTarget);
+        }
       };
-      // Two and a half metres is close enough for dialogue, without overlapping the civilian.
+      // Place the player beside a real civilian and point the test camera at that
+      // civilian. Teleporting the player alone leaves the original spawn camera
+      // facing away, so every valid NPC projection is rejected as behind-camera.
       playerRoot.position.set(
         Number(target.position.x) + 2.5,
         Number(target.position.y),
         Number(target.position.z)
       );
       if (typeof playerRoot.computeWorldMatrix === 'function') playerRoot.computeWorldMatrix(true);
+      if (camera && typeof camera.setTarget === 'function' &&
+          target.position && typeof target.position.clone === 'function') {
+        const lookAt = target.position.clone();
+        lookAt.y += 1.45;
+        camera.setTarget(lookAt);
+      }
       await new Promise(resolve => setTimeout(resolve, 7500));
       const after = bridge.getSnapshot();
       return {
