@@ -849,7 +849,7 @@ def main() -> None:
        if(!node||seen.has(node))continue;
        seen.add(node);
        const name=String(node.name||'');
-       const match=/^(?:Villager_(\\d+)_(\\d+)|VillageGuard(\\d+)_(\\d+))$/.exec(name);
+       const match=/^(?:Villager_(\d+)_(\d+)|VillageGuard(\d+)_(\d+))$/.exec(name);
        if(!match)continue;
        const villageIndex=Number(match[1]!==undefined?match[1]:match[3]);
        const slot=Number(match[2]!==undefined?match[2]:match[4]);
