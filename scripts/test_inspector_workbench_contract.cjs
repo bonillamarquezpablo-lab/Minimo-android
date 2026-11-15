@@ -25,6 +25,7 @@ for(const marker of ["sampleCoverage","gpuProfilerEnabled","drawCallsCounterSema
   assert.ok(js.includes(marker),"Advanced report analysis missing: "+marker);
 assert.ok(js.includes("Copiar informe para ChatGPT") && js.includes("navigator.clipboard.writeText"),"The short report must offer one-click copy of the complete ChatGPT evidence.");
 assert.ok(js.includes("summary.lightingConditions") && js.includes("nightDropPercent"),"The summary must compare day and night FPS when both are measured.");
+assert.ok(js.includes("summary.npcDialogue") && js.includes("dialogueEvidence.bubblesStarted"),"The short summary must reveal whether NPC dialogues were created and projected.");
 assert.ok(css.includes(".wb-quick-read") && css.includes(".wb-report-full"),"The concise summary and collapsed technical report must have their own styles.");
 assert.ok(js.includes("No se usa para decidir qué optimizar hasta calibrar el contador"),"Unverified draw-call counters must not guide optimization.");
 assert.ok(js.includes("La mediana del percentil 95 por ventana"),"The report must explain frame-time percentiles in plain language.");
