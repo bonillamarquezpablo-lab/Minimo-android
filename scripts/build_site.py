@@ -793,6 +793,26 @@ def main() -> None:
     people,peopleCounts:{ambientPeople:Array.isArray(ambientPeople)?ambientPeople.length:0,campGuards:Array.isArray(campGuards)?campGuards.length:0,enemies:Array.isArray(enemies)?enemies.length:0,companions:Array.isArray(companions)?companions.length:0},scene,camera:scene.activeCamera||camera,
     canvas:engine.getRenderingCanvas(),engine,BABYLON:B
    };
+  },
+  movePlayerNearNpcForTest:()=>{
+   if(new URLSearchParams(location.search).get('playerdialoguetest')!=='1')return {ok:false,reason:'test-only'};
+   const playerRoot=player&&(player.root||player.actor||player);
+   if(!playerRoot||!playerRoot.position||!B||!B.Vector3)return {ok:false,reason:'player-unavailable'};
+   const focus=typeof playerPos==='function'?playerPos():(playerRoot.getAbsolutePosition?playerRoot.getAbsolutePosition():playerRoot.position);
+   const candidates=[],roots=new Set();
+   const add=(group)=>{if(!Array.isArray(group))return;for(const actor of group){if(!actor||actor.alive===false||actor.recruited===true)continue;const root=actor.parts&&actor.parts.root||actor.root||actor.actor||actor;if(!root||roots.has(root))continue;roots.add(root);const p=root.getAbsolutePosition?root.getAbsolutePosition():root.position;if(!p||![p.x,p.y,p.z].every(Number.isFinite))continue;const d=Math.hypot(p.x-focus.x,p.z-focus.z);if(Number.isFinite(d))candidates.push({actor,root,p,d});}};
+   add(typeof ambientPeople!=='undefined'?ambientPeople:[]);
+   add(typeof campGuards!=='undefined'?campGuards:[]);
+   add(typeof enemies!=='undefined'?enemies:[]);
+   add(typeof companions!=='undefined'?companions:[]);
+   candidates.sort((a,b)=>a.d-b.d);
+   const target=candidates[0];if(!target)return {ok:false,reason:'no-humanoid-npc'};
+   const destination=new B.Vector3(target.p.x+2,target.p.y,target.p.z+2);
+   if(typeof playerRoot.setAbsolutePosition==='function')playerRoot.setAbsolutePosition(destination);
+   else if(playerRoot.parent&&playerRoot.parent.getWorldMatrix){playerRoot.parent.computeWorldMatrix(true);const inverse=playerRoot.parent.getWorldMatrix().clone();inverse.invert();playerRoot.position.copyFrom(B.Vector3.TransformCoordinates(destination,inverse));}
+   else playerRoot.position.copyFrom(destination);
+   if(typeof playerRoot.computeWorldMatrix==='function')playerRoot.computeWorldMatrix(true);
+   return {ok:true,actor:target.root.name||target.actor.name||'NPC',distanceBefore:Number(target.d.toFixed(2)),playerPosition:{x:destination.x,y:destination.y,z:destination.z}};
   }
  });
 """
