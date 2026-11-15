@@ -29,6 +29,8 @@ assert.ok(js.includes("summary.npcDialogue") && js.includes("dialogueEvidence.bu
 assert.ok(js.includes('elsn-game-session-recovery-v1') && js.includes("function readRecoveryReport"),"The Inspector must detect a game session recovered from the pagehide journal.");
 assert.ok(js.includes("function reconcileRecoveryReport") && js.includes("persistRecoveredReport"),"The Inspector must merge the emergency report into IndexedDB without deleting previous sessions.");
 assert.ok(js.includes("function reportUpdatedAt") && js.includes("sortReportsNewestFirst"),"The latest report must be selected using its last update/finish time, not only its start time.");
+assert.ok(js.includes("async function persistImportedReport") && js.includes("await persistImportedReport(candidate)"),"Imported reports must be persisted in the local IndexedDB archive, not only rendered temporarily.");
+assert.ok(js.includes("Este historial pertenece a este navegador") || js.includes("no se sincroniza automáticamente entre móviles"),"The Inspector must clearly disclose that session history is local and not cross-device synchronized.");
 assert.ok(js.includes("recoveredFromEmergency") && js.includes("Última partida recuperada del guardado de emergencia"),"Recovered sessions must be identified clearly in the report.");
 const loadReportSource=js.slice(js.indexOf("async function loadReport"),js.indexOf("function bindReportActions"));
 assert.ok(loadReportSource.includes("await reconcileRecoveryReport(reports)") && loadReportSource.includes("sortReportsNewestFirst(reports)"),"Recovery and timestamp ordering must run before rendering the latest session.");

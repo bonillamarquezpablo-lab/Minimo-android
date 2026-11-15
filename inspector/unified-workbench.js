@@ -61,7 +61,7 @@
       <div class="workbench-page-heading">
         <div><div class="workbench-kicker">CENTRO DE INSPECCIÓN · PARTIDAS</div>
           <h2 id="wbReportTitle">Resumen de la partida</h2>
-          <p id="wbReportMeta">Aquí tienes lo importante. El análisis completo queda guardado para revisarlo después.</p>
+          <p id="wbReportMeta">El historial pertenece a este navegador y perfil: no se sincroniza automáticamente entre móviles. Para reunir partidas de otros dispositivos, exporta el JSON de cada uno e impórtalo aquí; el informe importado quedará archivado en este navegador.</p>
         </div>
         <div class="workbench-report-actions">
           <button class="wb-button" id="wbReportRefresh" type="button">Actualizar</button>
@@ -916,6 +916,38 @@
     }
   }
 
+  async function persistImportedReport(report) {
+    if (!report || !report.sessionId || !report.startedAt || !Array.isArray(report.samples)) {
+      throw new Error("El informe debe incluir sessionId, startedAt y muestras para poder archivarse.");
+    }
+    const db = await openDb();
+    let selectedReport = report;
+    let saved = false;
+    try {
+      await new Promise((resolve,reject)=>{
+        const tx = db.transaction(STORE,"readwrite");
+        const store = tx.objectStore(STORE);
+        const request = store.get(report.sessionId);
+        request.onsuccess = () => {
+          const existing = request.result;
+          if (!existing || reportUpdatedAt(report) >= reportUpdatedAt(existing)) {
+            store.put(report);
+            saved = true;
+          } else {
+            selectedReport = existing;
+          }
+        };
+        request.onerror = () => reject(request.error || new Error("No se pudo consultar si el informe ya estaba archivado."));
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error("No se pudo archivar el informe importado."));
+        tx.onabort = () => reject(tx.error || new Error("Se canceló el archivo del informe importado."));
+      });
+    } finally {
+      db.close();
+    }
+    return { report: selectedReport, saved };
+  }
+
   function bindReportActions() {
     $("wbReportRefresh").addEventListener("click",loadReport);
     const exportLatestReport=()=>{
@@ -950,14 +982,20 @@
       if(!file)return;
       try {
         const parsed=JSON.parse(await file.text());
-        const report=Array.isArray(parsed)?parsed[0]:parsed.report||parsed;
-        if(!report||!Array.isArray(report.samples))throw new Error("El archivo no contiene una partida con muestras.");
+        const candidate=Array.isArray(parsed)?parsed[0]:parsed.report||parsed;
+        if(!candidate||!candidate.sessionId||!candidate.startedAt||!Array.isArray(candidate.samples))
+          throw new Error("El archivo no contiene un informe completo con identificador, fecha de inicio y muestras.");
+        const archived = await persistImportedReport(candidate);
+        const report = archived.report;
         const intelligence = await buildSpecialistIntelligence(report, false);
         if (latestPatrolRaw && window.ELSN_NPC_AGENT_CORE) {
           latestPatrolIntelligence = window.ELSN_NPC_AGENT_CORE.analyzeObserverPatrol(latestPatrolRaw, report.gameBuild || null);
           renderObserverPatrol(latestPatrolIntelligence);
         }
-        renderReport(report,"Archivo importado",null,intelligence);
+        renderReport(report,"Archivo importado y guardado",null,intelligence);
+        $("wbReportState").textContent = archived.saved
+          ? "Informe archivado en este navegador. Seguirá disponible al volver a abrir el Inspector en este mismo navegador y perfil."
+          : "Este identificador ya tenía una versión más reciente archivada; se ha conservado la versión más nueva.";
       } catch(error) {
         $("wbReportState").textContent="No se pudo abrir el JSON: "+String(error&&error.message||error);
       } finally {event.target.value="";}
