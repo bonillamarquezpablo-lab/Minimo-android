@@ -137,6 +137,9 @@ def main() -> None:
     builder_source = (ROOT / "scripts" / "build_site.py").read_text(encoding="utf-8")
     if 'dialogue_bridge_marker = " window.copyGameHealthDebug=()=>{"' not in builder_source:
         fail("El puente de diálogos debe compartir el ámbito real del jugador y la API de inspección del mundo.")
+    for marker in ("movePlayerNearNpcForTest", "playerdialoguetest", "addGroup(typeof enemies", "addGroup(typeof companions"):
+        if marker not in builder_source:
+            fail("La prueba de diálogos debe poder acercar al protagonista a guardias y compañeros reales: " + marker)
     for marker in (
         '<link rel="stylesheet" href="./scripts/npc-dialogue.css">',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
