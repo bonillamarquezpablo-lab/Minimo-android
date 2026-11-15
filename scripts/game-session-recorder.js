@@ -262,6 +262,23 @@
     const rawFrame = runtime.frameTimingMs && typeof runtime.frameTimingMs === "object" ? runtime.frameTimingMs : {};
     const browserMemory = window.performance && window.performance.memory && typeof window.performance.memory === "object"
       ? window.performance.memory : null;
+    let atmosphere = null;
+    try {
+      const liveAtmosphere = window.__ELSN_ATMOSPHERE;
+      if (liveAtmosphere && typeof liveAtmosphere.getState === "function") {
+        const state = liveAtmosphere.getState();
+        atmosphere = {
+          timeOfDay: number(state.timeOfDay),
+          night: number(state.night),
+          daylight: number(state.daylight),
+          twilight: number(state.twilight),
+          weather: text(state.weather, 24),
+          quality: text(state.quality, 24),
+          shadowMode: text(state.shadowMode, 24),
+          visualUpdateIntervalMs: number(state.visualUpdateIntervalMs)
+        };
+      }
+    } catch (_) {}
     const sample = {
       capturedAt: new Date().toISOString(),
       targetFps: number(runtime.performanceAssessment && runtime.performanceAssessment.targetFps),
@@ -351,6 +368,7 @@
         grassBatches: number(runtime.grassBatches),
         activeWorldShadowCasters: number(runtime.activeWorldShadowCasters)
       },
+      atmosphere,
       playerPosition: readPlayerLocation(health),
       waterDiagnostics: readWaterDiagnostics()
     };
@@ -626,6 +644,24 @@
       { name: "GPU", value: medianGpu, source: "Babylon EngineInstrumentation" }
     ].filter(item => item.value !== null).sort((a, b) => b.value - a.value);
     const targetFps = percentile(values(sample => sample.targetFps), .5) || 60;
+    const lightingGroup = night => {
+      const selected = samples.filter(sample => sample.atmosphere &&
+        Number.isFinite(Number(sample.atmosphere.night)) &&
+        (Number(sample.atmosphere.night) >= 0.55) === night);
+      const groupFps = selected.map(sample => number(sample.fps)).filter(value => value !== null);
+      const groupP95 = selected.map(sample => number(sample.frameTiming && sample.frameTiming.p95Ms)).filter(value => value !== null);
+      return {
+        sampleCount: selected.length,
+        fpsAverage: groupFps.length ? Number((groupFps.reduce((sum,value)=>sum+value,0)/groupFps.length).toFixed(2)) : null,
+        fpsMinimum: groupFps.length ? Math.min(...groupFps) : null,
+        p95MedianMs: percentile(groupP95,0.5),
+        timeOfDayRange: selected.length ? {
+          first: number(selected[0].atmosphere.timeOfDay),
+          last: number(selected[selected.length-1].atmosphere.timeOfDay)
+        } : null
+      };
+    };
+    const lightingConditions = { day: lightingGroup(false), night: lightingGroup(true) };
     const expectedSamples = session.startedAt && session.finishedAt
       ? Math.max(1, Math.floor((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / SAMPLE_INTERVAL_MS) + 1)
       : null;
@@ -635,6 +671,7 @@
         ? Math.max(0, Math.round((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / 1000)) : null,
       targetFps,
       fps: { minimum: fps.length ? Math.min(...fps) : null, average: fps.length ? Number((fps.reduce((sum, value) => sum + value, 0) / fps.length).toFixed(2)) : null, median: median(fps), p10: percentile(fps, .1) },
+      lightingConditions,
       frameTimeMs: {
         p95Median: median(p95),
         p99Median: median(p99),
