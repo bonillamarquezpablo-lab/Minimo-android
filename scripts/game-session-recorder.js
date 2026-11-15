@@ -310,6 +310,10 @@
         meshSelectionOctreeEnabled: runtime.meshSelectionOctreeEnabled === true,
         meshSelectionSceneMeshCount: number(runtime.meshSelectionSceneMeshCount),
         meshSelectionDynamicMeshCount: number(runtime.meshSelectionDynamicMeshCount),
+        meshSelectionStaticIndexedMeshCount: number(runtime.meshSelectionStaticIndexedMeshCount),
+        meshSelectionDynamicContentRatio: number(runtime.meshSelectionDynamicContentRatio),
+        meshSelectionInitialDynamicCount: number(runtime.meshSelectionInitialDynamicCount),
+        meshSelectionDynamicReasons: runtime.meshSelectionDynamicReasons || null,
         meshSelectionBuildMs: number(runtime.meshSelectionBuildMs)
       },
       memory: {
