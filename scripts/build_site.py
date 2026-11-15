@@ -831,7 +831,7 @@ def main() -> None:
    const atmosphere=window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getState==='function'?window.__ELSN_ATMOSPHERE.getState():null;
    const islandIndex=typeof landIslandIndex==='function'?landIslandIndex(focus.x,focus.z):-1;
    return {
-    active:!!gameStarted,
+    active:!!(document.body&&document.body.classList.contains('game-running')),
     playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
     people:ambientPeople.concat(campGuards.filter(guard=>guard&&guard.alive!==false)),
     world:{night:!!(atmosphere&&atmosphere.night>=0.55),onShip:!!onShip,enemyNearby:typeof nearEnemies==='function'&&nearEnemies(),health:Number(health),healthLow:Number(health)<=35,wood:Number(woodCount),stone:Number(stoneCount),captured:Number(captured)||0,islandName:islandIndex>=0&&land[islandIndex]?String(land[islandIndex].name||''):''},
