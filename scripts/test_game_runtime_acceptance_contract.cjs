@@ -55,6 +55,7 @@ for (const marker of [
   "worldUpdateWaitDiagnostic",
   "npcDialogueSmoke",
   "npcDialogueApproach",
+  "npcDialogueVisibilityWait",
   "PabloTheNameless",
   "Villager_",
   "__ELSN_NPC_DIALOGUE_SMOKE_RESTORE__",
@@ -76,4 +77,6 @@ for (const marker of [
 ]) {
   assert.ok(smoke.includes(marker), 'Runtime smoke is missing acceptance check: ' + marker);
 }
+assert.doesNotMatch(smoke, /setTimeout\(resolve, 7500\)/,
+  'NPC dialogue acceptance must wait for a visible bubble, not a fixed sleep.');
 console.log('Game runtime and offline Service Worker acceptance contract: PASS');
