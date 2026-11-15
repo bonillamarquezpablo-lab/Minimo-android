@@ -397,15 +397,44 @@
     const agents = report.agents.slice(0, 12).map(agent => {
       const issues = (Array.isArray(agent.issues) ? agent.issues : []).slice(0, 40).map(issue => {
         const textToMatch = [issue.title, issue.detail].map(value => String(value || "")).join(" ");
-        const match = structureRows.find(row => row && row.name && textToMatch.includes(String(row.name)));
+        let match = structureRows.find(row => row && row.name && textToMatch.includes(String(row.name)));
+        const measuredGapCm = /(\\d+(?:[.,]\\d+)?)\\s*cm/i.exec(textToMatch);
+        const expectedGapMeters = measuredGapCm ? Number(measuredGapCm[1].replace(",", ".")) / 100 : null;
+        if (!match && expectedGapMeters !== null) {
+          const candidates = structureRows.filter(row => row && finiteMetric(row.islandIndex) === finiteMetric(issue.islandIndex));
+          match = candidates.map(row => {
+            const measurements = row.measurements || {};
+            const gap = finiteMetric(row.gapMeters) ??
+              finiteMetric(measurements.maximumFootingGapMeters) ??
+              finiteMetric(measurements.maximumStructuralBaseGapMeters) ??
+              finiteMetric(measurements.maximumBaseGapMeters) ??
+              finiteMetric(measurements.maximumSupportPointGapMeters);
+            return { row, gap };
+          }).filter(item => item.gap !== null)
+            .sort((a, b) => Math.abs(a.gap - expectedGapMeters) - Math.abs(b.gap - expectedGapMeters))[0]?.row || null;
+          const matchedGap = match && (finiteMetric(match.gapMeters) ??
+            finiteMetric(match.measurements && match.measurements.maximumFootingGapMeters) ??
+            finiteMetric(match.measurements && match.measurements.maximumStructuralBaseGapMeters) ??
+            finiteMetric(match.measurements && match.measurements.maximumBaseGapMeters) ??
+            finiteMetric(match.measurements && match.measurements.maximumSupportPointGapMeters));
+          if (matchedGap === null || Math.abs(matchedGap - expectedGapMeters) > 0.03) match = null;
+        }
         const position = match && finiteMetric(match.x) !== null && finiteMetric(match.z) !== null
           ? { x: finiteMetric(match.x), z: finiteMetric(match.z), islandIndex: finiteMetric(match.islandIndex) } : null;
+        let nextStep = "Repetir la comprobación con la misma referencia y revisar el objeto antes de modificarlo.";
+        if (/tolerancia|apoyo|cimentaci[oó]n|cm/i.test(textToMatch))
+          nextStep = "Revisar la altura del terreno y todos los puntos de apoyo de esta estructura; no recolocarla automáticamente.";
+        else if (/insegura|visible/i.test(textToMatch))
+          nextStep = "Volver a comprobar la base, la visibilidad y el motivo por el que la auditoría la marca como insegura.";
+        else if (/terreno|enterrad|intersecci[oó]n/i.test(textToMatch))
+          nextStep = "Comprobar la altura del terreno y la posición real del objeto en esta zona.";
         return {
           title: bounded(issue.title || "Incidencia sin título", 140),
           detail: bounded(issue.detail || "", 600),
           severity: ["critical", "warning", "ok"].includes(issue.severity) ? issue.severity : "unknown",
           islandIndex: finiteMetric(issue.islandIndex),
-          position
+          position,
+          nextStep: bounded(nextStep, 300)
         };
       });
       const severity = ["critical", "warning", "ok"].includes(agent.severity) ? agent.severity : "unknown";
