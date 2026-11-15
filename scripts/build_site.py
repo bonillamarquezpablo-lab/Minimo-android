@@ -788,7 +788,7 @@ def main() -> None:
     active:!!gameStarted,
     playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
     people,scene,camera:scene.activeCamera||camera,
-    canvas:engine.getRenderingCanvas(),BABYLON:B
+    canvas:engine.getRenderingCanvas(),engine,BABYLON:B
    };
   }
  });
