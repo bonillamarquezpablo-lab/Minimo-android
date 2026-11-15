@@ -221,6 +221,7 @@ assert.ok(patrolUlf.issues[1].nextStep.includes("puntos de apoyo"));
 
 assert.ok(patrolAnalysis.cautions.some(item => item.includes("no al build actual")));
 assert.ok(patrolAnalysis.cautions.some(item => item.includes("GPU Adreno")));
+assert.ok(patrolAnalysis.cautions.some(item => item.includes("no se reasignan automáticamente")),"Patrol assignments must remain distinct from match specialist roles.");
 assert.equal(Core.analyzeObserverPatrol(Object.assign({}, patrolFixture, { mode: "gameplay-session" }), "0.6.301"), null,
   "Only the explicitly read-only observer patrol format may enter the patrol report.");
 const memoryWithPatrol = Core.analyzeSessionIntelligence(integratedReport, [
