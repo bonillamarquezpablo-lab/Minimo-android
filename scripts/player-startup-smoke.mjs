@@ -412,6 +412,59 @@ async function main() {
         JSON.stringify(diagnostics) + ' · ' + String(error?.message || error));
     }
     manifest.worldUpdateWaitMs = Number((performance.now() - worldUpdateWaitStartedAt).toFixed(1));
+
+    // Player-facing NPC dialogue must be visible over a real nearby character,
+    // not merely packaged or syntactically valid.
+    const npcDialogueWaitStartedAt = performance.now();
+    try {
+      await page.waitForFunction(() => {
+        const state = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.();
+        const message = document.querySelector(
+          '.elsn-npc-bubble.is-visible:not([hidden]) .elsn-npc-bubble-message'
+        );
+        return state?.bridgeActive === true && Number(state.renderedBubbleCount) > 0 &&
+          !!(message && message.textContent && message.textContent.trim().length > 0);
+      }, undefined, { timeout: 45000, polling: 200 });
+    } catch (error) {
+      manifest.npcDialogues = await page.evaluate(() => {
+        const runtime = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.() || null;
+        let bridge = null;
+        try {
+          const snapshot = window.__ELSN_GAME_DIALOGUE_BRIDGE__?.getSnapshot?.();
+          bridge = snapshot ? {
+            active: snapshot.active,
+            peopleCount: Array.isArray(snapshot.people) ? snapshot.people.length : null,
+            playerPosition: snapshot.playerPosition
+          } : null;
+        } catch (bridgeError) {
+          bridge = { error: String(bridgeError?.message || bridgeError) };
+        }
+        return {
+          runtime,
+          bridge,
+          visibleMessages: [...document.querySelectorAll(
+            '.elsn-npc-bubble.is-visible:not([hidden]) .elsn-npc-bubble-message'
+          )].map(node => node.textContent).filter(Boolean)
+        };
+      });
+      await page.screenshot({ path: path.join(OUT, 'npc-dialogue-missing.png'), fullPage: true }).catch(() => {});
+      throw new Error('Los NPC no mostraron ningún diálogo visible en una partida real: ' +
+        JSON.stringify(manifest.npcDialogues) + ' · ' + String(error?.message || error));
+    }
+    manifest.npcDialogueWaitMs = Number((performance.now() - npcDialogueWaitStartedAt).toFixed(1));
+    manifest.npcDialogues = await page.evaluate(() => {
+      const runtime = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.() || null;
+      const visibleMessages = [...document.querySelectorAll(
+        '.elsn-npc-bubble.is-visible:not([hidden]) .elsn-npc-bubble-message'
+      )].map(node => node.textContent).filter(Boolean);
+      return { runtime, visibleMessages };
+    });
+    assert.ok(manifest.npcDialogues.runtime?.renderedBubbleCount > 0,
+      'El runtime de diálogos no está dibujando globos sobre los NPC.');
+    assert.ok(manifest.npcDialogues.visibleMessages.some(message => message.trim().length > 0),
+      'El globo se creó, pero no contiene texto legible.');
+    await page.screenshot({ path: path.join(OUT, 'npc-dialogue-visible.png'), fullPage: true });
+
     manifest.worldUpdateCountAtCapture = await page.evaluate(() =>
       window.getGameHealthDebug()?.worldUpdateCount ?? null);
     manifest.spatialSelection = await page.evaluate(() => window.__ELSN_SPATIAL_SELECTION__ || null);
