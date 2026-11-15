@@ -11,7 +11,7 @@ const workflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 for(const marker of [
   'const spatialActorNamePattern=',
   'const spatialActorCamelNamePattern=',
-  'const spatialVegetationMotionPattern=',
+  'const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;',
   'const spatialWaterMotionPattern=',
   'const spatialEffectMotionPattern=',
   'const spatialDynamicReasonForMesh=',
@@ -19,6 +19,8 @@ for(const marker of [
   'scene.createOrUpdateSelectionOctree(64,3)',
   'scene.onNewMeshAddedObservable.add',
   'scene.onMeshRemovedObservable.add',
+  "scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,'created-after-octree',true);});",
+  "mesh.__elsnSpatialDynamicReason='octree-initial-dynamic'",
   'function buildSpatialSelectionOctree()',
   'buildSpatialSelectionOctree();',
   'meshSelectionOctreeEnabled:spatialSelectionStats.enabled',
@@ -42,6 +44,7 @@ assert.ok(smoke.includes('manifest.spatialSelection.staticIndexedMeshCount') && 
 assert.ok(smoke.includes('sceneCount') && smoke.includes(' * 0.35') && smoke.includes(' < 0.65'), 'Startup acceptance must require at least 35% of scene meshes to be static.');
 assert.ok(workflow.includes('node scripts/test_quality_spatial_selection.cjs'),'The Pages build must run the spatial selection contract.');
 assert.ok(source.includes('function update(dt){'),'World update must remain present.');
+assert.ok(source.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),'Felled trees must leave static octree cells before their fall animation.');
 for(const marker of ['function animateWater(dt)','function updateWildlife(dt)','function updateActiveIslandGrass(dt)','function updateManagedWorldShadowCasters()','function auditHabitableStructures']) {
   assert.ok(source.includes(marker),'A gameplay or visual subsystem was removed: '+marker);
 }
