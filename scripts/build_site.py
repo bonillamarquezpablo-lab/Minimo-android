@@ -809,31 +809,31 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.296: restore flagship render clarity while preserving the
+    # Release candidate 0.6.297: restore flagship render clarity while preserving the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.296; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.297; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.296\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.297\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.296.")
-    html = html.replace("0.6.274", "0.6.296")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.297.")
+    html = html.replace("0.6.274", "0.6.297")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'18',build:'0.6.296'"
+    diagnostic_build_replacement = "reportVersion:'19',build:'0.6.297'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.296 para normalizar.")
-    game_version = "0.6.296"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.297 para normalizar.")
+    game_version = "0.6.297"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
-    # 0.6.296 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
+    # 0.6.297 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
     quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
     quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
  const highHeadroomQualityMobile=!!(!isPerformanceMode&&isTouchDevice&&!constrainedHardware&&((reportedMemory>=8&&(Number(navigator.hardwareConcurrency)||0)>=8)||highTierGpuMatch));
@@ -890,37 +890,65 @@ def main() -> None:
  // High-mesh-count spatial selection for Babylon.js.
  // Static scene meshes stay indexed; moving actors/effects and every later-created mesh
  // are registered as dynamic content so movement, animation and gameplay remain intact.
- const spatialDynamicNamePattern=/(?:player|viking|npc|enemy|raider|guard|warrior|villager|peasant|companion|animal|fauna|deer|wolf|stag|gull|bird|ship|boat|drakkar|mast|sail|rudder|pennant|flag|banner|tree|canopy|wind|grass|foliage|leaf|leaves|shrub|bush|fire|flame|ember|smoke|particle|spray|foam|wake|water|ocean|shore|beach|tide|wave|cloud|sky|sun|moon|shadow|footprint|weapon|shield|arrow|projectile|buoy|debris|rock|boulder|torch|lantern|light|gate|door|bridge|install|craft|construction|outpost|village|camp|forge|tower|hall|hut|building|garrison|regatta|splash|wreck|corpse|capture|falling|damage)/i;
+ const spatialActorNamePattern=/^(?:player|pablo|pablothe|viking|human|civilian|npc|enemy|raider|guard|warrior|villager|peasant|companion|wildlife|animal|fauna|deer|wolf|stag|gull|bird|ship|boat|drakkar|mast|sail|rudder|flag|banner|pennant|weapon|shield|arrow|projectile|corpse|capture|falling|damage)/i;
+ const spatialActorCamelNamePattern=/(?:Player|Pablo|Viking|NPC|Enemy|Raider|Guard|Warrior|Villager|Peasant|Companion|Wildlife|Deer|Wolf|Stag|Gull|Bird|Ship|Boat|Drakkar|Flag|Banner|Pennant|Weapon|Shield|Arrow|Projectile|Corpse|Capture|Damage)/;
+ const spatialVegetationMotionPattern=/^(?:mixedForestTree|treeCanopyWindPivot|fallingTree|fallingForestTree)/i;
+ const spatialWaterMotionPattern=/^(?:ocean|water|nordicWater|coastalWater|coastalWave|waterFilm|tidalFoam|shoreBreakerWash|beachState|activeBeach|activeShore)/i;
+ const spatialEffectMotionPattern=/^(?:fire|flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
+ const spatialDynamicStatsPattern=/^(?:vesselWaterSpray|drakkarWake|tidalFoam|particle|projectile|arrow)/i;
  let spatialSelectionOctree=null;
- const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,buildMs:null,error:null};
+ const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],buildMs:null,error:null};
  const publishSpatialSelectionStats=()=>{
   try{window.__ELSN_SPATIAL_SELECTION__={...spatialSelectionStats};}catch(_){}
  };
- const isSpatialDynamicMesh=mesh=>{
+ const spatialDynamicReasonForMesh=mesh=>{
   for(let node=mesh;node&&node!==scene;node=node.parent){
-   if(spatialDynamicNamePattern.test(String(node.name||'')))return true;
-   if(node.skeleton||node.morphTargetManager||(Array.isArray(node.animations)&&node.animations.length))return true;
-   if(Number(node.thinInstanceCount)>0||Number(node.billboardMode)>0)return true;
+   const name=String(node.name||'');
+   if(node.skeleton||node.morphTargetManager||(Array.isArray(node.animations)&&node.animations.length))return 'animated-rig';
+   if(spatialActorNamePattern.test(name)||spatialActorCamelNamePattern.test(name))return 'actor-or-vehicle';
+   if(spatialVegetationMotionPattern.test(name))return 'vegetation-motion';
+   if(spatialWaterMotionPattern.test(name))return 'water-or-coast';
+   if(spatialEffectMotionPattern.test(name))return 'particle-or-effect';
+   if(Number(node.thinInstanceCount)>0&&spatialDynamicStatsPattern.test(name))return 'moving-thin-instances';
+   if(Number(node.billboardMode)>0)return 'billboard';
   }
-  return false;
+  return null;
  };
- const addSpatialDynamicMesh=mesh=>{
+ const isSpatialDynamicMesh=mesh=>!!spatialDynamicReasonForMesh(mesh);
+ const updateSpatialSelectionCounts=()=>{
+  const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
+  const dynamicCount=dynamic&&Number.isFinite(dynamic.length)?dynamic.length:0;
+  const sceneCount=scene.meshes.length;
+  spatialSelectionStats.sceneMeshCount=sceneCount;
+  spatialSelectionStats.dynamicMeshCount=dynamicCount;
+  spatialSelectionStats.staticIndexedMeshCount=Math.max(0,sceneCount-dynamicCount);
+  spatialSelectionStats.dynamicContentRatio=sceneCount?Number((dynamicCount/sceneCount).toFixed(4)):null;
+  publishSpatialSelectionStats();
+ };
+ const addSpatialDynamicMesh=(mesh,reason=null)=>{
   const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
   if(!mesh||!dynamic||typeof dynamic.push!=='function'||mesh.__elsnSpatialDynamic)return;
+  const classification=reason||spatialDynamicReasonForMesh(mesh);
+  if(!classification)return;
   mesh.__elsnSpatialDynamic=true;
-  dynamic.push(mesh);
-  spatialSelectionStats.dynamicMeshCount=dynamic.length;
-  publishSpatialSelectionStats();
+  mesh.__elsnSpatialDynamicReason=classification;
+  if(typeof dynamic.indexOf==='function'){
+   if(dynamic.indexOf(mesh)<0)dynamic.push(mesh);
+  }else dynamic.push(mesh);
+  spatialSelectionStats.dynamicReasons[classification]=(spatialSelectionStats.dynamicReasons[classification]||0)+1;
+  if(spatialSelectionStats.dynamicSampleNames.length<32)spatialSelectionStats.dynamicSampleNames.push({name:String(mesh.name||''),reason:classification});
+  updateSpatialSelectionCounts();
  };
  const removeSpatialDynamicMesh=mesh=>{
   const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
   if(!mesh||!mesh.__elsnSpatialDynamic)return;
   if(dynamic&&typeof dynamic.indexOf==='function'){
    const index=dynamic.indexOf(mesh);if(index>=0)dynamic.splice(index,1);
-   spatialSelectionStats.dynamicMeshCount=dynamic.length;
   }
-  try{delete mesh.__elsnSpatialDynamic;}catch(_){mesh.__elsnSpatialDynamic=false;}
-  publishSpatialSelectionStats();
+  const reason=String(mesh.__elsnSpatialDynamicReason||'unknown');
+  if(spatialSelectionStats.dynamicReasons[reason]>0)spatialSelectionStats.dynamicReasons[reason]--;
+  try{delete mesh.__elsnSpatialDynamic;delete mesh.__elsnSpatialDynamicReason;}catch(_){mesh.__elsnSpatialDynamic=false;}
+  updateSpatialSelectionCounts();
  };
  if(scene.onNewMeshAddedObservable&&typeof scene.onNewMeshAddedObservable.add==='function'){
   scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh);});
@@ -974,7 +1002,7 @@ def main() -> None:
     html = html.replace(scene_marker, scene_marker + "\n" + scene_profile_code, 1)
 
     runtime_diagnostics_marker = "webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,"
-    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionBuildMs:spatialSelectionStats.buildMs,engineGpuFrameMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
+    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionBuildMs:spatialSelectionStats.buildMs,engineGpuFrameMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
     if html.count(runtime_diagnostics_marker) != 1:
         raise SystemExit("No se encontró exactamente un bloque runtime para el diagnóstico.")
     html = html.replace(runtime_diagnostics_marker,runtime_diagnostics_replacement,1)
