@@ -734,6 +734,12 @@
     }else{
       quickLines.push("Aún no hay suficientes mediciones separadas entre día y noche.");
     }
+    const dialogueEvidence = summary.npcDialogue || {};
+    if(Number(dialogueEvidence.sampleCount)>0){
+      quickLines.push("Diálogos: "+fmt(dialogueEvidence.bubblesStarted,0)+" intervenciones iniciadas, "+fmt(dialogueEvidence.projectionSuccesses,0)+" colocaciones visuales correctas y hasta "+fmt(dialogueEvidence.nearbyMaximum,0)+" personajes cercanos.");
+    }else{
+      quickLines.push("No hay todavía mediciones del sistema de diálogos en esta partida.");
+    }
     if(runtimeErrors>0)quickLines.push("Se registraron "+fmt(runtimeErrors,0)+" errores durante la partida.");
     if(anomalies.length>0)quickLines.push("Se detectaron "+fmt(anomalies.length,0)+" avisos de rendimiento.");
     $("wbQuickReadTitle").textContent = quickTitle;
