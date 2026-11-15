@@ -158,7 +158,7 @@ def main() -> None:
         fail("El diálogo ambiental debe reintentar el puente, admitir NPC cercanos y exponer fallos de proyección.")
     if "worldColliders.push({" in index_html or "registerWorldCollider({" not in index_html or "habitableColliderBackfillCount" not in index_html:
         fail("Todos los colisionadores de estructuras deben incorporarse a la rejilla espacial activa.")
-    if "fallbackShorelineRadius(island)" not in index_html or "emissiveColor=new B.Color3(.12,.15,.16)" not in index_html or "foamVisibility=Math.max(Math.min(.94,foamStrength/.16),.22+foamBreakStrength*.72)" not in index_html:
+    if "fallbackShorelineRadius(island)" not in index_html or "emissiveColor=new B.Color3(.12,.15,.16)" not in index_html or "foamVisibility=Math.max(Math.min(.94,foamStrength/.16),.22,foamBreakStrength*.82)" not in index_html:
         fail("La espuma de rompiente debe conservar un anclaje válido y seguir siendo visible por la noche.")
     game_specialist_markers = (
         "window.__ELSN_NPC_AGENT_CONTEXT__",
