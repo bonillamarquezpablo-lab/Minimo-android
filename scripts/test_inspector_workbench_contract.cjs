@@ -10,7 +10,7 @@ for(const id of ["diagnostico-en-vivo","telemetria","mundo","radar","comparativa
 assert.ok(js.includes('id="wbReportSpecialists"'),"Unified report must include specialist findings.");
 assert.ok(js.includes('id="wbPatrolReport"') && js.includes("loadLatestObserverPatrol"),"The unified report must load the independent 13-island patrol.");
 assert.ok(js.includes("PATROL_REPORT_URL") && js.includes("rememberObserverPatrol"),"The latest patrol must enter the shared specialist memory.");
-assert.ok(js.includes("SwiftShader") || js.includes("softwareRenderer"),"Patrol GPU results must retain the software-renderer warning.");
+assert.ok(js.includes("patrol.cautions.map") && js.includes("wbPatrolCautions"),"The interface must display the provenance and renderer cautions produced by the patrol analyzer.");
 
 assert.ok(js.includes("function renderSpecialistIntelligence") && js.includes("function buildSpecialistIntelligence"),"Specialist findings must be rendered and hydrated from the shared memory.");
 assert.ok(js.includes("api.remember") && js.includes("specialistIntelligence"),"The report must persist per-session specialist diagnoses and export them.");
