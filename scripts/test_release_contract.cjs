@@ -70,7 +70,7 @@ assert.match(validator,/La defensa naval debe estar conectada al bucle/);
 assert.match(validator,/STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200/);
 assert.ok(indexHtml.includes("audioPreloadResult=await NorseAudio.preloadAll(30000)"),"The required audio barrier must retry a still-pending first preload without skipping any sound effect.");
 assert.match(validator,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/);
-assert.match(validator,/scene\.compileMaterialsAsync\(\)/);
+assert.match(validator,/sceneReadyTasks=\[scene\.whenReadyAsync\(\)\]/);\nassert.ok(buildSite.includes("full_scene_compile_marker") && buildSite.includes("avoid a duplicate all-island compile pass"),"The release builder must remove the redundant full-scene material compilation while retaining the blocking readiness barrier.");
 assert.match(validator,/rows=isPerformanceMode\?13/);
 assert.doesNotMatch(validator,/resourceResults=await Promise\.allSettled\(\[playerHumanLoadPromise,startNpcHumanModels\(\)\]\)/);
 assert.ok(buildSite.includes('scripts/nordic/atmosphere-system.js'),"The release builder must package the unified atmosphere runtime.");
