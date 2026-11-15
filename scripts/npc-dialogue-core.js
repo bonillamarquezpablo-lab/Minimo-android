@@ -12,15 +12,15 @@ const clamp=(n,min,max)=>Math.max(min,Math.min(max,Number(n)||0));
 function rand(r){const n=typeof r==="function"?Number(r()):Math.random();return Number.isFinite(n)?Math.max(0,Math.min(.999999,n)):.5;}
 function choose(a,r){return a[Math.floor(rand(r)*a.length)];}
 function roleForVariant(v){return ROLES[Math.abs(Math.floor(Number(v)||0))%ROLES.length];}
-function suppliesContext(ctx){return Number.isFinite(Number(ctx.wood))||Number.isFinite(Number(ctx.stone));}
+function hasMeasuredNumber(value){return value!==null&&value!==undefined&&value!==""&&Number.isFinite(Number(value));}
 function contextualLines(role,ctx){
  const lines=[];
  if(ctx.enemyNearby===true)lines.push({topic:"danger",kind:"speech",text:role.id==="fisher"?"¡Hay saqueadores cerca! No te quedes junto a la costa.":"¡He visto enemigos cerca del poblado! Mantén el arma preparada."});
  if(ctx.healthLow===true)lines.push({topic:"health",kind:"speech",text:"Estás herido. Busca un lugar seguro y recupera fuerzas antes de volver a luchar."});
  if(ctx.night===true)lines.push({topic:"night",kind:"speech",text:role.id==="farmer"?"Está anocheciendo. Será mejor asegurar el poblado y no alejarse de la luz.":role.id==="fisher"?"Con esta oscuridad no saldría a navegar sin revisar antes la costa.":"La noche cubre los caminos. Vigila los alrededores y mantente cerca del fuego."});
  if(ctx.onShip===true)lines.push({topic:"voyage",kind:"speech",text:role.id==="fisher"?"Vigila el viento y los bajíos. Una mala maniobra puede abrir el casco.":role.id==="trader"?"Cada isla puede guardar provisiones, pero primero hay que encontrar un desembarco seguro.":"No pierdas de vista la costa; desde el barco los arrecifes engañan."});
- if(suppliesContext(ctx)&&Number(ctx.wood)<=5)lines.push({topic:"wood",kind:"speech",text:role.id==="smith"?"Nos queda poca madera para reparar herramientas y defensas.":"Las reservas de madera son escasas. Conviene talar cerca del campamento."});
- if(suppliesContext(ctx)&&Number(ctx.stone)<=5)lines.push({topic:"stone",kind:"speech",text:role.id==="smith"?"Nos falta piedra para reforzar el equipo. Busca un afloramiento de granito y usa el pico.":"Queda poca piedra. Los bloques de granito de la isla pueden servirnos."});
+ if(hasMeasuredNumber(ctx.wood)&&Number(ctx.wood)<=5)lines.push({topic:"wood",kind:"speech",text:role.id==="smith"?"Nos queda poca madera para reparar herramientas y defensas.":"Las reservas de madera son escasas. Conviene talar cerca del campamento."});
+ if(hasMeasuredNumber(ctx.stone)&&Number(ctx.stone)<=5)lines.push({topic:"stone",kind:"speech",text:role.id==="smith"?"Nos falta piedra para reforzar el equipo. Busca un afloramiento de granito y usa el pico.":"Queda poca piedra. Los bloques de granito de la isla pueden servirnos."});
  if(ctx.playerClose===true)lines.push({topic:"greeting",kind:"speech",text:role.id==="trader"?"¡Eh, viajero! ¿Traes noticias de otras islas?":role.id==="fisher"?"¡Buen día! ¿Has visto cómo está el mar?":"Me alegra verte. ¿Cómo marcha la expedición?"});
  if(ctx.recentCapture===true)lines.push({topic:"victory",kind:"speech",text:"La bandera vuelve a ondear sobre una aldea libre. No olvidaremos a quienes lucharon por ella."});
  return lines;
