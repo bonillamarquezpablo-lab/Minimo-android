@@ -145,3 +145,6 @@
 .wb-patrol-cautions p{margin:4px 0;color:#c6b69d;font-size:.68rem;line-height:1.45}
 .wb-patrol-report a{color:#d8b27d;font-size:.7rem;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:620px){.wb-patrol-agents{grid-template-columns:1fr}.wb-patrol-agent{padding:10px}}
+
+.wb-patrol-next-step{margin-top:5px!important;color:#d8b27d!important}
+.wb-patrol-next-step strong{color:#e8c995}
