@@ -141,6 +141,7 @@ def main() -> None:
         "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
         "maxVisibleBubbles:4",
         "canvas:engine.getRenderingCanvas(),engine,BABYLON:B",
+        'dialogue_bridge_marker = " window.copyGameHealthDebug=()=>{"',
     ):
         if marker not in index_html:
             fail("El juego no integra correctamente los diálogos ambientales: " + marker)
