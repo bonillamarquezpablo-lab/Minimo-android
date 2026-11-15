@@ -397,10 +397,10 @@
     const agents = report.agents.slice(0, 12).map(agent => {
       const issues = (Array.isArray(agent.issues) ? agent.issues : []).slice(0, 40).map(issue => {
         const textToMatch = [issue.title, issue.detail].map(value => String(value || "")).join(" ");
-        let match = structureRows.find(row => row && row.name && /[_-]\\d+$/.test(String(row.name)) &&
+        let match = structureRows.find(row => row && row.name && /[_-]\d+$/.test(String(row.name)) &&
           textToMatch.includes(String(row.name)) &&
           (finiteMetric(issue.islandIndex) === null || finiteMetric(row.islandIndex) === finiteMetric(issue.islandIndex)));
-        const measuredGapCm = /(\\d+(?:[.,]\\d+)?)\\s*cm/i.exec(textToMatch);
+        const measuredGapCm = /(\d+(?:[.,]\d+)?)\\s*cm/i.exec(textToMatch);
         const expectedGapMeters = measuredGapCm ? Number(measuredGapCm[1].replace(",", ".")) / 100 : null;
         if (!match && expectedGapMeters !== null) {
           const candidates = structureRows.filter(row => row && finiteMetric(row.islandIndex) === finiteMetric(issue.islandIndex));
