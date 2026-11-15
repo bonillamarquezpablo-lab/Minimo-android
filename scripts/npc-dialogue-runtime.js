@@ -12,7 +12,7 @@ if(!Core||!Bridge||typeof Bridge.getSnapshot!=="function"){
  return;
 }
 const MAX_BUBBLES=Core.MAX_VISIBLE_BUBBLES,RANGE=Core.MAX_RANGE_METERS,slots=[],metadata=new Map(),pending=[];
-const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,worldPeopleCount:0,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},lastError:""};
+const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,worldPeopleCount:0,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},lastError:""};
 let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projectionIdentity=null,projectionScratch=null;
 const RANGE_SQUARED=RANGE*RANGE;
 const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.zIndex="2147483000";layer.dataset.maxBubbles=String(MAX_BUBBLES);document.body.appendChild(layer);
@@ -26,7 +26,7 @@ function distance(a,b){return a&&b?Math.hypot(Number(a.x)-Number(b.x),Number(a.z
 function distanceSquared(a,b){if(!a||!b)return Infinity;const dx=Number(a.x)-Number(b.x),dz=Number(a.z)-Number(b.z);return dx*dx+dz*dz;}
 function enabled(n){const r=rootOf(n);if(!r)return false;try{return (typeof r.isEnabled!=="function"||r.isEnabled())&&r.isVisible!==false&&r.visibility!==0;}catch(_){return false;}}
 function blockingUi(){if(document.body.classList.contains("map-open"))return true;const intro=document.getElementById("intro");return!!(intro&&intro.classList.contains("open"));}
-function snapshot(){try{return Bridge.getSnapshot();}catch(error){console.warn("NPC dialogue snapshot:",error);return null;}}
+function snapshot(){try{const value=Bridge.getSnapshot();diagnostics.bridgeError="";diagnostics.bridgeReportedActive=!!(value&&value.active);return value;}catch(error){diagnostics.snapshotFailures++;diagnostics.bridgeError=String(error&&error.message||error);diagnostics.lastError=diagnostics.bridgeError;console.warn("NPC dialogue snapshot:",error);return null;}}
 function nearbyPeople(s){
  diagnostics.worldPeopleCount=Array.isArray(s&&s.people)?s.people.length:0;
  if(!s||!s.active||!s.playerPosition||!Number.isFinite(Number(s.playerPosition.x))||!Number.isFinite(Number(s.playerPosition.z))||!Array.isArray(s.people)){diagnostics.nearbyCount=0;return[];}
