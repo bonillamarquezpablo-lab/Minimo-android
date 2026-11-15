@@ -105,6 +105,7 @@ const integratedReport = {
   sessionId: "session-intelligence-test",
   gameBuild: "0.6.301",
   status: "completed",
+  device: { userAgent: "ELSN-Test-Device", devicePixelRatio: 3, hardwareConcurrency: 8, deviceMemoryGB: 8, screen: { width: 412, height: 915 } },
   samples: Array.from({ length: 3 }, (_, index) => ({
     capturedAt: new Date(Date.UTC(2026, 10, 15, 10, index)).toISOString(),
     targetFps: 60,
@@ -156,6 +157,14 @@ const isolatedBuildPerformance = Core.analyzeSessionIntelligence(integratedRepor
 assert.equal(isolatedBuildPerformance.specialists.find(agent => agent.id === "eira").status, "probable",
   "Performance evidence from another game build must not confirm a current-build regression.");
 assert.equal(isolatedBuildPerformance.specialists.find(agent => agent.id === "eira").evidence.historicalSessionsAnalyzed, 1);
+const differentDeviceReport = JSON.parse(JSON.stringify(previousPerformanceReport));
+differentDeviceReport.sessionId = "session-intelligence-other-device";
+differentDeviceReport.device.userAgent = "Another-Device";
+const isolatedDevicePerformance = Core.analyzeSessionIntelligence(integratedReport, [], [integratedReport, differentDeviceReport]);
+assert.equal(isolatedDevicePerformance.specialists.find(agent => agent.id === "eira").status, "probable",
+  "Performance readings from a different browser/device must not confirm a recurring issue.");
+assert.equal(isolatedDevicePerformance.specialists.find(agent => agent.id === "eira").evidence.historicalSessionsAnalyzed, 1);
+
 
 
 assert.equal(intelligence.specialists.find(agent => agent.id === "sol").status, "evidencia-recogida");
