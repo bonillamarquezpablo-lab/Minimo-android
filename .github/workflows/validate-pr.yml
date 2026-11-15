@@ -50,6 +50,12 @@ jobs:
       - name: Test bounded startup scene warm-up
         run: node scripts/test_startup_guard.cjs
 
+      - name: Test player-facing NPC dialogue and supported character roots
+        run: node scripts/test_npc_dialogue_core.cjs
+
+      - name: Check player-facing NPC dialogue runtime syntax
+        run: node --check scripts/npc-dialogue-core.js && node --check scripts/npc-dialogue-runtime.js
+
       - name: Test civilian NPC specialists and shared-memory contract
         run: node scripts/test_npc_agent_core.cjs
 
