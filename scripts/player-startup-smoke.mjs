@@ -414,6 +414,55 @@ async function main() {
     manifest.worldUpdateWaitMs = Number((performance.now() - worldUpdateWaitStartedAt).toFixed(1));
     manifest.worldUpdateCountAtCapture = await page.evaluate(() =>
       window.getGameHealthDebug()?.worldUpdateCount ?? null);
+    manifest.npcDialogueSmoke = await page.evaluate(() => {
+      const bridge = window.__ELSN_GAME_DIALOGUE_BRIDGE__;
+      const runtime = window.__ELSN_NPC_DIALOGUES__;
+      if (!bridge || typeof bridge.getSnapshot !== 'function' ||
+          !runtime || typeof runtime.getSnapshot !== 'function') {
+        return { available: false, bridgePresent: !!bridge, runtimePresent: !!runtime };
+      }
+      const state = runtime.getSnapshot();
+      const world = bridge.getSnapshot();
+      return {
+        available: true,
+        bridgeReady: state.bridgeReady === true,
+        active: state.bridgeActive === true,
+        peopleInWorld: state.worldPeopleCount,
+        nearbyPeople: state.nearbyCount,
+        bubblesStarted: state.bubblesStarted,
+        projectionAttempts: state.projectionAttempts,
+        projectionSuccesses: state.projectionSuccesses,
+        visibleBubbles: state.renderedBubbleCount,
+        projectionFailures: state.projectionFailures,
+        lastError: state.lastError || '',
+        worldSnapshotActive: world.active === true
+      };
+    });
+    assert.equal(manifest.npcDialogueSmoke.available, true,
+      'El runtime de diálogos NPC no está conectado en la partida real: ' +
+      JSON.stringify(manifest.npcDialogueSmoke));
+    assert.equal(manifest.npcDialogueSmoke.bridgeReady, true,
+      'El puente de diálogos no quedó preparado: ' + JSON.stringify(manifest.npcDialogueSmoke));
+    assert.equal(manifest.npcDialogueSmoke.active, true,
+      'El sistema de diálogos no detectó la partida activa: ' + JSON.stringify(manifest.npcDialogueSmoke));
+    if (Number(manifest.npcDialogueSmoke.nearbyPeople) > 0) {
+      await page.waitForFunction(() => {
+        const state = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.();
+        return !!state && Number(state.bubblesStarted) > 0 &&
+          Number(state.projectionAttempts) > 0;
+      }, undefined, { timeout: 20000, polling: 100 });
+      manifest.npcDialogueSmoke = await page.evaluate(() => {
+        const state = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.() || {};
+        return {
+          ...state,
+          available: true,
+          bridgeReady: state.bridgeReady === true,
+          active: state.bridgeActive === true,
+          nearbyPeople: state.nearbyCount,
+          visibleBubbles: state.renderedBubbleCount
+        };
+      });
+    }
     manifest.spatialSelection = await page.evaluate(() => window.__ELSN_SPATIAL_SELECTION__ || null);
     assert.ok(manifest.spatialSelection?.enabled === true,
       'La compilación no activó la selección espacial Babylon en la escena principal: ' +
