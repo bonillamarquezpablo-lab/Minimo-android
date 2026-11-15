@@ -9,7 +9,17 @@ on:
       - 'scripts/test_phase2_world_inspection.mjs'
       - 'scripts/test_phase2_build_contract.mjs'
       - 'scripts/player-startup-smoke.mjs'
+      - 'scripts/game-session-recorder.js'
+      - 'inspector/unified-workbench.js'
+      - 'scripts/test_session_recorder_idle_contract.cjs'
+      - 'scripts/test_inspector_workbench_contract.cjs'
+      - 'scripts/test_release_contract.cjs'
       - 'scripts/player-startup-smoke.mjs'
+      - 'scripts/game-session-recorder.js'
+      - 'inspector/unified-workbench.js'
+      - 'scripts/test_session_recorder_idle_contract.cjs'
+      - 'scripts/test_inspector_workbench_contract.cjs'
+      - 'scripts/test_release_contract.cjs'
       - 'inspector/phase1-live.js'
       - 'inspector/index.html'
       - 'scripts/build_site.py'
@@ -65,6 +75,8 @@ jobs:
         run: node scripts/test_phase2_build_contract.mjs
       - name: Run Inspector live contracts
         run: node scripts/test_phase1_live_contract.mjs
+      - name: Test mobile session emergency recovery and timestamp ordering
+        run: node scripts/test_session_recorder_idle_contract.cjs && node scripts/test_inspector_workbench_contract.cjs && node scripts/test_release_contract.cjs
       - name: Validate Python build and release scripts
         run: python -m py_compile scripts/build_site.py scripts/validate_release.py
 
