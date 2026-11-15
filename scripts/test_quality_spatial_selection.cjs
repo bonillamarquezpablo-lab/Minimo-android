@@ -9,9 +9,8 @@ const smoke=fs.readFileSync('scripts/player-startup-smoke.mjs','utf8');
 const workflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 
 for(const marker of [
-  'const spatialActorNamePattern=',
-  'const spatialActorCamelNamePattern=',
-  'const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;',
+  'const spatialActorRootPattern=',
+    'const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;',
   'const spatialWaterMotionPattern=',
   'const spatialEffectMotionPattern=',
   'const spatialDynamicReasonForMesh=',
