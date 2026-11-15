@@ -8,7 +8,7 @@ assert.match(source,/const MAX_SAMPLES_PER_SESSION = 1440;/);
 assert.match(source,/const RECOVERY_STORAGE_KEY = "elsn-game-session-recovery-v1"/);
 assert.match(source,/const MAX_RECOVERY_SAMPLES = 360/);
 assert.match(source,/function writeRecoverySnapshot\(report\)/);
-assert.match(source,/window\.localStorage\.setItem\(RECOVERY_STORAGE_KEY/);
+assert.match(source,/storage\.setItem\(RECOVERY_STORAGE_KEY/);
 assert.match(source,/function clearRecoverySnapshot\(sessionId\)/);
 assert.match(source,/clearRecoverySnapshot\(current\.sessionId\)/);
 const finishSessionSource=source.slice(source.indexOf("async function finishSession"),source.indexOf("function monitorGameState"));
