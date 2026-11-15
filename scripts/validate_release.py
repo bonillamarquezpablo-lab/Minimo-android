@@ -383,7 +383,7 @@ def main() -> None:
         "meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio",
         "const installSpatialDynamicFrustumFilter=octree=>",
         "octree.select=function(frustumPlanes,allowDuplicate)",
-        "boundingSphere.centerWorld",
+        "sphere&&sphere.centerWorld",
         "mesh.__elsnSpatialFreshUntilRenderId",
         "plane.dotCoordinate(center)<-paddedRadius",
         "meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled",
