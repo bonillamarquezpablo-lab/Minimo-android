@@ -139,12 +139,47 @@
       const metrics = make("p", "", "FPS medio: " + fmt(fps.average, 1) +
         " · mínimo: " + fmt(fps.minimum, 0) +
         " · p95 mediano: " + fmt(frame.p95Median, 2) + " ms" +
+        " · peor p95: " + fmt(frame.worstP95, 2) + " ms" +
         " · último FPS: " + fmt(last && last.fps, 0));
+      const anomalies = Array.isArray(report.anomalies) ? report.anomalies : [];
+      const runtimeErrors = Array.isArray(report.runtimeErrors) ? report.runtimeErrors : [];
+      const incidentLine = make("p", "live-diagnostic-note",
+        "Tirones agrupados: " + anomalies.length +
+        " · graves: " + fmt(summary.criticalAnomalyEvents, 0) +
+        " · errores de ejecución/recursos: " + runtimeErrors.length +
+        " · muestreo: " + fmt(report.sampleIntervalMs, 0) + " ms");
+      const incidentList = make("div", "npc-report-incidents");
+      for (const event of anomalies.slice(-8).reverse()) {
+        const start = event.startedAt ? new Date(event.startedAt).toLocaleTimeString("es-ES") : "Hora desconocida";
+        const end = event.lastSeenAt && event.lastSeenAt !== event.startedAt
+          ? "–" + new Date(event.lastSeenAt).toLocaleTimeString("es-ES") : "";
+        const position = event.playerPosition || event.lastPlayerPosition;
+        const coordinates = position
+          ? " · XYZ " + fmt(position.x, 1) + ", " + fmt(position.y, 1) + ", " + fmt(position.z, 1)
+          : "";
+        const line = (event.severity === "critical" ? "GRAVE" : "TIRÓN") + " · " + start + end +
+          " · FPS mínimo " + fmt(event.minimumFps, 0) +
+          " · p95 " + fmt(event.peakP95Ms, 1) + " ms" +
+          " · p99 " + fmt(event.peakP99Ms, 1) + " ms" +
+          " · " + fmt(event.observations, 0) + " lecturas" + coordinates;
+        incidentList.appendChild(make("p", "live-diagnostic-note", line));
+      }
+      if (!anomalies.length) incidentList.appendChild(make("p", "live-diagnostic-note", "No se detectaron tirones por encima de los umbrales de esta sesión."));
+      const recentErrors = runtimeErrors.slice(-4).reverse();
+      const errorList = make("div", "npc-report-incidents");
+      for (const error of recentErrors) {
+        const when = error.capturedAt ? new Date(error.capturedAt).toLocaleTimeString("es-ES") : "Hora desconocida";
+        errorList.appendChild(make("p", "live-diagnostic-note",
+          "ERROR · " + when + " · " + text(error.kind) + " · " + text(error.message) +
+          (error.resourcePath ? " · " + text(error.resourcePath) : "")));
+      }
+      if (!recentErrors.length) errorList.appendChild(make("p", "live-diagnostic-note", "No se registraron errores JavaScript ni fallos de carga durante la sesión."));
       const diagnosis = make("p", "live-diagnostic-note",
         "Cuello de botella orientativo: " + text(summary.probableBottleneck || "sin atribución") +
         " · CPU mundo: " + fmt(summary.cpu && summary.cpu.worldUpdateMedianMs, 2) + " ms" +
         " · CPU render: " + fmt(summary.cpu && summary.cpu.renderPreparationMedianMs, 2) + " ms" +
         " · GPU: " + fmt(summary.gpu && summary.gpu.frameMedianMs, 2) + " ms" +
+        " · heap JS: " + fmt(summary.memory && summary.memory.jsHeapUsedMedianMB, 1) + " MB" +
         " · mallas activas: " + fmt(summary.sceneTimings && summary.sceneTimings.activeMeshesEvaluationMedianMs, 2) + " ms" +
         " · render targets: " + fmt(summary.sceneTimings && summary.sceneTimings.renderTargetsMedianMs, 2) + " ms");
       const terrainLine = make("p", "live-diagnostic-note",
@@ -160,9 +195,20 @@
       actions.appendChild(save);
       const details = make("details", "technical");
       const summaryLabel = make("summary", "", "Ver informe técnico y coordenadas");
+      const worstSamples = (Array.isArray(report.samples) ? report.samples : [])
+        .slice()
+        .sort((a, b) => Number(b.frameTiming && b.frameTiming.p95Ms || 0) - Number(a.frameTiming && a.frameTiming.p95Ms || 0))
+        .slice(0, 12);
       const evidence = {
         sessionId: report.sessionId, startedAt: report.startedAt, finishedAt: report.finishedAt,
         gameBuild: report.gameBuild, status: report.status, summary,
+        sampleIntervalMs: report.sampleIntervalMs,
+        device: report.device || null,
+        anomalyEvents: anomalies,
+        runtimeErrors,
+        longTasks: report.longTasks || [],
+        deviceEvents: report.deviceEvents || [],
+        worstSamples,
         scene: world.scene || null,
         terrain: world.terrain || null,
         terrainObjects: (terrain.items || []).slice(0, 100),
@@ -171,7 +217,7 @@
       };
       const pre = make("pre", "npc-agent-evidence", JSON.stringify(evidence, null, 2));
       details.append(summaryLabel, pre);
-      item.append(heading, meta, metrics, diagnosis, terrainLine, actions, details);
+      item.append(heading, meta, metrics, incidentLine, incidentList, diagnosis, terrainLine, errorList, actions, details);
       host.appendChild(item);
     }
     if (!reports.length) host.appendChild(make("p", "live-diagnostic-note", "Todavía no hay informes de partidas guardados en este navegador."));
