@@ -15,6 +15,9 @@ assert.ok(buildSite.includes('scene.createOrUpdateSelectionOctree(64,3)'),"The Q
 assert.ok(buildSite.includes('scene.onNewMeshAddedObservable.add') && buildSite.includes('scene.onMeshRemovedObservable.add'),"Meshes created or disposed after the octree build must stay correctly tracked.");
 assert.ok(buildSite.includes('spatialDynamicReasonForMesh') && buildSite.includes('mesh.__elsnSpatialDynamic'),"Only classified dynamic actors, animated geometry and effects must enter the dynamic selection list.");
 assert.ok(buildSite.includes('meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio'),"The release must report the static/dynamic selection ratio.");
+assert.ok(buildSite.includes("spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i") && !buildSite.includes("spatialVegetationMotionPattern=/^(?:mixedForestTree"),"The static forest root must stay indexed; only animated canopy and felled trees should be dynamic.");
+assert.ok(buildSite.includes("created-after-octree") && buildSite.includes("octree-initial-dynamic"),"New meshes and Babylon initial dynamic entries must be tracked.");
+assert.ok(indexHtml.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),"Felled trees must be transferred to dynamic octree selection before falling.");
 assert.ok(buildSite.includes('buildSpatialSelectionOctree();'),"The spatial index must be built before the campaign selector is shown.");
 
 const sourceVersion="0.6.274";
