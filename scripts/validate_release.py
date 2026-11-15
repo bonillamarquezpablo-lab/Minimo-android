@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.298"
+EXPECTED_VERSION = "0.6.299"
 
 HTML_PAGES = (
     "index.html",
@@ -391,7 +391,7 @@ def main() -> None:
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
-    if "reportVersion:'20',build:'0.6.298'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'21',build:'0.6.299'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     for marker in (
         "babylonEngineVersion:String(B.Engine.Version||'unknown')",
@@ -694,7 +694,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.298" not in index_html or "EL SIN NOMBRE 0.6.298 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.299" not in index_html or "EL SIN NOMBRE 0.6.299 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?64:96)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -824,6 +824,8 @@ def main() -> None:
         fail("La rompiente de resolución completa debe repartirse en fragmentos acotados sin perder columnas ni buffers.")
     if "return {update,reset,cancelBeachWorkForIsland:index=>" not in index_html or "GroundDynamics.cancelBeachWorkForIsland(previousIndex);" not in index_html or "if(beachWorkLayer&&beachWorkLayer.index===previousIndex)" in index_html:
         fail("La cancelación del trabajo costero debe permanecer dentro de GroundDynamics y no acceder a sus variables privadas desde el exterior.")
+    if "const groundRecoveryRetryState=new WeakMap()" not in index_html or "GROUND_RECOVERY_RETRY_MS=900" not in index_html or "candidates.sort((a,b)=>a.score-b.score)" not in index_html or "groundRecovery:{...groundRecoveryDiagnostics" not in index_html:
+        fail("La recuperación de terreno debe evitar búsquedas repetidas por fotograma, elegir el aterrizaje válido más cercano y registrar su coste.")
     if "function scheduleBeachWorkChunk(){if(beachWorkScheduled||!beachWorkLayer)return;beachWorkScheduled=true;}" not in index_html or "if(beachWorkScheduled)processBeachWorkChunk();" not in index_html:
         fail("La simulación de playa debe compartir el bucle principal, sin competir con un segundo requestAnimationFrame.")
     if "lastStepX=x;lastStepZ=z;hasLastStepPosition=true" not in index_html or "stepX=lastStepX+segmentX*t,stepZ=lastStepZ+segmentZ*t" not in index_html:
@@ -842,7 +844,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.298</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.299</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")

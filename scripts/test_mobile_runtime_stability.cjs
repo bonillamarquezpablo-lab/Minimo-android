@@ -61,10 +61,15 @@ assert.ok(validator.includes('cancelBeachWorkForIsland:index=>'), 'Release valid
 assert.ok(source.includes('function auditHabitableStructures(applyRepairs=true)'), 'Habitable structure integrity audit must remain present.');
 assert.ok(source.includes('function processBeachWorkChunk()'), 'Incremental coastal simulation must remain present.');
 assert.ok(source.includes('function animateWater(dt)'), 'Animated water system must remain present.');
+assert.ok(source.includes('const groundRecoveryRetryState=new WeakMap()'), 'Failed ground recovery must be cached per actor to avoid repeating expensive shoreline searches every frame.');
+assert.ok(source.includes('GROUND_RECOVERY_RETRY_MS=900'), 'Ground recovery retries must be time-bounded while preserving eventual recovery.');
+assert.ok(source.includes('candidates.sort((a,b)=>a.score-b.score)'), 'Safe landing candidates must be tested nearest-first and stop at the first valid point.');
+assert.ok(source.includes('if(!onShip&&!playerAirborne&&recoverGroundActor(player.root,realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08,.70))'), 'The player update must use the throttled recovery path instead of repeating an exhaustive search every frame.');
+assert.ok(source.includes('groundRecovery:{...groundRecoveryDiagnostics'), 'Ground recovery search cost and retry counters must be included in runtime diagnostics.');
 assert.ok(source.includes('function updateWildlife(dt)'), 'Wildlife behavior must remain present.');
 assert.ok(source.includes('function update(dt){'), 'The full game world update must remain present.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'20\',build:\'0.6.298\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.298"'), 'Release validator must target version 0.6.298.');
+assert.ok(validator.includes('reportVersion:\'21\',build:\'0.6.299\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.299"'), 'Release validator must target version 0.6.299.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
