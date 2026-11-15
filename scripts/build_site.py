@@ -780,10 +780,14 @@ def main() -> None:
   maxVisibleBubbles:4,
   getSnapshot:()=>{
    const focus=typeof playerPos==='function'?playerPos():player.root.position;
+   const atmosphere=window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getState==='function'?window.__ELSN_ATMOSPHERE.getState():null;
+   const islandIndex=typeof landIslandIndex==='function'?landIslandIndex(focus.x,focus.z):-1;
    return {
     active:!!gameStarted,
     playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
-    people:ambientPeople.concat(campGuards.filter(guard=>guard&&guard.alive!==false)),scene,engine,camera:scene.activeCamera||camera,
+    people:ambientPeople.concat(campGuards.filter(guard=>guard&&guard.alive!==false)),
+    world:{night:!!(atmosphere&&atmosphere.night>=0.55),onShip:!!onShip,enemyNearby:typeof nearEnemies==='function'&&nearEnemies(),health:Number(health),healthLow:Number(health)<=35,wood:Number(woodCount),stone:Number(stoneCount),captured:Number(captured)||0,islandName:islandIndex>=0&&land[islandIndex]?String(land[islandIndex].name||''):''},
+    scene,engine,camera:scene.activeCamera||camera,
     canvas:engine.getRenderingCanvas(),BABYLON:B
    };
   }
