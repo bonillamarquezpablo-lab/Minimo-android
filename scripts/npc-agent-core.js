@@ -386,6 +386,79 @@
     };
   }
 
+  function analyzeObserverPatrol(report, currentBuild) {
+    if (!report || typeof report !== "object" || report.schema !== 1 ||
+        report.mode !== "test-only-read-only-observer-patrol" ||
+        !Array.isArray(report.agents) || !report.run || !report.run.id) return null;
+    const bounded = (value, limit) => boundedText(value, limit);
+    const structureRows = (report.agents || []).flatMap(agent =>
+      agent && agent.readings && Array.isArray(agent.readings.structures)
+        ? agent.readings.structures.slice(0, 500) : []);
+    const agents = report.agents.slice(0, 12).map(agent => {
+      const issues = (Array.isArray(agent.issues) ? agent.issues : []).slice(0, 40).map(issue => {
+        const textToMatch = [issue.title, issue.detail].map(value => String(value || "")).join(" ");
+        const match = structureRows.find(row => row && row.name && textToMatch.includes(String(row.name)));
+        const position = match && finiteMetric(match.x) !== null && finiteMetric(match.z) !== null
+          ? { x: finiteMetric(match.x), z: finiteMetric(match.z), islandIndex: finiteMetric(match.islandIndex) } : null;
+        return {
+          title: bounded(issue.title || "Incidencia sin título", 140),
+          detail: bounded(issue.detail || "", 600),
+          severity: ["critical", "warning", "ok"].includes(issue.severity) ? issue.severity : "unknown",
+          islandIndex: finiteMetric(issue.islandIndex),
+          position
+        };
+      });
+      const severity = ["critical", "warning", "ok"].includes(agent.severity) ? agent.severity : "unknown";
+      return {
+        name: bounded(agent.name || "Explorador", 60),
+        specialization: bounded(agent.specialization || "", 100),
+        severity,
+        summary: bounded(agent.summary || "", 600),
+        issues,
+        missing: (Array.isArray(agent.missing) ? agent.missing : []).slice(0, 20).map(value => bounded(value, 240)),
+        readings: agent.readings && typeof agent.readings === "object" ? agent.readings : {}
+      };
+    });
+    const limitations = (Array.isArray(report.limitations) ? report.limitations : []).slice(0, 12)
+      .map(value => bounded(value, 300));
+    const expectedIslands = finiteMetric(report.world && report.world.expectedIslands);
+    const visitedIslands = finiteMetric(report.world && report.world.visitedIslands);
+    const sameBuild = currentBuild && report.build ? String(currentBuild) === String(report.build) : null;
+    const renderer = bounded(report.renderer || "Entorno no declarado", 160);
+    const isSoftwareRenderer = /swiftshader|software|llvmpipe/i.test(renderer);
+    const issueCount = agents.reduce((sum, agent) => sum + agent.issues.length, 0);
+    const missingCount = agents.reduce((sum, agent) => sum + agent.missing.length, 0);
+    return {
+      schemaVersion: 1,
+      source: "observer-patrol",
+      runId: bounded(report.run.id, 80),
+      runUrl: /^https:\/\/github\.com\/[^/]+\/[^/]+\/actions\/runs\/\d+/.test(String(report.run.url || "")) ? String(report.run.url) : null,
+      runSha: bounded(report.run.sha, 64) || null,
+      branch: bounded(report.run.branch, 100) || null,
+      build: bounded(report.build || "desconocido", 40),
+      renderer,
+      verdict: ["passed", "partial", "issues-found", "failed", "not-run"].includes(report.verdict) ? report.verdict : "unknown",
+      startedAt: bounded(report.startedAt, 40) || null,
+      finishedAt: bounded(report.finishedAt, 40) || null,
+      world: {
+        expectedIslands, visitedIslands,
+        coverageComplete: expectedIslands !== null && visitedIslands !== null && expectedIslands > 0 && visitedIslands >= expectedIslands
+      },
+      sameBuild,
+      softwareRenderer: isSoftwareRenderer,
+      issueCount,
+      missingCount,
+      agents,
+      limitations,
+      cautions: [
+        sameBuild === false ? "Esta patrulla corresponde al build " + bounded(report.build, 40) + ", no al build actual " + bounded(currentBuild, 40) + ". Sus hallazgos se muestran como evidencia independiente." : "",
+        sameBuild === null ? "No se conoce el build de la partida actual; no se puede confirmar que ambas mediciones correspondan a la misma versión." : "",
+        isSoftwareRenderer ? "La patrulla utilizó " + renderer + ". Sus tiempos de FPS y render no representan la GPU Adreno ni la fluidez real del móvil." : "",
+        "La patrulla mueve una cámara de prueba en un entorno aislado; no equivale a una partida normal ni a una ruta física recorrida por NPCs."
+      ].filter(Boolean)
+    };
+  }
+
   function byteLength(value) {
     if (typeof TextEncoder === "function") return new TextEncoder().encode(value).length;
     return unescape(encodeURIComponent(value)).length;
@@ -493,6 +566,7 @@
     SPECIALISTS,
     analyzeSessionReports,
     analyzeSessionIntelligence,
+    analyzeObserverPatrol,
     EVENT_KINDS: Object.freeze(Array.from(EVENT_KINDS)),
     REMOTE_EVENT_KINDS: Object.freeze(Array.from(REMOTE_EVENT_KINDS)),
     parseVillagerName,
