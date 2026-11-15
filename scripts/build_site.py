@@ -312,6 +312,41 @@ def main() -> None:
         "// scene.whenReadyAsync() already checks scene/material/texture readiness; avoid a duplicate all-island compile pass."
     , 1)
 
+    # Wait for resources used by the initial camera view, not every off-screen island mesh.
+    # The game loop is already rendering behind the blocking load screen. Each frame we
+    # inspect Babylon's actual active render list, ask those meshes to finish their material
+    # variants, and wait until scene texture requests have settled for three stable frames.
+    # Off-screen island shaders are compiled by Babylon when that island becomes visible.
+    initial_view_marker = "const sceneReadyTasks=[scene.whenReadyAsync()];"
+    initial_view_replacement = r"""const waitForInitialViewReadiness=async()=>{
+    let readyFrames=0,lastDiagnostic=null;
+    const started=performance.now();
+    while(performance.now()-started<85000){
+     await new Promise(resolve=>requestAnimationFrame(resolve));
+     const active=typeof scene.getActiveMeshes==='function'?scene.getActiveMeshes():null;
+     const activeMeshes=active&&Array.isArray(active.data)?active.data.slice(0,active.length):[];
+     const notReady=[];
+     for(const mesh of activeMeshes){
+      if(!mesh||mesh.isBlocked||mesh.isVisible===false)continue;
+      try{if(typeof mesh.isReady==='function'&&!mesh.isReady(true))notReady.push(String(mesh.name||mesh.id||'mesh').slice(0,100));}
+      catch(error){notReady.push(String(mesh.name||mesh.id||'mesh').slice(0,80)+': '+String(error&&error.message||error).slice(0,100));}
+     }
+     let waitingItems=null;
+     try{if(typeof scene.getWaitingItemsCount==='function')waitingItems=scene.getWaitingItemsCount();}catch(_){waitingItems=null;}
+     const firstFrame=firstFrameRendered===true;
+     const assetsSettled=waitingItems===null||waitingItems===0;
+     const ready=firstFrame&&activeMeshes.length>0&&notReady.length===0&&assetsSettled;
+     readyFrames=ready?readyFrames+1:0;
+     lastDiagnostic={firstFrameRendered:firstFrame,activeMeshCount:activeMeshes.length,notReadyMeshCount:notReady.length,notReadyMeshes:notReady.slice(0,16),waitingItems,stableReadyFrames:readyFrames,elapsedMs:Number((performance.now()-started).toFixed(1))};
+     if(readyFrames>=3)return lastDiagnostic;
+    }
+    throw new Error('La vista inicial no completó tres fotogramas estables: '+JSON.stringify(lastDiagnostic));
+   };
+   const sceneReadyTasks=[waitForInitialViewReadiness()];"""
+    if html.count(initial_view_marker) != 1:
+        raise SystemExit("No se encontró la única barrera global de disponibilidad de escena para sustituirla por la comprobación de vista inicial.")
+    html = html.replace(initial_view_marker, initial_view_replacement, 1)
+
     global USER_AGENT
     USER_AGENT = (
         f"EL-SIN-NOMBRE-WebBuild/{game_version} "
