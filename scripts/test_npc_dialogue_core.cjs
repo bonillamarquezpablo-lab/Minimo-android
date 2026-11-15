@@ -29,6 +29,7 @@ assert.match(builder,/healthLow:Number\(health\)<=35/);
 assert.match(builder,/stone:Number\(stoneCount\)/);
 assert.match(builder,/CreateIcoSphere\('graniteBoulder'/);
 assert.match(builder,/MineableGraniteMaterial/);
+assert.match(builder,/r\\.isPickable=true/);assert.match(builder,/cap\\.isPickable=true/);
 assert.match(builder,/footprint_surface_replacement/);
 assert.match(builder,/for\(const rock of rocks\)/);
 assert.match(builder,/for\(const collider of worldColliders\)/);
