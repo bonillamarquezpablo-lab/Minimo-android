@@ -1251,18 +1251,16 @@ def main() -> None:
   let cap=sphere('rockFacet',null,[x-.18,gy+sy*.72,z-.10],[sx*.62,sy*.36,sz*.62],M.stoneLight,10);
   return {meshes:[r,cap],x,z,radius:Math.max(sx,sz)*.48,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
  }"""
-    mineable_rock_replacement = """const mineableGraniteMaterial=M.stone.clone('MineableGraniteMaterial');
-  mineableGraniteMaterial.diffuseColor=new B.Color3(.62,.65,.64);
-  mineableGraniteMaterial.specularColor=new B.Color3(.20,.23,.25);
-  mineableGraniteMaterial.emissiveColor=new B.Color3(.035,.040,.042);
-  mineableGraniteMaterial.specularPower=28;
+    mineable_rock_replacement = """// Reuse the existing, already-loaded granite materials. Cloning a new StandardMaterial
+  // here creates a new shader variant that can remain unready on mobile/software GPUs.
+  const mineableGraniteMaterial=M.stoneLight;
   function createRock(x,z){
    const gy=renderedTerrainSurfaceAt(x,z),sx=rand(.72,1.02),sy=rand(.70,.94),sz=rand(.68,1.00);
    const r=B.MeshBuilder.CreateIcoSphere('graniteBoulder',{radius:1,subdivisions:2,flat:true},scene);
    r.position=v(x,gy+sy*.40,z);r.scaling=v(sx,sy,sz);r.material=mineableGraniteMaterial;r.isPickable=true;r.receiveShadows=true;
    r.rotation.set(rand(-.10,.10),rand(0,Math.PI*2),rand(-.12,.12));
    const cap=B.MeshBuilder.CreateIcoSphere('rockFacet',{radius:1,subdivisions:1,flat:true},scene);
-   cap.position=v(x-sx*.14,gy+sy*.65,z-sz*.11);cap.scaling=v(sx*.52,sy*.30,sz*.48);cap.material=M.stoneLight;cap.isPickable=true;cap.receiveShadows=true;
+   cap.position=v(x-sx*.14,gy+sy*.65,z-sz*.11);cap.scaling=v(sx*.52,sy*.30,sz*.48);cap.material=M.stone;cap.isPickable=true;cap.receiveShadows=true;
    cap.rotation.set(rand(-.12,.12),r.rotation.y+.42,rand(-.10,.10));
    const radius=Math.max(sx,sz)*.50;
    return {meshes:[r,cap],x,z,radius,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
