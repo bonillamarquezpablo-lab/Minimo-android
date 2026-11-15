@@ -9,15 +9,33 @@ const smoke=fs.readFileSync('scripts/player-startup-smoke.mjs','utf8');
 const workflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 
 for(const marker of [
-  'const spatialDynamicNamePattern=',
+  'const spatialActorRootPattern=',
+    'const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;',
+  'const spatialWaterMotionPattern=',
+  'const spatialEffectMotionPattern=',
+  'const spatialDynamicReasonForMesh=',
   'const isSpatialDynamicMesh=mesh=>',
   'scene.createOrUpdateSelectionOctree(64,3)',
   'scene.onNewMeshAddedObservable.add',
   'scene.onMeshRemovedObservable.add',
+  "scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,'created-after-octree',true);});",
+  "mesh.__elsnSpatialDynamicReason='octree-initial-dynamic'",
   'function buildSpatialSelectionOctree()',
   'buildSpatialSelectionOctree();',
+  'const installSpatialDynamicFrustumFilter=octree=>',
+  'octree.select=function(frustumPlanes,allowDuplicate)',
+  'sphere&&sphere.centerWorld',
+  'spatialDynamicMeshSet.has(mesh)',
+  'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
+  'meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak',
+  'mesh.__elsnSpatialFreshUntilRenderId',
+  'plane.dotCoordinate(center)<-paddedRadius',
   'meshSelectionOctreeEnabled:spatialSelectionStats.enabled',
   'meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount',
+  'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
+  'meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio',
+  'meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason',
+  'meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount',
   'meshSelectionBuildMs:spatialSelectionStats.buildMs'
 ]) assert.ok(builder.includes(marker),'Missing dynamic-safe spatial selection guard: '+marker);
 
@@ -30,8 +48,12 @@ for(const marker of [
 
 assert.ok(smoke.includes('window.__ELSN_SPATIAL_SELECTION__'),'Real campaign smoke must read the runtime spatial selection state.');
 assert.ok(smoke.includes('manifest.spatialSelection?.enabled === true'),'Real campaign smoke must fail if spatial selection is not active.');
+assert.ok(smoke.includes('manifest.spatialSelection.staticIndexedMeshCount') && smoke.includes('dynamicContentRatio'), 'Real campaign smoke must fail when most meshes are dynamically selected.');
+assert.ok(smoke.includes('sceneCount') && smoke.includes(' * 0.20') && smoke.includes(' < 0.80'), 'Startup acceptance must require a meaningful static octree share.');
+assert.ok(smoke.includes('dynamicFilterEnabled === true') && smoke.includes('dynamicFilterCulledPeak') && smoke.includes('>= 100'), 'Startup acceptance must prove that dynamic meshes outside the camera frustum are culled.');
 assert.ok(workflow.includes('node scripts/test_quality_spatial_selection.cjs'),'The Pages build must run the spatial selection contract.');
 assert.ok(source.includes('function update(dt){'),'World update must remain present.');
+assert.ok(source.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),'Felled trees must leave static octree cells before their fall animation.');
 for(const marker of ['function animateWater(dt)','function updateWildlife(dt)','function updateActiveIslandGrass(dt)','function updateManagedWorldShadowCasters()','function auditHabitableStructures']) {
   assert.ok(source.includes(marker),'A gameplay or visual subsystem was removed: '+marker);
 }

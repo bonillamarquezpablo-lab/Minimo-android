@@ -10836,6 +10836,7 @@ function updateHUD(){
    const tree=target.obj;tree.hp-=hasAxe?1:.5;tree.hitFlash=.34;woodChips(tree);NorseAudio.play('woodHit');
    if(tree.hp<=0){
     tree.alive=false;tree.falling=0;
+    if(tree.root&&typeof tree.root.getChildMeshes==='function')tree.root.getChildMeshes(false).forEach(mesh=>addSpatialDynamicMesh(mesh,'falling-tree',true));
     const pp=playerPos(),awayX=tree.x-pp.x,awayZ=tree.z-pp.z,awayLen=Math.hypot(awayX,awayZ)||1;
     tree.fallX=(awayZ/awayLen);tree.fallZ=(-awayX/awayLen);
     NorseAudio.play('woodBreak');woodCount+=5;createTreeStump(tree,trees.indexOf(tree));
