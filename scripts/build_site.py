@@ -779,11 +779,15 @@ def main() -> None:
  window.__ELSN_GAME_DIALOGUE_BRIDGE__=Object.freeze({
   maxVisibleBubbles:4,
   getSnapshot:()=>{
-   const focus=typeof playerPos==='function'?playerPos():player.root.position;
+   const playerRoot=player&&(player.root||player.actor||player);
+   const focus=typeof playerPos==='function'?playerPos():(playerRoot&&(typeof playerRoot.getAbsolutePosition==='function'?playerRoot.getAbsolutePosition():playerRoot.position));
+   const people=[];
+   if(typeof ambientPeople!=='undefined'&&Array.isArray(ambientPeople))people.push(...ambientPeople);
+   if(typeof campGuards!=='undefined'&&Array.isArray(campGuards))people.push(...campGuards.filter(guard=>guard&&guard.alive!==false));
    return {
     active:!!gameStarted,
     playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
-    people:ambientPeople.concat(campGuards.filter(guard=>guard&&guard.alive!==false)),scene,camera:scene.activeCamera||camera,
+    people,scene,camera:scene.activeCamera||camera,
     canvas:engine.getRenderingCanvas(),BABYLON:B
    };
   }
