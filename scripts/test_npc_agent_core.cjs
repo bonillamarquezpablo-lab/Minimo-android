@@ -100,6 +100,63 @@ assert.equal(Core.analyzeSessionReports([stableReport("a"), stableReport("b")])
   .specialists.find(agent => agent.id === "eira").status, "sin-incidencia-observada");
 assert.equal(Core.analyzeSessionReports([])
   .specialists.find(agent => agent.id === "eira").status, "sin-datos-suficientes");
+
+const integratedReport = {
+  sessionId: "session-intelligence-test",
+  gameBuild: "0.6.301",
+  status: "completed",
+  samples: Array.from({ length: 3 }, (_, index) => ({
+    capturedAt: new Date(Date.UTC(2026, 10, 15, 10, index)).toISOString(),
+    targetFps: 60,
+    frameTiming: { p95Ms: 25 },
+    waterDiagnostics: { available: true, measurements: { wetSteps: index + 1, maxShoreStepMeters: 1.4 } },
+    subsystems: { activeWorldShadowCasters: 12 }
+  })),
+  finalWorldInspection: {
+    dataQuality: { fullMeshInventory: true },
+    meshes: { invalidTransformCount: 0 },
+    collisions: { invalidPositionCount: 0 },
+    terrainObjects: {
+      complete: true, fullyBuriedCount: 1, penetratingCount: 0,
+      items: [{
+        name: "Roca junto a la casa", status: "fully-buried",
+        worldPosition: { x: 12.5, y: -0.4, z: 8.25 },
+        nearestIsland: { name: "Isla norte" }
+      }]
+    },
+    structureAudit: { visibleInvalidAfterRepair: 0, untrackedRootCount: 0 },
+    textures: { count: 50, pendingCount: 1, unknownReadinessCount: 0 }
+  }
+};
+const intelligence = Core.analyzeSessionIntelligence(integratedReport, [
+  {
+    id: "agent-observation-current", source: "npc", kind: "observation",
+    roleId: "terrain-structures", status: "observed", summary: "La roca queda por debajo de la superficie.",
+    evidence: { sessionId: "session-intelligence-test" }, createdAt: new Date().toISOString()
+  },
+  {
+    id: "agent-observation-old", source: "npc", kind: "observation",
+    roleId: "terrain-structures", status: "observed", summary: "Hallazgo de otra partida.",
+    evidence: { sessionId: "older-session" }, createdAt: new Date().toISOString()
+  }
+]);
+assert.equal(intelligence.specialists.length, 4);
+assert.equal(intelligence.specialists.find(agent => agent.id === "eira").status, "probable");
+assert.equal(intelligence.specialists.find(agent => agent.id === "sol").status, "evidencia-recogida");
+const ulfIntelligence = intelligence.specialists.find(agent => agent.id === "ulf");
+assert.equal(ulfIntelligence.status, "necesita-revision");
+assert.equal(ulfIntelligence.observations.length, 1, "Only specialist observations linked to the current session may appear.");
+assert.ok(ulfIntelligence.findings.some(finding => finding.locations?.some(location => location.includes("X 12.50"))),
+  "Terrain defects must retain their measured world coordinates.");
+assert.equal(intelligence.specialists.find(agent => agent.id === "tyr").status, "necesita-revision");
+assert.equal(intelligence.autonomy.automaticWorldChanges, false);
+assert.equal(intelligence.autonomy.automaticCodeChanges, false);
+const noWorldIntelligence = Core.analyzeSessionIntelligence({
+  sessionId: "session-without-world", samples: [], finalWorldInspection: null
+}, []);
+assert.equal(noWorldIntelligence.specialists.find(agent => agent.id === "ulf").status, "sin-datos-suficientes",
+  "Missing world capture must never be reported as a clean inspection.");
+
 assert.ok(runtimeSource.includes("function isInspectorCenterPath()"));
 const gameWindow = {
   location: { pathname: "/Minimo-android/guest/" },
