@@ -1196,6 +1196,57 @@ def main() -> None:
             raise SystemExit("Número inesperado de actualizaciones DynamicTexture: " + old)
         html = html.replace(old, new)
 
+    # Make the existing mineable granite deposits read as angular rock, not smooth black orbs.
+    mineable_rock_marker = """function createRock(x,z){
+   const gy=terrainSurfaceAt(x,z),sx=rand(1.0,1.8),sy=rand(1.0,1.6),sz=rand(1,1.7);
+   let r=sphere('graniteBoulder',null,[x,gy+sy*.49,z],[sx,sy,sz],M.stone,12);
+   let cap=sphere('rockFacet',null,[x-.18,gy+sy*.72,z-.10],[sx*.62,sy*.36,sz*.62],M.stoneLight,10);
+   return {meshes:[r,cap],x,z,radius:Math.max(sx,sz)*.48,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
+  }"""
+    mineable_rock_replacement = """const mineableGraniteMaterial=M.stone.clone('MineableGraniteMaterial');
+  mineableGraniteMaterial.diffuseColor=new B.Color3(.62,.65,.64);
+  mineableGraniteMaterial.specularColor=new B.Color3(.20,.23,.25);
+  mineableGraniteMaterial.emissiveColor=new B.Color3(.035,.040,.042);
+  mineableGraniteMaterial.specularPower=28;
+  function createRock(x,z){
+   const gy=terrainSurfaceAt(x,z),sx=rand(.72,1.02),sy=rand(.70,.94),sz=rand(.68,1.00);
+   const r=B.MeshBuilder.CreateIcoSphere('graniteBoulder',{radius:1,subdivisions:2,flat:true},scene);
+   r.position=v(x,gy+sy*.40,z);r.scaling=v(sx,sy,sz);r.material=mineableGraniteMaterial;r.isPickable=false;r.receiveShadows=true;
+   r.rotation.set(rand(-.10,.10),rand(0,Math.PI*2),rand(-.12,.12));
+   const cap=B.MeshBuilder.CreateIcoSphere('rockFacet',{radius:1,subdivisions:1,flat:true},scene);
+   cap.position=v(x-sx*.14,gy+sy*.65,z-sz*.11);cap.scaling=v(sx*.52,sy*.30,sz*.48);cap.material=M.stoneLight;cap.isPickable=false;cap.receiveShadows=true;
+   cap.rotation.set(rand(-.12,.12),r.rotation.y+.42,rand(-.10,.10));
+   const radius=Math.max(sx,sz)*.50;
+   return {meshes:[r,cap],x,z,radius,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
+  }"""
+    if html.count(mineable_rock_marker) != 1:
+        raise SystemExit("No se encontró exactamente la función createRock original.")
+    html = html.replace(mineable_rock_marker, mineable_rock_replacement, 1)
+
+    # Never stamp the ground footprint atlas on top of resource boulders or registered structures.
+    footprint_surface_marker = """function makeFootprint(islandIndex,x,z,heading,wet,beach,running,waterCovered=false){
+   if(waterCovered)return;
+   syncFootprintAtlasFocus(x,z);
+   const strength=wet?.90:(beach?.78:.58),currentTick=Math.floor((performance.now()*.001)/.25)%65536;
+   if(footprintAtlas.stamp(x,z,heading,strength,currentTick))footprintAtlasDirty=true;
+  }"""
+    footprint_surface_replacement = """function makeFootprint(islandIndex,x,z,heading,wet,beach,running,waterCovered=false){
+   if(waterCovered)return;
+   for(const rock of rocks){if(rock.alive&&Math.hypot(x-rock.x,z-rock.z)<(rock.radius||.75)+.34)return;}
+   for(const collider of worldColliders){
+    if(collider.active===false)continue;
+    const dx=x-collider.x,dz=z-collider.z;
+    if(collider.type==='circle'){if(dx*dx+dz*dz<(collider.r+.24)*(collider.r+.24))return;}
+    else if(Math.abs(dx)<collider.hx+.24&&Math.abs(dz)<collider.hz+.24)return;
+   }
+   syncFootprintAtlasFocus(x,z);
+   const strength=wet?.90:(beach?.78:.58),currentTick=Math.floor((performance.now()*.001)/.25)%65536;
+   if(footprintAtlas.stamp(x,z,heading,strength,currentTick))footprintAtlasDirty=true;
+  }"""
+    if html.count(footprint_surface_marker) != 1:
+        raise SystemExit("No se encontró exactamente la función makeFootprint original.")
+    html = html.replace(footprint_surface_marker, footprint_surface_replacement, 1)
+
     # Incremental discovery: avoid scanning all 5,000+ TransformNodes twice every 1.5 s.
     # Existing roots are indexed once; future habitable roots are queued by Babylon's
     # onNewTransformNodeAddedObservable and consumed on the next integrity audit.
