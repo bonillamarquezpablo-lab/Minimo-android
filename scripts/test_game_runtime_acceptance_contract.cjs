@@ -54,11 +54,6 @@ for (const marker of [
   "postEntryAudit.resources.length",
   "worldUpdateWaitDiagnostic",
   "npcDialogueSmoke",
-  "npcDialogueApproach",
-  "npcDialogueVisibilityWait",
-  "PabloTheNameless",
-  "Villager_",
-  "__ELSN_NPC_DIALOGUE_SMOKE_RESTORE__",
   "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
   "window.__ELSN_NPC_DIALOGUES__",
   "bubblesStarted",
@@ -77,6 +72,8 @@ for (const marker of [
 ]) {
   assert.ok(smoke.includes(marker), 'Runtime smoke is missing acceptance check: ' + marker);
 }
-assert.doesNotMatch(smoke, /setTimeout\(resolve, 7500\)/,
-  'NPC dialogue acceptance must wait for a visible bubble, not a fixed sleep.');
+assert.match(smoke, /automatedVisualAcceptance: false/,
+  'Visible NPC dialogue acceptance must remain with the player.'); 
+assert.doesNotMatch(smoke, /npcDialogueApproach|npcDialogueVisibilityWait|__ELSN_NPC_DIALOGUE_SMOKE_RESTORE__/,
+  'Startup CI must not teleport the player or approve NPC dialogue visibility.');
 console.log('Game runtime and offline Service Worker acceptance contract: PASS');
