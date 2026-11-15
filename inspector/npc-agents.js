@@ -148,6 +148,31 @@
         " · graves: " + fmt(summary.criticalAnomalyEvents, 0) +
         " · errores de ejecución/recursos: " + runtimeErrors.length +
         " · muestreo: " + fmt(report.sampleIntervalMs, 0) + " ms");
+      const incidentList = make("div", "npc-report-incidents");
+      for (const event of anomalies.slice(-8).reverse()) {
+        const start = event.startedAt ? new Date(event.startedAt).toLocaleTimeString("es-ES") : "Hora desconocida";
+        const end = event.lastSeenAt && event.lastSeenAt !== event.startedAt
+          ? "–" + new Date(event.lastSeenAt).toLocaleTimeString("es-ES") : "";
+        const position = event.playerPosition || event.lastPlayerPosition;
+        const coordinates = position
+          ? " · XYZ " + fmt(position.x, 1) + ", " + fmt(position.y, 1) + ", " + fmt(position.z, 1)
+          : "";
+        const line = (event.severity === "critical" ? "GRAVE" : "TIRÓN") + " · " + start + end +
+          " · FPS mínimo " + fmt(event.minimumFps, 0) +
+          " · p95 " + fmt(event.peakP95Ms, 1) + " ms" +
+          " · p99 " + fmt(event.peakP99Ms, 1) + " ms" +
+          " · " + fmt(event.observations, 0) + " lecturas" + coordinates;
+        incidentList.appendChild(make("p", "live-diagnostic-note", line));
+      }
+      if (!anomalies.length) incidentList.appendChild(make("p", "live-diagnostic-note", "No se detectaron tirones por encima de los umbrales de esta sesión."));
+      const recentErrors = runtimeErrors.slice(-4).reverse();
+      const errorList = make("div", "npc-report-incidents");
+      for (const error of recentErrors) {
+        const when = error.capturedAt ? new Date(error.capturedAt).toLocaleTimeString("es-ES") : "Hora desconocida";
+        errorList.appendChild(make("p", "live-diagnostic-note",
+          "ERROR · " + when + " · " + text(error.kind) + " · " + text(error.message) +
+          (error.resourcePath ? " · " + text(error.resourcePath) : "")));
+      }
       const diagnosis = make("p", "live-diagnostic-note",
         "Cuello de botella orientativo: " + text(summary.probableBottleneck || "sin atribución") +
         " · CPU mundo: " + fmt(summary.cpu && summary.cpu.worldUpdateMedianMs, 2) + " ms" +
@@ -190,7 +215,7 @@
       };
       const pre = make("pre", "npc-agent-evidence", JSON.stringify(evidence, null, 2));
       details.append(summaryLabel, pre);
-      item.append(heading, meta, metrics, incidentLine, diagnosis, terrainLine, actions, details);
+      item.append(heading, meta, metrics, incidentLine, incidentList, diagnosis, terrainLine, errorList, actions, details);
       host.appendChild(item);
     }
     if (!reports.length) host.appendChild(make("p", "live-diagnostic-note", "Todavía no hay informes de partidas guardados en este navegador."));
