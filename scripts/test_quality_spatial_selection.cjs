@@ -10,13 +10,14 @@ const workflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 
 for(const marker of [
   'const spatialActorNamePattern=',
+  'const spatialActorCamelNamePattern=',
   'const spatialVegetationMotionPattern=',
   'const spatialWaterMotionPattern=',
   'const spatialEffectMotionPattern=',
   'const spatialDynamicReasonForMesh=',
+  'meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount',
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
   'meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio',
-  'const spatialDynamicNamePattern=',
   'const isSpatialDynamicMesh=mesh=>',
   'scene.createOrUpdateSelectionOctree(64,3)',
   'scene.onNewMeshAddedObservable.add',
