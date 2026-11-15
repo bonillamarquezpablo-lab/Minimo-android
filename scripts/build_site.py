@@ -1004,9 +1004,13 @@ def main() -> None:
       if(mesh&&spatialDynamicMeshSet.has(mesh)){
        candidates++;
        try{
-        if(mesh.alwaysSelectAsActiveMesh)keep=true;
-        else if(typeof mesh.isInFrustum==='function')keep=mesh.isInFrustum(frustumPlanes);
-       }catch(_){keep=true;}
+        if(mesh.alwaysSelectAsActiveMesh||mesh.skeleton||mesh.morphTargetManager)keep=true;
+        else{
+         // Refresh a dirty transform before reading its world-space bounding volume.
+         if(typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix();
+         if(typeof mesh.isInFrustum==='function')keep=mesh.isInFrustum(frustumPlanes);
+        }
+       }catch(_){spatialSelectionStats.dynamicFilterErrors++;keep=true;}
        if(!keep){culled++;continue;}
       }
       data[write++]=mesh;
