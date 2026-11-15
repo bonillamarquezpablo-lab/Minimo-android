@@ -632,6 +632,8 @@
   function renderReport(report,sourceLabel,previousReport=null,intelligence=null) {
     latestReport = Object.assign({}, report, { specialistIntelligence: intelligence || null, observerPatrol: latestPatrolIntelligence || null });
     $("wbReportExport").disabled = false;
+    $("wbReportCopy").disabled = false;
+    $("wbReportExportFull").disabled = false;
     const samples = Array.isArray(report.samples) ? report.samples : [];
     const summary = report.summary || {};
     const fps = summary.fps || {};
@@ -644,6 +646,14 @@
     const p99 = finite(frame.p99Median) ?? median(valuesAt(samples,"frameTiming.p99Ms"));
     const avgFps = finite(fps.average) ?? (valuesAt(samples,"fps").length ? valuesAt(samples,"fps").reduce((a,b)=>a+b,0)/valuesAt(samples,"fps").length : null);
     const minFps = finite(fps.minimum) ?? (valuesAt(samples,"fps").length ? Math.min(...valuesAt(samples,"fps")) : null);
+    const dayNight = summary.lightingConditions || {};
+    const dayPerformance = dayNight.day || {};
+    const nightPerformance = dayNight.night || {};
+    const hasDayNightComparison = Number(dayPerformance.sampleCount)>0 && Number(nightPerformance.sampleCount)>0;
+    const dayAverage = finite(dayPerformance.fpsAverage);
+    const nightAverage = finite(nightPerformance.fpsAverage);
+    const nightDropPercent = hasDayNightComparison && dayAverage!==null && dayAverage>0 && nightAverage!==null
+      ? Number(((dayAverage-nightAverage)/dayAverage*100).toFixed(1)) : null;
     const maxFrame = finite(frame.worstFrameMax) ?? Math.max(0,...valuesAt(samples,"frameTiming.maxMs"));
     const meshCounts = valuesAt(samples,"scene.meshCount");
     const vertices = valuesAt(samples,"scene.totalVertices");
@@ -708,13 +718,26 @@
       "Anomalías de rendimiento: "+fmt(anomalies.length,0)+"; graves: "+fmt(criticalAnomalies,0)+". Errores JavaScript: "+runtimeErrors+". Cero errores de código no descarta fallos visuales, físicos o de navegación."
     ]);
     $("wbReportMetrics").innerHTML =
-      metricCard("FPS medios",fmt(avgFps,1),"Mínimo: "+fmt(minFps,0)+" FPS")+
-      metricCard("FPS mínimos",fmt(minFps,0),"Peor lectura de la sesión")+
-      metricCard("Estabilidad p95",p95===null?"Sin medir":fmt(p95,1)+" ms","Presupuesto a 60 FPS: 16,7 ms")+
-      metricCard("Mallas de escena",meshLast===null?"—":fmt(meshLast,0),vertexMax===null?"Vértices sin medir":"Hasta "+fmt(vertexMax/1e6,2)+" millones de vértices")+
-      metricCard("Memoria JavaScript",memory.jsHeapUsedMedianMB===undefined?"—":fmt(memory.jsHeapUsedMedianMB,1)+" MiB","Máximo: "+fmt(memory.jsHeapUsedMaximumMB,1)+" MiB");
+      metricCard("FPS medios",fmt(avgFps,1),"Media de toda la partida")+
+      metricCard("FPS mínimos",fmt(minFps,0),"Peor lectura registrada")+
+      metricCard("Fluidez",p95===null?"Sin medir":fmt(p95,1)+" ms","Tiempo de fotograma p95");
     $("wbReportState").innerHTML = '<strong>'+esc(sourceLabel||"Informe local")+'</strong><span>'+esc(niceDate(report.startedAt))+' · '+esc(report.gameBuild||"versión desconocida")+' · '+esc(status)+'</span>';
-    $("wbReportMeta").textContent = "Sesión "+String(report.sessionId||"").slice(0,12)+" · "+fmt(samples.length,0)+" lecturas · "+reason;
+    $("wbReportMeta").textContent = "Partida "+esc(niceDate(report.startedAt))+" · "+fmt(samples.length,0)+" mediciones guardadas.";
+    const quickTitle = avgFps===null ? "No hay mediciones suficientes" :
+      avgFps<15 ? "La partida fue muy lenta" :
+      avgFps<25 ? "La partida perdió mucha fluidez" :
+      avgFps<45 ? "La partida tuvo algunos tirones" : "La partida mantuvo una buena fluidez";
+    const quickLines = [];
+    quickLines.push(avgFps===null ? "No se pudo calcular la media de FPS." : "Media de "+fmt(avgFps,1)+" FPS y mínimo de "+fmt(minFps,0)+" FPS.");
+    if(hasDayNightComparison && dayAverage!==null && nightAverage!==null){
+      quickLines.push("De día: "+fmt(dayAverage,1)+" FPS. De noche: "+fmt(nightAverage,1)+" FPS."+(nightDropPercent!==null&&nightDropPercent>10?" La caída nocturna fue del "+fmt(nightDropPercent,0)+"%.":""));
+    }else{
+      quickLines.push("Aún no hay suficientes mediciones separadas entre día y noche.");
+    }
+    if(runtimeErrors>0)quickLines.push("Se registraron "+fmt(runtimeErrors,0)+" errores durante la partida.");
+    if(anomalies.length>0)quickLines.push("Se detectaron "+fmt(anomalies.length,0)+" avisos de rendimiento.");
+    $("wbQuickReadTitle").textContent = quickTitle;
+    $("wbQuickReadBody").textContent = quickLines.join(" ");
     $("wbReportActions").innerHTML = [
       noGpu ? reportFinding("critical","Medir la GPU en una ejecución controlada","No hay tiempos GPU en este informe. Repetir una ruta idéntica con el perfilador Babylon activado; no cambiar la calidad gráfica.") : "",
       preStartTasks.length ? reportFinding("critical","Separar el bloqueo de arranque","Antes de empezar a medir hubo "+preStartTasks.length+" tareas largas que suman "+fmt(preStartDuration,0)+" ms; la mayor duró "+fmt(preStartMax,0)+" ms. Auditar carga inicial, texturas, GLB y compilación de shaders.") : "",
@@ -798,12 +821,32 @@
 
   function bindReportActions() {
     $("wbReportRefresh").addEventListener("click",loadReport);
-    $("wbReportExport").addEventListener("click",()=>{
+    const exportLatestReport=()=>{
       if(!latestReport)return;
       const blob=new Blob([JSON.stringify(latestReport,null,2)],{type:"application/json"});
       const url=URL.createObjectURL(blob),link=document.createElement("a");
       link.href=url;link.download="el-sin-nombre-informe-"+(latestReport.gameBuild||"partida")+".json";
       document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+    };
+    $("wbReportExport").addEventListener("click",exportLatestReport);
+    $("wbReportExportFull").addEventListener("click",exportLatestReport);
+    $("wbReportCopy").addEventListener("click",async()=>{
+      if(!latestReport)return;
+      const json=JSON.stringify(latestReport,null,2);
+      try{
+        if(navigator.clipboard&&typeof navigator.clipboard.writeText==="function"){
+          await navigator.clipboard.writeText(json);
+        }else{
+          const area=document.createElement("textarea");area.value=json;
+          area.setAttribute("readonly","");area.style.position="fixed";area.style.opacity="0";
+          document.body.appendChild(area);area.select();
+          const copied=document.execCommand("copy");area.remove();
+          if(!copied)throw new Error("El navegador no permitió copiar el informe.");
+        }
+        $("wbReportState").textContent="Informe completo copiado. Pégalo en tu conversación con ChatGPT.";
+      }catch(error){
+        $("wbReportState").textContent="No se pudo copiar el informe. Usa «Descargar informe» para guardarlo.";
+      }
     });
     $("wbReportImport").addEventListener("change",async event=>{
       const file=event.target.files&&event.target.files[0];
