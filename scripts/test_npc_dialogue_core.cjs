@@ -19,6 +19,9 @@ assert.doesNotMatch(runtime,/new BABYLON\.Mesh|MeshBuilder|new B\.Mesh|requestAn
 assert.doesNotMatch(runtime,/computeWorldMatrix\(true\)/,"NPC dialogue ticks must not force-recompute every character's world matrix.");
 assert.match(runtime,/RANGE_SQUARED/,"Nearby NPC filtering must use squared distances before sorting the small visible set.");
 assert.match(runtime,/function rootOf\(n\).*n\.parts&&n\.parts\.root\|\|n\.root\|\|n\.actor\|\|n/,"Dialogue must resolve NPCs stored as parts.root, root, actor, or a direct Babylon node.");assert.match(runtime,/function idOf\(n\).*root&&root\.name/,"NPC identity must fall back to the resolved Babylon node name.");assert.match(runtime,/Number\.isFinite\(Number\(s\.playerPosition\.x\)\)/,"Invalid player positions must not silently place NPCs at the world origin.");assert.match(runtime,/layer\.style\.zIndex="2147483000"/,"Dialogue bubbles must render above the game canvas and HUD.");
+assert.match(runtime,/snapshotFailures/,"Dialogue runtime must surface bridge snapshot errors for diagnosis.");
+assert.match(runtime,/bridgeReportedActive/,"Dialogue runtime must expose the bridge's active-game signal.");
+assert.match(builder,/let focus=null;[\\s\\S]*?player&&player\.root&&player\.root\.position/,"Dialogue bridge must safely resolve the active player's world position.");
 assert.match(runtime,/function remember\(state,content\)/);
 assert.match(runtime,/schedule\(now,nearby,s\)/);
 assert.match(runtime,/Core\.chooseAmbientMessage\(chosen\.npc,context,random,state\)/);
