@@ -11976,20 +11976,32 @@ function updateHUD(){
   root.rotation.x=0;root.rotation.z=0;
   return true;
  }
- function rescueGroundActors(){
+ let groundActorRecoveryCursor=0;
+ function rescueGroundActors(maxActorChecks=6){
   let playerRecovered=false,recoveredNpcs=0;
   if(!onShip&&recoverGroundActor(player.root,realPlayerReady?REAL_PLAYER_ROOT_GROUND_OFFSET:.08,.70)){
    playerRecovered=true;playerAirborne=false;playerVerticalVelocity=0;playerGroundYFiltered=player.root.position.y;
    playerVelocity.x=0;playerVelocity.z=0;lastSafePosition.copyFrom(player.root.position);cameraTargetSmoothed=null;
   }
-  const rescueParts=(parts,radius=.66)=>{
-   if(parts&&recoverGroundActor(parts.root,actorGroundOffset(parts),radius))recoveredNpcs++;
-  };
-  for(const enemy of enemies)if(enemy.alive)rescueParts(enemy.parts,.62);
-  for(const guard of campGuards)if(guard.alive)rescueParts(guard.parts,.62);
-  for(const ally of companions)if(ally.recruited&&ally.parts.root.parent===null)rescueParts(ally.parts,.66);
-  for(const npc of ambientPeople)if(!npc.recruited)rescueParts(npc.parts,.46);
-  for(const fallen of fallenEnemies)rescueParts(fallen.parts,.62);
+  // Revisa el conjunto completo de actores por turnos: el rescate del terreno no debe
+  // recorrer todos los NPC de golpe ni provocar picos periódicos en el hilo principal.
+  const enemyCount=enemies.length,guardCount=campGuards.length,allyCount=companions.length,
+   civilianCount=ambientPeople.length,fallenCount=fallenEnemies.length;
+  const total=enemyCount+guardCount+allyCount+civilianCount+fallenCount;
+  if(total>0){
+   const checks=Math.min(total,Math.max(1,maxActorChecks|0));
+   for(let n=0;n<checks;n++){
+    const index=groundActorRecoveryCursor++%total;
+    let parts=null,radius=.62,eligible=false;
+    if(index<enemyCount){const actor=enemies[index];eligible=!!actor.alive;parts=actor.parts;}
+    else if(index<enemyCount+guardCount){const actor=campGuards[index-enemyCount];eligible=!!actor.alive;parts=actor.parts;}
+    else if(index<enemyCount+guardCount+allyCount){const actor=companions[index-enemyCount-guardCount];eligible=!!actor.recruited&&actor.parts.root.parent===null;parts=actor.parts;radius=.66;}
+    else if(index<enemyCount+guardCount+allyCount+civilianCount){const actor=ambientPeople[index-enemyCount-guardCount-allyCount];eligible=!actor.recruited;parts=actor.parts;radius=.46;}
+    else{const actor=fallenEnemies[index-enemyCount-guardCount-allyCount-civilianCount];eligible=true;parts=actor.parts;}
+    if(eligible&&parts&&recoverGroundActor(parts.root,actorGroundOffset(parts),radius))recoveredNpcs++;
+   }
+   groundActorRecoveryCursor%=total;
+  }else groundActorRecoveryCursor=0;
   return {playerRecovered,recoveredNpcs};
  }
  function tryLandSegment(fromX,fromZ,toX,toZ,radius=.72){
@@ -12074,9 +12086,9 @@ function update(dt){
    }
   }
   update.landRecoveryAccumulator=(update.landRecoveryAccumulator||0)+dt;
-  if(update.landRecoveryAccumulator>=.65){
-   update.landRecoveryAccumulator=0;
-   const recovered=rescueGroundActors();
+  if(update.landRecoveryAccumulator>=.10){
+   update.landRecoveryAccumulator%=.10;
+   const recovered=rescueGroundActors(6);
    if(recovered.playerRecovered){msg('Has vuelto a tierra firme.');saveGame(true);}
   }
   for(const buoy of regattaBuoys){if(!worldEntityVisualDue(buoy,buoy.x,buoy.z))continue;buoy.root.position.y=waterHeight(buoy.x,buoy.z,elapsed)-.12+Math.sin(elapsed*1.35+buoy.phase)*.035;buoy.root.rotation.z=Math.sin(elapsed*.72+buoy.phase)*.025;buoy.root.rotation.x=Math.cos(elapsed*.61+buoy.phase)*.018;}
