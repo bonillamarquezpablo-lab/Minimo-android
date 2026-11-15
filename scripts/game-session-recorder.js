@@ -260,6 +260,8 @@
     if (!health || !document.body || !document.body.classList.contains("game-running")) return null;
     const runtime = health.runtime && typeof health.runtime === "object" ? health.runtime : {};
     const rawFrame = runtime.frameTimingMs && typeof runtime.frameTimingMs === "object" ? runtime.frameTimingMs : {};
+    const browserMemory = window.performance && window.performance.memory && typeof window.performance.memory === "object"
+      ? window.performance.memory : null;
     const sample = {
       capturedAt: new Date().toISOString(),
       targetFps: number(runtime.performanceAssessment && runtime.performanceAssessment.targetFps),
@@ -305,6 +307,11 @@
         engineBackend: text(runtime.engineBackend, 32),
         gpuRenderer: text(runtime.gpuRenderer, 120),
         drawCallsCounterSemantics: "raw-runtime-counter"
+      },
+      memory: {
+        usedJSHeapSizeBytes: number(browserMemory && browserMemory.usedJSHeapSize),
+        totalJSHeapSizeBytes: number(browserMemory && browserMemory.totalJSHeapSize),
+        jsHeapLimitBytes: number(browserMemory && browserMemory.jsHeapSizeLimit)
       },
       subsystems: {
         waterUpdateMs: number(runtime.waterUpdateMs),
@@ -566,6 +573,8 @@
     const world = values(sample => sample.cpu && sample.cpu.worldUpdateMs);
     const render = values(sample => sample.cpu && sample.cpu.renderCpuMs);
     const telemetryRead = values(sample => sample.diagnosticsReadMs);
+    const heapUsedBytes = values(sample => sample.memory && sample.memory.usedJSHeapSizeBytes);
+    const heapLimitBytes = values(sample => sample.memory && sample.memory.jsHeapLimitBytes);
     const drawCallsObservedDelta = values(sample => sample.scene && sample.scene.drawCallsObservedDelta);
     const longTasks = Array.isArray(session.longTasks) ? session.longTasks : [];
     const anomalies = Array.isArray(session.anomalies) ? session.anomalies : [];
@@ -588,6 +597,9 @@
       { name: "GPU", value: medianGpu, source: "Babylon EngineInstrumentation" }
     ].filter(item => item.value !== null).sort((a, b) => b.value - a.value);
     const targetFps = percentile(values(sample => sample.targetFps), .5) || 60;
+    const expectedSamples = session.startedAt && session.finishedAt
+      ? Math.max(1, Math.floor((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / SAMPLE_INTERVAL_MS) + 1)
+      : null;
     return {
       sampleCount: samples.length,
       durationSeconds: session.startedAt && session.finishedAt
@@ -610,10 +622,15 @@
       persistIntervalMs: number(session.persistIntervalMs),
       sampleCoverage: {
         recorded: samples.length,
-        expected: session.startedAt && session.finishedAt
-          ? Math.max(1, Math.floor((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / SAMPLE_INTERVAL_MS) + 1)
-          : null,
+        expected: expectedSamples,
+        coverageRate: expectedSamples === null ? null : Number(Math.min(1, samples.length / expectedSamples).toFixed(3)),
         truncatedSamples: number(session.truncatedSamples) || 0
+      },
+      memory: {
+        jsHeapUsedMedianMB: heapUsedBytes.length ? Number((percentile(heapUsedBytes, .5) / 1048576).toFixed(2)) : null,
+        jsHeapUsedMaximumMB: heapUsedBytes.length ? Number((Math.max(...heapUsedBytes) / 1048576).toFixed(2)) : null,
+        jsHeapLimitMB: heapLimitBytes.length ? Number((percentile(heapLimitBytes, .5) / 1048576).toFixed(2)) : null,
+        measurementAvailable: heapUsedBytes.length > 0
       },
       cpu: { worldUpdateMedianMs: medianWorld, renderPreparationMedianMs: medianRender },
       gpu: { frameMedianMs: medianGpu, sceneRenderMedianMs: medianSceneRender },
