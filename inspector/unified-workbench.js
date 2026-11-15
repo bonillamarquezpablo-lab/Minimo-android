@@ -89,7 +89,14 @@
           <p>Se distinguirán las mediciones ausentes de los valores cero.</p>
         </article>
       </div>
-      <section class="wb-report-card">
+      <section class="wb-report-card wb-report-specialists" id="wbReportSpecialists">
+        <div class="wb-card-eyebrow">INTELIGENCIA AUTÓNOMA · CUATRO ESPECIALISTAS</div>
+        <h3>Lo que han descubierto nuestros especialistas</h3>
+        <p>Revisan la partida, reúnen pruebas y recuerdan los resultados para comparar futuras sesiones. No cambian el mundo ni reducen la calidad gráfica por su cuenta.</p>
+        <div id="wbSpecialistSummary" class="wb-specialist-summary">Preparando análisis…</div>
+        <div id="wbSpecialistCards" class="wb-specialist-grid"><p>Esperando los datos de la partida.</p></div>
+      </section>
+            <section class="wb-report-card">
         <div class="wb-card-eyebrow">ANÁLISIS CRUZADO</div><h3>Relaciones entre posibles causas</h3>
         <div id="wbReportCorrelations" class="wb-action-list"><p>Esperando mediciones.</p></div>
       </section>
@@ -386,8 +393,113 @@
     host.innerHTML=items.join("");
   }
 
-  function renderReport(report,sourceLabel,previousReport=null) {
-    latestReport = report;
+  function specialistStatusLabel(status) {
+    const labels = {
+      "confirmado": "Repetido en varias partidas",
+      "probable": "Posible problema",
+      "necesita-revision": "Hay algo que revisar",
+      "sin-incidencia-observada": "Sin problema observado",
+      "evidencia-recogida": "Datos recogidos",
+      "sin-datos-suficientes": "Faltan datos"
+    };
+    return labels[status] || "Estado no confirmado";
+  }
+
+  function specialistSourceLabel(source) {
+    return source === "external-agent" ? "Agente conectado" :
+      source === "operator" ? "Anotación del Inspector" :
+      source === "npc" ? "Observación del especialista" : "Registro";
+  }
+
+  function renderSpecialistIntelligence(intelligence) {
+    const summaryHost = $("wbSpecialistSummary");
+    const cardsHost = $("wbSpecialistCards");
+    if (!summaryHost || !cardsHost) return;
+    if (!intelligence || !Array.isArray(intelligence.specialists)) {
+      summaryHost.textContent = "El análisis de especialistas no está disponible en este navegador.";
+      cardsHost.innerHTML = '<p>La partida conserva su informe técnico; no se ha podido cargar el módulo de inteligencia.</p>';
+      return;
+    }
+    const summary = intelligence.summary || {};
+    const review = finite(summary.needReview) ?? 0;
+    const observations = finite(summary.recordedSpecialistObservations) ?? 0;
+    summaryHost.innerHTML =
+      '<span class="wb-specialist-count"><strong>'+esc(summary.specialists||0)+'</strong> especialistas</span>'+
+      '<span class="wb-specialist-count"><strong>'+esc(review)+'</strong> con puntos por revisar</span>'+
+      '<span class="wb-specialist-count"><strong>'+esc(observations)+'</strong> observaciones asociadas</span>'+
+      '<span class="wb-specialist-safety">Análisis y memoria activos · Reparaciones automáticas desactivadas</span>';
+    cardsHost.innerHTML = intelligence.specialists.map(specialist => {
+      const status = String(specialist.status || "sin-datos-suficientes");
+      const severity = status === "necesita-revision" || status === "confirmado" ? "warning" :
+        status === "probable" ? "warning" : status === "sin-incidencia-observada" ? "good" : "neutral";
+      const findingHtml = (Array.isArray(specialist.findings) ? specialist.findings : []).slice(0,8).map(finding => {
+        const badge = finding.severity === "critical" ? "Prioridad alta" :
+          finding.severity === "warning" ? "Revisar" : "Dato recogido";
+        const locations = Array.isArray(finding.locations) && finding.locations.length
+          ? '<div class="wb-specialist-location">'+finding.locations.map(item=>'<span>'+esc(item)+'</span>').join("")+'</div>' : "";
+        return '<div class="wb-specialist-finding"><span class="wb-specialist-finding-tag">'+badge+'</span><div><strong>'+esc(finding.title||"Hallazgo")+'</strong><p>'+esc(finding.summary||"")+'</p>'+locations+'</div></div>';
+      }).join("");
+      const observationHtml = (Array.isArray(specialist.observations) ? specialist.observations : []).slice(0,6).map(event =>
+        '<div class="wb-specialist-observation"><strong>'+esc(specialistSourceLabel(event.source))+'</strong><p>'+esc(event.summary||"")+'</p></div>'
+      ).join("");
+      const noFinding = !findingHtml ? '<p class="wb-specialist-empty">'+
+        (status === "sin-incidencia-observada" ? "No se han encontrado incidencias en las comprobaciones realizadas." :
+          status === "evidencia-recogida" ? "Se han guardado mediciones, pero aún no permiten confirmar un fallo." :
+            "Todavía faltan datos para emitir una conclusión fiable.")+'</p>' : "";
+      return '<article class="wb-specialist-card wb-specialist-'+severity+'">'+
+        '<div class="wb-specialist-card-head"><div><span class="wb-specialist-name">'+esc(specialist.name)+'</span><span class="wb-specialist-role">'+esc(specialist.roleId==="performance"?"Rendimiento":specialist.roleId==="water-coast"?"Agua y costa":specialist.roleId==="terrain-structures"?"Terreno y estructuras":"Materiales e iluminación")+'</span></div>'+
+        '<span class="wb-specialist-status">'+esc(specialistStatusLabel(status))+'</span></div>'+
+        '<p class="wb-specialist-summary-text">'+esc(specialist.summary||"Sin resumen disponible.")+'</p>'+
+        findingHtml+noFinding+
+        (observationHtml ? '<div class="wb-specialist-observations"><strong>Observaciones guardadas</strong>'+observationHtml+'</div>' : "")+
+        '</article>';
+    }).join("");
+  }
+
+  async function buildSpecialistIntelligence(report, rememberResults) {
+    const core = window.ELSN_NPC_AGENT_CORE;
+    if (!core || typeof core.analyzeSessionIntelligence !== "function") return null;
+    const api = window.__ELSN_NPC_AGENT_SYSTEM__;
+    let memory = [];
+    if (api) {
+      try {
+        if (api.ready) await api.ready;
+        if (typeof api.getMemory === "function") memory = await api.getMemory({ limit: 200 });
+      } catch (_) {}
+    }
+    const intelligence = core.analyzeSessionIntelligence(report, memory);
+    if (rememberResults && api && typeof api.remember === "function" && report && report.sessionId) {
+      const names = { "performance":"Eira", "water-coast":"Sól", "terrain-structures":"Ulf", "materials-lighting":"Týr" };
+      for (const specialist of intelligence.specialists) {
+        try {
+          await api.remember({
+            id: "session-intelligence:" + String(report.sessionId).slice(0,100) + ":" + specialist.id + ":v1",
+            source: "system",
+            npcId: names[specialist.roleId] || specialist.name,
+            roleId: specialist.roleId,
+            domain: specialist.roleId,
+            kind: "diagnosis",
+            status: specialist.status,
+            confidence: specialist.confidence,
+            summary: specialist.summary,
+            evidence: {
+              sessionId: report.sessionId,
+              gameBuild: report.gameBuild || null,
+              specialistStatus: specialist.status,
+              findings: (specialist.findings || []).slice(0,6).map(finding => ({
+                title: finding.title, summary: finding.summary, severity: finding.severity
+              })),
+              metrics: specialist.evidence || {}
+            }
+          });
+        } catch (_) {}
+      }
+    }
+    return intelligence;
+  }
+
+  function renderReport(report,sourceLabel,previousReport=null,intelligence=null) {
+    latestReport = Object.assign({}, report, { specialistIntelligence: intelligence || null });
     $("wbReportExport").disabled = false;
     const samples = Array.isArray(report.samples) ? report.samples : [];
     const summary = report.summary || {};
@@ -490,6 +602,7 @@
     ].join("");
     $("wbReportFindings").innerHTML = findings;
     renderWorldEvidence(report.finalWorldInspection || null);
+    renderSpecialistIntelligence(intelligence);
     reportComparison(report,previousReport);
     renderCorrelations(report,{p95,renderCpu,worldCpu,gpuValues,grass,shadows,meshCounts,vertices});
     $("wbReportJson").textContent = JSON.stringify(report,null,2);
@@ -529,7 +642,8 @@
         state.textContent="Todavía no hay informes guardados. Juega una partida para que el registrador cree el primero.";
         return;
       }
-      renderReport(reports[0],"Última partida guardada",reports[1]||null);
+      const intelligence = await buildSpecialistIntelligence(reports[0], reports[0].status === "completed");
+      renderReport(reports[0],"Última partida guardada",reports[1]||null,intelligence);
     } catch(error) {
       state.textContent="No se pudo leer el historial: "+String(error&&error.message||error);
     }
@@ -551,7 +665,8 @@
         const parsed=JSON.parse(await file.text());
         const report=Array.isArray(parsed)?parsed[0]:parsed.report||parsed;
         if(!report||!Array.isArray(report.samples))throw new Error("El archivo no contiene una partida con muestras.");
-        renderReport(report,"Archivo importado");
+        const intelligence = await buildSpecialistIntelligence(report, false);
+        renderReport(report,"Archivo importado",null,intelligence);
       } catch(error) {
         $("wbReportState").textContent="No se pudo abrir el JSON: "+String(error&&error.message||error);
       } finally {event.target.value="";}
