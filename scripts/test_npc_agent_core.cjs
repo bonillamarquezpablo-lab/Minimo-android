@@ -152,6 +152,60 @@ assert.equal(intelligence.specialists.find(agent => agent.id === "tyr").status, 
 assert.equal(intelligence.summary.needReview, 3, "Probable performance regressions must appear in the at-a-glance review count.");
 assert.equal(intelligence.autonomy.automaticWorldChanges, false);
 assert.equal(intelligence.autonomy.automaticCodeChanges, false);
+
+const patrolFixture = {
+  schema: 1,
+  mode: "test-only-read-only-observer-patrol",
+  build: "0.6.299",
+  renderer: "Chromium headless + ANGLE SwiftShader",
+  verdict: "issues-found",
+  startedAt: "2026-11-15T04:07:46.716Z",
+  finishedAt: "2026-11-15T04:11:13.325Z",
+  run: { id: "43675326364", url: "https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/runs/43675326364", branch: "main", sha: "abc123" },
+  world: { expectedIslands: 13, visitedIslands: 13 },
+  limitations: ["La patrulla es de prueba y lectura."],
+  agents: [{
+    name: "Ulf", specialization: "Física y cimentación", severity: "critical",
+    summary: "Se detectaron estructuras que necesitan una segunda comprobación.",
+    issues: [{
+      title: "Estructura insegura visible",
+      detail: "IslandGarrisonOutpost_4 continúa visible según la auditoría.",
+      severity: "critical", islandIndex: 4
+    }],
+    missing: ["No hay locomoción de NPC para recorrer rutas físicas."],
+    readings: {
+      structures: [{ name: "IslandGarrisonOutpost_4", islandIndex: 4, x: 146, z: -132, measurements: { maximumAnchorErrorMeters: 0.0043 } }]
+    }
+  }, {
+    name: "Eira", specialization: "Costa y pisadas", severity: "unknown",
+    summary: "No hay contadores válidos de pisadas.", issues: [], missing: ["Contador de pisadas no disponible."],
+    readings: { wetSteps: null }
+  }]
+};
+const patrolAnalysis = Core.analyzeObserverPatrol(patrolFixture, "0.6.301");
+assert.equal(patrolAnalysis.runId, "43675326364");
+assert.equal(patrolAnalysis.world.coverageComplete, true);
+assert.equal(patrolAnalysis.sameBuild, false, "An older patrol must be kept separate from the current game build.");
+assert.equal(patrolAnalysis.softwareRenderer, true, "SwiftShader test results must be marked as software-rendered.");
+const patrolUlf = patrolAnalysis.agents.find(agent => agent.name === "Ulf");
+assert.equal(patrolUlf.issues[0].position.x, 146);
+assert.equal(patrolUlf.issues[0].position.z, -132);
+assert.equal(patrolUlf.issues[0].position.islandIndex, 4);
+assert.ok(patrolAnalysis.cautions.some(item => item.includes("no al build actual")));
+assert.ok(patrolAnalysis.cautions.some(item => item.includes("GPU Adreno")));
+assert.equal(Core.analyzeObserverPatrol(Object.assign({}, patrolFixture, { mode: "gameplay-session" }), "0.6.301"), null,
+  "Only the explicitly read-only observer patrol format may enter the patrol report.");
+const memoryWithPatrol = Core.analyzeSessionIntelligence(integratedReport, [
+  { id: "session-event", source: "npc", kind: "observation", roleId: "terrain-structures",
+    summary: "Observación de esta partida.", status: "observed", createdAt: new Date().toISOString(),
+    evidence: { sessionId: integratedReport.sessionId } },
+  { id: "patrol-event", source: "system", kind: "diagnosis", roleId: "general",
+    summary: "Resultado de patrulla independiente.", status: "critical", createdAt: new Date().toISOString(),
+    evidence: { source: "observer-patrol", patrolRunId: patrolAnalysis.runId } }
+]);
+assert.equal(memoryWithPatrol.autonomy.specialistEvents, 1,
+  "Independent observer patrol memory must never be counted as a same-session NPC observation.");
+
 const noWorldIntelligence = Core.analyzeSessionIntelligence({
   sessionId: "session-without-world", samples: [], finalWorldInspection: null
 }, []);
