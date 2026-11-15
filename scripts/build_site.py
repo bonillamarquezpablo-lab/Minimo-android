@@ -836,8 +836,9 @@ def main() -> None:
    const atmosphere=window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getState==='function'?window.__ELSN_ATMOSPHERE.getState():null;
    let islandIndex=-1;
    try{if(typeof landIslandIndex==='function')islandIndex=landIslandIndex(focus.x,focus.z);}catch(_){};
+   const active=!!(document.body&&document.body.classList.contains('game-running'));
    return {
-    active:!!(document.body&&document.body.classList.contains('game-running')),
+    active,
     playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
     people:(()=>{
      if(!active)return [];
