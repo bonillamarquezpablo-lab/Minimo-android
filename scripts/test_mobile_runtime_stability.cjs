@@ -36,6 +36,7 @@ for (const marker of [
   'buildSpatialSelectionOctree();',
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
   'meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio',
+  'meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason',
   'spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i',
   'created-after-octree',
   'octree-initial-dynamic',
