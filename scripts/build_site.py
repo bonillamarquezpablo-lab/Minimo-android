@@ -1198,7 +1198,7 @@ def main() -> None:
 
     # Make the existing mineable granite deposits read as angular rock, not smooth black orbs.
     mineable_rock_marker = """function createRock(x,z){
-  const gy=terrainSurfaceAt(x,z),sx=rand(1.0,1.8),sy=rand(1.0,1.6),sz=rand(1,1.7);
+  const gy=renderedTerrainSurfaceAt(x,z),sx=rand(1.0,1.8),sy=rand(1.0,1.6),sz=rand(1,1.7);
   let r=sphere('graniteBoulder',null,[x,gy+sy*.49,z],[sx,sy,sz],M.stone,12);
   let cap=sphere('rockFacet',null,[x-.18,gy+sy*.72,z-.10],[sx*.62,sy*.36,sz*.62],M.stoneLight,10);
   return {meshes:[r,cap],x,z,radius:Math.max(sx,sz)*.48,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
