@@ -149,6 +149,7 @@ assert.equal(ulfIntelligence.observations.length, 1, "Only specialist observatio
 assert.ok(ulfIntelligence.findings.some(finding => finding.locations?.some(location => location.includes("X 12.50"))),
   "Terrain defects must retain their measured world coordinates.");
 assert.equal(intelligence.specialists.find(agent => agent.id === "tyr").status, "necesita-revision");
+assert.equal(intelligence.summary.needReview, 3, "Probable performance regressions must appear in the at-a-glance review count.");
 assert.equal(intelligence.autonomy.automaticWorldChanges, false);
 assert.equal(intelligence.autonomy.automaticCodeChanges, false);
 const noWorldIntelligence = Core.analyzeSessionIntelligence({
