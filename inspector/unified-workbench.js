@@ -356,7 +356,7 @@
       ["FPS medios",diff(now.average,before.average)],
       ["FPS mínimos",diff(now.minimum,before.minimum)],
       ["Frame time p95",diff(now.p95,before.p95,true)],
-      ["Mallas medias",diff(now.meshes,before.meshes,true)],
+      ["Mallas medias",now.meshes===null||before.meshes===null?"Sin datos":(now.meshes===before.meshes?"Sin cambio":"Cambio · "+fmt(now.meshes-before.meshes,0)+" mallas; no implica mejora por sí solo")],
       ["Memoria JavaScript",diff(now.heap,before.heap,true)],
       ["Errores JavaScript",diff(now.errors,before.errors,true)]
     ];
