@@ -309,7 +309,7 @@ def main() -> None:
         raise SystemExit("No se encontró la única compilación redundante de todos los materiales.")
     html = html.replace(
         full_scene_compile_marker,
-        "// scene.whenReadyAsync() already checks scene/material/texture readiness; avoid a duplicate all-island compile pass."
+        "// The initial camera render now checks its own mesh/material readiness; avoid a duplicate all-island compile pass."
     , 1)
 
     # Wait for resources used by the initial camera view, not every off-screen island mesh.
