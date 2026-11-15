@@ -139,7 +139,15 @@
       const metrics = make("p", "", "FPS medio: " + fmt(fps.average, 1) +
         " · mínimo: " + fmt(fps.minimum, 0) +
         " · p95 mediano: " + fmt(frame.p95Median, 2) + " ms" +
+        " · peor p95: " + fmt(frame.worstP95, 2) + " ms" +
         " · último FPS: " + fmt(last && last.fps, 0));
+      const anomalies = Array.isArray(report.anomalies) ? report.anomalies : [];
+      const runtimeErrors = Array.isArray(report.runtimeErrors) ? report.runtimeErrors : [];
+      const incidentLine = make("p", "live-diagnostic-note",
+        "Tirones agrupados: " + anomalies.length +
+        " · graves: " + fmt(summary.criticalAnomalyEvents, 0) +
+        " · errores de ejecución/recursos: " + runtimeErrors.length +
+        " · muestreo: " + fmt(report.sampleIntervalMs, 0) + " ms");
       const diagnosis = make("p", "live-diagnostic-note",
         "Cuello de botella orientativo: " + text(summary.probableBottleneck || "sin atribución") +
         " · CPU mundo: " + fmt(summary.cpu && summary.cpu.worldUpdateMedianMs, 2) + " ms" +
@@ -160,9 +168,20 @@
       actions.appendChild(save);
       const details = make("details", "technical");
       const summaryLabel = make("summary", "", "Ver informe técnico y coordenadas");
+      const worstSamples = (Array.isArray(report.samples) ? report.samples : [])
+        .slice()
+        .sort((a, b) => Number(b.frameTiming && b.frameTiming.p95Ms || 0) - Number(a.frameTiming && a.frameTiming.p95Ms || 0))
+        .slice(0, 12);
       const evidence = {
         sessionId: report.sessionId, startedAt: report.startedAt, finishedAt: report.finishedAt,
         gameBuild: report.gameBuild, status: report.status, summary,
+        sampleIntervalMs: report.sampleIntervalMs,
+        device: report.device || null,
+        anomalyEvents: anomalies,
+        runtimeErrors,
+        longTasks: report.longTasks || [],
+        deviceEvents: report.deviceEvents || [],
+        worstSamples,
         scene: world.scene || null,
         terrain: world.terrain || null,
         terrainObjects: (terrain.items || []).slice(0, 100),
@@ -171,7 +190,7 @@
       };
       const pre = make("pre", "npc-agent-evidence", JSON.stringify(evidence, null, 2));
       details.append(summaryLabel, pre);
-      item.append(heading, meta, metrics, diagnosis, terrainLine, actions, details);
+      item.append(heading, meta, metrics, incidentLine, diagnosis, terrainLine, actions, details);
       host.appendChild(item);
     }
     if (!reports.length) host.appendChild(make("p", "live-diagnostic-note", "Todavía no hay informes de partidas guardados en este navegador."));
