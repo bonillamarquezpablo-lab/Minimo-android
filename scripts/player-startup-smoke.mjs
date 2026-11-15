@@ -417,7 +417,34 @@ async function main() {
     await page.waitForFunction(() => {
       const state = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.();
       return !!state && state.active === true;
-    }, undefined, { timeout: 10000, polling: 100 });
+    }, undefined, { timeout: 10000, polling: 100 }).catch(async error => {
+      const diagnostics = await page.evaluate(() => {
+        let bridge = null, bridgeError = '';
+        try { bridge = window.__ELSN_GAME_DIALOGUE_BRIDGE__?.getSnapshot?.() ?? null; }
+        catch (failure) { bridgeError = String(failure?.stack || failure); }
+        return {
+          bodyClass: document.body.className,
+          introAriaHidden: document.getElementById('intro')?.getAttribute('aria-hidden') ?? null,
+          bridgeError,
+          bridgeActive: bridge?.active ?? null,
+          peopleInWorld: bridge?.people?.length ?? null,
+          playerPosition: bridge?.playerPosition ?? null,
+          gameHealth: (() => {
+            try {
+              const health = window.getGameHealthDebug?.();
+              return { gameStarted: health?.gameStarted ?? null, worldUpdateCount: health?.worldUpdateCount ?? null };
+            } catch (failure) { return { error: String(failure) }; }
+          })(),
+          runtime: window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.() ?? null
+        };
+      });
+      manifest.npcDialogueWaitDiagnostic = diagnostics;
+      await fs.promises.writeFile(path.join(OUT, 'npc-dialogue-wait-diagnostic.json'),
+        JSON.stringify(diagnostics, null, 2));
+      await page.screenshot({ path: path.join(OUT, 'npc-dialogue-wait-failure.png'), fullPage: true }).catch(() => {});
+      throw new Error('El runtime de diálogos no detectó la partida activa: ' +
+        JSON.stringify(diagnostics) + ' · ' + String(error?.message || error));
+    });
     manifest.npcDialogueSmoke = await page.evaluate(() => {
       const bridge = window.__ELSN_GAME_DIALOGUE_BRIDGE__;
       const runtime = window.__ELSN_NPC_DIALOGUES__;
