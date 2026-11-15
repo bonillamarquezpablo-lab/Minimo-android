@@ -140,6 +140,7 @@ def main() -> None:
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
         "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
         "maxVisibleBubbles:4",
+        "canvas:engine.getRenderingCanvas(),engine,BABYLON:B",
     ):
         if marker not in index_html:
             fail("El juego no integra correctamente los diálogos ambientales: " + marker)
