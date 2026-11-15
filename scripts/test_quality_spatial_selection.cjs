@@ -9,6 +9,13 @@ const smoke=fs.readFileSync('scripts/player-startup-smoke.mjs','utf8');
 const workflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 
 for(const marker of [
+  'const spatialActorNamePattern=',
+  'const spatialVegetationMotionPattern=',
+  'const spatialWaterMotionPattern=',
+  'const spatialEffectMotionPattern=',
+  'const spatialDynamicReasonForMesh=',
+  'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
+  'meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio',
   'const spatialDynamicNamePattern=',
   'const isSpatialDynamicMesh=mesh=>',
   'scene.createOrUpdateSelectionOctree(64,3)',
@@ -30,6 +37,8 @@ for(const marker of [
 
 assert.ok(smoke.includes('window.__ELSN_SPATIAL_SELECTION__'),'Real campaign smoke must read the runtime spatial selection state.');
 assert.ok(smoke.includes('manifest.spatialSelection?.enabled === true'),'Real campaign smoke must fail if spatial selection is not active.');
+assert.ok(smoke.includes('manifest.spatialSelection.staticIndexedMeshCount') && smoke.includes('dynamicContentRatio'), 'Real campaign smoke must fail when almost all scene meshes remain dynamic.');
+assert.ok(builder.includes('meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount') && builder.includes('meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio'),'The report must expose the actual static/dynamic split.');
 assert.ok(workflow.includes('node scripts/test_quality_spatial_selection.cjs'),'The Pages build must run the spatial selection contract.');
 assert.ok(source.includes('function update(dt){'),'World update must remain present.');
 for(const marker of ['function animateWater(dt)','function updateWildlife(dt)','function updateActiveIslandGrass(dt)','function updateManagedWorldShadowCasters()','function auditHabitableStructures']) {
