@@ -17,12 +17,15 @@ assert.ok(js.includes("function renderSpecialistIntelligence") && js.includes("f
 assert.ok(js.includes("api.remember") && js.includes("specialistIntelligence"),"The report must persist per-session specialist diagnoses and export them.");
 assert.ok(js.includes("analyzeSessionIntelligence(report, memory, historicalReports)") && js.includes("reports[0], reports[0].status === \"completed\", reports"),"Eira must review multiple independent saved sessions to recognize recurring performance issues.");
 assert.ok(js.includes("automaticCodeChanges: false") || js.includes("No cambian el mundo"),"Specialist analysis must remain read-only.");
-for(const id of ["wbReportMetrics","wbReportVerdict","wbReportIntegrity","wbReportActions","wbReportFindings","wbReportJson","wbReportImport","wbReportSpecialists","wbSpecialistSummary","wbSpecialistCards"])
+for(const id of ["wbReportCopy","wbQuickRead","wbQuickReadTitle","wbQuickReadBody","wbReportMore","wbReportExportFull","wbReportMetrics","wbReportVerdict","wbReportIntegrity","wbReportActions","wbReportFindings","wbReportJson","wbReportImport","wbReportSpecialists","wbSpecialistSummary","wbSpecialistCards"])
   assert.ok(js.includes(id),"Unified report view missing: "+id);
 for(const marker of ["workbench-tabs","workbench-deck","scroll-snap-type:x mandatory","overflow-x:auto","wb-report-metrics"])
   assert.ok(css.includes(marker),"Horizontal unified layout missing: "+marker);
 for(const marker of ["sampleCoverage","gpuProfilerEnabled","drawCallsCounterSemantics","finalWorldInspection","longTasks","grassInstances","activeWorldShadowCasters"])
   assert.ok(js.includes(marker),"Advanced report analysis missing: "+marker);
+assert.ok(js.includes("Copiar informe para ChatGPT") && js.includes("navigator.clipboard.writeText"),"The short report must offer one-click copy of the complete ChatGPT evidence.");
+assert.ok(js.includes("summary.lightingConditions") && js.includes("nightDropPercent"),"The summary must compare day and night FPS when both are measured.");
+assert.ok(css.includes(".wb-quick-read") && css.includes(".wb-report-full"),"The concise summary and collapsed technical report must have their own styles.");
 assert.ok(js.includes("No se usa para decidir qué optimizar hasta calibrar el contador"),"Unverified draw-call counters must not guide optimization.");
 assert.ok(js.includes("La mediana del percentil 95 por ventana"),"The report must explain frame-time percentiles in plain language.");
 console.log("Unified horizontal Inspector workbench + understandable advanced session report: PASS");
