@@ -1333,6 +1333,25 @@ def main() -> None:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
     html = html.replace(quality_profile_marker, quality_profile_code, 1)
 
+    # Make the identity gate reliable for both pointer and keyboard activation.
+    identity_start_guard_marker = "function beginLoadingWithIdentity(name){\n selectedPlayerName=String(name||'').trim().slice(0,20);playerIdentityChosen=true;"
+    identity_start_guard_replacement = "let identityStartupTriggered=false;\nfunction beginLoadingWithIdentity(name){\n if(identityStartupTriggered)return;\n identityStartupTriggered=true;window.__ELSN_IDENTITY_START_COUNT=(window.__ELSN_IDENTITY_START_COUNT||0)+1;window.__ELSN_IDENTITY_START_AT=Date.now();\n selectedPlayerName=String(name||'').trim().slice(0,20);playerIdentityChosen=true;"
+    if html.count(identity_start_guard_marker) != 1:
+        raise SystemExit("No se encontró el inicio único del selector de identidad para blindar su activación.")
+    html = html.replace(identity_start_guard_marker, identity_start_guard_replacement, 1)
+    identity_buttons_marker = """document.getElementById('continueWithName').addEventListener('click',()=>beginLoadingWithIdentity(document.getElementById('playerNameInput').value));
+document.getElementById('continueUnnamed').addEventListener('click',()=>beginLoadingWithIdentity(''));"""
+    identity_buttons_replacement = """const startNamedIdentity=()=>beginLoadingWithIdentity(document.getElementById('playerNameInput').value);
+const startUnnamedIdentity=()=>beginLoadingWithIdentity('');
+const continueWithNameButton=document.getElementById('continueWithName'),continueUnnamedButton=document.getElementById('continueUnnamed');
+continueWithNameButton.addEventListener('click',startNamedIdentity);
+continueWithNameButton.addEventListener('pointerup',startNamedIdentity,{once:true});
+continueUnnamedButton.addEventListener('click',startUnnamedIdentity);
+continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true});"""
+    if html.count(identity_buttons_marker) != 1:
+        raise SystemExit("No se encontraron los dos botones únicos de inicio de identidad.")
+    html = html.replace(identity_buttons_marker, identity_buttons_replacement, 1)
+
     # Platform-aware memory scheduling: preserve the full Quality scene and roster,
     # but avoid overlapping large binary downloads/parses on iOS Safari and Adreno 650.
     mobile_memory_policy_marker = "const isConstrainedMobile=!!(isPerformanceMode&&(iosMemoryBlindMobile||(isTouchDevice&&(constrainedHardware||reportedMemory<=3))));"
