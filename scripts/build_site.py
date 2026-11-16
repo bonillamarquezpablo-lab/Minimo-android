@@ -1353,27 +1353,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.309: deepen NPC village routines and role-aware conversations without reducing visual quality or changing the mobile update budget.
+    # Release candidate 0.6.310: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.309; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.310; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.309\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.310\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.309.")
-    html = html.replace("0.6.274", "0.6.309")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.310.")
+    html = html.replace("0.6.274", "0.6.310")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'28',build:'0.6.309'"
+    diagnostic_build_replacement = "reportVersion:'29',build:'0.6.310'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.309 para normalizar.")
-    game_version = "0.6.309"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.310 para normalizar.")
+    game_version = "0.6.310"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
