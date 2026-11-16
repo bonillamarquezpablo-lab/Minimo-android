@@ -267,10 +267,12 @@
     } catch (_) {}
   }
 
-  function readWaterDiagnostics() {
+  function readWaterDiagnostics(health) {
     if (typeof window.__elSinNombreWaterDebugSnapshot !== "function") return null;
     try {
-      const source = window.__elSinNombreWaterDebugSnapshot();
+      const source = typeof window.__elSinNombreWaterTelemetrySnapshot === "function"
+        ? window.__elSinNombreWaterTelemetrySnapshot()
+        : window.__elSinNombreWaterDebugSnapshot(health);
       if (!source || typeof source !== "object") return null;
       const allowed = ["wetSteps", "waterParticlesEmitted", "activeSplashParticles", "aliveSplashParticles", "maxShoreStepMeters", "maximumShoreStepMeters"];
       const measurements = {};
@@ -449,12 +451,16 @@
         waterReflectionRefreshRate: number(runtime.waterReflectionRefreshRate),
         grassInstances: number(runtime.grassInstances),
         grassBatches: number(runtime.grassBatches),
-        activeWorldShadowCasters: number(runtime.activeWorldShadowCasters)
+        activeWorldShadowCasters: number(runtime.activeWorldShadowCasters),
+        mapDrawMs: number(runtime.mapDrawMs),
+        mapDrawMaxMs: number(runtime.mapDrawMaxMs),
+        mapDrawSampleCount: number(runtime.mapDrawSampleCount),
+        worldPhaseTimings: runtime.worldPhaseTimings && typeof runtime.worldPhaseTimings === "object" ? runtime.worldPhaseTimings : null
       },
       atmosphere,
       npcDialogue,
       playerPosition: readPlayerLocation(health),
-      waterDiagnostics: readWaterDiagnostics()
+      waterDiagnostics: readWaterDiagnostics(health)
     };
     sample.diagnosticsReadMs = readStartedAt > 0 ? Number(Math.max(0, window.performance.now() - readStartedAt).toFixed(2)) : null;
     return sample;
@@ -748,15 +754,40 @@
     const lightingConditions = { day: lightingGroup(false), night: lightingGroup(true) };
     const dialogueSamples = samples.map(sample=>sample.npcDialogue).filter(Boolean);
     const latestDialogue = dialogueSamples.length ? dialogueSamples[dialogueSamples.length-1] : null;
+    const cumulativeCounterDelta = (rows, key) => {
+      let previous = null, total = 0;
+      for (const row of rows) {
+        const current = number(row && row[key]);
+        if (current === null) continue;
+        total += previous === null ? current : (current >= previous ? current - previous : current);
+        previous = current;
+      }
+      return total;
+    };
     const dialogueSummary = {
       sampleCount: dialogueSamples.length,
       peopleObservedMaximum: dialogueSamples.length ? Math.max(...dialogueSamples.map(x=>number(x.worldPeopleCount)||0)) : null,
       nearbyMaximum: dialogueSamples.length ? Math.max(...dialogueSamples.map(x=>number(x.nearbyCount)||0)) : null,
       bubblesStarted: dialogueSamples.length ? Math.max(...dialogueSamples.map(x=>number(x.bubblesStarted)||0)) : null,
-      projectionAttempts: dialogueSamples.reduce((sum,x)=>sum+(number(x.projectionAttempts)||0),0),
-      projectionSuccesses: dialogueSamples.reduce((sum,x)=>sum+(number(x.projectionSuccesses)||0),0),
+      projectionAttempts: latestDialogue ? number(latestDialogue.projectionAttempts) : null,
+      projectionSuccesses: latestDialogue ? number(latestDialogue.projectionSuccesses) : null,
+      projectionAttemptsDelta: cumulativeCounterDelta(dialogueSamples, "projectionAttempts"),
+      projectionSuccessesDelta: cumulativeCounterDelta(dialogueSamples, "projectionSuccesses"),
       latest: latestDialogue
     };
+    const latestPhaseSample = samples.slice().reverse().find(sample =>
+      sample && sample.subsystems && sample.subsystems.worldPhaseTimings &&
+      typeof sample.subsystems.worldPhaseTimings === "object");
+    const worldPhaseHotspots = Object.entries(latestPhaseSample?.subsystems?.worldPhaseTimings || {})
+      .map(([phase, timing]) => ({
+        phase,
+        samples: number(timing && timing.samples),
+        lastMs: number(timing && timing.lastMs),
+        meanMs: number(timing && timing.meanMs),
+        maxMs: number(timing && timing.maxMs)
+      }))
+      .sort((a, b) => (b.maxMs || 0) - (a.maxMs || 0))
+      .slice(0, 12);
     const expectedSamples = session.startedAt && session.finishedAt
       ? Math.max(1, Math.floor((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / SAMPLE_INTERVAL_MS) + 1)
       : null;
@@ -795,6 +826,12 @@
         measurementAvailable: heapUsedBytes.length > 0
       },
       cpu: { worldUpdateMedianMs: medianWorld, renderPreparationMedianMs: medianRender },
+      worldPhaseHotspots,
+      mapRendering: {
+        lastMs: latestPhaseSample ? number(latestPhaseSample.subsystems.mapDrawMs) : null,
+        maximumMs: latestPhaseSample ? number(latestPhaseSample.subsystems.mapDrawMaxMs) : null,
+        sampleCount: latestPhaseSample ? number(latestPhaseSample.subsystems.mapDrawSampleCount) : null
+      },
       gpu: { frameMedianMs: medianGpu, sceneRenderMedianMs: medianSceneRender },
       sceneTimings: { activeMeshesEvaluationMedianMs: medianActiveMeshes, renderTargetsMedianMs: medianRenderTargets },
       diagnostics: { medianReadMs: median(telemetryRead), maximumReadMs: telemetryRead.length ? Math.max(...telemetryRead) : null },
