@@ -1835,10 +1835,10 @@ function getWorldPhaseTimingSnapshot(){
 
     # Recorder telemetry must read scalar water timings, not run the expensive full
     # shoreline/foam geometry audit every 2.5 seconds.
-    water_debug_marker = " window.__elSinNombreWaterDebugSnapshot=()=>{\n   const health=typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug():null;"
+    water_debug_marker = " window.__elSinNombreWaterDebugSnapshot=()=>{\n  const health=typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug():null;"
     water_debug_replacement = """ window.__elSinNombreWaterTelemetrySnapshot=()=>({available:true,timings:{waterLastUpdateMs:Number(waterLastUpdateMs.toFixed(3)),waterLastNormalMs:Number(waterLastNormalMs.toFixed(3)),tidalFoamLastUpdateMs:Number(tidalFoamLastUpdateMs.toFixed(3)),beachUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),groundDynamicsLastUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(3))}});
  window.__elSinNombreWaterDebugSnapshot=(healthSnapshot=null)=>{
-   const health=healthSnapshot&&typeof healthSnapshot==='object'?healthSnapshot:(typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug():null);"""
+  const health=healthSnapshot&&typeof healthSnapshot==='object'?healthSnapshot:(typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug():null);"""
     if html.count(water_debug_marker) != 1:
         raise SystemExit("No se encontró el snapshot de agua único para separar telemetría ligera de auditoría visual completa.")
     html = html.replace(water_debug_marker, water_debug_replacement, 1)
