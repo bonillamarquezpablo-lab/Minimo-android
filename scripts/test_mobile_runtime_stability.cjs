@@ -114,7 +114,7 @@ assert.ok(builder.includes('tree_rebuild_start') && builder.includes('forestTree
   builder.includes('mature-scots-pine-tree.glb') && builder.includes('mature-norway-spruce-tree.glb') &&
   builder.includes('oak-detailed.glb') && builder.includes('baseYOffset'),
   'Forest trees must use three complete GLB species with original materials, terrain grounding and retained tree gameplay roots.');
-assert.ok(builder.includes('gull_material_registry_replacement = "    const realBirds[];"') &&
+assert.ok(builder.includes('gull_material_registry_replacement = "    const realBirds=[];"') &&
   builder.includes('gull_colour_block') && builder.includes('Conserva el color, brillo y materiales PBR originales'),
   'The replacement gull must retain its source PBR feather colours and avoid per-instance material clones.');
 assert.ok(builder.includes('wildlife_update_marker = "function updateWildlife(dt){"') &&
