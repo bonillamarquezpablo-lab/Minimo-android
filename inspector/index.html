@@ -51,31 +51,31 @@
 
     <section class="section" id="patrulla-exploradores">
       <div class="section-heading">
-        <div><div class="section-kicker">NIVEL 1 · SENTIDOS Y PATRULLA</div><h2>Nivel 1 — Patrulla de Exploradores</h2><p>Eira, Sól, Ulf y Týr recorren puntos de observación de las 13 islas con la API de prueba de Babylon.js. La cámara se mueve solo en ?test=1; no se crean NPCs ni se altera una partida normal.</p></div>
+        <div><div class="section-kicker">REVISIÓN DEL ARCHIPIÉLAGO</div><h2>Patrulla de exploradores</h2><p>Eira, Sól, Ulf y Týr revisan las 13 islas y anotan lo que encuentran. Aquí verás su último recorrido y qué zonas necesitan atención.</p></div>
         <span class="section-index">LECTURAS REALES</span>
       </div>
       <article class="panel patrol-dashboard">
         <div class="patrol-dashboard-head">
-          <div><div class="step-label">PATRULLA AUTOMÁTICA · CADA 6 HORAS</div><h3>Estado de los exploradores</h3><p id="patrolMeta">Esperando el primer informe de GitHub Actions.</p></div>
-          <div class="patrol-actions"><button class="small-button" id="patrolRefresh" type="button">Actualizar informe</button><button class="primary" id="patrolRunWorkflow" type="button">Abrir ejecución manual ↗</button></div>
+          <div><div class="step-label">ÚLTIMO RECORRIDO</div><h3>¿Qué han encontrado?</h3><p id="patrolMeta">Esperando el primer informe de GitHub Actions.</p></div>
+          <div class="patrol-actions"><button class="small-button" id="patrolRefresh" type="button">Actualizar patrulla</button><button class="primary" id="patrolRunWorkflow" type="button">Ver ejecución completa ↗</button></div>
         </div>
         <div class="patrol-status-row"><strong class="patrol-overall-state warning" id="patrolState">Sin informe disponible</strong><span id="patrolRenderer">Entorno pendiente</span><span id="patrolUpdated">—</span></div>
         <div class="patrol-agent-grid" id="patrolAgents">
           <div class="patrol-empty">La primera patrulla aparecerá aquí cuando termine una ejecución de GitHub Actions.</div>
         </div>
-        <p class="patrol-caveat" id="patrolCaveat">Los sensores no disponibles permanecen como pendientes de medir. La patrulla no simula locomoción ni inventa lecturas.</p>
+        <p class="patrol-caveat" id="patrolCaveat">Los datos que todavía no se pudieron medir aparecen como pendientes. El informe no inventa resultados.</p>
         <details class="technical"><summary>Ver informe JSON completo</summary><pre id="patrolReportJson">Sin informe todavía.</pre></details>
       </article>
     </section>
 
     <section class="section" id="control">
       <div class="section-heading">
-        <div><div class="section-kicker">01 · OPERACIONES</div><h2>Auditoría bajo demanda</h2><p>Esta herramienta es opcional: úsala para comparar oleaje, estructuras, texturas o iluminación cuando un cambio lo justifique. No se ejecuta con cada compilación.</p></div>
+        <div><div class="section-kicker">PRUEBAS DEL JUEGO</div><h2>Prepara una prueba</h2><p>Elige una comprobación cuando hayas hecho un cambio o quieras revisar un problema. Los resultados aparecerán aquí, sin tener que buscar en otras páginas.</p></div>
         <span class="section-index">RUN CONTROL</span>
       </div>
       <article class="panel active-runs-panel" aria-labelledby="activeRunsTitle">
         <div class="active-runs-head">
-          <div><div class="step-label">SEGUIMIENTO AUTOMÁTICO</div><h3 id="activeRunsTitle">Ejecuciones activas <span class="active-run-count" id="activeRunCount">0</span></h3><p id="activeRunsSubtitle">Consultando las pruebas de GitHub Actions…</p></div>
+          <div><div class="step-label">ESTADO DE LAS PRUEBAS</div><h3 id="activeRunsTitle">Pruebas en curso <span class="active-run-count" id="activeRunCount">0</span></h3><p id="activeRunsSubtitle">Buscando pruebas en marcha y en cola…</p></div>
           <span class="live-indicator"><i></i> ACTUALIZACIÓN AUTOMÁTICA</span>
         </div>
         <div class="active-runs-list" id="activeRunsList" aria-live="polite">
@@ -84,21 +84,21 @@
       </article>
       <div class="control-grid">
         <article class="panel launch-panel">
-          <div class="panel-title"><h3>Iniciar una auditoría (opcional)</h3><span class="step-label">Solo cuando la necesites</span></div>
+          <div class="panel-title"><h3>¿Qué profundidad necesitas?</h3><span class="step-label">Puedes cambiarla antes de empezar</span></div>
           <div class="levels" role="group" aria-label="Nivel de inspección">
-            <button class="level" type="button" data-level="quick" aria-pressed="true"><strong>Rápido</strong><small>Solo comprueba que el juego arranca</small></button>
-            <button class="level" type="button" data-level="complete" aria-pressed="false"><strong>Completo</strong><small>Texturas, estructuras, costa e inventario</small></button>
-            <button class="level" type="button" data-level="deep" aria-pressed="false"><strong>Profundo</strong><small>Todo lo anterior + comparación visual y FPS</small></button>
+            <button class="level" type="button" data-level="quick" aria-pressed="true"><strong>Rápida</strong><small>Comprueba que el juego arranca</small></button>
+            <button class="level" type="button" data-level="complete" aria-pressed="false"><strong>Completa</strong><small>Revisa mundo, costa y texturas</small></button>
+            <button class="level" type="button" data-level="deep" aria-pressed="false"><strong>Profunda</strong><small>Añade comparación visual y mediciones</small></button>
           </div>
           <div class="field-row">
-            <div class="field"><label for="targetBranch">Rama que se inspecciona</label><input id="targetBranch" value="main" autocomplete="off" spellcheck="false"></div>
-            <div class="field"><label for="beforeRef">Referencia ANTES · opcional</label><input id="beforeRef" placeholder="Automática: versión anterior" autocomplete="off" spellcheck="false"></div>
+            <div class="field expert-only"><label for="targetBranch">Rama que se inspecciona</label><input id="targetBranch" value="main" autocomplete="off" spellcheck="false"></div>
+            <div class="field expert-only"><label for="beforeRef">Referencia ANTES · opcional</label><input id="beforeRef" placeholder="Automática: versión anterior" autocomplete="off" spellcheck="false"></div>
           </div>
-          <div class="launch-actions"><button class="primary" id="launchButton" type="button">Ejecutar auditoría <span aria-hidden="true">↗</span></button><button class="token-gear" id="tokenSettingsButton" type="button" aria-label="Ajustes avanzados de conexión" aria-controls="tokenDetails" aria-expanded="false" title="Ajustes avanzados">⚙</button></div>
+          <div class="launch-actions"><button class="primary" id="launchButton" type="button">Iniciar prueba <span aria-hidden="true">↗</span></button><button class="token-gear" id="tokenSettingsButton" type="button" aria-label="Ajustes avanzados de conexión" aria-controls="tokenDetails" aria-expanded="false" title="Ajustes avanzados">⚙</button></div>
           <p class="inline-state" id="launchMessage" role="status" aria-live="polite">Nivel elegido: <strong id="selectedLevel">Rápido</strong>. No se iniciará nada hasta que confirmes la ejecución en GitHub.</p>
 
           <details class="token-box" id="tokenDetails">
-            <summary>Conexión directa · opcional</summary>
+            <summary>Conexión avanzada · opcional</summary>
             <p>Solo hace falta si quieres iniciar pruebas sin salir de este panel. Permiso necesario: <strong>Actions: Read and write</strong>. El token se envía directamente a GitHub; nunca lo pegues en este chat.</p>
             <div class="token-input"><input id="githubToken" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Token de acceso fino de GitHub"><button class="small-button" id="toggleToken" type="button">Mostrar</button></div>
             <div class="token-actions">
@@ -112,16 +112,16 @@
 
         <article class="panel run-panel">
           <div class="run-top">
-            <div><div class="step-label">Detalle de la ejecución seleccionada</div><div class="run-number" id="runNumber">—</div><div class="run-meta" id="runBranch">Consultando rama</div><div class="run-meta" id="runDate">Consultando inicio</div></div>
+            <div><div class="step-label">Detalle de la prueba seleccionada</div><div class="run-number" id="runNumber">—</div><div class="run-meta" id="runBranch">Consultando rama</div><div class="run-meta" id="runDate">Consultando inicio</div></div>
             <span class="status-pill" id="runState">Buscando</span>
           </div>
           <div class="progress-row">
             <div class="progress-ring"><svg viewBox="0 0 72 72" aria-hidden="true"><circle class="track" cx="36" cy="36" r="30"/><circle class="value" id="progressCircle" cx="36" cy="36" r="30"/></svg><strong id="progressValue" aria-label="Progreso">—</strong></div>
             <div class="progress-copy"><span class="run-phase-status" id="runPhaseStatus">PREPARANDO</span><strong id="runPhaseTitle">Preparando el entorno</strong><p id="runPhaseDescription">La auditoría está consultando GitHub Actions.</p><div class="progress-track"><span id="progressTrack"></span></div></div>
           </div>
-          <div class="panel-title"><h3>Capturas</h3><span class="step-label" id="evidenceStatus">Esperando imágenes</span></div>
+          <div class="panel-title"><h3>Imágenes del resultado</h3><span class="step-label" id="evidenceStatus">Esperando imágenes</span></div>
           <div class="evidence-inline" id="evidenceGrid" aria-live="polite"><div class="evidence-empty">Las capturas aparecerán aquí automáticamente cuando estén listas.</div></div>
-          <div class="panel-title run-actions-title"><h3>Pasos de la prueba</h3><span class="run-links"><a id="runArtifactsLink" href="#" target="_blank" rel="noopener">Todos los archivos ↗</a><a id="runTechnicalLink" href="#" target="_blank" rel="noopener">Logs ↗</a></span></div>
+          <div class="panel-title run-actions-title"><h3>Qué está comprobando</h3><span class="run-links"><a id="runArtifactsLink" href="#" target="_blank" rel="noopener">Todos los archivos ↗</a><a id="runTechnicalLink" href="#" target="_blank" rel="noopener">Logs ↗</a></span></div>
           <div class="step-list" id="stepList"><div class="empty-state"><div><strong>Conectando con el inspector</strong>Los pasos aparecerán aquí, uno por uno.</div></div></div>
           <div class="footer-meta"><span id="updatedAt">Actualizando automáticamente</span><button class="small-button" id="refreshNow" type="button">Actualizar ahora</button></div>
         </article>
@@ -130,15 +130,15 @@
 
     <section class="section" id="diagnostico-en-vivo">
       <div class="section-heading">
-        <div><div class="section-kicker">FASE 1 · MEDICIÓN DIRECTA</div><h2>Diagnóstico en vivo</h2><p>Abre el juego aquí y juega con normalidad. La referencia es 120 FPS (8,33 ms por fotograma), no una promesa de que el motor ya los alcance. La medición normal no activa el perfilador GPU; puedes solicitarlo aparte para una inspección más profunda.</p></div>
+        <div><div class="section-kicker">MEDICIÓN EN DIRECTO</div><h2>Mide la fluidez del juego</h2><p>Abre el juego en este panel y juega como siempre. El centro irá midiendo los FPS y los tiempos de fotograma para localizar los tirones.</p></div>
         <span class="section-index">SESIÓN LOCAL</span>
       </div>
       <article class="chart-card live-diagnostic-card">
         <div class="live-diagnostic-actions">
-          <button class="primary" id="liveGameStart" type="button">Abrir juego para medir</button>
+          <button class="primary" id="liveGameStart" type="button">Abrir el juego y medir</button>
           <button class="small-button" id="liveGameSample" type="button" disabled>Tomar muestra</button>
           <button class="small-button" id="liveGameStop" type="button" disabled>Detener medición</button>
-          <label class="live-device-confirm"><input id="livePhysicalDevice" type="checkbox"> Declaro que esta sesión se ejecuta en mi Galaxy S26 Ultra</label><label class="live-device-confirm"><input id="liveEnableGpuProfiler" type="checkbox"> Activar perfilador GPU (puede añadir carga)</label><span id="liveDiagnosticStatus" role="status" aria-live="polite">Esperando que abras el juego.</span>
+          <label class="live-device-confirm"><input id="livePhysicalDevice" type="checkbox"> Estoy midiendo en mi Galaxy S26 Ultra</label><label class="live-device-confirm"><input id="liveEnableGpuProfiler" type="checkbox"> Medición avanzada de GPU (puede añadir carga)</label><span id="liveDiagnosticStatus" role="status" aria-live="polite">Esperando que abras el juego.</span>
         </div>
         <div class="live-game-frame-wrap" id="liveGameFrameWrap" hidden>
           <iframe id="liveGameFrame" title="EL SIN NOMBRE · sesión de medición" loading="lazy" allow="fullscreen; gamepad" referrerpolicy="strict-origin-when-cross-origin"></iframe>
@@ -179,30 +179,30 @@
 
     <section class="section" id="mundo">
       <div class="section-heading">
-        <div><div class="section-kicker">03 · BABYLON.JS</div><h2>Inspección del mundo 3D</h2><p>Captura puntual y de solo lectura de la escena real: geometría, islas, estructuras, NPCs, animaciones, colisiones y texturas. No se ejecuta continuamente y no modifica el juego.</p></div>
+        <div><div class="section-kicker">REVISIÓN DEL ESCENARIO</div><h2>Revisa el mundo 3D</h2><p>Haz una captura después de recorrer la zona que te interesa. Revisaremos dónde están los objetos, cómo apoyan en el terreno y si hay problemas de colisión o texturas.</p></div>
         <span class="section-index">ESTADO DEL MUNDO</span>
       </div>
       <article class="chart-card live-diagnostic-card">
         <div class="live-diagnostic-actions">
-          <button class="primary" id="worldInspectionCapture" type="button" disabled>Capturar estado del mundo</button>
+          <button class="primary" id="worldInspectionCapture" type="button" disabled>Capturar la escena</button>
           <span id="worldInspectionStatus" role="status" aria-live="polite">Abre el juego en el panel de diagnóstico para habilitar la captura.</span>
         </div>
         <div class="live-diagnostic-grid">
-          <div><span>Islas registradas</span><strong id="worldIslandsCount">—</strong></div>
-          <div><span>Mallas en escena</span><strong id="worldMeshCount">—</strong></div>
-          <div><span>Nodos transformables</span><strong id="worldTransformCount">—</strong></div>
-          <div><span>Estructuras auditadas</span><strong id="worldStructureCount">—</strong></div>
-          <div><span>Estructuras inseguras</span><strong id="worldUnsafeCount">—</strong></div>
-          <div><span>Inseguras aún visibles</span><strong id="worldVisibleUnsafeCount">—</strong></div>
-          <div><span>NPCs / actores</span><strong id="worldActorCount">—</strong></div>
-          <div><span>Tripulación enemiga</span><strong id="worldShipCrewCount">—</strong></div>
-          <div><span>Texturas pendientes</span><strong id="worldPendingTextures">—</strong></div>
-          <div><span>Grupos de animación</span><strong id="worldAnimationGroups">—</strong></div>
-          <div><span>Mallas con colisiones</span><strong id="worldCollisionCount">—</strong></div>
-          <div><span>Transformaciones inválidas</span><strong id="worldInvalidTransformCount">—</strong></div>
+          <div><span>Islas encontradas</span><strong id="worldIslandsCount">—</strong></div>
+          <div><span>Objetos 3D revisados</span><strong id="worldMeshCount">—</strong></div>
+          <div><span>Elementos móviles</span><strong id="worldTransformCount">—</strong></div>
+          <div><span>Construcciones revisadas</span><strong id="worldStructureCount">—</strong></div>
+          <div><span>Construcciones con problemas</span><strong id="worldUnsafeCount">—</strong></div>
+          <div><span>Problemas que siguen visibles</span><strong id="worldVisibleUnsafeCount">—</strong></div>
+          <div><span>Personajes del mundo</span><strong id="worldActorCount">—</strong></div>
+          <div><span>Tripulantes enemigos</span><strong id="worldShipCrewCount">—</strong></div>
+          <div><span>Texturas por cargar</span><strong id="worldPendingTextures">—</strong></div>
+          <div><span>Animaciones</span><strong id="worldAnimationGroups">—</strong></div>
+          <div><span>Objetos con colisión</span><strong id="worldCollisionCount">—</strong></div>
+          <div><span>Posiciones incorrectas</span><strong id="worldInvalidTransformCount">—</strong></div>
           <div><span>FPS al capturar</span><strong id="worldFps">—</strong></div>
-          <div><span>Colisionadores registrados</span><strong id="worldColliderCount">—</strong></div>
-          <div><span>Rango de alturas del terreno</span><strong id="worldTerrainRange">—</strong></div>
+          <div><span>Zonas de colisión</span><strong id="worldColliderCount">—</strong></div>
+          <div><span>Alturas del terreno</span><strong id="worldTerrainRange">—</strong></div>
         </div>
         <section class="live-finding-panel" aria-live="polite" aria-label="Hallazgos de inspección del mundo">
           <div class="live-finding-head">
@@ -222,7 +222,7 @@
 
     <section class="section" id="telemetria">
       <div class="section-heading">
-        <div><div class="section-kicker">02 · GRÁFICAS</div><h2>Rendimiento</h2><p>FPS, tiempo por fotograma y memoria del heap JavaScript.</p></div>
+        <div><div class="section-kicker">HISTORIAL DE MEDICIONES</div><h2>Cómo se ha comportado el juego</h2><p>Consulta la evolución de los FPS y los tirones de las partidas guardadas.</p></div>
         <span class="section-index">DATOS MEDIDOS</span>
       </div>
       <div class="telemetry-grid" id="telemetryGrid">
@@ -254,7 +254,7 @@
 
     <section class="section" id="radar">
       <div class="section-heading">
-        <div><div class="section-kicker">03 · MAPA DEL MUNDO</div><h2>Radar táctico del archipiélago</h2><p>Toca una isla o estructura para consultar coordenadas y apoyo. Verde: hasta 2 cm; rojo: más de 2 cm; gris: sin medir.</p></div>
+        <div><div class="section-kicker">MAPA DEL ARCHIPIÉLAGO</div><h2>Explora las 13 islas</h2><p>Selecciona una isla o una construcción para ver su ubicación y si está bien apoyada en el terreno.</p></div>
         <span class="section-index">13 ISLAS</span>
       </div>
       <article class="panel radar-panel">
@@ -277,7 +277,7 @@
 
     <section class="section" id="comparativa">
       <div class="section-heading">
-        <div><div class="section-kicker">04 · EVIDENCIA VISUAL</div><h2>Comparador ANTES / DESPUÉS</h2><p>Elige una hora y desliza para comparar las dos versiones.</p></div>
+        <div><div class="section-kicker">COMPARACIÓN VISUAL</div><h2>Compara el antes y el después</h2><p>Elige amanecer, mediodía, atardecer o noche y desliza la imagen para ver los cambios.</p></div>
         <span class="section-index">S26 ULTRA · A/B</span>
       </div>
       <article class="panel compare-panel">
@@ -321,7 +321,7 @@
 
     <section class="section" id="inteligencia-npc">
       <div class="section-heading">
-        <div><div class="section-kicker">FASE 3 · ESPECIALISTAS</div><h2>Inteligencia y memoria de NPCs</h2><p>Informes locales de las partidas, análisis por especialidad y memoria persistente. Este panel pertenece al Inspector Center; los especialistas no se instancian como personajes adicionales durante el juego.</p></div>
+        <div><div class="section-kicker">PERSONAJES Y MEMORIA</div><h2>Qué recuerdan los personajes</h2><p>Consulta qué han observado los especialistas, cómo evolucionan los diálogos y qué problemas se repiten entre partidas.</p></div>
         <span class="section-index">MEMORIA LOCAL</span>
       </div>
       <article class="chart-card live-diagnostic-card">
