@@ -5,7 +5,8 @@ import { performance } from 'node:perf_hooks';
 import { chromium } from 'playwright';
 
 const BASE_URL = process.env.PLAYER_TEST_URL || 'http://127.0.0.1:4174/';
-const OUT = path.resolve('artifacts/player-startup');
+const MOBILE_PROFILE = process.env.PLAYER_TEST_MOBILE === '1';
+const OUT = path.resolve(process.env.PLAYER_TEST_ARTIFACT_DIR || 'artifacts/player-startup');
 const startedAt = performance.now();
 const manifest = {
   schema: 1,
@@ -51,10 +52,18 @@ async function main() {
       ]
     });
     const context = await browser.newContext({
-      viewport: { width: 960, height: 540 },
-      deviceScaleFactor: 1,
+      viewport: MOBILE_PROFILE ? { width: 393, height: 873 } : { width: 960, height: 540 },
+      deviceScaleFactor: MOBILE_PROFILE ? 2.75 : 1,
+      ...(MOBILE_PROFILE ? {
+        isMobile: true,
+        hasTouch: true,
+        userAgent: 'Mozilla/5.0 (Linux; Android 12; 2201123G) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36'
+      } : {}),
       ignoreHTTPSErrors: true
     });
+    manifest.deviceProfile = MOBILE_PROFILE
+      ? { name: 'Xiaomi 12X emulation', viewport: '393x873 CSS px', deviceScaleFactor: 2.75, userAgent: 'Android 12 / 2201123G' }
+      : { name: 'Desktop Chromium', viewport: '960x540 CSS px', deviceScaleFactor: 1 };
     const page = await context.newPage();
     page.setDefaultTimeout(60000);
     page.setDefaultNavigationTimeout(90000);
