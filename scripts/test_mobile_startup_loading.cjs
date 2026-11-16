@@ -17,6 +17,15 @@ assert.ok(build.includes('function loadEngine(url,timeoutMs=30000,check=null)'),
 for (const marker of ['window.__ELSN_RUNTIME_SCRIPT_LOADS','cacheStatus','transferSize','encodedBodySize','decodedBodySize','durationMs']) {
   assert.ok(build.includes(marker), 'Missing native script-load telemetry: ' + marker);
 }
+const terrainStart=index.indexOf('async function createIslandTerrain(');
+const terrainEnd=index.indexOf("\n }\n for(let i=0;i<land.length;i++)",terrainStart);
+assert.ok(terrainStart>=0 && terrainEnd>terrainStart,'All 13 island heightfields must use the asynchronous startup builder.');
+const terrainBuilder=index.slice(terrainStart,terrainEnd);
+assert.ok(terrainBuilder.includes('new Float32Array((positions.length/3)*4)'), 'Terrain vertex colours must use a preallocated typed buffer rather than a growing boxed array.');
+assert.ok(terrainBuilder.includes('terrainStartupSliceBudgetMs=isConstrainedMobile?4:7'), 'Terrain generation must yield according to a bounded mobile CPU time slice.');
+assert.ok(terrainBuilder.includes('await yieldStartupFrame()') && terrainBuilder.includes('setLoadingProgress(40+'), 'Terrain generation must yield to paint the loading screen and report real island progress.');
+assert.ok(index.includes('const terrainMesh=await createIslandTerrain(is,i)') && index.includes("recordStartupTask('Terreno 3D · isla '+(i+1)"), 'The 13 initial island heightfields must be awaited and timed independently before player entry.');
+
 assert.ok(index.includes('id="retryEngine"') && index.includes("retryButton.addEventListener('click',retryGameStartup)") &&
   index.includes("retryButton.addEventListener('pointerup',retryGameStartup)"),
   'The player must have a visible, touch-safe retry action after a blocking startup failure.');
