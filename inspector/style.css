@@ -565,3 +565,19 @@ h1{font-size:clamp(27px,3.4vw,42px);line-height:1.02;margin:7px 0 6px;letter-spa
   .patrol-issue{display:grid}
   .patrol-copy{justify-self:start}
 }
+
+
+/* Persistent in-browser screenshot vault. */
+.capture-vault{margin:18px 0;padding:18px;border:1px solid rgba(131,177,255,.22);border-radius:18px;background:linear-gradient(145deg,rgba(19,36,56,.82),rgba(11,22,36,.9))}
+.capture-vault-head{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.capture-vault-head h3{margin:4px 0;font-size:19px;letter-spacing:-.025em}
+.capture-vault-head p{margin:0;color:var(--muted);font-size:12px}
+.capture-vault-status{margin:12px 0;color:var(--muted);font-size:12px}
+.capture-vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.capture-vault-card{min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:#07111d}
+.capture-vault-card a{display:block;color:var(--text);text-decoration:none}
+.capture-vault-card img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;background:#02070d}
+.capture-vault-card-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px;font-size:10px}
+.capture-vault-card-foot button{border:0;background:transparent;color:var(--muted);font-size:10px;cursor:pointer}
+.capture-vault-empty{padding:20px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:12px;text-align:center}
+@media(max-width:560px){.capture-vault{padding:13px}.capture-vault-head{align-items:flex-start;flex-direction:column}.capture-vault-head .primary{width:100%}.capture-vault-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

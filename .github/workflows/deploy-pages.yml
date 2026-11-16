@@ -88,6 +88,8 @@ jobs:
 
       - name: Verify guided Inspector experience and preserved tools
         run: node scripts/test_inspector_workbench_contract.cjs
+      - name: Verify persistent screenshot gallery
+        run: node --check dist/inspector/phase1-live.js && node scripts/test_inspector_capture_gallery_contract.cjs
 
       - name: Verify Inspector Phase 1 dependencies are published
         run: node scripts/test_inspector_phase1_packaging.cjs

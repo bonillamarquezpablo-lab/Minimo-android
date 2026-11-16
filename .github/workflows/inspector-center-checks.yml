@@ -44,6 +44,8 @@ jobs:
         run: node scripts/test_hrafn_before_after_contract.cjs
       - name: Validate dashboard application syntax
         run: node --check inspector/app.js
+      - name: Validate persistent screenshot gallery
+        run: node --check inspector/phase1-live.js && node scripts/test_inspector_capture_gallery_contract.cjs
       - name: Validate the unified Inspector workspace
         run: node --check inspector/unified-workbench.js && node scripts/test_inspector_workbench_contract.cjs
       - name: Validate dashboard script and security contract

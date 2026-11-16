@@ -11,16 +11,19 @@ assert.doesNotMatch(source, /canvas\.getContext\(/, 'The inspector must not requ
 assert.match(source, /visibilityState/);
 assert.match(source, /__elSinNombreWaterDebugSnapshot/);
 assert.match(source, /liveDownloadReport/);
+assert.match(source, /captureGameScreenshot/);
+assert.match(source, /indexedDB\.open/);
+assert.match(source, /renderScreenshotVault/);
 assert.match(source, /180000/);
 for (const id of [
   'liveP50','liveP95','liveP99','liveWorldCpu','liveRenderCpu','liveGpu',
   'liveSceneRender','liveDrawCalls','liveActiveMeshes','liveRenderSize','liveHeap',
-  'liveEnableGpuProfiler','liveDownloadReport','liveFindingStatus','liveFindingSeverity','liveFindingPriority','liveFindingInterpretation','liveFindingCauses','liveFindingNextSteps'
+  'liveEnableGpuProfiler','liveDownloadReport','captureGameScreenshot','captureVaultStatus','captureVaultGrid','liveFindingStatus','liveFindingSeverity','liveFindingPriority','liveFindingInterpretation','liveFindingCauses','liveFindingNextSteps'
 ]) {
   assert.ok(html.includes('id="' + id + '"'), 'Inspector HTML is missing ' + id);
   assert.ok(source.includes("'" + id + "'"), 'Inspector script does not use ' + id);
 }
-assert.match(html, /phase1-live\.js\?v=3/);
+assert.match(html, /phase1-live\.js\?v=4/);
 
 assert.match(source, /getGameWorldInspectionSnapshot/);
 assert.match(source, /analyzeWorldInspectionSnapshot/);

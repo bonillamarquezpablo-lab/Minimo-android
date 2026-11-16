@@ -18,6 +18,101 @@ import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspecti
   let lastReadError = null;
   let lastWorldInspection = null;
   let lastWorldInspectionAnalysis = null;
+  const SCREENSHOT_DB = 'elsn-inspector-capture-vault';
+  const SCREENSHOT_STORE = 'screenshots';
+  const SCREENSHOT_LIMIT = 40;
+  let screenshotUrls = [];
+
+  function openScreenshotDb() {
+    return new Promise((resolve,reject) => {
+      if (!window.indexedDB) return reject(new Error('Este navegador no permite guardar capturas localmente.'));
+      const request = indexedDB.open(SCREENSHOT_DB,1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(SCREENSHOT_STORE)) db.createObjectStore(SCREENSHOT_STORE,{keyPath:'id',autoIncrement:true});
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('No se pudo abrir la galería local.'));
+    });
+  }
+
+  async function saveScreenshotBlob(blob,metadata) {
+    const db = await openScreenshotDb();
+    return new Promise((resolve,reject) => {
+      const tx = db.transaction(SCREENSHOT_STORE,'readwrite');
+      const store = tx.objectStore(SCREENSHOT_STORE);
+      const request = store.add({...metadata,blob});
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('No se pudo guardar la imagen.'));
+      tx.oncomplete = () => db.close();
+      tx.onerror = () => { db.close(); reject(tx.error || new Error('Falló el guardado de la captura.')); };
+    });
+  }
+
+  async function listScreenshots() {
+    const db = await openScreenshotDb();
+    return new Promise((resolve,reject) => {
+      const tx = db.transaction(SCREENSHOT_STORE,'readonly');
+      const request = tx.objectStore(SCREENSHOT_STORE).getAll();
+      request.onsuccess = () => resolve((request.result||[]).sort((a,b)=>b.id-a.id).slice(0,SCREENSHOT_LIMIT));
+      request.onerror = () => reject(request.error || new Error('No se pudo leer la galería.'));
+      tx.oncomplete = () => db.close();
+      tx.onerror = () => { db.close(); reject(tx.error || new Error('Falló la lectura de la galería.')); };
+    });
+  }
+
+  async function deleteScreenshot(id) {
+    const db = await openScreenshotDb();
+    return new Promise((resolve,reject) => {
+      const tx = db.transaction(SCREENSHOT_STORE,'readwrite');
+      tx.objectStore(SCREENSHOT_STORE).delete(Number(id));
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error || new Error('No se pudo borrar la captura.')); };
+    });
+  }
+
+  async function renderScreenshotVault() {
+    const host=$('captureVaultGrid');
+    if(!host)return;
+    screenshotUrls.forEach(url=>URL.revokeObjectURL(url));
+    screenshotUrls=[];
+    try {
+      const items=await listScreenshots();
+      if(!items.length){host.innerHTML='<div class="capture-vault-empty">Todavía no hay capturas guardadas. Abre el juego y pulsa «Guardar captura».</div>';return;}
+      host.replaceChildren();
+      for(const item of items){
+        const url=URL.createObjectURL(item.blob);screenshotUrls.push(url);
+        const card=document.createElement('article');card.className='capture-vault-card';
+        const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener';link.title='Abrir captura en grande';
+        const img=document.createElement('img');img.src=url;img.alt='Captura de partida '+new Date(item.capturedAt).toLocaleString('es-ES');img.loading='lazy';link.appendChild(img);
+        const foot=document.createElement('div');foot.className='capture-vault-card-foot';
+        const time=document.createElement('span');time.textContent=new Date(item.capturedAt).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'});
+        const remove=document.createElement('button');remove.type='button';remove.textContent='Borrar';remove.addEventListener('click',async()=>{await deleteScreenshot(item.id);await renderScreenshotVault();$('captureVaultStatus').textContent='Captura eliminada de este navegador.';});
+        foot.append(time,remove);card.append(link,foot);host.appendChild(card);
+      }
+    } catch(error) {
+      host.innerHTML='<div class="capture-vault-empty">No se pudo abrir la galería: '+String(error.message||error)+'</div>';
+    }
+  }
+
+  async function captureGameScreenshot() {
+    const button=$('captureGameScreenshot');
+    button.disabled=true;
+    $('captureVaultStatus').textContent='Capturando el fotograma actual…';
+    try {
+      const doc=frame?.contentDocument;
+      const canvas=doc?.querySelector('canvas');
+      if(!canvas||!canvas.width||!canvas.height)throw new Error('No se encuentra el lienzo 3D. Espera a que la partida esté visible.');
+      const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('El navegador no ha podido exportar el fotograma. Puede que el motor no conserve el búfer de dibujo.')),'image/png'));
+      if(blob.size<2048)throw new Error('La imagen generada está vacía o incompleta. No se ha guardado.');
+      const capturedAt=new Date().toISOString();
+      await saveScreenshotBlob(blob,{capturedAt,width:canvas.width,height:canvas.height,build:'EL SIN NOMBRE',source:'Inspector Center'});
+      await renderScreenshotVault();
+      $('captureVaultStatus').textContent='Captura guardada en este navegador · '+canvas.width+' × '+canvas.height+' · '+(blob.size/1024).toFixed(0)+' KB.';
+    } catch(error) {
+      $('captureVaultStatus').textContent='No se ha guardado ninguna imagen: '+String(error.message||error);
+    } finally {button.disabled=false;}
+  }
 
   const fmt = (value, digits = 1, suffix = '') =>
     value === null || value === undefined || !Number.isFinite(Number(value))
@@ -367,6 +462,8 @@ import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspecti
     }, SAMPLE_INTERVAL_MS);
   }
 
+  $('captureGameScreenshot').addEventListener('click',captureGameScreenshot);
+  renderScreenshotVault();
   $('liveGameStart').addEventListener('click', beginGameLoad);
   $('worldInspectionCapture').addEventListener('click', captureWorldInspection);
   $('worldInspectionDownload').addEventListener('click', () => {
@@ -386,12 +483,14 @@ import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspecti
     $('liveGameStart').disabled = false;
     $('liveGameSample').disabled = false;
     $('worldInspectionCapture').disabled = false;
+    $('captureGameScreenshot').disabled = false;
     $('worldInspectionStatus').textContent = 'Juego cargado. La captura del mundo está disponible cuando el motor termine de arrancar.';
     setStatus('Juego cargado. Inicia una partida; la medición comenzará automáticamente cuando el motor lo confirme.');
     beginWaitingForGame();
   });
   frame.addEventListener('error', () => {
     $('worldInspectionCapture').disabled = true;
+    $('captureGameScreenshot').disabled = true;
     $('liveGameStart').disabled = false;
     setStatus('No se pudo cargar el juego en el Inspector. Puedes volver a intentarlo.');
   });
