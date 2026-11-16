@@ -35,6 +35,8 @@ assert.ok(build.includes('civilianWarmupPromise=civilianTotal&&!isMobilePeakMemo
 assert.ok(build.includes('wildlifeBlobs.delete(kind)'),'Each wildlife GLB source must be released after all its actors are instantiated.');
 assert.ok(build.includes('npcStartupPromise=startNpcHumanModels();'),'Protagonist and NPC GLB imports must be staged on memory-sensitive mobile devices.');
 assert.ok(build.includes('async function prepareAmbientSmokePuffs()') && build.includes("await prepareAmbientSmokePuffs();"),'All existing ambient smoke pools must be prepared before releasing the loading screen.');
+assert.ok(build.includes('habitableAuditAccumulator=0') && build.includes('const initialHabitableAuditStartedAt=performance.now();'), 'The initial building integrity audit must run before the loading screen closes.');
+assert.ok(build.includes("recordStartupTask('Auditoría inicial de asentamientos'"), 'The initial audit work must be included in startup timing and diagnostics.');
 assert.ok(build.includes('await new Promise(resolve=>requestAnimationFrame(()=>resolve()))'),'Ambient smoke pool creation must yield between small batches to avoid a long task.');
 assert.ok(build.includes('isMobilePeakMemorySensitive=!!(isIOSDevice'),'Memory-sensitive scheduling must be selected independently of the Quality/Performance profile.');
 assert.ok(!build.includes('qualityDpr=isMobilePeakMemorySensitive'),'The memory policy must not lower the selected graphics profile or render scale.');
