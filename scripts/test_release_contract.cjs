@@ -129,7 +129,7 @@ assert.ok(unifiedRecorder.includes('largestVisibleMeshes') && unifiedRecorder.in
 assert.ok(unifiedRecorder.includes('compactActors') && unifiedRecorder.includes('pendingCount: number(textures.pendingCount)'),"Completed match reports must retain compact NPC, animation and texture-readiness evidence.");
 assert.ok(unifiedInspector.includes('function renderWorldEvidence(world)') && unifiedInspector.includes('function renderCorrelations(report, values)'),"The unified report must explain world geometry and cross-correlate performance evidence.");
 assert.ok(unifiedInspector.includes('function reportComparison(current, previous)') && unifiedInspector.includes('reports[1]||null'),"The unified report must compare the latest session with the previous saved session.");
-assert.ok(unifiedInspectorHtml.includes('unified-workbench.css?v=5') && unifiedInspectorHtml.includes('unified-workbench.js?v=7'),"The Inspector Center must load the updated integrated workbench assets.");
+assert.ok(unifiedInspectorHtml.includes('unified-workbench.css?v=6') && unifiedInspectorHtml.includes('unified-workbench.js?v=8'),"The Inspector Center must load the updated integrated workbench assets.");
 assert.ok(unifiedInspectorCss.includes('.wb-evidence-list') && unifiedInspectorCss.includes('.wb-evidence-row'),"World evidence and session comparisons must use readable compact layouts.");
 
 const npcCoreWithIntelligence=fs.readFileSync('scripts/npc-agent-core.js','utf8');
