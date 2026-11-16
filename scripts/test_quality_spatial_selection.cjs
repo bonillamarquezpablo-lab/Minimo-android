@@ -31,7 +31,7 @@ for(const marker of [
   'spatialDynamicMeshSet.has(mesh)',
   'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
   'meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak',
-  'statsPublishInterval:32',
+  "get:()=>({...spatialSelectionStats})",
   'dynamicFilterTotalCandidates+=candidates',
   'dynamicFilterTotalMs+=elapsed',
   'dynamicFilterPasses%spatialSelectionStats.statsPublishInterval',
@@ -58,6 +58,7 @@ for(const marker of [
 assert.ok(smoke.includes('window.__ELSN_SPATIAL_SELECTION__'),'Real campaign smoke must read the runtime spatial selection state.');
 for(const field of ['meshSelectionDynamicFilterTotalCandidates','meshSelectionDynamicFilterTotalMs','meshSelectionDynamicFilterAverageMs','meshSelectionDynamicFilterCullRatio']) assert.ok(recorder.includes(field+': number(runtime.'+field+'))','Session report must preserve '+field+'.');
 assert.ok(smoke.includes('manifest.spatialSelection?.enabled === true'),'Real campaign smoke must fail if spatial selection is not active.');
+assert.ok(smoke.includes('dynamicFilterPasses) >= 48') && smoke.includes('timeout: 30000'), 'Real campaign smoke must wait for actual frustum-selection passes before reading culling telemetry.');
 assert.ok(smoke.includes('manifest.spatialSelection.staticIndexedMeshCount') && smoke.includes('dynamicContentRatio'), 'Real campaign smoke must fail when most meshes are dynamically selected.');
 assert.ok(smoke.includes('manifest.spatialSelection.sceneMeshCount') && smoke.includes('manifest.spatialSelection.staticIndexedMeshCount') && smoke.includes(' * 0.20') && smoke.includes(' < 0.80'), 'Startup acceptance must require a meaningful static octree share.');
 assert.ok(smoke.includes('dynamicFilterEnabled === true') && smoke.includes('dynamicFilterCulledPeak') && smoke.includes('>= 100'), 'Startup acceptance must prove that dynamic meshes outside the camera frustum are culled.');
