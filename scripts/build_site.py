@@ -372,6 +372,51 @@ def main() -> None:
         raise SystemExit("No se encontró la única fuente externa de los GLB de fauna.")
     html = html.replace(wildlife_remote_root, wildlife_local_root, 1)
 
+    # Persist the three pinned animal GLBs independently of the Service Worker
+    # control state on the very first visit. A later SW release preserves this bucket.
+    wildlife_loader_marker = " async function downloadWildlifeBlob(kind){"
+    wildlife_cache_code = """ const WILDLIFE_MODEL_CACHE='el-sin-nombre-models-wildlife-6d6de54a-v1';
+ async function readWildlifeModelCache(kind){
+  if(!window.caches||typeof window.caches.open!=='function')return null;
+  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)return null;
+  const url=new URL(encodeURIComponent(definition.file),WILDLIFE_ASSET_ROOT).href;
+  try{
+   const cache=await window.caches.open(WILDLIFE_MODEL_CACHE),response=await cache.match(url);
+   if(!response)return null;
+   const blob=await response.blob();
+   if(await isValidGLB(blob))return blob;
+   await cache.delete(url);
+   console.warn('Se eliminó una copia de fauna inválida:',kind);
+  }catch(error){console.info('La caché persistente de fauna no está disponible; se descargará el GLB local:',error);}
+  return null;
+ }
+ async function saveWildlifeModelCache(kind,blob){
+  if(!window.caches||typeof window.caches.open!=='function')return false;
+  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)return false;
+  const url=new URL(encodeURIComponent(definition.file),WILDLIFE_ASSET_ROOT).href;
+  try{
+   const cache=await window.caches.open(WILDLIFE_MODEL_CACHE);
+   await cache.put(url,new Response(blob,{headers:{'Content-Type':'model/gltf-binary','Cache-Control':'public, max-age=31536000'}}));
+   return true;
+  }catch(error){console.info('El GLB de fauna está listo para esta sesión, pero no pudo persistirse:',kind,error);return false;}
+ }
+"""
+    if html.count(wildlife_loader_marker) != 1:
+        raise SystemExit("No se encontró el cargador único de modelos animales para añadir Cache API.")
+    html = html.replace(wildlife_loader_marker, wildlife_cache_code + wildlife_loader_marker, 1)
+
+    wildlife_download_head = "  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)throw new Error('Especie desconocida: '+kind);"
+    wildlife_download_cached = wildlife_download_head + "\n  const cached=await readWildlifeModelCache(kind);if(cached)return cached;"
+    if html.count(wildlife_download_head) != 1:
+        raise SystemExit("No se encontró la cabecera de descarga de fauna.")
+    html = html.replace(wildlife_download_head, wildlife_download_cached, 1)
+
+    wildlife_blob_ready = "   if(!await isValidGLB(blob))throw new Error(kind+': archivo GLB no válido.');\n   return blob;"
+    wildlife_blob_persist = "   if(!await isValidGLB(blob))throw new Error(kind+': archivo GLB no válido.');\n   await saveWildlifeModelCache(kind,blob);\n   return blob;"
+    if html.count(wildlife_blob_ready) != 1:
+        raise SystemExit("No se encontró el punto único para persistir cada GLB de fauna validado.")
+    html = html.replace(wildlife_blob_ready, wildlife_blob_persist, 1)
+
     wildlife_empty = "  if(!wildlifeSpawnSpecs.length)return 0;"
     wildlife_required = "  if(isPerformanceMode&&!wildlifeSpawnSpecs.length)return 0;\n  if(!isPerformanceMode&&wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
     if html.count(wildlife_empty) != 1:
