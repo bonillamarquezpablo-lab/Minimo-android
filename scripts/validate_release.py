@@ -403,14 +403,11 @@ def main() -> None:
         "scene.onMeshRemovedObservable.add",
         "function buildSpatialSelectionOctree()",
         "buildSpatialSelectionOctree();",
+        "spatialSelectionStats.dynamicFilterEnabled=false;",
         "meshSelectionOctreeEnabled:spatialSelectionStats.enabled",
         "meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount",
         "meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio",
-        "const installSpatialDynamicFrustumFilter=octree=>",
-        "octree.select=function(frustumPlanes,allowDuplicate)",
-        "sphere&&sphere.centerWorld",
-        "mesh.__elsnSpatialFreshUntilRenderId",
-        "plane.dotCoordinate(center)<-paddedRadius",
+        "meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason",
         "meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled",
     )
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
