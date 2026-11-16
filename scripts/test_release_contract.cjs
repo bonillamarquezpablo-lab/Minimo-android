@@ -6,6 +6,7 @@ const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const indexHtml=fs.readFileSync('index.html','utf8');
 const buildSite=fs.readFileSync('scripts/build_site.py','utf8');
 const serviceWorker=fs.readFileSync('sw.js','utf8');
+const atmosphereSource=fs.readFileSync('scripts/nordic/atmosphere-system.js','utf8');
 const npcCore=fs.readFileSync('scripts/npc-agent-core.js','utf8');
 const npcRuntime=fs.readFileSync('scripts/npc-agent-runtime.js','utf8');
 const deployWorkflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
@@ -15,7 +16,7 @@ assert.ok(buildSite.includes('scene.createOrUpdateSelectionOctree(64,3)'),"The Q
 assert.ok(buildSite.includes('scene.onNewMeshAddedObservable.add') && buildSite.includes('scene.onMeshRemovedObservable.add'),"Meshes created or disposed after the octree build must stay correctly tracked.");
 assert.ok(buildSite.includes("GroundSplashParticleBatch")&&buildSite.includes("mesh.alwaysSelectAsActiveMesh=true"),"The thin-instance splash pool must be classified as a dynamic effect and retained in the render list.");
 assert.ok(buildSite.includes("particle.size=wet?rand(.12,.18)")&&buildSite.includes("particle.life=particle.maxLife=wet?rand(.72,1.02)"),"The existing splash particles must become visible without increasing their count.");
-assert.ok(buildSite.includes("norseSunSurfaceVertexShader")&&buildSite.includes("NorseSunSurfaceMaterial"),"The release must ship the lightweight procedural photosphere on the existing sun disc.");
+assert.ok(atmosphereSource.includes("norseSunSurfaceVertexShader")&&atmosphereSource.includes("NorseSunSurfaceMaterial"),"The release must ship the lightweight procedural photosphere on the existing sun disc.");
 assert.ok(buildSite.includes('spatialDynamicReasonForMesh') && buildSite.includes('mesh.__elsnSpatialDynamic'),"Only classified dynamic actors, animated geometry and effects must enter the dynamic selection list.");
 assert.ok(buildSite.includes('meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio'),"The release must report the static/dynamic selection ratio.");
 assert.ok(buildSite.includes("spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i") && !buildSite.includes("spatialVegetationMotionPattern=/^(?:mixedForestTree"),"The static forest root must stay indexed; only animated canopy and felled trees should be dynamic.");
