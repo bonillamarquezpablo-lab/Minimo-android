@@ -16,6 +16,9 @@ const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const assetPaths = new Set((manifest.assets || []).map(asset => asset.path));
 const requiredWildlife = [
   'assets/models/Seagull.glb',
+  'assets/models/forest/mature-scots-pine-tree.glb',
+  'assets/models/forest/mature-norway-spruce-tree.glb',
+  'assets/models/forest/oak-detailed.glb',
   'assets/models/wildlife/Deer.glb',
   'assets/models/wildlife/Stag.glb',
   'assets/models/wildlife/Wolf.glb'
@@ -23,11 +26,17 @@ const requiredWildlife = [
 
 for (const asset of requiredWildlife) {
   assert.ok(assetPaths.has(asset), 'Asset manifest is missing ' + asset);
-  const minimumBytes = asset.endsWith('/Seagull.glb') ? 50000 : 100000;
+  const minimumBytes = asset.endsWith('/Seagull.glb') || asset.endsWith('/oak-detailed.glb') ? 1000000 : (asset.includes('/forest/') ? 300000 : 100000);
   assert.ok(fs.statSync(path.resolve('dist', asset)).size > minimumBytes, 'Bundled animal GLB is missing or too small: ' + asset);
 }
 assert.ok(html.includes("const WILDLIFE_ASSET_ROOT=new URL('./assets/models/wildlife/',document.baseURI).href;"),
   'Wildlife must be loaded from the same-origin package.');
+assert.ok(html.includes('function loadForestTreeTemplates()') && html.includes('await loadForestTreeTemplates()'),
+  'Three full forest GLBs must be loaded before the island tree population is created.');
+assert.ok(html.includes('forestTreeTemplates.size===3') && html.includes('startupResourceSnapshot.forest.models!==3'),
+  'The startup barrier must require all three tree species.');
+assert.ok(html.includes("targetGullWingspanMeters=.72") && html.includes('sourceModelSpan:modelSpan'),
+  'The seagull model must be normalized to a documented real-world wingspan.');
 assert.ok(!html.includes('https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline'),
   'The player must not fetch animal GLBs from GitHub Raw during startup.');
 assert.ok(html.includes('const WILDLIFE_MODEL_CACHE=\'el-sin-nombre-models-wildlife-6d6de54a-v1\';'),
