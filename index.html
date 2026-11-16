@@ -4769,150 +4769,78 @@ void main(void){
   });
   return mergedCount;
  }
-  function createTree(x,z,scale=1){
-  // Árboles nórdicos: tronco con taper, ramas visibles y copas construidas con hojas lanceoladas.
-  // El pivote independiente de copa permite que el viento mueva follaje y ramas sin doblar las raíces.
-  const root=newGroup('mixedForestTree',null);
-  const baseYaw=rand(0,Math.PI*2),roll=Math.random(),species=roll<.54?'oak':roll<.78?'birch':'fir';
-  const trunkHeight=species==='fir'?4.65:species==='birch'?5.05:4.05;
-  const trunkMat=species==='birch'?M.birch:M.bark;
-  const trunkTop=species==='birch'?.13:species==='fir'?.15:.16;
-  const trunkBottom=species==='birch'?.34:species==='fir'?.39:.48;
-  cyl('texturedTreeTrunk',root,[0,trunkHeight*.5,0],trunkHeight,trunkTop,trunkBottom,trunkMat);
-  // Raíces visibles, abiertas y desiguales; no forman un pedestal circular.
+  const forestMaterialCache={};
+ function forestMaterial(kind){
+  if(forestMaterialCache[kind])return forestMaterialCache[kind];
+  const texture=new B.DynamicTexture('Forest_'+kind+'_Texture',{width:512,height:512},scene,false);
+  const ctx=texture.getContext(),seed=kind==='bark'?41:kind==='birch'?73:kind==='fir'?97:113;
+  let state=seed;const rnd=()=>{state=(state*1664525+1013904223)>>>0;return state/4294967296;};
+  if(kind==='bark'||kind==='birch'){
+   ctx.fillStyle=kind==='birch'?'#d5d0b5':'#49382b';ctx.fillRect(0,0,512,512);
+   for(let i=0;i<2600;i++){const x=rnd()*512,y=rnd()*512,w=kind==='birch'?1+rnd()*5:1+rnd()*3,h=8+rnd()*90;ctx.fillStyle=kind==='birch'?(rnd()>.5?'rgba(55,48,38,.58)':'rgba(238,231,207,.28)'):(rnd()>.5?'rgba(20,13,9,.25)':'rgba(173,126,76,.20)');ctx.fillRect(x,y,w,h);}
+   for(let i=0;i<80;i++){ctx.strokeStyle=kind==='birch'?'rgba(55,48,38,.36)':'rgba(18,12,8,.24)';ctx.lineWidth=1+rnd()*3;ctx.beginPath();const x=rnd()*512;ctx.moveTo(x,0);ctx.bezierCurveTo(x-12,160,x+12,340,x+(rnd()-.5)*22,512);ctx.stroke();}
+  }else{
+   const palette=kind==='fir'?['#183d2b','#24563a','#397048']:['#1b472b','#285b32','#3d7440','#557e42'];
+   ctx.fillStyle=palette[0];ctx.fillRect(0,0,512,512);
+   for(let i=0;i<12000;i++){const x=rnd()*512,y=rnd()*512,r=1+rnd()*5;ctx.fillStyle=palette[Math.floor(rnd()*palette.length)];ctx.globalAlpha=.22+rnd()*.42;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+   ctx.globalAlpha=1;
+  }
+  texture.update(false);
+  const material=new B.StandardMaterial('Forest_'+kind+'_Material',scene);
+  material.diffuseTexture=texture;material.diffuseColor=kind==='birch'?new B.Color3(.92,.90,.82):new B.Color3(1,1,1);
+  material.specularColor=new B.Color3(.035,.045,.03);material.specularPower=18;material.backFaceCulling=false;
+  if(kind==='oak'||kind==='fir')material.useAlphaFromDiffuseTexture=false;
+  forestMaterialCache[kind]=material;return material;
+ }
+ function createTree(x,z,scale=1){
+  // Árboles reconstruidos con tronco cónico, raíces ancladas y copas volumétricas texturizadas.
+  // Se eliminan por completo las hojas lanceoladas triangulares que producían fragmentos flotantes.
+  const root=newGroup('mixedForestTree',null),baseYaw=rand(0,Math.PI*2),roll=Math.random();
+  const species=roll<.48?'oak':roll<.72?'birch':'fir';
+  const trunkHeight=species==='fir'?5.25:species==='birch'?5.35:4.55;
+  const bark=forestMaterial(species==='birch'?'birch':'bark'),foliage=forestMaterial(species==='fir'?'fir':'oak');
+  cyl('ForestTrunk_'+species,root,[0,trunkHeight*.5,0],trunkHeight,species==='birch'?.12:.17,species==='birch'?.28:.39,bark,undefined,14);
   const rootCount=species==='fir'?3:4;
   for(let i=0;i<rootCount;i++){
-   const a=i*Math.PI*2/rootCount+rand(-.26,.26),len=rand(.52,.88),flare=newGroup('TreeRootFlare_'+i,root);
-   flare.position=v(0,.24,0);flare.rotation.y=a;flare.rotation.z=-rand(.34,.56);
-   cyl('TreeRootWood_'+i,flare,[0,-.02,len*.42],len,.045,.19,trunkMat,[Math.PI/2,0,0]);
+   const a=i*Math.PI*2/rootCount+rand(-.24,.24),flare=newGroup('ForestRoot_'+i,root);
+   flare.position=v(0,.20,0);flare.rotation.y=a;flare.rotation.z=-rand(.32,.52);
+   cyl('ForestRootWood_'+i,flare,[0,.02,.28],.78,.035,.16,bark,[Math.PI/2,0,0],8);
   }
-  if(species==='birch'){
-   // Cicatrices horizontales oscuras de corteza, colocadas a distintas alturas.
-   for(let i=0;i<11;i++){
-    const y=rand(.55,trunkHeight-.35),a=rand(0,Math.PI*2),r=.17+(.34-y/trunkHeight)*.06;
-    const mark=box('BirchBarkScar_'+i,root,[Math.cos(a)*r,y,Math.sin(a)*r],[rand(.065,.13),rand(.018,.035),.018],M.woodDark,[rand(-.08,.08),a,rand(-.12,.12)]);
-   }
+  // Ramas principales salen del tronco y quedan cubiertas parcialmente por la copa.
+  const branchCount=species==='fir'?9:6;
+  for(let i=0;i<branchCount;i++){
+   const t=i/Math.max(1,branchCount-1),y=trunkHeight*(species==='fir'?.34+t*.55:.43+t*.40);
+   const angle=i*2.399+rand(-.18,.18),length=species==='fir'?1.35-t*.66:rand(.95,1.42);
+   const branch=newGroup('ForestBranch_'+i,root);branch.position=v(0,y,0);branch.rotation.y=angle;branch.rotation.z=-rand(.62,.92);
+   cyl('ForestBranchWood_'+i,branch,[0,length*.43,0],length,.025,.095,bark,[0,0,Math.PI/2],8);
   }
-  // Fusionar solo el fuste y las raíces: se conserva intacto el pivote animado de la copa.
-  mergeStaticDecorByMaterial(root,'NorseTreeBase');
-  const canopy=newGroup('TreeCanopyWindPivot',root);
-  const pivotY=trunkHeight*(species==='fir'?.57:.56);canopy.position.y=pivotY;
-  const leafMats=[M.leafOak,M.leaf,M.leafSun,M.leafShadow];
-  const leafBatches=leafMats.map(()=>({positions:[],indices:[],uvs:[]}));
-  // Una hoja tiene limbo puntiagudo, ligera curvatura y dos caras; todas se ensamblan por material.
-  const appendLeaf=(matIndex,pos,length,width,yaw,pitch,rollAngle,thickness)=>{
-   const batch=leafBatches[matIndex],offset=batch.positions.length/3;
-   const outline=[
-    [0,0,0],[width*.58,length*.22,thickness*.12],
-    [width*.48,length*.61,thickness*.30],[0,length,0],
-    [-width*.48,length*.61,-thickness*.22],[-width*.58,length*.22,-thickness*.08]
-   ];
-   const centre=[0,length*.48,thickness*.72];
-   const cx=Math.cos(pitch),sx=Math.sin(pitch),cy=Math.cos(yaw),sy=Math.sin(yaw),cz=Math.cos(rollAngle),sz=Math.sin(rollAngle);
-   const put=(point)=>{
-    let px=point[0],py=point[1],pz=point[2];
-    const y1=py*cx-pz*sx,z1=py*sx+pz*cx;
-    const x2=px*cy+z1*sy,z2=-px*sy+z1*cy;
-    const x3=x2*cz-y1*sz,y3=x2*sz+y1*cz;
-    batch.positions.push(pos[0]+x3,pos[1]-pivotY+y3,pos[2]+z2);
-   };
-   outline.forEach(put);put(centre);
-   outline.forEach(p=>put([p[0],p[1],-p[2]-.012]));
-   put([0,length*.48,-thickness*.55]);
-   const frontCentre=offset+6,backStart=offset+7,backCentre=offset+13;
-   for(let i=0;i<6;i++){
-    const next=(i+1)%6;
-    batch.indices.push(frontCentre,offset+i,offset+next);
-    batch.indices.push(backCentre,backStart+next,backStart+i);
-   }
-   batch.uvs.push(.5,0,1,.22,.90,.61,.5,1,.10,.61,0,.22,.5,.48,
-                  .5,0,1,.22,.90,.61,.5,1,.10,.61,0,.22,.5,.48);
+  mergeStaticDecorByMaterial(root,'ForestTrunkAndBranches');
+  const canopy=newGroup('TreeCanopyWindPivot',root);canopy.position.y=trunkHeight*.55;
+  const makeCrown=(name,pos,dimensions,material,segments=12)=>{
+   const mesh=B.MeshBuilder.CreateSphere(name,{diameter:1,segments},scene);
+   mesh.parent=canopy;mesh.position=v(pos[0],pos[1]-trunkHeight*.55,pos[2]);mesh.scaling=v(dimensions[0],dimensions[1],dimensions[2]);mesh.material=material;mesh.isPickable=false;mesh.receiveShadows=true;return mesh;
   };
-  const addBranch=(name,y,angle,length,lean,top=.045,bottom=.14)=>{
-   const branch=newGroup(name,canopy);branch.position=v(0,y-pivotY,0);branch.rotation.y=angle;branch.rotation.z=-lean;
-   cyl(name+'_Wood',branch,[0,length*.43,0],length,top,bottom,trunkMat,[0,0,Math.PI/2]);
-   // Una ramificación secundaria más fina en el extremo aporta una silueta quebrada.
-   if(species!=='fir'&&length>.8){
-    const twig=newGroup(name+'_Twig',branch);twig.position=v(0,length*.55,0);twig.rotation.y=rand(-.45,.45);twig.rotation.z=-rand(.26,.52);
-    cyl(name+'_TwigWood',twig,[0,length*.20,0],length*.46,.018,.060,trunkMat,[0,0,Math.PI/2]);
-   }
-  };
-  if(species==='oak'||species==='birch'){
-   const oak=species==='oak',branchCount=oak?7:6;
-   for(let k=0;k<branchCount;k++){
-    const f=k/Math.max(1,branchCount-1),y=trunkHeight*(oak?.43+f*.43:.42+f*.45);
-    const angle=k*2.399+rand(-.24,.24),len=oak?rand(1.05,1.52):rand(.78,1.18);
-    addBranch('TreeCanopyBranch_'+k,y,angle,len,rand(.52,.88),.035,.13);
-   }
-   // Copas asimétricas por pisos: roble ancho y redondeado de forma irregular;
-   // abedul más alto, estrecho y abierto, nunca una única esfera lisa.
-   const lobes=oak?9:7,leafCount=oak?12:10;
-   for(let c=0;c<lobes;c++){
-    const angle=c*2.399+rand(-.42,.42),ring=oak?rand(.38,1.00):rand(.26,.72);
-    const level=oak?rand(.63,.91):rand(.63,.94);
-    const centreX=Math.cos(angle)*ring,centreZ=Math.sin(angle)*ring,centreY=trunkHeight*level;
-    // Pequeños grupos interiores rompen los huecos, con tamaño y densidad variables.
-    const tuft=organicLeaf('TreeFoliageTuft_'+c,canopy,[centreX,centreY-pivotY,centreZ],
-      oak?[rand(.27,.43),rand(.24,.36),rand(.29,.45)]:[rand(.22,.34),rand(.30,.43),rand(.22,.34)],
-      leafMats[(c+Math.floor(rand(0,4)))%leafMats.length],1);
-    tuft.rotation.set(rand(-.28,.28),angle+rand(-.4,.4),rand(-.24,.24));
-    for(let j=0;j<leafCount;j++){
-     const a=angle+rand(-1.15,1.15),spread=oak?rand(.12,.43):rand(.08,.31);
-     const p=[centreX+Math.cos(a)*spread+rand(-.16,.16),
-              centreY+rand(-.31,.31),
-              centreZ+Math.sin(a)*spread+rand(-.16,.16)];
-     const direction=a+rand(-.95,.95);
-     appendLeaf((c+j+Math.floor(rand(0,4)))%leafMats.length,p,
-       oak?rand(.31,.53):rand(.30,.48),oak?rand(.105,.18):rand(.085,.15),
-       direction,rand(-.72,.60),rand(-.55,.55),rand(.018,.034));
-    }
-   }
-   // Hojas terminales sueltas en el contorno, para una copa viva y no geométricamente perfecta.
-   for(let i=0;i<(oak?18:13);i++){
-    const a=rand(0,Math.PI*2),r=oak?rand(.82,1.25):rand(.52,.94);
-    const p=[Math.cos(a)*r,trunkHeight*rand(.68,.94),Math.sin(a)*r];
-    appendLeaf(i%leafMats.length,p,rand(.34,.52),rand(.09,.16),a+rand(-.8,.8),rand(-.8,.4),rand(-.7,.7),.025);
+  if(species==='fir'){
+   // Abeto: pisos de copa cónica superpuestos, sin polígonos sueltos.
+   for(let tier=0;tier<5;tier++){
+    const f=tier/4,radius=1.52-f*.92,y=trunkHeight*(.43+f*.13);
+    const cone=B.MeshBuilder.CreateCylinder('FirCrownTier_'+tier,{height:1.34-f*.18,diameterTop:.05,diameterBottom:radius*2,tessellation:16},scene);
+    cone.parent=canopy;cone.position.y=y-trunkHeight*.55;cone.material=foliage;cone.isPickable=false;cone.receiveShadows=true;
+    for(let j=0;j<3;j++){const a=j*Math.PI*2/3+tier*.51;makeCrown('FirFoliageMass_'+tier+'_'+j,[Math.cos(a)*radius*.48,y-.18,Math.sin(a)*radius*.48],[radius*.92,.70,radius*.92],foliage,10);}
    }
   }else{
-   // Abeto: pisos de ramas descendentes en estrella, con agujas largas y estrechas.
-   const tiers=5,branchesPerTier=5;
-   for(let tier=0;tier<tiers;tier++){
-    const f=tier/(tiers-1),y=trunkHeight*(.37+f*.56),rad=1.46-f*.93;
-    for(let k=0;k<branchesPerTier;k++){
-     const angle=k*Math.PI*2/branchesPerTier+tier*.29+rand(-.10,.10),length=rad*rand(.88,1.12);
-     const branch=newGroup('FirBough_'+tier+'_'+k,canopy);branch.position=v(0,y-pivotY,0);branch.rotation.y=angle;branch.rotation.z=-rand(.63,.84);
-     cyl('FirBoughWood_'+tier+'_'+k,branch,[0,length*.40,0],length,.025,.105,M.bark,[0,0,Math.PI/2]);
-     for(let needle=0;needle<5;needle++){
-      const along=.24+needle*.15,outer=length*along;
-      for(let side=-1;side<=1;side+=2){
-       const p=[Math.cos(angle)*(outer*.72)+side*Math.sin(angle)*.10,
-                y-outer*.16+rand(-.045,.045),
-                Math.sin(angle)*(outer*.72)-side*Math.cos(angle)*.10];
-       appendLeaf((tier+needle+k+(side>0?1:0))%leafMats.length,p,
-         rand(.30,.48),rand(.035,.065),angle+side*rand(.36,.72),rand(-.85,-.35),rand(-.28,.28),.012);
-      }
-     }
-    }
+   const crownCount=species==='oak'?10:8;
+   for(let i=0;i<crownCount;i++){
+    const a=i*2.399+rand(-.2,.2),ring=species==='oak'?rand(.25,.92):rand(.18,.62),y=trunkHeight*rand(.68,.88);
+    const size=species==='oak'?rand(.78,1.08):rand(.58,.82);
+    makeCrown('BroadleafCrownMass_'+i,[Math.cos(a)*ring,y,Math.sin(a)*ring],[size*1.12,size*.78,size],foliage,14);
    }
-   // Punta principal y pequeños brotes en la parte superior del abeto.
-   const leader=newGroup('FirLeaderShoot',canopy);leader.position=v(0,trunkHeight*.77-pivotY,0);leader.rotation.z=-.10;
-   cyl('FirLeaderWood',leader,[0,.50,0],1.0,.025,.105,M.bark);
-   for(let i=0;i<16;i++){
-    const a=i*2.399,p=[Math.cos(a)*.12,trunkHeight*.86+rand(-.10,.12),Math.sin(a)*.12];
-    appendLeaf(i%leafMats.length,p,rand(.35,.50),rand(.035,.06),a,rand(-.9,-.45),rand(-.24,.24),.012);
-   }
+   makeCrown('BroadleafCrownCore',[0,trunkHeight*.78,0],[1.15,.95,1.12],foliage,16);
   }
-  // Una malla por material mantiene el coste de dibujo bajo pese al mayor detalle de hojas.
-  leafBatches.forEach((batch,i)=>{
-   if(!batch.indices.length)return;
-   const normals=[];B.VertexData.ComputeNormals(batch.positions,batch.indices,normals);
-   const mesh=new B.Mesh('NorseTreeLeafBatch_'+i,scene),data=new B.VertexData();
-   data.positions=batch.positions;data.indices=batch.indices;data.uvs=batch.uvs;data.normals=normals;data.applyToMesh(mesh);
-   mesh.parent=canopy;mesh.material=leafMats[i];mesh.isPickable=false;mesh.receiveShadows=true;
-  });
-  mergeStaticDecorByMaterial(canopy,'NorseTreeCanopy');
+  mergeStaticDecorByMaterial(canopy,'ForestCanopy');
   root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.y=baseYaw;root.scaling.setAll(scale);
-  return {root,canopy,x,z,radius:.62*scale,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species,baseYaw,windPhase:rand(0,Math.PI*2)};
+  root.computeWorldMatrix(true);
+  return {root,canopy,x,z,radius:.78*scale,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species,baseYaw,windPhase:rand(0,Math.PI*2)};
  }
  function isSafeShrubGroundPoint(is,x,z){
   const index=land.indexOf(is);
