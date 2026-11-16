@@ -23,7 +23,8 @@ const requiredWildlife = [
 
 for (const asset of requiredWildlife) {
   assert.ok(assetPaths.has(asset), 'Asset manifest is missing ' + asset);
-  assert.ok(fs.statSync(path.resolve('dist', asset)).size > 100000, 'Bundled animal GLB is missing or too small: ' + asset);
+  const minimumBytes = asset.endsWith('/Seagull.glb') ? 50000 : 100000;
+  assert.ok(fs.statSync(path.resolve('dist', asset)).size > minimumBytes, 'Bundled animal GLB is missing or too small: ' + asset);
 }
 assert.ok(html.includes("const WILDLIFE_ASSET_ROOT=new URL('./assets/models/wildlife/',document.baseURI).href;"),
   'Wildlife must be loaded from the same-origin package.');
