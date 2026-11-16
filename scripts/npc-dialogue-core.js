@@ -95,5 +95,39 @@ function chooseExchange(aNpc,bNpc,random,context,memory){
  return buildConversation(topic,a,b,ctx,random,mem);
 }
 function selectVisibleBubbles(items,limitValue){const requested=Number.isFinite(Number(limitValue))?Math.floor(Number(limitValue)):MAX_VISIBLE_BUBBLES,limit=Math.max(0,Math.min(MAX_VISIBLE_BUBBLES,requested));if(!Array.isArray(items)||!limit)return[];return items.filter(x=>x&&x.visible!==false&&Number.isFinite(Number(x.distance))&&Number(x.distance)<=MAX_RANGE_METERS).slice().sort((a,b)=>(Number(b.priority)||0)-(Number(a.priority)||0)||Number(a.distance)-Number(b.distance)).slice(0,limit);}
-return Object.freeze({MAX_VISIBLE_BUBBLES,MAX_RANGE_METERS,POSITION_UPDATE_MS,SCHEDULER_INTERVAL_MS,ROLES,roleForVariant,chooseAmbientMessage,chooseExchange,selectVisibleBubbles,contextualLines});
+
+function placeBubble(anchor,size,bounds,occupied){
+ const x=Number(anchor&&anchor.x),y=Number(anchor&&anchor.y),w=Number(size&&size.width),h=Number(size&&size.height);
+ const left=Number(bounds&&bounds.left),top=Number(bounds&&bounds.top),right=Number(bounds&&bounds.right),bottom=Number(bounds&&bounds.bottom);
+ if(![x,y,w,h,left,top,right,bottom].every(Number.isFinite)||w<=0||h<=0||right-left<w+12||bottom-top<h+12)return null;
+ const minLeft=left+6,maxLeft=right-w-6,minTop=top+6,maxTop=bottom-h-6,gap=12;
+ const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+ const raw=[
+  {left:x-w/2,top:y-h-gap},
+  {left:x+gap,top:y-h/2},
+  {left:x-w-gap,top:y-h/2},
+  {left:x-w/2,top:y+gap},
+  {left:x-w/2,top:y-(h*2)-gap},
+  {left:x+w/2+gap,top:y-h-gap},
+  {left:x-w/2-w-gap,top:y-h-gap}
+ ];
+ const seen=new Set(),others=Array.isArray(occupied)?occupied:[];
+ let best=null,bestScore=Infinity;
+ for(const candidate of raw){
+  const l=clamp(candidate.left,minLeft,maxLeft),t=clamp(candidate.top,minTop,maxTop),key=Math.round(l)+":"+Math.round(t);
+  if(seen.has(key))continue;seen.add(key);
+  let overlap=0;
+  for(const other of others){
+   if(!other)continue;
+   const ix=Math.max(0,Math.min(l+w,Number(other.right)+8)-Math.max(l,Number(other.left)-8));
+   const iy=Math.max(0,Math.min(t+h,Number(other.bottom)+8)-Math.max(t,Number(other.top)-8));
+   overlap+=ix*iy;
+  }
+  const score=overlap/(w*h);
+  if(score<bestScore){bestScore=score;best={left:l,top:t,right:l+w,bottom:t+h,width:w,height:h};}
+  if(score===0)break;
+ }
+ return best&&bestScore===0?Object.freeze(best):null;
+}
+return Object.freeze({MAX_VISIBLE_BUBBLES,placeBubble,MAX_RANGE_METERS,POSITION_UPDATE_MS,SCHEDULER_INTERVAL_MS,ROLES,roleForVariant,chooseAmbientMessage,chooseExchange,selectVisibleBubbles,contextualLines});
 });
