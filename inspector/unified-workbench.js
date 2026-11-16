@@ -122,6 +122,7 @@
           <div class="wb-card-eyebrow">RESUMEN EN LENGUAJE CLARO</div>
           <h3 id="wbQuickReadTitle">Esperando datos de la partida</h3>
           <p id="wbQuickReadBody">Aquí verás qué ha pasado, dónde mirar y cuál es el primer paso para corregirlo.</p>
+          <p class="wb-report-meta" id="wbReportMeta">Todavía no hay una sesión cargada en este navegador.</p>
         </article>
         <div class="wb-report-metrics" id="wbReportMetrics">
           <article class="wb-stat"><span>FPS medios</span><strong>—</strong><small>Esperando informe</small></article>
@@ -591,6 +592,37 @@
         } catch (_) {}
       }
     } catch (_) {}
+  }
+
+  let observerPatrolRefreshPromise = null;
+
+  // The patrol is independent evidence. Never make local match-history rendering wait for its network request.
+  function refreshObserverPatrolInBackground(reportBuild = null) {
+    if (observerPatrolRefreshPromise) return observerPatrolRefreshPromise;
+    observerPatrolRefreshPromise = (async () => {
+      try {
+        latestPatrolIntelligence = await loadLatestObserverPatrol(reportBuild);
+        const core = window.ELSN_NPC_AGENT_CORE;
+        const resolvedBuild = latestReport && latestReport.gameBuild || reportBuild || null;
+        if (latestPatrolRaw && core && typeof core.analyzeObserverPatrol === "function") {
+          latestPatrolIntelligence = core.analyzeObserverPatrol(latestPatrolRaw, resolvedBuild) || latestPatrolIntelligence;
+        }
+        renderObserverPatrol(latestPatrolIntelligence);
+        await rememberObserverPatrol(latestPatrolIntelligence);
+        if (latestReport) {
+          latestReport.observerPatrol = latestPatrolIntelligence;
+          const jsonHost = $("wbReportJson");
+          if (jsonHost) jsonHost.textContent = JSON.stringify(latestReport, null, 2);
+        }
+      } catch (error) {
+        latestPatrolRaw = null;
+        latestPatrolIntelligence = null;
+        renderObserverPatrol(null, String(error && error.message || error));
+      }
+    })().finally(() => {
+      observerPatrolRefreshPromise = null;
+    });
+    return observerPatrolRefreshPromise;
   }
 
   function renderObserverPatrol(patrol, error) {
@@ -1103,49 +1135,61 @@
   }
 
   async function loadReport() {
-    const state=$("wbReportState");
-    state.textContent="Actualizando informes y memoria de especialistas…";
-    let reports = [];
+    const state = $("wbReportState");
+    state.textContent = "Leyendo el historial local de partidas…";
+
+    // Run the external patrol fetch independently. Local reports belong to this browser
+    // and must render immediately even when GitHub/raw content is slow or unavailable.
+    void refreshObserverPatrolInBackground(latestReport && latestReport.gameBuild || null);
+
     try {
+      const db = await openDb();
+      let reports = [];
       try {
-        latestPatrolIntelligence = await loadLatestObserverPatrol(null);
-        renderObserverPatrol(latestPatrolIntelligence);
-        await rememberObserverPatrol(latestPatrolIntelligence);
-      } catch (patrolError) {
-        latestPatrolRaw = null;
-        latestPatrolIntelligence = null;
-        renderObserverPatrol(null, String(patrolError && patrolError.message || patrolError));
-      }
-      const db=await openDb();
-      if (!db.objectStoreNames.contains(STORE)) {
+        if (!db.objectStoreNames.contains(STORE)) {
+          state.textContent = "Todavía no hay partidas guardadas en este navegador. La patrulla independiente se actualizará por separado.";
+          return;
+        }
+        reports = await new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE, "readonly");
+          const request = tx.objectStore(STORE).getAll();
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error || new Error("No se pudo leer el historial."));
+        });
+      } finally {
         db.close();
-        state.textContent="Todavía no hay partidas guardadas en este navegador. La última patrulla independiente se muestra por separado.";
-        return;
       }
-      reports=await new Promise((resolve,reject)=>{
-        const tx=db.transaction(STORE,"readonly");
-        const request=tx.objectStore(STORE).getAll();
-        request.onsuccess=()=>resolve(request.result||[]);
-        request.onerror=()=>reject(request.error||new Error("No se pudo leer el historial."));
-      });
-      db.close();
+
       const recoveredLatestSession = await reconcileRecoveryReport(reports);
       sortReportsNewestFirst(reports);
       if (!reports.length) {
-        state.textContent="Todavía no hay informes de partidas guardados. La patrulla independiente queda disponible arriba.";
+        state.textContent = "Todavía no hay informes de partidas guardados en este navegador. Comprueba que el juego se haya ejecutado y cerrado al menos una vez; la patrulla independiente se muestra por separado.";
         return;
       }
-      const intelligence = await buildSpecialistIntelligence(reports[0], reports[0].status === "completed", reports);
+
       if (latestPatrolRaw && window.ELSN_NPC_AGENT_CORE) {
         latestPatrolIntelligence = window.ELSN_NPC_AGENT_CORE.analyzeObserverPatrol(latestPatrolRaw, reports[0].gameBuild || null) || latestPatrolIntelligence;
         renderObserverPatrol(latestPatrolIntelligence);
       }
-      renderReport(reports[0],recoveredLatestSession ? "Última partida recuperada del guardado de emergencia" : "Última partida guardada",reports[1]||null,intelligence);
-    } catch(error) {
-      state.textContent="No se pudo leer el historial: "+String(error&&error.message||error);
+
+      const sourceLabel = recoveredLatestSession
+        ? "Última partida recuperada del guardado de emergencia"
+        : "Última partida guardada";
+      // Paint the actual match report first. Specialist memory is supplementary and may take longer.
+      renderReport(reports[0], sourceLabel, reports[1]||null, null);
+      void buildSpecialistIntelligence(reports[0], reports[0].status === "completed", reports).then(intelligence => {
+        if (!latestReport || latestReport.sessionId !== reports[0].sessionId) return;
+        latestReport.specialistIntelligence = intelligence || null;
+        renderSpecialistIntelligence(intelligence);
+        const jsonHost = $("wbReportJson");
+        if (jsonHost) jsonHost.textContent = JSON.stringify(latestReport, null, 2);
+      }).catch(() => {
+        renderSpecialistIntelligence(null);
+      });
+    } catch (error) {
+      state.textContent = "No se pudo leer el historial local: " + String(error && error.message || error);
     }
   }
-
   async function persistImportedReport(report) {
     if (!report || !report.sessionId || !report.startedAt || !Array.isArray(report.samples)) {
       throw new Error("El informe debe incluir sessionId, startedAt y muestras para poder archivarse.");

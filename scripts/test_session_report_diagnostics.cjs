@@ -9,14 +9,23 @@ const inspectorHtml = fs.readFileSync("inspector/index.html", "utf8");
 const workbenchCss = fs.readFileSync("inspector/unified-workbench.css", "utf8");
 new vm.Script(source, { filename: "scripts/game-session-recorder.js" });
 new vm.Script(workbench, { filename: "inspector/unified-workbench.js" });
+assert.ok(workbench.includes('id="wbReportMeta"'), "The latest-session render target must exist so rendering cannot stop after writing the FPS cards.");
 for (const id of ["wbReportDiagnosis","wbDiagnosisHeadline","wbDiagnosisStages","wbDiagnosisMoments","wbDiagnosisAction","wbDiagnosisEvidence"])
   assert.ok(workbench.includes(id), "The guided diagnosis view must render " + id + ".");
 for (const control of ["wbReportExport","wbReportExportFull","wbReportCopy","wbReportImport","wbSpecialistCards","wbPatrolAgents","wbReportJson"])
   assert.ok(workbench.includes(control), "An existing report or inspection feature was removed: " + control);
 for (const marker of [".wb-diagnosis-needs-attention",".wb-diagnosis-columns",".wb-diagnosis-moment",".wb-diagnosis-extra","@media(max-width:620px)"])
   assert.ok(workbenchCss.includes(marker), "Missing accessible responsive diagnosis styling: " + marker);
-assert.ok(inspectorHtml.includes("unified-workbench.css?v=6") && inspectorHtml.includes("unified-workbench.js?v=8"),
+assert.ok(inspectorHtml.includes("unified-workbench.css?v=7") && inspectorHtml.includes("unified-workbench.js?v=9"),
   "Inspector cache versions must point to the new diagnostic layout.");
+const loadReportStart = workbench.indexOf("  async function loadReport() {");
+const loadReportEnd = workbench.indexOf("\n  async function persistImportedReport", loadReportStart);
+assert.ok(loadReportStart >= 0 && loadReportEnd > loadReportStart, "Local report loading must remain independently testable.");
+const loadReportSource = workbench.slice(loadReportStart, loadReportEnd);
+assert.ok(loadReportSource.includes("refreshObserverPatrolInBackground("), "Independent patrol evidence must refresh without blocking the local report.");
+assert.doesNotMatch(loadReportSource, /await\s+loadLatestObserverPatrol/, "Local match history must not wait for the remote patrol request.");
+assert.ok(loadReportSource.indexOf("renderReport(reports[0]") < loadReportSource.indexOf("void buildSpecialistIntelligence(reports[0]"), "The match summary must render before optional specialist memory work.");
+
 const start = source.indexOf("  function buildSessionSummary(session) {");
 const end = source.indexOf("\n  function captureFinalWorldInspection()", start);
 assert.ok(start >= 0 && end > start, "The real post-match summary builder must remain available for testing.");
