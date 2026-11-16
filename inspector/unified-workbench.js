@@ -817,7 +817,7 @@
       '<span><strong>'+esc(coverage===null?"—":fmt(coverage*100,0)+"%")+'</strong><small>cobertura de la partida</small></span>'
     ].join("");
     const stages=Array.isArray(diagnosis.rankedStages)?diagnosis.rankedStages:[];
-    stageHost.innerHTML=stages.length?stages.slice(0,5).map(item=>{
+    stageHost.innerHTML=stages.length?stages.slice(0,4).map(item=>{
       const value=finite(item.medianMs), share=finite(item.budgetSharePercent);
       const width=share===null?0:Math.max(2,Math.min(100,share));
       const detail=(value===null?"Sin medir":fmt(value,2)+" ms de mediana")+
@@ -827,7 +827,7 @@
         '<div class="wb-diagnosis-track"><i style="width:'+width.toFixed(1)+'%"></i></div><small>'+esc(detail)+'</small></article>';
     }).join(""):'<p class="wb-diagnosis-empty">No se pudo medir el tiempo de los sistemas internos en esta partida.</p>';
     const moments=Array.isArray(diagnosis.worstMoments)?diagnosis.worstMoments:[];
-    momentsHost.innerHTML=moments.length?moments.slice(0,4).map((item,index)=>{
+    momentsHost.innerHTML=moments.length?moments.slice(0,3).map((item,index)=>{
       const date=item.capturedAt&&Number.isFinite(Date.parse(item.capturedAt))
         ?new Date(item.capturedAt).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"Hora no disponible";
       const location=item.location||{};
