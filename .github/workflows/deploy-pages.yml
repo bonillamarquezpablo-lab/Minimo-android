@@ -48,6 +48,8 @@ jobs:
         run: node scripts/test_npc_dialogue_core.cjs
       - name: Test idle-scheduled session telemetry and long-task capture
         run: node scripts/test_session_recorder_idle_contract.cjs
+      - name: Test actionable post-match performance reports
+        run: node scripts/test_session_report_diagnostics.cjs
       - name: Check NPC specialist and dialogue runtime syntax
         run: node --check scripts/npc-agent-core.js && node --check scripts/npc-agent-runtime.js && node --check scripts/npc-dialogue-core.js && node --check scripts/npc-dialogue-runtime.js
       - name: Test the existing Inspector dashboard and preserve its controls

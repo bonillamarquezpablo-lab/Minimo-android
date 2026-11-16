@@ -62,6 +62,12 @@ assert.match(runtime,/RANGE_SQUARED/,"Nearby NPC filtering must use squared dist
 assert.match(runtime,/function rootOf\(n\).*n\.parts&&n\.parts\.root\|\|n\.root\|\|n\.actor\|\|n/,"Dialogue must resolve NPCs stored as parts.root, root, actor, or a direct Babylon node.");assert.match(runtime,/function idOf\(n\).*root&&root\.name/,"NPC identity must fall back to the resolved Babylon node name.");assert.match(runtime,/Number\.isFinite\(Number\(s\.playerPosition\.x\)\)/,"Invalid player positions must not silently place NPCs at the world origin.");assert.match(runtime,/layer\.style\.zIndex="30"/,"Dialogue bubbles must remain in the game overlay layer without covering the HUD.");assert.match(runtime,/function bubbleLimit\(\).*?\?2:MAX_BUBBLES/,"Mobile play must show no more than two simultaneous dialogue cards.");assert.match(runtime,/Core\.placeBubble\(\{x,y\}/,"Dialogue bubbles must be placed with collision avoidance.");
 assert.match(runtime,/snapshotFailures/,"Dialogue runtime must surface bridge snapshot errors for diagnosis.");
 assert.match(runtime,/bridgeReportedActive/,"Dialogue runtime must expose the bridge's active-game signal.");
+assert.match(runtime,/missingRootCount/,"Dialogue diagnostics must count existing NPCs without a usable world position.");
+assert.match(runtime,/resolvedPeopleCount/,"Dialogue diagnostics must count NPCs with a resolved world position.");
+assert.match(runtime,/missingIdentityCount/,"Dialogue diagnostics must count NPCs that cannot be identified.");
+assert.match(runtime,/nearestNpcDistanceMeters/,"Dialogue diagnostics must report the nearest resolved NPC distance.");
+assert.match(runtime,/activeBubbleTexts/,"Dialogue diagnostics must expose the currently visible NPC conversation text.");
+assert.match(runtime,/BUBBLE_DURATION_MS=6000/,"NPC speech bubbles must remain visible long enough to read.");
 const dialogueFocusStart=builder.indexOf("let focus=null;");
 const dialoguePlayerFallback=builder.indexOf("player&&player.root&&player.root.position",dialogueFocusStart);
 assert.ok(dialogueFocusStart>=0&&dialoguePlayerFallback>dialogueFocusStart,
