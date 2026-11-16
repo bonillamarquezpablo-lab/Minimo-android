@@ -252,9 +252,21 @@ async function main() {
     // Wait for the complete blocking startup barrier, then audit every import/network
     // entry point across the first 20 seconds of actual gameplay.
     const blockingBarrierStartedAt = performance.now();
-    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true,
-      undefined, { timeout: 180000, polling: 250 });
+    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
+      document.body.classList.contains('boot-failed'), undefined, { timeout: 180000, polling: 250 });
     manifest.blockingStartupMs = Number((performance.now() - blockingBarrierStartedAt).toFixed(1));
+    manifest.startupBarrierState = await page.evaluate(() => ({
+      bootFailed: document.body.classList.contains('boot-failed'),
+      bodyClass: document.body.className,
+      loadingText: document.querySelector('#loadText')?.textContent || null,
+      loadingHelp: document.querySelector('#loadHelp')?.textContent || null,
+      resourceGate: window.__ELSN_STARTUP_RESOURCE_GATE__ || null,
+      startupRecorder: window.__elSinNombreStartupSmoke || null
+    }));
+    assert.equal(manifest.startupBarrierState.bootFailed, false,
+      'La pantalla de carga bloqueó la entrada por un recurso obligatorio: ' + JSON.stringify(manifest.startupBarrierState));
+    assert.equal(manifest.startupBarrierState.startupRecorder?.worldReady, true,
+      'El arranque no liberó el mundo después de preparar sus recursos: ' + JSON.stringify(manifest.startupBarrierState));
     manifest.startupResourceGate = await page.evaluate(() => window.__ELSN_STARTUP_RESOURCE_GATE__ || null);
     assert.ok(manifest.startupResourceGate && manifest.startupResourceGate.ready === true,
       'La barrera final no confirmó todos los recursos obligatorios: ' + JSON.stringify(manifest.startupResourceGate));
