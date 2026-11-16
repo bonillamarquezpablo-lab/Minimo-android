@@ -325,6 +325,14 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
+    # Keep full-quality coast geometry while tightening the CPU slice ceiling on mobile.
+    # Work is spread over more frames; no mesh rows, columns or material detail are removed.
+    coast_budget_marker = "BEACH_WORK_BUDGET_MS=isTouchDevice?1.5:2.0"
+    coast_budget_replacement = "BEACH_WORK_BUDGET_MS=isTouchDevice?0.75:1.4"
+    if html.count(coast_budget_marker) != 1:
+        raise SystemExit("No se encontró exactamente un presupuesto de trabajo costero.")
+    html = html.replace(coast_budget_marker, coast_budget_replacement, 1)
+
     # Paint every startup milestone synchronously before expensive scene work.
     # Previously setLoadingProgress() only queued requestAnimationFrame(); a long
     # synchronous Babylon/world-construction task could therefore leave the visible
