@@ -325,6 +325,37 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
+    # Keep full-quality coast geometry while tightening the CPU slice ceiling on mobile.
+    # Work is spread over more frames; no mesh rows, columns or material detail are removed.
+    coast_budget_marker = "BEACH_WORK_BUDGET_MS=isTouchDevice?1.5:2.0"
+    coast_budget_replacement = "BEACH_WORK_BUDGET_MS=isTouchDevice?0.75:1.4"
+    if html.count(coast_budget_marker) != 1:
+        raise SystemExit("No se encontró exactamente un presupuesto de trabajo costero.")
+    html = html.replace(coast_budget_marker, coast_budget_replacement, 1)
+
+    # Civilian smiths must not spawn a rigid hammer on a hand/forearm bone.
+    # It intersected the hand during idle/walk clips and read as an unexplained brown prop.
+    smith_hammer_marker = """  }else if(job===1){
+   const hammerParent=rig.hand||rig.forearm||modelRoot,hammer=new B.TransformNode('SmithHammer_'+index,scene);hammer.parent=hammerParent;
+   hammer.position=hammerParent===modelRoot?v(.34*inv,.98*inv,.14*inv):v(0,-.12*inv,.08*inv);
+   capsule('SmithHammerHandle_'+index,hammer,[0,-.10*inv,0],.50*inv,.025*inv,M.woodLight);
+   box('SmithHammerHead_'+index,hammer,[0,.13*inv,0],[.22*inv,.13*inv,.16*inv],M.darkMetal);
+  }else if(job===2){"""
+    smith_hammer_replacement = """  }else if(job===1){
+   // Keep the smith's hands clear; work tools are represented at the anvil, not rigidly bound to a skinned hand.
+  }else if(job===2){"""
+    if html.count(smith_hammer_marker) != 1:
+        raise SystemExit("No se encontró la única herramienta rígida de mano del herrero.")
+    html = html.replace(smith_hammer_marker, smith_hammer_replacement, 1)
+
+    # Give every tree a subtle, deterministic-per-instance lean. This changes no mesh
+    # count, triangle count or shadow policy, but breaks the repeated perfectly upright silhouette.
+    tree_lean_marker = "root.position=v(x,renderedTerrainSurfaceAt(x,z),z);root.rotation.y=baseYaw;root.scaling.setAll(scale);"
+    tree_lean_replacement = "root.position=v(x,renderedTerrainSurfaceAt(x,z),z);root.rotation.x=rand(-.025,.025);root.rotation.y=baseYaw;root.rotation.z=rand(-.04,.04);root.scaling.setAll(scale);"
+    if html.count(tree_lean_marker) != 1:
+        raise SystemExit("No se encontró la transformación única de raíz de árbol.")
+    html = html.replace(tree_lean_marker, tree_lean_replacement, 1)
+
     # Paint every startup milestone synchronously before expensive scene work.
     # Previously setLoadingProgress() only queued requestAnimationFrame(); a long
     # synchronous Babylon/world-construction task could therefore leave the visible
@@ -601,10 +632,10 @@ def main() -> None:
     if html.count(gull_partial) != 1:
         raise SystemExit("No se encontró la comprobación de mallas del GLB de gaviota.")
     html = html.replace(gull_partial, gull_partial_required, 1)
-    # Normalize gulls by horizontal wingspan, not vertical rig height. A flying bird's folded body height
-    # is tiny compared with its open wingspan; using height here inflated the whole flock several-fold.
+    # Normalize gulls by the largest 3D model extent so rotated GLB axes cannot inflate the flock.
+    # The target wingspan is biological in-world scale, independent of the source model's up-axis.
     gull_scale_marker = "const bounds=boundsForMeshes(meshes),height=Math.max(.001,bounds.height),scale=1.65/height;actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
-    gull_scale_replacement = "const bounds=boundsForMeshes(meshes),width=bounds.max.x-bounds.min.x,depth=bounds.max.z-bounds.min.z,horizontalSpan=Math.max(width,depth),targetGullWingspanMeters=1.35;if(!Number.isFinite(horizontalSpan)||horizontalSpan<.35)throw new Error('Envergadura del modelo de gaviota inválida: '+horizontalSpan);const scale=targetGullWingspanMeters/horizontalSpan;if(!Number.isFinite(scale)||scale<=0||scale>8)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
+    gull_scale_replacement = "const bounds=boundsForMeshes(meshes),width=bounds.max.x-bounds.min.x,height=bounds.max.y-bounds.min.y,depth=bounds.max.z-bounds.min.z,modelSpan=Math.max(width,height,depth),targetGullWingspanMeters=1.15;if(!Number.isFinite(modelSpan)||modelSpan<.35)throw new Error('Envergadura 3D del modelo de gaviota inválida: '+modelSpan);const scale=targetGullWingspanMeters/modelSpan;if(!Number.isFinite(scale)||scale<=0||scale>8)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
     if html.count(gull_scale_marker) != 1:
         raise SystemExit("No se encontró la única escala incorrecta de gaviotas basada en altura.")
     html = html.replace(gull_scale_marker, gull_scale_replacement, 1)
@@ -1494,27 +1525,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.311: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.312: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.311; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.312; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.311\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.312\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.311.")
-    html = html.replace("0.6.274", "0.6.311")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.312.")
+    html = html.replace("0.6.274", "0.6.312")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'29',build:'0.6.311'"
+    diagnostic_build_replacement = "reportVersion:'30',build:'0.6.312'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.311 para normalizar.")
-    game_version = "0.6.311"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.312 para normalizar.")
+    game_version = "0.6.312"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.

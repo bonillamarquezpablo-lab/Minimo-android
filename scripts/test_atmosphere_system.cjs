@@ -21,9 +21,10 @@ const duskLighting = Atmosphere.computeLightingProfile(18);
 const deepNightLighting = Atmosphere.computeLightingProfile(0);
 const reusableState = { sunDirection: { x: 0, y: 0, z: 0 } };
 assert.equal(Atmosphere.computeSolarState(12, reusableState), reusableState, 'Solar state must support allocation-free updates.');
-assert.ok(duskLighting.hemisphereIntensity > 0.60 && duskLighting.exposure > 1.14, 'Sunset must retain readable terrain and avoid an exposure crash.');
-assert.ok(deepNightLighting.hemisphereIntensity >= 0.35, 'Night ambient fill must not collapse to near-black.');
-assert.ok(deepNightLighting.environmentIntensity >= 0.25 && deepNightLighting.exposure >= 1.10, 'Night image-based light and exposure must preserve scene readability.');
+assert.ok(duskLighting.hemisphereIntensity >= 0.82 && duskLighting.exposure >= 1.20, 'Sunset must keep settlement materials readable without flattening the dusk palette.');
+assert.ok(deepNightLighting.hemisphereIntensity >= 0.58, 'Night ambient fill must preserve terrain and tree silhouettes.');
+assert.ok(deepNightLighting.environmentIntensity >= 0.40 && deepNightLighting.exposure >= 1.20, 'Night image-based light and exposure must preserve readable architecture.');
+
 assert.ok(Math.abs(dawn.altitude) < 1e-6, 'Sunrise must occur at the horizon');
 assert.ok(noon.altitude > 0.99, 'The sun must reach a high noon position');
 assert.ok(Math.abs(dusk.altitude) < 1e-6, 'Sunset must occur at the horizon');
@@ -73,6 +74,10 @@ assert.ok(source.includes("material.setColor3('sunColor', sunColor)")&&source.in
 assert.ok(source.includes("0.73 + 0.27 * pow(mu, 0.58)")&&source.includes("warmLimb"),"The solar disc must use limb darkening and warm edge response.");
 
 assert.ok(source.includes('focus.x + sun.x * 180') && !source.includes('focus.add(sunVector.scale(180))'), 'Light positioning must not mutate the player or camera target.');
+const firePoolBody = source.slice(source.indexOf('    _updateFirePool(state, focus) {'), source.indexOf('    update(dt, force) {'));
+assert.ok(source.includes('this._fireCandidates = this.firePool.map(() => ({ h: null, d2: Infinity }))'), 'Night-fire selection must allocate its candidate slots once.');
+assert.ok(firePoolBody.includes('const candidates = this._fireCandidates'), 'Night-fire selection must reuse its fixed candidate slots.');
+assert.doesNotMatch(firePoolBody, /fireHearths\.filter|\.sort\(/, 'Night-fire updates must not allocate filter/map/sort chains.');
 const updateBody = source.slice(source.indexOf('    update(dt, force) {'), source.indexOf('    dispose() {'));
 assert.doesNotMatch(updateBody, /new B\.(?:Vector3|Color3|Color4)|B\.Color3\.Lerp/, 'Atmosphere updates must reuse frame-hot vectors and colours.');
 assert.ok(source.includes("this._visualUpdateInterval = this.isTouchDevice"), "Mobile atmosphere visual updates must be paced to avoid redundant work.");

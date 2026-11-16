@@ -37,10 +37,10 @@
   function computeLightingProfile(state, target) {
     const profile = target || {};
     // Preserve the dark Nordic sky while lifting terrain and character readability.
-    profile.hemisphereIntensity = 0.30 + 0.72 * state.daylight + 0.16 * state.twilight + 0.06 * state.night;
-    profile.moonIntensity = 0.20 * state.night;
-    profile.environmentIntensity = 0.20 + 0.42 * state.daylight + 0.12 * state.twilight + 0.065 * state.night;
-    profile.exposure = 1.02 + 0.08 * state.daylight + 0.12 * state.twilight + 0.10 * state.night;
+    profile.hemisphereIntensity = 0.48 + 0.72 * state.daylight + 0.22 * state.twilight + 0.10 * state.night;
+    profile.moonIntensity = 0.24 * state.night;
+    profile.environmentIntensity = 0.25 + 0.42 * state.daylight + 0.16 * state.twilight + 0.15 * state.night;
+    profile.exposure = 1.08 + 0.08 * state.daylight + 0.13 * state.twilight + 0.14 * state.night;
     profile.contrast = mix(1.045, 1.00, state.night);
     return profile;
   }
@@ -198,9 +198,9 @@
       this._moonPoint = new this.B.Vector3(0, 0, 0);
       this._sunColor = new this.B.Color3(1, 0.94, 0.82);
       this._sunSpecularColor = new this.B.Color3(0.96, 0.91, 0.78);
-      this._coolNightColor = new this.B.Color3(0.25, 0.34, 0.52);
+      this._coolNightColor = new this.B.Color3(0.31, 0.39, 0.55);
       this._dayAmbientColor = new this.B.Color3(0.72, 0.82, 0.92);
-      this._nightGroundColor = new this.B.Color3(0.055, 0.070, 0.11);
+      this._nightGroundColor = new this.B.Color3(0.105, 0.125, 0.17);
       this._dayGroundColor = new this.B.Color3(0.15, 0.19, 0.13);
       this._horizonDayColor = new this.B.Color3(0.40, 0.59, 0.66);
       this._horizonDuskColor = new this.B.Color3(0.40, 0.19, 0.20);
@@ -224,6 +224,8 @@
       this._configurePostProcessing();
       this._upgradeShadowsWhenSupported();
       this._createLocalLightPool();
+      // Reusable nearest-hearth slots: avoid filter/map/sort garbage during night transitions.
+      this._fireCandidates = this.firePool.map(() => ({ h: null, d2: Infinity }));
       this.update(0, true);
       console.info('Norse AtmosphereSystem ready', {
         version: 1, quality: this.quality, timeOfDay: this.timeOfDay,
@@ -654,12 +656,29 @@
         return;
       }
       this.lastFirePoolUpdate = now;
-      const candidates = nightOn ? this.fireHearths.filter(h => h && !h.extinguished).map(h => {
-        const dx = h.x - focus.x, dz = h.z - focus.z;
-        return { h, d2: dx * dx + dz * dz };
-      }).filter(x => x.d2 < 52 * 52).sort((a, b) => a.d2 - b.d2).slice(0, this.firePool.length) : [];
+      const candidates = this._fireCandidates;
+      for (const candidate of candidates) { candidate.h = null; candidate.d2 = Infinity; }
+      if (nightOn) {
+        const maxDistanceSquared = 52 * 52;
+        for (const h of this.fireHearths) {
+          if (!h || h.extinguished) continue;
+          const dx = h.x - focus.x, dz = h.z - focus.z, d2 = dx * dx + dz * dz;
+          if (d2 >= maxDistanceSquared) continue;
+          let insertAt = -1;
+          for (let i = 0; i < candidates.length; i++) {
+            if (d2 < candidates[i].d2) { insertAt = i; break; }
+          }
+          if (insertAt < 0) continue;
+          for (let i = candidates.length - 1; i > insertAt; i--) {
+            candidates[i].h = candidates[i - 1].h;
+            candidates[i].d2 = candidates[i - 1].d2;
+          }
+          candidates[insertAt].h = h;
+          candidates[insertAt].d2 = d2;
+        }
+      }
       for (let i = 0; i < this.firePool.length; i++) {
-        const slot = this.firePool[i], candidate = candidates[i] || null;
+        const slot = this.firePool[i], candidate = candidates[i].h ? candidates[i] : null;
         if (!candidate) {
           slot.source = null;
           slot.light.intensity = 0;
