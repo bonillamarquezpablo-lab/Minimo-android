@@ -2,6 +2,7 @@
 const fs=require('node:fs');
 const assert=require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8');
+const builder=fs.readFileSync('scripts/build_site.py','utf8');
 assert.match(html,/function loadWildlifeModels\(\)\s*\{\s*if\(!wildlifeModelsLoadPromise\)wildlifeModelsLoadPromise=loadWildlifeModelsOnce\(\)/);
 assert.match(html,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/);
 assert.match(html,/const npcStartupPromise=coastalReferenceMode\?Promise\.resolve\(0\):startNpcHumanModels\(\)/);
@@ -23,4 +24,8 @@ assert.match(html,/timeoutMs=60000/);
 assert.match(html,/agotó el plazo de '\+timeoutMs\+' ms/);
 assert.match(html,/window\.__elSinNombreGlbTimings=glbTimingRecords/);
 assert.match(html,/originalFallback:true/);
+assert.match(builder,/async function loadSameOriginScriptWithProgress/);
+assert.match(builder,/native-script-url/);
+assert.match(builder,/timeoutMs=25000/);
+assert.match(builder,/html\.replace\("7\.54\.3", BABYLON_VERSION\)/);
 console.log('OK: timed GLB stages clean up late imports; required NPC block entry and fauna remains optional.');

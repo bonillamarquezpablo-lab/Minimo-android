@@ -299,6 +299,66 @@ def main() -> None:
     game_version = version_match.group(1).strip()
     if not re.fullmatch(r"\d+\.\d+\.\d+", game_version):
         raise SystemExit(f"Versión del juego no válida en index.html: {game_version!r}")
+    # 0.6.308: use native same-origin script loading on mobile.
+    # Fetching a large engine into JS strings and re-executing it through a Blob
+    # duplicates memory and can exceed short compile deadlines on Android browsers.
+    # A native script URL lets HTTP/Service Worker cache and the browser pipeline
+    # handle the resource without a second in-memory source copy.
+    script_preloads = (
+        ('<link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="low">',
+         '<link rel="preload" as="script" href="./assets/vendor/babylon.js" fetchpriority="high">'),
+        ('<link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="low">',
+         '<link rel="preload" as="script" href="./assets/vendor/babylonjs.loaders.min.js" fetchpriority="high">'),
+    )
+    for old_tag, new_tag in script_preloads:
+        if html.count(old_tag) != 1:
+            raise SystemExit("No se encontró exactamente una precarga del script crítico.")
+        html = html.replace(old_tag, new_tag, 1)
+
+    same_origin_start = html.index("async function loadSameOriginScriptWithProgress(")
+    same_origin_end = html.index("\nasync function loadEngineWithCache(", same_origin_start)
+    same_origin_replacement = r'''async function loadSameOriginScriptWithProgress(url,timeoutMs,check,progressStart,progressEnd,label){
+ const started=performance.now(),absolute=new URL(url,document.baseURI).href;
+ setLoadingProgress(progressStart,label+' · ejecutando script desde su URL…');
+ const result=await loadEngine(absolute,timeoutMs,check);
+ let entry=null;
+ try{const entries=performance.getEntriesByName(absolute,'resource');entry=entries.length?entries[entries.length-1]:null;}catch(_){}
+ const diagnostics=window.__ELSN_RUNTIME_SCRIPT_LOADS||(window.__ELSN_RUNTIME_SCRIPT_LOADS=[]);
+ diagnostics.push({url:absolute,ok:!!result.ok,source:'native-script-url',durationMs:Number((performance.now()-started).toFixed(1)),reason:result.reason||'',transferSize:Number(entry&&entry.transferSize)||null,decodedBodySize:Number(entry&&entry.decodedBodySize)||null});
+ if(diagnostics.length>16)diagnostics.splice(0,diagnostics.length-16);
+ if(result.ok)setLoadingProgress(progressEnd,label+(entry&&entry.transferSize===0?' recuperado de la caché.':' listo.'));
+ return {...result,cached:!!(entry&&entry.transferSize===0&&entry.decodedBodySize>0),source:'native-script-url'};
+}'''
+    html = html[:same_origin_start] + same_origin_replacement + html[same_origin_end:]
+
+    cache_start = html.index("async function loadEngineWithCache(")
+    cache_end = html.index("\nasync function installCachedRuntime(", cache_start)
+    cache_replacement = r'''async function loadEngineWithCache(url,timeoutMs=25000,check=null,progressStart=0,progressEnd=0,label='Cargando recurso'){
+ const resolved=new URL(url,document.baseURI);
+ if(resolved.origin===location.origin)
+  return loadSameOriginScriptWithProgress(resolved.href,timeoutMs,check,progressStart,progressEnd,label);
+ const started=performance.now(),result=await loadEngine(resolved.href,timeoutMs,check);
+ if(result.ok)setLoadingProgress(progressEnd,label+' listo.');
+ return {...result,cached:false,source:'native-script-url',durationMs:Number((performance.now()-started).toFixed(1))};
+}'''
+    html = html[:cache_start] + cache_replacement + html[cache_end:]
+
+    native_script_marker = "script.async=true;script.src=url;script.referrerPolicy='strict-origin-when-cross-origin';"
+    if html.count(native_script_marker) != 1:
+        raise SystemExit("No se encontró exactamente el cargador dinámico de scripts críticos.")
+    html = html.replace(native_script_marker, "script.async=false;script.fetchPriority='high';script.src=url;script.referrerPolicy='strict-origin-when-cross-origin';", 1)
+    for old_call, new_call in (
+        ("loadEngineWithCache(url,7000,check,segmentStart,segmentEnd,label)", "loadEngineWithCache(url,25000,check,segmentStart,segmentEnd,label)"),
+        ("loadEngine(url,5500,check)", "loadEngine(url,25000,check)"),
+        ("function loadEngine(url,timeoutMs=7000,check=null)", "function loadEngine(url,timeoutMs=25000,check=null)"),
+    ):
+        if html.count(old_call) != 1:
+            raise SystemExit("No se encontró exactamente el plazo antiguo del cargador: " + old_call)
+        html = html.replace(old_call, new_call, 1)
+    if "7.54.3" not in html:
+        raise SystemExit("No se encontró el fallback Babylon antiguo que debía alinearse con el paquete.")
+    html = html.replace("7.54.3", BABYLON_VERSION)
+
     # Babylon's scene.whenReadyAsync() already waits for textures and shader readiness.
     # Calling scene.compileMaterialsAsync() as a second, full-scene pass recompiles every
     # material across all 13 islands, including off-screen variants, and can stall for
@@ -925,27 +985,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.307: deepen NPC village routines and role-aware conversations without reducing visual quality or changing the mobile update budget.
+    # Release candidate 0.6.308: deepen NPC village routines and role-aware conversations without reducing visual quality or changing the mobile update budget.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.307; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.308; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.307\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.308\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.307.")
-    html = html.replace("0.6.274", "0.6.307")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.308.")
+    html = html.replace("0.6.274", "0.6.308")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'27',build:'0.6.307'"
+    diagnostic_build_replacement = "reportVersion:'28',build:'0.6.308'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.307 para normalizar.")
-    game_version = "0.6.307"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.308 para normalizar.")
+    game_version = "0.6.308"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -1811,7 +1871,7 @@ def main() -> None:
 
 
 
-    # 0.6.307: time every existing world-update phase without changing its work or cadence.
+    # 0.6.308: time every existing world-update phase without changing its work or cadence.
     phase_update_marker = "function update(dt){"
     phase_timing_helpers = r"""const worldPhaseTimingStats=Object.create(null);
 let worldPhaseTimingCurrent='',worldPhaseTimingStartedAt=0;
