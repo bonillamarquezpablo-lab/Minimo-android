@@ -1963,6 +1963,46 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         raise SystemExit("No se encontró exactamente el punto de captura del material de arena.")
     html = html.replace(beach_render_marker, beach_render_code, 1)
 
+    # Prebuild the existing hearth/chimney smoke pools during the blocking load,
+    # yielding between small batches so the first gameplay frames only animate ready puffs.
+    smoke_registry_marker = " const smokeEmitters=[],fireLights=[],ambientPeople=[],ambientBirds=[];"
+    smoke_registry_replacement = """ const smokeEmitters=[],fireLights=[],ambientPeople=[],ambientBirds=[];
+ function createAmbientSmokePuffs(source,sourceIndex){
+  if(!source||source.puffs)return 0;
+  const puffCount=source.fire?3:2,puffs=[];
+  for(let puffIndex=0;puffIndex<puffCount;puffIndex++){
+   const puff=sphere('VillageSmokePuff_'+sourceIndex+'_'+puffIndex,null,[source.x,source.y,source.z],[.20,.20,.20],M.smoke,8);
+   const material=M.smoke.clone('SmokeMat_'+sourceIndex+'_'+puffIndex);
+   material.alpha=source.fire?.13:.10;material.disableLighting=true;puff.material=material;puff.setEnabled(false);
+   puffs.push({mesh:puff,phase:puffIndex/puffCount,mat:material});
+  }
+  source.puffs=puffs;return puffs.length;
+ }
+ async function prepareAmbientSmokePuffs(){
+  const started=performance.now();let prepared=0;
+  for(let index=0;index<smokeEmitters.length;index++){
+   prepared+=createAmbientSmokePuffs(smokeEmitters[index],index);
+   if((index+1)%2===0&&index+1<smokeEmitters.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+  }
+  recordStartupTask('Piscinas de humo ambiental',started,performance.now(),'ready',{emitters:smokeEmitters.length,puffs:prepared,batchEmitters:2});
+  return prepared;
+ }"""
+    if html.count(smoke_registry_marker) != 1:
+        raise SystemExit("No se encontró el registro único de emisores de humo para preparar sus piscinas.")
+    html = html.replace(smoke_registry_marker, smoke_registry_replacement, 1)
+
+    smoke_lazy_marker = "if(!source.puffs){source.puffs=[];const puffCount=source.fire?3:2;for(let p=0;p<puffCount;p++){const puff=sphere('VillageSmokePuff_'+si+'_'+p,null,[source.x,source.y,source.z],[.20,.20,.20],M.smoke,8);const pm=M.smoke.clone('SmokeMat_'+si+'_'+p);pm.alpha=source.fire ? 0.13 : 0.10;pm.disableLighting=true;puff.material=pm;source.puffs.push({mesh:puff,phase:p/puffCount,mat:pm});}}"
+    smoke_lazy_replacement = "if(!source.puffs)createAmbientSmokePuffs(source,si);"
+    if html.count(smoke_lazy_marker) != 1:
+        raise SystemExit("No se encontró el único bloque de creación perezosa de puffs de humo.")
+    html = html.replace(smoke_lazy_marker, smoke_lazy_replacement, 1)
+
+    smoke_warmup_marker = " let sceneWarmupStatus='unavailable';"
+    smoke_warmup_replacement = " await prepareAmbientSmokePuffs();\n let sceneWarmupStatus='unavailable';"
+    if html.count(smoke_warmup_marker) != 1:
+        raise SystemExit("No se encontró el inicio único de la barrera de shaders para preparar primero los efectos ambientales.")
+    html = html.replace(smoke_warmup_marker, smoke_warmup_replacement, 1)
+
     # Make the existing mineable granite deposits read as angular rock, not smooth black orbs.
     mineable_rock_marker = """function createRock(x,z){
   const gy=renderedTerrainSurfaceAt(x,z),sx=rand(1.0,1.8),sy=rand(1.0,1.6),sz=rand(1,1.7);
