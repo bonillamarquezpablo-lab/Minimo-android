@@ -428,6 +428,22 @@ def main() -> None:
         "materialReady,effectReady,compilationError",
         "textures:{albedo:beachTextureStatus(texCoastalSand)",
     )
+    mobile_memory_markers = (
+        "isMobilePeakMemorySensitive=!!(isIOSDevice",
+        "const GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024",
+        "civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive",
+        "wildlifeBlobs.delete(kind)",
+        "npcStartupPromise=startNpcHumanModels();",
+        "wildlifeCompressedBytesReleased:startupWildlifeCompressedBytes",
+        "browserHeap:startupHeapMemory",
+        "startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null",
+        "memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive",
+    )
+    missing_mobile_memory = [marker for marker in mobile_memory_markers if marker not in index_html]
+    if missing_mobile_memory:
+        fail("La versión móvil debe escalonar GLB, liberar fuentes ya importadas y registrar memoria sin alterar Calidad: " + ", ".join(missing_mobile_memory))
+    if "const qualityDpr=isPerformanceMode" not in index_html or "engine.setHardwareScalingLevel(renderScale)" not in index_html:
+        fail("La política de memoria no debe sustituir la escala gráfica seleccionada.")
     missing_beach_diagnostics = [marker for marker in beach_diagnostic_markers if marker not in index_html]
     if missing_beach_diagnostics:
         fail("El informe debe separar CPU de tiempo transcurrido y medir el material/texturas de arena: " + ", ".join(missing_beach_diagnostics))
