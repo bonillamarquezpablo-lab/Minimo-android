@@ -148,7 +148,7 @@ def main() -> None:
             fail("El juego no integra correctamente los diálogos ambientales: " + marker)
     if "const MAX_VISIBLE_BUBBLES=4" not in dialogue_core_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
         fail("El núcleo de diálogos debe mantener cuatro bocadillos como máximo y un radio de 18 metros.")
-    if "window.ELSN_NPC_VILLAGE_BRAIN" not in village_brain_source or any(marker not in village_brain_source for marker in ("function createState(", "function chooseMode(", "function chooseGoal(", "function chooseStep(", "function smoothAngle(")):
+    if "root.ELSN_NPC_VILLAGE_BRAIN=api" not in village_brain_source or any(marker not in village_brain_source for marker in ("function createState(", "function chooseMode(", "function chooseGoal(", "function chooseStep(", "function smoothAngle(")):
         fail("El cerebro de aldeanos debe conservar estados, decisiones, rutas y giros suaves.")
     if any(marker not in index_html for marker in ("npcVillageBrain.chooseMode(", "npcVillageBrain.chooseGoal(", "npcVillageBrain.chooseStep(", "tryLandMove(x,z,.43)", "worldEntityVisualDue(npc,npcPosition.x,npcPosition.z)")):
         fail("La IA de aldeanos debe usar sus decisiones de baja frecuencia, el LOD existente y la colisión del mundo.")
