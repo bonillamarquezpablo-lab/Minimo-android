@@ -6,7 +6,7 @@ const smoke=fs.readFileSync('scripts/player-startup-smoke.mjs','utf8');
 const workflow=fs.readFileSync('.github/workflows/game-startup-validation.yml','utf8');
 
 assert.match(build,/fetchpriority="high"/,'Babylon engine and GLTF loader must be preloaded at high priority.');
-assert.match(build,/BABYLON_VERSION = "9\\.35\\.0"/);
+assert.match(build,/BABYLON_VERSION = "9\.35\.0"/);
 assert.match(build,/loadSameOriginScriptWithProgress/,'The source must identify the old loader block for replacement.');
 assert.match(build,/same-origin-native-script/,'Same-origin Babylon must use a native script URL, not a JS string/Blob copy.');
 assert.match(build,/loadEngineWithCache\\(url,30000,check,segmentStart,segmentEnd,label\\)/,
