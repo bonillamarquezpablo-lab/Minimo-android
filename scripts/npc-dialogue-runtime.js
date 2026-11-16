@@ -15,8 +15,9 @@ const MAX_BUBBLES=Core.MAX_VISIBLE_BUBBLES,RANGE=Core.MAX_RANGE_METERS,slots=[],
 const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,worldPeopleCount:0,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:""};
 let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projectionIdentity=null,projectionScratch=null,lastSnapshot=null,observedScene=null,renderObserver=null,viewportObserver=null,viewportListenersBound=false,viewportRefreshPending=false,lastCapturedCount=null,recentCaptureUntil=0;
 const RANGE_SQUARED=RANGE*RANGE;
-const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="2147483000";layer.dataset.maxBubbles=String(MAX_BUBBLES);document.body.appendChild(layer);
-function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;node.style.position="fixed";node.style.left="0";node.style.top="0";node.style.margin="0";node.style.pointerEvents="none";node.style.zIndex=String(2147483001+index);const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null};}
+function bubbleLimit(){return window.matchMedia&&window.matchMedia("(max-width: 700px)").matches?2:MAX_BUBBLES;}
+const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="30";layer.dataset.maxBubbles=String(MAX_BUBBLES);document.body.appendChild(layer);
+function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;node.style.position="fixed";node.style.left="0";node.style.top="0";node.style.margin="0";node.style.pointerEvents="none";node.style.zIndex=String(1+index);const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null};}
 for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i));
 const random=()=>Math.random(),between=(a,b)=>a+random()*(b-a);
 function rootOf(n){return n&&(n.parts&&n.parts.root||n.root||n.actor||n);}
@@ -86,7 +87,7 @@ function stateFor(id,now){let s=metadata.get(id);if(!s){s={nextAt:now+between(70
 function pairKey(a,b){return[a,b].map(String).sort().join("::");}
 function pairMemory(a,b){const key=pairKey(a,b);let value=relationships.get(key);if(!value){value={key,rapport:0,exchanges:0,recentTopics:[]};relationships.set(key,value);if(relationships.size>64)relationships.delete(relationships.keys().next().value);}return value;}
 function rememberPair(pair,topic){if(!pair)return;pair.exchanges++;pair.rapport=Math.min(5,pair.rapport+0.65);if(topic){pair.recentTopics.push(topic);if(pair.recentTopics.length>4)pair.recentTopics.shift();}}
-function slotFor(id){return slots.find(s=>s.current&&s.current.id===id)||slots.find(s=>!s.current);}
+function slotFor(id){const activeSlots=slots.slice(0,bubbleLimit());return activeSlots.find(s=>s.current&&s.current.id===id)||activeSlots.find(s=>!s.current);}
 function startBubble(npc,content,now,duration){const id=idOf(npc);if(!id||!content||!content.text)return false;const slot=slotFor(id);if(!slot)return false;const kind=["thought","speech","action"].includes(content.kind)?content.kind:"speech";slot.current={id,npc,kind,expiresAt:now+(duration||3900)};slot.role.textContent=String(content.roleName||"Habitante").slice(0,24);slot.kind.textContent=kind==="thought"?"PIENSA":kind==="action"?"HACE":"DICE";slot.message.textContent=String(content.text).slice(0,120);slot.node.dataset.kind=kind;slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");slot.node.classList.remove("is-visible");void slot.node.offsetWidth;slot.node.classList.add("is-visible");diagnostics.bubblesStarted++;return true;}
 function clearSlot(slot){slot.current=null;slot.node.classList.remove("is-visible");slot.node.hidden=true;slot.node.style.transform="";}
 function expire(now){for(const slot of slots)if(slot.current&&slot.current.expiresAt<=now)clearSlot(slot);}
@@ -128,7 +129,7 @@ function schedule(now,nearby,s){
  const world=s&&s.world||{};
  const captured=Number.isFinite(Number(world.captured))?Number(world.captured):null;
  if(captured!==null){if(lastCapturedCount!==null&&captured>lastCapturedCount)recentCaptureUntil=now+30000;lastCapturedCount=captured;}
- const inView=nearby.filter(x=>isProjectable(x.npc,s)),selected=Core.selectVisibleBubbles(inView.map(x=>({item:x,distance:x.distance,priority:x.distance<7?3:(x.distance<14?2:1),visible:true})),MAX_BUBBLES).map(x=>x.item);
+ const inView=nearby.filter(x=>isProjectable(x.npc,s)),selected=Core.selectVisibleBubbles(inView.map(x=>({item:x,distance:x.distance,priority:x.distance<7?3:(x.distance<14?2:1),visible:true})),bubbleLimit()).map(x=>x.item);
  const due=selected.filter(x=>stateFor(x.id,now).nextAt<=now&&!slots.some(slot=>slot.current&&slot.current.id===x.id));
  if(!due.length)return;
  due.sort((a,b)=>a.distance-b.distance);
@@ -151,7 +152,7 @@ function schedule(now,nearby,s){
   state.nextAt=now+between(5600,9000);
  }else state.nextAt=now+2400;
 }
-function project(slot,s){
+function project(slot,s,occupied){
  const c=slot.current;
  const hide=reason=>{diagnostics.projectionFailures[reason]=(diagnostics.projectionFailures[reason]||0)+1;slot.node.hidden=true;return false;};
  diagnostics.projectionAttempts++;
@@ -175,16 +176,21 @@ function project(slot,s){
   const p=BABYLON.Vector3.Project(world,projectionIdentity,s.scene.getTransformMatrix(),viewport);
   if(!p||p.z<=0||p.z>=1)return hide("behind-camera");
   if(p.x<viewport.x||p.x>viewport.x+viewport.width||p.y<viewport.y||p.y>viewport.y+viewport.height)return hide("outside-screen");
-  const x=rect.left+p.x*(rect.width/width),y=rect.top+p.y*(rect.height/height),stack=slots.indexOf(slot)*9;
-  slot.node.style.transform="translate3d("+x.toFixed(1)+"px,"+(y-12-stack).toFixed(1)+"px,0) translate(-50%,-100%)";
-  slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");diagnostics.projectionSuccesses++;return true;
+  const x=rect.left+p.x*(rect.width/width),y=rect.top+p.y*(rect.height/height);
+  slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");
+  const box=slot.node.getBoundingClientRect();
+  if(!(box.width>0&&box.height>0))return hide("bubble-size-unavailable");
+  const placement=Core.placeBubble({x,y},{width:box.width,height:box.height},{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom},occupied);
+  if(!placement)return hide("bubble-layout-no-space");
+  slot.node.style.transform="translate3d("+placement.left.toFixed(1)+"px,"+placement.top.toFixed(1)+"px,0)";
+  occupied.push(placement);diagnostics.projectionSuccesses++;return true;
  }catch(error){diagnostics.lastError=String(error&&error.message||error);return hide("projection-exception");}
 }
-function render(s,matricesReady=false){if(!matricesReady)refreshProjectionMatrices(s);const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;layer.setAttribute("aria-hidden",String(!active));if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;return;}for(const slot of slots){if(slot.current)project(slot,s);else slot.node.hidden=true;}renderedCount=slots.filter(slot=>slot.current&&!slot.node.hidden).length;}
+function render(s,matricesReady=false){if(!matricesReady)refreshProjectionMatrices(s);const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;layer.setAttribute("aria-hidden",String(!active));if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;return;}const occupied=[];const limit=bubbleLimit();for(let i=0;i<slots.length;i++){const slot=slots[i];if(i<limit&&slot.current)project(slot,s,occupied);else slot.node.hidden=true;}renderedCount=slots.filter((slot,index)=>index<limit&&slot.current&&!slot.node.hidden).length;}
 function schedulerTick(){const now=Date.now(),s=snapshot();diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);if(s){bindSceneRenderObserver(s);bindViewportObservers(s);}if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}expire(now);const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));processPending(now,ids);schedule(now,nearby,s);render(s);}
 function positionTick(){const s=snapshot();if(!s)return;bindSceneRenderObserver(s);bindViewportObservers(s);render(s);}
 function start(){if(schedulerHandle||positionHandle)return;schedulerHandle=window.setInterval(()=>{try{schedulerTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC dialogue scheduler recovered:",e);}},Core.SCHEDULER_INTERVAL_MS);positionHandle=window.setInterval(()=>{try{positionTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC bubble projection recovered:",e);}},Core.POSITION_UPDATE_MS);}
-start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,active:!!lastActive,maxVisibleBubbles:MAX_BUBBLES,activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
+start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
 }
 boot();
 })();
