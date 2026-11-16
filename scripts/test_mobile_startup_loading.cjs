@@ -34,6 +34,8 @@ assert.ok(build.includes('GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024'),'Mobile mo
 assert.ok(build.includes('civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive'),'The mobile startup must not prefetch both NPC GLBs simultaneously on iOS/Adreno 650.');
 assert.ok(build.includes('wildlifeBlobs.delete(kind)'),'Each wildlife GLB source must be released after all its actors are instantiated.');
 assert.ok(build.includes('npcStartupPromise=startNpcHumanModels();'),'Protagonist and NPC GLB imports must be staged on memory-sensitive mobile devices.');
+assert.ok(build.includes('async function prepareAmbientSmokePuffs()') && build.includes("await prepareAmbientSmokePuffs();"),'All existing ambient smoke pools must be prepared before releasing the loading screen.');
+assert.ok(build.includes('await new Promise(resolve=>requestAnimationFrame(()=>resolve()))'),'Ambient smoke pool creation must yield between small batches to avoid a long task.');
 assert.ok(build.includes('isMobilePeakMemorySensitive=!!(isIOSDevice'),'Memory-sensitive scheduling must be selected independently of the Quality/Performance profile.');
 assert.ok(!build.includes('qualityDpr=isMobilePeakMemorySensitive'),'The memory policy must not lower the selected graphics profile or render scale.');
 
