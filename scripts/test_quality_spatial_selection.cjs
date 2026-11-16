@@ -34,7 +34,7 @@ for(const marker of [
   "get:()=>({...spatialSelectionStats})",
   'dynamicFilterTotalCandidates+=candidates',
   'dynamicFilterTotalMs+=elapsed',
-  'dynamicFilterPasses%spatialSelectionStats.statsPublishInterval',
+  'Diagnostics are read through the on-demand getter; no publication or allocation here.',
   'meshSelectionDynamicFilterAverageMs:spatialSelectionStats.dynamicFilterPasses?',
   'meshSelectionDynamicFilterCullRatio:spatialSelectionStats.dynamicFilterTotalCandidates?',
   'mesh.__elsnSpatialFreshUntilRenderId',
