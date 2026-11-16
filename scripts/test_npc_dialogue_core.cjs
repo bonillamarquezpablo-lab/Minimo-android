@@ -67,6 +67,7 @@ assert.match(runtime,/resolvedPeopleCount/,"Dialogue diagnostics must count NPCs
 assert.match(runtime,/missingIdentityCount/,"Dialogue diagnostics must count NPCs that cannot be identified.");
 assert.match(runtime,/nearestNpcDistanceMeters/,"Dialogue diagnostics must report the nearest resolved NPC distance.");
 assert.match(runtime,/activeBubbleTexts/,"Dialogue diagnostics must expose the currently visible NPC conversation text.");
+assert.match(runtime,/BUBBLE_DURATION_MS=6000/,"NPC speech bubbles must remain visible long enough to read.");
 const dialogueFocusStart=builder.indexOf("let focus=null;");
 const dialoguePlayerFallback=builder.indexOf("player&&player.root&&player.root.position",dialogueFocusStart);
 assert.ok(dialogueFocusStart>=0&&dialoguePlayerFallback>dialogueFocusStart,
