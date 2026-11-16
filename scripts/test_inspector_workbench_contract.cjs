@@ -23,7 +23,7 @@ for(const marker of ["workbench-tabs","workbench-deck","scroll-snap-type:x manda
   assert.ok(css.includes(marker),"Horizontal unified layout missing: "+marker);
 for(const marker of ["sampleCoverage","gpuProfilerEnabled","drawCallsCounterSemantics","finalWorldInspection","longTasks","grassInstances","activeWorldShadowCasters"])
   assert.ok(js.includes(marker),"Advanced report analysis missing: "+marker);
-assert.ok(js.includes("Copiar informe para ChatGPT") && js.includes("navigator.clipboard.writeText"),"The short report must offer one-click copy of the complete ChatGPT evidence.");
+assert.ok(js.includes("Copiar informe") && js.includes("navigator.clipboard.writeText"),"The short report must offer one-click copy of the complete evidence.");
 assert.ok(js.includes("summary.lightingConditions") && js.includes("nightDropPercent"),"The summary must compare day and night FPS when both are measured.");
 assert.ok(js.includes("summary.npcDialogue") && js.includes("dialogueEvidence.bubblesStarted"),"The short summary must reveal whether NPC dialogues were created and projected.");
 assert.ok(js.includes('elsn-game-session-recovery-v1') && js.includes("function readRecoveryReport"),"The Inspector must detect a game session recovered from the pagehide journal.");
