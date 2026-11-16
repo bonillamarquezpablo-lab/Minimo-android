@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.312"
+EXPECTED_VERSION = "0.6.313"
 
 HTML_PAGES = (
     "index.html",
@@ -57,6 +57,9 @@ REQUIRED_FILES = (
     "assets/models/armored-knight-rigged.glb",
     "assets/models/man-base-character-rigged.glb",
     "assets/models/Seagull.glb",
+    "assets/models/forest/mature-scots-pine-tree.glb",
+    "assets/models/forest/mature-norway-spruce-tree.glb",
+    "assets/models/forest/oak-detailed.glb",
     "assets/models/wildlife/Deer.glb",
     "assets/models/wildlife/Stag.glb",
     "assets/models/wildlife/Wolf.glb",
@@ -121,6 +124,11 @@ def main() -> None:
         fail("El sistema atmosférico debe cargarse antes del runtime principal.")
     if "window.__ELSN_ATMOSPHERE_CONTROLS" not in index_html or "atmosphereSystem.update(dt)" not in index_html:
         fail("El reloj atmosférico no está conectado al bucle de juego y a sus controles.")
+    forest_markers = ("function loadForestTreeTemplates()", "forestTreeTemplates.size===3", "mixedForestTree", "TreeCanopyWindPivot", "renderedTerrainSurfaceAt(x,z)")
+    if any(marker not in index_html for marker in forest_markers):
+        fail("El bosque debe utilizar modelos completos GLB, tres especies cargadas y apoyo sobre el terreno renderizado.")
+    if "startupResourceSnapshot.forest.models!==3" not in index_html or "startupResourceSnapshot.forest.placed<=0" not in index_html:
+        fail("La barrera final debe comprobar los modelos forestales y los árboles realmente colocados.")
     session_recorder_source = read_text("scripts/game-session-recorder.js")
     if '<script src="./scripts/game-session-recorder.js" defer></script>' not in index_html:
         fail("El juego no carga el registrador ligero de informes de sesión.")
