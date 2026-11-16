@@ -442,8 +442,117 @@ def main() -> None:
     if html.count(fauna_warning) != 1:
         raise SystemExit("No se encontró el punto donde se ignoraban los fallos de fauna.")
     html = html.replace(fauna_warning, fauna_blocking_failure, 1)
-    if html.count("setLoadingProgress(97,coastalReferenceMode?") != 0:
-        raise SystemExit("La fase 97 anterior sigue antes de la fauna; no se permite retroceso visual de progreso.")
+    late_shader_progress = " setLoadingProgress(97,coastalReferenceMode?'Preparando shaders y texturas de costa…':'Preparando shaders y texturas principales…');"
+    if html.count(late_shader_progress) != 1:
+        raise SystemExit("No se encontró la fase antigua de shaders anterior a la fauna.")
+    html = html.replace(late_shader_progress, "", 1)
+ 
+    # The two soundtracks remain native HTMLAudio streams. Wait for media readiness
+    # before entry, without decoding full MP3 tracks into WebAudio AudioBuffers.
+    audio_helper_anchor = " const MenuMusic=(()=>{"
+    audio_helper = """ function waitForPlayableAudio(track,label,timeoutMs=45000){
+  if(!track||typeof track.load!=='function')return Promise.reject(new Error('No existe el reproductor de '+label+'.'));
+  track.preload='auto';
+  if(track.readyState>=2&&!track.error)return Promise.resolve({label,ready:true,readyState:track.readyState});
+  return new Promise((resolve,reject)=>{
+   let settled=false,timer=null;
+   const cleanup=()=>{if(timer!==null)clearTimeout(timer);track.removeEventListener('loadeddata',onReady);track.removeEventListener('canplay',onReady);track.removeEventListener('error',onError);};
+   const finish=error=>{if(settled)return;settled=true;cleanup();if(error)reject(error);else resolve({label,ready:true,readyState:track.readyState});};
+   const onReady=()=>{if(track.readyState>=2&&!track.error)finish(null);};
+   const onError=()=>finish(new Error('No se pudo preparar '+label+' desde el paquete local.'));
+   track.addEventListener('loadeddata',onReady);track.addEventListener('canplay',onReady);track.addEventListener('error',onError);
+   timer=setTimeout(()=>finish(new Error(label+' no alcanzó estado reproducible en '+timeoutMs+' ms.')),timeoutMs);
+   try{track.load();onReady();}catch(error){finish(error);}
+  });
+ }
+"""
+    if html.count(audio_helper_anchor) != 1:
+        raise SystemExit("No se encontró la inicialización única de la música de menú.")
+    html = html.replace(audio_helper_anchor, audio_helper + audio_helper_anchor, 1)
+
+    if html.count("preflightMenuMusic.preload='none';") != 1:
+        raise SystemExit("No se encontró la precarga de música de preflight.")
+    html = html.replace("preflightMenuMusic.preload='none';", "preflightMenuMusic.preload='auto';", 1)
+    music_audio_marker = "audio=new Audio();audio.preload='none';audio.src=SOURCE;"
+    if html.count(music_audio_marker) != 2:
+        raise SystemExit("No se encontraron exactamente los dos reproductores de música.")
+    html = html.replace(music_audio_marker, "audio=new Audio();audio.preload='auto';audio.src=SOURCE;", 2)
+
+    menu_music_return = "  return {start,stop,setMuted};\n })();\n // Solicita la música desde el arranque, mientras carga el mundo;"
+    menu_music_required = "  return {start,stop,setMuted,preload:()=>waitForPlayableAudio(ensure(),'música del menú')};\n })();\n // Solicita la música desde el arranque, mientras carga el mundo;"
+    if html.count(menu_music_return) != 1:
+        raise SystemExit("No se encontró el cierre de MenuMusic.")
+    html = html.replace(menu_music_return, menu_music_required, 1)
+
+    gameplay_music_return = "  return {start,stop,setMuted};\n })();\n let startupAudioPreload=NorseAudio.preloadAll("
+    gameplay_music_required = "  return {start,stop,setMuted,preload:()=>waitForPlayableAudio(ensure(),'música de partida')};\n })();\n let startupAudioPreload=NorseAudio.preloadAll("
+    if html.count(gameplay_music_return) != 1:
+        raise SystemExit("No se encontró el cierre de GameplayMusic.")
+    html = html.replace(gameplay_music_return, gameplay_music_required, 1)
+
+    audio_startup_marker = " let startupAudioPreload=NorseAudio.preloadAll(new URLSearchParams(window.location.search).get('test')==='1'?30000:6500);"
+    if html.count(audio_startup_marker) != 1:
+        raise SystemExit("No se encontró la precarga inicial de efectos de sonido.")
+    html = html.replace(audio_startup_marker, audio_startup_marker+"\n const startupMusicPreload=Promise.all([MenuMusic.preload(),GameplayMusic.preload()]).then(results=>({results}),error=>({error}));", 1)
+
+    # Final gate is based on observed readiness, not on the animated percentage.
+    # The special coastal reference test deliberately skips game-only character/fauna assets.
+    audio_result_declaration = " let audioPreloadResult={total:0,ready:0,failed:0,pending:0,status:'pending'};"
+    if html.count(audio_result_declaration) != 1:
+        raise SystemExit("No se encontró el estado de la precarga de efectos de sonido.")
+    html = html.replace(audio_result_declaration, audio_result_declaration+"let startupMusicPreloadResult=null;", 1)
+
+    effects_ready_marker = "recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'ready',audioPreloadResult);"
+    music_ready_code = """recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'ready',audioPreloadResult);
+  const musicPreloadOutcome=await startupMusicPreload;
+  if(musicPreloadOutcome.error)throw musicPreloadOutcome.error;
+  startupMusicPreloadResult=musicPreloadOutcome.results;
+  if(!Array.isArray(startupMusicPreloadResult)||startupMusicPreloadResult.length!==2||startupMusicPreloadResult.some(item=>!item.ready||item.readyState<2))throw new Error('Las dos bandas sonoras no están en estado reproducible.');
+  recordStartupTask('Bandas sonoras streaming',audioLoadStarted,performance.now(),'ready',{menu:startupMusicPreloadResult[0],gameplay:startupMusicPreloadResult[1],decodedToAudioBuffer:false});"""
+    if html.count(effects_ready_marker) != 1:
+        raise SystemExit("No se encontró el registro de efectos de sonido listos.")
+    html = html.replace(effects_ready_marker, music_ready_code, 1)
+    old_audio_error = "throw new Error('RECURSO OBLIGATORIO: efectos de sonido · '+String(audioRequiredError&&audioRequiredError.message||audioRequiredError));"
+    new_audio_error = "throw new Error('RECURSO OBLIGATORIO: efectos y música · '+String(audioRequiredError&&audioRequiredError.message||audioRequiredError));"
+    if html.count(old_audio_error) != 1:
+        raise SystemExit("No se encontró el error de audio obligatorio.")
+    html = html.replace(old_audio_error, new_audio_error, 1)
+
+    startup_gate_marker = " setLoadingProgress(98,'Comprobando que todo está listo…');"
+    startup_gate_code = """ const startupResourceSnapshot={
+  engineReady:!!(window.BABYLON&&window.BABYLON.Engine),
+  gltfImporterReady:!!(window.BABYLON&&window.BABYLON.SceneLoader&&window.BABYLON.GLTFFileLoader),
+  protagonistReady:!!realPlayerReady,
+  npcRoster:window.__elSinNombreStartupNpcRoster||null,
+  fauna:{required:!isPerformanceMode,requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length,requiredGulls:isPerformanceMode?0:5,loadedGulls:ambientBirds.filter(b=>b.real).length},
+  soundEffects:audioPreloadResult,
+  music:{results:startupMusicPreloadResult,menuReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[0]&&startupMusicPreloadResult[0].ready),gameplayReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[1]&&startupMusicPreloadResult[1].ready),streaming:true,decodedToAudioBuffer:false},
+  scene:{status:sceneWarmupStatus,waitingItemsAfter:window.__elSinNombreStartupSceneWarmup&&window.__elSinNombreStartupSceneWarmup.waitingItemsAfter,meshes:scene&&scene.meshes?scene.meshes.length:0,firstFrameRendered:!!firstFrameRendered},
+  world:{islands:land.length,grassClumps:grassInstanceCount,grassBatches:grassBatchCount,profile:activeGraphicsProfile}
+ };
+ const startupResourceFailures=[];
+ if(!coastalReferenceMode){
+  if(!startupResourceSnapshot.engineReady)startupResourceFailures.push('motor Babylon');
+  if(!startupResourceSnapshot.gltfImporterReady)startupResourceFailures.push('importador GLB');
+  if(!startupResourceSnapshot.protagonistReady)startupResourceFailures.push('vikingo protagonista');
+  if(!startupResourceSnapshot.npcRoster||startupResourceSnapshot.npcRoster.ready!==true)startupResourceFailures.push('roster NPC obligatorio');
+  if(!startupResourceSnapshot.soundEffects||startupResourceSnapshot.soundEffects.failed||startupResourceSnapshot.soundEffects.pending||startupResourceSnapshot.soundEffects.ready!==startupResourceSnapshot.soundEffects.total)startupResourceFailures.push('efectos de sonido');
+  if(!startupResourceSnapshot.music.menuReady||!startupResourceSnapshot.music.gameplayReady)startupResourceFailures.push('bandas sonoras');
+  if(startupResourceSnapshot.scene.status!=='ready'||startupResourceSnapshot.scene.meshes<=0||!startupResourceSnapshot.scene.firstFrameRendered)startupResourceFailures.push('escena, texturas y shaders de la vista inicial');
+  if(startupResourceSnapshot.world.islands!==13)startupResourceFailures.push('mundo de 13 islas');
+  if(!isPerformanceMode){
+   if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)startupResourceFailures.push('fauna terrestre '+startupResourceSnapshot.fauna.loaded+'/'+startupResourceSnapshot.fauna.requested);
+   if(startupResourceSnapshot.fauna.loadedGulls!==5)startupResourceFailures.push('gaviotas 3D '+startupResourceSnapshot.fauna.loadedGulls+'/5');
+   if(startupResourceSnapshot.world.grassClumps<=0||startupResourceSnapshot.world.grassBatches<=0)startupResourceFailures.push('vegetación 3D inicial');
+  }
+ }
+ window.__ELSN_STARTUP_RESOURCE_GATE__={ready:startupResourceFailures.length===0,checkedAt:new Date().toISOString(),resources:startupResourceSnapshot,failures:startupResourceFailures,coastalReferenceMode:!!coastalReferenceMode};
+ if(startupResourceFailures.length)throw new Error('RECURSO OBLIGATORIO: barrera final de carga · '+startupResourceFailures.join(' · '));
+ recordStartupTask('Barrera final de recursos',performance.now(),performance.now(),'ready',startupResourceSnapshot);
+"""
+    if html.count(startup_gate_marker) != 1:
+        raise SystemExit("No se encontró el punto único para la barrera final de recursos.")
+    html = html.replace(startup_gate_marker, startup_gate_code+startup_gate_marker, 1)
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         html,
