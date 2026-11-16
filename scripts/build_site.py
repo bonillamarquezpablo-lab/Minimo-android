@@ -46,7 +46,7 @@ DOWNLOADS = {
         "https://ambientcg.com/get?file=Ground060_2K-JPG.zip", 1_000_000, "zip"
     ),
     "assets/models/Seagull.glb": (
-        "https://gobkit.com/freebies/animal007/Seagull.glb", 50_000, "glb"
+        "https://gobkit.com/freebies/animal007/Seagull.glb", 100_000, "glb"
     ),
     "assets/models/wildlife/Deer.glb": (
         "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Deer.glb", 100_000, "glb"
@@ -158,6 +158,24 @@ def validate_rigged_character_glb(path: Path, label: str) -> dict:
         raise RuntimeError(f"{label}: one or more GLB meshes have no primitives")
     return document
 
+def validate_rigged_animal_glb(path: Path, label: str) -> dict:
+    document = read_glb_document(path)
+    meshes = document.get("meshes") or []
+    skins = document.get("skins") or []
+    animations = document.get("animations") or []
+    max_joints = max((len(skin.get("joints") or []) for skin in skins), default=0)
+    if not meshes or not skins or not animations:
+        raise RuntimeError(
+            f"{label}: animal GLB must contain visible geometry, a rig and animation clips "
+            f"(meshes={len(meshes)}, skins={len(skins)}, animations={len(animations)})"
+        )
+    if max_joints < 8:
+        raise RuntimeError(f"{label}: animal rig is incomplete ({max_joints} joints; expected >=8)")
+    if any(not (mesh.get("primitives") or []) for mesh in meshes):
+        raise RuntimeError(f"{label}: one or more animal meshes have no primitives")
+    return document
+
+
 def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
     destination.parent.mkdir(parents=True, exist_ok=True)
     last_error = None
@@ -196,6 +214,14 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                         f"{max((len(s.get('joints') or []) for s in (document.get('skins') or [])), default=0)} joints, "
                         f"{len(document.get('animations') or [])} clips, "
                         f"{len(document.get('images') or [])} texture images."
+                    )
+                elif destination.parent.name == "wildlife":
+                    document = validate_rigged_animal_glb(destination, relative)
+                    print(
+                        f"OK animated animal GLB {relative}: "
+                        f"{len(document.get('meshes') or [])} meshes, "
+                        f"{max((len(s.get('joints') or []) for s in (document.get('skins') or [])), default=0)} joints, "
+                        f"{len(document.get('animations') or [])} clips."
                     )
                 else:
                     read_glb_document(destination)
@@ -972,6 +998,7 @@ def main() -> None:
         "assets/models/viking-rigged.glb",
         "assets/models/armored-knight-rigged.glb",
         "assets/models/man-base-character-rigged.glb",
+        "./assets/models/wildlife/",
         "const OGA_FOLEY_BASE='./assets/audio/cc0-game-sfx/';",
         "navigator.serviceWorker.register",
         "./scripts/nordic/beach-state.js",
