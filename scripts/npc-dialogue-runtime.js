@@ -20,7 +20,7 @@ const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReport
 let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projectionIdentity=null,projectionScratch=null,lastSnapshot=null,observedScene=null,renderObserver=null,viewportObserver=null,viewportListenersBound=false,viewportRefreshPending=false,lastCapturedCount=null,recentCaptureUntil=0;
 const RANGE_SQUARED=RANGE*RANGE;
 function bubbleLimit(){return window.matchMedia&&window.matchMedia("(max-width: 700px)").matches?2:MAX_BUBBLES;}
-const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="30";layer.dataset.maxBubbles=String(MAX_BUBBLES);document.body.appendChild(layer);
+const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="1200";layer.dataset.maxBubbles=String(MAX_BUBBLES);document.body.appendChild(layer);
 function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;node.style.position="fixed";node.style.left="0";node.style.top="0";node.style.margin="0";node.style.pointerEvents="none";node.style.zIndex=String(1+index);const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null,width:0,height:0,measureDirty:true};}
 for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i));
 const random=()=>Math.random(),between=(a,b)=>a+random()*(b-a);
@@ -202,8 +202,13 @@ function project(slot,s,occupied){
   slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");
   if(slot.measureDirty||!(slot.width>0&&slot.height>0)){const measured=slot.node.getBoundingClientRect();slot.width=measured.width;slot.height=measured.height;slot.measureDirty=false;}
   if(!(slot.width>0&&slot.height>0))return hide("bubble-size-unavailable");
-  const placement=Core.placeBubble({x,y},{width:slot.width,height:slot.height},{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom},occupied);
-  if(!placement)return hide("bubble-layout-no-space");
+  let placement=Core.placeBubble({x,y},{width:slot.width,height:slot.height},{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom},occupied);
+  if(!placement){
+   const left=Math.max(rect.left+6,Math.min(rect.right-slot.width-6,x-slot.width/2));
+   const top=Math.max(rect.top+6,Math.min(rect.bottom-slot.height-6,y-slot.height- slot.height-12));
+   placement={left,top,right:left+slot.width,bottom:top+slot.height};
+   diagnostics.placementFallbacks=(diagnostics.placementFallbacks||0)+1;
+  }
   slot.node.style.transform="translate3d("+placement.left.toFixed(1)+"px,"+placement.top.toFixed(1)+"px,0)";
   occupied.push(placement);diagnostics.projectionSuccesses++;return true;
  }catch(error){diagnostics.lastError=String(error&&error.message||error);return hide("projection-exception");}
