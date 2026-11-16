@@ -338,6 +338,112 @@ def main() -> None:
     )
     if embedded_timeout_count != 1:
         raise SystemExit("No se pudo ampliar el plazo del cargador en navegadores integrados.")
+
+    # Full pre-entry resource contract: local fauna, strict imports and progress phases.
+    wildlife_remote_root = " const WILDLIFE_ASSET_ROOT='https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/'+WILDLIFE_SOURCE_COMMIT+'/assets/Animated%20Animal%20Pack-glb/';"
+    wildlife_local_root = " const WILDLIFE_ASSET_ROOT=new URL('./assets/models/wildlife/',document.baseURI).href;"
+    if html.count(wildlife_remote_root) != 1:
+        raise SystemExit("No se encontró la única fuente externa de los GLB de fauna.")
+    html = html.replace(wildlife_remote_root, wildlife_local_root, 1)
+
+    wildlife_empty = "  if(!wildlifeSpawnSpecs.length)return 0;"
+    wildlife_required = "  if(isPerformanceMode&&!wildlifeSpawnSpecs.length)return 0;\n  if(!isPerformanceMode&&wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
+    if html.count(wildlife_empty) != 1:
+        raise SystemExit("No se encontró la comprobación de fauna inicial vacía.")
+    html = html.replace(wildlife_empty, wildlife_required, 1)
+
+    wildlife_download = "  await Promise.all(kinds.map(async kind=>{try{wildlifeBlobs.set(kind,await downloadWildlifeBlob(kind));}catch(err){console.warn('Modelo animal no disponible ('+kind+'):',err);}}));"
+    wildlife_download_required = "  const wildlifeDownloads=await Promise.all(kinds.map(async kind=>({kind,blob:await downloadWildlifeBlob(kind)})));wildlifeDownloads.forEach(({kind,blob})=>wildlifeBlobs.set(kind,blob));"
+    if html.count(wildlife_download) != 1:
+        raise SystemExit("No se encontró la descarga paralela de modelos de fauna.")
+    html = html.replace(wildlife_download, wildlife_download_required, 1)
+
+    wildlife_ground = "if(!homeIsland||!isSafeIslandGroundPoint(homeIsland,x,z,Infinity,1.05,.52))return null;"
+    wildlife_ground_required = "if(!homeIsland)throw new Error('La isla de destino de '+kind+' no existe.');if(!isSafeIslandGroundPoint(homeIsland,x,z,Infinity,1.05,.52))throw new Error('No hay un punto de apoyo válido para '+kind+' en la isla inicial.');"
+    if html.count(wildlife_ground) != 1:
+        raise SystemExit("No se encontró la validación del punto de apoyo de fauna.")
+    html = html.replace(wildlife_ground, wildlife_ground_required, 1)
+
+    wildlife_import_failure = "   console.warn('Fauna descartada: importación GLB incompleta ('+kind+')',err);\n   if(/agotó el plazo/i.test(String(err&&err.message||err)))throw err;\n   return null;"
+    wildlife_import_required = "   console.error('Falló la importación de fauna obligatoria ('+kind+'):',err);\n   throw new Error('RECURSO OBLIGATORIO: fauna '+kind+' · '+String(err&&err.message||err));"
+    if html.count(wildlife_import_failure) != 1:
+        raise SystemExit("No se encontró el fallback que ocultaba los fallos de importación animal.")
+    html = html.replace(wildlife_import_failure, wildlife_import_required, 1)
+
+    wildlife_instance = "   if(animal){ambientFauna.push(animal);loaded++;}\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),animal?'ready':'fallback',{island:spec.homeIslandIndex});"
+    wildlife_instance_required = "   if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');\n   ambientFauna.push(animal);loaded++;\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});"
+    if html.count(wildlife_instance) != 1:
+        raise SystemExit("No se encontró el montaje individual de fauna.")
+    html = html.replace(wildlife_instance, wildlife_instance_required, 1)
+
+    wildlife_completion = "  recordStartupTask('Fauna GLB · cola completa',wildlifeLoadStarted,performance.now(),'complete',{loaded,requested:wildlifeSpawnSpecs.length});"
+    wildlife_complete_required = "  if(loaded!==wildlifeSpawnSpecs.length)throw new Error('RECURSO OBLIGATORIO: fauna incompleta '+loaded+'/'+wildlifeSpawnSpecs.length+'.');\n"+wildlife_completion
+    if html.count(wildlife_completion) != 1:
+        raise SystemExit("No se encontró el cierre de la cola de fauna.")
+    html = html.replace(wildlife_completion, wildlife_complete_required, 1)
+
+    # Each of the five quality-profile gulls must be instantiated before the shader pass.
+    gull_success = "  if(realBirds.length){ambientBirds.forEach(b=>{if(b.procedural)b.root.setEnabled(false);});ambientBirds.splice(0,ambientBirds.length,...realBirds);"
+    gull_success_required = "  if(realBirds.length===5){ambientBirds.forEach(b=>{if(b.procedural)b.root.setEnabled(false);});ambientBirds.splice(0,ambientBirds.length,...realBirds);"
+    if html.count(gull_success) != 1:
+        raise SystemExit("No se encontró el reemplazo de gaviotas provisionales por GLB.")
+    html = html.replace(gull_success, gull_success_required, 1)
+    gull_partial = "else throw new Error('El GLB se importó sin mallas instanciables');"
+    gull_partial_required = "else throw new Error('El GLB solo permitió preparar '+realBirds.length+'/5 gaviotas completas.');"
+    if html.count(gull_partial) != 1:
+        raise SystemExit("No se encontró la comprobación de mallas del GLB de gaviota.")
+    html = html.replace(gull_partial, gull_partial_required, 1)
+    gull_optional_catch = "}catch(err){console.warn('Fauna opcional: gaviotas GLB no disponibles antes de entrar:',err);if(/agotó el plazo/i.test(String(err&&err.message||err)))throw err;}"
+    gull_required_catch = "}catch(err){console.error('Falló la fauna alada obligatoria:',err);throw new Error('RECURSO OBLIGATORIO: gaviotas GLB · '+String(err&&err.message||err));}"
+    if html.count(gull_optional_catch) != 1:
+        raise SystemExit("No se encontró el fallback opcional de gaviotas.")
+    html = html.replace(gull_optional_catch, gull_required_catch, 1)
+
+    # Make loader percentages reflect the actual ordered stages rather than jumping backwards.
+    for old, new, label in (
+        ("setLoadingProgress(94,'Cargando fauna salvaje 3D…');", "setLoadingProgress(88,'Cargando fauna salvaje 3D…');", "inicio de fauna"),
+        ("setLoadingProgress(96,loaded?'Fauna nórdica preparada.':'Se conserva la reserva de fauna; no se importó ningún cuerpo animal completo.');", "setLoadingProgress(90,'Fauna terrestre preparada.');", "fin de fauna terrestre"),
+        ("responseBlobWithProgress(response,'Cargando modelo animal · '+kind.toUpperCase(),68,70)", "responseBlobWithProgress(response,'Cargando modelo animal · '+kind.toUpperCase(),88,90)", "progreso de fauna terrestre"),
+        ("responseBlobWithProgress(response,'Cargando fauna alada · gaviotas',68,70)", "responseBlobWithProgress(response,'Cargando fauna alada · gaviotas',90,92)", "progreso de gaviotas"),
+    ):
+        if html.count(old) != 1:
+            raise SystemExit("No se encontró exactamente una actualización de progreso: "+label)
+        html = html.replace(old, new, 1)
+
+    # Move fauna imports ahead of the final shader/texture readiness barrier so every
+    # loaded animal and gull material is included in Babylon's initial-view warm-up.
+    fauna_start_marker = " if(!coastalReferenceMode){\n  const faunaStartedAt=performance.now();\n  const faunaTasks=[{name:'Fauna terrestre',promise:loadWildlifeModels()}];"
+    fauna_end_marker = "\n const startupMemoryTextures=new Set(),startupMemoryGeometry=new Set();"
+    fauna_scene_marker = " let sceneWarmupStatus='unavailable';"
+    if html.count(fauna_start_marker) != 1 or html.count(fauna_end_marker) != 1 or html.count(fauna_scene_marker) != 1:
+        raise SystemExit("No se encontró un único bloque de fauna/escena para ordenar el arranque.")
+    fauna_start = html.index(fauna_start_marker)
+    fauna_end = html.index(fauna_end_marker, fauna_start)
+    fauna_block = html[fauna_start:fauna_end]
+    html = html[:fauna_start] + html[fauna_end:]
+    scene_marker_index = html.index(fauna_scene_marker)
+    ordered_fauna = " setLoadingProgress(87,coastalReferenceMode?'Preparando la referencia costera…':'Preparando fauna de la isla inicial…');\n" + fauna_block + "\n setLoadingProgress(93,coastalReferenceMode?'Preparando shaders de costa…':'Preparando texturas y shaders de la zona inicial…');\n"
+    html = html[:scene_marker_index] + ordered_fauna + html[scene_marker_index:]
+
+    # Quality fauna is a required startup dependency; Performance intentionally retains
+    # its existing fauna-disabled profile and its existing rendering/resource choices.
+    optional_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-optional'"
+    required_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-required'"
+    if html.count(optional_fauna_state) != 1:
+        raise SystemExit("No se encontró el estado de fauna opcional en el registro de arranque.")
+    html = html.replace(optional_fauna_state, required_fauna_state, 1)
+    fauna_result = "recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),faunaFailures.length?'optional-failed':'ready',{loaded:ambientFauna.length,gulls:ambientBirds.filter(b=>b.real).length,failures:faunaFailures});"
+    fauna_result_required = "recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),faunaFailures.length?'required-failed':'ready',{loaded:ambientFauna.length,requested:wildlifeSpawnSpecs.length,gulls:ambientBirds.filter(b=>b.real).length,requiredGulls:isPerformanceMode?0:5,failures:faunaFailures});"
+    if html.count(fauna_result) != 1:
+        raise SystemExit("No se encontró el resumen de la carga de fauna.")
+    html = html.replace(fauna_result, fauna_result_required, 1)
+    fauna_warning = "if(faunaFailures.length)console.warn('La fauna opcional terminó con fallos antes de liberar la entrada; no quedan importaciones en segundo plano:',faunaFailures);"
+    fauna_blocking_failure = "if(faunaFailures.length){if(window.__elSinNombreBackgroundModelTasks)window.__elSinNombreBackgroundModelTasks.fauna='required-failed';throw new Error('RECURSO OBLIGATORIO: fauna de la isla inicial · '+faunaFailures.map(item=>item.name+': '+item.message).join(' | '));}"
+    if html.count(fauna_warning) != 1:
+        raise SystemExit("No se encontró el punto donde se ignoraban los fallos de fauna.")
+    html = html.replace(fauna_warning, fauna_blocking_failure, 1)
+    if html.count("setLoadingProgress(97,coastalReferenceMode?") != 0:
+        raise SystemExit("La fase 97 anterior sigue antes de la fauna; no se permite retroceso visual de progreso.")
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         html,
