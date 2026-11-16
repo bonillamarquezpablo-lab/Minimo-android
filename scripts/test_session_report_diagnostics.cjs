@@ -4,6 +4,19 @@ const vm = require("node:vm");
 const assert = require("node:assert/strict");
 
 const source = fs.readFileSync("scripts/game-session-recorder.js", "utf8");
+const workbench = fs.readFileSync("inspector/unified-workbench.js", "utf8");
+const inspectorHtml = fs.readFileSync("inspector/index.html", "utf8");
+const workbenchCss = fs.readFileSync("inspector/unified-workbench.css", "utf8");
+new vm.Script(source, { filename: "scripts/game-session-recorder.js" });
+new vm.Script(workbench, { filename: "inspector/unified-workbench.js" });
+for (const id of ["wbReportDiagnosis","wbDiagnosisHeadline","wbDiagnosisStages","wbDiagnosisMoments","wbDiagnosisAction","wbDiagnosisEvidence"])
+  assert.ok(workbench.includes(id), "The guided diagnosis view must render " + id + ".");
+for (const control of ["wbReportExport","wbReportExportFull","wbReportCopy","wbReportImport","wbSpecialistCards","wbPatrolAgents","wbReportJson"])
+  assert.ok(workbench.includes(control), "An existing report or inspection feature was removed: " + control);
+for (const marker of [".wb-diagnosis-needs-attention",".wb-diagnosis-columns",".wb-diagnosis-moment",".wb-diagnosis-extra","@media(max-width:620px)"])
+  assert.ok(workbenchCss.includes(marker), "Missing accessible responsive diagnosis styling: " + marker);
+assert.ok(inspectorHtml.includes("unified-workbench.css?v=6") && inspectorHtml.includes("unified-workbench.js?v=8"),
+  "Inspector cache versions must point to the new diagnostic layout.");
 const start = source.indexOf("  function buildSessionSummary(session) {");
 const end = source.indexOf("\n  function captureFinalWorldInspection()", start);
 assert.ok(start >= 0 && end > start, "The real post-match summary builder must remain available for testing.");
