@@ -130,6 +130,7 @@
         </div>
         <details class="wb-report-full" id="wbReportMore">
           <summary>Ver el informe completo, especialistas y mediciones avanzadas</summary>
+          <p>Este historial pertenece a este navegador y perfil. Para reunir partidas de otros dispositivos, importa aquí su informe JSON.</p>
           <div class="wb-report-grid">
             <article class="wb-report-card wb-report-primary" id="wbReportVerdict">
               <div class="wb-card-eyebrow">LECTURA PRINCIPAL</div><h3>Esperando datos</h3>
