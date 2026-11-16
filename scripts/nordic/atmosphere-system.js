@@ -414,7 +414,7 @@
           '  vSunLocalPosition = position;',
           '  gl_Position = worldViewProjection * vec4(position, 1.0);',
           '}'
-        ].join('\\n');
+        ].join('\n');
         B.Effect.ShadersStore.norseSunSurfaceFragmentShader = [
           'precision highp float;',
           'varying vec3 vSunNormalView;',
@@ -432,7 +432,7 @@
           '  vec3 radiance = photosphere * sunColor * limbDarkening * granulation;',
           '  gl_FragColor = vec4(radiance, 1.0);',
           '}'
-        ].join('\\n');
+        ].join('\n');
         const material = new B.ShaderMaterial('NorseSunSurfaceMaterial', scene,
           { vertex: 'norseSunSurface', fragment: 'norseSunSurface' },
           { attributes: ['position', 'normal'], uniforms: ['world', 'worldView', 'worldViewProjection', 'sunColor', 'uTime'] });
