@@ -16,7 +16,7 @@ for (const control of ["wbReportExport","wbReportExportFull","wbReportCopy","wbR
   assert.ok(workbench.includes(control), "An existing report or inspection feature was removed: " + control);
 for (const marker of [".wb-diagnosis-needs-attention",".wb-diagnosis-columns",".wb-diagnosis-moment",".wb-diagnosis-extra","@media(max-width:620px)"])
   assert.ok(workbenchCss.includes(marker), "Missing accessible responsive diagnosis styling: " + marker);
-assert.ok(inspectorHtml.includes("unified-workbench.css?v=7") && inspectorHtml.includes("unified-workbench.js?v=9"),
+assert.ok(inspectorHtml.includes("unified-workbench.css?v=7") && inspectorHtml.includes("unified-workbench.js?v=10"),
   "Inspector cache versions must point to the new diagnostic layout.");
 const loadReportStart = workbench.indexOf("  async function loadReport() {");
 const loadReportEnd = workbench.indexOf("\n  async function persistImportedReport", loadReportStart);
