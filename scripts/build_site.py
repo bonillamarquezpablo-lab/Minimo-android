@@ -1839,28 +1839,11 @@ function getWorldPhaseTimingSnapshot(){
     habitable_registry_marker = r""" const habitableStructureRegistry=[];
  let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;"""
     habitable_registry_replacement = r""" const habitableStructureRegistry=[];
- const habitableRootNamePattern=/^(?:WeatheredNorseHut|PersistentPlayerNorseShelter|PersistentNorseShelter|IslandOutpost_\d+|IslandScoutCamp_\d+|IslandGarrisonOutpost_\d+|NorseGreatMeadHall_\d+|NorseBlacksmithForge_\d+|NorseWatchTower_\d+|PoorNorseCastawayCamp)$/;
- const habitableRootDiscoveryQueue=new Set(),habitableRegisteredRootSet=new WeakSet();
- let habitableRootDiscoveryInitialized=false,habitableRootDiscoveryObserverAvailable=false;
  let habitableAuditLastMs=0,habitableAuditMaxMs=0,habitableAuditCount=0,habitableAuditLastCacheHits=0,habitableAuditLastCacheMisses=0;
- try{
-  if(scene.onNewTransformNodeAddedObservable&&typeof scene.onNewTransformNodeAddedObservable.add==='function'){
-   scene.onNewTransformNodeAddedObservable.add(node=>{
-    if(node&&!habitableRegisteredRootSet.has(node)&&habitableRootNamePattern.test(node.name||''))habitableRootDiscoveryQueue.add(node);
-   });
-   habitableRootDiscoveryObserverAvailable=true;
-  }
- }catch(_){}
  let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;"""
     if html.count(habitable_registry_marker) != 1:
         raise SystemExit("No se encontró el registro único de estructuras habitables.")
     html = html.replace(habitable_registry_marker, habitable_registry_replacement, 1)
-
-    register_root_marker = "if(root){root.__habitableStructureAudit=entry;habitableStructureRegistry.push(entry);}"
-    register_root_replacement = "if(root){root.__habitableStructureAudit=entry;habitableStructureRegistry.push(entry);habitableRegisteredRootSet.add(root);}"
-    if html.count(register_root_marker) != 1:
-        raise SystemExit("No se pudo conectar el registro de edificios con el índice incremental.")
-    html = html.replace(register_root_marker, register_root_replacement, 1)
 
     cached_evaluator_marker = " function auditHabitableStructures(applyRepairs=true){"
     cached_evaluator_code = r"""  function evaluateHabitableStructureCached(entry){
@@ -1889,36 +1872,16 @@ function getWorldPhaseTimingSnapshot(){
         raise SystemExit("No se encontró el punto único para cachear la evaluación de terreno de estructuras.")
     html = html.replace(cached_evaluator_marker, cached_evaluator_code + cached_evaluator_marker, 1)
 
-    audit_discovery_marker = r"""  const roofedRootPattern=/^(?:WeatheredNorseHut|PersistentPlayerNorseShelter|PersistentNorseShelter|IslandOutpost_\d+|IslandScoutCamp_\d+|IslandGarrisonOutpost_\d+|NorseGreatMeadHall_\d+|NorseBlacksmithForge_\d+|NorseWatchTower_\d+|PoorNorseCastawayCamp)$/;
-  const trackedBeforeDiscovery=new Set(habitableStructureRegistry.map(entry=>entry.root));
-  for(const node of scene.transformNodes){
-   const rootName=node.name||'';if(!roofedRootPattern.test(rootName)||trackedBeforeDiscovery.has(node))continue;"""
-    audit_discovery_replacement = r"""  habitableAuditLastCacheHits=0;habitableAuditLastCacheMisses=0;
-  if(!habitableRootDiscoveryInitialized||!habitableRootDiscoveryObserverAvailable){
-   for(const node of scene.transformNodes){
-    if(node&&!habitableRegisteredRootSet.has(node)&&habitableRootNamePattern.test(node.name||''))habitableRootDiscoveryQueue.add(node);
-   }
-  }
-  habitableRootDiscoveryInitialized=true;
-  const pendingHabitableRoots=Array.from(habitableRootDiscoveryQueue);habitableRootDiscoveryQueue.clear();
-  for(const node of pendingHabitableRoots){
-   if(!node||node.isDisposed?.()||habitableRegisteredRootSet.has(node))continue;
-   const rootName=node.name||'';if(!habitableRootNamePattern.test(rootName))continue;"""
-    if html.count(audit_discovery_marker) != 1:
-        raise SystemExit("No se encontró el bloque de descubrimiento de edificios que debe pasar a cola incremental.")
-    html = html.replace(audit_discovery_marker, audit_discovery_replacement, 1)
+    audit_start_marker = "  const records=[],camera=scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position:null,autoRegisteredRoots=[];"
+    audit_start_replacement = "  habitableAuditLastCacheHits=0;habitableAuditLastCacheMisses=0;\n" + audit_start_marker
+    if html.count(audit_start_marker) != 1:
+        raise SystemExit("No se encontró el inicio único de la auditoría de edificios para reiniciar sus contadores.")
+    html = html.replace(audit_start_marker, audit_start_replacement, 1)
 
     evaluation_marker = "let result=evaluateHabitableStructure(entry),root=entry.root;"
     if html.count(evaluation_marker) != 1:
         raise SystemExit("No se encontró la evaluación única de cada estructura para reutilizar sus pruebas estáticas.")
     html = html.replace(evaluation_marker, "let result=evaluateHabitableStructureCached(entry),root=entry.root;", 1)
-
-    untracked_marker = r"""  const registeredRoots=new Set(habitableStructureRegistry.map(entry=>entry.root));
-  const untrackedRoots=scene.transformNodes.filter(node=>roofedRootPattern.test(node.name||'')&&!registeredRoots.has(node)).map(node=>node.name);"""
-    untracked_replacement = r"""  const untrackedRoots=Array.from(habitableRootDiscoveryQueue).filter(node=>node&&!habitableRegisteredRootSet.has(node)).map(node=>node.name);"""
-    if html.count(untracked_marker) != 1:
-        raise SystemExit("No se encontró el segundo recorrido completo de nodos de estructuras habitables.")
-    html = html.replace(untracked_marker, untracked_replacement, 1)
 
     audit_call_marker = "habitableAuditAccumulator=0;auditHabitableStructures(true);"
     audit_call_replacement = "habitableAuditAccumulator=0;const habitableAuditStartedAt=performance.now();try{auditHabitableStructures(true);}finally{habitableAuditLastMs=performance.now()-habitableAuditStartedAt;habitableAuditMaxMs=Math.max(habitableAuditMaxMs,habitableAuditLastMs);habitableAuditCount++;}"
