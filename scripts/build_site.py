@@ -629,7 +629,7 @@ def main() -> None:
     # a distance-aware cadence. Root motion is still integrated on every frame, while
     # the skinned animation groups keep running at the render rate.
     wildlife_update_marker = "function updateWildlife(dt){"
-    wildlife_update_end_marker = "  // 0.6.195: la cubierta vegetal queda despejada de caminos y campamentos."
+    wildlife_update_end_marker = " // 0.6.195: la cubierta vegetal queda despejada de caminos y campamentos."
     wildlife_update_replacement = """function updateWildlife(dt){
    if(!ambientFauna.length)return;
    const focus=onShip?ship.position:player.root.position,now=elapsed;
