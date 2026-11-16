@@ -8,6 +8,9 @@ const BASE_URL = process.env.PLAYER_TEST_URL || 'http://127.0.0.1:4174/';
 const MOBILE_PROFILE = process.env.PLAYER_TEST_MOBILE === '1';
 const OUT = path.resolve(process.env.PLAYER_TEST_ARTIFACT_DIR || 'artifacts/player-startup');
 const startedAt = performance.now();
+// On mobile the real game can occupy the main thread for several seconds while bootEngine builds the first scene.
+// The input handler may already have fired; give Chromium time to resume and evaluate the queued assertion.
+const IDENTITY_START_WAIT_MS = 45000;
 const manifest = {
   schema: 1,
   capturedAt: new Date().toISOString(),
@@ -164,7 +167,7 @@ async function main() {
       try {
         await page.waitForFunction(() => Number(window.__ELSN_IDENTITY_START_COUNT || 0) > 0 ||
           document.body.classList.contains('booting') || document.body.classList.contains('boot-failed'),
-          undefined, { timeout: 3500, polling: 25 });
+          undefined, { timeout: IDENTITY_START_WAIT_MS, polling: 25 });
       } catch (error) {
         const clickDiagnostics = await page.evaluate(() => {
           const button = document.getElementById('continueUnnamed');
