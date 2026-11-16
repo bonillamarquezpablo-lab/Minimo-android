@@ -289,6 +289,46 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
+
+    # Mobile startup: let the browser stream/compile the bundled Babylon scripts natively.
+    # Fetching the complete engine into TextDecoder strings and re-wrapping it in a Blob
+    # duplicates several MB and delays script compilation on mid-range Android devices.
+    for old_priority, new_priority in (('fetchpriority="low"', 'fetchpriority="high"'),):
+        if html.count(old_priority) < 2:
+            raise SystemExit("No se encontraron los dos preloads del motor Babylon.")
+        html = html.replace(old_priority, new_priority, 2)
+
+    # All fallback engine/GLTF loader mirrors must match the bundled Babylon version.
+    html, fallback_version_count = re.subn(r"7\\.54\\.3", BABYLON_VERSION, html)
+    if fallback_version_count < 4:
+        raise SystemExit("No se pudieron sincronizar los mirrors de Babylon y GLTF loader.")
+
+    loader_start = html.find("async function loadSameOriginScriptWithProgress(")
+    loader_end = html.find("async function installCachedRuntime(", loader_start)
+    if loader_start < 0 or loader_end <= loader_start:
+        raise SystemExit("No se encontró el cargador de scripts Babylon para optimizar el arranque móvil.")
+    native_loader = r"""async function loadEngineWithCache(url,timeoutMs=30000,check=null,progressStart=0,progressEnd=0,label='Cargando recurso'){
+ const resolved=new URL(url,document.baseURI),sameOrigin=resolved.origin===location.origin;
+ // A native script URL allows Chromium to stream, parse and compile the large engine
+ // without first materializing a second multi-megabyte JS string and Blob in RAM.
+ const result=await loadEngine(sameOrigin?resolved.href:url,timeoutMs,check);
+ if(result.ok)setLoadingProgress(progressEnd,label+' listo.');
+ return {...result,cached:false,source:sameOrigin?'same-origin-native-script':'external-script'};
+}
+"""
+    html = html[:loader_start] + native_loader + html[loader_end:]
+    html, mirror_timeout_count = re.subn(
+        r"loadEngineWithCache\\(url,7000,check,segmentStart,segmentEnd,label\\)",
+        "loadEngineWithCache(url,30000,check,segmentStart,segmentEnd,label)", html, count=1
+    )
+    if mirror_timeout_count != 1:
+        raise SystemExit("No se pudo ampliar el plazo del cargador local de Babylon.")
+    html, embedded_timeout_count = re.subn(
+        r"loadEngine\\(url,5500,check\\)",
+        "loadEngine(url,20000,check)", html, count=1
+    )
+    if embedded_timeout_count != 1:
+        raise SystemExit("No se pudo ampliar el plazo del cargador en navegadores integrados.")
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         html,
