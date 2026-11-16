@@ -996,7 +996,7 @@ def main() -> None:
  const spatialDynamicReasonForMesh=mesh=>{
   for(let node=mesh;node&&node!==scene;node=node.parent){
    const name=String(node.name||'');
-   if(/^GroundSplashParticleBatch$/i.test(name)){if(mesh)mesh.alwaysSelectAsActiveMesh=true;return 'particle-or-effect';}
+   if(/^GroundSplashParticleBatch(?:$|[_-])/i.test(name)){if(mesh)mesh.alwaysSelectAsActiveMesh=true;return 'particle-or-effect';}
    if(node.skeleton||node.morphTargetManager||(Array.isArray(node.animations)&&node.animations.length))return 'animated-rig';
    if(spatialActorRootPattern.test(name))return 'actor-or-vehicle';
    if(spatialVegetationMotionPattern.test(name))return 'vegetation-motion';
