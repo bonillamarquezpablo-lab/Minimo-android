@@ -348,7 +348,107 @@ def main() -> None:
         raise SystemExit("No se encontró la única herramienta rígida de mano del herrero.")
     html = html.replace(smith_hammer_marker, smith_hammer_replacement, 1)
 
-    # Give every tree a subtle, deterministic-per-instance lean. This changes no mesh
+    # Replace the old hand-assembled leaf triangles with a complete, textured, compact tree model.
+    # The model uses two merged mesh batches per instance: bark/branches and textured crown.
+    tree_rebuild_start_marker = "  function createTree(x,z,scale=1){"
+    tree_rebuild_end_marker = "\n }\n function isSafeShrubGroundPoint"
+    tree_rebuild_code = """let forestTreeMaterials=null;
+ function getForestTreeMaterials(){
+  if(forestTreeMaterials)return forestTreeMaterials;
+  const makeTexture=(name,paint)=>{
+   const texture=new B.DynamicTexture(name,{width:512,height:512},scene,false),ctx=texture.getContext();
+   paint(ctx);texture.update(false);texture.wrapU=B.Texture.WRAP_ADDRESSMODE;texture.wrapV=B.Texture.WRAP_ADDRESSMODE;texture.anisotropicFilteringLevel=4;
+   return texture;
+  };
+  const randomFrom=seed=>()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+  const barkTexture=makeTexture('ForestBarkAlbedo',ctx=>{
+   const r=randomFrom(731);const g=ctx.createLinearGradient(0,0,512,0);g.addColorStop(0,'#39251d');g.addColorStop(.22,'#79513a');g.addColorStop(.48,'#4b3025');g.addColorStop(.73,'#8b6145');g.addColorStop(1,'#3e291f');ctx.fillStyle=g;ctx.fillRect(0,0,512,512);
+   for(let i=0;i<310;i++){const x=r()*512,w=.6+r()*4;ctx.strokeStyle=i%3?'rgba(20,12,9,.22)':'rgba(224,177,126,.17)';ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x,0);for(let y=0;y<=512;y+=24)ctx.lineTo(x+Math.sin(y*.018+i*1.7)*(.7+r()*2.4),y);ctx.stroke();}
+   for(let i=0;i<155;i++){const x=r()*512,y=r()*512;ctx.strokeStyle='rgba(16,10,7,'+(.12+r()*.2)+')';ctx.lineWidth=.8+r()*1.5;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(r()-.5)*30,y+(r()-.5)*12);ctx.stroke();}
+  });
+  const birchTexture=makeTexture('ForestBirchBarkAlbedo',ctx=>{
+   const r=randomFrom(932);ctx.fillStyle='#d5d0bd';ctx.fillRect(0,0,512,512);
+   for(let i=0;i<180;i++){const x=r()*512;ctx.strokeStyle=i%2?'rgba(85,83,72,.22)':'rgba(245,240,222,.5)';ctx.lineWidth=.7+r()*2.2;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+(r()-.5)*15,512);ctx.stroke();}
+   for(let i=0;i<95;i++){const x=r()*512,y=r()*512,w=8+r()*34;ctx.strokeStyle='rgba(37,35,31,'+(.42+r()*.33)+')';ctx.lineWidth=1.4+r()*3;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+w,y+(r()-.5)*3);ctx.stroke();}
+  });
+  const leafTexture=makeTexture('ForestBroadleafAlbedo',ctx=>{
+   const r=randomFrom(1245);ctx.fillStyle='#203d25';ctx.fillRect(0,0,512,512);
+   for(let i=0;i<1900;i++){const x=r()*512,y=r()*512,len=5+r()*15,w=1.8+r()*4,a=r()*Math.PI;ctx.save();ctx.translate(x,y);ctx.rotate(a);const grad=ctx.createLinearGradient(-len/2,0,len/2,0);const shade=Math.floor(68+r()*72);grad.addColorStop(0,'rgb('+(shade-19)+','+(shade+4)+','+(shade-30)+')');grad.addColorStop(.5,'rgb('+(shade-5)+','+(shade+21)+','+(shade-22)+')');grad.addColorStop(1,'rgb('+(shade-25)+','+(shade+1)+','+(shade-34)+')');ctx.fillStyle=grad;ctx.beginPath();ctx.ellipse(0,0,len/2,w,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(203,207,119,.32)';ctx.lineWidth=.65;ctx.beginPath();ctx.moveTo(-len*.38,0);ctx.lineTo(len*.38,0);ctx.stroke();ctx.restore();}
+  });
+  const needleTexture=makeTexture('ForestFirNeedlesAlbedo',ctx=>{
+   const r=randomFrom(2187);ctx.fillStyle='#1a3529';ctx.fillRect(0,0,512,512);
+   for(let i=0;i<4800;i++){const x=r()*512,y=r()*512,len=5+r()*13,a=(r()-.5)*.55;ctx.strokeStyle=i%4?'rgba(94,132,74,.78)':'rgba(181,181,105,.62)';ctx.lineWidth=.7+r()*1.3;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.sin(a)*len,y-Math.cos(a)*len);ctx.stroke();}
+  });
+  const pbr=(name,texture,roughness)=>{const material=new B.PBRMaterial(name,scene);material.albedoTexture=texture;material.metallic=0;material.roughness=roughness;material.backFaceCulling=true;return material;};
+  forestTreeMaterials={bark:pbr('ForestBarkPBR',barkTexture,.94),birch:pbr('ForestBirchPBR',birchTexture,.91),leaves:pbr('ForestLeavesPBR',leafTexture,.88),needles:pbr('ForestNeedlesPBR',needleTexture,.93)};
+  return forestTreeMaterials;
+ }
+ function createTree(x,z,scale=1){
+  const root=newGroup('mixedForestTree',null),woodRoot=newGroup('ForestTreeWoodRoot',root);
+  const baseYaw=rand(0,Math.PI*2),roll=Math.random(),species=roll<.54?'oak':roll<.78?'birch':'fir',materials=getForestTreeMaterials();
+  const trunkHeight=species==='fir'?5.65:(species==='birch'?5.35:4.75),wood=species==='birch'?materials.birch:materials.bark;
+  const branch=(name,start,end,radiusBase,radiusTip,material=wood)=>{
+   const dx=end[0]-start[0],dy=end[1]-start[1],dz=end[2]-start[2],length=Math.hypot(dx,dy,dz);
+   if(!Number.isFinite(length)||length<.08)return null;
+   const middle=[(start[0]+end[0])*.5,(start[1]+end[1])*.5,(start[2]+end[2])*.5];
+   const pitch=Math.acos(Math.max(-1,Math.min(1,dy/length))),yaw=Math.atan2(dx,dz);
+   const mesh=cyl(name,woodRoot,middle,length,radiusTip*2,radiusBase*2,material,[pitch,yaw,0]);
+   mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=false;return mesh;
+  };
+  // A gently irregular, tapered trunk with roots embedded into the terrain.
+  const trunkLean=rand(-.055,.055),trunkBend=rand(-.11,.11);
+  branch('ForestMainTrunkA',[0,0,0],[trunkBend*.35,1.75,trunkLean*.35],.36,.27);
+  branch('ForestMainTrunkB',[trunkBend*.35,1.75,trunkLean*.35],[trunkBend,3.45,trunkLean],.27,.17);
+  branch('ForestMainTrunkC',[trunkBend,3.45,trunkLean],[trunkBend*.7,trunkHeight, trunkLean*.7],.17,.075);
+  for(let i=0;i<5;i++){const a=i*Math.PI*2/5+rand(-.2,.2),length=rand(.48,.78);branch('ForestSurfaceRoot_'+i,[0,.25,0],[Math.cos(a)*length,.025,Math.sin(a)*length],.145,.035);}
+  const canopy=newGroup('TreeCanopyWindPivot',root),pivotY=trunkHeight*.59;canopy.position.y=pivotY;
+  const addCluster=(name,px,py,pz,sx,sy,sz,material,segments=9)=>{
+   const mesh=sphere(name,canopy,[px,py-pivotY,pz],[sx,sy,sz],material,segments);
+   mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;return mesh;
+  };
+  if(species==='oak'||species==='birch'){
+   const birch=species==='birch',branchTiers=birch?[2.55,3.2,3.8,4.35]:[2.2,2.85,3.45,3.95];
+   branchTiers.forEach((height,tier)=>{
+    const count=birch?5:6;
+    for(let i=0;i<count;i++){const a=i*Math.PI*2/count+tier*.39+rand(-.16,.16),length=(birch?rand(.72,1.12):rand(.92,1.42))*(1-tier*.06);
+     branch('ForestCrownBranch_'+tier+'_'+i,[trunkBend,height,trunkLean],[trunkBend+Math.cos(a)*length,height+rand(.10,.40),trunkLean+Math.sin(a)*length],.105-tier*.008,.032);
+    }
+   });
+   if(birch){
+    addCluster('BirchCrownCore',0,4.48,0,.62,.98,.60,materials.leaves,10);
+    for(let tier=0;tier<3;tier++)for(let i=0;i<4;i++){const a=i*Math.PI/2+tier*.46,rad=.38+tier*.09;addCluster('BirchFoliage_'+tier+'_'+i,Math.cos(a)*rad,3.75+tier*.62,Math.sin(a)*rad,.48,.54,.46,materials.leaves,9);}
+    addCluster('BirchTopCrown',-.05,5.16,.02,.40,.57,.39,materials.leaves,9);
+   }else{
+    addCluster('OakCrownCore',0,4.06,0,.98,.80,.91,materials.leaves,10);
+    for(let i=0;i<10;i++){const a=i*2.399963+rand(-.17,.17),rad=rand(.66,1.02),y=rand(3.74,4.48);addCluster('OakFoliageLobe_'+i,Math.cos(a)*rad,y,Math.sin(a)*rad,rand(.55,.72),rand(.43,.62),rand(.55,.72),materials.leaves,9);}
+    for(let i=0;i<5;i++){const a=i*2.399963,rad=rand(1.05,1.24);addCluster('OakOuterFoliage_'+i,Math.cos(a)*rad,rand(3.85,4.45),Math.sin(a)*rad,.40,.38,.41,materials.leaves,8);}
+   }
+  }else{
+   // A genuine layered fir silhouette: descending boughs and compact needle-covered tiers.
+   const tiers=6,branchesPerTier=6;
+   for(let tier=0;tier<tiers;tier++){
+    const f=tier/(tiers-1),height=1.55+f*3.85,rad=1.34*(1-f)+.12;
+    for(let i=0;i<branchesPerTier;i++){const a=i*Math.PI*2/branchesPerTier+tier*.25+rand(-.08,.08),length=rad*rand(.90,1.10);
+     branch('FirBoughWood_'+tier+'_'+i,[0,height,0],[Math.cos(a)*length,height-.25-rad*.16,Math.sin(a)*length],.075*(1-f*.35),.018,wood);
+    }
+    for(let i=0;i<4;i++){const a=i*Math.PI/2+tier*.19,clusterRadius=rad*.56;addCluster('FirNeedleCluster_'+tier+'_'+i,Math.cos(a)*clusterRadius,height,Math.sin(a)*clusterRadius,Math.max(.18,rad*.57),.25,Math.max(.18,rad*.57),materials.needles,8);}
+   }
+   addCluster('FirTopCluster',0,5.34,0,.22,.42,.22,materials.needles,8);
+  }
+  mergeStaticDecorByMaterial(woodRoot,'ForestTreeWood');
+  mergeStaticDecorByMaterial(canopy,'ForestTreeCanopy');
+  root.position=v(x,renderedTerrainSurfaceAt(x,z),z);
+  root.rotation.x=rand(-.018,.018);root.rotation.y=baseYaw;root.rotation.z=rand(-.024,.024);root.scaling.setAll(scale);
+  root.computeWorldMatrix(true);
+  return {root,canopy,x,z,radius:.72*scale,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species,baseYaw,windPhase:rand(0,Math.PI*2)};
+ }"""
+    tree_start=html.find(tree_rebuild_start_marker)
+    tree_end=html.find(tree_rebuild_end_marker,tree_start)
+    if tree_start<0 or tree_end<0 or html.count(tree_rebuild_start_marker)!=1 or html.count(tree_rebuild_end_marker)!=1:
+        raise SystemExit("No se encontró el único createTree completo para sustituirlo.")
+    html=html[:tree_start]+tree_rebuild_code+html[tree_end+3:]
+
+    # Paint every startup milestone synchronously before expensive scene work. This changes no mesh
     # count, triangle count or shadow policy, but breaks the repeated perfectly upright silhouette.
     tree_lean_marker = "root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.y=baseYaw;root.scaling.setAll(scale);"
     tree_lean_replacement = "root.position=v(x,renderedTerrainSurfaceAt(x,z),z);root.rotation.x=rand(-.025,.025);root.rotation.y=baseYaw;root.rotation.z=rand(-.04,.04);root.scaling.setAll(scale);"
@@ -635,7 +735,7 @@ def main() -> None:
     # Normalize gulls by the largest 3D model extent so rotated GLB axes cannot inflate the flock.
     # The target wingspan is biological in-world scale, independent of the source model's up-axis.
     gull_scale_marker = "const bounds=boundsForMeshes(meshes),height=Math.max(.001,bounds.height),scale=1.65/height;actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
-    gull_scale_replacement = "const bounds=boundsForMeshes(meshes),width=bounds.max.x-bounds.min.x,height=bounds.max.y-bounds.min.y,depth=bounds.max.z-bounds.min.z,modelSpan=Math.max(width,height,depth),targetGullWingspanMeters=1.15;if(!Number.isFinite(modelSpan)||modelSpan<.35)throw new Error('Envergadura 3D del modelo de gaviota inválida: '+modelSpan);const scale=targetGullWingspanMeters/modelSpan;if(!Number.isFinite(scale)||scale<=0||scale>8)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
+    gull_scale_replacement = "const sourceBounds=boundsForMeshes(meshes),sourceWidth=sourceBounds.max.x-sourceBounds.min.x,sourceHeight=sourceBounds.max.y-sourceBounds.min.y,sourceDepth=sourceBounds.max.z-sourceBounds.min.z,modelSpan=Math.max(sourceWidth,sourceHeight,sourceDepth),targetGullMaxExtentMeters=.78;if(!Number.isFinite(modelSpan)||modelSpan<.35)throw new Error('Dimensiones 3D del modelo de gaviota inválidas: '+modelSpan);const scale=targetGullMaxExtentMeters/modelSpan;if(!Number.isFinite(scale)||scale<=0||scale>8)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);actor.scaling.setAll(scale);actor.computeWorldMatrix(true);meshes.forEach(mesh=>mesh.computeWorldMatrix(true));const scaledBounds=boundsForMeshes(meshes),scaledWidth=scaledBounds.max.x-scaledBounds.min.x,scaledHeight=scaledBounds.max.y-scaledBounds.min.y,scaledDepth=scaledBounds.max.z-scaledBounds.min.z,scaledMaxExtent=Math.max(scaledWidth,scaledHeight,scaledDepth);if(!Number.isFinite(scaledMaxExtent)||scaledMaxExtent<.20)throw new Error('La gaviota no conserva dimensiones visibles después de escalarla.');if(scaledMaxExtent>.86){const correction=.82/scaledMaxExtent;actor.scaling.scaleInPlace(correction);actor.computeWorldMatrix(true);meshes.forEach(mesh=>mesh.computeWorldMatrix(true));}const finalBounds=boundsForMeshes(meshes),finalWidth=finalBounds.max.x-finalBounds.min.x,finalHeight=finalBounds.max.y-finalBounds.min.y,finalDepth=finalBounds.max.z-finalBounds.min.z,finalMaxExtent=Math.max(finalWidth,finalHeight,finalDepth);if(finalMaxExtent>.90)throw new Error('La gaviota sigue excediendo el tamaño máximo de vuelo: '+finalMaxExtent.toFixed(3)+' m.');actor.position=v(-36,10+i%3*1.4-finalBounds.min.y,-18);actor.metadata=Object.assign({},actor.metadata||{},{biologicalScale:{source:{width:sourceWidth,height:sourceHeight,depth:sourceDepth},rendered:{width:finalWidth,height:finalHeight,depth:finalDepth},maximumExtentMeters:finalMaxExtent}});"
     if html.count(gull_scale_marker) != 1:
         raise SystemExit("No se encontró la única escala incorrecta de gaviotas basada en altura.")
     html = html.replace(gull_scale_marker, gull_scale_replacement, 1)
@@ -1520,27 +1620,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.312: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.313: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.312; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.313; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.312\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.313\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.312.")
-    html = html.replace("0.6.274", "0.6.312")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.313.")
+    html = html.replace("0.6.274", "0.6.313")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'30',build:'0.6.312'"
+    diagnostic_build_replacement = "reportVersion:'31',build:'0.6.313'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.312 para normalizar.")
-    game_version = "0.6.312"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.313 para normalizar.")
+    game_version = "0.6.313"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.

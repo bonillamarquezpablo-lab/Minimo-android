@@ -68,8 +68,8 @@ assert.ok(builder.includes('phase_timing_helpers') && builder.includes('setWorld
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'30\',build:\'0.6.312\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.312"'), 'Release validator must target version 0.6.312.');
+assert.ok(validator.includes('reportVersion:\'30\',build:\'0.6.313\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.313"'), 'Release validator must target version 0.6.313.');
 assert.ok(builder.includes('mobile_memory_policy_marker') && builder.includes('isMobilePeakMemorySensitive'), 'Memory-sensitive scheduling must be independent from the selected graphics profile.');
 assert.ok(builder.includes('GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024'), 'GLB identity checks must compare bounded chunks instead of duplicating full files into ArrayBuffers.');
 assert.ok(builder.includes('player_import_start_marker') && builder.includes('let playerHumanLoadPromise=Promise.resolve(null);'), 'The protagonist GLB import must be deferred until static world construction has finished.');
@@ -107,10 +107,20 @@ assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGul
 assert.ok(builder.includes('smith_hammer_marker') && builder.includes('SmithHammer_') &&
   builder.includes('Keep the smith\'s hands clear'),
   'Rigid civilian hammer geometry must be removed from animated hand/forearm bones.');
-assert.ok(builder.includes('tree_lean_marker') &&
-  builder.includes('root.rotation.x=rand(-.025,.025)') &&
-  builder.includes('root.rotation.z=rand(-.04,.04)'),
-  'Trees must gain subtle natural trunk lean without additional geometry or draw calls.');
+assert.ok(builder.includes('tree_rebuild_start_marker') &&
+  builder.includes('getForestTreeMaterials()') &&
+  builder.includes('new B.PBRMaterial') &&
+  builder.includes('ForestBarkAlbedo') &&
+  builder.includes('ForestBroadleafAlbedo') &&
+  builder.includes('ForestFirNeedlesAlbedo') &&
+  builder.includes("mergeStaticDecorByMaterial(woodRoot,'ForestTreeWood')") &&
+  builder.includes("mergeStaticDecorByMaterial(canopy,'ForestTreeCanopy')'),
+  'The old triangle-built forest must be replaced by textured, merged full tree models.');
+assert.ok(builder.includes('targetGullMaxExtentMeters=.78') &&
+  builder.includes('scaledBounds=boundsForMeshes(meshes)') &&
+  builder.includes('maximumExtentMeters:finalMaxExtent') &&
+  builder.includes('if(finalMaxExtent>.90)'),
+  'Each gull must be clamped and verified by its measured world-space dimensions.');
 assert.ok(builder.includes("const realBirds=[],subduedMaterials=new Set();") &&
   builder.includes('html.replace(gull_material_clone_marker, "", 1)'),
   'The five gull instances must share one subdued material set instead of cloning material variants per bird.');
