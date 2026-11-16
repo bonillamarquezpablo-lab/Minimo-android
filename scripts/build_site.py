@@ -1998,7 +1998,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(smoke_lazy_marker, smoke_lazy_replacement, 1)
 
     smoke_warmup_marker = " let sceneWarmupStatus='unavailable';"
-    smoke_warmup_replacement = " await prepareAmbientSmokePuffs();\n let sceneWarmupStatus='unavailable';"
+    smoke_warmup_replacement = " await prepareAmbientSmokePuffs();\n await new Promise(resolve=>requestAnimationFrame(()=>resolve()));\n const initialHabitableAuditStartedAt=performance.now();\n const initialHabitableAudit=auditHabitableStructures(true);\n recordStartupTask('Auditoría inicial de asentamientos',initialHabitableAuditStartedAt,performance.now(),'ready',{structures:habitableStructureRegistry.length,repaired:initialHabitableAudit&&initialHabitableAudit.repaired||0,hiddenUnsafe:initialHabitableAudit&&initialHabitableAudit.hiddenUnsafe||0,autoRegistered:initialHabitableAudit&&initialHabitableAudit.autoRegisteredRoots&&initialHabitableAudit.autoRegisteredRoots.length||0});\n let sceneWarmupStatus='unavailable';"
     if html.count(smoke_warmup_marker) != 1:
         raise SystemExit("No se encontró el inicio único de la barrera de shaders para preparar primero los efectos ambientales.")
     html = html.replace(smoke_warmup_marker, smoke_warmup_replacement, 1)
@@ -2581,7 +2581,7 @@ function getWorldPhaseTimingSnapshot(){
 
     # Cache unchanged structural ground proofs and discover new roofed roots incrementally.
     habitable_registry_marker = r""" const habitableStructureRegistry=[];
- let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;"""
+ let lastHabitableStructureAudit=null,habitableAuditAccumulator=0;"""
     habitable_registry_replacement = r""" const habitableStructureRegistry=[];
  let habitableAuditLastMs=0,habitableAuditMaxMs=0,habitableAuditCount=0,habitableAuditLastCacheHits=0,habitableAuditLastCacheMisses=0;
  let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;"""
