@@ -1816,7 +1816,7 @@ function getWorldPhaseTimingSnapshot(){
     html = html.replace(phase_flush_marker, "  finishWorldPhaseTiming();\n" + phase_flush_marker, 1)
 
     health_phase_marker = "worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),"
-    health_phase_replacement = health_phase_marker + "worldPhaseTimings:getWorldPhaseTimingSnapshot(),mapDrawMs:Number(lastMapDrawMs.toFixed(3)),mapDrawMaxMs:Number(mapDrawMaxMs.toFixed(3)),mapDrawSampleCount,"
+    health_phase_replacement = health_phase_marker + "worldPhaseTimings:getWorldPhaseTimingSnapshot(),mapDrawMs:Number(lastMapDrawMs.toFixed(3)),mapDrawMaxMs:Number(mapDrawMaxMs.toFixed(3)),mapDrawSampleCount,habitableAuditMs:Number(habitableAuditLastMs.toFixed(3)),habitableAuditMaxMs:Number(habitableAuditMaxMs.toFixed(3)),habitableAuditCount,habitableAuditLastCacheHits,habitableAuditLastCacheMisses,"
     if html.count(health_phase_marker) != 1:
         raise SystemExit("No se encontró el objeto runtime único para publicar los tiempos de fase y del minimapa.")
     html = html.replace(health_phase_marker, health_phase_replacement, 1)
