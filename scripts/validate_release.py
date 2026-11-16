@@ -430,6 +430,13 @@ def main() -> None:
     )
     mobile_memory_markers = (
         "isMobilePeakMemorySensitive=!!(isIOSDevice",
+        "let playerHumanLoadPromise=Promise.resolve(null)",
+        "playerHumanLoadPromise=loadHumanViking()",
+        "syncActiveBeachIsland();",
+        "syncActiveTidalFoamIsland();",
+        "recordStartupTask('Geometría de costa inicial'",
+        "syncNordicWaterReflectionIsland();",
+        "recordStartupTask('Lista inicial de reflejos nórdicos'",
         "const GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024",
         "civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive",
         "wildlifeBlobs.delete(kind)",
