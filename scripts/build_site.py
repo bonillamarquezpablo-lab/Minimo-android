@@ -2584,7 +2584,7 @@ function getWorldPhaseTimingSnapshot(){
  let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;"""
     habitable_registry_replacement = r""" const habitableStructureRegistry=[];
  let habitableAuditLastMs=0,habitableAuditMaxMs=0,habitableAuditCount=0,habitableAuditLastCacheHits=0,habitableAuditLastCacheMisses=0;
- let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;"""
+ let lastHabitableStructureAudit=null,habitableAuditAccumulator=0;"""
     if html.count(habitable_registry_marker) != 1:
         raise SystemExit("No se encontró el registro único de estructuras habitables.")
     html = html.replace(habitable_registry_marker, habitable_registry_replacement, 1)
