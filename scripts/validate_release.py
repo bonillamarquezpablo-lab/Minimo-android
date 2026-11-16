@@ -310,8 +310,13 @@ def main() -> None:
     ):
         if obsolete_civilian_prop in index_html:
             fail("Se ha reintroducido un accesorio rígido que invade la silueta o las manos de un aldeano.")
-    if "root.rotation.x=rand(-.025,.025)" not in index_html or "root.rotation.z=rand(-.04,.04)" not in index_html:
-        fail("Los árboles deben conservar una variación orgánica de inclinación sin añadir geometría ni draw calls.")
+    if (
+        "ForestTreeModelMount_" not in index_html
+        or "TreeCanopyWindPivot_" not in index_html
+        or "canopy.position.y=pivotY;" not in index_html
+        or "modelMount.position.y=-asset.bounds.min.y*modelScale;" not in index_html
+    ):
+        fail("Los árboles deben ser modelos GLB texturizados, apoyados sobre el terreno y con pivote de copa para viento y tala.")
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         index_html,
