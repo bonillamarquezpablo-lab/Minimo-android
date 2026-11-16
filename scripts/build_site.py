@@ -609,8 +609,8 @@ def main() -> None:
     if html.count(gull_partial) != 1:
         raise SystemExit("No se encontró la comprobación de mallas del GLB de gaviota.")
     html = html.replace(gull_partial, gull_partial_required, 1)
-    # Normalize gulls by horizontal wingspan, not vertical rig height. A flying bird's folded body height
-    # is tiny compared with its open wingspan; using height here inflated the whole flock several-fold.
+    # Normalize gulls by the largest 3D model extent so rotated GLB axes cannot inflate the flock.
+    # The target wingspan is biological in-world scale, independent of the source model's up-axis.
     gull_scale_marker = "const bounds=boundsForMeshes(meshes),height=Math.max(.001,bounds.height),scale=1.65/height;actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
     gull_scale_replacement = "const bounds=boundsForMeshes(meshes),width=bounds.max.x-bounds.min.x,height=bounds.max.y-bounds.min.y,depth=bounds.max.z-bounds.min.z,modelSpan=Math.max(width,height,depth),targetGullWingspanMeters=1.15;if(!Number.isFinite(modelSpan)||modelSpan<.35)throw new Error('Envergadura 3D del modelo de gaviota inválida: '+modelSpan);const scale=targetGullWingspanMeters/modelSpan;if(!Number.isFinite(scale)||scale<=0||scale>8)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
     if html.count(gull_scale_marker) != 1:
