@@ -31,6 +31,9 @@ assert.ok(smoke.includes("document.body.classList.contains('boot-failed')"),'The
 assert.ok(smoke.includes('identityClickDiagnostics') && smoke.includes('__ELSN_IDENTITY_START_COUNT'), 'The smoke must capture whether the first-run identity button actually started the engine.');
 assert.ok(build.includes('identityStartupTriggered=false') && build.includes("continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true})"), 'The identity start controls must be idempotent and pointer-safe.');
 assert.ok(build.includes('GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024'),'Mobile model integrity checks must compare GLB files in bounded memory blocks.');
+assert.ok(build.includes('let playerHumanLoadPromise=Promise.resolve(null);') && build.includes('playerHumanLoadPromise=loadHumanViking();'), 'Large protagonist GLB import must start only after the static world has been constructed.');
+assert.ok(build.includes('syncActiveBeachIsland();') && build.includes('syncActiveTidalFoamIsland();'), 'The first island beach and foam must be prepared before player entry.');
+assert.ok(build.includes('syncNordicWaterReflectionIsland();'), 'The active island reflection list must be prepared before the first rendered gameplay frame.');
 assert.ok(build.includes('civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive'),'The mobile startup must not prefetch both NPC GLBs simultaneously on iOS/Adreno 650.');
 assert.ok(build.includes('wildlifeBlobs.delete(kind)'),'Each wildlife GLB source must be released after all its actors are instantiated.');
 assert.ok(build.includes('npcStartupPromise=startNpcHumanModels();'),'Protagonist and NPC GLB imports must be staged on memory-sensitive mobile devices.');
