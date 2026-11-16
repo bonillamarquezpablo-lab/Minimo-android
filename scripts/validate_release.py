@@ -324,6 +324,10 @@ def main() -> None:
         fail("La caché de shell del service worker no coincide con la versión.")
     if not re.search(r'const ASSET_CACHE = "el-sin-nombre-assets-[0-9a-f]{16}";', sw):
         fail("La caché de recursos no contiene la huella SHA-256 generada en build.")
+    if "const WILDLIFE_MODEL_CACHE='el-sin-nombre-models-wildlife-6d6de54a-v1';" not in index_html or 'const WILDLIFE_MODEL_CACHE = "el-sin-nombre-models-wildlife-6d6de54a-v1";' not in sw:
+        fail("Los tres GLB de fauna deben tener una caché persistente que sobreviva a las actualizaciones del service worker.")
+    if "WILDLIFE_MODEL_CACHE].includes(key)" not in sw:
+        fail("El service worker no conserva la caché persistente de fauna al activarse.")
     if "return cached || response;" not in sw:
         fail("El service worker no contiene fallback de caché para errores HTTP.")
     if "Network first: never launch a saved shell" not in sw or "await isValidGameNavigation(fresh)" not in sw or "controller.abort(), 5000" not in sw or "getVerifiedCachedNavigation(cache, request, fallback)" not in sw:
@@ -479,6 +483,12 @@ def main() -> None:
         fail("Las dos pistas de música deben estar listas mediante HTMLAudio streaming sin decodificar buffers.")
     if "fauna:isPerformanceMode?'disabled-performance':'blocking-required'" not in index_html:
         fail("El perfil Calidad debe esperar la fauna; Rendimiento conserva su fauna desactivada.")
+    if "window.__ELSN_STARTUP_RESOURCE_GATE__" not in index_html or "startupResourceFailures.length" not in index_html:
+        fail("La entrada requiere una barrera final basada en el estado real de los recursos, no en el porcentaje visual.")
+    if "startupResourceSnapshot.world.islands!==13" not in index_html or "startupResourceSnapshot.world.grassClumps<=0" not in index_html:
+        fail("La barrera debe validar las 13 islas y la vegetación inicial de Calidad.")
+    if "startupResourceSnapshot.fauna.loaded!==3" not in index_html or "startupResourceSnapshot.fauna.loadedGulls!==5" not in index_html:
+        fail("La barrera de Calidad debe validar los tres animales y las cinco gaviotas.")
     if "sceneReadyTasks=[waitForInitialViewReadiness()]" not in index_html or "scene.whenReadyAsync()" in index_html or "scene.compileMaterialsAsync()" in index_html or "getWaitingItemsCount" not in index_html or "mesh.isReady(true)" not in index_html or "stableReadyFrames" not in index_html or "sceneReadyTimeout" not in index_html or "RECURSO OBLIGATORIO: escena y shaders" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html:
         fail("La escena y los shaders deben estar preparados con un plazo cerrado; un fallo obligatorio debe detener el arranque.")
     if "audioPreloadResult=await startupAudioPreload" not in index_html or "RECURSO OBLIGATORIO: efectos de sonido" not in index_html or "startupAudioPreload.then(" not in index_html or "startupMusicPreload" not in index_html:
