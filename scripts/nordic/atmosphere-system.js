@@ -438,6 +438,7 @@
           { attributes: ['position', 'normal'], uniforms: ['world', 'worldView', 'worldViewProjection', 'sunColor', 'uTime'] });
         material.backFaceCulling = false;
         material.disableDepthWrite = true;
+        this._originalSunMaterial = this.sunDisc.material;
         this.sunSurfaceMaterial = material;
         this.sunDisc.material = material;
       } catch (error) {
@@ -895,6 +896,12 @@
       try { if (this.moonLight) this.moonLight.dispose(); } catch (_) {}
       try { if (this.moonDisc) this.moonDisc.dispose(); } catch (_) {}
       try { if (this.moonHalo) this.moonHalo.dispose(); } catch (_) {}
+      try {
+        if (this.sunSurfaceMaterial) {
+          if (this.sunDisc && this.sunDisc.material === this.sunSurfaceMaterial) this.sunDisc.material = this._originalSunMaterial || null;
+          this.sunSurfaceMaterial.dispose();
+        }
+      } catch (_) {}
     }
   }
 
