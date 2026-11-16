@@ -1963,7 +1963,7 @@ function getWorldPhaseTimingSnapshot(){
     ambientPeople.__npcEnvironmentAt=elapsed+2.5;
    }
    const npcEnvironment=ambientPeople.__npcEnvironment;
-   const playerLookAt=playerPos(),playerX=Number(playerLookAt.x)||0,playerZ=Number(playerLookAt.z)||0;
+   const ambientNpcPlayerPosition=playerPos(),playerX=Number(ambientNpcPlayerPosition.x)||0,playerZ=Number(ambientNpcPlayerPosition.z)||0;
    ambientPeople.forEach((npc,i)=>{
     if(!npc||npc.recruited||!npc.parts||!npc.parts.root)return;
     const p=npc.parts.root,npcPosition=p.position;
