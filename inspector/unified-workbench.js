@@ -967,6 +967,12 @@
     quickLines.push(avgFps===null ? "No se pudo calcular la media de FPS." : "Media: "+fmt(avgFps,1)+" FPS · mínimo: "+fmt(minFps,0)+" FPS.");
     if(quickDiagnosis && quickDiagnosis.primaryBottleneck && quickDiagnosis.primaryBottleneck.label)
       quickLines.push("Principal pista: "+quickDiagnosis.primaryBottleneck.label+".");
+    const dialogueEvidence = summary.npcDialogue || {};
+    if(Number(dialogueEvidence.sampleCount)>0) {
+      quickLines.push("Diálogos: "+fmt(dialogueEvidence.bubblesStarted,0)+" iniciados · "+fmt(dialogueEvidence.projectionSuccesses,0)+" textos colocados en pantalla.");
+    } else {
+      quickLines.push("Diálogos: sin mediciones en esta partida.");
+    }
     if(runtimeErrors>0)quickLines.push(fmt(runtimeErrors,0)+" errores registrados.");
     if(anomalies.length>0)quickLines.push(fmt(anomalies.length,0)+" avisos de rendimiento.");
     if(report.recoveredFromEmergency)quickLines.push("Informe recuperado automáticamente al cerrar el juego.");
