@@ -13,7 +13,7 @@ for(const marker of [
     'const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;',
   'const spatialWaterMotionPattern=',
   'const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|',
-  "if(/^GroundSplashParticleBatch$/i.test(name)){if(mesh)mesh.alwaysSelectAsActiveMesh=true;return 'particle-or-effect';}",
+  "if(/^GroundSplashParticleBatch(?:$|[_-])/i.test(name)){if(mesh)mesh.alwaysSelectAsActiveMesh=true;return 'particle-or-effect';}",
   'const spatialEffectMotionPattern=',
   'const spatialDynamicReasonForMesh=',
   'const isSpatialDynamicMesh=mesh=>',
