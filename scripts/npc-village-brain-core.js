@@ -24,13 +24,19 @@
    goalX:null,goalZ:null,lastGoalAt:0,lastModeAt:0};
  }
  function chooseMode(context,state){
-  const c=context||{},s=state||{};
-  if(c.threatNearby===true)return "flee";
-  if(c.night===true||(finite(c.daylight)&&c.daylight<.16))return "rest";
+  const c=context||{},s=state||{},now=Number(c.now)||0;
+  if(c.threatNearby===true){s.socialUntil=0;return "flee";}
+  if(c.night===true||(finite(c.daylight)&&c.daylight<.16)){s.socialUntil=0;return "rest";}
+  if(s.mode==="social"&&now<Number(s.socialUntil||0))return "social";
   if(c.playerNearby===true){
-   if(c.claimed===true&&Number(c.now||0)>=Number(s.nextSocialAt||0))return "social";
+   if(c.claimed===true&&now>=Number(s.nextSocialAt||0)){
+    s.socialUntil=now+7.5+(s.seed%2500)/1000;
+    s.nextSocialAt=now+24+(s.seed%9000)/1000;
+    return "social";
+   }
    return "watch";
   }
+  s.socialUntil=0;
   return "work";
  }
  function goalCandidates(input){
@@ -71,7 +77,7 @@
   if(!candidates.length)return null;
   const c=input||{},x=finite(Number(c.x))?Number(c.x):Number(c.homeX),z=finite(Number(c.z))?Number(c.z):Number(c.homeZ);
   let best=null,bestScore=Infinity;
-  for(const candidate of candidates){
+  for(const candidate of candidates.slice(0,16)){
    if(typeof isValid==="function"&&!isValid(candidate.x,candidate.z))continue;
    const distance=Math.hypot(candidate.x-x,candidate.z-z),rolePenalty=Math.abs(candidate.radius-roleForVariant(c.variant).workRadius)*.04;
    const score=distance+rolePenalty+(candidate.order||0)*.001;
@@ -89,7 +95,7 @@
   if(typeof isMoveValid!=="function"||isMoveValid(direct.x,direct.z))return Object.freeze(direct);
   let best=null,bestScore=Infinity;
   const side=Number(c.side)<0?-1:1;
-  for(let i=0;i<STEER_OFFSETS.length;i++){
+  for(let i=0;i<4;i++){
    const offset=STEER_OFFSETS[i]*(i%2===0?side:1),candidate=candidateAt(heading+offset);
    if(!isMoveValid(candidate.x,candidate.z))continue;
    const remaining=Math.hypot(targetX-candidate.x,targetZ-candidate.z),score=remaining+Math.abs(offset)*.24+(offset*side<0?.035:0);
