@@ -41,6 +41,7 @@ REQUIRED_FILES = (
     "scripts/game-session-recorder.js",
     "scripts/npc-dialogue-core.js",
     "scripts/npc-dialogue-runtime.js",
+    "scripts/npc-village-brain-core.js",
     "scripts/npc-dialogue.css",
     *MANIFESTS,
     "icon.svg",
@@ -133,9 +134,11 @@ def main() -> None:
     npc_agent_runtime_source = read_text("scripts/npc-agent-runtime.js")
     dialogue_core_source = read_text("scripts/npc-dialogue-core.js")
     dialogue_runtime_source = read_text("scripts/npc-dialogue-runtime.js")
+    village_brain_source = read_text("scripts/npc-village-brain-core.js")
     dialogue_style_source = read_text("scripts/npc-dialogue.css")
     for marker in (
         '<link rel="stylesheet" href="./scripts/npc-dialogue.css">',
+        '<script src="./scripts/npc-village-brain-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
         "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
@@ -145,6 +148,14 @@ def main() -> None:
             fail("El juego no integra correctamente los diálogos ambientales: " + marker)
     if "const MAX_VISIBLE_BUBBLES=4" not in dialogue_core_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
         fail("El núcleo de diálogos debe mantener cuatro bocadillos como máximo y un radio de 18 metros.")
+    if "window.ELSN_NPC_VILLAGE_BRAIN" not in village_brain_source or any(marker not in village_brain_source for marker in ("function createState(", "function chooseMode(", "function chooseGoal(", "function chooseStep(", "function smoothAngle(")):
+        fail("El cerebro de aldeanos debe conservar estados, decisiones, rutas y giros suaves.")
+    if any(marker not in index_html for marker in ("npcVillageBrain.chooseMode(", "npcVillageBrain.chooseGoal(", "npcVillageBrain.chooseStep(", "tryLandMove(x,z,.43)", "worldEntityVisualDue(npc,npcPosition.x,npcPosition.z)")):
+        fail("La IA de aldeanos debe usar sus decisiones de baja frecuencia, el LOD existente y la colisión del mundo.")
+    if "ambientUpdateAccumulator>=(isConstrainedMobile?1/10:(isPerformanceMode?1/30:1/60))" not in index_html:
+        fail("La IA de aldeanos no puede aumentar la frecuencia de actualización ni alterar el presupuesto móvil.")
+    if "dialogueAmbientByRoot=new Map()" not in index_html or "actualParts=ambientActor&&ambientActor.parts" not in index_html:
+        fail("Los diálogos deben reutilizar la identidad y profesión reales del aldeano, no inventar variantes.")
     for marker in ("BABYLON.Vector3.Project", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
