@@ -83,7 +83,7 @@ function buildConversation(topic,a,b,ctx,random,memory){
  if(topic==="resources"||topic==="wood"||topic==="stone")return[
   line(a,a.id==="smith"?"Nos falta material para reparar el equipo. ¿Qué podemos conseguir primero?":"Las reservas están bajando. ¿Cómo organizamos el trabajo?"),
   line(b,b.id==="fisher"?"Puedo traer pescado para cambiarlo por madera y piedra.":b.id==="farmer"?"Prioricemos comida y madera; sin reservas no aguantaremos el invierno.":b.id==="smith"?"Separaré el mineral útil de los restos; no conviene fundirlo todo junto.":"Puedo organizar un intercambio en la próxima ruta, pero necesitaremos escolta."),
-  line(a,ctx.wood<=5?"La madera no puede esperar; cada reparación consume más de lo que parece.":ctx.stone<=5?"La piedra será lo primero. Sin buenos cimientos, cualquier defensa acabará cediendo.":"Repartamos las tareas y anotemos lo que falta antes de salir."),
+  line(a,hasMeasuredNumber(ctx.wood)&&Number(ctx.wood)<=5?"La madera no puede esperar; cada reparación consume más de lo que parece.":hasMeasuredNumber(ctx.stone)&&Number(ctx.stone)<=5?"La piedra será lo primero. Sin buenos cimientos, cualquier defensa acabará cediendo.":"Repartamos las tareas y anotemos lo que falta antes de salir."),
   line(b,"De acuerdo. Cuando volvamos, contaremos las reservas y decidiremos qué conviene construir primero.")
  ];
  if(topic==="weather")return[
