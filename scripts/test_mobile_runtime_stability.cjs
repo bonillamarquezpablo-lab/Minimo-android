@@ -111,7 +111,8 @@ assert.ok(builder.includes('smith_hammer_marker') && builder.includes('SmithHamm
 assert.ok(builder.includes('tree_rebuild_start =') &&
   builder.includes('mature-scots-pine-tree.glb') &&
   builder.includes('mature-norway-spruce-tree.glb') &&
-  builder.includes('oak-detailed.glb') &&
+  builder.includes('oak-textured.glb') &&
+  builder.includes('mergeStaticDecorByMaterial') &&
   builder.includes('await loadForestTreeTemplates()') &&
   builder.includes("instantiateModelsToScene(name=>name+'_Forest_'+serial,false)") &&
   builder.includes('requiresTexture:true'),

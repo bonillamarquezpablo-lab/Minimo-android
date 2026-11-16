@@ -18,8 +18,8 @@ Esta distribución se construye desde GitHub Actions y copia los recursos al paq
 ## Modelos arbóreos CC0
 - Pino silvestre adulto: Innerscene, GLB con mapas de textura y materiales; CC0 1.0. Empaquetado en `assets/models/forest/mature-scots-pine-tree.glb`. Fuente: https://www.innerscene.com/tools/library/3d-parts/mature-scots-pine-tree-280307e1
 - Pícea de Noruega adulta: Innerscene, GLB con mapas de textura y materiales; CC0 1.0. Empaquetado en `assets/models/forest/mature-norway-spruce-tree.glb`. Fuente: https://www.innerscene.com/tools/library/3d-parts/mature-norway-spruce-tree-48c2566f
-- Roble urbano de hojas detalladas: Innerscene, GLB CC0 1.0 con geometría de follaje detallada; empaquetado en `assets/models/forest/oak-detailed.glb`. Fuente: https://www.innerscene.com/tools/library/3d-parts/oak-street-tree-detailed-leaves-a273fef9
-- Los tres modelos se descargan y validan durante la compilación. La partida solo utiliza archivos locales; se conservan materiales y UV y se instancian plantillas compartidas entre árboles para limitar duplicaciones.
+- Roble: Grab3D, GLB con texturas PBR 2K (color base, rugosidad, metálico y normal) y licencia CC0 1.0; empaquetado en `assets/models/forest/oak-textured.glb`. Fuente: https://grab3d.com/models/nature/oak-tree/ (GLB: https://grab3d.com/dl/oak-tree/oak-tree.glb)
+- Los tres modelos se descargan y validan durante la compilación; pino, pícea y roble incluyen mapas de textura empaquetados. La partida solo utiliza archivos locales; se conservan materiales y UV y se instancian plantillas compartidas entre árboles para limitar duplicaciones.
 
 ## Audio CC0
 - Pasos de hojas, barro, grava, piedra y madera, y barridos de batalla: TinyWorlds / Kenney, CC0 1.0, distribuidos por Open Game SFX Index. https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud

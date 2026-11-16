@@ -32,8 +32,10 @@ function inspectGlb(relative,minimumBytes,requiresTexture){
 const models=[
  inspectGlb('assets/models/forest/mature-scots-pine-tree.glb',500000,true),
  inspectGlb('assets/models/forest/mature-norway-spruce-tree.glb',500000,true),
- inspectGlb('assets/models/forest/oak-detailed.glb',1000000,false)
+ inspectGlb('assets/models/forest/oak-textured.glb',1500000,true)
 ];
+assert.ok(models[2].meshes<=8,'Oak source mesh count is not compact enough for a mobile forest');
+assert.match(html,/mergeStaticDecorByMaterial/,'Each static GLB tree must be merged by PBR material before rendering');
 const gull=path.join(dist,'assets/models/Seagull.glb');
 assert.ok(fs.existsSync(gull),'Falta GLB de gaviota');
 const gullData=fs.readFileSync(gull);

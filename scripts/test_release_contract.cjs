@@ -33,7 +33,8 @@ const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell
 assert.equal(expectedVersion,"0.6.313","The release validator must target the packaged 0.6.313 release.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
   buildSite.includes("mature-norway-spruce-tree.glb") &&
-  buildSite.includes("oak-detailed.glb") &&
+  buildSite.includes("oak-textured.glb") &&
+  buildSite.includes("mergeStaticDecorByMaterial") &&
   buildSite.includes("await loadForestTreeTemplates()"),
   "The release must package and block on all three complete forest models.");
 assert.ok(buildSite.includes("targetGullMaxExtentMeters=.78") &&
