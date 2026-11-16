@@ -108,6 +108,10 @@ assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGul
 assert.ok(builder.includes('smith_hammer_marker') && builder.includes('SmithHammer_') &&
   builder.includes('Keep the smith\'s hands clear'),
   'Rigid civilian hammer geometry must be removed from animated hand/forearm bones.');
+assert.ok(builder.includes('const glbTimingRecords=[];') &&
+  builder.includes('window.__elSinNombreGlbTimings=glbTimingRecords;') &&
+  builder.includes('glb_timing_declaration_marker'),
+  'The GLB timing registry must be initialized at startGame entry before any forest template imports use timedGlbStage.');
 assert.ok(builder.includes('tree_rebuild_start') && builder.includes('forestTreeAssetSpecs') &&
   builder.includes('loadForestTreeTemplates') && builder.includes('instantiateModelsToScene') &&
   builder.includes('mergeStaticDecorByMaterial(canopy,\'NorseForest_\'+kind)') &&
