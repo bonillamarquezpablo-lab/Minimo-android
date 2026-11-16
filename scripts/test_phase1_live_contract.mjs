@@ -20,7 +20,7 @@ for (const id of [
   assert.ok(html.includes('id="' + id + '"'), 'Inspector HTML is missing ' + id);
   assert.ok(source.includes("'" + id + "'"), 'Inspector script does not use ' + id);
 }
-assert.match(html, /phase1-live\.js\?v=3/);
+assert.match(html, /phase1-live\\.js\\?v=4/);
 
 assert.match(source, /getGameWorldInspectionSnapshot/);
 assert.match(source, /analyzeWorldInspectionSnapshot/);
