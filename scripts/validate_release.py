@@ -441,6 +441,9 @@ def main() -> None:
         "identityStartupTriggered=false",
         "async function prepareAmbientSmokePuffs()",
         "await prepareAmbientSmokePuffs();",
+        "habitableAuditAccumulator=0",
+        "const initialHabitableAudit=auditHabitableStructures(true)",
+        "recordStartupTask('Auditoría inicial de asentamientos'",
         "if(!source.puffs)createAmbientSmokePuffs(source,si);",
         "continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true})",
     )
