@@ -54,8 +54,8 @@ DOWNLOADS = {
     "assets/models/forest/mature-norway-spruce-tree.glb": (
         "https://files.innerscene.com/library/mature-norway-spruce-tree-48c2566f/a285b3017c941e802efc/mature-norway-spruce-tree.glb", 500_000, "glb"
     ),
-    "assets/models/forest/oak-detailed.glb": (
-        "https://files.innerscene.com/library/oak-street-tree-detailed-leaves-a273fef9/4a26d0fea7474835bf61/oak-detailed.glb", 1_000_000, "glb"
+    "assets/models/forest/oak-textured.glb": (
+        "https://grab3d.com/dl/oak-tree/oak-tree.glb", 1_500_000, "glb"
     ),
     "assets/models/wildlife/Deer.glb": (
         "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Deer.glb", 100_000, "glb"
@@ -367,7 +367,7 @@ def main() -> None:
     tree_rebuild_code = """ const forestTreeAssetSpecs=[
   {kind:'pine',label:'Pino silvestre',url:'./assets/models/forest/mature-scots-pine-tree.glb',targetHeight:6.2,requiresTexture:true},
   {kind:'spruce',label:'Pícea de Noruega',url:'./assets/models/forest/mature-norway-spruce-tree.glb',targetHeight:5.8,requiresTexture:true},
-  {kind:'oak',label:'Roble de hojas detalladas',url:'./assets/models/forest/oak-detailed.glb',targetHeight:5.6,requiresTexture:false}
+  {kind:'oak',label:'Roble PBR 2K',url:'./assets/models/forest/oak-textured.glb',targetHeight:5.6,requiresTexture:true}
  ];
  const forestTreeTemplates=new Map();
  async function loadForestTreeTemplates(){
@@ -415,12 +415,18 @@ def main() -> None:
   const importedRoots=inst.rootNodes||[];
   if(!importedRoots.length)throw new Error('El modelo forestal no produjo nodos raíz: '+spec.spec.label);
   importedRoots.forEach(node=>{node.parent=visualRoot;node.setEnabled(true);});
-  const meshes=getRootMeshes(importedRoots);
-  if(!meshes.length)throw new Error('El modelo forestal no produjo geometría: '+spec.spec.label);
-  const bounds=boundsForMeshes(meshes),sourceHeight=Math.max(.001,bounds.height);
+  const sourceMeshes=getRootMeshes(importedRoots);
+  if(!sourceMeshes.length)throw new Error('El modelo forestal no produjo geometría: '+spec.spec.label);
+  const bounds=boundsForMeshes(sourceMeshes),sourceHeight=Math.max(.001,bounds.height);
   const placedScale=(spec.spec.targetHeight/sourceHeight)*scale,pivotY=sourceHeight*.58;
   visualRoot.position.set(-(bounds.min.x+bounds.max.x)*.5,-bounds.min.y-pivotY,-(bounds.min.z+bounds.max.z)*.5);
-  canopy.position.y=pivotY;root.scaling.setAll(placedScale);
+  canopy.position.y=pivotY;
+  // Merge the imported static model by PBR material to reduce tree draw calls without losing UVs or textures.
+  mergeStaticDecorByMaterial(visualRoot,'NorseForestGLB_'+kind+'_'+serial);
+  const meshes=visualRoot.getChildMeshes(false).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0);
+  if(!meshes.length)throw new Error('El modelo forestal no pudo fusionarse en mallas renderizables: '+spec.spec.label);
+  if(meshes.length>Math.max(4,sourceMeshes.length))throw new Error('La optimización del árbol aumentó el número de mallas: '+spec.spec.label);
+  root.scaling.setAll(placedScale);
   const baseYaw=rand(0,Math.PI*2);root.rotation.y=baseYaw;
   root.position=v(x,renderedTerrainSurfaceAt(x,z),z);
   meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=false;});
