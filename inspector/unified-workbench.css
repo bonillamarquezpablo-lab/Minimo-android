@@ -337,3 +337,80 @@ body.inspector-expert .expert-only{display:initial}
 body.inspector-expert .field-row.expert-only{display:grid}
 body.inspector-expert .token-gear.expert-only{display:grid}
 body.inspector-expert label.expert-only{display:flex}
+
+
+/* Clear diagnostic reading: short summary first, full evidence remains expandable. */
+.wb-diagnosis-panel{margin:12px 0 16px;padding:17px;border-color:rgba(206,174,128,.28);background:linear-gradient(145deg,rgba(24,38,49,.97),rgba(12,23,35,.96))}
+.wb-diagnosis-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.wb-diagnosis-header h3{margin:5px 0 5px;color:#f3e5cf;font-size:1.08rem;line-height:1.35}
+.wb-diagnosis-header p{margin:0;max-width:820px;color:var(--muted,#a4b2c3);font-size:.78rem;line-height:1.5}
+.wb-diagnosis-confidence{flex:0 0 auto;max-width:190px;padding:7px 10px;border:1px solid rgba(145,165,189,.2);border-radius:9px;background:rgba(145,165,189,.09);color:#c8d5df;font-size:.68rem;font-weight:800;line-height:1.4;text-align:center}
+.wb-diagnosis-needs-attention{border-color:rgba(221,166,91,.38);background:rgba(153,103,42,.17);color:#f0c98c}
+.wb-diagnosis-no-major-drop-observed{border-color:rgba(103,179,145,.32);background:rgba(54,124,94,.15);color:#add9c0}
+.wb-diagnosis-insufficient-data{border-color:rgba(145,165,189,.18);background:rgba(145,165,189,.08);color:#c8d5df}
+.wb-diagnosis-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:13px 0}
+.wb-diagnosis-facts>span{display:flex;flex-direction:column;gap:3px;padding:9px 11px;border:1px solid rgba(145,165,189,.13);border-radius:10px;background:rgba(6,17,29,.45)}
+.wb-diagnosis-facts strong{color:#f0dfc3;font-size:1rem;font-variant-numeric:tabular-nums}
+.wb-diagnosis-facts small{color:var(--muted,#a4b2c3);font-size:.65rem;line-height:1.35}
+.wb-diagnosis-columns{display:grid;grid-template-columns:1fr 1fr;gap:9px;min-width:0}
+.wb-diagnosis-subcard{min-width:0;padding:12px;border:1px solid rgba(145,165,189,.13);border-radius:12px;background:rgba(5,15,26,.42)}
+.wb-diagnosis-subcard h4,.wb-diagnosis-extra h4{margin:0 0 9px;color:#e9d7b9;font-size:.75rem;line-height:1.35}
+.wb-diagnosis-stage{padding:7px 0;border-top:1px solid rgba(145,165,189,.1)}
+.wb-diagnosis-stage:first-child{border-top:0;padding-top:0}
+.wb-diagnosis-stage>div:first-child{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.wb-diagnosis-stage strong{color:#e6edf5;font-size:.71rem;line-height:1.4}
+.wb-diagnosis-stage>div:first-child span{flex:0 0 auto;color:#f0d5ad;font-size:.7rem;font-weight:800;font-variant-numeric:tabular-nums}
+.wb-diagnosis-track{height:5px;margin:5px 0;border-radius:99px;background:rgba(145,165,189,.13);overflow:hidden}
+.wb-diagnosis-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5aaea6,#d9ad73)}
+.wb-diagnosis-stage small,.wb-diagnosis-moment small{display:block;color:var(--muted,#9eafc1);font-size:.64rem;line-height:1.45;overflow-wrap:anywhere}
+.wb-diagnosis-moment{display:grid;grid-template-columns:23px minmax(0,1fr);gap:8px;padding:8px 0;border-top:1px solid rgba(145,165,189,.1)}
+.wb-diagnosis-moment:first-child{border-top:0;padding-top:0}
+.wb-diagnosis-moment-number{display:grid;place-items:center;width:22px;height:22px;border-radius:7px;background:rgba(207,157,100,.16);color:#eac58e;font-size:.67rem;font-weight:800}
+.wb-diagnosis-moment strong{display:block;margin-bottom:3px;color:#e5edf5;font-size:.7rem;line-height:1.35}
+.wb-diagnosis-empty{margin:0;color:var(--muted,#9eafc1);font-size:.71rem;line-height:1.5}
+.wb-diagnosis-action{margin-top:10px;padding:11px 13px;border-left:3px solid #c99761;border-radius:0 9px 9px 0;background:rgba(173,125,75,.1)}
+.wb-diagnosis-action strong{display:block;color:#f0d7b4;font-size:.72rem}
+.wb-diagnosis-action p{margin:4px 0 0;color:#c7d0d9;font-size:.72rem;line-height:1.5}
+.wb-diagnosis-extra{margin-top:10px;padding-top:9px;border-top:1px solid rgba(145,165,189,.13)}
+.wb-diagnosis-extra summary{cursor:pointer;color:#d9bd96;font-size:.7rem;font-weight:800}
+.wb-diagnosis-extra ul{margin:6px 0 12px;padding-left:18px;color:var(--muted,#a4b2c3);font-size:.67rem;line-height:1.55}
+.wb-diagnosis-extra li{padding:2px 0;overflow-wrap:anywhere}
+.wb-diagnosis-extra li strong{color:#e6d4ba}
+.wb-diagnosis-extra>div>p{margin:7px 0;color:var(--muted,#a4b2c3);font-size:.67rem;line-height:1.5}
+.wb-diagnosis-note{padding-top:7px;border-top:1px solid rgba(145,165,189,.1);font-style:italic}
+@media(max-width:620px){
+ .wb-diagnosis-panel{padding:13px}
+ .wb-diagnosis-header{display:grid;grid-template-columns:1fr;gap:8px}
+ .wb-diagnosis-confidence{justify-self:start;max-width:100%}
+ .wb-diagnosis-facts{gap:6px}
+ .wb-diagnosis-facts>span{padding:8px}
+ .wb-diagnosis-facts strong{font-size:.9rem}
+ .wb-diagnosis-facts small{font-size:.6rem}
+ .wb-diagnosis-columns{grid-template-columns:1fr}
+ .wb-diagnosis-subcard{padding:10px}
+}
+
+
+/* Guided mode keeps the entry screen focused; the same links and data stay in the expert view. */
+body.inspector-guided .topbar .nav{display:none}
+body.inspector-guided .hero{padding-block:clamp(14px,2vw,24px);margin-bottom:12px}
+body.inspector-guided .hero-copy h1{font-size:clamp(1.65rem,3vw,2.25rem);margin-bottom:7px}
+body.inspector-guided .hero-copy p{max-width:62ch;font-size:.86rem;line-height:1.45}
+body.inspector-guided .hero-aside{display:none}
+body.inspector-guided .overview{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+body.inspector-guided .overview-card{min-height:0;padding:10px 12px}
+body.inspector-guided .overview-label{font-size:.62rem}
+body.inspector-guided .overview-value{font-size:1.18rem}
+body.inspector-guided .overview-foot{font-size:.62rem;line-height:1.35}
+body.inspector-guided .section-heading{margin-bottom:12px;gap:12px}
+body.inspector-guided .section-heading h2{font-size:1.24rem}
+body.inspector-guided .section-heading p{margin-top:6px;font-size:.76rem;line-height:1.45}
+body.inspector-guided .panel{padding:14px}
+body.inspector-guided .panel-title h3{font-size:1rem}
+@media(max-width:620px){
+ body.inspector-guided .overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body.inspector-guided .hero{padding-block:12px}
+ body.inspector-guided .hero-copy p{font-size:.8rem}
+ body.inspector-guided .section-heading p{font-size:.73rem}
+ body.inspector-guided .panel{padding:11px}
+}
