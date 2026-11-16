@@ -3704,14 +3704,20 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
  function smooth01(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);}
  function clamp01(value){return Math.max(0,Math.min(1,Number(value)||0));}
  updateOceanDepthGradient();
- function createIslandTerrain(is,index){
+ async function createIslandTerrain(is,index){
   // Babylon's native Ground mesh guarantees a stable, upward-facing heightfield.
   // Vertices outside the island are sunk beneath the sea, so no square island edge is visible.
   const subdivisions=Math.min(360,Math.max(112,Math.ceil(is.r*2/(isTouchDevice?.42:.36))));
   const mesh=B.MeshBuilder.CreateGround('IslandHeightfield_'+index,{width:is.r*2,height:is.r*2,subdivisions,updatable:true},scene);
   const positions=mesh.getVerticesData(B.VertexBuffer.PositionKind);
-  const colors=[];
-  for(let i=0;i<positions.length;i+=3){
+  // A fixed-size typed buffer avoids millions of boxed array entries and repeated growth.
+  const colors=new Float32Array((positions.length/3)*4);
+  let colorCursor=0;
+  const terrainStartupSliceBudgetMs=isConstrainedMobile?4:7;
+  let terrainSliceStartedAt=performance.now();
+  const totalVertices=positions.length/3;
+  for(let vertexIndex=0;vertexIndex<totalVertices;vertexIndex++){
+   const i=vertexIndex*3;
    const lx=positions[i],lz=positions[i+2],d=Math.hypot(lx,lz),wx=is.x+lx,wz=is.z+lz;
    const coastNoise=(terrainValueNoise(wx*.12+17.2,wz*.12-8.4)-.5)*.008+Math.sin(wx*.17+wz*.11)*.0018+(terrainValueNoise(wx*.44+3.7,wz*.44-8.1)-.5)*.002;
    const coastDistance=d+coastNoise*is.r;
@@ -3752,7 +3758,19 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
    r=r*(1-beach)+sand[0]*beach;g=g*(1-beach)+sand[1]*beach;b=b*(1-beach)+sand[2]*beach;
    const shoreGrain=(terrainValueNoise(wx*.48+7.1,wz*.48-12.6)-.5)*.026*beach;
    r+=shoreGrain;g+=shoreGrain*.92;b+=shoreGrain*.78;
-   colors.push(Math.max(.30,Math.min(1,r)),Math.max(.30,Math.min(1,g)),Math.max(.27,Math.min(1,b)),1);
+   colors[colorCursor++]=Math.max(.30,Math.min(1,r));
+   colors[colorCursor++]=Math.max(.30,Math.min(1,g));
+   colors[colorCursor++]=Math.max(.27,Math.min(1,b));
+   colors[colorCursor++]=1;
+   // The old loop processed every vertex in one uninterrupted task. Yield after small
+   // batches so mobile browsers can paint the loading screen and process input.
+   if((vertexIndex&63)===63&&performance.now()-terrainSliceStartedAt>=terrainStartupSliceBudgetMs){
+    const fraction=(vertexIndex+1)/Math.max(1,totalVertices);
+    setLoadingProgress(40+((index+fraction)/Math.max(1,land.length))*8,
+     'Terreno 3D · Isla '+(index+1)+'/'+land.length+' · '+Math.round(fraction*100)+'%');
+    await yieldStartupFrame();
+    terrainSliceStartedAt=performance.now();
+   }
   }
   mesh.updateVerticesData(B.VertexBuffer.PositionKind,positions,false,false);
   mesh.setVerticesData(B.VertexBuffer.ColorKind,colors,true,4);
@@ -3787,12 +3805,16 @@ M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset
   islandTerrainMeshes.push(mesh);
   return mesh;
  }
- land.forEach((is,i)=>{
+ for(let i=0;i<land.length;i++){
+  const is=land[i],terrainStartedAt=performance.now();
   // Lower the sandy shore foundation below the heightfield; it must never cover the grass.
   let shore=B.MeshBuilder.CreateCylinder('shore'+i,{height:2.5,diameterTop:is.r*2,diameterBottom:(is.r+5)*2,tessellation:64},scene);
   shore.position=v(is.x,-4.30,is.z);shore.material=M.sand;shore.isPickable=false;shore.receiveShadows=false;shore.castShadows=false;shoreFoundationMeshes[i]=shore;
-  createIslandTerrain(is,i);
- });
+  const terrainMesh=await createIslandTerrain(is,i);
+  recordStartupTask('Terreno 3D · isla '+(i+1),terrainStartedAt,performance.now(),'ready',{subdivisions:terrainMesh.metadata?.subdivisions||null,vertices:terrainMesh.getTotalVertices?.()||0});
+  setLoadingProgress(48+((i+1)/Math.max(1,land.length))*2,'Terreno 3D · '+(i+1)+'/'+land.length+' islas listas');
+  await yieldStartupFrame();
+ }
  // The playable beach is a dedicated textured layer over the heightfield, with soft edges
  // and a moisture/foam state per shoreline sample. It uses the same analytical terrain height,
  // so it never changes the walkable collision profile.
