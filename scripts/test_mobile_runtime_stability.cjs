@@ -84,6 +84,8 @@ assert.ok(builder.includes('isMobilePeakMemorySensitive=!!(isIOSDevice') && buil
 assert.ok(builder.includes('civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive'), 'iOS/Adreno 650 startup must not prefetch a second large NPC GLB concurrently.');
 assert.ok(builder.includes('wildlifeBlobs.delete(kind)') && builder.includes('startupWildlifeCompressedBytes'), 'Wildlife source GLBs must be released after their complete species batch is imported.');
 assert.ok(builder.includes('npcStartupPromise=startNpcHumanModels();'), 'Memory-sensitive startup must load the protagonist before importing the NPC roster.');
+assert.ok(builder.includes('prepareAmbientSmokePuffs') && builder.includes("await prepareAmbientSmokePuffs();"), 'Smoke particle meshes and materials must be prepared during loading rather than the first ambient update.');
+assert.ok(builder.includes('if(!source.puffs)createAmbientSmokePuffs(source,si);'), 'The ambient update may only create a late smoke pool as a fallback; prewarmed emitters must reuse it.');
 assert.ok(builder.includes('faunaFailures.push({name:\'Gaviotas 3D\''), 'Memory-sensitive startup must stage all birds after the full wildlife set instead of overlapping import peaks.');
 assert.ok(validator.includes('mobilePeakMemorySensitive:isMobilePeakMemorySensitive'), 'Packaged session reports must expose the memory scheduling policy.');
 assert.ok(validator.includes('wildlifeCompressedBytesReleased:startupWildlifeCompressedBytes'), 'Packaged reports must retain measured wildlife source-byte totals after releasing blobs.');
