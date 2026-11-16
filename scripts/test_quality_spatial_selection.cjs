@@ -28,7 +28,6 @@ for(const marker of [
   'buildSpatialSelectionOctree();',
   'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
   "get:()=>({...spatialSelectionStats})",
-  'Diagnostics are read through the on-demand getter; no publication or allocation here.',
   'meshSelectionOctreeEnabled:spatialSelectionStats.enabled',
   'meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount',
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
