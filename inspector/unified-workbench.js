@@ -121,15 +121,28 @@
         <article class="wb-report-card wb-quick-read" id="wbQuickRead">
           <div class="wb-card-eyebrow">RESUMEN EN LENGUAJE CLARO</div>
           <h3 id="wbQuickReadTitle">Esperando datos de la partida</h3>
-          <p id="wbQuickReadBody">Cuando termines una partida, aquí aparecerá lo que ha ido bien y lo que merece atención.</p>
+          <p id="wbQuickReadBody">Aquí verás qué ha pasado, dónde mirar y cuál es el primer paso para corregirlo.</p>
         </article>
         <div class="wb-report-metrics" id="wbReportMetrics">
           <article class="wb-stat"><span>FPS medios</span><strong>—</strong><small>Esperando informe</small></article>
           <article class="wb-stat"><span>FPS mínimos</span><strong>—</strong><small>Esperando informe</small></article>
           <article class="wb-stat"><span>Fluidez</span><strong>—</strong><small>Esperando informe</small></article>
         </div>
+        <section class="wb-report-card wb-diagnosis-panel" id="wbReportDiagnosis" aria-live="polite">
+          <div class="wb-diagnosis-header">
+            <div><div class="wb-card-eyebrow">DIAGNÓSTICO CLARO</div><h3 id="wbDiagnosisHeadline">Esperando las mediciones</h3><p id="wbDiagnosisExplanation">Al terminar una partida aparecerán aquí las pistas para encontrar los problemas.</p></div>
+            <span class="wb-diagnosis-confidence" id="wbDiagnosisConfidence">Sin datos</span>
+          </div>
+          <div class="wb-diagnosis-facts" id="wbDiagnosisFacts"></div>
+          <div class="wb-diagnosis-columns">
+            <section class="wb-diagnosis-subcard"><h4>Qué parte consume más tiempo</h4><div id="wbDiagnosisStages"><p>Esperando lecturas.</p></div></section>
+            <section class="wb-diagnosis-subcard"><h4>Cuándo se notaron los bajones</h4><div id="wbDiagnosisMoments"><p>Esperando lecturas.</p></div></section>
+          </div>
+          <div class="wb-diagnosis-action" id="wbDiagnosisAction"><strong>Primer paso recomendado</strong><p>Esperando el análisis de la partida.</p></div>
+          <details class="wb-diagnosis-extra"><summary>Ver pruebas, errores y datos que faltan</summary><div id="wbDiagnosisEvidence"><p>Las mediciones detalladas aparecerán aquí.</p></div></details>
+        </section>
         <details class="wb-report-full" id="wbReportMore">
-          <summary>Ver el informe completo, especialistas y mediciones avanzadas</summary>
+          <summary>Abrir todas las comprobaciones y herramientas avanzadas</summary>
           <p>Este historial pertenece a este navegador y perfil. Para reunir partidas de otros dispositivos, importa aquí su informe JSON.</p>
           <div class="wb-report-grid">
             <article class="wb-report-card wb-report-primary" id="wbReportVerdict">
@@ -731,6 +744,125 @@
     return intelligence;
   }
 
+  function legacyPerformanceDiagnosis(report, summary) {
+    const samples = Array.isArray(report.samples) ? report.samples : [];
+    const targetFps = finite(summary.targetFps) || 60;
+    const frameBudgetMs = 1000 / targetFps;
+    const p95Values = valuesAt(samples,"frameTiming.p95Ms");
+    const fpsValues = valuesAt(samples,"fps");
+    const p95Median = finite(summary.frameTimeMs && summary.frameTimeMs.p95Median) ?? median(p95Values);
+    const candidates = [
+      {id:"world-update",label:"Actualización del mundo",source:"CPU del juego",values:valuesAt(samples,"cpu.worldUpdateMs")},
+      {id:"render-preparation",label:"Preparación de gráficos",source:"CPU del motor",values:valuesAt(samples,"cpu.renderCpuMs")},
+      {id:"gpu-frame",label:"Procesamiento gráfico",source:"GPU medida",values:valuesAt(samples,"gpu.frameMs")}
+    ].map(item=>({
+      id:item.id,label:item.label,source:item.source,
+      medianMs:median(item.values),
+      maximumMs:item.values.length?Math.max(...item.values):null,
+      sampleCount:item.values.length,
+      budgetSharePercent:median(item.values)===null?null:Number((median(item.values)/frameBudgetMs*100).toFixed(1))
+    })).filter(item=>item.medianMs!==null).sort((a,b)=>b.medianMs-a.medianMs);
+    const hasFrameDrops=(p95Median!==null&&p95Median>frameBudgetMs*1.2)||
+      (fpsValues.length&&Math.min(...fpsValues)<targetFps*.8);
+    const leading=candidates.find(item=>item.medianMs>=frameBudgetMs*.12)||null;
+    const phases=Array.isArray(summary.worldPhaseHotspots)?summary.worldPhaseHotspots:[];
+    const worstMoments=samples.map(sample=>{
+      const p95=finite(sample.frameTiming&&sample.frameTiming.p95Ms);
+      const fps=finite(sample.fps);
+      const max=finite(sample.frameTiming&&sample.frameTiming.maxMs);
+      const score=Math.max(p95===null?0:p95/frameBudgetMs,fps&&fps>0?targetFps/fps*.85:0,max===null?0:max/frameBudgetMs*.35);
+      return {capturedAt:sample.capturedAt||null,fps,p95Ms:p95,p99Ms:finite(sample.frameTiming&&sample.frameTiming.p99Ms),
+        maxFrameMs:max,score,location:sample.playerPosition||null,lighting:sample.atmosphere?(finite(sample.atmosphere.night)>=.55?"Noche":"Día"):null,topPhase:null};
+    }).filter(item=>item.score>=1.15).sort((a,b)=>b.score-a.score).slice(0,8);
+    const longTasks=Array.isArray(report.longTasks)?report.longTasks:[];
+    const runtimeErrors=Array.isArray(report.runtimeErrors)?report.runtimeErrors:[];
+    const anomalies=Array.isArray(report.anomalies)?report.anomalies:[];
+    const primaryBottleneck=hasFrameDrops&&leading?{
+      ...leading,confidence:"baja",explanation:"Es la parte con más tiempo medido; debe comprobarse con otra partida comparable."
+    }:null;
+    const coverage=finite(summary.sampleCoverage&&summary.sampleCoverage.coverageRate);
+    const enough=samples.length>=5&&p95Median!==null;
+    return {
+      schemaVersion:1,
+      status:!enough?"insufficient-data":hasFrameDrops?"needs-attention":"no-major-drop-observed",
+      headline:!enough?"Faltan datos para localizar la causa":!hasFrameDrops?"No se observa una caída importante en esta partida":primaryBottleneck?"Principal pista: "+primaryBottleneck.label:"Se detectan tirones, pero falta evidencia para atribuirlos",
+      explanation:!enough?"Este informe antiguo conserva las lecturas, pero no reúne suficientes muestras para localizar el origen.":hasFrameDrops?"Las pistas se ordenan por tiempo medido; una coincidencia no demuestra por sí sola la causa.":"Las lecturas disponibles no muestran una caída importante del ritmo de fotogramas.",
+      targetFps,frameBudgetMs,sampleCount:samples.length,coverageRate:coverage,confidence:"baja",primaryBottleneck,
+      rankedStages:candidates,phaseCosts:phases,worstMoments,
+      longTasks:{supported:summary.longTasks&&summary.longTasks.supported===true,count:longTasks.length,maximumMs:longTasks.length?Math.max(...longTasks.map(item=>finite(item.durationMs)||0)):null,top:longTasks.slice(0,8)},
+      runtimeErrors:{count:runtimeErrors.length,recent:runtimeErrors.slice(-12)},
+      anomalies:{count:anomalies.length,criticalCount:anomalies.filter(item=>item.severity==="critical").length,worst:anomalies.slice(0,8)},
+      firstAction:primaryBottleneck?"Revisar «"+primaryBottleneck.label+"» en la misma zona, sin bajar la calidad gráfica.":"Repetir la misma ruta con más mediciones y comparar el tramo donde aparezcan los tirones.",
+      limitations:["Informe de una versión anterior: el desglose detallado por fases puede no estar disponible."]
+    };
+  }
+
+  function renderPerformanceDiagnosis(report, summary) {
+    const diagnosis = summary.performanceDiagnosis || legacyPerformanceDiagnosis(report,summary);
+    const headline=$("wbDiagnosisHeadline"), explanation=$("wbDiagnosisExplanation");
+    const confidence=$("wbDiagnosisConfidence"), facts=$("wbDiagnosisFacts");
+    const stageHost=$("wbDiagnosisStages"), momentsHost=$("wbDiagnosisMoments");
+    const actionHost=$("wbDiagnosisAction"), evidenceHost=$("wbDiagnosisEvidence");
+    if(!headline||!explanation||!confidence||!facts||!stageHost||!momentsHost||!actionHost||!evidenceHost)return diagnosis;
+    headline.textContent=diagnosis.headline||"Diagnóstico no disponible";
+    explanation.textContent=diagnosis.explanation||"No hay una explicación disponible para estas mediciones.";
+    const status=diagnosis.status==="needs-attention"?"Hay bajones que revisar":
+      diagnosis.status==="no-major-drop-observed"?"Sin caída importante observada":"Faltan mediciones";
+    confidence.className="wb-diagnosis-confidence "+(diagnosis.status==="needs-attention"?"wb-diagnosis-needs-attention":diagnosis.status==="no-major-drop-observed"?"wb-diagnosis-no-major-drop-observed":"wb-diagnosis-insufficient-data");
+    confidence.textContent=(diagnosis.confidence==="media"?"Pista con varias lecturas":"Orientativo") + " · " + status;
+    const coverage=finite(diagnosis.coverageRate);
+    facts.innerHTML=[
+      '<span><strong>'+esc(fmt(diagnosis.sampleCount,0))+'</strong><small>lecturas</small></span>',
+      '<span><strong>'+esc(diagnosis.frameBudgetMs===null?"—":fmt(diagnosis.frameBudgetMs,1)+" ms")+'</strong><small>tiempo disponible por imagen</small></span>',
+      '<span><strong>'+esc(coverage===null?"—":fmt(coverage*100,0)+"%")+'</strong><small>cobertura de la partida</small></span>'
+    ].join("");
+    const stages=Array.isArray(diagnosis.rankedStages)?diagnosis.rankedStages:[];
+    stageHost.innerHTML=stages.length?stages.slice(0,4).map(item=>{
+      const value=finite(item.medianMs), share=finite(item.budgetSharePercent);
+      const width=share===null?0:Math.max(2,Math.min(100,share));
+      const detail=(value===null?"Sin medir":fmt(value,2)+" ms de mediana")+
+        (item.maximumMs===null||item.maximumMs===undefined?"":" · pico "+fmt(item.maximumMs,2)+" ms")+
+        (item.sampleCount===null||item.sampleCount===undefined?"":" · "+fmt(item.sampleCount,0)+" lecturas");
+      return '<article class="wb-diagnosis-stage"><div><strong>'+esc(item.label||"Medición")+'</strong><span>'+esc(value===null?"Sin medir":fmt(value,2)+" ms")+'</span></div>'+
+        '<div class="wb-diagnosis-track"><i style="width:'+width.toFixed(1)+'%"></i></div><small>'+esc(detail)+'</small></article>';
+    }).join(""):'<p class="wb-diagnosis-empty">No se pudo medir el tiempo de los sistemas internos en esta partida.</p>';
+    const moments=Array.isArray(diagnosis.worstMoments)?diagnosis.worstMoments:[];
+    momentsHost.innerHTML=moments.length?moments.slice(0,3).map((item,index)=>{
+      const date=item.capturedAt&&Number.isFinite(Date.parse(item.capturedAt))
+        ?new Date(item.capturedAt).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"Hora no disponible";
+      const location=item.location||{};
+      const island=finite(location.islandIndex);
+      const place=island!==null?"Isla "+(island+1):"Zona no identificada";
+      const coords=finite(location.x)!==null&&finite(location.z)!==null?" · X "+fmt(location.x,1)+" / Z "+fmt(location.z,1):"";
+      const phase=item.topPhase&&item.topPhase.label?" · "+item.topPhase.label:"";
+      return '<article class="wb-diagnosis-moment"><span class="wb-diagnosis-moment-number">'+(index+1)+'</span><div><strong>'+esc(date)+' · '+esc(place)+'</strong><small>'+esc(item.fps===null||item.fps===undefined?"FPS sin medir":fmt(item.fps,0)+" FPS")+
+        (item.p95Ms===null||item.p95Ms===undefined?"":" · "+fmt(item.p95Ms,1)+" ms")+
+        (item.lighting?" · "+esc(item.lighting):"")+'</small><small>'+esc((phase||"")+coords)+'</small></div></article>';
+    }).join(""):'<p class="wb-diagnosis-empty">No se han encontrado tramos claramente lentos en las muestras guardadas. Esto no descarta otros errores del juego.</p>';
+    actionHost.innerHTML='<strong>Primer paso recomendado</strong><p>'+esc(diagnosis.firstAction||"Comparar esta sesión con otra partida equivalente.")+'</p>';
+    const phaseCosts=Array.isArray(diagnosis.phaseCosts)?diagnosis.phaseCosts:[];
+    const longTasks=diagnosis.longTasks&&Array.isArray(diagnosis.longTasks.top)?diagnosis.longTasks.top:[];
+    const errors=diagnosis.runtimeErrors&&Array.isArray(diagnosis.runtimeErrors.recent)?diagnosis.runtimeErrors.recent:[];
+    const anomalies=diagnosis.anomalies||{};
+    const limitations=Array.isArray(diagnosis.limitations)?diagnosis.limitations:[];
+    const phaseHtml=phaseCosts.length?'<h4>Fases internas más costosas</h4><ul>'+phaseCosts.slice(0,10).map(item=>
+      '<li><strong>'+esc(item.label||item.id||"Fase")+'</strong> · media '+esc(item.meanMs===null?"sin medir":fmt(item.meanMs,2)+" ms")+
+      ' · pico '+esc(item.maxMs===null?"sin medir":fmt(item.maxMs,2)+" ms")+'</li>').join("")+'</ul>':'';
+    const tasksHtml=longTasks.length?'<h4>Tareas largas del navegador</h4><ul>'+longTasks.slice(0,6).map(item=>
+      '<li>'+esc(item.durationMs===null?"Duración desconocida":fmt(item.durationMs,1)+" ms")+
+      ' · '+esc(item.capturedAt||"Hora no disponible")+
+      (Array.isArray(item.attribution)&&item.attribution.length?" · "+esc(item.attribution.map(row=>row.name||row.containerName||"recurso").join(", ")):"")+'</li>').join("")+'</ul>':'';
+    const errorsHtml=errors.length?'<h4>Errores y recursos que fallaron</h4><ul>'+errors.slice(0,8).map(item=>
+      '<li><strong>'+esc(item.kind||"Error")+'</strong> · '+esc(item.message||"Sin mensaje")+
+      (item.resourcePath?" · "+esc(item.resourcePath):item.source?" · "+esc(item.source):"")+
+      (finite(item.line)!==null?" · línea "+esc(item.line):"")+'</li>').join("")+'</ul>':'';
+    const anomalyText='<p>'+esc(fmt(anomalies.count||0,0))+' avisos de rendimiento · '+esc(fmt(anomalies.criticalCount||0,0))+' graves.</p>';
+    const limitationHtml=limitations.length?'<h4>Qué no se pudo medir</h4><ul>'+limitations.map(item=>'<li>'+esc(item)+'</li>').join("")+'</ul>':'';
+    evidenceHost.innerHTML=phaseHtml+tasksHtml+errorsHtml+anomalyText+limitationHtml+
+      '<p class="wb-diagnosis-note">'+esc(diagnosis.interpretationNote||"Las mediciones orientan la revisión; no deben sumarse los tiempos de sistemas que trabajan al mismo tiempo.")+'</p>';
+    return diagnosis;
+  }
+
   function renderReport(report,sourceLabel,previousReport=null,intelligence=null) {
     latestReport = Object.assign({}, report, { specialistIntelligence: intelligence || null, observerPatrol: latestPatrolIntelligence || null });
     $("wbReportExport").disabled = false;
@@ -825,29 +957,25 @@
       metricCard("Fluidez",p95===null?"Sin medir":fmt(p95,1)+" ms","Tiempo de fotograma p95");
     $("wbReportState").innerHTML = '<strong>'+esc(sourceLabel||"Informe local")+'</strong><span>'+esc(niceDate(report.startedAt))+' · '+esc(report.gameBuild||"versión desconocida")+' · '+esc(status)+'</span>';
     $("wbReportMeta").textContent = "Partida "+esc(niceDate(report.startedAt))+" · "+fmt(samples.length,0)+" mediciones guardadas.";
-    const quickTitle = avgFps===null ? "No hay mediciones suficientes" :
-      avgFps<15 ? "La partida fue muy lenta" :
-      avgFps<25 ? "La partida perdió mucha fluidez" :
-      avgFps<45 ? "La partida tuvo algunos tirones" : "La partida mantuvo una buena fluidez";
+    const quickDiagnosis = summary.performanceDiagnosis || null;
+    const quickTitle = quickDiagnosis && quickDiagnosis.headline
+      ? quickDiagnosis.headline
+      : avgFps===null ? "No hay mediciones suficientes"
+        : p95!==null && p95>(1000/(finite(summary.targetFps)||60))*1.2
+          ? "La partida tuvo bajones de fluidez" : "No se observa una caída importante";
     const quickLines = [];
-    quickLines.push(avgFps===null ? "No se pudo calcular la media de FPS." : "Media de "+fmt(avgFps,1)+" FPS y mínimo de "+fmt(minFps,0)+" FPS.");
-    if(hasDayNightComparison && dayAverage!==null && nightAverage!==null){
-      quickLines.push("De día: "+fmt(dayAverage,1)+" FPS. De noche: "+fmt(nightAverage,1)+" FPS."+(nightDropPercent!==null&&nightDropPercent>10?" La caída nocturna fue del "+fmt(nightDropPercent,0)+"%.":""));
-    }else{
-      quickLines.push("Aún no hay suficientes mediciones separadas entre día y noche.");
-    }
+    quickLines.push(avgFps===null ? "No se pudo calcular la media de FPS." : "Media: "+fmt(avgFps,1)+" FPS · mínimo: "+fmt(minFps,0)+" FPS.");
+    if(quickDiagnosis && quickDiagnosis.primaryBottleneck && quickDiagnosis.primaryBottleneck.label)
+      quickLines.push("Principal pista: "+quickDiagnosis.primaryBottleneck.label+".");
     const dialogueEvidence = summary.npcDialogue || {};
-    if(Number(dialogueEvidence.sampleCount)>0){
-      quickLines.push("Diálogos: "+fmt(dialogueEvidence.bubblesStarted,0)+" intervenciones iniciadas, "+fmt(dialogueEvidence.projectionSuccesses,0)+" colocaciones visuales correctas y hasta "+fmt(dialogueEvidence.nearbyMaximum,0)+" personajes cercanos.");
-    }else{
-      quickLines.push("No hay todavía mediciones del sistema de diálogos en esta partida.");
+    if(Number(dialogueEvidence.sampleCount)>0) {
+      quickLines.push("Diálogos: "+fmt(dialogueEvidence.bubblesStarted,0)+" iniciados · "+fmt(dialogueEvidence.projectionSuccesses,0)+" textos colocados en pantalla.");
+    } else {
+      quickLines.push("Diálogos: sin mediciones en esta partida.");
     }
-    if(report.recoveredFromEmergency){
-      const omitted = Number(report.recovery && report.recovery.sampleHistoryTruncated || 0);
-      quickLines.push("Esta sesión se recuperó del guardado de emergencia al salir del juego."+(omitted>0?" Se conservaron las últimas 360 muestras; el resumen numérico cubre la sesión completa.":""));
-    }
-    if(runtimeErrors>0)quickLines.push("Se registraron "+fmt(runtimeErrors,0)+" errores durante la partida.");
-    if(anomalies.length>0)quickLines.push("Se detectaron "+fmt(anomalies.length,0)+" avisos de rendimiento.");
+    if(runtimeErrors>0)quickLines.push(fmt(runtimeErrors,0)+" errores registrados.");
+    if(anomalies.length>0)quickLines.push(fmt(anomalies.length,0)+" avisos de rendimiento.");
+    if(report.recoveredFromEmergency)quickLines.push("Informe recuperado automáticamente al cerrar el juego.");
     $("wbQuickReadTitle").textContent = quickTitle;
     $("wbQuickReadBody").textContent = quickLines.join(" ");
     $("wbReportActions").innerHTML = [
@@ -867,6 +995,7 @@
       reportFinding(drawCallsUnverified?"warning":"info","Contador de llamadas de dibujo",drawCallsUnverified?"El campo drawCallsCounterSemantics indica que su significado no está clasificado o verificado. No se usa para decidir qué optimizar hasta calibrar el contador.":"El informe incluye una clasificación del contador; aun así se debe contrastar con el perfilador de Babylon.")
     ].join("");
     $("wbReportFindings").innerHTML = findings;
+    renderPerformanceDiagnosis(report,summary);
     renderWorldEvidence(report.finalWorldInspection || null);
     renderSpecialistIntelligence(intelligence);
     reportComparison(report,previousReport);
