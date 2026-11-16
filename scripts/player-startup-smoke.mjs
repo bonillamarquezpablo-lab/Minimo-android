@@ -285,7 +285,50 @@ async function main() {
     // entry point across the first 20 seconds of actual gameplay.
     const blockingBarrierStartedAt = performance.now();
     await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
-      document.body.classList.contains('boot-failed'), undefined, { timeout: 180000, polling: 250 });
+      document.body.classList.contains('boot-failed'), undefined, { timeout: 180000, polling: 250 }).catch(async error => {
+      const diagnostic = await page.evaluate(() => {
+        let health = null, healthError = '';
+        try { health = typeof window.getGameHealthDebug === 'function' ? window.getGameHealthDebug() : null; }
+        catch (failure) { healthError = String(failure?.stack || failure); }
+        const runtime = health?.runtime || {};
+        const canvas = document.getElementById('renderCanvas');
+        const helper = window.__ELSN_PLAYER_STARTUP_SMOKE__;
+        return {
+          bodyClass: document.body.className,
+          loadingText: document.querySelector('#loadText')?.textContent || null,
+          loadingHelp: document.querySelector('#loadHelp')?.textContent || null,
+          progress: document.querySelector('#loadingProgress')?.style.width || null,
+          bootFailed: document.body.classList.contains('boot-failed'),
+          healthError,
+          gameHealth: health ? {
+            worldUpdateCount: health.worldUpdateCount,
+            worldUpdatePhase: health.worldUpdatePhase,
+            fps: runtime.fps,
+            meshCount: runtime.meshCount,
+            textureCount: runtime.textureCount,
+            startupTimeline: health.startupTimeline || null,
+            lastWorldUpdateFailure: health.lastWorldUpdateFailure || null,
+            errors: health.errors || []
+          } : null,
+          player: helper?.state?.() || null,
+          npcRoster: window.__elSinNombreStartupNpcRoster || null,
+          backgroundModelTasks: window.__elSinNombreBackgroundModelTasks || null,
+          forest: window.__ELSN_FOREST_TREES__ || null,
+          forestInstances: window.__ELSN_FOREST_INSTANCE_ID || 0,
+          sceneWarmup: window.__elSinNombreStartupSceneWarmup || null,
+          resourceGate: window.__ELSN_STARTUP_RESOURCE_GATE__ || null,
+          glbTimings: (window.__elSinNombreGlbTimings || []).slice(-20),
+          startupRecorder: window.__elSinNombreStartupSmoke || null,
+          canvas: canvas ? { width: canvas.width, height: canvas.height } : null
+        };
+      });
+      manifest.blockingBarrierDiagnostic = diagnostic;
+      await fs.promises.writeFile(path.join(OUT, 'blocking-barrier-timeout.json'),
+        JSON.stringify(diagnostic, null, 2));
+      await page.screenshot({ path: path.join(OUT, 'blocking-barrier-timeout.png'), fullPage: true }).catch(() => {});
+      throw new Error('La barrera de arranque no llegó a worldReady en 180 s: ' +
+        JSON.stringify(diagnostic) + ' · ' + String(error?.message || error));
+    });
     manifest.blockingStartupMs = Number((performance.now() - blockingBarrierStartedAt).toFixed(1));
     manifest.startupBarrierState = await page.evaluate(() => ({
       bootFailed: document.body.classList.contains('boot-failed'),
