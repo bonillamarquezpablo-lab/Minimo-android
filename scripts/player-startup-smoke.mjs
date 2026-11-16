@@ -255,6 +255,37 @@ async function main() {
     await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true,
       undefined, { timeout: 180000, polling: 250 });
     manifest.blockingStartupMs = Number((performance.now() - blockingBarrierStartedAt).toFixed(1));
+    manifest.startupResourceGate = await page.evaluate(() => window.__ELSN_STARTUP_RESOURCE_GATE__ || null);
+    assert.ok(manifest.startupResourceGate && manifest.startupResourceGate.ready === true,
+      'La barrera final no confirmó todos los recursos obligatorios: ' + JSON.stringify(manifest.startupResourceGate));
+    const startupResources = manifest.startupResourceGate.resources || {};
+    assert.equal(startupResources.engineReady, true, 'El motor Babylon no figura como listo.');
+    assert.equal(startupResources.gltfImporterReady, true, 'El importador GLB no figura como listo.');
+    assert.equal(startupResources.protagonistReady, true, 'El protagonista GLB no figura como listo.');
+    assert.equal(startupResources.npcRoster?.ready, true, 'El roster NPC obligatorio no figura como listo.');
+    assert.equal(startupResources.soundEffects?.pending, 0, 'Quedan efectos de sonido pendientes.');
+    assert.equal(startupResources.soundEffects?.failed, 0, 'Hay efectos de sonido fallidos.');
+    assert.equal(startupResources.music?.menuReady, true, 'La música del menú no está en estado reproducible.');
+    assert.equal(startupResources.music?.gameplayReady, true, 'La música de partida no está en estado reproducible.');
+    assert.equal(startupResources.music?.decodedToAudioBuffer, false, 'La música no debe decodificarse a AudioBuffer.');
+    assert.equal(startupResources.scene?.status, 'ready', 'La vista inicial y sus shaders no están listos.');
+    assert.equal(startupResources.world?.islands, 13, 'El mundo no expone las 13 islas.');
+    assert.equal(startupResources.world?.profile, 'quality', 'El smoke debe verificar el perfil Calidad sin degradaciones.');
+    assert.equal(startupResources.fauna?.requested, 3, 'No se prepararon los tres animales de la isla inicial.');
+    assert.equal(startupResources.fauna?.loaded, 3, 'No se montaron los tres animales de la isla inicial.');
+    assert.equal(startupResources.fauna?.loadedGulls, 5, 'No se montaron las cinco gaviotas 3D.');
+    assert.ok(startupResources.world?.grassClumps > 0 && startupResources.world?.grassBatches > 0,
+      'La hierba 3D de la zona inicial no se preparó antes de entrar.');
+    manifest.wildlifeCache = await page.evaluate(async () => {
+      const name = 'el-sin-nombre-models-wildlife-6d6de54a-v1';
+      const cache = await caches.open(name);
+      const paths = (await cache.keys()).map(request => new URL(request.url).pathname);
+      return { name, paths: paths.filter(value => /\/(Deer|Stag|Wolf)\.glb$/i.test(value)) };
+    });
+    for (const species of ['Deer.glb', 'Stag.glb', 'Wolf.glb']) {
+      assert.ok(manifest.wildlifeCache.paths.some(value => value.endsWith('/' + species)),
+        'Falta la caché persistente del modelo ' + species + ': ' + JSON.stringify(manifest.wildlifeCache));
+    }
     manifest.memoryEstimate = await page.evaluate(() => window.__elSinNombreStartupMemoryEstimate || null);
     const npcRoster = await page.evaluate(() => window.__elSinNombreStartupNpcRoster || null);
     assert.ok(npcRoster && npcRoster.ready === true,
