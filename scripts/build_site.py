@@ -299,7 +299,7 @@ def main() -> None:
         html = html.replace(old_priority, new_priority, 2)
 
     # All fallback engine/GLTF loader mirrors must match the bundled Babylon version.
-    html, fallback_version_count = re.subn(r"7\\.54\\.3", BABYLON_VERSION, html)
+    html, fallback_version_count = re.subn(r"7\.54\.3", BABYLON_VERSION, html)
     if fallback_version_count < 4:
         raise SystemExit("No se pudieron sincronizar los mirrors de Babylon y GLTF loader.")
 
@@ -318,13 +318,13 @@ def main() -> None:
 """
     html = html[:loader_start] + native_loader + html[loader_end:]
     html, mirror_timeout_count = re.subn(
-        r"loadEngineWithCache\\(url,7000,check,segmentStart,segmentEnd,label\\)",
+        r"loadEngineWithCache\(url,7000,check,segmentStart,segmentEnd,label\)",
         "loadEngineWithCache(url,30000,check,segmentStart,segmentEnd,label)", html, count=1
     )
     if mirror_timeout_count != 1:
         raise SystemExit("No se pudo ampliar el plazo del cargador local de Babylon.")
     html, embedded_timeout_count = re.subn(
-        r"loadEngine\\(url,5500,check\\)",
+        r"loadEngine\(url,5500,check\)",
         "loadEngine(url,20000,check)", html, count=1
     )
     if embedded_timeout_count != 1:
