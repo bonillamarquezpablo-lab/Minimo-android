@@ -111,6 +111,10 @@ assert.ok(builder.includes('tree_function_start') && builder.includes('loadFores
   builder.includes('validate_textured_tree_glb') && builder.includes('targetHeight:5.80') &&
   builder.includes('TreeCanopyWindPivot_') && builder.includes('await loadForestTreeAssets();'),
   'The old procedural triangle trees must be replaced by three blocking textured GLB species while retaining a wind/felling pivot.');
+assert.ok(builder.includes("importTimedOut=false") && builder.includes("Promise.race([importPromise") &&
+  builder.includes("B.SceneLoader.LoadAssetContainerAsync('',url,scene,null,'.glb')") &&
+  builder.includes("Modelo forestal '+species+' agotó el plazo de 60 segundos."),
+  'Initial forest GLB loading must have its own bounded import path and must not access the later GLB timing registry during early scene construction.');
 assert.ok(builder.includes("const realBirds=[],subduedMaterials=new Set();") &&
   builder.includes('html.replace(gull_material_clone_marker, "", 1)'),
   'The five gull instances must share one subdued material set instead of cloning material variants per bird.');
