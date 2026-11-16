@@ -925,7 +925,7 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.307: improve solar photosphere, visible contact splashes and contextual NPC dialogue while preserving existing game systems.
+    # Release candidate 0.6.307: deepen NPC village routines and role-aware conversations without reducing visual quality or changing the mobile update budget.
     if game_version != "0.6.274":
         raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.307; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
@@ -2051,6 +2051,14 @@ function getWorldPhaseTimingSnapshot(){
         if(!other||other===npc||other.recruited||Number(other.villageIndex)!==Number(npc.villageIndex))continue;
         const q=other.parts&&other.parts.root&&other.parts.root.position;if(!q)continue;
         const ox=x-q.x,oz=z-q.z;if(ox*ox+oz*oz<1.10*1.10)return false;
+       }
+       if(village&&Array.isArray(village.guards))for(const guard of village.guards){
+        if(!guard||guard.alive===false||guard.recruited||!guard.parts||!guard.parts.root)continue;
+        const q=guard.parts.root.position,ox=x-q.x,oz=z-q.z;
+        if(ox*ox+oz*oz<1.15*1.15)return false;
+       }
+       if(brain.threatNearby&&Number.isFinite(brain.threatX)&&Number.isFinite(brain.threatZ)){
+        const tx=x-brain.threatX,tz=z-brain.threatZ;if(tx*tx+tz*tz<2.05*2.05)return false;
        }
        return true;
       });
