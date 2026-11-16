@@ -1797,7 +1797,17 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCandidates:0,dynamicFilterTotalCulled:0,dynamicFilterTotalMs:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,statsPublishInterval:32,buildMs:null,error:null};
  const spatialDynamicMeshSet=new Set();
  const publishSpatialSelectionStats=()=>{
-  try{window.__ELSN_SPATIAL_SELECTION__={...spatialSelectionStats};}catch(_){}
+  try{
+   // Expose an on-demand live snapshot. The getter copies only when the Inspector
+   // or a test reads it, never from the per-frame render path.
+   const descriptor=Object.getOwnPropertyDescriptor(window,'__ELSN_SPATIAL_SELECTION__');
+   if(!descriptor||typeof descriptor.get!=='function'){
+    Object.defineProperty(window,'__ELSN_SPATIAL_SELECTION__',{
+     configurable:true,enumerable:true,
+     get:()=>({...spatialSelectionStats})
+    });
+   }
+  }catch(_){}
  };
  const spatialDynamicReasonForMesh=mesh=>{
   for(let node=mesh;node&&node!==scene;node=node.parent){
@@ -1941,10 +1951,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
      spatialSelectionStats.dynamicFilterTotalCulled+=culled;
      spatialSelectionStats.dynamicFilterLastMs=Number(elapsed.toFixed(3));
      spatialSelectionStats.dynamicFilterMaxMs=Math.max(spatialSelectionStats.dynamicFilterMaxMs,elapsed);
-     // This selector runs once per rendered frame. Keep exact counters in memory,
-     // but avoid allocating/publishing a fresh diagnostic snapshot on every frame.
-     // The Inspector receives a current snapshot at least every 32 render passes.
-     if((spatialSelectionStats.dynamicFilterPasses%spatialSelectionStats.statsPublishInterval)===0)publishSpatialSelectionStats();
+     // Diagnostics are read through the on-demand getter; no publication or allocation here.
      return selected;
     };
     Object.defineProperty(octree,'__elsnDynamicFrustumFilter',{value:true});
