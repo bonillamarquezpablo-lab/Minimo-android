@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/main-player-startup-validation
+      - fix/0.6.309-startup-telemetry
     paths:
       - 'index.html'
       - 'scripts/player-startup-smoke.mjs'
