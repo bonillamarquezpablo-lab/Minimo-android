@@ -439,6 +439,9 @@ def main() -> None:
         "startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null",
         "memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive",
         "identityStartupTriggered=false",
+        "async function prepareAmbientSmokePuffs()",
+        "await prepareAmbientSmokePuffs();",
+        "if(!source.puffs)createAmbientSmokePuffs(source,si);",
         "continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true})",
     )
     missing_mobile_memory = [marker for marker in mobile_memory_markers if marker not in index_html]
