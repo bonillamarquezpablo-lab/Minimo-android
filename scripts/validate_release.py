@@ -438,6 +438,8 @@ def main() -> None:
         "browserHeap:startupHeapMemory",
         "startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null",
         "memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive",
+        "identityStartupTriggered=false",
+        "continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true})",
     )
     missing_mobile_memory = [marker for marker in mobile_memory_markers if marker not in index_html]
     if missing_mobile_memory:
