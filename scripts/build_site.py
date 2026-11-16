@@ -405,11 +405,15 @@ def main() -> None:
         raise SystemExit("No se encontró el cargador único de modelos animales para añadir Cache API.")
     html = html.replace(wildlife_loader_marker, wildlife_cache_code + wildlife_loader_marker, 1)
 
-    animal_silhouette_marker = "if(width<Math.max(.16,sourceBounds.height*.16)||depth<Math.max(.16,sourceBounds.height*.16))throw new Error('Silueta animal anormalmente estrecha; se descarta para no mostrar extremidades sueltas.');"
-    animal_silhouette_replacement = "const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
-    if html.count(animal_silhouette_marker) != 1:
-        raise SystemExit("No se encontró la comprobación de silueta horizontal de fauna.")
-    html = html.replace(animal_silhouette_marker, animal_silhouette_replacement, 1)
+    animal_dimensions_marker = "const width=sourceBounds.max.x-sourceBounds.min.x,depth=sourceBounds.max.z-sourceBounds.min.z;"
+    animal_silhouette_text = "Silueta animal anormalmente estrecha; se descarta para no mostrar extremidades sueltas."
+    if html.count(animal_dimensions_marker) != 1 or html.count(animal_silhouette_text) != 1:
+        raise SystemExit("No se encontró la única comprobación geométrica de fauna.")
+    animal_dimensions_at = html.index(animal_dimensions_marker) + len(animal_dimensions_marker)
+    animal_check_end = html.index(animal_silhouette_text, animal_dimensions_at)
+    animal_check_end = html.index(";", animal_check_end) + 1
+    animal_silhouette_replacement = "\\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
+    html = html[:animal_dimensions_at] + animal_silhouette_replacement + html[animal_check_end:]
 
     wildlife_download_head = "  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)throw new Error('Especie desconocida: '+kind);"
     wildlife_download_cached = wildlife_download_head + "\n  const cached=await readWildlifeModelCache(kind);if(cached)return cached;"
