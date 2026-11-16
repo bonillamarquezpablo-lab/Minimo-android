@@ -970,7 +970,7 @@
       explanation: !enoughData
         ? "El informe conserva sus mediciones, pero no hay suficientes ventanas válidas para localizar el origen de los tirones."
         : hasFrameDrops
-          ? "Se han encontrado tramos por encima del tiempo disponible para mantener " + fmt(targetFps, 0) + " FPS. La clasificación de abajo ordena las pistas por tiempo medido; no demuestra por sí sola la causa."
+          ? "Se han encontrado tramos por encima del tiempo disponible para mantener " + Math.round(targetFps) + " FPS. La clasificación de abajo ordena las pistas por tiempo medido; no demuestra por sí sola la causa."
           : "Las lecturas disponibles no muestran una caída importante del ritmo de fotogramas. Esto no descarta defectos visuales, físicos o de funcionamiento.",
       targetFps,
       frameBudgetMs: frameBudgetMs === null ? null : Number(frameBudgetMs.toFixed(2)),
