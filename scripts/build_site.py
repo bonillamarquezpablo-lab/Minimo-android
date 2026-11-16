@@ -1721,7 +1721,7 @@ def main() -> None:
         ),
         (
             "cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,",
-            "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3)),elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,elapsedUpdateP95Ms:beachElapsedP95,workProgress:GroundDynamics.counts().beachWorkProgress,samples:beachUpdateSampleCount,",
+            "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3)),elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,elapsedUpdateP95Ms:beachElapsedP95,workProgress:GroundDynamics.counts().beachWorkProgress,renderDiagnostics:beachRenderDiagnostics,samples:beachUpdateSampleCount,",
         ),
     )
     for old, new in beach_diagnostic_replacements:
