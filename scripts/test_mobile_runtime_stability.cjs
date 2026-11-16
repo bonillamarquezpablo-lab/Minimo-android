@@ -100,17 +100,17 @@ assert.ok(validator.includes('renderDiagnostics:beachRenderDiagnostics'), 'The p
 assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3))'), 'The packaged report must label wall-clock beach duration separately.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
-assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullWingspanMeters=1.15') &&
+assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullWingspanMeters=0.62') &&
   builder.includes('modelSpan=Math.max(width,height,depth)') &&
   builder.includes('const scale=targetGullWingspanMeters/modelSpan'),
   'Gulls must be normalized by the largest of all three model bounds, regardless of GLB axis orientation.');
 assert.ok(builder.includes('smith_hammer_marker') && builder.includes('SmithHammer_') &&
   builder.includes('Keep the smith\'s hands clear'),
   'Rigid civilian hammer geometry must be removed from animated hand/forearm bones.');
-assert.ok(builder.includes('tree_lean_marker') &&
-  builder.includes('root.rotation.x=rand(-.025,.025)') &&
-  builder.includes('root.rotation.z=rand(-.04,.04)'),
-  'Trees must gain subtle natural trunk lean without additional geometry or draw calls.');
+assert.ok(builder.includes('tree_function_start') && builder.includes('loadForestTreeAssets') &&
+  builder.includes('validate_textured_tree_glb') && builder.includes('targetHeight:5.80') &&
+  builder.includes('TreeCanopyWindPivot_') && builder.includes('await loadForestTreeAssets();'),
+  'The old procedural triangle trees must be replaced by three blocking textured GLB species while retaining a wind/felling pivot.');
 assert.ok(builder.includes("const realBirds=[],subduedMaterials=new Set();") &&
   builder.includes('html.replace(gull_material_clone_marker, "", 1)'),
   'The five gull instances must share one subdued material set instead of cloning material variants per bird.');
