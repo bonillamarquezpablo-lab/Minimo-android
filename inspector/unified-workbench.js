@@ -1167,12 +1167,25 @@
         return;
       }
 
-      const intelligence = await buildSpecialistIntelligence(reports[0], reports[0].status === "completed", reports);
       if (latestPatrolRaw && window.ELSN_NPC_AGENT_CORE) {
         latestPatrolIntelligence = window.ELSN_NPC_AGENT_CORE.analyzeObserverPatrol(latestPatrolRaw, reports[0].gameBuild || null) || latestPatrolIntelligence;
         renderObserverPatrol(latestPatrolIntelligence);
       }
-      renderReport(reports[0], recoveredLatestSession ? "Última partida recuperada del guardado de emergencia" : "Última partida guardada", reports[1] || null, intelligence);
+
+      const sourceLabel = recoveredLatestSession
+        ? "Última partida recuperada del guardado de emergencia"
+        : "Última partida guardada";
+      // Paint the actual match report first. Specialist memory is supplementary and may take longer.
+      renderReport(reports[0], sourceLabel, reports[1] || null, null);
+      void buildSpecialistIntelligence(reports[0], reports[0].status === "completed", reports).then(intelligence => {
+        if (!latestReport || latestReport.sessionId !== reports[0].sessionId) return;
+        latestReport.specialistIntelligence = intelligence || null;
+        renderSpecialistIntelligence(intelligence);
+        const jsonHost = $("wbReportJson");
+        if (jsonHost) jsonHost.textContent = JSON.stringify(latestReport, null, 2);
+      }).catch(() => {
+        renderSpecialistIntelligence(null);
+      });
     } catch (error) {
       state.textContent = "No se pudo leer el historial local: " + String(error && error.message || error);
     }
