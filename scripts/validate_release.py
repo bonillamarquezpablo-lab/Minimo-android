@@ -315,8 +315,21 @@ def main() -> None:
     ):
         if obsolete_civilian_prop in index_html:
             fail("Se ha reintroducido un accesorio rígido que invade la silueta o las manos de un aldeano.")
-    if "root.rotation.x=rand(-.025,.025)" not in index_html or "root.rotation.z=rand(-.04,.04)" not in index_html:
-        fail("Los árboles deben conservar una variación orgánica de inclinación sin añadir geometría ni draw calls.")
+    forest_runtime_markers = (
+        "function loadForestTreeTemplates()",
+        "forestTreeTemplates.size===3",
+        "instantiateModelsToScene(name=>name+'_Forest_'+serial,false)",
+        "mergeStaticDecorByMaterial(canopy,'NorseForest_'+kind)",
+        "root.position.set(x,groundY+baseYOffset,z)",
+        "tree.root.position=v(tree.x,terrainSurfaceAt(tree.x,tree.z)+(tree.baseYOffset||0),tree.z)",
+        "mature-scots-pine-tree.glb",
+        "mature-norway-spruce-tree.glb",
+        "oak-detailed.glb",
+    )
+    if any(marker not in index_html for marker in forest_runtime_markers):
+        fail("El bosque debe instanciar modelos GLB completos, mantener sus materiales y apoyar su base sobre el terreno también después de un reinicio.")
+    if any(marker in index_html for marker in ("TreeFoliageTuft_", "NorseTreeLeafBatch_", "TreeCanopyBranch_")):
+        fail("El generador procedural anterior de hojas y ramas sigue presente en la versión construida.")
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         index_html,
