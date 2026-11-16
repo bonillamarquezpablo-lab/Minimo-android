@@ -27,6 +27,12 @@ assert.ok(inspector.includes('Arranque del motor 3D') && inspector.includes('sta
 assert.ok(build.includes("const horizontalMin=Math.max(.055,sourceBounds.height*.045)"),'Animal GLB validation must tolerate valid asymmetric body proportions.');
 assert.ok(build.includes("horizontalMajor=Math.max(.18,sourceBounds.height*.14)"),'Animal GLB validation must still reject near-degenerate geometry.');
 assert.ok(smoke.includes("document.body.classList.contains('boot-failed')"),'The startup smoke must fail fast with the actual boot error instead of timing out opaquely.');
+assert.ok(build.includes('GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024'),'Mobile model integrity checks must compare GLB files in bounded memory blocks.');
+assert.ok(build.includes('civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive'),'The mobile startup must not prefetch both NPC GLBs simultaneously on iOS/Adreno 650.');
+assert.ok(build.includes('wildlifeBlobs.delete(kind)'),'Each wildlife GLB source must be released after all its actors are instantiated.');
+assert.ok(build.includes('npcStartupPromise=startNpcHumanModels();'),'Protagonist and NPC GLB imports must be staged on memory-sensitive mobile devices.');
+assert.ok(build.includes('isMobilePeakMemorySensitive=!!(isIOSDevice'),'Memory-sensitive scheduling must be selected independently of the Quality/Performance profile.');
+assert.ok(!build.includes('qualityDpr=isMobilePeakMemorySensitive'),'The memory policy must not lower the selected graphics profile or render scale.');
 
 assert.ok(build.includes('loadEngineWithCache(url,30000,check,segmentStart,segmentEnd,label)'),
   'Local engine and GLTF script compilation must have a mobile-safe bounded timeout.');
