@@ -28,16 +28,21 @@
     dateStyle:"medium", timeStyle:"short"
   }) : "Fecha no disponible";
   const groups = [
-    { id:"performance", label:"Rendimiento", hint:"FPS, fluidez y memoria",
-      sections:[["diagnostico-en-vivo","Medición en directo"],["telemetria","Gráficas e historial"]] },
-    { id:"world", label:"Mundo 3D", hint:"Mallas, terreno y colisiones",
-      sections:[["mundo","Inspección del mundo"],["radar","Mapa y estructuras"]] },
-    { id:"evidence", label:"Comparación", hint:"Antes y después",
-      sections:[["comparativa","Comparador visual"]] },
-    { id:"intelligence", label:"Especialistas", hint:"Patrulla, NPC y memoria",
-      sections:[["patrulla-exploradores","Patrulla de exploradores"],["inteligencia-npc","Especialistas y memoria"]] },
-    { id:"tests", label:"Pruebas", hint:"Auditorías y ejecuciones",
-      sections:[["control","Operaciones y auditorías"]] }
+    { id:"performance", label:"Fluidez", hint:"Mide FPS, tirones y memoria",
+      description:"Comprueba cómo se mueve el juego y dónde aparecen las pausas.",
+      sections:[["diagnostico-en-vivo","Medir ahora"],["telemetria","Ver evolución"]] },
+    { id:"world", label:"Mundo 3D", hint:"Objetos, terreno e islas",
+      description:"Busca elementos flotantes, enterrados, colisiones y estructuras.",
+      sections:[["mundo","Revisar la escena"],["radar","Explorar las islas"]] },
+    { id:"evidence", label:"Aspecto", hint:"Luz, costa y gráficos",
+      description:"Compara el aspecto del juego entre versiones y momentos del día.",
+      sections:[["comparativa","Comparar imágenes"]] },
+    { id:"intelligence", label:"Personajes", hint:"NPC, patrulla y memoria",
+      description:"Consulta los recorridos, conversaciones y aprendizajes de los especialistas.",
+      sections:[["patrulla-exploradores","Ver patrulla"],["inteligencia-npc","Memoria de personajes"]] },
+    { id:"tests", label:"Pruebas", hint:"Comprobaciones y resultados",
+      description:"Inicia una auditoría cuando haga falta y sigue cada resultado desde aquí.",
+      sections:[["control","Gestionar pruebas"]] }
   ];
   let activePage = 0;
   let latestReport = null;
@@ -54,99 +59,143 @@
   }
 
   function reportPage() {
-    const page = node("section","workbench-page workbench-report-page");
-    page.id = "workbench-report";
-    page.setAttribute("aria-labelledby","wbReportTitle");
+    const page = node("section","workbench-page workbench-home-page");
+    page.id = "workbench-home";
+    page.setAttribute("aria-labelledby","wbHomeTitle");
     page.innerHTML = `
-      <div class="workbench-page-heading">
-        <div><div class="workbench-kicker">CENTRO DE INSPECCIÓN · PARTIDAS</div>
-          <h2 id="wbReportTitle">Resumen de la partida</h2>
-          <p id="wbReportMeta">El historial pertenece a este navegador y perfil: no se sincroniza automáticamente entre móviles. Para reunir partidas de otros dispositivos, exporta el JSON de cada uno e impórtalo aquí; el informe importado quedará archivado en este navegador.</p>
+      <section class="wb-welcome">
+        <div class="wb-welcome-copy">
+          <div class="workbench-kicker">EL SIN NOMBRE · CENTRO TODO EN UNO</div>
+          <h2 id="wbHomeTitle">¿Qué quieres revisar?</h2>
+          <p>Elige una tarea y te llevamos directamente a las herramientas necesarias. No hace falta conocer los términos técnicos.</p>
         </div>
-        <div class="workbench-report-actions">
-          <button class="wb-button" id="wbReportRefresh" type="button">Actualizar</button>
-          <button class="wb-button" id="wbReportCopy" type="button" disabled>Copiar informe para ChatGPT</button>
-          <button class="wb-button" id="wbReportExport" type="button" disabled>Descargar informe</button>
+        <div class="wb-home-quick-status" id="wbReportState" role="status" aria-live="polite">
+          <span class="wb-status-orbit" aria-hidden="true"></span>
+          <span>Buscando el último informe de tu partida…</span>
         </div>
-      </div>
-      <div class="wb-report-state" id="wbReportState" role="status" aria-live="polite">Buscando informes guardados en este navegador…</div>
-      <article class="wb-report-card wb-quick-read" id="wbQuickRead">
-        <div class="wb-card-eyebrow">LO IMPORTANTE</div>
-        <h3 id="wbQuickReadTitle">Esperando datos de la partida</h3>
-        <p id="wbQuickReadBody">Cuando termines una partida, aquí verás si ha ido bien o qué problema debo investigar. No necesitas leer el informe técnico.</p>
-      </article>
-      <div class="wb-report-metrics" id="wbReportMetrics">
-        <article class="wb-stat"><span>FPS medios</span><strong>—</strong><small>Esperando informe</small></article>
-        <article class="wb-stat"><span>FPS mínimos</span><strong>—</strong><small>Esperando informe</small></article>
-        <article class="wb-stat"><span>Fluidez</span><strong>—</strong><small>Esperando informe</small></article>
-      </div>
-      <details class="wb-report-full" id="wbReportMore">
-        <summary>Ver análisis completo y pruebas guardadas</summary>
-        <div class="wb-report-grid">
-          <article class="wb-report-card wb-report-primary" id="wbReportVerdict">
-            <div class="wb-card-eyebrow">LECTURA PRINCIPAL</div><h3>Esperando datos</h3>
-            <p>El informe aparecerá aquí con una explicación en lenguaje normal.</p>
-          </article>
-          <article class="wb-report-card" id="wbReportDevice">
-            <div class="wb-card-eyebrow">DISPOSITIVO Y MOTOR</div><h3>Entorno de ejecución</h3>
-            <p>La GPU y el backend se mostrarán cuando estén disponibles.</p>
-          </article>
-          <article class="wb-report-card" id="wbReportIntegrity">
-            <div class="wb-card-eyebrow">CALIDAD DEL INFORME</div><h3>Comprobando cobertura</h3>
-            <p>Se distinguirán las mediciones ausentes de los valores cero.</p>
-          </article>
+      </section>
+
+      <section class="wb-mode-section" aria-labelledby="wbModesTitle">
+        <div class="wb-section-title">
+          <div><span class="wb-card-eyebrow">ELIGE UNA HERRAMIENTA</span><h3 id="wbModesTitle">Empezar por una tarea</h3></div>
+          <span class="wb-section-note">5 modos · las funciones siguen conectadas</span>
         </div>
-        <section class="wb-report-card wb-report-specialists" id="wbReportSpecialists">
-          <div class="wb-card-eyebrow">INTELIGENCIA AUTÓNOMA · CUATRO ESPECIALISTAS</div>
-          <h3>Lo que han descubierto nuestros especialistas</h3>
-          <p>Revisan la partida, reúnen pruebas y recuerdan los resultados para comparar futuras sesiones. No cambian el mundo ni reducen la calidad gráfica por su cuenta.</p>
-          <div id="wbSpecialistSummary" class="wb-specialist-summary">Preparando análisis…</div>
-          <div id="wbSpecialistCards" class="wb-specialist-grid"><p>Esperando los datos de la partida.</p></div>
-        </section>
-        <section class="wb-report-card wb-patrol-report" id="wbPatrolReport">
-          <div class="wb-card-eyebrow">PATRULLA AUTÓNOMA · 13 ISLAS</div>
-          <h3>Último recorrido independiente</h3>
-          <p id="wbPatrolMeta">Consultando el último recorrido publicado…</p>
-          <div id="wbPatrolSummary" class="wb-patrol-summary"></div>
-          <div id="wbPatrolAgents" class="wb-patrol-agents"><p>Buscando observaciones.</p></div>
-          <div id="wbPatrolCautions" class="wb-patrol-cautions"></div>
-          <p><a href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/workflows/explorer-patrol.yml" target="_blank" rel="noopener noreferrer">Abrir o ejecutar la patrulla completa</a></p>
-        </section>
-        <section class="wb-report-card">
-          <div class="wb-card-eyebrow">ANÁLISIS CRUZADO</div><h3>Relaciones entre posibles causas</h3>
-          <div id="wbReportCorrelations" class="wb-action-list"><p>Esperando mediciones.</p></div>
-        </section>
-        <div class="wb-report-columns">
-          <section class="wb-report-card" id="wbReportWorld">
-            <div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D</div><h3>Geometría, físicas y objetos</h3>
-            <p>El inventario de la escena se incorporará al informe final cuando la partida termine normalmente.</p>
+        <div class="wb-mode-grid">
+          <button class="wb-mode-card wb-mode-performance" type="button" data-open-page="1">
+            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M6 27h8l5-14 9 25 6-16h8" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 7h32v34H8z" stroke="currentColor" stroke-opacity=".25" stroke-width="1.5" stroke-dasharray="3 4"/></svg></span>
+            <span class="wb-mode-copy"><strong>¿Va fluido?</strong><small>Mide FPS, encuentra tirones y revisa la memoria.</small></span>
+            <span class="wb-mode-action">Medir rendimiento <span aria-hidden="true">→</span></span>
+          </button>
+          <button class="wb-mode-card wb-mode-world" type="button" data-open-page="2">
+            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="m24 5 17 10v18L24 43 7 33V15L24 5Z" stroke="currentColor" stroke-width="2.5"/><path d="m7 15 17 10 17-10M24 25v18M16 10l17 10M32 10 15 20" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>
+            <span class="wb-mode-copy"><strong>¿Hay algo mal colocado?</strong><small>Revisa árboles, rocas, casas, terreno y las 13 islas.</small></span>
+            <span class="wb-mode-action">Revisar el mundo <span aria-hidden="true">→</span></span>
+          </button>
+          <button class="wb-mode-card wb-mode-visual" type="button" data-open-page="3">
+            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><rect x="5" y="8" width="38" height="31" rx="5" stroke="currentColor" stroke-width="2.5"/><path d="M24 9v29M11 31l8-9 6 5 7-10 7 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="wb-mode-copy"><strong>¿Se ve como debería?</strong><small>Compara luz, agua, costa y capturas de versiones.</small></span>
+            <span class="wb-mode-action">Comparar aspecto <span aria-hidden="true">→</span></span>
+          </button>
+          <button class="wb-mode-card wb-mode-people" type="button" data-open-page="4">
+            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><circle cx="17" cy="16" r="7" stroke="currentColor" stroke-width="2.5"/><circle cx="34" cy="19" r="5" stroke="currentColor" stroke-width="2.5"/><path d="M4 40c1-8 5-12 13-12s12 4 13 12M29 31c7-2 13 1 15 8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span>
+            <span class="wb-mode-copy"><strong>¿Qué hacen los personajes?</strong><small>Consulta patrullas, diálogos y memoria de NPC.</small></span>
+            <span class="wb-mode-action">Ver personajes <span aria-hidden="true">→</span></span>
+          </button>
+          <button class="wb-mode-card wb-mode-tests" type="button" data-open-page="5">
+            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M15 7h18M18 7v11L7 37a4 4 0 0 0 4 6h22a4 4 0 0 0 4-6L26 18V7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 32h20M18 26h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
+            <span class="wb-mode-copy"><strong>¿Quieres probar un cambio?</strong><small>Prepara una auditoría y sigue sus resultados paso a paso.</small></span>
+            <span class="wb-mode-action">Abrir pruebas <span aria-hidden="true">→</span></span>
+          </button>
+        </div>
+      </section>
+
+      <section class="wb-latest-section" aria-labelledby="wbLatestTitle">
+        <div class="wb-section-title wb-latest-heading">
+          <div><span class="wb-card-eyebrow">MEMORIA DEL CENTRO</span><h3 id="wbLatestTitle">Tu última partida</h3></div>
+          <div class="workbench-report-actions">
+            <button class="wb-button" id="wbReportRefresh" type="button">Actualizar</button>
+            <button class="wb-button" id="wbReportCopy" type="button" disabled>Copiar informe</button>
+            <button class="wb-button" id="wbReportExport" type="button" disabled>Guardar informe</button>
+          </div>
+        </div>
+        <article class="wb-report-card wb-quick-read" id="wbQuickRead">
+          <div class="wb-card-eyebrow">RESUMEN EN LENGUAJE CLARO</div>
+          <h3 id="wbQuickReadTitle">Esperando datos de la partida</h3>
+          <p id="wbQuickReadBody">Cuando termines una partida, aquí aparecerá lo que ha ido bien y lo que merece atención.</p>
+        </article>
+        <div class="wb-report-metrics" id="wbReportMetrics">
+          <article class="wb-stat"><span>FPS medios</span><strong>—</strong><small>Esperando informe</small></article>
+          <article class="wb-stat"><span>FPS mínimos</span><strong>—</strong><small>Esperando informe</small></article>
+          <article class="wb-stat"><span>Fluidez</span><strong>—</strong><small>Esperando informe</small></article>
+        </div>
+        <details class="wb-report-full" id="wbReportMore">
+          <summary>Ver el informe completo, especialistas y mediciones avanzadas</summary>
+          <div class="wb-report-grid">
+            <article class="wb-report-card wb-report-primary" id="wbReportVerdict">
+              <div class="wb-card-eyebrow">LECTURA PRINCIPAL</div><h3>Esperando datos</h3>
+              <p>El informe aparecerá aquí con una explicación en lenguaje normal.</p>
+            </article>
+            <article class="wb-report-card" id="wbReportDevice">
+              <div class="wb-card-eyebrow">DISPOSITIVO Y MOTOR</div><h3>Entorno de ejecución</h3>
+              <p>La GPU y el backend se mostrarán cuando estén disponibles.</p>
+            </article>
+            <article class="wb-report-card" id="wbReportIntegrity">
+              <div class="wb-card-eyebrow">CALIDAD DEL INFORME</div><h3>Comprobando cobertura</h3>
+              <p>Se distinguirán las mediciones ausentes de los valores cero.</p>
+            </article>
+          </div>
+          <section class="wb-report-card wb-report-specialists" id="wbReportSpecialists">
+            <div class="wb-card-eyebrow">INTELIGENCIA AUTÓNOMA · CUATRO ESPECIALISTAS</div>
+            <h3>Lo que han descubierto nuestros especialistas</h3>
+            <p>Revisan la partida, reúnen pruebas y recuerdan los resultados para comparar futuras sesiones. No cambian el mundo ni reducen la calidad gráfica por su cuenta.</p>
+            <div id="wbSpecialistSummary" class="wb-specialist-summary">Preparando análisis…</div>
+            <div id="wbSpecialistCards" class="wb-specialist-grid"><p>Esperando los datos de la partida.</p></div>
           </section>
-          <section class="wb-report-card" id="wbReportComparison">
-            <div class="wb-card-eyebrow">EVOLUCIÓN ENTRE PARTIDAS</div><h3>Comparación con la sesión anterior</h3>
-            <p>Se necesitan dos informes completos del mismo navegador para comparar.</p>
+          <section class="wb-report-card wb-patrol-report" id="wbPatrolReport">
+            <div class="wb-card-eyebrow">PATRULLA AUTÓNOMA · 13 ISLAS</div>
+            <h3>Último recorrido independiente</h3>
+            <p id="wbPatrolMeta">Consultando el último recorrido publicado…</p>
+            <div id="wbPatrolSummary" class="wb-patrol-summary"></div>
+            <div id="wbPatrolAgents" class="wb-patrol-agents"><p>Buscando observaciones.</p></div>
+            <div id="wbPatrolCautions" class="wb-patrol-cautions"></div>
+            <p><a href="https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/workflows/explorer-patrol.yml" target="_blank" rel="noopener noreferrer">Abrir o ejecutar la patrulla completa</a></p>
           </section>
-        </div>
-        <div class="wb-report-columns">
           <section class="wb-report-card">
-            <div class="wb-card-eyebrow">PLAN DE REPARACIÓN</div><h3>Qué debemos revisar primero</h3>
-            <div id="wbReportActions" class="wb-action-list"><p>Esperando informe.</p></div>
+            <div class="wb-card-eyebrow">ANÁLISIS CRUZADO</div><h3>Relaciones entre posibles causas</h3>
+            <div id="wbReportCorrelations" class="wb-action-list"><p>Esperando mediciones.</p></div>
           </section>
-          <section class="wb-report-card">
-            <div class="wb-card-eyebrow">PISTAS TÉCNICAS EXPLICADAS</div><h3>Qué puede estar ocurriendo</h3>
-            <div id="wbReportFindings" class="wb-action-list"><p>Esperando informe.</p></div>
-          </section>
-        </div>
-        <details class="wb-technical-details">
-          <summary>Ver datos originales y mediciones avanzadas</summary>
-          <p>Esta vista conserva el JSON completo. Los valores no disponibles permanecen como «sin medir»; no se convierten en ceros.</p>
-          <pre id="wbReportJson">Todavía no hay un informe cargado.</pre>
+          <div class="wb-report-columns">
+            <section class="wb-report-card" id="wbReportWorld">
+              <div class="wb-card-eyebrow">EVIDENCIA DEL MUNDO 3D</div><h3>Geometría, físicas y objetos</h3>
+              <p>El inventario de la escena se incorporará al informe final cuando la partida termine normalmente.</p>
+            </section>
+            <section class="wb-report-card" id="wbReportComparison">
+              <div class="wb-card-eyebrow">EVOLUCIÓN ENTRE PARTIDAS</div><h3>Comparación con la sesión anterior</h3>
+              <p>Se necesitan dos informes completos del mismo navegador para comparar.</p>
+            </section>
+          </div>
+          <div class="wb-report-columns">
+            <section class="wb-report-card">
+              <div class="wb-card-eyebrow">PLAN DE REPARACIÓN</div><h3>Qué debemos revisar primero</h3>
+              <div id="wbReportActions" class="wb-action-list"><p>Esperando informe.</p></div>
+            </section>
+            <section class="wb-report-card">
+              <div class="wb-card-eyebrow">PISTAS TÉCNICAS EXPLICADAS</div><h3>Qué puede estar ocurriendo</h3>
+              <div id="wbReportFindings" class="wb-action-list"><p>Esperando informe.</p></div>
+            </section>
+          </div>
+          <details class="wb-technical-details">
+            <summary>Ver datos originales y mediciones avanzadas</summary>
+            <p>Los valores que no se pudieron medir permanecen como «sin medir»; no se convierten en ceros.</p>
+            <pre id="wbReportJson">Todavía no hay un informe cargado.</pre>
+          </details>
+          <div class="workbench-report-actions">
+            <button class="wb-button" id="wbReportExportFull" type="button" disabled>Descargar todos los datos</button>
+            <label class="wb-button wb-file-button" for="wbReportImport">Importar informe</label>
+            <input id="wbReportImport" type="file" accept=".json,application/json" hidden>
+          </div>
         </details>
-        <div class="workbench-report-actions">
-          <button class="wb-button" id="wbReportExportFull" type="button" disabled>Descargar todos los datos</button>
-          <label class="wb-button wb-file-button" for="wbReportImport">Importar informe de una partida</label>
-          <input id="wbReportImport" type="file" accept=".json,application/json" hidden>
-        </div>
-      </details>`;
+      </section>`;
     return page;
   }
 
@@ -163,7 +212,7 @@
     deck = node("div","workbench-deck");
     deck.id = "workbenchDeck";
     deck.setAttribute("aria-label","Paneles del Inspector Center");
-    const pages = [{id:"report",label:"Informe",hint:"Diagnóstico y prioridades",page:reportPage()}];
+    const pages = [{id:"home",label:"Inicio",hint:"Elige lo que quieres revisar",page:reportPage()}];
     for (const group of groups) {
       const page = node("section","workbench-page");
       page.id = "workbench-page-" + group.id;
@@ -173,6 +222,10 @@
       copy.append(node("div","workbench-kicker","HERRAMIENTA INTEGRADA"),
         node("h2","",group.label),node("p","",group.hint));
       pageHead.append(copy);
+      const backButton = node("button","wb-back-home","← Inicio");
+      backButton.type = "button";
+      backButton.dataset.openPage = "0";
+      pageHead.append(backButton);
       const subnav = node("nav","workbench-subtabs");
       subnav.setAttribute("aria-label","Apartados de " + group.label);
       subnav.hidden = group.sections.length < 2;
@@ -213,7 +266,30 @@
       entry.page.dataset.pageIndex = String(index);
       deck.append(entry.page);
     });
-    shell.append(tabs,deck);
+    const modebar = node("div","workbench-modebar");
+    const modebarLabel = node("span","workbench-modebar-label","Modo de uso");
+    const modebarControls = node("div","workbench-modebar-controls");
+    const guidedButton = node("button","workbench-mode-button is-active","Guiado");
+    guidedButton.type = "button"; guidedButton.dataset.uiMode = "guided";
+    guidedButton.setAttribute("aria-pressed","true");
+    const expertButton = node("button","workbench-mode-button","Experto");
+    expertButton.type = "button"; expertButton.dataset.uiMode = "expert";
+    expertButton.setAttribute("aria-pressed","false");
+    const modeHint = node("span","workbench-mode-hint","Te mostramos primero lo esencial.");
+    modeHint.id = "workbenchModeHint";
+    modebarControls.append(guidedButton,expertButton);
+    modebar.append(modebarLabel,modebarControls,modeHint);
+    modebar.querySelectorAll("[data-ui-mode]").forEach(button=>button.addEventListener("click",()=>setUiMode(button.dataset.uiMode)));
+    shell.append(modebar,tabs,deck);
+    shell.addEventListener("click",event=>{
+      const trigger = event.target.closest("[data-open-page]");
+      if (!trigger) return;
+      const index = Number(trigger.dataset.openPage);
+      if (!Number.isInteger(index)) return;
+      goToPage(index);
+      const subview = trigger.dataset.openSubview;
+      if (subview && index > 0) selectSubview($("workbench-page-"+groups[index-1].id),subview);
+    });
     if (top) top.after(shell);
     else main.prepend(shell);
     tabButtons = Array.from(tabs.querySelectorAll(".workbench-tab"));
@@ -252,6 +328,22 @@
     window.addEventListener("resize",()=>goToPage(activePage,false),{passive:true});
   }
 
+  function setUiMode(mode) {
+    const expert = mode === "expert";
+    document.body.classList.toggle("inspector-expert",expert);
+    document.body.classList.toggle("inspector-guided",!expert);
+    document.querySelectorAll("[data-ui-mode]").forEach(button=>{
+      const active = button.dataset.uiMode === (expert ? "expert" : "guided");
+      button.setAttribute("aria-pressed",String(active));
+      button.classList.toggle("is-active",active);
+    });
+    const hint = $("workbenchModeHint");
+    if (hint) hint.textContent = expert
+      ? "Todas las métricas, datos y controles avanzados están visibles."
+      : "Te mostramos primero lo esencial. Los detalles siguen disponibles.";
+    try { sessionStorage.setItem("elsn-inspector-ui-mode",expert?"expert":"guided"); } catch (_) {}
+  }
+
   function setActiveTab(index) {
     activePage = Math.max(0,Math.min(tabButtons.length-1,index));
     tabButtons.forEach((button,i)=>{
@@ -271,6 +363,14 @@
     setActiveTab(next);
     deck.scrollTo({left:next*deck.clientWidth,behavior:smooth?"smooth":"auto"});
   }
+
+  window.__ELSN_INSPECTOR_NAV__ = (groupId, subviewId) => {
+    const index = typeof groupId === "number" ? groupId : groups.findIndex(group=>group.id===groupId)+1;
+    if (!Number.isInteger(index) || index < 1 || index > groups.length) return false;
+    goToPage(index);
+    if (subviewId) selectSubview($("workbench-page-"+groups[index-1].id),subviewId);
+    return true;
+  };
 
   function selectSubview(page,id) {
     if (!page) return;
@@ -1006,6 +1106,9 @@
     const main=$("inicio");
     if(!main || $("inspector-workbench"))return;
     buildWorkbench(main);
+    let savedMode = "guided";
+    try { savedMode = sessionStorage.getItem("elsn-inspector-ui-mode") || "guided"; } catch (_) {}
+    setUiMode(savedMode === "expert" ? "expert" : "guided");
     bindReportActions();
     loadReport();
     document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")loadReport();});
