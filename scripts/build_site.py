@@ -907,7 +907,7 @@ def main() -> None:
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
     html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.305\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.304.")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.305.")
     html = html.replace("0.6.274", "0.6.305")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
@@ -920,7 +920,7 @@ def main() -> None:
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.304 para normalizar.")
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.305 para normalizar.")
     game_version = "0.6.305"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
@@ -1787,7 +1787,7 @@ def main() -> None:
 
 
 
-    # 0.6.304: time every existing world-update phase without changing its work or cadence.
+    # 0.6.305: time every existing world-update phase without changing its work or cadence.
     phase_update_marker = "function update(dt){"
     phase_timing_helpers = r"""const worldPhaseTimingStats=Object.create(null);
 let worldPhaseTimingCurrent='',worldPhaseTimingStartedAt=0;
