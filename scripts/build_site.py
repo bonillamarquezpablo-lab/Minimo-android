@@ -886,28 +886,28 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.303: restore flagship render clarity while preserving the
+    # Release candidate 0.6.304: restore flagship render clarity while preserving the
     # heightfield skirt beneath it, and verify cross-mesh contact before release.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.303; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.304; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.303\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.304\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.303.")
-    html = html.replace("0.6.274", "0.6.303")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.304.")
+    html = html.replace("0.6.274", "0.6.304")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'24',build:'0.6.303'"
+    diagnostic_build_replacement = "reportVersion:'25',build:'0.6.304'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.303 para normalizar.")
-    game_version = "0.6.303"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.304 para normalizar.")
+    game_version = "0.6.304"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -1759,6 +1759,89 @@ def main() -> None:
     if html.count(world_snapshot_marker) != 1:
         raise SystemExit("No se encontró exactamente una API de copia del diagnóstico para exponer la inspección del mundo.")
     html = html.replace(world_snapshot_marker, world_snapshot_code + "\n" + world_snapshot_marker, 1)
+
+
+
+    # 0.6.304: time every existing world-update phase without changing its work or cadence.
+    phase_update_marker = "function update(dt){"
+    phase_timing_helpers = r"""const worldPhaseTimingStats=Object.create(null);
+let worldPhaseTimingCurrent='',worldPhaseTimingStartedAt=0;
+function flushWorldPhaseTiming(now){
+ if(!worldPhaseTimingCurrent||worldPhaseTimingStartedAt<=0)return;
+ const elapsed=Math.max(0,now-worldPhaseTimingStartedAt);
+ let row=worldPhaseTimingStats[worldPhaseTimingCurrent];
+ if(!row)row=worldPhaseTimingStats[worldPhaseTimingCurrent]={samples:0,lastMs:0,totalMs:0,meanMs:0,maxMs:0};
+ row.samples++;row.lastMs=elapsed;row.totalMs+=elapsed;row.meanMs=row.totalMs/row.samples;row.maxMs=Math.max(row.maxMs,elapsed);
+}
+function setWorldUpdatePhase(value){
+ const nextPhase=String(value||'unknown');
+ const now=performance.now();
+ if(nextPhase!==worldPhaseTimingCurrent){flushWorldPhaseTiming(now);worldPhaseTimingCurrent=nextPhase;worldPhaseTimingStartedAt=now;}
+ worldUpdatePhase=nextPhase;
+}
+function finishWorldPhaseTiming(){
+ flushWorldPhaseTiming(performance.now());worldPhaseTimingCurrent='';worldPhaseTimingStartedAt=0;
+}
+function getWorldPhaseTimingSnapshot(){
+ const snapshot={};
+ for(const [phase,row] of Object.entries(worldPhaseTimingStats)){
+  snapshot[phase]={samples:row.samples,lastMs:Number(row.lastMs.toFixed(3)),meanMs:Number(row.meanMs.toFixed(3)),maxMs:Number(row.maxMs.toFixed(3))};
+ }
+ return snapshot;
+}
+"""
+    if html.count(phase_update_marker) != 1:
+        raise SystemExit("No se encontró exactamente una función update(dt) para instrumentar sus fases.")
+    html = html.replace(phase_update_marker, phase_timing_helpers + "\n" + phase_update_marker, 1)
+    phase_update_start = html.index(phase_update_marker)
+    phase_update_end = html.find("\n function startNpcHumanModels()", phase_update_start)
+    if phase_update_end < 0:
+        raise SystemExit("No se encontró el final delimitado del actualizador del mundo.")
+    phase_update_source = html[phase_update_start:phase_update_end]
+    phase_assignment_count = len(re.findall(r"worldUpdatePhase\s*=\s*([^;]+);", phase_update_source))
+    if phase_assignment_count != 20:
+        raise SystemExit(f"Se esperaban 20 transiciones de fase del mundo; se encontraron {phase_assignment_count}.")
+    phase_update_source, phase_replacements = re.subn(
+        r"worldUpdatePhase\s*=\s*([^;]+);",
+        lambda match: "setWorldUpdatePhase(" + match.group(1) + ");",
+        phase_update_source,
+    )
+    if phase_replacements != 20:
+        raise SystemExit("No se pudieron instrumentar todas las transiciones de fase del mundo.")
+    html = html[:phase_update_start] + phase_update_source + html[phase_update_end:]
+
+    phase_flush_marker = "  lastWorldUpdateMs=performance.now()-worldUpdateStarted;"
+    if html.count(phase_flush_marker) != 1:
+        raise SystemExit("No se encontró el límite único de la actualización del mundo para cerrar la medición por fase.")
+    html = html.replace(phase_flush_marker, "  finishWorldPhaseTiming();\n" + phase_flush_marker, 1)
+
+    health_phase_marker = "worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),"
+    health_phase_replacement = health_phase_marker + "worldPhaseTimings:getWorldPhaseTimingSnapshot(),mapDrawMs:Number(lastMapDrawMs.toFixed(3)),mapDrawMaxMs:Number(mapDrawMaxMs.toFixed(3)),mapDrawSampleCount,"
+    if html.count(health_phase_marker) != 1:
+        raise SystemExit("No se encontró el objeto runtime único para publicar los tiempos de fase y del minimapa.")
+    html = html.replace(health_phase_marker, health_phase_replacement, 1)
+
+    map_clock_marker = "let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
+    map_clock_replacement = map_clock_marker + "\n let lastMapDrawMs=0,mapDrawMaxMs=0,mapDrawSampleCount=0;"
+    if html.count(map_clock_marker) != 1:
+        raise SystemExit("No se encontró el reloj único del bucle de juego para medir el coste del minimapa.")
+    html = html.replace(map_clock_marker, map_clock_replacement, 1)
+
+    map_draw_marker = "if(mapClock>=mapRefreshInterval){drawMap();mapClock=0;}"
+    map_draw_replacement = "if(mapClock>=mapRefreshInterval){const mapDrawStarted=performance.now();drawMap();lastMapDrawMs=performance.now()-mapDrawStarted;mapDrawMaxMs=Math.max(mapDrawMaxMs,lastMapDrawMs);mapDrawSampleCount++;mapClock=0;}"
+    if html.count(map_draw_marker) != 1:
+        raise SystemExit("No se encontró el único punto de actualización del minimapa; no se cambian sus frecuencias.")
+    html = html.replace(map_draw_marker, map_draw_replacement, 1)
+
+    # Recorder telemetry must read scalar water timings, not run the expensive full
+    # shoreline/foam geometry audit every 2.5 seconds.
+    water_debug_marker = " window.__elSinNombreWaterDebugSnapshot=()=>{\n   const health=typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug():null;"
+    water_debug_replacement = """ window.__elSinNombreWaterTelemetrySnapshot=()=>({available:true,timings:{waterLastUpdateMs:Number(waterLastUpdateMs.toFixed(3)),waterLastNormalMs:Number(waterLastNormalMs.toFixed(3)),tidalFoamLastUpdateMs:Number(tidalFoamLastUpdateMs.toFixed(3)),beachUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),groundDynamicsLastUpdateMs:Number(groundDynamicsLastUpdateMs.toFixed(3))}});
+ window.__elSinNombreWaterDebugSnapshot=(healthSnapshot=null)=>{
+   const health=healthSnapshot&&typeof healthSnapshot==='object'?healthSnapshot:(typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug():null);"""
+    if html.count(water_debug_marker) != 1:
+        raise SystemExit("No se encontró el snapshot de agua único para separar telemetría ligera de auditoría visual completa.")
+    html = html.replace(water_debug_marker, water_debug_replacement, 1)
 
     # Validate the transformed runtime too; the earlier syntax check runs before these patches.
     transformed_scripts = re.findall(r"<script\b[^>]*>(.*?)</script\s*>", html, flags=re.IGNORECASE | re.DOTALL)
