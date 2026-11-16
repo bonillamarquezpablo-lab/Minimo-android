@@ -44,6 +44,6 @@ for(const marker of ['function setUiMode(mode)','inspector-guided','inspector-ex
   assert.ok(js.includes(marker),"The guided/expert mode controller is missing: "+marker);
 for(const marker of ['.wb-mode-grid','.wb-mode-card','.workbench-modebar','@keyframes wb-section-in','prefers-reduced-motion'])
   assert.ok(css.includes(marker),"The dynamic all-in-one visual system is missing: "+marker);
-assert.ok(js.includes('wbReportMore') && js.includes('Ver el informe completo, especialistas y mediciones avanzadas'),"Advanced reports, specialist evidence and raw data must remain available behind one disclosure.");
+assert.ok(js.includes('wbReportMore') && js.includes('Abrir todas las comprobaciones y herramientas avanzadas'),"Advanced reports, specialist evidence and raw data must remain available behind one disclosure.");
 
 console.log("Unified horizontal Inspector workbench + understandable advanced session report: PASS");
