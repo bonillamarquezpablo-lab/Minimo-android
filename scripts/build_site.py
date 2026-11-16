@@ -353,9 +353,71 @@ def main() -> None:
         raise SystemExit("No se encontró el cargador de scripts Babylon para optimizar el arranque móvil.")
     native_loader = r"""async function loadEngineWithCache(url,timeoutMs=30000,check=null,progressStart=0,progressEnd=0,label='Cargando recurso'){
  const started=performance.now(),resolved=new URL(url,document.baseURI),sameOrigin=resolved.origin===location.origin;
- // Keep native script execution: no JS string/Blob copy of the multi-megabyte engine.
+ let result=null,source=sameOrigin?'same-origin-stream':'external-script',objectUrl=null;
  try{if(performance.setResourceTimingBufferSize)performance.setResourceTimingBufferSize(256);}catch(_){}
- const result=await loadEngine(resolved.href,timeoutMs,check);
+ if(sameOrigin){
+  try{
+   const controller=new AbortController(),downloadTimer=setTimeout(()=>controller.abort(),timeoutMs);
+   let response;
+   try{
+    response=await fetch(resolved.href,{cache:'force-cache',credentials:'same-origin',signal:controller.signal});
+    if(!response.ok)throw new Error('HTTP '+response.status);
+    const total=Number(response.headers&&response.headers.get('content-length'))||0;
+    const chunks=[];let loaded=0;
+    if(response.body&&typeof response.body.getReader==='function'){
+     const reader=response.body.getReader();
+     try{
+      while(true){
+       const part=await reader.read();if(part.done)break;
+       chunks.push(part.value);loaded+=part.value.byteLength;
+       const ratio=total>0?Math.min(.96,loaded/total*.96):Math.min(.94,loaded/(9*1024*1024));
+       setLoadingProgress(progressStart+(progressEnd-progressStart)*ratio,label+' · '+Math.round(loaded/1024)+' KB');
+      }
+     }catch(error){try{await reader.cancel();}catch(_){}throw error;}
+    }else{
+     const bytes=new Uint8Array(await response.arrayBuffer());chunks.push(bytes);loaded=bytes.byteLength;
+     setLoadingProgress(progressEnd,label+' · descarga terminada');
+    }
+    clearTimeout(downloadTimer);
+    const blob=new Blob(chunks,{type:'text/javascript'});
+    chunks.length=0;
+    setLoadingProgress(progressEnd,label+' · compilando el motor 3D…');
+    // Flush the completed byte-download percentage and let the browser paint it
+    // before the large Babylon bundle is synchronously parsed and evaluated.
+    currentLoadProgress=Math.max(currentLoadProgress,targetLoadProgress);
+    if(loadProgressBar)loadProgressBar.style.width=currentLoadProgress.toFixed(2)+'%';
+    if(loadProgressLabel)loadProgressLabel.textContent=Math.floor(currentLoadProgress)+'%';
+    if(loadProgressTrack)loadProgressTrack.setAttribute('aria-valuenow',String(Math.round(currentLoadProgress)));
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    objectUrl=URL.createObjectURL(blob);
+    result=await new Promise(resolve=>{
+     let settled=false;
+     const script=document.createElement('script');
+     const finish=(ok,reason)=>{
+      if(settled)return;settled=true;clearTimeout(timer);
+      if(!ok)script.remove();
+      resolve({ok:!!ok,reason:reason||'unknown',url:resolved.href});
+     };
+     const timer=setTimeout(()=>finish(false,'tiempo agotado al compilar el motor 3D'),timeoutMs);
+     script.async=false;script.fetchPriority='high';script.src=objectUrl;script.referrerPolicy='strict-origin-when-cross-origin';
+     script.onload=()=>{let ok=false;try{ok=check?!!check():!!(window.BABYLON&&window.BABYLON.Engine);}catch(_){ok=false;}finish(ok,ok?'cargado':'script cargado pero API no disponible');};
+     script.onerror=()=>finish(false,'no se pudo ejecutar el recurso local');
+     try{document.head.appendChild(script);}catch(error){finish(false,error&&error.message?error.message:'no se pudo insertar el script');}
+    });
+    if(!result.ok&&result.reason!=='tiempo agotado al compilar el motor 3D'){
+     result=await loadEngine(resolved.href,timeoutMs,check);
+     source='same-origin-native-fallback';
+    }
+   }finally{clearTimeout(downloadTimer);}
+  }catch(error){
+   const reason=error&&error.name==='AbortError'?'tiempo agotado durante la descarga local':(error&&error.message?error.message:String(error));
+   result=await loadEngine(resolved.href,timeoutMs,check);
+   if(!result.ok)result.reason='stream local: '+reason+'; respaldo nativo: '+result.reason;
+   source='same-origin-native-fallback';
+  }finally{if(objectUrl)URL.revokeObjectURL(objectUrl);}
+ }else{
+  result=await loadEngine(resolved.href,timeoutMs,check);
+ }
  let entry=null;
  try{
   const entries=performance.getEntriesByName(resolved.href,'resource');
@@ -365,13 +427,13 @@ def main() -> None:
  const transferSize=timingValue('transferSize'),encodedBodySize=timingValue('encodedBodySize'),decodedBodySize=timingValue('decodedBodySize');
  const cacheStatus=sameOrigin&&entry?(transferSize===0&&decodedBodySize>0?'cached':transferSize>0?'network':'unknown'):'unknown';
  const safeUrl=resolved.origin===location.origin?resolved.pathname:resolved.origin+resolved.pathname;
- const record={capturedAt:new Date().toISOString(),url:safeUrl,label:String(label||'Cargando recurso').slice(0,80),ok:!!result.ok,source:sameOrigin?'same-origin-native-script':'external-script',durationMs:Number((performance.now()-started).toFixed(1)),cacheStatus,transferSize,encodedBodySize,decodedBodySize,reason:result.reason||''};
+ const record={capturedAt:new Date().toISOString(),url:safeUrl,label:String(label||'Cargando recurso').slice(0,80),ok:!!(result&&result.ok),source,durationMs:Number((performance.now()-started).toFixed(1)),cacheStatus,transferSize,encodedBodySize,decodedBodySize,reason:result&&result.reason||''};
  const diagnostics=window.__ELSN_RUNTIME_SCRIPT_LOADS||(window.__ELSN_RUNTIME_SCRIPT_LOADS=[]);
  diagnostics.push(record);
  if(diagnostics.length>16)diagnostics.splice(0,diagnostics.length-16);
  window.__ELSN_RUNTIME_SCRIPT_LOADS_SNAPSHOT=()=>{const rows=Array.isArray(window.__ELSN_RUNTIME_SCRIPT_LOADS)?window.__ELSN_RUNTIME_SCRIPT_LOADS:[];return {count:rows.length,failed:rows.filter(row=>!row.ok).length,cached:rows.filter(row=>row.cacheStatus==='cached').length,network:rows.filter(row=>row.cacheStatus==='network').length,unknown:rows.filter(row=>row.cacheStatus==='unknown').length,slowest:rows.slice().sort((a,b)=>(b.durationMs||0)-(a.durationMs||0)).slice(0,5)};};
- if(result.ok)setLoadingProgress(progressEnd,label+(cacheStatus==='cached'?' recuperado de caché.':' listo.'));
- return {...result,cached:cacheStatus==='cached',source:record.source,durationMs:record.durationMs,cacheStatus,transferSize,encodedBodySize,decodedBodySize};
+ if(result&&result.ok)setLoadingProgress(progressEnd,label+(cacheStatus==='cached'?' recuperado de caché.':' listo.'));
+ return {...(result||{ok:false,reason:'fallo desconocido',url}),cached:cacheStatus==='cached',source:record.source,durationMs:record.durationMs,cacheStatus,transferSize,encodedBodySize,decodedBodySize};
 }
 """
     html = html[:loader_start] + native_loader + html[loader_end:]
@@ -1298,27 +1360,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.309: deepen NPC village routines and role-aware conversations without reducing visual quality or changing the mobile update budget.
+    # Release candidate 0.6.310: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.309; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.310; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.309\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.310\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.309.")
-    html = html.replace("0.6.274", "0.6.309")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.310.")
+    html = html.replace("0.6.274", "0.6.310")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'28',build:'0.6.309'"
+    diagnostic_build_replacement = "reportVersion:'29',build:'0.6.310'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.309 para normalizar.")
-    game_version = "0.6.309"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.310 para normalizar.")
+    game_version = "0.6.310"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.

@@ -11,9 +11,19 @@ const inspector=fs.readFileSync('inspector/unified-workbench.js','utf8');
 assert.ok(build.includes('fetchpriority="high"'),'Babylon engine and GLTF loader must be preloaded at high priority.');
 assert.ok(build.includes('BABYLON_VERSION = "9.35.0"'));
 assert.ok(build.includes('r"7\\.54\\.3"'),'Fallback mirrors must be normalized to the bundled Babylon version.');
-assert.ok(build.includes('same-origin-native-script'),'Same-origin Babylon must use a native script URL, not a JS string/Blob copy.');
+assert.ok(build.includes('same-origin-stream') && build.includes('same-origin-native-fallback'),'Same-origin Babylon must stream with progress and keep a native fallback.');
 assert.ok(build.includes("script.async=false;script.fetchPriority='high';script.src=url;"),'Critical Babylon scripts must execute in insertion order and retain high fetch priority.');
 assert.ok(build.includes('function loadEngine(url,timeoutMs=30000,check=null)'), 'Native engine script loading must use a bounded 30-second default timeout.');
+const nativeLoaderMatch=build.match(/native_loader = r"""([\s\S]*?)\n"""/);
+assert.ok(nativeLoaderMatch,'The generated engine loader must be present.');
+const nativeLoader=nativeLoaderMatch[1];
+assert.ok(nativeLoader.includes('response.body.getReader()') && nativeLoader.includes('reader.read()'),'The bundled Babylon download must be read in measurable stream chunks.');
+assert.ok(nativeLoader.includes('setLoadingProgress(progressStart+(progressEnd-progressStart)*ratio'),'Real download bytes must update the loading percentage.');
+assert.ok(nativeLoader.includes("label+' · compilando el motor 3D…'"),'The user must see the distinct engine compilation stage after download.');
+assert.ok(nativeLoader.includes('currentLoadProgress=Math.max(currentLoadProgress,targetLoadProgress)') && nativeLoader.includes('requestAnimationFrame(()=>requestAnimationFrame(resolve))'),'The final download percentage must be painted before synchronous Babylon compilation starts.');
+assert.ok(nativeLoader.includes("new Blob(chunks,{type:'text/javascript'})") && nativeLoader.includes('chunks.length=0'),'The streamed engine must be handed to the browser as bytes, without a large TextDecoder string copy.');
+assert.ok(nativeLoader.includes('new AbortController()'),'A stalled local engine download must be abortable before the fallback is attempted.');
+assert.ok(!nativeLoader.includes('new TextDecoder'),'The native engine loader must not duplicate the full bundle as a JavaScript string.');
 for (const marker of ['window.__ELSN_RUNTIME_SCRIPT_LOADS','cacheStatus','transferSize','encodedBodySize','decodedBodySize','durationMs']) {
   assert.ok(build.includes(marker), 'Missing native script-load telemetry: ' + marker);
 }
