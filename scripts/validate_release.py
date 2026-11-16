@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.304"
+EXPECTED_VERSION = "0.6.305"
 
 HTML_PAGES = (
     "index.html",
@@ -397,7 +397,7 @@ def main() -> None:
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
-    if "reportVersion:'25',build:'0.6.304'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'26',build:'0.6.305'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     for marker in (
         "babylonEngineVersion:String(B.Engine.Version||'unknown')",
@@ -700,7 +700,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.304" not in index_html or "EL SIN NOMBRE 0.6.304 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.305" not in index_html or "EL SIN NOMBRE 0.6.305 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?64:96)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -816,7 +816,9 @@ def main() -> None:
         fail("El diagnóstico debe distinguir pisadas descartadas, pasos de playa, borde de agua, pisadas húmedas y partículas de agua emitidas.")
     if "groundDynamics:GroundDynamics.counts()" not in index_html or "setInterval(refreshDiagnostics,1000)" not in index_html:
         fail("El panel debe refrescar y exponer los contadores de pisadas y partículas durante la prueba real.")
-    if "grainMaterial.diffuseTexture=null" not in index_html or "particle.size=wet?rand(.068,.104)" not in index_html or "particle.life=particle.maxLife=wet?rand(.55,.82)" not in index_html or "particle.r=wet?.72:.78;particle.g=wet?.94:.61;particle.b=wet?1:.40;particle.a=wet?.98:.82;" not in index_html:
+    if "GroundSplashParticleBatch" not in index_html or "mesh.alwaysSelectAsActiveMesh=true" not in index_html or "spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|" not in index_html:
+        fail("El lote instanciado de salpicaduras debe permanecer dinámico y no ser descartado por el frustum de su malla base.")
+    if "grainMaterial.diffuseTexture=null" not in index_html or "particle.size=wet?rand(.12,.18)" not in index_html or "particle.life=particle.maxLife=wet?rand(.72,1.02)" not in index_html or "particle.r=wet?.72:.78;particle.g=wet?.94:.61;particle.b=wet?1:.40;particle.a=wet?.98:.82;" not in index_html:
         fail("Las gotas de agua deben ser suficientemente grandes y contrastadas sobre la textura marina.")
     if "RENDIMIENTO: '+(assessment.bottleneckHint" not in index_html or "runtime.gpuRenderer" not in index_html or "runtime.renderDpr" not in index_html:
         fail("El panel de costa debe mostrar la hipótesis de cuello de botella y el perfil real de renderizado.")
@@ -850,7 +852,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.304</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.305</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
