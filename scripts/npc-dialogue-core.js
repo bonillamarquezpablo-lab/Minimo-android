@@ -50,7 +50,7 @@ function chooseAmbientMessage(npc,context,random,memory){
  if(fresh.length&&rand(random)<((ctx.enemyNearby||ctx.healthLow||ctx.night||ctx.onShip)?0.92:0.80))selected=choose(fresh,random);
  if(!selected&&ctx.isWalking===true&&rand(random)<.26)selected={topic:"work",kind:"action",text:role.id==="farmer"?"Revisa el terreno y comprueba que el camino esté despejado.":role.id==="smith"?"Vuelve a la fragua; todavía queda trabajo por hacer.":role.id==="fisher"?"Lleva las redes a secar y revisa los nudos antes de guardarlas.":"Continúa con tu tarea y pregunta al resto si necesitan algo."};
  if(!selected)selected={topic:"daily-"+role.id,kind:rand(random)<.24?"thought":"speech",text:choose(rand(random)<.48?role.thoughts:role.speech,random)};
- return{kind:selected.kind,topic:selected.topic,roleId:role.id,roleName:role.name,personality,text:voice(selected.text,personality,selected.kind)};
+ return{kind:selected.kind,topic:selected.topic,roleId:role.id,roleName:role.name,personality,text:voice(selected.text,personality,selected.kind).slice(0,120)};
 }
 function buildConversation(topic,a,b,ctx,random,memory){
  const island=ctx.islandName?(" en "+String(ctx.islandName).slice(0,28)):"",rapport=clamp(memory&&memory.rapport||0,0,5),friendly=rapport>=2;
