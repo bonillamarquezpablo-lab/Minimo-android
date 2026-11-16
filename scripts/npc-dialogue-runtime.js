@@ -107,7 +107,8 @@ function isProjectable(npc,s){
   const world=projectionScratch.copyFrom(ap);world.y+=anchor===root?2.12:.48;
   const width=s.engine.getRenderWidth(),height=s.engine.getRenderHeight(),rect=s.canvas.getBoundingClientRect();
   if(!(width>0&&height>0&&rect.width>0&&rect.height>0))return reject("zero-rendering-viewport");
-  const viewport=s.camera.viewport&&typeof s.camera.viewport.toGlobal==="function"?s.camera.viewport.toGlobal(width,height):{x:0,y:0,width,height};
+  const camera=s.scene.activeCamera||s.camera;
+  const viewport=camera.viewport&&typeof camera.viewport.toGlobal==="function"?camera.viewport.toGlobal(width,height):{x:0,y:0,width,height};
   const transform=s.scene.getTransformMatrix();
   const p=BABYLON.Vector3.Project(world,projectionIdentity,transform,viewport);
   if(!p||![p.x,p.y,p.z].every(Number.isFinite))return reject("invalid-projected-point");
@@ -161,7 +162,8 @@ function project(slot,s){
   const world=projectionScratch.copyFrom(ap);world.y+=anchor===root?2.12:.48;
   const width=s.engine.getRenderWidth(),height=s.engine.getRenderHeight(),rect=s.canvas.getBoundingClientRect();
   if(!(width>0&&height>0&&rect.width>0&&rect.height>0))return hide("zero-rendering-viewport");
-  const viewport=s.camera.viewport&&typeof s.camera.viewport.toGlobal==="function"?s.camera.viewport.toGlobal(width,height):{x:0,y:0,width,height};
+  const camera=s.scene.activeCamera||s.camera;
+  const viewport=camera.viewport&&typeof camera.viewport.toGlobal==="function"?camera.viewport.toGlobal(width,height):{x:0,y:0,width,height};
   const p=BABYLON.Vector3.Project(world,projectionIdentity,s.scene.getTransformMatrix(),viewport);
   if(!p||p.z<=0||p.z>=1)return hide("behind-camera");
   if(p.x<viewport.x||p.x>viewport.x+viewport.width||p.y<viewport.y||p.y>viewport.y+viewport.height)return hide("outside-screen");
@@ -172,7 +174,7 @@ function project(slot,s){
 }
 function render(s,matricesReady=false){if(!matricesReady)refreshProjectionMatrices(s);const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;layer.setAttribute("aria-hidden",String(!active));if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;return;}for(const slot of slots){if(slot.current)project(slot,s);else slot.node.hidden=true;}renderedCount=slots.filter(slot=>slot.current&&!slot.node.hidden).length;}
 function schedulerTick(){const now=Date.now(),s=snapshot();diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);if(s){bindSceneRenderObserver(s);bindViewportObservers(s);}if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}expire(now);const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));processPending(now,ids);schedule(now,nearby,s);render(s);}
-function positionTick(){const s=snapshot();if(!s)return;bindSceneRenderObserver(s);bindViewportObservers(s);if(!renderObserver)render(s);}
+function positionTick(){const s=snapshot();if(!s)return;bindSceneRenderObserver(s);bindViewportObservers(s);render(s);}
 function start(){if(schedulerHandle||positionHandle)return;schedulerHandle=window.setInterval(()=>{try{schedulerTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC dialogue scheduler recovered:",e);}},Core.SCHEDULER_INTERVAL_MS);positionHandle=window.setInterval(()=>{try{positionTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC bubble projection recovered:",e);}},Core.POSITION_UPDATE_MS);}
 start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,active:!!lastActive,maxVisibleBubbles:MAX_BUBBLES,activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
 }
