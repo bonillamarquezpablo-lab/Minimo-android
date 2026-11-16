@@ -1354,6 +1354,12 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
 
     # Platform-aware memory scheduling: preserve the full Quality scene and roster,
     # but avoid overlapping large binary downloads/parses on iOS Safari and Adreno 650.
+    # Import large GLBs only after the static world geometry has been built.
+    player_import_start_marker = "const playerHumanLoadPromise=coastalReferenceMode?Promise.resolve(null):loadHumanViking();"
+    if html.count(player_import_start_marker) != 1:
+        raise SystemExit("No se encontró la importación automática única del protagonista para aplazarla hasta terminar la geometría del mundo.")
+    html = html.replace(player_import_start_marker, "let playerHumanLoadPromise=Promise.resolve(null);", 1)
+
     mobile_memory_policy_marker = "const isConstrainedMobile=!!(isPerformanceMode&&(iosMemoryBlindMobile||(isTouchDevice&&(constrainedHardware||reportedMemory<=3))));"
     mobile_memory_policy_replacement = mobile_memory_policy_marker + "\n // Peak-memory scheduling is independent from the selected graphics profile. It changes task concurrency only; render scale, textures, shadows, density and gameplay systems remain untouched.\n const isMobilePeakMemorySensitive=!!(isIOSDevice||(isTouchDevice&&(constrainedHardware||/Adreno.*650/i.test(graphicsRenderer))));\n let startupWildlifeCompressedBytes=0;"
     if html.count(mobile_memory_policy_marker) != 1:
@@ -1449,7 +1455,13 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(wildlife_batch_marker, wildlife_batch_replacement, 1)
 
     npc_promise_marker = "const npcStartupPromise=coastalReferenceMode?Promise.resolve(0):startNpcHumanModels();"
-    npc_promise_replacement = "let npcStartupPromise=coastalReferenceMode||isMobilePeakMemorySensitive?Promise.resolve(0):startNpcHumanModels();"
+    npc_promise_replacement = """const initialCoastStartedAt=performance.now();
+ await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+ syncActiveBeachIsland();
+ syncActiveTidalFoamIsland();
+ recordStartupTask('Geometría de costa inicial',initialCoastStartedAt,performance.now(),'ready',{islandIndex:activeBeachIslandIndex,island:land[activeBeachIslandIndex]&&land[activeBeachIslandIndex].name,beachReady:!!livingBeachLayers[activeBeachIslandIndex],foamMeshes:tidalFoamMeshes.length});
+ if(!coastalReferenceMode)playerHumanLoadPromise=loadHumanViking();
+ let npcStartupPromise=coastalReferenceMode||isMobilePeakMemorySensitive?Promise.resolve(0):startNpcHumanModels();"""
     if html.count(npc_promise_marker) != 1:
         raise SystemExit("No se encontró la promesa única de preparación de NPC.")
     html = html.replace(npc_promise_marker, npc_promise_replacement, 1)
@@ -1998,7 +2010,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(smoke_lazy_marker, smoke_lazy_replacement, 1)
 
     smoke_warmup_marker = " let sceneWarmupStatus='unavailable';"
-    smoke_warmup_replacement = " await prepareAmbientSmokePuffs();\n await new Promise(resolve=>requestAnimationFrame(()=>resolve()));\n const initialHabitableAuditStartedAt=performance.now();\n const initialHabitableAudit=auditHabitableStructures(true);\n recordStartupTask('Auditoría inicial de asentamientos',initialHabitableAuditStartedAt,performance.now(),'ready',{structures:habitableStructureRegistry.length,repaired:initialHabitableAudit&&initialHabitableAudit.repaired||0,hiddenUnsafe:initialHabitableAudit&&initialHabitableAudit.hiddenUnsafe||0,autoRegistered:initialHabitableAudit&&initialHabitableAudit.autoRegisteredRoots&&initialHabitableAudit.autoRegisteredRoots.length||0});\n let sceneWarmupStatus='unavailable';"
+    smoke_warmup_replacement = " await prepareAmbientSmokePuffs();\n await new Promise(resolve=>requestAnimationFrame(()=>resolve()));\n const initialHabitableAuditStartedAt=performance.now();\n const initialHabitableAudit=auditHabitableStructures(true);\n recordStartupTask('Auditoría inicial de asentamientos',initialHabitableAuditStartedAt,performance.now(),'ready',{structures:habitableStructureRegistry.length,repaired:initialHabitableAudit&&initialHabitableAudit.repaired||0,hiddenUnsafe:initialHabitableAudit&&initialHabitableAudit.hiddenUnsafe||0,autoRegistered:initialHabitableAudit&&initialHabitableAudit.autoRegisteredRoots&&initialHabitableAudit.autoRegisteredRoots.length||0});\n const reflectionWarmupStartedAt=performance.now();syncNordicWaterReflectionIsland();recordStartupTask('Lista inicial de reflejos nórdicos',reflectionWarmupStartedAt,performance.now(),'ready',{islandIndex:activeWaterReflectionIslandIndex,reflectedMeshes:nordicWaterMirror&&nordicWaterMirror.renderList?nordicWaterMirror.renderList.length:0});\n let sceneWarmupStatus='unavailable';"
     if html.count(smoke_warmup_marker) != 1:
         raise SystemExit("No se encontró el inicio único de la barrera de shaders para preparar primero los efectos ambientales.")
     html = html.replace(smoke_warmup_marker, smoke_warmup_replacement, 1)
