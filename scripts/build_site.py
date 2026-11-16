@@ -350,7 +350,7 @@ def main() -> None:
 
     # Give every tree a subtle, deterministic-per-instance lean. This changes no mesh
     # count, triangle count or shadow policy, but breaks the repeated perfectly upright silhouette.
-    tree_lean_marker = "root.position=v(x,renderedTerrainSurfaceAt(x,z),z);root.rotation.y=baseYaw;root.scaling.setAll(scale);"
+    tree_lean_marker = "root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.x=rand(-.025,.025);root.rotation.y=baseYaw;root.rotation.z=rand(-.04,.04);root.scaling.setAll(scale);"
     tree_lean_replacement = "root.position=v(x,renderedTerrainSurfaceAt(x,z),z);root.rotation.x=rand(-.025,.025);root.rotation.y=baseYaw;root.rotation.z=rand(-.04,.04);root.scaling.setAll(scale);"
     if html.count(tree_lean_marker) != 1:
         raise SystemExit("No se encontró la transformación única de raíz de árbol.")
