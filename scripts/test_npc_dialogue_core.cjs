@@ -37,6 +37,11 @@ const dialoguePlayerFallback=builder.indexOf("player&&player.root&&player.root.p
 assert.ok(dialogueFocusStart>=0&&dialoguePlayerFallback>dialogueFocusStart,
  "Dialogue bridge must safely resolve the active player's world position.");
 assert.match(runtime,/function remember\(state,content\)/);
+assert.match(runtime,/function bindSceneRenderObserver\(s\)/,"Speech bubbles must be reprojected on Babylon's render cycle, not only on a slow wall-clock timer.");
+assert.match(runtime,/onAfterRenderObservable/,"Speech bubbles must follow the NPC and camera on every rendered frame.");
+assert.match(runtime,/orientationchange/);assert.match(runtime,/visualViewport/);assert.match(runtime,/ResizeObserver/);
+assert.match(runtime,/s\.engine\.resize\(\)/,"A device orientation change must resize Babylon before reprojection.");
+assert.match(runtime,/function render\(s,matricesReady=false\)/,"The render-cycle projection must reuse the current camera matrices.");
 assert.match(runtime,/function isProjectable\(npc,s\)/,"The scheduler must reject NPCs whose head anchors are outside the active camera view.");
 assert.match(runtime,/inView=nearby\.filter\(x=>isProjectable\(x\.npc,s\)\)/,"Ambient dialogue must only be scheduled for on-screen NPCs.");
 assert.match(runtime,/schedule\(now,nearby,s\)/);
@@ -59,6 +64,7 @@ assert.match(builder,/for\(const collider of worldColliders\)/);
 assert.match(runtime,/bootstrapAttempts\+\+<80/);assert.match(runtime,/projectionFailures/);assert.match(runtime,/projectionScratch/,"Bubble projection should reuse its scratch vector and identity matrix.");
 assert.match(builder,/dialogue_bridge_marker = " window\.copyGameHealthDebug=\(\)=>\{"/,"Dialogue bridge must be inserted in the same lexical scope as the Babylon scene.");assert.match(builder,/__ELSN_GAME_DIALOGUE_BRIDGE__/);assert.match(builder,/npc-dialogue-core\.js/);assert.match(builder,/npc-dialogue-runtime\.js/);assert.match(builder,/npc-dialogue\.css/);assert.match(builder,/maxVisibleBubbles:4/);assert.match(builder,/scene,engine,camera:scene\.activeCamera/,"Dialogue bridge must expose Babylon engine required for camera projection.");
 assert.ok(builder.includes("const active=!!(document.body&&document.body.classList.contains('game-running'));")&&builder.includes("    active,"),"Dialogue bridge must use the same active-game signal as the gameplay and acceptance flow.");assert.match(builder,/let dialoguePeopleCache=null/,"Dialogue actor roots must be cached after entry rather than rescanned on every position tick.");
+assert.match(builder,/head=descendants\.find\(child=>child&&\/head\/i/,"Dialogue anchors should use the NPC head transform when the rig exposes one.");
 assert.match(builder,/scene\.transformNodes\)\?scene\.transformNodes:\[\]/,"Dialogue must enumerate existing Babylon transform roots.");
 assert.ok(builder.includes("Villager_")&&builder.includes("VillageGuard")&&builder.includes(".exec(name)"),"Dialogue must select existing civilian and guard roots by their stable scene names.");
 assert.doesNotMatch(builder,/ambientPeople\.concat/,"Dialogue bridge cannot reference the removed ambientPeople global.");assert.match(fs.readFileSync("scripts/npc-dialogue.css","utf8"),/z-index:1200/);
