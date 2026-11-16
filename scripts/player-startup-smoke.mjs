@@ -554,6 +554,26 @@ async function main() {
         worldSnapshotActive: world.active === true
       };
     });
+    // The spatial index is created before the campaign selector opens. Do not
+    // inspect a stale/initial snapshot immediately after the first world tick:
+    // wait until Babylon has actually evaluated enough render frusta in gameplay.
+    const spatialFilterWaitStartedAt = performance.now();
+    try {
+      await page.waitForFunction(() => {
+        const state = window.__ELSN_SPATIAL_SELECTION__;
+        return !!state && Number(state.dynamicFilterPasses) >= 48 &&
+          Number(state.dynamicFilterCulledPeak) >= 100;
+      }, undefined, { timeout: 30000, polling: 100 });
+    } catch (error) {
+      const diagnostic = await page.evaluate(() => window.__ELSN_SPATIAL_SELECTION__ || null);
+      manifest.spatialSelectionWaitDiagnostic = diagnostic;
+      await fs.promises.writeFile(path.join(OUT, 'spatial-selection-wait-diagnostic.json'),
+        JSON.stringify(diagnostic, null, 2));
+      await page.screenshot({ path: path.join(OUT, 'spatial-selection-wait-failure.png'), fullPage: true }).catch(() => {});
+      throw new Error('La selección espacial no acumuló 48 pasadas reales y 100 descartes en 30 s: ' +
+        JSON.stringify(diagnostic) + ' · ' + String(error?.message || error));
+    }
+    manifest.spatialSelectionWaitMs = Number((performance.now() - spatialFilterWaitStartedAt).toFixed(1));
     manifest.spatialSelection = await page.evaluate(() => window.__ELSN_SPATIAL_SELECTION__ || null);
     assert.ok(manifest.spatialSelection?.enabled === true,
       'La compilación no activó la selección espacial Babylon en la escena principal: ' +
