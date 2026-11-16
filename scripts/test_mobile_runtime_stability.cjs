@@ -74,6 +74,11 @@ assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
 assert.ok(validator.includes('reportVersion:\'28\',build:\'0.6.309\''), 'Release must carry the next diagnostic build id.');
 assert.ok(validator.includes('EXPECTED_VERSION = "0.6.309"'), 'Release validator must target version 0.6.309.');
+assert.ok(builder.includes('beach_diagnostic_replacements'), 'Beach timing must distinguish actual sliced CPU from elapsed duration.');
+assert.ok(builder.includes('beachWorkProgress:{active:!!beachWorkLayer'), 'Beach diagnostics must expose cell and vertex cursor progress.');
+assert.ok(builder.includes('beachRenderDiagnostics'), 'Beach reports must inspect the active shader material and texture readiness.');
+assert.ok(validator.includes('renderDiagnostics:beachRenderDiagnostics'), 'The packaged report must include beach render diagnostics.');
+assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3))'), 'The packaged report must label wall-clock beach duration separately.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 
