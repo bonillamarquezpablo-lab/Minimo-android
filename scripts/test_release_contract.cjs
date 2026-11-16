@@ -30,13 +30,13 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.310","The release validator must target the packaged 0.6.310 release.");
+assert.equal(expectedVersion,"0.6.311","The release validator must target the packaged 0.6.311 release.");
 for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle:titleVersion,sourceBuildUserAgent:buildVersion})) {
   assert.equal(version,sourceVersion,`The source ${source} must remain the 0.6.274 input that build_site upgrades deterministically.`);
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.310"\)/,"The build must promote every visible source version to 0.6.310.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.311"\)/,"The build must promote every visible source version to 0.6.311.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true"),"Quality must keep its initially selected native render scale for the full session.");
 assert.ok(!buildSite.includes("qualityDprFloor") && !buildSite.includes("qualityDprCeiling") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples") && !buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"A CPU hitch must never trigger automatic resolution reduction in Quality.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2.10:1.45"),"The high-headroom mobile Quality startup scale must remain intact.");
@@ -66,7 +66,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.match(buildSite,/game_version = "0\.6\.310"/,"The build must validate and package 0.6.310.");
+assert.match(buildSite,/game_version = "0\.6\.311"/,"The build must validate and package 0.6.311.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
@@ -94,9 +94,9 @@ assert.ok(npcRuntime.includes("BroadcastChannel") && npcRuntime.includes("elsn-n
 assert.ok(!npcRuntime.includes("eval(") && !npcRuntime.includes("new Function("),"Remote specialist responses must remain data-only.");
 
 const sessionRecorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
-assert.ok(buildSite.includes('meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled') && sessionRecorder.includes('meshSelectionDynamicFilterCulledPeak: number(runtime.meshSelectionDynamicFilterCulledPeak)'),"The published match report must expose dynamic frustum culling effectiveness.");
+assert.ok(buildSite.includes('meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled') && sessionRecorder.includes('meshSelectionDynamicFrustumEnabled: runtime.meshSelectionDynamicFrustumEnabled === true'),"The published match report must state whether dynamic frustum filtering is genuinely enabled.");
 assert.ok(buildSite.includes('meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason') && sessionRecorder.includes('meshSelectionDynamicSamplesByReason: runtime.meshSelectionDynamicSamplesByReason || null'),"Reports must preserve the reason and parent-chain evidence for dynamic selection.");
-assert.ok(buildSite.includes('meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled') && buildSite.includes('plane.dotCoordinate(center)<-paddedRadius') && buildSite.includes('mesh.__elsnSpatialFreshUntilRenderId'),"The release must conservatively cull off-frustum dynamic meshes without forcing world-matrix updates.");
+assert.ok(buildSite.includes('meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled') && buildSite.includes('spatialSelectionStats.dynamicFilterEnabled=false;'),"The release must not claim dynamic frustum culling until Babylon's dynamicContent path has a supported integration.");
 assert.ok(sessionRecorder.includes('meshSelectionDynamicFilterCulledPeak: number(runtime.meshSelectionDynamicFilterCulledPeak)') && sessionRecorder.includes('meshSelectionDynamicFilterMaxMs: number(runtime.meshSelectionDynamicFilterMaxMs)'),"Saved match reports must expose filter effectiveness and CPU cost.");
 const sessionIdleTest=fs.readFileSync('scripts/test_session_recorder_idle_contract.cjs','utf8');
 assert.ok(sessionRecorder.includes('elsn-game-session-recovery-v1') && sessionRecorder.includes('writeRecoverySnapshot(current)'),"Mobile sessions must have a synchronous emergency report before asynchronous pagehide persistence.");

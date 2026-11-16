@@ -33,16 +33,12 @@ for (const marker of [
   'scene.onNewMeshAddedObservable.add',
   'scene.onMeshRemovedObservable.add',
   'function buildSpatialSelectionOctree()',
+  'spatialSelectionStats.dynamicFilterEnabled=false;',
+  'Do not wrap octree.select(): that method selects static octree blocks',
   'buildSpatialSelectionOctree();',
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
   'meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio',
   'meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason',
-  'const installSpatialDynamicFrustumFilter=octree=>',
-  'octree.select=function(frustumPlanes,allowDuplicate)',
-  'sphere&&sphere.centerWorld',
-  'meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak',
-  'mesh.__elsnSpatialFreshUntilRenderId',
-  'plane.dotCoordinate(center)<-paddedRadius',
   'spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i',
   'created-after-octree',
   'octree-initial-dynamic',
@@ -72,8 +68,8 @@ assert.ok(builder.includes('phase_timing_helpers') && builder.includes('setWorld
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'29\',build:\'0.6.310\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.310"'), 'Release validator must target version 0.6.310.');
+assert.ok(validator.includes('reportVersion:\'29\',build:\'0.6.311\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.311"'), 'Release validator must target version 0.6.311.');
 assert.ok(builder.includes('mobile_memory_policy_marker') && builder.includes('isMobilePeakMemorySensitive'), 'Memory-sensitive scheduling must be independent from the selected graphics profile.');
 assert.ok(builder.includes('GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024'), 'GLB identity checks must compare bounded chunks instead of duplicating full files into ArrayBuffers.');
 assert.ok(builder.includes('player_import_start_marker') && builder.includes('let playerHumanLoadPromise=Promise.resolve(null);'), 'The protagonist GLB import must be deferred until static world construction has finished.');

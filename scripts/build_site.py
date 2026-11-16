@@ -1494,27 +1494,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.310: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.311: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.310; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.311; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.310\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.311\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.310.")
-    html = html.replace("0.6.274", "0.6.310")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.311.")
+    html = html.replace("0.6.274", "0.6.311")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'29',build:'0.6.310'"
+    diagnostic_build_replacement = "reportVersion:'29',build:'0.6.311'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.310 para normalizar.")
-    game_version = "0.6.310"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.311 para normalizar.")
+    game_version = "0.6.311"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -1794,10 +1794,20 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
  const spatialDynamicStatsPattern=/^(?:vesselWaterSpray|drakkarWake|tidalFoam|particle|projectile|arrow)/i;
  let spatialSelectionOctree=null;
- const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCulled:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,buildMs:null,error:null};
+ const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCandidates:0,dynamicFilterTotalCulled:0,dynamicFilterTotalMs:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,buildMs:null,error:null};
  const spatialDynamicMeshSet=new Set();
  const publishSpatialSelectionStats=()=>{
-  try{window.__ELSN_SPATIAL_SELECTION__={...spatialSelectionStats};}catch(_){}
+  try{
+   // Expose an on-demand live snapshot. The getter copies only when the Inspector
+   // or a test reads it, never from the per-frame render path.
+   const descriptor=Object.getOwnPropertyDescriptor(window,'__ELSN_SPATIAL_SELECTION__');
+   if(!descriptor||typeof descriptor.get!=='function'){
+    Object.defineProperty(window,'__ELSN_SPATIAL_SELECTION__',{
+     configurable:true,enumerable:true,
+     get:()=>({...spatialSelectionStats})
+    });
+   }
+  }catch(_){}
  };
  const spatialDynamicReasonForMesh=mesh=>{
   for(let node=mesh;node&&node!==scene;node=node.parent){
@@ -1885,68 +1895,11 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     spatialSelectionStats.dynamicReasons['octree-initial-dynamic']=(spatialSelectionStats.dynamicReasons['octree-initial-dynamic']||0)+1;
    }
    for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh);
-   // Babylon normally appends every dynamicContent mesh to render candidates,
-   // including objects behind the camera. Filter only this per-frame candidate array.
-   // The canonical dynamicContent list stays intact for animation, picking, shadows,
-   // collisions, and future camera views.
-   const installSpatialDynamicFrustumFilter=octree=>{
-    if(!octree||typeof octree.select!=='function'||octree.__elsnDynamicFrustumFilter)return false;
-    const originalSelect=octree.select;
-    octree.select=function(frustumPlanes,allowDuplicate){
-     const selected=originalSelect.call(this,frustumPlanes,allowDuplicate);
-     const data=selected&&selected.data,originalLength=selected&&selected.length;
-     if(!data||!Number.isInteger(originalLength)||!Array.isArray(frustumPlanes)||frustumPlanes.length<6)return selected;
-     const started=performance.now();
-     let write=0,candidates=0,culled=0;
-     for(let read=0;read<originalLength;read++){
-      const mesh=data[read];
-      let keep=true;
-      if(mesh&&spatialDynamicMeshSet.has(mesh)){
-       candidates++;
-       try{
-        if(mesh.alwaysSelectAsActiveMesh||mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0)keep=true;
-        else if(typeof scene.getRenderId==='function'&&scene.getRenderId()<=(mesh.__elsnSpatialFreshUntilRenderId||-1))keep=true;
-        else{
-         // Use the last completed world-space bounding sphere with a 1.75 m
-         // motion margin. This avoids forcing matrix updates on thousands of
-         // off-screen meshes; newly created/moved entries get a two-frame grace.
-         const bounds=typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
-         const sphere=bounds&&bounds.boundingSphere,center=sphere&&sphere.centerWorld;
-         const radius=Number(sphere&&sphere.radiusWorld);
-         if(!center||!Number.isFinite(center.x)||!Number.isFinite(center.y)||!Number.isFinite(center.z)||!Number.isFinite(radius))keep=true;
-         else{
-          const paddedRadius=Math.max(0,radius)+1.75;
-          for(let planeIndex=0;planeIndex<6;planeIndex++){
-           const plane=frustumPlanes[planeIndex];
-           if(!plane||typeof plane.dotCoordinate!=='function'){keep=true;break;}
-           if(plane.dotCoordinate(center)<-paddedRadius){keep=false;break;}
-          }
-         }
-        }
-       }catch(_){spatialSelectionStats.dynamicFilterErrors++;keep=true;}
-       if(!keep){culled++;continue;}
-      }
-      data[write++]=mesh;
-     }
-     for(let index=write;index<originalLength;index++)data[index]=null;
-     selected.length=write;
-     const elapsed=Math.max(0,performance.now()-started);
-     spatialSelectionStats.dynamicFilterPasses++;
-     spatialSelectionStats.dynamicFilterLastCandidates=candidates;
-     spatialSelectionStats.dynamicFilterLastSelected=candidates-culled;
-     spatialSelectionStats.dynamicFilterLastCulled=culled;
-     spatialSelectionStats.dynamicFilterCulledPeak=Math.max(spatialSelectionStats.dynamicFilterCulledPeak,culled);
-     spatialSelectionStats.dynamicFilterTotalCulled+=culled;
-     spatialSelectionStats.dynamicFilterLastMs=Number(elapsed.toFixed(3));
-     spatialSelectionStats.dynamicFilterMaxMs=Math.max(spatialSelectionStats.dynamicFilterMaxMs,elapsed);
-     publishSpatialSelectionStats();
-     return selected;
-    };
-    Object.defineProperty(octree,'__elsnDynamicFrustumFilter',{value:true});
-    spatialSelectionStats.dynamicFilterEnabled=true;
-    return true;
-   };
-   if(!installSpatialDynamicFrustumFilter(octree))throw new Error('No se pudo instalar el filtro de frustum para meshes dinámicos.');
+   // Babylon's dynamicContent is evaluated by a separate internal path.
+   // Do not wrap octree.select(): that method selects static octree blocks and
+   // is not the per-frame dynamic candidate list in this Babylon build.
+   spatialSelectionStats.dynamicFilterEnabled=false;
+   spatialSelectionStats.dynamicFilterPasses=0;
    spatialSelectionStats.enabled=true;
    spatialSelectionStats.sceneMeshCount=meshCount;
    spatialSelectionStats.dynamicMeshCount=octree.dynamicContent.length;
@@ -1981,7 +1934,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(scene_marker, scene_marker + "\n" + scene_profile_code, 1)
 
     runtime_diagnostics_marker = "webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,"
-    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason,meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled,meshSelectionDynamicFilterPasses:spatialSelectionStats.dynamicFilterPasses,meshSelectionDynamicFilterCandidates:spatialSelectionStats.dynamicFilterLastCandidates,meshSelectionDynamicFilterSelected:spatialSelectionStats.dynamicFilterLastSelected,meshSelectionDynamicFilterCulled:spatialSelectionStats.dynamicFilterLastCulled,meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak,meshSelectionDynamicFilterTotalCulled:spatialSelectionStats.dynamicFilterTotalCulled,meshSelectionDynamicFilterLastMs:spatialSelectionStats.dynamicFilterLastMs,meshSelectionDynamicFilterMaxMs:spatialSelectionStats.dynamicFilterMaxMs,meshSelectionDynamicFilterErrors:spatialSelectionStats.dynamicFilterErrors,meshSelectionBuildMs:spatialSelectionStats.buildMs,engineGpuFrameMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
+    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason,meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled,meshSelectionDynamicFilterPasses:spatialSelectionStats.dynamicFilterPasses,meshSelectionDynamicFilterCandidates:spatialSelectionStats.dynamicFilterLastCandidates,meshSelectionDynamicFilterSelected:spatialSelectionStats.dynamicFilterLastSelected,meshSelectionDynamicFilterCulled:spatialSelectionStats.dynamicFilterLastCulled,meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak,meshSelectionDynamicFilterTotalCandidates:spatialSelectionStats.dynamicFilterTotalCandidates,meshSelectionDynamicFilterTotalCulled:spatialSelectionStats.dynamicFilterTotalCulled,meshSelectionDynamicFilterTotalMs:spatialSelectionStats.dynamicFilterTotalMs,meshSelectionDynamicFilterAverageMs:spatialSelectionStats.dynamicFilterPasses?Number((spatialSelectionStats.dynamicFilterTotalMs/spatialSelectionStats.dynamicFilterPasses).toFixed(3)):null,meshSelectionDynamicFilterCullRatio:spatialSelectionStats.dynamicFilterTotalCandidates?Number((spatialSelectionStats.dynamicFilterTotalCulled/spatialSelectionStats.dynamicFilterTotalCandidates).toFixed(4)):null,meshSelectionDynamicFilterLastMs:spatialSelectionStats.dynamicFilterLastMs,meshSelectionDynamicFilterMaxMs:spatialSelectionStats.dynamicFilterMaxMs,meshSelectionDynamicFilterErrors:spatialSelectionStats.dynamicFilterErrors,meshSelectionBuildMs:spatialSelectionStats.buildMs,engineGpuFrameMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
     if html.count(runtime_diagnostics_marker) != 1:
         raise SystemExit("No se encontró exactamente un bloque runtime para el diagnóstico.")
     html = html.replace(runtime_diagnostics_marker,runtime_diagnostics_replacement,1)
