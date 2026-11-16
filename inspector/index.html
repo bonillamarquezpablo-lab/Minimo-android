@@ -143,6 +143,14 @@
         <div class="live-game-frame-wrap" id="liveGameFrameWrap" hidden>
           <iframe id="liveGameFrame" title="EL SIN NOMBRE · sesión de medición" loading="lazy" allow="fullscreen; gamepad" referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
+        <section class="capture-vault" aria-labelledby="captureVaultTitle">
+          <div class="capture-vault-head">
+            <div><span class="section-kicker">GALERÍA LOCAL</span><h3 id="captureVaultTitle">Capturas de tu partida</h3><p>Guarda imágenes del juego en este navegador y vuelve a verlas cuando regreses al Inspector.</p></div>
+            <button class="primary" id="captureGameScreenshot" type="button" disabled>Guardar captura</button>
+          </div>
+          <div id="captureVaultStatus" class="capture-vault-status" role="status" aria-live="polite">Abre el juego para habilitar las capturas.</div>
+          <div id="captureVaultGrid" class="capture-vault-grid"><div class="capture-vault-empty">Todavía no hay capturas guardadas.</div></div>
+        </section>
         <div class="live-diagnostic-grid">
           <div><span>FPS del juego</span><strong id="liveFps">—</strong></div>
           <div><span>Frame time p50</span><strong id="liveP50">—</strong></div>
