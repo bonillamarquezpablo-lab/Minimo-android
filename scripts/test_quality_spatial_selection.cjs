@@ -6,6 +6,7 @@ const builder=fs.readFileSync('scripts/build_site.py','utf8');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const source=fs.readFileSync('index.html','utf8');
 const smoke=fs.readFileSync('scripts/player-startup-smoke.mjs','utf8');
+const recorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
 const workflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 
 for(const marker of [
@@ -55,6 +56,7 @@ for(const marker of [
 ]) assert.ok(validator.includes(marker),'Release validator does not require '+marker);
 
 assert.ok(smoke.includes('window.__ELSN_SPATIAL_SELECTION__'),'Real campaign smoke must read the runtime spatial selection state.');
+for(const field of ['meshSelectionDynamicFilterTotalCandidates','meshSelectionDynamicFilterTotalMs','meshSelectionDynamicFilterAverageMs','meshSelectionDynamicFilterCullRatio']) assert.ok(recorder.includes(field+': number(runtime.'+field+'))','Session report must preserve '+field+'.');
 assert.ok(smoke.includes('manifest.spatialSelection?.enabled === true'),'Real campaign smoke must fail if spatial selection is not active.');
 assert.ok(smoke.includes('manifest.spatialSelection.staticIndexedMeshCount') && smoke.includes('dynamicContentRatio'), 'Real campaign smoke must fail when most meshes are dynamically selected.');
 assert.ok(smoke.includes('manifest.spatialSelection.sceneMeshCount') && smoke.includes('manifest.spatialSelection.staticIndexedMeshCount') && smoke.includes(' * 0.20') && smoke.includes(' < 0.80'), 'Startup acceptance must require a meaningful static octree share.');
