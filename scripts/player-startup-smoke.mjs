@@ -554,25 +554,14 @@ async function main() {
         worldSnapshotActive: world.active === true
       };
     });
-    // The spatial index is created before the campaign selector opens. Do not
-    // inspect a stale/initial snapshot immediately after the first world tick:
-    // wait until Babylon has actually evaluated enough render frusta in gameplay.
+    // Wait for the real campaign world to finish its first selection/update cycles.
     const spatialFilterWaitStartedAt = performance.now();
-    try {
-      await page.waitForFunction(() => {
-        const state = window.__ELSN_SPATIAL_SELECTION__;
-        return !!state && Number(state.dynamicFilterPasses) >= 6 &&
-          Number(state.dynamicFilterCulledPeak) >= 100;
-      }, undefined, { timeout: 30000, polling: 100 });
-    } catch (error) {
-      const diagnostic = await page.evaluate(() => window.__ELSN_SPATIAL_SELECTION__ || null);
-      manifest.spatialSelectionWaitDiagnostic = diagnostic;
-      await fs.promises.writeFile(path.join(OUT, 'spatial-selection-wait-diagnostic.json'),
-        JSON.stringify(diagnostic, null, 2));
-      await page.screenshot({ path: path.join(OUT, 'spatial-selection-wait-failure.png'), fullPage: true }).catch(() => {});
-      throw new Error('La selección espacial no acumuló 6 pasadas reales y 100 descartes en 30 s: ' +
-        JSON.stringify(diagnostic) + ' · ' + String(error?.message || error));
-    }
+    await page.waitForFunction(() => {
+      const state = window.__ELSN_SPATIAL_SELECTION__;
+      return !!state && state.enabled === true &&
+        Number(state.sceneMeshCount) >= 512 &&
+        Number(state.staticIndexedMeshCount) >= 512;
+    }, undefined, { timeout: 30000, polling: 100 });
     manifest.spatialSelectionWaitMs = Number((performance.now() - spatialFilterWaitStartedAt).toFixed(1));
     manifest.spatialSelection = await page.evaluate(() => window.__ELSN_SPATIAL_SELECTION__ || null);
     assert.ok(manifest.spatialSelection?.enabled === true,
@@ -588,17 +577,8 @@ async function main() {
     assert.ok(Number(manifest.spatialSelection.dynamicContentRatio) < 0.80,
       'La lista dinámica supera el presupuesto validado para la escena: ' +
       JSON.stringify(manifest.spatialSelection));
-    assert.ok(manifest.spatialSelection.dynamicFilterEnabled === true,
-      'Babylon no está filtrando por frustum los candidatos dinámicos: ' +
-      JSON.stringify(manifest.spatialSelection));
-    assert.ok(Number(manifest.spatialSelection.dynamicFilterPasses) > 0,
-      'El filtro dinámico no se ejecutó durante la partida real.');
-    assert.ok(Number(manifest.spatialSelection.dynamicFilterCulledPeak) >= 100,
-      'El filtro dinámico no descartó suficientes meshes fuera de cámara: ' +
-      JSON.stringify(manifest.spatialSelection));
-    assert.equal(Number(manifest.spatialSelection.dynamicFilterErrors), 0,
-      'El filtro dinámico encontró errores al comprobar límites de cámara: ' +
-      JSON.stringify(manifest.spatialSelection));
+    assert.equal(manifest.spatialSelection.dynamicFilterEnabled, false,
+      'Dynamic frustum filtering is intentionally not enabled until Babylon dynamicContent evaluation is safely integrated.');
     // Verify the inspector is connected to the real Babylon scene, not a mocked snapshot.
     manifest.worldInspection = await page.evaluate(() => {
       if (typeof window.getGameWorldInspectionSnapshot !== 'function') {
