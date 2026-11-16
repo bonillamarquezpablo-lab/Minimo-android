@@ -54,6 +54,8 @@ assert.match(source,/window\.__elSinNombreWaterTelemetrySnapshot\(\)/);
 assert.match(source,/readWaterDiagnostics\(health\)/);
 assert.match(source,/worldPhaseTimings: runtime\.worldPhaseTimings/);
 assert.match(source,/worldPhaseHotspots/);
+assert.match(source,/habitableAuditMs: number\(runtime\.habitableAuditMs\)/);
+assert.match(source,/habitableStructureAudit/);
 assert.match(source,/projectionAttemptsDelta/);
 assert.doesNotMatch(source,/projectionAttempts: dialogueSamples\.reduce/);
 console.log("session recorder idle-performance contract: PASS");
