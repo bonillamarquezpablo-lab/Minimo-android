@@ -100,9 +100,10 @@ assert.ok(validator.includes('renderDiagnostics:beachRenderDiagnostics'), 'The p
 assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3))'), 'The packaged report must label wall-clock beach duration separately.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
-assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullWingspanMeters=1.35') &&
-  builder.includes('const scale=targetGullWingspanMeters/horizontalSpan'),
-  'Gulls must be normalized by horizontal wingspan, never by vertical rig height.');
+assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullWingspanMeters=1.15') &&
+  builder.includes('modelSpan=Math.max(width,height,depth)') &&
+  builder.includes('const scale=targetGullWingspanMeters/modelSpan'),
+  'Gulls must be normalized by the largest of all three model bounds, regardless of GLB axis orientation.');
 assert.ok(builder.includes("const realBirds=[],subduedMaterials=new Set();") &&
   builder.includes('html.replace(gull_material_clone_marker, "", 1)'),
   'The five gull instances must share one subdued material set instead of cloning material variants per bird.');
