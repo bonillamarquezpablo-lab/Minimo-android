@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.305"
+EXPECTED_VERSION = "0.6.307"
 
 HTML_PAGES = (
     "index.html",
@@ -41,6 +41,7 @@ REQUIRED_FILES = (
     "scripts/game-session-recorder.js",
     "scripts/npc-dialogue-core.js",
     "scripts/npc-dialogue-runtime.js",
+    "scripts/npc-village-brain-core.js",
     "scripts/npc-dialogue.css",
     *MANIFESTS,
     "icon.svg",
@@ -133,9 +134,11 @@ def main() -> None:
     npc_agent_runtime_source = read_text("scripts/npc-agent-runtime.js")
     dialogue_core_source = read_text("scripts/npc-dialogue-core.js")
     dialogue_runtime_source = read_text("scripts/npc-dialogue-runtime.js")
+    village_brain_source = read_text("scripts/npc-village-brain-core.js")
     dialogue_style_source = read_text("scripts/npc-dialogue.css")
     for marker in (
         '<link rel="stylesheet" href="./scripts/npc-dialogue.css">',
+        '<script src="./scripts/npc-village-brain-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
         "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
@@ -145,6 +148,14 @@ def main() -> None:
             fail("El juego no integra correctamente los diálogos ambientales: " + marker)
     if "const MAX_VISIBLE_BUBBLES=4" not in dialogue_core_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
         fail("El núcleo de diálogos debe mantener cuatro bocadillos como máximo y un radio de 18 metros.")
+    if "root.ELSN_NPC_VILLAGE_BRAIN=api" not in village_brain_source or any(marker not in village_brain_source for marker in ("function createState(", "function chooseMode(", "function chooseGoal(", "function chooseStep(", "function smoothAngle(")):
+        fail("El cerebro de aldeanos debe conservar estados, decisiones, rutas y giros suaves.")
+    if any(marker not in index_html for marker in ("npcVillageBrain.chooseMode(", "npcVillageBrain.chooseGoal(", "npcVillageBrain.chooseStep(", "tryLandMove(x,z,.43)", "worldEntityVisualDue(npc,npcPosition.x,npcPosition.z)")):
+        fail("La IA de aldeanos debe usar sus decisiones de baja frecuencia, el LOD existente y la colisión del mundo.")
+    if "ambientUpdateAccumulator>=(isConstrainedMobile?1/10:(isPerformanceMode?1/30:1/60))" not in index_html:
+        fail("La IA de aldeanos no puede aumentar la frecuencia de actualización ni alterar el presupuesto móvil.")
+    if "dialogueAmbientByRoot=new Map()" not in index_html or "actualParts=ambientActor&&ambientActor.parts" not in index_html:
+        fail("Los diálogos deben reutilizar la identidad y profesión reales del aldeano, no inventar variantes.")
     for marker in ("BABYLON.Vector3.Project", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
@@ -154,7 +165,7 @@ def main() -> None:
         fail("El runtime de diálogos no debe crear meshes 3D ni añadir trabajo permanente por fotograma.")
     if ".elsn-npc-bubble-message" not in dialogue_style_source or "pointer-events:none" not in dialogue_style_source:
         fail("La capa de bocadillos debe ser ligera y no interceptar los controles del juego.")
-    if "z-index:1200" not in dialogue_style_source or "bootstrapAttempts++<80" not in dialogue_runtime_source or "projectionFailures" not in dialogue_runtime_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
+    if "z-index:30" not in dialogue_style_source or "Core.placeBubble({x,y}" not in dialogue_runtime_source or "function bubbleLimit()" not in dialogue_runtime_source or "bootstrapAttempts++<80" not in dialogue_runtime_source or "projectionFailures" not in dialogue_runtime_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
         fail("El diálogo ambiental debe reintentar el puente, admitir NPC cercanos y exponer fallos de proyección.")
     if "worldColliders.push({" in index_html or "registerWorldCollider({" not in index_html or "habitableColliderBackfillCount" not in index_html:
         fail("Todos los colisionadores de estructuras deben incorporarse a la rejilla espacial activa.")
@@ -397,7 +408,7 @@ def main() -> None:
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
-    if "reportVersion:'26',build:'0.6.305'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'27',build:'0.6.307'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     for marker in (
         "babylonEngineVersion:String(B.Engine.Version||'unknown')",
@@ -700,7 +711,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.305" not in index_html or "EL SIN NOMBRE 0.6.305 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.307" not in index_html or "EL SIN NOMBRE 0.6.307 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?64:96)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -852,7 +863,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.305</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.307</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")

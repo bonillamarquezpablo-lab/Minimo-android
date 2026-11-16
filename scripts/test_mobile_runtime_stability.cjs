@@ -72,8 +72,8 @@ assert.ok(builder.includes('phase_timing_helpers') && builder.includes('setWorld
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'26\',build:\'0.6.305\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.305"'), 'Release validator must target version 0.6.305.');
+assert.ok(validator.includes('reportVersion:\'27\',build:\'0.6.307\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.307"'), 'Release validator must target version 0.6.307.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 
