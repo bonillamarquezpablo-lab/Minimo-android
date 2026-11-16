@@ -22,7 +22,8 @@ assert.equal(lowStoneOnly.some(line=>line.topic==="stone"),true,
 assert.equal(lowStoneOnly.some(line=>line.topic==="wood"),false);
 const remembered=Core.chooseAmbientMessage({parts:{variant:0}},{night:true},()=>0,{recentTopics:["night"]});
 assert.notEqual(remembered.topic,"night","An NPC must not repeat the same contextual topic immediately.");
-const ex=Core.chooseExchange({parts:{variant:0}},{parts:{variant:3}},()=>0,{night:true});assert.equal(ex.length,2);assert.ok(ex.every(x=>x.kind==="speech"&&x.topic==="night"&&x.text));
+const ex=Core.chooseExchange({parts:{variant:0}},{parts:{variant:3}},()=>0,{night:true});assert.equal(ex.length,3);assert.ok(ex.every(x=>x.kind==="speech"&&x.topic==="night"&&x.text));
+const repeatedExchange=Core.chooseExchange({parts:{variant:0}},{parts:{variant:3}},()=>0,{night:true},{rapport:3,exchanges:4,recentTopics:["night"]});assert.equal(repeatedExchange.length,3);assert.notEqual(repeatedExchange[0].topic,"night","Pair memory must steer NPCs away from repeating their last conversation topic.");assert.match(repeatedExchange[1].text,/noticias|oro|islas|viento/i);
 const input=Array.from({length:9},(_,i)=>({id:"npc-"+i,distance:i+1,priority:i===7?4:1,visible:true})),visible=Core.selectVisibleBubbles(input,99);assert.equal(visible.length,4);assert.equal(visible[0].id,"npc-7");assert.ok(visible.every(x=>x.distance<=26));assert.deepEqual(Core.selectVisibleBubbles(input,0),[]);
 const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
 assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);assert.match(runtime,/BABYLON\.Vector3\.Project/);assert.match(runtime,/Core\.POSITION_UPDATE_MS/);assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
@@ -48,7 +49,7 @@ assert.match(runtime,/function isProjectable\(npc,s\)/,"The scheduler must rejec
 assert.match(runtime,/inView=nearby\.filter\(x=>isProjectable\(x\.npc,s\)\)/,"Ambient dialogue must only be scheduled for on-screen NPCs.");
 assert.match(runtime,/schedule\(now,nearby,s\)/);
 assert.match(runtime,/Core\.chooseAmbientMessage\(chosen\.npc,context,random,state\)/);
-assert.match(runtime,/Core\.chooseExchange\(chosen\.npc,partner\.npc,random,context\)/);
+assert.match(runtime,/Core\.chooseExchange\(chosen\.npc,partner\.npc,random,context,pair\)/);assert.match(runtime,/relationships=new Map\(\)/);assert.match(runtime,/function pairMemory\(a,b\)/);assert.match(runtime,/function rememberPair\(pair,topic\)/);assert.match(runtime,/queueReply\(chosen\.npc,exchange\[2\],now\+3050\)/);assert.match(runtime,/recentCaptureUntil/);
 assert.match(builder,/world:\{night:/);
 assert.match(builder,/enemyNearby:typeof nearEnemies/);
 assert.ok(builder.includes("healthLow:typeof health!=='undefined'&&Number(health)<=35"),"Dialogue context must expose measured player health.");
@@ -68,7 +69,8 @@ assert.match(builder,/dialogue_bridge_marker = " window\.copyGameHealthDebug=\(\
 assert.ok(builder.includes("const active=!!(document.body&&document.body.classList.contains('game-running'));")&&builder.includes("    active,"),"Dialogue bridge must use the same active-game signal as the gameplay and acceptance flow.");assert.match(builder,/let dialoguePeopleCache=null/,"Dialogue actor roots must be cached after entry rather than rescanned on every position tick.");
 assert.match(builder,/head=descendants\.find\(child=>child&&\/head\/i/,"Dialogue anchors should use the NPC head transform when the rig exposes one.");
 assert.match(builder,/scene\.transformNodes\)\?scene\.transformNodes:\[\]/,"Dialogue must enumerate existing Babylon transform roots.");
+assert.ok(builder.includes("found.push({name,root:node,villageIndex,parts:"),"NPC snapshots must preserve their village identity so conversations stay within the same settlement.");
 assert.ok(builder.includes("Villager_")&&builder.includes("VillageGuard")&&builder.includes(".exec(name)"),"Dialogue must select existing civilian and guard roots by their stable scene names.");
-assert.doesNotMatch(builder,/ambientPeople\.concat/,"Dialogue bridge cannot reference the removed ambientPeople global.");assert.match(fs.readFileSync("scripts/npc-dialogue.css","utf8"),/z-index:1200/);
+assert.doesNotMatch(builder,/ambientPeople\.concat/,"Dialogue bridge cannot reference the removed ambientPeople global.");assert.match(fs.readFileSync("scripts/npc-dialogue.css","utf8"),/z-index:1200/);const dialogueStyle=fs.readFileSync("scripts/npc-dialogue.css","utf8");assert.match(dialogueStyle,/max-width:min\(184px,54vw\)/);assert.match(dialogueStyle,/font-size:14px/);assert.match(dialogueStyle,/padding:5px 7px 6px/);
 assert.match(worker,/\.\/scripts\/npc-dialogue-core\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue-runtime\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue\.css/);assert.match(validator,/scripts\/npc-dialogue-core\.js/);assert.match(validator,/maxVisibleBubbles:4/);
 console.log("NPC ambient dialogue contract: PASS (four-bubble limit, range, scheduling, projection and offline packaging).");

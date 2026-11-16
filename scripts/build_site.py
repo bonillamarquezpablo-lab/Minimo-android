@@ -867,7 +867,7 @@ def main() -> None:
          if(head)break;
         }
        }
-       found.push({name,root:node,parts:{name,root:node,head,variant:villageIndex*2+slot,civilian:match[1]!==undefined,role:match[1]!==undefined?'civilian':'warrior'},recruited:false});
+       found.push({name,root:node,villageIndex,parts:{name,root:node,head,variant:villageIndex*2+slot,civilian:match[1]!==undefined,role:match[1]!==undefined?'civilian':'warrior'},recruited:false});
       }
       dialoguePeopleCache=found;
      }
@@ -900,28 +900,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.304: restore flagship render clarity while preserving the
-    # heightfield skirt beneath it, and verify cross-mesh contact before release.
+    # Release candidate 0.6.305: improve solar photosphere, visible contact splashes and contextual NPC dialogue while preserving existing game systems.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.304; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.305; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.304\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.305\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.304.")
-    html = html.replace("0.6.274", "0.6.304")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.305.")
+    html = html.replace("0.6.274", "0.6.305")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'25',build:'0.6.304'"
+    diagnostic_build_replacement = "reportVersion:'26',build:'0.6.305'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.304 para normalizar.")
-    game_version = "0.6.304"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.305 para normalizar.")
+    game_version = "0.6.305"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -985,7 +984,7 @@ def main() -> None:
  const spatialActorRootPattern=/^(?:PabloTheNameless|RealHumanVikingRoot|EnemyHumanFallPivot_\\d+|VillageGuard\\d+_\\d+|Villager_\\d+_\\d+|RaiderLongship_\\d+|Drakkar|Wildlife(?:Root)?_?\\d*|Deer(?:Root)?_?\\d*|Wolf(?:Root)?_?\\d*|Stag(?:Root)?_?\\d*|AmbientPerson_?\\d*|AmbientBird_?\\d*)$/i;
  const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;
  const spatialWaterMotionPattern=/^(?:ocean|water|nordicWater|coastalWater|coastalWave|waterFilm|tidalFoam|shoreBreakerWash|beachState|activeBeach|activeShore)/i;
- const spatialEffectMotionPattern=/^(?:flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
+ const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
  const spatialDynamicStatsPattern=/^(?:vesselWaterSpray|drakkarWake|tidalFoam|particle|projectile|arrow)/i;
  let spatialSelectionOctree=null;
  const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCulled:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,buildMs:null,error:null};
@@ -996,6 +995,7 @@ def main() -> None:
  const spatialDynamicReasonForMesh=mesh=>{
   for(let node=mesh;node&&node!==scene;node=node.parent){
    const name=String(node.name||'');
+   if(/^GroundSplashParticleBatch(?:$|[_-])/i.test(name)){if(mesh)mesh.alwaysSelectAsActiveMesh=true;return 'particle-or-effect';}
    if(node.skeleton||node.morphTargetManager||(Array.isArray(node.animations)&&node.animations.length))return 'animated-rig';
    if(spatialActorRootPattern.test(name))return 'actor-or-vehicle';
    if(spatialVegetationMotionPattern.test(name))return 'vegetation-motion';
@@ -1447,6 +1447,16 @@ def main() -> None:
         raise SystemExit("No se encontró exactamente la función original de supervisión de resolución.")
     html = html.replace(quality_adaptive_marker, quality_adaptive_code, 1)
 
+    # Existing instanced water droplets: improve readability without increasing particle count or draw calls.
+    splash_visual_replacements = (
+        ("particle.size=wet?rand(.068,.104)", "particle.size=wet?rand(.12,.18)"),
+        ("particle.life=particle.maxLife=wet?rand(.55,.82)", "particle.life=particle.maxLife=wet?rand(.72,1.02)"),
+    )
+    for old_code, new_code in splash_visual_replacements:
+        if html.count(old_code) != 1:
+            raise SystemExit(f"No se encontró exactamente el parámetro original de salpicaduras: {old_code}")
+        html = html.replace(old_code, new_code, 1)
+
     high_res_texture_replacements = (
         ("function makePatternTexture(name,base,accents,style='grain',size=512,generateMipMaps=false){",
          "function makePatternTexture(name,base,accents,style='grain',size=highHeadroomQualityMobile?1024:512,generateMipMaps=false){",
@@ -1776,7 +1786,7 @@ def main() -> None:
 
 
 
-    # 0.6.304: time every existing world-update phase without changing its work or cadence.
+    # 0.6.305: time every existing world-update phase without changing its work or cadence.
     phase_update_marker = "function update(dt){"
     phase_timing_helpers = r"""const worldPhaseTimingStats=Object.create(null);
 let worldPhaseTimingCurrent='',worldPhaseTimingStartedAt=0;

@@ -2,10 +2,10 @@
 "use strict";
 const MAX_VISIBLE_BUBBLES=4,MAX_RANGE_METERS=26,POSITION_UPDATE_MS=100,SCHEDULER_INTERVAL_MS=1200;
 const ROLES=Object.freeze([
- Object.freeze({id:"fisher",name:"Pescador",thoughts:["La marea está cambiando; habrá que revisar las redes.","El mar siempre encuentra la forma de sorprendernos."],speech:["Hoy las redes pesan poco.","Cuando cambie el viento, saldré a pescar.","Necesitamos más cuerda para las redes."]}),
- Object.freeze({id:"farmer",name:"Campesino",thoughts:["La tierra necesita cuidados antes de la próxima cosecha.","No podemos desperdiciar ni una sola provisión."],speech:["Hoy toca revisar los cultivos.","La cosecha saldrá adelante si cuidamos la tierra.","Las provisiones deben durar hasta la próxima estación."]}),
- Object.freeze({id:"smith",name:"Herrero",thoughts:["Una buena hoja necesita paciencia y buen fuego.","El hierro de esta isla exige un trabajo cuidadoso."],speech:["La fragua necesita más carbón.","Me vendría bien recibir más mineral.","Cada herramienta debe aguantar muchos inviernos."]}),
- Object.freeze({id:"trader",name:"Mercader",thoughts:["Los rumores viajan más rápido que los barcos.","Conviene guardar algo para los días difíciles."],speech:["Siempre hay algo que intercambiar en otra isla.","Ojalá llegue pronto un barco mercante.","Una ruta segura puede traer noticias y provisiones."]})
+ Object.freeze({id:"fisher",name:"Pescador",focus:"mareas, redes, corrientes y calas",thoughts:["La marea está cambiando; habrá que revisar las redes.","El mar siempre encuentra la forma de sorprendernos."],speech:["Hoy las redes pesan poco.","Cuando cambie el viento, saldré a pescar.","Necesitamos más cuerda para las redes."]}),
+ Object.freeze({id:"farmer",name:"Campesino",focus:"cosechas, agua, alimentos y reservas",thoughts:["La tierra necesita cuidados antes de la próxima cosecha.","No podemos desperdiciar ni una sola provisión."],speech:["Hoy toca revisar los cultivos.","La cosecha saldrá adelante si cuidamos la tierra.","Las provisiones deben durar hasta la próxima estación."]}),
+ Object.freeze({id:"smith",name:"Herrero",focus:"hierro, herramientas, reparaciones y defensas",thoughts:["Una buena hoja necesita paciencia y buen fuego.","El hierro de esta isla exige un trabajo cuidadoso."],speech:["La fragua necesita más carbón.","Me vendría bien recibir más mineral.","Cada herramienta debe aguantar muchos inviernos."]}),
+ Object.freeze({id:"trader",name:"Mercader",focus:"intercambios, rutas, noticias y provisiones",thoughts:["Los rumores viajan más rápido que los barcos.","Conviene guardar algo para los días difíciles."],speech:["Siempre hay algo que intercambiar en otra isla.","Ojalá llegue pronto un barco mercante.","Una ruta segura puede traer noticias y provisiones."]})
 ]);
 const OPENERS=["¿Has oído algo nuevo de la costa?","¿Cómo marcha el trabajo hoy?","¿Crees que tendremos una travesía tranquila?","¿Has visto al resto del poblado esta mañana?"];
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,Number(n)||0));
@@ -35,12 +35,64 @@ function chooseAmbientMessage(npc,context,random,memory){
  if(!selected)selected={topic:"daily-"+role.id,kind:rand(random)<.22?"thought":"speech",text:choose(rand(random)<.5?role.thoughts:role.speech,random)};
  return{kind:selected.kind,topic:selected.topic,roleId:role.id,roleName:role.name,text:selected.text};
 }
-function chooseExchange(aNpc,bNpc,random,context){
- const a=roleForVariant(aNpc&&aNpc.parts?aNpc.parts.variant:aNpc?.variant),b=roleForVariant(bNpc&&bNpc.parts?bNpc.parts.variant:bNpc?.variant),ctx=context||{};
- if(ctx.enemyNearby===true)return[{kind:"speech",topic:"danger",roleId:a.id,roleName:a.name,text:"¿Has visto movimiento junto a la empalizada?"},{kind:"speech",topic:"danger",roleId:b.id,roleName:b.name,text:"Sí. Avísales a los demás y no dejes la entrada desprotegida."}];
- if(ctx.night===true)return[{kind:"speech",topic:"night",roleId:a.id,roleName:a.name,text:"La noche está cayendo. ¿Has revisado el fuego?"},{kind:"speech",topic:"night",roleId:b.id,roleName:b.name,text:"Sí, pero mantendré la guardia. No me fío del silencio."}];
- if(ctx.onShip===true)return[{kind:"speech",topic:"voyage",roleId:a.id,roleName:a.name,text:"¿Crees que encontraremos una cala segura?"},{kind:"speech",topic:"voyage",roleId:b.id,roleName:b.name,text:"Mantén la vista en la costa. Buscaremos un lugar donde desembarcar."}];
- return[{kind:"speech",topic:"village",roleId:a.id,roleName:a.name,text:choose(OPENERS,random)},{kind:"speech",topic:"village",roleId:b.id,roleName:b.name,text:choose(b.speech,random)}];
+function buildConversation(topic,a,b,ctx,random,memory){
+ const island=ctx.islandName?(" en "+String(ctx.islandName).slice(0,36)):"",rapport=clamp(memory&&memory.rapport||0,0,5),friendly=rapport>=2;
+ const line=(role,text)=>({kind:"speech",topic,roleId:role.id,roleName:role.name,text});
+ if(topic==="danger")return[
+  line(a,a.id==="fisher"?"He visto movimiento cerca de la costa. ¿Tú también?":"Hay enemigos cerca de la empalizada. ¿Has dado la voz de alarma?"),
+  line(b,b.id==="trader"?"Sí. Avisaré al poblado y buscaré una ruta segura para retirarnos.":b.id==="smith"?"Sí. Llevaré herramientas y reforzaré la entrada.":"Sí. Voy a avisar a la guardia; no debemos dejar ese paso descubierto."),
+  line(a,friendly?"Bien. Confío en ti; yo vigilaré el otro lado.":"De acuerdo. Yo cubriré el flanco mientras avisas a los demás.")
+ ];
+ if(topic==="health")return[
+  line(a,"Ese golpe ha sido serio. ¿Tienes vendas y un lugar donde descansar?"),
+  line(b,b.id==="farmer"?"Prepararé agua y algo de comida. No puedes seguir trabajando así.":"Buscaré un sitio junto al fuego. Primero hay que recuperarse y después volveremos al trabajo."),
+  line(a,"Avísame cuando esté mejor; no merece la pena perder a otro compañero.")
+ ];
+ if(topic==="night")return[
+  line(a,a.id==="farmer"?"La luz está cayendo. ¿Quién se encarga del fuego esta noche?":"La noche se ha cerrado sobre el poblado. ¿Has revisado la empalizada?"),
+  line(b,b.id==="fisher"?"Dejaré las redes y ayudaré con la guardia. La costa puede esperar.":b.id==="smith"?"Yo revisaré las defensas; el fuego debe mantenerse encendido.":"Haré el primer turno. Despiértame cuando llegue el relevo."),
+  line(a,friendly?"Gracias. Mañana te guardaré una parte de las provisiones.":"De acuerdo. Mantengamos el poblado seguro hasta el amanecer.")
+ ];
+ if(topic==="voyage")return[
+  line(a,"¿Qué ruta tomarías para llegar a la siguiente isla sin arriesgar el barco?"),
+  line(b,b.id==="fisher"?"Sigamos la costa y evitemos los bajíos cuando cambie la marea.":b.id==="trader"?"Primero busquemos una cala protegida; después podremos comerciar con el poblado.":"Conviene reparar el casco y asegurar las herramientas antes de zarpar."),
+  line(a,"Buena idea. Comprobaremos el viento y prepararemos la carga antes de partir.")
+ ];
+ if(topic==="resources")return[
+  line(a,a.id==="smith"?"Nos falta material para reparar el equipo. ¿Qué podemos conseguir primero?":"Las reservas están bajando. ¿Cómo organizamos el trabajo?"),
+  line(b,b.id==="fisher"?"Puedo traer pescado para cambiarlo por madera y piedra.":b.id==="farmer"?"Prioricemos comida y madera; sin reservas no aguantaremos el invierno.":"Puedo organizar un intercambio en la próxima ruta, pero necesitamos escolta."),
+  line(a,"Repartamos las tareas y revisemos las reservas al volver.")
+ ];
+ if(topic==="capture")return[
+  line(a,"La bandera ya ondea"+island+". ¿Crees que podremos mantener este asentamiento?"),
+  line(b,b.id==="smith"?"Reforzaremos la empalizada y repararemos las herramientas.":b.id==="farmer"?"Sí, si aseguramos agua y alimentos antes de que llegue el frío.":"Sí, pero habrá que abrir una ruta segura para traer provisiones."),
+  line(a,"Entonces manos a la obra. Esta vez construiremos algo que dure.")
+ ];
+ if(topic==="work")return[
+  line(a,"¿Cómo va tu tarea? Parece que hoy no paramos."),
+  line(b,b.id==="fisher"?"Las redes están listas; después puedo ayudar con el transporte.":b.id==="farmer"?"Voy a terminar aquí y luego revisaré las reservas.":b.id==="smith"?"Las herramientas estarán listas cuando termine de templar el hierro.":"Estoy organizando los materiales para que nadie tenga que esperar."),
+  line(a,friendly?"Perfecto. Trabajar contigo hace más fácil la jornada.":"Bien. Cuando acabes, coordinamos el siguiente trabajo.")
+ ];
+ return[
+  line(a,choose(OPENERS,random)),
+  line(b,b.id===a.id?choose(b.speech,random):b.id==="fisher"?"El viento está cambiando; mejor revisar las redes antes de que suba la marea.":b.id==="farmer"?"Con buenas reservas, el poblado puede pasar el invierno.":b.id==="smith"?"Una herramienta bien hecha ahorra muchos problemas.":"Las noticias de otras islas pueden valer tanto como el oro."),
+  line(a,friendly?"Siempre es bueno hablar contigo. Nos entendemos mejor cada día.":"Tendremos que compartir noticias cuando vuelva el resto de la expedición.")
+ ];
+}
+function chooseExchange(aNpc,bNpc,random,context,memory){
+ const a=roleForVariant(aNpc&&aNpc.parts?aNpc.parts.variant:aNpc?.variant),b=roleForVariant(bNpc&&bNpc.parts?bNpc.parts.variant:bNpc?.variant),ctx=context||{},mem=memory||{};
+ const candidates=[];
+ if(ctx.enemyNearby===true)candidates.push("danger");
+ if(ctx.healthLow===true)candidates.push("health");
+ if(ctx.recentCapture===true)candidates.push("capture");
+ if(ctx.night===true)candidates.push("night");
+ if(ctx.onShip===true)candidates.push("voyage");
+ if((hasMeasuredNumber(ctx.wood)&&Number(ctx.wood)<=5)||(hasMeasuredNumber(ctx.stone)&&Number(ctx.stone)<=5))candidates.push("resources");
+ if(ctx.isWalking===true)candidates.push("work");
+ candidates.push("village");
+ const recent=new Set(Array.isArray(mem.recentTopics)?mem.recentTopics:[]);
+ const topic=candidates.find(value=>!recent.has(value))||candidates[candidates.length-1];
+ return buildConversation(topic,a,b,ctx,random,mem);
 }
 function selectVisibleBubbles(items,limitValue){const requested=Number.isFinite(Number(limitValue))?Math.floor(Number(limitValue)):MAX_VISIBLE_BUBBLES,limit=Math.max(0,Math.min(MAX_VISIBLE_BUBBLES,requested));if(!Array.isArray(items)||!limit)return[];return items.filter(x=>x&&x.visible!==false&&Number.isFinite(Number(x.distance))&&Number(x.distance)<=MAX_RANGE_METERS).slice().sort((a,b)=>(Number(b.priority)||0)-(Number(a.priority)||0)||Number(a.distance)-Number(b.distance)).slice(0,limit);}
 return Object.freeze({MAX_VISIBLE_BUBBLES,MAX_RANGE_METERS,POSITION_UPDATE_MS,SCHEDULER_INTERVAL_MS,ROLES,roleForVariant,chooseAmbientMessage,chooseExchange,selectVisibleBubbles,contextualLines});

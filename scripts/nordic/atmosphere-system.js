@@ -197,7 +197,7 @@
       this._sunPoint = new this.B.Vector3(0, 0, 0);
       this._moonPoint = new this.B.Vector3(0, 0, 0);
       this._sunColor = new this.B.Color3(1, 0.94, 0.82);
-      this._sunSpecularColor = new this.B.Color3(0.72, 0.78, 0.86);
+      this._sunSpecularColor = new this.B.Color3(0.96, 0.91, 0.78);
       this._coolNightColor = new this.B.Color3(0.25, 0.34, 0.52);
       this._dayAmbientColor = new this.B.Color3(0.72, 0.82, 0.92);
       this._nightGroundColor = new this.B.Color3(0.055, 0.070, 0.11);
@@ -218,6 +218,7 @@
       this._windowGlowColor = new this.B.Color3(0, 0, 0);
       this._fallbackFocus = { x: 0, y: 0, z: 0 };
       this._createSkyResources();
+      this._createSunSurfaceMaterial();
       this._createMoonAndLights();
       this._adjustMaterialLightBudgets();
       this._configurePostProcessing();
@@ -392,6 +393,57 @@
         if (this.skyTexture) { this.skyTexture.dispose(); this.skyTexture = null; }
       } catch (error) {
         console.warn('Atmosphere shader unavailable; retaining the authored Nordic sky fallback.', error);
+      }
+    }
+
+    _createSunSurfaceMaterial() {
+      const B = this.B, scene = this.scene;
+      if (!this.sunDisc || !B || !B.ShaderMaterial || !B.Effect) return;
+      try {
+        B.Effect.ShadersStore.norseSunSurfaceVertexShader = [
+          'precision highp float;',
+          'attribute vec3 position;',
+          'attribute vec3 normal;',
+          'uniform mat4 world;',
+          'uniform mat4 worldView;',
+          'uniform mat4 worldViewProjection;',
+          'varying vec3 vSunNormalView;',
+          'varying vec3 vSunLocalPosition;',
+          'void main(void) {',
+          '  vSunNormalView = normalize(mat3(worldView) * normal);',
+          '  vSunLocalPosition = position;',
+          '  gl_Position = worldViewProjection * vec4(position, 1.0);',
+          '}'
+        ].join('\n');
+        B.Effect.ShadersStore.norseSunSurfaceFragmentShader = [
+          'precision highp float;',
+          'varying vec3 vSunNormalView;',
+          'varying vec3 vSunLocalPosition;',
+          'uniform vec3 sunColor;',
+          'uniform float uTime;',
+          'void main(void) {',
+          '  float mu = clamp(abs(normalize(vSunNormalView).z), 0.0, 1.0);',
+          '  float limbDarkening = 0.73 + 0.27 * pow(mu, 0.58);',
+          '  float granulationA = sin(vSunLocalPosition.x * 13.0 + uTime * 0.015) * sin(vSunLocalPosition.y * 17.0 - uTime * 0.011);',
+          '  float granulationB = sin((vSunLocalPosition.x + vSunLocalPosition.z) * 29.0 + uTime * 0.009);',
+          '  float granulation = 0.988 + granulationA * 0.012 + granulationB * 0.006;',
+          '  float warmLimb = pow(1.0 - mu, 2.6);',
+          '  vec3 photosphere = mix(vec3(1.0, 0.985, 0.91), vec3(1.0, 0.73, 0.43), warmLimb * 0.34);',
+          '  vec3 radiance = photosphere * sunColor * limbDarkening * granulation;',
+          '  gl_FragColor = vec4(radiance, 1.0);',
+          '}'
+        ].join('\n');
+        const material = new B.ShaderMaterial('NorseSunSurfaceMaterial', scene,
+          { vertex: 'norseSunSurface', fragment: 'norseSunSurface' },
+          { attributes: ['position', 'normal'], uniforms: ['world', 'worldView', 'worldViewProjection', 'sunColor', 'uTime'] });
+        material.backFaceCulling = false;
+        material.disableDepthWrite = true;
+        this._originalSunMaterial = this.sunDisc.material;
+        this.sunSurfaceMaterial = material;
+        this.sunDisc.material = material;
+      } catch (error) {
+        this.sunSurfaceMaterial = null;
+        console.warn('Procedural sun surface unavailable; retaining the existing sun material.', error);
       }
     }
 
@@ -652,8 +704,8 @@
       moonVector.x = -sun.x; moonVector.y = -sun.y; moonVector.z = -sun.z;
       const sunColor = this._sunColor;
       sunColor.r = 1.0;
-      sunColor.g = mix(0.94, 0.47, state.twilight);
-      sunColor.b = mix(0.82, 0.24, state.twilight);
+      sunColor.g = mix(0.985, 0.50, state.twilight);
+      sunColor.b = mix(0.91, 0.29, state.twilight);
 
       if (this.sunLight) {
         this.sunLight.direction.x = -sun.x;
@@ -734,7 +786,10 @@
         this.sunDisc.visibility = visible;
         this.sunHalo.visibility = visible;
         const material = this.sunDisc.material;
-        if (material && material.emissiveColor) material.emissiveColor.copyFrom(sunColor);
+        if (this.sunSurfaceMaterial && material === this.sunSurfaceMaterial) {
+          material.setColor3('sunColor', sunColor);
+          material.setFloat('uTime', this.elapsedSeconds);
+        } else if (material && material.emissiveColor) material.emissiveColor.copyFrom(sunColor);
         const haloMaterial = this.sunHalo.material;
         if (haloMaterial) haloMaterial.alpha = 0.035 + state.twilight * 0.20 + state.daylight * 0.045;
       }
@@ -841,6 +896,12 @@
       try { if (this.moonLight) this.moonLight.dispose(); } catch (_) {}
       try { if (this.moonDisc) this.moonDisc.dispose(); } catch (_) {}
       try { if (this.moonHalo) this.moonHalo.dispose(); } catch (_) {}
+      try {
+        if (this.sunSurfaceMaterial) {
+          if (this.sunDisc && this.sunDisc.material === this.sunSurfaceMaterial) this.sunDisc.material = this._originalSunMaterial || null;
+          this.sunSurfaceMaterial.dispose();
+        }
+      } catch (_) {}
     }
   }
 

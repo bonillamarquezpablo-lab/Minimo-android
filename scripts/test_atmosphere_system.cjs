@@ -51,6 +51,11 @@ for (const marker of [
   'cloudLayerA',
   'cloudLayerB',
   'starsMap',
+  'norseSunSurfaceVertexShader',
+  'norseSunSurfaceFragmentShader',
+  'NorseSunSurfaceMaterial',
+  'limbDarkening',
+  'granulationA',
   'NorseMoonDirectionalLight',
   'setWeather(value)',
   'setClimate(value)'
@@ -58,6 +63,15 @@ for (const marker of [
   assert.ok(source.includes(marker), 'Atmosphere module is missing: ' + marker);
 }
 assert.ok(source.includes('this.sunLight.direction.x = -sun.x') && source.includes('this.moonLight.direction.x = sun.x'), 'Sun and moon must use independent, correctly oriented light vectors.');
+
+const sunSurfaceBody=source.slice(source.indexOf('    _createSunSurfaceMaterial() {'),source.indexOf('    _createMoonAndLights() {'));
+assert.ok(sunSurfaceBody.includes("this.sunDisc.material = material")&&sunSurfaceBody.includes("attributes: ['position', 'normal']"),"The sun must reuse its existing disc and compute a procedural photosphere from its surface normals.");
+assert.doesNotMatch(sunSurfaceBody,/MeshBuilder|new B\.(?:PointLight|DirectionalLight)/,"The realistic sun must not add meshes or lights.");
+assert.equal((sunSurfaceBody.match(/\.join\('\\n'\);/g)||[]).length,2,"Both GLSL shader sources must use real newline separators.");
+assert.doesNotMatch(sunSurfaceBody,/\.join\('\\\\n'\);/,"GLSL shader sources must not contain literal backslash-n sequences.");
+assert.ok(source.includes("material.setColor3('sunColor', sunColor)")&&source.includes("material.setFloat('uTime', this.elapsedSeconds)"),"Solar colour and surface evolution must use the existing coalesced atmosphere update.");
+assert.ok(source.includes("0.73 + 0.27 * pow(mu, 0.58)")&&source.includes("warmLimb"),"The solar disc must use limb darkening and warm edge response.");
+
 assert.ok(source.includes('focus.x + sun.x * 180') && !source.includes('focus.add(sunVector.scale(180))'), 'Light positioning must not mutate the player or camera target.');
 const updateBody = source.slice(source.indexOf('    update(dt, force) {'), source.indexOf('    dispose() {'));
 assert.doesNotMatch(updateBody, /new B\.(?:Vector3|Color3|Color4)|B\.Color3\.Lerp/, 'Atmosphere updates must reuse frame-hot vectors and colours.');
