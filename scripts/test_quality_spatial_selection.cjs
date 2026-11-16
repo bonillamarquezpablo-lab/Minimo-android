@@ -46,7 +46,10 @@ for(const marker of [
 ]) assert.ok(validator.includes(marker),'Release validator does not require '+marker);
 
 assert.ok(smoke.includes('window.__ELSN_SPATIAL_SELECTION__'),'Real campaign smoke must read the runtime spatial selection state.');
-for(const field of ['meshSelectionDynamicFilterTotalCandidates','meshSelectionDynamicFilterTotalMs','meshSelectionDynamicFilterAverageMs','meshSelectionDynamicFilterCullRatio']) assert.ok(recorder.includes(field+': number(runtime.'+field+'))','Session report must preserve '+field+'.');
+for (const field of ['meshSelectionDynamicFilterTotalCandidates','meshSelectionDynamicFilterTotalMs','meshSelectionDynamicFilterAverageMs','meshSelectionDynamicFilterCullRatio']) {
+  const marker = field + ': number(runtime.' + field + '),';
+  assert.ok(recorder.includes(marker), 'Session report must preserve ' + field + '.');
+}
 assert.ok(smoke.includes('manifest.spatialSelection?.enabled === true'),'Real campaign smoke must read the runtime spatial selection state.');
 assert.ok(smoke.includes('manifest.spatialSelection.staticIndexedMeshCount'),'Real campaign smoke must verify static octree indexing.');
 assert.ok(smoke.includes('Dynamic frustum filtering is intentionally not enabled'),'Smoke must not claim dynamic culling before it is integrated into Babylon dynamicContent.');
