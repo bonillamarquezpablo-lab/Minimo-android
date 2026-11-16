@@ -143,7 +143,7 @@ assert.ok(unifiedInspector.includes('La patrulla utilizó') || npcCoreWithIntell
 assert.ok(unifiedInspector.includes('function buildSpecialistIntelligence(report, rememberResults, historicalReports)') && unifiedInspector.includes('api.remember'),"Session diagnoses must be connected to persistent specialist memory.");
 assert.ok(unifiedInspector.includes('renderSpecialistIntelligence(intelligence)') && unifiedInspector.includes('wbSpecialistCards'),"The unified session report must show the four specialists in a plain-language panel.");
 assert.ok(npcCoreWithIntelligence.includes('automaticWorldChanges: false') && npcCoreWithIntelligence.includes('automaticCodeChanges: false'),"Local autonomy must remain read-only until a repair is explicitly approved.");
-assert.ok(unifiedInspectorHtml.includes('unified-workbench.css?v=5') && unifiedInspectorHtml.includes('unified-workbench.js?v=7'),"The specialist report must load the current uncached workbench assets.");
+assert.ok(unifiedInspectorHtml.includes('unified-workbench.css?v=6') && unifiedInspectorHtml.includes('unified-workbench.js?v=8'),"The specialist report must load the current uncached workbench assets.");
 assert.ok(unifiedInspectorCss.includes('.wb-specialist-grid') && unifiedInspectorCss.includes('.wb-specialist-location'),"Specialist findings and measured world coordinates must be readable on mobile.");
 
 new (require('node:vm').Script)(unifiedInspector,{filename:'inspector/unified-workbench.js'});
