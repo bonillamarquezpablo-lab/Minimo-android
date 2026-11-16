@@ -645,14 +645,13 @@
 
 
   const GUIDE_STEPS=[
-    {target:'#overview',title:'1. Resumen',text:'Aquí ves cuántas pruebas están en marcha o en cola, además del inventario más reciente de islas y estructuras.'},
-    {target:'#activeRunsList',title:'2. Pruebas activas',text:'Esta lista reúne todas las ejecuciones que siguen en marcha o esperan turno. Toca cualquiera para abrir sus detalles.'},
-    {target:'#control .launch-panel',title:'3. Iniciar una inspección',text:'Elige Rápido, Completo o Profundo solo cuando necesites esta auditoría. Sin conexión directa, se abrirá GitHub y tendrás que confirmar el inicio.'},
-    {target:'.run-panel',title:'4. Detalle de la prueba',text:'Aquí ves el estado, los pasos, el tiempo transcurrido y las capturas de la ejecución que hayas seleccionado.'},
-    {target:'#telemetria',title:'5. Rendimiento',text:'FPS más alto es mejor; tiempo por fotograma más bajo es mejor. Las gráficas muestran solo mediciones disponibles.'},
-    {target:'#radar',title:'6. Mapa de las islas',text:'Toca una isla para consultar sus objetos y mediciones. Verde: apoyo correcto; rojo: desnivel; gris: pendiente de medir.'},
-    {target:'#comparativa',title:'7. Comparar versiones',text:'Elige amanecer, mediodía, atardecer o noche y desliza para comparar ANTES y DESPUÉS cuando haya capturas.'}
-  ];;
+    {target:'#workbench-home',title:'1. Elige qué quieres revisar',text:'Empieza por una de las cinco tarjetas. Cada una abre solo las herramientas necesarias para esa tarea.'},
+    {mode:'performance',subview:'diagnostico-en-vivo',target:'#diagnostico-en-vivo',title:'2. Comprueba la fluidez',text:'Abre el juego desde aquí y juega un rato. Verás si los FPS se mantienen y dónde aparecen los tirones.'},
+    {mode:'world',subview:'mundo',target:'#mundo',title:'3. Revisa el mundo 3D',text:'Haz una captura de la escena después de recorrer la zona que quieras revisar. El mapa te ayuda a localizar cada isla y estructura.'},
+    {mode:'evidence',subview:'comparativa',target:'#comparativa',title:'4. Compara el aspecto',text:'Elige amanecer, día, atardecer o noche y desliza para comparar las imágenes cuando existan capturas.'},
+    {mode:'intelligence',subview:'patrulla-exploradores',target:'#patrulla-exploradores',title:'5. Consulta a los especialistas',text:'Aquí aparecen los recorridos de las islas, los informes de NPC y lo que recuerdan de partidas anteriores.'},
+    {mode:'tests',subview:'control',target:'#control',title:'6. Ejecuta una prueba cuando haga falta',text:'Elige rápida, completa o profunda. El Inspector reúne el estado, los pasos y las capturas en el mismo lugar.'}
+  ];
   let guideIndex=0,guideActive=false,guideHighlighted=null;
   function clearGuideHighlight(){
     if(guideHighlighted)guideHighlighted.classList.remove('guide-focus');
@@ -668,6 +667,9 @@
     $('guidePrev').disabled=guideIndex===0;
     $('guideNext').textContent=guideIndex===GUIDE_STEPS.length-1?'Volver al principio ↺':'Siguiente →';
     clearGuideHighlight();
+    if(step.mode && typeof window.__ELSN_INSPECTOR_NAV__==="function"){
+      window.__ELSN_INSPECTOR_NAV__(step.mode,step.subview);
+    }
     const target=document.querySelector(step.target);
     if(target){
       guideHighlighted=target;

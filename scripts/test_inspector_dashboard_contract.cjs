@@ -11,7 +11,7 @@ const previewReport=fs.readFileSync('scripts/create_hrafn_ab_report.py','utf8');
 new vm.Script(app,{filename:'inspector/app.js'});
 const sectionOrder=['control','telemetria','radar','comparativa'].map(id=>html.indexOf('<section class="section" id="'+id+'">'));
 assert.ok(sectionOrder.every((position,index)=>position>=0&&(index===0||position>sectionOrder[index-1])),'The actual page sections must follow the guided-tour order: operations, graphs, island radar, comparison.');
-for(const [id,label] of [['control','01 · OPERACIONES'],['telemetria','02 · GRÁFICAS'],['radar','03 · MAPA DEL MUNDO'],['comparativa','04 · EVIDENCIA VISUAL']]){
+for(const [id,label] of [['control','PRUEBAS DEL JUEGO'],['telemetria','HISTORIAL DE MEDICIONES'],['radar','MAPA DEL ARCHIPIÉLAGO'],['comparativa','COMPARACIÓN VISUAL']]){
  const start=html.indexOf('<section class="section" id="'+id+'">');
  const next=html.indexOf('</section>',start);
  assert.ok(html.slice(start,next).includes(label),'Incorrect visual section number for '+id);
@@ -63,7 +63,8 @@ assert.ok(sampler.includes('performance.memory'),'Heap memory must be measured o
 assert.ok(sampler.includes("value!==null&&value!==undefined&&value!==''"),'Missing heap samples must not be converted to zero.');
 const guideStart=app.indexOf('  const GUIDE_STEPS=['),guideEnd=app.indexOf('\n  ];',guideStart);
 const guideTargets=[...app.slice(guideStart,guideEnd).matchAll(/target:'([^']+)'/g)].map(match=>match[1]);
-assert.deepEqual(guideTargets,['#overview','#activeRunsList','#control .launch-panel','.run-panel','#telemetria','#radar','#comparativa'],'The guide must follow the live-run-first dashboard order.');
+assert.deepEqual(guideTargets,['#workbench-home','#diagnostico-en-vivo','#mundo','#comparativa','#patrulla-exploradores','#control'],'The guide must follow the new guided all-in-one task flow.');
+assert.ok(app.includes("window.__ELSN_INSPECTOR_NAV__") && app.includes("step.mode") && app.includes("step.subview"),'The guide must open the correct integrated tool before highlighting it.');
 assert.ok(html.includes('<header class="topbar">')&&html.indexOf('id="guideFab"')<html.indexOf('</header>'),'Help must be opened from the top header.');
 assert.ok(!html.includes('id="guideStart"')&&!app.includes("$('guideStart').addEventListener"),'The page must not show a guide launch card.');
 assert.ok(app.includes("activeRun?.status==='in_progress'?'La prueba aún está trabajando."),'Empty performance charts must explain that the inspection is still running.');
