@@ -333,6 +333,29 @@ def main() -> None:
         raise SystemExit("No se encontró exactamente un presupuesto de trabajo costero.")
     html = html.replace(coast_budget_marker, coast_budget_replacement, 1)
 
+    # Civilian smiths must not spawn a rigid hammer on a hand/forearm bone.
+    # It intersected the hand during idle/walk clips and read as an unexplained brown prop.
+    smith_hammer_marker = """  }else if(job===1){
+   const hammerParent=rig.hand||rig.forearm||modelRoot,hammer=new B.TransformNode('SmithHammer_'+index,scene);hammer.parent=hammerParent;
+   hammer.position=hammerParent===modelRoot?v(.34*inv,.98*inv,.14*inv):v(0,-.12*inv,.08*inv);
+   capsule('SmithHammerHandle_'+index,hammer,[0,-.10*inv,0],.50*inv,.025*inv,M.woodLight);
+   box('SmithHammerHead_'+index,hammer,[0,.13*inv,0],[.22*inv,.13*inv,.16*inv],M.darkMetal);
+  }else if(job===2){"""
+    smith_hammer_replacement = """  }else if(job===1){
+   // Keep the smith's hands clear; work tools are represented at the anvil, not rigidly bound to a skinned hand.
+  }else if(job===2){"""
+    if html.count(smith_hammer_marker) != 1:
+        raise SystemExit("No se encontró la única herramienta rígida de mano del herrero.")
+    html = html.replace(smith_hammer_marker, smith_hammer_replacement, 1)
+
+    # Give every tree a subtle, deterministic-per-instance lean. This changes no mesh
+    # count, triangle count or shadow policy, but breaks the repeated perfectly upright silhouette.
+    tree_lean_marker = "root.position=v(x,renderedTerrainSurfaceAt(x,z),z);root.rotation.y=baseYaw;root.scaling.setAll(scale);"
+    tree_lean_replacement = "root.position=v(x,renderedTerrainSurfaceAt(x,z),z);root.rotation.x=rand(-.025,.025);root.rotation.y=baseYaw;root.rotation.z=rand(-.04,.04);root.scaling.setAll(scale);"
+    if html.count(tree_lean_marker) != 1:
+        raise SystemExit("No se encontró la transformación única de raíz de árbol.")
+    html = html.replace(tree_lean_marker, tree_lean_replacement, 1)
+
     # Paint every startup milestone synchronously before expensive scene work.
     # Previously setLoadingProgress() only queued requestAnimationFrame(); a long
     # synchronous Babylon/world-construction task could therefore leave the visible
