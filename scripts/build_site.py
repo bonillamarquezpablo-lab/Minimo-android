@@ -382,6 +382,13 @@ def main() -> None:
     const blob=new Blob(chunks,{type:'text/javascript'});
     chunks.length=0;
     setLoadingProgress(progressEnd,label+' · compilando el motor 3D…');
+    // Flush the completed byte-download percentage and let the browser paint it
+    // before the large Babylon bundle is synchronously parsed and evaluated.
+    currentLoadProgress=Math.max(currentLoadProgress,targetLoadProgress);
+    if(loadProgressBar)loadProgressBar.style.width=currentLoadProgress.toFixed(2)+'%';
+    if(loadProgressLabel)loadProgressLabel.textContent=Math.floor(currentLoadProgress)+'%';
+    if(loadProgressTrack)loadProgressTrack.setAttribute('aria-valuenow',String(Math.round(currentLoadProgress)));
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
     objectUrl=URL.createObjectURL(blob);
     result=await new Promise(resolve=>{
      let settled=false;
