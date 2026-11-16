@@ -325,6 +325,44 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
+    # Paint every startup milestone synchronously before expensive scene work.
+    # Previously setLoadingProgress() only queued requestAnimationFrame(); a long
+    # synchronous Babylon/world-construction task could therefore leave the visible
+    # indicator at 0% even after bootEngine() had advanced to 2%, 38% or 40%.
+    progress_marker = """function setLoadingProgress(value,label){
+ trackStartupPerfStage(value,label);
+ targetLoadProgress=Math.max(targetLoadProgress,Math.min(100,Math.max(0,Number(value)||0)));
+ if(label&&loadText)loadText.textContent=label;
+ if(!loadProgressAnimation)loadProgressAnimation=requestAnimationFrame(paintLoadingProgress);
+}"""
+    progress_replacement = """function setLoadingProgress(value,label){
+ trackStartupPerfStage(value,label);
+ targetLoadProgress=Math.max(targetLoadProgress,Math.min(100,Math.max(0,Number(value)||0)));
+ currentLoadProgress=targetLoadProgress;
+ if(loadProgressAnimation)cancelAnimationFrame(loadProgressAnimation);
+ loadProgressAnimation=0;lastLoadProgressFrame=0;
+ if(label&&loadText)loadText.textContent=label;
+ if(loadProgressBar)loadProgressBar.style.width=currentLoadProgress.toFixed(2)+'%';
+ if(loadProgressLabel)loadProgressLabel.textContent=Math.floor(currentLoadProgress)+'%';
+ if(loadProgressTrack)loadProgressTrack.setAttribute('aria-valuenow',String(Math.round(currentLoadProgress)));
+}"""
+    if html.count(progress_marker) != 1:
+        raise SystemExit("No se encontró la función única de progreso de carga.")
+    html = html.replace(progress_marker, progress_replacement, 1)
+
+    # Yield once before synchronous world construction so the browser can paint
+    # the real 40% milestone instead of freezing on the initial 0% frame.
+    game_start_marker = """ async function startGame(){
+ setLoadingProgress(40,'Preparando el mundo…');
+ try{"""
+    game_start_replacement = """ async function startGame(){
+ setLoadingProgress(40,'Preparando el mundo…');
+ await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+ try{"""
+    if html.count(game_start_marker) != 1:
+        raise SystemExit("No se encontró el inicio único de startGame para liberar el primer fotograma.")
+    html = html.replace(game_start_marker, game_start_replacement, 1)
+
     # Mobile startup: let the browser stream/compile the bundled Babylon scripts natively.
     # Fetching the complete engine into TextDecoder strings and re-wrapping it in a Blob
     # duplicates several MB and delays script compilation on mid-range Android devices.
@@ -563,6 +601,102 @@ def main() -> None:
     if html.count(gull_partial) != 1:
         raise SystemExit("No se encontró la comprobación de mallas del GLB de gaviota.")
     html = html.replace(gull_partial, gull_partial_required, 1)
+    # Normalize gulls by horizontal wingspan, not vertical rig height. A flying bird's folded body height
+    # is tiny compared with its open wingspan; using height here inflated the whole flock several-fold.
+    gull_scale_marker = "const bounds=boundsForMeshes(meshes),height=Math.max(.001,bounds.height),scale=1.65/height;actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
+    gull_scale_replacement = "const bounds=boundsForMeshes(meshes),width=bounds.max.x-bounds.min.x,depth=bounds.max.z-bounds.min.z,horizontalSpan=Math.max(width,depth),targetGullWingspanMeters=1.35;if(!Number.isFinite(horizontalSpan)||horizontalSpan<.35)throw new Error('Envergadura del modelo de gaviota inválida: '+horizontalSpan);const scale=targetGullWingspanMeters/horizontalSpan;if(!Number.isFinite(scale)||scale<=0||scale>8)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
+    if html.count(gull_scale_marker) != 1:
+        raise SystemExit("No se encontró la única escala incorrecta de gaviotas basada en altura.")
+    html = html.replace(gull_scale_marker, gull_scale_replacement, 1)
+
+    # The five instances deliberately share the subdued GLB materials. Cloning every
+    # mesh material for every gull created avoidable shader/material variants.
+    gull_material_registry_marker = "const realBirds=[];"
+    gull_material_registry_replacement = "    const realBirds=[],subduedMaterials=new Set();"
+    if html.count(gull_material_registry_marker) != 1:
+        raise SystemExit("No se encontró el registro único de instancias de gaviota.")
+    html = html.replace(gull_material_registry_marker, gull_material_registry_replacement, 1)
+    # Remove per-instance material clones by matching each source operation independently;
+    # this avoids whitespace-sensitive block matching in the minified source HTML.
+    for gull_material_clone_marker in (
+        "if(Array.isArray(mesh.material))mesh.material=mesh.material.map(material=>material?material.clone(material.name+'_subdued_gull'):material);",
+        "else if(mesh.material)mesh.material=mesh.material.clone(mesh.material.name+'_subdued_gull');",
+    ):
+        if html.count(gull_material_clone_marker) != 1:
+            raise SystemExit("No se encontró exactamente una operación de duplicación de material de gaviota.")
+        html = html.replace(gull_material_clone_marker, "", 1)
+    gull_material_set = "const subduedMaterials=new Set();"
+    if html.count(gull_material_set) != 1:
+        raise SystemExit("No se encontró el conjunto local de materiales duplicados de las gaviotas.")
+    html = html.replace(gull_material_set, "", 1)
+
+    # Move expensive terrestrial-fauna decisions and collision/terrain validation to
+    # a distance-aware cadence. Root motion is still integrated on every frame, while
+    # the skinned animation groups keep running at the render rate.
+    wildlife_update_marker = "function updateWildlife(dt){"
+    wildlife_update_end_marker = " // 0.6.195: la cubierta vegetal queda despejada de caminos y campamentos."
+    wildlife_update_replacement = """function updateWildlife(dt){
+   if(!ambientFauna.length)return;
+   const focus=onShip?ship.position:player.root.position,now=elapsed;
+   const frameDt=Math.max(0,Math.min(.08,Number(dt)||0));
+   for(const animal of ambientFauna){
+    const homeIsland=land[animal.homeIslandIndex],root=animal.root;
+    if(!homeIsland||!root)continue;
+    const nextDecision=Number(animal._wildlifeNextDecisionAt)||0;
+    if(now>=nextDecision){
+     const lastDecision=Number(animal._wildlifeLastDecisionAt);
+     const decisionDt=Number.isFinite(lastDecision)?Math.max(.016,Math.min(.25,now-lastDecision)):.05;
+     const dx=focus.x-root.position.x,dz=focus.z-root.position.z,distanceSquared=dx*dx+dz*dz,dist=Math.sqrt(distanceSquared);
+     const near=distanceSquared<4900,mid=distanceSquared<22500;
+     const decisionInterval=isTouchDevice
+      ?(isPerformanceMode?(near?.10:(mid?.18:.32)):(near?.05:(mid?.10:.20)))
+      :(near?(1/30):(mid?.075:.15));
+     animal._wildlifeLastDecisionAt=now;
+     animal._wildlifeNextDecisionAt=now+decisionInterval;
+     animal.flee=dist<14?Math.max(animal.flee,3.2):Math.max(0,animal.flee-decisionDt);
+     if(animal.flee>0&&dist>.01)animal.heading=Math.atan2(-dx,-dz);
+     else{
+      animal.turnTimer-=decisionDt;animal.wanderTimer-=decisionDt;
+      if(animal.turnTimer<=0){animal.turnTimer=rand(2.5,6.5);animal.heading+=rand(-.72,.72);}
+      if(animal.wanderTimer<=0){animal.wanderTimer=rand(2,5.5);animal.wandering=Math.random()<.58;}
+     }
+     if(dist>(isTouchDevice?115:165)){
+      if(animal.activeAnimation){(animal.groups||[]).forEach(group=>{try{group.stop();}catch(_){}});animal.activeAnimation=null;animal.activeMode='distance-idle';}
+      animal._wildlifeVelocityX=0;animal._wildlifeVelocityZ=0;
+     }else{
+      const moving=animal.flee>0||animal.wandering;
+      const speed=animal.flee>0?WILDLIFE_MODEL_DEFS[animal.kind].runSpeed:WILDLIFE_MODEL_DEFS[animal.kind].walkSpeed;
+      playWildlifeAnimation(animal,animal.flee>0?'run':(moving?'walk':'idle'));
+      if(moving){
+       const moveWindow=Math.max(decisionInterval,decisionDt),step=speed*moveWindow;
+       const nx=root.position.x+Math.sin(animal.heading)*step,nz=root.position.z+Math.cos(animal.heading)*step;
+       if(isSafeIslandGroundPoint(homeIsland,nx,nz,Infinity,1.05,.52)&&canWildlifeMove(nx,nz,animal.collisionRadius)){
+        animal._wildlifeVelocityX=Math.sin(animal.heading)*speed;
+        animal._wildlifeVelocityZ=Math.cos(animal.heading)*speed;
+       }else{
+        animal.heading+=Math.PI*rand(.55,1.45);animal.turnTimer=.35;animal.wanderTimer=.45;
+        animal._wildlifeVelocityX=0;animal._wildlifeVelocityZ=0;
+       }
+      }else{
+       animal._wildlifeVelocityX=0;animal._wildlifeVelocityZ=0;
+      }
+     }
+     root.rotation.y=animal.heading;
+     root.position.y=terrainHeightOnIsland(homeIsland,root.position.x,root.position.z)+animal.groundOffset;
+    }
+    const vx=Number(animal._wildlifeVelocityX)||0,vz=Number(animal._wildlifeVelocityZ)||0;
+    if(vx||vz){root.position.x+=vx*frameDt;root.position.z+=vz*frameDt;}
+    root.rotation.y=animal.heading;
+   }
+  }"""
+    if html.count(wildlife_update_marker) != 1 or html.count(wildlife_update_end_marker) != 1:
+        raise SystemExit("No se encontró un bloque único de actualización de fauna para limitar sus decisiones.")
+    wildlife_start = html.index(wildlife_update_marker)
+    wildlife_end = html.index(wildlife_update_end_marker, wildlife_start)
+    if not html[wildlife_start:wildlife_end].rstrip().endswith("}"):
+        raise SystemExit("El bloque original de fauna no termina con una llave de cierre válida.")
+    html = html[:wildlife_start] + wildlife_update_replacement + "\n " + html[wildlife_end:]
+
     gull_optional_catch = "}catch(err){console.warn('Fauna opcional: gaviotas GLB no disponibles antes de entrar:',err);if(/agotó el plazo/i.test(String(err&&err.message||err)))throw err;}"
     gull_required_catch = "}catch(err){console.error('Falló la fauna alada obligatoria:',err);throw new Error('RECURSO OBLIGATORIO: gaviotas GLB · '+String(err&&err.message||err));}"
     if html.count(gull_optional_catch) != 1:
@@ -2288,12 +2422,12 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
 
         (
             "const segments=isPerformanceMode?192:512,rows=isPerformanceMode?10:20,cols=segments+1;",
-            "const segments=isPerformanceMode?192:512,rows=isPerformanceMode?10:(isTouchDevice?64:96),cols=segments+1;",
+            "const segments=isPerformanceMode?192:512,rows=isPerformanceMode?10:(isTouchDevice?32:48),cols=segments+1;",
             "densidad radial de NordicSubmergedSand",
         ),
         (
             "const segments=coastColumns,rows=isPerformanceMode?13:(isTouchDevice?15:17),cols=segments+1;",
-            "const segments=coastColumns,rows=isPerformanceMode?13:(isTouchDevice?64:96),cols=segments+1;",
+            "const segments=coastColumns,rows=isPerformanceMode?13:(isTouchDevice?32:48),cols=segments+1;",
             "densidad radial de LivingCoastalSand para coincidir con la triangulación del fondo submarino",
         ),
         (

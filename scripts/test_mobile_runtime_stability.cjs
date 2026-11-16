@@ -104,6 +104,19 @@ assert.ok(validator.includes('renderDiagnostics:beachRenderDiagnostics'), 'The p
 assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3))'), 'The packaged report must label wall-clock beach duration separately.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
+assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullWingspanMeters=1.35') &&
+  builder.includes('const scale=targetGullWingspanMeters/horizontalSpan'),
+  'Gulls must be normalized by horizontal wingspan, never by vertical rig height.');
+assert.ok(builder.includes("const realBirds=[],subduedMaterials=new Set();") &&
+  builder.includes('html.replace(gull_material_clone_marker, "", 1)'),
+  'The five gull instances must share one subdued material set instead of cloning material variants per bird.');
+assert.ok(builder.includes('wildlife_update_marker = "function updateWildlife(dt){"') &&
+  builder.includes('_wildlifeNextDecisionAt') && builder.includes('_wildlifeVelocityX'),
+  'Wildlife pathfinding/collision decisions must be throttled while root motion remains frame-integrated.');
+assert.ok(builder.includes('rows=isPerformanceMode?10:(isTouchDevice?32:48)') &&
+  builder.includes('rows=isPerformanceMode?13:(isTouchDevice?32:48)'),
+  'Quality coast meshes must avoid the fourfold radial oversampling previously applied to touch devices.');
+
 
 assert.ok(!source.includes('worldColliders.push({'), 'Structures must not bypass the live spatial-hash collider registrar.');
 assert.ok(source.includes('habitableColliderBackfillCount'), 'Unregistered habitable roots must receive a conservative collision footprint.');

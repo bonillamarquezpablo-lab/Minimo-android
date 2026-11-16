@@ -216,7 +216,7 @@ def main() -> None:
         "function auditCoastalMeshContinuity(onlyIslandIndex=null)",
         "auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)",
         "thresholdMeters=.05",
-        "rows=isPerformanceMode?10:(isTouchDevice?64:96)",
+        "rows=isPerformanceMode?10:(isTouchDevice?32:48)",
     )
     missing_coastal_continuity_markers = [
         marker for marker in coastal_continuity_markers if marker not in index_html
@@ -783,7 +783,7 @@ def main() -> None:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
     if "SAGA DEL NORTE · CAPÍTULO I · 0.6.310" not in index_html or "EL SIN NOMBRE 0.6.310 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
-    if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?64:96)" not in index_html:
+    if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
     if "const subdivisions=Math.min(360,Math.max(112,Math.ceil(is.r*2/(isTouchDevice?.42:.36))));" not in index_html:
         fail("La costa necesita un heightfield más fino para evitar escalones visibles.")

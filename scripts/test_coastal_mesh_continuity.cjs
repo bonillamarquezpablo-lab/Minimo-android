@@ -11,11 +11,11 @@ assert.ok(build.includes('const y=shoreHeight;'),
   'NordicSubmergedSand must reuse terrainHeightOnIsland; it must not apply seabedHeight twice.');
 assert.ok(build.includes('const seabedY=analyticalHeight-.003;'),
   'IslandHeightfield skirt must sit under the same once-evaluated seabed profile.');
-assert.ok(build.includes('rows=isPerformanceMode?10:(isTouchDevice?64:96)'),
+assert.ok(build.includes('rows=isPerformanceMode?10:(isTouchDevice?32:48)'),
   'Quality radial density must be increased while Performance keeps its established budget.');
 assert.ok(build.includes('const segments=coastColumns,rows=isPerformanceMode?15:(isTouchDevice?64:96),cols=segments+1;')===false,
   'Build patch must not silently change the established low-memory performance beach budget.');
-assert.ok(build.includes('const segments=coastColumns,rows=isPerformanceMode?13:(isTouchDevice?64:96),cols=segments+1;'),
+assert.ok(build.includes('const segments=coastColumns,rows=isPerformanceMode?13:(isTouchDevice?32:48),cols=segments+1;'),
   'Quality beach radial density must match the corresponding 64/96-row submerged seabed and avoid triangulation gaps.');
 assert.ok(build.includes('function auditCoastalMeshContinuity(onlyIslandIndex=null)'),
   'The runtime must expose the cross-mesh continuity audit.');
@@ -26,7 +26,7 @@ assert.ok(build.includes('thresholdMeters=.05'),
 assert.ok(build.includes('auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)'),
   'The browser test API must expose the cross-mesh audit.');
 assert.ok(release.includes('EXPECTED_VERSION = "0.6.310"'));
-assert.ok(release.includes('rows=isPerformanceMode?13:(isTouchDevice?64:96)'),
+assert.ok(release.includes('rows=isPerformanceMode?13:(isTouchDevice?32:48)'),
   'Release validation must require the high-detail coast resolution while retaining the low-memory profile.');
 assert.ok(build.includes('html = html.replace("0.6.274", "0.6.310")'));
 assert.ok(release.includes('SAGA DEL NORTE · CAPÍTULO I · 0.6.310'));
