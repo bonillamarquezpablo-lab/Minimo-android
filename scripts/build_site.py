@@ -46,7 +46,7 @@ DOWNLOADS = {
         "https://ambientcg.com/get?file=Ground060_2K-JPG.zip", 1_000_000, "zip"
     ),
     "assets/models/Seagull.glb": (
-        "https://gobkit.com/freebies/animal007/Seagull.glb", 100_000, "glb"
+        "https://gobkit.com/freebies/animal007/Seagull.glb", 50_000, "glb"
     ),
     "assets/models/wildlife/Deer.glb": (
         "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Deer.glb", 100_000, "glb"
@@ -459,6 +459,10 @@ def main() -> None:
     if html.count(gull_success) != 1:
         raise SystemExit("No se encontró el reemplazo de gaviotas provisionales por GLB.")
     html = html.replace(gull_success, gull_success_required, 1)
+    gull_size_marker = "if(!(blob&&blob.size>100000))throw new Error('GLB de gaviota vacío o incompleto');"
+    if html.count(gull_size_marker) != 1:
+        raise SystemExit("No se encontró el umbral mínimo del GLB de gaviota.")
+    html = html.replace(gull_size_marker, "if(!(blob&&blob.size>50000))throw new Error('GLB de gaviota vacío o incompleto');", 1)
     gull_partial = "else throw new Error('El GLB se importó sin mallas instanciables');"
     gull_partial_required = "else throw new Error('El GLB solo permitió preparar '+realBirds.length+'/5 gaviotas completas.');"
     if html.count(gull_partial) != 1:
