@@ -1014,8 +1014,10 @@ def main() -> None:
         fail("La fauna debe conservar el roster completo en Rendimiento y Calidad.")
     if "const performanceDensity=isConstrainedMobile?" not in index_html or "leavesPerClump=isPerformanceMode?8:10" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("El ajuste de hierba preexistente de Rendimiento debe mantenerse y la fauna debe cargar después sin recortar su roster.")
-    if "const civilianWarmupPromise=civilianTotal?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html:
-        fail("La preparación de aldeanos debe compartir la misma promesa de carga y reutilizar el resultado al instanciarlos.")
+    if "const civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html or "if(!civilianBlob){" not in index_html:
+        fail("La preparación de aldeanos debe reutilizar la promesa compartida cuando hay margen y cargarla en serie en móviles sensibles a memoria.")
+    if "if(isMobilePeakMemorySensitive){" not in index_html or "await playerHumanLoadPromise;" not in index_html or "npcStartupPromise=startNpcHumanModels();" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
+        fail("El arranque móvil debe secuenciar protagonista y NPC sin eliminar el camino paralelo en equipos con margen.")
     if "WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837'" not in index_html or "function loadWildlifeModels()" not in index_html:
         fail("Los modelos de fauna de Calidad deben conservar su fuente inmutable y su cargador.")
     if "function isSafeIslandGroundPoint(" not in index_html or "return null;" not in index_html[index_html.find("function sampleGroundPoint("):index_html.find("land.forEach((is,idx)=>{", index_html.find("function sampleGroundPoint("))]:
