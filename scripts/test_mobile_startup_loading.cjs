@@ -9,6 +9,14 @@ const recorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
 const inspector=fs.readFileSync('inspector/unified-workbench.js','utf8');
 
 assert.ok(build.includes('fetchpriority="high"'),'Babylon engine and GLTF loader must be preloaded at high priority.');
+assert.ok(build.includes("progress_replacement =") && build.includes("currentLoadProgress=targetLoadProgress;") &&
+  build.includes("loadProgressLabel.textContent=Math.floor(currentLoadProgress)+'%'") &&
+  build.includes("loadProgressTrack.setAttribute('aria-valuenow'"),
+  'Every startup milestone must update the visible percentage and accessibility value synchronously, not only queue a future animation frame.');
+assert.ok(build.includes("await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));") &&
+  build.includes("Yield once before synchronous world construction"),
+  'The browser must paint the 40% world-building milestone before synchronous scene generation starts.');
+
 assert.ok(build.includes('BABYLON_VERSION = "9.35.0"'));
 assert.ok(build.includes('r"7\\.54\\.3"'),'Fallback mirrors must be normalized to the bundled Babylon version.');
 assert.ok(build.includes('same-origin-stream') && build.includes('same-origin-native-fallback'),'Same-origin Babylon must stream with progress and keep a native fallback.');
