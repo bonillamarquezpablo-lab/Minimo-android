@@ -900,8 +900,7 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.305: improve solar photosphere, visible contact splashes and contextual NPC dialogue while preserving the
-    # heightfield skirt beneath it, and verify cross-mesh contact before release.
+    # Release candidate 0.6.305: improve solar photosphere, visible contact splashes and contextual NPC dialogue while preserving existing game systems.
     if game_version != "0.6.274":
         raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.305; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
