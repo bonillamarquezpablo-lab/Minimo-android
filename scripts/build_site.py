@@ -2581,7 +2581,7 @@ function getWorldPhaseTimingSnapshot(){
 
     # Cache unchanged structural ground proofs and discover new roofed roots incrementally.
     habitable_registry_marker = r""" const habitableStructureRegistry=[];
- let lastHabitableStructureAudit=null,habitableAuditAccumulator=0;"""
+ let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;"""
     habitable_registry_replacement = r""" const habitableStructureRegistry=[];
  let habitableAuditLastMs=0,habitableAuditMaxMs=0,habitableAuditCount=0,habitableAuditLastCacheHits=0,habitableAuditLastCacheMisses=0;
  let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;"""
