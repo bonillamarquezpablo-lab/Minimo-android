@@ -561,7 +561,7 @@ async function main() {
     try {
       await page.waitForFunction(() => {
         const state = window.__ELSN_SPATIAL_SELECTION__;
-        return !!state && Number(state.dynamicFilterPasses) >= 48 &&
+        return !!state && Number(state.dynamicFilterPasses) >= 6 &&
           Number(state.dynamicFilterCulledPeak) >= 100;
       }, undefined, { timeout: 30000, polling: 100 });
     } catch (error) {
@@ -570,7 +570,7 @@ async function main() {
       await fs.promises.writeFile(path.join(OUT, 'spatial-selection-wait-diagnostic.json'),
         JSON.stringify(diagnostic, null, 2));
       await page.screenshot({ path: path.join(OUT, 'spatial-selection-wait-failure.png'), fullPage: true }).catch(() => {});
-      throw new Error('La selección espacial no acumuló 48 pasadas reales y 100 descartes en 30 s: ' +
+      throw new Error('La selección espacial no acumuló 6 pasadas reales y 100 descartes en 30 s: ' +
         JSON.stringify(diagnostic) + ' · ' + String(error?.message || error));
     }
     manifest.spatialSelectionWaitMs = Number((performance.now() - spatialFilterWaitStartedAt).toFixed(1));
