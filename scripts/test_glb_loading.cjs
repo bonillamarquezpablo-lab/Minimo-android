@@ -27,5 +27,5 @@ assert.match(html,/originalFallback:true/);
 assert.match(builder,/async function loadSameOriginScriptWithProgress/);
 assert.match(builder,/native-script-url/);
 assert.match(builder,/timeoutMs=25000/);
-assert.doesNotMatch(builder,/7\.54\.3/);
+assert.match(builder,/html\.replace\("7\.54\.3", BABYLON_VERSION\)/);
 console.log('OK: timed GLB stages clean up late imports; required NPC block entry and fauna remains optional.');
