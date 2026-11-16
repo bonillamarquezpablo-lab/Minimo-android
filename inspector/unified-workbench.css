@@ -389,3 +389,28 @@ body.inspector-expert label.expert-only{display:flex}
  .wb-diagnosis-columns{grid-template-columns:1fr}
  .wb-diagnosis-subcard{padding:10px}
 }
+
+
+/* Guided mode keeps the entry screen focused; the same links and data stay in the expert view. */
+body.inspector-guided .topbar .nav{display:none}
+body.inspector-guided .hero{padding-block:clamp(14px,2vw,24px);margin-bottom:12px}
+body.inspector-guided .hero-copy h1{font-size:clamp(1.65rem,3vw,2.25rem);margin-bottom:7px}
+body.inspector-guided .hero-copy p{max-width:62ch;font-size:.86rem;line-height:1.45}
+body.inspector-guided .hero-aside{display:none}
+body.inspector-guided .overview{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+body.inspector-guided .overview-card{min-height:0;padding:10px 12px}
+body.inspector-guided .overview-label{font-size:.62rem}
+body.inspector-guided .overview-value{font-size:1.18rem}
+body.inspector-guided .overview-foot{font-size:.62rem;line-height:1.35}
+body.inspector-guided .section-heading{margin-bottom:12px;gap:12px}
+body.inspector-guided .section-heading h2{font-size:1.24rem}
+body.inspector-guided .section-heading p{margin-top:6px;font-size:.76rem;line-height:1.45}
+body.inspector-guided .panel{padding:14px}
+body.inspector-guided .panel-title h3{font-size:1rem}
+@media(max-width:620px){
+ body.inspector-guided .overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body.inspector-guided .hero{padding-block:12px}
+ body.inspector-guided .hero-copy p{font-size:.8rem}
+ body.inspector-guided .section-heading p{font-size:.73rem}
+ body.inspector-guided .panel{padding:11px}
+}
