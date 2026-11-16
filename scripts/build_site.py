@@ -1895,70 +1895,11 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     spatialSelectionStats.dynamicReasons['octree-initial-dynamic']=(spatialSelectionStats.dynamicReasons['octree-initial-dynamic']||0)+1;
    }
    for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh);
-   // Babylon normally appends every dynamicContent mesh to render candidates,
-   // including objects behind the camera. Filter only this per-frame candidate array.
-   // The canonical dynamicContent list stays intact for animation, picking, shadows,
-   // collisions, and future camera views.
-   const installSpatialDynamicFrustumFilter=octree=>{
-    if(!octree||typeof octree.select!=='function'||octree.__elsnDynamicFrustumFilter)return false;
-    const originalSelect=octree.select;
-    octree.select=function(frustumPlanes,allowDuplicate){
-     const selected=originalSelect.call(this,frustumPlanes,allowDuplicate);
-     const data=selected&&selected.data,originalLength=selected&&selected.length;
-     if(!data||!Number.isInteger(originalLength)||!Array.isArray(frustumPlanes)||frustumPlanes.length<6)return selected;
-     const started=performance.now();
-     let write=0,candidates=0,culled=0;
-     for(let read=0;read<originalLength;read++){
-      const mesh=data[read];
-      let keep=true;
-      if(mesh&&spatialDynamicMeshSet.has(mesh)){
-       candidates++;
-       try{
-        if(mesh.alwaysSelectAsActiveMesh||mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0)keep=true;
-        else if(typeof scene.getRenderId==='function'&&scene.getRenderId()<=(mesh.__elsnSpatialFreshUntilRenderId||-1))keep=true;
-        else{
-         // Use the last completed world-space bounding sphere with a 1.75 m
-         // motion margin. This avoids forcing matrix updates on thousands of
-         // off-screen meshes; newly created/moved entries get a two-frame grace.
-         const bounds=typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
-         const sphere=bounds&&bounds.boundingSphere,center=sphere&&sphere.centerWorld;
-         const radius=Number(sphere&&sphere.radiusWorld);
-         if(!center||!Number.isFinite(center.x)||!Number.isFinite(center.y)||!Number.isFinite(center.z)||!Number.isFinite(radius))keep=true;
-         else{
-          const paddedRadius=Math.max(0,radius)+1.75;
-          for(let planeIndex=0;planeIndex<6;planeIndex++){
-           const plane=frustumPlanes[planeIndex];
-           if(!plane||typeof plane.dotCoordinate!=='function'){keep=true;break;}
-           if(plane.dotCoordinate(center)<-paddedRadius){keep=false;break;}
-          }
-         }
-        }
-       }catch(_){spatialSelectionStats.dynamicFilterErrors++;keep=true;}
-       if(!keep){culled++;continue;}
-      }
-      data[write++]=mesh;
-     }
-     for(let index=write;index<originalLength;index++)data[index]=null;
-     selected.length=write;
-     const elapsed=Math.max(0,performance.now()-started);
-     spatialSelectionStats.dynamicFilterPasses++;
-     spatialSelectionStats.dynamicFilterTotalCandidates+=candidates;
-     spatialSelectionStats.dynamicFilterTotalMs+=elapsed;
-     spatialSelectionStats.dynamicFilterLastCandidates=candidates;
-     spatialSelectionStats.dynamicFilterLastSelected=candidates-culled;
-     spatialSelectionStats.dynamicFilterLastCulled=culled;
-     spatialSelectionStats.dynamicFilterCulledPeak=Math.max(spatialSelectionStats.dynamicFilterCulledPeak,culled);
-     spatialSelectionStats.dynamicFilterTotalCulled+=culled;
-     spatialSelectionStats.dynamicFilterLastMs=Number(elapsed.toFixed(3));
-     spatialSelectionStats.dynamicFilterMaxMs=Math.max(spatialSelectionStats.dynamicFilterMaxMs,elapsed);
-     // Diagnostics are read through the on-demand getter; no publication or allocation here.
-     return selected;
-    };
-    Object.defineProperty(octree,'__elsnDynamicFrustumFilter',{value:true});
-    spatialSelectionStats.dynamicFilterEnabled=true;
-    return true;
-   };
-   if(!installSpatialDynamicFrustumFilter(octree))throw new Error('No se pudo instalar el filtro de frustum para meshes dinámicos.');
+   // Babylon's dynamicContent is evaluated by a separate internal path.
+   // Do not wrap octree.select(): that method selects static octree blocks and
+   // is not the per-frame dynamic candidate list in this Babylon build.
+   spatialSelectionStats.dynamicFilterEnabled=false;
+   spatialSelectionStats.dynamicFilterPasses=0;
    spatialSelectionStats.enabled=true;
    spatialSelectionStats.sceneMeshCount=meshCount;
    spatialSelectionStats.dynamicMeshCount=octree.dynamicContent.length;
