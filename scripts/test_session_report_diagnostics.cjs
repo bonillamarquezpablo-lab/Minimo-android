@@ -24,7 +24,7 @@ assert.ok(loadReportStart >= 0 && loadReportEnd > loadReportStart, "Local report
 const loadReportSource = workbench.slice(loadReportStart, loadReportEnd);
 assert.ok(loadReportSource.includes("refreshObserverPatrolInBackground("), "Independent patrol evidence must refresh without blocking the local report.");
 assert.doesNotMatch(loadReportSource, /await\\s+loadLatestObserverPatrol/, "Local match history must not wait for the remote patrol request.");
-
+assert.ok(loadReportSource.indexOf("renderReport(reports[0]") < loadReportSource.indexOf("void buildSpecialistIntelligence(reports[0]"), "The match summary must render before optional specialist memory work.");
 const start = source.indexOf("  function buildSessionSummary(session) {");
 const end = source.indexOf("\n  function captureFinalWorldInspection()", start);
 assert.ok(start >= 0 && end > start, "The real post-match summary builder must remain available for testing.");
