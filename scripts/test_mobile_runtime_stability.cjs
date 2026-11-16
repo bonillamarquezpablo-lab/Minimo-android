@@ -76,6 +76,10 @@ assert.ok(validator.includes('reportVersion:\'28\',build:\'0.6.309\''), 'Release
 assert.ok(validator.includes('EXPECTED_VERSION = "0.6.309"'), 'Release validator must target version 0.6.309.');
 assert.ok(builder.includes('mobile_memory_policy_marker') && builder.includes('isMobilePeakMemorySensitive'), 'Memory-sensitive scheduling must be independent from the selected graphics profile.');
 assert.ok(builder.includes('GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024'), 'GLB identity checks must compare bounded chunks instead of duplicating full files into ArrayBuffers.');
+assert.ok(builder.includes('player_import_start_marker') && builder.includes('let playerHumanLoadPromise=Promise.resolve(null);'), 'The protagonist GLB import must be deferred until static world construction has finished.');
+assert.ok(builder.includes('syncActiveBeachIsland();') && builder.includes('syncActiveTidalFoamIsland();'), 'The active beach, seabed and tidal foam must be created before the game loop starts.');
+assert.ok(builder.includes('recordStartupTask(\'Geometría de costa inicial\''), 'Initial coastline construction must be measured as a loading task.');
+assert.ok(builder.includes('syncNordicWaterReflectionIsland();') && builder.includes('Lista inicial de reflejos nórdicos'), 'The first full-scene reflection-list scan must complete during loading, not the first gameplay frame.');
 
 assert.ok(builder.includes('identity_start_guard_marker') && builder.includes('identityStartupTriggered=false'), 'The preflight identity gate must be idempotent.');
 assert.ok(builder.includes("continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true})"), 'The anonymous identity action must support touch pointer-up as well as click.');
