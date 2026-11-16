@@ -229,6 +229,10 @@ assert.match(html,/setInterval\(refreshDiagnostics,1000\)/,"The water debug pane
 assert.match(html,/grainMaterial\.diffuseTexture=null/,"Water droplets must not inherit the brown sand albedo.");
 assert.match(html,/particle\.size=wet\?rand\(\.068,\.104\)/,"Wet particles must be large enough to read as visible water droplets.");
 assert.match(html,/particle\.life=particle\.maxLife=wet\?rand\(\.55,\.82\)/,"Water droplets must persist long enough to be seen at mobile frame rates.");
+const builder=fs.readFileSync("scripts/build_site.py","utf8");
+assert.ok(builder.includes('"particle.size=wet?rand(.068,.104)", "particle.size=wet?rand(.12,.18)"'),"The release must increase water droplet size while preserving the existing instanced pool.");
+assert.ok(builder.includes('"particle.life=particle.maxLife=wet?rand(.55,.82)", "particle.life=particle.maxLife=wet?rand(.72,1.02)"'),"Water droplets must last long enough to read on mobile.");
+assert.ok(builder.includes("GroundSplashParticleBatch")&&builder.includes("mesh.alwaysSelectAsActiveMesh=true"),"The splash thin-instance batch must be retained as a dynamic effect.");
 assert.match(html,/Number\.isFinite\(shoreRadius\)&&shoreDistance<2\.6/,"Wet contact must cover the near-shore damp-sand band.");
 assert.match(html,/waterHeight\(x,z,oceanTime\)>groundY-\.48/,"Wet contact must include the actual shallow-water height gap.");
 assert.match(html,/wetness>\.035/,"The wetness atlas must trigger footstep splashes on damp sand.");
