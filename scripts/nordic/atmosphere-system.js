@@ -37,10 +37,10 @@
   function computeLightingProfile(state, target) {
     const profile = target || {};
     // Preserve the dark Nordic sky while lifting terrain and character readability.
-    profile.hemisphereIntensity = 0.48 + 0.72 * state.daylight + 0.22 * state.twilight + 0.10 * state.night;
-    profile.moonIntensity = 0.24 * state.night;
-    profile.environmentIntensity = 0.25 + 0.42 * state.daylight + 0.16 * state.twilight + 0.15 * state.night;
-    profile.exposure = 1.08 + 0.08 * state.daylight + 0.13 * state.twilight + 0.14 * state.night;
+    profile.hemisphereIntensity = 0.54 + 0.72 * state.daylight + 0.24 * state.twilight + 0.24 * state.night;
+    profile.moonIntensity = 0.28 * state.night;
+    profile.environmentIntensity = 0.30 + 0.42 * state.daylight + 0.18 * state.twilight + 0.24 * state.night;
+    profile.exposure = 1.10 + 0.08 * state.daylight + 0.14 * state.twilight + 0.20 * state.night;
     profile.contrast = mix(1.045, 1.00, state.night);
     return profile;
   }
@@ -200,7 +200,7 @@
       this._sunSpecularColor = new this.B.Color3(0.96, 0.91, 0.78);
       this._coolNightColor = new this.B.Color3(0.31, 0.39, 0.55);
       this._dayAmbientColor = new this.B.Color3(0.72, 0.82, 0.92);
-      this._nightGroundColor = new this.B.Color3(0.105, 0.125, 0.17);
+      this._nightGroundColor = new this.B.Color3(0.145, 0.165, 0.205);
       this._dayGroundColor = new this.B.Color3(0.15, 0.19, 0.13);
       this._horizonDayColor = new this.B.Color3(0.40, 0.59, 0.66);
       this._horizonDuskColor = new this.B.Color3(0.40, 0.19, 0.20);
