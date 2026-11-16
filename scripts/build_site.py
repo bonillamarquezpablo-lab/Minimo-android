@@ -789,7 +789,7 @@ def main() -> None:
     shutil.copy2(session_recorder_source, session_recorder_target)
 
     # Player-facing ambient dialogue is isolated from Inspector specialist identities.
-    for script_name in ("npc-dialogue-core.js", "npc-dialogue-runtime.js"):
+    for script_name in ("npc-village-brain-core.js", "npc-dialogue-core.js", "npc-dialogue-runtime.js"):
         script_source = ROOT / "scripts" / script_name
         if not script_source.is_file():
             raise SystemExit(f"Falta el módulo de diálogos NPC: {script_name}")
@@ -845,7 +845,7 @@ def main() -> None:
  // Player-facing dialogue bridge. Inspector specialist identities remain in their own runtime.
  window.__ELSN_GAME_DIALOGUE_BRIDGE__=Object.freeze({
   maxVisibleBubbles:4,
-  getSnapshot:(()=>{let dialoguePeopleCache=null;return ()=>{
+  getSnapshot:(()=>{let dialoguePeopleCache=null,dialogueAmbientByRoot=null;return ()=>{
    let focus=null;
    try{if(typeof playerPos==='function')focus=playerPos();}catch(_){}
    if(!focus||!Number.isFinite(Number(focus.x))||!Number.isFinite(Number(focus.z))){
@@ -862,6 +862,8 @@ def main() -> None:
     people:(()=>{
      if(!active)return [];
      if(!dialoguePeopleCache){
+      dialogueAmbientByRoot=new Map();
+      if(Array.isArray(ambientPeople))for(const actor of ambientPeople){if(actor&&actor.parts&&actor.parts.root)dialogueAmbientByRoot.set(actor.parts.root,actor);}
       const candidates=[].concat(Array.isArray(scene.transformNodes)?scene.transformNodes:[],Array.isArray(scene.meshes)?scene.meshes:[]);
       const seen=new Set(),found=[];
       for(const node of candidates){
@@ -886,13 +888,16 @@ def main() -> None:
          if(head)break;
         }
        }
-       found.push({name,root:node,villageIndex,parts:{name,root:node,head,variant:villageIndex*2+slot,civilian:match[1]!==undefined,role:match[1]!==undefined?'civilian':'warrior'},recruited:false});
+       const ambientActor=dialogueAmbientByRoot&&dialogueAmbientByRoot.get(node)||null;
+       const actualParts=ambientActor&&ambientActor.parts?ambientActor.parts:{name,root:node,head,variant:villageIndex*2+slot,civilian:match[1]!==undefined,role:match[1]!==undefined?'civilian':'warrior'};
+       if(actualParts&&!actualParts.head&&head)actualParts.head=head;
+       found.push({name,root:node,villageIndex,parts:actualParts,actor:ambientActor,recruited:ambientActor?ambientActor.recruited===true:false});
       }
       dialoguePeopleCache=found;
      }
      return dialoguePeopleCache;
     })(),
-    world:{night:!!(atmosphere&&atmosphere.night>=0.55),onShip:typeof onShip!=='undefined'&&!!onShip,enemyNearby:typeof nearEnemies==='function'&&nearEnemies(),health:typeof health!=='undefined'?Number(health):null,healthLow:typeof health!=='undefined'&&Number(health)<=35,wood:typeof woodCount!=='undefined'?Number(woodCount):null,stone:typeof stoneCount!=='undefined'?Number(stoneCount):null,captured:typeof captured!=='undefined'?Number(captured)||0:0,islandName:typeof land!=='undefined'&&islandIndex>=0&&land[islandIndex]?String(land[islandIndex].name||''):''},
+    world:{night:!!(atmosphere&&atmosphere.night>=0.55),daylight:atmosphere&&Number.isFinite(Number(atmosphere.daylight))?Number(atmosphere.daylight):null,weather:atmosphere&&atmosphere.weather?String(atmosphere.weather):'',timeOfDay:atmosphere&&Number.isFinite(Number(atmosphere.timeOfDay))?Number(atmosphere.timeOfDay):null,onShip:typeof onShip!=='undefined'&&!!onShip,enemyNearby:typeof nearEnemies==='function'&&nearEnemies(),health:typeof health!=='undefined'?Number(health):null,healthLow:typeof health!=='undefined'&&Number(health)<=35,wood:typeof woodCount!=='undefined'?Number(woodCount):null,stone:typeof stoneCount!=='undefined'?Number(stoneCount):null,captured:typeof captured!=='undefined'?Number(captured)||0:0,islandName:typeof land!=='undefined'&&islandIndex>=0&&land[islandIndex]?String(land[islandIndex].name||''):''},
     scene,engine,camera:scene.activeCamera||camera,
     canvas:engine.getRenderingCanvas(),BABYLON:B
    };
@@ -909,6 +914,7 @@ def main() -> None:
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
         html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
+        '<script src="./scripts/npc-village-brain-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
     ):
