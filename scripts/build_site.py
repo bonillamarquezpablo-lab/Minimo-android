@@ -867,7 +867,7 @@ def main() -> None:
          if(head)break;
         }
        }
-       found.push({name,root:node,parts:{name,root:node,head,variant:villageIndex*2+slot,civilian:match[1]!==undefined,role:match[1]!==undefined?'civilian':'warrior'},recruited:false});
+       found.push({name,root:node,villageIndex,parts:{name,root:node,head,variant:villageIndex*2+slot,civilian:match[1]!==undefined,role:match[1]!==undefined?'civilian':'warrior'},recruited:false});
       }
       dialoguePeopleCache=found;
      }
