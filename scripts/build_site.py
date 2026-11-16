@@ -736,14 +736,12 @@ def main() -> None:
     # The Polyfork herring gull is delivered with real LeftWing/RightWing pivots.
     # Capture their original rotations and animate the two pivots symmetrically at runtime.
     gull_wing_mesh_marker = """const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}
-    const subduedMaterials=new Set();
     meshes.forEach(mesh=>{"""
     gull_wing_mesh_replacement = """const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}
     const gullTransformNodes=collectTransformNodes(roots),leftWing=gullTransformNodes.find(node=>/leftwing/i.test(String(node.name||''))),rightWing=gullTransformNodes.find(node=>/rightwing/i.test(String(node.name||'')));
     if(!leftWing||!rightWing)throw new Error('La gaviota no contiene los pivotes LeftWing/RightWing validados en el GLB.');
     const captureWingBaseRotation=node=>{const base=node.rotationQuaternion?node.rotationQuaternion.toEulerAngles():node.rotation.clone();node.rotationQuaternion=null;node.rotation.copyFrom(base);return base;};
     const leftWingBaseRotation=captureWingBaseRotation(leftWing),rightWingBaseRotation=captureWingBaseRotation(rightWing);
-    const subduedMaterials=new Set();
     meshes.forEach(mesh=>{"""
     if html.count(gull_wing_mesh_marker) != 1:
         raise SystemExit("No se encontraron los meshes y pivotes únicos de alas de la gaviota.")
