@@ -1176,7 +1176,7 @@
         ? "Última partida recuperada del guardado de emergencia"
         : "Última partida guardada";
       // Paint the actual match report first. Specialist memory is supplementary and may take longer.
-      renderReport(reports[0], sourceLabel, reports[1] || null, null);
+      renderReport(reports[0], sourceLabel, reports[1]||null, null);
       void buildSpecialistIntelligence(reports[0], reports[0].status === "completed", reports).then(intelligence => {
         if (!latestReport || latestReport.sessionId !== reports[0].sessionId) return;
         latestReport.specialistIntelligence = intelligence || null;
