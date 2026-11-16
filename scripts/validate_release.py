@@ -313,10 +313,20 @@ def main() -> None:
     if (
         "ForestTreeModelMount_" not in index_html
         or "TreeCanopyWindPivot_" not in index_html
-        or "canopy.position.y=pivotY;" not in index_html
+        or "canopy.position.set(0,0,0);" not in index_html
         or "modelMount.position.y=-asset.bounds.min.y*modelScale;" not in index_html
+        or "canopy.rotation.set(0,0,0);" not in index_html
     ):
-        fail("Los árboles deben ser modelos GLB texturizados, apoyados sobre el terreno y con pivote de copa para viento y tala.")
+        fail("Los árboles deben ser modelos GLB texturizados, apoyados sobre el terreno y con un pivote de viento/tala en el origen.")
+    gull_wing_markers = (
+        "leftWing=gullTransformNodes.find(node=>/leftwing/i.test(String(node.name||'')))",
+        "rightWing=gullTransformNodes.find(node=>/rightwing/i.test(String(node.name||'')))",
+        "leftWingBaseRotation",
+        "rightWingBaseRotation",
+        "birdWingsFlap",
+    )
+    if any(marker not in index_html for marker in gull_wing_markers):
+        fail("La gaviota debe usar sus pivotes de alas GLB reales para animar el aleteo.")
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         index_html,

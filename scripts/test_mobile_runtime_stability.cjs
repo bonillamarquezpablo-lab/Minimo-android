@@ -109,8 +109,11 @@ assert.ok(builder.includes('smith_hammer_marker') && builder.includes('SmithHamm
   'Rigid civilian hammer geometry must be removed from animated hand/forearm bones.');
 assert.ok(builder.includes('tree_function_start') && builder.includes('loadForestTreeAssets') &&
   builder.includes('validate_textured_tree_glb') && builder.includes('targetHeight:5.80') &&
-  builder.includes('TreeCanopyWindPivot_') && builder.includes('await loadForestTreeAssets();'),
-  'The old procedural triangle trees must be replaced by three blocking textured GLB species while retaining a wind/felling pivot.');
+  builder.includes('TreeCanopyWindPivot_') && builder.includes('await loadForestTreeAssets();') &&
+  builder.includes('canopy.position.set(0,0,0);') &&
+  builder.includes('modelMount.position.y=-asset.bounds.min.y*modelScale') &&
+  builder.includes('tree.canopy.rotation.set(0,0,0);'),
+  'Complete textured GLB trees must start at the ground origin and retain wind/felling reset.');
 assert.ok(builder.includes("importTimedOut=false") && builder.includes("Promise.race([importPromise") &&
   builder.includes("B.SceneLoader.LoadAssetContainerAsync('',url,scene,null,'.glb')") &&
   builder.includes("Modelo forestal '+species+' agotó el plazo de 60 segundos."),
@@ -118,6 +121,11 @@ assert.ok(builder.includes("importTimedOut=false") && builder.includes("Promise.
 assert.ok(builder.includes("const realBirds=[],subduedMaterials=new Set();") &&
   builder.includes('html.replace(gull_material_clone_marker, "", 1)'),
   'The five gull instances must share one subdued material set instead of cloning material variants per bird.');
+assert.ok(builder.includes("leftWing=gullTransformNodes.find(node=>/leftwing/i.test(String(node.name||'')))") &&
+  builder.includes("rightWing=gullTransformNodes.find(node=>/rightwing/i.test(String(node.name||'')))") &&
+  builder.includes('birdWingsFlap') &&
+  builder.includes('leftWingBaseRotation') && builder.includes('rightWingBaseRotation'),
+  'The replacement gulls must animate their authored left/right wing pivots.');
 assert.ok(builder.includes('wildlife_update_marker = "function updateWildlife(dt){"') &&
   builder.includes('_wildlifeNextDecisionAt') && builder.includes('_wildlifeVelocityX'),
   'Wildlife pathfinding/collision decisions must be throttled while root motion remains frame-integrated.');

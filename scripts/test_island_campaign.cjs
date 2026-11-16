@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8');
 const build=fs.readFileSync('scripts/build_site.py','utf8');
 assert.ok(build.includes("const gy=renderedTerrainSurfaceAt(x,z),sx="),"Boulders must use the rendered terrain mesh height.");
-assert.ok(build.includes("root.position=v(x,renderedTerrainSurfaceAt(x,z),z);"),"Tree trunks must begin at the rendered ground surface.");
+assert.ok(build.includes("root.position=v(x,renderedTerrainSurfaceAt(x,z),z);") && build.includes("canopy.position.set(0,0,0);") && build.includes("modelMount.position.y=-asset.bounds.min.y*modelScale") && build.includes("tree.canopy.rotation.set(0,0,0);"),"Complete GLB trees must be grounded, keep their model base offset, and reset the wind pivot.");
 assert.ok(build.includes("const groundY=renderedTerrainSurfaceAt(x,z),normal=terrainNormalAt(x,z,.42);"),"Shrubs must sit on the rendered terrain surface.");
 assert.ok(build.includes("rockGroundingAudit:()=>rocks.map"),"The runtime must expose ground-contact measurements for every boulder.");
 assert.match(build,/IslandGarrisonFlagpole_.*?outpostRoot/,'Each garrison flagpole must be a child of its registered outpost so it cannot remain visible over open water.');
