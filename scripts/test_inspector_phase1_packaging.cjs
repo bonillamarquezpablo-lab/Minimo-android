@@ -19,7 +19,7 @@ assert.ok(
   "Live measurements must launch the same guest entry that players use."
 );
 
-const imports = [...live.matchAll(/from\\s+['"]([^'"]+\\.mjs)['"]/g)].map(match => match[1]);
+const imports = [...live.matchAll(/from\s+['"]([^'"]+\.mjs)['"]/g)].map(match => match[1]);
 assert.ok(imports.length >= 2, "The live diagnostics module must declare its ES module dependencies.");
 for (const specifier of imports) {
   const relativeToInspector = path.posix.normalize(path.posix.join("inspector", specifier));
