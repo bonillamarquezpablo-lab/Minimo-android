@@ -300,6 +300,11 @@ async function main() {
     assert.equal(manifest.startupBarrierState.startupRecorder?.worldReady, true,
       'El arranque no liberó el mundo después de preparar sus recursos: ' + JSON.stringify(manifest.startupBarrierState));
     manifest.startupResourceGate = await page.evaluate(() => window.__ELSN_STARTUP_RESOURCE_GATE__ || null);
+    manifest.startupTimeline = await page.evaluate(() =>
+      typeof window.getGameHealthDebug === 'function'
+        ? window.getGameHealthDebug()?.startupTimeline || null
+        : null
+    );
     assert.ok(manifest.startupResourceGate && manifest.startupResourceGate.ready === true,
       'La barrera final no confirmó todos los recursos obligatorios: ' + JSON.stringify(manifest.startupResourceGate));
     const startupResources = manifest.startupResourceGate.resources || {};
