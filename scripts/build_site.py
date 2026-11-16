@@ -1400,42 +1400,49 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(civilian_warmup_marker, civilian_warmup_replacement, 1)
 
     wildlife_batch_marker = """  const kinds=[...new Set(wildlifeSpawnSpecs.map(spec=>spec.kind))];
-  await Promise.all(kinds.map(async kind=>{try{wildlifeBlobs.set(kind,await downloadWildlifeBlob(kind));}catch(err){console.warn('Modelo animal no disponible ('+kind+'):',err);}}));
+  const wildlifeDownloads=await Promise.all(kinds.map(async kind=>({kind,blob:await downloadWildlifeBlob(kind)})));wildlifeDownloads.forEach(({kind,blob})=>wildlifeBlobs.set(kind,blob));
   let loaded=0;
   for(let index=0;index<wildlifeSpawnSpecs.length;index++){
    const spec=wildlifeSpawnSpecs[index],modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,index,spec.homeIslandIndex);
-   if(animal){ambientFauna.push(animal);loaded++;}
-   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),animal?'ready':'fallback',{island:spec.homeIslandIndex});
+   if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');
+   ambientFauna.push(animal);loaded++;
+   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});
    if(index+1<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
   }
+  if(loaded!==wildlifeSpawnSpecs.length)throw new Error('RECURSO OBLIGATORIO: fauna incompleta '+loaded+'/'+wildlifeSpawnSpecs.length+'.');
   recordStartupTask('Fauna GLB · cola completa',wildlifeLoadStarted,performance.now(),'complete',{loaded,requested:wildlifeSpawnSpecs.length});"""
     wildlife_batch_replacement = """  const kinds=[...new Set(wildlifeSpawnSpecs.map(spec=>spec.kind))];
-  let loaded=0;
+  let loaded=0,completedSpecs=0;
   const instantiateKind=async kind=>{
-   let blob=null;
-   try{blob=await downloadWildlifeBlob(kind);wildlifeBlobs.set(kind,blob);startupWildlifeCompressedBytes+=blob.size;}
-   catch(err){console.warn('Modelo animal no disponible ('+kind+'):',err);}
+   const blob=await downloadWildlifeBlob(kind);
+   wildlifeBlobs.set(kind,blob);
+   startupWildlifeCompressedBytes+=blob.size;
    const specs=wildlifeSpawnSpecs.map((spec,sourceIndex)=>({spec,sourceIndex})).filter(item=>item.spec.kind===kind);
    for(const item of specs){
     const spec=item.spec,modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,item.sourceIndex,spec.homeIslandIndex);
-    if(animal){ambientFauna.push(animal);loaded++;}
-    recordStartupTask('Fauna GLB '+spec.kind+' #'+item.sourceIndex,modelStarted,performance.now(),animal?'ready':'fallback',{island:spec.homeIslandIndex});
-    if(item.sourceIndex<wildlifeSpawnSpecs.length-1)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+    if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');
+    ambientFauna.push(animal);loaded++;completedSpecs++;
+    recordStartupTask('Fauna GLB '+spec.kind+' #'+item.sourceIndex,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});
+    if(completedSpecs<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
    }
-   // The imported scene now owns the live animal meshes; release the compressed source copy.
+   // All actors for this species now own their scene resources; drop the compressed source Blob.
    wildlifeBlobs.delete(kind);
   };
-  if(isMobilePeakMemorySensitive){for(const kind of kinds)await instantiateKind(kind);}
-  else{
-   await Promise.all(kinds.map(async kind=>{let blob=null;try{blob=await downloadWildlifeBlob(kind);wildlifeBlobs.set(kind,blob);startupWildlifeCompressedBytes+=blob.size;}catch(err){console.warn('Modelo animal no disponible ('+kind+'):',err);}}));
-   for(let sourceIndex=0;sourceIndex<wildlifeSpawnSpecs.length;sourceIndex++){
-    const spec=wildlifeSpawnSpecs[sourceIndex],modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,sourceIndex,spec.homeIslandIndex);
-    if(animal){ambientFauna.push(animal);loaded++;}
-    recordStartupTask('Fauna GLB '+spec.kind+' #'+sourceIndex,modelStarted,performance.now(),animal?'ready':'fallback',{island:spec.homeIslandIndex});
-    if(sourceIndex+1<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+  if(isMobilePeakMemorySensitive){
+   for(const kind of kinds)await instantiateKind(kind);
+  }else{
+   const wildlifeDownloads=await Promise.all(kinds.map(async kind=>({kind,blob:await downloadWildlifeBlob(kind)})));
+   wildlifeDownloads.forEach(({kind,blob})=>{wildlifeBlobs.set(kind,blob);startupWildlifeCompressedBytes+=blob.size;});
+   for(let index=0;index<wildlifeSpawnSpecs.length;index++){
+    const spec=wildlifeSpawnSpecs[index],modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,index,spec.homeIslandIndex);
+    if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');
+    ambientFauna.push(animal);loaded++;
+    recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});
+    if(index+1<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
    }
    wildlifeBlobs.clear();
   }
+  if(loaded!==wildlifeSpawnSpecs.length)throw new Error('RECURSO OBLIGATORIO: fauna incompleta '+loaded+'/'+wildlifeSpawnSpecs.length+'.');
   recordStartupTask('Fauna GLB · cola completa',wildlifeLoadStarted,performance.now(),'complete',{loaded,requested:wildlifeSpawnSpecs.length,compressedBytes:startupWildlifeCompressedBytes});"""
     if html.count(wildlife_batch_marker) != 1:
         raise SystemExit("No se encontró la cola única de descarga/importación de fauna.")
