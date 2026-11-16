@@ -1833,6 +1833,99 @@ function getWorldPhaseTimingSnapshot(){
         raise SystemExit("No se encontró el único punto de actualización del minimapa; no se cambian sus frecuencias.")
     html = html.replace(map_draw_marker, map_draw_replacement, 1)
 
+
+
+    # Cache unchanged structural ground proofs and discover new roofed roots incrementally.
+    habitable_registry_marker = r""" const habitableStructureRegistry=[];
+ let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;"""
+    habitable_registry_replacement = r""" const habitableStructureRegistry=[];
+ const habitableRootNamePattern=/^(?:WeatheredNorseHut|PersistentPlayerNorseShelter|PersistentNorseShelter|IslandOutpost_\d+|IslandScoutCamp_\d+|IslandGarrisonOutpost_\d+|NorseGreatMeadHall_\d+|NorseBlacksmithForge_\d+|NorseWatchTower_\d+|PoorNorseCastawayCamp)$/;
+ const habitableRootDiscoveryQueue=new Set(),habitableRegisteredRootSet=new WeakSet();
+ let habitableRootDiscoveryInitialized=false,habitableRootDiscoveryObserverAvailable=false;
+ let habitableAuditLastMs=0,habitableAuditMaxMs=0,habitableAuditCount=0,habitableAuditLastCacheHits=0,habitableAuditLastCacheMisses=0;
+ try{
+  if(scene.onNewTransformNodeAddedObservable&&typeof scene.onNewTransformNodeAddedObservable.add==='function'){
+   scene.onNewTransformNodeAddedObservable.add(node=>{
+    if(node&&!habitableRegisteredRootSet.has(node)&&habitableRootNamePattern.test(node.name||''))habitableRootDiscoveryQueue.add(node);
+   });
+   habitableRootDiscoveryObserverAvailable=true;
+  }
+ }catch(_){}
+ let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;"""
+    if html.count(habitable_registry_marker) != 1:
+        raise SystemExit("No se encontró el registro único de estructuras habitables.")
+    html = html.replace(habitable_registry_marker, habitable_registry_replacement, 1)
+
+    register_root_marker = "if(root){root.__habitableStructureAudit=entry;habitableStructureRegistry.push(entry);}"
+    register_root_replacement = "if(root){root.__habitableStructureAudit=entry;habitableStructureRegistry.push(entry);habitableRegisteredRootSet.add(root);}"
+    if html.count(register_root_marker) != 1:
+        raise SystemExit("No se pudo conectar el registro de edificios con el índice incremental.")
+    html = html.replace(register_root_marker, register_root_replacement, 1)
+
+    cached_evaluator_marker = "  function auditHabitableStructures(applyRepairs=true){"
+    cached_evaluator_code = r"""  function evaluateHabitableStructureCached(entry){
+   const root=entry&&entry.root;
+   if(!root||root.isDisposed?.())return evaluateHabitableStructure(entry);
+   let p;try{p=root.getAbsolutePosition?root.getAbsolutePosition():root.position;}catch(_){p=root.position;}
+   if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y)||!Number.isFinite(p.z))return evaluateHabitableStructure(entry);
+   const island=land[entry.islandIndex],rotationY=Number(root.rotation?.y)||0,scaleX=Number(root.scaling?.x)||1,groundY=Number(ground.position.y)||0;
+   const cache=entry.__habitableAuditCache;
+   if(cache&&cache.x===p.x&&cache.y===p.y&&cache.z===p.z&&cache.rotationY===rotationY&&cache.scaleX===scaleX&&
+      cache.islandIndex===entry.islandIndex&&cache.islandX===(island?island.x:null)&&cache.islandZ===(island?island.z:null)&&cache.islandRadius===(island?island.r:null)&&
+      cache.groundY===groundY&&cache.kind===entry.kind&&cache.baseOffset===entry.baseOffset&&cache.footprintRadius===entry.footprintRadius&&
+      cache.safeRadiusFactor===entry.safeRadiusFactor&&cache.edgeBuffer===entry.edgeBuffer&&cache.maxRelief===entry.maxRelief&&cache.anchorTolerance===entry.anchorTolerance){
+    habitableAuditLastCacheHits++;return cache.result;
+   }
+   habitableAuditLastCacheMisses++;
+   const result=evaluateHabitableStructure(entry);
+   entry.__habitableAuditCache={x:p.x,y:p.y,z:p.z,rotationY,scaleX,islandIndex:entry.islandIndex,islandX:island?island.x:null,
+    islandZ:island?island.z:null,islandRadius:island?island.r:null,groundY,kind:entry.kind,baseOffset:entry.baseOffset,
+    footprintRadius:entry.footprintRadius,safeRadiusFactor:entry.safeRadiusFactor,edgeBuffer:entry.edgeBuffer,
+    maxRelief:entry.maxRelief,anchorTolerance:entry.anchorTolerance,result};
+   return result;
+  }
+"""
+    if html.count(cached_evaluator_marker) != 1:
+        raise SystemExit("No se encontró el punto único para cachear la evaluación de terreno de estructuras.")
+    html = html.replace(cached_evaluator_marker, cached_evaluator_code + cached_evaluator_marker, 1)
+
+    audit_discovery_marker = r"""  const roofedRootPattern=/^(?:WeatheredNorseHut|PersistentPlayerNorseShelter|PersistentNorseShelter|IslandOutpost_\d+|IslandScoutCamp_\d+|IslandGarrisonOutpost_\d+|NorseGreatMeadHall_\d+|NorseBlacksmithForge_\d+|NorseWatchTower_\d+|PoorNorseCastawayCamp)$/;
+  const trackedBeforeDiscovery=new Set(habitableStructureRegistry.map(entry=>entry.root));
+  for(const node of scene.transformNodes){
+   const rootName=node.name||'';if(!roofedRootPattern.test(rootName)||trackedBeforeDiscovery.has(node))continue;"""
+    audit_discovery_replacement = r"""  habitableAuditLastCacheHits=0;habitableAuditLastCacheMisses=0;
+  if(!habitableRootDiscoveryInitialized||!habitableRootDiscoveryObserverAvailable){
+   for(const node of scene.transformNodes){
+    if(node&&!habitableRegisteredRootSet.has(node)&&habitableRootNamePattern.test(node.name||''))habitableRootDiscoveryQueue.add(node);
+   }
+  }
+  habitableRootDiscoveryInitialized=true;
+  const pendingHabitableRoots=Array.from(habitableRootDiscoveryQueue);habitableRootDiscoveryQueue.clear();
+  for(const node of pendingHabitableRoots){
+   if(!node||node.isDisposed?.()||habitableRegisteredRootSet.has(node))continue;
+   const rootName=node.name||'';if(!habitableRootNamePattern.test(rootName))continue;"""
+    if html.count(audit_discovery_marker) != 1:
+        raise SystemExit("No se encontró el bloque de descubrimiento de edificios que debe pasar a cola incremental.")
+    html = html.replace(audit_discovery_marker, audit_discovery_replacement, 1)
+
+    evaluation_marker = "let result=evaluateHabitableStructure(entry),root=entry.root;"
+    if html.count(evaluation_marker) != 1:
+        raise SystemExit("No se encontró la evaluación única de cada estructura para reutilizar sus pruebas estáticas.")
+    html = html.replace(evaluation_marker, "let result=evaluateHabitableStructureCached(entry),root=entry.root;", 1)
+
+    untracked_marker = r"""  const registeredRoots=new Set(habitableStructureRegistry.map(entry=>entry.root));
+  const untrackedRoots=scene.transformNodes.filter(node=>roofedRootPattern.test(node.name||'')&&!registeredRoots.has(node)).map(node=>node.name);"""
+    untracked_replacement = r"""  const untrackedRoots=Array.from(habitableRootDiscoveryQueue).filter(node=>node&&!habitableRegisteredRootSet.has(node)).map(node=>node.name);"""
+    if html.count(untracked_marker) != 1:
+        raise SystemExit("No se encontró el segundo recorrido completo de nodos de estructuras habitables.")
+    html = html.replace(untracked_marker, untracked_replacement, 1)
+
+    audit_call_marker = "habitableAuditAccumulator=0;auditHabitableStructures(true);"
+    audit_call_replacement = "habitableAuditAccumulator=0;const habitableAuditStartedAt=performance.now();try{auditHabitableStructures(true);}finally{habitableAuditLastMs=performance.now()-habitableAuditStartedAt;habitableAuditMaxMs=Math.max(habitableAuditMaxMs,habitableAuditLastMs);habitableAuditCount++;}"
+    if html.count(audit_call_marker) != 1:
+        raise SystemExit("No se encontró la llamada periódica única de la auditoría de estructuras.")
+    html = html.replace(audit_call_marker, audit_call_replacement, 1)
+
     # Recorder telemetry must read scalar water timings, not run the expensive full
     # shoreline/foam geometry audit every 2.5 seconds.
     water_debug_marker = " window.__elSinNombreWaterDebugSnapshot=()=>{\n  const health=typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug():null;"
