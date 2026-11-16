@@ -42,6 +42,8 @@ assert.match(runtime,/onAfterRenderObservable/,"Speech bubbles must follow the N
 assert.match(runtime,/orientationchange/);assert.match(runtime,/visualViewport/);assert.match(runtime,/ResizeObserver/);
 assert.match(runtime,/s\.engine\.resize\(\)/,"A device orientation change must resize Babylon before reprojection.");
 assert.match(runtime,/function render\(s,matricesReady=false\)/,"The render-cycle projection must reuse the current camera matrices.");
+assert.equal((runtime.match(/const camera=s\.scene\.activeCamera\|\|s\.camera/g)||[]).length,2,"Both visibility checks and final bubble placement must use the currently active Babylon camera.");
+assert.match(runtime,/function positionTick\(\)\{const s=snapshot\(\);if\(!s\)return;bindSceneRenderObserver\(s\);bindViewportObservers\(s\);render\(s\);\}/,"The 100 ms position tick must remain a fallback even when an after-render observer exists, so bubbles cannot freeze if that observer stops firing.");
 assert.match(runtime,/function isProjectable\(npc,s\)/,"The scheduler must reject NPCs whose head anchors are outside the active camera view.");
 assert.match(runtime,/inView=nearby\.filter\(x=>isProjectable\(x\.npc,s\)\)/,"Ambient dialogue must only be scheduled for on-screen NPCs.");
 assert.match(runtime,/schedule\(now,nearby,s\)/);
