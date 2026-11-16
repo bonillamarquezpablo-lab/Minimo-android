@@ -4,11 +4,26 @@ const assert=require('node:assert/strict');
 const build=fs.readFileSync('scripts/build_site.py','utf8');
 const smoke=fs.readFileSync('scripts/player-startup-smoke.mjs','utf8');
 const workflow=fs.readFileSync('.github/workflows/game-startup-validation.yml','utf8');
+const index=fs.readFileSync('index.html','utf8');
+const recorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
+const inspector=fs.readFileSync('inspector/unified-workbench.js','utf8');
 
 assert.ok(build.includes('fetchpriority="high"'),'Babylon engine and GLTF loader must be preloaded at high priority.');
 assert.ok(build.includes('BABYLON_VERSION = "9.35.0"'));
 assert.ok(build.includes('r"7\\.54\\.3"'),'Fallback mirrors must be normalized to the bundled Babylon version.');
 assert.ok(build.includes('same-origin-native-script'),'Same-origin Babylon must use a native script URL, not a JS string/Blob copy.');
+assert.ok(build.includes("script.async=false;script.fetchPriority='high';script.src=url;"),'Critical Babylon scripts must execute in insertion order and retain high fetch priority.');
+assert.ok(build.includes('function loadEngine(url,timeoutMs=30000,check=null)'), 'Native engine script loading must use a bounded 30-second default timeout.');
+for (const marker of ['window.__ELSN_RUNTIME_SCRIPT_LOADS','cacheStatus','transferSize','encodedBodySize','decodedBodySize','durationMs']) {
+  assert.ok(build.includes(marker), 'Missing native script-load telemetry: ' + marker);
+}
+assert.ok(index.includes('id="retryEngine"') && index.includes("retryButton.addEventListener('click',retryGameStartup)") &&
+  index.includes("retryButton.addEventListener('pointerup',retryGameStartup)"),
+  'The player must have a visible, touch-safe retry action after a blocking startup failure.');
+assert.ok(recorder.includes('captureStartupScriptLoads') && recorder.includes('startupScriptLoads: captureStartupScriptLoads()') &&
+  recorder.includes('startupScriptLoadSummary'), 'Startup transfer/cache diagnostics must be saved with the match report.');
+assert.ok(inspector.includes('Arranque del motor 3D') && inspector.includes('startupScriptLoads'),
+  'Inspector Center must show the recorded engine startup timings and cache source.');
 assert.ok(build.includes("const horizontalMin=Math.max(.055,sourceBounds.height*.045)"),'Animal GLB validation must tolerate valid asymmetric body proportions.');
 assert.ok(build.includes("horizontalMajor=Math.max(.18,sourceBounds.height*.14)"),'Animal GLB validation must still reject near-degenerate geometry.');
 assert.ok(smoke.includes("document.body.classList.contains('boot-failed')"),'The startup smoke must fail fast with the actual boot error instead of timing out opaquely.');
