@@ -37,4 +37,13 @@ assert.ok(loadReportSource.includes("await reconcileRecoveryReport(reports)") &&
 assert.ok(css.includes(".wb-quick-read") && css.includes(".wb-report-full"),"The concise summary and collapsed technical report must have their own styles.");
 assert.ok(js.includes("No se usa para decidir qué optimizar hasta calibrar el contador"),"Unverified draw-call counters must not guide optimization.");
 assert.ok(js.includes("La mediana del percentil 95 por ventana"),"The report must explain frame-time percentiles in plain language.");
+assert.ok(js.includes("¿Qué quieres revisar?") && js.includes("Empezar por una tarea"),"The default Inspector page must be a task-based home, not a technical report.");
+for(const marker of ['data-open-page="1"','data-open-page="2"','data-open-page="3"','data-open-page="4"','data-open-page="5"','¿Va fluido?','¿Hay algo mal colocado?','¿Se ve como debería?','¿Qué hacen los personajes?','¿Quieres probar un cambio?'])
+  assert.ok(js.includes(marker),"The all-in-one home must expose the five plain-language task modes: "+marker);
+for(const marker of ['function setUiMode(mode)','inspector-guided','inspector-expert','window.__ELSN_INSPECTOR_NAV__','data-ui-mode'])
+  assert.ok(js.includes(marker),"The guided/expert mode controller is missing: "+marker);
+for(const marker of ['.wb-mode-grid','.wb-mode-card','.workbench-modebar','@keyframes wb-section-in','prefers-reduced-motion'])
+  assert.ok(css.includes(marker),"The dynamic all-in-one visual system is missing: "+marker);
+assert.ok(js.includes('wbReportMore') && js.includes('Ver el informe completo, especialistas y mediciones avanzadas'),"Advanced reports, specialist evidence and raw data must remain available behind one disclosure.");
+
 console.log("Unified horizontal Inspector workbench + understandable advanced session report: PASS");
