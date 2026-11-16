@@ -50,6 +50,7 @@ for(const field of ['meshSelectionDynamicFilterTotalCandidates','meshSelectionDy
 assert.ok(smoke.includes('manifest.spatialSelection?.enabled === true'),'Real campaign smoke must read the runtime spatial selection state.');
 assert.ok(smoke.includes('manifest.spatialSelection.staticIndexedMeshCount'),'Real campaign smoke must verify static octree indexing.');
 assert.ok(smoke.includes('Dynamic frustum filtering is intentionally not enabled'),'Smoke must not claim dynamic culling before it is integrated into Babylon dynamicContent.');
+assert.ok(!builder.includes('const installSpatialDynamicFrustumFilter=octree=>') && !builder.includes('octree.select=function(frustumPlanes,allowDuplicate)'), 'The renderer must not wrap static octree selection as a dynamic-content filter.');
 assert.ok(workflow.includes('node scripts/test_quality_spatial_selection.cjs'),'The Pages build must run the spatial selection contract.');
 assert.ok(source.includes('function update(dt){'),'World update must remain present.');
 assert.ok(source.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),'Felled trees must leave static octree cells before their fall animation.');
@@ -61,4 +62,4 @@ assert.ok(builder.includes('renderPipeline.samples=Math.max(1,Math.min(isTouchDe
 assert.ok(!builder.includes('scene.freezeActiveMeshes('),'The optimization must not freeze the active list and stop dynamic rendering.');
 assert.ok(!builder.includes('scene.skipFrustumClipping=true'),'The optimization must not disable frustum culling.');
 
-console.log('OK Babylon spatial selection: dynamic meshes tracked, all game systems preserved, Quality resolution and antialiasing unchanged.');
+console.log('OK Babylon spatial selection: safe static Octree, dynamic meshes tracked separately, no false dynamic-frustum claim, Quality resolution and antialiasing unchanged.');
