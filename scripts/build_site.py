@@ -325,6 +325,44 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
+    # Paint every startup milestone synchronously before expensive scene work.
+    # Previously setLoadingProgress() only queued requestAnimationFrame(); a long
+    # synchronous Babylon/world-construction task could therefore leave the visible
+    # indicator at 0% even after bootEngine() had advanced to 2%, 38% or 40%.
+    progress_marker = """function setLoadingProgress(value,label){
+ trackStartupPerfStage(value,label);
+ targetLoadProgress=Math.max(targetLoadProgress,Math.min(100,Math.max(0,Number(value)||0)));
+ if(label&&loadText)loadText.textContent=label;
+ if(!loadProgressAnimation)loadProgressAnimation=requestAnimationFrame(paintLoadingProgress);
+}"""
+    progress_replacement = """function setLoadingProgress(value,label){
+ trackStartupPerfStage(value,label);
+ targetLoadProgress=Math.max(targetLoadProgress,Math.min(100,Math.max(0,Number(value)||0)));
+ currentLoadProgress=targetLoadProgress;
+ if(loadProgressAnimation)cancelAnimationFrame(loadProgressAnimation);
+ loadProgressAnimation=0;lastLoadProgressFrame=0;
+ if(label&&loadText)loadText.textContent=label;
+ if(loadProgressBar)loadProgressBar.style.width=currentLoadProgress.toFixed(2)+'%';
+ if(loadProgressLabel)loadProgressLabel.textContent=Math.floor(currentLoadProgress)+'%';
+ if(loadProgressTrack)loadProgressTrack.setAttribute('aria-valuenow',String(Math.round(currentLoadProgress)));
+}"""
+    if html.count(progress_marker) != 1:
+        raise SystemExit("No se encontró la función única de progreso de carga.")
+    html = html.replace(progress_marker, progress_replacement, 1)
+
+    # Yield once before synchronous world construction so the browser can paint
+    # the real 40% milestone instead of freezing on the initial 0% frame.
+    game_start_marker = """ async function startGame(){
+ setLoadingProgress(40,'Preparando el mundo…');
+ try{"""
+    game_start_replacement = """ async function startGame(){
+ setLoadingProgress(40,'Preparando el mundo…');
+ await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+ try{"""
+    if html.count(game_start_marker) != 1:
+        raise SystemExit("No se encontró el inicio único de startGame para liberar el primer fotograma.")
+    html = html.replace(game_start_marker, game_start_replacement, 1)
+
     # Mobile startup: let the browser stream/compile the bundled Babylon scripts natively.
     # Fetching the complete engine into TextDecoder strings and re-wrapping it in a Blob
     # duplicates several MB and delays script compilation on mid-range Android devices.
