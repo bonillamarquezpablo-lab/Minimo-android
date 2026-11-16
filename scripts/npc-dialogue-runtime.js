@@ -13,7 +13,7 @@ if(!Core||!Bridge||typeof Bridge.getSnapshot!=="function"){
 }
 const MAX_BUBBLES=Core.MAX_VISIBLE_BUBBLES,RANGE=Core.MAX_RANGE_METERS,slots=[],metadata=new Map(),pending=[];
 const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,worldPeopleCount:0,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:""};
-let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projectionIdentity=null,projectionScratch=null;
+let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projectionIdentity=null,projectionScratch=null,lastSnapshot=null,observedScene=null,renderObserver=null,viewportObserver=null,viewportListenersBound=false,viewportRefreshPending=false;
 const RANGE_SQUARED=RANGE*RANGE;
 const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="2147483000";layer.dataset.maxBubbles=String(MAX_BUBBLES);document.body.appendChild(layer);
 function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;node.style.position="fixed";node.style.left="0";node.style.top="0";node.style.margin="0";node.style.pointerEvents="none";node.style.zIndex=String(2147483001+index);const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null};}
@@ -25,9 +25,48 @@ function worldPosition(node){if(!node)return null;try{const p=typeof node.getAbs
 function distance(a,b){return a&&b?Math.hypot(Number(a.x)-Number(b.x),Number(a.z)-Number(b.z)):Infinity;}
 function distanceSquared(a,b){if(!a||!b)return Infinity;const dx=Number(a.x)-Number(b.x),dz=Number(a.z)-Number(b.z);return dx*dx+dz*dz;}
 function enabled(n){const r=rootOf(n);if(!r)return false;try{return (typeof r.isEnabled!=="function"||r.isEnabled())&&r.isVisible!==false&&r.visibility!==0;}catch(_){return false;}}
-function refreshProjectionMatrices(s){if(!s||!s.scene)return;try{if(typeof s.scene.updateTransformMatrix==="function")s.scene.updateTransformMatrix(true);else if(s.camera){if(typeof s.camera.getViewMatrix==="function")s.camera.getViewMatrix(true);if(typeof s.camera.getProjectionMatrix==="function")s.camera.getProjectionMatrix(true);}}catch(error){diagnostics.lastError=String(error&&error.message||error);}}
+function refreshProjectionMatrices(s){if(!s||!s.scene)return;try{const camera=s.camera||s.scene.activeCamera;if(camera){if(typeof camera.getViewMatrix==="function")camera.getViewMatrix(true);if(typeof camera.getProjectionMatrix==="function")camera.getProjectionMatrix(true);}if(typeof s.scene.updateTransformMatrix==="function")s.scene.updateTransformMatrix(true);}catch(error){diagnostics.lastError=String(error&&error.message||error);}}
 function blockingUi(){if(document.body.classList.contains("map-open"))return true;const intro=document.getElementById("intro");return!!(intro&&intro.classList.contains("open")&&intro.getAttribute("aria-hidden")!=="true");}
-function snapshot(){try{const value=Bridge.getSnapshot();diagnostics.bridgeError="";diagnostics.bridgeReportedActive=!!(value&&value.active);return value;}catch(error){diagnostics.snapshotFailures++;diagnostics.bridgeError=String(error&&error.message||error);diagnostics.lastError=diagnostics.bridgeError;console.warn("NPC dialogue snapshot:",error);return null;}}
+function snapshot(){try{const value=Bridge.getSnapshot();diagnostics.bridgeError="";diagnostics.bridgeReportedActive=!!(value&&value.active);if(value)lastSnapshot=value;return value;}catch(error){diagnostics.snapshotFailures++;diagnostics.bridgeError=String(error&&error.message||error);diagnostics.lastError=diagnostics.bridgeError;console.warn("NPC dialogue snapshot:",error);return lastSnapshot;}}
+function bindSceneRenderObserver(s){
+ const scene=s&&s.scene;if(!scene||scene===observedScene)return;
+ if(observedScene&&renderObserver&&observedScene.onAfterRenderObservable&&typeof observedScene.onAfterRenderObservable.remove==="function"){
+  try{observedScene.onAfterRenderObservable.remove(renderObserver);}catch(_){}
+ }
+ observedScene=scene;renderObserver=null;
+ const observable=scene.onAfterRenderObservable;
+ if(observable&&typeof observable.add==="function"){
+  renderObserver=observable.add(()=>{
+   if(!lastActive||document.hidden||!lastSnapshot)return;
+   try{render(lastSnapshot,true);}catch(error){diagnostics.lastError=String(error&&error.message||error);}
+  });
+ }
+}
+function handleViewportChange(){
+ if(viewportRefreshPending)return;
+ viewportRefreshPending=true;
+ window.setTimeout(()=>{
+  viewportRefreshPending=false;
+  const s=snapshot()||lastSnapshot;if(!s)return;
+  try{if(s.engine&&typeof s.engine.resize==="function")s.engine.resize();}catch(error){diagnostics.lastError=String(error&&error.message||error);}
+  bindSceneRenderObserver(s);refreshProjectionMatrices(s);render(s);
+ },0);
+}
+function bindViewportObservers(s){
+ if(viewportListenersBound)return;
+ window.addEventListener("resize",handleViewportChange,{passive:true});
+ window.addEventListener("orientationchange",handleViewportChange,{passive:true});
+ if(window.visualViewport&&typeof window.visualViewport.addEventListener==="function"){
+  window.visualViewport.addEventListener("resize",handleViewportChange,{passive:true});
+  window.visualViewport.addEventListener("scroll",handleViewportChange,{passive:true});
+ }
+ if(window.screen&&window.screen.orientation&&typeof window.screen.orientation.addEventListener==="function")
+  window.screen.orientation.addEventListener("change",handleViewportChange);
+ if(typeof window.ResizeObserver==="function"&&s&&s.canvas){
+  try{viewportObserver=new window.ResizeObserver(handleViewportChange);viewportObserver.observe(s.canvas);}catch(_){viewportObserver=null;}
+ }
+ viewportListenersBound=true;
+}
 function nearbyPeople(s){
  diagnostics.worldPeopleCount=Array.isArray(s&&s.people)?s.people.length:0;
  if(!s||!s.active||!s.playerPosition||!Number.isFinite(Number(s.playerPosition.x))||!Number.isFinite(Number(s.playerPosition.z))||!Array.isArray(s.people)){diagnostics.nearbyCount=0;return[];}
@@ -131,9 +170,9 @@ function project(slot,s){
   slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");diagnostics.projectionSuccesses++;return true;
  }catch(error){diagnostics.lastError=String(error&&error.message||error);return hide("projection-exception");}
 }
-function render(s){refreshProjectionMatrices(s);const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;layer.setAttribute("aria-hidden",String(!active));if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;return;}for(const slot of slots){if(slot.current)project(slot,s);else slot.node.hidden=true;}renderedCount=slots.filter(slot=>slot.current&&!slot.node.hidden).length;}
-function schedulerTick(){const now=Date.now(),s=snapshot();diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}expire(now);const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));processPending(now,ids);schedule(now,nearby,s);render(s);}
-function positionTick(){render(snapshot());}
+function render(s,matricesReady=false){if(!matricesReady)refreshProjectionMatrices(s);const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;layer.setAttribute("aria-hidden",String(!active));if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;return;}for(const slot of slots){if(slot.current)project(slot,s);else slot.node.hidden=true;}renderedCount=slots.filter(slot=>slot.current&&!slot.node.hidden).length;}
+function schedulerTick(){const now=Date.now(),s=snapshot();diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);if(s){bindSceneRenderObserver(s);bindViewportObservers(s);}if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}expire(now);const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));processPending(now,ids);schedule(now,nearby,s);render(s);}
+function positionTick(){const s=snapshot();if(!s)return;bindSceneRenderObserver(s);bindViewportObservers(s);if(!renderObserver)render(s);}
 function start(){if(schedulerHandle||positionHandle)return;schedulerHandle=window.setInterval(()=>{try{schedulerTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC dialogue scheduler recovered:",e);}},Core.SCHEDULER_INTERVAL_MS);positionHandle=window.setInterval(()=>{try{positionTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC bubble projection recovered:",e);}},Core.POSITION_UPDATE_MS);}
 start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,active:!!lastActive,maxVisibleBubbles:MAX_BUBBLES,activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
 }
