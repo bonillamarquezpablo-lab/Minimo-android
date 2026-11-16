@@ -611,7 +611,7 @@ def main() -> None:
 
     # The five instances deliberately share the subdued GLB materials. Cloning every
     # mesh material for every gull created avoidable shader/material variants.
-    gull_material_registry_marker = "    const realBirds=[];"
+    gull_material_registry_marker = "const realBirds=[];"
     gull_material_registry_replacement = "    const realBirds=[],subduedMaterials=new Set();"
     if html.count(gull_material_registry_marker) != 1:
         raise SystemExit("No se encontró el registro único de instancias de gaviota.")
@@ -620,7 +620,7 @@ def main() -> None:
     if html.count(gull_material_clone) != 1:
         raise SystemExit("No se encontró el bloque único que duplicaba materiales para cada gaviota.")
     html = html.replace(gull_material_clone, "", 1)
-    gull_material_set = "     const subduedMaterials=new Set();\n"
+    gull_material_set = "const subduedMaterials=new Set();"
     if html.count(gull_material_set) != 1:
         raise SystemExit("No se encontró el conjunto local de materiales duplicados de las gaviotas.")
     html = html.replace(gull_material_set, "", 1)
