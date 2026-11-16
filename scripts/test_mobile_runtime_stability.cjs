@@ -108,7 +108,7 @@ assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGul
   builder.includes('const scale=targetGullWingspanMeters/horizontalSpan'),
   'Gulls must be normalized by horizontal wingspan, never by vertical rig height.');
 assert.ok(builder.includes("const realBirds=[],subduedMaterials=new Set();") &&
-  builder.includes('html.replace(gull_material_clone, "", 1)'),
+  builder.includes('html.replace(gull_material_clone_marker, "", 1)'),
   'The five gull instances must share one subdued material set instead of cloning material variants per bird.');
 assert.ok(builder.includes('wildlife_update_marker = "function updateWildlife(dt){"') &&
   builder.includes('_wildlifeNextDecisionAt') && builder.includes('_wildlifeVelocityX'),
