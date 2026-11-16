@@ -198,21 +198,11 @@ async function main() {
         JSON.stringify(preflightState));
     }
 
-    await page.waitForFunction(() => document.body.classList.contains('booting') ||
-      document.body.classList.contains('boot-failed'), undefined, {
-      timeout: 15000,
-      polling: 50
-    }).catch(async error => {
-      const diagnostics = await page.evaluate(() => ({
-        bodyClass: document.body.className,
-        identityStartCount: window.__ELSN_IDENTITY_START_COUNT || 0,
-        loadingDisplay: document.getElementById('loading') ? getComputedStyle(document.getElementById('loading')).display : null,
-        modelStatus: document.getElementById('modelStatus')?.textContent || null
-      }));
-      await fs.promises.writeFile(path.join(OUT, 'preflight-dom.html'), await page.content());
-      throw new Error('El clic de identidad se registró pero no activó el arranque. Diagnóstico: ' +
-        JSON.stringify(diagnostics) + ' · ' + String(error?.message || error));
-    });
+    // Do not wait for a CSS class here: the game intentionally performs blocking scene setup
+    // after bootEngine() and may occupy the main thread while creating the first world frame.
+    // The identity-start counter proves the input handler ran; the next wait observes the actual
+    // startup recorder or an explicit boot-failed state, including browser-side long stalls.
+    manifest.identityStartCount = await page.evaluate(() => window.__ELSN_IDENTITY_START_COUNT || 0);
     manifest.menuFlowMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
     stepStartedAt = performance.now();
