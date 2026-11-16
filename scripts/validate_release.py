@@ -165,7 +165,7 @@ def main() -> None:
         fail("El runtime de diálogos no debe crear meshes 3D ni añadir trabajo permanente por fotograma.")
     if ".elsn-npc-bubble-message" not in dialogue_style_source or "pointer-events:none" not in dialogue_style_source:
         fail("La capa de bocadillos debe ser ligera y no interceptar los controles del juego.")
-    if "z-index:30" not in dialogue_style_source or "Core.placeBubble({x,y}" not in dialogue_runtime_source or "function bubbleLimit()" not in dialogue_runtime_source or "bootstrapAttempts++<80" not in dialogue_runtime_source or "projectionFailures" not in dialogue_runtime_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
+    if "z-index:1200" not in dialogue_style_source or "Core.placeBubble({x,y}" not in dialogue_runtime_source or "function bubbleLimit()" not in dialogue_runtime_source or "bootstrapAttempts++<80" not in dialogue_runtime_source or "projectionFailures" not in dialogue_runtime_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
         fail("El diálogo ambiental debe reintentar el puente, admitir NPC cercanos y exponer fallos de proyección.")
     if "worldColliders.push({" in index_html or "registerWorldCollider({" not in index_html or "habitableColliderBackfillCount" not in index_html:
         fail("Todos los colisionadores de estructuras deben incorporarse a la rejilla espacial activa.")
