@@ -86,15 +86,15 @@
         <article class="panel launch-panel">
           <div class="panel-title"><h3>¿Qué profundidad necesitas?</h3><span class="step-label">Puedes cambiarla antes de empezar</span></div>
           <div class="levels" role="group" aria-label="Nivel de inspección">
-            <button class="level" type="button" data-level="quick" aria-pressed="true"><strong>Rápida</strong><small>Comprueba que el juego arranca</small></button>
-            <button class="level" type="button" data-level="complete" aria-pressed="false"><strong>Completa</strong><small>Revisa mundo, costa y texturas</small></button>
-            <button class="level" type="button" data-level="deep" aria-pressed="false"><strong>Profunda</strong><small>Añade comparación visual y mediciones</small></button>
+            <button class="level" type="button" data-level="quick" aria-pressed="true"><strong>Rápido</strong><small>Comprueba que el juego arranca</small></button>
+            <button class="level" type="button" data-level="complete" aria-pressed="false"><strong>Completo</strong><small>Revisa mundo, costa y texturas</small></button>
+            <button class="level" type="button" data-level="deep" aria-pressed="false"><strong>Profundo</strong><small>Añade comparación visual y mediciones</small></button>
           </div>
-          <div class="field-row">
-            <div class="field expert-only"><label for="targetBranch">Rama que se inspecciona</label><input id="targetBranch" value="main" autocomplete="off" spellcheck="false"></div>
-            <div class="field expert-only"><label for="beforeRef">Referencia ANTES · opcional</label><input id="beforeRef" placeholder="Automática: versión anterior" autocomplete="off" spellcheck="false"></div>
+          <div class="field-row expert-only">
+            <div class="field"><label for="targetBranch">Rama que se inspecciona</label><input id="targetBranch" value="main" autocomplete="off" spellcheck="false"></div>
+            <div class="field"><label for="beforeRef">Referencia ANTES · opcional</label><input id="beforeRef" placeholder="Automática: versión anterior" autocomplete="off" spellcheck="false"></div>
           </div>
-          <div class="launch-actions"><button class="primary" id="launchButton" type="button">Iniciar prueba <span aria-hidden="true">↗</span></button><button class="token-gear" id="tokenSettingsButton" type="button" aria-label="Ajustes avanzados de conexión" aria-controls="tokenDetails" aria-expanded="false" title="Ajustes avanzados">⚙</button></div>
+          <div class="launch-actions"><button class="primary" id="launchButton" type="button">Iniciar prueba <span aria-hidden="true">↗</span></button><button class="token-gear expert-only" id="tokenSettingsButton" type="button" aria-label="Ajustes avanzados de conexión" aria-controls="tokenDetails" aria-expanded="false" title="Ajustes avanzados">⚙</button></div>
           <p class="inline-state" id="launchMessage" role="status" aria-live="polite">Nivel elegido: <strong id="selectedLevel">Rápido</strong>. No se iniciará nada hasta que confirmes la ejecución en GitHub.</p>
 
           <details class="token-box" id="tokenDetails">
@@ -138,7 +138,7 @@
           <button class="primary" id="liveGameStart" type="button">Abrir el juego y medir</button>
           <button class="small-button" id="liveGameSample" type="button" disabled>Tomar muestra</button>
           <button class="small-button" id="liveGameStop" type="button" disabled>Detener medición</button>
-          <label class="live-device-confirm"><input id="livePhysicalDevice" type="checkbox"> Estoy midiendo en mi Galaxy S26 Ultra</label><label class="live-device-confirm"><input id="liveEnableGpuProfiler" type="checkbox"> Medición avanzada de GPU (puede añadir carga)</label><span id="liveDiagnosticStatus" role="status" aria-live="polite">Esperando que abras el juego.</span>
+          <label class="live-device-confirm"><input id="livePhysicalDevice" type="checkbox"> Estoy midiendo en mi Galaxy S26 Ultra</label><label class="live-device-confirm expert-only"><input id="liveEnableGpuProfiler" type="checkbox"> Medición avanzada de GPU (puede añadir carga)</label><span id="liveDiagnosticStatus" role="status" aria-live="polite">Esperando que abras el juego.</span>
         </div>
         <div class="live-game-frame-wrap" id="liveGameFrameWrap" hidden>
           <iframe id="liveGameFrame" title="EL SIN NOMBRE · sesión de medición" loading="lazy" allow="fullscreen; gamepad" referrerpolicy="strict-origin-when-cross-origin"></iframe>
