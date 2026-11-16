@@ -853,7 +853,21 @@ def main() -> None:
        if(!match)continue;
        const villageIndex=Number(match[1]!==undefined?match[1]:match[3]);
        const slot=Number(match[2]!==undefined?match[2]:match[4]);
-       found.push({name,root:node,parts:{name,root:node,variant:villageIndex*2+slot,civilian:match[1]!==undefined,role:match[1]!==undefined?'civilian':'warrior'},recruited:false});
+       const descendants=[];
+       try{if(typeof node.getChildTransformNodes==='function')descendants.push(...node.getChildTransformNodes(false));}catch(_){}
+       try{if(typeof node.getChildMeshes==='function')descendants.push(...node.getChildMeshes(false));}catch(_){}
+       let head=descendants.find(child=>child&&/head/i.test(String(child.name||''))&&typeof child.getAbsolutePosition==='function')||null;
+       if(!head){
+        for(const child of descendants){
+         const bones=child&&child.skeleton&&Array.isArray(child.skeleton.bones)?child.skeleton.bones:[];
+         for(const bone of bones){
+          if(!bone||!/head/i.test(String(bone.name||''))||typeof bone.getTransformNode!=='function')continue;
+          const boneNode=bone.getTransformNode();if(boneNode&&typeof boneNode.getAbsolutePosition==='function'){head=boneNode;break;}
+         }
+         if(head)break;
+        }
+       }
+       found.push({name,root:node,parts:{name,root:node,head,variant:villageIndex*2+slot,civilian:match[1]!==undefined,role:match[1]!==undefined?'civilian':'warrior'},recruited:false});
       }
       dialoguePeopleCache=found;
      }
