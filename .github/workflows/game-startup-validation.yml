@@ -58,6 +58,7 @@ jobs:
           node scripts/test_release_contract.cjs
           node scripts/test_startup_guard.cjs
           node scripts/test_glb_loading.cjs
+          node scripts/test_mobile_startup_loading.cjs
           node scripts/test_startup_smoke.cjs
           node scripts/test_atmosphere_system.cjs
           node scripts/test_scene_capture_efficiency_contract.cjs
