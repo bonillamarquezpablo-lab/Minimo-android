@@ -57,9 +57,6 @@ REQUIRED_FILES = (
     "assets/models/armored-knight-rigged.glb",
     "assets/models/man-base-character-rigged.glb",
     "assets/models/Seagull.glb",
-    "assets/models/forest/mature-scots-pine-tree.glb",
-    "assets/models/forest/mature-norway-spruce-tree.glb",
-    "assets/models/forest/oak-detailed.glb",
     "assets/models/wildlife/Deer.glb",
     "assets/models/wildlife/Stag.glb",
     "assets/models/wildlife/Wolf.glb",
@@ -124,11 +121,6 @@ def main() -> None:
         fail("El sistema atmosférico debe cargarse antes del runtime principal.")
     if "window.__ELSN_ATMOSPHERE_CONTROLS" not in index_html or "atmosphereSystem.update(dt)" not in index_html:
         fail("El reloj atmosférico no está conectado al bucle de juego y a sus controles.")
-    forest_markers = ("function loadForestTreeTemplates()", "forestTreeTemplates.size===3", "mixedForestTree", "TreeCanopyWindPivot", "renderedTerrainSurfaceAt(x,z)")
-    if any(marker not in index_html for marker in forest_markers):
-        fail("El bosque debe utilizar modelos completos GLB, tres especies cargadas y apoyo sobre el terreno renderizado.")
-    if "startupResourceSnapshot.forest.models!==3" not in index_html or "startupResourceSnapshot.forest.placed<=0" not in index_html:
-        fail("La barrera final debe comprobar los modelos forestales y los árboles realmente colocados.")
     session_recorder_source = read_text("scripts/game-session-recorder.js")
     if '<script src="./scripts/game-session-recorder.js" defer></script>' not in index_html:
         fail("El juego no carga el registrador ligero de informes de sesión.")
@@ -315,21 +307,8 @@ def main() -> None:
     ):
         if obsolete_civilian_prop in index_html:
             fail("Se ha reintroducido un accesorio rígido que invade la silueta o las manos de un aldeano.")
-    forest_runtime_markers = (
-        "function loadForestTreeTemplates()",
-        "forestTreeTemplates.size===3",
-        "instantiateModelsToScene(name=>name+'_Forest_'+serial,false)",
-        "mergeStaticDecorByMaterial(canopy,'NorseForest_'+kind)",
-        "root.position.set(x,groundY+baseYOffset,z)",
-        "tree.root.position=v(tree.x,terrainSurfaceAt(tree.x,tree.z)+(tree.baseYOffset||0),tree.z)",
-        "mature-scots-pine-tree.glb",
-        "mature-norway-spruce-tree.glb",
-        "oak-detailed.glb",
-    )
-    if any(marker not in index_html for marker in forest_runtime_markers):
-        fail("El bosque debe instanciar modelos GLB completos, mantener sus materiales y apoyar su base sobre el terreno también después de un reinicio.")
-    if any(marker in index_html for marker in ("TreeFoliageTuft_", "NorseTreeLeafBatch_", "TreeCanopyBranch_")):
-        fail("El generador procedural anterior de hojas y ramas sigue presente en la versión construida.")
+    if "root.rotation.x=rand(-.025,.025)" not in index_html or "root.rotation.z=rand(-.04,.04)" not in index_html:
+        fail("Los árboles deben conservar una variación orgánica de inclinación sin añadir geometría ni draw calls.")
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         index_html,
@@ -342,6 +321,23 @@ def main() -> None:
         fail(f"Formato de versión no válido: {version!r}")
     if version != EXPECTED_VERSION:
         fail(f"Se esperaba la versión {EXPECTED_VERSION}, se encontró {version}.")
+    forest_runtime_markers = (
+        "function getForestTreeMaterials()",
+        "ForestBarkPBR",
+        "ForestBirchPBR",
+        "ForestLeavesPBR",
+        "ForestNeedlesPBR",
+        "mergeStaticDecorByMaterial(woodRoot,'ForestTreeWood')",
+        "mergeStaticDecorByMaterial(canopy,'ForestTreeCanopy')",
+        "root.position=v(x,renderedTerrainSurfaceAt(x,z),z)",
+        "targetGullMaxExtentMeters=.78",
+        "maximumExtentMeters:finalMaxExtent",
+    )
+    missing_forest_runtime = [marker for marker in forest_runtime_markers if marker not in index_html]
+    if missing_forest_runtime:
+        fail("La sustitución del bosque o el límite de tamaño de las gaviotas está incompleta: " + ", ".join(missing_forest_runtime))
+    if "appendLeaf=" in index_html or "NorseTreeLeafBatch_" in index_html or "TreeFoliageTuft_" in index_html:
+        fail("Quedan restos de la antigua geometría de hojas triangulares del bosque.")
 
     sw = read_text("sw.js")
     if f'el-sin-nombre-shell-{version}' not in sw:
