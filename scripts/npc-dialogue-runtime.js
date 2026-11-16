@@ -90,7 +90,8 @@ function slotFor(id){return slots.find(s=>s.current&&s.current.id===id)||slots.f
 function startBubble(npc,content,now,duration){const id=idOf(npc);if(!id||!content||!content.text)return false;const slot=slotFor(id);if(!slot)return false;const kind=["thought","speech","action"].includes(content.kind)?content.kind:"speech";slot.current={id,npc,kind,expiresAt:now+(duration||3900)};slot.role.textContent=String(content.roleName||"Habitante").slice(0,24);slot.kind.textContent=kind==="thought"?"PIENSA":kind==="action"?"HACE":"DICE";slot.message.textContent=String(content.text).slice(0,120);slot.node.dataset.kind=kind;slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");slot.node.classList.remove("is-visible");void slot.node.offsetWidth;slot.node.classList.add("is-visible");diagnostics.bubblesStarted++;return true;}
 function clearSlot(slot){slot.current=null;slot.node.classList.remove("is-visible");slot.node.hidden=true;slot.node.style.transform="";}
 function expire(now){for(const slot of slots)if(slot.current&&slot.current.expiresAt<=now)clearSlot(slot);}
-function partnerFor(item,nearby){let best=null,bestDistance=7.5;for(const candidate of nearby){if(candidate.id===item.id||candidate.npc.villageIndex!==item.npc.villageIndex)continue;if(slots.some(s=>s.current&&s.current.id===candidate.id))continue;const d=distance(item.position,candidate.position);if(d<bestDistance){best=candidate;bestDistance=d;}}return best;}
+function villageOf(npc){const direct=Number(npc&&npc.villageIndex);if(Number.isFinite(direct))return direct;const variant=Number(npc&&npc.parts&&npc.parts.variant);return Number.isFinite(variant)?Math.floor(variant/2):-1;}
+function partnerFor(item,nearby){let best=null,bestDistance=7.5;for(const candidate of nearby){if(candidate.id===item.id||villageOf(candidate.npc)!==villageOf(item.npc))continue;if(slots.some(s=>s.current&&s.current.id===candidate.id))continue;const d=distance(item.position,candidate.position);if(d<bestDistance){best=candidate;bestDistance=d;}}return best;}
 function queueReply(npc,content,dueAt){pending.push({npc,content,dueAt});if(pending.length>4)pending.shift();}
 function processPending(now,ids){for(let i=0;i<pending.length;){const entry=pending[i];if(entry.dueAt>now){i++;continue;}pending.splice(i,1);if(!ids.has(idOf(entry.npc)))continue;startBubble(entry.npc,entry.content,now,4300);break;}}
 function remember(state,content){if(!content)return;if(content.topic){state.recentTopics.push(content.topic);if(state.recentTopics.length>3)state.recentTopics.shift();}if(content.text){state.recentTexts.push(content.text);if(state.recentTexts.length>5)state.recentTexts.shift();}}
@@ -124,13 +125,14 @@ function isProjectable(npc,s){
 }
 function schedule(now,nearby,s){
  refreshProjectionMatrices(s);
- const world=s&&s.world||{},inView=nearby.filter(x=>isProjectable(x.npc,s)),selected=Core.selectVisibleBubbles(inView.map(x=>({item:x,distance:x.distance,priority:x.distance<7?3:(x.distance<14?2:1),visible:true})),MAX_BUBBLES).map(x=>x.item);
+ const world=s&&s.world||{};
+ const captured=Number.isFinite(Number(world.captured))?Number(world.captured):null;
+ if(captured!==null){if(lastCapturedCount!==null&&captured>lastCapturedCount)recentCaptureUntil=now+30000;lastCapturedCount=captured;}
+ const inView=nearby.filter(x=>isProjectable(x.npc,s)),selected=Core.selectVisibleBubbles(inView.map(x=>({item:x,distance:x.distance,priority:x.distance<7?3:(x.distance<14?2:1),visible:true})),MAX_BUBBLES).map(x=>x.item);
  const due=selected.filter(x=>stateFor(x.id,now).nextAt<=now&&!slots.some(slot=>slot.current&&slot.current.id===x.id));
  if(!due.length)return;
  due.sort((a,b)=>a.distance-b.distance);
  const chosen=due[Math.floor(random()*Math.min(due.length,3))],state=stateFor(chosen.id,now);
- const captured=Number.isFinite(Number(world.captured))?Number(world.captured):null;
- if(captured!==null){if(lastCapturedCount!==null&&captured>lastCapturedCount)recentCaptureUntil=now+30000;lastCapturedCount=captured;}
  const context={isWalking:Number(chosen.npc.parts&&chosen.npc.parts.actualMoveSpeed)>.08,playerClose:chosen.distance<8,night:world.night===true,onShip:world.onShip===true,enemyNearby:world.enemyNearby===true,healthLow:world.healthLow===true,wood:world.wood,stone:world.stone,recentCapture:world.recentCapture===true||now<recentCaptureUntil,islandName:String(world.islandName||"")};
  const partner=partnerFor(chosen,nearby);
  if(partner&&random()<.54){
