@@ -616,10 +616,15 @@ def main() -> None:
     if html.count(gull_material_registry_marker) != 1:
         raise SystemExit("No se encontró el registro único de instancias de gaviota.")
     html = html.replace(gull_material_registry_marker, gull_material_registry_replacement, 1)
-    gull_material_clone = "      if(Array.isArray(mesh.material))mesh.material=mesh.material.map(material=>material?material.clone(material.name+'_subdued_gull'):material);\n      else if(mesh.material)mesh.material=mesh.material.clone(mesh.material.name+'_subdued_gull');\n"
-    if html.count(gull_material_clone) != 1:
-        raise SystemExit("No se encontró el bloque único que duplicaba materiales para cada gaviota.")
-    html = html.replace(gull_material_clone, "", 1)
+    # Remove per-instance material clones by matching each source operation independently;
+    # this avoids whitespace-sensitive block matching in the minified source HTML.
+    for gull_material_clone_marker in (
+        "if(Array.isArray(mesh.material))mesh.material=mesh.material.map(material=>material?material.clone(material.name+'_subdued_gull'):material);",
+        "else if(mesh.material)mesh.material=mesh.material.clone(mesh.material.name+'_subdued_gull');",
+    ):
+        if html.count(gull_material_clone_marker) != 1:
+            raise SystemExit("No se encontró exactamente una operación de duplicación de material de gaviota.")
+        html = html.replace(gull_material_clone_marker, "", 1)
     gull_material_set = "const subduedMaterials=new Set();"
     if html.count(gull_material_set) != 1:
         raise SystemExit("No se encontró el conjunto local de materiales duplicados de las gaviotas.")
