@@ -11,7 +11,7 @@ const previewReport=fs.readFileSync('scripts/create_hrafn_ab_report.py','utf8');
 new vm.Script(app,{filename:'inspector/app.js'});
 const sectionOrder=['control','telemetria','radar','comparativa'].map(id=>html.indexOf('<section class="section" id="'+id+'">'));
 assert.ok(sectionOrder.every((position,index)=>position>=0&&(index===0||position>sectionOrder[index-1])),'The actual page sections must follow the guided-tour order: operations, graphs, island radar, comparison.');
-for(const [id,label] of [['control','01 · OPERACIONES'],['telemetria','02 · GRÁFICAS'],['radar','03 · MAPA DEL MUNDO'],['comparativa','04 · EVIDENCIA VISUAL']]){
+for(const [id,label] of [['control','PRUEBAS DEL JUEGO'],['telemetria','HISTORIAL DE MEDICIONES'],['radar','MAPA DEL ARCHIPIÉLAGO'],['comparativa','COMPARACIÓN VISUAL']]){
  const start=html.indexOf('<section class="section" id="'+id+'">');
  const next=html.indexOf('</section>',start);
  assert.ok(html.slice(start,next).includes(label),'Incorrect visual section number for '+id);
