@@ -1,5 +1,5 @@
 /* Four reusable HTML speech bubbles anchored to existing civilian heads. */
-.elsn-npc-dialogue-layer{position:fixed;inset:0;z-index:30;overflow:hidden;pointer-events:none;user-select:none;-webkit-user-select:none}
+.elsn-npc-dialogue-layer{position:fixed;inset:0;z-index:1200;overflow:visible;pointer-events:none;user-select:none;-webkit-user-select:none}
 .elsn-npc-dialogue-layer[hidden],.elsn-npc-bubble[hidden]{display:none!important}
 .elsn-npc-bubble{position:fixed;left:0;top:0;z-index:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:max-content;max-width:min(148px,calc(100vw - 24px));box-sizing:border-box;padding:4px 6px 5px;border:1px solid rgba(218,180,111,.72);border-radius:11px 11px 11px 4px;background:linear-gradient(145deg,rgba(18,27,27,.96),rgba(10,16,17,.94));color:#f7edda;box-shadow:0 4px 16px rgba(0,0,0,.38),0 0 0 1px rgba(0,0,0,.22);opacity:0;transform-origin:50% 100%;transition:opacity 160ms ease;will-change:transform,opacity;contain:layout paint style;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 .elsn-npc-bubble.is-visible{opacity:1}
