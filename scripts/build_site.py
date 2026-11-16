@@ -338,17 +338,40 @@ def main() -> None:
     if fallback_version_count < 4:
         raise SystemExit("No se pudieron sincronizar los mirrors de Babylon y GLTF loader.")
 
+    native_script_marker = "script.async=true;script.src=url;script.referrerPolicy='strict-origin-when-cross-origin';"
+    if html.count(native_script_marker) != 1:
+        raise SystemExit("No se encontró exactamente el cargador dinámico de scripts críticos.")
+    html = html.replace(native_script_marker, "script.async=false;script.fetchPriority='high';script.src=url;script.referrerPolicy='strict-origin-when-cross-origin';", 1)
+    default_timeout_marker = "function loadEngine(url,timeoutMs=7000,check=null){"
+    if html.count(default_timeout_marker) != 1:
+        raise SystemExit("No se encontró exactamente el plazo predeterminado del cargador Babylon.")
+    html = html.replace(default_timeout_marker, "function loadEngine(url,timeoutMs=30000,check=null){", 1)
+
     loader_start = html.find("async function loadSameOriginScriptWithProgress(")
     loader_end = html.find("async function installCachedRuntime(", loader_start)
     if loader_start < 0 or loader_end <= loader_start:
         raise SystemExit("No se encontró el cargador de scripts Babylon para optimizar el arranque móvil.")
     native_loader = r"""async function loadEngineWithCache(url,timeoutMs=30000,check=null,progressStart=0,progressEnd=0,label='Cargando recurso'){
- const resolved=new URL(url,document.baseURI),sameOrigin=resolved.origin===location.origin;
- // A native script URL allows Chromium to stream, parse and compile the large engine
- // without first materializing a second multi-megabyte JS string and Blob in RAM.
- const result=await loadEngine(sameOrigin?resolved.href:url,timeoutMs,check);
- if(result.ok)setLoadingProgress(progressEnd,label+' listo.');
- return {...result,cached:false,source:sameOrigin?'same-origin-native-script':'external-script'};
+ const started=performance.now(),resolved=new URL(url,document.baseURI),sameOrigin=resolved.origin===location.origin;
+ // Keep native script execution: no JS string/Blob copy of the multi-megabyte engine.
+ try{if(performance.setResourceTimingBufferSize)performance.setResourceTimingBufferSize(256);}catch(_){}
+ const result=await loadEngine(resolved.href,timeoutMs,check);
+ let entry=null;
+ try{
+  const entries=performance.getEntriesByName(resolved.href,'resource');
+  entry=entries.slice().reverse().find(item=>Number(item.startTime)>=started-1)||null;
+ }catch(_){}
+ const timingValue=key=>{const value=entry?Number(entry[key]):NaN;return Number.isFinite(value)?Number(value.toFixed(1)):null;};
+ const transferSize=timingValue('transferSize'),encodedBodySize=timingValue('encodedBodySize'),decodedBodySize=timingValue('decodedBodySize');
+ const cacheStatus=sameOrigin&&entry?(transferSize===0&&decodedBodySize>0?'cached':transferSize>0?'network':'unknown'):'unknown';
+ const safeUrl=resolved.origin===location.origin?resolved.pathname:resolved.origin+resolved.pathname;
+ const record={capturedAt:new Date().toISOString(),url:safeUrl,label:String(label||'Cargando recurso').slice(0,80),ok:!!result.ok,source:sameOrigin?'same-origin-native-script':'external-script',durationMs:Number((performance.now()-started).toFixed(1)),cacheStatus,transferSize,encodedBodySize,decodedBodySize,reason:result.reason||''};
+ const diagnostics=window.__ELSN_RUNTIME_SCRIPT_LOADS||(window.__ELSN_RUNTIME_SCRIPT_LOADS=[]);
+ diagnostics.push(record);
+ if(diagnostics.length>16)diagnostics.splice(0,diagnostics.length-16);
+ window.__ELSN_RUNTIME_SCRIPT_LOADS_SNAPSHOT=()=>{const rows=Array.isArray(window.__ELSN_RUNTIME_SCRIPT_LOADS)?window.__ELSN_RUNTIME_SCRIPT_LOADS:[];return {count:rows.length,failed:rows.filter(row=>!row.ok).length,cached:rows.filter(row=>row.cacheStatus==='cached').length,network:rows.filter(row=>row.cacheStatus==='network').length,unknown:rows.filter(row=>row.cacheStatus==='unknown').length,slowest:rows.slice().sort((a,b)=>(b.durationMs||0)-(a.durationMs||0)).slice(0,5)};};
+ if(result.ok)setLoadingProgress(progressEnd,label+(cacheStatus==='cached'?' recuperado de caché.':' listo.'));
+ return {...result,cached:cacheStatus==='cached',source:record.source,durationMs:record.durationMs,cacheStatus,transferSize,encodedBodySize,decodedBodySize};
 }
 """
     html = html[:loader_start] + native_loader + html[loader_end:]
@@ -1275,27 +1298,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.308: deepen NPC village routines and role-aware conversations without reducing visual quality or changing the mobile update budget.
+    # Release candidate 0.6.309: deepen NPC village routines and role-aware conversations without reducing visual quality or changing the mobile update budget.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.308; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.309; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.308\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.309\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.308.")
-    html = html.replace("0.6.274", "0.6.308")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.309.")
+    html = html.replace("0.6.274", "0.6.309")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'27',build:'0.6.308'"
+    diagnostic_build_replacement = "reportVersion:'28',build:'0.6.309'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.308 para normalizar.")
-    game_version = "0.6.308"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.309 para normalizar.")
+    game_version = "0.6.309"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -2161,7 +2184,7 @@ def main() -> None:
 
 
 
-    # 0.6.308: time every existing world-update phase without changing its work or cadence.
+    # 0.6.309: time every existing world-update phase without changing its work or cadence.
     phase_update_marker = "function update(dt){"
     phase_timing_helpers = r"""const worldPhaseTimingStats=Object.create(null);
 let worldPhaseTimingCurrent='',worldPhaseTimingStartedAt=0;
