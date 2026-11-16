@@ -405,6 +405,12 @@ def main() -> None:
         raise SystemExit("No se encontró el cargador único de modelos animales para añadir Cache API.")
     html = html.replace(wildlife_loader_marker, wildlife_cache_code + wildlife_loader_marker, 1)
 
+    animal_silhouette_marker = "if(width<Math.max(.16,sourceBounds.height*.16)||depth<Math.max(.16,sourceBounds.height*.16))throw new Error('Silueta animal anormalmente estrecha; se descarta para no mostrar extremidades sueltas.');"
+    animal_silhouette_replacement = "if(Math.max(width,depth)<Math.max(.16,sourceBounds.height*.16))throw new Error('Geometría horizontal animal demasiado pequeña; se descarta un GLB sin cuerpo completo.');"
+    if html.count(animal_silhouette_marker) != 1:
+        raise SystemExit("No se encontró la comprobación de silueta horizontal de fauna.")
+    html = html.replace(animal_silhouette_marker, animal_silhouette_replacement, 1)
+
     wildlife_download_head = "  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)throw new Error('Especie desconocida: '+kind);"
     wildlife_download_cached = wildlife_download_head + "\n  const cached=await readWildlifeModelCache(kind);if(cached)return cached;"
     if html.count(wildlife_download_head) != 1:
