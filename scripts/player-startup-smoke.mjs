@@ -161,6 +161,35 @@ async function main() {
     if (preflightState.identityVisible && preflightState.continueUnnamedVisible) {
       await page.locator('#continueUnnamed').click({ timeout: 15000 });
       manifest.identityFlow = 'first-run-anonymous';
+      try {
+        await page.waitForFunction(() => Number(window.__ELSN_IDENTITY_START_COUNT || 0) > 0 ||
+          document.body.classList.contains('booting') || document.body.classList.contains('boot-failed'),
+          undefined, { timeout: 3500, polling: 25 });
+      } catch (error) {
+        const clickDiagnostics = await page.evaluate(() => {
+          const button = document.getElementById('continueUnnamed');
+          const style = button ? getComputedStyle(button) : null;
+          return {
+            bodyClass: document.body.className,
+            identityStartCount: window.__ELSN_IDENTITY_START_COUNT || 0,
+            identityStartAt: window.__ELSN_IDENTITY_START_AT || null,
+            buttonExists: !!button,
+            buttonDisabled: button ? !!button.disabled : null,
+            buttonHtml: button ? button.outerHTML : null,
+            pointerEvents: style ? style.pointerEvents : null,
+            visibility: style ? style.visibility : null,
+            display: style ? style.display : null,
+            activeElement: document.activeElement ? document.activeElement.id : null,
+            duplicateContinueIds: document.querySelectorAll('#continueUnnamed').length
+          };
+        });
+        manifest.identityClickDiagnostics = clickDiagnostics;
+        await fs.promises.writeFile(path.join(OUT, 'preflight-dom.html'), await page.content());
+        await page.screenshot({ path: path.join(OUT, 'identity-click-failure.png'), fullPage: true }).catch(() => {});
+        throw new Error('El botón de inicio no ejecutó beginLoadingWithIdentity. Diagnóstico: ' +
+          JSON.stringify(clickDiagnostics) + ' · ' + String(error?.message || error));
+      }
+      manifest.identityStartCount = await page.evaluate(() => window.__ELSN_IDENTITY_START_COUNT || 0);
     } else if (preflightState.booting) {
       manifest.identityFlow = 'returning-player-auto-boot';
     } else {
@@ -173,6 +202,16 @@ async function main() {
       document.body.classList.contains('boot-failed'), undefined, {
       timeout: 15000,
       polling: 50
+    }).catch(async error => {
+      const diagnostics = await page.evaluate(() => ({
+        bodyClass: document.body.className,
+        identityStartCount: window.__ELSN_IDENTITY_START_COUNT || 0,
+        loadingDisplay: document.getElementById('loading') ? getComputedStyle(document.getElementById('loading')).display : null,
+        modelStatus: document.getElementById('modelStatus')?.textContent || null
+      }));
+      await fs.promises.writeFile(path.join(OUT, 'preflight-dom.html'), await page.content());
+      throw new Error('El clic de identidad se registró pero no activó el arranque. Diagnóstico: ' +
+        JSON.stringify(diagnostics) + ' · ' + String(error?.message || error));
     });
     manifest.menuFlowMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
