@@ -315,6 +315,9 @@ def main() -> None:
         or "TreeCanopyWindPivot_" not in index_html
         or "canopy.position.set(0,0,0);" not in index_html
         or "modelMount.position.y=-asset.bounds.min.y*modelScale;" not in index_html
+        or "instanceBoundsBeforeGrounding=boundsForMeshes(meshes)" not in index_html
+        or "groundingErrorMeters=groundedBounds.min.y-groundY" not in index_html
+        or "Math.abs(groundingErrorMeters)>.015" not in index_html
         or "canopy.rotation.set(0,0,0);" not in index_html
     ):
         fail("Los árboles deben ser modelos GLB texturizados, apoyados sobre el terreno y con un pivote de viento/tala en el origen.")
@@ -324,6 +327,10 @@ def main() -> None:
         "leftWingBaseRotation",
         "rightWingBaseRotation",
         "birdWingsFlap",
+        "targetGullWingspanMeters=0.62",
+        "scaledBoundsBeforePlacement=boundsForMeshes(meshes)",
+        "Math.abs(gullFlightGroundError)>.015",
+        "maximumExtentMeters:finalGullMaxExtent",
     )
     if any(marker not in index_html for marker in gull_wing_markers):
         fail("La gaviota debe usar sus pivotes de alas GLB reales para animar el aleteo.")

@@ -101,8 +101,11 @@ assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFix
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullWingspanMeters=0.62') &&
-  builder.includes('modelSpan=Math.max(width,height,depth)') &&
-  builder.includes('const scale=targetGullWingspanMeters/modelSpan'),
+  builder.includes('modelSpan=Math.max(sourceWidth,sourceHeight,sourceDepth)') &&
+  builder.includes('const scale=targetGullWingspanMeters/modelSpan') &&
+  builder.includes('scaledMaxExtent<.50||scaledMaxExtent>.68') &&
+  builder.includes('maximumExtentMeters:finalGullMaxExtent') &&
+  builder.includes('Math.abs(gullFlightGroundError)>.015'),
   'Gulls must be normalized by the largest of all three model bounds, regardless of GLB axis orientation.');
 assert.ok(builder.includes('smith_hammer_marker') && builder.includes('SmithHammer_') &&
   builder.includes('Keep the smith\'s hands clear'),
@@ -112,6 +115,8 @@ assert.ok(builder.includes('tree_function_start') && builder.includes('loadFores
   builder.includes('TreeCanopyWindPivot_') && builder.includes('await loadForestTreeAssets();') &&
   builder.includes('canopy.position.set(0,0,0);') &&
   builder.includes('modelMount.position.y=-asset.bounds.min.y*modelScale') &&
+  builder.includes('instanceBoundsBeforeGrounding=boundsForMeshes(meshes)') &&
+  builder.includes('Math.abs(groundingErrorMeters)>.015') &&
   builder.includes('tree.canopy.rotation.set(0,0,0);'),
   'Complete textured GLB trees must start at the ground origin and retain wind/felling reset.');
 assert.ok(builder.includes("importTimedOut=false") && builder.includes("Promise.race([importPromise") &&
