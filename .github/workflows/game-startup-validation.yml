@@ -5,11 +5,16 @@ on:
     branches:
       - fix/main-player-startup-validation
       - fix/0.6.309-startup-telemetry
+      - validation/0.6.310-mobile-startup
     paths:
       - 'index.html'
       - 'scripts/player-startup-smoke.mjs'
       - 'scripts/test_player_startup_flow_contract.cjs'
       - '.github/workflows/game-startup-validation.yml'
+      - 'scripts/build_site.py'
+      - 'scripts/test_mobile_startup_loading.cjs'
+      - 'scripts/validate_release.py'
+      - 'sw.js'
   pull_request:
     branches:
       - main
