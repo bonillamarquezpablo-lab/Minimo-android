@@ -40,6 +40,8 @@ jobs:
         run: node scripts/test_graphics_quality_contract.cjs
       - name: Test mobile runtime stability without reducing visual quality
         run: node scripts/test_mobile_runtime_stability.cjs
+      - name: Test mobile startup telemetry and retry affordance
+        run: node scripts/test_mobile_startup_loading.cjs
       - name: Test dynamic-safe Babylon spatial selection
         run: node scripts/test_quality_spatial_selection.cjs
       - name: Test civilian NPC specialists and shared-memory contract
