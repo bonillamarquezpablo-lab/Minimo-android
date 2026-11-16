@@ -796,6 +796,203 @@
     const expectedSamples = session.startedAt && session.finishedAt
       ? Math.max(1, Math.floor((Date.parse(session.finishedAt) - Date.parse(session.startedAt)) / SAMPLE_INTERVAL_MS) + 1)
       : null;
+    const frameBudgetMs = targetFps > 0 ? 1000 / targetFps : null;
+    const coverageRate = expectedSamples === null ? null : Math.min(1, samples.length / expectedSamples);
+    const averageFps = fps.length ? fps.reduce((sum, value) => sum + value, 0) / fps.length : null;
+    const medianP95 = median(p95);
+    const phaseLabel = phase => {
+      const key = String(phase || "").toLowerCase().replace(/[_\\s]+/g, "-");
+      if (/npc|dialog|actor|villager|character|ai/.test(key)) return "Personajes e inteligencia";
+      if (/path|nav|movement|locomotion/.test(key)) return "Movimiento y navegación";
+      if (/phys|collision/.test(key)) return "Físicas y colisiones";
+      if (/water|shore|coast|wave|splash/.test(key)) return "Agua y costa";
+      if (/grass|veget|foliage|tree/.test(key)) return "Hierba y vegetación";
+      if (/shadow|light|atmosphere|sun/.test(key)) return "Iluminación y sombras";
+      if (/map|radar/.test(key)) return "Minimapa y mapa";
+      if (/structure|habitable|building|audit/.test(key)) return "Construcciones y terreno";
+      if (/anim/.test(key)) return "Animaciones";
+      if (/render|mesh|scene|camera/.test(key)) return "Preparación de gráficos";
+      if (/terrain|island|ground|world/.test(key)) return "Terreno y mundo";
+      return "Otras tareas del mundo";
+    };
+    const phaseCosts = Object.entries(latestPhaseSample?.subsystems?.worldPhaseTimings || {})
+      .map(([phase, timing]) => ({
+        id: phase,
+        label: phaseLabel(phase),
+        samples: number(timing && timing.samples),
+        lastMs: number(timing && timing.lastMs),
+        meanMs: number(timing && timing.meanMs),
+        maxMs: number(timing && timing.maxMs)
+      }))
+      .filter(item => item.meanMs !== null || item.lastMs !== null || item.maxMs !== null)
+      .sort((a, b) => (b.meanMs || b.maxMs || 0) - (a.meanMs || a.maxMs || 0));
+    const gpuProfilerEnabled = samples.some(sample => sample.scene && sample.scene.profileDiagnosticsEnabled === true);
+    const stageRows = [
+      { id: "world-update", label: "Actualización del mundo", source: "CPU del juego", list: world },
+      { id: "render-preparation", label: "Preparación de gráficos", source: "CPU del motor", list: render },
+      { id: "gpu-frame", label: "Procesamiento gráfico", source: "GPU medida", list: gpu, available: gpuProfilerEnabled },
+      { id: "scene-render", label: "Dibujo de la escena", source: "Motor gráfico", list: sceneRender },
+      { id: "active-meshes", label: "Selección de objetos visibles", source: "Motor gráfico", list: activeMeshes },
+      { id: "render-targets", label: "Reflejos y superficies", source: "Motor gráfico", list: renderTargets },
+      { id: "water-update", label: "Actualización del agua", source: "Subsistema de agua", list: values(sample => sample.subsystems && sample.subsystems.waterUpdateMs) },
+      { id: "map-draw", label: "Dibujo del minimapa", source: "Interfaz del juego", list: values(sample => sample.subsystems && sample.subsystems.mapDrawMs) },
+      { id: "structure-audit", label: "Revisión de construcciones", source: "Auditoría del mundo", list: values(sample => sample.subsystems && sample.subsystems.habitableAuditMs) }
+    ].filter(item => item.available !== false)
+      .map(item => {
+        const measured = item.list.filter(value => value !== null && Number.isFinite(value));
+        const medianMs = median(measured);
+        return {
+          id: item.id, label: item.label, source: item.source,
+          medianMs, maximumMs: measured.length ? Math.max(...measured) : null,
+          sampleCount: measured.length,
+          budgetSharePercent: frameBudgetMs && medianMs !== null
+            ? Number((medianMs / frameBudgetMs * 100).toFixed(1)) : null
+        };
+      })
+      .filter(item => item.medianMs !== null);
+    for (const phase of phaseCosts) {
+      if (phase.meanMs === null || phase.meanMs <= 0) continue;
+      stageRows.push({
+        id: "phase:" + phase.id,
+        label: phase.label,
+        source: "Fase interna · " + phase.id,
+        medianMs: phase.meanMs,
+        maximumMs: phase.maxMs,
+        sampleCount: phase.samples,
+        budgetSharePercent: frameBudgetMs
+          ? Number((phase.meanMs / frameBudgetMs * 100).toFixed(1)) : null
+      });
+    }
+    const rankedStages = stageRows.sort((a, b) => b.medianMs - a.medianMs).slice(0, 12);
+    const hasFrameDrops = (medianP95 !== null && frameBudgetMs !== null && medianP95 > frameBudgetMs * 1.2) ||
+      (averageFps !== null && averageFps < targetFps * 0.8) || anomalies.length > 0;
+    const leadingStage = rankedStages.find(item => frameBudgetMs === null || item.medianMs >= frameBudgetMs * 0.12) || null;
+    const primaryBottleneck = hasFrameDrops && leadingStage ? {
+      id: leadingStage.id,
+      label: leadingStage.label,
+      source: leadingStage.source,
+      medianMs: leadingStage.medianMs,
+      maximumMs: leadingStage.maximumMs,
+      sampleCount: leadingStage.sampleCount,
+      budgetSharePercent: leadingStage.budgetSharePercent,
+      confidence: samples.length >= 12 && coverageRate !== null && coverageRate >= 0.55 ? "media" : "baja",
+      explanation: "Es la parte con mayor tiempo medido. Es una pista para investigar, no una prueba aislada de causalidad."
+    } : null;
+    const worstMoments = samples.map((sample, index) => {
+      const timing = sample && sample.frameTiming || {};
+      const p95Ms = number(timing.p95Ms), p99Ms = number(timing.p99Ms), maxMs = number(timing.maxMs);
+      const sampleFps = number(sample && sample.fps);
+      const score = Math.max(
+        p95Ms !== null && frameBudgetMs ? p95Ms / frameBudgetMs : 0,
+        p99Ms !== null && frameBudgetMs ? p99Ms / frameBudgetMs * 0.85 : 0,
+        maxMs !== null && frameBudgetMs ? maxMs / frameBudgetMs * 0.35 : 0,
+        sampleFps !== null && sampleFps > 0 ? targetFps / sampleFps * 0.85 : 0
+      );
+      const phaseRows = Object.entries(sample && sample.subsystems && sample.subsystems.worldPhaseTimings || {})
+        .map(([id, value]) => ({ id, label: phaseLabel(id), lastMs: number(value && value.lastMs), maxMs: number(value && value.maxMs) }))
+        .filter(item => item.lastMs !== null || item.maxMs !== null)
+        .sort((a, b) => (b.lastMs || b.maxMs || 0) - (a.lastMs || a.maxMs || 0));
+      return {
+        index, capturedAt: sample && sample.capturedAt || null,
+        fps: sampleFps, p95Ms, p99Ms, maxFrameMs: maxMs,
+        score: Number(score.toFixed(3)),
+        cpu: sample && sample.cpu || null,
+        gpu: sample && sample.gpu || null,
+        topPhase: phaseRows[0] || null,
+        location: sample && sample.playerPosition || null,
+        lighting: sample && sample.atmosphere
+          ? (number(sample.atmosphere.night) !== null && number(sample.atmosphere.night) >= 0.55 ? "Noche" : "Día")
+          : null
+      };
+    }).filter(item => item.score >= 1.15)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map(({ index, ...item }) => item);
+    const startTime = Date.parse(session.startedAt || "");
+    const inGameLongTasks = longTasks.filter(item => {
+      const at = Date.parse(item && item.capturedAt || "");
+      return Number.isFinite(at) && (!Number.isFinite(startTime) || at >= startTime);
+    }).sort((a, b) => (number(b.durationMs) || 0) - (number(a.durationMs) || 0));
+    const topLongTasks = inGameLongTasks.slice(0, 8).map(item => ({
+      capturedAt: item.capturedAt || null,
+      durationMs: number(item.durationMs),
+      attribution: Array.isArray(item.attribution) ? item.attribution.slice(0, 3) : []
+    }));
+    const errorEvidence = runtimeErrors.slice(-12).map(item => ({
+      capturedAt: item.capturedAt || null,
+      kind: item.kind || "error",
+      message: item.message || "Error sin descripción",
+      resourcePath: item.resourcePath || null,
+      source: item.source || null,
+      line: number(item.line),
+      column: number(item.column)
+    }));
+    const anomalyEvidence = anomalies.slice().sort((a, b) =>
+      (number(b.peakP95Ms) || 0) - (number(a.peakP95Ms) || 0)
+    ).slice(0, 8).map(item => ({
+      startedAt: item.startedAt || null,
+      lastSeenAt: item.lastSeenAt || null,
+      severity: item.severity || "warning",
+      observations: number(item.observations) || 1,
+      minimumFps: number(item.minimumFps),
+      peakP95Ms: number(item.peakP95Ms),
+      peakP99Ms: number(item.peakP99Ms),
+      signals: Array.isArray(item.signals) ? item.signals.slice(0, 8) : [],
+      playerPosition: item.lastPlayerPosition || item.playerPosition || null,
+      relatedLongTasks: Array.isArray(item.relatedLongTasks) ? item.relatedLongTasks.slice(0, 4) : [],
+      relatedRuntimeErrors: Array.isArray(item.relatedRuntimeErrors) ? item.relatedRuntimeErrors.slice(0, 4) : []
+    }));
+    const enoughData = samples.length >= 5 && medianP95 !== null;
+    const performanceStatus = !enoughData ? "insufficient-data" :
+      hasFrameDrops ? "needs-attention" : "no-major-drop-observed";
+    const firstAction = primaryBottleneck
+      ? "Revisar «" + primaryBottleneck.label + "» en el mismo tramo de juego, sin bajar la calidad gráfica ni desactivar sistemas."
+      : hasFrameDrops && !gpuProfilerEnabled
+        ? "Repetir la misma ruta con la medición opcional de GPU para separar el coste del motor y el de la tarjeta gráfica."
+        : hasFrameDrops
+          ? "Repetir la misma ruta y comparar sus momentos más lentos con las fases internas del mundo."
+          : enoughData
+            ? "No hay una corrección urgente demostrada por estas lecturas. Mantén esta partida como referencia para comparar cambios."
+            : "Jugar una sesión completa y visible para reunir más muestras antes de sacar conclusiones.";
+    const diagnosisHeadline = !enoughData ? "Faltan datos para localizar la causa" :
+      !hasFrameDrops ? "No se observa una caída importante en esta partida" :
+      primaryBottleneck ? "Principal pista: " + primaryBottleneck.label :
+        "Se detectan tirones, pero falta evidencia para atribuirlos";
+    const diagnosisLimitations = [];
+    if (!gpuProfilerEnabled || !gpu.length) diagnosisLimitations.push("No hay una medición válida de GPU; no se puede descartar que el límite esté en la tarjeta gráfica.");
+    if (!phaseCosts.length) diagnosisLimitations.push("No se recogió el desglose de las fases internas del mundo.");
+    if (coverageRate !== null && coverageRate < 0.7) diagnosisLimitations.push("La partida tiene huecos en las lecturas; algunas caídas pudieron quedar fuera.");
+    if (!session.longTaskObserverSupported) diagnosisLimitations.push("Este navegador no ofreció el registro de tareas largas.");
+    const performanceDiagnosis = {
+      schemaVersion: 1,
+      status: performanceStatus,
+      headline: diagnosisHeadline,
+      explanation: !enoughData
+        ? "El informe conserva sus mediciones, pero no hay suficientes ventanas válidas para localizar el origen de los tirones."
+        : hasFrameDrops
+          ? "Se han encontrado tramos por encima del tiempo disponible para mantener " + fmt(targetFps, 0) + " FPS. La clasificación de abajo ordena las pistas por tiempo medido; no demuestra por sí sola la causa."
+          : "Las lecturas disponibles no muestran una caída importante del ritmo de fotogramas. Esto no descarta defectos visuales, físicos o de funcionamiento.",
+      targetFps,
+      frameBudgetMs: frameBudgetMs === null ? null : Number(frameBudgetMs.toFixed(2)),
+      sampleCount: samples.length,
+      coverageRate: coverageRate === null ? null : Number(coverageRate.toFixed(3)),
+      confidence: samples.length >= 12 && coverageRate !== null && coverageRate >= 0.55 ? "media" : "baja",
+      primaryBottleneck,
+      rankedStages,
+      phaseCosts,
+      worstMoments,
+      longTasks: {
+        supported: session.longTaskObserverSupported === true,
+        count: inGameLongTasks.length,
+        maximumMs: inGameLongTasks.length ? Math.max(...inGameLongTasks.map(item => number(item.durationMs) || 0)) : null,
+        top: topLongTasks
+      },
+      runtimeErrors: { count: runtimeErrors.length, recent: errorEvidence },
+      anomalies: { count: anomalies.length, criticalCount: criticalAnomalies, worst: anomalyEvidence },
+      firstAction,
+      limitations: diagnosisLimitations,
+      interpretationNote: "Los tiempos de CPU y de cada subsistema pueden solaparse; no deben sumarse. La CPU muestra duración de tareas, no el porcentaje total del procesador. Los datos ausentes no equivalen a cero."
+    };
     return {
       sampleCount: samples.length,
       durationSeconds: session.startedAt && session.finishedAt
@@ -832,6 +1029,7 @@
       },
       cpu: { worldUpdateMedianMs: medianWorld, renderPreparationMedianMs: medianRender },
       worldPhaseHotspots,
+      performanceDiagnosis,
       mapRendering: {
         lastMs: latestPhaseSample ? number(latestPhaseSample.subsystems.mapDrawMs) : null,
         maximumMs: latestPhaseSample ? number(latestPhaseSample.subsystems.mapDrawMaxMs) : null,
@@ -861,7 +1059,7 @@
       deviceEvents: Array.isArray(session.deviceEvents) ? session.deviceEvents.length : 0,
       probableBottleneck: stages.length && stages[0].value >= 4 ? stages[0].name : "sin-atribucion-suficiente",
       bottleneckEvidence: stages,
-      gpuProfilerEnabled: samples.some(sample => sample.scene && sample.scene.profileDiagnosticsEnabled === true),
+      gpuProfilerEnabled,
       caveat: "Atribución orientativa basada en medianas disponibles; los contadores ausentes no se interpretan como cero."
     };
   }
