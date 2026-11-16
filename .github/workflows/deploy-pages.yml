@@ -86,6 +86,9 @@ jobs:
           mkdir -p dist/inspector
           cp -R inspector/. dist/inspector/
 
+      - name: Verify Inspector Phase 1 dependencies are published
+        run: node scripts/test_inspector_phase1_packaging.cjs
+
       - name: Install Playwright and Chromium for real startup acceptance
         run: |
           npm install --no-save --no-package-lock playwright
