@@ -25,12 +25,23 @@ assert.notEqual(remembered.topic,"night","An NPC must not repeat the same contex
 const ex=Core.chooseExchange({parts:{variant:0}},{parts:{variant:3}},()=>0,{night:true});assert.equal(ex.length,3);assert.ok(ex.every(x=>x.kind==="speech"&&x.topic==="night"&&x.text));
 const repeatedExchange=Core.chooseExchange({parts:{variant:0}},{parts:{variant:3}},()=>0,{night:true},{rapport:3,exchanges:4,recentTopics:["night"]});assert.equal(repeatedExchange.length,3);assert.notEqual(repeatedExchange[0].topic,"night","Pair memory must steer NPCs away from repeating their last conversation topic.");assert.match(repeatedExchange[1].text,/noticias|oro|islas|viento/i);
 const input=Array.from({length:9},(_,i)=>({id:"npc-"+i,distance:i+1,priority:i===7?4:1,visible:true})),visible=Core.selectVisibleBubbles(input,99);assert.equal(visible.length,4);assert.equal(visible[0].id,"npc-7");assert.ok(visible.every(x=>x.distance<=26));assert.deepEqual(Core.selectVisibleBubbles(input,0),[]);
+const viewport={left:0,top:0,right:360,bottom:1000},bubbleSize={width:140,height:70};
+const bubbleA=Core.placeBubble({x:180,y:500},bubbleSize,viewport,[]);
+assert.ok(bubbleA,"A visible NPC must receive a bubble placement.");
+const bubbleB=Core.placeBubble({x:180,y:500},bubbleSize,viewport,[bubbleA]);
+assert.ok(bubbleB,"A second bubble should move to an available non-overlapping position.");
+assert.ok(bubbleB.right<=viewport.right&&bubbleB.left>=viewport.left&&bubbleB.bottom<=viewport.bottom&&bubbleB.top>=viewport.top);
+assert.ok(bubbleB.right<=bubbleA.left-8||bubbleB.left>=bubbleA.right+8||bubbleB.bottom<=bubbleA.top-8||bubbleB.top>=bubbleA.bottom+8,
+ "Speech bubbles must not overlap when a free position exists.");
+const edgeBubble=Core.placeBubble({x:4,y:4},bubbleSize,viewport,[]);
+assert.ok(edgeBubble&&edgeBubble.left>=viewport.left+6&&edgeBubble.top>=viewport.top+6,
+ "Bubbles projected at screen edges must remain inside the canvas viewport.");
 const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
 assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);assert.match(runtime,/BABYLON\.Vector3\.Project/);assert.match(runtime,/Core\.POSITION_UPDATE_MS/);assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
 assert.doesNotMatch(runtime,/new BABYLON\.Mesh|MeshBuilder|new B\.Mesh|requestAnimationFrame/);
 assert.doesNotMatch(runtime,/computeWorldMatrix\(true\)/,"NPC dialogue ticks must not force-recompute every character's world matrix.");
 assert.match(runtime,/RANGE_SQUARED/,"Nearby NPC filtering must use squared distances before sorting the small visible set.");
-assert.match(runtime,/function rootOf\(n\).*n\.parts&&n\.parts\.root\|\|n\.root\|\|n\.actor\|\|n/,"Dialogue must resolve NPCs stored as parts.root, root, actor, or a direct Babylon node.");assert.match(runtime,/function idOf\(n\).*root&&root\.name/,"NPC identity must fall back to the resolved Babylon node name.");assert.match(runtime,/Number\.isFinite\(Number\(s\.playerPosition\.x\)\)/,"Invalid player positions must not silently place NPCs at the world origin.");assert.match(runtime,/layer\.style\.zIndex="2147483000"/,"Dialogue bubbles must render above the game canvas and HUD.");
+assert.match(runtime,/function rootOf\(n\).*n\.parts&&n\.parts\.root\|\|n\.root\|\|n\.actor\|\|n/,"Dialogue must resolve NPCs stored as parts.root, root, actor, or a direct Babylon node.");assert.match(runtime,/function idOf\(n\).*root&&root\.name/,"NPC identity must fall back to the resolved Babylon node name.");assert.match(runtime,/Number\.isFinite\(Number\(s\.playerPosition\.x\)\)/,"Invalid player positions must not silently place NPCs at the world origin.");assert.match(runtime,/layer\.style\.zIndex="30"/,"Dialogue bubbles must remain in the game overlay layer without covering the HUD.");
 assert.match(runtime,/snapshotFailures/,"Dialogue runtime must surface bridge snapshot errors for diagnosis.");
 assert.match(runtime,/bridgeReportedActive/,"Dialogue runtime must expose the bridge's active-game signal.");
 const dialogueFocusStart=builder.indexOf("let focus=null;");
