@@ -1,6 +1,7 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
 const SHELL_CACHE = "el-sin-nombre-shell-0.6.307";
 const ASSET_CACHE = "el-sin-nombre-assets-pending-build-0.6.204";
+const WILDLIFE_MODEL_CACHE = "el-sin-nombre-models-wildlife-6d6de54a-v1";
 const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./scripts/nordic/beach-state.js", "./scripts/nordic/coastal-interaction.js", "./scripts/nordic/navigation-suite.js", "./scripts/nordic/atmosphere-system.js", "./scripts/nordic/world-inspection.js", "./scripts/npc-agent-core.js", "./scripts/npc-agent-runtime.js", "./scripts/game-session-recorder.js", "./scripts/npc-village-brain-core.js", "./scripts/npc-dialogue-core.js", "./scripts/npc-dialogue-runtime.js", "./scripts/npc-dialogue.css", "./icon.svg"];
 
 self.addEventListener("install", event => {
@@ -16,7 +17,7 @@ self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys
-        .filter(key => ![SHELL_CACHE, ASSET_CACHE].includes(key))
+        .filter(key => ![SHELL_CACHE, ASSET_CACHE, WILDLIFE_MODEL_CACHE].includes(key))
         .filter(key => key.startsWith("el-sin-nombre-"))
         .map(key => caches.delete(key))))
       .then(() => self.clients.claim())
