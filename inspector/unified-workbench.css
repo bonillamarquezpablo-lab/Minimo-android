@@ -414,3 +414,6 @@ body.inspector-guided .panel-title h3{font-size:1rem}
  body.inspector-guided .section-heading p{font-size:.73rem}
  body.inspector-guided .panel{padding:11px}
 }
+
+
+.wb-report-meta{margin-top:8px!important;padding-top:8px;border-top:1px solid rgba(145,165,189,.12);font-size:.68rem!important;line-height:1.45!important;opacity:.82}
