@@ -419,13 +419,13 @@ def main() -> None:
   if(!sourceMeshes.length)throw new Error('El modelo forestal no produjo geometría: '+spec.spec.label);
   const bounds=boundsForMeshes(sourceMeshes),sourceHeight=Math.max(.001,bounds.height);
   const placedScale=(spec.spec.targetHeight/sourceHeight)*scale,pivotY=sourceHeight*.58;
-  visualRoot.position.set(-(bounds.min.x+bounds.max.x)*.5,-bounds.min.y-pivotY,-(bounds.min.z+bounds.max.z)*.5);
-  canopy.position.y=pivotY;
-  // Merge the imported static model by PBR material to reduce tree draw calls without losing UVs or textures.
+  // Merge while the visual root is still at identity so the imported world transforms are baked only once.
   mergeStaticDecorByMaterial(visualRoot,'NorseForestGLB_'+kind+'_'+serial);
   const meshes=visualRoot.getChildMeshes(false).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0);
   if(!meshes.length)throw new Error('El modelo forestal no pudo fusionarse en mallas renderizables: '+spec.spec.label);
   if(meshes.length>Math.max(4,sourceMeshes.length))throw new Error('La optimización del árbol aumentó el número de mallas: '+spec.spec.label);
+  visualRoot.position.set(-(bounds.min.x+bounds.max.x)*.5,-bounds.min.y-pivotY,-(bounds.min.z+bounds.max.z)*.5);
+  canopy.position.y=pivotY;
   root.scaling.setAll(placedScale);
   const baseYaw=rand(0,Math.PI*2);root.rotation.y=baseYaw;
   root.position=v(x,renderedTerrainSurfaceAt(x,z),z);
