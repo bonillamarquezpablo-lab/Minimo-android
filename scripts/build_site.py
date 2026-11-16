@@ -1681,6 +1681,87 @@ def main() -> None:
             raise SystemExit("Número inesperado de actualizaciones DynamicTexture: " + old)
         html = html.replace(old, new)
 
+    # Beach diagnostics: distinguish wall-clock completion from actual sliced CPU work.
+    beach_diagnostic_replacements = (
+        (
+            "let groundDynamicsLastUpdateMs=0,beachUpdateLastMs=0;",
+            "let groundDynamicsLastUpdateMs=0,beachUpdateLastMs=0,beachUpdateCpuMs=0;",
+        ),
+        (
+            "const beachUpdateSamples=new Float32Array(120);let beachUpdateSampleCount=0,beachUpdateSampleCursor=0;",
+            "const beachUpdateSamples=new Float32Array(120),beachUpdateCpuSamples=new Float32Array(120);let beachUpdateSampleCount=0,beachUpdateSampleCursor=0;",
+        ),
+        (
+            "let beachWorkStartedAt=0,beachWorkLastSliceMs=0,beachWorkMaxSliceMs=0,beachWorkCellsProcessed=0;",
+            "let beachWorkStartedAt=0,beachWorkLastSliceMs=0,beachWorkMaxSliceMs=0,beachWorkCellsProcessed=0,beachWorkCpuTotalMs=0;",
+        ),
+        (
+            "const sliceMs=performance.now()-sliceStarted;beachWorkLastSliceMs=Number(sliceMs.toFixed(3));beachWorkMaxSliceMs=Math.max(beachWorkMaxSliceMs,sliceMs);",
+            "const sliceMs=performance.now()-sliceStarted;beachWorkCpuTotalMs+=sliceMs;beachWorkLastSliceMs=Number(sliceMs.toFixed(3));beachWorkMaxSliceMs=Math.max(beachWorkMaxSliceMs,sliceMs);",
+        ),
+        (
+            "beachUpdateLastMs=performance.now()-beachWorkStartedAt;\n    beachUpdateSamples[beachUpdateSampleCursor]=beachUpdateLastMs;beachUpdateSampleCursor=(beachUpdateSampleCursor+1)%beachUpdateSamples.length;beachUpdateSampleCount=Math.min(beachUpdateSampleCount+1,beachUpdateSamples.length);",
+            "beachUpdateLastMs=performance.now()-beachWorkStartedAt;beachUpdateCpuMs=beachWorkCpuTotalMs;\n    beachUpdateSamples[beachUpdateSampleCursor]=beachUpdateLastMs;beachUpdateCpuSamples[beachUpdateSampleCursor]=beachUpdateCpuMs;beachUpdateSampleCursor=(beachUpdateSampleCursor+1)%beachUpdateSamples.length;beachUpdateSampleCount=Math.min(beachUpdateSampleCount+1,beachUpdateSamples.length);",
+        ),
+        (
+            "beachWorkStartedAt=performance.now();\n   if(layer.material)",
+            "beachWorkStartedAt=performance.now();beachWorkCpuTotalMs=0;\n   if(layer.material)",
+        ),
+        (
+            "beachWorkMaxSliceMs:Number(beachWorkMaxSliceMs.toFixed(3)),beachWorkCellsProcessed})};",
+            "beachWorkMaxSliceMs:Number(beachWorkMaxSliceMs.toFixed(3)),beachWorkCellsProcessed,beachWorkProgress:{active:!!beachWorkLayer,islandIndex:beachWorkLayer?beachWorkLayer.index:null,cellCursor:beachWorkCellCursor,cellTotal:beachWorkLayer?beachWorkLayer.coastalState.size:0,vertexCursor:beachWorkVertexCursor,vertexTotal:beachWorkLayer?beachWorkLayer.baseY.length:0,elapsedMs:beachWorkLayer?Number((performance.now()-beachWorkStartedAt).toFixed(2)):0,sliceCpuMs:Number(beachWorkCpuTotalMs.toFixed(2))}})};",
+        ),
+        (
+            "const beachCpuSamples=Array.from(beachUpdateSamples.subarray(0,beachUpdateSampleCount)).sort((a,b)=>a-b);\n  const beachCpuP95=beachCpuSamples.length?Number(beachCpuSamples[Math.min(beachCpuSamples.length-1,Math.floor((beachCpuSamples.length-1)*.95))].toFixed(3)):null;",
+            "const beachElapsedSamples=Array.from(beachUpdateSamples.subarray(0,beachUpdateSampleCount)).sort((a,b)=>a-b);\n  const beachElapsedP95=beachElapsedSamples.length?Number(beachElapsedSamples[Math.min(beachElapsedSamples.length-1,Math.floor((beachElapsedSamples.length-1)*.95))].toFixed(3)):null;\n  const beachCpuSamples=Array.from(beachUpdateCpuSamples.subarray(0,beachUpdateSampleCount)).sort((a,b)=>a-b);\n  const beachCpuP95=beachCpuSamples.length?Number(beachCpuSamples[Math.min(beachCpuSamples.length-1,Math.floor((beachCpuSamples.length-1)*.95))].toFixed(3)):null;",
+        ),
+        (
+            "beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),",
+            "beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),beachUpdateElapsedMs:Number(beachUpdateLastMs.toFixed(2)),beachUpdateCpuMs:Number(beachUpdateCpuMs.toFixed(2)),",
+        ),
+        (
+            "cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,",
+            "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3)),elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,elapsedUpdateP95Ms:beachElapsedP95,workProgress:GroundDynamics.counts().beachWorkProgress,samples:beachUpdateSampleCount,",
+        ),
+    )
+    for old, new in beach_diagnostic_replacements:
+        if html.count(old) != 1:
+            raise SystemExit("No se pudo instrumentar de forma única el diagnóstico de la playa: " + old[:100])
+        html = html.replace(old, new, 1)
+
+    # Inspect the actual shader/material and its four textures when a session report is requested.
+    beach_render_marker = "  const activeBeachLayer=livingBeachLayers[activeBeachIslandIndex]||null;\n"
+    beach_render_code = r"""  const activeBeachLayer=livingBeachLayers[activeBeachIslandIndex]||null;
+  const beachTextureStatus=texture=>{
+   try{
+    if(!texture)return null;
+    const size=typeof texture.getSize==='function'?texture.getSize():null;
+    const internal=typeof texture.getInternalTexture==='function'?texture.getInternalTexture():null;
+    const disposed=typeof texture.isDisposed==='function'?texture.isDisposed():texture.isDisposed===true;
+    return {name:String(texture.name||''),ready:typeof texture.isReady==='function'?!!texture.isReady():null,disposed,width:size&&Number.isFinite(size.width)?size.width:null,height:size&&Number.isFinite(size.height)?size.height:null,hasInternalTexture:!!internal,internalReady:internal&&typeof internal.isReady==='boolean'?internal.isReady:null};
+   }catch(error){return {error:String(error).slice(0,240)};}
+  };
+  const beachRenderDiagnostics=activeBeachLayer?(()=>{
+   const mesh=activeBeachLayer.mesh,material=activeBeachLayer.material;
+   let effect=null,materialReady=null,effectReady=null,compilationError=null;
+   try{effect=material&&(typeof material.getEffect==='function'?material.getEffect():material._effect)||null;}catch(error){compilationError=String(error).slice(0,500);}
+   try{if(material&&typeof material.isReady==='function')materialReady=!!material.isReady(mesh);}catch(error){compilationError=String(error).slice(0,500);}
+   try{if(effect&&typeof effect.isReady==='function')effectReady=!!effect.isReady();if(effect&&typeof effect.getCompilationError==='function')compilationError=effect.getCompilationError()||compilationError;}catch(error){compilationError=String(error).slice(0,500);}
+   return {
+    meshEnabled:!!(mesh&&(typeof mesh.isEnabled==='function'?mesh.isEnabled():true)),
+    meshVisible:!!(mesh&&mesh.isVisible),
+    vertexCount:mesh&&typeof mesh.getTotalVertices==='function'?mesh.getTotalVertices():0,
+    hasVertexAlpha:!!(mesh&&mesh.hasVertexAlpha),
+    materialClass:material&&typeof material.getClassName==='function'?material.getClassName():null,
+    materialReady,effectReady,compilationError,
+    textures:{albedo:beachTextureStatus(texCoastalSand),roughness:beachTextureStatus(texCoastalSandRoughnessPbr),normal:beachTextureStatus(texCoastalSandNormalPbr),state:beachTextureStatus(activeBeachLayer.coastalStateTexture)}
+   };
+  })():null;
+"""
+    if html.count(beach_render_marker) != 1:
+        raise SystemExit("No se encontró exactamente el punto de captura del material de arena.")
+    html = html.replace(beach_render_marker, beach_render_code, 1)
+
     # Make the existing mineable granite deposits read as angular rock, not smooth black orbs.
     mineable_rock_marker = """function createRock(x,z){
   const gy=renderedTerrainSurfaceAt(x,z),sx=rand(1.0,1.8),sy=rand(1.0,1.6),sz=rand(1,1.7);
