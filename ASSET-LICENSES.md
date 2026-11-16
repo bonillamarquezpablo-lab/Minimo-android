@@ -1,4 +1,4 @@
-# Recursos de EL SIN NOMBRE 0.6.129
+# Recursos de EL SIN NOMBRE 0.6.313
 
 Esta distribución se construye desde GitHub Actions y copia los recursos al paquete estático publicado. El navegador los recibe desde el mismo origen HTTPS; no necesita descargar modelos ni sonidos por separado.
 
@@ -12,7 +12,8 @@ Esta distribución se construye desde GitHub Actions y copia los recursos al paq
 - Viking rigged: Grab3D, CC0 1.0. https://grab3d.com/models/characters/viking/
 - Armored Knight rigged: Grab3D, CC0 1.0. https://grab3d.com/
 - Man Base Mesh rigged: Grab3D, CC0 1.0. https://grab3d.com/models/characters/man-base-character/
-- Seagull GLB: Gobkit free CC0 library, CC0 1.0. https://gobkit.com/freebies
+- Roble, abedul y pino forestales: modelos GLB de Grab3D, CC0 1.0; materiales PBR y texturas empaquetadas dentro de cada GLB. https://grab3d.com/models/nature/oak-tree/ · https://grab3d.com/models/nature/birch-tree/ · https://grab3d.com/models/nature/pine-tree/
+- Gaviota argéntea (Herring gull): modelo Polyfork, 2.994 triángulos, pivotes separados LeftWing/RightWing; licencia CC BY 4.0 para redistribución del archivo. Crédito: “Herring gull” by Lucas Martinic / Polyfork, https://polyfork.dev/asset/herring-gull-base — https://creativecommons.org/licenses/by/4.0/
 - Deer, Stag and Wolf animated GLB: Quaternius Ultimate Animated Animals, CC0 1.0; pinned to commit `6d6de54a1d7143cf5487462d147bbef039de4837` and packaged locally under `assets/models/wildlife/`. https://github.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic
 
 ## Audio CC0

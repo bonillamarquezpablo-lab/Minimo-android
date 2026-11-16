@@ -45,8 +45,17 @@ DOWNLOADS = {
     "assets/downloads/Ground060_2K-JPG.zip": (
         "https://ambientcg.com/get?file=Ground060_2K-JPG.zip", 1_000_000, "zip"
     ),
+    "assets/models/trees/oak-tree.glb": (
+        "https://grab3d.com/dl/oak-tree/oak-tree.glb", 500_000, "glb"
+    ),
+    "assets/models/trees/birch-tree.glb": (
+        "https://grab3d.com/dl/birch-tree/birch-tree.glb", 500_000, "glb"
+    ),
+    "assets/models/trees/pine-tree.glb": (
+        "https://grab3d.com/dl/pine-tree/pine-tree.glb", 500_000, "glb"
+    ),
     "assets/models/Seagull.glb": (
-        "https://gobkit.com/freebies/animal007/Seagull.glb", 50_000, "glb"
+        "https://polyfork.dev/cdn/herring-gull-base.glb", 1_000_000, "glb"
     ),
     "assets/models/wildlife/Deer.glb": (
         "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Deer.glb", 100_000, "glb"
@@ -176,6 +185,43 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
     return document
 
 
+def validate_textured_tree_glb(path: Path, label: str) -> dict:
+    document = read_glb_document(path)
+    meshes = document.get("meshes") or []
+    materials = document.get("materials") or []
+    textures = document.get("textures") or []
+    images = document.get("images") or []
+    if not meshes or not materials or not textures or not images:
+        raise RuntimeError(
+            f"{label}: forest tree must include geometry and embedded PBR texture maps "
+            f"(meshes={len(meshes)}, materials={len(materials)}, textures={len(textures)}, images={len(images)})"
+        )
+    has_pbr_map = any(
+        material.get("pbrMetallicRoughness", {}).get("baseColorTexture")
+        or material.get("pbrMetallicRoughness", {}).get("metallicRoughnessTexture")
+        or material.get("normalTexture")
+        or material.get("occlusionTexture")
+        for material in materials
+    )
+    if not has_pbr_map:
+        raise RuntimeError(f"{label}: PBR texture references are missing from the forest model")
+    if any(not (mesh.get("primitives") or []) for mesh in meshes):
+        raise RuntimeError(f"{label}: one or more tree meshes have no primitives")
+    return document
+
+
+def validate_herring_gull_glb(path: Path, label: str) -> dict:
+    document = read_glb_document(path)
+    meshes = document.get("meshes") or []
+    nodes = document.get("nodes") or []
+    node_names = {str(node.get("name") or "").lower() for node in nodes}
+    if not meshes or not any("leftwing" in name for name in node_names) or not any("rightwing" in name for name in node_names):
+        raise RuntimeError(f"{label}: herring gull must contain visible geometry and separate LeftWing/RightWing pivots")
+    if not (document.get("materials") or []):
+        raise RuntimeError(f"{label}: herring gull is missing its authored material")
+    return document
+
+
 def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
     destination.parent.mkdir(parents=True, exist_ok=True)
     last_error = None
@@ -222,6 +268,21 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                         f"{len(document.get('meshes') or [])} meshes, "
                         f"{max((len(s.get('joints') or []) for s in (document.get('skins') or [])), default=0)} joints, "
                         f"{len(document.get('animations') or [])} clips."
+                    )
+                elif destination.parent.name == "trees":
+                    document = validate_textured_tree_glb(destination, relative)
+                    print(
+                        f"OK textured forest GLB {relative}: "
+                        f"{len(document.get('meshes') or [])} meshes, "
+                        f"{len(document.get('materials') or [])} materials, "
+                        f"{len(document.get('images') or [])} embedded texture images."
+                    )
+                elif destination.name == "Seagull.glb":
+                    document = validate_herring_gull_glb(destination, relative)
+                    print(
+                        f"OK wing-rigged herring gull {relative}: "
+                        f"{len(document.get('meshes') or [])} meshes, "
+                        f"{len(document.get('nodes') or [])} nodes."
                     )
                 else:
                     read_glb_document(destination)
@@ -348,13 +409,23 @@ def main() -> None:
         raise SystemExit("No se encontró la única herramienta rígida de mano del herrero.")
     html = html.replace(smith_hammer_marker, smith_hammer_replacement, 1)
 
-    # Give every tree a subtle, deterministic-per-instance lean. This changes no mesh
-    # count, triangle count or shadow policy, but breaks the repeated perfectly upright silhouette.
-    tree_lean_marker = "root.position=v(x,terrainSurfaceAt(x,z),z);root.rotation.y=baseYaw;root.scaling.setAll(scale);"
-    tree_lean_replacement = "root.position=v(x,renderedTerrainSurfaceAt(x,z),z);root.rotation.x=rand(-.025,.025);root.rotation.y=baseYaw;root.rotation.z=rand(-.04,.04);root.scaling.setAll(scale);"
-    if html.count(tree_lean_marker) != 1:
-        raise SystemExit("No se encontró la transformación única de raíz de árbol.")
-    html = html.replace(tree_lean_marker, tree_lean_replacement, 1)
+    # Replace the entire procedural branch/leaf triangle generator with textured reusable GLB species.
+    tree_function_start = "  function createTree(x,z,scale=1){"
+    tree_function_end = " function isSafeShrubGroundPoint("
+    tree_start = html.find(tree_function_start)
+    tree_end = html.find(tree_function_end, tree_start + 1)
+    if tree_start < 0 or tree_end <= tree_start:
+        raise SystemExit("No se encontró el bloque completo del generador procedural de árboles.")
+    tree_replacement = "  const forestTreeModelSpecs={\n   oak:{file:'oak-tree.glb',targetHeight:4.95},\n   birch:{file:'birch-tree.glb',targetHeight:5.80},\n   fir:{file:'pine-tree.glb',targetHeight:5.35}\n  };\n  let forestTreeAssetBank=null,forestTreeAssetPromise=null,forestTreeInstanceIndex=0;\n  async function loadForestTreeAssets(){\n   if(forestTreeAssetBank)return forestTreeAssetBank;\n   if(forestTreeAssetPromise)return forestTreeAssetPromise;\n   forestTreeAssetPromise=(async()=>{\n    const loaded=await Promise.all(Object.entries(forestTreeModelSpecs).map(async([species,spec])=>{\n     const url='./assets/models/trees/'+spec.file;\n     let importTimedOut=false,importTimeoutId;\n     const importPromise=B.SceneLoader.LoadAssetContainerAsync('',url,scene,null,'.glb').then(result=>{if(importTimedOut){try{result.dispose();}catch(_){}return null;}return result;});\n     let container;\n     try{container=await Promise.race([importPromise,new Promise((_,reject)=>{importTimeoutId=setTimeout(()=>{importTimedOut=true;reject(new Error('Modelo forestal '+species+' agotó el plazo de 60 segundos.'));},60000);})]);}\n     finally{clearTimeout(importTimeoutId);}\n     if(!container)throw new Error('La importación tardía del modelo forestal '+species+' fue descartada.');\n     if(!container||typeof container.instantiateModelsToScene!=='function')throw new Error('No se pudo preparar el modelo de árbol '+species);\n     const sourceRoots=container.rootNodes||[],sourceMeshes=getRootMeshes(sourceRoots);\n     if(!sourceMeshes.length)throw new Error('El modelo '+species+' no contiene mallas visibles');\n     const materials=[...new Set(sourceMeshes.map(mesh=>mesh.material).filter(Boolean))];\n     const hasTexture=materials.some(material=>material.albedoTexture||material.diffuseTexture||material.bumpTexture||material.normalTexture||material.metallicTexture||material.reflectivityTexture);\n     if(!hasTexture)throw new Error('El modelo '+species+' no incluye mapas de textura PBR');\n     const bounds=boundsForMeshes(sourceMeshes),height=bounds.height;\n     if(!Number.isFinite(height)||height<2||height>15)throw new Error('Altura 3D no válida para el árbol '+species+': '+height);\n     return [species,{container,bounds,sourceMeshCount:sourceMeshes.length,materialCount:materials.length,targetHeight:spec.targetHeight}];\n    }));\n    forestTreeAssetBank=Object.fromEntries(loaded);\n    window.__ELSN_FOREST_TREE_MODELS__={loaded:true,species:Object.keys(forestTreeAssetBank),sourceMeshes:loaded.reduce((sum,item)=>sum+item[1].sourceMeshCount,0),materials:loaded.reduce((sum,item)=>sum+item[1].materialCount,0)};\n    console.info('Bosque PBR preparado',window.__ELSN_FOREST_TREE_MODELS__);\n    return forestTreeAssetBank;\n   })().catch(error=>{forestTreeAssetPromise=null;throw error;});\n   return forestTreeAssetPromise;\n  }\n  function createTree(x,z,scale=1){\n   if(!forestTreeAssetBank)throw new Error('El bosque PBR no se ha cargado antes de crear los árboles');\n   const baseYaw=rand(0,Math.PI*2),roll=Math.random(),species=roll<.54?'oak':(roll<.78?'birch':'fir'),asset=forestTreeAssetBank[species];\n   if(!asset)throw new Error('Falta el modelo forestal '+species);\n   const treeId=forestTreeInstanceIndex++,root=new B.TransformNode('mixedForestTree_'+treeId,scene),canopy=new B.TransformNode('TreeCanopyWindPivot_'+treeId,scene);\n   canopy.parent=root;\n   const inst=asset.container.instantiateModelsToScene(name=>name+'_ForestTree_'+treeId,false),roots=inst.rootNodes||[],meshes=getRootMeshes(roots);\n   if(!roots.length||!meshes.length){root.dispose(false,true);throw new Error('El modelo '+species+' no generó una instancia visible');}\n   const variation=Math.max(.78,Math.min(1.12,Number(scale)||1)),modelScale=asset.targetHeight*variation/asset.bounds.height;\n   canopy.position.set(0,0,0);canopy.metadata=Object.assign({},canopy.metadata||{},{windPivot:'ground-origin',modelHeight:asset.targetHeight*variation});\n   const groundY=renderedTerrainSurfaceAt(x,z);\n   root.position=v(x,groundY,z);root.rotation.y=baseYaw;\n   const modelMount=new B.TransformNode('ForestTreeModelMount_'+treeId,scene);\n   modelMount.parent=canopy;modelMount.position.y=-asset.bounds.min.y*modelScale;modelMount.scaling.setAll(modelScale);\n   roots.forEach(node=>{node.parent=modelMount;node.setEnabled(true);});\n   meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;});\n   root.computeWorldMatrix(true);canopy.computeWorldMatrix(true);modelMount.computeWorldMatrix(true);\n   const instanceBoundsBeforeGrounding=boundsForMeshes(meshes),groundCorrection=groundY-instanceBoundsBeforeGrounding.min.y;\n   modelMount.position.y+=groundCorrection;root.computeWorldMatrix(true);modelMount.computeWorldMatrix(true);\n   const groundedBounds=boundsForMeshes(meshes),groundingErrorMeters=groundedBounds.min.y-groundY;\n   if(!Number.isFinite(groundingErrorMeters)||Math.abs(groundingErrorMeters)>.015)throw new Error('El árbol '+species+' no apoya sobre el terreno: error '+groundingErrorMeters.toFixed(3)+' m.');\n   root.metadata=Object.assign({},root.metadata||{},{forestTree:{species,groundY,groundCorrection:Number(groundCorrection.toFixed(4)),bottomY:Number(groundedBounds.min.y.toFixed(4)),groundingErrorMeters:Number(groundingErrorMeters.toFixed(4))}});\n   return {root,canopy,x,z,radius:.62*variation,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species,baseYaw,windPhase:rand(0,Math.PI*2)};\n  }\n"
+    html = html[:tree_start] + tree_replacement + html[tree_end:]
+    tree_spawn_marker = " land.forEach((is,idx)=>{"
+    if html.count(tree_spawn_marker) != 1:
+        raise SystemExit("No se encontró el único punto de creación de árboles en las 13 islas.")
+    html = html.replace(tree_spawn_marker, " setLoadingProgress(Math.max(44,targetLoadProgress),'Cargando bosque nórdico con texturas PBR…');\n await loadForestTreeAssets();\n" + tree_spawn_marker, 1)
+    tree_reset_marker = "tree.root.position=v(tree.x,terrainSurfaceAt(tree.x,tree.z),tree.z);"
+    if html.count(tree_reset_marker) != 1:
+        raise SystemExit("No se encontró el punto único de reposición de árboles.")
+    html = html.replace(tree_reset_marker, "tree.root.position=v(tree.x,renderedTerrainSurfaceAt(tree.x,tree.z),tree.z);if(tree.canopy)tree.canopy.rotation.set(0,0,0);", 1)
 
     # Paint every startup milestone synchronously before expensive scene work.
     # Previously setLoadingProgress() only queued requestAnimationFrame(); a long
@@ -635,7 +706,7 @@ def main() -> None:
     # Normalize gulls by the largest 3D model extent so rotated GLB axes cannot inflate the flock.
     # The target wingspan is biological in-world scale, independent of the source model's up-axis.
     gull_scale_marker = "const bounds=boundsForMeshes(meshes),height=Math.max(.001,bounds.height),scale=1.65/height;actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
-    gull_scale_replacement = "const bounds=boundsForMeshes(meshes),width=bounds.max.x-bounds.min.x,height=bounds.max.y-bounds.min.y,depth=bounds.max.z-bounds.min.z,modelSpan=Math.max(width,height,depth),targetGullWingspanMeters=1.15;if(!Number.isFinite(modelSpan)||modelSpan<.35)throw new Error('Envergadura 3D del modelo de gaviota inválida: '+modelSpan);const scale=targetGullWingspanMeters/modelSpan;if(!Number.isFinite(scale)||scale<=0||scale>8)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
+    gull_scale_replacement = "const sourceBounds=boundsForMeshes(meshes),sourceWidth=sourceBounds.max.x-sourceBounds.min.x,sourceHeight=sourceBounds.max.y-sourceBounds.min.y,sourceDepth=sourceBounds.max.z-sourceBounds.min.z,modelSpan=Math.max(sourceWidth,sourceHeight,sourceDepth),targetGullWingspanMeters=0.62;if(!Number.isFinite(modelSpan)||modelSpan<.35)throw new Error('Dimensiones 3D de gaviota inválidas: '+modelSpan);const scale=targetGullWingspanMeters/modelSpan;if(!Number.isFinite(scale)||scale<=0||scale>8)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);const flightBaseY=10+i%3*1.4;actor.scaling.setAll(scale);actor.position=v(-36,flightBaseY,-18);actor.computeWorldMatrix(true);const scaledBoundsBeforePlacement=boundsForMeshes(meshes),scaledWidth=scaledBoundsBeforePlacement.max.x-scaledBoundsBeforePlacement.min.x,scaledHeight=scaledBoundsBeforePlacement.max.y-scaledBoundsBeforePlacement.min.y,scaledDepth=scaledBoundsBeforePlacement.max.z-scaledBoundsBeforePlacement.min.z,scaledMaxExtent=Math.max(scaledWidth,scaledHeight,scaledDepth);if(!Number.isFinite(scaledMaxExtent)||scaledMaxExtent<.50||scaledMaxExtent>.68)throw new Error('La gaviota no respeta la dimensión natural de 0.62 m: '+scaledMaxExtent.toFixed(3)+' m.');actor.position.y+=flightBaseY-scaledBoundsBeforePlacement.min.y;actor.computeWorldMatrix(true);const finalGullBounds=boundsForMeshes(meshes),finalGullWidth=finalGullBounds.max.x-finalGullBounds.min.x,finalGullHeight=finalGullBounds.max.y-finalGullBounds.min.y,finalGullDepth=finalGullBounds.max.z-finalGullBounds.min.z,finalGullMaxExtent=Math.max(finalGullWidth,finalGullHeight,finalGullDepth),gullFlightGroundError=finalGullBounds.min.y-flightBaseY;if(!Number.isFinite(finalGullMaxExtent)||finalGullMaxExtent>.68||Math.abs(gullFlightGroundError)>.015)throw new Error('La gaviota no respeta su tamaño o altura de vuelo: '+finalGullMaxExtent.toFixed(3)+' m / '+gullFlightGroundError.toFixed(3)+' m.');actor.metadata=Object.assign({},actor.metadata||{},{biologicalScale:{source:{width:sourceWidth,height:sourceHeight,depth:sourceDepth},rendered:{width:finalGullWidth,height:finalGullHeight,depth:finalGullDepth},maximumExtentMeters:finalGullMaxExtent,flightBaseY,groundingErrorMeters:gullFlightGroundError}});"
     if html.count(gull_scale_marker) != 1:
         raise SystemExit("No se encontró la única escala incorrecta de gaviotas basada en altura.")
     html = html.replace(gull_scale_marker, gull_scale_replacement, 1)
@@ -660,6 +731,32 @@ def main() -> None:
     if html.count(gull_material_set) != 1:
         raise SystemExit("No se encontró el conjunto local de materiales duplicados de las gaviotas.")
     html = html.replace(gull_material_set, "", 1)
+
+    
+    # The Polyfork herring gull is delivered with real LeftWing/RightWing pivots.
+    # Capture their original rotations and animate the two pivots symmetrically at runtime.
+    gull_wing_mesh_marker = "const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}"
+    gull_wing_mesh_replacement = """const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}
+    const gullTransformNodes=collectTransformNodes(roots),leftWing=gullTransformNodes.find(node=>/leftwing/i.test(String(node.name||''))),rightWing=gullTransformNodes.find(node=>/rightwing/i.test(String(node.name||'')));
+    if(!leftWing||!rightWing)throw new Error('La gaviota no contiene los pivotes LeftWing/RightWing validados en el GLB.');
+    const captureWingBaseRotation=node=>{const base=node.rotationQuaternion?node.rotationQuaternion.toEulerAngles():node.rotation.clone();node.rotationQuaternion=null;node.rotation.copyFrom(base);return base;};
+    const leftWingBaseRotation=captureWingBaseRotation(leftWing),rightWingBaseRotation=captureWingBaseRotation(rightWing);"""
+    if html.count(gull_wing_mesh_marker) != 1:
+        raise SystemExit("No se encontraron los meshes y pivotes únicos de alas de la gaviota.")
+    html = html.replace(gull_wing_mesh_marker, gull_wing_mesh_replacement, 1)
+
+    gull_wing_push_marker = "realBirds.push({root:actor,real:true,groups,animation:fly,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
+    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,animation:fly,leftWing,rightWing,leftWingBaseRotation,rightWingBaseRotation,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
+    if html.count(gull_wing_push_marker) != 1:
+        raise SystemExit("No se encontró el registro único de las gaviotas para añadir pivotes.")
+    html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
+
+    gull_wing_update_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
+    gull_wing_update_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.leftWing&&b.rightWing){const birdWingsFlap=Math.sin(elapsed*7.4+b.phase)*.42;b.leftWing.rotation.set(b.leftWingBaseRotation.x,b.leftWingBaseRotation.y,b.leftWingBaseRotation.z+birdWingsFlap);b.rightWing.rotation.set(b.rightWingBaseRotation.x,b.rightWingBaseRotation.y,b.rightWingBaseRotation.z-birdWingsFlap);if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
+    if html.count(gull_wing_update_marker) != 1:
+        raise SystemExit("No se encontró el bucle único de actualización de vuelo de las gaviotas.")
+    html = html.replace(gull_wing_update_marker, gull_wing_update_replacement, 1)
+
 
     # Move expensive terrestrial-fauna decisions and collision/terrain validation to
     # a distance-aware cadence. Root motion is still integrated on every frame, while
@@ -1520,27 +1617,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.312: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.313: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.312; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.313; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.312\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.313\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.312.")
-    html = html.replace("0.6.274", "0.6.312")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.313.")
+    html = html.replace("0.6.274", "0.6.313")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'30',build:'0.6.312'"
+    diagnostic_build_replacement = "reportVersion:'31',build:'0.6.313'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.312 para normalizar.")
-    game_version = "0.6.312"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.313 para normalizar.")
+    game_version = "0.6.313"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.

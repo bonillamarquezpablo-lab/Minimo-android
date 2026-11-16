@@ -851,7 +851,48 @@ async function main() {
     const cachedBarrierStartedAt = performance.now();
     await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
       document.body.classList.contains('boot-failed'),
-      undefined, { timeout: 180000, polling: 250 });
+      undefined, { timeout: 180000, polling: 250 }).catch(async error => {
+      const diagnostic = await page.evaluate(() => {
+        let health = null, healthError = '';
+        try { health = typeof window.getGameHealthDebug === 'function' ? window.getGameHealthDebug() : null; }
+        catch (failure) { healthError = String(failure?.stack || failure); }
+        const runtime = health?.runtime || {};
+        const resources = performance.getEntriesByType('resource');
+        return {
+          bodyClass: document.body.className,
+          loadingText: document.querySelector('#loadText')?.textContent || null,
+          loadingHelp: document.querySelector('#loadHelp')?.textContent || null,
+          loadingProgress: document.querySelector('#loadProgressBar')?.style.width || null,
+          bootFailed: document.body.classList.contains('boot-failed'),
+          healthError,
+          gameHealth: health ? {
+            gameStarted: health.gameStarted ?? null,
+            worldUpdateCount: health.worldUpdateCount ?? null,
+            worldUpdatePhase: health.worldUpdatePhase ?? null,
+            lastWorldUpdateFailure: health.lastWorldUpdateFailure ?? null,
+            fps: runtime.fps ?? null,
+            meshCount: runtime.meshCount ?? null,
+            drawCalls: runtime.drawCalls ?? null,
+            graphicsProfile: runtime.graphicsProfile ?? null
+          } : null,
+          startupRecorder: window.__elSinNombreStartupSmoke || null,
+          resourceGate: window.__ELSN_STARTUP_RESOURCE_GATE__ || null,
+          forest: window.__ELSN_FOREST_TREE_MODELS__ || null,
+          player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state?.() || null,
+          glbResources: resources.filter(entry => /\\.glb(?:$|[?#])/i.test(entry.name)).slice(-20).map(entry => ({
+            name: entry.name.slice(0,300), durationMs:Number(entry.duration.toFixed(1)),
+            transferSize:entry.transferSize, decodedBodySize:entry.decodedBodySize
+          })),
+          scriptLoads: (window.__ELSN_RUNTIME_SCRIPT_LOADS || []).slice(-12)
+        };
+      });
+      manifest.cachedStartupTimeoutDiagnostic = diagnostic;
+      await fs.promises.writeFile(path.join(OUT, 'cached-startup-timeout.json'),
+        JSON.stringify(diagnostic, null, 2));
+      await page.screenshot({ path: path.join(OUT, 'cached-startup-timeout.png'), fullPage: true }).catch(() => {});
+      throw new Error('El arranque con caché no alcanzó worldReady en 180 s: ' +
+        JSON.stringify(diagnostic) + ' · ' + String(error?.message || error));
+    });
     if (await page.evaluate(() => document.body.classList.contains('boot-failed'))) {
       throw new Error('El arranque con caché terminó en boot-failed: ' +
         JSON.stringify(await page.evaluate(() => ({

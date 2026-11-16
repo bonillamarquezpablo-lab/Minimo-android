@@ -23,9 +23,20 @@ const requiredWildlife = [
 
 for (const asset of requiredWildlife) {
   assert.ok(assetPaths.has(asset), 'Asset manifest is missing ' + asset);
-  const minimumBytes = asset.endsWith('/Seagull.glb') ? 50000 : 100000;
+  const minimumBytes = asset.endsWith('/Seagull.glb') ? 1000000 : 100000;
   assert.ok(fs.statSync(path.resolve('dist', asset)).size > minimumBytes, 'Bundled animal GLB is missing or too small: ' + asset);
 }
+const requiredForest = [
+  'assets/models/trees/oak-tree.glb',
+  'assets/models/trees/birch-tree.glb',
+  'assets/models/trees/pine-tree.glb'
+];
+for (const asset of requiredForest) {
+  assert.ok(assetPaths.has(asset), 'Asset manifest is missing textured forest model ' + asset);
+  assert.ok(fs.statSync(path.resolve('dist', asset)).size > 500000, 'Textured forest GLB is missing or too small: ' + asset);
+}
+assert.ok(html.includes('await loadForestTreeAssets();') && html.includes('window.__ELSN_FOREST_TREE_MODELS__'),
+  'All textured forest species must be loaded and verified before any tree is created.');
 assert.ok(html.includes("const WILDLIFE_ASSET_ROOT=new URL('./assets/models/wildlife/',document.baseURI).href;"),
   'Wildlife must be loaded from the same-origin package.');
 assert.ok(!html.includes('https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline'),

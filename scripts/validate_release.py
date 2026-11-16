@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.312"
+EXPECTED_VERSION = "0.6.313"
 
 HTML_PAGES = (
     "index.html",
@@ -57,6 +57,9 @@ REQUIRED_FILES = (
     "assets/models/armored-knight-rigged.glb",
     "assets/models/man-base-character-rigged.glb",
     "assets/models/Seagull.glb",
+    "assets/models/trees/oak-tree.glb",
+    "assets/models/trees/birch-tree.glb",
+    "assets/models/trees/pine-tree.glb",
     "assets/models/wildlife/Deer.glb",
     "assets/models/wildlife/Stag.glb",
     "assets/models/wildlife/Wolf.glb",
@@ -307,8 +310,30 @@ def main() -> None:
     ):
         if obsolete_civilian_prop in index_html:
             fail("Se ha reintroducido un accesorio rígido que invade la silueta o las manos de un aldeano.")
-    if "root.rotation.x=rand(-.025,.025)" not in index_html or "root.rotation.z=rand(-.04,.04)" not in index_html:
-        fail("Los árboles deben conservar una variación orgánica de inclinación sin añadir geometría ni draw calls.")
+    if (
+        "ForestTreeModelMount_" not in index_html
+        or "TreeCanopyWindPivot_" not in index_html
+        or "canopy.position.set(0,0,0);" not in index_html
+        or "modelMount.position.y=-asset.bounds.min.y*modelScale;" not in index_html
+        or "instanceBoundsBeforeGrounding=boundsForMeshes(meshes)" not in index_html
+        or "groundingErrorMeters=groundedBounds.min.y-groundY" not in index_html
+        or "Math.abs(groundingErrorMeters)>.015" not in index_html
+        or "canopy.rotation.set(0,0,0);" not in index_html
+    ):
+        fail("Los árboles deben ser modelos GLB texturizados, apoyados sobre el terreno y con un pivote de viento/tala en el origen.")
+    gull_wing_markers = (
+        "leftWing=gullTransformNodes.find(node=>/leftwing/i.test(String(node.name||'')))",
+        "rightWing=gullTransformNodes.find(node=>/rightwing/i.test(String(node.name||'')))",
+        "leftWingBaseRotation",
+        "rightWingBaseRotation",
+        "birdWingsFlap",
+        "targetGullWingspanMeters=0.62",
+        "scaledBoundsBeforePlacement=boundsForMeshes(meshes)",
+        "Math.abs(gullFlightGroundError)>.015",
+        "maximumExtentMeters:finalGullMaxExtent",
+    )
+    if any(marker not in index_html for marker in gull_wing_markers):
+        fail("La gaviota debe usar sus pivotes de alas GLB reales para animar el aleteo.")
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         index_html,
@@ -416,7 +441,7 @@ def main() -> None:
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
-    if "reportVersion:'30',build:'0.6.312'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'31',build:'0.6.313'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -781,8 +806,10 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.312" not in index_html or "EL SIN NOMBRE 0.6.312 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.313" not in index_html or "EL SIN NOMBRE 0.6.313 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
+    if "async function loadForestTreeAssets()" not in index_html or "ForestTreeModelMount_" not in index_html or "await loadForestTreeAssets();" not in index_html:
+        fail("La campaña debe cargar de forma bloqueante los tres modelos forestales PBR antes de crear árboles.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
     if "const subdivisions=Math.min(360,Math.max(112,Math.ceil(is.r*2/(isTouchDevice?.42:.36))));" not in index_html:
@@ -933,7 +960,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.312</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.313</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
