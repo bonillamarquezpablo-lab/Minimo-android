@@ -8,6 +8,9 @@ const BASE_URL = process.env.PLAYER_TEST_URL || 'http://127.0.0.1:4174/';
 const MOBILE_PROFILE = process.env.PLAYER_TEST_MOBILE === '1';
 const OUT = path.resolve(process.env.PLAYER_TEST_ARTIFACT_DIR || 'artifacts/player-startup');
 const startedAt = performance.now();
+// On mobile the real game can occupy the main thread for several seconds while bootEngine builds the first scene.
+// The input handler may already have fired; give Chromium time to resume and evaluate the queued assertion.
+const IDENTITY_START_WAIT_MS = 45000;
 const manifest = {
   schema: 1,
   capturedAt: new Date().toISOString(),
@@ -161,6 +164,35 @@ async function main() {
     if (preflightState.identityVisible && preflightState.continueUnnamedVisible) {
       await page.locator('#continueUnnamed').click({ timeout: 15000 });
       manifest.identityFlow = 'first-run-anonymous';
+      try {
+        await page.waitForFunction(() => Number(window.__ELSN_IDENTITY_START_COUNT || 0) > 0 ||
+          document.body.classList.contains('booting') || document.body.classList.contains('boot-failed'),
+          undefined, { timeout: IDENTITY_START_WAIT_MS, polling: 25 });
+      } catch (error) {
+        const clickDiagnostics = await page.evaluate(() => {
+          const button = document.getElementById('continueUnnamed');
+          const style = button ? getComputedStyle(button) : null;
+          return {
+            bodyClass: document.body.className,
+            identityStartCount: window.__ELSN_IDENTITY_START_COUNT || 0,
+            identityStartAt: window.__ELSN_IDENTITY_START_AT || null,
+            buttonExists: !!button,
+            buttonDisabled: button ? !!button.disabled : null,
+            buttonHtml: button ? button.outerHTML : null,
+            pointerEvents: style ? style.pointerEvents : null,
+            visibility: style ? style.visibility : null,
+            display: style ? style.display : null,
+            activeElement: document.activeElement ? document.activeElement.id : null,
+            duplicateContinueIds: document.querySelectorAll('#continueUnnamed').length
+          };
+        });
+        manifest.identityClickDiagnostics = clickDiagnostics;
+        await fs.promises.writeFile(path.join(OUT, 'preflight-dom.html'), await page.content());
+        await page.screenshot({ path: path.join(OUT, 'identity-click-failure.png'), fullPage: true }).catch(() => {});
+        throw new Error('El botón de inicio no ejecutó beginLoadingWithIdentity. Diagnóstico: ' +
+          JSON.stringify(clickDiagnostics) + ' · ' + String(error?.message || error));
+      }
+      manifest.identityStartCount = await page.evaluate(() => window.__ELSN_IDENTITY_START_COUNT || 0);
     } else if (preflightState.booting) {
       manifest.identityFlow = 'returning-player-auto-boot';
     } else {
@@ -169,11 +201,11 @@ async function main() {
         JSON.stringify(preflightState));
     }
 
-    await page.waitForFunction(() => document.body.classList.contains('booting') ||
-      document.body.classList.contains('boot-failed'), undefined, {
-      timeout: 15000,
-      polling: 50
-    });
+    // Do not wait for a CSS class here: the game intentionally performs blocking scene setup
+    // after bootEngine() and may occupy the main thread while creating the first world frame.
+    // The identity-start counter proves the input handler ran; the next wait observes the actual
+    // startup recorder or an explicit boot-failed state, including browser-side long stalls.
+    manifest.identityStartCount = await page.evaluate(() => window.__ELSN_IDENTITY_START_COUNT || 0);
     manifest.menuFlowMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
     stepStartedAt = performance.now();

@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.308"
+EXPECTED_VERSION = "0.6.309"
 
 HTML_PAGES = (
     "index.html",
@@ -416,8 +416,52 @@ def main() -> None:
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
-    if "reportVersion:'27',build:'0.6.308'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'28',build:'0.6.309'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
+    beach_diagnostic_markers = (
+        "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
+        "elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3))",
+        "elapsedUpdateP95Ms:beachElapsedP95",
+        "beachWorkProgress:{active:!!beachWorkLayer",
+        "vertexCursor:beachWorkVertexCursor",
+        "renderDiagnostics:beachRenderDiagnostics",
+        "materialReady,effectReady,compilationError",
+        "textures:{albedo:beachTextureStatus(texCoastalSand)",
+    )
+    mobile_memory_markers = (
+        "isMobilePeakMemorySensitive=!!(isIOSDevice",
+        "let playerHumanLoadPromise=Promise.resolve(null)",
+        "playerHumanLoadPromise=loadHumanViking()",
+        "syncActiveBeachIsland();",
+        "syncActiveTidalFoamIsland();",
+        "recordStartupTask('Geometría de costa inicial'",
+        "syncNordicWaterReflectionIsland();",
+        "recordStartupTask('Lista inicial de reflejos nórdicos'",
+        "const GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024",
+        "civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive",
+        "wildlifeBlobs.delete(kind)",
+        "npcStartupPromise=startNpcHumanModels();",
+        "wildlifeCompressedBytesReleased:startupWildlifeCompressedBytes",
+        "browserHeap:startupHeapMemory",
+        "startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null",
+        "memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive",
+        "identityStartupTriggered=false",
+        "async function prepareAmbientSmokePuffs()",
+        "await prepareAmbientSmokePuffs();",
+        "habitableAuditAccumulator=0",
+        "const initialHabitableAudit=auditHabitableStructures(true)",
+        "recordStartupTask('Auditoría inicial de asentamientos'",
+        "if(!source.puffs)createAmbientSmokePuffs(source,si);",
+        "continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true})",
+    )
+    missing_mobile_memory = [marker for marker in mobile_memory_markers if marker not in index_html]
+    if missing_mobile_memory:
+        fail("La versión móvil debe escalonar GLB, liberar fuentes ya importadas y registrar memoria sin alterar Calidad: " + ", ".join(missing_mobile_memory))
+    if "const qualityDpr=isPerformanceMode" not in index_html or "engine.setHardwareScalingLevel(renderScale)" not in index_html:
+        fail("La política de memoria no debe sustituir la escala gráfica seleccionada.")
+    missing_beach_diagnostics = [marker for marker in beach_diagnostic_markers if marker not in index_html]
+    if missing_beach_diagnostics:
+        fail("El informe debe separar CPU de tiempo transcurrido y medir el material/texturas de arena: " + ", ".join(missing_beach_diagnostics))
     for marker in (
         "babylonEngineVersion:String(B.Engine.Version||'unknown')",
         "engineBackend:graphicsContext&&",
@@ -737,7 +781,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.308" not in index_html or "EL SIN NOMBRE 0.6.308 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.309" not in index_html or "EL SIN NOMBRE 0.6.309 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?64:96)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -889,7 +933,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.308</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.309</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
@@ -983,8 +1027,10 @@ def main() -> None:
         fail("La fauna debe conservar el roster completo en Rendimiento y Calidad.")
     if "const performanceDensity=isConstrainedMobile?" not in index_html or "leavesPerClump=isPerformanceMode?8:10" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("El ajuste de hierba preexistente de Rendimiento debe mantenerse y la fauna debe cargar después sin recortar su roster.")
-    if "const civilianWarmupPromise=civilianTotal?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html:
-        fail("La preparación de aldeanos debe compartir la misma promesa de carga y reutilizar el resultado al instanciarlos.")
+    if "const civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html or "if(!civilianBlob){" not in index_html:
+        fail("La preparación de aldeanos debe reutilizar la promesa compartida cuando hay margen y cargarla en serie en móviles sensibles a memoria.")
+    if "if(isMobilePeakMemorySensitive){" not in index_html or "await playerHumanLoadPromise;" not in index_html or "npcStartupPromise=startNpcHumanModels();" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
+        fail("El arranque móvil debe secuenciar protagonista y NPC sin eliminar el camino paralelo en equipos con margen.")
     if "WILDLIFE_SOURCE_COMMIT='6d6de54a1d7143cf5487462d147bbef039de4837'" not in index_html or "function loadWildlifeModels()" not in index_html:
         fail("Los modelos de fauna de Calidad deben conservar su fuente inmutable y su cargador.")
     if "function isSafeIslandGroundPoint(" not in index_html or "return null;" not in index_html[index_html.find("function sampleGroundPoint("):index_html.find("land.forEach((is,idx)=>{", index_html.find("function sampleGroundPoint("))]:

@@ -338,17 +338,40 @@ def main() -> None:
     if fallback_version_count < 4:
         raise SystemExit("No se pudieron sincronizar los mirrors de Babylon y GLTF loader.")
 
+    native_script_marker = "script.async=true;script.src=url;script.referrerPolicy='strict-origin-when-cross-origin';"
+    if html.count(native_script_marker) != 1:
+        raise SystemExit("No se encontró exactamente el cargador dinámico de scripts críticos.")
+    html = html.replace(native_script_marker, "script.async=false;script.fetchPriority='high';script.src=url;script.referrerPolicy='strict-origin-when-cross-origin';", 1)
+    default_timeout_marker = "function loadEngine(url,timeoutMs=7000,check=null){"
+    if html.count(default_timeout_marker) != 1:
+        raise SystemExit("No se encontró exactamente el plazo predeterminado del cargador Babylon.")
+    html = html.replace(default_timeout_marker, "function loadEngine(url,timeoutMs=30000,check=null){", 1)
+
     loader_start = html.find("async function loadSameOriginScriptWithProgress(")
     loader_end = html.find("async function installCachedRuntime(", loader_start)
     if loader_start < 0 or loader_end <= loader_start:
         raise SystemExit("No se encontró el cargador de scripts Babylon para optimizar el arranque móvil.")
     native_loader = r"""async function loadEngineWithCache(url,timeoutMs=30000,check=null,progressStart=0,progressEnd=0,label='Cargando recurso'){
- const resolved=new URL(url,document.baseURI),sameOrigin=resolved.origin===location.origin;
- // A native script URL allows Chromium to stream, parse and compile the large engine
- // without first materializing a second multi-megabyte JS string and Blob in RAM.
- const result=await loadEngine(sameOrigin?resolved.href:url,timeoutMs,check);
- if(result.ok)setLoadingProgress(progressEnd,label+' listo.');
- return {...result,cached:false,source:sameOrigin?'same-origin-native-script':'external-script'};
+ const started=performance.now(),resolved=new URL(url,document.baseURI),sameOrigin=resolved.origin===location.origin;
+ // Keep native script execution: no JS string/Blob copy of the multi-megabyte engine.
+ try{if(performance.setResourceTimingBufferSize)performance.setResourceTimingBufferSize(256);}catch(_){}
+ const result=await loadEngine(resolved.href,timeoutMs,check);
+ let entry=null;
+ try{
+  const entries=performance.getEntriesByName(resolved.href,'resource');
+  entry=entries.slice().reverse().find(item=>Number(item.startTime)>=started-1)||null;
+ }catch(_){}
+ const timingValue=key=>{const value=entry?Number(entry[key]):NaN;return Number.isFinite(value)?Number(value.toFixed(1)):null;};
+ const transferSize=timingValue('transferSize'),encodedBodySize=timingValue('encodedBodySize'),decodedBodySize=timingValue('decodedBodySize');
+ const cacheStatus=sameOrigin&&entry?(transferSize===0&&decodedBodySize>0?'cached':transferSize>0?'network':'unknown'):'unknown';
+ const safeUrl=resolved.origin===location.origin?resolved.pathname:resolved.origin+resolved.pathname;
+ const record={capturedAt:new Date().toISOString(),url:safeUrl,label:String(label||'Cargando recurso').slice(0,80),ok:!!result.ok,source:sameOrigin?'same-origin-native-script':'external-script',durationMs:Number((performance.now()-started).toFixed(1)),cacheStatus,transferSize,encodedBodySize,decodedBodySize,reason:result.reason||''};
+ const diagnostics=window.__ELSN_RUNTIME_SCRIPT_LOADS||(window.__ELSN_RUNTIME_SCRIPT_LOADS=[]);
+ diagnostics.push(record);
+ if(diagnostics.length>16)diagnostics.splice(0,diagnostics.length-16);
+ window.__ELSN_RUNTIME_SCRIPT_LOADS_SNAPSHOT=()=>{const rows=Array.isArray(window.__ELSN_RUNTIME_SCRIPT_LOADS)?window.__ELSN_RUNTIME_SCRIPT_LOADS:[];return {count:rows.length,failed:rows.filter(row=>!row.ok).length,cached:rows.filter(row=>row.cacheStatus==='cached').length,network:rows.filter(row=>row.cacheStatus==='network').length,unknown:rows.filter(row=>row.cacheStatus==='unknown').length,slowest:rows.slice().sort((a,b)=>(b.durationMs||0)-(a.durationMs||0)).slice(0,5)};};
+ if(result.ok)setLoadingProgress(progressEnd,label+(cacheStatus==='cached'?' recuperado de caché.':' listo.'));
+ return {...result,cached:cacheStatus==='cached',source:record.source,durationMs:record.durationMs,cacheStatus,transferSize,encodedBodySize,decodedBodySize};
 }
 """
     html = html[:loader_start] + native_loader + html[loader_end:]
@@ -1275,27 +1298,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.308: deepen NPC village routines and role-aware conversations without reducing visual quality or changing the mobile update budget.
+    # Release candidate 0.6.309: deepen NPC village routines and role-aware conversations without reducing visual quality or changing the mobile update budget.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.308; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.309; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.308\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.309\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.308.")
-    html = html.replace("0.6.274", "0.6.308")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.309.")
+    html = html.replace("0.6.274", "0.6.309")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'27',build:'0.6.308'"
+    diagnostic_build_replacement = "reportVersion:'28',build:'0.6.309'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.308 para normalizar.")
-    game_version = "0.6.308"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.309 para normalizar.")
+    game_version = "0.6.309"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -1309,6 +1332,219 @@ def main() -> None:
     if html.count(quality_profile_marker) != 1:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
     html = html.replace(quality_profile_marker, quality_profile_code, 1)
+
+    # Make the identity gate reliable for both pointer and keyboard activation.
+    identity_start_guard_marker = "function beginLoadingWithIdentity(name){\n selectedPlayerName=String(name||'').trim().slice(0,20);playerIdentityChosen=true;"
+    identity_start_guard_replacement = "let identityStartupTriggered=false;\nfunction beginLoadingWithIdentity(name){\n if(identityStartupTriggered)return;\n identityStartupTriggered=true;window.__ELSN_IDENTITY_START_COUNT=(window.__ELSN_IDENTITY_START_COUNT||0)+1;window.__ELSN_IDENTITY_START_AT=Date.now();\n selectedPlayerName=String(name||'').trim().slice(0,20);playerIdentityChosen=true;"
+    if html.count(identity_start_guard_marker) != 1:
+        raise SystemExit("No se encontró el inicio único del selector de identidad para blindar su activación.")
+    html = html.replace(identity_start_guard_marker, identity_start_guard_replacement, 1)
+    identity_buttons_marker = """document.getElementById('continueWithName').addEventListener('click',()=>beginLoadingWithIdentity(document.getElementById('playerNameInput').value));
+document.getElementById('continueUnnamed').addEventListener('click',()=>beginLoadingWithIdentity(''));"""
+    identity_buttons_replacement = """const startNamedIdentity=()=>beginLoadingWithIdentity(document.getElementById('playerNameInput').value);
+const startUnnamedIdentity=()=>beginLoadingWithIdentity('');
+const continueWithNameButton=document.getElementById('continueWithName'),continueUnnamedButton=document.getElementById('continueUnnamed');
+continueWithNameButton.addEventListener('click',startNamedIdentity);
+continueWithNameButton.addEventListener('pointerup',startNamedIdentity,{once:true});
+continueUnnamedButton.addEventListener('click',startUnnamedIdentity);
+continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true});"""
+    if html.count(identity_buttons_marker) != 1:
+        raise SystemExit("No se encontraron los dos botones únicos de inicio de identidad.")
+    html = html.replace(identity_buttons_marker, identity_buttons_replacement, 1)
+
+    # Platform-aware memory scheduling: preserve the full Quality scene and roster,
+    # but avoid overlapping large binary downloads/parses on iOS Safari and Adreno 650.
+    # Import large GLBs only after the static world geometry has been built.
+    player_import_start_marker = "const playerHumanLoadPromise=coastalReferenceMode?Promise.resolve(null):loadHumanViking();"
+    if html.count(player_import_start_marker) != 1:
+        raise SystemExit("No se encontró la importación automática única del protagonista para aplazarla hasta terminar la geometría del mundo.")
+    html = html.replace(player_import_start_marker, "let playerHumanLoadPromise=Promise.resolve(null);", 1)
+
+    mobile_memory_policy_marker = "const isConstrainedMobile=!!(isPerformanceMode&&(iosMemoryBlindMobile||(isTouchDevice&&(constrainedHardware||reportedMemory<=3))));"
+    mobile_memory_policy_replacement = mobile_memory_policy_marker + "\n // Peak-memory scheduling is independent from the selected graphics profile. It changes task concurrency only; render scale, textures, shadows, density and gameplay systems remain untouched.\n const isMobilePeakMemorySensitive=!!(isIOSDevice||(isTouchDevice&&(constrainedHardware||/Adreno.*650/i.test(graphicsRenderer))));\n let startupWildlifeCompressedBytes=0;"
+    if html.count(mobile_memory_policy_marker) != 1:
+        raise SystemExit("No se encontró la clasificación única para la política de memoria multiplataforma.")
+    html = html.replace(mobile_memory_policy_marker, mobile_memory_policy_replacement, 1)
+
+    blob_compare_marker = """ async function sameBlobBytes(a,b){
+  if(!a||!b||a.size!==b.size)return false;
+  if(a===b)return true;
+  try{
+   const [ab,bb]=await Promise.all([a.arrayBuffer(),b.arrayBuffer()]);
+   if(ab.byteLength!==bb.byteLength)return false;
+   const x=new Uint8Array(ab),y=new Uint8Array(bb);
+   for(let i=0;i<x.length;i++)if(x[i]!==y[i])return false;
+   return true;
+  }catch(err){console.warn('No se pudo comparar la identidad de los GLB:',err);return false;}
+ }"""
+    blob_compare_replacement = """ const GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024;
+ async function sameBlobBytes(a,b){
+  if(!a||!b||a.size!==b.size)return false;
+  if(a===b)return true;
+  try{
+   let sinceYield=0;
+   for(let offset=0;offset<a.size;offset+=GLB_IDENTITY_COMPARE_CHUNK_BYTES){
+    const end=Math.min(a.size,offset+GLB_IDENTITY_COMPARE_CHUNK_BYTES);
+    const [ab,bb]=await Promise.all([a.slice(offset,end).arrayBuffer(),b.slice(offset,end).arrayBuffer()]);
+    if(ab.byteLength!==bb.byteLength)return false;
+    const x=new Uint8Array(ab),y=new Uint8Array(bb);
+    for(let i=0;i<x.length;i++)if(x[i]!==y[i])return false;
+    sinceYield+=end-offset;
+    if(sinceYield>=1024*1024){await new Promise(resolve=>setTimeout(resolve,0));sinceYield=0;}
+   }
+   return true;
+  }catch(err){console.warn('No se pudo comparar la identidad de los GLB:',err);return false;}
+ }"""
+    if html.count(blob_compare_marker) != 1:
+        raise SystemExit("No se encontró la comparación única de GLB que podía duplicar archivos completos en RAM.")
+    html = html.replace(blob_compare_marker, blob_compare_replacement, 1)
+
+    civilian_warmup_marker = "const civilianWarmupPromise=civilianTotal?(async()=>{"
+    civilian_warmup_replacement = "const civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive?(async()=>{"
+    if html.count(civilian_warmup_marker) != 1:
+        raise SystemExit("No se encontró la precarga paralela única del GLB civil.")
+    html = html.replace(civilian_warmup_marker, civilian_warmup_replacement, 1)
+
+    wildlife_batch_marker = """  const kinds=[...new Set(wildlifeSpawnSpecs.map(spec=>spec.kind))];
+  const wildlifeDownloads=await Promise.all(kinds.map(async kind=>({kind,blob:await downloadWildlifeBlob(kind)})));wildlifeDownloads.forEach(({kind,blob})=>wildlifeBlobs.set(kind,blob));
+  let loaded=0;
+  for(let index=0;index<wildlifeSpawnSpecs.length;index++){
+   const spec=wildlifeSpawnSpecs[index],modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,index,spec.homeIslandIndex);
+   if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');
+   ambientFauna.push(animal);loaded++;
+   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});
+   if(index+1<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+  }
+  if(loaded!==wildlifeSpawnSpecs.length)throw new Error('RECURSO OBLIGATORIO: fauna incompleta '+loaded+'/'+wildlifeSpawnSpecs.length+'.');
+  recordStartupTask('Fauna GLB · cola completa',wildlifeLoadStarted,performance.now(),'complete',{loaded,requested:wildlifeSpawnSpecs.length});"""
+    wildlife_batch_replacement = """  const kinds=[...new Set(wildlifeSpawnSpecs.map(spec=>spec.kind))];
+  let loaded=0,completedSpecs=0;
+  const instantiateKind=async kind=>{
+   const blob=await downloadWildlifeBlob(kind);
+   wildlifeBlobs.set(kind,blob);
+   startupWildlifeCompressedBytes+=blob.size;
+   const specs=wildlifeSpawnSpecs.map((spec,sourceIndex)=>({spec,sourceIndex})).filter(item=>item.spec.kind===kind);
+   for(const item of specs){
+    const spec=item.spec,modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,item.sourceIndex,spec.homeIslandIndex);
+    if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');
+    ambientFauna.push(animal);loaded++;completedSpecs++;
+    recordStartupTask('Fauna GLB '+spec.kind+' #'+item.sourceIndex,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});
+    if(completedSpecs<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+   }
+   // All actors for this species now own their scene resources; drop the compressed source Blob.
+   wildlifeBlobs.delete(kind);
+  };
+  if(isMobilePeakMemorySensitive){
+   for(const kind of kinds)await instantiateKind(kind);
+  }else{
+   const wildlifeDownloads=await Promise.all(kinds.map(async kind=>({kind,blob:await downloadWildlifeBlob(kind)})));
+   wildlifeDownloads.forEach(({kind,blob})=>{wildlifeBlobs.set(kind,blob);startupWildlifeCompressedBytes+=blob.size;});
+   for(let index=0;index<wildlifeSpawnSpecs.length;index++){
+    const spec=wildlifeSpawnSpecs[index],modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,index,spec.homeIslandIndex);
+    if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');
+    ambientFauna.push(animal);loaded++;
+    recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});
+    if(index+1<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+   }
+   wildlifeBlobs.clear();
+  }
+  if(loaded!==wildlifeSpawnSpecs.length)throw new Error('RECURSO OBLIGATORIO: fauna incompleta '+loaded+'/'+wildlifeSpawnSpecs.length+'.');
+  recordStartupTask('Fauna GLB · cola completa',wildlifeLoadStarted,performance.now(),'complete',{loaded,requested:wildlifeSpawnSpecs.length,compressedBytes:startupWildlifeCompressedBytes});"""
+    if html.count(wildlife_batch_marker) != 1:
+        raise SystemExit("No se encontró la cola única de descarga/importación de fauna.")
+    html = html.replace(wildlife_batch_marker, wildlife_batch_replacement, 1)
+
+    npc_promise_marker = "const npcStartupPromise=coastalReferenceMode?Promise.resolve(0):startNpcHumanModels();"
+    npc_promise_replacement = """const initialCoastStartedAt=performance.now();
+ await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+ syncActiveBeachIsland();
+ syncActiveTidalFoamIsland();
+ recordStartupTask('Geometría de costa inicial',initialCoastStartedAt,performance.now(),'ready',{islandIndex:activeBeachIslandIndex,island:land[activeBeachIslandIndex]&&land[activeBeachIslandIndex].name,beachReady:!!livingBeachLayers[activeBeachIslandIndex],foamMeshes:tidalFoamMeshes.length});
+ if(!coastalReferenceMode)playerHumanLoadPromise=loadHumanViking();
+ let npcStartupPromise=coastalReferenceMode||isMobilePeakMemorySensitive?Promise.resolve(0):startNpcHumanModels();"""
+    if html.count(npc_promise_marker) != 1:
+        raise SystemExit("No se encontró la promesa única de preparación de NPC.")
+    html = html.replace(npc_promise_marker, npc_promise_replacement, 1)
+
+    npc_parallel_wait_marker = "   await Promise.all([playerHumanLoadPromise,npcStartupPromise]);"
+    npc_serial_wait_replacement = """   if(isMobilePeakMemorySensitive){
+    // Load the protagonist first, then the unchanged required NPC roster; this avoids overlapping GLB parser/decoder working sets.
+    await playerHumanLoadPromise;
+    npcStartupPromise=startNpcHumanModels();
+    await npcStartupPromise;
+   }else await Promise.all([playerHumanLoadPromise,npcStartupPromise]);"""
+    if html.count(npc_parallel_wait_marker) != 1:
+        raise SystemExit("No se encontró la espera única del protagonista y el roster NPC.")
+    html = html.replace(npc_parallel_wait_marker, npc_serial_wait_replacement, 1)
+
+    fauna_parallel_marker = """  const faunaStartedAt=performance.now();
+  const faunaTasks=[{name:'Fauna terrestre',promise:loadWildlifeModels()}];
+  if(!isPerformanceMode)faunaTasks.push({name:'Gaviotas 3D',promise:loadRiggedCoastalGulls()});
+  // No liberar la entrada por el primer fallo: el resto de tareas opcionales debe
+  // terminar también, para que nada importe o aparezca detrás del jugador.
+  const faunaResults=await Promise.allSettled(faunaTasks.map(task=>task.promise));
+  const faunaFailures=faunaResults.flatMap((result,index)=>result.status==='rejected'?[{name:faunaTasks[index].name,message:String(result.reason&&result.reason.message||result.reason)}]:[]);"""
+    fauna_serial_replacement = """  const faunaStartedAt=performance.now();
+  const faunaFailures=[];
+  if(isMobilePeakMemorySensitive){
+   // Keep the complete wildlife and gull roster, but never retain several large GLBs/importers at once.
+   try{await loadWildlifeModels();}catch(error){faunaFailures.push({name:'Fauna terrestre',message:String(error&&error.message||error)});}
+   if(!isPerformanceMode){try{await loadRiggedCoastalGulls();}catch(error){faunaFailures.push({name:'Gaviotas 3D',message:String(error&&error.message||error)});}}
+  }else{
+   const faunaTasks=[{name:'Fauna terrestre',promise:loadWildlifeModels()}];
+   if(!isPerformanceMode)faunaTasks.push({name:'Gaviotas 3D',promise:loadRiggedCoastalGulls()});
+   // No liberar la entrada por el primer fallo: el resto de tareas opcionales debe terminar también.
+   const faunaResults=await Promise.allSettled(faunaTasks.map(task=>task.promise));
+   faunaFailures.push(...faunaResults.flatMap((result,index)=>result.status==='rejected'?[{name:faunaTasks[index].name,message:String(result.reason&&result.reason.message||result.reason)}]:[]));
+  }"""
+    if html.count(fauna_parallel_marker) != 1:
+        raise SystemExit("No se encontró la preparación paralela única de fauna y gaviotas.")
+    html = html.replace(fauna_parallel_marker, fauna_serial_replacement, 1)
+
+    retry_roster_marker = """ function hasMissingEnemyVikings(){
+  // Los NPC procedurales son la representación provisional mientras se importan los GLB.
+  const warriors=isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts;
+  const civilians=isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts;
+  return warriors.some(p=>!p.realHuman||p.realHuman.role!=='knight')||civilians.some(p=>!p.realHuman||p.realHuman.role!=='civilian');
+ }"""
+    retry_roster_replacement = """ function hasMissingEnemyVikings(){
+  // Retry only the same roster required before entry; do not trigger extra iOS-only imports.
+  const lowMemoryNpcBudget=!!(isUltraLowEndMobile||isGalaxyA12LowEndMobile||isGalaxyA12NachoPerformance);
+  const warriors=isMobilePeakMemorySensitive
+   ?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,lowMemoryNpcBudget?1:3)
+   :humanEnemyParts;
+  const civilians=isMobilePeakMemorySensitive
+   ?humanCivilianParts.slice(0,lowMemoryNpcBudget?1:2)
+   :humanCivilianParts;
+  return warriors.some(p=>!p.realHuman||p.realHuman.role!=='knight')||civilians.some(p=>!p.realHuman||p.realHuman.role!=='civilian');
+ }"""
+    if html.count(retry_roster_marker) != 1:
+        raise SystemExit("No se encontró la regla única de reintentos del roster de NPC.")
+    html = html.replace(retry_roster_marker, retry_roster_replacement, 1)
+
+    startup_glb_bytes_marker = "const startupKnownGlbBytes=(playerHumanBlob?.size||0)+(enemyHumanSourceBytes||0)+(civilianHumanSourceBytes||0)+[...(wildlifeBlobs?.values?.()||[])].reduce((sum,blob)=>sum+(blob?.size||0),0);"
+    startup_glb_bytes_replacement = "const startupKnownGlbBytes=(playerHumanBlob?.size||0)+(enemyHumanSourceBytes||0)+(civilianHumanSourceBytes||0)+startupWildlifeCompressedBytes+[...(wildlifeBlobs?.values?.()||[])].reduce((sum,blob)=>sum+(blob?.size||0),0);"
+    if html.count(startup_glb_bytes_marker) != 1:
+        raise SystemExit("No se encontró la estimación única de binarios GLB de arranque.")
+    html = html.replace(startup_glb_bytes_marker, startup_glb_bytes_replacement, 1)
+
+    startup_memory_marker = "window.__elSinNombreStartupMemoryEstimate={"
+    startup_memory_replacement = "const startupHeapMemory=performance.memory&&typeof performance.memory==='object'?{usedJSHeapSizeBytes:Number(performance.memory.usedJSHeapSize)||null,totalJSHeapSizeBytes:Number(performance.memory.totalJSHeapSize)||null,jsHeapLimitBytes:Number(performance.memory.jsHeapSizeLimit)||null}:null;\n window.__elSinNombreStartupMemoryEstimate={"
+    if html.count(startup_memory_marker) != 1:
+        raise SystemExit("No se encontró el objeto único de estimación de memoria de arranque.")
+    html = html.replace(startup_memory_marker, startup_memory_replacement, 1)
+    startup_memory_fields_marker = "  textureCount:startupMemoryTextures.size,geometryCount:startupMemoryGeometry.size,\n  sceneMeshCount:scene.meshes?.length||0,"
+    startup_memory_fields_replacement = "  textureCount:startupMemoryTextures.size,geometryCount:startupMemoryGeometry.size,\n  wildlifeCompressedBytesReleased:startupWildlifeCompressedBytes,browserHeap:startupHeapMemory,mobilePeakMemorySensitive:isMobilePeakMemorySensitive,\n  sceneMeshCount:scene.meshes?.length||0,"
+    if html.count(startup_memory_fields_marker) != 1:
+        raise SystemExit("No se encontró el bloque único de campos de memoria de arranque.")
+    html = html.replace(startup_memory_fields_marker, startup_memory_fields_replacement, 1)
+
+    health_memory_marker = "runtime:{performanceAudit:window.__elSinNombrePerformanceAudit?"
+    health_memory_replacement = "runtime:{startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null,memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive,ios:isIOSDevice,deviceMemory:Number(navigator.deviceMemory)||null,retainedWildlifeSources:wildlifeBlobs.size,retainedPlayerSourceBlob:!!playerHumanBlob},performanceAudit:window.__elSinNombrePerformanceAudit?"
+    if html.count(health_memory_marker) != 1:
+        raise SystemExit("No se encontró el objeto runtime del informe para adjuntar memoria de arranque.")
+    html = html.replace(health_memory_marker, health_memory_replacement, 1)
+
 
     # La página fuente conserva un bloque FSR1 antiguo. El único camino activo es
     # el escalado adaptativo nativo de Babylon; protegemos el bloque heredado.
@@ -1657,6 +1893,127 @@ def main() -> None:
         if html.count(old) != expected:
             raise SystemExit("Número inesperado de actualizaciones DynamicTexture: " + old)
         html = html.replace(old, new)
+
+    # Beach diagnostics: distinguish wall-clock completion from actual sliced CPU work.
+    beach_diagnostic_replacements = (
+        (
+            "let groundDynamicsLastUpdateMs=0,beachUpdateLastMs=0;",
+            "let groundDynamicsLastUpdateMs=0,beachUpdateLastMs=0,beachUpdateCpuMs=0;",
+        ),
+        (
+            "const beachUpdateSamples=new Float32Array(120);let beachUpdateSampleCount=0,beachUpdateSampleCursor=0;",
+            "const beachUpdateSamples=new Float32Array(120),beachUpdateCpuSamples=new Float32Array(120);let beachUpdateSampleCount=0,beachUpdateSampleCursor=0;",
+        ),
+        (
+            "let beachWorkStartedAt=0,beachWorkLastSliceMs=0,beachWorkMaxSliceMs=0,beachWorkCellsProcessed=0;",
+            "let beachWorkStartedAt=0,beachWorkLastSliceMs=0,beachWorkMaxSliceMs=0,beachWorkCellsProcessed=0,beachWorkCpuTotalMs=0;",
+        ),
+        (
+            "const sliceMs=performance.now()-sliceStarted;beachWorkLastSliceMs=Number(sliceMs.toFixed(3));beachWorkMaxSliceMs=Math.max(beachWorkMaxSliceMs,sliceMs);",
+            "const sliceMs=performance.now()-sliceStarted;beachWorkCpuTotalMs+=sliceMs;beachWorkLastSliceMs=Number(sliceMs.toFixed(3));beachWorkMaxSliceMs=Math.max(beachWorkMaxSliceMs,sliceMs);",
+        ),
+        (
+            "beachUpdateLastMs=performance.now()-beachWorkStartedAt;\n    beachUpdateSamples[beachUpdateSampleCursor]=beachUpdateLastMs;beachUpdateSampleCursor=(beachUpdateSampleCursor+1)%beachUpdateSamples.length;beachUpdateSampleCount=Math.min(beachUpdateSampleCount+1,beachUpdateSamples.length);",
+            "beachUpdateLastMs=performance.now()-beachWorkStartedAt;beachUpdateCpuMs=beachWorkCpuTotalMs;\n    beachUpdateSamples[beachUpdateSampleCursor]=beachUpdateLastMs;beachUpdateCpuSamples[beachUpdateSampleCursor]=beachUpdateCpuMs;beachUpdateSampleCursor=(beachUpdateSampleCursor+1)%beachUpdateSamples.length;beachUpdateSampleCount=Math.min(beachUpdateSampleCount+1,beachUpdateSamples.length);",
+        ),
+        (
+            "beachWorkStartedAt=performance.now();\n   if(layer.material)",
+            "beachWorkStartedAt=performance.now();beachWorkCpuTotalMs=0;\n   if(layer.material)",
+        ),
+        (
+            "beachWorkMaxSliceMs:Number(beachWorkMaxSliceMs.toFixed(3)),beachWorkCellsProcessed})};",
+            "beachWorkMaxSliceMs:Number(beachWorkMaxSliceMs.toFixed(3)),beachWorkCellsProcessed,beachWorkProgress:{active:!!beachWorkLayer,islandIndex:beachWorkLayer?beachWorkLayer.index:null,cellCursor:beachWorkCellCursor,cellTotal:beachWorkLayer?beachWorkLayer.coastalState.size:0,vertexCursor:beachWorkVertexCursor,vertexTotal:beachWorkLayer?beachWorkLayer.baseY.length:0,elapsedMs:beachWorkLayer?Number((performance.now()-beachWorkStartedAt).toFixed(2)):0,sliceCpuMs:Number(beachWorkCpuTotalMs.toFixed(2))}})};",
+        ),
+        (
+            "const beachCpuSamples=Array.from(beachUpdateSamples.subarray(0,beachUpdateSampleCount)).sort((a,b)=>a-b);\n  const beachCpuP95=beachCpuSamples.length?Number(beachCpuSamples[Math.min(beachCpuSamples.length-1,Math.floor((beachCpuSamples.length-1)*.95))].toFixed(3)):null;",
+            "const beachElapsedSamples=Array.from(beachUpdateSamples.subarray(0,beachUpdateSampleCount)).sort((a,b)=>a-b);\n  const beachElapsedP95=beachElapsedSamples.length?Number(beachElapsedSamples[Math.min(beachElapsedSamples.length-1,Math.floor((beachElapsedSamples.length-1)*.95))].toFixed(3)):null;\n  const beachCpuSamples=Array.from(beachUpdateCpuSamples.subarray(0,beachUpdateSampleCount)).sort((a,b)=>a-b);\n  const beachCpuP95=beachCpuSamples.length?Number(beachCpuSamples[Math.min(beachCpuSamples.length-1,Math.floor((beachCpuSamples.length-1)*.95))].toFixed(3)):null;",
+        ),
+        (
+            "beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),",
+            "beachUpdateMs:Number(beachUpdateLastMs.toFixed(2)),beachUpdateElapsedMs:Number(beachUpdateLastMs.toFixed(2)),beachUpdateCpuMs:Number(beachUpdateCpuMs.toFixed(2)),",
+        ),
+        (
+            "cpuUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,samples:beachUpdateSampleCount,",
+            "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3)),elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3)),cpuUpdateP95Ms:beachCpuP95,elapsedUpdateP95Ms:beachElapsedP95,workProgress:GroundDynamics.counts().beachWorkProgress,renderDiagnostics:beachRenderDiagnostics,samples:beachUpdateSampleCount,",
+        ),
+    )
+    for old, new in beach_diagnostic_replacements:
+        if html.count(old) != 1:
+            raise SystemExit("No se pudo instrumentar de forma única el diagnóstico de la playa: " + old[:100])
+        html = html.replace(old, new, 1)
+
+    # Inspect the actual shader/material and its four textures when a session report is requested.
+    beach_render_marker = "  const activeBeachLayer=livingBeachLayers[activeBeachIslandIndex]||null;\n"
+    beach_render_code = r"""  const activeBeachLayer=livingBeachLayers[activeBeachIslandIndex]||null;
+  const beachTextureStatus=texture=>{
+   try{
+    if(!texture)return null;
+    const size=typeof texture.getSize==='function'?texture.getSize():null;
+    const internal=typeof texture.getInternalTexture==='function'?texture.getInternalTexture():null;
+    const disposed=typeof texture.isDisposed==='function'?texture.isDisposed():texture.isDisposed===true;
+    return {name:String(texture.name||''),ready:typeof texture.isReady==='function'?!!texture.isReady():null,disposed,width:size&&Number.isFinite(size.width)?size.width:null,height:size&&Number.isFinite(size.height)?size.height:null,hasInternalTexture:!!internal,internalReady:internal&&typeof internal.isReady==='boolean'?internal.isReady:null};
+   }catch(error){return {error:String(error).slice(0,240)};}
+  };
+  const beachRenderDiagnostics=activeBeachLayer?(()=>{
+   const mesh=activeBeachLayer.mesh,material=activeBeachLayer.material;
+   let effect=null,materialReady=null,effectReady=null,compilationError=null;
+   try{effect=material&&(typeof material.getEffect==='function'?material.getEffect():material._effect)||null;}catch(error){compilationError=String(error).slice(0,500);}
+   try{if(material&&typeof material.isReady==='function')materialReady=!!material.isReady(mesh);}catch(error){compilationError=String(error).slice(0,500);}
+   try{if(effect&&typeof effect.isReady==='function')effectReady=!!effect.isReady();if(effect&&typeof effect.getCompilationError==='function')compilationError=effect.getCompilationError()||compilationError;}catch(error){compilationError=String(error).slice(0,500);}
+   return {
+    meshEnabled:!!(mesh&&(typeof mesh.isEnabled==='function'?mesh.isEnabled():true)),
+    meshVisible:!!(mesh&&mesh.isVisible),
+    vertexCount:mesh&&typeof mesh.getTotalVertices==='function'?mesh.getTotalVertices():0,
+    hasVertexAlpha:!!(mesh&&mesh.hasVertexAlpha),
+    materialClass:material&&typeof material.getClassName==='function'?material.getClassName():null,
+    materialReady,effectReady,compilationError,
+    textures:{albedo:beachTextureStatus(texCoastalSand),roughness:beachTextureStatus(texCoastalSandRoughnessPbr),normal:beachTextureStatus(texCoastalSandNormalPbr),state:beachTextureStatus(activeBeachLayer.coastalStateTexture)}
+   };
+  })():null;
+"""
+    if html.count(beach_render_marker) != 1:
+        raise SystemExit("No se encontró exactamente el punto de captura del material de arena.")
+    html = html.replace(beach_render_marker, beach_render_code, 1)
+
+    # Prebuild the existing hearth/chimney smoke pools during the blocking load,
+    # yielding between small batches so the first gameplay frames only animate ready puffs.
+    smoke_registry_marker = " const smokeEmitters=[],fireLights=[],ambientPeople=[],ambientBirds=[];"
+    smoke_registry_replacement = """ const smokeEmitters=[],fireLights=[],ambientPeople=[],ambientBirds=[];
+ function createAmbientSmokePuffs(source,sourceIndex){
+  if(!source||source.puffs)return 0;
+  const puffCount=source.fire?3:2,puffs=[];
+  for(let puffIndex=0;puffIndex<puffCount;puffIndex++){
+   const puff=sphere('VillageSmokePuff_'+sourceIndex+'_'+puffIndex,null,[source.x,source.y,source.z],[.20,.20,.20],M.smoke,8);
+   const material=M.smoke.clone('SmokeMat_'+sourceIndex+'_'+puffIndex);
+   material.alpha=source.fire?.13:.10;material.disableLighting=true;puff.material=material;puff.setEnabled(false);
+   puffs.push({mesh:puff,phase:puffIndex/puffCount,mat:material});
+  }
+  source.puffs=puffs;return puffs.length;
+ }
+ async function prepareAmbientSmokePuffs(){
+  const started=performance.now();let prepared=0;
+  for(let index=0;index<smokeEmitters.length;index++){
+   prepared+=createAmbientSmokePuffs(smokeEmitters[index],index);
+   if((index+1)%2===0&&index+1<smokeEmitters.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+  }
+  recordStartupTask('Piscinas de humo ambiental',started,performance.now(),'ready',{emitters:smokeEmitters.length,puffs:prepared,batchEmitters:2});
+  return prepared;
+ }"""
+    if html.count(smoke_registry_marker) != 1:
+        raise SystemExit("No se encontró el registro único de emisores de humo para preparar sus piscinas.")
+    html = html.replace(smoke_registry_marker, smoke_registry_replacement, 1)
+
+    smoke_lazy_marker = "if(!source.puffs){source.puffs=[];const puffCount=source.fire?3:2;for(let p=0;p<puffCount;p++){const puff=sphere('VillageSmokePuff_'+si+'_'+p,null,[source.x,source.y,source.z],[.20,.20,.20],M.smoke,8);const pm=M.smoke.clone('SmokeMat_'+si+'_'+p);pm.alpha=source.fire ? 0.13 : 0.10;pm.disableLighting=true;puff.material=pm;source.puffs.push({mesh:puff,phase:p/puffCount,mat:pm});}}"
+    smoke_lazy_replacement = "if(!source.puffs)createAmbientSmokePuffs(source,si);"
+    if html.count(smoke_lazy_marker) != 1:
+        raise SystemExit("No se encontró el único bloque de creación perezosa de puffs de humo.")
+    html = html.replace(smoke_lazy_marker, smoke_lazy_replacement, 1)
+
+    smoke_warmup_marker = " let sceneWarmupStatus='unavailable';"
+    smoke_warmup_replacement = " await prepareAmbientSmokePuffs();\n await new Promise(resolve=>requestAnimationFrame(()=>resolve()));\n const initialHabitableAuditStartedAt=performance.now();\n const initialHabitableAudit=auditHabitableStructures(true);\n recordStartupTask('Auditoría inicial de asentamientos',initialHabitableAuditStartedAt,performance.now(),'ready',{structures:habitableStructureRegistry.length,repaired:initialHabitableAudit&&initialHabitableAudit.repaired||0,hiddenUnsafe:initialHabitableAudit&&initialHabitableAudit.hiddenUnsafe||0,autoRegistered:initialHabitableAudit&&initialHabitableAudit.autoRegisteredRoots&&initialHabitableAudit.autoRegisteredRoots.length||0});\n const reflectionWarmupStartedAt=performance.now();syncNordicWaterReflectionIsland();recordStartupTask('Lista inicial de reflejos nórdicos',reflectionWarmupStartedAt,performance.now(),'ready',{islandIndex:activeWaterReflectionIslandIndex,reflectedMeshes:nordicWaterMirror&&nordicWaterMirror.renderList?nordicWaterMirror.renderList.length:0});\n let sceneWarmupStatus='unavailable';"
+    if html.count(smoke_warmup_marker) != 1:
+        raise SystemExit("No se encontró el inicio único de la barrera de shaders para preparar primero los efectos ambientales.")
+    html = html.replace(smoke_warmup_marker, smoke_warmup_replacement, 1)
 
     # Make the existing mineable granite deposits read as angular rock, not smooth black orbs.
     mineable_rock_marker = """function createRock(x,z){
@@ -2161,7 +2518,7 @@ def main() -> None:
 
 
 
-    # 0.6.308: time every existing world-update phase without changing its work or cadence.
+    # 0.6.309: time every existing world-update phase without changing its work or cadence.
     phase_update_marker = "function update(dt){"
     phase_timing_helpers = r"""const worldPhaseTimingStats=Object.create(null);
 let worldPhaseTimingCurrent='',worldPhaseTimingStartedAt=0;
@@ -2239,7 +2596,7 @@ function getWorldPhaseTimingSnapshot(){
  let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;"""
     habitable_registry_replacement = r""" const habitableStructureRegistry=[];
  let habitableAuditLastMs=0,habitableAuditMaxMs=0,habitableAuditCount=0,habitableAuditLastCacheHits=0,habitableAuditLastCacheMisses=0;
- let lastHabitableStructureAudit=null,habitableAuditAccumulator=1.5;"""
+ let lastHabitableStructureAudit=null,habitableAuditAccumulator=0;"""
     if html.count(habitable_registry_marker) != 1:
         raise SystemExit("No se encontró el registro único de estructuras habitables.")
     html = html.replace(habitable_registry_marker, habitable_registry_replacement, 1)

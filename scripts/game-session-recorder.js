@@ -155,6 +155,23 @@
     }
   }
 
+  function captureStartupScriptLoads() {
+    const entries = Array.isArray(window.__ELSN_RUNTIME_SCRIPT_LOADS) ? window.__ELSN_RUNTIME_SCRIPT_LOADS : [];
+    return entries.slice(-16).map(entry => ({
+      capturedAt: text(entry && entry.capturedAt, 40),
+      url: safeResourcePath(entry && entry.url),
+      label: text(entry && entry.label, 80),
+      ok: !!(entry && entry.ok),
+      source: text(entry && entry.source, 40),
+      durationMs: number(entry && entry.durationMs),
+      cacheStatus: entry && ["cached", "network", "unknown"].includes(entry.cacheStatus) ? entry.cacheStatus : "unknown",
+      transferSize: number(entry && entry.transferSize),
+      encodedBodySize: number(entry && entry.encodedBodySize),
+      decodedBodySize: number(entry && entry.decodedBodySize),
+      reason: text(entry && entry.reason, 180)
+    }));
+  }
+
   function handleRuntimeError(event) {
     if (!state.session || !event) return;
     const target = event.target;
@@ -495,6 +512,7 @@
         finishedAt: null,
         status: "active",
         gameBuild: build ? text(build.content, 40) : null,
+        startupScriptLoads: captureStartupScriptLoads(),
         device: {
           userAgent: text(window.navigator && window.navigator.userAgent, 220),
           devicePixelRatio: number(window.devicePixelRatio),
@@ -721,6 +739,25 @@
     const longTasks = Array.isArray(session.longTasks) ? session.longTasks : [];
     const anomalies = Array.isArray(session.anomalies) ? session.anomalies : [];
     const runtimeErrors = Array.isArray(session.runtimeErrors) ? session.runtimeErrors : [];
+    const startupScriptLoads = Array.isArray(session.startupScriptLoads) ? session.startupScriptLoads : [];
+    const startupScriptLoadSummary = {
+      count: startupScriptLoads.length,
+      failed: startupScriptLoads.filter(item => item && item.ok === false).length,
+      cached: startupScriptLoads.filter(item => item && item.cacheStatus === "cached").length,
+      network: startupScriptLoads.filter(item => item && item.cacheStatus === "network").length,
+      unknown: startupScriptLoads.filter(item => !item || item.cacheStatus === "unknown").length,
+      totalDurationMs: Number(startupScriptLoads.reduce((sum, item) => sum + (number(item && item.durationMs) || 0), 0).toFixed(1)),
+      slowest: startupScriptLoads.slice().sort((a, b) => (number(b && b.durationMs) || 0) - (number(a && a.durationMs) || 0)).slice(0, 5)
+        .map(item => ({
+          label: text(item && item.label, 80),
+          url: item && item.url || null,
+          ok: !!(item && item.ok),
+          durationMs: number(item && item.durationMs),
+          cacheStatus: item && item.cacheStatus || "unknown",
+          transferSize: number(item && item.transferSize),
+          reason: text(item && item.reason, 180)
+        }))
+    };
     const criticalAnomalies = anomalies.filter(item => item && item.severity === "critical").length;
     const longTaskDurations = longTasks.map(item => number(item.durationMs)).filter(value => value !== null);
     const gpu = values(sample => sample.gpu && sample.gpu.frameMs);
@@ -1030,6 +1067,7 @@
       cpu: { worldUpdateMedianMs: medianWorld, renderPreparationMedianMs: medianRender },
       worldPhaseHotspots,
       performanceDiagnosis,
+      startupScriptLoads: startupScriptLoadSummary,
       mapRendering: {
         lastMs: latestPhaseSample ? number(latestPhaseSample.subsystems.mapDrawMs) : null,
         maximumMs: latestPhaseSample ? number(latestPhaseSample.subsystems.mapDrawMaxMs) : null,

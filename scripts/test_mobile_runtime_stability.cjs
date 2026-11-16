@@ -72,8 +72,36 @@ assert.ok(builder.includes('phase_timing_helpers') && builder.includes('setWorld
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'27\',build:\'0.6.308\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.308"'), 'Release validator must target version 0.6.308.');
+assert.ok(validator.includes('reportVersion:\'28\',build:\'0.6.309\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.309"'), 'Release validator must target version 0.6.309.');
+assert.ok(builder.includes('mobile_memory_policy_marker') && builder.includes('isMobilePeakMemorySensitive'), 'Memory-sensitive scheduling must be independent from the selected graphics profile.');
+assert.ok(builder.includes('GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024'), 'GLB identity checks must compare bounded chunks instead of duplicating full files into ArrayBuffers.');
+assert.ok(builder.includes('player_import_start_marker') && builder.includes('let playerHumanLoadPromise=Promise.resolve(null);'), 'The protagonist GLB import must be deferred until static world construction has finished.');
+assert.ok(builder.includes('syncActiveBeachIsland();') && builder.includes('syncActiveTidalFoamIsland();'), 'The active beach, seabed and tidal foam must be created before the game loop starts.');
+assert.ok(builder.includes('recordStartupTask(\'Geometría de costa inicial\''), 'Initial coastline construction must be measured as a loading task.');
+assert.ok(builder.includes('syncNordicWaterReflectionIsland();') && builder.includes('Lista inicial de reflejos nórdicos'), 'The first full-scene reflection-list scan must complete during loading, not the first gameplay frame.');
+
+assert.ok(builder.includes('identity_start_guard_marker') && builder.includes('identityStartupTriggered=false'), 'The preflight identity gate must be idempotent.');
+assert.ok(builder.includes("continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true})"), 'The anonymous identity action must support touch pointer-up as well as click.');
+assert.ok(builder.includes("continueWithNameButton.addEventListener('pointerup',startNamedIdentity,{once:true})"), 'The named identity action must support touch pointer-up as well as click.');
+assert.ok(builder.includes('isMobilePeakMemorySensitive=!!(isIOSDevice') && builder.includes('/Adreno.*650/i.test(graphicsRenderer)'), 'The memory policy must cover iOS Safari and Adreno 650 without switching the graphics profile.');
+assert.ok(builder.includes('civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive'), 'iOS/Adreno 650 startup must not prefetch a second large NPC GLB concurrently.');
+assert.ok(builder.includes('wildlifeBlobs.delete(kind)') && builder.includes('startupWildlifeCompressedBytes'), 'Wildlife source GLBs must be released after their complete species batch is imported.');
+assert.ok(builder.includes('npcStartupPromise=startNpcHumanModels();'), 'Memory-sensitive startup must load the protagonist before importing the NPC roster.');
+assert.ok(builder.includes('prepareAmbientSmokePuffs') && builder.includes("await prepareAmbientSmokePuffs();"), 'Smoke particle meshes and materials must be prepared during loading rather than the first ambient update.');
+assert.ok(builder.includes('habitableAuditAccumulator=0'), 'The periodic structure audit must not force a full repair scan on the first gameplay frame.');
+assert.ok(builder.includes("const initialHabitableAudit=auditHabitableStructures(true)"), 'The initial structure repair must complete while the loading screen is still active.');
+assert.ok(builder.includes("recordStartupTask('Auditoría inicial de asentamientos'"), 'The startup report must record the initial structure-integrity pass.');
+assert.ok(builder.includes('if(!source.puffs)createAmbientSmokePuffs(source,si);'), 'The ambient update may only create a late smoke pool as a fallback; prewarmed emitters must reuse it.');
+assert.ok(builder.includes('faunaFailures.push({name:\'Gaviotas 3D\''), 'Memory-sensitive startup must stage all birds after the full wildlife set instead of overlapping import peaks.');
+assert.ok(validator.includes('mobilePeakMemorySensitive:isMobilePeakMemorySensitive'), 'Packaged session reports must expose the memory scheduling policy.');
+assert.ok(validator.includes('wildlifeCompressedBytesReleased:startupWildlifeCompressedBytes'), 'Packaged reports must retain measured wildlife source-byte totals after releasing blobs.');
+assert.ok(!builder.includes('qualityDpr=isMobilePeakMemorySensitive'), 'Memory scheduling must never lower or replace the Quality render scale.');
+assert.ok(builder.includes('beach_diagnostic_replacements'), 'Beach timing must distinguish actual sliced CPU from elapsed duration.');
+assert.ok(builder.includes('beachWorkProgress:{active:!!beachWorkLayer'), 'Beach diagnostics must expose cell and vertex cursor progress.');
+assert.ok(builder.includes('beachRenderDiagnostics'), 'Beach reports must inspect the active shader material and texture readiness.');
+assert.ok(validator.includes('renderDiagnostics:beachRenderDiagnostics'), 'The packaged report must include beach render diagnostics.');
+assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3))'), 'The packaged report must label wall-clock beach duration separately.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 
