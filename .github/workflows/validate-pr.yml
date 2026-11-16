@@ -84,6 +84,9 @@ jobs:
       - name: Test mobile runtime stability without reducing visual quality
         run: node scripts/test_mobile_runtime_stability.cjs
 
+      - name: Test mobile startup telemetry and retry affordance
+        run: node scripts/test_mobile_startup_loading.cjs
+
       - name: Test automatic startup smoke recorder and player.modelReady
         run: node scripts/test_startup_smoke.cjs
 
