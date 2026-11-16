@@ -405,7 +405,7 @@ def main() -> None:
         raise SystemExit("No se encontró el cargador único de modelos animales para añadir Cache API.")
     html = html.replace(wildlife_loader_marker, wildlife_cache_code + wildlife_loader_marker, 1)
 
-    animal_silhouette_marker = "if(width<Math.max(.16,sourceBounds.height*.16)||depth<Math.max(.16,sourceBounds.height*.16))throw new Error('Silueta animal anormalmente estrecha; se descarta para no mostrar extremidades sueltas.');"
+    animal_silhouette_marker = "const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
     animal_silhouette_replacement = "if(Math.max(width,depth)<Math.max(.16,sourceBounds.height*.16))throw new Error('Geometría horizontal animal demasiado pequeña; se descarta un GLB sin cuerpo completo.');"
     if html.count(animal_silhouette_marker) != 1:
         raise SystemExit("No se encontró la comprobación de silueta horizontal de fauna.")
