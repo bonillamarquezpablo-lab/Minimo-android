@@ -455,6 +455,11 @@
         mapDrawMs: number(runtime.mapDrawMs),
         mapDrawMaxMs: number(runtime.mapDrawMaxMs),
         mapDrawSampleCount: number(runtime.mapDrawSampleCount),
+        habitableAuditMs: number(runtime.habitableAuditMs),
+        habitableAuditMaxMs: number(runtime.habitableAuditMaxMs),
+        habitableAuditCount: number(runtime.habitableAuditCount),
+        habitableAuditLastCacheHits: number(runtime.habitableAuditLastCacheHits),
+        habitableAuditLastCacheMisses: number(runtime.habitableAuditLastCacheMisses),
         worldPhaseTimings: runtime.worldPhaseTimings && typeof runtime.worldPhaseTimings === "object" ? runtime.worldPhaseTimings : null
       },
       atmosphere,
@@ -831,6 +836,13 @@
         lastMs: latestPhaseSample ? number(latestPhaseSample.subsystems.mapDrawMs) : null,
         maximumMs: latestPhaseSample ? number(latestPhaseSample.subsystems.mapDrawMaxMs) : null,
         sampleCount: latestPhaseSample ? number(latestPhaseSample.subsystems.mapDrawSampleCount) : null
+      },
+      habitableStructureAudit: {
+        lastMs: latestPhaseSample ? number(latestPhaseSample.subsystems.habitableAuditMs) : null,
+        maximumMs: latestPhaseSample ? number(latestPhaseSample.subsystems.habitableAuditMaxMs) : null,
+        runs: latestPhaseSample ? number(latestPhaseSample.subsystems.habitableAuditCount) : null,
+        lastCacheHits: latestPhaseSample ? number(latestPhaseSample.subsystems.habitableAuditLastCacheHits) : null,
+        lastCacheMisses: latestPhaseSample ? number(latestPhaseSample.subsystems.habitableAuditLastCacheMisses) : null
       },
       gpu: { frameMedianMs: medianGpu, sceneRenderMedianMs: medianSceneRender },
       sceneTimings: { activeMeshesEvaluationMedianMs: medianActiveMeshes, renderTargetsMedianMs: medianRenderTargets },
