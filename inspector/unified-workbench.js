@@ -808,6 +808,7 @@
     explanation.textContent=diagnosis.explanation||"No hay una explicación disponible para estas mediciones.";
     const status=diagnosis.status==="needs-attention"?"Hay bajones que revisar":
       diagnosis.status==="no-major-drop-observed"?"Sin caída importante observada":"Faltan mediciones";
+    confidence.className="wb-diagnosis-confidence "+(diagnosis.status==="needs-attention"?"wb-diagnosis-needs-attention":diagnosis.status==="no-major-drop-observed"?"wb-diagnosis-no-major-drop-observed":"wb-diagnosis-insufficient-data");
     confidence.textContent=(diagnosis.confidence==="media"?"Pista con varias lecturas":"Orientativo") + " · " + status;
     const coverage=finite(diagnosis.coverageRate);
     facts.innerHTML=[
