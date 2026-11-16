@@ -330,3 +330,10 @@ body:before{content:"";position:fixed;z-index:-1;inset:0;pointer-events:none;bac
  .overview-card{min-height:70px;padding:10px 12px}
 }
 @media(prefers-reduced-motion:reduce){body:before{animation:none}}
+
+
+body.inspector-guided .expert-only{display:none!important}
+body.inspector-expert .expert-only{display:initial}
+body.inspector-expert .field-row.expert-only{display:grid}
+body.inspector-expert .token-gear.expert-only{display:grid}
+body.inspector-expert label.expert-only{display:flex}
