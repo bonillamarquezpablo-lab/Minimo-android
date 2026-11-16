@@ -72,6 +72,8 @@ jobs:
         run: node scripts/test_release_contract.cjs
       - name: Test idle-scheduled session telemetry and long-task capture
         run: node scripts/test_session_recorder_idle_contract.cjs
+      - name: Test actionable post-match performance reports
+        run: node scripts/test_session_report_diagnostics.cjs
 
       - name: Test adaptive graphics quality without sacrificing Performance profile
         run: node scripts/test_graphics_quality_contract.cjs
