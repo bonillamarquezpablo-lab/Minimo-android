@@ -1948,6 +1948,145 @@ function getWorldPhaseTimingSnapshot(){
         raise SystemExit("No se encontró el snapshot de agua único para separar telemetría ligera de auditoría visual completa.")
     html = html.replace(water_debug_marker, water_debug_replacement, 1)
 
+
+    # Deterministic, low-frequency civilian AI: existing actors, terrain and collision grid only.
+    npc_behavior_pattern = r"(?ms)^   // Villagers walk between short work points.*?^   const playerLookAt=playerPos\(\);"
+    npc_behavior_replacement = r"""
+   // Village NPCs use role schedules, local obstacle steering and bounded social reactions.
+   // This reuses the existing actor roots, collision grid, animation clips and LOD cadence.
+   const npcVillageBrain=window.ELSN_NPC_VILLAGE_BRAIN;
+   if(!npcVillageBrain)throw new Error('El núcleo de comportamiento de aldeanos no está disponible.');
+   if(!ambientPeople.__npcEnvironment||elapsed>=Number(ambientPeople.__npcEnvironmentAt||0)){
+    let atmosphere=null;
+    try{atmosphere=window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getState==='function'?window.__ELSN_ATMOSPHERE.getState():null;}catch(_){}
+    ambientPeople.__npcEnvironment={night:!!(atmosphere&&Number(atmosphere.night)>=.55),daylight:atmosphere&&Number.isFinite(Number(atmosphere.daylight))?Number(atmosphere.daylight):.5,weather:atmosphere&&atmosphere.weather?String(atmosphere.weather):''};
+    ambientPeople.__npcEnvironmentAt=elapsed+2.5;
+   }
+   const npcEnvironment=ambientPeople.__npcEnvironment;
+   const playerLookAt=playerPos(),playerX=Number(playerLookAt.x)||0,playerZ=Number(playerLookAt.z)||0;
+   ambientPeople.forEach((npc,i)=>{
+    if(!npc||npc.recruited||!npc.parts||!npc.parts.root)return;
+    const p=npc.parts.root,npcPosition=p.position;
+    if(!worldEntityVisualDue(npc,npcPosition.x,npcPosition.z))return;
+    if(!npc.brainState)npc.brainState=npcVillageBrain.createState(npc.parts.name||p.name,npc.parts.variant,elapsed);
+    const brain=npc.brainState,homeX=Number(npc.homeX),homeZ=Number(npc.homeZ);
+    if(!Number.isFinite(homeX)||!Number.isFinite(homeZ))return;
+    const village=villages[npc.villageIndex]||null;
+    const dxPlayer=playerX-p.position.x,dzPlayer=playerZ-p.position.z,playerDistanceSq=dxPlayer*dxPlayer+dzPlayer*dzPlayer;
+    if(elapsed>=Number(brain.nextThreatScanAt||0)){
+     brain.nextThreatScanAt=elapsed+1.1+(Number(brain.seed)%600)/1000;
+     let nearestThreat=null,nearestThreatSq=12.5*12.5;
+     for(const enemy of enemies){
+      if(!enemy||enemy.alive===false||enemy.surrendered===true||enemy.recruited===true)continue;
+      const enemyVillage=Number(enemy.villageIndex);
+      if(Number.isFinite(enemyVillage)&&enemyVillage===Number(npc.villageIndex))continue;
+      const enemyFaction=String(enemy.faction||enemy.parts&&enemy.parts.faction||'enemy').toLowerCase();
+      if(enemyFaction==='player'||enemyFaction==='friendly'||enemyFaction==='ally')continue;
+      const enemyRoot=enemy.parts&&enemy.parts.root||enemy.root;
+      const enemyPosition=enemyRoot&&enemyRoot.position;
+      if(!enemyPosition||!Number.isFinite(enemyPosition.x)||!Number.isFinite(enemyPosition.z))continue;
+      const tx=enemyPosition.x-p.position.x,tz=enemyPosition.z-p.position.z,d2=tx*tx+tz*tz;
+      if(d2<nearestThreatSq){nearestThreatSq=d2;nearestThreat={x:enemyPosition.x,z:enemyPosition.z};}
+     }
+     brain.threatNearby=!!nearestThreat;
+     brain.threatX=nearestThreat?nearestThreat.x:null;
+     brain.threatZ=nearestThreat?nearestThreat.z:null;
+    }
+    const nearPlayer=playerDistanceSq<9.5*9.5;
+    const wantedMode=npcVillageBrain.chooseMode({now:elapsed,threatNearby:brain.threatNearby===true,night:npcEnvironment.night,daylight:npcEnvironment.daylight,playerNearby:nearPlayer,claimed:!!(village&&village.claimed)},brain);
+    if(wantedMode!==brain.mode){
+     if(wantedMode==='flee')brain.threatResponses=(brain.threatResponses||0)+1;
+     if(wantedMode==='social')brain.socialApproaches=(brain.socialApproaches||0)+1;
+     brain.mode=wantedMode;brain.goalMode='';brain.blockedCount=0;brain.nextDecisionAt=elapsed;
+     npc.pause=0;npc.targetX=NaN;npc.targetZ=NaN;
+    }
+    const oldX=p.position.x,oldZ=p.position.z;
+    const roleSpacing=1.55;
+    const destinationIsOpen=(x,z)=>{
+     if(!tryLandMove(x,z,.43))return false;
+     for(const other of ambientPeople){
+      if(!other||other===npc||other.recruited||Number(other.villageIndex)!==Number(npc.villageIndex))continue;
+      const q=other.parts&&other.parts.root&&other.parts.root.position;if(!q)continue;
+      const ox=x-q.x,oz=z-q.z;if(ox*ox+oz*oz<roleSpacing*roleSpacing)return false;
+     }
+     if(village&&Array.isArray(village.guards))for(const guard of village.guards){
+      if(!guard||guard.alive===false||guard.recruited||!guard.parts||!guard.parts.root)continue;
+      const q=guard.parts.root.position,ox=x-q.x,oz=z-q.z;
+      if(ox*ox+oz*oz<1.30*1.30)return false;
+     }
+     return true;
+    };
+    npc.pause=Math.max(0,(Number(npc.pause)||0)-ambientDt);
+    const currentGoalDistance=Number.isFinite(npc.targetX)&&Number.isFinite(npc.targetZ)?Math.hypot(npc.targetX-oldX,npc.targetZ-oldZ):Infinity;
+    if(currentGoalDistance<.58){
+     npc.targetX=NaN;npc.targetZ=NaN;
+     npc.pause=Math.max(npc.pause||0,brain.mode==='rest'?rand(4.2,7.0):(brain.mode==='watch'?rand(1.3,2.5):(brain.mode==='social'?rand(1.2,2.1):rand(1.8,3.5))));
+    }
+    const goalExpired=elapsed>=Number(brain.goalExpiresAt||0);
+    const noGoal=!Number.isFinite(npc.targetX)||!Number.isFinite(npc.targetZ)||brain.goalMode!==brain.mode;
+    if(npc.pause<=0&&(noGoal||goalExpired||brain.blockedCount>=2)){
+     const target=npcVillageBrain.chooseGoal({
+      mode:brain.mode,homeX,homeZ,x:oldX,z:oldZ,variant:npc.parts.variant,seed:Number(brain.seed)+Number(brain.replans||0)*29,
+      homeAngle:Number(npc.phase||0)*.24,playerX,playerZ,threatX:brain.threatX,threatZ:brain.threatZ
+     },(x,z)=>Math.hypot(x-oldX,z-oldZ)>.82&&destinationIsOpen(x,z));
+     brain.replans=(brain.replans||0)+1;
+     if(target){
+      npc.targetX=target.x;npc.targetZ=target.z;brain.goalMode=brain.mode;
+      brain.goalExpiresAt=elapsed+(brain.mode==='flee'?4.6:((brain.mode==='social'||brain.mode==='watch')?5.2:8.5));
+      brain.blockedCount=0;
+     }else{
+      brain.blockedCount=Math.min(6,(brain.blockedCount||0)+1);
+      brain.goalExpiresAt=elapsed+1.45;
+     }
+    }
+    let moved=0,walking=false;
+    if(npc.pause<=0&&Number.isFinite(npc.targetX)&&Number.isFinite(npc.targetZ)){
+     const targetDx=npc.targetX-oldX,targetDz=npc.targetZ-oldZ,targetDistance=Math.hypot(targetDx,targetDz);
+     if(targetDistance>.42){
+      const pace=brain.mode==='flee'?1.18:(brain.mode==='social'?.72:(brain.mode==='watch'?.34:(brain.mode==='rest'?.20:npc.speed)));
+      const step=Math.min(targetDistance,Math.max(.018,pace*ambientDt));
+      const move=npcVillageBrain.chooseStep({x:oldX,z:oldZ,targetX:npc.targetX,targetZ:npc.targetZ,step,side:i%2===0?1:-1},(x,z)=>{
+       if(!tryLandMove(x,z,.43,oldX,oldZ))return false;
+       for(const other of ambientPeople){
+        if(!other||other===npc||other.recruited||Number(other.villageIndex)!==Number(npc.villageIndex))continue;
+        const q=other.parts&&other.parts.root&&other.parts.root.position;if(!q)continue;
+        const ox=x-q.x,oz=z-q.z;if(ox*ox+oz*oz<1.10*1.10)return false;
+       }
+       return true;
+      });
+      if(move){
+       p.position.x=move.x;p.position.z=move.z;
+       moved=Math.hypot(move.x-oldX,move.z-oldZ);walking=moved>.004;
+       if(walking){
+        npc.walkPhase=(npc.walkPhase||0)+moved*(Math.PI*2/(pace>1?2.1:2.40));
+        npc.stepDistance=(npc.stepDistance||0)+moved;
+        if(npc.stepDistance>=1.20){npc.stepDistance-=1.20;NorseAudio.civilianStep();}
+       }
+       brain.blockedCount=0;
+      }else{
+       brain.blockedCount=Math.min(6,(brain.blockedCount||0)+1);
+       brain.goalExpiresAt=Math.min(Number(brain.goalExpiresAt)||elapsed+1.2,elapsed+1.2);
+      }
+     }
+    }
+    p.position.y=terrainSurfaceAt(p.position.x,p.position.z)+actorGroundOffset(npc.parts);
+    let wantedYaw=p.rotation.y;
+    if(walking&&moved>.004)wantedYaw=Math.atan2(p.position.x-oldX,p.position.z-oldZ);
+    else if((brain.mode==='social'||brain.mode==='watch'||nearPlayer)&&nearPlayer)wantedYaw=Math.atan2(playerX-p.position.x,playerZ-p.position.z);
+    else if(Number.isFinite(npc.targetX)&&Number.isFinite(npc.targetZ))wantedYaw=Math.atan2(npc.targetX-p.position.x,npc.targetZ-p.position.z);
+    p.rotation.y=npcVillageBrain.smoothAngle(p.rotation.y,wantedYaw,ambientDt,walking?7.6:3.2);
+    npc.parts.actualMoveSpeed=ambientDt>0?moved/ambientDt:0;
+    animateViking(npc.parts,npc.walkPhase||0,walking,'walk',false);
+   });
+"""
+    if not npc_behavior_pattern.search(html):
+        raise SystemExit("No se encontró el bloque único de movimiento aleatorio de los aldeanos.")
+    html, npc_behavior_count = re.subn(
+        npc_behavior_pattern, lambda _match: npc_behavior_replacement + "   const playerLookAt=playerPos();",
+        html, count=1
+    )
+    if npc_behavior_count != 1:
+        raise SystemExit(f"Se esperaba una sustitución de comportamiento NPC; se realizaron {npc_behavior_count}.")
     # Validate the transformed runtime too; the earlier syntax check runs before these patches.
     transformed_scripts = re.findall(r"<script\b[^>]*>(.*?)</script\s*>", html, flags=re.IGNORECASE | re.DOTALL)
     transformed_inline_scripts = [block for block in transformed_scripts if block.strip()]
