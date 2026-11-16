@@ -76,7 +76,7 @@ assert.match(animateBody,/if\(detailDue\)refreshWaterDetailRegion\(\)/);
 assert.match(animateBody,/Math\.exp\(-foamElapsed\/3\.4\)/);
 assert.doesNotMatch(animateBody,/Math\.exp\(-dt\/3\.4\)/);
 assert.match(animateBody,/if\(!farDue&&!detailDue&&!foamWorkDue\)return;[\s\S]*?if\(foamWorkDue\)\{[\s\S]*?for\(const foam of tidalFoamMeshes\)/);
-assert.match(html,/BEACH_WORK_BUDGET_MS=isTouchDevice\?1\.5:2\.0/);
+assert.match(html,/BEACH_WORK_BUDGET_MS=isTouchDevice\?0\.75:1\.4/);
 assert.match(html,/BEACH_CELL_BUDGET_MS=BEACH_WORK_BUDGET_MS\*\.68/);
 assert.match(html,/TIDAL_FOAM_UPDATE_STEP=isTouchDevice\?\(isPerformanceMode\?1\/18:1\/15\):1\/30/);
 assert.match(html,/for\(let step=0;step<5;step\+\+\)/);
