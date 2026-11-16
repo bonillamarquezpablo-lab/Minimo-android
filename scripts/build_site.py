@@ -943,6 +943,7 @@ def main() -> None:
   protagonistReady:!!realPlayerReady,
   npcRoster:window.__elSinNombreStartupNpcRoster||null,
   fauna:{required:!isPerformanceMode,requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length,requiredGulls:isPerformanceMode?0:5,loadedGulls:ambientBirds.filter(b=>b.real).length},
+  forest:{ready:!!(window.__ELSN_FOREST_TREES__&&window.__ELSN_FOREST_TREES__.ready),models:Number(window.__ELSN_FOREST_TREES__&&window.__ELSN_FOREST_TREES__.loaded)||0,species:window.__ELSN_FOREST_TREES__&&window.__ELSN_FOREST_TREES__.species||[],placed:trees.length},
   soundEffects:audioPreloadResult,
   music:{results:startupMusicPreloadResult,menuReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[0]&&startupMusicPreloadResult[0].ready),gameplayReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[1]&&startupMusicPreloadResult[1].ready),streaming:true,decodedToAudioBuffer:false},
   scene:{status:sceneWarmupStatus,waitingItemsAfter:window.__elSinNombreStartupSceneWarmup&&window.__elSinNombreStartupSceneWarmup.waitingItemsAfter,meshes:scene&&scene.meshes?scene.meshes.length:0,firstFrameRendered:!!firstFrameRendered},
@@ -954,6 +955,7 @@ def main() -> None:
   if(!startupResourceSnapshot.gltfImporterReady)startupResourceFailures.push('importador GLB');
   if(!startupResourceSnapshot.protagonistReady)startupResourceFailures.push('vikingo protagonista');
   if(!startupResourceSnapshot.npcRoster||startupResourceSnapshot.npcRoster.ready!==true)startupResourceFailures.push('roster NPC obligatorio');
+  if(!startupResourceSnapshot.forest.ready||startupResourceSnapshot.forest.models!==3||startupResourceSnapshot.forest.placed<=0)startupResourceFailures.push('modelos forestales 3D completos');
   if(!startupResourceSnapshot.soundEffects||startupResourceSnapshot.soundEffects.failed||startupResourceSnapshot.soundEffects.pending||startupResourceSnapshot.soundEffects.ready!==startupResourceSnapshot.soundEffects.total)startupResourceFailures.push('efectos de sonido');
   if(!startupResourceSnapshot.music.menuReady||!startupResourceSnapshot.music.gameplayReady)startupResourceFailures.push('bandas sonoras');
   if(startupResourceSnapshot.scene.status!=='ready'||startupResourceSnapshot.scene.meshes<=0||!startupResourceSnapshot.scene.firstFrameRendered)startupResourceFailures.push('escena, texturas y shaders de la vista inicial');
