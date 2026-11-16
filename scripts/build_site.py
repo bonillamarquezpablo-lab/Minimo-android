@@ -1950,7 +1950,7 @@ function getWorldPhaseTimingSnapshot(){
 
 
     # Deterministic, low-frequency civilian AI: existing actors, terrain and collision grid only.
-    npc_behavior_pattern = r"(?ms)^   // Villagers walk between short work points.*?^   const playerLookAt=playerPos\(\);"
+    npc_behavior_pattern = r"(?ms)^[ \\t]*// Villagers walk between short work points.*?^[ \\t]*const playerLookAt=playerPos\\(\\);"
     npc_behavior_replacement = r"""
    // Village NPCs use role schedules, local obstacle steering and bounded social reactions.
    // This reuses the existing actor roots, collision grid, animation clips and LOD cadence.
