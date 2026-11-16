@@ -93,5 +93,13 @@ jobs:
       - name: Build and validate game resources
         run: python scripts/build_site.py
 
+      - name: Include the independent Inspector Center in the PR artifact
+        run: |
+          mkdir -p dist/inspector
+          cp -R inspector/. dist/inspector/
+
+      - name: Verify Inspector Phase 1 dependencies and launch route
+        run: node scripts/test_inspector_phase1_packaging.cjs
+
       - name: Verify generated website entry point
         run: test -s dist/index.html

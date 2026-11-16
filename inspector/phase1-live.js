@@ -343,7 +343,7 @@ import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspecti
     unchangedWorldPolls = 0;
     const profiler = $('liveEnableGpuProfiler').checked;
     const query = profiler ? '?phase1-diagnostics=1&profile=1' : '?phase1-diagnostics=1';
-    frame.src = '../' + query;
+    frame.src = '../guest/' + query;
     setStatus(profiler
       ? 'Cargando el juego con instrumentación GPU opcional. Puede añadir algo de carga al diagnóstico.'
       : 'Cargando el juego en modo normal. Se medirá el rendimiento sin activar el perfilador detallado.');
