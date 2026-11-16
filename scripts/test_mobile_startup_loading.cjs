@@ -20,6 +20,7 @@ const nativeLoader=nativeLoaderMatch[1];
 assert.ok(nativeLoader.includes('response.body.getReader()') && nativeLoader.includes('reader.read()'),'The bundled Babylon download must be read in measurable stream chunks.');
 assert.ok(nativeLoader.includes('setLoadingProgress(progressStart+(progressEnd-progressStart)*ratio'),'Real download bytes must update the loading percentage.');
 assert.ok(nativeLoader.includes("label+' · compilando el motor 3D…'"),'The user must see the distinct engine compilation stage after download.');
+assert.ok(nativeLoader.includes('currentLoadProgress=Math.max(currentLoadProgress,targetLoadProgress)') && nativeLoader.includes('requestAnimationFrame(()=>requestAnimationFrame(resolve))'),'The final download percentage must be painted before synchronous Babylon compilation starts.');
 assert.ok(nativeLoader.includes("new Blob(chunks,{type:'text/javascript'})") && nativeLoader.includes('chunks.length=0'),'The streamed engine must be handed to the browser as bytes, without a large TextDecoder string copy.');
 assert.ok(nativeLoader.includes('new AbortController()'),'A stalled local engine download must be abortable before the fallback is attempted.');
 assert.ok(!nativeLoader.includes('new TextDecoder'),'The native engine loader must not duplicate the full bundle as a JavaScript string.');
