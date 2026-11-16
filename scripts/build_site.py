@@ -2087,7 +2087,7 @@ function getWorldPhaseTimingSnapshot(){
     animateViking(npc.parts,npc.walkPhase||0,walking,'walk',false);
    });
 """
-    if not npc_behavior_pattern.search(html):
+    if not re.search(npc_behavior_pattern, html):
         raise SystemExit("No se encontró el bloque único de movimiento aleatorio de los aldeanos.")
     html, npc_behavior_count = re.subn(
         npc_behavior_pattern, lambda _match: npc_behavior_replacement + "   const playerLookAt=playerPos();",
