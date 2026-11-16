@@ -82,6 +82,9 @@ jobs:
 
       - name: Download all resources, build dist and run release validation
         run: python scripts/build_site.py
+      - name: Verify every mandatory resource is packaged and startup gate is wired
+        run: node scripts/test_startup_resource_gate.cjs
+
 
       - name: Include the independent Inspector Center in the published site
         run: |

@@ -48,6 +48,15 @@ DOWNLOADS = {
     "assets/models/Seagull.glb": (
         "https://gobkit.com/freebies/animal007/Seagull.glb", 50_000, "glb"
     ),
+    "assets/models/wildlife/Deer.glb": (
+        "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Deer.glb", 100_000, "glb"
+    ),
+    "assets/models/wildlife/Stag.glb": (
+        "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Stag.glb", 100_000, "glb"
+    ),
+    "assets/models/wildlife/Wolf.glb": (
+        "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Wolf.glb", 100_000, "glb"
+    ),
     "assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg": (
         "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-footsteps/leaves01.ogg", 2_000, "audio"
     ),
@@ -149,6 +158,24 @@ def validate_rigged_character_glb(path: Path, label: str) -> dict:
         raise RuntimeError(f"{label}: one or more GLB meshes have no primitives")
     return document
 
+def validate_rigged_animal_glb(path: Path, label: str) -> dict:
+    document = read_glb_document(path)
+    meshes = document.get("meshes") or []
+    skins = document.get("skins") or []
+    animations = document.get("animations") or []
+    max_joints = max((len(skin.get("joints") or []) for skin in skins), default=0)
+    if not meshes or not skins or not animations:
+        raise RuntimeError(
+            f"{label}: animal GLB must contain visible geometry, a rig and animation clips "
+            f"(meshes={len(meshes)}, skins={len(skins)}, animations={len(animations)})"
+        )
+    if max_joints < 8:
+        raise RuntimeError(f"{label}: animal rig is incomplete ({max_joints} joints; expected >=8)")
+    if any(not (mesh.get("primitives") or []) for mesh in meshes):
+        raise RuntimeError(f"{label}: one or more animal meshes have no primitives")
+    return document
+
+
 def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
     destination.parent.mkdir(parents=True, exist_ok=True)
     last_error = None
@@ -187,6 +214,14 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                         f"{max((len(s.get('joints') or []) for s in (document.get('skins') or [])), default=0)} joints, "
                         f"{len(document.get('animations') or [])} clips, "
                         f"{len(document.get('images') or [])} texture images."
+                    )
+                elif destination.parent.name == "wildlife":
+                    document = validate_rigged_animal_glb(destination, relative)
+                    print(
+                        f"OK animated animal GLB {relative}: "
+                        f"{len(document.get('meshes') or [])} meshes, "
+                        f"{max((len(s.get('joints') or []) for s in (document.get('skins') or [])), default=0)} joints, "
+                        f"{len(document.get('animations') or [])} clips."
                     )
                 else:
                     read_glb_document(destination)
@@ -289,6 +324,320 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
+
+    # Mobile startup: let the browser stream/compile the bundled Babylon scripts natively.
+    # Fetching the complete engine into TextDecoder strings and re-wrapping it in a Blob
+    # duplicates several MB and delays script compilation on mid-range Android devices.
+    for old_priority, new_priority in (('fetchpriority="low"', 'fetchpriority="high"'),):
+        if html.count(old_priority) < 2:
+            raise SystemExit("No se encontraron los dos preloads del motor Babylon.")
+        html = html.replace(old_priority, new_priority, 2)
+
+    # All fallback engine/GLTF loader mirrors must match the bundled Babylon version.
+    html, fallback_version_count = re.subn(r"7\.54\.3", BABYLON_VERSION, html)
+    if fallback_version_count < 4:
+        raise SystemExit("No se pudieron sincronizar los mirrors de Babylon y GLTF loader.")
+
+    loader_start = html.find("async function loadSameOriginScriptWithProgress(")
+    loader_end = html.find("async function installCachedRuntime(", loader_start)
+    if loader_start < 0 or loader_end <= loader_start:
+        raise SystemExit("No se encontró el cargador de scripts Babylon para optimizar el arranque móvil.")
+    native_loader = r"""async function loadEngineWithCache(url,timeoutMs=30000,check=null,progressStart=0,progressEnd=0,label='Cargando recurso'){
+ const resolved=new URL(url,document.baseURI),sameOrigin=resolved.origin===location.origin;
+ // A native script URL allows Chromium to stream, parse and compile the large engine
+ // without first materializing a second multi-megabyte JS string and Blob in RAM.
+ const result=await loadEngine(sameOrigin?resolved.href:url,timeoutMs,check);
+ if(result.ok)setLoadingProgress(progressEnd,label+' listo.');
+ return {...result,cached:false,source:sameOrigin?'same-origin-native-script':'external-script'};
+}
+"""
+    html = html[:loader_start] + native_loader + html[loader_end:]
+    html, mirror_timeout_count = re.subn(
+        r"loadEngineWithCache\(url,7000,check,segmentStart,segmentEnd,label\)",
+        "loadEngineWithCache(url,30000,check,segmentStart,segmentEnd,label)", html, count=1
+    )
+    if mirror_timeout_count != 1:
+        raise SystemExit("No se pudo ampliar el plazo del cargador local de Babylon.")
+    html, embedded_timeout_count = re.subn(
+        r"loadEngine\(url,5500,check\)",
+        "loadEngine(url,20000,check)", html, count=1
+    )
+    if embedded_timeout_count != 1:
+        raise SystemExit("No se pudo ampliar el plazo del cargador en navegadores integrados.")
+
+    # Full pre-entry resource contract: local fauna, strict imports and progress phases.
+    wildlife_remote_root = " const WILDLIFE_ASSET_ROOT='https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/'+WILDLIFE_SOURCE_COMMIT+'/assets/Animated%20Animal%20Pack-glb/';"
+    wildlife_local_root = " const WILDLIFE_ASSET_ROOT=new URL('./assets/models/wildlife/',document.baseURI).href;"
+    if html.count(wildlife_remote_root) != 1:
+        raise SystemExit("No se encontró la única fuente externa de los GLB de fauna.")
+    html = html.replace(wildlife_remote_root, wildlife_local_root, 1)
+
+    # Persist the three pinned animal GLBs independently of the Service Worker
+    # control state on the very first visit. A later SW release preserves this bucket.
+    wildlife_loader_marker = " async function downloadWildlifeBlob(kind){"
+    wildlife_cache_code = """ const WILDLIFE_MODEL_CACHE='el-sin-nombre-models-wildlife-6d6de54a-v1';
+ async function readWildlifeModelCache(kind){
+  if(!window.caches||typeof window.caches.open!=='function')return null;
+  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)return null;
+  const url=new URL(encodeURIComponent(definition.file),WILDLIFE_ASSET_ROOT).href;
+  try{
+   const cache=await window.caches.open(WILDLIFE_MODEL_CACHE),response=await cache.match(url);
+   if(!response)return null;
+   const blob=await response.blob();
+   if(await isValidGLB(blob))return blob;
+   await cache.delete(url);
+   console.warn('Se eliminó una copia de fauna inválida:',kind);
+  }catch(error){console.info('La caché persistente de fauna no está disponible; se descargará el GLB local:',error);}
+  return null;
+ }
+ async function saveWildlifeModelCache(kind,blob){
+  if(!window.caches||typeof window.caches.open!=='function')return false;
+  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)return false;
+  const url=new URL(encodeURIComponent(definition.file),WILDLIFE_ASSET_ROOT).href;
+  try{
+   const cache=await window.caches.open(WILDLIFE_MODEL_CACHE);
+   await cache.put(url,new Response(blob,{headers:{'Content-Type':'model/gltf-binary','Cache-Control':'public, max-age=31536000'}}));
+   return true;
+  }catch(error){console.info('El GLB de fauna está listo para esta sesión, pero no pudo persistirse:',kind,error);return false;}
+ }
+"""
+    if html.count(wildlife_loader_marker) != 1:
+        raise SystemExit("No se encontró el cargador único de modelos animales para añadir Cache API.")
+    html = html.replace(wildlife_loader_marker, wildlife_cache_code + wildlife_loader_marker, 1)
+
+    animal_dimensions_marker = "const width=sourceBounds.max.x-sourceBounds.min.x,depth=sourceBounds.max.z-sourceBounds.min.z;"
+    animal_silhouette_text = "Silueta animal anormalmente estrecha; se descarta para no mostrar extremidades sueltas."
+    if html.count(animal_dimensions_marker) != 1 or html.count(animal_silhouette_text) != 1:
+        raise SystemExit("No se encontró la única comprobación geométrica de fauna.")
+    animal_dimensions_at = html.index(animal_dimensions_marker) + len(animal_dimensions_marker)
+    animal_text_at = html.index(animal_silhouette_text, animal_dimensions_at)
+    animal_check_end = html.index("');", animal_text_at) + 3
+    animal_silhouette_replacement = "\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
+    html = html[:animal_dimensions_at] + animal_silhouette_replacement + html[animal_check_end:]
+
+    wildlife_download_head = "  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)throw new Error('Especie desconocida: '+kind);"
+    wildlife_download_cached = wildlife_download_head + "\n  const cached=await readWildlifeModelCache(kind);if(cached)return cached;"
+    if html.count(wildlife_download_head) != 1:
+        raise SystemExit("No se encontró la cabecera de descarga de fauna.")
+    html = html.replace(wildlife_download_head, wildlife_download_cached, 1)
+
+    wildlife_blob_ready = "   if(!await isValidGLB(blob))throw new Error(kind+': archivo GLB no válido.');\n   return blob;"
+    wildlife_blob_persist = "   if(!await isValidGLB(blob))throw new Error(kind+': archivo GLB no válido.');\n   await saveWildlifeModelCache(kind,blob);\n   return blob;"
+    if html.count(wildlife_blob_ready) != 1:
+        raise SystemExit("No se encontró el punto único para persistir cada GLB de fauna validado.")
+    html = html.replace(wildlife_blob_ready, wildlife_blob_persist, 1)
+
+    wildlife_empty = "  if(!wildlifeSpawnSpecs.length)return 0;"
+    wildlife_required = "  if(isPerformanceMode&&!wildlifeSpawnSpecs.length)return 0;\n  if(!isPerformanceMode&&wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
+    if html.count(wildlife_empty) != 1:
+        raise SystemExit("No se encontró la comprobación de fauna inicial vacía.")
+    html = html.replace(wildlife_empty, wildlife_required, 1)
+
+    wildlife_download = "  await Promise.all(kinds.map(async kind=>{try{wildlifeBlobs.set(kind,await downloadWildlifeBlob(kind));}catch(err){console.warn('Modelo animal no disponible ('+kind+'):',err);}}));"
+    wildlife_download_required = "  const wildlifeDownloads=await Promise.all(kinds.map(async kind=>({kind,blob:await downloadWildlifeBlob(kind)})));wildlifeDownloads.forEach(({kind,blob})=>wildlifeBlobs.set(kind,blob));"
+    if html.count(wildlife_download) != 1:
+        raise SystemExit("No se encontró la descarga paralela de modelos de fauna.")
+    html = html.replace(wildlife_download, wildlife_download_required, 1)
+
+    wildlife_ground = "if(!homeIsland||!isSafeIslandGroundPoint(homeIsland,x,z,Infinity,1.05,.52))return null;"
+    wildlife_ground_required = "if(!homeIsland)throw new Error('La isla de destino de '+kind+' no existe.');if(!isSafeIslandGroundPoint(homeIsland,x,z,Infinity,1.05,.52))throw new Error('No hay un punto de apoyo válido para '+kind+' en la isla inicial.');"
+    if html.count(wildlife_ground) != 1:
+        raise SystemExit("No se encontró la validación del punto de apoyo de fauna.")
+    html = html.replace(wildlife_ground, wildlife_ground_required, 1)
+
+    wildlife_import_failure = "   console.warn('Fauna descartada: importación GLB incompleta ('+kind+')',err);\n   if(/agotó el plazo/i.test(String(err&&err.message||err)))throw err;\n   return null;"
+    wildlife_import_required = "   console.error('Falló la importación de fauna obligatoria ('+kind+'):',err);\n   throw new Error('RECURSO OBLIGATORIO: fauna '+kind+' · '+String(err&&err.message||err));"
+    if html.count(wildlife_import_failure) != 1:
+        raise SystemExit("No se encontró el fallback que ocultaba los fallos de importación animal.")
+    html = html.replace(wildlife_import_failure, wildlife_import_required, 1)
+
+    wildlife_instance = "   if(animal){ambientFauna.push(animal);loaded++;}\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),animal?'ready':'fallback',{island:spec.homeIslandIndex});"
+    wildlife_instance_required = "   if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');\n   ambientFauna.push(animal);loaded++;\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});"
+    if html.count(wildlife_instance) != 1:
+        raise SystemExit("No se encontró el montaje individual de fauna.")
+    html = html.replace(wildlife_instance, wildlife_instance_required, 1)
+
+    wildlife_completion = "  recordStartupTask('Fauna GLB · cola completa',wildlifeLoadStarted,performance.now(),'complete',{loaded,requested:wildlifeSpawnSpecs.length});"
+    wildlife_complete_required = "  if(loaded!==wildlifeSpawnSpecs.length)throw new Error('RECURSO OBLIGATORIO: fauna incompleta '+loaded+'/'+wildlifeSpawnSpecs.length+'.');\n"+wildlife_completion
+    if html.count(wildlife_completion) != 1:
+        raise SystemExit("No se encontró el cierre de la cola de fauna.")
+    html = html.replace(wildlife_completion, wildlife_complete_required, 1)
+
+    # Each of the five quality-profile gulls must be instantiated before the shader pass.
+    gull_success = "  if(realBirds.length){ambientBirds.forEach(b=>{if(b.procedural)b.root.setEnabled(false);});ambientBirds.splice(0,ambientBirds.length,...realBirds);"
+    gull_success_required = "  if(realBirds.length===5){ambientBirds.forEach(b=>{if(b.procedural)b.root.setEnabled(false);});ambientBirds.splice(0,ambientBirds.length,...realBirds);"
+    if html.count(gull_success) != 1:
+        raise SystemExit("No se encontró el reemplazo de gaviotas provisionales por GLB.")
+    html = html.replace(gull_success, gull_success_required, 1)
+    gull_size_marker = "if(!(blob&&blob.size>100000))throw new Error('GLB de gaviota vacío o incompleto');"
+    if html.count(gull_size_marker) != 1:
+        raise SystemExit("No se encontró el umbral mínimo del GLB de gaviota.")
+    html = html.replace(gull_size_marker, "if(!(blob&&blob.size>50000))throw new Error('GLB de gaviota vacío o incompleto');", 1)
+    gull_partial = "else throw new Error('El GLB se importó sin mallas instanciables');"
+    gull_partial_required = "else throw new Error('El GLB solo permitió preparar '+realBirds.length+'/5 gaviotas completas.');"
+    if html.count(gull_partial) != 1:
+        raise SystemExit("No se encontró la comprobación de mallas del GLB de gaviota.")
+    html = html.replace(gull_partial, gull_partial_required, 1)
+    gull_optional_catch = "}catch(err){console.warn('Fauna opcional: gaviotas GLB no disponibles antes de entrar:',err);if(/agotó el plazo/i.test(String(err&&err.message||err)))throw err;}"
+    gull_required_catch = "}catch(err){console.error('Falló la fauna alada obligatoria:',err);throw new Error('RECURSO OBLIGATORIO: gaviotas GLB · '+String(err&&err.message||err));}"
+    if html.count(gull_optional_catch) != 1:
+        raise SystemExit("No se encontró el fallback opcional de gaviotas.")
+    html = html.replace(gull_optional_catch, gull_required_catch, 1)
+
+    # Make loader percentages reflect the actual ordered stages rather than jumping backwards.
+    for old, new, label in (
+        ("setLoadingProgress(94,'Cargando fauna salvaje 3D…');", "setLoadingProgress(88,'Cargando fauna salvaje 3D…');", "inicio de fauna"),
+        ("setLoadingProgress(96,loaded?'Fauna nórdica preparada.':'Se conserva la reserva de fauna; no se importó ningún cuerpo animal completo.');", "setLoadingProgress(90,'Fauna terrestre preparada.');", "fin de fauna terrestre"),
+        ("responseBlobWithProgress(response,'Cargando modelo animal · '+kind.toUpperCase(),68,70)", "responseBlobWithProgress(response,'Cargando modelo animal · '+kind.toUpperCase(),88,90)", "progreso de fauna terrestre"),
+        ("responseBlobWithProgress(response,'Cargando fauna alada · gaviotas',68,70)", "responseBlobWithProgress(response,'Cargando fauna alada · gaviotas',90,92)", "progreso de gaviotas"),
+    ):
+        if html.count(old) != 1:
+            raise SystemExit("No se encontró exactamente una actualización de progreso: "+label)
+        html = html.replace(old, new, 1)
+
+    # Move fauna imports ahead of the final shader/texture readiness barrier so every
+    # loaded animal and gull material is included in Babylon's initial-view warm-up.
+    fauna_start_marker = " if(!coastalReferenceMode){\n  const faunaStartedAt=performance.now();\n  const faunaTasks=[{name:'Fauna terrestre',promise:loadWildlifeModels()}];"
+    fauna_end_marker = "\n const startupMemoryTextures=new Set(),startupMemoryGeometry=new Set();"
+    fauna_scene_marker = " let sceneWarmupStatus='unavailable';"
+    if html.count(fauna_start_marker) != 1 or html.count(fauna_end_marker) != 1 or html.count(fauna_scene_marker) != 1:
+        raise SystemExit("No se encontró un único bloque de fauna/escena para ordenar el arranque.")
+    fauna_start = html.index(fauna_start_marker)
+    fauna_end = html.index(fauna_end_marker, fauna_start)
+    fauna_block = html[fauna_start:fauna_end]
+    html = html[:fauna_start] + html[fauna_end:]
+    scene_marker_index = html.index(fauna_scene_marker)
+    ordered_fauna = " setLoadingProgress(87,coastalReferenceMode?'Preparando la referencia costera…':'Preparando fauna de la isla inicial…');\n" + fauna_block + "\n setLoadingProgress(93,coastalReferenceMode?'Preparando shaders de costa…':'Preparando texturas y shaders de la zona inicial…');\n"
+    html = html[:scene_marker_index] + ordered_fauna + html[scene_marker_index:]
+
+    # Quality fauna is a required startup dependency; Performance intentionally retains
+    # its existing fauna-disabled profile and its existing rendering/resource choices.
+    optional_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-optional'"
+    required_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-required'"
+    if html.count(optional_fauna_state) != 1:
+        raise SystemExit("No se encontró el estado de fauna opcional en el registro de arranque.")
+    html = html.replace(optional_fauna_state, required_fauna_state, 1)
+    fauna_result = "recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),faunaFailures.length?'optional-failed':'ready',{loaded:ambientFauna.length,gulls:ambientBirds.filter(b=>b.real).length,failures:faunaFailures});"
+    fauna_result_required = "recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),faunaFailures.length?'required-failed':'ready',{loaded:ambientFauna.length,requested:wildlifeSpawnSpecs.length,gulls:ambientBirds.filter(b=>b.real).length,requiredGulls:isPerformanceMode?0:5,failures:faunaFailures});"
+    if html.count(fauna_result) != 1:
+        raise SystemExit("No se encontró el resumen de la carga de fauna.")
+    html = html.replace(fauna_result, fauna_result_required, 1)
+    fauna_warning = "if(faunaFailures.length)console.warn('La fauna opcional terminó con fallos antes de liberar la entrada; no quedan importaciones en segundo plano:',faunaFailures);"
+    fauna_blocking_failure = "if(faunaFailures.length){if(window.__elSinNombreBackgroundModelTasks)window.__elSinNombreBackgroundModelTasks.fauna='required-failed';throw new Error('RECURSO OBLIGATORIO: fauna de la isla inicial · '+faunaFailures.map(item=>item.name+': '+item.message).join(' | '));}"
+    if html.count(fauna_warning) != 1:
+        raise SystemExit("No se encontró el punto donde se ignoraban los fallos de fauna.")
+    html = html.replace(fauna_warning, fauna_blocking_failure, 1)
+    late_shader_progress = " setLoadingProgress(97,coastalReferenceMode?'Preparando shaders y texturas de costa…':'Preparando shaders y texturas principales…');"
+    if html.count(late_shader_progress) != 1:
+        raise SystemExit("No se encontró la fase antigua de shaders anterior a la fauna.")
+    html = html.replace(late_shader_progress, "", 1)
+ 
+    # The two soundtracks remain native HTMLAudio streams. Wait for media readiness
+    # before entry, without decoding full MP3 tracks into WebAudio AudioBuffers.
+    audio_helper_anchor = " const MenuMusic=(()=>{"
+    audio_helper = """ function waitForPlayableAudio(track,label,timeoutMs=45000){
+  if(!track||typeof track.load!=='function')return Promise.reject(new Error('No existe el reproductor de '+label+'.'));
+  track.preload='auto';
+  if(track.readyState>=2&&!track.error)return Promise.resolve({label,ready:true,readyState:track.readyState});
+  return new Promise((resolve,reject)=>{
+   let settled=false,timer=null;
+   const cleanup=()=>{if(timer!==null)clearTimeout(timer);track.removeEventListener('loadeddata',onReady);track.removeEventListener('canplay',onReady);track.removeEventListener('error',onError);};
+   const finish=error=>{if(settled)return;settled=true;cleanup();if(error)reject(error);else resolve({label,ready:true,readyState:track.readyState});};
+   const onReady=()=>{if(track.readyState>=2&&!track.error)finish(null);};
+   const onError=()=>finish(new Error('No se pudo preparar '+label+' desde el paquete local.'));
+   track.addEventListener('loadeddata',onReady);track.addEventListener('canplay',onReady);track.addEventListener('error',onError);
+   timer=setTimeout(()=>finish(new Error(label+' no alcanzó estado reproducible en '+timeoutMs+' ms.')),timeoutMs);
+   try{track.load();onReady();}catch(error){finish(error);}
+  });
+ }
+"""
+    if html.count(audio_helper_anchor) != 1:
+        raise SystemExit("No se encontró la inicialización única de la música de menú.")
+    html = html.replace(audio_helper_anchor, audio_helper + audio_helper_anchor, 1)
+
+    if html.count("preflightMenuMusic.preload='none';") != 1:
+        raise SystemExit("No se encontró la precarga de música de preflight.")
+    html = html.replace("preflightMenuMusic.preload='none';", "preflightMenuMusic.preload='auto';", 1)
+    music_audio_marker = "audio=new Audio();audio.preload='none';audio.src=SOURCE;"
+    if html.count(music_audio_marker) != 2:
+        raise SystemExit("No se encontraron exactamente los dos reproductores de música.")
+    html = html.replace(music_audio_marker, "audio=new Audio();audio.preload='auto';audio.src=SOURCE;", 2)
+
+    menu_music_return = "  return {start,stop,setMuted};\n })();\n // Solicita la música desde el arranque, mientras carga el mundo;"
+    menu_music_required = "  return {start,stop,setMuted,preload:()=>waitForPlayableAudio(ensure(),'música del menú')};\n })();\n // Solicita la música desde el arranque, mientras carga el mundo;"
+    if html.count(menu_music_return) != 1:
+        raise SystemExit("No se encontró el cierre de MenuMusic.")
+    html = html.replace(menu_music_return, menu_music_required, 1)
+
+    gameplay_music_return = "  return {start,stop,setMuted};\n })();\n let startupAudioPreload=NorseAudio.preloadAll("
+    gameplay_music_required = "  return {start,stop,setMuted,preload:()=>waitForPlayableAudio(ensure(),'música de partida')};\n })();\n let startupAudioPreload=NorseAudio.preloadAll("
+    if html.count(gameplay_music_return) != 1:
+        raise SystemExit("No se encontró el cierre de GameplayMusic.")
+    html = html.replace(gameplay_music_return, gameplay_music_required, 1)
+
+    audio_startup_marker = " let startupAudioPreload=NorseAudio.preloadAll(new URLSearchParams(window.location.search).get('test')==='1'?30000:6500);"
+    if html.count(audio_startup_marker) != 1:
+        raise SystemExit("No se encontró la precarga inicial de efectos de sonido.")
+    html = html.replace(audio_startup_marker, audio_startup_marker+"\n const startupMusicPreload=Promise.all([MenuMusic.preload(),GameplayMusic.preload()]).then(results=>({results}),error=>({error}));", 1)
+
+    # Final gate is based on observed readiness, not on the animated percentage.
+    # The special coastal reference test deliberately skips game-only character/fauna assets.
+    audio_result_declaration = " let audioPreloadResult={total:0,ready:0,failed:0,pending:0,status:'pending'};"
+    if html.count(audio_result_declaration) != 1:
+        raise SystemExit("No se encontró el estado de la precarga de efectos de sonido.")
+    html = html.replace(audio_result_declaration, audio_result_declaration+"let startupMusicPreloadResult=null;", 1)
+
+    effects_ready_marker = "recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'ready',audioPreloadResult);"
+    music_ready_code = """recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'ready',audioPreloadResult);
+  const musicPreloadOutcome=await startupMusicPreload;
+  if(musicPreloadOutcome.error)throw musicPreloadOutcome.error;
+  startupMusicPreloadResult=musicPreloadOutcome.results;
+  if(!Array.isArray(startupMusicPreloadResult)||startupMusicPreloadResult.length!==2||startupMusicPreloadResult.some(item=>!item.ready||item.readyState<2))throw new Error('Las dos bandas sonoras no están en estado reproducible.');
+  recordStartupTask('Bandas sonoras streaming',audioLoadStarted,performance.now(),'ready',{menu:startupMusicPreloadResult[0],gameplay:startupMusicPreloadResult[1],decodedToAudioBuffer:false});"""
+    if html.count(effects_ready_marker) != 1:
+        raise SystemExit("No se encontró el registro de efectos de sonido listos.")
+    html = html.replace(effects_ready_marker, music_ready_code, 1)
+    old_audio_error = "throw new Error('RECURSO OBLIGATORIO: efectos de sonido · '+String(audioRequiredError&&audioRequiredError.message||audioRequiredError));"
+    new_audio_error = "throw new Error('RECURSO OBLIGATORIO: efectos de sonido y música · '+String(audioRequiredError&&audioRequiredError.message||audioRequiredError));"
+    if html.count(old_audio_error) != 1:
+        raise SystemExit("No se encontró el error de audio obligatorio.")
+    html = html.replace(old_audio_error, new_audio_error, 1)
+
+    startup_gate_marker = " setLoadingProgress(98,'Comprobando que todo está listo…');"
+    startup_gate_code = """ const startupResourceSnapshot={
+  engineReady:!!(window.BABYLON&&window.BABYLON.Engine),
+  gltfImporterReady:!!(window.BABYLON&&window.BABYLON.SceneLoader&&window.BABYLON.GLTFFileLoader),
+  protagonistReady:!!realPlayerReady,
+  npcRoster:window.__elSinNombreStartupNpcRoster||null,
+  fauna:{required:!isPerformanceMode,requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length,requiredGulls:isPerformanceMode?0:5,loadedGulls:ambientBirds.filter(b=>b.real).length},
+  soundEffects:audioPreloadResult,
+  music:{results:startupMusicPreloadResult,menuReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[0]&&startupMusicPreloadResult[0].ready),gameplayReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[1]&&startupMusicPreloadResult[1].ready),streaming:true,decodedToAudioBuffer:false},
+  scene:{status:sceneWarmupStatus,waitingItemsAfter:window.__elSinNombreStartupSceneWarmup&&window.__elSinNombreStartupSceneWarmup.waitingItemsAfter,meshes:scene&&scene.meshes?scene.meshes.length:0,firstFrameRendered:!!firstFrameRendered},
+  world:{islands:land.length,grassClumps:grassInstanceCount,grassBatches:grassBatchCount,profile:activeGraphicsProfile}
+ };
+ const startupResourceFailures=[];
+ if(!coastalReferenceMode){
+  if(!startupResourceSnapshot.engineReady)startupResourceFailures.push('motor Babylon');
+  if(!startupResourceSnapshot.gltfImporterReady)startupResourceFailures.push('importador GLB');
+  if(!startupResourceSnapshot.protagonistReady)startupResourceFailures.push('vikingo protagonista');
+  if(!startupResourceSnapshot.npcRoster||startupResourceSnapshot.npcRoster.ready!==true)startupResourceFailures.push('roster NPC obligatorio');
+  if(!startupResourceSnapshot.soundEffects||startupResourceSnapshot.soundEffects.failed||startupResourceSnapshot.soundEffects.pending||startupResourceSnapshot.soundEffects.ready!==startupResourceSnapshot.soundEffects.total)startupResourceFailures.push('efectos de sonido');
+  if(!startupResourceSnapshot.music.menuReady||!startupResourceSnapshot.music.gameplayReady)startupResourceFailures.push('bandas sonoras');
+  if(startupResourceSnapshot.scene.status!=='ready'||startupResourceSnapshot.scene.meshes<=0||!startupResourceSnapshot.scene.firstFrameRendered)startupResourceFailures.push('escena, texturas y shaders de la vista inicial');
+  if(startupResourceSnapshot.world.islands!==13)startupResourceFailures.push('mundo de 13 islas');
+  if(!isPerformanceMode){
+   if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)startupResourceFailures.push('fauna terrestre '+startupResourceSnapshot.fauna.loaded+'/'+startupResourceSnapshot.fauna.requested);
+   if(startupResourceSnapshot.fauna.loadedGulls!==5)startupResourceFailures.push('gaviotas 3D '+startupResourceSnapshot.fauna.loadedGulls+'/5');
+   if(startupResourceSnapshot.world.grassClumps<=0||startupResourceSnapshot.world.grassBatches<=0)startupResourceFailures.push('vegetación 3D inicial');
+  }
+ }
+ window.__ELSN_STARTUP_RESOURCE_GATE__={ready:startupResourceFailures.length===0,checkedAt:new Date().toISOString(),resources:startupResourceSnapshot,failures:startupResourceFailures,coastalReferenceMode:!!coastalReferenceMode};
+ if(startupResourceFailures.length)throw new Error('RECURSO OBLIGATORIO: barrera final de carga · '+startupResourceFailures.join(' · '));
+ recordStartupTask('Barrera final de recursos',performance.now(),performance.now(),'ready',startupResourceSnapshot);
+"""
+    if html.count(startup_gate_marker) != 1:
+        raise SystemExit("No se encontró el punto único para la barrera final de recursos.")
+    html = html.replace(startup_gate_marker, startup_gate_code+startup_gate_marker, 1)
     version_match = re.search(
         r'<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\']([^"\']+)["\']',
         html,
@@ -708,6 +1057,7 @@ def main() -> None:
         "assets/models/viking-rigged.glb",
         "assets/models/armored-knight-rigged.glb",
         "assets/models/man-base-character-rigged.glb",
+        "./assets/models/wildlife/",
         "const OGA_FOLEY_BASE='./assets/audio/cc0-game-sfx/';",
         "navigator.serviceWorker.register",
         "./scripts/nordic/beach-state.js",

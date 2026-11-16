@@ -5,7 +5,8 @@ import { performance } from 'node:perf_hooks';
 import { chromium } from 'playwright';
 
 const BASE_URL = process.env.PLAYER_TEST_URL || 'http://127.0.0.1:4174/';
-const OUT = path.resolve('artifacts/player-startup');
+const MOBILE_PROFILE = process.env.PLAYER_TEST_MOBILE === '1';
+const OUT = path.resolve(process.env.PLAYER_TEST_ARTIFACT_DIR || 'artifacts/player-startup');
 const startedAt = performance.now();
 const manifest = {
   schema: 1,
@@ -51,10 +52,18 @@ async function main() {
       ]
     });
     const context = await browser.newContext({
-      viewport: { width: 960, height: 540 },
-      deviceScaleFactor: 1,
+      viewport: MOBILE_PROFILE ? { width: 393, height: 873 } : { width: 960, height: 540 },
+      deviceScaleFactor: MOBILE_PROFILE ? 2.75 : 1,
+      ...(MOBILE_PROFILE ? {
+        isMobile: true,
+        hasTouch: true,
+        userAgent: 'Mozilla/5.0 (Linux; Android 12; 2201123G) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36'
+      } : {}),
       ignoreHTTPSErrors: true
     });
+    manifest.deviceProfile = MOBILE_PROFILE
+      ? { name: 'Xiaomi 12X emulation', viewport: '393x873 CSS px', deviceScaleFactor: 2.75, userAgent: 'Android 12 / 2201123G' }
+      : { name: 'Desktop Chromium', viewport: '960x540 CSS px', deviceScaleFactor: 1 };
     const page = await context.newPage();
     page.setDefaultTimeout(60000);
     page.setDefaultNavigationTimeout(90000);
@@ -243,9 +252,52 @@ async function main() {
     // Wait for the complete blocking startup barrier, then audit every import/network
     // entry point across the first 20 seconds of actual gameplay.
     const blockingBarrierStartedAt = performance.now();
-    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true,
-      undefined, { timeout: 180000, polling: 250 });
+    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
+      document.body.classList.contains('boot-failed'), undefined, { timeout: 180000, polling: 250 });
     manifest.blockingStartupMs = Number((performance.now() - blockingBarrierStartedAt).toFixed(1));
+    manifest.startupBarrierState = await page.evaluate(() => ({
+      bootFailed: document.body.classList.contains('boot-failed'),
+      bodyClass: document.body.className,
+      loadingText: document.querySelector('#loadText')?.textContent || null,
+      loadingHelp: document.querySelector('#loadHelp')?.textContent || null,
+      resourceGate: window.__ELSN_STARTUP_RESOURCE_GATE__ || null,
+      startupRecorder: window.__elSinNombreStartupSmoke || null
+    }));
+    assert.equal(manifest.startupBarrierState.bootFailed, false,
+      'La pantalla de carga bloqueó la entrada por un recurso obligatorio: ' + JSON.stringify(manifest.startupBarrierState));
+    assert.equal(manifest.startupBarrierState.startupRecorder?.worldReady, true,
+      'El arranque no liberó el mundo después de preparar sus recursos: ' + JSON.stringify(manifest.startupBarrierState));
+    manifest.startupResourceGate = await page.evaluate(() => window.__ELSN_STARTUP_RESOURCE_GATE__ || null);
+    assert.ok(manifest.startupResourceGate && manifest.startupResourceGate.ready === true,
+      'La barrera final no confirmó todos los recursos obligatorios: ' + JSON.stringify(manifest.startupResourceGate));
+    const startupResources = manifest.startupResourceGate.resources || {};
+    assert.equal(startupResources.engineReady, true, 'El motor Babylon no figura como listo.');
+    assert.equal(startupResources.gltfImporterReady, true, 'El importador GLB no figura como listo.');
+    assert.equal(startupResources.protagonistReady, true, 'El protagonista GLB no figura como listo.');
+    assert.equal(startupResources.npcRoster?.ready, true, 'El roster NPC obligatorio no figura como listo.');
+    assert.equal(startupResources.soundEffects?.pending, 0, 'Quedan efectos de sonido pendientes.');
+    assert.equal(startupResources.soundEffects?.failed, 0, 'Hay efectos de sonido fallidos.');
+    assert.equal(startupResources.music?.menuReady, true, 'La música del menú no está en estado reproducible.');
+    assert.equal(startupResources.music?.gameplayReady, true, 'La música de partida no está en estado reproducible.');
+    assert.equal(startupResources.music?.decodedToAudioBuffer, false, 'La música no debe decodificarse a AudioBuffer.');
+    assert.equal(startupResources.scene?.status, 'ready', 'La vista inicial y sus shaders no están listos.');
+    assert.equal(startupResources.world?.islands, 13, 'El mundo no expone las 13 islas.');
+    assert.equal(startupResources.world?.profile, 'quality', 'El smoke debe verificar el perfil Calidad sin degradaciones.');
+    assert.equal(startupResources.fauna?.requested, 3, 'No se prepararon los tres animales de la isla inicial.');
+    assert.equal(startupResources.fauna?.loaded, 3, 'No se montaron los tres animales de la isla inicial.');
+    assert.equal(startupResources.fauna?.loadedGulls, 5, 'No se montaron las cinco gaviotas 3D.');
+    assert.ok(startupResources.world?.grassClumps > 0 && startupResources.world?.grassBatches > 0,
+      'La hierba 3D de la zona inicial no se preparó antes de entrar.');
+    manifest.wildlifeCache = await page.evaluate(async () => {
+      const name = 'el-sin-nombre-models-wildlife-6d6de54a-v1';
+      const cache = await caches.open(name);
+      const paths = (await cache.keys()).map(request => new URL(request.url).pathname);
+      return { name, paths: paths.filter(value => /\/(Deer|Stag|Wolf)\.glb$/i.test(value)) };
+    });
+    for (const species of ['Deer.glb', 'Stag.glb', 'Wolf.glb']) {
+      assert.ok(manifest.wildlifeCache.paths.some(value => value.endsWith('/' + species)),
+        'Falta la caché persistente del modelo ' + species + ': ' + JSON.stringify(manifest.wildlifeCache));
+    }
     manifest.memoryEstimate = await page.evaluate(() => window.__elSinNombreStartupMemoryEstimate || null);
     const npcRoster = await page.evaluate(() => window.__elSinNombreStartupNpcRoster || null);
     assert.ok(npcRoster && npcRoster.ready === true,
