@@ -435,6 +435,11 @@ def main() -> None:
         raise SystemExit("No se encontró la única restauración de altura de los árboles al reiniciar.")
     html = html.replace(tree_reset_marker, "tree.root.position=v(tree.x,terrainSurfaceAt(tree.x,tree.z)+(tree.baseYOffset||0),tree.z);", 1)
 
+    glb_timing_declaration_marker = "const glbTimingRecords=[];"
+    if html.count(glb_timing_declaration_marker) != 1:
+        raise SystemExit("No se encontró la única declaración tardía de registros GLB.")
+    html = html.replace(glb_timing_declaration_marker, "// GLB timing records are initialized at the start of startGame, before any template can import.", 1)
+
     # Paint every startup milestone synchronously before expensive scene work.
     # Previously setLoadingProgress() only queued requestAnimationFrame(); a long
     # synchronous Babylon/world-construction task could therefore leave the visible
@@ -466,6 +471,8 @@ def main() -> None:
  setLoadingProgress(40,'Preparando el mundo…');
  try{"""
     game_start_replacement = """ async function startGame(){
+ const glbTimingRecords=[];
+ window.__elSinNombreGlbTimings=glbTimingRecords;
  setLoadingProgress(40,'Preparando el mundo…');
  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
  try{"""
