@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.307"
+EXPECTED_VERSION = "0.6.308"
 
 HTML_PAGES = (
     "index.html",
@@ -82,6 +82,15 @@ def main() -> None:
         fail("Hay archivos requeridos vacíos: " + ", ".join(empty))
 
     index_html = read_text("index.html")
+    # Mobile startup scripts must execute via native URLs rather than a duplicate JS Blob.
+    if "new Blob(parts,{type:'text/javascript'})" in index_html:
+        fail("El cargador móvil sigue duplicando el motor y el importador glTF en un Blob.")
+    if "native-script-url" not in index_html or "window.__ELSN_RUNTIME_SCRIPT_LOADS" not in index_html:
+        fail("Falta la carga nativa de scripts y su telemetría de arranque.")
+    if "v7.54.3" in index_html or "@7.54.3" in index_html:
+        fail("Los fallbacks Babylon deben coincidir con la versión 9.35.0 empaquetada.")
+    if "script.fetchPriority='high'" not in index_html or "timeoutMs=25000" not in index_html:
+        fail("El motor y el importador deben tener prioridad alta y un plazo adecuado para móviles.")
     atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
     world_inspection_source = read_text("scripts/nordic/world-inspection.js")
     if "root.ELSNWorldInspection" not in world_inspection_source or "capture(context" not in world_inspection_source:
@@ -408,7 +417,7 @@ def main() -> None:
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
-    if "reportVersion:'27',build:'0.6.307'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'28',build:'0.6.308'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     for marker in (
         "babylonEngineVersion:String(B.Engine.Version||'unknown')",
@@ -711,7 +720,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.307" not in index_html or "EL SIN NOMBRE 0.6.307 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.308" not in index_html or "EL SIN NOMBRE 0.6.308 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?64:96)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -863,7 +872,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.307</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.308</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
