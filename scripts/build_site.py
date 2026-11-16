@@ -48,6 +48,15 @@ DOWNLOADS = {
     "assets/models/Seagull.glb": (
         "https://gobkit.com/freebies/animal007/Seagull.glb", 50_000, "glb"
     ),
+    "assets/models/wildlife/Deer.glb": (
+        "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Deer.glb", 100_000, "glb"
+    ),
+    "assets/models/wildlife/Stag.glb": (
+        "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Stag.glb", 100_000, "glb"
+    ),
+    "assets/models/wildlife/Wolf.glb": (
+        "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Wolf.glb", 100_000, "glb"
+    ),
     "assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg": (
         "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-footsteps/leaves01.ogg", 2_000, "audio"
     ),
