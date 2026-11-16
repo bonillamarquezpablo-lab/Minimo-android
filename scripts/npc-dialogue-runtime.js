@@ -97,7 +97,7 @@ function startBubble(npc,content,now,duration){const id=idOf(npc);if(!id||!conte
 function clearSlot(slot){slot.current=null;slot.node.classList.remove("is-visible");slot.node.hidden=true;slot.node.style.transform="";}
 function expire(now){for(const slot of slots)if(slot.current&&slot.current.expiresAt<=now)clearSlot(slot);}
 function villageOf(npc){const direct=Number(npc&&npc.villageIndex);if(Number.isFinite(direct))return direct;const nested=Number(npc&&npc.parts&&npc.parts.villageIndex);if(Number.isFinite(nested))return nested;const name=String(npc&&npc.parts&&npc.parts.name||npc&&npc.name||"");const match=/^(?:Villager_|VillageGuard)(\\d+)_/.exec(name);if(match)return Number(match[1]);return -1;}
-function partnerFor(item,nearby){let best=null,bestDistance=7.5;for(const candidate of nearby){if(candidate.id===item.id||villageOf(candidate.npc)!==villageOf(item.npc))continue;if(slots.some(s=>s.current&&s.current.id===candidate.id))continue;const d=distance(item.position,candidate.position);if(d<bestDistance){best=candidate;bestDistance=d;}}return best;}
+function partnerFor(item,nearby,s){let best=null,bestDistance=7.5;for(const candidate of nearby){if(candidate.id===item.id||villageOf(candidate.npc)!==villageOf(item.npc))continue;if(slots.some(slot=>slot.current&&slot.current.id===candidate.id))continue;if(s&&!isProjectable(candidate.npc,s))continue;const d=distance(item.position,candidate.position);if(d<bestDistance){best=candidate;bestDistance=d;}}return best;}
 function queueReply(npc,content,dueAt){pending.push({npc,content,dueAt});if(pending.length>4)pending.shift();}
 function processPending(now,ids){for(let i=0;i<pending.length;){const entry=pending[i];if(entry.dueAt>now){i++;continue;}pending.splice(i,1);if(!ids.has(idOf(entry.npc)))continue;startBubble(entry.npc,entry.content,now,4300);break;}}
 function remember(state,content){if(!content)return;if(content.topic){state.recentTopics.push(content.topic);if(state.recentTopics.length>3)state.recentTopics.shift();}if(content.text){state.recentTexts.push(content.text);if(state.recentTexts.length>5)state.recentTexts.shift();}}
@@ -139,7 +139,7 @@ function schedule(now,nearby,s){
  if(!due.length)return;
  due.sort((a,b)=>a.distance-b.distance);
  const chosen=due[Math.floor(random()*Math.min(due.length,3))],state=stateFor(chosen.id,now);
- const partner=partnerFor(chosen,nearby);
+ const partner=partnerFor(chosen,nearby,s);
  const context={isWalking:Number(chosen.npc.parts&&chosen.npc.parts.actualMoveSpeed)>.08,playerClose:chosen.distance<8,friendNearby:!!partner,night:world.night===true,daylight:world.daylight,weather:String(world.weather||""),onShip:world.onShip===true,enemyNearby:world.enemyNearby===true,healthLow:world.healthLow===true,wood:world.wood,stone:world.stone,recentCapture:world.recentCapture===true||now<recentCaptureUntil,islandName:String(world.islandName||"")};
  if(partner&&random()<.58){
   const pair=pairMemory(chosen.id,partner.id),exchange=Core.chooseExchange(chosen.npc,partner.npc,random,context,pair);
