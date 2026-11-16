@@ -56,6 +56,10 @@ REQUIRED_FILES = (
     "assets/models/viking-rigged.glb",
     "assets/models/armored-knight-rigged.glb",
     "assets/models/man-base-character-rigged.glb",
+    "assets/models/Seagull.glb",
+    "assets/models/wildlife/Deer.glb",
+    "assets/models/wildlife/Stag.glb",
+    "assets/models/wildlife/Wolf.glb",
     "assets/audio/menu/winter_s_final_toll.mp3",
     "assets/audio/gameplay/the_weight_of_empire.mp3",
 )
@@ -463,10 +467,22 @@ def main() -> None:
         fail("Los móviles de gama alta conservan el normal de oleaje; solo perfiles limitados mantienen la reserva.")
     if "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html or "function startNpcHumanModels()" not in index_html or "if(!requiredReady)throw new Error('NPC obligatorios de la isla inicial incompletos" not in index_html:
         fail("El protagonista y los NPC GLB obligatorios de la isla inicial deben estar listos antes de entrar.")
+    if "const WILDLIFE_ASSET_ROOT=new URL('./assets/models/wildlife/',document.baseURI).href;" not in index_html or "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline" in index_html:
+        fail("Los GLB de ciervo, ciervo macho y lobo deben servirse desde el paquete local, no desde GitHub Raw.")
+    if "const wildlifeDownloads=await Promise.all(kinds.map(async kind=>({kind,blob:await downloadWildlifeBlob(kind)})))" not in index_html or "RECURSO OBLIGATORIO: fauna " not in index_html:
+        fail("La fauna de Calidad debe descargarse en paralelo y fallar de forma visible si algún GLB no se puede importar.")
+    if "if(realBirds.length===5)" not in index_html or "RECURSO OBLIGATORIO: gaviotas GLB" not in index_html:
+        fail("Las cinco gaviotas GLB deben estar montadas antes de liberar la campaña.")
+    if "startupResourceGate" in index_html or "window.__ELSN_STARTUP_RESOURCE_GATE__" not in index_html or "startupResourceFailures.length" not in index_html:
+        fail("La barrera final debe publicar una lectura de recursos observados y bloquear la entrada si falta alguno.")
+    if "MenuMusic.preload()" not in index_html or "GameplayMusic.preload()" not in index_html or "waitForPlayableAudio" not in index_html or "decodedToAudioBuffer:false" not in index_html:
+        fail("Las dos pistas de música deben estar listas mediante HTMLAudio streaming sin decodificar buffers.")
+    if "fauna:isPerformanceMode?'disabled-performance':'blocking-required'" not in index_html:
+        fail("El perfil Calidad debe esperar la fauna; Rendimiento conserva su fauna desactivada.")
     if "sceneReadyTasks=[waitForInitialViewReadiness()]" not in index_html or "scene.whenReadyAsync()" in index_html or "scene.compileMaterialsAsync()" in index_html or "getWaitingItemsCount" not in index_html or "mesh.isReady(true)" not in index_html or "stableReadyFrames" not in index_html or "sceneReadyTimeout" not in index_html or "RECURSO OBLIGATORIO: escena y shaders" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html:
         fail("La escena y los shaders deben estar preparados con un plazo cerrado; un fallo obligatorio debe detener el arranque.")
-    if "audioPreloadResult=await startupAudioPreload" not in index_html or "RECURSO OBLIGATORIO: efectos de sonido" not in index_html or "startupAudioPreload.then(" not in index_html:
-        fail("Los efectos de sonido deben estar listos antes de entrar; la música debe seguir en streaming.")
+    if "audioPreloadResult=await startupAudioPreload" not in index_html or "RECURSO OBLIGATORIO: efectos de sonido" not in index_html or "startupAudioPreload.then(" not in index_html or "startupMusicPreload" not in index_html:
+        fail("Los efectos y las dos bandas sonoras deben estar listos antes de entrar; la música debe seguir en streaming.")
     if "if(audioPreloadResult.pending&&!audioPreloadResult.failed)" not in index_html or "audioPreloadResult=await NorseAudio.preloadAll(30000)" not in index_html:
         fail("Una precarga de sonido pendiente debe reintentarse en la barrera de entrada; no se permite fallar antes de que el navegador comience a descargar tras la primera interacción.")
     if "RECURSO OBLIGATORIO: Vikingo protagonista" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
