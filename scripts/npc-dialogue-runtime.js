@@ -16,7 +16,7 @@ const SOCIAL_MEMORY_KEY="elsn-npc-social-memory-v1";
 function restoreSocialMemory(){try{const raw=window.localStorage&&localStorage.getItem(SOCIAL_MEMORY_KEY);if(!raw)return;const data=JSON.parse(raw);if(!data||data.version!==1||!Array.isArray(data.pairs))return;for(const row of data.pairs.slice(-64)){if(!row||typeof row.key!=="string"||row.key.length>180)continue;relationships.set(row.key,{key:row.key,rapport:Math.max(0,Math.min(5,Number(row.rapport)||0)),exchanges:Math.max(0,Math.floor(Number(row.exchanges)||0)),recentTopics:Array.isArray(row.recentTopics)?row.recentTopics.map(x=>String(x).slice(0,40)).slice(-4):[]});}}catch(_){}}
 function saveSocialMemory(){try{if(!window.localStorage)return;const pairs=Array.from(relationships.values()).slice(-64).map(row=>({key:row.key,rapport:row.rapport,exchanges:row.exchanges,recentTopics:row.recentTopics.slice(-4)}));localStorage.setItem(SOCIAL_MEMORY_KEY,JSON.stringify({version:1,pairs}));}catch(_){}}
 restoreSocialMemory();
-const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,worldPeopleCount:0,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:""};
+const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,worldPeopleCount:0,resolvedPeopleCount:0,missingRootCount:0,missingIdentityCount:0,nearestNpcDistanceMeters:null,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:""};
 let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projectionIdentity=null,projectionScratch=null,lastSnapshot=null,observedScene=null,renderObserver=null,viewportObserver=null,viewportListenersBound=false,viewportRefreshPending=false,lastCapturedCount=null,recentCaptureUntil=0;
 const RANGE_SQUARED=RANGE*RANGE;
 function bubbleLimit(){return window.matchMedia&&window.matchMedia("(max-width: 700px)").matches?2:MAX_BUBBLES;}
@@ -74,19 +74,36 @@ function bindViewportObservers(s){
  viewportListenersBound=true;
 }
 function nearbyPeople(s){
- diagnostics.worldPeopleCount=Array.isArray(s&&s.people)?s.people.length:0;
- if(!s||!s.active||!s.playerPosition||!Number.isFinite(Number(s.playerPosition.x))||!Number.isFinite(Number(s.playerPosition.z))||!Array.isArray(s.people)){diagnostics.nearbyCount=0;return[];}
- const result=[],people=s.people,focus=s.playerPosition;
- for(let i=0;i<people.length;i++){
-  const npc=people[i];if(!npc||npc.recruited===true||!enabled(npc))continue;
-  const root=rootOf(npc);if(!root)continue;
-  const position=worldPosition(root);if(!position)continue;
-  const d2=distanceSquared(position,focus);if(!Number.isFinite(d2)||d2>RANGE_SQUARED)continue;
-  const id=idOf(npc);if(!id)continue;
-  result.push({npc,id,position,distance:Math.sqrt(d2)});
- }
- diagnostics.nearbyCount=result.length;
- return result;
+  const people=Array.isArray(s&&s.people)?s.people:[];
+  diagnostics.worldPeopleCount=people.length;
+  diagnostics.resolvedPeopleCount=0;
+  diagnostics.missingRootCount=0;
+  diagnostics.missingIdentityCount=0;
+  diagnostics.nearestNpcDistanceMeters=null;
+  if(!s||!s.active||!s.playerPosition||!Number.isFinite(Number(s.playerPosition.x))||
+     !Number.isFinite(Number(s.playerPosition.z))||!Array.isArray(s.people)){
+    diagnostics.nearbyCount=0;return[];
+  }
+  const result=[],focus=s.playerPosition;
+  let nearest=Infinity;
+  for(let i=0;i<people.length;i++){
+   const npc=people[i];
+   if(!npc||npc.recruited===true||npc.alive===false||!enabled(npc))continue;
+   const root=rootOf(npc),position=worldPosition(root);
+   if(!root||!position){diagnostics.missingRootCount++;continue;}
+   diagnostics.resolvedPeopleCount++;
+   const d2=distanceSquared(position,focus);
+   if(!Number.isFinite(d2))continue;
+   const d=Math.sqrt(d2);
+   if(d<nearest)nearest=d;
+   const id=idOf(npc);
+   if(!id){diagnostics.missingIdentityCount++;continue;}
+   if(d2>RANGE_SQUARED)continue;
+   result.push({npc,id,position,distance:d});
+  }
+  diagnostics.nearestNpcDistanceMeters=Number.isFinite(nearest)?Number(nearest.toFixed(2)):null;
+  diagnostics.nearbyCount=result.length;
+  return result;
 }
 function stateFor(id,now){let s=metadata.get(id);if(!s){s={nextAt:now+between(700,1500),lastSpokeAt:0,recentTopics:[],recentTexts:[] };metadata.set(id,s);}return s;}
 function pairKey(a,b){return[a,b].map(String).sort().join("::");}
@@ -195,7 +212,7 @@ function render(s,matricesReady=false){if(!matricesReady)refreshProjectionMatric
 function schedulerTick(){const now=Date.now(),s=snapshot();diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);if(s){bindSceneRenderObserver(s);bindViewportObservers(s);}if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}expire(now);const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));processPending(now,ids);schedule(now,nearby,s);render(s);}
 function positionTick(){const s=snapshot();if(!s)return;bindSceneRenderObserver(s);bindViewportObservers(s);render(s);}
 function start(){if(schedulerHandle||positionHandle)return;schedulerHandle=window.setInterval(()=>{try{schedulerTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC dialogue scheduler recovered:",e);}},Core.SCHEDULER_INTERVAL_MS);positionHandle=window.setInterval(()=>{try{positionTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC bubble projection recovered:",e);}},Core.POSITION_UPDATE_MS);}
-start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
+start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.role.textContent,kind:s.kind.textContent,text:s.message.textContent})),nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
 }
 boot();
 })();
