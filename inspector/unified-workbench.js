@@ -890,7 +890,20 @@
       (finite(item.line)!==null?" · línea "+esc(item.line):"")+'</li>').join("")+'</ul>':'';
     const anomalyText='<p>'+esc(fmt(anomalies.count||0,0))+' avisos de rendimiento · '+esc(fmt(anomalies.criticalCount||0,0))+' graves.</p>';
     const limitationHtml=limitations.length?'<h4>Qué no se pudo medir</h4><ul>'+limitations.map(item=>'<li>'+esc(item)+'</li>').join("")+'</ul>':'';
-    evidenceHost.innerHTML=phaseHtml+tasksHtml+errorsHtml+anomalyText+limitationHtml+
+    const startup=summary.startupScriptLoads&&typeof summary.startupScriptLoads==="object"?summary.startupScriptLoads:null;
+    const startupRows=startup&&Array.isArray(startup.slowest)?startup.slowest:[];
+    const startupStatus=startup
+      ?fmt(startup.count||0,0)+" scripts · "+fmt(startup.failed||0,0)+" fallidos · "+fmt(startup.cached||0,0)+" caché · "+fmt(startup.network||0,0)+" red"
+      :"No disponible en este informe";
+    const startupHtml='<h4>Arranque del motor 3D</h4><p>'+esc(startupStatus)+'</p>'+
+      (startupRows.length?'<ul>'+startupRows.map(item=>{
+        const cache=item.cacheStatus==="cached"?"caché":item.cacheStatus==="network"?"red":"origen no determinado";
+        const transfer=finite(item.transferSize);
+        return '<li><strong>'+esc(item.label||item.url||"Script")+'</strong> · '+esc(item.durationMs===null?"tiempo no disponible":fmt(item.durationMs,1)+" ms")+
+          ' · '+esc(cache)+(transfer===null?"":' · '+esc(fmt(transfer/1024,1)+" KiB transferidos"))+
+          (item.ok===false?' · fallo: '+esc(item.reason||"sin detalle"):"")+'</li>';
+      }).join("")+'</ul>':'<p class="wb-diagnosis-empty">No se registraron cargas de scripts Babylon en esta sesión.</p>');
+    evidenceHost.innerHTML=phaseHtml+tasksHtml+errorsHtml+startupHtml+anomalyText+limitationHtml+
       '<p class="wb-diagnosis-note">'+esc(diagnosis.interpretationNote||"Las mediciones orientan la revisión; no deben sumarse los tiempos de sistemas que trabajan al mismo tiempo.")+'</p>';
     return diagnosis;
   }
