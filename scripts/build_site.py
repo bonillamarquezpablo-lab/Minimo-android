@@ -1862,7 +1862,7 @@ function getWorldPhaseTimingSnapshot(){
         raise SystemExit("No se pudo conectar el registro de edificios con el índice incremental.")
     html = html.replace(register_root_marker, register_root_replacement, 1)
 
-    cached_evaluator_marker = "  function auditHabitableStructures(applyRepairs=true){"
+    cached_evaluator_marker = " function auditHabitableStructures(applyRepairs=true){"
     cached_evaluator_code = r"""  function evaluateHabitableStructureCached(entry){
    const root=entry&&entry.root;
    if(!root||root.isDisposed?.())return evaluateHabitableStructure(entry);
