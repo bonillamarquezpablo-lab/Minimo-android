@@ -805,6 +805,25 @@ def main() -> None:
     dialogue_style_target = DIST / "scripts" / "npc-dialogue.css"
     shutil.copy2(dialogue_style_source, dialogue_style_target)
 
+    # The Inspector's Phase 1 ES module imports these helpers from ../scripts/.
+    # They are not part of the player shell, so copy them explicitly into dist.
+    for script_name in ("phase1-diagnostics-core.mjs", "phase2-world-inspection-core.mjs"):
+        script_source = ROOT / "scripts" / script_name
+        if not script_source.is_file():
+            raise SystemExit(f"Falta el módulo de diagnóstico del Inspector: {script_name}")
+        module_check = subprocess.run(
+            [node, "--check", str(script_source)], capture_output=True, text=True,
+        )
+        if module_check.returncode != 0:
+            raise SystemExit(
+                f"Inspector diagnostic module syntax validation failed ({script_name}):\\n"
+                + module_check.stderr
+            )
+        script_target = DIST / "scripts" / script_name
+        script_target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(script_source, script_target)
+        print(f"OK scripts/{script_name}: módulo del Inspector validado y empaquetado.")
+
     navigation_tag = '<script src="./scripts/nordic/navigation-suite.js" defer></script>'
     if navigation_tag not in html:
         if "</body>" not in html:
