@@ -2,6 +2,7 @@
 const fs=require('node:fs');
 const assert=require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8');
+const builder=fs.readFileSync('scripts/build_site.py','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 
 const start=html.indexOf("setLoadingProgress(82,'Preparando protagonista y NPC de la isla inicial…');");
@@ -88,4 +89,12 @@ assert.doesNotMatch(html,/decodeAudioData\([^)]*menu|decodeAudioData\([^)]*gamep
 assert.ok(sw.includes('if (!/\\.glb$/i.test(requestedUrl.pathname)) return false;'),'El service worker debe validar todos los GLB.');
 assert.match(sw,/response\.redirected/);
 assert.match(sw,/contentType\.includes\("text\/html"\)/);
+// Native script URLs avoid copying the large engine/importer into a JS string and Blob.
+assert.match(builder,/async function loadSameOriginScriptWithProgress/);
+assert.match(builder,/native-script-url/);
+assert.match(builder,/script\.async=false;script\.fetchPriority='high';script\.src=url/);
+assert.match(builder,/loadEngineWithCache\(url,25000,check,segmentStart,segmentEnd,label\)/);
+assert.match(builder,/loadEngine\(url,25000,check\)/);
+assert.match(builder,/html\.replace\("7\.54\.3", BABYLON_VERSION\)/);
+assert.match(builder,/reportVersion:'28',build:'0\.6\.308'/);
 console.log('OK: protagonist + initial-island NPC + scene/shaders block entry; fauna is bounded optional; no deferred import path.');
