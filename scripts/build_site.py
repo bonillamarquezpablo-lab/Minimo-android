@@ -1333,6 +1333,181 @@ def main() -> None:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
     html = html.replace(quality_profile_marker, quality_profile_code, 1)
 
+    # Platform-aware memory scheduling: preserve the full Quality scene and roster,
+    # but avoid overlapping large binary downloads/parses on iOS Safari and Adreno 650.
+    mobile_memory_policy_marker = "const isConstrainedMobile=!!(isPerformanceMode&&(iosMemoryBlindMobile||(isTouchDevice&&(constrainedHardware||reportedMemory<=3))));"
+    mobile_memory_policy_replacement = mobile_memory_policy_marker + "\n // Peak-memory scheduling is independent from the selected graphics profile. It changes task concurrency only; render scale, textures, shadows, density and gameplay systems remain untouched.\n const isMobilePeakMemorySensitive=!!(isIOSDevice||(isTouchDevice&&(constrainedHardware||/Adreno.*650/i.test(graphicsRenderer))));\n let startupWildlifeCompressedBytes=0;"
+    if html.count(mobile_memory_policy_marker) != 1:
+        raise SystemExit("No se encontró la clasificación única para la política de memoria multiplataforma.")
+    html = html.replace(mobile_memory_policy_marker, mobile_memory_policy_replacement, 1)
+
+    blob_compare_marker = """ async function sameBlobBytes(a,b){
+  if(!a||!b||a.size!==b.size)return false;
+  if(a===b)return true;
+  try{
+   const [ab,bb]=await Promise.all([a.arrayBuffer(),b.arrayBuffer()]);
+   if(ab.byteLength!==bb.byteLength)return false;
+   const x=new Uint8Array(ab),y=new Uint8Array(bb);
+   for(let i=0;i<x.length;i++)if(x[i]!==y[i])return false;
+   return true;
+  }catch(err){console.warn('No se pudo comparar la identidad de los GLB:',err);return false;}
+ }"""
+    blob_compare_replacement = """ const GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024;
+ async function sameBlobBytes(a,b){
+  if(!a||!b||a.size!==b.size)return false;
+  if(a===b)return true;
+  try{
+   let sinceYield=0;
+   for(let offset=0;offset<a.size;offset+=GLB_IDENTITY_COMPARE_CHUNK_BYTES){
+    const end=Math.min(a.size,offset+GLB_IDENTITY_COMPARE_CHUNK_BYTES);
+    const [ab,bb]=await Promise.all([a.slice(offset,end).arrayBuffer(),b.slice(offset,end).arrayBuffer()]);
+    if(ab.byteLength!==bb.byteLength)return false;
+    const x=new Uint8Array(ab),y=new Uint8Array(bb);
+    for(let i=0;i<x.length;i++)if(x[i]!==y[i])return false;
+    sinceYield+=end-offset;
+    if(sinceYield>=1024*1024){await new Promise(resolve=>setTimeout(resolve,0));sinceYield=0;}
+   }
+   return true;
+  }catch(err){console.warn('No se pudo comparar la identidad de los GLB:',err);return false;}
+ }"""
+    if html.count(blob_compare_marker) != 1:
+        raise SystemExit("No se encontró la comparación única de GLB que podía duplicar archivos completos en RAM.")
+    html = html.replace(blob_compare_marker, blob_compare_replacement, 1)
+
+    civilian_warmup_marker = "const civilianWarmupPromise=civilianTotal?(async()=>{"
+    civilian_warmup_replacement = "const civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive?(async()=>{"
+    if html.count(civilian_warmup_marker) != 1:
+        raise SystemExit("No se encontró la precarga paralela única del GLB civil.")
+    html = html.replace(civilian_warmup_marker, civilian_warmup_replacement, 1)
+
+    wildlife_batch_marker = """  const kinds=[...new Set(wildlifeSpawnSpecs.map(spec=>spec.kind))];
+  await Promise.all(kinds.map(async kind=>{try{wildlifeBlobs.set(kind,await downloadWildlifeBlob(kind));}catch(err){console.warn('Modelo animal no disponible ('+kind+'):',err);}}));
+  let loaded=0;
+  for(let index=0;index<wildlifeSpawnSpecs.length;index++){
+   const spec=wildlifeSpawnSpecs[index],modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,index,spec.homeIslandIndex);
+   if(animal){ambientFauna.push(animal);loaded++;}
+   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),animal?'ready':'fallback',{island:spec.homeIslandIndex});
+   if(index+1<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+  }
+  recordStartupTask('Fauna GLB · cola completa',wildlifeLoadStarted,performance.now(),'complete',{loaded,requested:wildlifeSpawnSpecs.length});"""
+    wildlife_batch_replacement = """  const kinds=[...new Set(wildlifeSpawnSpecs.map(spec=>spec.kind))];
+  let loaded=0;
+  const instantiateKind=async kind=>{
+   let blob=null;
+   try{blob=await downloadWildlifeBlob(kind);wildlifeBlobs.set(kind,blob);startupWildlifeCompressedBytes+=blob.size;}
+   catch(err){console.warn('Modelo animal no disponible ('+kind+'):',err);}
+   const specs=wildlifeSpawnSpecs.map((spec,sourceIndex)=>({spec,sourceIndex})).filter(item=>item.spec.kind===kind);
+   for(const item of specs){
+    const spec=item.spec,modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,item.sourceIndex,spec.homeIslandIndex);
+    if(animal){ambientFauna.push(animal);loaded++;}
+    recordStartupTask('Fauna GLB '+spec.kind+' #'+item.sourceIndex,modelStarted,performance.now(),animal?'ready':'fallback',{island:spec.homeIslandIndex});
+    if(item.sourceIndex<wildlifeSpawnSpecs.length-1)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+   }
+   // The imported scene now owns the live animal meshes; release the compressed source copy.
+   wildlifeBlobs.delete(kind);
+  };
+  if(isMobilePeakMemorySensitive){for(const kind of kinds)await instantiateKind(kind);}
+  else{
+   await Promise.all(kinds.map(async kind=>{let blob=null;try{blob=await downloadWildlifeBlob(kind);wildlifeBlobs.set(kind,blob);startupWildlifeCompressedBytes+=blob.size;}catch(err){console.warn('Modelo animal no disponible ('+kind+'):',err);}}));
+   for(let sourceIndex=0;sourceIndex<wildlifeSpawnSpecs.length;sourceIndex++){
+    const spec=wildlifeSpawnSpecs[sourceIndex],modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,sourceIndex,spec.homeIslandIndex);
+    if(animal){ambientFauna.push(animal);loaded++;}
+    recordStartupTask('Fauna GLB '+spec.kind+' #'+sourceIndex,modelStarted,performance.now(),animal?'ready':'fallback',{island:spec.homeIslandIndex});
+    if(sourceIndex+1<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+   }
+   wildlifeBlobs.clear();
+  }
+  recordStartupTask('Fauna GLB · cola completa',wildlifeLoadStarted,performance.now(),'complete',{loaded,requested:wildlifeSpawnSpecs.length,compressedBytes:startupWildlifeCompressedBytes});"""
+    if html.count(wildlife_batch_marker) != 1:
+        raise SystemExit("No se encontró la cola única de descarga/importación de fauna.")
+    html = html.replace(wildlife_batch_marker, wildlife_batch_replacement, 1)
+
+    npc_promise_marker = "const npcStartupPromise=coastalReferenceMode?Promise.resolve(0):startNpcHumanModels();"
+    npc_promise_replacement = "let npcStartupPromise=coastalReferenceMode||isMobilePeakMemorySensitive?Promise.resolve(0):startNpcHumanModels();"
+    if html.count(npc_promise_marker) != 1:
+        raise SystemExit("No se encontró la promesa única de preparación de NPC.")
+    html = html.replace(npc_promise_marker, npc_promise_replacement, 1)
+
+    npc_parallel_wait_marker = "   await Promise.all([playerHumanLoadPromise,npcStartupPromise]);"
+    npc_serial_wait_replacement = """   if(isMobilePeakMemorySensitive){
+    // Load the protagonist first, then the unchanged required NPC roster; this avoids overlapping GLB parser/decoder working sets.
+    await playerHumanLoadPromise;
+    npcStartupPromise=startNpcHumanModels();
+    await npcStartupPromise;
+   }else await Promise.all([playerHumanLoadPromise,npcStartupPromise]);"""
+    if html.count(npc_parallel_wait_marker) != 1:
+        raise SystemExit("No se encontró la espera única del protagonista y el roster NPC.")
+    html = html.replace(npc_parallel_wait_marker, npc_serial_wait_replacement, 1)
+
+    fauna_parallel_marker = """  const faunaStartedAt=performance.now();
+  const faunaTasks=[{name:'Fauna terrestre',promise:loadWildlifeModels()}];
+  if(!isPerformanceMode)faunaTasks.push({name:'Gaviotas 3D',promise:loadRiggedCoastalGulls()});
+  // No liberar la entrada por el primer fallo: el resto de tareas opcionales debe
+  // terminar también, para que nada importe o aparezca detrás del jugador.
+  const faunaResults=await Promise.allSettled(faunaTasks.map(task=>task.promise));
+  const faunaFailures=faunaResults.flatMap((result,index)=>result.status==='rejected'?[{name:faunaTasks[index].name,message:String(result.reason&&result.reason.message||result.reason)}]:[]);"""
+    fauna_serial_replacement = """  const faunaStartedAt=performance.now();
+  const faunaFailures=[];
+  if(isMobilePeakMemorySensitive){
+   // Keep the complete wildlife and gull roster, but never retain several large GLBs/importers at once.
+   try{await loadWildlifeModels();}catch(error){faunaFailures.push({name:'Fauna terrestre',message:String(error&&error.message||error)});}
+   if(!isPerformanceMode){try{await loadRiggedCoastalGulls();}catch(error){faunaFailures.push({name:'Gaviotas 3D',message:String(error&&error.message||error)});}}
+  }else{
+   const faunaTasks=[{name:'Fauna terrestre',promise:loadWildlifeModels()}];
+   if(!isPerformanceMode)faunaTasks.push({name:'Gaviotas 3D',promise:loadRiggedCoastalGulls()});
+   // No liberar la entrada por el primer fallo: el resto de tareas opcionales debe terminar también.
+   const faunaResults=await Promise.allSettled(faunaTasks.map(task=>task.promise));
+   faunaFailures.push(...faunaResults.flatMap((result,index)=>result.status==='rejected'?[{name:faunaTasks[index].name,message:String(result.reason&&result.reason.message||result.reason)}]:[]));
+  }"""
+    if html.count(fauna_parallel_marker) != 1:
+        raise SystemExit("No se encontró la preparación paralela única de fauna y gaviotas.")
+    html = html.replace(fauna_parallel_marker, fauna_serial_replacement, 1)
+
+    retry_roster_marker = """ function hasMissingEnemyVikings(){
+  // Los NPC procedurales son la representación provisional mientras se importan los GLB.
+  const warriors=isIOSDevice?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,3):humanEnemyParts;
+  const civilians=isIOSDevice?humanCivilianParts.slice(0,5):humanCivilianParts;
+  return warriors.some(p=>!p.realHuman||p.realHuman.role!=='knight')||civilians.some(p=>!p.realHuman||p.realHuman.role!=='civilian');
+ }"""
+    retry_roster_replacement = """ function hasMissingEnemyVikings(){
+  // Retry only the same roster required before entry; do not trigger extra iOS-only imports.
+  const lowMemoryNpcBudget=!!(isUltraLowEndMobile||isGalaxyA12LowEndMobile||isGalaxyA12NachoPerformance);
+  const warriors=isMobilePeakMemorySensitive
+   ?humanEnemyParts.filter(p=>/^VillageGuard0_/.test(String(p.name||''))).slice(0,lowMemoryNpcBudget?1:3)
+   :humanEnemyParts;
+  const civilians=isMobilePeakMemorySensitive
+   ?humanCivilianParts.slice(0,lowMemoryNpcBudget?1:2)
+   :humanCivilianParts;
+  return warriors.some(p=>!p.realHuman||p.realHuman.role!=='knight')||civilians.some(p=>!p.realHuman||p.realHuman.role!=='civilian');
+ }"""
+    if html.count(retry_roster_marker) != 1:
+        raise SystemExit("No se encontró la regla única de reintentos del roster de NPC.")
+    html = html.replace(retry_roster_marker, retry_roster_replacement, 1)
+
+    startup_glb_bytes_marker = "const startupKnownGlbBytes=(playerHumanBlob?.size||0)+(enemyHumanSourceBytes||0)+(civilianHumanSourceBytes||0)+[...(wildlifeBlobs?.values?.()||[])].reduce((sum,blob)=>sum+(blob?.size||0),0);"
+    startup_glb_bytes_replacement = "const startupKnownGlbBytes=(playerHumanBlob?.size||0)+(enemyHumanSourceBytes||0)+(civilianHumanSourceBytes||0)+startupWildlifeCompressedBytes+[...(wildlifeBlobs?.values?.()||[])].reduce((sum,blob)=>sum+(blob?.size||0),0);"
+    if html.count(startup_glb_bytes_marker) != 1:
+        raise SystemExit("No se encontró la estimación única de binarios GLB de arranque.")
+    html = html.replace(startup_glb_bytes_marker, startup_glb_bytes_replacement, 1)
+
+    startup_memory_marker = "window.__elSinNombreStartupMemoryEstimate={"
+    startup_memory_replacement = "const startupHeapMemory=performance.memory&&typeof performance.memory==='object'?{usedJSHeapSizeBytes:Number(performance.memory.usedJSHeapSize)||null,totalJSHeapSizeBytes:Number(performance.memory.totalJSHeapSize)||null,jsHeapLimitBytes:Number(performance.memory.jsHeapSizeLimit)||null}:null;\n window.__elSinNombreStartupMemoryEstimate={"
+    if html.count(startup_memory_marker) != 1:
+        raise SystemExit("No se encontró el objeto único de estimación de memoria de arranque.")
+    html = html.replace(startup_memory_marker, startup_memory_replacement, 1)
+    startup_memory_fields_marker = "  textureCount:startupMemoryTextures.size,geometryCount:startupMemoryGeometry.size,\n  sceneMeshCount:scene.meshes?.length||0,"
+    startup_memory_fields_replacement = "  textureCount:startupMemoryTextures.size,geometryCount:startupMemoryGeometry.size,\n  wildlifeCompressedBytesReleased:startupWildlifeCompressedBytes,browserHeap:startupHeapMemory,mobilePeakMemorySensitive:isMobilePeakMemorySensitive,\n  sceneMeshCount:scene.meshes?.length||0,"
+    if html.count(startup_memory_fields_marker) != 1:
+        raise SystemExit("No se encontró el bloque único de campos de memoria de arranque.")
+    html = html.replace(startup_memory_fields_marker, startup_memory_fields_replacement, 1)
+
+    health_memory_marker = "runtime:{performanceAudit:window.__elSinNombrePerformanceAudit?"
+    health_memory_replacement = "runtime:{startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null,memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive,ios:isIOSDevice,deviceMemory:Number(navigator.deviceMemory)||null,retainedWildlifeSources:wildlifeBlobs.size,retainedPlayerSourceBlob:!!playerHumanBlob},performanceAudit:window.__elSinNombrePerformanceAudit?"
+    if html.count(health_memory_marker) != 1:
+        raise SystemExit("No se encontró el objeto runtime del informe para adjuntar memoria de arranque.")
+    html = html.replace(health_memory_marker, health_memory_replacement, 1)
+
+
     # La página fuente conserva un bloque FSR1 antiguo. El único camino activo es
     # el escalado adaptativo nativo de Babylon; protegemos el bloque heredado.
     legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"
