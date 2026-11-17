@@ -73,4 +73,10 @@ for(const marker of ['optimizerPerformance:', 'spatialSelection:', 'waterAndRefl
   assert.ok(recorder.includes(marker),'Session report must expose measured optimizer performance: '+marker);
 }
 
+const atmosphereUpdate=atmosphere.slice(atmosphere.indexOf('    update(dt, force) {'),atmosphere.indexOf('    dispose() {'));
+assert.doesNotMatch(atmosphereUpdate,/imageProcessing\\.(?:exposure|contrast)\\s*=\\s*lighting\\./,
+  'Atmospheric frame updates must not mutate shared image-processing settings.');
+assert.ok(atmosphere.includes('const imageConfigs = new Set(') && atmosphere.includes('imageConfig.exposure = 1.035') && atmosphere.includes('imageConfig.contrast = 1.10'),
+  'Image-processing settings must be applied once at setup, not rewritten every dusk frame.');
+
 console.log('SUBSYSTEM PERFORMANCE CONTRACT: PASS (world phases, atmosphere, hearths, wildlife, NPC dialogue, CPU and GPU timing).');
