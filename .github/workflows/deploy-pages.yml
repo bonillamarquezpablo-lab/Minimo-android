@@ -84,6 +84,10 @@ jobs:
 
       - name: Download all resources, build dist and run release validation
         run: python scripts/build_site.py
+      - name: Verify realistic forest spacing and gull flight clips
+        run: node scripts/test_forest_gull_assets.cjs
+      - name: Verify night-effect CPU budgets without reducing Quality
+        run: node scripts/test_subsystem_performance_contract.cjs
       - name: Verify every mandatory resource is packaged and startup gate is wired
         run: node scripts/test_startup_resource_gate.cjs
 

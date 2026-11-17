@@ -60,6 +60,12 @@ assert.ok(gameHtml.includes('gpuTimerQuery:\'not measured; scene.render duration
 assert.ok(!builder.includes('qualityDprFloor')&&!builder.includes('qualityDprCeiling')&&
   !builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)'),
   'The Quality profile must not downscale resolution automatically to hide frame-time spikes.');
+assert.ok(builder.includes("f.light&&typeof f.light.isEnabled==='function'&&!f.light.isEnabled()"),
+  'Disabled legacy hearth lights must not be animated every frame.');
+assert.ok(builder.includes('sparkDx*sparkDx+sparkDz*sparkDz>140*140') &&
+  builder.includes('smokeDx*smokeDx+smokeDz*smokeDz>180*180'),
+  'Distant embers and smoke must be culled outside the local visual field while nearby effects remain intact.');
+
 assert.ok(validator.includes('worldPhaseTimings:getWorldPhaseTimingSnapshot()'),
   'Release validation must require the per-phase timing telemetry.');
 

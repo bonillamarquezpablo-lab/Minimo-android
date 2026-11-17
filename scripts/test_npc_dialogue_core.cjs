@@ -122,9 +122,10 @@ assert.ok(dialogueRuntime.includes('root.computeWorldMatrix(true)'),
 assert.ok(dialogueRuntime.includes('anchor.computeWorldMatrix(true)'),
  "The head-bone anchor must refresh its own world matrix before its screen position is calculated.");
 assert.ok(dialogueRuntime.includes('lastProjection'));
-assert.ok(dialogueRuntime.includes('y-slot.height-12') &&
-  !dialogueRuntime.includes('y-slot.height-slot.height-12'),
-  'The fallback speech-bubble position must stay one bubble-height above its NPC anchor, not drift toward the screen edge.');
+assert.ok(dialogueRuntime.includes('if(!placement)return hide("no-safe-placement")'),
+  'A dialogue card must remain attached to a valid NPC anchor or hide; it must never be clamped and dragged along a screen edge.');
+assert.ok(!dialogueRuntime.includes('placementFallbacks')&&!dialogueRuntime.includes('const left=Math.max(rect.left+6'),
+  'The projection path must not invent a replacement edge position when the camera turns.');
 assert.ok(dialogueRuntime.includes('lastPositioningMs'));
 assert.ok(dialogueRuntime.includes('const positioningSamples=new Float32Array(120)') &&
   dialogueRuntime.includes('positioningPercentiles()') &&

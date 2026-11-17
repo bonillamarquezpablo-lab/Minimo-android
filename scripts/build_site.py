@@ -370,6 +370,34 @@ def main() -> None:
   {kind:'oak',label:'Roble PBR 2K',url:'./assets/models/forest/oak-textured.glb',targetHeight:5.6,requiresTexture:true}
  ];
  const forestTreeTemplates=new Map();
+  const forestTreeSpacingStats={placed:0,relocated:0,skipped:0,minGapMeters:4.8};
+  function findForestTreePlacement(x,z,canopyRadius){
+   const islandIndex=landIslandIndex(x,z),island=land[islandIndex];
+   if(!island)return null;
+   const acceptable=(cx,cz)=>{
+    if(landIslandIndex(cx,cz)!==islandIndex||!isSafeIslandGroundPoint(island,cx,cz,4.4,.70,.52))return false;
+    for(const other of trees){
+     if(!other||other.alive===false)continue;
+     const dx=cx-other.x,dz=cz-other.z;
+     const otherRadius=Math.max(2.3,Number(other.canopyRadius)||2.3);
+     const required=Math.max(forestTreeSpacingStats.minGapMeters,(canopyRadius+otherRadius)*.92);
+     if(dx*dx+dz*dz<required*required)return false;
+    }
+    return true;
+   };
+   if(acceptable(x,z))return {x,z};
+   const phase=Math.atan2(z-island.z,x-island.x);
+   for(let ring=1;ring<=8;ring++){
+    const distance=ring*.7,steps=ring<3?12:18;
+    for(let step=0;step<steps;step++){
+     const angle=phase+step*Math.PI*2/steps+(ring%2)*.09;
+     const candidateX=x+Math.cos(angle)*distance,candidateZ=z+Math.sin(angle)*distance;
+     if(acceptable(candidateX,candidateZ))return {x:candidateX,z:candidateZ};
+    }
+   }
+   return null;
+  }
+  window.__ELSN_FOREST_TREE_SPACING__=()=>({...forestTreeSpacingStats,treeCount:trees.filter(tree=>tree&&tree.alive).length});
  async function loadForestTreeTemplates(){
   const started=performance.now();
   const loaded=await Promise.all(forestTreeAssetSpecs.map(async spec=>{
@@ -428,11 +456,15 @@ def main() -> None:
   canopy.position.y=pivotY;
   root.scaling.setAll(placedScale);
   const baseYaw=rand(0,Math.PI*2);root.rotation.y=baseYaw;
-  root.position=v(x,renderedTerrainSurfaceAt(x,z),z);
   meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=false;});
-  root.computeWorldMatrix(true);
   const horizontalSpan=Math.max(bounds.max.x-bounds.min.x,bounds.max.z-bounds.min.z)*placedScale;
-  return {root,canopy,x,z,radius:Math.max(.62,Math.min(1.45,horizontalSpan*.24)),hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species:kind,baseYaw,baseYOffset:0,windPhase:rand(0,Math.PI*2),modelLabel:spec.spec.label,modelMeshCount:meshes.length};
+  const canopyRadius=Math.max(2.3,Math.min(3.9,horizontalSpan*.50));
+  const placement=findForestTreePlacement(x,z,canopyRadius);
+  if(!placement){forestTreeSpacingStats.skipped++;root.dispose(false,false);return null;}
+  if(Math.hypot(placement.x-x,placement.z-z)>.10)forestTreeSpacingStats.relocated++;
+  forestTreeSpacingStats.placed++;x=placement.x;z=placement.z;
+  root.position=v(x,renderedTerrainSurfaceAt(x,z),z);root.computeWorldMatrix(true);
+  return {root,canopy,x,z,radius:Math.max(.62,Math.min(1.45,horizontalSpan*.24)),canopyRadius,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species:kind,baseYaw,baseYOffset:0,windPhase:rand(0,Math.PI*2),modelLabel:spec.spec.label,modelMeshCount:meshes.length};
  }
 """
     html = html[:tree_start] + tree_rebuild_code + html[tree_end:]
@@ -440,6 +472,11 @@ def main() -> None:
     if html.count(forest_planting_marker) != 1:
         raise SystemExit("No se encontró el único bloque de plantación de árboles del archipiélago.")
     html = html.replace(forest_planting_marker, " await loadForestTreeTemplates();\n" + forest_planting_marker, 1)
+    tree_push_marker = "trees.push(createTree(x,z,rand(.78,1.12)));"
+    tree_push_replacement = "const plantedTree=createTree(x,z,rand(.78,1.12));if(plantedTree)trees.push(plantedTree);"
+    if html.count(tree_push_marker) != 1:
+        raise SystemExit("No se encontró el único punto de inserción de árboles del archipiélago.")
+    html = html.replace(tree_push_marker,tree_push_replacement,1)
 
     tree_reset_marker = "tree.root.setEnabled(true);tree.root.position=v(tree.x,terrainSurfaceAt(tree.x,tree.z),tree.z);tree.root.rotation.set(0,tree.baseYaw||0,0);"
     tree_reset_replacement = "tree.root.setEnabled(true);tree.root.position=v(tree.x,renderedTerrainSurfaceAt(tree.x,tree.z)+(tree.baseYOffset||0),tree.z);tree.root.rotation.set(0,tree.baseYaw||0,0);"
@@ -863,6 +900,12 @@ def main() -> None:
     if html.count(gull_root_marker) != 1:
         raise SystemExit("No se encontró la única raíz de las gaviotas GLB.")
     html = html.replace(gull_root_marker,gull_root_replacement,1)
+
+    gull_animation_marker = "const groups=inst.animationGroups||[],fly=groups.find(g=>/walk|fly|flap/i.test(g.name))||groups.find(g=>/idle/i.test(g.name))||groups[0]||null;groups.forEach(g=>{try{g.stop();}catch(_){}});if(fly){fly.start(true,1.0);fly.speedRatio=.95+Math.random()*.12;}"
+    gull_animation_replacement = "const groups=inst.animationGroups||[],fly=groups.find(g=>/\\b(?:fly|flight|flying|flap|flapping|soar|soaring)\\b/i.test(String(g.name||'')))||null;groups.forEach(g=>{try{g.stop();}catch(_){}});if(fly){fly.start(true,1.0);fly.speedRatio=.95+Math.random()*.12;}"
+    if html.count(gull_animation_marker) != 1:
+        raise SystemExit("No se encontró el selector único de animación de las gaviotas.")
+    html = html.replace(gull_animation_marker,gull_animation_replacement,1)
 
     gull_rig_marker = "const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}"
     gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const leftWing=rigNodes.find(node=>/^LeftWing(?:_|$)/i.test(node.name||'')),rightWing=rigNodes.find(node=>/^RightWing(?:_|$)/i.test(node.name||'')),tail=rigNodes.find(node=>/^Tail(?:_|$)/i.test(node.name||''));if(!leftWing||!rightWing){actor.dispose(false,true);throw new Error('El modelo de gaviota no incluye pivotes anatómicos LeftWing y RightWing.');}[leftWing,rightWing,tail].forEach(node=>{if(node&&node.rotationQuaternion){node.rotation.copyFrom(node.rotationQuaternion.toEulerAngles());node.rotationQuaternion=null;}});leftWing.computeWorldMatrix(true);rightWing.computeWorldMatrix(true);const leftWingWorld=leftWing.getAbsolutePosition(),rightWingWorld=rightWing.getAbsolutePosition(),wingSpanX=Math.abs(leftWingWorld.x-rightWingWorld.x),wingSpanZ=Math.abs(leftWingWorld.z-rightWingWorld.z),wingFlapAxis=wingSpanX>=wingSpanZ?'z':'x';"
@@ -1798,27 +1841,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.315: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.316: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.315; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.316; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.315\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.316\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.315.")
-    html = html.replace("0.6.274", "0.6.315")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.316.")
+    html = html.replace("0.6.274", "0.6.316")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'32',build:'0.6.315'"
+    diagnostic_build_replacement = "reportVersion:'33',build:'0.6.316'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.315 para normalizar.")
-    game_version = "0.6.315"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.316 para normalizar.")
+    game_version = "0.6.316"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -2461,6 +2504,22 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     if html.count(smoke_lazy_marker) != 1:
         raise SystemExit("No se encontró el único bloque de creación perezosa de puffs de humo.")
     html = html.replace(smoke_lazy_marker, smoke_lazy_replacement, 1)
+
+    legacy_fire_light_marker = "fireLights.forEach(f=>{if(f.hearth&&f.hearth.extinguished){f.light.intensity=0;return;}if(!worldEntityVisualDue(f,f.light.position.x,f.light.position.z))return;f.light.intensity=.66+Math.sin(elapsed*8+f.phase)*.16+Math.sin(elapsed*13+f.phase)*.065;});"
+    legacy_fire_light_replacement = "fireLights.forEach(f=>{if(f.light&&typeof f.light.isEnabled==='function'&&!f.light.isEnabled())return;if(f.hearth&&f.hearth.extinguished){f.light.intensity=0;return;}if(!worldEntityVisualDue(f,f.light.position.x,f.light.position.z))return;f.light.intensity=.66+Math.sin(elapsed*8+f.phase)*.16+Math.sin(elapsed*13+f.phase)*.065;});"
+    if html.count(legacy_fire_light_marker) != 1:
+        raise SystemExit("No se encontró el único bucle de luces de hogar heredadas.")
+    html = html.replace(legacy_fire_light_marker,legacy_fire_light_replacement,1)
+    fire_spark_marker = "if(s.hearth&&s.hearth.extinguished){s.mesh.setEnabled(false);return;}if(!worldEntityVisualDue(s,s.offsetX,s.offsetZ))return;"
+    fire_spark_replacement = "if(s.hearth&&s.hearth.extinguished){s.mesh.setEnabled(false);return;}const sparkX=s.hearth?s.hearth.x:s.offsetX,sparkZ=s.hearth?s.hearth.z:s.offsetZ,sparkDx=sparkX-worldVisualFocusX,sparkDz=sparkZ-worldVisualFocusZ;if(sparkDx*sparkDx+sparkDz*sparkDz>140*140){if(s.mesh.isEnabled())s.mesh.setEnabled(false);return;}if(!worldEntityVisualDue(s,sparkX,sparkZ))return;"
+    if html.count(fire_spark_marker) != 1:
+        raise SystemExit("No se encontró el único bucle de chispas de hogar.")
+    html = html.replace(fire_spark_marker,fire_spark_replacement,1)
+    smoke_distance_marker = "if(!source.puffs)createAmbientSmokePuffs(source,si);"
+    smoke_distance_replacement = "if(!source.puffs)createAmbientSmokePuffs(source,si);const smokeDx=source.x-worldVisualFocusX,smokeDz=source.z-worldVisualFocusZ;if(smokeDx*smokeDx+smokeDz*smokeDz>180*180){source.puffs.forEach(p=>{if(p.mesh.isEnabled())p.mesh.setEnabled(false);});return;}"
+    if html.count(smoke_distance_marker) != 1:
+        raise SystemExit("No se encontró el único bucle de creación de humo para aplicar la distancia visual.")
+    html = html.replace(smoke_distance_marker,smoke_distance_replacement,1)
 
     smoke_warmup_marker = " let sceneWarmupStatus='unavailable';"
     smoke_warmup_replacement = " await prepareAmbientSmokePuffs();\n await new Promise(resolve=>requestAnimationFrame(()=>resolve()));\n const initialHabitableAuditStartedAt=performance.now();\n const initialHabitableAudit=auditHabitableStructures(true);\n recordStartupTask('Auditoría inicial de asentamientos',initialHabitableAuditStartedAt,performance.now(),'ready',{structures:habitableStructureRegistry.length,repaired:initialHabitableAudit&&initialHabitableAudit.repaired||0,hiddenUnsafe:initialHabitableAudit&&initialHabitableAudit.hiddenUnsafe||0,autoRegistered:initialHabitableAudit&&initialHabitableAudit.autoRegisteredRoots&&initialHabitableAudit.autoRegisteredRoots.length||0});\n const reflectionWarmupStartedAt=performance.now();syncNordicWaterReflectionIsland();recordStartupTask('Lista inicial de reflejos nórdicos',reflectionWarmupStartedAt,performance.now(),'ready',{islandIndex:activeWaterReflectionIslandIndex,reflectedMeshes:nordicWaterMirror&&nordicWaterMirror.renderList?nordicWaterMirror.renderList.length:0});\n let sceneWarmupStatus='unavailable';"

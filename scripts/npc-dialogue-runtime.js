@@ -221,12 +221,7 @@ function project(slot,s,occupied){
   if(slot.measureDirty||!(slot.width>0&&slot.height>0)){const measured=slot.node.getBoundingClientRect();slot.width=measured.width;slot.height=measured.height;slot.measureDirty=false;}
   if(!(slot.width>0&&slot.height>0))return hide("bubble-size-unavailable");
   let placement=Core.placeBubble({x,y},{width:slot.width,height:slot.height},{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom},occupied);
-  if(!placement){
-   const left=Math.max(rect.left+6,Math.min(rect.right-slot.width-6,x-slot.width/2));
-   const top=Math.max(rect.top+6,Math.min(rect.bottom-slot.height-6,y-slot.height-12));
-   placement={left,top,right:left+slot.width,bottom:top+slot.height};
-   diagnostics.placementFallbacks=(diagnostics.placementFallbacks||0)+1;
-  }
+  if(!placement)return hide("no-safe-placement");
   slot.node.style.transform="translate3d("+placement.left.toFixed(1)+"px,"+placement.top.toFixed(1)+"px,0)";
   diagnostics.lastProjection={id:idOf(npc),world:{x:Number(world.x.toFixed(3)),y:Number(world.y.toFixed(3)),z:Number(world.z.toFixed(3))},screen:{x:Number(x.toFixed(1)),y:Number(y.toFixed(1))},at:Date.now()};
   occupied.push(placement);diagnostics.projectionSuccesses++;return true;
