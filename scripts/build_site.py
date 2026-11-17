@@ -46,7 +46,7 @@ DOWNLOADS = {
         "https://ambientcg.com/get?file=Ground060_2K-JPG.zip", 1_000_000, "zip"
     ),
     "assets/models/Seagull.glb": (
-        "https://gobkit.com/freebies/animal007/Seagull.glb", 50_000, "glb"
+        "https://files.innerscene.com/library/coastal-gull-26803928/fc8a665c119edc95c3b6/coastal-gull.glb", 500_000, "glb"
     ),
     "assets/models/forest/mature-scots-pine-tree.glb": (
         "https://files.innerscene.com/library/mature-scots-pine-tree-280307e1/e52dca598822dfa9ffa9/mature-scots-pine-tree.glb", 500_000, "glb"
