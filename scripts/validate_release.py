@@ -632,6 +632,10 @@ def main() -> None:
         fail("Las dos pistas de música deben estar listas mediante HTMLAudio streaming sin decodificar buffers.")
     if "fauna:'blocking-required'" not in index_html:
         fail("Calidad y Rendimiento deben esperar los tres animales terrestres completos; Rendimiento conserva su LOD y cadencia reducida.")
+    if "fauna:{required:true,requested:wildlifeSpawnSpecs.length" not in index_html:
+        fail("El informe de arranque debe marcar la fauna terrestre como obligatoria en ambos perfiles gráficos.")
+    if "startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3" not in index_html:
+        fail("La barrera final debe comprobar las tres especies terrestres también en Rendimiento.")
     if "window.__ELSN_STARTUP_RESOURCE_GATE__" not in index_html or "startupResourceFailures.length" not in index_html:
         fail("La entrada requiere una barrera final basada en el estado real de los recursos, no en el porcentaje visual.")
     if "startupResourceSnapshot.world.islands!==13" not in index_html or "startupResourceSnapshot.world.grassClumps<=0" not in index_html:
