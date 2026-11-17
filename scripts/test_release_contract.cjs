@@ -42,8 +42,11 @@ assert.ok(buildSite.includes("targetGullMaxExtentMeters=.55") &&
   buildSite.includes("visualRoot.position.copyFrom(sourceCenter.scale(-1))"),
   "The release must center the gull hierarchy and enforce the measured 0.55 m biological size.");
 assert.ok(buildSite.includes("const groups=inst.animationGroups||[];groups.forEach(group=>{try{group.stop();}catch(_){}});const fly=null;") &&
-  buildSite.includes("b.leftWing&&b.rightWing") && !buildSite.includes("fly.start(true,1.0)"),
-  "The gull must keep GLB body/leg clips stopped and animate only its anatomical wing pivots.");
+  buildSite.includes("b.flightPoseReady") && buildSite.includes("b.leftWing.rotation[b.wingFlapAxis]") &&
+  buildSite.includes("b.leftHindUpLeg.rotation.x") && buildSite.includes("b.rightHindUpLeg.rotation.x") &&
+  buildSite.includes("b.leftHindLeg.rotation.x") && buildSite.includes("b.rightHindLeg.rotation.x") &&
+  !buildSite.includes("fly.start(true,1.0)"),
+  "The gull must keep imported body clips stopped and explicitly animate wings, tucked hind legs, head and neck.");
 assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyRadius+otherRadius)*1.12") &&
   buildSite.includes("ring<=16") && buildSite.includes("overlapPairs"),
   "Conifers must use measured canopy clearances, a wider in-island relocation search and an overlap audit.");
