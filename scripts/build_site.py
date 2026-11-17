@@ -728,7 +728,10 @@ def main() -> None:
    return {json,binBytes};
   }catch(_){return null;}
  }
- async function isValidGLB(blob){return !!(await inspectGLBContainer(blob));}
+ async function isValidGLB(blob){
+  if(!(blob instanceof Blob)||blob.size<500000)return false;
+  try{const bytes=await blob.slice(0,4).arrayBuffer();const magic=new Uint8Array(bytes);return magic.length===4&&magic[0]===0x67&&magic[1]===0x6c&&magic[2]===0x54&&magic[3]===0x46;}catch(_){return false;}
+ }
  async function waitForAnimalTextures(meshes,kind,timeoutMs=25000){
   const textures=new Set();
   for(const mesh of meshes||[]){
@@ -757,12 +760,6 @@ def main() -> None:
         raise SystemExit("No se encontró el validador GLB único.")
     html = html.replace(glb_validator_marker, glb_validator_required, 1)
 
-    animal_count_marker = "const animalCount=isPerformanceMode?0:(idx===0?3:0);"
-    animal_count_required = "const animalCount=idx===0?3:0;"
-    if html.count(animal_count_marker) != 1:
-        raise SystemExit("No se encontró el control único de población animal por perfil.")
-    html = html.replace(animal_count_marker, animal_count_required, 1)
-
     wildlife_import_snapshot_marker = "  let imported=null,objectUrl=null,actor=null;\n  try{\n   // Import each GLB independently into the live scene; never clone a skinned mesh/skeleton.\n   objectUrl=URL.createObjectURL(blob);"
     wildlife_import_snapshot_marker_replacement = "  let imported=null,objectUrl=null,actor=null;\n  const beforeMeshes=new Set(scene.meshes||[]),beforeNodes=new Set(scene.transformNodes||[]),beforeSkeletons=new Set(scene.skeletons||[]),beforeGroups=new Set(scene.animationGroups||[]);\n  try{\n   const glbRecord=await inspectGLBContainer(blob),sourceJson=glbRecord&&glbRecord.json;\n   if(!sourceJson||!(sourceJson.skins||[]).some(skin=>Array.isArray(skin.joints)&&skin.joints.length>=12)||!(sourceJson.animations||[]).some(animation=>Array.isArray(animation.channels)&&animation.channels.length>0&&Array.isArray(animation.samplers)&&animation.samplers.length>0)||!(sourceJson.nodes||[]).some(node=>Number.isInteger(node.mesh)&&Number.isInteger(node.skin)))throw new Error(kind+': el GLB no contiene un cuerpo riggeado y clips de animación completos.');\n   objectUrl=URL.createObjectURL(blob);"
     if html.count(wildlife_import_snapshot_marker) != 1:
@@ -788,7 +785,7 @@ def main() -> None:
     html = html.replace(wildlife_cleanup_marker, wildlife_cleanup_marker_replacement, 1)
 
     wildlife_empty = "  if(!wildlifeSpawnSpecs.length)return 0;"
-    wildlife_required = "  if(wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
+    wildlife_required = "  if(isPerformanceMode&&!wildlifeSpawnSpecs.length)return 0;\\n  if(!isPerformanceMode&&wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
     if html.count(wildlife_empty) != 1:
         raise SystemExit("No se encontró la comprobación de fauna inicial vacía.")
     html = html.replace(wildlife_empty, wildlife_required, 1)
@@ -1009,12 +1006,12 @@ function updateWildlife(dt){
     # Quality fauna is a required startup dependency; Performance intentionally retains
     # its existing fauna-disabled profile and its existing rendering/resource choices.
     optional_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-optional'"
-    required_fauna_state = "fauna:'blocking-required'"
+    required_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-required'"
     if html.count(optional_fauna_state) != 1:
         raise SystemExit("No se encontró el estado de fauna opcional en el registro de arranque.")
     html = html.replace(optional_fauna_state, required_fauna_state, 1)
     fauna_result = "recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),faunaFailures.length?'optional-failed':'ready',{loaded:ambientFauna.length,gulls:ambientBirds.filter(b=>b.real).length,failures:faunaFailures});"
-    fauna_result_required = "recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),faunaFailures.length?'required-failed':'ready',{loaded:ambientFauna.length,requested:wildlifeSpawnSpecs.length,gulls:ambientBirds.filter(b=>b.real).length,requiredGulls:5,failures:faunaFailures});"
+    fauna_result_required = "recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),faunaFailures.length?'required-failed':'ready',{loaded:ambientFauna.length,requested:wildlifeSpawnSpecs.length,gulls:ambientBirds.filter(b=>b.real).length,requiredGulls:isPerformanceMode?0:5,failures:faunaFailures});"
     if html.count(fauna_result) != 1:
         raise SystemExit("No se encontró el resumen de la carga de fauna.")
     html = html.replace(fauna_result, fauna_result_required, 1)
