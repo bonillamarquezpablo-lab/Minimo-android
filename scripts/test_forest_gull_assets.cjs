@@ -13,6 +13,14 @@ assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
 assert.ok(html.includes('leftWing,rightWing,tail,wingFlapAxis'), 'The replacement gull must expose its named articulated anatomy.');
+assert.ok(html.includes("findRigNode('LeftHindUpLeg')") && html.includes("findRigNode('RightHindUpLeg')") &&
+  html.includes("findRigNode('LeftHindLeg')") && html.includes("findRigNode('RightHindLeg')"),
+  'Both upper and lower leg pivots must be resolved from the imported gull rig.');
+assert.ok(html.includes('window.ELSN_GULL_FLIGHT_CORE.applyFlightPose(b,elapsed)'),
+  'The real gull loop must animate the complete flight pose, not just its wings.');
+assert.ok(html.includes('flight:{wingFlapAxis,legBendAxis,phase:i*1.25') &&
+  html.includes('leftHip,rightHip,leftKnee,rightKnee,neck,head,tail'),
+  'Every imported flight joint must retain its bind pose before animation.');
 assert.ok(html.includes("const groups=inst.animationGroups||[];groups.forEach(group=>{try{group.stop();}catch(_){}});const fly=null;"),
   'The gull must not select a walk/idle body clip; it uses explicit articulated wing flight.');
 assert.ok(!html.includes("groups.find(g=>/walk|fly|flap/i.test(g.name)"),
@@ -70,6 +78,10 @@ const gullNodeNames=(gullJson.nodes||[]).map(node=>String(node.name||''));
 assert.ok(gullNodeNames.some(name=>/^LeftWing(?:_|$)/i.test(name)),'La gaviota debe tener el pivote LeftWing');
 assert.ok(gullNodeNames.some(name=>/^RightWing(?:_|$)/i.test(name)),'La gaviota debe tener el pivote RightWing');
 assert.ok(gullNodeNames.some(name=>/^Tail(?:_|$)/i.test(name)),'La gaviota debe tener cola articulada');
+for(const nodeName of ['Head','Neck','LeftHindUpLeg','RightHindUpLeg','LeftHindLeg','RightHindLeg']){
+ assert.ok(gullNodeNames.some(name=>name.toLowerCase()===nodeName.toLowerCase()),
+   'La gaviota debe conservar la articulación anatómica '+nodeName);
+}
 const gullTriangles=(gullJson.meshes||[]).reduce((total,mesh)=>total+(mesh.primitives||[]).reduce((subtotal,primitive)=>{
   if(primitive.mode!==undefined&&primitive.mode!==4)return subtotal;
   const accessor=primitive.indices===undefined?primitive.attributes?.POSITION:gullJson.accessors?.[primitive.indices];
