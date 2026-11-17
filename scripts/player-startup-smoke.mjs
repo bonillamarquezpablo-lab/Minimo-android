@@ -897,7 +897,11 @@ async function main() {
       const offlineStartedAt = performance.now();
       manifest.offlineReload = { enabled: true, navigation: 'pending', worldReady: false };
       await context.setOffline(true);
-      await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
+      // Offline reload must only wait for the navigation response to commit.
+      // Chromium may keep the main thread busy while the cached game boots; waiting for
+      // DOMContentLoaded here can time out even when the Service Worker served the shell.
+      // The following UI/preflight waits verify that the cached page actually becomes usable.
+      await page.reload({ waitUntil: 'commit', timeout: 30000 });
       manifest.offlineReload.navigation = 'loaded-from-service-worker-cache';
 
       const offlineAudioGate = page.locator('#audioGateStart');
