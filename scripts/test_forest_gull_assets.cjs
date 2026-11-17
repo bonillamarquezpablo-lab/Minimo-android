@@ -8,9 +8,13 @@ const html=fs.readFileSync(path.join(dist,'index.html'),'utf8');
 assert.match(html,/forestTreeAssetSpecs/);
 assert.match(html,/instantiateModelsToScene\(name=>name\+'_Forest_'/);
 assert.match(html,/await loadForestTreeTemplates\(\)/);
-assert.match(html,/targetGullMaxExtentMeters=\.78/);
-assert.match(html,/fittedMaxExtent>\.82/);
-assert.doesNotMatch(html,/scale=1\.65\/height/);
+assert.match(html,/createGullBodyMesh/,'Gulls must use an elongated anatomical fuselage, not the rounded GLB.');
+assert.match(html,/createGullWingMesh/,'Gulls must have separate, articulated wing surfaces.');
+assert.match(html,/wingStations/,'Gull wings must taper to pointed primary feathers.');
+assert.match(html,/wingspanMeters:1\.12/,'The flight silhouette must retain a realistic wingspan.');
+assert.match(html,/meshCount:realBirds\.length\*3/,'Each gull must stay within three meshes to bound draw calls.');
+assert.match(html,/externalGlb:false/,'The obsolete rounded bird asset must not be downloaded.');
+assert.doesNotMatch(html,/Seagull\.glb/,'The packaged player must not reference the old external bird model.');
 
 function inspectGlb(relative,minimumBytes,requiresTexture){
  const file=path.join(dist,relative);
@@ -36,9 +40,9 @@ const models=[
 ];
 assert.ok(models[2].meshes<=8,'Oak source mesh count is not compact enough for a mobile forest');
 assert.match(html,/mergeStaticDecorByMaterial/,'Each static GLB tree must be merged by PBR material before rendering');
-const gull=path.join(dist,'assets/models/Seagull.glb');
-assert.ok(fs.existsSync(gull),'Falta GLB de gaviota');
-const gullData=fs.readFileSync(gull);
-assert.equal(gullData.toString('ascii',0,4),'glTF','Firma GLB de gaviota inválida');
-console.log('OK: bosque CC0 completo y local; mapas de textura verificados; gaviotas con tamaño máximo medido de 0,78 m.');
-console.log(JSON.stringify({models,gullBytes:gullData.length},null,2));
+const manifest=JSON.parse(fs.readFileSync(path.join(dist,'assets/asset-manifest.json'),'utf8'));
+assert.ok(!(manifest.assets||[]).some(asset=>asset.path==='assets/models/Seagull.glb'),'The old rounded gull GLB must not be shipped.');
+assert.match(html,/window\.__ELSN_GULL_DIAGNOSTICS__/,'Runtime bird diagnostics must be available for device inspection.');
+assert.match(html,/count:realBirds\.length/,'All five flight silhouettes must be reported to startup diagnostics.');
+console.log('OK: bosque CC0 completo y local; texturas verificadas; cinco gaviotas de silueta estilizada y tres mallas por ave.');
+console.log(JSON.stringify({models,gullCount:5,gullWingspanMeters:1.12,gullMeshes:15},null,2));
