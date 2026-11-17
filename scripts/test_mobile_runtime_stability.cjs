@@ -118,10 +118,10 @@ assert.ok(builder.includes('tree_rebuild_start =') &&
   builder.includes('requiresTexture:true'),
   'The procedural triangle foliage must be replaced by three required, locally packaged CC0 tree models with texture maps.');
 assert.ok(builder.includes('gull_material_registry_replacement = "    const realBirds=[];"') &&
-  builder.includes('html.replace(gull_material_clone_marker, "", 1)') &&
-  builder.includes('html = html[:style_start] + html[style_end:]') &&
-  builder.includes('gull_material_style_start = "meshes.forEach(mesh=>{"'),
-  'The five gull instances must share the source model material without per-instance tint clones.');
+  builder.includes('gull_material_style_start = "const subduedMaterials=new Set();"') &&
+  builder.includes('gull_material_style_end = "const bounds=boundsForMeshes(meshes)"') &&
+  builder.includes('html = html[:style_start] + html[style_end:]'),
+  'The five gull instances must retain the native source material and colour without legacy per-instance tinting.');
 assert.ok(builder.includes('wildlife_update_marker = "function updateWildlife(dt){"') &&
   builder.includes('_wildlifeNextDecisionAt') && builder.includes('_wildlifeVelocityX'),
   'Wildlife pathfinding/collision decisions must be throttled while root motion remains frame-integrated.');
