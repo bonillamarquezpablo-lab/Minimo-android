@@ -88,4 +88,58 @@ assert.doesNotMatch(html,/decodeAudioData\([^)]*menu|decodeAudioData\([^)]*gamep
 assert.ok(sw.includes('if (!/\\.glb$/i.test(requestedUrl.pathname)) return false;'),'El service worker debe validar todos los GLB.');
 assert.match(sw,/response\.redirected/);
 assert.match(sw,/contentType\.includes\("text\/html"\)/);
+
+ // The title screen quietly warms only small resources shared by both graphics profiles.
+ const preloadStart=html.indexOf('const SHARED_STARTUP_ASSET_PATHS=Object.freeze([');
+ const preloadEnd=html.indexOf(']);',preloadStart);
+ assert.ok(preloadStart>=0&&preloadEnd>preloadStart,'La portada debe declarar una lista explícita de recursos ligeros compartidos.');
+ const preloadListSource=html.slice(preloadStart,preloadEnd);
+ const preloadPaths=Array.from(preloadListSource.matchAll(/'([^']+)'/g),match=>match[1]);
+ assert.deepEqual(preloadPaths,[
+  './manifest.webmanifest',
+  './icon.svg',
+  './assets/asset-manifest.json',
+  './scripts/nordic/beach-state.js',
+  './scripts/nordic/coastal-interaction.js',
+  './scripts/nordic/navigation-suite.js',
+  './scripts/npc-village-brain-core.js',
+  './scripts/npc-dialogue.css'
+ ],'La precarga inicial debe limitarse a recursos comunes y pequeños.');
+ assert.doesNotMatch(preloadListSource,/babylon\\.js|\\.glb|assets\\/(?:models|textures|audio)|environmentSpecular/i,
+  'La portada no debe iniciar descargas del motor, modelos, texturas ni audio.');
+ const preloadFunctionStart=html.indexOf('function prepareMinorStartupAssets()',preloadStart);
+ const preloadFunctionEnd=html.indexOf('function chooseGraphicsProfile()',preloadFunctionStart);
+ assert.ok(preloadFunctionStart>preloadStart&&preloadFunctionEnd>preloadFunctionStart,
+  'La función de precarga debe estar separada de la selección del perfil.');
+ const preloadFunction=html.slice(preloadFunctionStart,preloadFunctionEnd);
+ assert.match(preloadFunction,/requestAnimationFrame/,
+  'La precarga debe esperar al primer fotograma para no competir con el pintado de la portada.');
+ assert.match(preloadFunction,/Math\\.min\\(3,queue\\.length\\)/,
+  'La precarga debe limitar las peticiones paralelas.');
+ assert.match(preloadFunction,/Promise\\.all\\(/,
+  'La precarga debe ejecutarse en paralelo y en segundo plano.');
+ assert.match(preloadFunction,/cache:'force-cache'/,
+  'Los recursos compartidos deben reutilizar la caché del navegador/service worker.');
+ assert.doesNotMatch(preloadFunction,/bootEngine\\(|startGame\\(|loadHumanViking|BABYLON|SceneLoader|\\.glb/i,
+  'La precarga no debe crear el motor ni importar recursos 3D.');
+ const preloadSchedule=html.indexOf('scheduleMinorStartupAssetPreload();');
+ const modeChooser=html.indexOf("document.getElementById('chooseQuality').addEventListener");
+ assert.ok(preloadSchedule>0&&modeChooser>preloadSchedule,
+  'La precarga debe programarse al abrir la portada, antes de elegir Calidad o Rendimiento.');
+ assert.match(html,/startPreflightMenuMusic\\(\\);[^\\n]*\\n scheduleMinorStartupAssetPreload\\(\\);/,
+  'La precarga silenciosa debe arrancar en la primera apertura de la portada.');
+ assert.match(html,/prepareMinorStartupAssets\\(\\);/,
+  'La selección del perfil debe reutilizar la misma precarga, sin duplicarla.');
+ assert.doesNotMatch(html,/await prepareMinorStartupAssets\\(\\)/,
+  'La precarga ligera no puede bloquear la pantalla de identidad ni la carga completa.');
+ assert.match(html,/La preparación del mundo comenzará al continuar\\./,
+  'La pantalla de nombre no debe mostrar una barra de carga para estos recursos invisibles.');
+ assert.doesNotMatch(html,/id="identityPrepBar"/,
+  'No debe mostrarse un progreso de precarga que haga parecer que el juego ya está cargando.');
+ for(const path of preloadPaths.filter(path=>path!=='./assets/asset-manifest.json')){
+  assert.ok(sw.includes(path),'El recurso ligero debe formar parte de la caché compartida offline: '+path);
+ }
+ assert.match(sw,/url\\.pathname\\.includes\\("\\/assets\\/"\\)/,
+  'El manifiesto de recursos debe quedar atendido por la caché de recursos del service worker.');
+
 console.log('OK: protagonist + initial-island NPC + scene/shaders block entry; fauna is bounded optional; no deferred import path.');
