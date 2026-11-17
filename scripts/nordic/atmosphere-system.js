@@ -638,8 +638,11 @@
         light.specular = new B.Color3(1.0, 0.30, 0.08);
         light.range = 11.5;
         light.intensity = 0;
-        light.setEnabled(false);
-        this.firePool.push({ light, source: null, phase: i * 2.17 });
+        // Keep a stable light registration across day/night; an empty influence list
+        // avoids global shader variants until a nearby hearth is selected.
+        light.includedOnlyMeshes = [];
+        light.setEnabled(true);
+        this.firePool.push({ light, source: null, phase: i * 2.17, includedMeshCount: 0 });
       }
     }
 
@@ -682,7 +685,8 @@
         if (!candidate) {
           slot.source = null;
           slot.light.intensity = 0;
-          slot.light.setEnabled(false);
+          slot.light.includedOnlyMeshes = [];
+          slot.includedMeshCount = 0;
           continue;
         }
         const h = candidate.h;
@@ -690,7 +694,27 @@
         slot.light.position.set(h.x, h.floorY + 1.0, h.z);
         slot.light.range = 11.5;
         slot.light.intensity = 0.56 * state.night;
-        slot.light.setEnabled(true);
+        // Preserve full local hearth illumination while excluding distant island meshes.
+        const affectedMeshes = [];
+        const maxRange = slot.light.range;
+        for (const mesh of this.scene.meshes || []) {
+          if (!mesh || mesh === this.skyDome || !mesh.material ||
+              mesh.isVisible === false || mesh.visibility <= 0 ||
+              (mesh.isDisposed && mesh.isDisposed()) ||
+              (mesh.isEnabled && !mesh.isEnabled())) continue;
+          try {
+            if (mesh.computeWorldMatrix) mesh.computeWorldMatrix(true);
+            const sphere = mesh.getBoundingInfo && mesh.getBoundingInfo().boundingSphere;
+            if (!sphere || !sphere.centerWorld) continue;
+            const dx = sphere.centerWorld.x - h.x;
+            const dy = sphere.centerWorld.y - (h.floorY + 1.0);
+            const dz = sphere.centerWorld.z - h.z;
+            const reach = maxRange + Math.max(0, Number(sphere.radiusWorld) || 0);
+            if (dx * dx + dy * dy + dz * dz <= reach * reach) affectedMeshes.push(mesh);
+          } catch (_) {}
+        }
+        slot.light.includedOnlyMeshes = affectedMeshes;
+        slot.includedMeshCount = affectedMeshes.length;
       }
     }
 
