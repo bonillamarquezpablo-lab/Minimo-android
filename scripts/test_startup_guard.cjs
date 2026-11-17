@@ -105,41 +105,39 @@ assert.match(sw,/contentType\.includes\("text\/html"\)/);
   './scripts/npc-village-brain-core.js',
   './scripts/npc-dialogue.css'
  ],'La precarga inicial debe limitarse a recursos comunes y pequeños.');
- assert.doesNotMatch(preloadListSource,/babylon\.js|\.glb|assets\/(?:models|textures|audio)|environmentSpecular/i,
-  'La portada no debe iniciar descargas del motor, modelos, texturas ni audio.');
+ for(const forbidden of ['babylon.js','.glb','assets/models','assets/textures','assets/audio','environmentSpecular']){
+  assert.ok(!preloadListSource.includes(forbidden),'La portada no debe precargar recursos pesados: '+forbidden);
+ }
  const preloadFunctionStart=html.indexOf('function prepareMinorStartupAssets()',preloadStart);
  const preloadFunctionEnd=html.indexOf('function chooseGraphicsProfile()',preloadFunctionStart);
  assert.ok(preloadFunctionStart>preloadStart&&preloadFunctionEnd>preloadFunctionStart,
   'La función de precarga debe estar separada de la selección del perfil.');
  const preloadFunction=html.slice(preloadFunctionStart,preloadFunctionEnd);
- assert.match(preloadFunction,/requestAnimationFrame/,
-  'La precarga debe esperar al primer fotograma para no competir con el pintado de la portada.');
- assert.match(preloadFunction,/Math\.min\(3,queue\.length\)/,
-  'La precarga debe limitar las peticiones paralelas.');
- assert.match(preloadFunction,/Promise\.all\(/,
-  'La precarga debe ejecutarse en paralelo y en segundo plano.');
- assert.match(preloadFunction,/cache:'force-cache'/,
-  'Los recursos compartidos deben reutilizar la caché del navegador/service worker.');
- assert.doesNotMatch(preloadFunction,/bootEngine\(|startGame\(|loadHumanViking|BABYLON|SceneLoader|\.glb/i,
-  'La precarga no debe crear el motor ni importar recursos 3D.');
+ assert.ok(preloadFunction.includes('requestAnimationFrame'),'La precarga debe esperar al primer fotograma.');
+ assert.ok(preloadFunction.includes('Math.min(3,queue.length)'),'La precarga debe limitar las peticiones paralelas.');
+ assert.ok(preloadFunction.includes('Promise.all('),'La precarga debe ejecutarse en paralelo y en segundo plano.');
+ assert.ok(preloadFunction.includes("cache:'force-cache'"),'Los recursos deben reutilizar la caché.');
+ for(const forbidden of ['bootEngine(','startGame(','loadHumanViking','BABYLON','SceneLoader','.glb']){
+  assert.ok(!preloadFunction.includes(forbidden),'La precarga no debe iniciar el motor ni importar recursos 3D: '+forbidden);
+ }
  const preloadSchedule=html.indexOf('scheduleMinorStartupAssetPreload();');
  const modeChooser=html.indexOf("document.getElementById('chooseQuality').addEventListener");
  assert.ok(preloadSchedule>0&&modeChooser>preloadSchedule,
   'La precarga debe programarse al abrir la portada, antes de elegir Calidad o Rendimiento.');
- assert.match(html,/startPreflightMenuMusic\(\);[^\n]*\nscheduleMinorStartupAssetPreload\(\);/,
+ assert.ok(html.includes("startPreflightMenuMusic(); // En dispositivos con autoplay permitido, suena antes del primer toque.\nscheduleMinorStartupAssetPreload();"),
   'La precarga silenciosa debe arrancar en la primera apertura de la portada.');
- assert.match(html,/prepareMinorStartupAssets\(\);/,
+ assert.ok(html.includes('prepareMinorStartupAssets();'),
   'La selección del perfil debe reutilizar la misma precarga, sin duplicarla.');
- assert.doesNotMatch(html,/await prepareMinorStartupAssets\(\)/,
+ assert.ok(!html.includes('await prepareMinorStartupAssets()'),
   'La precarga ligera no puede bloquear la pantalla de identidad ni la carga completa.');
- assert.match(html,/La preparación del mundo comenzará al continuar\./,
+ assert.ok(html.includes('La preparación del mundo comenzará al continuar.'),
   'La pantalla de nombre no debe mostrar una barra de carga para estos recursos invisibles.');
- assert.doesNotMatch(html,/id="identityPrepBar"/,
+ assert.ok(!html.includes('id="identityPrepBar"'),
   'No debe mostrarse un progreso de precarga que haga parecer que el juego ya está cargando.');
  for(const path of preloadPaths.filter(path=>path!=='./assets/asset-manifest.json')){
   assert.ok(sw.includes(path),'El recurso ligero debe formar parte de la caché compartida offline: '+path);
  }
- assert.match(sw,/url\.pathname\.includes\("\/assets\/"\)/,
-  'El manifiesto de recursos debe quedar atendido por la caché de recursos del service worker.');
+ assert.ok(sw.includes('url.pathname.includes("/assets/")'),
+  'El manifiesto debe quedar atendido por la caché de recursos del service worker.');
 
 console.log('OK: protagonist + initial-island NPC + scene/shaders block entry; fauna is bounded optional; no deferred import path.');
