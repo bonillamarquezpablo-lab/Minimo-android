@@ -47,4 +47,10 @@ assert.match(offlineBlock, /offlineNavigationResponse\.fromServiceWorker\(\)/,
   'The offline navigation must prove that the Service Worker served the cached shell.');
 assert.match(offlineBlock, /offlineNavigationResponse\.status\(\), 200/,
   'The offline cached shell must return HTTP 200.');
+const warmLaunch = smoke.slice(smoke.indexOf('// Repeat in the same browser profile'));
+assert.match(warmLaunch, /await page\.close\(\{ runBeforeUnload: false \}\)/,
+  'The warm launch must dispose of the previous gameplay renderer.');
+assert.match(warmLaunch, /warmNavigationResponse\.status\(\) === 200/,
+  'The warm launch must verify the new page navigation response.');
+
 console.log('PLAYER STARTUP FLOW CONTRACT OK: first-run and returning-player paths are both explicit.');
