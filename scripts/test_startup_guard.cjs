@@ -49,7 +49,7 @@ assert.doesNotMatch(html,/caches\.match\(VIKING_GLB_URL\)/,
 assert.match(html,/function disposeLateGlbResult\(result,model,stage\)/);
 assert.match(html,/pending\.then\(result=>\{if\(timedOut\)disposeLateGlbResult\(result,model,stage\);?\},\(\)=>\{\}\)/,
   'Timed-out SceneLoader imports must be disposed if Babylon resolves them late.');
-assert.match(html,/const faunaResults=await Promise\\.allSettled\\(faunaTasks\\.map\\(task=>task\\.promise\\)\\)/,
+assert.ok(html.includes('const faunaResults=await Promise.allSettled(faunaTasks.map(task=>task.promise))'),
   'Every fauna task must settle before player entry, whether it is terrestrial fauna or Quality gulls.');
 assert.ok(builder.includes('optional_fauna_state = "fauna:isPerformanceMode?\'disabled-performance\':\'blocking-optional\'"'),
   'The release builder must recognize the unbuilt source marker before replacing it.');
