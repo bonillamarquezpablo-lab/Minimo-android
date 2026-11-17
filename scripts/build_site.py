@@ -3236,18 +3236,18 @@ function getWorldPhaseTimingSnapshot(){
         transformed_file.write_text("\n".join(transformed_inline_scripts), encoding="utf-8")
         transformed_check = subprocess.run([node, "--check", str(transformed_file)], capture_output=True, text=True)
         if transformed_check.returncode != 0:
-            error_match = re.search(r"game-inline-transformed\\.js:(\\d+)", transformed_check.stderr)
+            error_match = re.search(r"game-inline-transformed\.js:(\d+)", transformed_check.stderr)
             context = ""
             if error_match:
                 error_line = int(error_match.group(1))
                 transformed_lines = transformed_file.read_text(encoding="utf-8").splitlines()
                 start_line = max(1, error_line - 8)
                 end_line = min(len(transformed_lines), error_line + 8)
-                context = "\\n" + "\\n".join(
+                context = "\n" + "\n".join(
                     f"{line_number}: {transformed_lines[line_number - 1]}"
                     for line_number in range(start_line, end_line + 1)
                 )
-            raise SystemExit("JavaScript sintácticamente inválido después de aplicar las correcciones costeras:\\n" + transformed_check.stderr + context)
+            raise SystemExit("JavaScript sintácticamente inválido después de aplicar las correcciones costeras:\n" + transformed_check.stderr + context)
     print("OK submerged seabed profile is applied once; 5 cm cross-mesh continuity audit is installed and syntax-checked.")
 
     # A tiny, unobtrusive build label matching the loading screen's muted gold typography.
