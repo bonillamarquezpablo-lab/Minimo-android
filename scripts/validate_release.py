@@ -166,8 +166,9 @@ def main() -> None:
     for marker in ("BABYLON.Vector3.Project", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
-    if "root.computeWorldMatrix(true)" not in dialogue_runtime_source or "anchor.computeWorldMatrix(true)" not in dialogue_runtime_source or "RANGE_SQUARED" not in dialogue_runtime_source:
-        fail("Los diálogos deben refrescar solo la matriz del NPC visible y su ancla de cabeza, manteniendo la búsqueda por radio acotado.")
+    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "headForced": "anchor.computeWorldMatrix(true)" in dialogue_runtime_source, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "activeCameraRefresh": "const camera=s.scene.activeCamera||s.camera" in dialogue_runtime_source, "rootOverlay": "document.documentElement||document.body" in dialogue_runtime_source}
+    if not all(dialogue_matrix_contract.values()):
+        fail("Contrato de proyección de diálogos incompleto en el paquete: " + json.dumps(dialogue_matrix_contract, ensure_ascii=False))
     if "scene.meshes" in dialogue_runtime_source or "for(const npc of allNpcs)" in dialogue_runtime_source:
         fail("El diálogo no debe recorrer todas las mallas o todos los NPC cada fotograma.")
     if any(marker in dialogue_runtime_source for marker in ("new BABYLON.Mesh", "MeshBuilder", "requestAnimationFrame")):
