@@ -784,8 +784,14 @@ def main() -> None:
         raise SystemExit("No se encontró el marcador único: wildlife_cleanup_marker.")
     html = html.replace(wildlife_cleanup_marker, wildlife_cleanup_marker_replacement, 1)
 
+    wildlife_spawn_count_marker = "const animalCount=isPerformanceMode?0:(idx===0?3:0);"
+    wildlife_spawn_count_replacement = "const animalCount=idx===0?3:0;"
+    if html.count(wildlife_spawn_count_marker) != 1:
+        raise SystemExit("No se encontró el contador de fauna terrestre inicial.")
+    html = html.replace(wildlife_spawn_count_marker, wildlife_spawn_count_replacement, 1)
+
     wildlife_empty = "  if(!wildlifeSpawnSpecs.length)return 0;"
-    wildlife_required = "  if(isPerformanceMode&&!wildlifeSpawnSpecs.length)return 0;\n  if(!isPerformanceMode&&wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
+    wildlife_required = "  if(wildlifeSpawnSpecs.length!==3throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
     if html.count(wildlife_empty) != 1:
         raise SystemExit("No se encontró la comprobación de fauna inicial vacía.")
     html = html.replace(wildlife_empty, wildlife_required, 1)
@@ -1003,10 +1009,10 @@ function updateWildlife(dt){
     ordered_fauna = " setLoadingProgress(87,coastalReferenceMode?'Preparando la referencia costera…':'Preparando fauna de la isla inicial…');\n" + fauna_block + "\n setLoadingProgress(93,coastalReferenceMode?'Preparando shaders de costa…':'Preparando texturas y shaders de la zona inicial…');\n"
     html = html[:scene_marker_index] + ordered_fauna + html[scene_marker_index:]
 
-    # Quality fauna is a required startup dependency; Performance intentionally retains
+    # Terrestrial fauna is a required startup dependency in both profiles; Performance retains
     # its existing fauna-disabled profile and its existing rendering/resource choices.
     optional_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-optional'"
-    required_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-required'"
+    required_fauna_state = "fauna:'blocking-required'"
     if html.count(optional_fauna_state) != 1:
         raise SystemExit("No se encontró el estado de fauna opcional en el registro de arranque.")
     html = html.replace(optional_fauna_state, required_fauna_state, 1)
