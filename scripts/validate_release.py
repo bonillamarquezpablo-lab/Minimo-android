@@ -1098,7 +1098,7 @@ def main() -> None:
         fail("El helper buildShoreFoam sin uso debe desaparecer únicamente en el último hito.")
     if "sceneReadyTasks=[waitForInitialViewReadiness()]" not in index_html or "scene.whenReadyAsync()" in index_html or "getWaitingItemsCount" not in index_html or "mesh.isReady(true)" not in index_html or "stableReadyFrames" not in index_html or "sceneReadyTimeout" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html or "STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200" in index_html:
         fail("La preparación gráfica global debe estar acotada por timeout en ambos perfiles.")
-    if "const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;" not in index_html or "const grassBuildSliceBudgetMs=staging?(isTouchDevice?3.5:6):grassStartupSliceBudgetMs;" not in index_html or "await yieldGrassStartupIfNeeded(islandIndex,placed,want);" not in index_html:
+    if "const grassStartupSliceBudgetMs=isConstrainedMobile?8:12;" not in index_html or "const grassBuildSliceBudgetMs=staging?(isTouchDevice?(highHeadroomQualityMobile?7:3.5):6):grassStartupSliceBudgetMs;" not in index_html or "await yieldGrassStartupIfNeeded(islandIndex,placed,want);" not in index_html:
         fail("La generación de vegetación debe ceder el control según tiempo real de CPU.")
     if "const occupiedGridCells=new Uint8Array(gridSide*gridSide)" not in index_html or "const terrainHashCache=new Map()," not in index_html:
         fail("La generación del terreno y la hierba debe reutilizar buffers compactos y hashes deterministas.")
