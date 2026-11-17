@@ -364,6 +364,11 @@ def main() -> None:
         "wildlifeUpdateCpu",
         "positioningP99Ms",
         "readiness: Array.isArray(state.readiness)",
+        "rayleighTransmittance",
+        "airMass",
+        "aerosolPath",
+        "sunsetAlignment",
+        "mieG",
         "p95Ms:at(.95)",
         "p99Ms:at(.99)",
     )
