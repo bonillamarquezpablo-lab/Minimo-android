@@ -78,6 +78,10 @@ const firePoolBody = source.slice(source.indexOf('    _updateFirePool(state, foc
 assert.ok(source.includes('this._fireCandidates = this.firePool.map(() => ({ h: null, d2: Infinity }))'), 'Night-fire selection must allocate its candidate slots once.');
 assert.ok(firePoolBody.includes('const candidates = this._fireCandidates'), 'Night-fire selection must reuse its fixed candidate slots.');
 assert.doesNotMatch(firePoolBody, /fireHearths\.filter|\.sort\(/, 'Night-fire updates must not allocate filter/map/sort chains.');
+assert.ok(source.includes('light.includedOnlyMeshes = []') && source.includes('slot.light.includedOnlyMeshes = affectedMeshes'),
+  'Night hearth lights must be restricted to nearby meshes instead of illuminating the whole world.');
+assert.doesNotMatch(firePoolBody, /slot\\.light\\.setEnabled\\((?:true|false)\\)/,
+  'Dusk must not toggle pooled point lights and trigger scene-wide shader variant recompilation.');
 const updateBody = source.slice(source.indexOf('    update(dt, force) {'), source.indexOf('    dispose() {'));
 assert.doesNotMatch(updateBody, /new B\.(?:Vector3|Color3|Color4)|B\.Color3\.Lerp/, 'Atmosphere updates must reuse frame-hot vectors and colours.');
 assert.ok(source.includes("this._visualUpdateInterval = this.isTouchDevice"), "Mobile atmosphere visual updates must be paced to avoid redundant work.");
