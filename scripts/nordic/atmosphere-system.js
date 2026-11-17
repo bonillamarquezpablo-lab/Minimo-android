@@ -167,6 +167,8 @@
       this.paused = false;
       this.weather = 'clear';
       this.elapsedSeconds = 0;
+      // Unscaled wall-clock for maintenance cadence and hearth flicker when the solar clock is paused.
+      this._realElapsedSeconds = 0;
       this.windStrength = 1;
       this.baseFogDensity = Number(this.scene.fogDensity) || 0.00058;
       this.fogClimate = 'fjord';
@@ -676,7 +678,7 @@
 
     _updateFirePool(state, focus) {
       if (!this.firePool.length) return;
-      const now = this.elapsedSeconds;
+      const now = this._realElapsedSeconds;
       const selectionDue = now - this.lastFirePoolUpdate >= 0.75;
       if (!selectionDue) {
         for (const slot of this.firePool) {
@@ -754,6 +756,7 @@
     update(dt, force) {
       if (this.disposed || !this.scene) return null;
       const delta = clamp(Number(dt) || 0, 0, 0.10);
+      this._realElapsedSeconds += delta;
       if (!this.paused && delta > 0) {
         this.timeOfDay = AtmosphereSystem.advanceTime(
           this.timeOfDay, delta * this.speed, this.dayDurationSeconds, 1);
