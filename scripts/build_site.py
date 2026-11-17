@@ -679,8 +679,14 @@ def main() -> None:
         raise SystemExit("No se encontró el punto único para persistir cada GLB de fauna validado.")
     html = html.replace(wildlife_blob_ready, wildlife_blob_persist, 1)
 
+    animal_count_marker = "const animalCount=isPerformanceMode?0:(idx===0?3:0);"
+    animal_count_required = "const animalCount=idx===0?3:0;"
+    if html.count(animal_count_marker) != 1:
+        raise SystemExit("No se encontró el control único de población animal por perfil.")
+    html = html.replace(animal_count_marker, animal_count_required, 1)
+
     wildlife_empty = "  if(!wildlifeSpawnSpecs.length)return 0;"
-    wildlife_required = "  if(isPerformanceMode&&!wildlifeSpawnSpecs.length)return 0;\n  if(!isPerformanceMode&&wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
+    wildlife_required = "  if(wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
     if html.count(wildlife_empty) != 1:
         raise SystemExit("No se encontró la comprobación de fauna inicial vacía.")
     html = html.replace(wildlife_empty, wildlife_required, 1)
@@ -883,12 +889,12 @@ def main() -> None:
     # Quality fauna is a required startup dependency; Performance intentionally retains
     # its existing fauna-disabled profile and its existing rendering/resource choices.
     optional_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-optional'"
-    required_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-required'"
+    required_fauna_state = "fauna:'blocking-required'"
     if html.count(optional_fauna_state) != 1:
         raise SystemExit("No se encontró el estado de fauna opcional en el registro de arranque.")
     html = html.replace(optional_fauna_state, required_fauna_state, 1)
     fauna_result = "recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),faunaFailures.length?'optional-failed':'ready',{loaded:ambientFauna.length,gulls:ambientBirds.filter(b=>b.real).length,failures:faunaFailures});"
-    fauna_result_required = "recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),faunaFailures.length?'required-failed':'ready',{loaded:ambientFauna.length,requested:wildlifeSpawnSpecs.length,gulls:ambientBirds.filter(b=>b.real).length,requiredGulls:isPerformanceMode?0:5,failures:faunaFailures});"
+    fauna_result_required = "recordStartupTask('Fauna de la isla inicial',faunaStartedAt,performance.now(),faunaFailures.length?'required-failed':'ready',{loaded:ambientFauna.length,requested:wildlifeSpawnSpecs.length,gulls:ambientBirds.filter(b=>b.real).length,requiredGulls:5,failures:faunaFailures});"
     if html.count(fauna_result) != 1:
         raise SystemExit("No se encontró el resumen de la carga de fauna.")
     html = html.replace(fauna_result, fauna_result_required, 1)
