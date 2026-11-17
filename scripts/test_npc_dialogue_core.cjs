@@ -60,7 +60,7 @@ assert.ok(anchoredBubble&&Math.abs((anchoredBubble.left+bubbleSize.width/2)-180)
 const impossibleEdgeBubble=Core.placeBubble({x:4,y:4},bubbleSize,viewport,[]);
 assert.equal(impossibleEdgeBubble,null,
  "When no valid position exists beside the NPC, the bubble must hide rather than clamp to a screen corner.");
-const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
+const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),coreSource=fs.readFileSync("scripts/npc-dialogue-core.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
 assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);assert.match(runtime,/BABYLON\.Vector3\.Project/);assert.match(runtime,/Core\.POSITION_UPDATE_MS/);assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
 assert.doesNotMatch(runtime,/new BABYLON\.Mesh|MeshBuilder|new B\.Mesh|requestAnimationFrame/);
 assert.ok(runtime.includes("root.computeWorldMatrix(true)")&&runtime.includes("anchor.computeWorldMatrix(true)"),"Only the visible NPC root/head anchor is refreshed for screen-space projection.");
@@ -70,7 +70,7 @@ assert.match(runtime,/RANGE_SQUARED/,"Nearby NPC filtering must use squared dist
 assert.match(runtime,/function rootOf\(n\).*n\.parts&&n\.parts\.root\|\|n\.root\|\|n\.actor\|\|n/,"Dialogue must resolve NPCs stored as parts.root, root, actor, or a direct Babylon node.");assert.match(runtime,/function idOf\(n\).*root&&root\.name/,"NPC identity must fall back to the resolved Babylon node name.");assert.match(runtime,/Number\.isFinite\(Number\(s\.playerPosition\.x\)\)/,"Invalid player positions must not silently place NPCs at the world origin.");assert.match(runtime,/layer\.style\.zIndex="1200"/,"Dialogue bubbles must render above the gameplay HUD so speech remains visible.");assert.match(runtime,/function bubbleLimit\(\).*?\?2:MAX_BUBBLES/,"Mobile play must show no more than two simultaneous dialogue cards.");assert.match(runtime,/Core\.placeBubble\(\{x,y\}/,"Dialogue bubbles must be placed with collision avoidance.");
 assert.match(runtime,/Core\.viewportPointToLayer\(\{x:placement\.left,y:placement\.top\},layerRect\)/,"Bubble positions must be converted into overlay-local coordinates.");
 assert.match(runtime,/node\.style\.position="absolute"/,"Dialogue cards must use the overlay's own coordinate space.");
-assert.match(core,/function viewportPointToLayer\(point,layerRect\)/,"The coordinate transform must be independently testable.");
+assert.match(coreSource,/function viewportPointToLayer\(point,layerRect\)/,"The coordinate transform must be independently testable.");
 assert.match(runtime,/snapshotFailures/,"Dialogue runtime must surface bridge snapshot errors for diagnosis.");
 assert.match(runtime,/bridgeReportedActive/,"Dialogue runtime must expose the bridge's active-game signal.");
 assert.match(runtime,/missingRootCount/,"Dialogue diagnostics must count existing NPCs without a usable world position.");
