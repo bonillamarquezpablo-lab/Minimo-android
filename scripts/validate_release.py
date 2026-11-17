@@ -344,7 +344,7 @@ def main() -> None:
         "partialSkeletons=Array.from(scene.skeletons||[]).filter(skeleton=>!beforeSkeletons.has(skeleton))",
         "window.__ELSN_WILDLIFE_DIAGNOSTICS__",
         "complete:ambientFauna.length===wildlifeSpawnSpecs.length",
-        "const animalCount=isPerformanceMode?0:(idx===0?3:0)",
+        "const animalCount=idx===0?3:0",
     )
     missing_wildlife_runtime = [marker for marker in wildlife_runtime_markers if marker not in index_html]
     if missing_wildlife_runtime:
@@ -580,8 +580,8 @@ def main() -> None:
         fail("La barrera final debe publicar una lectura de recursos observados y bloquear la entrada si falta alguno.")
     if "MenuMusic.preload()" not in index_html or "GameplayMusic.preload()" not in index_html or "waitForPlayableAudio" not in index_html or "decodedToAudioBuffer:false" not in index_html:
         fail("Las dos pistas de música deben estar listas mediante HTMLAudio streaming sin decodificar buffers.")
-    if "fauna:isPerformanceMode?'disabled-performance':'blocking-required'" not in index_html:
-        fail("El perfil Calidad debe esperar la fauna; Rendimiento conserva su fauna desactivada.")
+    if "fauna:'blocking-required'" not in index_html:
+        fail("Calidad y Rendimiento deben esperar los tres animales terrestres completos; Rendimiento conserva su LOD y cadencia reducida.")
     if "window.__ELSN_STARTUP_RESOURCE_GATE__" not in index_html or "startupResourceFailures.length" not in index_html:
         fail("La entrada requiere una barrera final basada en el estado real de los recursos, no en el porcentaje visual.")
     if "startupResourceSnapshot.world.islands!==13" not in index_html or "startupResourceSnapshot.world.grassClumps<=0" not in index_html:
