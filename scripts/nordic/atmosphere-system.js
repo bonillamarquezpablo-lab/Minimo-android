@@ -644,28 +644,32 @@
     }
 
     _collectHearthMeshes(hearth) {
-      const meshes = this.scene && Array.isArray(this.scene.meshes) ? this.scene.meshes : [];
+      const scene = this.scene;
+      if (!scene) return [];
+      // Use Babylon's already-culled active list: no forced world-matrix rebuild or
+      // full 13-island mesh scan while the player is moving between hearths.
+      const active = typeof scene.getActiveMeshes === 'function' ? scene.getActiveMeshes() : null;
+      const source = active && Array.isArray(active.data)
+        ? active.data.slice(0, active.length)
+        : (Array.isArray(scene.meshes) ? scene.meshes : []);
       const included = [];
       const lightX = Number(hearth.x) || 0;
       const lightY = (Number(hearth.floorY) || 0) + 1.0;
       const lightZ = Number(hearth.z) || 0;
       const range = 11.5;
-      for (const mesh of meshes) {
+      for (const mesh of source) {
         if (!mesh || (typeof mesh.isDisposed === 'function' && mesh.isDisposed())) continue;
         if (typeof mesh.isEnabled === 'function' && !mesh.isEnabled()) continue;
         if (mesh.isVisible === false || (Number.isFinite(mesh.visibility) && mesh.visibility <= 0.001)) continue;
         if (!mesh.material || mesh.material.disableLighting === true) continue;
-        try {
-          if (typeof mesh.computeWorldMatrix === 'function') mesh.computeWorldMatrix(true);
-          const bounds = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
-          const sphere = bounds && bounds.boundingSphere;
-          const center = sphere && sphere.centerWorld;
-          if (!center) continue;
-          const extent = Math.max(0, Number(sphere.radiusWorld) || 0);
-          const dx = center.x - lightX, dy = center.y - lightY, dz = center.z - lightZ;
-          const reach = range + extent;
-          if (dx * dx + dy * dy + dz * dz <= reach * reach) included.push(mesh);
-        } catch (_) {}
+        const bounds = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
+        const sphere = bounds && bounds.boundingSphere;
+        const center = sphere && sphere.centerWorld;
+        if (!center) continue;
+        const extent = Math.max(0, Number(sphere.radiusWorld) || 0);
+        const dx = center.x - lightX, dy = center.y - lightY, dz = center.z - lightZ;
+        const reach = range + extent;
+        if (dx * dx + dy * dy + dz * dz <= reach * reach) included.push(mesh);
       }
       return included;
     }
@@ -673,46 +677,27 @@
     _updateFirePool(state, focus) {
       if (!this.firePool.length) return;
       const now = this.elapsedSeconds;
-      const nightOn = state.night > 0.18;
-      if (!nightOn) {
-        if (!this._firePoolNightActive) return;
-        this._firePoolNightActive = false;
-        this.lastFirePoolUpdate = now;
-        for (const slot of this.firePool) {
-          slot.source = null;
-          slot.light.intensity = 0;
-          slot.light.includedOnlyMeshes = [];
-          if (typeof slot.light.isEnabled === 'function' ? slot.light.isEnabled() : true) {
-            slot.light.setEnabled(false);
-          }
-        }
-        return;
-      }
-
-      // Keep the fire animation smooth, but only reselect and rescope lights about once a second.
-      const selectionDue = !this._firePoolNightActive || now - this.lastFirePoolUpdate >= 0.95;
+      const selectionDue = now - this.lastFirePoolUpdate >= 0.75;
       if (!selectionDue) {
         for (const slot of this.firePool) {
-          if (slot.source && !slot.source.extinguished) {
-            slot.light.intensity = (0.54 + Math.sin(now * 8.2 + slot.phase) * 0.12) * state.night;
-          } else {
-            slot.light.intensity = 0;
-            if (typeof slot.light.isEnabled === 'function' ? slot.light.isEnabled() : false) {
-              slot.light.setEnabled(false);
-            }
-          }
+          const hearth = slot.source;
+          const activeNight = state.night > 0.18 && hearth && !hearth.extinguished;
+          slot.light.intensity = activeNight
+            ? (0.54 + Math.sin(now * 8.2 + slot.phase) * 0.12) * state.night
+            : 0;
         }
         return;
       }
 
-      this._firePoolNightActive = true;
+      // Choose and register local fire lights during daytime too. The shader light
+      // layout is therefore already warm before dusk; twilight only raises intensity.
       this.lastFirePoolUpdate = now;
       const candidates = this._fireCandidates;
       for (const candidate of candidates) { candidate.h = null; candidate.d2 = Infinity; }
       const maxDistanceSquared = 52 * 52;
-      for (const h of this.fireHearths) {
-        if (!h || h.extinguished) continue;
-        const dx = h.x - focus.x, dz = h.z - focus.z, d2 = dx * dx + dz * dz;
+      for (const hearth of this.fireHearths) {
+        if (!hearth || hearth.extinguished) continue;
+        const dx = hearth.x - focus.x, dz = hearth.z - focus.z, d2 = dx * dx + dz * dz;
         if (d2 >= maxDistanceSquared) continue;
         let insertAt = -1;
         for (let i = 0; i < candidates.length; i++) {
@@ -723,7 +708,7 @@
           candidates[i].h = candidates[i - 1].h;
           candidates[i].d2 = candidates[i - 1].d2;
         }
-        candidates[insertAt].h = h;
+        candidates[insertAt].h = hearth;
         candidates[insertAt].d2 = d2;
       }
 
@@ -741,10 +726,28 @@
         if (slot.source !== hearth) {
           slot.source = hearth;
           light.position.set(hearth.x, hearth.floorY + 1.0, hearth.z);
-          light.includedOnlyMeshes = this._collectHearthMeshes(hearth);
         }
-        light.intensity = (0.54 + Math.sin(now * 8.2 + slot.phase) * 0.12) * state.night;
+        const nextMeshes = this._collectHearthMeshes(hearth);
+        const currentMeshes = light.includedOnlyMeshes || [];
+        let meshSetChanged = currentMeshes.length !== nextMeshes.length;
+        if (!meshSetChanged) {
+          for (let meshIndex = 0; meshIndex < nextMeshes.length; meshIndex++) {
+            if (currentMeshes[meshIndex] !== nextMeshes[meshIndex]) { meshSetChanged = true; break; }
+          }
+        }
+        if (meshSetChanged) light.includedOnlyMeshes = nextMeshes;
+        if (!nextMeshes.length) {
+          light.intensity = 0;
+          if (typeof light.isEnabled === 'function' ? light.isEnabled() : true) light.setEnabled(false);
+          continue;
+        }
+        // Enabling occurs as soon as the nearby hearth is selected, including daytime
+        // startup; there is no new shader light-slot transition at sunset.
         if (typeof light.isEnabled === 'function' ? !light.isEnabled() : true) light.setEnabled(true);
+        const activeNight = state.night > 0.18 && !hearth.extinguished;
+        light.intensity = activeNight
+          ? (0.54 + Math.sin(now * 8.2 + slot.phase) * 0.12) * state.night
+          : 0;
       }
     }
 
