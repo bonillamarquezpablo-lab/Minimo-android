@@ -6,7 +6,6 @@ const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const html=fs.readFileSync('index.html','utf8');
 for(const marker of [
   "if(!isPerformanceMode&&wildlifeSpawnSpecs.length!==3)",
-  "const animalCount=isPerformanceMode?0:(idx===0?3:0);",
   "required_fauna_state = \"fauna:'blocking-required'\"",
   "async function inspectGLBContainer(blob)",
   "async function waitForAnimalTextures(meshes,kind,timeoutMs=25000)",
@@ -28,6 +27,7 @@ assert.match(html,/file:'Deer\.glb'/);
 assert.match(html,/file:'Wolf\.glb'/);
 assert.match(html,/file:'Stag\.glb'/);
 assert.match(html,/function updateWildlife\(dt\)/);
+assert.match(html,/const animalCount=isPerformanceMode\?0:\(idx===0\?3:0\);/);
 assert.match(validator,/wildlife/i);
 assert.ok(builder.includes("requiredGulls:isPerformanceMode?0:5"),
   'The five physical gull instances must be validated before startup is released.');
