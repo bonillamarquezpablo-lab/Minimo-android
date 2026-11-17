@@ -758,7 +758,7 @@ def main() -> None:
         raise SystemExit("No se encontró el registro único de instancias de gaviota.")
     html = html.replace(gull_material_registry_marker, gull_material_registry_replacement, 1)
     gull_material_style_start = "const subduedMaterials=new Set();"
-    gull_material_style_end = "const bounds=boundsForMeshes(meshes)"
+    gull_material_style_end = "const sourceBounds=boundsForMeshes(meshes)"
     style_anchor = html.find(gull_rig_replacement)
     style_start = html.find(gull_material_style_start, style_anchor)
     style_end = html.find(gull_material_style_end, style_start)
