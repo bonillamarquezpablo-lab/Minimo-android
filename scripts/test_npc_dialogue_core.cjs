@@ -43,6 +43,9 @@ const ex=Core.chooseExchange({parts:{variant:0}},{parts:{variant:3}},()=>0,{nigh
 const repeatedExchange=Core.chooseExchange({parts:{variant:0}},{parts:{variant:3}},()=>0,{night:true},{rapport:3,exchanges:4,recentTopics:["night"]});assert.equal(repeatedExchange.length,4);assert.notEqual(repeatedExchange[0].topic,"night","Pair memory must steer NPCs away from repeating their last conversation topic.");assert.match(repeatedExchange[1].text,/noticias|oro|islas|viento/i);
 const input=Array.from({length:9},(_,i)=>({id:"npc-"+i,distance:i+1,priority:i===7?4:1,visible:true})),visible=Core.selectVisibleBubbles(input,99);assert.equal(visible.length,4);assert.equal(visible[0].id,"npc-7");assert.ok(visible.every(x=>x.distance<=26));assert.deepEqual(Core.selectVisibleBubbles(input,0),[]);
 const villageBrainSource=fs.readFileSync("scripts/npc-village-brain-core.js","utf8");assert.doesNotMatch(villageBrainSource,/new B\.Mesh|MeshBuilder|BABYLON\.Mesh|requestAnimationFrame/,"The NPC brain must stay pure and must not create meshes or a frame loop.");
+const localTopLeft=Core.viewportPointToLayer({x:128,y:246},{left:24,top:86,right:384,bottom:1086});
+assert.deepEqual(localTopLeft,{x:104,y:160},"Viewport CSS coordinates must be converted into overlay-local coordinates.");
+assert.equal(Core.viewportPointToLayer({x:1,y:2},{left:NaN,top:0}),null,"Invalid overlay geometry must fail closed.");
 const viewport={left:0,top:0,right:360,bottom:1000},bubbleSize={width:140,height:70};
 const bubbleA=Core.placeBubble({x:180,y:500},bubbleSize,viewport,[]);
 assert.ok(bubbleA,"A visible NPC must receive a bubble placement.");
@@ -65,6 +68,9 @@ assert.equal((runtime.match(/const camera=s\.scene\.activeCamera\|\|s\.camera;/g
 assert.doesNotMatch(runtime,/!s\.camera/,"A missing snapshot camera must not block projection when scene.activeCamera exists.");
 assert.match(runtime,/RANGE_SQUARED/,"Nearby NPC filtering must use squared distances before sorting the small visible set.");
 assert.match(runtime,/function rootOf\(n\).*n\.parts&&n\.parts\.root\|\|n\.root\|\|n\.actor\|\|n/,"Dialogue must resolve NPCs stored as parts.root, root, actor, or a direct Babylon node.");assert.match(runtime,/function idOf\(n\).*root&&root\.name/,"NPC identity must fall back to the resolved Babylon node name.");assert.match(runtime,/Number\.isFinite\(Number\(s\.playerPosition\.x\)\)/,"Invalid player positions must not silently place NPCs at the world origin.");assert.match(runtime,/layer\.style\.zIndex="1200"/,"Dialogue bubbles must render above the gameplay HUD so speech remains visible.");assert.match(runtime,/function bubbleLimit\(\).*?\?2:MAX_BUBBLES/,"Mobile play must show no more than two simultaneous dialogue cards.");assert.match(runtime,/Core\.placeBubble\(\{x,y\}/,"Dialogue bubbles must be placed with collision avoidance.");
+assert.match(runtime,/Core\.viewportPointToLayer\(\{x:placement\.left,y:placement\.top\},layerRect\)/,"Bubble positions must be converted into overlay-local coordinates.");
+assert.match(runtime,/node\.style\.position="absolute"/,"Dialogue cards must use the overlay's own coordinate space.");
+assert.match(core,/function viewportPointToLayer\(point,layerRect\)/,"The coordinate transform must be independently testable.");
 assert.match(runtime,/snapshotFailures/,"Dialogue runtime must surface bridge snapshot errors for diagnosis.");
 assert.match(runtime,/bridgeReportedActive/,"Dialogue runtime must expose the bridge's active-game signal.");
 assert.match(runtime,/missingRootCount/,"Dialogue diagnostics must count existing NPCs without a usable world position.");
