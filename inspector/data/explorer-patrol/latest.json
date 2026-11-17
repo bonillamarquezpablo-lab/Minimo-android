@@ -3,16 +3,16 @@
   "project": "EL SIN NOMBRE",
   "level": 1,
   "mode": "test-only-read-only-observer-patrol",
-  "startedAt": "2026-11-16T14:27:13.569Z",
-  "finishedAt": "2026-11-16T14:30:09.037Z",
-  "build": "0.6.308",
+  "startedAt": "2026-11-17T01:23:28.209Z",
+  "finishedAt": "2026-11-17T01:29:11.124Z",
+  "build": "0.6.313",
   "renderer": "Chromium headless + ANGLE SwiftShader",
   "query": "?test=1",
   "run": {
-    "id": "43885686123",
-    "url": "https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/runs/43885686123",
+    "id": "43995119876",
+    "url": "https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/runs/43995119876",
     "branch": "main",
-    "sha": "e69a82972d8a6976da21413da6afd8b48ae25db8"
+    "sha": "695f9225391967a678c166f12db943efd55b4367"
   },
   "world": {
     "expectedIslands": 13,
@@ -38,17 +38,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 42,
-            "average": 2062.89,
-            "p50": 93.3,
-            "p95": 9571,
-            "p99": 11622.6,
-            "max": 12136.2
+            "samples": 53,
+            "average": 2861.69,
+            "p50": 117.4,
+            "p95": 10081.7,
+            "p99": 15272.4,
+            "max": 56006.8
           },
-          "drawCalls": 885,
+          "drawCalls": 891,
           "worldUpdateMs": 0,
-          "renderCpuMs": 56.5,
-          "grassInstances": 20204,
+          "renderCpuMs": 37,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -74,60 +74,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 3654,
-          "foamVerticesChecked": 345,
+          "foamGeometryVerticesOutsideBand": 3726,
+          "foamVerticesChecked": 88,
           "foamVerticesOutsideBand": 0,
-          "foamMaxOffshoreDistanceMeters": 0.427,
-          "foamUpdateLastMs": 2.2,
-          "foamUpdateMaxMs": 2.2,
+          "foamMaxOffshoreDistanceMeters": 0.196,
+          "foamUpdateLastMs": 2,
+          "foamUpdateMaxMs": 2,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 40,
+          "foamBackwashActiveColumns": 16,
           "foamBackwashMeanVelocityMetersPerSecond": 0.9,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 40,
+          "foamRetreatResidueColumns": 16,
           "coastSolver": {
-            "samples": 1320,
-            "bracketFailures": 0,
-            "finiteResiduals": 1320,
-            "converged": 211,
+            "samples": 1309,
+            "bracketFailures": 10,
+            "finiteResiduals": 1299,
+            "converged": 209,
             "lastResidualMeters": 0.0014755427959427525,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 14.400000000372529,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 22.600000000049477,
             "lastMs": 0,
-            "maxMs": 0.7000000000116415,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1280,
+              "samples": 1293,
               "bracketFailures": 0,
-              "finiteResiduals": 1280,
-              "converged": 202,
+              "finiteResiduals": 1293,
+              "converged": 203,
               "lastResidualMeters": 0.0014755427959427525,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.200000000360887,
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 22.600000000049477,
               "lastMs": 0,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.011093750000281944
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.017478731631902146
             },
             "animated": {
-              "samples": 40,
-              "bracketFailures": 0,
-              "finiteResiduals": 40,
-              "converged": 9,
-              "lastResidualMeters": 0.004115546096132294,
-              "maxResidualMeters": 0.098774308600137,
-              "totalMs": 0.20000000001164153,
+              "samples": 16,
+              "bracketFailures": 10,
+              "finiteResiduals": 6,
+              "converged": 6,
+              "lastResidualMeters": 0.0035502882801445867,
+              "maxResidualMeters": 0.005048252217078442,
+              "totalMs": 0,
               "lastMs": 0,
-              "maxMs": 0.1000000000349246,
-              "meanMs": 0.005000000000291038
+              "maxMs": 0,
+              "meanMs": 0
             },
-            "meanMs": 0.010909090909373129,
+            "meanMs": 0.017265087853360946,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 40,
+              "activeColumns": 16,
               "meanMetersPerSecond": 0.9,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 40
+              "retreatResidueColumns": 16
             }
           },
           "renderedVertexAgreement": {
@@ -159,10 +159,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 40,
+            "activeColumns": 16,
             "meanMetersPerSecond": 0.9,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 40
+            "retreatResidueColumns": 16
           }
         },
         "water": null,
@@ -215,17 +215,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 43,
-            "average": 2151.53,
-            "p50": 123.3,
-            "p95": 9571,
-            "p99": 11622.6,
-            "max": 12136.2
+            "samples": 54,
+            "average": 3310.27,
+            "p50": 117.4,
+            "p95": 12710.6,
+            "p99": 27084.8,
+            "max": 56006.8
           },
-          "drawCalls": 2906,
-          "worldUpdateMs": 553.1,
-          "renderCpuMs": 101.2,
-          "grassInstances": 20204,
+          "drawCalls": 2503,
+          "worldUpdateMs": 32.7,
+          "renderCpuMs": 4092.8,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -251,60 +251,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 3462,
-          "foamVerticesChecked": 830,
+          "foamGeometryVerticesOutsideBand": 3510,
+          "foamVerticesChecked": 447,
           "foamVerticesOutsideBand": 0,
-          "foamMaxOffshoreDistanceMeters": 0.427,
-          "foamUpdateLastMs": 2.2,
-          "foamUpdateMaxMs": 4.1,
+          "foamMaxOffshoreDistanceMeters": 0.416,
+          "foamUpdateLastMs": 2,
+          "foamUpdateMaxMs": 2,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 104,
-          "foamBackwashMeanVelocityMetersPerSecond": 0.9,
+          "foamBackwashActiveColumns": 61,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.837,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 104,
+          "foamRetreatResidueColumns": 61,
           "coastSolver": {
-            "samples": 1386,
-            "bracketFailures": 0,
-            "finiteResiduals": 1386,
-            "converged": 261,
+            "samples": 1383,
+            "bracketFailures": 10,
+            "finiteResiduals": 1373,
+            "converged": 275,
             "lastResidualMeters": 0.0017893752357626136,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 14.80000000045402,
-            "lastMs": 0.1000000000349246,
-            "maxMs": 0.7000000000116415,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 23.000000000014552,
+            "lastMs": 0,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1282,
+              "samples": 1295,
               "bracketFailures": 0,
-              "finiteResiduals": 1282,
-              "converged": 204,
+              "finiteResiduals": 1295,
+              "converged": 205,
               "lastResidualMeters": 0.0017893752357626136,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.300000000395812,
-              "lastMs": 0.1000000000349246,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.01115444617815586
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 22.700000000026193,
+              "lastMs": 0,
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.017528957528977755
             },
             "animated": {
-              "samples": 104,
-              "bracketFailures": 0,
-              "finiteResiduals": 104,
-              "converged": 57,
-              "lastResidualMeters": 0.075757160198384,
-              "maxResidualMeters": 0.098774308600137,
-              "totalMs": 0.5000000000582077,
+              "samples": 88,
+              "bracketFailures": 10,
+              "finiteResiduals": 78,
+              "converged": 70,
+              "lastResidualMeters": 0.0074148090331326855,
+              "maxResidualMeters": 0.010011238475962692,
+              "totalMs": 0.29999999998835847,
               "lastMs": 0,
               "maxMs": 0.1000000000349246,
-              "meanMs": 0.0048076923082519965
+              "meanMs": 0.003409090908958619
             },
-            "meanMs": 0.010678210678538254,
+            "meanMs": 0.016630513376727805,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 104,
-              "meanMetersPerSecond": 0.9,
+              "activeColumns": 61,
+              "meanMetersPerSecond": 0.837,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 104
+              "retreatResidueColumns": 61
             }
           },
           "renderedVertexAgreement": {
@@ -336,10 +336,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 104,
-            "meanMetersPerSecond": 0.9,
+            "activeColumns": 61,
+            "meanMetersPerSecond": 0.837,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 104
+            "retreatResidueColumns": 61
           }
         },
         "water": null,
@@ -392,17 +392,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 45,
-            "average": 2083.22,
-            "p50": 142,
-            "p95": 9571,
-            "p99": 11622.6,
-            "max": 12136.2
+            "samples": 55,
+            "average": 3795.24,
+            "p50": 118.4,
+            "p95": 15272.4,
+            "p99": 29983.5,
+            "max": 56006.8
           },
-          "drawCalls": 451,
-          "worldUpdateMs": 45.2,
-          "renderCpuMs": 226.5,
-          "grassInstances": 20204,
+          "drawCalls": 1254,
+          "worldUpdateMs": 23.8,
+          "renderCpuMs": 3213.7,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -428,60 +428,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 2982,
-          "foamVerticesChecked": 1485,
+          "foamGeometryVerticesOutsideBand": 3318,
+          "foamVerticesChecked": 696,
           "foamVerticesOutsideBand": 0,
-          "foamMaxOffshoreDistanceMeters": 0.427,
+          "foamMaxOffshoreDistanceMeters": 0.416,
           "foamUpdateLastMs": 2,
-          "foamUpdateMaxMs": 4.9,
+          "foamUpdateMaxMs": 2.1,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 264,
-          "foamBackwashMeanVelocityMetersPerSecond": 0.9,
+          "foamBackwashActiveColumns": 125,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.869,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 264,
+          "foamRetreatResidueColumns": 125,
           "coastSolver": {
-            "samples": 1548,
-            "bracketFailures": 0,
-            "finiteResiduals": 1548,
-            "converged": 369,
+            "samples": 1478,
+            "bracketFailures": 38,
+            "finiteResiduals": 1440,
+            "converged": 295,
             "lastResidualMeters": 0.0014755427959427525,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 15.500000000465661,
-            "lastMs": 0.09999999997671694,
-            "maxMs": 0.7000000000116415,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 27.09999999999127,
+            "lastMs": 0,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1284,
+              "samples": 1326,
               "bracketFailures": 0,
-              "finiteResiduals": 1284,
-              "converged": 206,
+              "finiteResiduals": 1326,
+              "converged": 208,
               "lastResidualMeters": 0.0014755427959427525,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.400000000372529,
-              "lastMs": 0.09999999997671694,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.011214953271318169
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 26.50000000007276,
+              "lastMs": 0,
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.019984917043795444
             },
             "animated": {
-              "samples": 264,
-              "bracketFailures": 0,
-              "finiteResiduals": 264,
-              "converged": 163,
-              "lastResidualMeters": 0.0008989562098730697,
-              "maxResidualMeters": 0.098774308600137,
-              "totalMs": 1.1000000000931323,
+              "samples": 152,
+              "bracketFailures": 38,
+              "finiteResiduals": 114,
+              "converged": 87,
+              "lastResidualMeters": 0.002634776139964101,
+              "maxResidualMeters": 0.01516561690155488,
+              "totalMs": 0.5999999999185093,
               "lastMs": 0,
               "maxMs": 0.1000000000349246,
-              "meanMs": 0.00416666666701944
+              "meanMs": 0.0039473684205165085
             },
-            "meanMs": 0.010012919896941641,
+            "meanMs": 0.01833558863328232,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 264,
-              "meanMetersPerSecond": 0.9,
+              "activeColumns": 125,
+              "meanMetersPerSecond": 0.869,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 264
+              "retreatResidueColumns": 125
             }
           },
           "renderedVertexAgreement": {
@@ -513,10 +513,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 264,
-            "meanMetersPerSecond": 0.9,
+            "activeColumns": 125,
+            "meanMetersPerSecond": 0.869,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 264
+            "retreatResidueColumns": 125
           }
         },
         "water": null,
@@ -569,17 +569,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 46,
-            "average": 2045.18,
-            "p50": 142,
-            "p95": 9571,
-            "p99": 11622.6,
-            "max": 12136.2
+            "samples": 56,
+            "average": 3787.37,
+            "p50": 118.4,
+            "p95": 15272.4,
+            "p99": 29983.5,
+            "max": 56006.8
           },
-          "drawCalls": 451,
-          "worldUpdateMs": 17.2,
-          "renderCpuMs": 3479.5,
-          "grassInstances": 20204,
+          "drawCalls": 1254,
+          "worldUpdateMs": 26.8,
+          "renderCpuMs": 27954.4,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -605,60 +605,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 2622,
-          "foamVerticesChecked": 1795,
+          "foamGeometryVerticesOutsideBand": 3126,
+          "foamVerticesChecked": 1049,
           "foamVerticesOutsideBand": 0,
-          "foamMaxOffshoreDistanceMeters": 0.609,
-          "foamUpdateLastMs": 2.1,
-          "foamUpdateMaxMs": 4.9,
+          "foamMaxOffshoreDistanceMeters": 0.416,
+          "foamUpdateLastMs": 2,
+          "foamUpdateMaxMs": 2.3,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 384,
-          "foamBackwashMeanVelocityMetersPerSecond": 0.9,
+          "foamBackwashActiveColumns": 189,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.88,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 384,
+          "foamRetreatResidueColumns": 189,
           "coastSolver": {
-            "samples": 1670,
-            "bracketFailures": 0,
-            "finiteResiduals": 1670,
-            "converged": 411,
+            "samples": 1566,
+            "bracketFailures": 60,
+            "finiteResiduals": 1506,
+            "converged": 336,
             "lastResidualMeters": 0.0014755427959427525,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 16.200000000477303,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 27.59999999993306,
             "lastMs": 0,
-            "maxMs": 0.7000000000116415,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1286,
+              "samples": 1350,
               "bracketFailures": 0,
-              "finiteResiduals": 1286,
-              "converged": 208,
+              "finiteResiduals": 1350,
+              "converged": 210,
               "lastResidualMeters": 0.0014755427959427525,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.400000000372529,
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 26.7000000000844,
               "lastMs": 0,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.011197511664364331
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.019777777777840296
             },
             "animated": {
-              "samples": 384,
-              "bracketFailures": 0,
-              "finiteResiduals": 384,
-              "converged": 203,
-              "lastResidualMeters": 0.010627554538329698,
-              "maxResidualMeters": 0.19834883522698557,
-              "totalMs": 1.8000000001047738,
+              "samples": 216,
+              "bracketFailures": 60,
+              "finiteResiduals": 156,
+              "converged": 126,
+              "lastResidualMeters": null,
+              "maxResidualMeters": 0.01516561690155488,
+              "totalMs": 0.8999999998486601,
               "lastMs": 0,
               "maxMs": 0.1000000000349246,
-              "meanMs": 0.004687500000272848
+              "meanMs": 0.004166666665966019
             },
-            "meanMs": 0.00970059880268102,
+            "meanMs": 0.01762452107275419,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 384,
-              "meanMetersPerSecond": 0.9,
+              "activeColumns": 189,
+              "meanMetersPerSecond": 0.88,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 384
+              "retreatResidueColumns": 189
             }
           },
           "renderedVertexAgreement": {
@@ -690,10 +690,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 384,
-            "meanMetersPerSecond": 0.9,
+            "activeColumns": 189,
+            "meanMetersPerSecond": 0.88,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 384
+            "retreatResidueColumns": 189
           }
         },
         "water": null,
@@ -746,17 +746,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 47,
-            "average": 2078.53,
-            "p50": 145.7,
-            "p95": 9571,
-            "p99": 11622.6,
-            "max": 12136.2
+            "samples": 57,
+            "average": 4588.1,
+            "p50": 119.8,
+            "p95": 27084.8,
+            "p99": 49429.4,
+            "max": 56006.8
           },
-          "drawCalls": 1484,
-          "worldUpdateMs": 16.8,
-          "renderCpuMs": 7351.4,
-          "grassInstances": 20204,
+          "drawCalls": 1515,
+          "worldUpdateMs": 23.9,
+          "renderCpuMs": 16483,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -782,60 +782,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 2499,
-          "foamVerticesChecked": 2440,
+          "foamGeometryVerticesOutsideBand": 2814,
+          "foamVerticesChecked": 1321,
           "foamVerticesOutsideBand": 0,
-          "foamMaxOffshoreDistanceMeters": 0.746,
-          "foamUpdateLastMs": 2,
-          "foamUpdateMaxMs": 4.9,
+          "foamMaxOffshoreDistanceMeters": 0.416,
+          "foamUpdateLastMs": 2.1,
+          "foamUpdateMaxMs": 2.5,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 512,
-          "foamBackwashMeanVelocityMetersPerSecond": 0.9,
+          "foamBackwashActiveColumns": 293,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.887,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 512,
+          "foamRetreatResidueColumns": 293,
           "coastSolver": {
-            "samples": 1801,
-            "bracketFailures": 0,
-            "finiteResiduals": 1801,
-            "converged": 504,
+            "samples": 1724,
+            "bracketFailures": 111,
+            "finiteResiduals": 1613,
+            "converged": 387,
             "lastResidualMeters": 0.0018634829593957014,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 16.700000000477303,
-            "lastMs": 0.09999999997671694,
-            "maxMs": 0.7000000000116415,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 29.59999999993306,
+            "lastMs": 0,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1289,
+              "samples": 1404,
               "bracketFailures": 0,
-              "finiteResiduals": 1289,
-              "converged": 211,
+              "finiteResiduals": 1404,
+              "converged": 213,
               "lastResidualMeters": 0.0018634829593957014,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.500000000349246,
-              "lastMs": 0.09999999997671694,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.011249030256283356
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 27.90000000015425,
+              "lastMs": 0,
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.019871794871904738
             },
             "animated": {
-              "samples": 512,
-              "bracketFailures": 0,
-              "finiteResiduals": 512,
-              "converged": 293,
-              "lastResidualMeters": 0.0015311573659418931,
-              "maxResidualMeters": 0.19834883522698557,
-              "totalMs": 2.200000000128057,
+              "samples": 320,
+              "bracketFailures": 111,
+              "finiteResiduals": 209,
+              "converged": 174,
+              "lastResidualMeters": null,
+              "maxResidualMeters": 0.01516561690155488,
+              "totalMs": 1.6999999997788109,
               "lastMs": 0,
               "maxMs": 0.1000000000349246,
-              "meanMs": 0.004296875000250111
+              "meanMs": 0.005312499999308784
             },
-            "meanMs": 0.009272626318976847,
+            "meanMs": 0.017169373549845164,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 512,
-              "meanMetersPerSecond": 0.9,
+              "activeColumns": 293,
+              "meanMetersPerSecond": 0.887,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 512
+              "retreatResidueColumns": 293
             }
           },
           "renderedVertexAgreement": {
@@ -867,10 +867,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 512,
-            "meanMetersPerSecond": 0.9,
+            "activeColumns": 293,
+            "meanMetersPerSecond": 0.887,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 512
+            "retreatResidueColumns": 293
           }
         },
         "water": null,
@@ -923,17 +923,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 48,
-            "average": 2191.11,
-            "p50": 145.7,
-            "p95": 9571,
-            "p99": 11622.6,
-            "max": 12136.2
+            "samples": 58,
+            "average": 4796.31,
+            "p50": 119.8,
+            "p95": 27084.8,
+            "p99": 49429.4,
+            "max": 56006.8
           },
-          "drawCalls": 1484,
-          "worldUpdateMs": 15.6,
-          "renderCpuMs": 369,
-          "grassInstances": 20204,
+          "drawCalls": 1515,
+          "worldUpdateMs": 17.6,
+          "renderCpuMs": 7190.2,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -959,60 +959,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 2195,
-          "foamVerticesChecked": 3111,
+          "foamGeometryVerticesOutsideBand": 2646,
+          "foamVerticesChecked": 1465,
           "foamVerticesOutsideBand": 0,
-          "foamMaxOffshoreDistanceMeters": 0.771,
-          "foamUpdateLastMs": 2,
-          "foamUpdateMaxMs": 4.9,
+          "foamMaxOffshoreDistanceMeters": 0.74,
+          "foamUpdateLastMs": 2.1,
+          "foamUpdateMaxMs": 2.5,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 592,
-          "foamBackwashMeanVelocityMetersPerSecond": 0.858,
+          "foamBackwashActiveColumns": 349,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.889,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 588,
+          "foamRetreatResidueColumns": 349,
           "coastSolver": {
-            "samples": 1931,
-            "bracketFailures": 0,
-            "finiteResiduals": 1931,
-            "converged": 629,
+            "samples": 1838,
+            "bracketFailures": 167,
+            "finiteResiduals": 1671,
+            "converged": 389,
             "lastResidualMeters": 0.0014755427959427525,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 17.200000000477303,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 30.899999999746797,
             "lastMs": 0,
-            "maxMs": 0.7000000000116415,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1291,
+              "samples": 1462,
               "bracketFailures": 0,
-              "finiteResiduals": 1291,
-              "converged": 213,
+              "finiteResiduals": 1462,
+              "converged": 215,
               "lastResidualMeters": 0.0014755427959427525,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.500000000349246,
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 28.80000000000291,
               "lastMs": 0,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.011231603408481212
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.01969904240766273
             },
             "animated": {
-              "samples": 640,
-              "bracketFailures": 0,
-              "finiteResiduals": 640,
-              "converged": 416,
-              "lastResidualMeters": 0.0005337452421294575,
-              "maxResidualMeters": 0.19834883522698557,
-              "totalMs": 2.700000000128057,
+              "samples": 376,
+              "bracketFailures": 167,
+              "finiteResiduals": 209,
+              "converged": 174,
+              "lastResidualMeters": null,
+              "maxResidualMeters": 0.01516561690155488,
+              "totalMs": 2.0999999997438863,
               "lastMs": 0,
               "maxMs": 0.1000000000349246,
-              "meanMs": 0.0042187500002000885
+              "meanMs": 0.00558510638229757
             },
-            "meanMs": 0.008907301916352825,
+            "meanMs": 0.016811751904105984,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 592,
-              "meanMetersPerSecond": 0.858,
+              "activeColumns": 349,
+              "meanMetersPerSecond": 0.889,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 588
+              "retreatResidueColumns": 349
             }
           },
           "renderedVertexAgreement": {
@@ -1044,10 +1044,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 592,
-            "meanMetersPerSecond": 0.858,
+            "activeColumns": 349,
+            "meanMetersPerSecond": 0.889,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 588
+            "retreatResidueColumns": 349
           }
         },
         "water": null,
@@ -1100,17 +1100,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 49,
-            "average": 2155.23,
-            "p50": 175.3,
-            "p95": 9571,
-            "p99": 11622.6,
-            "max": 12136.2
+            "samples": 59,
+            "average": 4838.34,
+            "p50": 122.1,
+            "p95": 27084.8,
+            "p99": 49429.4,
+            "max": 56006.8
           },
-          "drawCalls": 1484,
-          "worldUpdateMs": 22.1,
-          "renderCpuMs": 17.7,
-          "grassInstances": 20204,
+          "drawCalls": 1515,
+          "worldUpdateMs": 21.6,
+          "renderCpuMs": 25.6,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -1136,60 +1136,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 1379,
-          "foamVerticesChecked": 3786,
+          "foamGeometryVerticesOutsideBand": 2535,
+          "foamVerticesChecked": 1765,
           "foamVerticesOutsideBand": 0,
-          "foamMaxOffshoreDistanceMeters": 0.771,
-          "foamUpdateLastMs": 2.1,
-          "foamUpdateMaxMs": 4.9,
+          "foamMaxOffshoreDistanceMeters": 0.764,
+          "foamUpdateLastMs": 2.2,
+          "foamUpdateMaxMs": 2.5,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 674,
-          "foamBackwashMeanVelocityMetersPerSecond": 0.822,
+          "foamBackwashActiveColumns": 397,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.89,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 667,
+          "foamRetreatResidueColumns": 397,
           "coastSolver": {
-            "samples": 2205,
-            "bracketFailures": 0,
-            "finiteResiduals": 2205,
-            "converged": 836,
+            "samples": 1937,
+            "bracketFailures": 215,
+            "finiteResiduals": 1722,
+            "converged": 392,
             "lastResidualMeters": 0.0015120169859133004,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 17.700000000419095,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 31.999999999665306,
             "lastMs": 0,
-            "maxMs": 0.7000000000116415,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1293,
+              "samples": 1513,
               "bracketFailures": 0,
-              "finiteResiduals": 1293,
-              "converged": 215,
+              "finiteResiduals": 1513,
+              "converged": 218,
               "lastResidualMeters": 0.0015120169859133004,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.500000000349246,
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 29.799999999944703,
               "lastMs": 0,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.01121423047204118
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.01969596827491388
             },
             "animated": {
-              "samples": 912,
-              "bracketFailures": 0,
-              "finiteResiduals": 912,
-              "converged": 621,
-              "lastResidualMeters": 0.0006860825309450008,
-              "maxResidualMeters": 0.19834883522698557,
-              "totalMs": 3.200000000069849,
-              "lastMs": 0,
+              "samples": 424,
+              "bracketFailures": 215,
+              "finiteResiduals": 209,
+              "converged": 174,
+              "lastResidualMeters": null,
+              "maxResidualMeters": 0.01516561690155488,
+              "totalMs": 2.1999999997206032,
+              "lastMs": 0.09999999997671694,
               "maxMs": 0.1000000000349246,
-              "meanMs": 0.0035087719299011504
+              "meanMs": 0.005188679244624064
             },
-            "meanMs": 0.008027210884543808,
+            "meanMs": 0.016520392359145743,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 674,
-              "meanMetersPerSecond": 0.822,
+              "activeColumns": 397,
+              "meanMetersPerSecond": 0.89,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 667
+              "retreatResidueColumns": 397
             }
           },
           "renderedVertexAgreement": {
@@ -1221,10 +1221,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 674,
-            "meanMetersPerSecond": 0.822,
+            "activeColumns": 397,
+            "meanMetersPerSecond": 0.89,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 667
+            "retreatResidueColumns": 397
           }
         },
         "water": null,
@@ -1277,17 +1277,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 50,
-            "average": 2500.58,
-            "p50": 175.3,
-            "p95": 11201.6,
-            "p99": 12136.2,
-            "max": 19422.7
+            "samples": 60,
+            "average": 4909,
+            "p50": 122.1,
+            "p95": 27084.8,
+            "p99": 49429.4,
+            "max": 56006.8
           },
-          "drawCalls": 5447,
-          "worldUpdateMs": 14,
-          "renderCpuMs": 411.1,
-          "grassInstances": 20204,
+          "drawCalls": 4892,
+          "worldUpdateMs": 28.7,
+          "renderCpuMs": 8131.7,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -1313,60 +1313,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 477,
-          "foamVerticesChecked": 5665,
+          "foamGeometryVerticesOutsideBand": 2503,
+          "foamVerticesChecked": 1926,
           "foamVerticesOutsideBand": 0,
-          "foamMaxOffshoreDistanceMeters": 0.771,
-          "foamUpdateLastMs": 0.8,
-          "foamUpdateMaxMs": 4.9,
+          "foamMaxOffshoreDistanceMeters": 0.764,
+          "foamUpdateLastMs": 2,
+          "foamUpdateMaxMs": 2.8,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 1019,
-          "foamBackwashMeanVelocityMetersPerSecond": 0.848,
+          "foamBackwashActiveColumns": 461,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.892,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 1012,
+          "foamRetreatResidueColumns": 461,
           "coastSolver": {
-            "samples": 2553,
-            "bracketFailures": 0,
-            "finiteResiduals": 2553,
-            "converged": 1052,
+            "samples": 2035,
+            "bracketFailures": 247,
+            "finiteResiduals": 1788,
+            "converged": 402,
             "lastResidualMeters": 0.0013950291872646403,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 18.500000000407454,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 32.799999999653664,
             "lastMs": 0,
-            "maxMs": 0.7000000000116415,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1295,
+              "samples": 1547,
               "bracketFailures": 0,
-              "finiteResiduals": 1295,
-              "converged": 217,
+              "finiteResiduals": 1547,
+              "converged": 220,
               "lastResidualMeters": 0.0013950291872646403,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.500000000349246,
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 30.39999999992142,
               "lastMs": 0,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.011196911197180885
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.019650937297945325
             },
             "animated": {
-              "samples": 1258,
-              "bracketFailures": 0,
-              "finiteResiduals": 1258,
-              "converged": 835,
-              "lastResidualMeters": 0.06949937087417728,
-              "maxResidualMeters": 0.19834883522698557,
-              "totalMs": 4.000000000058208,
+              "samples": 488,
+              "bracketFailures": 247,
+              "finiteResiduals": 241,
+              "converged": 182,
+              "lastResidualMeters": 0.023776099241166665,
+              "maxResidualMeters": 0.03495425677560719,
+              "totalMs": 2.3999999997322448,
               "lastMs": 0,
               "maxMs": 0.1000000000349246,
-              "meanMs": 0.003179650238520038
+              "meanMs": 0.004918032786336567
             },
-            "meanMs": 0.007246376811753801,
+            "meanMs": 0.01611793611776593,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 1019,
-              "meanMetersPerSecond": 0.848,
+              "activeColumns": 461,
+              "meanMetersPerSecond": 0.892,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 1012
+              "retreatResidueColumns": 461
             }
           },
           "renderedVertexAgreement": {
@@ -1398,10 +1398,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 1019,
-            "meanMetersPerSecond": 0.848,
+            "activeColumns": 461,
+            "meanMetersPerSecond": 0.892,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 1012
+            "retreatResidueColumns": 461
           }
         },
         "water": null,
@@ -1454,17 +1454,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 51,
-            "average": 2460.49,
-            "p50": 241.8,
-            "p95": 11201.6,
-            "p99": 12136.2,
-            "max": 19422.7
+            "samples": 63,
+            "average": 4807.52,
+            "p50": 122.1,
+            "p95": 16663.9,
+            "p99": 49429.4,
+            "max": 56006.8
           },
-          "drawCalls": 5447,
-          "worldUpdateMs": 15.8,
-          "renderCpuMs": 6.8,
-          "grassInstances": 20204,
+          "drawCalls": 90,
+          "worldUpdateMs": 18.3,
+          "renderCpuMs": 27,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -1490,60 +1490,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 477,
-          "foamVerticesChecked": 5782,
+          "foamGeometryVerticesOutsideBand": 1895,
+          "foamVerticesChecked": 3158,
           "foamVerticesOutsideBand": 0,
           "foamMaxOffshoreDistanceMeters": 0.771,
-          "foamUpdateLastMs": 2.3,
-          "foamUpdateMaxMs": 4.9,
+          "foamUpdateLastMs": 2,
+          "foamUpdateMaxMs": 2.8,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 1019,
-          "foamBackwashMeanVelocityMetersPerSecond": 0.847,
+          "foamBackwashActiveColumns": 716,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.886,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 1012,
+          "foamRetreatResidueColumns": 715,
           "coastSolver": {
-            "samples": 2723,
-            "bracketFailures": 0,
-            "finiteResiduals": 2723,
-            "converged": 1096,
+            "samples": 2293,
+            "bracketFailures": 247,
+            "finiteResiduals": 2046,
+            "converged": 559,
             "lastResidualMeters": 0.0015120169859133004,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 19.00000000052387,
-            "lastMs": 0,
-            "maxMs": 0.7000000000116415,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 33.8999999997468,
+            "lastMs": 0.09999999997671694,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1297,
+              "samples": 1549,
               "bracketFailures": 0,
-              "finiteResiduals": 1297,
-              "converged": 219,
+              "finiteResiduals": 1549,
+              "converged": 222,
               "lastResidualMeters": 0.0015120169859133004,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.500000000349246,
-              "lastMs": 0,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.011179645335658633
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 30.499999999898137,
+              "lastMs": 0.09999999997671694,
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.019690122659714742
             },
             "animated": {
-              "samples": 1426,
-              "bracketFailures": 0,
-              "finiteResiduals": 1426,
-              "converged": 877,
-              "lastResidualMeters": 0.00837875490652823,
-              "maxResidualMeters": 0.20356971762868695,
-              "totalMs": 4.500000000174623,
+              "samples": 744,
+              "bracketFailures": 247,
+              "finiteResiduals": 497,
+              "converged": 337,
+              "lastResidualMeters": 0.004591391238424614,
+              "maxResidualMeters": 0.05077867146294418,
+              "totalMs": 3.39999999984866,
               "lastMs": 0,
               "maxMs": 0.1000000000349246,
-              "meanMs": 0.0031556802245263837
+              "meanMs": 0.004569892472914866
             },
-            "meanMs": 0.006977598237430727,
+            "meanMs": 0.014784125599540688,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 1019,
-              "meanMetersPerSecond": 0.847,
+              "activeColumns": 716,
+              "meanMetersPerSecond": 0.886,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 1012
+              "retreatResidueColumns": 715
             }
           },
           "renderedVertexAgreement": {
@@ -1575,10 +1575,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 1019,
-            "meanMetersPerSecond": 0.847,
+            "activeColumns": 716,
+            "meanMetersPerSecond": 0.886,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 1012
+            "retreatResidueColumns": 715
           }
         },
         "water": null,
@@ -1631,17 +1631,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 52,
-            "average": 2550.47,
-            "p50": 241.8,
-            "p95": 11201.6,
-            "p99": 12136.2,
-            "max": 19422.7
+            "samples": 63,
+            "average": 4807.52,
+            "p50": 122.1,
+            "p95": 16663.9,
+            "p99": 49429.4,
+            "max": 56006.8
           },
-          "drawCalls": 2061,
-          "worldUpdateMs": 14.2,
-          "renderCpuMs": 11040.1,
-          "grassInstances": 20204,
+          "drawCalls": 90,
+          "worldUpdateMs": 18.3,
+          "renderCpuMs": 27,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -1667,60 +1667,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 488,
-          "foamVerticesChecked": 5885,
+          "foamGeometryVerticesOutsideBand": 1511,
+          "foamVerticesChecked": 3349,
           "foamVerticesOutsideBand": 0,
           "foamMaxOffshoreDistanceMeters": 0.771,
-          "foamUpdateLastMs": 2.1,
-          "foamUpdateMaxMs": 4.9,
+          "foamUpdateLastMs": 2,
+          "foamUpdateMaxMs": 2.8,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 1019,
-          "foamBackwashMeanVelocityMetersPerSecond": 0.805,
+          "foamBackwashActiveColumns": 718,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.884,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 1012,
+          "foamRetreatResidueColumns": 717,
           "coastSolver": {
-            "samples": 3014,
-            "bracketFailures": 0,
-            "finiteResiduals": 3014,
-            "converged": 1206,
+            "samples": 2423,
+            "bracketFailures": 247,
+            "finiteResiduals": 2176,
+            "converged": 665,
             "lastResidualMeters": 0.0015120169859133004,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 20.800000000628643,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 34.29999999971187,
             "lastMs": 0,
-            "maxMs": 0.7000000000116415,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1300,
+              "samples": 1551,
               "bracketFailures": 0,
-              "finiteResiduals": 1300,
-              "converged": 222,
+              "finiteResiduals": 1551,
+              "converged": 224,
               "lastResidualMeters": 0.0015120169859133004,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.600000000325963,
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 30.499999999898137,
               "lastMs": 0,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.011230769231019972
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.0196647324306242
             },
             "animated": {
-              "samples": 1714,
-              "bracketFailures": 0,
-              "finiteResiduals": 1714,
-              "converged": 984,
-              "lastResidualMeters": 0.008913861470911777,
-              "maxResidualMeters": 0.20356971762868695,
-              "totalMs": 6.20000000030268,
+              "samples": 872,
+              "bracketFailures": 247,
+              "finiteResiduals": 625,
+              "converged": 441,
+              "lastResidualMeters": 0.002532772917435283,
+              "maxResidualMeters": 0.05077867146294418,
+              "totalMs": 3.7999999998137355,
               "lastMs": 0,
               "maxMs": 0.1000000000349246,
-              "meanMs": 0.003617269545100747
+              "meanMs": 0.004357798164924009
             },
-            "meanMs": 0.006901128069219855,
+            "meanMs": 0.014156004952419261,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 1019,
-              "meanMetersPerSecond": 0.805,
+              "activeColumns": 718,
+              "meanMetersPerSecond": 0.884,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 1012
+              "retreatResidueColumns": 717
             }
           },
           "renderedVertexAgreement": {
@@ -1752,10 +1752,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 1019,
-            "meanMetersPerSecond": 0.805,
+            "activeColumns": 718,
+            "meanMetersPerSecond": 0.884,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 1012
+            "retreatResidueColumns": 717
           }
         },
         "water": null,
@@ -1808,17 +1808,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 53,
-            "average": 2887.38,
-            "p50": 244.7,
-            "p95": 11622.6,
-            "p99": 19422.7,
-            "max": 20406.9
+            "samples": 64,
+            "average": 4974.87,
+            "p50": 122.1,
+            "p95": 16663.9,
+            "p99": 49429.4,
+            "max": 56006.8
           },
-          "drawCalls": 5888,
-          "worldUpdateMs": 27,
-          "renderCpuMs": 2173.5,
-          "grassInstances": 20204,
+          "drawCalls": 7538,
+          "worldUpdateMs": 16.7,
+          "renderCpuMs": 193.8,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -1844,60 +1844,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 490,
-          "foamVerticesChecked": 5887,
+          "foamGeometryVerticesOutsideBand": 1075,
+          "foamVerticesChecked": 3788,
           "foamVerticesOutsideBand": 0,
           "foamMaxOffshoreDistanceMeters": 0.771,
           "foamUpdateLastMs": 2,
-          "foamUpdateMaxMs": 4.9,
+          "foamUpdateMaxMs": 2.8,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 1014,
-          "foamBackwashMeanVelocityMetersPerSecond": 0.782,
+          "foamBackwashActiveColumns": 718,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.884,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 1012,
+          "foamRetreatResidueColumns": 717,
           "coastSolver": {
-            "samples": 3384,
-            "bracketFailures": 0,
-            "finiteResiduals": 3384,
-            "converged": 1482,
+            "samples": 2617,
+            "bracketFailures": 247,
+            "finiteResiduals": 2370,
+            "converged": 800,
             "lastResidualMeters": 0.0015120169859133004,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 21.400000000663567,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 35.19999999967695,
             "lastMs": 0,
-            "maxMs": 0.7000000000116415,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1302,
+              "samples": 1553,
               "bracketFailures": 0,
-              "finiteResiduals": 1302,
-              "converged": 224,
+              "finiteResiduals": 1553,
+              "converged": 226,
               "lastResidualMeters": 0.0015120169859133004,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.700000000360887,
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 30.599999999874854,
               "lastMs": 0,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.01129032258092234
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.01970379909843841
             },
             "animated": {
-              "samples": 2082,
-              "bracketFailures": 0,
-              "finiteResiduals": 2082,
-              "converged": 1258,
-              "lastResidualMeters": 0.010465730817303454,
-              "maxResidualMeters": 0.20356971762868695,
-              "totalMs": 6.70000000030268,
+              "samples": 1064,
+              "bracketFailures": 247,
+              "finiteResiduals": 817,
+              "converged": 574,
+              "lastResidualMeters": 0.01578999978676468,
+              "maxResidualMeters": 0.05077867146294418,
+              "totalMs": 4.599999999802094,
               "lastMs": 0,
               "maxMs": 0.1000000000349246,
-              "meanMs": 0.0032180595582625743
+              "meanMs": 0.004323308270490689
             },
-            "meanMs": 0.006323877068754009,
+            "meanMs": 0.01345051585772906,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 1014,
-              "meanMetersPerSecond": 0.782,
+              "activeColumns": 718,
+              "meanMetersPerSecond": 0.884,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 1012
+              "retreatResidueColumns": 717
             }
           },
           "renderedVertexAgreement": {
@@ -1929,10 +1929,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 1014,
-            "meanMetersPerSecond": 0.782,
+            "activeColumns": 718,
+            "meanMetersPerSecond": 0.884,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 1012
+            "retreatResidueColumns": 717
           }
         },
         "water": null,
@@ -1985,17 +1985,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 56,
-            "average": 2773.62,
-            "p50": 241.8,
-            "p95": 11622.6,
-            "p99": 19422.7,
-            "max": 20406.9
+            "samples": 65,
+            "average": 4902.43,
+            "p50": 124.4,
+            "p95": 16663.9,
+            "p99": 49429.4,
+            "max": 56006.8
           },
-          "drawCalls": 48,
-          "worldUpdateMs": 23.8,
-          "renderCpuMs": 6.5,
-          "grassInstances": 20204,
+          "drawCalls": 7538,
+          "worldUpdateMs": 28,
+          "renderCpuMs": 10.4,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -2021,60 +2021,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 490,
-          "foamVerticesChecked": 5982,
+          "foamGeometryVerticesOutsideBand": 499,
+          "foamVerticesChecked": 4541,
           "foamVerticesOutsideBand": 0,
           "foamMaxOffshoreDistanceMeters": 0.771,
-          "foamUpdateLastMs": 2.1,
+          "foamUpdateLastMs": 5,
           "foamUpdateMaxMs": 5,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 1043,
-          "foamBackwashMeanVelocityMetersPerSecond": 0.658,
+          "foamBackwashActiveColumns": 907,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.885,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 1036,
+          "foamRetreatResidueColumns": 906,
           "coastSolver": {
-            "samples": 3948,
-            "bracketFailures": 0,
-            "finiteResiduals": 3948,
-            "converged": 1680,
+            "samples": 2841,
+            "bracketFailures": 276,
+            "finiteResiduals": 2565,
+            "converged": 907,
             "lastResidualMeters": 0.0015120169859133004,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 25.900000000779983,
-            "lastMs": 0,
-            "maxMs": 2.599999999976717,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 36.9999999996071,
+            "lastMs": 0.1000000000349246,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1304,
+              "samples": 1585,
               "bracketFailures": 0,
-              "finiteResiduals": 1304,
-              "converged": 226,
+              "finiteResiduals": 1585,
+              "converged": 229,
               "lastResidualMeters": 0.0015120169859133004,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.700000000360887,
-              "lastMs": 0,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.011273006135246079
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 31.299999999886495,
+              "lastMs": 0.1000000000349246,
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.019747634069329018
             },
             "animated": {
-              "samples": 2644,
-              "bracketFailures": 0,
-              "finiteResiduals": 2644,
-              "converged": 1454,
-              "lastResidualMeters": 0.017773546773191082,
-              "maxResidualMeters": 0.20356971762868695,
-              "totalMs": 11.200000000419095,
+              "samples": 1256,
+              "bracketFailures": 276,
+              "finiteResiduals": 980,
+              "converged": 678,
+              "lastResidualMeters": null,
+              "maxResidualMeters": 0.14173044804637114,
+              "totalMs": 5.699999999720603,
               "lastMs": 0,
-              "maxMs": 2.599999999976717,
-              "meanMs": 0.004236006051595725
+              "maxMs": 0.1000000000349246,
+              "meanMs": 0.004538216560287104
             },
-            "meanMs": 0.0065602836881408265,
+            "meanMs": 0.013023583245197852,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 1043,
-              "meanMetersPerSecond": 0.658,
+              "activeColumns": 907,
+              "meanMetersPerSecond": 0.885,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 1036
+              "retreatResidueColumns": 906
             }
           },
           "renderedVertexAgreement": {
@@ -2106,10 +2106,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 1043,
-            "meanMetersPerSecond": 0.658,
+            "activeColumns": 907,
+            "meanMetersPerSecond": 0.885,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 1036
+            "retreatResidueColumns": 906
           }
         },
         "water": null,
@@ -2162,17 +2162,17 @@
         "runtime": {
           "fps": 0,
           "frameTimingMs": {
-            "samples": 56,
-            "average": 2773.62,
-            "p50": 241.8,
-            "p95": 11622.6,
-            "p99": 19422.7,
-            "max": 20406.9
+            "samples": 65,
+            "average": 4902.43,
+            "p50": 124.4,
+            "p95": 16663.9,
+            "p99": 49429.4,
+            "max": 56006.8
           },
-          "drawCalls": 48,
-          "worldUpdateMs": 23.8,
-          "renderCpuMs": 6.5,
-          "grassInstances": 20204,
+          "drawCalls": 7538,
+          "worldUpdateMs": 28,
+          "renderCpuMs": 10.4,
+          "grassInstances": 20153,
           "grassBatches": 2,
           "grassDebugClumpCount": null,
           "grassDebugBatchCount": null,
@@ -2198,60 +2198,60 @@
           "foamValidIntersections": 1257,
           "foamIntersectionCapacity": 1257,
           "foamGeometryVerticesChecked": 32708,
-          "foamGeometryVerticesOutsideBand": 490,
-          "foamVerticesChecked": 5978,
+          "foamGeometryVerticesOutsideBand": 493,
+          "foamVerticesChecked": 4545,
           "foamVerticesOutsideBand": 0,
           "foamMaxOffshoreDistanceMeters": 0.771,
-          "foamUpdateLastMs": 4.9,
+          "foamUpdateLastMs": 0.7,
           "foamUpdateMaxMs": 5,
           "foamBackwashSamples": 1257,
-          "foamBackwashActiveColumns": 1043,
-          "foamBackwashMeanVelocityMetersPerSecond": 0.653,
+          "foamBackwashActiveColumns": 908,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.885,
           "foamBackwashPeakVelocityMetersPerSecond": 0.9,
-          "foamRetreatResidueColumns": 1036,
+          "foamRetreatResidueColumns": 907,
           "coastSolver": {
-            "samples": 4038,
-            "bracketFailures": 0,
-            "finiteResiduals": 4038,
-            "converged": 1697,
+            "samples": 2847,
+            "bracketFailures": 278,
+            "finiteResiduals": 2569,
+            "converged": 909,
             "lastResidualMeters": 0.0015120169859133004,
-            "maxResidualMeters": 0.3908238484532478,
-            "totalMs": 29.500000000814907,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 37.09999999964202,
             "lastMs": 0,
-            "maxMs": 3,
+            "maxMs": 3.099999999991269,
             "initial": {
-              "samples": 1306,
+              "samples": 1589,
               "bracketFailures": 0,
-              "finiteResiduals": 1306,
-              "converged": 228,
+              "finiteResiduals": 1589,
+              "converged": 231,
               "lastResidualMeters": 0.0015120169859133004,
-              "maxResidualMeters": 0.3908238484532478,
-              "totalMs": 14.700000000360887,
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 31.39999999992142,
               "lastMs": 0,
-              "maxMs": 0.7000000000116415,
-              "meanMs": 0.011255742726156882
+              "maxMs": 3.099999999991269,
+              "meanMs": 0.01976085588415445
             },
             "animated": {
-              "samples": 2732,
-              "bracketFailures": 0,
-              "finiteResiduals": 2732,
-              "converged": 1469,
-              "lastResidualMeters": 0.02421635506930317,
-              "maxResidualMeters": 0.20356971762868695,
-              "totalMs": 14.80000000045402,
+              "samples": 1258,
+              "bracketFailures": 278,
+              "finiteResiduals": 980,
+              "converged": 678,
+              "lastResidualMeters": null,
+              "maxResidualMeters": 0.14173044804637114,
+              "totalMs": 5.699999999720603,
               "lastMs": 0,
-              "maxMs": 3,
-              "meanMs": 0.0054172767205175765
+              "maxMs": 0.1000000000349246,
+              "meanMs": 0.004531001589603023
             },
-            "meanMs": 0.007305596830315728,
+            "meanMs": 0.013031260976340718,
             "physicalBackwashVelocity": {
               "implemented": true,
               "unit": "m/s",
               "samples": 1257,
-              "activeColumns": 1043,
-              "meanMetersPerSecond": 0.653,
+              "activeColumns": 908,
+              "meanMetersPerSecond": 0.885,
               "peakMetersPerSecond": 0.9,
-              "retreatResidueColumns": 1036
+              "retreatResidueColumns": 907
             }
           },
           "renderedVertexAgreement": {
@@ -2283,10 +2283,10 @@
             "implemented": true,
             "unit": "m/s",
             "samples": 1257,
-            "activeColumns": 1043,
-            "meanMetersPerSecond": 0.653,
+            "activeColumns": 908,
+            "meanMetersPerSecond": 0.885,
             "peakMetersPerSecond": 0.9,
-            "retreatResidueColumns": 1036
+            "retreatResidueColumns": 907
           }
         },
         "water": null,
@@ -2324,7 +2324,7 @@
   "startup": {
     "worldReady": true,
     "bootFailed": false,
-    "bodyClass": "booting",
+    "bodyClass": "intro-open",
     "loadingText": "Mundo preparado.",
     "loadingHelp": null
   },
@@ -2763,29 +2763,29 @@
         "statusText": "Partial Content"
       },
       {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
         "status": 200,
         "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
         "status": 206,
         "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
-        "status": 200,
-        "statusText": "OK"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
         "status": 200,
         "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
@@ -2798,22 +2798,12 @@
         "statusText": "OK"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
         "status": 200,
         "statusText": "OK"
       },
@@ -2823,22 +2813,32 @@
         "statusText": "OK"
       },
       {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
-        "status": 206,
-        "statusText": "Partial Content"
+        "status": 200,
+        "statusText": "OK"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -2916,16 +2916,16 @@
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
         "status": 200,
         "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
         "status": 200,
         "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
@@ -2968,7 +2968,7 @@
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -2979,16 +2979,16 @@
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -3013,12 +3013,27 @@
         "statusText": "Partial Content"
       },
       {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -3038,12 +3053,7 @@
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -3053,17 +3063,22 @@
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -3078,37 +3093,7 @@
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -3119,6 +3104,21 @@
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
         "status": 206,
         "statusText": "Partial Content"
       }
@@ -3129,7 +3129,47 @@
         "error": "net::ERR_ABORTED"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
         "error": "net::ERR_ABORTED"
       }
     ]
@@ -3338,12 +3378,12 @@
       "status": "incomplete",
       "summary": "Sól registra hierba, draw calls y tiempos de actualización/render. No declara cobertura por isla si el motor solo entrega totales globales.",
       "readings": {
-        "grassInstances": 20204,
+        "grassInstances": 20153,
         "grassBatches": 2,
-        "drawCalls": 885,
+        "drawCalls": 891,
         "worldUpdateMs": 0,
-        "renderCpuMs": 56.5,
-        "frameTimeP95Ms": 9571,
+        "renderCpuMs": 37,
+        "frameTimeP95Ms": 10081.7,
         "perIslandGrass": [
           {
             "islandIndex": 0,
@@ -3428,7 +3468,7 @@
       "issues": [],
       "missing": [
         "La cobertura de hierba por isla no está expuesta; el contador global no demuestra las 13 zonas.",
-        "El p95 de 9571.00 ms procede de Chromium/SwiftShader; no permite diagnosticar los FPS de la GPU física del móvil."
+        "El p95 de 10081.70 ms procede de Chromium/SwiftShader; no permite diagnosticar los FPS de la GPU física del móvil."
       ],
       "patrol": {
         "type": "camera-observation",
@@ -3610,8 +3650,8 @@
       "id": "ulf",
       "name": "Ulf",
       "specialization": "Física y cimentación",
-      "severity": "critical",
-      "status": "issue-found",
+      "severity": "unknown",
+      "status": "incomplete",
       "summary": "Ulf compara las medidas de apoyo disponibles con la tolerancia solicitada de 2 cm. La patrulla no finge recorrer rutas físicas si falta una API de locomoción.",
       "readings": {
         "structuresMeasured": 68,
@@ -3633,8 +3673,8 @@
             "islandIndex": 0,
             "name": "WeatheredNorseHut",
             "kind": "NorseHut",
-            "x": 13.69,
-            "z": -4.35,
+            "x": 21.59,
+            "z": -17.41,
             "measurements": {
               "anchorErrorMeters": 0
             },
@@ -3765,8 +3805,8 @@
             "islandIndex": 4,
             "name": "IslandGarrisonOutpost_4",
             "kind": "IslandGarrisonOutpost",
-            "x": 146,
-            "z": -132,
+            "x": 144.65,
+            "z": -134.1,
             "measurements": {
               "anchorErrorMeters": 0
             },
@@ -3777,8 +3817,8 @@
             "islandIndex": 5,
             "name": "IslandGarrisonOutpost_5",
             "kind": "IslandGarrisonOutpost",
-            "x": -145,
-            "z": -126,
+            "x": -141.87,
+            "z": -125.12,
             "measurements": {
               "anchorErrorMeters": 0
             },
@@ -3789,8 +3829,8 @@
             "islandIndex": 6,
             "name": "IslandGarrisonOutpost_6",
             "kind": "IslandGarrisonOutpost",
-            "x": 286,
-            "z": 154,
+            "x": 285.32,
+            "z": 154.82,
             "measurements": {
               "anchorErrorMeters": 0
             },
@@ -3801,8 +3841,8 @@
             "islandIndex": 7,
             "name": "IslandGarrisonOutpost_7",
             "kind": "IslandGarrisonOutpost",
-            "x": -286,
-            "z": 232,
+            "x": -286.66,
+            "z": 229.84,
             "measurements": {
               "anchorErrorMeters": 0
             },
@@ -3813,8 +3853,8 @@
             "islandIndex": 8,
             "name": "IslandGarrisonOutpost_8",
             "kind": "IslandGarrisonOutpost",
-            "x": 292,
-            "z": -264,
+            "x": 292.04,
+            "z": -264.71,
             "measurements": {
               "anchorErrorMeters": 0
             },
@@ -3861,8 +3901,8 @@
             "islandIndex": 12,
             "name": "IslandGarrisonOutpost_12",
             "kind": "IslandGarrisonOutpost",
-            "x": -45,
-            "z": -465,
+            "x": -41.92,
+            "z": -466.42,
             "measurements": {
               "anchorErrorMeters": 0
             },
@@ -3873,8 +3913,8 @@
             "islandIndex": 0,
             "name": "NorseBlacksmithForge_0",
             "kind": "NorseBlacksmithForge",
-            "x": 13.89,
-            "z": -13.25,
+            "x": 11.65,
+            "z": -14.6,
             "measurements": {
               "anchorErrorMeters": 0
             },
@@ -3909,8 +3949,8 @@
             "islandIndex": 1,
             "name": "NorseWatchTower_1",
             "kind": "NorseWatchTower",
-            "x": 145.5,
-            "z": 6.4,
+            "x": 141.04,
+            "z": 5.79,
             "measurements": {
               "anchorErrorMeters": 0
             },
@@ -4103,14 +4143,14 @@
             "islandIndex": 0,
             "name": "Estructura",
             "kind": null,
-            "x": 13.69,
-            "z": -4.35,
+            "x": 21.59,
+            "z": -17.41,
             "measurements": {
               "groundingErrorMeters": 0,
-              "maximumFootingGapMeters": 0.3982,
-              "maximumStructuralBaseGapMeters": 0.3982
+              "maximumFootingGapMeters": 0.0163,
+              "maximumStructuralBaseGapMeters": 0.0164
             },
-            "gapMeters": 0.3982
+            "gapMeters": 0.0164
           },
           {
             "source": "houses",
@@ -4838,62 +4878,7 @@
         ],
         "movementSupported": false
       },
-      "issues": [
-        {
-          "severity": "critical",
-          "title": "Estructura insegura visible",
-          "detail": "IslandGarrisonOutpost_4 continúa visible según la auditoría de cimentación.",
-          "islandIndex": 4
-        },
-        {
-          "severity": "critical",
-          "title": "Estructura insegura visible",
-          "detail": "IslandGarrisonOutpost_5 continúa visible según la auditoría de cimentación.",
-          "islandIndex": 5
-        },
-        {
-          "severity": "critical",
-          "title": "Estructura insegura visible",
-          "detail": "IslandGarrisonOutpost_6 continúa visible según la auditoría de cimentación.",
-          "islandIndex": 6
-        },
-        {
-          "severity": "critical",
-          "title": "Estructura insegura visible",
-          "detail": "IslandGarrisonOutpost_7 continúa visible según la auditoría de cimentación.",
-          "islandIndex": 7
-        },
-        {
-          "severity": "critical",
-          "title": "Estructura insegura visible",
-          "detail": "IslandGarrisonOutpost_8 continúa visible según la auditoría de cimentación.",
-          "islandIndex": 8
-        },
-        {
-          "severity": "critical",
-          "title": "Estructura insegura visible",
-          "detail": "IslandGarrisonOutpost_12 continúa visible según la auditoría de cimentación.",
-          "islandIndex": 12
-        },
-        {
-          "severity": "critical",
-          "title": "Estructura insegura visible",
-          "detail": "NorseBlacksmithForge_0 continúa visible según la auditoría de cimentación.",
-          "islandIndex": 0
-        },
-        {
-          "severity": "critical",
-          "title": "Estructura insegura visible",
-          "detail": "NorseWatchTower_1 continúa visible según la auditoría de cimentación.",
-          "islandIndex": 1
-        },
-        {
-          "severity": "critical",
-          "title": "Estructura fuera de tolerancia de 2 cm",
-          "detail": "Estructura presenta 39.8 cm de diferencia en una medición explícita de apoyo.",
-          "islandIndex": 0
-        }
-      ],
+      "issues": [],
       "missing": [
         "La API de prueba no expone locomoción autónoma para recorrer rutas y detectar bloqueos físicos."
       ],
@@ -5082,7 +5067,7 @@
       "summary": "Týr consulta el inventario disponible. No etiqueta actividades como ausentes sin un catálogo oficial de actividades esperadas.",
       "readings": {
         "activityCount": null,
-        "inventoryCount": 3606,
+        "inventoryCount": 2303,
         "islandCount": 13
       },
       "issues": [],
@@ -5277,5 +5262,5 @@
   "consoleErrors": [],
   "pageErrors": [],
   "failures": [],
-  "verdict": "issues-found"
+  "verdict": "partial"
 }
