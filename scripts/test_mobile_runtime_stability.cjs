@@ -99,6 +99,8 @@ assert.ok(builder.includes('beachRenderDiagnostics'), 'Beach reports must inspec
 assert.ok(validator.includes('renderDiagnostics:beachRenderDiagnostics'), 'The packaged report must include beach render diagnostics.');
 assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3))'), 'The packaged report must label wall-clock beach duration separately.');
 
+assert.ok(builder.includes('grass_stream_replacement = "if(bestRatio>(onShip?1.55:1.09))currentIsland=-1;"'), 'Quality grass must be staged for the destination island while the player approaches by ship.');
+assert.ok(builder.includes('(onShip?Math.max(96,GRASS_STREAM_RECENTER_DISTANCE):GRASS_STREAM_RECENTER_DISTANCE)'), 'Grass streaming must not rebuild repeatedly during short ship movements.');
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullMaxExtentMeters=.55') &&
   builder.includes('sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)') &&
