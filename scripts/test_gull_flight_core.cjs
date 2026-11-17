@@ -6,7 +6,7 @@ function bird(){
  const value={root:joint(),leftWing:joint(),rightWing:joint(),flight:{
   wingFlapAxis:"z",legBendAxis:"x",leftHip:joint(),rightHip:joint(),leftKnee:joint(),rightKnee:joint(),
   neck:joint(),head:joint(),tail:joint(),phase:.25,
-  base:{rootX:0,leftWing:0,rightWing:0,leftHip:0,rightHip:0,leftKnee:0,rightKnee:0,neck:0,head:0,tail:0}
+  base:{rootPitch:0,leftWing:0,rightWing:0,leftHip:0,rightHip:0,leftKnee:0,rightKnee:0,neck:0,head:0,tail:0}
  }};
  return value;
 }
