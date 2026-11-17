@@ -358,6 +358,12 @@ def main() -> None:
         "npcDialogue:window.__ELSN_NPC_DIALOGUES__",
         "wildlife:window.__ELSN_WILDLIFE_DIAGNOSTICS__",
         "atmosphere:window.__ELSN_ATMOSPHERE",
+    )
+    missing_subsystem_diagnostics = [marker for marker in subsystem_diagnostic_markers if marker not in index_html]
+    if missing_subsystem_diagnostics:
+        fail("El runtime del juego no conecta los diagnósticos de subsistema: " + ", ".join(missing_subsystem_diagnostics))
+
+    recorder_subsystem_markers = (
         "npcDialoguePositioningCpu",
         "atmosphereVisualUpdateCpu",
         "atmosphereDirectLightingCpu",
@@ -368,17 +374,38 @@ def main() -> None:
         "wildlifeUpdateCpu",
         "positioningP99Ms",
         "readiness: Array.isArray(state.readiness)",
+    )
+    missing_recorder_diagnostics = [marker for marker in recorder_subsystem_markers if marker not in session_recorder_source]
+    if missing_recorder_diagnostics:
+        fail("El registrador de sesiones no incluye el perfil de CPU por subsistema: " + ", ".join(missing_recorder_diagnostics))
+
+    atmosphere_profiler_markers = (
+        "directLighting: summarize('directLight')",
+        "skyAndCloudUniforms: summarize('sky')",
+        "waterMaterial: summarize('water')",
+        "postProcessing: summarize('post')",
+        "hearthSelection: summarize('fire')",
+        "p99Ms: percentile(.99)",
         "rayleighTransmittance",
         "airMass",
         "aerosolPath",
         "sunsetAlignment",
         "mieG",
-        "p95Ms:at(.95)",
-        "p99Ms:at(.99)",
     )
-    missing_subsystem_diagnostics = [marker for marker in subsystem_diagnostic_markers if marker not in index_html]
-    if missing_subsystem_diagnostics:
-        fail("El informe de rendimiento por subsistema está incompleto: " + ", ".join(missing_subsystem_diagnostics))
+    missing_atmosphere_profiler = [marker for marker in atmosphere_profiler_markers if marker not in atmosphere_source]
+    if missing_atmosphere_profiler:
+        fail("El módulo atmosférico no incluye dispersión realista y perfil por optimizador: " + ", ".join(missing_atmosphere_profiler))
+
+    dialogue_profiler_markers = (
+        "positioningSamples",
+        "positioningP50Ms:at(.50)",
+        "positioningP95Ms:at(.95)",
+        "positioningP99Ms:at(.99)",
+    )
+    missing_dialogue_profiler = [marker for marker in dialogue_profiler_markers if marker not in dialogue_runtime_source]
+    if missing_dialogue_profiler:
+        fail("El runtime de diálogos no incluye medición del anclaje en pantalla: " + ", ".join(missing_dialogue_profiler))
+
     tree_start = index_html.find("function createTree(x,z,scale=1){")
     tree_end = index_html.find("function isSafeShrubGroundPoint(is,x,z){", tree_start)
     if tree_start < 0 or tree_end <= tree_start or "appendLeaf" in index_html[tree_start:tree_end]:
