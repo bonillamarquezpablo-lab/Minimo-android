@@ -1031,8 +1031,8 @@ function updateWildlife(dt){
     ordered_fauna = " setLoadingProgress(87,coastalReferenceMode?'Preparando la referencia costera…':'Preparando fauna de la isla inicial…');\n" + fauna_block + "\n setLoadingProgress(93,coastalReferenceMode?'Preparando shaders de costa…':'Preparando texturas y shaders de la zona inicial…');\n"
     html = html[:scene_marker_index] + ordered_fauna + html[scene_marker_index:]
 
-    # Terrestrial fauna is a required startup dependency in both profiles; Performance retains
-    # its existing fauna-disabled profile and its existing rendering/resource choices.
+    # All three terrestrial species are required in both profiles. Performance keeps its
+    # reduced movement/decision cadence; the five gulls remain Quality-only.
     optional_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-optional'"
     required_fauna_state = "fauna:'blocking-required'"
     if html.count(optional_fauna_state) != 1:
@@ -1130,7 +1130,7 @@ function updateWildlife(dt){
   gltfImporterReady:!!(window.BABYLON&&window.BABYLON.SceneLoader&&window.BABYLON.GLTFFileLoader),
   protagonistReady:!!realPlayerReady,
   npcRoster:window.__elSinNombreStartupNpcRoster||null,
-  fauna:{required:!isPerformanceMode,requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length,requiredGulls:isPerformanceMode?0:5,loadedGulls:ambientBirds.filter(b=>b.real).length},
+  fauna:{required:true,requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length,requiredGulls:isPerformanceMode?0:5,loadedGulls:ambientBirds.filter(b=>b.real).length},
   soundEffects:audioPreloadResult,
   music:{results:startupMusicPreloadResult,menuReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[0]&&startupMusicPreloadResult[0].ready),gameplayReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[1]&&startupMusicPreloadResult[1].ready),streaming:true,decodedToAudioBuffer:false},
   scene:{status:sceneWarmupStatus,waitingItemsAfter:window.__elSinNombreStartupSceneWarmup&&window.__elSinNombreStartupSceneWarmup.waitingItemsAfter,meshes:scene&&scene.meshes?scene.meshes.length:0,firstFrameRendered:!!firstFrameRendered},
@@ -1146,8 +1146,8 @@ function updateWildlife(dt){
   if(!startupResourceSnapshot.music.menuReady||!startupResourceSnapshot.music.gameplayReady)startupResourceFailures.push('bandas sonoras');
   if(startupResourceSnapshot.scene.status!=='ready'||startupResourceSnapshot.scene.meshes<=0||!startupResourceSnapshot.scene.firstFrameRendered)startupResourceFailures.push('escena, texturas y shaders de la vista inicial');
   if(startupResourceSnapshot.world.islands!==13)startupResourceFailures.push('mundo de 13 islas');
+  if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)startupResourceFailures.push('fauna terrestre '+startupResourceSnapshot.fauna.loaded+'/'+startupResourceSnapshot.fauna.requested);
   if(!isPerformanceMode){
-   if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)startupResourceFailures.push('fauna terrestre '+startupResourceSnapshot.fauna.loaded+'/'+startupResourceSnapshot.fauna.requested);
    if(startupResourceSnapshot.fauna.loadedGulls!==5)startupResourceFailures.push('gaviotas 3D '+startupResourceSnapshot.fauna.loadedGulls+'/5');
    if(startupResourceSnapshot.world.grassClumps<=0||startupResourceSnapshot.world.grassBatches<=0)startupResourceFailures.push('vegetación 3D inicial');
   }
