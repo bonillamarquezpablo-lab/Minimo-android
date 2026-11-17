@@ -134,7 +134,9 @@ function remember(state,content){if(!content)return;if(content.topic){state.rece
 function isProjectable(npc,s){
  const id=idOf(npc);
  const reject=reason=>{diagnostics.projectionCandidateFailures[reason]=(diagnostics.projectionCandidateFailures[reason]||0)+1;diagnostics.lastProjectionCandidate={id,reason};return false;};
- if(!npc||!s||!s.scene||!s.engine||!s.camera||!s.canvas||!enabled(npc))return reject("missing-scene-camera-canvas-or-disabled-npc");
+ if(!npc||!s||!s.scene||!s.engine||!s.canvas||!enabled(npc))return reject("missing-scene-camera-canvas-or-disabled-npc");
+ const camera=s.scene.activeCamera||s.camera;
+ if(!camera)return reject("missing-active-camera");
  const root=rootOf(npc),rootPos=worldPosition(root);
  if(!rootPos||distance(rootPos,s.playerPosition)>RANGE)return reject("missing-root-or-outside-range");
  const BABYLON=s.BABYLON||window.BABYLON;
@@ -147,7 +149,6 @@ function isProjectable(npc,s){
   const world=projectionScratch.copyFrom(ap);world.y+=anchor===root?2.12:.48;
   const width=s.engine.getRenderWidth(),height=s.engine.getRenderHeight(),rect=s.canvas.getBoundingClientRect();
   if(!(width>0&&height>0&&rect.width>0&&rect.height>0))return reject("zero-rendering-viewport");
-  const camera=s.scene.activeCamera||s.camera;
   const viewport=camera.viewport&&typeof camera.viewport.toGlobal==="function"?camera.viewport.toGlobal(width,height):{x:0,y:0,width,height};
   const transform=s.scene.getTransformMatrix();
   const p=BABYLON.Vector3.Project(world,projectionIdentity,transform,viewport);
@@ -191,7 +192,9 @@ function project(slot,s,occupied){
  const c=slot.current;
  const hide=reason=>{diagnostics.projectionFailures[reason]=(diagnostics.projectionFailures[reason]||0)+1;slot.node.hidden=true;return false;};
  diagnostics.projectionAttempts++;
- if(!c||!s||!s.scene||!s.engine||!s.camera||!s.canvas)return hide("missing-scene-camera-canvas");
+ if(!c||!s||!s.scene||!s.engine||!s.canvas)return hide("missing-scene-camera-canvas");
+ const camera=s.scene.activeCamera||s.camera;
+ if(!camera)return hide("missing-active-camera");
  const npc=c.npc;if(!enabled(npc))return hide("npc-disabled");
  const root=rootOf(npc);
  try{if(root&&typeof root.computeWorldMatrix==="function")root.computeWorldMatrix(true);}catch(_){}
@@ -209,7 +212,6 @@ function project(slot,s,occupied){
   const world=projectionScratch.copyFrom(ap);world.y+=anchor===root?2.12:.48;
   const width=s.engine.getRenderWidth(),height=s.engine.getRenderHeight(),rect=s.canvas.getBoundingClientRect();
   if(!(width>0&&height>0&&rect.width>0&&rect.height>0))return hide("zero-rendering-viewport");
-  const camera=s.scene.activeCamera||s.camera;
   const viewport=camera.viewport&&typeof camera.viewport.toGlobal==="function"?camera.viewport.toGlobal(width,height):{x:0,y:0,width,height};
   const p=BABYLON.Vector3.Project(world,projectionIdentity,s.scene.getTransformMatrix(),viewport);
   if(!p||p.z<=0||p.z>=1)return hide("behind-camera");
