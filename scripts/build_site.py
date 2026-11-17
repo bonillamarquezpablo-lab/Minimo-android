@@ -679,12 +679,6 @@ def main() -> None:
         raise SystemExit("No se encontró el punto único para persistir cada GLB de fauna validado.")
     html = html.replace(wildlife_blob_ready, wildlife_blob_persist, 1)
 
-    animal_count_marker = "const animalCount=isPerformanceMode?0:(idx===0?3:0);"
-    animal_count_required = "const animalCount=idx===0?3:0;"
-    if html.count(animal_count_marker) != 1:
-        raise SystemExit("No se encontró el control único de población animal por perfil.")
-    html = html.replace(animal_count_marker, animal_count_required, 1)
-
     glb_validator_marker = " async function isValidGLB(blob){\n  if(!(blob instanceof Blob)||blob.size<500000)return false;\n  try{const bytes=await blob.slice(0,4).arrayBuffer();const magic=new Uint8Array(bytes);return magic.length===4&&magic[0]===0x67&&magic[1]===0x6c&&magic[2]===0x54&&magic[3]===0x46;}catch(_){return false;}\n }"
     glb_validator_required = r""" async function inspectGLBContainer(blob){
   if(!(blob instanceof Blob)||blob.size<500000)return null;
