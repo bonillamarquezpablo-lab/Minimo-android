@@ -685,7 +685,7 @@ def main() -> None:
         raise SystemExit("No se encontró el control único de población animal por perfil.")
     html = html.replace(animal_count_marker, animal_count_required, 1)
 
-    glb_validator_marker = " async function isValidGLB(blob){\\n  if(!(blob instanceof Blob)||blob.size<500000)return false;\\n  try{const bytes=await blob.slice(0,4).arrayBuffer();const magic=new Uint8Array(bytes);return magic.length===4&&magic[0]===0x67&&magic[1]===0x6c&&magic[2]===0x54&&magic[3]===0x46;}catch(_){return false;}\\n }"
+    glb_validator_marker = " async function isValidGLB(blob){\n  if(!(blob instanceof Blob)||blob.size<500000)return false;\n  try{const bytes=await blob.slice(0,4).arrayBuffer();const magic=new Uint8Array(bytes);return magic.length===4&&magic[0]===0x67&&magic[1]===0x6c&&magic[2]===0x54&&magic[3]===0x46;}catch(_){return false;}\n }"
     glb_validator_required = r""" async function inspectGLBContainer(blob){
   if(!(blob instanceof Blob)||blob.size<500000)return null;
   try{
@@ -1179,7 +1179,7 @@ def main() -> None:
         capture_output=True, text=True,
     )
     if navigation_check.returncode != 0:
-        raise SystemExit("Navigation runtime JavaScript syntax validation failed:\\n" + navigation_check.stderr)
+        raise SystemExit("Navigation runtime JavaScript syntax validation failed:\n" + navigation_check.stderr)
     print("Navigation runtime JavaScript syntax validation passed.")
     # Anchor decorative terrain objects to the actual rendered GroundMesh. The
     # analytical heightfield can differ from the rendered triangle interpolation,
@@ -1564,7 +1564,7 @@ def main() -> None:
             raise SystemExit(f"Falta el módulo de especialistas NPC: {script_name}")
         npc_check = subprocess.run([node, "--check", str(script_source)], capture_output=True, text=True)
         if npc_check.returncode != 0:
-            raise SystemExit(f"NPC specialist runtime syntax validation failed ({script_name}):\\n" + npc_check.stderr)
+            raise SystemExit(f"NPC specialist runtime syntax validation failed ({script_name}):\n" + npc_check.stderr)
         script_target = DIST / "scripts" / script_name
         script_target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(script_source, script_target)
@@ -1594,7 +1594,7 @@ def main() -> None:
             raise SystemExit(f"Falta el módulo de diálogos NPC: {script_name}")
         dialogue_check = subprocess.run([node, "--check", str(script_source)], capture_output=True, text=True)
         if dialogue_check.returncode != 0:
-            raise SystemExit(f"NPC dialogue syntax validation failed ({script_name}):\\n" + dialogue_check.stderr)
+            raise SystemExit(f"NPC dialogue syntax validation failed ({script_name}):\n" + dialogue_check.stderr)
         script_target = DIST / "scripts" / script_name
         script_target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(script_source, script_target)
@@ -1615,7 +1615,7 @@ def main() -> None:
         )
         if module_check.returncode != 0:
             raise SystemExit(
-                f"Inspector diagnostic module syntax validation failed ({script_name}):\\n"
+                f"Inspector diagnostic module syntax validation failed ({script_name}):\n"
                 + module_check.stderr
             )
         script_target = DIST / "scripts" / script_name
