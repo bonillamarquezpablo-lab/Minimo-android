@@ -33,7 +33,7 @@ function positioningPercentiles(){
 let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projectionIdentity=null,projectionScratch=null,lastSnapshot=null,observedScene=null,renderObserver=null,viewportObserver=null,viewportListenersBound=false,viewportRefreshPending=false,lastCapturedCount=null,recentCaptureUntil=0;
 const RANGE_SQUARED=RANGE*RANGE;
 function bubbleLimit(){return window.matchMedia&&window.matchMedia("(max-width: 700px)").matches?2:MAX_BUBBLES;}
-const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="1200";layer.dataset.maxBubbles=String(MAX_BUBBLES);document.body.appendChild(layer);
+const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="1200";layer.dataset.maxBubbles=String(MAX_BUBBLES);(document.documentElement||document.body).appendChild(layer);
 function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;node.style.position="fixed";node.style.left="0";node.style.top="0";node.style.margin="0";node.style.pointerEvents="none";node.style.zIndex=String(1+index);const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null,width:0,height:0,measureDirty:true};}
 for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i));
 const random=()=>Math.random(),between=(a,b)=>a+random()*(b-a);
@@ -43,7 +43,7 @@ function worldPosition(node){if(!node)return null;try{const p=typeof node.getAbs
 function distance(a,b){return a&&b?Math.hypot(Number(a.x)-Number(b.x),Number(a.z)-Number(b.z)):Infinity;}
 function distanceSquared(a,b){if(!a||!b)return Infinity;const dx=Number(a.x)-Number(b.x),dz=Number(a.z)-Number(b.z);return dx*dx+dz*dz;}
 function enabled(n){const r=rootOf(n);if(!r)return false;try{return (typeof r.isEnabled!=="function"||r.isEnabled())&&r.isVisible!==false&&r.visibility!==0;}catch(_){return false;}}
-function refreshProjectionMatrices(s){if(!s||!s.scene)return;try{const camera=s.camera||s.scene.activeCamera;if(camera){if(typeof camera.getViewMatrix==="function")camera.getViewMatrix(true);if(typeof camera.getProjectionMatrix==="function")camera.getProjectionMatrix(true);}if(typeof s.scene.updateTransformMatrix==="function")s.scene.updateTransformMatrix(true);}catch(error){diagnostics.lastError=String(error&&error.message||error);}}
+function refreshProjectionMatrices(s){if(!s||!s.scene)return;try{const camera=s.scene.activeCamera||s.camera;if(camera){if(typeof camera.getViewMatrix==="function")camera.getViewMatrix(true);if(typeof camera.getProjectionMatrix==="function")camera.getProjectionMatrix(true);}if(typeof s.scene.updateTransformMatrix==="function")s.scene.updateTransformMatrix(true);}catch(error){diagnostics.lastError=String(error&&error.message||error);}}
 function blockingUi(){if(document.body.classList.contains("map-open"))return true;const intro=document.getElementById("intro");return!!(intro&&intro.classList.contains("open")&&intro.getAttribute("aria-hidden")!=="true");}
 function snapshot(){try{const value=Bridge.getSnapshot();diagnostics.bridgeError="";diagnostics.bridgeReportedActive=!!(value&&value.active);if(value)lastSnapshot=value;return value;}catch(error){diagnostics.snapshotFailures++;diagnostics.bridgeError=String(error&&error.message||error);diagnostics.lastError=diagnostics.bridgeError;console.warn("NPC dialogue snapshot:",error);return lastSnapshot;}}
 function bindSceneRenderObserver(s){
@@ -194,7 +194,7 @@ function project(slot,s,occupied){
  if(!c||!s||!s.scene||!s.engine||!s.camera||!s.canvas)return hide("missing-scene-camera-canvas");
  const npc=c.npc;if(!enabled(npc))return hide("npc-disabled");
  const root=rootOf(npc);
- try{if(root&&typeof root.computeWorldMatrix==="function")root.computeWorldMatrix(false);}catch(_){}
+ try{if(root&&typeof root.computeWorldMatrix==="function")root.computeWorldMatrix(true);}catch(_){}
  const rootPos=worldPosition(root);
  if(!rootPos)return hide("npc-root-unavailable");
  if(distance(rootPos,s.playerPosition)>RANGE)return hide("outside-dialogue-range");
@@ -202,7 +202,7 @@ function project(slot,s,occupied){
  if(!BABYLON||!BABYLON.Vector3||!BABYLON.Matrix)return hide("babylon-project-unavailable");
  try{
   const anchor=npc.parts&&npc.parts.head&&typeof npc.parts.head.getAbsolutePosition==="function"?npc.parts.head:root;
-  try{if(anchor&&typeof anchor.computeWorldMatrix==="function")anchor.computeWorldMatrix(false);}catch(_){}
+  try{if(anchor&&typeof anchor.computeWorldMatrix==="function")anchor.computeWorldMatrix(true);}catch(_){}
   const ap=worldPosition(anchor);if(!ap)return hide("head-anchor-unavailable");
   if(!projectionIdentity)projectionIdentity=BABYLON.Matrix.Identity();
   if(!projectionScratch)projectionScratch=new BABYLON.Vector3(0,0,0);
