@@ -5,6 +5,7 @@ const assert=require('node:assert/strict');
 const builder=fs.readFileSync('scripts/build_site.py','utf8');
 const atmosphere=fs.readFileSync('scripts/nordic/atmosphere-system.js','utf8');
 const dialogue=fs.readFileSync('scripts/npc-dialogue-runtime.js','utf8');
+const recorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const gameHtml=fs.readFileSync('index.html','utf8');
 
@@ -32,7 +33,11 @@ for(const marker of [
 
 for(const marker of [
   'maxPositioningMs',
-  'lastProjection'
+  'lastProjection',
+  'positioningSamples',
+  'positioningP50Ms:at(.50)',
+  'positioningP95Ms:at(.95)',
+  'positioningP99Ms:at(.99)'
 ]) assert.ok(dialogue.includes(marker),'Dialogue profiler/anchor diagnostics are missing: '+marker);
 
 assert.ok(dialogue.includes('lastPositioningMs') &&
@@ -40,6 +45,14 @@ assert.ok(dialogue.includes('lastPositioningMs') &&
   dialogue.includes('lastProjection'),
   'NPC dialogue must expose positioning cost and current screen/world anchor telemetry.');
 
+assert.ok(recorder.includes('liveAtmosphere.getPerformanceSnapshot()') &&
+  recorder.includes('atmosphereVisualUpdateCpu') &&
+  recorder.includes('atmosphereHearthSelectionCpu') &&
+  recorder.includes('npcDialoguePositioningCpu') &&
+  recorder.includes('wildlifeUpdateCpu') &&
+  recorder.includes('positioningP99Ms') &&
+  recorder.includes('readiness: Array.isArray(state.readiness)'),
+  'Session reports must carry per-subsystem p50/p95/p99 CPU timings and per-animal readiness evidence.');
 assert.ok(gameHtml.includes('EXT_disjoint_timer_query_webgl2')&&gameHtml.includes('EXT_disjoint_timer_query'),
   'The GPU timer-query path must remain available when supported.');
 assert.ok(gameHtml.includes('gpuTimerQuery:\'not measured; scene.render duration is CPU wall-clock only\''),
