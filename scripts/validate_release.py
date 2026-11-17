@@ -358,6 +358,12 @@ def main() -> None:
         "npcDialogue:window.__ELSN_NPC_DIALOGUES__",
         "wildlife:window.__ELSN_WILDLIFE_DIAGNOSTICS__",
         "atmosphere:window.__ELSN_ATMOSPHERE",
+        "npcDialoguePositioningCpu",
+        "atmosphereVisualUpdateCpu",
+        "atmosphereHearthSelectionCpu",
+        "wildlifeUpdateCpu",
+        "positioningP99Ms",
+        "readiness: Array.isArray(state.readiness)",
         "p95Ms:at(.95)",
         "p99Ms:at(.99)",
     )
