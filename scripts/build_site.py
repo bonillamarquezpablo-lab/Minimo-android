@@ -750,33 +750,23 @@ def main() -> None:
         raise SystemExit("No se encontró la única escala incorrecta de gaviotas basada en altura.")
     html = html.replace(gull_scale_marker, gull_scale_replacement, 1)
 
-    # The five instances deliberately share the subdued GLB materials. Cloning every
-    # mesh material for every gull created avoidable shader/material variants.
+    # Preserve the Polyfork model's native single material and colours.
+    # Remove only the legacy subdued tint block; retain bounds, transforms and flight setup.
     gull_material_registry_marker = "const realBirds=[];"
     gull_material_registry_replacement = "    const realBirds=[];"
     if html.count(gull_material_registry_marker) != 1:
         raise SystemExit("No se encontró el registro único de instancias de gaviota.")
     html = html.replace(gull_material_registry_marker, gull_material_registry_replacement, 1)
-    # Remove per-instance material clones by matching each source operation independently;
-    # this avoids whitespace-sensitive block matching in the minified source HTML.
-    for gull_material_clone_marker in (
-        "if(Array.isArray(mesh.material))mesh.material=mesh.material.map(material=>material?material.clone(material.name+'_subdued_gull'):material);",
-        "else if(mesh.material)mesh.material=mesh.material.clone(mesh.material.name+'_subdued_gull');",
-    ):
-        if html.count(gull_material_clone_marker) != 1:
-            raise SystemExit("No se encontró exactamente una operación de duplicación de material de gaviota.")
-        html = html.replace(gull_material_clone_marker, "", 1)
-    gull_material_set = "const subduedMaterials=new Set();"
-    if html.count(gull_material_set) != 1:
-        raise SystemExit("No se encontró el conjunto local de materiales duplicados de las gaviotas.")
-    html = html.replace(gull_material_set, "", 1)
-    gull_material_style_start = "meshes.forEach(mesh=>{"
+    gull_material_style_start = "const subduedMaterials=new Set();"
     gull_material_style_end = "const bounds=boundsForMeshes(meshes)"
     style_anchor = html.find(gull_rig_replacement)
     style_start = html.find(gull_material_style_start, style_anchor)
     style_end = html.find(gull_material_style_end, style_start)
-    if style_start < 0 or style_end <= style_start:
-        raise SystemExit("No se pudo aislar el tinte artificial del modelo de gaviota.")
+    if style_anchor < 0 or style_start < 0 or style_end <= style_start:
+        raise SystemExit(
+            "No se pudo aislar el tinte artificial de la gaviota: "
+            f"anchor={style_anchor}, styleStart={style_start}, styleEnd={style_end}."
+        )
     html = html[:style_start] + html[style_end:]
 
     gull_wing_push_marker = "realBirds.push({root:actor,real:true,groups,animation:fly,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
