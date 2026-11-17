@@ -1057,13 +1057,12 @@ async function main() {
       manifest.offlineReload.pageErrors = manifest.pageErrors.slice();
       assert.equal(manifest.pageErrors.length, 0,
         'Errores JavaScript tras el reinicio offline: ' + manifest.pageErrors.join(' | '));
-    }
-
     } else {
       manifest.offlineReload = {
         enabled: false,
         reason: 'El reinicio offline requiere HTTPS; este runner usa HTTP.'
       };
+    }
     }
 
     console.log('[player-startup] first/cached/offline startup + first 20s: ' +
