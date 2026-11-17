@@ -76,7 +76,9 @@ assert.ok(dialogueFocusStart>=0&&dialoguePlayerFallback>dialogueFocusStart,
  "Dialogue bridge must safely resolve the active player's world position.");
 assert.match(runtime,/function remember\(state,content\)/);
 assert.match(runtime,/function bindSceneRenderObserver\(s\)/,"Speech bubbles must be reprojected on Babylon's render cycle, not only on a slow wall-clock timer.");
-assert.match(runtime,/onAfterRenderObservable/,"Speech bubbles must follow the NPC and camera on every rendered frame.");
+assert.match(runtime,/onBeforeRenderObservable/,"Speech bubbles must be reprojected with the latest camera matrices before each rendered frame.");
+assert.match(runtime,/refreshProjectionMatrices\(lastSnapshot\);render\(lastSnapshot,true\)/,"Camera projection matrices must be refreshed before the bubble's frame render.");
+assert.doesNotMatch(runtime,/onAfterRenderObservable/,"Bubble placement must not lag a rendered camera frame.");
 assert.match(runtime,/orientationchange/);assert.match(runtime,/visualViewport/);assert.match(runtime,/ResizeObserver/);
 assert.match(runtime,/s\.engine\.resize\(\)/,"A device orientation change must resize Babylon before reprojection.");
 assert.match(runtime,/function render\(s,matricesReady=false\)/,"The render-cycle projection must reuse the current camera matrices.");
