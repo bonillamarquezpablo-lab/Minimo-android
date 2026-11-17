@@ -8,11 +8,11 @@ Esta distribución se construye desde GitHub Actions y copia los recursos al paq
 - Fuente oficial: https://github.com/BabylonJS/Babylon.js
 - Distribución: CDN oficial de Babylon.js, descargada durante el build y servida localmente por GitHub Pages.
 
-## Modelos 3D CC0
+## Modelos 3D y licencias
 - Viking rigged: Grab3D, CC0 1.0. https://grab3d.com/models/characters/viking/
 - Armored Knight rigged: Grab3D, CC0 1.0. https://grab3d.com/
 - Man Base Mesh rigged: Grab3D, CC0 1.0. https://grab3d.com/models/characters/man-base-character/
-- Seagull GLB: Gobkit free CC0 library, CC0 1.0. https://gobkit.com/freebies
+- Herring gull GLB: modelo anatómico de Polyfork, archivo GLB distribuido bajo CC BY 4.0; atribución: “Herring gull by Polyfork (https://polyfork.dev/asset/herring-gull-base), CC BY 4.0”. https://polyfork.dev/asset/herring-gull-base
 - Deer, Stag and Wolf animated GLB: Quaternius Ultimate Animated Animals, CC0 1.0; pinned to commit `6d6de54a1d7143cf5487462d147bbef039de4837` and packaged locally under `assets/models/wildlife/`. https://github.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic
 
 ## Modelos arbóreos CC0
