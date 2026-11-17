@@ -57,13 +57,18 @@ for (const marker of [
   'NorseSunSurfaceMaterial',
   'limbDarkening',
   'granulationA',
-  'NorseMoonDirectionalLight',
+  'this._moonDirectColor',
+  'this._moonDirectSpecularColor',
   'setWeather(value)',
   'setClimate(value)'
 ]) {
   assert.ok(source.includes(marker), 'Atmosphere module is missing: ' + marker);
 }
-assert.ok(source.includes('this.sunLight.direction.x = -sun.x') && source.includes('this.moonLight.direction.x = sun.x'), 'Sun and moon must use independent, correctly oriented light vectors.');
+assert.ok(source.includes('const useMoonDirectLight = state.night > state.daylight;') &&
+  source.includes('this.sunLight.direction.x = directX') &&
+  source.includes('this.sunLight.intensity = useMoonDirectLight') &&
+  !source.includes("new B.DirectionalLight('NorseMoonDirectionalLight'"),
+  'Sun and moon must share one continuously enabled directional slot without swapping shader-light variants at dusk.');
 
 const sunSurfaceBody=source.slice(source.indexOf('    _createSunSurfaceMaterial() {'),source.indexOf('    _createMoonAndLights() {'));
 assert.ok(sunSurfaceBody.includes("this.sunDisc.material = material")&&sunSurfaceBody.includes("attributes: ['position', 'normal']"),"The sun must reuse its existing disc and compute a procedural photosphere from its surface normals.");
@@ -73,11 +78,18 @@ assert.doesNotMatch(sunSurfaceBody,/\.join\('\\\\n'\);/,"GLSL shader sources mus
 assert.ok(source.includes("material.setColor3('sunColor', sunColor)")&&source.includes("material.setFloat('uTime', this.elapsedSeconds)"),"Solar colour and surface evolution must use the existing coalesced atmosphere update.");
 assert.ok(source.includes("0.73 + 0.27 * pow(mu, 0.58)")&&source.includes("warmLimb"),"The solar disc must use limb darkening and warm edge response.");
 
-assert.ok(source.includes('focus.x + sun.x * 180') && !source.includes('focus.add(sunVector.scale(180))'), 'Light positioning must not mutate the player or camera target.');
+assert.ok(source.includes('focus.x - directX * directDistance') && !source.includes('focus.add(sunVector.scale(180))'), 'Light positioning must not mutate the player or camera target.');
 const firePoolBody = source.slice(source.indexOf('    _updateFirePool(state, focus) {'), source.indexOf('    update(dt, force) {'));
 assert.ok(source.includes('this._fireCandidates = this.firePool.map(() => ({ h: null, d2: Infinity }))'), 'Night-fire selection must allocate its candidate slots once.');
 assert.ok(firePoolBody.includes('const candidates = this._fireCandidates'), 'Night-fire selection must reuse its fixed candidate slots.');
 assert.doesNotMatch(firePoolBody, /fireHearths\.filter|\.sort\(/, 'Night-fire updates must not allocate filter/map/sort chains.');
+const localFireBody=source.slice(source.indexOf('    _collectHearthMeshes(hearth) {'),source.indexOf('    update(dt, force) {'));
+assert.ok(localFireBody.includes('light.includedOnlyMeshes = this._collectHearthMeshes(hearth)'),
+  'Each hearth light must affect only meshes inside its physical reach.');
+assert.ok(localFireBody.includes('now - this.lastFirePoolUpdate >= 0.95'),
+  'Hearths must not be rescanned several times per second during dusk.');
+assert.ok(source.includes('this.sunLight.setEnabled(true)'), 'The one directional light must remain enabled across day/night transitions.');
+
 const updateBody = source.slice(source.indexOf('    update(dt, force) {'), source.indexOf('    dispose() {'));
 assert.doesNotMatch(updateBody, /new B\.(?:Vector3|Color3|Color4)|B\.Color3\.Lerp/, 'Atmosphere updates must reuse frame-hot vectors and colours.');
 assert.ok(source.includes("this._visualUpdateInterval = this.isTouchDevice"), "Mobile atmosphere visual updates must be paced to avoid redundant work.");
