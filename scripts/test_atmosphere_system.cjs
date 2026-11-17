@@ -89,6 +89,8 @@ assert.ok(localFireBody.includes('light.includedOnlyMeshes = nextMeshes') &&
   'Each hearth light must use only the already-culled visible meshes inside its physical reach.');
 assert.ok(localFireBody.includes('now - this.lastFirePoolUpdate >= 0.75'),
   'Hearth selection and local-light membership must use a bounded cadence.');
+assert.ok(source.includes('this._realElapsedSeconds += delta') && localFireBody.includes('const now = this._realElapsedSeconds'),
+  'Local hearth selection and flicker must keep running when the solar clock is paused.');
 assert.ok(localFireBody.includes('Choose and register local fire lights during daytime too') &&
   localFireBody.includes('const activeNight = state.night > 0.18'),
   'Hearth shader slots must be registered before dusk and use intensity, not setEnabled, for the night transition.');
