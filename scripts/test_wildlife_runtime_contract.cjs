@@ -6,7 +6,7 @@ const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const html=fs.readFileSync('index.html','utf8');
 for(const marker of [
   "if(!isPerformanceMode&&wildlifeSpawnSpecs.length!==3)",
-  "required_fauna_state = \"fauna:'blocking-required'\"",
+  "required_fauna_state = \"fauna:isPerformanceMode?'disabled-performance':'blocking-required'\"",
   "async function inspectGLBContainer(blob)",
   "async function waitForAnimalTextures(meshes,kind,timeoutMs=25000)",
   "const beforeMeshes=new Set(scene.meshes||[])",
