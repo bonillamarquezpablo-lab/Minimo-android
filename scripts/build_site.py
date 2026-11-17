@@ -685,6 +685,84 @@ def main() -> None:
         raise SystemExit("No se encontró el control único de población animal por perfil.")
     html = html.replace(animal_count_marker, animal_count_required, 1)
 
+    glb_validator_marker = " async function isValidGLB(blob){\\n  if(!(blob instanceof Blob)||blob.size<500000)return false;\\n  try{const bytes=await blob.slice(0,4).arrayBuffer();const magic=new Uint8Array(bytes);return magic.length===4&&magic[0]===0x67&&magic[1]===0x6c&&magic[2]===0x54&&magic[3]===0x46;}catch(_){return false;}\\n }"
+    glb_validator_required = r""" async function inspectGLBContainer(blob){
+  if(!(blob instanceof Blob)||blob.size<500000)return null;
+  try{
+   const header=new DataView(await blob.slice(0,12).arrayBuffer());
+   if(header.getUint32(0,true)!==0x46546c67||header.getUint32(4,true)!==2||header.getUint32(8,true)!==blob.size)return null;
+   let offset=12,chunkIndex=0,json=null,binBytes=0;
+   while(offset<blob.size){
+    if(offset+8>blob.size)return null;
+    const chunkHeader=new DataView(await blob.slice(offset,offset+8).arrayBuffer());
+    const chunkLength=chunkHeader.getUint32(0,true),chunkType=chunkHeader.getUint32(4,true);
+    offset+=8;
+    if(chunkLength%4!==0||chunkLength<=0||offset+chunkLength>blob.size)return null;
+    if(chunkIndex===0){
+     if(chunkType!==0x4e4f534a)return null;
+     json=JSON.parse(await blob.slice(offset,offset+chunkLength).text());
+    }else if(chunkType===0x004e4942)binBytes+=chunkLength;
+    offset+=chunkLength;chunkIndex++;
+   }
+   if(offset!==blob.size||!json||json.asset?.version!=='2.0')return null;
+   const meshes=json.meshes||[],nodes=json.nodes||[],skins=json.skins||[],animations=json.animations||[],accessors=json.accessors||[],views=json.bufferViews||[],buffers=json.buffers||[];
+   if(!meshes.length||!nodes.length)return null;
+   if(buffers.length>1||(buffers.length===1&&(buffers[0].uri||!Number.isFinite(buffers[0].byteLength)||buffers[0].byteLength>binBytes)))return null;
+   for(const view of views){
+    if(!Number.isInteger(view.buffer)||view.buffer<0||view.buffer>=Math.max(1,buffers.length))return null;
+    const end=(Number(view.byteOffset)||0)+(Number(view.byteLength)||0);
+    if(!Number.isFinite(end)||end<0||(buffers.length&&end>buffers[view.buffer].byteLength))return null;
+   }
+   for(const accessor of accessors){
+    if(accessor.bufferView!==undefined&&(!Number.isInteger(accessor.bufferView)||accessor.bufferView<0||accessor.bufferView>=views.length))return null;
+    if(!Number.isFinite(accessor.count)||accessor.count<=0)return null;
+   }
+   for(const node of nodes){
+    if(node.mesh!==undefined&&(!Number.isInteger(node.mesh)||node.mesh<0||node.mesh>=meshes.length))return null;
+    if(node.skin!==undefined&&(!Number.isInteger(node.skin)||node.skin<0||node.skin>=skins.length))return null;
+   }
+   for(const skin of skins){
+    if(!Array.isArray(skin.joints)||skin.joints.length<1||skin.joints.some(j=>!Number.isInteger(j)||j<0||j>=nodes.length))return null;
+   }
+   for(const mesh of meshes){
+    if(!Array.isArray(mesh.primitives)||!mesh.primitives.length)return null;
+    for(const primitive of mesh.primitives){
+     if(!primitive.attributes||!Number.isInteger(primitive.attributes.POSITION)||primitive.attributes.POSITION<0||primitive.attributes.POSITION>=accessors.length)return null;
+     if(primitive.indices!==undefined&&(!Number.isInteger(primitive.indices)||primitive.indices<0||primitive.indices>=accessors.length))return null;
+    }
+   }
+   return {json,binBytes};
+  }catch(_){return null;}
+ }
+ async function isValidGLB(blob){return !!(await inspectGLBContainer(blob));}
+ async function waitForAnimalTextures(meshes,kind,timeoutMs=25000){
+  const textures=new Set();
+  for(const mesh of meshes||[]){
+   const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+   for(const material of materials)if(material&&typeof material.getActiveTextures==='function'){
+    for(const texture of material.getActiveTextures()||[])if(texture)textures.add(texture);
+   }
+  }
+  const pending=Array.from(textures).filter(texture=>typeof texture.isReady==='function'&&!texture.isReady());
+  if(!pending.length)return {count:textures.size,waitedMs:0};
+  const started=performance.now();
+  await new Promise((resolve,reject)=>{
+   let settled=false,timer=null;
+   const finish=error=>{if(settled)return;settled=true;if(timer!==null)clearTimeout(timer);if(error)reject(error);else resolve();};
+   const check=()=>{
+    if(pending.every(texture=>typeof texture.isReady!=='function'||texture.isReady()))return finish(null);
+    if(performance.now()-started>=timeoutMs)return finish(new Error(kind+' dejó texturas sin preparar tras '+timeoutMs+' ms.'));
+    requestAnimationFrame(check);
+   };
+   timer=setTimeout(()=>finish(new Error(kind+' agotó la espera de texturas tras '+timeoutMs+' ms.')),timeoutMs+250);
+   check();
+  });
+  return {count:textures.size,waitedMs:Number((performance.now()-started).toFixed(1))};
+ }"""
+    if html.count(glb_validator_marker) != 1:
+        raise SystemExit("No se encontró el validador GLB único.")
+    html = html.replace(glb_validator_marker, glb_validator_required, 1)
+
     wildlife_empty = "  if(!wildlifeSpawnSpecs.length)return 0;"
     wildlife_required = "  if(wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
     if html.count(wildlife_empty) != 1:
