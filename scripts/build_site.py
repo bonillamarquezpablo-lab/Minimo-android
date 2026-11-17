@@ -1993,7 +1993,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   }else{
    const faunaTasks=[{name:'Fauna terrestre',promise:loadWildlifeModels()}];
    if(!isPerformanceMode)faunaTasks.push({name:'Gaviotas 3D',promise:loadRiggedCoastalGulls()});
-   // No liberar la entrada por el primer fallo: el resto de tareas opcionales debe terminar también.
+   // No liberar la entrada hasta resolver todas las dependencias obligatorias del perfil.
    const faunaResults=await Promise.allSettled(faunaTasks.map(task=>task.promise));
    faunaFailures.push(...faunaResults.flatMap((result,index)=>result.status==='rejected'?[{name:faunaTasks[index].name,message:String(result.reason&&result.reason.message||result.reason)}]:[]));
   }"""
