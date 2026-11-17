@@ -119,7 +119,7 @@ assert.ok(builder.includes('tree_rebuild_start =') &&
   'The procedural triangle foliage must be replaced by three required, locally packaged CC0 tree models with texture maps.');
 assert.ok(builder.includes('gull_material_registry_replacement = "    const realBirds=[];"') &&
   builder.includes('gull_material_style_start = "const subduedMaterials=new Set();"') &&
-  builder.includes('gull_material_style_end = "const bounds=boundsForMeshes(meshes)"') &&
+  builder.includes('gull_material_style_end = "const sourceBounds=boundsForMeshes(meshes)"') &&
   builder.includes('html = html[:style_start] + html[style_end:]'),
   'The five gull instances must retain the native source material and colour without legacy per-instance tinting.');
 assert.ok(builder.includes('wildlife_update_marker = "function updateWildlife(dt){"') &&
