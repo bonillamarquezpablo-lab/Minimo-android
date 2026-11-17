@@ -70,5 +70,5 @@ assert.ok(build.includes('loadEngine(url,20000,check)'),
 assert.ok(smoke.includes('PLAYER_TEST_MOBILE'));
 assert.ok(smoke.includes('Xiaomi 12X emulation'));
 assert.ok(smoke.includes('deviceScaleFactor: MOBILE_PROFILE ? 2.75 : 1'));
-assert.ok(workflow.includes('Test Xiaomi 12X-class Android mobile startup and cached restart'));
+assert.ok(workflow.includes('Test Android-class mobile startup and first 20 seconds of gameplay'), 'The main startup workflow must run the Android-class mobile gameplay smoke.');
 console.log('MOBILE STARTUP LOADING CONTRACT OK');
