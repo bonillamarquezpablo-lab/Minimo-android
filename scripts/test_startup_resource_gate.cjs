@@ -15,7 +15,6 @@ const sw = fs.readFileSync(swPath, 'utf8');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const assetPaths = new Set((manifest.assets || []).map(asset => asset.path));
 const requiredWildlife = [
-  'assets/models/Seagull.glb',
   'assets/models/wildlife/Deer.glb',
   'assets/models/wildlife/Stag.glb',
   'assets/models/wildlife/Wolf.glb'
@@ -23,8 +22,7 @@ const requiredWildlife = [
 
 for (const asset of requiredWildlife) {
   assert.ok(assetPaths.has(asset), 'Asset manifest is missing ' + asset);
-  const minimumBytes = asset.endsWith('/Seagull.glb') ? 50000 : 100000;
-  assert.ok(fs.statSync(path.resolve('dist', asset)).size > minimumBytes, 'Bundled animal GLB is missing or too small: ' + asset);
+  assert.ok(fs.statSync(path.resolve('dist', asset)).size > 100000, 'Bundled animal GLB is missing or too small: ' + asset);
 }
 assert.ok(html.includes("const WILDLIFE_ASSET_ROOT=new URL('./assets/models/wildlife/',document.baseURI).href;"),
   'Wildlife must be loaded from the same-origin package.');
@@ -37,6 +35,7 @@ assert.ok(html.includes('window.__ELSN_STARTUP_RESOURCE_GATE__') && html.include
 assert.ok(html.includes("startupResourceSnapshot.world.islands!==13"));
 assert.ok(html.includes("startupResourceSnapshot.fauna.loaded!==3"));
 assert.ok(html.includes("startupResourceSnapshot.fauna.loadedGulls!==5"));
+assert.ok(html.includes("window.__ELSN_GULL_DIAGNOSTICS__") && html.includes("externalGlb:false"), 'Five gulls must use the new in-project mesh instead of downloading the rounded GLB.');
 assert.ok(html.includes("startupResourceSnapshot.world.grassClumps<=0"));
 assert.ok(html.includes('fauna:isPerformanceMode?\'disabled-performance\':\'blocking-required\''),
   'Quality requires fauna before entry; Performance keeps its pre-existing fauna-disabled profile.');
