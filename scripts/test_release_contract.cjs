@@ -37,10 +37,10 @@ assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
   buildSite.includes("mergeStaticDecorByMaterial") &&
   buildSite.includes("await loadForestTreeTemplates()"),
   "The release must package and block on all three complete forest models.");
-assert.ok(buildSite.includes("targetGullMaxExtentMeters=.78") &&
-  buildSite.includes("fittedMaxExtent>.82") &&
+assert.ok(buildSite.includes("targetGullMaxExtentMeters=.55") &&
+  buildSite.includes("fittedMaxExtent>.57") &&
   buildSite.includes("visualRoot.position.copyFrom(sourceCenter.scale(-1))"),
-  "The release must center the gull hierarchy and enforce the measured 0.78 m physical size.");
+  "The release must center the gull hierarchy and enforce the measured 0.55 m biological size.");
 
 for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle:titleVersion,sourceBuildUserAgent:buildVersion})) {
   assert.equal(version,sourceVersion,`The source ${source} must remain the 0.6.274 input that build_site upgrades deterministically.`);
