@@ -8,7 +8,7 @@ for(const marker of [
   "if(wildlifeSpawnSpecs.length!==3)",
   "required_fauna_state = \"fauna:'blocking-required'\"",
   "async function inspectGLBContainer(blob)",
-  "async function waitForAnimalTextures(meshes,kind,timeoutMs=25000)",
+  "async function waitForAnimalTextures(meshes,kind,timeoutMs=30000",
   "const beforeMeshes=new Set(scene.meshes||[])",
   "beforeNodes=new Set(scene.transformNodes||[])",
   "beforeSkeletons=new Set(scene.skeletons||[])",
