@@ -22,8 +22,9 @@ const deepNightLighting = Atmosphere.computeLightingProfile(0);
 const reusableState = { sunDirection: { x: 0, y: 0, z: 0 } };
 assert.equal(Atmosphere.computeSolarState(12, reusableState), reusableState, 'Solar state must support allocation-free updates.');
 assert.ok(duskLighting.hemisphereIntensity >= 0.56 && duskLighting.hemisphereIntensity <= 0.70 &&
-  duskLighting.exposure >= 1.06 && duskLighting.exposure <= 1.12,
-  'Dusk must lower ambient fill/exposure enough to preserve atmospheric sky contrast while keeping terrain readable.');
+  near(duskLighting.exposure, 1.035) && near(deepNightLighting.exposure, 1.035) &&
+  near(duskLighting.contrast, 1.10) && near(deepNightLighting.contrast, 1.10),
+  'Atmosphere lighting may change through sun/moon/ambient values, while shared image-processing settings stay stable to avoid scene-wide material invalidation.');
 assert.ok(deepNightLighting.hemisphereIntensity >= 0.26 && deepNightLighting.hemisphereIntensity <= 0.30,
   'Night ambient fill must remain low enough for silhouettes and moonlight to read naturally.');
 assert.ok(deepNightLighting.moonIntensity >= 0.33 && deepNightLighting.environmentIntensity >= 0.25 &&
@@ -132,6 +133,10 @@ assert.ok(!localFireBody.includes('computeWorldMatrix(true)'),
 assert.ok(source.includes('this.sunLight.setEnabled(true)'), 'The one directional light must remain enabled across day/night transitions.');
 
 const updateBody = source.slice(source.indexOf('    update(dt, force) {'), source.indexOf('    dispose() {'));
+assert.doesNotMatch(updateBody, /imageProcessing\.(?:exposure|contrast)\s*=\s*lighting\./,
+  'The frame update must not mutate shared image-processing configuration.');
+assert.ok(source.includes('const imageConfigs = new Set(') && source.includes('imageConfig.exposure = 1.035') && source.includes('imageConfig.contrast = 1.10'),
+  'Image-processing values must be applied once to unique configuration objects during setup.');
 assert.doesNotMatch(updateBody, /new B\.(?:Vector3|Color3|Color4)|B\.Color3\.Lerp/, 'Atmosphere updates must reuse frame-hot vectors and colours.');
 assert.ok(source.includes("this._visualUpdateInterval = this.isTouchDevice"), "Mobile atmosphere visual updates must be paced to avoid redundant work.");
 assert.ok(source.includes("this._visualUpdateAccumulator += delta") && source.includes("this._visualUpdateAccumulator < this._visualUpdateInterval"), "Atmosphere must preserve the solar clock while coalescing visual updates.");
