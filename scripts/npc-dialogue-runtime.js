@@ -221,7 +221,7 @@ function project(slot,s,occupied){
   let placement=Core.placeBubble({x,y},{width:slot.width,height:slot.height},{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom},occupied);
   if(!placement){
    const left=Math.max(rect.left+6,Math.min(rect.right-slot.width-6,x-slot.width/2));
-   const top=Math.max(rect.top+6,Math.min(rect.bottom-slot.height-6,y-slot.height- slot.height-12));
+   const top=Math.max(rect.top+6,Math.min(rect.bottom-slot.height-6,y-slot.height-12));
    placement={left,top,right:left+slot.width,bottom:top+slot.height};
    diagnostics.placementFallbacks=(diagnostics.placementFallbacks||0)+1;
   }
