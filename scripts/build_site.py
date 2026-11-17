@@ -953,7 +953,7 @@ def main() -> None:
     html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
 
     gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
-    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.leftWing&&b.rightWing){const flap=Math.sin(elapsed*10.5+b.phase)*.68;b.leftWing.rotation[b.wingFlapAxis]=b.leftWingBaseRotation-flap;b.rightWing.rotation[b.wingFlapAxis]=b.rightWingBaseRotation+flap;if(b.tail)b.tail.rotation.x=b.tailBaseRotation+Math.sin(elapsed*2.7+b.phase)*.045;}"
+    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.leftWing&&b.rightWing){const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;b.leftWing.rotation[b.wingFlapAxis]=b.leftWingBaseRotation-open-flap;b.rightWing.rotation[b.wingFlapAxis]=b.rightWingBaseRotation+open+flap;if(b.tail)b.tail.rotation.x=b.tailBaseRotation+Math.sin(elapsed*2.7+b.phase)*.045;}"
     if html.count(gull_flight_marker) != 1:
         raise SystemExit("No se encontró el bucle único de vuelo de las gaviotas.")
     html = html.replace(gull_flight_marker, gull_flight_replacement, 1)
@@ -1842,27 +1842,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.317: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.318: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.317; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.318; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.317\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.318\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.317.")
-    html = html.replace("0.6.274", "0.6.317")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.318.")
+    html = html.replace("0.6.274", "0.6.318")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'34',build:'0.6.317'"
+    diagnostic_build_replacement = "reportVersion:'35',build:'0.6.318'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.317 para normalizar.")
-    game_version = "0.6.317"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.318 para normalizar.")
+    game_version = "0.6.318"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
