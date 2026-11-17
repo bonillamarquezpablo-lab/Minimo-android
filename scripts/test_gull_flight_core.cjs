@@ -4,7 +4,7 @@ const Flight=require("./gull-flight-core.js");
 function joint(){return {rotation:{x:0,y:0,z:0}};}
 function bird(){
  const value={root:joint(),leftWing:joint(),rightWing:joint(),flight:{
-  wingFlapAxis:"z",legBendAxis:"x",leftHip:joint(),rightHip:joint(),leftKnee:joint(),rightKnee:joint(),
+  wingFlapAxis:"z",legBendAxis:"x",leftWing:joint(),rightWing:joint(),leftHip:joint(),rightHip:joint(),leftKnee:joint(),rightKnee:joint(),
   neck:joint(),head:joint(),tail:joint(),phase:.25,
   base:{rootPitch:0,leftWing:0,rightWing:0,leftHip:0,rightHip:0,leftKnee:0,rightKnee:0,neck:0,head:0,tail:0}
  }};
