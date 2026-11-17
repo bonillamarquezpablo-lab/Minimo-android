@@ -1122,6 +1122,64 @@
       cpu: { worldUpdateMedianMs: medianWorld, renderPreparationMedianMs: medianRender },
       worldPhaseHotspots,
       performanceDiagnosis,
+      optimizerPerformance: (() => {
+        const latest = latestPhaseSample || {};
+        const subs = latest.subsystems || {};
+        const scene = latest.scene || {};
+        const atm = latest.atmosphere && latest.atmosphere.performance || {};
+        const fauna = latest.wildlife || {};
+        const dialogue = latest.npcDialogue || {};
+        const metric = value => value && typeof value === "object" ? {
+          samples: number(value.samples), lastMs: number(value.lastMs),
+          p50Ms: number(value.p50Ms), p95Ms: number(value.p95Ms),
+          p99Ms: number(value.p99Ms), maxMs: number(value.maxMs)
+        } : null;
+        return {
+          spatialSelection: {
+            enabled: scene.meshSelectionOctreeEnabled === true,
+            buildMs: number(scene.meshSelectionBuildMs),
+            dynamicFilterAverageMs: number(scene.meshSelectionDynamicFilterAverageMs),
+            dynamicFilterMaxMs: number(scene.meshSelectionDynamicFilterMaxMs),
+            candidates: number(scene.meshSelectionDynamicFilterCandidates),
+            selected: number(scene.meshSelectionDynamicFilterSelected),
+            culled: number(scene.meshSelectionDynamicFilterCulled),
+            cullRatio: number(scene.meshSelectionDynamicFilterCullRatio)
+          },
+          waterAndReflections: {
+            updateMs: number(subs.waterUpdateMs), normalMs: number(subs.waterNormalMs),
+            reflectionMeshes: number(subs.waterReflectionMeshes),
+            reflectionRefreshHz: number(subs.waterReflectionRefreshRate)
+          },
+          vegetationBatching: {
+            instances: number(subs.grassInstances), batches: number(subs.grassBatches)
+          },
+          shadowCasterManagement: { activeCasters: number(subs.activeWorldShadowCasters) },
+          atmosphere: {
+            visual: metric(atm.visualUpdate), directLighting: metric(atm.directLighting),
+            skyAndClouds: metric(atm.skyAndCloudUniforms), hearthSelection: metric(atm.hearthSelection),
+            waterMaterial: metric(atm.waterMaterial), postProcessing: metric(atm.postProcessing)
+          },
+          wildlife: {
+            update: { samples: number(fauna.samples), p50Ms: number(fauna.p50Ms),
+              p95Ms: number(fauna.p95Ms), p99Ms: number(fauna.p99Ms), maxMs: number(fauna.maxMs) },
+            requested: number(fauna.requested), loaded: number(fauna.loaded),
+            complete: fauna.complete === true, readiness: Array.isArray(fauna.readiness) ? fauna.readiness : []
+          },
+          npcDialogue: {
+            positioning: { samples: number(dialogue.positioningSamples),
+              p50Ms: number(dialogue.positioningP50Ms), p95Ms: number(dialogue.positioningP95Ms),
+              p99Ms: number(dialogue.positioningP99Ms), maxMs: number(dialogue.maxPositioningMs) },
+            projectionAttempts: number(dialogue.projectionAttempts),
+            projectionSuccesses: number(dialogue.projectionSuccesses)
+          },
+          minimap: { lastMs: number(subs.mapDrawMs), maxMs: number(subs.mapDrawMaxMs),
+            samples: number(subs.mapDrawSampleCount) },
+          structureAuditCache: { lastMs: number(subs.habitableAuditMs),
+            maxMs: number(subs.habitableAuditMaxMs), cacheHits: number(subs.habitableAuditLastCacheHits),
+            cacheMisses: number(subs.habitableAuditLastCacheMisses) },
+          worldPhases: phaseCosts
+        };
+      })(),
       startupScriptLoads: startupScriptLoadSummary,
       mapRendering: {
         lastMs: latestPhaseSample ? number(latestPhaseSample.subsystems.mapDrawMs) : null,
