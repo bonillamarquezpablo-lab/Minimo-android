@@ -318,6 +318,13 @@ async function main() {
     assert.equal(startupResources.fauna?.requested, 3, 'No se prepararon los tres animales de la isla inicial.');
     assert.equal(startupResources.fauna?.loaded, 3, 'No se montaron los tres animales de la isla inicial.');
     assert.equal(startupResources.fauna?.loadedGulls, 5, 'No se montaron las cinco gaviotas 3D.');
+    manifest.gullDiagnostics = await page.evaluate(() => window.__ELSN_GULL_DIAGNOSTICS__ || null);
+    assert.equal(manifest.gullDiagnostics?.ready, true, 'La nueva malla anatómica de gaviota no se ha inicializado.');
+    assert.equal(manifest.gullDiagnostics?.count, 5, 'La escena debe conservar exactamente cinco gaviotas.');
+    assert.equal(manifest.gullDiagnostics?.meshCount, 15, 'Las cinco gaviotas deben limitarse a tres mallas cada una.');
+    assert.equal(manifest.gullDiagnostics?.externalGlb, false, 'No debe descargarse el antiguo GLB de gaviota redondeada.');
+    assert.ok(!manifest.glbResponses.some(response => /Seagull\\.glb/i.test(response.url)),
+      'El arranque sigue solicitando el viejo modelo Seagull.glb.');
     assert.ok(startupResources.world?.grassClumps > 0 && startupResources.world?.grassBatches > 0,
       'La hierba 3D de la zona inicial no se preparó antes de entrar.');
     manifest.wildlifeCache = await page.evaluate(async () => {
