@@ -20,6 +20,10 @@ for(const marker of [
   "partialNodes=Array.from(scene.transformNodes||[]).filter(node=>!beforeNodes.has(node))",
   "partialSkeletons=Array.from(scene.skeletons||[]).filter(skeleton=>!beforeSkeletons.has(skeleton))",
   "window.__ELSN_WILDLIFE_DIAGNOSTICS__",
+  "wildlifeReadinessRecords=[]",
+  "readiness:wildlifeReadinessRecords.slice()",
+  "wildlifeReadinessRecords.push({kind:spec.kind,state:'ready'",
+  "wildlifeModelsLoadOnce().catch(error=>",
   "complete:ambientFauna.length===wildlifeSpawnSpecs.length"
 ]) assert.ok(builder.includes(marker),'Builder is missing animal-integrity requirement: '+marker);
 assert.match(html,/WILDLIFE_MODEL_DEFS=\{deer:/);
