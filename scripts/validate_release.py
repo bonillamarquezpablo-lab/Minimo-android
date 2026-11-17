@@ -334,6 +334,7 @@ def main() -> None:
         "rotationQuaternion.toEulerAngles()",
         "leftWing.rotation[b.wingFlapAxis]",
         "rightWing.rotation[b.wingFlapAxis]",
+        "groups.forEach(group=>{try{group.stop();}catch(_){}})",
         "function findForestTreePlacement(x,z,canopyRadius)",
         "const conifer=kind==='pine'||kind==='spruce'",
         "Math.min(conifer?5.2:4.6,horizontalSpan*(conifer?0.70:0.62))",
