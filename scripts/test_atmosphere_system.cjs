@@ -96,14 +96,14 @@ assert.ok(localFireBody.includes('Select nearby hearths in daylight') &&
   source.includes('light.includedOnlyMeshes = this._fireFallbackMeshes') &&
   source.includes('this._fireFallbackMeshes = this.skyDome ? [this.skyDome] : []'),
   'Hearth light slots must stay permanently registered and use a harmless fallback target outside their range.');
-assert.doesNotMatch(localFireBody,/\\.setEnabled\\(/,
+assert.ok(!localFireBody.includes('.setEnabled('), 'The hearth pool must never toggle point-light shader slots at dusk.');
   'The hearth pool must never toggle point-light shader slots at dusk.');
 assert.ok(source.includes('const lunarBlend = smooth(0.18, 0.82, state.night)') &&
   source.includes('handoffAngle = Math.PI * lunarBlend') &&
   !source.includes('const useMoonDirectLight = state.night > state.daylight'),
   'The directional light must hand off smoothly between sun and moon without an abrupt 180-degree flip.');
 assert.doesNotMatch(source.slice(source.indexOf('        this.moonDisc.visibility = visible;'),source.indexOf('      if (this.skyMaterial) {')),
-  /\\.setEnabled\\(/,'Moon visibility must fade through alpha instead of toggling mesh/light slots.');
+  '.setEnabled(','Moon visibility must fade through alpha instead of toggling mesh/light slots.');
 assert.ok(source.includes('rayleighPhase') && source.includes('miePhase') && source.includes('sunAzimuth') &&
   !source.includes('sky += vec3(0.98, 0.39, 0.16) * horizonGlow'),
   'The sky must use directional atmospheric scattering rather than a uniform orange horizon fill.');
