@@ -808,7 +808,8 @@ async function main() {
         enabled: false,
         delegatedTo: 'Game runtime acceptance — EL SIN NOMBRE'
       };
-    } else {
+      return;
+    }
     // Repeat in the same browser profile to measure the Service Worker/Cache API warm path.
     const cachedLaunchStartedAt = performance.now();
     // Dispose of the renderer that just completed the 5,000+ mesh gameplay
@@ -1062,7 +1063,6 @@ async function main() {
         enabled: false,
         reason: 'El reinicio offline requiere HTTPS; este runner usa HTTP.'
       };
-    }
     }
 
     console.log('[player-startup] first/cached/offline startup + first 20s: ' +
