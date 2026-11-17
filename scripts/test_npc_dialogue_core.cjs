@@ -119,4 +119,10 @@ assert.ok(dialogueRuntime.includes('anchor.computeWorldMatrix(false)'),
  "The head-bone anchor must update only when dirty before its screen position is calculated.");
 assert.ok(dialogueRuntime.includes('lastProjection'));
 assert.ok(dialogueRuntime.includes('lastPositioningMs'));
+assert.ok(dialogueRuntime.includes('const positioningSamples=new Float32Array(120)') &&
+  dialogueRuntime.includes('positioningPercentiles()') &&
+  dialogueRuntime.includes('positioningP50Ms:at(.50)') &&
+  dialogueRuntime.includes('positioningP95Ms:at(.95)') &&
+  dialogueRuntime.includes('positioningP99Ms:at(.99)'),
+  'NPC dialogue projection must expose bounded p50/p95/p99 CPU timing samples.');
 console.log("NPC screen-space projection freshness and timing contract: PASS.");
