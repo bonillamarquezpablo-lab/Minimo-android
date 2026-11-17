@@ -11,6 +11,9 @@ assert.match(html,/await loadForestTreeTemplates\(\)/);
 assert.match(html,/targetGullMaxExtentMeters=\.78/);
 assert.match(html,/fittedMaxExtent>\.82/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
+assert.ok(html.includes('leftWing,rightWing,tail,wingFlapAxis'), 'The replacement gull must expose its named articulated anatomy.');
+assert.ok(html.includes('b.leftWing.rotation[b.wingFlapAxis]') && html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
+  'The new gull wings must flap around their actual pivot axis.');
 
 function inspectGlb(relative,minimumBytes,requiresTexture){
  const file=path.join(dist,relative);
@@ -39,6 +42,24 @@ assert.match(html,/mergeStaticDecorByMaterial/,'Each static GLB tree must be mer
 const gull=path.join(dist,'assets/models/Seagull.glb');
 assert.ok(fs.existsSync(gull),'Falta GLB de gaviota');
 const gullData=fs.readFileSync(gull);
+assert.ok(gullData.length>=2_500_000,'La nueva gaviota anatómica debe conservar el modelo completo de alta definición.');
 assert.equal(gullData.toString('ascii',0,4),'glTF','Firma GLB de gaviota inválida');
-console.log('OK: bosque CC0 completo y local; mapas de textura verificados; gaviotas con tamaño máximo medido de 0,78 m.');
-console.log(JSON.stringify({models,gullBytes:gullData.length},null,2));
+assert.equal(gullData.readUInt32LE(4),2,'Versión GLB de gaviota inesperada');
+assert.equal(gullData.readUInt32LE(8),gullData.length,'Longitud GLB de gaviota incoherente');
+const gullJsonLength=gullData.readUInt32LE(12);
+assert.equal(gullData.readUInt32LE(16),0x4e4f534a,'Falta el chunk JSON del GLB de gaviota');
+const gullJson=JSON.parse(gullData.toString('utf8',20,20+gullJsonLength));
+const gullNodeNames=(gullJson.nodes||[]).map(node=>String(node.name||''));
+assert.ok(gullNodeNames.some(name=>/^LeftWing(?:_|$)/i.test(name)),'La gaviota debe tener el pivote LeftWing');
+assert.ok(gullNodeNames.some(name=>/^RightWing(?:_|$)/i.test(name)),'La gaviota debe tener el pivote RightWing');
+assert.ok(gullNodeNames.some(name=>/^Tail(?:_|$)/i.test(name)),'La gaviota debe tener cola articulada');
+const gullTriangles=(gullJson.meshes||[]).reduce((total,mesh)=>total+(mesh.primitives||[]).reduce((subtotal,primitive)=>{
+  if(primitive.mode!==undefined&&primitive.mode!==4)return subtotal;
+  const accessor=primitive.indices===undefined?primitive.attributes?.POSITION:gullJson.accessors?.[primitive.indices];
+  const count=primitive.indices===undefined?(gullJson.accessors?.[accessor]?.count||0):(accessor?.count||0);
+  return subtotal+Math.floor(count/3);
+},0),0);
+assert.ok(gullTriangles>0&&gullTriangles<=7000,'La nueva gaviota debe conservar una malla ligera y anatómica (triángulos medidos: '+gullTriangles+').');
+assert.ok((gullJson.materials||[]).length>0&&(gullJson.materials||[]).length<=2,'La gaviota debe conservar el material nativo de su plumaje.');
+console.log('OK: bosque y mapas PBR intactos; gaviota anatómica con pivotes de alas/cola y escala física máxima 0,78 m.');
+console.log(JSON.stringify({models,gullBytes:gullData.length,gullTriangles,gullMaterials:gullJson.materials.length},null,2));
