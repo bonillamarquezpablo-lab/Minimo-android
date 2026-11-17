@@ -84,10 +84,16 @@ assert.ok(source.includes('this._fireCandidates = this.firePool.map(() => ({ h: 
 assert.ok(firePoolBody.includes('const candidates = this._fireCandidates'), 'Night-fire selection must reuse its fixed candidate slots.');
 assert.doesNotMatch(firePoolBody, /fireHearths\.filter|\.sort\(/, 'Night-fire updates must not allocate filter/map/sort chains.');
 const localFireBody=source.slice(source.indexOf('    _collectHearthMeshes(hearth) {'),source.indexOf('    update(dt, force) {'));
-assert.ok(localFireBody.includes('light.includedOnlyMeshes = this._collectHearthMeshes(hearth)'),
-  'Each hearth light must affect only meshes inside its physical reach.');
-assert.ok(localFireBody.includes('now - this.lastFirePoolUpdate >= 0.95'),
-  'Hearths must not be rescanned several times per second during dusk.');
+assert.ok(localFireBody.includes('light.includedOnlyMeshes = nextMeshes') &&
+  localFireBody.includes('scene.getActiveMeshes'),
+  'Each hearth light must use only the already-culled visible meshes inside its physical reach.');
+assert.ok(localFireBody.includes('now - this.lastFirePoolUpdate >= 0.75'),
+  'Hearth selection and local-light membership must use a bounded cadence.');
+assert.ok(localFireBody.includes('Choose and register local fire lights during daytime too') &&
+  localFireBody.includes('const activeNight = state.night > 0.18'),
+  'Hearth shader slots must be registered before dusk and use intensity, not setEnabled, for the night transition.');
+assert.ok(!localFireBody.includes('computeWorldMatrix(true)'),
+  'Hearth scoping must not force world-matrix rebuilds across the scene.');
 assert.ok(source.includes('this.sunLight.setEnabled(true)'), 'The one directional light must remain enabled across day/night transitions.');
 
 const updateBody = source.slice(source.indexOf('    update(dt, force) {'), source.indexOf('    dispose() {'));
