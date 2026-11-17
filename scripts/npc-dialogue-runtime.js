@@ -43,7 +43,7 @@ function bindSceneRenderObserver(s){
  if(observable&&typeof observable.add==="function"){
   renderObserver=observable.add(()=>{
    if(!lastActive||document.hidden||!lastSnapshot)return;
-   try{render(lastSnapshot,false);}catch(error){diagnostics.lastError=String(error&&error.message||error);}
+   try{render(lastSnapshot,true);}catch(error){diagnostics.lastError=String(error&&error.message||error);}
   });
  }
 }
@@ -181,7 +181,7 @@ function project(slot,s,occupied){
  if(!c||!s||!s.scene||!s.engine||!s.camera||!s.canvas)return hide("missing-scene-camera-canvas");
  const npc=c.npc;if(!enabled(npc))return hide("npc-disabled");
  const root=rootOf(npc);
- try{if(root&&typeof root.computeWorldMatrix==="function")root.computeWorldMatrix(true);}catch(_){}
+ try{if(root&&typeof root.computeWorldMatrix==="function")root.computeWorldMatrix(false);}catch(_){}
  const rootPos=worldPosition(root);
  if(!rootPos)return hide("npc-root-unavailable");
  if(distance(rootPos,s.playerPosition)>RANGE)return hide("outside-dialogue-range");
@@ -189,7 +189,7 @@ function project(slot,s,occupied){
  if(!BABYLON||!BABYLON.Vector3||!BABYLON.Matrix)return hide("babylon-project-unavailable");
  try{
   const anchor=npc.parts&&npc.parts.head&&typeof npc.parts.head.getAbsolutePosition==="function"?npc.parts.head:root;
-  try{if(anchor&&typeof anchor.computeWorldMatrix==="function")anchor.computeWorldMatrix(true);}catch(_){}
+  try{if(anchor&&typeof anchor.computeWorldMatrix==="function")anchor.computeWorldMatrix(false);}catch(_){}
   const ap=worldPosition(anchor);if(!ap)return hide("head-anchor-unavailable");
   if(!projectionIdentity)projectionIdentity=BABYLON.Matrix.Identity();
   if(!projectionScratch)projectionScratch=new BABYLON.Vector3(0,0,0);
