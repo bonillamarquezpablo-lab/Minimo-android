@@ -71,6 +71,11 @@ jobs:
           node --check scripts/player-startup-smoke.mjs
       - name: Run Babylon world snapshot tests
         run: node scripts/test_phase2_world_inspection.mjs
+      - name: Test NPC dialogue, wildlife loading and subsystem performance contracts
+        run: |
+          node scripts/test_npc_dialogue_core.cjs
+          node scripts/test_wildlife_runtime_contract.cjs
+          node scripts/test_subsystem_performance_contract.cjs
       - name: Verify builder, Inspector and offline cache wiring
         run: node scripts/test_phase2_build_contract.mjs
       - name: Run Inspector live contracts
