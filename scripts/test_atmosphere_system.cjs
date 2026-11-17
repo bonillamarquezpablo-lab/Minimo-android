@@ -78,7 +78,7 @@ assert.doesNotMatch(sunSurfaceBody,/\.join\('\\\\n'\);/,"GLSL shader sources mus
 assert.ok(source.includes("material.setColor3('sunColor', sunColor)")&&source.includes("material.setFloat('uTime', this.elapsedSeconds)"),"Solar colour and surface evolution must use the existing coalesced atmosphere update.");
 assert.ok(source.includes("0.73 + 0.27 * pow(mu, 0.58)")&&source.includes("warmLimb"),"The solar disc must use limb darkening and warm edge response.");
 
-assert.ok(source.includes('focus.x - directX * directDistance') && !source.includes('focus.add(sunVector.scale(180))'), 'Light positioning must not mutate the player or camera target.');
+assert.ok(source.includes('this._lightPosition.x = focus.x - directX * 180') && !source.includes('focus.add(sunVector.scale(180))'), 'Light positioning must not mutate the player or camera target.');
 const firePoolBody = source.slice(source.indexOf('    _updateFirePool(state, focus) {'), source.indexOf('    update(dt, force) {'));
 assert.ok(source.includes('this._fireCandidates = this.firePool.map(() => ({ h: null, d2: Infinity }))'), 'Night-fire selection must allocate its candidate slots once.');
 assert.ok(firePoolBody.includes('const candidates = this._fireCandidates'), 'Night-fire selection must reuse its fixed candidate slots.');
