@@ -2012,7 +2012,7 @@ function prepareMinorStartupAssets(){
    try{
     const response=await fetch(new URL(path,document.baseURI).href,{cache:'force-cache',credentials:'same-origin'});
     if(!response.ok)throw new Error('HTTP '+response.status);
-    if(/\\.(?:json|webmanifest)$/i.test(path))await response.clone().json();
+    if(path.endsWith('.json')||path.endsWith('.webmanifest'))await response.clone().json();
     sharedStartupAssetPreloadState.completed++;
    }catch(error){
     sharedStartupAssetPreloadState.failed.push({path,message:String(error&&error.message||error).slice(0,180)});
