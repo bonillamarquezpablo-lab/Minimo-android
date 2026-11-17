@@ -45,9 +45,6 @@ DOWNLOADS = {
     "assets/downloads/Ground060_2K-JPG.zip": (
         "https://ambientcg.com/get?file=Ground060_2K-JPG.zip", 1_000_000, "zip"
     ),
-    "assets/models/Seagull.glb": (
-        "https://gobkit.com/freebies/animal007/Seagull.glb", 50_000, "glb"
-    ),
     "assets/models/forest/mature-scots-pine-tree.glb": (
         "https://files.innerscene.com/library/mature-scots-pine-tree-280307e1/e52dca598822dfa9ffa9/mature-scots-pine-tree.glb", 500_000, "glb"
     ),
@@ -1624,27 +1621,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.313: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.314: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.313; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.314; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.313\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.314\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.313.")
-    html = html.replace("0.6.274", "0.6.313")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.314.")
+    html = html.replace("0.6.274", "0.6.314")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'30',build:'0.6.313'"
+    diagnostic_build_replacement = "reportVersion:'31',build:'0.6.314'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.313 para normalizar.")
-    game_version = "0.6.313"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.314 para normalizar.")
+    game_version = "0.6.314"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -3081,6 +3078,95 @@ function getWorldPhaseTimingSnapshot(){
     )
     if npc_behavior_count != 1:
         raise SystemExit(f"Se esperaba una sustitución de comportamiento NPC; se realizaron {npc_behavior_count}.")
+    # 0.6.314: replace the inflated external GLB gull with a compact, anatomical flight silhouette.
+    gull_loader_start = " // No se crean gaviotas provisionales: la fauna GLB se prepara antes de entrar.\n async function loadRiggedCoastalGulls(){"
+    gull_loader_end = "\n }\n\n // Partículas reutilizables: evita crear y destruir geometría en cada impacto."
+    if html.count(gull_loader_start) != 1 or html.count(gull_loader_end) != 1:
+        raise SystemExit("No se encontró el cargador único de gaviotas para sustituir el GLB redondeado.")
+    gull_loader_replacement = r""" // Gaviotas adultas estilizadas: fuselaje estrecho, cuello, pico y alas largas con puntas oscuras.
+ async function loadRiggedCoastalGulls(){
+  const realBirds=[];
+  const bodyMaterial=mat('Herring gull plumage · white and grey','#ffffff',.96);
+  bodyMaterial.useVertexColors=true;bodyMaterial.specularColor=new B.Color3(.035,.035,.035);
+  const wingMaterial=mat('Herring gull flight feathers · silver and charcoal','#ffffff',.97);
+  wingMaterial.useVertexColors=true;wingMaterial.backFaceCulling=false;wingMaterial.specularColor=new B.Color3(.025,.025,.025);
+  const bodyStations=[
+   [-.242,0,.003,.006],[-.211,0,.025,.023],[-.151,0,.050,.039],[-.083,.001,.061,.045],
+   [-.012,.004,.058,.043],[.054,.012,.041,.034],[.105,.025,.021,.024],
+   [.143,.041,.030,.029],[.171,.044,.026,.026],[.195,.044,.013,.013],[.246,.044,.001,.001]
+  ];
+  function createGullBodyMesh(name){
+   const mesh=new B.Mesh(name,scene),positions=[],indices=[],colors=[],normals=[],sides=10;
+   for(let ring=0;ring<bodyStations.length;ring++){
+    const [z,cy,rx,ry]=bodyStations[ring],t=ring/(bodyStations.length-1);
+    for(let side=0;side<sides;side++){
+     const angle=side/sides*Math.PI*2,up=Math.sin(angle);
+     positions.push(Math.cos(angle)*rx,cy+up*ry,z);
+     let color;
+     if(ring>=9)color=[.90,.61,.16,1]; // yellow bill, tapered to a fine point
+     else if(ring>=7)color=[.91,.91,.86,1]; // white head and neck
+     else color=up>.22?[.66,.72,.72,1]:[.91,.92,.88,1]; // pale grey mantle, white underside
+     colors.push(...color);
+    }
+   }
+   for(let ring=0;ring<bodyStations.length-1;ring++){
+    for(let side=0;side<sides;side++){
+     const a=ring*sides+side,b=ring*sides+(side+1)%sides,c=(ring+1)*sides+side,d=(ring+1)*sides+(side+1)%sides;
+     indices.push(a,c,b,b,c,d);
+    }
+   }
+   B.VertexData.ComputeNormals(positions,indices,normals);
+   const data=new B.VertexData();data.positions=positions;data.indices=indices;data.normals=normals;data.colors=colors;data.applyToMesh(mesh,true);
+   mesh.material=bodyMaterial;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;
+   mesh.metadata={species:'herring-gull',bodyLengthMeters:.488,anatomicalFuselage:true};
+   return mesh;
+  }
+  const wingStations=[
+   [0,.105,-.105],[.070,.105,-.128],[.140,.086,-.153],[.210,.057,-.181],
+   [.280,.020,-.205],[.350,-.028,-.218],[.420,-.080,-.214],[.490,-.132,-.197],[.560,-.169,-.176]
+  ];
+  function createGullWingMesh(name,sign){
+   const mesh=new B.Mesh(name,scene),positions=[],indices=[],colors=[],normals=[];
+   for(let i=0;i<wingStations.length;i++){
+    const [span,leading,trailing]=wingStations[i],t=i/(wingStations.length-1),x=sign*span;
+    const dihedral=Math.sin(t*Math.PI)*.014;
+    positions.push(x,.010+dihedral,leading,x,.007+dihedral,trailing);
+    const shade=t>.76?[.18,.23,.25,1]:(t>.57?[.40,.48,.49,1]:[.70,.76,.76,1]);
+    colors.push(...shade,...shade);
+   }
+   for(let i=0;i<wingStations.length-1;i++){
+    const a=i*2,b=a+1,c=a+2,d=a+3;
+    if(sign>0)indices.push(a,c,b,b,c,d);else indices.push(a,b,c,b,d,c);
+   }
+   B.VertexData.ComputeNormals(positions,indices,normals);
+   const data=new B.VertexData();data.positions=positions;data.indices=indices;data.normals=normals;data.colors=colors;data.applyToMesh(mesh,true);
+   mesh.material=wingMaterial;mesh.isPickable=false;mesh.receiveShadows=false;mesh.castShadows=false;
+   mesh.metadata={species:'herring-gull',wingSide:sign<0?'left':'right',pointedPrimaries:true};
+   return mesh;
+  }
+  for(let i=0;i<5;i++){
+   const actor=new B.TransformNode('SlimHerringGull_'+i,scene);
+   const body=createGullBodyMesh('GullFuselage_'+i);body.parent=actor;
+   const left=new B.TransformNode('GullLeftWingPivot_'+i,scene);left.parent=actor;left.position.set(-.025,.012,-.018);
+   const right=new B.TransformNode('GullRightWingPivot_'+i,scene);right.parent=actor;right.position.set(.025,.012,-.018);
+   createGullWingMesh('GullLeftWing_'+i,-1).parent=left;
+   createGullWingMesh('GullRightWing_'+i,1).parent=right;
+   actor.position.set(-36,10+(i%3)*1.4,-18);
+   actor.metadata={species:'herring-gull',model:'anatomical-flight-silhouette',wingspanMeters:1.12,bodyLengthMeters:.488,sharedMaterials:true};
+   realBirds.push({root:actor,real:true,procedural:true,left,right,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});
+  }
+  ambientBirds.forEach(b=>{if(b.root&&b.root.setEnabled)b.root.setEnabled(false);});
+  ambientBirds.splice(0,ambientBirds.length,...realBirds);
+  window.__ELSN_GULL_DIAGNOSTICS__={ready:realBirds.length===5,count:realBirds.length,model:'anatomical-herring-gull',wingspanMeters:1.12,bodyLengthMeters:.488,meshCount:realBirds.length*3,sharedMaterials:true,externalGlb:false};
+  if(realBirds.length!==5)throw new Error('No se pudieron preparar las cinco gaviotas estilizadas.');
+  console.info('Gaviotas estilizadas preparadas',{count:realBirds.length,model:'anatomical-herring-gull',wingspanMeters:1.12,meshCount:realBirds.length*3});
+ }
+"""
+    start_at = html.find(gull_loader_start)
+    end_at = html.find(gull_loader_end, start_at + len(gull_loader_start))
+    if end_at < 0 or end_at <= start_at:
+        raise SystemExit("No se pudo delimitar la función de carga de gaviotas.")
+    html = html[:start_at] + gull_loader_replacement + html[end_at + len("\n }"):]
     # Validate the transformed runtime too; the earlier syntax check runs before these patches.
     transformed_scripts = re.findall(r"<script\b[^>]*>(.*?)</script\s*>", html, flags=re.IGNORECASE | re.DOTALL)
     transformed_inline_scripts = [block for block in transformed_scripts if block.strip()]
