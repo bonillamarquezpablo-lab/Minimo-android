@@ -14,6 +14,8 @@ assert.doesNotMatch(html,/scale=1\.65\/height/);
 assert.ok(html.includes('leftWing,rightWing,tail,wingFlapAxis'), 'The replacement gull must expose its named articulated anatomy.');
 assert.ok(html.includes('b.leftWing.rotation[b.wingFlapAxis]') && html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
   'The new gull wings must flap around their actual pivot axis.');
+assert.ok(buildSource.includes('node.rotationQuaternion.toEulerAngles()') && buildSource.includes('node.rotationQuaternion=null'),
+ 'Imported GLB quaternion rotations must be preserved before wing pivots switch to Euler animation.');
 
 function inspectGlb(relative,minimumBytes,requiresTexture){
  const file=path.join(dist,relative);
