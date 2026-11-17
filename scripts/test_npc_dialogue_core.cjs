@@ -58,7 +58,11 @@ const impossibleEdgeBubble=Core.placeBubble({x:4,y:4},bubbleSize,viewport,[]);
 assert.equal(impossibleEdgeBubble,null,
  "When no valid position exists beside the NPC, the bubble must hide rather than clamp to a screen corner.");
 const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
-assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);assert.match(runtime,/BABYLON\.Vector3\.Project/);assert.match(runtime,/Core\.POSITION_UPDATE_MS/);assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
+assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);assert.match(runtime,/BABYLON\.Vector3\.Project/);
+assert.match(runtime,/camera\.getTransformationMatrix\(\)/,'Dialogue projection must use the active camera transform.');
+assert.match(runtime,/const layerRect=layer\.getBoundingClientRect\(\)/,'Dialogue coordinates must be converted into the fixed overlay layer coordinate space.');
+assert.match(runtime,/slot\.node\.style\.left=placement\.left\.toFixed\(1\)/,'Dialogue bubbles must use explicit layer-relative left/top values rather than a transformed fixed element.');
+assert.match(runtime,/node\.style\.position="absolute"/,'Bubble nodes must be positioned relative to their single full-screen overlay layer.');assert.match(runtime,/Core\.POSITION_UPDATE_MS/);assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
 assert.doesNotMatch(runtime,/new BABYLON\.Mesh|MeshBuilder|new B\.Mesh|requestAnimationFrame/);
 assert.ok(runtime.includes("root.computeWorldMatrix(true)")&&runtime.includes("anchor.computeWorldMatrix(true)"),"Only the visible NPC root/head anchor is refreshed for screen-space projection.");
 assert.equal((runtime.match(/const camera=s\.scene\.activeCamera\|\|s\.camera;/g)||[]).length,3,"NPC bubble projection must use the active scene camera, with the snapshot camera only as fallback.");
@@ -115,7 +119,8 @@ assert.match(builder,/head=descendants\.find\(child=>child&&\/head\/i/,"Dialogue
 assert.match(builder,/scene\.transformNodes\)\?scene\.transformNodes:\[\]/,"Dialogue must enumerate existing Babylon transform roots.");
 assert.ok(builder.includes("found.push({name,root:node,villageIndex,parts:"),"NPC snapshots must preserve their village identity so conversations stay within the same settlement.");
 assert.ok(builder.includes("Villager_")&&builder.includes("VillageGuard")&&builder.includes(".exec(name)"),"Dialogue must select existing civilian and guard roots by their stable scene names.");
-assert.doesNotMatch(builder,/ambientPeople\.concat/,"Dialogue bridge cannot reference the removed ambientPeople global.");const dialogueStyle=fs.readFileSync("scripts/npc-dialogue.css","utf8");assert.match(dialogueStyle,/z-index:1200/);assert.match(dialogueStyle,/max-width:min\(148px,calc\(100vw - 24px\)\)/);assert.match(dialogueStyle,/font-size:12px/);assert.match(dialogueStyle,/padding:4px 6px 5px/);
+assert.doesNotMatch(builder,/ambientPeople\.concat/,"Dialogue bridge cannot reference the removed ambientPeople global.");const dialogueStyle=fs.readFileSync("scripts/npc-dialogue.css","utf8");
+assert.match(dialogueStyle,/\.elsn-npc-bubble\{position:absolute;/,'Bubbles must share the overlay layer coordinate system.');assert.match(dialogueStyle,/z-index:1200/);assert.match(dialogueStyle,/max-width:min\(148px,calc\(100vw - 24px\)\)/);assert.match(dialogueStyle,/font-size:12px/);assert.match(dialogueStyle,/padding:4px 6px 5px/);
 assert.match(worker,/\.\/scripts\/npc-village-brain-core\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue-core\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue-runtime\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue\.css/);assert.match(validator,/scripts\/npc-dialogue-core\.js/);assert.match(validator,/maxVisibleBubbles:4/);
 console.log("NPC ambient dialogue contract: PASS (four-bubble limit, range, scheduling, projection and offline packaging).");
 

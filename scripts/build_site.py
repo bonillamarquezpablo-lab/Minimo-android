@@ -909,7 +909,7 @@ def main() -> None:
     html = html.replace(gull_animation_marker,gull_animation_replacement,1)
 
     gull_rig_marker = "const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}"
-    gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const leftWing=rigNodes.find(node=>/^LeftWing(?:_|$)/i.test(node.name||'')),rightWing=rigNodes.find(node=>/^RightWing(?:_|$)/i.test(node.name||'')),tail=rigNodes.find(node=>/^Tail(?:_|$)/i.test(node.name||''));if(!leftWing||!rightWing){actor.dispose(false,true);throw new Error('El modelo de gaviota no incluye pivotes anatómicos LeftWing y RightWing.');}[leftWing,rightWing,tail].forEach(node=>{if(node&&node.rotationQuaternion){node.rotation.copyFrom(node.rotationQuaternion.toEulerAngles());node.rotationQuaternion=null;}});leftWing.computeWorldMatrix(true);rightWing.computeWorldMatrix(true);const leftWingWorld=leftWing.getAbsolutePosition(),rightWingWorld=rightWing.getAbsolutePosition(),wingSpanX=Math.abs(leftWingWorld.x-rightWingWorld.x),wingSpanZ=Math.abs(leftWingWorld.z-rightWingWorld.z),wingFlapAxis=wingSpanX>=wingSpanZ?'z':'x';"
+    gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const leftWing=rigNodes.find(node=>/^LeftWing(?:_|$)/i.test(node.name||'')),rightWing=rigNodes.find(node=>/^RightWing(?:_|$)/i.test(node.name||'')),tail=rigNodes.find(node=>/^Tail(?:_|$)/i.test(node.name||''));if(!leftWing||!rightWing){actor.dispose(false,true);throw new Error('El modelo de gaviota no incluye pivotes anatómicos LeftWing y RightWing.');}[leftWing,rightWing,tail].forEach(node=>{if(node&&node.rotationQuaternion){node.rotation.copyFrom(node.rotationQuaternion.toEulerAngles());node.rotationQuaternion=null;}});leftWing.computeWorldMatrix(true);rightWing.computeWorldMatrix(true);const leftWingWorld=leftWing.getAbsolutePosition(),rightWingWorld=rightWing.getAbsolutePosition(),wingSpanX=Math.abs(leftWingWorld.x-rightWingWorld.x),wingSpanZ=Math.abs(leftWingWorld.z-rightWingWorld.z),wingFlapAxis=wingSpanX>=wingSpanZ?'z':'x',bodyFlightAxis=wingFlapAxis==='z'?'x':'z',bodyFlightPitch=wingFlapAxis==='z'?Math.PI*.5:-Math.PI*.5,flightYawOffset=wingFlapAxis==='z'?0:-Math.PI*.5;visualRoot.rotation[bodyFlightAxis]=bodyFlightPitch;visualRoot.computeWorldMatrix(true);actor.metadata=Object.assign({},actor.metadata||{},{biologicalFlightPose:{wingSpanAxis:bodyFlightAxis,bodyPitchAxis:bodyFlightAxis,bodyPitchRadians:bodyFlightPitch,yawOffsetRadians:flightYawOffset}});"
     if html.count(gull_rig_marker) != 1:
         raise SystemExit("No se encontró el punto único para validar los pivotes anatómicos de gaviota.")
     html = html.replace(gull_rig_marker, gull_rig_replacement, 1)
@@ -947,7 +947,7 @@ def main() -> None:
     html = html[:style_start] + html[style_end:]
 
     gull_wing_push_marker = "realBirds.push({root:actor,real:true,groups,animation:fly,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
-    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,animation:fly,leftWing,rightWing,tail,wingFlapAxis,leftWingBaseRotation:leftWing.rotation[wingFlapAxis],rightWingBaseRotation:rightWing.rotation[wingFlapAxis],tailBaseRotation:tail?tail.rotation.x:0,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
+    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,animation:fly,leftWing,rightWing,tail,wingFlapAxis,flightYawOffset,leftWingBaseRotation:leftWing.rotation[wingFlapAxis],rightWingBaseRotation:rightWing.rotation[wingFlapAxis],tailBaseRotation:tail?tail.rotation.x:0,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
     if html.count(gull_wing_push_marker) != 1:
         raise SystemExit("No se encontró el registro único de las articulaciones de gaviota.")
     html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
@@ -957,6 +957,19 @@ def main() -> None:
     if html.count(gull_flight_marker) != 1:
         raise SystemExit("No se encontró el bucle único de vuelo de las gaviotas.")
     html = html.replace(gull_flight_marker, gull_flight_replacement, 1)
+
+    gull_heading_marker = "b.root.rotation.y=-a+Math.PI/2;"
+    gull_heading_replacement = "b.root.rotation.y=-a+Math.PI/2+(b.flightYawOffset||0);"
+    if html.count(gull_heading_marker) != 1:
+        raise SystemExit("No se encontró el rumbo único de las gaviotas de costa.")
+    html = html.replace(gull_heading_marker,gull_heading_replacement,1)
+
+    # Require a genuine locomotion clip before an animal may translate over the ground.
+    wildlife_clip_marker = "return {idle,walk:walk||idle,run:run||walk||idle};"
+    wildlife_clip_replacement = "return {idle,walk,run:run||walk};"
+    if html.count(wildlife_clip_marker) != 1:
+        raise SystemExit("No se encontró el selector único de animaciones de fauna.")
+    html = html.replace(wildlife_clip_marker,wildlife_clip_replacement,1)
 
     # Move expensive terrestrial-fauna decisions and collision/terrain validation to
     # a distance-aware cadence. Root motion is still integrated on every frame, while
@@ -1003,7 +1016,7 @@ function updateWildlife(dt){
       if(animal.activeAnimation){(animal.groups||[]).forEach(group=>{try{group.stop();}catch(_){}});animal.activeAnimation=null;animal.activeMode='distance-idle';}
       animal._wildlifeVelocityX=0;animal._wildlifeVelocityZ=0;
      }else{
-      const moving=animal.flee>0||animal.wandering;
+      const moving=(animal.flee>0||animal.wandering)&&!!animal.clips.walk;
       const speed=animal.flee>0?WILDLIFE_MODEL_DEFS[animal.kind].runSpeed:WILDLIFE_MODEL_DEFS[animal.kind].walkSpeed;
       playWildlifeAnimation(animal,animal.flee>0?'run':(moving?'walk':'idle'));
       if(moving){
@@ -1842,27 +1855,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.318: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.319: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.318; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.319; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.318\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.319\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.318.")
-    html = html.replace("0.6.274", "0.6.318")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.319.")
+    html = html.replace("0.6.274", "0.6.319")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'35',build:'0.6.318'"
+    diagnostic_build_replacement = "reportVersion:'36',build:'0.6.319'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.318 para normalizar.")
-    game_version = "0.6.318"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.319 para normalizar.")
+    game_version = "0.6.319"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -1876,6 +1889,14 @@ function updateWildlife(dt){
     if html.count(quality_profile_marker) != 1:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
     html = html.replace(quality_profile_marker, quality_profile_code, 1)
+
+    # Use the available flagship CPU headroom to prepare staged grass more promptly;
+    # density, geometry and the active Quality render scale remain unchanged.
+    grass_budget_marker = "const grassBuildSliceBudgetMs=staging?(isTouchDevice?3.5:6):grassStartupSliceBudgetMs;"
+    grass_budget_replacement = "const grassBuildSliceBudgetMs=staging?(isTouchDevice?(highHeadroomQualityMobile?7:3.5):6):grassStartupSliceBudgetMs;"
+    if html.count(grass_budget_marker) != 1:
+        raise SystemExit("No se encontró el presupuesto único de construcción de hierba.")
+    html = html.replace(grass_budget_marker,grass_budget_replacement,1)
 
     # Make the identity gate reliable for both pointer and keyboard activation.
     identity_start_guard_marker = "function beginLoadingWithIdentity(name){\n selectedPlayerName=String(name||'').trim().slice(0,20);playerIdentityChosen=true;"
