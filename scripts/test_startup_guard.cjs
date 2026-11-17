@@ -2,6 +2,7 @@
 const fs=require('node:fs');
 const assert=require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8');
+const builder=fs.readFileSync('scripts/build_site.py','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 
 const start=html.indexOf("setLoadingProgress(82,'Preparando protagonista y NPC de la isla inicial…');");
@@ -48,11 +49,22 @@ assert.doesNotMatch(html,/caches\.match\(VIKING_GLB_URL\)/,
 assert.match(html,/function disposeLateGlbResult\(result,model,stage\)/);
 assert.match(html,/pending\.then\(result=>\{if\(timedOut\)disposeLateGlbResult\(result,model,stage\);?\},\(\)=>\{\}\)/,
   'Timed-out SceneLoader imports must be disposed if Babylon resolves them late.');
-assert.match(html,/const faunaResults=await Promise\.allSettled\(faunaTasks\.map\(task=>task\.promise\)\)/, 'Every optional fauna task must settle before player entry, even when one task fails.');
-assert.doesNotMatch(html,/RECURSO OBLIGATORIO: importación de fauna sin finalizar/,
-  'Fauna timeout/failure is optional and must not block game entry.');
-assert.match(html,/fauna:isPerformanceMode\?'disabled-performance':'blocking-optional'/);
-assert.match(html,/npcBackgroundLoad:'blocking-before-entry',faunaBackgroundLoad:'optional-before-entry'/);
+assert.match(html,/const faunaResults=await Promise\\.allSettled\\(faunaTasks\\.map\\(task=>task\\.promise\\)\\)/,
+  'Every fauna task must settle before player entry, whether it is terrestrial fauna or Quality gulls.');
+assert.ok(builder.includes('optional_fauna_state = "fauna:isPerformanceMode?\'disabled-performance\':\'blocking-optional\'"'),
+  'The release builder must recognize the unbuilt source marker before replacing it.');
+assert.ok(builder.includes('required_fauna_state = "fauna:\'blocking-required\'"'),
+  'The release builder must make terrestrial fauna mandatory in both profiles.');
+assert.ok(builder.includes('fauna_blocking_failure = "if(faunaFailures.length){'),
+  'Any failed required animal must stop entry with an actionable resource error.');
+assert.ok(builder.includes('wildlife_spawn_count_replacement = "const animalCount=idx===0?3:0;"'),
+  'Performance must keep the same three terrestrial animal instances.');
+assert.ok(builder.includes('if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)'),
+  'The final readiness gate must reject entry unless all three terrestrial animals are loaded.');
+assert.ok(builder.includes('fauna_telemetry_marker = "npcBackgroundLoad:\'blocking-before-entry\',faunaBackgroundLoad:\'optional-before-entry\'"'),
+  'The builder must update the legacy optional-f fauna telemetry marker.');
+assert.ok(builder.includes('fauna_telemetry_required = "npcBackgroundLoad:\'blocking-before-entry\',faunaBackgroundLoad:\'blocking-before-entry\'"'),
+  'The generated session report must describe fauna as blocking before entry.');
 assert.match(html,/No se pudo identificar un roster obligatorio de guardianes y aldeanos/);
 assert.doesNotMatch(html,/cached=await readVikingFromBrowser\(\)/,'El GLB oficial del protagonista no debe duplicarse en IndexedDB.');
 assert.match(html,/async function saveCivilianHumanCache\(blob\)[\s\S]*?caches\.open\(VIKING_WEB_CACHE\)/,'El GLB civil debe usar Cache API y no duplicarse en IndexedDB.');
