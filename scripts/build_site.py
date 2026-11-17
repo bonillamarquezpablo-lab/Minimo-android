@@ -785,7 +785,7 @@ def main() -> None:
     html = html.replace(wildlife_cleanup_marker, wildlife_cleanup_marker_replacement, 1)
 
     wildlife_empty = "  if(!wildlifeSpawnSpecs.length)return 0;"
-    wildlife_required = "  if(isPerformanceMode&&!wildlifeSpawnSpecs.length)return 0;\\n  if(!isPerformanceMode&&wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
+    wildlife_required = "  if(isPerformanceMode&&!wildlifeSpawnSpecs.length)return 0;\n  if(!isPerformanceMode&&wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
     if html.count(wildlife_empty) != 1:
         raise SystemExit("No se encontró la comprobación de fauna inicial vacía.")
     html = html.replace(wildlife_empty, wildlife_required, 1)
