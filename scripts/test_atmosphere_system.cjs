@@ -85,15 +85,31 @@ assert.ok(firePoolBody.includes('const candidates = this._fireCandidates'), 'Nig
 assert.doesNotMatch(firePoolBody, /fireHearths\.filter|\.sort\(/, 'Night-fire updates must not allocate filter/map/sort chains.');
 const localFireBody=source.slice(source.indexOf('    _collectHearthMeshes(hearth) {'),source.indexOf('    update(dt, force) {'));
 assert.ok(localFireBody.includes('light.includedOnlyMeshes = nextMeshes') &&
-  localFireBody.includes('scene.getActiveMeshes'),
-  'Each hearth light must use only the already-culled visible meshes inside its physical reach.');
+  localFireBody.includes('const source = Array.isArray(scene.meshes) ? scene.meshes : []'),
+  'Each hearth light must use a stable local mesh set rather than the camera-culled list.');
 assert.ok(localFireBody.includes('now - this.lastFirePoolUpdate >= 0.75'),
   'Hearth selection and local-light membership must use a bounded cadence.');
 assert.ok(source.includes('this._realElapsedSeconds += delta') && localFireBody.includes('const now = this._realElapsedSeconds'),
   'Local hearth selection and flicker must keep running when the solar clock is paused.');
-assert.ok(localFireBody.includes('Choose and register local fire lights during daytime too') &&
-  localFireBody.includes('const activeNight = state.night > 0.18'),
-  'Hearth shader slots must be registered before dusk and use intensity, not setEnabled, for the night transition.');
+assert.ok(localFireBody.includes('Select nearby hearths in daylight') &&
+  localFireBody.includes('const activeNight = state.night > 0.18') &&
+  source.includes('light.includedOnlyMeshes = this._fireFallbackMeshes') &&
+  source.includes('this._fireFallbackMeshes = this.skyDome ? [this.skyDome] : []'),
+  'Hearth light slots must stay permanently registered and use a harmless fallback target outside their range.');
+assert.doesNotMatch(localFireBody,/\\.setEnabled\\(/,
+  'The hearth pool must never toggle point-light shader slots at dusk.');
+assert.ok(source.includes('const lunarBlend = smooth(0.18, 0.82, state.night)') &&
+  source.includes('handoffAngle = Math.PI * lunarBlend') &&
+  !source.includes('const useMoonDirectLight = state.night > state.daylight'),
+  'The directional light must hand off smoothly between sun and moon without an abrupt 180-degree flip.');
+assert.doesNotMatch(source.slice(source.indexOf('        this.moonDisc.visibility = visible;'),source.indexOf('      if (this.skyMaterial) {')),
+  /\\.setEnabled\\(/,'Moon visibility must fade through alpha instead of toggling mesh/light slots.');
+assert.ok(source.includes('rayleighPhase') && source.includes('miePhase') && source.includes('sunAzimuth') &&
+  !source.includes('sky += vec3(0.98, 0.39, 0.16) * horizonGlow'),
+  'The sky must use directional atmospheric scattering rather than a uniform orange horizon fill.');
+assert.ok(source.includes('getPerformanceSnapshot()') && source.includes('visualUpdate: summarize') &&
+  source.includes('hearthSelection: summarize'),
+  'Atmosphere profiling must expose bounded visual-update and hearth-selection timings.');
 assert.ok(!localFireBody.includes('computeWorldMatrix(true)'),
   'Hearth scoping must not force world-matrix rebuilds across the scene.');
 assert.ok(source.includes('this.sunLight.setEnabled(true)'), 'The one directional light must remain enabled across day/night transitions.');
