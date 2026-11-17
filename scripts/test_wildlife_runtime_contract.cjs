@@ -31,7 +31,10 @@ assert.match(html,/file:'Deer\.glb'/);
 assert.match(html,/file:'Wolf\.glb'/);
 assert.match(html,/file:'Stag\.glb'/);
 assert.match(html,/function updateWildlife\(dt\)/);
-assert.match(html,/const animalCount=idx===0\?3:0;/);
+assert.match(html,/const animalCount=isPerformanceMode\?0:\(idx===0\?3:0\);/);
+assert.ok(builder.includes('wildlife_spawn_count_marker = "const animalCount=isPerformanceMode?0:(idx===0?3:0);"') &&
+  builder.includes('wildlife_spawn_count_replacement = "const animalCount=idx===0?3:0;"'),
+  'The release builder must retain the three terrestrial animals in Performance without reducing their visual models.');
 assert.match(validator,/wildlife/i);
 assert.ok(builder.includes("requiredGulls:isPerformanceMode?0:5"),
   'The five physical gull instances must be validated before startup is released.');
