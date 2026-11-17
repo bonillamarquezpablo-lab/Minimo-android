@@ -3062,7 +3062,7 @@ function getWorldPhaseTimingSnapshot(){
    for(let ring=0;ring<bodyStations.length-1;ring++){
     for(let side=0;side<sides;side++){
      const a=ring*sides+side,b=ring*sides+(side+1)%sides,c=(ring+1)*sides+side,d=(ring+1)*sides+(side+1)%sides;
-     indices.push(a,c,b,b,c,d);
+     indices.push(a,b,c,b,d,c);
     }
    }
    B.VertexData.ComputeNormals(positions,indices,normals);
