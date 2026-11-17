@@ -111,12 +111,12 @@ assert.match(worker,/\.\/scripts\/npc-village-brain-core\.js/);assert.match(work
 console.log("NPC ambient dialogue contract: PASS (four-bubble limit, range, scheduling, projection and offline packaging).");
 
 const dialogueRuntime=fs.readFileSync(__dirname+"/npc-dialogue-runtime.js","utf8");
-assert.match(dialogueRuntime,/render\\(lastSnapshot,false\\)/,
+assert.ok(dialogueRuntime.includes("render(lastSnapshot,false)"),
  "Post-render dialogue projection must refresh matrices instead of reusing stale camera transforms.");
-assert.match(dialogueRuntime,/root\\.computeWorldMatrix\\(true\\)/,
+assert.ok(dialogueRuntime.includes('root.computeWorldMatrix(true)'),
  "A moving NPC root must refresh its world matrix before projecting its dialogue.");
-assert.match(dialogueRuntime,/anchor\\.computeWorldMatrix\\(true\\)/,
+assert.ok(dialogueRuntime.includes('anchor.computeWorldMatrix(true)'),
  "The head-bone anchor must refresh before its screen position is calculated.");
-assert.match(dialogueRuntime,/lastProjection/);
-assert.match(dialogueRuntime,/lastPositioningMs/);
+assert.ok(dialogueRuntime.includes('lastProjection'));
+assert.ok(dialogueRuntime.includes('lastPositioningMs'));
 console.log("NPC screen-space projection freshness and timing contract: PASS.");
