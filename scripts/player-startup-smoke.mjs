@@ -983,8 +983,27 @@ async function main() {
       if (await offlineAudioGate.isVisible().catch(() => false)) {
         await offlineAudioGate.click({ timeout: 30000 });
       }
-      await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
-      await page.locator('#chooseQuality').click();
+      // Offline reload can restore the saved player and enter booting immediately.
+      // In that valid returning-player path the quality selector is intentionally hidden.
+      // Wait for either the first-run selector or an already-started/failed boot; never
+      // require a hidden UI control after the Service Worker has restored the app shell.
+      await page.waitForFunction(() => {
+        const quality = document.getElementById('chooseQuality');
+        const identity = document.getElementById('identitySetup');
+        const loading = document.getElementById('loading');
+        const visible = element => !!element &&
+          getComputedStyle(element).display !== 'none' &&
+          getComputedStyle(element).visibility !== 'hidden';
+        const qualityVisible = visible(quality);
+        const identityVisible = visible(identity) && identity?.getAttribute('aria-hidden') !== 'true';
+        const booting = document.body.classList.contains('booting') ||
+          (visible(loading) && !document.body.classList.contains('boot-failed'));
+        return qualityVisible || identityVisible || booting ||
+          document.body.classList.contains('boot-failed');
+      }, undefined, { timeout: 60000, polling: 100 });
+      if (await page.locator('#chooseQuality').isVisible().catch(() => false)) {
+        await page.locator('#chooseQuality').click();
+      }
       await page.waitForFunction(() => {
         const identity = document.getElementById('identitySetup');
         const loading = document.getElementById('loading');
