@@ -17,10 +17,10 @@ assert.ok(gull.flight.rightHip.rotation.x>0.9,"Right upper leg must tuck backwar
 assert.ok(gull.flight.leftKnee.rotation.x<-.95,"Left lower leg must fold at the knee.");
 assert.ok(gull.flight.rightKnee.rotation.x<-.95,"Right lower leg must fold at the knee.");
 assert.ok(gull.root.rotation.x>0.03,"Body must hold a slight aerodynamic flight pitch.");
-const firstWing=gull.leftWing.rotation.z;
+const firstWing=gull.flight.leftWing.rotation.z;
 Flight.applyFlightPose(gull,.18);
-assert.notEqual(gull.leftWing.rotation.z,firstWing,"Wings must continue moving on the authored flap cycle.");
-assert.ok(gull.leftWing.rotation.z<0&&gull.rightWing.rotation.z>0,"The wing pivots must move in mirrored directions.");
+assert.notEqual(gull.flight.leftWing.rotation.z,firstWing,"Wings must continue moving on the authored flap cycle.");
+assert.ok(gull.flight.leftWing.rotation.z<0&&gull.flight.rightWing.rotation.z>0,"The wing pivots must move in mirrored directions.");
 assert.ok(Number.isFinite(gull.flight.tail.rotation.x));
 assert.equal(Flight.applyFlightPose({},0),false,"Incomplete imported anatomy must be reported rather than silently animated.");
 console.log("OK gull flight pose: mirrored wing cycle, tucked upper/lower legs, aerodynamic body pitch and finite articulated joints.");
