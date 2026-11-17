@@ -6,6 +6,7 @@ const assert=require('node:assert/strict');
 const dist=path.join(process.cwd(),'dist');
 const html=fs.readFileSync(path.join(dist,'index.html'),'utf8');
 const buildSource=fs.readFileSync(path.join(process.cwd(),'scripts','build_site.py'),'utf8');
+const flightCore=fs.readFileSync(path.join(dist,'scripts','gull-flight-core.js'),'utf8');
 assert.match(html,/forestTreeAssetSpecs/);
 assert.match(html,/instantiateModelsToScene\(name=>name\+'_Forest_'/);
 assert.match(html,/await loadForestTreeTemplates\(\)/);
@@ -13,6 +14,14 @@ assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
 assert.ok(html.includes('leftWing,rightWing,tail,wingFlapAxis'), 'The replacement gull must expose its named articulated anatomy.');
+assert.ok(html.includes("findRigNode('LeftHindUpLeg')") && html.includes("findRigNode('RightHindUpLeg')") &&
+  html.includes("findRigNode('LeftHindLeg')") && html.includes("findRigNode('RightHindLeg')"),
+  'Both upper and lower leg pivots must be resolved from the imported gull rig.');
+assert.ok(html.includes('window.ELSN_GULL_FLIGHT_CORE.applyFlightPose(b,elapsed)'),
+  'The real gull loop must animate the complete flight pose, not just its wings.');
+assert.ok(html.includes('flight:{wingFlapAxis,legBendAxis,phase:i*1.25') &&
+  html.includes('leftHip,rightHip,leftKnee,rightKnee,neck,head,tail'),
+  'Every imported flight joint must retain its bind pose before animation.');
 assert.ok(html.includes("const groups=inst.animationGroups||[];groups.forEach(group=>{try{group.stop();}catch(_){}});const fly=null;"),
   'The gull must not select a walk/idle body clip; it uses explicit articulated wing flight.');
 assert.ok(!html.includes("groups.find(g=>/walk|fly|flap/i.test(g.name)"),
@@ -25,10 +34,16 @@ assert.ok(html.includes("const conifer=kind==='pine'||kind==='spruce'") && html.
   'Pine and spruce canopy radii must account for their broader real model bounds.');
 assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html.includes('overlapPairs'),
   'Forest placement must use a wider relocation search and expose overlap diagnostics.');
-assert.ok(html.includes('b.leftWing.rotation[b.wingFlapAxis]') && html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
-  'The new gull wings must flap around their actual pivot axis.');
-assert.ok(html.includes('const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;') && html.includes('b.leftWingBaseRotation-open-flap') && html.includes('b.rightWingBaseRotation+open+flap'),
-  'The gull must hold a visibly spread glide pose and use a broad, continuous wing stroke rather than a folded idle silhouette.');
+assert.ok(flightCore.includes('f.leftWing.rotation[f.wingFlapAxis]') && flightCore.includes('f.rightWing.rotation[f.wingFlapAxis]'),
+  'The flight core must flap both imported wings around their actual pivots.');
+assert.ok(flightCore.includes('FLAP_HZ=8.8,WING_OPEN=.78,WING_AMPLITUDE=.82') &&
+  flightCore.includes('HIP_TUCK=1.02,KNEE_FOLD=-1.18'),
+  'The gull must retain the spread wing cycle and add a folded airborne leg pose.');
+assert.ok(flightCore.includes('f.leftHip.rotation[f.legBendAxis]') && flightCore.includes('f.rightHip.rotation[f.legBendAxis]') &&
+  flightCore.includes('f.leftKnee.rotation[f.legBendAxis]') && flightCore.includes('f.rightKnee.rotation[f.legBendAxis]'),
+  'Both upper and lower legs must animate on the actual imported joint pivots.');
+assert.ok(flightCore.includes('bird.root.rotation[f.legBendAxis]'),
+  'The flight body pitch must follow the imported model axis rather than a hard-coded global axis.');
 assert.ok(buildSource.includes('node.rotationQuaternion.toEulerAngles()') && buildSource.includes('node.rotationQuaternion=null'),
  'Imported GLB quaternion rotations must be preserved before wing pivots switch to Euler animation.');
 
@@ -70,6 +85,10 @@ const gullNodeNames=(gullJson.nodes||[]).map(node=>String(node.name||''));
 assert.ok(gullNodeNames.some(name=>/^LeftWing(?:_|$)/i.test(name)),'La gaviota debe tener el pivote LeftWing');
 assert.ok(gullNodeNames.some(name=>/^RightWing(?:_|$)/i.test(name)),'La gaviota debe tener el pivote RightWing');
 assert.ok(gullNodeNames.some(name=>/^Tail(?:_|$)/i.test(name)),'La gaviota debe tener cola articulada');
+for(const nodeName of ['Head','Neck','LeftHindUpLeg','RightHindUpLeg','LeftHindLeg','RightHindLeg']){
+ assert.ok(gullNodeNames.some(name=>name.toLowerCase()===nodeName.toLowerCase()),
+   'La gaviota debe conservar la articulación anatómica '+nodeName);
+}
 const gullTriangles=(gullJson.meshes||[]).reduce((total,mesh)=>total+(mesh.primitives||[]).reduce((subtotal,primitive)=>{
   if(primitive.mode!==undefined&&primitive.mode!==4)return subtotal;
   const accessor=primitive.indices===undefined?primitive.attributes?.POSITION:gullJson.accessors?.[primitive.indices];

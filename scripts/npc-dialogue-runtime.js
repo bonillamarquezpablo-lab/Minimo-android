@@ -34,7 +34,7 @@ let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projecti
 const RANGE_SQUARED=RANGE*RANGE;
 function bubbleLimit(){return window.matchMedia&&window.matchMedia("(max-width: 700px)").matches?2:MAX_BUBBLES;}
 const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="1200";layer.dataset.maxBubbles=String(MAX_BUBBLES);(document.documentElement||document.body).appendChild(layer);
-function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;node.style.position="fixed";node.style.left="0";node.style.top="0";node.style.margin="0";node.style.pointerEvents="none";node.style.zIndex=String(1+index);const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null,width:0,height:0,measureDirty:true};}
+function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;node.style.position="absolute";node.style.left="0";node.style.top="0";node.style.margin="0";node.style.pointerEvents="none";node.style.zIndex=String(1+index);const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null,width:0,height:0,measureDirty:true};}
 for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i));
 const random=()=>Math.random(),between=(a,b)=>a+random()*(b-a);
 function rootOf(n){return n&&(n.parts&&n.parts.root||n.root||n.actor||n);}
@@ -222,8 +222,9 @@ function project(slot,s,occupied){
   if(!(slot.width>0&&slot.height>0))return hide("bubble-size-unavailable");
   let placement=Core.placeBubble({x,y},{width:slot.width,height:slot.height},{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom},occupied);
   if(!placement)return hide("no-safe-placement");
-  slot.node.style.transform="translate3d("+placement.left.toFixed(1)+"px,"+placement.top.toFixed(1)+"px,0)";
-  diagnostics.lastProjection={id:idOf(npc),world:{x:Number(world.x.toFixed(3)),y:Number(world.y.toFixed(3)),z:Number(world.z.toFixed(3))},screen:{x:Number(x.toFixed(1)),y:Number(y.toFixed(1))},at:Date.now()};
+  const layerRect=layer.getBoundingClientRect(),local=Core.viewportPointToLayer({x:placement.left,y:placement.top},layerRect);if(!local)return hide("invalid-overlay-coordinate-space");
+  slot.node.style.transform="translate3d("+local.x.toFixed(1)+"px,"+local.y.toFixed(1)+"px,0)";
+  diagnostics.lastProjection={id:idOf(npc),world:{x:Number(world.x.toFixed(3)),y:Number(world.y.toFixed(3)),z:Number(world.z.toFixed(3))},screen:{x:Number(x.toFixed(1)),y:Number(y.toFixed(1))},overlay:{left:Number(layerRect.left.toFixed(1)),top:Number(layerRect.top.toFixed(1)),localX:Number(local.x.toFixed(1)),localY:Number(local.y.toFixed(1))},at:Date.now()};
   occupied.push(placement);diagnostics.projectionSuccesses++;return true;
  }catch(error){diagnostics.lastError=String(error&&error.message||error);return hide("projection-exception");}
 }

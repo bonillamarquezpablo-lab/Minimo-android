@@ -58,6 +58,9 @@ jobs:
 
       - name: Test contextual dialogue and low-cost village NPC brain
         run: node --check scripts/npc-village-brain-core.js && node --check scripts/npc-dialogue-core.js && node --check scripts/npc-dialogue-runtime.js && node scripts/test_npc_dialogue_core.cjs
+      
+      - name: Test articulated gull flight anatomy
+        run: node --check scripts/gull-flight-core.js && node scripts/test_gull_flight_core.cjs
 
       - name: Test GLB background pipeline and fallbacks
         run: node scripts/test_glb_loading.cjs

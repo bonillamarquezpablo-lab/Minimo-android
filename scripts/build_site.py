@@ -909,7 +909,7 @@ def main() -> None:
     html = html.replace(gull_animation_marker,gull_animation_replacement,1)
 
     gull_rig_marker = "const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}"
-    gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const leftWing=rigNodes.find(node=>/^LeftWing(?:_|$)/i.test(node.name||'')),rightWing=rigNodes.find(node=>/^RightWing(?:_|$)/i.test(node.name||'')),tail=rigNodes.find(node=>/^Tail(?:_|$)/i.test(node.name||''));if(!leftWing||!rightWing){actor.dispose(false,true);throw new Error('El modelo de gaviota no incluye pivotes anatómicos LeftWing y RightWing.');}[leftWing,rightWing,tail].forEach(node=>{if(node&&node.rotationQuaternion){node.rotation.copyFrom(node.rotationQuaternion.toEulerAngles());node.rotationQuaternion=null;}});leftWing.computeWorldMatrix(true);rightWing.computeWorldMatrix(true);const leftWingWorld=leftWing.getAbsolutePosition(),rightWingWorld=rightWing.getAbsolutePosition(),wingSpanX=Math.abs(leftWingWorld.x-rightWingWorld.x),wingSpanZ=Math.abs(leftWingWorld.z-rightWingWorld.z),wingFlapAxis=wingSpanX>=wingSpanZ?'z':'x';"
+    gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const normalizeRigName=value=>String(value||'').replace(/[^a-z0-9]/gi,'').toLowerCase(),findRigNode=name=>rigNodes.find(node=>normalizeRigName(node.name)===name.toLowerCase())||rigNodes.find(node=>normalizeRigName(node.name).startsWith(name.toLowerCase())),head=findRigNode('Head'),neck=findRigNode('Neck'),leftWing=findRigNode('LeftWing'),rightWing=findRigNode('RightWing'),tail=findRigNode('Tail'),leftHip=findRigNode('LeftHindUpLeg'),rightHip=findRigNode('RightHindUpLeg'),leftKnee=findRigNode('LeftHindLeg'),rightKnee=findRigNode('RightHindLeg');const articulatedNodes=[head,neck,leftWing,rightWing,tail,leftHip,rightHip,leftKnee,rightKnee];if(articulatedNodes.some(node=>!node)){actor.dispose(false,true);throw new Error('El modelo de gaviota no incluye toda la anatomía de vuelo: cabeza, cuello, alas, cola y articulaciones de ambas patas. Nodos importados: '+rigNodes.map(node=>String(node.name||'')).filter(Boolean).slice(0,48).join(', '));}articulatedNodes.forEach(node=>{if(node.rotationQuaternion){node.rotation.copyFrom(node.rotationQuaternion.toEulerAngles());node.rotationQuaternion=null;}});leftWing.computeWorldMatrix(true);rightWing.computeWorldMatrix(true);const leftWingWorld=leftWing.getAbsolutePosition(),rightWingWorld=rightWing.getAbsolutePosition(),wingSpanX=Math.abs(leftWingWorld.x-rightWingWorld.x),wingSpanZ=Math.abs(leftWingWorld.z-rightWingWorld.z),wingFlapAxis=wingSpanX>=wingSpanZ?'z':'x',legBendAxis=wingFlapAxis==='z'?'x':'z';"
     if html.count(gull_rig_marker) != 1:
         raise SystemExit("No se encontró el punto único para validar los pivotes anatómicos de gaviota.")
     html = html.replace(gull_rig_marker, gull_rig_replacement, 1)
@@ -947,13 +947,13 @@ def main() -> None:
     html = html[:style_start] + html[style_end:]
 
     gull_wing_push_marker = "realBirds.push({root:actor,real:true,groups,animation:fly,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
-    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,animation:fly,leftWing,rightWing,tail,wingFlapAxis,leftWingBaseRotation:leftWing.rotation[wingFlapAxis],rightWingBaseRotation:rightWing.rotation[wingFlapAxis],tailBaseRotation:tail?tail.rotation.x:0,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
+    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,animation:fly,leftWing,rightWing,tail,wingFlapAxis,phase:i*1.25,flight:{wingFlapAxis,legBendAxis,phase:i*1.25,leftWing,rightWing,leftHip,rightHip,leftKnee,rightKnee,neck,head,tail,base:{rootPitch:actor.rotation[legBendAxis],leftWing:leftWing.rotation[wingFlapAxis],rightWing:rightWing.rotation[wingFlapAxis],leftHip:leftHip.rotation[legBendAxis],rightHip:rightHip.rotation[legBendAxis],leftKnee:leftKnee.rotation[legBendAxis],rightKnee:rightKnee.rotation[legBendAxis],neck:neck.rotation[legBendAxis],head:head.rotation[legBendAxis],tail:tail.rotation.x}},radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
     if html.count(gull_wing_push_marker) != 1:
         raise SystemExit("No se encontró el registro único de las articulaciones de gaviota.")
     html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
 
     gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
-    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.leftWing&&b.rightWing){const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;b.leftWing.rotation[b.wingFlapAxis]=b.leftWingBaseRotation-open-flap;b.rightWing.rotation[b.wingFlapAxis]=b.rightWingBaseRotation+open+flap;if(b.tail)b.tail.rotation.x=b.tailBaseRotation+Math.sin(elapsed*2.7+b.phase)*.045;}"
+    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(window.ELSN_GULL_FLIGHT_CORE){if(!window.ELSN_GULL_FLIGHT_CORE.applyFlightPose(b,elapsed)&&!b.flightPoseFailureLogged){b.flightPoseFailureLogged=true;console.warn('Gaviota sin anatomía completa para adoptar la postura de vuelo.',b.root&&b.root.name);}}"
     if html.count(gull_flight_marker) != 1:
         raise SystemExit("No se encontró el bucle único de vuelo de las gaviotas.")
     html = html.replace(gull_flight_marker, gull_flight_replacement, 1)
@@ -1706,7 +1706,7 @@ function updateWildlife(dt){
     shutil.copy2(session_recorder_source, session_recorder_target)
 
     # Player-facing ambient dialogue is isolated from Inspector specialist identities.
-    for script_name in ("npc-village-brain-core.js", "npc-dialogue-core.js", "npc-dialogue-runtime.js"):
+    for script_name in ("npc-village-brain-core.js", "npc-dialogue-core.js", "npc-dialogue-runtime.js", "gull-flight-core.js"):
         script_source = ROOT / "scripts" / script_name
         if not script_source.is_file():
             raise SystemExit(f"Falta el módulo de diálogos NPC: {script_name}")
@@ -1842,27 +1842,33 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.318: stream the Babylon engine bundle with truthful mobile startup progress.
+    gull_flight_tag = '<script src="./scripts/gull-flight-core.js"></script>'
+    if html.count(gull_flight_tag) > 1:
+        raise SystemExit("El núcleo de vuelo de gaviotas aparece duplicado.")
+    if gull_flight_tag not in html:
+        html = html.replace("</body>", gull_flight_tag + chr(10) + "</body>", 1)
+
+    # Release candidate 0.6.319: articulated gull flight and overlay-local NPC dialogue.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.318; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.319; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.318\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.319\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.318.")
-    html = html.replace("0.6.274", "0.6.318")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.319.")
+    html = html.replace("0.6.274", "0.6.319")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'35',build:'0.6.318'"
+    diagnostic_build_replacement = "reportVersion:'36',build:'0.6.319'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.318 para normalizar.")
-    game_version = "0.6.318"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.319 para normalizar.")
+    game_version = "0.6.319"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
