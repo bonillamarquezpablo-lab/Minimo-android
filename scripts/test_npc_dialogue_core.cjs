@@ -115,9 +115,9 @@ console.log("NPC ambient dialogue contract: PASS (four-bubble limit, range, sche
 const dialogueRuntime=fs.readFileSync(__dirname+"/npc-dialogue-runtime.js","utf8");
 assert.ok(dialogueRuntime.includes("render(lastSnapshot,true)"),
  "Post-render dialogue projection must reuse the matrices that produced the just-rendered frame.");
-assert.ok(dialogueRuntime.includes('root.computeWorldMatrix(false)'),
+assert.ok(dialogueRuntime.includes('root.computeWorldMatrix(true)'),
  "A moving NPC root must update only when dirty before projecting its dialogue.");
-assert.ok(dialogueRuntime.includes('anchor.computeWorldMatrix(false)'),
+assert.ok(dialogueRuntime.includes('anchor.computeWorldMatrix(true)'),
  "The head-bone anchor must update only when dirty before its screen position is calculated.");
 assert.ok(dialogueRuntime.includes('lastProjection'));
 assert.ok(dialogueRuntime.includes('y-slot.height-12') &&
