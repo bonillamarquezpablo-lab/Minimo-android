@@ -346,7 +346,7 @@ def main() -> None:
         "wildlifeReadinessRecords=[]",
         "readiness:wildlifeReadinessRecords.slice()",
         "wildlifeReadinessRecords.push({kind:spec.kind,state:'ready'",
-        "wildlifeModelsLoadOnce().catch(error=>",
+        "loadWildlifeModelsOnce().catch(error=>",
         "complete:ambientFauna.length===wildlifeSpawnSpecs.length",
         "const animalCount=idx===0?3:0",
     )
