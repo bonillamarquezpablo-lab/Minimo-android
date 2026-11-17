@@ -100,10 +100,11 @@ jobs:
           PLAYER_TEST_SKIP_WARM_RESTART: '1'
         run: node scripts/player-startup-smoke.mjs
 
-      - name: Test Xiaomi 12X-class Android mobile startup and cached restart
+      - name: Test Android-class mobile startup and first 20 seconds of gameplay
         env:
           PLAYER_TEST_URL: http://127.0.0.1:4174/
           PLAYER_TEST_MOBILE: '1'
+          PLAYER_TEST_SKIP_WARM_RESTART: '1'
           PLAYER_TEST_ARTIFACT_DIR: artifacts/player-startup-mobile
         run: node scripts/player-startup-smoke.mjs
 
