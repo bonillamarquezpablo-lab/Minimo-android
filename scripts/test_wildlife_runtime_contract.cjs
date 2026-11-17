@@ -23,7 +23,7 @@ for(const marker of [
   "wildlifeReadinessRecords=[]",
   "readiness:wildlifeReadinessRecords.slice()",
   "wildlifeReadinessRecords.push({kind:spec.kind,state:'ready'",
-  "wildlifeModelsLoadOnce().catch(error=>",
+  "loadWildlifeModelsOnce().catch(error=>",
   "complete:ambientFauna.length===wildlifeSpawnSpecs.length"
 ]) assert.ok(builder.includes(marker),'Builder is missing animal-integrity requirement: '+marker);
 assert.match(html,/WILDLIFE_MODEL_DEFS=\{deer:/);
