@@ -795,6 +795,20 @@ async function main() {
     manifest.postEntryErrors = finalErrors;
     assert.deepEqual(finalErrors, { consoleErrors: 0, runtimeErrors: 0, unhandledRejections: 0 },
       'Se detectaron errores durante los primeros 20 segundos de partida.');
+    if (process.env.PLAYER_TEST_SKIP_WARM_RESTART === '1') {
+      // The dedicated HTTPS runtime-acceptance workflow owns warm and offline restart.
+      // Keep this run focused on a cold first boot and the first gameplay interval;
+      // avoid repeating a second 5,183-mesh scene load on the same constrained runner.
+      manifest.cachedRestart = {
+        enabled: false,
+        delegatedTo: 'Game runtime acceptance — EL SIN NOMBRE',
+        reason: 'Dedicated HTTPS workflow validates warm start and Service Worker offline restart.'
+      };
+      manifest.offlineReload = {
+        enabled: false,
+        delegatedTo: 'Game runtime acceptance — EL SIN NOMBRE'
+      };
+    } else {
     // Repeat in the same browser profile to measure the Service Worker/Cache API warm path.
     const cachedLaunchStartedAt = performance.now();
     // Dispose of the renderer that just completed the 5,000+ mesh gameplay
@@ -1043,6 +1057,8 @@ async function main() {
       manifest.offlineReload.pageErrors = manifest.pageErrors.slice();
       assert.equal(manifest.pageErrors.length, 0,
         'Errores JavaScript tras el reinicio offline: ' + manifest.pageErrors.join(' | '));
+    }
+
     } else {
       manifest.offlineReload = {
         enabled: false,
