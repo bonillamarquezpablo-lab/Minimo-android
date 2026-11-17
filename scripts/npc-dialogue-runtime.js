@@ -48,15 +48,15 @@ function blockingUi(){if(document.body.classList.contains("map-open"))return tru
 function snapshot(){try{const value=Bridge.getSnapshot();diagnostics.bridgeError="";diagnostics.bridgeReportedActive=!!(value&&value.active);if(value)lastSnapshot=value;return value;}catch(error){diagnostics.snapshotFailures++;diagnostics.bridgeError=String(error&&error.message||error);diagnostics.lastError=diagnostics.bridgeError;console.warn("NPC dialogue snapshot:",error);return lastSnapshot;}}
 function bindSceneRenderObserver(s){
  const scene=s&&s.scene;if(!scene||scene===observedScene)return;
- if(observedScene&&renderObserver&&observedScene.onAfterRenderObservable&&typeof observedScene.onAfterRenderObservable.remove==="function"){
-  try{observedScene.onAfterRenderObservable.remove(renderObserver);}catch(_){}
+ if(observedScene&&renderObserver&&observedScene.onBeforeRenderObservable&&typeof observedScene.onBeforeRenderObservable.remove==="function"){
+  try{observedScene.onBeforeRenderObservable.remove(renderObserver);}catch(_){}
  }
  observedScene=scene;renderObserver=null;
- const observable=scene.onAfterRenderObservable;
+ const observable=scene.onBeforeRenderObservable;
  if(observable&&typeof observable.add==="function"){
   renderObserver=observable.add(()=>{
    if(!lastActive||document.hidden||!lastSnapshot)return;
-   try{render(lastSnapshot,true);}catch(error){diagnostics.lastError=String(error&&error.message||error);}
+   try{refreshProjectionMatrices(lastSnapshot);render(lastSnapshot,true);}catch(error){diagnostics.lastError=String(error&&error.message||error);}
   });
  }
 }
