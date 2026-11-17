@@ -64,11 +64,11 @@ for (const marker of [
 ]) {
   assert.ok(source.includes(marker), 'Atmosphere module is missing: ' + marker);
 }
-assert.ok(source.includes('const useMoonDirectLight = state.night > state.daylight;') &&
+assert.ok(source.includes('const lunarBlend = smooth(0.18, 0.82, state.night)') &&
   source.includes('this.sunLight.direction.x = directX') &&
-  source.includes('this.sunLight.intensity = useMoonDirectLight') &&
+  source.includes('this.sunLight.intensity = mix(sunIntensity, moonIntensity, lunarBlend)') &&
   !source.includes("new B.DirectionalLight('NorseMoonDirectionalLight'"),
-  'Sun and moon must share one continuously enabled directional slot without swapping shader-light variants at dusk.');
+  'Sun and moon must share one continuously enabled directional slot with a smooth twilight hand-off.');
 
 const sunSurfaceBody=source.slice(source.indexOf('    _createSunSurfaceMaterial() {'),source.indexOf('    _createMoonAndLights() {'));
 assert.ok(sunSurfaceBody.includes("this.sunDisc.material = material")&&sunSurfaceBody.includes("attributes: ['position', 'normal']"),"The sun must reuse its existing disc and compute a procedural photosphere from its surface normals.");
