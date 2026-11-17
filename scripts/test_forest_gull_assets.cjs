@@ -27,6 +27,8 @@ assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html
   'Forest placement must use a wider relocation search and expose overlap diagnostics.');
 assert.ok(html.includes('b.leftWing.rotation[b.wingFlapAxis]') && html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
   'The new gull wings must flap around their actual pivot axis.');
+assert.ok(html.includes('const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;') && html.includes('b.leftWingBaseRotation-open-flap') && html.includes('b.rightWingBaseRotation+open+flap'),
+  'The gull must hold a visibly spread glide pose and use a broad, continuous wing stroke rather than a folded idle silhouette.');
 assert.ok(buildSource.includes('node.rotationQuaternion.toEulerAngles()') && buildSource.includes('node.rotationQuaternion=null'),
  'Imported GLB quaternion rotations must be preserved before wing pivots switch to Euler animation.');
 

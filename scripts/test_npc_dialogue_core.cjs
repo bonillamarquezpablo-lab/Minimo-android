@@ -51,9 +51,12 @@ assert.ok(bubbleB,"A second bubble should move to an available non-overlapping p
 assert.ok(bubbleB.right<=viewport.right&&bubbleB.left>=viewport.left&&bubbleB.bottom<=viewport.bottom&&bubbleB.top>=viewport.top);
 assert.ok(bubbleB.right<=bubbleA.left-8||bubbleB.left>=bubbleA.right+8||bubbleB.bottom<=bubbleA.top-8||bubbleB.top>=bubbleA.bottom+8,
  "Speech bubbles must not overlap when a free position exists.");
-const edgeBubble=Core.placeBubble({x:4,y:4},bubbleSize,viewport,[]);
-assert.ok(edgeBubble&&edgeBubble.left>=viewport.left+6&&edgeBubble.top>=viewport.top+6,
- "Bubbles projected at screen edges must remain inside the canvas viewport.");
+const anchoredBubble=Core.placeBubble({x:180,y:500},bubbleSize,viewport,[]);
+assert.ok(anchoredBubble&&Math.abs((anchoredBubble.left+bubbleSize.width/2)-180)<1&&anchoredBubble.bottom<500,
+ "A dialogue bubble must remain adjacent to its NPC anchor instead of drifting to a viewport edge.");
+const impossibleEdgeBubble=Core.placeBubble({x:4,y:4},bubbleSize,viewport,[]);
+assert.equal(impossibleEdgeBubble,null,
+ "When no valid position exists beside the NPC, the bubble must hide rather than clamp to a screen corner.");
 const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
 assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);assert.match(runtime,/BABYLON\.Vector3\.Project/);assert.match(runtime,/Core\.POSITION_UPDATE_MS/);assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
 assert.doesNotMatch(runtime,/new BABYLON\.Mesh|MeshBuilder|new B\.Mesh|requestAnimationFrame/);
@@ -76,9 +79,9 @@ assert.ok(dialogueFocusStart>=0&&dialoguePlayerFallback>dialogueFocusStart,
  "Dialogue bridge must safely resolve the active player's world position.");
 assert.match(runtime,/function remember\(state,content\)/);
 assert.match(runtime,/function bindSceneRenderObserver\(s\)/,"Speech bubbles must be reprojected on Babylon's render cycle, not only on a slow wall-clock timer.");
-assert.match(runtime,/onBeforeRenderObservable/,"Speech bubbles must be reprojected with the latest camera matrices before each rendered frame.");
-assert.match(runtime,/refreshProjectionMatrices\(lastSnapshot\);render\(lastSnapshot,true\)/,"Camera projection matrices must be refreshed before the bubble's frame render.");
-assert.doesNotMatch(runtime,/onAfterRenderObservable/,"Bubble placement must not lag a rendered camera frame.");
+assert.match(runtime,/onAfterRenderObservable/,"Speech bubbles must be reprojected after Babylon renders the camera frame.");
+assert.match(runtime,/render\(lastSnapshot,true\)/,"Bubble projection must use the current frame matrices without refreshing them after render.");
+assert.doesNotMatch(runtime,/onBeforeRenderObservable/,"Bubble projection must not use pre-render camera matrices.");
 assert.match(runtime,/orientationchange/);assert.match(runtime,/visualViewport/);assert.match(runtime,/ResizeObserver/);
 assert.match(runtime,/s\.engine\.resize\(\)/,"A device orientation change must resize Babylon before reprojection.");
 assert.match(runtime,/function render\(s,matricesReady=false\)/,"The render-cycle projection must reuse the current camera matrices.");

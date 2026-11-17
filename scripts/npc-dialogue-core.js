@@ -152,8 +152,10 @@ function placeBubble(anchor,size,bounds,occupied){
  const seen=new Set(),others=Array.isArray(occupied)?occupied:[];
  let best=null,bestScore=Infinity;
  for(const candidate of raw){
-  const l=clamp(candidate.left,minLeft,maxLeft),t=clamp(candidate.top,minTop,maxTop),key=Math.round(l)+":"+Math.round(t);
-  if(seen.has(key))continue;seen.add(key);
+  const l=candidate.left,t=candidate.top;
+  if(l<minLeft||l>maxLeft||t<minTop||t>maxTop)continue;
+  const key=Math.round(l)+":"+Math.round(t);
+  if(seen.has(key))continue;
   let overlap=0;
   for(const other of others){if(!other)continue;const ix=Math.max(0,Math.min(l+w,Number(other.right)+8)-Math.max(l,Number(other.left)-8));const iy=Math.max(0,Math.min(t+h,Number(other.bottom)+8)-Math.max(t,Number(other.top)-8));overlap+=ix*iy;}
   const score=overlap/(w*h);if(score<bestScore){bestScore=score;best={left:l,top:t,right:l+w,bottom:t+h,width:w,height:h};}if(score===0)break;
