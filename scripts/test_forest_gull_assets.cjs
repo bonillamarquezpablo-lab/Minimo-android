@@ -8,8 +8,8 @@ const html=fs.readFileSync(path.join(dist,'index.html'),'utf8');
 assert.match(html,/forestTreeAssetSpecs/);
 assert.match(html,/instantiateModelsToScene\(name=>name\+'_Forest_'/);
 assert.match(html,/await loadForestTreeTemplates\(\)/);
-assert.match(html,/targetGullMaxExtentMeters=\.78/);
-assert.match(html,/fittedMaxExtent>\.82/);
+assert.match(html,/targetGullMaxExtentMeters=\.55/);
+assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
 assert.ok(html.includes('leftWing,rightWing,tail,wingFlapAxis'), 'The replacement gull must expose its named articulated anatomy.');
 assert.ok(html.includes('b.leftWing.rotation[b.wingFlapAxis]') && html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
