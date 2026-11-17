@@ -335,8 +335,12 @@ def main() -> None:
         "leftWing.rotation[b.wingFlapAxis]",
         "rightWing.rotation[b.wingFlapAxis]",
         "function findForestTreePlacement(x,z,canopyRadius)",
-        "const canopyRadius=Math.max(2.3,Math.min(3.9,horizontalSpan*.50))",
-        "minGapMeters:4.8",
+        "const conifer=kind==='pine'||kind==='spruce'",
+        "Math.min(conifer?5.2:4.6,horizontalSpan*(conifer?0.70:0.62))",
+        "Math.max(forestTreeSpacingStats.minGapMeters,(canopyRadius+otherRadius)*1.12)",
+        "minGapMeters:6.5",
+        "ring<=16",
+        "overlapPairs",
     )
     missing_forest_markers = [marker for marker in forest_markers if marker not in index_html]
     if missing_forest_markers:
