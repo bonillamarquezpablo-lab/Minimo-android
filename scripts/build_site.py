@@ -370,7 +370,7 @@ def main() -> None:
   {kind:'oak',label:'Roble PBR 2K',url:'./assets/models/forest/oak-textured.glb',targetHeight:5.6,requiresTexture:true}
  ];
  const forestTreeTemplates=new Map();
-  const forestTreeSpacingStats={placed:0,relocated:0,skipped:0,minGapMeters:4.8};
+  const forestTreeSpacingStats={placed:0,relocated:0,skipped:0,minGapMeters:6.5};
   function findForestTreePlacement(x,z,canopyRadius){
    const islandIndex=landIslandIndex(x,z),island=land[islandIndex];
    if(!island)return null;
@@ -379,16 +379,16 @@ def main() -> None:
     for(const other of trees){
      if(!other||other.alive===false)continue;
      const dx=cx-other.x,dz=cz-other.z;
-     const otherRadius=Math.max(2.3,Number(other.canopyRadius)||2.3);
-     const required=Math.max(forestTreeSpacingStats.minGapMeters,(canopyRadius+otherRadius)*.92);
+     const otherRadius=Math.max(3.0,Number(other.canopyRadius)||3.0);
+     const required=Math.max(forestTreeSpacingStats.minGapMeters,(canopyRadius+otherRadius)*1.12);
      if(dx*dx+dz*dz<required*required)return false;
     }
     return true;
    };
    if(acceptable(x,z))return {x,z};
    const phase=Math.atan2(z-island.z,x-island.x);
-   for(let ring=1;ring<=8;ring++){
-    const distance=ring*.7,steps=ring<3?12:18;
+   for(let ring=1;ring<=16;ring++){
+    const distance=ring*.8,steps=ring<4?16:24;
     for(let step=0;step<steps;step++){
      const angle=phase+step*Math.PI*2/steps+(ring%2)*.09;
      const candidateX=x+Math.cos(angle)*distance,candidateZ=z+Math.sin(angle)*distance;
@@ -397,7 +397,7 @@ def main() -> None:
    }
    return null;
   }
-  window.__ELSN_FOREST_TREE_SPACING__=()=>({...forestTreeSpacingStats,treeCount:trees.filter(tree=>tree&&tree.alive).length});
+  window.__ELSN_FOREST_TREE_SPACING__=()=>{const live=trees.filter(tree=>tree&&tree.alive);let overlapPairs=0,minCenterDistance=Infinity;for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){const a=live[i],c=live[j],distance=Math.hypot(a.x-c.x,a.z-c.z);minCenterDistance=Math.min(minCenterDistance,distance);const required=Math.max(forestTreeSpacingStats.minGapMeters,(Math.max(3,Number(a.canopyRadius)||3)+Math.max(3,Number(c.canopyRadius)||3))*1.12);if(distance<required-.05)overlapPairs++;}return {...forestTreeSpacingStats,treeCount:live.length,overlapPairs,minCenterDistanceMeters:Number.isFinite(minCenterDistance)?Number(minCenterDistance.toFixed(2)):null};};
  async function loadForestTreeTemplates(){
   const started=performance.now();
   const loaded=await Promise.all(forestTreeAssetSpecs.map(async spec=>{
@@ -458,7 +458,8 @@ def main() -> None:
   const baseYaw=rand(0,Math.PI*2);root.rotation.y=baseYaw;
   meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=false;});
   const horizontalSpan=Math.max(bounds.max.x-bounds.min.x,bounds.max.z-bounds.min.z)*placedScale;
-  const canopyRadius=Math.max(2.3,Math.min(3.9,horizontalSpan*.50));
+  const conifer=kind==='pine'||kind==='spruce';
+  const canopyRadius=Math.max(conifer?3.6:3.0,Math.min(conifer?5.2:4.6,horizontalSpan*(conifer?0.70:0.62)));
   const placement=findForestTreePlacement(x,z,canopyRadius);
   if(!placement){forestTreeSpacingStats.skipped++;root.dispose(false,false);return null;}
   if(Math.hypot(placement.x-x,placement.z-z)>.10)forestTreeSpacingStats.relocated++;
@@ -902,7 +903,7 @@ def main() -> None:
     html = html.replace(gull_root_marker,gull_root_replacement,1)
 
     gull_animation_marker = "const groups=inst.animationGroups||[],fly=groups.find(g=>/walk|fly|flap/i.test(g.name))||groups.find(g=>/idle/i.test(g.name))||groups[0]||null;"
-    gull_animation_replacement = "const groups=inst.animationGroups||[],fly=groups.find(g=>/\\b(?:fly|flight|flying|flap|flapping|soar|soaring)\\b/i.test(String(g.name||'')))||null;"
+    gull_animation_replacement = "const groups=inst.animationGroups||[],fly=null;"
     if html.count(gull_animation_marker) != 1:
         raise SystemExit("No se encontró el selector único de animación de las gaviotas.")
     html = html.replace(gull_animation_marker,gull_animation_replacement,1)
@@ -952,7 +953,7 @@ def main() -> None:
     html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
 
     gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
-    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.leftWing&&b.rightWing){const flap=Math.sin(elapsed*7.2+b.phase)*.58;b.leftWing.rotation[b.wingFlapAxis]=b.leftWingBaseRotation-flap;b.rightWing.rotation[b.wingFlapAxis]=b.rightWingBaseRotation+flap;if(b.tail)b.tail.rotation.x=b.tailBaseRotation+Math.sin(elapsed*2.1+b.phase)*.035;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
+    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.leftWing&&b.rightWing){const flap=Math.sin(elapsed*10.5+b.phase)*.68;b.leftWing.rotation[b.wingFlapAxis]=b.leftWingBaseRotation-flap;b.rightWing.rotation[b.wingFlapAxis]=b.rightWingBaseRotation+flap;if(b.tail)b.tail.rotation.x=b.tailBaseRotation+Math.sin(elapsed*2.7+b.phase)*.045;}"
     if html.count(gull_flight_marker) != 1:
         raise SystemExit("No se encontró el bucle único de vuelo de las gaviotas.")
     html = html.replace(gull_flight_marker, gull_flight_replacement, 1)
@@ -1841,27 +1842,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.316: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.317: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.316; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.317; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.316\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.317\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.316.")
-    html = html.replace("0.6.274", "0.6.316")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.317.")
+    html = html.replace("0.6.274", "0.6.317")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'33',build:'0.6.316'"
+    diagnostic_build_replacement = "reportVersion:'34',build:'0.6.317'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.316 para normalizar.")
-    game_version = "0.6.316"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.317 para normalizar.")
+    game_version = "0.6.317"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
