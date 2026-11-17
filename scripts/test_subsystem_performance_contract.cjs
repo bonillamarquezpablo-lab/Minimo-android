@@ -30,10 +30,14 @@ for(const marker of [
 ]) assert.ok(atmosphere.includes(marker),'Atmosphere profiler is missing: '+marker);
 
 for(const marker of [
-  'lastPositioningMs',
   'maxPositioningMs',
   'lastProjection'
 ]) assert.ok(dialogue.includes(marker),'Dialogue profiler/anchor diagnostics are missing: '+marker);
+
+assert.ok(dialogue.includes('lastPositioningMs') &&
+  dialogue.includes('maxPositioningMs') &&
+  dialogue.includes('lastProjection'),
+  'NPC dialogue must expose positioning cost and current screen/world anchor telemetry.');
 
 assert.ok(builder.includes('EXT_disjoint_timer_query'),
   'The GPU timer-query path must remain available when supported.');
