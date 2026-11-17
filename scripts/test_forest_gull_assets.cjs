@@ -6,6 +6,7 @@ const assert=require('node:assert/strict');
 const dist=path.join(process.cwd(),'dist');
 const html=fs.readFileSync(path.join(dist,'index.html'),'utf8');
 const buildSource=fs.readFileSync(path.join(process.cwd(),'scripts','build_site.py'),'utf8');
+const flightCore=fs.readFileSync(path.join(dist,'scripts','gull-flight-core.js'),'utf8');
 assert.match(html,/forestTreeAssetSpecs/);
 assert.match(html,/instantiateModelsToScene\(name=>name\+'_Forest_'/);
 assert.match(html,/await loadForestTreeTemplates\(\)/);
@@ -33,10 +34,16 @@ assert.ok(html.includes("const conifer=kind==='pine'||kind==='spruce'") && html.
   'Pine and spruce canopy radii must account for their broader real model bounds.');
 assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html.includes('overlapPairs'),
   'Forest placement must use a wider relocation search and expose overlap diagnostics.');
-assert.ok(html.includes('b.leftWing.rotation[b.wingFlapAxis]') && html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
-  'The new gull wings must flap around their actual pivot axis.');
-assert.ok(html.includes('const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;') && html.includes('b.leftWingBaseRotation-open-flap') && html.includes('b.rightWingBaseRotation+open+flap'),
-  'The gull must hold a visibly spread glide pose and use a broad, continuous wing stroke rather than a folded idle silhouette.');
+assert.ok(flightCore.includes('f.leftWing.rotation[f.wingFlapAxis]') && flightCore.includes('f.rightWing.rotation[f.wingFlapAxis]'),
+  'The flight core must flap both imported wings around their actual pivots.');
+assert.ok(flightCore.includes('FLAP_HZ=8.8,WING_OPEN=.78,WING_AMPLITUDE=.82') &&
+  flightCore.includes('HIP_TUCK=1.02,KNEE_FOLD=-1.18'),
+  'The gull must retain the spread wing cycle and add a folded airborne leg pose.');
+assert.ok(flightCore.includes('f.leftHip.rotation[f.legBendAxis]') && flightCore.includes('f.rightHip.rotation[f.legBendAxis]') &&
+  flightCore.includes('f.leftKnee.rotation[f.legBendAxis]') && flightCore.includes('f.rightKnee.rotation[f.legBendAxis]'),
+  'Both upper and lower legs must animate on the actual imported joint pivots.');
+assert.ok(flightCore.includes('bird.root.rotation[f.legBendAxis]'),
+  'The flight body pitch must follow the imported model axis rather than a hard-coded global axis.');
 assert.ok(buildSource.includes('node.rotationQuaternion.toEulerAngles()') && buildSource.includes('node.rotationQuaternion=null'),
  'Imported GLB quaternion rotations must be preserved before wing pivots switch to Euler animation.');
 
