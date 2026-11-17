@@ -797,7 +797,21 @@ async function main() {
       'Se detectaron errores durante los primeros 20 segundos de partida.');
     // Repeat in the same browser profile to measure the Service Worker/Cache API warm path.
     const cachedLaunchStartedAt = performance.now();
-    await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
+    // Dispose of the renderer that just completed the 5,000+ mesh gameplay
+    // session before measuring the warm launch. Keep the same browser context so
+    // localStorage, Cache API and the Service Worker remain intact.
+    await page.close({ runBeforeUnload: false });
+    page = await context.newPage();
+    page.setDefaultTimeout(60000);
+    page.setDefaultNavigationTimeout(90000);
+    attachPageDiagnostics(page);
+    const warmNavigationResponse = await page.goto(BASE_URL + '?playertest=1&debug=1', {
+      waitUntil: 'domcontentloaded',
+      timeout: 90000
+    });
+    assert.ok(warmNavigationResponse && warmNavigationResponse.status() === 200,
+      'El arranque con caché no respondió HTTP 200: ' +
+      JSON.stringify({ status: warmNavigationResponse?.status(), url: warmNavigationResponse?.url() }));
     const cachedAudioGate = page.locator('#audioGateStart');
     if (await cachedAudioGate.isVisible().catch(() => false)) await cachedAudioGate.click({ timeout: 30000 });
     await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
