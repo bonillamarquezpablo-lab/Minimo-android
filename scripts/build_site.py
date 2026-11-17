@@ -806,6 +806,12 @@ def main() -> None:
         raise SystemExit("No se encontró el contador de fauna terrestre inicial.")
     html = html.replace(wildlife_spawn_count_marker, wildlife_spawn_count_replacement, 1)
 
+    wildlife_retry_marker = " function loadWildlifeModels(){\n  if(!wildlifeModelsLoadPromise)wildlifeModelsLoadPromise=loadWildlifeModelsOnce();\n  return wildlifeModelsLoadPromise;\n }"
+    wildlife_retry_replacement = " function loadWildlifeModels(){\n  if(!wildlifeModelsLoadPromise)wildlifeModelsLoadPromise=loadWildlifeModelsOnce().catch(error=>{\n   for(const animal of ambientFauna.splice(0)){\n    const root=animal.root;try{(animal.groups||[]).forEach(group=>{try{group.stop();group.dispose();}catch(_){}});}catch(_){}\n    for(let i=managedWorldShadowGroups.length-1;i>=0;i--){const entry=managedWorldShadowGroups[i];if(entry&&entry.root===root){if(entry.active&&shadowGen)for(const mesh of entry.meshes||[]){try{shadowGen.removeShadowCaster(mesh);}catch(_){}}managedActiveWorldShadowCount=Math.max(0,managedActiveWorldShadowCount-(entry.meshes||[]).length);managedWorldShadowGroups.splice(i,1);}}\n    try{if(root&&!(root.isDisposed&&root.isDisposed()))root.dispose(false,true);}catch(_){}\n   }\n   wildlifeBlobs.clear();wildlifeModelsLoadPromise=null;throw error;\n  });\n  return wildlifeModelsLoadPromise;\n }"
+    if html.count(wildlife_retry_marker) != 1:
+        raise SystemExit("No se encontró la promesa única de fauna para reintentar sin duplicados.")
+    html = html.replace(wildlife_retry_marker, wildlife_retry_replacement, 1)
+
     wildlife_empty = "  if(!wildlifeSpawnSpecs.length)return 0;"
     wildlife_required = "  if(wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
     if html.count(wildlife_empty) != 1:
@@ -825,13 +831,13 @@ def main() -> None:
     html = html.replace(wildlife_ground, wildlife_ground_required, 1)
 
     wildlife_import_failure = "   console.warn('Fauna descartada: importación GLB incompleta ('+kind+')',err);\n   if(/agotó el plazo/i.test(String(err&&err.message||err)))throw err;\n   return null;"
-    wildlife_import_required = "   console.error('Falló la importación de fauna obligatoria ('+kind+'):',err);\n   throw new Error('RECURSO OBLIGATORIO: fauna '+kind+' · '+String(err&&err.message||err));"
+    wildlife_import_required = "   wildlifeReadinessRecords.push({kind,state:'failed',error:String(err&&err.message||err)});\n   console.error('Falló la importación de fauna obligatoria ('+kind+'):',err);\n   throw new Error('RECURSO OBLIGATORIO: fauna '+kind+' · '+String(err&&err.message||err));"
     if html.count(wildlife_import_failure) != 1:
         raise SystemExit("No se encontró el fallback que ocultaba los fallos de importación animal.")
     html = html.replace(wildlife_import_failure, wildlife_import_required, 1)
 
     wildlife_instance = "   if(animal){ambientFauna.push(animal);loaded++;}\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),animal?'ready':'fallback',{island:spec.homeIslandIndex});"
-    wildlife_instance_required = "   if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');\n   ambientFauna.push(animal);loaded++;\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});"
+    wildlife_instance_required = "   if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');\n   wildlifeReadinessRecords.push({kind:spec.kind,state:'ready',island:spec.homeIslandIndex,meshes:animal.meshCount,skinnedVertices:animal.skinnedVertexCount,bones:animal.skeletonBoneCount,textures:animal.textureReadiness.count,textureWaitMs:animal.textureReadiness.waitedMs});\n   ambientFauna.push(animal);loaded++;\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});"
     if html.count(wildlife_instance) != 1:
         raise SystemExit("No se encontró el montaje individual de fauna.")
     html = html.replace(wildlife_instance, wildlife_instance_required, 1)
