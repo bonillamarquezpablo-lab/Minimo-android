@@ -40,4 +40,8 @@ assert.ok(builder.includes("requiredGulls:isPerformanceMode?0:5"),
   'The five physical gull instances must be validated before startup is released.');
 assert.ok(builder.includes("fauna:'blocking-required'"),
   'Both graphics profiles must block until all three terrestrial animals are complete.');
+assert.ok(builder.includes("fauna:{required:true,requested:wildlifeSpawnSpecs.length"),
+  'The startup report must mark terrestrial fauna required in both graphics profiles.');
+assert.ok(builder.includes("if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)"),
+  'The final resource gate must verify all three terrestrial species in both profiles, not Quality only.');
 console.log('WILDLIFE RUNTIME CONTRACT: PASS (3 complete terrestrial species, GLB integrity, skeletons, clips, textures, transactional cleanup and blocking Quality readiness).');
