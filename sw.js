@@ -162,7 +162,7 @@ self.addEventListener("fetch", event => {
 
   // The Nordic simulation modules are part of the offline game shell, not generic media assets.
   // Serve them from the shell cache first so a cached game never boots without its runtime APIs.
-  if (url.pathname.includes("/scripts/nordic/") || url.pathname.endsWith("/scripts/npc-agent-core.js") || url.pathname.endsWith("/scripts/npc-agent-runtime.js") || url.pathname.endsWith("/scripts/game-session-recorder.js")) {
+  if (url.pathname.includes("/scripts/nordic/") || url.pathname.endsWith("/scripts/npc-agent-core.js") || url.pathname.endsWith("/scripts/npc-agent-runtime.js") || url.pathname.endsWith("/scripts/game-session-recorder.js") || url.pathname.endsWith("/scripts/npc-village-brain-core.js") || url.pathname.endsWith("/scripts/npc-dialogue.css")) {
     event.respondWith(cacheFirst(request, SHELL_CACHE).catch(() => Response.error()));
     return;
   }
