@@ -770,9 +770,10 @@ def main() -> None:
     if html.count(gull_material_set) != 1:
         raise SystemExit("No se encontró el conjunto local de materiales duplicados de las gaviotas.")
     html = html.replace(gull_material_set, "", 1)
-    gull_material_style_start = "    meshes.forEach(mesh=>{\n     const list=Array.isArray(mesh.material)?mesh.material:[mesh.material];"
+    gull_material_style_start = "    meshes.forEach(mesh=>{"
     gull_material_style_end = "    const bounds=boundsForMeshes(meshes)"
-    style_start = html.find(gull_material_style_start)
+    style_anchor = html.find(gull_rig_replacement)
+    style_start = html.find(gull_material_style_start, style_anchor)
     style_end = html.find(gull_material_style_end, style_start)
     if style_start < 0 or style_end <= style_start:
         raise SystemExit("No se pudo aislar el tinte artificial del modelo de gaviota.")
