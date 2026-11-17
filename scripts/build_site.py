@@ -776,6 +776,12 @@ def main() -> None:
         raise SystemExit("No se encontró el marcador único: wildlife_import_snapshot_marker.")
     html = html.replace(wildlife_import_snapshot_marker, wildlife_import_snapshot_marker_replacement, 1)
 
+    wildlife_animal_marker = "const animal={kind,root:actor,"
+    wildlife_animal_replacement = "const animal={textureReadiness,kind,root:actor,"
+    if html.count(wildlife_animal_marker) != 1:
+        raise SystemExit("No se encontró el actor único de fauna para adjuntar el estado de texturas.")
+    html = html.replace(wildlife_animal_marker, wildlife_animal_replacement, 1)
+
     wildlife_mesh_texture_marker = "   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);\n   if(!meshes.length)throw new Error('GLB sin malla visible.');"
     wildlife_mesh_texture_marker_replacement = "   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);\n   if(!meshes.length)throw new Error('GLB sin malla visible.');\n   const textureReadiness=await waitForAnimalTextures(meshes,kind);"
     if html.count(wildlife_mesh_texture_marker) != 1:
@@ -907,12 +913,12 @@ def main() -> None:
     # the skinned animation groups keep running at the render rate.
     wildlife_update_marker = "function updateWildlife(dt){"
     wildlife_update_end_marker = " // 0.6.195: la cubierta vegetal queda despejada de caminos y campamentos."
-    wildlife_update_replacement = """const wildlifeUpdatePerfSamples=new Float32Array(120);let wildlifeUpdatePerfCursor=0,wildlifeUpdatePerfCount=0,wildlifeUpdatePerfLastMs=0,wildlifeUpdatePerfMaxMs=0,wildlifeUpdatePerfTicks=0;
+    wildlife_update_replacement = """const wildlifeReadinessRecords=[];const wildlifeUpdatePerfSamples=new Float32Array(120);let wildlifeUpdatePerfCursor=0,wildlifeUpdatePerfCount=0,wildlifeUpdatePerfLastMs=0,wildlifeUpdatePerfMaxMs=0,wildlifeUpdatePerfTicks=0;
 function wildlifeUpdatePerfSnapshot(){
  const values=[];for(let i=0;i<wildlifeUpdatePerfCount;i++)values.push(wildlifeUpdatePerfSamples[i]);values.sort((a,b)=>a-b);
  const at=p=>values.length?Number(values[Math.min(values.length-1,Math.floor((values.length-1)*p))].toFixed(3)):null;
  const byKind={deer:0,stag:0,wolf:0};for(const animal of ambientFauna)if(byKind[animal.kind]!==undefined)byKind[animal.kind]++;
- return {samples:wildlifeUpdatePerfCount,ticks:wildlifeUpdatePerfTicks,lastMs:wildlifeUpdatePerfLastMs,p50Ms:at(.50),p95Ms:at(.95),p99Ms:at(.99),maxMs:Number(wildlifeUpdatePerfMaxMs.toFixed(3)),requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length,byKind,complete:ambientFauna.length===wildlifeSpawnSpecs.length};
+ return {samples:wildlifeUpdatePerfCount,ticks:wildlifeUpdatePerfTicks,lastMs:wildlifeUpdatePerfLastMs,p50Ms:at(.50),p95Ms:at(.95),p99Ms:at(.99),maxMs:Number(wildlifeUpdatePerfMaxMs.toFixed(3)),requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length,byKind,readiness:wildlifeReadinessRecords.slice(),complete:ambientFauna.length===wildlifeSpawnSpecs.length};
 }
 window.__ELSN_WILDLIFE_DIAGNOSTICS__=Object.freeze({getSnapshot:wildlifeUpdatePerfSnapshot});
 function updateWildlife(dt){
