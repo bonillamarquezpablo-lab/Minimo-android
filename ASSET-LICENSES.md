@@ -15,6 +15,12 @@ Esta distribución se construye desde GitHub Actions y copia los recursos al paq
 - Seagull GLB: Gobkit free CC0 library, CC0 1.0. https://gobkit.com/freebies
 - Deer, Stag and Wolf animated GLB: Quaternius Ultimate Animated Animals, CC0 1.0; pinned to commit `6d6de54a1d7143cf5487462d147bbef039de4837` and packaged locally under `assets/models/wildlife/`. https://github.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic
 
+## Modelos arbóreos CC0
+- Pino silvestre adulto: Innerscene, GLB con mapas de textura y materiales; CC0 1.0. Empaquetado en `assets/models/forest/mature-scots-pine-tree.glb`. Fuente: https://www.innerscene.com/tools/library/3d-parts/mature-scots-pine-tree-280307e1
+- Pícea de Noruega adulta: Innerscene, GLB con mapas de textura y materiales; CC0 1.0. Empaquetado en `assets/models/forest/mature-norway-spruce-tree.glb`. Fuente: https://www.innerscene.com/tools/library/3d-parts/mature-norway-spruce-tree-48c2566f
+- Roble: Grab3D, GLB con texturas PBR 2K (color base, rugosidad, metálico y normal) y licencia CC0 1.0; empaquetado en `assets/models/forest/oak-textured.glb`. Fuente: https://grab3d.com/models/nature/oak-tree/ (GLB: https://grab3d.com/dl/oak-tree/oak-tree.glb)
+- Los tres modelos se descargan y validan durante la compilación; pino, pícea y roble incluyen mapas de textura empaquetados. La partida solo utiliza archivos locales; se conservan materiales y UV y se instancian plantillas compartidas entre árboles para limitar duplicaciones.
+
 ## Audio CC0
 - Pasos de hojas, barro, grava, piedra y madera, y barridos de batalla: TinyWorlds / Kenney, CC0 1.0, distribuidos por Open Game SFX Index. https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud
 - Impactos y sonidos de batalla: Kenney / OpenGameArt, CC0 1.0. https://kenney.nl/assets/impact-sounds

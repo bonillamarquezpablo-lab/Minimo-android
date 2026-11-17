@@ -101,6 +101,9 @@ jobs:
       - name: Build and validate game resources
         run: python scripts/build_site.py
 
+      - name: Test complete CC0 forest assets and measured gull size
+        run: node scripts/test_forest_gull_assets.cjs
+
       - name: Include the independent Inspector Center in the PR artifact
         run: |
           mkdir -p dist/inspector
