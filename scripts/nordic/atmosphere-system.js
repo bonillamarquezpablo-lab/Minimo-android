@@ -690,31 +690,34 @@
           continue;
         }
         const h = candidate.h;
+        const hearthChanged = slot.source !== h;
         slot.source = h;
         slot.light.position.set(h.x, h.floorY + 1.0, h.z);
         slot.light.range = 11.5;
         slot.light.intensity = 0.56 * state.night;
-        // Preserve full local hearth illumination while excluding distant island meshes.
-        const affectedMeshes = [];
-        const maxRange = slot.light.range;
-        for (const mesh of this.scene.meshes || []) {
-          if (!mesh || mesh === this.skyDome || !mesh.material ||
-              mesh.isVisible === false || mesh.visibility <= 0 ||
-              (mesh.isDisposed && mesh.isDisposed()) ||
-              (mesh.isEnabled && !mesh.isEnabled())) continue;
-          try {
-            if (mesh.computeWorldMatrix) mesh.computeWorldMatrix(true);
-            const sphere = mesh.getBoundingInfo && mesh.getBoundingInfo().boundingSphere;
-            if (!sphere || !sphere.centerWorld) continue;
-            const dx = sphere.centerWorld.x - h.x;
-            const dy = sphere.centerWorld.y - (h.floorY + 1.0);
-            const dz = sphere.centerWorld.z - h.z;
-            const reach = maxRange + Math.max(0, Number(sphere.radiusWorld) || 0);
-            if (dx * dx + dy * dy + dz * dz <= reach * reach) affectedMeshes.push(mesh);
-          } catch (_) {}
+        // Rebuild the influence list only when this pooled light changes hearth.
+        // Bounding spheres are read from the current world state; never force a scene-wide matrix refresh.
+        if (hearthChanged) {
+          const affectedMeshes = [];
+          const maxRange = slot.light.range;
+          for (const mesh of this.scene.meshes || []) {
+            if (!mesh || mesh === this.skyDome || !mesh.material ||
+                mesh.isVisible === false || mesh.visibility <= 0 ||
+                (mesh.isDisposed && mesh.isDisposed()) ||
+                (mesh.isEnabled && !mesh.isEnabled())) continue;
+            try {
+              const sphere = mesh.getBoundingInfo && mesh.getBoundingInfo().boundingSphere;
+              if (!sphere || !sphere.centerWorld) continue;
+              const dx = sphere.centerWorld.x - h.x;
+              const dy = sphere.centerWorld.y - (h.floorY + 1.0);
+              const dz = sphere.centerWorld.z - h.z;
+              const reach = maxRange + Math.max(0, Number(sphere.radiusWorld) || 0);
+              if (dx * dx + dy * dy + dz * dz <= reach * reach) affectedMeshes.push(mesh);
+            } catch (_) {}
+          }
+          slot.light.includedOnlyMeshes = affectedMeshes;
+          slot.includedMeshCount = affectedMeshes.length;
         }
-        slot.light.includedOnlyMeshes = affectedMeshes;
-        slot.includedMeshCount = affectedMeshes.length;
       }
     }
 
