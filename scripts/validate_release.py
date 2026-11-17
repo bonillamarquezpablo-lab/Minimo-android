@@ -334,7 +334,7 @@ def main() -> None:
         fail("El bosque GLB o la escala física de las gaviotas están incompletos: " + ", ".join(missing_forest_markers))
     wildlife_runtime_markers = (
         "async function inspectGLBContainer(blob)",
-        "async function waitForAnimalTextures(meshes,kind,timeoutMs=25000)",
+        "async function waitForAnimalTextures(meshes,kind,timeoutMs=30000",
         "const beforeMeshes=new Set(scene.meshes||[])",
         "beforeSkeletons=new Set(scene.skeletons||[])",
         "sourceJson.skins",
