@@ -46,7 +46,7 @@ DOWNLOADS = {
         "https://ambientcg.com/get?file=Ground060_2K-JPG.zip", 1_000_000, "zip"
     ),
     "assets/models/Seagull.glb": (
-        "https://gobkit.com/freebies/animal007/Seagull.glb", 50_000, "glb"
+        "https://polyfork.dev/cdn/herring-gull-base.glb", 500_000, "glb"
     ),
     "assets/models/forest/mature-scots-pine-tree.glb": (
         "https://files.innerscene.com/library/mature-scots-pine-tree-280307e1/e52dca598822dfa9ffa9/mature-scots-pine-tree.glb", 500_000, "glb"
@@ -731,6 +731,12 @@ def main() -> None:
         raise SystemExit("No se encontró la única raíz de las gaviotas GLB.")
     html = html.replace(gull_root_marker,gull_root_replacement,1)
 
+    gull_rig_marker = "const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue};"
+    gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const leftWing=rigNodes.find(node=>/^LeftWing(?:_|$)/i.test(node.name||'')),rightWing=rigNodes.find(node=>/^RightWing(?:_|$)/i.test(node.name||'')),tail=rigNodes.find(node=>/^Tail(?:_|$)/i.test(node.name||''));if(!leftWing||!rightWing){actor.dispose(false,true);throw new Error('El modelo de gaviota no incluye pivotes anatómicos LeftWing y RightWing.');}leftWing.computeWorldMatrix(true);rightWing.computeWorldMatrix(true);const leftWingWorld=leftWing.getAbsolutePosition(),rightWingWorld=rightWing.getAbsolutePosition(),wingSpanX=Math.abs(leftWingWorld.x-rightWingWorld.x),wingSpanZ=Math.abs(leftWingWorld.z-rightWingWorld.z),wingFlapAxis=wingSpanX>=wingSpanZ?'z':'x';"
+    if html.count(gull_rig_marker) != 1:
+        raise SystemExit("No se encontró el punto único para validar los pivotes anatómicos de gaviota.")
+    html = html.replace(gull_rig_marker, gull_rig_replacement, 1)
+
     gull_partial = "else throw new Error('El GLB se importó sin mallas instanciables');"
     gull_partial_required = "else throw new Error('El GLB solo permitió preparar '+realBirds.length+'/5 gaviotas completas.');"
     if html.count(gull_partial) != 1:
@@ -747,7 +753,7 @@ def main() -> None:
     # The five instances deliberately share the subdued GLB materials. Cloning every
     # mesh material for every gull created avoidable shader/material variants.
     gull_material_registry_marker = "const realBirds=[];"
-    gull_material_registry_replacement = "    const realBirds=[],subduedMaterials=new Set();"
+    gull_material_registry_replacement = "    const realBirds=[];"
     if html.count(gull_material_registry_marker) != 1:
         raise SystemExit("No se encontró el registro único de instancias de gaviota.")
     html = html.replace(gull_material_registry_marker, gull_material_registry_replacement, 1)
@@ -764,6 +770,25 @@ def main() -> None:
     if html.count(gull_material_set) != 1:
         raise SystemExit("No se encontró el conjunto local de materiales duplicados de las gaviotas.")
     html = html.replace(gull_material_set, "", 1)
+    gull_material_style_start = "    meshes.forEach(mesh=>{\\n     const list=Array.isArray(mesh.material)?mesh.material:[mesh.material];"
+    gull_material_style_end = "    const bounds=boundsForMeshes(meshes)"
+    style_start = html.find(gull_material_style_start)
+    style_end = html.find(gull_material_style_end, style_start)
+    if style_start < 0 or style_end <= style_start:
+        raise SystemExit("No se pudo aislar el tinte artificial del modelo de gaviota.")
+    html = html[:style_start] + html[style_end:]
+
+    gull_wing_push_marker = "realBirds.push({root:actor,real:true,groups,animation:fly,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
+    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,animation:fly,leftWing,rightWing,tail,wingFlapAxis,leftWingBaseRotation:leftWing.rotation[wingFlapAxis],rightWingBaseRotation:rightWing.rotation[wingFlapAxis],tailBaseRotation:tail?tail.rotation.x:0,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
+    if html.count(gull_wing_push_marker) != 1:
+        raise SystemExit("No se encontró el registro único de las articulaciones de gaviota.")
+    html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
+
+    gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
+    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.leftWing&&b.rightWing){const flap=Math.sin(elapsed*7.2+b.phase)*.58;b.leftWing.rotation[b.wingFlapAxis]=b.leftWingBaseRotation-flap;b.rightWing.rotation[b.wingFlapAxis]=b.rightWingBaseRotation+flap;if(b.tail)b.tail.rotation.x=b.tailBaseRotation+Math.sin(elapsed*2.1+b.phase)*.035;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
+    if html.count(gull_flight_marker) != 1:
+        raise SystemExit("No se encontró el bucle único de vuelo de las gaviotas.")
+    html = html.replace(gull_flight_marker, gull_flight_replacement, 1)
 
     # Move expensive terrestrial-fauna decisions and collision/terrain validation to
     # a distance-aware cadence. Root motion is still integrated on every frame, while
@@ -1624,27 +1649,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.313: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.314: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.313; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.314; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.313\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.314\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.313.")
-    html = html.replace("0.6.274", "0.6.313")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.314.")
+    html = html.replace("0.6.274", "0.6.314")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'30',build:'0.6.313'"
+    diagnostic_build_replacement = "reportVersion:'31',build:'0.6.314'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.313 para normalizar.")
-    game_version = "0.6.313"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.314 para normalizar.")
+    game_version = "0.6.314"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
