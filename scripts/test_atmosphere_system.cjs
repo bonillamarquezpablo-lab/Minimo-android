@@ -107,8 +107,8 @@ assert.ok(source.includes('rayleighPhase') && source.includes('miePhase') && sou
   !source.includes('sky += vec3(0.98, 0.39, 0.16) * horizonGlow'),
   'The sky must use directional atmospheric scattering rather than a uniform orange horizon fill.');
 assert.ok(source.includes('getPerformanceSnapshot()') && source.includes('visualUpdate: summarize') &&
-  source.includes('hearthSelection: summarize'),
-  'Atmosphere profiling must expose bounded visual-update and hearth-selection timings.');
+  source.includes('hearthSelection: summarize') && source.includes('p99Ms: percentile(.99)'),
+  'Atmosphere profiling must expose p50/p95/p99 visual-update and hearth-selection timings.');
 assert.ok(!localFireBody.includes('computeWorldMatrix(true)'),
   'Hearth scoping must not force world-matrix rebuilds across the scene.');
 assert.ok(source.includes('this.sunLight.setEnabled(true)'), 'The one directional light must remain enabled across day/night transitions.');
