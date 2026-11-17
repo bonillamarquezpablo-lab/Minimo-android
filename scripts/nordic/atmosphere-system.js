@@ -410,7 +410,7 @@
           '  vec3 rayleighBeta = vec3(0.045, 0.11, 0.24);',
           '  vec3 rayleighTransmittance = exp(-rayleighBeta * airMass);',
           '  vec3 sunTransmittance = exp(-rayleighBeta * sunAirMass);',
-          '  vec3 rayleighScatter = (vec3(1.0) - rayleighTransmittance) * sunTransmittance * vec3(0.18, 0.46, 1.0) * rayleighPhase;
+          '  vec3 rayleighScatter = (vec3(1.0) - rayleighTransmittance) * sunTransmittance * vec3(0.18, 0.46, 1.0) * rayleighPhase;',
           '  float aerosolPath = 1.0 - exp(-airMass * 0.10);',
           '  vec3 aerosolTint = mix(vec3(0.84, 0.54, 0.38), vec3(0.72, 0.84, 1.0), smoothstep(-0.14, 0.22, sunElevation));',
           '  float atmosphericDaylight = max(dayFactor, twilightFactor * 0.22);',
