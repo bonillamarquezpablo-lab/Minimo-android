@@ -109,3 +109,14 @@ assert.ok(builder.includes("Villager_")&&builder.includes("VillageGuard")&&build
 assert.doesNotMatch(builder,/ambientPeople\.concat/,"Dialogue bridge cannot reference the removed ambientPeople global.");const dialogueStyle=fs.readFileSync("scripts/npc-dialogue.css","utf8");assert.match(dialogueStyle,/z-index:1200/);assert.match(dialogueStyle,/max-width:min\(148px,calc\(100vw - 24px\)\)/);assert.match(dialogueStyle,/font-size:12px/);assert.match(dialogueStyle,/padding:4px 6px 5px/);
 assert.match(worker,/\.\/scripts\/npc-village-brain-core\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue-core\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue-runtime\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue\.css/);assert.match(validator,/scripts\/npc-dialogue-core\.js/);assert.match(validator,/maxVisibleBubbles:4/);
 console.log("NPC ambient dialogue contract: PASS (four-bubble limit, range, scheduling, projection and offline packaging).");
+
+const dialogueRuntime=fs.readFileSync(__dirname+"/npc-dialogue-runtime.js","utf8");
+assert.match(dialogueRuntime,/render\\(lastSnapshot,false\\)/,
+ "Post-render dialogue projection must refresh matrices instead of reusing stale camera transforms.");
+assert.match(dialogueRuntime,/root\\.computeWorldMatrix\\(true\\)/,
+ "A moving NPC root must refresh its world matrix before projecting its dialogue.");
+assert.match(dialogueRuntime,/anchor\\.computeWorldMatrix\\(true\\)/,
+ "The head-bone anchor must refresh before its screen position is calculated.");
+assert.match(dialogueRuntime,/lastProjection/);
+assert.match(dialogueRuntime,/lastPositioningMs/);
+console.log("NPC screen-space projection freshness and timing contract: PASS.");
