@@ -141,6 +141,7 @@ function chooseExchange(aNpc,bNpc,random,context,memory){
  const topic=candidates.find(value=>!recent.has(value))||candidates[candidates.length-1];
  return buildConversation(topic,a,b,ctx,random,mem);
 }
+function viewportPointToLayer(point,layerRect){const x=Number(point&&point.x),y=Number(point&&point.y),left=Number(layerRect&&layerRect.left),top=Number(layerRect&&layerRect.top);if(![x,y,left,top].every(Number.isFinite))return null;return Object.freeze({x:x-left,y:y-top});}
 function selectVisibleBubbles(items,limitValue){const requested=Number.isFinite(Number(limitValue))?Math.floor(Number(limitValue)):MAX_VISIBLE_BUBBLES,limit=Math.max(0,Math.min(MAX_VISIBLE_BUBBLES,requested));if(!Array.isArray(items)||!limit)return[];return items.filter(x=>x&&x.visible!==false&&Number.isFinite(Number(x.distance))&&Number(x.distance)<=MAX_RANGE_METERS).slice().sort((a,b)=>(Number(b.priority)||0)-(Number(a.priority)||0)||Number(a.distance)-Number(b.distance)).slice(0,limit);}
 function placeBubble(anchor,size,bounds,occupied){
  const x=Number(anchor&&anchor.x),y=Number(anchor&&anchor.y),w=Number(size&&size.width),h=Number(size&&size.height);
@@ -162,5 +163,5 @@ function placeBubble(anchor,size,bounds,occupied){
  }
  return best&&bestScore===0?Object.freeze(best):null;
 }
-return Object.freeze({MAX_VISIBLE_BUBBLES,placeBubble,MAX_RANGE_METERS,POSITION_UPDATE_MS,SCHEDULER_INTERVAL_MS,ROLES,roleForVariant,personalityFor,chooseAmbientMessage,chooseExchange,selectVisibleBubbles,contextualLines});
+return Object.freeze({MAX_VISIBLE_BUBBLES,placeBubble,viewportPointToLayer,MAX_RANGE_METERS,POSITION_UPDATE_MS,SCHEDULER_INTERVAL_MS,ROLES,roleForVariant,personalityFor,chooseAmbientMessage,chooseExchange,selectVisibleBubbles,contextualLines});
 });
