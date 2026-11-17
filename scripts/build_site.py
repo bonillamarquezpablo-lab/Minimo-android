@@ -729,32 +729,42 @@ def main() -> None:
   }catch(_){return null;}
  }
  async function isValidGLB(blob){
-  if(!(blob instanceof Blob)||blob.size<500000)return false;
-  try{const bytes=await blob.slice(0,4).arrayBuffer();const magic=new Uint8Array(bytes);return magic.length===4&&magic[0]===0x67&&magic[1]===0x6c&&magic[2]===0x54&&magic[3]===0x46;}catch(_){return false;}
+  const record=await inspectGLBContainer(blob);
+  if(!record)return false;
+  const json=record.json||{},skins=json.skins||[],animations=json.animations||[],nodes=json.nodes||[];
+  return skins.some(skin=>Array.isArray(skin.joints)&&skin.joints.length>=12)&&
+   animations.some(animation=>Array.isArray(animation.channels)&&animation.channels.length>0&&Array.isArray(animation.samplers)&&animation.samplers.length>0)&&
+   nodes.some(node=>Number.isInteger(node.mesh)&&Number.isInteger(node.skin));
  }
- async function waitForAnimalTextures(meshes,kind,timeoutMs=25000){
-  const textures=new Set();
-  for(const mesh of meshes||[]){
+ async function waitForAnimalTextures(meshes,kind,timeoutMs=30000){
+  const list=Array.from(meshes||[]),textures=new Set();
+  if(!list.length)throw new Error(kind+': no hay mallas para validar su presentación.');
+  for(const mesh of list){
+   if(!mesh||!(mesh.getTotalVertices&&mesh.getTotalVertices()>0))throw new Error(kind+': se ha importado una malla sin geometría.');
    const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];
    for(const material of materials)if(material&&typeof material.getActiveTextures==='function'){
     for(const texture of material.getActiveTextures()||[])if(texture)textures.add(texture);
    }
   }
-  const pending=Array.from(textures).filter(texture=>typeof texture.isReady==='function'&&!texture.isReady());
-  if(!pending.length)return {count:textures.size,waitedMs:0};
   const started=performance.now();
+  const pendingNow=()=>{
+   const pendingTextures=Array.from(textures).filter(texture=>typeof texture.isReady==='function'&&!texture.isReady());
+   const pendingMeshes=list.filter(mesh=>typeof mesh.isReady==='function'&&!mesh.isReady(true));
+   return {pendingTextures,pendingMeshes};
+  };
   await new Promise((resolve,reject)=>{
    let settled=false,timer=null;
    const finish=error=>{if(settled)return;settled=true;if(timer!==null)clearTimeout(timer);if(error)reject(error);else resolve();};
    const check=()=>{
-    if(pending.every(texture=>typeof texture.isReady!=='function'||texture.isReady()))return finish(null);
-    if(performance.now()-started>=timeoutMs)return finish(new Error(kind+' dejó texturas sin preparar tras '+timeoutMs+' ms.'));
-    requestAnimationFrame(check);
+    const pending=pendingNow();
+    if(!pending.pendingTextures.length&&!pending.pendingMeshes.length)return finish(null);
+    if(performance.now()-started>=timeoutMs)return finish(new Error(kind+': preparación visual incompleta; '+pending.pendingMeshes.length+'/'+list.length+' mallas y '+pending.pendingTextures.length+'/'+textures.size+' texturas pendientes.'));
+    setTimeout(check,50);
    };
-   timer=setTimeout(()=>finish(new Error(kind+' agotó la espera de texturas tras '+timeoutMs+' ms.')),timeoutMs+250);
+   timer=setTimeout(()=>{const pending=pendingNow();finish(new Error(kind+': espera visual agotada; '+pending.pendingMeshes.length+' mallas y '+pending.pendingTextures.length+' texturas pendientes.'));},timeoutMs+250);
    check();
   });
-  return {count:textures.size,waitedMs:Number((performance.now()-started).toFixed(1))};
+  return {count:textures.size,readyMeshes:list.length,waitedMs:Number((performance.now()-started).toFixed(1))};
  }"""
     if html.count(glb_validator_marker) != 1:
         raise SystemExit("No se encontró el validador GLB único.")
@@ -791,7 +801,7 @@ def main() -> None:
     html = html.replace(wildlife_spawn_count_marker, wildlife_spawn_count_replacement, 1)
 
     wildlife_empty = "  if(!wildlifeSpawnSpecs.length)return 0;"
-    wildlife_required = "  if(wildlifeSpawnSpecs.length!==3throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
+    wildlife_required = "  if(wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
     if html.count(wildlife_empty) != 1:
         raise SystemExit("No se encontró la comprobación de fauna inicial vacía.")
     html = html.replace(wildlife_empty, wildlife_required, 1)
