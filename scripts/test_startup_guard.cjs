@@ -62,7 +62,7 @@ assert.ok(builder.includes('wildlife_spawn_count_replacement = "const animalCoun
 assert.ok(builder.includes('if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)'),
   'The final readiness gate must reject entry unless all three terrestrial animals are loaded.');
 assert.ok(builder.includes('fauna_telemetry_marker = "npcBackgroundLoad:\'blocking-before-entry\',faunaBackgroundLoad:\'optional-before-entry\'"'),
-  'The builder must update the legacy optional-f fauna telemetry marker.');
+  'The builder must update the legacy optional fauna telemetry marker.');
 assert.ok(builder.includes('fauna_telemetry_required = "npcBackgroundLoad:\'blocking-before-entry\',faunaBackgroundLoad:\'blocking-before-entry\'"'),
   'The generated session report must describe fauna as blocking before entry.');
 assert.match(html,/No se pudo identificar un roster obligatorio de guardianes y aldeanos/);
