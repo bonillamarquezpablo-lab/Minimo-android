@@ -52,5 +52,10 @@ assert.match(warmLaunch, /await page\.close\(\{ runBeforeUnload: false \}\)/,
   'The warm launch must dispose of the previous gameplay renderer.');
 assert.match(warmLaunch, /warmNavigationResponse\.status\(\) === 200/,
   'The warm launch must verify the new page navigation response.');
+assert.match(smoke, /PLAYER_TEST_SKIP_WARM_RESTART === '1'/,
+  'The main startup workflow may delegate duplicated warm/offline validation to the dedicated HTTPS runtime suite.');
+assert.match(smoke, /delegatedTo: 'Game runtime acceptance — EL SIN NOMBRE'/,
+  'A delegated warm/offline check must be named explicitly in the evidence manifest.');
+
 
 console.log('PLAYER STARTUP FLOW CONTRACT OK: first-run and returning-player paths are both explicit.');
