@@ -139,6 +139,8 @@
       this.camera = o.camera;
       this.engine = o.engine;
       this.sunLight = o.sunLight;
+      // One directional source is reused for sunlight and moonlight; it never swaps shader light slots at dusk.
+      if (this.sunLight && typeof this.sunLight.setEnabled === 'function') this.sunLight.setEnabled(true);
       this.hemiLight = o.hemiLight;
       this.skyDome = o.skyDome;
       this.sunDisc = o.sunDisc;
@@ -169,6 +171,7 @@
       this.baseFogDensity = Number(this.scene.fogDensity) || 0.00058;
       this.fogClimate = 'fjord';
       this.lastFirePoolUpdate = -10;
+      this._firePoolNightActive = false;
       this.lastState = null;
       this.moonLight = null;
       this.moonDisc = null;
@@ -198,6 +201,8 @@
       this._moonPoint = new this.B.Vector3(0, 0, 0);
       this._sunColor = new this.B.Color3(1, 0.94, 0.82);
       this._sunSpecularColor = new this.B.Color3(0.96, 0.91, 0.78);
+      this._moonDirectColor = new this.B.Color3(0.48, 0.60, 0.82);
+      this._moonDirectSpecularColor = new this.B.Color3(0.30, 0.38, 0.58);
       this._coolNightColor = new this.B.Color3(0.31, 0.39, 0.55);
       this._dayAmbientColor = new this.B.Color3(0.72, 0.82, 0.92);
       this._nightGroundColor = new this.B.Color3(0.145, 0.165, 0.205);
@@ -453,12 +458,7 @@
       const B = this.B, scene = this.scene;
       if (!B || !scene) return;
       try {
-        this.moonLight = new B.DirectionalLight('NorseMoonDirectionalLight',
-          new B.Vector3(0, 1, 0), scene);
-        this.moonLight.diffuse = new B.Color3(0.48, 0.60, 0.82);
-        this.moonLight.specular = new B.Color3(0.30, 0.38, 0.58);
-        this.moonLight.intensity = 0;
-        this.moonLight.setEnabled(false);
+        // Lunar direct illumination reuses sunLight so the scene keeps one stable directional-light shader slot.
 
         if (this.skyDome && B.MeshBuilder && B.StandardMaterial) {
           this.moonDisc = B.MeshBuilder.CreateSphere('NorseMoonDisc', { diameter: 17, segments: 24 }, scene);
@@ -643,54 +643,108 @@
       }
     }
 
+    _collectHearthMeshes(hearth) {
+      const meshes = this.scene && Array.isArray(this.scene.meshes) ? this.scene.meshes : [];
+      const included = [];
+      const lightX = Number(hearth.x) || 0;
+      const lightY = (Number(hearth.floorY) || 0) + 1.0;
+      const lightZ = Number(hearth.z) || 0;
+      const range = 11.5;
+      for (const mesh of meshes) {
+        if (!mesh || (typeof mesh.isDisposed === 'function' && mesh.isDisposed())) continue;
+        if (typeof mesh.isEnabled === 'function' && !mesh.isEnabled()) continue;
+        if (mesh.isVisible === false || (Number.isFinite(mesh.visibility) && mesh.visibility <= 0.001)) continue;
+        if (!mesh.material || mesh.material.disableLighting === true) continue;
+        try {
+          if (typeof mesh.computeWorldMatrix === 'function') mesh.computeWorldMatrix(true);
+          const bounds = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
+          const sphere = bounds && bounds.boundingSphere;
+          const center = sphere && sphere.centerWorld;
+          if (!center) continue;
+          const extent = Math.max(0, Number(sphere.radiusWorld) || 0);
+          const dx = center.x - lightX, dy = center.y - lightY, dz = center.z - lightZ;
+          const reach = range + extent;
+          if (dx * dx + dy * dy + dz * dz <= reach * reach) included.push(mesh);
+        } catch (_) {}
+      }
+      return included;
+    }
+
     _updateFirePool(state, focus) {
       if (!this.firePool.length) return;
       const now = this.elapsedSeconds;
       const nightOn = state.night > 0.18;
-      if (now - this.lastFirePoolUpdate < 0.28 && nightOn) {
+      if (!nightOn) {
+        if (!this._firePoolNightActive) return;
+        this._firePoolNightActive = false;
+        this.lastFirePoolUpdate = now;
         for (const slot of this.firePool) {
-          if (slot.source && !slot.source.extinguished) {
-            slot.light.intensity = (0.54 + Math.sin(now * 8.2 + slot.phase) * 0.12) * state.night;
+          slot.source = null;
+          slot.light.intensity = 0;
+          slot.light.includedOnlyMeshes = [];
+          if (typeof slot.light.isEnabled === 'function' ? slot.light.isEnabled() : true) {
+            slot.light.setEnabled(false);
           }
         }
         return;
       }
+
+      // Keep the fire animation smooth, but only reselect and rescope lights about once a second.
+      const selectionDue = !this._firePoolNightActive || now - this.lastFirePoolUpdate >= 0.95;
+      if (!selectionDue) {
+        for (const slot of this.firePool) {
+          if (slot.source && !slot.source.extinguished) {
+            slot.light.intensity = (0.54 + Math.sin(now * 8.2 + slot.phase) * 0.12) * state.night;
+          } else {
+            slot.light.intensity = 0;
+            if (typeof slot.light.isEnabled === 'function' ? slot.light.isEnabled() : false) {
+              slot.light.setEnabled(false);
+            }
+          }
+        }
+        return;
+      }
+
+      this._firePoolNightActive = true;
       this.lastFirePoolUpdate = now;
       const candidates = this._fireCandidates;
       for (const candidate of candidates) { candidate.h = null; candidate.d2 = Infinity; }
-      if (nightOn) {
-        const maxDistanceSquared = 52 * 52;
-        for (const h of this.fireHearths) {
-          if (!h || h.extinguished) continue;
-          const dx = h.x - focus.x, dz = h.z - focus.z, d2 = dx * dx + dz * dz;
-          if (d2 >= maxDistanceSquared) continue;
-          let insertAt = -1;
-          for (let i = 0; i < candidates.length; i++) {
-            if (d2 < candidates[i].d2) { insertAt = i; break; }
-          }
-          if (insertAt < 0) continue;
-          for (let i = candidates.length - 1; i > insertAt; i--) {
-            candidates[i].h = candidates[i - 1].h;
-            candidates[i].d2 = candidates[i - 1].d2;
-          }
-          candidates[insertAt].h = h;
-          candidates[insertAt].d2 = d2;
+      const maxDistanceSquared = 52 * 52;
+      for (const h of this.fireHearths) {
+        if (!h || h.extinguished) continue;
+        const dx = h.x - focus.x, dz = h.z - focus.z, d2 = dx * dx + dz * dz;
+        if (d2 >= maxDistanceSquared) continue;
+        let insertAt = -1;
+        for (let i = 0; i < candidates.length; i++) {
+          if (d2 < candidates[i].d2) { insertAt = i; break; }
         }
+        if (insertAt < 0) continue;
+        for (let i = candidates.length - 1; i > insertAt; i--) {
+          candidates[i].h = candidates[i - 1].h;
+          candidates[i].d2 = candidates[i - 1].d2;
+        }
+        candidates[insertAt].h = h;
+        candidates[insertAt].d2 = d2;
       }
+
       for (let i = 0; i < this.firePool.length; i++) {
         const slot = this.firePool[i], candidate = candidates[i].h ? candidates[i] : null;
+        const light = slot.light;
         if (!candidate) {
           slot.source = null;
-          slot.light.intensity = 0;
-          slot.light.setEnabled(false);
+          light.intensity = 0;
+          light.includedOnlyMeshes = [];
+          if (typeof light.isEnabled === 'function' ? light.isEnabled() : true) light.setEnabled(false);
           continue;
         }
-        const h = candidate.h;
-        slot.source = h;
-        slot.light.position.set(h.x, h.floorY + 1.0, h.z);
-        slot.light.range = 11.5;
-        slot.light.intensity = 0.56 * state.night;
-        slot.light.setEnabled(true);
+        const hearth = candidate.h;
+        if (slot.source !== hearth) {
+          slot.source = hearth;
+          light.position.set(hearth.x, hearth.floorY + 1.0, hearth.z);
+          light.includedOnlyMeshes = this._collectHearthMeshes(hearth);
+        }
+        light.intensity = (0.54 + Math.sin(now * 8.2 + slot.phase) * 0.12) * state.night;
+        if (typeof light.isEnabled === 'function' ? !light.isEnabled() : true) light.setEnabled(true);
       }
     }
 
@@ -726,34 +780,27 @@
       sunColor.g = mix(0.985, 0.50, state.twilight);
       sunColor.b = mix(0.91, 0.29, state.twilight);
 
+      // Sun and moon share one permanent directional slot: only direction, colour and intensity move through the day.
+      const useMoonDirectLight = state.night > state.daylight;
+      const directX = useMoonDirectLight ? sun.x : -sun.x;
+      const directY = useMoonDirectLight ? sun.y : -sun.y;
+      const directZ = useMoonDirectLight ? sun.z : -sun.z;
       if (this.sunLight) {
-        this.sunLight.direction.x = -sun.x;
-        this.sunLight.direction.y = -sun.y;
-        this.sunLight.direction.z = -sun.z;
+        this.sunLight.direction.x = directX;
+        this.sunLight.direction.y = directY;
+        this.sunLight.direction.z = directZ;
         if (focus && this.sunLight.position) {
-          this._lightPosition.x = focus.x + sun.x * 180;
-          this._lightPosition.y = focus.y + sun.y * 180;
-          this._lightPosition.z = focus.z + sun.z * 180;
+          const directDistance = useMoonDirectLight ? 150 : 180;
+          this._lightPosition.x = focus.x - directX * directDistance;
+          this._lightPosition.y = focus.y - directY * directDistance;
+          this._lightPosition.z = focus.z - directZ * directDistance;
           this.sunLight.position.copyFrom(this._lightPosition);
         }
-        this.sunLight.diffuse.copyFrom(sunColor);
-        this.sunLight.specular.copyFrom(this._sunSpecularColor);
-        this.sunLight.intensity = 1.42 * state.daylight * (0.36 + 0.64 * smooth(0.0, 0.54, state.altitude));
-        this.sunLight.setEnabled(state.daylight >= state.night && state.daylight > 0.012);
-      }
-
-      if (this.moonLight) {
-        this.moonLight.direction.x = sun.x;
-        this.moonLight.direction.y = sun.y;
-        this.moonLight.direction.z = sun.z;
-        if (focus && this.moonLight.position) {
-          this._lightPosition.x = focus.x - sun.x * 150;
-          this._lightPosition.y = focus.y - sun.y * 150;
-          this._lightPosition.z = focus.z - sun.z * 150;
-          this.moonLight.position.copyFrom(this._lightPosition);
-        }
-        this.moonLight.intensity = lighting.moonIntensity * (1 - storm * 0.48);
-        this.moonLight.setEnabled(state.night > state.daylight && state.night > 0.025);
+        this.sunLight.diffuse.copyFrom(useMoonDirectLight ? this._moonDirectColor : sunColor);
+        this.sunLight.specular.copyFrom(useMoonDirectLight ? this._moonDirectSpecularColor : this._sunSpecularColor);
+        this.sunLight.intensity = useMoonDirectLight
+          ? lighting.moonIntensity * (1 - storm * 0.48)
+          : 1.42 * state.daylight * (0.36 + 0.64 * smooth(0.0, 0.54, state.altitude));
       }
 
       if (this.hemiLight) {
