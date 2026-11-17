@@ -13,7 +13,7 @@ assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
 assert.ok(html.includes('leftWing,rightWing,tail,wingFlapAxis'), 'The replacement gull must expose its named articulated anatomy.');
-assert.ok(html.includes("const groups=inst.animationGroups||[],fly=null;"),
+assert.ok(html.includes("const groups=inst.animationGroups||[];groups.forEach(group=>{try{group.stop();}catch(_){}});const fly=null;"),
   'The gull must not select a walk/idle body clip; it uses explicit articulated wing flight.');
 assert.ok(!html.includes("groups.find(g=>/walk|fly|flap/i.test(g.name)"),
   'A walking animation must never be selected as the gull flight clip.');
