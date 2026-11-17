@@ -763,6 +763,36 @@ def main() -> None:
         raise SystemExit("No se encontró el validador GLB único.")
     html = html.replace(glb_validator_marker, glb_validator_required, 1)
 
+    animal_count_marker = "const animalCount=isPerformanceMode?0:(idx===0?3:0);"
+    animal_count_required = "const animalCount=idx===0?3:0;"
+    if html.count(animal_count_marker) != 1:
+        raise SystemExit("No se encontró el control único de población animal por perfil.")
+    html = html.replace(animal_count_marker, animal_count_required, 1)
+
+    wildlife_import_snapshot_marker = "  let imported=null,objectUrl=null,actor=null;\n  try{\n   // Import each GLB independently into the live scene; never clone a skinned mesh/skeleton.\n   objectUrl=URL.createObjectURL(blob);"
+    wildlife_import_snapshot_marker_replacement = "  let imported=null,objectUrl=null,actor=null;\n  const beforeMeshes=new Set(scene.meshes||[]),beforeNodes=new Set(scene.transformNodes||[]),beforeSkeletons=new Set(scene.skeletons||[]),beforeGroups=new Set(scene.animationGroups||[]);\n  try{\n   const glbRecord=await inspectGLBContainer(blob),sourceJson=glbRecord&&glbRecord.json;\n   if(!sourceJson||!(sourceJson.skins||[]).some(skin=>Array.isArray(skin.joints)&&skin.joints.length>=12)||!(sourceJson.animations||[]).some(animation=>Array.isArray(animation.channels)&&animation.channels.length>0&&Array.isArray(animation.samplers)&&animation.samplers.length>0)||!(sourceJson.nodes||[]).some(node=>Number.isInteger(node.mesh)&&Number.isInteger(node.skin)))throw new Error(kind+': el GLB no contiene un cuerpo riggeado y clips de animación completos.');\n   objectUrl=URL.createObjectURL(blob);"
+    if html.count(wildlife_import_snapshot_marker) != 1:
+        raise SystemExit("No se encontró el marcador único: wildlife_import_snapshot_marker.")
+    html = html.replace(wildlife_import_snapshot_marker, wildlife_import_snapshot_marker_replacement, 1)
+
+    wildlife_mesh_texture_marker = "   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);\n   if(!meshes.length)throw new Error('GLB sin malla visible.');"
+    wildlife_mesh_texture_marker_replacement = "   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);\n   if(!meshes.length)throw new Error('GLB sin malla visible.');\n   const textureReadiness=await waitForAnimalTextures(meshes,kind);"
+    if html.count(wildlife_mesh_texture_marker) != 1:
+        raise SystemExit("No se encontró el marcador único: wildlife_mesh_texture_marker.")
+    html = html.replace(wildlife_mesh_texture_marker, wildlife_mesh_texture_marker_replacement, 1)
+
+    wildlife_animation_marker = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);"
+    wildlife_animation_marker_replacement = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);\n   if(!groups.some(group=>group&&group.targetedAnimations&&group.targetedAnimations.length>0)||!clips.idle||!clips.walk||!clips.run)throw new Error(kind+': el rig llegó sin animaciones reproducibles completas.');"
+    if html.count(wildlife_animation_marker) != 1:
+        raise SystemExit("No se encontró el marcador único: wildlife_animation_marker.")
+    html = html.replace(wildlife_animation_marker, wildlife_animation_marker_replacement, 1)
+
+    wildlife_cleanup_marker = "   if(imported){try{(imported.animationGroups||[]).forEach(group=>group.stop());(imported.skeletons||[]).forEach(skeleton=>skeleton.dispose());(imported.meshes||[]).forEach(mesh=>mesh.dispose(false,true));(imported.transformNodes||[]).forEach(node=>node.dispose(false,true));}catch(_){}}"
+    wildlife_cleanup_marker_replacement = "   const partialGroups=Array.from(scene.animationGroups||[]).filter(group=>!beforeGroups.has(group));partialGroups.forEach(group=>{try{group.stop();group.dispose();}catch(_){}}); \n   const partialMeshes=Array.from(scene.meshes||[]).filter(mesh=>!beforeMeshes.has(mesh));partialMeshes.forEach(mesh=>{try{if(!(mesh.isDisposed&&mesh.isDisposed()))mesh.dispose(false,true);}catch(_){}}); \n   const partialNodes=Array.from(scene.transformNodes||[]).filter(node=>!beforeNodes.has(node));partialNodes.forEach(node=>{try{if(!(node.isDisposed&&node.isDisposed()))node.dispose(false,true);}catch(_){}}); \n   const partialSkeletons=Array.from(scene.skeletons||[]).filter(skeleton=>!beforeSkeletons.has(skeleton));partialSkeletons.forEach(skeleton=>{try{skeleton.dispose();}catch(_){}});"
+    if html.count(wildlife_cleanup_marker) != 1:
+        raise SystemExit("No se encontró el marcador único: wildlife_cleanup_marker.")
+    html = html.replace(wildlife_cleanup_marker, wildlife_cleanup_marker_replacement, 1)
+
     wildlife_empty = "  if(!wildlifeSpawnSpecs.length)return 0;"
     wildlife_required = "  if(wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
     if html.count(wildlife_empty) != 1:
