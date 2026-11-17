@@ -11,6 +11,8 @@ const startedAt = performance.now();
 // On mobile the real game can occupy the main thread for several seconds while bootEngine builds the first scene.
 // The input handler may already have fired; give Chromium time to resume and evaluate the queued assertion.
 const IDENTITY_START_WAIT_MS = 45000;
+// Full world boot takes ~134–166 s on the CI SwiftShader runner; keep a bounded 4-minute restart window.
+const STARTUP_RESTART_TIMEOUT_MS = 240000;
 const manifest = {
   schema: 1,
   capturedAt: new Date().toISOString(),
@@ -22,6 +24,7 @@ const manifest = {
   retryMs: null,
   identityPreferencePersisted: null,
   cachedIdentityPreferencePersisted: null,
+  cachedStartupWaitDiagnostic: null,
   serviceWorkerBeforeOfflineReload: null,
   serviceWorkerAfterOfflineReload: null,
   offlineReload: null,
@@ -881,9 +884,29 @@ async function main() {
         JSON.stringify(cachedPreflightState));
     }
     const cachedBarrierStartedAt = performance.now();
-    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
-      document.body.classList.contains('boot-failed'),
-      undefined, { timeout: 180000, polling: 250 });
+    try {
+      await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
+        document.body.classList.contains('boot-failed'),
+        undefined, { timeout: STARTUP_RESTART_TIMEOUT_MS, polling: 250 });
+    } catch (error) {
+      const stalledState = await page.evaluate(() => ({
+        bodyClass: document.body.className,
+        bootFailed: document.body.classList.contains('boot-failed'),
+        loadingText: document.querySelector('#loadingText')?.textContent ||
+          document.querySelector('#loading')?.textContent || null,
+        loadingHelp: document.querySelector('#loadHelp')?.textContent || null,
+        recorder: window.__elSinNombreStartupSmoke || null,
+        player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state() || null,
+        serviceWorker: {
+          controlled: !!navigator.serviceWorker?.controller,
+          state: navigator.serviceWorker?.controller?.state || null
+        }
+      }));
+      manifest.cachedStartupWaitDiagnostic = stalledState;
+      throw new Error('El arranque con caché no alcanzó worldReady dentro de ' +
+        STARTUP_RESTART_TIMEOUT_MS + ' ms. Estado: ' + JSON.stringify(stalledState) +
+        ' · ' + String(error?.message || error));
+    }
     if (await page.evaluate(() => document.body.classList.contains('boot-failed'))) {
       throw new Error('El arranque con caché terminó en boot-failed: ' +
         JSON.stringify(await page.evaluate(() => ({
@@ -1001,9 +1024,29 @@ async function main() {
           JSON.stringify(offlinePreflight));
       }
 
-      await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
-        document.body.classList.contains('boot-failed'),
-        undefined, { timeout: 180000, polling: 250 });
+      try {
+        await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
+          document.body.classList.contains('boot-failed'),
+          undefined, { timeout: STARTUP_RESTART_TIMEOUT_MS, polling: 250 });
+      } catch (error) {
+        const stalledState = await page.evaluate(() => ({
+          bodyClass: document.body.className,
+          bootFailed: document.body.classList.contains('boot-failed'),
+          loadingText: document.querySelector('#loadingText')?.textContent ||
+            document.querySelector('#loading')?.textContent || null,
+          loadingHelp: document.querySelector('#loadHelp')?.textContent || null,
+          recorder: window.__elSinNombreStartupSmoke || null,
+          player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state() || null,
+          serviceWorker: {
+            controlled: !!navigator.serviceWorker?.controller,
+            state: navigator.serviceWorker?.controller?.state || null
+          }
+        }));
+        manifest.offlineReload.startupWaitDiagnostic = stalledState;
+        throw new Error('El reinicio offline no alcanzó worldReady dentro de ' +
+          STARTUP_RESTART_TIMEOUT_MS + ' ms. Estado: ' + JSON.stringify(stalledState) +
+          ' · ' + String(error?.message || error));
+      }
       const offlinePlayerState = await page.evaluate(() => ({
         player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state() || null,
         recorder: window.__elSinNombreStartupSmoke || null,
