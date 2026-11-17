@@ -24,7 +24,7 @@
     f.rightHip.rotation[f.legBendAxis]=f.base.rightHip+HIP_TUCK+tuckWave*.035;
     f.leftKnee.rotation[f.legBendAxis]=f.base.leftKnee+KNEE_FOLD-tuckWave*.045;
     f.rightKnee.rotation[f.legBendAxis]=f.base.rightKnee+KNEE_FOLD-tuckWave*.045;
-    bird.root.rotation.x=f.base.rootX+.055+Math.sin(phase*.5)*.018;
+    bird.root.rotation[f.legBendAxis]=f.base.rootPitch+.055+Math.sin(phase*.5)*.018;
     if(f.neck&&validRotation(f.neck))f.neck.rotation[f.legBendAxis]=f.base.neck+.018*Math.sin(phase*.5);
     if(f.head&&validRotation(f.head))f.head.rotation[f.legBendAxis]=f.base.head-.018*Math.sin(phase*.5);
     if(f.tail&&validRotation(f.tail))f.tail.rotation.x=f.base.tail+Math.sin((Number(elapsed)||0)*2.7+(Number(f.phase)||0))*.045;
