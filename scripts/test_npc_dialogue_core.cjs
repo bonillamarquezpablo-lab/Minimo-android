@@ -118,6 +118,9 @@ assert.ok(dialogueRuntime.includes('root.computeWorldMatrix(false)'),
 assert.ok(dialogueRuntime.includes('anchor.computeWorldMatrix(false)'),
  "The head-bone anchor must update only when dirty before its screen position is calculated.");
 assert.ok(dialogueRuntime.includes('lastProjection'));
+assert.ok(dialogueRuntime.includes('y-slot.height-12') &&
+  !dialogueRuntime.includes('y-slot.height-slot.height-12'),
+  'The fallback speech-bubble position must stay one bubble-height above its NPC anchor, not drift toward the screen edge.');
 assert.ok(dialogueRuntime.includes('lastPositioningMs'));
 assert.ok(dialogueRuntime.includes('const positioningSamples=new Float32Array(120)') &&
   dialogueRuntime.includes('positioningPercentiles()') &&
