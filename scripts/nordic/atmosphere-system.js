@@ -36,12 +36,13 @@
 
   function computeLightingProfile(state, target) {
     const profile = target || {};
-    // Preserve the dark Nordic sky while lifting terrain and character readability.
-    profile.hemisphereIntensity = 0.54 + 0.72 * state.daylight + 0.24 * state.twilight + 0.24 * state.night;
-    profile.moonIntensity = 0.28 * state.night;
-    profile.environmentIntensity = 0.30 + 0.42 * state.daylight + 0.18 * state.twilight + 0.24 * state.night;
-    profile.exposure = 1.10 + 0.08 * state.daylight + 0.14 * state.twilight + 0.20 * state.night;
-    profile.contrast = mix(1.045, 1.00, state.night);
+    // Keep daylight readable, but let twilight and moonlight regain real night contrast.
+    // The previous ambient floor/exposure flattened the sky and illuminated the whole world at midnight.
+    profile.hemisphereIntensity = 0.22 + 0.72 * state.daylight + 0.17 * state.twilight + 0.06 * state.night;
+    profile.moonIntensity = 0.34 * state.night;
+    profile.environmentIntensity = 0.20 + 0.44 * state.daylight + 0.10 * state.twilight + 0.08 * state.night;
+    profile.exposure = 1.00 + 0.05 * state.daylight + 0.07 * state.twilight + 0.015 * state.night;
+    profile.contrast = mix(1.07, 1.13, state.night);
     return profile;
   }
 
