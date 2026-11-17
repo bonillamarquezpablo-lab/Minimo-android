@@ -952,6 +952,20 @@ def main() -> None:
         raise SystemExit("No se encontró el registro único de las articulaciones de gaviota.")
     html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
 
+    # Prepare the destination island's grass while the player is still approaching by ship.
+    # The previous condition forcibly unloaded every grass batch on boarding, then started
+    # procedural generation only after disembarkation; that produced an obvious bare-ground delay.
+    grass_stream_marker = "if(onShip||bestRatio>1.09)currentIsland=-1;"
+    grass_stream_replacement = "if(bestRatio>(onShip?1.55:1.09))currentIsland=-1;"
+    if html.count(grass_stream_marker) != 1:
+        raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
+    html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
+    grass_recenter_marker = "const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=GRASS_STREAM_RECENTER_DISTANCE;"
+    grass_recenter_replacement = "const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=(onShip?Math.max(96,GRASS_STREAM_RECENTER_DISTANCE):GRASS_STREAM_RECENTER_DISTANCE);"
+    if html.count(grass_recenter_marker) != 1:
+        raise SystemExit("No se encontró la distancia única de recentrado de hierba.")
+    html = html.replace(grass_recenter_marker, grass_recenter_replacement, 1)
+
     gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
     gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightPoseReady){const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;b.leftWing.rotation[b.wingFlapAxis]=b.leftWingBaseRotation-open-flap;b.rightWing.rotation[b.wingFlapAxis]=b.rightWingBaseRotation+open+flap;b.leftHindUpLeg.rotation.x=b.leftHindUpLegBaseRotation+1.05;b.rightHindUpLeg.rotation.x=b.rightHindUpLegBaseRotation+1.05;b.leftHindLeg.rotation.x=b.leftHindLegBaseRotation-.78;b.rightHindLeg.rotation.x=b.rightHindLegBaseRotation-.78;b.neck.rotation.x=b.neckBaseRotation-.08+Math.sin(elapsed*1.4+b.phase)*.025;b.head.rotation.x=b.headBaseRotation+.06+Math.sin(elapsed*1.8+b.phase)*.025;if(b.jaw)b.jaw.rotation.x=b.jawBaseRotation;if(b.tail)b.tail.rotation.x=b.tailBaseRotation+Math.sin(elapsed*2.7+b.phase)*.045;}"
     if html.count(gull_flight_marker) != 1:
