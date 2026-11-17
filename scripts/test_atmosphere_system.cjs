@@ -57,13 +57,21 @@ for (const marker of [
   'NorseSunSurfaceMaterial',
   'limbDarkening',
   'granulationA',
-  'NorseMoonDirectionalLight',
+  'NorseMoonDisc',
+  'nightDominant',
+  'this._stableFireLight = this.isTouchDevice && this.quality !== \'low\';',
   'setWeather(value)',
   'setClimate(value)'
 ]) {
   assert.ok(source.includes(marker), 'Atmosphere module is missing: ' + marker);
 }
-assert.ok(source.includes('this.sunLight.direction.x = -sun.x') && source.includes('this.moonLight.direction.x = sun.x'), 'Sun and moon must use independent, correctly oriented light vectors.');
+assert.ok(source.includes('this.sunLight.direction.x = nightDominant ? sun.x : -sun.x') &&
+  source.includes('this.sunLight.intensity = nightDominant') &&
+  source.includes('this.sunLight.setEnabled(true)'),
+  'The same directional light must be reused for the sun and moon without switching the scene light count at dusk.');
+assert.ok(source.includes('this.moonLight = null;') &&
+  !source.includes('new B.DirectionalLight(\'NorseMoonDirectionalLight\''),
+  'The moon disc remains visible, but must not create a second directional light.');
 
 const sunSurfaceBody=source.slice(source.indexOf('    _createSunSurfaceMaterial() {'),source.indexOf('    _createMoonAndLights() {'));
 assert.ok(sunSurfaceBody.includes("this.sunDisc.material = material")&&sunSurfaceBody.includes("attributes: ['position', 'normal']"),"The sun must reuse its existing disc and compute a procedural photosphere from its surface normals.");
@@ -76,7 +84,12 @@ assert.ok(source.includes("0.73 + 0.27 * pow(mu, 0.58)")&&source.includes("warmL
 assert.ok(source.includes('focus.x + sun.x * 180') && !source.includes('focus.add(sunVector.scale(180))'), 'Light positioning must not mutate the player or camera target.');
 const firePoolBody = source.slice(source.indexOf('    _updateFirePool(state, focus) {'), source.indexOf('    update(dt, force) {'));
 assert.ok(source.includes('this._fireCandidates = this.firePool.map(() => ({ h: null, d2: Infinity }))'), 'Night-fire selection must allocate its candidate slots once.');
+assert.ok(source.includes('const poolSize = this._stableFireLight ? 1'), 'Touch devices must reserve one stable local fire-light slot rather than enabling multiple new lights at dusk.');
+assert.ok(source.includes('light.setEnabled(this._stableFireLight)'), 'The mobile fire-light shader variant must be present from startup, at zero intensity during daylight.');
 assert.ok(firePoolBody.includes('const candidates = this._fireCandidates'), 'Night-fire selection must reuse its fixed candidate slots.');
+assert.ok(firePoolBody.includes('if (!slot.stable) slot.light.setEnabled(false)') &&
+  firePoolBody.includes('if (!slot.stable) slot.light.setEnabled(true)'),
+  'The stable mobile point light must fade by intensity without changing the compiled light count.');
 assert.doesNotMatch(firePoolBody, /fireHearths\.filter|\.sort\(/, 'Night-fire updates must not allocate filter/map/sort chains.');
 const updateBody = source.slice(source.indexOf('    update(dt, force) {'), source.indexOf('    dispose() {'));
 assert.doesNotMatch(updateBody, /new B\.(?:Vector3|Color3|Color4)|B\.Color3\.Lerp/, 'Atmosphere updates must reuse frame-hot vectors and colours.');
@@ -107,4 +120,4 @@ assert.ok(buildSource.includes('setTime:value=>atmosphereSystem.setTime(value)')
   buildSource.includes('setWeather:value=>atmosphereSystem.setWeather(value)'),
   'Time, duration and weather controls must be exposed to diagnostics');
 
-console.log('OK unified atmosphere: 24-hour solar arc, twilight, moon/night state, configurable 300-second clock, layered clouds, stars, optional god rays, bloom, adaptive shadows and pooled hearth lighting.');
+console.log('OK unified atmosphere: 24-hour solar arc, twilight, moon/night state, one stable directional light, stable mobile hearth-light budget, layered clouds, stars, bloom and adaptive shadows.');
