@@ -1052,6 +1052,13 @@ function updateWildlife(dt){
     if html.count(late_shader_progress) != 1:
         raise SystemExit("No se encontró la fase antigua de shaders anterior a la fauna.")
     html = html.replace(late_shader_progress, "", 1)
+
+    # Runtime telemetry must reflect the blocking fauna barrier in both graphics profiles.
+    fauna_telemetry_marker = "npcBackgroundLoad:'blocking-before-entry',faunaBackgroundLoad:'optional-before-entry'"
+    fauna_telemetry_required = "npcBackgroundLoad:'blocking-before-entry',faunaBackgroundLoad:'blocking-before-entry'"
+    if html.count(fauna_telemetry_marker) != 1:
+        raise SystemExit("No se encontró el marcador único del estado de carga de fauna en el informe de arranque.")
+    html = html.replace(fauna_telemetry_marker, fauna_telemetry_required, 1)
  
     # The two soundtracks remain native HTMLAudio streams. Wait for media readiness
     # before entry, without decoding full MP3 tracks into WebAudio AudioBuffers.
