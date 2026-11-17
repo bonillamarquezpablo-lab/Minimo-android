@@ -41,8 +41,8 @@
     profile.hemisphereIntensity = 0.22 + 0.72 * state.daylight + 0.17 * state.twilight + 0.06 * state.night;
     profile.moonIntensity = 0.34 * state.night;
     profile.environmentIntensity = 0.20 + 0.44 * state.daylight + 0.10 * state.twilight + 0.08 * state.night;
-    profile.exposure = 1.00 + 0.05 * state.daylight + 0.07 * state.twilight + 0.015 * state.night;
-    profile.contrast = mix(1.07, 1.13, state.night);
+    profile.exposure = 1.035;
+    profile.contrast = 1.10;
     return profile;
   }
 
@@ -600,9 +600,12 @@
       // Use Babylon's ACES tone mapper for the scene and the active post-process.
       const acesToneMapping = B.ImageProcessingConfiguration &&
         B.ImageProcessingConfiguration.TONEMAPPING_ACES;
-      for (const imageConfig of [this.scene.imageProcessingConfiguration,
-        this.renderPipeline && this.renderPipeline.imageProcessing]) {
+      const imageConfigs = new Set([this.scene.imageProcessingConfiguration,
+        this.renderPipeline && this.renderPipeline.imageProcessing]);
+      for (const imageConfig of imageConfigs) {
         if (!imageConfig) continue;
+        imageConfig.exposure = 1.035;
+        imageConfig.contrast = 1.10;
         imageConfig.toneMappingEnabled = true;
         if (Number.isFinite(acesToneMapping)) imageConfig.toneMappingType = acesToneMapping;
       }
@@ -991,14 +994,9 @@
       this._recordPerformanceSample('sky', performance.now() - skyStarted);
 
       const postStarted = performance.now();
-      if (this.renderPipeline && this.renderPipeline.imageProcessing) {
-        this.renderPipeline.imageProcessing.exposure = lighting.exposure;
-        this.renderPipeline.imageProcessing.contrast = lighting.contrast;
-      }
-      if (this.scene.imageProcessingConfiguration) {
-        this.scene.imageProcessingConfiguration.exposure = lighting.exposure;
-        this.scene.imageProcessingConfiguration.contrast = lighting.contrast;
-      }
+      // Exposure and contrast are initialized once in _configurePostProcessing.
+      // Rewriting Babylon's shared configuration every visual tick notifies material observers
+      // across the scene and can turn dusk into a main-thread long task on mobile.
       this._recordPerformanceSample('post', performance.now() - postStarted);
 
       const waterStarted = performance.now();
