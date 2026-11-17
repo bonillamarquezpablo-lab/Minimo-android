@@ -36,6 +36,9 @@ const models=[
 ];
 assert.ok(models[2].meshes<=8,'Oak source mesh count is not compact enough for a mobile forest');
 assert.match(html,/mergeStaticDecorByMaterial/,'Each static GLB tree must be merged by PBR material before rendering');
+const buildSource=fs.readFileSync(path.join(process.cwd(),'scripts','build_site.py'),'utf8');
+assert.ok(buildSource.includes('files.innerscene.com/library/coastal-gull-26803928/'),
+ 'The old compact Gobkit bird must be replaced by the natural CC0 coastal gull.');
 const gull=path.join(dist,'assets/models/Seagull.glb');
 assert.ok(fs.existsSync(gull),'Falta GLB de gaviota');
 const gullData=fs.readFileSync(gull);
