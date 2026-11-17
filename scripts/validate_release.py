@@ -319,9 +319,9 @@ def main() -> None:
         "await loadForestTreeTemplates()",
         "instantiateModelsToScene(name=>name+'_Forest_'+serial,false)",
         "requiresTexture:true",
-        "targetGullMaxExtentMeters=.78",
+        "targetGullMaxExtentMeters=.55",
         "sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)",
-        "fittedMaxExtent>.82",
+        "fittedMaxExtent>.57",
         "visualRoot.position.copyFrom(sourceCenter.scale(-1))",
     )
     missing_forest_markers = [marker for marker in forest_markers if marker not in index_html]
