@@ -17,6 +17,19 @@ function restoreSocialMemory(){try{const raw=window.localStorage&&localStorage.g
 function saveSocialMemory(){try{if(!window.localStorage)return;const pairs=Array.from(relationships.values()).slice(-64).map(row=>({key:row.key,rapport:row.rapport,exchanges:row.exchanges,recentTopics:row.recentTopics.slice(-4)}));localStorage.setItem(SOCIAL_MEMORY_KEY,JSON.stringify({version:1,pairs}));}catch(_){}}
 restoreSocialMemory();
 const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,worldPeopleCount:0,resolvedPeopleCount:0,missingRootCount:0,missingIdentityCount:0,nearestNpcDistanceMeters:null,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:""};
+const positioningSamples=new Float32Array(120);let positioningCursor=0,positioningCount=0;
+function recordPositioningSample(startedAt){
+ const duration=Math.max(0,performance.now()-startedAt);
+ positioningSamples[positioningCursor]=duration;positioningCursor=(positioningCursor+1)%positioningSamples.length;
+ positioningCount=Math.min(positioningSamples.length,positioningCount+1);
+ diagnostics.lastPositioningMs=Number(duration.toFixed(3));
+ diagnostics.maxPositioningMs=Math.max(diagnostics.maxPositioningMs||0,duration);
+}
+function positioningPercentiles(){
+ const values=[];for(let i=0;i<positioningCount;i++)values.push(positioningSamples[i]);values.sort((a,b)=>a-b);
+ const at=p=>values.length?Number(values[Math.min(values.length-1,Math.floor((values.length-1)*p))].toFixed(3)):null;
+ return {positioningSamples:positioningCount,positioningP50Ms:at(.50),positioningP95Ms:at(.95),positioningP99Ms:at(.99)};
+}
 let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projectionIdentity=null,projectionScratch=null,lastSnapshot=null,observedScene=null,renderObserver=null,viewportObserver=null,viewportListenersBound=false,viewportRefreshPending=false,lastCapturedCount=null,recentCaptureUntil=0;
 const RANGE_SQUARED=RANGE*RANGE;
 function bubbleLimit(){return window.matchMedia&&window.matchMedia("(max-width: 700px)").matches?2:MAX_BUBBLES;}
@@ -217,11 +230,11 @@ function project(slot,s,occupied){
   occupied.push(placement);diagnostics.projectionSuccesses++;return true;
  }catch(error){diagnostics.lastError=String(error&&error.message||error);return hide("projection-exception");}
 }
-function render(s,matricesReady=false){const started=performance.now();if(!matricesReady)refreshProjectionMatrices(s);const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;layer.setAttribute("aria-hidden",String(!active));if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;diagnostics.lastPositioningMs=Number((performance.now()-started).toFixed(3));diagnostics.maxPositioningMs=Math.max(diagnostics.maxPositioningMs,diagnostics.lastPositioningMs);return;}const occupied=[];const limit=bubbleLimit();for(let i=0;i<slots.length;i++){const slot=slots[i];if(i<limit&&slot.current)project(slot,s,occupied);else slot.node.hidden=true;}renderedCount=slots.filter((slot,index)=>index<limit&&slot.current&&!slot.node.hidden).length;diagnostics.lastPositioningMs=Number((performance.now()-started).toFixed(3));diagnostics.maxPositioningMs=Math.max(diagnostics.maxPositioningMs,diagnostics.lastPositioningMs);}
+function render(s,matricesReady=false){const started=performance.now();if(!matricesReady)refreshProjectionMatrices(s);const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;layer.setAttribute("aria-hidden",String(!active));if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;recordPositioningSample(started);return;}const occupied=[];const limit=bubbleLimit();for(let i=0;i<slots.length;i++){const slot=slots[i];if(i<limit&&slot.current)project(slot,s,occupied);else slot.node.hidden=true;}renderedCount=slots.filter((slot,index)=>index<limit&&slot.current&&!slot.node.hidden).length;recordPositioningSample(started);}
 function schedulerTick(){const now=Date.now(),s=snapshot();diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);if(s){bindSceneRenderObserver(s);bindViewportObservers(s);}if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}expire(now);const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));processPending(now,ids);schedule(now,nearby,s);render(s);}
 function positionTick(){const s=snapshot();if(!s)return;bindSceneRenderObserver(s);bindViewportObservers(s);render(s);}
 function start(){if(schedulerHandle||positionHandle)return;schedulerHandle=window.setInterval(()=>{try{schedulerTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC dialogue scheduler recovered:",e);}},Core.SCHEDULER_INTERVAL_MS);positionHandle=window.setInterval(()=>{try{positionTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC bubble projection recovered:",e);}},Core.POSITION_UPDATE_MS);}
-start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.role.textContent,kind:s.kind.textContent,text:s.message.textContent})),lastProjection:diagnostics.lastProjection,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
+start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,...positioningPercentiles(),active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.role.textContent,kind:s.kind.textContent,text:s.message.textContent})),lastProjection:diagnostics.lastProjection,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
 }
 boot();
 })();
