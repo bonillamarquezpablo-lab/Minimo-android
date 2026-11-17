@@ -41,7 +41,7 @@ assert.ok(buildSite.includes("targetGullMaxExtentMeters=.55") &&
   buildSite.includes("fittedMaxExtent>.57") &&
   buildSite.includes("visualRoot.position.copyFrom(sourceCenter.scale(-1))"),
   "The release must center the gull hierarchy and enforce the measured 0.55 m biological size.");
-assert.ok(buildSite.includes("const groups=inst.animationGroups||[],fly=null;") &&
+assert.ok(buildSite.includes("const groups=inst.animationGroups||[];groups.forEach(group=>{try{group.stop();}catch(_){}});const fly=null;") &&
   buildSite.includes("b.leftWing&&b.rightWing") && !buildSite.includes("fly.start(true,1.0)"),
   "The gull must keep GLB body/leg clips stopped and animate only its anatomical wing pivots.");
 assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyRadius+otherRadius)*1.12") &&
