@@ -6,6 +6,7 @@ const builder=fs.readFileSync('scripts/build_site.py','utf8');
 const atmosphere=fs.readFileSync('scripts/nordic/atmosphere-system.js','utf8');
 const dialogue=fs.readFileSync('scripts/npc-dialogue-runtime.js','utf8');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
+const gameHtml=fs.readFileSync('index.html','utf8');
 
 for(const marker of [
   'worldPhaseTimingStats=Object.create(null)',
@@ -39,9 +40,9 @@ assert.ok(dialogue.includes('lastPositioningMs') &&
   dialogue.includes('lastProjection'),
   'NPC dialogue must expose positioning cost and current screen/world anchor telemetry.');
 
-assert.ok(builder.includes('EXT_disjoint_timer_query'),
+assert.ok(gameHtml.includes('EXT_disjoint_timer_query_webgl2')&&gameHtml.includes('EXT_disjoint_timer_query'),
   'The GPU timer-query path must remain available when supported.');
-assert.ok(builder.includes('gpuTimerQuery:\'not measured; scene.render duration is CPU wall-clock only\''),
+assert.ok(gameHtml.includes('gpuTimerQuery:\'not measured; scene.render duration is CPU wall-clock only\''),
   'Unavailable GPU timing must not be misreported as zero.');
 assert.ok(!builder.includes('qualityDprFloor')&&!builder.includes('qualityDprCeiling')&&
   !builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)'),
