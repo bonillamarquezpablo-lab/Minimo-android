@@ -166,8 +166,10 @@ def main() -> None:
     for marker in ("BABYLON.Vector3.Project", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
-    if "computeWorldMatrix(true)" in dialogue_runtime_source or "RANGE_SQUARED" not in dialogue_runtime_source:
-        fail("Los diálogos no deben forzar matrices de cada NPC ni recorrer proximidad con cálculos redundantes.")
+    if "root.computeWorldMatrix(true)" not in dialogue_runtime_source or "anchor.computeWorldMatrix(true)" not in dialogue_runtime_source or "RANGE_SQUARED" not in dialogue_runtime_source:
+        fail("Los diálogos deben refrescar solo la matriz del NPC visible y su ancla de cabeza, manteniendo la búsqueda por radio acotado.")
+    if "scene.meshes" in dialogue_runtime_source or "for(const npc of allNpcs)" in dialogue_runtime_source:
+        fail("El diálogo no debe recorrer todas las mallas o todos los NPC cada fotograma.")
     if any(marker in dialogue_runtime_source for marker in ("new BABYLON.Mesh", "MeshBuilder", "requestAnimationFrame")):
         fail("El runtime de diálogos no debe crear meshes 3D ni añadir trabajo permanente por fotograma.")
     if ".elsn-npc-bubble-message" not in dialogue_style_source or "pointer-events:none" not in dialogue_style_source:
