@@ -336,7 +336,7 @@ def main() -> None:
         "async function inspectGLBContainer(blob)",
         "async function waitForAnimalTextures(meshes,kind,timeoutMs=25000)",
         "const beforeMeshes=new Set(scene.meshes||[])",
-        "const beforeSkeletons=new Set(scene.skeletons||[])",
+        "beforeSkeletons=new Set(scene.skeletons||[])",
         "sourceJson.skins",
         "sourceJson.animations",
         "const textureReadiness=await waitForAnimalTextures(meshes,kind)",
