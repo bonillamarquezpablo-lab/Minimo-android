@@ -38,8 +38,16 @@ assert.ok(html.includes("startupResourceSnapshot.world.islands!==13"));
 assert.ok(html.includes("startupResourceSnapshot.fauna.loaded!==3"));
 assert.ok(html.includes("startupResourceSnapshot.fauna.loadedGulls!==5"));
 assert.ok(html.includes("startupResourceSnapshot.world.grassClumps<=0"));
-assert.ok(html.includes('fauna:isPerformanceMode?\'disabled-performance\':\'blocking-required\''),
-  'Quality requires fauna before entry; Performance keeps its pre-existing fauna-disabled profile.');
+assert.ok(html.includes("fauna:'blocking-required'"),
+  'Both Quality and Performance must wait for all three terrestrial animals before entry.');
+assert.ok(html.includes("fauna:{required:true,requested:wildlifeSpawnSpecs.length"),
+  'The startup report must mark terrestrial fauna as required in both profiles.');
+assert.ok(html.includes("startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3"),
+  'The final readiness gate must verify all three terrestrial species in both profiles.');
+assert.ok(html.includes("npcBackgroundLoad:'blocking-before-entry',faunaBackgroundLoad:'blocking-before-entry'"),
+  'The session report must not describe required fauna as optional or deferred.');
+assert.ok(html.includes("const animalCount=idx===0?3:0;"),
+  'The runtime must spawn the same three terrestrial animal instances in both profiles.');
 assert.ok(html.includes('waitForPlayableAudio') &&
   html.includes('MenuMusic.preload()') && html.includes('GameplayMusic.preload()'),
   'Both native HTMLAudio soundtracks must reach a playable state before entry.');

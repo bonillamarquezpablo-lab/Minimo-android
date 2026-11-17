@@ -57,7 +57,9 @@ assert.ok(edgeBubble&&edgeBubble.left>=viewport.left+6&&edgeBubble.top>=viewport
 const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
 assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);assert.match(runtime,/BABYLON\.Vector3\.Project/);assert.match(runtime,/Core\.POSITION_UPDATE_MS/);assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
 assert.doesNotMatch(runtime,/new BABYLON\.Mesh|MeshBuilder|new B\.Mesh|requestAnimationFrame/);
-assert.doesNotMatch(runtime,/computeWorldMatrix\(true\)/,"NPC dialogue ticks must not force-recompute every character's world matrix.");
+assert.ok(runtime.includes("root.computeWorldMatrix(true)")&&runtime.includes("anchor.computeWorldMatrix(true)"),"Only the visible NPC root/head anchor is refreshed for screen-space projection.");
+assert.equal((runtime.match(/const camera=s\.scene\.activeCamera\|\|s\.camera;/g)||[]).length,3,"NPC bubble projection must use the active scene camera, with the snapshot camera only as fallback.");
+assert.doesNotMatch(runtime,/!s\.camera/,"A missing snapshot camera must not block projection when scene.activeCamera exists.");
 assert.match(runtime,/RANGE_SQUARED/,"Nearby NPC filtering must use squared distances before sorting the small visible set.");
 assert.match(runtime,/function rootOf\(n\).*n\.parts&&n\.parts\.root\|\|n\.root\|\|n\.actor\|\|n/,"Dialogue must resolve NPCs stored as parts.root, root, actor, or a direct Babylon node.");assert.match(runtime,/function idOf\(n\).*root&&root\.name/,"NPC identity must fall back to the resolved Babylon node name.");assert.match(runtime,/Number\.isFinite\(Number\(s\.playerPosition\.x\)\)/,"Invalid player positions must not silently place NPCs at the world origin.");assert.match(runtime,/layer\.style\.zIndex="1200"/,"Dialogue bubbles must render above the gameplay HUD so speech remains visible.");assert.match(runtime,/function bubbleLimit\(\).*?\?2:MAX_BUBBLES/,"Mobile play must show no more than two simultaneous dialogue cards.");assert.match(runtime,/Core\.placeBubble\(\{x,y\}/,"Dialogue bubbles must be placed with collision avoidance.");
 assert.match(runtime,/snapshotFailures/,"Dialogue runtime must surface bridge snapshot errors for diagnosis.");
@@ -78,7 +80,9 @@ assert.match(runtime,/onAfterRenderObservable/,"Speech bubbles must follow the N
 assert.match(runtime,/orientationchange/);assert.match(runtime,/visualViewport/);assert.match(runtime,/ResizeObserver/);
 assert.match(runtime,/s\.engine\.resize\(\)/,"A device orientation change must resize Babylon before reprojection.");
 assert.match(runtime,/function render\(s,matricesReady=false\)/,"The render-cycle projection must reuse the current camera matrices.");
-assert.equal((runtime.match(/const camera=s\.scene\.activeCamera\|\|s\.camera/g)||[]).length,2,"Both visibility checks and final bubble placement must use the currently active Babylon camera.");
+assert.equal((runtime.match(/const camera=s\.scene\.activeCamera\|\|s\.camera/g)||[]).length,3,"Matrix refresh, visibility checks and final bubble placement must use the currently active Babylon camera.");
+assert.match(runtime,/function refreshProjectionMatrices\(s\).*?const camera=s\.scene\.activeCamera\|\|s\.camera/,"Matrix refresh must target the same active camera used for projection.");
+assert.match(runtime,/document\.documentElement\|\|document\.body/,"Dialogue overlay must live outside the transformed game body so fixed coordinates remain viewport-relative.");
 assert.match(runtime,/function positionTick\(\)\{const s=snapshot\(\);if\(!s\)return;bindSceneRenderObserver\(s\);bindViewportObservers\(s\);render\(s\);\}/,"The 100 ms position tick must remain a fallback even when an after-render observer exists, so bubbles cannot freeze if that observer stops firing.");
 assert.match(runtime,/function isProjectable\(npc,s\)/,"The scheduler must reject NPCs whose head anchors are outside the active camera view.");
 assert.match(runtime,/inView=nearby\.filter\(x=>isProjectable\(x\.npc,s\)\)/,"Ambient dialogue must only be scheduled for on-screen NPCs.");
@@ -109,3 +113,23 @@ assert.ok(builder.includes("Villager_")&&builder.includes("VillageGuard")&&build
 assert.doesNotMatch(builder,/ambientPeople\.concat/,"Dialogue bridge cannot reference the removed ambientPeople global.");const dialogueStyle=fs.readFileSync("scripts/npc-dialogue.css","utf8");assert.match(dialogueStyle,/z-index:1200/);assert.match(dialogueStyle,/max-width:min\(148px,calc\(100vw - 24px\)\)/);assert.match(dialogueStyle,/font-size:12px/);assert.match(dialogueStyle,/padding:4px 6px 5px/);
 assert.match(worker,/\.\/scripts\/npc-village-brain-core\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue-core\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue-runtime\.js/);assert.match(worker,/\.\/scripts\/npc-dialogue\.css/);assert.match(validator,/scripts\/npc-dialogue-core\.js/);assert.match(validator,/maxVisibleBubbles:4/);
 console.log("NPC ambient dialogue contract: PASS (four-bubble limit, range, scheduling, projection and offline packaging).");
+
+const dialogueRuntime=fs.readFileSync(__dirname+"/npc-dialogue-runtime.js","utf8");
+assert.ok(dialogueRuntime.includes("render(lastSnapshot,true)"),
+ "Post-render dialogue projection must reuse the matrices that produced the just-rendered frame.");
+assert.ok(dialogueRuntime.includes('root.computeWorldMatrix(true)'),
+ "A moving NPC root must refresh its own world matrix before screen-space projection.");
+assert.ok(dialogueRuntime.includes('anchor.computeWorldMatrix(true)'),
+ "The head-bone anchor must refresh its own world matrix before its screen position is calculated.");
+assert.ok(dialogueRuntime.includes('lastProjection'));
+assert.ok(dialogueRuntime.includes('y-slot.height-12') &&
+  !dialogueRuntime.includes('y-slot.height-slot.height-12'),
+  'The fallback speech-bubble position must stay one bubble-height above its NPC anchor, not drift toward the screen edge.');
+assert.ok(dialogueRuntime.includes('lastPositioningMs'));
+assert.ok(dialogueRuntime.includes('const positioningSamples=new Float32Array(120)') &&
+  dialogueRuntime.includes('positioningPercentiles()') &&
+  dialogueRuntime.includes('positioningP50Ms:at(.50)') &&
+  dialogueRuntime.includes('positioningP95Ms:at(.95)') &&
+  dialogueRuntime.includes('positioningP99Ms:at(.99)'),
+  'NPC dialogue projection must expose bounded p50/p95/p99 CPU timing samples.');
+console.log("NPC screen-space projection freshness and timing contract: PASS.");

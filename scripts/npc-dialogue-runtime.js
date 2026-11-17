@@ -17,10 +17,23 @@ function restoreSocialMemory(){try{const raw=window.localStorage&&localStorage.g
 function saveSocialMemory(){try{if(!window.localStorage)return;const pairs=Array.from(relationships.values()).slice(-64).map(row=>({key:row.key,rapport:row.rapport,exchanges:row.exchanges,recentTopics:row.recentTopics.slice(-4)}));localStorage.setItem(SOCIAL_MEMORY_KEY,JSON.stringify({version:1,pairs}));}catch(_){}}
 restoreSocialMemory();
 const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,worldPeopleCount:0,resolvedPeopleCount:0,missingRootCount:0,missingIdentityCount:0,nearestNpcDistanceMeters:null,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:""};
+const positioningSamples=new Float32Array(120);let positioningCursor=0,positioningCount=0;
+function recordPositioningSample(startedAt){
+ const duration=Math.max(0,performance.now()-startedAt);
+ positioningSamples[positioningCursor]=duration;positioningCursor=(positioningCursor+1)%positioningSamples.length;
+ positioningCount=Math.min(positioningSamples.length,positioningCount+1);
+ diagnostics.lastPositioningMs=Number(duration.toFixed(3));
+ diagnostics.maxPositioningMs=Math.max(diagnostics.maxPositioningMs||0,duration);
+}
+function positioningPercentiles(){
+ const values=[];for(let i=0;i<positioningCount;i++)values.push(positioningSamples[i]);values.sort((a,b)=>a-b);
+ const at=p=>values.length?Number(values[Math.min(values.length-1,Math.floor((values.length-1)*p))].toFixed(3)):null;
+ return {positioningSamples:positioningCount,positioningP50Ms:at(.50),positioningP95Ms:at(.95),positioningP99Ms:at(.99)};
+}
 let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projectionIdentity=null,projectionScratch=null,lastSnapshot=null,observedScene=null,renderObserver=null,viewportObserver=null,viewportListenersBound=false,viewportRefreshPending=false,lastCapturedCount=null,recentCaptureUntil=0;
 const RANGE_SQUARED=RANGE*RANGE;
 function bubbleLimit(){return window.matchMedia&&window.matchMedia("(max-width: 700px)").matches?2:MAX_BUBBLES;}
-const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="1200";layer.dataset.maxBubbles=String(MAX_BUBBLES);document.body.appendChild(layer);
+const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="1200";layer.dataset.maxBubbles=String(MAX_BUBBLES);(document.documentElement||document.body).appendChild(layer);
 function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;node.style.position="fixed";node.style.left="0";node.style.top="0";node.style.margin="0";node.style.pointerEvents="none";node.style.zIndex=String(1+index);const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null,width:0,height:0,measureDirty:true};}
 for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i));
 const random=()=>Math.random(),between=(a,b)=>a+random()*(b-a);
@@ -30,7 +43,7 @@ function worldPosition(node){if(!node)return null;try{const p=typeof node.getAbs
 function distance(a,b){return a&&b?Math.hypot(Number(a.x)-Number(b.x),Number(a.z)-Number(b.z)):Infinity;}
 function distanceSquared(a,b){if(!a||!b)return Infinity;const dx=Number(a.x)-Number(b.x),dz=Number(a.z)-Number(b.z);return dx*dx+dz*dz;}
 function enabled(n){const r=rootOf(n);if(!r)return false;try{return (typeof r.isEnabled!=="function"||r.isEnabled())&&r.isVisible!==false&&r.visibility!==0;}catch(_){return false;}}
-function refreshProjectionMatrices(s){if(!s||!s.scene)return;try{const camera=s.camera||s.scene.activeCamera;if(camera){if(typeof camera.getViewMatrix==="function")camera.getViewMatrix(true);if(typeof camera.getProjectionMatrix==="function")camera.getProjectionMatrix(true);}if(typeof s.scene.updateTransformMatrix==="function")s.scene.updateTransformMatrix(true);}catch(error){diagnostics.lastError=String(error&&error.message||error);}}
+function refreshProjectionMatrices(s){if(!s||!s.scene)return;try{const camera=s.scene.activeCamera||s.camera;if(camera){if(typeof camera.getViewMatrix==="function")camera.getViewMatrix(true);if(typeof camera.getProjectionMatrix==="function")camera.getProjectionMatrix(true);}if(typeof s.scene.updateTransformMatrix==="function")s.scene.updateTransformMatrix(true);}catch(error){diagnostics.lastError=String(error&&error.message||error);}}
 function blockingUi(){if(document.body.classList.contains("map-open"))return true;const intro=document.getElementById("intro");return!!(intro&&intro.classList.contains("open")&&intro.getAttribute("aria-hidden")!=="true");}
 function snapshot(){try{const value=Bridge.getSnapshot();diagnostics.bridgeError="";diagnostics.bridgeReportedActive=!!(value&&value.active);if(value)lastSnapshot=value;return value;}catch(error){diagnostics.snapshotFailures++;diagnostics.bridgeError=String(error&&error.message||error);diagnostics.lastError=diagnostics.bridgeError;console.warn("NPC dialogue snapshot:",error);return lastSnapshot;}}
 function bindSceneRenderObserver(s){
@@ -121,7 +134,9 @@ function remember(state,content){if(!content)return;if(content.topic){state.rece
 function isProjectable(npc,s){
  const id=idOf(npc);
  const reject=reason=>{diagnostics.projectionCandidateFailures[reason]=(diagnostics.projectionCandidateFailures[reason]||0)+1;diagnostics.lastProjectionCandidate={id,reason};return false;};
- if(!npc||!s||!s.scene||!s.engine||!s.camera||!s.canvas||!enabled(npc))return reject("missing-scene-camera-canvas-or-disabled-npc");
+ if(!npc||!s||!s.scene||!s.engine||!s.canvas||!enabled(npc))return reject("missing-scene-camera-canvas-or-disabled-npc");
+ const camera=s.scene.activeCamera||s.camera;
+ if(!camera)return reject("missing-active-camera");
  const root=rootOf(npc),rootPos=worldPosition(root);
  if(!rootPos||distance(rootPos,s.playerPosition)>RANGE)return reject("missing-root-or-outside-range");
  const BABYLON=s.BABYLON||window.BABYLON;
@@ -134,7 +149,6 @@ function isProjectable(npc,s){
   const world=projectionScratch.copyFrom(ap);world.y+=anchor===root?2.12:.48;
   const width=s.engine.getRenderWidth(),height=s.engine.getRenderHeight(),rect=s.canvas.getBoundingClientRect();
   if(!(width>0&&height>0&&rect.width>0&&rect.height>0))return reject("zero-rendering-viewport");
-  const camera=s.scene.activeCamera||s.camera;
   const viewport=camera.viewport&&typeof camera.viewport.toGlobal==="function"?camera.viewport.toGlobal(width,height):{x:0,y:0,width,height};
   const transform=s.scene.getTransformMatrix();
   const p=BABYLON.Vector3.Project(world,projectionIdentity,transform,viewport);
@@ -178,22 +192,26 @@ function project(slot,s,occupied){
  const c=slot.current;
  const hide=reason=>{diagnostics.projectionFailures[reason]=(diagnostics.projectionFailures[reason]||0)+1;slot.node.hidden=true;return false;};
  diagnostics.projectionAttempts++;
- if(!c||!s||!s.scene||!s.engine||!s.camera||!s.canvas)return hide("missing-scene-camera-canvas");
+ if(!c||!s||!s.scene||!s.engine||!s.canvas)return hide("missing-scene-camera-canvas");
+ const camera=s.scene.activeCamera||s.camera;
+ if(!camera)return hide("missing-active-camera");
  const npc=c.npc;if(!enabled(npc))return hide("npc-disabled");
- const root=rootOf(npc),rootPos=worldPosition(root);
+ const root=rootOf(npc);
+ try{if(root&&typeof root.computeWorldMatrix==="function")root.computeWorldMatrix(true);}catch(_){}
+ const rootPos=worldPosition(root);
  if(!rootPos)return hide("npc-root-unavailable");
  if(distance(rootPos,s.playerPosition)>RANGE)return hide("outside-dialogue-range");
  const BABYLON=s.BABYLON||window.BABYLON;
  if(!BABYLON||!BABYLON.Vector3||!BABYLON.Matrix)return hide("babylon-project-unavailable");
  try{
   const anchor=npc.parts&&npc.parts.head&&typeof npc.parts.head.getAbsolutePosition==="function"?npc.parts.head:root;
+  try{if(anchor&&typeof anchor.computeWorldMatrix==="function")anchor.computeWorldMatrix(true);}catch(_){}
   const ap=worldPosition(anchor);if(!ap)return hide("head-anchor-unavailable");
   if(!projectionIdentity)projectionIdentity=BABYLON.Matrix.Identity();
   if(!projectionScratch)projectionScratch=new BABYLON.Vector3(0,0,0);
   const world=projectionScratch.copyFrom(ap);world.y+=anchor===root?2.12:.48;
   const width=s.engine.getRenderWidth(),height=s.engine.getRenderHeight(),rect=s.canvas.getBoundingClientRect();
   if(!(width>0&&height>0&&rect.width>0&&rect.height>0))return hide("zero-rendering-viewport");
-  const camera=s.scene.activeCamera||s.camera;
   const viewport=camera.viewport&&typeof camera.viewport.toGlobal==="function"?camera.viewport.toGlobal(width,height):{x:0,y:0,width,height};
   const p=BABYLON.Vector3.Project(world,projectionIdentity,s.scene.getTransformMatrix(),viewport);
   if(!p||p.z<=0||p.z>=1)return hide("behind-camera");
@@ -205,19 +223,20 @@ function project(slot,s,occupied){
   let placement=Core.placeBubble({x,y},{width:slot.width,height:slot.height},{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom},occupied);
   if(!placement){
    const left=Math.max(rect.left+6,Math.min(rect.right-slot.width-6,x-slot.width/2));
-   const top=Math.max(rect.top+6,Math.min(rect.bottom-slot.height-6,y-slot.height- slot.height-12));
+   const top=Math.max(rect.top+6,Math.min(rect.bottom-slot.height-6,y-slot.height-12));
    placement={left,top,right:left+slot.width,bottom:top+slot.height};
    diagnostics.placementFallbacks=(diagnostics.placementFallbacks||0)+1;
   }
   slot.node.style.transform="translate3d("+placement.left.toFixed(1)+"px,"+placement.top.toFixed(1)+"px,0)";
+  diagnostics.lastProjection={id:idOf(npc),world:{x:Number(world.x.toFixed(3)),y:Number(world.y.toFixed(3)),z:Number(world.z.toFixed(3))},screen:{x:Number(x.toFixed(1)),y:Number(y.toFixed(1))},at:Date.now()};
   occupied.push(placement);diagnostics.projectionSuccesses++;return true;
  }catch(error){diagnostics.lastError=String(error&&error.message||error);return hide("projection-exception");}
 }
-function render(s,matricesReady=false){if(!matricesReady)refreshProjectionMatrices(s);const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;layer.setAttribute("aria-hidden",String(!active));if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;return;}const occupied=[];const limit=bubbleLimit();for(let i=0;i<slots.length;i++){const slot=slots[i];if(i<limit&&slot.current)project(slot,s,occupied);else slot.node.hidden=true;}renderedCount=slots.filter((slot,index)=>index<limit&&slot.current&&!slot.node.hidden).length;}
+function render(s,matricesReady=false){const started=performance.now();if(!matricesReady)refreshProjectionMatrices(s);const active=!!(s&&s.active&&!document.hidden&&!blockingUi());layer.hidden=!active;layer.setAttribute("aria-hidden",String(!active));if(!active){for(const slot of slots)slot.node.hidden=true;renderedCount=0;recordPositioningSample(started);return;}const occupied=[];const limit=bubbleLimit();for(let i=0;i<slots.length;i++){const slot=slots[i];if(i<limit&&slot.current)project(slot,s,occupied);else slot.node.hidden=true;}renderedCount=slots.filter((slot,index)=>index<limit&&slot.current&&!slot.node.hidden).length;recordPositioningSample(started);}
 function schedulerTick(){const now=Date.now(),s=snapshot();diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);if(s){bindSceneRenderObserver(s);bindViewportObservers(s);}if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}expire(now);const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));processPending(now,ids);schedule(now,nearby,s);render(s);}
 function positionTick(){const s=snapshot();if(!s)return;bindSceneRenderObserver(s);bindViewportObservers(s);render(s);}
 function start(){if(schedulerHandle||positionHandle)return;schedulerHandle=window.setInterval(()=>{try{schedulerTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC dialogue scheduler recovered:",e);}},Core.SCHEDULER_INTERVAL_MS);positionHandle=window.setInterval(()=>{try{positionTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC bubble projection recovered:",e);}},Core.POSITION_UPDATE_MS);}
-start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.role.textContent,kind:s.kind.textContent,text:s.message.textContent})),nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
+start();window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,...positioningPercentiles(),active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.role.textContent,kind:s.kind.textContent,text:s.message.textContent})),lastProjection:diagnostics.lastProjection,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
 }
 boot();
 })();

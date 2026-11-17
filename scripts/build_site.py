@@ -46,7 +46,7 @@ DOWNLOADS = {
         "https://ambientcg.com/get?file=Ground060_2K-JPG.zip", 1_000_000, "zip"
     ),
     "assets/models/Seagull.glb": (
-        "https://gobkit.com/freebies/animal007/Seagull.glb", 50_000, "glb"
+        "https://polyfork.dev/cdn/herring-gull-base.glb", 500_000, "glb"
     ),
     "assets/models/forest/mature-scots-pine-tree.glb": (
         "https://files.innerscene.com/library/mature-scots-pine-tree-280307e1/e52dca598822dfa9ffa9/mature-scots-pine-tree.glb", 500_000, "glb"
@@ -679,8 +679,141 @@ def main() -> None:
         raise SystemExit("No se encontró el punto único para persistir cada GLB de fauna validado.")
     html = html.replace(wildlife_blob_ready, wildlife_blob_persist, 1)
 
+    glb_validator_marker = " async function isValidGLB(blob){\n  if(!(blob instanceof Blob)||blob.size<500000)return false;\n  try{const bytes=await blob.slice(0,4).arrayBuffer();const magic=new Uint8Array(bytes);return magic.length===4&&magic[0]===0x67&&magic[1]===0x6c&&magic[2]===0x54&&magic[3]===0x46;}catch(_){return false;}\n }"
+    glb_validator_required = r""" async function inspectGLBContainer(blob){
+  if(!(blob instanceof Blob)||blob.size<500000)return null;
+  try{
+   const header=new DataView(await blob.slice(0,12).arrayBuffer());
+   if(header.getUint32(0,true)!==0x46546c67||header.getUint32(4,true)!==2||header.getUint32(8,true)!==blob.size)return null;
+   let offset=12,chunkIndex=0,json=null,binBytes=0;
+   while(offset<blob.size){
+    if(offset+8>blob.size)return null;
+    const chunkHeader=new DataView(await blob.slice(offset,offset+8).arrayBuffer());
+    const chunkLength=chunkHeader.getUint32(0,true),chunkType=chunkHeader.getUint32(4,true);
+    offset+=8;
+    if(chunkLength%4!==0||chunkLength<=0||offset+chunkLength>blob.size)return null;
+    if(chunkIndex===0){
+     if(chunkType!==0x4e4f534a)return null;
+     json=JSON.parse(await blob.slice(offset,offset+chunkLength).text());
+    }else if(chunkType===0x004e4942)binBytes+=chunkLength;
+    offset+=chunkLength;chunkIndex++;
+   }
+   if(offset!==blob.size||!json||json.asset?.version!=='2.0')return null;
+   const meshes=json.meshes||[],nodes=json.nodes||[],skins=json.skins||[],animations=json.animations||[],accessors=json.accessors||[],views=json.bufferViews||[],buffers=json.buffers||[];
+   if(!meshes.length||!nodes.length)return null;
+   if(buffers.length>1||(buffers.length===1&&(buffers[0].uri||!Number.isFinite(buffers[0].byteLength)||buffers[0].byteLength>binBytes)))return null;
+   for(const view of views){
+    if(!Number.isInteger(view.buffer)||view.buffer<0||view.buffer>=Math.max(1,buffers.length))return null;
+    const end=(Number(view.byteOffset)||0)+(Number(view.byteLength)||0);
+    if(!Number.isFinite(end)||end<0||(buffers.length&&end>buffers[view.buffer].byteLength))return null;
+   }
+   for(const accessor of accessors){
+    if(accessor.bufferView!==undefined&&(!Number.isInteger(accessor.bufferView)||accessor.bufferView<0||accessor.bufferView>=views.length))return null;
+    if(!Number.isFinite(accessor.count)||accessor.count<=0)return null;
+   }
+   for(const node of nodes){
+    if(node.mesh!==undefined&&(!Number.isInteger(node.mesh)||node.mesh<0||node.mesh>=meshes.length))return null;
+    if(node.skin!==undefined&&(!Number.isInteger(node.skin)||node.skin<0||node.skin>=skins.length))return null;
+   }
+   for(const skin of skins){
+    if(!Array.isArray(skin.joints)||skin.joints.length<1||skin.joints.some(j=>!Number.isInteger(j)||j<0||j>=nodes.length))return null;
+   }
+   for(const mesh of meshes){
+    if(!Array.isArray(mesh.primitives)||!mesh.primitives.length)return null;
+    for(const primitive of mesh.primitives){
+     if(!primitive.attributes||!Number.isInteger(primitive.attributes.POSITION)||primitive.attributes.POSITION<0||primitive.attributes.POSITION>=accessors.length)return null;
+     if(primitive.indices!==undefined&&(!Number.isInteger(primitive.indices)||primitive.indices<0||primitive.indices>=accessors.length))return null;
+    }
+   }
+   return {json,binBytes};
+  }catch(_){return null;}
+ }
+ async function isValidGLB(blob){
+  const record=await inspectGLBContainer(blob);
+  if(!record)return false;
+  const json=record.json||{},skins=json.skins||[],animations=json.animations||[],nodes=json.nodes||[];
+  return skins.some(skin=>Array.isArray(skin.joints)&&skin.joints.length>=12)&&
+   animations.some(animation=>Array.isArray(animation.channels)&&animation.channels.length>0&&Array.isArray(animation.samplers)&&animation.samplers.length>0)&&
+   nodes.some(node=>Number.isInteger(node.mesh)&&Number.isInteger(node.skin));
+ }
+ async function waitForAnimalTextures(meshes,kind,timeoutMs=30000){
+  const list=Array.from(meshes||[]),textures=new Set();
+  if(!list.length)throw new Error(kind+': no hay mallas para validar su presentación.');
+  for(const mesh of list){
+   if(!mesh||!(mesh.getTotalVertices&&mesh.getTotalVertices()>0))throw new Error(kind+': se ha importado una malla sin geometría.');
+   const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+   for(const material of materials)if(material&&typeof material.getActiveTextures==='function'){
+    for(const texture of material.getActiveTextures()||[])if(texture)textures.add(texture);
+   }
+  }
+  const started=performance.now();
+  const pendingNow=()=>{
+   const pendingTextures=Array.from(textures).filter(texture=>typeof texture.isReady==='function'&&!texture.isReady());
+   const pendingMeshes=list.filter(mesh=>typeof mesh.isReady==='function'&&!mesh.isReady(true));
+   return {pendingTextures,pendingMeshes};
+  };
+  await new Promise((resolve,reject)=>{
+   let settled=false,timer=null;
+   const finish=error=>{if(settled)return;settled=true;if(timer!==null)clearTimeout(timer);if(error)reject(error);else resolve();};
+   const check=()=>{
+    const pending=pendingNow();
+    if(!pending.pendingTextures.length&&!pending.pendingMeshes.length)return finish(null);
+    if(performance.now()-started>=timeoutMs)return finish(new Error(kind+': preparación visual incompleta; '+pending.pendingMeshes.length+'/'+list.length+' mallas y '+pending.pendingTextures.length+'/'+textures.size+' texturas pendientes.'));
+    setTimeout(check,50);
+   };
+   timer=setTimeout(()=>{const pending=pendingNow();finish(new Error(kind+': espera visual agotada; '+pending.pendingMeshes.length+' mallas y '+pending.pendingTextures.length+' texturas pendientes.'));},timeoutMs+250);
+   check();
+  });
+  return {count:textures.size,readyMeshes:list.length,waitedMs:Number((performance.now()-started).toFixed(1))};
+ }"""
+    if html.count(glb_validator_marker) != 1:
+        raise SystemExit("No se encontró el validador GLB único.")
+    html = html.replace(glb_validator_marker, glb_validator_required, 1)
+
+    wildlife_import_snapshot_marker = "  let imported=null,objectUrl=null,actor=null;\n  try{\n   // Import each GLB independently into the live scene; never clone a skinned mesh/skeleton.\n   objectUrl=URL.createObjectURL(blob);"
+    wildlife_import_snapshot_marker_replacement = "  let imported=null,objectUrl=null,actor=null;\n  const beforeMeshes=new Set(scene.meshes||[]),beforeNodes=new Set(scene.transformNodes||[]),beforeSkeletons=new Set(scene.skeletons||[]),beforeGroups=new Set(scene.animationGroups||[]);\n  try{\n   const glbRecord=await inspectGLBContainer(blob),sourceJson=glbRecord&&glbRecord.json;\n   if(!sourceJson||!(sourceJson.skins||[]).some(skin=>Array.isArray(skin.joints)&&skin.joints.length>=12)||!(sourceJson.animations||[]).some(animation=>Array.isArray(animation.channels)&&animation.channels.length>0&&Array.isArray(animation.samplers)&&animation.samplers.length>0)||!(sourceJson.nodes||[]).some(node=>Number.isInteger(node.mesh)&&Number.isInteger(node.skin)))throw new Error(kind+': el GLB no contiene un cuerpo riggeado y clips de animación completos.');\n   objectUrl=URL.createObjectURL(blob);"
+    if html.count(wildlife_import_snapshot_marker) != 1:
+        raise SystemExit("No se encontró el marcador único: wildlife_import_snapshot_marker.")
+    html = html.replace(wildlife_import_snapshot_marker, wildlife_import_snapshot_marker_replacement, 1)
+
+    wildlife_animal_marker = "const animal={kind,root:actor,"
+    wildlife_animal_replacement = "const animal={textureReadiness,kind,root:actor,"
+    if html.count(wildlife_animal_marker) != 1:
+        raise SystemExit("No se encontró el actor único de fauna para adjuntar el estado de texturas.")
+    html = html.replace(wildlife_animal_marker, wildlife_animal_replacement, 1)
+
+    wildlife_mesh_texture_marker = "   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);\n   if(!meshes.length)throw new Error('GLB sin malla visible.');"
+    wildlife_mesh_texture_marker_replacement = "   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);\n   if(!meshes.length)throw new Error('GLB sin malla visible.');\n   const textureReadiness=await waitForAnimalTextures(meshes,kind);"
+    if html.count(wildlife_mesh_texture_marker) != 1:
+        raise SystemExit("No se encontró el marcador único: wildlife_mesh_texture_marker.")
+    html = html.replace(wildlife_mesh_texture_marker, wildlife_mesh_texture_marker_replacement, 1)
+
+    wildlife_animation_marker = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);"
+    wildlife_animation_marker_replacement = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);\n   if(!groups.some(group=>group&&group.targetedAnimations&&group.targetedAnimations.length>0)||!clips.idle||!clips.walk||!clips.run)throw new Error(kind+': el rig llegó sin animaciones reproducibles completas.');"
+    if html.count(wildlife_animation_marker) != 1:
+        raise SystemExit("No se encontró el marcador único: wildlife_animation_marker.")
+    html = html.replace(wildlife_animation_marker, wildlife_animation_marker_replacement, 1)
+
+    wildlife_cleanup_marker = "   if(imported){try{(imported.animationGroups||[]).forEach(group=>group.stop());(imported.skeletons||[]).forEach(skeleton=>skeleton.dispose());(imported.meshes||[]).forEach(mesh=>mesh.dispose(false,true));(imported.transformNodes||[]).forEach(node=>node.dispose(false,true));}catch(_){}}"
+    wildlife_cleanup_marker_replacement = "   const partialGroups=Array.from(scene.animationGroups||[]).filter(group=>!beforeGroups.has(group));partialGroups.forEach(group=>{try{group.stop();group.dispose();}catch(_){}}); \n   const partialMeshes=Array.from(scene.meshes||[]).filter(mesh=>!beforeMeshes.has(mesh));partialMeshes.forEach(mesh=>{try{if(!(mesh.isDisposed&&mesh.isDisposed()))mesh.dispose(false,true);}catch(_){}}); \n   const partialNodes=Array.from(scene.transformNodes||[]).filter(node=>!beforeNodes.has(node));partialNodes.forEach(node=>{try{if(!(node.isDisposed&&node.isDisposed()))node.dispose(false,true);}catch(_){}}); \n   const partialSkeletons=Array.from(scene.skeletons||[]).filter(skeleton=>!beforeSkeletons.has(skeleton));partialSkeletons.forEach(skeleton=>{try{skeleton.dispose();}catch(_){}});"
+    if html.count(wildlife_cleanup_marker) != 1:
+        raise SystemExit("No se encontró el marcador único: wildlife_cleanup_marker.")
+    html = html.replace(wildlife_cleanup_marker, wildlife_cleanup_marker_replacement, 1)
+
+    wildlife_spawn_count_marker = "const animalCount=isPerformanceMode?0:(idx===0?3:0);"
+    wildlife_spawn_count_replacement = "const animalCount=idx===0?3:0;"
+    if html.count(wildlife_spawn_count_marker) != 1:
+        raise SystemExit("No se encontró el contador de fauna terrestre inicial.")
+    html = html.replace(wildlife_spawn_count_marker, wildlife_spawn_count_replacement, 1)
+
+    wildlife_retry_marker = " function loadWildlifeModels(){\n  if(!wildlifeModelsLoadPromise)wildlifeModelsLoadPromise=loadWildlifeModelsOnce();\n  return wildlifeModelsLoadPromise;\n }"
+    wildlife_retry_replacement = " function loadWildlifeModels(){\n  if(!wildlifeModelsLoadPromise)wildlifeModelsLoadPromise=loadWildlifeModelsOnce().catch(error=>{\n   for(const animal of ambientFauna.splice(0)){\n    const root=animal.root;try{(animal.groups||[]).forEach(group=>{try{group.stop();group.dispose();}catch(_){}});}catch(_){}\n    for(let i=managedWorldShadowGroups.length-1;i>=0;i--){const entry=managedWorldShadowGroups[i];if(entry&&entry.root===root){if(entry.active&&shadowGen)for(const mesh of entry.meshes||[]){try{shadowGen.removeShadowCaster(mesh);}catch(_){}}managedActiveWorldShadowCount=Math.max(0,managedActiveWorldShadowCount-(entry.meshes||[]).length);managedWorldShadowGroups.splice(i,1);}}\n    try{if(root&&!(root.isDisposed&&root.isDisposed()))root.dispose(false,true);}catch(_){}\n   }\n   wildlifeBlobs.clear();wildlifeModelsLoadPromise=null;throw error;\n  });\n  return wildlifeModelsLoadPromise;\n }"
+    if html.count(wildlife_retry_marker) != 1:
+        raise SystemExit("No se encontró la promesa única de fauna para reintentar sin duplicados.")
+    html = html.replace(wildlife_retry_marker, wildlife_retry_replacement, 1)
+
     wildlife_empty = "  if(!wildlifeSpawnSpecs.length)return 0;"
-    wildlife_required = "  if(isPerformanceMode&&!wildlifeSpawnSpecs.length)return 0;\n  if(!isPerformanceMode&&wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
+    wildlife_required = "  if(wildlifeSpawnSpecs.length!==3)throw new Error('RECURSO OBLIGATORIO: fauna inicial incompleta; se esperaban 3 animales y se encontraron '+wildlifeSpawnSpecs.length+'.');"
     if html.count(wildlife_empty) != 1:
         raise SystemExit("No se encontró la comprobación de fauna inicial vacía.")
     html = html.replace(wildlife_empty, wildlife_required, 1)
@@ -698,13 +831,13 @@ def main() -> None:
     html = html.replace(wildlife_ground, wildlife_ground_required, 1)
 
     wildlife_import_failure = "   console.warn('Fauna descartada: importación GLB incompleta ('+kind+')',err);\n   if(/agotó el plazo/i.test(String(err&&err.message||err)))throw err;\n   return null;"
-    wildlife_import_required = "   console.error('Falló la importación de fauna obligatoria ('+kind+'):',err);\n   throw new Error('RECURSO OBLIGATORIO: fauna '+kind+' · '+String(err&&err.message||err));"
+    wildlife_import_required = "   wildlifeReadinessRecords.push({kind,state:'failed',error:String(err&&err.message||err)});\n   console.error('Falló la importación de fauna obligatoria ('+kind+'):',err);\n   throw new Error('RECURSO OBLIGATORIO: fauna '+kind+' · '+String(err&&err.message||err));"
     if html.count(wildlife_import_failure) != 1:
         raise SystemExit("No se encontró el fallback que ocultaba los fallos de importación animal.")
     html = html.replace(wildlife_import_failure, wildlife_import_required, 1)
 
     wildlife_instance = "   if(animal){ambientFauna.push(animal);loaded++;}\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),animal?'ready':'fallback',{island:spec.homeIslandIndex});"
-    wildlife_instance_required = "   if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');\n   ambientFauna.push(animal);loaded++;\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});"
+    wildlife_instance_required = "   if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');\n   wildlifeReadinessRecords.push({kind:spec.kind,state:'ready',island:spec.homeIslandIndex,meshes:animal.meshCount,skinnedVertices:animal.skinnedVertexCount,bones:animal.skeletonBoneCount,textures:animal.textureReadiness.count,textureWaitMs:animal.textureReadiness.waitedMs});\n   ambientFauna.push(animal);loaded++;\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});"
     if html.count(wildlife_instance) != 1:
         raise SystemExit("No se encontró el montaje individual de fauna.")
     html = html.replace(wildlife_instance, wildlife_instance_required, 1)
@@ -731,6 +864,12 @@ def main() -> None:
         raise SystemExit("No se encontró la única raíz de las gaviotas GLB.")
     html = html.replace(gull_root_marker,gull_root_replacement,1)
 
+    gull_rig_marker = "const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}"
+    gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const leftWing=rigNodes.find(node=>/^LeftWing(?:_|$)/i.test(node.name||'')),rightWing=rigNodes.find(node=>/^RightWing(?:_|$)/i.test(node.name||'')),tail=rigNodes.find(node=>/^Tail(?:_|$)/i.test(node.name||''));if(!leftWing||!rightWing){actor.dispose(false,true);throw new Error('El modelo de gaviota no incluye pivotes anatómicos LeftWing y RightWing.');}[leftWing,rightWing,tail].forEach(node=>{if(node&&node.rotationQuaternion){node.rotation.copyFrom(node.rotationQuaternion.toEulerAngles());node.rotationQuaternion=null;}});leftWing.computeWorldMatrix(true);rightWing.computeWorldMatrix(true);const leftWingWorld=leftWing.getAbsolutePosition(),rightWingWorld=rightWing.getAbsolutePosition(),wingSpanX=Math.abs(leftWingWorld.x-rightWingWorld.x),wingSpanZ=Math.abs(leftWingWorld.z-rightWingWorld.z),wingFlapAxis=wingSpanX>=wingSpanZ?'z':'x';"
+    if html.count(gull_rig_marker) != 1:
+        raise SystemExit("No se encontró el punto único para validar los pivotes anatómicos de gaviota.")
+    html = html.replace(gull_rig_marker, gull_rig_replacement, 1)
+
     gull_partial = "else throw new Error('El GLB se importó sin mallas instanciables');"
     gull_partial_required = "else throw new Error('El GLB solo permitió preparar '+realBirds.length+'/5 gaviotas completas.');"
     if html.count(gull_partial) != 1:
@@ -739,39 +878,60 @@ def main() -> None:
     # Normalize gulls by the largest 3D model extent so rotated GLB axes cannot inflate the flock.
     # The target wingspan is biological in-world scale, independent of the source model's up-axis.
     gull_scale_marker = "const bounds=boundsForMeshes(meshes),height=Math.max(.001,bounds.height),scale=1.65/height;actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
-    gull_scale_replacement = "const sourceBounds=boundsForMeshes(meshes),sourceWidth=sourceBounds.max.x-sourceBounds.min.x,sourceHeight=sourceBounds.max.y-sourceBounds.min.y,sourceDepth=sourceBounds.max.z-sourceBounds.min.z,sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth),targetGullMaxExtentMeters=.78;if(!Number.isFinite(sourceMaxExtent)||sourceMaxExtent<.10)throw new Error('Dimensiones físicas de gaviota inválidas: '+sourceMaxExtent);const sourceCenter=new B.Vector3((sourceBounds.min.x+sourceBounds.max.x)*.5,(sourceBounds.min.y+sourceBounds.max.y)*.5,(sourceBounds.min.z+sourceBounds.max.z)*.5),scale=targetGullMaxExtentMeters/sourceMaxExtent;if(!Number.isFinite(scale)||scale<=0||scale>12)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);visualRoot.position.copyFrom(sourceCenter.scale(-1));actor.scaling.setAll(scale);actor.computeWorldMatrix(true);visualRoot.computeWorldMatrix(true);meshes.forEach(mesh=>mesh.computeWorldMatrix(true));const fittedBounds=boundsForMeshes(meshes),fittedWidth=fittedBounds.max.x-fittedBounds.min.x,fittedHeight=fittedBounds.max.y-fittedBounds.min.y,fittedDepth=fittedBounds.max.z-fittedBounds.min.z,fittedMaxExtent=Math.max(fittedWidth,fittedHeight,fittedDepth);if(!Number.isFinite(fittedMaxExtent)||fittedMaxExtent>.82)throw new Error('La gaviota supera el límite físico de 0,82 m: '+fittedMaxExtent.toFixed(3));actor.position=v(-36,10+i%3*1.4,-18);actor.metadata=Object.assign({},actor.metadata||{},{biologicalScale:{source:{width:sourceWidth,height:sourceHeight,depth:sourceDepth},rendered:{width:fittedWidth,height:fittedHeight,depth:fittedDepth},maximumExtentMeters:fittedMaxExtent}});"
+    gull_scale_replacement = "const sourceBounds=boundsForMeshes(meshes),sourceWidth=sourceBounds.max.x-sourceBounds.min.x,sourceHeight=sourceBounds.max.y-sourceBounds.min.y,sourceDepth=sourceBounds.max.z-sourceBounds.min.z,sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth),targetGullMaxExtentMeters=.55;if(!Number.isFinite(sourceMaxExtent)||sourceMaxExtent<.10)throw new Error('Dimensiones físicas de gaviota inválidas: '+sourceMaxExtent);const sourceCenter=new B.Vector3((sourceBounds.min.x+sourceBounds.max.x)*.5,(sourceBounds.min.y+sourceBounds.max.y)*.5,(sourceBounds.min.z+sourceBounds.max.z)*.5),scale=targetGullMaxExtentMeters/sourceMaxExtent;if(!Number.isFinite(scale)||scale<=0||scale>12)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);visualRoot.position.copyFrom(sourceCenter.scale(-1));actor.scaling.setAll(scale);actor.computeWorldMatrix(true);visualRoot.computeWorldMatrix(true);meshes.forEach(mesh=>mesh.computeWorldMatrix(true));const fittedBounds=boundsForMeshes(meshes),fittedWidth=fittedBounds.max.x-fittedBounds.min.x,fittedHeight=fittedBounds.max.y-fittedBounds.min.y,fittedDepth=fittedBounds.max.z-fittedBounds.min.z,fittedMaxExtent=Math.max(fittedWidth,fittedHeight,fittedDepth);if(!Number.isFinite(fittedMaxExtent)||fittedMaxExtent>.57)throw new Error('La gaviota supera el límite físico de 0,57 m: '+fittedMaxExtent.toFixed(3));actor.position=v(-36,10+i%3*1.4,-18);actor.metadata=Object.assign({},actor.metadata||{},{biologicalScale:{source:{width:sourceWidth,height:sourceHeight,depth:sourceDepth},rendered:{width:fittedWidth,height:fittedHeight,depth:fittedDepth},maximumExtentMeters:fittedMaxExtent}});"
     if html.count(gull_scale_marker) != 1:
         raise SystemExit("No se encontró la única escala incorrecta de gaviotas basada en altura.")
     html = html.replace(gull_scale_marker, gull_scale_replacement, 1)
 
-    # The five instances deliberately share the subdued GLB materials. Cloning every
-    # mesh material for every gull created avoidable shader/material variants.
+    # Preserve the Polyfork model's native single material and colours.
+    # Remove only the legacy subdued tint block; retain bounds, transforms and flight setup.
     gull_material_registry_marker = "const realBirds=[];"
-    gull_material_registry_replacement = "    const realBirds=[],subduedMaterials=new Set();"
+    gull_material_registry_replacement = "    const realBirds=[];"
     if html.count(gull_material_registry_marker) != 1:
         raise SystemExit("No se encontró el registro único de instancias de gaviota.")
     html = html.replace(gull_material_registry_marker, gull_material_registry_replacement, 1)
-    # Remove per-instance material clones by matching each source operation independently;
-    # this avoids whitespace-sensitive block matching in the minified source HTML.
-    for gull_material_clone_marker in (
-        "if(Array.isArray(mesh.material))mesh.material=mesh.material.map(material=>material?material.clone(material.name+'_subdued_gull'):material);",
-        "else if(mesh.material)mesh.material=mesh.material.clone(mesh.material.name+'_subdued_gull');",
-    ):
-        if html.count(gull_material_clone_marker) != 1:
-            raise SystemExit("No se encontró exactamente una operación de duplicación de material de gaviota.")
-        html = html.replace(gull_material_clone_marker, "", 1)
-    gull_material_set = "const subduedMaterials=new Set();"
-    if html.count(gull_material_set) != 1:
-        raise SystemExit("No se encontró el conjunto local de materiales duplicados de las gaviotas.")
-    html = html.replace(gull_material_set, "", 1)
+    gull_material_style_start = "const subduedMaterials=new Set();"
+    gull_material_style_end = "const sourceBounds=boundsForMeshes(meshes)"
+    style_anchor = html.find(gull_rig_replacement)
+    style_start = html.find(gull_material_style_start, style_anchor)
+    style_end = html.find(gull_material_style_end, style_start)
+    if style_anchor < 0 or style_start < 0 or style_end <= style_start:
+        raise SystemExit(
+            "No se pudo aislar el tinte artificial de la gaviota: "
+            f"anchor={style_anchor}, styleStart={style_start}, styleEnd={style_end}."
+        )
+    html = html[:style_start] + html[style_end:]
+
+    gull_wing_push_marker = "realBirds.push({root:actor,real:true,groups,animation:fly,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
+    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,animation:fly,leftWing,rightWing,tail,wingFlapAxis,leftWingBaseRotation:leftWing.rotation[wingFlapAxis],rightWingBaseRotation:rightWing.rotation[wingFlapAxis],tailBaseRotation:tail?tail.rotation.x:0,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
+    if html.count(gull_wing_push_marker) != 1:
+        raise SystemExit("No se encontró el registro único de las articulaciones de gaviota.")
+    html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
+
+    gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
+    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.leftWing&&b.rightWing){const flap=Math.sin(elapsed*7.2+b.phase)*.58;b.leftWing.rotation[b.wingFlapAxis]=b.leftWingBaseRotation-flap;b.rightWing.rotation[b.wingFlapAxis]=b.rightWingBaseRotation+flap;if(b.tail)b.tail.rotation.x=b.tailBaseRotation+Math.sin(elapsed*2.1+b.phase)*.035;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
+    if html.count(gull_flight_marker) != 1:
+        raise SystemExit("No se encontró el bucle único de vuelo de las gaviotas.")
+    html = html.replace(gull_flight_marker, gull_flight_replacement, 1)
 
     # Move expensive terrestrial-fauna decisions and collision/terrain validation to
     # a distance-aware cadence. Root motion is still integrated on every frame, while
     # the skinned animation groups keep running at the render rate.
     wildlife_update_marker = "function updateWildlife(dt){"
     wildlife_update_end_marker = " // 0.6.195: la cubierta vegetal queda despejada de caminos y campamentos."
-    wildlife_update_replacement = """function updateWildlife(dt){
-   if(!ambientFauna.length)return;
+    wildlife_update_replacement = """const wildlifeReadinessRecords=[];const wildlifeUpdatePerfSamples=new Float32Array(120);let wildlifeUpdatePerfCursor=0,wildlifeUpdatePerfCount=0,wildlifeUpdatePerfLastMs=0,wildlifeUpdatePerfMaxMs=0,wildlifeUpdatePerfTicks=0;
+function wildlifeUpdatePerfSnapshot(){
+ const values=[];for(let i=0;i<wildlifeUpdatePerfCount;i++)values.push(wildlifeUpdatePerfSamples[i]);values.sort((a,b)=>a-b);
+ const at=p=>values.length?Number(values[Math.min(values.length-1,Math.floor((values.length-1)*p))].toFixed(3)):null;
+ const byKind={deer:0,stag:0,wolf:0};for(const animal of ambientFauna)if(byKind[animal.kind]!==undefined)byKind[animal.kind]++;
+ return {samples:wildlifeUpdatePerfCount,ticks:wildlifeUpdatePerfTicks,lastMs:wildlifeUpdatePerfLastMs,p50Ms:at(.50),p95Ms:at(.95),p99Ms:at(.99),maxMs:Number(wildlifeUpdatePerfMaxMs.toFixed(3)),requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length,byKind,readiness:wildlifeReadinessRecords.slice(),complete:ambientFauna.length===wildlifeSpawnSpecs.length};
+}
+window.__ELSN_WILDLIFE_DIAGNOSTICS__=Object.freeze({getSnapshot:wildlifeUpdatePerfSnapshot});
+function updateWildlife(dt){
+   const wildlifeStarted=performance.now();
+   if(!ambientFauna.length){
+    const cost=performance.now()-wildlifeStarted;wildlifeUpdatePerfSamples[wildlifeUpdatePerfCursor]=cost;wildlifeUpdatePerfCursor=(wildlifeUpdatePerfCursor+1)%wildlifeUpdatePerfSamples.length;wildlifeUpdatePerfCount=Math.min(wildlifeUpdatePerfSamples.length,wildlifeUpdatePerfCount+1);wildlifeUpdatePerfLastMs=Number(cost.toFixed(3));wildlifeUpdatePerfMaxMs=Math.max(wildlifeUpdatePerfMaxMs,cost);wildlifeUpdatePerfTicks++;return;
+   }
    const focus=onShip?ship.position:player.root.position,now=elapsed;
    const frameDt=Math.max(0,Math.min(.08,Number(dt)||0));
    for(const animal of ambientFauna){
@@ -823,6 +983,13 @@ def main() -> None:
     if(vx||vz){root.position.x+=vx*frameDt;root.position.z+=vz*frameDt;}
     root.rotation.y=animal.heading;
    }
+   const wildlifeCost=performance.now()-wildlifeStarted;
+   wildlifeUpdatePerfSamples[wildlifeUpdatePerfCursor]=wildlifeCost;
+   wildlifeUpdatePerfCursor=(wildlifeUpdatePerfCursor+1)%wildlifeUpdatePerfSamples.length;
+   wildlifeUpdatePerfCount=Math.min(wildlifeUpdatePerfSamples.length,wildlifeUpdatePerfCount+1);
+   wildlifeUpdatePerfLastMs=Number(wildlifeCost.toFixed(3));
+   wildlifeUpdatePerfMaxMs=Math.max(wildlifeUpdatePerfMaxMs,wildlifeCost);
+   wildlifeUpdatePerfTicks++;
   }"""
     if html.count(wildlife_update_marker) != 1 or html.count(wildlife_update_end_marker) != 1:
         raise SystemExit("No se encontró un bloque único de actualización de fauna para limitar sus decisiones.")
@@ -864,10 +1031,10 @@ def main() -> None:
     ordered_fauna = " setLoadingProgress(87,coastalReferenceMode?'Preparando la referencia costera…':'Preparando fauna de la isla inicial…');\n" + fauna_block + "\n setLoadingProgress(93,coastalReferenceMode?'Preparando shaders de costa…':'Preparando texturas y shaders de la zona inicial…');\n"
     html = html[:scene_marker_index] + ordered_fauna + html[scene_marker_index:]
 
-    # Quality fauna is a required startup dependency; Performance intentionally retains
-    # its existing fauna-disabled profile and its existing rendering/resource choices.
+    # All three terrestrial species are required in both profiles. Performance keeps its
+    # reduced movement/decision cadence; the five gulls remain Quality-only.
     optional_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-optional'"
-    required_fauna_state = "fauna:isPerformanceMode?'disabled-performance':'blocking-required'"
+    required_fauna_state = "fauna:'blocking-required'"
     if html.count(optional_fauna_state) != 1:
         raise SystemExit("No se encontró el estado de fauna opcional en el registro de arranque.")
     html = html.replace(optional_fauna_state, required_fauna_state, 1)
@@ -885,6 +1052,13 @@ def main() -> None:
     if html.count(late_shader_progress) != 1:
         raise SystemExit("No se encontró la fase antigua de shaders anterior a la fauna.")
     html = html.replace(late_shader_progress, "", 1)
+
+    # Runtime telemetry must reflect the blocking fauna barrier in both graphics profiles.
+    fauna_telemetry_marker = "npcBackgroundLoad:'blocking-before-entry',faunaBackgroundLoad:'optional-before-entry'"
+    fauna_telemetry_required = "npcBackgroundLoad:'blocking-before-entry',faunaBackgroundLoad:'blocking-before-entry'"
+    if html.count(fauna_telemetry_marker) != 1:
+        raise SystemExit("No se encontró el marcador único del estado de carga de fauna en el informe de arranque.")
+    html = html.replace(fauna_telemetry_marker, fauna_telemetry_required, 1)
  
     # The two soundtracks remain native HTMLAudio streams. Wait for media readiness
     # before entry, without decoding full MP3 tracks into WebAudio AudioBuffers.
@@ -963,7 +1137,7 @@ def main() -> None:
   gltfImporterReady:!!(window.BABYLON&&window.BABYLON.SceneLoader&&window.BABYLON.GLTFFileLoader),
   protagonistReady:!!realPlayerReady,
   npcRoster:window.__elSinNombreStartupNpcRoster||null,
-  fauna:{required:!isPerformanceMode,requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length,requiredGulls:isPerformanceMode?0:5,loadedGulls:ambientBirds.filter(b=>b.real).length},
+  fauna:{required:true,requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length,requiredGulls:isPerformanceMode?0:5,loadedGulls:ambientBirds.filter(b=>b.real).length},
   soundEffects:audioPreloadResult,
   music:{results:startupMusicPreloadResult,menuReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[0]&&startupMusicPreloadResult[0].ready),gameplayReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[1]&&startupMusicPreloadResult[1].ready),streaming:true,decodedToAudioBuffer:false},
   scene:{status:sceneWarmupStatus,waitingItemsAfter:window.__elSinNombreStartupSceneWarmup&&window.__elSinNombreStartupSceneWarmup.waitingItemsAfter,meshes:scene&&scene.meshes?scene.meshes.length:0,firstFrameRendered:!!firstFrameRendered},
@@ -979,8 +1153,8 @@ def main() -> None:
   if(!startupResourceSnapshot.music.menuReady||!startupResourceSnapshot.music.gameplayReady)startupResourceFailures.push('bandas sonoras');
   if(startupResourceSnapshot.scene.status!=='ready'||startupResourceSnapshot.scene.meshes<=0||!startupResourceSnapshot.scene.firstFrameRendered)startupResourceFailures.push('escena, texturas y shaders de la vista inicial');
   if(startupResourceSnapshot.world.islands!==13)startupResourceFailures.push('mundo de 13 islas');
+  if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)startupResourceFailures.push('fauna terrestre '+startupResourceSnapshot.fauna.loaded+'/'+startupResourceSnapshot.fauna.requested);
   if(!isPerformanceMode){
-   if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)startupResourceFailures.push('fauna terrestre '+startupResourceSnapshot.fauna.loaded+'/'+startupResourceSnapshot.fauna.requested);
    if(startupResourceSnapshot.fauna.loadedGulls!==5)startupResourceFailures.push('gaviotas 3D '+startupResourceSnapshot.fauna.loadedGulls+'/5');
    if(startupResourceSnapshot.world.grassClumps<=0||startupResourceSnapshot.world.grassBatches<=0)startupResourceFailures.push('vegetación 3D inicial');
   }
@@ -1079,7 +1253,7 @@ def main() -> None:
         capture_output=True, text=True,
     )
     if navigation_check.returncode != 0:
-        raise SystemExit("Navigation runtime JavaScript syntax validation failed:\\n" + navigation_check.stderr)
+        raise SystemExit("Navigation runtime JavaScript syntax validation failed:\n" + navigation_check.stderr)
     print("Navigation runtime JavaScript syntax validation passed.")
     # Anchor decorative terrain objects to the actual rendered GroundMesh. The
     # analytical heightfield can differ from the rendered triangle interpolation,
@@ -1464,7 +1638,7 @@ def main() -> None:
             raise SystemExit(f"Falta el módulo de especialistas NPC: {script_name}")
         npc_check = subprocess.run([node, "--check", str(script_source)], capture_output=True, text=True)
         if npc_check.returncode != 0:
-            raise SystemExit(f"NPC specialist runtime syntax validation failed ({script_name}):\\n" + npc_check.stderr)
+            raise SystemExit(f"NPC specialist runtime syntax validation failed ({script_name}):\n" + npc_check.stderr)
         script_target = DIST / "scripts" / script_name
         script_target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(script_source, script_target)
@@ -1494,7 +1668,7 @@ def main() -> None:
             raise SystemExit(f"Falta el módulo de diálogos NPC: {script_name}")
         dialogue_check = subprocess.run([node, "--check", str(script_source)], capture_output=True, text=True)
         if dialogue_check.returncode != 0:
-            raise SystemExit(f"NPC dialogue syntax validation failed ({script_name}):\\n" + dialogue_check.stderr)
+            raise SystemExit(f"NPC dialogue syntax validation failed ({script_name}):\n" + dialogue_check.stderr)
         script_target = DIST / "scripts" / script_name
         script_target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(script_source, script_target)
@@ -1515,7 +1689,7 @@ def main() -> None:
         )
         if module_check.returncode != 0:
             raise SystemExit(
-                f"Inspector diagnostic module syntax validation failed ({script_name}):\\n"
+                f"Inspector diagnostic module syntax validation failed ({script_name}):\n"
                 + module_check.stderr
             )
         script_target = DIST / "scripts" / script_name
@@ -1624,27 +1798,27 @@ def main() -> None:
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.313: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.315: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.313; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.315; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.313\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.315\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.313.")
-    html = html.replace("0.6.274", "0.6.313")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.315.")
+    html = html.replace("0.6.274", "0.6.315")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'30',build:'0.6.313'"
+    diagnostic_build_replacement = "reportVersion:'32',build:'0.6.315'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.313 para normalizar.")
-    game_version = "0.6.313"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.315 para normalizar.")
+    game_version = "0.6.315"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -1736,7 +1910,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   let loaded=0;
   for(let index=0;index<wildlifeSpawnSpecs.length;index++){
    const spec=wildlifeSpawnSpecs[index],modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,index,spec.homeIslandIndex);
-   if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');
+   if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');\n   wildlifeReadinessRecords.push({kind:spec.kind,state:'ready',island:spec.homeIslandIndex,meshes:animal.meshCount,skinnedVertices:animal.skinnedVertexCount,bones:animal.skeletonBoneCount,textures:animal.textureReadiness.count,textureWaitMs:animal.textureReadiness.waitedMs});
    ambientFauna.push(animal);loaded++;
    recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});
    if(index+1<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
@@ -1752,7 +1926,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    const specs=wildlifeSpawnSpecs.map((spec,sourceIndex)=>({spec,sourceIndex})).filter(item=>item.spec.kind===kind);
    for(const item of specs){
     const spec=item.spec,modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,item.sourceIndex,spec.homeIslandIndex);
-    if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');
+    if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');\n   wildlifeReadinessRecords.push({kind:spec.kind,state:'ready',island:spec.homeIslandIndex,meshes:animal.meshCount,skinnedVertices:animal.skinnedVertexCount,bones:animal.skeletonBoneCount,textures:animal.textureReadiness.count,textureWaitMs:animal.textureReadiness.waitedMs});
     ambientFauna.push(animal);loaded++;completedSpecs++;
     recordStartupTask('Fauna GLB '+spec.kind+' #'+item.sourceIndex,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});
     if(completedSpecs<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
@@ -1767,7 +1941,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    wildlifeDownloads.forEach(({kind,blob})=>{wildlifeBlobs.set(kind,blob);startupWildlifeCompressedBytes+=blob.size;});
    for(let index=0;index<wildlifeSpawnSpecs.length;index++){
     const spec=wildlifeSpawnSpecs[index],modelStarted=performance.now(),animal=await instantiateWildlifeAnimal(spec.kind,spec.x,spec.z,spec.size,index,spec.homeIslandIndex);
-    if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');
+    if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');\n   wildlifeReadinessRecords.push({kind:spec.kind,state:'ready',island:spec.homeIslandIndex,meshes:animal.meshCount,skinnedVertices:animal.skinnedVertexCount,bones:animal.skeletonBoneCount,textures:animal.textureReadiness.count,textureWaitMs:animal.textureReadiness.waitedMs});
     ambientFauna.push(animal);loaded++;
     recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});
     if(index+1<wildlifeSpawnSpecs.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
@@ -1819,7 +1993,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   }else{
    const faunaTasks=[{name:'Fauna terrestre',promise:loadWildlifeModels()}];
    if(!isPerformanceMode)faunaTasks.push({name:'Gaviotas 3D',promise:loadRiggedCoastalGulls()});
-   // No liberar la entrada por el primer fallo: el resto de tareas opcionales debe terminar también.
+   // No liberar la entrada hasta resolver todas las dependencias obligatorias del perfil.
    const faunaResults=await Promise.allSettled(faunaTasks.map(task=>task.promise));
    faunaFailures.push(...faunaResults.flatMap((result,index)=>result.status==='rejected'?[{name:faunaTasks[index].name,message:String(result.reason&&result.reason.message||result.reason)}]:[]));
   }"""
@@ -2805,8 +2979,9 @@ function flushWorldPhaseTiming(now){
  if(!worldPhaseTimingCurrent||worldPhaseTimingStartedAt<=0)return;
  const elapsed=Math.max(0,now-worldPhaseTimingStartedAt);
  let row=worldPhaseTimingStats[worldPhaseTimingCurrent];
- if(!row)row=worldPhaseTimingStats[worldPhaseTimingCurrent]={samples:0,lastMs:0,totalMs:0,meanMs:0,maxMs:0};
+ if(!row)row=worldPhaseTimingStats[worldPhaseTimingCurrent]={samples:0,lastMs:0,totalMs:0,meanMs:0,maxMs:0,samplesMs:new Float32Array(120),sampleCursor:0,sampleCount:0};
  row.samples++;row.lastMs=elapsed;row.totalMs+=elapsed;row.meanMs=row.totalMs/row.samples;row.maxMs=Math.max(row.maxMs,elapsed);
+ row.samplesMs[row.sampleCursor]=elapsed;row.sampleCursor=(row.sampleCursor+1)%row.samplesMs.length;row.sampleCount=Math.min(row.samplesMs.length,row.sampleCount+1);
 }
 function setWorldUpdatePhase(value){
  const nextPhase=String(value||'unknown');
@@ -2820,7 +2995,8 @@ function finishWorldPhaseTiming(){
 function getWorldPhaseTimingSnapshot(){
  const snapshot={};
  for(const [phase,row] of Object.entries(worldPhaseTimingStats)){
-  snapshot[phase]={samples:row.samples,lastMs:Number(row.lastMs.toFixed(3)),meanMs:Number(row.meanMs.toFixed(3)),maxMs:Number(row.maxMs.toFixed(3))};
+  const values=Array.from(row.samplesMs).slice(0,row.sampleCount).sort((a,b)=>a-b),at=p=>values.length?Number(values[Math.min(values.length-1,Math.floor((values.length-1)*p))].toFixed(3)):null;
+  snapshot[phase]={samples:row.samples,lastMs:Number(row.lastMs.toFixed(3)),meanMs:Number(row.meanMs.toFixed(3)),p50Ms:at(.50),p95Ms:at(.95),p99Ms:at(.99),maxMs:Number(row.maxMs.toFixed(3))};
  }
  return snapshot;
 }
@@ -2844,6 +3020,12 @@ function getWorldPhaseTimingSnapshot(){
     if phase_replacements != 20:
         raise SystemExit("No se pudieron instrumentar todas las transiciones de fase del mundo.")
     html = html[:phase_update_start] + phase_update_source + html[phase_update_end:]
+
+    performance_report_marker = "waterVertices:waterPositions.length/3}};"
+    performance_report_replacement = "waterVertices:waterPositions.length/3},subsystems:{worldPhases:getWorldPhaseTimingSnapshot(),atmosphere:window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getPerformanceSnapshot==='function'?window.__ELSN_ATMOSPHERE.getPerformanceSnapshot():null,npcDialogue:window.__ELSN_NPC_DIALOGUES__&&typeof window.__ELSN_NPC_DIALOGUES__.getSnapshot==='function'?window.__ELSN_NPC_DIALOGUES__.getSnapshot():null,wildlife:window.__ELSN_WILDLIFE_DIAGNOSTICS__&&typeof window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot==='function'?window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot():{requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length}}};"
+    if html.count(performance_report_marker) != 1:
+        raise SystemExit("No se encontró el objeto único del informe de rendimiento para añadir métricas por subsistema.")
+    html = html.replace(performance_report_marker, performance_report_replacement, 1)
 
     phase_flush_marker = "  lastWorldUpdateMs=performance.now()-worldUpdateStarted;"
     if html.count(phase_flush_marker) != 1:
@@ -3089,7 +3271,27 @@ function getWorldPhaseTimingSnapshot(){
         transformed_file.write_text("\n".join(transformed_inline_scripts), encoding="utf-8")
         transformed_check = subprocess.run([node, "--check", str(transformed_file)], capture_output=True, text=True)
         if transformed_check.returncode != 0:
-            raise SystemExit("JavaScript sintácticamente inválido después de aplicar las correcciones costeras:\n" + transformed_check.stderr)
+            transformed_lines = transformed_file.read_text(encoding="utf-8").splitlines()
+            error_line = None
+            for stderr_line in transformed_check.stderr.splitlines():
+                if "game-inline-transformed.js:" not in stderr_line:
+                    continue
+                match = re.search(r":(\\d+)(?::\\d+)?\\s*$", stderr_line)
+                if match:
+                    error_line = int(match.group(1))
+                    break
+            context = ""
+            if error_line is not None:
+                start_line = max(1, error_line - 12)
+                end_line = min(len(transformed_lines), error_line + 12)
+                context = "\\n--- Contexto del JavaScript transformado ---\\n" + "\\n".join(
+                    f"{line_number}: {transformed_lines[line_number - 1]}"
+                    for line_number in range(start_line, end_line + 1)
+                )
+            raise SystemExit(
+                "JavaScript sintácticamente inválido después de aplicar las correcciones costeras:\\n"
+                + transformed_check.stderr + context
+            )
     print("OK submerged seabed profile is applied once; 5 cm cross-mesh continuity audit is installed and syntax-checked.")
 
     # A tiny, unobtrusive build label matching the loading screen's muted gold typography.

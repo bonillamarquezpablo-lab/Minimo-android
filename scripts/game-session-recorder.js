@@ -346,6 +346,8 @@
       const liveAtmosphere = window.__ELSN_ATMOSPHERE;
       if (liveAtmosphere && typeof liveAtmosphere.getState === "function") {
         const state = liveAtmosphere.getState();
+        const performanceSnapshot = typeof liveAtmosphere.getPerformanceSnapshot === "function"
+          ? liveAtmosphere.getPerformanceSnapshot() : null;
         atmosphere = {
           timeOfDay: number(state.timeOfDay),
           night: number(state.night),
@@ -354,7 +356,8 @@
           weather: text(state.weather, 24),
           quality: text(state.quality, 24),
           shadowMode: text(state.shadowMode, 24),
-          visualUpdateIntervalMs: number(state.visualUpdateIntervalMs)
+          visualUpdateIntervalMs: number(state.visualUpdateIntervalMs),
+          performance: performanceSnapshot
         };
       }
     } catch (_) {}
@@ -374,10 +377,47 @@
           projectionSuccesses: number(state.projectionSuccesses),
           renderedBubbleCount: number(state.renderedBubbleCount),
           activeBubbleCount: number(state.activeBubbleCount),
+          positioningSamples: number(state.positioningSamples),
+          positioningP50Ms: number(state.positioningP50Ms),
+          positioningP95Ms: number(state.positioningP95Ms),
+          positioningP99Ms: number(state.positioningP99Ms),
+          lastPositioningMs: number(state.lastPositioningMs),
+          maxPositioningMs: number(state.maxPositioningMs),
           lastError: text(state.lastError, 220),
           projectionFailures: state.projectionFailures && typeof state.projectionFailures === "object"
             ? Object.fromEntries(Object.entries(state.projectionFailures).slice(0, 12).map(([key,value])=>[text(key,64),number(value)]))
             : {}
+        };
+      }
+    } catch (_) {}
+    let wildlife = null;
+    try {
+      const wildlifeRuntime = window.__ELSN_WILDLIFE_DIAGNOSTICS__;
+      if (wildlifeRuntime && typeof wildlifeRuntime.getSnapshot === "function") {
+        const state = wildlifeRuntime.getSnapshot();
+        wildlife = {
+          samples: number(state.samples),
+          ticks: number(state.ticks),
+          lastMs: number(state.lastMs),
+          p50Ms: number(state.p50Ms),
+          p95Ms: number(state.p95Ms),
+          p99Ms: number(state.p99Ms),
+          maxMs: number(state.maxMs),
+          requested: number(state.requested),
+          loaded: number(state.loaded),
+          complete: state.complete === true,
+          byKind: state.byKind && typeof state.byKind === "object" ? state.byKind : {},
+          readiness: Array.isArray(state.readiness) ? state.readiness.slice(-6).map(item => ({
+            kind: text(item.kind, 24),
+            state: text(item.state, 20),
+            island: number(item.island),
+            meshes: number(item.meshes),
+            skinnedVertices: number(item.skinnedVertices),
+            bones: number(item.bones),
+            textures: number(item.textures),
+            textureWaitMs: number(item.textureWaitMs),
+            error: text(item.error, 180)
+          })) : []
         };
       }
     } catch (_) {}
@@ -471,10 +511,31 @@
         habitableAuditCount: number(runtime.habitableAuditCount),
         habitableAuditLastCacheHits: number(runtime.habitableAuditLastCacheHits),
         habitableAuditLastCacheMisses: number(runtime.habitableAuditLastCacheMisses),
-        worldPhaseTimings: runtime.worldPhaseTimings && typeof runtime.worldPhaseTimings === "object" ? runtime.worldPhaseTimings : null
+        worldPhaseTimings: runtime.worldPhaseTimings && typeof runtime.worldPhaseTimings === "object" ? runtime.worldPhaseTimings : null,
+        atmosphereVisualUpdateCpu: atmosphere && atmosphere.performance ? atmosphere.performance.visualUpdate : null,
+        atmosphereDirectLightingCpu: atmosphere && atmosphere.performance ? atmosphere.performance.directLighting : null,
+        atmosphereSkyCloudCpu: atmosphere && atmosphere.performance ? atmosphere.performance.skyAndCloudUniforms : null,
+        atmosphereWaterMaterialCpu: atmosphere && atmosphere.performance ? atmosphere.performance.waterMaterial : null,
+        atmospherePostProcessingCpu: atmosphere && atmosphere.performance ? atmosphere.performance.postProcessing : null,
+        atmosphereHearthSelectionCpu: atmosphere && atmosphere.performance ? atmosphere.performance.hearthSelection : null,
+        npcDialoguePositioningCpu: npcDialogue ? {
+          samples: npcDialogue.positioningSamples,
+          p50Ms: npcDialogue.positioningP50Ms,
+          p95Ms: npcDialogue.positioningP95Ms,
+          p99Ms: npcDialogue.positioningP99Ms,
+          maxMs: npcDialogue.maxPositioningMs
+        } : null,
+        wildlifeUpdateCpu: wildlife ? {
+          samples: wildlife.samples,
+          p50Ms: wildlife.p50Ms,
+          p95Ms: wildlife.p95Ms,
+          p99Ms: wildlife.p99Ms,
+          maxMs: wildlife.maxMs
+        } : null
       },
       atmosphere,
       npcDialogue,
+      wildlife,
       playerPosition: readPlayerLocation(health),
       waterDiagnostics: readWaterDiagnostics(health)
     };
@@ -1061,6 +1122,64 @@
       cpu: { worldUpdateMedianMs: medianWorld, renderPreparationMedianMs: medianRender },
       worldPhaseHotspots,
       performanceDiagnosis,
+      optimizerPerformance: (() => {
+        const latest = latestPhaseSample || {};
+        const subs = latest.subsystems || {};
+        const scene = latest.scene || {};
+        const atm = latest.atmosphere && latest.atmosphere.performance || {};
+        const fauna = latest.wildlife || {};
+        const dialogue = latest.npcDialogue || {};
+        const metric = value => value && typeof value === "object" ? {
+          samples: number(value.samples), lastMs: number(value.lastMs),
+          p50Ms: number(value.p50Ms), p95Ms: number(value.p95Ms),
+          p99Ms: number(value.p99Ms), maxMs: number(value.maxMs)
+        } : null;
+        return {
+          spatialSelection: {
+            enabled: scene.meshSelectionOctreeEnabled === true,
+            buildMs: number(scene.meshSelectionBuildMs),
+            dynamicFilterAverageMs: number(scene.meshSelectionDynamicFilterAverageMs),
+            dynamicFilterMaxMs: number(scene.meshSelectionDynamicFilterMaxMs),
+            candidates: number(scene.meshSelectionDynamicFilterCandidates),
+            selected: number(scene.meshSelectionDynamicFilterSelected),
+            culled: number(scene.meshSelectionDynamicFilterCulled),
+            cullRatio: number(scene.meshSelectionDynamicFilterCullRatio)
+          },
+          waterAndReflections: {
+            updateMs: number(subs.waterUpdateMs), normalMs: number(subs.waterNormalMs),
+            reflectionMeshes: number(subs.waterReflectionMeshes),
+            reflectionRefreshHz: number(subs.waterReflectionRefreshRate)
+          },
+          vegetationBatching: {
+            instances: number(subs.grassInstances), batches: number(subs.grassBatches)
+          },
+          shadowCasterManagement: { activeCasters: number(subs.activeWorldShadowCasters) },
+          atmosphere: {
+            visual: metric(atm.visualUpdate), directLighting: metric(atm.directLighting),
+            skyAndClouds: metric(atm.skyAndCloudUniforms), hearthSelection: metric(atm.hearthSelection),
+            waterMaterial: metric(atm.waterMaterial), postProcessing: metric(atm.postProcessing)
+          },
+          wildlife: {
+            update: { samples: number(fauna.samples), p50Ms: number(fauna.p50Ms),
+              p95Ms: number(fauna.p95Ms), p99Ms: number(fauna.p99Ms), maxMs: number(fauna.maxMs) },
+            requested: number(fauna.requested), loaded: number(fauna.loaded),
+            complete: fauna.complete === true, readiness: Array.isArray(fauna.readiness) ? fauna.readiness : []
+          },
+          npcDialogue: {
+            positioning: { samples: number(dialogue.positioningSamples),
+              p50Ms: number(dialogue.positioningP50Ms), p95Ms: number(dialogue.positioningP95Ms),
+              p99Ms: number(dialogue.positioningP99Ms), maxMs: number(dialogue.maxPositioningMs) },
+            projectionAttempts: number(dialogue.projectionAttempts),
+            projectionSuccesses: number(dialogue.projectionSuccesses)
+          },
+          minimap: { lastMs: number(subs.mapDrawMs), maxMs: number(subs.mapDrawMaxMs),
+            samples: number(subs.mapDrawSampleCount) },
+          structureAuditCache: { lastMs: number(subs.habitableAuditMs),
+            maxMs: number(subs.habitableAuditMaxMs), cacheHits: number(subs.habitableAuditLastCacheHits),
+            cacheMisses: number(subs.habitableAuditLastCacheMisses) },
+          worldPhases: phaseCosts
+        };
+      })(),
       startupScriptLoads: startupScriptLoadSummary,
       mapRendering: {
         lastMs: latestPhaseSample ? number(latestPhaseSample.subsystems.mapDrawMs) : null,

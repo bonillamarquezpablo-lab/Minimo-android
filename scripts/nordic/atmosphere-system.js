@@ -36,12 +36,13 @@
 
   function computeLightingProfile(state, target) {
     const profile = target || {};
-    // Preserve the dark Nordic sky while lifting terrain and character readability.
-    profile.hemisphereIntensity = 0.54 + 0.72 * state.daylight + 0.24 * state.twilight + 0.24 * state.night;
-    profile.moonIntensity = 0.28 * state.night;
-    profile.environmentIntensity = 0.30 + 0.42 * state.daylight + 0.18 * state.twilight + 0.24 * state.night;
-    profile.exposure = 1.10 + 0.08 * state.daylight + 0.14 * state.twilight + 0.20 * state.night;
-    profile.contrast = mix(1.045, 1.00, state.night);
+    // Keep daylight readable, but let twilight and moonlight regain real night contrast.
+    // The previous ambient floor/exposure flattened the sky and illuminated the whole world at midnight.
+    profile.hemisphereIntensity = 0.22 + 0.72 * state.daylight + 0.17 * state.twilight + 0.06 * state.night;
+    profile.moonIntensity = 0.34 * state.night;
+    profile.environmentIntensity = 0.20 + 0.44 * state.daylight + 0.10 * state.twilight + 0.08 * state.night;
+    profile.exposure = 1.00 + 0.05 * state.daylight + 0.07 * state.twilight + 0.015 * state.night;
+    profile.contrast = mix(1.07, 1.13, state.night);
     return profile;
   }
 
@@ -139,6 +140,8 @@
       this.camera = o.camera;
       this.engine = o.engine;
       this.sunLight = o.sunLight;
+      // One directional source is reused for sunlight and moonlight; it never swaps shader light slots at dusk.
+      if (this.sunLight && typeof this.sunLight.setEnabled === 'function') this.sunLight.setEnabled(true);
       this.hemiLight = o.hemiLight;
       this.skyDome = o.skyDome;
       this.sunDisc = o.sunDisc;
@@ -165,10 +168,22 @@
       this.paused = false;
       this.weather = 'clear';
       this.elapsedSeconds = 0;
+      // Unscaled wall-clock for maintenance cadence and hearth flicker when the solar clock is paused.
+      this._realElapsedSeconds = 0;
+      this._performanceSamples = {
+        visual: new Float32Array(120), visualCursor: 0, visualCount: 0, visualLastMs: 0, visualMaxMs: 0,
+        fire: new Float32Array(120), fireCursor: 0, fireCount: 0, fireLastMs: 0, fireMaxMs: 0,
+        directLight: new Float32Array(120), directLightCursor: 0, directLightCount: 0, directLightLastMs: 0, directLightMaxMs: 0,
+        sky: new Float32Array(120), skyCursor: 0, skyCount: 0, skyLastMs: 0, skyMaxMs: 0,
+        water: new Float32Array(120), waterCursor: 0, waterCount: 0, waterLastMs: 0, waterMaxMs: 0,
+        post: new Float32Array(120), postCursor: 0, postCount: 0, postLastMs: 0, postMaxMs: 0,
+        hearthMeshes: 0, hearthRefreshes: 0
+      };
       this.windStrength = 1;
       this.baseFogDensity = Number(this.scene.fogDensity) || 0.00058;
       this.fogClimate = 'fjord';
       this.lastFirePoolUpdate = -10;
+      this._firePoolNightActive = false;
       this.lastState = null;
       this.moonLight = null;
       this.moonDisc = null;
@@ -181,6 +196,7 @@
       this.ssaoPipeline = null;
       this.ssrPipeline = null;
       this.firePool = [];
+      this._fireFallbackMeshes = this.skyDome ? [this.skyDome] : [];
       // The solar clock keeps advancing every frame; expensive material/light writes are
       // coalesced to a stable cadence. This keeps night effects without per-frame overhead.
       this._visualUpdateAccumulator = 0;
@@ -198,6 +214,10 @@
       this._moonPoint = new this.B.Vector3(0, 0, 0);
       this._sunColor = new this.B.Color3(1, 0.94, 0.82);
       this._sunSpecularColor = new this.B.Color3(0.96, 0.91, 0.78);
+      this._moonDirectColor = new this.B.Color3(0.48, 0.60, 0.82);
+      this._moonDirectSpecularColor = new this.B.Color3(0.30, 0.38, 0.58);
+      this._directColor = new this.B.Color3(1, 1, 1);
+      this._directSpecularColor = new this.B.Color3(1, 1, 1);
       this._coolNightColor = new this.B.Color3(0.31, 0.39, 0.55);
       this._dayAmbientColor = new this.B.Color3(0.72, 0.82, 0.92);
       this._nightGroundColor = new this.B.Color3(0.145, 0.165, 0.205);
@@ -274,6 +294,42 @@
       this.update(0, true);
       return this.getState();
     }
+    _recordPerformanceSample(kind, durationMs) {
+      const perf = this._performanceSamples;
+      const value = Number.isFinite(durationMs) ? Math.max(0, durationMs) : 0;
+      const cursorKey = kind + 'Cursor', countKey = kind + 'Count', lastKey = kind + 'LastMs', maxKey = kind + 'MaxMs';
+      const samples = perf[kind];
+      samples[perf[cursorKey]] = value;
+      perf[cursorKey] = (perf[cursorKey] + 1) % samples.length;
+      perf[countKey] = Math.min(samples.length, perf[countKey] + 1);
+      perf[lastKey] = Number(value.toFixed(3));
+      perf[maxKey] = Math.max(perf[maxKey], value);
+    }
+
+    getPerformanceSnapshot() {
+      const perf = this._performanceSamples;
+      const summarize = kind => {
+        const count = perf[kind + 'Count'], samples = perf[kind], values = [];
+        for (let i = 0; i < count; i++) values.push(samples[i]);
+        values.sort((a, b) => a - b);
+        const percentile = p => values.length
+          ? Number(values[Math.min(values.length - 1, Math.floor((values.length - 1) * p))].toFixed(3))
+          : null;
+        return { samples: count, lastMs: perf[kind + 'LastMs'], p50Ms: percentile(.50), p95Ms: percentile(.95), p99Ms: percentile(.99), maxMs: Number(perf[kind + 'MaxMs'].toFixed(3)) };
+      };
+      return {
+        visualUpdate: summarize('visual'),
+        hearthSelection: summarize('fire'),
+        directLighting: summarize('directLight'),
+        skyAndCloudUniforms: summarize('sky'),
+        waterMaterial: summarize('water'),
+        postProcessing: summarize('post'),
+        hearthMeshesLastRefresh: perf.hearthMeshes,
+        hearthRefreshes: perf.hearthRefreshes,
+        visualUpdateIntervalMs: Number((this._visualUpdateInterval * 1000).toFixed(2))
+      };
+    }
+
     getState() {
       const s = this.lastState || computeSolarState(this.timeOfDay);
       return {
@@ -334,35 +390,55 @@
           'void main(void) {',
           '  vec3 dir = normalize(vAtmosphereDirection);',
           '  float h = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);',
-          '  float horizon = pow(h, 0.72);',
-          '  vec3 dayZenith = vec3(0.055, 0.205, 0.345);',
-          '  vec3 dayHorizon = vec3(0.48, 0.66, 0.70);',
-          '  vec3 duskZenith = vec3(0.075, 0.105, 0.205);',
-          '  vec3 duskHorizon = vec3(0.92, 0.30, 0.16);',
-          '  vec3 nightZenith = vec3(0.004, 0.010, 0.030);',
-          '  vec3 nightHorizon = vec3(0.018, 0.035, 0.075);',
+          '  float horizon = smoothstep(0.02, 0.96, h);',
+          '  vec3 dayZenith = vec3(0.045, 0.145, 0.285);',
+          '  vec3 dayHorizon = vec3(0.30, 0.43, 0.52);',
+          '  vec3 nightZenith = vec3(0.0025, 0.006, 0.018);',
+          '  vec3 nightHorizon = vec3(0.012, 0.022, 0.042);',
           '  vec3 daySky = mix(dayHorizon, dayZenith, horizon);',
-          '  vec3 duskSky = mix(duskHorizon, duskZenith, horizon);',
           '  vec3 nightSky = mix(nightHorizon, nightZenith, horizon);',
           '  vec3 sky = mix(nightSky, daySky, dayFactor);',
-          '  sky = mix(sky, duskSky, twilightFactor * 0.92);',
-          '  float sunDot = max(dot(dir, normalize(sunDirection)), 0.0);',
-          '  float aureole = pow(sunDot, 18.0) * (0.14 + twilightFactor * 0.35);',
-          '  float sunGlow = pow(sunDot, 90.0) * (0.22 + twilightFactor * 0.78);',
-          '  sky += sunColor * (aureole + sunGlow) * dayFactor;',
+          '  float mu = clamp(dot(dir, normalize(sunDirection)), -1.0, 1.0);',
+          '  float sunElevation = clamp(sunDirection.y, -1.0, 1.0);',
+          '  float viewElevation = max(dir.y, 0.0);',
+          '  float airMass = clamp(1.0 / max(0.085, viewElevation + 0.10), 1.0, 8.0);',
+          '  float sunAirMass = clamp(1.0 / max(0.085, max(sunElevation, 0.0) + 0.10), 1.0, 8.0);',
+          '  float rayleighPhase = 0.75 * (1.0 + mu * mu);',
+          '  float mieG = 0.76;',
+          '  float mieDenominator = pow(max(0.03, 1.0 + mieG * mieG - 2.0 * mieG * mu), 1.5);',
+          '  float miePhase = (1.0 - mieG * mieG) / (12.56637 * mieDenominator);',
+          '  vec3 rayleighBeta = vec3(0.045, 0.11, 0.24);',
+          '  vec3 rayleighTransmittance = exp(-rayleighBeta * airMass);',
+          '  vec3 sunTransmittance = exp(-rayleighBeta * sunAirMass);',
+          '  vec3 rayleighScatter = (vec3(1.0) - rayleighTransmittance) * sunTransmittance * vec3(0.18, 0.46, 1.0) * rayleighPhase;',
+          '  float aerosolPath = 1.0 - exp(-airMass * 0.10);',
+          '  vec3 aerosolTint = mix(vec3(0.84, 0.54, 0.38), vec3(0.72, 0.84, 1.0), smoothstep(-0.14, 0.22, sunElevation));',
+          '  float atmosphericDaylight = max(dayFactor, twilightFactor * 0.22);',
+          '  sky *= mix(vec3(0.92), rayleighTransmittance, dayFactor * 0.52);',
+          '  sky += rayleighScatter * atmosphericDaylight * 0.42;',
+          '  sky += aerosolTint * miePhase * aerosolPath * atmosphericDaylight * (0.018 + twilightFactor * 0.035) * sunTransmittance;',
+          '  float upperAtmosphere = smoothstep(-0.18, 0.42, sunElevation);',
+          '  vec2 horizontalDir = normalize(dir.xz + vec2(0.00001));',
+          '  vec2 sunHorizontal = normalize(sunDirection.xz + vec2(0.00001));',
+          '  float sunAzimuth = pow(max(dot(horizontalDir, sunHorizontal), 0.0), 6.0);',
+          '  float horizonDensity = exp(-abs(dir.y) * 5.2);',
+          '  float sunsetAlignment = horizonDensity * sunAzimuth * twilightFactor * (1.0 - smoothstep(-0.10, 0.22, sunElevation));',
+          '  sky += vec3(0.94, 0.48, 0.30) * sunsetAlignment * 0.12;',
+          '  float aureole = pow(max(mu, 0.0), 18.0) * (0.022 + twilightFactor * 0.035);',
+          '  float sunGlow = pow(max(mu, 0.0), 110.0) * (0.18 + twilightFactor * 0.28);',
+          '  sky += sunColor * sunTransmittance * (aureole + sunGlow) * upperAtmosphere * (0.45 + dayFactor * 0.55);',
           '  vec2 uvA = vec2(vAtmosphereUV.x + uTime * 0.000012, vAtmosphereUV.y);',
           '  vec2 uvB = vec2(vAtmosphereUV.x * 1.72 - uTime * 0.000021, vAtmosphereUV.y * 1.18 + uTime * 0.000006);',
           '  float cloud1 = texture2D(cloudLayerA, uvA).a;',
           '  float cloud2 = texture2D(cloudLayerB, uvB).a;',
           '  float clouds = clamp(cloud1 * 0.76 + cloud2 * 0.24, 0.0, 1.0) * cloudCoverage;',
-          '  float silverEdge = pow(max(0.0, dot(dir, normalize(sunDirection))), 2.2);',
-          '  vec3 dayCloud = mix(vec3(0.28, 0.34, 0.39), vec3(0.82, 0.88, 0.88), dayFactor);',
-          '  dayCloud = mix(dayCloud, sunColor * 0.95 + vec3(0.12, 0.035, 0.012), twilightFactor * 0.58);',
-          '  vec3 nightCloud = vec3(0.035, 0.055, 0.085);',
-          '  vec3 cloudColor = mix(nightCloud, dayCloud, dayFactor + twilightFactor * 0.20);',
-          '  cloudColor = mix(cloudColor, vec3(0.17, 0.20, 0.25), stormFactor * 0.76);',
-          '  cloudColor += sunColor * silverEdge * (0.12 + twilightFactor * 0.18) * (1.0 - stormFactor);',
-          '  sky = mix(sky, cloudColor, clouds * (0.38 + 0.42 * (1.0 - stormFactor)));',
+          '  float silverEdge = pow(max(mu, 0.0), 2.8);',
+          '  float cloudTopLight = 0.22 + 0.62 * dayFactor + 0.20 * twilightFactor;',
+          '  vec3 dayCloud = mix(vec3(0.045, 0.060, 0.085), vec3(0.62, 0.69, 0.73), dayFactor);',
+          '  vec3 cloudColor = mix(vec3(0.020, 0.030, 0.050), dayCloud, dayFactor + twilightFactor * 0.14);',
+          '  cloudColor = mix(cloudColor, vec3(0.075, 0.085, 0.105), stormFactor * 0.70);',
+          '  cloudColor += sunColor * silverEdge * cloudTopLight * (1.0 - stormFactor) * 0.22;',
+          '  sky = mix(sky, cloudColor, clouds * (0.32 + 0.40 * (1.0 - stormFactor)));',
           '  vec4 starSample = texture2D(starsMap, vAtmosphereUV);',
           '  sky += starSample.rgb * starSample.a * nightFactor * (1.0 - stormFactor * 0.72) * 1.35;',
           '  float auroraWave = 0.22 + 0.055 * sin(dir.x * 10.0 + uTime * 0.075) + 0.022 * sin(dir.x * 23.0 - uTime * 0.11);',
@@ -370,8 +446,8 @@
           '  float auroraRibbons = 0.55 + 0.45 * sin(dir.x * 18.0 + uTime * 0.10);',
           '  vec3 auroraColor = mix(vec3(0.10, 0.58, 0.37), vec3(0.12, 0.42, 0.72), 0.5 + 0.5 * sin(dir.x * 4.0 + uTime * 0.04));',
           '  sky += auroraColor * auroraBand * auroraRibbons * auroraStrength * nightFactor * (1.0 - stormFactor);',
-          '  float horizonGlow = exp(-abs(dir.y) * 8.0) * twilightFactor * 0.13;',
-          '  sky += vec3(0.98, 0.39, 0.16) * horizonGlow;',
+          '  float horizonGlow = exp(-abs(dir.y) * 6.0) * twilightFactor * sunAzimuth * 0.035;',
+          '  sky += sunColor * vec3(0.28, 0.13, 0.07) * horizonGlow;',
           '  gl_FragColor = vec4(max(sky, vec3(0.0)), 1.0);',
           '}'
         ].join('\n');
@@ -453,17 +529,13 @@
       const B = this.B, scene = this.scene;
       if (!B || !scene) return;
       try {
-        this.moonLight = new B.DirectionalLight('NorseMoonDirectionalLight',
-          new B.Vector3(0, 1, 0), scene);
-        this.moonLight.diffuse = new B.Color3(0.48, 0.60, 0.82);
-        this.moonLight.specular = new B.Color3(0.30, 0.38, 0.58);
-        this.moonLight.intensity = 0;
-        this.moonLight.setEnabled(false);
+        // Lunar direct illumination reuses sunLight so the scene keeps one stable directional-light shader slot.
 
         if (this.skyDome && B.MeshBuilder && B.StandardMaterial) {
           this.moonDisc = B.MeshBuilder.CreateSphere('NorseMoonDisc', { diameter: 17, segments: 24 }, scene);
           this.moonDisc.parent = this.skyDome;
           this.moonDisc.isPickable = false;
+          this.moonDisc.setEnabled(true);
           const moonMaterial = new B.StandardMaterial('NorseMoonMaterial', scene);
           moonMaterial.disableLighting = true;
           moonMaterial.emissiveColor = new B.Color3(0.50, 0.62, 0.86);
@@ -474,6 +546,7 @@
           this.moonHalo = B.MeshBuilder.CreateSphere('NorseMoonHalo', { diameter: 37, segments: 20 }, scene);
           this.moonHalo.parent = this.skyDome;
           this.moonHalo.isPickable = false;
+          this.moonHalo.setEnabled(true);
           const halo = new B.StandardMaterial('NorseMoonHaloMaterial', scene);
           halo.disableLighting = true;
           halo.emissiveColor = new B.Color3(0.25, 0.36, 0.60);
@@ -638,65 +711,119 @@
         light.specular = new B.Color3(1.0, 0.30, 0.08);
         light.range = 11.5;
         light.intensity = 0;
-        light.setEnabled(false);
+        light.includedOnlyMeshes = this._fireFallbackMeshes;
+        // Keep the two point-light slots registered for the entire solar cycle.
+        // Intensity and local mesh membership change; the shader variant never toggles.
+        light.setEnabled(true);
         this.firePool.push({ light, source: null, phase: i * 2.17 });
       }
     }
 
+    _collectHearthMeshes(hearth) {
+      const scene = this.scene;
+      if (!scene) return [];
+      // Use Babylon's already-culled active list: no forced world-matrix rebuild or
+      // full 13-island mesh scan while the player is moving between hearths.
+      // The hearth's bounded influence set is static; do not rebuild it from the camera-culled list.
+      const source = Array.isArray(scene.meshes) ? scene.meshes : [];
+      const included = [];
+      const lightX = Number(hearth.x) || 0;
+      const lightY = (Number(hearth.floorY) || 0) + 1.0;
+      const lightZ = Number(hearth.z) || 0;
+      const range = 11.5;
+      for (const mesh of source) {
+        if (!mesh || (typeof mesh.isDisposed === 'function' && mesh.isDisposed())) continue;
+        if (typeof mesh.isEnabled === 'function' && !mesh.isEnabled()) continue;
+        if (mesh.isVisible === false || (Number.isFinite(mesh.visibility) && mesh.visibility <= 0.001)) continue;
+        if (!mesh.material || mesh.material.disableLighting === true) continue;
+        const bounds = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
+        const sphere = bounds && bounds.boundingSphere;
+        const center = sphere && sphere.centerWorld;
+        if (!center) continue;
+        const extent = Math.max(0, Number(sphere.radiusWorld) || 0);
+        const dx = center.x - lightX, dy = center.y - lightY, dz = center.z - lightZ;
+        const reach = range + extent;
+        if (dx * dx + dy * dy + dz * dz <= reach * reach) included.push(mesh);
+      }
+      return included;
+    }
+
     _updateFirePool(state, focus) {
       if (!this.firePool.length) return;
-      const now = this.elapsedSeconds;
-      const nightOn = state.night > 0.18;
-      if (now - this.lastFirePoolUpdate < 0.28 && nightOn) {
+      const started = performance.now();
+      const now = this._realElapsedSeconds;
+      const selectionDue = now - this.lastFirePoolUpdate >= 0.75;
+      if (!selectionDue) {
         for (const slot of this.firePool) {
-          if (slot.source && !slot.source.extinguished) {
-            slot.light.intensity = (0.54 + Math.sin(now * 8.2 + slot.phase) * 0.12) * state.night;
-          }
+          const hearth = slot.source;
+          const activeNight = state.night > 0.18 && hearth && !hearth.extinguished;
+          slot.light.intensity = activeNight
+            ? (0.54 + Math.sin(now * 8.2 + slot.phase) * 0.12) * state.night
+            : 0;
         }
+        this._recordPerformanceSample('fire', performance.now() - started);
         return;
       }
+
+      // Select nearby hearths in daylight, so dusk only changes light energy.
       this.lastFirePoolUpdate = now;
       const candidates = this._fireCandidates;
       for (const candidate of candidates) { candidate.h = null; candidate.d2 = Infinity; }
-      if (nightOn) {
-        const maxDistanceSquared = 52 * 52;
-        for (const h of this.fireHearths) {
-          if (!h || h.extinguished) continue;
-          const dx = h.x - focus.x, dz = h.z - focus.z, d2 = dx * dx + dz * dz;
-          if (d2 >= maxDistanceSquared) continue;
-          let insertAt = -1;
-          for (let i = 0; i < candidates.length; i++) {
-            if (d2 < candidates[i].d2) { insertAt = i; break; }
-          }
-          if (insertAt < 0) continue;
-          for (let i = candidates.length - 1; i > insertAt; i--) {
-            candidates[i].h = candidates[i - 1].h;
-            candidates[i].d2 = candidates[i - 1].d2;
-          }
-          candidates[insertAt].h = h;
-          candidates[insertAt].d2 = d2;
+      const maxDistanceSquared = 52 * 52;
+      for (const hearth of this.fireHearths) {
+        if (!hearth || hearth.extinguished) continue;
+        const dx = hearth.x - focus.x, dz = hearth.z - focus.z, d2 = dx * dx + dz * dz;
+        if (d2 >= maxDistanceSquared) continue;
+        let insertAt = -1;
+        for (let i = 0; i < candidates.length; i++) {
+          if (d2 < candidates[i].d2) { insertAt = i; break; }
         }
+        if (insertAt < 0) continue;
+        for (let i = candidates.length - 1; i > insertAt; i--) {
+          candidates[i].h = candidates[i - 1].h;
+          candidates[i].d2 = candidates[i - 1].d2;
+        }
+        candidates[insertAt].h = hearth;
+        candidates[insertAt].d2 = d2;
       }
+
       for (let i = 0; i < this.firePool.length; i++) {
         const slot = this.firePool[i], candidate = candidates[i].h ? candidates[i] : null;
+        const light = slot.light;
         if (!candidate) {
-          slot.source = null;
-          slot.light.intensity = 0;
-          slot.light.setEnabled(false);
+          if (slot.source !== null) {
+            slot.source = null;
+            light.includedOnlyMeshes = this._fireFallbackMeshes;
+            this._performanceSamples.hearthMeshes = this._fireFallbackMeshes.length;
+            this._performanceSamples.hearthRefreshes++;
+          }
+          light.intensity = 0;
           continue;
         }
-        const h = candidate.h;
-        slot.source = h;
-        slot.light.position.set(h.x, h.floorY + 1.0, h.z);
-        slot.light.range = 11.5;
-        slot.light.intensity = 0.56 * state.night;
-        slot.light.setEnabled(true);
+        const hearth = candidate.h;
+        // The visible influence list is recalculated only when this slot changes hearth.
+        // It is not rebuilt from Babylon's camera-culled active list every 750 ms.
+        if (slot.source !== hearth) {
+          slot.source = hearth;
+          light.position.set(hearth.x, hearth.floorY + 1.0, hearth.z);
+          const nextMeshes = this._collectHearthMeshes(hearth);
+          light.includedOnlyMeshes = nextMeshes.length ? nextMeshes : this._fireFallbackMeshes;
+          this._performanceSamples.hearthMeshes = nextMeshes.length;
+          this._performanceSamples.hearthRefreshes++;
+        }
+        const activeNight = state.night > 0.18 && !hearth.extinguished;
+        light.intensity = activeNight
+          ? (0.54 + Math.sin(now * 8.2 + slot.phase) * 0.12) * state.night
+          : 0;
       }
+      this._recordPerformanceSample('fire', performance.now() - started);
     }
+
 
     update(dt, force) {
       if (this.disposed || !this.scene) return null;
       const delta = clamp(Number(dt) || 0, 0, 0.10);
+      this._realElapsedSeconds += delta;
       if (!this.paused && delta > 0) {
         this.timeOfDay = AtmosphereSystem.advanceTime(
           this.timeOfDay, delta * this.speed, this.dayDurationSeconds, 1);
@@ -708,6 +835,7 @@
       }
       this._visualUpdateAccumulator = force === true ? 0 :
         this._visualUpdateAccumulator % this._visualUpdateInterval;
+      const visualStarted = performance.now();
       const B = this.B;
       const state = computeSolarState(this.timeOfDay, this._solarState);
       const lighting = computeLightingProfile(state, this._lightingProfile);
@@ -726,34 +854,41 @@
       sunColor.g = mix(0.985, 0.50, state.twilight);
       sunColor.b = mix(0.91, 0.29, state.twilight);
 
+      const directLightStarted = performance.now();
+      // Sun and moon share one permanent directional slot: only direction, colour and intensity move through the day.
+      // A single permanent directional slot makes a smooth solar-to-lunar hand-off.
+      // The small perpendicular arc avoids a 180° direction flip at the day/night boundary.
+      const lunarBlend = smooth(0.18, 0.82, state.night);
+      const handoffAngle = Math.PI * lunarBlend;
+      const handoffCos = Math.cos(handoffAngle), handoffSin = Math.sin(handoffAngle);
+      let directX = -sun.x * handoffCos - sun.y * handoffSin;
+      let directY = -sun.y * handoffCos + sun.x * handoffSin;
+      let directZ = -sun.z * handoffCos;
+      const directLength = Math.hypot(directX, directY, directZ) || 1;
+      directX /= directLength; directY /= directLength; directZ /= directLength;
       if (this.sunLight) {
-        this.sunLight.direction.x = -sun.x;
-        this.sunLight.direction.y = -sun.y;
-        this.sunLight.direction.z = -sun.z;
+        this.sunLight.direction.x = directX;
+        this.sunLight.direction.y = directY;
+        this.sunLight.direction.z = directZ;
         if (focus && this.sunLight.position) {
-          this._lightPosition.x = focus.x + sun.x * 180;
-          this._lightPosition.y = focus.y + sun.y * 180;
-          this._lightPosition.z = focus.z + sun.z * 180;
+          this._lightPosition.x = focus.x - directX * 180;
+          this._lightPosition.y = focus.y - directY * 180;
+          this._lightPosition.z = focus.z - directZ * 180;
           this.sunLight.position.copyFrom(this._lightPosition);
         }
-        this.sunLight.diffuse.copyFrom(sunColor);
-        this.sunLight.specular.copyFrom(this._sunSpecularColor);
-        this.sunLight.intensity = 1.42 * state.daylight * (0.36 + 0.64 * smooth(0.0, 0.54, state.altitude));
-        this.sunLight.setEnabled(state.daylight >= state.night && state.daylight > 0.012);
-      }
-
-      if (this.moonLight) {
-        this.moonLight.direction.x = sun.x;
-        this.moonLight.direction.y = sun.y;
-        this.moonLight.direction.z = sun.z;
-        if (focus && this.moonLight.position) {
-          this._lightPosition.x = focus.x - sun.x * 150;
-          this._lightPosition.y = focus.y - sun.y * 150;
-          this._lightPosition.z = focus.z - sun.z * 150;
-          this.moonLight.position.copyFrom(this._lightPosition);
-        }
-        this.moonLight.intensity = lighting.moonIntensity * (1 - storm * 0.48);
-        this.moonLight.setEnabled(state.night > state.daylight && state.night > 0.025);
+        const directColor = this._directColor;
+        directColor.r = mix(sunColor.r, this._moonDirectColor.r, lunarBlend);
+        directColor.g = mix(sunColor.g, this._moonDirectColor.g, lunarBlend);
+        directColor.b = mix(sunColor.b, this._moonDirectColor.b, lunarBlend);
+        const directSpecular = this._directSpecularColor;
+        directSpecular.r = mix(this._sunSpecularColor.r, this._moonDirectSpecularColor.r, lunarBlend);
+        directSpecular.g = mix(this._sunSpecularColor.g, this._moonDirectSpecularColor.g, lunarBlend);
+        directSpecular.b = mix(this._sunSpecularColor.b, this._moonDirectSpecularColor.b, lunarBlend);
+        this.sunLight.diffuse.copyFrom(directColor);
+        this.sunLight.specular.copyFrom(directSpecular);
+        const sunIntensity = 1.42 * state.daylight * (0.36 + 0.64 * smooth(0.0, 0.54, state.altitude));
+        const moonIntensity = lighting.moonIntensity * (1 - storm * 0.48);
+        this.sunLight.intensity = mix(sunIntensity, moonIntensity, lunarBlend);
       }
 
       if (this.hemiLight) {
@@ -792,7 +927,9 @@
       this._clearColor.b = fogColor.b * 0.78;
       this._clearColor.a = 1;
       this.scene.clearColor.copyFrom(this._clearColor);
+      this._recordPerformanceSample('directLight', performance.now() - directLightStarted);
 
+      const skyStarted = performance.now();
       if (this.sunDisc && this.sunHalo) {
         const visible = clamp(state.daylight * 0.88 + state.twilight * 0.36, 0, 1);
         const point = this._sunPoint;
@@ -823,8 +960,6 @@
         this.moonHalo.position.copyFrom(this._lightPosition);
         this.moonDisc.visibility = visible;
         this.moonHalo.visibility = visible;
-        this.moonDisc.setEnabled(visible > 0.025);
-        this.moonHalo.setEnabled(visible > 0.025);
         if (this.moonDisc.material) this.moonDisc.material.alpha = visible;
         if (this.moonHalo.material) this.moonHalo.material.alpha = 0.09 * visible;
       }
@@ -853,6 +988,9 @@
         this.cloudB.uOffset = (-this.elapsedSeconds * 0.000038 * this.windStrength) % 1;
         this.cloudB.vOffset = (this.elapsedSeconds * 0.000012) % 1;
       }
+      this._recordPerformanceSample('sky', performance.now() - skyStarted);
+
+      const postStarted = performance.now();
       if (this.renderPipeline && this.renderPipeline.imageProcessing) {
         this.renderPipeline.imageProcessing.exposure = lighting.exposure;
         this.renderPipeline.imageProcessing.contrast = lighting.contrast;
@@ -861,6 +999,9 @@
         this.scene.imageProcessingConfiguration.exposure = lighting.exposure;
         this.scene.imageProcessingConfiguration.contrast = lighting.contrast;
       }
+      this._recordPerformanceSample('post', performance.now() - postStarted);
+
+      const waterStarted = performance.now();
       if (this.waterMaterial) {
         const waterColor = this._waterColor;
         waterColor.r = mix(this._waterNightColor.r, this._waterDayColor.r, state.daylight);
@@ -881,6 +1022,8 @@
           this.waterMaterial.diffuseFresnelParameters.rightColor.copyFrom(this._waterDiffuseColor);
         }
       }
+      this._recordPerformanceSample('water', performance.now() - waterStarted);
+
       if (this.windowMaterial && this.windowMaterial.emissiveColor) {
         const glow = 0.08 + state.night * 0.52;
         this._windowGlowColor.r = 0.8 * glow;
@@ -896,6 +1039,7 @@
         this.godRays.density = rayActive ? 0.72 + rayFactor * 0.18 : 0;
       }
       this._updateFirePool(state, focus || this._fallbackFocus);
+      this._recordPerformanceSample('visual', performance.now() - visualStarted);
       this.lastState = state;
       return this.getState();
     }

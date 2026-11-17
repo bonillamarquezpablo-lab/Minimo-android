@@ -21,9 +21,15 @@ const duskLighting = Atmosphere.computeLightingProfile(18);
 const deepNightLighting = Atmosphere.computeLightingProfile(0);
 const reusableState = { sunDirection: { x: 0, y: 0, z: 0 } };
 assert.equal(Atmosphere.computeSolarState(12, reusableState), reusableState, 'Solar state must support allocation-free updates.');
-assert.ok(duskLighting.hemisphereIntensity >= 0.78 && duskLighting.exposure >= 1.22, 'Sunset must keep settlement materials readable without flattening the dusk palette.');
-assert.ok(deepNightLighting.hemisphereIntensity >= 0.76, 'Night ambient fill must preserve terrain and tree silhouettes.');
-assert.ok(deepNightLighting.environmentIntensity >= 0.53 && deepNightLighting.exposure >= 1.29, 'Night image-based light and exposure must preserve readable architecture.');
+assert.ok(duskLighting.hemisphereIntensity >= 0.56 && duskLighting.hemisphereIntensity <= 0.70 &&
+  duskLighting.exposure >= 1.06 && duskLighting.exposure <= 1.12,
+  'Dusk must lower ambient fill/exposure enough to preserve atmospheric sky contrast while keeping terrain readable.');
+assert.ok(deepNightLighting.hemisphereIntensity >= 0.26 && deepNightLighting.hemisphereIntensity <= 0.30,
+  'Night ambient fill must remain low enough for silhouettes and moonlight to read naturally.');
+assert.ok(deepNightLighting.moonIntensity >= 0.33 && deepNightLighting.environmentIntensity >= 0.25 &&
+  deepNightLighting.environmentIntensity <= 0.31 && deepNightLighting.exposure >= 1.00 &&
+  deepNightLighting.exposure <= 1.04,
+  'Night must be lit by the moon and a restrained environment, not broad high-exposure ambient light.');
 
 assert.ok(Math.abs(dawn.altitude) < 1e-6, 'Sunrise must occur at the horizon');
 assert.ok(noon.altitude > 0.99, 'The sun must reach a high noon position');
@@ -55,15 +61,23 @@ for (const marker of [
   'norseSunSurfaceVertexShader',
   'norseSunSurfaceFragmentShader',
   'NorseSunSurfaceMaterial',
+  'sunAirMass',
+  'rayleighBeta',
+  'sunTransmittance',
   'limbDarkening',
   'granulationA',
-  'NorseMoonDirectionalLight',
+  'this._moonDirectColor',
+  'this._moonDirectSpecularColor',
   'setWeather(value)',
   'setClimate(value)'
 ]) {
   assert.ok(source.includes(marker), 'Atmosphere module is missing: ' + marker);
 }
-assert.ok(source.includes('this.sunLight.direction.x = -sun.x') && source.includes('this.moonLight.direction.x = sun.x'), 'Sun and moon must use independent, correctly oriented light vectors.');
+assert.ok(source.includes('const lunarBlend = smooth(0.18, 0.82, state.night)') &&
+  source.includes('this.sunLight.direction.x = directX') &&
+  source.includes('this.sunLight.intensity = mix(sunIntensity, moonIntensity, lunarBlend)') &&
+  !source.includes("new B.DirectionalLight('NorseMoonDirectionalLight'"),
+  'Sun and moon must share one continuously enabled directional slot with a smooth twilight hand-off.');
 
 const sunSurfaceBody=source.slice(source.indexOf('    _createSunSurfaceMaterial() {'),source.indexOf('    _createMoonAndLights() {'));
 assert.ok(sunSurfaceBody.includes("this.sunDisc.material = material")&&sunSurfaceBody.includes("attributes: ['position', 'normal']"),"The sun must reuse its existing disc and compute a procedural photosphere from its surface normals.");
@@ -73,11 +87,50 @@ assert.doesNotMatch(sunSurfaceBody,/\.join\('\\\\n'\);/,"GLSL shader sources mus
 assert.ok(source.includes("material.setColor3('sunColor', sunColor)")&&source.includes("material.setFloat('uTime', this.elapsedSeconds)"),"Solar colour and surface evolution must use the existing coalesced atmosphere update.");
 assert.ok(source.includes("0.73 + 0.27 * pow(mu, 0.58)")&&source.includes("warmLimb"),"The solar disc must use limb darkening and warm edge response.");
 
-assert.ok(source.includes('focus.x + sun.x * 180') && !source.includes('focus.add(sunVector.scale(180))'), 'Light positioning must not mutate the player or camera target.');
+assert.ok(source.includes('this._lightPosition.x = focus.x - directX * 180') && !source.includes('focus.add(sunVector.scale(180))'), 'Light positioning must not mutate the player or camera target.');
 const firePoolBody = source.slice(source.indexOf('    _updateFirePool(state, focus) {'), source.indexOf('    update(dt, force) {'));
 assert.ok(source.includes('this._fireCandidates = this.firePool.map(() => ({ h: null, d2: Infinity }))'), 'Night-fire selection must allocate its candidate slots once.');
 assert.ok(firePoolBody.includes('const candidates = this._fireCandidates'), 'Night-fire selection must reuse its fixed candidate slots.');
 assert.doesNotMatch(firePoolBody, /fireHearths\.filter|\.sort\(/, 'Night-fire updates must not allocate filter/map/sort chains.');
+const localFireBody=source.slice(source.indexOf('    _collectHearthMeshes(hearth) {'),source.indexOf('    update(dt, force) {'));
+assert.ok(localFireBody.includes('light.includedOnlyMeshes = nextMeshes') &&
+  localFireBody.includes('const source = Array.isArray(scene.meshes) ? scene.meshes : []'),
+  'Each hearth light must use a stable local mesh set rather than the camera-culled list.');
+assert.ok(localFireBody.includes('now - this.lastFirePoolUpdate >= 0.75'),
+  'Hearth selection and local-light membership must use a bounded cadence.');
+assert.ok(source.includes('this._realElapsedSeconds += delta') && localFireBody.includes('const now = this._realElapsedSeconds'),
+  'Local hearth selection and flicker must keep running when the solar clock is paused.');
+assert.ok(localFireBody.includes('Select nearby hearths in daylight') &&
+  localFireBody.includes('const activeNight = state.night > 0.18') &&
+  source.includes('light.includedOnlyMeshes = this._fireFallbackMeshes') &&
+  source.includes('this._fireFallbackMeshes = this.skyDome ? [this.skyDome] : []'),
+  'Hearth light slots must stay permanently registered and use a harmless fallback target outside their range.');
+assert.ok(!localFireBody.includes('.setEnabled('), 'The hearth pool must never toggle point-light shader slots at dusk.');
+assert.ok(source.includes('const lunarBlend = smooth(0.18, 0.82, state.night)') &&
+  source.includes('handoffAngle = Math.PI * lunarBlend') &&
+  !source.includes('const useMoonDirectLight = state.night > state.daylight'),
+  'The directional light must hand off smoothly between sun and moon without an abrupt 180-degree flip.');
+assert.ok(!source.slice(source.indexOf('        this.moonDisc.visibility = visible;'),source.indexOf('      if (this.skyMaterial) {')).includes('.setEnabled('),
+  'Moon visibility must fade through alpha instead of toggling mesh/light slots.');
+assert.ok(source.includes('rayleighPhase') && source.includes('miePhase') &&
+  source.includes('rayleighTransmittance') && source.includes('airMass') &&
+  source.includes('aerosolPath') && source.includes('sunsetAlignment') &&
+  !source.includes('vec3 duskZenith') && !source.includes('vec3 duskHorizon') &&
+  !source.includes('sky += vec3(0.98, 0.39, 0.16) * horizonGlow'),
+  'The sky must use solar-elevation and view-angle-driven Rayleigh/Mie scattering instead of a fixed dusk gradient.');
+assert.ok(source.includes('getPerformanceSnapshot()') && source.includes('visualUpdate: summarize') &&
+  source.includes('hearthSelection: summarize') && source.includes('directLighting: summarize') &&
+  source.includes('skyAndCloudUniforms: summarize') && source.includes('waterMaterial: summarize') &&
+  source.includes('postProcessing: summarize') && source.includes('p99Ms: percentile(.99)') &&
+  source.includes("this._recordPerformanceSample('directLight'") &&
+  source.includes("this._recordPerformanceSample('sky'") &&
+  source.includes("this._recordPerformanceSample('water'") &&
+  source.includes("this._recordPerformanceSample('post'"),
+  'Atmosphere profiling must expose p50/p95/p99 for direct lighting, sky/cloud uniforms, water material, post-processing and hearth selection.');
+assert.ok(!localFireBody.includes('computeWorldMatrix(true)'),
+  'Hearth scoping must not force world-matrix rebuilds across the scene.');
+assert.ok(source.includes('this.sunLight.setEnabled(true)'), 'The one directional light must remain enabled across day/night transitions.');
+
 const updateBody = source.slice(source.indexOf('    update(dt, force) {'), source.indexOf('    dispose() {'));
 assert.doesNotMatch(updateBody, /new B\.(?:Vector3|Color3|Color4)|B\.Color3\.Lerp/, 'Atmosphere updates must reuse frame-hot vectors and colours.');
 assert.ok(source.includes("this._visualUpdateInterval = this.isTouchDevice"), "Mobile atmosphere visual updates must be paced to avoid redundant work.");

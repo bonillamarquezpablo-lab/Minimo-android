@@ -1330,11 +1330,11 @@ body.game-running #loading{display:none!important;visibility:hidden!important;op
  <div class="preflightCard identityCard">
   <div class="preflightSigil" aria-hidden="true">ᚱ</div><div class="preflightEyebrow">TU SAGA · TU IDENTIDAD</div>
   <h2>¿CÓMO TE LLAMARÁS?</h2>
-  <p class="preflightLead">El mundo empieza a preparar los recursos ligeros mientras decides el nombre de tu vikingo.</p>
+  <p class="preflightLead">El mundo espera tu nombre. La preparación completa comenzará al continuar.</p>
   <label for="playerNameInput">NOMBRE DEL VIKINGO</label>
   <input id="playerNameInput" type="text" maxlength="20" autocomplete="nickname" autocapitalize="words" placeholder="Escribe tu nombre" />
   <div class="identityProfile" id="identityProfileLabel">PERFIL GRÁFICO: CALIDAD</div>
-  <div class="identityPrep" aria-live="polite"><div class="identityPrepTrack"><i id="identityPrepBar"></i></div><span id="identityPrepStatus">Preparando mapas, configuración y recursos ligeros…</span></div>
+  <div class="identityPrep"><span>La preparación del mundo comenzará al continuar.</span></div>
   <button id="continueWithName" class="preflightPrimary" type="button">CONTINUAR CON ESTE NOMBRE</button>
   <button id="continueUnnamed" class="preflightSecondary" type="button">SEGUIR SIN NOMBRE</button>
  </div>
@@ -1964,6 +1964,7 @@ function startPreflightMenuMusic(){
 }
 ensurePreflightMenuMusic();
 startPreflightMenuMusic(); // En dispositivos con autoplay permitido, suena antes del primer toque.
+scheduleMinorStartupAssetPreload();
 const audioGateStart=document.getElementById('audioGateStart');
 if(audioGateStart)audioGateStart.addEventListener('click',()=>{
  audioGateStart.disabled=true;
@@ -1986,19 +1987,51 @@ const PLAYER_IDENTITY_KEY='el-sin-nombre-identity-'+(SHARE_NEW_GAME?'guest-v8':'
 let activeGraphicsProfile='quality',selectedPlayerName='',playerIdentityChosen=false;
 function safePreferenceRead(key,fallback=''){try{const value=localStorage.getItem(key);return value===null?fallback:value;}catch(_){return fallback;}}
 function safePreferenceWrite(key,value){try{localStorage.setItem(key,String(value));return true;}catch(err){console.info('No se pudo guardar una preferencia local:',err);return false;}}
-function updateIdentityPreparation(done,total){
- const bar=document.getElementById('identityPrepBar'),status=document.getElementById('identityPrepStatus');
- const pct=Math.round(total?done/total*100:0);
- if(bar)bar.style.width=pct+'%';
- if(status)status.textContent=pct>=100?'Recursos ligeros preparados. Tu nombre se guardará en este dispositivo.':'Preparando recursos ligeros… '+pct+'%';
+// Precarga silenciosa de recursos pequeños compartidos por CALIDAD y RENDIMIENTO.
+// No crea el motor, no importa modelos y nunca retrasa la pantalla de nombre ni bootEngine().
+const SHARED_STARTUP_ASSET_PATHS=Object.freeze([
+ './manifest.webmanifest',
+ './icon.svg',
+ './assets/asset-manifest.json',
+ './scripts/nordic/beach-state.js',
+ './scripts/nordic/coastal-interaction.js',
+ './scripts/nordic/navigation-suite.js',
+ './scripts/npc-village-brain-core.js',
+ './scripts/npc-dialogue.css'
+]);
+let sharedStartupAssetPreloadPromise=null;
+const sharedStartupAssetPreloadState={phase:'idle',total:SHARED_STARTUP_ASSET_PATHS.length,completed:0,failed:[],elapsedMs:0};
+function prepareMinorStartupAssets(){
+ if(sharedStartupAssetPreloadPromise)return sharedStartupAssetPreloadPromise;
+ const startedAt=performance.now(),queue=SHARED_STARTUP_ASSET_PATHS.slice();
+ sharedStartupAssetPreloadState.phase='loading';
+ window.__ELSN_SHARED_STARTUP_PRELOAD__=sharedStartupAssetPreloadState;
+ const worker=async()=>{
+  while(queue.length){
+   const path=queue.shift();
+   try{
+    const response=await fetch(new URL(path,document.baseURI).href,{cache:'force-cache',credentials:'same-origin'});
+    if(!response.ok)throw new Error('HTTP '+response.status);
+    if(path.endsWith('.json')||path.endsWith('.webmanifest'))await response.clone().json();
+    sharedStartupAssetPreloadState.completed++;
+   }catch(error){
+    sharedStartupAssetPreloadState.failed.push({path,message:String(error&&error.message||error).slice(0,180)});
+   }
+  }
+ };
+ sharedStartupAssetPreloadPromise=(async()=>{
+  await Promise.all(Array.from({length:Math.min(3,queue.length)},()=>worker()));
+  sharedStartupAssetPreloadState.phase=sharedStartupAssetPreloadState.failed.length?'partial':'ready';
+  sharedStartupAssetPreloadState.elapsedMs=Number((performance.now()-startedAt).toFixed(1));
+  return sharedStartupAssetPreloadState;
+ })();
+ return sharedStartupAssetPreloadPromise;
 }
-async function prepareMinorStartupAssets(){
- const resources=['./manifest.webmanifest','./icon.svg','./assets/asset-manifest.json'];
- let completed=0;updateIdentityPreparation(0,resources.length);
- await Promise.allSettled(resources.map(async path=>{
-  try{const response=await fetch(new URL(path,document.baseURI).href,{cache:'force-cache'});if(response.ok&&path.endsWith('.json'))await response.json();}catch(_){ }
-  completed++;updateIdentityPreparation(completed,resources.length);
- }));
+function scheduleMinorStartupAssetPreload(){
+ const start=()=>{prepareMinorStartupAssets();};
+ // Deja que el navegador pinte primero la portada; las peticiones empiezan en segundo plano.
+ if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(()=>window.setTimeout(start,0));
+ else window.setTimeout(start,0);
 }
 function chooseGraphicsProfile(profile){
  activeGraphicsProfile=profile==='performance'?'performance':'quality';

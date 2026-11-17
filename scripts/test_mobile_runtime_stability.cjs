@@ -68,8 +68,8 @@ assert.ok(builder.includes('phase_timing_helpers') && builder.includes('setWorld
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'30\',build:\'0.6.313\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.313"'), 'Release validator must target version 0.6.313.');
+assert.ok(validator.includes('reportVersion:\'32\',build:\'0.6.315\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.315"'), 'Release validator must target version 0.6.315.');
 assert.ok(builder.includes('mobile_memory_policy_marker') && builder.includes('isMobilePeakMemorySensitive'), 'Memory-sensitive scheduling must be independent from the selected graphics profile.');
 assert.ok(builder.includes('GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024'), 'GLB identity checks must compare bounded chunks instead of duplicating full files into ArrayBuffers.');
 assert.ok(builder.includes('player_import_start_marker') && builder.includes('let playerHumanLoadPromise=Promise.resolve(null);'), 'The protagonist GLB import must be deferred until static world construction has finished.');
@@ -100,10 +100,10 @@ assert.ok(validator.includes('renderDiagnostics:beachRenderDiagnostics'), 'The p
 assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3))'), 'The packaged report must label wall-clock beach duration separately.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
-assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullMaxExtentMeters=.78') &&
+assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullMaxExtentMeters=.55') &&
   builder.includes('sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)') &&
   builder.includes('visualRoot.position.copyFrom(sourceCenter.scale(-1))') &&
-  builder.includes('fittedMaxExtent>.82'),
+  builder.includes('fittedMaxExtent>.57'),
   'Gulls must be centered and normalized by all three measured model bounds, then checked after scaling.');
 assert.ok(builder.includes('smith_hammer_marker') && builder.includes('SmithHammer_') &&
   builder.includes('Keep the smith\'s hands clear'),
@@ -117,9 +117,11 @@ assert.ok(builder.includes('tree_rebuild_start =') &&
   builder.includes("instantiateModelsToScene(name=>name+'_Forest_'+serial,false)") &&
   builder.includes('requiresTexture:true'),
   'The procedural triangle foliage must be replaced by three required, locally packaged CC0 tree models with texture maps.');
-assert.ok(builder.includes("const realBirds=[],subduedMaterials=new Set();") &&
-  builder.includes('html.replace(gull_material_clone_marker, "", 1)'),
-  'The five gull instances must share one subdued material set instead of cloning material variants per bird.');
+assert.ok(builder.includes('gull_material_registry_replacement = "    const realBirds=[];"') &&
+  builder.includes('gull_material_style_start = "const subduedMaterials=new Set();"') &&
+  builder.includes('gull_material_style_end = "const sourceBounds=boundsForMeshes(meshes)"') &&
+  builder.includes('html = html[:style_start] + html[style_end:]'),
+  'The five gull instances must retain the native source material and colour without legacy per-instance tinting.');
 assert.ok(builder.includes('wildlife_update_marker = "function updateWildlife(dt){"') &&
   builder.includes('_wildlifeNextDecisionAt') && builder.includes('_wildlifeVelocityX'),
   'Wildlife pathfinding/collision decisions must be throttled while root motion remains frame-integrated.');

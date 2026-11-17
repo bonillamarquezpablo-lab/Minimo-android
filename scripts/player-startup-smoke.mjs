@@ -67,36 +67,39 @@ async function main() {
     manifest.deviceProfile = MOBILE_PROFILE
       ? { name: 'Xiaomi 12X emulation', viewport: '393x873 CSS px', deviceScaleFactor: 2.75, userAgent: 'Android 12 / 2201123G' }
       : { name: 'Desktop Chromium', viewport: '960x540 CSS px', deviceScaleFactor: 1 };
-    const page = await context.newPage();
+    let page = await context.newPage();
     page.setDefaultTimeout(60000);
     page.setDefaultNavigationTimeout(90000);
     const requests = new Map();
-    page.on('request', request => {
-      if (/\.glb(?:$|[?#])/i.test(request.url())) requests.set(request, performance.now());
-    });
-    page.on('response', response => {
-      if (/\.glb(?:$|[?#])/i.test(response.url())) {
-        const request = response.request();
-        const begin = requests.get(request);
-        manifest.glbResponses.push({
-          url: response.url(),
-          status: response.status(),
-          durationMs: begin === undefined ? null : Number((performance.now() - begin).toFixed(1))
-        });
-      }
-    });
-    page.on('requestfailed', request => {
-      if (/\.glb(?:$|[?#])/i.test(request.url())) {
-        manifest.glbFailures.push({
-          url: request.url(),
-          failure: request.failure()?.errorText || 'unknown request failure'
-        });
-      }
-    });
-    page.on('pageerror', error => manifest.pageErrors.push(String(error && error.stack || error)));
-    page.on('console', message => {
-      if (message.type() === 'error') manifest.consoleErrors.push(message.text());
-    });
+    const attachPageDiagnostics = target => {
+      target.on('request', request => {
+        if (/\.glb(?:$|[?#])/i.test(request.url())) requests.set(request, performance.now());
+      });
+      target.on('response', response => {
+        if (/\.glb(?:$|[?#])/i.test(response.url())) {
+          const request = response.request();
+          const begin = requests.get(request);
+          manifest.glbResponses.push({
+            url: response.url(),
+            status: response.status(),
+            durationMs: begin === undefined ? null : Number((performance.now() - begin).toFixed(1))
+          });
+        }
+      });
+      target.on('requestfailed', request => {
+        if (/\.glb(?:$|[?#])/i.test(request.url())) {
+          manifest.glbFailures.push({
+            url: request.url(),
+            failure: request.failure()?.errorText || 'unknown request failure'
+          });
+        }
+      });
+      target.on('pageerror', error => manifest.pageErrors.push(String(error && error.stack || error)));
+      target.on('console', message => {
+        if (message.type() === 'error') manifest.consoleErrors.push(message.text());
+      });
+    };
+    attachPageDiagnostics(page);
 
     let stepStartedAt = performance.now();
     await page.goto(BASE_URL + '?playertest=1&debug=1', {
@@ -792,9 +795,38 @@ async function main() {
     manifest.postEntryErrors = finalErrors;
     assert.deepEqual(finalErrors, { consoleErrors: 0, runtimeErrors: 0, unhandledRejections: 0 },
       'Se detectaron errores durante los primeros 20 segundos de partida.');
+    if (process.env.PLAYER_TEST_SKIP_WARM_RESTART === '1') {
+      // The dedicated HTTPS runtime-acceptance workflow owns warm and offline restart.
+      // Keep this run focused on a cold first boot and the first gameplay interval;
+      // avoid repeating a second 5,183-mesh scene load on the same constrained runner.
+      manifest.cachedRestart = {
+        enabled: false,
+        delegatedTo: 'Game runtime acceptance — EL SIN NOMBRE',
+        reason: 'Dedicated HTTPS workflow validates warm start and Service Worker offline restart.'
+      };
+      manifest.offlineReload = {
+        enabled: false,
+        delegatedTo: 'Game runtime acceptance — EL SIN NOMBRE'
+      };
+      return;
+    }
     // Repeat in the same browser profile to measure the Service Worker/Cache API warm path.
     const cachedLaunchStartedAt = performance.now();
-    await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
+    // Dispose of the renderer that just completed the 5,000+ mesh gameplay
+    // session before measuring the warm launch. Keep the same browser context so
+    // localStorage, Cache API and the Service Worker remain intact.
+    await page.close({ runBeforeUnload: false });
+    page = await context.newPage();
+    page.setDefaultTimeout(60000);
+    page.setDefaultNavigationTimeout(90000);
+    attachPageDiagnostics(page);
+    const warmNavigationResponse = await page.goto(BASE_URL + '?playertest=1&debug=1', {
+      waitUntil: 'domcontentloaded',
+      timeout: 90000
+    });
+    assert.ok(warmNavigationResponse && warmNavigationResponse.status() === 200,
+      'El arranque con caché no respondió HTTP 200: ' +
+      JSON.stringify({ status: warmNavigationResponse?.status(), url: warmNavigationResponse?.url() }));
     const cachedAudioGate = page.locator('#audioGateStart');
     if (await cachedAudioGate.isVisible().catch(() => false)) await cachedAudioGate.click({ timeout: 30000 });
     await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
@@ -897,7 +929,31 @@ async function main() {
       const offlineStartedAt = performance.now();
       manifest.offlineReload = { enabled: true, navigation: 'pending', worldReady: false };
       await context.setOffline(true);
-      await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
+      // Do not reload the gameplay tab in place: its renderer may still be busy with the
+      // just-finished 5,000+ mesh scene (especially under SwiftShader). Close that client
+      // and create a cold browser tab in the SAME context so localStorage, Cache API and
+      // the active Service Worker are preserved while the renderer starts clean.
+      await page.close({ runBeforeUnload: false });
+      page = await context.newPage();
+      page.setDefaultTimeout(60000);
+      page.setDefaultNavigationTimeout(90000);
+      attachPageDiagnostics(page);
+      const offlineNavigationResponse = await page.goto(BASE_URL + '?playertest=1&debug=1', {
+        waitUntil: 'commit',
+        timeout: 60000
+      });
+      assert.ok(offlineNavigationResponse,
+        'La navegación offline no devolvió una respuesta principal.');
+      manifest.offlineReload.navigationResponse = {
+        status: offlineNavigationResponse.status(),
+        fromServiceWorker: offlineNavigationResponse.fromServiceWorker(),
+        url: offlineNavigationResponse.url()
+      };
+      assert.equal(offlineNavigationResponse.status(), 200,
+        'El shell offline no respondió HTTP 200: ' + JSON.stringify(manifest.offlineReload.navigationResponse));
+      assert.equal(offlineNavigationResponse.fromServiceWorker(), true,
+        'La página nueva no se sirvió desde el Service Worker: ' +
+        JSON.stringify(manifest.offlineReload.navigationResponse));
       manifest.offlineReload.navigation = 'loaded-from-service-worker-cache';
 
       const offlineAudioGate = page.locator('#audioGateStart');

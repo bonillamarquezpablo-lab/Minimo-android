@@ -36,4 +36,26 @@ assert.match(smoke, /cachedPlayerState\.player\?\.fallbackVisible, false/,
   'The provisional player body must not reappear after a cached reload.');
 assert.match(smoke, /cachedPlayerState\.recorder\?\.worldReady, true/,
   'The full startup barrier must be ready after a cached reload.');
+const offlineStart = smoke.indexOf("manifest.offlineReload = { enabled: true");
+assert.ok(offlineStart >= 0, 'The HTTPS acceptance path must test an offline restart.');
+const offlineBlock = smoke.slice(offlineStart);
+assert.match(offlineBlock, /await page\.close\(\{ runBeforeUnload: false \}\)/,
+  'The offline restart must dispose the busy gameplay renderer before navigating.');
+assert.match(offlineBlock, /page = await context\.newPage\(\)/,
+  'The offline restart must use a fresh page in the same browser context.');
+assert.match(offlineBlock, /offlineNavigationResponse\.fromServiceWorker\(\)/,
+  'The offline navigation must prove that the Service Worker served the cached shell.');
+assert.match(offlineBlock, /offlineNavigationResponse\.status\(\), 200/,
+  'The offline cached shell must return HTTP 200.');
+const warmLaunch = smoke.slice(smoke.indexOf('// Repeat in the same browser profile'));
+assert.match(warmLaunch, /await page\.close\(\{ runBeforeUnload: false \}\)/,
+  'The warm launch must dispose of the previous gameplay renderer.');
+assert.match(warmLaunch, /warmNavigationResponse\.status\(\) === 200/,
+  'The warm launch must verify the new page navigation response.');
+assert.match(smoke, /PLAYER_TEST_SKIP_WARM_RESTART === '1'/,
+  'The main startup workflow may delegate duplicated warm/offline validation to the dedicated HTTPS runtime suite.');
+assert.match(smoke, /delegatedTo: 'Game runtime acceptance — EL SIN NOMBRE'/,
+  'A delegated warm/offline check must be named explicitly in the evidence manifest.');
+
+
 console.log('PLAYER STARTUP FLOW CONTRACT OK: first-run and returning-player paths are both explicit.');

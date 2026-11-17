@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.313"
+EXPECTED_VERSION = "0.6.315"
 
 HTML_PAGES = (
     "index.html",
@@ -166,8 +166,11 @@ def main() -> None:
     for marker in ("BABYLON.Vector3.Project", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
-    if "computeWorldMatrix(true)" in dialogue_runtime_source or "RANGE_SQUARED" not in dialogue_runtime_source:
-        fail("Los diálogos no deben forzar matrices de cada NPC ni recorrer proximidad con cálculos redundantes.")
+    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "headForced": "anchor.computeWorldMatrix(true)" in dialogue_runtime_source, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "activeCameraRefresh": "const camera=s.scene.activeCamera||s.camera" in dialogue_runtime_source, "rootOverlay": "document.documentElement||document.body" in dialogue_runtime_source}
+    if not all(dialogue_matrix_contract.values()):
+        fail("Contrato de proyección de diálogos incompleto en el paquete: " + json.dumps(dialogue_matrix_contract, ensure_ascii=False))
+    if "scene.meshes" in dialogue_runtime_source or "for(const npc of allNpcs)" in dialogue_runtime_source:
+        fail("El diálogo no debe recorrer todas las mallas o todos los NPC cada fotograma.")
     if any(marker in dialogue_runtime_source for marker in ("new BABYLON.Mesh", "MeshBuilder", "requestAnimationFrame")):
         fail("El runtime de diálogos no debe crear meshes 3D ni añadir trabajo permanente por fotograma.")
     if ".elsn-npc-bubble-message" not in dialogue_style_source or "pointer-events:none" not in dialogue_style_source:
@@ -319,14 +322,94 @@ def main() -> None:
         "await loadForestTreeTemplates()",
         "instantiateModelsToScene(name=>name+'_Forest_'+serial,false)",
         "requiresTexture:true",
-        "targetGullMaxExtentMeters=.78",
+        "targetGullMaxExtentMeters=.55",
         "sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)",
-        "fittedMaxExtent>.82",
+        "fittedMaxExtent>.57",
         "visualRoot.position.copyFrom(sourceCenter.scale(-1))",
+        "rotationQuaternion.toEulerAngles()",
+        "leftWing.rotation[b.wingFlapAxis]",
+        "rightWing.rotation[b.wingFlapAxis]",
     )
     missing_forest_markers = [marker for marker in forest_markers if marker not in index_html]
     if missing_forest_markers:
         fail("El bosque GLB o la escala física de las gaviotas están incompletos: " + ", ".join(missing_forest_markers))
+    wildlife_runtime_markers = (
+        "async function inspectGLBContainer(blob)",
+        "async function waitForAnimalTextures(meshes,kind,timeoutMs=30000",
+        "const beforeMeshes=new Set(scene.meshes||[])",
+        "beforeSkeletons=new Set(scene.skeletons||[])",
+        "sourceJson.skins",
+        "sourceJson.animations",
+        "const textureReadiness=await waitForAnimalTextures(meshes,kind)",
+        "partialMeshes=Array.from(scene.meshes||[]).filter(mesh=>!beforeMeshes.has(mesh))",
+        "partialSkeletons=Array.from(scene.skeletons||[]).filter(skeleton=>!beforeSkeletons.has(skeleton))",
+        "window.__ELSN_WILDLIFE_DIAGNOSTICS__",
+        "wildlifeReadinessRecords=[]",
+        "readiness:wildlifeReadinessRecords.slice()",
+        "wildlifeReadinessRecords.push({kind:spec.kind,state:'ready'",
+        "loadWildlifeModelsOnce().catch(error=>",
+        "complete:ambientFauna.length===wildlifeSpawnSpecs.length",
+        "const animalCount=idx===0?3:0",
+    )
+    missing_wildlife_runtime = [marker for marker in wildlife_runtime_markers if marker not in index_html]
+    if missing_wildlife_runtime:
+        fail("La carga de fauna terrestre no verifica cuerpos, rigs, animaciones, texturas y limpieza transaccional: " + ", ".join(missing_wildlife_runtime))
+    subsystem_diagnostic_markers = (
+        "subsystems:{worldPhases:getWorldPhaseTimingSnapshot()",
+        "npcDialogue:window.__ELSN_NPC_DIALOGUES__",
+        "wildlife:window.__ELSN_WILDLIFE_DIAGNOSTICS__",
+        "atmosphere:window.__ELSN_ATMOSPHERE",
+    )
+    missing_subsystem_diagnostics = [marker for marker in subsystem_diagnostic_markers if marker not in index_html]
+    if missing_subsystem_diagnostics:
+        fail("El runtime del juego no conecta los diagnósticos de subsistema: " + ", ".join(missing_subsystem_diagnostics))
+
+    recorder_subsystem_markers = (
+        "npcDialoguePositioningCpu",
+        "atmosphereVisualUpdateCpu",
+        "atmosphereDirectLightingCpu",
+        "atmosphereSkyCloudCpu",
+        "atmosphereWaterMaterialCpu",
+        "atmospherePostProcessingCpu",
+        "atmosphereHearthSelectionCpu",
+        "wildlifeUpdateCpu",
+        "positioningP99Ms",
+        "readiness: Array.isArray(state.readiness)",
+    )
+    missing_recorder_diagnostics = [marker for marker in recorder_subsystem_markers if marker not in session_recorder_source]
+    if missing_recorder_diagnostics:
+        fail("El registrador de sesiones no incluye el perfil de CPU por subsistema: " + ", ".join(missing_recorder_diagnostics))
+
+    atmosphere_profiler_markers = (
+        "directLighting: summarize('directLight')",
+        "skyAndCloudUniforms: summarize('sky')",
+        "waterMaterial: summarize('water')",
+        "postProcessing: summarize('post')",
+        "hearthSelection: summarize('fire')",
+        "p99Ms: percentile(.99)",
+        "rayleighTransmittance",
+        "airMass",
+        "aerosolPath",
+        "sunsetAlignment",
+        "mieG",
+        "sunAirMass",
+        "rayleighBeta",
+        "sunTransmittance",
+    )
+    missing_atmosphere_profiler = [marker for marker in atmosphere_profiler_markers if marker not in atmosphere_source]
+    if missing_atmosphere_profiler:
+        fail("El módulo atmosférico no incluye dispersión realista y perfil por optimizador: " + ", ".join(missing_atmosphere_profiler))
+
+    dialogue_profiler_markers = (
+        "positioningSamples",
+        "positioningP50Ms:at(.50)",
+        "positioningP95Ms:at(.95)",
+        "positioningP99Ms:at(.99)",
+    )
+    missing_dialogue_profiler = [marker for marker in dialogue_profiler_markers if marker not in dialogue_runtime_source]
+    if missing_dialogue_profiler:
+        fail("El runtime de diálogos no incluye medición del anclaje en pantalla: " + ", ".join(missing_dialogue_profiler))
+
     tree_start = index_html.find("function createTree(x,z,scale=1){")
     tree_end = index_html.find("function isSafeShrubGroundPoint(is,x,z){", tree_start)
     if tree_start < 0 or tree_end <= tree_start or "appendLeaf" in index_html[tree_start:tree_end]:
@@ -438,7 +521,7 @@ def main() -> None:
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
-    if "reportVersion:'30',build:'0.6.313'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'32',build:'0.6.315'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -547,8 +630,12 @@ def main() -> None:
         fail("La barrera final debe publicar una lectura de recursos observados y bloquear la entrada si falta alguno.")
     if "MenuMusic.preload()" not in index_html or "GameplayMusic.preload()" not in index_html or "waitForPlayableAudio" not in index_html or "decodedToAudioBuffer:false" not in index_html:
         fail("Las dos pistas de música deben estar listas mediante HTMLAudio streaming sin decodificar buffers.")
-    if "fauna:isPerformanceMode?'disabled-performance':'blocking-required'" not in index_html:
-        fail("El perfil Calidad debe esperar la fauna; Rendimiento conserva su fauna desactivada.")
+    if "fauna:'blocking-required'" not in index_html:
+        fail("Calidad y Rendimiento deben esperar los tres animales terrestres completos; Rendimiento conserva su LOD y cadencia reducida.")
+    if "fauna:{required:true,requested:wildlifeSpawnSpecs.length" not in index_html:
+        fail("El informe de arranque debe marcar la fauna terrestre como obligatoria en ambos perfiles gráficos.")
+    if "startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3" not in index_html:
+        fail("La barrera final debe comprobar las tres especies terrestres también en Rendimiento.")
     if "window.__ELSN_STARTUP_RESOURCE_GATE__" not in index_html or "startupResourceFailures.length" not in index_html:
         fail("La entrada requiere una barrera final basada en el estado real de los recursos, no en el porcentaje visual.")
     if "startupResourceSnapshot.world.islands!==13" not in index_html or "startupResourceSnapshot.world.grassClumps<=0" not in index_html:
@@ -803,7 +890,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.313" not in index_html or "EL SIN NOMBRE 0.6.313 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.315" not in index_html or "EL SIN NOMBRE 0.6.315 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -955,7 +1042,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.313</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.315</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
@@ -1045,8 +1132,8 @@ def main() -> None:
         fail("Siguen presentes los animales provisionales construidos con primitivas.")
     if "function loadWildlifeModels()" not in index_html or "function playWildlifeAnimation(" not in index_html or "ImportMeshAsync(" not in index_html or "numBoneInfluencers>0" not in index_html or "Deer.glb" not in index_html or "Stag.glb" not in index_html or "Wolf.glb" not in index_html:
         fail("Falta la importación GLB con esqueleto de ciervo, venado y lobo.")
-    if "const animalCount=isPerformanceMode?0:(idx===0?3:0);" not in index_html:
-        fail("La fauna debe conservar el roster completo en Rendimiento y Calidad.")
+    if "const animalCount=idx===0?3:0;" not in index_html:
+        fail("Los tres animales terrestres deben estar presentes en ambos perfiles; Rendimiento debe conservar su cadencia y LOD.")
     if "const performanceDensity=isConstrainedMobile?" not in index_html or "leavesPerClump=isPerformanceMode?8:10" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("El ajuste de hierba preexistente de Rendimiento debe mantenerse y la fauna debe cargar después sin recortar su roster.")
     if "const civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html or "if(!civilianBlob){" not in index_html:
