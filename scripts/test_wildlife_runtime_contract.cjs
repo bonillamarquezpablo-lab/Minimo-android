@@ -31,6 +31,8 @@ assert.match(html,/file:'Deer\.glb'/);
 assert.match(html,/file:'Wolf\.glb'/);
 assert.match(html,/file:'Stag\.glb'/);
 assert.match(html,/function updateWildlife\(dt\)/);
+assert.ok(builder.includes('wildlife_clip_marker = "return {idle,walk:walk||idle,run:run||walk||idle};"'), 'The builder must reject the idle-as-walk fallback.');
+assert.ok(builder.includes('const moving=(animal.flee>0||animal.wandering)&&!!animal.clips.walk;'), 'An animal must not translate across terrain while only its idle clip is available.');
 assert.match(html,/const animalCount=isPerformanceMode\?0:\(idx===0\?3:0\);/);
 assert.ok(builder.includes('wildlife_spawn_count_marker = "const animalCount=isPerformanceMode?0:(idx===0?3:0);"') &&
   builder.includes('wildlife_spawn_count_replacement = "const animalCount=idx===0?3:0;"'),
