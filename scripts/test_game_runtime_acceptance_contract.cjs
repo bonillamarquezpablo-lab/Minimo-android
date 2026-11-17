@@ -72,6 +72,9 @@ for (const marker of [
 ]) {
   assert.ok(smoke.includes(marker), 'Runtime smoke is missing acceptance check: ' + marker);
 }
+assert.match(smoke, /STARTUP_RESTART_TIMEOUT_MS = 240000/);
+assert.match(smoke, /cachedStartupWaitDiagnostic/);
+assert.match(smoke, /offlineReload\.startupWaitDiagnostic/);
 assert.match(smoke, /automatedVisualAcceptance: false/,
   'Visible NPC dialogue acceptance must remain with the player.'); 
 assert.doesNotMatch(smoke, /npcDialogueApproach|npcDialogueVisibilityWait|__ELSN_NPC_DIALOGUE_SMOKE_RESTORE__/,
