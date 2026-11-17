@@ -330,6 +330,34 @@ def main() -> None:
     missing_forest_markers = [marker for marker in forest_markers if marker not in index_html]
     if missing_forest_markers:
         fail("El bosque GLB o la escala física de las gaviotas están incompletos: " + ", ".join(missing_forest_markers))
+    wildlife_runtime_markers = (
+        "async function inspectGLBContainer(blob)",
+        "async function waitForAnimalTextures(meshes,kind,timeoutMs=25000)",
+        "const beforeMeshes=new Set(scene.meshes||[])",
+        "const beforeSkeletons=new Set(scene.skeletons||[])",
+        "sourceJson.skins",
+        "sourceJson.animations",
+        "const textureReadiness=await waitForAnimalTextures(meshes,kind)",
+        "partialMeshes=Array.from(scene.meshes||[]).filter(mesh=>!beforeMeshes.has(mesh))",
+        "partialSkeletons=Array.from(scene.skeletons||[]).filter(skeleton=>!beforeSkeletons.has(skeleton))",
+        "window.__ELSN_WILDLIFE_DIAGNOSTICS__",
+        "complete:ambientFauna.length===wildlifeSpawnSpecs.length",
+        "const animalCount=isPerformanceMode?0:(idx===0?3:0)",
+    )
+    missing_wildlife_runtime = [marker for marker in wildlife_runtime_markers if marker not in index_html]
+    if missing_wildlife_runtime:
+        fail("La carga de fauna terrestre no verifica cuerpos, rigs, animaciones, texturas y limpieza transaccional: " + ", ".join(missing_wildlife_runtime))
+    subsystem_diagnostic_markers = (
+        "subsystems:{worldPhases:getWorldPhaseTimingSnapshot()",
+        "npcDialogue:window.__ELSN_NPC_DIALOGUES__",
+        "wildlife:window.__ELSN_WILDLIFE_DIAGNOSTICS__",
+        "atmosphere:window.__ELSN_ATMOSPHERE",
+        "p95Ms:at(.95)",
+        "p99Ms:at(.99)",
+    )
+    missing_subsystem_diagnostics = [marker for marker in subsystem_diagnostic_markers if marker not in index_html]
+    if missing_subsystem_diagnostics:
+        fail("El informe de rendimiento por subsistema está incompleto: " + ", ".join(missing_subsystem_diagnostics))
     tree_start = index_html.find("function createTree(x,z,scale=1){")
     tree_end = index_html.find("function isSafeShrubGroundPoint(is,x,z){", tree_start)
     if tree_start < 0 or tree_end <= tree_start or "appendLeaf" in index_html[tree_start:tree_end]:
