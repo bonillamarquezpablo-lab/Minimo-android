@@ -63,4 +63,8 @@ assert.ok(!builder.includes('qualityDprFloor')&&!builder.includes('qualityDprCei
 assert.ok(validator.includes('worldPhaseTimings:getWorldPhaseTimingSnapshot()'),
   'Release validation must require the per-phase timing telemetry.');
 
+for(const marker of ['optimizerPerformance:', 'spatialSelection:', 'waterAndReflections:', 'vegetationBatching:', 'shadowCasterManagement:', 'atmosphere:', 'wildlife:', 'npcDialogue:', 'minimap:', 'structureAuditCache:', 'worldPhases: phaseCosts']) {
+  assert.ok(recorder.includes(marker),'Session report must expose measured optimizer performance: '+marker);
+}
+
 console.log('SUBSYSTEM PERFORMANCE CONTRACT: PASS (world phases, atmosphere, hearths, wildlife, NPC dialogue, CPU and GPU timing).');
