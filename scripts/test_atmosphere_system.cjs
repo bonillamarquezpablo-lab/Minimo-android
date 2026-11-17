@@ -103,9 +103,12 @@ assert.ok(source.includes('const lunarBlend = smooth(0.18, 0.82, state.night)') 
   'The directional light must hand off smoothly between sun and moon without an abrupt 180-degree flip.');
 assert.ok(!source.slice(source.indexOf('        this.moonDisc.visibility = visible;'),source.indexOf('      if (this.skyMaterial) {')).includes('.setEnabled('),
   'Moon visibility must fade through alpha instead of toggling mesh/light slots.');
-assert.ok(source.includes('rayleighPhase') && source.includes('miePhase') && source.includes('sunAzimuth') &&
+assert.ok(source.includes('rayleighPhase') && source.includes('miePhase') &&
+  source.includes('rayleighTransmittance') && source.includes('airMass') &&
+  source.includes('aerosolPath') && source.includes('sunsetAlignment') &&
+  !source.includes('vec3 duskZenith') && !source.includes('vec3 duskHorizon') &&
   !source.includes('sky += vec3(0.98, 0.39, 0.16) * horizonGlow'),
-  'The sky must use directional atmospheric scattering rather than a uniform orange horizon fill.');
+  'The sky must use solar-elevation and view-angle-driven Rayleigh/Mie scattering instead of a fixed dusk gradient.');
 assert.ok(source.includes('getPerformanceSnapshot()') && source.includes('visualUpdate: summarize') &&
   source.includes('hearthSelection: summarize') && source.includes('p99Ms: percentile(.99)'),
   'Atmosphere profiling must expose p50/p95/p99 visual-update and hearth-selection timings.');
