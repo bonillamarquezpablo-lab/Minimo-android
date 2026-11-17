@@ -109,7 +109,7 @@ assert.match(sw,/contentType\.includes\("text\/html"\)/);
   assert.ok(!preloadListSource.includes(forbidden),'La portada no debe precargar recursos pesados: '+forbidden);
  }
  const preloadFunctionStart=html.indexOf('function prepareMinorStartupAssets()',preloadStart);
- const preloadFunctionEnd=html.indexOf('function chooseGraphicsProfile()',preloadFunctionStart);
+ const preloadFunctionEnd=html.indexOf('function chooseGraphicsProfile(',preloadFunctionStart);
  assert.ok(preloadFunctionStart>preloadStart&&preloadFunctionEnd>preloadFunctionStart,
   'La función de precarga debe estar separada de la selección del perfil.');
  const preloadFunction=html.slice(preloadFunctionStart,preloadFunctionEnd);
