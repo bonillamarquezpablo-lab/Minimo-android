@@ -139,6 +139,8 @@
       this.camera = o.camera;
       this.engine = o.engine;
       this.sunLight = o.sunLight;
+      // Keep one directional light active for the whole day/night cycle; avoid a dusk shader-light-count switch.
+      if (this.sunLight && this.sunLight.setEnabled) this.sunLight.setEnabled(true);
       this.hemiLight = o.hemiLight;
       this.skyDome = o.skyDome;
       this.sunDisc = o.sunDisc;
@@ -452,14 +454,10 @@
     _createMoonAndLights() {
       const B = this.B, scene = this.scene;
       if (!B || !scene) return;
+      // Moonlight reuses the already-enabled solar directional light. Keeping a
+      // second DirectionalLight disabled/enabled at dusk forced new material variants.
+      this.moonLight = null;
       try {
-        this.moonLight = new B.DirectionalLight('NorseMoonDirectionalLight',
-          new B.Vector3(0, 1, 0), scene);
-        this.moonLight.diffuse = new B.Color3(0.48, 0.60, 0.82);
-        this.moonLight.specular = new B.Color3(0.30, 0.38, 0.58);
-        this.moonLight.intensity = 0;
-        this.moonLight.setEnabled(false);
-
         if (this.skyDome && B.MeshBuilder && B.StandardMaterial) {
           this.moonDisc = B.MeshBuilder.CreateSphere('NorseMoonDisc', { diameter: 17, segments: 24 }, scene);
           this.moonDisc.parent = this.skyDome;
@@ -482,7 +480,7 @@
           this.moonHalo.material = halo;
         }
       } catch (error) {
-        console.warn('Moon lighting or disc could not be created.', error);
+        console.warn('Moon disc or halo could not be created.', error);
       }
     }
 
@@ -630,16 +628,18 @@
       for (const item of this.fireLegacyLights) {
         if (item && item.light && item.light.setEnabled) item.light.setEnabled(false);
       }
-      // Exactly two nearby fire lights stay active: one sun/moon + hemi + two fires
-      // respects common four-light material budgets on mobile.
-      for (let i = 0; i < (this.quality === 'low' ? 1 : 2); i++) {
+      // On capable touch devices, reserve one nearby hearth slot from startup.
+      // Zero intensity by day keeps the shader light budget stable at sunset.
+      this._stableFireLight = this.isTouchDevice && this.quality !== 'low';
+      const poolSize = this._stableFireLight ? 1 : (this.quality === 'low' ? 1 : 2);
+      for (let i = 0; i < poolSize; i++) {
         const light = new B.PointLight('NorseNightHearthPool_' + i, new B.Vector3(0, 0, 0), scene);
         light.diffuse = new B.Color3(1.0, 0.43, 0.14);
         light.specular = new B.Color3(1.0, 0.30, 0.08);
         light.range = 11.5;
         light.intensity = 0;
-        light.setEnabled(false);
-        this.firePool.push({ light, source: null, phase: i * 2.17 });
+        light.setEnabled(this._stableFireLight);
+        this.firePool.push({ light, source: null, phase: i * 2.17, stable: this._stableFireLight });
       }
     }
 
@@ -682,7 +682,7 @@
         if (!candidate) {
           slot.source = null;
           slot.light.intensity = 0;
-          slot.light.setEnabled(false);
+          if (!slot.stable) slot.light.setEnabled(false);
           continue;
         }
         const h = candidate.h;
@@ -690,7 +690,7 @@
         slot.light.position.set(h.x, h.floorY + 1.0, h.z);
         slot.light.range = 11.5;
         slot.light.intensity = 0.56 * state.night;
-        slot.light.setEnabled(true);
+        if (!slot.stable) slot.light.setEnabled(true);
       }
     }
 
@@ -726,34 +726,27 @@
       sunColor.g = mix(0.985, 0.50, state.twilight);
       sunColor.b = mix(0.91, 0.29, state.twilight);
 
+      // One stable directional light serves as both sun and moon throughout the cycle.
+      // No enable/disable transition means affected materials keep the same compiled light count at sunset.
+      const nightDominant = state.night > state.daylight;
       if (this.sunLight) {
-        this.sunLight.direction.x = -sun.x;
-        this.sunLight.direction.y = -sun.y;
-        this.sunLight.direction.z = -sun.z;
+        this.sunLight.direction.x = nightDominant ? sun.x : -sun.x;
+        this.sunLight.direction.y = nightDominant ? sun.y : -sun.y;
+        this.sunLight.direction.z = nightDominant ? sun.z : -sun.z;
         if (focus && this.sunLight.position) {
-          this._lightPosition.x = focus.x + sun.x * 180;
-          this._lightPosition.y = focus.y + sun.y * 180;
-          this._lightPosition.z = focus.z + sun.z * 180;
+          const lightOffset = nightDominant ? -150 : 180;
+          this._lightPosition.x = focus.x + sun.x * lightOffset;
+          this._lightPosition.y = focus.y + sun.y * lightOffset;
+          this._lightPosition.z = focus.z + sun.z * lightOffset;
           this.sunLight.position.copyFrom(this._lightPosition);
         }
-        this.sunLight.diffuse.copyFrom(sunColor);
-        this.sunLight.specular.copyFrom(this._sunSpecularColor);
-        this.sunLight.intensity = 1.42 * state.daylight * (0.36 + 0.64 * smooth(0.0, 0.54, state.altitude));
-        this.sunLight.setEnabled(state.daylight >= state.night && state.daylight > 0.012);
-      }
-
-      if (this.moonLight) {
-        this.moonLight.direction.x = sun.x;
-        this.moonLight.direction.y = sun.y;
-        this.moonLight.direction.z = sun.z;
-        if (focus && this.moonLight.position) {
-          this._lightPosition.x = focus.x - sun.x * 150;
-          this._lightPosition.y = focus.y - sun.y * 150;
-          this._lightPosition.z = focus.z - sun.z * 150;
-          this.moonLight.position.copyFrom(this._lightPosition);
-        }
-        this.moonLight.intensity = lighting.moonIntensity * (1 - storm * 0.48);
-        this.moonLight.setEnabled(state.night > state.daylight && state.night > 0.025);
+        this.sunLight.diffuse.copyFrom(nightDominant ? this._coolNightColor : sunColor);
+        this.sunLight.specular.copyFrom(nightDominant ? this._coolNightColor : this._sunSpecularColor);
+        const solarIntensity = 1.42 * state.daylight *
+          (0.36 + 0.64 * smooth(0.0, 0.54, state.altitude));
+        this.sunLight.intensity = nightDominant
+          ? lighting.moonIntensity * (1 - storm * 0.48)
+          : solarIntensity;
       }
 
       if (this.hemiLight) {
