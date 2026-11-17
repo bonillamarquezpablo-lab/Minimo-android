@@ -100,10 +100,10 @@ assert.ok(validator.includes('renderDiagnostics:beachRenderDiagnostics'), 'The p
 assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3))'), 'The packaged report must label wall-clock beach duration separately.');
 
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
-assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullMaxExtentMeters=.78') &&
+assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullMaxExtentMeters=.55') &&
   builder.includes('sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)') &&
   builder.includes('visualRoot.position.copyFrom(sourceCenter.scale(-1))') &&
-  builder.includes('fittedMaxExtent>.82'),
+  builder.includes('fittedMaxExtent>.57'),
   'Gulls must be centered and normalized by all three measured model bounds, then checked after scaling.');
 assert.ok(builder.includes('smith_hammer_marker') && builder.includes('SmithHammer_') &&
   builder.includes('Keep the smith\'s hands clear'),
