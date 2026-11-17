@@ -172,6 +172,10 @@
       this._performanceSamples = {
         visual: new Float32Array(120), visualCursor: 0, visualCount: 0, visualLastMs: 0, visualMaxMs: 0,
         fire: new Float32Array(120), fireCursor: 0, fireCount: 0, fireLastMs: 0, fireMaxMs: 0,
+        directLight: new Float32Array(120), directLightCursor: 0, directLightCount: 0, directLightLastMs: 0, directLightMaxMs: 0,
+        sky: new Float32Array(120), skyCursor: 0, skyCount: 0, skyLastMs: 0, skyMaxMs: 0,
+        water: new Float32Array(120), waterCursor: 0, waterCount: 0, waterLastMs: 0, waterMaxMs: 0,
+        post: new Float32Array(120), postCursor: 0, postCount: 0, postLastMs: 0, postMaxMs: 0,
         hearthMeshes: 0, hearthRefreshes: 0
       };
       this.windStrength = 1;
@@ -315,6 +319,10 @@
       return {
         visualUpdate: summarize('visual'),
         hearthSelection: summarize('fire'),
+        directLighting: summarize('directLight'),
+        skyAndCloudUniforms: summarize('sky'),
+        waterMaterial: summarize('water'),
+        postProcessing: summarize('post'),
         hearthMeshesLastRefresh: perf.hearthMeshes,
         hearthRefreshes: perf.hearthRefreshes,
         visualUpdateIntervalMs: Number((this._visualUpdateInterval * 1000).toFixed(2))
@@ -842,6 +850,7 @@
       sunColor.g = mix(0.985, 0.50, state.twilight);
       sunColor.b = mix(0.91, 0.29, state.twilight);
 
+      const directLightStarted = performance.now();
       // Sun and moon share one permanent directional slot: only direction, colour and intensity move through the day.
       // A single permanent directional slot makes a smooth solar-to-lunar hand-off.
       // The small perpendicular arc avoids a 180° direction flip at the day/night boundary.
@@ -914,7 +923,9 @@
       this._clearColor.b = fogColor.b * 0.78;
       this._clearColor.a = 1;
       this.scene.clearColor.copyFrom(this._clearColor);
+      this._recordPerformanceSample('directLight', performance.now() - directLightStarted);
 
+      const skyStarted = performance.now();
       if (this.sunDisc && this.sunHalo) {
         const visible = clamp(state.daylight * 0.88 + state.twilight * 0.36, 0, 1);
         const point = this._sunPoint;
@@ -973,6 +984,9 @@
         this.cloudB.uOffset = (-this.elapsedSeconds * 0.000038 * this.windStrength) % 1;
         this.cloudB.vOffset = (this.elapsedSeconds * 0.000012) % 1;
       }
+      this._recordPerformanceSample('sky', performance.now() - skyStarted);
+
+      const postStarted = performance.now();
       if (this.renderPipeline && this.renderPipeline.imageProcessing) {
         this.renderPipeline.imageProcessing.exposure = lighting.exposure;
         this.renderPipeline.imageProcessing.contrast = lighting.contrast;
@@ -981,6 +995,9 @@
         this.scene.imageProcessingConfiguration.exposure = lighting.exposure;
         this.scene.imageProcessingConfiguration.contrast = lighting.contrast;
       }
+      this._recordPerformanceSample('post', performance.now() - postStarted);
+
+      const waterStarted = performance.now();
       if (this.waterMaterial) {
         const waterColor = this._waterColor;
         waterColor.r = mix(this._waterNightColor.r, this._waterDayColor.r, state.daylight);
@@ -1001,6 +1018,8 @@
           this.waterMaterial.diffuseFresnelParameters.rightColor.copyFrom(this._waterDiffuseColor);
         }
       }
+      this._recordPerformanceSample('water', performance.now() - waterStarted);
+
       if (this.windowMaterial && this.windowMaterial.emissiveColor) {
         const glow = 0.08 + state.night * 0.52;
         this._windowGlowColor.r = 0.8 * glow;
