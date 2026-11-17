@@ -323,6 +323,9 @@ def main() -> None:
         "sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)",
         "fittedMaxExtent>.57",
         "visualRoot.position.copyFrom(sourceCenter.scale(-1))",
+        "rotationQuaternion.toEulerAngles()",
+        "leftWing.rotation[b.wingFlapAxis]",
+        "rightWing.rotation[b.wingFlapAxis]",
     )
     missing_forest_markers = [marker for marker in forest_markers if marker not in index_html]
     if missing_forest_markers:
