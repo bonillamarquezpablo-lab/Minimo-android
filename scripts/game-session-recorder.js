@@ -513,6 +513,10 @@
         habitableAuditLastCacheMisses: number(runtime.habitableAuditLastCacheMisses),
         worldPhaseTimings: runtime.worldPhaseTimings && typeof runtime.worldPhaseTimings === "object" ? runtime.worldPhaseTimings : null,
         atmosphereVisualUpdateCpu: atmosphere && atmosphere.performance ? atmosphere.performance.visualUpdate : null,
+        atmosphereDirectLightingCpu: atmosphere && atmosphere.performance ? atmosphere.performance.directLighting : null,
+        atmosphereSkyCloudCpu: atmosphere && atmosphere.performance ? atmosphere.performance.skyAndCloudUniforms : null,
+        atmosphereWaterMaterialCpu: atmosphere && atmosphere.performance ? atmosphere.performance.waterMaterial : null,
+        atmospherePostProcessingCpu: atmosphere && atmosphere.performance ? atmosphere.performance.postProcessing : null,
         atmosphereHearthSelectionCpu: atmosphere && atmosphere.performance ? atmosphere.performance.hearthSelection : null,
         npcDialoguePositioningCpu: npcDialogue ? {
           samples: npcDialogue.positioningSamples,
