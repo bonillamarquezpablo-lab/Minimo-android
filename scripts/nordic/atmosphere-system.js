@@ -310,7 +310,7 @@
         const percentile = p => values.length
           ? Number(values[Math.min(values.length - 1, Math.floor((values.length - 1) * p))].toFixed(3))
           : null;
-        return { samples: count, lastMs: perf[kind + 'LastMs'], p50Ms: percentile(.50), p95Ms: percentile(.95), maxMs: Number(perf[kind + 'MaxMs'].toFixed(3)) };
+        return { samples: count, lastMs: perf[kind + 'LastMs'], p50Ms: percentile(.50), p95Ms: percentile(.95), p99Ms: percentile(.99), maxMs: Number(perf[kind + 'MaxMs'].toFixed(3)) };
       };
       return {
         visualUpdate: summarize('visual'),
