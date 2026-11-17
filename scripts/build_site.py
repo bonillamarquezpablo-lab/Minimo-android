@@ -901,8 +901,8 @@ def main() -> None:
         raise SystemExit("No se encontró la única raíz de las gaviotas GLB.")
     html = html.replace(gull_root_marker,gull_root_replacement,1)
 
-    gull_animation_marker = "const groups=inst.animationGroups||[],fly=groups.find(g=>/walk|fly|flap/i.test(g.name))||groups.find(g=>/idle/i.test(g.name))||groups[0]||null;groups.forEach(g=>{try{g.stop();}catch(_){}});if(fly){fly.start(true,1.0);fly.speedRatio=.95+Math.random()*.12;}"
-    gull_animation_replacement = "const groups=inst.animationGroups||[],fly=groups.find(g=>/\\b(?:fly|flight|flying|flap|flapping|soar|soaring)\\b/i.test(String(g.name||'')))||null;groups.forEach(g=>{try{g.stop();}catch(_){}});if(fly){fly.start(true,1.0);fly.speedRatio=.95+Math.random()*.12;}"
+    gull_animation_marker = "const groups=inst.animationGroups||[],fly=groups.find(g=>/walk|fly|flap/i.test(g.name))||groups.find(g=>/idle/i.test(g.name))||groups[0]||null;"
+    gull_animation_replacement = "const groups=inst.animationGroups||[],fly=groups.find(g=>/\\b(?:fly|flight|flying|flap|flapping|soar|soaring)\\b/i.test(String(g.name||'')))||null;"
     if html.count(gull_animation_marker) != 1:
         raise SystemExit("No se encontró el selector único de animación de las gaviotas.")
     html = html.replace(gull_animation_marker,gull_animation_replacement,1)
