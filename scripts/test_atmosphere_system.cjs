@@ -21,9 +21,15 @@ const duskLighting = Atmosphere.computeLightingProfile(18);
 const deepNightLighting = Atmosphere.computeLightingProfile(0);
 const reusableState = { sunDirection: { x: 0, y: 0, z: 0 } };
 assert.equal(Atmosphere.computeSolarState(12, reusableState), reusableState, 'Solar state must support allocation-free updates.');
-assert.ok(duskLighting.hemisphereIntensity >= 0.78 && duskLighting.exposure >= 1.22, 'Sunset must keep settlement materials readable without flattening the dusk palette.');
-assert.ok(deepNightLighting.hemisphereIntensity >= 0.76, 'Night ambient fill must preserve terrain and tree silhouettes.');
-assert.ok(deepNightLighting.environmentIntensity >= 0.53 && deepNightLighting.exposure >= 1.29, 'Night image-based light and exposure must preserve readable architecture.');
+assert.ok(duskLighting.hemisphereIntensity >= 0.56 && duskLighting.hemisphereIntensity <= 0.70 &&
+  duskLighting.exposure >= 1.06 && duskLighting.exposure <= 1.12,
+  'Dusk must lower ambient fill/exposure enough to preserve atmospheric sky contrast while keeping terrain readable.');
+assert.ok(deepNightLighting.hemisphereIntensity >= 0.26 && deepNightLighting.hemisphereIntensity <= 0.30,
+  'Night ambient fill must remain low enough for silhouettes and moonlight to read naturally.');
+assert.ok(deepNightLighting.moonIntensity >= 0.33 && deepNightLighting.environmentIntensity >= 0.25 &&
+  deepNightLighting.environmentIntensity <= 0.31 && deepNightLighting.exposure >= 1.00 &&
+  deepNightLighting.exposure <= 1.04,
+  'Night must be lit by the moon and a restrained environment, not broad high-exposure ambient light.');
 
 assert.ok(Math.abs(dawn.altitude) < 1e-6, 'Sunrise must occur at the horizon');
 assert.ok(noon.altitude > 0.99, 'The sun must reach a high noon position');
