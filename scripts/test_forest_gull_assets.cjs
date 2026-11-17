@@ -13,16 +13,18 @@ assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
 assert.ok(html.includes('leftWing,rightWing,tail,wingFlapAxis'), 'The replacement gull must expose its named articulated anatomy.');
-assert.ok(html.includes("groups.find(g=>/\b(?:fly|flight|flying|flap|flapping|soar|soaring)\b/i.test(String(g.name||'')))||null"),
-  'The gull must only start an explicit flight/flapping clip; walking/idle clips are never accepted.');
+assert.ok(html.includes("const groups=inst.animationGroups||[],fly=null;"),
+  'The gull must not select a walk/idle body clip; it uses explicit articulated wing flight.');
 assert.ok(!html.includes("groups.find(g=>/walk|fly|flap/i.test(g.name)"),
   'A walking animation must never be selected as the gull flight clip.');
 assert.ok(html.includes("function findForestTreePlacement(x,z,canopyRadius)"),
   'Forest placement must validate the actual canopy radius against previous trees.');
-assert.ok(html.includes("Math.max(forestTreeSpacingStats.minGapMeters,(canopyRadius+otherRadius)*.92)"),
-  'Tree crowns must keep a measurable gap based on both model canopy bounds.');
-assert.ok(html.includes("const canopyRadius=Math.max(2.3,Math.min(3.9,horizontalSpan*.50))"),
-  'The tree canopy radius must represent the full horizontal model bounds.');
+assert.ok(html.includes("Math.max(forestTreeSpacingStats.minGapMeters,(canopyRadius+otherRadius)*1.12)"),
+  'Tree crowns must maintain a wider measured clearance based on both canopy bounds.');
+assert.ok(html.includes("const conifer=kind==='pine'||kind==='spruce'") && html.includes("Math.min(conifer?5.2:4.6,horizontalSpan*(conifer?0.70:0.62))"),
+  'Pine and spruce canopy radii must account for their broader real model bounds.');
+assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html.includes('overlapPairs'),
+  'Forest placement must use a wider relocation search and expose overlap diagnostics.');
 assert.ok(html.includes('b.leftWing.rotation[b.wingFlapAxis]') && html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
   'The new gull wings must flap around their actual pivot axis.');
 assert.ok(buildSource.includes('node.rotationQuaternion.toEulerAngles()') && buildSource.includes('node.rotationQuaternion=null'),
