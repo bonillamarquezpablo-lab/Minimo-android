@@ -712,56 +712,6 @@ def main() -> None:
         raise SystemExit("No se encontró el cierre de la cola de fauna.")
     html = html.replace(wildlife_completion, wildlife_complete_required, 1)
 
-    # Each of the five quality-profile gulls must be instantiated before the shader pass.
-    gull_success = "  if(realBirds.length){ambientBirds.forEach(b=>{if(b.procedural)b.root.setEnabled(false);});ambientBirds.splice(0,ambientBirds.length,...realBirds);"
-    gull_success_required = "  if(realBirds.length===5){ambientBirds.forEach(b=>{if(b.procedural)b.root.setEnabled(false);});ambientBirds.splice(0,ambientBirds.length,...realBirds);"
-    if html.count(gull_success) != 1:
-        raise SystemExit("No se encontró el reemplazo de gaviotas provisionales por GLB.")
-    html = html.replace(gull_success, gull_success_required, 1)
-    gull_size_marker = "if(!(blob&&blob.size>100000))throw new Error('GLB de gaviota vacío o incompleto');"
-    if html.count(gull_size_marker) != 1:
-        raise SystemExit("No se encontró el umbral mínimo del GLB de gaviota.")
-    html = html.replace(gull_size_marker, "if(!(blob&&blob.size>50000))throw new Error('GLB de gaviota vacío o incompleto');", 1)
-    gull_root_marker = "const actor=new B.TransformNode('RealSeagullActor_'+i,scene);roots.forEach(r=>{r.parent=actor;r.setEnabled(true);});"
-    gull_root_replacement = "const actor=new B.TransformNode('RealSeagullActor_'+i,scene),visualRoot=new B.TransformNode('GullVisualCenter_'+i,scene);visualRoot.parent=actor;roots.forEach(r=>{r.parent=visualRoot;r.setEnabled(true);});"
-    if html.count(gull_root_marker) != 1:
-        raise SystemExit("No se encontró la única raíz de las gaviotas GLB.")
-    html = html.replace(gull_root_marker,gull_root_replacement,1)
-
-    gull_partial = "else throw new Error('El GLB se importó sin mallas instanciables');"
-    gull_partial_required = "else throw new Error('El GLB solo permitió preparar '+realBirds.length+'/5 gaviotas completas.');"
-    if html.count(gull_partial) != 1:
-        raise SystemExit("No se encontró la comprobación de mallas del GLB de gaviota.")
-    html = html.replace(gull_partial, gull_partial_required, 1)
-    # Normalize gulls by the largest 3D model extent so rotated GLB axes cannot inflate the flock.
-    # The target wingspan is biological in-world scale, independent of the source model's up-axis.
-    gull_scale_marker = "const bounds=boundsForMeshes(meshes),height=Math.max(.001,bounds.height),scale=1.65/height;actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
-    gull_scale_replacement = "const sourceBounds=boundsForMeshes(meshes),sourceWidth=sourceBounds.max.x-sourceBounds.min.x,sourceHeight=sourceBounds.max.y-sourceBounds.min.y,sourceDepth=sourceBounds.max.z-sourceBounds.min.z,sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth),targetGullMaxExtentMeters=.78;if(!Number.isFinite(sourceMaxExtent)||sourceMaxExtent<.10)throw new Error('Dimensiones físicas de gaviota inválidas: '+sourceMaxExtent);const sourceCenter=new B.Vector3((sourceBounds.min.x+sourceBounds.max.x)*.5,(sourceBounds.min.y+sourceBounds.max.y)*.5,(sourceBounds.min.z+sourceBounds.max.z)*.5),scale=targetGullMaxExtentMeters/sourceMaxExtent;if(!Number.isFinite(scale)||scale<=0||scale>12)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);visualRoot.position.copyFrom(sourceCenter.scale(-1));actor.scaling.setAll(scale);actor.computeWorldMatrix(true);visualRoot.computeWorldMatrix(true);meshes.forEach(mesh=>mesh.computeWorldMatrix(true));const fittedBounds=boundsForMeshes(meshes),fittedWidth=fittedBounds.max.x-fittedBounds.min.x,fittedHeight=fittedBounds.max.y-fittedBounds.min.y,fittedDepth=fittedBounds.max.z-fittedBounds.min.z,fittedMaxExtent=Math.max(fittedWidth,fittedHeight,fittedDepth);if(!Number.isFinite(fittedMaxExtent)||fittedMaxExtent>.82)throw new Error('La gaviota supera el límite físico de 0,82 m: '+fittedMaxExtent.toFixed(3));actor.position=v(-36,10+i%3*1.4,-18);actor.metadata=Object.assign({},actor.metadata||{},{biologicalScale:{source:{width:sourceWidth,height:sourceHeight,depth:sourceDepth},rendered:{width:fittedWidth,height:fittedHeight,depth:fittedDepth},maximumExtentMeters:fittedMaxExtent}});"
-    if html.count(gull_scale_marker) != 1:
-        raise SystemExit("No se encontró la única escala incorrecta de gaviotas basada en altura.")
-    html = html.replace(gull_scale_marker, gull_scale_replacement, 1)
-
-    # The five instances deliberately share the subdued GLB materials. Cloning every
-    # mesh material for every gull created avoidable shader/material variants.
-    gull_material_registry_marker = "const realBirds=[];"
-    gull_material_registry_replacement = "    const realBirds=[],subduedMaterials=new Set();"
-    if html.count(gull_material_registry_marker) != 1:
-        raise SystemExit("No se encontró el registro único de instancias de gaviota.")
-    html = html.replace(gull_material_registry_marker, gull_material_registry_replacement, 1)
-    # Remove per-instance material clones by matching each source operation independently;
-    # this avoids whitespace-sensitive block matching in the minified source HTML.
-    for gull_material_clone_marker in (
-        "if(Array.isArray(mesh.material))mesh.material=mesh.material.map(material=>material?material.clone(material.name+'_subdued_gull'):material);",
-        "else if(mesh.material)mesh.material=mesh.material.clone(mesh.material.name+'_subdued_gull');",
-    ):
-        if html.count(gull_material_clone_marker) != 1:
-            raise SystemExit("No se encontró exactamente una operación de duplicación de material de gaviota.")
-        html = html.replace(gull_material_clone_marker, "", 1)
-    gull_material_set = "const subduedMaterials=new Set();"
-    if html.count(gull_material_set) != 1:
-        raise SystemExit("No se encontró el conjunto local de materiales duplicados de las gaviotas.")
-    html = html.replace(gull_material_set, "", 1)
-
     # Move expensive terrestrial-fauna decisions and collision/terrain validation to
     # a distance-aware cadence. Root motion is still integrated on every frame, while
     # the skinned animation groups keep running at the render rate.
