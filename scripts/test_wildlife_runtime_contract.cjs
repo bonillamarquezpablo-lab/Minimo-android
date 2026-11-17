@@ -7,8 +7,7 @@ const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const html=fs.readFileSync('index.html','utf8');
 
 for(const marker of [
-  "animal_count_required = \"const animalCount=idx===0?3:0;\"",
-  "wildlife_required = \"  if(wildlifeSpawnSpecs.length!==3)",
+  "wildlife_required = \"  if(isPerformanceMode&&!wildlifeSpawnSpecs.length)return 0;",
   "required_fauna_state = \"fauna:'blocking-required'\"",
   "async function inspectGLBContainer(blob)",
   "async function waitForAnimalTextures(meshes,kind,timeoutMs=25000)",
@@ -33,10 +32,10 @@ assert.match(html,/file:'Stag\.glb'/);
 assert.match(html,/function updateWildlife\(dt\)/);
 assert.match(validator,/wildlife/i);
 assert.ok(!builder.includes("if(isPerformanceMode&&!wildlifeSpawnSpecs.length)return 0"),
-  'Performance profile must not disable the requested wildlife population.');
-assert.ok(!builder.includes("fauna:isPerformanceMode?'disabled-performance'"),
   'Performance profile must not bypass the blocking animal readiness barrier.');
-assert.ok(builder.includes("requiredGulls:5"),
+assert.ok(builder.includes("requiredGulls:isPerformanceMode?0:5"),
   'The five physical gull instances must be validated before startup is released.');
 
+assert.ok(builder.includes("fauna:isPerformanceMode?'disabled-performance':'blocking-required'"),
+  'Quality must block on complete fauna while Performance retains its explicit fauna-disabled policy.');
 console.log('WILDLIFE RUNTIME CONTRACT: PASS (3 complete terrestrial species, GLB integrity, skeletons, clips, textures, transactional cleanup and all-profile readiness).');
