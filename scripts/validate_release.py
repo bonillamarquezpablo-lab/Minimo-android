@@ -392,6 +392,9 @@ def main() -> None:
         "aerosolPath",
         "sunsetAlignment",
         "mieG",
+        "sunAirMass",
+        "rayleighBeta",
+        "sunTransmittance",
     )
     missing_atmosphere_profiler = [marker for marker in atmosphere_profiler_markers if marker not in atmosphere_source]
     if missing_atmosphere_profiler:
