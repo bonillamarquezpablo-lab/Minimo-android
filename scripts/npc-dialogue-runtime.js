@@ -216,13 +216,13 @@ function project(slot,s,occupied){
   const p=BABYLON.Vector3.Project(world,projectionIdentity,s.scene.getTransformMatrix(),viewport);
   if(!p||p.z<=0||p.z>=1)return hide("behind-camera");
   if(p.x<viewport.x||p.x>viewport.x+viewport.width||p.y<viewport.y||p.y>viewport.y+viewport.height)return hide("outside-screen");
-  const layerRect=layer.getBoundingClientRect(),x=p.x*(rect.width/width)+rect.left-layerRect.left,y=p.y*(rect.height/height)+rect.top-layerRect.top;
+  const screenX=rect.left+p.x*(rect.width/width),screenY=rect.top+p.y*(rect.height/height),layerRect=layer.getBoundingClientRect(),overlayAnchor=Core.toOverlayPoint({x:screenX,y:screenY},layerRect);if(!overlayAnchor)return hide("invalid-overlay-coordinate-space");const x=screenX,y=screenY;
   slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");
   if(slot.measureDirty||!(slot.width>0&&slot.height>0)){const measured=slot.node.getBoundingClientRect();slot.width=measured.width;slot.height=measured.height;slot.measureDirty=false;}
   if(!(slot.width>0&&slot.height>0))return hide("bubble-size-unavailable");
   let placement=Core.placeBubble({x,y},{width:slot.width,height:slot.height},{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom},occupied);
   if(!placement)return hide("no-safe-placement");
-  slot.node.style.left=placement.left.toFixed(1)+"px";slot.node.style.top=placement.top.toFixed(1)+"px";slot.node.style.transform="none";
+  const overlayPlacement=Core.toOverlayPoint({x:placement.left,y:placement.top},layerRect);if(!overlayPlacement)return hide("invalid-overlay-placement");slot.node.style.left=overlayPlacement.x.toFixed(1)+"px";slot.node.style.top=overlayPlacement.y.toFixed(1)+"px";slot.node.style.transform="none";
   diagnostics.lastProjection={id:idOf(npc),world:{x:Number(world.x.toFixed(3)),y:Number(world.y.toFixed(3)),z:Number(world.z.toFixed(3))},screen:{x:Number(x.toFixed(1)),y:Number(y.toFixed(1))},at:Date.now()};
   occupied.push(placement);diagnostics.projectionSuccesses++;return true;
  }catch(error){diagnostics.lastError=String(error&&error.message||error);return hide("projection-exception");}
