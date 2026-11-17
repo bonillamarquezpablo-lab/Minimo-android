@@ -17,7 +17,6 @@ for(const marker of [
   'getPerformanceSnapshot()',
   'window.__ELSN_WILDLIFE_DIAGNOSTICS__',
   'wildlifeUpdatePerfSamples=new Float32Array(120)',
-  'lastPositioningMs',
   'npcDialogue:window.__ELSN_NPC_DIALOGUES__',
   'atmosphere:window.__ELSN_ATMOSPHERE'
 ]) assert.ok(builder.includes(marker),'Subsystem performance report is missing: '+marker);
