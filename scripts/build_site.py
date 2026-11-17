@@ -180,6 +180,10 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
         )
     if max_joints < 8:
         raise RuntimeError(f"{label}: animal rig is incomplete ({max_joints} joints; expected >=8)")
+    animation_names = [re.sub(r"[^a-z0-9]", "", str(item.get("name") or "").lower()) for item in animations]
+    missing_clips = [clip for clip in ("idle", "walk", "gallop") if not any(name == clip or name.endswith(clip) for name in animation_names)]
+    if missing_clips:
+        raise RuntimeError(f"{label}: animal GLB is missing required locomotion clips {missing_clips}; found {animation_names}")
     if any(not (mesh.get("primitives") or []) for mesh in meshes):
         raise RuntimeError(f"{label}: one or more animal meshes have no primitives")
     return document
@@ -230,7 +234,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                         f"OK animated animal GLB {relative}: "
                         f"{len(document.get('meshes') or [])} meshes, "
                         f"{max((len(s.get('joints') or []) for s in (document.get('skins') or [])), default=0)} joints, "
-                        f"{len(document.get('animations') or [])} clips."
+                        f"{len(document.get('animations') or [])} clips { [item.get('name') for item in (document.get('animations') or [])] }."
                     )
                 else:
                     read_glb_document(destination)
@@ -827,7 +831,7 @@ def main() -> None:
     html = html.replace(wildlife_mesh_texture_marker, wildlife_mesh_texture_marker_replacement, 1)
 
     wildlife_animation_marker = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);"
-    wildlife_animation_marker_replacement = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);\n   if(!groups.some(group=>group&&group.targetedAnimations&&group.targetedAnimations.length>0)||!clips.idle||!clips.walk||!clips.run)throw new Error(kind+': el rig llegó sin animaciones reproducibles completas.');"
+    wildlife_animation_marker_replacement = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);\n   if(!groups.some(group=>group&&group.targetedAnimations&&group.targetedAnimations.length>0)||!clips.idle||!clips.walk||!clips.run||clips.walk===clips.idle||clips.run===clips.walk||clips.run===clips.idle)throw new Error(kind+': el rig necesita clips Idle, Walk y Gallop/Run distintos y reproducibles.');"
     if html.count(wildlife_animation_marker) != 1:
         raise SystemExit("No se encontró el marcador único: wildlife_animation_marker.")
     html = html.replace(wildlife_animation_marker, wildlife_animation_marker_replacement, 1)
