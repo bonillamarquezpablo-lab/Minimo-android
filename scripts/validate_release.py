@@ -343,6 +343,10 @@ def main() -> None:
         "partialMeshes=Array.from(scene.meshes||[]).filter(mesh=>!beforeMeshes.has(mesh))",
         "partialSkeletons=Array.from(scene.skeletons||[]).filter(skeleton=>!beforeSkeletons.has(skeleton))",
         "window.__ELSN_WILDLIFE_DIAGNOSTICS__",
+        "wildlifeReadinessRecords=[]",
+        "readiness:wildlifeReadinessRecords.slice()",
+        "wildlifeReadinessRecords.push({kind:spec.kind,state:'ready'",
+        "wildlifeModelsLoadOnce().catch(error=>",
         "complete:ambientFauna.length===wildlifeSpawnSpecs.length",
         "const animalCount=idx===0?3:0",
     )
@@ -1078,8 +1082,8 @@ def main() -> None:
         fail("Siguen presentes los animales provisionales construidos con primitivas.")
     if "function loadWildlifeModels()" not in index_html or "function playWildlifeAnimation(" not in index_html or "ImportMeshAsync(" not in index_html or "numBoneInfluencers>0" not in index_html or "Deer.glb" not in index_html or "Stag.glb" not in index_html or "Wolf.glb" not in index_html:
         fail("Falta la importación GLB con esqueleto de ciervo, venado y lobo.")
-    if "const animalCount=isPerformanceMode?0:(idx===0?3:0);" not in index_html:
-        fail("La fauna debe conservar el roster completo en Rendimiento y Calidad.")
+    if "const animalCount=idx===0?3:0;" not in index_html:
+        fail("Los tres animales terrestres deben estar presentes en ambos perfiles; Rendimiento debe conservar su cadencia y LOD.")
     if "const performanceDensity=isConstrainedMobile?" not in index_html or "leavesPerClump=isPerformanceMode?8:10" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("El ajuste de hierba preexistente de Rendimiento debe mantenerse y la fauna debe cargar después sin recortar su roster.")
     if "const civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html or "if(!civilianBlob){" not in index_html:
