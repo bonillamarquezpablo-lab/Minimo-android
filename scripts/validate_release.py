@@ -163,6 +163,9 @@ def main() -> None:
     gull_flight_source = read_text("scripts/gull-flight-core.js")
     if "applyFlightPose" not in gull_flight_source or "HIP_TUCK=1.02" not in gull_flight_source or "KNEE_FOLD=-1.18" not in gull_flight_source:
         fail("El núcleo de vuelo no incorpora el plegado de patas y articulación completa de la gaviota.")
+    for marker in ("f.leftWing.rotation[f.wingFlapAxis]", "f.rightWing.rotation[f.wingFlapAxis]", "f.leftHip.rotation[f.legBendAxis]", "f.rightHip.rotation[f.legBendAxis]", "f.leftKnee.rotation[f.legBendAxis]", "f.rightKnee.rotation[f.legBendAxis]", "bird.root.rotation[f.legBendAxis]"):
+        if marker not in gull_flight_source:
+            fail("La postura de vuelo no anima una articulación anatómica de la gaviota: " + marker)
     for marker in ("findRigNode('LeftHindUpLeg')", "findRigNode('RightHindUpLeg')", "findRigNode('LeftHindLeg')", "findRigNode('RightHindLeg')", "window.ELSN_GULL_FLIGHT_CORE.applyFlightPose(b,elapsed)"):
         if marker not in index_html:
             fail("La gaviota debe animar las cuatro articulaciones de las patas y el cuerpo en vuelo: " + marker)
@@ -180,6 +183,8 @@ def main() -> None:
     dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "headForced": "anchor.computeWorldMatrix(true)" in dialogue_runtime_source, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "activeCameraRefresh": "const camera=s.scene.activeCamera||s.camera" in dialogue_runtime_source, "rootOverlay": "document.documentElement||document.body" in dialogue_runtime_source}
     if not all(dialogue_matrix_contract.values()):
         fail("Contrato de proyección de diálogos incompleto en el paquete: " + json.dumps(dialogue_matrix_contract, ensure_ascii=False))
+    if "function viewportPointToLayer(point,layerRect)" not in dialogue_core_source or "Core.viewportPointToLayer({x:placement.left,y:placement.top},layerRect)" not in dialogue_runtime_source or 'node.style.position="absolute"' not in dialogue_runtime_source:
+        fail("Los diálogos deben convertir coordenadas de viewport a la capa local en lugar de fijarse a la pantalla.")
     if "scene.meshes" in dialogue_runtime_source or "for(const npc of allNpcs)" in dialogue_runtime_source:
         fail("El diálogo no debe recorrer todas las mallas o todos los NPC cada fotograma.")
     if any(marker in dialogue_runtime_source for marker in ("new BABYLON.Mesh", "MeshBuilder", "requestAnimationFrame")):
@@ -340,11 +345,6 @@ def main() -> None:
         "fittedMaxExtent>.57",
         "visualRoot.position.copyFrom(sourceCenter.scale(-1))",
         "rotationQuaternion.toEulerAngles()",
-        "leftWing.rotation[b.wingFlapAxis]",
-        "rightWing.rotation[b.wingFlapAxis]",
-        "const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;",
-        "b.leftWingBaseRotation-open-flap",
-        "b.rightWingBaseRotation+open+flap",
         "groups.forEach(group=>{try{group.stop();}catch(_){}})",
         "function findForestTreePlacement(x,z,canopyRadius)",
         "const conifer=kind==='pine'||kind==='spruce'",
