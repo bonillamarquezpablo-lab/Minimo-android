@@ -5,6 +5,7 @@ const assert=require('node:assert/strict');
 
 const dist=path.join(process.cwd(),'dist');
 const html=fs.readFileSync(path.join(dist,'index.html'),'utf8');
+const buildSource=fs.readFileSync(path.join(process.cwd(),'scripts','build_site.py'),'utf8');
 assert.match(html,/forestTreeAssetSpecs/);
 assert.match(html,/instantiateModelsToScene\(name=>name\+'_Forest_'/);
 assert.match(html,/await loadForestTreeTemplates\(\)/);
