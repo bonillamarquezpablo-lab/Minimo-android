@@ -140,7 +140,7 @@ assert.ok(dialogueRuntime.includes('const positioningSamples=new Float32Array(12
   dialogueRuntime.includes('positioningP99Ms:at(.99)'),
   'NPC dialogue projection must expose bounded p50/p95/p99 CPU timing samples.');
 assert.ok(dialogueRuntime.includes('layerRect=layer.getBoundingClientRect()'), 'NPC projection must convert Babylon render pixels into overlay coordinates.');
-assert.ok(dialogueRuntime.includes('slot.node.style.left=overlayPlacement.x.toFixed(1)+"px"') && dialogueRuntime.includes('slot.node.style.top=overlayPlacement.y.toFixed(1)+"px"') && dialogueRuntime.includes('slot.node.style.transform="none"'), 'NPC bubbles must use explicit overlay-local coordinates.');
+assert.ok(dialogueRuntime.includes('slot.node.style.left=placement.left.toFixed(1)+"px"') && dialogueRuntime.includes('slot.node.style.top=placement.top.toFixed(1)+"px"') && dialogueRuntime.includes('slot.node.style.transform="none"'), 'NPC bubbles must use the overlay-local NPC anchor without side or edge relocation.');
 assert.ok(dialogueRuntime.includes('node.style.position="absolute"'), 'Dialogue bubbles must be positioned relative to the fixed overlay.');
 assert.ok(dialogueStyle.includes('.elsn-npc-bubble{position:absolute;'), 'CSS must match the overlay-local positioning contract.');
 console.log("NPC screen-space projection freshness and timing contract: PASS.");
