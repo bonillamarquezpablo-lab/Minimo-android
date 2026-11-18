@@ -577,46 +577,73 @@ async function main() {
       throw new Error('El runtime de diálogos no detectó la partida activa: ' +
         JSON.stringify(diagnostics) + ' · ' + String(error?.message || error));
     });
-    // Dialogue diagnostics are observational only. The player validates the visible dialogue in normal gameplay.
-    manifest.npcDialogueSmoke = await page.evaluate(() => {
+    // Force one real NPC into camera range in the isolated browser session.
+    // This is test-only positioning; the original position is restored immediately afterwards.
+    const npcDialogueVisualProbe = await page.evaluate(() => {
       const bridge = window.__ELSN_GAME_DIALOGUE_BRIDGE__;
-      const runtime = window.__ELSN_NPC_DIALOGUES__;
-      if (!bridge || typeof bridge.getSnapshot !== 'function' ||
-          !runtime || typeof runtime.getSnapshot !== 'function') {
-        return { available: false, bridgePresent: !!bridge, runtimePresent: !!runtime };
-      }
-      const state = runtime.getSnapshot();
-      const world = bridge.getSnapshot();
+      const snapshot = bridge?.getSnapshot?.();
+      const npc = snapshot?.people?.find(person => person?.root &&
+        typeof person.root.getAbsolutePosition === 'function' &&
+        typeof person.root.setAbsolutePosition === 'function');
+      if (!npc) return { ready: false, reason: 'no-movable-npc-root' };
+      const root = npc.root;
+      const original = root.getAbsolutePosition().clone();
+      const player = snapshot.playerPosition;
+      const BABYLON = window.BABYLON;
+      const camera = snapshot.camera;
+      let forward = new BABYLON.Vector3(0, 0, 1);
+      try {
+        if (camera && typeof camera.getDirection === 'function')
+          forward = camera.getDirection(BABYLON.Axis.Z).normalize();
+      } catch (_) {}
+      const probePosition = new BABYLON.Vector3(
+        Number(player.x) + forward.x * 3.6,
+        Number(player.y) || original.y,
+        Number(player.z) + forward.z * 3.6
+      );
+      window.__ELSN_DIALOGUE_SMOKE_RESTORE__ = () => {
+        try { root.setAbsolutePosition(original); root.computeWorldMatrix(true); } catch (_) {}
+        delete window.__ELSN_DIALOGUE_SMOKE_RESTORE__;
+      };
+      root.setAbsolutePosition(probePosition);
+      root.computeWorldMatrix(true);
       return {
-        available: true,
-        bridgeReady: state.bridgeReady === true,
-        active: state.bridgeActive === true,
-        peopleInWorld: state.worldPeopleCount,
-        nearbyPeople: state.nearbyCount,
-        bubblesStarted: state.bubblesStarted,
-        projectionAttempts: state.projectionAttempts,
-        projectionSuccesses: state.projectionSuccesses,
-        visibleBubbles: state.renderedBubbleCount,
-        projectionFailures: state.projectionFailures,
-        lastError: state.lastError || '',
-        worldSnapshotActive: world.active === true
+        ready: true,
+        npc: String(npc.name || root.name || 'NPC'),
+        original: { x: original.x, y: original.y, z: original.z },
+        probe: { x: probePosition.x, y: probePosition.y, z: probePosition.z },
+        player: { x: player.x, y: player.y, z: player.z }
       };
     });
-    assert.ok(manifest.npcDialogueSmoke.available && Number(manifest.npcDialogueSmoke.peopleInWorld) > 0,
-      'El puente de diálogos no ha descubierto NPC reales en la escena: ' + JSON.stringify(manifest.npcDialogueSmoke));
-    if (Number(manifest.npcDialogueSmoke.nearbyPeople) > 0) {
+    manifest.npcDialogueVisualProbe = npcDialogueVisualProbe;
+    assert.ok(npcDialogueVisualProbe.ready,
+      'No se pudo preparar un NPC real para probar la burbuja: ' + JSON.stringify(npcDialogueVisualProbe));
+    try {
       await page.waitForFunction(() => {
         const state = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.();
-        return Number(state?.bubblesStarted) > 0 && Number(state?.renderedBubbleCount) > 0;
-      }, undefined, { timeout: 10000, polling: 100 });
-      manifest.npcDialogueSmoke.visibleBubbleVerified = true;
+        return Number(state?.bubblesStarted) > 0 &&
+          Number(state?.renderedBubbleCount) > 0 &&
+          Array.isArray(state?.activeBubbleTexts) &&
+          state.activeBubbleTexts.some(item => typeof item?.text === 'string' && item.text.trim().length > 0);
+      }, undefined, { timeout: 15000, polling: 100 });
       manifest.npcDialogueSmoke = await page.evaluate(() => ({
         ...window.__ELSN_NPC_DIALOGUES__.getSnapshot(),
-        visibleBubbleVerified: true
+        visibleBubbleVerified: true,
+        visualProbe: window.__ELSN_DIALOGUE_SMOKE_RESTORE__ ? 'temporary-npc-near-player' : 'restored'
       }));
-    } else {
-      manifest.npcDialogueSmoke.visibleBubbleVerified = false;
-      manifest.npcDialogueSmoke.visibleBubbleReason = 'No hay NPC dentro de 26 m en el punto de aparición; se valida el descubrimiento del roster.';
+      await page.screenshot({ path: path.join(OUT, 'npc-dialogue-visual.png'), fullPage: false });
+    } catch (error) {
+      manifest.npcDialogueSmoke = await page.evaluate(() => ({
+        ...window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.(),
+        visibleBubbleVerified: false
+      }));
+      await page.screenshot({ path: path.join(OUT, 'npc-dialogue-visual-failure.png'), fullPage: false }).catch(() => {});
+      throw new Error('La burbuja NPC real no se llegó a dibujar junto al jugador: ' +
+        JSON.stringify(manifest.npcDialogueSmoke) + ' · ' + String(error?.message || error));
+    } finally {
+      await page.evaluate(() => {
+        try { window.__ELSN_DIALOGUE_SMOKE_RESTORE__?.(); } catch (_) {}
+      });
     }
     // Wait for the real campaign world to finish its first selection/update cycles.
     const spatialFilterWaitStartedAt = performance.now();
