@@ -203,19 +203,19 @@ function updateWorldBubble(slot,s){
  try{
   if(!slot.mesh){
    slot.texture=new BABYLON.DynamicTexture("ELSN_NPC_WorldBubble_Texture_"+slot.index,{width:768,height:384},s.scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
-   slot.texture.hasAlpha=true;slot.texture.wrapU=BABYLON.Texture.CLAMP_ADDRESSMODE;slot.texture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;slot.texture.vScale=1;slot.texture.vOffset=0;slot.texture.anisotropicFilteringLevel=2;
+   slot.texture.hasAlpha=true;slot.texture.wrapU=BABYLON.Texture.CLAMP_ADDRESSMODE;slot.texture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;slot.texture.vScale=-1;slot.texture.vOffset=1;slot.texture.anisotropicFilteringLevel=2;
    slot.material=new BABYLON.StandardMaterial("ELSN_NPC_WorldBubble_Material_"+slot.index,s.scene);
    slot.material.diffuseTexture=slot.texture;slot.material.useAlphaFromDiffuseTexture=true;
    slot.material.disableLighting=true;slot.material.emissiveColor=new BABYLON.Color3(1,1,1);
    slot.material.specularColor=BABYLON.Color3.Black();slot.material.backFaceCulling=false;
    slot.material.disableDepthWrite=true;slot.material.transparencyMode=BABYLON.Material.MATERIAL_ALPHABLEND;
-   slot.mesh=BABYLON.MeshBuilder.CreatePlane("ELSN_NPC_WorldBubble_"+slot.index,{width:2.35,height:1.18,sideOrientation:BABYLON.Mesh.DOUBLESIDE},s.scene);
+   slot.mesh=BABYLON.MeshBuilder.CreatePlane("ELSN_NPC_WorldBubble_"+slot.index,{width:2.12,height:1.06,sideOrientation:BABYLON.Mesh.DOUBLESIDE},s.scene);
    slot.mesh.material=slot.material;slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL;
    slot.mesh.isPickable=false;slot.mesh.checkCollisions=false;slot.mesh.alwaysSelectAsActiveMesh=true;
-   slot.mesh.renderingGroupId=1;slot.mesh.setEnabled(false);slot.textDirty=true;
+   slot.mesh.renderingGroupId=2;slot.mesh.setEnabled(false);slot.textDirty=true;
   }
   if(slot.anchor!==root){slot.mesh.parent=root;slot.anchor=root;}
-  slot.mesh.position.set(0,2.02+slot.index*.10,0);
+  slot.mesh.position.set(0,2.48+slot.index*.42,0);
   if(slot.textDirty)paintWorldBubble(slot);
   slot.mesh.setEnabled(true);
   diagnostics.lastAttachment={id:idOf(npc),root:{x:Number(rootPos.x.toFixed(2)),y:Number(rootPos.y.toFixed(2)),z:Number(rootPos.z.toFixed(2))},distance:Number(distance(rootPos,s.playerPosition).toFixed(2)),anchor:"npc-root",at:Date.now()};
