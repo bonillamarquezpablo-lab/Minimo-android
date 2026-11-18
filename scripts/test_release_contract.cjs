@@ -30,7 +30,7 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.320","The release validator must target the packaged 0.6.320 release.");
+assert.equal(expectedVersion,"0.6.321","The release validator must target the packaged 0.6.321 release.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
   buildSite.includes("mature-norway-spruce-tree.glb") &&
   buildSite.includes("oak-textured.glb") &&
@@ -43,15 +43,17 @@ assert.ok(buildSite.includes("targetGullMaxExtentMeters=.55") &&
   "The release must center the gull hierarchy and enforce the measured 0.55 m biological size.");
 assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]") &&
   buildSite.includes("flightRig,phase:i*1.25") &&
-  buildSite.includes("B.Quaternion.RotationAxisToRef(parentAxis,angle,part.delta)") &&
+  buildSite.includes("makeRotationPart=(node,worldAxis)") &&
+  buildSite.includes("const parent=node.parent||actor") &&
+  buildSite.includes("parentAxis=B.Vector3.TransformNormal(worldAxis,parentInverse)") &&
+  buildSite.includes("B.Quaternion.RotationAxisToRef(part.parentAxis,angle,part.delta)") &&
   buildSite.includes("part.delta.multiplyToRef(part.base,part.output)") &&
-  buildSite.includes("B.Vector3.TransformNormal(worldBodyAxis,actorInverse)") &&
-  buildSite.includes("parent=part.node.parent||actor") &&
+  buildSite.includes("applyRotation(part,angle)") &&
   buildSite.includes("flapPhase=elapsed*9.8+b.phase") &&
-  buildSite.includes("apply(rig.leftWing,rig.bodyAxis,flap*rig.leftWing.sign)") &&
-  buildSite.includes("apply(rig.rightWing,rig.bodyAxis,flap*rig.rightWing.sign)") &&
+  buildSite.includes("apply(rig.leftWing,flap*rig.leftWing.sign)") &&
+  buildSite.includes("apply(rig.rightWing,flap*rig.rightWing.sign)") &&
   !buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio"),
-  "The gull must fly through synchronized anatomical pivots while preserving original quaternion rest poses.");
+  "The gull must use precomputed local axes and quaternion-only per-frame animation.");
 assert.ok(buildSite.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)"),
   "Transparent ground effects in rendering group 1 must preserve opaque-world depth.");
 assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyRadius+otherRadius)*1.12") &&
@@ -78,7 +80,7 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.320"\)/,"The build must promote every visible source version to 0.6.320.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.320"\)/,"The build must promote every visible source version to 0.6.321.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true"),"Quality must keep its initially selected native render scale for the full session.");
 assert.ok(!buildSite.includes("qualityDprFloor") && !buildSite.includes("qualityDprCeiling") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples") && !buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"A CPU hitch must never trigger automatic resolution reduction in Quality.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2.10:1.45"),"The high-headroom mobile Quality startup scale must remain intact.");
@@ -108,7 +110,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.match(buildSite,/game_version = "0\.6\.320"/,"The build must validate and package 0.6.320.");
+assert.match(buildSite,/game_version = "0\.6\.320"/,"The build must validate and package 0.6.321.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");

@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.320"
+EXPECTED_VERSION = "0.6.321"
 
 HTML_PAGES = (
     "index.html",
@@ -166,13 +166,13 @@ def main() -> None:
         fail("La IA de aldeanos no puede aumentar la frecuencia de actualización ni alterar el presupuesto móvil.")
     if "dialogueAmbientByRoot=new Map()" not in index_html or "actualParts=ambientActor&&ambientActor.parts" not in index_html:
         fail("Los diálogos deben reutilizar la identidad y profesión reales del aldeano, no inventar variantes.")
-    for marker in ("BABYLON.Vector3.Project", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
+    for marker in ("slot.mesh.parent=root", "slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
-    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "headForced": "anchor.computeWorldMatrix(true)" in dialogue_runtime_source, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "activeCamera": "const camera=s.scene.activeCamera||s.camera" in dialogue_runtime_source, "worldSpacePlane": "BABYLON.MeshBuilder.CreatePlane" in dialogue_runtime_source, "dynamicTexture": "new BABYLON.DynamicTexture" in dialogue_runtime_source, "parentedToNpcHead": "slot.mesh.parent=anchor" in dialogue_runtime_source, "billboardCameraFacing": "BABYLON.Mesh.BILLBOARDMODE_ALL" in dialogue_runtime_source}
+    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "worldSpacePlane": "BABYLON.MeshBuilder.CreatePlane" in dialogue_runtime_source, "dynamicTexture": "new BABYLON.DynamicTexture" in dialogue_runtime_source, "parentedToNpcRoot": "slot.mesh.parent=root" in dialogue_runtime_source, "stableRootOffset": "slot.mesh.position.set(0,2.02+slot.index*.10,0)" in dialogue_runtime_source, "billboardCameraFacing": "BABYLON.Mesh.BILLBOARDMODE_ALL" in dialogue_runtime_source, "distanceOnlyScheduling": "Core.selectVisibleBubbles(nearby.map" in dialogue_runtime_source, "noScreenProjection": "BABYLON.Vector3.Project" not in dialogue_runtime_source}
     if not all(dialogue_matrix_contract.values()):
         fail("Contrato de proyección de diálogos incompleto en el paquete: " + json.dumps(dialogue_matrix_contract, ensure_ascii=False))
-    for marker in ("Core.isSegmentOccluded", "occluded-by-world-geometry", "updateWorldBubble(slot,s)", "worldOcclusionBounds(s)", "slot.mesh.position.set(0,anchor===root?2.12:.48+slot.index*.08,0)"):
+    for marker in ("updateWorldBubble(slot,s)", "outside-dialogue-range", "slot.mesh.parent=root", "slot.mesh.position.set(0,2.02+slot.index*.10,0)", "Core.selectVisibleBubbles(nearby.map"):
         if marker not in dialogue_runtime_source:
             fail("Los diálogos deben permanecer anclados al NPC y quedar ocluidos por el bosque: " + marker)
     if "occluders:trees,naturalOccluders:naturalShrubs" not in index_html:
@@ -180,7 +180,7 @@ def main() -> None:
     if "scene.meshes" in dialogue_runtime_source or "for(const npc of allNpcs)" in dialogue_runtime_source:
         fail("El diálogo no debe recorrer todas las mallas o todos los NPC cada fotograma.")
     if "document.createElement" in dialogue_runtime_source or "elsn-npc-dialogue-layer" in dialogue_runtime_source or "slot.node.style.left" in dialogue_runtime_source or "requestAnimationFrame" in dialogue_runtime_source:
-        fail("El runtime de diálogos no debe crear meshes 3D ni añadir trabajo permanente por fotograma.")
+        fail("El runtime de diálogos no debe crear overlays DOM ni añadir trabajo permanente por fotograma.")
     if "pointer-events:none" not in dialogue_style_source or "function bubbleLimit()" not in dialogue_runtime_source or "window.__ELSN_NPC_DIALOGUES_RUNTIME_ACTIVE__" not in dialogue_runtime_source or "?1:MAX_BUBBLES" not in dialogue_runtime_source or "slice(0,69)" not in dialogue_runtime_source or "bootstrapAttempts++<80" not in dialogue_runtime_source or "projectionFailures" not in dialogue_runtime_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
         fail("El diálogo ambiental debe reintentar el puente, limitar las tarjetas, admitir NPC cercanos y exponer fallos de proyección.")
     if "worldColliders.push({" in index_html or "registerWorldCollider({" not in index_html or "habitableColliderBackfillCount" not in index_html:
@@ -336,15 +336,17 @@ def main() -> None:
         "const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]",
         "rotationPart=node=>{const base=node.rotationQuaternion?node.rotationQuaternion.clone():B.Quaternion.FromEulerAngles",
         "flightRig={actor,wingAxis,bodyAxis",
-        "B.Vector3.TransformNormal(worldBodyAxis,actorInverse)",
-        "parent=part.node.parent||actor",
-        "B.Quaternion.RotationAxisToRef(parentAxis,angle,part.delta)",
+        "makeRotationPart=(node,worldAxis)",
+        "const parent=node.parent||actor",
+        "parentAxis=B.Vector3.TransformNormal(worldAxis,parentInverse)",
+        "B.Quaternion.RotationAxisToRef(part.parentAxis,angle,part.delta)",
         "part.delta.multiplyToRef(part.base,part.output)",
+        "applyRotation(part,angle)",
         "flapPhase=elapsed*9.8+b.phase",
-        "apply(rig.leftWing,rig.bodyAxis,flap*rig.leftWing.sign)",
-        "apply(rig.rightWing,rig.bodyAxis,flap*rig.rightWing.sign)",
-        "apply(rig.leftHindUpLeg,rig.wingAxis,tuck)",
-        "apply(rig.rightHindUpLeg,rig.wingAxis,tuck)",
+        "apply(rig.leftWing,flap*rig.leftWing.sign)",
+        "apply(rig.rightWing,flap*rig.rightWing.sign)",
+        "apply(rig.leftHindUpLeg,tuck)",
+        "apply(rig.rightHindUpLeg,tuck)",
         "scene.setRenderingAutoClearDepthStencil(1,false,false,false)",
         "height:spec.spec.targetHeight*scale",
         "height:.95*size",
@@ -563,7 +565,7 @@ def main() -> None:
     missing_fps_pacing = [marker for marker in fps_pacing_markers if marker not in index_html]
     if missing_fps_pacing:
         fail("El planificador de 60 Hz y su medición de fotogramas renderizados están incompletos: " + ", ".join(missing_fps_pacing))
-    if "reportVersion:'35',build:'0.6.320'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'36',build:'0.6.321'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -932,7 +934,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.320" not in index_html or "EL SIN NOMBRE 0.6.320 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.321" not in index_html or "EL SIN NOMBRE 0.6.321 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -1084,7 +1086,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.320</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.321</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")

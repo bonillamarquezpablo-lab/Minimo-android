@@ -5,7 +5,7 @@
  if(root)root.ELSN_NPC_DIALOGUE_CORE=api;
 })(typeof globalThis!=="undefined"?globalThis:this,function(){
 "use strict";
-const MAX_VISIBLE_BUBBLES=4,MAX_RANGE_METERS=26,POSITION_UPDATE_MS=100,SCHEDULER_INTERVAL_MS=1200;
+const MAX_VISIBLE_BUBBLES=4,MAX_RANGE_METERS=26,POSITION_UPDATE_MS=250,SCHEDULER_INTERVAL_MS=1200;
 const ROLES=Object.freeze([
  Object.freeze({id:"fisher",name:"Pescador",focus:"mareas, redes, corrientes y calas",thoughts:["La marea está cambiando; habrá que revisar las redes.","El mar siempre encuentra la forma de sorprendernos.","La corriente trae algas. Mañana tendré que remendar una red."],speech:["Hoy las redes pesan poco.","Cuando cambie el viento, saldré a pescar.","Necesitamos más cuerda para las redes.","La cala del norte suele quedar protegida cuando sopla del oeste."]}),
  Object.freeze({id:"farmer",name:"Campesino",focus:"cosechas, agua, alimentos y reservas",thoughts:["La tierra necesita cuidados antes de la próxima cosecha.","No podemos desperdiciar ni una sola provisión.","La lluvia ha dejado la tierra blanda; habrá que esperar para cargar los sacos."],speech:["Hoy toca revisar los cultivos.","La cosecha saldrá adelante si cuidamos la tierra.","Las provisiones deben durar hasta la próxima estación.","He guardado semillas para la siguiente siembra."]}),

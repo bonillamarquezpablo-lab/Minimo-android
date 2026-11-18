@@ -913,7 +913,7 @@ def main() -> None:
     html = html.replace(gull_animation_marker,gull_animation_replacement,1)
 
     gull_rig_marker = "const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}"
-    gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const findPart=name=>rigNodes.find(node=>new RegExp('^'+name+'(?:_|$)','i').test(node.name||''))||null,leftWing=findPart('LeftWing'),rightWing=findPart('RightWing'),tail=findPart('Tail'),head=findPart('Head'),neck=findPart('Neck'),jaw=findPart('Jaw'),leftHindUpLeg=findPart('LeftHindUpLeg'),rightHindUpLeg=findPart('RightHindUpLeg'),leftHindLeg=findPart('LeftHindLeg'),rightHindLeg=findPart('RightHindLeg');const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg];if(requiredFlightParts.some(node=>!node)){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene todas las articulaciones de vuelo: alas, cabeza, cuello y patas traseras.');}rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const worldBodyAxis=head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),worldWingAxis=leftWing.getAbsolutePosition().subtract(rightWing.getAbsolutePosition()).normalize(),actorInverse=actor.getWorldMatrix().clone().invert(),bodyAxis=B.Vector3.TransformNormal(worldBodyAxis,actorInverse).normalize(),wingAxis=B.Vector3.TransformNormal(worldWingAxis,actorInverse).normalize(),rotationPart=node=>{const base=node.rotationQuaternion?node.rotationQuaternion.clone():B.Quaternion.FromEulerAngles(node.rotation.x,node.rotation.y,node.rotation.z);node.rotationQuaternion=base.clone();return {node,base,delta:new B.Quaternion(),output:new B.Quaternion()};},leftWingSign=1,rightWingSign=-1,flightRig={actor,wingAxis,bodyAxis,leftWing:{...rotationPart(leftWing),sign:leftWingSign},rightWing:{...rotationPart(rightWing),sign:rightWingSign},tail:rotationPart(tail),head:rotationPart(head),neck:rotationPart(neck),leftHindUpLeg:rotationPart(leftHindUpLeg),rightHindUpLeg:rotationPart(rightHindUpLeg),leftHindLeg:rotationPart(leftHindLeg),rightHindLeg:rotationPart(rightHindLeg),applyRotation(part,axis,angle){actor.computeWorldMatrix(true);const worldAxis=B.Vector3.TransformNormal(axis,actor.getWorldMatrix()).normalize(),parent=part.node.parent||actor;parent.computeWorldMatrix(true);const parentInverse=parent.getWorldMatrix().clone().invert(),parentAxis=B.Vector3.TransformNormal(worldAxis,parentInverse).normalize();B.Quaternion.RotationAxisToRef(parentAxis,angle,part.delta);part.delta.multiplyToRef(part.base,part.output);part.node.rotationQuaternion.copyFrom(part.output);}};"
+    gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const findPart=name=>rigNodes.find(node=>new RegExp('^'+name+'(?:_|$)','i').test(node.name||''))||null,leftWing=findPart('LeftWing'),rightWing=findPart('RightWing'),tail=findPart('Tail'),head=findPart('Head'),neck=findPart('Neck'),jaw=findPart('Jaw'),leftHindUpLeg=findPart('LeftHindUpLeg'),rightHindUpLeg=findPart('RightHindUpLeg'),leftHindLeg=findPart('LeftHindLeg'),rightHindLeg=findPart('RightHindLeg');const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg];if(requiredFlightParts.some(node=>!node)){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene todas las articulaciones de vuelo: alas, cabeza, cuello y patas traseras.');}rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const actorInverse=actor.getWorldMatrix().clone().invert(),bodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),wingAxis=B.Vector3.TransformNormal(leftWing.getAbsolutePosition().subtract(rightWing.getAbsolutePosition()).normalize(),actorInverse).normalize(),actorWorld=actor.getWorldMatrix(),bodyWorldAxis=B.Vector3.TransformNormal(bodyAxis,actorWorld).normalize(),wingWorldAxis=B.Vector3.TransformNormal(wingAxis,actorWorld).normalize(),makeRotationPart=(node,worldAxis)=>{const base=node.rotationQuaternion?node.rotationQuaternion.clone():B.Quaternion.FromEulerAngles(node.rotation.x,node.rotation.y,node.rotation.z);node.rotationQuaternion=base.clone();const parent=node.parent||actor;parent.computeWorldMatrix(true);const parentInverse=parent.getWorldMatrix().clone().invert(),parentAxis=B.Vector3.TransformNormal(worldAxis,parentInverse).normalize();return {node,base,delta:new B.Quaternion(),output:new B.Quaternion(),parentAxis};},leftWingSign=1,rightWingSign=-1,flightRig={actor,wingAxis,bodyAxis,leftWing:{...makeRotationPart(leftWing,bodyWorldAxis),sign:leftWingSign},rightWing:{...makeRotationPart(rightWing,bodyWorldAxis),sign:rightWingSign},tail:makeRotationPart(tail,wingWorldAxis),head:makeRotationPart(head,wingWorldAxis),neck:makeRotationPart(neck,wingWorldAxis),leftHindUpLeg:makeRotationPart(leftHindUpLeg,wingWorldAxis),rightHindUpLeg:makeRotationPart(rightHindUpLeg,wingWorldAxis),leftHindLeg:makeRotationPart(leftHindLeg,wingWorldAxis),rightHindLeg:makeRotationPart(rightHindLeg,wingWorldAxis),applyRotation(part,angle){B.Quaternion.RotationAxisToRef(part.parentAxis,angle,part.delta);part.delta.multiplyToRef(part.base,part.output);part.node.rotationQuaternion.copyFrom(part.output);}};"
     if html.count(gull_rig_marker) != 1:
         raise SystemExit("No se encontró el punto único para validar los pivotes anatómicos de gaviota.")
     html = html.replace(gull_rig_marker, gull_rig_replacement, 1)
@@ -971,7 +971,7 @@ def main() -> None:
     html = html.replace(grass_recenter_marker, grass_recenter_replacement, 1)
 
     gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
-    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightRig){const rig=b.flightRig,flapPhase=elapsed*9.8+b.phase,flap=1.02*(Math.sin(flapPhase)+.16*Math.sin(flapPhase*2)),apply=rig.applyRotation;apply(rig.leftWing,rig.bodyAxis,flap*rig.leftWing.sign);apply(rig.rightWing,rig.bodyAxis,flap*rig.rightWing.sign);apply(rig.tail,rig.wingAxis,.085*Math.sin(elapsed*2.4+b.phase));apply(rig.neck,rig.wingAxis,-.075+.025*Math.sin(elapsed*1.2+b.phase));apply(rig.head,rig.wingAxis,.045*Math.sin(elapsed*1.6+b.phase));const tuck=1.08+.08*Math.sin(flapPhase+.7);apply(rig.leftHindUpLeg,rig.wingAxis,tuck);apply(rig.rightHindUpLeg,rig.wingAxis,tuck);apply(rig.leftHindLeg,rig.wingAxis,-.94);apply(rig.rightHindLeg,rig.wingAxis,-.94);}"
+    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightRig){const rig=b.flightRig,flapPhase=elapsed*9.8+b.phase,flap=1.02*(Math.sin(flapPhase)+.16*Math.sin(flapPhase*2)),apply=rig.applyRotation;apply(rig.leftWing,flap*rig.leftWing.sign);apply(rig.rightWing,flap*rig.rightWing.sign);apply(rig.tail,.085*Math.sin(elapsed*2.4+b.phase));apply(rig.neck,-.075+.025*Math.sin(elapsed*1.2+b.phase));apply(rig.head,.045*Math.sin(elapsed*1.6+b.phase));const tuck=1.08+.08*Math.sin(flapPhase+.7);apply(rig.leftHindUpLeg,tuck);apply(rig.rightHindUpLeg,tuck);apply(rig.leftHindLeg,-.94);apply(rig.rightHindLeg,-.94);}"
     if html.count(gull_flight_marker) != 1:
         raise SystemExit("No se encontró el bucle único de vuelo de las gaviotas.")
     html = html.replace(gull_flight_marker, gull_flight_replacement, 1)
@@ -1867,27 +1867,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.320: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.321: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.320; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.321; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.320\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.321\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.320.")
-    html = html.replace("0.6.274", "0.6.320")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.321.")
+    html = html.replace("0.6.274", "0.6.321")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'35',build:'0.6.320'"
+    diagnostic_build_replacement = "reportVersion:'36',build:'0.6.321'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.320 para normalizar.")
-    game_version = "0.6.320"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.321 para normalizar.")
+    game_version = "0.6.321"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -2659,6 +2659,21 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
 
     # Babylon's raw draw-call counter is cumulative in this runtime. Report the
     # per-rendered-frame delta rather than a growing session total.
+    enemy_ai_lod_marker = "if(isConstrainedMobile&&dist>18&&e.state!=='attack'&&e.stun<=0){"
+    enemy_ai_lod_replacement = "if(isTouchDevice&&dist>18&&e.state!=='attack'&&e.stun<=0){"
+    if html.count(enemy_ai_lod_marker) != 1:
+        raise SystemExit("No se encontró el límite de IA de enemigos a distancia.")
+    html = html.replace(enemy_ai_lod_marker, enemy_ai_lod_replacement, 1)
+    enemy_ai_lod_reset = "}else if(isConstrainedMobile){e.mobileAiNextAt=0;}"
+    enemy_ai_lod_reset_replacement = "}else if(isTouchDevice){e.mobileAiNextAt=0;}"
+    if html.count(enemy_ai_lod_reset) != 1:
+        raise SystemExit("No se encontró el reinicio de cadencia de IA de enemigos.")
+    html = html.replace(enemy_ai_lod_reset, enemy_ai_lod_reset_replacement, 1)
+    enemy_ai_far_cadence = "const mobileAiInterval=dist>70?.90:(dist>36?.42:.18);"
+    if html.count(enemy_ai_far_cadence) != 1:
+        raise SystemExit("No se encontró la cadencia escalonada de IA distante.")
+    html = html.replace(enemy_ai_far_cadence, "const mobileAiInterval=dist>70?1.0:(dist>36?.45:.20);", 1)
+
     draw_state_marker = "let perfAuditCount=0,perfAuditCursor=0,perfAuditScenario='sin seleccionar',perfAuditScenarioStartedAt=performance.now(),perfAuditFrameCounter=0;"
     draw_state_replacement = draw_state_marker + "\n let lastObservedDrawCallsTotal=null,lastObservedDrawCallsPerFrame=null;"
     if html.count(draw_state_marker) != 1:
