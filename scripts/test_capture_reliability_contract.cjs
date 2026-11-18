@@ -12,12 +12,14 @@ async function main() {
   const unifiedRunner = fs.readFileSync('scripts/run-unified-inspector.mjs', 'utf8');
   const planner = await import('./scene-capture-inspection.mjs');
 
-  assert.match(workflow,/^  pull_request:/m);
+  assert.doesNotMatch(workflow,/^  pull_request:/m,'The full Inspector must not run on pull requests.');
   assert.match(workflow,/^  workflow_dispatch:/m);
   assert.match(workflow,/^  unified-inspector:/m);
   assert.doesNotMatch(workflow,/^  (texture-smoke|character-startup|custom-capture):/m,
     'All checks must be invoked from one workflow job.');
   const pushBranches = workflow.match(/^  push:\n    branches: \[([^\]]+)\]/m);
+  assert.match(workflow,/^    paths:\n/m,'The automatic push trigger must be path-scoped, not run for every main commit.');
+  for (const file of ['scripts/fauna-visual-capture.mjs','scripts/create_fauna_contact_sheet.py','scripts/run-unified-inspector.mjs','scripts/test_fauna_visual_capture_contract.cjs','scripts/test_capture_reliability_contract.cjs']) assert.ok(workflow.includes(file),'Missing fauna Inspector path filter: '+file);
   assert.ok(pushBranches, 'The inspector workflow must keep an explicit push trigger.');
   const pushBranchNames = pushBranches[1].split(',').map(branch => branch.trim());
   assert.ok(pushBranchNames.includes('main'), 'Production changes must continue to be validated on main.');
