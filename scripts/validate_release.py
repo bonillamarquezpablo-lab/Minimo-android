@@ -339,6 +339,8 @@ def main() -> None:
         "fly=groups.find(g=>/^fly$/i.test(String(g.name||'')))||null",
         "El GLB de gaviota no contiene el clip Fly obligatorio",
         "animation:fly",
+        "groups.forEach(group=>{if(group!==fly)group.stop();})",
+        "fly.start(true,1.0)",
         "else if(b.animation)b.animation.speedRatio=.92+.08*Math.sin(elapsed*.85+b.phase)",
         "scene.setRenderingAutoClearDepthStencil(1,false,false,false)",
         "height:spec.spec.targetHeight*scale",
