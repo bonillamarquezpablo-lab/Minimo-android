@@ -442,7 +442,10 @@
       },
       gpu: {
         frameMs: number(runtime.engineGpuFrameMs),
-        sceneRenderMs: number(runtime.sceneRenderMs)
+        sceneRenderMs: number(runtime.sceneRenderMs),
+        timerQueryStatus: text(runtime.gpuTimerQueryStatus, 48),
+        timerQueryExtension: text(runtime.gpuTimerQueryExtension, 48),
+        device: runtime.gpuDeviceTelemetry && typeof runtime.gpuDeviceTelemetry === "object" ? runtime.gpuDeviceTelemetry : null
       },
       sceneTimings: {
         frameMs: number(runtime.sceneFrameMs),
@@ -817,6 +820,10 @@
     const longTaskDurations = longTasks.map(item => number(item.durationMs)).filter(value => value !== null);
     const gpu = values(sample => sample.gpu && sample.gpu.frameMs);
     const sceneRender = values(sample => sample.gpu && sample.gpu.sceneRenderMs);
+    const gpuStatusSamples = samples.map(sample => sample.gpu && sample.gpu.timerQueryStatus).filter(Boolean);
+    const latestGpuSample = samples.slice().reverse().find(sample => sample && sample.gpu) || null;
+    const latestGpuDevice = latestGpuSample && latestGpuSample.gpu && latestGpuSample.gpu.device || null;
+    const gpuTimerQueryStatus = gpuStatusSamples.length ? gpuStatusSamples[gpuStatusSamples.length-1] : "not-recorded";
     const activeMeshes = values(sample => sample.sceneTimings && sample.sceneTimings.activeMeshesEvaluationMs);
     const renderTargets = values(sample => sample.sceneTimings && sample.sceneTimings.renderTargetsMs);
     const median = list => percentile(list, .5);
@@ -1193,7 +1200,22 @@
         lastCacheHits: latestPhaseSample ? number(latestPhaseSample.subsystems.habitableAuditLastCacheHits) : null,
         lastCacheMisses: latestPhaseSample ? number(latestPhaseSample.subsystems.habitableAuditLastCacheMisses) : null
       },
-      gpu: { frameMedianMs: medianGpu, sceneRenderMedianMs: medianSceneRender },
+      gpu: {
+        timerQueryStatus: gpuTimerQueryStatus,
+        timerQueryExtension: latestGpuSample && latestGpuSample.gpu ? latestGpuSample.gpu.timerQueryExtension : null,
+        frameSampleCount: gpu.length,
+        frameMedianMs: medianGpu,
+        frameP50Ms: percentile(gpu,.50),
+        frameP95Ms: percentile(gpu,.95),
+        frameP99Ms: percentile(gpu,.99),
+        frameMaximumMs: gpu.length ? Math.max(...gpu) : null,
+        sceneRenderMedianMs: medianSceneRender,
+        device: latestGpuDevice,
+        measurementNote: gpu.length ? "GPU timer-query values measured by the graphics driver." :
+          gpuTimerQueryStatus === "unsupported" ? "GPU timer queries are unavailable on this browser/device; CPU and frame timing remain separate." :
+          gpuTimerQueryStatus === "disabled" ? "GPU profiling was not enabled for this session." :
+          "No valid GPU timer-query sample was collected; null is not zero."
+      },
       sceneTimings: { activeMeshesEvaluationMedianMs: medianActiveMeshes, renderTargetsMedianMs: medianRenderTargets },
       diagnostics: { medianReadMs: median(telemetryRead), maximumReadMs: telemetryRead.length ? Math.max(...telemetryRead) : null },
       sceneCounters: {
