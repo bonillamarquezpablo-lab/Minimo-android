@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.319"
+EXPECTED_VERSION = "0.6.320"
 
 HTML_PAGES = (
     "index.html",
@@ -185,7 +185,7 @@ def main() -> None:
         fail("La capa de bocadillos debe ser ligera y no interceptar los controles del juego.")
     if 'if(!placement)return hide("no-safe-placement")' not in dialogue_runtime_source or "placementFallbacks" in dialogue_runtime_source:
         fail("Las tarjetas de diálogo no deben desplazarse a los bordes cuando no hay una posición válida sobre el NPC.")
-    if "z-index:1200" not in dialogue_style_source or "Core.placeBubble(overlayAnchor" not in dialogue_runtime_source or "function bubbleLimit()" not in dialogue_runtime_source or "bootstrapAttempts++<80" not in dialogue_runtime_source or "projectionFailures" not in dialogue_runtime_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
+    if "z-index:1200" not in dialogue_style_source or "Core.placeBubble(overlayAnchor" not in dialogue_runtime_source or "function bubbleLimit()" not in dialogue_runtime_source or "window.__ELSN_NPC_DIALOGUES_RUNTIME_ACTIVE__" not in dialogue_runtime_source or "?1:MAX_BUBBLES" not in dialogue_runtime_source or "slice(0,69)" not in dialogue_runtime_source or "-webkit-line-clamp:3" not in dialogue_style_source or "bootstrapAttempts++<80" not in dialogue_runtime_source or "projectionFailures" not in dialogue_runtime_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
         fail("El diálogo ambiental debe reintentar el puente, admitir NPC cercanos y exponer fallos de proyección.")
     if "worldColliders.push({" in index_html or "registerWorldCollider({" not in index_html or "habitableColliderBackfillCount" not in index_html:
         fail("Todos los colisionadores de estructuras deben incorporarse a la rejilla espacial activa.")
@@ -309,8 +309,9 @@ def main() -> None:
     if not expanded_map_heading:
         fail("La carta ampliada debe declarar el rumbo antes de girar la brújula.")
     for marker in (
-        "renderedTerrainSurfaceAt(camera.position.x,camera.position.z)",
-        "minimumCameraY=cameraGroundY+1.70",
+        "renderedTerrainSurfaceAt(wantX,wantZ)",
+        "desiredGroundLimit=cameraGroundY+1.70",
+        "cameraGroundLimitFiltered+=(desiredGroundLimit-cameraGroundLimitFiltered)*(1-Math.exp(-safeDt*7.0))",
     ):
         if marker not in index_html:
             fail("La cámara terrestre debe conservar una separación mínima respecto al terreno renderizado.")
@@ -564,7 +565,7 @@ def main() -> None:
     missing_fps_pacing = [marker for marker in fps_pacing_markers if marker not in index_html]
     if missing_fps_pacing:
         fail("El planificador de 60 Hz y su medición de fotogramas renderizados están incompletos: " + ", ".join(missing_fps_pacing))
-    if "reportVersion:'35',build:'0.6.319'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'35',build:'0.6.320'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -933,7 +934,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.319" not in index_html or "EL SIN NOMBRE 0.6.319 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.320" not in index_html or "EL SIN NOMBRE 0.6.320 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -1085,7 +1086,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.319</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.320</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")

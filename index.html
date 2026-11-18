@@ -8702,7 +8702,7 @@ function createRealWeapon(type='axe'){
   console.warn('Island reflection unavailable; generic HDRI is intentionally excluded from water.',waterReflectionError);
  }
  let yaw=0,attackFacingYaw=0,cameraYaw=0,cameraPitch=.48,cameraDistance=10.35,cameraMode='follow',cameraManualLookUntil=0;
- let cameraTargetSmoothed=null,cameraCollisionTimer=0,cameraObstructionRatio=1,cameraObstructionBlend=1,playerGroundYFiltered=NaN,playerVerticalVelocity=0,playerAirborne=false;
+ let cameraTargetSmoothed=null,cameraCollisionTimer=0,cameraObstructionRatio=1,cameraObstructionBlend=1,cameraGroundLimitFiltered=NaN,playerGroundYFiltered=NaN,playerVerticalVelocity=0,playerAirborne=false;
  let cameraPointers=new Map(),cameraPinchDistance=0,cameraPinchStart=0;
  function playerPos(){return player.root.getAbsolutePosition();}
  function cameraPointBlocked(x,z){
@@ -8771,7 +8771,18 @@ function createRealWeapon(type='axe'){
   }else{
    cameraCollisionTimer=0;cameraObstructionRatio=1;cameraObstructionBlend=1;
   }
-  const wantX=target.x+baseX*blend,wantY=target.y+baseY*blend,wantZ=target.z+baseZ*blend;
+  const wantX=target.x+baseX*blend,wantZ=target.z+baseZ*blend;
+  let wantY=target.y+baseY*blend;
+  // Smooth terrain clearance before camera interpolation; never snap its Y after easing.
+  if(!onShip&&wantY<target.y+2.15){
+   const cameraGroundY=renderedTerrainSurfaceAt(wantX,wantZ);
+   if(Number.isFinite(cameraGroundY)){
+    const desiredGroundLimit=cameraGroundY+1.70;
+    if(!Number.isFinite(cameraGroundLimitFiltered))cameraGroundLimitFiltered=Math.min(desiredGroundLimit,camera.position.y);
+    cameraGroundLimitFiltered+=(desiredGroundLimit-cameraGroundLimitFiltered)*(1-Math.exp(-safeDt*7.0));
+    wantY=Math.max(wantY,cameraGroundLimitFiltered);
+   }else cameraGroundLimitFiltered=NaN;
+  }else cameraGroundLimitFiltered=NaN;
   const positionAlpha=Math.min(1,1-Math.exp(-safeDt*(onShip?8.5:13.2)));
   camera.position.x+=(wantX-camera.position.x)*positionAlpha;
   camera.position.y+=(wantY-camera.position.y)*positionAlpha;
@@ -8780,15 +8791,6 @@ function createRealWeapon(type='axe'){
    const shake=Math.min(.012,cameraShake*.10);
    camera.position.x+=Math.sin(elapsed*47)*shake;
    camera.position.y+=Math.cos(elapsed*61)*shake*.35;
-  }
-  // Ground guard: a manually lowered camera may never cross the rendered terrain.
-  // Sample only near the ground so the normal cinematic camera adds no per-frame cost.
-  if(!onShip&&camera.position.y<target.y+2.15){
-   const cameraGroundY=renderedTerrainSurfaceAt(camera.position.x,camera.position.z);
-   if(Number.isFinite(cameraGroundY)){
-    const minimumCameraY=cameraGroundY+1.70;
-    if(camera.position.y<minimumCameraY)camera.position.y=minimumCameraY;
-   }
   }
   camera.setTarget(target);
   camera.fov=portrait?.84:.78;
