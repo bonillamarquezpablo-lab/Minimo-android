@@ -560,6 +560,22 @@ async function main() {
         worldSnapshotActive: world.active === true
       };
     });
+    assert.ok(manifest.npcDialogueSmoke.available && Number(manifest.npcDialogueSmoke.peopleInWorld) > 0,
+      'El puente de diálogos no ha descubierto NPC reales en la escena: ' + JSON.stringify(manifest.npcDialogueSmoke));
+    if (Number(manifest.npcDialogueSmoke.nearbyPeople) > 0) {
+      await page.waitForFunction(() => {
+        const state = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.();
+        return Number(state?.bubblesStarted) > 0 && Number(state?.renderedBubbleCount) > 0;
+      }, undefined, { timeout: 10000, polling: 100 });
+      manifest.npcDialogueSmoke.visibleBubbleVerified = true;
+      manifest.npcDialogueSmoke = await page.evaluate(() => ({
+        ...window.__ELSN_NPC_DIALOGUES__.getSnapshot(),
+        visibleBubbleVerified: true
+      }));
+    } else {
+      manifest.npcDialogueSmoke.visibleBubbleVerified = false;
+      manifest.npcDialogueSmoke.visibleBubbleReason = 'No hay NPC dentro de 26 m en el punto de aparición; se valida el descubrimiento del roster.';
+    }
     // Wait for the real campaign world to finish its first selection/update cycles.
     const spatialFilterWaitStartedAt = performance.now();
     await page.waitForFunction(() => {
