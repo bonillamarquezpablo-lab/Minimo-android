@@ -15,16 +15,16 @@ assert.doesNotMatch(html,/scale=1\.65\/height/);
 assert.ok(html.includes('const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]'), 'The replacement gull must require all named anatomical flight pivots.');
 assert.ok(!html.includes("El GLB de gaviota no contiene el clip Fly obligatorio") && !html.includes("fly=groups.find("),
   'A missing glTF animation clip must not block a model that exposes articulated pivots.');
-assert.ok(html.includes("flightRig,phase:i*1.25") && html.includes("makeRotationPart=(node,worldAxis)") &&
-  html.includes("parentAxis=B.Vector3.TransformNormal(worldAxis,parentInverse)") &&
-  html.includes("B.Quaternion.RotationAxisToRef(part.parentAxis,angle,part.delta)") &&
-  html.includes("part.delta.multiplyToRef(part.base,part.output)") &&
-  html.includes("applyRotation(part,angle)"),
-  'Gull joint axes must be prepared at load and then animated using original quaternion rest poses.');
-assert.ok(html.includes("flapPhase=elapsed*9.8+b.phase") &&
-  html.includes("apply(rig.leftWing,flap*rig.leftWing.sign)") &&
-  html.includes("apply(rig.rightWing,flap*rig.rightWing.sign)"),
-  'Both wings must execute a synchronized, mirrored, continuous flight stroke through cached axes.');
+assert.ok(html.includes("flightRig,phase:i*1.25") && html.includes("alignAxis=(from,to)") &&
+  html.includes("visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))") &&
+  html.includes("new B.AnimationGroup('Seagull_Flight_Loop_'+i,scene)") &&
+  html.includes("B.Animation.ANIMATIONTYPE_QUATERNION") &&
+  html.includes("addFlightTrack('LeftWing'") && html.includes("addFlightTrack('RightWing'") &&
+  html.includes("flightGroup.start(true,1,0,24)") && html.includes("flightGroup.goToFrame((i*5)%24)"),
+  'Every gull must be aligned horizontally and run a real looping Babylon quaternion animation group.');
+assert.ok(html.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
+  html.includes("Seagull_Flight_Loop_") && html.includes("wingStroke=t=>.88*Math.sin(t*Math.PI*2)+.14*Math.sin(t*Math.PI*4)"),
+  'The authored flight clip must loop continuously with mirrored wing strokes and per-bird phase offsets.');
 assert.ok(html.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)") && html.includes("footprintMesh.renderingGroupId=1"),
   'Transparent footprints in rendering group 1 must preserve opaque-world depth.');
 assert.ok(html.includes("function findForestTreePlacement(x,z,canopyRadius)"),
@@ -37,20 +37,13 @@ assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html
   'Forest placement must use a wider relocation search and expose overlap diagnostics.');
 assert.ok(!html.includes('b.leftWing.rotation[b.wingFlapAxis]') && !html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
   'The imported skeleton animation must not be overridden by synthetic per-bone wing rotations.');
-assert.ok(html.includes('flightRig,phase:i*1.25') &&
-  html.includes('apply(rig.leftHindUpLeg,tuck)') &&
-  html.includes('apply(rig.rightHindUpLeg,tuck)') &&
-  html.includes('apply(rig.tail,.085*Math.sin') &&
-  html.includes('apply(rig.head,.045*Math.sin') &&
-  html.includes('apply(rig.neck,-.075'),
-  'The flight pose must tuck both legs and add restrained head, neck and tail compensation.');
-assert.ok(buildSource.includes("makeRotationPart=(node,worldAxis)") &&
-  buildSource.includes("node.rotationQuaternion=base.clone()") &&
-  buildSource.includes("leftWingSign=") && buildSource.includes("rightWingSign=") &&
-  buildSource.includes("const parent=node.parent||actor") &&
-  buildSource.includes("parentAxis=B.Vector3.TransformNormal(worldAxis,parentInverse)") &&
-  buildSource.includes("applyRotation(part,angle)"),
- 'The original quaternion rest pose, mirrored wing pivots and cached parent-local axes must be preserved.');
+assert.ok(html.includes("addFlightTrack('LeftHindUpLeg'") && html.includes("addFlightTrack('RightHindUpLeg'") &&
+  html.includes("addFlightTrack('Tail'") && html.includes("addFlightTrack('Head'") && html.includes("addFlightTrack('Neck'"),
+  'The flight clip must tuck both legs and animate restrained head, neck and tail compensation.');
+assert.ok(buildSource.includes("alignAxis=(from,to)") && buildSource.includes("visualRoot.rotationQuaternion=alignAxis") &&
+  buildSource.includes("new B.AnimationGroup('Seagull_Flight_Loop_'+i,scene)") &&
+  buildSource.includes("addFlightTrack('LeftWing'") && buildSource.includes("addFlightTrack('RightWing'"),
+ 'The bird body must be aligned to a horizontal flight axis and use a real looping animation group with mirrored wing pivots.');
 
 function inspectGlb(relative,minimumBytes,requiresTexture){
  const file=path.join(dist,relative);
