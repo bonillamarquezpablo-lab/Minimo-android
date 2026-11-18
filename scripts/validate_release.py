@@ -169,24 +169,20 @@ def main() -> None:
     for marker in ("BABYLON.Vector3.Project", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
-    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "headForced": "anchor.computeWorldMatrix(true)" in dialogue_runtime_source, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "activeCameraRefresh": "const camera=s.scene.activeCamera||s.camera" in dialogue_runtime_source, "rootOverlay": "document.documentElement||document.body" in dialogue_runtime_source}
+    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "headForced": "anchor.computeWorldMatrix(true)" in dialogue_runtime_source, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "activeCamera": "const camera=s.scene.activeCamera||s.camera" in dialogue_runtime_source, "worldSpacePlane": "BABYLON.MeshBuilder.CreatePlane" in dialogue_runtime_source, "dynamicTexture": "new BABYLON.DynamicTexture" in dialogue_runtime_source, "parentedToNpcHead": "slot.mesh.parent=anchor" in dialogue_runtime_source, "billboardCameraFacing": "BABYLON.Mesh.BILLBOARDMODE_ALL" in dialogue_runtime_source}
     if not all(dialogue_matrix_contract.values()):
         fail("Contrato de proyección de diálogos incompleto en el paquete: " + json.dumps(dialogue_matrix_contract, ensure_ascii=False))
-    for marker in ("Core.isSegmentOccluded", "occluded-by-world-geometry", "Core.placeBubble(overlayAnchor", "worldOcclusionBounds(s)"):
+    for marker in ("Core.isSegmentOccluded", "occluded-by-world-geometry", "updateWorldBubble(slot,s)", "worldOcclusionBounds(s)", "slot.mesh.position.set(0,anchor===root?2.12:.48+slot.index*.08,0)"):
         if marker not in dialogue_runtime_source:
             fail("Los diálogos deben permanecer anclados al NPC y quedar ocluidos por el bosque: " + marker)
     if "occluders:trees,naturalOccluders:naturalShrubs" not in index_html:
         fail("El puente de diálogos no publica la geometría de oclusión del bosque y los arbustos.")
     if "scene.meshes" in dialogue_runtime_source or "for(const npc of allNpcs)" in dialogue_runtime_source:
         fail("El diálogo no debe recorrer todas las mallas o todos los NPC cada fotograma.")
-    if any(marker in dialogue_runtime_source for marker in ("new BABYLON.Mesh", "MeshBuilder", "requestAnimationFrame")):
+    if "document.createElement" in dialogue_runtime_source or "elsn-npc-dialogue-layer" in dialogue_runtime_source or "slot.node.style.left" in dialogue_runtime_source or "requestAnimationFrame" in dialogue_runtime_source:
         fail("El runtime de diálogos no debe crear meshes 3D ni añadir trabajo permanente por fotograma.")
-    if ".elsn-npc-bubble-message" not in dialogue_style_source or "pointer-events:none" not in dialogue_style_source:
-        fail("La capa de bocadillos debe ser ligera y no interceptar los controles del juego.")
-    if 'if(!placement)return hide("no-safe-placement")' not in dialogue_runtime_source or "placementFallbacks" in dialogue_runtime_source:
-        fail("Las tarjetas de diálogo no deben desplazarse a los bordes cuando no hay una posición válida sobre el NPC.")
-    if "z-index:1200" not in dialogue_style_source or "Core.placeBubble(overlayAnchor" not in dialogue_runtime_source or "function bubbleLimit()" not in dialogue_runtime_source or "window.__ELSN_NPC_DIALOGUES_RUNTIME_ACTIVE__" not in dialogue_runtime_source or "?1:MAX_BUBBLES" not in dialogue_runtime_source or "slice(0,69)" not in dialogue_runtime_source or "-webkit-line-clamp:3" not in dialogue_style_source or "bootstrapAttempts++<80" not in dialogue_runtime_source or "projectionFailures" not in dialogue_runtime_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
-        fail("El diálogo ambiental debe reintentar el puente, admitir NPC cercanos y exponer fallos de proyección.")
+    if "pointer-events:none" not in dialogue_style_source or "function bubbleLimit()" not in dialogue_runtime_source or "window.__ELSN_NPC_DIALOGUES_RUNTIME_ACTIVE__" not in dialogue_runtime_source or "?1:MAX_BUBBLES" not in dialogue_runtime_source or "slice(0,69)" not in dialogue_runtime_source or "bootstrapAttempts++<80" not in dialogue_runtime_source or "projectionFailures" not in dialogue_runtime_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
+        fail("El diálogo ambiental debe reintentar el puente, limitar las tarjetas, admitir NPC cercanos y exponer fallos de proyección.")
     if "worldColliders.push({" in index_html or "registerWorldCollider({" not in index_html or "habitableColliderBackfillCount" not in index_html:
         fail("Todos los colisionadores de estructuras deben incorporarse a la rejilla espacial activa.")
     if "fallbackShorelineRadius(island)" not in index_html or "emissiveColor=new B.Color3(.12,.15,.16)" not in index_html or "foamVisibility=Math.max(Math.min(.94,foamStrength/.16),.22,foamBreakStrength*.82)" not in index_html:
@@ -339,14 +335,16 @@ def main() -> None:
         "visualRoot.position.copyFrom(sourceCenter.scale(-1))",
         "const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]",
         "rotationPart=node=>{const base=node.rotationQuaternion?node.rotationQuaternion.clone():B.Quaternion.FromEulerAngles",
-        "flightRig={wingAxis,bodyAxis",
-        "B.Quaternion.RotationAxisToRef(axis,angle,part.delta)",
-        "part.base.multiplyToRef(part.delta,part.output)",
-        "flapPhase=elapsed*10.2+b.phase",
-        "apply(rig.leftWing,rig.wingAxis,flap*rig.leftWing.sign)",
-        "apply(rig.rightWing,rig.wingAxis,flap*rig.rightWing.sign)",
-        "apply(rig.leftHindUpLeg,rig.bodyAxis,tuck)",
-        "apply(rig.rightHindUpLeg,rig.bodyAxis,tuck)",
+        "flightRig={actor,wingAxis,bodyAxis",
+        "B.Vector3.TransformNormal(worldBodyAxis,actorInverse)",
+        "const parent=part.node.parent||actor",
+        "B.Quaternion.RotationAxisToRef(parentAxis,angle,part.delta)",
+        "part.delta.multiplyToRef(part.base,part.output)",
+        "flapPhase=elapsed*9.8+b.phase",
+        "apply(rig.leftWing,rig.bodyAxis,flap*rig.leftWing.sign)",
+        "apply(rig.rightWing,rig.bodyAxis,flap*rig.rightWing.sign)",
+        "apply(rig.leftHindUpLeg,rig.wingAxis,tuck)",
+        "apply(rig.rightHindUpLeg,rig.wingAxis,tuck)",
         "scene.setRenderingAutoClearDepthStencil(1,false,false,false)",
         "height:spec.spec.targetHeight*scale",
         "height:.95*size",

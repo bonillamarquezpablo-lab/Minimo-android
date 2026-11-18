@@ -43,11 +43,13 @@ assert.ok(buildSite.includes("targetGullMaxExtentMeters=.55") &&
   "The release must center the gull hierarchy and enforce the measured 0.55 m biological size.");
 assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]") &&
   buildSite.includes("flightRig,phase:i*1.25") &&
-  buildSite.includes("B.Quaternion.RotationAxisToRef(axis,angle,part.delta)") &&
-  buildSite.includes("part.base.multiplyToRef(part.delta,part.output)") &&
-  buildSite.includes("flapPhase=elapsed*10.2+b.phase") &&
-  buildSite.includes("apply(rig.leftWing,rig.wingAxis,flap*rig.leftWing.sign)") &&
-  buildSite.includes("apply(rig.rightWing,rig.wingAxis,flap*rig.rightWing.sign)") &&
+  buildSite.includes("B.Quaternion.RotationAxisToRef(parentAxis,angle,part.delta)") &&
+  buildSite.includes("part.delta.multiplyToRef(part.base,part.output)") &&
+  buildSite.includes("B.Vector3.TransformNormal(worldBodyAxis,actorInverse)") &&
+  buildSite.includes("const parent=part.node.parent||actor") &&
+  buildSite.includes("flapPhase=elapsed*9.8+b.phase") &&
+  buildSite.includes("apply(rig.leftWing,rig.bodyAxis,flap*rig.leftWing.sign)") &&
+  buildSite.includes("apply(rig.rightWing,rig.bodyAxis,flap*rig.rightWing.sign)") &&
   !buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio"),
   "The gull must fly through synchronized anatomical pivots while preserving original quaternion rest poses.");
 assert.ok(buildSite.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)"),
@@ -60,7 +62,13 @@ assert.ok(atmosphereSource.includes("profile.exposure = 1.035") && atmosphereSou
   "Dusk must not rewrite shared image-processing settings on every visual update.");
 const npcDialogueRuntime=fs.readFileSync('scripts/npc-dialogue-runtime.js','utf8');
 assert.ok(buildSite.includes('occluders:trees,naturalOccluders:naturalShrubs'),"The dialogue bridge must supply tree and shrub occluders.");
-assert.ok(npcDialogueRuntime.includes('Core.isSegmentOccluded') && npcDialogueRuntime.includes('Core.placeBubble(overlayAnchor'),"NPC dialogue must stay attached to its world anchor and hide behind tree geometry.");
+assert.ok(npcDialogueRuntime.includes('Core.isSegmentOccluded') &&
+  npcDialogueRuntime.includes('BABYLON.MeshBuilder.CreatePlane') &&
+  npcDialogueRuntime.includes('new BABYLON.DynamicTexture') &&
+  npcDialogueRuntime.includes('slot.mesh.parent=anchor') &&
+  npcDialogueRuntime.includes('slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL') &&
+  !npcDialogueRuntime.includes('elsn-npc-dialogue-layer'),
+  "NPC dialogue must be a world-space billboard parented to the live NPC head, not a fixed viewport overlay.");
 assert.ok(npcDialogueRuntime.includes('const observable=scene.onAfterRenderObservable') &&
   npcDialogueRuntime.includes('render(lastSnapshot,true)') && !npcDialogueRuntime.includes('refreshProjectionMatrices(lastSnapshot)'),
   "Dialogue cards must reproject against the latest camera matrix before scene rendering.");
