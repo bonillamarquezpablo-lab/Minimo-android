@@ -537,6 +537,17 @@ def main() -> None:
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
+    fps_pacing_markers = (
+        "const targetFrameRate=60;",
+        "frameIntervalMs=1000/targetFrameRate",
+        "if(now+.5<nextRenderAt)return",
+        "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
+        "renderedFps=measured",
+        "renderedFps||engine.getFps()",
+    )
+    missing_fps_pacing = [marker for marker in fps_pacing_markers if marker not in index_html]
+    if missing_fps_pacing:
+        fail("El planificador de 60 Hz y su medición de fotogramas renderizados están incompletos: " + ", ".join(missing_fps_pacing))
     if "reportVersion:'35',build:'0.6.318'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
