@@ -1786,7 +1786,7 @@ function updateWildlife(dt){
  // Player-facing dialogue bridge. Inspector specialist identities remain in their own runtime.
  window.__ELSN_GAME_DIALOGUE_BRIDGE__=Object.freeze({
   maxVisibleBubbles:4,
-  getSnapshot:(()=>{let dialoguePeopleCache=null,dialogueAmbientByRoot=null;return ()=>{
+  getSnapshot:(()=>{let dialoguePeopleCache=null,dialogueAmbientByRoot=null,dialoguePeopleSceneNodeCount=-1;return ()=>{
    let focus=null;
    try{if(typeof playerPos==='function')focus=playerPos();}catch(_){}
    if(!focus||!Number.isFinite(Number(focus.x))||!Number.isFinite(Number(focus.z))){
@@ -1802,7 +1802,8 @@ function updateWildlife(dt){
     playerPosition:{x:Number(focus&&focus.x)||0,y:Number(focus&&focus.y)||0,z:Number(focus&&focus.z)||0},
     people:(()=>{
      if(!active)return [];
-     if(!dialoguePeopleCache){
+     const sceneNodeCount=(Array.isArray(scene.transformNodes)?scene.transformNodes.length:0)+(Array.isArray(scene.meshes)?scene.meshes.length:0);
+     if(!dialoguePeopleCache||sceneNodeCount!==dialoguePeopleSceneNodeCount){
       dialogueAmbientByRoot=new Map();
       if(Array.isArray(ambientPeople))for(const actor of ambientPeople){if(actor&&actor.parts&&actor.parts.root)dialogueAmbientByRoot.set(actor.parts.root,actor);}
       const candidates=[].concat(Array.isArray(scene.transformNodes)?scene.transformNodes:[],Array.isArray(scene.meshes)?scene.meshes:[]);
@@ -1835,6 +1836,7 @@ function updateWildlife(dt){
        found.push({name,root:node,villageIndex,parts:actualParts,actor:ambientActor,recruited:ambientActor?ambientActor.recruited===true:false});
       }
       dialoguePeopleCache=found;
+      dialoguePeopleSceneNodeCount=sceneNodeCount;
      }
      return dialoguePeopleCache;
     })(),
