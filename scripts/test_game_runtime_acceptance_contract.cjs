@@ -76,7 +76,9 @@ for (const marker of [
 assert.ok(dialogueRuntime.includes('projectionAttempts') &&
   smoke.includes('getSnapshot()') &&
   smoke.includes('visualEvidence.state') &&
-  smoke.includes('captureVisualProof(true)'),
+  smoke.includes('captureVisualProof(true)') &&
+  smoke.includes('proof?.texture?.vScale === 1') &&
+  smoke.includes('proof?.texture?.vOffset === 0'),
   'The runtime must expose positioning attempts and the browser smoke must persist its complete snapshot with the NPC texture proof.');
 assert.match(smoke, /STARTUP_RESTART_TIMEOUT_MS = 240000/);
 assert.match(smoke, /function waitForWorldReadyWithRecovery/);
