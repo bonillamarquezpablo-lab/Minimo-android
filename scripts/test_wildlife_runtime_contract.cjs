@@ -31,6 +31,8 @@ assert.match(html,/file:'Deer\.glb'/);
 assert.match(html,/file:'Wolf\.glb'/);
 assert.match(html,/file:'Stag\.glb'/);
 assert.match(html,/function updateWildlife\(dt\)/);
+assert.ok(html.includes("hearthOuterFlame.emissiveColor=new B.Color3(1,.24,.035)") && html.includes("hearthMiddleFlame.emissiveColor=new B.Color3(1,.46,.075)"), 'The village hearth must render amber/orange fire, not saturated red blade-shaped tongues.');
+assert.ok(html.includes('segments=14,positions=[],indices=[];') && html.includes('const wave=.94+Math.sin(elapsed*9.5+f.phase)*.075'), 'The fire silhouette must use smoother geometry and restrained flicker/lean so it cannot be mistaken for tentacles.');
 assert.match(html,/const animalCount=isPerformanceMode\?0:\(idx===0\?3:0\);/);
 assert.ok(builder.includes('wildlife_spawn_count_marker = "const animalCount=isPerformanceMode?0:(idx===0?3:0);"') &&
   builder.includes('wildlife_spawn_count_replacement = "const animalCount=idx===0?3:0;"'),

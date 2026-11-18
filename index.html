@@ -9376,13 +9376,13 @@ function createRealWeapon(type='axe'){
  // Decoration and atmosphere: anatomically built Norse hearths, layered flame, embers and smoke.
  const flameMeshes=[],fireSparks=[],hearthStates=[];
  const hearthAshMat=mat('Hearth ash and soot','#28231f',1),hearthCoalMat=mat('Charred oak coal','#201914',.98);
- const hearthOuterFlame=new B.StandardMaterial('HearthFlameOuter',scene);hearthOuterFlame.emissiveColor=new B.Color3(1,.105,.012);hearthOuterFlame.diffuseColor=new B.Color3(.76,.12,.025);hearthOuterFlame.disableLighting=true;hearthOuterFlame.alpha=.94;hearthOuterFlame.backFaceCulling=false;hearthOuterFlame.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
- const hearthMiddleFlame=new B.StandardMaterial('HearthFlameMiddle',scene);hearthMiddleFlame.emissiveColor=new B.Color3(1,.34,.035);hearthMiddleFlame.diffuseColor=new B.Color3(1,.36,.045);hearthMiddleFlame.disableLighting=true;hearthMiddleFlame.alpha=.97;hearthMiddleFlame.backFaceCulling=false;hearthMiddleFlame.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
+ const hearthOuterFlame=new B.StandardMaterial('HearthFlameOuter',scene);hearthOuterFlame.emissiveColor=new B.Color3(1,.24,.035);hearthOuterFlame.diffuseColor=new B.Color3(.92,.22,.045);hearthOuterFlame.disableLighting=true;hearthOuterFlame.alpha=.88;hearthOuterFlame.backFaceCulling=false;hearthOuterFlame.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
+ const hearthMiddleFlame=new B.StandardMaterial('HearthFlameMiddle',scene);hearthMiddleFlame.emissiveColor=new B.Color3(1,.46,.075);hearthMiddleFlame.diffuseColor=new B.Color3(1,.40,.065);hearthMiddleFlame.disableLighting=true;hearthMiddleFlame.alpha=.95;hearthMiddleFlame.backFaceCulling=false;hearthMiddleFlame.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
  const hearthCoreFlame=new B.StandardMaterial('HearthFlameCore',scene);hearthCoreFlame.emissiveColor=new B.Color3(1,.76,.25);hearthCoreFlame.diffuseColor=new B.Color3(1,.72,.25);hearthCoreFlame.disableLighting=true;hearthCoreFlame.alpha=.98;hearthCoreFlame.backFaceCulling=false;hearthCoreFlame.transparencyMode=B.Material.MATERIAL_ALPHABLEND;
  const hearthSparkMat=new B.StandardMaterial('HearthFlyingSparks',scene);hearthSparkMat.emissiveColor=new B.Color3(1,.48,.10);hearthSparkMat.diffuseColor=new B.Color3(1,.35,.05);hearthSparkMat.disableLighting=true;hearthSparkMat.alpha=.98;
  function makeFlameTongue(name,parent,pos,height,width,material,phase,lean=0){
   // Malla 3D afilada con centro curvado: evita las esferas/cilindros que parecían una llama de plástico.
-  const profile=[[0,.10],[.17,.78],[.37,1],[.58,.68],[.78,.36],[.92,.14],[1,.006]],segments=10,positions=[],indices=[];
+  const profile=[[0,.10],[.17,.78],[.37,1],[.58,.68],[.78,.36],[.92,.14],[1,.006]],segments=14,positions=[],indices=[];
   profile.forEach(([yy,rr],ri)=>{const bend=lean*yy+Math.sin(phase+yy*4.6)*.055*yy;for(let j=0;j<segments;j++){const a=j/segments*Math.PI*2;positions.push(bend+Math.cos(a)*width*rr,yy*height,Math.sin(a)*width*rr*.72);}});
   for(let r=0;r<profile.length-1;r++)for(let j=0;j<segments;j++){const a=r*segments+j,b=r*segments+(j+1)%segments,c=(r+1)*segments+(j+1)%segments,d=(r+1)*segments+j;indices.push(a,b,c,a,c,d);}
   const mesh=new B.Mesh(name,scene),normals=[];mesh.setVerticesData(B.VertexBuffer.PositionKind,positions);mesh.setIndices(indices);B.VertexData.ComputeNormals(positions,indices,normals);mesh.setVerticesData(B.VertexBuffer.NormalKind,normals);mesh.parent=parent;mesh.position=v(...pos);mesh.material=material;mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;
@@ -9407,7 +9407,7 @@ function createRealWeapon(type='axe'){
   // Se posiciona después de agrupar para que el transform mundial no se duplique en las mallas fusionadas.
   base.position=v(x,floorY,z);base.rotation.y=baseYaw;
   // Cinco lenguas de fuego solapadas en tres temperaturas: borde naranja, cuerpo ámbar y núcleo amarillo.
-  for(let i=0;i<4;i++){const a=i*Math.PI/2+.28,height=.67+rand(.10,.25),xx=Math.cos(a)*.12,zz=Math.sin(a)*.10;makeFlameTongue('HearthFlameOuter_'+i,base,[xx,.22,zz],height,.19+rand(0,.035),hearthOuterFlame,i*1.61,Math.cos(a)*.075);}
+  for(let i=0;i<4;i++){const a=i*Math.PI/2+.28,height=.67+rand(.10,.25),xx=Math.cos(a)*.105,zz=Math.sin(a)*.09;makeFlameTongue('HearthFlameOuter_'+i,base,[xx,.22,zz],height,.155+rand(0,.025),hearthOuterFlame,i*1.61,Math.cos(a)*.055);}
   for(let i=0;i<3;i++){const a=i*2.09+.55;makeFlameTongue('HearthFlameAmber_'+i,base,[Math.cos(a)*.055,.23,Math.sin(a)*.05],.52+rand(.08,.16),.115,hearthMiddleFlame,2+i*1.8,Math.cos(a)*.045);}
   makeFlameTongue('HearthFlameCore_A',base,[0,.22,-.015],.43,.078,hearthCoreFlame,1.1,.025);
   makeFlameTongue('HearthFlameCore_B',base,[.035,.22,.025],.35,.062,hearthCoreFlame,3.7,-.025);
@@ -12590,7 +12590,7 @@ function update(dt){
    ambientVfxAccumulator%=isConstrainedMobile?.10:.05;
   updateHearthFlooding(ambientDt);
   // Hearths flicker and throw warm light across the settlement.
-  flameMeshes.forEach(f=>{if(f.hearth&&f.hearth.extinguished){f.mesh.setEnabled(false);return;}f.mesh.setEnabled(true);if(!worldEntityVisualDue(f,f.baseX,f.baseZ))return;const wave=.91+Math.sin(elapsed*9.5+f.phase)*.13+Math.sin(elapsed*17+f.phase)*.055;f.mesh.scaling.y=wave;f.mesh.scaling.x=1+Math.sin(elapsed*12+f.phase)*.07;f.mesh.rotation.z=Math.sin(elapsed*8+f.phase)*.105;f.mesh.rotation.x=Math.cos(elapsed*7.2+f.phase)*.045;f.mesh.position.x=f.baseX+Math.sin(elapsed*6.8+f.phase)*.035;f.mesh.position.z=f.baseZ+Math.cos(elapsed*7.6+f.phase)*.025;});
+  flameMeshes.forEach(f=>{if(f.hearth&&f.hearth.extinguished){f.mesh.setEnabled(false);return;}f.mesh.setEnabled(true);if(!worldEntityVisualDue(f,f.baseX,f.baseZ))return;const wave=.94+Math.sin(elapsed*9.5+f.phase)*.075+Math.sin(elapsed*17+f.phase)*.025;f.mesh.scaling.y=wave;f.mesh.scaling.x=1+Math.sin(elapsed*12+f.phase)*.04;f.mesh.rotation.z=Math.sin(elapsed*8+f.phase)*.065;f.mesh.rotation.x=Math.cos(elapsed*7.2+f.phase)*.028;f.mesh.position.x=f.baseX+Math.sin(elapsed*6.8+f.phase)*.018;f.mesh.position.z=f.baseZ+Math.cos(elapsed*7.6+f.phase)*.015;});
   fireLights.forEach(f=>{if(f.hearth&&f.hearth.extinguished){f.light.intensity=0;return;}if(!worldEntityVisualDue(f,f.light.position.x,f.light.position.z))return;f.light.intensity=.66+Math.sin(elapsed*8+f.phase)*.16+Math.sin(elapsed*13+f.phase)*.065;});
   fireSparks.forEach(s=>{if(s.hearth&&s.hearth.extinguished){s.mesh.setEnabled(false);return;}if(!worldEntityVisualDue(s,s.offsetX,s.offsetZ))return;const t=(elapsed*s.speed+s.phase)%1,visible=t<.66;s.mesh.setEnabled(visible);if(visible){const rise=t/.66;s.mesh.position.x=s.offsetX+Math.sin(elapsed*11+s.phase)*(.045+rise*.12);s.mesh.position.y=.34+rise*.72;s.mesh.position.z=s.offsetZ+Math.cos(elapsed*9+s.phase)*(.04+rise*.10);const size=.032*(1-rise*.58);s.mesh.scaling.set(size,size*1.35,size);}});
   // Soft chimney and hearth smoke rises, stretches and fades in a repeating cycle.
