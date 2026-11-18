@@ -9,6 +9,8 @@ on:
       - 'scripts/create_fauna_contact_sheet.py'
       - 'scripts/run-unified-inspector.mjs'
       - 'scripts/test_fauna_visual_capture_contract.cjs'
+      - 'scripts/test_inspector_capture_skip_contract.cjs'
+      - 'scripts/test_inspector_workflows_contract.cjs'
       - '.github/workflows/coastal-reference.yml'
   # Runs the complete cloud lab nightly and a deep A/B pass every Sunday.
   schedule:

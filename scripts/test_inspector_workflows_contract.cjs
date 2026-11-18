@@ -11,7 +11,12 @@ assert.match(workflow,/Manual runs are isolated by selected branch and exact com
 assert.match(workflow,/group: scene-capture-s26-graphics-.*github\.sha/);
 assert.match(workflow,/workflow_dispatch:/);
 const mainTriggers=workflow.slice(workflow.indexOf('on:\n'),workflow.indexOf('\npermissions:'));
-assert.ok(!/^  (push|pull_request):/m.test(mainTriggers),'The full Inspector must not run on every push or pull request.');
+const scopedPush=mainTriggers.split('  push:\\n')[1]?.split('\\n  # Runs')[0]||'';
+assert.ok(scopedPush.includes('branches: [main]')&&scopedPush.includes('paths:'),'Push-triggered fauna inspection must be scoped to its implementation paths.');
+for(const file of ['scripts/fauna-visual-capture.mjs','scripts/create_fauna_contact_sheet.py','scripts/run-unified-inspector.mjs','scripts/test_fauna_visual_capture_contract.cjs','.github/workflows/coastal-reference.yml']){
+  assert.ok(scopedPush.includes(file),'Missing scoped fauna path: '+file);
+}
+assert.ok(!/^  pull_request:/m.test(mainTriggers),'Pull requests must not launch the full Inspector.');
 const hrafnTriggers=hrafn.slice(hrafn.indexOf('on:\n'),hrafn.indexOf('\npermissions:'));
 assert.ok(hrafnTriggers.includes('workflow_dispatch:')&&!/^  pull_request:/m.test(hrafnTriggers),'Hrafn measurements must also be manual-only.');
 assert.match(validate,/pull_request:/,'Ordinary pull-request validation must remain enabled.');
@@ -24,7 +29,7 @@ assert.ok(workflow.includes("github.event_name == 'workflow_dispatch' && inputs.
 assert.ok(workflow.includes("github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0'"),'The scheduled Sunday Deep audit must resolve an A/B baseline.');
 assert.match(mainTriggers,/schedule:/,'The Inspector must run on its unattended schedule.');
 assert.match(workflow,/timezone: 'Europe\/Madrid'/,'Nightly runs must follow the Madrid time zone.');
-assert.ok(workflow.includes("INSPECTOR_LEVEL: ${{ inputs.inspection_level || ((github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0') && 'deep') || (github.event_name == 'schedule' && 'complete') || 'quick' }}"),'Manual runs default to Quick, nightly runs to Complete and Sunday runs to Deep.');
+assert.ok(workflow.includes("INSPECTOR_LEVEL: ${{ inputs.inspection_level || ((github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0') && 'deep') || (github.event_name == 'schedule' && 'complete') || (github.event_name == 'push' && 'complete') || 'quick' }}"),'Manual runs default to Quick, nightly and scoped fauna pushes to Complete and Sunday runs to Deep.');
 assert.match(workflow,/git fetch --no-tags origin "\$BASE_REF"/);
 assert.match(workflow,/git rev-parse "\$GITHUB_SHA\^"/);
 assert.match(workflow,/for attempt in \$\(seq 1 32\); do/);
@@ -44,7 +49,7 @@ assert.match(center,/branches: \[main\]/);
 assert.doesNotMatch(center,/feature\/inspector-center-dashboard|feature\/tiered-inspector-levels/);
 assert.ok(rs.includes("const INSPECTOR_LEVEL=process.env.INSPECTOR_LEVEL||'quick'"),'The runner must default to Quick.');
 assert.ok(rs.includes("if(/Arranque del juego y modelo vikingo real/.test(name))return 1;"),'Quick must contain only the startup check.');
-assert.ok(rs.includes("if(/Texturas, carga y preparación de cámara|Cimentación, estructuras|Referencias costeras|Inventario completo|Informe visual unificado|Lámina de referencias/.test(name))return 2;"),'Complete must add the world and graphics audit.');
+assert.ok(rs.includes("if(/Texturas, carga y preparación de cámara|Cimentación, estructuras|Referencias costeras|Inventario completo|Capturas visuales y diagnóstico de fauna|Lámina e informe visual de fauna|Informe visual unificado|Lámina de referencias/.test(name))return 2;"),'Complete must add the world, wildlife and graphics audit.');
 assert.ok(rs.includes("return 3;")&&rs.includes("Informe visual ANTES"),'Deep must add the before/after and performance comparison.');
 assert.ok(rs.includes("phaseLevel(name)>LEVEL_RANK[INSPECTOR_LEVEL]"),'The selected inspection level must skip higher-cost phases.');
 assert.ok(rs.includes("child.once('exit'"),'Inspector phases must settle on child exit rather than waiting for inherited stdio close.');
