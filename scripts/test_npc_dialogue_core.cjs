@@ -89,6 +89,8 @@ assert.match(builder,/dialogueAmbientByRoot=new Map\(\)/);
 assert.match(builder,/actualParts=ambientActor&&ambientActor\.parts/);
 assert.match(builder,/occluders:trees,naturalOccluders:naturalShrubs/);
 assert.match(builder,/let dialoguePeopleCache=null/);
+assert.match(builder,/dialoguePeopleSceneNodeCount=-1/);
+assert.match(builder,/sceneNodeCount!==dialoguePeopleSceneNodeCount/);
 assert.match(builder,/head=descendants\.find\(child=>child&&\/head\/i/);
 assert.match(builder,/npcVillageBrain\.chooseMode\(/);
 assert.match(worker,/\.\/scripts\/npc-dialogue-runtime\.js/);
