@@ -9,6 +9,9 @@ const recorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const gameHtml=fs.readFileSync('index.html','utf8');
 
+assert.ok(builder.includes('map_clock_marker = "let last=performance.now(),nextRenderAt=0,mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"'),
+  'Minimap profiling must match the 60 Hz scheduler clock inserted earlier in the build pipeline.');
+
 for(const marker of [
   'worldPhaseTimingStats=Object.create(null)',
   'samplesMs:new Float32Array(120)',
