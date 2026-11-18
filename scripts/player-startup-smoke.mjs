@@ -577,8 +577,10 @@ async function main() {
       throw new Error('El runtime de diálogos no detectó la partida activa: ' +
         JSON.stringify(diagnostics) + ' · ' + String(error?.message || error));
     });
-    // Force one real NPC into camera range in the isolated browser session.
-    // This is test-only positioning; the original position is restored immediately afterwards.
+    // Move one real NPC into range only in this isolated browser test, then restore it.
+    // Validate the billboard's live mesh and DynamicTexture directly. A compositor screenshot
+    // is deliberately non-blocking: SwiftShader can stall Chromium's screenshot compositor
+    // even while Babylon reports a live, rendered dialogue mesh.
     const npcDialogueVisualProbe = await page.evaluate(() => {
       const bridge = window.__ELSN_GAME_DIALOGUE_BRIDGE__;
       const snapshot = bridge?.getSnapshot?.();
@@ -620,25 +622,54 @@ async function main() {
       'No se pudo preparar un NPC real para probar la burbuja: ' + JSON.stringify(npcDialogueVisualProbe));
     try {
       await page.waitForFunction(() => {
-        const state = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.();
+        const api = window.__ELSN_NPC_DIALOGUES__;
+        const state = api?.getSnapshot?.();
+        const proof = api?.captureVisualProof?.();
         return Number(state?.bubblesStarted) > 0 &&
           Number(state?.renderedBubbleCount) > 0 &&
           Array.isArray(state?.activeBubbleTexts) &&
-          state.activeBubbleTexts.some(item => typeof item?.text === 'string' && item.text.trim().length > 0);
+          state.activeBubbleTexts.some(item => typeof item?.text === 'string' && item.text.trim().length > 0) &&
+          proof?.ready === true &&
+          proof?.meshEnabled === true &&
+          proof?.messagePainted === true &&
+          proof?.texture?.width === 768 &&
+          proof?.texture?.height === 384 &&
+          proof?.texture?.vScale === -1 &&
+          proof?.texture?.vOffset === 1;
       }, undefined, { timeout: 15000, polling: 100 });
-      manifest.npcDialogueSmoke = await page.evaluate(() => ({
-        ...window.__ELSN_NPC_DIALOGUES__.getSnapshot(),
-        visibleBubbleVerified: true,
-        visualProbe: window.__ELSN_DIALOGUE_SMOKE_RESTORE__ ? 'temporary-npc-near-player' : 'restored'
-      }));
-      await page.screenshot({ path: path.join(OUT, 'npc-dialogue-visual.png'), fullPage: false });
+      const visualEvidence = await page.evaluate(() => {
+        const state = window.__ELSN_NPC_DIALOGUES__.getSnapshot();
+        const proof = window.__ELSN_NPC_DIALOGUES__.captureVisualProof();
+        const { dataUrl, ...metadata } = proof;
+        return { state, proof: metadata, dataUrl };
+      });
+      assert.ok(visualEvidence.proof?.ready && visualEvidence.dataUrl?.startsWith('data:image/png;base64,'),
+        'La textura del diálogo NPC no produjo evidencia PNG válida: ' + JSON.stringify(visualEvidence.proof));
+      manifest.npcDialogueSmoke = {
+        ...visualEvidence.state,
+        renderedBubbleVerified: true,
+        visualScreenshotCaptured: false,
+        visualEvidenceFile: 'npc-dialogue-texture.png',
+        visualProof: visualEvidence.proof,
+        visualProbe: 'temporary-npc-near-player'
+      };
+      await fs.promises.writeFile(
+        path.join(OUT, 'npc-dialogue-texture.png'),
+        Buffer.from(visualEvidence.dataUrl.slice('data:image/png;base64,'.length), 'base64')
+      );
+      await fs.promises.writeFile(
+        path.join(OUT, 'npc-dialogue-render-state.json'),
+        JSON.stringify(manifest.npcDialogueSmoke, null, 2)
+      );
     } catch (error) {
       manifest.npcDialogueSmoke = await page.evaluate(() => ({
         ...window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.(),
-        visibleBubbleVerified: false
+        renderedBubbleVerified: false,
+        visualProof: window.__ELSN_NPC_DIALOGUES__?.captureVisualProof?.() || null
       }));
-      await page.screenshot({ path: path.join(OUT, 'npc-dialogue-visual-failure.png'), fullPage: false }).catch(() => {});
-      throw new Error('La burbuja NPC real no se llegó a dibujar junto al jugador: ' +
+      await fs.promises.writeFile(path.join(OUT, 'npc-dialogue-render-state-failure.json'),
+        JSON.stringify(manifest.npcDialogueSmoke, null, 2));
+      throw new Error('La burbuja NPC no superó la comprobación de malla y textura: ' +
         JSON.stringify(manifest.npcDialogueSmoke) + ' · ' + String(error?.message || error));
     } finally {
       await page.evaluate(() => {
