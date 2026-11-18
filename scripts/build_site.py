@@ -2690,17 +2690,15 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const fps=engine.getFps();
   if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
-    quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr;
- // Shared frame-loop timing state; keep these bindings for the existing world update instrumentation.
+    quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr,renderedFps=0;
+ // The Quality profile keeps its existing render scale, shadows, materials and scene detail.
+ // We cap only the simulation/render submission cadence at 60 Hz for stable frame pacing.
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
- let targetFrameRate=60,observedFpsCeiling=60,lastQualityWarningAt=0;
+ const targetFrameRate=60;
+ let lastQualityWarningAt=0;
  function adaptRenderQuality(dt){
-  const sampleWindow=highHeadroomQualityMobile?1.0:(isConstrainedMobile?1.5:2.0);
-  fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<sampleWindow)return;fpsSample=0;
-  const fps=engine.getFps();
-  if(highHeadroomQualityMobile)observedFpsCeiling=Math.max(observedFpsCeiling,Math.min(120,fps));
-  targetFrameRate=highHeadroomQualityMobile?Math.min(90,observedFpsCeiling):60;
-  // The initial Quality scale is locked for the session: no CPU hitch can trigger a resolution downgrade.
+  fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<2.0)return;fpsSample=0;
+  const fps=renderedFps||engine.getFps();
   if(fps<24&&performance.now()-lastQualityWarningAt>=4000){
    lastQualityWarningAt=performance.now();
    console.warn('EL SIN NOMBRE: FPS bajo con resolución de Calidad protegida.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
@@ -2709,6 +2707,63 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     if html.count(quality_adaptive_marker) != 1:
         raise SystemExit("No se encontró exactamente la función original de supervisión de resolución.")
     html = html.replace(quality_adaptive_marker, quality_adaptive_code, 1)
+
+    # Enforce the declared 60 Hz Quality target at the render-loop boundary.
+    # Keep the accumulator aligned to the target cadence so 90 Hz panels alternate
+    # one/two refresh intervals instead of collapsing to 45 Hz.
+    frame_loop_marker = "engine.runRenderLoop(()=>{\\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
+    frame_loop_replacement = "engine.runRenderLoop(()=>{\\n  const now=performance.now(),frameIntervalMs=1000/targetFrameRate;if(!nextRenderAt)nextRenderAt=now;if(now+.5<nextRenderAt)return;if(now-nextRenderAt>frameIntervalMs*2)nextRenderAt=now;else nextRenderAt+=frameIntervalMs;\\n  const rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
+    if html.count(frame_loop_marker) != 1:
+        raise SystemExit("No se encontró el único bucle Babylon para aplicar el límite de 60 Hz.")
+    html = html.replace(frame_loop_marker, frame_loop_replacement, 1)
+
+    frame_clock_marker = "let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
+    frame_clock_replacement = "let last=performance.now(),nextRenderAt=0,mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
+    if html.count(frame_clock_marker) != 1:
+        raise SystemExit("No se encontró el reloj único de render para instalar el planificador de fotogramas.")
+    html = html.replace(frame_clock_marker, frame_clock_replacement, 1)
+
+    fps_sample_marker = "fpsHudTime+=dt;"
+    fps_sample_replacement = "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++;"
+    if html.count(fps_sample_marker) != 1:
+        raise SystemExit("No se encontró el contador único del HUD de FPS.")
+    html = html.replace(fps_sample_marker, fps_sample_replacement, 1)
+
+    fps_hud_marker = "const measured=engine.getFps(),meter=document.getElementById('fpsMeter');"
+    fps_hud_replacement = "const measured=fpsHudTime>0?fpsHudFrames/fpsHudTime:0;renderedFps=measured;fpsHudFrames=0;const meter=document.getElementById('fpsMeter');"
+    if html.count(fps_hud_marker) != 1:
+        raise SystemExit("No se encontró el cálculo único del FPS real del HUD.")
+    html = html.replace(fps_hud_marker, fps_hud_replacement, 1)
+
+    fps_colour_marker = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
+    fps_colour_replacement = "meter.style.color=measured>=targetFrameRate-1?'#94d8a0':measured>=targetFrameRate*.90?'#e6c27f':'#ff9a83';"
+    if html.count(fps_colour_marker) != 1:
+        raise SystemExit("No se encontró el esquema único de color del HUD para 60 FPS.")
+    html = html.replace(fps_colour_marker, fps_colour_replacement, 1)
+
+    fps_title_marker = "meter.title='Objetivo: 120 FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms (120 FPS requiere ≤8,3 ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';"
+    fps_title_replacement = "meter.title='Objetivo: '+targetFrameRate+' FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms ('+targetFrameRate+' FPS requiere ≤'+(1000/targetFrameRate).toFixed(1)+' ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';"
+    if html.count(fps_title_marker) != 1:
+        raise SystemExit("No se encontró el texto único del objetivo de FPS del HUD.")
+    html = html.replace(fps_title_marker, fps_title_replacement, 1)
+
+    visibility_clock_marker = "document.addEventListener('visibilitychange',()=>{last=performance.now();"
+    visibility_clock_replacement = "document.addEventListener('visibilitychange',()=>{last=performance.now();nextRenderAt=0;"
+    if html.count(visibility_clock_marker) != 1:
+        raise SystemExit("No se encontró el reinicio único del reloj al cambiar la visibilidad.")
+    html = html.replace(visibility_clock_marker, visibility_clock_replacement, 1)
+
+    webgl_clock_marker = "engine.resize();scene.activeCamera=camera;last=performance.now();"
+    webgl_clock_replacement = "engine.resize();scene.activeCamera=camera;last=performance.now();nextRenderAt=0;"
+    if html.count(webgl_clock_marker) != 1:
+        raise SystemExit("No se encontró el reinicio único del reloj tras restaurar WebGL.")
+    html = html.replace(webgl_clock_marker, webgl_clock_replacement, 1)
+
+    health_fps_marker = "fps:Math.round(engine.getFps()),"
+    health_fps_replacement = "fps:Math.round(renderedFps||engine.getFps()),"
+    if html.count(health_fps_marker) != 1:
+        raise SystemExit("No se encontró la lectura única del FPS del informe de salud.")
+    html = html.replace(health_fps_marker, health_fps_replacement, 1)
 
     # Existing instanced water droplets: improve readability without increasing particle count or draw calls.
     splash_visual_replacements = (
