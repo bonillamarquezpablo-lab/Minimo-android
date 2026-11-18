@@ -46,17 +46,18 @@ const villageBrainSource=fs.readFileSync("scripts/npc-village-brain-core.js","ut
 const viewport={left:0,top:0,right:360,bottom:1000},bubbleSize={width:140,height:70};
 const bubbleA=Core.placeBubble({x:180,y:500},bubbleSize,viewport,[]);
 assert.ok(bubbleA,"A visible NPC must receive a bubble placement.");
-const bubbleB=Core.placeBubble({x:180,y:500},bubbleSize,viewport,[bubbleA]);
-assert.ok(bubbleB,"A second bubble should move to an available non-overlapping position.");
-assert.ok(bubbleB.right<=viewport.right&&bubbleB.left>=viewport.left&&bubbleB.bottom<=viewport.bottom&&bubbleB.top>=viewport.top);
-assert.ok(bubbleB.right<=bubbleA.left-8||bubbleB.left>=bubbleA.right+8||bubbleB.bottom<=bubbleA.top-8||bubbleB.top>=bubbleA.bottom+8,
- "Speech bubbles must not overlap when a free position exists.");
-const anchoredBubble=Core.placeBubble({x:180,y:500},bubbleSize,viewport,[]);
-assert.ok(anchoredBubble&&Math.abs((anchoredBubble.left+bubbleSize.width/2)-180)<1&&anchoredBubble.bottom<500,
- "A dialogue bubble must remain adjacent to its NPC anchor instead of drifting to a viewport edge.");
-const impossibleEdgeBubble=Core.placeBubble({x:4,y:4},bubbleSize,viewport,[]);
-assert.equal(impossibleEdgeBubble,null,
- "When no valid position exists beside the NPC, the bubble must hide rather than clamp to a screen corner.");
+assert.ok(Math.abs((bubbleA.left+bubbleSize.width/2)-180)<1&&Math.abs((bubbleA.bottom+14)-500)<1,
+ "A dialogue bubble must remain centered directly above its current NPC world anchor.");
+assert.equal(Core.placeBubble({x:180,y:500},bubbleSize,viewport,[bubbleA]),null,
+ "An overlapping bubble must hide instead of jumping sideways or drifting.");
+assert.equal(Core.placeBubble({x:4,y:4},bubbleSize,viewport,[]),null,
+ "When no directly anchored position is available, the bubble must hide.");
+assert.equal(Core.isSegmentOccluded({x:0,y:2,z:0},{x:10,y:2,z:0},[{x:5,z:0,radius:1,bottomY:0,topY:6}]),true,
+ "A tree crossing the line of sight must occlude the dialogue.");
+assert.equal(Core.isSegmentOccluded({x:0,y:8,z:0},{x:10,y:8,z:0},[{x:5,z:0,radius:1,bottomY:0,topY:6}]),false,
+ "An obstacle below the line of sight must not hide the NPC.");
+assert.equal(Core.isSegmentOccluded({x:0,y:2,z:0},{x:10,y:2,z:0},[{x:12,z:0,radius:1,bottomY:0,topY:6}]),false,
+ "Geometry beyond the NPC must not occlude the dialogue.");
 const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
 assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);assert.match(runtime,/BABYLON\.Vector3\.Project/);assert.match(runtime,/Core\.POSITION_UPDATE_MS/);assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
 assert.doesNotMatch(runtime,/new BABYLON\.Mesh|MeshBuilder|new B\.Mesh|requestAnimationFrame/);
@@ -149,4 +150,6 @@ assert.deepEqual(Core.toOverlayPoint({x:320,y:480},{left:20,top:40}),{x:300,y:44
 assert.deepEqual(Core.toOverlayPoint({x:320,y:480},{left:-12,top:8}),{x:332,y:472});
 assert.equal(Core.toOverlayPoint({x:NaN,y:10},{left:0,top:0}),null);
 assert.ok(dialogueRuntime.includes('const screenX=rect.left+p.x*(rect.width/width)'), 'Babylon render coordinates must first be converted to viewport coordinates.');
-assert.ok(dialogueRuntime.includes('Core.toOverlayPoint({x:placement.left,y:placement.top},layerRect)'), 'The chosen screen-space bubble position must be converted to overlay-local coordinates before applying CSS left/top.');
+assert.ok(dialogueRuntime.includes('Core.placeBubble(overlayAnchor'), 'Bubble placement must use the NPC anchor in overlay-local coordinates.');
+assert.ok(dialogueRuntime.includes('Core.isSegmentOccluded(cameraPosition,world,worldOcclusionBounds(s))'), 'Dialogue bubbles must hide when geometry blocks the camera-to-NPC line of sight.');
+assert.ok(builder.includes('occluders:trees,naturalOccluders:naturalShrubs'), 'The game bridge must supply tree and shrub occluders.');
