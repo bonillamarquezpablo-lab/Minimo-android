@@ -73,7 +73,7 @@ assert.match(runtime,/BABYLON\.Mesh\.BILLBOARDMODE_ALL/);
 assert.match(runtime,/mesh\.isPickable=false/);
 assert.match(runtime,/renderingGroupId=1/);
 assert.doesNotMatch(runtime,/isProjectable|BABYLON\.Vector3\.Project|Core\.isSegmentOccluded|worldOcclusionBounds|onAfterRenderObservable|requestAnimationFrame|bindViewportObservers/);
-assert.match(runtime,/function positionTick\(\)\{if\(!lastActive\|\|!slots\.some\(slot=>slot\.current\)/);
+assert.match(runtime,/function positionTick\(\)\{[\s\S]{0,300}lastActive[\s\S]{0,300}slots\.some\(slot=>slot\.current\)/,"The light position timer must be dormant unless a live dialogue slot needs updating.");
 assert.match(runtime,/lastAttachment/);
 assert.match(runtime,/snapshotFailures/);
 assert.match(runtime,/nearestNpcDistanceMeters/);
