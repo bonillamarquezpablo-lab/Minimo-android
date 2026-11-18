@@ -338,6 +338,71 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
+    # Stabilize the ground guard before camera interpolation. The old implementation
+    # eased toward a point below terrain, then hard-snapped the live camera upward after
+    # interpolation; uneven height samples made the camera oscillate on low-angle views.
+    camera_ground_state_marker = "let cameraTargetSmoothed=null,cameraCollisionTimer=0,cameraObstructionRatio=1,cameraObstructionBlend=1,playerGroundYFiltered=NaN,playerVerticalVelocity=0,playerAirborne=false;"
+    camera_ground_state_code = "let cameraTargetSmoothed=null,cameraCollisionTimer=0,cameraObstructionRatio=1,cameraObstructionBlend=1,playerGroundYFiltered=NaN,cameraGroundYFiltered=NaN,playerVerticalVelocity=0,playerAirborne=false;"
+    if html.count(camera_ground_state_marker) != 1:
+        raise SystemExit("No se encontró el estado único de la cámara para filtrar la altura del terreno.")
+    html = html.replace(camera_ground_state_marker, camera_ground_state_code, 1)
+
+    camera_ground_motion_marker = """  const wantX=target.x+baseX*blend,wantY=target.y+baseY*blend,wantZ=target.z+baseZ*blend;
+  const positionAlpha=Math.min(1,1-Math.exp(-safeDt*(onShip?8.5:13.2)));
+  camera.position.x+=(wantX-camera.position.x)*positionAlpha;
+  camera.position.y+=(wantY-camera.position.y)*positionAlpha;
+  camera.position.z+=(wantZ-camera.position.z)*positionAlpha;
+  if(cameraShake>.001){
+   const shake=Math.min(.012,cameraShake*.10);
+   camera.position.x+=Math.sin(elapsed*47)*shake;
+   camera.position.y+=Math.cos(elapsed*61)*shake*.35;
+  }
+  // Ground guard: a manually lowered camera may never cross the rendered terrain.
+  // Sample only near the ground so the normal cinematic camera adds no per-frame cost.
+  if(!onShip&&camera.position.y<target.y+2.15){
+   const cameraGroundY=renderedTerrainSurfaceAt(camera.position.x,camera.position.z);
+   if(Number.isFinite(cameraGroundY)){
+    const minimumCameraY=cameraGroundY+1.70;
+    if(camera.position.y<minimumCameraY)camera.position.y=minimumCameraY;
+   }
+  }"""
+    camera_ground_motion_code = """  const wantX=target.x+baseX*blend,wantY=target.y+baseY*blend,wantZ=target.z+baseZ*blend;
+  // Ground clearance is applied to the desired camera position before interpolation.
+  // This avoids the old post-smoothing hard snap, which produced oscillation on uneven terrain.
+  let safeWantY=wantY;
+  if(!onShip&&wantY<target.y+2.15){
+   const cameraGroundY=renderedTerrainSurfaceAt(wantX,wantZ);
+   if(Number.isFinite(cameraGroundY)){
+    if(!Number.isFinite(cameraGroundYFiltered))cameraGroundYFiltered=cameraGroundY;
+    else{
+     const groundFilterAlpha=1-Math.exp(-safeDt*(cameraGroundY>cameraGroundYFiltered?20:5));
+     cameraGroundYFiltered+=(cameraGroundY-cameraGroundYFiltered)*groundFilterAlpha;
+    }
+    // Keep the lens low enough for an upward/horizon look, while maintaining safe ground clearance.
+    safeWantY=Math.max(wantY,cameraGroundYFiltered+.82);
+   }
+  }else cameraGroundYFiltered=NaN;
+  const positionAlpha=Math.min(1,1-Math.exp(-safeDt*(onShip?8.5:13.2)));
+  camera.position.x+=(wantX-camera.position.x)*positionAlpha;
+  camera.position.y+=(safeWantY-camera.position.y)*positionAlpha;
+  camera.position.z+=(wantZ-camera.position.z)*positionAlpha;
+  if(cameraShake>.001){
+   // Reduce high-frequency camera shake during low-angle inspection views.
+   const angleStability=cameraPitch<.12?.20:1;
+   const shake=Math.min(.012,cameraShake*.10)*angleStability;
+   camera.position.x+=Math.sin(elapsed*47)*shake;
+   camera.position.y+=Math.cos(elapsed*61)*shake*.35;
+  }"""
+    if html.count(camera_ground_motion_marker) != 1:
+        raise SystemExit("No se encontró exactamente un bloque de movimiento y límite de terreno de cámara.")
+    html = html.replace(camera_ground_motion_marker, camera_ground_motion_code, 1)
+
+    camera_pitch_marker = "const pitchMin=onShip?-.02:-.06,pitchMax=onShip?.92:.94;"
+    camera_pitch_code = "const pitchMin=onShip?-.18:-.52,pitchMax=onShip?.92:.94;"
+    if html.count(camera_pitch_marker) != 1:
+        raise SystemExit("No se encontró exactamente el límite de inclinación de cámara.")
+    html = html.replace(camera_pitch_marker, camera_pitch_code, 1)
+
     # Keep full-quality coast geometry while tightening the CPU slice ceiling on mobile.
     # Work is spread over more frames; no mesh rows, columns or material detail are removed.
     coast_budget_marker = "BEACH_WORK_BUDGET_MS=isTouchDevice?1.5:2.0"
@@ -1867,27 +1932,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.319: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.320: reliable NPC dialogue lifecycle and stable low-angle camera.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.319; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.320; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.319\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.320\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.319.")
-    html = html.replace("0.6.274", "0.6.319")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.320.")
+    html = html.replace("0.6.274", "0.6.320")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'35',build:'0.6.319'"
+    diagnostic_build_replacement = "reportVersion:'36',build:'0.6.320'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.319 para normalizar.")
-    game_version = "0.6.319"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.320 para normalizar.")
+    game_version = "0.6.320"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
