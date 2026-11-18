@@ -907,7 +907,7 @@ def main() -> None:
     html = html.replace(gull_root_marker,gull_root_replacement,1)
 
     gull_animation_marker = "const groups=inst.animationGroups||[],fly=groups.find(g=>/walk|fly|flap/i.test(g.name))||groups.find(g=>/idle/i.test(g.name))||groups[0]||null;"
-    gull_animation_replacement = "const groups=inst.animationGroups||[];groups.forEach(group=>{try{group.stop();}catch(_){}});"
+    gull_animation_replacement = "const groups=inst.animationGroups||[];groups.forEach(group=>{try{group.stop();}catch(_){}});const fly=null;"
     if html.count(gull_animation_marker) != 1:
         raise SystemExit("No se encontró el selector único de animación de las gaviotas.")
     html = html.replace(gull_animation_marker,gull_animation_replacement,1)
