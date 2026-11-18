@@ -82,7 +82,7 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.326"\)/,"The build must promote every visible source version to 0.6.327.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.327"\)/,"The build must promote every visible source version to 0.6.327.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true"),"Quality must keep its initially selected native render scale for the full session.");
 assert.ok(!buildSite.includes("qualityDprFloor") && !buildSite.includes("qualityDprCeiling") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples") && !buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"A CPU hitch must never trigger automatic resolution reduction in Quality.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2.10:1.45"),"The high-headroom mobile Quality startup scale must remain intact.");
