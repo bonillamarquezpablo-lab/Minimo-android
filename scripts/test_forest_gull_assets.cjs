@@ -43,7 +43,7 @@ assert.ok(html.includes('flightRig,phase:i*1.25') &&
   'The flight pose must tuck both legs and add restrained head, neck and tail compensation.');
 assert.ok(buildSource.includes("rotationPart=node=>{const base=node.rotationQuaternion?node.rotationQuaternion.clone():B.Quaternion.FromEulerAngles") &&
   buildSource.includes("node.rotationQuaternion=base.clone()") &&
-  buildSource.includes("leftWingSign=") && buildSource.includes("rightWingSign=") && buildSource.includes("B.Vector3.TransformNormal(worldBodyAxis,actorInverse)") && buildSource.includes("const parent=part.node.parent||actor"),
+  buildSource.includes("leftWingSign=") && buildSource.includes("rightWingSign=") && buildSource.includes("B.Vector3.TransformNormal(worldBodyAxis,actorInverse)") && buildSource.includes("parent=part.node.parent||actor"),
  'The original quaternion rest pose and mirrored left/right wing pivots must be preserved.');
 
 function inspectGlb(relative,minimumBytes,requiresTexture){

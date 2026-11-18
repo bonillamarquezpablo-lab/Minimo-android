@@ -337,7 +337,7 @@ def main() -> None:
         "rotationPart=node=>{const base=node.rotationQuaternion?node.rotationQuaternion.clone():B.Quaternion.FromEulerAngles",
         "flightRig={actor,wingAxis,bodyAxis",
         "B.Vector3.TransformNormal(worldBodyAxis,actorInverse)",
-        "const parent=part.node.parent||actor",
+        "parent=part.node.parent||actor",
         "B.Quaternion.RotationAxisToRef(parentAxis,angle,part.delta)",
         "part.delta.multiplyToRef(part.base,part.output)",
         "flapPhase=elapsed*9.8+b.phase",

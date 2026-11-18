@@ -46,7 +46,7 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   buildSite.includes("B.Quaternion.RotationAxisToRef(parentAxis,angle,part.delta)") &&
   buildSite.includes("part.delta.multiplyToRef(part.base,part.output)") &&
   buildSite.includes("B.Vector3.TransformNormal(worldBodyAxis,actorInverse)") &&
-  buildSite.includes("const parent=part.node.parent||actor") &&
+  buildSite.includes("parent=part.node.parent||actor") &&
   buildSite.includes("flapPhase=elapsed*9.8+b.phase") &&
   buildSite.includes("apply(rig.leftWing,rig.bodyAxis,flap*rig.leftWing.sign)") &&
   buildSite.includes("apply(rig.rightWing,rig.bodyAxis,flap*rig.rightWing.sign)") &&
