@@ -334,7 +334,6 @@ def main() -> None:
         "fittedMaxExtent>.57",
         "visualRoot.position.copyFrom(sourceCenter.scale(-1))",
         "const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]",
-        "rotationPart=node=>{const base=node.rotationQuaternion?node.rotationQuaternion.clone():B.Quaternion.FromEulerAngles",
         "flightRig={actor,wingAxis,bodyAxis",
         "makeRotationPart=(node,worldAxis)",
         "const parent=node.parent||actor",
