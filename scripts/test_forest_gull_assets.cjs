@@ -16,11 +16,11 @@ assert.ok(html.includes('const requiredFlightParts=[leftWing,rightWing,tail,head
 assert.ok(!html.includes("El GLB de gaviota no contiene el clip Fly obligatorio") && !html.includes("fly=groups.find("),
   'A missing glTF animation clip must not block a model that exposes articulated pivots.');
 assert.ok(html.includes("flightRig,phase:i*1.25") && html.includes("B.Quaternion.RotationAxisToRef") &&
-  html.includes("part.base.multiplyToRef(part.delta,part.output)"),
+  html.includes("part.delta.multiplyToRef(part.base,part.output)"),
   'The real anatomical pivots must be animated from their original quaternion rest pose.');
-assert.ok(html.includes("flapPhase=elapsed*10.2+b.phase") &&
-  html.includes("apply(rig.leftWing,rig.wingAxis,flap*rig.leftWing.sign)") &&
-  html.includes("apply(rig.rightWing,rig.wingAxis,flap*rig.rightWing.sign)"),
+assert.ok(html.includes("flapPhase=elapsed*9.8+b.phase") &&
+  html.includes("apply(rig.leftWing,rig.bodyAxis,flap*rig.leftWing.sign)") &&
+  html.includes("apply(rig.rightWing,rig.bodyAxis,flap*rig.rightWing.sign)"),
   'Both wings must execute a synchronized, mirrored, continuous flight stroke.');
 assert.ok(html.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)") && html.includes("footprintMesh.renderingGroupId=1"),
   'Transparent footprints in rendering group 1 must preserve opaque-world depth.');
@@ -35,15 +35,15 @@ assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html
 assert.ok(!html.includes('b.leftWing.rotation[b.wingFlapAxis]') && !html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
   'The imported skeleton animation must not be overridden by synthetic per-bone wing rotations.');
 assert.ok(html.includes('flightRig,phase:i*1.25') &&
-  html.includes('apply(rig.leftHindUpLeg,rig.bodyAxis,tuck)') &&
-  html.includes('apply(rig.rightHindUpLeg,rig.bodyAxis,tuck)') &&
-  html.includes('apply(rig.tail,rig.bodyAxis') &&
-  html.includes('apply(rig.head,rig.bodyAxis') &&
-  html.includes('apply(rig.neck,rig.bodyAxis'),
+  html.includes('apply(rig.leftHindUpLeg,rig.wingAxis,tuck)') &&
+  html.includes('apply(rig.rightHindUpLeg,rig.wingAxis,tuck)') &&
+  html.includes('apply(rig.tail,rig.wingAxis') &&
+  html.includes('apply(rig.head,rig.wingAxis') &&
+  html.includes('apply(rig.neck,rig.wingAxis'),
   'The flight pose must tuck both legs and add restrained head, neck and tail compensation.');
 assert.ok(buildSource.includes("rotationPart=node=>{const base=node.rotationQuaternion?node.rotationQuaternion.clone():B.Quaternion.FromEulerAngles") &&
   buildSource.includes("node.rotationQuaternion=base.clone()") &&
-  buildSource.includes("leftWingSign=") && buildSource.includes("rightWingSign="),
+  buildSource.includes("leftWingSign=") && buildSource.includes("rightWingSign=") && buildSource.includes("B.Vector3.TransformNormal(worldBodyAxis,actorInverse)") && buildSource.includes("const parent=part.node.parent||actor"),
  'The original quaternion rest pose and mirrored left/right wing pivots must be preserved.');
 
 function inspectGlb(relative,minimumBytes,requiresTexture){

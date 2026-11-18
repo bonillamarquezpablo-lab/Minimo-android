@@ -60,12 +60,19 @@ assert.equal(Core.isSegmentOccluded({x:0,y:2,z:0},{x:10,y:2,z:0},[{x:12,z:0,radi
  "Geometry beyond the NPC must not occlude the dialogue.");
 const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
 assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);assert.match(runtime,/BABYLON\.Vector3\.Project/);assert.match(runtime,/Core\.POSITION_UPDATE_MS/);assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
-assert.doesNotMatch(runtime,/new BABYLON\.Mesh|MeshBuilder|new B\.Mesh|requestAnimationFrame/);
+assert.match(runtime,/BABYLON\.MeshBuilder\.CreatePlane/,"NPC conversations must render as 3D world-space cards, not fixed DOM overlays.");
+assert.match(runtime,/new BABYLON\.DynamicTexture/,"World dialogue cards must draw their text into a texture.");
+assert.match(runtime,/BABYLON\.Mesh\.BILLBOARDMODE_ALL/,"World dialogue cards must face the active camera while retaining their NPC world position.");
+assert.match(runtime,/mesh.parent=anchor/,"Each dialogue card must be parented to the speaking NPC's head transform.");
+assert.match(runtime,/mesh.isPickable=false/,"Dialogue cards must not intercept gameplay input.");
+assert.doesNotMatch(runtime,/document\.createElement|position:\s*["']fixed["']/,"Dialogue runtime must not create screen-fixed DOM cards.");
+assert.doesNotMatch(runtime,/requestAnimationFrame/);
 assert.ok(runtime.includes("root.computeWorldMatrix(true)")&&runtime.includes("anchor.computeWorldMatrix(true)"),"Only the visible NPC root/head anchor is refreshed for screen-space projection.");
 assert.equal((runtime.match(/const camera=s\.scene\.activeCamera\|\|s\.camera;/g)||[]).length,3,"NPC bubble projection must use the active scene camera, with the snapshot camera only as fallback.");
 assert.doesNotMatch(runtime,/!s\.camera/,"A missing snapshot camera must not block projection when scene.activeCamera exists.");
 assert.match(runtime,/RANGE_SQUARED/,"Nearby NPC filtering must use squared distances before sorting the small visible set.");
-assert.match(runtime,/Core\.placeBubble\(overlayAnchor/,"Dialogue bubbles must stay anchored in overlay-local coordinates.");
+assert.match(runtime,/function updateWorldBubble\(slot,s\)/,"The dialogue renderer must update a world-space NPC attachment.");
+assert.match(runtime,/Core\.isSegmentOccluded\(cameraPosition,world,worldOcclusionBounds\(s\)\)/,"World dialogue cards must still respect line-of-sight occlusion.");
 assert.match(runtime,/snapshotFailures/,"Dialogue runtime must surface bridge snapshot errors for diagnosis.");
 assert.match(runtime,/bridgeReportedActive/,"Dialogue runtime must expose the bridge's active-game signal.");
 assert.match(runtime,/missingRootCount/,"Dialogue diagnostics must count existing NPCs without a usable world position.");
@@ -88,7 +95,7 @@ assert.match(runtime,/s\.engine\.resize\(\)/,"A device orientation change must r
 assert.match(runtime,/function render\(s,matricesReady=false\)/,"The render-cycle projection must reuse the current camera matrices.");
 assert.equal((runtime.match(/const camera=s\.scene\.activeCamera\|\|s\.camera/g)||[]).length,3,"Matrix refresh, visibility checks and final bubble placement must use the currently active Babylon camera.");
 assert.match(runtime,/function refreshProjectionMatrices\(s\).*?const camera=s\.scene\.activeCamera\|\|s\.camera/,"Matrix refresh must target the same active camera used for projection.");
-assert.match(runtime,/document\.documentElement\|\|document\.body/,"Dialogue overlay must live outside the transformed game body so fixed coordinates remain viewport-relative.");
+assert.match(runtime,/slot\.mesh\.position\.set\(0,anchor===root\?2\.12:\.48\+slot\.index\*\.08,0\)/,"Dialogue cards must maintain a local offset above the NPC head.");
 assert.match(runtime,/function positionTick\(\)\{const s=snapshot\(\);if\(!s\)return;bindSceneRenderObserver\(s\);bindViewportObservers\(s\);render\(s\);\}/,"The 100 ms position tick must remain a fallback even when an after-render observer exists, so bubbles cannot freeze if that observer stops firing.");
 assert.match(runtime,/function isProjectable\(npc,s\)/,"The scheduler must reject NPCs whose head anchors are outside the active camera view.");
 assert.match(runtime,/inView=nearby\.filter\(x=>isProjectable\(x\.npc,s\)\)/,"Ambient dialogue must only be scheduled for on-screen NPCs.");
@@ -128,10 +135,12 @@ assert.ok(dialogueRuntime.includes('root.computeWorldMatrix(true)'),
 assert.ok(dialogueRuntime.includes('anchor.computeWorldMatrix(true)'),
  "The head-bone anchor must refresh its own world matrix before its screen position is calculated.");
 assert.ok(dialogueRuntime.includes('lastProjection'));
-assert.ok(dialogueRuntime.includes('if(!placement)return hide("no-safe-placement")'),
-  'A dialogue card must remain attached to a valid NPC anchor or hide; it must never be clamped and dragged along a screen edge.');
-assert.ok(!dialogueRuntime.includes('placementFallbacks')&&!dialogueRuntime.includes('const left=Math.max(rect.left+6'),
-  'The projection path must not invent a replacement edge position when the camera turns.');
+assert.ok(dialogueRuntime.includes('BABYLON.MeshBuilder.CreatePlane')&&dialogueRuntime.includes('new BABYLON.DynamicTexture'),
+  'The visible dialogue card must be a Babylon plane with its own text texture.');
+assert.ok(dialogueRuntime.includes('slot.mesh.parent=anchor')&&dialogueRuntime.includes('slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL'),
+  'The card must follow the actual NPC head in world space and face the camera.');
+assert.ok(!dialogueRuntime.includes('elsn-npc-dialogue-layer')&&!dialogueRuntime.includes('slot.node.style.left'),
+  'The legacy viewport-fixed HTML overlay must be absent.');
 assert.ok(dialogueRuntime.includes('lastPositioningMs'));
 assert.ok(dialogueRuntime.includes('const positioningSamples=new Float32Array(120)') &&
   dialogueRuntime.includes('positioningPercentiles()') &&
@@ -139,17 +148,17 @@ assert.ok(dialogueRuntime.includes('const positioningSamples=new Float32Array(12
   dialogueRuntime.includes('positioningP95Ms:at(.95)') &&
   dialogueRuntime.includes('positioningP99Ms:at(.99)'),
   'NPC dialogue projection must expose bounded p50/p95/p99 CPU timing samples.');
-assert.ok(dialogueRuntime.includes('layerRect=layer.getBoundingClientRect()'), 'NPC projection must convert Babylon render pixels into overlay coordinates.');
-assert.ok(dialogueRuntime.includes('slot.node.style.left=placement.left.toFixed(1)+"px"') && dialogueRuntime.includes('slot.node.style.top=placement.top.toFixed(1)+"px"') && dialogueRuntime.includes('slot.node.style.transform="none"'), 'NPC bubbles must use the overlay-local NPC anchor without side or edge relocation.');
-assert.ok(dialogueRuntime.includes('node.style.position="absolute"'), 'Dialogue bubbles must be positioned relative to the fixed overlay.');
-assert.ok(dialogueStyle.includes('.elsn-npc-bubble{position:absolute;'), 'CSS must match the overlay-local positioning contract.');
+assert.ok(dialogueRuntime.includes('slot.mesh.position.set(0,anchor===root?2.12:.48+slot.index*.08,0)'), 'NPC speech cards must use a stable local head offset.');
+assert.ok(dialogueRuntime.includes('slot.mesh.setEnabled(true)')&&dialogueRuntime.includes('slot.mesh.setEnabled(false)'), 'World dialogue cards must toggle visibility with NPC activity and camera visibility.');
+assert.ok(dialogueRuntime.includes('slot.mesh.parent=anchor'), 'Dialogue billboard must remain parented to the live NPC transform.');
+assert.ok(dialogueRuntime.includes('material.disableDepthWrite=true')&&dialogueRuntime.includes('material.useAlphaFromDiffuseTexture=true'), 'World-space dialogue material must blend transparently while keeping scene depth testing.');
 console.log("NPC screen-space projection freshness and timing contract: PASS.");
 
-// Fixed-overlay coordinates must be independent of the layer's screen-space offset.
+// Legacy coordinate helper remains pure; the active renderer no longer positions DOM overlays.
 assert.deepEqual(Core.toOverlayPoint({x:320,y:480},{left:20,top:40}),{x:300,y:440});
 assert.deepEqual(Core.toOverlayPoint({x:320,y:480},{left:-12,top:8}),{x:332,y:472});
 assert.equal(Core.toOverlayPoint({x:NaN,y:10},{left:0,top:0}),null);
-assert.ok(dialogueRuntime.includes('const screenX=rect.left+p.x*(rect.width/width)'), 'Babylon render coordinates must first be converted to viewport coordinates.');
-assert.ok(dialogueRuntime.includes('Core.placeBubble(overlayAnchor'), 'Bubble placement must use the NPC anchor in overlay-local coordinates.');
+assert.ok(dialogueRuntime.includes('const world=new BABYLON.Vector3(Number(ap.x),Number(ap.y)+(anchor===root?2.12:.48),Number(ap.z))'), 'The bubble anchor must be a real NPC head point in world coordinates.');
+assert.ok(dialogueRuntime.includes('BABYLON.Vector3.Project(world,projectionIdentity,s.scene.getTransformMatrix(),viewport)'), 'Camera projection may cull off-screen NPCs but must not determine a fixed DOM placement.');
 assert.ok(dialogueRuntime.includes('Core.isSegmentOccluded(cameraPosition,world,worldOcclusionBounds(s))'), 'Dialogue bubbles must hide when geometry blocks the camera-to-NPC line of sight.');
 assert.ok(builder.includes('occluders:trees,naturalOccluders:naturalShrubs'), 'The game bridge must supply tree and shrub occluders.');
