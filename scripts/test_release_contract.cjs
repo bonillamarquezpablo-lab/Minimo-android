@@ -68,7 +68,7 @@ assert.ok(npcDialogueRuntime.includes('BABYLON.MeshBuilder.CreatePlane') &&
   npcDialogueRuntime.includes('new BABYLON.DynamicTexture') &&
   npcDialogueRuntime.includes('slot.mesh.parent=root') &&
   npcDialogueRuntime.includes('slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL') &&
-  npcDialogueRuntime.includes('slot.mesh.position.set(0,2.02+slot.index*.10,0)') &&
+  npcDialogueRuntime.includes('slot.mesh.position.set(0,2.48+slot.index*.42,0)') &&
   !npcDialogueRuntime.includes('BABYLON.Vector3.Project') &&
   !npcDialogueRuntime.includes('Core.isSegmentOccluded'),
   "NPC dialogue must be a distance-scheduled world-space billboard attached to the NPC root, with no fragile screen-projection gate.");
