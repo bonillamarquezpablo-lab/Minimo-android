@@ -64,23 +64,25 @@ assert.ok(atmosphereSource.includes("profile.exposure = 1.035") && atmosphereSou
   "Dusk must not rewrite shared image-processing settings on every visual update.");
 const npcDialogueRuntime=fs.readFileSync('scripts/npc-dialogue-runtime.js','utf8');
 assert.ok(buildSite.includes('occluders:trees,naturalOccluders:naturalShrubs'),"The dialogue bridge must supply tree and shrub occluders.");
-assert.ok(npcDialogueRuntime.includes('Core.isSegmentOccluded') &&
-  npcDialogueRuntime.includes('BABYLON.MeshBuilder.CreatePlane') &&
+assert.ok(npcDialogueRuntime.includes('BABYLON.MeshBuilder.CreatePlane') &&
   npcDialogueRuntime.includes('new BABYLON.DynamicTexture') &&
-  npcDialogueRuntime.includes('slot.mesh.parent=anchor') &&
+  npcDialogueRuntime.includes('slot.mesh.parent=root') &&
   npcDialogueRuntime.includes('slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL') &&
-  !npcDialogueRuntime.includes('elsn-npc-dialogue-layer'),
-  "NPC dialogue must be a world-space billboard parented to the live NPC head, not a fixed viewport overlay.");
-assert.ok(npcDialogueRuntime.includes('const observable=scene.onAfterRenderObservable') &&
-  npcDialogueRuntime.includes('render(lastSnapshot,true)') && !npcDialogueRuntime.includes('refreshProjectionMatrices(lastSnapshot)'),
-  "Dialogue cards must reproject against the latest camera matrix before scene rendering.");
+  npcDialogueRuntime.includes('slot.mesh.position.set(0,2.02+slot.index*.10,0)') &&
+  !npcDialogueRuntime.includes('BABYLON.Vector3.Project') &&
+  !npcDialogueRuntime.includes('Core.isSegmentOccluded'),
+  "NPC dialogue must be a distance-scheduled world-space billboard attached to the NPC root, with no fragile screen-projection gate.");
+assert.ok(npcDialogueRuntime.includes('function positionTick()') &&
+  npcDialogueRuntime.includes('POSITION_UPDATE_MS') &&
+  npcDialogueRuntime.includes('if(!lastActive||!slots.some(slot=>slot.current)'),
+  "Dialogue maintenance must run on a bounded timer only while a conversation is active.");
 
 for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle:titleVersion,sourceBuildUserAgent:buildVersion})) {
   assert.equal(version,sourceVersion,`The source ${source} must remain the 0.6.274 input that build_site upgrades deterministically.`);
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.320"\)/,"The build must promote every visible source version to 0.6.321.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.321"\)/,"The build must promote every visible source version to 0.6.321.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true"),"Quality must keep its initially selected native render scale for the full session.");
 assert.ok(!buildSite.includes("qualityDprFloor") && !buildSite.includes("qualityDprCeiling") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples") && !buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)"),"A CPU hitch must never trigger automatic resolution reduction in Quality.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2.10:1.45"),"The high-headroom mobile Quality startup scale must remain intact.");
