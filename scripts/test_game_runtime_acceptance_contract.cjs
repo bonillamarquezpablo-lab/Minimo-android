@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 
 const workflow = fs.readFileSync('.github/workflows/game-runtime-acceptance.yml', 'utf8');
 const smoke = fs.readFileSync('scripts/player-startup-smoke.mjs', 'utf8');
+const dialogueRuntime = fs.readFileSync('scripts/npc-dialogue-runtime.js', 'utf8');
 const startupReadiness = fs.readFileSync('scripts/startup-readiness-core.cjs', 'utf8');
 const release = fs.readFileSync('.github/workflows/deploy-pages.yml', 'utf8');
 const httpsServer = fs.readFileSync('scripts/start_https_static_server.py', 'utf8');
@@ -58,7 +59,6 @@ for (const marker of [
   "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
   "window.__ELSN_NPC_DIALOGUES__",
   "bubblesStarted",
-  "projectionAttempts",
   "identityPreferencePersisted",
   "cachedIdentityPreferencePersisted",
   "navigator.serviceWorker.controller",
@@ -73,6 +73,9 @@ for (const marker of [
 ]) {
   assert.ok(smoke.includes(marker), 'Runtime smoke is missing acceptance check: ' + marker);
 }
+assert.ok(dialogueRuntime.includes('projectionAttempts:0') &&
+  smoke.includes('...window.__ELSN_NPC_DIALOGUES__.getSnapshot()'),
+  'The runtime must expose positioning-attempt diagnostics and the browser smoke must persist the complete dialogue snapshot.');
 assert.match(smoke, /STARTUP_RESTART_TIMEOUT_MS = 240000/);
 assert.match(smoke, /function waitForWorldReadyWithRecovery/);
 assert.match(smoke, /cachedStartupWaitRecoveredAfterRendererStall/);
