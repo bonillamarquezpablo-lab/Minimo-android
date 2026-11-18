@@ -2711,8 +2711,8 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # Enforce the declared 60 Hz Quality target at the render-loop boundary.
     # Keep the accumulator aligned to the target cadence so 90 Hz panels alternate
     # one/two refresh intervals instead of collapsing to 45 Hz.
-    frame_loop_marker = "engine.runRenderLoop(()=>{\\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
-    frame_loop_replacement = "engine.runRenderLoop(()=>{\\n  const now=performance.now(),frameIntervalMs=1000/targetFrameRate;if(!nextRenderAt)nextRenderAt=now;if(now+.5<nextRenderAt)return;if(now-nextRenderAt>frameIntervalMs*2)nextRenderAt=now;else nextRenderAt+=frameIntervalMs;\\n  const rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
+    frame_loop_marker = "engine.runRenderLoop(()=>{\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
+    frame_loop_replacement = "engine.runRenderLoop(()=>{\n  const now=performance.now(),frameIntervalMs=1000/targetFrameRate;if(!nextRenderAt)nextRenderAt=now;if(now+.5<nextRenderAt)return;if(now-nextRenderAt>frameIntervalMs*2)nextRenderAt=now;else nextRenderAt+=frameIntervalMs;\n  const rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
     if html.count(frame_loop_marker) != 1:
         raise SystemExit("No se encontró el único bucle Babylon para aplicar el límite de 60 Hz.")
     html = html.replace(frame_loop_marker, frame_loop_replacement, 1)
