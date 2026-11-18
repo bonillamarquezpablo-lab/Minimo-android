@@ -6,6 +6,7 @@ const builder = fs.readFileSync('scripts/build_site.py', 'utf8');
 const validator = fs.readFileSync('scripts/validate_release.py', 'utf8');
 const dialogueRuntime = fs.readFileSync('scripts/npc-dialogue-runtime.js', 'utf8');
 const source = fs.readFileSync('index.html', 'utf8');
+const smoke = fs.readFileSync('scripts/player-startup-smoke.mjs', 'utf8');
 
 for (const marker of [
   'const isLiveDynamicTexture=texture=>',
