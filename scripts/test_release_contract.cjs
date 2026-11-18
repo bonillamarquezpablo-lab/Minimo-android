@@ -87,7 +87,7 @@ assert.ok(buildSite.includes('if url.startswith("https://grab3d.com/")'),
   "Large rigged packages from Grab3D must be removed from the concurrent download pool.");
 assert.ok(buildSite.includes("for relative, (url, minimum, kind) in grab3d_downloads.items():"),
   "Grab3D model downloads must be serialized while preserving all validation.");
-assert.ok(buildSite.includes("let targetFrameRate=60,observedFpsCeiling=60"),"The S26 profile must adapt to 60 or 90 FPS according to the observed browser refresh ceiling.");
+assert.ok(buildSite.includes("const targetFrameRate=60;") && buildSite.includes("frameIntervalMs=1000/targetFrameRate") && buildSite.includes("renderedFps=measured"),"The Quality runtime must enforce a stable 60 Hz simulation/render cadence and report the actual processed frame rate.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
 assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.includes("thinInstanceBatch") && buildSite.includes("list.length<180"),"Water reflections must filter non-essential foliage, instance batches and limit pass submissions.");
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
