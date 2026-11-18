@@ -70,7 +70,7 @@ assert.match(runtime,/function nearbyPeople\(s\)/);
 assert.match(runtime,/Core\.selectVisibleBubbles\(nearby\.map/);
 assert.match(runtime,/function updateWorldBubble\(slot,s\)/);
 assert.match(runtime,/slot\.mesh\.parent=root/);
-assert.match(runtime,/slot\.mesh\.position\.set\(0,2\.02\+slot\.index\*\.10,0\)/);
+assert.match(runtime,/slot\.mesh\.position\.set\(0,2\.48\+slot\.index\*\.42,0\)/);
 assert.match(runtime,/BABYLON\.MeshBuilder\.CreatePlane/);
 assert.match(runtime,/new BABYLON\.DynamicTexture/);
 assert.match(runtime,/BABYLON\.Mesh\.BILLBOARDMODE_ALL/);
