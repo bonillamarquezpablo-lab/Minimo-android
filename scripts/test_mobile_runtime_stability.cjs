@@ -161,5 +161,5 @@ assert.ok(dialogueRuntime.includes('slot.texture.vScale=-1;slot.texture.vOffset=
 assert.ok(dialogueRuntime.includes('width:2.12,height:1.06') && dialogueRuntime.includes('renderingGroupId=2') && dialogueRuntime.includes('2.48+slot.index*.42'),
   'NPC dialogue cards must be compact, raised above actors and rendered in the dialogue overlay group.');
 assert.ok(dialogueRuntime.includes('ctx.font="650 46px system-ui, sans-serif"') &&
-  dialogueRuntime.includes('{width:2.35,height:1.18,sideOrientation:BABYLON.Mesh.DOUBLESIDE}'),
+  dialogueRuntime.includes('{width:2.12,height:1.06,sideOrientation:BABYLON.Mesh.DOUBLESIDE}'),
   'NPC world dialogues must remain readable at mobile camera distance.');
