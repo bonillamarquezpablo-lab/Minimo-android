@@ -9,7 +9,9 @@ assert.match(runner,/SKIP_VISUAL_CAPTURES&&phaseLevel\(name\)>1/);
 assert.match(runner,/INSPECTOR_LEVEL==='deep'&&!SKIP_VISUAL_CAPTURES/);
 const triggers=workflow.slice(workflow.indexOf('on:\n'),workflow.indexOf('\npermissions:'));
 assert.ok(triggers.includes('workflow_dispatch:'),'The full Inspector must have a manual trigger.');
-const pushBlock=triggers.split('  push:\\n')[1]?.split('\\n  # Runs')[0]||'';
+const pushStart=triggers.indexOf('  push:')+'  push:'.length;
+const pushEnd=triggers.indexOf('  # Runs the complete cloud lab');
+const pushBlock=triggers.slice(pushStart,pushEnd);
 assert.ok(pushBlock.includes('branches: [main]')&&pushBlock.includes('paths:'),'Automatic Inspector runs must be restricted to the fauna-capture implementation paths.');
 for(const file of ['scripts/fauna-visual-capture.mjs','scripts/create_fauna_contact_sheet.py','scripts/run-unified-inspector.mjs','scripts/test_fauna_visual_capture_contract.cjs','.github/workflows/coastal-reference.yml']){
   assert.ok(pushBlock.includes(file),'Scoped fauna capture trigger is missing path: '+file);

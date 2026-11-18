@@ -11,7 +11,9 @@ assert.match(workflow,/Manual runs are isolated by selected branch and exact com
 assert.match(workflow,/group: scene-capture-s26-graphics-.*github\.sha/);
 assert.match(workflow,/workflow_dispatch:/);
 const mainTriggers=workflow.slice(workflow.indexOf('on:\n'),workflow.indexOf('\npermissions:'));
-const scopedPush=mainTriggers.split('  push:\\n')[1]?.split('\\n  # Runs')[0]||'';
+const pushStart=mainTriggers.indexOf('  push:')+'  push:'.length;
+const pushEnd=mainTriggers.indexOf('  # Runs the complete cloud lab');
+const scopedPush=mainTriggers.slice(pushStart,pushEnd);
 assert.ok(scopedPush.includes('branches: [main]')&&scopedPush.includes('paths:'),'Push-triggered fauna inspection must be scoped to its implementation paths.');
 for(const file of ['scripts/fauna-visual-capture.mjs','scripts/create_fauna_contact_sheet.py','scripts/run-unified-inspector.mjs','scripts/test_fauna_visual_capture_contract.cjs','.github/workflows/coastal-reference.yml']){
   assert.ok(scopedPush.includes(file),'Missing scoped fauna path: '+file);
