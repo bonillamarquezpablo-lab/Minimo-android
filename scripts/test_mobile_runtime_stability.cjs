@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 
 const builder = fs.readFileSync('scripts/build_site.py', 'utf8');
 const validator = fs.readFileSync('scripts/validate_release.py', 'utf8');
+const dialogueRuntime = fs.readFileSync('scripts/npc-dialogue-runtime.js', 'utf8');
 const source = fs.readFileSync('index.html', 'utf8');
 
 for (const marker of [
@@ -73,8 +74,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'39\',build:\'0.6.324\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.324"'), 'Release validator must target version 0.6.324.');
+assert.ok(validator.includes('reportVersion:\'40\',build:\'0.6.325\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.325"'), 'Release validator must target version 0.6.325.');
 assert.ok(builder.includes('mobile_memory_policy_marker') && builder.includes('isMobilePeakMemorySensitive'), 'Memory-sensitive scheduling must be independent from the selected graphics profile.');
 assert.ok(builder.includes('GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024'), 'GLB identity checks must compare bounded chunks instead of duplicating full files into ArrayBuffers.');
 assert.ok(builder.includes('player_import_start_marker') && builder.includes('let playerHumanLoadPromise=Promise.resolve(null);'), 'The protagonist GLB import must be deferred until static world construction has finished.');
@@ -148,3 +149,10 @@ assert.ok(builder.includes('const targetFrameRate=60;'), 'The Quality runtime mu
 assert.ok(builder.includes('frameIntervalMs=1000/targetFrameRate') && builder.includes('if(now+.5<nextRenderAt)return') && builder.includes('nextRenderAt+=frameIntervalMs'), 'Babylon rendering and world simulation must be paced at the 60 Hz target on high-refresh displays.');
 assert.ok(builder.includes('fpsHudTime+=rawFrameMs/1000;fpsHudFrames++') && builder.includes('renderedFps=measured'), 'The FPS HUD and health report must count rendered game frames, not browser requestAnimationFrame callbacks.');
 assert.ok(builder.includes("meter.title='Objetivo: '+targetFrameRate+' FPS."), 'The FPS tooltip must show the enforced target and correct frame budget.');
+
+assert.ok(dialogueRuntime.includes('slot.texture.vScale=1;slot.texture.vOffset=0;') &&
+  !dialogueRuntime.includes('slot.texture.vScale=-1'),
+  'NPC world-dialogue textures must not be vertically mirrored.');
+assert.ok(dialogueRuntime.includes('ctx.font="650 46px system-ui, sans-serif"') &&
+  dialogueRuntime.includes('{width:2.35,height:1.18,sideOrientation:BABYLON.Mesh.DOUBLESIDE}'),
+  'NPC world dialogues must remain readable at mobile camera distance.');
