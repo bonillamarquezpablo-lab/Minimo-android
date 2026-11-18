@@ -249,6 +249,26 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
             destination.unlink(missing_ok=True)
             if attempt < 4:
                 time.sleep(attempt * 2)
+    # The repository may already contain a verified vendor copy. Prefer that immutable
+    # local dependency when a CDN blocks CI (403/rate-limit); never publish a partial file.
+    fallback = ROOT / destination.relative_to(DIST)
+    if fallback.is_file():
+        size = fallback.stat().st_size
+        if size >= minimum:
+            shutil.copy2(fallback, destination)
+            digest = hashlib.sha256()
+            with destination.open("rb") as source:
+                for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            if kind == "glb":
+                read_glb_document(destination)
+            print(f"OK {destination.relative_to(DIST).as_posix()}: {size:,} bytes (verified repository fallback)")
+            return {
+                "path": destination.relative_to(DIST).as_posix(),
+                "bytes": size,
+                "sha256": digest.hexdigest(),
+                "source": "repository-fallback",
+            }
     raise RuntimeError(f"Could not download {url}: {last_error}") from last_error
 
 MESHOPT_MODELS = (
