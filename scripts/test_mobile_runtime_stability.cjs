@@ -106,8 +106,8 @@ assert.ok(builder.includes('beachRenderDiagnostics'), 'Beach reports must inspec
 assert.ok(validator.includes('renderDiagnostics:beachRenderDiagnostics'), 'The packaged report must include beach render diagnostics.');
 assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3))'), 'The packaged report must label wall-clock beach duration separately.');
 
-assert.ok(builder.includes('grass_stream_replacement = "if(bestRatio>(onShip?1.55:1.09))currentIsland=-1;"'), 'Quality grass must be staged for the destination island while the player approaches by ship.');
-assert.ok(builder.includes('(onShip?Math.max(96,GRASS_STREAM_RECENTER_DISTANCE):GRASS_STREAM_RECENTER_DISTANCE)'), 'Grass streaming must not rebuild repeatedly during short ship movements.');
+assert.ok(builder.includes('grass_stream_replacement = "if(bestRatio>(onShip?2.0:1.09))currentIsland=-1;"'), 'Destination-island grass prewarm must retain the island during a longer ship approach.');
+assert.ok(builder.includes('(onShip?Math.max(160,GRASS_STREAM_RECENTER_DISTANCE):GRASS_STREAM_RECENTER_DISTANCE)'), 'Grass streaming must not rebuild repeatedly during short ship movements.');
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullMaxExtentMeters=.55') &&
   builder.includes('sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)') &&
@@ -156,9 +156,10 @@ assert.ok(builder.includes('frameIntervalMs=1000/targetFrameRate') && builder.in
 assert.ok(builder.includes('fpsHudTime+=rawFrameMs/1000;fpsHudFrames++') && builder.includes('renderedFps=measured'), 'The FPS HUD and health report must count rendered game frames, not browser requestAnimationFrame callbacks.');
 assert.ok(builder.includes("meter.title='Objetivo: '+targetFrameRate+' FPS."), 'The FPS tooltip must show the enforced target and correct frame budget.');
 
-assert.ok(dialogueRuntime.includes('slot.texture.vScale=1;slot.texture.vOffset=0;') &&
-  !dialogueRuntime.includes('slot.texture.vScale=-1'),
-  'NPC world-dialogue textures must not be vertically mirrored.');
+assert.ok(dialogueRuntime.includes('slot.texture.vScale=-1;slot.texture.vOffset=1;'),
+  'NPC world-dialogue texture must use the corrected vertical UV orientation.');
+assert.ok(dialogueRuntime.includes('width:2.12,height:1.06') && dialogueRuntime.includes('renderingGroupId=2') && dialogueRuntime.includes('2.48+slot.index*.42'),
+  'NPC dialogue cards must be compact, raised above actors and rendered in the dialogue overlay group.');
 assert.ok(dialogueRuntime.includes('ctx.font="650 46px system-ui, sans-serif"') &&
   dialogueRuntime.includes('{width:2.35,height:1.18,sideOrientation:BABYLON.Mesh.DOUBLESIDE}'),
   'NPC world dialogues must remain readable at mobile camera distance.');
