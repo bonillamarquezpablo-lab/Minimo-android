@@ -980,12 +980,12 @@ def main() -> None:
     # The previous condition forcibly unloaded every grass batch on boarding, then started
     # procedural generation only after disembarkation; that produced an obvious bare-ground delay.
     grass_stream_marker = "if(onShip||bestRatio>1.09)currentIsland=-1;"
-    grass_stream_replacement = "if(bestRatio>(onShip?1.55:1.09))currentIsland=-1;"
+    grass_stream_replacement = "if(bestRatio>(onShip?2.0:1.09))currentIsland=-1;"
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
     grass_recenter_marker = "const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=GRASS_STREAM_RECENTER_DISTANCE;"
-    grass_recenter_replacement = "const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=(onShip?Math.max(96,GRASS_STREAM_RECENTER_DISTANCE):GRASS_STREAM_RECENTER_DISTANCE);"
+    grass_recenter_replacement = "const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=(onShip?Math.max(160,GRASS_STREAM_RECENTER_DISTANCE):GRASS_STREAM_RECENTER_DISTANCE);"
     if html.count(grass_recenter_marker) != 1:
         raise SystemExit("No se encontró la distancia única de recentrado de hierba.")
     html = html.replace(grass_recenter_marker, grass_recenter_replacement, 1)
