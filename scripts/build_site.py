@@ -970,8 +970,8 @@ def main() -> None:
         raise SystemExit("No se encontró la distancia única de recentrado de hierba.")
     html = html.replace(grass_recenter_marker, grass_recenter_replacement, 1)
 
-    gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightRig&&b.flightRig.animationGroup){b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase);}"
-    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightRig){const rig=b.flightRig,flapPhase=elapsed*9.8+b.phase,flap=1.02*(Math.sin(flapPhase)+.16*Math.sin(flapPhase*2)),apply=rig.applyRotation;apply(rig.leftWing,flap*rig.leftWing.sign);apply(rig.rightWing,flap*rig.rightWing.sign);apply(rig.tail,.085*Math.sin(elapsed*2.4+b.phase));apply(rig.neck,-.075+.025*Math.sin(elapsed*1.2+b.phase));apply(rig.head,.045*Math.sin(elapsed*1.6+b.phase));const tuck=1.08+.08*Math.sin(flapPhase+.7);apply(rig.leftHindUpLeg,tuck);apply(rig.rightHindUpLeg,tuck);apply(rig.leftHindLeg,-.94);apply(rig.rightHindLeg,-.94);}"
+    gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
+    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightRig&&b.flightRig.animationGroup){b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase);}"
     if html.count(gull_flight_marker) != 1:
         raise SystemExit("No se encontró el bucle único de vuelo de las gaviotas.")
     html = html.replace(gull_flight_marker, gull_flight_replacement, 1)
