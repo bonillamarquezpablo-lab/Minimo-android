@@ -34,12 +34,29 @@ let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,projecti
 const RANGE_SQUARED=RANGE*RANGE;
 function bubbleLimit(){return window.matchMedia&&window.matchMedia("(max-width: 700px)").matches?2:MAX_BUBBLES;}
 const layer=document.createElement("div");layer.id="elsn-npc-dialogue-layer";layer.className="elsn-npc-dialogue-layer";layer.setAttribute("aria-hidden","true");layer.style.position="fixed";layer.style.inset="0";layer.style.width="100%";layer.style.height="100%";layer.style.overflow="visible";layer.style.pointerEvents="none";layer.style.zIndex="1200";layer.dataset.maxBubbles=String(MAX_BUBBLES);(document.documentElement||document.body).appendChild(layer);
-function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;node.style.position="absolute";node.style.left="0";node.style.top="0";node.style.transform="none";node.style.margin="0";node.style.pointerEvents="none";node.style.zIndex=String(1+index);const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null,width:0,height:0,measureDirty:true};}
+function makeSlot(index){const node=document.createElement("div");node.className="elsn-npc-bubble";node.dataset.slot=String(index);node.hidden=true;node.style.position="absolute";node.style.left="0";node.style.top="0";node.style.transform="none";node.style.margin="0";node.style.pointerEvents="none";node.style.zIndex=String(1+index);const role=document.createElement("span"),kind=document.createElement("span"),message=document.createElement("span");role.className="elsn-npc-bubble-role";kind.className="elsn-npc-bubble-kind";message.className="elsn-npc-bubble-message";node.append(role,kind,message);layer.appendChild(node);return{node,role,kind,message,current:null,width:0,height:0,measureDirty:true,lastOcclusionAt:0,occluded:false};}
 for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i));
 const random=()=>Math.random(),between=(a,b)=>a+random()*(b-a);
 function rootOf(n){return n&&(n.parts&&n.parts.root||n.root||n.actor||n);}
 function idOf(n){const root=rootOf(n);return String(n&&n.parts&&(n.parts.name||(n.parts.root&&n.parts.root.name))||n&&n.name||root&&root.name||"");}
 function worldPosition(node){if(!node)return null;try{const p=typeof node.getAbsolutePosition==="function"?node.getAbsolutePosition():node.position||null;return p&&Number.isFinite(Number(p.x))&&Number.isFinite(Number(p.z))?p:null;}catch(_){return null;}}
+let cachedOcclusionScene=null,cachedOcclusionAt=0,cachedOcclusionBounds=[];
+function worldOcclusionBounds(s){
+ const now=performance.now();if(!s||!s.scene)return[];
+ if(cachedOcclusionScene===s.scene&&now-cachedOcclusionAt<350)return cachedOcclusionBounds;
+ const result=[];
+ const add=(item,kind)=>{
+  if(!item||item.alive===false||item.falling)return;
+  const root=item.root;let p=null;try{p=root&&typeof root.getAbsolutePosition==="function"?root.getAbsolutePosition():root&&root.position||null;}catch(_){}
+  const x=Number(item.x),z=Number(item.z),bottomY=Number(p&&p.y),height=Number(item.height)||(kind==="tree"?6.0:1.0);
+  const rawRadius=Number(kind==="tree"?item.canopyRadius:item.radius),radius=Math.max(.35,Math.min(kind==="tree"?5.6:2.0,rawRadius*(kind==="tree"?.84:1)));
+  if([x,z,bottomY,height,radius].every(Number.isFinite)&&height>0&&radius>0)result.push({x,z,radius,bottomY:bottomY+(kind==="tree"?.10:.02),topY:bottomY+height});
+ };
+ for(const tree of Array.isArray(s.occluders)?s.occluders:[])add(tree,"tree");
+ for(const shrub of Array.isArray(s.naturalOccluders)?s.naturalOccluders:[])add(shrub,"shrub");
+ cachedOcclusionScene=s.scene;cachedOcclusionAt=now;cachedOcclusionBounds=result;return result;
+}
+function cameraWorldPosition(camera){try{if(camera&&typeof camera.getAbsolutePosition==="function")return camera.getAbsolutePosition();}catch(_){}return camera&&(camera.globalPosition||camera.position)||null;}
 function distance(a,b){return a&&b?Math.hypot(Number(a.x)-Number(b.x),Number(a.z)-Number(b.z)):Infinity;}
 function distanceSquared(a,b){if(!a||!b)return Infinity;const dx=Number(a.x)-Number(b.x),dz=Number(a.z)-Number(b.z);return dx*dx+dz*dz;}
 function enabled(n){const r=rootOf(n);if(!r)return false;try{return (typeof r.isEnabled!=="function"||r.isEnabled())&&r.isVisible!==false&&r.visibility!==0;}catch(_){return false;}}
@@ -123,8 +140,8 @@ function pairKey(a,b){return[a,b].map(String).sort().join("::");}
 function pairMemory(a,b){const key=pairKey(a,b);let value=relationships.get(key);if(!value){value={key,rapport:0,exchanges:0,recentTopics:[]};relationships.set(key,value);if(relationships.size>64)relationships.delete(relationships.keys().next().value);}return value;}
 function rememberPair(pair,topic){if(!pair)return;pair.exchanges++;pair.rapport=Math.min(5,pair.rapport+0.65);if(topic){pair.recentTopics.push(topic);if(pair.recentTopics.length>4)pair.recentTopics.shift();}saveSocialMemory();}
 function slotFor(id){const activeSlots=slots.slice(0,bubbleLimit());return activeSlots.find(s=>s.current&&s.current.id===id)||activeSlots.find(s=>!s.current);}
-function startBubble(npc,content,now,duration){const id=idOf(npc);if(!id||!content||!content.text)return false;const slot=slotFor(id);if(!slot)return false;const kind=["thought","speech","action"].includes(content.kind)?content.kind:"speech";slot.current={id,npc,kind,expiresAt:now+(duration||BUBBLE_DURATION_MS)};slot.role.textContent=String(content.roleName||"Habitante").slice(0,24);slot.kind.textContent=kind==="thought"?"PIENSA":kind==="action"?"HACE":"DICE";slot.message.textContent=String(content.text).slice(0,120);slot.node.dataset.kind=kind;slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");slot.node.classList.remove("is-visible");void slot.node.offsetWidth;const measured=slot.node.getBoundingClientRect();slot.width=measured.width;slot.height=measured.height;slot.measureDirty=false;slot.node.classList.add("is-visible");diagnostics.bubblesStarted++;return true;}
-function clearSlot(slot){slot.current=null;slot.node.classList.remove("is-visible");slot.node.hidden=true;slot.node.style.transform="";}
+function startBubble(npc,content,now,duration){const id=idOf(npc);if(!id||!content||!content.text)return false;const slot=slotFor(id);if(!slot)return false;const kind=["thought","speech","action"].includes(content.kind)?content.kind:"speech";slot.current={id,npc,kind,expiresAt:now+(duration||BUBBLE_DURATION_MS)};slot.lastOcclusionAt=0;slot.occluded=false;slot.role.textContent=String(content.roleName||"Habitante").slice(0,24);slot.kind.textContent=kind==="thought"?"PIENSA":kind==="action"?"HACE":"DICE";slot.message.textContent=String(content.text).slice(0,120);slot.node.dataset.kind=kind;slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");slot.node.classList.remove("is-visible");void slot.node.offsetWidth;const measured=slot.node.getBoundingClientRect();slot.width=measured.width;slot.height=measured.height;slot.measureDirty=false;slot.node.classList.add("is-visible");diagnostics.bubblesStarted++;return true;}
+function clearSlot(slot){slot.current=null;slot.lastOcclusionAt=0;slot.occluded=false;slot.node.classList.remove("is-visible");slot.node.hidden=true;slot.node.style.transform="";}
 function expire(now){for(const slot of slots)if(slot.current&&slot.current.expiresAt<=now)clearSlot(slot);}
 function villageOf(npc){const direct=Number(npc&&npc.villageIndex);if(Number.isFinite(direct))return direct;const nested=Number(npc&&npc.parts&&npc.parts.villageIndex);if(Number.isFinite(nested))return nested;const name=String(npc&&npc.parts&&npc.parts.name||npc&&npc.name||"");const match=/^(?:Villager_|VillageGuard)(\\d+)_/.exec(name);if(match)return Number(match[1]);return -1;}
 function partnerFor(item,nearby,s){let best=null,bestDistance=7.5;for(const candidate of nearby){if(candidate.id===item.id||villageOf(candidate.npc)!==villageOf(item.npc))continue;if(slots.some(slot=>slot.current&&slot.current.id===candidate.id))continue;if(s&&!isProjectable(candidate.npc,s))continue;const d=distance(item.position,candidate.position);if(d<bestDistance){best=candidate;bestDistance=d;}}return best;}
@@ -216,14 +233,21 @@ function project(slot,s,occupied){
   const p=BABYLON.Vector3.Project(world,projectionIdentity,s.scene.getTransformMatrix(),viewport);
   if(!p||p.z<=0||p.z>=1)return hide("behind-camera");
   if(p.x<viewport.x||p.x>viewport.x+viewport.width||p.y<viewport.y||p.y>viewport.y+viewport.height)return hide("outside-screen");
-  const screenX=rect.left+p.x*(rect.width/width),screenY=rect.top+p.y*(rect.height/height),layerRect=layer.getBoundingClientRect(),overlayAnchor=Core.toOverlayPoint({x:screenX,y:screenY},layerRect);if(!overlayAnchor)return hide("invalid-overlay-coordinate-space");const x=screenX,y=screenY;
+  const screenX=rect.left+p.x*(rect.width/width),screenY=rect.top+p.y*(rect.height/height),layerRect=layer.getBoundingClientRect(),overlayAnchor=Core.toOverlayPoint({x:screenX,y:screenY},layerRect);if(!overlayAnchor)return hide("invalid-overlay-coordinate-space");
+  const occlusionNow=performance.now();
+  if(!slot.lastOcclusionAt||occlusionNow-slot.lastOcclusionAt>=Core.POSITION_UPDATE_MS){
+   const cameraPosition=cameraWorldPosition(camera);
+   slot.occluded=!!(cameraPosition&&Core.isSegmentOccluded(cameraPosition,world,worldOcclusionBounds(s)));
+   slot.lastOcclusionAt=occlusionNow;
+  }
+  if(slot.occluded)return hide("occluded-by-world-geometry");
   slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");
   if(slot.measureDirty||!(slot.width>0&&slot.height>0)){const measured=slot.node.getBoundingClientRect();slot.width=measured.width;slot.height=measured.height;slot.measureDirty=false;}
   if(!(slot.width>0&&slot.height>0))return hide("bubble-size-unavailable");
-  let placement=Core.placeBubble({x,y},{width:slot.width,height:slot.height},{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom},occupied);
+  let placement=Core.placeBubble(overlayAnchor,{width:slot.width,height:slot.height},{left:0,top:0,right:layerRect.width,bottom:layerRect.height},occupied);
   if(!placement)return hide("no-safe-placement");
-  const overlayPlacement=Core.toOverlayPoint({x:placement.left,y:placement.top},layerRect);if(!overlayPlacement)return hide("invalid-overlay-placement");slot.node.style.left=overlayPlacement.x.toFixed(1)+"px";slot.node.style.top=overlayPlacement.y.toFixed(1)+"px";slot.node.style.transform="none";
-  diagnostics.lastProjection={id:idOf(npc),world:{x:Number(world.x.toFixed(3)),y:Number(world.y.toFixed(3)),z:Number(world.z.toFixed(3))},screen:{x:Number(x.toFixed(1)),y:Number(y.toFixed(1))},at:Date.now()};
+  slot.node.style.left=placement.left.toFixed(1)+"px";slot.node.style.top=placement.top.toFixed(1)+"px";slot.node.style.transform="none";
+  diagnostics.lastProjection={id:idOf(npc),world:{x:Number(world.x.toFixed(3)),y:Number(world.y.toFixed(3)),z:Number(world.z.toFixed(3))},screen:{x:Number(screenX.toFixed(1)),y:Number(screenY.toFixed(1))},at:Date.now()};
   occupied.push(placement);diagnostics.projectionSuccesses++;return true;
  }catch(error){diagnostics.lastError=String(error&&error.message||error);return hide("projection-exception");}
 }

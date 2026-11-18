@@ -12,11 +12,18 @@ assert.match(html,/await loadForestTreeTemplates\(\)/);
 assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
-assert.ok(html.includes('leftWing,rightWing,tail,head,neck,jaw,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg,wingFlapAxis'), 'The replacement gull must expose its complete named flight anatomy.');
-assert.ok(html.includes("const groups=inst.animationGroups||[];groups.forEach(group=>{try{group.stop();}catch(_){}});const fly=null;"),
-  'The gull must not select a walk/idle body clip; it uses explicit articulated wing flight.');
-assert.ok(!html.includes("groups.find(g=>/walk|fly|flap/i.test(g.name)"),
-  'A walking animation must never be selected as the gull flight clip.');
+assert.ok(html.includes('const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]'), 'The replacement gull must require all named anatomical flight pivots.');
+assert.ok(!html.includes("El GLB de gaviota no contiene el clip Fly obligatorio") && !html.includes("fly=groups.find("),
+  'A missing glTF animation clip must not block a model that exposes articulated pivots.');
+assert.ok(html.includes("flightRig,phase:i*1.25") && html.includes("B.Quaternion.RotationAxisToRef") &&
+  html.includes("part.base.multiplyToRef(part.delta,part.output)"),
+  'The real anatomical pivots must be animated from their original quaternion rest pose.');
+assert.ok(html.includes("flapPhase=elapsed*10.2+b.phase") &&
+  html.includes("apply(rig.leftWing,rig.wingAxis,flap*rig.leftWing.sign)") &&
+  html.includes("apply(rig.rightWing,rig.wingAxis,flap*rig.rightWing.sign)"),
+  'Both wings must execute a synchronized, mirrored, continuous flight stroke.');
+assert.ok(html.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)") && html.includes("footprintMesh.renderingGroupId=1"),
+  'Transparent footprints in rendering group 1 must preserve opaque-world depth.');
 assert.ok(html.includes("function findForestTreePlacement(x,z,canopyRadius)"),
   'Forest placement must validate the actual canopy radius against previous trees.');
 assert.ok(html.includes("Math.max(forestTreeSpacingStats.minGapMeters,(canopyRadius+otherRadius)*1.12)"),
@@ -25,12 +32,19 @@ assert.ok(html.includes("const conifer=kind==='pine'||kind==='spruce'") && html.
   'Pine and spruce canopy radii must account for their broader real model bounds.');
 assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html.includes('overlapPairs'),
   'Forest placement must use a wider relocation search and expose overlap diagnostics.');
-assert.ok(html.includes('b.leftWing.rotation[b.wingFlapAxis]') && html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
-  'The new gull wings must flap around their actual pivot axis.');
-assert.ok(html.includes('const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;') && html.includes('b.leftWingBaseRotation-open-flap') && html.includes('b.rightWingBaseRotation+open+flap'),
-  'The gull must hold a visibly spread glide pose and use a broad, continuous wing stroke rather than a folded idle silhouette.');
-assert.ok(buildSource.includes('node.rotationQuaternion.toEulerAngles()') && buildSource.includes('node.rotationQuaternion=null'),
- 'Imported GLB quaternion rotations must be preserved before wing pivots switch to Euler animation.');
+assert.ok(!html.includes('b.leftWing.rotation[b.wingFlapAxis]') && !html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
+  'The imported skeleton animation must not be overridden by synthetic per-bone wing rotations.');
+assert.ok(html.includes('flightRig,phase:i*1.25') &&
+  html.includes('apply(rig.leftHindUpLeg,rig.bodyAxis,tuck)') &&
+  html.includes('apply(rig.rightHindUpLeg,rig.bodyAxis,tuck)') &&
+  html.includes('apply(rig.tail,rig.bodyAxis') &&
+  html.includes('apply(rig.head,rig.bodyAxis') &&
+  html.includes('apply(rig.neck,rig.bodyAxis'),
+  'The flight pose must tuck both legs and add restrained head, neck and tail compensation.');
+assert.ok(buildSource.includes("rotationPart=node=>{const base=node.rotationQuaternion?node.rotationQuaternion.clone():B.Quaternion.FromEulerAngles") &&
+  buildSource.includes("node.rotationQuaternion=base.clone()") &&
+  buildSource.includes("leftWingSign=") && buildSource.includes("rightWingSign="),
+ 'The original quaternion rest pose and mirrored left/right wing pivots must be preserved.');
 
 function inspectGlb(relative,minimumBytes,requiresTexture){
  const file=path.join(dist,relative);
@@ -71,8 +85,11 @@ assert.ok(gullNodeNames.some(name=>/^LeftWing(?:_|$)/i.test(name)),'La gaviota d
 assert.ok(gullNodeNames.some(name=>/^RightWing(?:_|$)/i.test(name)),'La gaviota debe tener el pivote RightWing');
 assert.ok(gullNodeNames.some(name=>/^Tail(?:_|$)/i.test(name)),'La gaviota debe tener cola articulada');
 for(const part of ['Head','Neck','Jaw','LeftHindUpLeg','RightHindUpLeg','LeftHindLeg','RightHindLeg'])assert.ok(gullNodeNames.some(name=>new RegExp('^'+part+'(?:_|$)','i').test(name)),'La gaviota debe incluir la articulación '+part+' para adoptar una postura de vuelo realista.');
-assert.ok(html.includes('b.flightPoseReady')&&html.includes('leftHindUpLeg.rotation.x')&&html.includes('rightHindUpLeg.rotation.x')&&html.includes('leftHindLeg.rotation.x')&&html.includes('rightHindLeg.rotation.x'),'Las patas traseras deben recogerse durante el vuelo, no permanecer colgando como en reposo.');
-assert.ok(html.includes('b.neck.rotation.x')&&html.includes('b.head.rotation.x'),'La cabeza y el cuello deben compensar la postura de vuelo.');
+assert.ok(gullNodeNames.some(name=>/^LeftHindUpLeg(?:_|$)/i.test(name)) &&
+  gullNodeNames.some(name=>/^RightHindUpLeg(?:_|$)/i.test(name)) &&
+  gullNodeNames.some(name=>/^LeftHindLeg(?:_|$)/i.test(name)) &&
+  gullNodeNames.some(name=>/^RightHindLeg(?:_|$)/i.test(name)),
+  'The source model must include both articulated legs for a tucked flight silhouette.');
 const gullTriangles=(gullJson.meshes||[]).reduce((total,mesh)=>total+(mesh.primitives||[]).reduce((subtotal,primitive)=>{
   if(primitive.mode!==undefined&&primitive.mode!==4)return subtotal;
   const accessor=primitive.indices===undefined?primitive.attributes?.POSITION:gullJson.accessors?.[primitive.indices];

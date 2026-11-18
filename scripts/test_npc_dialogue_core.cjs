@@ -46,17 +46,18 @@ const villageBrainSource=fs.readFileSync("scripts/npc-village-brain-core.js","ut
 const viewport={left:0,top:0,right:360,bottom:1000},bubbleSize={width:140,height:70};
 const bubbleA=Core.placeBubble({x:180,y:500},bubbleSize,viewport,[]);
 assert.ok(bubbleA,"A visible NPC must receive a bubble placement.");
-const bubbleB=Core.placeBubble({x:180,y:500},bubbleSize,viewport,[bubbleA]);
-assert.ok(bubbleB,"A second bubble should move to an available non-overlapping position.");
-assert.ok(bubbleB.right<=viewport.right&&bubbleB.left>=viewport.left&&bubbleB.bottom<=viewport.bottom&&bubbleB.top>=viewport.top);
-assert.ok(bubbleB.right<=bubbleA.left-8||bubbleB.left>=bubbleA.right+8||bubbleB.bottom<=bubbleA.top-8||bubbleB.top>=bubbleA.bottom+8,
- "Speech bubbles must not overlap when a free position exists.");
-const anchoredBubble=Core.placeBubble({x:180,y:500},bubbleSize,viewport,[]);
-assert.ok(anchoredBubble&&Math.abs((anchoredBubble.left+bubbleSize.width/2)-180)<1&&anchoredBubble.bottom<500,
- "A dialogue bubble must remain adjacent to its NPC anchor instead of drifting to a viewport edge.");
-const impossibleEdgeBubble=Core.placeBubble({x:4,y:4},bubbleSize,viewport,[]);
-assert.equal(impossibleEdgeBubble,null,
- "When no valid position exists beside the NPC, the bubble must hide rather than clamp to a screen corner.");
+assert.ok(Math.abs((bubbleA.left+bubbleSize.width/2)-180)<1&&Math.abs((bubbleA.bottom+14)-500)<1,
+ "A dialogue bubble must remain centered directly above its current NPC world anchor.");
+assert.equal(Core.placeBubble({x:180,y:500},bubbleSize,viewport,[bubbleA]),null,
+ "An overlapping bubble must hide instead of jumping sideways or drifting.");
+assert.equal(Core.placeBubble({x:4,y:4},bubbleSize,viewport,[]),null,
+ "When no directly anchored position is available, the bubble must hide.");
+assert.equal(Core.isSegmentOccluded({x:0,y:2,z:0},{x:10,y:2,z:0},[{x:5,z:0,radius:1,bottomY:0,topY:6}]),true,
+ "A tree crossing the line of sight must occlude the dialogue.");
+assert.equal(Core.isSegmentOccluded({x:0,y:8,z:0},{x:10,y:8,z:0},[{x:5,z:0,radius:1,bottomY:0,topY:6}]),false,
+ "An obstacle below the line of sight must not hide the NPC.");
+assert.equal(Core.isSegmentOccluded({x:0,y:2,z:0},{x:10,y:2,z:0},[{x:12,z:0,radius:1,bottomY:0,topY:6}]),false,
+ "Geometry beyond the NPC must not occlude the dialogue.");
 const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
 assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);assert.match(runtime,/BABYLON\.Vector3\.Project/);assert.match(runtime,/Core\.POSITION_UPDATE_MS/);assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
 assert.doesNotMatch(runtime,/new BABYLON\.Mesh|MeshBuilder|new B\.Mesh|requestAnimationFrame/);
@@ -64,7 +65,7 @@ assert.ok(runtime.includes("root.computeWorldMatrix(true)")&&runtime.includes("a
 assert.equal((runtime.match(/const camera=s\.scene\.activeCamera\|\|s\.camera;/g)||[]).length,3,"NPC bubble projection must use the active scene camera, with the snapshot camera only as fallback.");
 assert.doesNotMatch(runtime,/!s\.camera/,"A missing snapshot camera must not block projection when scene.activeCamera exists.");
 assert.match(runtime,/RANGE_SQUARED/,"Nearby NPC filtering must use squared distances before sorting the small visible set.");
-assert.match(runtime,/function rootOf\(n\).*n\.parts&&n\.parts\.root\|\|n\.root\|\|n\.actor\|\|n/,"Dialogue must resolve NPCs stored as parts.root, root, actor, or a direct Babylon node.");assert.match(runtime,/function idOf\(n\).*root&&root\.name/,"NPC identity must fall back to the resolved Babylon node name.");assert.match(runtime,/Number\.isFinite\(Number\(s\.playerPosition\.x\)\)/,"Invalid player positions must not silently place NPCs at the world origin.");assert.match(runtime,/layer\.style\.zIndex="1200"/,"Dialogue bubbles must render above the gameplay HUD so speech remains visible.");assert.match(runtime,/function bubbleLimit\(\).*?\?2:MAX_BUBBLES/,"Mobile play must show no more than two simultaneous dialogue cards.");assert.match(runtime,/Core\.placeBubble\(\{x,y\}/,"Dialogue bubbles must be placed with collision avoidance.");
+assert.match(runtime,/Core\.placeBubble\(overlayAnchor/,"Dialogue bubbles must stay anchored in overlay-local coordinates.");
 assert.match(runtime,/snapshotFailures/,"Dialogue runtime must surface bridge snapshot errors for diagnosis.");
 assert.match(runtime,/bridgeReportedActive/,"Dialogue runtime must expose the bridge's active-game signal.");
 assert.match(runtime,/missingRootCount/,"Dialogue diagnostics must count existing NPCs without a usable world position.");
@@ -139,7 +140,7 @@ assert.ok(dialogueRuntime.includes('const positioningSamples=new Float32Array(12
   dialogueRuntime.includes('positioningP99Ms:at(.99)'),
   'NPC dialogue projection must expose bounded p50/p95/p99 CPU timing samples.');
 assert.ok(dialogueRuntime.includes('layerRect=layer.getBoundingClientRect()'), 'NPC projection must convert Babylon render pixels into overlay coordinates.');
-assert.ok(dialogueRuntime.includes('slot.node.style.left=overlayPlacement.x.toFixed(1)+"px"') && dialogueRuntime.includes('slot.node.style.top=overlayPlacement.y.toFixed(1)+"px"') && dialogueRuntime.includes('slot.node.style.transform="none"'), 'NPC bubbles must use explicit overlay-local coordinates.');
+assert.ok(dialogueRuntime.includes('slot.node.style.left=placement.left.toFixed(1)+"px"') && dialogueRuntime.includes('slot.node.style.top=placement.top.toFixed(1)+"px"') && dialogueRuntime.includes('slot.node.style.transform="none"'), 'NPC bubbles must use the overlay-local NPC anchor without side or edge relocation.');
 assert.ok(dialogueRuntime.includes('node.style.position="absolute"'), 'Dialogue bubbles must be positioned relative to the fixed overlay.');
 assert.ok(dialogueStyle.includes('.elsn-npc-bubble{position:absolute;'), 'CSS must match the overlay-local positioning contract.');
 console.log("NPC screen-space projection freshness and timing contract: PASS.");
@@ -149,4 +150,6 @@ assert.deepEqual(Core.toOverlayPoint({x:320,y:480},{left:20,top:40}),{x:300,y:44
 assert.deepEqual(Core.toOverlayPoint({x:320,y:480},{left:-12,top:8}),{x:332,y:472});
 assert.equal(Core.toOverlayPoint({x:NaN,y:10},{left:0,top:0}),null);
 assert.ok(dialogueRuntime.includes('const screenX=rect.left+p.x*(rect.width/width)'), 'Babylon render coordinates must first be converted to viewport coordinates.');
-assert.ok(dialogueRuntime.includes('Core.toOverlayPoint({x:placement.left,y:placement.top},layerRect)'), 'The chosen screen-space bubble position must be converted to overlay-local coordinates before applying CSS left/top.');
+assert.ok(dialogueRuntime.includes('Core.placeBubble(overlayAnchor'), 'Bubble placement must use the NPC anchor in overlay-local coordinates.');
+assert.ok(dialogueRuntime.includes('Core.isSegmentOccluded(cameraPosition,world,worldOcclusionBounds(s))'), 'Dialogue bubbles must hide when geometry blocks the camera-to-NPC line of sight.');
+assert.ok(builder.includes('occluders:trees,naturalOccluders:naturalShrubs'), 'The game bridge must supply tree and shrub occluders.');

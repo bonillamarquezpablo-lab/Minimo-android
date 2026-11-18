@@ -151,21 +151,27 @@ function placeBubble(anchor,size,bounds,occupied){
  const x=Number(anchor&&anchor.x),y=Number(anchor&&anchor.y),w=Number(size&&size.width),h=Number(size&&size.height);
  const left=Number(bounds&&bounds.left),top=Number(bounds&&bounds.top),right=Number(bounds&&bounds.right),bottom=Number(bounds&&bounds.bottom);
  if(![x,y,w,h,left,top,right,bottom].every(Number.isFinite)||w<=0||h<=0||right-left<w+12||bottom-top<h+12)return null;
- const minLeft=left+6,maxLeft=right-w-6,minTop=top+6,maxTop=bottom-h-6,gap=12;
- const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
- const raw=[{left:x-w/2,top:y-h-gap},{left:x+gap,top:y-h/2},{left:x-w-gap,top:y-h/2},{left:x-w/2,top:y+gap},{left:x-w/2,top:y-(h*2)-gap},{left:x+w/2+gap,top:y-h-gap},{left:x-w/2-w-gap,top:y-h-gap}];
- const seen=new Set(),others=Array.isArray(occupied)?occupied:[];
- let best=null,bestScore=Infinity;
- for(const candidate of raw){
-  const l=candidate.left,t=candidate.top;
-  if(l<minLeft||l>maxLeft||t<minTop||t>maxTop)continue;
-  const key=Math.round(l)+":"+Math.round(t);
-  if(seen.has(key))continue;
-  let overlap=0;
-  for(const other of others){if(!other)continue;const ix=Math.max(0,Math.min(l+w,Number(other.right)+8)-Math.max(l,Number(other.left)-8));const iy=Math.max(0,Math.min(t+h,Number(other.bottom)+8)-Math.max(t,Number(other.top)-8));overlap+=ix*iy;}
-  const score=overlap/(w*h);if(score<bestScore){bestScore=score;best={left:l,top:t,right:l+w,bottom:t+h,width:w,height:h};}if(score===0)break;
+ const gap=14,l=x-w/2,t=y-h-gap;
+ if(l<left+6||l+w>right-6||t<top+6||t+h>bottom-6)return null;
+ for(const other of Array.isArray(occupied)?occupied:[]){
+  if(!other)continue;
+  if(l<Number(other.right)+8&&l+w>Number(other.left)-8&&t<Number(other.bottom)+8&&t+h>Number(other.top)-8)return null;
  }
- return best&&bestScore===0?Object.freeze(best):null;
+ return Object.freeze({left:l,top:t,right:l+w,bottom:t+h,width:w,height:h,anchorX:x,anchorY:y,gap});
 }
-return Object.freeze({MAX_VISIBLE_BUBBLES,toOverlayPoint,placeBubble,MAX_RANGE_METERS,POSITION_UPDATE_MS,SCHEDULER_INTERVAL_MS,ROLES,roleForVariant,personalityFor,chooseAmbientMessage,chooseExchange,selectVisibleBubbles,contextualLines});
+function isSegmentOccluded(from,to,occluders){
+ const fx=Number(from&&from.x),fy=Number(from&&from.y),fz=Number(from&&from.z),tx=Number(to&&to.x),ty=Number(to&&to.y),tz=Number(to&&to.z);
+ if(![fx,fy,fz,tx,ty,tz].every(Number.isFinite)||!Array.isArray(occluders)||!occluders.length)return false;
+ const dx=tx-fx,dz=tz-fz,denominator=dx*dx+dz*dz;if(denominator<1e-6)return false;
+ for(const item of occluders){
+  if(!item)continue;
+  const ox=Number(item.x),oz=Number(item.z),radius=Number(item.radius),bottomY=Number(item.bottomY),topY=Number(item.topY);
+  if(![ox,oz,radius,bottomY,topY].every(Number.isFinite)||radius<=0||topY<=bottomY)continue;
+  const along=((ox-fx)*dx+(oz-fz)*dz)/denominator;if(along<=.015||along>=.985)continue;
+  const px=fx+dx*along,pz=fz+dz*along,rx=px-ox,rz=pz-oz;if(rx*rx+rz*rz>radius*radius)continue;
+  const hitY=fy+(ty-fy)*along;if(hitY>=bottomY&&hitY<=topY)return true;
+ }
+ return false;
+}
+return Object.freeze({MAX_VISIBLE_BUBBLES,toOverlayPoint,placeBubble,isSegmentOccluded,MAX_RANGE_METERS,POSITION_UPDATE_MS,SCHEDULER_INTERVAL_MS,ROLES,roleForVariant,personalityFor,chooseAmbientMessage,chooseExchange,selectVisibleBubbles,contextualLines});
 });
