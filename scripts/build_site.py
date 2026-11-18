@@ -180,6 +180,10 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
         )
     if max_joints < 8:
         raise RuntimeError(f"{label}: animal rig is incomplete ({max_joints} joints; expected >=8)")
+    animation_names = [re.sub(r"[^a-z0-9]", "", str(item.get("name") or "").lower()) for item in animations]
+    missing_clips = [clip for clip in ("idle", "walk", "gallop") if not any(name == clip or name.endswith(clip) for name in animation_names)]
+    if missing_clips:
+        raise RuntimeError(f"{label}: animal GLB is missing required locomotion clips {missing_clips}; found {animation_names}")
     if any(not (mesh.get("primitives") or []) for mesh in meshes):
         raise RuntimeError(f"{label}: one or more animal meshes have no primitives")
     return document
@@ -230,7 +234,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                         f"OK animated animal GLB {relative}: "
                         f"{len(document.get('meshes') or [])} meshes, "
                         f"{max((len(s.get('joints') or []) for s in (document.get('skins') or [])), default=0)} joints, "
-                        f"{len(document.get('animations') or [])} clips."
+                        f"{len(document.get('animations') or [])} clips { [item.get('name') for item in (document.get('animations') or [])] }."
                     )
                 else:
                     read_glb_document(destination)
@@ -827,7 +831,7 @@ def main() -> None:
     html = html.replace(wildlife_mesh_texture_marker, wildlife_mesh_texture_marker_replacement, 1)
 
     wildlife_animation_marker = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);"
-    wildlife_animation_marker_replacement = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);\n   if(!groups.some(group=>group&&group.targetedAnimations&&group.targetedAnimations.length>0)||!clips.idle||!clips.walk||!clips.run)throw new Error(kind+': el rig llegó sin animaciones reproducibles completas.');"
+    wildlife_animation_marker_replacement = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);\n   if(!groups.some(group=>group&&group.targetedAnimations&&group.targetedAnimations.length>0)||!clips.idle||!clips.walk||!clips.run||clips.walk===clips.idle||clips.run===clips.walk||clips.run===clips.idle)throw new Error(kind+': el rig necesita clips Idle, Walk y Gallop/Run distintos y reproducibles.');"
     if html.count(wildlife_animation_marker) != 1:
         raise SystemExit("No se encontró el marcador único: wildlife_animation_marker.")
     html = html.replace(wildlife_animation_marker, wildlife_animation_marker_replacement, 1)
@@ -909,7 +913,7 @@ def main() -> None:
     html = html.replace(gull_animation_marker,gull_animation_replacement,1)
 
     gull_rig_marker = "const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}"
-    gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const leftWing=rigNodes.find(node=>/^LeftWing(?:_|$)/i.test(node.name||'')),rightWing=rigNodes.find(node=>/^RightWing(?:_|$)/i.test(node.name||'')),tail=rigNodes.find(node=>/^Tail(?:_|$)/i.test(node.name||''));if(!leftWing||!rightWing){actor.dispose(false,true);throw new Error('El modelo de gaviota no incluye pivotes anatómicos LeftWing y RightWing.');}[leftWing,rightWing,tail].forEach(node=>{if(node&&node.rotationQuaternion){node.rotation.copyFrom(node.rotationQuaternion.toEulerAngles());node.rotationQuaternion=null;}});leftWing.computeWorldMatrix(true);rightWing.computeWorldMatrix(true);const leftWingWorld=leftWing.getAbsolutePosition(),rightWingWorld=rightWing.getAbsolutePosition(),wingSpanX=Math.abs(leftWingWorld.x-rightWingWorld.x),wingSpanZ=Math.abs(leftWingWorld.z-rightWingWorld.z),wingFlapAxis=wingSpanX>=wingSpanZ?'z':'x';"
+    gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const findPart=name=>rigNodes.find(node=>new RegExp('^'+name+'(?:_|$)','i').test(node.name||''))||null,leftWing=findPart('LeftWing'),rightWing=findPart('RightWing'),tail=findPart('Tail'),head=findPart('Head'),neck=findPart('Neck'),jaw=findPart('Jaw'),leftHindUpLeg=findPart('LeftHindUpLeg'),rightHindUpLeg=findPart('RightHindUpLeg'),leftHindLeg=findPart('LeftHindLeg'),rightHindLeg=findPart('RightHindLeg');const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg];if(requiredFlightParts.some(node=>!node)){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene todas las articulaciones de vuelo: alas, cabeza, cuello, cola y patas traseras.');}requiredFlightParts.concat([jaw]).forEach(node=>{if(node&&node.rotationQuaternion){node.rotation.copyFrom(node.rotationQuaternion.toEulerAngles());node.rotationQuaternion=null;}});leftWing.computeWorldMatrix(true);rightWing.computeWorldMatrix(true);const leftWingWorld=leftWing.getAbsolutePosition(),rightWingWorld=rightWing.getAbsolutePosition(),wingSpanX=Math.abs(leftWingWorld.x-rightWingWorld.x),wingSpanZ=Math.abs(leftWingWorld.z-rightWingWorld.z),wingFlapAxis=wingSpanX>=wingSpanZ?'z':'x';"
     if html.count(gull_rig_marker) != 1:
         raise SystemExit("No se encontró el punto único para validar los pivotes anatómicos de gaviota.")
     html = html.replace(gull_rig_marker, gull_rig_replacement, 1)
@@ -947,13 +951,27 @@ def main() -> None:
     html = html[:style_start] + html[style_end:]
 
     gull_wing_push_marker = "realBirds.push({root:actor,real:true,groups,animation:fly,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
-    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,animation:fly,leftWing,rightWing,tail,wingFlapAxis,leftWingBaseRotation:leftWing.rotation[wingFlapAxis],rightWingBaseRotation:rightWing.rotation[wingFlapAxis],tailBaseRotation:tail?tail.rotation.x:0,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
+    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,animation:fly,leftWing,rightWing,tail,head,neck,jaw,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg,wingFlapAxis,leftWingBaseRotation:leftWing.rotation[wingFlapAxis],rightWingBaseRotation:rightWing.rotation[wingFlapAxis],tailBaseRotation:tail.rotation.x,headBaseRotation:head.rotation.x,neckBaseRotation:neck.rotation.x,jawBaseRotation:jaw?jaw.rotation.x:0,leftHindUpLegBaseRotation:leftHindUpLeg.rotation.x,rightHindUpLegBaseRotation:rightHindUpLeg.rotation.x,leftHindLegBaseRotation:leftHindLeg.rotation.x,rightHindLegBaseRotation:rightHindLeg.rotation.x,flightPoseReady:true,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
     if html.count(gull_wing_push_marker) != 1:
         raise SystemExit("No se encontró el registro único de las articulaciones de gaviota.")
     html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
 
+    # Prepare the destination island's grass while the player is still approaching by ship.
+    # The previous condition forcibly unloaded every grass batch on boarding, then started
+    # procedural generation only after disembarkation; that produced an obvious bare-ground delay.
+    grass_stream_marker = "if(onShip||bestRatio>1.09)currentIsland=-1;"
+    grass_stream_replacement = "if(bestRatio>(onShip?1.55:1.09))currentIsland=-1;"
+    if html.count(grass_stream_marker) != 1:
+        raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
+    html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
+    grass_recenter_marker = "const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=GRASS_STREAM_RECENTER_DISTANCE;"
+    grass_recenter_replacement = "const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=(onShip?Math.max(96,GRASS_STREAM_RECENTER_DISTANCE):GRASS_STREAM_RECENTER_DISTANCE);"
+    if html.count(grass_recenter_marker) != 1:
+        raise SystemExit("No se encontró la distancia única de recentrado de hierba.")
+    html = html.replace(grass_recenter_marker, grass_recenter_replacement, 1)
+
     gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
-    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.leftWing&&b.rightWing){const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;b.leftWing.rotation[b.wingFlapAxis]=b.leftWingBaseRotation-open-flap;b.rightWing.rotation[b.wingFlapAxis]=b.rightWingBaseRotation+open+flap;if(b.tail)b.tail.rotation.x=b.tailBaseRotation+Math.sin(elapsed*2.7+b.phase)*.045;}"
+    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightPoseReady){const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;b.leftWing.rotation[b.wingFlapAxis]=b.leftWingBaseRotation-open-flap;b.rightWing.rotation[b.wingFlapAxis]=b.rightWingBaseRotation+open+flap;b.leftHindUpLeg.rotation.x=b.leftHindUpLegBaseRotation+1.05;b.rightHindUpLeg.rotation.x=b.rightHindUpLegBaseRotation+1.05;b.leftHindLeg.rotation.x=b.leftHindLegBaseRotation-.78;b.rightHindLeg.rotation.x=b.rightHindLegBaseRotation-.78;b.neck.rotation.x=b.neckBaseRotation-.08+Math.sin(elapsed*1.4+b.phase)*.025;b.head.rotation.x=b.headBaseRotation+.06+Math.sin(elapsed*1.8+b.phase)*.025;if(b.jaw)b.jaw.rotation.x=b.jawBaseRotation;if(b.tail)b.tail.rotation.x=b.tailBaseRotation+Math.sin(elapsed*2.7+b.phase)*.045;}"
     if html.count(gull_flight_marker) != 1:
         raise SystemExit("No se encontró el bucle único de vuelo de las gaviotas.")
     html = html.replace(gull_flight_marker, gull_flight_replacement, 1)
@@ -2672,17 +2690,15 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const fps=engine.getFps();
   if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
-    quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr;
- // Shared frame-loop timing state; keep these bindings for the existing world update instrumentation.
+    quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr,renderedFps=0;
+ // The Quality profile keeps its existing render scale, shadows, materials and scene detail.
+ // We cap only the simulation/render submission cadence at 60 Hz for stable frame pacing.
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
- let targetFrameRate=60,observedFpsCeiling=60,lastQualityWarningAt=0;
+ const targetFrameRate=60;
+ let lastQualityWarningAt=0;
  function adaptRenderQuality(dt){
-  const sampleWindow=highHeadroomQualityMobile?1.0:(isConstrainedMobile?1.5:2.0);
-  fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<sampleWindow)return;fpsSample=0;
-  const fps=engine.getFps();
-  if(highHeadroomQualityMobile)observedFpsCeiling=Math.max(observedFpsCeiling,Math.min(120,fps));
-  targetFrameRate=highHeadroomQualityMobile?Math.min(90,observedFpsCeiling):60;
-  // The initial Quality scale is locked for the session: no CPU hitch can trigger a resolution downgrade.
+  fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<2.0)return;fpsSample=0;
+  const fps=renderedFps||engine.getFps();
   if(fps<24&&performance.now()-lastQualityWarningAt>=4000){
    lastQualityWarningAt=performance.now();
    console.warn('EL SIN NOMBRE: FPS bajo con resolución de Calidad protegida.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
@@ -2691,6 +2707,63 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     if html.count(quality_adaptive_marker) != 1:
         raise SystemExit("No se encontró exactamente la función original de supervisión de resolución.")
     html = html.replace(quality_adaptive_marker, quality_adaptive_code, 1)
+
+    # Enforce the declared 60 Hz Quality target at the render-loop boundary.
+    # Keep the accumulator aligned to the target cadence so 90 Hz panels alternate
+    # one/two refresh intervals instead of collapsing to 45 Hz.
+    frame_loop_marker = "engine.runRenderLoop(()=>{\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
+    frame_loop_replacement = "engine.runRenderLoop(()=>{\n  const now=performance.now(),frameIntervalMs=1000/targetFrameRate;if(!nextRenderAt)nextRenderAt=now;if(now+.5<nextRenderAt)return;if(now-nextRenderAt>frameIntervalMs*2)nextRenderAt=now;else nextRenderAt+=frameIntervalMs;\n  const rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
+    if html.count(frame_loop_marker) != 1:
+        raise SystemExit("No se encontró el único bucle Babylon para aplicar el límite de 60 Hz.")
+    html = html.replace(frame_loop_marker, frame_loop_replacement, 1)
+
+    frame_clock_marker = "let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
+    frame_clock_replacement = "let last=performance.now(),nextRenderAt=0,mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
+    if html.count(frame_clock_marker) != 1:
+        raise SystemExit("No se encontró el reloj único de render para instalar el planificador de fotogramas.")
+    html = html.replace(frame_clock_marker, frame_clock_replacement, 1)
+
+    fps_sample_marker = "fpsHudTime+=dt;"
+    fps_sample_replacement = "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++;"
+    if html.count(fps_sample_marker) != 1:
+        raise SystemExit("No se encontró el contador único del HUD de FPS.")
+    html = html.replace(fps_sample_marker, fps_sample_replacement, 1)
+
+    fps_hud_marker = "const measured=engine.getFps(),meter=document.getElementById('fpsMeter');"
+    fps_hud_replacement = "const measured=fpsHudTime>0?fpsHudFrames/fpsHudTime:0;renderedFps=measured;fpsHudFrames=0;const meter=document.getElementById('fpsMeter');"
+    if html.count(fps_hud_marker) != 1:
+        raise SystemExit("No se encontró el cálculo único del FPS real del HUD.")
+    html = html.replace(fps_hud_marker, fps_hud_replacement, 1)
+
+    fps_colour_marker = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
+    fps_colour_replacement = "meter.style.color=measured>=targetFrameRate-1?'#94d8a0':measured>=targetFrameRate*.90?'#e6c27f':'#ff9a83';"
+    if html.count(fps_colour_marker) != 1:
+        raise SystemExit("No se encontró el esquema único de color del HUD para 60 FPS.")
+    html = html.replace(fps_colour_marker, fps_colour_replacement, 1)
+
+    fps_title_marker = "meter.title='Objetivo: 120 FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms (120 FPS requiere ≤8,3 ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';"
+    fps_title_replacement = "meter.title='Objetivo: '+targetFrameRate+' FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms ('+targetFrameRate+' FPS requiere ≤'+(1000/targetFrameRate).toFixed(1)+' ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';"
+    if html.count(fps_title_marker) != 1:
+        raise SystemExit("No se encontró el texto único del objetivo de FPS del HUD.")
+    html = html.replace(fps_title_marker, fps_title_replacement, 1)
+
+    visibility_clock_marker = "document.addEventListener('visibilitychange',()=>{last=performance.now();"
+    visibility_clock_replacement = "document.addEventListener('visibilitychange',()=>{last=performance.now();nextRenderAt=0;"
+    if html.count(visibility_clock_marker) != 1:
+        raise SystemExit("No se encontró el reinicio único del reloj al cambiar la visibilidad.")
+    html = html.replace(visibility_clock_marker, visibility_clock_replacement, 1)
+
+    webgl_clock_marker = "engine.resize();scene.activeCamera=camera;last=performance.now();"
+    webgl_clock_replacement = "engine.resize();scene.activeCamera=camera;last=performance.now();nextRenderAt=0;"
+    if html.count(webgl_clock_marker) != 1:
+        raise SystemExit("No se encontró el reinicio único del reloj tras restaurar WebGL.")
+    html = html.replace(webgl_clock_marker, webgl_clock_replacement, 1)
+
+    health_fps_marker = "fps:Math.round(engine.getFps()),"
+    health_fps_replacement = "fps:Math.round(renderedFps||engine.getFps()),"
+    if html.count(health_fps_marker) != 1:
+        raise SystemExit("No se encontró la lectura única del FPS del informe de salud.")
+    html = html.replace(health_fps_marker, health_fps_replacement, 1)
 
     # Existing instanced water droplets: improve readability without increasing particle count or draw calls.
     splash_visual_replacements = (
@@ -3098,11 +3171,11 @@ function getWorldPhaseTimingSnapshot(){
         raise SystemExit("No se encontró el objeto runtime único para publicar los tiempos de fase y del minimapa.")
     html = html.replace(health_phase_marker, health_phase_replacement, 1)
 
-    map_clock_marker = "let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
-    map_clock_replacement = map_clock_marker + "\n let lastMapDrawMs=0,mapDrawMaxMs=0,mapDrawSampleCount=0;"
-    if html.count(map_clock_marker) != 1:
-        raise SystemExit("No se encontró el reloj único del bucle de juego para medir el coste del minimapa.")
-    html = html.replace(map_clock_marker, map_clock_replacement, 1)
+    map_clock_pattern = r"let last=performance\.now\(\),(?:nextRenderAt=0,)?mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
+    map_clock_replacement = "let last=performance.now(),nextRenderAt=0,mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;\n let lastMapDrawMs=0,mapDrawMaxMs=0,mapDrawSampleCount=0;"
+    html, map_clock_count = re.subn(map_clock_pattern, map_clock_replacement, html, count=1)
+    if map_clock_count != 1:
+        raise SystemExit(f"No se encontró un único reloj compatible del bucle para medir el minimapa (encontrados={map_clock_count}).")
 
     map_draw_marker = "if(mapClock>=mapRefreshInterval){drawMap();mapClock=0;}"
     map_draw_replacement = "if(mapClock>=mapRefreshInterval){const mapDrawStarted=performance.now();drawMap();lastMapDrawMs=performance.now()-mapDrawStarted;mapDrawMaxMs=Math.max(mapDrawMaxMs,lastMapDrawMs);mapDrawSampleCount++;mapClock=0;}"

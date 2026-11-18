@@ -104,6 +104,7 @@ jobs:
       - name: Run real Babylon gameplay and world-inspection smoke
         env:
           PLAYER_TEST_URL: http://127.0.0.1:4175/
+          PLAYER_TEST_SKIP_WARM_RESTART: '1'
         run: node scripts/player-startup-smoke.mjs
       - name: Upload real-scene inspection evidence
         if: always()

@@ -12,7 +12,7 @@ assert.match(html,/await loadForestTreeTemplates\(\)/);
 assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
-assert.ok(html.includes('leftWing,rightWing,tail,wingFlapAxis'), 'The replacement gull must expose its named articulated anatomy.');
+assert.ok(html.includes('leftWing,rightWing,tail,head,neck,jaw,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg,wingFlapAxis'), 'The replacement gull must expose its complete named flight anatomy.');
 assert.ok(html.includes("const groups=inst.animationGroups||[];groups.forEach(group=>{try{group.stop();}catch(_){}});const fly=null;"),
   'The gull must not select a walk/idle body clip; it uses explicit articulated wing flight.');
 assert.ok(!html.includes("groups.find(g=>/walk|fly|flap/i.test(g.name)"),
@@ -70,6 +70,9 @@ const gullNodeNames=(gullJson.nodes||[]).map(node=>String(node.name||''));
 assert.ok(gullNodeNames.some(name=>/^LeftWing(?:_|$)/i.test(name)),'La gaviota debe tener el pivote LeftWing');
 assert.ok(gullNodeNames.some(name=>/^RightWing(?:_|$)/i.test(name)),'La gaviota debe tener el pivote RightWing');
 assert.ok(gullNodeNames.some(name=>/^Tail(?:_|$)/i.test(name)),'La gaviota debe tener cola articulada');
+for(const part of ['Head','Neck','Jaw','LeftHindUpLeg','RightHindUpLeg','LeftHindLeg','RightHindLeg'])assert.ok(gullNodeNames.some(name=>new RegExp('^'+part+'(?:_|$)','i').test(name)),'La gaviota debe incluir la articulación '+part+' para adoptar una postura de vuelo realista.');
+assert.ok(html.includes('b.flightPoseReady')&&html.includes('leftHindUpLeg.rotation.x')&&html.includes('rightHindUpLeg.rotation.x')&&html.includes('leftHindLeg.rotation.x')&&html.includes('rightHindLeg.rotation.x'),'Las patas traseras deben recogerse durante el vuelo, no permanecer colgando como en reposo.');
+assert.ok(html.includes('b.neck.rotation.x')&&html.includes('b.head.rotation.x'),'La cabeza y el cuello deben compensar la postura de vuelo.');
 const gullTriangles=(gullJson.meshes||[]).reduce((total,mesh)=>total+(mesh.primitives||[]).reduce((subtotal,primitive)=>{
   if(primitive.mode!==undefined&&primitive.mode!==4)return subtotal;
   const accessor=primitive.indices===undefined?primitive.attributes?.POSITION:gullJson.accessors?.[primitive.indices];

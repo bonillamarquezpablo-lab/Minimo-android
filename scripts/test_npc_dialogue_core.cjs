@@ -138,4 +138,15 @@ assert.ok(dialogueRuntime.includes('const positioningSamples=new Float32Array(12
   dialogueRuntime.includes('positioningP95Ms:at(.95)') &&
   dialogueRuntime.includes('positioningP99Ms:at(.99)'),
   'NPC dialogue projection must expose bounded p50/p95/p99 CPU timing samples.');
+assert.ok(dialogueRuntime.includes('layerRect=layer.getBoundingClientRect()'), 'NPC projection must convert Babylon render pixels into overlay coordinates.');
+assert.ok(dialogueRuntime.includes('slot.node.style.left=overlayPlacement.x.toFixed(1)+"px"') && dialogueRuntime.includes('slot.node.style.top=overlayPlacement.y.toFixed(1)+"px"') && dialogueRuntime.includes('slot.node.style.transform="none"'), 'NPC bubbles must use explicit overlay-local coordinates.');
+assert.ok(dialogueRuntime.includes('node.style.position="absolute"'), 'Dialogue bubbles must be positioned relative to the fixed overlay.');
+assert.ok(dialogueStyle.includes('.elsn-npc-bubble{position:absolute;'), 'CSS must match the overlay-local positioning contract.');
 console.log("NPC screen-space projection freshness and timing contract: PASS.");
+
+// Fixed-overlay coordinates must be independent of the layer's screen-space offset.
+assert.deepEqual(Core.toOverlayPoint({x:320,y:480},{left:20,top:40}),{x:300,y:440});
+assert.deepEqual(Core.toOverlayPoint({x:320,y:480},{left:-12,top:8}),{x:332,y:472});
+assert.equal(Core.toOverlayPoint({x:NaN,y:10},{left:0,top:0}),null);
+assert.ok(dialogueRuntime.includes('const screenX=rect.left+p.x*(rect.width/width)'), 'Babylon render coordinates must first be converted to viewport coordinates.');
+assert.ok(dialogueRuntime.includes('Core.toOverlayPoint({x:placement.left,y:placement.top},layerRect)'), 'The chosen screen-space bubble position must be converted to overlay-local coordinates before applying CSS left/top.');

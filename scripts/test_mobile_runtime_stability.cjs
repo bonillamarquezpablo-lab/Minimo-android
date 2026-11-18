@@ -99,6 +99,8 @@ assert.ok(builder.includes('beachRenderDiagnostics'), 'Beach reports must inspec
 assert.ok(validator.includes('renderDiagnostics:beachRenderDiagnostics'), 'The packaged report must include beach render diagnostics.');
 assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3))'), 'The packaged report must label wall-clock beach duration separately.');
 
+assert.ok(builder.includes('grass_stream_replacement = "if(bestRatio>(onShip?1.55:1.09))currentIsland=-1;"'), 'Quality grass must be staged for the destination island while the player approaches by ship.');
+assert.ok(builder.includes('(onShip?Math.max(96,GRASS_STREAM_RECENTER_DISTANCE):GRASS_STREAM_RECENTER_DISTANCE)'), 'Grass streaming must not rebuild repeatedly during short ship movements.');
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullMaxExtentMeters=.55') &&
   builder.includes('sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)') &&
@@ -134,3 +136,8 @@ assert.ok(!source.includes('worldColliders.push({'), 'Structures must not bypass
 assert.ok(source.includes('habitableColliderBackfillCount'), 'Unregistered habitable roots must receive a conservative collision footprint.');
 assert.ok(source.includes('fallbackShorelineRadius(island)'), 'The foam solver must retain a valid shoreline anchor when a numerical bracket disappears.');
 assert.ok(validator.includes('bootstrapAttempts++<80'), 'Dialogue startup must retry until the game bridge is ready.');
+
+assert.ok(builder.includes('const targetFrameRate=60;'), 'The Quality runtime must target 60 frames per second.');
+assert.ok(builder.includes('frameIntervalMs=1000/targetFrameRate') && builder.includes('if(now+.5<nextRenderAt)return') && builder.includes('nextRenderAt+=frameIntervalMs'), 'Babylon rendering and world simulation must be paced at the 60 Hz target on high-refresh displays.');
+assert.ok(builder.includes('fpsHudTime+=rawFrameMs/1000;fpsHudFrames++') && builder.includes('renderedFps=measured'), 'The FPS HUD and health report must count rendered game frames, not browser requestAnimationFrame callbacks.');
+assert.ok(builder.includes("meter.title='Objetivo: '+targetFrameRate+' FPS."), 'The FPS tooltip must show the enforced target and correct frame budget.');

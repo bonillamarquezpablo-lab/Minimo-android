@@ -497,7 +497,12 @@ def main() -> None:
         "highHeadroomQualityMobile=",
         "qualityDprCurrent=qualityDpr",
         "qualityScaleLockedForSession:true",
-        "let targetFrameRate=60,observedFpsCeiling=60",
+        "const targetFrameRate=60;",
+        "frameIntervalMs=1000/targetFrameRate",
+        "if(now+.5<nextRenderAt)return",
+        "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
+        "renderedFps=measured",
+        "renderedFps||engine.getFps()",
         "FPS bajo con resolución de Calidad protegida",
         "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))",
         "renderPipeline.sharpen.edgeAmount=.34",
@@ -537,6 +542,17 @@ def main() -> None:
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
+    fps_pacing_markers = (
+        "const targetFrameRate=60;",
+        "frameIntervalMs=1000/targetFrameRate",
+        "if(now+.5<nextRenderAt)return",
+        "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
+        "renderedFps=measured",
+        "renderedFps||engine.getFps()",
+    )
+    missing_fps_pacing = [marker for marker in fps_pacing_markers if marker not in index_html]
+    if missing_fps_pacing:
+        fail("El planificador de 60 Hz y su medición de fotogramas renderizados están incompletos: " + ", ".join(missing_fps_pacing))
     if "reportVersion:'35',build:'0.6.318'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
@@ -1104,8 +1120,8 @@ def main() -> None:
         fail("La generación del terreno y la hierba debe reutilizar buffers compactos y hashes deterministas.")
     if "const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);" not in index_html or "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "async function createRealGrass(onlyIslandIndex=null,focusX=null,focusZ=null,staging=false)" not in index_html or "if(onlyIslandIndex!==null&&islandIndex!==onlyIslandIndex)continue;" not in index_html or "const radius=Math.min(92,safeLandRadius);" not in index_html or "if(!isPerformanceMode){" not in index_html or "console.info('Hierba desactivada en modo Rendimiento.');" not in index_html:
         fail("Solo Calidad debe generar hierba local; Rendimiento debe desactivarla completamente.")
-    if "async function streamActiveIslandGrass(index,focusX,focusZ)" not in index_html or "(!sameIsland||moved)&&!grassStreamPromise" not in index_html or "createRealGrass(index,focusX,focusZ,true)" not in index_html or "Visible Nordic ground cover swapped atomically" not in index_html or "GRASS_STREAM_RECENTER_DISTANCE=isTouchDevice?58:46" not in index_html or "grassStream:{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise}" not in index_html or "if(onShip||bestRatio>1.09)currentIsland=-1" not in index_html:
-        fail("La hierba debe seguir el área cercana y no cargar islas hasta desembarcar.")
+    if "async function streamActiveIslandGrass(index,focusX,focusZ)" not in index_html or "(!sameIsland||moved)&&!grassStreamPromise" not in index_html or "createRealGrass(index,focusX,focusZ,true)" not in index_html or "Visible Nordic ground cover swapped atomically" not in index_html or "GRASS_STREAM_RECENTER_DISTANCE=isTouchDevice?58:46" not in index_html or "grassStream:{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise}" not in index_html or "if(bestRatio>(onShip?1.55:1.09))currentIsland=-1" not in index_html:
+        fail("La hierba debe seguir el área cercana y preconstruir el destino próximo sin descargas al embarcar.")
     if "leavesPerClump=isPerformanceMode?8:10" not in index_html or "const show=batch.islandIndex===visibleGrassIslandIndex;" not in index_html or "const chunkSize=56,grassBatches=new Map();" not in index_html or "const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));" not in index_html:
         fail("La hierba de Calidad debe conservar el detalle y limitar la generación al área local.")
     if "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "recordStartupTask('Hierba 3D inicial de Calidad'" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:

@@ -42,8 +42,11 @@ assert.ok(buildSite.includes("targetGullMaxExtentMeters=.55") &&
   buildSite.includes("visualRoot.position.copyFrom(sourceCenter.scale(-1))"),
   "The release must center the gull hierarchy and enforce the measured 0.55 m biological size.");
 assert.ok(buildSite.includes("const groups=inst.animationGroups||[];groups.forEach(group=>{try{group.stop();}catch(_){}});const fly=null;") &&
-  buildSite.includes("b.leftWing&&b.rightWing") && !buildSite.includes("fly.start(true,1.0)"),
-  "The gull must keep GLB body/leg clips stopped and animate only its anatomical wing pivots.");
+  buildSite.includes("b.flightPoseReady") && buildSite.includes("b.leftWing.rotation[b.wingFlapAxis]") &&
+  buildSite.includes("b.leftHindUpLeg.rotation.x") && buildSite.includes("b.rightHindUpLeg.rotation.x") &&
+  buildSite.includes("b.leftHindLeg.rotation.x") && buildSite.includes("b.rightHindLeg.rotation.x") &&
+  !buildSite.includes("fly.start(true,1.0)"),
+  "The gull must keep imported body clips stopped and explicitly animate wings, tucked hind legs, head and neck.");
 assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyRadius+otherRadius)*1.12") &&
   buildSite.includes("ring<=16") && buildSite.includes("overlapPairs"),
   "Conifers must use measured canopy clearances, a wider in-island relocation search and an overlap audit.");
@@ -84,7 +87,7 @@ assert.ok(buildSite.includes('if url.startswith("https://grab3d.com/")'),
   "Large rigged packages from Grab3D must be removed from the concurrent download pool.");
 assert.ok(buildSite.includes("for relative, (url, minimum, kind) in grab3d_downloads.items():"),
   "Grab3D model downloads must be serialized while preserving all validation.");
-assert.ok(buildSite.includes("let targetFrameRate=60,observedFpsCeiling=60"),"The S26 profile must adapt to 60 or 90 FPS according to the observed browser refresh ceiling.");
+assert.ok(buildSite.includes("const targetFrameRate=60;") && buildSite.includes("frameIntervalMs=1000/targetFrameRate") && buildSite.includes("renderedFps=measured"),"The Quality runtime must enforce a stable 60 Hz simulation/render cadence and report the actual processed frame rate.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
 assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.includes("thinInstanceBatch") && buildSite.includes("list.length<180"),"Water reflections must filter non-essential foliage, instance batches and limit pass submissions.");
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
