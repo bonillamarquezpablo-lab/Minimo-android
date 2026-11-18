@@ -17,10 +17,11 @@
       "name": "Texturas, carga y preparación de cámara",
       "script": "scripts/texture-readiness-smoke.mjs",
       "startedAt": "2026-11-18T20:38:31.741Z",
-      "status": "running",
-      "durationMs": null,
-      "exitCode": null,
-      "error": null
+      "status": "failed",
+      "durationMs": 143999,
+      "exitCode": 2,
+      "error": "exit=2 signal=none",
+      "finishedAt": "2026-11-18T20:40:55.741Z"
     }
   ],
   "finishedAt": null
