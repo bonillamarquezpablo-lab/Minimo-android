@@ -41,15 +41,15 @@ assert.ok(buildSite.includes("targetGullMaxExtentMeters=.55") &&
   buildSite.includes("fittedMaxExtent>.57") &&
   buildSite.includes("visualRoot.position.copyFrom(sourceCenter.scale(-1))"),
   "The release must center the gull hierarchy and enforce the measured 0.55 m biological size.");
-assert.ok(buildSite.includes("fly=groups.find(g=>/^fly$/i.test(String(g.name||'')))||null") &&
-  buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio") &&
-  buildSite.includes("animation:fly") &&
-  buildSite.includes("fly.start(true,1.0)") &&
-  buildSite.includes("groups.forEach(group=>{if(group!==fly)group.stop();})") &&
-  !buildSite.includes("const fly=null") &&
-  !buildSite.includes("b.flightPoseReady") &&
-  !buildSite.includes("b.leftWing.rotation[b.wingFlapAxis]"),
-  "The gull must use the complete authored Fly clip, not a false synthetic flight pose.");
+assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]") &&
+  buildSite.includes("flightRig,phase:i*1.25") &&
+  buildSite.includes("B.Quaternion.RotationAxisToRef(axis,angle,part.delta)") &&
+  buildSite.includes("part.base.multiplyToRef(part.delta,part.output)") &&
+  buildSite.includes("flapPhase=elapsed*10.2+b.phase") &&
+  buildSite.includes("apply(rig.leftWing,rig.wingAxis,flap*rig.leftWing.sign)") &&
+  buildSite.includes("apply(rig.rightWing,rig.wingAxis,flap*rig.rightWing.sign)") &&
+  !buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio"),
+  "The gull must fly through synchronized anatomical pivots while preserving original quaternion rest poses.");
 assert.ok(buildSite.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)"),
   "Transparent ground effects in rendering group 1 must preserve opaque-world depth.");
 assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyRadius+otherRadius)*1.12") &&
