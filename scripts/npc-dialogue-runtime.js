@@ -253,7 +253,27 @@ function start(){
  positionHandle=window.setInterval(()=>{try{positionTick();}catch(e){diagnostics.lastError=String(e&&e.message||e);console.warn("NPC attachment update recovered:",e);}},Core.POSITION_UPDATE_MS);
 }
 start();
-window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,...positioningPercentiles(),active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.roleText,kind:s.kindText,text:s.messageText})),lastAttachment:diagnostics.lastAttachment,lastHideReason:diagnostics.lastHideReason,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS})});
+function captureVisualProof(){
+ const slot=slots.slice(0,bubbleLimit()).find(s=>s.current&&s.mesh&&s.texture);
+ if(!slot)return{ready:false,reason:"no-active-bubble"};
+ try{
+  const context=slot.texture.getContext(),canvas=context&&context.canvas;
+  if(!canvas||typeof canvas.toDataURL!=="function")return{ready:false,reason:"texture-canvas-unavailable"};
+  const enabled=typeof slot.mesh.isEnabled==="function"?slot.mesh.isEnabled():slot.mesh.isVisible!==false;
+  const parent=slot.mesh.parent,position=slot.mesh.position;
+  const dataUrl=canvas.toDataURL("image/png");
+  return{
+   ready:!!enabled&&!slot.textDirty&&!!slot.messageText&&typeof dataUrl==="string"&&dataUrl.startsWith("data:image/png"),
+   id:slot.current.id,role:slot.roleText,text:slot.messageText,messagePainted:!slot.textDirty,
+   meshEnabled:!!enabled,renderingGroupId:Number(slot.mesh.renderingGroupId),
+   parentName:String(parent&&(parent.name||parent.id)||""),
+   position:position?{x:Number(position.x.toFixed(3)),y:Number(position.y.toFixed(3)),z:Number(position.z.toFixed(3))}:null,
+   texture:{width:Number(canvas.width),height:Number(canvas.height),vScale:Number(slot.texture.vScale),vOffset:Number(slot.texture.vOffset)},
+   dataUrl
+  };
+ }catch(error){return{ready:false,reason:String(error&&error.message||error)};}
+}
+ window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,...positioningPercentiles(),active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.roleText,kind:s.kindText,text:s.messageText})),lastAttachment:diagnostics.lastAttachment,lastHideReason:diagnostics.lastHideReason,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS}),captureVisualProof});
 
 }
 boot();
