@@ -1,6 +1,8 @@
 (function(){
 "use strict";
 if(typeof window==="undefined"||typeof document==="undefined")return;
+if(window.__ELSN_NPC_DIALOGUE_RUNTIME__&&window.__ELSN_NPC_DIALOGUE_RUNTIME__.installed)return;
+window.__ELSN_NPC_DIALOGUE_RUNTIME__={installed:true,startedAt:Date.now()};
 const pathParts=String(location.pathname||"").split("/").filter(Boolean),last=pathParts[pathParts.length-1]||"";
 if(last==="inspector"||(last==="index.html"&&pathParts[pathParts.length-2]==="inspector"))return;
 let bootstrapAttempts=0;
@@ -140,8 +142,8 @@ function pairKey(a,b){return[a,b].map(String).sort().join("::");}
 function pairMemory(a,b){const key=pairKey(a,b);let value=relationships.get(key);if(!value){value={key,rapport:0,exchanges:0,recentTopics:[]};relationships.set(key,value);if(relationships.size>64)relationships.delete(relationships.keys().next().value);}return value;}
 function rememberPair(pair,topic){if(!pair)return;pair.exchanges++;pair.rapport=Math.min(5,pair.rapport+0.65);if(topic){pair.recentTopics.push(topic);if(pair.recentTopics.length>4)pair.recentTopics.shift();}saveSocialMemory();}
 function slotFor(id){const activeSlots=slots.slice(0,bubbleLimit());return activeSlots.find(s=>s.current&&s.current.id===id)||activeSlots.find(s=>!s.current);}
-function startBubble(npc,content,now,duration){const id=idOf(npc);if(!id||!content||!content.text)return false;const slot=slotFor(id);if(!slot)return false;const kind=["thought","speech","action"].includes(content.kind)?content.kind:"speech";slot.current={id,npc,kind,expiresAt:now+(duration||BUBBLE_DURATION_MS)};slot.lastOcclusionAt=0;slot.occluded=false;slot.role.textContent=String(content.roleName||"Habitante").slice(0,24);slot.kind.textContent=kind==="thought"?"PIENSA":kind==="action"?"HACE":"DICE";slot.message.textContent=String(content.text).slice(0,120);slot.node.dataset.kind=kind;slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");slot.node.classList.remove("is-visible");void slot.node.offsetWidth;const measured=slot.node.getBoundingClientRect();slot.width=measured.width;slot.height=measured.height;slot.measureDirty=false;slot.node.classList.add("is-visible");diagnostics.bubblesStarted++;return true;}
-function clearSlot(slot){slot.current=null;slot.lastOcclusionAt=0;slot.occluded=false;slot.node.classList.remove("is-visible");slot.node.hidden=true;slot.node.style.transform="";}
+function startBubble(npc,content,now,duration){const id=idOf(npc);if(!id||!content||!content.text)return false;const slot=slotFor(id);if(!slot)return false;const kind=["thought","speech","action"].includes(content.kind)?content.kind:"speech";slot.current={id,npc,kind,expiresAt:now+(duration||BUBBLE_DURATION_MS)};slot.lastOcclusionAt=0;slot.occluded=false;slot.role.textContent=String(content.roleName||"Habitante").slice(0,24);slot.kind.textContent=kind==="thought"?"PIENSA":kind==="action"?"HACE":"DICE";slot.message.textContent=String(content.text).slice(0,120);slot.node.dataset.kind=kind;slot.node.hidden=false;slot.node.style.removeProperty("display");slot.node.style.removeProperty("visibility");slot.node.style.removeProperty("opacity");slot.node.classList.remove("is-visible");void slot.node.offsetWidth;const measured=slot.node.getBoundingClientRect();slot.width=measured.width;slot.height=measured.height;slot.measureDirty=false;slot.node.classList.add("is-visible");diagnostics.bubblesStarted++;return true;}
+function clearSlot(slot){slot.current=null;slot.lastOcclusionAt=0;slot.occluded=false;slot.node.hidden=true;slot.node.classList.remove("is-visible");slot.node.style.removeProperty("display");slot.node.style.removeProperty("visibility");slot.node.style.removeProperty("opacity");slot.node.style.removeProperty("transform");}
 function expire(now){for(const slot of slots)if(slot.current&&slot.current.expiresAt<=now)clearSlot(slot);}
 function villageOf(npc){const direct=Number(npc&&npc.villageIndex);if(Number.isFinite(direct))return direct;const nested=Number(npc&&npc.parts&&npc.parts.villageIndex);if(Number.isFinite(nested))return nested;const name=String(npc&&npc.parts&&npc.parts.name||npc&&npc.name||"");const match=/^(?:Villager_|VillageGuard)(\\d+)_/.exec(name);if(match)return Number(match[1]);return -1;}
 function partnerFor(item,nearby,s){let best=null,bestDistance=7.5;for(const candidate of nearby){if(candidate.id===item.id||villageOf(candidate.npc)!==villageOf(item.npc))continue;if(slots.some(slot=>slot.current&&slot.current.id===candidate.id))continue;if(s&&!isProjectable(candidate.npc,s))continue;const d=distance(item.position,candidate.position);if(d<bestDistance){best=candidate;bestDistance=d;}}return best;}
@@ -207,7 +209,7 @@ function schedule(now,nearby,s){
 }
 function project(slot,s,occupied){
  const c=slot.current;
- const hide=reason=>{diagnostics.projectionFailures[reason]=(diagnostics.projectionFailures[reason]||0)+1;slot.node.hidden=true;return false;};
+ const hide=reason=>{diagnostics.projectionFailures[reason]=(diagnostics.projectionFailures[reason]||0)+1;slot.node.hidden=true;slot.node.classList.remove("is-visible");return false;};
  diagnostics.projectionAttempts++;
  if(!c||!s||!s.scene||!s.engine||!s.canvas)return hide("missing-scene-camera-canvas");
  const camera=s.scene.activeCamera||s.camera;
@@ -241,7 +243,7 @@ function project(slot,s,occupied){
    slot.lastOcclusionAt=occlusionNow;
   }
   if(slot.occluded)return hide("occluded-by-world-geometry");
-  slot.node.hidden=false;slot.node.style.setProperty("display","block","important");slot.node.style.setProperty("visibility","visible","important");slot.node.style.setProperty("opacity","1","important");
+  slot.node.hidden=false;slot.node.style.removeProperty("display");slot.node.style.removeProperty("visibility");slot.node.style.removeProperty("opacity");
   if(slot.measureDirty||!(slot.width>0&&slot.height>0)){const measured=slot.node.getBoundingClientRect();slot.width=measured.width;slot.height=measured.height;slot.measureDirty=false;}
   if(!(slot.width>0&&slot.height>0))return hide("bubble-size-unavailable");
   let placement=Core.placeBubble(overlayAnchor,{width:slot.width,height:slot.height},{left:0,top:0,right:layerRect.width,bottom:layerRect.height},occupied);

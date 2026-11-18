@@ -283,3 +283,13 @@ assert.ok(source.includes("distanceToCoastMeters"));
 assert.ok(source.includes("hrafn-final-"));
 assert.ok(source.includes("objectInspectionCaptures.length===5"));
 console.log('OK: Hrafn source transform, safe camp placement, rendered-ground + high-tide contract and before/after captures.');
+
+assert.ok(builder.includes("cameraGroundYFiltered=NaN"), "The camera must retain a smoothed terrain-height sample.");
+assert.ok(builder.includes("safeWantY=Math.max(wantY,cameraGroundYFiltered+.82)"), "The low camera must keep ground clearance while still allowing an upward inspection angle.");
+assert.ok(builder.includes("camera.position.y+=(safeWantY-camera.position.y)*positionAlpha"), "The camera floor correction must take part in the easing, not snap after it.");
+assert.ok(builder.includes("const pitchMin=onShip?-.18:-.52,pitchMax=onShip?.92:.94"), "The camera must allow a low upward-looking angle on land and aboard the ship.");
+assert.ok(builder.includes("const angleStability=cameraPitch<.12?.20:1"), "High-frequency camera shake must be reduced during low-angle inspection.");
+
+assert.ok(builder.includes("cameraAimTargetScratch=null"), "The camera must reuse an upward-look target scratch vector.");
+assert.ok(builder.includes("cameraAimTargetScratch.y+=Math.min(distance*.52,Math.tan(upwardAngle)*distance*.72)"), "Negative pitch must aim toward the sky while keeping the camera above the terrain.");
+assert.ok(builder.includes("camera.setTarget(cameraAimTargetScratch)"), "The camera must use the separate upward-look target.");
