@@ -34,8 +34,13 @@ assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html
   'Forest placement must use a wider relocation search and expose overlap diagnostics.');
 assert.ok(!html.includes('b.leftWing.rotation[b.wingFlapAxis]') && !html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
   'The imported skeleton animation must not be overridden by synthetic per-bone wing rotations.');
-assert.ok(html.includes('fly.start(true,1.0)') && html.includes('groups.forEach(group=>{if(group!==fly)group.stop();})'),
-  'Only the complete native Fly animation must play in a continuous loop.');
+assert.ok(html.includes('flightRig,phase:i*1.25') &&
+  html.includes('apply(rig.leftHindUpLeg,rig.bodyAxis,tuck)') &&
+  html.includes('apply(rig.rightHindUpLeg,rig.bodyAxis,tuck)') &&
+  html.includes('apply(rig.tail,rig.bodyAxis') &&
+  html.includes('apply(rig.head,rig.bodyAxis') &&
+  html.includes('apply(rig.neck,rig.bodyAxis'),
+  'The flight pose must tuck both legs and add restrained head, neck and tail compensation.');
 assert.ok(buildSource.includes("rotationPart=node=>{const base=node.rotationQuaternion?node.rotationQuaternion.clone():B.Quaternion.FromEulerAngles") &&
   buildSource.includes("node.rotationQuaternion=base.clone()") &&
   buildSource.includes("leftWingSign=") && buildSource.includes("rightWingSign="),
