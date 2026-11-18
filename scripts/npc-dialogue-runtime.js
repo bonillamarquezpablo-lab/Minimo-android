@@ -173,11 +173,11 @@ function paintWorldBubble(slot){
  ctx.beginPath();ctx.moveTo(76,344);ctx.lineTo(108,376);ctx.lineTo(142,344);
  ctx.closePath();ctx.fillStyle="rgba(10,18,19,0.96)";ctx.fill();
  ctx.strokeStyle="rgba(220,183,119,0.92)";ctx.lineWidth=4;ctx.stroke();
- ctx.textBaseline="middle";ctx.textAlign="left";ctx.font="800 24px system-ui, sans-serif";
+ ctx.textBaseline="middle";ctx.textAlign="left";ctx.font="800 27px system-ui, sans-serif";
  ctx.fillStyle="#e1c184";ctx.fillText(slot.roleText.toLocaleUpperCase("es-ES"),34,58,520);
- ctx.textAlign="right";ctx.font="700 20px system-ui, sans-serif";ctx.fillStyle="rgba(239,228,206,0.78)";
+ ctx.textAlign="right";ctx.font="700 22px system-ui, sans-serif";ctx.fillStyle="rgba(239,228,206,0.78)";
  ctx.fillText(slot.kindText,730,58,170);ctx.textAlign="left";
- ctx.font="600 34px system-ui, sans-serif";ctx.fillStyle="#fff8e9";
+ ctx.font="650 38px system-ui, sans-serif";ctx.fillStyle="#fff8e9";
  const lines=wrapBubbleText(ctx,slot.messageText,690,3);
  for(let i=0;i<lines.length;i++)ctx.fillText(lines[i],34,132+i*67,690);
  ctx.restore();slot.texture.update(false);slot.textDirty=false;
@@ -203,13 +203,13 @@ function updateWorldBubble(slot,s){
  try{
   if(!slot.mesh){
    slot.texture=new BABYLON.DynamicTexture("ELSN_NPC_WorldBubble_Texture_"+slot.index,{width:768,height:384},s.scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
-   slot.texture.hasAlpha=true;slot.texture.wrapU=BABYLON.Texture.CLAMP_ADDRESSMODE;slot.texture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
+   slot.texture.hasAlpha=true;slot.texture.wrapU=BABYLON.Texture.CLAMP_ADDRESSMODE;slot.texture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;slot.texture.vScale=-1;slot.texture.vOffset=1;slot.texture.anisotropicFilteringLevel=2;
    slot.material=new BABYLON.StandardMaterial("ELSN_NPC_WorldBubble_Material_"+slot.index,s.scene);
    slot.material.diffuseTexture=slot.texture;slot.material.useAlphaFromDiffuseTexture=true;
    slot.material.disableLighting=true;slot.material.emissiveColor=new BABYLON.Color3(1,1,1);
    slot.material.specularColor=BABYLON.Color3.Black();slot.material.backFaceCulling=false;
    slot.material.disableDepthWrite=true;slot.material.transparencyMode=BABYLON.Material.MATERIAL_ALPHABLEND;
-   slot.mesh=BABYLON.MeshBuilder.CreatePlane("ELSN_NPC_WorldBubble_"+slot.index,{width:1.78,height:.89,sideOrientation:BABYLON.Mesh.DOUBLESIDE},s.scene);
+   slot.mesh=BABYLON.MeshBuilder.CreatePlane("ELSN_NPC_WorldBubble_"+slot.index,{width:2.04,height:1.02,sideOrientation:BABYLON.Mesh.DOUBLESIDE},s.scene);
    slot.mesh.material=slot.material;slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL;
    slot.mesh.isPickable=false;slot.mesh.checkCollisions=false;slot.mesh.alwaysSelectAsActiveMesh=true;
    slot.mesh.renderingGroupId=1;slot.mesh.setEnabled(false);slot.textDirty=true;
