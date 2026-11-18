@@ -91,8 +91,8 @@ def main() -> None:
     index_html = read_text("index.html")
     atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
     world_inspection_source = read_text("scripts/nordic/world-inspection.js")
-    if "root.ELSNWorldInspection" not in world_inspection_source or "capture(context" not in world_inspection_source:
-        raise SystemExit("World inspection runtime is missing its public read-only capture API.")
+    if "root.ELSNWorldInspection" not in world_inspection_source or "capture(context" not in world_inspection_source or "visualIntegrity" not in world_inspection_source or "playingAnimationGroups" not in world_inspection_source:
+        raise SystemExit("World inspection runtime is missing its individual wildlife rig and animation evidence.")
     if "./scripts/nordic/world-inspection.js" not in index_html:
         raise SystemExit("index.html is missing the world inspection runtime script.")
     atmosphere_markers = (
