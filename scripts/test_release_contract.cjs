@@ -43,17 +43,17 @@ assert.ok(buildSite.includes("targetGullMaxExtentMeters=.55") &&
   "The release must center the gull hierarchy and enforce the measured 0.55 m biological size.");
 assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]") &&
   buildSite.includes("flightRig,phase:i*1.25") &&
-  buildSite.includes("makeRotationPart=(node,worldAxis)") &&
-  buildSite.includes("const parent=node.parent||actor") &&
-  buildSite.includes("parentAxis=B.Vector3.TransformNormal(worldAxis,parentInverse)") &&
-  buildSite.includes("B.Quaternion.RotationAxisToRef(part.parentAxis,angle,part.delta)") &&
-  buildSite.includes("part.delta.multiplyToRef(part.base,part.output)") &&
-  buildSite.includes("applyRotation(part,angle)") &&
-  buildSite.includes("flapPhase=elapsed*9.8+b.phase") &&
-  buildSite.includes("apply(rig.leftWing,flap*rig.leftWing.sign)") &&
-  buildSite.includes("apply(rig.rightWing,flap*rig.rightWing.sign)") &&
+  buildSite.includes("alignAxis=(from,to)") &&
+  buildSite.includes("visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))") &&
+  buildSite.includes("new B.AnimationGroup('Seagull_Flight_Loop_'+i,scene)") &&
+  buildSite.includes("B.Animation.ANIMATIONTYPE_QUATERNION") &&
+  buildSite.includes("addFlightTrack('LeftWing'") &&
+  buildSite.includes("addFlightTrack('RightWing'") &&
+  buildSite.includes("flightGroup.start(true,1,0,24)") &&
+  buildSite.includes("flightGroup.goToFrame((i*5)%24)") &&
+  buildSite.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
   !buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio"),
-  "The gull must use precomputed local axes and quaternion-only per-frame animation.");
+  "The gull must be aligned horizontally and use a cached looping quaternion flight animation group.");
 assert.ok(buildSite.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)"),
   "Transparent ground effects in rendering group 1 must preserve opaque-world depth.");
 assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyRadius+otherRadius)*1.12") &&
