@@ -829,6 +829,55 @@
     const median = list => percentile(list, .5);
     const medianWorld = median(world), medianRender = median(render), medianGpu = median(gpu);
     const medianSceneRender = median(sceneRender), medianActiveMeshes = median(activeMeshes), medianRenderTargets = median(renderTargets);
+    // Conservative CPU/GPU attribution: compare independent P95 measurements against the frame budget.
+    // CPU world and render timings are kept separate because they may overlap with browser scheduling.
+    const cpuWorldP95Ms = percentile(world, .95);
+    const cpuRenderP95Ms = percentile(render, .95);
+    const cpuCriticalP95Ms = [cpuWorldP95Ms, cpuRenderP95Ms].filter(value => value !== null).reduce((max, value) => Math.max(max, value), 0);
+    const gpuP95Ms = percentile(gpu, .95);
+    const frameP95Ms = percentile(p95, .95);
+    const attributionThresholdMs = frameBudgetMs === null ? null : frameBudgetMs * .65;
+    const cpuHigh = attributionThresholdMs !== null && cpuCriticalP95Ms >= attributionThresholdMs;
+    const gpuHigh = attributionThresholdMs !== null && gpuP95Ms !== null && gpuP95Ms >= attributionThresholdMs;
+    let cpuGpuVerdict = "no-concluyente";
+    let cpuGpuReason = "Las muestras no aíslan un cuello de botella dominante con suficiente evidencia.";
+    if (gpu.length < 3) {
+      if (cpuHigh) {
+        cpuGpuVerdict = "cpu-probable";
+        cpuGpuReason = "La carga medida de CPU es alta, pero faltan consultas GPU válidas para descartar un límite gráfico simultáneo.";
+      } else {
+        cpuGpuReason = "No hay suficientes consultas de temporización GPU válidas; no se puede distinguir con seguridad CPU de GPU.";
+      }
+    } else if (cpuHigh && gpuHigh) {
+      cpuGpuVerdict = "mixto";
+      cpuGpuReason = "CPU y GPU superan el umbral de coste relativo al presupuesto de fotograma; pueden contribuir ambas.";
+    } else if (gpuHigh && (cpuCriticalP95Ms === 0 || gpuP95Ms >= cpuCriticalP95Ms * 1.20)) {
+      cpuGpuVerdict = "gpu-probable";
+      cpuGpuReason = "El tiempo de GPU P95 es elevado y supera claramente el coste CPU P95 medido.";
+    } else if (cpuHigh && (gpuP95Ms === null || cpuCriticalP95Ms >= gpuP95Ms * 1.20)) {
+      cpuGpuVerdict = "cpu-probable";
+      cpuGpuReason = "El coste CPU P95 supera claramente el tiempo GPU P95 medido.";
+    } else if (frameP95Ms !== null && frameBudgetMs !== null && frameP95Ms > frameBudgetMs * 1.20) {
+      cpuGpuReason = "Hay fotogramas lentos, pero CPU y GPU no muestran una diferencia suficientemente clara.";
+    } else {
+      cpuGpuVerdict = "sin-cuello-dominante";
+      cpuGpuReason = "Las mediciones disponibles no muestran CPU o GPU claramente por encima del umbral.";
+    }
+    const cpuGpuDiagnosis = {
+      verdict: cpuGpuVerdict,
+      explanation: cpuGpuReason,
+      frameBudgetMs: frameBudgetMs === null ? null : Number(frameBudgetMs.toFixed(2)),
+      frameP95Ms,
+      cpuWorldP95Ms,
+      cpuRenderP95Ms,
+      cpuCriticalP95Ms: Number(cpuCriticalP95Ms.toFixed(2)),
+      gpuP95Ms,
+      gpuSampleCount: gpu.length,
+      cpuSampleCount: Math.max(world.length, render.length),
+      thresholdMs: attributionThresholdMs === null ? null : Number(attributionThresholdMs.toFixed(2)),
+      confidence: gpu.length >= 12 && samples.length >= 12 ? "media" : "baja",
+      method: "Comparación heurística de percentiles P95; CPU y GPU se miden por separado y no se suman."
+    };
     const stages = [
       { name: "actualizacion-del-mundo", value: medianWorld, source: "CPU del juego" },
       { name: "preparacion-render-CPU", value: medianRender, source: "CPU del navegador/motor" },
@@ -1077,6 +1126,7 @@
       coverageRate: coverageRate === null ? null : Number(coverageRate.toFixed(3)),
       confidence: samples.length >= 12 && coverageRate !== null && coverageRate >= 0.55 ? "media" : "baja",
       primaryBottleneck,
+      cpuGpuDiagnosis,
       rankedStages,
       phaseCosts,
       worstMoments,
@@ -1202,6 +1252,9 @@
       },
       gpu: {
         timerQueryStatus: gpuTimerQueryStatus,
+        p95Ms: gpuP95Ms,
+        p99Ms: percentile(gpu,.99),
+        validTimerQuerySamples: gpu.length,
         timerQueryExtension: latestGpuSample && latestGpuSample.gpu ? latestGpuSample.gpu.timerQueryExtension : null,
         frameSampleCount: gpu.length,
         frameMedianMs: medianGpu,
