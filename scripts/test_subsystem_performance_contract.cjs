@@ -60,6 +60,14 @@ assert.ok(recorder.includes('liveAtmosphere.getPerformanceSnapshot()') &&
   'Session reports must carry per-subsystem p50/p95/p99 CPU timings and per-animal readiness evidence.');
 assert.ok(gameHtml.includes('EXT_disjoint_timer_query_webgl2')&&gameHtml.includes('EXT_disjoint_timer_query'),
   'The GPU timer-query path must remain available when supported.');
+assert.ok(builder.includes('gpuTimerQueryExtensionName') && builder.includes('gpuDeviceTelemetry') &&
+  builder.includes('gpuTimerQueryStatus') && builder.includes('maxRenderbufferSize') &&
+  builder.includes('maxViewportDims'),
+  'GPU telemetry must identify timer-query availability, adapter identity when exposed, and hardware limits.');
+assert.ok(recorder.includes('frameP95Ms') && recorder.includes('frameP99Ms') &&
+  recorder.includes('frameMaximumMs') && recorder.includes('measurementNote') &&
+  recorder.includes('timerQueryStatus'),
+  'Session reports must summarize GPU timer-query percentiles and distinguish unavailable measurements from zero.');
 assert.ok(gameHtml.includes('gpuTimerQuery:\'not measured; scene.render duration is CPU wall-clock only\''),
   'Unavailable GPU timing must not be misreported as zero.');
 assert.ok(!builder.includes('qualityDprFloor')&&!builder.includes('qualityDprCeiling')&&
