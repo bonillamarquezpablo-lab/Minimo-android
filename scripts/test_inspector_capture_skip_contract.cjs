@@ -18,7 +18,7 @@ for(const file of ['scripts/fauna-visual-capture.mjs','scripts/create_fauna_cont
 }
 assert.ok(!/^  pull_request:/m.test(triggers),'Pull requests must not launch the full Inspector.');
 assert.doesNotMatch(workflow,/manual-game-test-no-inspector|Record temporary inspector bypass|pull_request\.number\s*[!=]=\s*121/);
-for(const step of ['Install Playwright and Chromium','Start baseline and candidate game servers for the unified inspection','Run the single unified inspector']){
+for(const step of ['Install Playwright and Chromium','Start candidate game server (and baseline only for Deep)','Run the single unified inspector']){
   const p=workflow.indexOf('- name: '+step);
   assert.ok(p>=0,'Missing full inspector step: '+step);
   assert.doesNotMatch(workflow.slice(p,p+220),/if:.*pull_request\.number/);
