@@ -75,7 +75,7 @@ assert.match(runtime,/BABYLON\.MeshBuilder\.CreatePlane/);
 assert.match(runtime,/new BABYLON\.DynamicTexture/);
 assert.match(runtime,/BABYLON\.Mesh\.BILLBOARDMODE_ALL/);
 assert.match(runtime,/mesh\.isPickable=false/);
-assert.match(runtime,/renderingGroupId=1/);
+assert.match(runtime,/renderingGroupId=2/);
 assert.doesNotMatch(runtime,/isProjectable|BABYLON\.Vector3\.Project|Core\.isSegmentOccluded|worldOcclusionBounds|onAfterRenderObservable|requestAnimationFrame|bindViewportObservers/);
 assert.match(runtime,/function positionTick\(\)\{[\s\S]{0,300}lastActive[\s\S]{0,300}slots\.some\(slot=>slot\.current\)/,"The light position timer must be dormant unless a live dialogue slot needs updating.");
 assert.match(runtime,/lastAttachment/);
