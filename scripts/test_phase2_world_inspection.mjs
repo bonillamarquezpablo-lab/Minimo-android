@@ -123,4 +123,23 @@ const truncated = capture({
 assert.equal(truncated.islands.complete, false);
 assert.equal(analyzeWorldInspectionSnapshot(truncated).status, 'findings');
 assert.equal(analyzeWorldInspectionSnapshot(null).status, 'unavailable');
+
+const wildlifeSnapshot = {
+  schemaVersion: 1, kind: 'babylon-world-inspection',
+  actors: { wildlife: { count: 1, truncated: 0, returned: [{
+    name: 'Wolf_0', kind: 'wolf', activeMode: 'walk', activeAnimation: 'Walk',
+    meshCount: 2, skinnedMeshCount: 1, skeletons: [{name:'WolfRig',boneCount:24}],
+    playingAnimationGroups: 0, animationGroups: [{name:'Walk',playing:false}],
+    textureReadiness: {count:2,ready:2,pending:0},
+    visualIntegrity: {hasMeshes:true,hasSkinnedMesh:true,hasSkeleton:true,hasFinitePosition:true,hasVisibleGeometry:true},
+    position:{x:1,y:0,z:2}, meshes:[]
+  }]}}
+};
+const wildlifeFindings = analyzeWorldInspectionSnapshot(wildlifeSnapshot).findings;
+assert.ok(wildlifeFindings.some(item => item.code === 'wildlife-animation-not-playing'),
+  'Wildlife capture must flag an active animation mode with no playing group.');
+const brokenWildlifeSnapshot = structuredClone(wildlifeSnapshot);
+brokenWildlifeSnapshot.actors.wildlife.returned[0].visualIntegrity.hasSkinnedMesh = false;
+assert.ok(analyzeWorldInspectionSnapshot(brokenWildlifeSnapshot).findings.some(item => item.code === 'wildlife-visual-rig-invalid'),
+  'Wildlife capture must flag missing skinned geometry.');
 console.log('Phase 2 Babylon world inspection contracts: OK');
