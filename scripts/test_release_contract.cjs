@@ -44,6 +44,8 @@ assert.ok(buildSite.includes("targetGullMaxExtentMeters=.55") &&
 assert.ok(buildSite.includes("fly=groups.find(g=>/^fly$/i.test(String(g.name||'')))||null") &&
   buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio") &&
   buildSite.includes("animation:fly") &&
+  buildSite.includes("fly.start(true,1.0)") &&
+  buildSite.includes("groups.forEach(group=>{if(group!==fly)group.stop();})") &&
   !buildSite.includes("const fly=null") &&
   !buildSite.includes("b.flightPoseReady") &&
   !buildSite.includes("b.leftWing.rotation[b.wingFlapAxis]"),
