@@ -313,6 +313,9 @@ def main() -> None:
         "cameraGroundYFiltered=NaN",
         "safeWantY=Math.max(wantY,cameraGroundYFiltered+.82)",
         "camera.position.y+=(safeWantY-camera.position.y)*positionAlpha",
+        "cameraAimTargetScratch=null",
+        "cameraAimTargetScratch.y+=Math.min(distance*.52,Math.tan(upwardAngle)*distance*.72)",
+        "camera.setTarget(cameraAimTargetScratch)",
     ):
         if marker not in index_html:
             fail("La cámara terrestre debe filtrar el terreno y mantener la separación antes de interpolar.")
