@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.322"
+EXPECTED_VERSION = "0.6.323"
 
 HTML_PAGES = (
     "index.html",
@@ -181,7 +181,7 @@ def main() -> None:
         fail("El diálogo no debe recorrer todas las mallas o todos los NPC cada fotograma.")
     if "document.createElement" in dialogue_runtime_source or "elsn-npc-dialogue-layer" in dialogue_runtime_source or "slot.node.style.left" in dialogue_runtime_source or "requestAnimationFrame" in dialogue_runtime_source:
         fail("El runtime de diálogos no debe crear overlays DOM ni añadir trabajo permanente por fotograma.")
-    if "pointer-events:none" not in dialogue_style_source or "function bubbleLimit()" not in dialogue_runtime_source or "window.__ELSN_NPC_DIALOGUES_RUNTIME_ACTIVE__" not in dialogue_runtime_source or "?1:MAX_BUBBLES" not in dialogue_runtime_source or "slice(0,69)" not in dialogue_runtime_source or "bootstrapAttempts++<80" not in dialogue_runtime_source or "projectionFailures" not in dialogue_runtime_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
+    if "pointer-events:none" not in dialogue_style_source or "function bubbleLimit()" not in dialogue_runtime_source or "window.__ELSN_NPC_DIALOGUES_RUNTIME_ACTIVE__" not in dialogue_runtime_source or "?1:MAX_BUBBLES" not in dialogue_runtime_source or "slice(0,69)" not in dialogue_runtime_source or "Math.min(1000,125+bootstrapAttempts*25)" not in dialogue_runtime_source or "window.__ELSN_NPC_DIALOGUE_BOOTSTRAP__" not in dialogue_runtime_source or "bootstrapState.status=\"ready\"" not in dialogue_runtime_source or "bootstrapAttempts++<80" in dialogue_runtime_source or "projectionFailures" not in dialogue_runtime_source or "MAX_RANGE_METERS=26" not in dialogue_core_source:
         fail("El diálogo ambiental debe reintentar el puente, limitar las tarjetas, admitir NPC cercanos y exponer fallos de proyección.")
     if "worldColliders.push({" in index_html or "registerWorldCollider({" not in index_html or "habitableColliderBackfillCount" not in index_html:
         fail("Todos los colisionadores de estructuras deben incorporarse a la rejilla espacial activa.")
@@ -564,7 +564,7 @@ def main() -> None:
     missing_fps_pacing = [marker for marker in fps_pacing_markers if marker not in index_html]
     if missing_fps_pacing:
         fail("El planificador de 60 Hz y su medición de fotogramas renderizados están incompletos: " + ", ".join(missing_fps_pacing))
-    if "reportVersion:'37',build:'0.6.322'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'38',build:'0.6.323'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -933,7 +933,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.322" not in index_html or "EL SIN NOMBRE 0.6.322 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.323" not in index_html or "EL SIN NOMBRE 0.6.322 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -1085,7 +1085,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.322</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.323</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
