@@ -68,6 +68,8 @@ assert.ok(recorder.includes('frameP95Ms') && recorder.includes('frameP99Ms') &&
   recorder.includes('frameMaximumMs') && recorder.includes('measurementNote') &&
   recorder.includes('timerQueryStatus'),
   'Session reports must summarize GPU timer-query percentiles and distinguish unavailable measurements from zero.');
+assert.ok(recorder.includes('cpuGpuDiagnosis') && recorder.includes('cpuWorldP95Ms') && recorder.includes('cpuRenderP95Ms') && recorder.includes('gpuP95Ms') && recorder.includes('cpuGpuVerdict'),
+  'Session reports must classify likely CPU, GPU, mixed or inconclusive bottlenecks using independent P95 measurements.');
 assert.ok(gameHtml.includes('gpuTimerQuery:\'not measured; scene.render duration is CPU wall-clock only\''),
   'Unavailable GPU timing must not be misreported as zero.');
 assert.ok(!builder.includes('qualityDprFloor')&&!builder.includes('qualityDprCeiling')&&
