@@ -13,10 +13,16 @@ assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
 assert.ok(html.includes('leftWing,rightWing,tail,head,neck,jaw,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg,wingFlapAxis'), 'The replacement gull must expose its complete named flight anatomy.');
-assert.ok(html.includes("const groups=inst.animationGroups||[];groups.forEach(group=>{try{group.stop();}catch(_){}});const fly=null;"),
-  'The gull must not select a walk/idle body clip; it uses explicit articulated wing flight.');
-assert.ok(!html.includes("groups.find(g=>/walk|fly|flap/i.test(g.name)"),
-  'A walking animation must never be selected as the gull flight clip.');
+assert.ok(html.includes("fly=groups.find(g=>/^fly$/i.test(String(g.name||'')))||null;"),
+  'The gull must select the authored Fly clip by exact name.');
+assert.ok(html.includes("if(!fly)throw new Error('El GLB de gaviota no contiene el clip Fly obligatorio')") && html.includes("animation:fly"),
+  'The game must fail visibly if the native Fly clip is missing.');
+assert.ok(!html.includes("const fly=null") && !html.includes("groups.find(g=>/walk|fly|flap/i.test(g.name)"),
+  'The gull must not substitute a walk/idle animation.');
+assert.ok(html.includes("else if(b.animation)b.animation.speedRatio=.92+.08*Math.sin(elapsed*.85+b.phase)"),
+  'The native Fly clip must remain playing.');
+assert.ok(html.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)") && html.includes("footprintMesh.renderingGroupId=1"),
+  'Transparent footprints in rendering group 1 must preserve opaque-world depth.');
 assert.ok(html.includes("function findForestTreePlacement(x,z,canopyRadius)"),
   'Forest placement must validate the actual canopy radius against previous trees.');
 assert.ok(html.includes("Math.max(forestTreeSpacingStats.minGapMeters,(canopyRadius+otherRadius)*1.12)"),
@@ -29,8 +35,8 @@ assert.ok(html.includes('b.leftWing.rotation[b.wingFlapAxis]') && html.includes(
   'The new gull wings must flap around their actual pivot axis.');
 assert.ok(html.includes('const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;') && html.includes('b.leftWingBaseRotation-open-flap') && html.includes('b.rightWingBaseRotation+open+flap'),
   'The gull must hold a visibly spread glide pose and use a broad, continuous wing stroke rather than a folded idle silhouette.');
-assert.ok(buildSource.includes('node.rotationQuaternion.toEulerAngles()') && buildSource.includes('node.rotationQuaternion=null'),
- 'Imported GLB quaternion rotations must be preserved before wing pivots switch to Euler animation.');
+assert.ok(buildSource.includes("fly=groups.find(g=>/^fly$/i.test(String(g.name||'')))||null") && !buildSource.includes("node.rotationQuaternion=null"),
+ 'The native Fly clip must retain its original quaternion animation tracks.');
 
 function inspectGlb(relative,minimumBytes,requiresTexture){
  const file=path.join(dist,relative);
@@ -71,8 +77,10 @@ assert.ok(gullNodeNames.some(name=>/^LeftWing(?:_|$)/i.test(name)),'La gaviota d
 assert.ok(gullNodeNames.some(name=>/^RightWing(?:_|$)/i.test(name)),'La gaviota debe tener el pivote RightWing');
 assert.ok(gullNodeNames.some(name=>/^Tail(?:_|$)/i.test(name)),'La gaviota debe tener cola articulada');
 for(const part of ['Head','Neck','Jaw','LeftHindUpLeg','RightHindUpLeg','LeftHindLeg','RightHindLeg'])assert.ok(gullNodeNames.some(name=>new RegExp('^'+part+'(?:_|$)','i').test(name)),'La gaviota debe incluir la articulación '+part+' para adoptar una postura de vuelo realista.');
-assert.ok(html.includes('b.flightPoseReady')&&html.includes('leftHindUpLeg.rotation.x')&&html.includes('rightHindUpLeg.rotation.x')&&html.includes('leftHindLeg.rotation.x')&&html.includes('rightHindLeg.rotation.x'),'Las patas traseras deben recogerse durante el vuelo, no permanecer colgando como en reposo.');
-assert.ok(html.includes('b.neck.rotation.x')&&html.includes('b.head.rotation.x'),'La cabeza y el cuello deben compensar la postura de vuelo.');
+assert.ok((gullJson.animations||[]).some(animation=>/^fly$/i.test(String(animation.name||''))),
+  'The source Seagull GLB must include its complete native Fly clip.');
+assert.ok(html.includes("fly.start(true,1.0)") && !html.includes("b.flightPoseReady"),
+  'The game must loop the complete native Fly clip without manual per-frame bone overrides.');
 const gullTriangles=(gullJson.meshes||[]).reduce((total,mesh)=>total+(mesh.primitives||[]).reduce((subtotal,primitive)=>{
   if(primitive.mode!==undefined&&primitive.mode!==4)return subtotal;
   const accessor=primitive.indices===undefined?primitive.attributes?.POSITION:gullJson.accessors?.[primitive.indices];
