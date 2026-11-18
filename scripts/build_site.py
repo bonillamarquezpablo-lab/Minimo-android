@@ -469,7 +469,7 @@ def main() -> None:
   if(Math.hypot(placement.x-x,placement.z-z)>.10)forestTreeSpacingStats.relocated++;
   forestTreeSpacingStats.placed++;x=placement.x;z=placement.z;
   root.position=v(x,renderedTerrainSurfaceAt(x,z),z);root.computeWorldMatrix(true);
-  return {root,canopy,x,z,radius:Math.max(.62,Math.min(1.45,horizontalSpan*.24)),canopyRadius,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species:kind,baseYaw,baseYOffset:0,windPhase:rand(0,Math.PI*2),modelLabel:spec.spec.label,modelMeshCount:meshes.length};
+  return {root,canopy,x,z,radius:Math.max(.62,Math.min(1.45,horizontalSpan*.24)),canopyRadius,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species:kind,baseYaw,baseYOffset:0,windPhase:rand(0,Math.PI*2),modelLabel:spec.spec.label,modelMeshCount:meshes.length,height:spec.spec.targetHeight*scale};
  }
 """
     html = html[:tree_start] + tree_rebuild_code + html[tree_end:]
@@ -907,13 +907,13 @@ def main() -> None:
     html = html.replace(gull_root_marker,gull_root_replacement,1)
 
     gull_animation_marker = "const groups=inst.animationGroups||[],fly=groups.find(g=>/walk|fly|flap/i.test(g.name))||groups.find(g=>/idle/i.test(g.name))||groups[0]||null;"
-    gull_animation_replacement = "const groups=inst.animationGroups||[];groups.forEach(group=>{try{group.stop();}catch(_){}});const fly=null;"
+    gull_animation_replacement = "const groups=inst.animationGroups||[],fly=groups.find(g=>/^fly$/i.test(String(g.name||'')))||null;if(!fly)throw new Error('El GLB de gaviota no contiene el clip Fly obligatorio');"
     if html.count(gull_animation_marker) != 1:
         raise SystemExit("No se encontró el selector único de animación de las gaviotas.")
     html = html.replace(gull_animation_marker,gull_animation_replacement,1)
 
     gull_rig_marker = "const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}"
-    gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const findPart=name=>rigNodes.find(node=>new RegExp('^'+name+'(?:_|$)','i').test(node.name||''))||null,leftWing=findPart('LeftWing'),rightWing=findPart('RightWing'),tail=findPart('Tail'),head=findPart('Head'),neck=findPart('Neck'),jaw=findPart('Jaw'),leftHindUpLeg=findPart('LeftHindUpLeg'),rightHindUpLeg=findPart('RightHindUpLeg'),leftHindLeg=findPart('LeftHindLeg'),rightHindLeg=findPart('RightHindLeg');const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg];if(requiredFlightParts.some(node=>!node)){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene todas las articulaciones de vuelo: alas, cabeza, cuello, cola y patas traseras.');}requiredFlightParts.concat([jaw]).forEach(node=>{if(node&&node.rotationQuaternion){node.rotation.copyFrom(node.rotationQuaternion.toEulerAngles());node.rotationQuaternion=null;}});leftWing.computeWorldMatrix(true);rightWing.computeWorldMatrix(true);const leftWingWorld=leftWing.getAbsolutePosition(),rightWingWorld=rightWing.getAbsolutePosition(),wingSpanX=Math.abs(leftWingWorld.x-rightWingWorld.x),wingSpanZ=Math.abs(leftWingWorld.z-rightWingWorld.z),wingFlapAxis=wingSpanX>=wingSpanZ?'z':'x';"
+    gull_rig_replacement = gull_rig_marker + "const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const findPart=name=>rigNodes.find(node=>new RegExp('^'+name+'(?:_|$)','i').test(node.name||''))||null,leftWing=findPart('LeftWing'),rightWing=findPart('RightWing'),tail=findPart('Tail'),head=findPart('Head'),neck=findPart('Neck'),jaw=findPart('Jaw'),leftHindUpLeg=findPart('LeftHindUpLeg'),rightHindUpLeg=findPart('RightHindUpLeg'),leftHindLeg=findPart('LeftHindLeg'),rightHindLeg=findPart('RightHindLeg');const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg];if(requiredFlightParts.some(node=>!node)){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene todas las articulaciones de vuelo: alas, cabeza, cuello, cola y patas traseras.');}"
     if html.count(gull_rig_marker) != 1:
         raise SystemExit("No se encontró el punto único para validar los pivotes anatómicos de gaviota.")
     html = html.replace(gull_rig_marker, gull_rig_replacement, 1)
@@ -951,7 +951,7 @@ def main() -> None:
     html = html[:style_start] + html[style_end:]
 
     gull_wing_push_marker = "realBirds.push({root:actor,real:true,groups,animation:fly,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
-    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,animation:fly,leftWing,rightWing,tail,head,neck,jaw,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg,wingFlapAxis,leftWingBaseRotation:leftWing.rotation[wingFlapAxis],rightWingBaseRotation:rightWing.rotation[wingFlapAxis],tailBaseRotation:tail.rotation.x,headBaseRotation:head.rotation.x,neckBaseRotation:neck.rotation.x,jawBaseRotation:jaw?jaw.rotation.x:0,leftHindUpLegBaseRotation:leftHindUpLeg.rotation.x,rightHindUpLegBaseRotation:rightHindUpLeg.rotation.x,leftHindLegBaseRotation:leftHindLeg.rotation.x,rightHindLegBaseRotation:rightHindLeg.rotation.x,flightPoseReady:true,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
+    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,animation:fly,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.064+i*.006});"
     if html.count(gull_wing_push_marker) != 1:
         raise SystemExit("No se encontró el registro único de las articulaciones de gaviota.")
     html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
@@ -971,7 +971,7 @@ def main() -> None:
     html = html.replace(grass_recenter_marker, grass_recenter_replacement, 1)
 
     gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
-    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightPoseReady){const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;b.leftWing.rotation[b.wingFlapAxis]=b.leftWingBaseRotation-open-flap;b.rightWing.rotation[b.wingFlapAxis]=b.rightWingBaseRotation+open+flap;b.leftHindUpLeg.rotation.x=b.leftHindUpLegBaseRotation+1.05;b.rightHindUpLeg.rotation.x=b.rightHindUpLegBaseRotation+1.05;b.leftHindLeg.rotation.x=b.leftHindLegBaseRotation-.78;b.rightHindLeg.rotation.x=b.rightHindLegBaseRotation-.78;b.neck.rotation.x=b.neckBaseRotation-.08+Math.sin(elapsed*1.4+b.phase)*.025;b.head.rotation.x=b.headBaseRotation+.06+Math.sin(elapsed*1.8+b.phase)*.025;if(b.jaw)b.jaw.rotation.x=b.jawBaseRotation;if(b.tail)b.tail.rotation.x=b.tailBaseRotation+Math.sin(elapsed*2.7+b.phase)*.045;}"
+    gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.animation)b.animation.speedRatio=.92+.08*Math.sin(elapsed*.85+b.phase);"
     if html.count(gull_flight_marker) != 1:
         raise SystemExit("No se encontró el bucle único de vuelo de las gaviotas.")
     html = html.replace(gull_flight_marker, gull_flight_replacement, 1)
@@ -1774,6 +1774,12 @@ function updateWildlife(dt){
         html = html.replace("</body>", session_recorder_tag + "\n</body>", 1)
 
 
+    shrub_occlusion_marker = "return {root,x,z,radius:.9*size,homeIslandIndex,groundY};"
+    shrub_occlusion_replacement = "return {root,x,z,radius:.9*size,homeIslandIndex,groundY,height:.95*size};"
+    if html.count(shrub_occlusion_marker) != 1:
+        raise SystemExit("No se encontró el único registro de arbustos para oclusión.")
+    html = html.replace(shrub_occlusion_marker, shrub_occlusion_replacement, 1)
+
     # Read-only player dialogue bridge: reuses existing villagers and creates no actors.
     dialogue_bridge_marker = " window.copyGameHealthDebug=()=>{"
     dialogue_bridge_code = r"""
@@ -1833,6 +1839,7 @@ function updateWildlife(dt){
      return dialoguePeopleCache;
     })(),
     world:{night:!!(atmosphere&&atmosphere.night>=0.55),daylight:atmosphere&&Number.isFinite(Number(atmosphere.daylight))?Number(atmosphere.daylight):null,weather:atmosphere&&atmosphere.weather?String(atmosphere.weather):'',timeOfDay:atmosphere&&Number.isFinite(Number(atmosphere.timeOfDay))?Number(atmosphere.timeOfDay):null,onShip:typeof onShip!=='undefined'&&!!onShip,enemyNearby:typeof nearEnemies==='function'&&nearEnemies(),health:typeof health!=='undefined'?Number(health):null,healthLow:typeof health!=='undefined'&&Number(health)<=35,wood:typeof woodCount!=='undefined'?Number(woodCount):null,stone:typeof stoneCount!=='undefined'?Number(stoneCount):null,captured:typeof captured!=='undefined'?Number(captured)||0:0,islandName:typeof land!=='undefined'&&islandIndex>=0&&land[islandIndex]?String(land[islandIndex].name||''):''},
+    occluders:trees,naturalOccluders:naturalShrubs,
     scene,engine,camera:scene.activeCamera||camera,
     canvas:engine.getRenderingCanvas(),BABYLON:B
    };
@@ -1860,27 +1867,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.318: stream the Babylon engine bundle with truthful mobile startup progress.
+    # Release candidate 0.6.319: stream the Babylon engine bundle with truthful mobile startup progress.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.318; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.319; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.318\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.319\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.318.")
-    html = html.replace("0.6.274", "0.6.318")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.319.")
+    html = html.replace("0.6.274", "0.6.319")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'35',build:'0.6.318'"
+    diagnostic_build_replacement = "reportVersion:'35',build:'0.6.319'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.318 para normalizar.")
-    game_version = "0.6.318"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.319 para normalizar.")
+    game_version = "0.6.319"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -2118,6 +2125,8 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # Instrumentación nativa de Babylon disponible solo para inspector/perfil.
     scene_marker = "const scene=new B.Scene(engine);"
     scene_profile_code = r"""
+ // Preserve opaque-scene depth for transparent footprints and ground effects.
+ scene.setRenderingAutoClearDepthStencil(1,false,false,false);
  // Optional Babylon-native profiler. Normal gameplay keeps instrumentation disabled.
  const profileDiagnosticsEnabled=!!(testModeEnabled||new URLSearchParams(window.location.search).get('profile')==='1');
  let engineInstrumentation=null,sceneInstrumentation=null;
