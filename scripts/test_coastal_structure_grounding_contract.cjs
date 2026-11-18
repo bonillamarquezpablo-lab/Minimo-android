@@ -192,6 +192,9 @@ assert.match(html,/mapRefreshInterval=document\.body\.classList\.contains\('map-
 
 // Ship camera follows the vessel with a wider default framing; camera mode selection is wired to gameplay.
 assert.match(html,/cameraMode='follow'/);
+assert.match(html,/cameraGroundLimitFiltered/);
+assert.match(html,/renderedTerrainSurfaceAt\(wantX,wantZ\)/);
+assert.doesNotMatch(html,/camera\.position\.y=minimumCameraY/);
 assert.match(html,/cameraDistance\*\(onShip\?2\.12:1\)/);
 assert.match(html,/cameraMode!=='free'/);
 assert.match(html,/window\.__ELSN_CAMERA_CONTROL=/);
