@@ -309,11 +309,13 @@ def main() -> None:
     if not expanded_map_heading:
         fail("La carta ampliada debe declarar el rumbo antes de girar la brújula.")
     for marker in (
-        "renderedTerrainSurfaceAt(camera.position.x,camera.position.z)",
-        "minimumCameraY=cameraGroundY+1.70",
+        "renderedTerrainSurfaceAt(wantX,wantZ)",
+        "cameraGroundYFiltered=NaN",
+        "safeWantY=Math.max(wantY,cameraGroundYFiltered+.82)",
+        "camera.position.y+=(safeWantY-camera.position.y)*positionAlpha",
     ):
         if marker not in index_html:
-            fail("La cámara terrestre debe conservar una separación mínima respecto al terreno renderizado.")
+            fail("La cámara terrestre debe filtrar el terreno y mantener la separación antes de interpolar.")
     for obsolete_civilian_prop in (
         "CivilianWorkApron_",
         "CivilianApronHem_",
