@@ -50,16 +50,65 @@
     const candidate = actor && (actor.parts && actor.parts.root || actor.root || actor.actor || actor);
     if (!candidate || typeof candidate !== 'object') return null;
     const position = readPosition(candidate);
-    return {
-      role,
-      name: String(candidate.name || actor.name || role),
-      position,
+    const isWildlife = role === 'wildlife';
+    const childMeshes = isWildlife ? (safeCall(() => candidate.getChildMeshes ? candidate.getChildMeshes(false) : [], []) || []) : [];
+    const groups = isWildlife && Array.isArray(actor.groups) ? actor.groups : [];
+    const skeletons = isWildlife ? Array.from(new Set(childMeshes.map(mesh => mesh && mesh.skeleton).filter(Boolean))) : [];
+    const groupRows = groups.map(group => ({
+      name: String(group && group.name || 'unnamed-animation'),
+      playing: !!(group && group.isPlaying),
+      targetedAnimations: Array.isArray(group && group.targetedAnimations) ? group.targetedAnimations.length : 0,
+      from: finite(group && group.from) ? round(group.from, 3) : null,
+      to: finite(group && group.to) ? round(group.to, 3) : null
+    }));
+    const result = {
+      role, name: String(candidate.name || actor.name || role), position,
       alive: actor.alive === undefined ? null : actor.alive === true,
       faction: actor.faction == null ? null : String(actor.faction),
       recruited: actor.recruited === true,
-      enabled: safeCall(() => typeof candidate.isEnabled === 'function' ? candidate.isEnabled() : candidate.isVisible !== false, null),
+      enabled: safeCall(() => candidate.isEnabled ? candidate.isEnabled() : candidate.isVisible !== false, null),
       finitePosition: !!position && finite(position.x) && finite(position.y) && finite(position.z)
     };
+    if (isWildlife) {
+      const readiness = actor.textureReadiness || {};
+      result.kind = actor.kind == null ? null : String(actor.kind);
+      result.activeMode = actor.activeMode == null ? null : String(actor.activeMode);
+      result.activeAnimation = actor.activeAnimation == null ? null : String(actor.activeAnimation);
+      result.meshCount = childMeshes.length;
+      result.visibleMeshCount = childMeshes.filter(mesh => mesh && mesh.isVisible !== false && (!mesh.isEnabled || mesh.isEnabled())).length;
+      result.skinnedMeshCount = childMeshes.filter(mesh => mesh && mesh.skeleton).length;
+      result.skeletons = skeletons.map(skeleton => ({
+        name: String(skeleton.name || 'unnamed-skeleton'),
+        boneCount: Array.isArray(skeleton.bones) ? skeleton.bones.length : null
+      }));
+      result.animationGroups = groupRows;
+      result.playingAnimationGroups = groupRows.filter(group => group.playing).length;
+      result.textureReadiness = {
+        count: finite(readiness.count) ? readiness.count : null,
+        ready: finite(readiness.ready) ? readiness.ready : null,
+        pending: finite(readiness.pending) ? readiness.pending : null,
+        waitedMs: finite(readiness.waitedMs) ? round(readiness.waitedMs, 1) : null
+      };
+      result.groundOffset = finite(actor.groundOffset) ? round(actor.groundOffset, 3) : null;
+      result.heading = finite(actor.heading) ? round(actor.heading, 3) : null;
+      result.homeIslandIndex = finite(actor.homeIslandIndex) ? actor.homeIslandIndex : null;
+      result.visualIntegrity = {
+        hasMeshes: childMeshes.length > 0,
+        hasSkinnedMesh: childMeshes.some(mesh => !!mesh.skeleton),
+        hasSkeleton: skeletons.length > 0,
+        hasFinitePosition: !!position && [position.x, position.y, position.z].every(finite),
+        hasVisibleGeometry: childMeshes.some(mesh => mesh && mesh.isVisible !== false && (!mesh.isEnabled || mesh.isEnabled()))
+      };
+      result.meshes = childMeshes.slice(0, 80).map(mesh => ({
+        name: String(mesh.name || mesh.id || 'unnamed-mesh'),
+        enabled: safeCall(() => mesh.isEnabled ? mesh.isEnabled() : mesh.isVisible !== false, null),
+        visible: mesh.isVisible !== false,
+        vertices: safeCall(() => mesh.getTotalVertices && mesh.getTotalVertices(), null),
+        skeleton: mesh.skeleton ? String(mesh.skeleton.name || 'unnamed-skeleton') : null,
+        material: mesh.material ? String(mesh.material.name || 'unnamed-material') : null
+      }));
+    }
+    return result;
   }
 
   function mapActors(values, role, limit) {
