@@ -342,7 +342,7 @@ def main() -> None:
     # eased toward a point below terrain, then hard-snapped the live camera upward after
     # interpolation; uneven height samples made the camera oscillate on low-angle views.
     camera_ground_state_marker = "let cameraTargetSmoothed=null,cameraCollisionTimer=0,cameraObstructionRatio=1,cameraObstructionBlend=1,playerGroundYFiltered=NaN,playerVerticalVelocity=0,playerAirborne=false;"
-    camera_ground_state_code = "let cameraTargetSmoothed=null,cameraCollisionTimer=0,cameraObstructionRatio=1,cameraObstructionBlend=1,playerGroundYFiltered=NaN,cameraGroundYFiltered=NaN,playerVerticalVelocity=0,playerAirborne=false;"
+    camera_ground_state_code = "let cameraTargetSmoothed=null,cameraCollisionTimer=0,cameraObstructionRatio=1,cameraObstructionBlend=1,playerGroundYFiltered=NaN,cameraGroundYFiltered=NaN,cameraAimTargetScratch=null,playerVerticalVelocity=0,playerAirborne=false;"
     if html.count(camera_ground_state_marker) != 1:
         raise SystemExit("No se encontró el estado único de la cámara para filtrar la altura del terreno.")
     html = html.replace(camera_ground_state_marker, camera_ground_state_code, 1)
@@ -402,6 +402,18 @@ def main() -> None:
     if html.count(camera_pitch_marker) != 1:
         raise SystemExit("No se encontró exactamente el límite de inclinación de cámara.")
     html = html.replace(camera_pitch_marker, camera_pitch_code, 1)
+
+    camera_aim_marker = "camera.setTarget(target);"
+    camera_aim_code = """if(!cameraAimTargetScratch)cameraAimTargetScratch=new B.Vector3(target.x,target.y,target.z);
+  cameraAimTargetScratch.copyFrom(target);
+  if(cameraMode!=='orbit'&&cameraPitch<0){
+   const upwardAngle=Math.min(.60,-cameraPitch);
+   cameraAimTargetScratch.y+=Math.min(distance*.52,Math.tan(upwardAngle)*distance*.72);
+  }
+  camera.setTarget(cameraAimTargetScratch);"""
+    if html.count(camera_aim_marker) != 1:
+        raise SystemExit("No se encontró el punto único de orientación de la cámara para separar su objetivo del suelo.")
+    html = html.replace(camera_aim_marker, camera_aim_code, 1)
 
     # Keep full-quality coast geometry while tightening the CPU slice ceiling on mobile.
     # Work is spread over more frames; no mesh rows, columns or material detail are removed.
