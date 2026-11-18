@@ -765,6 +765,7 @@ async function main() {
           auditTotal: snapshot.structures?.audit?.total ?? null
         },
         player: snapshot.actors?.player ?? null,
+        wildlife: snapshot.actors?.wildlife ?? null,
         actorCounts
       };
     });
@@ -776,6 +777,18 @@ async function main() {
       'La captura Babylon debe tomarse después de iniciar la campaña real.');
     assert.ok(manifest.worldInspection.worldUpdateCount > 0,
       'La captura Babylon debe observar al menos un tick real del bucle de actualización.');
+    assert.equal(manifest.worldInspection.actorCounts.wildlife, 3,
+      'La captura de arranque debe contener los tres animales terrestres obligatorios.');
+    assert.equal(manifest.worldInspection.wildlife?.returned?.length, 3,
+      'La captura debe incluir el inventario individual de los tres animales.');
+    for (const animal of manifest.worldInspection.wildlife.returned) {
+      assert.ok(animal.visualIntegrity?.hasMeshes && animal.visualIntegrity?.hasSkinnedMesh &&
+        animal.visualIntegrity?.hasSkeleton && animal.visualIntegrity?.hasFinitePosition &&
+        animal.visualIntegrity?.hasVisibleGeometry,
+        'Fauna con rig o geometría incompletos: ' + JSON.stringify(animal));
+      assert.ok(animal.skeletons?.some(skeleton => Number(skeleton.boneCount) >= 12),
+        'Fauna sin esqueleto suficiente: ' + JSON.stringify(animal));
+    }
     assert.equal(manifest.worldInspection.islands.count, 13,
       'La captura del mundo no contiene las 13 islas.');
     assert.equal(manifest.worldInspection.islands.complete, true);
