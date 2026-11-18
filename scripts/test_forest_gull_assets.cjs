@@ -79,7 +79,7 @@ assert.ok(gullNodeNames.some(name=>/^Tail(?:_|$)/i.test(name)),'La gaviota debe 
 for(const part of ['Head','Neck','Jaw','LeftHindUpLeg','RightHindUpLeg','LeftHindLeg','RightHindLeg'])assert.ok(gullNodeNames.some(name=>new RegExp('^'+part+'(?:_|$)','i').test(name)),'La gaviota debe incluir la articulación '+part+' para adoptar una postura de vuelo realista.');
 assert.ok((gullJson.animations||[]).some(animation=>/^fly$/i.test(String(animation.name||''))),
   'The source Seagull GLB must include its complete native Fly clip.');
-assert.ok(html.includes("fly.start(true,1.0)") && !html.includes("b.flightPoseReady"),
+assert.ok(html.includes("fly.start(true,1.0)") && html.includes("groups.forEach(group=>{if(group!==fly)group.stop();})") && !html.includes("b.flightPoseReady"),
   'The game must loop the complete native Fly clip without manual per-frame bone overrides.');
 const gullTriangles=(gullJson.meshes||[]).reduce((total,mesh)=>total+(mesh.primitives||[]).reduce((subtotal,primitive)=>{
   if(primitive.mode!==undefined&&primitive.mode!==4)return subtotal;
