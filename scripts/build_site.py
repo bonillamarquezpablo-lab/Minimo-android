@@ -3171,11 +3171,11 @@ function getWorldPhaseTimingSnapshot(){
         raise SystemExit("No se encontró el objeto runtime único para publicar los tiempos de fase y del minimapa.")
     html = html.replace(health_phase_marker, health_phase_replacement, 1)
 
-    map_clock_marker = "let last=performance.now(),nextRenderAt=0,mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
-    map_clock_replacement = map_clock_marker + "\n let lastMapDrawMs=0,mapDrawMaxMs=0,mapDrawSampleCount=0;"
-    if html.count(map_clock_marker) != 1:
-        raise SystemExit("No se encontró el reloj único del bucle de juego para medir el coste del minimapa.")
-    html = html.replace(map_clock_marker, map_clock_replacement, 1)
+    map_clock_pattern = r"let last=performance\\.now\\(\\),(?:nextRenderAt=0,)?mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
+    map_clock_replacement = "let last=performance.now(),nextRenderAt=0,mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;\\n let lastMapDrawMs=0,mapDrawMaxMs=0,mapDrawSampleCount=0;"
+    html, map_clock_count = re.subn(map_clock_pattern, map_clock_replacement, html, count=1)
+    if map_clock_count != 1:
+        raise SystemExit(f"No se encontró un único reloj compatible del bucle para medir el minimapa (encontrados={map_clock_count}).")
 
     map_draw_marker = "if(mapClock>=mapRefreshInterval){drawMap();mapClock=0;}"
     map_draw_replacement = "if(mapClock>=mapRefreshInterval){const mapDrawStarted=performance.now();drawMap();lastMapDrawMs=performance.now()-mapDrawStarted;mapDrawMaxMs=Math.max(mapDrawMaxMs,lastMapDrawMs);mapDrawSampleCount++;mapClock=0;}"
