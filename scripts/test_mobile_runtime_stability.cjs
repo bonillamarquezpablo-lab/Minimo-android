@@ -149,9 +149,11 @@ assert.ok(validator.includes('"bootstrapAttempts++<80" in dialogue_runtime_sourc
 assert.ok(builder.includes('const targetFrameRate=60;'), 'The Quality runtime must target 60 frames per second.');
 assert.ok(smoke.includes('npcDialogueVisualProbe') &&
   smoke.includes('renderedBubbleCount') &&
-  smoke.includes('npc-dialogue-visual.png') &&
-  smoke.includes('__ELSN_DIALOGUE_SMOKE_RESTORE__'),
-  'Browser acceptance must move a real NPC into range, require a rendered text bubble, save evidence and restore the NPC position.');
+  smoke.includes('captureVisualProof') &&
+  smoke.includes('npc-dialogue-texture.png') &&
+  smoke.includes('__ELSN_DIALOGUE_SMOKE_RESTORE__') &&
+  !smoke.includes("page.screenshot({ path: path.join(OUT, 'npc-dialogue-visual.png')"),
+  'Browser acceptance must verify a live NPC billboard and texture proof without blocking on Chromium screenshot compositing, then restore NPC position.');
 assert.ok(builder.includes('frameIntervalMs=1000/targetFrameRate') && builder.includes('if(now+.5<nextRenderAt)return') && builder.includes('nextRenderAt+=frameIntervalMs'), 'Babylon rendering and world simulation must be paced at the 60 Hz target on high-refresh displays.');
 assert.ok(builder.includes('fpsHudTime+=rawFrameMs/1000;fpsHudFrames++') && builder.includes('renderedFps=measured'), 'The FPS HUD and health report must count rendered game frames, not browser requestAnimationFrame callbacks.');
 assert.ok(builder.includes("meter.title='Objetivo: '+targetFrameRate+' FPS."), 'The FPS tooltip must show the enforced target and correct frame budget.');
