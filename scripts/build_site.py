@@ -1883,7 +1883,7 @@ function updateWildlife(dt){
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'38',build:'0.6.324'"
+    diagnostic_build_replacement = "reportVersion:'39',build:'0.6.324'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
