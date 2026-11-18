@@ -6,13 +6,23 @@ window.__ELSN_NPC_DIALOGUES_RUNTIME_ACTIVE__=true;
 const pathParts=String(location.pathname||"").split("/").filter(Boolean),last=pathParts[pathParts.length-1]||"";
 if(last==="inspector"||(last==="index.html"&&pathParts[pathParts.length-2]==="inspector"))return;
 let bootstrapAttempts=0;
+const bootstrapState=window.__ELSN_NPC_DIALOGUE_BOOTSTRAP__={
+ status:"waiting",attempts:0,startedAt:Date.now(),connectedAt:null,delayMs:125
+};
 function boot(){
 const Core=window.ELSN_NPC_DIALOGUE_CORE,Bridge=window.__ELSN_GAME_DIALOGUE_BRIDGE__;
 if(!Core||!Bridge||typeof Bridge.getSnapshot!=="function"){
- if(bootstrapAttempts++<80){window.setTimeout(boot,125);return;}
- console.warn("NPC dialogue: no llegó el puente del mundo tras esperar a que terminara el arranque.");
+ bootstrapAttempts++;
+ bootstrapState.status="waiting";
+ bootstrapState.attempts=bootstrapAttempts;
+ bootstrapState.delayMs=Math.min(1000,125+bootstrapAttempts*25);
+ if(bootstrapAttempts===1)console.info("NPC dialogue: esperando a que el mundo publique su puente de aldeanos.");
+ window.setTimeout(boot,bootstrapState.delayMs);
  return;
 }
+bootstrapState.status="ready";
+bootstrapState.attempts=bootstrapAttempts;
+bootstrapState.connectedAt=Date.now();
 const MAX_BUBBLES=Core.MAX_VISIBLE_BUBBLES,RANGE=Core.MAX_RANGE_METERS,BUBBLE_DURATION_MS=6000,slots=[],metadata=new Map(),relationships=new Map(),pending=[];
 const SOCIAL_MEMORY_KEY="elsn-npc-social-memory-v1";
 function restoreSocialMemory(){try{const raw=window.localStorage&&localStorage.getItem(SOCIAL_MEMORY_KEY);if(!raw)return;const data=JSON.parse(raw);if(!data||data.version!==1||!Array.isArray(data.pairs))return;for(const row of data.pairs.slice(-64)){if(!row||typeof row.key!=="string"||row.key.length>180)continue;relationships.set(row.key,{key:row.key,rapport:Math.max(0,Math.min(5,Number(row.rapport)||0)),exchanges:Math.max(0,Math.floor(Number(row.exchanges)||0)),recentTopics:Array.isArray(row.recentTopics)?row.recentTopics.map(x=>String(x).slice(0,40)).slice(-4):[]});}}catch(_){}}

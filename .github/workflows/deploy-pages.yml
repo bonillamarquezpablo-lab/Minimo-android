@@ -78,6 +78,8 @@ jobs:
         run: node scripts/test_island_campaign.cjs
       - name: Test runtime and offline Service Worker publication gate
         run: node scripts/test_game_runtime_acceptance_contract.cjs
+      - name: Test cached and offline startup readiness decisions
+        run: node scripts/test_startup_readiness_core.cjs
 
       - name: Validate the local HTTPS acceptance server
         run: python -m py_compile scripts/start_https_static_server.py

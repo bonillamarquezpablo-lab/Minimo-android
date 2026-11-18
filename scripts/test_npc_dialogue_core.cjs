@@ -62,6 +62,10 @@ const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=
 assert.equal(Core.POSITION_UPDATE_MS,250);
 assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);
 assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
+assert.match(runtime,/window\.__ELSN_NPC_DIALOGUE_BOOTSTRAP__/);
+assert.match(runtime,/Math\.min\(1000,125\+bootstrapAttempts\*25\)/);
+assert.match(runtime,/bootstrapState\.status="ready"/);
+assert.doesNotMatch(runtime,/bootstrapAttempts\+\+<80/);
 assert.match(runtime,/function nearbyPeople\(s\)/);
 assert.match(runtime,/Core\.selectVisibleBubbles\(nearby\.map/);
 assert.match(runtime,/function updateWorldBubble\(slot,s\)/);

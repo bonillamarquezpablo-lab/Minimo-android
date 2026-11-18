@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 
 const workflow = fs.readFileSync('.github/workflows/game-runtime-acceptance.yml', 'utf8');
 const smoke = fs.readFileSync('scripts/player-startup-smoke.mjs', 'utf8');
+const startupReadiness = fs.readFileSync('scripts/startup-readiness-core.cjs', 'utf8');
 const release = fs.readFileSync('.github/workflows/deploy-pages.yml', 'utf8');
 const httpsServer = fs.readFileSync('scripts/start_https_static_server.py', 'utf8');
 
@@ -73,8 +74,14 @@ for (const marker of [
   assert.ok(smoke.includes(marker), 'Runtime smoke is missing acceptance check: ' + marker);
 }
 assert.match(smoke, /STARTUP_RESTART_TIMEOUT_MS = 240000/);
+assert.match(smoke, /function waitForWorldReadyWithRecovery/);
+assert.match(smoke, /cachedStartupWaitRecoveredAfterRendererStall/);
+assert.match(smoke, /offlineReload\.startupWaitRecoveredAfterRendererStall/);
 assert.match(smoke, /cachedStartupWaitDiagnostic/);
 assert.match(smoke, /offlineReload\.startupWaitDiagnostic/);
+assert.match(startupReadiness, /recorder\.playerModelReady === true/);
+assert.match(startupReadiness, /player\.fallbackVisible === false/);
+assert.match(startupReadiness, /resourceGate\.ready === true/);
 assert.match(smoke, /automatedVisualAcceptance: false/,
   'Visible NPC dialogue acceptance must remain with the player.'); 
 assert.doesNotMatch(smoke, /npcDialogueApproach|npcDialogueVisibilityWait|__ELSN_NPC_DIALOGUE_SMOKE_RESTORE__/,

@@ -3,6 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { chromium } from 'playwright';
+import startupReadiness from './startup-readiness-core.cjs';
+
+const { isCompletedStartupSnapshot } = startupReadiness;
 
 const BASE_URL = process.env.PLAYER_TEST_URL || 'http://127.0.0.1:4174/';
 const MOBILE_PROFILE = process.env.PLAYER_TEST_MOBILE === '1';
@@ -39,6 +42,45 @@ const manifest = {
   pageErrors: [],
   failure: null
 };
+
+async function readStartupSnapshot(page) {
+  return page.evaluate(() => ({
+    bodyClass: document.body.className,
+    bootFailed: document.body.classList.contains('boot-failed'),
+    loadingText: document.querySelector('#loadingText')?.textContent ||
+      document.querySelector('#loading')?.textContent || null,
+    loadingHelp: document.querySelector('#loadHelp')?.textContent || null,
+    recorder: window.__elSinNombreStartupSmoke || null,
+    player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state?.() || null,
+    resourceGate: window.__ELSN_STARTUP_RESOURCE_GATE__ || null,
+    serviceWorker: {
+      controlled: !!navigator.serviceWorker?.controller,
+      state: navigator.serviceWorker?.controller?.state || null
+    }
+  }));
+}
+
+async function waitForWorldReadyWithRecovery(page, phase) {
+  const startedAt = performance.now();
+  try {
+    await page.waitForFunction(() =>
+      window.__elSinNombreStartupSmoke?.worldReady === true ||
+      document.body.classList.contains('boot-failed'),
+    undefined, { timeout: STARTUP_RESTART_TIMEOUT_MS, polling: 250 });
+    return { recoveredAfterWaitTimeout: false, waitTimeoutMs: STARTUP_RESTART_TIMEOUT_MS,
+      elapsedMs: Number((performance.now() - startedAt).toFixed(1)), snapshot: null };
+  } catch (error) {
+    const snapshot = await readStartupSnapshot(page);
+    if (isCompletedStartupSnapshot(snapshot)) {
+      return { recoveredAfterWaitTimeout: true, waitTimeoutMs: STARTUP_RESTART_TIMEOUT_MS,
+        elapsedMs: Number((performance.now() - startedAt).toFixed(1)),
+        waitError: String(error?.message || error), snapshot };
+    }
+    throw new Error(phase + ' no alcanzó un estado de arranque completo dentro de ' +
+      STARTUP_RESTART_TIMEOUT_MS + ' ms. Estado: ' + JSON.stringify(snapshot) +
+      ' · ' + String(error?.message || error));
+  }
+}
 
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
@@ -900,29 +942,13 @@ async function main() {
         JSON.stringify(cachedPreflightState));
     }
     const cachedBarrierStartedAt = performance.now();
-    try {
-      await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
-        document.body.classList.contains('boot-failed'),
-        undefined, { timeout: STARTUP_RESTART_TIMEOUT_MS, polling: 250 });
-    } catch (error) {
-      const stalledState = await page.evaluate(() => ({
-        bodyClass: document.body.className,
-        bootFailed: document.body.classList.contains('boot-failed'),
-        loadingText: document.querySelector('#loadingText')?.textContent ||
-          document.querySelector('#loading')?.textContent || null,
-        loadingHelp: document.querySelector('#loadHelp')?.textContent || null,
-        recorder: window.__elSinNombreStartupSmoke || null,
-        player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state() || null,
-        serviceWorker: {
-          controlled: !!navigator.serviceWorker?.controller,
-          state: navigator.serviceWorker?.controller?.state || null
-        }
-      }));
-      manifest.cachedStartupWaitDiagnostic = stalledState;
-      throw new Error('El arranque con caché no alcanzó worldReady dentro de ' +
-        STARTUP_RESTART_TIMEOUT_MS + ' ms. Estado: ' + JSON.stringify(stalledState) +
-        ' · ' + String(error?.message || error));
-    }
+    const cachedStartupWait = await waitForWorldReadyWithRecovery(page, 'El arranque con caché');
+    manifest.cachedStartupWaitRecoveredAfterRendererStall = cachedStartupWait.recoveredAfterWaitTimeout;
+    manifest.cachedStartupWaitDiagnostic = cachedStartupWait.recoveredAfterWaitTimeout
+      ? { ...cachedStartupWait.snapshot, recoveredAfterWaitTimeout: true,
+          waitTimeoutMs: cachedStartupWait.waitTimeoutMs, elapsedMs: cachedStartupWait.elapsedMs,
+          waitError: cachedStartupWait.waitError }
+      : { recoveredAfterWaitTimeout: false, elapsedMs: cachedStartupWait.elapsedMs };
     if (await page.evaluate(() => document.body.classList.contains('boot-failed'))) {
       throw new Error('El arranque con caché terminó en boot-failed: ' +
         JSON.stringify(await page.evaluate(() => ({
@@ -1059,29 +1085,13 @@ async function main() {
           JSON.stringify(offlinePreflight));
       }
 
-      try {
-        await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
-          document.body.classList.contains('boot-failed'),
-          undefined, { timeout: STARTUP_RESTART_TIMEOUT_MS, polling: 250 });
-      } catch (error) {
-        const stalledState = await page.evaluate(() => ({
-          bodyClass: document.body.className,
-          bootFailed: document.body.classList.contains('boot-failed'),
-          loadingText: document.querySelector('#loadingText')?.textContent ||
-            document.querySelector('#loading')?.textContent || null,
-          loadingHelp: document.querySelector('#loadHelp')?.textContent || null,
-          recorder: window.__elSinNombreStartupSmoke || null,
-          player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state() || null,
-          serviceWorker: {
-            controlled: !!navigator.serviceWorker?.controller,
-            state: navigator.serviceWorker?.controller?.state || null
-          }
-        }));
-        manifest.offlineReload.startupWaitDiagnostic = stalledState;
-        throw new Error('El reinicio offline no alcanzó worldReady dentro de ' +
-          STARTUP_RESTART_TIMEOUT_MS + ' ms. Estado: ' + JSON.stringify(stalledState) +
-          ' · ' + String(error?.message || error));
-      }
+      const offlineStartupWait = await waitForWorldReadyWithRecovery(page, 'El reinicio offline');
+      manifest.offlineReload.startupWaitRecoveredAfterRendererStall = offlineStartupWait.recoveredAfterWaitTimeout;
+      manifest.offlineReload.startupWaitDiagnostic = offlineStartupWait.recoveredAfterWaitTimeout
+        ? { ...offlineStartupWait.snapshot, recoveredAfterWaitTimeout: true,
+            waitTimeoutMs: offlineStartupWait.waitTimeoutMs, elapsedMs: offlineStartupWait.elapsedMs,
+            waitError: offlineStartupWait.waitError }
+        : { recoveredAfterWaitTimeout: false, elapsedMs: offlineStartupWait.elapsedMs };
       const offlinePlayerState = await page.evaluate(() => ({
         player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state() || null,
         recorder: window.__elSinNombreStartupSmoke || null,
