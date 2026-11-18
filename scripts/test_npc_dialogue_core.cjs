@@ -58,7 +58,7 @@ assert.equal(Core.isSegmentOccluded({x:0,y:8,z:0},{x:10,y:8,z:0},[{x:5,z:0,radiu
  "An obstacle below the line of sight must not hide the NPC.");
 assert.equal(Core.isSegmentOccluded({x:0,y:2,z:0},{x:10,y:2,z:0},[{x:12,z:0,radius:1,bottomY:0,topY:6}]),false,
  "Geometry beyond the NPC must not occlude the dialogue.");
-const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8");
+const runtime=fs.readFileSync("scripts/npc-dialogue-runtime.js","utf8"),builder=fs.readFileSync("scripts/build_site.py","utf8"),worker=fs.readFileSync("sw.js","utf8"),validator=fs.readFileSync("scripts/validate_release.py","utf8"),smoke=fs.readFileSync("scripts/player-startup-smoke.mjs","utf8");
 assert.equal(Core.POSITION_UPDATE_MS,250);
 assert.match(runtime,/for\(let i=0;i<MAX_BUBBLES;i\+\+\)slots\.push\(makeSlot\(i\)\)/);
 assert.match(runtime,/Core\.SCHEDULER_INTERVAL_MS/);
@@ -91,6 +91,8 @@ assert.match(builder,/occluders:trees,naturalOccluders:naturalShrubs/);
 assert.match(builder,/let dialoguePeopleCache=null/);
 assert.match(builder,/dialoguePeopleSceneNodeCount=-1/);
 assert.match(builder,/sceneNodeCount!==dialoguePeopleSceneNodeCount/);
+assert.match(smoke,/peopleInWorld\) > 0/);
+assert.match(smoke,/visibleBubbleVerified/);
 assert.match(builder,/head=descendants\.find\(child=>child&&\/head\/i/);
 assert.match(builder,/npcVillageBrain\.chooseMode\(/);
 assert.match(worker,/\.\/scripts\/npc-dialogue-runtime\.js/);
