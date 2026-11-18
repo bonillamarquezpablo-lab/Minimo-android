@@ -236,7 +236,7 @@ async function main() {
           const width=max.x-min.x,depth=max.z-min.z,height=max.y-min.y;
           const radius=Math.max(2.8,width*1.8,depth*1.8,height*2.0);
           const yaw=Number(root.rotation?.y)||0;
-          const radians=(yaw+angleDegrees)*Math.PI/180;
+          const radians=yaw+angleDegrees*Math.PI/180;
           const camera={
             x:target.x+Math.sin(radians)*radius,
             y:target.y+Math.max(.35,height*.36),
