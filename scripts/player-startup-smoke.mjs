@@ -634,8 +634,8 @@ async function main() {
           proof?.messagePainted === true &&
           proof?.texture?.width === 768 &&
           proof?.texture?.height === 384 &&
-          proof?.texture?.vScale === -1 &&
-          proof?.texture?.vOffset === 1;
+          proof?.texture?.vScale === 1 &&
+          proof?.texture?.vOffset === 0;
       }, undefined, { timeout: 15000, polling: 100 });
       const visualEvidence = await page.evaluate(() => {
         const state = window.__ELSN_NPC_DIALOGUES__.getSnapshot();
