@@ -203,7 +203,7 @@ function updateWorldBubble(slot,s){
  try{
   if(!slot.mesh){
    slot.texture=new BABYLON.DynamicTexture("ELSN_NPC_WorldBubble_Texture_"+slot.index,{width:768,height:384},s.scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
-   slot.texture.hasAlpha=true;slot.texture.wrapU=BABYLON.Texture.CLAMP_ADDRESSMODE;slot.texture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;slot.texture.vScale=-1;slot.texture.vOffset=1;slot.texture.anisotropicFilteringLevel=2;
+   slot.texture.hasAlpha=true;slot.texture.wrapU=BABYLON.Texture.CLAMP_ADDRESSMODE;slot.texture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;slot.texture.vScale=1;slot.texture.vOffset=0;slot.texture.anisotropicFilteringLevel=2;
    slot.material=new BABYLON.StandardMaterial("ELSN_NPC_WorldBubble_Material_"+slot.index,s.scene);
    slot.material.diffuseTexture=slot.texture;slot.material.useAlphaFromDiffuseTexture=true;
    slot.material.disableLighting=true;slot.material.emissiveColor=new BABYLON.Color3(1,1,1);
