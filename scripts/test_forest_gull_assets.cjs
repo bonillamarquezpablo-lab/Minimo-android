@@ -12,7 +12,7 @@ assert.match(html,/await loadForestTreeTemplates\(\)/);
 assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
-assert.ok(html.includes('leftWing,rightWing,tail,head,neck,jaw,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg,wingFlapAxis'), 'The replacement gull must expose its complete named flight anatomy.');
+assert.ok(html.includes('const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]'), 'The replacement gull must require all named anatomical flight pivots.');
 assert.ok(html.includes("fly=groups.find(g=>/^fly$/i.test(String(g.name||'')))||null;"),
   'The gull must select the authored Fly clip by exact name.');
 assert.ok(html.includes("if(!fly)throw new Error('El GLB de gaviota no contiene el clip Fly obligatorio')") && html.includes("animation:fly"),
@@ -31,10 +31,10 @@ assert.ok(html.includes("const conifer=kind==='pine'||kind==='spruce'") && html.
   'Pine and spruce canopy radii must account for their broader real model bounds.');
 assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html.includes('overlapPairs'),
   'Forest placement must use a wider relocation search and expose overlap diagnostics.');
-assert.ok(html.includes('b.leftWing.rotation[b.wingFlapAxis]') && html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
-  'The new gull wings must flap around their actual pivot axis.');
-assert.ok(html.includes('const flap=Math.sin(elapsed*8.8+b.phase)*.82,open=.78;') && html.includes('b.leftWingBaseRotation-open-flap') && html.includes('b.rightWingBaseRotation+open+flap'),
-  'The gull must hold a visibly spread glide pose and use a broad, continuous wing stroke rather than a folded idle silhouette.');
+assert.ok(!html.includes('b.leftWing.rotation[b.wingFlapAxis]') && !html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
+  'The imported skeleton animation must not be overridden by synthetic per-bone wing rotations.');
+assert.ok(html.includes('fly.start(true,1.0)') && html.includes('groups.forEach(group=>{if(group!==fly)group.stop();})'),
+  'Only the complete native Fly animation must play in a continuous loop.');
 assert.ok(buildSource.includes("fly=groups.find(g=>/^fly$/i.test(String(g.name||'')))||null") && !buildSource.includes("node.rotationQuaternion=null"),
  'The native Fly clip must retain its original quaternion animation tracks.');
 
