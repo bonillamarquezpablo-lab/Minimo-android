@@ -639,7 +639,7 @@ async function main() {
       }, undefined, { timeout: 15000, polling: 100 });
       const visualEvidence = await page.evaluate(() => {
         const state = window.__ELSN_NPC_DIALOGUES__.getSnapshot();
-        const proof = window.__ELSN_NPC_DIALOGUES__.captureVisualProof();
+        const proof = window.__ELSN_NPC_DIALOGUES__.captureVisualProof(true);
         const { dataUrl, ...metadata } = proof;
         return { state, proof: metadata, dataUrl };
       });
