@@ -158,8 +158,9 @@ assert.ok(builder.includes('frameIntervalMs=1000/targetFrameRate') && builder.in
 assert.ok(builder.includes('fpsHudTime+=rawFrameMs/1000;fpsHudFrames++') && builder.includes('renderedFps=measured'), 'The FPS HUD and health report must count rendered game frames, not browser requestAnimationFrame callbacks.');
 assert.ok(builder.includes("meter.title='Objetivo: '+targetFrameRate+' FPS."), 'The FPS tooltip must show the enforced target and correct frame budget.');
 
-assert.ok(dialogueRuntime.includes('slot.texture.vScale=1;slot.texture.vOffset=0;'),
-  'NPC world-dialogue texture must use the normal vertical UV orientation to keep the painted text upright.');
+assert.ok(dialogueRuntime.includes('slot.texture.vScale=1;slot.texture.vOffset=0;') &&
+  dialogueRuntime.includes('slot.texture.update(true);slot.lastUploadInvertY=true;'),
+  'NPC world-dialogue canvas uploads must flip the top-origin canvas for upright text on Babylon planes.');
 assert.ok(dialogueRuntime.includes('width:2.12,height:1.06') && dialogueRuntime.includes('renderingGroupId=2') && dialogueRuntime.includes('2.48+slot.index*.42'),
   'NPC dialogue cards must be compact, raised above actors and rendered in the dialogue overlay group.');
 assert.ok(dialogueRuntime.includes('ctx.font="650 46px system-ui, sans-serif"') &&

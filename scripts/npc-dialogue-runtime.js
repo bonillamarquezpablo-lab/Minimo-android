@@ -45,7 +45,7 @@ function positioningPercentiles(){
 let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,lastSnapshot=null,lastCapturedCount=null,recentCaptureUntil=0;
 const RANGE_SQUARED=RANGE*RANGE;
 function bubbleLimit(){return window.matchMedia&&window.matchMedia("(max-width: 700px)").matches?1:MAX_BUBBLES;}
-function makeSlot(index){return{index,current:null,roleText:"",kindText:"",messageText:"",mesh:null,texture:null,material:null,anchor:null,textDirty:true};}
+function makeSlot(index){return{index,current:null,roleText:"",kindText:"",messageText:"",mesh:null,texture:null,material:null,anchor:null,textDirty:true,lastUploadInvertY:false};}
 for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i));
 const random=()=>Math.random(),between=(a,b)=>a+random()*(b-a);
 function rootOf(n){return n&&(n.parts&&n.parts.root||n.root||n.actor||n);}
@@ -180,7 +180,7 @@ function paintWorldBubble(slot){
  ctx.font="650 46px system-ui, sans-serif";ctx.fillStyle="#fff8e9";
  const lines=wrapBubbleText(ctx,slot.messageText,690,3);
  for(let i=0;i<lines.length;i++)ctx.fillText(lines[i],34,132+i*67,690);
- ctx.restore();slot.texture.update(false);slot.textDirty=false;
+ ctx.restore();slot.texture.update(true);slot.lastUploadInvertY=true;slot.textDirty=false;
 }
 function updateWorldBubble(slot,s){
  const c=slot.current;
@@ -263,12 +263,13 @@ function captureVisualProof(includeDataUrl=false){
   const parent=slot.mesh.parent,position=slot.mesh.position;
   const dataUrl=includeDataUrl?canvas.toDataURL("image/png"):null;
   return{
-   ready:!!enabled&&!slot.textDirty&&!!slot.messageText,
+   ready:!!enabled&&!slot.textDirty&&!!slot.messageText&&slot.lastUploadInvertY===true,
    id:slot.current.id,role:slot.roleText,text:slot.messageText,messagePainted:!slot.textDirty,
    meshEnabled:!!enabled,renderingGroupId:Number(slot.mesh.renderingGroupId),
    parentName:String(parent&&(parent.name||parent.id)||""),
    position:position?{x:Number(position.x.toFixed(3)),y:Number(position.y.toFixed(3)),z:Number(position.z.toFixed(3))}:null,
    texture:{width:Number(canvas.width),height:Number(canvas.height),vScale:Number(slot.texture.vScale),vOffset:Number(slot.texture.vOffset)},
+   uploadInvertY:slot.lastUploadInvertY===true,
    dataUrl
   };
  }catch(error){return{ready:false,reason:String(error&&error.message||error)};}

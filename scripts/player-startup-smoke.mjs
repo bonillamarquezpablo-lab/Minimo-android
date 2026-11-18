@@ -635,7 +635,8 @@ async function main() {
           proof?.texture?.width === 768 &&
           proof?.texture?.height === 384 &&
           proof?.texture?.vScale === 1 &&
-          proof?.texture?.vOffset === 0;
+          proof?.texture?.vOffset === 0 &&
+          proof?.uploadInvertY === true;
       }, undefined, { timeout: 15000, polling: 100 });
       const visualEvidence = await page.evaluate(() => {
         const state = window.__ELSN_NPC_DIALOGUES__.getSnapshot();
@@ -647,7 +648,9 @@ async function main() {
         'La textura del diálogo NPC no produjo evidencia PNG válida: ' + JSON.stringify(visualEvidence.proof));
       manifest.npcDialogueSmoke = {
         ...visualEvidence.state,
-        renderedBubbleVerified: true,
+        billboardTextureReady: true,
+        textureUploadOrientationVerified: true,
+        renderedBubbleVerified: false,
         visualScreenshotCaptured: false,
         visualEvidenceFile: 'npc-dialogue-texture.png',
         visualProof: visualEvidence.proof,
@@ -664,6 +667,8 @@ async function main() {
     } catch (error) {
       manifest.npcDialogueSmoke = await page.evaluate(() => ({
         ...window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.(),
+        billboardTextureReady: false,
+        textureUploadOrientationVerified: false,
         renderedBubbleVerified: false,
         visualProof: window.__ELSN_NPC_DIALOGUES__?.captureVisualProof?.() || null
       }));
