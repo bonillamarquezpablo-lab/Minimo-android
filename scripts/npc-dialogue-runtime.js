@@ -194,8 +194,7 @@ function updateWorldBubble(slot,s){
  if(!c||!s||!s.scene||!s.engine)return hide("missing-scene-or-engine");
  const npc=c.npc;if(!enabled(npc))return hide("npc-disabled");
  const root=rootOf(npc);
- try{if(root&&typeof root.computeWorldMatrix==="function")root.computeWorldMatrix(true);}catch(_){}
- const rootPos=worldPosition(root);
+  const rootPos=worldPosition(root);
  if(!rootPos)return hide("npc-root-unavailable");
  if(distance(rootPos,s.playerPosition)>RANGE)return hide("outside-dialogue-range");
  const BABYLON=s.BABYLON||window.BABYLON;
