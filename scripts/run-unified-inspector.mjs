@@ -19,7 +19,7 @@ function phaseLevel(name){
   // Quick: only confirm the game and real Viking model start.
   if(/Arranque del juego y modelo vikingo real/.test(name))return 1;
   // Complete: add textures, structure grounding, coasts, world inventory and their reports.
-  if(/Texturas, carga y preparación de cámara|Cimentación, estructuras|Referencias costeras|Inventario completo|Informe visual unificado|Lámina de referencias/.test(name))return 2;
+  if(/Texturas, carga y preparación de cámara|Cimentación, estructuras|Referencias costeras|Inventario completo|Capturas visuales y diagnóstico de fauna|Lámina e informe visual de fauna|Informe visual unificado|Lámina de referencias/.test(name))return 2;
   // Deep: visual A/B comparison, four times of day and performance.
   if(/Comparación (?:visual|gráfica).*ANTES\/DESPUÉS|Informe visual ANTES\/DESPUÉS/.test(name))return 3;
   return 2;
@@ -195,6 +195,8 @@ async function main(){
   await runNodePhase('Cimentación, estructuras y simulación de reparación en entorno desechable','scripts/coastal-structure-grounding-smoke.mjs',common,15*60*1000);
   await runNodePhase('Referencias costeras, agua, visibilidad y capturas de entorno','scripts/coastal-reference.mjs',common,35*60*1000);
   await runNodePhase('Inventario completo, identidades y cámaras desde el agua','scripts/custom-scene-capture.mjs',{...common,CAPTURE_PLAN_JSON:PLAN},20*60*1000);
+  await runNodePhase('Capturas visuales y diagnóstico de fauna terrestre','scripts/fauna-visual-capture.mjs',common,20*60*1000);
+  await runPythonPhase('Lámina e informe visual de fauna','scripts/create_fauna_contact_sheet.py','artifacts/fauna-visual-captures');
   // These two report builders read separate artifact folders, so they can safely run together.
   await Promise.all([
     runPythonPhase('Informe visual unificado de estructuras','scripts/create_scene_capture_contact_sheet.py','artifacts/custom-scene-captures'),
@@ -216,6 +218,10 @@ async function main(){
     inspectionErrors:m.initialPhysicalAudit?.errors||{},shots:{planned:m.expandedShotCount,captured:m.captures?.length,failed:m.failures?.length},
     zones:m.zoneInspections,readiness:m.readiness,textures:m.initialPhysicalAudit?.textures,water:m.initialPhysicalAudit?.water,environment:m.initialPhysicalAudit?.environment
   }));
+  const fauna=summaryFrom('artifacts/fauna-visual-captures/fauna-visual-summary.json',m=>({
+    verdict:m.verdict,animalCount:m.animalCount,captureCount:m.captureCount,warnings:m.warnings||[],failures:m.failures||[],
+    animals:(m.animals||[]).map(a=>({id:a.id,kind:a.kind,bounds:a.bounds,meshCount:a.meshCount,visibleMeshCount:a.visibleMeshCount,skinnedVertices:a.skinnedVertices,boneCount:a.boneCount,textures:a.textures?.length,animationGroups:a.animationGroups?.length}))
+  }));
   const texture=summaryFrom('artifacts/texture-readiness-smoke/manifest.json',m=>({verdict:m.verdict,readiness:m.readiness,textureDiagnostics:m.textureDiagnostics,cameraVerification:m.cameraVerification,actualCamera:m.actualCamera,failure:m.failure}));
   const grounding=summaryFrom('artifacts/structure-grounding/manifest.json',m=>({verdict:m.verdict,summary:m.summary,habitableStructures:m.habitableStructures||[],settlementHouses:m.settlementHouses||[],settlementCamps:m.settlementCamps||[],garrisons:m.garrisons||[],offshoreAudit:m.offshoreAudit||null,outerLandmarks:m.outerLandmarks||[],rocks:m.rocks||[],failure:m.failure}));
   const coastal=summaryFrom('artifacts/coastal-reference/manifest.json',m=>({captureCount:m.captures?.length,atmosphereAudit:m.atmosphereAudit,atmosphereCaptureCount:m.atmosphereCaptures?.length,structureVisibility:m.structureVisibility?.length,failure:m.failure}));
@@ -225,10 +231,12 @@ async function main(){
     schema:1,mode:'tiered-single-entrypoint-inspection',level:INSPECTOR_LEVEL,readOnlyForMainCapture:true,visualCapturesSkipped:SKIP_VISUAL_CAPTURES,
     note:SKIP_VISUAL_CAPTURES?'Pasada temporal de compilación y auditoría de arranque: las capturas costeras, las panorámicas de escena y la comparación Hrafn se han omitido; el código de captura permanece intacto.':'Las comprobaciones de reparación se ejecutan en navegadores de prueba desechables; no modifican la partida ni los archivos publicados.',
     startedAt,finishedAt:new Date().toISOString(),durationMs:Date.now()-started,
-    baseUrl:BASE_URL,phases,results:{player,texture,grounding,coastal,custom,beforeAfter},
+    baseUrl:BASE_URL,phases,results:{player,texture,grounding,coastal,custom,fauna,beforeAfter},
     files:[
       'player-startup/manifest.json','texture-readiness-smoke/manifest.json',
       'structure-grounding/manifest.json',
+      'fauna-visual-captures/manifest.json','fauna-visual-captures/fauna-visual-summary.json',
+      'fauna-visual-captures/fauna-inspection-report.md','fauna-visual-captures/fauna-contact-sheet.jpg',
       ...(SKIP_VISUAL_CAPTURES?[]:[
         'coastal-reference/manifest.json','custom-scene-captures/manifest.json',
         'custom-scene-captures/inspection-report.md','custom-scene-captures/contact-sheet.png',
@@ -255,7 +263,20 @@ async function main(){
     '## Resultado de cada fase','','| Fase | Estado | Duración | Código |','|---|---|---:|---:|'
   ];
   for(const row of phases)lines.push('| '+row.name+' | '+row.status+' | '+(row.durationMs??'—')+' ms | '+(row.exitCode??'—')+' |');
-  lines.push('','## Inventario de estructuras','',
+  lines.push('','## Fauna 3D — capturas e informe','',
+    '- Animales detectados: **'+(fauna?.animalCount??'no disponible')+'**',
+    '- Vistas verificadas: **'+(fauna?.captureCount??0)+'**',
+    '- Avisos de geometría, rig, textura o animación: **'+(fauna?.warnings?.length??0)+'**',
+    '- Lámina: **artifacts/fauna-visual-captures/fauna-contact-sheet.jpg**',
+    '- Informe: **artifacts/fauna-visual-captures/fauna-inspection-report.md**','',
+    '| Actor | Especie | Mallas visibles/total | Vértices skin | Huesos | Texturas | Clips | Dimensiones (m) |',
+    '|---|---|---:|---:|---:|---:|---:|---|'
+  );
+  for(const animal of (fauna?.animals||[])){
+    const d=animal.bounds?.dimensions||{};
+    lines.push('| '+animal.id+' | '+animal.kind+' | '+(animal.visibleMeshCount??'—')+'/'+(animal.meshCount??'—')+' | '+(animal.skinnedVertices??'—')+' | '+(animal.boneCount??'—')+' | '+(animal.textures??'—')+' | '+(animal.animationGroups??'—')+' | '+[d.width??'—',d.height??'—',d.depth??'—'].join(' × ')+' |');
+  }
+    lines.push('','## Inventario de estructuras','',
     '- Islas: **'+(custom?.counts?.islands??'no disponible')+'**',
     '- Objetos estructurales candidatos: **'+(custom?.structures?.length??'no disponible')+'**',
     '- Cabañas registradas: **'+(custom?.counts?.huts??'no disponible')+'**',
