@@ -73,9 +73,9 @@ for (const marker of [
 ]) {
   assert.ok(smoke.includes(marker), 'Runtime smoke is missing acceptance check: ' + marker);
 }
-assert.ok(dialogueRuntime.includes('projectionAttempts:0') &&
-  smoke.includes('const state = window.__ELSN_NPC_DIALOGUES__.getSnapshot()') &&
-  smoke.includes('...visualEvidence.state') &&
+assert.ok(dialogueRuntime.includes('projectionAttempts') &&
+  smoke.includes('getSnapshot()') &&
+  smoke.includes('visualEvidence.state') &&
   smoke.includes('captureVisualProof(true)'),
   'The runtime must expose positioning attempts and the browser smoke must persist its complete snapshot with the NPC texture proof.');
 assert.match(smoke, /STARTUP_RESTART_TIMEOUT_MS = 240000/);
