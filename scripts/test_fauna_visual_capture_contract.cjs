@@ -36,6 +36,11 @@ assert.ok(capture.includes('minimumWorld') || capture.includes('maximumWorld'));
 assert.ok(capture.includes('skinnedVertices'));
 assert.ok(capture.includes('animationGroups'));
 assert.ok(capture.includes('captureCanvas'));
+assert.ok(capture.includes("if(expected!==landAnimals.length||(manifest.startup.worldReady&&expected!==loaded))"),
+  'A timed-out startup recorder must not override the number of actors actually mounted in the live scene.');
+assert.ok(capture.includes("if(animal.textures.some(texture=>texture.ready===false||texture.ready===null))") &&
+  capture.includes("code:'missing-materials'"),
+  'Material-only GLBs must not be reported as missing textures; pending textures and missing materials must remain visible.');
 assert.ok(sheet.includes('fauna-contact-sheet.jpg'));
 assert.ok(sheet.includes('fauna-inspection-report.md'));
 console.log('Fauna visual capture contract: PASS (live animal inventory, rig, texture and animation diagnostics, plus four camera-verified views per animal).');
