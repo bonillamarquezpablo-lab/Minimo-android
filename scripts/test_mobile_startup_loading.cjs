@@ -22,7 +22,7 @@ assert.ok(build.includes('r"7\\.54\\.3"'),'Fallback mirrors must be normalized t
 assert.ok(build.includes('same-origin-native-script'),'Same-origin Babylon must use the browser native script loader.');
 assert.ok(build.includes("script.async=false;script.fetchPriority='high';script.src=url;"),'Critical Babylon scripts must execute in insertion order and retain high fetch priority.');
 assert.ok(build.includes('function loadEngine(url,timeoutMs=30000,check=null)'), 'Native engine script loading must use a bounded 30-second default timeout.');
-const nativeLoaderMatch=build.match(/native_loader = r"""([\\s\\S]*?)\\n"""/);
+const nativeLoaderMatch=build.match(/native_loader = r"""([\s\S]*?)\n"""/);
 assert.ok(nativeLoaderMatch,'The generated engine loader must be present.');
 const nativeLoader=nativeLoaderMatch[1];
 assert.ok(nativeLoader.includes("const source=sameOrigin?'same-origin-native-script':'external-script'"),'The engine loader must identify native same-origin script execution.');
