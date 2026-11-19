@@ -26,7 +26,7 @@ assert.ok(capture.includes('startupDiagnostic') && capture.includes('startup-sta
   'The fauna inspector must preserve partial world/fauna diagnostics when the startup barrier never reaches worldReady.');
 assert.ok(capture.includes('FaunaInspectorTemporaryCamera') && capture.includes('temporary-babylon-camera'),
   'The inspector must photograph instantiated animals with a temporary Babylon camera if the game test API is not ready.');
-assert.ok(capture.includes("if(!scene||!root)throw new Error('No se encuentra la escena o el actor de fauna para capturar:'),
+assert.ok(capture.includes("if(!scene||!root)throw new Error("),
   'The temporary Babylon camera fallback must not require the game test API to exist.');
 assert.ok(capture.includes('window.__ELSN_FAUNA_CAPTURE_SCENE__||window.BABYLON?.EngineStore?.LastCreatedScene'),
   'The inspector must resolve the live scene even when the render hook has not captured it yet.');
