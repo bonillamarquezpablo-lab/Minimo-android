@@ -830,6 +830,7 @@ async function main() {
         },
         player: snapshot.actors?.player ?? null,
         wildlife: snapshot.actors?.wildlife ?? null,
+        ambientBirds: snapshot.actors?.ambientBirds ?? null,
         actorCounts
       };
     });
@@ -858,10 +859,43 @@ async function main() {
       assert.ok(Array.isArray(animal.animationGroups) && animal.animationGroups.length > 0 &&
         animal.animationGroups.some(group => Number(group.targetedAnimations) > 0),
         'Fauna sin clips dirigidos al esqueleto: ' + JSON.stringify(animal));
-      assert.equal(animal.textureReadiness?.pending, 0,
+      const textureState=animal.textureReadiness||{};
+      assert.equal(textureState.complete,true,
+        'La comprobación de carga de texturas no se completó: ' + JSON.stringify(animal));
+      // Some GLBs are intentionally material-coloured and contain no image textures.
+      // Null counters mean "no active texture objects", not pending/unknown textures.
+      assert.equal(Number(textureState.pending??0),0,
         'La fauna no puede entrar con texturas pendientes: ' + JSON.stringify(animal));
-      assert.equal(animal.textureReadiness?.unknown, 0,
+      assert.equal(Number(textureState.unknown??0),0,
         'La disponibilidad de texturas debe ser verificable: ' + JSON.stringify(animal));
+      if(Number(textureState.count)>0)assert.equal(Number(textureState.ready),Number(textureState.count),
+        'Hay texturas activas que no terminaron de prepararse: ' + JSON.stringify(animal));
+      const drawableMeshes=(animal.meshes||[]).filter(mesh=>Number(mesh.vertices)>0);
+      assert.ok(drawableMeshes.length>0&&drawableMeshes.every(mesh=>!!mesh.material),
+        'La fauna tiene geometría sin material asignado: ' + JSON.stringify(animal));
+    }
+    assert.equal(manifest.worldInspection.actorCounts.ambientBirds,5,
+      'La captura debe contener las cinco gaviotas reales del perfil Calidad.');
+    assert.equal(manifest.worldInspection.ambientBirds?.returned?.length,5,
+      'La captura debe conservar la ficha individual de cada gaviota.');
+    for(const bird of manifest.worldInspection.ambientBirds.returned){
+      assert.ok(bird.visualIntegrity?.hasMeshes&&bird.visualIntegrity?.hasFinitePosition&&
+        bird.visualIntegrity?.hasVisibleGeometry&&bird.visualIntegrity?.hasFiniteBounds&&
+        bird.visualIntegrity?.plausibleBounds,
+        'Gaviota con geometría, posición o límites inválidos: '+JSON.stringify(bird));
+      assert.equal(bird.flightRig?.complete,true,
+        'La gaviota no tiene sus nueve articulaciones de vuelo: '+JSON.stringify(bird));
+      assert.equal(bird.flightRig?.partCount,9,
+        'El rig de vuelo debe contener nueve pivotes: '+JSON.stringify(bird.flightRig));
+      assert.equal(bird.flightRig?.animationPlaying,true,
+        'La animación de vuelo de una gaviota está detenida: '+JSON.stringify(bird.flightRig));
+      assert.ok(Number(bird.flightRig?.targetedAnimations)>0,
+        'La animación de vuelo no tiene pistas dirigidas: '+JSON.stringify(bird.flightRig));
+      const textureState=bird.textureReadiness||{};
+      assert.equal(Number(textureState.pending??0),0,
+        'La gaviota tiene texturas pendientes: '+JSON.stringify(bird));
+      assert.equal(Number(textureState.unknown??0),0,
+        'La disponibilidad de texturas de la gaviota no se puede verificar: '+JSON.stringify(bird));
     }
     manifest.wildlifeVisualCapture = {
       file: 'wildlife-world-capture.png',
