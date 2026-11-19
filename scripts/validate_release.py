@@ -511,14 +511,14 @@ def main() -> None:
         "highTierGpuMatch=",
         "highHeadroomQualityMobile=",
         "qualityDprCurrent=qualityDpr",
-        "qualityScaleLockedForSession:true",
+        "qualityScaleAdaptive:true",
         "const targetFrameRate=60;",
         "frameIntervalMs=1000/targetFrameRate",
         "if(now+.5<nextRenderAt)return",
         "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
         "renderedFps=measured",
         "renderedFps||engine.getFps()",
-        "FPS bajo con resolución de Calidad protegida",
+        "FPS bajo; Calidad conserva geometría y efectos y adapta solo la resolución interna.",
         "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))",
         "renderPipeline.sharpen.edgeAmount=.34",
         "style='grain',size=highHeadroomQualityMobile?1024:512",
@@ -529,8 +529,10 @@ def main() -> None:
     missing_graphics_quality = [marker for marker in graphics_quality_markers if marker not in index_html]
     if missing_graphics_quality:
         fail("El perfil nativo de gama alta, la resolución protegida o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
-    if "qualityDprSlowSamples" in index_html or "qualityDprStableSamples" in index_html or "qualityDprFloor" in index_html or "qualityDprCeiling" in index_html:
-        fail("El perfil Calidad no debe reducir ni modificar el DPR durante una partida.")
+    if "qualityDprSlowSamples>=2" not in index_html or "qualityDprStableSamples>=6" not in index_html or "engine.setHardwareScalingLevel(1/qualityDprCurrent)" not in index_html or "geometryAndEffectsPreserved:true" not in index_html:
+        fail("La resolución adaptativa de Calidad debe usar histéresis y conservar geometría y efectos.")
+    if "qualityScaleLockedForSession:true" in index_html:
+        fail("La resolución de Calidad no puede permanecer bloqueada cuando el dispositivo no sostiene el presupuesto de fotograma.")
 
     if "const TERRAIN_HASH_CACHE_LIMIT=65536;" not in index_html or "terrainHashCacheSlots" not in index_html or "terrainHashCacheEntries:terrainHashCache.size" not in index_html:
         fail("La caché determinista de ruido del terreno debe estar acotada y diagnosticada.")
