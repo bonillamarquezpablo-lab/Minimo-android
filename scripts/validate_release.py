@@ -89,6 +89,8 @@ def main() -> None:
         fail("Hay archivos requeridos vacíos: " + ", ".join(empty))
 
     index_html = read_text("index.html")
+    if any(marker not in index_html for marker in ("elsnStartupProgressPanel", "elsnStartupProgressElapsed", "startupProgressSteps", "PASO ")):
+        fail("La pantalla de carga debe mostrar la fase numerada, la operación actual y el tiempo en la fase.")
     atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
     world_inspection_source = read_text("scripts/nordic/world-inspection.js")
     inspector_html = (ROOT / "inspector/index.html").read_text(encoding="utf-8")
