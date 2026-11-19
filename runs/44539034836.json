@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "startedAt": "2026-11-19T14:00:25.982Z",
+  "level": "complete",
+  "phases": [
+    {
+      "name": "Arranque del juego y modelo vikingo real",
+      "script": "scripts/player-startup-smoke.mjs",
+      "startedAt": "2026-11-19T14:00:25.983Z",
+      "status": "failed",
+      "durationMs": 248091,
+      "exitCode": 1,
+      "error": "exit=1 signal=none",
+      "finishedAt": "2026-11-19T14:04:34.075Z"
+    },
+    {
+      "name": "Texturas, carga y preparación de cámara",
+      "script": "scripts/texture-readiness-smoke.mjs",
+      "startedAt": "2026-11-19T14:04:34.077Z",
+      "status": "failed",
+      "durationMs": 122702,
+      "exitCode": 2,
+      "error": "exit=2 signal=none",
+      "finishedAt": "2026-11-19T14:06:36.779Z"
+    }
+  ],
+  "finishedAt": null
+}
