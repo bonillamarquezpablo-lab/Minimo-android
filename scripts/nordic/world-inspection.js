@@ -51,9 +51,13 @@
     if (!candidate || typeof candidate !== 'object') return null;
     const position = readPosition(candidate);
     const isWildlife = role === 'wildlife';
-    const childMeshes = isWildlife ? (safeCall(() => candidate.getChildMeshes ? candidate.getChildMeshes(false) : [], []) || []) : [];
-    const groups = isWildlife && Array.isArray(actor.groups) ? actor.groups : [];
-    const skeletons = isWildlife ? Array.from(new Set(childMeshes.map(mesh => mesh && mesh.skeleton).filter(Boolean))) : [];
+    const isBird = role === 'ambient-bird';
+    const isAnimatedFauna = isWildlife || isBird;
+    const childMeshes = isAnimatedFauna ? (safeCall(() => candidate.getChildMeshes ? candidate.getChildMeshes(false) : [], []) || []) : [];
+    const groups = isAnimatedFauna && Array.isArray(actor.groups) ? actor.groups.slice() : [];
+    const flightGroup = isBird ? actor.flightRig && actor.flightRig.animationGroup || null : null;
+    if (flightGroup && !groups.includes(flightGroup)) groups.push(flightGroup);
+    const skeletons = isAnimatedFauna ? Array.from(new Set(childMeshes.map(mesh => mesh && mesh.skeleton).filter(Boolean))) : [];
     const groupRows = groups.map(group => ({
       name: String(group && group.name || 'unnamed-animation'),
       playing: !!(group && group.isPlaying),
@@ -72,7 +76,7 @@
         size:{x:round(max.x-min.x),y:round(max.y-min.y),z:round(max.z-min.z)}, measuredMeshes:validBounds.length };
     }
     const liveTextures = new Set();
-    if (isWildlife) for (const mesh of childMeshes) {
+    if (isAnimatedFauna) for (const mesh of childMeshes) {
       const materials = Array.isArray(mesh && mesh.material) ? mesh.material : [mesh && mesh.material];
       for (const material of materials) {
         const active = safeCall(() => material && typeof material.getActiveTextures === 'function' ? material.getActiveTextures() : [], []);
@@ -89,22 +93,36 @@
     const pendingCount = textureRows.filter(row=>row.ready===false).length;
     const unknownCount = textureRows.filter(row=>row.ready===null).length;
     const hasLiveTextures = textureRows.length > 0;
-    const textureReadiness = isWildlife ? {
-      count:hasLiveTextures?textureRows.length:(finite(stored.count)?stored.count:0),
-      ready:hasLiveTextures?readyCount:(finite(stored.count)?stored.count:(finite(stored.ready)?stored.ready:null)),
-      pending:hasLiveTextures?pendingCount:(finite(stored.count)?0:(finite(stored.pending)?stored.pending:null)),
-      unknown:hasLiveTextures?unknownCount:0,
+    const textureReadiness = isAnimatedFauna ? {
+      count:hasLiveTextures?textureRows.length:(finite(stored.count)?stored.count:null),
+      ready:hasLiveTextures?readyCount:(finite(stored.ready)?stored.ready:null),
+      pending:hasLiveTextures?pendingCount:(finite(stored.pending)?stored.pending:null),
+      unknown:hasLiveTextures?unknownCount:null,
       waitedMs:finite(stored.waitedMs)?round(stored.waitedMs,1):null,
       complete:hasLiveTextures?pendingCount===0&&unknownCount===0:(finite(stored.count)?true:null),
       items:textureRows.slice(0,80)
     } : null;
     const activeAnimation = isWildlife && actor.activeAnimation
-      ? String(actor.activeAnimation.name || actor.activeAnimation.id || actor.activeAnimation) : null;
+      ? String(actor.activeAnimation.name || actor.activeAnimation.id || actor.activeAnimation)
+      : (isBird && flightGroup ? String(flightGroup.name || 'Seagull_Flight_Loop') : null);
     const visibleMeshes = childMeshes.filter(mesh=>mesh&&mesh.isVisible!==false&&(!mesh.isEnabled||mesh.isEnabled()));
     const skinnedMeshes = childMeshes.filter(mesh=>mesh&&mesh.skeleton);
     const totalBoneCount = skeletons.reduce((sum,skeleton)=>sum+(Array.isArray(skeleton.bones)?skeleton.bones.length:0),0);
     const size = aggregateBounds && aggregateBounds.size;
     const maxExtent = size ? Math.max(size.x,size.y,size.z) : null;
+    const flightRigSource = isBird ? actor.flightRig || null : null;
+    const flightPartNames = ['leftWing','rightWing','tail','head','neck','leftHindUpLeg','rightHindUpLeg','leftHindLeg','rightHindLeg'];
+    const flightParts = flightRigSource ? Object.fromEntries(flightPartNames.map(name => [name,!!(flightRigSource[name] && flightRigSource[name].node)])) : {};
+    const flightPartCount = Object.values(flightParts).filter(Boolean).length;
+    const flightTargetCount = Array.isArray(flightGroup && flightGroup.targetedAnimations) ? flightGroup.targetedAnimations.length : 0;
+    const flightRig = isBird ? {
+      present:!!flightRigSource, parts:flightParts, partCount:flightPartCount, expectedPartCount:flightPartNames.length,
+      complete:!!flightRigSource && flightPartCount===flightPartNames.length && !!flightGroup && flightTargetCount>0,
+      animationGroupName:flightGroup?String(flightGroup.name||'Seagull_Flight_Loop'):null,
+      animationPlaying:!!(flightGroup&&flightGroup.isPlaying),
+      targetedAnimations:flightTargetCount,
+      speedRatio:finite(flightGroup&&flightGroup.speedRatio)?round(flightGroup.speedRatio,3):null
+    } : null;
     const result = {
       role, name:String(candidate.name||actor.name||role), position,
       alive:actor.alive===undefined?null:actor.alive===true,
@@ -113,10 +131,10 @@
       enabled:safeCall(()=>typeof candidate.isEnabled==='function'?candidate.isEnabled():candidate.isVisible!==false,null),
       finitePosition:!!position&&finite(position.x)&&finite(position.y)&&finite(position.z)
     };
-    if (isWildlife) {
-      result.kind=actor.kind==null?null:String(actor.kind);
-      result.activeMode=actor.activeMode==null?null:String(actor.activeMode);
-      result.activeAnimation=activeAnimation;
+    if (isAnimatedFauna) {
+      result.kind = isBird ? 'gull' : (actor.kind==null?null:String(actor.kind));
+      result.activeMode = isBird ? 'flight' : (actor.activeMode==null?null:String(actor.activeMode));
+      result.activeAnimation = activeAnimation;
       result.meshCount=childMeshes.length;
       result.visibleMeshCount=visibleMeshes.length;
       result.skinnedMeshCount=skinnedMeshes.length;
@@ -130,15 +148,19 @@
       result.animationGroupCount=groupRows.length;
       result.playingAnimationGroups=groupRows.filter(group=>group.playing).length;
       result.textureReadiness=textureReadiness;
-      result.groundOffset=finite(actor.groundOffset)?round(actor.groundOffset,3):null;
-      result.heading=finite(actor.heading)?round(actor.heading,3):null;
-      result.homeIslandIndex=finite(actor.homeIslandIndex)?actor.homeIslandIndex:null;
+      if (isBird) result.flightRig=flightRig;
+      if (isWildlife) {
+        result.groundOffset=finite(actor.groundOffset)?round(actor.groundOffset,3):null;
+        result.heading=finite(actor.heading)?round(actor.heading,3):null;
+        result.homeIslandIndex=finite(actor.homeIslandIndex)?actor.homeIslandIndex:null;
+      }
       result.visualIntegrity={
         hasMeshes:childMeshes.length>0,hasSkinnedMesh:skinnedMeshes.length>0,
         hasSkeleton:skeletons.length>0&&totalBoneCount>=12,
+        hasFlightRig:isBird?!!(flightRig&&flightRig.complete):null,
         hasFinitePosition:!!position&&[position.x,position.y,position.z].every(finite),
         hasVisibleGeometry:visibleMeshes.length>0,hasFiniteBounds:!!aggregateBounds,
-        plausibleBounds:!!size&&size.y>=.2&&maxExtent<=8
+        plausibleBounds:isBird?!!size&&size.y>=.08&&maxExtent>=.1&&maxExtent<=.8:!!size&&size.y>=.2&&maxExtent<=8
       };
       result.meshes=meshBounds.slice(0,80).map(({mesh,bounds})=>({
         name:String(mesh.name||mesh.id||'unnamed-mesh'),
