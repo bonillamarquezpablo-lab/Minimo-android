@@ -15,6 +15,7 @@ const ANGLES = [
 const manifest = {
   schema: 1, capturedAt: new Date().toISOString(), finishedAt: null,
   gameVersion: null, renderer: 'Chromium headless + ANGLE SwiftShader',
+  skinningAcceptance: 'CPU skinning forced in touch emulation for rig-visibility captures; not a physical-device performance measurement',
   viewport: VIEWPORT, readOnlySceneCapture: true, startup: null,
   readiness: null, scene: null, fauna: [], captures: [],
   warnings: [], failures: [], consoleErrors: [], pageErrors: [], verdict: 'incomplete'
@@ -41,6 +42,8 @@ async function main() {
     page.setDefaultTimeout(60000);
     page.setDefaultNavigationTimeout(90000);
     await page.addInitScript(()=>{
+      // This is a visual acceptance session, not a performance benchmark. Force the mobile CPU-skinning path even on SwiftShader.
+      window.__ELSN_FORCE_CPU_SKINNING__=true;
       let babylonValue=null;
       const hook=B=>{
         try{
