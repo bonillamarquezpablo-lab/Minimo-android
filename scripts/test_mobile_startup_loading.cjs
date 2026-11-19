@@ -49,7 +49,7 @@ assert.ok(smoke.includes("document.body.classList.contains('boot-failed')"),'The
 
 assert.ok(smoke.includes('identityClickDiagnostics') && smoke.includes('__ELSN_IDENTITY_START_COUNT'), 'The smoke must capture whether the first-run identity button actually started the engine.');
 assert.ok(smoke.includes('startupTimeoutDiagnostics') && smoke.includes('elsnStartupProgressStage') &&
-  smoke.includes('wildlifeReadiness') && smoke.includes('actorRoots'),
+  smoke.includes('readiness:safe') && smoke.includes('actorRoots'),
   'A blocked world startup must preserve its exact loading stage, scene readiness and partial fauna state.');
 assert.ok(smoke.includes('const IDENTITY_START_WAIT_MS = 45000') && smoke.includes('timeout: IDENTITY_START_WAIT_MS'), 'The identity-start assertion must tolerate the measured mobile main-thread stall instead of failing after 3.5 seconds.');
 assert.ok(build.includes('identityStartupTriggered=false') && build.includes("continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true})"), 'The identity start controls must be idempotent and pointer-safe.');
