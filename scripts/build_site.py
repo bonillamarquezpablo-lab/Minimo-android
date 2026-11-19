@@ -147,7 +147,7 @@ def read_glb_document(path: Path) -> dict:
 
 def _read_glb_payload(path: Path) -> tuple[dict, bytearray, list[tuple[bytes, bytes]]]:
     raw = path.read_bytes()
-    if len(raw) < 20 or raw[:4] != b"glTF" + bytes([0]) or int.from_bytes(raw[4:8], "little") != 2:
+    if len(raw) < 20 or raw[:4] != b"glTF" or int.from_bytes(raw[4:8], "little") != 2:
         raise RuntimeError(f"Invalid GLB v2 container: {path.name}")
     offset = 12
     document = None
@@ -182,7 +182,7 @@ def _write_glb_payload(path: Path, document: dict, binary: bytearray,
     json_payload += b" " * ((-len(json_payload)) % 4)
     binary_payload = bytes(binary)
     binary_payload += bytes([0]) * ((-len(binary_payload)) % 4)
-    output = bytearray(b"glTF" + bytes([0]) + struct.pack("<II", 2, 0))
+    output = bytearray(b"glTF" + struct.pack("<II", 2, 0))
     wrote_json = False
     wrote_binary = False
     for chunk_type, payload in chunks:
