@@ -529,7 +529,7 @@ def main() -> None:
     missing_graphics_quality = [marker for marker in graphics_quality_markers if marker not in index_html]
     if missing_graphics_quality:
         fail("El perfil nativo de gama alta, la resolución protegida o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
-    if "qualityDprSlowSamples>=2" not in index_html or "qualityDprStableSamples>=6" not in index_html or "engine.setHardwareScalingLevel(1/qualityDprCurrent)" not in index_html or "geometryAndEffectsPreserved:true" not in index_html:
+    if "fps<49&&lastWorldUpdateMs<8&&lastRenderCpuMs<9" not in index_html or "qualityDprSlowSamples>=2" not in index_html or "qualityDprStableSamples>=6" not in index_html or "engine.setHardwareScalingLevel(1/qualityDprCurrent)" not in index_html or "geometryAndEffectsPreserved:true" not in index_html:
         fail("La resolución adaptativa de Calidad debe usar histéresis y conservar geometría y efectos.")
     if "qualityScaleLockedForSession:true" in index_html:
         fail("La resolución de Calidad no puede permanecer bloqueada cuando el dispositivo no sostiene el presupuesto de fotograma.")
