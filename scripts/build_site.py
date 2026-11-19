@@ -591,6 +591,63 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
+    # Keep the full Quality scene, but adapt only internal pixel density when a touch GPU
+    # cannot sustain the 60 Hz frame budget. Hysteresis prevents oscillation and recovers
+    # resolution after sustained headroom; geometry, textures, shadows and effects stay intact.
+    quality_state_marker = "let fpsSample=0,qualityDprCurrent=qualityDpr,renderedFps=0;"
+    quality_state_replacement = (
+        "let fpsSample=0,qualityDprCurrent=qualityDpr,renderedFps=0,"
+        "qualityDprSlowSamples=0,qualityDprStableSamples=0,qualityDprChanges=0;"
+        "const qualityDprFloor=isTouchDevice?(highHeadroomQualityMobile?1.28:1.10):qualityDpr,"
+        "qualityDprCeiling=qualityDpr;let qualityDprLastChangeAt=0;"
+    )
+    if html.count(quality_state_marker) != 1:
+        raise SystemExit("No se encontró exactamente un estado de resolución adaptativa.")
+    html = html.replace(quality_state_marker, quality_state_replacement, 1)
+
+    quality_adapt_marker = """  function adaptRenderQuality(dt){
+   fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<2.0)return;fpsSample=0;
+   const fps=renderedFps||engine.getFps();
+   if(fps<24&&performance.now()-lastQualityWarningAt>=4000){
+    lastQualityWarningAt=performance.now();
+    console.warn('EL SIN NOMBRE: FPS bajo con resolución de Calidad protegida.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
+   }
+  }"""
+    quality_adapt_replacement = """  function adaptRenderQuality(dt){
+   fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<2.0)return;fpsSample=0;
+   const fps=renderedFps||engine.getFps(),now=performance.now();
+   if(!isPerformanceMode&&isTouchDevice){
+    if(fps<49){qualityDprSlowSamples++;qualityDprStableSamples=0;}
+    else if(fps>=57){qualityDprStableSamples++;qualityDprSlowSamples=0;}
+    else{qualityDprSlowSamples=0;qualityDprStableSamples=0;}
+    if(qualityDprSlowSamples>=2&&qualityDprCurrent>qualityDprFloor+.005&&now-qualityDprLastChangeAt>=3500){
+     qualityDprCurrent=Math.max(qualityDprFloor,Number((qualityDprCurrent-.12).toFixed(2)));
+     engine.setHardwareScalingLevel(1/qualityDprCurrent);
+     qualityDprLastChangeAt=now;qualityDprSlowSamples=0;qualityDprChanges++;
+     console.info('EL SIN NOMBRE: resolución interna adaptada para recuperar fluidez.',{fps:Math.round(fps),renderDpr:qualityDprCurrent,minDpr:qualityDprFloor,maxDpr:qualityDprCeiling,qualityScaleAdaptive:true,geometryAndEffectsPreserved:true,changes:qualityDprChanges});
+    }else if(qualityDprStableSamples>=6&&qualityDprCurrent<qualityDprCeiling-.005&&now-qualityDprLastChangeAt>=8000){
+     qualityDprCurrent=Math.min(qualityDprCeiling,Number((qualityDprCurrent+.06).toFixed(2)));
+     engine.setHardwareScalingLevel(1/qualityDprCurrent);
+     qualityDprLastChangeAt=now;qualityDprStableSamples=0;qualityDprChanges++;
+     console.info('EL SIN NOMBRE: resolución interna recuperada tras estabilidad.',{fps:Math.round(fps),renderDpr:qualityDprCurrent,minDpr:qualityDprFloor,maxDpr:qualityDprCeiling,qualityScaleAdaptive:true,geometryAndEffectsPreserved:true,changes:qualityDprChanges});
+    }
+   }
+   if(fps<24&&now-lastQualityWarningAt>=4000){
+    lastQualityWarningAt=now;
+    console.warn('EL SIN NOMBRE: FPS bajo; Calidad conserva geometría y efectos y adapta solo la resolución interna.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleAdaptive:true,qualityDprFloor,qualityDprCeiling,qualityDprChanges,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
+   }
+  }"""
+    if html.count(quality_adapt_marker) != 1:
+        raise SystemExit("No se encontró exactamente el controlador de resolución fija de Calidad.")
+    html = html.replace(quality_adapt_marker, quality_adapt_replacement, 1)
+    if html.count("qualityScaleLockedForSession:true") != 1:
+        raise SystemExit("No se encontró exactamente el indicador de resolución fija.")
+    html = html.replace(
+        "qualityScaleLockedForSession:true",
+        "qualityScaleAdaptive:true,qualityDprFloor:Number(qualityDprFloor.toFixed(2)),qualityDprCeiling:Number(qualityDprCeiling.toFixed(2)),qualityDprChanges",
+        1,
+    )
+
     # Keep full-quality coast geometry while tightening the CPU slice ceiling on mobile.
     # Work is spread over more frames; no mesh rows, columns or material detail are removed.
     coast_budget_marker = "BEACH_WORK_BUDGET_MS=isTouchDevice?1.5:2.0"
