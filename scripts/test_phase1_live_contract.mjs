@@ -23,11 +23,14 @@ for (const id of [
   assert.ok(html.includes('id="' + id + '"'), 'Inspector HTML is missing ' + id);
   assert.ok(source.includes("'" + id + "'"), 'Inspector script does not use ' + id);
 }
-assert.match(html, /phase1-live\.js\?v=4/);
+assert.match(html, /phase1-live\.js\?v=6/);
 
 assert.match(source, /getGameWorldInspectionSnapshot/);
 assert.match(source, /analyzeWorldInspectionSnapshot/);
 assert.match(source, /captureWorldInspection/);
+assert.match(source, /renderWildlifeInspection/);
+assert.match(source, /captureGameScreenshot/);
+assert.ok(html.includes('id="wildlifeInspectionGrid"'));
 for (const id of ['worldInspectionCapture','worldIslandsCount','worldMeshCount','worldStructureCount','worldUnsafeCount','worldActorCount','worldShipCrewCount','worldPendingTextures','worldAnimationGroups','worldCollisionCount','worldInvalidTransformCount','worldColliderCount','worldTerrainRange','worldInspectionJson','worldInspectionDownload']) {
   assert.ok(html.includes('id="' + id + '"'), 'Inspector HTML is missing ' + id);
   assert.ok(source.includes("'" + id + "'"), 'Inspector script does not use ' + id);

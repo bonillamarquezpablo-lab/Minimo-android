@@ -781,14 +781,30 @@ async function main() {
       'La captura de arranque debe contener los tres animales terrestres obligatorios.');
     assert.equal(manifest.worldInspection.wildlife?.returned?.length, 3,
       'La captura debe incluir el inventario individual de los tres animales.');
+    assert.deepEqual([...new Set(manifest.worldInspection.wildlife.returned.map(animal => animal.kind))].sort(),
+      ['deer','stag','wolf'], 'La isla inicial debe contener ciervo, ciervo macho y lobo.');
     for (const animal of manifest.worldInspection.wildlife.returned) {
       assert.ok(animal.visualIntegrity?.hasMeshes && animal.visualIntegrity?.hasSkinnedMesh &&
         animal.visualIntegrity?.hasSkeleton && animal.visualIntegrity?.hasFinitePosition &&
-        animal.visualIntegrity?.hasVisibleGeometry,
-        'Fauna con rig o geometría incompletos: ' + JSON.stringify(animal));
+        animal.visualIntegrity?.hasVisibleGeometry && animal.visualIntegrity?.hasFiniteBounds &&
+        animal.visualIntegrity?.plausibleBounds,
+        'Fauna con rig, geometría, límites o escala incorrectos: ' + JSON.stringify(animal));
       assert.ok(animal.skeletons?.some(skeleton => Number(skeleton.boneCount) >= 12),
         'Fauna sin esqueleto suficiente: ' + JSON.stringify(animal));
+      assert.ok(Array.isArray(animal.animationGroups) && animal.animationGroups.length > 0 &&
+        animal.animationGroups.some(group => Number(group.targetedAnimations) > 0),
+        'Fauna sin clips dirigidos al esqueleto: ' + JSON.stringify(animal));
+      assert.equal(animal.textureReadiness?.pending, 0,
+        'La fauna no puede entrar con texturas pendientes: ' + JSON.stringify(animal));
+      assert.equal(animal.textureReadiness?.unknown, 0,
+        'La disponibilidad de texturas debe ser verificable: ' + JSON.stringify(animal));
     }
+    manifest.wildlifeVisualCapture = {
+      file: 'wildlife-world-capture.png',
+      capturedAt: new Date().toISOString(),
+      viewport: await page.evaluate(() => ({ width: innerWidth, height: innerHeight, devicePixelRatio }))
+    };
+    await page.screenshot({ path: path.join(OUT, 'wildlife-world-capture.png'), fullPage: false });
     assert.equal(manifest.worldInspection.islands.count, 13,
       'La captura del mundo no contiene las 13 islas.');
     assert.equal(manifest.worldInspection.islands.complete, true);

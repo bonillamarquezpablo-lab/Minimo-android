@@ -25,7 +25,7 @@ assert.ok(validator.includes('root.ELSNWorldInspection'));
 assert.ok(serviceWorker.includes('"./scripts/nordic/world-inspection.js"'));
 assert.ok(live.includes('getGameWorldInspectionSnapshot'));
 assert.ok(live.includes('analyzeWorldInspectionSnapshot'));
-for (const id of ['worldInspectionCapture','worldInspectionJson','worldInspectionFindings','worldInspectionDownload']) {
+for (const id of ['worldInspectionCapture','worldInspectionJson','worldInspectionFindings','worldInspectionDownload','wildlifeInspectionGrid','wildlifeInspectionSummary']) {
   assert.ok(html.includes('id="' + id + '"'), 'Inspector is missing ' + id);
 }
 assert.match(smoke, /identityFlow = 'first-run-anonymous'/,
@@ -34,6 +34,7 @@ assert.match(smoke, /identityFlow = 'returning-player-auto-boot'/,
   'The world-inspection smoke must support saved-player automatic boot.');
 assert.ok(smoke.includes("page.locator('#intro.open')"),
   'The smoke must wait for the real intro overlay before selecting a campaign.');
+assert.ok(smoke.includes('wildlife-world-capture.png') && smoke.includes('textureReadiness?.pending'), 'Startup smoke must retain a wildlife capture and verify animal texture readiness.');
 assert.match(smoke, /manifest\.worldInspection\.gameStarted, true/,
   'The Babylon snapshot must be captured after a real campaign starts.');
 assert.match(smoke, /cachedIdentityFlow = 'returning-player-auto-boot'/,

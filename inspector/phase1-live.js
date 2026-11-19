@@ -109,8 +109,10 @@ import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspecti
       await saveScreenshotBlob(blob,{capturedAt,width:canvas.width,height:canvas.height,build:'EL SIN NOMBRE',source:'Inspector Center'});
       await renderScreenshotVault();
       $('captureVaultStatus').textContent='Captura guardada en este navegador · '+canvas.width+' × '+canvas.height+' · '+(blob.size/1024).toFixed(0)+' KB.';
+      return true;
     } catch(error) {
       $('captureVaultStatus').textContent='No se ha guardado ninguna imagen: '+String(error.message||error);
+      return false;
     } finally {button.disabled=false;}
   }
 
@@ -200,10 +202,78 @@ import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspecti
     }
   }
 
+  function renderWildlifeInspection(snapshot) {
+    const host=$('wildlifeInspectionGrid'),summary=$('wildlifeInspectionSummary');
+    if(!host||!summary)return;
+    host.replaceChildren();
+    const inventory=snapshot.actors?.wildlife,animals=Array.isArray(inventory?.returned)?inventory.returned:[];
+    const count=Number(inventory?.count)||0;
+    const names={deer:'Ciervo',stag:'Ciervo macho',wolf:'Lobo'};
+    if(!count||!animals.length){
+      summary.textContent='Fauna cargada: '+count+' · no hay fichas individuales disponibles.';
+      const empty=document.createElement('div');empty.className='wildlife-inspection-empty';
+      empty.textContent='No se han encontrado animales. Revisa el gate de carga y los errores de importación GLB.';
+      host.appendChild(empty);return;
+    }
+    const line=(parent,label,value)=>{
+      const row=document.createElement('div');row.className='wildlife-inspection-line';
+      const key=document.createElement('span');key.className='wildlife-inspection-key';key.textContent=label;
+      const val=document.createElement('strong');
+      val.textContent=value===null||value===undefined||value===''?'No disponible':String(value);
+      row.append(key,val);parent.appendChild(row);
+    };
+    const flagged=[];
+    for(const animal of animals){
+      const integrity=animal.visualIntegrity||{},textures=animal.textureReadiness||{};
+      const groups=Array.isArray(animal.animationGroups)?animal.animationGroups:[];
+      const faults=[];
+      if(!integrity.hasMeshes)faults.push('Sin mallas');
+      if(!integrity.hasSkinnedMesh||!integrity.hasSkeleton)faults.push('Rig incompleto');
+      if(!integrity.hasFinitePosition||!integrity.hasVisibleGeometry)faults.push('Geometría no visible o posición inválida');
+      if(!integrity.hasFiniteBounds||!integrity.plausibleBounds)faults.push('Escala o límites sospechosos');
+      if(animal.activeMode!=='distance-idle'&&animal.activeAnimation&&Number(animal.playingAnimationGroups)===0)faults.push('Animación activa sin reproducción');
+      if(Number(textures.pending)>0)faults.push('Texturas pendientes: '+textures.pending);
+      if(Number(textures.unknown)>0)faults.push('Disponibilidad de texturas desconocida');
+      if(!groups.length)faults.push('Sin clips de animación');
+      if(faults.length)flagged.push(animal.name||animal.kind||'Animal');
+      const card=document.createElement('article');card.className='wildlife-inspection-card'+(faults.length?' has-issues':'');
+      const head=document.createElement('div');head.className='wildlife-inspection-card-head';
+      const title=document.createElement('div'),species=document.createElement('strong'),actorName=document.createElement('small');
+      species.textContent=names[animal.kind]||animal.kind||'Animal desconocido';
+      actorName.textContent=animal.name||'Raíz sin nombre';title.append(species,actorName);
+      const status=document.createElement('span');status.className='wildlife-inspection-status '+(faults.length?'is-warning':'is-ok');
+      status.textContent=faults.length?'REVISAR':'SIN INCIDENCIAS OBSERVADAS';
+      head.append(title,status);card.appendChild(head);
+      const facts=document.createElement('div');facts.className='wildlife-inspection-facts';
+      line(facts,'Posición XYZ',animal.position?[animal.position.x,animal.position.y,animal.position.z].map(value=>Number(value).toFixed(2)).join(' · '):null);
+      line(facts,'Cuerpo 3D',animal.meshCount+' mallas · '+animal.visibleMeshCount+' visibles · '+animal.skinnedMeshCount+' riggeadas');
+      line(facts,'Vértices / índices',animal.totalVertices+' / '+animal.totalIndices);
+      line(facts,'Esqueleto',animal.skeletons?.map(item=>item.name+' ('+item.boneCount+' huesos)').join(', ')||'No detectado');
+      line(facts,'Animación',String(animal.activeMode||'sin modo')+' · '+String(animal.activeAnimation||'sin clip activo')+' · '+animal.playingAnimationGroups+'/'+groups.length+' reproduciéndose');
+      line(facts,'Texturas',textures.count===null||textures.count===undefined?'Sin inventario':textures.ready+'/'+textures.count+' listas · '+textures.pending+' pendientes · '+textures.unknown+' desconocidas');
+      line(facts,'Volumen XYZ',animal.bounds?.size?[animal.bounds.size.x,animal.bounds.size.y,animal.bounds.size.z].join(' × ')+' m':null);
+      card.appendChild(facts);
+      if(faults.length){
+        const list=document.createElement('ul');list.className='wildlife-inspection-faults';
+        for(const fault of faults){const item=document.createElement('li');item.textContent=fault;list.appendChild(item);}
+        card.appendChild(list);
+      }
+      const details=document.createElement('details');details.className='wildlife-inspection-details';
+      const detailSummary=document.createElement('summary');detailSummary.textContent='Ver inventario de mallas y clips';details.appendChild(detailSummary);
+      const body=document.createElement('div');body.className='wildlife-inspection-detail-body';
+      for(const group of groups)line(body,'Clip '+group.name,(group.playing?'REPRODUCIÉNDOSE':'detenido')+' · '+group.targetedAnimations+' pistas');
+      for(const mesh of animal.meshes||[])line(body,'Malla '+mesh.name,(mesh.vertices??'—')+' vértices · '+(mesh.skeleton||'sin esqueleto')+' · '+(mesh.material||'sin material')+(mesh.bounds?.size?' · '+mesh.bounds.size.x+'×'+mesh.bounds.size.y+'×'+mesh.bounds.size.z+' m':''));
+      for(const texture of textures.items||[])line(body,'Textura '+texture.name,(texture.ready===true?'lista':texture.ready===false?'pendiente':'estado desconocido')+(texture.size?' · '+texture.size.width+'×'+texture.size.height:''));
+      details.appendChild(body);card.appendChild(details);host.appendChild(card);
+    }
+    summary.textContent='Animales: '+animals.length+'/'+count+' · '+(flagged.length?'requieren revisión: '+[...new Set(flagged)].join(', '):'sin anomalías observadas en esta captura')+(inventory.truncated?' · inventario incompleto':'');
+  }
+
   function renderWorldInspection(snapshot) {
     const analysis = analyzeWorldInspectionSnapshot(snapshot);
     lastWorldInspection = snapshot;
     lastWorldInspectionAnalysis = analysis;
+    renderWildlifeInspection(snapshot);
     const scene = snapshot.scene || {};
     const islands = snapshot.islands || {};
     const structureAudit = snapshot.structures?.audit;
@@ -260,7 +330,7 @@ import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspecti
     $('worldInspectionDownload').disabled = false;
   }
 
-  function captureWorldInspection() {
+  async function captureWorldInspection() {
     try {
       const win = frame?.contentWindow;
       if (!win || win.location.origin !== window.location.origin) {
@@ -273,9 +343,11 @@ import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspecti
       $('worldInspectionStatus').textContent = 'Leyendo la escena Babylon.js…';
       const snapshot = win.getGameWorldInspectionSnapshot({ includeMeshes: true, maxMeshes: 2500, maxActors: 180 });
       renderWorldInspection(snapshot);
+      const screenshotSaved = await captureGameScreenshot();
       $('worldInspectionStatus').textContent =
         'Captura puntual completada · ' + new Date(snapshot.capturedAt).toLocaleTimeString('es-ES') +
-        ' · ' + snapshot.scene.meshCount + ' mallas inspeccionadas.';
+        ' · ' + snapshot.scene.meshCount + ' mallas inspeccionadas · ' +
+        (screenshotSaved ? 'fotograma guardado en la galería local.' : 'fotograma no disponible; el informe JSON sí se ha generado.');
     } catch (error) {
       $('worldInspectionStatus').textContent = String(error?.message || error);
     } finally {

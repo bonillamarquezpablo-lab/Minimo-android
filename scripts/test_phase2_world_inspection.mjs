@@ -142,4 +142,38 @@ const brokenWildlifeSnapshot = structuredClone(wildlifeSnapshot);
 brokenWildlifeSnapshot.actors.wildlife.returned[0].visualIntegrity.hasSkinnedMesh = false;
 assert.ok(analyzeWorldInspectionSnapshot(brokenWildlifeSnapshot).findings.some(item => item.code === 'wildlife-visual-rig-invalid'),
   'Wildlife capture must flag missing skinned geometry.');
+const wolfTextureReady={name:'wolf-albedo',isReady:()=>true,getSize:()=>({width:1024,height:1024})};
+const wolfTexturePending={name:'wolf-normal',isReady:()=>false,getSize:()=>({width:512,height:512})};
+const wolfSkeleton={name:'WolfRig',bones:Array.from({length:24},()=>({}))};
+const wolfMesh={...mesh,uniqueId:70,name:'WolfBody',id:'wolf-body',skeleton:wolfSkeleton,
+ material:{name:'WolfMaterial',getActiveTextures:()=>[wolfTextureReady,wolfTexturePending]},
+ getTotalVertices:()=>920,getTotalIndices:()=>1840,
+ getBoundingInfo:()=>({boundingBox:{minimumWorld:{x:1.1,y:.02,z:1.1},maximumWorld:{x:2.0,y:.88,z:2.4}}})};
+const wolfRoot={name:'Wolf_0',position:{x:1.5,y:.03,z:1.7},getChildMeshes:()=>[wolfMesh],isEnabled:()=>true};
+const wolfWalk={name:'Walk',isPlaying:false,targetedAnimations:[{}],from:0,to:1,speedRatio:.82};
+const wolfActor={kind:'wolf',root:wolfRoot,groups:[wolfWalk],activeAnimation:wolfWalk,activeMode:'walk',
+ homeIslandIndex:0,groundOffset:.03,heading:1.2,textureReadiness:{count:2,waitedMs:12}};
+const wildlifeCaptured=capture({
+ scene:{meshes:[mesh,wolfMesh],transformNodes:[wolfRoot],materials:[wolfMesh.material],
+  textures:[wolfTextureReady,wolfTexturePending],animationGroups:[wolfWalk],collisionsEnabled:false,
+  getActiveMeshes:()=>({length:2}),getTotalVertices:()=>944},
+ land:[],player:null,villages:[],enemies:[],campGuards:[],companions:[],ambientFauna:[wolfActor],
+ ambientPeople:[],ambientBirds:[],enemyShips:[],worldColliders:[],habitableStructureRegistry:[],lastHabitableStructureAudit:null
+});
+const inspectedWolf=wildlifeCaptured.actors.wildlife.returned[0];
+assert.equal(inspectedWolf.kind,'wolf');
+assert.equal(inspectedWolf.meshCount,1);
+assert.equal(inspectedWolf.skinnedMeshCount,1);
+assert.equal(inspectedWolf.skeletons[0].boneCount,24);
+assert.equal(inspectedWolf.activeAnimation,'Walk');
+assert.equal(inspectedWolf.playingAnimationGroups,0);
+assert.equal(inspectedWolf.textureReadiness.count,2);
+assert.equal(inspectedWolf.textureReadiness.ready,1);
+assert.equal(inspectedWolf.textureReadiness.pending,1);
+assert.equal(inspectedWolf.bounds.size.y,.86);
+assert.equal(inspectedWolf.visualIntegrity.plausibleBounds,true);
+assert.ok(inspectedWolf.meshes[0].bounds.finite);
+assert.ok(analyzeWorldInspectionSnapshot(wildlifeCaptured).findings.some(item=>item.code==='wildlife-animation-not-playing'));
+assert.ok(analyzeWorldInspectionSnapshot(wildlifeCaptured).findings.some(item=>item.code==='wildlife-textures-not-ready'));
+
 console.log('Phase 2 Babylon world inspection contracts: OK');

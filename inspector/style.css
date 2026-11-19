@@ -581,3 +581,31 @@ h1{font-size:clamp(27px,3.4vw,42px);line-height:1.02;margin:7px 0 6px;letter-spa
 .capture-vault-card-foot button{border:0;background:transparent;color:var(--muted);font-size:10px;cursor:pointer}
 .capture-vault-empty{padding:20px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:12px;text-align:center}
 @media(max-width:560px){.capture-vault{padding:13px}.capture-vault-head{align-items:flex-start;flex-direction:column}.capture-vault-head .primary{width:100%}.capture-vault-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Individual wildlife diagnostics from the Babylon scene capture. */
+.wildlife-inspection-panel{margin:16px 0;padding:18px;border:1px solid rgba(131,177,255,.22);border-radius:18px;background:linear-gradient(145deg,rgba(15,31,49,.86),rgba(8,18,30,.94))}
+.wildlife-inspection-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
+.wildlife-inspection-head h3{margin:4px 0;font-size:19px;letter-spacing:-.025em}
+.wildlife-inspection-head p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.wildlife-inspection-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px}
+.wildlife-inspection-empty{padding:18px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:12px;text-align:center}
+.wildlife-inspection-card{min-width:0;padding:14px;border:1px solid rgba(108,160,220,.22);border-radius:14px;background:rgba(4,12,22,.76)}
+.wildlife-inspection-card.has-issues{border-color:rgba(235,166,83,.5)}
+.wildlife-inspection-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.wildlife-inspection-card-head>div{display:grid;gap:3px;min-width:0}
+.wildlife-inspection-card-head strong{font-size:15px}
+.wildlife-inspection-card-head small{color:var(--muted);font-size:10px;overflow-wrap:anywhere}
+.wildlife-inspection-status{flex:0 0 auto;padding:5px 8px;border:1px solid var(--line);border-radius:999px;font-size:9px;font-weight:800;letter-spacing:.04em}
+.wildlife-inspection-status.is-ok{color:#9fe1b4;border-color:rgba(104,202,139,.35);background:rgba(70,150,99,.12)}
+.wildlife-inspection-status.is-warning{color:#f0c17d;border-color:rgba(235,166,83,.4);background:rgba(180,116,36,.12)}
+.wildlife-inspection-facts{display:grid;gap:6px}
+.wildlife-inspection-line{display:grid;grid-template-columns:minmax(90px,.8fr) minmax(0,1.2fr);gap:8px;padding:6px 0;border-bottom:1px solid rgba(120,150,185,.12);font-size:11px}
+.wildlife-inspection-key{color:var(--muted)}
+.wildlife-inspection-line strong{font-size:11px;font-weight:650;text-align:right;overflow-wrap:anywhere}
+.wildlife-inspection-faults{margin:10px 0 0;padding-left:18px;color:#f0c17d;font-size:11px;line-height:1.5}
+.wildlife-inspection-details{margin-top:10px;border-top:1px solid rgba(120,150,185,.16);padding-top:9px}
+.wildlife-inspection-details summary{cursor:pointer;color:#aac5e8;font-size:11px;font-weight:700}
+.wildlife-inspection-detail-body{margin-top:8px;max-height:260px;overflow:auto}
+.wildlife-inspection-detail-body .wildlife-inspection-line{grid-template-columns:minmax(100px,.9fr) minmax(0,1.1fr);font-size:10px}
+@media(max-width:560px){.wildlife-inspection-panel{padding:13px}.wildlife-inspection-head{display:grid}.wildlife-inspection-head .section-index{justify-self:start}.wildlife-inspection-grid{grid-template-columns:1fr}}

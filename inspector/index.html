@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#080d16">
 <meta name="description" content="Centro de inspección todo en uno de EL SIN NOMBRE: rendimiento, mundo 3D, aspecto, personajes y pruebas.">
 <title>Inspector Center · EL SIN NOMBRE</title>
-<link rel="stylesheet" href="style.css?v=phase1-live-4">
+<link rel="stylesheet" href="style.css?v=phase1-live-5">
 <link rel="stylesheet" href="unified-workbench.css?v=7">
 </head>
 <body>
@@ -223,6 +223,16 @@
             <div><strong>Calidad de datos</strong><ul id="worldInspectionQuality"><li>Esperando la primera captura.</li></ul></div>
           </div>
         </section>
+        <section class="wildlife-inspection-panel" aria-labelledby="wildlifeInspectionTitle">
+          <div class="wildlife-inspection-head">
+            <div><span class="section-kicker">INVENTARIO BIOLÓGICO</span><h3 id="wildlifeInspectionTitle">Fauna · revisión individual</h3>
+              <p id="wildlifeInspectionSummary">La captura comprobará cuerpo, esqueleto, texturas, escala y clips de animación de cada animal.</p></div>
+            <span class="section-index">DEER · STAG · WOLF</span>
+          </div>
+          <div id="wildlifeInspectionGrid" class="wildlife-inspection-grid">
+            <div class="wildlife-inspection-empty">Todavía no hay datos de fauna. Inicia el juego y pulsa «Capturar la escena».</div>
+          </div>
+        </section>
         <div class="live-diagnostic-actions"><button class="small-button" id="worldInspectionDownload" type="button" disabled>Descargar informe del mundo</button></div>
         <details class="technical"><summary>Ver inventario completo de Babylon.js</summary><pre id="worldInspectionJson">Sin captura todavía.</pre></details>
       </article>
@@ -372,7 +382,7 @@
   </aside>
 </div>
 <script src="app.js?v=20261113.11" defer></script>
-<script type="module" src="phase1-live.js?v=5"></script>
+<script type="module" src="phase1-live.js?v=6"></script>
 <script src="explorer-patrol.js?v=1" defer></script>
 <script src="../scripts/npc-agent-core.js" defer></script>
 <script src="../scripts/npc-agent-runtime.js" defer></script>

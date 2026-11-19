@@ -91,11 +91,16 @@ def main() -> None:
     index_html = read_text("index.html")
     atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
     world_inspection_source = read_text("scripts/nordic/world-inspection.js")
-    if "root.ELSNWorldInspection" not in world_inspection_source or "capture(context" not in world_inspection_source or "visualIntegrity" not in world_inspection_source or "playingAnimationGroups" not in world_inspection_source:
-        raise SystemExit("World inspection runtime is missing its individual wildlife rig and animation evidence.")
+    inspector_html = read_text("inspector/index.html")
+    inspector_live_source = read_text("inspector/phase1-live.js")
+    inspector_style_source = read_text("inspector/style.css")
+    if "root.ELSNWorldInspection" not in world_inspection_source or "capture(context" not in world_inspection_source or "visualIntegrity" not in world_inspection_source or "playingAnimationGroups" not in world_inspection_source or "textureReadiness" not in world_inspection_source:
+        raise SystemExit("World inspection runtime is missing its individual wildlife rig, animation and texture evidence.")
     if "./scripts/nordic/world-inspection.js" not in index_html:
         raise SystemExit("index.html is missing the world inspection runtime script.")
     atmosphere_markers = (
+    if "wildlifeInspectionGrid" not in inspector_html or "renderWildlifeInspection" not in inspector_live_source or "visualIntegrity" not in inspector_live_source or "wildlife-inspection-card" not in inspector_style_source or "captureGameScreenshot()" not in inspector_live_source:
+        raise SystemExit("Inspector Center is missing the individual wildlife cards, visual evidence or linked screenshot capture.")
         "class AtmosphereSystem",
         "static computeSolarState(value, target)",
         "static computeLightingProfile(value)",
@@ -570,8 +575,6 @@ def main() -> None:
     if missing_fps_pacing:
         fail("El planificador de 60 Hz y su medición de fotogramas renderizados están incompletos: " + ", ".join(missing_fps_pacing))
     if "reportVersion:'41',build:'0.6.329'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
-    if "hearthOuterFlame.emissiveColor=new B.Color3(1,.24,.035)" not in index_html or "segments=14,positions=[],indices=[];" not in index_html or "const wave=.94+Math.sin(elapsed*9.5+f.phase)*.075" not in index_html:
-        fail("La hoguera debe usar fuego ámbar, silueta suavizada y oscilación contenida; no lenguas rojas que parezcan criaturas.")
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",

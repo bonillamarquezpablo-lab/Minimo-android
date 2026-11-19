@@ -102,34 +102,52 @@ export function analyzeWorldInspectionSnapshot(snapshot) {
   const wildlife = snapshot.actors?.wildlife;
   const wildlifeActors = Array.isArray(wildlife?.returned) ? wildlife.returned : [];
   if (wildlife && finite(wildlife.count) && wildlife.count > 0) {
-    const malformed = wildlifeActors.filter(actor => actor && actor.visualIntegrity && (
+    const malformed = wildlifeActors.filter(actor => !actor || !actor.visualIntegrity ||
       actor.visualIntegrity.hasMeshes !== true || actor.visualIntegrity.hasSkinnedMesh !== true ||
       actor.visualIntegrity.hasSkeleton !== true || actor.visualIntegrity.hasFinitePosition !== true ||
-      actor.visualIntegrity.hasVisibleGeometry !== true
-    ));
+      actor.visualIntegrity.hasVisibleGeometry !== true || actor.visualIntegrity.hasFiniteBounds !== true ||
+      actor.visualIntegrity.plausibleBounds !== true);
     if (malformed.length) add('high', 'wildlife-visual-rig-invalid',
-      'Uno o varios animales tienen geometría, esqueleto, posición o visibilidad incompletos.',
-      { count: malformed.length, animals: malformed.slice(0, 30).map(actor => ({
-        name: actor.name, kind: actor.kind, position: actor.position, meshCount: actor.meshCount,
-        skinnedMeshCount: actor.skinnedMeshCount, skeletons: actor.skeletons, meshes: actor.meshes
+      'Uno o varios animales tienen geometría, esqueleto, límites, posición o visibilidad incompletos o fuera de escala.',
+      { count:malformed.length, animals:malformed.slice(0,30).map(actor=>({
+        name:actor&&actor.name,kind:actor&&actor.kind,position:actor&&actor.position,
+        meshCount:actor&&actor.meshCount,skinnedMeshCount:actor&&actor.skinnedMeshCount,
+        bounds:actor&&actor.bounds,visualIntegrity:actor&&actor.visualIntegrity,
+        skeletons:actor&&actor.skeletons,meshes:actor&&actor.meshes
       })) });
-    const animationFaults = wildlifeActors.filter(actor => actor && actor.activeMode !== 'distance-idle' &&
-      actor.activeAnimation && actor.playingAnimationGroups === 0);
-    if (animationFaults.length) add('high', 'wildlife-animation-not-playing',
+    const expectedSpecies = ['deer','stag','wolf'];
+    const loadedSpecies = new Set(wildlifeActors.map(actor=>actor&&actor.kind).filter(Boolean));
+    const missingSpecies = expectedSpecies.filter(kind=>!loadedSpecies.has(kind));
+    if (missingSpecies.length) add('high','wildlife-species-missing',
+      'La captura no contiene todas las especies obligatorias de la isla inicial.',
+      {missingSpecies,loadedSpecies:Array.from(loadedSpecies),requested:wildlife.count});
+    const animationFaults = wildlifeActors.filter(actor=>actor&&actor.activeMode!=='distance-idle'&&
+      actor.activeAnimation&&actor.playingAnimationGroups===0);
+    if (animationFaults.length) add('high','wildlife-animation-not-playing',
       'Hay animales con un modo de animación activo pero sin ningún AnimationGroup reproduciéndose.',
-      { count: animationFaults.length, animals: animationFaults.slice(0, 30).map(actor => ({
-        name: actor.name, kind: actor.kind, activeMode: actor.activeMode, activeAnimation: actor.activeAnimation,
-        animationGroups: actor.animationGroups
-      })) });
-    const pendingAnimalTextures = wildlifeActors.filter(actor => actor?.textureReadiness?.pending > 0);
-    if (pendingAnimalTextures.length) add('medium', 'wildlife-textures-pending',
-      'Hay animales con texturas pendientes en el instante de la captura.',
-      { count: pendingAnimalTextures.length, animals: pendingAnimalTextures.slice(0, 30).map(actor => ({
-        name: actor.name, kind: actor.kind, textureReadiness: actor.textureReadiness
-      })) });
-    if (wildlife.truncated > 0) add('info', 'wildlife-inventory-truncated',
+      {count:animationFaults.length,animals:animationFaults.slice(0,30).map(actor=>({
+        name:actor.name,kind:actor.kind,activeMode:actor.activeMode,activeAnimation:actor.activeAnimation,
+        animationGroups:actor.animationGroups
+      }))});
+    const invalidAnimationRoster = wildlifeActors.filter(actor=>!actor||!Array.isArray(actor.animationGroups)||
+      actor.animationGroups.length===0||actor.animationGroups.every(group=>!group||!(group.targetedAnimations>0)));
+    if (invalidAnimationRoster.length) add('high','wildlife-animation-clips-missing',
+      'Uno o varios animales no exponen clips de animación dirigidos a su esqueleto.',
+      {count:invalidAnimationRoster.length,animals:invalidAnimationRoster.slice(0,30).map(actor=>({
+        name:actor&&actor.name,kind:actor&&actor.kind,animationGroups:actor&&actor.animationGroups
+      }))});
+    const pendingAnimalTextures = wildlifeActors.filter(actor=>actor&&
+      (actor.textureReadiness?.pending>0||actor.textureReadiness?.unknown>0));
+    if (pendingAnimalTextures.length) add('medium','wildlife-textures-not-ready',
+      'Hay animales con texturas pendientes o con disponibilidad no verificable en el instante de la captura.',
+      {count:pendingAnimalTextures.length,animals:pendingAnimalTextures.slice(0,30).map(actor=>({
+        name:actor.name,kind:actor.kind,textureReadiness:actor.textureReadiness
+      }))});
+    if (wildlife.truncated>0) add('info','wildlife-inventory-truncated',
       'El inventario individual de fauna está limitado y no contiene todos los animales.',
-      { returned: wildlifeActors.length, total: wildlife.count, truncated: wildlife.truncated });
+      {returned:wildlifeActors.length,total:wildlife.count,truncated:wildlife.truncated});
+  } else if (snapshot.actors && snapshot.actors.wildlife) {
+    add('high','wildlife-inventory-empty','El inventario del mundo no contiene ningún animal cargado.');
   }
   const pendingTextures = snapshot.textures?.pendingCount;
   if (finite(pendingTextures) && pendingTextures > 0) {

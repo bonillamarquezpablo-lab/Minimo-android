@@ -59,53 +59,96 @@
       playing: !!(group && group.isPlaying),
       targetedAnimations: Array.isArray(group && group.targetedAnimations) ? group.targetedAnimations.length : 0,
       from: finite(group && group.from) ? round(group.from, 3) : null,
-      to: finite(group && group.to) ? round(group.to, 3) : null
+      to: finite(group && group.to) ? round(group.to, 3) : null,
+      speedRatio: finite(group && group.speedRatio) ? round(group.speedRatio, 3) : null
     }));
+    const meshBounds = childMeshes.map(mesh => ({ mesh, bounds: readBounds(mesh) }));
+    const validBounds = meshBounds.map(row => row.bounds).filter(bounds => bounds && bounds.finite === true && bounds.min && bounds.max);
+    let aggregateBounds = null;
+    if (validBounds.length) {
+      const min = { x:Math.min(...validBounds.map(row=>row.min.x)), y:Math.min(...validBounds.map(row=>row.min.y)), z:Math.min(...validBounds.map(row=>row.min.z)) };
+      const max = { x:Math.max(...validBounds.map(row=>row.max.x)), y:Math.max(...validBounds.map(row=>row.max.y)), z:Math.max(...validBounds.map(row=>row.max.z)) };
+      aggregateBounds = { min:{x:round(min.x),y:round(min.y),z:round(min.z)}, max:{x:round(max.x),y:round(max.y),z:round(max.z)},
+        size:{x:round(max.x-min.x),y:round(max.y-min.y),z:round(max.z-min.z)}, measuredMeshes:validBounds.length };
+    }
+    const liveTextures = new Set();
+    if (isWildlife) for (const mesh of childMeshes) {
+      const materials = Array.isArray(mesh && mesh.material) ? mesh.material : [mesh && mesh.material];
+      for (const material of materials) {
+        const active = safeCall(() => material && typeof material.getActiveTextures === 'function' ? material.getActiveTextures() : [], []);
+        for (const texture of Array.isArray(active) ? active : []) if (texture) liveTextures.add(texture);
+      }
+    }
+    const textureRows = Array.from(liveTextures).map(texture => ({
+      name:String(texture && (texture.name || texture.url) || 'unnamed-texture'),
+      ready:safeCall(() => typeof texture.isReady === 'function' ? texture.isReady() : null, null),
+      size:safeCall(() => { const size=typeof texture.getSize==='function'?texture.getSize():null; return size?{width:finite(size.width)?size.width:null,height:finite(size.height)?size.height:null}:null; }, null)
+    }));
+    const stored = isWildlife && actor.textureReadiness && typeof actor.textureReadiness === 'object' ? actor.textureReadiness : {};
+    const readyCount = textureRows.filter(row=>row.ready===true).length;
+    const pendingCount = textureRows.filter(row=>row.ready===false).length;
+    const unknownCount = textureRows.filter(row=>row.ready===null).length;
+    const hasLiveTextures = textureRows.length > 0;
+    const textureReadiness = isWildlife ? {
+      count:hasLiveTextures?textureRows.length:(finite(stored.count)?stored.count:0),
+      ready:hasLiveTextures?readyCount:(finite(stored.count)?stored.count:(finite(stored.ready)?stored.ready:null)),
+      pending:hasLiveTextures?pendingCount:(finite(stored.count)?0:(finite(stored.pending)?stored.pending:null)),
+      unknown:hasLiveTextures?unknownCount:0,
+      waitedMs:finite(stored.waitedMs)?round(stored.waitedMs,1):null,
+      complete:hasLiveTextures?pendingCount===0&&unknownCount===0:(finite(stored.count)?true:null),
+      items:textureRows.slice(0,80)
+    } : null;
+    const activeAnimation = isWildlife && actor.activeAnimation
+      ? String(actor.activeAnimation.name || actor.activeAnimation.id || actor.activeAnimation) : null;
+    const visibleMeshes = childMeshes.filter(mesh=>mesh&&mesh.isVisible!==false&&(!mesh.isEnabled||mesh.isEnabled()));
+    const skinnedMeshes = childMeshes.filter(mesh=>mesh&&mesh.skeleton);
+    const totalBoneCount = skeletons.reduce((sum,skeleton)=>sum+(Array.isArray(skeleton.bones)?skeleton.bones.length:0),0);
+    const size = aggregateBounds && aggregateBounds.size;
+    const maxExtent = size ? Math.max(size.x,size.y,size.z) : null;
     const result = {
-      role, name: String(candidate.name || actor.name || role), position,
-      alive: actor.alive === undefined ? null : actor.alive === true,
-      faction: actor.faction == null ? null : String(actor.faction),
-      recruited: actor.recruited === true,
-      enabled: safeCall(() => candidate.isEnabled ? candidate.isEnabled() : candidate.isVisible !== false, null),
-      finitePosition: !!position && finite(position.x) && finite(position.y) && finite(position.z)
+      role, name:String(candidate.name||actor.name||role), position,
+      alive:actor.alive===undefined?null:actor.alive===true,
+      faction:actor.faction==null?null:String(actor.faction),
+      recruited:actor.recruited===true,
+      enabled:safeCall(()=>typeof candidate.isEnabled==='function'?candidate.isEnabled():candidate.isVisible!==false,null),
+      finitePosition:!!position&&finite(position.x)&&finite(position.y)&&finite(position.z)
     };
     if (isWildlife) {
-      const readiness = actor.textureReadiness || {};
-      result.kind = actor.kind == null ? null : String(actor.kind);
-      result.activeMode = actor.activeMode == null ? null : String(actor.activeMode);
-      result.activeAnimation = actor.activeAnimation == null ? null : String(actor.activeAnimation);
-      result.meshCount = childMeshes.length;
-      result.visibleMeshCount = childMeshes.filter(mesh => mesh && mesh.isVisible !== false && (!mesh.isEnabled || mesh.isEnabled())).length;
-      result.skinnedMeshCount = childMeshes.filter(mesh => mesh && mesh.skeleton).length;
-      result.skeletons = skeletons.map(skeleton => ({
-        name: String(skeleton.name || 'unnamed-skeleton'),
-        boneCount: Array.isArray(skeleton.bones) ? skeleton.bones.length : null
-      }));
-      result.animationGroups = groupRows;
-      result.playingAnimationGroups = groupRows.filter(group => group.playing).length;
-      result.textureReadiness = {
-        count: finite(readiness.count) ? readiness.count : null,
-        ready: finite(readiness.ready) ? readiness.ready : null,
-        pending: finite(readiness.pending) ? readiness.pending : null,
-        waitedMs: finite(readiness.waitedMs) ? round(readiness.waitedMs, 1) : null
+      result.kind=actor.kind==null?null:String(actor.kind);
+      result.activeMode=actor.activeMode==null?null:String(actor.activeMode);
+      result.activeAnimation=activeAnimation;
+      result.meshCount=childMeshes.length;
+      result.visibleMeshCount=visibleMeshes.length;
+      result.skinnedMeshCount=skinnedMeshes.length;
+      result.totalVertices=childMeshes.reduce((sum,mesh)=>sum+(safeCall(()=>mesh.getTotalVertices&&mesh.getTotalVertices(),0)||0),0);
+      result.totalIndices=childMeshes.reduce((sum,mesh)=>sum+(safeCall(()=>mesh.getTotalIndices&&mesh.getTotalIndices(),0)||0),0);
+      result.bounds=aggregateBounds;
+      result.maxExtentMeters=finite(maxExtent)?round(maxExtent,3):null;
+      result.skeletons=skeletons.map(skeleton=>({name:String(skeleton.name||'unnamed-skeleton'),boneCount:Array.isArray(skeleton.bones)?skeleton.bones.length:null}));
+      result.totalBones=totalBoneCount;
+      result.animationGroups=groupRows;
+      result.animationGroupCount=groupRows.length;
+      result.playingAnimationGroups=groupRows.filter(group=>group.playing).length;
+      result.textureReadiness=textureReadiness;
+      result.groundOffset=finite(actor.groundOffset)?round(actor.groundOffset,3):null;
+      result.heading=finite(actor.heading)?round(actor.heading,3):null;
+      result.homeIslandIndex=finite(actor.homeIslandIndex)?actor.homeIslandIndex:null;
+      result.visualIntegrity={
+        hasMeshes:childMeshes.length>0,hasSkinnedMesh:skinnedMeshes.length>0,
+        hasSkeleton:skeletons.length>0&&totalBoneCount>=12,
+        hasFinitePosition:!!position&&[position.x,position.y,position.z].every(finite),
+        hasVisibleGeometry:visibleMeshes.length>0,hasFiniteBounds:!!aggregateBounds,
+        plausibleBounds:!!size&&size.y>=.2&&maxExtent<=8
       };
-      result.groundOffset = finite(actor.groundOffset) ? round(actor.groundOffset, 3) : null;
-      result.heading = finite(actor.heading) ? round(actor.heading, 3) : null;
-      result.homeIslandIndex = finite(actor.homeIslandIndex) ? actor.homeIslandIndex : null;
-      result.visualIntegrity = {
-        hasMeshes: childMeshes.length > 0,
-        hasSkinnedMesh: childMeshes.some(mesh => !!mesh.skeleton),
-        hasSkeleton: skeletons.length > 0,
-        hasFinitePosition: !!position && [position.x, position.y, position.z].every(finite),
-        hasVisibleGeometry: childMeshes.some(mesh => mesh && mesh.isVisible !== false && (!mesh.isEnabled || mesh.isEnabled()))
-      };
-      result.meshes = childMeshes.slice(0, 80).map(mesh => ({
-        name: String(mesh.name || mesh.id || 'unnamed-mesh'),
-        enabled: safeCall(() => mesh.isEnabled ? mesh.isEnabled() : mesh.isVisible !== false, null),
-        visible: mesh.isVisible !== false,
-        vertices: safeCall(() => mesh.getTotalVertices && mesh.getTotalVertices(), null),
-        skeleton: mesh.skeleton ? String(mesh.skeleton.name || 'unnamed-skeleton') : null,
-        material: mesh.material ? String(mesh.material.name || 'unnamed-material') : null
+      result.meshes=meshBounds.slice(0,80).map(({mesh,bounds})=>({
+        name:String(mesh.name||mesh.id||'unnamed-mesh'),
+        enabled:safeCall(()=>typeof mesh.isEnabled==='function'?mesh.isEnabled():mesh.isVisible!==false,null),
+        visible:mesh.isVisible!==false,worldPosition:readPosition(mesh),
+        bounds:bounds&&bounds.finite?bounds:null,
+        vertices:safeCall(()=>mesh.getTotalVertices&&mesh.getTotalVertices(),null),
+        indices:safeCall(()=>mesh.getTotalIndices&&mesh.getTotalIndices(),null),
+        skeleton:mesh.skeleton?String(mesh.skeleton.name||'unnamed-skeleton'):null,
+        material:mesh.material?String(mesh.material.name||'unnamed-material'):null
       }));
     }
     return result;
