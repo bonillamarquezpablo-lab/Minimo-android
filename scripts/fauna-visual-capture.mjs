@@ -268,10 +268,12 @@ async function main() {
     }
     const landAnimals=manifest.fauna.filter(animal=>animal.role!=='ambient-bird');
     const birds=manifest.fauna.filter(animal=>animal.role==='ambient-bird');
-    const expected=Number(initial.expectedWildlifeCount||manifest.readiness?.requested||landAnimals.length);
-    const loaded=Number(manifest.readiness?.loaded??landAnimals.length);
-    if(expected!==loaded||loaded!==landAnimals.length)manifest.warnings.push({
-      code:'fauna-count-mismatch',requested:expected,loaded,sceneActors:landAnimals.length
+    const expected=Number(manifest.readiness?.requested||initial.expectedWildlifeCount||landAnimals.length);
+    const readinessLoaded=Number(manifest.readiness?.loaded);
+    const loaded=manifest.startup.worldReady&&Number.isFinite(readinessLoaded)?readinessLoaded:landAnimals.length;
+    if(expected!==landAnimals.length||(manifest.startup.worldReady&&expected!==loaded))manifest.warnings.push({
+      code:'fauna-count-mismatch',requested:expected,loaded,sceneActors:landAnimals.length,
+      source:manifest.startup.worldReady?'startup-resource-gate':'live-scene-inventory'
     });
     const expectedBirds=Number(initial.expectedBirdCount||birds.length);
     if(expectedBirds!==birds.length)manifest.warnings.push({
@@ -292,7 +294,10 @@ async function main() {
         code:'weak-skinning-or-rig',animal:animal.id,skinnedVertices:animal.skinnedVertices,boneCount:animal.boneCount
       });
       if(!animal.animationGroups.length)manifest.warnings.push({code:animal.role==='ambient-bird'?'gull-animation-group-missing':'no-linked-animation-groups',animal:animal.id});
-      if(!animal.textures.length||animal.textures.some(texture=>texture.ready===false||texture.ready===null))manifest.warnings.push({
+      if(!animal.materials.length)manifest.warnings.push({
+        code:'missing-materials',animal:animal.id,meshNames:animal.meshNames
+      });
+      if(animal.textures.some(texture=>texture.ready===false||texture.ready===null))manifest.warnings.push({
         code:'texture-readiness-review',animal:animal.id,textures:animal.textures
       });
     }
