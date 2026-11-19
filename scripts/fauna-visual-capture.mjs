@@ -36,7 +36,7 @@ async function main() {
       '--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--enable-webgl2',
       '--ignore-gpu-blocklist','--disable-dev-shm-usage','--force-color-profile=srgb'
     ]});
-    const context=await browser.newContext({viewport:VIEWPORT,deviceScaleFactor:1,ignoreHTTPSErrors:true});
+    const context=await browser.newContext({viewport:VIEWPORT,deviceScaleFactor:1,ignoreHTTPSErrors:true,hasTouch:true});
     const page=await context.newPage();
     page.setDefaultTimeout(60000);
     page.setDefaultNavigationTimeout(90000);
