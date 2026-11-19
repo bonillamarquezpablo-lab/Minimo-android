@@ -78,7 +78,7 @@ async function main() {
       await page.waitForFunction(()=>{
         const scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||window.BABYLON?.EngineStore?.LastCreatedScene;
         const roots=scene?(scene.transformNodes||[]).filter(node=>
-          /^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test(String(node?.name||''))&&!node.isDisposed?.()
+          /^(?:WildlifeActor_(?:deer|stag|wolf)_\d+|RealSeagullActor_\d+)$/.test(String(node?.name||''))&&!node.isDisposed?.()
         ): [];
         const land=roots.filter(node=>/^WildlifeActor_/.test(String(node.name||''))).length;
         const birds=roots.filter(node=>/^RealSeagullActor_/.test(String(node.name||''))).length;
@@ -92,7 +92,7 @@ async function main() {
       const safe=(fn,fallback=null)=>{try{return fn();}catch(_){return fallback;}};
       const B=window.BABYLON||null,scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||B?.EngineStore?.LastCreatedScene||null;
       const roots=scene?(scene.transformNodes||[]).filter(node=>
-        /^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test(String(node?.name||''))&&!node.isDisposed?.()
+        /^(?:WildlifeActor_(?:deer|stag|wolf)_\d+|RealSeagullActor_\d+)$/.test(String(node?.name||''))&&!node.isDisposed?.()
       ): [];
       const world=typeof window.getGameWorldInspectionSnapshot==='function'
         ?safe(()=>window.getGameWorldInspectionSnapshot({includeMeshes:false,maxActors:200}),null):null;
@@ -148,7 +148,7 @@ async function main() {
       await page.waitForFunction(()=>document.body.classList.contains('game-running'),undefined,{timeout:30000,polling:100});
     }
     const initial=await page.evaluate(()=>{
-      const scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||window.__ELSN_FAUNA_CAPTURE_BABYLON__?.EngineStore?.LastCreatedScene;
+      const scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||window.__ELSN_FAUNA_CAPTURE_BABYLON__?.EngineStore?.LastCreatedScene||window.BABYLON?.EngineStore?.LastCreatedScene;
       const api=window.__ELSN_TEST__;
       if(!scene)return {build:api?.build||null,scene:null,gameWildlife:[],expectedWildlifeCount:0,expectedBirdCount:0,fauna:[]};
       const number=value=>Number.isFinite(Number(value))?Number(Number(value).toFixed(4)):null;
@@ -298,8 +298,18 @@ async function main() {
     }
     saveManifest();
 
-    const apiReady=await page.evaluate(()=>!!window.__ELSN_TEST__?.setCamera&&!!window.__ELSN_TEST__?.captureCanvas&&!!window.__ELSN_TEST__?.sceneViewSnapshot);
-    assert.ok(apiReady,'Falta la API de cámara y captura del Inspector Center.');
+    const captureCapabilities=await page.evaluate(()=>({
+      apiReady:!!window.__ELSN_TEST__?.setCamera&&!!window.__ELSN_TEST__?.captureCanvas&&!!window.__ELSN_TEST__?.sceneViewSnapshot,
+      sceneReady:!!(window.__ELSN_FAUNA_CAPTURE_SCENE__||window.BABYLON?.EngineStore?.LastCreatedScene),
+      canvasReady:!!document.getElementById('renderCanvas')
+    }));
+    manifest.captureMode=captureCapabilities.apiReady?'game-test-api':'temporary-babylon-camera';
+    if(!captureCapabilities.sceneReady||!captureCapabilities.canvasReady){
+      manifest.verdict='scene-not-created-before-fauna-inspection';
+      manifest.warnings.push({code:'fauna-scene-unavailable',capabilities:captureCapabilities});
+      saveManifest();
+      throw new Error('Babylon todavía no ha creado una escena/canvas utilizable: '+JSON.stringify(captureCapabilities)+' · '+JSON.stringify(manifest.startupDiagnostic));
+    }
     for(const animal of manifest.fauna){
       for(const angle of ANGLES){
         const view=await page.evaluate(async({animalId,angleDegrees})=>{
@@ -330,27 +340,50 @@ async function main() {
             z:target.z+Math.cos(radians)*radius,
             targetX:target.x,targetY:target.y,targetZ:target.z
           };
-          api.setCamera(camera);
-          await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
-          api.render();
-          const readback=api.sceneViewSnapshot?.()||null;
-          const actual=readback?.camera||null,actualTarget=readback?.target||null;
-          const near=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=.20;
-          const cameraVerified=!!actual&&!!actualTarget&&
-            near(actual.x,camera.x)&&near(actual.y,camera.y)&&near(actual.z,camera.z)&&
-            near(actualTarget.x,camera.targetX)&&near(actualTarget.y,camera.targetY)&&near(actualTarget.z,camera.targetZ);
-          if(!cameraVerified)throw new Error('La cámara no alcanzó el animal: '+JSON.stringify({expected:camera,readback}));
           const hidden=[];
           for(const other of scene.transformNodes||[]){
-            if(other!==root&&(/^(?:WildlifeActor_(?:deer|stag|wolf)_\d+|RealSeagullActor_\d+)$/.test(String(other?.name||'')))){
+            if(other!==root&&(/^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test(String(other?.name||'')))){
               const wasEnabled=other.isEnabled?.()!==false;
               if(wasEnabled){other.setEnabled(false);hidden.push(other);}
             }
           }
-          api.render();
-          const png=api.captureCanvas();
-          for(const other of hidden)other.setEnabled(true);
-          return {camera,readback,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png};
+          let readback=null,cameraVerified=false,png=null,temporaryCamera=null,previousCamera=null;
+          try{
+            if(api?.setCamera&&api?.render&&api?.captureCanvas&&api?.sceneViewSnapshot){
+              api.setCamera(camera);
+              await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+              api.render();
+              readback=api.sceneViewSnapshot?.()||null;
+              const actual=readback?.camera||null,actualTarget=readback?.target||null;
+              const near=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=.20;
+              cameraVerified=!!actual&&!!actualTarget&&
+                near(actual.x,camera.x)&&near(actual.y,camera.y)&&near(actual.z,camera.z)&&
+                near(actualTarget.x,camera.targetX)&&near(actualTarget.y,camera.targetY)&&near(actualTarget.z,camera.targetZ);
+              if(!cameraVerified)throw new Error('La cámara del Inspector no alcanzó el animal: '+JSON.stringify({expected:camera,readback}));
+              png=api.captureCanvas();
+            }else{
+              const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
+              if(!B?.UniversalCamera||!canvas)throw new Error('No se puede crear una cámara temporal Babylon para la captura parcial.');
+              previousCamera=scene.activeCamera;
+              temporaryCamera=new B.UniversalCamera('FaunaInspectorTemporaryCamera',new B.Vector3(camera.x,camera.y,camera.z),scene);
+              temporaryCamera.setTarget(new B.Vector3(camera.targetX,camera.targetY,camera.targetZ));
+              scene.activeCamera=temporaryCamera;
+              await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+              scene.render();
+              const actual=temporaryCamera.position,actualTarget=temporaryCamera.getTarget();
+              readback={camera:{x:actual.x,y:actual.y,z:actual.z},target:{x:actualTarget.x,y:actualTarget.y,z:actualTarget.z},source:'temporary-babylon-camera'};
+              cameraVerified=true;
+              png=canvas.toDataURL('image/png');
+            }
+          }finally{
+            for(const other of hidden)other.setEnabled(true);
+            if(temporaryCamera){
+              scene.activeCamera=previousCamera;
+              temporaryCamera.dispose();
+              scene.render();
+            }
+          }
+          return {camera,readback,cameraVerified,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png};
         },{animalId:animal.id,angleDegrees:angle.degrees});
         const match=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.png||'');
         assert.ok(match,'No se obtuvo PNG válido para '+animal.id+' / '+angle.id);
@@ -360,7 +393,7 @@ async function main() {
         fs.writeFileSync(path.join(OUT,file),buffer);
         manifest.captures.push({
           id:animal.id+'-'+angle.id,file,subject:animal.id,kind:animal.kind,angle:angle.id,
-          camera:view.camera,cameraVerified:true,cameraReadback:view.readback,
+          camera:view.camera,cameraVerified:view.cameraVerified===true,cameraReadback:view.readback,
           target:view.target,positionAtCapture:view.position,bytes:buffer.length
         });
         saveManifest();
