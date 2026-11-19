@@ -99,8 +99,6 @@ def main() -> None:
     if "./scripts/nordic/world-inspection.js" not in index_html:
         raise SystemExit("index.html is missing the world inspection runtime script.")
     atmosphere_markers = (
-    if "wildlifeInspectionGrid" not in inspector_html or "renderWildlifeInspection" not in inspector_live_source or "visualIntegrity" not in inspector_live_source or "wildlife-inspection-card" not in inspector_style_source or "captureGameScreenshot()" not in inspector_live_source:
-        raise SystemExit("Inspector Center is missing the individual wildlife cards, visual evidence or linked screenshot capture.")
         "class AtmosphereSystem",
         "static computeSolarState(value, target)",
         "static computeLightingProfile(value)",
@@ -118,6 +116,8 @@ def main() -> None:
         "this.quality === 'high' && !this.isTouchDevice",
         "this.quality === 'low' || this.isTouchDevice",
     )
+    if "wildlifeInspectionGrid" not in inspector_html or "renderWildlifeInspection" not in inspector_live_source or "visualIntegrity" not in inspector_live_source or "wildlife-inspection-card" not in inspector_style_source or "captureGameScreenshot()" not in inspector_live_source:
+        raise SystemExit("Inspector Center is missing the individual wildlife cards, visual evidence or linked screenshot capture.")
     missing_atmosphere_markers = [marker for marker in atmosphere_markers if marker not in atmosphere_source]
     if missing_atmosphere_markers:
         fail("El sistema atmosférico unificado está incompleto: " + ", ".join(missing_atmosphere_markers))
