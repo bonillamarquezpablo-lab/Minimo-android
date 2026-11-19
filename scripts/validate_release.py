@@ -346,7 +346,7 @@ def main() -> None:
         "flightRig={actor,visualRoot,bodyAxis",
         "alignAxis=(from,to)",
         "visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))",
-        "const groups=inst.animationGroups||[];const nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null;",
+        "const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;",
         "rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip",
         "nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);",
         "b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)",
