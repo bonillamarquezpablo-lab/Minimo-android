@@ -237,15 +237,15 @@ def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:
     for mesh in document.get("meshes") or []:
         for primitive in mesh.get("primitives") or []:
             attributes = primitive.get("attributes") or {}
-            if "JOINTS_0" not in attributes or "WEIGHTS_0" not in attributes or "COLOR_0" in attributes:
+            if "JOINTS_0" not in attributes or "WEIGHTS_0" not in attributes:
                 continue
+            positions = _read_glb_position_accessor(document, binary, int(attributes["POSITION"]))
             material_index = primitive.get("material")
             materials = document.get("materials") or []
             material_name = str(materials[material_index].get("name") or "") if material_index is not None and material_index < len(materials) else ""
             lowered_name = material_name.lower()
             if any(token in lowered_name for token in ("eye", "nose", "black")):
                 continue
-            positions = _read_glb_position_accessor(document, binary, int(attributes["POSITION"]))
             primitives.append((primitive, positions))
             for position in positions:
                 for axis in range(3):
@@ -266,7 +266,7 @@ def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:
             broad_pattern = math.sin(y_norm * 41.0 + math.sin(x_norm * 17.0 + z_norm * 5.0) * 1.7) * math.cos(z_norm * 19.0 - x_norm * 11.0)
             fine_pattern = math.sin(y_norm * 103.0 + x_norm * 57.0 + z_norm * 71.0)
             mottling = 0.045 * broad_pattern + 0.018 * fine_pattern
-            lower_flank = 1.0 - z_norm
+            lower_flank = 1.0 - y_norm
             if species == "wolf":
                 coat = 0.88 + 0.18 * lower_flank + mottling
                 red = coat * (1.02 + 0.025 * broad_pattern)
@@ -312,6 +312,25 @@ def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:
                 pbr["baseColorFactor"] = [0.255, 0.265, 0.255, 1.0]
             elif material.get("name") == "Main_Light":
                 pbr["baseColorFactor"] = [0.42, 0.43, 0.40, 1.0]
+    total_skinned_vertices = sum(
+        int(document["accessors"][primitive["attributes"]["POSITION"]].get("count") or 0)
+        for mesh in (document.get("meshes") or [])
+        for primitive in (mesh.get("primitives") or [])
+        if "JOINTS_0" in (primitive.get("attributes") or []) and "WEIGHTS_0" in (primitive.get("attributes") or [])
+    )
+    coverage = added_vertices / max(1, total_skinned_vertices)
+    if coverage < 0.90:
+        raise RuntimeError(
+            f"{label}: generated coat colors cover only {coverage:.1%} of skinned vertices "
+            f"({added_vertices}/{total_skinned_vertices}); minimum is 90%."
+        )
+    document.setdefault("extras", {})["elsnAnimalCoat"] = {
+        "algorithm": "procedural-vertex-coat-v2",
+        "species": species,
+        "vertices": added_vertices,
+        "skinnedVertices": total_skinned_vertices,
+        "coverage": round(coverage, 5),
+    }
     _write_glb_payload(path, document, binary, chunks)
     return added_vertices
 
@@ -361,29 +380,34 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
         raise RuntimeError(f"{label}: animal GLB is missing required locomotion clips {missing_clips}; found {animation_names}")
     if not materials or any(not (mesh.get("primitives") or []) for mesh in meshes):
         raise RuntimeError(f"{label}: one or more animal meshes/materials are missing")
-    skinned_vertex_count = 0
-    colored_skinned_vertex_count = 0
+    coat = ((document.get("extras") or {}).get("elsnAnimalCoat") or {})
+    if coat.get("algorithm") != "procedural-vertex-coat-v2" or coat.get("species") != path.stem.lower():
+        raise RuntimeError(f"{label}: generated species-specific coat colors are missing")
+    skinned_vertex_count = sum(
+        int(document["accessors"][primitive["attributes"]["POSITION"]].get("count") or 0)
+        for mesh in meshes
+        for primitive in (mesh.get("primitives") or [])
+        if "JOINTS_0" in (primitive.get("attributes") or {}) and "WEIGHTS_0" in (primitive.get("attributes") or {})
+    )
+    generated_vertices = int(coat.get("vertices") or 0)
+    generated_skinned_vertices = int(coat.get("skinnedVertices") or 0)
+    coverage = generated_vertices / max(1, skinned_vertex_count)
+    if generated_skinned_vertices != skinned_vertex_count or coverage < 0.90:
+        raise RuntimeError(
+            f"{label}: generated coat coverage is incomplete "
+            f"({generated_vertices}/{skinned_vertex_count} skinned vertices; {coverage:.1%}, expected >=90%)"
+        )
     for mesh in meshes:
         for primitive in mesh.get("primitives") or []:
             attributes = primitive.get("attributes") or {}
             if "JOINTS_0" not in attributes or "WEIGHTS_0" not in attributes:
                 continue
-            position_accessor = document["accessors"][attributes["POSITION"]]
-            vertex_count = int(position_accessor.get("count") or 0)
-            skinned_vertex_count += vertex_count
             if "COLOR_0" not in attributes:
-                continue
+                raise RuntimeError(f"{label}: a skinned primitive has no COLOR_0 stream after coat generation")
             color_accessor = document["accessors"][attributes["COLOR_0"]]
+            vertex_count = int(document["accessors"][attributes["POSITION"]].get("count") or 0)
             if color_accessor.get("type") not in ("VEC3", "VEC4") or int(color_accessor.get("count") or 0) != vertex_count:
                 raise RuntimeError(f"{label}: malformed vertex-color stream on a skinned animal primitive")
-            if color_accessor.get("componentType") not in (5121, 5123, 5126):
-                raise RuntimeError(f"{label}: unsupported vertex-color component type")
-            colored_skinned_vertex_count += vertex_count
-    if skinned_vertex_count < 600 or colored_skinned_vertex_count / max(1, skinned_vertex_count) < 0.95:
-        raise RuntimeError(
-            f"{label}: animal appearance is incomplete; vertex colors must cover at least 95% "
-            f"of skinned vertices (colored={colored_skinned_vertex_count}, total={skinned_vertex_count})"
-        )
     return document
 
 
