@@ -17,6 +17,16 @@
       "name": "Texturas, carga y preparación de cámara",
       "script": "scripts/texture-readiness-smoke.mjs",
       "startedAt": "2026-11-19T20:13:05.750Z",
+      "status": "passed",
+      "durationMs": 100199,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-19T20:14:45.949Z"
+    },
+    {
+      "name": "Cimentación, estructuras y simulación de reparación en entorno desechable",
+      "script": "scripts/coastal-structure-grounding-smoke.mjs",
+      "startedAt": "2026-11-19T20:14:45.950Z",
       "status": "running",
       "durationMs": null,
       "exitCode": null,
