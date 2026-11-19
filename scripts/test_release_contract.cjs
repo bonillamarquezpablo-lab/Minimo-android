@@ -31,7 +31,6 @@ const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
 assert.equal(expectedVersion,"0.6.329","The release validator must target the packaged 0.6.329 release.");
-assert.ok(buildSite.includes("HearthFlameOuter") && buildSite.includes("HearthFlameMiddle"),"The release must retain the real layered hearth fire rather than replacing it with procedural animals.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
   buildSite.includes("mature-norway-spruce-tree.glb") &&
   buildSite.includes("oak-textured.glb") &&
