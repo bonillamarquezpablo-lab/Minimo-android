@@ -34,6 +34,8 @@ assert.match(smoke, /identityFlow = 'returning-player-auto-boot'/,
   'The world-inspection smoke must support saved-player automatic boot.');
 assert.ok(smoke.includes("page.locator('#intro.open')"),
   'The smoke must wait for the real intro overlay before selecting a campaign.');
+assert.ok(smoke.includes('/^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/'),
+  'The startup smoke must capture each real terrestrial wildlife and gull root node.');
 assert.ok(smoke.includes('wildlife-world-capture.png') &&
   smoke.includes('const textureState=animal.textureReadiness||{};') &&
   smoke.includes('assert.equal(textureState.complete,true'),
