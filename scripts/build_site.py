@@ -2186,7 +2186,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(identity_buttons_marker, identity_buttons_replacement, 1)
 
     # Platform-aware memory scheduling: preserve the full Quality scene and roster,
-    # but avoid overlapping large binary downloads/parses on iOS Safari and Adreno 650.
+    # but serialize large GLB parser/decoder work on every mobile device, regardless of GPU tier.
     # Import large GLBs only after the static world geometry has been built.
     player_import_start_marker = "const playerHumanLoadPromise=coastalReferenceMode?Promise.resolve(null):loadHumanViking();"
     if html.count(player_import_start_marker) != 1:
@@ -2194,7 +2194,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(player_import_start_marker, "let playerHumanLoadPromise=Promise.resolve(null);", 1)
 
     mobile_memory_policy_marker = "const isConstrainedMobile=!!(isPerformanceMode&&(iosMemoryBlindMobile||(isTouchDevice&&(constrainedHardware||reportedMemory<=3))));"
-    mobile_memory_policy_replacement = mobile_memory_policy_marker + "\n // Peak-memory scheduling is independent from the selected graphics profile. It changes task concurrency only; render scale, textures, shadows, density and gameplay systems remain untouched.\n const isMobilePeakMemorySensitive=!!(isIOSDevice||(isTouchDevice&&(constrainedHardware||/Adreno.*650/i.test(graphicsRenderer))));\n let startupWildlifeCompressedBytes=0;"
+    mobile_memory_policy_replacement = mobile_memory_policy_marker + "\n // Peak-memory scheduling is independent from the selected graphics profile. It changes task concurrency only; render scale, textures, shadows, density and gameplay systems remain untouched.\n const isMobilePeakMemorySensitive=!!(isIOSDevice||isTouchDevice);\n let startupWildlifeCompressedBytes=0;"
     if html.count(mobile_memory_policy_marker) != 1:
         raise SystemExit("No se encontró la clasificación única para la política de memoria multiplataforma.")
     html = html.replace(mobile_memory_policy_marker, mobile_memory_policy_replacement, 1)
