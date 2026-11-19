@@ -13,10 +13,10 @@ assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
 assert.ok(html.includes('const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]'), 'The replacement gull must require all named anatomical flight pivots.');
-assert.ok(html.includes("const groups=inst.animationGroups||[],fly=groups.find(group=>/fly/i.test(String(group.name||'')))||null;") &&
+assert.ok(html.includes("const groups=inst.animationGroups||[];const nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null;") &&
   html.includes("El GLB de gaviota no contiene un clip Fly válido.") &&
-  html.includes("if(group!==fly)group.stop();") &&
-  html.includes("flightGroup.dispose();flightRig.animationGroup=fly;fly.start(true,1,fly.from,fly.to);"),
+  html.includes("if(group!==nativeFlightClip)group.stop();") &&
+  html.includes("flightGroup.dispose();flightRig.animationGroup=nativeFlightClip;nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);"),
   'Every gull must use the complete native Fly animation while retaining the nine anatomical pivots for inspection.');
 assert.ok(html.includes("flightRig,phase:i*1.25") && html.includes("alignAxis=(from,to)") &&
   html.includes("visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))") &&
