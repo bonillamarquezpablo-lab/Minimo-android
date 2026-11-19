@@ -39,6 +39,8 @@ assert.ok(capture.includes("if(!scene||!root)throw new Error("),
 assert.ok(capture.includes('window.__ELSN_FAUNA_CAPTURE_SCENE__||window.BABYLON?.EngineStore?.LastCreatedScene'),
   'The inspector must resolve the live scene even when the render hook has not captured it yet.');
 assert.ok(capture.includes('faunaWaitStarted') && capture.includes('actorRoots'));
+assert.ok(capture.includes('const FAUNA_ROSTER_TIMEOUT_MS = 240000') && capture.includes('timeout:FAUNA_ROSTER_TIMEOUT_MS'),
+  'Fauna inspection must allow the complete blocking startup window before declaring the roster missing.');
 assert.ok(capture.includes('getChildMeshes'));
 assert.ok(capture.includes('minimumWorld') || capture.includes('maximumWorld'));
 assert.ok(capture.includes('skinnedVertices'));
