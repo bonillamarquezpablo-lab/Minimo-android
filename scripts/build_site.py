@@ -6,7 +6,9 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 import hashlib
 import json
+import math
 import re
+import struct
 import shutil
 import subprocess
 import sys
@@ -142,6 +144,178 @@ def read_glb_document(path: Path) -> dict:
     return document
 
 
+
+def _read_glb_payload(path: Path) -> tuple[dict, bytearray, list[tuple[bytes, bytes]]]:
+    raw = path.read_bytes()
+    if len(raw) < 20 or raw[:4] != b"glTF" + bytes([0]) or int.from_bytes(raw[4:8], "little") != 2:
+        raise RuntimeError(f"Invalid GLB v2 container: {path.name}")
+    offset = 12
+    document = None
+    binary = None
+    chunks: list[tuple[bytes, bytes]] = []
+    while offset + 8 <= len(raw):
+        chunk_length = int.from_bytes(raw[offset:offset + 4], "little")
+        chunk_type = raw[offset + 4:offset + 8]
+        offset += 8
+        end = offset + chunk_length
+        if end > len(raw):
+            raise RuntimeError(f"Truncated GLB chunk in {path.name}")
+        payload = raw[offset:end]
+        offset = end
+        chunks.append((chunk_type, payload))
+        if chunk_type == b"JSON":
+            document = json.loads(payload.decode("utf-8").rstrip(chr(0) + " "))
+        elif chunk_type == b"BIN" + bytes([0]):
+            binary = bytearray(payload)
+    if not isinstance(document, dict) or binary is None:
+        raise RuntimeError(f"GLB is missing JSON or embedded BIN data: {path.name}")
+    return document, binary, chunks
+
+
+def _write_glb_payload(path: Path, document: dict, binary: bytearray,
+                       chunks: list[tuple[bytes, bytes]]) -> None:
+    buffers = document.setdefault("buffers", [])
+    if not buffers:
+        buffers.append({"byteLength": len(binary)})
+    buffers[0]["byteLength"] = len(binary)
+    json_payload = json.dumps(document, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    json_payload += b" " * ((-len(json_payload)) % 4)
+    binary_payload = bytes(binary)
+    binary_payload += bytes([0]) * ((-len(binary_payload)) % 4)
+    output = bytearray(b"glTF" + bytes([0]) + struct.pack("<II", 2, 0))
+    wrote_json = False
+    wrote_binary = False
+    for chunk_type, payload in chunks:
+        if chunk_type == b"JSON":
+            payload = json_payload
+            wrote_json = True
+        elif chunk_type == b"BIN" + bytes([0]):
+            payload = binary_payload
+            wrote_binary = True
+        output.extend(struct.pack("<I4s", len(payload), chunk_type))
+        output.extend(payload)
+    if not wrote_json:
+        raise RuntimeError(f"GLB JSON chunk disappeared while writing {path.name}")
+    if not wrote_binary:
+        output.extend(struct.pack("<I4s", len(binary_payload), b"BIN" + bytes([0])))
+        output.extend(binary_payload)
+    struct.pack_into("<I", output, 8, len(output))
+    path.write_bytes(output)
+
+
+def _read_glb_position_accessor(document: dict, binary: bytearray, accessor_index: int) -> list[tuple[float, float, float]]:
+    accessors = document.get("accessors") or []
+    views = document.get("bufferViews") or []
+    accessor = accessors[accessor_index]
+    if accessor.get("componentType") != 5126 or accessor.get("type") != "VEC3":
+        raise RuntimeError("Animal POSITION accessor must use FLOAT VEC3 data")
+    if accessor.get("sparse"):
+        raise RuntimeError("Sparse animal POSITION accessors are not supported by the coat-color baker")
+    view = views[accessor["bufferView"]]
+    if view.get("buffer", 0) != 0:
+        raise RuntimeError("Animal POSITION accessor references a non-embedded buffer")
+    stride = int(view.get("byteStride") or 12)
+    if stride < 12:
+        raise RuntimeError("Animal POSITION accessor has an invalid byte stride")
+    start = int(view.get("byteOffset") or 0) + int(accessor.get("byteOffset") or 0)
+    count = int(accessor["count"])
+    end = start + max(0, count - 1) * stride + 12
+    if start < 0 or end > len(binary):
+        raise RuntimeError("Animal POSITION accessor exceeds the embedded GLB buffer")
+    return [struct.unpack_from("<3f", binary, start + index * stride) for index in range(count)]
+
+
+def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:
+    """Bake subtle coat color variation into glTF COLOR_0 without changing rigs or animation."""
+    species = path.stem.lower()
+    if species not in {"wolf", "stag", "deer"}:
+        raise RuntimeError(f"Unknown terrestrial species for appearance baking: {label}")
+    document, binary, chunks = _read_glb_payload(path)
+    primitives = []
+    global_min = [float("inf")] * 3
+    global_max = [float("-inf")] * 3
+    for mesh in document.get("meshes") or []:
+        for primitive in mesh.get("primitives") or []:
+            attributes = primitive.get("attributes") or {}
+            if "JOINTS_0" not in attributes or "WEIGHTS_0" not in attributes or "COLOR_0" in attributes:
+                continue
+            material_index = primitive.get("material")
+            materials = document.get("materials") or []
+            material_name = str(materials[material_index].get("name") or "") if material_index is not None and material_index < len(materials) else ""
+            lowered_name = material_name.lower()
+            if any(token in lowered_name for token in ("eye", "nose", "black")):
+                continue
+            positions = _read_glb_position_accessor(document, binary, int(attributes["POSITION"]))
+            primitives.append((primitive, positions))
+            for position in positions:
+                for axis in range(3):
+                    global_min[axis] = min(global_min[axis], position[axis])
+                    global_max[axis] = max(global_max[axis], position[axis])
+    if not primitives:
+        return 0
+    ranges = [max(1e-9, global_max[axis] - global_min[axis]) for axis in range(3)]
+    added_vertices = 0
+    accessors = document.setdefault("accessors", [])
+    buffer_views = document.setdefault("bufferViews", [])
+    for primitive, positions in primitives:
+        colors = bytearray()
+        for x, y, z in positions:
+            x_norm = (x - global_min[0]) / ranges[0]
+            y_norm = (y - global_min[1]) / ranges[1]
+            z_norm = (z - global_min[2]) / ranges[2]
+            broad_pattern = math.sin(y_norm * 41.0 + math.sin(x_norm * 17.0 + z_norm * 5.0) * 1.7) * math.cos(z_norm * 19.0 - x_norm * 11.0)
+            fine_pattern = math.sin(y_norm * 103.0 + x_norm * 57.0 + z_norm * 71.0)
+            mottling = 0.045 * broad_pattern + 0.018 * fine_pattern
+            lower_flank = 1.0 - z_norm
+            if species == "wolf":
+                coat = 0.88 + 0.18 * lower_flank + mottling
+                red = coat * (1.02 + 0.025 * broad_pattern)
+                green = coat * (1.00 + 0.018 * fine_pattern)
+                blue = coat * (0.94 - 0.020 * broad_pattern)
+            else:
+                coat = 0.91 + 0.13 * lower_flank + mottling
+                red = coat * (1.035 + 0.022 * broad_pattern)
+                green = coat * (1.00 + 0.018 * fine_pattern)
+                blue = coat * (0.91 - 0.020 * broad_pattern)
+            colors.extend(struct.pack(
+                "<4f",
+                max(0.55, min(1.25, red)),
+                max(0.55, min(1.25, green)),
+                max(0.55, min(1.25, blue)),
+                1.0,
+            ))
+        while len(binary) % 4:
+            binary.append(0)
+        byte_offset = len(binary)
+        binary.extend(colors)
+        view_index = len(buffer_views)
+        buffer_views.append({
+            "buffer": 0,
+            "byteOffset": byte_offset,
+            "byteLength": len(colors),
+            "target": 34962,
+        })
+        accessor_index = len(accessors)
+        accessors.append({
+            "bufferView": view_index,
+            "byteOffset": 0,
+            "componentType": 5126,
+            "count": len(positions),
+            "type": "VEC4",
+        })
+        primitive.setdefault("attributes", {})["COLOR_0"] = accessor_index
+        added_vertices += len(positions)
+    if species == "wolf":
+        for material in document.get("materials") or []:
+            pbr = material.get("pbrMetallicRoughness") or {}
+            if material.get("name") == "Main":
+                pbr["baseColorFactor"] = [0.255, 0.265, 0.255, 1.0]
+            elif material.get("name") == "Main_Light":
+                pbr["baseColorFactor"] = [0.42, 0.43, 0.40, 1.0]
+    _write_glb_payload(path, document, binary, chunks)
+    return added_vertices
+
+
 def validate_rigged_character_glb(path: Path, label: str) -> dict:
     document = read_glb_document(path)
     meshes = document.get("meshes") or []
@@ -172,6 +346,7 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
     meshes = document.get("meshes") or []
     skins = document.get("skins") or []
     animations = document.get("animations") or []
+    materials = document.get("materials") or []
     max_joints = max((len(skin.get("joints") or []) for skin in skins), default=0)
     if not meshes or not skins or not animations:
         raise RuntimeError(
@@ -184,8 +359,31 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
     missing_clips = [clip for clip in ("idle", "walk", "gallop") if not any(name == clip or name.endswith(clip) for name in animation_names)]
     if missing_clips:
         raise RuntimeError(f"{label}: animal GLB is missing required locomotion clips {missing_clips}; found {animation_names}")
-    if any(not (mesh.get("primitives") or []) for mesh in meshes):
-        raise RuntimeError(f"{label}: one or more animal meshes have no primitives")
+    if not materials or any(not (mesh.get("primitives") or []) for mesh in meshes):
+        raise RuntimeError(f"{label}: one or more animal meshes/materials are missing")
+    skinned_vertex_count = 0
+    colored_skinned_vertex_count = 0
+    for mesh in meshes:
+        for primitive in mesh.get("primitives") or []:
+            attributes = primitive.get("attributes") or {}
+            if "JOINTS_0" not in attributes or "WEIGHTS_0" not in attributes:
+                continue
+            position_accessor = document["accessors"][attributes["POSITION"]]
+            vertex_count = int(position_accessor.get("count") or 0)
+            skinned_vertex_count += vertex_count
+            if "COLOR_0" not in attributes:
+                continue
+            color_accessor = document["accessors"][attributes["COLOR_0"]]
+            if color_accessor.get("type") not in ("VEC3", "VEC4") or int(color_accessor.get("count") or 0) != vertex_count:
+                raise RuntimeError(f"{label}: malformed vertex-color stream on a skinned animal primitive")
+            if color_accessor.get("componentType") not in (5121, 5123, 5126):
+                raise RuntimeError(f"{label}: unsupported vertex-color component type")
+            colored_skinned_vertex_count += vertex_count
+    if skinned_vertex_count < 600 or colored_skinned_vertex_count / max(1, skinned_vertex_count) < 0.95:
+        raise RuntimeError(
+            f"{label}: animal appearance is incomplete; vertex colors must cover at least 95% "
+            f"of skinned vertices (colored={colored_skinned_vertex_count}, total={skinned_vertex_count})"
+        )
     return document
 
 
@@ -229,12 +427,17 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                         f"{len(document.get('images') or [])} texture images."
                     )
                 elif destination.parent.name == "wildlife":
+                    baked_vertices = bake_procedural_animal_vertex_colors(destination, relative)
                     document = validate_rigged_animal_glb(destination, relative)
+                    size = destination.stat().st_size
+                    digest = hashlib.sha256(destination.read_bytes())
                     print(
                         f"OK animated animal GLB {relative}: "
                         f"{len(document.get('meshes') or [])} meshes, "
                         f"{max((len(s.get('joints') or []) for s in (document.get('skins') or [])), default=0)} joints, "
-                        f"{len(document.get('animations') or [])} clips { [item.get('name') for item in (document.get('animations') or [])] }."
+                        f"{len(document.get('animations') or [])} clips, "
+                        f"{baked_vertices:,} coat vertices baked, "
+                        f"{sum(1 for mesh in (document.get('meshes') or []) for primitive in (mesh.get('primitives') or []) if 'COLOR_0' in (primitive.get('attributes') or {}))} vertex-coloured primitives."
                     )
                 else:
                     read_glb_document(destination)
@@ -261,7 +464,13 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                 for chunk in iter(lambda: source.read(1024 * 1024), b""):
                     digest.update(chunk)
             if kind == "glb":
-                read_glb_document(destination)
+                if destination.parent.name == "wildlife":
+                    bake_procedural_animal_vertex_colors(destination, destination.relative_to(DIST).as_posix())
+                    validate_rigged_animal_glb(destination, destination.relative_to(DIST).as_posix())
+                    size = destination.stat().st_size
+                    digest = hashlib.sha256(destination.read_bytes())
+                else:
+                    read_glb_document(destination)
             print(f"OK {destination.relative_to(DIST).as_posix()}: {size:,} bytes (verified repository fallback)")
             return {
                 "path": destination.relative_to(DIST).as_posix(),
@@ -1898,27 +2107,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.330: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.331: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.330; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.331; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.330\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.331\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.330.")
-    html = html.replace("0.6.274", "0.6.330")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.331.")
+    html = html.replace("0.6.274", "0.6.331")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'41',build:'0.6.330'"
+    diagnostic_build_replacement = "reportVersion:'42',build:'0.6.331'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.330 para normalizar.")
-    game_version = "0.6.330"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.331 para normalizar.")
+    game_version = "0.6.331"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -1928,7 +2137,7 @@ function updateWildlife(dt){
  // Quality fixes its native render scale at startup. Runtime FPS drops must never lower image quality.
  const qualityDpr=isPerformanceMode
   ?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile?.62:(constrainedHardware?.78:(isTouchDevice?1.0:1.35))))))
-  :Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?2.10:1.45):1.65);"""
+  :Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.80:1.45):1.65);"""
     if html.count(quality_profile_marker) != 1:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
     html = html.replace(quality_profile_marker, quality_profile_code, 1)
