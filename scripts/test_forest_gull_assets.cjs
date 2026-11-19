@@ -16,8 +16,16 @@ assert.ok(html.includes('const requiredFlightParts=[leftWing,rightWing,tail,head
 assert.ok(html.includes("const groups=inst.animationGroups||[];const nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null;") &&
   html.includes("El GLB de gaviota no contiene un clip Fly válido.") &&
   html.includes("if(group!==nativeFlightClip)group.stop();") &&
-  html.includes("flightRig={actor,visualRoot,bodyAxis,leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);"),
+  html.includes("flightRig={actor,visualRoot,bodyAxis,leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};") &&
+  html.includes("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);"),
   'Every gull must retain all nine anatomical pivots and start its complete native Fly clip.');
+const nativeClipIndex=html.indexOf("const groups=inst.animationGroups||[];const nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null;");
+const flightRigIndex=html.indexOf("const flightRig={actor,visualRoot,bodyAxis");
+const nativeClipStartIndex=html.indexOf("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);");
+assert.ok(nativeClipIndex>=0&&nativeClipIndex<flightRigIndex&&flightRigIndex<nativeClipStartIndex,
+  'The native clip must be declared before the diagnostic rig uses it and started only after rig placement.');
+assert.ok(!html.includes("if(fly){fly.start")&&!html.includes("animation:fly"),
+  'No legacy fly variable or second animation-selection path may remain.');
 assert.ok(html.includes("flightRig,phase:i*1.25") && html.includes("alignAxis=(from,to)") &&
   html.includes("visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))") &&
   html.includes("groups.find(group=>/fly/i") &&
