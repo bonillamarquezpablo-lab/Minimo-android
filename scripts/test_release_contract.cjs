@@ -45,15 +45,14 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   buildSite.includes("flightRig,phase:i*1.25") &&
   buildSite.includes("alignAxis=(from,to)") &&
   buildSite.includes("visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))") &&
-  buildSite.includes("new B.AnimationGroup('Seagull_Flight_Loop_'+i,scene)") &&
-  buildSite.includes("B.Animation.ANIMATIONTYPE_QUATERNION") &&
-  buildSite.includes("addFlightTrack('LeftWing'") &&
-  buildSite.includes("addFlightTrack('RightWing'") &&
-  buildSite.includes("flightGroup.dispose();flightRig.animationGroup=nativeFlightClip;nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);") &&
   buildSite.includes("const groups=inst.animationGroups||[];const nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null;") &&
+  buildSite.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip") &&
+  buildSite.includes("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to)") &&
   buildSite.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
+  !buildSite.includes("addFlightTrack(") &&
+  !buildSite.includes("Seagull_Flight_Loop_") &&
   !buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio"),
-  "The gull must be aligned horizontally and use a cached looping quaternion flight animation group.");
+  "The gull must be aligned horizontally and play the complete native GLB flight clip without constructing a redundant animation.");
 assert.ok(buildSite.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)"),
   "Transparent ground effects in rendering group 1 must preserve opaque-world depth.");
 assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyRadius+otherRadius)*1.12") &&
