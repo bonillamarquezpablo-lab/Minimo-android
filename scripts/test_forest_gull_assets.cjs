@@ -13,18 +13,20 @@ assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
 assert.ok(html.includes('const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]'), 'The replacement gull must require all named anatomical flight pivots.');
-assert.ok(!html.includes("El GLB de gaviota no contiene el clip Fly obligatorio") && !html.includes("fly=groups.find("),
-  'A missing glTF animation clip must not block a model that exposes articulated pivots.');
+assert.ok(html.includes("const groups=inst.animationGroups||[],fly=groups.find(group=>/fly/i.test(String(group.name||'')))||null;") &&
+  html.includes("El GLB de gaviota no contiene un clip Fly válido.") &&
+  html.includes("if(group!==fly)group.stop();") &&
+  html.includes("flightGroup.dispose();flightRig.animationGroup=fly;fly.start(true,1,fly.from,fly.to);"),
+  'Every gull must use the complete native Fly animation while retaining the nine anatomical pivots for inspection.');
 assert.ok(html.includes("flightRig,phase:i*1.25") && html.includes("alignAxis=(from,to)") &&
   html.includes("visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))") &&
   html.includes("new B.AnimationGroup('Seagull_Flight_Loop_'+i,scene)") &&
   html.includes("B.Animation.ANIMATIONTYPE_QUATERNION") &&
-  html.includes("addFlightTrack('LeftWing'") && html.includes("addFlightTrack('RightWing'") &&
-  html.includes("flightGroup.start(true,1,0,24)") && html.includes("flightGroup.goToFrame((i*5)%24)"),
-  'Every gull must be aligned horizontally and run a real looping Babylon quaternion animation group.');
+  html.includes("flightGroup.dispose();flightRig.animationGroup=fly;fly.start(true,1,fly.from,fly.to);"),
+  'Every gull must be aligned horizontally and play the source GLB Fly clip, with the temporary partial rig disposed.');
 assert.ok(html.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
-  html.includes("Seagull_Flight_Loop_") && html.includes("wingStroke=t=>.88*Math.sin(t*Math.PI*2)+.14*Math.sin(t*Math.PI*4)"),
-  'The authored flight clip must loop continuously with mirrored wing strokes and per-bird phase offsets.');
+  html.includes("Fly_Gull") && html.includes("flightRig.animationGroup=fly"),
+  'The complete native bird flight clip must remain active, with independent per-bird speed variation.');
 assert.ok(html.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)") && html.includes("footprintMesh.renderingGroupId=1"),
   'Transparent footprints in rendering group 1 must preserve opaque-world depth.');
 assert.ok(html.includes("function findForestTreePlacement(x,z,canopyRadius)"),
