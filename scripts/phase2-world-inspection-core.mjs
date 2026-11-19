@@ -149,6 +149,40 @@ export function analyzeWorldInspectionSnapshot(snapshot) {
   } else if (snapshot.actors && snapshot.actors.wildlife) {
     add('high','wildlife-inventory-empty','El inventario del mundo no contiene ningún animal cargado.');
   }
+  const birds = snapshot.actors?.ambientBirds;
+  const birdActors = Array.isArray(birds?.returned) ? birds.returned : [];
+  if (birds && finite(birds.count) && birds.count > 0) {
+    const invalidFlightRigs = birdActors.filter(actor => !actor || actor.visualIntegrity?.hasMeshes !== true ||
+      actor.visualIntegrity?.hasFinitePosition !== true || actor.visualIntegrity?.hasVisibleGeometry !== true ||
+      actor.visualIntegrity?.hasFiniteBounds !== true || actor.visualIntegrity?.plausibleBounds !== true ||
+      actor.visualIntegrity?.hasFlightRig !== true || actor.flightRig?.complete !== true);
+    if (invalidFlightRigs.length) add('high','ambient-bird-flight-rig-invalid',
+      'Una o varias gaviotas tienen mallas, pivotes anatómicos o límites de vuelo incompletos.',
+      {count:invalidFlightRigs.length,birds:invalidFlightRigs.slice(0,30).map(actor=>({
+        name:actor&&actor.name,position:actor&&actor.position,meshCount:actor&&actor.meshCount,
+        bounds:actor&&actor.bounds,flightRig:actor&&actor.flightRig,visualIntegrity:actor&&actor.visualIntegrity
+      }))});
+    const stoppedFlight = birdActors.filter(actor => actor && actor.flightRig?.complete === true &&
+      actor.flightRig.animationPlaying !== true);
+    if (stoppedFlight.length) add('high','ambient-bird-flight-not-playing',
+      'Hay gaviotas con el rig de vuelo montado pero su AnimationGroup no está reproduciéndose.',
+      {count:stoppedFlight.length,birds:stoppedFlight.slice(0,30).map(actor=>({
+        name:actor.name,animationGroupName:actor.flightRig?.animationGroupName,
+        animationPlaying:actor.flightRig?.animationPlaying,targetedAnimations:actor.flightRig?.targetedAnimations
+      }))});
+    const pendingBirdTextures = birdActors.filter(actor =>
+      actor?.textureReadiness?.pending > 0 || actor?.textureReadiness?.unknown > 0);
+    if (pendingBirdTextures.length) add('medium','ambient-bird-textures-not-ready',
+      'Hay gaviotas con texturas pendientes o cuya disponibilidad no se puede verificar.',
+      {count:pendingBirdTextures.length,birds:pendingBirdTextures.slice(0,30).map(actor=>({
+        name:actor.name,textureReadiness:actor.textureReadiness
+      }))});
+    if (birds.truncated > 0) add('info','ambient-bird-inventory-truncated',
+      'El inventario individual de gaviotas está limitado y no contiene todos los actores.',
+      {returned:birdActors.length,total:birds.count,truncated:birds.truncated});
+  } else if (snapshot.actors && snapshot.actors.ambientBirds && Number(birds.count) > 0) {
+    add('high','ambient-bird-inventory-empty','El inventario declara gaviotas, pero no contiene fichas individuales.');
+  }
   const pendingTextures = snapshot.textures?.pendingCount;
   if (finite(pendingTextures) && pendingTextures > 0) {
     add('medium', 'textures-pending-at-capture', 'Había texturas pendientes en el instante de la captura. Esto no demuestra un fallo de carga.', {
