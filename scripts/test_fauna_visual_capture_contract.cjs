@@ -22,6 +22,11 @@ assert.ok(capture.includes('RealSeagullActor_'), 'Visual capture must include re
 assert.ok(capture.includes('flightRig'), 'Gull reports must include articulated flight rig evidence.');
 assert.ok(capture.includes('gull-flight-rig-incomplete') && capture.includes('gull-flight-animation-stopped'));
 assert.ok(capture.includes('getGameWorldInspectionSnapshot'), 'Capture must cross-check the live Inspector wildlife inventory.');
+assert.ok(capture.includes('startupDiagnostic') && capture.includes('startup-stalled-before-world-ready'),
+  'The fauna inspector must preserve partial world/fauna diagnostics when the startup barrier never reaches worldReady.');
+assert.ok(capture.includes('FaunaInspectorTemporaryCamera') && capture.includes('temporary-babylon-camera'),
+  'The inspector must photograph instantiated animals with a temporary Babylon camera if the game test API is not ready.');
+assert.ok(capture.includes('faunaWaitStarted') && capture.includes('actorRoots'));
 assert.ok(capture.includes('getChildMeshes'));
 assert.ok(capture.includes('minimumWorld') || capture.includes('maximumWorld'));
 assert.ok(capture.includes('skinnedVertices'));
