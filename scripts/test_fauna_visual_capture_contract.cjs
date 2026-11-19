@@ -21,6 +21,10 @@ assert.ok(capture.includes('WildlifeActor_'));
 assert.ok(capture.includes('RealSeagullActor_'), 'Visual capture must include real gull actors, not only terrestrial animals.');
 assert.ok(capture.includes('flightRig'), 'Gull reports must include articulated flight rig evidence.');
 assert.ok(capture.includes('gull-flight-rig-incomplete') && capture.includes('gull-flight-animation-stopped'));
+assert.ok(capture.includes('gull-native-flight-clip-missing') && capture.includes('gull-native-flight-tracks-incomplete'),
+  'The Inspector must reject the former partial wing-only animation when the full native Fly clip is not active.');
+assert.ok(capture.includes("Number(animal.flightRig?.targetedAnimations)<100"),
+  'The visual report must require the complete native gull animation track set.');
 assert.ok(capture.includes('getGameWorldInspectionSnapshot'), 'Capture must cross-check the live Inspector wildlife inventory.');
 assert.ok(capture.includes('startupDiagnostic') && capture.includes('startup-stalled-before-fauna-actors'),
   'The fauna inspector must preserve partial world/fauna diagnostics when the startup barrier never reaches worldReady.');
