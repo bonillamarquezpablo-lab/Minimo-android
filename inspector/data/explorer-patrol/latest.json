@@ -3,16 +3,16 @@
   "project": "EL SIN NOMBRE",
   "level": 1,
   "mode": "test-only-read-only-observer-patrol",
-  "startedAt": "2026-11-18T14:54:11.936Z",
-  "finishedAt": "2026-11-18T14:57:13.160Z",
+  "startedAt": "2026-11-19T14:59:57.078Z",
+  "finishedAt": "2026-11-19T15:03:14.273Z",
   "build": null,
   "renderer": "Chromium headless + ANGLE SwiftShader",
   "query": "?test=1",
   "run": {
-    "id": "44329280457",
-    "url": "https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/runs/44329280457",
+    "id": "44549680506",
+    "url": "https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/runs/44549680506",
     "branch": "main",
-    "sha": "70d5f7370a270e1f934a77bf3d4ac0c366f94b53"
+    "sha": "fdbae7d1277e33be4ae65be33c5108c42951a9d4"
   },
   "world": {
     "expectedIslands": 13,
@@ -21,10 +21,10 @@
   },
   "startup": {
     "worldReady": false,
-    "bootFailed": false,
-    "bodyClass": "booting",
-    "loadingText": "Preparando texturas y shaders de la zona inicial…",
-    "loadingHelp": null
+    "bootFailed": true,
+    "bodyClass": "booting boot-failed",
+    "loadingText": "No se ha podido preparar el mundo.",
+    "loadingHelp": "El arranque se ha detenido. Pulsa REINTENTAR para volver a cargar la partida guardada. Detalle técnico: Babylon.js se descargó, pero el juego falló al construir la escena: RECURSO OBLIGATORIO: fauna de la isla inicial · Gaviotas 3D: RECURSO OBLIGATORIO: gaviotas GLB · Cannot access 'fly' before initialization. Puedes volver a intentarlo.Comprueba Internet y abre el juego con un navegador actualizado compatible con WebGL."
   },
   "audioNetwork": {
     "requests": [
@@ -251,47 +251,17 @@
         "statusText": "OK"
       },
       {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -301,7 +271,12 @@
         "statusText": "OK"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
         "status": 200,
         "statusText": "OK"
       },
@@ -311,11 +286,36 @@
         "statusText": "Partial Content"
       },
       {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
         "status": 200,
         "statusText": "OK"
@@ -341,21 +341,6 @@
         "statusText": "OK"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
         "status": 200,
         "statusText": "OK"
@@ -366,7 +351,7 @@
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -376,22 +361,17 @@
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -406,9 +386,24 @@
         "statusText": "Partial Content"
       },
       {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
         "status": 200,
         "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
@@ -416,19 +411,24 @@
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
-        "status": 200,
-        "statusText": "OK"
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
+        "status": 200,
+        "statusText": "OK"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
         "status": 200,
         "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
       }
     ],
     "failures": [
@@ -447,12 +447,17 @@
     "El catálogo de actividades por isla no está expuesto como contrato estructurado; no se inventan actividades ausentes.",
     "Chromium/SwiftShader no representa la GPU Adreno física del dispositivo."
   ],
-  "consoleErrors": [],
+  "consoleErrors": [
+    "Falló la fauna alada obligatoria: ReferenceError: Cannot access 'fly' before initialization\n    at loadRiggedCoastalGulls (http://127.0.0.1:4175/?test=1:10773:4452)\n    at async Promise.allSettled (index 1)\n    at async startGame (http://127.0.0.1:4175/?test=1:14053:23)\n    at async bootEngine (http://127.0.0.1:4175/?test=1:1910:4)",
+    "EL SIN NOMBRE startGame failed Error: RECURSO OBLIGATORIO: fauna de la isla inicial · Gaviotas 3D: RECURSO OBLIGATORIO: gaviotas GLB · Cannot access 'fly' before initialization\n    at startGame (http://127.0.0.1:4175/?test=1:14058:143)\n    at async bootEngine (http://127.0.0.1:4175/?test=1:1910:4)",
+    "EL SIN NOMBRE boot error Error: RECURSO OBLIGATORIO: fauna de la isla inicial · Gaviotas 3D: RECURSO OBLIGATORIO: gaviotas GLB · Cannot access 'fly' before initialization\n    at startGame (http://127.0.0.1:4175/?test=1:14058:143)\n    at async bootEngine (http://127.0.0.1:4175/?test=1:1910:4)",
+    "EL SIN NOMBRE · detalle de arranque: Babylon.js se descargó, pero el juego falló al construir la escena: RECURSO OBLIGATORIO: fauna de la isla inicial · Gaviotas 3D: RECURSO OBLIGATORIO: gaviotas GLB · Cannot access 'fly' before initialization. Puedes volver a intentarlo.Comprueba Internet y abre el juego con un navegador actualizado compatible con WebGL."
+  ],
   "pageErrors": [],
   "failures": [
     {
       "phase": "runner",
-      "error": "Error: El arranque no alcanzó worldReady: {\"worldReady\":false,\"bootFailed\":false,\"bodyClass\":\"booting\",\"loadingText\":\"Preparando texturas y shaders de la zona inicial…\",\"loadingHelp\":null} · page.waitForFunction: Timeout 180000ms exceeded.\n    at startGame (file:///home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:201:11)\n    at async main (file:///home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:394:5)"
+      "error": "Error: El arranque no alcanzó worldReady: {\"worldReady\":false,\"bootFailed\":true,\"bodyClass\":\"booting boot-failed\",\"loadingText\":\"No se ha podido preparar el mundo.\",\"loadingHelp\":\"El arranque se ha detenido. Pulsa REINTENTAR para volver a cargar la partida guardada. Detalle técnico: Babylon.js se descargó, pero el juego falló al construir la escena: RECURSO OBLIGATORIO: fauna de la isla inicial · Gaviotas 3D: RECURSO OBLIGATORIO: gaviotas GLB · Cannot access 'fly' before initialization. Puedes volver a intentarlo.Comprueba Internet y abre el juego con un navegador actualizado compatible con WebGL.\"} · page.waitForFunction: Timeout 180000ms exceeded.\n    at startGame (file:///home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:201:11)\n    at async main (file:///home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:394:5)"
     }
   ],
   "verdict": "failed"
