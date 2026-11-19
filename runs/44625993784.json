@@ -62,6 +62,35 @@
       "exitCode": 1,
       "error": "exit=1 signal=none",
       "finishedAt": "2026-11-19T22:37:51.720Z"
+    },
+    {
+      "name": "Lámina e informe visual de fauna",
+      "script": "scripts/create_fauna_contact_sheet.py",
+      "startedAt": "2026-11-19T22:37:51.721Z",
+      "status": "passed",
+      "durationMs": 66,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-19T22:37:51.787Z"
+    },
+    {
+      "name": "Informe visual unificado de estructuras",
+      "script": "scripts/create_scene_capture_contact_sheet.py",
+      "startedAt": "2026-11-19T22:37:51.787Z",
+      "status": "running",
+      "durationMs": null,
+      "exitCode": null,
+      "error": null
+    },
+    {
+      "name": "Lámina de referencias costeras",
+      "script": "scripts/create_coastal_contact_sheet.py",
+      "startedAt": "2026-11-19T22:37:51.789Z",
+      "status": "failed",
+      "durationMs": 43,
+      "exitCode": 1,
+      "error": "exit=1 signal=none",
+      "finishedAt": "2026-11-19T22:37:51.832Z"
     }
   ],
   "finishedAt": null
