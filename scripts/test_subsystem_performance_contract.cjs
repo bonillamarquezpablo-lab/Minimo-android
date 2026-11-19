@@ -72,9 +72,10 @@ assert.ok(recorder.includes('cpuGpuDiagnosis') && recorder.includes('cpuWorldP95
   'Session reports must classify likely CPU, GPU, mixed or inconclusive bottlenecks using independent P95 measurements.');
 assert.ok(gameHtml.includes('gpuTimerQuery:\'not measured; scene.render duration is CPU wall-clock only\''),
   'Unavailable GPU timing must not be misreported as zero.');
-assert.ok(!builder.includes('qualityDprFloor')&&!builder.includes('qualityDprCeiling')&&
-  !builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)'),
-  'The Quality profile must not downscale resolution automatically to hide frame-time spikes.');
+assert.ok(builder.includes('qualityDprFloor')&&builder.includes('qualityDprCeiling')&&
+  builder.includes('fps<49&&lastWorldUpdateMs<8&&lastRenderCpuMs<9')&&
+  builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)')&&builder.includes('geometryAndEffectsPreserved:true'),
+  'The Quality profile may adapt only bounded internal resolution under sustained GPU pressure, never to mask CPU hitches or remove scene detail.');
 assert.ok(builder.includes("f.light&&typeof f.light.isEnabled==='function'&&!f.light.isEnabled()"),
   'Disabled legacy hearth lights must not be animated every frame.');
 assert.ok(builder.includes('sparkDx*sparkDx+sparkDz*sparkDz>140*140') &&
