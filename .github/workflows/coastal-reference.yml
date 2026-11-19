@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
     paths:
+      - 'scripts/build_site.py'
+      - 'scripts/test_mobile_startup_loading.cjs'
+      - 'scripts/test_wildlife_runtime_contract.cjs'
       - 'scripts/fauna-visual-capture.mjs'
       - 'scripts/create_fauna_contact_sheet.py'
       - 'scripts/run-unified-inspector.mjs'
