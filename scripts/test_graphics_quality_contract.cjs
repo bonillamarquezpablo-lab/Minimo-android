@@ -11,15 +11,15 @@ for(const marker of [
   'highTierGpuMatch=',
   'highHeadroomQualityMobile=',
   'qualityDprCurrent=qualityDpr',
-  'qualityScaleLockedForSession:true',
+  'qualityScaleAdaptive:true',
   'const targetFrameRate=60;',
   'frameIntervalMs=1000/targetFrameRate',
   'if(now+.5<nextRenderAt)return',
   'fpsHudTime+=rawFrameMs/1000;fpsHudFrames++',
   'renderedFps=measured',
   'renderedFps||engine.getFps()',
-  'Quality fixes its native render scale at startup',
-  'FPS bajo con resolución de Calidad protegida',
+  'qualityDprFloor',
+  'FPS bajo; Calidad conserva geometría y efectos y adapta solo la resolución interna.',
   'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))',
   'renderPipeline.sharpen.edgeAmount=.34',
   'list.length<180',
@@ -33,9 +33,10 @@ for(const marker of [
   'highHeadroomQualityMobile,reportedMemory',
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
-assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleLockedForSession:true'), 'Quality must preserve the initial native render scale throughout gameplay.');
+assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleAdaptive:true') && builder.includes('qualityDprFloor') && builder.includes('qualityDprCeiling'), 'Quality must preserve full scene detail while exposing bounded adaptive internal resolution.');
 assert.ok(builder.includes('let lastWorldUpdateMs=0,lastRenderCpuMs=0;'), 'Shared frame-loop timing bindings must remain available after the Quality-scale change.');
-assert.ok(!builder.includes('qualityDprSlowSamples') && !builder.includes('qualityDprStableSamples') && !builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)'), 'No runtime CPU/FPS event may lower or change Quality resolution.');
+assert.ok(builder.includes('qualityDprSlowSamples>=2') && builder.includes('qualityDprStableSamples>=6') && builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)') && builder.includes('geometryAndEffectsPreserved:true'), 'Adaptive resolution must use hysteresis, recover after stable headroom and preserve geometry/effects.');
+assert.ok(!builder.includes('qualityScaleLockedForSession:true'), 'Quality must no longer remain locked at a scale that cannot sustain the frame budget.');
 assert.ok(!builder.includes('fsr1Candidate') && !builder.includes('fsr1InputScale'), 'No inactive FSR1 state may override native device resolution.');
 assert.ok(builder.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && builder.includes('html.replace(legacy_fsr_guard, "if(false){", 1)'), 'The obsolete FSR block must be guarded before scene construction.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"), 'Native engine antialiasing must remain enabled in Quality.');
@@ -51,4 +52,4 @@ assert.ok(atmosphere.includes("this.quality === 'low' || this.isTouchDevice"), '
 assert.ok(validator.includes('missing_graphics_quality'), 'The release validator must reject missing mobile rendering guardrails.');
 assert.ok(validator.includes('this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;'), 'The atmosphere hardware tier must be checked by release validation.');
 
-console.log('OK graphics quality: native WebGL rendering, locked flagship Quality scale, native 2x MSAA, dedicated mobile-high atmosphere, desktop-only SSAO/god-rays/CSM.');
+console.log('OK graphics quality: native WebGL rendering, bounded adaptive Quality resolution, native 2x MSAA, dedicated mobile-high atmosphere, desktop-only SSAO/god-rays/CSM.');
