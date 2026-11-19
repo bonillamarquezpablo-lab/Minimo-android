@@ -26,7 +26,7 @@ assert.ok(nativeClipIndex>=0&&nativeClipIndex<flightRigIndex&&flightRigIndex<nat
   'The native clip must be declared before the diagnostic rig uses it and started only after rig placement.');
 assert.ok(!html.includes("if(fly){fly.start")&&!html.includes("animation:fly"),
   'No legacy fly variable or second animation-selection path may remain.');
-assert.ok(html.includes("flightRig,phase:i*1.25") && html.includes("alignAxis=(from,to)") &&
+assert.ok(html.includes("flightRig,animation:nativeFlightClip,phase:i*1.25") && html.includes("alignAxis=(from,to)") &&
   html.includes("visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))") &&
   html.includes("groups.find(group=>/fly/i") &&
   html.includes("animationGroup:nativeFlightClip") &&
