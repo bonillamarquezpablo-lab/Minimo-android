@@ -69,7 +69,7 @@ assert.ok(source.includes('function update(dt){'), 'The full game world update m
 assert.ok(builder.includes('phase_timing_helpers') && builder.includes('setWorldUpdatePhase(') && builder.includes('getWorldPhaseTimingSnapshot()'), 'The release must time each existing world-update phase.');
 assert.ok(builder.includes('enemy_ai_lod_marker =') && builder.includes("if(isTouchDevice&&dist>18&&e.state!=='attack'&&e.stun<=0){") && builder.includes('const mobileAiInterval=dist>70?1.0:(dist>36?.45:.20);'), 'Distant touch-device enemies must use distance-based AI cadence while nearby combat remains full-rate.');
 assert.ok(builder.includes('alignAxis=(from,to)') &&
-  builder.includes("const groups=inst.animationGroups||[];const nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null;") &&
+  builder.includes("const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;") &&
   builder.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip") &&
   builder.includes("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to)") &&
   !builder.includes("addFlightTrack(") && !builder.includes("Seagull_Flight_Loop_"),
