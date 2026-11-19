@@ -17,6 +17,10 @@ assert.ok(runner.includes('scripts/fauna-visual-capture.mjs'));
 assert.ok(runner.includes('scripts/create_fauna_contact_sheet.py'));
 assert.ok(runner.includes('results:{player,texture,grounding,coastal,custom,fauna,beforeAfter}'));
 assert.ok(capture.includes('__ELSN_FAUNA_CAPTURE_SCENE__'));
+assert.ok(capture.includes('window.__ELSN_FORCE_CPU_SKINNING__=true') && capture.includes('hasTouch:true'),
+  'The SwiftShader visual-acceptance session must explicitly force the mobile CPU-skinning path before loading the game; it must not silently inspect shader skinning instead.');
+assert.ok(capture.indexOf('window.__ELSN_FORCE_CPU_SKINNING__=true')<capture.indexOf("await page.goto(BASE_URL+'?test=1&fauna-inspector=1'"),
+  'The CPU-skinning override must be installed before any game script executes.');
 assert.ok(capture.includes('WildlifeActor_'));
 assert.ok(capture.includes('RealSeagullActor_'), 'Visual capture must include real gull actors, not only terrestrial animals.');
 assert.ok(capture.includes('flightRig'), 'Gull reports must include articulated flight rig evidence.');
