@@ -47,10 +47,50 @@
       "name": "Inventario completo, identidades y cámaras desde el agua",
       "script": "scripts/custom-scene-capture.mjs",
       "startedAt": "2026-11-19T13:57:14.722Z",
+      "status": "passed",
+      "durationMs": 724187,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-19T14:09:18.910Z"
+    },
+    {
+      "name": "Capturas visuales y diagnóstico de fauna terrestre",
+      "script": "scripts/fauna-visual-capture.mjs",
+      "startedAt": "2026-11-19T14:09:18.911Z",
+      "status": "failed",
+      "durationMs": 272475,
+      "exitCode": 1,
+      "error": "exit=1 signal=none",
+      "finishedAt": "2026-11-19T14:13:51.386Z"
+    },
+    {
+      "name": "Lámina e informe visual de fauna",
+      "script": "scripts/create_fauna_contact_sheet.py",
+      "startedAt": "2026-11-19T14:13:51.387Z",
+      "status": "passed",
+      "durationMs": 69,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-19T14:13:51.456Z"
+    },
+    {
+      "name": "Informe visual unificado de estructuras",
+      "script": "scripts/create_scene_capture_contact_sheet.py",
+      "startedAt": "2026-11-19T14:13:51.457Z",
       "status": "running",
       "durationMs": null,
       "exitCode": null,
       "error": null
+    },
+    {
+      "name": "Lámina de referencias costeras",
+      "script": "scripts/create_coastal_contact_sheet.py",
+      "startedAt": "2026-11-19T14:13:51.459Z",
+      "status": "failed",
+      "durationMs": 50,
+      "exitCode": 1,
+      "error": "exit=1 signal=none",
+      "finishedAt": "2026-11-19T14:13:51.509Z"
     }
   ],
   "finishedAt": null
