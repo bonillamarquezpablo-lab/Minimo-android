@@ -54,5 +54,6 @@ assert.ok(builder.includes("fauna:{required:true,requested:wildlifeSpawnSpecs.le
 assert.ok(builder.includes("if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)"),
   'The final resource gate must verify all three terrestrial species in both profiles, not Quality only.');
 console.log('WILDLIFE RUNTIME CONTRACT: PASS (3 complete terrestrial species in both profiles, GLB integrity, skeletons, clips, textures, transactional cleanup and blocking readiness).');
+assert.ok(builder.includes("mesh.computeBonesUsingShaders=false") && builder.includes("mesh.alwaysSelectAsActiveMesh=true") && builder.includes("skeleton.prepare()"), "Terrestrial animal meshes must use reliable CPU skinning and avoid frustum-culling skinned bodies with stale bounds.");
 assert.ok(builder.includes("clips.walk===clips.idle||clips.run===clips.walk||clips.run===clips.idle"), "Animals must not silently substitute idle for walking or walking for galloping.");
 assert.ok(builder.includes('("idle", "walk", "gallop")'), "Every terrestrial species must provide the real Idle, Walk and Gallop GLB clips.");
