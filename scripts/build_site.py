@@ -617,14 +617,15 @@ def main() -> None:
    fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<2.0)return;fpsSample=0;
    const fps=renderedFps||engine.getFps(),now=performance.now();
    if(!isPerformanceMode&&isTouchDevice){
-    if(fps<49){qualityDprSlowSamples++;qualityDprStableSamples=0;}
-    else if(fps>=57){qualityDprStableSamples++;qualityDprSlowSamples=0;}
+    const gpuLimitedFrame=fps<49&&lastWorldUpdateMs<8&&lastRenderCpuMs<9;
+    if(gpuLimitedFrame){qualityDprSlowSamples++;qualityDprStableSamples=0;}
+    else if(fps>=57&&lastWorldUpdateMs<8&&lastRenderCpuMs<9){qualityDprStableSamples++;qualityDprSlowSamples=0;}
     else{qualityDprSlowSamples=0;qualityDprStableSamples=0;}
     if(qualityDprSlowSamples>=2&&qualityDprCurrent>qualityDprFloor+.005&&now-qualityDprLastChangeAt>=3500){
      qualityDprCurrent=Math.max(qualityDprFloor,Number((qualityDprCurrent-.12).toFixed(2)));
      engine.setHardwareScalingLevel(1/qualityDprCurrent);
      qualityDprLastChangeAt=now;qualityDprSlowSamples=0;qualityDprChanges++;
-     console.info('EL SIN NOMBRE: resolución interna adaptada para recuperar fluidez.',{fps:Math.round(fps),renderDpr:qualityDprCurrent,minDpr:qualityDprFloor,maxDpr:qualityDprCeiling,qualityScaleAdaptive:true,geometryAndEffectsPreserved:true,changes:qualityDprChanges});
+     console.info('EL SIN NOMBRE: resolución interna adaptada para recuperar fluidez.',{fps:Math.round(fps),renderDpr:qualityDprCurrent,minDpr:qualityDprFloor,maxDpr:qualityDprCeiling,qualityScaleAdaptive:true,geometryAndEffectsPreserved:true,changes:qualityDprChanges,cpu:{worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
     }else if(qualityDprStableSamples>=6&&qualityDprCurrent<qualityDprCeiling-.005&&now-qualityDprLastChangeAt>=8000){
      qualityDprCurrent=Math.min(qualityDprCeiling,Number((qualityDprCurrent+.06).toFixed(2)));
      engine.setHardwareScalingLevel(1/qualityDprCurrent);
