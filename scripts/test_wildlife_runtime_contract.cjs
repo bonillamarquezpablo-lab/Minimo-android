@@ -28,6 +28,10 @@ for(const marker of [
   "loadWildlifeModelsOnce().catch(error=>",
   "complete:ambientFauna.length===wildlifeSpawnSpecs.length"
 ]) assert.ok(builder.includes(marker),'Builder is missing animal-integrity requirement: '+marker);
+assert.ok(builder.includes('def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:') &&
+  builder.includes('primitive.setdefault("attributes", {})["COLOR_0"] = accessor_index') &&
+  builder.includes('colored_skinned_vertex_count / max(1, skinned_vertex_count) < 0.95'),
+  'Every terrestrial animal must ship with a valid, sufficiently complete vertex-colour coat stream; a technically loaded but flat unshaded GLB must fail release validation.');
 assert.match(html,/WILDLIFE_MODEL_DEFS=\{deer:/);
 assert.match(html,/file:'Deer\.glb'/);
 assert.match(html,/file:'Wolf\.glb'/);
