@@ -90,7 +90,7 @@ assert.ok(builder.includes('syncNordicWaterReflectionIsland();') && builder.incl
 assert.ok(builder.includes('identity_start_guard_marker') && builder.includes('identityStartupTriggered=false'), 'The preflight identity gate must be idempotent.');
 assert.ok(builder.includes("continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true})"), 'The anonymous identity action must support touch pointer-up as well as click.');
 assert.ok(builder.includes("continueWithNameButton.addEventListener('pointerup',startNamedIdentity,{once:true})"), 'The named identity action must support touch pointer-up as well as click.');
-assert.ok(builder.includes('isMobilePeakMemorySensitive=!!(isIOSDevice') && builder.includes('/Adreno.*650/i.test(graphicsRenderer)'), 'The memory policy must cover iOS Safari and Adreno 650 without switching the graphics profile.');
+assert.ok(builder.includes('isMobilePeakMemorySensitive=!!(isIOSDevice||isTouchDevice)'), 'The memory policy must serialize large asset imports on every mobile device without switching the graphics profile.');
 assert.ok(builder.includes('civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive'), 'iOS/Adreno 650 startup must not prefetch a second large NPC GLB concurrently.');
 assert.ok(builder.includes('wildlifeBlobs.delete(kind)') && builder.includes('startupWildlifeCompressedBytes'), 'Wildlife source GLBs must be released after their complete species batch is imported.');
 assert.ok(builder.includes('npcStartupPromise=startNpcHumanModels();'), 'Memory-sensitive startup must load the protagonist before importing the NPC roster.');
