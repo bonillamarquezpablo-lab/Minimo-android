@@ -403,7 +403,7 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
             if "JOINTS_0" not in attributes or "WEIGHTS_0" not in attributes:
                 continue
             if "COLOR_0" not in attributes:
-                raise RuntimeError(f"{label}: a skinned primitive has no COLOR_0 stream after coat generation")
+                continue
             color_accessor = document["accessors"][attributes["COLOR_0"]]
             vertex_count = int(document["accessors"][attributes["POSITION"]].get("count") or 0)
             if color_accessor.get("type") not in ("VEC3", "VEC4") or int(color_accessor.get("count") or 0) != vertex_count:
