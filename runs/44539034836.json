@@ -57,10 +57,40 @@
       "name": "Capturas visuales y diagnóstico de fauna terrestre",
       "script": "scripts/fauna-visual-capture.mjs",
       "startedAt": "2026-11-19T14:19:42.853Z",
+      "status": "failed",
+      "durationMs": 217518,
+      "exitCode": 1,
+      "error": "exit=1 signal=none",
+      "finishedAt": "2026-11-19T14:23:20.371Z"
+    },
+    {
+      "name": "Lámina e informe visual de fauna",
+      "script": "scripts/create_fauna_contact_sheet.py",
+      "startedAt": "2026-11-19T14:23:20.373Z",
+      "status": "passed",
+      "durationMs": 65,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-19T14:23:20.438Z"
+    },
+    {
+      "name": "Informe visual unificado de estructuras",
+      "script": "scripts/create_scene_capture_contact_sheet.py",
+      "startedAt": "2026-11-19T14:23:20.439Z",
       "status": "running",
       "durationMs": null,
       "exitCode": null,
       "error": null
+    },
+    {
+      "name": "Lámina de referencias costeras",
+      "script": "scripts/create_coastal_contact_sheet.py",
+      "startedAt": "2026-11-19T14:23:20.440Z",
+      "status": "failed",
+      "durationMs": 42,
+      "exitCode": 1,
+      "error": "exit=1 signal=none",
+      "finishedAt": "2026-11-19T14:23:20.482Z"
     }
   ],
   "finishedAt": null
