@@ -49,7 +49,7 @@ async function readStartupSnapshot(page) {
     const babylon=window.BABYLON||null;
     const scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||babylon?.EngineStore?.LastCreatedScene||null;
     const roots=scene?(scene.transformNodes||[]).filter(node=>
-      /^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test(String(node?.name||''))&&!node.isDisposed?.()
+      /^(?:WildlifeActor_(?:deer|stag|wolf)_\d+|RealSeagullActor_\d+)$/.test(String(node?.name||''))&&!node.isDisposed?.()
     ):[];
     const world=typeof window.getGameWorldInspectionSnapshot==='function'
       ?safe(()=>window.getGameWorldInspectionSnapshot({includeMeshes:false,maxActors:100}),null):null;
