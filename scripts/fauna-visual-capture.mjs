@@ -313,9 +313,9 @@ async function main() {
     for(const animal of manifest.fauna){
       for(const angle of ANGLES){
         const view=await page.evaluate(async({animalId,angleDegrees})=>{
-          const api=window.__ELSN_TEST__,scene=window.__ELSN_FAUNA_CAPTURE_SCENE__;
+          const api=window.__ELSN_TEST__,scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||window.BABYLON?.EngineStore?.LastCreatedScene;
           const root=scene?.getTransformNodeByName?.(animalId);
-          if(!api||!root)throw new Error('El actor de fauna desapareció durante las capturas: '+animalId);
+          if(!scene||!root)throw new Error('No se encuentra la escena o el actor de fauna para capturar: '+animalId+' · api='+!!api);
           root.computeWorldMatrix?.(true);
           const meshes=root.getChildMeshes?.(false)||[];
           let min={x:Infinity,y:Infinity,z:Infinity},max={x:-Infinity,y:-Infinity,z:-Infinity};
