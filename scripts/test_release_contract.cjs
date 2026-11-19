@@ -42,7 +42,7 @@ assert.ok(buildSite.includes("targetGullMaxExtentMeters=.55") &&
   buildSite.includes("visualRoot.position.copyFrom(sourceCenter.scale(-1))"),
   "The release must center the gull hierarchy and enforce the measured 0.55 m biological size.");
 assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]") &&
-  buildSite.includes("flightRig,phase:i*1.25") &&
+  buildSite.includes("flightRig,animation:nativeFlightClip,phase:i*1.25") &&
   buildSite.includes("alignAxis=(from,to)") &&
   buildSite.includes("visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))") &&
   buildSite.includes("const groups=inst.animationGroups||[];const nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null;") &&
