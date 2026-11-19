@@ -36,6 +36,15 @@ assert.ok(!nativeLoader.includes('new Blob') && !nativeLoader.includes('URL.crea
 for (const marker of ['window.__ELSN_RUNTIME_SCRIPT_LOADS','cacheStatus','transferSize','encodedBodySize','decodedBodySize','durationMs']) {
   assert.ok(build.includes(marker), 'Missing native script-load telemetry: ' + marker);
 }
+const terrainStart=index.indexOf('async function createIslandTerrain(');
+const terrainEnd=index.indexOf("\n }\n for(let i=0;i<land.length;i++)",terrainStart);
+assert.ok(terrainStart>=0 && terrainEnd>terrainStart,'All 13 island heightfields must use the asynchronous startup builder.');
+const terrainBuilder=index.slice(terrainStart,terrainEnd);
+assert.ok(terrainBuilder.includes('new Float32Array((positions.length/3)*4)'), 'Terrain vertex colours must use a preallocated typed buffer rather than a growing boxed array.');
+assert.ok(terrainBuilder.includes('terrainStartupSliceBudgetMs=isConstrainedMobile?4:7'), 'Terrain generation must yield according to a bounded mobile CPU time slice.');
+assert.ok(terrainBuilder.includes('await yieldStartupFrame()') && terrainBuilder.includes('setLoadingProgress(40+'), 'Terrain generation must yield to paint the loading screen and report real island progress.');
+assert.ok(index.includes('const terrainMesh=await createIslandTerrain(is,i)') && index.includes("recordStartupTask('Terreno 3D · isla '+(i+1)"), 'The 13 initial island heightfields must be awaited and timed independently before player entry.');
+
 assert.ok(index.includes('id="retryEngine"') && index.includes("retryButton.addEventListener('click',retryGameStartup)") &&
   index.includes("retryButton.addEventListener('pointerup',retryGameStartup)"),
   'The player must have a visible, touch-safe retry action after a blocking startup failure.');
@@ -45,6 +54,7 @@ assert.ok(inspector.includes('Arranque del motor 3D') && inspector.includes('sta
   'Inspector Center must show the recorded engine startup timings and cache source.');
 assert.ok(build.includes("const horizontalMin=Math.max(.055,sourceBounds.height*.045)"),'Animal GLB validation must tolerate valid asymmetric body proportions.');
 assert.ok(build.includes("horizontalMajor=Math.max(.18,sourceBounds.height*.14)"),'Animal GLB validation must still reject near-degenerate geometry.');
+assert.ok(smoke.includes('startupTimeline = await page.evaluate') && smoke.includes('getGameHealthDebug'), 'The startup smoke must preserve per-task startup timing evidence in its report.');
 assert.ok(smoke.includes("document.body.classList.contains('boot-failed')"),'The startup smoke must fail fast with the actual boot error instead of timing out opaquely.');
 
 assert.ok(smoke.includes('identityClickDiagnostics') && smoke.includes('__ELSN_IDENTITY_START_COUNT'), 'The smoke must capture whether the first-run identity button actually started the engine.');
