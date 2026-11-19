@@ -13,6 +13,9 @@ assert.ok(build.includes("progress_replacement =") && build.includes("currentLoa
   build.includes("loadProgressLabel.textContent=Math.floor(currentLoadProgress)+'%'") &&
   build.includes("loadProgressTrack.setAttribute('aria-valuenow'"),
   'Every startup milestone must update the visible percentage and accessibility value synchronously, not only queue a future animation frame.');
+for (const marker of ['elsnStartupProgressPanel','startupProgressSteps','elsnStartupProgressElapsed','En esta fase:']) {
+  assert.ok(build.includes(marker), 'The loading screen must show the current numbered phase and time in phase: ' + marker);
+}
 assert.ok(build.includes("await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));") &&
   build.includes("Yield once before synchronous world construction"),
   'The browser must paint the 40% world-building milestone before synchronous scene generation starts.');
