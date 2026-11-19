@@ -889,8 +889,10 @@ async function main() {
         'El rig de vuelo debe contener nueve pivotes: '+JSON.stringify(bird.flightRig));
       assert.equal(bird.flightRig?.animationPlaying,true,
         'La animación de vuelo de una gaviota está detenida: '+JSON.stringify(bird.flightRig));
-      assert.ok(Number(bird.flightRig?.targetedAnimations)>0,
+      assert.ok(Number(bird.flightRig?.targetedAnimations)>=100,
         'La animación de vuelo no tiene pistas dirigidas: '+JSON.stringify(bird.flightRig));
+      assert.match(String(bird.flightRig?.animationGroupName||''),/fly/i,
+        'La gaviota no está reproduciendo el clip Fly nativo del GLB: '+JSON.stringify(bird.flightRig));
       const textureState=bird.textureReadiness||{};
       assert.equal(Number(textureState.pending??0),0,
         'La gaviota tiene texturas pendientes: '+JSON.stringify(bird));
