@@ -10,6 +10,6 @@ for(const marker of ["elsn-inspector-capture-vault","indexedDB.open","saveScreen
  assert.ok(live.includes(marker),"Screenshot persistence contract missing: "+marker);
 for(const marker of [".capture-vault",".capture-vault-grid",".capture-vault-card",".capture-vault-empty"])
  assert.ok(css.includes(marker),"Screenshot gallery styling missing: "+marker);
-assert.ok(/style\.css\?v=phase1-live-4/.test(html),"Screenshot gallery CSS must use a fresh cache version.");
-assert.ok(/phase1-live\.js\?v=4/.test(html),"Screenshot gallery script must use a fresh cache version.");
+assert.ok(/style\.css\?v=phase1-live-5/.test(html),"Screenshot gallery CSS must use a fresh cache version.");
+assert.ok(/phase1-live\.js\?v=6/.test(html),"Screenshot gallery script must use a fresh cache version.");
 console.log("Inspector persistent screenshot gallery contract: PASS");
