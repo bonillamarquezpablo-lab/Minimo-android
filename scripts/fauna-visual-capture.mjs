@@ -449,7 +449,10 @@ async function main() {
       }
     }
     manifest.verdict=manifest.warnings.length?'captured-with-review-warnings':'captured';
-    assert.equal(manifest.captures.length,manifest.fauna.length*ANGLES.length,'Faltan vistas de fauna.');
+    const visualCaptureCount=manifest.captures.filter(capture=>ANGLES.some(angle=>angle.id===capture.angle)).length;
+    const bindPoseCaptureCount=manifest.captures.filter(capture=>capture.angle==='bindpose-no-skinning').length;
+    assert.equal(visualCaptureCount,manifest.fauna.length*ANGLES.length,'Faltan vistas cardinales de fauna; las capturas bind-pose son evidencia adicional y no cuentan como ángulos de cámara.');
+    assert.ok(bindPoseCaptureCount<=manifest.fauna.length,'Hay más capturas bind-pose que actores inspeccionados.');
     assert.equal(manifest.pageErrors.length,0,'Errores JavaScript: '+manifest.pageErrors.join(' | '));
   }catch(error){
     manifest.failures.push(String(error?.stack||error));
