@@ -42,6 +42,8 @@ assert.ok(capture.includes('faunaWaitStarted') && capture.includes('actorRoots')
 assert.ok(capture.includes('const FAUNA_ROSTER_TIMEOUT_MS = 240000') && capture.includes('timeout:FAUNA_ROSTER_TIMEOUT_MS'),
   'Fauna inspection must allow the complete blocking startup window before declaring the roster missing.');
 assert.ok(capture.includes('getChildMeshes'));
+assert.ok(capture.includes("if(other!==root&&(/^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test"),
+  'Per-animal captures must hide every other wildlife actor using digit-matching IDs, not a literal backslash sequence.');
 assert.ok(capture.includes('minimumWorld') || capture.includes('maximumWorld'));
 assert.ok(capture.includes('skinnedVertices'));
 assert.ok(capture.includes('animationGroups'));
