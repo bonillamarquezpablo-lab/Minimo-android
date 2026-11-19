@@ -47,6 +47,8 @@ assert.ok(capture.includes('captureCanvas'));
 assert.ok(capture.includes('const visualCaptureCount=manifest.captures.filter(capture=>ANGLES.some(angle=>angle.id===capture.angle)).length') &&
   capture.includes("capture.angle==='bindpose-no-skinning'"),
   'Four cardinal camera views must be counted separately from optional bind-pose diagnostic images.');
+assert.ok(capture.includes('assert.equal(manifest.warnings.length,0'),
+  'Fauna visual acceptance must fail on unresolved count, geometry, rig, animation, material or texture anomalies.');
 assert.ok(capture.includes("if(expected!==landAnimals.length||(manifest.startup.worldReady&&expected!==loaded))"),
   'A timed-out startup recorder must not override the number of actors actually mounted in the live scene.');
 assert.ok(capture.includes("if(animal.textures.some(texture=>texture.ready===false||texture.ready===null))") &&
