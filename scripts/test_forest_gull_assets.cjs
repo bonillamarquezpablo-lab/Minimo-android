@@ -16,17 +16,15 @@ assert.ok(html.includes('const requiredFlightParts=[leftWing,rightWing,tail,head
 assert.ok(html.includes("const groups=inst.animationGroups||[];const nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null;") &&
   html.includes("El GLB de gaviota no contiene un clip Fly válido.") &&
   html.includes("if(group!==nativeFlightClip)group.stop();") &&
-  html.includes("flightGroup.dispose();flightRig.animationGroup=nativeFlightClip;nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);"),
-  'Every gull must use the complete native Fly animation while retaining the nine anatomical pivots for inspection.');
+  html.includes("flightRig={actor,visualRoot,bodyAxis,leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);"),
+  'Every gull must retain all nine anatomical pivots and start its complete native Fly clip.');
 assert.ok(html.includes("flightRig,phase:i*1.25") && html.includes("alignAxis=(from,to)") &&
   html.includes("visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))") &&
-  html.includes("new B.AnimationGroup('Seagull_Flight_Loop_'+i,scene)") &&
-  html.includes("B.Animation.ANIMATIONTYPE_QUATERNION") &&
-  html.includes("flightGroup.dispose();flightRig.animationGroup=fly;fly.start(true,1,fly.from,fly.to);"),
-  'Every gull must be aligned horizontally and play the source GLB Fly clip, with the temporary partial rig disposed.');
-assert.ok(html.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
-  html.includes("groups.find(group=>/fly/i") && html.includes("flightRig.animationGroup=fly"),
-  'The complete native bird flight clip must remain active, with independent per-bird speed variation.');
+  html.includes("groups.find(group=>/fly/i") &&
+  html.includes("flightRig.animationGroup=nativeFlightClip") &&
+  html.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
+  !html.includes("Seagull_Flight_Loop_") && !html.includes("addFlightTrack("),
+  'Each gull must align its body horizontally and animate the entire imported GLB Fly clip without a discarded synthetic rig.');
 assert.ok(html.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)") && html.includes("footprintMesh.renderingGroupId=1"),
   'Transparent footprints in rendering group 1 must preserve opaque-world depth.');
 assert.ok(html.includes("function findForestTreePlacement(x,z,canopyRadius)"),
@@ -39,13 +37,14 @@ assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html
   'Forest placement must use a wider relocation search and expose overlap diagnostics.');
 assert.ok(!html.includes('b.leftWing.rotation[b.wingFlapAxis]') && !html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
   'The imported skeleton animation must not be overridden by synthetic per-bone wing rotations.');
-assert.ok(html.includes("addFlightTrack('LeftHindUpLeg'") && html.includes("addFlightTrack('RightHindUpLeg'") &&
-  html.includes("addFlightTrack('Tail'") && html.includes("addFlightTrack('Head'") && html.includes("addFlightTrack('Neck'"),
-  'The flight clip must tuck both legs and animate restrained head, neck and tail compensation.');
+assert.ok(html.includes("flightRig={actor,visualRoot,bodyAxis,leftWing:{node:leftWing}") &&
+  html.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip}"),
+  'The live gull diagnostic rig must expose the two wings, tail, head, neck and both articulated legs.');
 assert.ok(buildSource.includes("alignAxis=(from,to)") && buildSource.includes("visualRoot.rotationQuaternion=alignAxis") &&
-  buildSource.includes("new B.AnimationGroup('Seagull_Flight_Loop_'+i,scene)") &&
-  buildSource.includes("addFlightTrack('LeftWing'") && buildSource.includes("addFlightTrack('RightWing'"),
- 'The bird body must be aligned to a horizontal flight axis and use a real looping animation group with mirrored wing pivots.');
+  buildSource.includes("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to)") &&
+  buildSource.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip") &&
+  !buildSource.includes("addFlightTrack("),
+ 'The bird body must be aligned horizontally and play the complete native GLB flight clip without constructing a redundant animation.');
 
 function inspectGlb(relative,minimumBytes,requiresTexture){
  const file=path.join(dist,relative);
