@@ -68,10 +68,12 @@ assert.ok(source.includes('function updateWildlife(dt)'), 'Wildlife behavior mus
 assert.ok(source.includes('function update(dt){'), 'The full game world update must remain present.');
 assert.ok(builder.includes('phase_timing_helpers') && builder.includes('setWorldUpdatePhase(') && builder.includes('getWorldPhaseTimingSnapshot()'), 'The release must time each existing world-update phase.');
 assert.ok(builder.includes('enemy_ai_lod_marker =') && builder.includes("if(isTouchDevice&&dist>18&&e.state!=='attack'&&e.stun<=0){") && builder.includes('const mobileAiInterval=dist>70?1.0:(dist>36?.45:.20);'), 'Distant touch-device enemies must use distance-based AI cadence while nearby combat remains full-rate.');
-assert.ok(builder.includes('alignAxis=(from,to)') && builder.includes("new B.AnimationGroup('Seagull_Flight_Loop_'+i,scene)") &&
-  builder.includes("flightGroup.dispose();flightRig.animationGroup=nativeFlightClip;nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);") &&
-  builder.includes("const groups=inst.animationGroups||[];const nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null;"),
-  'Gulls must be aligned horizontally and use the complete native Fly clip rather than an incomplete synthetic wing-only loop.');
+assert.ok(builder.includes('alignAxis=(from,to)') &&
+  builder.includes("const groups=inst.animationGroups||[];const nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null;") &&
+  builder.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip") &&
+  builder.includes("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to)") &&
+  !builder.includes("addFlightTrack(") && !builder.includes("Seagull_Flight_Loop_"),
+  'Gulls must use the complete native GLB Fly clip with all anatomical pivots, without a redundant synthetic animation.');
 assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Vector3.TransformNormal(axis,actor.getWorldMatrix())'), 'Per-frame gull animation must not calculate/invert joint matrices.');
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
