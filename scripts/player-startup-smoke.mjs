@@ -386,8 +386,10 @@ async function main() {
     // entry point across the first 20 seconds of actual gameplay.
     const blockingBarrierStartedAt = performance.now();
     try {
-      await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
-        document.body.classList.contains('boot-failed'), undefined, { timeout: 180000, polling: 250 });
+      manifest.startupWait = await waitForWorldReadyWithRecovery(page,'El arranque');
+      if(manifest.startupWait.recoveredAfterWaitTimeout){
+        manifest.startupRecoveredFromDelayedEvaluation = true;
+      }
     } catch (error) {
       manifest.blockingStartupMs = Number((performance.now() - blockingBarrierStartedAt).toFixed(1));
       manifest.startupTimeoutDiagnostics = await readStartupSnapshot(page);
