@@ -44,20 +44,73 @@ const manifest = {
 };
 
 async function readStartupSnapshot(page) {
-  return page.evaluate(() => ({
-    bodyClass: document.body.className,
-    bootFailed: document.body.classList.contains('boot-failed'),
-    loadingText: document.querySelector('#loadingText')?.textContent ||
-      document.querySelector('#loading')?.textContent || null,
-    loadingHelp: document.querySelector('#loadHelp')?.textContent || null,
-    recorder: window.__elSinNombreStartupSmoke || null,
-    player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state?.() || null,
-    resourceGate: window.__ELSN_STARTUP_RESOURCE_GATE__ || null,
-    serviceWorker: {
-      controlled: !!navigator.serviceWorker?.controller,
-      state: navigator.serviceWorker?.controller?.state || null
-    }
-  }));
+  return page.evaluate(() => {
+    const safe=(fn,fallback=null)=>{try{return fn();}catch(_){return fallback;}};
+    const babylon=window.BABYLON||null;
+    const scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||babylon?.EngineStore?.LastCreatedScene||null;
+    const roots=scene?(scene.transformNodes||[]).filter(node=>
+      /^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test(String(node?.name||''))&&!node.isDisposed?.()
+    ):[];
+    const world=typeof window.getGameWorldInspectionSnapshot==='function'
+      ?safe(()=>window.getGameWorldInspectionSnapshot({includeMeshes:false,maxActors:100}),null):null;
+    const progress={
+      percent:document.getElementById('elsnStartupProgressPercent')?.textContent||
+        document.getElementById('loadProgressLabel')?.textContent||null,
+      stage:document.getElementById('elsnStartupProgressStage')?.textContent||null,
+      action:document.getElementById('elsnStartupProgressAction')?.textContent||
+        document.getElementById('loadText')?.textContent||null,
+      elapsed:document.getElementById('elsnStartupProgressElapsed')?.textContent||null,
+      trackWidth:document.getElementById('loadProgressBar')?.style.width||
+        document.getElementById('loadingProgress')?.style.width||null,
+      help:document.getElementById('loadHelp')?.textContent||null
+    };
+    const summarizeActors=inventory=>({
+      count:Number(inventory?.count)||0,
+      returned:(inventory?.returned||[]).map(actor=>({
+        name:actor?.name||null,kind:actor?.kind||null,meshCount:actor?.meshCount??null,
+        visibleMeshCount:actor?.visibleMeshCount??null,
+        boneCount:actor?.totalBones??actor?.skeletons?.reduce?.((sum,item)=>sum+(Number(item?.boneCount)||0),0)??null,
+        animationGroups:actor?.animationGroups?.map(group=>({name:group.name,playing:group.playing,targetedAnimations:group.targetedAnimations}))||[],
+        textures:actor?.textureReadiness||null,flightRig:actor?.flightRig||null
+      }))
+    });
+    return {
+      bodyClass:document.body.className,
+      bootFailed:document.body.classList.contains('boot-failed'),
+      booting:document.body.classList.contains('booting'),
+      loadingVisible:!!document.getElementById('loading')&&getComputedStyle(document.getElementById('loading')).display!=='none',
+      loadingText:document.getElementById('loadText')?.textContent||document.querySelector('#loading')?.textContent||null,
+      loadingHelp:progress.help,progress,
+      recorder:window.__elSinNombreStartupSmoke||null,
+      player:window.__ELSN_PLAYER_STARTUP_SMOKE__?.state?.()||null,
+      resourceGate:window.__ELSN_STARTUP_RESOURCE_GATE__||null,
+      scene:scene?{
+        available:true,meshCount:scene.meshes?.length||0,transformNodeCount:scene.transformNodes?.length||0,
+        materialCount:scene.materials?.length||0,textureCount:scene.textures?.length||0,
+        pendingTextures:(scene.textures||[]).filter(texture=>safe(()=>texture.isReady?.(),false)===false).length,
+        animationGroupCount:scene.animationGroups?.length||0,
+        playingAnimationGroups:(scene.animationGroups||[]).filter(group=>group?.isPlaying).length,
+        waitingItems:safe(()=>scene.getWaitingItemsCount?.(),null),
+        fps:safe(()=>scene.getEngine?.().getFps?.(),null)
+      }:{available:false},
+      fauna:{
+        readiness:safe(()=>window.__ELSN_WILDLIFE_DIAGNOSTICS__?.getSnapshot?.(),null),
+        actorRoots:roots.map(root=>({
+          name:String(root.name||''),enabled:safe(()=>root.isEnabled?.(),null),
+          position:root.position?{x:root.position.x,y:root.position.y,z:root.position.z}:null,
+          meshCount:safe(()=>root.getChildMeshes?.(false)?.length,0)
+        })),
+        landInventory:summarizeActors(world?.actors?.wildlife),
+        birdInventory:summarizeActors(world?.actors?.ambientBirds)
+      },
+      sceneWarmup:window.__elSinNombreStartupSceneWarmup||null,
+      backgroundModels:window.__elSinNombreBackgroundModelTasks||null,
+      serviceWorker:{
+        controlled:!!navigator.serviceWorker?.controller,
+        state:navigator.serviceWorker?.controller?.state||null
+      }
+    };
+  });
 }
 
 async function waitForWorldReadyWithRecovery(page, phase) {
@@ -332,8 +385,19 @@ async function main() {
     // Wait for the complete blocking startup barrier, then audit every import/network
     // entry point across the first 20 seconds of actual gameplay.
     const blockingBarrierStartedAt = performance.now();
-    await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
-      document.body.classList.contains('boot-failed'), undefined, { timeout: 180000, polling: 250 });
+    try {
+      await page.waitForFunction(() => window.__elSinNombreStartupSmoke?.worldReady === true ||
+        document.body.classList.contains('boot-failed'), undefined, { timeout: 180000, polling: 250 });
+    } catch (error) {
+      manifest.blockingStartupMs = Number((performance.now() - blockingBarrierStartedAt).toFixed(1));
+      manifest.startupTimeoutDiagnostics = await readStartupSnapshot(page);
+      manifest.startupTimeoutDiagnostics.failure = String(error?.message||error);
+      await fs.promises.writeFile(path.join(OUT,'startup-timeout-diagnostics.json'),
+        JSON.stringify(manifest.startupTimeoutDiagnostics,null,2));
+      await page.screenshot({path:path.join(OUT,'startup-timeout-screen.png'),fullPage:true}).catch(()=>{});
+      throw new Error('El arranque no alcanzó worldReady. Diagnóstico de etapa, escena y fauna: '+
+        JSON.stringify(manifest.startupTimeoutDiagnostics)+' · '+String(error?.message||error));
+    }
     manifest.blockingStartupMs = Number((performance.now() - blockingBarrierStartedAt).toFixed(1));
     manifest.startupBarrierState = await page.evaluate(() => ({
       bootFailed: document.body.classList.contains('boot-failed'),
