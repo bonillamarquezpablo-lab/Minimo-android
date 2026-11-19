@@ -142,6 +142,20 @@ jobs:
           PLAYER_TEST_URL: https://localhost:4175/
         run: node scripts/player-startup-smoke.mjs
 
+      - name: Verify mobile fauna rigs, animations, textures and four-view visuals before publish
+        env:
+          FAUNA_TEST_URL: https://localhost:4175/
+        run: node scripts/fauna-visual-capture.mjs
+
+      - name: Preserve fauna visual acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-sin-nombre-fauna-release-${{ github.sha }}
+          path: artifacts/fauna-visual-captures/
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Preserve runtime acceptance evidence
         if: always()
         uses: actions/upload-artifact@v4
