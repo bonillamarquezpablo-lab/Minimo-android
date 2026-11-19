@@ -289,7 +289,8 @@ async function main() {
       if(animal.role==='ambient-bird'){
         if(!animal.flightRig?.complete)manifest.warnings.push({code:'gull-flight-rig-incomplete',animal:animal.id,flightRig:animal.flightRig});
         if(animal.flightRig?.complete&&!animal.flightRig.animationPlaying)manifest.warnings.push({code:'gull-flight-animation-stopped',animal:animal.id,flightRig:animal.flightRig});
-        if(!(Number(animal.flightRig?.targetedAnimations)>0))manifest.warnings.push({code:'gull-flight-tracks-missing',animal:animal.id,flightRig:animal.flightRig});
+        if(!/fly/i.test(String(animal.flightRig?.animationGroupName||'')))manifest.warnings.push({code:'gull-native-flight-clip-missing',animal:animal.id,flightRig:animal.flightRig});
+        if(Number(animal.flightRig?.targetedAnimations)<100)manifest.warnings.push({code:'gull-native-flight-tracks-incomplete',animal:animal.id,flightRig:animal.flightRig});
       }else if(animal.skinnedVertices<600||animal.boneCount<12)manifest.warnings.push({
         code:'weak-skinning-or-rig',animal:animal.id,skinnedVertices:animal.skinnedVertices,boneCount:animal.boneCount
       });
