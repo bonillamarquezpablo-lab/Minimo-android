@@ -73,23 +73,84 @@ async function main() {
     await page.locator('#chooseQuality').click();
     await page.locator('#continueUnnamed').waitFor({state:'visible',timeout:30000});
     await page.locator('#continueUnnamed').click();
-    await page.waitForFunction(
-      ()=>window.__ELSN_TEST__&&window.__elSinNombreStartupSmoke?.worldReady===true,
-      undefined,{timeout:240000,polling:250}
-    );
-    await page.locator('#intro.open').waitFor({state:'visible',timeout:60000});
-    await page.locator('#newGameChoice').waitFor({state:'visible',timeout:30000});
-    await page.locator('#newGameChoice').click();
-    await page.waitForFunction(()=>document.body.classList.contains('game-running'),undefined,{timeout:30000,polling:100});
-
-    manifest.startup={worldReady:true,durationMs:Date.now()-navigationStarted};
+    const faunaWaitStarted=Date.now();
+    try {
+      await page.waitForFunction(()=>{
+        const scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||window.BABYLON?.EngineStore?.LastCreatedScene;
+        const roots=scene?(scene.transformNodes||[]).filter(node=>
+          /^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test(String(node?.name||''))&&!node.isDisposed?.()
+        ): [];
+        const land=roots.filter(node=>/^WildlifeActor_/.test(String(node.name||''))).length;
+        const birds=roots.filter(node=>/^RealSeagullActor_/.test(String(node.name||''))).length;
+        return window.__elSinNombreStartupSmoke?.worldReady===true||
+          document.body.classList.contains('boot-failed')||land>=3||birds>=1;
+      },undefined,{timeout:120000,polling:250});
+    } catch(error) {
+      manifest.warnings.push({code:'startup-did-not-reach-fauna-roster',message:String(error?.message||error)});
+    }
+    manifest.startupDiagnostic=await page.evaluate(()=>{
+      const safe=(fn,fallback=null)=>{try{return fn();}catch(_){return fallback;}};
+      const B=window.BABYLON||null,scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||B?.EngineStore?.LastCreatedScene||null;
+      const roots=scene?(scene.transformNodes||[]).filter(node=>
+        /^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test(String(node?.name||''))&&!node.isDisposed?.()
+      ): [];
+      const world=typeof window.getGameWorldInspectionSnapshot==='function'
+        ?safe(()=>window.getGameWorldInspectionSnapshot({includeMeshes:false,maxActors:200}),null):null;
+      return {
+        worldReady:window.__elSinNombreStartupSmoke?.worldReady===true,
+        bootFailed:document.body.classList.contains('boot-failed'),bodyClass:document.body.className,
+        loadText:document.getElementById('loadText')?.textContent||null,
+        progress:{
+          percent:document.getElementById('elsnStartupProgressPercent')?.textContent||null,
+          stage:document.getElementById('elsnStartupProgressStage')?.textContent||null,
+          action:document.getElementById('elsnStartupProgressAction')?.textContent||null,
+          elapsed:document.getElementById('elsnStartupProgressElapsed')?.textContent||null,
+          trackWidth:document.getElementById('loadProgressBar')?.style.width||null
+        },
+        recorder:window.__elSinNombreStartupSmoke||null,
+        resourceGate:window.__ELSN_STARTUP_RESOURCE_GATE__||null,
+        scene:scene?{
+          meshCount:scene.meshes?.length||0,transformNodeCount:scene.transformNodes?.length||0,
+          materialCount:scene.materials?.length||0,textureCount:scene.textures?.length||0,
+          pendingTextures:(scene.textures||[]).filter(texture=>safe(()=>texture.isReady?.(),false)===false).length,
+          animationGroupCount:scene.animationGroups?.length||0,
+          waitingItems:safe(()=>scene.getWaitingItemsCount?.(),null),
+          fps:safe(()=>scene.getEngine?.().getFps?.(),null)
+        }:null,
+        faunaReadiness:safe(()=>window.__ELSN_WILDLIFE_DIAGNOSTICS__?.getSnapshot?.(),null),
+        actorRoots:roots.map(root=>({
+          name:String(root.name||''),enabled:safe(()=>root.isEnabled?.(),null),
+          position:root.position?{x:root.position.x,y:root.position.y,z:root.position.z}:null,
+          meshCount:safe(()=>root.getChildMeshes?.(false)?.length,0)
+        })),
+        landInventory:world?.actors?.wildlife?.returned||[],
+        birdInventory:world?.actors?.ambientBirds?.returned||[]
+      };
+    });
+    manifest.startup={
+      worldReady:manifest.startupDiagnostic.worldReady,
+      bootFailed:manifest.startupDiagnostic.bootFailed,
+      durationMs:Date.now()-navigationStarted,
+      waitedMs:Date.now()-faunaWaitStarted
+    };
     manifest.gameVersion=await page.evaluate(()=>document.querySelector('meta[name="el-sin-nombre-build"]')?.content||null);
-    manifest.readiness=await page.evaluate(()=>window.__ELSN_WILDLIFE_DIAGNOSTICS__?.getSnapshot?.()||null);
-    manifest.cameraTextureReadiness=await page.evaluate(()=>window.__ELSN_TEST__?.prepareCaptureFrame?window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs:120000}):null);
+    manifest.readiness=manifest.startupDiagnostic.faunaReadiness;
+    manifest.cameraTextureReadiness=manifest.startup.worldReady
+      ?await page.evaluate(()=>window.__ELSN_TEST__?.prepareCaptureFrame?window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs:120000}):null)
+      :null;
+    if(!manifest.startup.worldReady){
+      await page.screenshot({path:path.join(OUT,'startup-stalled-before-world-ready.png'),fullPage:true}).catch(()=>{});
+    }
+    if(manifest.startup.worldReady){
+      await page.locator('#intro.open').waitFor({state:'visible',timeout:60000});
+      await page.locator('#newGameChoice').waitFor({state:'visible',timeout:30000});
+      await page.locator('#newGameChoice').click();
+      await page.waitForFunction(()=>document.body.classList.contains('game-running'),undefined,{timeout:30000,polling:100});
+    }
     const initial=await page.evaluate(()=>{
       const scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||window.__ELSN_FAUNA_CAPTURE_BABYLON__?.EngineStore?.LastCreatedScene;
       const api=window.__ELSN_TEST__;
-      if(!scene)throw new Error('El Inspector no pudo enlazar la escena Babylon viva.');
+      if(!scene)return {build:api?.build||null,scene:null,gameWildlife:[],expectedWildlifeCount:0,expectedBirdCount:0,fauna:[]};
       const number=value=>Number.isFinite(Number(value))?Number(Number(value).toFixed(4)):null;
       const vec=value=>value?{x:number(value.x),y:number(value.y),z:number(value.z)}:null;
       const gameDiagnostics=typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug():null;
@@ -199,7 +260,12 @@ async function main() {
     manifest.scene=initial.scene;
     manifest.gameWildlife=initial.gameWildlife;
     manifest.fauna=initial.fauna;
-    if(!manifest.fauna.length)throw new Error('No se encontró ningún actor de fauna terrestre ni alada en la escena.');
+    if(!manifest.fauna.length){
+      manifest.verdict='startup-stalled-before-fauna-actors';
+      manifest.failures.push('No se encontraron actores de fauna en la escena; el estado de arranque y la captura de pantalla quedaron guardados para localizar la dependencia bloqueada.');
+      saveManifest();
+      throw new Error('No se encontró fauna montada. Estado de arranque: '+JSON.stringify(manifest.startupDiagnostic));
+    }
     const landAnimals=manifest.fauna.filter(animal=>animal.role!=='ambient-bird');
     const birds=manifest.fauna.filter(animal=>animal.role==='ambient-bird');
     const expected=Number(initial.expectedWildlifeCount||manifest.readiness?.requested||landAnimals.length);
