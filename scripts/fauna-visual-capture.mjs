@@ -363,7 +363,7 @@ async function main() {
           };
           const hidden=[];
           for(const other of scene.transformNodes||[]){
-            if(other!==root&&(/^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test(String(other?.name||'')))){
+            if(other!==root&&(/^(?:WildlifeActor_(?:deer|stag|wolf)_\d+|RealSeagullActor_\d+)$/.test(String(other?.name||'')))){
               const wasEnabled=other.isEnabled?.()!==false;
               if(wasEnabled){other.setEnabled(false);hidden.push(other);}
             }
