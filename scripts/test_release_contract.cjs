@@ -49,8 +49,8 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   buildSite.includes("B.Animation.ANIMATIONTYPE_QUATERNION") &&
   buildSite.includes("addFlightTrack('LeftWing'") &&
   buildSite.includes("addFlightTrack('RightWing'") &&
-  buildSite.includes("flightGroup.dispose();flightRig.animationGroup=fly;fly.start(true,1,fly.from,fly.to);") &&
-  buildSite.includes("const groups=inst.animationGroups||[],fly=groups.find(group=>/fly/i.test(String(group.name||'')))||null;") &&
+  buildSite.includes("flightGroup.dispose();flightRig.animationGroup=nativeFlightClip;nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);") &&
+  buildSite.includes("const groups=inst.animationGroups||[];const nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null;") &&
   buildSite.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
   !buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio"),
   "The gull must be aligned horizontally and use a cached looping quaternion flight animation group.");
