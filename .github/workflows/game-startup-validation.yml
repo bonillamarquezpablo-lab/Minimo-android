@@ -3,10 +3,14 @@ name: Main game startup validation
 on:
   push:
     branches:
+      - main
       - fix/main-player-startup-validation
       - fix/0.6.309-startup-telemetry
     paths:
       - 'index.html'
+      - 'scripts/build_site.py'
+      - 'scripts/test_mobile_startup_loading.cjs'
+      - 'scripts/test_wildlife_runtime_contract.cjs'
       - 'scripts/player-startup-smoke.mjs'
       - 'scripts/test_player_startup_flow_contract.cjs'
       - '.github/workflows/game-startup-validation.yml'
@@ -15,6 +19,9 @@ on:
       - main
     paths:
       - 'index.html'
+      - 'scripts/build_site.py'
+      - 'scripts/test_mobile_startup_loading.cjs'
+      - 'scripts/test_wildlife_runtime_contract.cjs'
       - 'scripts/player-startup-smoke.mjs'
       - 'scripts/test_player_startup_flow_contract.cjs'
       - '.github/workflows/game-startup-validation.yml'
@@ -59,6 +66,7 @@ jobs:
           node scripts/test_release_contract.cjs
           node scripts/test_startup_guard.cjs
           node scripts/test_glb_loading.cjs
+          node scripts/test_wildlife_runtime_contract.cjs
           node scripts/test_mobile_startup_loading.cjs
           node scripts/test_startup_smoke.cjs
           node scripts/test_atmosphere_system.cjs
