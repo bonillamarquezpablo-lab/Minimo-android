@@ -25,7 +25,7 @@ assert.ok(html.includes("flightRig,phase:i*1.25") && html.includes("alignAxis=(f
   html.includes("flightGroup.dispose();flightRig.animationGroup=fly;fly.start(true,1,fly.from,fly.to);"),
   'Every gull must be aligned horizontally and play the source GLB Fly clip, with the temporary partial rig disposed.');
 assert.ok(html.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
-  html.includes("Fly_Gull") && html.includes("flightRig.animationGroup=fly"),
+  html.includes("groups.find(group=>/fly/i") && html.includes("flightRig.animationGroup=fly"),
   'The complete native bird flight clip must remain active, with independent per-bird speed variation.');
 assert.ok(html.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)") && html.includes("footprintMesh.renderingGroupId=1"),
   'Transparent footprints in rendering group 1 must preserve opaque-world depth.');
