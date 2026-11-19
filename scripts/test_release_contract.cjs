@@ -45,7 +45,7 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   buildSite.includes("flightRig,animation:nativeFlightClip,phase:i*1.25") &&
   buildSite.includes("alignAxis=(from,to)") &&
   buildSite.includes("visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))") &&
-  buildSite.includes("const groups=inst.animationGroups||[];const nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null;") &&
+  buildSite.includes("const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;") &&
   buildSite.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip") &&
   buildSite.includes("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to)") &&
   buildSite.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
