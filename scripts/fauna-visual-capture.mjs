@@ -98,10 +98,13 @@ async function main() {
         while(current&&depth++<48){if(current===root)return true;current=current.parent;}
         return false;
       };
+      const worldSnapshot=typeof window.getGameWorldInspectionSnapshot==='function'?window.getGameWorldInspectionSnapshot({includeMeshes:false,maxActors:200}):null;
+      const birdDiagnostics=worldSnapshot?.actors?.ambientBirds?.returned||[];
       const actors=(scene.transformNodes||[]).filter(node=>
-        /^WildlifeActor_(?:deer|stag|wolf)_\d+$/.test(String(node?.name||''))&&!node.isDisposed?.()
+        (/^WildlifeActor_(?:deer|stag|wolf)_\d+$/.test(String(node?.name||''))||/^RealSeagullActor_\d+$/.test(String(node?.name||'')))&&!node.isDisposed?.()
       );
       const fauna=actors.map(root=>{
+        const isBird=/^RealSeagullActor_\d+$/.test(String(root?.name||''));
         root.computeWorldMatrix?.(true);
         const meshes=(root.getChildMeshes?.(false)||[]).filter(mesh=>
           mesh&&!mesh.isDisposed?.()&&Number(mesh.getTotalVertices?.())>0
@@ -165,16 +168,20 @@ async function main() {
         const position=root.getAbsolutePosition?.()||root.position;
         const validBounds=Number.isFinite(min.x)&&Number.isFinite(max.x);
         const dimensions=validBounds?{width:number(max.x-min.x),height:number(max.y-min.y),depth:number(max.z-min.z)}:null;
-        const kind=String(root.name).split('_')[1]||'unknown';
+        const kind=isBird?'gull':(String(root.name).split('_')[1]||'unknown');
         const index=Number(String(root.name).split('_').at(-1));
-        const actorDiagnostic=(gameDiagnostics?.wildlife||[]).find(item=>item.kind===kind&&item.island===0)||null;
+        const actorDiagnostic=isBird
+          ? (birdDiagnostics.find(item=>item.name===String(root.name))||birdDiagnostics[index]||null)
+          : ((gameDiagnostics?.wildlife||[]).find(item=>item.kind===kind&&item.island===0)||null);
         return {
-          id:String(root.name),index,kind,islandIndex:actorDiagnostic?.island??null,
+          id:String(root.name),index,kind,role:isBird?'ambient-bird':'wildlife',islandIndex:actorDiagnostic?.island??null,
           position:vec(position),rotation:vec(root.rotation),scaling:vec(root.scaling),
           bounds:validBounds?{min:vec(min),max:vec(max),dimensions}:null,
           sourceDimensions:actorDiagnostic?.dimensions||null,
           meshCount:meshes.length,visibleMeshCount,totalVertices,totalIndices,skinnedVertices,
           skeletonCount:skeletons.size,boneCount:bones.size,
+          flightRig:isBird?(actorDiagnostic?.flightRig||null):null,
+          activeMode:actorDiagnostic?.activeMode||null,
           meshNames:meshRows.map(row=>row.name),meshes:meshRows,
           materials:[...materials.values()].map(material=>({name:String(material.name||''),type:material.getClassName?.()||material.constructor?.name||'unknown'})),
           textures:textureRows,animation:actorDiagnostic?.animation||null,animationGroups
@@ -184,29 +191,42 @@ async function main() {
         build:api?.build||null,
         scene:{meshCount:scene.meshes?.length||0,transformNodeCount:scene.transformNodes?.length||0},
         gameWildlife:typeof window.getGameHealthDebug==='function'?window.getGameHealthDebug()?.wildlife||[]:[],
+        expectedWildlifeCount:Number(worldSnapshot?.actors?.wildlife?.count)||0,
+        expectedBirdCount:Number(worldSnapshot?.actors?.ambientBirds?.count)||0,
         fauna
       };
     });
     manifest.scene=initial.scene;
     manifest.gameWildlife=initial.gameWildlife;
     manifest.fauna=initial.fauna;
-    if(!manifest.fauna.length)throw new Error('No se encontró ningún actor WildlifeActor_* en la escena. Revisa el diagnóstico de carga de fauna.');
-    const expected=Number(manifest.readiness?.requested??manifest.fauna.length);
-    const loaded=Number(manifest.readiness?.loaded??manifest.fauna.length);
-    if(expected!==loaded||loaded!==manifest.fauna.length)manifest.warnings.push({
-      code:'fauna-count-mismatch',requested:expected,loaded,sceneActors:manifest.fauna.length
+    if(!manifest.fauna.length)throw new Error('No se encontró ningún actor de fauna terrestre ni alada en la escena.');
+    const landAnimals=manifest.fauna.filter(animal=>animal.role!=='ambient-bird');
+    const birds=manifest.fauna.filter(animal=>animal.role==='ambient-bird');
+    const expected=Number(initial.expectedWildlifeCount||manifest.readiness?.requested||landAnimals.length);
+    const loaded=Number(manifest.readiness?.loaded??landAnimals.length);
+    if(expected!==loaded||loaded!==landAnimals.length)manifest.warnings.push({
+      code:'fauna-count-mismatch',requested:expected,loaded,sceneActors:landAnimals.length
+    });
+    const expectedBirds=Number(initial.expectedBirdCount||birds.length);
+    if(expectedBirds!==birds.length)manifest.warnings.push({
+      code:'gull-count-mismatch',requested:expectedBirds,loaded:birds.length
     });
     for(const animal of manifest.fauna){
       const d=animal.bounds?.dimensions;
       const horizontal=d?Math.max(d.width,d.depth):null;
-      if(!d||!(d.height>.1)||!(horizontal>.1))manifest.warnings.push({code:'invalid-world-bounds',animal:animal.id,bounds:animal.bounds});
-      if(d&&horizontal<d.height*.24)manifest.warnings.push({code:'extremely-narrow-world-silhouette',animal:animal.id,dimensions:d});
+      const maxExtent=d?Math.max(d.width,d.height,d.depth):0;
+      if(!d||!(horizontal>.1)||(animal.role==='ambient-bird'?!(maxExtent>.1&&maxExtent<=.8):!(d.height>.1)))manifest.warnings.push({code:'invalid-world-bounds',animal:animal.id,bounds:animal.bounds});
+      if(animal.role!=='ambient-bird'&&d&&horizontal<d.height*.24)manifest.warnings.push({code:'extremely-narrow-world-silhouette',animal:animal.id,dimensions:d});
       if(animal.visibleMeshCount<1)manifest.warnings.push({code:'no-visible-meshes',animal:animal.id});
-      if(animal.skinnedVertices<600||animal.boneCount<12)manifest.warnings.push({
+      if(animal.role==='ambient-bird'){
+        if(!animal.flightRig?.complete)manifest.warnings.push({code:'gull-flight-rig-incomplete',animal:animal.id,flightRig:animal.flightRig});
+        if(animal.flightRig?.complete&&!animal.flightRig.animationPlaying)manifest.warnings.push({code:'gull-flight-animation-stopped',animal:animal.id,flightRig:animal.flightRig});
+        if(!(Number(animal.flightRig?.targetedAnimations)>0))manifest.warnings.push({code:'gull-flight-tracks-missing',animal:animal.id,flightRig:animal.flightRig});
+      }else if(animal.skinnedVertices<600||animal.boneCount<12)manifest.warnings.push({
         code:'weak-skinning-or-rig',animal:animal.id,skinnedVertices:animal.skinnedVertices,boneCount:animal.boneCount
       });
-      if(!animal.animationGroups.length)manifest.warnings.push({code:'no-linked-animation-groups',animal:animal.id});
-      if(!animal.textures.length||animal.textures.some(texture=>texture.ready===false))manifest.warnings.push({
+      if(!animal.animationGroups.length)manifest.warnings.push({code:animal.role==='ambient-bird'?'gull-animation-group-missing':'no-linked-animation-groups',animal:animal.id});
+      if(!animal.textures.length||animal.textures.some(texture=>texture.ready===false||texture.ready===null))manifest.warnings.push({
         code:'texture-readiness-review',animal:animal.id,textures:animal.textures
       });
     }
@@ -234,7 +254,8 @@ async function main() {
           if(!Number.isFinite(min.x)||!Number.isFinite(max.x))throw new Error('El animal no tiene límites mundiales medibles: '+animalId);
           const target={x:(min.x+max.x)/2,y:(min.y+max.y)/2,z:(min.z+max.z)/2};
           const width=max.x-min.x,depth=max.z-min.z,height=max.y-min.y;
-          const radius=Math.max(2.8,width*1.8,depth*1.8,height*2.0);
+          const isBird=/^RealSeagullActor_\d+$/.test(animalId);
+          const radius=Math.max(isBird?1.15:2.8,width*1.8,depth*1.8,height*2.0);
           const yaw=Number(root.rotation?.y)||0;
           const radians=yaw+angleDegrees*Math.PI/180;
           const camera={
@@ -253,7 +274,17 @@ async function main() {
             near(actual.x,camera.x)&&near(actual.y,camera.y)&&near(actual.z,camera.z)&&
             near(actualTarget.x,camera.targetX)&&near(actualTarget.y,camera.targetY)&&near(actualTarget.z,camera.targetZ);
           if(!cameraVerified)throw new Error('La cámara no alcanzó el animal: '+JSON.stringify({expected:camera,readback}));
-          return {camera,readback,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png:api.captureCanvas()};
+          const hidden=[];
+          for(const other of scene.transformNodes||[]){
+            if(other!==root&&(/^(?:WildlifeActor_(?:deer|stag|wolf)_\d+|RealSeagullActor_\d+)$/.test(String(other?.name||'')))){
+              const wasEnabled=other.isEnabled?.()!==false;
+              if(wasEnabled){other.setEnabled(false);hidden.push(other);}
+            }
+          }
+          api.render();
+          const png=api.captureCanvas();
+          for(const other of hidden)other.setEnabled(true);
+          return {camera,readback,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png};
         },{animalId:animal.id,angleDegrees:angle.degrees});
         const match=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.png||'');
         assert.ok(match,'No se obtuvo PNG válido para '+animal.id+' / '+angle.id);
