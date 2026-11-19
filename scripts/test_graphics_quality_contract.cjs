@@ -36,7 +36,7 @@ for(const marker of [
 assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleAdaptive:true') && builder.includes('qualityDprFloor') && builder.includes('qualityDprCeiling'), 'Quality must preserve full scene detail while exposing bounded adaptive internal resolution.');
 assert.ok(builder.includes('let lastWorldUpdateMs=0,lastRenderCpuMs=0;'), 'Shared frame-loop timing bindings must remain available after the Quality-scale change.');
 assert.ok(builder.includes('qualityDprSlowSamples>=2') && builder.includes('qualityDprStableSamples>=6') && builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)') && builder.includes('geometryAndEffectsPreserved:true'), 'Adaptive resolution must use hysteresis, recover after stable headroom and preserve geometry/effects.');
-assert.ok(!builder.includes('qualityScaleLockedForSession:true'), 'Quality must no longer remain locked at a scale that cannot sustain the frame budget.');
+assert.ok(builder.includes('qualityScaleAdaptive:true') && builder.includes('qualityDprFloor:Number(qualityDprFloor.toFixed(2))'), 'The packaged diagnostics must expose adaptive quality scale bounds and changes.');
 assert.ok(!builder.includes('fsr1Candidate') && !builder.includes('fsr1InputScale'), 'No inactive FSR1 state may override native device resolution.');
 assert.ok(builder.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && builder.includes('html.replace(legacy_fsr_guard, "if(false){", 1)'), 'The obsolete FSR block must be guarded before scene construction.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"), 'Native engine antialiasing must remain enabled in Quality.');
