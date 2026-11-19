@@ -1,0 +1,192 @@
+{
+  "schema": 1,
+  "project": "EL SIN NOMBRE",
+  "kind": "autonomous-specialist-agent-report",
+  "generatedAt": "2026-11-19T20:26:28.127Z",
+  "run": {
+    "id": "44605187558",
+    "url": "https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/runs/44605187558",
+    "commit": "2162774330997001c424370129c1ea3cb1d8327a",
+    "ref": "refs/heads/main"
+  },
+  "summary": {
+    "inspectionLevel": "complete",
+    "phases": 11,
+    "passed": 5,
+    "failed": 4,
+    "skipped": 2,
+    "unknown": 0,
+    "evidenceMissing": [
+      "artifacts/structure-grounding/manifest.json",
+      "artifacts/hrafn-before-after/manifest.json"
+    ]
+  },
+  "agents": [
+    {
+      "id": "npc-performance",
+      "role": "Especialista de rendimiento",
+      "scope": [
+        "FPS",
+        "frame time",
+        "CPU/JavaScript",
+        "GPU when available",
+        "draw calls",
+        "startup"
+      ],
+      "status": "insufficient-data",
+      "findings": [],
+      "guardrail": "Never recommend lowering visual quality or removing gameplay systems as a first-line fix."
+    },
+    {
+      "id": "npc-visual-quality",
+      "role": "Especialista de calidad visual",
+      "scope": [
+        "water",
+        "foam",
+        "lighting",
+        "shadows",
+        "materials",
+        "textures",
+        "composition",
+        "visual regressions"
+      ],
+      "status": "evidence-collected-review-pending",
+      "findings": [
+        {
+          "metric": "sceneCaptures",
+          "value": 102,
+          "unit": "captures"
+        },
+        {
+          "metric": "coastalCaptures",
+          "value": 0,
+          "unit": "captures"
+        },
+        {
+          "metric": "sceneContactSheet",
+          "value": "available",
+          "unit": "artifact"
+        },
+        {
+          "status": "visual-judgement-pending",
+          "message": "No visual defect is confirmed from file counts or pixel differences alone. Synchronized captures remain available for human review; automated geometry checks use Babylon.js runtime evidence."
+        }
+      ],
+      "guardrail": "Do not change the art direction, materials, resolution or effects based only on a pixel-difference score."
+    },
+    {
+      "id": "npc-world-geometry",
+      "role": "Especialista de mundo y geometría",
+      "scope": [
+        "13 islands",
+        "terrain",
+        "shoreline",
+        "structures",
+        "grounding",
+        "floating/intersecting objects",
+        "textures readiness"
+      ],
+      "status": "insufficient-data",
+      "findings": [],
+      "guardrail": "Do not reposition, delete or rebuild world objects without object-level evidence and a regression capture."
+    },
+    {
+      "id": "npc-validation",
+      "role": "Especialista de pruebas y validación",
+      "scope": [
+        "startup",
+        "test contracts",
+        "phase results",
+        "artifacts",
+        "regression gates"
+      ],
+      "status": "issues-found",
+      "findings": [
+        {
+          "status": "failed-phase",
+          "phase": "Cimentación, estructuras y simulación de reparación en entorno desechable",
+          "result": "failed",
+          "durationMs": 83468,
+          "error": "exit=2 signal=none"
+        },
+        {
+          "status": "failed-phase",
+          "phase": "Referencias costeras, agua, visibilidad y capturas de entorno",
+          "result": "failed",
+          "durationMs": 109979,
+          "error": "exit=1 signal=none"
+        },
+        {
+          "status": "failed-phase",
+          "phase": "Capturas visuales y diagnóstico de fauna terrestre",
+          "result": "failed",
+          "durationMs": 150514,
+          "error": "exit=1 signal=none"
+        },
+        {
+          "status": "failed-phase",
+          "phase": "Lámina de referencias costeras",
+          "result": "failed",
+          "durationMs": 32,
+          "error": "exit=1 signal=none"
+        }
+      ],
+      "guardrail": "Skipped phases are not passes. Missing test evidence never counts as a successful validation."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "investigate-scripts-coastal-structure-grounding-smoke-mjs",
+      "priority": "P1",
+      "owner": "npc-validation",
+      "title": "Investigar fase fallida: Cimentación, estructuras y simulación de reparación en entorno desechable",
+      "evidence": "exit=2 signal=none",
+      "nextAction": "Reproducir la fase aislada, revisar sus logs y añadir una prueba de regresión antes de modificar el juego."
+    },
+    {
+      "id": "investigate-scripts-coastal-reference-mjs",
+      "priority": "P1",
+      "owner": "npc-validation",
+      "title": "Investigar fase fallida: Referencias costeras, agua, visibilidad y capturas de entorno",
+      "evidence": "exit=1 signal=none",
+      "nextAction": "Reproducir la fase aislada, revisar sus logs y añadir una prueba de regresión antes de modificar el juego."
+    },
+    {
+      "id": "investigate-scripts-fauna-visual-capture-mjs",
+      "priority": "P1",
+      "owner": "npc-validation",
+      "title": "Investigar fase fallida: Capturas visuales y diagnóstico de fauna terrestre",
+      "evidence": "exit=1 signal=none",
+      "nextAction": "Reproducir la fase aislada, revisar sus logs y añadir una prueba de regresión antes de modificar el juego."
+    },
+    {
+      "id": "investigate-scripts-create-coastal-contact-sheet-py",
+      "priority": "P1",
+      "owner": "npc-validation",
+      "title": "Investigar fase fallida: Lámina de referencias costeras",
+      "evidence": "exit=1 signal=none",
+      "nextAction": "Reproducir la fase aislada, revisar sus logs y añadir una prueba de regresión antes de modificar el juego."
+    },
+    {
+      "id": "collect-performance-evidence",
+      "priority": "P2",
+      "owner": "npc-performance",
+      "title": "Completar evidencia de rendimiento comparable",
+      "evidence": "No se ha localizado una métrica FPS válida en el manifiesto Hrafn.",
+      "nextAction": "Comprobar el contrato del perfilador y mantener separados los resultados emulados de los obtenidos en Adreno."
+    }
+  ],
+  "autonomy": {
+    "evidenceCollection": "automatic",
+    "specialistAnalysis": "deterministic-evidence-rules",
+    "sourceCodeModification": false,
+    "deployment": false,
+    "note": "This first unattended layer measures, classifies and assigns evidence-backed tasks. It does not write game source or publish unvalidated repairs."
+  },
+  "limitations": [
+    "GitHub Actions Chromium/SwiftShader is a cloud test environment, not the physical Galaxy S26 Ultra Adreno GPU.",
+    "No judgement of visual quality is inferred from screenshot counts or pixel differences alone.",
+    "Unavailable metrics remain unknown; they are never fabricated as zero.",
+    "The specialist rules are not LLM agents. A model-backed external agent requires a separately configured provider credential and an approved usage budget."
+  ]
+}
