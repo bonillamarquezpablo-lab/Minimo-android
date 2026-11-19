@@ -202,7 +202,8 @@ async function main() {
             skeleton:mesh.skeleton?.name||null,enabled:mesh.isEnabled?.()!==false,
             visible:mesh.isVisible!==false,visibility:number(mesh.visibility??1),
             material:mesh.material?.name||null,localBounds:local,
-            worldBounds:lo&&hi?{min:{x:number(lo.x),y:number(lo.y),z:number(lo.z)},max:{x:number(hi.x),y:number(hi.y),z:number(hi.z)}}:null
+            worldBounds:lo&&hi?{min:{x:number(lo.x),y:number(lo.y),z:number(lo.z)},max:{x:number(hi.x),y:number(hi.y),z:number(hi.z)}}:null,
+            parentChain:(()=>{const rows=[];let node=mesh;while(node&&rows.length<8){rows.push({name:String(node.name||''),type:node.getClassName?.()||node.constructor?.name||'',parent:String(node.parent?.name||''),position:vec(node.position),scaling:vec(node.scaling)});node=node.parent;}return rows;})()
           };
         });
         const isDescendant=node=>ancestorsContain(node,root);
@@ -241,6 +242,16 @@ async function main() {
           sourceDimensions:actorDiagnostic?.dimensions||null,
           meshCount:meshes.length,visibleMeshCount,totalVertices,totalIndices,skinnedVertices,
           skeletonCount:skeletons.size,boneCount:bones.size,
+          skeletons:[...skeletons].map(skeleton=>({
+            name:String(skeleton.name||''),boneCount:(skeleton.bones||[]).length,
+            transformNode:String(skeleton.transformNode?.name||skeleton._transformNode?.name||'')||null,
+            roots:(skeleton.bones||[]).filter(bone=>!bone.getParent?.()).map(bone=>String(bone.name||'')),
+            sampleBones:(skeleton.bones||[]).slice(0,12).map(bone=>({
+              name:String(bone.name||''),parent:String(bone.getParent?.()?.name||'')||null,
+              linkedNode:String(bone.getTransformNode?.()?.name||bone._linkedTransformNode?.name||'')||null,
+              linkedParent:String(bone.getTransformNode?.()?.parent?.name||bone._linkedTransformNode?.parent?.name||'')||null
+            }))
+          })),
           flightRig:isBird?(actorDiagnostic?.flightRig||null):null,
           activeMode:actorDiagnostic?.activeMode||null,
           meshNames:meshRows.map(row=>row.name),meshes:meshRows,
@@ -353,7 +364,7 @@ async function main() {
               if(wasEnabled){other.setEnabled(false);hidden.push(other);}
             }
           }
-          let readback=null,cameraVerified=false,png=null,temporaryCamera=null,previousCamera=null;
+          let readback=null,cameraVerified=false,png=null,bindPosePng=null,temporaryCamera=null,previousCamera=null;
           try{
             if(api?.setCamera&&api?.render&&api?.captureCanvas&&api?.sceneViewSnapshot){
               api.setCamera(camera);
@@ -381,6 +392,26 @@ async function main() {
               cameraVerified=true;
               png=canvas.toDataURL('image/png');
             }
+            if(!isBird&&angleDegrees===0){
+              const canvas=document.getElementById('renderCanvas');
+              const ownGroups=(scene.animationGroups||[]).filter(group=>(group.targetedAnimations||[]).some(entry=>{
+                const targetNode=entry.target?.getTransformNode?.()||entry.target;
+                return ancestorsContain(targetNode,root);
+              }));
+              const playing=ownGroups.filter(group=>group.isPlaying).map(group=>({group,speed:number(group.speedRatio)||1,from:number(group.from),to:number(group.to)}));
+              const savedMeshes=meshes.map(mesh=>({mesh,skeleton:mesh.skeleton,influencers:mesh.numBoneInfluencers,shader:mesh.computeBonesUsingShaders}));
+              try{
+                playing.forEach(entry=>entry.group.stop());
+                savedMeshes.forEach(entry=>{entry.mesh.skeleton=null;entry.mesh.numBoneInfluencers=0;entry.mesh.computeBonesUsingShaders=false;});
+                scene.render();
+                await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+                bindPosePng=api?.captureCanvas?api.captureCanvas():canvas?.toDataURL('image/png')||null;
+              }finally{
+                savedMeshes.forEach(entry=>{entry.mesh.skeleton=entry.skeleton;entry.mesh.numBoneInfluencers=entry.influencers;entry.mesh.computeBonesUsingShaders=entry.shader;});
+                playing.forEach(entry=>entry.group.start(true,entry.speed,entry.from,entry.to));
+                scene.render();
+              }
+            }
           }finally{
             for(const other of hidden)other.setEnabled(true);
             if(temporaryCamera){
@@ -389,7 +420,7 @@ async function main() {
               scene.render();
             }
           }
-          return {camera,readback,cameraVerified,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png};
+          return {camera,readback,cameraVerified,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png,bindPosePng};
         },{animalId:animal.id,angleDegrees:angle.degrees});
         const match=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.png||'');
         assert.ok(match,'No se obtuvo PNG válido para '+animal.id+' / '+angle.id);
@@ -402,6 +433,15 @@ async function main() {
           camera:view.camera,cameraVerified:view.cameraVerified===true,cameraReadback:view.readback,
           target:view.target,positionAtCapture:view.position,bytes:buffer.length
         });
+        if(angle.id==='front'&&view.bindPosePng){
+          const bindMatch=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.bindPosePng);
+          assert.ok(bindMatch,'No se obtuvo PNG de diagnóstico sin skinning para '+animal.id);
+          const bindBuffer=Buffer.from(bindMatch[1],'base64');
+          assert.ok(bindBuffer.length>1000,'PNG de bind pose vacío: '+animal.id);
+          const bindFile=animal.id+'-bindpose.png';
+          fs.writeFileSync(path.join(OUT,bindFile),bindBuffer);
+          manifest.captures.push({id:animal.id+'-bindpose',file:bindFile,subject:animal.id,kind:animal.kind,angle:'bindpose-no-skinning',camera:view.camera,cameraVerified:view.cameraVerified===true,bytes:bindBuffer.length});
+        }
         saveManifest();
       }
     }
