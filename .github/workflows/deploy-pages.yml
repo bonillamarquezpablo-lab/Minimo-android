@@ -42,6 +42,14 @@ jobs:
         run: node scripts/test_mobile_runtime_stability.cjs
       - name: Test mobile startup telemetry and retry affordance
         run: node scripts/test_mobile_startup_loading.cjs
+      - name: Test per-animal GLB rig, animation and texture requirements
+        run: node scripts/test_wildlife_runtime_contract.cjs
+      - name: Test Babylon live-world inspection and anomaly analysis
+        run: node scripts/test_phase2_world_inspection.mjs
+      - name: Test four-view fauna capture and report generation
+        run: node scripts/test_fauna_visual_capture_contract.cjs
+      - name: Test full Inspector trigger routing
+        run: node scripts/test_inspector_workflows_contract.cjs
       - name: Test dynamic-safe Babylon spatial selection
         run: node scripts/test_quality_spatial_selection.cjs
       - name: Test civilian NPC specialists and shared-memory contract
