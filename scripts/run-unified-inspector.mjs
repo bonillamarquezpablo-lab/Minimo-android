@@ -220,7 +220,7 @@ async function main(){
   }));
   const fauna=summaryFrom('artifacts/fauna-visual-captures/fauna-visual-summary.json',m=>({
     verdict:m.verdict,animalCount:m.animalCount,captureCount:m.captureCount,warnings:m.warnings||[],failures:m.failures||[],
-    animals:(m.animals||[]).map(a=>({id:a.id,kind:a.kind,bounds:a.bounds,meshCount:a.meshCount,visibleMeshCount:a.visibleMeshCount,skinnedVertices:a.skinnedVertices,boneCount:a.boneCount,textures:a.textures?.length,animationGroups:a.animationGroups?.length}))
+    animals:(m.animals||[]).map(a=>({id:a.id,kind:a.kind,role:a.role,bounds:a.bounds,meshCount:a.meshCount,visibleMeshCount:a.visibleMeshCount,skinnedVertices:a.skinnedVertices,boneCount:a.boneCount,flightRig:a.flightRig||null,textures:a.textures?.length,animationGroups:a.animationGroups?.length}))
   }));
   const texture=summaryFrom('artifacts/texture-readiness-smoke/manifest.json',m=>({verdict:m.verdict,readiness:m.readiness,textureDiagnostics:m.textureDiagnostics,cameraVerification:m.cameraVerification,actualCamera:m.actualCamera,failure:m.failure}));
   const grounding=summaryFrom('artifacts/structure-grounding/manifest.json',m=>({verdict:m.verdict,summary:m.summary,habitableStructures:m.habitableStructures||[],settlementHouses:m.settlementHouses||[],settlementCamps:m.settlementCamps||[],garrisons:m.garrisons||[],offshoreAudit:m.offshoreAudit||null,outerLandmarks:m.outerLandmarks||[],rocks:m.rocks||[],failure:m.failure}));
@@ -264,17 +264,18 @@ async function main(){
   ];
   for(const row of phases)lines.push('| '+row.name+' | '+row.status+' | '+(row.durationMs??'—')+' ms | '+(row.exitCode??'—')+' |');
   lines.push('','## Fauna 3D — capturas e informe','',
-    '- Animales detectados: **'+(fauna?.animalCount??'no disponible')+'**',
+    '- Animales y aves detectados: **'+(fauna?.animalCount??'no disponible')+'**',
     '- Vistas verificadas: **'+(fauna?.captureCount??0)+'**',
     '- Avisos de geometría, rig, textura o animación: **'+(fauna?.warnings?.length??0)+'**',
     '- Lámina: **artifacts/fauna-visual-captures/fauna-contact-sheet.jpg**',
     '- Informe: **artifacts/fauna-visual-captures/fauna-inspection-report.md**','',
-    '| Actor | Especie | Mallas visibles/total | Vértices skin | Huesos | Texturas | Clips | Dimensiones (m) |',
-    '|---|---|---:|---:|---:|---:|---:|---|'
+    '| Actor | Especie | Rig | Mallas visibles/total | Vértices skin | Huesos | Texturas | Clips | Dimensiones (m) |',
+    '|---|---|---|---:|---:|---:|---:|---:|---|'
   );
   for(const animal of (fauna?.animals||[])){
     const d=animal.bounds?.dimensions||{};
-    lines.push('| '+animal.id+' | '+animal.kind+' | '+(animal.visibleMeshCount??'—')+'/'+(animal.meshCount??'—')+' | '+(animal.skinnedVertices??'—')+' | '+(animal.boneCount??'—')+' | '+(animal.textures??'—')+' | '+(animal.animationGroups??'—')+' | '+[d.width??'—',d.height??'—',d.depth??'—'].join(' × ')+' |');
+    const rig=animal.role==='ambient-bird'?('Vuelo '+(animal.flightRig?.partCount??'—')+'/'+(animal.flightRig?.expectedPartCount??'—')+' · '+(animal.flightRig?.animationPlaying?'activo':'detenido')):'Óseo';
+    lines.push('| '+animal.id+' | '+animal.kind+' | '+rig+' | '+(animal.visibleMeshCount??'—')+'/'+(animal.meshCount??'—')+' | '+(animal.skinnedVertices??'—')+' | '+(animal.boneCount??'—')+' | '+(animal.textures??'—')+' | '+(animal.animationGroups??'—')+' | '+[d.width??'—',d.height??'—',d.depth??'—'].join(' × ')+' |');
   }
     lines.push('','## Inventario de estructuras','',
     '- Islas: **'+(custom?.counts?.islands??'no disponible')+'**',
