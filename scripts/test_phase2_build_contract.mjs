@@ -34,7 +34,10 @@ assert.match(smoke, /identityFlow = 'returning-player-auto-boot'/,
   'The world-inspection smoke must support saved-player automatic boot.');
 assert.ok(smoke.includes("page.locator('#intro.open')"),
   'The smoke must wait for the real intro overlay before selecting a campaign.');
-assert.ok(smoke.includes('wildlife-world-capture.png') && smoke.includes('textureReadiness?.pending'), 'Startup smoke must retain a wildlife capture and verify animal texture readiness.');
+assert.ok(smoke.includes('wildlife-world-capture.png') &&
+  smoke.includes('const textureState=animal.textureReadiness||{};') &&
+  smoke.includes('assert.equal(textureState.complete,true'),
+  'Startup smoke must retain the individual wildlife capture and require complete animal texture readiness.');
 assert.match(smoke, /manifest\.worldInspection\.gameStarted, true/,
   'The Babylon snapshot must be captured after a real campaign starts.');
 assert.match(smoke, /cachedIdentityFlow = 'returning-player-auto-boot'/,
