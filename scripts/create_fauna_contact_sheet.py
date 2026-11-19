@@ -50,15 +50,18 @@ lines = [
     "- Método: capturas reales del canvas Babylon, cuatro ángulos por actor.",
     "- Modo: cámara y lectura temporal de escena; no se guardan ni modifican partidas.", "",
     "## Inventario por animal", "",
-    "| Actor | Especie | Mallas visibles/total | Vértices skin | Huesos | Texturas listas/total | Clips | Ancho × alto × fondo (m) |",
-    "|---|---|---:|---:|---:|---:|---:|---|"
+    "| Actor | Especie | Rig | Mallas visibles/total | Vértices skin | Huesos | Texturas listas/total | Clips | Ancho × alto × fondo (m) |",
+    "|---|---|---|---:|---:|---:|---:|---:|---|"
 ]
 for animal in manifest.get("fauna") or []:
     d = (animal.get("bounds") or {}).get("dimensions") or {}
     textures = animal.get("textures") or []
     ready = sum(1 for item in textures if item.get("ready") is True)
+    flight = animal.get("flightRig") or {}
+    rig_label = (f"Vuelo {flight.get('partCount','—')}/{flight.get('expectedPartCount','—')} pivotes · "
+                 f"{'reproduciéndose' if flight.get('animationPlaying') else 'detenido'}") if animal.get("role") == "ambient-bird" else "Óseo"
     lines.append(
-        f"| {animal.get('id')} | {animal.get('kind')} | {animal.get('visibleMeshCount')}/{animal.get('meshCount')} "
+        f"| {animal.get('id')} | {animal.get('kind')} | {rig_label} | {animal.get('visibleMeshCount')}/{animal.get('meshCount')} "
         f"| {animal.get('skinnedVertices')} | {animal.get('boneCount')} | {ready}/{len(textures)} "
         f"| {len(animal.get('animationGroups') or [])} "
         f"| {d.get('width','—')} × {d.get('height','—')} × {d.get('depth','—')} |"
