@@ -453,6 +453,7 @@ async function main() {
     const bindPoseCaptureCount=manifest.captures.filter(capture=>capture.angle==='bindpose-no-skinning').length;
     assert.equal(visualCaptureCount,manifest.fauna.length*ANGLES.length,'Faltan vistas cardinales de fauna; las capturas bind-pose son evidencia adicional y no cuentan como ángulos de cámara.');
     assert.ok(bindPoseCaptureCount<=manifest.fauna.length,'Hay más capturas bind-pose que actores inspeccionados.');
+    assert.equal(manifest.warnings.length,0,'La aceptación visual de fauna no puede pasar con anomalías pendientes: '+JSON.stringify(manifest.warnings));
     assert.equal(manifest.pageErrors.length,0,'Errores JavaScript: '+manifest.pageErrors.join(' | '));
   }catch(error){
     manifest.failures.push(String(error?.stack||error));
