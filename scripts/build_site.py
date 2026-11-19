@@ -524,7 +524,64 @@ def main() -> None:
  if(label&&loadText)loadText.textContent=label;
  if(!loadProgressAnimation)loadProgressAnimation=requestAnimationFrame(paintLoadingProgress);
 }"""
-    progress_replacement = """function setLoadingProgress(value,label){
+    progress_replacement = """const startupProgressSteps=[
+ {title:'Motor 3D',short:'Motor 3D',detail:'Babylon.js, WebGL e importador GLB · 0–39%'},
+ {title:'Mundo',short:'Mundo',detail:'Islas, terreno, costa y vegetación · 40–81%'},
+ {title:'Personajes',short:'Personajes',detail:'Protagonista y NPC obligatorios · 82–86%'},
+ {title:'Fauna',short:'Fauna',detail:'Ciervos, lobo y aves · 87–92%'},
+ {title:'Gráficos',short:'Gráficos',detail:'Texturas y shaders de la primera vista · 93–99%'},
+ {title:'Listo',short:'Listo',detail:'Comprobación final antes de abrir la partida · 100%'}
+];
+let startupProgressActiveIndex=-1,startupProgressStageStartedAt=performance.now();
+function ensureStartupProgressPanel(){
+ let panel=document.getElementById('elsnStartupProgressPanel');
+ if(panel)return panel;
+ const style=document.createElement('style');
+ style.id='elsn-startup-progress-style';
+ style.textContent='#elsnStartupProgressPanel{box-sizing:border-box;width:min(760px,calc(100% - 28px));margin:9px auto 0;padding:10px 12px;border:1px solid rgba(235,190,143,.3);border-radius:12px;background:rgba(5,14,22,.9);color:#f7eee4;font:500 11px/1.35 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.22)}#elsnStartupProgressPanel *{box-sizing:border-box}#elsnStartupProgressPanel .elsn-sp-head,#elsnStartupProgressPanel .elsn-sp-current{display:flex;align-items:center;justify-content:space-between;gap:10px}#elsnStartupProgressPanel .elsn-sp-head strong{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#ffd3ac}#elsnStartupProgressPanel .elsn-sp-head span{font-variant-numeric:tabular-nums;color:#fff}#elsnStartupProgressPanel .elsn-sp-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin-top:8px}#elsnStartupProgressPanel .elsn-sp-step{min-width:0;padding:5px 2px;border:1px solid rgba(255,255,255,.13);border-radius:7px;color:rgba(255,255,255,.58);text-align:center;font-size:9px;white-space:nowrap}#elsnStartupProgressPanel .elsn-sp-step[aria-current=step]{border-color:#ffbd8b;background:rgba(235,153,99,.2);color:#fff;font-weight:800}#elsnStartupProgressPanel .elsn-sp-step.is-done{border-color:rgba(235,190,143,.42);color:#f0c6a2}#elsnStartupProgressPanel .elsn-sp-current{margin-top:8px;color:rgba(255,255,255,.78);font-size:10px}#elsnStartupProgressPanel #elsnStartupProgressAction{min-width:0;overflow-wrap:anywhere}#elsnStartupProgressPanel #elsnStartupProgressElapsed{flex:none;color:#ffd3ac;font-variant-numeric:tabular-nums}@media(max-width:460px){#elsnStartupProgressPanel{width:calc(100% - 22px);padding:8px 9px;margin-top:7px}#elsnStartupProgressPanel .elsn-sp-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}#elsnStartupProgressPanel .elsn-sp-step{font-size:10px;padding:5px 2px}}';
+ document.head.appendChild(style);
+ panel=document.createElement('section');
+ panel.id='elsnStartupProgressPanel';
+ panel.setAttribute('role','status');
+ panel.setAttribute('aria-live','polite');
+ panel.innerHTML='<div class="elsn-sp-head"><strong id="elsnStartupProgressStage">PASO 1/6 · MOTOR 3D</strong><span id="elsnStartupProgressPercent">0%</span></div><div class="elsn-sp-grid">'+startupProgressSteps.map((step,index)=>'<span class="elsn-sp-step" data-step="'+index+'">'+(index+1)+'. '+step.short+'</span>').join('')+'</div><div class="elsn-sp-current"><span id="elsnStartupProgressAction">Preparando motor 3D…</span><span id="elsnStartupProgressElapsed">En esta fase: 0 s</span></div>';
+ const anchor=loadProgressTrack||loadProgressBar||loadText;
+ const host=document.getElementById('loading')||(anchor&&anchor.parentElement)||document.body;
+ host.appendChild(panel);
+ if(!window.__ELSN_STARTUP_PROGRESS_TIMER__)window.__ELSN_STARTUP_PROGRESS_TIMER__=window.setInterval(()=>{
+  const loading=document.getElementById('loading');
+  if(!loading||getComputedStyle(loading).display==='none'||document.body.classList.contains('game-running')){
+   window.clearInterval(window.__ELSN_STARTUP_PROGRESS_TIMER__);
+   window.__ELSN_STARTUP_PROGRESS_TIMER__=null;
+   return;
+  }
+  const elapsed=document.getElementById('elsnStartupProgressElapsed');
+  if(elapsed&&startupProgressActiveIndex>=0)elapsed.textContent='En esta fase: '+Math.max(0,Math.floor((performance.now()-startupProgressStageStartedAt)/1000))+' s';
+ },1000);
+ return panel;
+}
+function renderStartupProgress(value,label){
+ const panel=ensureStartupProgressPanel();
+ if(!panel)return;
+ const progress=Math.max(0,Math.min(100,Number(value)||0));
+ const index=progress>=100?5:progress>=93?4:progress>=87?3:progress>=82?2:progress>=40?1:0;
+ if(index!==startupProgressActiveIndex){startupProgressActiveIndex=index;startupProgressStageStartedAt=performance.now();}
+ const step=startupProgressSteps[index];
+ const heading=panel.querySelector('#elsnStartupProgressStage');
+ const percent=panel.querySelector('#elsnStartupProgressPercent');
+ const action=panel.querySelector('#elsnStartupProgressAction');
+ const elapsed=panel.querySelector('#elsnStartupProgressElapsed');
+ if(heading)heading.textContent='PASO '+(index+1)+'/'+startupProgressSteps.length+' · '+step.title.toUpperCase();
+ if(percent)percent.textContent=Math.floor(progress)+'%';
+ if(action)action.textContent=label||step.detail;
+ if(elapsed)elapsed.textContent='En esta fase: '+Math.max(0,Math.floor((performance.now()-startupProgressStageStartedAt)/1000))+' s';
+ panel.querySelectorAll('[data-step]').forEach(node=>{
+  const current=Number(node.getAttribute('data-step'));
+  node.classList.toggle('is-done',current<index);
+  if(current===index)node.setAttribute('aria-current','step');else node.removeAttribute('aria-current');
+ });
+}
+function setLoadingProgress(value,label){
  trackStartupPerfStage(value,label);
  targetLoadProgress=Math.max(targetLoadProgress,Math.min(100,Math.max(0,Number(value)||0)));
  currentLoadProgress=targetLoadProgress;
@@ -534,6 +591,7 @@ def main() -> None:
  if(loadProgressBar)loadProgressBar.style.width=currentLoadProgress.toFixed(2)+'%';
  if(loadProgressLabel)loadProgressLabel.textContent=Math.floor(currentLoadProgress)+'%';
  if(loadProgressTrack)loadProgressTrack.setAttribute('aria-valuenow',String(Math.round(currentLoadProgress)));
+ renderStartupProgress(currentLoadProgress,label);
 }"""
     if html.count(progress_marker) != 1:
         raise SystemExit("No se encontró la función única de progreso de carga.")
