@@ -91,9 +91,9 @@ def main() -> None:
     index_html = read_text("index.html")
     atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
     world_inspection_source = read_text("scripts/nordic/world-inspection.js")
-    inspector_html = read_text("inspector/index.html")
-    inspector_live_source = read_text("inspector/phase1-live.js")
-    inspector_style_source = read_text("inspector/style.css")
+    inspector_html = (ROOT / "inspector/index.html").read_text(encoding="utf-8")
+    inspector_live_source = (ROOT / "inspector/phase1-live.js").read_text(encoding="utf-8")
+    inspector_style_source = (ROOT / "inspector/style.css").read_text(encoding="utf-8")
     if "root.ELSNWorldInspection" not in world_inspection_source or "capture(context" not in world_inspection_source or "visualIntegrity" not in world_inspection_source or "playingAnimationGroups" not in world_inspection_source or "textureReadiness" not in world_inspection_source:
         raise SystemExit("World inspection runtime is missing its individual wildlife rig, animation and texture evidence.")
     if "./scripts/nordic/world-inspection.js" not in index_html:
