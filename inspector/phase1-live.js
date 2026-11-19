@@ -206,13 +206,17 @@ import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspecti
     const host=$('wildlifeInspectionGrid'),summary=$('wildlifeInspectionSummary');
     if(!host||!summary)return;
     host.replaceChildren();
-    const inventory=snapshot.actors?.wildlife,animals=Array.isArray(inventory?.returned)?inventory.returned:[];
-    const count=Number(inventory?.count)||0;
-    const names={deer:'Ciervo',stag:'Ciervo macho',wolf:'Lobo'};
+    const inventory=snapshot.actors?.wildlife,birdInventory=snapshot.actors?.ambientBirds;
+    const landAnimals=Array.isArray(inventory?.returned)?inventory.returned:[];
+    const birds=Array.isArray(birdInventory?.returned)?birdInventory.returned:[];
+    const animals=[...landAnimals,...birds];
+    const landCount=Number(inventory?.count)||0,birdCount=Number(birdInventory?.count)||0,count=landCount+birdCount;
+    const truncated=(Number(inventory?.truncated)||0)+(Number(birdInventory?.truncated)||0);
+    const names={deer:'Ciervo',stag:'Ciervo macho',wolf:'Lobo',gull:'Gaviota'};
     if(!count||!animals.length){
       summary.textContent='Fauna cargada: '+count+' · no hay fichas individuales disponibles.';
       const empty=document.createElement('div');empty.className='wildlife-inspection-empty';
-      empty.textContent='No se han encontrado animales. Revisa el gate de carga y los errores de importación GLB.';
+      empty.textContent='No se han encontrado animales. Revisa la carga de fauna terrestre y el rig de vuelo de las gaviotas.';
       host.appendChild(empty);return;
     }
     const line=(parent,label,value)=>{
@@ -224,17 +228,21 @@ import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspecti
     };
     const flagged=[];
     for(const animal of animals){
+      const isBird=animal.role==='ambient-bird'||animal.kind==='gull';
       const integrity=animal.visualIntegrity||{},textures=animal.textureReadiness||{};
       const groups=Array.isArray(animal.animationGroups)?animal.animationGroups:[];
       const faults=[];
       if(!integrity.hasMeshes)faults.push('Sin mallas');
-      if(!integrity.hasSkinnedMesh||!integrity.hasSkeleton)faults.push('Rig incompleto');
+      if(isBird){
+        if(!integrity.hasFlightRig||!animal.flightRig?.complete)faults.push('Rig de vuelo incompleto');
+        if(animal.flightRig?.complete&&!animal.flightRig.animationPlaying)faults.push('Animación de vuelo detenida');
+      }else if(!integrity.hasSkinnedMesh||!integrity.hasSkeleton)faults.push('Rig óseo incompleto');
       if(!integrity.hasFinitePosition||!integrity.hasVisibleGeometry)faults.push('Geometría no visible o posición inválida');
       if(!integrity.hasFiniteBounds||!integrity.plausibleBounds)faults.push('Escala o límites sospechosos');
-      if(animal.activeMode!=='distance-idle'&&animal.activeAnimation&&Number(animal.playingAnimationGroups)===0)faults.push('Animación activa sin reproducción');
+      if(!isBird&&animal.activeMode!=='distance-idle'&&animal.activeAnimation&&Number(animal.playingAnimationGroups)===0)faults.push('Animación activa sin reproducción');
       if(Number(textures.pending)>0)faults.push('Texturas pendientes: '+textures.pending);
       if(Number(textures.unknown)>0)faults.push('Disponibilidad de texturas desconocida');
-      if(!groups.length)faults.push('Sin clips de animación');
+      if(!groups.length)faults.push(isBird?'Sin animación de vuelo':'Sin clips de animación');
       if(faults.length)flagged.push(animal.name||animal.kind||'Animal');
       const card=document.createElement('article');card.className='wildlife-inspection-card'+(faults.length?' has-issues':'');
       const head=document.createElement('div');head.className='wildlife-inspection-card-head';
@@ -246,10 +254,13 @@ import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspecti
       head.append(title,status);card.appendChild(head);
       const facts=document.createElement('div');facts.className='wildlife-inspection-facts';
       line(facts,'Posición XYZ',animal.position?[animal.position.x,animal.position.y,animal.position.z].map(value=>Number(value).toFixed(2)).join(' · '):null);
-      line(facts,'Cuerpo 3D',animal.meshCount+' mallas · '+animal.visibleMeshCount+' visibles · '+animal.skinnedMeshCount+' riggeadas');
-      line(facts,'Vértices / índices',animal.totalVertices+' / '+animal.totalIndices);
-      line(facts,'Esqueleto',animal.skeletons?.map(item=>item.name+' ('+item.boneCount+' huesos)').join(', ')||'No detectado');
-      line(facts,'Animación',String(animal.activeMode||'sin modo')+' · '+String(animal.activeAnimation||'sin clip activo')+' · '+animal.playingAnimationGroups+'/'+groups.length+' reproduciéndose');
+      line(facts,'Mallas',animal.meshCount+' · '+animal.visibleMeshCount+' visibles · '+animal.totalVertices+' vértices');
+      line(facts,'Rig',isBird
+        ? (animal.flightRig?.complete?'Vuelo completo · '+animal.flightRig.partCount+'/'+animal.flightRig.expectedPartCount+' pivotes':'Vuelo incompleto · '+(animal.flightRig?.partCount??0)+'/'+(animal.flightRig?.expectedPartCount??9)+' pivotes')
+        : (animal.skeletons?.map(item=>item.name+' ('+item.boneCount+' huesos)').join(', ')||'Esqueleto no detectado'));
+      line(facts,'Animación',isBird
+        ? String(animal.flightRig?.animationGroupName||'sin grupo de vuelo')+' · '+(animal.flightRig?.animationPlaying?'reproduciéndose':'detenida')+' · '+(animal.flightRig?.targetedAnimations??0)+' pistas'
+        : String(animal.activeMode||'sin modo')+' · '+String(animal.activeAnimation||'sin clip activo')+' · '+animal.playingAnimationGroups+'/'+groups.length+' reproduciéndose');
       line(facts,'Texturas',textures.count===null||textures.count===undefined?'Sin inventario':textures.ready+'/'+textures.count+' listas · '+textures.pending+' pendientes · '+textures.unknown+' desconocidas');
       line(facts,'Volumen XYZ',animal.bounds?.size?[animal.bounds.size.x,animal.bounds.size.y,animal.bounds.size.z].join(' × ')+' m':null);
       card.appendChild(facts);
@@ -259,14 +270,15 @@ import { analyzeWorldInspectionSnapshot } from '../scripts/phase2-world-inspecti
         card.appendChild(list);
       }
       const details=document.createElement('details');details.className='wildlife-inspection-details';
-      const detailSummary=document.createElement('summary');detailSummary.textContent='Ver inventario de mallas y clips';details.appendChild(detailSummary);
+      const detailSummary=document.createElement('summary');detailSummary.textContent='Ver inventario de mallas y animación';details.appendChild(detailSummary);
       const body=document.createElement('div');body.className='wildlife-inspection-detail-body';
+      if(isBird&&animal.flightRig?.parts)for(const [name,present] of Object.entries(animal.flightRig.parts))line(body,'Pivote '+name,present?'encontrado':'AUSENTE');
       for(const group of groups)line(body,'Clip '+group.name,(group.playing?'REPRODUCIÉNDOSE':'detenido')+' · '+group.targetedAnimations+' pistas');
       for(const mesh of animal.meshes||[])line(body,'Malla '+mesh.name,(mesh.vertices??'—')+' vértices · '+(mesh.skeleton||'sin esqueleto')+' · '+(mesh.material||'sin material')+(mesh.bounds?.size?' · '+mesh.bounds.size.x+'×'+mesh.bounds.size.y+'×'+mesh.bounds.size.z+' m':''));
       for(const texture of textures.items||[])line(body,'Textura '+texture.name,(texture.ready===true?'lista':texture.ready===false?'pendiente':'estado desconocido')+(texture.size?' · '+texture.size.width+'×'+texture.size.height:''));
       details.appendChild(body);card.appendChild(details);host.appendChild(card);
     }
-    summary.textContent='Animales: '+animals.length+'/'+count+' · '+(flagged.length?'requieren revisión: '+[...new Set(flagged)].join(', '):'sin anomalías observadas en esta captura')+(inventory.truncated?' · inventario incompleto':'');
+    summary.textContent='Fauna terrestre: '+landAnimals.length+'/'+landCount+' · gaviotas: '+birds.length+'/'+birdCount+' · '+(flagged.length?'requieren revisión: '+[...new Set(flagged)].join(', '):'sin anomalías observadas en esta captura')+(truncated?' · inventario incompleto':'');
   }
 
   function renderWorldInspection(snapshot) {
