@@ -6,6 +6,7 @@ import { chromium } from 'playwright';
 const BASE_URL = process.env.FAUNA_TEST_URL || process.env.INSPECTOR_TEST_URL || 'http://127.0.0.1:4175/';
 const OUT = path.resolve('artifacts/fauna-visual-captures');
 const VIEWPORT = { width: 1600, height: 900 };
+const FAUNA_ROSTER_TIMEOUT_MS = 240000;
 const ANGLES = [
   { id: 'front', degrees: 0 },
   { id: 'right', degrees: 90 },
@@ -87,7 +88,7 @@ async function main() {
         const birds=roots.filter(node=>/^RealSeagullActor_/.test(String(node.name||''))).length;
         return window.__elSinNombreStartupSmoke?.worldReady===true||
           document.body.classList.contains('boot-failed')||land>=3||birds>=1;
-      },undefined,{timeout:120000,polling:250});
+      },undefined,{timeout:FAUNA_ROSTER_TIMEOUT_MS,polling:250});
     } catch(error) {
       manifest.warnings.push({code:'startup-did-not-reach-fauna-roster',message:String(error?.message||error)});
     }
