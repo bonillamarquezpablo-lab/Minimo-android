@@ -45,7 +45,7 @@ for (const marker of [
   'created-after-octree',
   'octree-initial-dynamic',
   'meshSelectionOctreeEnabled:spatialSelectionStats.enabled',
-  'qualityScaleLockedForSession:true'
+  'qualityScaleAdaptive:true'
 ]) {
   assert.ok(builder.includes(marker), 'Missing mobile stability guardrail: ' + marker);
 }
