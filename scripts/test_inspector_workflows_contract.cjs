@@ -15,7 +15,7 @@ const pushStart=mainTriggers.indexOf('  push:')+'  push:'.length;
 const pushEnd=mainTriggers.indexOf('  # Runs the complete cloud lab');
 const scopedPush=mainTriggers.slice(pushStart,pushEnd);
 assert.ok(scopedPush.includes('branches: [main]')&&scopedPush.includes('paths:'),'Push-triggered fauna inspection must be scoped to its implementation paths.');
-for(const file of ['scripts/fauna-visual-capture.mjs','scripts/create_fauna_contact_sheet.py','scripts/run-unified-inspector.mjs','scripts/test_fauna_visual_capture_contract.cjs','.github/workflows/coastal-reference.yml']){
+for(const file of ['scripts/build_site.py','scripts/test_mobile_startup_loading.cjs','scripts/test_wildlife_runtime_contract.cjs','scripts/fauna-visual-capture.mjs','scripts/create_fauna_contact_sheet.py','scripts/run-unified-inspector.mjs','scripts/test_fauna_visual_capture_contract.cjs','.github/workflows/coastal-reference.yml']){
   assert.ok(scopedPush.includes(file),'Missing scoped fauna path: '+file);
 }
 assert.ok(!/^  pull_request:/m.test(mainTriggers),'Pull requests must not launch the full Inspector.');
