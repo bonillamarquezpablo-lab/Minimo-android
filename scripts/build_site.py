@@ -2993,7 +2993,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const fps=renderedFps||engine.getFps(),now=performance.now();
   if(fps<24&&now-lastQualityWarningAt>=4000){
    lastQualityWarningAt=now;
-   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
+   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,nativeResolutionPreserved:true,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
   }
  }"""
     if html.count(quality_adaptive_marker) != 1:
