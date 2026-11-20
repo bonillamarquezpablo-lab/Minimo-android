@@ -59,9 +59,9 @@ assert.ok(source.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),'Fe
 for(const marker of ['function animateWater(dt)','function updateWildlife(dt)','function updateActiveIslandGrass(dt)','function updateManagedWorldShadowCasters()','function auditHabitableStructures']) {
   assert.ok(source.includes(marker),'A gameplay or visual subsystem was removed: '+marker);
 }
-assert.ok(builder.includes('highHeadroomQualityMobile?1.50:1.25'),'The S26 native Quality render scale must use the bounded 0.6.333 headroom profile.');
+assert.ok(builder.includes('highHeadroomQualityMobile?1.80:1.45'),'The S26 native Quality render scale must preserve the original full-resolution profile.');
 assert.ok(builder.includes('renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))'),'Mobile AA quality must remain unchanged.');
 assert.ok(!builder.includes('scene.freezeActiveMeshes('),'The optimization must not freeze the active list and stop dynamic rendering.');
 assert.ok(!builder.includes('scene.skipFrustumClipping=true'),'The optimization must not disable frustum culling.');
 
-console.log('OK Babylon spatial selection: safe static Octree, dynamic meshes tracked separately, no false dynamic-frustum claim, bounded Quality resolution and antialiasing retained.');
+console.log('OK Babylon spatial selection: safe static Octree, dynamic meshes tracked separately, no false dynamic-frustum claim, native Quality resolution and antialiasing retained.');
