@@ -147,26 +147,28 @@ jobs:
         run: node scripts/player-startup-smoke.mjs
 
       - name: Verify mobile fauna rigs, animations, textures and four-view visuals before publish
+        timeout-minutes: 18
         env:
           FAUNA_TEST_URL: https://localhost:4175/
+          FAUNA_SKINNING_MODE: gpu
         run: node scripts/fauna-visual-capture.mjs
 
-      - name: Diagnostic A/B capture with GPU skinning (non-release acceptance)
+      - name: Diagnostic A/B capture with CPU skinning fallback (non-release acceptance)
         if: always() && steps.playwright_install.outcome == 'success'
         continue-on-error: true
         timeout-minutes: 8
         env:
           FAUNA_TEST_URL: https://localhost:4175/
-          FAUNA_SKINNING_MODE: gpu
-          FAUNA_CAPTURE_OUTPUT: artifacts/fauna-visual-captures-gpu
+          FAUNA_SKINNING_MODE: cpu
+          FAUNA_CAPTURE_OUTPUT: artifacts/fauna-visual-captures-cpu
         run: node scripts/fauna-visual-capture.mjs
 
-      - name: Preserve GPU skinning diagnostic evidence
+      - name: Preserve CPU skinning fallback diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: el-sin-nombre-fauna-gpu-diagnostic-${{ github.sha }}
-          path: artifacts/fauna-visual-captures-gpu/
+          name: el-sin-nombre-fauna-cpu-diagnostic-${{ github.sha }}
+          path: artifacts/fauna-visual-captures-cpu/
           if-no-files-found: warn
           retention-days: 30
 
