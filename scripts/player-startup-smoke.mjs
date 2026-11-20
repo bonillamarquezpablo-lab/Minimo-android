@@ -729,6 +729,9 @@ async function main() {
           state.activeBubbleTexts.some(item => typeof item?.text === 'string' && item.text.trim().length > 0) &&
           proof?.ready === true &&
           proof?.meshEnabled === true &&
+          proof?.meshVisible === true &&
+          proof?.meshReady === true &&
+          proof?.screenInViewport === true &&
           proof?.messagePainted === true &&
           proof?.texture?.width === 768 &&
           proof?.texture?.height === 384 &&
@@ -742,15 +745,21 @@ async function main() {
         const { dataUrl, ...metadata } = proof;
         return { state, proof: metadata, dataUrl };
       });
-      assert.ok(visualEvidence.proof?.ready && visualEvidence.dataUrl?.startsWith('data:image/png;base64,'),
-        'La textura del diálogo NPC no produjo evidencia PNG válida: ' + JSON.stringify(visualEvidence.proof));
+      assert.ok(visualEvidence.proof?.ready && visualEvidence.proof?.meshVisible === true &&
+        visualEvidence.proof?.meshReady === true && visualEvidence.proof?.screenInViewport === true &&
+        visualEvidence.proof?.screenPosition && visualEvidence.dataUrl?.startsWith('data:image/png;base64,'),
+        'La burbuja NPC no está realmente visible y renderizable dentro del viewport: ' + JSON.stringify(visualEvidence.proof));
+      await page.waitForTimeout(300);
+      const dialogueScreen=await page.screenshot({path:path.join(OUT,'npc-dialogue-screen.png'),timeout:20000,animations:'disabled'});
+      assert.ok(dialogueScreen.length>5000,'La captura real de pantalla del diálogo NPC está vacía o incompleta.');
       manifest.npcDialogueSmoke = {
         ...visualEvidence.state,
         billboardTextureReady: true,
         textureUploadOrientationVerified: true,
-        renderedBubbleVerified: false,
-        visualScreenshotCaptured: false,
+        renderedBubbleVerified: visualEvidence.proof.ready===true && visualEvidence.proof.meshVisible===true && visualEvidence.proof.meshReady===true && visualEvidence.proof.screenInViewport===true,
+        visualScreenshotCaptured: true,
         visualEvidenceFile: 'npc-dialogue-texture.png',
+        visualScreenshotFile: 'npc-dialogue-screen.png',
         visualProof: visualEvidence.proof,
         visualProbe: 'temporary-npc-near-player'
       };
