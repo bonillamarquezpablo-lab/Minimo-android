@@ -168,4 +168,10 @@ assert.ok(buildSource.includes('setTime:value=>atmosphereSystem.setTime(value)')
   buildSource.includes('setWeather:value=>atmosphereSystem.setWeather(value)'),
   'Time, duration and weather controls must be exposed to diagnostics');
 
+assert.ok(source.includes("if (visible > 0.001)") &&
+  source.includes("if (this.sunDisc.visibility !== 0) this.sunDisc.visibility = 0;") &&
+  source.includes("if (this.moonDisc.visibility !== 0) this.moonDisc.visibility = 0;") &&
+  source.includes("material.setFloat('uTime', this.elapsedSeconds);"),
+  'Hidden solar/lunar meshes must stop receiving per-tick transforms and shader writes, while visible bodies keep the original full update path.');
+
 console.log('OK unified atmosphere: 24-hour solar arc, twilight, moon/night state, configurable 300-second clock, layered clouds, stars, optional god rays, bloom, adaptive shadows and pooled hearth lighting.');
