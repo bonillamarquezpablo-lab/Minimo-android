@@ -160,7 +160,7 @@ assert.ok(smoke.includes('npcDialogueVisualProbe') &&
   'Browser acceptance must verify a live NPC billboard and texture proof without blocking on Chromium screenshot compositing, then restore NPC position.');
 assert.ok(builder.includes('fpsHudTime+=rawFrameMs/1000;fpsHudFrames++') && builder.includes('renderedFps=measured'), 'The FPS HUD and health report must count actual rendered frames over elapsed wall-clock time, including high-refresh screens.');
 assert.ok(builder.includes('fpsHudTime+=rawFrameMs/1000;fpsHudFrames++') && builder.includes('renderedFps=measured'), 'The FPS HUD and health report must count rendered game frames, not browser requestAnimationFrame callbacks.');
-assert.ok(builder.includes("meter.title='Objetivo: '+targetFrameRate+' FPS."), 'The FPS tooltip must show the enforced target and correct frame budget.');
+assert.ok(builder.includes("fps_title_replacement = fps_title_marker") && builder.includes("meter.title='Objetivo: 120 FPS."), 'The FPS tooltip must keep the original 120 FPS target and 8.3 ms frame budget.');
 
 assert.ok(dialogueRuntime.includes('slot.texture.vScale=1;slot.texture.vOffset=0;') &&
   dialogueRuntime.includes('slot.texture.update(true);slot.lastUploadInvertY=true;'),
