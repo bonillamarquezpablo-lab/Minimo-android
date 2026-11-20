@@ -948,36 +948,49 @@
       const skyStarted = performance.now();
       if (this.sunDisc && this.sunHalo) {
         const visible = clamp(state.daylight * 0.88 + state.twilight * 0.36, 0, 1);
-        const point = this._sunPoint;
-        point.x = sun.x * 680; point.y = sun.y * 680; point.z = sun.z * 680;
-        this.sunDisc.position.copyFrom(point);
-        this._lightPosition.x = point.x * 1.012;
-        this._lightPosition.y = point.y * 1.012;
-        this._lightPosition.z = point.z * 1.012;
-        this.sunHalo.position.copyFrom(this._lightPosition);
-        this.sunDisc.visibility = visible;
-        this.sunHalo.visibility = visible;
-        const material = this.sunDisc.material;
-        if (this.sunSurfaceMaterial && material === this.sunSurfaceMaterial) {
-          material.setColor3('sunColor', sunColor);
-          material.setFloat('uTime', this.elapsedSeconds);
-        } else if (material && material.emissiveColor) material.emissiveColor.copyFrom(sunColor);
-        const haloMaterial = this.sunHalo.material;
-        if (haloMaterial) haloMaterial.alpha = 0.035 + state.twilight * 0.20 + state.daylight * 0.045;
+        if (visible > 0.001) {
+          // The solar body is fully off-screen/transparent through deep night.
+          // Do not rewrite its transform or shader uniforms until dawn brings it back.
+          const point = this._sunPoint;
+          point.x = sun.x * 680; point.y = sun.y * 680; point.z = sun.z * 680;
+          this.sunDisc.position.copyFrom(point);
+          this._lightPosition.x = point.x * 1.012;
+          this._lightPosition.y = point.y * 1.012;
+          this._lightPosition.z = point.z * 1.012;
+          this.sunHalo.position.copyFrom(this._lightPosition);
+          this.sunDisc.visibility = visible;
+          this.sunHalo.visibility = visible;
+          const material = this.sunDisc.material;
+          if (this.sunSurfaceMaterial && material === this.sunSurfaceMaterial) {
+            material.setColor3('sunColor', sunColor);
+            material.setFloat('uTime', this.elapsedSeconds);
+          } else if (material && material.emissiveColor) material.emissiveColor.copyFrom(sunColor);
+          const haloMaterial = this.sunHalo.material;
+          if (haloMaterial) haloMaterial.alpha = 0.035 + state.twilight * 0.20 + state.daylight * 0.045;
+        } else {
+          if (this.sunDisc.visibility !== 0) this.sunDisc.visibility = 0;
+          if (this.sunHalo.visibility !== 0) this.sunHalo.visibility = 0;
+        }
       }
       if (this.moonDisc && this.moonHalo) {
         const visible = state.night * (1 - storm * 0.58);
-        const point = this._moonPoint;
-        point.x = -sun.x * 670; point.y = -sun.y * 670; point.z = -sun.z * 670;
-        this.moonDisc.position.copyFrom(point);
-        this._lightPosition.x = point.x * 1.018;
-        this._lightPosition.y = point.y * 1.018;
-        this._lightPosition.z = point.z * 1.018;
-        this.moonHalo.position.copyFrom(this._lightPosition);
-        this.moonDisc.visibility = visible;
-        this.moonHalo.visibility = visible;
-        if (this.moonDisc.material) this.moonDisc.material.alpha = visible;
-        if (this.moonHalo.material) this.moonHalo.material.alpha = 0.09 * visible;
+        if (visible > 0.001) {
+          // The moon uses the same transform/uniform update path only while visible.
+          const point = this._moonPoint;
+          point.x = -sun.x * 670; point.y = -sun.y * 670; point.z = -sun.z * 670;
+          this.moonDisc.position.copyFrom(point);
+          this._lightPosition.x = point.x * 1.018;
+          this._lightPosition.y = point.y * 1.018;
+          this._lightPosition.z = point.z * 1.018;
+          this.moonHalo.position.copyFrom(this._lightPosition);
+          this.moonDisc.visibility = visible;
+          this.moonHalo.visibility = visible;
+          if (this.moonDisc.material) this.moonDisc.material.alpha = visible;
+          if (this.moonHalo.material) this.moonHalo.material.alpha = 0.09 * visible;
+        } else {
+          if (this.moonDisc.visibility !== 0) this.moonDisc.visibility = 0;
+          if (this.moonHalo.visibility !== 0) this.moonHalo.visibility = 0;
+        }
       }
 
       if (this.skyMaterial) {
