@@ -518,7 +518,7 @@ def main() -> None:
         "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
         "renderedFps=measured",
         "renderedFps||engine.getFps()",
-        "FPS bajo; Calidad conserva geometría y efectos y adapta solo la resolución interna.",
+        "FPS bajo; la calidad y resolución nativa permanecen bloqueadas.",
         "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))",
         "renderPipeline.sharpen.edgeAmount=.34",
         "style='grain',size=highHeadroomQualityMobile?1024:512",
