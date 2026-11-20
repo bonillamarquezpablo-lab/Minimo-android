@@ -584,8 +584,8 @@
           pipeline.bloomEnabled = enabled;
           pipeline.bloomThreshold = this.quality === 'low' ? 0.98 : 0.94;
           pipeline.bloomWeight = this.quality === 'high' ? 0.18 : (mobileHigh ? 0.09 : (this.quality === 'medium' ? 0.13 : 0.075));
-          pipeline.bloomKernel = this.quality === 'high' ? 56 : (mobileHigh ? 16 : (this.quality === 'medium' ? 36 : 20));
-          pipeline.bloomScale = this.quality === 'high' ? 0.45 : (mobileHigh ? 0.16 : (this.quality === 'medium' ? 0.32 : 0.20));
+          pipeline.bloomKernel = this.quality === 'high' ? 56 : (mobileHigh ? 24 : (this.quality === 'medium' ? 36 : 20));
+          pipeline.bloomScale = this.quality === 'high' ? 0.45 : (mobileHigh ? 0.24 : (this.quality === 'medium' ? 0.32 : 0.20));
           pipeline.imageProcessingEnabled = true;
           // Native mobile MSAA is already active; avoid a second FXAA softening pass.
           pipeline.fxaaEnabled = !mobileHigh;
@@ -712,7 +712,7 @@
       }
       // Touch GPUs keep one nearest local fire light; desktop Quality may use two.
       // This avoids a second dynamic per-pixel light pass on mobile during the night.
-      const poolSize = this.isTouchDevice ? 1 : (this.quality === 'low' ? 1 : 2);
+      const poolSize = this.quality === 'low' ? 1 : 2;
       for (let i = 0; i < poolSize; i++) {
         const light = new B.PointLight('NorseNightHearthPool_' + i, new B.Vector3(0, 0, 0), scene);
         light.diffuse = new B.Color3(1.0, 0.43, 0.14);
