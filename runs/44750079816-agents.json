@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "project": "EL SIN NOMBRE",
+  "kind": "autonomous-specialist-agent-report",
+  "generatedAt": "2026-11-20T14:05:39.023Z",
+  "run": {
+    "id": "44750079816",
+    "url": "https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/runs/44750079816",
+    "commit": "08fad61e9e2c8f8e5e9f72e7667654f12c6e577d",
+    "ref": "refs/heads/main"
+  },
+  "summary": {
+    "inspectionLevel": null,
+    "phases": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "unknown": 0,
+    "evidenceMissing": [
+      "artifacts/unified-inspector/manifest.json",
+      "artifacts/player-startup/manifest.json",
+      "artifacts/texture-readiness-smoke/manifest.json",
+      "artifacts/structure-grounding/manifest.json",
+      "artifacts/custom-scene-captures/manifest.json",
+      "artifacts/hrafn-before-after/manifest.json"
+    ]
+  },
+  "agents": [
+    {
+      "id": "npc-performance",
+      "role": "Especialista de rendimiento",
+      "scope": [
+        "FPS",
+        "frame time",
+        "CPU/JavaScript",
+        "GPU when available",
+        "draw calls",
+        "startup"
+      ],
+      "status": "insufficient-data",
+      "findings": [],
+      "guardrail": "Never recommend lowering visual quality or removing gameplay systems as a first-line fix."
+    },
+    {
+      "id": "npc-visual-quality",
+      "role": "Especialista de calidad visual",
+      "scope": [
+        "water",
+        "foam",
+        "lighting",
+        "shadows",
+        "materials",
+        "textures",
+        "composition",
+        "visual regressions"
+      ],
+      "status": "insufficient-data",
+      "findings": [
+        {
+          "status": "visual-judgement-pending",
+          "message": "No visual defect is confirmed from file counts or pixel differences alone. Synchronized captures remain available for human review; automated geometry checks use Babylon.js runtime evidence."
+        }
+      ],
+      "guardrail": "Do not change the art direction, materials, resolution or effects based only on a pixel-difference score."
+    },
+    {
+      "id": "npc-world-geometry",
+      "role": "Especialista de mundo y geometría",
+      "scope": [
+        "13 islands",
+        "terrain",
+        "shoreline",
+        "structures",
+        "grounding",
+        "floating/intersecting objects",
+        "textures readiness"
+      ],
+      "status": "insufficient-data",
+      "findings": [],
+      "guardrail": "Do not reposition, delete or rebuild world objects without object-level evidence and a regression capture."
+    },
+    {
+      "id": "npc-validation",
+      "role": "Especialista de pruebas y validación",
+      "scope": [
+        "startup",
+        "test contracts",
+        "phase results",
+        "artifacts",
+        "regression gates"
+      ],
+      "status": "no-run-data",
+      "findings": [],
+      "guardrail": "Skipped phases are not passes. Missing test evidence never counts as a successful validation."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "collect-performance-evidence",
+      "priority": "P2",
+      "owner": "npc-performance",
+      "title": "Completar evidencia de rendimiento comparable",
+      "evidence": "No se ha localizado una métrica FPS válida en el manifiesto Hrafn.",
+      "nextAction": "Comprobar el contrato del perfilador y mantener separados los resultados emulados de los obtenidos en Adreno."
+    },
+    {
+      "id": "collect-visual-evidence",
+      "priority": "P2",
+      "owner": "npc-visual-quality",
+      "title": "Completar capturas visuales sincronizadas",
+      "evidence": "No se ha encontrado la lámina de escena esperada.",
+      "nextAction": "Repetir las cámaras y hora de captura; no inferir calidad visual de una ejecución sin imágenes."
+    }
+  ],
+  "autonomy": {
+    "evidenceCollection": "automatic",
+    "specialistAnalysis": "deterministic-evidence-rules",
+    "sourceCodeModification": false,
+    "deployment": false,
+    "note": "This first unattended layer measures, classifies and assigns evidence-backed tasks. It does not write game source or publish unvalidated repairs."
+  },
+  "limitations": [
+    "GitHub Actions Chromium/SwiftShader is a cloud test environment, not the physical Galaxy S26 Ultra Adreno GPU.",
+    "No judgement of visual quality is inferred from screenshot counts or pixel differences alone.",
+    "Unavailable metrics remain unknown; they are never fabricated as zero.",
+    "The specialist rules are not LLM agents. A model-backed external agent requires a separately configured provider credential and an approved usage budget."
+  ]
+}
