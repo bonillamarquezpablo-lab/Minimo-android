@@ -12,9 +12,7 @@ for(const marker of [
   'highHeadroomQualityMobile=',
   'qualityDprCurrent=qualityDpr',
   'qualityScaleAdaptive:false',
-  'const targetFrameRate=60;',
-  'frameIntervalMs=1000/targetFrameRate',
-  'if(now+.5<nextRenderAt)return',
+  'const targetFrameRate=120;',
   'fpsHudTime+=rawFrameMs/1000;fpsHudFrames++',
   'renderedFps=measured',
   'renderedFps||engine.getFps()',
@@ -37,7 +35,8 @@ for(const marker of [
 assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleLockedForSession:true') && builder.includes('qualityScaleAdaptive:false') && builder.includes('nativeResolutionPreserved:true'), 'Quality must preserve the native render scale for the whole session.');
 assert.ok(!builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)') && !builder.includes('qualityDprSlowSamples') && !builder.includes('qualityDprStableSamples'), 'Runtime pressure must never reduce native Quality resolution.');
 assert.ok(builder.includes('let lastWorldUpdateMs=0,lastRenderCpuMs=0;'), 'Shared frame-loop timing bindings must remain available after the Quality-scale change.');
-assert.ok(builder.includes('targetFrameRate=60') && builder.includes('renderDpr:qualityDprCurrent') && builder.includes('qualityScaleLockedForSession:true'), 'Performance reporting must keep the configured render scale fixed and expose frame pressure.');
+assert.ok(builder.includes('targetFrameRate=120') && builder.includes('renderDpr:qualityDprCurrent') && builder.includes('qualityScaleLockedForSession:true'), 'Performance diagnostics must retain the 120 Hz device target and native render scale.');
+assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') && !builder.includes('frameIntervalMs=1000/targetFrameRate') && !builder.includes('if(now+.5<nextRenderAt)return'), 'Quality must not throttle Babylon rendering below the display refresh rate.');
 assert.ok(builder.includes('nativeResolutionPreserved:true') && !builder.includes('setHardwareScalingLevel(1/qualityDprCurrent)'), 'The runtime must report that native resolution was preserved without automatic downscaling.');
 assert.ok(!builder.includes('fsr1Candidate') && !builder.includes('fsr1InputScale'), 'No inactive FSR1 state may override native device resolution.');
 assert.ok(builder.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && builder.includes('html.replace(legacy_fsr_guard, "if(false){", 1)'), 'The obsolete FSR block must be guarded before scene construction.');
