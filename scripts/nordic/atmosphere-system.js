@@ -197,6 +197,10 @@
       this.ssrPipeline = null;
       this.firePool = [];
       this._fireFallbackMeshes = this.skyDome ? [this.skyDome] : [];
+      // Hearth illumination is infrequently reassigned; cache each static influence set.
+      // The cache is invalidated lazily whenever the scene mesh count changes.
+      this._hearthMeshCache = new WeakMap();
+      this._hearthMeshCacheMeshCount = -1;
       // The solar clock keeps advancing every frame; expensive material/light writes are
       // coalesced to a stable cadence. This keeps night effects without per-frame overhead.
       this._visualUpdateAccumulator = 0;
@@ -580,8 +584,8 @@
           pipeline.bloomEnabled = enabled;
           pipeline.bloomThreshold = this.quality === 'low' ? 0.98 : 0.94;
           pipeline.bloomWeight = this.quality === 'high' ? 0.18 : (mobileHigh ? 0.09 : (this.quality === 'medium' ? 0.13 : 0.075));
-          pipeline.bloomKernel = this.quality === 'high' ? 56 : (mobileHigh ? 24 : (this.quality === 'medium' ? 36 : 20));
-          pipeline.bloomScale = this.quality === 'high' ? 0.45 : (mobileHigh ? 0.24 : (this.quality === 'medium' ? 0.32 : 0.20));
+          pipeline.bloomKernel = this.quality === 'high' ? 56 : (mobileHigh ? 16 : (this.quality === 'medium' ? 36 : 20));
+          pipeline.bloomScale = this.quality === 'high' ? 0.45 : (mobileHigh ? 0.16 : (this.quality === 'medium' ? 0.32 : 0.20));
           pipeline.imageProcessingEnabled = true;
           // Native mobile MSAA is already active; avoid a second FXAA softening pass.
           pipeline.fxaaEnabled = !mobileHigh;
@@ -706,9 +710,10 @@
       for (const item of this.fireLegacyLights) {
         if (item && item.light && item.light.setEnabled) item.light.setEnabled(false);
       }
-      // Exactly two nearby fire lights stay active: one sun/moon + hemi + two fires
-      // respects common four-light material budgets on mobile.
-      for (let i = 0; i < (this.quality === 'low' ? 1 : 2); i++) {
+      // Touch GPUs keep one nearest local fire light; desktop Quality may use two.
+      // This avoids a second dynamic per-pixel light pass on mobile during the night.
+      const poolSize = this.isTouchDevice ? 1 : (this.quality === 'low' ? 1 : 2);
+      for (let i = 0; i < poolSize; i++) {
         const light = new B.PointLight('NorseNightHearthPool_' + i, new B.Vector3(0, 0, 0), scene);
         light.diffuse = new B.Color3(1.0, 0.43, 0.14);
         light.specular = new B.Color3(1.0, 0.30, 0.08);
@@ -729,6 +734,12 @@
       // full 13-island mesh scan while the player is moving between hearths.
       // The hearth's bounded influence set is static; do not rebuild it from the camera-culled list.
       const source = Array.isArray(scene.meshes) ? scene.meshes : [];
+      if (this._hearthMeshCacheMeshCount !== source.length) {
+        this._hearthMeshCache = new WeakMap();
+        this._hearthMeshCacheMeshCount = source.length;
+      }
+      const cached = this._hearthMeshCache.get(hearth);
+      if (cached) return cached;
       const included = [];
       const lightX = Number(hearth.x) || 0;
       const lightY = (Number(hearth.floorY) || 0) + 1.0;
@@ -748,6 +759,7 @@
         const reach = range + extent;
         if (dx * dx + dy * dy + dz * dz <= reach * reach) included.push(mesh);
       }
+      this._hearthMeshCache.set(hearth, included);
       return included;
     }
 
