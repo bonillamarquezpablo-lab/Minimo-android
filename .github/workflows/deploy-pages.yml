@@ -151,6 +151,7 @@ jobs:
         run: node scripts/fauna-visual-capture.mjs
 
       - name: Diagnostic A/B capture with GPU skinning (non-release acceptance)
+        if: always()
         continue-on-error: true
         env:
           FAUNA_TEST_URL: https://localhost:4175/
