@@ -718,6 +718,13 @@ async function main() {
     manifest.npcDialogueVisualProbe = npcDialogueVisualProbe;
     assert.ok(npcDialogueVisualProbe.ready,
       'No se pudo preparar un NPC real para probar la burbuja: ' + JSON.stringify(npcDialogueVisualProbe));
+    const smokeBubbleTriggered=await page.evaluate(id=>
+      window.__ELSN_NPC_DIALOGUES__?.triggerSmokeBubble?.(id)===true,
+      npcDialogueVisualProbe.npc
+    );
+    assert.ok(smokeBubbleTriggered,
+      'El modo de prueba no pudo solicitar un diálogo inmediato para el NPC seleccionado: ' +
+      JSON.stringify({npc:npcDialogueVisualProbe.npc,dialogue:await page.evaluate(()=>window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.()||null)}));
     try {
       await page.waitForFunction(() => {
         const api = window.__ELSN_NPC_DIALOGUES__;
