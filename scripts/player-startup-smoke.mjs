@@ -726,7 +726,9 @@ async function main() {
       'El modo de prueba no pudo solicitar un diálogo inmediato para el NPC seleccionado: ' +
       JSON.stringify({npc:npcDialogueVisualProbe.npc,dialogue:await page.evaluate(()=>window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.()||null)}));
     try {
-      await page.waitForFunction(() => {
+      let dialogueVisualPollTimedOut=false;
+      try {
+        await page.waitForFunction(() => {
         const api = window.__ELSN_NPC_DIALOGUES__;
         const state = api?.getSnapshot?.();
         const proof = api?.captureVisualProof?.();
@@ -745,17 +747,29 @@ async function main() {
           proof?.texture?.vScale === 1 &&
           proof?.texture?.vOffset === 0 &&
           proof?.uploadInvertY === true;
-      }, undefined, { timeout: 15000, polling: 100 });
+        }, undefined, { timeout: 15000, polling: 100 });
+      } catch(pollError) {
+        // SwiftShader can starve Playwright's polling loop while a complete frame is
+        // being composited. Re-read the real Babylon billboard below and accept only
+        // if the final mesh, text, texture and viewport checks all pass synchronously.
+        dialogueVisualPollTimedOut=true;
+        manifest.npcDialogueVisualPollWarning=String(pollError?.message||pollError);
+      }
       const visualEvidence = await page.evaluate(() => {
         const state = window.__ELSN_NPC_DIALOGUES__.getSnapshot();
         const proof = window.__ELSN_NPC_DIALOGUES__.captureVisualProof(true);
         const { dataUrl, ...metadata } = proof;
         return { state, proof: metadata, dataUrl };
       });
-      assert.ok(visualEvidence.proof?.ready && visualEvidence.proof?.meshVisible === true &&
-        visualEvidence.proof?.meshReady === true && visualEvidence.proof?.screenInViewport === true &&
-        visualEvidence.proof?.screenPosition && visualEvidence.dataUrl?.startsWith('data:image/png;base64,'),
-        'La burbuja NPC no está realmente visible y renderizable dentro del viewport: ' + JSON.stringify(visualEvidence.proof));
+      assert.ok(visualEvidence.proof?.ready && visualEvidence.proof?.meshEnabled === true &&
+        visualEvidence.proof?.meshVisible === true && visualEvidence.proof?.meshReady === true &&
+        visualEvidence.proof?.screenInViewport === true && visualEvidence.proof?.messagePainted === true &&
+        visualEvidence.proof?.texture?.width === 768 && visualEvidence.proof?.texture?.height === 384 &&
+        visualEvidence.proof?.texture?.vScale === 1 && visualEvidence.proof?.texture?.vOffset === 0 &&
+        visualEvidence.proof?.uploadInvertY === true && visualEvidence.proof?.screenPosition &&
+        visualEvidence.dataUrl?.startsWith('data:image/png;base64,'),
+        'La burbuja NPC no está realmente visible y renderizable dentro del viewport: ' +
+        JSON.stringify({pollTimedOut:dialogueVisualPollTimedOut,state:visualEvidence.state,proof:visualEvidence.proof}));
       // Chromium's full-page compositor screenshot can stall for 20s under SwiftShader,
       // even after Babylon confirms the billboard is enabled, ready and inside the viewport.
       // Keep that optional evidence separate from the deterministic live-render proof.
@@ -775,6 +789,7 @@ async function main() {
         visualEvidenceFile: 'npc-dialogue-texture.png',
         visualScreenshotFile: dialogueScreenshotCaptured?'npc-dialogue-screen.png':null,
         visualScreenshotIsOptionalUnderSoftwareRenderer:true,
+        visualPollingRecoveredAfterTimeout:dialogueVisualPollTimedOut,
         visualProof: visualEvidence.proof,
         visualProbe: 'temporary-npc-near-player'
       };
