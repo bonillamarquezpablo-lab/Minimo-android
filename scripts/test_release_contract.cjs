@@ -30,7 +30,7 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.332","The release validator must target the packaged 0.6.332 release.");
+assert.equal(expectedVersion,"0.6.333","The release validator must target the packaged 0.6.333 release.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
   buildSite.includes("mature-norway-spruce-tree.glb") &&
   buildSite.includes("oak-textured.glb") &&
@@ -81,15 +81,17 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.332"\)/,"The build must promote every visible source version to 0.6.332.");
-assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleAdaptive:true") && buildSite.includes("qualityDprFloor") && buildSite.includes("qualityDprCeiling"),"Quality must preserve full scene detail while exposing bounded adaptive internal resolution.");
-assert.ok(buildSite.includes("fps<49&&lastWorldUpdateMs<8&&lastRenderCpuMs<9") && buildSite.includes("qualityDprSlowSamples>=2") && buildSite.includes("qualityDprStableSamples>=6") && buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)") && buildSite.includes("geometryAndEffectsPreserved:true"),"Sustained frame-budget pressure may adapt internal resolution with hysteresis, while preserving geometry and effects.");
-assert.ok(buildSite.includes("highHeadroomQualityMobile?1.80:1.45"),"The high-headroom mobile Quality startup scale must remain intact.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.333"\)/,"The build must promote every visible source version to 0.6.333.");
+assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true") && buildSite.includes("qualityScaleAdaptive:false") && buildSite.includes("nativeResolutionPreserved:true"),"Quality must keep its native render scale fixed for the session.");
+assert.ok(!buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples"),"Runtime pressure must not trigger automatic resolution reduction.");
+assert.ok(buildSite.includes("highHeadroomQualityMobile?1.80:1.45"),"The high-headroom mobile Quality startup scale must preserve its original full-resolution setting.");
+assert.ok(buildSite.includes("const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024"),"The original mobile water-reflection resolution must be preserved.");
+assert.ok(buildSite.includes("highHeadroomQualityMobile?10:4"),"The original flagship mobile shadow-refresh cadence must be preserved.");
 assert.ok(!buildSite.includes("fsr1Candidate") && !buildSite.includes("fsr1InputScale"),"The build must not retain an inactive FSR1 scaling path.");
 assert.ok(buildSite.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && buildSite.includes('html.replace(legacy_fsr_guard, "if(false){", 1)'),"The legacy FSR branch must be guarded before scene startup.");
 assert.ok(buildSite.includes('"loaderVersion": BABYLON_VERSION') && buildSite.includes('"defaultBackend": "WebGL2-preferred"'),"The asset manifest must record the exact Babylon/glTF loader pair and validated backend.");
 assert.ok(buildSite.includes("new B.EngineInstrumentation(engine)") && buildSite.includes("new B.SceneInstrumentation(scene)"),"The build must expose Babylon-native profiling only to diagnostics.");
-assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleAdaptive:true") && buildSite.includes("qualityDprFloor") && buildSite.includes("qualityDprCeiling"),"The Quality profile must expose adaptive internal resolution bounds without changing scene assets.");
+assert.ok(buildSite.includes("qualityScaleLockedForSession:true") && buildSite.includes("nativeResolutionPreserved:true") && !buildSite.includes("setHardwareScalingLevel(1/qualityDprCurrent)"),"The Quality profile must not lower resolution at runtime.");
 assert.match(buildSite,/BABYLON_VERSION = "9\.35\.0"/,"The packaged engine must include the DynamicTexture null-update fix.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/babylon.js"'),"The engine URL must use the pinned Babylon version.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/loaders/babylonjs.loaders.min.js"'),"The glTF loader must match the engine version.");
@@ -105,13 +107,14 @@ assert.ok(buildSite.includes('if url.startswith("https://grab3d.com/")'),
   "Large rigged packages from Grab3D must be removed from the concurrent download pool.");
 assert.ok(buildSite.includes("for relative, (url, minimum, kind) in grab3d_downloads.items():"),
   "Grab3D model downloads must be serialized while preserving all validation.");
-assert.ok(buildSite.includes("const targetFrameRate=60;") && buildSite.includes("frameIntervalMs=1000/targetFrameRate") && buildSite.includes("renderedFps=measured"),"The Quality runtime must enforce a stable 60 Hz simulation/render cadence and report the actual processed frame rate.");
+assert.ok(buildSite.includes("const targetFrameRate=120;") && buildSite.includes("renderedFps=measured") && buildSite.includes("fpsHudTime+=rawFrameMs/1000;fpsHudFrames++"),"The Quality runtime must report rendered FPS against a 120 Hz capability target without imposing a lower render cadence.");
+assert.ok(buildSite.includes("frame_loop_replacement = frame_loop_marker") && buildSite.includes("frame_clock_replacement = frame_clock_marker"),"The Babylon loop must remain uncapped and render at the available device refresh rate.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
 assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.includes("thinInstanceBatch") && buildSite.includes("list.length<180"),"Water reflections must filter non-essential foliage, instance batches and limit pass submissions.");
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.match(buildSite,/game_version = "0\.6\.332"/,"After validating the 0.6.274 source, the builder must set the packaged release version to 0.6.332.");
+assert.match(buildSite,/game_version = "0\.6\.333"/,"After validating the 0.6.274 source, the builder must set the packaged release version to 0.6.333.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
@@ -120,7 +123,7 @@ assert.match(validator,/STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200/);
 assert.ok(indexHtml.includes("audioPreloadResult=await NorseAudio.preloadAll(30000)"),"The required audio barrier must retry a still-pending first preload without skipping any sound effect.");
 assert.match(validator,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/);
 assert.match(validator,/sceneReadyTasks=\[waitForInitialViewReadiness\(\)\]/);
-assert.ok(buildSite.includes("initial_view_marker") && buildSite.includes("stableReadyFrames") && buildSite.includes("mesh.isReady(true)"),"The startup barrier must wait for the actual camera-visible meshes and settled scene assets, not every off-screen island shader.");
+assert.ok(buildSite.includes("initial_view_marker") && buildSite.includes("stableReadySamples") && buildSite.includes("readinessSampleIntervalMs:250") && buildSite.includes("activeData[index]") && !buildSite.includes("activeData.slice(0,active.length)") && buildSite.includes("mesh.isReady(true)"),"The startup barrier must sample actual camera-visible mesh readiness without allocating a full active-mesh copy every frame.");
 assert.ok(buildSite.includes("full_scene_compile_marker") && buildSite.includes("avoid a duplicate all-island compile pass"),"The release builder must remove the redundant full-scene material compilation while retaining the blocking readiness barrier.");
 assert.ok(buildSite.includes("const mineableGraniteMaterial=M.stoneLight;") && buildSite.includes("cap.material=M.stone;") && !buildSite.includes("M.stone.clone('MineableGraniteMaterial')"),"Mineable granite deposits must reuse preloaded scene materials to avoid an unready cloned shader variant.");
 assert.match(validator,/rows=isPerformanceMode\?13/);

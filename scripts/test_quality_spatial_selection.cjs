@@ -37,6 +37,16 @@ for(const marker of [
   'meshSelectionBuildMs:spatialSelectionStats.buildMs'
 ]) assert.ok(builder.includes(marker),'Missing dynamic-safe spatial selection guard: '+marker);
 
+const dynamicAddStart=builder.indexOf('const addSpatialDynamicMesh=');
+const dynamicAddEnd=builder.indexOf('const removeSpatialDynamicMesh=',dynamicAddStart);
+assert.ok(dynamicAddStart>=0&&dynamicAddEnd>dynamicAddStart,'Dynamic mesh registration must remain present.');
+const dynamicAddSource=builder.slice(dynamicAddStart,dynamicAddEnd);
+assert.ok(dynamicAddSource.includes('mesh.__elsnSpatialDynamic')&&dynamicAddSource.includes('dynamic.push(mesh)')&&!dynamicAddSource.includes('dynamic.indexOf(mesh)'),'Dynamic mesh registration must use the existing per-mesh O(1) duplicate flag instead of a repeated linear search.');
+assert.ok(dynamicAddSource.includes('deferStats=false') && dynamicAddSource.includes('if(!deferStats)updateSpatialSelectionCounts();') &&
+  builder.includes('addSpatialDynamicMesh(mesh,null,false,true);') &&
+  builder.includes('for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);\n   updateSpatialSelectionCounts();'),
+  'Initial dynamic mesh registration must batch global statistics once after the scene scan; live objects must still update stats immediately.');
+
 for(const marker of [
   'scene.createOrUpdateSelectionOctree(64,3)',
   'scene.onNewMeshAddedObservable.add',
@@ -59,9 +69,9 @@ assert.ok(source.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),'Fe
 for(const marker of ['function animateWater(dt)','function updateWildlife(dt)','function updateActiveIslandGrass(dt)','function updateManagedWorldShadowCasters()','function auditHabitableStructures']) {
   assert.ok(source.includes(marker),'A gameplay or visual subsystem was removed: '+marker);
 }
-assert.ok(builder.includes('highHeadroomQualityMobile?1.80:1.45'),'The S26 native Quality render scale must remain unchanged.');
+assert.ok(builder.includes('highHeadroomQualityMobile?1.80:1.45'),'The S26 native Quality render scale must preserve the original full-resolution profile.');
 assert.ok(builder.includes('renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))'),'Mobile AA quality must remain unchanged.');
 assert.ok(!builder.includes('scene.freezeActiveMeshes('),'The optimization must not freeze the active list and stop dynamic rendering.');
 assert.ok(!builder.includes('scene.skipFrustumClipping=true'),'The optimization must not disable frustum culling.');
 
-console.log('OK Babylon spatial selection: safe static Octree, dynamic meshes tracked separately, no false dynamic-frustum claim, Quality resolution and antialiasing unchanged.');
+console.log('OK Babylon spatial selection: safe static Octree, dynamic meshes tracked separately, no false dynamic-frustum claim, native Quality resolution and antialiasing retained.');

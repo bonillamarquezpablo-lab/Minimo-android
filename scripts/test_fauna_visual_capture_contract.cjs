@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
 const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf8');
+const releaseWorkflow = fs.readFileSync('.github/workflows/deploy-pages.yml', 'utf8');
 const runner = fs.readFileSync('scripts/run-unified-inspector.mjs', 'utf8');
 const capture = fs.readFileSync('scripts/fauna-visual-capture.mjs', 'utf8');
 const sheet = fs.readFileSync('scripts/create_fauna_contact_sheet.py', 'utf8');
@@ -16,11 +17,21 @@ assert.ok(runner.includes('Capturas visuales y diagnóstico de fauna terrestre')
 assert.ok(runner.includes('scripts/fauna-visual-capture.mjs'));
 assert.ok(runner.includes('scripts/create_fauna_contact_sheet.py'));
 assert.ok(runner.includes('results:{player,texture,grounding,coastal,custom,fauna,beforeAfter}'));
+assert.ok(releaseWorkflow.includes('Diagnostic A/B capture with GPU skinning') && releaseWorkflow.includes('FAUNA_SKINNING_MODE: gpu') && releaseWorkflow.includes('FAUNA_CAPTURE_OUTPUT: artifacts/fauna-visual-captures-gpu'),
+  'Release validation must retain an independent GPU-skinning fauna diagnostic run.');
+const gpuDiagnosticStart=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning');
+const gpuDiagnosticEnd=releaseWorkflow.indexOf('- name: Preserve GPU skinning diagnostic evidence',gpuDiagnosticStart);
+assert.ok(gpuDiagnosticStart>=0&&gpuDiagnosticEnd>gpuDiagnosticStart&&releaseWorkflow.slice(gpuDiagnosticStart,gpuDiagnosticEnd).includes('if: always()'),
+  'GPU skinning diagnostics must still run when the primary CPU-fauna visual acceptance fails.');
 assert.ok(capture.includes('__ELSN_FAUNA_CAPTURE_SCENE__'));
-assert.ok(capture.includes('window.__ELSN_FORCE_CPU_SKINNING__=true') && capture.includes('hasTouch:true'),
-  'The SwiftShader visual-acceptance session must explicitly force the mobile CPU-skinning path before loading the game; it must not silently inspect shader skinning instead.');
-assert.ok(capture.indexOf('window.__ELSN_FORCE_CPU_SKINNING__=true')<capture.indexOf("await page.goto(BASE_URL+'?test=1&fauna-inspector=1'"),
-  'The CPU-skinning override must be installed before any game script executes.');
+assert.ok(capture.includes('const number=value=>Number.isFinite(Number(value))?Number(Number(value).toFixed(4)):null;\n          const ancestorsContain='),
+  'Every isolated Playwright page.evaluate callback must define its own numeric formatter; helpers in prior evaluate contexts are not shared.');
+assert.ok(capture.includes("const SKINNING_MODE = String(process.env.FAUNA_SKINNING_MODE || 'cpu').toLowerCase()") && capture.includes("process.env.FAUNA_CAPTURE_OUTPUT"),
+  'Fauna captures must support an explicit CPU/GPU diagnostic mode and isolated output folders.');
+assert.ok(capture.includes("window.__ELSN_FORCE_CPU_SKINNING__=mode==='cpu'") && capture.includes("window.__ELSN_FORCE_GPU_SKINNING__=mode==='gpu'") && capture.includes('{mode:SKINNING_MODE}') && capture.includes('hasTouch:true'),
+  'The visual inspector must force exactly one requested skinning path before game scripts execute.');
+assert.ok(capture.indexOf('window.__ELSN_FORCE_GPU_SKINNING__=mode===\'gpu\'')<capture.indexOf("await page.goto(BASE_URL+'?test=1&fauna-inspector=1'"),
+  'Both skinning overrides must be set before the game loads.');
 assert.ok(capture.includes('WildlifeActor_'));
 assert.ok(capture.includes('RealSeagullActor_'), 'Visual capture must include real gull actors, not only terrestrial animals.');
 assert.ok(capture.includes('flightRig'), 'Gull reports must include articulated flight rig evidence.');

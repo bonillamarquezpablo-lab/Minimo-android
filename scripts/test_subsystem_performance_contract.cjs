@@ -9,10 +9,10 @@ const recorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const gameHtml=fs.readFileSync('index.html','utf8');
 
-assert.ok(builder.includes('map_clock_pattern = r"let last=performance\\.now\\(\\),(?:nextRenderAt=0,)?mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"') &&
-  builder.includes('map_clock_replacement = "let last=performance.now(),nextRenderAt=0,mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;') &&
+assert.ok(builder.includes('map_clock_pattern = r"let last=performance\\.now\\(\\),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"') &&
+  builder.includes('map_clock_replacement = "let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;') &&
   builder.includes('lastMapDrawMs=0,mapDrawMaxMs=0,mapDrawSampleCount=0'),
-  'Minimap profiling must accept the current or 60 Hz scheduler clock and initialize its timing telemetry.');
+  'Minimap profiling must initialize its timing telemetry without inserting a frame limiter.');
 
 for(const marker of [
   'worldPhaseTimingStats=Object.create(null)',
@@ -72,10 +72,12 @@ assert.ok(recorder.includes('cpuGpuDiagnosis') && recorder.includes('cpuWorldP95
   'Session reports must classify likely CPU, GPU, mixed or inconclusive bottlenecks using independent P95 measurements.');
 assert.ok(gameHtml.includes('gpuTimerQuery:\'not measured; scene.render duration is CPU wall-clock only\''),
   'Unavailable GPU timing must not be misreported as zero.');
-assert.ok(builder.includes('qualityDprFloor')&&builder.includes('qualityDprCeiling')&&
-  builder.includes('fps<49&&lastWorldUpdateMs<8&&lastRenderCpuMs<9')&&
-  builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)')&&builder.includes('geometryAndEffectsPreserved:true'),
-  'The Quality profile may adapt only bounded internal resolution under sustained GPU pressure, never to mask CPU hitches or remove scene detail.');
+assert.ok(builder.includes('qualityScaleLockedForSession:true') && builder.includes('qualityScaleAdaptive:false') && builder.includes('nativeResolutionPreserved:true') && !builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)'), 'Quality resolution must remain native and fixed while performance is diagnosed.');
+assert.ok(builder.includes("highHeadroomQualityMobile?1.80:1.45"), 'Mobile Quality must retain its original full-resolution scale.');
+assert.ok(builder.includes("const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024") && builder.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8") && builder.includes("list.length<180"), 'The water reflection resolution, cadence and draw-list budget must not be reduced.');
+assert.ok(builder.includes("highHeadroomQualityMobile?10:4"), 'Flagship mobile shadow refresh cadence must retain its original setting.');
+assert.ok(atmosphere.includes("const poolSize = this.quality === 'low' ? 1 : 2") && atmosphere.includes("this._hearthMeshCache.set(hearth, included)"), 'Both mobile Quality hearth lights must remain active while their static mesh influence sets are cached.');
+assert.ok(atmosphere.includes("mobileHigh ? 24") && atmosphere.includes("mobileHigh ? 0.24"), 'Flagship mobile bloom quality must remain unchanged.');
 assert.ok(builder.includes("f.light&&typeof f.light.isEnabled==='function'&&!f.light.isEnabled()"),
   'Disabled legacy hearth lights must not be animated every frame.');
 assert.ok(builder.includes('sparkDx*sparkDx+sparkDz*sparkDz>140*140') &&
@@ -94,5 +96,12 @@ assert.doesNotMatch(atmosphereUpdate,/imageProcessing\\.(?:exposure|contrast)\\s
   'Atmospheric frame updates must not mutate shared image-processing settings.');
 assert.ok(atmosphere.includes('const imageConfigs = new Set(') && atmosphere.includes('imageConfig.exposure = 1.035') && atmosphere.includes('imageConfig.contrast = 1.10'),
   'Image-processing settings must be applied once at setup, not rewritten every dusk frame.');
+
+assert.ok(builder.includes('distanceSquared=dx*dx+dz*dz;') &&
+  builder.includes('animal.flee=distanceSquared<196?') &&
+  builder.includes('if(animal.flee>0&&distanceSquared>.0001)') &&
+  builder.includes('if(distanceSquared>(isTouchDevice?13225:27225)){') &&
+  !builder.includes('dist=Math.sqrt(distanceSquared)'),
+  'Wildlife decision cadence must use squared-distance thresholds and avoid a per-decision square root without changing flee or far-distance ranges.');
 
 console.log('SUBSYSTEM PERFORMANCE CONTRACT: PASS (world phases, atmosphere, hearths, wildlife, NPC dialogue, CPU and GPU timing).');

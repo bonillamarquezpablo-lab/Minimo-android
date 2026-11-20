@@ -3,6 +3,9 @@ name: Build and deploy EL SIN NOMBRE
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -146,6 +149,24 @@ jobs:
         env:
           FAUNA_TEST_URL: https://localhost:4175/
         run: node scripts/fauna-visual-capture.mjs
+
+      - name: Diagnostic A/B capture with GPU skinning (non-release acceptance)
+        if: always()
+        continue-on-error: true
+        env:
+          FAUNA_TEST_URL: https://localhost:4175/
+          FAUNA_SKINNING_MODE: gpu
+          FAUNA_CAPTURE_OUTPUT: artifacts/fauna-visual-captures-gpu
+        run: node scripts/fauna-visual-capture.mjs
+
+      - name: Preserve GPU skinning diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-sin-nombre-fauna-gpu-diagnostic-${{ github.sha }}
+          path: artifacts/fauna-visual-captures-gpu/
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Preserve fauna visual acceptance evidence
         if: always()

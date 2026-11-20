@@ -960,7 +960,7 @@ function setLoadingProgress(value,label){
     animal_dimensions_at = html.index(animal_dimensions_marker) + len(animal_dimensions_marker)
     animal_text_at = html.index(animal_silhouette_text, animal_dimensions_at)
     animal_check_end = html.index("');", animal_text_at) + 3
-    animal_silhouette_replacement = "\n   const animalSkinningMeshes=meshes.filter(mesh=>mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);\n   const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer);const useCpuSkinning=isTouchDevice&&(!softwareSkinningRenderer||window.__ELSN_FORCE_CPU_SKINNING__===true);animalSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;});\n   (imported.skeletons||[]).forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}catch(_){}});\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
+    animal_silhouette_replacement = "\n   const animalSkinningMeshes=meshes.filter(mesh=>mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);\n   const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer);const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true;if(forceCpuSkinning&&forceGpuSkinning)throw new Error('El diagnóstico de fauna no puede forzar CPU y GPU skinning a la vez.');const useCpuSkinning=forceCpuSkinning?true:(forceGpuSkinning?false:(isTouchDevice&&!softwareSkinningRenderer));animalSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;});\n   (imported.skeletons||[]).forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}catch(_){}});\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
     html = html[:animal_dimensions_at] + animal_silhouette_replacement + html[animal_check_end:]
 
     wildlife_download_head = "  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)throw new Error('Especie desconocida: '+kind);"
@@ -1265,21 +1265,21 @@ function updateWildlife(dt){
     if(now>=nextDecision){
      const lastDecision=Number(animal._wildlifeLastDecisionAt);
      const decisionDt=Number.isFinite(lastDecision)?Math.max(.016,Math.min(.25,now-lastDecision)):.05;
-     const dx=focus.x-root.position.x,dz=focus.z-root.position.z,distanceSquared=dx*dx+dz*dz,dist=Math.sqrt(distanceSquared);
+     const dx=focus.x-root.position.x,dz=focus.z-root.position.z,distanceSquared=dx*dx+dz*dz;
      const near=distanceSquared<4900,mid=distanceSquared<22500;
      const decisionInterval=isTouchDevice
       ?(isPerformanceMode?(near?.10:(mid?.18:.32)):(near?.05:(mid?.10:.20)))
       :(near?(1/30):(mid?.075:.15));
      animal._wildlifeLastDecisionAt=now;
      animal._wildlifeNextDecisionAt=now+decisionInterval;
-     animal.flee=dist<14?Math.max(animal.flee,3.2):Math.max(0,animal.flee-decisionDt);
-     if(animal.flee>0&&dist>.01)animal.heading=Math.atan2(-dx,-dz);
+     animal.flee=distanceSquared<196?Math.max(animal.flee,3.2):Math.max(0,animal.flee-decisionDt);
+     if(animal.flee>0&&distanceSquared>.0001)animal.heading=Math.atan2(-dx,-dz);
      else{
       animal.turnTimer-=decisionDt;animal.wanderTimer-=decisionDt;
       if(animal.turnTimer<=0){animal.turnTimer=rand(2.5,6.5);animal.heading+=rand(-.72,.72);}
       if(animal.wanderTimer<=0){animal.wanderTimer=rand(2,5.5);animal.wandering=Math.random()<.58;}
      }
-     if(dist>(isTouchDevice?115:165)){
+     if(distanceSquared>(isTouchDevice?13225:27225)){
       if(animal.activeAnimation){(animal.groups||[]).forEach(group=>{try{group.stop();}catch(_){}});animal.activeAnimation=null;animal.activeMode='distance-idle';}
       animal._wildlifeVelocityX=0;animal._wildlifeVelocityZ=0;
      }else{
@@ -1305,7 +1305,8 @@ function updateWildlife(dt){
     }
     const vx=Number(animal._wildlifeVelocityX)||0,vz=Number(animal._wildlifeVelocityZ)||0;
     if(vx||vz){root.position.x+=vx*frameDt;root.position.z+=vz*frameDt;}
-    root.rotation.y=animal.heading;
+    // Heading rotation is written only when an AI decision changes it above.
+    // Reassigning the same rotation every render frame dirties the transform needlessly.
    }
    const wildlifeCost=performance.now()-wildlifeStarted;
    wildlifeUpdatePerfSamples[wildlifeUpdatePerfCursor]=wildlifeCost;
@@ -1520,28 +1521,44 @@ function updateWildlife(dt){
     # Off-screen island shaders are compiled by Babylon when that island becomes visible.
     initial_view_marker = "const sceneReadyTasks=[scene.whenReadyAsync()];"
     initial_view_replacement = r"""const waitForInitialViewReadiness=async()=>{
-    let readyFrames=0,lastDiagnostic=null;
+    let readySamples=0,lastDiagnostic=null;
     const started=performance.now();
+    let lastSampleAt=started;
     while(performance.now()-started<85000){
+     // Keep Babylon's real render loop running, but sample readiness at 4 Hz rather
+     // than rescanning thousands of active meshes on every rendered frame.
      await new Promise(resolve=>requestAnimationFrame(resolve));
+     const sampleAt=performance.now();
+     if(sampleAt-lastSampleAt<250)continue;
+     lastSampleAt=sampleAt;
      const active=typeof scene.getActiveMeshes==='function'?scene.getActiveMeshes():null;
-     const activeMeshes=active&&Array.isArray(active.data)?active.data.slice(0,active.length):[];
-     const notReady=[];
-     for(const mesh of activeMeshes){
+     const activeData=active&&Array.isArray(active.data)?active.data:null;
+     const activeMeshCount=activeData&&Number.isFinite(active.length)?Math.min(active.length,activeData.length):0;
+     let notReadyCount=0;
+     const notReadySamples=[];
+     for(let index=0;index<activeMeshCount;index++){
+      const mesh=activeData[index];
       if(!mesh||mesh.isBlocked||mesh.isVisible===false)continue;
-      try{if(typeof mesh.isReady==='function'&&!mesh.isReady(true))notReady.push(String(mesh.name||mesh.id||'mesh').slice(0,100));}
-      catch(error){notReady.push(String(mesh.name||mesh.id||'mesh').slice(0,80)+': '+String(error&&error.message||error).slice(0,100));}
+      try{
+       if(typeof mesh.isReady==='function'&&!mesh.isReady(true)){
+        notReadyCount++;
+        if(notReadySamples.length<16)notReadySamples.push(String(mesh.name||mesh.id||'mesh').slice(0,100));
+       }
+      }catch(error){
+       notReadyCount++;
+       if(notReadySamples.length<16)notReadySamples.push(String(mesh.name||mesh.id||'mesh').slice(0,80)+': '+String(error&&error.message||error).slice(0,100));
+      }
      }
      let waitingItems=null;
      try{if(typeof scene.getWaitingItemsCount==='function')waitingItems=scene.getWaitingItemsCount();}catch(_){waitingItems=null;}
      const firstFrame=firstFrameRendered===true;
      const assetsSettled=waitingItems===null||waitingItems===0;
-     const ready=firstFrame&&activeMeshes.length>0&&notReady.length===0&&assetsSettled;
-     readyFrames=ready?readyFrames+1:0;
-     lastDiagnostic={firstFrameRendered:firstFrame,activeMeshCount:activeMeshes.length,notReadyMeshCount:notReady.length,notReadyMeshes:notReady.slice(0,16),waitingItems,stableReadyFrames:readyFrames,elapsedMs:Number((performance.now()-started).toFixed(1))};
-     if(readyFrames>=3)return lastDiagnostic;
+     const ready=firstFrame&&activeMeshCount>0&&notReadyCount===0&&assetsSettled;
+     readySamples=ready?readySamples+1:0;
+     lastDiagnostic={firstFrameRendered:firstFrame,activeMeshCount,notReadyMeshCount:notReadyCount,notReadyMeshes:notReadySamples,waitingItems,stableReadySamples:readySamples,readinessSampleIntervalMs:250,elapsedMs:Number((sampleAt-started).toFixed(1))};
+     if(readySamples>=3)return lastDiagnostic;
     }
-    throw new Error('La vista inicial no completó tres fotogramas estables: '+JSON.stringify(lastDiagnostic));
+    throw new Error('La vista inicial no completó tres muestras estables de 250 ms: '+JSON.stringify(lastDiagnostic));
    };
    const sceneReadyTasks=[waitForInitialViewReadiness()];"""
     if html.count(initial_view_marker) != 1:
@@ -2131,27 +2148,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.332: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.333: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.332; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.333; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.332\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.333\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.332.")
-    html = html.replace("0.6.274", "0.6.332")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.333.")
+    html = html.replace("0.6.274", "0.6.333")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'43',build:'0.6.332'"
+    diagnostic_build_replacement = "reportVersion:'44',build:'0.6.333'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.332 para normalizar.")
-    game_version = "0.6.332"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.333 para normalizar.")
+    game_version = "0.6.333"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -2477,7 +2494,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   spatialSelectionStats.dynamicContentRatio=sceneCount?Number((dynamicCount/sceneCount).toFixed(4)):null;
   publishSpatialSelectionStats();
  };
- const addSpatialDynamicMesh=(mesh,reason=null,force=false)=>{
+ const addSpatialDynamicMesh=(mesh,reason=null,force=false,deferStats=false)=>{
   const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
   if(!mesh||!dynamic||typeof dynamic.push!=='function'||mesh.__elsnSpatialDynamic)return;
   const classification=reason||spatialDynamicReasonForMesh(mesh);
@@ -2485,9 +2502,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   mesh.__elsnSpatialDynamic=true;
   mesh.__elsnSpatialDynamicReason=classification;
   mesh.__elsnSpatialFreshUntilRenderId=(typeof scene.getRenderId==='function'?scene.getRenderId():0)+2;
-  if(typeof dynamic.indexOf==='function'){
-   if(dynamic.indexOf(mesh)<0)dynamic.push(mesh);
-  }else dynamic.push(mesh);
+  // The mesh flag above is the O(1) duplicate guard: existing Babylon dynamic
+  // entries are marked during octree creation before this registration path runs.
+  dynamic.push(mesh);
   spatialDynamicMeshSet.add(mesh);
   spatialSelectionStats.dynamicReasons[classification]=(spatialSelectionStats.dynamicReasons[classification]||0)+1;
   if(spatialSelectionStats.dynamicSampleNames.length<32)spatialSelectionStats.dynamicSampleNames.push({name:String(mesh.name||''),reason:classification});
@@ -2497,7 +2514,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    for(let node=mesh;node&&node!==scene&&parentChain.length<10;node=node.parent)parentChain.push(String(node.name||''));
    reasonSamples.push({name:String(mesh.name||''),parentChain});
   }
-  updateSpatialSelectionCounts();
+  if(!deferStats)updateSpatialSelectionCounts();
  };
  const removeSpatialDynamicMesh=mesh=>{
   const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
@@ -2537,7 +2554,8 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     mesh.__elsnSpatialFreshUntilRenderId=(typeof scene.getRenderId==='function'?scene.getRenderId():0)+2;
     spatialSelectionStats.dynamicReasons['octree-initial-dynamic']=(spatialSelectionStats.dynamicReasons['octree-initial-dynamic']||0)+1;
    }
-   for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh);
+   for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);
+   updateSpatialSelectionCounts();
    // Babylon's dynamicContent is evaluated by a separate internal path.
    // Do not wrap octree.select(): that method selects static octree blocks and
    // is not the per-frame dynamic candidate list in this Babylon build.
@@ -2983,55 +3001,35 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
     quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr,renderedFps=0;
- // Quality retains full geometry, materials, shadows and effects. Only internal pixel density
- // may adapt, and only when frame time is GPU-bound rather than dominated by JavaScript work.
- let qualityDprSlowSamples=0,qualityDprStableSamples=0,qualityDprChanges=0;
- const qualityDprFloor=isTouchDevice?(highHeadroomQualityMobile?1.28:1.10):qualityDpr,qualityDprCeiling=qualityDpr;
- let qualityDprLastChangeAt=0,lastWorldUpdateMs=0,lastRenderCpuMs=0;
- const targetFrameRate=60;
+ // Quality keeps the full native render scale selected at startup. Runtime pressure is
+ // measured and reported, never hidden by reducing resolution or scene fidelity.
+ let lastWorldUpdateMs=0,lastRenderCpuMs=0;
+ const targetFrameRate=120;
  let lastQualityWarningAt=0;
  function adaptRenderQuality(dt){
   fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<2.0)return;fpsSample=0;
   const fps=renderedFps||engine.getFps(),now=performance.now();
-  if(!isPerformanceMode&&isTouchDevice){
-   const gpuLimitedFrame=fps<49&&lastWorldUpdateMs<8&&lastRenderCpuMs<9;
-   if(gpuLimitedFrame){qualityDprSlowSamples++;qualityDprStableSamples=0;}
-   else if(fps>=57&&lastWorldUpdateMs<8&&lastRenderCpuMs<9){qualityDprStableSamples++;qualityDprSlowSamples=0;}
-   else{qualityDprSlowSamples=0;qualityDprStableSamples=0;}
-   if(qualityDprSlowSamples>=2&&qualityDprCurrent>qualityDprFloor+.005&&now-qualityDprLastChangeAt>=3500){
-    qualityDprCurrent=Math.max(qualityDprFloor,Number((qualityDprCurrent-.12).toFixed(2)));
-    engine.setHardwareScalingLevel(1/qualityDprCurrent);
-    qualityDprLastChangeAt=now;qualityDprSlowSamples=0;qualityDprChanges++;
-    console.info('EL SIN NOMBRE: resolución interna adaptada para recuperar fluidez.',{fps:Math.round(fps),renderDpr:qualityDprCurrent,minDpr:qualityDprFloor,maxDpr:qualityDprCeiling,qualityScaleAdaptive:true,geometryAndEffectsPreserved:true,changes:qualityDprChanges,cpu:{worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
-   }else if(qualityDprStableSamples>=6&&qualityDprCurrent<qualityDprCeiling-.005&&now-qualityDprLastChangeAt>=8000){
-    qualityDprCurrent=Math.min(qualityDprCeiling,Number((qualityDprCurrent+.06).toFixed(2)));
-    engine.setHardwareScalingLevel(1/qualityDprCurrent);
-    qualityDprLastChangeAt=now;qualityDprStableSamples=0;qualityDprChanges++;
-    console.info('EL SIN NOMBRE: resolución interna recuperada tras estabilidad.',{fps:Math.round(fps),renderDpr:qualityDprCurrent,minDpr:qualityDprFloor,maxDpr:qualityDprCeiling,qualityScaleAdaptive:true,geometryAndEffectsPreserved:true,changes:qualityDprChanges});
-   }
-  }
   if(fps<24&&now-lastQualityWarningAt>=4000){
    lastQualityWarningAt=now;
-   console.warn('EL SIN NOMBRE: FPS bajo; Calidad conserva geometría y efectos y adapta solo la resolución interna.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleAdaptive:true,qualityDprFloor,qualityDprCeiling,qualityDprChanges,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
+   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,nativeResolutionPreserved:true,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
   }
  }"""
     if html.count(quality_adaptive_marker) != 1:
         raise SystemExit("No se encontró exactamente la función original de supervisión de resolución.")
     html = html.replace(quality_adaptive_marker, quality_adaptive_code, 1)
 
-    # Enforce the declared 60 Hz Quality target at the render-loop boundary.
-    # Keep the accumulator aligned to the target cadence so 90 Hz panels alternate
-    # one/two refresh intervals instead of collapsing to 45 Hz.
+    # Preserve Babylon's native render-loop cadence: do not cap or pace frames below
+    # the display's actual refresh rate. Only measure rendered frames for diagnostics.
     frame_loop_marker = "engine.runRenderLoop(()=>{\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
-    frame_loop_replacement = "engine.runRenderLoop(()=>{\n  const now=performance.now(),frameIntervalMs=1000/targetFrameRate;if(!nextRenderAt)nextRenderAt=now;if(now+.5<nextRenderAt)return;if(now-nextRenderAt>frameIntervalMs*2)nextRenderAt=now;else nextRenderAt+=frameIntervalMs;\n  const rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
+    frame_loop_replacement = frame_loop_marker
     if html.count(frame_loop_marker) != 1:
-        raise SystemExit("No se encontró el único bucle Babylon para aplicar el límite de 60 Hz.")
+        raise SystemExit("No se encontró el bucle nativo de Babylon para preservar la frecuencia de refresco del dispositivo.")
     html = html.replace(frame_loop_marker, frame_loop_replacement, 1)
 
     frame_clock_marker = "let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
-    frame_clock_replacement = "let last=performance.now(),nextRenderAt=0,mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
+    frame_clock_replacement = frame_clock_marker
     if html.count(frame_clock_marker) != 1:
-        raise SystemExit("No se encontró el reloj único de render para instalar el planificador de fotogramas.")
+        raise SystemExit("No se encontró el reloj único del bucle nativo para medir los fotogramas renderizados.")
     html = html.replace(frame_clock_marker, frame_clock_replacement, 1)
 
     fps_sample_marker = "fpsHudTime+=dt;"
@@ -3047,25 +3045,25 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(fps_hud_marker, fps_hud_replacement, 1)
 
     fps_colour_marker = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
-    fps_colour_replacement = "meter.style.color=measured>=targetFrameRate-1?'#94d8a0':measured>=targetFrameRate*.90?'#e6c27f':'#ff9a83';"
+    fps_colour_replacement = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
     if html.count(fps_colour_marker) != 1:
-        raise SystemExit("No se encontró el esquema único de color del HUD para 60 FPS.")
+        raise SystemExit("No se encontró el esquema único de color del HUD para pantallas de alta frecuencia.")
     html = html.replace(fps_colour_marker, fps_colour_replacement, 1)
 
     fps_title_marker = "meter.title='Objetivo: 120 FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms (120 FPS requiere ≤8,3 ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';"
-    fps_title_replacement = "meter.title='Objetivo: '+targetFrameRate+' FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms ('+targetFrameRate+' FPS requiere ≤'+(1000/targetFrameRate).toFixed(1)+' ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';"
+    fps_title_replacement = fps_title_marker
     if html.count(fps_title_marker) != 1:
         raise SystemExit("No se encontró el texto único del objetivo de FPS del HUD.")
     html = html.replace(fps_title_marker, fps_title_replacement, 1)
 
     visibility_clock_marker = "document.addEventListener('visibilitychange',()=>{last=performance.now();"
-    visibility_clock_replacement = "document.addEventListener('visibilitychange',()=>{last=performance.now();nextRenderAt=0;"
+    visibility_clock_replacement = visibility_clock_marker
     if html.count(visibility_clock_marker) != 1:
         raise SystemExit("No se encontró el reinicio único del reloj al cambiar la visibilidad.")
     html = html.replace(visibility_clock_marker, visibility_clock_replacement, 1)
 
     webgl_clock_marker = "engine.resize();scene.activeCamera=camera;last=performance.now();"
-    webgl_clock_replacement = "engine.resize();scene.activeCamera=camera;last=performance.now();nextRenderAt=0;"
+    webgl_clock_replacement = webgl_clock_marker
     if html.count(webgl_clock_marker) != 1:
         raise SystemExit("No se encontró el reinicio único del reloj tras restaurar WebGL.")
     html = html.replace(webgl_clock_marker, webgl_clock_replacement, 1)
@@ -3189,7 +3187,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         (
             "if(dx*dx+dz*dz<reach*reach)list.push(mesh);",
             "if(dx*dx+dz*dz<reach*reach){if(list.length<180)list.push(mesh);else reflectionLimitDiscardedMeshCount++;}",
-            "cap the reflected island draw list at 260 representative meshes",
+            "preserve the original 180-object reflection submission budget",
         ),
         (
             "  console.info('Nordic water reflection island updated',{islandIndex,reflectedMeshes:list.length,filteredFoliageAndTinyDetails:reflectionFilteredMeshCount});",
@@ -3199,17 +3197,17 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         (
             "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024;",
             "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024;",
-            "reduce mobile mirror target size while retaining a live water reflection",
+            "restore the original 640-pixel mobile water reflection target",
         ),
         (
             "nordicWaterMirror.refreshRate=isTouchDevice?12:8;",
             "nordicWaterMirror.refreshRate=isTouchDevice?12:8;",
-            "refresh the mobile water mirror once every 20–24 frames",
+            "restore the original 12-frame mobile water reflection cadence",
         ),
         (
             "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?3:4));",
             "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4));",
-            "reuse high-quality mobile shadows for six frames",
+            "restore the original high-quality mobile shadow refresh cadence",
         ),
         (
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));",
@@ -3482,8 +3480,8 @@ function getWorldPhaseTimingSnapshot(){
         raise SystemExit("No se encontró el objeto runtime único para publicar los tiempos de fase y del minimapa.")
     html = html.replace(health_phase_marker, health_phase_replacement, 1)
 
-    map_clock_pattern = r"let last=performance\.now\(\),(?:nextRenderAt=0,)?mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
-    map_clock_replacement = "let last=performance.now(),nextRenderAt=0,mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;\n let lastMapDrawMs=0,mapDrawMaxMs=0,mapDrawSampleCount=0;"
+    map_clock_pattern = r"let last=performance\.now\(\),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
+    map_clock_replacement = "let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;\n let lastMapDrawMs=0,mapDrawMaxMs=0,mapDrawSampleCount=0;"
     html, map_clock_count = re.subn(map_clock_pattern, map_clock_replacement, html, count=1)
     if map_clock_count != 1:
         raise SystemExit(f"No se encontró un único reloj compatible del bucle para medir el minimapa (encontrados={map_clock_count}).")

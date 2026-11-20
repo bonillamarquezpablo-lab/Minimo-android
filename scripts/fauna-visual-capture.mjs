@@ -4,7 +4,9 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 
 const BASE_URL = process.env.FAUNA_TEST_URL || process.env.INSPECTOR_TEST_URL || 'http://127.0.0.1:4175/';
-const OUT = path.resolve('artifacts/fauna-visual-captures');
+const SKINNING_MODE = String(process.env.FAUNA_SKINNING_MODE || 'cpu').toLowerCase();
+if (!['cpu', 'gpu'].includes(SKINNING_MODE)) throw new Error('FAUNA_SKINNING_MODE must be cpu or gpu.');
+const OUT = path.resolve(process.env.FAUNA_CAPTURE_OUTPUT || 'artifacts/fauna-visual-captures');
 const VIEWPORT = { width: 1600, height: 900 };
 const FAUNA_ROSTER_TIMEOUT_MS = 240000;
 const ANGLES = [
@@ -16,7 +18,7 @@ const ANGLES = [
 const manifest = {
   schema: 1, capturedAt: new Date().toISOString(), finishedAt: null,
   gameVersion: null, renderer: 'Chromium headless + ANGLE SwiftShader',
-  skinningAcceptance: 'CPU skinning forced in touch emulation for rig-visibility captures; not a physical-device performance measurement',
+  skinningAcceptance: SKINNING_MODE.toUpperCase() + ' skinning explicitly forced in touch emulation; SwiftShader visual diagnosis only, not a physical-device performance measurement',
   viewport: VIEWPORT, readOnlySceneCapture: true, startup: null,
   readiness: null, scene: null, fauna: [], captures: [],
   warnings: [], failures: [], consoleErrors: [], pageErrors: [], verdict: 'incomplete'
@@ -42,9 +44,10 @@ async function main() {
     const page=await context.newPage();
     page.setDefaultTimeout(60000);
     page.setDefaultNavigationTimeout(90000);
-    await page.addInitScript(()=>{
-      // This is a visual acceptance session, not a performance benchmark. Force the mobile CPU-skinning path even on SwiftShader.
-      window.__ELSN_FORCE_CPU_SKINNING__=true;
+    await page.addInitScript(({mode})=>{
+      // The same scene can be captured in CPU and GPU skinning modes for a controlled A/B.
+      window.__ELSN_FORCE_CPU_SKINNING__=mode==='cpu';
+      window.__ELSN_FORCE_GPU_SKINNING__=mode==='gpu';
       let babylonValue=null;
       const hook=B=>{
         try{
@@ -65,7 +68,7 @@ async function main() {
           set(value){babylonValue=value;hook(value);}
         });
       }catch(_){}
-    });
+    }, {mode:SKINNING_MODE});
     page.on('pageerror',error=>manifest.pageErrors.push(String(error?.stack||error)));
     page.on('console',message=>{if(message.type()==='error')manifest.consoleErrors.push(message.text());});
 
@@ -335,6 +338,8 @@ async function main() {
       for(const angle of ANGLES){
         const view=await page.evaluate(async({animalId,angleDegrees})=>{
           const api=window.__ELSN_TEST__,scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||window.BABYLON?.EngineStore?.LastCreatedScene;
+          const number=value=>Number.isFinite(Number(value))?Number(Number(value).toFixed(4)):null;
+          const ancestorsContain=(node,root)=>{let current=node,depth=0;while(current&&depth++<48){if(current===root)return true;current=current.parent;}return false;};
           const root=scene?.getTransformNodeByName?.(animalId);
           if(!scene||!root)throw new Error('No se encuentra la escena o el actor de fauna para capturar: '+animalId+' · api='+!!api);
           root.computeWorldMatrix?.(true);

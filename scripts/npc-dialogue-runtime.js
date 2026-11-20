@@ -88,7 +88,7 @@ function nearbyPeople(s){
   diagnostics.nearbyCount=result.length;
   return result;
 }
-function stateFor(id,now){let s=metadata.get(id);if(!s){s={nextAt:now+between(700,1500),lastSpokeAt:0,recentTopics:[],recentTexts:[] };metadata.set(id,s);}return s;}
+function stateFor(id,now){let s=metadata.get(id);if(!s){s={nextAt:now,lastSpokeAt:0,recentTopics:[],recentTexts:[] };metadata.set(id,s);}return s;}
 function pairKey(a,b){return[a,b].map(String).sort().join("::");}
 function pairMemory(a,b){const key=pairKey(a,b);let value=relationships.get(key);if(!value){value={key,rapport:0,exchanges:0,recentTopics:[]};relationships.set(key,value);if(relationships.size>64)relationships.delete(relationships.keys().next().value);}return value;}
 function rememberPair(pair,topic){if(!pair)return;pair.exchanges++;pair.rapport=Math.min(5,pair.rapport+0.65);if(topic){pair.recentTopics.push(topic);if(pair.recentTopics.length>4)pair.recentTopics.shift();}saveSocialMemory();}
@@ -111,7 +111,7 @@ function clearSlot(slot){
  if(slot.mesh)slot.mesh.setEnabled(false);
 }
 function expire(now){for(const slot of slots)if(slot.current&&slot.current.expiresAt<=now)clearSlot(slot);}
-function villageOf(npc){const direct=Number(npc&&npc.villageIndex);if(Number.isFinite(direct))return direct;const nested=Number(npc&&npc.parts&&npc.parts.villageIndex);if(Number.isFinite(nested))return nested;const name=String(npc&&npc.parts&&npc.parts.name||npc&&npc.name||"");const match=/^(?:Villager_|VillageGuard)(\\d+)_/.exec(name);if(match)return Number(match[1]);return -1;}
+function villageOf(npc){const direct=Number(npc&&npc.villageIndex);if(Number.isFinite(direct))return direct;const nested=Number(npc&&npc.parts&&npc.parts.villageIndex);if(Number.isFinite(nested))return nested;const name=String(npc&&npc.parts&&npc.parts.name||npc&&npc.name||"");const match=/^(?:Villager_|VillageGuard)(\d+)_/.exec(name);if(match)return Number(match[1]);return -1;}
 function partnerFor(item,nearby){let best=null,bestDistance=7.5;for(const candidate of nearby){if(candidate.id===item.id||villageOf(candidate.npc)!==villageOf(item.npc))continue;if(slots.some(slot=>slot.current&&slot.current.id===candidate.id))continue;const d=distance(item.position,candidate.position);if(d<bestDistance){best=candidate;bestDistance=d;}}return best;}
 function queueReply(npc,content,dueAt){pending.push({npc,content,dueAt});if(pending.length>4)pending.shift();}
 function processPending(now,ids){for(let i=0;i<pending.length;){const entry=pending[i];if(entry.dueAt>now){i++;continue;}pending.splice(i,1);if(!ids.has(idOf(entry.npc)))continue;startBubble(entry.npc,entry.content,now,BUBBLE_DURATION_MS);break;}}
@@ -122,6 +122,7 @@ function schedule(now,nearby,s){
  if(captured!==null){if(lastCapturedCount!==null&&captured>lastCapturedCount)recentCaptureUntil=now+30000;lastCapturedCount=captured;}
  const selected=Core.selectVisibleBubbles(nearby.map(x=>({item:x,distance:x.distance,priority:x.distance<7?3:(x.distance<14?2:1),visible:true})),bubbleLimit()).map(x=>x.item);
  const due=selected.filter(x=>stateFor(x.id,now).nextAt<=now&&!slots.some(slot=>slot.current&&slot.current.id===x.id));
+ diagnostics.lastScheduleAt=now;diagnostics.lastScheduleSelectedCount=selected.length;diagnostics.lastScheduleDueCount=due.length;diagnostics.lastScheduledNpc=due[0]?.id||null;
  if(!due.length)return;
  due.sort((a,b)=>a.distance-b.distance);
  const chosen=due[Math.floor(random()*Math.min(due.length,3))],state=stateFor(chosen.id,now);
@@ -260,21 +261,59 @@ function captureVisualProof(includeDataUrl=false){
   const context=slot.texture.getContext(),canvas=context&&context.canvas;
   if(!canvas||typeof canvas.toDataURL!=="function")return{ready:false,reason:"texture-canvas-unavailable"};
   const enabled=typeof slot.mesh.isEnabled==="function"?slot.mesh.isEnabled():slot.mesh.isVisible!==false;
+  const visible=slot.mesh.isVisible!==false&&Number(slot.mesh.visibility??1)>0;
+  const meshReady=typeof slot.mesh.isReady==="function"?slot.mesh.isReady(true):true;
   const parent=slot.mesh.parent,position=slot.mesh.position;
+  const scene=slot.mesh.getScene?.(),camera=scene?.activeCamera,engine=scene?.getEngine?.();
+  let screenPosition=null,screenInViewport=false;
+  try{
+   slot.mesh.computeWorldMatrix?.(true);
+   const B=window.BABYLON,world=slot.mesh.getAbsolutePosition?.();
+   const viewport=camera?.viewport?.toGlobal?.(engine?.getRenderWidth?.()||0,engine?.getRenderHeight?.()||0);
+   const transform=scene?.getTransformMatrix?.();
+   if(B?.Vector3?.Project&&B?.Matrix?.Identity&&world&&viewport&&transform){
+    const projected=B.Vector3.Project(world,B.Matrix.Identity(),transform,viewport);
+    screenPosition={x:Number(projected.x.toFixed(1)),y:Number(projected.y.toFixed(1)),depth:Number(projected.z.toFixed(4))};
+    screenInViewport=projected.z>=0&&projected.z<=1&&projected.x>=0&&projected.y>=0&&projected.x<=engine.getRenderWidth()&&projected.y<=engine.getRenderHeight();
+   }
+  }catch(_){}
   const dataUrl=includeDataUrl?canvas.toDataURL("image/png"):null;
+  const ready=!!enabled&&visible&&!!meshReady&&screenInViewport&&!slot.textDirty&&!!slot.messageText&&slot.lastUploadInvertY===true;
   return{
-   ready:!!enabled&&!slot.textDirty&&!!slot.messageText&&slot.lastUploadInvertY===true,
-   id:slot.current.id,role:slot.roleText,text:slot.messageText,messagePainted:!slot.textDirty,
-   meshEnabled:!!enabled,renderingGroupId:Number(slot.mesh.renderingGroupId),
+   ready,id:slot.current.id,role:slot.roleText,text:slot.messageText,messagePainted:!slot.textDirty,
+   meshEnabled:!!enabled,meshVisible:visible,meshReady:!!meshReady,screenInViewport,screenPosition,
+   renderingGroupId:Number(slot.mesh.renderingGroupId),sceneRenderId:scene?.getRenderId?.()??null,
    parentName:String(parent&&(parent.name||parent.id)||""),
    position:position?{x:Number(position.x.toFixed(3)),y:Number(position.y.toFixed(3)),z:Number(position.z.toFixed(3))}:null,
    texture:{width:Number(canvas.width),height:Number(canvas.height),vScale:Number(slot.texture.vScale),vOffset:Number(slot.texture.vOffset)},
-   uploadInvertY:slot.lastUploadInvertY===true,
-   dataUrl
+   uploadInvertY:slot.lastUploadInvertY===true,dataUrl
   };
  }catch(error){return{ready:false,reason:String(error&&error.message||error)};}
 }
- window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,...positioningPercentiles(),active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.roleText,kind:s.kindText,text:s.messageText})),lastAttachment:diagnostics.lastAttachment,lastHideReason:diagnostics.lastHideReason,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS}),captureVisualProof:includeDataUrl=>captureVisualProof(includeDataUrl===true)});
+ function triggerSmokeBubble(id){
+  const params=new URLSearchParams(location.search||'');
+  if(params.get('playertest')!=='1'||params.get('debug')!=='1')return false;
+  const now=Date.now(),s=snapshot();
+  if(!s||!s.active||document.hidden||blockingUi())return false;
+  const target=nearbyPeople(s).find(item=>item.id===String(id));
+  if(!target)return false;
+  for(const slot of slots)clearSlot(slot);
+  pending.length=0;
+  const state=stateFor(target.id,now);state.nextAt=now;
+  lastActive=true;
+  schedule(now,[target],s);
+  const smokeSlot=slots.find(slot=>slot.current&&slot.current.id===target.id);
+  if(smokeSlot)smokeSlot.current.expiresAt=now+45000;
+  render(s);
+  return !!smokeSlot&&smokeSlot.current?.id===target.id;
+ }
+ const npcDialogueApi={
+  getSnapshot:()=>({...diagnostics,...positioningPercentiles(),active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.roleText,kind:s.kindText,text:s.messageText})),lastAttachment:diagnostics.lastAttachment,lastHideReason:diagnostics.lastHideReason,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS}),
+  captureVisualProof:includeDataUrl=>captureVisualProof(includeDataUrl===true)
+ };
+ const dialogueSmokeParams=new URLSearchParams(location.search||'');
+ if(dialogueSmokeParams.get('playertest')==='1'&&dialogueSmokeParams.get('debug')==='1')npcDialogueApi.triggerSmokeBubble=triggerSmokeBubble;
+ window.__ELSN_NPC_DIALOGUES__=Object.freeze(npcDialogueApi);
 
 }
 boot();

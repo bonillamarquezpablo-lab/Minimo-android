@@ -150,6 +150,9 @@ assert.ok(source.includes("const enabled = this.quality !== 'low';") && source.i
 assert.ok(source.includes('pipeline.fxaaEnabled = !mobileHigh;'), 'Mobile-high must use native MSAA without an extra FXAA pass.');
 assert.ok(source.includes("this.quality === 'high' && !this.isTouchDevice"), 'God rays and SSAO must remain desktop-only.');
 assert.ok(source.includes("this.quality === 'low' || this.isTouchDevice"), 'Touch devices must not create the cascaded-shadow multipass.');
+assert.ok(source.includes("const poolSize = this.quality === 'low' ? 1 : 2"), 'Mobile Quality must keep both local hearth lights enabled.');
+assert.ok(source.includes("this._hearthMeshCache = new WeakMap()") && source.includes("this._hearthMeshCacheMeshCount !== source.length") && source.includes("this._hearthMeshCache.set(hearth, included)"), 'Hearth influence mesh lists must be cached and invalidated when scene topology changes.');
+assert.ok(source.includes("mobileHigh ? 24") && source.includes("mobileHigh ? 0.24"), 'The flagship mobile profile must preserve the original bloom quality.');
 
 const buildSource = fs.readFileSync(path.join(__dirname, 'build_site.py'), 'utf8');
 const sourceHtml = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
@@ -164,5 +167,11 @@ assert.ok(buildSource.includes('setTime:value=>atmosphereSystem.setTime(value)')
   buildSource.includes('setDayDuration:value=>atmosphereSystem.setDayDuration(value)') &&
   buildSource.includes('setWeather:value=>atmosphereSystem.setWeather(value)'),
   'Time, duration and weather controls must be exposed to diagnostics');
+
+assert.ok(source.includes("if (visible > 0.001)") &&
+  source.includes("if (this.sunDisc.visibility !== 0) this.sunDisc.visibility = 0;") &&
+  source.includes("if (this.moonDisc.visibility !== 0) this.moonDisc.visibility = 0;") &&
+  source.includes("material.setFloat('uTime', this.elapsedSeconds);"),
+  'Hidden solar/lunar meshes must stop receiving per-tick transforms and shader writes, while visible bodies keep the original full update path.');
 
 console.log('OK unified atmosphere: 24-hour solar arc, twilight, moon/night state, configurable 300-second clock, layered clouds, stars, optional god rays, bloom, adaptive shadows and pooled hearth lighting.');

@@ -49,7 +49,7 @@ async function readStartupSnapshot(page) {
     const babylon=window.BABYLON||null;
     const scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||babylon?.EngineStore?.LastCreatedScene||null;
     const roots=scene?(scene.transformNodes||[]).filter(node=>
-      /^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test(String(node?.name||''))&&!node.isDisposed?.()
+      /^(?:WildlifeActor_(?:deer|stag|wolf)_\d+|RealSeagullActor_\d+)$/.test(String(node?.name||''))&&!node.isDisposed?.()
     ):[];
     const world=typeof window.getGameWorldInspectionSnapshot==='function'
       ?safe(()=>window.getGameWorldInspectionSnapshot({includeMeshes:false,maxActors:100}),null):null;
@@ -78,6 +78,9 @@ async function readStartupSnapshot(page) {
       bodyClass:document.body.className,
       bootFailed:document.body.classList.contains('boot-failed'),
       booting:document.body.classList.contains('booting'),
+      introOpen:document.body.classList.contains('intro-open'),
+      introVisible:!!document.getElementById('intro')&&document.getElementById('intro').classList.contains('open')&&document.getElementById('intro').getAttribute('aria-hidden')!=='true',
+      gameRunning:document.body.classList.contains('game-running'),
       loadingVisible:!!document.getElementById('loading')&&getComputedStyle(document.getElementById('loading')).display!=='none',
       loadingText:document.getElementById('loadText')?.textContent||document.querySelector('#loading')?.textContent||null,
       loadingHelp:progress.help,progress,
@@ -133,6 +136,34 @@ async function waitForWorldReadyWithRecovery(page, phase) {
       STARTUP_RESTART_TIMEOUT_MS + ' ms. Estado: ' + JSON.stringify(snapshot) +
       ' · ' + String(error?.message || error));
   }
+}
+
+async function waitForStartupPresentation(page, phase) {
+  const startedAt=performance.now();
+  await page.waitForFunction(()=>{
+    const intro=document.getElementById('intro');
+    const loading=document.getElementById('loading');
+    return document.body.classList.contains('intro-open') &&
+      !document.body.classList.contains('booting') &&
+      !document.body.classList.contains('boot-failed') &&
+      !!intro && intro.classList.contains('open') &&
+      intro.getAttribute('aria-hidden')==='false' &&
+      (!loading || getComputedStyle(loading).display==='none');
+  },undefined,{timeout:30000,polling:100});
+  const state=await page.evaluate(()=>({
+    bodyClass:document.body.className,
+    introOpen:document.body.classList.contains('intro-open'),
+    introVisible:!!document.getElementById('intro')&&document.getElementById('intro').classList.contains('open')&&document.getElementById('intro').getAttribute('aria-hidden')==='false',
+    loadingVisible:!!document.getElementById('loading')&&getComputedStyle(document.getElementById('loading')).display!=='none',
+    booting:document.body.classList.contains('booting'),
+    bootFailed:document.body.classList.contains('boot-failed')
+  }));
+  assert.equal(state.booting,false,phase+' dejó el body en booting después de la barrera de recursos: '+JSON.stringify(state));
+  assert.equal(state.bootFailed,false,phase+' terminó en boot-failed: '+JSON.stringify(state));
+  assert.equal(state.introOpen,true,phase+' no mostró el selector real de campaña: '+JSON.stringify(state));
+  assert.equal(state.introVisible,true,phase+' mantiene oculto el selector de campaña: '+JSON.stringify(state));
+  assert.equal(state.loadingVisible,false,phase+' conserva la pantalla de carga después de iniciar: '+JSON.stringify(state));
+  return {elapsedMs:Number((performance.now()-startedAt).toFixed(1)),...state};
 }
 
 async function main() {
@@ -400,6 +431,7 @@ async function main() {
       throw new Error('El arranque no alcanzó worldReady. Diagnóstico de etapa, escena y fauna: '+
         JSON.stringify(manifest.startupTimeoutDiagnostics)+' · '+String(error?.message||error));
     }
+    manifest.startupPresentation=await waitForStartupPresentation(page,'Primer arranque');
     manifest.blockingStartupMs = Number((performance.now() - blockingBarrierStartedAt).toFixed(1));
     manifest.startupBarrierState = await page.evaluate(() => ({
       bootFailed: document.body.classList.contains('boot-failed'),
@@ -686,8 +718,17 @@ async function main() {
     manifest.npcDialogueVisualProbe = npcDialogueVisualProbe;
     assert.ok(npcDialogueVisualProbe.ready,
       'No se pudo preparar un NPC real para probar la burbuja: ' + JSON.stringify(npcDialogueVisualProbe));
+    const smokeBubbleTriggered=await page.evaluate(id=>
+      window.__ELSN_NPC_DIALOGUES__?.triggerSmokeBubble?.(id)===true,
+      npcDialogueVisualProbe.npc
+    );
+    assert.ok(smokeBubbleTriggered,
+      'El modo de prueba no pudo solicitar un diálogo inmediato para el NPC seleccionado: ' +
+      JSON.stringify({npc:npcDialogueVisualProbe.npc,dialogue:await page.evaluate(()=>window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.()||null)}));
     try {
-      await page.waitForFunction(() => {
+      let dialogueVisualPollTimedOut=false;
+      try {
+        await page.waitForFunction(() => {
         const api = window.__ELSN_NPC_DIALOGUES__;
         const state = api?.getSnapshot?.();
         const proof = api?.captureVisualProof?.();
@@ -697,28 +738,58 @@ async function main() {
           state.activeBubbleTexts.some(item => typeof item?.text === 'string' && item.text.trim().length > 0) &&
           proof?.ready === true &&
           proof?.meshEnabled === true &&
+          proof?.meshVisible === true &&
+          proof?.meshReady === true &&
+          proof?.screenInViewport === true &&
           proof?.messagePainted === true &&
           proof?.texture?.width === 768 &&
           proof?.texture?.height === 384 &&
           proof?.texture?.vScale === 1 &&
           proof?.texture?.vOffset === 0 &&
           proof?.uploadInvertY === true;
-      }, undefined, { timeout: 15000, polling: 100 });
+        }, undefined, { timeout: 15000, polling: 100 });
+      } catch(pollError) {
+        // SwiftShader can starve Playwright's polling loop while a complete frame is
+        // being composited. Re-read the real Babylon billboard below and accept only
+        // if the final mesh, text, texture and viewport checks all pass synchronously.
+        dialogueVisualPollTimedOut=true;
+        manifest.npcDialogueVisualPollWarning=String(pollError?.message||pollError);
+      }
       const visualEvidence = await page.evaluate(() => {
         const state = window.__ELSN_NPC_DIALOGUES__.getSnapshot();
         const proof = window.__ELSN_NPC_DIALOGUES__.captureVisualProof(true);
         const { dataUrl, ...metadata } = proof;
         return { state, proof: metadata, dataUrl };
       });
-      assert.ok(visualEvidence.proof?.ready && visualEvidence.dataUrl?.startsWith('data:image/png;base64,'),
-        'La textura del diálogo NPC no produjo evidencia PNG válida: ' + JSON.stringify(visualEvidence.proof));
+      assert.ok(visualEvidence.proof?.ready && visualEvidence.proof?.meshEnabled === true &&
+        visualEvidence.proof?.meshVisible === true && visualEvidence.proof?.meshReady === true &&
+        visualEvidence.proof?.screenInViewport === true && visualEvidence.proof?.messagePainted === true &&
+        visualEvidence.proof?.texture?.width === 768 && visualEvidence.proof?.texture?.height === 384 &&
+        visualEvidence.proof?.texture?.vScale === 1 && visualEvidence.proof?.texture?.vOffset === 0 &&
+        visualEvidence.proof?.uploadInvertY === true && visualEvidence.proof?.screenPosition &&
+        visualEvidence.dataUrl?.startsWith('data:image/png;base64,'),
+        'La burbuja NPC no está realmente visible y renderizable dentro del viewport: ' +
+        JSON.stringify({pollTimedOut:dialogueVisualPollTimedOut,state:visualEvidence.state,proof:visualEvidence.proof}));
+      // Chromium's full-page compositor screenshot can stall for 20s under SwiftShader,
+      // even after Babylon confirms the billboard is enabled, ready and inside the viewport.
+      // Keep that optional evidence separate from the deterministic live-render proof.
+      let dialogueScreenshotCaptured=false;
+      try{
+        const dialogueScreen=await page.screenshot({path:path.join(OUT,'npc-dialogue-screen.png'),timeout:3000,animations:'disabled'});
+        dialogueScreenshotCaptured=dialogueScreen.length>5000;
+      }catch(screenshotError){
+        manifest.npcDialogueScreenshotWarning=String(screenshotError?.message||screenshotError);
+      }
       manifest.npcDialogueSmoke = {
         ...visualEvidence.state,
         billboardTextureReady: true,
         textureUploadOrientationVerified: true,
-        renderedBubbleVerified: false,
-        visualScreenshotCaptured: false,
+        renderedBubbleVerified: visualEvidence.proof.ready===true && visualEvidence.proof.meshEnabled===true && visualEvidence.proof.meshVisible===true && visualEvidence.proof.meshReady===true && visualEvidence.proof.screenInViewport===true && visualEvidence.proof.messagePainted===true,
+        visualScreenshotCaptured: dialogueScreenshotCaptured,
         visualEvidenceFile: 'npc-dialogue-texture.png',
+        visualScreenshotFile: dialogueScreenshotCaptured?'npc-dialogue-screen.png':null,
+        visualScreenshotIsOptionalUnderSoftwareRenderer:true,
+        visualPollingRecoveredAfterTimeout:dialogueVisualPollTimedOut,
         visualProof: visualEvidence.proof,
         visualProbe: 'temporary-npc-near-player'
       };
@@ -1137,6 +1208,7 @@ async function main() {
     }
     const cachedBarrierStartedAt = performance.now();
     const cachedStartupWait = await waitForWorldReadyWithRecovery(page, 'El arranque con caché');
+    manifest.cachedStartupPresentation=await waitForStartupPresentation(page,'Arranque con caché');
     manifest.cachedStartupWaitRecoveredAfterRendererStall = cachedStartupWait.recoveredAfterWaitTimeout;
     manifest.cachedStartupWaitDiagnostic = cachedStartupWait.recoveredAfterWaitTimeout
       ? { ...cachedStartupWait.snapshot, recoveredAfterWaitTimeout: true,
@@ -1280,6 +1352,7 @@ async function main() {
       }
 
       const offlineStartupWait = await waitForWorldReadyWithRecovery(page, 'El reinicio offline');
+      manifest.offlineReload.startupPresentation=await waitForStartupPresentation(page,'Reinicio offline');
       manifest.offlineReload.startupWaitRecoveredAfterRendererStall = offlineStartupWait.recoveredAfterWaitTimeout;
       manifest.offlineReload.startupWaitDiagnostic = offlineStartupWait.recoveredAfterWaitTimeout
         ? { ...offlineStartupWait.snapshot, recoveredAfterWaitTimeout: true,

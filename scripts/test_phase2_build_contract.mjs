@@ -7,6 +7,7 @@ const serviceWorker = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf
 const live = fs.readFileSync(new URL('../inspector/phase1-live.js', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../inspector/index.html', import.meta.url), 'utf8');
 const smoke = fs.readFileSync(new URL('./player-startup-smoke.mjs', import.meta.url), 'utf8');
+const faunaCapture = fs.readFileSync(new URL('./fauna-visual-capture.mjs', import.meta.url), 'utf8');
 const game = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 for (const marker of [
@@ -20,6 +21,8 @@ for (const marker of [
   'World inspection runtime JavaScript syntax validation failed:'
 ]) assert.ok(build.includes(marker), 'Build step missing: ' + marker);
 
+assert.match(faunaCapture, /page\.evaluate\(async\(\{animalId,angleDegrees\}\)=>\{\s*const api=window\.__ELSN_TEST__,scene=[\s\S]{0,260}const ancestorsContain=\(node,root\)=>/,
+  'The fauna capture page context must define its own ancestry helper before inspecting animation tracks.');
 assert.ok(validator.includes('"scripts/nordic/world-inspection.js"'));
 assert.ok(validator.includes('root.ELSNWorldInspection'));
 assert.ok(serviceWorker.includes('"./scripts/nordic/world-inspection.js"'));
@@ -28,12 +31,16 @@ assert.ok(live.includes('analyzeWorldInspectionSnapshot'));
 for (const id of ['worldInspectionCapture','worldInspectionJson','worldInspectionFindings','worldInspectionDownload','wildlifeInspectionGrid','wildlifeInspectionSummary']) {
   assert.ok(html.includes('id="' + id + '"'), 'Inspector is missing ' + id);
 }
+assert.ok(smoke.includes('waitForStartupPresentation') && smoke.includes("manifest.startupPresentation=await waitForStartupPresentation(page,'Primer arranque')") && smoke.includes("manifest.cachedStartupPresentation=await waitForStartupPresentation(page,'Arranque con caché')") && smoke.includes("manifest.offlineReload.startupPresentation=await waitForStartupPresentation(page,'Reinicio offline')"),
+  'The startup smoke must wait for the visible intro screen and verify booting is cleared after the resource gate on first, cached and offline starts.');
 assert.match(smoke, /identityFlow = 'first-run-anonymous'/,
   'The world-inspection smoke must support first-run identity setup.');
 assert.match(smoke, /identityFlow = 'returning-player-auto-boot'/,
   'The world-inspection smoke must support saved-player automatic boot.');
 assert.ok(smoke.includes("page.locator('#intro.open')"),
   'The smoke must wait for the real intro overlay before selecting a campaign.');
+assert.ok(smoke.includes('/^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/'),
+  'The startup smoke must capture each real terrestrial wildlife and gull root node.');
 assert.ok(smoke.includes('wildlife-world-capture.png') &&
   smoke.includes('const textureState=animal.textureReadiness||{};') &&
   smoke.includes('assert.equal(textureState.complete,true'),

@@ -11,15 +11,14 @@ for(const marker of [
   'highTierGpuMatch=',
   'highHeadroomQualityMobile=',
   'qualityDprCurrent=qualityDpr',
-  'qualityScaleAdaptive:true',
-  'const targetFrameRate=60;',
-  'frameIntervalMs=1000/targetFrameRate',
-  'if(now+.5<nextRenderAt)return',
+  'qualityScaleAdaptive:false',
+  'const targetFrameRate=120;',
   'fpsHudTime+=rawFrameMs/1000;fpsHudFrames++',
   'renderedFps=measured',
   'renderedFps||engine.getFps()',
-  'qualityDprFloor',
-  'FPS bajo; Calidad conserva geometría y efectos y adapta solo la resolución interna.',
+  'qualityScaleLockedForSession:true',
+  'nativeResolutionPreserved:true',
+  'FPS bajo; la calidad y resolución nativa permanecen bloqueadas.',
   'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))',
   'renderPipeline.sharpen.edgeAmount=.34',
   'list.length<180',
@@ -33,10 +32,12 @@ for(const marker of [
   'highHeadroomQualityMobile,reportedMemory',
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
-assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleAdaptive:true') && builder.includes('qualityDprFloor') && builder.includes('qualityDprCeiling'), 'Quality must preserve full scene detail while exposing bounded adaptive internal resolution.');
+assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleLockedForSession:true') && builder.includes('qualityScaleAdaptive:false') && builder.includes('nativeResolutionPreserved:true'), 'Quality must preserve the native render scale for the whole session.');
+assert.ok(!builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)') && !builder.includes('qualityDprSlowSamples') && !builder.includes('qualityDprStableSamples'), 'Runtime pressure must never reduce native Quality resolution.');
 assert.ok(builder.includes('let lastWorldUpdateMs=0,lastRenderCpuMs=0;'), 'Shared frame-loop timing bindings must remain available after the Quality-scale change.');
-assert.ok(builder.includes('fps<49&&lastWorldUpdateMs<8&&lastRenderCpuMs<9') && builder.includes('qualityDprSlowSamples>=2') && builder.includes('qualityDprStableSamples>=6') && builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)') && builder.includes('geometryAndEffectsPreserved:true'), 'Adaptive resolution must use hysteresis, recover after stable headroom and preserve geometry/effects.');
-assert.ok(builder.includes('qualityScaleAdaptive:true') && builder.includes('qualityDprFloor') && builder.includes('qualityDprCeiling') && builder.includes('qualityDprChanges'), 'The runtime must expose adaptive quality scale bounds and changes.');
+assert.ok(builder.includes('targetFrameRate=120') && builder.includes('renderDpr:qualityDprCurrent') && builder.includes('qualityScaleLockedForSession:true'), 'Performance diagnostics must retain the 120 Hz device target and native render scale.');
+assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') && !builder.includes('frameIntervalMs=1000/targetFrameRate') && !builder.includes('if(now+.5<nextRenderAt)return'), 'Quality must not throttle Babylon rendering below the display refresh rate.');
+assert.ok(builder.includes('nativeResolutionPreserved:true') && !builder.includes('setHardwareScalingLevel(1/qualityDprCurrent)'), 'The runtime must report that native resolution was preserved without automatic downscaling.');
 assert.ok(!builder.includes('fsr1Candidate') && !builder.includes('fsr1InputScale'), 'No inactive FSR1 state may override native device resolution.');
 assert.ok(builder.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && builder.includes('html.replace(legacy_fsr_guard, "if(false){", 1)'), 'The obsolete FSR block must be guarded before scene construction.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"), 'Native engine antialiasing must remain enabled in Quality.');

@@ -197,6 +197,10 @@
       this.ssrPipeline = null;
       this.firePool = [];
       this._fireFallbackMeshes = this.skyDome ? [this.skyDome] : [];
+      // Hearth illumination is infrequently reassigned; cache each static influence set.
+      // The cache is invalidated lazily whenever the scene mesh count changes.
+      this._hearthMeshCache = new WeakMap();
+      this._hearthMeshCacheMeshCount = -1;
       // The solar clock keeps advancing every frame; expensive material/light writes are
       // coalesced to a stable cadence. This keeps night effects without per-frame overhead.
       this._visualUpdateAccumulator = 0;
@@ -706,17 +710,19 @@
       for (const item of this.fireLegacyLights) {
         if (item && item.light && item.light.setEnabled) item.light.setEnabled(false);
       }
-      // Exactly two nearby fire lights stay active: one sun/moon + hemi + two fires
-      // respects common four-light material budgets on mobile.
-      for (let i = 0; i < (this.quality === 'low' ? 1 : 2); i++) {
+      // Touch GPUs keep one nearest local fire light; desktop Quality may use two.
+      // This avoids a second dynamic per-pixel light pass on mobile during the night.
+      const poolSize = this.quality === 'low' ? 1 : 2;
+      for (let i = 0; i < poolSize; i++) {
         const light = new B.PointLight('NorseNightHearthPool_' + i, new B.Vector3(0, 0, 0), scene);
         light.diffuse = new B.Color3(1.0, 0.43, 0.14);
         light.specular = new B.Color3(1.0, 0.30, 0.08);
         light.range = 11.5;
         light.intensity = 0;
         light.includedOnlyMeshes = this._fireFallbackMeshes;
-        // Keep the two point-light slots registered for the entire solar cycle.
-        // Intensity and local mesh membership change; the shader variant never toggles.
+        // Keep the selected point-light slots registered for the entire solar cycle.
+        // Touch GPUs use one local light; desktop tiers may use two. Intensity and
+        // mesh membership change without toggling shader variants.
         light.setEnabled(true);
         this.firePool.push({ light, source: null, phase: i * 2.17 });
       }
@@ -724,11 +730,17 @@
 
     _collectHearthMeshes(hearth) {
       const scene = this.scene;
-      if (!scene) return [];
+      if (!scene || !hearth || typeof hearth !== 'object') return [];
       // Use Babylon's already-culled active list: no forced world-matrix rebuild or
       // full 13-island mesh scan while the player is moving between hearths.
       // The hearth's bounded influence set is static; do not rebuild it from the camera-culled list.
       const source = Array.isArray(scene.meshes) ? scene.meshes : [];
+      if (this._hearthMeshCacheMeshCount !== source.length) {
+        this._hearthMeshCache = new WeakMap();
+        this._hearthMeshCacheMeshCount = source.length;
+      }
+      const cached = this._hearthMeshCache.get(hearth);
+      if (cached) return cached;
       const included = [];
       const lightX = Number(hearth.x) || 0;
       const lightY = (Number(hearth.floorY) || 0) + 1.0;
@@ -748,6 +760,7 @@
         const reach = range + extent;
         if (dx * dx + dy * dy + dz * dz <= reach * reach) included.push(mesh);
       }
+      this._hearthMeshCache.set(hearth, included);
       return included;
     }
 
@@ -935,36 +948,49 @@
       const skyStarted = performance.now();
       if (this.sunDisc && this.sunHalo) {
         const visible = clamp(state.daylight * 0.88 + state.twilight * 0.36, 0, 1);
-        const point = this._sunPoint;
-        point.x = sun.x * 680; point.y = sun.y * 680; point.z = sun.z * 680;
-        this.sunDisc.position.copyFrom(point);
-        this._lightPosition.x = point.x * 1.012;
-        this._lightPosition.y = point.y * 1.012;
-        this._lightPosition.z = point.z * 1.012;
-        this.sunHalo.position.copyFrom(this._lightPosition);
-        this.sunDisc.visibility = visible;
-        this.sunHalo.visibility = visible;
-        const material = this.sunDisc.material;
-        if (this.sunSurfaceMaterial && material === this.sunSurfaceMaterial) {
-          material.setColor3('sunColor', sunColor);
-          material.setFloat('uTime', this.elapsedSeconds);
-        } else if (material && material.emissiveColor) material.emissiveColor.copyFrom(sunColor);
-        const haloMaterial = this.sunHalo.material;
-        if (haloMaterial) haloMaterial.alpha = 0.035 + state.twilight * 0.20 + state.daylight * 0.045;
+        if (visible > 0.001) {
+          // The solar body is fully off-screen/transparent through deep night.
+          // Do not rewrite its transform or shader uniforms until dawn brings it back.
+          const point = this._sunPoint;
+          point.x = sun.x * 680; point.y = sun.y * 680; point.z = sun.z * 680;
+          this.sunDisc.position.copyFrom(point);
+          this._lightPosition.x = point.x * 1.012;
+          this._lightPosition.y = point.y * 1.012;
+          this._lightPosition.z = point.z * 1.012;
+          this.sunHalo.position.copyFrom(this._lightPosition);
+          this.sunDisc.visibility = visible;
+          this.sunHalo.visibility = visible;
+          const material = this.sunDisc.material;
+          if (this.sunSurfaceMaterial && material === this.sunSurfaceMaterial) {
+            material.setColor3('sunColor', sunColor);
+            material.setFloat('uTime', this.elapsedSeconds);
+          } else if (material && material.emissiveColor) material.emissiveColor.copyFrom(sunColor);
+          const haloMaterial = this.sunHalo.material;
+          if (haloMaterial) haloMaterial.alpha = 0.035 + state.twilight * 0.20 + state.daylight * 0.045;
+        } else {
+          if (this.sunDisc.visibility !== 0) this.sunDisc.visibility = 0;
+          if (this.sunHalo.visibility !== 0) this.sunHalo.visibility = 0;
+        }
       }
       if (this.moonDisc && this.moonHalo) {
         const visible = state.night * (1 - storm * 0.58);
-        const point = this._moonPoint;
-        point.x = -sun.x * 670; point.y = -sun.y * 670; point.z = -sun.z * 670;
-        this.moonDisc.position.copyFrom(point);
-        this._lightPosition.x = point.x * 1.018;
-        this._lightPosition.y = point.y * 1.018;
-        this._lightPosition.z = point.z * 1.018;
-        this.moonHalo.position.copyFrom(this._lightPosition);
-        this.moonDisc.visibility = visible;
-        this.moonHalo.visibility = visible;
-        if (this.moonDisc.material) this.moonDisc.material.alpha = visible;
-        if (this.moonHalo.material) this.moonHalo.material.alpha = 0.09 * visible;
+        if (visible > 0.001) {
+          // The moon uses the same transform/uniform update path only while visible.
+          const point = this._moonPoint;
+          point.x = -sun.x * 670; point.y = -sun.y * 670; point.z = -sun.z * 670;
+          this.moonDisc.position.copyFrom(point);
+          this._lightPosition.x = point.x * 1.018;
+          this._lightPosition.y = point.y * 1.018;
+          this._lightPosition.z = point.z * 1.018;
+          this.moonHalo.position.copyFrom(this._lightPosition);
+          this.moonDisc.visibility = visible;
+          this.moonHalo.visibility = visible;
+          if (this.moonDisc.material) this.moonDisc.material.alpha = visible;
+          if (this.moonHalo.material) this.moonHalo.material.alpha = 0.09 * visible;
+        } else {
+          if (this.moonDisc.visibility !== 0) this.moonDisc.visibility = 0;
+          if (this.moonHalo.visibility !== 0) this.moonHalo.visibility = 0;
+        }
       }
 
       if (this.skyMaterial) {
