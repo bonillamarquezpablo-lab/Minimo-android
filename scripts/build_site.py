@@ -3464,8 +3464,8 @@ function getWorldPhaseTimingSnapshot(){
         raise SystemExit("No se encontró el objeto runtime único para publicar los tiempos de fase y del minimapa.")
     html = html.replace(health_phase_marker, health_phase_replacement, 1)
 
-    map_clock_pattern = r"let last=performance\.now\(\),(?:nextRenderAt=0,)?mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
-    map_clock_replacement = "let last=performance.now(),nextRenderAt=0,mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;\n let lastMapDrawMs=0,mapDrawMaxMs=0,mapDrawSampleCount=0;"
+    map_clock_pattern = r"let last=performance\\.now\\(\\),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
+    map_clock_replacement = "let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;\\n let lastMapDrawMs=0,mapDrawMaxMs=0,mapDrawSampleCount=0;"
     html, map_clock_count = re.subn(map_clock_pattern, map_clock_replacement, html, count=1)
     if map_clock_count != 1:
         raise SystemExit(f"No se encontró un único reloj compatible del bucle para medir el minimapa (encontrados={map_clock_count}).")
