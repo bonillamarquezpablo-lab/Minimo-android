@@ -17,13 +17,15 @@ assert.ok(runner.includes('Capturas visuales y diagnóstico de fauna terrestre')
 assert.ok(runner.includes('scripts/fauna-visual-capture.mjs'));
 assert.ok(runner.includes('scripts/create_fauna_contact_sheet.py'));
 assert.ok(runner.includes('results:{player,texture,grounding,coastal,custom,fauna,beforeAfter}'));
-assert.ok(releaseWorkflow.includes('Diagnostic A/B capture with GPU skinning') && releaseWorkflow.includes('FAUNA_SKINNING_MODE: gpu') && releaseWorkflow.includes('FAUNA_CAPTURE_OUTPUT: artifacts/fauna-visual-captures-gpu'),
-  'Release validation must retain an independent GPU-skinning fauna diagnostic run.');
-const gpuDiagnosticStart=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning');
-const gpuDiagnosticEnd=releaseWorkflow.indexOf('- name: Preserve GPU skinning diagnostic evidence',gpuDiagnosticStart);
+const primaryFaunaStart=releaseWorkflow.indexOf('- name: Verify mobile fauna rigs, animations, textures and four-view visuals before publish');
+const primaryFaunaEnd=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with CPU skinning fallback',primaryFaunaStart);
+assert.ok(primaryFaunaStart>=0&&primaryFaunaEnd>primaryFaunaStart&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('FAUNA_SKINNING_MODE: gpu')&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('timeout-minutes: 18'),
+  'Release acceptance must validate all fauna using the hardware GPU skinning path with enough time for the full four-view capture.');
+const cpuDiagnosticStart=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with CPU skinning fallback');
+const cpuDiagnosticEnd=releaseWorkflow.indexOf('- name: Preserve CPU skinning fallback diagnostic evidence',cpuDiagnosticStart);
 assert.ok(releaseWorkflow.includes("id: playwright_install"), 'Playwright installation must be identifiable before optional diagnostic captures.');
-assert.ok(gpuDiagnosticStart>=0&&gpuDiagnosticEnd>gpuDiagnosticStart&&releaseWorkflow.slice(gpuDiagnosticStart,gpuDiagnosticEnd).includes("if: always() && steps.playwright_install.outcome == 'success'"),
-  'GPU skinning diagnostics must still run when the primary CPU-fauna visual acceptance fails.');
+assert.ok(cpuDiagnosticStart>=0&&cpuDiagnosticEnd>cpuDiagnosticStart&&releaseWorkflow.slice(cpuDiagnosticStart,cpuDiagnosticEnd).includes('FAUNA_SKINNING_MODE: cpu')&&releaseWorkflow.slice(cpuDiagnosticStart,cpuDiagnosticEnd).includes("if: always() && steps.playwright_install.outcome == 'success'"),
+  'The CPU fallback must remain separately measured and non-blocking; it must not be confused with the hardware release path.');
 assert.ok(capture.includes('__ELSN_FAUNA_CAPTURE_SCENE__'));
 assert.ok(capture.includes('const number=value=>Number.isFinite(Number(value))?Number(Number(value).toFixed(4)):null;\n          const ancestorsContain='),
   'Every isolated Playwright page.evaluate callback must define its own numeric formatter; helpers in prior evaluate contexts are not shared.');
