@@ -2494,7 +2494,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   spatialSelectionStats.dynamicContentRatio=sceneCount?Number((dynamicCount/sceneCount).toFixed(4)):null;
   publishSpatialSelectionStats();
  };
- const addSpatialDynamicMesh=(mesh,reason=null,force=false)=>{
+ const addSpatialDynamicMesh=(mesh,reason=null,force=false,deferStats=false)=>{
   const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
   if(!mesh||!dynamic||typeof dynamic.push!=='function'||mesh.__elsnSpatialDynamic)return;
   const classification=reason||spatialDynamicReasonForMesh(mesh);
@@ -2514,7 +2514,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    for(let node=mesh;node&&node!==scene&&parentChain.length<10;node=node.parent)parentChain.push(String(node.name||''));
    reasonSamples.push({name:String(mesh.name||''),parentChain});
   }
-  updateSpatialSelectionCounts();
+  if(!deferStats)updateSpatialSelectionCounts();
  };
  const removeSpatialDynamicMesh=mesh=>{
   const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
@@ -2554,7 +2554,8 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     mesh.__elsnSpatialFreshUntilRenderId=(typeof scene.getRenderId==='function'?scene.getRenderId():0)+2;
     spatialSelectionStats.dynamicReasons['octree-initial-dynamic']=(spatialSelectionStats.dynamicReasons['octree-initial-dynamic']||0)+1;
    }
-   for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh);
+   for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);
+   updateSpatialSelectionCounts();
    // Babylon's dynamicContent is evaluated by a separate internal path.
    // Do not wrap octree.select(): that method selects static octree blocks and
    // is not the per-frame dynamic candidate list in this Babylon build.
