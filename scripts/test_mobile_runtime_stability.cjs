@@ -68,6 +68,9 @@ assert.ok(source.includes('function updateWildlife(dt)'), 'Wildlife behavior mus
 assert.ok(source.includes('function update(dt){'), 'The full game world update must remain present.');
 assert.ok(builder.includes('phase_timing_helpers') && builder.includes('setWorldUpdatePhase(') && builder.includes('getWorldPhaseTimingSnapshot()'), 'The release must time each existing world-update phase.');
 assert.ok(builder.includes('enemy_ai_lod_marker =') && builder.includes("if(isTouchDevice&&dist>18&&e.state!=='attack'&&e.stun<=0){") && builder.includes('const mobileAiInterval=dist>70?1.0:(dist>36?.45:.20);'), 'Distant touch-device enemies must use distance-based AI cadence while nearby combat remains full-rate.');
+assert.ok(builder.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
+  builder.includes("alignment:{source:'native-Fly-midpoint'") &&
+  builder.includes("alignmentDot<.995"), 'Gull orientation must be corrected from the evaluated Fly pose and reject a tilted residual body axis.');
 assert.ok(builder.includes('alignAxis=(from,to)') &&
   builder.includes("const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;") &&
   builder.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip") &&
@@ -78,8 +81,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'44\',build:\'0.6.333\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.333"'), 'Release validator must target version 0.6.333.');
+assert.ok(validator.includes('reportVersion:\'46\',build:\'0.6.335\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.335"'), 'Release validator must target version 0.6.333.');
 assert.ok(builder.includes('mobile_memory_policy_marker') && builder.includes('isMobilePeakMemorySensitive'), 'Memory-sensitive scheduling must be independent from the selected graphics profile.');
 assert.ok(builder.includes('GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024'), 'GLB identity checks must compare bounded chunks instead of duplicating full files into ArrayBuffers.');
 assert.ok(builder.includes('player_import_start_marker') && builder.includes('let playerHumanLoadPromise=Promise.resolve(null);'), 'The protagonist GLB import must be deferred until static world construction has finished.');
