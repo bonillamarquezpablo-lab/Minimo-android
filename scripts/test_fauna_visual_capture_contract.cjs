@@ -17,7 +17,7 @@ assert.ok(runner.includes('scripts/fauna-visual-capture.mjs'));
 assert.ok(runner.includes('scripts/create_fauna_contact_sheet.py'));
 assert.ok(runner.includes('results:{player,texture,grounding,coastal,custom,fauna,beforeAfter}'));
 assert.ok(capture.includes('__ELSN_FAUNA_CAPTURE_SCENE__'));
-assert.ok(capture.includes('const number=value=>Number.isFinite(Number(value))?Number(Number(value).toFixed(4)):null;\\n          const ancestorsContain='),
+assert.ok(capture.includes('const number=value=>Number.isFinite(Number(value))?Number(Number(value).toFixed(4)):null;\n          const ancestorsContain='),
   'Every isolated Playwright page.evaluate callback must define its own numeric formatter; helpers in prior evaluate contexts are not shared.');
 assert.ok(capture.includes('window.__ELSN_FORCE_CPU_SKINNING__=true') && capture.includes('hasTouch:true'),
   'The SwiftShader visual-acceptance session must explicitly force the mobile CPU-skinning path before loading the game; it must not silently inspect shader skinning instead.');
