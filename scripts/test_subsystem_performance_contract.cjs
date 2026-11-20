@@ -9,10 +9,10 @@ const recorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const gameHtml=fs.readFileSync('index.html','utf8');
 
-assert.ok(builder.includes('map_clock_pattern = r"let last=performance\\.now\\(\\),(?:nextRenderAt=0,)?mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"') &&
-  builder.includes('map_clock_replacement = "let last=performance.now(),nextRenderAt=0,mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;') &&
+assert.ok(builder.includes('map_clock_pattern = r"let last=performance\\.now\\(\\),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"') &&
+  builder.includes('map_clock_replacement = "let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;') &&
   builder.includes('lastMapDrawMs=0,mapDrawMaxMs=0,mapDrawSampleCount=0'),
-  'Minimap profiling must accept the current or 60 Hz scheduler clock and initialize its timing telemetry.');
+  'Minimap profiling must initialize its timing telemetry without inserting a frame limiter.');
 
 for(const marker of [
   'worldPhaseTimingStats=Object.create(null)',
