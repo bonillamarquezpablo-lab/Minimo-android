@@ -62,8 +62,12 @@ assert.ok(capture.includes("previousActiveCameras=scene.activeCameras") &&
   capture.includes("scene.activeCameras=[]") &&
   capture.includes("scene.activeCamera=temporaryCamera") &&
   capture.includes("scene.activeCamera===temporaryCamera") &&
-  capture.includes("scene.activeCameras=previousActiveCameras"),
-  'Temporary fauna captures must disable Babylon multi-camera rendering, verify the active render camera, and restore the prior camera configuration.');
+  capture.includes("scene.activeCameras=previousActiveCameras") &&
+  capture.includes("const activeCamera=scene.activeCamera") &&
+  capture.includes("activeCamera?.getTarget?.()") &&
+  capture.includes("source:'active-babylon-camera'") &&
+  !capture.includes("readback=api.sceneViewSnapshot?.()||null"),
+  'Temporary fauna captures must verify the actual Babylon render camera rather than the unrelated player-camera snapshot, then restore the prior camera configuration.');
 assert.ok(capture.includes('const FAUNA_ROSTER_TIMEOUT_MS = 240000') && capture.includes('timeout:FAUNA_ROSTER_TIMEOUT_MS'),
   'Fauna inspection must allow the complete blocking startup window before declaring the roster missing.');
 assert.ok(capture.includes('getChildMeshes'));
