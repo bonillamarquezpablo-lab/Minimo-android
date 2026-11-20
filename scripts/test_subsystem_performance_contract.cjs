@@ -97,4 +97,11 @@ assert.doesNotMatch(atmosphereUpdate,/imageProcessing\\.(?:exposure|contrast)\\s
 assert.ok(atmosphere.includes('const imageConfigs = new Set(') && atmosphere.includes('imageConfig.exposure = 1.035') && atmosphere.includes('imageConfig.contrast = 1.10'),
   'Image-processing settings must be applied once at setup, not rewritten every dusk frame.');
 
+assert.ok(builder.includes('distanceSquared=dx*dx+dz*dz;') &&
+  builder.includes('animal.flee=distanceSquared<196?') &&
+  builder.includes('if(animal.flee>0&&distanceSquared>.0001)') &&
+  builder.includes('if(distanceSquared>(isTouchDevice?13225:27225)){') &&
+  !builder.includes('dist=Math.sqrt(distanceSquared)'),
+  'Wildlife decision cadence must use squared-distance thresholds and avoid a per-decision square root without changing flee or far-distance ranges.');
+
 console.log('SUBSYSTEM PERFORMANCE CONTRACT: PASS (world phases, atmosphere, hearths, wildlife, NPC dialogue, CPU and GPU timing).');
