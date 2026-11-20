@@ -3171,7 +3171,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         (
             "if(dx*dx+dz*dz<reach*reach)list.push(mesh);",
             "if(dx*dx+dz*dz<reach*reach){if(list.length<180)list.push(mesh);else reflectionLimitDiscardedMeshCount++;}",
-            "cap the reflected island draw list at 260 representative meshes",
+            "preserve the original 180-object reflection submission budget",
         ),
         (
             "  console.info('Nordic water reflection island updated',{islandIndex,reflectedMeshes:list.length,filteredFoliageAndTinyDetails:reflectionFilteredMeshCount});",
@@ -3180,18 +3180,18 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         ),
         (
             "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024;",
-            "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:(640)):1024;",
-            "reduce mobile mirror target size while retaining a live water reflection",
+            "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024;",
+            "restore the original 640-pixel mobile water reflection target",
         ),
         (
             "nordicWaterMirror.refreshRate=isTouchDevice?12:8;",
-            "nordicWaterMirror.refreshRate=isTouchDevice?(isConstrainedMobile?24:(12)):8;",
-            "refresh the mobile water mirror once every 20–24 frames",
+            "nordicWaterMirror.refreshRate=isTouchDevice?12:8;",
+            "restore the original 12-frame mobile water reflection cadence",
         ),
         (
             "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?3:4));",
             "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4));",
-            "reuse high-quality mobile shadows for six frames",
+            "restore the original high-quality mobile shadow refresh cadence",
         ),
         (
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));",
