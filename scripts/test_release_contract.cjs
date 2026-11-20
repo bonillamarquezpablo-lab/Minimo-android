@@ -81,7 +81,7 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.332"\)/,"The build must promote every visible source version to 0.6.333.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.333"\)/,"The build must promote every visible source version to 0.6.333.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleAdaptive:true") && buildSite.includes("qualityDprFloor") && buildSite.includes("qualityDprCeiling"),"Quality must preserve full scene detail while exposing bounded adaptive internal resolution.");
 assert.ok(buildSite.includes("fps<50&&lastWorldUpdateMs<14&&lastRenderCpuMs<14") && buildSite.includes("qualityDprSlowSamples>=2") && buildSite.includes("qualityDprStableSamples>=6") && buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)") && buildSite.includes("geometryAndEffectsPreserved:true"),"Sustained frame-budget pressure may adapt internal resolution with hysteresis, while preserving geometry and effects.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?1.50:1.25"),"The high-headroom mobile Quality startup scale must remain intact.");
@@ -114,7 +114,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.match(buildSite,/game_version = "0\.6\.332"/,"After validating the 0.6.274 source, the builder must set the packaged release version to 0.6.333.");
+assert.match(buildSite,/game_version = "0\.6\.333"/,"After validating the 0.6.274 source, the builder must set the packaged release version to 0.6.333.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
