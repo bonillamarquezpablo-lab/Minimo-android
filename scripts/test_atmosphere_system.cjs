@@ -150,6 +150,9 @@ assert.ok(source.includes("const enabled = this.quality !== 'low';") && source.i
 assert.ok(source.includes('pipeline.fxaaEnabled = !mobileHigh;'), 'Mobile-high must use native MSAA without an extra FXAA pass.');
 assert.ok(source.includes("this.quality === 'high' && !this.isTouchDevice"), 'God rays and SSAO must remain desktop-only.');
 assert.ok(source.includes("this.quality === 'low' || this.isTouchDevice"), 'Touch devices must not create the cascaded-shadow multipass.');
+assert.ok(source.includes("const poolSize = this.isTouchDevice ? 1"), 'Touch devices must use a single local hearth light to avoid a second dynamic lighting pass.');
+assert.ok(source.includes("this._hearthMeshCache = new WeakMap()") && source.includes("this._hearthMeshCacheMeshCount !== source.length") && source.includes("this._hearthMeshCache.set(hearth, included)"), 'Hearth influence mesh lists must be cached and invalidated when scene topology changes.');
+assert.ok(source.includes("mobileHigh ? 16") && source.includes("mobileHigh ? 0.16"), 'The flagship mobile profile must reduce bloom kernel and render scale while retaining the effect.');
 
 const buildSource = fs.readFileSync(path.join(__dirname, 'build_site.py'), 'utf8');
 const sourceHtml = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
