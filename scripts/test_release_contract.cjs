@@ -110,9 +110,9 @@ assert.ok(buildSite.includes("for relative, (url, minimum, kind) in grab3d_downl
   "Grab3D model downloads must be serialized while preserving all validation.");
 assert.ok(buildSite.includes("const targetFrameRate=60;") && buildSite.includes("frameIntervalMs=1000/targetFrameRate") && buildSite.includes("renderedFps=measured"),"The Quality runtime must enforce a stable 60 Hz simulation/render cadence and report the actual processed frame rate.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
-assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.includes("thinInstanceBatch") && buildSite.includes("list.length<180"),"Water reflections must filter non-essential foliage, instance batches and limit pass submissions.");
+assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.includes("thinInstanceBatch") && buildSite.includes("list.length<(isTouchDevice?(isConstrainedMobile?96:120):180)"),"Water reflections must filter non-essential foliage, instance batches and limit pass submissions.");
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
-assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
+assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?(isConstrainedMobile?24:(highHeadroomQualityMobile?18:16)):8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
 assert.match(buildSite,/game_version = "0\.6\.333"/,"After validating the 0.6.274 source, the builder must set the packaged release version to 0.6.333.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
