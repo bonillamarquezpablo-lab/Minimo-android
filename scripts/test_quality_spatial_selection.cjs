@@ -37,6 +37,12 @@ for(const marker of [
   'meshSelectionBuildMs:spatialSelectionStats.buildMs'
 ]) assert.ok(builder.includes(marker),'Missing dynamic-safe spatial selection guard: '+marker);
 
+const dynamicAddStart=builder.indexOf('const addSpatialDynamicMesh=');
+const dynamicAddEnd=builder.indexOf('const removeSpatialDynamicMesh=',dynamicAddStart);
+assert.ok(dynamicAddStart>=0&&dynamicAddEnd>dynamicAddStart,'Dynamic mesh registration must remain present.');
+const dynamicAddSource=builder.slice(dynamicAddStart,dynamicAddEnd);
+assert.ok(dynamicAddSource.includes('mesh.__elsnSpatialDynamic')&&dynamicAddSource.includes('dynamic.push(mesh)')&&!dynamicAddSource.includes('dynamic.indexOf(mesh)'),'Dynamic mesh registration must use the existing per-mesh O(1) duplicate flag instead of a repeated linear search.');
+
 for(const marker of [
   'scene.createOrUpdateSelectionOctree(64,3)',
   'scene.onNewMeshAddedObservable.add',
