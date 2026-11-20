@@ -62,6 +62,16 @@
       "exitCode": 0,
       "error": null,
       "finishedAt": "2026-11-20T22:25:24.662Z"
+    },
+    {
+      "name": "Lámina e informe visual de fauna",
+      "script": "scripts/create_fauna_contact_sheet.py",
+      "startedAt": "2026-11-20T22:25:24.663Z",
+      "status": "passed",
+      "durationMs": 1518,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-20T22:25:26.181Z"
     }
   ],
   "finishedAt": null
