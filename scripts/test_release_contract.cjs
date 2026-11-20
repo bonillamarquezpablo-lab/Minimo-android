@@ -30,7 +30,7 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.334","The release validator must target the packaged 0.6.334 release.");
+assert.equal(expectedVersion,"0.6.335","The release validator must target the packaged 0.6.335 release.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
   buildSite.includes("mature-norway-spruce-tree.glb") &&
   buildSite.includes("oak-textured.glb") &&
@@ -48,6 +48,9 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   buildSite.includes("const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;") &&
   buildSite.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip") &&
   buildSite.includes("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to)") &&
+  buildSite.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
+  buildSite.includes("alignment:{source:'native-Fly-midpoint'") &&
+  buildSite.includes("alignmentDot<.995") &&
   buildSite.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
   !buildSite.includes("addFlightTrack(") &&
   !buildSite.includes("Seagull_Flight_Loop_") &&
@@ -81,7 +84,7 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.333"\)/,"The build must promote every visible source version to 0.6.334.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.335"\)/,"The build must promote every visible source version to 0.6.335.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true") && buildSite.includes("qualityScaleAdaptive:false") && buildSite.includes("nativeResolutionPreserved:true"),"Quality must keep its native render scale fixed for the session.");
 assert.ok(!buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples"),"Runtime pressure must not trigger automatic resolution reduction.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?1.80:1.45"),"The high-headroom mobile Quality startup scale must preserve its original full-resolution setting.");
@@ -114,7 +117,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.match(buildSite,/game_version = "0\.6\.333"/,"After validating the 0.6.274 source, the builder must set the packaged release version to 0.6.334.");
+assert.match(buildSite,/game_version = "0\.6\.335"/,"After validating the 0.6.274 source, the builder must set the packaged release version to 0.6.335.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
