@@ -3189,7 +3189,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         ),
         (
             "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?3:4));",
-            "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(10:4));",
+            "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4));",
             "reuse high-quality mobile shadows for six frames",
         ),
         (
