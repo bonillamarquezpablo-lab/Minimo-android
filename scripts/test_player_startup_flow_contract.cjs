@@ -14,6 +14,8 @@ assert.match(smoke, /preflightState: preflightState|manifest\.preflightState = p
   'The startup manifest must preserve the observed preflight state.');
 assert.ok(smoke.includes("page.locator('#intro.open')"),
   'The smoke must wait for the first rendered campaign selector after the resource barrier.');
+assert.ok(smoke.includes('const STARTUP_PRESENTATION_TIMEOUT_MS = 60000'),
+  'The startup smoke must allow the software renderer a bounded first-frame presentation window without weakening the mandatory resource barrier.');
 assert.ok(smoke.includes('manifest.campaignSelector = introReady'),
   'The smoke must record whether the campaign selector became visible.');
 assert.match(smoke, /preflight-dom\.html/,
