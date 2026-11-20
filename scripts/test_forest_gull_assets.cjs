@@ -16,14 +16,15 @@ assert.ok(html.includes('const requiredFlightParts=[leftWing,rightWing,tail,head
 assert.ok(html.includes("const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;") &&
   html.includes("El GLB de gaviota no contiene un clip Fly válido.") &&
   html.includes("if(group!==nativeFlightClip)group.stop();") &&
-  html.includes("flightRig={actor,visualRoot,bodyAxis,leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};") &&
+  html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot},leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};") &&
   html.includes("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);"),
   'Every gull must retain all nine anatomical pivots and start its complete native Fly clip.');
 const nativeClipIndex=html.indexOf("const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;");
-const flightRigIndex=html.indexOf("const flightRig={actor,visualRoot,bodyAxis");
+const flightRigIndex=html.indexOf("const flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint'");
 const nativeClipStartIndex=html.indexOf("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);");
-assert.ok(nativeClipIndex>=0&&nativeClipIndex<flightRigIndex&&flightRigIndex<nativeClipStartIndex,
-  'The native clip must be declared before the diagnostic rig uses it and started only after rig placement.');
+const nativeFlightPoseIndex=html.indexOf("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5);");
+assert.ok(nativeClipIndex>=0&&nativeClipIndex<nativeClipStartIndex&&nativeClipStartIndex<nativeFlightPoseIndex&&nativeFlightPoseIndex<flightRigIndex,
+  'The native Fly clip must be declared and evaluated at its midpoint before measuring the body axis and publishing the completed diagnostic rig.');
 assert.ok(!html.includes("if(fly){fly.start")&&!html.includes("animation:fly"),
   'No legacy fly variable or second animation-selection path may remain.');
 assert.ok(html.includes("flightRig,animation:nativeFlightClip,phase:i*1.25") && html.includes("alignAxis=(from,to)") &&
@@ -45,9 +46,13 @@ assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html
   'Forest placement must use a wider relocation search and expose overlap diagnostics.');
 assert.ok(!html.includes('b.leftWing.rotation[b.wingFlapAxis]') && !html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
   'The imported skeleton animation must not be overridden by synthetic per-bone wing rotations.');
-assert.ok(html.includes("flightRig={actor,visualRoot,bodyAxis,leftWing:{node:leftWing}") &&
+assert.ok(html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint'") &&
+  html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot}") &&
   html.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip}"),
   'The live gull diagnostic rig must expose the two wings, tail, head, neck and both articulated legs.');
+assert.ok(html.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
+  html.includes("alignment:{source:'native-Fly-midpoint'") && html.includes("alignmentDot<.995"),
+  'The measured body alignment must come from the actual native Fly pose and reject residual tilt.');
 assert.ok(buildSource.includes("alignAxis=(from,to)") && buildSource.includes("visualRoot.rotationQuaternion=alignAxis") &&
   buildSource.includes("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to)") &&
   buildSource.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip") &&
