@@ -78,6 +78,9 @@ async function readStartupSnapshot(page) {
       bodyClass:document.body.className,
       bootFailed:document.body.classList.contains('boot-failed'),
       booting:document.body.classList.contains('booting'),
+      introOpen:document.body.classList.contains('intro-open'),
+      introVisible:!!document.getElementById('intro')&&document.getElementById('intro').classList.contains('open')&&document.getElementById('intro').getAttribute('aria-hidden')!=='true',
+      gameRunning:document.body.classList.contains('game-running'),
       loadingVisible:!!document.getElementById('loading')&&getComputedStyle(document.getElementById('loading')).display!=='none',
       loadingText:document.getElementById('loadText')?.textContent||document.querySelector('#loading')?.textContent||null,
       loadingHelp:progress.help,progress,
@@ -133,6 +136,34 @@ async function waitForWorldReadyWithRecovery(page, phase) {
       STARTUP_RESTART_TIMEOUT_MS + ' ms. Estado: ' + JSON.stringify(snapshot) +
       ' · ' + String(error?.message || error));
   }
+}
+
+async function waitForStartupPresentation(page, phase) {
+  const startedAt=performance.now();
+  await page.waitForFunction(()=>{
+    const intro=document.getElementById('intro');
+    const loading=document.getElementById('loading');
+    return document.body.classList.contains('intro-open') &&
+      !document.body.classList.contains('booting') &&
+      !document.body.classList.contains('boot-failed') &&
+      !!intro && intro.classList.contains('open') &&
+      intro.getAttribute('aria-hidden')==='false' &&
+      (!loading || getComputedStyle(loading).display==='none');
+  },undefined,{timeout:30000,polling:100});
+  const state=await page.evaluate(()=>({
+    bodyClass:document.body.className,
+    introOpen:document.body.classList.contains('intro-open'),
+    introVisible:!!document.getElementById('intro')&&document.getElementById('intro').classList.contains('open')&&document.getElementById('intro').getAttribute('aria-hidden')==='false',
+    loadingVisible:!!document.getElementById('loading')&&getComputedStyle(document.getElementById('loading')).display!=='none',
+    booting:document.body.classList.contains('booting'),
+    bootFailed:document.body.classList.contains('boot-failed')
+  }));
+  assert.equal(state.booting,false,phase+' dejó el body en booting después de la barrera de recursos: '+JSON.stringify(state));
+  assert.equal(state.bootFailed,false,phase+' terminó en boot-failed: '+JSON.stringify(state));
+  assert.equal(state.introOpen,true,phase+' no mostró el selector real de campaña: '+JSON.stringify(state));
+  assert.equal(state.introVisible,true,phase+' mantiene oculto el selector de campaña: '+JSON.stringify(state));
+  assert.equal(state.loadingVisible,false,phase+' conserva la pantalla de carga después de iniciar: '+JSON.stringify(state));
+  return {elapsedMs:Number((performance.now()-startedAt).toFixed(1)),...state};
 }
 
 async function main() {
@@ -400,6 +431,7 @@ async function main() {
       throw new Error('El arranque no alcanzó worldReady. Diagnóstico de etapa, escena y fauna: '+
         JSON.stringify(manifest.startupTimeoutDiagnostics)+' · '+String(error?.message||error));
     }
+    manifest.startupPresentation=await waitForStartupPresentation(page,'Primer arranque');
     manifest.blockingStartupMs = Number((performance.now() - blockingBarrierStartedAt).toFixed(1));
     manifest.startupBarrierState = await page.evaluate(() => ({
       bootFailed: document.body.classList.contains('boot-failed'),
@@ -1137,6 +1169,7 @@ async function main() {
     }
     const cachedBarrierStartedAt = performance.now();
     const cachedStartupWait = await waitForWorldReadyWithRecovery(page, 'El arranque con caché');
+    manifest.cachedStartupPresentation=await waitForStartupPresentation(page,'Arranque con caché');
     manifest.cachedStartupWaitRecoveredAfterRendererStall = cachedStartupWait.recoveredAfterWaitTimeout;
     manifest.cachedStartupWaitDiagnostic = cachedStartupWait.recoveredAfterWaitTimeout
       ? { ...cachedStartupWait.snapshot, recoveredAfterWaitTimeout: true,
@@ -1280,6 +1313,7 @@ async function main() {
       }
 
       const offlineStartupWait = await waitForWorldReadyWithRecovery(page, 'El reinicio offline');
+      manifest.offlineReload.startupPresentation=await waitForStartupPresentation(page,'Reinicio offline');
       manifest.offlineReload.startupWaitRecoveredAfterRendererStall = offlineStartupWait.recoveredAfterWaitTimeout;
       manifest.offlineReload.startupWaitDiagnostic = offlineStartupWait.recoveredAfterWaitTimeout
         ? { ...offlineStartupWait.snapshot, recoveredAfterWaitTimeout: true,
