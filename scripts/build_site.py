@@ -1305,7 +1305,8 @@ function updateWildlife(dt){
     }
     const vx=Number(animal._wildlifeVelocityX)||0,vz=Number(animal._wildlifeVelocityZ)||0;
     if(vx||vz){root.position.x+=vx*frameDt;root.position.z+=vz*frameDt;}
-    root.rotation.y=animal.heading;
+    // Heading rotation is written only when an AI decision changes it above.
+    // Reassigning the same rotation every render frame dirties the transform needlessly.
    }
    const wildlifeCost=performance.now()-wildlifeStarted;
    wildlifeUpdatePerfSamples[wildlifeUpdatePerfCursor]=wildlifeCost;
