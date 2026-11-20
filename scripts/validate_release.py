@@ -529,17 +529,16 @@ def main() -> None:
     missing_graphics_quality = [marker for marker in graphics_quality_markers if marker not in index_html]
     if missing_graphics_quality:
         fail("El perfil nativo de gama alta, la resolución protegida o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
-    if "fps<50&&lastWorldUpdateMs<14&&lastRenderCpuMs<14" not in index_html or "qualityDprSlowSamples>=2" not in index_html or "qualityDprStableSamples>=6" not in index_html or "engine.setHardwareScalingLevel(1/qualityDprCurrent)" not in index_html or "geometryAndEffectsPreserved:true" not in index_html:
-        fail("La resolución adaptativa de Calidad debe usar histéresis y conservar geometría y efectos.")
-    if "qualityScaleLockedForSession:true" in index_html:
-        fail("La resolución de Calidad no puede permanecer bloqueada cuando el dispositivo no sostiene el presupuesto de fotograma.")
+    if "qualityScaleLockedForSession:true" not in index_html or "qualityScaleAdaptive:false" not in index_html or "nativeResolutionPreserved:true" not in index_html:
+        fail("El perfil Calidad debe conservar la resolución nativa durante toda la sesión y medir los cuellos de botella sin degradarla.")
+    if "engine.setHardwareScalingLevel(1/qualityDprCurrent)" in index_html or "qualityDprSlowSamples" in index_html:
+        fail("El runtime no puede reducir la resolución nativa automáticamente.")
     mobile_gpu_budget_markers = (
-        "highHeadroomQualityMobile?1.50:1.25",
-        "highHeadroomQualityMobile?1.00:0.92",
-        "highHeadroomQualityMobile?12:8",
-        "highHeadroomQualityMobile?512:448",
-        "isConstrainedMobile?96:120",
-        "highHeadroomQualityMobile?18:16",
+        "highHeadroomQualityMobile?1.80:1.45",
+        "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024",
+        "nordicWaterMirror.refreshRate=isTouchDevice?12:8",
+        "shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))",
+        "list.length<180",
     )
     missing_mobile_gpu_budget = [marker for marker in mobile_gpu_budget_markers if marker not in index_html]
     if missing_mobile_gpu_budget:
@@ -653,9 +652,9 @@ def main() -> None:
         fail("La hierba cercana debe actualizarse solo en Calidad y limitarse a la isla activa.")
     if "function syncNordicWaterReflectionIsland()" not in index_html or "syncNordicWaterReflectionIsland();" not in index_html or "activeWaterReflectionIslandIndex" not in index_html:
         fail("El espejo del agua debe actualizarse solo con la isla activa.")
-    if "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:(highHeadroomQualityMobile?512:448)):1024" not in index_html or "nordicWaterMirror.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE)" not in index_html or "anisotropicFilteringLevel=Math.min(8,maxAnisotropy)" not in index_html or "reflectionFilteredMeshCount" not in index_html or "tinyReflectionDetail=vertexCount<96" not in index_html or "list.length<(isTouchDevice?(isConstrainedMobile?96:120):180)" not in index_html or "reflectionLimitDiscardedMeshCount" not in index_html or "nordicWaterMirror.refreshRate=isTouchDevice?(isConstrainedMobile?24:(highHeadroomQualityMobile?18:16)):8" not in index_html:
-        fail("El reflejo de Calidad debe mantener resolución alta y filtrado trilineal/aniso sin cambiar la cadencia de actualización.")
-    if "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))" not in index_html or "renderPipeline.sharpen.edgeAmount=.34" not in index_html or "shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?12:8))" not in index_html:
+    if "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024" not in index_html or "nordicWaterMirror.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE)" not in index_html or "anisotropicFilteringLevel=Math.min(8,maxAnisotropy)" not in index_html or "reflectionFilteredMeshCount" not in index_html or "tinyReflectionDetail=vertexCount<96" not in index_html or "list.length<180" not in index_html or "reflectionLimitDiscardedMeshCount" not in index_html or "nordicWaterMirror.refreshRate=isTouchDevice?12:8" not in index_html:
+        fail("El reflejo de Calidad debe conservar la resolución, el presupuesto visual y la cadencia originales.")
+    if "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))" not in index_html or "renderPipeline.sharpen.edgeAmount=.34" not in index_html or "shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))" not in index_html:
         fail("El perfil móvil de gama alta debe usar MSAA nativo, nitidez moderada, sombras cacheadas y reflejos filtrados.")
     if "const boneCount=skeletons.reduce" not in index_html or "skinnedVertexCount<600" not in index_html or "const attachedBounds=boundsForMeshes(meshes)" not in index_html:
         fail("La fauna debe validar el cuerpo riggeado y alinear el modelo tras reparentar sus raíces.")
