@@ -1521,28 +1521,44 @@ function updateWildlife(dt){
     # Off-screen island shaders are compiled by Babylon when that island becomes visible.
     initial_view_marker = "const sceneReadyTasks=[scene.whenReadyAsync()];"
     initial_view_replacement = r"""const waitForInitialViewReadiness=async()=>{
-    let readyFrames=0,lastDiagnostic=null;
+    let readySamples=0,lastDiagnostic=null;
     const started=performance.now();
+    let lastSampleAt=started;
     while(performance.now()-started<85000){
+     // Keep Babylon's real render loop running, but sample readiness at 4 Hz rather
+     // than rescanning thousands of active meshes on every rendered frame.
      await new Promise(resolve=>requestAnimationFrame(resolve));
+     const sampleAt=performance.now();
+     if(sampleAt-lastSampleAt<250)continue;
+     lastSampleAt=sampleAt;
      const active=typeof scene.getActiveMeshes==='function'?scene.getActiveMeshes():null;
-     const activeMeshes=active&&Array.isArray(active.data)?active.data.slice(0,active.length):[];
-     const notReady=[];
-     for(const mesh of activeMeshes){
+     const activeData=active&&Array.isArray(active.data)?active.data:null;
+     const activeMeshCount=activeData&&Number.isFinite(active.length)?Math.min(active.length,activeData.length):0;
+     let notReadyCount=0;
+     const notReadySamples=[];
+     for(let index=0;index<activeMeshCount;index++){
+      const mesh=activeData[index];
       if(!mesh||mesh.isBlocked||mesh.isVisible===false)continue;
-      try{if(typeof mesh.isReady==='function'&&!mesh.isReady(true))notReady.push(String(mesh.name||mesh.id||'mesh').slice(0,100));}
-      catch(error){notReady.push(String(mesh.name||mesh.id||'mesh').slice(0,80)+': '+String(error&&error.message||error).slice(0,100));}
+      try{
+       if(typeof mesh.isReady==='function'&&!mesh.isReady(true)){
+        notReadyCount++;
+        if(notReadySamples.length<16)notReadySamples.push(String(mesh.name||mesh.id||'mesh').slice(0,100));
+       }
+      }catch(error){
+       notReadyCount++;
+       if(notReadySamples.length<16)notReadySamples.push(String(mesh.name||mesh.id||'mesh').slice(0,80)+': '+String(error&&error.message||error).slice(0,100));
+      }
      }
      let waitingItems=null;
      try{if(typeof scene.getWaitingItemsCount==='function')waitingItems=scene.getWaitingItemsCount();}catch(_){waitingItems=null;}
      const firstFrame=firstFrameRendered===true;
      const assetsSettled=waitingItems===null||waitingItems===0;
-     const ready=firstFrame&&activeMeshes.length>0&&notReady.length===0&&assetsSettled;
-     readyFrames=ready?readyFrames+1:0;
-     lastDiagnostic={firstFrameRendered:firstFrame,activeMeshCount:activeMeshes.length,notReadyMeshCount:notReady.length,notReadyMeshes:notReady.slice(0,16),waitingItems,stableReadyFrames:readyFrames,elapsedMs:Number((performance.now()-started).toFixed(1))};
-     if(readyFrames>=3)return lastDiagnostic;
+     const ready=firstFrame&&activeMeshCount>0&&notReadyCount===0&&assetsSettled;
+     readySamples=ready?readySamples+1:0;
+     lastDiagnostic={firstFrameRendered:firstFrame,activeMeshCount,notReadyMeshCount:notReadyCount,notReadyMeshes:notReadySamples,waitingItems,stableReadySamples:readySamples,readinessSampleIntervalMs:250,elapsedMs:Number((sampleAt-started).toFixed(1))};
+     if(readySamples>=3)return lastDiagnostic;
     }
-    throw new Error('La vista inicial no completó tres fotogramas estables: '+JSON.stringify(lastDiagnostic));
+    throw new Error('La vista inicial no completó tres muestras estables de 250 ms: '+JSON.stringify(lastDiagnostic));
    };
    const sceneReadyTasks=[waitForInitialViewReadiness()];"""
     if html.count(initial_view_marker) != 1:
