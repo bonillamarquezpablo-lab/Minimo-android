@@ -426,11 +426,11 @@ async function main() {
               source:'active-babylon-camera',
               cameraName:activeCamera?.name||null
             };
-            const actual=readback?.camera||null,actualTarget=readback?.target||null;
+            const actual=readback?.camera||null,verifiedTarget=readback?.target||null;
             const near=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=.20;
-            cameraVerified=cameraOwnsRender()&&!!actual&&!!actualTarget&&
+            cameraVerified=cameraOwnsRender()&&!!actual&&!!verifiedTarget&&
               near(actual.x,camera.x)&&near(actual.y,camera.y)&&near(actual.z,camera.z)&&
-              near(actualTarget.x,camera.targetX)&&near(actualTarget.y,camera.targetY)&&near(actualTarget.z,camera.targetZ);
+              near(verifiedTarget.x,camera.targetX)&&near(verifiedTarget.y,camera.targetY)&&near(verifiedTarget.z,camera.targetZ);
             readback={...readback,renderCamera:scene.activeCamera?.name||null,activeCameras:(scene.activeCameras||[]).map(item=>String(item?.name||''))};
             if(!cameraVerified)throw new Error('La captura no utilizó la cámara Babylon dirigida al animal: '+JSON.stringify({expected:camera,readback}));
             png=api?.captureCanvas?api.captureCanvas():canvas.toDataURL('image/png');
