@@ -55,5 +55,9 @@ assert.ok(builder.includes("if(startupResourceSnapshot.fauna.requested!==3||star
   'The final resource gate must verify all three terrestrial species in both profiles, not Quality only.');
 assert.ok(builder.includes("const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer)") && builder.includes("const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true") && builder.includes("if(forceCpuSkinning&&forceGpuSkinning)throw new Error") && builder.includes("const useCpuSkinning=forceCpuSkinning?true:(forceGpuSkinning?false:(isTouchDevice&&!softwareSkinningRenderer))") && builder.includes("mesh.computeBonesUsingShaders=!useCpuSkinning") && builder.includes("mesh.alwaysSelectAsActiveMesh=true") && builder.includes("skeleton.prepare()"), "The runtime default must remain CPU skinning on touch GPUs; explicit, mutually exclusive CPU/GPU overrides exist for diagnosis, and skinned meshes must avoid stale-bounds frustum culling.");
 assert.ok(builder.includes("clips.walk===clips.idle||clips.run===clips.walk||clips.run===clips.idle"), "Animals must not silently substitute idle for walking or walking for galloping.");
+assert.ok(builder.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
+  builder.includes("alignment:{source:'native-Fly-midpoint'") &&
+  builder.includes("alignmentDot<.995"),
+  "The gull body axis must be aligned from the evaluated native Fly pose, then rejected if residual pitch is not horizontal.");
 assert.ok(builder.includes('("idle", "walk", "gallop")'), "Every terrestrial species must provide the real Idle, Walk and Gallop GLB clips.");
 console.log('WILDLIFE RUNTIME CONTRACT: PASS (3 complete terrestrial species in both profiles, GLB integrity, skeletons, clips, textures, transactional cleanup and blocking readiness).');
