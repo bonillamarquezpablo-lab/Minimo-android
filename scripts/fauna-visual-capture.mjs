@@ -89,8 +89,10 @@ async function main() {
         ): [];
         const land=roots.filter(node=>/^WildlifeActor_/.test(String(node.name||''))).length;
         const birds=roots.filter(node=>/^RealSeagullActor_/.test(String(node.name||''))).length;
+        // Animal nodes may appear before their GLB rig, textures and scene warm-up finish.
+        // They are not evidence that the mandatory startup barrier has completed.
         return window.__elSinNombreStartupSmoke?.worldReady===true||
-          document.body.classList.contains('boot-failed')||land>=3||birds>=1;
+          document.body.classList.contains('boot-failed');
       },undefined,{timeout:FAUNA_ROSTER_TIMEOUT_MS,polling:250});
     } catch(error) {
       manifest.warnings.push({code:'startup-did-not-reach-fauna-roster',message:String(error?.message||error)});
@@ -145,8 +147,21 @@ async function main() {
     manifest.cameraTextureReadiness=manifest.startup.worldReady
       ?await page.evaluate(()=>window.__ELSN_TEST__?.prepareCaptureFrame?window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs:120000}):null)
       :null;
-    if(!manifest.startup.worldReady){
+    if(!manifest.startup.worldReady||manifest.startup.bootFailed||manifest.startupDiagnostic.resourceGate?.ready===false){
+      const blocker={
+        worldReady:manifest.startup.worldReady,
+        bootFailed:manifest.startup.bootFailed,
+        bodyClass:manifest.startupDiagnostic.bodyClass,
+        progress:manifest.startupDiagnostic.progress,
+        resourceGate:manifest.startupDiagnostic.resourceGate,
+        scene:manifest.startupDiagnostic.scene,
+        faunaReadiness:manifest.startupDiagnostic.faunaReadiness
+      };
       await page.screenshot({path:path.join(OUT,'startup-stalled-before-world-ready.png'),fullPage:true}).catch(()=>{});
+      manifest.verdict='startup-stalled-before-world-ready';
+      manifest.failures.push('La captura visual se bloquea: el arranque no alcanzó worldReady con la barrera de recursos completa. '+JSON.stringify(blocker));
+      saveManifest();
+      throw new Error('No se permite aceptar fauna ni capturas mientras el juego siga en booting o la barrera de recursos no esté lista: '+JSON.stringify(blocker));
     }
     if(manifest.startup.worldReady){
       await page.locator('#intro.open').waitFor({state:'visible',timeout:60000});
@@ -373,34 +388,49 @@ async function main() {
               if(wasEnabled){other.setEnabled(false);hidden.push(other);}
             }
           }
-          let readback=null,cameraVerified=false,png=null,bindPosePng=null,temporaryCamera=null,previousCamera=null;
+          let readback=null,cameraVerified=false,png=null,bindPosePng=null,temporaryCamera=null,previousCamera=null,previousActiveCameras=null;
           try{
-            if(api?.setCamera&&api?.render&&api?.captureCanvas&&api?.sceneViewSnapshot){
-              api.setCamera(camera);
-              await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+            const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
+            if(!B?.UniversalCamera||!canvas)throw new Error('No se puede crear una cámara temporal Babylon para una captura visual aislada.');
+            previousCamera=scene.activeCamera;
+            previousActiveCameras=scene.activeCameras;
+            temporaryCamera=new B.UniversalCamera('FaunaInspectorTemporaryCamera',new B.Vector3(camera.x,camera.y,camera.z),scene);
+            temporaryCamera.setTarget(new B.Vector3(camera.targetX,camera.targetY,camera.targetZ));
+            if(previousCamera){
+              temporaryCamera.fov=Number(previousCamera.fov)||temporaryCamera.fov;
+              temporaryCamera.minZ=Number(previousCamera.minZ)||temporaryCamera.minZ;
+              temporaryCamera.maxZ=Number(previousCamera.maxZ)||temporaryCamera.maxZ;
+              temporaryCamera.layerMask=Number(previousCamera.layerMask)||temporaryCamera.layerMask;
+            }
+            // Babylon renders activeCameras instead of activeCamera when the array is non-empty.
+            // Clear that list for this isolated capture, otherwise the screenshot can silently
+            // show the player's camera while a readback of the unused temporary camera passes.
+            scene.activeCameras=[];
+            scene.activeCamera=temporaryCamera;
+            await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            const cameraOwnsRender=()=>scene.activeCamera===temporaryCamera&&
+              (!Array.isArray(scene.activeCameras)||scene.activeCameras.length===0);
+            if(!cameraOwnsRender())throw new Error('Babylon no está renderizando con la cámara temporal del animal: '+JSON.stringify({
+              activeCamera:scene.activeCamera?.name||null,
+              activeCameras:(scene.activeCameras||[]).map(item=>String(item?.name||'')),
+              expected:temporaryCamera.name
+            }));
+            if(api?.render&&api?.captureCanvas&&api?.sceneViewSnapshot){
               api.render();
               readback=api.sceneViewSnapshot?.()||null;
-              const actual=readback?.camera||null,actualTarget=readback?.target||null;
-              const near=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=.20;
-              cameraVerified=!!actual&&!!actualTarget&&
-                near(actual.x,camera.x)&&near(actual.y,camera.y)&&near(actual.z,camera.z)&&
-                near(actualTarget.x,camera.targetX)&&near(actualTarget.y,camera.targetY)&&near(actualTarget.z,camera.targetZ);
-              if(!cameraVerified)throw new Error('La cámara del Inspector no alcanzó el animal: '+JSON.stringify({expected:camera,readback}));
-              png=api.captureCanvas();
             }else{
-              const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
-              if(!B?.UniversalCamera||!canvas)throw new Error('No se puede crear una cámara temporal Babylon para la captura parcial.');
-              previousCamera=scene.activeCamera;
-              temporaryCamera=new B.UniversalCamera('FaunaInspectorTemporaryCamera',new B.Vector3(camera.x,camera.y,camera.z),scene);
-              temporaryCamera.setTarget(new B.Vector3(camera.targetX,camera.targetY,camera.targetZ));
-              scene.activeCamera=temporaryCamera;
-              await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
               scene.render();
               const actual=temporaryCamera.position,actualTarget=temporaryCamera.getTarget();
               readback={camera:{x:actual.x,y:actual.y,z:actual.z},target:{x:actualTarget.x,y:actualTarget.y,z:actualTarget.z},source:'temporary-babylon-camera'};
-              cameraVerified=true;
-              png=canvas.toDataURL('image/png');
             }
+            const actual=readback?.camera||null,actualTarget=readback?.target||null;
+            const near=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=.20;
+            cameraVerified=cameraOwnsRender()&&!!actual&&!!actualTarget&&
+              near(actual.x,camera.x)&&near(actual.y,camera.y)&&near(actual.z,camera.z)&&
+              near(actualTarget.x,camera.targetX)&&near(actualTarget.y,camera.targetY)&&near(actualTarget.z,camera.targetZ);
+            readback={...readback,renderCamera:scene.activeCamera?.name||null,activeCameras:(scene.activeCameras||[]).map(item=>String(item?.name||''))};
+            if(!cameraVerified)throw new Error('La captura no utilizó la cámara Babylon dirigida al animal: '+JSON.stringify({expected:camera,readback}));
+            png=api?.captureCanvas?api.captureCanvas():canvas.toDataURL('image/png');
             if(!isBird&&angleDegrees===0){
               const canvas=document.getElementById('renderCanvas');
               const ownGroups=(scene.animationGroups||[]).filter(group=>(group.targetedAnimations||[]).some(entry=>{
@@ -425,6 +455,7 @@ async function main() {
             for(const other of hidden)other.setEnabled(true);
             if(temporaryCamera){
               scene.activeCamera=previousCamera;
+              if(previousActiveCameras!==null&&previousActiveCameras!==undefined)scene.activeCameras=previousActiveCameras;
               temporaryCamera.dispose();
               scene.render();
             }
