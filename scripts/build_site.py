@@ -2987,7 +2987,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  // Quality keeps the full native render scale selected at startup. Runtime pressure is
  // measured and reported, never hidden by reducing resolution or scene fidelity.
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
- const targetFrameRate=60;
+ const targetFrameRate=120;
  let lastQualityWarningAt=0;
  function adaptRenderQuality(dt){
   fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<2.0)return;fpsSample=0;
@@ -3005,13 +3005,13 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # Keep the accumulator aligned to the target cadence so 90 Hz panels alternate
     # one/two refresh intervals instead of collapsing to 45 Hz.
     frame_loop_marker = "engine.runRenderLoop(()=>{\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
-    frame_loop_replacement = "engine.runRenderLoop(()=>{\n  const now=performance.now(),frameIntervalMs=1000/targetFrameRate;if(!nextRenderAt)nextRenderAt=now;if(now+.5<nextRenderAt)return;if(now-nextRenderAt>frameIntervalMs*2)nextRenderAt=now;else nextRenderAt+=frameIntervalMs;\n  const rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
+    frame_loop_replacement = frame_loop_marker
     if html.count(frame_loop_marker) != 1:
         raise SystemExit("No se encontró el único bucle Babylon para aplicar el límite de 60 Hz.")
     html = html.replace(frame_loop_marker, frame_loop_replacement, 1)
 
     frame_clock_marker = "let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
-    frame_clock_replacement = "let last=performance.now(),nextRenderAt=0,mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
+    frame_clock_replacement = frame_clock_marker
     if html.count(frame_clock_marker) != 1:
         raise SystemExit("No se encontró el reloj único de render para instalar el planificador de fotogramas.")
     html = html.replace(frame_clock_marker, frame_clock_replacement, 1)
@@ -3029,25 +3029,25 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(fps_hud_marker, fps_hud_replacement, 1)
 
     fps_colour_marker = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
-    fps_colour_replacement = "meter.style.color=measured>=targetFrameRate-1?'#94d8a0':measured>=targetFrameRate*.90?'#e6c27f':'#ff9a83';"
+    fps_colour_replacement = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
     if html.count(fps_colour_marker) != 1:
         raise SystemExit("No se encontró el esquema único de color del HUD para 60 FPS.")
     html = html.replace(fps_colour_marker, fps_colour_replacement, 1)
 
     fps_title_marker = "meter.title='Objetivo: 120 FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms (120 FPS requiere ≤8,3 ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';"
-    fps_title_replacement = "meter.title='Objetivo: '+targetFrameRate+' FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms ('+targetFrameRate+' FPS requiere ≤'+(1000/targetFrameRate).toFixed(1)+' ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';"
+    fps_title_replacement = fps_title_marker
     if html.count(fps_title_marker) != 1:
         raise SystemExit("No se encontró el texto único del objetivo de FPS del HUD.")
     html = html.replace(fps_title_marker, fps_title_replacement, 1)
 
     visibility_clock_marker = "document.addEventListener('visibilitychange',()=>{last=performance.now();"
-    visibility_clock_replacement = "document.addEventListener('visibilitychange',()=>{last=performance.now();nextRenderAt=0;"
+    visibility_clock_replacement = visibility_clock_marker
     if html.count(visibility_clock_marker) != 1:
         raise SystemExit("No se encontró el reinicio único del reloj al cambiar la visibilidad.")
     html = html.replace(visibility_clock_marker, visibility_clock_replacement, 1)
 
     webgl_clock_marker = "engine.resize();scene.activeCamera=camera;last=performance.now();"
-    webgl_clock_replacement = "engine.resize();scene.activeCamera=camera;last=performance.now();nextRenderAt=0;"
+    webgl_clock_replacement = webgl_clock_marker
     if html.count(webgl_clock_marker) != 1:
         raise SystemExit("No se encontró el reinicio único del reloj tras restaurar WebGL.")
     html = html.replace(webgl_clock_marker, webgl_clock_replacement, 1)
