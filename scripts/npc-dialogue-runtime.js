@@ -300,9 +300,12 @@ function captureVisualProof(includeDataUrl=false){
   for(const slot of slots)clearSlot(slot);
   pending.length=0;
   const state=stateFor(target.id,now);state.nextAt=now;
+  lastActive=true;
   schedule(now,[target],s);
+  const smokeSlot=slots.find(slot=>slot.current&&slot.current.id===target.id);
+  if(smokeSlot)smokeSlot.current.expiresAt=now+45000;
   render(s);
-  return slots.some(slot=>slot.current&&slot.current.id===target.id);
+  return !!smokeSlot&&smokeSlot.current?.id===target.id;
  }
  const npcDialogueApi={
   getSnapshot:()=>({...diagnostics,...positioningPercentiles(),active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.roleText,kind:s.kindText,text:s.messageText})),lastAttachment:diagnostics.lastAttachment,lastHideReason:diagnostics.lastHideReason,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS}),
