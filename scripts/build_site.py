@@ -2161,7 +2161,7 @@ function updateWildlife(dt){
  // Quality fixes its native render scale at startup. Runtime FPS drops must never lower image quality.
  const qualityDpr=isPerformanceMode
   ?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile?.62:(constrainedHardware?.78:(isTouchDevice?1.0:1.35))))))
-  :Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.50:1.25):1.65);"""
+  :Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.80:1.45):1.65);"""
     if html.count(quality_profile_marker) != 1:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
     html = html.replace(quality_profile_marker, quality_profile_code, 1)
@@ -2983,36 +2983,17 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
     quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr,renderedFps=0;
- // Quality retains full geometry, materials, shadows and effects. Only internal pixel density
- // may adapt, and only when frame time is GPU-bound rather than dominated by JavaScript work.
- let qualityDprSlowSamples=0,qualityDprStableSamples=0,qualityDprChanges=0;
- const qualityDprFloor=isTouchDevice?(highHeadroomQualityMobile?1.00:0.92):qualityDpr,qualityDprCeiling=qualityDpr;
- let qualityDprLastChangeAt=0,lastWorldUpdateMs=0,lastRenderCpuMs=0;
+ // Quality keeps the full native render scale selected at startup. Runtime pressure is
+ // measured and reported, never hidden by reducing resolution or scene fidelity.
+ let lastWorldUpdateMs=0,lastRenderCpuMs=0;
  const targetFrameRate=60;
  let lastQualityWarningAt=0;
  function adaptRenderQuality(dt){
-  fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<1.0)return;fpsSample=0;
+  fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<2.0)return;fpsSample=0;
   const fps=renderedFps||engine.getFps(),now=performance.now();
-  if(!isPerformanceMode&&isTouchDevice){
-   const gpuLimitedFrame=fps<50&&lastWorldUpdateMs<14&&lastRenderCpuMs<14;
-   if(gpuLimitedFrame){qualityDprSlowSamples++;qualityDprStableSamples=0;}
-   else if(fps>=57&&lastWorldUpdateMs<8&&lastRenderCpuMs<9){qualityDprStableSamples++;qualityDprSlowSamples=0;}
-   else{qualityDprSlowSamples=0;qualityDprStableSamples=0;}
-   if(qualityDprSlowSamples>=2&&qualityDprCurrent>qualityDprFloor+.005&&now-qualityDprLastChangeAt>=2500){
-    qualityDprCurrent=Math.max(qualityDprFloor,Number((qualityDprCurrent-.12).toFixed(2)));
-    engine.setHardwareScalingLevel(1/qualityDprCurrent);
-    qualityDprLastChangeAt=now;qualityDprSlowSamples=0;qualityDprChanges++;
-    console.info('EL SIN NOMBRE: resolución interna adaptada para recuperar fluidez.',{fps:Math.round(fps),renderDpr:qualityDprCurrent,minDpr:qualityDprFloor,maxDpr:qualityDprCeiling,qualityScaleAdaptive:true,geometryAndEffectsPreserved:true,changes:qualityDprChanges,cpu:{worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
-   }else if(qualityDprStableSamples>=6&&qualityDprCurrent<qualityDprCeiling-.005&&now-qualityDprLastChangeAt>=8000){
-    qualityDprCurrent=Math.min(qualityDprCeiling,Number((qualityDprCurrent+.06).toFixed(2)));
-    engine.setHardwareScalingLevel(1/qualityDprCurrent);
-    qualityDprLastChangeAt=now;qualityDprStableSamples=0;qualityDprChanges++;
-    console.info('EL SIN NOMBRE: resolución interna recuperada tras estabilidad.',{fps:Math.round(fps),renderDpr:qualityDprCurrent,minDpr:qualityDprFloor,maxDpr:qualityDprCeiling,qualityScaleAdaptive:true,geometryAndEffectsPreserved:true,changes:qualityDprChanges});
-   }
-  }
   if(fps<24&&now-lastQualityWarningAt>=4000){
    lastQualityWarningAt=now;
-   console.warn('EL SIN NOMBRE: FPS bajo; Calidad conserva geometría y efectos y adapta solo la resolución interna.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleAdaptive:true,qualityDprFloor,qualityDprCeiling,qualityDprChanges,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
+   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
   }
  }"""
     if html.count(quality_adaptive_marker) != 1:
@@ -3188,7 +3169,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         ),
         (
             "if(dx*dx+dz*dz<reach*reach)list.push(mesh);",
-            "if(dx*dx+dz*dz<reach*reach){if(list.length<(isTouchDevice?(isConstrainedMobile?96:120):180))list.push(mesh);else reflectionLimitDiscardedMeshCount++;}",
+            "if(dx*dx+dz*dz<reach*reach){if(list.length<180)list.push(mesh);else reflectionLimitDiscardedMeshCount++;}",
             "cap the reflected island draw list at 260 representative meshes",
         ),
         (
@@ -3198,17 +3179,17 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         ),
         (
             "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024;",
-            "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:(highHeadroomQualityMobile?512:448)):1024;",
+            "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:(640)):1024;",
             "reduce mobile mirror target size while retaining a live water reflection",
         ),
         (
             "nordicWaterMirror.refreshRate=isTouchDevice?12:8;",
-            "nordicWaterMirror.refreshRate=isTouchDevice?(isConstrainedMobile?24:(highHeadroomQualityMobile?18:16)):8;",
+            "nordicWaterMirror.refreshRate=isTouchDevice?(isConstrainedMobile?24:(12)):8;",
             "refresh the mobile water mirror once every 20–24 frames",
         ),
         (
             "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?3:4));",
-            "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?12:8));",
+            "if(shadowMap)shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(10:4));",
             "reuse high-quality mobile shadows for six frames",
         ),
         (
