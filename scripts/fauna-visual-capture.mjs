@@ -332,7 +332,7 @@ async function main() {
     saveManifest();
 
     const captureCapabilities=await page.evaluate(()=>({
-      apiReady:!!window.__ELSN_TEST__?.setCamera&&!!window.__ELSN_TEST__?.captureCanvas&&!!window.__ELSN_TEST__?.sceneViewSnapshot,
+      apiReady:!!window.__ELSN_TEST__?.render&&!!window.__ELSN_TEST__?.captureCanvas,
       sceneReady:!!(window.__ELSN_FAUNA_CAPTURE_SCENE__||window.BABYLON?.EngineStore?.LastCreatedScene),
       canvasReady:!!document.getElementById('renderCanvas')
     }));
@@ -409,14 +409,23 @@ async function main() {
               activeCameras:(scene.activeCameras||[]).map(item=>String(item?.name||'')),
               expected:temporaryCamera.name
             }));
-            if(api?.render&&api?.captureCanvas&&api?.sceneViewSnapshot){
+            if(api?.render&&api?.captureCanvas){
               api.render();
-              readback=api.sceneViewSnapshot?.()||null;
             }else{
               scene.render();
-              const actual=temporaryCamera.position,actualTarget=temporaryCamera.getTarget();
-              readback={camera:{x:actual.x,y:actual.y,z:actual.z},target:{x:actualTarget.x,y:actualTarget.y,z:actualTarget.z},source:'temporary-babylon-camera'};
             }
+            // sceneViewSnapshot reports the game's player-camera state, not necessarily the
+            // temporary camera currently assigned to Babylon's active render pipeline.
+            // Verify the camera Babylon actually rendered with, after the manual frame.
+            const activeCamera=scene.activeCamera;
+            const actualPosition=activeCamera?.position;
+            const actualTarget=activeCamera?.getTarget?.();
+            readback={
+              camera:actualPosition?{x:actualPosition.x,y:actualPosition.y,z:actualPosition.z}:null,
+              target:actualTarget?{x:actualTarget.x,y:actualTarget.y,z:actualTarget.z}:null,
+              source:'active-babylon-camera',
+              cameraName:activeCamera?.name||null
+            };
             const actual=readback?.camera||null,actualTarget=readback?.target||null;
             const near=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a)-Number(b))<=.20;
             cameraVerified=cameraOwnsRender()&&!!actual&&!!actualTarget&&
