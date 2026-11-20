@@ -110,7 +110,7 @@ assert.match(smoke,/visualScreenshotCaptured: dialogueScreenshotCaptured/);
 assert.match(smoke,/npc-dialogue-screen\.png/);
 assert.match(smoke,/timeout:3000,animations:'disabled'/,'A full-page compositor screenshot is optional and must fail fast under SwiftShader rather than invalidate a successful Babylon billboard proof.');
 assert.match(smoke,/visualScreenshotIsOptionalUnderSoftwareRenderer:true/);
-assert.match(smoke,/visualProof\.meshEnabled===true[\s\S]{0,180}visualProof\.screenInViewport===true/,'Rendered-bubble acceptance must be based on live Babylon mesh visibility and camera projection, not screenshot-compositor availability.');
+assert.match(smoke,/renderedBubbleVerified: visualEvidence\.proof\.ready===true[\s\S]{0,320}visualEvidence\.proof\.meshEnabled\s*===\s*true[\s\S]{0,240}visualEvidence\.proof\.screenInViewport\s*===\s*true/,'Rendered-bubble acceptance must be based on live Babylon mesh visibility and camera projection, not screenshot-compositor availability.');
 assert.match(smoke,/renderedBubbleCount\) > 0/);
 assert.match(smoke,/renderedBubbleVerified/);
 assert.match(builder,/head=descendants\.find\(child=>child&&\/head\/i/);
