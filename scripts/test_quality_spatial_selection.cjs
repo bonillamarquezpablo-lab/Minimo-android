@@ -42,6 +42,10 @@ const dynamicAddEnd=builder.indexOf('const removeSpatialDynamicMesh=',dynamicAdd
 assert.ok(dynamicAddStart>=0&&dynamicAddEnd>dynamicAddStart,'Dynamic mesh registration must remain present.');
 const dynamicAddSource=builder.slice(dynamicAddStart,dynamicAddEnd);
 assert.ok(dynamicAddSource.includes('mesh.__elsnSpatialDynamic')&&dynamicAddSource.includes('dynamic.push(mesh)')&&!dynamicAddSource.includes('dynamic.indexOf(mesh)'),'Dynamic mesh registration must use the existing per-mesh O(1) duplicate flag instead of a repeated linear search.');
+assert.ok(dynamicAddSource.includes('deferStats=false') && dynamicAddSource.includes('if(!deferStats)updateSpatialSelectionCounts();') &&
+  builder.includes('addSpatialDynamicMesh(mesh,null,false,true);') &&
+  builder.includes('for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);\\n   updateSpatialSelectionCounts();'),
+  'Initial dynamic mesh registration must batch global statistics once after the scene scan; live objects must still update stats immediately.');
 
 for(const marker of [
   'scene.createOrUpdateSelectionOctree(64,3)',
