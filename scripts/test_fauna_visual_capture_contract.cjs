@@ -21,7 +21,8 @@ assert.ok(releaseWorkflow.includes('Diagnostic A/B capture with GPU skinning') &
   'Release validation must retain an independent GPU-skinning fauna diagnostic run.');
 const gpuDiagnosticStart=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning');
 const gpuDiagnosticEnd=releaseWorkflow.indexOf('- name: Preserve GPU skinning diagnostic evidence',gpuDiagnosticStart);
-assert.ok(gpuDiagnosticStart>=0&&gpuDiagnosticEnd>gpuDiagnosticStart&&releaseWorkflow.slice(gpuDiagnosticStart,gpuDiagnosticEnd).includes('if: always()'),
+assert.ok(releaseWorkflow.includes("id: playwright_install"), 'Playwright installation must be identifiable before optional diagnostic captures.');
+assert.ok(gpuDiagnosticStart>=0&&gpuDiagnosticEnd>gpuDiagnosticStart&&releaseWorkflow.slice(gpuDiagnosticStart,gpuDiagnosticEnd).includes("if: always() && steps.playwright_install.outcome == 'success'"),
   'GPU skinning diagnostics must still run when the primary CPU-fauna visual acceptance fails.');
 assert.ok(capture.includes('__ELSN_FAUNA_CAPTURE_SCENE__'));
 assert.ok(capture.includes('const number=value=>Number.isFinite(Number(value))?Number(Number(value).toFixed(4)):null;\n          const ancestorsContain='),
