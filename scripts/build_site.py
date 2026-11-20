@@ -3017,19 +3017,18 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         raise SystemExit("No se encontró exactamente la función original de supervisión de resolución.")
     html = html.replace(quality_adaptive_marker, quality_adaptive_code, 1)
 
-    # Enforce the declared 60 Hz Quality target at the render-loop boundary.
-    # Keep the accumulator aligned to the target cadence so 90 Hz panels alternate
-    # one/two refresh intervals instead of collapsing to 45 Hz.
+    # Preserve Babylon's native render-loop cadence: do not cap or pace frames below
+    # the display's actual refresh rate. Only measure rendered frames for diagnostics.
     frame_loop_marker = "engine.runRenderLoop(()=>{\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
     frame_loop_replacement = frame_loop_marker
     if html.count(frame_loop_marker) != 1:
-        raise SystemExit("No se encontró el único bucle Babylon para aplicar el límite de 60 Hz.")
+        raise SystemExit("No se encontró el bucle nativo de Babylon para preservar la frecuencia de refresco del dispositivo.")
     html = html.replace(frame_loop_marker, frame_loop_replacement, 1)
 
     frame_clock_marker = "let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"
     frame_clock_replacement = frame_clock_marker
     if html.count(frame_clock_marker) != 1:
-        raise SystemExit("No se encontró el reloj único de render para instalar el planificador de fotogramas.")
+        raise SystemExit("No se encontró el reloj único del bucle nativo para medir los fotogramas renderizados.")
     html = html.replace(frame_clock_marker, frame_clock_replacement, 1)
 
     fps_sample_marker = "fpsHudTime+=dt;"
@@ -3047,7 +3046,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     fps_colour_marker = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
     fps_colour_replacement = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
     if html.count(fps_colour_marker) != 1:
-        raise SystemExit("No se encontró el esquema único de color del HUD para 60 FPS.")
+        raise SystemExit("No se encontró el esquema único de color del HUD para pantallas de alta frecuencia.")
     html = html.replace(fps_colour_marker, fps_colour_replacement, 1)
 
     fps_title_marker = "meter.title='Objetivo: 120 FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms (120 FPS requiere ≤8,3 ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';"
