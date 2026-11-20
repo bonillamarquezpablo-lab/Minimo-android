@@ -70,7 +70,7 @@ assert.match(runtime,/function nearbyPeople\(s\)/);
 assert.match(runtime,/nextAt:now,lastSpokeAt:0/,"The first nearby NPC dialogue must not be delayed by a random cooldown.");
 assert.match(runtime,/lastScheduleSelectedCount=selected\.length/,"Dialogue scheduling must expose selected candidates for diagnosis.");
 assert.match(runtime,/lastScheduleDueCount=due\.length/,"Dialogue scheduling must expose due candidates for diagnosis.");
-assert.match(runtime,/\(\\d\+\)_/,"Village IDs must parse numeric suffixes for NPC conversations.");
+assert.ok(runtime.includes("VillageGuard)(\\d+)_"),"Village IDs must parse numeric suffixes for NPC conversations.");
 assert.match(runtime,/Core\.selectVisibleBubbles\(nearby\.map/);
 assert.match(runtime,/function updateWorldBubble\(slot,s\)/);
 assert.match(runtime,/slot\.mesh\.parent=root/);
