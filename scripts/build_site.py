@@ -1265,21 +1265,21 @@ function updateWildlife(dt){
     if(now>=nextDecision){
      const lastDecision=Number(animal._wildlifeLastDecisionAt);
      const decisionDt=Number.isFinite(lastDecision)?Math.max(.016,Math.min(.25,now-lastDecision)):.05;
-     const dx=focus.x-root.position.x,dz=focus.z-root.position.z,distanceSquared=dx*dx+dz*dz,dist=Math.sqrt(distanceSquared);
+     const dx=focus.x-root.position.x,dz=focus.z-root.position.z,distanceSquared=dx*dx+dz*dz;
      const near=distanceSquared<4900,mid=distanceSquared<22500;
      const decisionInterval=isTouchDevice
       ?(isPerformanceMode?(near?.10:(mid?.18:.32)):(near?.05:(mid?.10:.20)))
       :(near?(1/30):(mid?.075:.15));
      animal._wildlifeLastDecisionAt=now;
      animal._wildlifeNextDecisionAt=now+decisionInterval;
-     animal.flee=dist<14?Math.max(animal.flee,3.2):Math.max(0,animal.flee-decisionDt);
-     if(animal.flee>0&&dist>.01)animal.heading=Math.atan2(-dx,-dz);
+     animal.flee=distanceSquared<196?Math.max(animal.flee,3.2):Math.max(0,animal.flee-decisionDt);
+     if(animal.flee>0&&distanceSquared>.0001)animal.heading=Math.atan2(-dx,-dz);
      else{
       animal.turnTimer-=decisionDt;animal.wanderTimer-=decisionDt;
       if(animal.turnTimer<=0){animal.turnTimer=rand(2.5,6.5);animal.heading+=rand(-.72,.72);}
       if(animal.wanderTimer<=0){animal.wanderTimer=rand(2,5.5);animal.wandering=Math.random()<.58;}
      }
-     if(dist>(isTouchDevice?115:165)){
+     if(distanceSquared>(isTouchDevice?13225:27225)){
       if(animal.activeAnimation){(animal.groups||[]).forEach(group=>{try{group.stop();}catch(_){}});animal.activeAnimation=null;animal.activeMode='distance-idle';}
       animal._wildlifeVelocityX=0;animal._wildlifeVelocityZ=0;
      }else{
