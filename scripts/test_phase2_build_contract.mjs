@@ -7,6 +7,7 @@ const serviceWorker = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf
 const live = fs.readFileSync(new URL('../inspector/phase1-live.js', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../inspector/index.html', import.meta.url), 'utf8');
 const smoke = fs.readFileSync(new URL('./player-startup-smoke.mjs', import.meta.url), 'utf8');
+const faunaCapture = fs.readFileSync(new URL('./fauna-visual-capture.mjs', import.meta.url), 'utf8');
 const game = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 for (const marker of [
@@ -20,6 +21,8 @@ for (const marker of [
   'World inspection runtime JavaScript syntax validation failed:'
 ]) assert.ok(build.includes(marker), 'Build step missing: ' + marker);
 
+assert.match(faunaCapture, /page\.evaluate\(async\(\{animalId,angleDegrees\}\)=>\{\s*const api=window\.__ELSN_TEST__,scene=[\s\S]{0,260}const ancestorsContain=\(node,root\)=>/,
+  'The fauna capture page context must define its own ancestry helper before inspecting animation tracks.');
 assert.ok(validator.includes('"scripts/nordic/world-inspection.js"'));
 assert.ok(validator.includes('root.ELSNWorldInspection'));
 assert.ok(serviceWorker.includes('"./scripts/nordic/world-inspection.js"'));
