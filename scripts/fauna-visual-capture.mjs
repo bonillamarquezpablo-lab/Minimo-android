@@ -335,6 +335,7 @@ async function main() {
       for(const angle of ANGLES){
         const view=await page.evaluate(async({animalId,angleDegrees})=>{
           const api=window.__ELSN_TEST__,scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||window.BABYLON?.EngineStore?.LastCreatedScene;
+          const ancestorsContain=(node,root)=>{let current=node,depth=0;while(current&&depth++<48){if(current===root)return true;current=current.parent;}return false;};
           const root=scene?.getTransformNodeByName?.(animalId);
           if(!scene||!root)throw new Error('No se encuentra la escena o el actor de fauna para capturar: '+animalId+' · api='+!!api);
           root.computeWorldMatrix?.(true);
