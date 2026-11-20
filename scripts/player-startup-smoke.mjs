@@ -16,6 +16,8 @@ const startedAt = performance.now();
 const IDENTITY_START_WAIT_MS = 45000;
 // Full world boot takes ~134–166 s on the CI SwiftShader runner; keep a bounded 4-minute restart window.
 const STARTUP_RESTART_TIMEOUT_MS = 240000;
+// SwiftShader may take longer than a physical GPU to compile and draw the first complete world frame.
+const STARTUP_PRESENTATION_TIMEOUT_MS = 60000;
 const manifest = {
   schema: 1,
   capturedAt: new Date().toISOString(),
@@ -149,7 +151,7 @@ async function waitForStartupPresentation(page, phase) {
       !!intro && intro.classList.contains('open') &&
       intro.getAttribute('aria-hidden')==='false' &&
       (!loading || getComputedStyle(loading).display==='none');
-  },undefined,{timeout:30000,polling:100});
+  },undefined,{timeout:STARTUP_PRESENTATION_TIMEOUT_MS,polling:100});
   const state=await page.evaluate(()=>({
     bodyClass:document.body.className,
     introOpen:document.body.classList.contains('intro-open'),
