@@ -2502,9 +2502,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   mesh.__elsnSpatialDynamic=true;
   mesh.__elsnSpatialDynamicReason=classification;
   mesh.__elsnSpatialFreshUntilRenderId=(typeof scene.getRenderId==='function'?scene.getRenderId():0)+2;
-  if(typeof dynamic.indexOf==='function'){
-   if(dynamic.indexOf(mesh)<0)dynamic.push(mesh);
-  }else dynamic.push(mesh);
+  // The mesh flag above is the O(1) duplicate guard: existing Babylon dynamic
+  // entries are marked during octree creation before this registration path runs.
+  dynamic.push(mesh);
   spatialDynamicMeshSet.add(mesh);
   spatialSelectionStats.dynamicReasons[classification]=(spatialSelectionStats.dynamicReasons[classification]||0)+1;
   if(spatialSelectionStats.dynamicSampleNames.length<32)spatialSelectionStats.dynamicSampleNames.push({name:String(mesh.name||''),reason:classification});
