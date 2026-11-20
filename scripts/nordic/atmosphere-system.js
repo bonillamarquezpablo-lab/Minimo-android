@@ -720,8 +720,9 @@
         light.range = 11.5;
         light.intensity = 0;
         light.includedOnlyMeshes = this._fireFallbackMeshes;
-        // Keep the two point-light slots registered for the entire solar cycle.
-        // Intensity and local mesh membership change; the shader variant never toggles.
+        // Keep the selected point-light slots registered for the entire solar cycle.
+        // Touch GPUs use one local light; desktop tiers may use two. Intensity and
+        // mesh membership change without toggling shader variants.
         light.setEnabled(true);
         this.firePool.push({ light, source: null, phase: i * 2.17 });
       }
@@ -729,7 +730,7 @@
 
     _collectHearthMeshes(hearth) {
       const scene = this.scene;
-      if (!scene) return [];
+      if (!scene || !hearth || typeof hearth !== 'object') return [];
       // Use Babylon's already-culled active list: no forced world-matrix rebuild or
       // full 13-island mesh scan while the player is moving between hearths.
       // The hearth's bounded influence set is static; do not rebuild it from the camera-culled list.
