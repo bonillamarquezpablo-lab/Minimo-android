@@ -419,10 +419,10 @@ async function main() {
             // Verify the camera Babylon actually rendered with, after the manual frame.
             const activeCamera=scene.activeCamera;
             const actualPosition=activeCamera?.position;
-            const actualTarget=activeCamera?.getTarget?.();
+            const capturedTarget=activeCamera?.getTarget?.();
             readback={
               camera:actualPosition?{x:actualPosition.x,y:actualPosition.y,z:actualPosition.z}:null,
-              target:actualTarget?{x:actualTarget.x,y:actualTarget.y,z:actualTarget.z}:null,
+              target:capturedTarget?{x:capturedTarget.x,y:capturedTarget.y,z:capturedTarget.z}:null,
               source:'active-babylon-camera',
               cameraName:activeCamera?.name||null
             };
