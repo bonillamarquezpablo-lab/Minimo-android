@@ -149,7 +149,8 @@ assert.ok(validator.includes('"bootstrapAttempts++<80" in dialogue_runtime_sourc
   validator.includes('Math.min(1000,125+bootstrapAttempts*25)'),
   'Dialogue startup must retry with a low-frequency bounded poll until the game bridge is ready.');
 
-assert.ok(builder.includes('const targetFrameRate=60;'), 'The Quality runtime must target 60 frames per second.');
+assert.ok(builder.includes('const targetFrameRate=120;'), 'The Quality diagnostics must target high-refresh 120 Hz devices.');
+assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') && !builder.includes('frameIntervalMs=1000/targetFrameRate') && !builder.includes('if(now+.5<nextRenderAt)return'), 'Mobile Quality must not throttle rendering below the physical display refresh rate.');
 assert.ok(smoke.includes('npcDialogueVisualProbe') &&
   smoke.includes('renderedBubbleCount') &&
   smoke.includes('captureVisualProof') &&
@@ -157,7 +158,7 @@ assert.ok(smoke.includes('npcDialogueVisualProbe') &&
   smoke.includes('__ELSN_DIALOGUE_SMOKE_RESTORE__') &&
   !smoke.includes("page.screenshot({ path: path.join(OUT, 'npc-dialogue-visual.png')"),
   'Browser acceptance must verify a live NPC billboard and texture proof without blocking on Chromium screenshot compositing, then restore NPC position.');
-assert.ok(builder.includes('frameIntervalMs=1000/targetFrameRate') && builder.includes('if(now+.5<nextRenderAt)return') && builder.includes('nextRenderAt+=frameIntervalMs'), 'Babylon rendering and world simulation must be paced at the 60 Hz target on high-refresh displays.');
+assert.ok(builder.includes('fpsHudTime+=rawFrameMs/1000;fpsHudFrames++') && builder.includes('renderedFps=measured'), 'The FPS HUD and health report must count actual rendered frames over elapsed wall-clock time, including high-refresh screens.');
 assert.ok(builder.includes('fpsHudTime+=rawFrameMs/1000;fpsHudFrames++') && builder.includes('renderedFps=measured'), 'The FPS HUD and health report must count rendered game frames, not browser requestAnimationFrame callbacks.');
 assert.ok(builder.includes("meter.title='Objetivo: '+targetFrameRate+' FPS."), 'The FPS tooltip must show the enforced target and correct frame budget.');
 
