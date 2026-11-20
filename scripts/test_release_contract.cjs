@@ -123,7 +123,7 @@ assert.match(validator,/STARTUP_SCENE_WARMUP_TIMEOUT_MS=2200/);
 assert.ok(indexHtml.includes("audioPreloadResult=await NorseAudio.preloadAll(30000)"),"The required audio barrier must retry a still-pending first preload without skipping any sound effect.");
 assert.match(validator,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/);
 assert.match(validator,/sceneReadyTasks=\[waitForInitialViewReadiness\(\)\]/);
-assert.ok(buildSite.includes("initial_view_marker") && buildSite.includes("stableReadyFrames") && buildSite.includes("mesh.isReady(true)"),"The startup barrier must wait for the actual camera-visible meshes and settled scene assets, not every off-screen island shader.");
+assert.ok(buildSite.includes("initial_view_marker") && buildSite.includes("stableReadySamples") && buildSite.includes("readinessSampleIntervalMs:250") && buildSite.includes("activeData[index]") && !buildSite.includes("activeData.slice(0,active.length)") && buildSite.includes("mesh.isReady(true)"),"The startup barrier must sample actual camera-visible mesh readiness without allocating a full active-mesh copy every frame.");
 assert.ok(buildSite.includes("full_scene_compile_marker") && buildSite.includes("avoid a duplicate all-island compile pass"),"The release builder must remove the redundant full-scene material compilation while retaining the blocking readiness barrier.");
 assert.ok(buildSite.includes("const mineableGraniteMaterial=M.stoneLight;") && buildSite.includes("cap.material=M.stone;") && !buildSite.includes("M.stone.clone('MineableGraniteMaterial')"),"Mineable granite deposits must reuse preloaded scene materials to avoid an unready cloned shader variant.");
 assert.match(validator,/rows=isPerformanceMode\?13/);
