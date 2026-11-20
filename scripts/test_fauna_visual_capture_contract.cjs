@@ -50,6 +50,19 @@ assert.ok(capture.includes("if(!scene||!root)throw new Error("),
 assert.ok(capture.includes('window.__ELSN_FAUNA_CAPTURE_SCENE__||window.BABYLON?.EngineStore?.LastCreatedScene'),
   'The inspector must resolve the live scene even when the render hook has not captured it yet.');
 assert.ok(capture.includes('faunaWaitStarted') && capture.includes('actorRoots'));
+assert.ok(capture.includes("return window.__elSinNombreStartupSmoke?.worldReady===true||") &&
+  !capture.includes("document.body.classList.contains('boot-failed')||land>=3||birds>=1"),
+  'The animal roots must never short-circuit the mandatory startup barrier before worldReady.');
+assert.ok(capture.includes("if(!manifest.startup.worldReady||manifest.startup.bootFailed||manifest.startupDiagnostic.resourceGate?.ready===false)") &&
+  capture.includes("manifest.verdict='startup-stalled-before-world-ready'") &&
+  capture.includes("No se permite aceptar fauna ni capturas mientras el juego siga en booting"),
+  'Fauna visual acceptance must fail before taking animal captures when the full game startup/resource gate is not ready.');
+assert.ok(capture.includes("previousActiveCameras=scene.activeCameras") &&
+  capture.includes("scene.activeCameras=[]") &&
+  capture.includes("scene.activeCamera=temporaryCamera") &&
+  capture.includes("scene.activeCamera===temporaryCamera") &&
+  capture.includes("scene.activeCameras=previousActiveCameras"),
+  'Temporary fauna captures must disable Babylon multi-camera rendering, verify the active render camera, and restore the prior camera configuration.');
 assert.ok(capture.includes('const FAUNA_ROSTER_TIMEOUT_MS = 240000') && capture.includes('timeout:FAUNA_ROSTER_TIMEOUT_MS'),
   'Fauna inspection must allow the complete blocking startup window before declaring the roster missing.');
 assert.ok(capture.includes('getChildMeshes'));
