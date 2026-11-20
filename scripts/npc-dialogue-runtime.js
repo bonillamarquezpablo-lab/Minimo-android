@@ -290,7 +290,27 @@ function captureVisualProof(includeDataUrl=false){
   };
  }catch(error){return{ready:false,reason:String(error&&error.message||error)};}
 }
- window.__ELSN_NPC_DIALOGUES__=Object.freeze({getSnapshot:()=>({...diagnostics,...positioningPercentiles(),active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.roleText,kind:s.kindText,text:s.messageText})),lastAttachment:diagnostics.lastAttachment,lastHideReason:diagnostics.lastHideReason,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS}),captureVisualProof:includeDataUrl=>captureVisualProof(includeDataUrl===true)});
+ function triggerSmokeBubble(id){
+  const params=new URLSearchParams(location.search||'');
+  if(params.get('playertest')!=='1'||params.get('debug')!=='1')return false;
+  const now=Date.now(),s=snapshot();
+  if(!s||!s.active||document.hidden||blockingUi())return false;
+  const target=nearbyPeople(s).find(item=>item.id===String(id));
+  if(!target)return false;
+  for(const slot of slots)clearSlot(slot);
+  pending.length=0;
+  const state=stateFor(target.id,now);state.nextAt=now;
+  schedule(now,[target],s);
+  render(s);
+  return slots.some(slot=>slot.current&&slot.current.id===target.id);
+ }
+ const npcDialogueApi={
+  getSnapshot:()=>({...diagnostics,...positioningPercentiles(),active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.roleText,kind:s.kindText,text:s.messageText})),lastAttachment:diagnostics.lastAttachment,lastHideReason:diagnostics.lastHideReason,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS}),
+  captureVisualProof:includeDataUrl=>captureVisualProof(includeDataUrl===true)
+ };
+ const dialogueSmokeParams=new URLSearchParams(location.search||'');
+ if(dialogueSmokeParams.get('playertest')==='1'&&dialogueSmokeParams.get('debug')==='1')npcDialogueApi.triggerSmokeBubble=triggerSmokeBubble;
+ window.__ELSN_NPC_DIALOGUES__=Object.freeze(npcDialogueApi);
 
 }
 boot();
