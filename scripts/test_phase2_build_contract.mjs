@@ -31,6 +31,8 @@ assert.ok(live.includes('analyzeWorldInspectionSnapshot'));
 for (const id of ['worldInspectionCapture','worldInspectionJson','worldInspectionFindings','worldInspectionDownload','wildlifeInspectionGrid','wildlifeInspectionSummary']) {
   assert.ok(html.includes('id="' + id + '"'), 'Inspector is missing ' + id);
 }
+assert.ok(smoke.includes('waitForStartupPresentation') && smoke.includes("manifest.startupPresentation=await waitForStartupPresentation(page,'Primer arranque')") && smoke.includes("manifest.cachedStartupPresentation=await waitForStartupPresentation(page,'Arranque con caché')") && smoke.includes("manifest.offlineReload.startupPresentation=await waitForStartupPresentation(page,'Reinicio offline')"),
+  'The startup smoke must wait for the visible intro screen and verify booting is cleared after the resource gate on first, cached and offline starts.');
 assert.match(smoke, /identityFlow = 'first-run-anonymous'/,
   'The world-inspection smoke must support first-run identity setup.');
 assert.match(smoke, /identityFlow = 'returning-player-auto-boot'/,
