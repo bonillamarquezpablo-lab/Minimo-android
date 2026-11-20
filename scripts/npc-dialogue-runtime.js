@@ -88,7 +88,7 @@ function nearbyPeople(s){
   diagnostics.nearbyCount=result.length;
   return result;
 }
-function stateFor(id,now){let s=metadata.get(id);if(!s){s={nextAt:now+between(700,1500),lastSpokeAt:0,recentTopics:[],recentTexts:[] };metadata.set(id,s);}return s;}
+function stateFor(id,now){let s=metadata.get(id);if(!s){s={nextAt:now,lastSpokeAt:0,recentTopics:[],recentTexts:[] };metadata.set(id,s);}return s;}
 function pairKey(a,b){return[a,b].map(String).sort().join("::");}
 function pairMemory(a,b){const key=pairKey(a,b);let value=relationships.get(key);if(!value){value={key,rapport:0,exchanges:0,recentTopics:[]};relationships.set(key,value);if(relationships.size>64)relationships.delete(relationships.keys().next().value);}return value;}
 function rememberPair(pair,topic){if(!pair)return;pair.exchanges++;pair.rapport=Math.min(5,pair.rapport+0.65);if(topic){pair.recentTopics.push(topic);if(pair.recentTopics.length>4)pair.recentTopics.shift();}saveSocialMemory();}
@@ -122,6 +122,7 @@ function schedule(now,nearby,s){
  if(captured!==null){if(lastCapturedCount!==null&&captured>lastCapturedCount)recentCaptureUntil=now+30000;lastCapturedCount=captured;}
  const selected=Core.selectVisibleBubbles(nearby.map(x=>({item:x,distance:x.distance,priority:x.distance<7?3:(x.distance<14?2:1),visible:true})),bubbleLimit()).map(x=>x.item);
  const due=selected.filter(x=>stateFor(x.id,now).nextAt<=now&&!slots.some(slot=>slot.current&&slot.current.id===x.id));
+ diagnostics.lastScheduleAt=now;diagnostics.lastScheduleSelectedCount=selected.length;diagnostics.lastScheduleDueCount=due.length;diagnostics.lastScheduledNpc=due[0]?.id||null;
  if(!due.length)return;
  due.sort((a,b)=>a.distance-b.distance);
  const chosen=due[Math.floor(random()*Math.min(due.length,3))],state=stateFor(chosen.id,now);
