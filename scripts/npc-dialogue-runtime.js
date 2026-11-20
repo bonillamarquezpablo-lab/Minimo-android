@@ -261,17 +261,32 @@ function captureVisualProof(includeDataUrl=false){
   const context=slot.texture.getContext(),canvas=context&&context.canvas;
   if(!canvas||typeof canvas.toDataURL!=="function")return{ready:false,reason:"texture-canvas-unavailable"};
   const enabled=typeof slot.mesh.isEnabled==="function"?slot.mesh.isEnabled():slot.mesh.isVisible!==false;
+  const visible=slot.mesh.isVisible!==false&&Number(slot.mesh.visibility??1)>0;
+  const meshReady=typeof slot.mesh.isReady==="function"?slot.mesh.isReady(true):true;
   const parent=slot.mesh.parent,position=slot.mesh.position;
+  const scene=slot.mesh.getScene?.(),camera=scene?.activeCamera,engine=scene?.getEngine?.();
+  let screenPosition=null,screenInViewport=false;
+  try{
+   slot.mesh.computeWorldMatrix?.(true);
+   const B=window.BABYLON,world=slot.mesh.getAbsolutePosition?.();
+   const viewport=camera?.viewport?.toGlobal?.(engine?.getRenderWidth?.()||0,engine?.getRenderHeight?.()||0);
+   const transform=scene?.getTransformMatrix?.();
+   if(B?.Vector3?.Project&&B?.Matrix?.Identity&&world&&viewport&&transform){
+    const projected=B.Vector3.Project(world,B.Matrix.Identity(),transform,viewport);
+    screenPosition={x:Number(projected.x.toFixed(1)),y:Number(projected.y.toFixed(1)),depth:Number(projected.z.toFixed(4))};
+    screenInViewport=projected.z>=0&&projected.z<=1&&projected.x>=0&&projected.y>=0&&projected.x<=engine.getRenderWidth()&&projected.y<=engine.getRenderHeight();
+   }
+  }catch(_){}
   const dataUrl=includeDataUrl?canvas.toDataURL("image/png"):null;
+  const ready=!!enabled&&visible&&!!meshReady&&screenInViewport&&!slot.textDirty&&!!slot.messageText&&slot.lastUploadInvertY===true;
   return{
-   ready:!!enabled&&!slot.textDirty&&!!slot.messageText&&slot.lastUploadInvertY===true,
-   id:slot.current.id,role:slot.roleText,text:slot.messageText,messagePainted:!slot.textDirty,
-   meshEnabled:!!enabled,renderingGroupId:Number(slot.mesh.renderingGroupId),
+   ready,id:slot.current.id,role:slot.roleText,text:slot.messageText,messagePainted:!slot.textDirty,
+   meshEnabled:!!enabled,meshVisible:visible,meshReady:!!meshReady,screenInViewport,screenPosition,
+   renderingGroupId:Number(slot.mesh.renderingGroupId),sceneRenderId:scene?.getRenderId?.()??null,
    parentName:String(parent&&(parent.name||parent.id)||""),
    position:position?{x:Number(position.x.toFixed(3)),y:Number(position.y.toFixed(3)),z:Number(position.z.toFixed(3))}:null,
    texture:{width:Number(canvas.width),height:Number(canvas.height),vScale:Number(slot.texture.vScale),vOffset:Number(slot.texture.vOffset)},
-   uploadInvertY:slot.lastUploadInvertY===true,
-   dataUrl
+   uploadInvertY:slot.lastUploadInvertY===true,dataUrl
   };
  }catch(error){return{ready:false,reason:String(error&&error.message||error)};}
 }
