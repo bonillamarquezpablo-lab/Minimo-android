@@ -73,9 +73,14 @@ assert.ok(recorder.includes('cpuGpuDiagnosis') && recorder.includes('cpuWorldP95
 assert.ok(gameHtml.includes('gpuTimerQuery:\'not measured; scene.render duration is CPU wall-clock only\''),
   'Unavailable GPU timing must not be misreported as zero.');
 assert.ok(builder.includes('qualityDprFloor')&&builder.includes('qualityDprCeiling')&&
-  builder.includes('fps<49&&lastWorldUpdateMs<8&&lastRenderCpuMs<9')&&
+  builder.includes('fps<50&&lastWorldUpdateMs<14&&lastRenderCpuMs<14')&&
   builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)')&&builder.includes('geometryAndEffectsPreserved:true'),
   'The Quality profile may adapt only bounded internal resolution under sustained GPU pressure, never to mask CPU hitches or remove scene detail.');
+assert.ok(builder.includes("highHeadroomQualityMobile?1.50:1.25") && builder.includes("highHeadroomQualityMobile?1.00:0.92"), 'Mobile Quality must use a bounded startup render scale and preserve enough headroom for sustained load.');
+assert.ok(builder.includes("highHeadroomQualityMobile?12:8") && builder.includes("highHeadroomQualityMobile?512:448"), 'Mobile high-quality shadows and water reflections must refresh less often at lower resolution.');
+assert.ok(builder.includes("isConstrainedMobile?96:120") && builder.includes("highHeadroomQualityMobile?18:16"), 'Mobile water reflections must cap reflected objects and reduce refresh frequency.');
+assert.ok(atmosphere.includes("const poolSize = this.isTouchDevice ? 1") && atmosphere.includes("this._hearthMeshCache.set(hearth, included)"), 'Mobile night lighting must use one local hearth and reuse its static influence list.');
+assert.ok(atmosphere.includes("mobileHigh ? 16") && atmosphere.includes("mobileHigh ? 0.16"), 'Flagship mobile bloom must use a smaller kernel and scale.');
 assert.ok(builder.includes("f.light&&typeof f.light.isEnabled==='function'&&!f.light.isEnabled()"),
   'Disabled legacy hearth lights must not be animated every frame.');
 assert.ok(builder.includes('sparkDx*sparkDx+sparkDz*sparkDz>140*140') &&
