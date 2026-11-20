@@ -83,14 +83,8 @@ async function main() {
     const faunaWaitStarted=Date.now();
     try {
       await page.waitForFunction(()=>{
-        const scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||window.BABYLON?.EngineStore?.LastCreatedScene;
-        const roots=scene?(scene.transformNodes||[]).filter(node=>
-          /^(?:WildlifeActor_(?:deer|stag|wolf)_\d+|RealSeagullActor_\d+)$/.test(String(node?.name||''))&&!node.isDisposed?.()
-        ): [];
-        const land=roots.filter(node=>/^WildlifeActor_/.test(String(node.name||''))).length;
-        const birds=roots.filter(node=>/^RealSeagullActor_/.test(String(node.name||''))).length;
-        // Animal nodes may appear before their GLB rig, textures and scene warm-up finish.
-        // They are not evidence that the mandatory startup barrier has completed.
+        // Only the complete startup barrier is authoritative; actor roots can exist while
+        // the fauna loader, native rigs, audio and shader warm-up are still incomplete.
         return window.__elSinNombreStartupSmoke?.worldReady===true||
           document.body.classList.contains('boot-failed');
       },undefined,{timeout:FAUNA_ROSTER_TIMEOUT_MS,polling:250});
