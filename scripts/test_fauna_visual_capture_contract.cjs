@@ -19,7 +19,9 @@ assert.ok(runner.includes('scripts/create_fauna_contact_sheet.py'));
 assert.ok(runner.includes('results:{player,texture,grounding,coastal,custom,fauna,beforeAfter}'));
 assert.ok(releaseWorkflow.includes('Diagnostic A/B capture with GPU skinning') && releaseWorkflow.includes('FAUNA_SKINNING_MODE: gpu') && releaseWorkflow.includes('FAUNA_CAPTURE_OUTPUT: artifacts/fauna-visual-captures-gpu'),
   'Release validation must retain an independent GPU-skinning fauna diagnostic run.');
-assert.match(releaseWorkflow,/Diagnostic A\/B capture with GPU skinning[\\s\\S]{0,180}if: always\(\)/,
+const gpuDiagnosticStart=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning');
+const gpuDiagnosticEnd=releaseWorkflow.indexOf('- name: Preserve GPU skinning diagnostic evidence',gpuDiagnosticStart);
+assert.ok(gpuDiagnosticStart>=0&&gpuDiagnosticEnd>gpuDiagnosticStart&&releaseWorkflow.slice(gpuDiagnosticStart,gpuDiagnosticEnd).includes('if: always()'),
   'GPU skinning diagnostics must still run when the primary CPU-fauna visual acceptance fails.');
 assert.ok(capture.includes('__ELSN_FAUNA_CAPTURE_SCENE__'));
 assert.ok(capture.includes('const number=value=>Number.isFinite(Number(value))?Number(Number(value).toFixed(4)):null;\n          const ancestorsContain='),
