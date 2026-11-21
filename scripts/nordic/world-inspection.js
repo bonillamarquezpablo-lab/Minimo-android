@@ -19,18 +19,58 @@
     };
   }
 
+  function transformedLocalBounds(mesh, box) {
+    const localMin = box && box.minimum;
+    const localMax = box && box.maximum;
+    const matrix = safeCall(() => typeof mesh.getWorldMatrix === 'function' ? mesh.getWorldMatrix() : null);
+    const m = matrix && matrix.m;
+    if (!localMin || !localMax || !m || m.length < 16) return null;
+    const corners = [];
+    for (const x of [localMin.x, localMax.x]) {
+      for (const y of [localMin.y, localMax.y]) {
+        for (const z of [localMin.z, localMax.z]) {
+          const point = {
+            x: m[0] * x + m[4] * y + m[8] * z + m[12],
+            y: m[1] * x + m[5] * y + m[9] * z + m[13],
+            z: m[2] * x + m[6] * y + m[10] * z + m[14]
+          };
+          if (![point.x, point.y, point.z].every(finite)) return null;
+          corners.push(point);
+        }
+      }
+    }
+    return {
+      min: {
+        x: Math.min(...corners.map(point => point.x)),
+        y: Math.min(...corners.map(point => point.y)),
+        z: Math.min(...corners.map(point => point.z))
+      },
+      max: {
+        x: Math.max(...corners.map(point => point.x)),
+        y: Math.max(...corners.map(point => point.y)),
+        z: Math.max(...corners.map(point => point.z))
+      }
+    };
+  }
+
   function readBounds(mesh) {
     try {
       if (typeof mesh.computeWorldMatrix === 'function') mesh.computeWorldMatrix(true);
       const info = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
       const box = info && info.boundingBox;
-      const min = box && box.minimumWorld;
-      const max = box && box.maximumWorld;
+      // GPU skinning deforms vertices in the shader. Babylon's minimumWorld/maximumWorld
+      // can therefore be stale or expanded in a different space. For skinned meshes,
+      // measure the immutable bind-pose local AABB through the current world matrix.
+      // This preserves the imported model scale without inventing or clamping dimensions.
+      const bindPoseBounds = mesh && mesh.skeleton ? transformedLocalBounds(mesh, box) : null;
+      const min = bindPoseBounds ? bindPoseBounds.min : box && box.minimumWorld;
+      const max = bindPoseBounds ? bindPoseBounds.max : box && box.maximumWorld;
       if (!min || !max) return { available: false, min: null, max: null, size: null, finite: null };
       const values = [min.x, min.y, min.z, max.x, max.y, max.z];
       const valid = values.every(finite);
       if (!valid) return {
-        available: true, min: null, max: null, size: null, finite: false
+        available: true, min: null, max: null, size: null, finite: false,
+        basis: bindPoseBounds ? 'skinned-bind-pose-local' : 'babylon-world'
       };
       return {
         available: true,
@@ -39,7 +79,8 @@
         size: {
           x: round(max.x - min.x), y: round(max.y - min.y), z: round(max.z - min.z)
         },
-        finite: true
+        finite: true,
+        basis: bindPoseBounds ? 'skinned-bind-pose-local' : 'babylon-world'
       };
     } catch (error) {
       return { available: false, min: null, max: null, size: null, finite: null, error: String(error && error.message || error) };
