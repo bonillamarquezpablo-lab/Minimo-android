@@ -5776,7 +5776,8 @@ void main(void){
    const ancestors=[];for(let parent=mesh&&mesh.parent;parent;parent=parent.parent)ancestors.unshift(parent);
    for(const parent of ancestors)if(typeof parent.computeWorldMatrix==='function')parent.computeWorldMatrix(true);
    if(mesh&&typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix(true);
-   const isSkinned=!!mesh.skeleton&&Number(mesh.numBoneInfluencers)>0;
+   const VB=B.VertexBuffer||{},skinIndices=mesh&&typeof mesh.getVerticesData==='function'?mesh.getVerticesData(VB.MatricesIndicesKind||'matricesIndices'):null,skinWeights=mesh&&typeof mesh.getVerticesData==='function'?mesh.getVerticesData(VB.MatricesWeightsKind||'matricesWeights'):null;
+   const isSkinned=!!(mesh&&mesh.skeleton&&Number(mesh.numBoneInfluencers)>0&&skinIndices&&skinWeights);
    if(isSkinned){
     const bounds=skinnedVertexWorldBounds(mesh);
     if(!bounds)continue;

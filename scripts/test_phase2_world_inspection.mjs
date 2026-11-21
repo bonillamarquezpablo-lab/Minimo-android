@@ -187,6 +187,8 @@ assert.equal(inspectedWolf.textureReadiness.pending,1);
 assert.equal(inspectedWolf.bounds.size.y,.86);
 assert.equal(inspectedWolf.visualIntegrity.plausibleBounds,true);
 assert.ok(inspectedWolf.meshes[0].bounds.finite);
+assert.ok(worldInspection.includes('skinIndices && skinWeights'),
+  'Vegetation without actual JOINTS/WEIGHTS buffers must retain Babylon native bounds.');
 assert.equal(inspectedWolf.meshes[0].bounds.basis,'skinned-vertex-world',
   'Skinned meshes must be measured from original vertices deformed once by current bone matrices.');
  assert.equal(inspectedWolf.bounds.size.x,.9);

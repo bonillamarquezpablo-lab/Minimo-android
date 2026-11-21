@@ -43,8 +43,9 @@ for(const marker of ['visualIntegrity','playingAnimationGroups','textureReadines
 assert.ok(worldInspection.includes('function skinnedVertexWorldBounds(mesh)') &&
   worldInspection.includes("'skinned-vertex-world'") &&
   worldInspection.includes('skeleton.getTransformMatrices(mesh)') &&
+  worldInspection.includes('skinIndices && skinWeights') &&
   !worldInspection.includes('mesh.refreshBoundingInfo(true)'),
-  'Skinned wildlife diagnostics must skin original vertices exactly once with current bone matrices.');
+  'Skinned wildlife diagnostics must skin original vertices exactly once, and only for meshes with actual bone buffers.');
 assert.ok(html.includes('function skinnedVertexWorldBounds(mesh)') &&
   html.includes('mesh.setPositionsForCPUSkinning()') &&
   html.includes('skeleton.getTransformMatrices(mesh)'),
@@ -108,13 +109,17 @@ vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+
 assert.equal(Number(fittingSandbox.__fit.factor.toFixed(3)),1.42);
 assert.equal(Number(fittingSandbox.__fit.bounds.height.toFixed(3)),1.42);
 assert.equal(Number(dynamicActor.scaling.y.toFixed(3)),1.42);
-const unskinnedSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:{
+const unskinnedSandbox={B:{Vector3:Vec3,VertexBuffer},scene:{incrementRenderId(){}},mesh:{
+  // Vegetation can carry Babylon skeleton metadata / influence count without actual skin buffers.
+  skeleton:{name:'DecorationMetadataOnly'},numBoneInfluencers:4,getVerticesData(){return null;},
   computeWorldMatrix(){},getBoundingInfo(){return {boundingBox:{minimum:{x:0,y:0,z:0},maximum:{x:1,y:1,z:1},
     minimumWorld:{x:2,y:3,z:4},maximumWorld:{x:4,y:6,z:8}}};}
 }};
 vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',unskinnedSandbox);
 assert.equal(unskinnedSandbox.__measured.width,2,'Unskinned meshes must retain Babylon native world bounds.');
 assert.equal(unskinnedSandbox.__measured.height,3);
+assert.ok(html.includes('skinIndices&&skinWeights'),
+ 'Meshes require real bone attribute buffers before using the skinning bounds path.');
 assert.ok(html.includes('for(let parent=mesh&&mesh.parent;parent;parent=parent.parent)ancestors.unshift(parent)') &&
   worldInspection.includes('for (let parent = mesh && mesh.parent; parent; parent = parent.parent) ancestors.unshift(parent)'),
   'Runtime and inspection bounds must refresh every ancestor matrix before measuring skinned children.');
