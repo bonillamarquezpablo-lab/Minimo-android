@@ -79,7 +79,7 @@
       for (let parent = mesh && mesh.parent; parent; parent = parent.parent) ancestors.unshift(parent);
       ancestors.forEach(parent => safeCall(() => typeof parent.computeWorldMatrix === 'function' ? parent.computeWorldMatrix(true) : null));
       if (typeof mesh.computeWorldMatrix === 'function') mesh.computeWorldMatrix(true);
-      const isSkinned = !!(mesh && (mesh.skeleton || Number(mesh.numBoneInfluencers) > 0));
+      const isSkinned = !!(mesh && mesh.skeleton && Number(mesh.numBoneInfluencers) > 0);
       const info = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
       const box = info && info.boundingBox;
       let bounds = null;
