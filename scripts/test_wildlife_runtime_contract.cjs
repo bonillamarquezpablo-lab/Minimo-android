@@ -43,7 +43,7 @@ for(const marker of ['visualIntegrity','playingAnimationGroups','textureReadines
 assert.ok(worldInspection.includes('function transformedLocalBounds(mesh, box)') &&
   worldInspection.includes("'skinned-deformed-local'") &&
   worldInspection.includes('mesh.refreshBoundingInfo(true)') &&
-  worldInspection.includes('mesh.skeleton ? transformedLocalBounds(mesh, box) : null'),
+  worldInspection.includes('const deformedBounds = isSkinned ? transformedLocalBounds(mesh, box) : null'),
   'Skinned wildlife diagnostics must measure skeleton-deformed local bounds, not bind-pose bounds or stale GPU world AABBs.');
 assert.ok(html.includes('function transformedSkinnedBounds(mesh,boundingBox)') &&
   html.includes('mesh.refreshBoundingInfo(true)') &&
