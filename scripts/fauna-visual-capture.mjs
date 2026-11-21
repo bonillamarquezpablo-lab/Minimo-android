@@ -193,32 +193,65 @@ async function main() {
         const meshRows=meshes.map(mesh=>{
           mesh.computeWorldMatrix?.(true);
           const bounds=mesh.getBoundingInfo?.()?.boundingBox;
-          const lo=bounds?.minimumWorld,hi=bounds?.maximumWorld;
+          const vertices=Number(mesh.getTotalVertices?.())||0;
+          const indices=Number(mesh.getTotalIndices?.())||0;
+          const skinned=!!mesh.skeleton||Number(mesh.numBoneInfluencers)>0;
+          let lo=bounds?.minimumWorld||null,hi=bounds?.maximumWorld||null;
+          let localMin=bounds?.minimum||null,localMax=bounds?.maximum||null;
+          let boundsBasis='babylon-native-world';
+          if(skinned){
+            // GPU skinning leaves Babylon's native AABB at bind pose. Query Babylon's
+            // public CPU vertex evaluator for the live skeleton+morph pose instead.
+            const positions=typeof mesh.getPositionData==='function'?mesh.getPositionData(true,true):null;
+            const world=mesh.getWorldMatrix?.(),wm=world?.m;
+            if(!positions||positions.length<3||!wm||wm.length<16){
+              throw new Error('No se pueden medir los vértices deformados de '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+            }
+            localMin={x:Infinity,y:Infinity,z:Infinity};
+            localMax={x:-Infinity,y:-Infinity,z:-Infinity};
+            lo={x:Infinity,y:Infinity,z:Infinity};
+            hi={x:-Infinity,y:-Infinity,z:-Infinity};
+            for(let p=0;p+2<positions.length;p+=3){
+              const x=Number(positions[p]),y=Number(positions[p+1]),z=Number(positions[p+2]);
+              if(![x,y,z].every(Number.isFinite))throw new Error('Vértice deformado no finito en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+              localMin.x=Math.min(localMin.x,x);localMin.y=Math.min(localMin.y,y);localMin.z=Math.min(localMin.z,z);
+              localMax.x=Math.max(localMax.x,x);localMax.y=Math.max(localMax.y,y);localMax.z=Math.max(localMax.z,z);
+              const ww=wm[3]*x+wm[7]*y+wm[11]*z+wm[15];
+              if(!Number.isFinite(ww)||Math.abs(ww)<1e-10)throw new Error('Matriz mundial inválida al medir '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+              const iw=1/ww;
+              const point={
+                x:(wm[0]*x+wm[4]*y+wm[8]*z+wm[12])*iw,
+                y:(wm[1]*x+wm[5]*y+wm[9]*z+wm[13])*iw,
+                z:(wm[2]*x+wm[6]*y+wm[10]*z+wm[14])*iw
+              };
+              if(![point.x,point.y,point.z].every(Number.isFinite))throw new Error('Transformación mundial no finita en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+              lo.x=Math.min(lo.x,point.x);lo.y=Math.min(lo.y,point.y);lo.z=Math.min(lo.z,point.z);
+              hi.x=Math.max(hi.x,point.x);hi.y=Math.max(hi.y,point.y);hi.z=Math.max(hi.z,point.z);
+            }
+            boundsBasis='babylon-getPositionData-world';
+          }
           if(lo&&hi){
             min.x=Math.min(min.x,lo.x);min.y=Math.min(min.y,lo.y);min.z=Math.min(min.z,lo.z);
             max.x=Math.max(max.x,hi.x);max.y=Math.max(max.y,hi.y);max.z=Math.max(max.z,hi.z);
           }
-          const vertices=Number(mesh.getTotalVertices?.())||0;
-          const indices=Number(mesh.getTotalIndices?.())||0;
-          const skinned=!!mesh.skeleton||Number(mesh.numBoneInfluencers)>0;
           totalVertices+=vertices;totalIndices+=indices;
           if(skinned)skinnedVertices+=vertices;
           if(mesh.isVisible!==false&&mesh.isEnabled?.()!==false&&Number(mesh.visibility??1)>0)visibleMeshCount++;
           if(mesh.skeleton)skeletons.add(mesh.skeleton);
           if(mesh.material){
             materials.set(mesh.material.uniqueId??mesh.material.name,mesh.material);
-            for(const texture of mesh.material.getActiveTextures?.()||[])textures.set(texture.uniqueId??texture.name,texture);
+            for(const texture of mesh.material.getActiveTextures?.()||[])textures.set(texture.uniqueId??mesh.material.name,mesh.material);
           }
-          const local=bounds?{
-            min:{x:number(bounds.minimum.x),y:number(bounds.minimum.y),z:number(bounds.minimum.z)},
-            max:{x:number(bounds.maximum.x),y:number(bounds.maximum.y),z:number(bounds.maximum.z)}
+          const local=localMin&&localMax?{
+            min:{x:number(localMin.x),y:number(localMin.y),z:number(localMin.z)},
+            max:{x:number(localMax.x),y:number(localMax.y),z:number(localMax.z)}
           }:null;
           return {
             name:String(mesh.name||mesh.id||''),vertices,indices,skinned,
             skeleton:mesh.skeleton?.name||null,alwaysSelectAsActiveMesh:mesh.alwaysSelectAsActiveMesh===true,enabled:mesh.isEnabled?.()!==false,
             visible:mesh.isVisible!==false,visibility:number(mesh.visibility??1),
             material:mesh.material?.name||null,localBounds:local,
-            worldBounds:lo&&hi?{min:{x:number(lo.x),y:number(lo.y),z:number(lo.z)},max:{x:number(hi.x),y:number(hi.y),z:number(hi.z)}}:null,
+            worldBounds:lo&&hi?{min:{x:number(lo.x),y:number(lo.y),z:number(lo.z)},max:{x:number(hi.x),y:number(hi.y),z:number(hi.z)},basis:boundsBasis}:null,
             parentChain:(()=>{const rows=[];let node=mesh;while(node&&rows.length<8){rows.push({name:String(node.name||''),type:node.getClassName?.()||node.constructor?.name||'',parent:String(node.parent?.name||''),position:vec(node.position),scaling:vec(node.scaling)});node=node.parent;}return rows;})()
           };
         });
