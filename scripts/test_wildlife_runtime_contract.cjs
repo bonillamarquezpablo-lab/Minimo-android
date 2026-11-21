@@ -49,7 +49,7 @@ assert.ok(html.includes('function transformedSkinnedBounds(mesh,boundingBox)') &
   html.includes('if(isSkinned&&!localBounds)throw new Error'),
   'Wildlife normalization must use local bind-pose bounds transformed by the live world matrix, never stale GPU world AABBs.');
 const boundsStart=html.indexOf(' function transformedSkinnedBounds(mesh,boundingBox){');
-const boundsEnd=html.indexOf('\n function makeHeldEnemySword',boundsStart);
+const boundsEnd=html.indexOf('function makeHeldEnemySword',boundsStart);
 assert.ok(boundsStart>=0&&boundsEnd>boundsStart,'Production wildlife bounds functions must be available for deterministic scale regression.');
 class Vec3 { constructor(x,y,z){this.x=x;this.y=y;this.z=z;} clone(){return new Vec3(this.x,this.y,this.z);} }
 const boundsSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:null};
@@ -57,7 +57,7 @@ boundsSandbox.mesh={skeleton:{name:'DeerRig'},numBoneInfluencers:4,computeWorldM
   getWorldMatrix(){return {m:[.8,0,0,0,0,1.42,0,0,0,0,.9,0,12,1.25,-3,1]};},
   getBoundingInfo(){return {boundingBox:{minimum:{x:-.5,y:0,z:-.4},maximum:{x:.5,y:1,z:.4},
     minimumWorld:{x:-80,y:-2,z:-30},maximumWorld:{x:80,y:142,z:30}}};}};
-vm.runInNewContext(html.slice(boundsStart,boundsEnd)+'\nthis.__measured=boundsForMeshes([mesh]);',boundsSandbox);
+vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',boundsSandbox);
 assert.equal(Number(boundsSandbox.__measured.height.toFixed(3)),1.42,'A stale 142 m GPU world AABB must not shrink a 1.42 m deer during normalization.');
 assert.equal(Number(boundsSandbox.__measured.width.toFixed(3)),.8);
 assert.equal(Number(boundsSandbox.__measured.depth.toFixed(3)),.72);
@@ -66,7 +66,7 @@ const unskinnedSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:{
   computeWorldMatrix(){},getBoundingInfo(){return {boundingBox:{minimum:{x:0,y:0,z:0},maximum:{x:1,y:1,z:1},
     minimumWorld:{x:2,y:3,z:4},maximumWorld:{x:4,y:6,z:8}}};}
 }};
-vm.runInNewContext(html.slice(boundsStart,boundsEnd)+'\nthis.__measured=boundsForMeshes([mesh]);',unskinnedSandbox);
+vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',unskinnedSandbox);
 assert.equal(unskinnedSandbox.__measured.width,2,'Unskinned meshes must retain Babylon native world bounds.');
 assert.equal(unskinnedSandbox.__measured.height,3);
 for(const marker of ['wildlife-species-missing','wildlife-animation-not-playing','wildlife-animation-clips-missing','wildlife-textures-not-ready'])assert.ok(worldInspectionCore.includes(marker),'Wildlife analysis is missing '+marker);
