@@ -81,6 +81,7 @@ assert.ok(capture.includes('Math.min(d.width,d.depth)') && capture.includes('d.h
   'Fauna visual acceptance must reject limb/antler-only actors with a collapsed body depth even when their maximum extent looks plausible.');
 assert.ok(capture.includes('skinnedVertices'));
 assert.ok(capture.includes('alwaysSelectAsActiveMesh') && capture.includes("code:'skinned-mesh-frustum-culling-enabled'"), 'Fauna acceptance must inspect the final Babylon frustum-protection flag and reject any skinned animal mesh that remains cullable against stale bind-pose bounds.');
+assert.ok(capture.includes('maxExtent>.1&&maxExtent<=1.0'), 'A real gull with a measured 0.834 m span must pass the realistic 1 m size ceiling while giant outliers remain rejected.');
 assert.ok(game.includes("m.alwaysSelectAsActiveMesh=!!(m.skeleton||Number(m.numBoneInfluencers)>0)"), 'The real coastal gull loader must protect imported skinned body meshes from frustum culling against stale bounds.');
 assert.ok(capture.includes('animationGroups'));
 assert.ok(capture.includes('captureCanvas'));

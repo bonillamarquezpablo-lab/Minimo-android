@@ -321,7 +321,7 @@ async function main() {
       // A complete quadruped must have plausible depth as well as width. A long pair of
       // antlers/legs can inflate the maximum extent while the torso itself is missing.
       const minimumBodyDepth=d?Math.max(.16,d.height*.30):null;
-      if(!d||!(horizontalMax>.1)||(animal.role==='ambient-bird'?!(maxExtent>.1&&maxExtent<=.8):(!(d.height>.1)||!(horizontalMin>=minimumBodyDepth))))manifest.warnings.push({code:'invalid-world-bounds',animal:animal.id,bounds:animal.bounds,minimumBodyDepth});
+      if(!d||!(horizontalMax>.1)||(animal.role==='ambient-bird'?!(maxExtent>.1&&maxExtent<=1.0):(!(d.height>.1)||!(horizontalMin>=minimumBodyDepth))))manifest.warnings.push({code:'invalid-world-bounds',animal:animal.id,bounds:animal.bounds,minimumBodyDepth});
       if(animal.role!=='ambient-bird'&&d&&horizontalMin<d.height*.30)manifest.warnings.push({code:'extremely-narrow-world-silhouette',animal:animal.id,dimensions:d,minimumBodyDepth});
       if(animal.visibleMeshCount<1)manifest.warnings.push({code:'no-visible-meshes',animal:animal.id});
       if(animal.role==='ambient-bird'){
