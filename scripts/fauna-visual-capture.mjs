@@ -200,35 +200,53 @@ async function main() {
           let localMin=bounds?.minimum||null,localMax=bounds?.maximum||null;
           let boundsBasis='babylon-native-world';
           if(skinned){
-            // GPU skinning leaves Babylon's native AABB at bind pose. Query Babylon's
-            // public CPU vertex evaluator for the live skeleton+morph pose instead.
-            const positions=typeof mesh.getPositionData==='function'?mesh.getPositionData(true,true):null;
+            // Measure the original bind-pose vertex buffer through the exact bone
+            // matrices used by Babylon's shader. Never feed already CPU-deformed
+            // positions back through the skeleton (that would skin twice).
+            const B=window.BABYLON;
+            const positions=mesh.getVerticesData?.(B?.VertexBuffer?.PositionKind||'position');
+            const indices=mesh.getVerticesData?.(B?.VertexBuffer?.MatricesIndicesKind||'matricesIndices');
+            const weights=mesh.getVerticesData?.(B?.VertexBuffer?.MatricesWeightsKind||'matricesWeights');
+            const extras=Number(mesh.numBoneInfluencers)>4;
+            const indicesExtra=extras?mesh.getVerticesData?.(B?.VertexBuffer?.MatricesIndicesExtraKind||'matricesIndicesExtra'):null;
+            const weightsExtra=extras?mesh.getVerticesData?.(B?.VertexBuffer?.MatricesWeightsExtraKind||'matricesWeightsExtra'):null;
+            mesh.skeleton?.prepare?.(true);
+            const bones=mesh.skeleton?.getTransformMatrices?.(mesh);
             const world=mesh.getWorldMatrix?.(),wm=world?.m;
-            if(!positions||positions.length<3||!wm||wm.length<16){
-              throw new Error('No se pueden medir los vértices deformados de '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+            if(!positions||positions.length<3||!indices||!weights||!bones||bones.length<16||!wm||wm.length<16||
+               (extras&&(!indicesExtra||!weightsExtra))){
+              throw new Error('Faltan buffers o matrices de skinning para medir '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
             }
             localMin={x:Infinity,y:Infinity,z:Infinity};
             localMax={x:-Infinity,y:-Infinity,z:-Infinity};
-            lo={x:Infinity,y:Infinity,z:Infinity};
-            hi={x:-Infinity,y:-Infinity,z:-Infinity};
-            for(let p=0;p+2<positions.length;p+=3){
+            lo={x:Infinity,y:Infinity,z:Infinity};hi={x:-Infinity,y:-Infinity,z:-Infinity};
+            const influences=extras?8:4;
+            for(let p=0,vertex=0;p+2<positions.length;p+=3,vertex++){
               const x=Number(positions[p]),y=Number(positions[p+1]),z=Number(positions[p+2]);
-              if(![x,y,z].every(Number.isFinite))throw new Error('Vértice deformado no finito en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+              if(![x,y,z].every(Number.isFinite))throw new Error('Vértice original no finito en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
               localMin.x=Math.min(localMin.x,x);localMin.y=Math.min(localMin.y,y);localMin.z=Math.min(localMin.z,z);
               localMax.x=Math.max(localMax.x,x);localMax.y=Math.max(localMax.y,y);localMax.z=Math.max(localMax.z,z);
-              const ww=wm[3]*x+wm[7]*y+wm[11]*z+wm[15];
-              if(!Number.isFinite(ww)||Math.abs(ww)<1e-10)throw new Error('Matriz mundial inválida al medir '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
-              const iw=1/ww;
-              const point={
-                x:(wm[0]*x+wm[4]*y+wm[8]*z+wm[12])*iw,
-                y:(wm[1]*x+wm[5]*y+wm[9]*z+wm[13])*iw,
-                z:(wm[2]*x+wm[6]*y+wm[10]*z+wm[14])*iw
-              };
-              if(![point.x,point.y,point.z].every(Number.isFinite))throw new Error('Transformación mundial no finita en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+              let sx=0,sy=0,sz=0,sw=0,active=0;
+              for(let slot=0;slot<influences;slot++){
+                const idata=slot<4?indices:indicesExtra,wdata=slot<4?weights:weightsExtra,at=vertex*4+(slot%4);
+                const weight=Number(wdata?.[at]||0);if(!(weight>0))continue;
+                const joint=Math.floor(Number(idata?.[at])),offset=joint*16;
+                if(!Number.isFinite(joint)||joint<0||offset+15>=bones.length)throw new Error('Índice de hueso inválido en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+                sx+=weight*(bones[offset]*x+bones[offset+4]*y+bones[offset+8]*z+bones[offset+12]);
+                sy+=weight*(bones[offset+1]*x+bones[offset+5]*y+bones[offset+9]*z+bones[offset+13]);
+                sz+=weight*(bones[offset+2]*x+bones[offset+6]*y+bones[offset+10]*z+bones[offset+14]);
+                sw+=weight*(bones[offset+3]*x+bones[offset+7]*y+bones[offset+11]*z+bones[offset+15]);active++;
+              }
+              if(!active)continue;
+              if(!Number.isFinite(sw)||Math.abs(sw)<1e-10)throw new Error('Pesos de skinning inválidos en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+              const x1=sx/sw,y1=sy/sw,z1=sz/sw,ww=wm[3]*x1+wm[7]*y1+wm[11]*z1+wm[15];
+              if(!Number.isFinite(ww)||Math.abs(ww)<1e-10)throw new Error('Matriz mundial inválida en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+              const iw=1/ww,point={x:(wm[0]*x1+wm[4]*y1+wm[8]*z1+wm[12])*iw,y:(wm[1]*x1+wm[5]*y1+wm[9]*z1+wm[13])*iw,z:(wm[2]*x1+wm[6]*y1+wm[10]*z1+wm[14])*iw};
+              if(![point.x,point.y,point.z].every(Number.isFinite))throw new Error('Transformación no finita en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
               lo.x=Math.min(lo.x,point.x);lo.y=Math.min(lo.y,point.y);lo.z=Math.min(lo.z,point.z);
               hi.x=Math.max(hi.x,point.x);hi.y=Math.max(hi.y,point.y);hi.z=Math.max(hi.z,point.z);
             }
-            boundsBasis='babylon-getPositionData-world';
+            boundsBasis='babylon-bone-matrices-world';
           }
           if(lo&&hi){
             min.x=Math.min(min.x,lo.x);min.y=Math.min(min.y,lo.y);min.z=Math.min(min.z,lo.z);
