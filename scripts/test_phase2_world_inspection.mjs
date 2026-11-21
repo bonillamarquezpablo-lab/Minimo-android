@@ -194,4 +194,23 @@ assert.equal(inspectedWolf.bounds.size.z,1.3);
 assert.ok(analyzeWorldInspectionSnapshot(wildlifeCaptured).findings.some(item=>item.code==='wildlife-animation-not-playing'));
 assert.ok(analyzeWorldInspectionSnapshot(wildlifeCaptured).findings.some(item=>item.code==='wildlife-textures-not-ready'));
 
+
+const foliageWithSkinReference = {
+  ...mesh, uniqueId: 99, name: 'Closed conifer needle sprays_Forest_1', id: 'conifer-foliage',
+  skeleton: { name: 'ImportedSharedSkeleton' }, numBoneInfluencers: 0,
+  getBoundingInfo: () => ({ boundingBox: {
+    minimumWorld: { x: -2, y: 0, z: -2 },
+    maximumWorld: { x: 2, y: 5, z: 2 }
+  } })
+};
+const foliageSnapshot = capture({
+  scene: { meshes: [foliageWithSkinReference], transformNodes: [], materials: [], textures: [],
+    animationGroups: [], collisionsEnabled: false, getActiveMeshes: () => ({ length: 1 }), getTotalVertices: () => 24 },
+  land: [], player: null, villages: [], enemies: [], campGuards: [], companions: [],
+  ambientFauna: [], ambientPeople: [], ambientBirds: [], enemyShips: [], worldColliders: [],
+  habitableStructureRegistry: [], lastHabitableStructureAudit: null
+});
+assert.equal(foliageSnapshot.meshes.items[0].bounds.basis, 'babylon-world',
+  'A non-skinned foliage mesh may retain a skeleton reference; it must use Babylon world bounds.');
+
 console.log('Phase 2 Babylon world inspection contracts: OK');
