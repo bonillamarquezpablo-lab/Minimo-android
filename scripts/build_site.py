@@ -972,7 +972,7 @@ function setLoadingProgress(value,label){
     animal_dimensions_at = html.index(animal_dimensions_marker) + len(animal_dimensions_marker)
     animal_text_at = html.index(animal_silhouette_text, animal_dimensions_at)
     animal_check_end = html.index("');", animal_text_at) + 3
-    animal_silhouette_replacement = "\n   const animalSkinningMeshes=meshes.filter(mesh=>mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);\n   const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer);const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true;if(forceCpuSkinning&&forceGpuSkinning)throw new Error('El diagnóstico de fauna no puede forzar CPU y GPU skinning a la vez.');const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&(isTouchDevice||softwareSkinningRenderer));animalSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;});\n   (imported.skeletons||[]).forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}catch(_){}});\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
+    animal_silhouette_replacement = "\n   const animalSkinningMeshes=meshes.filter(mesh=>mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);\n   const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer);const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true;if(forceCpuSkinning&&forceGpuSkinning)throw new Error('El diagnóstico de fauna no puede forzar CPU y GPU skinning a la vez.');const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer);animalSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;});\n   (imported.skeletons||[]).forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}catch(_){}});\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
     html = html[:animal_dimensions_at] + animal_silhouette_replacement + html[animal_check_end:]
     animal_skinning_mode_marker = "skinnedVertexCount,dimensions:{width:Number(width.toFixed(3))"
     animal_skinning_mode_replacement = "skinnedVertexCount,skinningMode:useCpuSkinning?'cpu':'gpu',dimensions:{width:Number(width.toFixed(3))"
@@ -1244,7 +1244,7 @@ function setLoadingProgress(value,label){
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
-    # 0.6.340: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
+    # 0.6.341: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
     # Build each island around its stable centre and keep its original per-area density.
     grass_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;\n   const radius=Math.min(92,safeLandRadius);\n   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));"
     grass_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
@@ -2197,27 +2197,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.340: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.341: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.340; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.341; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.340\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.341\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.340.")
-    html = html.replace("0.6.274", "0.6.340")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.341.")
+    html = html.replace("0.6.274", "0.6.341")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'50',build:'0.6.340'"
+    diagnostic_build_replacement = "reportVersion:'50',build:'0.6.341'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.340 para normalizar.")
-    game_version = "0.6.340"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.341 para normalizar.")
+    game_version = "0.6.341"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.

@@ -81,8 +81,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'50\',build:\'0.6.340\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.340"'), 'Release validator must target version 0.6.340.');
+assert.ok(validator.includes('reportVersion:\'50\',build:\'0.6.341\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.341"'), 'Release validator must target version 0.6.341.');
 assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&(isTouchDevice||softwareSkinningRenderer))") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
   'Touch devices must use CPU skinning by default and record the exact skinning path for each animal.');
 assert.ok(builder.includes("forestPlantingStartedAt") && builder.includes("Plantación inicial de bosque") && builder.includes("await new Promise(resolve=>requestAnimationFrame(resolve))"),
