@@ -41,27 +41,33 @@ assert.match(html,/file:'Stag\.glb'/);
 assert.match(html,/function updateWildlife\(dt\)/);
 for(const marker of ['visualIntegrity','playingAnimationGroups','textureReadiness','maxExtentMeters','result.meshes'])assert.ok(worldInspection.includes(marker),'Inspector per-animal capture is missing '+marker);
 assert.ok(worldInspection.includes('function transformedLocalBounds(mesh, box)') &&
-  worldInspection.includes("'skinned-bind-pose-local'") &&
+  worldInspection.includes("'skinned-deformed-local'") &&
+  worldInspection.includes('mesh.refreshBoundingInfo(true)') &&
   worldInspection.includes('mesh.skeleton ? transformedLocalBounds(mesh, box) : null'),
-  'Skinned wildlife diagnostics must transform the local bind-pose AABB with the live world matrix instead of trusting stale GPU world bounds.');
+  'Skinned wildlife diagnostics must measure skeleton-deformed local bounds, not bind-pose bounds or stale GPU world AABBs.');
 assert.ok(html.includes('function transformedSkinnedBounds(mesh,boundingBox)') &&
+  html.includes('mesh.refreshBoundingInfo(true)') &&
+  html.includes('mesh.refreshBoundingInfo(true)') &&
   html.includes('const localBounds=isSkinned?transformedSkinnedBounds(mesh,bb):null') &&
   html.includes('if(isSkinned&&!localBounds)throw new Error'),
-  'Wildlife normalization must use local bind-pose bounds transformed by the live world matrix, never stale GPU world AABBs.');
+  'Wildlife normalization must refresh local bounds with the real skeleton before transforming them into world space.');
 const boundsStart=html.indexOf(' function transformedSkinnedBounds(mesh,boundingBox){');
 const boundsEnd=html.indexOf('function makeHeldEnemySword',boundsStart);
 assert.ok(boundsStart>=0&&boundsEnd>boundsStart,'Production wildlife bounds functions must be available for deterministic scale regression.');
 class Vec3 { constructor(x,y,z){this.x=x;this.y=y;this.z=z;} clone(){return new Vec3(this.x,this.y,this.z);} }
 const boundsSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:null};
+const regressionBox={minimum:{x:-.5,y:0,z:-.4},maximum:{x:.5,y:.015,z:.4},
+  minimumWorld:{x:-80,y:-2,z:-30},maximumWorld:{x:80,y:142,z:30}};
 boundsSandbox.mesh={skeleton:{name:'DeerRig'},numBoneInfluencers:4,computeWorldMatrix(){},
+  refreshBoundingInfo(applySkeleton){this.skeletonBoundsRefreshed=applySkeleton===true;if(applySkeleton)regressionBox.maximum.y=1;},
   getWorldMatrix(){return {m:[.8,0,0,0,0,1.42,0,0,0,0,.9,0,12,1.25,-3,1]};},
-  getBoundingInfo(){return {boundingBox:{minimum:{x:-.5,y:0,z:-.4},maximum:{x:.5,y:1,z:.4},
-    minimumWorld:{x:-80,y:-2,z:-30},maximumWorld:{x:80,y:142,z:30}}};}};
+  getBoundingInfo(){return {boundingBox:regressionBox};}};
 vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',boundsSandbox);
 assert.equal(Number(boundsSandbox.__measured.height.toFixed(3)),1.42,'A stale 142 m GPU world AABB must not shrink a 1.42 m deer during normalization.');
 assert.equal(Number(boundsSandbox.__measured.width.toFixed(3)),.8);
 assert.equal(Number(boundsSandbox.__measured.depth.toFixed(3)),.72);
 assert.equal(Number(boundsSandbox.__measured.min.y.toFixed(3)),1.25);
+assert.equal(boundsSandbox.mesh.skeletonBoundsRefreshed,true,'Runtime normalization must refresh the skeleton-deformed local AABB before measuring.');
 const unskinnedSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:{
   computeWorldMatrix(){},getBoundingInfo(){return {boundingBox:{minimum:{x:0,y:0,z:0},maximum:{x:1,y:1,z:1},
     minimumWorld:{x:2,y:3,z:4},maximumWorld:{x:4,y:6,z:8}}};}
