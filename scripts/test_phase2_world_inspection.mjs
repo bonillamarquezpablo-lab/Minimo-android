@@ -148,7 +148,12 @@ const wolfSkeleton={name:'WolfRig',bones:Array.from({length:24},()=>({}))};
 const wolfMesh={...mesh,uniqueId:70,name:'WolfBody',id:'wolf-body',skeleton:wolfSkeleton,
  material:{name:'WolfMaterial',getActiveTextures:()=>[wolfTextureReady,wolfTexturePending]},
  getTotalVertices:()=>920,getTotalIndices:()=>1840,
- getBoundingInfo:()=>({boundingBox:{minimumWorld:{x:1.1,y:.02,z:1.1},maximumWorld:{x:2.0,y:.88,z:2.4}}})};
+ getWorldMatrix:()=>({m:[1,0,0,0,0,1,0,0,0,0,1,0,1.55,.03,1.75,1]}),
+ getBoundingInfo:()=>({boundingBox:{
+  minimum:{x:-.45,y:-.01,z:-.65},maximum:{x:.45,y:.85,z:.65},
+  // Deliberately reproduce Babylon's stale GPU-skinned world AABB from the failed release smoke.
+  minimumWorld:{x:-2.246,y:2.351,z:21.593},maximumWorld:{x:5.295,y:3.814,z:38.372}
+ }})};
 const wolfRoot={name:'Wolf_0',position:{x:1.5,y:.03,z:1.7},getChildMeshes:()=>[wolfMesh],isEnabled:()=>true};
 const wolfWalk={name:'Walk',isPlaying:false,targetedAnimations:[{}],from:0,to:1,speedRatio:.82};
 const wolfActor={kind:'wolf',root:wolfRoot,groups:[wolfWalk],activeAnimation:wolfWalk,activeMode:'walk',
@@ -173,6 +178,10 @@ assert.equal(inspectedWolf.textureReadiness.pending,1);
 assert.equal(inspectedWolf.bounds.size.y,.86);
 assert.equal(inspectedWolf.visualIntegrity.plausibleBounds,true);
 assert.ok(inspectedWolf.meshes[0].bounds.finite);
+assert.equal(inspectedWolf.meshes[0].bounds.basis,'skinned-bind-pose-local',
+  'Skinned GPU meshes must use transformed local bind-pose bounds, not stale Babylon world AABBs.');
+assert.equal(inspectedWolf.bounds.size.x,.9);
+assert.equal(inspectedWolf.bounds.size.z,1.3);
 assert.ok(analyzeWorldInspectionSnapshot(wildlifeCaptured).findings.some(item=>item.code==='wildlife-animation-not-playing'));
 assert.ok(analyzeWorldInspectionSnapshot(wildlifeCaptured).findings.some(item=>item.code==='wildlife-textures-not-ready'));
 
