@@ -61,22 +61,30 @@
 
   function readBounds(mesh) {
     try {
+      const ancestors = [];
+      for (let parent = mesh && mesh.parent; parent; parent = parent.parent) ancestors.unshift(parent);
+      ancestors.forEach(parent => safeCall(() => typeof parent.computeWorldMatrix === 'function' ? parent.computeWorldMatrix(true) : null));
       if (typeof mesh.computeWorldMatrix === 'function') mesh.computeWorldMatrix(true);
+      const isSkinned = !!(mesh && mesh.skeleton);
+      // GPU skinning changes vertex positions in the shader. Ask Babylon to evaluate
+      // the skeleton on a CPU-side copy before reading bounds; bind-pose bounds alone
+      // can report centimetres for a full-size animal.
+      if (isSkinned) {
+        if (typeof mesh.refreshBoundingInfo !== 'function') throw new Error('Babylon cannot refresh skinned bounds with the skeleton applied.');
+        mesh.refreshBoundingInfo(true);
+      }
       const info = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
       const box = info && info.boundingBox;
-      // GPU skinning deforms vertices in the shader. Babylon's minimumWorld/maximumWorld
-      // can therefore be stale or expanded in a different space. For skinned meshes,
-      // measure the immutable bind-pose local AABB through the current world matrix.
-      // This preserves the imported model scale without inventing or clamping dimensions.
-      const bindPoseBounds = mesh && mesh.skeleton ? transformedLocalBounds(mesh, box) : null;
-      const min = bindPoseBounds ? bindPoseBounds.min : box && box.minimumWorld;
-      const max = bindPoseBounds ? bindPoseBounds.max : box && box.maximumWorld;
+      const deformedBounds = isSkinned ? transformedLocalBounds(mesh, box) : null;
+      if (isSkinned && !deformedBounds) throw new Error('Unable to transform skeleton-deformed local bounds.');
+      const min = deformedBounds ? deformedBounds.min : box && box.minimumWorld;
+      const max = deformedBounds ? deformedBounds.max : box && box.maximumWorld;
       if (!min || !max) return { available: false, min: null, max: null, size: null, finite: null };
       const values = [min.x, min.y, min.z, max.x, max.y, max.z];
       const valid = values.every(finite);
       if (!valid) return {
         available: true, min: null, max: null, size: null, finite: false,
-        basis: bindPoseBounds ? 'skinned-bind-pose-local' : 'babylon-world'
+        basis: deformedBounds ? 'skinned-deformed-local' : 'babylon-world'
       };
       return {
         available: true,
@@ -86,7 +94,7 @@
           x: round(max.x - min.x), y: round(max.y - min.y), z: round(max.z - min.z)
         },
         finite: true,
-        basis: bindPoseBounds ? 'skinned-bind-pose-local' : 'babylon-world'
+        basis: deformedBounds ? 'skinned-deformed-local' : 'babylon-world'
       };
     } catch (error) {
       return { available: false, min: null, max: null, size: null, finite: null, error: String(error && error.message || error) };
