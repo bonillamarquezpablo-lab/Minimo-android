@@ -69,6 +69,10 @@ const unskinnedSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:{
 vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',unskinnedSandbox);
 assert.equal(unskinnedSandbox.__measured.width,2,'Unskinned meshes must retain Babylon native world bounds.');
 assert.equal(unskinnedSandbox.__measured.height,3);
+assert.ok(html.includes("root.setParent(actor,true,true)") &&
+  html.includes("heightError>heightTolerance") &&
+  html.includes("renderedDimensions:{width:Number(finalBounds.width.toFixed(3))"),
+  'Wildlife import must preserve GLB root world transforms and reject final bodies that miss their configured physical height.');
 for(const marker of ['wildlife-species-missing','wildlife-animation-not-playing','wildlife-animation-clips-missing','wildlife-textures-not-ready'])assert.ok(worldInspectionCore.includes(marker),'Wildlife analysis is missing '+marker);
 assert.match(html,/const animalCount=isPerformanceMode\?0:\(idx===0\?3:0\);/);
 assert.ok(builder.includes('wildlife_spawn_count_marker = "const animalCount=isPerformanceMode?0:(idx===0?3:0);"') &&

@@ -5064,7 +5064,13 @@ void main(void){
    if(width<Math.max(.16,sourceBounds.height*.16)||depth<Math.max(.16,sourceBounds.height*.16))throw new Error('Silueta animal anormalmente estrecha; se descarta para no mostrar extremidades sueltas.');
    const definition=WILDLIFE_MODEL_DEFS[kind],scale=definition.height/Math.max(.001,sourceBounds.height)*size;
    actor=new B.TransformNode('WildlifeActor_'+kind+'_'+index,scene);
-   roots.forEach(root=>{root.parent=actor;try{root.setEnabled(true);}catch(_){}});
+   // Preserve the GLB importer's complete world transform when moving each root under the actor.
+   // Direct parent assignment retains local TRS only and can discard the synthetic/imported root scale.
+   roots.forEach(root=>{
+    if(!root||typeof root.setParent!=='function')throw new Error('La raíz GLB no permite reparentado conservando su transformación mundial.');
+    root.setParent(actor,true,true);
+    try{root.setEnabled(true);}catch(_){}
+   });
    actor.scaling.setAll(scale);
    actor.position=v(x,0,z);
    const attachedBounds=boundsForMeshes(meshes);
@@ -5075,13 +5081,15 @@ void main(void){
    scene.incrementRenderId();
    const finalBounds=boundsForMeshes(meshes);
    if(!Number.isFinite(finalBounds.min.y)||Math.abs(finalBounds.min.y-groundY-.015)>.12)throw new Error('El cuerpo animal no quedó apoyado correctamente en el terreno.');
+   const expectedHeight=definition.height*size,heightTolerance=Math.max(.08,expectedHeight*.12),heightError=Math.abs(finalBounds.height-expectedHeight);
+   if(!Number.isFinite(finalBounds.height)||heightError>heightTolerance)throw new Error('Escala biológica incorrecta para '+kind+': altura final '+Number(finalBounds.height||0).toFixed(3)+' m; esperada '+expectedHeight.toFixed(3)+' m; fuente '+sourceBounds.height.toFixed(3)+' m; factor '+scale.toFixed(5)+'.');
    actor.rotation.y=rand(0,Math.PI*2);
    meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});
    const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);
    groups.forEach(group=>{try{group.stop();}catch(_){}});
-   const animal={kind,root:actor,x,z,size,homeIslandIndex,groundOffset,collisionRadius:definition.collisionRadius*size,heading:actor.rotation.y,turnTimer:rand(2.5,6),wanderTimer:rand(2,5),wandering:Math.random()<.45,flee:0,clips,groups,activeAnimation:null,activeMode:'',meshCount:meshes.length,skeletonBoneCount:boneCount,skinnedVertexCount,dimensions:{width:Number(width.toFixed(3)),height:Number(sourceBounds.height.toFixed(3)),depth:Number(depth.toFixed(3))},meshNames:meshes.map(mesh=>String(mesh.name||mesh.id||'')).slice(0,16)};
+   const animal={kind,root:actor,x,z,size,homeIslandIndex,groundOffset,collisionRadius:definition.collisionRadius*size,normalizationScale:Number(scale.toFixed(5)),expectedHeightMeters:Number(expectedHeight.toFixed(3)),renderedDimensions:{width:Number(finalBounds.width.toFixed(3)),height:Number(finalBounds.height.toFixed(3)),depth:Number(finalBounds.depth.toFixed(3))},heading:actor.rotation.y,turnTimer:rand(2.5,6),wanderTimer:rand(2,5),wandering:Math.random()<.45,flee:0,clips,groups,activeAnimation:null,activeMode:'',meshCount:meshes.length,skeletonBoneCount:boneCount,skinnedVertexCount,dimensions:{width:Number(width.toFixed(3)),height:Number(sourceBounds.height.toFixed(3)),depth:Number(depth.toFixed(3))},meshNames:meshes.map(mesh=>String(mesh.name||mesh.id||'')).slice(0,16)};
    playWildlifeAnimation(animal,'idle');addModelShadow(actor,isPerformanceMode?1:2);
-   console.info('Animal GLB validado',{kind,meshes:animal.meshCount,skinned:skinned.length,skinnedVertices:skinnedVertexCount,skeletons:skeletons.length,bones:boneCount,animations:groups.map(group=>group.name),dimensions:animal.dimensions,groundOffset:Number(groundOffset.toFixed(4)),collisionRadius:animal.collisionRadius,rootNodes:roots.map(root=>String(root.name||root.id||''))});
+   console.info('Animal GLB validado',{kind,meshes:animal.meshCount,skinned:skinned.length,skinnedVertices:skinnedVertexCount,skeletons:skeletons.length,bones:boneCount,animations:groups.map(group=>group.name),sourceDimensions:animal.dimensions,renderedDimensions:animal.renderedDimensions,expectedHeightMeters:animal.expectedHeightMeters,normalizationScale:animal.normalizationScale,groundOffset:Number(groundOffset.toFixed(4)),collisionRadius:animal.collisionRadius,rootNodes:roots.map(root=>String(root.name||root.id||''))});
    return animal;
   }catch(err){
    if(imported){try{(imported.animationGroups||[]).forEach(group=>group.stop());(imported.skeletons||[]).forEach(skeleton=>skeleton.dispose());(imported.meshes||[]).forEach(mesh=>mesh.dispose(false,true));(imported.transformNodes||[]).forEach(node=>node.dispose(false,true));}catch(_){}}
