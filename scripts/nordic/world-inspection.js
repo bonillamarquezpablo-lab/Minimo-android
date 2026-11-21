@@ -225,7 +225,7 @@
         hasFlightRig:isBird?!!(flightRig&&flightRig.complete):null,
         hasFinitePosition:!!position&&[position.x,position.y,position.z].every(finite),
         hasVisibleGeometry:visibleMeshes.length>0,hasFiniteBounds:!!aggregateBounds,
-        plausibleBounds:isBird?!!size&&size.y>=.08&&maxExtent>=.1&&maxExtent<=.8:!!size&&size.y>=.2&&maxExtent<=8
+        plausibleBounds:isBird?!!size&&size.y>=.08&&maxExtent>=.1&&maxExtent<=1.0:!!size&&size.y>=.2&&maxExtent<=8
       };
       result.meshes=meshBounds.slice(0,80).map(({mesh,bounds})=>({
         name:String(mesh.name||mesh.id||'unnamed-mesh'),
