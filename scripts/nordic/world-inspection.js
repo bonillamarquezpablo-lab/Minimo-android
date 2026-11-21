@@ -19,44 +19,14 @@
     };
   }
 
-  function transformedLocalBounds(mesh, box) {
-    const localMin = box && box.minimum;
-    const localMax = box && box.maximum;
-    // Refresh every ancestor first: skinned meshes can retain a cached child
-    // world matrix after their imported GLB root is reparented under the actor.
-    const ancestors = [];
-    for (let parent = mesh && mesh.parent; parent; parent = parent.parent) ancestors.unshift(parent);
-    ancestors.forEach(parent => safeCall(() => typeof parent.computeWorldMatrix === 'function' ? parent.computeWorldMatrix(true) : null));
-    safeCall(() => typeof mesh.computeWorldMatrix === 'function' ? mesh.computeWorldMatrix(true) : null);
-    const matrix = safeCall(() => typeof mesh.getWorldMatrix === 'function' ? mesh.getWorldMatrix() : null);
-    const m = matrix && matrix.m;
-    if (!localMin || !localMax || !m || m.length < 16) return null;
-    const corners = [];
-    for (const x of [localMin.x, localMax.x]) {
-      for (const y of [localMin.y, localMax.y]) {
-        for (const z of [localMin.z, localMax.z]) {
-          const point = {
-            x: m[0] * x + m[4] * y + m[8] * z + m[12],
-            y: m[1] * x + m[5] * y + m[9] * z + m[13],
-            z: m[2] * x + m[6] * y + m[10] * z + m[14]
-          };
-          if (![point.x, point.y, point.z].every(finite)) return null;
-          corners.push(point);
-        }
-      }
-    }
-    return {
-      min: {
-        x: Math.min(...corners.map(point => point.x)),
-        y: Math.min(...corners.map(point => point.y)),
-        z: Math.min(...corners.map(point => point.z))
-      },
-      max: {
-        x: Math.max(...corners.map(point => point.x)),
-        y: Math.max(...corners.map(point => point.y)),
-        z: Math.max(...corners.map(point => point.z))
-      }
-    };
+  function refreshedSkinnedWorldBounds(mesh) {
+    if (!mesh || typeof mesh.refreshBoundingInfo !== 'function') return null;
+    safeCall(() => mesh.refreshBoundingInfo(true));
+    const info = safeCall(() => typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null);
+    const box = info && info.boundingBox;
+    const min = box && box.minimumWorld, max = box && box.maximumWorld;
+    if (!min || !max || ![min.x,min.y,min.z,max.x,max.y,max.z].every(finite)) return null;
+    return { min, max };
   }
 
   function readBounds(mesh) {
@@ -66,21 +36,21 @@
       ancestors.forEach(parent => safeCall(() => typeof parent.computeWorldMatrix === 'function' ? parent.computeWorldMatrix(true) : null));
       if (typeof mesh.computeWorldMatrix === 'function') mesh.computeWorldMatrix(true);
       const isSkinned = !!(mesh && mesh.skeleton);
-      const info = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
+      let info = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
+      if (isSkinned) {
+        const deformed = refreshedSkinnedWorldBounds(mesh);
+        if (!deformed) throw new Error('Babylon did not return finite world bounds after applying the skeleton.');
+        info = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
+      }
       const box = info && info.boundingBox;
-      // The bind-pose AABB is already expressed in mesh-local coordinates. Transform
-      // it once using the current world matrix; applying CPU skinning here and then
-      // multiplying by the world matrix again double-counts this GLB rig's transforms.
-      const bindPoseBounds = isSkinned ? transformedLocalBounds(mesh, box) : null;
-      if (isSkinned && !bindPoseBounds) throw new Error('Unable to transform skinned bind-pose local bounds.');
-      const min = bindPoseBounds ? bindPoseBounds.min : box && box.minimumWorld;
-      const max = bindPoseBounds ? bindPoseBounds.max : box && box.maximumWorld;
+      const min = isSkinned ? box && box.minimumWorld : box && box.minimumWorld;
+      const max = isSkinned ? box && box.maximumWorld : box && box.maximumWorld;
       if (!min || !max) return { available: false, min: null, max: null, size: null, finite: null };
       const values = [min.x, min.y, min.z, max.x, max.y, max.z];
       const valid = values.every(finite);
       if (!valid) return {
         available: true, min: null, max: null, size: null, finite: false,
-        basis: bindPoseBounds ? 'skinned-bind-pose-local' : 'babylon-world'
+        basis: isSkinned ? 'skinned-deformed-world' : 'babylon-world'
       };
       return {
         available: true,
@@ -90,7 +60,7 @@
           x: round(max.x - min.x), y: round(max.y - min.y), z: round(max.z - min.z)
         },
         finite: true,
-        basis: bindPoseBounds ? 'skinned-bind-pose-local' : 'babylon-world'
+        basis: isSkinned ? 'skinned-deformed-world' : 'babylon-world'
       };
     } catch (error) {
       return { available: false, min: null, max: null, size: null, finite: null, error: String(error && error.message || error) };
