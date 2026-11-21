@@ -81,8 +81,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'46\',build:\'0.6.335\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.335"'), 'Release validator must target version 0.6.335.');
+assert.ok(validator.includes('reportVersion:\'47\',build:\'0.6.337\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.337"'), 'Release validator must target version 0.6.337.');
 assert.ok(builder.includes('mobile_memory_policy_marker') && builder.includes('isMobilePeakMemorySensitive'), 'Memory-sensitive scheduling must be independent from the selected graphics profile.');
 assert.ok(builder.includes('GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024'), 'GLB identity checks must compare bounded chunks instead of duplicating full files into ArrayBuffers.');
 assert.ok(builder.includes('player_import_start_marker') && builder.includes('let playerHumanLoadPromise=Promise.resolve(null);'), 'The protagonist GLB import must be deferred until static world construction has finished.');
@@ -113,7 +113,8 @@ assert.ok(validator.includes('renderDiagnostics:beachRenderDiagnostics'), 'The p
 assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFixed(3))'), 'The packaged report must label wall-clock beach duration separately.');
 
 assert.ok(builder.includes('grass_stream_replacement = "if(bestRatio>(onShip?2.0:1.09))currentIsland=-1;"'), 'Destination-island grass prewarm must retain the island during a longer ship approach.');
-assert.ok(builder.includes('(onShip?Math.max(160,GRASS_STREAM_RECENTER_DISTANCE):GRASS_STREAM_RECENTER_DISTANCE)'), 'Grass streaming must not rebuild repeatedly during short ship movements.');
+assert.ok(builder.includes('const centerX=island.x,centerZ=island.z;') && builder.includes('const radius=safeLandRadius;') && builder.includes('const areaFraction=1;'), 'Quality grass must cover the complete dry-land radius at the original per-area density.');
+assert.ok(builder.includes('grass_recenter_replacement = "const moved=false;"'), 'Grass must not rebuild the same island after player movement once full-island coverage exists.');
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullMaxExtentMeters=.55') &&
   builder.includes('sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)') &&
