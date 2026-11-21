@@ -40,27 +40,30 @@ assert.match(html,/file:'Wolf\.glb'/);
 assert.match(html,/file:'Stag\.glb'/);
 assert.match(html,/function updateWildlife\(dt\)/);
 for(const marker of ['visualIntegrity','playingAnimationGroups','textureReadiness','maxExtentMeters','result.meshes'])assert.ok(worldInspection.includes(marker),'Inspector per-animal capture is missing '+marker);
-assert.ok(worldInspection.includes('function transformedLocalBounds(mesh, box)') &&
-  worldInspection.includes("'skinned-bind-pose-local'") &&
-  worldInspection.includes('const bindPoseBounds = isSkinned ? transformedLocalBounds(mesh, box) : null'),
-  'Skinned wildlife diagnostics must transform local bind-pose bounds once, never use stale GPU world AABBs.');
-assert.ok(html.includes('function transformedSkinnedBounds(mesh,boundingBox)') &&
-  html.includes('const localBounds=isSkinned?transformedSkinnedBounds(mesh,bb):null') &&
-  html.includes('if(isSkinned&&!localBounds)throw new Error'),
-  'Wildlife normalization must transform local bind-pose bounds once and preserve the GLB root world transform.');
+assert.ok(worldInspection.includes('function refreshedSkinnedWorldBounds(mesh)') &&
+  worldInspection.includes('mesh.refreshBoundingInfo(true)') &&
+  worldInspection.includes("'skinned-deformed-world'"),
+  'Skinned wildlife diagnostics must use Babylon world bounds recomputed with the skeleton applied.');
+assert.ok(html.includes('mesh.refreshBoundingInfo(true)') &&
+  html.includes('const bb=info.boundingBox,meshMin=bb.minimumWorld,meshMax=bb.maximumWorld;'),
+  'Wildlife normalization must use Babylon world bounds after CPU skinning without transforming them twice.');
 assert.ok(html.includes('function normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight)') &&
   html.includes('const correction=expectedHeight/measured;') &&
   html.includes('actor.scaling.scaleInPlace(correction)') &&
   html.includes('const fitted=normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight)'),
   'The final physical deer scale must be corrected from measured world bounds after the GLB roots are attached.');
-const boundsStart=html.indexOf(' function transformedSkinnedBounds(mesh,boundingBox){');
+const boundsStart=html.indexOf(' function normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight){');
 const boundsEnd=html.indexOf('function makeHeldEnemySword',boundsStart);
 assert.ok(boundsStart>=0&&boundsEnd>boundsStart,'Production wildlife bounds functions must be available for deterministic scale regression.');
 class Vec3 { constructor(x,y,z){this.x=x;this.y=y;this.z=z;} clone(){return new Vec3(this.x,this.y,this.z);} }
 const boundsSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:null};
-const regressionBox={minimum:{x:-.5,y:0,z:-.4},maximum:{x:.5,y:1,z:.4},
+const regressionBox={minimum:{x:-.01,y:-.01,z:-.01},maximum:{x:.01,y:.015,z:.01},
   minimumWorld:{x:-80,y:-2,z:-30},maximumWorld:{x:80,y:142,z:30}};
 boundsSandbox.mesh={skeleton:{name:'DeerRig'},numBoneInfluencers:4,computeWorldMatrix(){},
+  refreshBoundingInfo(applySkeleton){this.skeletonBoundsRefreshed=applySkeleton===true;if(applySkeleton){
+    regressionBox.minimumWorld={x:11.6,y:1.25,z:-3.36};
+    regressionBox.maximumWorld={x:12.4,y:2.67,z:-2.64};
+  }},
   getWorldMatrix(){return {m:[.8,0,0,0,0,1.42,0,0,0,0,.9,0,12,1.25,-3,1]};},
   getBoundingInfo(){return {boundingBox:regressionBox};}};
 vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',boundsSandbox);
@@ -68,14 +71,18 @@ assert.equal(Number(boundsSandbox.__measured.height.toFixed(3)),1.42,'A stale 14
 assert.equal(Number(boundsSandbox.__measured.width.toFixed(3)),.8);
 assert.equal(Number(boundsSandbox.__measured.depth.toFixed(3)),.72);
 assert.equal(Number(boundsSandbox.__measured.min.y.toFixed(3)),1.25);
+assert.equal(boundsSandbox.mesh.skeletonBoundsRefreshed,true,'Runtime normalization must refresh skinned bounds with the skeleton applied before measuring.');
 const dynamicActor={
  scaling:{x:1,y:1,z:1,scaleInPlace(factor){this.x*=factor;this.y*=factor;this.z*=factor;},asArray(){return [this.x,this.y,this.z];}},
  computeWorldMatrix(){}
 };
+const dynamicBox={minimum:{x:-.01,y:-.01,z:-.01},maximum:{x:.01,y:.015,z:.01},
+ minimumWorld:{x:-.01,y:-.01,z:-.01},maximumWorld:{x:.01,y:.015,z:.01}};
 const dynamicMesh={
  parent:dynamicActor,skeleton:{name:'DynamicRig'},numBoneInfluencers:4,computeWorldMatrix(){},
  getWorldMatrix(){return {m:[dynamicActor.scaling.x,0,0,0,0,dynamicActor.scaling.y,0,0,0,0,dynamicActor.scaling.z,0,0,0,0,1]};},
- getBoundingInfo(){return {boundingBox:{minimum:{x:-.5,y:0,z:-.4},maximum:{x:.5,y:1,z:.4}}};}
+ refreshBoundingInfo(applySkeleton){if(applySkeleton){dynamicBox.minimumWorld={x:-.5*dynamicActor.scaling.x,y:0,z:-.4*dynamicActor.scaling.z};dynamicBox.maximumWorld={x:.5*dynamicActor.scaling.x,y:dynamicActor.scaling.y,z:.4*dynamicActor.scaling.z};}},
+ getBoundingInfo(){return {boundingBox:dynamicBox};}
 };
 const fittingSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:null,actor:dynamicActor,meshes:[dynamicMesh]};
 vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+
