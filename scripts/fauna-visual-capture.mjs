@@ -195,7 +195,7 @@ async function main() {
           const bounds=mesh.getBoundingInfo?.()?.boundingBox;
           const vertices=Number(mesh.getTotalVertices?.())||0;
           const indices=Number(mesh.getTotalIndices?.())||0;
-          const skinned=!!mesh.skeleton||Number(mesh.numBoneInfluencers)>0;
+          const skinned=!!mesh.skeleton&&Number(mesh.numBoneInfluencers)>0;
           let lo=bounds?.minimumWorld||null,hi=bounds?.maximumWorld||null;
           let localMin=bounds?.minimum||null,localMax=bounds?.maximum||null;
           let boundsBasis='babylon-native-world';
