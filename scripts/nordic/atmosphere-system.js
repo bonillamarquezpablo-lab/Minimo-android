@@ -200,7 +200,12 @@
       // Hearth illumination is infrequently reassigned; cache each static influence set.
       // The cache is invalidated lazily whenever the scene mesh count changes.
       this._hearthMeshCache = new WeakMap();
-      this._hearthMeshCacheMeshCount = -1;
+      this._hearthMeshCacheEntries = new Map();
+      this._hearthMeshCacheMeshCount = 0;
+      this._hearthMeshCacheDirty = false;
+      this._hearthMeshRemovedObserver = this.scene?.onMeshRemovedObservable?.add(() => {
+        this._hearthMeshCacheDirty = true;
+      }) || null;
       // The solar clock keeps advancing every frame; expensive material/light writes are
       // coalesced to a stable cadence. This keeps night effects without per-frame overhead.
       this._visualUpdateAccumulator = 0;
@@ -728,39 +733,53 @@
       }
     }
 
+    _isHearthInfluenceMesh(mesh, hearth) {
+      if (!mesh || (typeof mesh.isDisposed === 'function' && mesh.isDisposed())) return false;
+      if (typeof mesh.isEnabled === 'function' && !mesh.isEnabled()) return false;
+      if (mesh.isVisible === false || (Number.isFinite(mesh.visibility) && mesh.visibility <= 0.001)) return false;
+      if (!mesh.material || mesh.material.disableLighting === true) return false;
+      const bounds = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
+      const sphere = bounds && bounds.boundingSphere;
+      const center = sphere && sphere.centerWorld;
+      if (!center) return false;
+      const dx = center.x - (Number(hearth.x) || 0);
+      const dy = center.y - ((Number(hearth.floorY) || 0) + 1.0);
+      const dz = center.z - (Number(hearth.z) || 0);
+      const reach = 11.5 + Math.max(0, Number(sphere.radiusWorld) || 0);
+      return dx * dx + dy * dy + dz * dz <= reach * reach;
+    }
+
     _collectHearthMeshes(hearth) {
       const scene = this.scene;
       if (!scene || !hearth || typeof hearth !== 'object') return [];
-      // Use Babylon's already-culled active list: no forced world-matrix rebuild or
-      // full 13-island mesh scan while the player is moving between hearths.
-      // The hearth's bounded influence set is static; do not rebuild it from the camera-culled list.
       const source = Array.isArray(scene.meshes) ? scene.meshes : [];
-      if (this._hearthMeshCacheMeshCount !== source.length) {
+      // Incrementally append newly streamed meshes to cached influence lists.
+      // A single grass tile must not invalidate and rescan all 5k scene meshes.
+      if (this._hearthMeshCacheDirty || this._hearthMeshCacheMeshCount > source.length) {
         this._hearthMeshCache = new WeakMap();
-        this._hearthMeshCacheMeshCount = source.length;
+        this._hearthMeshCacheEntries.clear();
+        this._hearthMeshCacheMeshCount = 0;
+        this._hearthMeshCacheDirty = false;
       }
+      const firstNewMeshIndex = Math.min(this._hearthMeshCacheMeshCount, source.length);
+      if (source.length > firstNewMeshIndex && this._hearthMeshCacheEntries.size) {
+        for (let index = firstNewMeshIndex; index < source.length; index++) {
+          const mesh = source[index];
+          for (const [cachedHearth, included] of this._hearthMeshCacheEntries) {
+            if (this._isHearthInfluenceMesh(mesh, cachedHearth)) included.push(mesh);
+          }
+        }
+      }
+      this._hearthMeshCacheMeshCount = source.length;
       const cached = this._hearthMeshCache.get(hearth);
       if (cached) return cached;
+      // A previously unseen hearth pays one full scan; future scene additions are incremental.
       const included = [];
-      const lightX = Number(hearth.x) || 0;
-      const lightY = (Number(hearth.floorY) || 0) + 1.0;
-      const lightZ = Number(hearth.z) || 0;
-      const range = 11.5;
       for (const mesh of source) {
-        if (!mesh || (typeof mesh.isDisposed === 'function' && mesh.isDisposed())) continue;
-        if (typeof mesh.isEnabled === 'function' && !mesh.isEnabled()) continue;
-        if (mesh.isVisible === false || (Number.isFinite(mesh.visibility) && mesh.visibility <= 0.001)) continue;
-        if (!mesh.material || mesh.material.disableLighting === true) continue;
-        const bounds = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
-        const sphere = bounds && bounds.boundingSphere;
-        const center = sphere && sphere.centerWorld;
-        if (!center) continue;
-        const extent = Math.max(0, Number(sphere.radiusWorld) || 0);
-        const dx = center.x - lightX, dy = center.y - lightY, dz = center.z - lightZ;
-        const reach = range + extent;
-        if (dx * dx + dy * dy + dz * dz <= reach * reach) included.push(mesh);
+        if (this._isHearthInfluenceMesh(mesh, hearth)) included.push(mesh);
       }
       this._hearthMeshCache.set(hearth, included);
+      this._hearthMeshCacheEntries.set(hearth, included);
       return included;
     }
 
@@ -1071,6 +1090,12 @@
     dispose() {
       if (this.disposed) return;
       this.disposed = true;
+      try {
+        if (this._hearthMeshRemovedObserver && this.scene?.onMeshRemovedObservable) {
+          this.scene.onMeshRemovedObservable.remove(this._hearthMeshRemovedObserver);
+        }
+      } catch (_) {}
+      try { this._hearthMeshCacheEntries?.clear(); } catch (_) {}
       try { if (this.godRays) this.godRays.dispose(); } catch (_) {}
       try { if (this.ssaoPipeline) this.ssaoPipeline.dispose(); } catch (_) {}
       try { if (this.ssrPipeline) this.ssrPipeline.dispose(); } catch (_) {}

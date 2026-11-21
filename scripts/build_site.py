@@ -1226,7 +1226,7 @@ function setLoadingProgress(value,label){
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
-    # 0.6.338: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
+    # 0.6.339: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
     # Build each island around its stable centre and keep its original per-area density.
     grass_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;\n   const radius=Math.min(92,safeLandRadius);\n   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));"
     grass_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
@@ -2179,27 +2179,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.338: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.339: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.338; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.339; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.338\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.339\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.338.")
-    html = html.replace("0.6.274", "0.6.338")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.339.")
+    html = html.replace("0.6.274", "0.6.339")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'48',build:'0.6.338'"
+    diagnostic_build_replacement = "reportVersion:'49',build:'0.6.339'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.338 para normalizar.")
-    game_version = "0.6.338"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.339 para normalizar.")
+    game_version = "0.6.339"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.

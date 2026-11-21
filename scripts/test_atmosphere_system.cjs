@@ -151,7 +151,15 @@ assert.ok(source.includes('pipeline.fxaaEnabled = !mobileHigh;'), 'Mobile-high m
 assert.ok(source.includes("this.quality === 'high' && !this.isTouchDevice"), 'God rays and SSAO must remain desktop-only.');
 assert.ok(source.includes("this.quality === 'low' || this.isTouchDevice"), 'Touch devices must not create the cascaded-shadow multipass.');
 assert.ok(source.includes("const poolSize = this.quality === 'low' ? 1 : 2"), 'Mobile Quality must keep both local hearth lights enabled.');
-assert.ok(source.includes("this._hearthMeshCache = new WeakMap()") && source.includes("this._hearthMeshCacheMeshCount !== source.length") && source.includes("this._hearthMeshCache.set(hearth, included)"), 'Hearth influence mesh lists must be cached and invalidated when scene topology changes.');
+assert.ok(source.includes("this._hearthMeshCache = new WeakMap()") &&
+  source.includes("this._hearthMeshCacheEntries = new Map()") &&
+  source.includes("this._hearthMeshCacheDirty = false") &&
+  localFireBody.includes("const firstNewMeshIndex = Math.min(this._hearthMeshCacheMeshCount, source.length)") &&
+  localFireBody.includes("for (const [cachedHearth, included] of this._hearthMeshCacheEntries)") &&
+  localFireBody.includes("this._isHearthInfluenceMesh(mesh, cachedHearth)") &&
+  source.includes("onMeshRemovedObservable") &&
+  source.includes("this._hearthMeshCache.set(hearth, included)"),
+  'Hearth influence lists must absorb added meshes incrementally and only rebuild after actual removals.');
 assert.ok(source.includes("mobileHigh ? 24") && source.includes("mobileHigh ? 0.24"), 'The flagship mobile profile must preserve the original bloom quality.');
 
 const buildSource = fs.readFileSync(path.join(__dirname, 'build_site.py'), 'utf8');
