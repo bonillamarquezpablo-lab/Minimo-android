@@ -1110,9 +1110,13 @@ function setLoadingProgress(value,label){
 
     wildlife_animation_marker = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);"
     wildlife_animation_marker_replacement = ""
-    if html.count(wildlife_animation_marker) != 1:
-        raise SystemExit("No se encontró el marcador único: wildlife_animation_marker.")
-    html = html.replace(wildlife_animation_marker, wildlife_animation_marker_replacement, 1)
+    if html.count(wildlife_animation_marker) != 2:
+        raise SystemExit("La selección de clips de fauna debe aparecer dos veces antes de retirar únicamente la declaración tardía.")
+    wildlife_animation_marker_at = html.find(wildlife_animation_marker)
+    wildlife_animation_late_at = html.find(wildlife_animation_marker, wildlife_animation_marker_at + len(wildlife_animation_marker))
+    if wildlife_animation_marker_at < 0 or wildlife_animation_late_at <= wildlife_animation_marker_at:
+        raise SystemExit("No se pudo localizar la declaración temprana y la declaración tardía de clips de fauna.")
+    html = html[:wildlife_animation_late_at] + html[wildlife_animation_late_at:].replace(wildlife_animation_marker, wildlife_animation_marker_replacement, 1)
 
     wildlife_cleanup_marker = "   if(imported){try{(imported.animationGroups||[]).forEach(group=>group.stop());(imported.skeletons||[]).forEach(skeleton=>skeleton.dispose());(imported.meshes||[]).forEach(mesh=>mesh.dispose(false,true));(imported.transformNodes||[]).forEach(node=>node.dispose(false,true));}catch(_){}}"
     wildlife_cleanup_marker_replacement = "   const partialGroups=Array.from(scene.animationGroups||[]).filter(group=>!beforeGroups.has(group));partialGroups.forEach(group=>{try{group.stop();group.dispose();}catch(_){}}); \n   const partialMeshes=Array.from(scene.meshes||[]).filter(mesh=>!beforeMeshes.has(mesh));partialMeshes.forEach(mesh=>{try{if(!(mesh.isDisposed&&mesh.isDisposed()))mesh.dispose(false,true);}catch(_){}}); \n   const partialNodes=Array.from(scene.transformNodes||[]).filter(node=>!beforeNodes.has(node));partialNodes.forEach(node=>{try{if(!(node.isDisposed&&node.isDisposed()))node.dispose(false,true);}catch(_){}}); \n   const partialSkeletons=Array.from(scene.skeletons||[]).filter(skeleton=>!beforeSkeletons.has(skeleton));partialSkeletons.forEach(skeleton=>{try{skeleton.dispose();}catch(_){}});"
