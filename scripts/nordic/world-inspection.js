@@ -80,7 +80,7 @@
       const valid = values.every(finite);
       if (!valid) return {
         available: true, min: null, max: null, size: null, finite: false,
-        basis: deformedBounds ? 'skinned-bind-pose-local' : 'babylon-world'
+        basis: bindPoseBounds ? 'skinned-bind-pose-local' : 'babylon-world'
       };
       return {
         available: true,
@@ -90,7 +90,7 @@
           x: round(max.x - min.x), y: round(max.y - min.y), z: round(max.z - min.z)
         },
         finite: true,
-        basis: deformedBounds ? 'skinned-bind-pose-local' : 'babylon-world'
+        basis: bindPoseBounds ? 'skinned-bind-pose-local' : 'babylon-world'
       };
     } catch (error) {
       return { available: false, min: null, max: null, size: null, finite: null, error: String(error && error.message || error) };
