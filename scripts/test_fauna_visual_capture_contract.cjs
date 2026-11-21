@@ -17,7 +17,7 @@ assert.ok(runner.includes('Capturas visuales y diagnóstico de fauna terrestre')
 assert.ok(runner.includes('scripts/fauna-visual-capture.mjs'));
 assert.ok(runner.includes('scripts/create_fauna_contact_sheet.py'));
 assert.ok(runner.includes('results:{player,texture,grounding,coastal,custom,fauna,beforeAfter}'));
-const primaryFaunaStart=releaseWorkflow.indexOf('- name: Verify mobile fauna rigs, animations, textures and four-view visuals before publish');
+const primaryFaunaStart=releaseWorkflow.indexOf('- name: Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish');
 const primaryFaunaEnd=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning fallback',primaryFaunaStart);
 assert.ok(primaryFaunaStart>=0&&primaryFaunaEnd>primaryFaunaStart&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('FAUNA_SKINNING_MODE: cpu')&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('timeout-minutes: 18'),
   'Release acceptance must validate all fauna using the stable CPU skinning path with enough time for the full four-view capture.');
