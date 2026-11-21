@@ -1226,7 +1226,7 @@ function setLoadingProgress(value,label){
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
-    # 0.6.337: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
+    # 0.6.338: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
     # Build each island around its stable centre and keep its original per-area density.
     grass_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;\n   const radius=Math.min(92,safeLandRadius);\n   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));"
     grass_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
@@ -2179,27 +2179,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.337: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.338: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.337; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.338; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.337\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.338\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.337.")
-    html = html.replace("0.6.274", "0.6.337")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.338.")
+    html = html.replace("0.6.274", "0.6.338")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'47',build:'0.6.337'"
+    diagnostic_build_replacement = "reportVersion:'48',build:'0.6.338'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.337 para normalizar.")
-    game_version = "0.6.337"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.338 para normalizar.")
+    game_version = "0.6.338"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -2545,11 +2545,13 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    for(let node=mesh;node&&node!==scene&&parentChain.length<10;node=node.parent)parentChain.push(String(node.name||''));
    reasonSamples.push({name:String(mesh.name||''),parentChain});
   }
-  if(!deferStats)updateSpatialSelectionCounts();
+  if(spatialDynamicFrustumActive)spatialDynamicFrustumAdded.push(mesh);
+  if(!deferStats&&!spatialDynamicFrustumActive)updateSpatialSelectionCounts();
  };
  const removeSpatialDynamicMesh=mesh=>{
   const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
   if(!mesh||!mesh.__elsnSpatialDynamic)return;
+  if(spatialDynamicFrustumActive)mesh.__elsnSpatialRemovedDuringFilter=true;
   if(dynamic&&typeof dynamic.indexOf==='function'){
    const index=dynamic.indexOf(mesh);if(index>=0)dynamic.splice(index,1);
   }
@@ -2557,7 +2559,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const reason=String(mesh.__elsnSpatialDynamicReason||'unknown');
   if(spatialSelectionStats.dynamicReasons[reason]>0)spatialSelectionStats.dynamicReasons[reason]--;
   try{delete mesh.__elsnSpatialDynamic;delete mesh.__elsnSpatialDynamicReason;}catch(_){mesh.__elsnSpatialDynamic=false;}
-  updateSpatialSelectionCounts();
+  if(!spatialDynamicFrustumActive)updateSpatialSelectionCounts();
  };
  if(scene.onNewMeshAddedObservable&&typeof scene.onNewMeshAddedObservable.add==='function'){
   // Meshes born after the index is built cannot be assumed static: constructions,
@@ -2590,7 +2592,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    // Babylon's dynamicContent is evaluated by a separate internal path.
    // Do not wrap octree.select(): that method selects static octree blocks and
    // is not the per-frame dynamic candidate list in this Babylon build.
-   spatialSelectionStats.dynamicFilterEnabled=false;
+   spatialSelectionStats.dynamicFilterPasses=0;
    spatialSelectionStats.dynamicFilterPasses=0;
    spatialSelectionStats.enabled=true;
    spatialSelectionStats.sceneMeshCount=meshCount;
@@ -2619,6 +2621,88 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    return false;
   }
  }
+
+
+ // Babylon 9.35 selects static octree blocks and appends dynamicContent afterwards.
+ // Filter only explicitly safe dynamic classes between active-mesh callbacks and
+ // restore the exact dynamic list before Babylon continues into particle/render work.
+ const spatialDynamicFrustumCullReasons=new Set(['vegetation-motion','water-or-coast','particle-or-effect','billboard','moving-thin-instances']);
+ const spatialDynamicFrustumOriginal=[];
+ const spatialDynamicFrustumAdded=[];
+ let spatialDynamicFrustumActive=false,spatialDynamicFrustumOriginalCount=0;
+ const spatialDynamicFrustumCanCull=mesh=>{
+  if(!mesh||mesh.alwaysSelectAsActiveMesh)return false;
+  if(mesh.skeleton||mesh.morphTargetManager||(Array.isArray(mesh.animations)&&mesh.animations.length))return false;
+  if(!spatialDynamicFrustumCullReasons.has(String(mesh.__elsnSpatialDynamicReason||'')))return false;
+  const renderId=typeof scene.getRenderId==='function'?scene.getRenderId():0;
+  if(renderId<=Number(mesh.__elsnSpatialFreshUntilRenderId||0))return false;
+  if(typeof mesh.isDisposed==='function'&&mesh.isDisposed())return false;
+  if(typeof mesh.isInFrustum!=='function'||!Array.isArray(scene.frustumPlanes)||scene.frustumPlanes.length<6)return false;
+  try{mesh.computeWorldMatrix();return !mesh.isInFrustum(scene.frustumPlanes);}
+  catch(error){spatialSelectionStats.dynamicFilterErrors++;return false;}
+ };
+ function restoreSpatialDynamicFrustumCandidates(){
+  if(!spatialDynamicFrustumActive)return;
+  const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
+  if(!Array.isArray(dynamic)){spatialDynamicFrustumActive=false;return;}
+  let write=0;
+  for(let i=0;i<spatialDynamicFrustumOriginalCount;i++){
+   const mesh=spatialDynamicFrustumOriginal[i];
+   if(!mesh||mesh.__elsnSpatialRemovedDuringFilter||(typeof mesh.isDisposed==='function'&&mesh.isDisposed()))continue;
+   delete mesh.__elsnSpatialRemovedDuringFilter;dynamic[write++]=mesh;
+  }
+  for(let i=0;i<spatialDynamicFrustumAdded.length;i++){
+   const mesh=spatialDynamicFrustumAdded[i];
+   if(!mesh||mesh.__elsnSpatialRemovedDuringFilter||(typeof mesh.isDisposed==='function'&&mesh.isDisposed()))continue;
+   delete mesh.__elsnSpatialRemovedDuringFilter;dynamic[write++]=mesh;
+  }
+  dynamic.length=write;
+  spatialDynamicFrustumOriginal.length=0;spatialDynamicFrustumAdded.length=0;spatialDynamicFrustumOriginalCount=0;
+  spatialDynamicFrustumActive=false;updateSpatialSelectionCounts();
+ }
+ function spatialDynamicFrustumBeforeEvaluation(){
+  if(spatialDynamicFrustumActive)restoreSpatialDynamicFrustumCandidates();
+  const dynamic=spatialSelectionOctree&&spatialSelectionOctree.dynamicContent;
+  if(!Array.isArray(dynamic)||dynamic.length<24||!scene.activeCamera||!Array.isArray(scene.frustumPlanes)||scene.frustumPlanes.length<6)return;
+  const startedAt=performance.now(),candidateCount=dynamic.length;
+  spatialDynamicFrustumOriginal.length=candidateCount;spatialDynamicFrustumAdded.length=0;spatialDynamicFrustumOriginalCount=candidateCount;
+  for(let i=0;i<candidateCount;i++)spatialDynamicFrustumOriginal[i]=dynamic[i];
+  spatialDynamicFrustumActive=true;
+  let selected=0,culled=0;
+  for(let read=0;read<candidateCount;read++){
+   const mesh=spatialDynamicFrustumOriginal[read];
+   if(spatialDynamicFrustumCanCull(mesh)){culled++;continue;}
+   dynamic[selected++]=mesh;
+  }
+  dynamic.length=selected;
+  spatialSelectionStats.dynamicFilterPasses++;
+  spatialSelectionStats.dynamicFilterLastCandidates=candidateCount;
+  spatialSelectionStats.dynamicFilterLastSelected=selected;
+  spatialSelectionStats.dynamicFilterLastCulled=culled;
+  spatialSelectionStats.dynamicFilterCulledPeak=Math.max(spatialSelectionStats.dynamicFilterCulledPeak,culled);
+  spatialSelectionStats.dynamicFilterTotalCandidates+=candidateCount;
+  spatialSelectionStats.dynamicFilterTotalCulled+=culled;
+  spatialSelectionStats.dynamicFilterLastMs=Number((performance.now()-startedAt).toFixed(3));
+  spatialSelectionStats.dynamicFilterTotalMs+=spatialSelectionStats.dynamicFilterLastMs;
+  spatialSelectionStats.dynamicFilterMaxMs=Math.max(spatialSelectionStats.dynamicFilterMaxMs,spatialSelectionStats.dynamicFilterLastMs);
+ }
+ function spatialDynamicFrustumAfterEvaluation(){
+  if(spatialDynamicFrustumActive)restoreSpatialDynamicFrustumCandidates();
+ }
+ const spatialDynamicFrustumHooksReady=!!(
+  scene.onBeforeActiveMeshesEvaluationObservable&&typeof scene.onBeforeActiveMeshesEvaluationObservable.add==='function'&&
+  scene.onAfterActiveMeshesEvaluationObservable&&typeof scene.onAfterActiveMeshesEvaluationObservable.add==='function'
+ );
+ if(spatialDynamicFrustumHooksReady){
+  scene.onBeforeActiveMeshesEvaluationObservable.add(spatialDynamicFrustumBeforeEvaluation);
+  scene.onAfterActiveMeshesEvaluationObservable.add(spatialDynamicFrustumAfterEvaluation);
+  spatialSelectionStats.dynamicFilterEnabled=true;
+ }else{
+  spatialSelectionStats.dynamicFilterEnabled=false;
+  spatialSelectionStats.error='Babylon active-mesh evaluation observers unavailable; dynamic frustum filter remains disabled.';
+ }
+ spatialSelectionStats.dynamicFilterPasses=0;
+ publishSpatialSelectionStats();
 
 """
     if html.count(scene_marker) != 1:
@@ -3482,6 +3566,21 @@ function getWorldPhaseTimingSnapshot(){
     if phase_update_end < 0:
         raise SystemExit("No se encontró el final delimitado del actualizador del mundo.")
     phase_update_source = html[phase_update_start:phase_update_end]
+    # Split the old environment/water bucket into individually measurable operations.
+    phase_markers = (
+        ("  setWorldUpdatePhase('environment / water');\n  updatePerformanceIslandStreaming(dt);\n  updateActiveIslandGrass(dt);\n  updateManagedWorldShadowCasters();",
+         "  setWorldUpdatePhase('world / island streaming');updatePerformanceIslandStreaming(dt);\n  setWorldUpdatePhase('world / vegetation streaming');updateActiveIslandGrass(dt);\n  setWorldUpdatePhase('world / shadow caster refresh');updateManagedWorldShadowCasters();"),
+        ("  habitableAuditAccumulator+=dt;",
+         "  setWorldUpdatePhase('world / structure audit');habitableAuditAccumulator+=dt;"),
+        ("  skyTexture.uOffset=",
+         "  setWorldUpdatePhase('world / atmosphere lighting');skyTexture.uOffset="),
+        ("  animateWater(dt);\n  updateWildlife(dt);",
+         "  setWorldUpdatePhase('world / water mesh and reflections');animateWater(dt);\n  setWorldUpdatePhase('world / wildlife simulation');updateWildlife(dt);")
+    )
+    for old_phase_block, new_phase_block in phase_markers:
+        if phase_update_source.count(old_phase_block) != 1:
+            raise SystemExit("No se encontró exactamente una transición de fase para dividir el diagnóstico: " + old_phase_block[:90])
+        phase_update_source = phase_update_source.replace(old_phase_block, new_phase_block, 1)
     phase_assignment_count = len(re.findall(r"worldUpdatePhase\s*=\s*([^;]+);", phase_update_source))
     if phase_assignment_count != 20:
         raise SystemExit(f"Se esperaban 20 transiciones de fase del mundo; se encontraron {phase_assignment_count}.")
