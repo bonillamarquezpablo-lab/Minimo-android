@@ -1197,8 +1197,8 @@ def main() -> None:
         fail("La preparación de aldeanos debe reutilizar la promesa compartida cuando hay margen y cargarla en serie en móviles sensibles a memoria.")
     if "if(isMobilePeakMemorySensitive){" not in index_html or "await playerHumanLoadPromise;" not in index_html or "npcStartupPromise=startNpcHumanModels();" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("El arranque móvil debe secuenciar protagonista y NPC sin eliminar el camino paralelo en equipos con margen.")
-    if "const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&(isTouchDevice||softwareSkinningRenderer))" not in index_html or "skinningMode:useCpuSkinning?'cpu':'gpu'" not in index_html:
-        fail("La fauna móvil debe usar CPU skinning por defecto y registrar la ruta real de deformación.")
+    if "const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)" not in index_html or "skinningMode:useCpuSkinning?'cpu':'gpu'" not in index_html:
+        fail("La fauna debe usar GPU skinning en hardware móvil y reservar CPU para diagnóstico explícito o renderizadores software.")
     if "Plantación inicial de bosque" not in index_html or "forestPlantingStartedAt" not in index_html:
         fail("La plantación del bosque debe ceder fotogramas y registrar su tiempo de arranque.")
     if "WILDLIFE_SOURCE_COMMIT='0128ca510d653bb04d6d1e4885bd8890b5050b4f'" not in index_html or "function loadWildlifeModels()" not in index_html:
