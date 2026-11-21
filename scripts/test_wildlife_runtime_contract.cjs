@@ -28,6 +28,18 @@ for(const marker of [
   "loadWildlifeModelsOnce().catch(error=>",
   "complete:ambientFauna.length===wildlifeSpawnSpecs.length"
 ]) assert.ok(builder.includes(marker),'Builder is missing animal-integrity requirement: '+marker);
+assert.ok(builder.includes("def rebase_quaternius_animal_skin_root(path: Path, label: str) -> dict:") &&
+  builder.includes('algorithm = "quaternius-armature-explicit-skin-root-v1"') &&
+  builder.includes('skin["joints"] = [parent_index, *original_joints]') &&
+  builder.includes('skin["skeleton"] = parent_index') &&
+  builder.includes('joint_index + 1') &&
+  builder.includes('inverse_payload = bytearray(identity)') &&
+  builder.includes('skin_root.get("algorithm") != "quaternius-armature-explicit-skin-root-v1"'),
+  'Each Quaternius animal must expose its transformed Armature ancestor as an explicit skin root, with rebased JOINTS and a matching identity inverse-bind matrix.');
+assert.ok(builder.includes("animal_source_height_replacement") && builder.includes("sourceBounds.height<.005") &&
+  builder.includes("sourceBounds.height>.5") &&
+  builder.includes("horizontalMajor=Math.max(.006,sourceBounds.height*.38)"),
+  'Runtime source dimensions and silhouette gates must use the rebuilt skin space, not raw centimetre thresholds.');
 assert.ok(builder.includes('def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:') &&
   builder.includes('primitive.setdefault("attributes", {})["COLOR_0"] = accessor_index') &&
   builder.includes('coat.get("algorithm") != "procedural-vertex-coat-v2"') &&
