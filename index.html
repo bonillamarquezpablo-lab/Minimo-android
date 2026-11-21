@@ -5698,19 +5698,6 @@ void main(void){
   const add=m=>{if(m&&m.getTotalVertices&&m.getTotalVertices()>0&&!seen.has(m)){seen.add(m);out.push(m);}};
   roots.forEach(r=>{add(r);try{r.getChildMeshes(false).forEach(add);}catch(_){}});return out;
  }
- function transformedSkinnedBounds(mesh,boundingBox){
-  const localMin=boundingBox&&boundingBox.minimum,localMax=boundingBox&&boundingBox.maximum;
-  const matrix=mesh&&typeof mesh.getWorldMatrix==='function'?mesh.getWorldMatrix():null,m=matrix&&matrix.m;
-  if(!localMin||!localMax||!m||m.length<16)return null;
-  const min=new B.Vector3(Infinity,Infinity,Infinity),max=new B.Vector3(-Infinity,-Infinity,-Infinity);
-  for(const x of [localMin.x,localMax.x])for(const y of [localMin.y,localMax.y])for(const z of [localMin.z,localMax.z]){
-   const wx=m[0]*x+m[4]*y+m[8]*z+m[12],wy=m[1]*x+m[5]*y+m[9]*z+m[13],wz=m[2]*x+m[6]*y+m[10]*z+m[14];
-   if(!Number.isFinite(wx)||!Number.isFinite(wy)||!Number.isFinite(wz))return null;
-   min.x=Math.min(min.x,wx);min.y=Math.min(min.y,wy);min.z=Math.min(min.z,wz);
-   max.x=Math.max(max.x,wx);max.y=Math.max(max.y,wy);max.z=Math.max(max.z,wz);
-  }
-  return {min,max};
- }
  function normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight){
   if(!actor||!actor.scaling||typeof actor.scaling.scaleInPlace!=='function')throw new Error('El actor de fauna no permite normalización uniforme.');
   if(!Number.isFinite(expectedHeight)||expectedHeight<.05)throw new Error('Altura física objetivo no válida.');
@@ -5733,15 +5720,20 @@ void main(void){
    const ancestors=[];for(let parent=mesh&&mesh.parent;parent;parent=parent.parent)ancestors.unshift(parent);
    for(const parent of ancestors)if(typeof parent.computeWorldMatrix==='function')parent.computeWorldMatrix(true);
    if(mesh&&typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix(true);
-   const info=mesh&&typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
+   let info=mesh&&typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
    if(!info||!info.boundingBox)continue;
-   const bb=info.boundingBox,isSkinned=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);
-   // For skinned GLBs, use the immutable local bind-pose AABB and transform it
-   // once through the live mesh world matrix. CPU-applying the skeleton here and
-   // transforming the resulting bounds again double-counts this rig's node transforms.
-   const localBounds=isSkinned?transformedSkinnedBounds(mesh,bb):null;
-   if(isSkinned&&!localBounds)throw new Error('No se pudieron transformar los límites locales del mesh con skinning; se cancela la normalización para evitar reducir el animal.');
-   const meshMin=localBounds?localBounds.min:bb.minimumWorld,meshMax=localBounds?localBounds.max:bb.maximumWorld;
+   const isSkinned=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);
+   // Babylon's refreshBoundingInfo(true) CPU-evaluates the current skeleton into a
+   // temporary vertex array and rebuilds minimumWorld/maximumWorld. Those values are
+   // already world-space: do not multiply them by the mesh matrix a second time.
+   if(isSkinned){
+    if(typeof mesh.refreshBoundingInfo!=='function')throw new Error('Babylon no puede recalcular los límites aplicando el esqueleto; se cancela la normalización.');
+    mesh.refreshBoundingInfo(true);
+    info=typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
+    if(!info||!info.boundingBox)throw new Error('Babylon no devolvió límites después de aplicar el esqueleto.');
+   }
+   const bb=info.boundingBox,meshMin=bb.minimumWorld,meshMax=bb.maximumWorld;
+   if(isSkinned&&(!meshMin||!meshMax))throw new Error('Babylon no generó límites mundiales para la geometría deformada.');
    if(!meshMin||!meshMax)continue;
    min=min?new B.Vector3(Math.min(min.x,meshMin.x),Math.min(min.y,meshMin.y),Math.min(min.z,meshMin.z)):new B.Vector3(meshMin.x,meshMin.y,meshMin.z);
    max=max?new B.Vector3(Math.max(max.x,meshMax.x),Math.max(max.y,meshMax.y),Math.max(max.z,meshMax.z)):new B.Vector3(meshMax.x,meshMax.y,meshMax.z);
