@@ -28,8 +28,10 @@
     const extraIndices = needsExtras ? safeVertices('matricesIndicesExtra') : null;
     const extraWeights = needsExtras ? safeVertices('matricesWeightsExtra') : null;
     const skeleton = mesh.skeleton;
-    if (!positions || positions.length < 3 || !indices || !weights || !skeleton ||
-        typeof skeleton.getTransformMatrices !== 'function' || (needsExtras && (!extraIndices || !extraWeights))) return null;
+    // Empty glTF skin-root/attachment nodes can reference the skeleton but contain no geometry.
+    if (!positions || positions.length < 3) return null;
+    if (!indices || !weights || !skeleton || typeof skeleton.getTransformMatrices !== 'function' ||
+        (needsExtras && (!extraIndices || !extraWeights))) return null;
     safeCall(() => typeof skeleton.prepare === 'function' ? skeleton.prepare(true) : null);
     const bones = safeCall(() => skeleton.getTransformMatrices(mesh));
     const world = safeCall(() => typeof mesh.getWorldMatrix === 'function' ? mesh.getWorldMatrix() : null);

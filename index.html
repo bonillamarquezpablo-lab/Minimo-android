@@ -5722,7 +5722,10 @@ void main(void){
   const extraIndices=Number(mesh.numBoneInfluencers)>4?mesh.getVerticesData(indicesExtraKind):null;
   const extraWeights=Number(mesh.numBoneInfluencers)>4?mesh.getVerticesData(weightsExtraKind):null;
   const skeleton=mesh.skeleton;
-  if(!positions||positions.length<3||!indices||!weights||!skeleton||typeof skeleton.getTransformMatrices!=='function')throw new Error('La malla esqueletizada no expone vértices originales, influencias y matrices de huesos.');
+  // Imported skin roots and attachment nodes can carry a skeleton reference without geometry.
+  // Ignore those empty nodes; a real skinned primitive must still expose every required stream.
+  if(!positions||positions.length<3)return null;
+  if(!indices||!weights||!skeleton||typeof skeleton.getTransformMatrices!=='function')throw new Error('La malla esqueletizada '+(mesh.name||mesh.id||'sin nombre')+' tiene vértices pero carece de índices, pesos o matrices de huesos.');
   if(Number(mesh.numBoneInfluencers)>4&&(!extraIndices||!extraWeights))throw new Error('Faltan influencias de huesos adicionales en la malla.');
   if(typeof skeleton.prepare==='function')skeleton.prepare(true);
   const boneMatrices=skeleton.getTransformMatrices(mesh);
@@ -5776,6 +5779,7 @@ void main(void){
    const isSkinned=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);
    if(isSkinned){
     const bounds=skinnedVertexWorldBounds(mesh);
+    if(!bounds)continue;
     include(bounds.min);include(bounds.max);
    }else{
     const info=mesh&&typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;

@@ -80,6 +80,12 @@ assert.equal(Number(boundsSandbox.__measured.height.toFixed(3)),1.42,'The CPU an
 assert.equal(Number(boundsSandbox.__measured.width.toFixed(3)),.8);
 assert.equal(Number(boundsSandbox.__measured.depth.toFixed(3)),.72);
 assert.equal(Number(boundsSandbox.__measured.min.y.toFixed(3)),1.25);
+const emptySkinnedNode={name:'SkinRootWithoutGeometry',skeleton:{name:'Rig'},numBoneInfluencers:4,
+ setPositionsForCPUSkinning(){return null;},getVerticesData(){return null;},getBoundingInfo(){return {boundingBox:null};}};
+const emptyNodeSandbox={B:{Vector3:Vec3,VertexBuffer},scene:{incrementRenderId(){}},mesh:boundsSandbox.mesh,emptyNode:emptySkinnedNode};
+vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__withEmpty=boundsForMeshes([mesh,emptyNode]);',emptyNodeSandbox);
+assert.equal(Number(emptyNodeSandbox.__withEmpty.height.toFixed(3)),1.42,
+ 'Empty glTF skeleton attachment nodes must be ignored without aborting valid mesh bounds.');
 const dynamicActor={
  scaling:{x:1,y:1,z:1,scaleInPlace(factor){this.x*=factor;this.y*=factor;this.z*=factor;},asArray(){return [this.x,this.y,this.z];}},
  computeWorldMatrix(){}
