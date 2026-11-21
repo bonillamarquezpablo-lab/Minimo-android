@@ -5714,19 +5714,14 @@ void main(void){
    const ancestors=[];for(let parent=mesh&&mesh.parent;parent;parent=parent.parent)ancestors.unshift(parent);
    for(const parent of ancestors)if(typeof parent.computeWorldMatrix==='function')parent.computeWorldMatrix(true);
    if(mesh&&typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix(true);
-   const isSkinned=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);
-   // Babylon applies skinning on the GPU during rendering, so the raw bind-pose AABB
-   // is not the visible animal. Refresh a CPU-side copy with the real bone matrices
-   // before measuring; refreshBoundingInfo(true) does not rewrite the source vertex buffer.
-   if(isSkinned){
-    if(typeof mesh.refreshBoundingInfo!=='function')throw new Error('Babylon no puede recalcular los límites aplicando el esqueleto; se cancela la normalización.');
-    mesh.refreshBoundingInfo(true);
-   }
    const info=mesh&&typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
    if(!info||!info.boundingBox)continue;
-   const bb=info.boundingBox;
+   const bb=info.boundingBox,isSkinned=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);
+   // For skinned GLBs, use the immutable local bind-pose AABB and transform it
+   // once through the live mesh world matrix. CPU-applying the skeleton here and
+   // transforming the resulting bounds again double-counts this rig's node transforms.
    const localBounds=isSkinned?transformedSkinnedBounds(mesh,bb):null;
-   if(isSkinned&&!localBounds)throw new Error('No se pudieron transformar los límites deformados por el esqueleto; se cancela la normalización para evitar reducir el animal.');
+   if(isSkinned&&!localBounds)throw new Error('No se pudieron transformar los límites locales del mesh con skinning; se cancela la normalización para evitar reducir el animal.');
    const meshMin=localBounds?localBounds.min:bb.minimumWorld,meshMax=localBounds?localBounds.max:bb.maximumWorld;
    if(!meshMin||!meshMax)continue;
    min=min?new B.Vector3(Math.min(min.x,meshMin.x),Math.min(min.y,meshMin.y),Math.min(min.z,meshMin.z)):new B.Vector3(meshMin.x,meshMin.y,meshMin.z);
