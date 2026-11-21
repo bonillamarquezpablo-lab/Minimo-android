@@ -3572,8 +3572,8 @@ function getWorldPhaseTimingSnapshot(){
          "  worldUpdateCount++;worldUpdatePhase='world / island streaming';\n  updatePerformanceIslandStreaming(dt);\n  setWorldUpdatePhase('world / vegetation streaming');\n  updateActiveIslandGrass(dt);\n  setWorldUpdatePhase('world / shadow caster refresh');\n  updateManagedWorldShadowCasters();"),
         ("  habitableAuditAccumulator+=dt;",
          "  setWorldUpdatePhase('world / structure audit');\n  habitableAuditAccumulator+=dt;"),
-        ("  skyTexture.uOffset=",
-         "  setWorldUpdatePhase('world / atmosphere lighting');\n  skyTexture.uOffset="),
+        ("skyTexture.uOffset=",
+         "setWorldUpdatePhase('world / atmosphere lighting');skyTexture.uOffset="),
         ("  animateWater(dt);\n  updateWildlife(dt);",
          "  setWorldUpdatePhase('world / water mesh and reflections');\n  animateWater(dt);\n  setWorldUpdatePhase('world / wildlife simulation');\n  updateWildlife(dt);")
     )
