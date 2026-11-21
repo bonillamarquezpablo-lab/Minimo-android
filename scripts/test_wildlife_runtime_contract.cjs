@@ -69,6 +69,9 @@ const unskinnedSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:{
 vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',unskinnedSandbox);
 assert.equal(unskinnedSandbox.__measured.width,2,'Unskinned meshes must retain Babylon native world bounds.');
 assert.equal(unskinnedSandbox.__measured.height,3);
+assert.ok(html.includes('for(let parent=mesh&&mesh.parent;parent;parent=parent.parent)ancestors.unshift(parent)') &&
+  worldInspection.includes('for (let parent = mesh && mesh.parent; parent; parent = parent.parent) ancestors.unshift(parent)'),
+  'Runtime and inspection bounds must refresh every ancestor matrix before measuring skinned children.');
 assert.ok(html.includes("root.setParent(actor,true,true)") &&
   html.includes("heightError>heightTolerance") &&
   html.includes("renderedDimensions:{width:Number(finalBounds.width.toFixed(3))"),
