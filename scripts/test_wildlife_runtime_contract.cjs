@@ -48,6 +48,11 @@ assert.ok(html.includes('function transformedSkinnedBounds(mesh,boundingBox)') &
   html.includes('const localBounds=isSkinned?transformedSkinnedBounds(mesh,bb):null') &&
   html.includes('if(isSkinned&&!localBounds)throw new Error'),
   'Wildlife normalization must transform local bind-pose bounds once and preserve the GLB root world transform.');
+assert.ok(html.includes('function normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight)') &&
+  html.includes('const correction=expectedHeight/measured;') &&
+  html.includes('actor.scaling.scaleInPlace(correction)') &&
+  html.includes('const fitted=normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight)'),
+  'The final physical deer scale must be corrected from measured world bounds after the GLB roots are attached.');
 const boundsStart=html.indexOf(' function transformedSkinnedBounds(mesh,boundingBox){');
 const boundsEnd=html.indexOf('function makeHeldEnemySword',boundsStart);
 assert.ok(boundsStart>=0&&boundsEnd>boundsStart,'Production wildlife bounds functions must be available for deterministic scale regression.');
@@ -63,6 +68,21 @@ assert.equal(Number(boundsSandbox.__measured.height.toFixed(3)),1.42,'A stale 14
 assert.equal(Number(boundsSandbox.__measured.width.toFixed(3)),.8);
 assert.equal(Number(boundsSandbox.__measured.depth.toFixed(3)),.72);
 assert.equal(Number(boundsSandbox.__measured.min.y.toFixed(3)),1.25);
+const dynamicActor={
+ scaling:{x:1,y:1,z:1,scaleInPlace(factor){this.x*=factor;this.y*=factor;this.z*=factor;},asArray(){return [this.x,this.y,this.z];}},
+ computeWorldMatrix(){}
+};
+const dynamicMesh={
+ parent:dynamicActor,skeleton:{name:'DynamicRig'},numBoneInfluencers:4,computeWorldMatrix(){},
+ getWorldMatrix(){return {m:[dynamicActor.scaling.x,0,0,0,0,dynamicActor.scaling.y,0,0,0,0,dynamicActor.scaling.z,0,0,0,0,1]};},
+ getBoundingInfo(){return {boundingBox:{minimum:{x:-.5,y:0,z:-.4},maximum:{x:.5,y:1,z:.4}}};}
+};
+const fittingSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:null,actor:dynamicActor,meshes:[dynamicMesh]};
+vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+
+ 'this.__fit=normalizeActorScaleFromWorldBounds(actor,meshes,1.42);',fittingSandbox);
+assert.equal(Number(fittingSandbox.__fit.factor.toFixed(3)),1.42);
+assert.equal(Number(fittingSandbox.__fit.bounds.height.toFixed(3)),1.42);
+assert.equal(Number(dynamicActor.scaling.y.toFixed(3)),1.42);
 const unskinnedSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:{
   computeWorldMatrix(){},getBoundingInfo(){return {boundingBox:{minimum:{x:0,y:0,z:0},maximum:{x:1,y:1,z:1},
     minimumWorld:{x:2,y:3,z:4},maximumWorld:{x:4,y:6,z:8}}};}
