@@ -6,6 +6,7 @@ const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf
 const releaseWorkflow = fs.readFileSync('.github/workflows/deploy-pages.yml', 'utf8');
 const runner = fs.readFileSync('scripts/run-unified-inspector.mjs', 'utf8');
 const capture = fs.readFileSync('scripts/fauna-visual-capture.mjs', 'utf8');
+const game = fs.readFileSync('index.html', 'utf8');
 const sheet = fs.readFileSync('scripts/create_fauna_contact_sheet.py', 'utf8');
 
 assert.match(workflow, /^  push:/m, 'Fauna visual inspection must run automatically after relevant main pushes.');
@@ -80,6 +81,7 @@ assert.ok(capture.includes('Math.min(d.width,d.depth)') && capture.includes('d.h
   'Fauna visual acceptance must reject limb/antler-only actors with a collapsed body depth even when their maximum extent looks plausible.');
 assert.ok(capture.includes('skinnedVertices'));
 assert.ok(capture.includes('alwaysSelectAsActiveMesh') && capture.includes("code:'skinned-mesh-frustum-culling-enabled'"), 'Fauna acceptance must inspect the final Babylon frustum-protection flag and reject any skinned animal mesh that remains cullable against stale bind-pose bounds.');
+assert.ok(game.includes("m.alwaysSelectAsActiveMesh=!!(m.skeleton||Number(m.numBoneInfluencers)>0)"), 'The real coastal gull loader must protect imported skinned body meshes from frustum culling against stale bounds.');
 assert.ok(capture.includes('animationGroups'));
 assert.ok(capture.includes('captureCanvas'));
 assert.ok(capture.includes('const visualCaptureCount=manifest.captures.filter(capture=>ANGLES.some(angle=>angle.id===capture.angle)).length') &&
