@@ -5709,6 +5709,10 @@ void main(void){
  function boundsForMeshes(meshes){
   scene.incrementRenderId();let min=null,max=null;
   for(const mesh of meshes){
+   // Refresh the complete imported hierarchy from the outer actor down. Babylon can
+   // otherwise leave a skinned child's cached world matrix at its pre-parent scale.
+   const ancestors=[];for(let parent=mesh&&mesh.parent;parent;parent=parent.parent)ancestors.unshift(parent);
+   for(const parent of ancestors)if(typeof parent.computeWorldMatrix==='function')parent.computeWorldMatrix(true);
    if(mesh&&typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix(true);
    const info=mesh&&typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
    if(!info||!info.boundingBox)continue;
