@@ -562,6 +562,8 @@ def main() -> None:
         "scene.onAfterActiveMeshesEvaluationObservable.add(spatialDynamicFrustumAfterEvaluation)",
         "mesh.isInFrustum(scene.frustumPlanes)",
         "restoreSpatialDynamicFrustumCandidates()",
+        "dynamicFilterCandidates:0",
+        "spatialSelectionStats.dynamicFilterCandidates=candidateCount",
         "meshSelectionOctreeEnabled:spatialSelectionStats.enabled",
         "meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount",
         "meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio",

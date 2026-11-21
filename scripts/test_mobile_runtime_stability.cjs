@@ -40,6 +40,8 @@ for (const marker of [
   'scene.onAfterActiveMeshesEvaluationObservable.add(spatialDynamicFrustumAfterEvaluation)',
   'mesh.isInFrustum(scene.frustumPlanes)',
   'restoreSpatialDynamicFrustumCandidates()',
+  'dynamicFilterCandidates:0',
+  'spatialSelectionStats.dynamicFilterCandidates=candidateCount;',
   'Do not wrap octree.select(): that method selects static octree blocks',
   'buildSpatialSelectionOctree();',
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',

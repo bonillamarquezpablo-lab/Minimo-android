@@ -24,6 +24,7 @@ for(const marker of [
   "scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,'created-after-octree',true);});",
   "mesh.__elsnSpatialDynamicReason='octree-initial-dynamic'",
   'function buildSpatialSelectionOctree()',
+assert.ok(builder.includes('dynamicFilterCandidates:0') && builder.includes('spatialSelectionStats.dynamicFilterCandidates=candidateCount;'), 'The live spatial snapshot must publish the current dynamic candidate count.');
   'spatialSelectionStats.dynamicFilterEnabled=true;',
   'scene.onBeforeActiveMeshesEvaluationObservable.add(spatialDynamicFrustumBeforeEvaluation)',
   'scene.onAfterActiveMeshesEvaluationObservable.add(spatialDynamicFrustumAfterEvaluation)',

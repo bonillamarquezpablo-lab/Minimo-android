@@ -2485,7 +2485,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
  const spatialDynamicStatsPattern=/^(?:vesselWaterSpray|drakkarWake|tidalFoam|particle|projectile|arrow)/i;
  let spatialSelectionOctree=null;
- const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCandidates:0,dynamicFilterTotalCulled:0,dynamicFilterTotalMs:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,buildMs:null,error:null};
+ const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterCandidates:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCandidates:0,dynamicFilterTotalCulled:0,dynamicFilterTotalMs:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,buildMs:null,error:null};
  const spatialDynamicMeshSet=new Set();
  const publishSpatialSelectionStats=()=>{
   try{
@@ -2676,7 +2676,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   }
   dynamic.length=selected;
   spatialSelectionStats.dynamicFilterPasses++;
-  spatialSelectionStats.dynamicFilterLastCandidates=candidateCount;
+  spatialSelectionStats.dynamicFilterCandidates=candidateCount;spatialSelectionStats.dynamicFilterLastCandidates=candidateCount;
   spatialSelectionStats.dynamicFilterLastSelected=selected;
   spatialSelectionStats.dynamicFilterLastCulled=culled;
   spatialSelectionStats.dynamicFilterCulledPeak=Math.max(spatialSelectionStats.dynamicFilterCulledPeak,culled);
