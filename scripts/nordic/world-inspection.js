@@ -22,6 +22,12 @@
   function transformedLocalBounds(mesh, box) {
     const localMin = box && box.minimum;
     const localMax = box && box.maximum;
+    // Refresh every ancestor first: skinned meshes can retain a cached child
+    // world matrix after their imported GLB root is reparented under the actor.
+    const ancestors = [];
+    for (let parent = mesh && mesh.parent; parent; parent = parent.parent) ancestors.unshift(parent);
+    ancestors.forEach(parent => safeCall(() => typeof parent.computeWorldMatrix === 'function' ? parent.computeWorldMatrix(true) : null));
+    safeCall(() => typeof mesh.computeWorldMatrix === 'function' ? mesh.computeWorldMatrix(true) : null);
     const matrix = safeCall(() => typeof mesh.getWorldMatrix === 'function' ? mesh.getWorldMatrix() : null);
     const m = matrix && matrix.m;
     if (!localMin || !localMax || !m || m.length < 16) return null;
