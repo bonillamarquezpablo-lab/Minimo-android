@@ -965,6 +965,12 @@ function setLoadingProgress(value,label){
         raise SystemExit("No se encontró el cargador único de modelos animales para añadir Cache API.")
     html = html.replace(wildlife_loader_marker, wildlife_cache_code + wildlife_loader_marker, 1)
 
+    wildlife_bounds_probe_marker = "   const sourceBounds=boundsForMeshes(meshes);"
+    wildlife_bounds_probe_replacement = "   const animalSkinningMeshes=meshes.filter(mesh=>mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);\n   const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer);const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true;if(forceCpuSkinning&&forceGpuSkinning)throw new Error('El diagnóstico de fauna no puede forzar CPU y GPU skinning a la vez.');const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer);animalSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;});\n   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);\n   if(!groups.some(group=>group&&group.targetedAnimations&&group.targetedAnimations.length>0)||!clips.idle||!clips.walk||!clips.run||clips.walk===clips.idle||clips.run===clips.walk||clips.run===clips.idle)throw new Error(kind+': el rig necesita clips Idle, Walk y Gallop/Run distintos y reproducibles.');\n   const wildlifeBoundsProbe=clips.idle;wildlifeBoundsProbe.start(true);wildlifeBoundsProbe.goToFrame(wildlifeBoundsProbe.from);\n   await new Promise((resolve,reject)=>{const boundsProbeTimeout=window.setTimeout(()=>reject(new Error(kind+': no se pudo evaluar un fotograma del esqueleto antes de medir la silueta.')),5000);scene.onAfterRenderObservable.addOnce(()=>{window.clearTimeout(boundsProbeTimeout);try{(imported.skeletons||[]).forEach(skeleton=>{if(typeof skeleton.prepare==='function')skeleton.prepare();});meshes.forEach(mesh=>{mesh.computeWorldMatrix(true);if(typeof mesh.refreshBoundingInfo==='function')mesh.refreshBoundingInfo({applySkeleton:!!mesh.skeleton});mesh.computeWorldMatrix(true);});scene.incrementRenderId();resolve();}catch(error){reject(error);}});});\n   const sourceBounds=boundsForMeshes(meshes);"
+    if html.count(wildlife_bounds_probe_marker) != 1:
+        raise SystemExit("No se encontró el marcador único de evaluación de pose antes de medir los límites de fauna.")
+    html = html.replace(wildlife_bounds_probe_marker, wildlife_bounds_probe_replacement, 1)
+
     animal_dimensions_marker = "const width=sourceBounds.max.x-sourceBounds.min.x,depth=sourceBounds.max.z-sourceBounds.min.z;"
     animal_silhouette_text = "Silueta animal anormalmente estrecha; se descarta para no mostrar extremidades sueltas."
     if html.count(animal_dimensions_marker) != 1 or html.count(animal_silhouette_text) != 1:
@@ -972,7 +978,7 @@ function setLoadingProgress(value,label){
     animal_dimensions_at = html.index(animal_dimensions_marker) + len(animal_dimensions_marker)
     animal_text_at = html.index(animal_silhouette_text, animal_dimensions_at)
     animal_check_end = html.index("');", animal_text_at) + 3
-    animal_silhouette_replacement = "\n   const animalSkinningMeshes=meshes.filter(mesh=>mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);\n   const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer);const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true;if(forceCpuSkinning&&forceGpuSkinning)throw new Error('El diagnóstico de fauna no puede forzar CPU y GPU skinning a la vez.');const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer);animalSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;});\n   (imported.skeletons||[]).forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}catch(_){}});\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
+    animal_silhouette_replacement = "\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
     html = html[:animal_dimensions_at] + animal_silhouette_replacement + html[animal_check_end:]
     animal_skinning_mode_marker = "skinnedVertexCount,dimensions:{width:Number(width.toFixed(3))"
     animal_skinning_mode_replacement = "skinnedVertexCount,skinningMode:useCpuSkinning?'cpu':'gpu',dimensions:{width:Number(width.toFixed(3))"
@@ -1103,10 +1109,14 @@ function setLoadingProgress(value,label){
     html = html.replace(wildlife_mesh_texture_marker, wildlife_mesh_texture_marker_replacement, 1)
 
     wildlife_animation_marker = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);"
-    wildlife_animation_marker_replacement = "   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);\n   if(!groups.some(group=>group&&group.targetedAnimations&&group.targetedAnimations.length>0)||!clips.idle||!clips.walk||!clips.run||clips.walk===clips.idle||clips.run===clips.walk||clips.run===clips.idle)throw new Error(kind+': el rig necesita clips Idle, Walk y Gallop/Run distintos y reproducibles.');"
-    if html.count(wildlife_animation_marker) != 1:
-        raise SystemExit("No se encontró el marcador único: wildlife_animation_marker.")
-    html = html.replace(wildlife_animation_marker, wildlife_animation_marker_replacement, 1)
+    wildlife_animation_marker_replacement = ""
+    if html.count(wildlife_animation_marker) != 2:
+        raise SystemExit("La selección de clips de fauna debe aparecer dos veces antes de retirar únicamente la declaración tardía.")
+    wildlife_animation_marker_at = html.find(wildlife_animation_marker)
+    wildlife_animation_late_at = html.find(wildlife_animation_marker, wildlife_animation_marker_at + len(wildlife_animation_marker))
+    if wildlife_animation_marker_at < 0 or wildlife_animation_late_at <= wildlife_animation_marker_at:
+        raise SystemExit("No se pudo localizar la declaración temprana y la declaración tardía de clips de fauna.")
+    html = html[:wildlife_animation_late_at] + html[wildlife_animation_late_at:].replace(wildlife_animation_marker, wildlife_animation_marker_replacement, 1)
 
     wildlife_cleanup_marker = "   if(imported){try{(imported.animationGroups||[]).forEach(group=>group.stop());(imported.skeletons||[]).forEach(skeleton=>skeleton.dispose());(imported.meshes||[]).forEach(mesh=>mesh.dispose(false,true));(imported.transformNodes||[]).forEach(node=>node.dispose(false,true));}catch(_){}}"
     wildlife_cleanup_marker_replacement = "   const partialGroups=Array.from(scene.animationGroups||[]).filter(group=>!beforeGroups.has(group));partialGroups.forEach(group=>{try{group.stop();group.dispose();}catch(_){}}); \n   const partialMeshes=Array.from(scene.meshes||[]).filter(mesh=>!beforeMeshes.has(mesh));partialMeshes.forEach(mesh=>{try{if(!(mesh.isDisposed&&mesh.isDisposed()))mesh.dispose(false,true);}catch(_){}}); \n   const partialNodes=Array.from(scene.transformNodes||[]).filter(node=>!beforeNodes.has(node));partialNodes.forEach(node=>{try{if(!(node.isDisposed&&node.isDisposed()))node.dispose(false,true);}catch(_){}}); \n   const partialSkeletons=Array.from(scene.skeletons||[]).filter(skeleton=>!beforeSkeletons.has(skeleton));partialSkeletons.forEach(skeleton=>{try{skeleton.dispose();}catch(_){}});"
