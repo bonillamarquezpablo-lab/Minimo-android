@@ -240,7 +240,7 @@ async function main() {
           if(mesh.skeleton)skeletons.add(mesh.skeleton);
           if(mesh.material){
             materials.set(mesh.material.uniqueId??mesh.material.name,mesh.material);
-            for(const texture of mesh.material.getActiveTextures?.()||[])textures.set(texture.uniqueId??mesh.material.name,mesh.material);
+            for(const texture of mesh.material.getActiveTextures?.()||[])textures.set(texture.uniqueId??texture.name,texture);
           }
           const local=localMin&&localMax?{
             min:{x:number(localMin.x),y:number(localMin.y),z:number(localMin.z)},
