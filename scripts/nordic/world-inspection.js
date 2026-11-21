@@ -19,28 +19,55 @@
     };
   }
 
-  function transformedLocalBounds(mesh, box) {
-    const localMin = box && box.minimum, localMax = box && box.maximum;
+  function skinnedVertexWorldBounds(mesh) {
+    const safeVertices = kind => safeCall(() => mesh.getVerticesData(kind));
+    const positions = safeCall(() => typeof mesh.setPositionsForCPUSkinning === 'function'
+      ? mesh.setPositionsForCPUSkinning() : null) || safeVertices('position');
+    const indices = safeVertices('matricesIndices'), weights = safeVertices('matricesWeights');
+    const needsExtras = Number(mesh.numBoneInfluencers) > 4;
+    const extraIndices = needsExtras ? safeVertices('matricesIndicesExtra') : null;
+    const extraWeights = needsExtras ? safeVertices('matricesWeightsExtra') : null;
+    const skeleton = mesh.skeleton;
+    if (!positions || positions.length < 3 || !indices || !weights || !skeleton ||
+        typeof skeleton.getTransformMatrices !== 'function' || (needsExtras && (!extraIndices || !extraWeights))) return null;
+    safeCall(() => typeof skeleton.prepare === 'function' ? skeleton.prepare(true) : null);
+    const bones = safeCall(() => skeleton.getTransformMatrices(mesh));
     const world = safeCall(() => typeof mesh.getWorldMatrix === 'function' ? mesh.getWorldMatrix() : null);
-    const matrix = world && world.m;
-    if (!localMin || !localMax || !matrix || matrix.length < 16) return null;
-    const min = { x: Infinity, y: Infinity, z: Infinity };
-    const max = { x: -Infinity, y: -Infinity, z: -Infinity };
-    for (let corner = 0; corner < 8; corner++) {
-      const x = corner & 1 ? localMax.x : localMin.x;
-      const y = corner & 2 ? localMax.y : localMin.y;
-      const z = corner & 4 ? localMax.z : localMin.z;
-      const w = matrix[3] * x + matrix[7] * y + matrix[11] * z + matrix[15];
-      const invW = finite(w) && Math.abs(w) > 1e-12 ? 1 / w : 1;
+    const wm = world && world.m;
+    if (!bones || bones.length < 16 || !wm || wm.length < 16) return null;
+    const min = { x: Infinity, y: Infinity, z: Infinity }, max = { x: -Infinity, y: -Infinity, z: -Infinity };
+    const influences = needsExtras ? 8 : 4;
+    for (let p = 0, vertex = 0; p + 2 < positions.length; p += 3, vertex++) {
+      const x = Number(positions[p]), y = Number(positions[p + 1]), z = Number(positions[p + 2]);
+      if (![x, y, z].every(finite)) return null;
+      let sx = 0, sy = 0, sz = 0, sw = 0, active = 0;
+      for (let slot = 0; slot < influences; slot++) {
+        const jointData = slot < 4 ? indices : extraIndices, weightData = slot < 4 ? weights : extraWeights;
+        const at = vertex * 4 + (slot % 4), weight = Number(weightData && weightData[at] || 0);
+        if (!(weight > 0)) continue;
+        const joint = Math.floor(Number(jointData && jointData[at])), offset = joint * 16;
+        if (!finite(joint) || joint < 0 || offset + 15 >= bones.length) return null;
+        sx += weight * (bones[offset] * x + bones[offset + 4] * y + bones[offset + 8] * z + bones[offset + 12]);
+        sy += weight * (bones[offset + 1] * x + bones[offset + 5] * y + bones[offset + 9] * z + bones[offset + 13]);
+        sz += weight * (bones[offset + 2] * x + bones[offset + 6] * y + bones[offset + 10] * z + bones[offset + 14]);
+        sw += weight * (bones[offset + 3] * x + bones[offset + 7] * y + bones[offset + 11] * z + bones[offset + 15]);
+        active++;
+      }
+      if (!active) continue;
+      if (!finite(sw) || Math.abs(sw) < 1e-10) return null;
+      const px = sx / sw, py = sy / sw, pz = sz / sw;
+      const worldW = wm[3] * px + wm[7] * py + wm[11] * pz + wm[15];
+      const invW = finite(worldW) && Math.abs(worldW) > 1e-10 ? 1 / worldW : 1;
       const point = {
-        x: (matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12]) * invW,
-        y: (matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13]) * invW,
-        z: (matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14]) * invW
+        x: (wm[0] * px + wm[4] * py + wm[8] * pz + wm[12]) * invW,
+        y: (wm[1] * px + wm[5] * py + wm[9] * pz + wm[13]) * invW,
+        z: (wm[2] * px + wm[6] * py + wm[10] * pz + wm[14]) * invW
       };
       if (![point.x, point.y, point.z].every(finite)) return null;
       min.x = Math.min(min.x, point.x); min.y = Math.min(min.y, point.y); min.z = Math.min(min.z, point.z);
       max.x = Math.max(max.x, point.x); max.y = Math.max(max.y, point.y); max.z = Math.max(max.z, point.z);
     }
+    if (!finite(min.x) || !finite(max.x)) return null;
     return { min, max };
   }
 
@@ -56,13 +83,13 @@
       let bounds = null;
       let basis = 'babylon-world';
       if (isSkinned) {
-        bounds = transformedLocalBounds(mesh, box);
-        basis = 'skinned-bind-pose-world';
+        bounds = skinnedVertexWorldBounds(mesh);
+        basis = 'skinned-vertex-world';
       } else if (box && box.minimumWorld && box.maximumWorld) {
         bounds = { min: box.minimumWorld, max: box.maximumWorld };
       }
       const min = bounds && bounds.min, max = bounds && bounds.max;
-      if (!min || !max) return { available: false, min: null, max: null, size: null, finite: null };
+      if (!min || !max) return { available: false, min: null, max: null, size: null, finite: null, basis };
       const values = [min.x, min.y, min.z, max.x, max.y, max.z];
       const valid = values.every(finite);
       if (!valid) return { available: true, min: null, max: null, size: null, finite: false, basis };

@@ -5712,6 +5712,56 @@ void main(void){
   }
   return {factor:correction,bounds:after};
  }
+ function skinnedVertexWorldBounds(mesh){
+  const VB=B.VertexBuffer||{};
+  const positionKind=VB.PositionKind||'position',indicesKind=VB.MatricesIndicesKind||'matricesIndices',weightsKind=VB.MatricesWeightsKind||'matricesWeights';
+  const indicesExtraKind=VB.MatricesIndicesExtraKind||'matricesIndicesExtra',weightsExtraKind=VB.MatricesWeightsExtraKind||'matricesWeightsExtra';
+  let positions=typeof mesh.setPositionsForCPUSkinning==='function'?mesh.setPositionsForCPUSkinning():null;
+  if(!positions||!positions.length)positions=mesh.getVerticesData(positionKind);
+  const indices=mesh.getVerticesData(indicesKind),weights=mesh.getVerticesData(weightsKind);
+  const extraIndices=Number(mesh.numBoneInfluencers)>4?mesh.getVerticesData(indicesExtraKind):null;
+  const extraWeights=Number(mesh.numBoneInfluencers)>4?mesh.getVerticesData(weightsExtraKind):null;
+  const skeleton=mesh.skeleton;
+  if(!positions||positions.length<3||!indices||!weights||!skeleton||typeof skeleton.getTransformMatrices!=='function')throw new Error('La malla esqueletizada no expone vértices originales, influencias y matrices de huesos.');
+  if(Number(mesh.numBoneInfluencers)>4&&(!extraIndices||!extraWeights))throw new Error('Faltan influencias de huesos adicionales en la malla.');
+  if(typeof skeleton.prepare==='function')skeleton.prepare(true);
+  const boneMatrices=skeleton.getTransformMatrices(mesh);
+  if(!boneMatrices||boneMatrices.length<16)throw new Error('El esqueleto no ha generado matrices de deformación.');
+  const world=mesh.getWorldMatrix&&mesh.getWorldMatrix(),wm=world&&world.m;
+  if(!wm||wm.length<16)throw new Error('La malla esqueletizada no tiene matriz mundial válida.');
+  const min=new B.Vector3(Infinity,Infinity,Infinity),max=new B.Vector3(-Infinity,-Infinity,-Infinity);
+  const influences=Number(mesh.numBoneInfluencers)>4?8:4;
+  for(let p=0,v=0;p+2<positions.length;p+=3,v+=1){
+   const x=Number(positions[p]),y=Number(positions[p+1]),z=Number(positions[p+2]);
+   if(![x,y,z].every(Number.isFinite))throw new Error('La geometría original contiene vértices no finitos.');
+   let sx=0,sy=0,sz=0,sw=0,active=0;
+   for(let slot=0;slot<influences;slot++){
+    const idx=slot<4?indices:extraIndices,wt=slot<4?weights:extraWeights,at=v*4+(slot%4),weight=Number(wt&&wt[at]||0);
+    if(!(weight>0))continue;
+    const boneIndex=Math.floor(Number(idx&&idx[at]));
+    const offset=boneIndex*16;
+    if(!Number.isFinite(boneIndex)||boneIndex<0||offset+15>=boneMatrices.length)throw new Error('Índice de hueso fuera de las matrices disponibles.');
+    const m=boneMatrices;
+    sx+=weight*(m[offset]*x+m[offset+4]*y+m[offset+8]*z+m[offset+12]);
+    sy+=weight*(m[offset+1]*x+m[offset+5]*y+m[offset+9]*z+m[offset+13]);
+    sz+=weight*(m[offset+2]*x+m[offset+6]*y+m[offset+10]*z+m[offset+14]);
+    sw+=weight*(m[offset+3]*x+m[offset+7]*y+m[offset+11]*z+m[offset+15]);
+    active++;
+   }
+   if(!active)continue;
+   if(!Number.isFinite(sw)||Math.abs(sw)<1e-10)throw new Error('La matriz ponderada de huesos produce una coordenada homogénea inválida.');
+   const px=sx/sw,py=sy/sw,pz=sz/sw;
+   const ww=wm[3]*px+wm[7]*py+wm[11]*pz+wm[15],iw=Math.abs(ww)>1e-10?1/ww:1;
+   const wx=(wm[0]*px+wm[4]*py+wm[8]*pz+wm[12])*iw;
+   const wy=(wm[1]*px+wm[5]*py+wm[9]*pz+wm[13])*iw;
+   const wz=(wm[2]*px+wm[6]*py+wm[10]*pz+wm[14])*iw;
+   if(![wx,wy,wz].every(Number.isFinite))throw new Error('La deformación de huesos genera límites mundiales no finitos.');
+   min.x=Math.min(min.x,wx);min.y=Math.min(min.y,wy);min.z=Math.min(min.z,wz);
+   max.x=Math.max(max.x,wx);max.y=Math.max(max.y,wy);max.z=Math.max(max.z,wz);
+  }
+  if(!Number.isFinite(min.x)||!Number.isFinite(max.x))throw new Error('No se han podido medir vértices deformados de la malla esqueletizada.');
+  return {min,max,width:max.x-min.x,height:max.y-min.y,depth:max.z-min.z};
+ }
  function boundsForMeshes(meshes){
   scene.incrementRenderId();let min=null,max=null;
   const include=(point)=>{
@@ -5723,22 +5773,13 @@ void main(void){
    const ancestors=[];for(let parent=mesh&&mesh.parent;parent;parent=parent.parent)ancestors.unshift(parent);
    for(const parent of ancestors)if(typeof parent.computeWorldMatrix==='function')parent.computeWorldMatrix(true);
    if(mesh&&typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix(true);
-   const info=mesh&&typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
-   if(!info||!info.boundingBox)continue;
-   const bb=info.boundingBox,isSkinned=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);
+   const isSkinned=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);
    if(isSkinned){
-    // Measure bind-pose local geometry through the live world matrix. CPU skeleton
-    // refresh places these imported rigs in a mismatched coordinate frame and can
-    // expand their AABB beyond 100 metres; the GPU animation remains untouched.
-    const localMin=bb.minimum,localMax=bb.maximum;
-    const world=typeof mesh.getWorldMatrix==='function'?mesh.getWorldMatrix():null;
-    if(!localMin||!localMax||!world||typeof B.Vector3.TransformCoordinates!=='function')throw new Error('No se pueden transformar los límites locales de la malla esqueletizada.');
-    for(let corner=0;corner<8;corner++){
-     const local=new B.Vector3(corner&1?localMax.x:localMin.x,corner&2?localMax.y:localMin.y,corner&4?localMax.z:localMin.z);
-     include(B.Vector3.TransformCoordinates(local,world));
-    }
+    const bounds=skinnedVertexWorldBounds(mesh);
+    include(bounds.min);include(bounds.max);
    }else{
-    const boxMin=bb.minimumWorld,boxMax=bb.maximumWorld;
+    const info=mesh&&typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
+    const bb=info&&info.boundingBox,boxMin=bb&&bb.minimumWorld,boxMax=bb&&bb.maximumWorld;
     if(!boxMin||!boxMax)continue;
     include(new B.Vector3(boxMin.x,boxMin.y,boxMin.z));
     include(new B.Vector3(boxMax.x,boxMax.y,boxMax.z));

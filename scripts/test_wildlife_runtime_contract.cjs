@@ -40,13 +40,15 @@ assert.match(html,/file:'Wolf\.glb'/);
 assert.match(html,/file:'Stag\.glb'/);
 assert.match(html,/function updateWildlife\(dt\)/);
 for(const marker of ['visualIntegrity','playingAnimationGroups','textureReadiness','maxExtentMeters','result.meshes'])assert.ok(worldInspection.includes(marker),'Inspector per-animal capture is missing '+marker);
-assert.ok(worldInspection.includes('function transformedLocalBounds(mesh, box)') &&
-  worldInspection.includes("'skinned-bind-pose-world'") &&
+assert.ok(worldInspection.includes('function skinnedVertexWorldBounds(mesh)') &&
+  worldInspection.includes("'skinned-vertex-world'") &&
+  worldInspection.includes('skeleton.getTransformMatrices(mesh)') &&
   !worldInspection.includes('mesh.refreshBoundingInfo(true)'),
-  'Skinned wildlife diagnostics must transform bind-pose local bounds and avoid CPU skeleton refresh.');
-assert.ok(html.includes('const localMin=bb.minimum,localMax=bb.maximum;') &&
-  html.includes('B.Vector3.TransformCoordinates(local,world)'),
-  'Wildlife normalization must transform skinned bind-pose local bounds using the live world matrix.');
+  'Skinned wildlife diagnostics must skin original vertices exactly once with current bone matrices.');
+assert.ok(html.includes('function skinnedVertexWorldBounds(mesh)') &&
+  html.includes('mesh.setPositionsForCPUSkinning()') &&
+  html.includes('skeleton.getTransformMatrices(mesh)'),
+  'Wildlife normalization must use original vertices and current bone matrices, not stale bind-pose or CPU-deformed AABBs.');
 assert.ok(html.includes('function normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight)') &&
   html.includes('const correction=expectedHeight/measured;') &&
   html.includes('actor.scaling.scaleInPlace(correction)') &&
@@ -55,37 +57,41 @@ assert.ok(html.includes('function normalizeActorScaleFromWorldBounds(actor,meshe
 const boundsStart=html.indexOf(' function normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight){');
 const boundsEnd=html.indexOf('function makeHeldEnemySword',boundsStart);
 assert.ok(boundsStart>=0&&boundsEnd>boundsStart,'Production wildlife bounds functions must be available for deterministic scale regression.');
-class Vec3 {
- constructor(x,y,z){this.x=x;this.y=y;this.z=z;}
- clone(){return new Vec3(this.x,this.y,this.z);}
- static TransformCoordinates(p,m){
-  const a=m.m||m,w=a[3]*p.x+a[7]*p.y+a[11]*p.z+a[15],iw=Math.abs(w)>1e-12?1/w:1;
-  return new Vec3((a[0]*p.x+a[4]*p.y+a[8]*p.z+a[12])*iw,
-   (a[1]*p.x+a[5]*p.y+a[9]*p.z+a[13])*iw,
-   (a[2]*p.x+a[6]*p.y+a[10]*p.z+a[14])*iw);
- }
-}
-const boundsSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:null};
-const regressionBox={minimum:{x:-.5,y:0,z:-.4},maximum:{x:.5,y:1,z:.4},
-  minimumWorld:{x:-80,y:-2,z:-30},maximumWorld:{x:80,y:142,z:30}};
-boundsSandbox.mesh={skeleton:{name:'DeerRig'},numBoneInfluencers:4,computeWorldMatrix(){},
-  refreshBoundingInfo(){throw new Error('CPU skeleton refresh must not be used for anatomical bounds.');},
-  getWorldMatrix(){return {m:[.8,0,0,0,0,1.42,0,0,0,0,.9,0,12,1.25,-3,1]};},
-  getBoundingInfo(){return {boundingBox:regressionBox};}};
+class Vec3 { constructor(x,y,z){this.x=x;this.y=y;this.z=z;} clone(){return new Vec3(this.x,this.y,this.z);} }
+const VertexBuffer={PositionKind:'position',MatricesIndicesKind:'matricesIndices',MatricesWeightsKind:'matricesWeights',
+ MatricesIndicesExtraKind:'matricesIndicesExtra',MatricesWeightsExtraKind:'matricesWeightsExtra'};
+const boundsSandbox={B:{Vector3:Vec3,VertexBuffer},scene:{incrementRenderId(){}},mesh:null};
+const corners=[];for(const x of [-.5,.5])for(const y of [0,1])for(const z of [-.4,.4])corners.push(x,y,z);
+const jointIndices=Array.from({length:8*4},(_,i)=>0),jointWeights=Array.from({length:8*4},(_,i)=>i%4===0?1:0);
+const boneMatrix=[.8,0,0,0,0,1.42,0,0,0,0,.9,0,0,0,0,1];
+const regressionBox={minimum:{x:-.01,y:-.01,z:-.01},maximum:{x:.01,y:.015,z:.01},
+ minimumWorld:{x:-80,y:-2,z:-30},maximumWorld:{x:80,y:142,z:30}};
+let originalPositionsRequested=false;
+boundsSandbox.mesh={skeleton:{name:'DeerRig',prepare(){},getTransformMatrices(){return boneMatrix;}},
+ numBoneInfluencers:4,computeWorldMatrix(){},
+ setPositionsForCPUSkinning(){originalPositionsRequested=true;return corners;},
+ getVerticesData(kind){if(kind==='position')return new Array(24).fill(.001);if(kind==='matricesIndices')return jointIndices;if(kind==='matricesWeights')return jointWeights;return null;},
+ refreshBoundingInfo(){throw new Error('CPU skeleton refresh must not be used for anatomical bounds.');},
+ getWorldMatrix(){return {m:[1,0,0,0,0,1,0,0,0,0,1,0,12,1.25,-3,1]};},
+ getBoundingInfo(){return {boundingBox:regressionBox};}};
 vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',boundsSandbox);
-assert.equal(Number(boundsSandbox.__measured.height.toFixed(3)),1.42,'A stale 142 m GPU world AABB must not distort the 1.42 m local bind-pose deer during normalization.');
+assert.equal(originalPositionsRequested,true,'Bounds must use original vertex data when the renderer is using software skinning.');
+assert.equal(Number(boundsSandbox.__measured.height.toFixed(3)),1.42,'The CPU and GPU path must apply the current bone transform exactly once.');
 assert.equal(Number(boundsSandbox.__measured.width.toFixed(3)),.8);
 assert.equal(Number(boundsSandbox.__measured.depth.toFixed(3)),.72);
 assert.equal(Number(boundsSandbox.__measured.min.y.toFixed(3)),1.25);
-assert.equal(boundsSandbox.__measured.min.y,1.25,'Bind-pose local bounds must be transformed through the live world matrix.');
 const dynamicActor={
  scaling:{x:1,y:1,z:1,scaleInPlace(factor){this.x*=factor;this.y*=factor;this.z*=factor;},asArray(){return [this.x,this.y,this.z];}},
  computeWorldMatrix(){}
 };
 const dynamicBox={minimum:{x:-.5,y:0,z:-.4},maximum:{x:.5,y:1,z:.4},
  minimumWorld:{x:-50,y:-10,z:-30},maximumWorld:{x:50,y:90,z:30}};
+const dynamicCorners=[];for(const x of [0,1])for(const y of [0,1])for(const z of [0,1])dynamicCorners.push(x,y,z);
+const dynamicIndices=Array.from({length:8*4},()=>0),dynamicWeights=Array.from({length:8*4},(_,i)=>i%4===0?1:0);
 const dynamicMesh={
- parent:dynamicActor,skeleton:{name:'DynamicRig'},numBoneInfluencers:4,computeWorldMatrix(){},
+ parent:dynamicActor,skeleton:{name:'DynamicRig',prepare(){},getTransformMatrices(){return [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];}},numBoneInfluencers:4,computeWorldMatrix(){},
+ setPositionsForCPUSkinning(){return dynamicCorners;},
+ getVerticesData(kind){return kind==='position'?new Array(24).fill(0):kind==='matricesIndices'?dynamicIndices:kind==='matricesWeights'?dynamicWeights:null;},
  getWorldMatrix(){return {m:[dynamicActor.scaling.x,0,0,0,0,dynamicActor.scaling.y,0,0,0,0,dynamicActor.scaling.z,0,0,0,0,1]};},
  refreshBoundingInfo(){throw new Error('CPU skeleton refresh must not be used for anatomical bounds.');},
  getBoundingInfo(){return {boundingBox:dynamicBox};}
@@ -107,7 +113,7 @@ assert.ok(html.includes('for(let parent=mesh&&mesh.parent;parent;parent=parent.p
   worldInspection.includes('for (let parent = mesh && mesh.parent; parent; parent = parent.parent) ancestors.unshift(parent)'),
   'Runtime and inspection bounds must refresh every ancestor matrix before measuring skinned children.');
 assert.ok(!html.slice(boundsStart,boundsEnd).includes('mesh.refreshBoundingInfo(true)'),
-  'The wildlife bounds helper must not CPU-apply skeletal deformation.');
+  'The wildlife bounds helper must not reapply CPU skeletal deformation.');
 assert.ok(html.includes("root.setParent(actor,true,true)") &&
   html.includes("heightError>heightTolerance") &&
   html.includes("renderedDimensions:{width:Number(finalBounds.width.toFixed(3))"),

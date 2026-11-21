@@ -147,14 +147,20 @@ const wolfTexturePending={name:'wolf-normal',isReady:()=>false,getSize:()=>({wid
 const wolfSkeleton={name:'WolfRig',bones:Array.from({length:24},()=>({}))};
 const wolfBounds={
  minimum:{x:-.45,y:0,z:-.65},maximum:{x:.45,y:.86,z:.65},
- // Stale GPU world bounds are intentionally absurd; inspection must ignore them for skinned meshes.
  minimumWorld:{x:-80,y:-2,z:-30},maximumWorld:{x:80,y:142,z:30}
 };
+const wolfPositions=[];for(const x of [-.45,.45])for(const y of [0,.86])for(const z of [-.65,.65])wolfPositions.push(x,y,z);
+const wolfIndices=Array.from({length:8*4},()=>0),wolfWeights=Array.from({length:8*4},(_,i)=>i%4===0?1:0);
+const wolfIdentity=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
+wolfSkeleton.prepare=()=>{};
+wolfSkeleton.getTransformMatrices=()=>wolfIdentity;
 const wolfMesh={...mesh,uniqueId:70,name:'WolfBody',id:'wolf-body',skeleton:wolfSkeleton,
  material:{name:'WolfMaterial',getActiveTextures:()=>[wolfTextureReady,wolfTexturePending]},
  getTotalVertices:()=>920,getTotalIndices:()=>1840,
  computeWorldMatrix(){},
- refreshBoundingInfo(){throw new Error('CPU skinning is not a valid anatomical bounds source for this GLB.');},
+ setPositionsForCPUSkinning:()=>wolfPositions,
+ getVerticesData(kind){return kind==='position'?new Array(24).fill(0):kind==='matricesIndices'?wolfIndices:kind==='matricesWeights'?wolfWeights:null;},
+ refreshBoundingInfo(){throw new Error('CPU skinning must not be reapplied to already-deformed buffers.');},
  getWorldMatrix:()=>({m:[1,0,0,0,0,1,0,0,0,0,1,0,1.55,.03,1.75,1]}),
  getBoundingInfo:()=>({boundingBox:wolfBounds})};
 const wolfRoot={name:'Wolf_0',position:{x:1.5,y:.03,z:1.7},getChildMeshes:()=>[wolfMesh],isEnabled:()=>true};
@@ -181,8 +187,8 @@ assert.equal(inspectedWolf.textureReadiness.pending,1);
 assert.equal(inspectedWolf.bounds.size.y,.86);
 assert.equal(inspectedWolf.visualIntegrity.plausibleBounds,true);
 assert.ok(inspectedWolf.meshes[0].bounds.finite);
-assert.equal(inspectedWolf.meshes[0].bounds.basis,'skinned-bind-pose-world',
-  'Skinned meshes must use transformed bind-pose bounds and ignore stale GPU/CPU skeleton bounds.');
+assert.equal(inspectedWolf.meshes[0].bounds.basis,'skinned-vertex-world',
+  'Skinned meshes must be measured from original vertices deformed once by current bone matrices.');
  assert.equal(inspectedWolf.bounds.size.x,.9);
 assert.equal(inspectedWolf.bounds.size.z,1.3);
 assert.ok(analyzeWorldInspectionSnapshot(wildlifeCaptured).findings.some(item=>item.code==='wildlife-animation-not-playing'));
