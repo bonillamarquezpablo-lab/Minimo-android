@@ -5714,29 +5714,35 @@ void main(void){
  }
  function boundsForMeshes(meshes){
   scene.incrementRenderId();let min=null,max=null;
+  const include=(point)=>{
+   if(!point||![point.x,point.y,point.z].every(Number.isFinite))throw new Error('Punto de límites GLB no finito.');
+   min=min?new B.Vector3(Math.min(min.x,point.x),Math.min(min.y,point.y),Math.min(min.z,point.z)):point.clone();
+   max=max?new B.Vector3(Math.max(max.x,point.x),Math.max(max.y,point.y),Math.max(max.z,point.z)):point.clone();
+  };
   for(const mesh of meshes){
-   // Refresh the complete imported hierarchy from the outer actor down. Babylon can
-   // otherwise leave a skinned child's cached world matrix at its pre-parent scale.
    const ancestors=[];for(let parent=mesh&&mesh.parent;parent;parent=parent.parent)ancestors.unshift(parent);
    for(const parent of ancestors)if(typeof parent.computeWorldMatrix==='function')parent.computeWorldMatrix(true);
    if(mesh&&typeof mesh.computeWorldMatrix==='function')mesh.computeWorldMatrix(true);
-   let info=mesh&&typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
+   const info=mesh&&typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
    if(!info||!info.boundingBox)continue;
-   const isSkinned=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);
-   // Babylon's refreshBoundingInfo(true) CPU-evaluates the current skeleton into a
-   // temporary vertex array and rebuilds minimumWorld/maximumWorld. Those values are
-   // already world-space: do not multiply them by the mesh matrix a second time.
+   const bb=info.boundingBox,isSkinned=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);
    if(isSkinned){
-    if(typeof mesh.refreshBoundingInfo!=='function')throw new Error('Babylon no puede recalcular los límites aplicando el esqueleto; se cancela la normalización.');
-    mesh.refreshBoundingInfo(true);
-    info=typeof mesh.getBoundingInfo==='function'?mesh.getBoundingInfo():null;
-    if(!info||!info.boundingBox)throw new Error('Babylon no devolvió límites después de aplicar el esqueleto.');
+    // Measure bind-pose local geometry through the live world matrix. CPU skeleton
+    // refresh places these imported rigs in a mismatched coordinate frame and can
+    // expand their AABB beyond 100 metres; the GPU animation remains untouched.
+    const localMin=bb.minimum,localMax=bb.maximum;
+    const world=typeof mesh.getWorldMatrix==='function'?mesh.getWorldMatrix():null;
+    if(!localMin||!localMax||!world||typeof B.Vector3.TransformCoordinates!=='function')throw new Error('No se pueden transformar los límites locales de la malla esqueletizada.');
+    for(let corner=0;corner<8;corner++){
+     const local=new B.Vector3(corner&1?localMax.x:localMin.x,corner&2?localMax.y:localMin.y,corner&4?localMax.z:localMin.z);
+     include(B.Vector3.TransformCoordinates(local,world));
+    }
+   }else{
+    const boxMin=bb.minimumWorld,boxMax=bb.maximumWorld;
+    if(!boxMin||!boxMax)continue;
+    include(new B.Vector3(boxMin.x,boxMin.y,boxMin.z));
+    include(new B.Vector3(boxMax.x,boxMax.y,boxMax.z));
    }
-   const bb=info.boundingBox,meshMin=bb.minimumWorld,meshMax=bb.maximumWorld;
-   if(isSkinned&&(!meshMin||!meshMax))throw new Error('Babylon no generó límites mundiales para la geometría deformada.');
-   if(!meshMin||!meshMax)continue;
-   min=min?new B.Vector3(Math.min(min.x,meshMin.x),Math.min(min.y,meshMin.y),Math.min(min.z,meshMin.z)):new B.Vector3(meshMin.x,meshMin.y,meshMin.z);
-   max=max?new B.Vector3(Math.max(max.x,meshMax.x),Math.max(max.y,meshMax.y),Math.max(max.z,meshMax.z)):new B.Vector3(meshMax.x,meshMax.y,meshMax.z);
   }
   if(!min||!max)throw new Error('El personaje GLB enemigo no contiene geometría visible.');
   return {min,max,width:max.x-min.x,height:max.y-min.y,depth:max.z-min.z};
