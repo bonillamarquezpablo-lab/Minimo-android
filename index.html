@@ -5076,7 +5076,7 @@ void main(void){
    const finalBounds=boundsForMeshes(meshes);
    if(!Number.isFinite(finalBounds.min.y)||Math.abs(finalBounds.min.y-groundY-.015)>.12)throw new Error('El cuerpo animal no quedó apoyado correctamente en el terreno.');
    actor.rotation.y=rand(0,Math.PI*2);
-   meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=false;});
+   meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});
    const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);
    groups.forEach(group=>{try{group.stop();}catch(_){}});
    const animal={kind,root:actor,x,z,size,homeIslandIndex,groundOffset,collisionRadius:definition.collisionRadius*size,heading:actor.rotation.y,turnTimer:rand(2.5,6),wanderTimer:rand(2,5),wandering:Math.random()<.45,flee:0,clips,groups,activeAnimation:null,activeMode:'',meshCount:meshes.length,skeletonBoneCount:boneCount,skinnedVertexCount,dimensions:{width:Number(width.toFixed(3)),height:Number(sourceBounds.height.toFixed(3)),depth:Number(depth.toFixed(3))},meshNames:meshes.map(mesh=>String(mesh.name||mesh.id||'')).slice(0,16)};

@@ -104,7 +104,7 @@ export function analyzeWorldInspectionSnapshot(snapshot) {
   if (wildlife && finite(wildlife.count) && wildlife.count > 0) {
     const malformed = wildlifeActors.filter(actor => !actor || !actor.visualIntegrity ||
       actor.visualIntegrity.hasMeshes !== true || actor.visualIntegrity.hasSkinnedMesh !== true ||
-      actor.visualIntegrity.hasSkeleton !== true || actor.visualIntegrity.hasFinitePosition !== true ||
+      actor.visualIntegrity.hasSkeleton !== true || actor.visualIntegrity.hasSkinnedMeshFrustumProtection !== true || actor.visualIntegrity.hasFinitePosition !== true ||
       actor.visualIntegrity.hasVisibleGeometry !== true || actor.visualIntegrity.hasFiniteBounds !== true ||
       actor.visualIntegrity.plausibleBounds !== true);
     if (malformed.length) add('high', 'wildlife-visual-rig-invalid',
@@ -115,6 +115,10 @@ export function analyzeWorldInspectionSnapshot(snapshot) {
         bounds:actor&&actor.bounds,visualIntegrity:actor&&actor.visualIntegrity,
         skeletons:actor&&actor.skeletons,meshes:actor&&actor.meshes
       })) });
+    const unprotectedSkinnedAnimals=wildlifeActors.filter(actor=>actor&&actor.visualIntegrity?.hasSkinnedMesh===true&&actor.visualIntegrity?.hasSkinnedMeshFrustumProtection!==true);
+    if(unprotectedSkinnedAnimals.length)add('high','wildlife-skinned-mesh-frustum-culling',
+      'Hay animales cuyas mallas con esqueleto siguen sujetas al frustum con límites de pose obsoletos.',
+      {count:unprotectedSkinnedAnimals.length,animals:unprotectedSkinnedAnimals.slice(0,30).map(actor=>({name:actor.name,kind:actor.kind,meshes:actor.meshes?.filter(mesh=>mesh.skeleton&&!mesh.alwaysSelectAsActiveMesh).map(mesh=>mesh.name)}))});
     const expectedSpecies = ['deer','stag','wolf'];
     const loadedSpecies = new Set(wildlifeActors.map(actor=>actor&&actor.kind).filter(Boolean));
     const missingSpecies = expectedSpecies.filter(kind=>!loadedSpecies.has(kind));

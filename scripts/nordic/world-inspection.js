@@ -107,6 +107,7 @@
       : (isBird && flightGroup ? String(flightGroup.name || 'Seagull_Flight_Loop') : null);
     const visibleMeshes = childMeshes.filter(mesh=>mesh&&mesh.isVisible!==false&&(!mesh.isEnabled||mesh.isEnabled()));
     const skinnedMeshes = childMeshes.filter(mesh=>mesh&&mesh.skeleton);
+    const hasSkinnedMeshFrustumProtection=skinnedMeshes.length>0&&skinnedMeshes.every(mesh=>mesh.alwaysSelectAsActiveMesh===true);
     const totalBoneCount = skeletons.reduce((sum,skeleton)=>sum+(Array.isArray(skeleton.bones)?skeleton.bones.length:0),0);
     const size = aggregateBounds && aggregateBounds.size;
     const maxExtent = size ? Math.max(size.x,size.y,size.z) : null;
@@ -155,7 +156,7 @@
         result.homeIslandIndex=finite(actor.homeIslandIndex)?actor.homeIslandIndex:null;
       }
       result.visualIntegrity={
-        hasMeshes:childMeshes.length>0,hasSkinnedMesh:skinnedMeshes.length>0,
+        hasMeshes:childMeshes.length>0,hasSkinnedMesh:skinnedMeshes.length>0,hasSkinnedMeshFrustumProtection,
         hasSkeleton:skeletons.length>0&&totalBoneCount>=12,
         hasFlightRig:isBird?!!(flightRig&&flightRig.complete):null,
         hasFinitePosition:!!position&&[position.x,position.y,position.z].every(finite),
@@ -170,6 +171,7 @@
         vertices:safeCall(()=>mesh.getTotalVertices&&mesh.getTotalVertices(),null),
         indices:safeCall(()=>mesh.getTotalIndices&&mesh.getTotalIndices(),null),
         skeleton:mesh.skeleton?String(mesh.skeleton.name||'unnamed-skeleton'):null,
+        alwaysSelectAsActiveMesh:mesh.alwaysSelectAsActiveMesh===true,
         material:mesh.material?String(mesh.material.name||'unnamed-material'):null
       }));
     }

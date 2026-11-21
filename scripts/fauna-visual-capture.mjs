@@ -215,7 +215,7 @@ async function main() {
           }:null;
           return {
             name:String(mesh.name||mesh.id||''),vertices,indices,skinned,
-            skeleton:mesh.skeleton?.name||null,enabled:mesh.isEnabled?.()!==false,
+            skeleton:mesh.skeleton?.name||null,alwaysSelectAsActiveMesh:mesh.alwaysSelectAsActiveMesh===true,enabled:mesh.isEnabled?.()!==false,
             visible:mesh.isVisible!==false,visibility:number(mesh.visibility??1),
             material:mesh.material?.name||null,localBounds:local,
             worldBounds:lo&&hi?{min:{x:number(lo.x),y:number(lo.y),z:number(lo.z)},max:{x:number(hi.x),y:number(hi.y),z:number(hi.z)}}:null,
@@ -307,6 +307,13 @@ async function main() {
       code:'gull-count-mismatch',requested:expectedBirds,loaded:birds.length
     });
     for(const animal of manifest.fauna){
+      if(animal.role!=='ambient-bird'){
+        const unprotectedSkinnedMeshes=(animal.meshes||[]).filter(mesh=>mesh.skinned&&mesh.alwaysSelectAsActiveMesh!==true);
+        if(unprotectedSkinnedMeshes.length)manifest.warnings.push({
+          code:'skinned-mesh-frustum-culling-enabled',animal:animal.id,
+          meshes:unprotectedSkinnedMeshes.map(mesh=>({name:mesh.name,vertices:mesh.vertices,bounds:mesh.worldBounds}))
+        });
+      }
       const d=animal.bounds?.dimensions;
       const horizontalMin=d?Math.min(d.width,d.depth):null;
       const horizontalMax=d?Math.max(d.width,d.depth):null;

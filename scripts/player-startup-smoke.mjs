@@ -925,7 +925,7 @@ async function main() {
       ['deer','stag','wolf'], 'La isla inicial debe contener ciervo, ciervo macho y lobo.');
     for (const animal of manifest.worldInspection.wildlife.returned) {
       assert.ok(animal.visualIntegrity?.hasMeshes && animal.visualIntegrity?.hasSkinnedMesh &&
-        animal.visualIntegrity?.hasSkeleton && animal.visualIntegrity?.hasFinitePosition &&
+        animal.visualIntegrity?.hasSkeleton && animal.visualIntegrity?.hasSkinnedMeshFrustumProtection && animal.visualIntegrity?.hasFinitePosition &&
         animal.visualIntegrity?.hasVisibleGeometry && animal.visualIntegrity?.hasFiniteBounds &&
         animal.visualIntegrity?.plausibleBounds,
         'Fauna con rig, geometría, límites o escala incorrectos: ' + JSON.stringify(animal));
