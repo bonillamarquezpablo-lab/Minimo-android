@@ -83,8 +83,8 @@ assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
 assert.ok(validator.includes('reportVersion:\'51\',build:\'0.6.342\''), 'Release must carry the next diagnostic build id.');
 assert.ok(validator.includes('EXPECTED_VERSION = "0.6.342"'), 'Release validator must target version 0.6.342.');
-assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
-  'Hardware mobile GPUs must use GPU skinning by default; CPU remains explicit diagnostics/software fallback, and the exact path is recorded per animal.');
+assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning;") && !builder.includes("softwareSkinningRenderer") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
+  'All renderers must use GPU skinning by default; CPU skinning is only an explicit diagnostic override, and the selected path is recorded per animal.');
 assert.ok(builder.includes("forestPlantingStartedAt") && builder.includes("Plantación inicial de bosque") && builder.includes("await new Promise(resolve=>requestAnimationFrame(resolve))"),
   'The initial forest must be planted in bounded frame slices and expose a startup timing task.');
 assert.ok(builder.includes('mobile_memory_policy_marker') && builder.includes('isMobilePeakMemorySensitive'), 'Memory-sensitive scheduling must be independent from the selected graphics profile.');
