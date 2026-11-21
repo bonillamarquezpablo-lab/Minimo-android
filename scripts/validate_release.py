@@ -1197,8 +1197,8 @@ def main() -> None:
         fail("La preparación de aldeanos debe reutilizar la promesa compartida cuando hay margen y cargarla en serie en móviles sensibles a memoria.")
     if "if(isMobilePeakMemorySensitive){" not in index_html or "await playerHumanLoadPromise;" not in index_html or "npcStartupPromise=startNpcHumanModels();" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("El arranque móvil debe secuenciar protagonista y NPC sin eliminar el camino paralelo en equipos con margen.")
-    if "const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)" not in index_html or "skinningMode:useCpuSkinning?'cpu':'gpu'" not in index_html:
-        fail("La fauna debe usar GPU skinning en hardware móvil y reservar CPU para diagnóstico explícito o renderizadores software.")
+    if "const useCpuSkinning=forceCpuSkinning;" not in index_html or "softwareSkinningRenderer" in index_html or "skinningMode:useCpuSkinning?'cpu':'gpu'" not in index_html:
+        fail("La fauna debe usar GPU skinning en todos los renderizadores por defecto; CPU solo puede activarse mediante diagnóstico explícito.")
     if "meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});" not in index_html:
         fail("Las mallas riggeadas de fauna deben conservar alwaysSelectAsActiveMesh después de la configuración final para evitar que Babylon las oculte con límites de pose obsoletos.")
     if "Plantación inicial de bosque" not in index_html or "forestPlantingStartedAt" not in index_html:
