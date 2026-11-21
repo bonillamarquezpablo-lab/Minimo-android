@@ -729,12 +729,24 @@ def main() -> None:
     forest_planting_marker = " land.forEach((is,idx)=>{"
     if html.count(forest_planting_marker) != 1:
         raise SystemExit("No se encontró el único bloque de plantación de árboles del archipiélago.")
-    html = html.replace(forest_planting_marker, " await loadForestTreeTemplates();\n" + forest_planting_marker, 1)
+    html = html.replace(forest_planting_marker, " await loadForestTreeTemplates();\n const forestPlantingStartedAt=performance.now();\n for(let idx=0;idx<land.length;idx++){const is=land[idx];", 1)
     tree_push_marker = "trees.push(createTree(x,z,rand(.78,1.12)));"
-    tree_push_replacement = "const plantedTree=createTree(x,z,rand(.78,1.12));if(plantedTree)trees.push(plantedTree);"
+    tree_plant_iteration_marker = "  for(let i=0;i<count;i++){\n   const p=sampleGroundPoint(is,4.4,.70,.22,.82);"
+    tree_plant_iteration_replacement = "  for(let i=0;i<count;i++){\n   if((i&1)===0)await new Promise(resolve=>requestAnimationFrame(resolve));\n   const p=sampleGroundPoint(is,4.4,.70,.22,.82);"
+    if html.count(tree_plant_iteration_marker) != 1:
+        raise SystemExit("No se encontró el único bucle de plantación de árboles.")
+    html = html.replace(tree_plant_iteration_marker,tree_plant_iteration_replacement,1)
+
+    tree_push_replacement = "const plantedTree=createTree(x,z,rand(.78,1.12));if(plantedTree)trees.push(plantedTree);await new Promise(resolve=>requestAnimationFrame(resolve));"
     if html.count(tree_push_marker) != 1:
         raise SystemExit("No se encontró el único punto de inserción de árboles del archipiélago.")
     html = html.replace(tree_push_marker,tree_push_replacement,1)
+
+    forest_loop_end_marker = "   rocks.push(createRock(x,z));\n  }\n });\n // A recognisable longship"
+    forest_loop_end_replacement = "   rocks.push(createRock(x,z));\n   if((i&3)===3)await new Promise(resolve=>requestAnimationFrame(resolve));\n  }\n  await new Promise(resolve=>requestAnimationFrame(resolve));\n }\n recordStartupTask('Plantación inicial de bosque',forestPlantingStartedAt,performance.now(),'ready',{...forestTreeSpacingStats,treeCount:trees.length});\n // A recognisable longship"
+    if html.count(forest_loop_end_marker) != 1:
+        raise SystemExit("No se encontró el cierre único de la generación forestal.")
+    html = html.replace(forest_loop_end_marker,forest_loop_end_replacement,1)
 
     tree_reset_marker = "tree.root.setEnabled(true);tree.root.position=v(tree.x,terrainSurfaceAt(tree.x,tree.z),tree.z);tree.root.rotation.set(0,tree.baseYaw||0,0);"
     tree_reset_replacement = "tree.root.setEnabled(true);tree.root.position=v(tree.x,renderedTerrainSurfaceAt(tree.x,tree.z)+(tree.baseYOffset||0),tree.z);tree.root.rotation.set(0,tree.baseYaw||0,0);"
@@ -960,8 +972,14 @@ function setLoadingProgress(value,label){
     animal_dimensions_at = html.index(animal_dimensions_marker) + len(animal_dimensions_marker)
     animal_text_at = html.index(animal_silhouette_text, animal_dimensions_at)
     animal_check_end = html.index("');", animal_text_at) + 3
-    animal_silhouette_replacement = "\n   const animalSkinningMeshes=meshes.filter(mesh=>mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);\n   const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer);const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true;if(forceCpuSkinning&&forceGpuSkinning)throw new Error('El diagnóstico de fauna no puede forzar CPU y GPU skinning a la vez.');const useCpuSkinning=forceCpuSkinning;animalSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;});\n   (imported.skeletons||[]).forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}catch(_){}});\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
+    animal_silhouette_replacement = "\n   const animalSkinningMeshes=meshes.filter(mesh=>mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);\n   const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer);const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true;if(forceCpuSkinning&&forceGpuSkinning)throw new Error('El diagnóstico de fauna no puede forzar CPU y GPU skinning a la vez.');const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&(isTouchDevice||softwareSkinningRenderer));animalSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;});\n   (imported.skeletons||[]).forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}catch(_){}});\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
     html = html[:animal_dimensions_at] + animal_silhouette_replacement + html[animal_check_end:]
+    animal_skinning_mode_marker = "skinnedVertexCount,dimensions:{width:Number(width.toFixed(3))"
+    animal_skinning_mode_replacement = "skinnedVertexCount,skinningMode:useCpuSkinning?'cpu':'gpu',dimensions:{width:Number(width.toFixed(3))"
+    if html.count(animal_skinning_mode_marker) != 1:
+        raise SystemExit("No se encontró el único objeto animal para registrar el modo de skinning.")
+    html = html.replace(animal_skinning_mode_marker, animal_skinning_mode_replacement, 1)
+
 
     wildlife_download_head = "  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)throw new Error('Especie desconocida: '+kind);"
     wildlife_download_cached = wildlife_download_head + "\n  const cached=await readWildlifeModelCache(kind);if(cached)return cached;"
@@ -1133,7 +1151,7 @@ function setLoadingProgress(value,label){
     html = html.replace(wildlife_import_failure, wildlife_import_required, 1)
 
     wildlife_instance = "   if(animal){ambientFauna.push(animal);loaded++;}\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),animal?'ready':'fallback',{island:spec.homeIslandIndex});"
-    wildlife_instance_required = "   if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');\n   wildlifeReadinessRecords.push({kind:spec.kind,state:'ready',island:spec.homeIslandIndex,meshes:animal.meshCount,skinnedVertices:animal.skinnedVertexCount,bones:animal.skeletonBoneCount,textures:animal.textureReadiness.count,textureWaitMs:animal.textureReadiness.waitedMs});\n   ambientFauna.push(animal);loaded++;\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});"
+    wildlife_instance_required = "   if(!animal)throw new Error('RECURSO OBLIGATORIO: no se pudo montar '+spec.kind+' en la isla '+spec.homeIslandIndex+'.');\n   wildlifeReadinessRecords.push({kind:spec.kind,state:'ready',island:spec.homeIslandIndex,meshes:animal.meshCount,skinnedVertices:animal.skinnedVertexCount,skinningMode:animal.skinningMode||'unknown',bones:animal.skeletonBoneCount,textures:animal.textureReadiness.count,textureWaitMs:animal.textureReadiness.waitedMs});\n   ambientFauna.push(animal);loaded++;\n   recordStartupTask('Fauna GLB '+spec.kind+' #'+index,modelStarted,performance.now(),'ready',{island:spec.homeIslandIndex});"
     if html.count(wildlife_instance) != 1:
         raise SystemExit("No se encontró el montaje individual de fauna.")
     html = html.replace(wildlife_instance, wildlife_instance_required, 1)

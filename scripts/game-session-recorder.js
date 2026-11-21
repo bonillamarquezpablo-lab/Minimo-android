@@ -413,6 +413,7 @@
             island: number(item.island),
             meshes: number(item.meshes),
             skinnedVertices: number(item.skinnedVertices),
+            skinningMode: text(item.skinningMode, 12),
             bones: number(item.bones),
             textures: number(item.textures),
             textureWaitMs: number(item.textureWaitMs),
