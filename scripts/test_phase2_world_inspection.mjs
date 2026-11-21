@@ -156,7 +156,7 @@ wolfSkeleton.prepare=()=>{};
 wolfSkeleton.getTransformMatrices=()=>wolfIdentity;
 const wolfMesh={...mesh,uniqueId:70,name:'WolfBody',id:'wolf-body',skeleton:wolfSkeleton,
  material:{name:'WolfMaterial',getActiveTextures:()=>[wolfTextureReady,wolfTexturePending]},
- getTotalVertices:()=>920,getTotalIndices:()=>1840,
+ getTotalVertices:()=>920,getTotalIndices:()=>1840,numBoneInfluencers:4,
  computeWorldMatrix(){},
  setPositionsForCPUSkinning:()=>wolfPositions,
  getVerticesData(kind){return kind==='position'?new Array(24).fill(0):kind==='matricesIndices'?wolfIndices:kind==='matricesWeights'?wolfWeights:null;},
