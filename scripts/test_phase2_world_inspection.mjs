@@ -186,6 +186,8 @@ assert.equal(inspectedWolf.textureReadiness.ready,1);
 assert.equal(inspectedWolf.textureReadiness.pending,1);
 assert.equal(inspectedWolf.bounds.size.y,.86);
 assert.equal(inspectedWolf.visualIntegrity.plausibleBounds,true);
+assert.ok(runtimeSource.includes('maxExtent<=1.0'),
+  'The Inspector must accept the measured 0.843 m real gull span while still rejecting oversized outliers.');
 assert.ok(inspectedWolf.meshes[0].bounds.finite);
 assert.ok(runtimeSource.includes('skinIndices && skinWeights'),
   'Vegetation without actual JOINTS/WEIGHTS buffers must retain Babylon native bounds.');
