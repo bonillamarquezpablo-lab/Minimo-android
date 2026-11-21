@@ -24,7 +24,11 @@ for(const marker of [
   "scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,'created-after-octree',true);});",
   "mesh.__elsnSpatialDynamicReason='octree-initial-dynamic'",
   'function buildSpatialSelectionOctree()',
-  'spatialSelectionStats.dynamicFilterEnabled=false;',
+  'spatialSelectionStats.dynamicFilterEnabled=true;',
+  'scene.onBeforeActiveMeshesEvaluationObservable.add(spatialDynamicFrustumBeforeEvaluation)',
+  'scene.onAfterActiveMeshesEvaluationObservable.add(spatialDynamicFrustumAfterEvaluation)',
+  'mesh.isInFrustum(scene.frustumPlanes)',
+  'restoreSpatialDynamicFrustumCandidates()',
   'buildSpatialSelectionOctree();',
   'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
   "get:()=>({...spatialSelectionStats})",
@@ -61,8 +65,8 @@ for (const field of ['meshSelectionDynamicFilterTotalCandidates','meshSelectionD
 }
 assert.ok(smoke.includes('manifest.spatialSelection?.enabled === true'),'Real campaign smoke must read the runtime spatial selection state.');
 assert.ok(smoke.includes('manifest.spatialSelection.staticIndexedMeshCount'),'Real campaign smoke must verify static octree indexing.');
-assert.ok(smoke.includes('Dynamic frustum filtering is intentionally not enabled'),'Smoke must not claim dynamic culling before it is integrated into Babylon dynamicContent.');
-assert.ok(!builder.includes('const installSpatialDynamicFrustumFilter=octree=>') && !builder.includes('octree.select=function(frustumPlanes,allowDuplicate)'), 'The renderer must not wrap static octree selection as a dynamic-content filter.');
+assert.ok(smoke.includes('dynamicFilterEnabled === true') && smoke.includes('dynamicFilterErrors'), 'Smoke must verify the live Babylon dynamic frustum filter and error counter.');
+assert.ok(!builder.includes('octree.select=function(frustumPlanes,allowDuplicate)'), 'The renderer must not monkey-patch Babylon static octree selection.');
 assert.ok(workflow.includes('node scripts/test_quality_spatial_selection.cjs'),'The Pages build must run the spatial selection contract.');
 assert.ok(source.includes('function update(dt){'),'World update must remain present.');
 assert.ok(source.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),'Felled trees must leave static octree cells before their fall animation.');
