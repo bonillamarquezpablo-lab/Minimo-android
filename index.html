@@ -5073,7 +5073,12 @@ void main(void){
    });
    actor.scaling.setAll(scale);
    actor.position=v(x,0,z);
-   const attachedBounds=boundsForMeshes(meshes);
+   const expectedHeight=definition.height*size;
+   // Re-measure after the imported roots have been attached to the actor. Some rigged
+   // GLBs carry scale on synthetic/imported ancestors, so the pre-parent source AABB
+   // is not always the physical size that reaches the live hierarchy.
+   const fitted=normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight);
+   const heightCorrection=fitted.factor,attachedBounds=fitted.bounds;
    if(!Number.isFinite(attachedBounds.min.y))throw new Error('No se pudo calcular el apoyo del cuerpo animal.');
    const groundOffset=-attachedBounds.min.y+.015;
    const groundY=terrainHeightOnIsland(homeIsland,x,z);
@@ -5081,15 +5086,15 @@ void main(void){
    scene.incrementRenderId();
    const finalBounds=boundsForMeshes(meshes);
    if(!Number.isFinite(finalBounds.min.y)||Math.abs(finalBounds.min.y-groundY-.015)>.12)throw new Error('El cuerpo animal no quedó apoyado correctamente en el terreno.');
-   const expectedHeight=definition.height*size,heightTolerance=Math.max(.08,expectedHeight*.12),heightError=Math.abs(finalBounds.height-expectedHeight);
+   const heightTolerance=Math.max(.08,expectedHeight*.12),heightError=Math.abs(finalBounds.height-expectedHeight);
    if(!Number.isFinite(finalBounds.height)||heightError>heightTolerance)throw new Error('Escala biológica incorrecta para '+kind+': altura final '+Number(finalBounds.height||0).toFixed(3)+' m; esperada '+expectedHeight.toFixed(3)+' m; fuente '+sourceBounds.height.toFixed(3)+' m; factor '+scale.toFixed(5)+'.');
    actor.rotation.y=rand(0,Math.PI*2);
    meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});
    const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);
    groups.forEach(group=>{try{group.stop();}catch(_){}});
-   const animal={kind,root:actor,x,z,size,homeIslandIndex,groundOffset,collisionRadius:definition.collisionRadius*size,normalizationScale:Number(scale.toFixed(5)),expectedHeightMeters:Number(expectedHeight.toFixed(3)),renderedDimensions:{width:Number(finalBounds.width.toFixed(3)),height:Number(finalBounds.height.toFixed(3)),depth:Number(finalBounds.depth.toFixed(3))},heading:actor.rotation.y,turnTimer:rand(2.5,6),wanderTimer:rand(2,5),wandering:Math.random()<.45,flee:0,clips,groups,activeAnimation:null,activeMode:'',meshCount:meshes.length,skeletonBoneCount:boneCount,skinnedVertexCount,dimensions:{width:Number(width.toFixed(3)),height:Number(sourceBounds.height.toFixed(3)),depth:Number(depth.toFixed(3))},meshNames:meshes.map(mesh=>String(mesh.name||mesh.id||'')).slice(0,16)};
+   const animal={kind,root:actor,x,z,size,homeIslandIndex,groundOffset,collisionRadius:definition.collisionRadius*size,normalizationScale:Number((scale*heightCorrection).toFixed(5)),expectedHeightMeters:Number(expectedHeight.toFixed(3)),renderedDimensions:{width:Number(finalBounds.width.toFixed(3)),height:Number(finalBounds.height.toFixed(3)),depth:Number(finalBounds.depth.toFixed(3))},heading:actor.rotation.y,turnTimer:rand(2.5,6),wanderTimer:rand(2,5),wandering:Math.random()<.45,flee:0,clips,groups,activeAnimation:null,activeMode:'',meshCount:meshes.length,skeletonBoneCount:boneCount,skinnedVertexCount,dimensions:{width:Number(width.toFixed(3)),height:Number(sourceBounds.height.toFixed(3)),depth:Number(depth.toFixed(3))},meshNames:meshes.map(mesh=>String(mesh.name||mesh.id||'')).slice(0,16)};
    playWildlifeAnimation(animal,'idle');addModelShadow(actor,isPerformanceMode?1:2);
-   console.info('Animal GLB validado',{kind,meshes:animal.meshCount,skinned:skinned.length,skinnedVertices:skinnedVertexCount,skeletons:skeletons.length,bones:boneCount,animations:groups.map(group=>group.name),sourceDimensions:animal.dimensions,renderedDimensions:animal.renderedDimensions,expectedHeightMeters:animal.expectedHeightMeters,normalizationScale:animal.normalizationScale,groundOffset:Number(groundOffset.toFixed(4)),collisionRadius:animal.collisionRadius,rootNodes:roots.map(root=>String(root.name||root.id||''))});
+   console.info('Animal GLB validado',{kind,meshes:animal.meshCount,skinned:skinned.length,skinnedVertices:skinnedVertexCount,skeletons:skeletons.length,bones:boneCount,animations:groups.map(group=>group.name),sourceDimensions:animal.dimensions,renderedDimensions:animal.renderedDimensions,expectedHeightMeters:animal.expectedHeightMeters,normalizationScale:animal.normalizationScale,heightCorrection:Number(heightCorrection.toFixed(5)),groundOffset:Number(groundOffset.toFixed(4)),collisionRadius:animal.collisionRadius,rootNodes:roots.map(root=>String(root.name||root.id||''))});
    return animal;
   }catch(err){
    if(imported){try{(imported.animationGroups||[]).forEach(group=>group.stop());(imported.skeletons||[]).forEach(skeleton=>skeleton.dispose());(imported.meshes||[]).forEach(mesh=>mesh.dispose(false,true));(imported.transformNodes||[]).forEach(node=>node.dispose(false,true));}catch(_){}}
@@ -5705,6 +5710,20 @@ void main(void){
    max.x=Math.max(max.x,wx);max.y=Math.max(max.y,wy);max.z=Math.max(max.z,wz);
   }
   return {min,max};
+ }
+ function normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight){
+  if(!actor||!actor.scaling||typeof actor.scaling.scaleInPlace!=='function')throw new Error('El actor de fauna no permite normalización uniforme.');
+  if(!Number.isFinite(expectedHeight)||expectedHeight<.05)throw new Error('Altura física objetivo no válida.');
+  const before=boundsForMeshes(meshes),measured=Number(before&&before.height);
+  if(!Number.isFinite(measured)||measured<.005)throw new Error('No se puede normalizar la fauna: altura medida bajo el actor '+measured+' m.');
+  const correction=expectedHeight/measured;
+  if(!Number.isFinite(correction)||correction<.01||correction>1000)throw new Error('Factor corrector de fauna fuera de rango seguro: '+correction+'.');
+  if(Math.abs(correction-1)>.002)actor.scaling.scaleInPlace(correction);
+  const after=boundsForMeshes(meshes),error=Math.abs(Number(after&&after.height)-expectedHeight);
+  if(!Number.isFinite(after&&after.height)||error>Math.max(.02,expectedHeight*.03)){
+   throw new Error('La escala física no se propagó a la jerarquía GLB: medida '+Number(after&&after.height||0).toFixed(3)+' m, objetivo '+expectedHeight.toFixed(3)+' m, corrección '+correction.toFixed(5)+', escala del actor '+JSON.stringify(actor.scaling.asArray?actor.scaling.asArray():actor.scaling)+'.');
+  }
+  return {factor:correction,bounds:after};
  }
  function boundsForMeshes(meshes){
   scene.incrementRenderId();let min=null,max=null;
