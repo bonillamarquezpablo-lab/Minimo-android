@@ -225,6 +225,182 @@ def _read_glb_position_accessor(document: dict, binary: bytearray, accessor_inde
     return [struct.unpack_from("<3f", binary, start + index * stride) for index in range(count)]
 
 
+
+def rebase_quaternius_animal_skin_root(path: Path, label: str) -> dict:
+    """Promote the non-joint Armature ancestor into the glTF skin to preserve the rig transform in Babylon."""
+    species = path.stem.lower()
+    if species not in {"deer", "wolf", "stag"}:
+        raise RuntimeError(f"Unknown Quaternius animal for skin-root rebasing: {label}")
+    document, binary, chunks = _read_glb_payload(path)
+    nodes = document.get("nodes") or []
+    skins = document.get("skins") or []
+    if not nodes or not skins:
+        raise RuntimeError(f"{label}: cannot rebase an animal GLB without nodes and skins")
+
+    parents = [-1] * len(nodes)
+    for parent_index, node in enumerate(nodes):
+        for child_index in node.get("children") or []:
+            if not isinstance(child_index, int) or child_index < 0 or child_index >= len(nodes):
+                raise RuntimeError(f"{label}: invalid child node index {child_index}")
+            if parents[child_index] != -1:
+                raise RuntimeError(f"{label}: node {child_index} has more than one parent")
+            parents[child_index] = parent_index
+
+    extras = document.setdefault("extras", {})
+    marker = extras.get("elsnAnimalSkinRoot") or {}
+    algorithm = "quaternius-armature-explicit-skin-root-v1"
+    if marker.get("algorithm") == algorithm and marker.get("species") == species:
+        for skin_index, skin in enumerate(skins):
+            root_index = skin.get("skeleton")
+            if not isinstance(root_index, int) or root_index not in (skin.get("joints") or []):
+                raise RuntimeError(f"{label}: rebased skin {skin_index} lost its explicit root joint")
+            if nodes[root_index].get("name") != "AnimalArmature":
+                raise RuntimeError(f"{label}: rebased skin {skin_index} has an unexpected root")
+        return marker
+
+    mesh_nodes_by_skin: dict[int, list[dict]] = {}
+    for node in nodes:
+        skin_index = node.get("skin")
+        if skin_index is not None:
+            if not isinstance(skin_index, int) or skin_index < 0 or skin_index >= len(skins):
+                raise RuntimeError(f"{label}: skinned node references an invalid skin index")
+            mesh_nodes_by_skin.setdefault(skin_index, []).append(node)
+
+    joint_accessors_updated: set[int] = set()
+    buffer_views = document.setdefault("bufferViews", [])
+    accessors = document.setdefault("accessors", [])
+    identity = struct.pack(
+        "<16f",
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0,
+    )
+    adjusted_skins = []
+
+    for skin_index, skin in enumerate(skins):
+        original_joints = list(skin.get("joints") or [])
+        skeleton_root = skin.get("skeleton")
+        if not original_joints or not isinstance(skeleton_root, int) or skeleton_root < 0 or skeleton_root >= len(nodes):
+            raise RuntimeError(f"{label}: skin {skin_index} has no valid skeleton root")
+        parent_index = parents[skeleton_root]
+        if parent_index < 0:
+            raise RuntimeError(f"{label}: skin {skin_index} skeleton root has no parent transform")
+        parent_node = nodes[parent_index]
+        if parent_node.get("name") != "AnimalArmature":
+            raise RuntimeError(
+                f"{label}: expected AnimalArmature above skin root, found {parent_node.get('name')!r}"
+            )
+        if parent_index in original_joints:
+            raise RuntimeError(f"{label}: AnimalArmature is already in the original joint list")
+
+        inverse_accessor_index = skin.get("inverseBindMatrices")
+        if not isinstance(inverse_accessor_index, int) or inverse_accessor_index < 0 or inverse_accessor_index >= len(accessors):
+            raise RuntimeError(f"{label}: skin {skin_index} is missing inverse bind matrices")
+        inverse_accessor = accessors[inverse_accessor_index]
+        if inverse_accessor.get("componentType") != 5126 or inverse_accessor.get("type") != "MAT4":
+            raise RuntimeError(f"{label}: skin {skin_index} inverse binds must be FLOAT MAT4")
+        if int(inverse_accessor.get("count") or 0) != len(original_joints) or inverse_accessor.get("sparse"):
+            raise RuntimeError(f"{label}: skin {skin_index} inverse-bind count/format is invalid")
+        inverse_view_index = inverse_accessor.get("bufferView")
+        if not isinstance(inverse_view_index, int) or inverse_view_index < 0 or inverse_view_index >= len(buffer_views):
+            raise RuntimeError(f"{label}: skin {skin_index} inverse-bind buffer view is invalid")
+        inverse_view = buffer_views[inverse_view_index]
+        if inverse_view.get("buffer", 0) != 0:
+            raise RuntimeError(f"{label}: skin {skin_index} inverse binds are not embedded in the GLB")
+        inverse_stride = int(inverse_view.get("byteStride") or 64)
+        if inverse_stride < 64:
+            raise RuntimeError(f"{label}: skin {skin_index} inverse-bind stride is invalid")
+        inverse_start = int(inverse_view.get("byteOffset") or 0) + int(inverse_accessor.get("byteOffset") or 0)
+        if inverse_start < 0 or inverse_start + max(0, len(original_joints) - 1) * inverse_stride + 64 > len(binary):
+            raise RuntimeError(f"{label}: skin {skin_index} inverse-bind data exceeds the GLB buffer")
+        inverse_payload = bytearray(identity)
+        for matrix_index in range(len(original_joints)):
+            matrix_start = inverse_start + matrix_index * inverse_stride
+            inverse_payload.extend(binary[matrix_start:matrix_start + 64])
+        while len(binary) % 4:
+            binary.append(0)
+        new_inverse_offset = len(binary)
+        binary.extend(inverse_payload)
+        new_view_index = len(buffer_views)
+        buffer_views.append({
+            "buffer": 0,
+            "byteOffset": new_inverse_offset,
+            "byteLength": len(inverse_payload),
+        })
+        new_accessor_index = len(accessors)
+        accessors.append({
+            "bufferView": new_view_index,
+            "byteOffset": 0,
+            "componentType": 5126,
+            "count": len(original_joints) + 1,
+            "type": "MAT4",
+        })
+
+        for mesh_node in mesh_nodes_by_skin.get(skin_index, []):
+            mesh_index = mesh_node.get("mesh")
+            if not isinstance(mesh_index, int) or mesh_index < 0 or mesh_index >= len(document.get("meshes") or []):
+                raise RuntimeError(f"{label}: skinned node has an invalid mesh reference")
+            for primitive in document["meshes"][mesh_index].get("primitives") or []:
+                attributes = primitive.get("attributes") or {}
+                for joint_attribute in ("JOINTS_0", "JOINTS_1"):
+                    accessor_index = attributes.get(joint_attribute)
+                    if accessor_index is None or accessor_index in joint_accessors_updated:
+                        continue
+                    if not isinstance(accessor_index, int) or accessor_index < 0 or accessor_index >= len(accessors):
+                        raise RuntimeError(f"{label}: {joint_attribute} accessor index is invalid")
+                    joint_accessor = accessors[accessor_index]
+                    component_type = joint_accessor.get("componentType")
+                    if component_type not in (5121, 5123) or joint_accessor.get("type") != "VEC4" or joint_accessor.get("sparse"):
+                        raise RuntimeError(f"{label}: {joint_attribute} must be UNSIGNED_BYTE/SHORT VEC4")
+                    joint_view_index = joint_accessor.get("bufferView")
+                    if not isinstance(joint_view_index, int) or joint_view_index < 0 or joint_view_index >= len(buffer_views):
+                        raise RuntimeError(f"{label}: {joint_attribute} buffer view is invalid")
+                    joint_view = buffer_views[joint_view_index]
+                    if joint_view.get("buffer", 0) != 0:
+                        raise RuntimeError(f"{label}: {joint_attribute} is not embedded in the GLB")
+                    component_size = 1 if component_type == 5121 else 2
+                    vertex_stride = int(joint_view.get("byteStride") or component_size * 4)
+                    if vertex_stride < component_size * 4:
+                        raise RuntimeError(f"{label}: {joint_attribute} stride is invalid")
+                    joint_start = int(joint_view.get("byteOffset") or 0) + int(joint_accessor.get("byteOffset") or 0)
+                    vertex_count = int(joint_accessor.get("count") or 0)
+                    if joint_start < 0 or joint_start + max(0, vertex_count - 1) * vertex_stride + component_size * 4 > len(binary):
+                        raise RuntimeError(f"{label}: {joint_attribute} data exceeds the GLB buffer")
+                    format_code = "<B" if component_type == 5121 else "<H"
+                    for vertex_index in range(vertex_count):
+                        for component_index in range(4):
+                            offset = joint_start + vertex_index * vertex_stride + component_index * component_size
+                            joint_index = struct.unpack_from(format_code, binary, offset)[0]
+                            if joint_index >= len(original_joints):
+                                raise RuntimeError(
+                                    f"{label}: {joint_attribute} references joint {joint_index}, "
+                                    f"but skin {skin_index} has {len(original_joints)} joints"
+                                )
+                            struct.pack_into(format_code, binary, offset, joint_index + 1)
+                    joint_accessors_updated.add(accessor_index)
+
+        skin["joints"] = [parent_index, *original_joints]
+        skin["skeleton"] = parent_index
+        skin["inverseBindMatrices"] = new_accessor_index
+        adjusted_skins.append({
+            "skinIndex": skin_index,
+            "rootNode": parent_index,
+            "rootName": str(parent_node.get("name") or ""),
+            "previousJointCount": len(original_joints),
+            "jointCount": len(original_joints) + 1,
+            "meshNodes": [str(node.get("name") or "") for node in mesh_nodes_by_skin.get(skin_index, [])],
+        })
+
+    extras["elsnAnimalSkinRoot"] = {
+        "algorithm": algorithm,
+        "species": species,
+        "skins": adjusted_skins,
+    }
+    _write_glb_payload(path, document, binary, chunks)
+    return extras["elsnAnimalSkinRoot"]
+
+
 def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:
     """Bake subtle coat color variation into glTF COLOR_0 without changing rigs or animation."""
     species = path.stem.lower()
@@ -380,6 +556,13 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
         raise RuntimeError(f"{label}: animal GLB is missing required locomotion clips {missing_clips}; found {animation_names}")
     if not materials or any(not (mesh.get("primitives") or []) for mesh in meshes):
         raise RuntimeError(f"{label}: one or more animal meshes/materials are missing")
+    skin_root = ((document.get("extras") or {}).get("elsnAnimalSkinRoot") or {})
+    if skin_root.get("algorithm") != "quaternius-armature-explicit-skin-root-v1" or skin_root.get("species") != path.stem.lower():
+        raise RuntimeError(f"{label}: the original Armature transform must be represented as an explicit skin root")
+    for skin_index, skin in enumerate(skins):
+        root_index = skin.get("skeleton")
+        if not isinstance(root_index, int) or root_index not in (skin.get("joints") or []) or document["nodes"][root_index].get("name") != "AnimalArmature":
+            raise RuntimeError(f"{label}: skin {skin_index} does not expose AnimalArmature as its explicit root joint")
     coat = ((document.get("extras") or {}).get("elsnAnimalCoat") or {})
     if coat.get("algorithm") != "procedural-vertex-coat-v2" or coat.get("species") != path.stem.lower():
         raise RuntimeError(f"{label}: generated species-specific coat colors are missing")
@@ -451,6 +634,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                         f"{len(document.get('images') or [])} texture images."
                     )
                 elif destination.parent.name == "wildlife":
+                    skin_root = rebase_quaternius_animal_skin_root(destination, relative)
                     baked_vertices = bake_procedural_animal_vertex_colors(destination, relative)
                     document = validate_rigged_animal_glb(destination, relative)
                     size = destination.stat().st_size
@@ -489,6 +673,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                     digest.update(chunk)
             if kind == "glb":
                 if destination.parent.name == "wildlife":
+                    rebase_quaternius_animal_skin_root(destination, destination.relative_to(DIST).as_posix())
                     bake_procedural_animal_vertex_colors(destination, destination.relative_to(DIST).as_posix())
                     validate_rigged_animal_glb(destination, destination.relative_to(DIST).as_posix())
                     size = destination.stat().st_size
@@ -965,11 +1150,23 @@ function setLoadingProgress(value,label){
         raise SystemExit("No se encontró el cargador único de modelos animales para añadir Cache API.")
     html = html.replace(wildlife_loader_marker, wildlife_cache_code + wildlife_loader_marker, 1)
 
+    animal_scale_marker = "const definition=WILDLIFE_MODEL_DEFS[kind],scale=definition.height/Math.max(.001,sourceBounds.height)*size;"
+    animal_scale_replacement = "const definition=WILDLIFE_MODEL_DEFS[kind],scale=definition.height/Math.max(.001,sourceBounds.height)*size;if(!Number.isFinite(scale)||scale<.5||scale>250)throw new Error(kind+': factor de escala fuera de rango tras reconstruir el skin: '+scale.toFixed(3));"
+    if html.count(animal_scale_marker) != 1:
+        raise SystemExit("No se encontró el cálculo único de escala de los animales.")
+    html = html.replace(animal_scale_marker, animal_scale_replacement, 1)
+
     wildlife_bounds_probe_marker = "   const sourceBounds=boundsForMeshes(meshes);"
     wildlife_bounds_probe_replacement = "   const animalSkinningMeshes=meshes.filter(mesh=>mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);\n   const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer);const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true;if(forceCpuSkinning&&forceGpuSkinning)throw new Error('El diagnóstico de fauna no puede forzar CPU y GPU skinning a la vez.');const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer);animalSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;});\n   const groups=imported.animationGroups||[],clips=chooseWildlifeClips(groups);\n   if(!groups.some(group=>group&&group.targetedAnimations&&group.targetedAnimations.length>0)||!clips.idle||!clips.walk||!clips.run||clips.walk===clips.idle||clips.run===clips.walk||clips.run===clips.idle)throw new Error(kind+': el rig necesita clips Idle, Walk y Gallop/Run distintos y reproducibles.');\n   const wildlifeBoundsProbe=clips.idle;wildlifeBoundsProbe.start(true);wildlifeBoundsProbe.goToFrame(wildlifeBoundsProbe.from);\n   await new Promise((resolve,reject)=>{const boundsProbeTimeout=window.setTimeout(()=>reject(new Error(kind+': no se pudo evaluar un fotograma del esqueleto antes de medir la silueta.')),5000);scene.onAfterRenderObservable.addOnce(()=>{window.clearTimeout(boundsProbeTimeout);try{(imported.skeletons||[]).forEach(skeleton=>{if(typeof skeleton.prepare==='function')skeleton.prepare();});meshes.forEach(mesh=>{mesh.computeWorldMatrix(true);if(typeof mesh.refreshBoundingInfo==='function')mesh.refreshBoundingInfo({applySkeleton:!!mesh.skeleton});mesh.computeWorldMatrix(true);});scene.incrementRenderId();resolve();}catch(error){reject(error);}});});\n   const sourceBounds=boundsForMeshes(meshes);"
     if html.count(wildlife_bounds_probe_marker) != 1:
         raise SystemExit("No se encontró el marcador único de evaluación de pose antes de medir los límites de fauna.")
     html = html.replace(wildlife_bounds_probe_marker, wildlife_bounds_probe_replacement, 1)
+
+    animal_source_height_marker = "if(!Number.isFinite(sourceBounds.height)||sourceBounds.height<.25)throw new Error('Altura de malla no válida.');"
+    animal_source_height_replacement = "if(!Number.isFinite(sourceBounds.height)||sourceBounds.height<.005||sourceBounds.height>.5)throw new Error('Altura de malla no válida en el espacio rebajado del skin: '+sourceBounds.height.toFixed(4)+' m.');"
+    if html.count(animal_source_height_marker) != 1:
+        raise SystemExit("No se encontró el único límite de altura fuente de fauna.")
+    html = html.replace(animal_source_height_marker, animal_source_height_replacement, 1)
 
     animal_dimensions_marker = "const width=sourceBounds.max.x-sourceBounds.min.x,depth=sourceBounds.max.z-sourceBounds.min.z;"
     animal_silhouette_text = "Silueta animal anormalmente estrecha; se descarta para no mostrar extremidades sueltas."
@@ -978,7 +1175,7 @@ function setLoadingProgress(value,label){
     animal_dimensions_at = html.index(animal_dimensions_marker) + len(animal_dimensions_marker)
     animal_text_at = html.index(animal_silhouette_text, animal_dimensions_at)
     animal_check_end = html.index("');", animal_text_at) + 3
-    animal_silhouette_replacement = "\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
+    animal_silhouette_replacement = "   const horizontalMin=Math.max(.003,sourceBounds.height*.20),horizontalMajor=Math.max(.006,sourceBounds.height*.38);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada tras reconstruir la raíz del skin: dimensiones X/Z '+width.toFixed(4)+'/'+depth.toFixed(4)+' m para altura '+sourceBounds.height.toFixed(4)+' m.');"
     html = html[:animal_dimensions_at] + animal_silhouette_replacement + html[animal_check_end:]
     animal_skinning_mode_marker = "skinnedVertexCount,dimensions:{width:Number(width.toFixed(3))"
     animal_skinning_mode_replacement = "skinnedVertexCount,skinningMode:useCpuSkinning?'cpu':'gpu',dimensions:{width:Number(width.toFixed(3))"
