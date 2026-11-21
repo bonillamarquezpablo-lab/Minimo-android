@@ -87,6 +87,8 @@ assert.match(source,/unexpectedOffshoreStructures/);
 assert.match(source,/unexpectedOffshoreStructures===0/);
 assert.match(source,/unregisteredStructuralCandidatesAfter/);
 assert.match(source,/offshoreIslandCount===13/);
+assert.ok(source.includes('Number(item.gapMeters)>.02') && source.includes('Number(item.gapMeters)<-.85'),
+  'Rock grounding must distinguish an air gap (floating) from intentional terrain penetration and still reject excessive burial.');
 assert.match(source,/report\.offshoreAudit=settled\.offshore/);
 assert.match(source,/offshoreRootsScanned/);
 assert.match(source,/structuralCandidates/);

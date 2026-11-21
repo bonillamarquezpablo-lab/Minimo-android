@@ -60,13 +60,13 @@ DOWNLOADS = {
         "https://grab3d.com/dl/oak-tree/oak-tree.glb", 1_500_000, "glb"
     ),
     "assets/models/wildlife/Deer.glb": (
-        "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Deer.glb", 100_000, "glb"
+        "https://raw.githubusercontent.com/trebeljahr/quaternius-showcase/0128ca510d653bb04d6d1e4885bd8890b5050b4f/public/glb/animals_pack/Deer.glb", 100_000, "glb"
     ),
     "assets/models/wildlife/Stag.glb": (
-        "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Stag.glb", 100_000, "glb"
+        "https://raw.githubusercontent.com/trebeljahr/quaternius-showcase/0128ca510d653bb04d6d1e4885bd8890b5050b4f/public/glb/animals_pack/Stag.glb", 100_000, "glb"
     ),
     "assets/models/wildlife/Wolf.glb": (
-        "https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/6d6de54a1d7143cf5487462d147bbef039de4837/assets/Animated%20Animal%20Pack-glb/Wolf.glb", 100_000, "glb"
+        "https://raw.githubusercontent.com/trebeljahr/quaternius-showcase/0128ca510d653bb04d6d1e4885bd8890b5050b4f/public/glb/animals_pack/Wolf.glb", 100_000, "glb"
     ),
     "assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg": (
         "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/oga-footsteps/leaves01.ogg", 2_000, "audio"
@@ -914,7 +914,7 @@ function setLoadingProgress(value,label){
         raise SystemExit("No se pudo ampliar el plazo del cargador en navegadores integrados.")
 
     # Full pre-entry resource contract: local fauna, strict imports and progress phases.
-    wildlife_remote_root = " const WILDLIFE_ASSET_ROOT='https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic/'+WILDLIFE_SOURCE_COMMIT+'/assets/Animated%20Animal%20Pack-glb/';"
+    wildlife_remote_root = " const WILDLIFE_ASSET_ROOT='https://raw.githubusercontent.com/trebeljahr/quaternius-showcase/'+WILDLIFE_SOURCE_COMMIT+'/public/glb/animals_pack/';"
     wildlife_local_root = " const WILDLIFE_ASSET_ROOT=new URL('./assets/models/wildlife/',document.baseURI).href;"
     if html.count(wildlife_remote_root) != 1:
         raise SystemExit("No se encontró la única fuente externa de los GLB de fauna.")
@@ -923,7 +923,7 @@ function setLoadingProgress(value,label){
     # Persist the three pinned animal GLBs independently of the Service Worker
     # control state on the very first visit. A later SW release preserves this bucket.
     wildlife_loader_marker = " async function downloadWildlifeBlob(kind){"
-    wildlife_cache_code = """ const WILDLIFE_MODEL_CACHE='el-sin-nombre-models-wildlife-6d6de54a-v1';
+    wildlife_cache_code = """ const WILDLIFE_MODEL_CACHE='el-sin-nombre-models-wildlife-0128ca51-v1';
  async function readWildlifeModelCache(kind){
   if(!window.caches||typeof window.caches.open!=='function')return null;
   const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)return null;
@@ -1226,7 +1226,7 @@ function setLoadingProgress(value,label){
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
-    # 0.6.337: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
+    # 0.6.338: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
     # Build each island around its stable centre and keep its original per-area density.
     grass_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;\n   const radius=Math.min(92,safeLandRadius);\n   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));"
     grass_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
@@ -2179,27 +2179,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.337: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.338: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.337; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.338; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.337\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.338\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.337.")
-    html = html.replace("0.6.274", "0.6.337")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.338.")
+    html = html.replace("0.6.274", "0.6.338")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'47',build:'0.6.337'"
+    diagnostic_build_replacement = "reportVersion:'48',build:'0.6.338'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.337 para normalizar.")
-    game_version = "0.6.337"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.338 para normalizar.")
+    game_version = "0.6.338"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.

@@ -102,7 +102,9 @@ function collectStructureSnapshot(){
  const houseOutliers=houses.filter(item=>Math.abs(Number(item.groundingErrorMeters)||0)>.02||Number(item.maximumFootingGapMeters)>.02||Number(item.dryLandFootprintMarginMeters)<1.25);
  const campOutliers=camps.filter(item=>item.withinDryLandBand===false||Math.abs(Number(item.anchorErrorMeters)||0)>.02||(item.supportPoints||[]).some(point=>Math.abs(Number(point.baseGapMeters)||0)>.02));
  const garrisonOutliers=garrisons.filter(item=>Number(item.outpostErrorMeters)>.02||Number(item.flagErrorMeters)>.02||Number(item.guardErrorMeters)>.06||Number(item.detachedPropCount)>0);
- const rockOutliers=(rocks||[]).filter(item=>!item.valid||Math.abs(Number(item.gapMeters))>.02);
+ // A negative gap means the boulder is embedded in the terrain (intentional for rounded rocks),
+ // not floating. Reject air gaps above 2 cm and abnormally deep burial beyond 85 cm.
+ const rockOutliers=(rocks||[]).filter(item=>!item.valid||!Number.isFinite(Number(item.gapMeters))||Number(item.gapMeters)>.02||Number(item.gapMeters)<-.85);
  return {
   structures,offshore,houses,camps,garrisons,rocks,outerLandmarks,view,projectedCandidates,inventoryStructuralCandidates,unregisteredCandidateReview,navigationPointAudit,hrafnSceneRoots,nearbyHrafnStructureRoots,hrafnHutRoots,cuervoSceneRoots,nearbyCuervoStructureRoots,inventorySummary:inventory?{candidateCount:inventory.candidateCount,categoryCounts:inventory.categoryCounts,sceneCounts:inventory.sceneCounts}:null,
   summary:{

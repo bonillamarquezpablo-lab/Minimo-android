@@ -13,7 +13,7 @@ Esta distribución se construye desde GitHub Actions y copia los recursos al paq
 - Armored Knight rigged: Grab3D, CC0 1.0. https://grab3d.com/
 - Man Base Mesh rigged: Grab3D, CC0 1.0. https://grab3d.com/models/characters/man-base-character/
 - Herring gull GLB: modelo anatómico de Polyfork, archivo GLB distribuido bajo CC BY 4.0; atribución: “Herring gull by Polyfork (https://polyfork.dev/asset/herring-gull-base), CC BY 4.0”. https://polyfork.dev/asset/herring-gull-base
-- Deer, Stag and Wolf animated GLB: Quaternius Ultimate Animated Animals, CC0 1.0; pinned to commit `6d6de54a1d7143cf5487462d147bbef039de4837` and packaged locally under `assets/models/wildlife/`. https://github.com/nishit47/Blender-Pre-vis-Pipeline---Screenplay-to-Animatic
+- Deer, Stag and Wolf animated GLB: Quaternius Ultimate Animated Animal Pack, CC0 1.0; pinned to the original Quaternius export at commit `0128ca510d653bb04d6d1e4885bd8890b5050b4f` in `trebeljahr/quaternius-showcase/public/glb/animals_pack/` and packaged locally under `assets/models/wildlife/`. The upstream showcase license inventory identifies this pack as CC0-1.0: https://github.com/trebeljahr/quaternius-showcase/blob/0128ca510d653bb04d6d1e4885bd8890b5050b4f/LICENSES.md
 
 ## Modelos arbóreos CC0
 - Pino silvestre adulto: Innerscene, GLB con mapas de textura y materiales; CC0 1.0. Empaquetado en `assets/models/forest/mature-scots-pine-tree.glb`. Fuente: https://www.innerscene.com/tools/library/3d-parts/mature-scots-pine-tree-280307e1

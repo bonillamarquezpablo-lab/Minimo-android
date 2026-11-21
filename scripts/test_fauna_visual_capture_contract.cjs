@@ -76,6 +76,8 @@ assert.ok(capture.includes('getChildMeshes'));
 assert.ok(capture.includes("if(other!==root&&(/^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test"),
   'Per-animal captures must hide every other wildlife actor using digit-matching IDs, not a literal backslash sequence.');
 assert.ok(capture.includes('minimumWorld') || capture.includes('maximumWorld'));
+assert.ok(capture.includes('Math.min(d.width,d.depth)') && capture.includes('d.height*.30') && capture.includes('minimumBodyDepth'),
+  'Fauna visual acceptance must reject limb/antler-only actors with a collapsed body depth even when their maximum extent looks plausible.');
 assert.ok(capture.includes('skinnedVertices'));
 assert.ok(capture.includes('animationGroups'));
 assert.ok(capture.includes('captureCanvas'));

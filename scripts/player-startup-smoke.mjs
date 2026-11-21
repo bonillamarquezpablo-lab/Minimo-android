@@ -469,7 +469,7 @@ async function main() {
     assert.ok(startupResources.world?.grassClumps > 0 && startupResources.world?.grassBatches > 0,
       'La hierba 3D de la zona inicial no se preparó antes de entrar.');
     manifest.wildlifeCache = await page.evaluate(async () => {
-      const name = 'el-sin-nombre-models-wildlife-6d6de54a-v1';
+      const name = 'el-sin-nombre-models-wildlife-0128ca51-v1';
       const cache = await caches.open(name);
       const paths = (await cache.keys()).map(request => new URL(request.url).pathname);
       return { name, paths: paths.filter(value => /\/(Deer|Stag|Wolf)\.glb$/i.test(value)) };

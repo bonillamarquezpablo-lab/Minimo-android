@@ -308,10 +308,14 @@ async function main() {
     });
     for(const animal of manifest.fauna){
       const d=animal.bounds?.dimensions;
-      const horizontal=d?Math.max(d.width,d.depth):null;
+      const horizontalMin=d?Math.min(d.width,d.depth):null;
+      const horizontalMax=d?Math.max(d.width,d.depth):null;
       const maxExtent=d?Math.max(d.width,d.height,d.depth):0;
-      if(!d||!(horizontal>.1)||(animal.role==='ambient-bird'?!(maxExtent>.1&&maxExtent<=.8):!(d.height>.1)))manifest.warnings.push({code:'invalid-world-bounds',animal:animal.id,bounds:animal.bounds});
-      if(animal.role!=='ambient-bird'&&d&&horizontal<d.height*.24)manifest.warnings.push({code:'extremely-narrow-world-silhouette',animal:animal.id,dimensions:d});
+      // A complete quadruped must have plausible depth as well as width. A long pair of
+      // antlers/legs can inflate the maximum extent while the torso itself is missing.
+      const minimumBodyDepth=d?Math.max(.16,d.height*.30):null;
+      if(!d||!(horizontalMax>.1)||(animal.role==='ambient-bird'?!(maxExtent>.1&&maxExtent<=.8):(!(d.height>.1)||!(horizontalMin>=minimumBodyDepth))))manifest.warnings.push({code:'invalid-world-bounds',animal:animal.id,bounds:animal.bounds,minimumBodyDepth});
+      if(animal.role!=='ambient-bird'&&d&&horizontalMin<d.height*.30)manifest.warnings.push({code:'extremely-narrow-world-silhouette',animal:animal.id,dimensions:d,minimumBodyDepth});
       if(animal.visibleMeshCount<1)manifest.warnings.push({code:'no-visible-meshes',animal:animal.id});
       if(animal.role==='ambient-bird'){
         if(!animal.flightRig?.complete)manifest.warnings.push({code:'gull-flight-rig-incomplete',animal:animal.id,flightRig:animal.flightRig});

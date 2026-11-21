@@ -30,7 +30,7 @@ assert.ok(html.includes("const WILDLIFE_ASSET_ROOT=new URL('./assets/models/wild
   'Wildlife must be loaded from the same-origin package.');
 assert.ok(!html.includes('https://raw.githubusercontent.com/nishit47/Blender-Pre-vis-Pipeline'),
   'The player must not fetch animal GLBs from GitHub Raw during startup.');
-assert.ok(html.includes('const WILDLIFE_MODEL_CACHE=\'el-sin-nombre-models-wildlife-6d6de54a-v1\';'),
+assert.ok(html.includes('const WILDLIFE_MODEL_CACHE=\'el-sin-nombre-models-wildlife-0128ca51-v1\';'),
   'The wildlife GLBs need a persistent Cache API bucket.');
 assert.ok(html.includes('window.__ELSN_STARTUP_RESOURCE_GATE__') && html.includes('startupResourceFailures.length'),
   'The player must publish a final readiness gate based on actual resources.');
@@ -55,7 +55,7 @@ assert.ok(html.includes('decodedToAudioBuffer:false'),
   'Menu and gameplay music must remain streamed, not decoded into WebAudio AudioBuffers.');
 assert.ok(html.indexOf("Preparando fauna de la isla inicial") < html.indexOf("Preparando texturas y shaders de la zona inicial"),
   'Fauna must be imported before the final initial-view shader/material warm-up.');
-assert.ok(sw.includes('const WILDLIFE_MODEL_CACHE = "el-sin-nombre-models-wildlife-6d6de54a-v1";'));
+assert.ok(sw.includes('const WILDLIFE_MODEL_CACHE = "el-sin-nombre-models-wildlife-0128ca51-v1";'));
 assert.ok(sw.includes('WILDLIFE_MODEL_CACHE].includes(key)'),
   'Service Worker activation must preserve the persistent wildlife model cache.');
 console.log('STARTUP RESOURCE GATE OK: same-origin fauna, persistent cache, HTMLAudio streaming and complete pre-entry readiness.');
