@@ -39,6 +39,10 @@ assert.match(html,/file:'Wolf\.glb'/);
 assert.match(html,/file:'Stag\.glb'/);
 assert.match(html,/function updateWildlife\(dt\)/);
 for(const marker of ['visualIntegrity','playingAnimationGroups','textureReadiness','maxExtentMeters','result.meshes'])assert.ok(worldInspection.includes(marker),'Inspector per-animal capture is missing '+marker);
+assert.ok(worldInspection.includes('function transformedLocalBounds(mesh, box)') &&
+  worldInspection.includes("'skinned-bind-pose-local'") &&
+  worldInspection.includes('mesh.skeleton ? transformedLocalBounds(mesh, box) : null'),
+  'Skinned wildlife diagnostics must transform the local bind-pose AABB with the live world matrix instead of trusting stale GPU world bounds.');
 for(const marker of ['wildlife-species-missing','wildlife-animation-not-playing','wildlife-animation-clips-missing','wildlife-textures-not-ready'])assert.ok(worldInspectionCore.includes(marker),'Wildlife analysis is missing '+marker);
 assert.match(html,/const animalCount=isPerformanceMode\?0:\(idx===0\?3:0\);/);
 assert.ok(builder.includes('wildlife_spawn_count_marker = "const animalCount=isPerformanceMode?0:(idx===0?3:0);"') &&
