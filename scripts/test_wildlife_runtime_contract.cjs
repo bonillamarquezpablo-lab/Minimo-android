@@ -42,7 +42,7 @@ assert.match(html,/function updateWildlife\(dt\)/);
 for(const marker of ['visualIntegrity','playingAnimationGroups','textureReadiness','maxExtentMeters','result.meshes'])assert.ok(worldInspection.includes(marker),'Inspector per-animal capture is missing '+marker);
 assert.ok(worldInspection.includes('function transformedLocalBounds(mesh, box)') &&
   worldInspection.includes("'skinned-bind-pose-local'") &&
-  worldInspection.includes('const deformedBounds = isSkinned ? transformedLocalBounds(mesh, box) : null'),
+  worldInspection.includes('const bindPoseBounds = isSkinned ? transformedLocalBounds(mesh, box) : null'),
   'Skinned wildlife diagnostics must transform local bind-pose bounds once, never use stale GPU world AABBs.');
 assert.ok(html.includes('function transformedSkinnedBounds(mesh,boundingBox)') &&
   html.includes('const localBounds=isSkinned?transformedSkinnedBounds(mesh,bb):null') &&
