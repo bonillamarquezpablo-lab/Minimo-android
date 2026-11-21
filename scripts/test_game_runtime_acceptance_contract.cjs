@@ -17,12 +17,14 @@ assert.match(release, /Install Playwright and Chromium for real startup acceptan
 assert.match(release, /Start the built release on local HTTPS for Service Worker acceptance/);
 assert.match(release, /Verify startup, required NPCs, gameplay and offline Service Worker restart before publish/);
 assert.match(release, /node scripts\/player-startup-smoke\.mjs/);
-assert.match(release, /Verify mobile fauna rigs, animations, textures and four-view visuals before publish/);
+assert.match(release, /Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish/);
 assert.match(release, /FAUNA_TEST_URL: https:\/\/localhost:4175\//);
+assert.match(release, /FAUNA_SKINNING_MODE: cpu/, 'Required mobile fauna acceptance must use the stable CPU skinning path.');
+assert.match(release, /Diagnostic A\/B capture with GPU skinning fallback/, 'GPU skinning remains a separate non-blocking comparison.');
 assert.match(release, /node scripts\/fauna-visual-capture\.mjs/);
 assert.match(release, /Preserve fauna visual acceptance evidence/);
 assert.match(release, /artifacts\/fauna-visual-captures\//);
-assert.ok(release.indexOf('Verify mobile fauna rigs, animations, textures and four-view visuals before publish') <
+assert.ok(release.indexOf('Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish') <
   release.indexOf('Upload validated site for PR inspection'),
   'Pages publication must wait until all real fauna captures and visual integrity checks pass.');
 
