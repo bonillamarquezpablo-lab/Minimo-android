@@ -35,7 +35,13 @@ for (const marker of [
   'scene.onNewMeshAddedObservable.add',
   'scene.onMeshRemovedObservable.add',
   'function buildSpatialSelectionOctree()',
-  'spatialSelectionStats.dynamicFilterEnabled=false;',
+  'spatialSelectionStats.dynamicFilterEnabled=true;',
+  'scene.onBeforeActiveMeshesEvaluationObservable.add(spatialDynamicFrustumBeforeEvaluation)',
+  'scene.onAfterActiveMeshesEvaluationObservable.add(spatialDynamicFrustumAfterEvaluation)',
+  'mesh.isInFrustum(scene.frustumPlanes)',
+  'restoreSpatialDynamicFrustumCandidates()',
+  'dynamicFilterCandidates:0',
+  'spatialSelectionStats.dynamicFilterCandidates=candidateCount;',
   'Do not wrap octree.select(): that method selects static octree blocks',
   'buildSpatialSelectionOctree();',
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
@@ -81,8 +87,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'47\',build:\'0.6.337\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.337"'), 'Release validator must target version 0.6.337.');
+assert.ok(validator.includes('reportVersion:\'48\',build:\'0.6.338\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.338"'), 'Release validator must target version 0.6.338.');
 assert.ok(builder.includes('mobile_memory_policy_marker') && builder.includes('isMobilePeakMemorySensitive'), 'Memory-sensitive scheduling must be independent from the selected graphics profile.');
 assert.ok(builder.includes('GLB_IDENTITY_COMPARE_CHUNK_BYTES=256*1024'), 'GLB identity checks must compare bounded chunks instead of duplicating full files into ArrayBuffers.');
 assert.ok(builder.includes('player_import_start_marker') && builder.includes('let playerHumanLoadPromise=Promise.resolve(null);'), 'The protagonist GLB import must be deferred until static world construction has finished.');

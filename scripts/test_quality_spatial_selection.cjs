@@ -24,7 +24,12 @@ for(const marker of [
   "scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,'created-after-octree',true);});",
   "mesh.__elsnSpatialDynamicReason='octree-initial-dynamic'",
   'function buildSpatialSelectionOctree()',
-  'spatialSelectionStats.dynamicFilterEnabled=false;',
+assert.ok(builder.includes('dynamicFilterCandidates:0') && builder.includes('spatialSelectionStats.dynamicFilterCandidates=candidateCount;'), 'The live spatial snapshot must publish the current dynamic candidate count.');
+  'spatialSelectionStats.dynamicFilterEnabled=true;',
+  'scene.onBeforeActiveMeshesEvaluationObservable.add(spatialDynamicFrustumBeforeEvaluation)',
+  'scene.onAfterActiveMeshesEvaluationObservable.add(spatialDynamicFrustumAfterEvaluation)',
+  'mesh.isInFrustum(scene.frustumPlanes)',
+  'restoreSpatialDynamicFrustumCandidates()',
   'buildSpatialSelectionOctree();',
   'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
   "get:()=>({...spatialSelectionStats})",
@@ -42,10 +47,10 @@ const dynamicAddEnd=builder.indexOf('const removeSpatialDynamicMesh=',dynamicAdd
 assert.ok(dynamicAddStart>=0&&dynamicAddEnd>dynamicAddStart,'Dynamic mesh registration must remain present.');
 const dynamicAddSource=builder.slice(dynamicAddStart,dynamicAddEnd);
 assert.ok(dynamicAddSource.includes('mesh.__elsnSpatialDynamic')&&dynamicAddSource.includes('dynamic.push(mesh)')&&!dynamicAddSource.includes('dynamic.indexOf(mesh)'),'Dynamic mesh registration must use the existing per-mesh O(1) duplicate flag instead of a repeated linear search.');
-assert.ok(dynamicAddSource.includes('deferStats=false') && dynamicAddSource.includes('if(!deferStats)updateSpatialSelectionCounts();') &&
+assert.ok(dynamicAddSource.includes('deferStats=false') && dynamicAddSource.includes('if(!deferStats&&!spatialDynamicFrustumActive)updateSpatialSelectionCounts();') &&
   builder.includes('addSpatialDynamicMesh(mesh,null,false,true);') &&
   builder.includes('for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);\n   updateSpatialSelectionCounts();'),
-  'Initial dynamic mesh registration must batch global statistics once after the scene scan; live objects must still update stats immediately.');
+  'Initial dynamic registration must batch statistics once; live objects update immediately except during temporary frustum filtering, when counts refresh after restoration.');
 
 for(const marker of [
   'scene.createOrUpdateSelectionOctree(64,3)',
@@ -61,8 +66,8 @@ for (const field of ['meshSelectionDynamicFilterTotalCandidates','meshSelectionD
 }
 assert.ok(smoke.includes('manifest.spatialSelection?.enabled === true'),'Real campaign smoke must read the runtime spatial selection state.');
 assert.ok(smoke.includes('manifest.spatialSelection.staticIndexedMeshCount'),'Real campaign smoke must verify static octree indexing.');
-assert.ok(smoke.includes('Dynamic frustum filtering is intentionally not enabled'),'Smoke must not claim dynamic culling before it is integrated into Babylon dynamicContent.');
-assert.ok(!builder.includes('const installSpatialDynamicFrustumFilter=octree=>') && !builder.includes('octree.select=function(frustumPlanes,allowDuplicate)'), 'The renderer must not wrap static octree selection as a dynamic-content filter.');
+assert.ok(smoke.includes('dynamicFilterEnabled === true') && smoke.includes('dynamicFilterErrors'), 'Smoke must verify the live Babylon dynamic frustum filter and error counter.');
+assert.ok(!builder.includes('octree.select=function(frustumPlanes,allowDuplicate)'), 'The renderer must not monkey-patch Babylon static octree selection.');
 assert.ok(workflow.includes('node scripts/test_quality_spatial_selection.cjs'),'The Pages build must run the spatial selection contract.');
 assert.ok(source.includes('function update(dt){'),'World update must remain present.');
 assert.ok(source.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),'Felled trees must leave static octree cells before their fall animation.');
