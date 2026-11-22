@@ -656,8 +656,9 @@ def main() -> None:
         fail("Las animaciones y la flotación deben reutilizar valores sin asignaciones por fotograma.")
     if "frameTimingMs:{samples:frameTimes.length,average:frameAverage,p50:frameAt(.50),p95:frameAt(.95),p99:frameAt(.99)" not in index_html:
         fail("El diagnóstico debe exponer percentiles de tiempo de fotograma.")
-    if "function updateActiveIslandGrass(dt)" not in index_html or "if(isPerformanceMode)return;" not in index_html[index_html.find("function updateActiveIslandGrass(dt)"):index_html.find("spawnNaturalVegetationAndFauna();")] or "qualityGrassLodBatches.push" not in index_html or "updateActiveIslandGrass(dt);" not in index_html or "const show=batch.islandIndex===visibleGrassIslandIndex;" not in index_html:
-        fail("La hierba cercana debe actualizarse solo en Calidad y limitarse a la isla activa.")
+    grass_update_section = index_html[index_html.find("function updateActiveIslandGrass(dt)"):index_html.find("spawnNaturalVegetationAndFauna();")]
+    if "function updateActiveIslandGrass(dt)" not in index_html or "if(isPerformanceMode)return;" in grass_update_section or "qualityGrassLodBatches.push" not in index_html or "updateActiveIslandGrass(dt);" not in index_html or "const show=batch.islandIndex===visibleGrassIslandIndex;" not in index_html:
+        fail("La hierba instanciada debe actualizarse en ambos perfiles y limitarse a la isla activa.")
     if "function syncNordicWaterReflectionIsland()" not in index_html or "syncNordicWaterReflectionIsland();" not in index_html or "activeWaterReflectionIslandIndex" not in index_html:
         fail("El espejo del agua debe actualizarse solo con la isla activa.")
     if "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024" not in index_html or "nordicWaterMirror.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE)" not in index_html or "anisotropicFilteringLevel=Math.min(8,maxAnisotropy)" not in index_html or "reflectionFilteredMeshCount" not in index_html or "tinyReflectionDetail=vertexCount<96" not in index_html or "list.length<180" not in index_html or "reflectionLimitDiscardedMeshCount" not in index_html or "nordicWaterMirror.refreshRate=isTouchDevice?12:8" not in index_html:
