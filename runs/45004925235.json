@@ -7,10 +7,11 @@
       "name": "Arranque del juego y modelo vikingo real",
       "script": "scripts/player-startup-smoke.mjs",
       "startedAt": "2026-11-22T08:54:24.612Z",
-      "status": "running",
-      "durationMs": null,
-      "exitCode": null,
-      "error": null
+      "status": "passed",
+      "durationMs": 538513,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-22T09:03:23.127Z"
     }
   ],
   "finishedAt": null
