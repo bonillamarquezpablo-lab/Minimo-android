@@ -1208,8 +1208,8 @@ def main() -> None:
         fail("Falta la importación GLB con esqueleto de ciervo, venado y lobo.")
     if "const animalCount=idx===0?3:0;" not in index_html:
         fail("Los tres animales terrestres deben estar presentes en ambos perfiles; Rendimiento debe conservar su cadencia y LOD.")
-    if "const performanceDensity=isConstrainedMobile?" not in index_html or "leavesPerClump=isPerformanceMode?8:10" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
-        fail("El ajuste de hierba preexistente de Rendimiento debe mantenerse y la fauna debe cargar después sin recortar su roster.")
+    if "const performanceDensity=isConstrainedMobile?" not in index_html or "leavesPerClump=isPerformanceMode?8:12" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
+        fail("El presupuesto de hierba de Rendimiento y la fauna completa deben conservarse sin alterar el orden de carga.")
     if "const civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html or "if(!civilianBlob){" not in index_html:
         fail("La preparación de aldeanos debe reutilizar la promesa compartida cuando hay margen y cargarla en serie en móviles sensibles a memoria.")
     if "if(isMobilePeakMemorySensitive){" not in index_html or "await playerHumanLoadPromise;" not in index_html or "npcStartupPromise=startNpcHumanModels();" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
