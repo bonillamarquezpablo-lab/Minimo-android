@@ -1521,11 +1521,6 @@ function setLoadingProgress(value,label){
     html = html.replace(grass_recenter_marker, grass_recenter_replacement, 1)
 
  
-    update_grass_lod_guard_marker = "function updateActiveIslandGrass(dt){\n  if(isPerformanceMode)return;"
-    if html.count(update_grass_lod_guard_marker) != 1:
-        raise SystemExit("No se encontró el guard del actualizador LOD de hierba.")
-    html = html.replace(update_grass_lod_guard_marker, "function updateActiveIslandGrass(dt){", 1)
-
     grass_lod_runtime_marker = """  for(const batch of qualityGrassLodBatches){
    const show=batch.islandIndex===visibleGrassIslandIndex;
    if(batch.mesh.isVisible!==show)batch.mesh.isVisible=show;
