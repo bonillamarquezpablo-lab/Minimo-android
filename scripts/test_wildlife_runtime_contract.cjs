@@ -129,7 +129,7 @@ assert.ok(html.includes('skinIndices&&skinWeights'),
 assert.ok(html.includes('for(let parent=mesh&&mesh.parent;parent;parent=parent.parent)ancestors.unshift(parent)') &&
   worldInspection.includes('for (let parent = mesh && mesh.parent; parent; parent = parent.parent) ancestors.unshift(parent)'),
   'Runtime and inspection bounds must refresh every ancestor matrix before measuring skinned children.');
-assert.ok(!html.slice(boundsStart,boundsEnd).includes('mesh.refreshBoundingInfo(true)'),
+assert.ok(!productionHtml.slice(boundsStart,boundsEnd).includes('mesh.refreshBoundingInfo(true)'),
   'The wildlife bounds helper must not reapply CPU skeletal deformation.');
 assert.ok(html.includes("root.setParent(actor,true,true)") &&
   html.includes("heightError>heightTolerance") &&
