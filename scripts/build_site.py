@@ -721,28 +721,29 @@ def main() -> None:
         raise SystemExit("No se encontró el guard de desactivación de actualización de hierba en Rendimiento.")
     html = html.replace(update_skip_marker, "function updateActiveIslandGrass(dt){", 1)
 
-    initial_grass_marker = """  // La hierba existe únicamente en Calidad y solo en un radio local alrededor del jugador.
-  // Rendimiento no crea geometría, buffers ni materiales de hierba.
-  if(!isPerformanceMode){
-   const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);
-   grassStreamActiveIslandIndex=initialGrassIslandIndex;
-   grassStreamCenterX=player.root.position.x;grassStreamCenterZ=player.root.position.z;
-   const initialGrassStartedAt=performance.now();
-   await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);
-   recordStartupTask('Hierba 3D inicial de Calidad',initialGrassStartedAt,performance.now(),'ready',{clumps:grassInstanceCount,batches:grassBatchCount,island:initialGrassIslandIndex});
-   console.info('Hierba cercana de la isla inicial preparada.',{profile:activeGraphicsProfile,island:land[initialGrassIslandIndex]&&land[initialGrassIslandIndex].name,clumps:grassInstanceCount,batches:grassBatchCount,radiusMeters:92});
-  }else{
-   grassStreamActiveIslandIndex=-1;grassDebugClumpCount=0;grassDebugBatchCount=0;grassDebugIslandStats.length=0;
-   console.info('Hierba desactivada en modo Rendimiento.');
-  }"""
-    initial_grass_replacement = """  // Both profiles retain a full-island grass field; Performance changes density and tuft complexity, not grass availability.
+    initial_grass_marker = """ // La hierba existe únicamente en Calidad y solo en un radio local alrededor del jugador.
+ // Rendimiento no crea geometría, buffers ni materiales de hierba.
+ if(!isPerformanceMode){
   const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);
   grassStreamActiveIslandIndex=initialGrassIslandIndex;
-  grassStreamCenterX=land[initialGrassIslandIndex].x;grassStreamCenterZ=land[initialGrassIslandIndex].z;
+  grassStreamCenterX=player.root.position.x;grassStreamCenterZ=player.root.position.z;
   const initialGrassStartedAt=performance.now();
   await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);
-  recordStartupTask('Hierba 3D inicial',initialGrassStartedAt,performance.now(),'ready',{clumps:grassInstanceCount,batches:grassBatchCount,island:initialGrassIslandIndex,profile:isPerformanceMode?'performance':'quality',wind:'gpu-vertex-displacement'});
-  console.info('Cobertura 3D de hierba inicial preparada.',{profile:activeGraphicsProfile,island:land[initialGrassIslandIndex]&&land[initialGrassIslandIndex].name,clumps:grassInstanceCount,batches:grassBatchCount,radiusMeters:land[initialGrassIslandIndex].r*.70,wind:'gpu-vertex-displacement'});"""
+  recordStartupTask('Hierba 3D inicial de Calidad',initialGrassStartedAt,performance.now(),'ready',{clumps:grassInstanceCount,batches:grassBatchCount,island:initialGrassIslandIndex});
+  console.info('Hierba cercana de la isla inicial preparada.',{profile:activeGraphicsProfile,island:land[initialGrassIslandIndex]&&land[initialGrassIslandIndex].name,clumps:grassInstanceCount,batches:grassBatchCount,radiusMeters:92});
+ }else{
+  grassStreamActiveIslandIndex=-1;grassDebugClumpCount=0;grassDebugBatchCount=0;grassDebugIslandStats.length=0;
+  console.info('Hierba desactivada en modo Rendimiento.');
+ }"""
+    initial_grass_replacement = """ // Both profiles retain a full-island grass field; Performance changes density and tuft complexity, not grass availability.
+ const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);
+ grassStreamActiveIslandIndex=initialGrassIslandIndex;
+ grassStreamCenterX=land[initialGrassIslandIndex].x;grassStreamCenterZ=land[initialGrassIslandIndex].z;
+ const initialGrassStartedAt=performance.now();
+ await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);
+ recordStartupTask('Hierba 3D inicial',initialGrassStartedAt,performance.now(),'ready',{clumps:grassInstanceCount,batches:grassBatchCount,island:initialGrassIslandIndex,profile:isPerformanceMode?'performance':'quality',wind:'gpu-vertex-displacement'});
+ console.info('Cobertura 3D de hierba inicial preparada.',{profile:activeGraphicsProfile,island:land[initialGrassIslandIndex]&&land[initialGrassIslandIndex].name,clumps:grassInstanceCount,batches:grassBatchCount,radiusMeters:land[initialGrassIslandIndex].r*.70,wind:'gpu-vertex-displacement'});"""
+
     if html.count(initial_grass_marker) != 1:
         raise SystemExit("No se encontró el bloque único de hierba inicial que desactivaba Rendimiento.")
     html = html.replace(initial_grass_marker, initial_grass_replacement, 1)
