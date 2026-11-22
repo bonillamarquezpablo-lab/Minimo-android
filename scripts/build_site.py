@@ -792,18 +792,18 @@ function ensureStartupProgressPanel(){
  const style=document.createElement('style');
  style.id='elsn-startup-progress-style';
  style.textContent='#elsnStartupProgressPanel{box-sizing:border-box;width:min(760px,calc(100% - 28px));margin:9px auto 0;padding:10px 12px;border:1px solid rgba(235,190,143,.3);border-radius:12px;background:rgba(5,14,22,.9);color:#f7eee4;font:500 11px/1.35 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.22)}#elsnStartupProgressPanel *{box-sizing:border-box}#elsnStartupProgressPanel .elsn-sp-head,#elsnStartupProgressPanel .elsn-sp-current{display:flex;align-items:center;justify-content:space-between;gap:10px}#elsnStartupProgressPanel .elsn-sp-head strong{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#ffd3ac}#elsnStartupProgressPanel .elsn-sp-head span{font-variant-numeric:tabular-nums;color:#fff}#elsnStartupProgressPanel .elsn-sp-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin-top:8px}#elsnStartupProgressPanel .elsn-sp-step{min-width:0;padding:5px 2px;border:1px solid rgba(255,255,255,.13);border-radius:7px;color:rgba(255,255,255,.58);text-align:center;font-size:9px;white-space:nowrap}#elsnStartupProgressPanel .elsn-sp-step[aria-current=step]{border-color:#ffbd8b;background:rgba(235,153,99,.2);color:#fff;font-weight:800}#elsnStartupProgressPanel .elsn-sp-step.is-done{border-color:rgba(235,190,143,.42);color:#f0c6a2}#elsnStartupProgressPanel .elsn-sp-current{margin-top:8px;color:rgba(255,255,255,.78);font-size:10px}#elsnStartupProgressPanel #elsnStartupProgressAction{min-width:0;overflow-wrap:anywhere}#elsnStartupProgressPanel #elsnStartupProgressElapsed{flex:none;color:#ffd3ac;font-variant-numeric:tabular-nums}@media(max-width:460px){#elsnStartupProgressPanel{width:calc(100% - 22px);padding:8px 9px;margin-top:7px}#elsnStartupProgressPanel .elsn-sp-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}#elsnStartupProgressPanel .elsn-sp-step{font-size:10px;padding:5px 2px}}';
+ style.textContent+='#elsnStartupProgressPanel{position:fixed;left:0;right:0;bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;width:100vw;max-width:none;margin:0;padding:10px 14px;border-left:0;border-right:0;border-radius:0;z-index:2147482000;pointer-events:none}@media(max-width:460px){#elsnStartupProgressPanel{left:0;right:0;width:100vw;max-width:none;margin:0;padding:9px 12px calc(9px + env(safe-area-inset-bottom,0px));border-radius:0}}';
  document.head.appendChild(style);
  panel=document.createElement('section');
  panel.id='elsnStartupProgressPanel';
  panel.setAttribute('role','status');
  panel.setAttribute('aria-live','polite');
  panel.innerHTML='<div class="elsn-sp-head"><strong id="elsnStartupProgressStage">PASO 1/6 · MOTOR 3D</strong><span id="elsnStartupProgressPercent">0%</span></div><div class="elsn-sp-grid">'+startupProgressSteps.map((step,index)=>'<span class="elsn-sp-step" data-step="'+index+'">'+(index+1)+'. '+step.short+'</span>').join('')+'</div><div class="elsn-sp-current"><span id="elsnStartupProgressAction">Preparando motor 3D…</span><span id="elsnStartupProgressElapsed">En esta fase: 0 s</span></div>';
- const anchor=loadProgressTrack||loadProgressBar||loadText;
- const host=document.getElementById('loading')||(anchor&&anchor.parentElement)||document.body;
- host.appendChild(panel);
+ document.body.appendChild(panel);
  if(!window.__ELSN_STARTUP_PROGRESS_TIMER__)window.__ELSN_STARTUP_PROGRESS_TIMER__=window.setInterval(()=>{
   const loading=document.getElementById('loading');
   if(!loading||getComputedStyle(loading).display==='none'||document.body.classList.contains('game-running')){
+   panel.remove();
    window.clearInterval(window.__ELSN_STARTUP_PROGRESS_TIMER__);
    window.__ELSN_STARTUP_PROGRESS_TIMER__=null;
    return;
