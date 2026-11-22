@@ -77,6 +77,8 @@ jobs:
         run: node scripts/test_inspector_dashboard_contract.cjs
       - name: Test the unified horizontal Inspector and session report
         run: node scripts/test_inspector_workbench_contract.cjs
+      - name: Test verified external resource cache integrity
+        run: python scripts/test_build_resource_cache.py
       - name: Test release version and packaging contract
         run: node scripts/test_release_contract.cjs
       - name: Test unified day-night atmosphere clock and APIs
