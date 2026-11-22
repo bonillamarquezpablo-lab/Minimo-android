@@ -29,6 +29,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Restore verified external resource cache
+        id: resource_cache
         uses: actions/cache/restore@v4
         with:
           path: .build-cache/resources
