@@ -212,7 +212,7 @@ assert.match(html,/recordStartupTask\('Hierba 3D inicial de Calidad'/,"Initial Q
 assert.match(html,/Visible Nordic ground cover swapped atomically/,"Grass must swap only after the staged replacement is ready.");
 assert.match(html,/grassMesh\.setEnabled\(!staging\)/,"New grass batches must stay hidden until their atomic activation.");
 assert.match(html,/grassBuildSliceBudgetMs=staging\?\(isTouchDevice\?3\.5:6\)/,"Runtime grass generation must yield in short frame slices.");
-assert.match(html,/const leavesPerClump=isPerformanceMode\?8:\(isTouchDevice\?7:10\)/,"Mobile Quality must use seven-blade tufts for denser, more uniform instanced ground cover; desktop retains ten blades.");
+assert.ok(buildSite.includes('grass_leaves_marker = "const leavesPerClump=isPerformanceMode?8:10;"') && buildSite.includes('grass_leaves_replacement = "const leavesPerClump=isPerformanceMode?8:(isTouchDevice?7:10);"'),"The release builder must use seven-blade tufts for denser, more uniform mobile Quality ground cover while retaining ten blades on desktop.");
 console.log('OK: separate seabed, translucent moving water film, white foam, wet sand and detailed multi-scale ocean surface.');
 
 assert.match(html,/function footstepShorelineRadius\(island,angle,t=oceanTime\)/,"Footstep splashes must use the legacy uncapped ocean-line solver independently of the rendered foam solver.");
