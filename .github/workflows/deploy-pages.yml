@@ -384,6 +384,7 @@ jobs:
       - name: Install the exact cached Playwright version
         run: npm install --no-save --no-package-lock "playwright@${{ needs.build.outputs.playwright-version }}"
       - name: Verify cached Chromium and system dependencies
+        id: playwright_install
         run: npx playwright install --with-deps chromium
       - name: Download the exact site package built and validated above
         uses: actions/download-artifact@v4
