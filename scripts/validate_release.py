@@ -391,6 +391,8 @@ def main() -> None:
         fail("Los puntos de aparición de fauna deben estar despejados de arbustos voluminosos y rocas.")
     if "window.__ELSN_ROCK_PLACEMENT__" not in index_html or "mineableRockPlacementStats" not in index_html:
         fail("La colocación de rocas debe rechazar intersecciones con troncos y exponer su auditoría.")
+    if "for(const rock of rocks)" not in index_html or "rockOverlapPairs" not in index_html or "minRockTreeClearanceMeters" not in index_html:
+        fail("La colocación incremental debe comprobar rocas previas al plantar árboles y auditar ambos sentidos de solapamiento.")
     subsystem_diagnostic_markers = (
         "subsystems:{worldPhases:getWorldPhaseTimingSnapshot()",
         "npcDialogue:window.__ELSN_NPC_DIALOGUES__",
