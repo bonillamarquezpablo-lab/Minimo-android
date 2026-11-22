@@ -751,7 +751,7 @@ def main() -> None:
     html = html.replace(tree_push_marker,tree_push_replacement,1)
 
     forest_loop_end_marker = "   rocks.push(createRock(x,z));\n  }\n });\n // A recognisable longship"
-    forest_loop_end_replacement = "   rocks.push(createRock(x,z));\n   if((i&3)===3)await new Promise(resolve=>requestAnimationFrame(resolve));\n  }\n  await new Promise(resolve=>requestAnimationFrame(resolve));\n }\n recordStartupTask('Plantación inicial de bosque',forestPlantingStartedAt,performance.now(),'ready',{...forestTreeSpacingStats,treeCount:trees.length});\n // A recognisable longship"
+    forest_loop_end_replacement = "   const placedRock=createRock(x,z);if(placedRock)rocks.push(placedRock);\n   if((i&3)===3)await new Promise(resolve=>requestAnimationFrame(resolve));\n  }\n  await new Promise(resolve=>requestAnimationFrame(resolve));\n }\n recordStartupTask('Plantación inicial de bosque',forestPlantingStartedAt,performance.now(),'ready',{...forestTreeSpacingStats,treeCount:trees.length,rockPlacement:mineableRockPlacementStats});\n // A recognisable longship"
     if html.count(forest_loop_end_marker) != 1:
         raise SystemExit("No se encontró el cierre único de la generación forestal.")
     html = html.replace(forest_loop_end_marker,forest_loop_end_replacement,1)
@@ -2919,18 +2919,41 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   let cap=sphere('rockFacet',null,[x-.18,gy+sy*.72,z-.10],[sx*.62,sy*.36,sz*.62],M.stoneLight,10);
   return {meshes:[r,cap],x,z,radius:Math.max(sx,sz)*.48,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
  }"""
-    mineable_rock_replacement = """// Reuse the existing, already-loaded granite materials. Cloning a new StandardMaterial
-  // here creates a new shader variant that can remain unready on mobile/software GPUs.
+    mineable_rock_replacement = """// Reuse shared materials and reject placements that intersect a tree trunk or another deposit.
   const mineableGraniteMaterial=M.stoneLight;
+  const mineableRockPlacementStats={placed:0,relocated:0,skipped:0};
+  window.__ELSN_ROCK_PLACEMENT__=()=>{let overlaps=0,minClearance=Infinity;for(const rock of rocks){if(!rock||!rock.alive)continue;for(const tree of trees){if(!tree||!tree.alive)continue;const clearance=Math.hypot(rock.x-tree.x,rock.z-tree.z)-(Number(rock.radius)||.5)-(Number(tree.radius)||.7)-.45;minClearance=Math.min(minClearance,clearance);if(clearance<-.05)overlaps++;}}return {...mineableRockPlacementStats,overlapPairs:overlaps,minTreeClearanceMeters:Number.isFinite(minClearance)?Number(minClearance.toFixed(3)):null};};
   function createRock(x,z){
-   const gy=renderedTerrainSurfaceAt(x,z),sx=rand(.72,1.02),sy=rand(.70,.94),sz=rand(.68,1.00);
+   const sx=rand(.72,1.02),sy=rand(.70,.94),sz=rand(.68,1.00),radius=Math.max(sx,sz)*.50;
+   const islandIndex=landIslandIndex(x,z),island=land[islandIndex];
+   const acceptable=(px,pz)=>{
+    if(!island||landIslandIndex(px,pz)!==islandIndex)return false;
+    if(!isSafeIslandGroundPoint(island,px,pz,1.4,.70,.52))return false;
+    for(const tree of trees){if(!tree||!tree.alive)continue;const required=(Number(tree.radius)||.7)+radius+.45;if(Math.hypot(px-tree.x,pz-tree.z)<required)return false;}
+    for(const other of rocks){if(!other||!other.alive)continue;const required=(Number(other.radius)||.7)+radius+.35;if(Math.hypot(px-other.x,pz-other.z)<required)return false;}
+    return true;
+   };
+   let placement=acceptable(x,z)?{x,z}:null;
+   if(!placement){
+    const phase=rand(0,Math.PI*2);
+    for(let ring=1;ring<=10&&!placement;ring++){
+     const distance=ring*.65;
+     for(let step=0;step<24;step++){
+      const angle=phase+step*Math.PI*2/24+(ring%2)*.08,px=x+Math.cos(angle)*distance,pz=z+Math.sin(angle)*distance;
+      if(acceptable(px,pz)){placement={x:px,z:pz};break;}
+     }
+    }
+   }
+   if(!placement){mineableRockPlacementStats.skipped++;return null;}
+   if(Math.hypot(placement.x-x,placement.z-z)>.10)mineableRockPlacementStats.relocated++;
+   x=placement.x;z=placement.z;mineableRockPlacementStats.placed++;
+   const gy=renderedTerrainSurfaceAt(x,z);
    const r=B.MeshBuilder.CreateIcoSphere('graniteBoulder',{radius:1,subdivisions:2,flat:true},scene);
    r.position=v(x,gy+sy*.40,z);r.scaling=v(sx,sy,sz);r.material=mineableGraniteMaterial;r.isPickable=true;r.receiveShadows=true;
    r.rotation.set(rand(-.10,.10),rand(0,Math.PI*2),rand(-.12,.12));
    const cap=B.MeshBuilder.CreateIcoSphere('rockFacet',{radius:1,subdivisions:1,flat:true},scene);
    cap.position=v(x-sx*.14,gy+sy*.65,z-sz*.11);cap.scaling=v(sx*.52,sy*.30,sz*.48);cap.material=M.stone;cap.isPickable=true;cap.receiveShadows=true;
    cap.rotation.set(rand(-.12,.12),r.rotation.y+.42,rand(-.10,.10));
-   const radius=Math.max(sx,sz)*.50;
    return {meshes:[r,cap],x,z,radius,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
   }"""
     mineable_rock_pattern = r"(?m)^[ \t]*function createRock\(x,z\)\{\n.*?\n[ \t]*\}"
