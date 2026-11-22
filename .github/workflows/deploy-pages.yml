@@ -37,6 +37,13 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Restore verified external game assets
+        uses: actions/cache@v4
+        with:
+          path: .asset-cache/
+          key: el-sin-nombre-assets-v1-${{ runner.os }}
+
+
       - name: Test offline navigation suite and four camera modes
         run: node scripts/test_navigation_suite_contract.cjs
       - name: Test adaptive graphics quality without sacrificing Performance profile
