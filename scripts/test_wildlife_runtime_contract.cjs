@@ -42,27 +42,23 @@ assert.match(html,/function updateWildlife\(dt\)/);
 for(const marker of ['visualIntegrity','playingAnimationGroups','textureReadiness','maxExtentMeters','result.meshes'])assert.ok(worldInspection.includes(marker),'Inspector per-animal capture is missing '+marker);
 assert.ok(worldInspection.includes('function skinnedVertexWorldBounds(mesh)') &&
   worldInspection.includes("'skinned-vertex-world'") &&
-  worldInspection.includes("const positions = safeVertices('position');") &&
-  !worldInspection.includes('setPositionsForCPUSkinning') &&
+  worldInspection.includes("const positions = safeCall(() => typeof mesh.setPositionsForCPUSkinning === 'function'") &&
+  worldInspection.includes('setPositionsForCPUSkinning()') &&
   worldInspection.includes('skeleton.getTransformMatrices(mesh)') &&
   worldInspection.includes('skinIndices && skinWeights') &&
   !worldInspection.includes('mesh.refreshBoundingInfo(true)'),
-  'The inspector must skin immutable source vertices once and never transform CPU-deformed positions again.');
-const sourceSkinningMarker = "let positions=typeof mesh.setPositionsForCPUSkinning==='function'?mesh.setPositionsForCPUSkinning():null;\n  if(!positions||!positions.length)positions=mesh.getVerticesData(positionKind);";
-const productionHtml = html.replace(sourceSkinningMarker,"const positions=mesh.getVerticesData(positionKind);");
-assert.notEqual(productionHtml,html,'The release test must exercise the builder-transformed source-vertex path.');
-assert.ok(builder.includes('skinned_bounds_positions_marker =') &&
-  builder.includes('skinned_bounds_positions_replacement = "const positions=mesh.getVerticesData(positionKind);"') &&
-  productionHtml.includes('const positions=mesh.getVerticesData(positionKind);') &&
-  productionHtml.includes('skeleton.getTransformMatrices(mesh)'),
-  'The production fauna bounds helper must always start from original positions before applying current bone matrices.');
+  'The inspector must use Babylon\'s original CPU-skinning source positions before applying current bone matrices.');
+assert.ok(html.includes('function skinnedVertexWorldBounds(mesh)') &&
+  html.includes('mesh.setPositionsForCPUSkinning()') &&
+  html.includes('skeleton.getTransformMatrices(mesh)'),
+  'Production fauna bounds must use Babylon\'s original CPU-skinning source positions before applying current bone matrices.');
 assert.ok(html.includes('function normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight)') &&
   html.includes('const correction=expectedHeight/measured;') &&
   html.includes('actor.scaling.scaleInPlace(correction)') &&
   html.includes('const fitted=normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight)'),
   'The final physical deer scale must be corrected from measured world bounds after the GLB roots are attached.');
-const boundsStart=productionHtml.indexOf(' function normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight){');
-const boundsEnd=productionHtml.indexOf('function makeHeldEnemySword',boundsStart);
+const boundsStart=html.indexOf(' function normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight){');
+const boundsEnd=html.indexOf('function makeHeldEnemySword',boundsStart);
 assert.ok(boundsStart>=0&&boundsEnd>boundsStart,'Production wildlife bounds functions must be available for deterministic scale regression.');
 class Vec3 { constructor(x,y,z){this.x=x;this.y=y;this.z=z;} clone(){return new Vec3(this.x,this.y,this.z);} }
 const VertexBuffer={PositionKind:'position',MatricesIndicesKind:'matricesIndices',MatricesWeightsKind:'matricesWeights',
@@ -76,13 +72,13 @@ const regressionBox={minimum:{x:-.01,y:-.01,z:-.01},maximum:{x:.01,y:.015,z:.01}
 let originalPositionsRequested=false;
 boundsSandbox.mesh={skeleton:{name:'DeerRig',prepare(){},getTransformMatrices(){return boneMatrix;}},
  numBoneInfluencers:4,computeWorldMatrix(){},
- setPositionsForCPUSkinning(){originalPositionsRequested=true;throw new Error('CPU-deformed vertices must never enter the manual bone-matrix path.');},
- getVerticesData(kind){if(kind==='position')return corners;if(kind==='matricesIndices')return jointIndices;if(kind==='matricesWeights')return jointWeights;return null;},
+ setPositionsForCPUSkinning(){originalPositionsRequested=true;return corners;},
+ getVerticesData(kind){if(kind==='position')return new Array(24).fill(.001);if(kind==='matricesIndices')return jointIndices;if(kind==='matricesWeights')return jointWeights;return null;},
  refreshBoundingInfo(){throw new Error('CPU skeleton refresh must not be used for anatomical bounds.');},
  getWorldMatrix(){return {m:[1,0,0,0,0,1,0,0,0,0,1,0,12,1.25,-3,1]};},
  getBoundingInfo(){return {boundingBox:regressionBox};}};
-vm.runInNewContext(productionHtml.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',boundsSandbox);
-assert.equal(originalPositionsRequested,false,'Bounds must never request CPU-deformed vertices before manually applying bone matrices.');
+vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',boundsSandbox);
+assert.equal(originalPositionsRequested,true,'Bounds must use Babylon\'s dedicated API for original vertices on the software-skinning path.');
 assert.equal(Number(boundsSandbox.__measured.height.toFixed(3)),1.42,'The CPU and GPU path must apply the current bone transform exactly once.');
 assert.equal(Number(boundsSandbox.__measured.width.toFixed(3)),.8);
 assert.equal(Number(boundsSandbox.__measured.depth.toFixed(3)),.72);
@@ -90,7 +86,7 @@ assert.equal(Number(boundsSandbox.__measured.min.y.toFixed(3)),1.25);
 const emptySkinnedNode={name:'SkinRootWithoutGeometry',skeleton:{name:'Rig'},numBoneInfluencers:4,
  setPositionsForCPUSkinning(){return null;},getVerticesData(){return null;},getBoundingInfo(){return {boundingBox:null};}};
 const emptyNodeSandbox={B:{Vector3:Vec3,VertexBuffer},scene:{incrementRenderId(){}},mesh:boundsSandbox.mesh,emptyNode:emptySkinnedNode};
-vm.runInNewContext(productionHtml.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__withEmpty=boundsForMeshes([mesh,emptyNode]);',emptyNodeSandbox);
+vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__withEmpty=boundsForMeshes([mesh,emptyNode]);',emptyNodeSandbox);
 assert.equal(Number(emptyNodeSandbox.__withEmpty.height.toFixed(3)),1.42,
  'Empty glTF skeleton attachment nodes must be ignored without aborting valid mesh bounds.');
 const dynamicActor={
@@ -103,14 +99,14 @@ const dynamicCorners=[];for(const x of [0,1])for(const y of [0,1])for(const z of
 const dynamicIndices=Array.from({length:8*4},()=>0),dynamicWeights=Array.from({length:8*4},(_,i)=>i%4===0?1:0);
 const dynamicMesh={
  parent:dynamicActor,skeleton:{name:'DynamicRig',prepare(){},getTransformMatrices(){return [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];}},numBoneInfluencers:4,computeWorldMatrix(){},
- setPositionsForCPUSkinning(){throw new Error('The CPU-deformed vertex stream must not be used.');},
- getVerticesData(kind){return kind==='position'?dynamicCorners:kind==='matricesIndices'?dynamicIndices:kind==='matricesWeights'?dynamicWeights:null;},
+ setPositionsForCPUSkinning(){return dynamicCorners;},
+ getVerticesData(kind){return kind==='position'?new Array(24).fill(0):kind==='matricesIndices'?dynamicIndices:kind==='matricesWeights'?dynamicWeights:null;},
  getWorldMatrix(){return {m:[dynamicActor.scaling.x,0,0,0,0,dynamicActor.scaling.y,0,0,0,0,dynamicActor.scaling.z,0,0,0,0,1]};},
  refreshBoundingInfo(){throw new Error('CPU skeleton refresh must not be used for anatomical bounds.');},
  getBoundingInfo(){return {boundingBox:dynamicBox};}
 };
 const fittingSandbox={B:{Vector3:Vec3},scene:{incrementRenderId(){}},mesh:null,actor:dynamicActor,meshes:[dynamicMesh]};
-vm.runInNewContext(productionHtml.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+
+vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+
  'this.__fit=normalizeActorScaleFromWorldBounds(actor,meshes,1.42);',fittingSandbox);
 assert.equal(Number(fittingSandbox.__fit.factor.toFixed(3)),1.42);
 assert.equal(Number(fittingSandbox.__fit.bounds.height.toFixed(3)),1.42);
@@ -121,7 +117,7 @@ const unskinnedSandbox={B:{Vector3:Vec3,VertexBuffer},scene:{incrementRenderId()
   computeWorldMatrix(){},getBoundingInfo(){return {boundingBox:{minimum:{x:0,y:0,z:0},maximum:{x:1,y:1,z:1},
     minimumWorld:{x:2,y:3,z:4},maximumWorld:{x:4,y:6,z:8}}};}
 }};
-vm.runInNewContext(productionHtml.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',unskinnedSandbox);
+vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',unskinnedSandbox);
 assert.equal(unskinnedSandbox.__measured.width,2,'Unskinned meshes must retain Babylon native world bounds.');
 assert.equal(unskinnedSandbox.__measured.height,3);
 assert.ok(html.includes('skinIndices&&skinWeights'),
@@ -129,7 +125,7 @@ assert.ok(html.includes('skinIndices&&skinWeights'),
 assert.ok(html.includes('for(let parent=mesh&&mesh.parent;parent;parent=parent.parent)ancestors.unshift(parent)') &&
   worldInspection.includes('for (let parent = mesh && mesh.parent; parent; parent = parent.parent) ancestors.unshift(parent)'),
   'Runtime and inspection bounds must refresh every ancestor matrix before measuring skinned children.');
-assert.ok(!productionHtml.slice(boundsStart,boundsEnd).includes('mesh.refreshBoundingInfo(true)'),
+assert.ok(!html.slice(boundsStart,boundsEnd).includes('mesh.refreshBoundingInfo(true)'),
   'The wildlife bounds helper must not reapply CPU skeletal deformation.');
 assert.ok(html.includes("root.setParent(actor,true,true)") &&
   html.includes("heightError>heightTolerance") &&
