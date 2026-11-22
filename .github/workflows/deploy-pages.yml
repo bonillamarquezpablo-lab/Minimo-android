@@ -27,6 +27,14 @@ jobs:
       - name: Checkout game repository
         uses: actions/checkout@v6
 
+      - name: Restore verified external resource cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .build-cache/resources
+          key: el-sin-nombre-resources-v1-${{ runner.os }}-${{ hashFiles('scripts/build_site.py') }}
+          restore-keys: |
+            el-sin-nombre-resources-v1-${{ runner.os }}-
+
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -97,6 +105,14 @@ jobs:
 
       - name: Download all resources, build dist and run release validation
         run: python scripts/build_site.py
+
+      - name: Save verified external resource cache
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: .build-cache/resources
+          key: el-sin-nombre-resources-v1-${{ runner.os }}-${{ hashFiles('scripts/build_site.py') }}
+
       - name: Verify realistic forest spacing and gull flight clips
         run: node scripts/test_forest_gull_assets.cjs
       - name: Verify night-effect CPU budgets without reducing Quality
