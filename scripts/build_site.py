@@ -591,6 +591,14 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
+    # 0.6.343: the previous mobile Quality density produced ~53k grass clumps on the starter island.
+    # Keep full-island coverage, but cap vegetation workload on touch devices.
+    grass_density_marker = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);"
+    grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?2.6:1.9):(islandIndex===0?6.2:4.6);"
+    if html.count(grass_density_marker) != 1:
+        raise SystemExit("No se encontró exactamente una densidad de hierba de Calidad para el presupuesto móvil.")
+    html = html.replace(grass_density_marker, grass_density_replacement, 1)
+
     # Keep full-quality coast geometry while tightening the CPU slice ceiling on mobile.
     # Work is spread over more frames; no mesh rows, columns or material detail are removed.
     coast_budget_marker = "BEACH_WORK_BUDGET_MS=isTouchDevice?1.5:2.0"
@@ -640,6 +648,14 @@ def main() -> None:
      const required=Math.max(forestTreeSpacingStats.minGapMeters,(canopyRadius+otherRadius)*1.12);
      if(dx*dx+dz*dz<required*required)return false;
     }
+    // Trees are planted incrementally beside rocks; reject a new tree if an earlier
+    // resource deposit already occupies its trunk footprint.
+    for(const rock of rocks){
+     if(!rock||rock.alive===false)continue;
+     const dx=cx-rock.x,dz=cz-rock.z;
+     const required=(Number(rock.radius)||.7)+.9+.45;
+     if(dx*dx+dz*dz<required*required)return false;
+    }
     return true;
    };
    if(acceptable(x,z))return {x,z};
@@ -654,7 +670,7 @@ def main() -> None:
    }
    return null;
   }
-  window.__ELSN_FOREST_TREE_SPACING__=()=>{const live=trees.filter(tree=>tree&&tree.alive);let overlapPairs=0,minCenterDistance=Infinity;for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){const a=live[i],c=live[j],distance=Math.hypot(a.x-c.x,a.z-c.z);minCenterDistance=Math.min(minCenterDistance,distance);const required=Math.max(forestTreeSpacingStats.minGapMeters,(Math.max(3,Number(a.canopyRadius)||3)+Math.max(3,Number(c.canopyRadius)||3))*1.12);if(distance<required-.05)overlapPairs++;}return {...forestTreeSpacingStats,treeCount:live.length,overlapPairs,minCenterDistanceMeters:Number.isFinite(minCenterDistance)?Number(minCenterDistance.toFixed(2)):null};};
+  window.__ELSN_FOREST_TREE_SPACING__=()=>{const live=trees.filter(tree=>tree&&tree.alive);let overlapPairs=0,rockOverlapPairs=0,minCenterDistance=Infinity,minRockTreeClearance=Infinity;for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){const a=live[i],c=live[j],distance=Math.hypot(a.x-c.x,a.z-c.z);minCenterDistance=Math.min(minCenterDistance,distance);const required=Math.max(forestTreeSpacingStats.minGapMeters,(Math.max(3,Number(a.canopyRadius)||3)+Math.max(3,Number(c.canopyRadius)||3))*1.12);if(distance<required-.05)overlapPairs++;}for(const tree of live)for(const rock of rocks){if(!rock||rock.alive===false)continue;const clearance=Math.hypot(tree.x-rock.x,tree.z-rock.z)-(Number(tree.radius)||.9)-(Number(rock.radius)||.7)-.45;minRockTreeClearance=Math.min(minRockTreeClearance,clearance);if(clearance<-.05)rockOverlapPairs++;}return {...forestTreeSpacingStats,treeCount:live.length,overlapPairs,rockOverlapPairs,minCenterDistanceMeters:Number.isFinite(minCenterDistance)?Number(minCenterDistance.toFixed(2)):null,minRockTreeClearanceMeters:Number.isFinite(minRockTreeClearance)?Number(minRockTreeClearance.toFixed(3)):null};};
  async function loadForestTreeTemplates(){
   const started=performance.now();
   const loaded=await Promise.all(forestTreeAssetSpecs.map(async spec=>{
@@ -743,7 +759,7 @@ def main() -> None:
     html = html.replace(tree_push_marker,tree_push_replacement,1)
 
     forest_loop_end_marker = "   rocks.push(createRock(x,z));\n  }\n });\n // A recognisable longship"
-    forest_loop_end_replacement = "   rocks.push(createRock(x,z));\n   if((i&3)===3)await new Promise(resolve=>requestAnimationFrame(resolve));\n  }\n  await new Promise(resolve=>requestAnimationFrame(resolve));\n }\n recordStartupTask('Plantación inicial de bosque',forestPlantingStartedAt,performance.now(),'ready',{...forestTreeSpacingStats,treeCount:trees.length});\n // A recognisable longship"
+    forest_loop_end_replacement = "   const placedRock=createRock(x,z);if(placedRock)rocks.push(placedRock);\n   if((i&3)===3)await new Promise(resolve=>requestAnimationFrame(resolve));\n  }\n  await new Promise(resolve=>requestAnimationFrame(resolve));\n }\n recordStartupTask('Plantación inicial de bosque',forestPlantingStartedAt,performance.now(),'ready',{...forestTreeSpacingStats,treeCount:trees.length,rockPlacement:mineableRockPlacementStats});\n // A recognisable longship"
     if html.count(forest_loop_end_marker) != 1:
         raise SystemExit("No se encontró el cierre único de la generación forestal.")
     html = html.replace(forest_loop_end_marker,forest_loop_end_replacement,1)
@@ -784,18 +800,18 @@ function ensureStartupProgressPanel(){
  const style=document.createElement('style');
  style.id='elsn-startup-progress-style';
  style.textContent='#elsnStartupProgressPanel{box-sizing:border-box;width:min(760px,calc(100% - 28px));margin:9px auto 0;padding:10px 12px;border:1px solid rgba(235,190,143,.3);border-radius:12px;background:rgba(5,14,22,.9);color:#f7eee4;font:500 11px/1.35 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.22)}#elsnStartupProgressPanel *{box-sizing:border-box}#elsnStartupProgressPanel .elsn-sp-head,#elsnStartupProgressPanel .elsn-sp-current{display:flex;align-items:center;justify-content:space-between;gap:10px}#elsnStartupProgressPanel .elsn-sp-head strong{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#ffd3ac}#elsnStartupProgressPanel .elsn-sp-head span{font-variant-numeric:tabular-nums;color:#fff}#elsnStartupProgressPanel .elsn-sp-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin-top:8px}#elsnStartupProgressPanel .elsn-sp-step{min-width:0;padding:5px 2px;border:1px solid rgba(255,255,255,.13);border-radius:7px;color:rgba(255,255,255,.58);text-align:center;font-size:9px;white-space:nowrap}#elsnStartupProgressPanel .elsn-sp-step[aria-current=step]{border-color:#ffbd8b;background:rgba(235,153,99,.2);color:#fff;font-weight:800}#elsnStartupProgressPanel .elsn-sp-step.is-done{border-color:rgba(235,190,143,.42);color:#f0c6a2}#elsnStartupProgressPanel .elsn-sp-current{margin-top:8px;color:rgba(255,255,255,.78);font-size:10px}#elsnStartupProgressPanel #elsnStartupProgressAction{min-width:0;overflow-wrap:anywhere}#elsnStartupProgressPanel #elsnStartupProgressElapsed{flex:none;color:#ffd3ac;font-variant-numeric:tabular-nums}@media(max-width:460px){#elsnStartupProgressPanel{width:calc(100% - 22px);padding:8px 9px;margin-top:7px}#elsnStartupProgressPanel .elsn-sp-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}#elsnStartupProgressPanel .elsn-sp-step{font-size:10px;padding:5px 2px}}';
+ style.textContent+='#loading .loadBottom{position:relative;left:50%;transform:translateX(-50%);box-sizing:border-box;width:100vw!important;max-width:none!important;margin:0!important;padding-left:clamp(24px,6.2vw,104px)!important;padding-right:clamp(24px,6.2vw,104px)!important}#loading .loadPhase{box-sizing:border-box;width:100%}#loading .loadTrack{display:block;box-sizing:border-box;width:100%!important;max-width:none!important}#elsnStartupProgressPanel{position:fixed;left:0;right:0;bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;width:100vw;max-width:none;margin:0;padding:10px 14px;border-left:0;border-right:0;border-radius:0;z-index:2147482000;pointer-events:none}@media(max-width:460px){#elsnStartupProgressPanel{left:0;right:0;width:100vw;max-width:none;margin:0;padding:9px 12px calc(9px + env(safe-area-inset-bottom,0px));border-radius:0}}';
  document.head.appendChild(style);
  panel=document.createElement('section');
  panel.id='elsnStartupProgressPanel';
  panel.setAttribute('role','status');
  panel.setAttribute('aria-live','polite');
  panel.innerHTML='<div class="elsn-sp-head"><strong id="elsnStartupProgressStage">PASO 1/6 · MOTOR 3D</strong><span id="elsnStartupProgressPercent">0%</span></div><div class="elsn-sp-grid">'+startupProgressSteps.map((step,index)=>'<span class="elsn-sp-step" data-step="'+index+'">'+(index+1)+'. '+step.short+'</span>').join('')+'</div><div class="elsn-sp-current"><span id="elsnStartupProgressAction">Preparando motor 3D…</span><span id="elsnStartupProgressElapsed">En esta fase: 0 s</span></div>';
- const anchor=loadProgressTrack||loadProgressBar||loadText;
- const host=document.getElementById('loading')||(anchor&&anchor.parentElement)||document.body;
- host.appendChild(panel);
+ document.body.appendChild(panel);
  if(!window.__ELSN_STARTUP_PROGRESS_TIMER__)window.__ELSN_STARTUP_PROGRESS_TIMER__=window.setInterval(()=>{
   const loading=document.getElementById('loading');
   if(!loading||getComputedStyle(loading).display==='none'||document.body.classList.contains('game-running')){
+   panel.remove();
    window.clearInterval(window.__ELSN_STARTUP_PROGRESS_TIMER__);
    window.__ELSN_STARTUP_PROGRESS_TIMER__=null;
    return;
@@ -970,6 +986,8 @@ function setLoadingProgress(value,label){
     if html.count(animal_dimensions_marker) != 1 or html.count(animal_silhouette_text) != 1:
         raise SystemExit("No se encontró la única comprobación geométrica de fauna.")
     animal_dimensions_at = html.index(animal_dimensions_marker) + len(animal_dimensions_marker)
+
+
     animal_text_at = html.index(animal_silhouette_text, animal_dimensions_at)
     animal_check_end = html.index("');", animal_text_at) + 3
     animal_silhouette_replacement = "\n   const animalSkinningMeshes=meshes.filter(mesh=>mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);\n   const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer);const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true;if(forceCpuSkinning&&forceGpuSkinning)throw new Error('El diagnóstico de fauna no puede forzar CPU y GPU skinning a la vez.');const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer);animalSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;});\n   (imported.skeletons||[]).forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}catch(_){}});\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
@@ -1120,6 +1138,13 @@ function setLoadingProgress(value,label){
         raise SystemExit("No se encontró el contador de fauna terrestre inicial.")
     html = html.replace(wildlife_spawn_count_marker, wildlife_spawn_count_replacement, 1)
 
+    # Give each animal a clear foreground; dense broadleaf shrubs must not hide imported bodies.
+    wildlife_clearance_marker = "trees.some(t=>Math.hypot(x-t.x,z-t.z)<(t.radius||.6)+3.0)||\n        wildlifeSpawnSpecs.some(other=>Math.hypot(x-other.x,z-other.z)<5.6)"
+    wildlife_clearance_replacement = "trees.some(t=>Math.hypot(x-t.x,z-t.z)<(t.radius||.6)+3.0)||\n        naturalShrubs.some(b=>Math.hypot(x-b.x,z-b.z)<(b.radius||.9)+3.0)||\n        rocks.some(r=>Math.hypot(x-r.x,z-r.z)<(r.radius||.8)+2.2)||\n        wildlifeSpawnSpecs.some(other=>Math.hypot(x-other.x,z-other.z)<5.6)"
+    if html.count(wildlife_clearance_marker) != 1:
+        raise SystemExit("No se encontró el punto único para despejar los puntos de aparición de fauna.")
+    html = html.replace(wildlife_clearance_marker, wildlife_clearance_replacement, 1)
+
     wildlife_retry_marker = " function loadWildlifeModels(){\n  if(!wildlifeModelsLoadPromise)wildlifeModelsLoadPromise=loadWildlifeModelsOnce();\n  return wildlifeModelsLoadPromise;\n }"
     wildlife_retry_replacement = " function loadWildlifeModels(){\n  if(!wildlifeModelsLoadPromise)wildlifeModelsLoadPromise=loadWildlifeModelsOnce().catch(error=>{\n   for(const animal of ambientFauna.splice(0)){\n    const root=animal.root;try{(animal.groups||[]).forEach(group=>{try{group.stop();group.dispose();}catch(_){}});}catch(_){}\n    for(let i=managedWorldShadowGroups.length-1;i>=0;i--){const entry=managedWorldShadowGroups[i];if(entry&&entry.root===root){if(entry.active&&shadowGen)for(const mesh of entry.meshes||[]){try{shadowGen.removeShadowCaster(mesh);}catch(_){}}managedActiveWorldShadowCount=Math.max(0,managedActiveWorldShadowCount-(entry.meshes||[]).length);managedWorldShadowGroups.splice(i,1);}}\n    try{if(root&&!(root.isDisposed&&root.isDisposed()))root.dispose(false,true);}catch(_){}\n   }\n   wildlifeBlobs.clear();wildlifeModelsLoadPromise=null;throw error;\n  });\n  return wildlifeModelsLoadPromise;\n }"
     if html.count(wildlife_retry_marker) != 1:
@@ -1244,7 +1269,7 @@ function setLoadingProgress(value,label){
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
-    # 0.6.342: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
+    # 0.6.343: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
     # Build each island around its stable centre and keep its original per-area density.
     grass_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;\n   const radius=Math.min(92,safeLandRadius);\n   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));"
     grass_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
@@ -2197,27 +2222,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.342: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.343: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.342; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.343; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.342\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.343\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.342.")
-    html = html.replace("0.6.274", "0.6.342")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.343.")
+    html = html.replace("0.6.274", "0.6.343")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'51',build:'0.6.342'"
+    diagnostic_build_replacement = "reportVersion:'52',build:'0.6.343'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.342 para normalizar.")
-    game_version = "0.6.342"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.343 para normalizar.")
+    game_version = "0.6.343"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -2897,18 +2922,41 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   let cap=sphere('rockFacet',null,[x-.18,gy+sy*.72,z-.10],[sx*.62,sy*.36,sz*.62],M.stoneLight,10);
   return {meshes:[r,cap],x,z,radius:Math.max(sx,sz)*.48,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
  }"""
-    mineable_rock_replacement = """// Reuse the existing, already-loaded granite materials. Cloning a new StandardMaterial
-  // here creates a new shader variant that can remain unready on mobile/software GPUs.
+    mineable_rock_replacement = """// Reuse shared materials and reject placements that intersect a tree trunk or another deposit.
   const mineableGraniteMaterial=M.stoneLight;
+  const mineableRockPlacementStats={placed:0,relocated:0,skipped:0};
+  window.__ELSN_ROCK_PLACEMENT__=()=>{let overlaps=0,minClearance=Infinity;for(const rock of rocks){if(!rock||!rock.alive)continue;for(const tree of trees){if(!tree||!tree.alive)continue;const clearance=Math.hypot(rock.x-tree.x,rock.z-tree.z)-(Number(rock.radius)||.5)-(Number(tree.radius)||.7)-.45;minClearance=Math.min(minClearance,clearance);if(clearance<-.05)overlaps++;}}return {...mineableRockPlacementStats,overlapPairs:overlaps,minTreeClearanceMeters:Number.isFinite(minClearance)?Number(minClearance.toFixed(3)):null};};
   function createRock(x,z){
-   const gy=renderedTerrainSurfaceAt(x,z),sx=rand(.72,1.02),sy=rand(.70,.94),sz=rand(.68,1.00);
+   const sx=rand(.72,1.02),sy=rand(.70,.94),sz=rand(.68,1.00),radius=Math.max(sx,sz)*.50;
+   const islandIndex=landIslandIndex(x,z),island=land[islandIndex];
+   const acceptable=(px,pz)=>{
+    if(!island||landIslandIndex(px,pz)!==islandIndex)return false;
+    if(!isSafeIslandGroundPoint(island,px,pz,1.4,.70,.52))return false;
+    for(const tree of trees){if(!tree||!tree.alive)continue;const required=(Number(tree.radius)||.7)+radius+.45;if(Math.hypot(px-tree.x,pz-tree.z)<required)return false;}
+    for(const other of rocks){if(!other||!other.alive)continue;const required=(Number(other.radius)||.7)+radius+.35;if(Math.hypot(px-other.x,pz-other.z)<required)return false;}
+    return true;
+   };
+   let placement=acceptable(x,z)?{x,z}:null;
+   if(!placement){
+    const phase=rand(0,Math.PI*2);
+    for(let ring=1;ring<=10&&!placement;ring++){
+     const distance=ring*.65;
+     for(let step=0;step<24;step++){
+      const angle=phase+step*Math.PI*2/24+(ring%2)*.08,px=x+Math.cos(angle)*distance,pz=z+Math.sin(angle)*distance;
+      if(acceptable(px,pz)){placement={x:px,z:pz};break;}
+     }
+    }
+   }
+   if(!placement){mineableRockPlacementStats.skipped++;return null;}
+   if(Math.hypot(placement.x-x,placement.z-z)>.10)mineableRockPlacementStats.relocated++;
+   x=placement.x;z=placement.z;mineableRockPlacementStats.placed++;
+   const gy=renderedTerrainSurfaceAt(x,z);
    const r=B.MeshBuilder.CreateIcoSphere('graniteBoulder',{radius:1,subdivisions:2,flat:true},scene);
    r.position=v(x,gy+sy*.40,z);r.scaling=v(sx,sy,sz);r.material=mineableGraniteMaterial;r.isPickable=true;r.receiveShadows=true;
    r.rotation.set(rand(-.10,.10),rand(0,Math.PI*2),rand(-.12,.12));
    const cap=B.MeshBuilder.CreateIcoSphere('rockFacet',{radius:1,subdivisions:1,flat:true},scene);
    cap.position=v(x-sx*.14,gy+sy*.65,z-sz*.11);cap.scaling=v(sx*.52,sy*.30,sz*.48);cap.material=M.stone;cap.isPickable=true;cap.receiveShadows=true;
    cap.rotation.set(rand(-.12,.12),r.rotation.y+.42,rand(-.10,.10));
-   const radius=Math.max(sx,sz)*.50;
    return {meshes:[r,cap],x,z,radius,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
   }"""
     mineable_rock_pattern = r"(?m)^[ \t]*function createRock\(x,z\)\{\n.*?\n[ \t]*\}"

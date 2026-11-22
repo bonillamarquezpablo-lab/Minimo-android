@@ -42,14 +42,16 @@ assert.match(html,/function updateWildlife\(dt\)/);
 for(const marker of ['visualIntegrity','playingAnimationGroups','textureReadiness','maxExtentMeters','result.meshes'])assert.ok(worldInspection.includes(marker),'Inspector per-animal capture is missing '+marker);
 assert.ok(worldInspection.includes('function skinnedVertexWorldBounds(mesh)') &&
   worldInspection.includes("'skinned-vertex-world'") &&
+  worldInspection.includes("const positions = safeCall(() => typeof mesh.setPositionsForCPUSkinning === 'function'") &&
+  worldInspection.includes('setPositionsForCPUSkinning()') &&
   worldInspection.includes('skeleton.getTransformMatrices(mesh)') &&
   worldInspection.includes('skinIndices && skinWeights') &&
   !worldInspection.includes('mesh.refreshBoundingInfo(true)'),
-  'Skinned wildlife diagnostics must skin original vertices exactly once, and only for meshes with actual bone buffers.');
+  'The inspector must use Babylon\'s original CPU-skinning source positions before applying current bone matrices.');
 assert.ok(html.includes('function skinnedVertexWorldBounds(mesh)') &&
   html.includes('mesh.setPositionsForCPUSkinning()') &&
   html.includes('skeleton.getTransformMatrices(mesh)'),
-  'Wildlife normalization must use original vertices and current bone matrices, not stale bind-pose or CPU-deformed AABBs.');
+  'Production fauna bounds must use Babylon\'s original CPU-skinning source positions before applying current bone matrices.');
 assert.ok(html.includes('function normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight)') &&
   html.includes('const correction=expectedHeight/measured;') &&
   html.includes('actor.scaling.scaleInPlace(correction)') &&
@@ -76,7 +78,7 @@ boundsSandbox.mesh={skeleton:{name:'DeerRig',prepare(){},getTransformMatrices(){
  getWorldMatrix(){return {m:[1,0,0,0,0,1,0,0,0,0,1,0,12,1.25,-3,1]};},
  getBoundingInfo(){return {boundingBox:regressionBox};}};
 vm.runInNewContext(html.slice(boundsStart,boundsEnd)+String.fromCharCode(10)+'this.__measured=boundsForMeshes([mesh]);',boundsSandbox);
-assert.equal(originalPositionsRequested,true,'Bounds must use original vertex data when the renderer is using software skinning.');
+assert.equal(originalPositionsRequested,true,'Bounds must use Babylon\'s dedicated API for original vertices on the software-skinning path.');
 assert.equal(Number(boundsSandbox.__measured.height.toFixed(3)),1.42,'The CPU and GPU path must apply the current bone transform exactly once.');
 assert.equal(Number(boundsSandbox.__measured.width.toFixed(3)),.8);
 assert.equal(Number(boundsSandbox.__measured.depth.toFixed(3)),.72);
@@ -145,6 +147,7 @@ assert.ok(builder.includes("if(startupResourceSnapshot.fauna.requested!==3||star
   'The final resource gate must verify all three terrestrial species in both profiles, not Quality only.');
 assert.ok(builder.includes("const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer)") && builder.includes("const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true") && builder.includes("if(forceCpuSkinning&&forceGpuSkinning)throw new Error") && builder.includes("const useCpuSkinning=forceCpuSkinning") && builder.includes("mesh.computeBonesUsingShaders=!useCpuSkinning") && builder.includes("mesh.alwaysSelectAsActiveMesh=true") && builder.includes("skeleton.prepare()"), "GPU skinning is the runtime default on every renderer; CPU skinning is opt-in diagnostics only. Mutually exclusive CPU/GPU overrides exist and skinned meshes avoid stale-bounds frustum culling.");
 assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)") && !builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&(isTouchDevice||softwareSkinningRenderer))"), "Hardware mobile devices must use GPU skinning by default; CPU skinning remains an explicit diagnostic override and a software-renderer fallback only.");
+assert.ok(builder.includes('wildlife_clearance_marker =') && builder.includes('naturalShrubs.some(b=>Math.hypot(x-b.x,z-b.z)<(b.radius||.9)+3.0)') && builder.includes('rocks.some(r=>Math.hypot(x-r.x,z-r.z)<(r.radius||.8)+2.2)'), 'Animal spawn points must not be hidden inside broadleaf shrubs or resource rocks.');
 assert.ok(html.includes("meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});") && !html.includes("meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=false;});"), "The final fauna mesh setup must preserve alwaysSelectAsActiveMesh for every skinned mesh so animated bodies cannot disappear behind bind-pose bounding boxes.");
 assert.ok(builder.includes("clips.walk===clips.idle||clips.run===clips.walk||clips.run===clips.idle"), "Animals must not silently substitute idle for walking or walking for galloping.");
 assert.ok(builder.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
