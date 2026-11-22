@@ -654,8 +654,11 @@ async function main() {
         JSON.stringify(introReady));
     }
     try {
-      // A real pointer click is still dispatched; only the perpetual CSS stability wait is bypassed.
-      await campaignButton.click({ force: true, timeout: 10000 });
+      // Dispatch the button's native activation after the explicit visibility, enabled-state and hit-test checks above.
+      // Playwright's click(force) still waits for a stable bounding box; the intro's perpetual entrance/pulse animation
+      // can keep that heuristic pending forever even though the control is visibly unobstructed and receives pointer hits.
+      // HTMLElement.click() runs the same registered click handlers without waiting for CSS animation stability.
+      await campaignButton.evaluate(button => button.click());
     } catch (error) {
       await page.screenshot({ path: path.join(OUT, 'campaign-selector-click-failure.png'), fullPage: true }).catch(() => {});
       throw new Error('El botón de nueva partida superó las comprobaciones de visibilidad y hit-test, ' +
