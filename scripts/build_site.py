@@ -609,13 +609,20 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
-    # 0.6.343: the previous mobile Quality density produced ~53k grass clumps on the starter island.
-    # Keep full-island coverage, but cap vegetation workload on touch devices.
+    # 0.6.344: increase mobile Quality ground-cover clumps while keeping the per-area blade budget nearly flat.
+    # Seven blades per tuft plus ~42% more jittered-grid tufts gives denser, more uniform coverage.
     grass_density_marker = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);"
-    grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?2.6:1.9):(islandIndex===0?6.2:4.6);"
+    grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?12.5:8.2):(islandIndex===0?8.2:5.8);"
     if html.count(grass_density_marker) != 1:
         raise SystemExit("No se encontró exactamente una densidad de hierba de Calidad para el presupuesto móvil.")
     html = html.replace(grass_density_marker, grass_density_replacement, 1)
+
+    # Smaller individual tufts permit a much more even field without multiplying blade triangles.
+    grass_leaves_marker = "const leavesPerClump=isPerformanceMode?8:10;"
+    grass_leaves_replacement = "const leavesPerClump=isPerformanceMode?8:(isTouchDevice?7:10);"
+    if html.count(grass_leaves_marker) != 1:
+        raise SystemExit("No se encontró la única configuración de hojas por mata de hierba.")
+    html = html.replace(grass_leaves_marker, grass_leaves_replacement, 1)
 
     # Keep full-quality coast geometry while tightening the CPU slice ceiling on mobile.
     # Work is spread over more frames; no mesh rows, columns or material detail are removed.
@@ -1287,7 +1294,7 @@ function setLoadingProgress(value,label){
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
-    # 0.6.343: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
+    # 0.6.344: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
     # Build each island around its stable centre and keep its original per-area density.
     grass_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;\n   const radius=Math.min(92,safeLandRadius);\n   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));"
     grass_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
@@ -2240,27 +2247,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.343: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.344: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.343; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.344; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.343\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.344\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.343.")
-    html = html.replace("0.6.274", "0.6.343")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.344.")
+    html = html.replace("0.6.274", "0.6.344")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'52',build:'0.6.343'"
+    diagnostic_build_replacement = "reportVersion:'52',build:'0.6.344'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.343 para normalizar.")
-    game_version = "0.6.343"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.344 para normalizar.")
+    game_version = "0.6.344"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
