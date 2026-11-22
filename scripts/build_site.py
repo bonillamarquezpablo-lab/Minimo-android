@@ -1431,23 +1431,11 @@ function setLoadingProgress(value,label){
         raise SystemExit("No se encontró el umbral único de recentrado de hierba.")
     html = html.replace(grass_distance_marker, "const GRASS_STREAM_RECENTER_DISTANCE=Number.MAX_SAFE_INTEGER;", 1)
 
-    grass_initial_center_marker = "grassStreamCenterX=player.root.position.x;grassStreamCenterZ=player.root.position.z;\n  const initialGrassStartedAt=performance.now();"
-    grass_initial_center_replacement = "grassStreamCenterX=land[initialGrassIslandIndex].x;grassStreamCenterZ=land[initialGrassIslandIndex].z;\n  const initialGrassStartedAt=performance.now();"
-    if html.count(grass_initial_center_marker) != 1:
-        raise SystemExit("No se encontró la inicialización única del centro de hierba de la isla.")
-    html = html.replace(grass_initial_center_marker, grass_initial_center_replacement, 1)
-
     grass_swap_center_marker = "grassStreamActiveIslandIndex=index;grassStreamCenterX=focusX;grassStreamCenterZ=focusZ;"
     grass_swap_center_replacement = "grassStreamActiveIslandIndex=index;grassStreamCenterX=land[index].x;grassStreamCenterZ=land[index].z;"
     if html.count(grass_swap_center_marker) != 1:
         raise SystemExit("No se encontró la actualización única del centro de hierba tras el cambio de isla.")
     html = html.replace(grass_swap_center_marker, grass_swap_center_replacement, 1)
-
-    grass_radius_log_marker = "radiusMeters:92});"
-    grass_radius_log_replacement = "radiusMeters:land[initialGrassIslandIndex].r*.70,fullIslandCoverage:true});"
-    if html.count(grass_radius_log_marker) != 1:
-        raise SystemExit("No se encontró el resumen único del radio de hierba inicial.")
-    html = html.replace(grass_radius_log_marker, grass_radius_log_replacement, 1)
 
     grass_recenter_marker = "const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=GRASS_STREAM_RECENTER_DISTANCE;"
     grass_recenter_replacement = "const moved=false;"
