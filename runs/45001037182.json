@@ -52,6 +52,15 @@
       "exitCode": 0,
       "error": null,
       "finishedAt": "2026-11-22T08:34:53.284Z"
+    },
+    {
+      "name": "Capturas visuales y diagnóstico de fauna terrestre",
+      "script": "scripts/fauna-visual-capture.mjs",
+      "startedAt": "2026-11-22T08:34:53.285Z",
+      "status": "running",
+      "durationMs": null,
+      "exitCode": null,
+      "error": null
     }
   ],
   "finishedAt": null
