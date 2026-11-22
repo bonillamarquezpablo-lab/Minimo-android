@@ -2944,6 +2944,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
     console.info('EL SIN NOMBRE: primer fotograma confirmado por la barrera de arranque.');
    }
+   // Keep the regular render-loop handoff invariant: the spatial octree must
+   // exist before gameplay can be selected, even when this safety path wins the race.
+   buildSpatialSelectionOctree();
    const startupLoading=document.getElementById('loading');
    if(startupLoading)startupLoading.style.display='none';
    showStartScreen();
