@@ -609,13 +609,221 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
-    # 0.6.343: the previous mobile Quality density produced ~53k grass clumps on the starter island.
-    # Keep full-island coverage, but cap vegetation workload on touch devices.
+    # 0.6.344: dense flagship ground cover; constrained devices retain the prior safe density.
     grass_density_marker = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);"
-    grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?2.6:1.9):(islandIndex===0?6.2:4.6);"
+    grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(isConstrainedMobile?(islandIndex===0?8.8:5.8):(islandIndex===0?10.4:7.0)):(islandIndex===0?8.8:6.2);"
     if html.count(grass_density_marker) != 1:
-        raise SystemExit("No se encontró exactamente una densidad de hierba de Calidad para el presupuesto móvil.")
+        raise SystemExit("No se encontró exactamente una densidad de hierba de Calidad para la nueva vegetación.")
     html = html.replace(grass_density_marker, grass_density_replacement, 1)
+
+    # Keep a visible instanced grass layer in Performance; low-end devices retain a smaller budget.
+    performance_density_marker = "const performanceDensity=isConstrainedMobile?(isUltraLowEndMobile?.22:(isGalaxyA12NachoPerformance?.18:.26)):(isTouchDevice?.36:.50);"
+    performance_density_replacement = "const performanceDensity=isConstrainedMobile?(isUltraLowEndMobile?.22:(isGalaxyA12NachoPerformance?.18:.26)):(isTouchDevice?.46:.58);"
+    if html.count(performance_density_marker) != 1:
+        raise SystemExit("No se encontró exactamente el presupuesto de hierba del perfil Rendimiento.")
+    html = html.replace(performance_density_marker, performance_density_replacement, 1)
+
+    # More blades per tuft, using a tapered five-vertex blade profile.
+    leaf_count_marker = "const leavesPerClump=isPerformanceMode?8:10;"
+    if html.count(leaf_count_marker) != 1:
+        raise SystemExit("No se encontró el número de hojas por mata.")
+    html = html.replace(leaf_count_marker, "const leavesPerClump=isPerformanceMode?8:12;", 1)
+
+    leaf_geometry_marker = """   for(const row of rows){
+    positions.push(row.cx-px*row.w,row.cy,row.cz-pz*row.w,row.cx+px*row.w,row.cy,row.cz+pz*row.w);
+    const shade=shades[shadeIndex%shades.length];
+    for(let side=0;side<2;side++){
+     const f=row.tint*(side===0?.95:1.05);
+     colors.push(Math.min(1,shade[0]*f),Math.min(1,shade[1]*f),Math.min(1,shade[2]*f),1);
+    }
+   }
+   indices.push(base,base+2,base+1,base+1,base+2,base+3,base+2,base+4,base+3,base+3,base+4,base+5);"""
+    leaf_geometry_replacement = """    for(let rowIndex=0;rowIndex<2;rowIndex++){
+     const row=rows[rowIndex];
+     positions.push(row.cx-px*row.w,row.cy,row.cz-pz*row.w,row.cx+px*row.w,row.cy,row.cz+pz*row.w);
+     const shade=shades[shadeIndex%shades.length];
+     for(let side=0;side<2;side++){
+      const f=row.tint*(side===0?.95:1.05);
+      colors.push(Math.min(1,shade[0]*f),Math.min(1,shade[1]*f),Math.min(1,shade[2]*f),1);
+     }
+    }
+    const tip=rows[2],tipShade=shades[shadeIndex%shades.length],tipTint=tip.tint*1.06;
+    positions.push(tip.cx,tip.cy,tip.cz);
+    colors.push(Math.min(1,tipShade[0]*tipTint),Math.min(1,tipShade[1]*tipTint),Math.min(1,tipShade[2]*tipTint),1);
+    indices.push(base,base+2,base+1,base+1,base+2,base+3,base+2,base+4,base+3);"""
+    if html.count(leaf_geometry_marker) != 1:
+        raise SystemExit("No se encontró la geometría de hoja 3D original para optimizar su perfil.")
+    html = html.replace(leaf_geometry_marker, leaf_geometry_replacement, 1)
+
+    # GPU vertex displacement animates all thin instances without CPU vertex-buffer uploads.
+    grass_material_marker = "const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);if(!staging)grassBatchMaterial=gm;else if(grassStagingResources)grassStagingResources.material=gm;"
+
+    grass_tint_marker = "const tint=rand(.93,1.06);batch.colors.push(tint,rand(.96,1.03),rand(.90,.99),1);"
+    grass_tint_replacement = "const tint=rand(.88,1.12);batch.colors.push(tint,rand(.90,1.10),rand(.82,1.06),1);"
+    if html.count(grass_tint_marker) != 1:
+        raise SystemExit("No se encontró la variación cromática por mata.")
+    html = html.replace(grass_tint_marker, grass_tint_replacement, 1)
+
+
+    grass_batch_marker = """  for(const batch of grassBatches.values()){
+   const grassMesh=new B.Mesh('NordicGroundCover_'+batch.islandIndex+'_'+batch.cellX+'_'+batch.cellZ,scene);
+   vertexData.applyToMesh(grassMesh);grassMesh.material=gm;grassMesh.setEnabled(!staging);grassMesh.isPickable=false;grassMesh.receiveShadows=false;buildGrassMeshes.push(grassMesh);
+   // Keep the source clump on the ground plane; instance transforms contain the actual terrain height.
+   grassMesh.position.set(0,0,0);grassMesh.computeWorldMatrix(true);
+   grassMesh.thinInstanceSetBuffer('matrix',new Float32Array(batch.matrices),16,true);
+   grassMesh.thinInstanceSetBuffer('color',new Float32Array(batch.colors),4,true);
+   grassMesh.thinInstanceCount=batch.matrices.length/16;grassMesh.thinInstanceRefreshBoundingInfo(true);
+   grassMesh.doNotSyncBoundingInfo=false;
+   let batchX=0,batchZ=0;for(let matrixOffset=12;matrixOffset<batch.matrices.length;matrixOffset+=16){batchX+=batch.matrices[matrixOffset];batchZ+=batch.matrices[matrixOffset+2];}
+   const batchInstances=Math.max(1,batch.matrices.length/16);
+   buildGrassBatches.push({mesh:grassMesh,x:batchX/batchInstances,z:batchZ/batchInstances,islandIndex:batch.islandIndex});
+   grassUploadBatch++;
+   if(performance.now()-grassUploadSliceStartedAt>=grassBuildSliceBudgetMs){await yieldStartupFrame();grassUploadSliceStartedAt=performance.now();}
+  }"""
+    grass_batch_replacement = """  for(const batch of grassBatches.values()){
+   let batchX=0,batchZ=0;for(let matrixOffset=12;matrixOffset<batch.matrices.length;matrixOffset+=16){batchX+=batch.matrices[matrixOffset];batchZ+=batch.matrices[matrixOffset+2];}
+   const batchInstances=Math.max(1,batch.matrices.length/16),centerX=batchX/batchInstances,centerZ=batchZ/batchInstances;
+   const initialLod=selectGrassLod(centerX,centerZ,focusX,focusZ);
+   const grassMesh=new B.Mesh('NordicGroundCover_'+batch.islandIndex+'_'+batch.cellX+'_'+batch.cellZ,scene);
+   grassLodVertexData[initialLod].applyToMesh(grassMesh);grassMesh.material=gm;grassMesh.setEnabled(!staging);grassMesh.isPickable=false;grassMesh.receiveShadows=false;buildGrassMeshes.push(grassMesh);
+   // Keep source tufts at the ground plane; instance transforms contain the actual terrain height.
+   grassMesh.position.set(0,0,0);grassMesh.computeWorldMatrix(true);
+   grassMesh.thinInstanceSetBuffer('matrix',new Float32Array(batch.matrices),16,true);
+   grassMesh.thinInstanceSetBuffer('color',new Float32Array(batch.colors),4,true);
+   grassMesh.thinInstanceCount=batch.matrices.length/16;grassMesh.thinInstanceRefreshBoundingInfo(true);
+   grassMesh.doNotSyncBoundingInfo=false;
+   buildGrassBatches.push({mesh:grassMesh,x:centerX,z:centerZ,islandIndex:batch.islandIndex,lod:initialLod,lodVertexData:grassLodVertexData,selectLod:selectGrassLod});
+   grassUploadBatch++;
+   if(performance.now()-grassUploadSliceStartedAt>=grassBuildSliceBudgetMs){await yieldStartupFrame();grassUploadSliceStartedAt=performance.now();}
+  }"""
+    if html.count(grass_batch_marker) != 1:
+        raise SystemExit("No se encontró el bucle de carga de los lotes de hierba.")
+    html = html.replace(grass_batch_marker, grass_batch_replacement, 1)
+
+    grass_material_replacement = grass_material_marker + """
+
+   // Distance LOD geometry: all tuft locations remain; only blades per tuft change.
+   const grassLodLeafCounts=[leavesPerClump,Math.max(4,Math.floor(leavesPerClump*.42)),Math.max(2,Math.floor(leavesPerClump*.20))];
+   const createGrassLodVertexData=bladeCount=>{
+    const lodPositions=[],lodIndices=[],lodColors=[],lodNormals=[];
+    for(let lodBlade=0;lodBlade<bladeCount;lodBlade++){
+     const sourceBlade=Math.min(leavesPerClump-1,Math.floor((lodBlade+.5)*leavesPerClump/bladeCount));
+     const sourceVertex=sourceBlade*5,targetVertex=lodPositions.length/3;
+     for(let vertex=0;vertex<5;vertex++){
+      const positionOffset=(sourceVertex+vertex)*3,colorOffset=(sourceVertex+vertex)*4;
+      lodPositions.push(positions[positionOffset],positions[positionOffset+1],positions[positionOffset+2]);
+      lodColors.push(colors[colorOffset],colors[colorOffset+1],colors[colorOffset+2],colors[colorOffset+3]);
+     }
+     const sourceIndex=sourceBlade*9;
+     for(let index=0;index<9;index++)lodIndices.push(targetVertex+(indices[sourceIndex+index]-sourceVertex));
+    }
+    B.VertexData.ComputeNormals(lodPositions,lodIndices,lodNormals);
+    const data=new B.VertexData();data.positions=lodPositions;data.indices=lodIndices;data.normals=lodNormals;data.colors=lodColors;
+    return data;
+   };
+   const grassLodVertexData=[vertexData,createGrassLodVertexData(grassLodLeafCounts[1]),createGrassLodVertexData(grassLodLeafCounts[2])];
+   const grassLodNearMeters=isConstrainedMobile?26:(isPerformanceMode?34:(isTouchDevice?48:64));
+   const grassLodMidMeters=isConstrainedMobile?76:(isPerformanceMode?108:(isTouchDevice?136:182));
+   const selectGrassLod=(x,z,focusX,focusZ,previousLod=-1)=>{
+    const fx=Number.isFinite(focusX)?focusX:player.root.position.x,fz=Number.isFinite(focusZ)?focusZ:player.root.position.z;
+    const distance=Math.hypot(x-fx,z-fz);
+    if(previousLod<0)return distance<grassLodNearMeters?0:(distance<grassLodMidMeters?1:2);
+    if(previousLod===0&&distance<=grassLodNearMeters+10)return 0;
+    if(previousLod===2&&distance>=grassLodMidMeters-16)return 2;
+    if(distance<grassLodNearMeters-10)return 0;
+    if(distance<grassLodMidMeters-16)return 1;
+    return 2;
+   };
+
+   class NordicGrassWindPlugin extends B.MaterialPluginBase{
+    constructor(material){
+     super(material,'NordicGrassWind',200,{NORSE_GRASS_WIND:true});
+     this.strength=isPerformanceMode?.40:(isConstrainedMobile?.72:1.0);
+     this._enable(true);
+    }
+    getClassName(){return 'NordicGrassWindPlugin';}
+    isCompatible(shaderLanguage){return shaderLanguage===B.ShaderLanguage.GLSL;}
+    prepareDefines(defines){defines.NORSE_GRASS_WIND=true;}
+    getUniforms(){
+     return {
+      ubo:[{name:'grassWindTime',size:1,type:'float'},{name:'grassWindStrength',size:1,type:'float'}],
+      vertex:'#ifdef NORSE_GRASS_WIND\\nuniform float grassWindTime;\\nuniform float grassWindStrength;\\n#endif'
+     };
+    }
+    _bindWind(uniformBuffer){
+     if(!uniformBuffer||typeof uniformBuffer.updateFloat!=='function')return;
+     uniformBuffer.updateFloat('grassWindTime',performance.now()*.001);
+     uniformBuffer.updateFloat('grassWindStrength',this.strength);
+    }
+    bindForSubMesh(uniformBuffer){this._bindWind(uniformBuffer);}
+    hardBindForSubMesh(uniformBuffer){this._bindWind(uniformBuffer);}
+    getCustomCode(shaderType,shaderLanguage){
+     if(shaderType!=='vertex'||shaderLanguage!==B.ShaderLanguage.GLSL)return null;
+     return {CUSTOM_VERTEX_UPDATE_POSITION:
+      '#ifdef NORSE_GRASS_WIND\\n'+
+      'float grassWindHeight=clamp(positionUpdated.y/0.42,0.0,1.0);\\n'+
+      'float grassWindFlex=grassWindHeight*grassWindHeight;\\n'+
+      'float grassWindSeed=0.0;\\n'+
+      '#ifdef INSTANCESCOLOR\\n'+
+      'grassWindSeed=instanceColor.r*6.2831853+instanceColor.g*2.173;\\n'+
+      '#endif\\n'+
+      'float grassWindPhase=grassWindTime*1.08+grassWindSeed+positionUpdated.x*4.4+positionUpdated.z*5.1;\\n'+
+      'float grassWindWave=sin(grassWindPhase)*0.72+sin(grassWindPhase*0.47+1.8)*0.28;\\n'+
+      'float grassWindCross=cos(grassWindPhase*0.73+0.9);\\n'+
+      'positionUpdated.x+=(grassWindWave*0.052+grassWindCross*0.014)*grassWindFlex*grassWindStrength;\\n'+
+      'positionUpdated.z+=(grassWindCross*0.034+grassWindWave*0.010)*grassWindFlex*grassWindStrength;\\n'+
+      '#endif'
+     };
+    }
+   }
+   const grassWindPlugin=new NordicGrassWindPlugin(gm);
+   window.__ELSN_GRASS_WIND__={enabled:true,mode:'gpu-vertex-displacement',uniformBinding:'hardBindForSubMesh',profile:isPerformanceMode?'performance':'quality',leavesPerClump:leavesPerClump};"""
+    if html.count(grass_material_marker) != 1:
+        raise SystemExit("No se encontró el material único de la hierba para instalar el viento GPU.")
+    html = html.replace(grass_material_marker, grass_material_replacement, 1)
+
+    # Keep a visible instanced grass population in both profiles.
+    want_marker = "const want=isPerformanceMode?0:Math.max(1,Math.round(baseWant*qualityGrassDensity*areaFraction));"
+    want_replacement = "const want=Math.max(1,Math.round(baseWant*(isPerformanceMode?performanceDensity:qualityGrassDensity)*areaFraction));"
+    if html.count(want_marker) != 1:
+        raise SystemExit("No se encontró la decisión única de población de hierba por perfil.")
+    html = html.replace(want_marker, want_replacement, 1)
+
+    stream_skip_marker = "async function streamActiveIslandGrass(index,focusX,focusZ){\n  if(isPerformanceMode)return;"
+    if html.count(stream_skip_marker) != 1:
+        raise SystemExit("No se encontró el guard de desactivación del streaming de hierba en Rendimiento.")
+    html = html.replace(stream_skip_marker, "async function streamActiveIslandGrass(index,focusX,focusZ){", 1)
+    update_skip_marker = "function updateActiveIslandGrass(dt){\n  if(isPerformanceMode)return;"
+    if html.count(update_skip_marker) != 1:
+        raise SystemExit("No se encontró el guard de desactivación de actualización de hierba en Rendimiento.")
+    html = html.replace(update_skip_marker, "function updateActiveIslandGrass(dt){", 1)
+
+    initial_grass_marker = """ // La hierba existe únicamente en Calidad y solo en un radio local alrededor del jugador.
+ // Rendimiento no crea geometría, buffers ni materiales de hierba.
+ if(!isPerformanceMode){
+  const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);
+  grassStreamActiveIslandIndex=initialGrassIslandIndex;
+  grassStreamCenterX=player.root.position.x;grassStreamCenterZ=player.root.position.z;
+  const initialGrassStartedAt=performance.now();
+  await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);
+  recordStartupTask('Hierba 3D inicial de Calidad',initialGrassStartedAt,performance.now(),'ready',{clumps:grassInstanceCount,batches:grassBatchCount,island:initialGrassIslandIndex});
+  console.info('Hierba cercana de la isla inicial preparada.',{profile:activeGraphicsProfile,island:land[initialGrassIslandIndex]&&land[initialGrassIslandIndex].name,clumps:grassInstanceCount,batches:grassBatchCount,radiusMeters:92});
+ }else{
+  grassStreamActiveIslandIndex=-1;grassDebugClumpCount=0;grassDebugBatchCount=0;grassDebugIslandStats.length=0;
+  console.info('Hierba desactivada en modo Rendimiento.');
+ }"""
+    initial_grass_replacement = """ // Both profiles retain a full-island grass field; Performance changes density and tuft complexity, not grass availability.
+ const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);
+ grassStreamActiveIslandIndex=initialGrassIslandIndex;
+ grassStreamCenterX=player.root.position.x;grassStreamCenterZ=player.root.position.z;
+ const initialGrassStartedAt=performance.now();
+ await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);
+ recordStartupTask('Hierba 3D inicial',initialGrassStartedAt,performance.now(),'ready',{clumps:grassInstanceCount,batches:grassBatchCount,island:initialGrassIslandIndex,profile:isPerformanceMode?'performance':'quality',wind:'gpu-vertex-displacement'});
+ console.info('Cobertura 3D de hierba inicial preparada.',{profile:activeGraphicsProfile,island:land[initialGrassIslandIndex]&&land[initialGrassIslandIndex].name,clumps:grassInstanceCount,batches:grassBatchCount,radiusMeters:land[initialGrassIslandIndex].r*.70,wind:'gpu-vertex-displacement'});"""
+
+    if html.count(initial_grass_marker) != 1:
+        raise SystemExit("No se encontró el bloque único de hierba inicial que desactivaba Rendimiento.")
+    html = html.replace(initial_grass_marker, initial_grass_replacement, 1)
 
     # Keep full-quality coast geometry while tightening the CPU slice ceiling on mobile.
     # Work is spread over more frames; no mesh rows, columns or material detail are removed.
@@ -1287,7 +1495,7 @@ function setLoadingProgress(value,label){
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
-    # 0.6.343: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
+    # 0.6.344: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
     # Build each island around its stable centre and keep its original per-area density.
     grass_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;\n   const radius=Math.min(92,safeLandRadius);\n   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));"
     grass_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
@@ -1300,29 +1508,43 @@ function setLoadingProgress(value,label){
         raise SystemExit("No se encontró el umbral único de recentrado de hierba.")
     html = html.replace(grass_distance_marker, "const GRASS_STREAM_RECENTER_DISTANCE=Number.MAX_SAFE_INTEGER;", 1)
 
-    grass_initial_center_marker = "grassStreamCenterX=player.root.position.x;grassStreamCenterZ=player.root.position.z;\n  const initialGrassStartedAt=performance.now();"
-    grass_initial_center_replacement = "grassStreamCenterX=land[initialGrassIslandIndex].x;grassStreamCenterZ=land[initialGrassIslandIndex].z;\n  const initialGrassStartedAt=performance.now();"
-    if html.count(grass_initial_center_marker) != 1:
-        raise SystemExit("No se encontró la inicialización única del centro de hierba de la isla.")
-    html = html.replace(grass_initial_center_marker, grass_initial_center_replacement, 1)
-
     grass_swap_center_marker = "grassStreamActiveIslandIndex=index;grassStreamCenterX=focusX;grassStreamCenterZ=focusZ;"
     grass_swap_center_replacement = "grassStreamActiveIslandIndex=index;grassStreamCenterX=land[index].x;grassStreamCenterZ=land[index].z;"
     if html.count(grass_swap_center_marker) != 1:
         raise SystemExit("No se encontró la actualización única del centro de hierba tras el cambio de isla.")
     html = html.replace(grass_swap_center_marker, grass_swap_center_replacement, 1)
 
-    grass_radius_log_marker = "radiusMeters:92});"
-    grass_radius_log_replacement = "radiusMeters:land[initialGrassIslandIndex].r*.70,fullIslandCoverage:true});"
-    if html.count(grass_radius_log_marker) != 1:
-        raise SystemExit("No se encontró el resumen único del radio de hierba inicial.")
-    html = html.replace(grass_radius_log_marker, grass_radius_log_replacement, 1)
-
     grass_recenter_marker = "const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=GRASS_STREAM_RECENTER_DISTANCE;"
     grass_recenter_replacement = "const moved=false;"
     if html.count(grass_recenter_marker) != 1:
         raise SystemExit("No se encontró la distancia única de recentrado de hierba.")
     html = html.replace(grass_recenter_marker, grass_recenter_replacement, 1)
+
+ 
+    grass_lod_runtime_marker = """  for(const batch of qualityGrassLodBatches){
+   const show=batch.islandIndex===visibleGrassIslandIndex;
+   if(batch.mesh.isVisible!==show)batch.mesh.isVisible=show;
+   if(show)visible++;
+  }"""
+    grass_lod_runtime_replacement = """  const viewFocus=scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position:focus;
+  for(const batch of qualityGrassLodBatches){
+   const show=batch.islandIndex===visibleGrassIslandIndex;
+   if(show){
+    const nextLod=batch.selectLod(batch.x,batch.z,viewFocus.x,viewFocus.z,batch.lod);
+    if(nextLod!==batch.lod){
+     batch.lodVertexData[nextLod].applyToMesh(batch.mesh);
+     batch.mesh.thinInstanceRefreshBoundingInfo(true);
+     batch.lod=nextLod;
+     window.__ELSN_GRASS_LOD_TRANSITIONS__=(window.__ELSN_GRASS_LOD_TRANSITIONS__||0)+1;
+    }
+   }
+   if(batch.mesh.isVisible!==show)batch.mesh.isVisible=show;
+   if(show)visible++;
+  }"""
+    if html.count(grass_lod_runtime_marker) != 1:
+        raise SystemExit("No se encontró el bucle de visibilidad de lotes para LOD por distancia.")
+    html = html.replace(grass_lod_runtime_marker, grass_lod_runtime_replacement, 1)
+
 
     gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
     gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightRig&&b.flightRig.animationGroup){b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase);}"
@@ -2240,27 +2462,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.343: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.344: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.343; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.344; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.343\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.344\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.343.")
-    html = html.replace("0.6.274", "0.6.343")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.344.")
+    html = html.replace("0.6.274", "0.6.344")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'52',build:'0.6.343'"
+    diagnostic_build_replacement = "reportVersion:'53',build:'0.6.344'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.343 para normalizar.")
-    game_version = "0.6.343"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.344 para normalizar.")
+    game_version = "0.6.344"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -2701,6 +2923,45 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         spatial_startup_marker + "\n    buildSpatialSelectionOctree();",
         1,
     )
+
+    # The resource gate can finish while Babylon's render-loop callback is throttled
+    # (notably after a Service Worker offline navigation). Do not report worldReady
+    # while the loading overlay is still stuck: force one real scene frame if needed,
+    # then reveal the campaign selector from the startup task itself. The render-loop
+    # path remains the normal path; this idempotent hand-off is only its safety net.
+    startup_handoff_marker = " startupAssetsReady=true;\n window.__elSinNombreStartupSmoke.worldReady=true;"
+    startup_handoff_replacement = """ startupAssetsReady=true;
+ if(!startScreenShown){
+  try{
+   if(!firstFrameRendered){
+    if(!engine||engine.isDisposed&&engine.isDisposed())throw new Error('El motor Babylon ya no está disponible para el primer fotograma.');
+    if(!scene.activeCamera)scene.activeCamera=camera;
+    engine.resize();
+    scene.render();
+    renderedFrames++;
+    firstFrameRendered=true;
+    startupTimeline.firstFrameAt=performance.now();
+    startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
+    console.info('EL SIN NOMBRE: primer fotograma confirmado por la barrera de arranque.');
+   }
+   // Keep the regular render-loop handoff invariant: the spatial octree must
+   // exist before gameplay can be selected, even when this safety path wins the race.
+   buildSpatialSelectionOctree();
+   const startupLoading=document.getElementById('loading');
+   if(startupLoading)startupLoading.style.display='none';
+   showStartScreen();
+   trackStartupPerfStage(100,'Selector principal listo');
+   finishStartupPerfStage();
+   startScreenShown=true;
+  }catch(startupHandoffError){
+   reportFrameError('presentación del selector tras la barrera de recursos',startupHandoffError);
+   throw new Error('RECURSO OBLIGATORIO: primer fotograma y selector de campaña · '+String(startupHandoffError&&startupHandoffError.message||startupHandoffError));
+  }
+ }
+ window.__elSinNombreStartupSmoke.worldReady=true;"""
+    if html.count(startup_handoff_marker) != 1:
+        raise SystemExit("No se encontró el punto único de cierre de la barrera de recursos para asegurar la presentación del selector.")
+    html = html.replace(startup_handoff_marker,startup_handoff_replacement,1)
 
 
     # Mobile runtime stability without visual downgrades.

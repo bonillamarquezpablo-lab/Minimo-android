@@ -93,6 +93,10 @@ assert.ok(dialogueRuntime.includes('projectionAttempts') &&
   smoke.includes('proof?.uploadInvertY === true') &&
   smoke.includes('renderedBubbleVerified: false'),
   'The runtime must expose positioning attempts and the browser smoke must persist its complete snapshot with the NPC texture proof.');
+assert.match(smoke, /campaignButton\.evaluate\(button => button\.click\(\)\)/,
+  'Campaign entry must not hang on Playwright bounding-box stability while the intro is continuously animated.');
+assert.doesNotMatch(smoke, /campaignButton\.click\(\{\s*force:\s*true/,
+  'Do not rely on Playwright force-click stability semantics for the animated campaign card.');
 assert.match(smoke, /STARTUP_RESTART_TIMEOUT_MS = 240000/);
 assert.match(smoke, /function waitForWorldReadyWithRecovery/);
 assert.match(smoke, /cachedStartupWaitRecoveredAfterRendererStall/);
