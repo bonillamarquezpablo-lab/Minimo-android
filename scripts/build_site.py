@@ -629,15 +629,15 @@ def main() -> None:
         raise SystemExit("No se encontró el número de hojas por mata.")
     html = html.replace(leaf_count_marker, "const leavesPerClump=isPerformanceMode?8:12;", 1)
 
-    leaf_geometry_marker = """    for(const row of rows){
-     positions.push(row.cx-px*row.w,row.cy,row.cz-pz*row.w,row.cx+px*row.w,row.cy,row.cz+pz*row.w);
-     const shade=shades[shadeIndex%shades.length];
-     for(let side=0;side<2;side++){
-      const f=row.tint*(side===0?.95:1.05);
-      colors.push(Math.min(1,shade[0]*f),Math.min(1,shade[1]*f),Math.min(1,shade[2]*f),1);
-     }
+    leaf_geometry_marker = """   for(const row of rows){
+    positions.push(row.cx-px*row.w,row.cy,row.cz-pz*row.w,row.cx+px*row.w,row.cy,row.cz+pz*row.w);
+    const shade=shades[shadeIndex%shades.length];
+    for(let side=0;side<2;side++){
+     const f=row.tint*(side===0?.95:1.05);
+     colors.push(Math.min(1,shade[0]*f),Math.min(1,shade[1]*f),Math.min(1,shade[2]*f),1);
     }
-    indices.push(base,base+2,base+1,base+1,base+2,base+3,base+2,base+4,base+3,base+3,base+4,base+5);"""
+   }
+   indices.push(base,base+2,base+1,base+1,base+2,base+3,base+2,base+4,base+3,base+3,base+4,base+5);"""
     leaf_geometry_replacement = """    for(let rowIndex=0;rowIndex<2;rowIndex++){
      const row=rows[rowIndex];
      positions.push(row.cx-px*row.w,row.cy,row.cz-pz*row.w,row.cx+px*row.w,row.cy,row.cz+pz*row.w);
