@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     permissions:
+      actions: read
       contents: read
     steps:
       - name: Checkout game repository
@@ -39,6 +40,39 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+
+      - name: Locate the latest successful release site artifact
+        id: previous_site
+        if: steps.resource_cache.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          for run_id in $(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-pages.yml/runs?branch=main&status=success&per_page=30" --jq '.workflow_runs[].id'); do
+            artifact_id=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" --jq '[.artifacts[] | select(.expired == false) | select(.name | startswith("el-sin-nombre-site-"))] | .[0].id // empty')
+            if [[ -n "$artifact_id" ]]; then
+              echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+              echo "artifact_id=$artifact_id" >> "$GITHUB_OUTPUT"
+              echo "Using previously validated site artifact $artifact_id from run $run_id."
+              exit 0
+            fi
+          done
+          echo "artifact_id=" >> "$GITHUB_OUTPUT"
+          echo "No previous successful site artifact is available; the normal verified download path will be used."
+
+      - name: Download previous validated site resource mirror
+        if: steps.resource_cache.outputs.cache-hit != 'true' && steps.previous_site.outputs.artifact_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ steps.previous_site.outputs.artifact_id }}
+          path: .previous-validated-site
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.previous_site.outputs.run_id }}
+
+      - name: Seed resource cache from previous validated site
+        if: steps.previous_site.outputs.artifact_id != ''
+        run: python scripts/seed_build_resource_cache.py .previous-validated-site
 
       - name: Set up Node.js for release checks
         uses: actions/setup-node@v4
