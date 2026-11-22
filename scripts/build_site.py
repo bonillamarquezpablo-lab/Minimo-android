@@ -413,6 +413,22 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
 
 def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
     destination.parent.mkdir(parents=True, exist_ok=True)
+    relative = destination.relative_to(DIST).as_posix()
+    cache_file = ROOT / ".asset-cache" / relative
+    if cache_file.is_file() and cache_file.stat().st_size >= minimum:
+        shutil.copy2(cache_file, destination)
+        if kind == "glb":
+            if destination.name in {"viking-rigged.glb", "armored-knight-rigged.glb", "man-base-character-rigged.glb"}:
+                validate_rigged_character_glb(destination, relative)
+            elif destination.parent.name == "wildlife":
+                bake_procedural_animal_vertex_colors(destination, relative)
+                validate_rigged_animal_glb(destination, relative)
+            else:
+                read_glb_document(destination)
+        digest = hashlib.sha256(destination.read_bytes()).hexdigest()
+        size = destination.stat().st_size
+        print(f"OK {relative}: {size:,} bytes (verified persistent asset cache)")
+        return {"path": relative, "bytes": size, "sha256": digest, "source": "persistent-build-cache"}
     last_error = None
     for attempt in range(1, 5):
         try:
@@ -465,6 +481,8 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                     )
                 else:
                     read_glb_document(destination)
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(destination, cache_file)
             return {
                 "path": destination.relative_to(DIST).as_posix(),
                 "bytes": size,
@@ -478,7 +496,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                 time.sleep(attempt * 2)
     # The repository may already contain a verified vendor copy. Prefer that immutable
     # local dependency when a CDN blocks CI (403/rate-limit); never publish a partial file.
-    fallback = ROOT / destination.relative_to(DIST)
+    fallback = cache_file if cache_file.is_file() else ROOT / destination.relative_to(DIST)
     if fallback.is_file():
         size = fallback.stat().st_size
         if size >= minimum:

@@ -37,6 +37,15 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Restore verified external game assets
+        uses: actions/cache@v4
+        with:
+          path: .asset-cache/
+          key: el-sin-nombre-assets-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            el-sin-nombre-assets-${{ runner.os }}-
+
+
       - name: Test offline navigation suite and four camera modes
         run: node scripts/test_navigation_suite_contract.cjs
       - name: Test adaptive graphics quality without sacrificing Performance profile
@@ -97,6 +106,12 @@ jobs:
 
       - name: Download all resources, build dist and run release validation
         run: python scripts/build_site.py
+      - name: Save downloaded assets even when another resource fails
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .asset-cache/
+          key: el-sin-nombre-assets-${{ runner.os }}-${{ github.run_id }}
       - name: Verify realistic forest spacing and gull flight clips
         run: node scripts/test_forest_gull_assets.cjs
       - name: Verify night-effect CPU budgets without reducing Quality
