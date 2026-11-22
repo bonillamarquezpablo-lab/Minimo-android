@@ -712,14 +712,19 @@ def main() -> None:
         raise SystemExit("No se encontró la decisión única de población de hierba por perfil.")
     html = html.replace(want_marker, want_replacement, 1)
 
-    stream_skip_marker = " async function streamActiveIslandGrass(index,focusX,focusZ){\n  if(isPerformanceMode)return;"
-    if html.count(stream_skip_marker) != 1:
-        raise SystemExit("No se encontró la desactivación del streaming de hierba en Rendimiento.")
-    html = html.replace(stream_skip_marker, " async function streamActiveIslandGrass(index,focusX,focusZ){", 1)
-    update_skip_marker = "  function updateActiveIslandGrass(dt){\n  if(isPerformanceMode)return;"
-    if html.count(update_skip_marker) != 1:
-        raise SystemExit("No se encontró la desactivación de actualización de hierba en Rendimiento.")
-    html = html.replace(update_skip_marker, "  function updateActiveIslandGrass(dt){", 1)
+    # Match the actual source whitespace instead of relying on indentation-sensitive exact literals.
+    html, stream_skip_count = re.subn(
+        r"(async function streamActiveIslandGrass\\(index,focusX,focusZ\\)\\{[ \\t]*\\n[ \\t]*)if\\(isPerformanceMode\\)return;",
+        r"\\1", html, count=1
+    )
+    if stream_skip_count != 1:
+        raise SystemExit("No se encontró el guard de desactivación del streaming de hierba en Rendimiento.")
+    html, update_skip_count = re.subn(
+        r"(function updateActiveIslandGrass\\(dt\\)\\{[ \\t]*\\n[ \\t]*)if\\(isPerformanceMode\\)return;",
+        r"\\1", html, count=1
+    )
+    if update_skip_count != 1:
+        raise SystemExit("No se encontró el guard de desactivación de actualización de hierba en Rendimiento.")
 
     initial_grass_marker = """  // La hierba existe únicamente en Calidad y solo en un radio local alrededor del jugador.
   // Rendimiento no crea geometría, buffers ni materiales de hierba.
