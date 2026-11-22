@@ -484,7 +484,7 @@ def _restore_cached_resource(url: str, destination: Path, minimum: int, kind: st
             "path": relative,
             "bytes": size,
             "sha256": digest,
-            "source": url,
+            "source": metadata.get("source") or url,
         }
     except Exception as exc:
         print(f"WARN Ignoring invalid resource cache for {relative}: {exc}", file=sys.stderr)
@@ -494,25 +494,38 @@ def _restore_cached_resource(url: str, destination: Path, minimum: int, kind: st
         return None
 
 
-def _store_cached_resource(url: str, destination: Path, minimum: int, kind: str, sha256_hex: str) -> None:
+def _store_cached_resource(
+    url: str,
+    destination: Path,
+    minimum: int,
+    kind: str,
+    sha256_hex: str,
+    source: str | None = None,
+) -> None:
     relative = destination.relative_to(DIST).as_posix()
     cached_file, metadata_file = _resource_cache_paths(relative)
-    cached_file.parent.mkdir(parents=True, exist_ok=True)
     temporary_file = Path(str(cached_file) + ".tmp")
     temporary_metadata = Path(str(metadata_file) + ".tmp")
-    shutil.copy2(destination, temporary_file)
-    temporary_file.replace(cached_file)
-    metadata = {
-        "schema": RESOURCE_CACHE_SCHEMA,
-        "url": url,
-        "kind": kind,
-        "minimum": minimum,
-        "bytes": destination.stat().st_size,
-        "sha256": sha256_hex,
-        "fetched_at": int(time.time()),
-    }
-    temporary_metadata.write_text(json.dumps(metadata, separators=(",", ":")), encoding="utf-8")
-    temporary_metadata.replace(metadata_file)
+    try:
+        cached_file.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(destination, temporary_file)
+        temporary_file.replace(cached_file)
+        metadata = {
+            "schema": RESOURCE_CACHE_SCHEMA,
+            "url": url,
+            "source": source or url,
+            "kind": kind,
+            "minimum": minimum,
+            "bytes": destination.stat().st_size,
+            "sha256": sha256_hex,
+            "fetched_at": int(time.time()),
+        }
+        temporary_metadata.write_text(json.dumps(metadata, separators=(",", ":")), encoding="utf-8")
+        temporary_metadata.replace(metadata_file)
+    except Exception as exc:
+        temporary_file.unlink(missing_ok=True)
+        temporary_metadata.unlink(missing_ok=True)
+        print(f"WARN Could not persist verified resource cache for {relative}: {exc}", file=sys.stderr)
 
 
 def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
@@ -605,7 +618,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                     size = destination.stat().st_size
                     digest = hashlib.sha256(destination.read_bytes())
                 else:
-                    read_glb_document(destination)
+                    _validate_cached_payload(destination, destination.relative_to(DIST).as_posix(), kind)
             if kind == "zip":
                 _validate_cached_payload(destination, destination.relative_to(DIST).as_posix(), kind)
             fallback_result = {
@@ -615,7 +628,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                 "source": "repository-fallback",
             }
             print(f"OK {destination.relative_to(DIST).as_posix()}: {size:,} bytes (verified repository fallback)")
-            _store_cached_resource(url, destination, minimum, kind, fallback_result["sha256"])
+            _store_cached_resource(url, destination, minimum, kind, fallback_result["sha256"], "repository-fallback")
             return fallback_result
     raise RuntimeError(f"Could not download {url}: {last_error}") from last_error
 
