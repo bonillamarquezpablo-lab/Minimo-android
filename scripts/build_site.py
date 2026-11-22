@@ -714,14 +714,14 @@ def main() -> None:
 
     # Match the actual source whitespace instead of relying on indentation-sensitive exact literals.
     html, stream_skip_count = re.subn(
-        r"(async function streamActiveIslandGrass\\(index,focusX,focusZ\\)\\{[ \\t]*\\n[ \\t]*)if\\(isPerformanceMode\\)return;",
-        r"\\1", html, count=1
+        r"(async function streamActiveIslandGrass\(index,focusX,focusZ\)\{[ \t]*\n[ \t]*)if\(isPerformanceMode\)return;",
+        r"\1", html, count=1
     )
     if stream_skip_count != 1:
         raise SystemExit("No se encontró el guard de desactivación del streaming de hierba en Rendimiento.")
     html, update_skip_count = re.subn(
         r"(function updateActiveIslandGrass\\(dt\\)\\{[ \\t]*\\n[ \\t]*)if\\(isPerformanceMode\\)return;",
-        r"\\1", html, count=1
+        r"\1", html, count=1
     )
     if update_skip_count != 1:
         raise SystemExit("No se encontró el guard de desactivación de actualización de hierba en Rendimiento.")
