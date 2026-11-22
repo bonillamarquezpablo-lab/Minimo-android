@@ -584,24 +584,83 @@ async function main() {
 
     // worldReady means resources are prepared; wait for the real rendered intro before selecting a campaign.
     await page.locator('#intro.open').waitFor({ state: 'visible', timeout: 60000 });
-    await page.locator('#newGameChoice').waitFor({ state: 'visible', timeout: 30000 });
-    // Keep the stricter first-render/intro validation already present on main.
-    const introReady = await page.evaluate(() => ({
-      bodyClass: document.body.className,
-      ariaHidden: document.getElementById('intro')?.getAttribute('aria-hidden') ?? null,
-      open: document.getElementById('intro')?.classList.contains('open') ?? false,
-      newGameVisible: (() => {
-        const button = document.getElementById('newGameChoice');
-        return !!button && getComputedStyle(button).display !== 'none' &&
-          getComputedStyle(button).visibility !== 'hidden';
-      })()
-    }));
+    const campaignButton = page.locator('#newGameChoice');
+    await campaignButton.waitFor({ state: 'visible', timeout: 30000 });
+
+    // Diagnose the actual hit target before bypassing Playwright's two-frame stability heuristic.
+    // The campaign card can be affected by a continuously animated intro; the test must not
+    // click through a real overlay, disabled control or hidden button.
+    const introReady = await page.evaluate(() => {
+      const intro = document.getElementById('intro');
+      const button = document.getElementById('newGameChoice');
+      if (!button) return { bodyClass: document.body.className, open: false, missingButton: true };
+      const style = getComputedStyle(button);
+      const rect = button.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const hit = document.elementFromPoint(centerX, centerY);
+      const ancestors = [];
+      for (let node = button; node && node !== document.documentElement; node = node.parentElement) {
+        const computed = getComputedStyle(node);
+        if (computed.animationName !== 'none' || computed.transitionDuration !== '0s') {
+          ancestors.push({
+            tag: node.tagName,
+            id: node.id || null,
+            className: typeof node.className === 'string' ? node.className : null,
+            animationName: computed.animationName,
+            animationDuration: computed.animationDuration,
+            animationIterationCount: computed.animationIterationCount,
+            transitionProperty: computed.transitionProperty,
+            transitionDuration: computed.transitionDuration,
+            transform: computed.transform
+          });
+        }
+      }
+      const animations = document.getAnimations().filter(animation => {
+        const target = animation.effect?.target;
+        return target && (target === button || button.contains(target) || target.contains?.(button));
+      }).map(animation => ({
+        playState: animation.playState,
+        currentTime: animation.currentTime,
+        target: animation.effect?.target?.id || animation.effect?.target?.tagName || null
+      }));
+      const visible = style.display !== 'none' && style.visibility !== 'hidden' &&
+        Number(style.opacity || 1) > 0.01 && rect.width > 2 && rect.height > 2;
+      const enabled = !button.disabled && button.getAttribute('aria-disabled') !== 'true';
+      const receivesPointer = style.pointerEvents !== 'none' && !!hit && (hit === button || button.contains(hit));
+      return {
+        bodyClass: document.body.className,
+        ariaHidden: intro?.getAttribute('aria-hidden') ?? null,
+        open: !!intro?.classList.contains('open'),
+        newGameVisible: visible,
+        enabled,
+        receivesPointer,
+        pointerEvents: style.pointerEvents,
+        opacity: style.opacity,
+        rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        hitTarget: hit ? {
+          tag: hit.tagName,
+          id: hit.id || null,
+          className: typeof hit.className === 'string' ? hit.className : null
+        } : null,
+        animatedAncestors: ancestors,
+        activeAnimations: animations
+      };
+    });
     manifest.campaignSelector = introReady;
-    if (!introReady.open || introReady.ariaHidden === 'true' || !introReady.newGameVisible) {
-      throw new Error('La barrera de recursos terminó pero el selector de campaña no se mostró: ' +
+    if (!introReady.open || introReady.ariaHidden === 'true' || !introReady.newGameVisible ||
+        !introReady.enabled || !introReady.receivesPointer) {
+      throw new Error('El selector de campaña no es realmente pulsable; no se forzará el clic: ' +
         JSON.stringify(introReady));
     }
-    await page.locator('#newGameChoice').click();
+    try {
+      // A real pointer click is still dispatched; only the perpetual CSS stability wait is bypassed.
+      await campaignButton.click({ force: true, timeout: 10000 });
+    } catch (error) {
+      await page.screenshot({ path: path.join(OUT, 'campaign-selector-click-failure.png'), fullPage: true }).catch(() => {});
+      throw new Error('El botón de nueva partida superó las comprobaciones de visibilidad y hit-test, ' +
+        'pero no inició la campaña: ' + JSON.stringify(introReady) + ' · ' + String(error?.message || error));
+    }
     await page.waitForFunction(() => document.body.classList.contains('game-running') &&
       document.querySelector('#intro')?.getAttribute('aria-hidden') === 'true',
       undefined, { timeout: 30000, polling: 100 });
