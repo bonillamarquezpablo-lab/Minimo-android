@@ -121,6 +121,11 @@ assert.ok(deployWorkflow.includes("uses: actions/cache/restore@v4") &&
   deployWorkflow.includes("uses: actions/cache/save@v4") &&
   deployWorkflow.includes(".build-cache/resources"),
   "GitHub Actions must restore and save the verified resource cache without bypassing release gates.");
+assert.ok(deployWorkflow.includes("actions: read") &&
+  deployWorkflow.includes("actions/download-artifact@v4") &&
+  deployWorkflow.includes("seed_build_resource_cache.py") &&
+  buildSite.includes("REQUIRED_MIRROR_ASSETS"),
+  "When cache is cold, the build must seed required models from the latest verified site artifact and check each file against its manifest.");
 assert.ok(buildSite.includes("const targetFrameRate=120;") && buildSite.includes("renderedFps=measured") && buildSite.includes("fpsHudTime+=rawFrameMs/1000;fpsHudFrames++"),"The Quality runtime must report rendered FPS against a 120 Hz capability target without imposing a lower render cadence.");
 assert.ok(buildSite.includes("frame_loop_replacement = frame_loop_marker") && buildSite.includes("frame_clock_replacement = frame_clock_marker"),"The Babylon loop must remain uncapped and render at the available device refresh rate.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
