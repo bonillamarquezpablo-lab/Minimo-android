@@ -712,11 +712,11 @@ def main() -> None:
         raise SystemExit("No se encontró la decisión única de población de hierba por perfil.")
     html = html.replace(want_marker, want_replacement, 1)
 
-    stream_skip_marker = " async function streamActiveIslandGrass(index,focusX,focusZ){\\n   if(isPerformanceMode)return;"
+    stream_skip_marker = " async function streamActiveIslandGrass(index,focusX,focusZ){\n   if(isPerformanceMode)return;"
     if html.count(stream_skip_marker) != 1:
         raise SystemExit("No se encontró la desactivación del streaming de hierba en Rendimiento.")
     html = html.replace(stream_skip_marker, " async function streamActiveIslandGrass(index,focusX,focusZ){", 1)
-    update_skip_marker = "  function updateActiveIslandGrass(dt){\\n   if(isPerformanceMode)return;"
+    update_skip_marker = "  function updateActiveIslandGrass(dt){\n   if(isPerformanceMode)return;"
     if html.count(update_skip_marker) != 1:
         raise SystemExit("No se encontró la desactivación de actualización de hierba en Rendimiento.")
     html = html.replace(update_skip_marker, "  function updateActiveIslandGrass(dt){", 1)
