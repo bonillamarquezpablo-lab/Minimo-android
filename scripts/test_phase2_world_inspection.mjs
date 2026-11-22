@@ -158,8 +158,8 @@ const wolfMesh={...mesh,uniqueId:70,name:'WolfBody',id:'wolf-body',skeleton:wolf
  material:{name:'WolfMaterial',getActiveTextures:()=>[wolfTextureReady,wolfTexturePending]},
  getTotalVertices:()=>920,getTotalIndices:()=>1840,numBoneInfluencers:4,
  computeWorldMatrix(){},
- setPositionsForCPUSkinning(){throw new Error('World inspection must not double-skin CPU-deformed vertices.');},
- getVerticesData(kind){return kind==='position'?wolfPositions:kind==='matricesIndices'?wolfIndices:kind==='matricesWeights'?wolfWeights:null;},
+ setPositionsForCPUSkinning:()=>wolfPositions,
+ getVerticesData(kind){return kind==='position'?new Array(24).fill(0):kind==='matricesIndices'?wolfIndices:kind==='matricesWeights'?wolfWeights:null;},
  refreshBoundingInfo(){throw new Error('CPU skinning must not be reapplied to already-deformed buffers.');},
  getWorldMatrix:()=>({m:[1,0,0,0,0,1,0,0,0,0,1,0,1.55,.03,1.75,1]}),
  getBoundingInfo:()=>({boundingBox:wolfBounds})};
