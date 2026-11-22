@@ -10,6 +10,7 @@ const atmosphereSource=fs.readFileSync('scripts/nordic/atmosphere-system.js','ut
 const npcCore=fs.readFileSync('scripts/npc-agent-core.js','utf8');
 const npcRuntime=fs.readFileSync('scripts/npc-agent-runtime.js','utf8');
 const deployWorkflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
+const resourceCacheSeeder=fs.readFileSync('scripts/seed_build_resource_cache.py','utf8');
 
 const expectedVersion=validator.split('EXPECTED_VERSION = "')[1]?.split('"')[0];
 assert.ok(buildSite.includes('scene.createOrUpdateSelectionOctree(64,3)'),"The Quality build must use Babylon spatial selection for the high-mesh-count scene.");
@@ -124,7 +125,7 @@ assert.ok(deployWorkflow.includes("uses: actions/cache/restore@v4") &&
 assert.ok(deployWorkflow.includes("actions: read") &&
   deployWorkflow.includes("actions/download-artifact@v4") &&
   deployWorkflow.includes("seed_build_resource_cache.py") &&
-  buildSite.includes("REQUIRED_MIRROR_ASSETS"),
+  resourceCacheSeeder.includes("REQUIRED_MIRROR_ASSETS"),
   "When cache is cold, the build must seed required models from the latest verified site artifact and check each file against its manifest.");
 assert.ok(buildSite.includes("const targetFrameRate=120;") && buildSite.includes("renderedFps=measured") && buildSite.includes("fpsHudTime+=rawFrameMs/1000;fpsHudFrames++"),"The Quality runtime must report rendered FPS against a 120 Hz capability target without imposing a lower render cadence.");
 assert.ok(buildSite.includes("frame_loop_replacement = frame_loop_marker") && buildSite.includes("frame_clock_replacement = frame_clock_marker"),"The Babylon loop must remain uncapped and render at the available device refresh rate.");
