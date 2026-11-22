@@ -37,10 +37,11 @@
       "name": "Referencias costeras, agua, visibilidad y capturas de entorno",
       "script": "scripts/coastal-reference.mjs",
       "startedAt": "2026-11-22T00:21:43.235Z",
-      "status": "running",
-      "durationMs": null,
-      "exitCode": null,
-      "error": null
+      "status": "failed",
+      "durationMs": 97210,
+      "exitCode": 1,
+      "error": "exit=1 signal=none",
+      "finishedAt": "2026-11-22T00:23:20.445Z"
     }
   ],
   "finishedAt": null
