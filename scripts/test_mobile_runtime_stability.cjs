@@ -127,6 +127,11 @@ assert.ok(builder.includes("class NordicGrassWindPlugin extends B.MaterialPlugin
 assert.ok(builder.includes("const want=Math.max(1,Math.round(baseWant*(isPerformanceMode?performanceDensity:qualityGrassDensity)*areaFraction));") && builder.includes("grass_density_replacement = \"const qualityGrassDensity=isTouchDevice?(isConstrainedMobile?(islandIndex===0?8.8:5.8):(islandIndex===0?10.4:7.0)):(islandIndex===0?8.8:6.2);\""), 'Both graphics profiles must retain grass, with a larger Quality population and a constrained Performance budget.');
 assert.ok(builder.includes('position:fixed;left:0;right:0;bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;width:100vw;max-width:none') && builder.includes('document.body.appendChild(panel)') && builder.includes('panel.remove();'), 'The startup status panel must span the viewport and be removed once gameplay starts.');
 assert.ok(builder.includes("#loading .loadBottom{position:relative;left:50%;transform:translateX(-50%);box-sizing:border-box;width:100vw!important;max-width:none!important;") && builder.includes("#loading .loadTrack{display:block;box-sizing:border-box;width:100%!important;max-width:none!important}"), 'The actual loading progress bar, not just the status panel, must fill the viewport width.');
+assert.ok(builder.includes('grassLodLeafCounts') &&
+  builder.includes('selectGrassLod') &&
+  builder.includes('batch.selectLod(batch.x,batch.z,viewFocus.x,viewFocus.z,batch.lod)') &&
+  builder.includes('batch.lodVertexData[nextLod].applyToMesh(batch.mesh)'),
+  'Grass must use near/mid/far geometry LOD on the same instance buffers, without removing grass positions.');
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullMaxExtentMeters=.55') &&
   builder.includes('sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)') &&

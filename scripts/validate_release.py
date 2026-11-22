@@ -905,6 +905,10 @@ def main() -> None:
         fail("La nueva mata de hierba debe conservar hojas adicionales y puntas afiladas con viento ponderado por altura.")
     if "const want=Math.max(1,Math.round(baseWant*(isPerformanceMode?performanceDensity:qualityGrassDensity)*areaFraction));" not in index_html:
         fail("El perfil Rendimiento debe conservar hierba instanciada con un presupuesto reducido, no desactivar el sistema.")
+    if "const grassLodLeafCounts=[leavesPerClump,Math.max(4,Math.floor(leavesPerClump*.42)),Math.max(2,Math.floor(leavesPerClump*.20))];" not in index_html or "const selectGrassLod=" not in index_html:
+        fail("La hierba debe usar tres geometrías LOD por distancia sin eliminar posiciones.")
+    if "batch.selectLod(batch.x,batch.z,viewFocus.x,viewFocus.z,batch.lod)" not in index_html or "batch.lodVertexData[nextLod].applyToMesh(batch.mesh)" not in index_html:
+        fail("Los lotes de hierba deben cambiar de geometría LOD según la distancia a cámara.")
     if "function isSafeGroundCoverPoint(is,x,z)" not in index_html or "const grassGroundSample=(x,z)=>{" not in index_html or "const safeLandRadius=island.r*.70" not in index_html:
         fail("La hierba no restringe la generación optimizada a terreno seco y alejado de la costa.")
     if "terrainDeformationAt(islandIndex,xP,z)" not in index_html or "surfaceSlopeX" not in index_html:

@@ -657,7 +657,84 @@ def main() -> None:
 
     # GPU vertex displacement animates all thin instances without CPU vertex-buffer uploads.
     grass_material_marker = "const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);if(!staging)grassBatchMaterial=gm;else if(grassStagingResources)grassStagingResources.material=gm;"
+
+    grass_tint_marker = "const tint=rand(.93,1.06);batch.colors.push(tint,rand(.96,1.03),rand(.90,.99),1);"
+    grass_tint_replacement = "const tint=rand(.88,1.12);batch.colors.push(tint,rand(.90,1.10),rand(.82,1.06),1);"
+    if html.count(grass_tint_marker) != 1:
+        raise SystemExit("No se encontró la variación cromática por mata.")
+    html = html.replace(grass_tint_marker, grass_tint_replacement, 1)
+
+
+    grass_batch_marker = """  for(const batch of grassBatches.values()){
+   const grassMesh=new B.Mesh('NordicGroundCover_'+batch.islandIndex+'_'+batch.cellX+'_'+batch.cellZ,scene);
+   vertexData.applyToMesh(grassMesh);grassMesh.material=gm;grassMesh.setEnabled(!staging);grassMesh.isPickable=false;grassMesh.receiveShadows=false;buildGrassMeshes.push(grassMesh);
+   // Keep the source clump on the ground plane; instance transforms contain the actual terrain height.
+   grassMesh.position.set(0,0,0);grassMesh.computeWorldMatrix(true);
+   grassMesh.thinInstanceSetBuffer('matrix',new Float32Array(batch.matrices),16,true);
+   grassMesh.thinInstanceSetBuffer('color',new Float32Array(batch.colors),4,true);
+   grassMesh.thinInstanceCount=batch.matrices.length/16;grassMesh.thinInstanceRefreshBoundingInfo(true);
+   grassMesh.doNotSyncBoundingInfo=false;
+   let batchX=0,batchZ=0;for(let matrixOffset=12;matrixOffset<batch.matrices.length;matrixOffset+=16){batchX+=batch.matrices[matrixOffset];batchZ+=batch.matrices[matrixOffset+2];}
+   const batchInstances=Math.max(1,batch.matrices.length/16);
+   buildGrassBatches.push({mesh:grassMesh,x:batchX/batchInstances,z:batchZ/batchInstances,islandIndex:batch.islandIndex});
+   grassUploadBatch++;
+   if(performance.now()-grassUploadSliceStartedAt>=grassBuildSliceBudgetMs){await yieldStartupFrame();grassUploadSliceStartedAt=performance.now();}
+  }"""
+    grass_batch_replacement = """  for(const batch of grassBatches.values()){
+   let batchX=0,batchZ=0;for(let matrixOffset=12;matrixOffset<batch.matrices.length;matrixOffset+=16){batchX+=batch.matrices[matrixOffset];batchZ+=batch.matrices[matrixOffset+2];}
+   const batchInstances=Math.max(1,batch.matrices.length/16),centerX=batchX/batchInstances,centerZ=batchZ/batchInstances;
+   const initialLod=selectGrassLod(centerX,centerZ,focusX,focusZ);
+   const grassMesh=new B.Mesh('NordicGroundCover_'+batch.islandIndex+'_'+batch.cellX+'_'+batch.cellZ,scene);
+   grassLodVertexData[initialLod].applyToMesh(grassMesh);grassMesh.material=gm;grassMesh.setEnabled(!staging);grassMesh.isPickable=false;grassMesh.receiveShadows=false;buildGrassMeshes.push(grassMesh);
+   // Keep source tufts at the ground plane; instance transforms contain the actual terrain height.
+   grassMesh.position.set(0,0,0);grassMesh.computeWorldMatrix(true);
+   grassMesh.thinInstanceSetBuffer('matrix',new Float32Array(batch.matrices),16,true);
+   grassMesh.thinInstanceSetBuffer('color',new Float32Array(batch.colors),4,true);
+   grassMesh.thinInstanceCount=batch.matrices.length/16;grassMesh.thinInstanceRefreshBoundingInfo(true);
+   grassMesh.doNotSyncBoundingInfo=false;
+   buildGrassBatches.push({mesh:grassMesh,x:centerX,z:centerZ,islandIndex:batch.islandIndex,lod:initialLod,lodVertexData:grassLodVertexData,selectLod:selectGrassLod});
+   grassUploadBatch++;
+   if(performance.now()-grassUploadSliceStartedAt>=grassBuildSliceBudgetMs){await yieldStartupFrame();grassUploadSliceStartedAt=performance.now();}
+  }"""
+    if html.count(grass_batch_marker) != 1:
+        raise SystemExit("No se encontró el bucle de carga de los lotes de hierba.")
+    html = html.replace(grass_batch_marker, grass_batch_replacement, 1)
+
     grass_material_replacement = grass_material_marker + """
+
+   // Distance LOD geometry: all tuft locations remain; only blades per tuft change.
+   const grassLodLeafCounts=[leavesPerClump,Math.max(4,Math.floor(leavesPerClump*.42)),Math.max(2,Math.floor(leavesPerClump*.20))];
+   const createGrassLodVertexData=bladeCount=>{
+    const lodPositions=[],lodIndices=[],lodColors=[],lodNormals=[];
+    for(let lodBlade=0;lodBlade<bladeCount;lodBlade++){
+     const sourceBlade=Math.min(leavesPerClump-1,Math.floor((lodBlade+.5)*leavesPerClump/bladeCount));
+     const sourceVertex=sourceBlade*5,targetVertex=lodPositions.length/3;
+     for(let vertex=0;vertex<5;vertex++){
+      const positionOffset=(sourceVertex+vertex)*3,colorOffset=(sourceVertex+vertex)*4;
+      lodPositions.push(positions[positionOffset],positions[positionOffset+1],positions[positionOffset+2]);
+      lodColors.push(colors[colorOffset],colors[colorOffset+1],colors[colorOffset+2],colors[colorOffset+3]);
+     }
+     const sourceIndex=sourceBlade*9;
+     for(let index=0;index<9;index++)lodIndices.push(targetVertex+(indices[sourceIndex+index]-sourceVertex));
+    }
+    B.VertexData.ComputeNormals(lodPositions,lodIndices,lodNormals);
+    const data=new B.VertexData();data.positions=lodPositions;data.indices=lodIndices;data.normals=lodNormals;data.colors=lodColors;
+    return data;
+   };
+   const grassLodVertexData=[vertexData,createGrassLodVertexData(grassLodLeafCounts[1]),createGrassLodVertexData(grassLodLeafCounts[2])];
+   const grassLodNearMeters=isConstrainedMobile?26:(isPerformanceMode?34:(isTouchDevice?48:64));
+   const grassLodMidMeters=isConstrainedMobile?76:(isPerformanceMode?108:(isTouchDevice?136:182));
+   const selectGrassLod=(x,z,focusX,focusZ,previousLod=-1)=>{
+    const fx=Number.isFinite(focusX)?focusX:player.root.position.x,fz=Number.isFinite(focusZ)?focusZ:player.root.position.z;
+    const distance=Math.hypot(x-fx,z-fz);
+    if(previousLod<0)return distance<grassLodNearMeters?0:(distance<grassLodMidMeters?1:2);
+    if(previousLod===0&&distance<=grassLodNearMeters+10)return 0;
+    if(previousLod===2&&distance>=grassLodMidMeters-16)return 2;
+    if(distance<grassLodNearMeters-10)return 0;
+    if(distance<grassLodMidMeters-16)return 1;
+    return 2;
+   };
+
    class NordicGrassWindPlugin extends B.MaterialPluginBase{
     constructor(material){
      super(material,'NordicGrassWind',200,{NORSE_GRASS_WIND:true});
@@ -738,7 +815,7 @@ def main() -> None:
     initial_grass_replacement = """ // Both profiles retain a full-island grass field; Performance changes density and tuft complexity, not grass availability.
  const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);
  grassStreamActiveIslandIndex=initialGrassIslandIndex;
- grassStreamCenterX=land[initialGrassIslandIndex].x;grassStreamCenterZ=land[initialGrassIslandIndex].z;
+ grassStreamCenterX=player.root.position.x;grassStreamCenterZ=player.root.position.z;
  const initialGrassStartedAt=performance.now();
  await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);
  recordStartupTask('Hierba 3D inicial',initialGrassStartedAt,performance.now(),'ready',{clumps:grassInstanceCount,batches:grassBatchCount,island:initialGrassIslandIndex,profile:isPerformanceMode?'performance':'quality',wind:'gpu-vertex-displacement'});
@@ -1442,6 +1519,37 @@ function setLoadingProgress(value,label){
     if html.count(grass_recenter_marker) != 1:
         raise SystemExit("No se encontró la distancia única de recentrado de hierba.")
     html = html.replace(grass_recenter_marker, grass_recenter_replacement, 1)
+
+ 
+    update_grass_lod_guard_marker = "function updateActiveIslandGrass(dt){\n  if(isPerformanceMode)return;"
+    if html.count(update_grass_lod_guard_marker) != 1:
+        raise SystemExit("No se encontró el guard del actualizador LOD de hierba.")
+    html = html.replace(update_grass_lod_guard_marker, "function updateActiveIslandGrass(dt){", 1)
+
+    grass_lod_runtime_marker = """  for(const batch of qualityGrassLodBatches){
+   const show=batch.islandIndex===visibleGrassIslandIndex;
+   if(batch.mesh.isVisible!==show)batch.mesh.isVisible=show;
+   if(show)visible++;
+  }"""
+    grass_lod_runtime_replacement = """  const viewFocus=scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position:focus;
+  for(const batch of qualityGrassLodBatches){
+   const show=batch.islandIndex===visibleGrassIslandIndex;
+   if(show){
+    const nextLod=batch.selectLod(batch.x,batch.z,viewFocus.x,viewFocus.z,batch.lod);
+    if(nextLod!==batch.lod){
+     batch.lodVertexData[nextLod].applyToMesh(batch.mesh);
+     batch.mesh.thinInstanceRefreshBoundingInfo(true);
+     batch.lod=nextLod;
+     window.__ELSN_GRASS_LOD_TRANSITIONS__=(window.__ELSN_GRASS_LOD_TRANSITIONS__||0)+1;
+    }
+   }
+   if(batch.mesh.isVisible!==show)batch.mesh.isVisible=show;
+   if(show)visible++;
+  }"""
+    if html.count(grass_lod_runtime_marker) != 1:
+        raise SystemExit("No se encontró el bucle de visibilidad de lotes para LOD por distancia.")
+    html = html.replace(grass_lod_runtime_marker, grass_lod_runtime_replacement, 1)
+
 
     gull_flight_marker = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*7+b.phase)*.34;b.right.rotation.z=.10+Math.sin(elapsed*7+b.phase)*.34;}else if(b.animation)b.animation.speedRatio=.90+.18*Math.sin(elapsed*1.5+b.phase);"
     gull_flight_replacement = "if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightRig&&b.flightRig.animationGroup){b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase);}"
