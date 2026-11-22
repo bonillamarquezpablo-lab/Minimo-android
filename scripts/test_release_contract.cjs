@@ -112,6 +112,15 @@ assert.ok(buildSite.includes('if url.startswith("https://grab3d.com/")'),
   "Large rigged packages from Grab3D must be removed from the concurrent download pool.");
 assert.ok(buildSite.includes("for relative, (url, minimum, kind) in grab3d_downloads.items():"),
   "Grab3D model downloads must be serialized while preserving all validation.");
+assert.ok(buildSite.includes('RESOURCE_CACHE_DIR = ROOT / ".build-cache" / "resources"') &&
+  buildSite.includes("def _restore_cached_resource") &&
+  buildSite.includes("def _store_cached_resource") &&
+  buildSite.includes("RESOURCE_CACHE_TTL_SECONDS"),
+  "External resources must be reused only through a checksummed, source-matched and time-bounded cache.");
+assert.ok(deployWorkflow.includes("uses: actions/cache/restore@v4") &&
+  deployWorkflow.includes("uses: actions/cache/save@v4") &&
+  deployWorkflow.includes(".build-cache/resources"),
+  "GitHub Actions must restore and save the verified resource cache without bypassing release gates.");
 assert.ok(buildSite.includes("const targetFrameRate=120;") && buildSite.includes("renderedFps=measured") && buildSite.includes("fpsHudTime+=rawFrameMs/1000;fpsHudFrames++"),"The Quality runtime must report rendered FPS against a 120 Hz capability target without imposing a lower render cadence.");
 assert.ok(buildSite.includes("frame_loop_replacement = frame_loop_marker") && buildSite.includes("frame_clock_replacement = frame_clock_marker"),"The Babylon loop must remain uncapped and render at the available device refresh rate.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
