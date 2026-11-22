@@ -21,8 +21,9 @@
 
   function skinnedVertexWorldBounds(mesh) {
     const safeVertices = kind => safeCall(() => mesh.getVerticesData(kind));
-    const positions = safeCall(() => typeof mesh.setPositionsForCPUSkinning === 'function'
-      ? mesh.setPositionsForCPUSkinning() : null) || safeVertices('position');
+    // Always start from immutable source positions; applying bone matrices to CPU-deformed
+    // vertices would skin the same pose a second time and produce impossible world bounds.
+    const positions = safeVertices('position');
     const indices = safeVertices('matricesIndices'), weights = safeVertices('matricesWeights');
     const needsExtras = Number(mesh.numBoneInfluencers) > 4;
     const extraIndices = needsExtras ? safeVertices('matricesIndicesExtra') : null;
