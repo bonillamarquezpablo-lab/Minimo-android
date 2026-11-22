@@ -30,7 +30,7 @@ assert.ok(release.indexOf('Verify mobile fauna rigs on CPU skinning, animations,
 
 assert.match(release, /PLAYER_TEST_URL: https:\/\/localhost:4175\//);
 assert.match(release, /openssl req -x509/);
-assert.match(release, /needs: \[build\]/);
+assert.match(release, /needs: \\[build, contracts\\]/, 'Pages must wait for both the validated package and every parallel source-contract shard.');
 assert.match(release, /if: github\.event_name != 'pull_request' && github\.ref == 'refs\/heads\/main'/);
 assert.ok(release.indexOf('Verify startup, required NPCs, gameplay and offline Service Worker restart before publish') <
   release.indexOf('Upload validated site for PR inspection'),
