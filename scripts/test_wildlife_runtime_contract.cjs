@@ -48,7 +48,7 @@ assert.ok(worldInspection.includes('function skinnedVertexWorldBounds(mesh)') &&
   worldInspection.includes('skinIndices && skinWeights') &&
   !worldInspection.includes('mesh.refreshBoundingInfo(true)'),
   'The inspector must skin immutable source vertices once and never transform CPU-deformed positions again.');
-const sourceSkinningMarker = "let positions=typeof mesh.setPositionsForCPUSkinning==='function'?mesh.setPositionsForCPUSkinning():null;\\n  if(!positions||!positions.length)positions=mesh.getVerticesData(positionKind);";
+const sourceSkinningMarker = "let positions=typeof mesh.setPositionsForCPUSkinning==='function'?mesh.setPositionsForCPUSkinning():null;\n  if(!positions||!positions.length)positions=mesh.getVerticesData(positionKind);";
 const productionHtml = html.replace(sourceSkinningMarker,"const positions=mesh.getVerticesData(positionKind);");
 assert.notEqual(productionHtml,html,'The release test must exercise the builder-transformed source-vertex path.');
 assert.ok(builder.includes('skinned_bounds_positions_marker =') &&
