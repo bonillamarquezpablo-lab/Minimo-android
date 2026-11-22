@@ -95,6 +95,10 @@ assert.ok(builder.includes('recordStartupTask(\'Geometría de costa inicial\''),
 assert.ok(builder.includes('syncNordicWaterReflectionIsland();') && builder.includes('Lista inicial de reflejos nórdicos'), 'The first full-scene reflection-list scan must complete during loading, not the first gameplay frame.');
 
 assert.ok(builder.includes('identity_start_guard_marker') && builder.includes('identityStartupTriggered=false'), 'The preflight identity gate must be idempotent.');
+assert.ok(builder.includes('startup_handoff_marker') &&
+  builder.includes("if(!startScreenShown){") && builder.includes("scene.render();") &&
+  builder.includes("showStartScreen();") && builder.includes("window.__elSinNombreStartupSmoke.worldReady=true;"),
+  'The startup resource gate must reveal the campaign selector after one verified frame even when the Babylon render-loop callback is throttled.');
 assert.ok(builder.includes("continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true})"), 'The anonymous identity action must support touch pointer-up as well as click.');
 assert.ok(builder.includes("continueWithNameButton.addEventListener('pointerup',startNamedIdentity,{once:true})"), 'The named identity action must support touch pointer-up as well as click.');
 assert.ok(builder.includes('isMobilePeakMemorySensitive=!!(isIOSDevice||isTouchDevice)'), 'The memory policy must serialize large asset imports on every mobile device without switching the graphics profile.');
