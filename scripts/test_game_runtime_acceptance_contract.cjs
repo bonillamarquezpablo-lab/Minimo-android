@@ -32,7 +32,7 @@ assert.match(release, /  fauna-gpu-diagnostic:\n[\s\S]*?continue-on-error: true/
 
 assert.match(release, /PLAYER_TEST_URL: https:\/\/localhost:4175\//);
 assert.match(release, /openssl req -x509/);
-assert.match(release, /needs: \[build, contracts\]/, 'Pages must wait for both the validated package and every parallel source-contract shard.');
+assert.match(release, /needs: \\[build, contracts, startup, fauna\\]/, 'Pages must wait for the built package, all source contracts, gameplay/offline acceptance and CPU fauna visual acceptance.');
 assert.match(release, /if: github\.event_name != 'pull_request' && github\.ref == 'refs\/heads\/main'/);
 assert.match(release, /  deploy:[\s\S]*?needs: \[build, contracts, startup, fauna\]/, 'Public Pages deployment must be gated by every mandatory acceptance job.');
 assert.match(release, /Preserve runtime acceptance evidence/);
