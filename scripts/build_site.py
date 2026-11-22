@@ -2924,6 +2924,42 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         1,
     )
 
+    # The resource gate can finish while Babylon's render-loop callback is throttled
+    # (notably after a Service Worker offline navigation). Do not report worldReady
+    # while the loading overlay is still stuck: force one real scene frame if needed,
+    # then reveal the campaign selector from the startup task itself. The render-loop
+    # path remains the normal path; this idempotent hand-off is only its safety net.
+    startup_handoff_marker = " startupAssetsReady=true;\n window.__elSinNombreStartupSmoke.worldReady=true;"
+    startup_handoff_replacement = """ startupAssetsReady=true;
+ if(!startScreenShown){
+  try{
+   if(!firstFrameRendered){
+    if(!engine||engine.isDisposed&&engine.isDisposed())throw new Error('El motor Babylon ya no está disponible para el primer fotograma.');
+    if(!scene.activeCamera)scene.activeCamera=camera;
+    engine.resize();
+    scene.render();
+    renderedFrames++;
+    firstFrameRendered=true;
+    startupTimeline.firstFrameAt=performance.now();
+    startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
+    console.info('EL SIN NOMBRE: primer fotograma confirmado por la barrera de arranque.');
+   }
+   const startupLoading=document.getElementById('loading');
+   if(startupLoading)startupLoading.style.display='none';
+   showStartScreen();
+   trackStartupPerfStage(100,'Selector principal listo');
+   finishStartupPerfStage();
+   startScreenShown=true;
+  }catch(startupHandoffError){
+   reportFrameError('presentación del selector tras la barrera de recursos',startupHandoffError);
+   throw new Error('RECURSO OBLIGATORIO: primer fotograma y selector de campaña · '+String(startupHandoffError&&startupHandoffError.message||startupHandoffError));
+  }
+ }
+ window.__elSinNombreStartupSmoke.worldReady=true;"""
+    if html.count(startup_handoff_marker) != 1:
+        raise SystemExit("No se encontró el punto único de cierre de la barrera de recursos para asegurar la presentación del selector.")
+    html = html.replace(startup_handoff_marker,startup_handoff_replacement,1)
+
 
     # Mobile runtime stability without visual downgrades.
     # Guard DynamicTexture uploads against stale/disposed scene owners.
