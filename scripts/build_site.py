@@ -979,12 +979,7 @@ function setLoadingProgress(value,label){
         raise SystemExit("No se encontró la única comprobación geométrica de fauna.")
     animal_dimensions_at = html.index(animal_dimensions_marker) + len(animal_dimensions_marker)
 
-    # Never measure vertices after CPU skinning and then skin them again with bone matrices.
-    skinned_bounds_positions_marker = "let positions=typeof mesh.setPositionsForCPUSkinning==='function'?mesh.setPositionsForCPUSkinning():null;\n  if(!positions||!positions.length)positions=mesh.getVerticesData(positionKind);"
-    skinned_bounds_positions_replacement = "const positions=mesh.getVerticesData(positionKind);"
-    if html.count(skinned_bounds_positions_marker) != 1:
-        raise SystemExit("No se encontró la ruta única de vértices esqueletizados para evitar el doble skinning.")
-    html = html.replace(skinned_bounds_positions_marker, skinned_bounds_positions_replacement, 1)
+
     animal_text_at = html.index(animal_silhouette_text, animal_dimensions_at)
     animal_check_end = html.index("');", animal_text_at) + 3
     animal_silhouette_replacement = "\n   const animalSkinningMeshes=meshes.filter(mesh=>mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);\n   const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer);const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true;if(forceCpuSkinning&&forceGpuSkinning)throw new Error('El diagnóstico de fauna no puede forzar CPU y GPU skinning a la vez.');const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer);animalSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;});\n   (imported.skeletons||[]).forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}catch(_){}});\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
