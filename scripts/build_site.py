@@ -648,6 +648,14 @@ def main() -> None:
      const required=Math.max(forestTreeSpacingStats.minGapMeters,(canopyRadius+otherRadius)*1.12);
      if(dx*dx+dz*dz<required*required)return false;
     }
+    // Trees are planted incrementally beside rocks; reject a new tree if an earlier
+    // resource deposit already occupies its trunk footprint.
+    for(const rock of rocks){
+     if(!rock||rock.alive===false)continue;
+     const dx=cx-rock.x,dz=cz-rock.z;
+     const required=(Number(rock.radius)||.7)+.9+.45;
+     if(dx*dx+dz*dz<required*required)return false;
+    }
     return true;
    };
    if(acceptable(x,z))return {x,z};
@@ -662,7 +670,7 @@ def main() -> None:
    }
    return null;
   }
-  window.__ELSN_FOREST_TREE_SPACING__=()=>{const live=trees.filter(tree=>tree&&tree.alive);let overlapPairs=0,minCenterDistance=Infinity;for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){const a=live[i],c=live[j],distance=Math.hypot(a.x-c.x,a.z-c.z);minCenterDistance=Math.min(minCenterDistance,distance);const required=Math.max(forestTreeSpacingStats.minGapMeters,(Math.max(3,Number(a.canopyRadius)||3)+Math.max(3,Number(c.canopyRadius)||3))*1.12);if(distance<required-.05)overlapPairs++;}return {...forestTreeSpacingStats,treeCount:live.length,overlapPairs,minCenterDistanceMeters:Number.isFinite(minCenterDistance)?Number(minCenterDistance.toFixed(2)):null};};
+  window.__ELSN_FOREST_TREE_SPACING__=()=>{const live=trees.filter(tree=>tree&&tree.alive);let overlapPairs=0,rockOverlapPairs=0,minCenterDistance=Infinity,minRockTreeClearance=Infinity;for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){const a=live[i],c=live[j],distance=Math.hypot(a.x-c.x,a.z-c.z);minCenterDistance=Math.min(minCenterDistance,distance);const required=Math.max(forestTreeSpacingStats.minGapMeters,(Math.max(3,Number(a.canopyRadius)||3)+Math.max(3,Number(c.canopyRadius)||3))*1.12);if(distance<required-.05)overlapPairs++;}for(const tree of live)for(const rock of rocks){if(!rock||rock.alive===false)continue;const clearance=Math.hypot(tree.x-rock.x,tree.z-rock.z)-(Number(tree.radius)||.9)-(Number(rock.radius)||.7)-.45;minRockTreeClearance=Math.min(minRockTreeClearance,clearance);if(clearance<-.05)rockOverlapPairs++;}return {...forestTreeSpacingStats,treeCount:live.length,overlapPairs,rockOverlapPairs,minCenterDistanceMeters:Number.isFinite(minCenterDistance)?Number(minCenterDistance.toFixed(2)):null,minRockTreeClearanceMeters:Number.isFinite(minRockTreeClearance)?Number(minRockTreeClearance.toFixed(3)):null};};
  async function loadForestTreeTemplates(){
   const started=performance.now();
   const loaded=await Promise.all(forestTreeAssetSpecs.map(async spec=>{
