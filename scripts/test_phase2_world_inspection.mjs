@@ -145,10 +145,24 @@ assert.ok(analyzeWorldInspectionSnapshot(brokenWildlifeSnapshot).findings.some(i
 const wolfTextureReady={name:'wolf-albedo',isReady:()=>true,getSize:()=>({width:1024,height:1024})};
 const wolfTexturePending={name:'wolf-normal',isReady:()=>false,getSize:()=>({width:512,height:512})};
 const wolfSkeleton={name:'WolfRig',bones:Array.from({length:24},()=>({}))};
+const wolfBounds={
+ minimum:{x:-.45,y:0,z:-.65},maximum:{x:.45,y:.86,z:.65},
+ minimumWorld:{x:-80,y:-2,z:-30},maximumWorld:{x:80,y:142,z:30}
+};
+const wolfPositions=[];for(const x of [-.45,.45])for(const y of [0,.86])for(const z of [-.65,.65])wolfPositions.push(x,y,z);
+const wolfIndices=Array.from({length:8*4},()=>0),wolfWeights=Array.from({length:8*4},(_,i)=>i%4===0?1:0);
+const wolfIdentity=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
+wolfSkeleton.prepare=()=>{};
+wolfSkeleton.getTransformMatrices=()=>wolfIdentity;
 const wolfMesh={...mesh,uniqueId:70,name:'WolfBody',id:'wolf-body',skeleton:wolfSkeleton,
  material:{name:'WolfMaterial',getActiveTextures:()=>[wolfTextureReady,wolfTexturePending]},
- getTotalVertices:()=>920,getTotalIndices:()=>1840,
- getBoundingInfo:()=>({boundingBox:{minimumWorld:{x:1.1,y:.02,z:1.1},maximumWorld:{x:2.0,y:.88,z:2.4}}})};
+ getTotalVertices:()=>920,getTotalIndices:()=>1840,numBoneInfluencers:4,
+ computeWorldMatrix(){},
+ setPositionsForCPUSkinning:()=>wolfPositions,
+ getVerticesData(kind){return kind==='position'?new Array(24).fill(0):kind==='matricesIndices'?wolfIndices:kind==='matricesWeights'?wolfWeights:null;},
+ refreshBoundingInfo(){throw new Error('CPU skinning must not be reapplied to already-deformed buffers.');},
+ getWorldMatrix:()=>({m:[1,0,0,0,0,1,0,0,0,0,1,0,1.55,.03,1.75,1]}),
+ getBoundingInfo:()=>({boundingBox:wolfBounds})};
 const wolfRoot={name:'Wolf_0',position:{x:1.5,y:.03,z:1.7},getChildMeshes:()=>[wolfMesh],isEnabled:()=>true};
 const wolfWalk={name:'Walk',isPlaying:false,targetedAnimations:[{}],from:0,to:1,speedRatio:.82};
 const wolfActor={kind:'wolf',root:wolfRoot,groups:[wolfWalk],activeAnimation:wolfWalk,activeMode:'walk',
@@ -172,8 +186,35 @@ assert.equal(inspectedWolf.textureReadiness.ready,1);
 assert.equal(inspectedWolf.textureReadiness.pending,1);
 assert.equal(inspectedWolf.bounds.size.y,.86);
 assert.equal(inspectedWolf.visualIntegrity.plausibleBounds,true);
+assert.ok(runtimeSource.includes('maxExtent<=1.0'),
+  'The Inspector must accept the measured 0.843 m real gull span while still rejecting oversized outliers.');
 assert.ok(inspectedWolf.meshes[0].bounds.finite);
+assert.ok(runtimeSource.includes('skinIndices && skinWeights'),
+  'Vegetation without actual JOINTS/WEIGHTS buffers must retain Babylon native bounds.');
+assert.equal(inspectedWolf.meshes[0].bounds.basis,'skinned-vertex-world',
+  'Skinned meshes must be measured from original vertices deformed once by current bone matrices.');
+ assert.equal(inspectedWolf.bounds.size.x,.9);
+assert.equal(inspectedWolf.bounds.size.z,1.3);
 assert.ok(analyzeWorldInspectionSnapshot(wildlifeCaptured).findings.some(item=>item.code==='wildlife-animation-not-playing'));
 assert.ok(analyzeWorldInspectionSnapshot(wildlifeCaptured).findings.some(item=>item.code==='wildlife-textures-not-ready'));
+
+
+const foliageWithSkinReference = {
+  ...mesh, uniqueId: 99, name: 'Closed conifer needle sprays_Forest_1', id: 'conifer-foliage',
+  skeleton: { name: 'ImportedSharedSkeleton' }, numBoneInfluencers: 0,
+  getBoundingInfo: () => ({ boundingBox: {
+    minimumWorld: { x: -2, y: 0, z: -2 },
+    maximumWorld: { x: 2, y: 5, z: 2 }
+  } })
+};
+const foliageSnapshot = capture({
+  scene: { meshes: [foliageWithSkinReference], transformNodes: [], materials: [], textures: [],
+    animationGroups: [], collisionsEnabled: false, getActiveMeshes: () => ({ length: 1 }), getTotalVertices: () => 24 },
+  land: [], player: null, villages: [], enemies: [], campGuards: [], companions: [],
+  ambientFauna: [], ambientPeople: [], ambientBirds: [], enemyShips: [], worldColliders: [],
+  habitableStructureRegistry: [], lastHabitableStructureAudit: null
+});
+assert.equal(foliageSnapshot.meshes.items[0].bounds.basis, 'babylon-world',
+  'A non-skinned foliage mesh may retain a skeleton reference; it must use Babylon world bounds.');
 
 console.log('Phase 2 Babylon world inspection contracts: OK');

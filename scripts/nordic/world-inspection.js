@@ -19,27 +19,91 @@
     };
   }
 
+  function skinnedVertexWorldBounds(mesh) {
+    const safeVertices = kind => safeCall(() => mesh.getVerticesData(kind));
+    const positions = safeCall(() => typeof mesh.setPositionsForCPUSkinning === 'function'
+      ? mesh.setPositionsForCPUSkinning() : null) || safeVertices('position');
+    const indices = safeVertices('matricesIndices'), weights = safeVertices('matricesWeights');
+    const needsExtras = Number(mesh.numBoneInfluencers) > 4;
+    const extraIndices = needsExtras ? safeVertices('matricesIndicesExtra') : null;
+    const extraWeights = needsExtras ? safeVertices('matricesWeightsExtra') : null;
+    const skeleton = mesh.skeleton;
+    // Empty glTF skin-root/attachment nodes can reference the skeleton but contain no geometry.
+    if (!positions || positions.length < 3) return null;
+    if (!indices || !weights || !skeleton || typeof skeleton.getTransformMatrices !== 'function' ||
+        (needsExtras && (!extraIndices || !extraWeights))) return null;
+    safeCall(() => typeof skeleton.prepare === 'function' ? skeleton.prepare(true) : null);
+    const bones = safeCall(() => skeleton.getTransformMatrices(mesh));
+    const world = safeCall(() => typeof mesh.getWorldMatrix === 'function' ? mesh.getWorldMatrix() : null);
+    const wm = world && world.m;
+    if (!bones || bones.length < 16 || !wm || wm.length < 16) return null;
+    const min = { x: Infinity, y: Infinity, z: Infinity }, max = { x: -Infinity, y: -Infinity, z: -Infinity };
+    const influences = needsExtras ? 8 : 4;
+    for (let p = 0, vertex = 0; p + 2 < positions.length; p += 3, vertex++) {
+      const x = Number(positions[p]), y = Number(positions[p + 1]), z = Number(positions[p + 2]);
+      if (![x, y, z].every(finite)) return null;
+      let sx = 0, sy = 0, sz = 0, sw = 0, active = 0;
+      for (let slot = 0; slot < influences; slot++) {
+        const jointData = slot < 4 ? indices : extraIndices, weightData = slot < 4 ? weights : extraWeights;
+        const at = vertex * 4 + (slot % 4), weight = Number(weightData && weightData[at] || 0);
+        if (!(weight > 0)) continue;
+        const joint = Math.floor(Number(jointData && jointData[at])), offset = joint * 16;
+        if (!finite(joint) || joint < 0 || offset + 15 >= bones.length) return null;
+        sx += weight * (bones[offset] * x + bones[offset + 4] * y + bones[offset + 8] * z + bones[offset + 12]);
+        sy += weight * (bones[offset + 1] * x + bones[offset + 5] * y + bones[offset + 9] * z + bones[offset + 13]);
+        sz += weight * (bones[offset + 2] * x + bones[offset + 6] * y + bones[offset + 10] * z + bones[offset + 14]);
+        sw += weight * (bones[offset + 3] * x + bones[offset + 7] * y + bones[offset + 11] * z + bones[offset + 15]);
+        active++;
+      }
+      if (!active) continue;
+      if (!finite(sw) || Math.abs(sw) < 1e-10) return null;
+      const px = sx / sw, py = sy / sw, pz = sz / sw;
+      const worldW = wm[3] * px + wm[7] * py + wm[11] * pz + wm[15];
+      const invW = finite(worldW) && Math.abs(worldW) > 1e-10 ? 1 / worldW : 1;
+      const point = {
+        x: (wm[0] * px + wm[4] * py + wm[8] * pz + wm[12]) * invW,
+        y: (wm[1] * px + wm[5] * py + wm[9] * pz + wm[13]) * invW,
+        z: (wm[2] * px + wm[6] * py + wm[10] * pz + wm[14]) * invW
+      };
+      if (![point.x, point.y, point.z].every(finite)) return null;
+      min.x = Math.min(min.x, point.x); min.y = Math.min(min.y, point.y); min.z = Math.min(min.z, point.z);
+      max.x = Math.max(max.x, point.x); max.y = Math.max(max.y, point.y); max.z = Math.max(max.z, point.z);
+    }
+    if (!finite(min.x) || !finite(max.x)) return null;
+    return { min, max };
+  }
+
   function readBounds(mesh) {
     try {
+      const ancestors = [];
+      for (let parent = mesh && mesh.parent; parent; parent = parent.parent) ancestors.unshift(parent);
+      ancestors.forEach(parent => safeCall(() => typeof parent.computeWorldMatrix === 'function' ? parent.computeWorldMatrix(true) : null));
       if (typeof mesh.computeWorldMatrix === 'function') mesh.computeWorldMatrix(true);
+      const skinIndices = safeCall(() => typeof mesh.getVerticesData === 'function' ? mesh.getVerticesData('matricesIndices') : null);
+      const skinWeights = safeCall(() => typeof mesh.getVerticesData === 'function' ? mesh.getVerticesData('matricesWeights') : null);
+      const isSkinned = !!(mesh && mesh.skeleton && Number(mesh.numBoneInfluencers) > 0 && skinIndices && skinWeights);
       const info = typeof mesh.getBoundingInfo === 'function' ? mesh.getBoundingInfo() : null;
       const box = info && info.boundingBox;
-      const min = box && box.minimumWorld;
-      const max = box && box.maximumWorld;
-      if (!min || !max) return { available: false, min: null, max: null, size: null, finite: null };
+      let bounds = null;
+      let basis = 'babylon-world';
+      if (isSkinned) {
+        bounds = skinnedVertexWorldBounds(mesh);
+        basis = 'skinned-vertex-world';
+      } else if (box && box.minimumWorld && box.maximumWorld) {
+        bounds = { min: box.minimumWorld, max: box.maximumWorld };
+      }
+      const min = bounds && bounds.min, max = bounds && bounds.max;
+      if (!min || !max) return { available: false, min: null, max: null, size: null, finite: null, basis };
       const values = [min.x, min.y, min.z, max.x, max.y, max.z];
       const valid = values.every(finite);
-      if (!valid) return {
-        available: true, min: null, max: null, size: null, finite: false
-      };
+      if (!valid) return { available: true, min: null, max: null, size: null, finite: false, basis };
       return {
         available: true,
-        min: { x: round(min.x), y: round(min.y), z: round(min.z) },
-        max: { x: round(max.x), y: round(max.y), z: round(max.z) },
-        size: {
-          x: round(max.x - min.x), y: round(max.y - min.y), z: round(max.z - min.z)
-        },
-        finite: true
+        min: { x: round(min.x, 3), y: round(min.y, 3), z: round(min.z, 3) },
+        max: { x: round(max.x, 3), y: round(max.y, 3), z: round(max.z, 3) },
+        size: { x: round(max.x - min.x), y: round(max.y - min.y), z: round(max.z - min.z) },
+        finite: true,
+        basis
       };
     } catch (error) {
       return { available: false, min: null, max: null, size: null, finite: null, error: String(error && error.message || error) };
@@ -161,7 +225,7 @@
         hasFlightRig:isBird?!!(flightRig&&flightRig.complete):null,
         hasFinitePosition:!!position&&[position.x,position.y,position.z].every(finite),
         hasVisibleGeometry:visibleMeshes.length>0,hasFiniteBounds:!!aggregateBounds,
-        plausibleBounds:isBird?!!size&&size.y>=.08&&maxExtent>=.1&&maxExtent<=.8:!!size&&size.y>=.2&&maxExtent<=8
+        plausibleBounds:isBird?!!size&&size.y>=.08&&maxExtent>=.1&&maxExtent<=1.0:!!size&&size.y>=.2&&maxExtent<=8
       };
       result.meshes=meshBounds.slice(0,80).map(({mesh,bounds})=>({
         name:String(mesh.name||mesh.id||'unnamed-mesh'),

@@ -193,14 +193,65 @@ async function main() {
         const meshRows=meshes.map(mesh=>{
           mesh.computeWorldMatrix?.(true);
           const bounds=mesh.getBoundingInfo?.()?.boundingBox;
-          const lo=bounds?.minimumWorld,hi=bounds?.maximumWorld;
+          const vertices=Number(mesh.getTotalVertices?.())||0;
+          const indices=Number(mesh.getTotalIndices?.())||0;
+          const skinned=!!mesh.skeleton&&Number(mesh.numBoneInfluencers)>0;
+          let lo=bounds?.minimumWorld||null,hi=bounds?.maximumWorld||null;
+          let localMin=bounds?.minimum||null,localMax=bounds?.maximum||null;
+          let boundsBasis='babylon-native-world';
+          if(skinned){
+            // Measure the original bind-pose vertex buffer through the exact bone
+            // matrices used by Babylon's shader. Never feed already CPU-deformed
+            // positions back through the skeleton (that would skin twice).
+            const B=window.BABYLON;
+            const positions=mesh.getVerticesData?.(B?.VertexBuffer?.PositionKind||'position');
+            const indices=mesh.getVerticesData?.(B?.VertexBuffer?.MatricesIndicesKind||'matricesIndices');
+            const weights=mesh.getVerticesData?.(B?.VertexBuffer?.MatricesWeightsKind||'matricesWeights');
+            const extras=Number(mesh.numBoneInfluencers)>4;
+            const indicesExtra=extras?mesh.getVerticesData?.(B?.VertexBuffer?.MatricesIndicesExtraKind||'matricesIndicesExtra'):null;
+            const weightsExtra=extras?mesh.getVerticesData?.(B?.VertexBuffer?.MatricesWeightsExtraKind||'matricesWeightsExtra'):null;
+            mesh.skeleton?.prepare?.(true);
+            const bones=mesh.skeleton?.getTransformMatrices?.(mesh);
+            const world=mesh.getWorldMatrix?.(),wm=world?.m;
+            if(!positions||positions.length<3||!indices||!weights||!bones||bones.length<16||!wm||wm.length<16||
+               (extras&&(!indicesExtra||!weightsExtra))){
+              throw new Error('Faltan buffers o matrices de skinning para medir '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+            }
+            localMin={x:Infinity,y:Infinity,z:Infinity};
+            localMax={x:-Infinity,y:-Infinity,z:-Infinity};
+            lo={x:Infinity,y:Infinity,z:Infinity};hi={x:-Infinity,y:-Infinity,z:-Infinity};
+            const influences=extras?8:4;
+            for(let p=0,vertex=0;p+2<positions.length;p+=3,vertex++){
+              const x=Number(positions[p]),y=Number(positions[p+1]),z=Number(positions[p+2]);
+              if(![x,y,z].every(Number.isFinite))throw new Error('Vértice original no finito en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+              localMin.x=Math.min(localMin.x,x);localMin.y=Math.min(localMin.y,y);localMin.z=Math.min(localMin.z,z);
+              localMax.x=Math.max(localMax.x,x);localMax.y=Math.max(localMax.y,y);localMax.z=Math.max(localMax.z,z);
+              let sx=0,sy=0,sz=0,sw=0,active=0;
+              for(let slot=0;slot<influences;slot++){
+                const idata=slot<4?indices:indicesExtra,wdata=slot<4?weights:weightsExtra,at=vertex*4+(slot%4);
+                const weight=Number(wdata?.[at]||0);if(!(weight>0))continue;
+                const joint=Math.floor(Number(idata?.[at])),offset=joint*16;
+                if(!Number.isFinite(joint)||joint<0||offset+15>=bones.length)throw new Error('Índice de hueso inválido en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+                sx+=weight*(bones[offset]*x+bones[offset+4]*y+bones[offset+8]*z+bones[offset+12]);
+                sy+=weight*(bones[offset+1]*x+bones[offset+5]*y+bones[offset+9]*z+bones[offset+13]);
+                sz+=weight*(bones[offset+2]*x+bones[offset+6]*y+bones[offset+10]*z+bones[offset+14]);
+                sw+=weight*(bones[offset+3]*x+bones[offset+7]*y+bones[offset+11]*z+bones[offset+15]);active++;
+              }
+              if(!active)continue;
+              if(!Number.isFinite(sw)||Math.abs(sw)<1e-10)throw new Error('Pesos de skinning inválidos en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+              const x1=sx/sw,y1=sy/sw,z1=sz/sw,ww=wm[3]*x1+wm[7]*y1+wm[11]*z1+wm[15];
+              if(!Number.isFinite(ww)||Math.abs(ww)<1e-10)throw new Error('Matriz mundial inválida en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+              const iw=1/ww,point={x:(wm[0]*x1+wm[4]*y1+wm[8]*z1+wm[12])*iw,y:(wm[1]*x1+wm[5]*y1+wm[9]*z1+wm[13])*iw,z:(wm[2]*x1+wm[6]*y1+wm[10]*z1+wm[14])*iw};
+              if(![point.x,point.y,point.z].every(Number.isFinite))throw new Error('Transformación no finita en '+String(mesh.name||mesh.id||'malla esqueletizada')+'.');
+              lo.x=Math.min(lo.x,point.x);lo.y=Math.min(lo.y,point.y);lo.z=Math.min(lo.z,point.z);
+              hi.x=Math.max(hi.x,point.x);hi.y=Math.max(hi.y,point.y);hi.z=Math.max(hi.z,point.z);
+            }
+            boundsBasis='babylon-bone-matrices-world';
+          }
           if(lo&&hi){
             min.x=Math.min(min.x,lo.x);min.y=Math.min(min.y,lo.y);min.z=Math.min(min.z,lo.z);
             max.x=Math.max(max.x,hi.x);max.y=Math.max(max.y,hi.y);max.z=Math.max(max.z,hi.z);
           }
-          const vertices=Number(mesh.getTotalVertices?.())||0;
-          const indices=Number(mesh.getTotalIndices?.())||0;
-          const skinned=!!mesh.skeleton||Number(mesh.numBoneInfluencers)>0;
           totalVertices+=vertices;totalIndices+=indices;
           if(skinned)skinnedVertices+=vertices;
           if(mesh.isVisible!==false&&mesh.isEnabled?.()!==false&&Number(mesh.visibility??1)>0)visibleMeshCount++;
@@ -209,16 +260,16 @@ async function main() {
             materials.set(mesh.material.uniqueId??mesh.material.name,mesh.material);
             for(const texture of mesh.material.getActiveTextures?.()||[])textures.set(texture.uniqueId??texture.name,texture);
           }
-          const local=bounds?{
-            min:{x:number(bounds.minimum.x),y:number(bounds.minimum.y),z:number(bounds.minimum.z)},
-            max:{x:number(bounds.maximum.x),y:number(bounds.maximum.y),z:number(bounds.maximum.z)}
+          const local=localMin&&localMax?{
+            min:{x:number(localMin.x),y:number(localMin.y),z:number(localMin.z)},
+            max:{x:number(localMax.x),y:number(localMax.y),z:number(localMax.z)}
           }:null;
           return {
             name:String(mesh.name||mesh.id||''),vertices,indices,skinned,
             skeleton:mesh.skeleton?.name||null,alwaysSelectAsActiveMesh:mesh.alwaysSelectAsActiveMesh===true,enabled:mesh.isEnabled?.()!==false,
             visible:mesh.isVisible!==false,visibility:number(mesh.visibility??1),
             material:mesh.material?.name||null,localBounds:local,
-            worldBounds:lo&&hi?{min:{x:number(lo.x),y:number(lo.y),z:number(lo.z)},max:{x:number(hi.x),y:number(hi.y),z:number(hi.z)}}:null,
+            worldBounds:lo&&hi?{min:{x:number(lo.x),y:number(lo.y),z:number(lo.z)},max:{x:number(hi.x),y:number(hi.y),z:number(hi.z)},basis:boundsBasis}:null,
             parentChain:(()=>{const rows=[];let node=mesh;while(node&&rows.length<8){rows.push({name:String(node.name||''),type:node.getClassName?.()||node.constructor?.name||'',parent:String(node.parent?.name||''),position:vec(node.position),scaling:vec(node.scaling)});node=node.parent;}return rows;})()
           };
         });
@@ -321,7 +372,7 @@ async function main() {
       // A complete quadruped must have plausible depth as well as width. A long pair of
       // antlers/legs can inflate the maximum extent while the torso itself is missing.
       const minimumBodyDepth=d?Math.max(.16,d.height*.30):null;
-      if(!d||!(horizontalMax>.1)||(animal.role==='ambient-bird'?!(maxExtent>.1&&maxExtent<=.8):(!(d.height>.1)||!(horizontalMin>=minimumBodyDepth))))manifest.warnings.push({code:'invalid-world-bounds',animal:animal.id,bounds:animal.bounds,minimumBodyDepth});
+      if(!d||!(horizontalMax>.1)||(animal.role==='ambient-bird'?!(maxExtent>.1&&maxExtent<=1.0):(!(d.height>.1)||!(horizontalMin>=minimumBodyDepth))))manifest.warnings.push({code:'invalid-world-bounds',animal:animal.id,bounds:animal.bounds,minimumBodyDepth});
       if(animal.role!=='ambient-bird'&&d&&horizontalMin<d.height*.30)manifest.warnings.push({code:'extremely-narrow-world-silhouette',animal:animal.id,dimensions:d,minimumBodyDepth});
       if(animal.visibleMeshCount<1)manifest.warnings.push({code:'no-visible-meshes',animal:animal.id});
       if(animal.role==='ambient-bird'){

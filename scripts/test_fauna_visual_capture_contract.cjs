@@ -6,6 +6,7 @@ const workflow = fs.readFileSync('.github/workflows/coastal-reference.yml', 'utf
 const releaseWorkflow = fs.readFileSync('.github/workflows/deploy-pages.yml', 'utf8');
 const runner = fs.readFileSync('scripts/run-unified-inspector.mjs', 'utf8');
 const capture = fs.readFileSync('scripts/fauna-visual-capture.mjs', 'utf8');
+const game = fs.readFileSync('index.html', 'utf8');
 const sheet = fs.readFileSync('scripts/create_fauna_contact_sheet.py', 'utf8');
 
 assert.match(workflow, /^  push:/m, 'Fauna visual inspection must run automatically after relevant main pushes.');
@@ -76,10 +77,17 @@ assert.ok(capture.includes('getChildMeshes'));
 assert.ok(capture.includes("if(other!==root&&(/^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test"),
   'Per-animal captures must hide every other wildlife actor using digit-matching IDs, not a literal backslash sequence.');
 assert.ok(capture.includes('minimumWorld') || capture.includes('maximumWorld'));
+assert.ok(capture.includes("mesh.skeleton?.getTransformMatrices?.(mesh)") && capture.includes("boundsBasis='babylon-bone-matrices-world'") &&
+  capture.includes("getVerticesData?.(B?.VertexBuffer?.PositionKind||'position')"),
+  'Skinned fauna acceptance must measure original vertices through Babylon bone matrices exactly once, not stale GPU bind-pose bounds or double-skinned CPU vertices.');
 assert.ok(capture.includes('Math.min(d.width,d.depth)') && capture.includes('d.height*.30') && capture.includes('minimumBodyDepth'),
   'Fauna visual acceptance must reject limb/antler-only actors with a collapsed body depth even when their maximum extent looks plausible.');
 assert.ok(capture.includes('skinnedVertices'));
+assert.ok(capture.includes("const skinned=!!mesh.skeleton&&Number(mesh.numBoneInfluencers)>0;"),
+  'Rigid accessory meshes that only carry a skeleton reference but have no bone-weight influences must retain native bounds instead of requiring skinning buffers.');
 assert.ok(capture.includes('alwaysSelectAsActiveMesh') && capture.includes("code:'skinned-mesh-frustum-culling-enabled'"), 'Fauna acceptance must inspect the final Babylon frustum-protection flag and reject any skinned animal mesh that remains cullable against stale bind-pose bounds.');
+assert.ok(capture.includes('maxExtent>.1&&maxExtent<=1.0'), 'A real gull with a measured 0.834 m span must pass the realistic 1 m size ceiling while giant outliers remain rejected.');
+assert.ok(game.includes("m.alwaysSelectAsActiveMesh=!!(m.skeleton||Number(m.numBoneInfluencers)>0)"), 'The real coastal gull loader must protect imported skinned body meshes from frustum culling against stale bounds.');
 assert.ok(capture.includes('animationGroups'));
 assert.ok(capture.includes('captureCanvas'));
 assert.ok(capture.includes('const visualCaptureCount=manifest.captures.filter(capture=>ANGLES.some(angle=>angle.id===capture.angle)).length') &&
