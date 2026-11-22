@@ -22,6 +22,13 @@ USER_AGENT = "EL-SIN-NOMBRE-WebBuild/0.6.274 (+https://github.com/bonillamarquez
 BABYLON_VERSION = "9.35.0"
 TIMEOUT = 90
 
+# Cache only complete, validated external resources outside dist/. GitHub Actions
+# restores this directory between runs; per-file metadata prevents stale or
+# corrupted bytes from bypassing any of the normal release checks.
+RESOURCE_CACHE_DIR = ROOT / ".build-cache" / "resources"
+RESOURCE_CACHE_SCHEMA = 1
+RESOURCE_CACHE_TTL_SECONDS = 14 * 24 * 60 * 60
+
 # Public redistributable dependencies: Babylon.js (Apache-2.0), models/audio (CC0).
 DOWNLOADS = {
     "assets/vendor/babylon.js": (
@@ -411,8 +418,108 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
     return document
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _resource_cache_paths(relative: str) -> tuple[Path, Path]:
+    cached_file = RESOURCE_CACHE_DIR / relative
+    metadata_file = Path(str(cached_file) + ".cache.json")
+    return cached_file, metadata_file
+
+
+def _validate_cached_payload(path: Path, relative: str, kind: str) -> None:
+    if kind == "glb":
+        if path.name in {
+            "viking-rigged.glb",
+            "armored-knight-rigged.glb",
+            "man-base-character-rigged.glb",
+        }:
+            validate_rigged_character_glb(path, relative)
+        elif path.parent.name == "wildlife":
+            document = read_glb_document(path)
+            coat = ((document.get("extras") or {}).get("elsnAnimalCoat") or {})
+            if coat.get("algorithm") != "procedural-vertex-coat-v2":
+                raise RuntimeError(f"{relative}: cached animal is missing its baked coat colors")
+            validate_rigged_animal_glb(path, relative)
+        else:
+            read_glb_document(path)
+    elif kind == "zip":
+        with zipfile.ZipFile(path) as archive:
+            corrupt_member = archive.testzip()
+            if corrupt_member:
+                raise RuntimeError(f"Corrupt ZIP member in cached resource: {corrupt_member}")
+
+
+def _restore_cached_resource(url: str, destination: Path, minimum: int, kind: str) -> dict | None:
+    relative = destination.relative_to(DIST).as_posix()
+    cached_file, metadata_file = _resource_cache_paths(relative)
+    if not cached_file.is_file() or not metadata_file.is_file():
+        return None
+    try:
+        metadata = json.loads(metadata_file.read_text(encoding="utf-8"))
+        now = int(time.time())
+        size = cached_file.stat().st_size
+        if (
+            metadata.get("schema") != RESOURCE_CACHE_SCHEMA
+            or metadata.get("url") != url
+            or metadata.get("kind") != kind
+            or int(metadata.get("minimum", -1)) != minimum
+            or size < minimum
+            or now - int(metadata.get("fetched_at", 0)) > RESOURCE_CACHE_TTL_SECONDS
+        ):
+            raise RuntimeError("Cached resource metadata is stale or does not match its source")
+        digest = _sha256_file(cached_file)
+        if digest != metadata.get("sha256") or size != int(metadata.get("bytes", -1)):
+            raise RuntimeError("Cached resource checksum or size does not match its metadata")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(cached_file, destination)
+        _validate_cached_payload(destination, relative, kind)
+        print(f"CACHE {relative}: {size:,} bytes (verified; source unchanged)")
+        return {
+            "path": relative,
+            "bytes": size,
+            "sha256": digest,
+            "source": url,
+        }
+    except Exception as exc:
+        print(f"WARN Ignoring invalid resource cache for {relative}: {exc}", file=sys.stderr)
+        destination.unlink(missing_ok=True)
+        cached_file.unlink(missing_ok=True)
+        metadata_file.unlink(missing_ok=True)
+        return None
+
+
+def _store_cached_resource(url: str, destination: Path, minimum: int, kind: str, sha256_hex: str) -> None:
+    relative = destination.relative_to(DIST).as_posix()
+    cached_file, metadata_file = _resource_cache_paths(relative)
+    cached_file.parent.mkdir(parents=True, exist_ok=True)
+    temporary_file = Path(str(cached_file) + ".tmp")
+    temporary_metadata = Path(str(metadata_file) + ".tmp")
+    shutil.copy2(destination, temporary_file)
+    temporary_file.replace(cached_file)
+    metadata = {
+        "schema": RESOURCE_CACHE_SCHEMA,
+        "url": url,
+        "kind": kind,
+        "minimum": minimum,
+        "bytes": destination.stat().st_size,
+        "sha256": sha256_hex,
+        "fetched_at": int(time.time()),
+    }
+    temporary_metadata.write_text(json.dumps(metadata, separators=(",", ":")), encoding="utf-8")
+    temporary_metadata.replace(metadata_file)
+
+
 def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
     destination.parent.mkdir(parents=True, exist_ok=True)
+    cached_result = _restore_cached_resource(url, destination, minimum, kind)
+    if cached_result is not None:
+        return cached_result
     last_error = None
     for attempt in range(1, 5):
         try:
@@ -465,12 +572,16 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                     )
                 else:
                     read_glb_document(destination)
-            return {
-                "path": destination.relative_to(DIST).as_posix(),
+            if kind == "zip":
+                _validate_cached_payload(destination, relative, kind)
+            result = {
+                "path": relative,
                 "bytes": size,
                 "sha256": digest.hexdigest(),
                 "source": url,
             }
+            _store_cached_resource(url, destination, minimum, kind, result["sha256"])
+            return result
         except Exception as exc:
             last_error = exc
             destination.unlink(missing_ok=True)
@@ -495,13 +606,17 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                     digest = hashlib.sha256(destination.read_bytes())
                 else:
                     read_glb_document(destination)
-            print(f"OK {destination.relative_to(DIST).as_posix()}: {size:,} bytes (verified repository fallback)")
-            return {
+            if kind == "zip":
+                _validate_cached_payload(destination, destination.relative_to(DIST).as_posix(), kind)
+            fallback_result = {
                 "path": destination.relative_to(DIST).as_posix(),
                 "bytes": size,
                 "sha256": digest.hexdigest(),
                 "source": "repository-fallback",
             }
+            print(f"OK {destination.relative_to(DIST).as_posix()}: {size:,} bytes (verified repository fallback)")
+            _store_cached_resource(url, destination, minimum, kind, fallback_result["sha256"])
+            return fallback_result
     raise RuntimeError(f"Could not download {url}: {last_error}") from last_error
 
 MESHOPT_MODELS = (
