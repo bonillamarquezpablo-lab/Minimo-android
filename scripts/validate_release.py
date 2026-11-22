@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.342"
+EXPECTED_VERSION = "0.6.343"
 
 HTML_PAGES = (
     "index.html",
@@ -91,6 +91,8 @@ def main() -> None:
     index_html = read_text("index.html")
     if any(marker not in index_html for marker in ("elsnStartupProgressPanel", "elsnStartupProgressElapsed", "startupProgressSteps", "PASO ")):
         fail("La pantalla de carga debe mostrar la fase numerada, la operación actual y el tiempo en la fase.")
+    if "position:fixed;left:0;right:0;bottom:env(safe-area-inset-bottom,0px)" not in index_html or "width:100vw;max-width:none" not in index_html or "document.body.appendChild(panel)" not in index_html:
+        fail("El panel de progreso debe ocupar todo el ancho del viewport y vivir fuera del contenedor estrecho de carga.")
     atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
     world_inspection_source = read_text("scripts/nordic/world-inspection.js")
     inspector_html = (ROOT / "inspector/index.html").read_text(encoding="utf-8")
@@ -385,6 +387,10 @@ def main() -> None:
     missing_wildlife_runtime = [marker for marker in wildlife_runtime_markers if marker not in index_html]
     if missing_wildlife_runtime:
         fail("La carga de fauna terrestre no verifica cuerpos, rigs, animaciones, texturas y limpieza transaccional: " + ", ".join(missing_wildlife_runtime))
+    if "naturalShrubs.some(b=>Math.hypot(x-b.x,z-b.z)<(b.radius||.9)+3.0)" not in index_html or "rocks.some(r=>Math.hypot(x-r.x,z-r.z)<(r.radius||.8)+2.2)" not in index_html:
+        fail("Los puntos de aparición de fauna deben estar despejados de arbustos voluminosos y rocas.")
+    if "window.__ELSN_ROCK_PLACEMENT__" not in index_html or "mineableRockPlacementStats" not in index_html:
+        fail("La colocación de rocas debe rechazar intersecciones con troncos y exponer su auditoría.")
     subsystem_diagnostic_markers = (
         "subsystems:{worldPhases:getWorldPhaseTimingSnapshot()",
         "npcDialogue:window.__ELSN_NPC_DIALOGUES__",
@@ -578,7 +584,7 @@ def main() -> None:
         fail("La medición de fotogramas renderizados y la referencia de pantallas de alta frecuencia están incompletas: " + ", ".join(missing_fps_pacing))
     if "nextRenderAt" in index_html or "frameIntervalMs" in index_html:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
-    if "reportVersion:'51',build:'0.6.342'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'51',build:'0.6.343'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -654,7 +660,7 @@ def main() -> None:
         fail("El reflejo de Calidad debe conservar la resolución, el presupuesto visual y la cadencia originales.")
     if "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))" not in index_html or "renderPipeline.sharpen.edgeAmount=.34" not in index_html or "shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))" not in index_html:
         fail("El perfil móvil de gama alta debe usar MSAA nativo, nitidez moderada, sombras cacheadas y reflejos filtrados.")
-    if "const boneCount=skeletons.reduce" not in index_html or "skinnedVertexCount<600" not in index_html or "root.setParent(actor,true,true)" not in index_html or "normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight)" not in index_html or "function skinnedVertexWorldBounds(mesh)" not in index_html or "mesh.setPositionsForCPUSkinning()" not in index_html or "skeleton.getTransformMatrices(mesh)" not in index_html or "heightError>heightTolerance" not in index_html:
+    if "const boneCount=skeletons.reduce" not in index_html or "skinnedVertexCount<600" not in index_html or "root.setParent(actor,true,true)" not in index_html or "normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight)" not in index_html or "function skinnedVertexWorldBounds(mesh)" not in index_html or "mesh.setPositionsForCPUSkinning()" in index_html or "const positions=mesh.getVerticesData(positionKind)" not in index_html or "skeleton.getTransformMatrices(mesh)" not in index_html or "heightError>heightTolerance" not in index_html:
         fail("La fauna debe preservar las transformaciones GLB, medir límites locales esqueletizados en espacio mundial y validar la altura física final de cada animal.")
     if "const normalized=group=>" not in index_html or "const pickExact=name=>playable.find(group=>normalized(group)===name)||null;" not in index_html or "pickExact('animalarmature'+name)" not in index_html:
         fail("La fauna debe priorizar los clips canónicos Idle/Walk/Gallop y usar AnimalArmature como respaldo.")
@@ -886,7 +892,7 @@ def main() -> None:
         fail("La textura procedural debe usar resolución adaptativa de 1K y conservar la generación selectiva de mipmaps.")
     if "mesh.material.diffuseTexture.anisotropicFilteringLevel=maxAnisotropy" not in index_html or "tex.anisotropicFilteringLevel=maxAnisotropy" not in index_html:
         fail("No se conserva el filtrado anisotrópico de las texturas procedurales.")
-    if "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);" not in index_html:
+    if "const qualityGrassDensity=isTouchDevice?(islandIndex===0?2.6:1.9):(islandIndex===0?6.2:4.6);" not in index_html:
         fail("La densidad principal de vegetación no conserva su cobertura.")
     if "function isSafeGroundCoverPoint(is,x,z)" not in index_html or "const grassGroundSample=(x,z)=>{" not in index_html or "const safeLandRadius=island.r*.70" not in index_html:
         fail("La hierba no restringe la generación optimizada a terreno seco y alejado de la costa.")
@@ -947,7 +953,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.342" not in index_html or "EL SIN NOMBRE 0.6.342 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.343" not in index_html or "EL SIN NOMBRE 0.6.343 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -1099,7 +1105,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.342</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.343</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
