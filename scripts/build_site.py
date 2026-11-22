@@ -591,6 +591,14 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
+    # 0.6.343: the previous mobile Quality density produced ~53k grass clumps on the starter island.
+    # Keep full-island coverage, but cap vegetation workload on touch devices.
+    grass_density_marker = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);"
+    grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?2.6:1.9):(islandIndex===0?6.2:4.6);"
+    if html.count(grass_density_marker) != 1:
+        raise SystemExit("No se encontró exactamente una densidad de hierba de Calidad para el presupuesto móvil.")
+    html = html.replace(grass_density_marker, grass_density_replacement, 1)
+
     # Keep full-quality coast geometry while tightening the CPU slice ceiling on mobile.
     # Work is spread over more frames; no mesh rows, columns or material detail are removed.
     coast_budget_marker = "BEACH_WORK_BUDGET_MS=isTouchDevice?1.5:2.0"
@@ -970,6 +978,13 @@ function setLoadingProgress(value,label){
     if html.count(animal_dimensions_marker) != 1 or html.count(animal_silhouette_text) != 1:
         raise SystemExit("No se encontró la única comprobación geométrica de fauna.")
     animal_dimensions_at = html.index(animal_dimensions_marker) + len(animal_dimensions_marker)
+
+    # Never measure vertices after CPU skinning and then skin them again with bone matrices.
+    skinned_bounds_positions_marker = "let positions=typeof mesh.setPositionsForCPUSkinning==='function'?mesh.setPositionsForCPUSkinning():null;\n  if(!positions||!positions.length)positions=mesh.getVerticesData(positionKind);"
+    skinned_bounds_positions_replacement = "const positions=mesh.getVerticesData(positionKind);"
+    if html.count(skinned_bounds_positions_marker) != 1:
+        raise SystemExit("No se encontró la ruta única de vértices esqueletizados para evitar el doble skinning.")
+    html = html.replace(skinned_bounds_positions_marker, skinned_bounds_positions_replacement, 1)
     animal_text_at = html.index(animal_silhouette_text, animal_dimensions_at)
     animal_check_end = html.index("');", animal_text_at) + 3
     animal_silhouette_replacement = "\n   const animalSkinningMeshes=meshes.filter(mesh=>mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);\n   const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer);const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true;if(forceCpuSkinning&&forceGpuSkinning)throw new Error('El diagnóstico de fauna no puede forzar CPU y GPU skinning a la vez.');const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer);animalSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;});\n   (imported.skeletons||[]).forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}catch(_){}});\n   const horizontalMin=Math.max(.055,sourceBounds.height*.045),horizontalMajor=Math.max(.18,sourceBounds.height*.14);\n   if(Math.min(width,depth)<horizontalMin||Math.max(width,depth)<horizontalMajor)throw new Error('Silueta animal degenerada; dimensiones X/Z '+width.toFixed(3)+'/'+depth.toFixed(3)+' m para altura '+sourceBounds.height.toFixed(3)+' m.');"
@@ -1119,6 +1134,13 @@ function setLoadingProgress(value,label){
     if html.count(wildlife_spawn_count_marker) != 1:
         raise SystemExit("No se encontró el contador de fauna terrestre inicial.")
     html = html.replace(wildlife_spawn_count_marker, wildlife_spawn_count_replacement, 1)
+
+    # Give each animal a clear foreground; dense broadleaf shrubs must not hide imported bodies.
+    wildlife_clearance_marker = "trees.some(t=>Math.hypot(x-t.x,z-t.z)<(t.radius||.6)+3.0)||\n        wildlifeSpawnSpecs.some(other=>Math.hypot(x-other.x,z-other.z)<5.6)"
+    wildlife_clearance_replacement = "trees.some(t=>Math.hypot(x-t.x,z-t.z)<(t.radius||.6)+3.0)||\n        naturalShrubs.some(b=>Math.hypot(x-b.x,z-b.z)<(b.radius||.9)+3.0)||\n        rocks.some(r=>Math.hypot(x-r.x,z-r.z)<(r.radius||.8)+2.2)||\n        wildlifeSpawnSpecs.some(other=>Math.hypot(x-other.x,z-other.z)<5.6)"
+    if html.count(wildlife_clearance_marker) != 1:
+        raise SystemExit("No se encontró el punto único para despejar los puntos de aparición de fauna.")
+    html = html.replace(wildlife_clearance_marker, wildlife_clearance_replacement, 1)
 
     wildlife_retry_marker = " function loadWildlifeModels(){\n  if(!wildlifeModelsLoadPromise)wildlifeModelsLoadPromise=loadWildlifeModelsOnce();\n  return wildlifeModelsLoadPromise;\n }"
     wildlife_retry_replacement = " function loadWildlifeModels(){\n  if(!wildlifeModelsLoadPromise)wildlifeModelsLoadPromise=loadWildlifeModelsOnce().catch(error=>{\n   for(const animal of ambientFauna.splice(0)){\n    const root=animal.root;try{(animal.groups||[]).forEach(group=>{try{group.stop();group.dispose();}catch(_){}});}catch(_){}\n    for(let i=managedWorldShadowGroups.length-1;i>=0;i--){const entry=managedWorldShadowGroups[i];if(entry&&entry.root===root){if(entry.active&&shadowGen)for(const mesh of entry.meshes||[]){try{shadowGen.removeShadowCaster(mesh);}catch(_){}}managedActiveWorldShadowCount=Math.max(0,managedActiveWorldShadowCount-(entry.meshes||[]).length);managedWorldShadowGroups.splice(i,1);}}\n    try{if(root&&!(root.isDisposed&&root.isDisposed()))root.dispose(false,true);}catch(_){}\n   }\n   wildlifeBlobs.clear();wildlifeModelsLoadPromise=null;throw error;\n  });\n  return wildlifeModelsLoadPromise;\n }"
