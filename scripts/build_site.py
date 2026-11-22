@@ -609,13 +609,143 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
-    # 0.6.343: the previous mobile Quality density produced ~53k grass clumps on the starter island.
-    # Keep full-island coverage, but cap vegetation workload on touch devices.
+    # 0.6.344: dense flagship ground cover; constrained devices retain the prior safe density.
     grass_density_marker = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);"
-    grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?2.6:1.9):(islandIndex===0?6.2:4.6);"
+    grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(isConstrainedMobile?(islandIndex===0?8.8:5.8):(islandIndex===0?10.4:7.0)):(islandIndex===0?8.8:6.2);"
     if html.count(grass_density_marker) != 1:
-        raise SystemExit("No se encontró exactamente una densidad de hierba de Calidad para el presupuesto móvil.")
+        raise SystemExit("No se encontró exactamente una densidad de hierba de Calidad para la nueva vegetación.")
     html = html.replace(grass_density_marker, grass_density_replacement, 1)
+
+    # Keep a visible instanced grass layer in Performance; low-end devices retain a smaller budget.
+    performance_density_marker = "const performanceDensity=isConstrainedMobile?(isUltraLowEndMobile?.22:(isGalaxyA12NachoPerformance?.18:.26)):(isTouchDevice?.36:.50);"
+    performance_density_replacement = "const performanceDensity=isConstrainedMobile?(isUltraLowEndMobile?.22:(isGalaxyA12NachoPerformance?.18:.26)):(isTouchDevice?.46:.58);"
+    if html.count(performance_density_marker) != 1:
+        raise SystemExit("No se encontró exactamente el presupuesto de hierba del perfil Rendimiento.")
+    html = html.replace(performance_density_marker, performance_density_replacement, 1)
+
+    # More blades per tuft, using a tapered five-vertex blade profile.
+    leaf_count_marker = "const leavesPerClump=isPerformanceMode?8:10;"
+    if html.count(leaf_count_marker) != 1:
+        raise SystemExit("No se encontró el número de hojas por mata.")
+    html = html.replace(leaf_count_marker, "const leavesPerClump=isPerformanceMode?8:12;", 1)
+
+    leaf_geometry_marker = """    for(const row of rows){
+     positions.push(row.cx-px*row.w,row.cy,row.cz-pz*row.w,row.cx+px*row.w,row.cy,row.cz+pz*row.w);
+     const shade=shades[shadeIndex%shades.length];
+     for(let side=0;side<2;side++){
+      const f=row.tint*(side===0?.95:1.05);
+      colors.push(Math.min(1,shade[0]*f),Math.min(1,shade[1]*f),Math.min(1,shade[2]*f),1);
+     }
+    }
+    indices.push(base,base+2,base+1,base+1,base+2,base+3,base+2,base+4,base+3,base+3,base+4,base+5);"""
+    leaf_geometry_replacement = """    for(let rowIndex=0;rowIndex<2;rowIndex++){
+     const row=rows[rowIndex];
+     positions.push(row.cx-px*row.w,row.cy,row.cz-pz*row.w,row.cx+px*row.w,row.cy,row.cz+pz*row.w);
+     const shade=shades[shadeIndex%shades.length];
+     for(let side=0;side<2;side++){
+      const f=row.tint*(side===0?.95:1.05);
+      colors.push(Math.min(1,shade[0]*f),Math.min(1,shade[1]*f),Math.min(1,shade[2]*f),1);
+     }
+    }
+    const tip=rows[2],tipShade=shades[shadeIndex%shades.length],tipTint=tip.tint*1.06;
+    positions.push(tip.cx,tip.cy,tip.cz);
+    colors.push(Math.min(1,tipShade[0]*tipTint),Math.min(1,tipShade[1]*tipTint),Math.min(1,tipShade[2]*tipTint),1);
+    indices.push(base,base+2,base+1,base+1,base+2,base+3,base+2,base+4,base+3);"""
+    if html.count(leaf_geometry_marker) != 1:
+        raise SystemExit("No se encontró la geometría de hoja 3D original para optimizar su perfil.")
+    html = html.replace(leaf_geometry_marker, leaf_geometry_replacement, 1)
+
+    # GPU vertex displacement animates all thin instances without CPU vertex-buffer uploads.
+    grass_material_marker = "const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);if(!staging)grassBatchMaterial=gm;else if(grassStagingResources)grassStagingResources.material=gm;"
+    grass_material_replacement = grass_material_marker + """
+   class NordicGrassWindPlugin extends B.MaterialPluginBase{
+    constructor(material){
+     super(material,'NordicGrassWind',200,{NORSE_GRASS_WIND:true});
+     this.strength=isPerformanceMode?.40:(isConstrainedMobile?.72:1.0);
+     this._enable(true);
+    }
+    getClassName(){return 'NordicGrassWindPlugin';}
+    isCompatible(shaderLanguage){return shaderLanguage===B.ShaderLanguage.GLSL;}
+    prepareDefines(defines){defines.NORSE_GRASS_WIND=true;}
+    getUniforms(){
+     return {
+      ubo:[{name:'grassWindTime',size:1,type:'float'},{name:'grassWindStrength',size:1,type:'float'}],
+      vertex:'#ifdef NORSE_GRASS_WIND\\nuniform float grassWindTime;\\nuniform float grassWindStrength;\\n#endif'
+     };
+    }
+    _bindWind(uniformBuffer){
+     if(!uniformBuffer||typeof uniformBuffer.updateFloat!=='function')return;
+     uniformBuffer.updateFloat('grassWindTime',performance.now()*.001);
+     uniformBuffer.updateFloat('grassWindStrength',this.strength);
+    }
+    bindForSubMesh(uniformBuffer){this._bindWind(uniformBuffer);}
+    hardBindForSubMesh(uniformBuffer){this._bindWind(uniformBuffer);}
+    getCustomCode(shaderType,shaderLanguage){
+     if(shaderType!=='vertex'||shaderLanguage!==B.ShaderLanguage.GLSL)return null;
+     return {CUSTOM_VERTEX_UPDATE_POSITION:
+      '#ifdef NORSE_GRASS_WIND\\n'+
+      'float grassWindHeight=clamp(positionUpdated.y/0.42,0.0,1.0);\\n'+
+      'float grassWindFlex=grassWindHeight*grassWindHeight;\\n'+
+      'float grassWindSeed=0.0;\\n'+
+      '#ifdef INSTANCESCOLOR\\n'+
+      'grassWindSeed=instanceColor.r*6.2831853+instanceColor.g*2.173;\\n'+
+      '#endif\\n'+
+      'float grassWindPhase=grassWindTime*1.08+grassWindSeed+positionUpdated.x*4.4+positionUpdated.z*5.1;\\n'+
+      'float grassWindWave=sin(grassWindPhase)*0.72+sin(grassWindPhase*0.47+1.8)*0.28;\\n'+
+      'float grassWindCross=cos(grassWindPhase*0.73+0.9);\\n'+
+      'positionUpdated.x+=(grassWindWave*0.052+grassWindCross*0.014)*grassWindFlex*grassWindStrength;\\n'+
+      'positionUpdated.z+=(grassWindCross*0.034+grassWindWave*0.010)*grassWindFlex*grassWindStrength;\\n'+
+      '#endif'
+     };
+    }
+   }
+   const grassWindPlugin=new NordicGrassWindPlugin(gm);
+   window.__ELSN_GRASS_WIND__={enabled:true,mode:'gpu-vertex-displacement',uniformBinding:'hardBindForSubMesh',profile:isPerformanceMode?'performance':'quality',leavesPerClump:leavesPerClump};"""
+    if html.count(grass_material_marker) != 1:
+        raise SystemExit("No se encontró el material único de la hierba para instalar el viento GPU.")
+    html = html.replace(grass_material_marker, grass_material_replacement, 1)
+
+    # Keep a visible instanced grass population in both profiles.
+    want_marker = "const want=isPerformanceMode?0:Math.max(1,Math.round(baseWant*qualityGrassDensity*areaFraction));"
+    want_replacement = "const want=Math.max(1,Math.round(baseWant*(isPerformanceMode?performanceDensity:qualityGrassDensity)*areaFraction));"
+    if html.count(want_marker) != 1:
+        raise SystemExit("No se encontró la decisión única de población de hierba por perfil.")
+    html = html.replace(want_marker, want_replacement, 1)
+
+    stream_skip_marker = " async function streamActiveIslandGrass(index,focusX,focusZ){\\n   if(isPerformanceMode)return;"
+    if html.count(stream_skip_marker) != 1:
+        raise SystemExit("No se encontró la desactivación del streaming de hierba en Rendimiento.")
+    html = html.replace(stream_skip_marker, " async function streamActiveIslandGrass(index,focusX,focusZ){", 1)
+    update_skip_marker = "  function updateActiveIslandGrass(dt){\\n   if(isPerformanceMode)return;"
+    if html.count(update_skip_marker) != 1:
+        raise SystemExit("No se encontró la desactivación de actualización de hierba en Rendimiento.")
+    html = html.replace(update_skip_marker, "  function updateActiveIslandGrass(dt){", 1)
+
+    initial_grass_marker = """  // La hierba existe únicamente en Calidad y solo en un radio local alrededor del jugador.
+  // Rendimiento no crea geometría, buffers ni materiales de hierba.
+  if(!isPerformanceMode){
+   const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);
+   grassStreamActiveIslandIndex=initialGrassIslandIndex;
+   grassStreamCenterX=player.root.position.x;grassStreamCenterZ=player.root.position.z;
+   const initialGrassStartedAt=performance.now();
+   await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);
+   recordStartupTask('Hierba 3D inicial de Calidad',initialGrassStartedAt,performance.now(),'ready',{clumps:grassInstanceCount,batches:grassBatchCount,island:initialGrassIslandIndex});
+   console.info('Hierba cercana de la isla inicial preparada.',{profile:activeGraphicsProfile,island:land[initialGrassIslandIndex]&&land[initialGrassIslandIndex].name,clumps:grassInstanceCount,batches:grassBatchCount,radiusMeters:92});
+  }else{
+   grassStreamActiveIslandIndex=-1;grassDebugClumpCount=0;grassDebugBatchCount=0;grassDebugIslandStats.length=0;
+   console.info('Hierba desactivada en modo Rendimiento.');
+  }"""
+    initial_grass_replacement = """  // Both profiles retain a full-island grass field; Performance changes density and tuft complexity, not grass availability.
+  const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);
+  grassStreamActiveIslandIndex=initialGrassIslandIndex;
+  grassStreamCenterX=land[initialGrassIslandIndex].x;grassStreamCenterZ=land[initialGrassIslandIndex].z;
+  const initialGrassStartedAt=performance.now();
+  await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);
+  recordStartupTask('Hierba 3D inicial',initialGrassStartedAt,performance.now(),'ready',{clumps:grassInstanceCount,batches:grassBatchCount,island:initialGrassIslandIndex,profile:isPerformanceMode?'performance':'quality',wind:'gpu-vertex-displacement'});
+  console.info('Cobertura 3D de hierba inicial preparada.',{profile:activeGraphicsProfile,island:land[initialGrassIslandIndex]&&land[initialGrassIslandIndex].name,clumps:grassInstanceCount,batches:grassBatchCount,radiusMeters:land[initialGrassIslandIndex].r*.70,wind:'gpu-vertex-displacement'});"""
+    if html.count(initial_grass_marker) != 1:
+        raise SystemExit("No se encontró el bloque único de hierba inicial que desactivaba Rendimiento.")
+    html = html.replace(initial_grass_marker, initial_grass_replacement, 1)
 
     # Keep full-quality coast geometry while tightening the CPU slice ceiling on mobile.
     # Work is spread over more frames; no mesh rows, columns or material detail are removed.
@@ -1287,7 +1417,7 @@ function setLoadingProgress(value,label){
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
-    # 0.6.343: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
+    # 0.6.344: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
     # Build each island around its stable centre and keep its original per-area density.
     grass_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;\n   const radius=Math.min(92,safeLandRadius);\n   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));"
     grass_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
@@ -2240,27 +2370,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.343: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.344: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.343; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.344; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.343\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.344\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.343.")
-    html = html.replace("0.6.274", "0.6.343")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.344.")
+    html = html.replace("0.6.274", "0.6.344")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'52',build:'0.6.343'"
+    diagnostic_build_replacement = "reportVersion:'53',build:'0.6.344'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.343 para normalizar.")
-    game_version = "0.6.343"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.344 para normalizar.")
+    game_version = "0.6.344"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
