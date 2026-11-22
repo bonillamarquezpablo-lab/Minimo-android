@@ -696,6 +696,10 @@ def main() -> None:
         fail("Las cinco gaviotas GLB deben estar montadas antes de liberar la campaña.")
     if "startupResourceGate" in index_html or "window.__ELSN_STARTUP_RESOURCE_GATE__" not in index_html or "startupResourceFailures.length" not in index_html:
         fail("La barrera final debe publicar una lectura de recursos observados y bloquear la entrada si falta alguno.")
+    startup_handoff = index_html.find("primer fotograma confirmado por la barrera de arranque")
+    startup_world_ready = index_html.find("window.__elSinNombreStartupSmoke.worldReady=true;", startup_handoff)
+    if startup_handoff < 0 or startup_world_ready < startup_handoff or "scene.render();" not in index_html[startup_handoff-900:startup_world_ready]:
+        fail("La barrera de recursos debe asegurar un primer fotograma y abrir el selector antes de declarar worldReady; el render loop no puede dejar el arranque offline atascado.")
     if "MenuMusic.preload()" not in index_html or "GameplayMusic.preload()" not in index_html or "waitForPlayableAudio" not in index_html or "decodedToAudioBuffer:false" not in index_html:
         fail("Las dos pistas de música deben estar listas mediante HTMLAudio streaming sin decodificar buffers.")
     if "fauna:'blocking-required'" not in index_html:
