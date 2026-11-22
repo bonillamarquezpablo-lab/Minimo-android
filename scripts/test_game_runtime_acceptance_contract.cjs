@@ -13,7 +13,9 @@ assert.match(release, /Test runtime and offline Service Worker publication gate/
 assert.match(release, /node scripts\/test_game_runtime_acceptance_contract\.cjs/);
 assert.match(release, /Validate the local HTTPS acceptance server/);
 assert.match(release, /py_compile scripts\/start_https_static_server\.py/);
-assert.match(release, /Install Playwright and Chromium for real startup acceptance/);
+assert.match(release, /Prepare shared Playwright and Chromium cache for parallel browser gates/);
+assert.match(release, /Install the exact cached Playwright version/);
+assert.match(release, /el-sin-nombre-playwright-.*needs\.build\.outputs\.playwright-version/);
 assert.match(release, /Start the built release on local HTTPS for Service Worker acceptance/);
 assert.match(release, /Verify startup, required NPCs, gameplay and offline Service Worker restart before publish/);
 assert.match(release, /node scripts\/player-startup-smoke\.mjs/);
@@ -24,17 +26,15 @@ assert.match(release, /Diagnostic A\/B capture with GPU skinning fallback/, 'GPU
 assert.match(release, /node scripts\/fauna-visual-capture\.mjs/);
 assert.match(release, /Preserve fauna visual acceptance evidence/);
 assert.match(release, /artifacts\/fauna-visual-captures\//);
-assert.ok(release.indexOf('Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish') <
-  release.indexOf('Upload validated site for PR inspection'),
-  'Pages publication must wait until all real fauna captures and visual integrity checks pass.');
+assert.match(release, /  startup:\n[\s\S]*?needs: \[build\]/, 'The gameplay/offline smoke must run as an independent required job.');
+assert.match(release, /  fauna:\n[\s\S]*?needs: \[build\]/, 'The full CPU fauna visual acceptance must run as an independent required job.');
+assert.match(release, /  fauna-gpu-diagnostic:\n[\s\S]*?continue-on-error: true/, 'The GPU comparison remains available but non-blocking.');
 
 assert.match(release, /PLAYER_TEST_URL: https:\/\/localhost:4175\//);
 assert.match(release, /openssl req -x509/);
 assert.match(release, /needs: \[build, contracts\]/, 'Pages must wait for both the validated package and every parallel source-contract shard.');
 assert.match(release, /if: github\.event_name != 'pull_request' && github\.ref == 'refs\/heads\/main'/);
-assert.ok(release.indexOf('Verify startup, required NPCs, gameplay and offline Service Worker restart before publish') <
-  release.indexOf('Upload validated site for PR inspection'),
-  'The acceptance gate must complete before publishing artifacts or Pages.');
+assert.match(release, /  deploy:[\s\S]*?needs: \[build, contracts, startup, fauna\]/, 'Public Pages deployment must be gated by every mandatory acceptance job.');
 assert.match(release, /Preserve runtime acceptance evidence/);
 assert.doesNotMatch(release, /force: true|git push origin main/i);
 
