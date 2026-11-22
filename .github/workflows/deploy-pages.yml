@@ -17,6 +17,96 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Source-only contracts run concurrently with the build and remain mandatory release gates.
+  contracts:
+    name: Source regression contracts — ${{ matrix.suite }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [core, wildlife, inspector, world, release]
+    steps:
+      - name: Checkout exact release candidate
+        uses: actions/checkout@v4
+      - name: Set up Node.js for source contracts
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run the complete assigned source-contract shard
+        env:
+          CONTRACT_SUITE: ${{ matrix.suite }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$CONTRACT_SUITE" in
+            core)
+          echo "Test offline navigation suite and four camera modes"
+          node scripts/test_navigation_suite_contract.cjs
+          echo "Test adaptive graphics quality without sacrificing Performance profile"
+          node scripts/test_graphics_quality_contract.cjs
+          echo "Test mobile runtime stability without reducing visual quality"
+          node scripts/test_mobile_runtime_stability.cjs
+          echo "Test mobile startup telemetry and retry affordance"
+          node scripts/test_mobile_startup_loading.cjs
+          echo "Test civilian NPC specialists and shared-memory contract"
+          node scripts/test_npc_agent_core.cjs
+          echo "Test autonomous civilian dialogue and four-bubble cap"
+          node scripts/test_npc_dialogue_core.cjs
+          echo "Test idle-scheduled session telemetry and long-task capture"
+          node scripts/test_session_recorder_idle_contract.cjs
+          echo "Test actionable post-match performance reports"
+          node scripts/test_session_report_diagnostics.cjs
+          echo "Check NPC specialist and dialogue runtime syntax"
+          node --check scripts/npc-agent-core.js && node --check scripts/npc-agent-runtime.js && node --check scripts/npc-dialogue-core.js && node --check scripts/npc-dialogue-runtime.js
+              ;;
+            wildlife)
+          echo "Test per-animal GLB rig, animation and texture requirements"
+          node scripts/test_wildlife_runtime_contract.cjs
+          echo "Test four-view fauna capture and report generation"
+          node scripts/test_fauna_visual_capture_contract.cjs
+              ;;
+            inspector)
+          echo "Test full Inspector trigger routing"
+          node scripts/test_inspector_workflows_contract.cjs
+          echo "Test the existing Inspector dashboard and preserve its controls"
+          node scripts/test_inspector_dashboard_contract.cjs
+          echo "Test the unified horizontal Inspector and session report"
+          node scripts/test_inspector_workbench_contract.cjs
+          echo "Test bounded scene capture and animated frame integrity"
+          node scripts/test_scene_capture_efficiency_contract.cjs
+              ;;
+            world)
+          echo "Test Babylon live-world inspection and anomaly analysis"
+          node scripts/test_phase2_world_inspection.mjs
+          echo "Test dynamic-safe Babylon spatial selection"
+          node scripts/test_quality_spatial_selection.cjs
+          echo "Test rendered-ground structure and outpost bedroll placement"
+          node scripts/test_coastal_structure_grounding_contract.cjs
+          echo "Test BeachState coast and toroidal footprint atlas"
+          node scripts/test_beach_state.cjs
+          echo "Test three-layer coast rendering contract and water film"
+          node scripts/test_water_shore.cjs
+          echo "Test coastal mesh continuity and 5 cm seam limit"
+          node scripts/test_coastal_mesh_continuity.cjs
+          echo "Test separate seabed, transparent water and advancing film geometry"
+          node scripts/test_coastal_interaction.cjs
+          echo "Test 13-island campaign and naval invasion integration"
+          node scripts/test_island_campaign.cjs
+              ;;
+            release)
+          echo "Test release version and packaging contract"
+          node scripts/test_release_contract.cjs
+          echo "Test unified day-night atmosphere clock and APIs"
+          node scripts/test_atmosphere_system.cjs
+          echo "Test runtime and offline Service Worker publication gate"
+          node scripts/test_game_runtime_acceptance_contract.cjs
+          echo "Test cached and offline startup readiness decisions"
+          node scripts/test_startup_readiness_core.cjs
+              ;;
+            *) echo "Unknown contract suite: $CONTRACT_SUITE" >&2; exit 2 ;;
+          esac
+
   build:
     name: Build and validate the complete game
     runs-on: ubuntu-latest
@@ -37,6 +127,22 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Resolve the exact Playwright version for browser-cache compatibility
+        id: playwright_version
+        shell: bash
+        run: |
+          version="$(npm view playwright version)"
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Playwright package and matching Chromium cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/ms-playwright
+          key: el-sin-nombre-playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright_version.outputs.version }}-chromium
+
       - name: Restore verified external game assets
         uses: actions/cache@v4
         with:
@@ -45,61 +151,6 @@ jobs:
           restore-keys: |
             el-sin-nombre-assets-${{ runner.os }}-
 
-
-      - name: Test offline navigation suite and four camera modes
-        run: node scripts/test_navigation_suite_contract.cjs
-      - name: Test adaptive graphics quality without sacrificing Performance profile
-        run: node scripts/test_graphics_quality_contract.cjs
-      - name: Test mobile runtime stability without reducing visual quality
-        run: node scripts/test_mobile_runtime_stability.cjs
-      - name: Test mobile startup telemetry and retry affordance
-        run: node scripts/test_mobile_startup_loading.cjs
-      - name: Test per-animal GLB rig, animation and texture requirements
-        run: node scripts/test_wildlife_runtime_contract.cjs
-      - name: Test Babylon live-world inspection and anomaly analysis
-        run: node scripts/test_phase2_world_inspection.mjs
-      - name: Test four-view fauna capture and report generation
-        run: node scripts/test_fauna_visual_capture_contract.cjs
-      - name: Test full Inspector trigger routing
-        run: node scripts/test_inspector_workflows_contract.cjs
-      - name: Test dynamic-safe Babylon spatial selection
-        run: node scripts/test_quality_spatial_selection.cjs
-      - name: Test civilian NPC specialists and shared-memory contract
-        run: node scripts/test_npc_agent_core.cjs
-      - name: Test autonomous civilian dialogue and four-bubble cap
-        run: node scripts/test_npc_dialogue_core.cjs
-      - name: Test idle-scheduled session telemetry and long-task capture
-        run: node scripts/test_session_recorder_idle_contract.cjs
-      - name: Test actionable post-match performance reports
-        run: node scripts/test_session_report_diagnostics.cjs
-      - name: Check NPC specialist and dialogue runtime syntax
-        run: node --check scripts/npc-agent-core.js && node --check scripts/npc-agent-runtime.js && node --check scripts/npc-dialogue-core.js && node --check scripts/npc-dialogue-runtime.js
-      - name: Test the existing Inspector dashboard and preserve its controls
-        run: node scripts/test_inspector_dashboard_contract.cjs
-      - name: Test the unified horizontal Inspector and session report
-        run: node scripts/test_inspector_workbench_contract.cjs
-      - name: Test release version and packaging contract
-        run: node scripts/test_release_contract.cjs
-      - name: Test unified day-night atmosphere clock and APIs
-        run: node scripts/test_atmosphere_system.cjs
-      - name: Test bounded scene capture and animated frame integrity
-        run: node scripts/test_scene_capture_efficiency_contract.cjs
-      - name: Test rendered-ground structure and outpost bedroll placement
-        run: node scripts/test_coastal_structure_grounding_contract.cjs
-      - name: Test BeachState coast and toroidal footprint atlas
-        run: node scripts/test_beach_state.cjs
-      - name: Test three-layer coast rendering contract and water film
-        run: node scripts/test_water_shore.cjs
-      - name: Test coastal mesh continuity and 5 cm seam limit
-        run: node scripts/test_coastal_mesh_continuity.cjs
-      - name: Test separate seabed, transparent water and advancing film geometry
-        run: node scripts/test_coastal_interaction.cjs
-      - name: Test 13-island campaign and naval invasion integration
-        run: node scripts/test_island_campaign.cjs
-      - name: Test runtime and offline Service Worker publication gate
-        run: node scripts/test_game_runtime_acceptance_contract.cjs
-      - name: Test cached and offline startup readiness decisions
-        run: node scripts/test_startup_readiness_core.cjs
 
       - name: Validate the local HTTPS acceptance server
         run: python -m py_compile scripts/start_https_static_server.py
@@ -136,7 +187,7 @@ jobs:
       - name: Install Playwright and Chromium for real startup acceptance
         id: playwright_install
         run: |
-          npm install --no-save --no-package-lock playwright
+          npm install --no-save --no-package-lock "playwright@${{ steps.playwright_version.outputs.version }}"
           npx playwright install --with-deps chromium
 
       - name: Start the built release on local HTTPS for Service Worker acceptance
@@ -230,7 +281,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [build]
+    needs: [build, contracts]
     permissions:
       contents: read
       pages: write
