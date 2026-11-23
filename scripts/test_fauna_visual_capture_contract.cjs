@@ -90,10 +90,14 @@ assert.ok(capture.includes('maxExtent>.1&&maxExtent<=1.0'), 'A real gull with a 
 assert.ok(game.includes("m.alwaysSelectAsActiveMesh=!!(m.skeleton||Number(m.numBoneInfluencers)>0)"), 'The real coastal gull loader must protect imported skinned body meshes from frustum culling against stale bounds.');
 assert.ok(capture.includes('animationGroups'));
 assert.ok(capture.includes('captureCanvas'));
+const rasterCaptureStart=capture.indexOf('const actorWasEnabled=root.isEnabled?.()!==false;');
+const rasterCaptureEnd=capture.indexOf('if(backgroundPng){',rasterCaptureStart);
+const rasterCaptureBlock=capture.slice(rasterCaptureStart,rasterCaptureEnd);
 assert.ok(capture.includes("source:'same-frame-projected-animal-bounds-raster-diff'") &&
   capture.includes('changedPixels>=140') && capture.includes('fillRatio>=.008') &&
   capture.includes('B.Vector3.Project') && capture.includes('backgroundPng=captureFrame();') &&
-  !capture.includes('await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));') &&
+  rasterCaptureStart>=0 && rasterCaptureEnd>rasterCaptureStart &&
+  !rasterCaptureBlock.includes('requestAnimationFrame') &&
   capture.includes('view.imageIntegrity?.valid===true'),
   'Four-view fauna captures must compare actor-visible and actor-hidden pixels inside the projected animal bounds, without counting water/sky animation drift; empty captures must fail.');
 assert.ok(capture.includes('measuredBounds:animal.bounds') &&
