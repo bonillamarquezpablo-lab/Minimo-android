@@ -30,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      site: ${{ steps.scope.outputs.site }}
       game: ${{ steps.scope.outputs.game }}
       fauna: ${{ steps.scope.outputs.fauna }}
     steps:
@@ -48,6 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "site=true" >> "$GITHUB_OUTPUT"
             echo "game=true" >> "$GITHUB_OUTPUT"
             echo "fauna=true" >> "$GITHUB_OUTPUT"
             exit 0
@@ -62,6 +64,11 @@ jobs:
             changed="$(git diff --name-only "$base" "$HEAD_SHA")"
           fi
           printf '%s\n' "$changed"
+          if grep -Eq '^(index\.html|sw\.js|assets/|inspector/|manifest\.webmanifest|guest-manifest\.webmanifest|guest-file-manifest\.webmanifest|invitado-manifest\.webmanifest|scripts/(build_site\.py|validate_release\.py|nordic/))' <<<"$changed"; then
+            echo "site=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "site=false" >> "$GITHUB_OUTPUT"
+          fi
           if grep -Eq '^(index\.html|sw\.js|assets/|scripts/(build_site\.py|validate_release\.py|start_https_static_server\.py|player-startup-smoke\.mjs|startup-readiness-core\.cjs|game-session-recorder\.js|npc-(agent|dialogue|village)|nordic/))' <<<"$changed"; then
             echo "game=true" >> "$GITHUB_OUTPUT"
           else
@@ -167,6 +174,7 @@ jobs:
 
   build:
     name: Build and validate the complete game
+    if: needs.changes.outputs.site == 'true'
     needs: [changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 50
@@ -517,6 +525,7 @@ jobs:
       !cancelled() &&
       github.event_name != 'pull_request' &&
       github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.site == 'true' &&
       needs.build.result == 'success' &&
       needs.contracts.result == 'success' &&
       needs.changes.result == 'success' &&
