@@ -4183,8 +4183,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     world_snapshot_marker = " window.copyGameHealthDebug=()=>{"
     world_snapshot_code = r"""
  // Flight is advanced by the game's actual Engine.runRenderLoop callback on every frame.
- const gullFlightRenderState={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,lastTimestamp:null,lastError:null};
- window.__ELSN_GULL_FLIGHT_RENDER__=gullFlightRenderState;
+ const gullFlightRenderState=window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,lastTimestamp:null,lastError:null};
  function updateAmbientGullFlight(nowSeconds){
   const birds=ambientBirds;
   if(!Number.isFinite(nowSeconds)||!Array.isArray(birds)||!birds.length)return;
