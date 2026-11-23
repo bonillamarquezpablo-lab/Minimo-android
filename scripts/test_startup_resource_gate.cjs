@@ -40,10 +40,10 @@ assert.ok(html.includes("coast:window.__ELSN_INITIAL_COAST_WARMUP__||null"),
   'The startup report must include measured initial beach, seabed, foam and reflection readiness.');
 assert.ok(html.includes("startupResourceSnapshot.coast.status!=='ready'"),
   'Gameplay must remain blocked until the complete initial coast is ready.');
-assert.ok(html.includes("startup_coast_warmup_code")&&
-  html.includes("syncActiveBeachIsland()")&&
-  html.includes("syncActiveTidalFoamIsland()")&&
-  html.includes("syncNordicWaterReflectionIsland()"),
+assert.ok(html.includes("window.__ELSN_INITIAL_COAST_WARMUP__={")&&
+  html.includes("syncActiveBeachIsland();")&&
+  html.includes("syncActiveTidalFoamIsland();")&&
+  html.includes("syncNordicWaterReflectionIsland();"),
   'The full initial coastal systems must be built before the player enters the world.');
 
 assert.ok(html.includes("startupResourceSnapshot.fauna.loaded!==3"));
