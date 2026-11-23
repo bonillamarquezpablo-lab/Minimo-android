@@ -17,7 +17,6 @@ visual_capture_count = sum(
     1 for entry in captures
     if entry.get("angle") in {"front", "left", "rear", "right"}
 )
-raster_verified_count = max(0, visual_capture_count - len(raster_invalid))
 raster_invalid = [
     {
         "file": entry.get("file"),
@@ -29,6 +28,7 @@ raster_invalid = [
     if entry.get("angle") in {"front", "left", "rear", "right"}
     and (entry.get("imageIntegrity") or {}).get("valid") is not True
 ]
+raster_verified_count = max(0, visual_capture_count - len(raster_invalid))
 for entry in captures:
     source = OUT / str(entry.get("file") or "")
     (available if source.is_file() else missing).append((entry, source) if source.is_file() else str(entry.get("file") or ""))
