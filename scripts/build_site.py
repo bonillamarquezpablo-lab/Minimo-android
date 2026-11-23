@@ -1514,11 +1514,13 @@ function setLoadingProgress(value,label){
         raise SystemExit("No se encontró la actualización única del centro de hierba tras el cambio de isla.")
     html = html.replace(grass_swap_center_marker, grass_swap_center_replacement, 1)
 
-    grass_recenter_marker = "const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=GRASS_STREAM_RECENTER_DISTANCE;"
-    grass_recenter_replacement = "const moved=false;"
+    # The source now streams grass only when the active island changes.
+    # Never restore the old player-distance recenter path: it rebuilt all Quality
+    # grass batches while walking across the same island and caused frame spikes.
+    grass_recenter_marker = "const sameIsland=currentIsland===grassStreamActiveIslandIndex;\n  if(!sameIsland&&!grassStreamPromise){"
     if html.count(grass_recenter_marker) != 1:
-        raise SystemExit("No se encontró la distancia única de recentrado de hierba.")
-    html = html.replace(grass_recenter_marker, grass_recenter_replacement, 1)
+        raise SystemExit("No se encontró el nuevo contrato de streaming de hierba por cambio de isla.")
+    html = html.replace(grass_recenter_marker, grass_recenter_marker, 1)
 
  
     grass_lod_runtime_marker = """  for(const batch of qualityGrassLodBatches){
