@@ -232,3 +232,11 @@ assert.ok(builder.includes('window.getGameVisualActorDiagnostics') && builder.in
 assert.ok(smoke.includes("/^Fly(?:_|$)/i.test(bird.flightName||'')"), 'The startup acceptance must accept the native Fly clip even when the GLB adds a per-bird suffix such as Fly_Gull_0.');
 
 assert.ok(builder.includes("calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor'"), 'Visual diagnostics must report club calibration using the existing live weapon-anchor state.');
+const textureInventoryPauseBlock = `if(testModeEnabled&&renderLoopCountBeforeSnapshot>0){
+    engine.stopRenderLoop();
+    scene.render();
+    renderLoopPausedForInventory=true;
+   }`;
+assert.ok(!source.includes(textureInventoryPauseBlock) &&
+  source.includes('const renderLoopPausedForInventory=false;'),
+  'Texture inventory must never stop the live render loop; gameplay animation and actor motion must continue during and after the snapshot.');
