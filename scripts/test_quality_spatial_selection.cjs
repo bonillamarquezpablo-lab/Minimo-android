@@ -13,7 +13,7 @@ for(const marker of [
   'const spatialActorRootPattern=',
     'const spatialVegetationMotionPattern=/^(?:mixedForestTree|treeCanopyWindPivot|fallingTree|fallingForestTree)/i;',
   'const spatialWaterMotionPattern=',
-  'const spatialEffectMotionPattern=/^(?:NorseMovingFootprints|SunHalo|SunDisc|WindborneLeaf|HearthFlame|HearthSpark|GroundSplashParticleBatch|',
+  'const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|NorseMovingFootprints|SunHalo|SunDisc|NordicSkyDome|WindborneLeaf|HearthFlame|HearthSpark|',
   "if(/^GroundSplashParticleBatch(?:$|[_-])/i.test(name)){if(mesh)mesh.alwaysSelectAsActiveMesh=true;return 'particle-or-effect';}",
   'const spatialEffectMotionPattern=',
   'const spatialDynamicReasonForMesh=',
