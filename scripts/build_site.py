@@ -2763,7 +2763,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  // are registered as dynamic content so movement, animation and gameplay remain intact.
  // Only known moving roots, animated rigs and live water/effect meshes stay dynamic; static foliage, rocks and structures remain in the octree.
  const spatialActorRootPattern=/^(?:PabloTheNameless|RealHumanVikingRoot|EnemyHumanFallPivot_\\d+|VillageGuard\\d+_\\d+|Villager_\\d+_\\d+|RaiderLongship_\\d+|Drakkar|Wildlife(?:Root)?_?\\d*|Deer(?:Root)?_?\\d*|Wolf(?:Root)?_?\\d*|Stag(?:Root)?_?\\d*|AmbientPerson_?\\d*|AmbientBird_?\\d*)$/i;
- const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;
+ const spatialVegetationMotionPattern=/^(?:mixedForestTree|treeCanopyWindPivot|fallingTree|fallingForestTree)/i;
  const spatialWaterMotionPattern=/^(?:ocean|water|nordicWater|coastalWater|coastalWave|waterFilm|tidalFoam|shoreBreakerWash|beachState|activeBeach|activeShore)/i;
  const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|NorseMovingFootprints|SunHalo|SunDisc|WindborneLeaf|HearthFlame|HearthSpark|flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
  const spatialDynamicStatsPattern=/^(?:vesselWaterSpray|drakkarWake|tidalFoam|particle|projectile|arrow)/i;
