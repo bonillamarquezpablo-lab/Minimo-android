@@ -5,7 +5,8 @@ on:
     branches: [main]
     paths:
       - 'inspector/**'
-      - '.github/workflows/**'
+      - '.github/workflows/inspector-center-checks.yml'
+      - '.github/workflows/coastal-reference.yml'
       - 'scripts/run-unified-inspector.mjs'
       - 'scripts/hrafn-before-after.mjs'
       - 'scripts/test_hrafn_before_after_contract.cjs'
@@ -14,7 +15,8 @@ on:
     branches: [main]
     paths:
       - 'inspector/**'
-      - '.github/workflows/**'
+      - '.github/workflows/inspector-center-checks.yml'
+      - '.github/workflows/coastal-reference.yml'
       - 'scripts/run-unified-inspector.mjs'
       - 'scripts/hrafn-before-after.mjs'
       - 'scripts/test_hrafn_before_after_contract.cjs'

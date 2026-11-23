@@ -26,21 +26,25 @@ assert.match(release, /Diagnostic A\/B capture with GPU skinning fallback/, 'GPU
 assert.match(release, /node scripts\/fauna-visual-capture\.mjs/);
 assert.match(release, /Preserve fauna visual acceptance evidence/);
 assert.match(release, /artifacts\/fauna-visual-captures\//);
-assert.match(release, /  startup:\n[\s\S]*?needs: \[build\]/, 'The gameplay/offline smoke must run as an independent required job.');
-assert.match(release, /  fauna:\n[\s\S]*?needs: \[build\]/, 'The full CPU fauna visual acceptance must run as an independent required job.');
+assert.match(release, /  changes:\n[\s\S]*?outputs:\n[\s\S]*?site: \$\{\{ steps\.scope\.outputs\.site \}\}[\s\S]*?game: \$\{\{ steps\.scope\.outputs\.game \}\}[\s\S]*?fauna: \$\{\{ steps\.scope\.outputs\.fauna \}\}/, 'The pipeline must classify site, game and fauna changes.');
+assert.match(release, /  build:\n[\s\S]*?if: needs\.changes\.outputs\.site == 'true'[\s\S]*?needs: \[changes\]/, 'The complete build is required only when published site files change.');
+assert.match(release, /Resolve the exact Playwright version for browser-cache compatibility\n        if: needs\.changes\.outputs\.game == 'true' \|\| needs\.changes\.outputs\.fauna == 'true'/, 'Browser dependencies must not be installed for documentation or Inspector-only updates.');
+assert.match(release, /  startup:\n[\s\S]*?if: needs\.changes\.outputs\.game == 'true'[\s\S]*?needs: \[build, changes\]/, 'The gameplay/offline smoke must run whenever game runtime files change.');
+assert.match(release, /  fauna:\n[\s\S]*?if: needs\.changes\.outputs\.fauna == 'true'[\s\S]*?needs: \[build, changes\]/, 'The full CPU fauna visual acceptance must run whenever fauna or packaged assets change.');
 assert.match(release, /  fauna-gpu-diagnostic:\n[\s\S]*?continue-on-error: true/, 'The GPU comparison remains available but non-blocking.');
 
 assert.match(release, /PLAYER_TEST_URL: https:\/\/localhost:4175\//);
 assert.match(release, /openssl req -x509/);
-assert.match(release, /needs: \[build, contracts, startup, fauna\]/, 'Pages must wait for the built package, all source contracts, gameplay/offline acceptance and CPU fauna visual acceptance.');
-assert.match(release, /if: github\.event_name != 'pull_request' && github\.ref == 'refs\/heads\/main'/);
-assert.match(release, /  deploy:[\s\S]*?needs: \[build, contracts, startup, fauna\]/, 'Public Pages deployment must be gated by every mandatory acceptance job.');
+assert.match(release, /needs: \[build, contracts, startup, fauna, changes\]/, 'Pages must wait for the build, source contracts, scope detection and applicable acceptance gates.');
+assert.match(release, /needs\.startup\.result == 'success' \|\| needs\.startup\.result == 'skipped'/, 'A skipped startup gate is accepted only when no game runtime files changed.');
+assert.match(release, /needs\.fauna\.result == 'success' \|\| needs\.fauna\.result == 'skipped'/, 'A skipped fauna gate is accepted only when no fauna or packaged asset files changed.');
+assert.match(release, /github\.event_name != 'pull_request' &&\s+github\.ref == 'refs\/heads\/main' &&\s+needs\.changes\.outputs\.site == 'true'/, 'Production Pages can deploy only from main when published site files changed.');
+assert.match(release, /  deploy:[\s\S]*?needs: \[build, contracts, startup, fauna, changes\]/, 'Public Pages deployment must be gated by the build, all source contracts, scope detection and every applicable acceptance job.');
 assert.match(release, /Preserve runtime acceptance evidence/);
 assert.doesNotMatch(release, /force: true|git push origin main/i);
 
-assert.match(workflow, /^  pull_request:/m, 'The acceptance workflow must run on integration PRs.');
-assert.match(workflow, /branches: \[main\]/, 'The acceptance workflow must target main.');
-assert.match(workflow, /^  workflow_dispatch:/m, 'A manual acceptance run must remain available.');
+assert.doesNotMatch(workflow, /^  pull_request:/m, 'The standalone duplicate build must not run automatically; deploy-pages owns required PR runtime acceptance.');
+assert.match(workflow, /^  workflow_dispatch:/m, 'Keep independent runtime acceptance available for manual regression investigations.');
 assert.doesNotMatch(workflow, /^  push:/m, 'Avoid duplicate automatic runs on branch pushes.');
 assert.doesNotMatch(workflow, /phase2\/autonomous-repair-safety|test_autonomous_lab_agents|test_ai_visual_review|test_autonomous_repair/,
   'The acceptance workflow cannot depend on unmerged autonomous-lab files.');

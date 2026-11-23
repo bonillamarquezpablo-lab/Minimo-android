@@ -1,8 +1,8 @@
 name: Game runtime acceptance — EL SIN NOMBRE
 
 on:
-  pull_request:
-    branches: [main]
+  # The main publication workflow already runs this required gate against the exact package it publishes.
+  # Keep the independent full rebuild available for manual regression investigations.
   workflow_dispatch:
 
 permissions:

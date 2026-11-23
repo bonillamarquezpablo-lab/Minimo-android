@@ -98,19 +98,5 @@ jobs:
       - name: Test 13-island campaign and naval invasion integration
         run: node scripts/test_island_campaign.cjs
 
-      - name: Build and validate game resources
-        run: python scripts/build_site.py
-
-      - name: Test complete CC0 forest assets and measured gull size
-        run: node scripts/test_forest_gull_assets.cjs
-
-      - name: Include the independent Inspector Center in the PR artifact
-        run: |
-          mkdir -p dist/inspector
-          cp -R inspector/. dist/inspector/
-
-      - name: Verify Inspector Phase 1 dependencies and launch route
-        run: node scripts/test_inspector_phase1_packaging.cjs
-
-      - name: Verify generated website entry point
-        run: test -s dist/index.html
+      # The single deploy-pages workflow performs the full build and packaged-asset validation.
+      # This PR workflow deliberately stays source-only to avoid building the same game twice.

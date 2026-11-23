@@ -6,7 +6,14 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
+  # GPU comparison is optional and only runs when explicitly requested.
   workflow_dispatch:
+    inputs:
+      run_gpu_diagnostics:
+        description: 'Ejecutar la comparación GPU opcional de fauna.'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -17,7 +24,63 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Source-only contracts run concurrently with the build and remain mandatory release gates.
+  # Detect whether this commit changes the game runtime or assets before scheduling expensive browser gates.
+  changes:
+    name: Detect changed runtime components
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      site: ${{ steps.scope.outputs.site }}
+      game: ${{ steps.scope.outputs.game }}
+      fauna: ${{ steps.scope.outputs.fauna }}
+    steps:
+      - name: Checkout history for an exact changed-file comparison
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify game and fauna changes
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "site=true" >> "$GITHUB_OUTPUT"
+            echo "game=true" >> "$GITHUB_OUTPUT"
+            echo "fauna=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base="$BEFORE_SHA"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base="$PR_BASE_SHA"
+          fi
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            changed="$(git ls-files)"
+          else
+            changed="$(git diff --name-only "$base" "$HEAD_SHA")"
+          fi
+          printf '%s\n' "$changed"
+          if grep -Eq '^(index\.html|sw\.js|assets/|inspector/|manifest\.webmanifest|guest-manifest\.webmanifest|guest-file-manifest\.webmanifest|invitado-manifest\.webmanifest|scripts/(build_site\.py|validate_release\.py|nordic/))' <<<"$changed"; then
+            echo "site=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "site=false" >> "$GITHUB_OUTPUT"
+          fi
+          if grep -Eq '^(index\.html|sw\.js|assets/|scripts/(build_site\.py|validate_release\.py|start_https_static_server\.py|player-startup-smoke\.mjs|startup-readiness-core\.cjs|game-session-recorder\.js|npc-(agent|dialogue|village)|nordic/))' <<<"$changed"; then
+            echo "game=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "game=false" >> "$GITHUB_OUTPUT"
+          fi
+          if grep -Eq '^(index\.html|assets/|scripts/(build_site\.py|fauna-visual-capture\.mjs|test_fauna_visual_capture_contract\.cjs|test_wildlife_runtime_contract\.cjs|test_forest_gull_assets\.cjs|create_fauna_contact_sheet\.py))' <<<"$changed"; then
+            echo "fauna=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "fauna=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Fast source contracts run beside the single release build. Inspector UI checks are path-scoped in their own workflow.
   contracts:
     name: Source regression contracts — ${{ matrix.suite }}
     runs-on: ubuntu-latest
@@ -25,7 +88,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [core, wildlife, inspector, world, release]
+        suite: [core, wildlife, world, release]
     steps:
       - name: Checkout exact release candidate
         uses: actions/checkout@v4
@@ -93,6 +156,8 @@ jobs:
           node scripts/test_coastal_interaction.cjs
           echo "Test 13-island campaign and naval invasion integration"
           node scripts/test_island_campaign.cjs
+          echo "Test Phase 2 builder, offline and world-inspection integration"
+          node scripts/test_phase2_build_contract.mjs
               ;;
             release)
           echo "Test release version and packaging contract"
@@ -109,6 +174,8 @@ jobs:
 
   build:
     name: Build and validate the complete game
+    if: needs.changes.outputs.site == 'true'
+    needs: [changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     outputs:
@@ -130,6 +197,7 @@ jobs:
           node-version: "22"
 
       - name: Resolve the exact Playwright version for browser-cache compatibility
+        if: needs.changes.outputs.game == 'true' || needs.changes.outputs.fauna == 'true'
         id: playwright_version
         shell: bash
         run: |
@@ -138,6 +206,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Restore Playwright package and matching Chromium cache
+        if: needs.changes.outputs.game == 'true' || needs.changes.outputs.fauna == 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -186,15 +255,11 @@ jobs:
           mkdir -p dist/inspector
           cp -R inspector/. dist/inspector/
 
-      - name: Verify guided Inspector experience and preserved tools
-        run: node scripts/test_inspector_workbench_contract.cjs
-      - name: Verify persistent screenshot gallery
-        run: node --check dist/inspector/phase1-live.js && node scripts/test_inspector_capture_gallery_contract.cjs
-
       - name: Verify Inspector Phase 1 dependencies are published
         run: node scripts/test_inspector_phase1_packaging.cjs
 
       - name: Prepare shared Playwright and Chromium cache for parallel browser gates
+        if: needs.changes.outputs.game == 'true' || needs.changes.outputs.fauna == 'true'
         run: |
           npm install --no-save --no-package-lock "playwright@${{ steps.playwright_version.outputs.version }}"
           npx playwright install --with-deps chromium
@@ -227,7 +292,8 @@ jobs:
 
   startup:
     name: Real gameplay and offline Service Worker acceptance
-    needs: [build]
+    if: needs.changes.outputs.game == 'true'
+    needs: [build, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -298,7 +364,8 @@ jobs:
 
   fauna:
     name: Required fauna rigs, animation, textures and four-view visual acceptance
-    needs: [build]
+    if: needs.changes.outputs.fauna == 'true'
+    needs: [build, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
@@ -378,6 +445,7 @@ jobs:
 
   fauna-gpu-diagnostic:
     name: Optional GPU skinning comparison captures
+    if: github.event_name == 'workflow_dispatch' && inputs.run_gpu_diagnostics == true
     needs: [build]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -453,13 +521,22 @@ jobs:
 
   deploy:
     name: Publish the exact validated build on GitHub Pages
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: >-
+      !cancelled() &&
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.site == 'true' &&
+      needs.build.result == 'success' &&
+      needs.contracts.result == 'success' &&
+      needs.changes.result == 'success' &&
+      (needs.startup.result == 'success' || needs.startup.result == 'skipped') &&
+      (needs.fauna.result == 'success' || needs.fauna.result == 'skipped')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [build, contracts, startup, fauna]
+    needs: [build, contracts, startup, fauna, changes]
     permissions:
       contents: read
       pages: write

@@ -1,31 +1,9 @@
 name: Main game startup validation
 
 on:
-  push:
-    branches:
-      - main
-      - fix/main-player-startup-validation
-      - fix/0.6.309-startup-telemetry
-    paths:
-      - 'index.html'
-      - 'scripts/build_site.py'
-      - 'scripts/test_mobile_startup_loading.cjs'
-      - 'scripts/test_wildlife_runtime_contract.cjs'
-      - 'scripts/player-startup-smoke.mjs'
-      - 'scripts/test_player_startup_flow_contract.cjs'
-      - '.github/workflows/game-startup-validation.yml'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'index.html'
-      - 'scripts/build_site.py'
-      - 'scripts/test_mobile_startup_loading.cjs'
-      - 'scripts/test_wildlife_runtime_contract.cjs'
-      - 'scripts/player-startup-smoke.mjs'
-      - 'scripts/test_player_startup_flow_contract.cjs'
-      - '.github/workflows/game-startup-validation.yml'
-
+  # The main Pages workflow already performs the required startup and mobile acceptance on its exact build.
+  # Keep this independent expanded smoke available for targeted manual diagnostics.
+  workflow_dispatch:
 permissions:
   contents: read
 

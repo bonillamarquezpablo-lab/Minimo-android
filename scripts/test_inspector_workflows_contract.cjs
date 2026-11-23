@@ -6,6 +6,7 @@ const rs=fs.readFileSync('scripts/run-unified-inspector.mjs','utf8');
 const center=fs.readFileSync('.github/workflows/inspector-center-checks.yml','utf8');
 const hrafn=fs.readFileSync('.github/workflows/hrafn-geometry-measurements.yml','utf8');
 const validate=fs.readFileSync('.github/workflows/validate-pr.yml','utf8');
+const deploy=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 assert.match(workflow,/cancel-in-progress: false/);
 assert.match(workflow,/Manual runs are isolated by selected branch and exact commit/);
 assert.match(workflow,/group: scene-capture-s26-graphics-.*github\.sha/);
@@ -15,10 +16,11 @@ const pushStart=mainTriggers.indexOf('  push:')+'  push:'.length;
 const pushEnd=mainTriggers.indexOf('  # Runs the complete cloud lab');
 const scopedPush=mainTriggers.slice(pushStart,pushEnd);
 assert.ok(scopedPush.includes('branches: [main]')&&scopedPush.includes('paths:'),'Push-triggered fauna inspection must be scoped to its implementation paths.');
-for(const file of ['scripts/build_site.py','scripts/test_mobile_startup_loading.cjs','scripts/test_wildlife_runtime_contract.cjs','scripts/fauna-visual-capture.mjs','scripts/create_fauna_contact_sheet.py','scripts/run-unified-inspector.mjs','scripts/test_fauna_visual_capture_contract.cjs','.github/workflows/coastal-reference.yml']){
+for(const file of ['scripts/fauna-visual-capture.mjs','scripts/create_fauna_contact_sheet.py','scripts/run-unified-inspector.mjs','scripts/test_fauna_visual_capture_contract.cjs','scripts/test_capture_reliability_contract.cjs','scripts/test_inspector_capture_skip_contract.cjs','scripts/test_inspector_workflows_contract.cjs','.github/workflows/coastal-reference.yml']){
   assert.ok(scopedPush.includes(file),'Missing scoped fauna path: '+file);
 }
 assert.ok(!/^  pull_request:/m.test(mainTriggers),'Pull requests must not launch the full Inspector.');
+assert.doesNotMatch(scopedPush,/scripts\/build_site\.py|scripts\/test_mobile_startup_loading\.cjs|scripts\/test_wildlife_runtime_contract\.cjs/,'General build and runtime changes must not launch the full cloud lab.');
 const hrafnTriggers=hrafn.slice(hrafn.indexOf('on:\n'),hrafn.indexOf('\npermissions:'));
 assert.ok(hrafnTriggers.includes('workflow_dispatch:')&&!/^  pull_request:/m.test(hrafnTriggers),'Hrafn measurements must also be manual-only.');
 assert.match(validate,/pull_request:/,'Ordinary pull-request validation must remain enabled.');
@@ -31,7 +33,7 @@ assert.ok(workflow.includes("github.event_name == 'workflow_dispatch' && inputs.
 assert.ok(workflow.includes("github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0'"),'The scheduled Sunday Deep audit must resolve an A/B baseline.');
 assert.match(mainTriggers,/schedule:/,'The Inspector must run on its unattended schedule.');
 assert.match(workflow,/timezone: 'Europe\/Madrid'/,'Nightly runs must follow the Madrid time zone.');
-assert.ok(workflow.includes("INSPECTOR_LEVEL: ${{ inputs.inspection_level || ((github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0') && 'deep') || (github.event_name == 'schedule' && 'complete') || (github.event_name == 'push' && 'complete') || 'quick' }}"),'Manual runs default to Quick, nightly and scoped fauna pushes to Complete and Sunday runs to Deep.');
+assert.ok(workflow.includes("INSPECTOR_LEVEL: ${{ inputs.inspection_level || ((github.event_name == 'schedule' && github.event.schedule == '47 2 * * 0') && 'deep') || (github.event_name == 'schedule' && 'complete') || (github.event_name == 'push' && 'complete') || 'quick' }}"),'Manual runs default to Quick, nightly and scoped Inspector/capture pushes to Complete and Sunday runs to Deep.');
 assert.match(workflow,/git fetch --no-tags origin "\$BASE_REF"/);
 assert.match(workflow,/git rev-parse "\$GITHUB_SHA\^"/);
 assert.match(workflow,/for attempt in \$\(seq 1 32\); do/);
@@ -48,6 +50,10 @@ assert.doesNotMatch(specialistTestStep,/continue-on-error: true/,'Agent contract
 assert.match(workflow,/node scripts\/test_hrafn_before_after_contract\.cjs/);
 assert.doesNotMatch(workflow,/feature\/unified-atmosphere-system|manual-game-test-no-inspector|pull_request\.number\s*[!=]=\s*121/);
 assert.match(center,/branches: \[main\]/);
+assert.doesNotMatch(center,/\.github\/workflows\/\*\*/, 'Unrelated workflow edits must not trigger Inspector dashboard checks.');
+assert.ok(center.includes('.github/workflows/inspector-center-checks.yml') && center.includes('.github/workflows/coastal-reference.yml'),'Inspector checks must be scoped to Inspector workflow files.');
+assert.match(deploy,/suite: \[core, wildlife, world, release\]/,'The normal release path must not run the Inspector contract shard on unrelated game changes.');
+assert.match(deploy,/inputs\.run_gpu_diagnostics == true/,'GPU comparison must be opt-in.');
 assert.doesNotMatch(center,/feature\/inspector-center-dashboard|feature\/tiered-inspector-levels/);
 assert.ok(rs.includes("const INSPECTOR_LEVEL=process.env.INSPECTOR_LEVEL||'quick'"),'The runner must default to Quick.');
 assert.ok(rs.includes("if(/Arranque del juego y modelo vikingo real/.test(name))return 1;"),'Quick must contain only the startup check.');
