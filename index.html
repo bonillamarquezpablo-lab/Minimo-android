@@ -8486,7 +8486,7 @@ function createRealWeapon(type='axe'){
   try{
    if(socket){
     realPlayerModelPivot.computeWorldMatrix(true);socket.computeWorldMatrix(true);
-    const inverseParent=realPlayerModelPivot.getWorldMatrix().clone();inverseParent.invert();
+    holderParent.computeWorldMatrix(true);const inverseParent=holderParent.getWorldMatrix().clone();inverseParent.invert();
     let gripWorld=socket.getAbsolutePosition().clone(),axisWorld=null,forwardWorld=null;
     if(realHandNode&&realForearmNode){
      realHandNode.computeWorldMatrix(true);realForearmNode.computeWorldMatrix(true);
