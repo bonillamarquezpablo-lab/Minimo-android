@@ -27,6 +27,8 @@ assert.match(release, /node scripts\/fauna-visual-capture\.mjs/);
 assert.match(release, /Preserve fauna visual acceptance evidence/);
 assert.match(release, /artifacts\/fauna-visual-captures\//);
 assert.match(release, /  changes:\n[\s\S]*?outputs:\n[\s\S]*?game: \$\{\{ steps\.scope\.outputs\.game \}\}[\s\S]*?fauna: \$\{\{ steps\.scope\.outputs\.fauna \}\}/, 'The pipeline must classify changed game and fauna components.');
+assert.match(release, /  build:\n[\s\S]*?needs: \[changes\]/, 'The build must wait for component-scope detection before preparing browser dependencies.');
+assert.match(release, /Resolve the exact Playwright version for browser-cache compatibility\n        if: needs\.changes\.outputs\.game == 'true' \|\| needs\.changes\.outputs\.fauna == 'true'/, 'Browser dependencies must not be installed for documentation or Inspector-only updates.');
 assert.match(release, /  startup:\n[\s\S]*?if: needs\.changes\.outputs\.game == 'true'[\s\S]*?needs: \[build, changes\]/, 'The gameplay/offline smoke must run whenever game runtime files change.');
 assert.match(release, /  fauna:\n[\s\S]*?if: needs\.changes\.outputs\.fauna == 'true'[\s\S]*?needs: \[build, changes\]/, 'The full CPU fauna visual acceptance must run whenever fauna or packaged assets change.');
 assert.match(release, /  fauna-gpu-diagnostic:\n[\s\S]*?continue-on-error: true/, 'The GPU comparison remains available but non-blocking.');
