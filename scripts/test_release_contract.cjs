@@ -58,7 +58,7 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.348","The release validator must target the packaged 0.6.348 release.");
+assert.equal(expectedVersion,"0.6.349","The release validator must target the packaged 0.6.349 release.");
 assert.ok(indexHtml.includes("meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});"),
   "The published HTML must preserve frustum bypass on skinned fauna meshes after all setup passes.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
@@ -119,11 +119,11 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
   assert.equal(version,sourceVersion,`The source ${source} must remain the 0.6.274 input that build_site upgrades deterministically.`);
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
-assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.348-npcbrain2"') &&
-  buildSite.includes('npc-village-brain-core.js?v=0.6.348-npcbrain2'),
+assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.349-npcbrain3"') &&
+  buildSite.includes('npc-village-brain-core.js?v=0.6.349-npcbrain3'),
   "The NPC brain must use the same versioned URL in the generated page and the service-worker shell cache.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.348"\)/,"The build must promote every visible source version to 0.6.348.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.348"\)/,"The build must promote every visible source version to 0.6.349.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true") && buildSite.includes("qualityScaleAdaptive:false") && buildSite.includes("nativeResolutionPreserved:true"),"Quality must keep its native render scale fixed for the session.");
 assert.ok(!buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples"),"Runtime pressure must not trigger automatic resolution reduction.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?1.80:1.45"),"The high-headroom mobile Quality startup scale must preserve its original full-resolution setting.");
@@ -156,7 +156,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.348")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.348.");
+assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.349")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.349.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
@@ -240,3 +240,7 @@ new (require('node:vm').Script)(unifiedInspector,{filename:'inspector/unified-wo
 new (require('node:vm').Script)(unifiedRecorder,{filename:'scripts/game-session-recorder.js'});
 
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
+
+assert.ok(expectedVersion==="0.6.349" && buildSite.includes('html = html.replace("0.6.274", "0.6.349")'), "The correction package must be release 0.6.349.");
+assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('gull_motion_replacement') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes with read-only acceptance diagnostics.");
+assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.349-npcbrain3") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.349-npcbrain3"), "The new shell cache must not reuse the previous NPC brain module entry.");

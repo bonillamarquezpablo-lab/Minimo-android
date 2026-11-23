@@ -14,6 +14,13 @@ ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 EXPECTED_VERSION = "0.6.349"
 
+VISUAL_ACCEPTANCE_MARKERS = (
+    "window.getGameVisualActorDiagnostics=()=>{",
+    "RealCastawayStickBranch",
+    "const forwardCarryAxis=worldUp.clone().add(modelForward.scale(.18)).normalize();",
+    "ambientBirds.forEach(b=>{if(!b||!b.root||b.root.isDisposed?.())return;",
+)
+
 HTML_PAGES = (
     "index.html",
     "guest.html",
@@ -81,6 +88,11 @@ def read_text(relative: str) -> str:
         fail(f"No se pudo leer {relative}: {exc}")
 
 def main() -> None:
+
+    for marker in VISUAL_ACCEPTANCE_MARKERS:
+        if marker not in (DIST / "index.html").read_text(encoding="utf-8"):
+            fail("El paquete visual no contiene el arreglo obligatorio: " + marker)
+
     missing = [relative for relative in REQUIRED_FILES if not (DIST / relative).is_file()]
     if missing:
         fail("Faltan archivos requeridos: " + ", ".join(missing))
