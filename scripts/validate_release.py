@@ -375,7 +375,7 @@ def main() -> None:
         "const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;",
         "rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip",
         "nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);",
-        "b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)",
+        "flight.speedRatio=.96+.08*Math.sin(elapsed*.7+(Number(b.phase)||0))",
         "scene.setRenderingAutoClearDepthStencil(1,false,false,false)",
         "height:spec.spec.targetHeight*scale",
         "height:.95*size",
