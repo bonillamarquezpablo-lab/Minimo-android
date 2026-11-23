@@ -1660,6 +1660,37 @@ function updateWildlife(dt){
     fauna_start_marker = " if(!coastalReferenceMode){\n  const faunaStartedAt=performance.now();\n  const faunaTasks=[{name:'Fauna terrestre',promise:loadWildlifeModels()}];"
     fauna_end_marker = "\n const startupMemoryTextures=new Set(),startupMemoryGeometry=new Set();"
     fauna_scene_marker = " let sceneWarmupStatus='unavailable';"
+    startup_coast_warmup_code = """ if(!coastalReferenceMode){
+  const startupCoastWarmupStartedAt=performance.now();
+  const yieldStartupCoastFrame=()=>new Promise(resolve=>{
+   let settled=false;const finish=()=>{if(settled)return;settled=true;resolve();};
+   requestAnimationFrame(finish);setTimeout(finish,90);
+  });
+  setLoadingProgress(94,'Preparando la costa y los reflejos de la isla inicial…');
+  syncActiveBeachIsland();
+  await yieldStartupCoastFrame();
+  const initialCoastIslandIndex=activeBeachIslandIndex;
+  if(initialCoastIslandIndex<0)throw new Error('RECURSO OBLIGATORIO: no se pudo identificar la costa de la isla inicial.');
+  syncActiveTidalFoamIsland();
+  await yieldStartupCoastFrame();
+  syncNordicWaterReflectionIsland();
+  await yieldStartupCoastFrame();
+  const initialCoastReady=!!coastalSeabedMeshes[initialCoastIslandIndex]&&
+   !!livingBeachLayers[initialCoastIslandIndex]&&
+   tidalFoamMeshes.some(item=>item.index===initialCoastIslandIndex)&&
+   (isPerformanceMode||!nordicWaterMirror||activeWaterReflectionIslandIndex===initialCoastIslandIndex);
+  window.__ELSN_INITIAL_COAST_WARMUP__={
+   status:initialCoastReady?'ready':'failed',
+   islandIndex:initialCoastIslandIndex,
+   seabedReady:!!coastalSeabedMeshes[initialCoastIslandIndex],
+   beachReady:!!livingBeachLayers[initialCoastIslandIndex],
+   foamReady:tidalFoamMeshes.some(item=>item.index===initialCoastIslandIndex),
+   reflectionReady:isPerformanceMode||!nordicWaterMirror||activeWaterReflectionIslandIndex===initialCoastIslandIndex,
+   durationMs:Number((performance.now()-startupCoastWarmupStartedAt).toFixed(2))
+  };
+  if(!initialCoastReady)throw new Error('RECURSO OBLIGATORIO: costa, rompiente o reflejo de la isla inicial incompleto.');
+  recordStartupTask('Costa, rompiente y reflejos de la isla inicial',startupCoastWarmupStartedAt,performance.now(),'ready',window.__ELSN_INITIAL_COAST_WARMUP__);
+ }"""
     if html.count(fauna_start_marker) != 1 or html.count(fauna_end_marker) != 1 or html.count(fauna_scene_marker) != 1:
         raise SystemExit("No se encontró un único bloque de fauna/escena para ordenar el arranque.")
     fauna_start = html.index(fauna_start_marker)
@@ -1669,6 +1700,11 @@ function updateWildlife(dt){
     scene_marker_index = html.index(fauna_scene_marker)
     ordered_fauna = " setLoadingProgress(87,coastalReferenceMode?'Preparando la referencia costera…':'Preparando fauna de la isla inicial…');\n" + fauna_block + "\n setLoadingProgress(93,coastalReferenceMode?'Preparando shaders de costa…':'Preparando texturas y shaders de la zona inicial…');\n"
     html = html[:scene_marker_index] + ordered_fauna + html[scene_marker_index:]
+    # Prepare the initial beach/foam/reflection after all fauna has joined the scene,
+    # before Babylon's full texture and shader readiness barrier unlocks gameplay.
+    if html.count(fauna_scene_marker) != 1:
+        raise SystemExit("No se encontró exactamente una barrera de compilación de escena para precalentar la costa.")
+    html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\\n" + fauna_scene_marker, 1)
 
     # All three terrestrial species are required in both profiles. Performance keeps its
     # reduced movement/decision cadence; the five gulls remain Quality-only.
@@ -1780,6 +1816,7 @@ function updateWildlife(dt){
   soundEffects:audioPreloadResult,
   music:{results:startupMusicPreloadResult,menuReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[0]&&startupMusicPreloadResult[0].ready),gameplayReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[1]&&startupMusicPreloadResult[1].ready),streaming:true,decodedToAudioBuffer:false},
   scene:{status:sceneWarmupStatus,waitingItemsAfter:window.__elSinNombreStartupSceneWarmup&&window.__elSinNombreStartupSceneWarmup.waitingItemsAfter,meshes:scene&&scene.meshes?scene.meshes.length:0,firstFrameRendered:!!firstFrameRendered},
+  coast:window.__ELSN_INITIAL_COAST_WARMUP__||null,
   world:{islands:land.length,grassClumps:grassInstanceCount,grassBatches:grassBatchCount,profile:activeGraphicsProfile}
  };
  const startupResourceFailures=[];
@@ -1791,6 +1828,7 @@ function updateWildlife(dt){
   if(!startupResourceSnapshot.soundEffects||startupResourceSnapshot.soundEffects.failed||startupResourceSnapshot.soundEffects.pending||startupResourceSnapshot.soundEffects.ready!==startupResourceSnapshot.soundEffects.total)startupResourceFailures.push('efectos de sonido');
   if(!startupResourceSnapshot.music.menuReady||!startupResourceSnapshot.music.gameplayReady)startupResourceFailures.push('bandas sonoras');
   if(startupResourceSnapshot.scene.status!=='ready'||startupResourceSnapshot.scene.meshes<=0||!startupResourceSnapshot.scene.firstFrameRendered)startupResourceFailures.push('escena, texturas y shaders de la vista inicial');
+  if(!startupResourceSnapshot.coast||startupResourceSnapshot.coast.status!=='ready')startupResourceFailures.push('playa, fondo submarino, rompiente y reflejo de la isla inicial');
   if(startupResourceSnapshot.world.islands!==13)startupResourceFailures.push('mundo de 13 islas');
   if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)startupResourceFailures.push('fauna terrestre '+startupResourceSnapshot.fauna.loaded+'/'+startupResourceSnapshot.fauna.requested);
   if(!isPerformanceMode){
