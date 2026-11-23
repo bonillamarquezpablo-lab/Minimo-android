@@ -739,8 +739,9 @@ async function main() {
     const visualActorsAfter=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsAfter&&visualActorsAfter.gulls.length===5,'Se perdió la bandada tras el primer segundo.');
     for(let index=0;index<5;index++){
-      const before=visualActorsBefore.gulls[index]?.position,after=visualActorsAfter.gulls[index]?.position;
-      const displacement=before&&after?Math.hypot(after.x-before.x,after.z-before.z):0;
+      const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index],beforePosition=before?.position,afterPosition=after?.position;
+      const displacement=beforePosition&&afterPosition?Math.hypot(afterPosition.x-beforePosition.x,afterPosition.z-beforePosition.z):0;
+      assert.ok(Number(after?.flightUpdateTicks)>Number(before?.flightUpdateTicks),'La actualización de vuelo no avanzó para la gaviota '+index+': '+JSON.stringify({before,after}));
       assert.ok(displacement>.15,'La gaviota '+index+' no se desplazó durante la prueba de vuelo: '+JSON.stringify({before,after,displacement}));
     }
     manifest.visualActorAcceptance={before:visualActorsBefore,after:visualActorsAfter,allThreeSystemsVisible:true,gullsMoved:true};

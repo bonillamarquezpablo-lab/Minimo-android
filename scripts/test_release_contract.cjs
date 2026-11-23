@@ -82,7 +82,7 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   buildSite.includes("alignment:{source:'native-Fly-midpoint'") &&
   buildSite.includes("alignmentDot<.995") &&
   buildSite.includes("gull_motion_replacement = \"ambientBirds.forEach(b=>{if(!b||!b.root||b.root.isDisposed?.())return;") &&
-  buildSite.includes("flight.speedRatio=.96+.08*Math.sin(elapsed*.7+(Number(b.phase)||0));") &&
+  buildSite.includes("flight.speedRatio=.96+.08*Math.sin(flightElapsed*.7+phase);") &&
   buildSite.includes("if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);") &&
   !buildSite.includes("addFlightTrack(") &&
   !buildSite.includes("Seagull_Flight_Loop_") &&
@@ -244,5 +244,5 @@ new (require('node:vm').Script)(unifiedRecorder,{filename:'scripts/game-session-
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
 
 assert.ok(expectedVersion==="0.6.349" && buildSite.includes('html = html.replace("0.6.274", "0.6.349")'), "The correction package must be release 0.6.349.");
-assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('gull_motion_replacement') && buildSite.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
+assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('gull_motion_replacement') && buildSite.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && buildSite.includes("const gullClockSeconds=performance.now()*.001;") && buildSite.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
 assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.349-npcbrain3") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.349-npcbrain3"), "The new shell cache must not reuse the previous NPC brain module entry.");

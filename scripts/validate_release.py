@@ -20,6 +20,9 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "const forwardCarryAxis=worldUp.clone().add(modelForward.scale(.18)).normalize();",
     "ambientBirds.forEach(b=>{if(!b||!b.root||b.root.isDisposed?.())return;",
     "if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);",
+    "const gullClockSeconds=performance.now()*.001;",
+    "b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;",
+    "flightElapsed=Math.max(0,gullClockSeconds-b.flightClockOrigin)",
 )
 
 HTML_PAGES = (
@@ -376,7 +379,7 @@ def main() -> None:
         "const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;",
         "rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip",
         "nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);",
-        "flight.speedRatio=.96+.08*Math.sin(elapsed*.7+(Number(b.phase)||0))",
+        "flight.speedRatio=.96+.08*Math.sin(flightElapsed*.7+phase)",
         "if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);",
         "scene.setRenderingAutoClearDepthStencil(1,false,false,false)",
         "height:spec.spec.targetHeight*scale",
