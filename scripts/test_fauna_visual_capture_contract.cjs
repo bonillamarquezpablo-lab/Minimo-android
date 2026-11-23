@@ -20,8 +20,14 @@ assert.ok(runner.includes('scripts/create_fauna_contact_sheet.py'));
 assert.ok(runner.includes('results:{player,texture,grounding,coastal,custom,fauna,beforeAfter}'));
 const primaryFaunaStart=releaseWorkflow.indexOf('- name: Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish');
 const primaryFaunaEnd=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning fallback',primaryFaunaStart);
-assert.ok(primaryFaunaStart>=0&&primaryFaunaEnd>primaryFaunaStart&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('FAUNA_SKINNING_MODE: cpu')&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('timeout-minutes: 30') && releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('python scripts/create_fauna_contact_sheet.py'),
+assert.ok(primaryFaunaStart>=0&&primaryFaunaEnd>primaryFaunaStart&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('FAUNA_SKINNING_MODE: cpu')&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('timeout-minutes: 18') && releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('python scripts/create_fauna_contact_sheet.py'),
   'Release acceptance must validate all fauna using the stable CPU skinning path with enough time for the full four-view capture.');
+assert.ok(releaseWorkflow.includes('timeout-minutes: 25') && releaseWorkflow.includes('# The capture script has a 15-minute global deadline and per-evaluation watchdogs.'),
+  'The complete fauna job and its main capture step must have hard upper time bounds.');
+assert.ok(capture.includes('const FAUNA_CAPTURE_MAX_RUNTIME_MS = 15 * 60 * 1000') &&
+  capture.includes('async function evaluateWithTimeout') && capture.includes('[FAUNA_EVALUATE_TIMEOUT]') &&
+  capture.includes('[FAUNA_PROGRESS]') && capture.includes('manifest.currentCapture'),
+  'Fauna capture must publish incremental progress and fail with a diagnostic instead of waiting indefinitely in a Playwright evaluation.');
 const cpuDiagnosticStart=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning fallback');
 const cpuDiagnosticEnd=releaseWorkflow.indexOf('- name: Preserve GPU skinning fallback diagnostic evidence',cpuDiagnosticStart);
 assert.ok(releaseWorkflow.includes("id: playwright_install"), 'Playwright installation must be identifiable before optional diagnostic captures.');
@@ -30,6 +36,9 @@ assert.ok(cpuDiagnosticStart>=0&&cpuDiagnosticEnd>cpuDiagnosticStart&&releaseWor
 assert.ok(capture.includes('__ELSN_FAUNA_CAPTURE_SCENE__'));
 assert.ok(capture.includes('const number=value=>Number.isFinite(Number(value))?Number(Number(value).toFixed(4)):null;\n          const ancestorsContain='),
   'Every isolated Playwright page.evaluate callback must define its own numeric formatter; helpers in prior evaluate contexts are not shared.');
+assert.ok(capture.includes("'view '+animal.id+'/'+angle.id,FAUNA_PAGE_EVALUATE_TIMEOUT_MS") &&
+  capture.includes("logProgress('view-capture-complete'"),
+  'Every individual fauna camera view must have its own timeout and a visible completion marker.');
 assert.ok(capture.includes("const SKINNING_MODE = String(process.env.FAUNA_SKINNING_MODE || 'cpu').toLowerCase()") && capture.includes("process.env.FAUNA_CAPTURE_OUTPUT"),
   'Fauna captures must support an explicit CPU/GPU diagnostic mode and isolated output folders.');
 assert.ok(capture.includes("window.__ELSN_FORCE_CPU_SKINNING__=mode==='cpu'") && capture.includes("window.__ELSN_FORCE_GPU_SKINNING__=mode==='gpu'") && capture.includes('{mode:SKINNING_MODE}') && capture.includes('hasTouch:true'),
