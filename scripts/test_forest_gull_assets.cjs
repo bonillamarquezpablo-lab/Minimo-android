@@ -31,7 +31,7 @@ assert.ok(html.includes("flightRig,animation:nativeFlightClip,phase:i*1.25") && 
   html.includes("visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))") &&
   html.includes("groups.find(group=>/fly/i") &&
   html.includes("animationGroup:nativeFlightClip") &&
-  html.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
+  html.includes("flight.speedRatio=.96+.08*Math.sin(elapsed*.7+(Number(b.phase)||0))") && html.includes("if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);") &&
   !html.includes("Seagull_Flight_Loop_") && !html.includes("addFlightTrack("),
   'Each gull must align its body horizontally and animate the entire imported GLB Fly clip without a discarded synthetic rig.');
 assert.ok(html.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)") && html.includes("footprintMesh.renderingGroupId=1"),
@@ -113,3 +113,7 @@ assert.ok(gullTriangles>0&&gullTriangles<=7000,'La nueva gaviota debe conservar 
 assert.ok((gullJson.materials||[]).length>0&&(gullJson.materials||[]).length<=2,'La gaviota debe conservar el material nativo de su plumaje.');
 console.log('OK: bosque y mapas PBR intactos; gaviota anatómica con pivotes de alas/cola y escala física máxima 0,55 m.');
 console.log(JSON.stringify({models,gullBytes:gullData.length,gullTriangles,gullMaterials:gullJson.materials.length},null,2));
+
+assert.ok(html.includes("actor.position=v(Math.cos(i*1.25)*(18+i*2.5)-36,10+i%3*1.45,Math.sin(i*1.25)*(18+i*2.5)-18)"), 'Each gull must start at its own orbital phase instead of stacking all five roots at the same X/Z coordinate.');
+assert.ok(html.includes('ambientBirds.forEach(b=>{if(!b||!b.root||b.root.isDisposed?.())return;') && html.includes('if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);'), 'All live gulls must keep moving and restart their complete native Fly clip even when generic entity LOD is throttled.');
+assert.ok(!html.includes('ambientBirds.forEach(b=>{if(!worldEntityVisualDue(b,b.root.position.x,b.root.position.z))return;'), 'The five-bird flock must not freeze behind the generic world-entity visual cadence.');

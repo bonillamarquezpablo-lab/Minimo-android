@@ -84,8 +84,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'57\',build:\'0.6.348\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.348"'), 'Release validator must target version 0.6.348.');
+assert.ok(validator.includes('reportVersion:\'58\',build:\'0.6.349\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.349"'), 'Release validator must target version 0.6.349.');
 assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
   'Hardware mobile GPUs must use GPU skinning by default; CPU remains explicit diagnostics/software fallback, and the exact path is recorded per animal.');
 assert.ok(builder.includes("forestPlantingStartedAt") && builder.includes("Plantación inicial de bosque") && builder.includes("await new Promise(resolve=>requestAnimationFrame(resolve))"),
@@ -139,6 +139,19 @@ assert.ok(builder.includes('grassLodLeafCounts') &&
   builder.includes('batch.selectLod(batch.x,batch.z,viewFocus.x,viewFocus.z,batch.lod)') &&
   builder.includes('batch.lodVertexData[nextLod].applyToMesh(batch.mesh)'),
   'Grass must use near/mid/far geometry LOD on the same instance buffers, without removing grass positions.');
+assert.ok(builder.includes("const freezeSpatialStaticWorldMatrices=()=>") &&
+  builder.includes("mesh.computeWorldMatrix(true);") &&
+  builder.includes("mesh.freezeWorldMatrix(worldMatrix);") &&
+  builder.includes("const staticWorldMatricesFrozen=freezeSpatialStaticWorldMatrices();"),
+  "The Quality scene must freeze only static transforms after dynamic classification, retaining animated systems.");
+assert.ok(builder.includes("mesh.__elsnSpatialDynamic||isSpatialDynamicMesh(mesh)") &&
+  builder.includes("mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0"),
+  "Static transform freezing must exclude dynamic, skinned, morphed and billboard meshes.");
+assert.ok(builder.includes('npcBrainRuntime.fallbackComputeLocomotion') &&
+  builder.includes('if(npcBrainMissingMethods.length===0)ambientPeople.forEach'),
+  "Missing NPC locomotion must use an NPC-only fallback, while an incompatible brain cannot abort the rest of the world update.");
+assert.ok(builder.includes('npcBrainDiagnostics.lastProblemKey'),
+  "NPC compatibility failures must be logged once per distinct API mismatch, not once per rendered frame.");
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullMaxExtentMeters=.55') &&
   builder.includes('sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)') &&
@@ -208,3 +221,13 @@ assert.ok(!weaponAnchorSource.includes('const inverseParent=realPlayerModelPivot
 assert.ok(source.includes("e.parts.alive=false;")&&source.includes("guard.parts.alive=true;"),'Dead and reset guards must synchronize their renderable actor lifecycle state.');
 assert.ok(source.includes("setFactionBadge(guard.parts,'friendly');"),'A recruited guard must switch its faction indicator to friendly.');
 assert.ok(source.includes('hideFactionBadge(parts);crewman.landed=false;crewman.invaderRef=null;parts.faction=\'enemy\';'),'Crew returned to a ship must not retain a detached enemy marker.');
+
+assert.ok(builder.includes('warrior_mesh_visibility_marker') && builder.includes('meshes.forEach(mesh=>{try{mesh.setEnabled(true);}catch(_){}mesh.isVisible=true;mesh.visibility=1;});'), 'The real warrior GLB must explicitly enable its filtered body meshes instead of leaving invisible imported parts.');
+assert.ok(builder.includes('warrior_attach_replacement') && builder.includes('visualBody.setEnabled(true);modelRoot.setEnabled(true);parts.root.setEnabled(true);'), 'The real warrior attachment must restore the actor root, body pivot and model root after mounting.');
+assert.ok(builder.includes('npc_visual_lod_replacement') && builder.includes('(wantVisible&&!rootEnabled)'), 'NPC distance visibility must recover an accidentally disabled nearby root without reducing mesh detail.');
+assert.ok(builder.includes('club_shaft_replacement') && builder.includes('RealCastawayStickBranch') && builder.includes('1.34,.078,M.woodLight'), 'The starting club must keep a clearly readable full-length wooden shaft and forked branch.');
+assert.ok(builder.includes('const forwardCarryAxis=worldUp.clone().add(modelForward.scale(.18)).normalize();') && builder.includes('gripWorld.addInPlace(modelRight.scale(.055));'), 'The equipped club must extend down beside the hand instead of being carried horizontally into the body.');
+assert.ok(builder.includes('gull_motion_replacement') && builder.includes('if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to)') && builder.includes('Math.cos(i*1.25)*(18+i*2.5)-36'), 'The five gulls must retain independent orbit positions and recover their native flight clip every frame.');
+assert.ok(builder.includes('window.getGameVisualActorDiagnostics') && builder.includes('visibleMeshCount') && builder.includes('flightPlaying'), 'The release must expose read-only visual proof for the club, home warriors and flying gulls.');
+
+assert.ok(builder.includes("calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor'"), 'Visual diagnostics must report club calibration using the existing live weapon-anchor state.');

@@ -1,8 +1,8 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.348";
-const ASSET_CACHE = "el-sin-nombre-assets-pending-build-0.6.348";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.349-npcbrain3";
+const ASSET_CACHE = "el-sin-nombre-assets-pending-build-0.6.349";
 const WILDLIFE_MODEL_CACHE = "el-sin-nombre-models-wildlife-0128ca51-v1";
-const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./scripts/nordic/beach-state.js", "./scripts/nordic/coastal-interaction.js", "./scripts/nordic/navigation-suite.js", "./scripts/nordic/atmosphere-system.js", "./scripts/nordic/world-inspection.js", "./scripts/npc-agent-core.js", "./scripts/npc-agent-runtime.js", "./scripts/game-session-recorder.js", "./scripts/npc-village-brain-core.js", "./scripts/npc-dialogue-core.js", "./scripts/npc-dialogue-runtime.js", "./scripts/npc-dialogue.css", "./icon.svg"];
+const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./scripts/nordic/beach-state.js", "./scripts/nordic/coastal-interaction.js", "./scripts/nordic/navigation-suite.js", "./scripts/nordic/atmosphere-system.js", "./scripts/nordic/world-inspection.js", "./scripts/npc-agent-core.js", "./scripts/npc-agent-runtime.js", "./scripts/game-session-recorder.js", "./scripts/npc-village-brain-core.js?v=0.6.349-npcbrain3", "./scripts/npc-dialogue-core.js", "./scripts/npc-dialogue-runtime.js", "./scripts/npc-dialogue.css", "./icon.svg"];
 
 self.addEventListener("install", event => {
   event.waitUntil(

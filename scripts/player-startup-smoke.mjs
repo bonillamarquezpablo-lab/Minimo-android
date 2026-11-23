@@ -55,6 +55,7 @@ async function readStartupSnapshot(page) {
     ):[];
     const world=typeof window.getGameWorldInspectionSnapshot==='function'
       ?safe(()=>window.getGameWorldInspectionSnapshot({includeMeshes:false,maxActors:100}),null):null;
+    const visualActors=typeof window.getGameVisualActorDiagnostics==='function'?safe(()=>window.getGameVisualActorDiagnostics(),null):null;
     const progress={
       percent:document.getElementById('elsnStartupProgressPercent')?.textContent||
         document.getElementById('loadProgressLabel')?.textContent||null,
@@ -87,6 +88,7 @@ async function readStartupSnapshot(page) {
       loadingText:document.getElementById('loadText')?.textContent||document.querySelector('#loading')?.textContent||null,
       loadingHelp:progress.help,progress,
       recorder:window.__elSinNombreStartupSmoke||null,
+      visualActors,
       player:window.__ELSN_PLAYER_STARTUP_SMOKE__?.state?.()||null,
       resourceGate:window.__ELSN_STARTUP_RESOURCE_GATE__||null,
       scene:scene?{
@@ -722,6 +724,26 @@ async function main() {
     manifest.worldUpdateWaitMs = Number((performance.now() - worldUpdateWaitStartedAt).toFixed(1));
     manifest.worldUpdateCountAtCapture = await page.evaluate(() =>
       window.getGameHealthDebug()?.worldUpdateCount ?? null);
+    const visualActorsBefore=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
+    assert.ok(visualActorsBefore,'Falta el diagnóstico visual del palo, los guerreros y las gaviotas.');
+    assert.equal(visualActorsBefore.playerClub.equipped,'club','El arsenal no conserva el palo inicial equipado.');
+    assert.equal(visualActorsBefore.playerClub.holderEnabled,true,'El anclaje del palo no está activo.');
+    assert.ok(visualActorsBefore.playerClub.visibleMeshCount>=3,'El palo inicial no tiene sus piezas visibles: '+JSON.stringify(visualActorsBefore.playerClub));
+    assert.ok(visualActorsBefore.homeWarriors.length>=1,'No se cargó ningún guardián humano de la zona inicial: '+JSON.stringify(visualActorsBefore.homeWarriors));
+    assert.ok(visualActorsBefore.homeWarriors.every(actor=>actor.rootEnabled&&actor.realHuman&&actor.bodyEnabled&&actor.modelRootEnabled&&actor.visibleMeshCount>0),'Hay guardianes GLB invisibles o incompletos: '+JSON.stringify(visualActorsBefore.homeWarriors));
+    assert.equal(visualActorsBefore.gulls.length,5,'Calidad debe cargar las cinco gaviotas 3D: '+JSON.stringify(visualActorsBefore.gulls));
+    assert.ok(visualActorsBefore.gulls.every(bird=>bird.rootEnabled&&bird.hasFlightRig&&bird.flightPlaying&&/^Fly$/i.test(bird.flightName||'')),'Hay una gaviota sin su rig o clip nativo Fly activo: '+JSON.stringify(visualActorsBefore.gulls));
+    const gullPositions=new Set(visualActorsBefore.gulls.map(bird=>bird.position?Math.round(bird.position.x*10)+':'+Math.round(bird.position.z*10):'missing'));
+    assert.equal(gullPositions.size,5,'Las cinco gaviotas arrancaron superpuestas: '+JSON.stringify(visualActorsBefore.gulls));
+    await page.waitForTimeout(900);
+    const visualActorsAfter=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
+    assert.ok(visualActorsAfter&&visualActorsAfter.gulls.length===5,'Se perdió la bandada tras el primer segundo.');
+    for(let index=0;index<5;index++){
+      const before=visualActorsBefore.gulls[index]?.position,after=visualActorsAfter.gulls[index]?.position;
+      const displacement=before&&after?Math.hypot(after.x-before.x,after.z-before.z):0;
+      assert.ok(displacement>.15,'La gaviota '+index+' no se desplazó durante la prueba de vuelo: '+JSON.stringify({before,after,displacement}));
+    }
+    manifest.visualActorAcceptance={before:visualActorsBefore,after:visualActorsAfter,allThreeSystemsVisible:true,gullsMoved:true};
     await page.waitForFunction(() => {
       const state = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.();
       return !!state && state.active === true;
