@@ -876,7 +876,45 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
-    # 0.6.348: dense flagship ground cover; constrained devices retain the prior safe density.
+    # 0.6.349: restore imported humanoid actor visibility after transactional GLB attachment.
+    warrior_mesh_visibility_marker = """  const filterResult=filterNpcEquipmentMeshes(meshes,isCivilian);
+  meshes=filterResult.meshes;"""
+    warrior_mesh_visibility_replacement = """  const filterResult=filterNpcEquipmentMeshes(meshes,isCivilian);
+  meshes=filterResult.meshes;
+  meshes.forEach(mesh=>{try{mesh.setEnabled(true);}catch(_){}mesh.isVisible=true;mesh.visibility=1;});"""
+    if html.count(warrior_mesh_visibility_marker) != 1:
+        raise SystemExit("No se encontró el filtro único de visibilidad de mallas NPC.")
+    html = html.replace(warrior_mesh_visibility_marker,warrior_mesh_visibility_replacement,1)
+
+    warrior_attach_marker = "parts.realHuman={roots,meshes,groups,walk,run,idle,attack,current:null,rig,rest,sword,modelRoot,visualBody,isRaiderCrew,weaponSocketNode,role,manualGaitAvailable:!!(rig.leftUpperLeg&&rig.rightUpperLeg),manualGaitReady:!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg),modelForwardOffset:NPC_HUMAN_FORWARD_OFFSET,shadowCasterMeshes,shadowCasterActive:true,phaseOffset:index*1.37};"
+    warrior_attach_replacement = warrior_attach_marker + "visualBody.setEnabled(true);modelRoot.setEnabled(true);parts.root.setEnabled(true);roots.forEach(root=>{try{root.setEnabled(true);}catch(_){}});meshes.forEach(mesh=>{try{mesh.setEnabled(true);}catch(_){}mesh.isVisible=true;mesh.visibility=1;});"
+    if html.count(warrior_attach_marker) != 1:
+        raise SystemExit("No se encontró la asignación única del rig humano NPC.")
+    html = html.replace(warrior_attach_marker,warrior_attach_replacement,1)
+
+    # Recover a nearby actor root if an earlier scene lifecycle step disabled it.
+    npc_visual_lod_marker = "const wasVisible=real.distanceVisible!==false,wantVisible=wasVisible?d2<(hideRadius*hideRadius):d2<(showRadius*showRadius);\n    if(wantVisible!==wasVisible){real.distanceVisible=wantVisible;parts.root.setEnabled(wantVisible);}"
+    npc_visual_lod_replacement = "const wasVisible=real.distanceVisible!==false,rootEnabled=typeof parts.root.isEnabled==='function'?parts.root.isEnabled():true,wantVisible=wasVisible?d2<(hideRadius*hideRadius):d2<(showRadius*showRadius);\n    if(wantVisible!==wasVisible||(wantVisible&&!rootEnabled)){real.distanceVisible=wantVisible;parts.root.setEnabled(wantVisible);}"
+    if html.count(npc_visual_lod_marker) != 1:
+        raise SystemExit("No se encontró el bloque único de LOD visual de NPC.")
+    html = html.replace(npc_visual_lod_marker,npc_visual_lod_replacement,1)
+
+    # Make the starting club a clearly readable wooden staff while retaining its weapon system.
+    club_shaft_marker = "capsule('RealCastawayStickShaft',club,[0,-.04,0],1.22,.061,M.woodDark,[.025,0,.015]);"
+    club_shaft_replacement = "capsule('RealCastawayStickShaft',club,[0,-.10,0],1.34,.078,M.woodLight,[.025,0,.015]);\n  capsule('RealCastawayStickBranch',club,[.055,.36,.008],.29,.047,M.woodDark,[0,0,-.70]);"
+    if html.count(club_shaft_marker) != 1:
+        raise SystemExit("No se encontró la geometría única del palo inicial.")
+    html = html.replace(club_shaft_marker,club_shaft_replacement,1)
+
+    club_axis_marker = "const forwardCarryAxis=modelForward.clone().add(new B.Vector3(0,.24,0)).normalize();"
+    club_axis_replacement = "const forwardCarryAxis=worldUp.clone().add(modelForward.scale(.18)).normalize();"
+    if html.count(club_axis_marker) != 1:
+        raise SystemExit("No se encontró el eje único del palo equipado.")
+    html = html.replace(club_axis_marker,club_axis_replacement,1)
+    html = html.replace("gripWorld.addInPlace(modelRight.scale(.012));","gripWorld.addInPlace(modelRight.scale(.055));",1)
+
+
+    # 0.6.349: dense flagship ground cover; constrained devices retain the prior safe density.
     grass_density_marker = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);"
     grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(isConstrainedMobile?(islandIndex===0?8.8:5.8):(islandIndex===0?10.4:7.0)):(islandIndex===0?8.8:6.2);"
     if html.count(grass_density_marker) != 1:
@@ -1750,7 +1788,7 @@ function setLoadingProgress(value,label){
     # Normalize gulls by the largest 3D model extent so rotated GLB axes cannot inflate the flock.
     # The target wingspan is biological in-world scale, independent of the source model's up-axis.
     gull_scale_marker = "const bounds=boundsForMeshes(meshes),height=Math.max(.001,bounds.height),scale=1.65/height;actor.scaling.setAll(scale);actor.position=v(-36,10+i%3*1.4-bounds.min.y*scale,-18);"
-    gull_scale_replacement = "const sourceBounds=boundsForMeshes(meshes),sourceWidth=sourceBounds.max.x-sourceBounds.min.x,sourceHeight=sourceBounds.max.y-sourceBounds.min.y,sourceDepth=sourceBounds.max.z-sourceBounds.min.z,sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth),targetGullMaxExtentMeters=.55;if(!Number.isFinite(sourceMaxExtent)||sourceMaxExtent<.10)throw new Error('Dimensiones físicas de gaviota inválidas: '+sourceMaxExtent);const sourceCenter=new B.Vector3((sourceBounds.min.x+sourceBounds.max.x)*.5,(sourceBounds.min.y+sourceBounds.max.y)*.5,(sourceBounds.min.z+sourceBounds.max.z)*.5),scale=targetGullMaxExtentMeters/sourceMaxExtent;if(!Number.isFinite(scale)||scale<=0||scale>12)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);visualRoot.position.copyFrom(sourceCenter.scale(-1));actor.scaling.setAll(scale);actor.computeWorldMatrix(true);visualRoot.computeWorldMatrix(true);meshes.forEach(mesh=>mesh.computeWorldMatrix(true));const fittedBounds=boundsForMeshes(meshes),fittedWidth=fittedBounds.max.x-fittedBounds.min.x,fittedHeight=fittedBounds.max.y-fittedBounds.min.y,fittedDepth=fittedBounds.max.z-fittedBounds.min.z,fittedMaxExtent=Math.max(fittedWidth,fittedHeight,fittedDepth);if(!Number.isFinite(fittedMaxExtent)||fittedMaxExtent>.57)throw new Error('La gaviota supera el límite físico de 0,57 m: '+fittedMaxExtent.toFixed(3));actor.position=v(-36,10+i%3*1.4,-18);actor.metadata=Object.assign({},actor.metadata||{},{biologicalScale:{source:{width:sourceWidth,height:sourceHeight,depth:sourceDepth},rendered:{width:fittedWidth,height:fittedHeight,depth:fittedDepth},maximumExtentMeters:fittedMaxExtent}});"
+    gull_scale_replacement = "const sourceBounds=boundsForMeshes(meshes),sourceWidth=sourceBounds.max.x-sourceBounds.min.x,sourceHeight=sourceBounds.max.y-sourceBounds.min.y,sourceDepth=sourceBounds.max.z-sourceBounds.min.z,sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth),targetGullMaxExtentMeters=.55;if(!Number.isFinite(sourceMaxExtent)||sourceMaxExtent<.10)throw new Error('Dimensiones físicas de gaviota inválidas: '+sourceMaxExtent);const sourceCenter=new B.Vector3((sourceBounds.min.x+sourceBounds.max.x)*.5,(sourceBounds.min.y+sourceBounds.max.y)*.5,(sourceBounds.min.z+sourceBounds.max.z)*.5),scale=targetGullMaxExtentMeters/sourceMaxExtent;if(!Number.isFinite(scale)||scale<=0||scale>12)throw new Error('Factor de escala de gaviota fuera de rango: '+scale);visualRoot.position.copyFrom(sourceCenter.scale(-1));actor.scaling.setAll(scale);actor.computeWorldMatrix(true);visualRoot.computeWorldMatrix(true);meshes.forEach(mesh=>mesh.computeWorldMatrix(true));const fittedBounds=boundsForMeshes(meshes),fittedWidth=fittedBounds.max.x-fittedBounds.min.x,fittedHeight=fittedBounds.max.y-fittedBounds.min.y,fittedDepth=fittedBounds.max.z-fittedBounds.min.z,fittedMaxExtent=Math.max(fittedWidth,fittedHeight,fittedDepth);if(!Number.isFinite(fittedMaxExtent)||fittedMaxExtent>.57)throw new Error('La gaviota supera el límite físico de 0,57 m: '+fittedMaxExtent.toFixed(3));actor.position=v(Math.cos(i*1.25)*(18+i*2.5)-36,10+i%3*1.45,Math.sin(i*1.25)*(18+i*2.5)-18);actor.metadata=Object.assign({},actor.metadata||{},{biologicalScale:{source:{width:sourceWidth,height:sourceHeight,depth:sourceDepth},rendered:{width:fittedWidth,height:fittedHeight,depth:fittedDepth},maximumExtentMeters:fittedMaxExtent}});"
     if html.count(gull_scale_marker) != 1:
         raise SystemExit("No se encontró la única escala incorrecta de gaviotas basada en altura.")
     html = html.replace(gull_scale_marker, gull_scale_replacement, 1)
@@ -1788,7 +1826,7 @@ function setLoadingProgress(value,label){
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
-    # 0.6.348: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
+    # 0.6.349: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
     # Build each island around its stable centre and keep its original per-area density.
     grass_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;\n   const radius=Math.min(92,safeLandRadius);\n   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));"
     grass_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
@@ -1846,6 +1884,13 @@ function setLoadingProgress(value,label){
     if html.count(gull_flight_marker) != 1:
         raise SystemExit("No se encontró el bucle único de vuelo de las gaviotas.")
     html = html.replace(gull_flight_marker, gull_flight_replacement, 1)
+
+    # Five birds are cheap to update every frame; generic entity LOD must not freeze the flock.
+    gull_motion_marker = "ambientBirds.forEach(b=>{if(!worldEntityVisualDue(b,b.root.position.x,b.root.position.z))return;const a=elapsed*b.speed+b.phase,bank=Math.sin(a*1.2)*.12;b.root.position.x=Math.cos(a)*b.radius-36;b.root.position.z=Math.sin(a)*b.radius-18;b.root.position.y=b.alt+Math.sin(a*2+b.phase)*.72+Math.sin(elapsed*.41+b.phase)*.12;b.root.rotation.y=-a+Math.PI/2;b.root.rotation.z=bank;if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightRig&&b.flightRig.animationGroup){b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase);}});"
+    gull_motion_replacement = "ambientBirds.forEach(b=>{if(!b||!b.root||b.root.isDisposed?.())return;const a=elapsed*(Number(b.speed)||.064)+(Number(b.phase)||0),bank=Math.sin(a*1.2)*.12;b.root.position.x=Math.cos(a)*b.radius-36;b.root.position.z=Math.sin(a)*b.radius-18;b.root.position.y=b.alt+Math.sin(a*2+b.phase)*.72+Math.sin(elapsed*.41+b.phase)*.12;b.root.rotation.y=-a+Math.PI/2;b.root.rotation.z=bank;if(b.procedural&&b.left&&b.right){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else{const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null;if(flight){if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);flight.speedRatio=.96+.08*Math.sin(elapsed*.7+(Number(b.phase)||0));}}});"
+    if html.count(gull_motion_marker) != 1:
+        raise SystemExit("No se encontró el bucle único de órbita de gaviotas.")
+    html = html.replace(gull_motion_marker,gull_motion_replacement,1)
 
     # Move expensive terrestrial-fauna decisions and collision/terrain validation to
     # a distance-aware cadence. Root motion is still integrated on every frame, while
@@ -2784,7 +2829,7 @@ function updateWildlife(dt){
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
         html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.348-npcbrain2" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.349-npcbrain2" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
     ):
@@ -2795,27 +2840,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.348: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.349: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.348; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.349; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.348\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.349\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.348.")
-    html = html.replace("0.6.274", "0.6.348")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.349.")
+    html = html.replace("0.6.274", "0.6.349")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'57',build:'0.6.348'"
+    diagnostic_build_replacement = "reportVersion:'58',build:'0.6.349'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.348 para normalizar.")
-    game_version = "0.6.348"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.349 para normalizar.")
+    game_version = "0.6.349"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -4149,6 +4194,21 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    playerDiagnostics:health?.player||null,
    runtime:{gameStarted:health?.gameStarted===true,worldUpdatePhase:health?.worldUpdatePhase??null,worldUpdateCount:health?.worldUpdateCount??null,fps:health?.runtime?.fps??null,graphicsProfile:health?.runtime?.graphicsProfile??null}
   },options);
+ };
+ window.getGameVisualActorDiagnostics=()=>{
+  const enabled=node=>!!node&&(typeof node.isEnabled!=='function'||node.isEnabled());
+  const visible=mesh=>!!mesh&&!mesh.isDisposed?.()&&enabled(mesh)&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.01;
+  const clubMeshes=realWeaponGroups&&realWeaponGroups.club&&realWeaponGroups.club.getChildMeshes?realWeaponGroups.club.getChildMeshes(false):[];
+  const guards=(humanEnemyParts||[]).filter(parts=>/^VillageGuard0_/.test(String(parts&&parts.name||'')));
+  const homeWarriors=guards.map(parts=>{
+   const real=parts.realHuman,meshes=real&&Array.isArray(real.meshes)?real.meshes:[];
+   return {name:String(parts.name||''),rootEnabled:enabled(parts.root),realHuman:!!real,meshCount:meshes.length,visibleMeshCount:meshes.filter(visible).length,bodyEnabled:enabled(real&&real.visualBody),modelRootEnabled:enabled(real&&real.modelRoot)};
+  });
+  const gulls=(ambientBirds||[]).filter(b=>b&&b.real).map(b=>{
+   const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null,p=b.root&&b.root.position;
+   return {name:String(b.root&&b.root.name||''),rootEnabled:enabled(b.root),position:p?{x:p.x,y:p.y,z:p.z}:null,phase:Number(b.phase)||0,radius:Number(b.radius)||0,flightName:flight&&String(flight.name||''),flightPlaying:!!(flight&&flight.isPlaying),hasFlightRig:!!b.flightRig};
+  });
+  return {playerClub:{equipped:String(equippedWeapon||''),holderExists:!!realWeaponHolder,holderEnabled:enabled(realWeaponHolder),groupEnabled:enabled(realWeaponGroups&&realWeaponGroups.club),meshCount:clubMeshes.length,visibleMeshCount:clubMeshes.filter(visible).length,anchor:String(realWeaponAnchorType||''),calibrated:!!realWeaponAnchorCalibrated},homeWarriors,gulls};
  };
 """
     if html.count(world_snapshot_marker) != 1:
