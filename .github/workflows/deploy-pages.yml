@@ -353,6 +353,7 @@ jobs:
         if: always()
         run: |
           if [ -s artifacts/fauna-visual-captures/manifest.json ]; then
+            python -m pip install --disable-pip-version-check pillow
             python scripts/create_fauna_contact_sheet.py artifacts/fauna-visual-captures
           else
             echo "No fauna manifest was produced; raw diagnostic logs will still be preserved."
