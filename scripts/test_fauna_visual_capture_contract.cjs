@@ -20,7 +20,7 @@ assert.ok(runner.includes('scripts/create_fauna_contact_sheet.py'));
 assert.ok(runner.includes('results:{player,texture,grounding,coastal,custom,fauna,beforeAfter}'));
 const primaryFaunaStart=releaseWorkflow.indexOf('- name: Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish');
 const primaryFaunaEnd=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning fallback',primaryFaunaStart);
-assert.ok(primaryFaunaStart>=0&&primaryFaunaEnd>primaryFaunaStart&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('FAUNA_SKINNING_MODE: cpu')&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('timeout-minutes: 18'),
+assert.ok(primaryFaunaStart>=0&&primaryFaunaEnd>primaryFaunaStart&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('FAUNA_SKINNING_MODE: cpu')&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('timeout-minutes: 30') && releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('python scripts/create_fauna_contact_sheet.py'),
   'Release acceptance must validate all fauna using the stable CPU skinning path with enough time for the full four-view capture.');
 const cpuDiagnosticStart=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning fallback');
 const cpuDiagnosticEnd=releaseWorkflow.indexOf('- name: Preserve GPU skinning fallback diagnostic evidence',cpuDiagnosticStart);
@@ -110,4 +110,8 @@ assert.ok(capture.includes("if(animal.textures.some(texture=>texture.ready===fal
   'Material-only GLBs must not be reported as missing textures; pending textures and missing materials must remain visible.');
 assert.ok(sheet.includes('fauna-contact-sheet.jpg'));
 assert.ok(sheet.includes('fauna-inspection-report.md'));
+assert.ok(sheet.includes('raster_invalid') && sheet.includes('Capturas sin evidencia raster suficiente') &&
+  sheet.includes('rasterVerifiedCount'),
+  'The contact sheet must preserve incomplete images and explicitly report their missing visual evidence rather than silently treating them as verified.');
+
 console.log('Fauna visual capture contract: PASS (live animal inventory, rig, texture and animation diagnostics, plus four camera-verified views per animal).');
