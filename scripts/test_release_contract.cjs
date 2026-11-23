@@ -58,7 +58,7 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.350","The release validator must target the packaged 0.6.350 release.");
+assert.equal(expectedVersion,"0.6.351","The release validator must target the packaged 0.6.351 release.");
 assert.ok(indexHtml.includes("meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});"),
   "The published HTML must preserve frustum bypass on skinned fauna meshes after all setup passes.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
@@ -81,7 +81,7 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   buildSite.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
   buildSite.includes("alignment:{source:'native-Fly-midpoint'") &&
   buildSite.includes("alignmentDot<.995") &&
-  buildSite.includes("scene.onBeforeRenderObservable.add(()=>{") && buildSite.includes("window.__ELSN_GULL_FLIGHT_RENDER__={active:true,observer:gullFlightRenderObserver};") &&
+  buildSite.includes("function updateAmbientGullFlight(nowSeconds){") && buildSite.includes("window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,lastTimestamp:null,lastError:null};") &&
   buildSite.includes("flight.speedRatio=.96+.08*Math.sin(flightElapsed*.7+phase);") &&
   buildSite.includes("if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);") &&
   !buildSite.includes("addFlightTrack(") &&
@@ -121,11 +121,11 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
   assert.equal(version,sourceVersion,`The source ${source} must remain the 0.6.274 input that build_site upgrades deterministically.`);
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
-assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.350-npcbrain4"') &&
-  buildSite.includes('npc-village-brain-core.js?v=0.6.350-npcbrain4'),
+assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.351-npcbrain4"') &&
+  buildSite.includes('npc-village-brain-core.js?v=0.6.351-npcbrain4'),
   "The NPC brain must use the same versioned URL in the generated page and the service-worker shell cache.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.350"\)/,"The build must promote every visible source version to 0.6.350.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.350"\)/,"The build must promote every visible source version to 0.6.351.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true") && buildSite.includes("qualityScaleAdaptive:false") && buildSite.includes("nativeResolutionPreserved:true"),"Quality must keep its native render scale fixed for the session.");
 assert.ok(!buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples"),"Runtime pressure must not trigger automatic resolution reduction.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?1.80:1.45"),"The high-headroom mobile Quality startup scale must preserve its original full-resolution setting.");
@@ -158,7 +158,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.350")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.350.");
+assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.351")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.351.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
@@ -243,6 +243,7 @@ new (require('node:vm').Script)(unifiedRecorder,{filename:'scripts/game-session-
 
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
 
-assert.ok(expectedVersion==="0.6.350" && buildSite.includes('html = html.replace("0.6.274", "0.6.350")'), "The correction package must be release 0.6.350.");
-assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('scene.onBeforeRenderObservable.add(()=>{') && buildSite.includes('window.__ELSN_GULL_FLIGHT_RENDER__') && buildSite.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && buildSite.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
-assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.350-npcbrain4") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.350-npcbrain4"), "The new shell cache must not reuse the previous NPC brain module entry.");
+assert.ok(expectedVersion==="0.6.351" && buildSite.includes('html = html.replace("0.6.274", "0.6.351")'), "The correction package must be release 0.6.351.");
+assert.ok(buildSite.includes('updateAmbientGullFlight(now*.001);'), "The flock must be updated by the actual engine render-loop callback on every frame.");
+assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('function updateAmbientGullFlight(nowSeconds){') && buildSite.includes('window.__ELSN_GULL_FLIGHT_RENDER__') && buildSite.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && buildSite.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
+assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.351-npcbrain4") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.351-npcbrain4"), "The new shell cache must not reuse the previous NPC brain module entry.");
