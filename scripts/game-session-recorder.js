@@ -493,6 +493,7 @@
         meshSelectionDynamicFilterMaxMs: number(runtime.meshSelectionDynamicFilterMaxMs),
         meshSelectionDynamicFilterErrors: number(runtime.meshSelectionDynamicFilterErrors),
         meshSelectionBuildMs: number(runtime.meshSelectionBuildMs),
+        meshSelectionStaticWorldMatrixFreezeMs: number(runtime.meshSelectionStaticWorldMatrixFreezeMs),
         meshSelectionStaticWorldMatricesFrozen: number(runtime.meshSelectionStaticWorldMatricesFrozen),
         meshSelectionStaticWorldMatrixFreezeErrors: number(runtime.meshSelectionStaticWorldMatrixFreezeErrors),
         meshSelectionStaticWorldMatrixFreezeSkipped: number(runtime.meshSelectionStaticWorldMatrixFreezeSkipped)
