@@ -9,6 +9,10 @@ if (!['cpu', 'gpu'].includes(SKINNING_MODE)) throw new Error('FAUNA_SKINNING_MOD
 const OUT = path.resolve(process.env.FAUNA_CAPTURE_OUTPUT || 'artifacts/fauna-visual-captures');
 const VIEWPORT = { width: 1600, height: 900 };
 const FAUNA_ROSTER_TIMEOUT_MS = 240000;
+const FAUNA_CAPTURE_MAX_RUNTIME_MS = 15 * 60 * 1000;
+const FAUNA_PAGE_EVALUATE_TIMEOUT_MS = 90000;
+const FAUNA_HEAVY_EVALUATION_TIMEOUT_MS = 120000;
+const captureStartedAt = Date.now();
 const ANGLES = [
   { id: 'front', degrees: 0 },
   { id: 'right', degrees: 90 },
@@ -21,11 +25,45 @@ const manifest = {
   skinningAcceptance: SKINNING_MODE.toUpperCase() + ' skinning explicitly forced in touch emulation; SwiftShader visual diagnosis only, not a physical-device performance measurement',
   viewport: VIEWPORT, readOnlySceneCapture: true, startup: null,
   readiness: null, scene: null, fauna: [], captures: [],
-  warnings: [], failures: [], consoleErrors: [], pageErrors: [], verdict: 'incomplete'
+  warnings: [], failures: [], consoleErrors: [], pageErrors: [], verdict: 'incomplete',
+  progress: {stage:'queued',elapsedMs:0,updatedAt:new Date().toISOString()}, currentCapture:null
 };
 const round = (value, digits = 4) =>
   Number.isFinite(Number(value)) ? Number(Number(value).toFixed(digits)) : null;
 const vector = value => value ? {x:round(value.x),y:round(value.y),z:round(value.z)} : null;
+function logProgress(stage, detail = '') {
+  const elapsedMs = Date.now() - captureStartedAt;
+  console.log('[FAUNA_PROGRESS] ' + JSON.stringify({stage,elapsedMs,detail}));
+}
+function setStage(stage, detail = '') {
+  manifest.progress = {stage,elapsedMs:Date.now()-captureStartedAt,updatedAt:new Date().toISOString()};
+  saveManifest();
+  logProgress(stage,detail);
+}
+function assertCaptureDeadline(stage) {
+  const elapsedMs = Date.now()-captureStartedAt;
+  if (elapsedMs > FAUNA_CAPTURE_MAX_RUNTIME_MS) {
+    throw new Error('[FAUNA_CAPTURE_DEADLINE] ' + stage + ' exceeded ' +
+      FAUNA_CAPTURE_MAX_RUNTIME_MS + ' ms; elapsed=' + elapsedMs +
+      ' ms; lastCapture=' + JSON.stringify(manifest.currentCapture));
+  }
+}
+async function evaluateWithTimeout(page, pageFunction, arg, label, timeoutMs = FAUNA_PAGE_EVALUATE_TIMEOUT_MS) {
+  assertCaptureDeadline(label);
+  let timer = null;
+  const evaluation = arg === undefined ? page.evaluate(pageFunction) : page.evaluate(pageFunction,arg);
+  try {
+    return await Promise.race([
+      evaluation,
+      new Promise((_,reject) => {
+        timer = setTimeout(() => reject(new Error('[FAUNA_EVALUATE_TIMEOUT] ' + label +
+          ' exceeded ' + timeoutMs + ' ms; lastCapture=' + JSON.stringify(manifest.currentCapture))),timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 function saveManifest() {
   fs.mkdirSync(OUT,{recursive:true});
   const target=path.join(OUT,'manifest.json'),temporary=target+'.tmp';
@@ -36,6 +74,7 @@ async function main() {
   fs.mkdirSync(OUT,{recursive:true});
   let browser=null;
   try {
+    setStage('launching-browser','Chromium headless + SwiftShader');
     browser=await chromium.launch({headless:true,timeout:60000,args:[
       '--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--enable-webgl2',
       '--ignore-gpu-blocklist','--disable-dev-shm-usage','--force-color-profile=srgb'
@@ -73,7 +112,9 @@ async function main() {
     page.on('console',message=>{if(message.type()==='error')manifest.consoleErrors.push(message.text());});
 
     const navigationStarted=Date.now();
+    setStage('loading-built-release',BASE_URL);
     await page.goto(BASE_URL+'?test=1&fauna-inspector=1',{waitUntil:'domcontentloaded',timeout:90000});
+    logProgress('release-html-loaded','domcontentloaded');
     const audioGate=page.locator('#audioGateStart');
     if(await audioGate.isVisible().catch(()=>false))await audioGate.click();
     await page.locator('#chooseQuality').waitFor({state:'visible',timeout:60000});
@@ -81,6 +122,7 @@ async function main() {
     await page.locator('#continueUnnamed').waitFor({state:'visible',timeout:30000});
     await page.locator('#continueUnnamed').click();
     const faunaWaitStarted=Date.now();
+    setStage('waiting-for-complete-world-startup','worldReady resource barrier; maximum 240 s');
     try {
       await page.waitForFunction(()=>{
         // Only the complete startup barrier is authoritative; actor roots can exist while
@@ -88,10 +130,12 @@ async function main() {
         return window.__elSinNombreStartupSmoke?.worldReady===true||
           document.body.classList.contains('boot-failed');
       },undefined,{timeout:FAUNA_ROSTER_TIMEOUT_MS,polling:250});
+      logProgress('complete-world-startup-ready','worldReady=true');
     } catch(error) {
       manifest.warnings.push({code:'startup-did-not-reach-fauna-roster',message:String(error?.message||error)});
     }
-    manifest.startupDiagnostic=await page.evaluate(()=>{
+    setStage('collecting-startup-diagnostics');
+    manifest.startupDiagnostic=await evaluateWithTimeout(page,()=>{
       const safe=(fn,fallback=null)=>{try{return fn();}catch(_){return fallback;}};
       const B=window.BABYLON||null,scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||B?.EngineStore?.LastCreatedScene||null;
       const roots=scene?(scene.transformNodes||[]).filter(node=>
@@ -129,7 +173,7 @@ async function main() {
         landInventory:world?.actors?.wildlife?.returned||[],
         birdInventory:world?.actors?.ambientBirds?.returned||[]
       };
-    });
+    },undefined,'startup-diagnostics',60000);
     manifest.startup={
       worldReady:manifest.startupDiagnostic.worldReady,
       bootFailed:manifest.startupDiagnostic.bootFailed,
@@ -139,7 +183,7 @@ async function main() {
     manifest.gameVersion=await page.evaluate(()=>document.querySelector('meta[name="el-sin-nombre-build"]')?.content||null);
     manifest.readiness=manifest.startupDiagnostic.faunaReadiness;
     manifest.cameraTextureReadiness=manifest.startup.worldReady
-      ?await page.evaluate(()=>window.__ELSN_TEST__?.prepareCaptureFrame?window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs:120000}):null)
+      ?await evaluateWithTimeout(page,()=>window.__ELSN_TEST__?.prepareCaptureFrame?window.__ELSN_TEST__.prepareCaptureFrame({timeoutMs:60000}):null,undefined,'camera-and-texture-readiness',75000)
       :null;
     if(!manifest.startup.worldReady||manifest.startup.bootFailed||manifest.startupDiagnostic.resourceGate?.ready===false){
       const blocker={
@@ -158,12 +202,14 @@ async function main() {
       throw new Error('No se permite aceptar fauna ni capturas mientras el juego siga en booting o la barrera de recursos no esté lista: '+JSON.stringify(blocker));
     }
     if(manifest.startup.worldReady){
+      setStage('entering-read-only-gameplay-for-fauna-capture');
       await page.locator('#intro.open').waitFor({state:'visible',timeout:60000});
       await page.locator('#newGameChoice').waitFor({state:'visible',timeout:30000});
       await page.locator('#newGameChoice').click();
       await page.waitForFunction(()=>document.body.classList.contains('game-running'),undefined,{timeout:30000,polling:100});
     }
-    const initial=await page.evaluate(()=>{
+    setStage('measuring-live-fauna-rigs-and-bounds');
+    const initial=await evaluateWithTimeout(page,()=>{
       const scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||window.__ELSN_FAUNA_CAPTURE_BABYLON__?.EngineStore?.LastCreatedScene||window.BABYLON?.EngineStore?.LastCreatedScene;
       const api=window.__ELSN_TEST__;
       if(!scene)return {build:api?.build||null,scene:null,gameWildlife:[],expectedWildlifeCount:0,expectedBirdCount:0,fauna:[]};
@@ -336,7 +382,7 @@ async function main() {
         expectedBirdCount:Number(worldSnapshot?.actors?.ambientBirds?.count)||0,
         fauna
       };
-    });
+    },undefined,'live-fauna-rig-analysis',FAUNA_HEAVY_EVALUATION_TIMEOUT_MS);
     manifest.scene=initial.scene;
     manifest.gameWildlife=initial.gameWildlife;
     manifest.fauna=initial.fauna;
@@ -407,9 +453,17 @@ async function main() {
       saveManifest();
       throw new Error('Babylon todavía no ha creado una escena/canvas utilizable: '+JSON.stringify(captureCapabilities)+' · '+JSON.stringify(manifest.startupDiagnostic));
     }
+    setStage('capturing-four-verified-views','actors='+manifest.fauna.length+'; viewsPerActor='+ANGLES.length);
     for(const animal of manifest.fauna){
+      assertCaptureDeadline('before actor '+animal.id);
+      logProgress('actor-capture-started',animal.id);
       for(const angle of ANGLES){
-        const view=await page.evaluate(async({animalId,angleDegrees,measuredBounds})=>{
+        assertCaptureDeadline('before view '+animal.id+'/'+angle.id);
+        manifest.currentCapture={animalId:animal.id,angle:angle.id,startedAt:new Date().toISOString()};
+        manifest.progress={stage:'capturing-'+animal.id+'-'+angle.id,elapsedMs:Date.now()-captureStartedAt,updatedAt:new Date().toISOString()};
+        saveManifest();
+        logProgress('view-capture-started',animal.id+'/'+angle.id);
+        const view=await evaluateWithTimeout(page,async({animalId,angleDegrees,measuredBounds})=>{
           const api=window.__ELSN_TEST__,scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||window.BABYLON?.EngineStore?.LastCreatedScene;
           const number=value=>Number.isFinite(Number(value))?Number(Number(value).toFixed(4)):null;
           const ancestorsContain=(node,root)=>{let current=node,depth=0;while(current&&depth++<48){if(current===root)return true;current=current.parent;}return false;};
@@ -591,11 +645,13 @@ async function main() {
               scene.activeCamera=previousCamera;
               if(previousActiveCameras!==null&&previousActiveCameras!==undefined)scene.activeCameras=previousActiveCameras;
               temporaryCamera.dispose();
-              scene.render();
+              // The next camera setup renders the restored scene. Avoid an additional
+              // full SwiftShader frame solely for cleanup on every one of four views.
             }
           }
           return {camera,readback,cameraVerified,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png,imageIntegrity,bindPosePng};
-        },{animalId:animal.id,angleDegrees:angle.degrees,measuredBounds:animal.bounds});
+        },{animalId:animal.id,angleDegrees:angle.degrees,measuredBounds:animal.bounds},
+        'view '+animal.id+'/'+angle.id,FAUNA_PAGE_EVALUATE_TIMEOUT_MS);
         const match=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.png||'');
         assert.ok(match,'No se obtuvo PNG válido para '+animal.id+' / '+angle.id);
         const buffer=Buffer.from(match[1],'base64');
@@ -617,8 +673,12 @@ async function main() {
           fs.writeFileSync(path.join(OUT,bindFile),bindBuffer);
           manifest.captures.push({id:animal.id+'-bindpose',file:bindFile,subject:animal.id,kind:animal.kind,angle:'bindpose-no-skinning',camera:view.camera,cameraVerified:view.cameraVerified===true,bytes:bindBuffer.length});
         }
+        manifest.currentCapture=null;
+        manifest.progress={stage:'view-complete',elapsedMs:Date.now()-captureStartedAt,updatedAt:new Date().toISOString()};
         saveManifest();
+        logProgress('view-capture-complete',animal.id+'/'+angle.id+'; completed='+manifest.captures.length);
       }
+      logProgress('actor-capture-complete',animal.id);
     }
     manifest.verdict=manifest.warnings.length?'captured-with-review-warnings':'captured';
     const visualCaptureCount=manifest.captures.filter(capture=>ANGLES.some(angle=>angle.id===capture.angle)).length;
@@ -633,8 +693,14 @@ async function main() {
     throw error;
   }finally{
     manifest.finishedAt=new Date().toISOString();
+    manifest.elapsedMs=Date.now()-captureStartedAt;
+    manifest.currentCapture=null;
+    manifest.progress={stage:manifest.verdict==='failed'?'failed':'finished',elapsedMs:manifest.elapsedMs,updatedAt:manifest.finishedAt};
     saveManifest();
-    if(browser)await browser.close();
+    if(browser){
+      await Promise.race([browser.close(),new Promise(resolve=>setTimeout(resolve,5000))]);
+    }
+    logProgress('capture-process-closed',manifest.verdict+'; totalMs='+manifest.elapsedMs);
   }
   console.log('FAUNA VISUAL CAPTURE '+manifest.verdict+': '+manifest.captures.length+' vistas para '+manifest.fauna.length+' animales.');
 }
