@@ -520,14 +520,14 @@ async function main() {
               activeCameras:(scene.activeCameras||[]).map(item=>String(item?.name||'')),
               expected:temporaryCamera.name
             }));
-            if(api?.render&&api?.captureCanvas){
-              api.render();
-            }else{
-              scene.render();
-            }
-            // sceneViewSnapshot reports the game's player-camera state, not necessarily the
-            // temporary camera currently assigned to Babylon's active render pipeline.
-            // Verify the camera Babylon actually rendered with, after the manual frame.
+            const captureFrame=()=>{
+              if(api?.render&&api?.captureCanvas){api.render();return api.captureCanvas();}
+              scene.render();return canvas.toDataURL('image/png');
+            };
+            // Render the visible subject exactly once, then verify the active camera
+            // against the frame just captured. The prior implementation rendered once
+            // for verification and immediately rendered the same view again for PNG.
+            png=captureFrame();
             const activeCamera=scene.activeCamera;
             const actualPosition=activeCamera?.position;
             const capturedTarget=activeCamera?.getTarget?.();
@@ -544,11 +544,6 @@ async function main() {
               near(verifiedTarget.x,camera.targetX)&&near(verifiedTarget.y,camera.targetY)&&near(verifiedTarget.z,camera.targetZ);
             readback={...readback,renderCamera:scene.activeCamera?.name||null,activeCameras:(scene.activeCameras||[]).map(item=>String(item?.name||''))};
             if(!cameraVerified)throw new Error('La captura no utilizó la cámara Babylon dirigida al animal: '+JSON.stringify({expected:camera,readback}));
-            const captureFrame=()=>{
-              if(api?.render&&api?.captureCanvas){api.render();return api.captureCanvas();}
-              scene.render();return canvas.toDataURL('image/png');
-            };
-            png=captureFrame();
             // Capture the same view once without this actor. A raster comparison proves
             // that the PNG contains the animal itself, not just a valid non-empty canvas.
             const actorWasEnabled=root.isEnabled?.()!==false;
@@ -560,7 +555,8 @@ async function main() {
               backgroundPng=captureFrame();
             }finally{
               root.setEnabled(actorWasEnabled);
-              scene.render();
+              // The next capture renders the restored subject and world. Avoid a
+              // third full SwiftShader frame just to restore visibility.
             }
             if(backgroundPng){
               const imageData=async dataUrl=>{
