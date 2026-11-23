@@ -2784,7 +2784,7 @@ function updateWildlife(dt){
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
         html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
-        '<script src="./scripts/npc-village-brain-core.js" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.348-npcbrain2" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
     ):
@@ -4309,7 +4309,33 @@ function getWorldPhaseTimingSnapshot(){
    // Village NPCs use role schedules, local obstacle steering and bounded social reactions.
    // This reuses the existing actor roots, collision grid, animation clips and LOD cadence.
    const npcVillageBrain=window.ELSN_NPC_VILLAGE_BRAIN;
-   if(!npcVillageBrain)throw new Error('El núcleo de comportamiento de aldeanos no está disponible.');
+   const npcBrainRequiredMethods=['createState','chooseMode','chooseGoal','chooseStep','smoothAngle'];
+   const npcBrainMissingMethods=npcBrainRequiredMethods.filter(name=>typeof npcVillageBrain?.[name]!=='function');
+   const npcBrainHasLocomotion=typeof npcVillageBrain?.computeLocomotion==='function';
+   const npcBrainProblemKey=[...npcBrainMissingMethods,...(!npcBrainHasLocomotion?['computeLocomotion:fallback']:[])].join(',');
+   const npcBrainDiagnostics=window.__ELSN_NPC_BRAIN_DIAGNOSTICS__||(window.__ELSN_NPC_BRAIN_DIAGNOSTICS__={status:'unknown',missingMethods:[],computeLocomotionFallback:false,lastProblemKey:''});
+   npcBrainDiagnostics.status=npcBrainMissingMethods.length?'unavailable':(npcBrainHasLocomotion?'ready':'degraded');
+   npcBrainDiagnostics.missingMethods=npcBrainMissingMethods.slice();
+   npcBrainDiagnostics.computeLocomotionFallback=!npcBrainHasLocomotion;
+   if(npcBrainProblemKey!==npcBrainDiagnostics.lastProblemKey){
+    if(npcBrainProblemKey)console.warn('NPC village brain compatibility issue; world update continues.',{missingMethods:npcBrainMissingMethods,computeLocomotionFallback:!npcBrainHasLocomotion});
+    npcBrainDiagnostics.lastProblemKey=npcBrainProblemKey;
+   }
+   const npcBrainRuntime=window.__ELSN_NPC_BRAIN_RUNTIME__||(window.__ELSN_NPC_BRAIN_RUNTIME__=(()=>{
+    const fallbackComputeLocomotion=(input,state)=>{
+     const c=input||{},s=state||{},dt=Math.min(.12,Math.max(0,Number(c.dt)||0));
+     const mode=String(c.mode||'work'),distance=Math.max(0,Number(c.distance)||0);
+     const base=Number.isFinite(Number(c.baseSpeed))?Math.max(.05,Number(c.baseSpeed)):.78;
+     const desired=mode==='flee'?Math.max(1.25,base*1.48):mode==='social'?.72:mode==='watch'?.34:mode==='rest'?.20:base;
+     const moving=c.moving===true&&distance>.04,target=moving?desired:0,accel=target>(Number(s.speed)||0)?3.1:5.4;
+     const previous=Number.isFinite(Number(s.speed))?Number(s.speed):0;
+     s.speed=previous+(target-previous)*Math.min(1,dt*accel);
+     const turn=Math.abs(Number(c.turnAngle)||0),turnScale=1-Math.min(.34,turn/Math.PI*.34),speed=Math.max(0,s.speed*turnScale);
+     const gait=!moving||speed<.12?'idle':mode==='flee'?'run':speed>.88?'jog':'walk';
+     return Object.freeze({speed,gait,turnRate:gait==='idle'?2.8:(gait==='run'?8.8:7.2),strideScale:gait==='run'?1.22:(gait==='jog'?1.08:1),acceleration:dt>0?(s.speed-previous)/dt:0});
+    };
+    return Object.freeze({fallbackComputeLocomotion});
+   })());
    if(!ambientPeople.__npcEnvironment||elapsed>=Number(ambientPeople.__npcEnvironmentAt||0)){
     let atmosphere=null;
     try{atmosphere=window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getState==='function'?window.__ELSN_ATMOSPHERE.getState():null;}catch(_){}
@@ -4318,7 +4344,7 @@ function getWorldPhaseTimingSnapshot(){
    }
    const npcEnvironment=ambientPeople.__npcEnvironment;
    const ambientNpcPlayerPosition=playerPos(),playerX=Number(ambientNpcPlayerPosition.x)||0,playerZ=Number(ambientNpcPlayerPosition.z)||0;
-   ambientPeople.forEach((npc,i)=>{
+   if(npcBrainMissingMethods.length===0)ambientPeople.forEach((npc,i)=>{
     if(!npc||npc.recruited||!npc.parts||!npc.parts.root)return;
     const p=npc.parts.root,npcPosition=p.position;
     if(!worldEntityVisualDue(npc,npcPosition.x,npcPosition.z))return;
@@ -4400,7 +4426,7 @@ function getWorldPhaseTimingSnapshot(){
       const wantedHeading=Math.atan2(targetDx,targetDz);
       const turnDelta=Math.atan2(Math.sin(wantedHeading-p.rotation.y),Math.cos(wantedHeading-p.rotation.y));
       if(!brain.locomotionState)brain.locomotionState={speed:0};
-      const motion=npcVillageBrain.computeLocomotion({mode:brain.mode,baseSpeed:npc.speed,distance:targetDistance,dt:ambientDt,moving:true,turnAngle:turnDelta},brain.locomotionState);
+      const motion=npcBrainHasLocomotion?npcVillageBrain.computeLocomotion({mode:brain.mode,baseSpeed:npc.speed,distance:targetDistance,dt:ambientDt,moving:true,turnAngle:turnDelta},brain.locomotionState):npcBrainRuntime.fallbackComputeLocomotion({mode:brain.mode,baseSpeed:npc.speed,distance:targetDistance,dt:ambientDt,moving:true,turnAngle:turnDelta},brain.locomotionState);
       const pace=motion.speed;
       const step=Math.min(targetDistance,Math.max(.012,pace*ambientDt));
       const move=npcVillageBrain.chooseStep({x:oldX,z:oldZ,targetX:npc.targetX,targetZ:npc.targetZ,step,side:i%2===0?1:-1},(x,z)=>{

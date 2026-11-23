@@ -119,6 +119,9 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
   assert.equal(version,sourceVersion,`The source ${source} must remain the 0.6.274 input that build_site upgrades deterministically.`);
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
+assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.348-npcbrain2"') &&
+  buildSite.includes('npc-village-brain-core.js?v=0.6.348-npcbrain2'),
+  "The NPC brain must use the same versioned URL in the generated page and the service-worker shell cache.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
 assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.348"\)/,"The build must promote every visible source version to 0.6.348.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true") && buildSite.includes("qualityScaleAdaptive:false") && buildSite.includes("nativeResolutionPreserved:true"),"Quality must keep its native render scale fixed for the session.");

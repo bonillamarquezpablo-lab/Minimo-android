@@ -139,6 +139,19 @@ assert.ok(builder.includes('grassLodLeafCounts') &&
   builder.includes('batch.selectLod(batch.x,batch.z,viewFocus.x,viewFocus.z,batch.lod)') &&
   builder.includes('batch.lodVertexData[nextLod].applyToMesh(batch.mesh)'),
   'Grass must use near/mid/far geometry LOD on the same instance buffers, without removing grass positions.');
+assert.ok(builder.includes("const freezeSpatialStaticWorldMatrices=()=>") &&
+  builder.includes("mesh.computeWorldMatrix(true);") &&
+  builder.includes("mesh.freezeWorldMatrix(worldMatrix);") &&
+  builder.includes("const staticWorldMatricesFrozen=freezeSpatialStaticWorldMatrices();"),
+  "The Quality scene must freeze only static transforms after dynamic classification, retaining animated systems.");
+assert.ok(builder.includes("mesh.__elsnSpatialDynamic||isSpatialDynamicMesh(mesh)") &&
+  builder.includes("mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0"),
+  "Static transform freezing must exclude dynamic, skinned, morphed and billboard meshes.");
+assert.ok(builder.includes('npcBrainRuntime.fallbackComputeLocomotion') &&
+  builder.includes('if(npcBrainMissingMethods.length===0)ambientPeople.forEach'),
+  "Missing NPC locomotion must use an NPC-only fallback, while an incompatible brain cannot abort the rest of the world update.");
+assert.ok(builder.includes('npcBrainDiagnostics.lastProblemKey'),
+  "NPC compatibility failures must be logged once per distinct API mismatch, not once per rendered frame.");
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullMaxExtentMeters=.55') &&
   builder.includes('sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)') &&

@@ -151,7 +151,7 @@ assert.match(sw,/contentType\.includes\("text\/html"\)/);
  }
  assert.ok(sw.includes('url.pathname.includes("/assets/")'),
   'El manifiesto debe quedar atendido por la caché de recursos del service worker.');
- assert.ok(sw.includes('url.pathname.endsWith("/scripts/npc-village-brain-core.js")')&&
+ assert.ok(sw.includes('./scripts/npc-village-brain-core.js?v=0.6.348-npcbrain2')&&sw.includes('url.pathname.endsWith("/scripts/npc-village-brain-core.js")')&&
   sw.includes('url.pathname.endsWith("/scripts/npc-dialogue.css")'),
   'Los módulos ligeros precargados deben servirse desde SHELL_CACHE, no solo figurar en la lista de instalación.');
 

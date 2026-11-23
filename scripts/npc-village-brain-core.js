@@ -152,5 +152,5 @@
   const t=Math.max(0,Number(elapsed)||0),d=Math.max(.12,Number(duration)||.9),p=Math.min(1,t/d);
   return Object.freeze({progress:p,phase:p<.32?"anticipation":p<.58?"strike":p<.82?"recovery":"recovering",canImpact:p>=.32&&p<.58,canChain:p>=.82});
  }
- return Object.freeze({ROLES,ROLE_IDS,roleForVariant,createState,chooseMode,goalCandidates,chooseGoal,chooseStep,smoothAngle,computeLocomotion,evaluateThreat,chooseCombatIntent,formationOffset,attackTelegraph});
+ return Object.freeze({apiVersion:2,ROLES,ROLE_IDS,roleForVariant,createState,chooseMode,goalCandidates,chooseGoal,chooseStep,smoothAngle,computeLocomotion,evaluateThreat,chooseCombatIntent,formationOffset,attackTelegraph});
 });
